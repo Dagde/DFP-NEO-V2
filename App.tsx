@@ -22,6 +22,7 @@ import {
     getPlatformDataScopeForLocation,
     getLocationCodesForCurrentRuntime,
     getLocationResourcePool,
+    getOperationalContextResourcePool,
     getOperationalModelLabel,
     getPlatformAccessContext,
     getPlatformModuleForView,
@@ -28810,8 +28811,8 @@ const App: React.FC = () => {
     }, [activeContextUnitCodes, activeUnitCode, hasMasterLmpUnitAccess]);
 
     const activePlatformResourcePool = useMemo(
-        () => getLocationResourcePool(platformConfig, school, activeResourcePoolUnitCode),
-        [activeResourcePoolUnitCode, platformConfig, school],
+        () => getOperationalContextResourcePool(platformConfig, school, activeUnitCode, activeContextUnitCodes),
+        [activeContextUnitCodes, activeUnitCode, platformConfig, school],
     );
 
     const activeRuntimeAircraftType = useMemo(() => {

@@ -1413,6 +1413,87 @@ export const getLocationResourcePool = (
   return sharedPools[0] || locationLevelPools[0] || pools[0] || null;
 };
 
+const splitUnitIdentifiers = (value: unknown): string[] => (
+  String(value || '')
+    .split(/[+\/,;&]/)
+    .map(normaliseUnitIdentifier)
+    .filter(Boolean)
+);
+
+const resourcePoolMatchesAnyUnit = (
+  pool: PlatformResourcePool,
+  unitIdentifiers: Set<string>,
+): boolean => {
+  if (unitIdentifiers.size === 0) return true;
+  const poolUnit = normaliseUnitIdentifier(pool.unitCode);
+  if (!poolUnit) return false;
+  if (unitIdentifiers.has(poolUnit)) return true;
+  const poolUnitParts = splitUnitIdentifiers(pool.unitCode);
+  return poolUnitParts.length > 0 && poolUnitParts.some((unit) => unitIdentifiers.has(unit));
+};
+
+const resourcePoolMatchesLocationAliases = (
+  pool: PlatformResourcePool,
+  locationAliases: Set<string>,
+): boolean => (
+  locationAliases.size === 0 ||
+  locationAliases.has(normaliseLocationIdentifier(pool.locationCode))
+);
+
+const buildLocationAliasSet = (
+  config: PlatformConfig | null,
+  locationCode: unknown,
+): Set<string> => {
+  const matchingLocation = (config?.locations || []).find((location) => (
+    getConfiguredLocationAliases(location).some((alias) => locationCodesAreEquivalent(alias, String(locationCode || '')))
+  ));
+  return new Set(
+    (matchingLocation ? getConfiguredLocationAliases(matchingLocation) : getKnownLocationAliases(locationCode))
+      .map(normaliseLocationIdentifier)
+      .filter(Boolean),
+  );
+};
+
+export const getOperationalContextResourcePool = (
+  config: PlatformConfig | null,
+  locationCode: string,
+  unitCode?: string | null,
+  memberUnitCodes: string[] = [],
+): PlatformResourcePool | null => {
+  const activePools = (config?.resourcePools || []).filter((pool) => pool.status !== 'INACTIVE');
+  if (activePools.length === 0) return null;
+
+  const unitIdentifiers = new Set([
+    ...splitUnitIdentifiers(unitCode),
+    ...memberUnitCodes.flatMap(splitUnitIdentifiers),
+  ]);
+  const preferredLocationAliases = buildLocationAliasSet(config, locationCode);
+  const activeUnits = (config?.units || []).filter((unit) => unit.status !== 'INACTIVE');
+  const activeUnitHomeLocationAliases = new Set(
+    activeUnits
+      .filter((unit) => unitIdentifiers.has(normaliseUnitIdentifier(unit.code)))
+      .flatMap((unit) => Array.from(buildLocationAliasSet(config, unit.locationCode)))
+      .filter(Boolean),
+  );
+
+  const sharedPools = activePools.filter((pool) => String(pool.poolType || '').trim().toLowerCase() === 'shared');
+  const unitPools = activePools.filter((pool) => resourcePoolMatchesAnyUnit(pool, unitIdentifiers));
+
+  const exactUnitLocationPool = unitPools.find((pool) => resourcePoolMatchesLocationAliases(pool, preferredLocationAliases));
+  if (exactUnitLocationPool) return exactUnitLocationPool;
+
+  const exactSharedLocationPool = sharedPools.find((pool) => resourcePoolMatchesLocationAliases(pool, preferredLocationAliases));
+  if (exactSharedLocationPool) return exactSharedLocationPool;
+
+  const homeLocationUnitPool = unitPools.find((pool) => resourcePoolMatchesLocationAliases(pool, activeUnitHomeLocationAliases));
+  if (homeLocationUnitPool) return homeLocationUnitPool;
+
+  const homeLocationSharedPool = sharedPools.find((pool) => resourcePoolMatchesLocationAliases(pool, activeUnitHomeLocationAliases));
+  if (homeLocationSharedPool) return homeLocationSharedPool;
+
+  return getLocationResourcePool(config, locationCode, unitCode) || unitPools[0] || null;
+};
+
 export const isResourcePoolRuntimeEnabled = (
   pool: PlatformResourcePool | null,
 ): boolean => !!pool && pool.status !== 'INACTIVE';

@@ -3091,6 +3091,46 @@ const getLocationResourcePool = (config, locationCode, unitCode) => {
   const locationLevelPools = pools.filter((pool) => !normaliseLocationIdentifier(pool.unitCode));
   return sharedPools[0] || locationLevelPools[0] || pools[0] || null;
 };
+const splitUnitIdentifiers = (value) => String(value || "").split(/[+\/,;&]/).map(normaliseUnitIdentifier).filter(Boolean);
+const resourcePoolMatchesAnyUnit = (pool, unitIdentifiers) => {
+  if (unitIdentifiers.size === 0) return true;
+  const poolUnit = normaliseUnitIdentifier(pool.unitCode);
+  if (!poolUnit) return false;
+  if (unitIdentifiers.has(poolUnit)) return true;
+  const poolUnitParts = splitUnitIdentifiers(pool.unitCode);
+  return poolUnitParts.length > 0 && poolUnitParts.some((unit) => unitIdentifiers.has(unit));
+};
+const resourcePoolMatchesLocationAliases = (pool, locationAliases) => locationAliases.size === 0 || locationAliases.has(normaliseLocationIdentifier(pool.locationCode));
+const buildLocationAliasSet = (config, locationCode) => {
+  const matchingLocation = (config?.locations || []).find((location) => getConfiguredLocationAliases(location).some((alias) => locationCodesAreEquivalent(alias, String(locationCode || ""))));
+  return new Set(
+    (matchingLocation ? getConfiguredLocationAliases(matchingLocation) : getKnownLocationAliases(locationCode)).map(normaliseLocationIdentifier).filter(Boolean)
+  );
+};
+const getOperationalContextResourcePool = (config, locationCode, unitCode, memberUnitCodes = []) => {
+  const activePools = (config?.resourcePools || []).filter((pool) => pool.status !== "INACTIVE");
+  if (activePools.length === 0) return null;
+  const unitIdentifiers = /* @__PURE__ */ new Set([
+    ...splitUnitIdentifiers(unitCode),
+    ...memberUnitCodes.flatMap(splitUnitIdentifiers)
+  ]);
+  const preferredLocationAliases = buildLocationAliasSet(config, locationCode);
+  const activeUnits = (config?.units || []).filter((unit) => unit.status !== "INACTIVE");
+  const activeUnitHomeLocationAliases = new Set(
+    activeUnits.filter((unit) => unitIdentifiers.has(normaliseUnitIdentifier(unit.code))).flatMap((unit) => Array.from(buildLocationAliasSet(config, unit.locationCode))).filter(Boolean)
+  );
+  const sharedPools = activePools.filter((pool) => String(pool.poolType || "").trim().toLowerCase() === "shared");
+  const unitPools = activePools.filter((pool) => resourcePoolMatchesAnyUnit(pool, unitIdentifiers));
+  const exactUnitLocationPool = unitPools.find((pool) => resourcePoolMatchesLocationAliases(pool, preferredLocationAliases));
+  if (exactUnitLocationPool) return exactUnitLocationPool;
+  const exactSharedLocationPool = sharedPools.find((pool) => resourcePoolMatchesLocationAliases(pool, preferredLocationAliases));
+  if (exactSharedLocationPool) return exactSharedLocationPool;
+  const homeLocationUnitPool = unitPools.find((pool) => resourcePoolMatchesLocationAliases(pool, activeUnitHomeLocationAliases));
+  if (homeLocationUnitPool) return homeLocationUnitPool;
+  const homeLocationSharedPool = sharedPools.find((pool) => resourcePoolMatchesLocationAliases(pool, activeUnitHomeLocationAliases));
+  if (homeLocationSharedPool) return homeLocationSharedPool;
+  return getLocationResourcePool(config, locationCode, unitCode) || unitPools[0] || null;
+};
 const getResourceRowsForDate = (settings, targetDate) => {
   if (!targetDate || !/^\d{4}-\d{2}-\d{2}$/.test(targetDate)) return null;
   const history = Array.isArray(settings.dfpResourceRowsHistory) ? settings.dfpResourceRowsHistory : [];
@@ -129058,8 +129098,8 @@ const App = () => {
     return unitCodes.find((unitCode) => hasMasterLmpUnitAccess(lmpType, unitCode, requiredAccess)) || explicitUnit || activeUnitCode;
   }, [activeContextUnitCodes, activeUnitCode, hasMasterLmpUnitAccess]);
   const activePlatformResourcePool = reactExports.useMemo(
-    () => getLocationResourcePool(platformConfig, school, activeResourcePoolUnitCode),
-    [activeResourcePoolUnitCode, platformConfig, school]
+    () => getOperationalContextResourcePool(platformConfig, school, activeUnitCode, activeContextUnitCodes),
+    [activeContextUnitCodes, activeUnitCode, platformConfig, school]
   );
   const activeRuntimeAircraftType = reactExports.useMemo(() => {
     const aircraftTypes = (platformConfig?.aircraftTypes || []).filter((aircraft) => String(aircraft?.status || "ACTIVE").toUpperCase() !== "INACTIVE");
