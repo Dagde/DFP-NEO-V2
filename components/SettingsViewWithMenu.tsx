@@ -9,6 +9,7 @@ import OrganisationSettings from './OrganisationSettings';
 import AppearanceSettings from './AppearanceSettings';
 import PlatformConfigurationSettings from './PlatformConfigurationSettings';
 import EmailActivationSettings from './EmailActivationSettings';
+import TestingFunctionsSettings from './TestingFunctionsSettings';
 import PeopleProfilePage from './PeopleProfilePage';
 import { showDarkAlert, showDarkPrompt } from './DarkMessageModal';
 import CurrencyBuilderView from './CurrencyBuilderView';
@@ -241,6 +242,7 @@ type SettingsSection =
     | 'audit-recording'
     | 'appearance'
     | 'email-activation'
+    | 'testing-functions'
     | 'emergency';
 
 const platformConfigurationSections = [
@@ -327,6 +329,7 @@ const sectionLabels: Record<SettingsMenuSection, string> = {
     'platform-scheduling-rule-sets': 'Scheduling Rule Sets',
     'appearance': 'App Appearance',
     'email-activation': 'Email & Account Activation',
+    'testing-functions': 'Testing Functions',
     'emergency': 'Emergency',
 };
 
@@ -457,6 +460,7 @@ const sectionIcons: Record<SettingsMenuSection, React.ReactNode> = {
   'standard-missions': platformConfigurationIcon,
   'currency-profiles': platformConfigurationIcon,
   'email-activation': platformConfigurationIcon,
+  'testing-functions': platformConfigurationIcon,
   'platform-configuration-health': platformConfigurationIcon,
   'platform-organisation-locations': platformConfigurationIcon,
   'platform-units': platformConfigurationIcon,
@@ -533,6 +537,7 @@ const sectionDescriptions: Record<SettingsMenuSection, string> = {
   'platform-scheduling-rule-sets': 'Scheduling rules for selected units, aircraft and operating areas',
   'appearance': 'Choose dark or light display theme',
   'email-activation': 'Customer SMTP and activation email delivery settings',
+  'testing-functions': 'Temporary reset tools for customer testbeds',
   'emergency': 'System freeze and emergency controls',
 };
 
@@ -674,6 +679,10 @@ const sectionSearchKeywords: Partial<Record<SettingsMenuSection, string[]>> = {
     'temporary password', 'two part password', 'from address', 'no reply', 'mail server',
     'customer smtp', 'test email', 'activation expiry',
   ],
+  'testing-functions': [
+    'testing functions', 'testbed', 'reset database', 'clear database', 'first delivery',
+    'new customer test', 'clean testbed', 'temporary tools',
+  ],
   'platform-permission-profiles': [
     'master permission profiles', 'permission profiles', 'permissions', 'permission', 'roles', 'access role', 'admin rights',
     'scheduler rights', 'viewer', 'profile',
@@ -811,6 +820,7 @@ const sectionColors: Record<SettingsMenuSection, string> = {
   'platform-scheduling-rule-sets': 'from-cyan-500/20 to-cyan-600/10 border-cyan-500/30 text-cyan-400',
   'appearance':        'from-purple-500/20 to-purple-600/10 border-purple-500/30 text-purple-400',
   'email-activation':  'from-cyan-500/20 to-cyan-600/10 border-cyan-500/30 text-cyan-400',
+  'testing-functions': 'from-red-500/20 to-red-600/10 border-red-500/30 text-red-400',
   // EMERGENCY - red icons
   'emergency':         'from-red-500/20 to-red-600/10 border-red-500/30 text-red-400',
 };
@@ -866,6 +876,7 @@ const sectionGroups: {
       'platform-deployment-readiness',
       'email-activation',
       'platform-licensing',
+      'testing-functions',
     ],
   },
   {
@@ -1349,6 +1360,7 @@ export const SettingsViewWithMenu: React.FC<SettingsViewWithMenuProps> = (props)
     const [auditRecordingPage, setAuditRecordingPage] = useState(auditRecordingPageOptions[0]);
     const [auditRecordingUnlocked, setAuditRecordingUnlocked] = useState(false);
     const [, setAuditRecordingRefreshKey] = useState(0);
+    const [testingFunctionsAvailable, setTestingFunctionsAvailable] = useState(false);
     const sctTerminology = props.sctTerminology || DEFAULT_SCT_TERMINOLOGY;
     const continuationCurrencyLabel = `${String(sctTerminology.shortLabel || DEFAULT_SCT_TERMINOLOGY.shortLabel || 'ContT').trim() || 'ContT'} / Currency Events`;
     const isContinuationCurrencySection = (section: SettingsMenuSection): boolean =>
@@ -1398,6 +1410,9 @@ export const SettingsViewWithMenu: React.FC<SettingsViewWithMenuProps> = (props)
         return null;
     };
     const canAccessSettingsSection = (section: SettingsMenuSection): boolean => {
+        if (section === 'testing-functions') {
+            return props.currentUserPermission === 'Super Admin' && testingFunctionsAvailable;
+        }
         if (hasLegacySettingsAdminRole || hasGeneralSettingsEditPermission) return true;
         if (hasSpecificSettingsEditPermission) {
             const requiredPermission = getRequiredSettingsSectionPermission(section);
@@ -1447,6 +1462,38 @@ export const SettingsViewWithMenu: React.FC<SettingsViewWithMenuProps> = (props)
         setAuditRecordingRefreshKey((current) => current + 1);
         props.onShowSuccess(enabled ? 'Audit recording enabled for all actions on this page.' : 'Audit recording disabled for all actions on this page.');
     };
+
+    // TESTING FUNCTIONS START - temporary customer-testbed reset tools.
+    useEffect(() => {
+        if (props.currentUserPermission !== 'Super Admin') {
+            setTestingFunctionsAvailable(false);
+            return;
+        }
+
+        let cancelled = false;
+        const readTestingFunctionStatus = async () => {
+            try {
+                const sessionToken = localStorage.getItem('dfp_session_token') || '';
+                const response = await fetch('/api/testing-functions/status', {
+                    headers: sessionToken ? { Authorization: `Bearer ${sessionToken}` } : undefined,
+                });
+                if (!response.ok) {
+                    if (!cancelled) setTestingFunctionsAvailable(false);
+                    return;
+                }
+                const payload = await response.json().catch(() => ({}));
+                if (!cancelled) setTestingFunctionsAvailable(Boolean(payload?.enabled));
+            } catch {
+                if (!cancelled) setTestingFunctionsAvailable(false);
+            }
+        };
+
+        void readTestingFunctionStatus();
+        return () => {
+            cancelled = true;
+        };
+    }, [props.currentUserPermission]);
+    // TESTING FUNCTIONS END
 
     const changeActiveSection = (section: ActiveSection) => {
         if (section !== 'currencies') {
@@ -1642,6 +1689,7 @@ export const SettingsViewWithMenu: React.FC<SettingsViewWithMenuProps> = (props)
             'organisation': collectSelectedSearchDataTerms(props.organisationSettings, unitContextTerms, resourceRowTerms),
             'crew-composition': collectSelectedSearchDataTerms(aircraftTerms, props.aircraftCrewComposition, props.crewPositionTerminology),
             'appearance': collectSelectedSearchDataTerms(props.fixedCrewTileColourMode, props.activeOperationalModel),
+            'testing-functions': collectSelectedSearchDataTerms('testing functions', 'reset database', 'testbed', props.currentUserPermission),
             'emergency': collectSelectedSearchDataTerms(props.emergencyFreezeAuthority, props.emergencyFreezeAllowedActions, props.qualificationOptions, props.currentUserQualificationIds),
         };
     }, [
@@ -2336,6 +2384,7 @@ export const SettingsViewWithMenu: React.FC<SettingsViewWithMenuProps> = (props)
                      !isPlatformConfigurationActive &&
                      activeSection !== 'appearance' &&
                      activeSection !== 'email-activation' &&
+                     activeSection !== 'testing-functions' &&
                      activeSection !== 'people-profile' && (
                         activeSection === 'currencies' && embeddedCurrencyBuilderOpen ? (
                             <div className="h-[calc(100vh-220px)] min-h-[620px] overflow-hidden rounded-lg border border-gray-700 bg-gray-900">
@@ -2457,6 +2506,11 @@ export const SettingsViewWithMenu: React.FC<SettingsViewWithMenuProps> = (props)
                     {activeSection === 'email-activation' && (
                         <EmailActivationSettings
                             currentUserPermission={props.currentUserPermission}
+                            onShowSuccess={props.onShowSuccess}
+                        />
+                    )}
+                    {activeSection === 'testing-functions' && (
+                        <TestingFunctionsSettings
                             onShowSuccess={props.onShowSuccess}
                         />
                     )}

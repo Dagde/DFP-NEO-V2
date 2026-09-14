@@ -93901,6 +93901,83 @@ const EmailActivationSettings = ({ currentUserPermission, onShowSuccess }) => {
     /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex justify-end", children: /* @__PURE__ */ jsxRuntimeExports.jsx("button", { type: "button", disabled: !canEdit || saving, onClick: handleSave, className: "rounded-md bg-emerald-600 px-5 py-2 text-sm font-semibold text-white hover:bg-emerald-700 disabled:cursor-not-allowed disabled:bg-gray-600", children: saving ? "Saving..." : "Save Email Settings" }) })
   ] });
 };
+const REQUIRED_CONFIRMATION = "RESET DATABASE";
+const TestingFunctionsSettings = ({ onShowSuccess }) => {
+  const [confirmation, setConfirmation] = reactExports.useState("");
+  const [isResetting, setIsResetting] = reactExports.useState(false);
+  const [message, setMessage] = reactExports.useState("");
+  const [error, setError] = reactExports.useState("");
+  const canReset = confirmation.trim() === REQUIRED_CONFIRMATION && !isResetting;
+  const resetDatabase = async () => {
+    if (!canReset) return;
+    setIsResetting(true);
+    setMessage("");
+    setError("");
+    try {
+      const sessionToken = localStorage.getItem("dfp_session_token") || "";
+      const response = await fetch("/api/testing-functions/reset-database", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          ...sessionToken ? { Authorization: `Bearer ${sessionToken}` } : {}
+        },
+        body: JSON.stringify({ confirmation: REQUIRED_CONFIRMATION })
+      });
+      const payload = await response.json().catch(() => ({}));
+      if (!response.ok) {
+        throw new Error(payload.message || "The test database could not be reset.");
+      }
+      localStorage.removeItem("dfp_session_token");
+      localStorage.removeItem("dfp_current_user");
+      const successMessage = payload.message || "Test database reset. Sign in again with the initial Organisation Administrator account.";
+      setMessage(successMessage);
+      onShowSuccess?.(successMessage);
+    } catch (resetError) {
+      setError(resetError?.message || "The test database could not be reset.");
+    } finally {
+      setIsResetting(false);
+    }
+  };
+  return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded-lg border border-red-800/50 bg-gray-800 shadow-lg", children: [
+    /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "border-b border-red-900/50 bg-red-950/30 px-5 py-4", children: [
+      /* @__PURE__ */ jsxRuntimeExports.jsx("h3", { className: "text-lg font-bold text-white", children: "Testing Functions" }),
+      /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-1 max-w-3xl text-sm text-red-100/80", children: "Temporary tools for customer testbeds. These controls are intended for setup testing only and should be removed before final product release." })
+    ] }),
+    /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-5 p-5", children: [
+      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded-md border border-red-700/50 bg-red-950/25 p-4", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsx("h4", { className: "text-sm font-bold uppercase tracking-widest text-red-200", children: "Reset Test Database" }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-2 text-sm leading-6 text-gray-200", children: "This clears the current test database back to first-delivery state. It removes configured organisations, units, people, schedules, settings, sessions and imported data, then recreates the initial Organisation Administrator account from the deployment settings." }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-2 text-sm font-semibold text-red-100", children: "You will be signed out after the reset because saved sessions are removed with the database data." })
+      ] }),
+      /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "block max-w-xl", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "mb-2 block text-[11px] font-semibold uppercase tracking-widest text-gray-400", children: "Type RESET DATABASE to continue" }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx(
+          "input",
+          {
+            type: "text",
+            value: confirmation,
+            onChange: (event) => setConfirmation(event.target.value),
+            className: "w-full rounded-md border border-gray-700 bg-gray-950 px-3 py-2 text-sm font-semibold text-white outline-none transition focus:border-red-400 focus:ring-1 focus:ring-red-400",
+            placeholder: REQUIRED_CONFIRMATION,
+            autoComplete: "off"
+          }
+        )
+      ] }),
+      error ? /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "rounded-md border border-red-600/60 bg-red-950/40 px-3 py-2 text-sm font-semibold text-red-100", children: error }) : null,
+      message ? /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "rounded-md border border-emerald-600/50 bg-emerald-950/30 px-3 py-2 text-sm font-semibold text-emerald-100", children: message }) : null,
+      /* @__PURE__ */ jsxRuntimeExports.jsx(
+        "button",
+        {
+          type: "button",
+          onClick: resetDatabase,
+          disabled: !canReset,
+          className: "rounded-md border border-red-500/70 bg-red-600 px-4 py-2 text-sm font-bold text-white shadow-sm transition hover:bg-red-500 disabled:cursor-not-allowed disabled:border-gray-700 disabled:bg-gray-700 disabled:text-gray-400",
+          children: isResetting ? "Resetting database..." : "Reset Test Database"
+        }
+      )
+    ] })
+  ] });
+};
 const PeopleProfilePage = ({
   traineesData,
   excludedCourses,
@@ -94119,6 +94196,7 @@ const sectionLabels = {
   "platform-scheduling-rule-sets": "Scheduling Rule Sets",
   "appearance": "App Appearance",
   "email-activation": "Email & Account Activation",
+  "testing-functions": "Testing Functions",
   "emergency": "Emergency"
 };
 const platformConfigurationIcon = /* @__PURE__ */ jsxRuntimeExports.jsxs("svg", { viewBox: "0 0 24 24", fill: "none", stroke: "currentColor", strokeWidth: "1.5", strokeLinecap: "round", strokeLinejoin: "round", className: "w-full h-full", children: [
@@ -94208,6 +94286,7 @@ const sectionIcons = {
   "standard-missions": platformConfigurationIcon,
   "currency-profiles": platformConfigurationIcon,
   "email-activation": platformConfigurationIcon,
+  "testing-functions": platformConfigurationIcon,
   "platform-configuration-health": platformConfigurationIcon,
   "platform-organisation-locations": platformConfigurationIcon,
   "platform-units": platformConfigurationIcon,
@@ -94270,6 +94349,7 @@ const sectionDescriptions = {
   "platform-scheduling-rule-sets": "Scheduling rules for selected units, aircraft and operating areas",
   "appearance": "Choose dark or light display theme",
   "email-activation": "Customer SMTP and activation email delivery settings",
+  "testing-functions": "Temporary reset tools for customer testbeds",
   "emergency": "System freeze and emergency controls"
 };
 const sectionSearchKeywords = {
@@ -94722,6 +94802,16 @@ const sectionSearchKeywords = {
     "test email",
     "activation expiry"
   ],
+  "testing-functions": [
+    "testing functions",
+    "testbed",
+    "reset database",
+    "clear database",
+    "first delivery",
+    "new customer test",
+    "clean testbed",
+    "temporary tools"
+  ],
   "platform-permission-profiles": [
     "master permission profiles",
     "permission profiles",
@@ -94937,6 +95027,7 @@ const sectionColors = {
   "platform-scheduling-rule-sets": "from-cyan-500/20 to-cyan-600/10 border-cyan-500/30 text-cyan-400",
   "appearance": "from-purple-500/20 to-purple-600/10 border-purple-500/30 text-purple-400",
   "email-activation": "from-cyan-500/20 to-cyan-600/10 border-cyan-500/30 text-cyan-400",
+  "testing-functions": "from-red-500/20 to-red-600/10 border-red-500/30 text-red-400",
   // EMERGENCY - red icons
   "emergency": "from-red-500/20 to-red-600/10 border-red-500/30 text-red-400"
 };
@@ -94981,7 +95072,8 @@ const sectionGroups = [
       "platform-settings-visibility",
       "platform-deployment-readiness",
       "email-activation",
-      "platform-licensing"
+      "platform-licensing",
+      "testing-functions"
     ]
   },
   {
@@ -95383,6 +95475,7 @@ const SettingsViewWithMenu = (props) => {
   const [auditRecordingPage, setAuditRecordingPage] = reactExports.useState(auditRecordingPageOptions[0]);
   const [auditRecordingUnlocked, setAuditRecordingUnlocked] = reactExports.useState(false);
   const [, setAuditRecordingRefreshKey] = reactExports.useState(0);
+  const [testingFunctionsAvailable, setTestingFunctionsAvailable] = reactExports.useState(false);
   const sctTerminology = props.sctTerminology || DEFAULT_SCT_TERMINOLOGY$1;
   const continuationCurrencyLabel = `${String(sctTerminology.shortLabel || DEFAULT_SCT_TERMINOLOGY$1.shortLabel || "ContT").trim() || "ContT"} / Currency Events`;
   const isContinuationCurrencySection = (section) => section === "sct-events" || section === "currency-profiles";
@@ -95421,6 +95514,9 @@ const SettingsViewWithMenu = (props) => {
     return null;
   };
   const canAccessSettingsSection = (section) => {
+    if (section === "testing-functions") {
+      return props.currentUserPermission === "Super Admin" && testingFunctionsAvailable;
+    }
     if (hasLegacySettingsAdminRole || hasGeneralSettingsEditPermission) return true;
     if (hasSpecificSettingsEditPermission) {
       const requiredPermission = getRequiredSettingsSectionPermission(section);
@@ -95470,6 +95566,33 @@ const SettingsViewWithMenu = (props) => {
     setAuditRecordingRefreshKey((current) => current + 1);
     props.onShowSuccess(enabled ? "Audit recording enabled for all actions on this page." : "Audit recording disabled for all actions on this page.");
   };
+  reactExports.useEffect(() => {
+    if (props.currentUserPermission !== "Super Admin") {
+      setTestingFunctionsAvailable(false);
+      return;
+    }
+    let cancelled = false;
+    const readTestingFunctionStatus = async () => {
+      try {
+        const sessionToken = localStorage.getItem("dfp_session_token") || "";
+        const response = await fetch("/api/testing-functions/status", {
+          headers: sessionToken ? { Authorization: `Bearer ${sessionToken}` } : void 0
+        });
+        if (!response.ok) {
+          if (!cancelled) setTestingFunctionsAvailable(false);
+          return;
+        }
+        const payload = await response.json().catch(() => ({}));
+        if (!cancelled) setTestingFunctionsAvailable(Boolean(payload?.enabled));
+      } catch {
+        if (!cancelled) setTestingFunctionsAvailable(false);
+      }
+    };
+    void readTestingFunctionStatus();
+    return () => {
+      cancelled = true;
+    };
+  }, [props.currentUserPermission]);
   const changeActiveSection = (section) => {
     if (section !== "currencies") {
       setEmbeddedCurrencyBuilderOpen(false);
@@ -95652,6 +95775,7 @@ const SettingsViewWithMenu = (props) => {
       "organisation": collectSelectedSearchDataTerms(props.organisationSettings, unitContextTerms, resourceRowTerms),
       "crew-composition": collectSelectedSearchDataTerms(aircraftTerms, props.aircraftCrewComposition, props.crewPositionTerminology),
       "appearance": collectSelectedSearchDataTerms(props.fixedCrewTileColourMode, props.activeOperationalModel),
+      "testing-functions": collectSelectedSearchDataTerms("testing functions", "reset database", "testbed", props.currentUserPermission),
       "emergency": collectSelectedSearchDataTerms(props.emergencyFreezeAuthority, props.emergencyFreezeAllowedActions, props.qualificationOptions, props.currentUserQualificationIds)
     };
   }, [
@@ -96198,7 +96322,7 @@ const SettingsViewWithMenu = (props) => {
             ] })
           ] })
         ] }),
-        activeSection !== "scoring-matrix" && activeSection !== "scheduling-rules" && activeSection !== "training-report-template" && activeSection !== "crew-composition" && activeSection !== "standard-missions" && activeSection !== "currency-profiles" && activeSection !== "audit-recording" && activeSection !== "user-list" && activeSection !== "staff-database" && activeSection !== "trainee-database" && activeSection !== "trainee-reallocation" && activeSection !== "organisation" && !isPlatformConfigurationActive && activeSection !== "appearance" && activeSection !== "email-activation" && activeSection !== "people-profile" && (activeSection === "currencies" && embeddedCurrencyBuilderOpen ? /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "h-[calc(100vh-220px)] min-h-[620px] overflow-hidden rounded-lg border border-gray-700 bg-gray-900", children: /* @__PURE__ */ jsxRuntimeExports.jsx(
+        activeSection !== "scoring-matrix" && activeSection !== "scheduling-rules" && activeSection !== "training-report-template" && activeSection !== "crew-composition" && activeSection !== "standard-missions" && activeSection !== "currency-profiles" && activeSection !== "audit-recording" && activeSection !== "user-list" && activeSection !== "staff-database" && activeSection !== "trainee-database" && activeSection !== "trainee-reallocation" && activeSection !== "organisation" && !isPlatformConfigurationActive && activeSection !== "appearance" && activeSection !== "email-activation" && activeSection !== "testing-functions" && activeSection !== "people-profile" && (activeSection === "currencies" && embeddedCurrencyBuilderOpen ? /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "h-[calc(100vh-220px)] min-h-[620px] overflow-hidden rounded-lg border border-gray-700 bg-gray-900", children: /* @__PURE__ */ jsxRuntimeExports.jsx(
           CurrencyBuilderView,
           {
             onBack: () => setEmbeddedCurrencyBuilderOpen(false),
@@ -96320,6 +96444,12 @@ const SettingsViewWithMenu = (props) => {
           EmailActivationSettings,
           {
             currentUserPermission: props.currentUserPermission,
+            onShowSuccess: props.onShowSuccess
+          }
+        ),
+        activeSection === "testing-functions" && /* @__PURE__ */ jsxRuntimeExports.jsx(
+          TestingFunctionsSettings,
+          {
             onShowSuccess: props.onShowSuccess
           }
         ),

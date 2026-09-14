@@ -10301,6 +10301,103 @@ function rejectDisabledDebugRoute(res) {
   return false;
 }
 
+// TESTING FUNCTIONS START - temporary customer-testbed reset tools.
+function isTestingFunctionsEnabled() {
+  return String(process.env.DFP_TESTING_FUNCTIONS_ENABLED || '').trim().toLowerCase() === 'true';
+}
+
+function quotePostgresIdentifier(identifier) {
+  return `"${String(identifier || '').replace(/"/g, '""')}"`;
+}
+
+async function requireDirectSuperAdminForTesting(req, res) {
+  const context = await requireDirectAdmin(req, res);
+  if (!context) return null;
+  if (String(context.admin?.role || '').toUpperCase() !== 'SUPER_ADMIN') {
+    res.status(403).json({ error: 'Forbidden', message: 'Super Admin permission is required' });
+    return null;
+  }
+  return context;
+}
+
+app.get('/api/testing-functions/status', async (req, res) => {
+  try {
+    const context = await requireDirectSuperAdminForTesting(req, res);
+    if (!context) return;
+    return res.json({
+      enabled: isTestingFunctionsEnabled(),
+      functions: isTestingFunctionsEnabled() ? ['reset-database'] : [],
+    });
+  } catch (error) {
+    console.error('❌ GET /api/testing-functions/status error:', error);
+    res.status(500).json({ error: 'Internal server error', message: 'Failed to read testing function status' });
+  }
+});
+
+app.post('/api/testing-functions/reset-database', async (req, res) => {
+  try {
+    if (!isTestingFunctionsEnabled()) {
+      return res.status(404).json({ error: 'Not found' });
+    }
+
+    const context = await requireDirectSuperAdminForTesting(req, res);
+    if (!context) return;
+
+    const confirmation = String(req.body?.confirmation || '').trim();
+    if (confirmation !== 'RESET DATABASE') {
+      return res.status(400).json({
+        error: 'Confirmation required',
+        message: 'Type RESET DATABASE exactly before resetting this test database.',
+      });
+    }
+
+    const firstAdminPassword = getConfiguredSecret('DFP_FIRST_ADMIN_PASSWORD', ['INITIAL_ADMIN_PASSWORD']);
+    if (!firstAdminPassword) {
+      return res.status(503).json({
+        error: 'First admin not configured',
+        message: 'DFP_FIRST_ADMIN_PASSWORD must be configured before a test database can be reset.',
+      });
+    }
+
+    const tables = await context.db.$queryRawUnsafe(`
+      SELECT table_name
+      FROM information_schema.tables
+      WHERE table_schema = 'public'
+        AND table_type = 'BASE TABLE'
+        AND table_name <> '_prisma_migrations'
+      ORDER BY table_name
+    `);
+    const tableNames = (tables || [])
+      .map((row) => String(row.table_name || '').trim())
+      .filter(Boolean);
+
+    if (tableNames.length > 0) {
+      const quotedTables = tableNames.map(quotePostgresIdentifier).join(', ');
+      await context.db.$executeRawUnsafe(`TRUNCATE TABLE ${quotedTables} RESTART IDENTITY CASCADE`);
+    }
+
+    userActivationColumnsEnsured = false;
+    firstAdminProvisioningChecked = false;
+    clearLicenseStatusCache();
+
+    await ensureUserActivationColumns(context.db);
+    await ensureFirstAdminProvisioned(context.db);
+
+    const firstAdminUserId = getConfiguredSecret('DFP_FIRST_ADMIN_USERID', ['INITIAL_ADMIN_USERID']) || 'admin';
+    res.json({
+      success: true,
+      message: 'Test database reset to first-delivery state. Sign in again with the initial Organisation Administrator credentials.',
+      tablesReset: tableNames.length,
+      firstAdminUserId,
+      resetAt: new Date().toISOString(),
+    });
+  } catch (error) {
+    console.error('❌ POST /api/testing-functions/reset-database error:', error);
+    res.status(500).json({ error: 'Internal server error', message: 'Failed to reset test database' });
+  }
+});
+// TESTING FUNCTIONS END
+
 const toDirectAdminUser = (user) => ({
   id: user.id,
   userId: user.userId,
