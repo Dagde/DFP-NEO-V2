@@ -16962,6 +16962,9 @@ async function ensureDailySnapshotTable(db) {
 	      ALTER TABLE "DeviceToken" ADD COLUMN IF NOT EXISTS "userDbId" TEXT;
 	    `);
 	    await db.$executeRawUnsafe(`
+	      ALTER TABLE "DeviceToken" ADD COLUMN IF NOT EXISTS "token" TEXT;
+	    `);
+	    await db.$executeRawUnsafe(`
 	      ALTER TABLE "DeviceToken" ADD COLUMN IF NOT EXISTS "deviceToken" TEXT;
 	    `);
 	    await db.$executeRawUnsafe(`
@@ -16975,6 +16978,9 @@ async function ensureDailySnapshotTable(db) {
 	    `);
 	    await db.$executeRawUnsafe(`
 	      ALTER TABLE "DeviceToken" ADD COLUMN IF NOT EXISTS "isActive" BOOLEAN NOT NULL DEFAULT TRUE;
+	    `);
+	    await db.$executeRawUnsafe(`
+	      ALTER TABLE "DeviceToken" ADD COLUMN IF NOT EXISTS "registeredAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP;
 	    `);
 	    await db.$executeRawUnsafe(`
 	      ALTER TABLE "DeviceToken" ADD COLUMN IF NOT EXISTS "lastSeenAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP;
