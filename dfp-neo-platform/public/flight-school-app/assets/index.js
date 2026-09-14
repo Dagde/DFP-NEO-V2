@@ -95995,17 +95995,6 @@ const SettingsViewWithMenu = (props) => {
       cancelled = true;
     };
   }, [activeSection, settingsSearchFocus]);
-  const getAccentClasses = (accent) => {
-    const classes = {
-      cyan: { rail: "bg-cyan-400", badge: "bg-cyan-500/10 border-cyan-500/30", text: "text-cyan-300", border: "border-cyan-500/30", shadow: "hover:shadow-cyan-950/30" },
-      violet: { rail: "bg-violet-400", badge: "bg-violet-500/10 border-violet-500/30", text: "text-violet-300", border: "border-violet-500/30", shadow: "hover:shadow-violet-950/30" },
-      sky: { rail: "bg-sky-400", badge: "bg-sky-500/10 border-sky-500/30", text: "text-sky-300", border: "border-sky-500/30", shadow: "hover:shadow-sky-950/30" },
-      amber: { rail: "bg-amber-400", badge: "bg-amber-500/10 border-amber-500/30", text: "text-amber-300", border: "border-amber-500/30", shadow: "hover:shadow-amber-950/30" },
-      emerald: { rail: "bg-emerald-400", badge: "bg-emerald-500/10 border-emerald-500/30", text: "text-emerald-300", border: "border-emerald-500/30", shadow: "hover:shadow-emerald-950/30" },
-      red: { rail: "bg-red-400", badge: "bg-red-500/10 border-red-500/30", text: "text-red-300", border: "border-red-500/30", shadow: "hover:shadow-red-950/30" }
-    };
-    return classes[accent] || classes.sky;
-  };
   const visibleSettingGroups = reactExports.useMemo(() => isSearchActive ? sectionGroups.map((group) => ({
     ...group,
     visibleSections: (group.searchSections || group.sections).filter((section) => canAccessSettingsSection(section) && matchesSettingsSearch(section, group.label))
@@ -96072,66 +96061,35 @@ const SettingsViewWithMenu = (props) => {
             /* @__PURE__ */ jsxRuntimeExports.jsx(AuditButton, { pageName: "Settings" })
           ] })
         ] }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "border-t border-gray-700 p-4 lg:p-5 xl:hidden", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mb-4 rounded-lg border border-gray-700 bg-gray-900/45 p-4 xl:hidden", children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "mb-2 block text-[11px] font-semibold uppercase tracking-widest text-gray-500", children: "Find Setting" }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx(
-            "input",
-            {
-              type: "search",
-              value: settingsSearch,
-              onChange: (event) => setSettingsSearch(event.target.value),
-              onBeforeInput: (event) => handleEditableTextBeforeInput(event, setSettingsSearch),
-              onKeyDownCapture: (event) => handleEditableTextKeyDownCapture(event, setSettingsSearch),
-              onKeyDown: stopEditableKeyPropagation,
-              placeholder: "Search settings...",
-              className: "w-full rounded-md border border-gray-700 bg-gray-950/70 px-3 py-2 text-sm text-white placeholder:text-gray-600 focus:border-sky-500 focus:outline-none focus:ring-1 focus:ring-sky-500"
-            }
-          )
-        ] }) }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "border-t border-gray-700 p-4 lg:p-5", children: hasSettingsMatches ? /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "grid gap-3 md:grid-cols-2 2xl:grid-cols-3", children: visibleSettingGroups.map((group) => {
-          const accentClasses = getAccentClasses(group.accent);
-          const defaultSection = group.visibleSections.includes(group.defaultSection) ? group.defaultSection : group.visibleSections[0];
-          return /* @__PURE__ */ jsxRuntimeExports.jsxs(
-            "button",
-            {
-              type: "button",
-              onClick: () => selectSettingsSectionFromMenu(defaultSection, group.label),
-              className: `group flex min-h-[120px] items-stretch overflow-hidden rounded-lg border ${accentClasses.border} bg-gray-900/55 text-left shadow-lg transition hover:-translate-y-0.5 hover:bg-gray-900 ${accentClasses.shadow}`,
-              children: [
-                /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: `w-1.5 flex-shrink-0 ${accentClasses.rail}` }),
-                /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "flex min-w-0 flex-1 flex-col gap-3 p-4", children: [
-                  /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "flex items-center gap-3", children: [
-                    /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: `flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-md border ${accentClasses.badge} ${accentClasses.text}`, children: /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "h-5 w-5", children: sectionIcons[defaultSection] }) }),
-                    /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "min-w-0", children: [
-                      /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "block text-base font-bold text-white", children: group.label }),
-                      /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: `block text-[11px] font-semibold uppercase tracking-[0.16em] ${accentClasses.text}`, children: [
-                        group.visibleSections.length,
-                        " page",
-                        group.visibleSections.length === 1 ? "" : "s"
-                      ] })
-                    ] })
-                  ] }),
-                  /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-sm leading-5 text-gray-300", children: group.description }),
-                  /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "mt-auto text-xs font-semibold text-gray-400 group-hover:text-white", children: [
-                    "Open ",
-                    getSectionLabel(defaultSection)
-                  ] })
-                ] })
-              ]
-            },
-            group.label
-          );
-        }) }) : /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded-lg border border-gray-700 bg-gray-900/60 p-8 text-center", children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "font-semibold text-gray-300", children: "No settings match that search." }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx(
-            "button",
-            {
-              onClick: () => setSettingsSearch(""),
-              className: "mt-3 rounded-md bg-gray-700 px-3 py-2 text-sm font-semibold text-white hover:bg-gray-600",
-              children: "Clear Search"
-            }
-          )
-        ] }) })
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "border-t border-gray-700 p-4 lg:p-5 xl:hidden", children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mb-4 rounded-lg border border-gray-700 bg-gray-900/45 p-4 xl:hidden", children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "mb-2 block text-[11px] font-semibold uppercase tracking-widest text-gray-500", children: "Find Setting" }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx(
+              "input",
+              {
+                type: "search",
+                value: settingsSearch,
+                onChange: (event) => setSettingsSearch(event.target.value),
+                onBeforeInput: (event) => handleEditableTextBeforeInput(event, setSettingsSearch),
+                onKeyDownCapture: (event) => handleEditableTextKeyDownCapture(event, setSettingsSearch),
+                onKeyDown: stopEditableKeyPropagation,
+                placeholder: "Search settings...",
+                className: "w-full rounded-md border border-gray-700 bg-gray-950/70 px-3 py-2 text-sm text-white placeholder:text-gray-600 focus:border-sky-500 focus:outline-none focus:ring-1 focus:ring-sky-500"
+              }
+            )
+          ] }),
+          !hasSettingsMatches && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded-lg border border-gray-700 bg-gray-900/60 p-8 text-center", children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "font-semibold text-gray-300", children: "No settings match that search." }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx(
+              "button",
+              {
+                onClick: () => setSettingsSearch(""),
+                className: "mt-3 rounded-md bg-gray-700 px-3 py-2 text-sm font-semibold text-white hover:bg-gray-600",
+                children: "Clear Search"
+              }
+            )
+          ] })
+        ] })
       ] }) }),
       activeSection !== "home" && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "relative", children: [
         isFrozen && activeSection !== "emergency" && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "absolute inset-0 z-50 bg-transparent cursor-not-allowed", style: { pointerEvents: "all" } }),

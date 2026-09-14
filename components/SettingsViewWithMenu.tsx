@@ -2082,45 +2082,7 @@ export const SettingsViewWithMenu: React.FC<SettingsViewWithMenuProps> = (props)
                                             className="w-full rounded-md border border-gray-700 bg-gray-950/70 px-3 py-2 text-sm text-white placeholder:text-gray-600 focus:border-sky-500 focus:outline-none focus:ring-1 focus:ring-sky-500"
                                         />
                                     </div>
-                                </div>
-                                <div className="border-t border-gray-700 p-4 lg:p-5">
-                                    {hasSettingsMatches ? (
-                                        <div className="grid gap-3 md:grid-cols-2 2xl:grid-cols-3">
-                                            {visibleSettingGroups.map(group => {
-                                                const accentClasses = getAccentClasses(group.accent);
-                                                const defaultSection = group.visibleSections.includes(group.defaultSection)
-                                                    ? group.defaultSection
-                                                    : group.visibleSections[0];
-                                                return (
-                                                    <button
-                                                        key={group.label}
-                                                        type="button"
-                                                        onClick={() => selectSettingsSectionFromMenu(defaultSection, group.label)}
-                                                        className={`group flex min-h-[120px] items-stretch overflow-hidden rounded-lg border ${accentClasses.border} bg-gray-900/55 text-left shadow-lg transition hover:-translate-y-0.5 hover:bg-gray-900 ${accentClasses.shadow}`}
-                                                    >
-                                                        <span className={`w-1.5 flex-shrink-0 ${accentClasses.rail}`} />
-                                                        <span className="flex min-w-0 flex-1 flex-col gap-3 p-4">
-                                                            <span className="flex items-center gap-3">
-                                                                <span className={`flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-md border ${accentClasses.badge} ${accentClasses.text}`}>
-                                                                    <span className="h-5 w-5">{sectionIcons[defaultSection]}</span>
-                                                                </span>
-                                                                <span className="min-w-0">
-                                                                    <span className="block text-base font-bold text-white">{group.label}</span>
-                                                                    <span className={`block text-[11px] font-semibold uppercase tracking-[0.16em] ${accentClasses.text}`}>
-                                                                        {group.visibleSections.length} page{group.visibleSections.length === 1 ? '' : 's'}
-                                                                    </span>
-                                                                </span>
-                                                            </span>
-                                                            <span className="text-sm leading-5 text-gray-300">{group.description}</span>
-                                                            <span className="mt-auto text-xs font-semibold text-gray-400 group-hover:text-white">
-                                                                Open {getSectionLabel(defaultSection)}
-                                                            </span>
-                                                        </span>
-                                                    </button>
-                                                );
-                                            })}
-                                        </div>
-                                    ) : (
+                                    {!hasSettingsMatches && (
                                         <div className="rounded-lg border border-gray-700 bg-gray-900/60 p-8 text-center">
                                             <p className="font-semibold text-gray-300">No settings match that search.</p>
                                             <button
