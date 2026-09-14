@@ -520,6 +520,7 @@ let prisma = null;
 let prismaMaintenanceStarted = false;
 let prismaMaintenancePromise = null;
 let userActivationColumnsEnsured = false;
+let firstAdminProvisioningChecked = false;
 
 async function ensureUserActivationColumns(db) {
   if (userActivationColumnsEnsured) return;
@@ -532,6 +533,48 @@ async function ensureUserActivationColumns(db) {
   await db.$executeRawUnsafe(`ALTER TABLE "User" ADD COLUMN IF NOT EXISTS "activationLockedUntil" TIMESTAMP(3)`);
   await db.$executeRawUnsafe(`CREATE INDEX IF NOT EXISTS "User_activationCodeExpiresAt_idx" ON "User"("activationCodeExpiresAt")`);
   userActivationColumnsEnsured = true;
+}
+
+async function ensureFirstAdminProvisioned(db) {
+  if (firstAdminProvisioningChecked) return;
+  firstAdminProvisioningChecked = true;
+
+  const firstAdminPassword = getConfiguredSecret('DFP_FIRST_ADMIN_PASSWORD', ['INITIAL_ADMIN_PASSWORD']);
+  if (!firstAdminPassword) {
+    console.log('First admin provisioning skipped - DFP_FIRST_ADMIN_PASSWORD is not configured');
+    return;
+  }
+
+  const userCountRows = await db.$queryRawUnsafe(`SELECT COUNT(*)::int AS count FROM "User"`);
+  const userCount = Number(userCountRows?.[0]?.count || 0);
+  if (userCount > 0) {
+    console.log(`First admin provisioning skipped - User table already contains ${userCount} account${userCount === 1 ? '' : 's'}`);
+    return;
+  }
+
+  const firstAdminUserId = getConfiguredSecret('DFP_FIRST_ADMIN_USERID', ['INITIAL_ADMIN_USERID']) || 'admin';
+  const firstAdminEmail = getConfiguredSecret('DFP_FIRST_ADMIN_EMAIL', ['INITIAL_ADMIN_EMAIL']) || null;
+  const firstAdminFirstName = getConfiguredSecret('DFP_FIRST_ADMIN_FIRST_NAME', ['INITIAL_ADMIN_FIRST_NAME']) || 'System';
+  const firstAdminLastName = getConfiguredSecret('DFP_FIRST_ADMIN_LAST_NAME', ['INITIAL_ADMIN_LAST_NAME']) || 'Administrator';
+  const bcrypt = require('bcryptjs');
+  const hashedPassword = await bcrypt.hash(firstAdminPassword, 12);
+  const createdUserId = crypto.randomUUID();
+
+  await db.$executeRawUnsafe(
+    `INSERT INTO "User" (
+       id, "userId", username, email, password, role, "firstName", "lastName",
+       "isActive", "mustChangePassword", "createdAt", "updatedAt"
+     )
+     VALUES ($1, $2, $2, $3, $4, 'SUPER_ADMIN'::"Role", $5, $6, true, true, NOW(), NOW())`,
+    createdUserId,
+    firstAdminUserId,
+    firstAdminEmail,
+    hashedPassword,
+    firstAdminFirstName,
+    firstAdminLastName
+  );
+
+  console.log(`First organisation administrator provisioned: ${firstAdminUserId} (${firstAdminEmail || 'no email configured'})`);
 }
 
 const ACTIVATION_SUFFIX_CHARS = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz23456789';
@@ -1382,6 +1425,7 @@ async function getPrisma() {
     await prisma.$connect();
     console.log(`✅ Prisma connected to database in ${Date.now() - startedAt}ms`);
     await ensureUserActivationColumns(prisma);
+    await ensureFirstAdminProvisioned(prisma);
     if (process.env.DFP_NEO_BLOCKING_DB_MAINTENANCE === 'true') {
       prismaMaintenanceStarted = true;
       prismaMaintenancePromise = runPrismaRuntimeMaintenance(prisma);
