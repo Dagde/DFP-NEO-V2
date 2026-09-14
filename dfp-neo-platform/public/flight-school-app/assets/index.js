@@ -96011,6 +96011,118 @@ const SettingsViewWithMenu = (props) => {
     props.canUsePlatformPermission
   ]);
   const hasSettingsMatches = visibleSettingGroups.length > 0;
+  const downloadSettingsMenuTrace = () => {
+    const permissionResults = sectionGroups.map((group) => ({
+      label: group.label,
+      defaultSection: group.defaultSection,
+      sections: group.sections.map((section) => ({
+        section,
+        label: getSectionLabel(section),
+        requiredPermission: getRequiredSettingsSectionPermission(section),
+        canAccess: canAccessSettingsSection(section),
+        matchesSearch: matchesSettingsSearch(section, group.label)
+      })),
+      searchSections: (group.searchSections || []).map((section) => ({
+        section,
+        label: getSectionLabel(section),
+        requiredPermission: getRequiredSettingsSectionPermission(section),
+        canAccess: canAccessSettingsSection(section),
+        matchesSearch: matchesSettingsSearch(section, group.label)
+      }))
+    }));
+    const platformOrganisations = Array.isArray(props.platformConfig?.organisations) ? props.platformConfig?.organisations || [] : [];
+    const platformUnits = platformOrganisations.flatMap((organisation) => Array.isArray(organisation?.units) ? organisation.units : []);
+    const platformLocations = platformOrganisations.flatMap((organisation) => Array.isArray(organisation?.locations) ? organisation.locations : []);
+    const trace = {
+      traceName: "dfp-neo-settings-menu-trace",
+      generatedAt: (/* @__PURE__ */ new Date()).toISOString(),
+      url: window.location.href,
+      host: window.location.host,
+      activeSection,
+      search: {
+        settingsSearch,
+        settingsSearchQuery,
+        deferredSettingsSearchQuery,
+        isSearchActive,
+        isSearchFiltering,
+        searchQueryTokens,
+        hasSettingsMatches
+      },
+      permissions: {
+        rawCurrentUserPermission: props.currentUserPermission,
+        currentSettingsPermission,
+        hasLegacySettingsAdminRole,
+        hasSpecificSettingsEditPermission,
+        hasGeneralSettingsEditPermission,
+        testingFunctionsAvailable,
+        canUsePlatformPermissionProvided: typeof props.canUsePlatformPermission === "function",
+        permissionProbe: {
+          settingsView: canUseSettingsPermission("settings.view"),
+          settingsEdit: canUseSettingsPermission("settings.edit"),
+          platformEdit: canUseSettingsPermission("settings.platform.edit"),
+          userAccessEdit: canUseSettingsPermission("settings.userAccess.edit"),
+          rankTerminologyEdit: canUseSettingsPermission("settings.rankTerminology.edit"),
+          schedulingRulesEdit: canUseSettingsPermission("settings.schedulingRules.edit")
+        }
+      },
+      context: {
+        activeUnitCode: props.activeUnitCode,
+        activeUnitCodes: props.activeUnitCodes,
+        activeCompositeUnitCode: props.activeCompositeUnitCode,
+        activeAircraftTypeCode: props.activeAircraftTypeCode,
+        activeOperationalModel: props.activeOperationalModel,
+        activeUnitHasTrainees: props.activeUnitHasTrainees,
+        settingsLoaded: props.settingsLoaded,
+        locations: props.locations,
+        units: props.units,
+        platformUnits: props.platformUnits,
+        platformUnitContexts: props.platformUnitContexts,
+        settingsVisibilityPolicy: props.settingsVisibilityPolicy
+      },
+      platformConfigSummary: {
+        hasPlatformConfig: Boolean(props.platformConfig),
+        organisationCount: platformOrganisations.length,
+        organisations: platformOrganisations.map((organisation) => ({
+          id: organisation?.id,
+          code: organisation?.code,
+          name: organisation?.name,
+          status: organisation?.status,
+          unitCount: Array.isArray(organisation?.units) ? organisation.units.length : 0,
+          locationCount: Array.isArray(organisation?.locations) ? organisation.locations.length : 0,
+          settingsKeys: Object.keys(organisation?.settings || {})
+        })),
+        platformUnitCount: platformUnits.length,
+        platformLocationCount: platformLocations.length
+      },
+      menu: {
+        sectionGroupCount: sectionGroups.length,
+        visibleSettingGroupCount: visibleSettingGroups.length,
+        visibleSettingGroups: visibleSettingGroups.map((group) => ({
+          label: group.label,
+          defaultSection: group.defaultSection,
+          visibleSections: group.visibleSections.map((section) => ({
+            section,
+            label: getSectionLabel(section)
+          }))
+        })),
+        permissionResults
+      },
+      localState: {
+        hasSessionToken: Boolean(localStorage.getItem("dfp_session_token")),
+        selectedProfile: localStorage.getItem("dfp_selected_profile"),
+        currentUserName: localStorage.getItem("dfp_current_user_name")
+      }
+    };
+    const blob = new Blob([JSON.stringify(trace, null, 2)], { type: "application/json" });
+    const link = document.createElement("a");
+    link.href = URL.createObjectURL(blob);
+    const unitLabel = String(props.activeCompositeUnitCode || props.activeUnitCode || currentSettingsPermission || "unknown").replace(/[^A-Za-z0-9+_-]+/g, "-");
+    link.download = `dfp-neo-settings-menu-trace-${unitLabel}-${(/* @__PURE__ */ new Date()).toISOString().replace(/[:.]/g, "-")}.json`;
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    window.setTimeout(() => URL.revokeObjectURL(link.href), 1e3);
+  };
   reactExports.useEffect(() => {
     if (activeSection === "home") return;
     if (Object.prototype.hasOwnProperty.call(sectionLabels, activeSection) && canAccessSettingsSection(activeSection)) return;
@@ -96058,6 +96170,15 @@ const SettingsViewWithMenu = (props) => {
           /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "min-w-0", children: /* @__PURE__ */ jsxRuntimeExports.jsx("h1", { className: "text-2xl lg:text-3xl font-bold text-white tracking-tight", children: "Settings" }) }),
           /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "ml-auto flex items-center gap-[10px]", children: [
             !["Super Admin", "Admin", "Scheduler"].includes(currentSettingsPermission) && /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-xs text-yellow-300 bg-yellow-900/30 border border-yellow-600/40 rounded px-2 py-1 whitespace-nowrap", children: "Read-Only Mode" }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx(
+              "button",
+              {
+                type: "button",
+                onClick: downloadSettingsMenuTrace,
+                className: "btn-aluminium-brushed rounded-md px-3 py-2 text-xs font-bold text-gray-900",
+                children: "Download Settings Trace"
+              }
+            ),
             /* @__PURE__ */ jsxRuntimeExports.jsx(AuditButton, { pageName: "Settings" })
           ] })
         ] }),
@@ -96109,6 +96230,15 @@ const SettingsViewWithMenu = (props) => {
           /* @__PURE__ */ jsxRuntimeExports.jsx("h2", { className: "text-xl sm:text-2xl font-bold text-white", children: getSectionLabel(activeSection) }),
           /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "ml-auto flex items-center gap-[10px]", children: [
             !["Super Admin", "Admin", "Scheduler"].includes(currentSettingsPermission) && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-sm text-yellow-200 bg-yellow-900/30 border border-yellow-600/50 rounded px-3 py-2", children: /* @__PURE__ */ jsxRuntimeExports.jsx("strong", { children: "Read-Only Mode" }) }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx(
+              "button",
+              {
+                type: "button",
+                onClick: downloadSettingsMenuTrace,
+                className: "btn-aluminium-brushed rounded-md px-3 py-2 text-xs font-bold text-gray-900",
+                children: "Download Settings Trace"
+              }
+            ),
             /* @__PURE__ */ jsxRuntimeExports.jsx(AuditButton, { pageName: `Settings - ${getSectionLabel(activeSection)}` })
           ] })
         ] }),
