@@ -6,7 +6,7 @@ export interface SctTerminology {
 }
 
 export const DEFAULT_SCT_TERMINOLOGY: SctTerminology = {
-  shortLabel: 'ContT',
+  shortLabel: 'CT',
   longLabel: 'Continuation Training',
 };
 

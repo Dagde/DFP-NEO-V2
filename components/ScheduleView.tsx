@@ -1901,7 +1901,7 @@ const OrganisationMyUnitSettings: React.FC<{
     const [activeCategory, setActiveCategory] = useState('identity');
     const unitTypeOptions = useMemo(() => normaliseUnitTypeOptions(platformConfig), [platformConfig]);
     const configuredContinuationShortLabel = useMemo(
-        () => getSctTerminology(platformConfig, unitCode).shortLabel || 'ContT',
+        () => getSctTerminology(platformConfig, unitCode).shortLabel || 'CT',
         [platformConfig, unitCode],
     );
     const configuredContinuationCurrencyEventsLabel = `${configuredContinuationShortLabel} / Currency Events`;
@@ -2844,7 +2844,7 @@ const InitialSetupWizard: React.FC<{
     const [mode, setMode] = useState<InitialSetupWizardMode>('detect');
     const unitTypeOptions = useMemo(() => normaliseUnitTypeOptions(platformConfig), [platformConfig]);
     const configuredContinuationShortLabel = useMemo(
-        () => getSctTerminology(platformConfig, unitCode).shortLabel || 'ContT',
+        () => getSctTerminology(platformConfig, unitCode).shortLabel || 'CT',
         [platformConfig, unitCode],
     );
     const configuredContinuationCurrencyEventsLabel = `${configuredContinuationShortLabel} / Currency Events`;

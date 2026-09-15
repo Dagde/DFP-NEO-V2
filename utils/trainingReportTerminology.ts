@@ -96,14 +96,14 @@ export interface TrainingReportTemplate {
   };
 }
 
-export const TRAINING_REPORT_NAME_MAX_LENGTH = 10;
+export const TRAINING_REPORT_NAME_MAX_LENGTH = 20;
 export const TRAINING_REPORT_DISPLAY_NAME_MAX_LENGTH = 20;
 export const TRAINING_REPORT_GENERIC_NAME_MAX_LENGTH = 40;
 export const TRAINING_REPORT_FIELD_LABEL_MAX_LENGTH = 40;
 export type TrainingReportCompletionCode = 'DCO' | 'DPCO' | 'DNCO';
 
 export const DEFAULT_TRAINING_REPORT_TERMINOLOGY: TrainingReportTerminology = {
-  name: 'Report',
+  name: 'Training Report',
 };
 
 export const resolveReportAssessorDisplayLabel = (

@@ -296,7 +296,7 @@ const sectionLabels: Record<SettingsMenuSection, string> = {
     'scoring-matrix': 'Scoring Matrix',
     'training-report-template': 'Training Reports',
     'currencies': 'Currency Requirements',
-    'sct-events': 'ContT / Currency Events',
+    'sct-events': 'CT / Currency Events',
     'people-profile': 'NEO Build Course Exclusions',
     'scheduling-rules': 'Scheduling Rules',
     'event-limits': 'Daily Event Limits',
@@ -311,7 +311,7 @@ const sectionLabels: Record<SettingsMenuSection, string> = {
     'organisation': 'Resource Sharing',
     'crew-composition': 'Crew Composition',
     'standard-missions': 'Directed Task Setups',
-    'currency-profiles': 'ContT / Currency Events',
+    'currency-profiles': 'CT / Currency Events',
     'platform-configuration-health': 'Configuration Health',
     'platform-organisation-locations': 'Organisation, Bases & Areas',
     'platform-units': 'Units & Ownership',
@@ -506,7 +506,7 @@ const sectionDescriptions: Record<SettingsMenuSection, string> = {
   'scoring-matrix': 'Configure report elements, grades and performance text',
   'training-report-template': 'Configure report labels, grades and repeat rules',
   'currencies': 'Manage currency expiry requirements',
-  'sct-events': 'Configure ContT and currency event settings',
+  'sct-events': 'Configure CT and currency event settings',
   'people-profile': 'Select courses that NEO Build should leave out of schedule generation',
   'scheduling-rules': 'Event limits, duty rules, turnarounds and dispatch limits',
   'event-limits': 'Set daily event limits and duty supervisor session limits',
@@ -521,7 +521,7 @@ const sectionDescriptions: Record<SettingsMenuSection, string> = {
   'organisation': 'Fleet sharing and multi-unit configuration',
   'crew-composition': 'Aircraft-specific crew roles, crew seats and alternate crew setups',
   'standard-missions': 'Full reusable directed tasks with aircraft, crew, timing and callsign settings',
-  'currency-profiles': 'Configure ContT and currency event settings',
+  'currency-profiles': 'Configure CT and currency event settings',
   'platform-configuration-health': 'Configuration warnings, risks and remediation guidance',
   'platform-organisation-locations': 'Customer organisation, bases, timezones and training areas',
   'platform-units': 'Unit type, base ownership and operating status',
@@ -1387,7 +1387,7 @@ export const SettingsViewWithMenu: React.FC<SettingsViewWithMenuProps> = (props)
     const [, setAuditRecordingRefreshKey] = useState(0);
     const [testingFunctionsAvailable, setTestingFunctionsAvailable] = useState(false);
     const sctTerminology = props.sctTerminology || DEFAULT_SCT_TERMINOLOGY;
-    const continuationCurrencyLabel = `${String(sctTerminology.shortLabel || DEFAULT_SCT_TERMINOLOGY.shortLabel || 'ContT').trim() || 'ContT'} / Currency Events`;
+    const continuationCurrencyLabel = `${String(sctTerminology.shortLabel || DEFAULT_SCT_TERMINOLOGY.shortLabel || 'CT').trim() || 'CT'} / Currency Events`;
     const isContinuationCurrencySection = (section: SettingsMenuSection): boolean =>
         section === 'sct-events' || section === 'currency-profiles';
     const currentSettingsPermission = normaliseSettingsPermissionLabel(props.currentUserPermission);

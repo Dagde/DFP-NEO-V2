@@ -36,7 +36,7 @@ const TrainingReportHateSheetView: React.FC<TrainingReportHateSheetViewProps> = 
   lmpScores,
   assessments,
   onSelectLmpScore,
-  reportName = 'Report',
+  reportName = 'Training Report',
   trainingReportTerminology = DEFAULT_TRAINING_REPORT_TERMINOLOGY,
   trainingReportTemplate = null,
 }) => {

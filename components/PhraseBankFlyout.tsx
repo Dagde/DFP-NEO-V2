@@ -58,7 +58,7 @@ const DraftPhraseTextArea: React.FC<{
     );
 };
 
-const PhraseBankFlyout: React.FC<PhraseBankFlyoutProps> = ({ onClose, phraseBank, onUpdatePhraseBank, initialDimension = 'Airmanship', reportName = 'Report' }) => {
+const PhraseBankFlyout: React.FC<PhraseBankFlyoutProps> = ({ onClose, phraseBank, onUpdatePhraseBank, initialDimension = 'Airmanship', reportName = 'Training Report' }) => {
     const [activeMainTab, setActiveMainTab] = useState<'Core Dimensions' | 'Elements'>('Core Dimensions');
     const [activeDimension, setActiveDimension] = useState<'Airmanship' | 'Preparation' | 'Technique'>(initialDimension);
     

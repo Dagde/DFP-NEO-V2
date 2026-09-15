@@ -1353,7 +1353,7 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
   formationCallsigns = [],
   staffQualificationCatalogue,
   instructorLabel = 'Instructor',
-  continuationShortLabel = 'ContT',
+  continuationShortLabel = 'CT',
   currentUserRole = '',
   onNavigateToSettingsSection,
 }) => {

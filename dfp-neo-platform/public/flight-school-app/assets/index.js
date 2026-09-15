@@ -5233,12 +5233,12 @@ const DEFAULT_PHRASE_BANK = {
     ]
   }
 };
-const TRAINING_REPORT_NAME_MAX_LENGTH = 10;
+const TRAINING_REPORT_NAME_MAX_LENGTH = 20;
 const TRAINING_REPORT_DISPLAY_NAME_MAX_LENGTH = 20;
 const TRAINING_REPORT_GENERIC_NAME_MAX_LENGTH = 40;
 const TRAINING_REPORT_FIELD_LABEL_MAX_LENGTH = 40;
 const DEFAULT_TRAINING_REPORT_TERMINOLOGY = {
-  name: "Report"
+  name: "Training Report"
 };
 const resolveReportAssessorDisplayLabel = (assessorFieldLabel, instructorDisplayLabel) => {
   const configuredInstructor = cleanLabel$1(instructorDisplayLabel, "Instructor", TRAINING_REPORT_FIELD_LABEL_MAX_LENGTH) || "Instructor";
@@ -5659,7 +5659,7 @@ const forfeitTrainingReportFollowUpForRpl = (item) => {
   };
 };
 const DEFAULT_SCT_TERMINOLOGY$1 = {
-  shortLabel: "ContT",
+  shortLabel: "CT",
   longLabel: "Continuation Training"
 };
 const SCT_SHORT_LABEL_MAX_LENGTH = 12;
@@ -18755,7 +18755,7 @@ const PlatformConfigurationSettings = ({
   const sctTerminology = normaliseSctTerminology(
     primaryOrganisationSettings.sctTerminology || null
   );
-  const continuationCurrencyShortLabel = String(sctTerminology.shortLabel || DEFAULT_SCT_TERMINOLOGY.shortLabel || "ContT").trim() || "ContT";
+  const continuationCurrencyShortLabel = String(sctTerminology.shortLabel || DEFAULT_SCT_TERMINOLOGY.shortLabel || "CT").trim() || "CT";
   const trainingReportTerminology = normaliseTrainingReportTerminology(
     primaryOrganisationSettings.trainingReportTerminology || null
   );
@@ -27427,7 +27427,7 @@ This removes them from DFP Resource Rows. Press Save in this section to apply th
                     disabled: !canEditRankTerminology,
                     maxLength: TRAINING_REPORT_NAME_MAX_LENGTH,
                     onCommit: (value) => updateTrainingReportTerminology({ name: value }),
-                    info: "The compact name users see for a completed assessment or training report. Example: Report, Grade Form, Assessment."
+                    info: "The name users see for a completed assessment or training report. Example: Training Report, Grade Form, Assessment."
                   }
                 ),
                 /* @__PURE__ */ jsxRuntimeExports.jsx(
@@ -27438,7 +27438,7 @@ This removes them from DFP Resource Rows. Press Save in this section to apply th
                     disabled: !canEditRankTerminology,
                     maxLength: SCT_SHORT_LABEL_MAX_LENGTH,
                     onCommit: (value) => updateSctTerminology({ shortLabel: value }),
-                    info: "The short label for staff continuation training events. Example: ContT, SCT."
+                    info: "The short label for staff continuation training events. Example: CT, SCT."
                   }
                 ),
                 /* @__PURE__ */ jsxRuntimeExports.jsx(
@@ -27684,7 +27684,7 @@ This removes them from DFP Resource Rows. Press Save in this section to apply th
                   disabled: !canEditRankTerminology,
                   maxLength: TRAINING_REPORT_NAME_MAX_LENGTH,
                   onCommit: (value) => updateTrainingReportTerminology({ name: value }),
-                  info: `The compact organisation-specific report name used in tight spaces such as Performance History type pills. Maximum ${TRAINING_REPORT_NAME_MAX_LENGTH} characters. Default: Report. Examples: Report, Grade Form, Assessment.`
+                  info: `The organisation-specific report name used in spaces such as Performance History type pills. Maximum ${TRAINING_REPORT_NAME_MAX_LENGTH} characters. Default: Training Report. Examples: Training Report, Grade Form, Assessment.`
                 }
               ),
               /* @__PURE__ */ jsxRuntimeExports.jsx(
@@ -31111,7 +31111,7 @@ const OrganisationMyUnitSettings = ({ platformConfig, unitCode, formationCallsig
   const [activeCategory, setActiveCategory] = reactExports.useState("identity");
   const unitTypeOptions = reactExports.useMemo(() => normaliseUnitTypeOptions(platformConfig), [platformConfig]);
   const configuredContinuationShortLabel = reactExports.useMemo(
-    () => getSctTerminology(platformConfig, unitCode).shortLabel || "ContT",
+    () => getSctTerminology(platformConfig, unitCode).shortLabel || "CT",
     [platformConfig, unitCode]
   );
   const configuredContinuationCurrencyEventsLabel = `${configuredContinuationShortLabel} / Currency Events`;
@@ -31752,7 +31752,7 @@ const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, lo
   const [mode, setMode] = reactExports.useState("detect");
   const unitTypeOptions = reactExports.useMemo(() => normaliseUnitTypeOptions(platformConfig), [platformConfig]);
   const configuredContinuationShortLabel = reactExports.useMemo(
-    () => getSctTerminology(platformConfig, unitCode).shortLabel || "ContT",
+    () => getSctTerminology(platformConfig, unitCode).shortLabel || "CT",
     [platformConfig, unitCode]
   );
   const configuredContinuationCurrencyEventsLabel = `${configuredContinuationShortLabel} / Currency Events`;
@@ -67140,7 +67140,7 @@ const PrioritiesView = ({
   formationCallsigns = [],
   staffQualificationCatalogue: staffQualificationCatalogue2,
   instructorLabel: instructorLabel2 = "Instructor",
-  continuationShortLabel = "ContT",
+  continuationShortLabel = "CT",
   currentUserRole: currentUserRole2 = "",
   onNavigateToSettingsSection
 }) => {
@@ -71312,7 +71312,7 @@ const PrioritiesViewWithMenu = (props) => {
     "events-builder": [
       { label: "Highest Priority Table", target: ".highest-priority-events-card" },
       { label: "Directed Tasks", target: ".tasking-events-card" },
-      { label: `${props.continuationShortLabel || "ContT"} / Currency Requests`, target: ".specific-currency-card" },
+      { label: `${props.continuationShortLabel || "CT"} / Currency Requests`, target: ".specific-currency-card" },
       { label: "Saved Special Events", target: ".saved-special-events-card" }
     ],
     "deployments": [
@@ -94423,7 +94423,7 @@ const sectionLabels = {
   "scoring-matrix": "Scoring Matrix",
   "training-report-template": "Training Reports",
   "currencies": "Currency Requirements",
-  "sct-events": "ContT / Currency Events",
+  "sct-events": "CT / Currency Events",
   "people-profile": "NEO Build Course Exclusions",
   "scheduling-rules": "Scheduling Rules",
   "event-limits": "Daily Event Limits",
@@ -94438,7 +94438,7 @@ const sectionLabels = {
   "organisation": "Resource Sharing",
   "crew-composition": "Crew Composition",
   "standard-missions": "Directed Task Setups",
-  "currency-profiles": "ContT / Currency Events",
+  "currency-profiles": "CT / Currency Events",
   "platform-configuration-health": "Configuration Health",
   "platform-organisation-locations": "Organisation, Bases & Areas",
   "platform-units": "Units & Ownership",
@@ -94578,7 +94578,7 @@ const sectionDescriptions = {
   "scoring-matrix": "Configure report elements, grades and performance text",
   "training-report-template": "Configure report labels, grades and repeat rules",
   "currencies": "Manage currency expiry requirements",
-  "sct-events": "Configure ContT and currency event settings",
+  "sct-events": "Configure CT and currency event settings",
   "people-profile": "Select courses that NEO Build should leave out of schedule generation",
   "scheduling-rules": "Event limits, duty rules, turnarounds and dispatch limits",
   "event-limits": "Set daily event limits and duty supervisor session limits",
@@ -94593,7 +94593,7 @@ const sectionDescriptions = {
   "organisation": "Fleet sharing and multi-unit configuration",
   "crew-composition": "Aircraft-specific crew roles, crew seats and alternate crew setups",
   "standard-missions": "Full reusable directed tasks with aircraft, crew, timing and callsign settings",
-  "currency-profiles": "Configure ContT and currency event settings",
+  "currency-profiles": "Configure CT and currency event settings",
   "platform-configuration-health": "Configuration warnings, risks and remediation guidance",
   "platform-organisation-locations": "Customer organisation, bases, timezones and training areas",
   "platform-units": "Unit type, base ownership and operating status",
@@ -95779,7 +95779,7 @@ const SettingsViewWithMenu = (props) => {
   const [, setAuditRecordingRefreshKey] = reactExports.useState(0);
   const [testingFunctionsAvailable, setTestingFunctionsAvailable] = reactExports.useState(false);
   const sctTerminology = props.sctTerminology || DEFAULT_SCT_TERMINOLOGY$1;
-  const continuationCurrencyLabel = `${String(sctTerminology.shortLabel || DEFAULT_SCT_TERMINOLOGY$1.shortLabel || "ContT").trim() || "ContT"} / Currency Events`;
+  const continuationCurrencyLabel = `${String(sctTerminology.shortLabel || DEFAULT_SCT_TERMINOLOGY$1.shortLabel || "CT").trim() || "CT"} / Currency Events`;
   const isContinuationCurrencySection = (section) => section === "sct-events" || section === "currency-profiles";
   const currentSettingsPermission = normaliseSettingsPermissionLabel(props.currentUserPermission);
   const getSectionLabel = (section) => isContinuationCurrencySection(section) ? continuationCurrencyLabel : sectionLabels[section];

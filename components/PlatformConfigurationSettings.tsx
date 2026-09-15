@@ -3158,7 +3158,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
   const sctTerminology = normaliseSctTerminology(
     primaryOrganisationSettings.sctTerminology || null,
   );
-  const continuationCurrencyShortLabel = String(sctTerminology.shortLabel || DEFAULT_SCT_TERMINOLOGY.shortLabel || 'ContT').trim() || 'ContT';
+  const continuationCurrencyShortLabel = String(sctTerminology.shortLabel || DEFAULT_SCT_TERMINOLOGY.shortLabel || 'CT').trim() || 'CT';
   const continuationCurrencyEventsLabel = `${continuationCurrencyShortLabel} / Currency Events`;
   const trainingReportTerminology = normaliseTrainingReportTerminology(
     primaryOrganisationSettings.trainingReportTerminology || null,
@@ -13257,7 +13257,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
                   disabled={!canEditRankTerminology}
                   maxLength={TRAINING_REPORT_NAME_MAX_LENGTH}
                   onCommit={(value) => updateTrainingReportTerminology({ name: value })}
-                  info="The compact name users see for a completed assessment or training report. Example: Report, Grade Form, Assessment."
+                  info="The name users see for a completed assessment or training report. Example: Training Report, Grade Form, Assessment."
                 />
                 <DraftField
                   label="Continuation Training Short Label"
@@ -13265,7 +13265,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
                   disabled={!canEditRankTerminology}
                   maxLength={SCT_SHORT_LABEL_MAX_LENGTH}
                   onCommit={(value) => updateSctTerminology({ shortLabel: value })}
-                  info="The short label for staff continuation training events. Example: ContT, SCT."
+                  info="The short label for staff continuation training events. Example: CT, SCT."
                 />
                 <DraftField
                   label="Continuation Training Full Name"
@@ -13493,7 +13493,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
               disabled={!canEditRankTerminology}
               maxLength={TRAINING_REPORT_NAME_MAX_LENGTH}
               onCommit={(value) => updateTrainingReportTerminology({ name: value })}
-              info={`The compact organisation-specific report name used in tight spaces such as Performance History type pills. Maximum ${TRAINING_REPORT_NAME_MAX_LENGTH} characters. Default: Report. Examples: Report, Grade Form, Assessment.`}
+              info={`The organisation-specific report name used in spaces such as Performance History type pills. Maximum ${TRAINING_REPORT_NAME_MAX_LENGTH} characters. Default: Training Report. Examples: Training Report, Grade Form, Assessment.`}
             />
             <DraftField
               label="Continuation Training Short Label"
