@@ -10351,6 +10351,23 @@ app.post('/api/testing-functions/reset-database', async (req, res) => {
       });
     }
 
+    const password = String(req.body?.password || '');
+    if (!password) {
+      return res.status(400).json({
+        error: 'Password required',
+        message: 'Enter your current password before resetting this test database.',
+      });
+    }
+
+    const bcrypt = require('bcryptjs');
+    const validPassword = await bcrypt.compare(password, context.admin.password || '');
+    if (!validPassword) {
+      return res.status(403).json({
+        error: 'Password rejected',
+        message: 'The password was not accepted. The database was not reset.',
+      });
+    }
+
     const firstAdminPassword = getConfiguredSecret('DFP_FIRST_ADMIN_PASSWORD', ['INITIAL_ADMIN_PASSWORD']);
     if (!firstAdminPassword) {
       return res.status(503).json({

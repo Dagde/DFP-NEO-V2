@@ -1,4 +1,6 @@
 import React, { useState } from 'react';
+import { showDarkAlert, showDarkConfirm, showDarkPrompt } from './DarkMessageModal';
+import { verifyCurrentUserPassword } from '../utils/passwordVerification';
 
 interface TestingFunctionsSettingsProps {
   onShowSuccess?: (message: string) => void;
@@ -16,11 +18,36 @@ const TestingFunctionsSettings: React.FC<TestingFunctionsSettingsProps> = ({ onS
 
   const resetDatabase = async () => {
     if (!canReset) return;
-    setIsResetting(true);
     setMessage('');
     setError('');
 
     try {
+      const password = await showDarkPrompt({
+        title: 'Testing Functions Password Required',
+        message: 'Enter your current password to continue with the test database reset.',
+        inputLabel: 'Password',
+        inputType: 'password',
+        inputPlaceholder: 'Enter password',
+        confirmText: 'Continue',
+        cancelText: 'Cancel',
+        variant: 'warning',
+      });
+      if (!password) return;
+
+      const passwordAccepted = await verifyCurrentUserPassword(password);
+      if (!passwordAccepted) {
+        await showDarkAlert('The password was not accepted. The database was not reset.', 'Password Required', 'warning');
+        return;
+      }
+
+      const finalConfirmation = await showDarkConfirm(
+        'This will erase this test database and return it to first-delivery state.\n\nThis cannot be undone.',
+        'Erase Test Database?',
+        'warning',
+      );
+      if (!finalConfirmation) return;
+
+      setIsResetting(true);
       const sessionToken = localStorage.getItem('dfp_session_token') || '';
       const response = await fetch('/api/testing-functions/reset-database', {
         method: 'POST',
@@ -28,7 +55,7 @@ const TestingFunctionsSettings: React.FC<TestingFunctionsSettingsProps> = ({ onS
           'Content-Type': 'application/json',
           ...(sessionToken ? { Authorization: `Bearer ${sessionToken}` } : {}),
         },
-        body: JSON.stringify({ confirmation: REQUIRED_CONFIRMATION }),
+        body: JSON.stringify({ confirmation: REQUIRED_CONFIRMATION, password }),
       });
       const payload = await response.json().catch(() => ({}));
       if (!response.ok) {
@@ -39,6 +66,7 @@ const TestingFunctionsSettings: React.FC<TestingFunctionsSettingsProps> = ({ onS
       localStorage.removeItem('dfp_current_user');
       const successMessage = payload.message || 'Test database reset. Sign in again with the initial Organisation Administrator account.';
       setMessage(successMessage);
+      setConfirmation('');
       onShowSuccess?.(successMessage);
     } catch (resetError: any) {
       setError(resetError?.message || 'The test database could not be reset.');
@@ -65,6 +93,9 @@ const TestingFunctionsSettings: React.FC<TestingFunctionsSettingsProps> = ({ onS
           </p>
           <p className="mt-2 text-sm font-semibold text-red-100">
             You will be signed out after the reset because saved sessions are removed with the database data.
+          </p>
+          <p className="mt-2 text-sm font-semibold text-red-100">
+            After typing the reset phrase, you must enter your password and accept one final irreversible warning before anything is erased.
           </p>
         </div>
 

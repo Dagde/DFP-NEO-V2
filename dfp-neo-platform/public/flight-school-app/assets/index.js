@@ -93910,10 +93910,32 @@ const TestingFunctionsSettings = ({ onShowSuccess }) => {
   const canReset = confirmation.trim() === REQUIRED_CONFIRMATION && !isResetting;
   const resetDatabase = async () => {
     if (!canReset) return;
-    setIsResetting(true);
     setMessage("");
     setError("");
     try {
+      const password = await showDarkPrompt({
+        title: "Testing Functions Password Required",
+        message: "Enter your current password to continue with the test database reset.",
+        inputLabel: "Password",
+        inputType: "password",
+        inputPlaceholder: "Enter password",
+        confirmText: "Continue",
+        cancelText: "Cancel",
+        variant: "warning"
+      });
+      if (!password) return;
+      const passwordAccepted = await verifyCurrentUserPassword(password);
+      if (!passwordAccepted) {
+        await showDarkAlert("The password was not accepted. The database was not reset.", "Password Required", "warning");
+        return;
+      }
+      const finalConfirmation = await showDarkConfirm(
+        "This will erase this test database and return it to first-delivery state.\n\nThis cannot be undone.",
+        "Erase Test Database?",
+        "warning"
+      );
+      if (!finalConfirmation) return;
+      setIsResetting(true);
       const sessionToken = localStorage.getItem("dfp_session_token") || "";
       const response = await fetch("/api/testing-functions/reset-database", {
         method: "POST",
@@ -93921,7 +93943,7 @@ const TestingFunctionsSettings = ({ onShowSuccess }) => {
           "Content-Type": "application/json",
           ...sessionToken ? { Authorization: `Bearer ${sessionToken}` } : {}
         },
-        body: JSON.stringify({ confirmation: REQUIRED_CONFIRMATION })
+        body: JSON.stringify({ confirmation: REQUIRED_CONFIRMATION, password })
       });
       const payload = await response.json().catch(() => ({}));
       if (!response.ok) {
@@ -93931,6 +93953,7 @@ const TestingFunctionsSettings = ({ onShowSuccess }) => {
       localStorage.removeItem("dfp_current_user");
       const successMessage = payload.message || "Test database reset. Sign in again with the initial Organisation Administrator account.";
       setMessage(successMessage);
+      setConfirmation("");
       onShowSuccess?.(successMessage);
     } catch (resetError) {
       setError(resetError?.message || "The test database could not be reset.");
@@ -93947,7 +93970,8 @@ const TestingFunctionsSettings = ({ onShowSuccess }) => {
       /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded-md border border-red-700/50 bg-red-950/25 p-4", children: [
         /* @__PURE__ */ jsxRuntimeExports.jsx("h4", { className: "text-sm font-bold uppercase tracking-widest text-red-200", children: "Reset Test Database" }),
         /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-2 text-sm leading-6 text-gray-200", children: "This clears the current test database back to first-delivery state. It removes configured organisations, units, people, schedules, settings, sessions and imported data, then recreates the initial Organisation Administrator account from the deployment settings." }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-2 text-sm font-semibold text-red-100", children: "You will be signed out after the reset because saved sessions are removed with the database data." })
+        /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-2 text-sm font-semibold text-red-100", children: "You will be signed out after the reset because saved sessions are removed with the database data." }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-2 text-sm font-semibold text-red-100", children: "After typing the reset phrase, you must enter your password and accept one final irreversible warning before anything is erased." })
       ] }),
       /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "block max-w-xl", children: [
         /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "mb-2 block text-[11px] font-semibold uppercase tracking-widest text-gray-400", children: "Type RESET DATABASE to continue" }),
