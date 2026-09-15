@@ -3916,7 +3916,11 @@ const getTaskProfileAbbreviationsForUnit = (config, unitCode) => {
 const DEFAULT_RESOURCE_DISPLAY_NAMES = {
   aircraft: "Aircraft",
   ftd: "FTD",
-  cpt: "CPT"
+  cpt: "CPT",
+  dutySupervisor: "Duty Supervisor",
+  dutySupervisorShort: "Duty Sup",
+  towerDutyInstructor: "Tower Duty Instructor",
+  towerDutyInstructorShort: "TWR DI"
 };
 const cleanLabel$2 = (value, fallback) => {
   if (typeof value !== "string") return fallback;
@@ -3971,13 +3975,19 @@ const getResourceDisplayNames = (resourcePool) => {
   return {
     aircraft: cleanLabel$2(settings.aircraftLabel, aircraftFallback),
     ftd: cleanLabel$2(settings.ftdLabel, DEFAULT_RESOURCE_DISPLAY_NAMES.ftd),
-    cpt: cleanLabel$2(settings.cptLabel, DEFAULT_RESOURCE_DISPLAY_NAMES.cpt)
+    cpt: cleanLabel$2(settings.cptLabel, DEFAULT_RESOURCE_DISPLAY_NAMES.cpt),
+    dutySupervisor: cleanLabel$2(settings.dutySupervisorLabel, DEFAULT_RESOURCE_DISPLAY_NAMES.dutySupervisor),
+    dutySupervisorShort: cleanLabel$2(settings.dutySupervisorShortLabel, DEFAULT_RESOURCE_DISPLAY_NAMES.dutySupervisorShort),
+    towerDutyInstructor: cleanLabel$2(settings.towerDutyInstructorLabel, DEFAULT_RESOURCE_DISPLAY_NAMES.towerDutyInstructor),
+    towerDutyInstructorShort: cleanLabel$2(settings.towerDutyInstructorShortLabel, DEFAULT_RESOURCE_DISPLAY_NAMES.towerDutyInstructorShort)
   };
 };
 const formatResourceLabel = (resourceId, names = DEFAULT_RESOURCE_DISPLAY_NAMES) => {
   if (!resourceId || typeof resourceId !== "string") return resourceId;
   if (resourceId === "FTD") return names.ftd;
   if (resourceId === "CPT") return names.cpt;
+  if (resourceId === "Duty Sup") return names.dutySupervisorShort;
+  if (resourceId === "TWR DI") return names.towerDutyInstructorShort;
   const deployedMatch = resourceId.match(/^Deployed(\s+\d+)$/);
   if (deployedMatch) {
     const deployedLabel = names.aircraft.length >= 5 ? "Dep" : "Deployed";
@@ -4783,6 +4793,7 @@ const DEFAULT_PERSONNEL_DISPLAY_SETTINGS = {
   civilianTitles: DEFAULT_CIVILIAN_TITLES,
   civilianContractorGroupName: "Civilian titles",
   instructorLabel: "Instructor",
+  traineeLabel: "Trainee",
   courseLeadershipEnabled: true,
   courseCommanderLabel: "Cse Commander",
   deputyCourseCommanderLabel: "Deputy Cse Commander",
@@ -4895,6 +4906,7 @@ const normalisePersonnelDisplaySettings = (input) => {
     civilianTitles,
     civilianContractorGroupName: preserveEditableTextSetting(input?.civilianContractorGroupName, DEFAULT_PERSONNEL_DISPLAY_SETTINGS.civilianContractorGroupName),
     instructorLabel: preserveEditableTextSetting(input?.instructorLabel, DEFAULT_PERSONNEL_DISPLAY_SETTINGS.instructorLabel),
+    traineeLabel: preserveEditableTextSetting(input?.traineeLabel, DEFAULT_PERSONNEL_DISPLAY_SETTINGS.traineeLabel),
     courseLeadershipEnabled: input?.courseLeadershipEnabled !== false,
     courseCommanderLabel: preserveEditableTextSetting(input?.courseCommanderLabel, DEFAULT_PERSONNEL_DISPLAY_SETTINGS.courseCommanderLabel),
     deputyCourseCommanderLabel: preserveEditableTextSetting(input?.deputyCourseCommanderLabel, DEFAULT_PERSONNEL_DISPLAY_SETTINGS.deputyCourseCommanderLabel),
@@ -23831,8 +23843,8 @@ This removes them from DFP Resource Rows. Press Save in this section to apply th
                     `Trainer ${pool.rows.cpt}`,
                     `Standby ${pool.rows.standby}`,
                     `Ground ${pool.rows.ground}`,
-                    pool.rows.dutySupervisor ? "Duty Sup" : "",
-                    pool.rows.towerDutyInstructor ? "TWR DI" : ""
+                    pool.rows.dutySupervisor ? pool.settings?.dutySupervisorShortLabel || "Duty Sup" : "",
+                    pool.rows.towerDutyInstructor ? pool.settings?.towerDutyInstructorShortLabel || "TWR DI" : ""
                   ].filter(Boolean).join(" · ") })
                 ] }, `ownership-resource-pool-${pool.code || pool.name}`)) : /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-xs font-semibold text-gray-400", children: "No DFP Resource Rows are visible for this unit context." }) }),
                 /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mt-3 border-t border-gray-800 pt-2 text-[11px] leading-relaxed text-gray-400", children: [
@@ -25462,7 +25474,11 @@ This removes them from DFP Resource Rows. Press Save in this section to apply th
                         /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid gap-3 md:grid-cols-3", children: [
                           /* @__PURE__ */ jsxRuntimeExports.jsx(DraftField, { label: "Aircraft Row Label", value: pool.settings?.aircraftLabel || (displayedResourcePoolAircraftTypeCode ? getAircraftTypeDisplayLabel(displayedResourcePoolAircraftTypeCode) : ""), disabled: !canEditResourcePools, onCommit: (value) => updateResourcePoolSettings(index, { aircraftLabel: value }) }),
                           /* @__PURE__ */ jsxRuntimeExports.jsx(DraftField, { label: "Simulator Row Label", value: pool.settings?.ftdLabel || "FTD", disabled: !canEditResourcePools, onCommit: (value) => updateResourcePoolSettings(index, { ftdLabel: value }) }),
-                          /* @__PURE__ */ jsxRuntimeExports.jsx(DraftField, { label: "Procedural Trainer Row Label", value: pool.settings?.cptLabel || "CPT", disabled: !canEditResourcePools, onCommit: (value) => updateResourcePoolSettings(index, { cptLabel: value }) })
+                          /* @__PURE__ */ jsxRuntimeExports.jsx(DraftField, { label: "Procedural Trainer Row Label", value: pool.settings?.cptLabel || "CPT", disabled: !canEditResourcePools, onCommit: (value) => updateResourcePoolSettings(index, { cptLabel: value }) }),
+                          /* @__PURE__ */ jsxRuntimeExports.jsx(DraftField, { label: "Duty Supervisor Full Label", value: pool.settings?.dutySupervisorLabel || "Duty Supervisor", disabled: !canEditResourcePools, onCommit: (value) => updateResourcePoolSettings(index, { dutySupervisorLabel: value }) }),
+                          /* @__PURE__ */ jsxRuntimeExports.jsx(DraftField, { label: "Duty Supervisor Short Label", value: pool.settings?.dutySupervisorShortLabel || "Duty Sup", disabled: !canEditResourcePools, onCommit: (value) => updateResourcePoolSettings(index, { dutySupervisorShortLabel: value }) }),
+                          /* @__PURE__ */ jsxRuntimeExports.jsx(DraftField, { label: "Tower Duty Instructor Full Label", value: pool.settings?.towerDutyInstructorLabel || "Tower Duty Instructor", disabled: !canEditResourcePools, onCommit: (value) => updateResourcePoolSettings(index, { towerDutyInstructorLabel: value }) }),
+                          /* @__PURE__ */ jsxRuntimeExports.jsx(DraftField, { label: "Tower Duty Instructor Short Label", value: pool.settings?.towerDutyInstructorShortLabel || "TWR DI", disabled: !canEditResourcePools, onCommit: (value) => updateResourcePoolSettings(index, { towerDutyInstructorShortLabel: value }) })
                         ] })
                       ] }),
                       /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: resourceSectionPanelClass, children: [
@@ -27227,6 +27243,175 @@ This removes them from DFP Resource Rows. Press Save in this section to apply th
                     /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "font-bold text-cyan-50", children: rollingWindowRepeatGradeSummary })
                   ] })
                 ] })
+              ] })
+            ] })
+          ] })
+        ] }),
+        shouldRenderSection("platform-labels-terminology") && /* @__PURE__ */ jsxRuntimeExports.jsxs("section", { id: "platform-labels-terminology", className: getSectionClass("platform-labels-terminology"), children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsx(
+            SectionHeader,
+            {
+              title: "Labels & Terminology",
+              subtitle: "Central place to set the words users see across people, crew, DFP rows, schedules and reports."
+            }
+          ),
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-4 p-4", children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "rounded border border-cyan-500/25 bg-cyan-500/10 px-3 py-2 text-sm text-cyan-50/80", children: "This page edits the same labels used on their original Settings pages. Changes made here also appear in those pages." }),
+            /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded-lg border border-cyan-400/25 bg-cyan-500/10 p-4", children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mb-4", children: [
+                /* @__PURE__ */ jsxRuntimeExports.jsx("h5", { className: "text-sm font-bold text-cyan-100", children: "People Labels" }),
+                /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-1 text-xs leading-relaxed text-cyan-50/75", children: "These labels describe people and appointments in schedules, records and reports." })
+              ] }),
+              /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid gap-3 lg:grid-cols-2", children: [
+                /* @__PURE__ */ jsxRuntimeExports.jsx(
+                  DraftField,
+                  {
+                    label: "Instructor Duty Display Term",
+                    value: personnelDisplaySettings.instructorLabel,
+                    disabled: !canEditRankTerminology,
+                    onCommit: (value) => updatePersonnelDisplaySettings({ instructorLabel: value }),
+                    info: "The word shown when a person is performing instructor duty. Example: Instructor, Training Captain, Coach."
+                  }
+                ),
+                /* @__PURE__ */ jsxRuntimeExports.jsx(
+                  DraftField,
+                  {
+                    label: "Trainee / Student Label",
+                    value: personnelDisplaySettings.traineeLabel,
+                    disabled: !canEditRankTerminology,
+                    onCommit: (value) => updatePersonnelDisplaySettings({ traineeLabel: value }),
+                    info: "The customer-facing word for a person under training. Use one preferred label so the app is consistent."
+                  }
+                ),
+                /* @__PURE__ */ jsxRuntimeExports.jsx(
+                  DraftField,
+                  {
+                    label: "Contractor Staff Label",
+                    value: personnelDisplaySettings.simIpDisplayLabel,
+                    disabled: !canEditRankTerminology,
+                    onCommit: (value) => updatePersonnelDisplaySettings({ simIpDisplayLabel: value }),
+                    info: "The staff type label for contracted, civilian or specialist support personnel. Example: Contractor Staff, Contract Instructor."
+                  }
+                ),
+                /* @__PURE__ */ jsxRuntimeExports.jsx(
+                  DraftField,
+                  {
+                    label: "Course Commander Label",
+                    value: personnelDisplaySettings.courseCommanderLabel,
+                    disabled: !canEditRankTerminology || !personnelDisplaySettings.courseLeadershipEnabled,
+                    onCommit: (value) => updatePersonnelDisplaySettings({ courseCommanderLabel: value }),
+                    info: "The first course leadership label shown on trainee course cards. Example: Course Commander, Course Lead."
+                  }
+                ),
+                /* @__PURE__ */ jsxRuntimeExports.jsx(
+                  DraftField,
+                  {
+                    label: "Deputy Course Commander Label",
+                    value: personnelDisplaySettings.deputyCourseCommanderLabel,
+                    disabled: !canEditRankTerminology || !personnelDisplaySettings.courseLeadershipEnabled,
+                    onCommit: (value) => updatePersonnelDisplaySettings({ deputyCourseCommanderLabel: value }),
+                    info: "The second course leadership label shown on trainee course cards. Example: Deputy Course Commander, Course 2IC."
+                  }
+                )
+              ] })
+            ] }),
+            /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded-lg border border-orange-400/25 bg-orange-500/10 p-4", children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mb-4 flex flex-wrap items-start justify-between gap-3", children: [
+                /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("h5", { className: "text-sm font-bold text-orange-100", children: "Crew Position Labels" }),
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-1 text-xs leading-relaxed text-orange-100/75", children: "These are the same crew position records used by aircraft crew setup and crew requirement dropdowns." })
+                ] }),
+                renderRankTerminologySectionAction()
+              ] }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "space-y-3", children: crewPositionTerminology.positions.map((entry) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid gap-3 rounded border border-gray-700 bg-gray-950 p-3 lg:grid-cols-[minmax(180px,0.8fr)_minmax(220px,1fr)_minmax(260px,1.2fr)]", children: [
+                /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-[11px] font-semibold uppercase tracking-wider text-gray-500", children: "Stable Crew Position" }),
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-1 text-sm font-semibold text-gray-100", children: entry.genericName })
+                ] }),
+                /* @__PURE__ */ jsxRuntimeExports.jsx(
+                  DraftField,
+                  {
+                    label: "Customer-Facing Label",
+                    value: entry.label,
+                    disabled: !canEditRankTerminology,
+                    onCommit: (value) => updateCrewPositionEntry(entry.id, { label: value }),
+                    info: "The word shown to users for this crew position. Example: Combat Systems Operator can display as WSO."
+                  }
+                ),
+                /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-[11px] font-semibold uppercase tracking-wider text-gray-500", children: "Where Users See It" }),
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-1 text-xs leading-relaxed text-gray-300", children: "Aircraft crew seats, crew composition, directed tasks, scheduling dropdowns and imported crew requirements." })
+                ] })
+              ] }, `labels-hub-${entry.id}`)) })
+            ] }),
+            /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded-lg border border-sky-400/25 bg-sky-500/10 p-4", children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mb-4", children: [
+                /* @__PURE__ */ jsxRuntimeExports.jsx("h5", { className: "text-sm font-bold text-sky-100", children: "DFP Resource And Duty Row Labels" }),
+                /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-1 text-xs leading-relaxed text-sky-100/75", children: "These labels are shown on DFP resource rows. Short labels are used where screen space is tight." })
+              ] }),
+              /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-4", children: [
+                config.resourcePools.map((pool, index) => {
+                  const aircraftCode = String(pool.aircraftTypeCode || "").trim();
+                  const poolTitle = [
+                    pool.locationCode || "Any location",
+                    pool.unitCode || "Any unit",
+                    aircraftCode || "Any aircraft"
+                  ].join(" - ");
+                  return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded border border-gray-700 bg-gray-950 p-3", children: [
+                    /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mb-3 text-sm font-bold text-gray-100", children: poolTitle }),
+                    /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid gap-3 lg:grid-cols-2", children: [
+                      /* @__PURE__ */ jsxRuntimeExports.jsx(DraftField, { label: "Aircraft Row Label", value: pool.settings?.aircraftLabel || (aircraftCode ? getAircraftTypeDisplayLabel(aircraftCode) : ""), disabled: !canEditResourcePools, onCommit: (value) => updateResourcePoolSettings(index, { aircraftLabel: value }), info: "The label shown for aircraft rows. Example: Aircraft, Jet, Helicopter." }),
+                      /* @__PURE__ */ jsxRuntimeExports.jsx(DraftField, { label: "Simulator Row Label", value: pool.settings?.ftdLabel || "FTD", disabled: !canEditResourcePools, onCommit: (value) => updateResourcePoolSettings(index, { ftdLabel: value }), info: "The label shown for simulator rows. Example: Simulator, FTD." }),
+                      /* @__PURE__ */ jsxRuntimeExports.jsx(DraftField, { label: "Procedural Trainer Row Label", value: pool.settings?.cptLabel || "CPT", disabled: !canEditResourcePools, onCommit: (value) => updateResourcePoolSettings(index, { cptLabel: value }), info: "The label shown for procedural trainer rows. Example: Procedural Trainer, CPT." }),
+                      /* @__PURE__ */ jsxRuntimeExports.jsx(DraftField, { label: "Duty Supervisor Full Label", value: pool.settings?.dutySupervisorLabel || "Duty Supervisor", disabled: !canEditResourcePools, onCommit: (value) => updateResourcePoolSettings(index, { dutySupervisorLabel: value }), info: "The full name for the person supervising daily flying operations." }),
+                      /* @__PURE__ */ jsxRuntimeExports.jsx(DraftField, { label: "Duty Supervisor Short Label", value: pool.settings?.dutySupervisorShortLabel || "Duty Sup", disabled: !canEditResourcePools, onCommit: (value) => updateResourcePoolSettings(index, { dutySupervisorShortLabel: value }), info: "The short label used on compact DFP rows and tiles. Example: Duty Sup, Duty Lead." }),
+                      /* @__PURE__ */ jsxRuntimeExports.jsx(DraftField, { label: "Tower Duty Instructor Full Label", value: pool.settings?.towerDutyInstructorLabel || "Tower Duty Instructor", disabled: !canEditResourcePools, onCommit: (value) => updateResourcePoolSettings(index, { towerDutyInstructorLabel: value }), info: "The full name for the instructor monitoring tower or circuit operations." }),
+                      /* @__PURE__ */ jsxRuntimeExports.jsx(DraftField, { label: "Tower Duty Instructor Short Label", value: pool.settings?.towerDutyInstructorShortLabel || "TWR DI", disabled: !canEditResourcePools, onCommit: (value) => updateResourcePoolSettings(index, { towerDutyInstructorShortLabel: value }), info: "The short label used on compact DFP rows and tiles. Example: TWR DI, Tower DI." })
+                    ] })
+                  ] }, `labels-resource-pool-${pool.id || pool.code || index}`);
+                }),
+                config.resourcePools.length === 0 ? /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "rounded border border-gray-700 bg-gray-950 p-4 text-sm font-semibold text-gray-400", children: "Add DFP Resource Rows before setting resource and duty row labels." }) : null
+              ] })
+            ] }),
+            /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded-lg border border-emerald-400/25 bg-emerald-500/10 p-4", children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mb-4", children: [
+                /* @__PURE__ */ jsxRuntimeExports.jsx("h5", { className: "text-sm font-bold text-emerald-100", children: "Training And Report Labels" }),
+                /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-1 text-xs leading-relaxed text-emerald-100/75", children: "These labels control training report names and continuation training wording." })
+              ] }),
+              /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid gap-3 lg:grid-cols-2", children: [
+                /* @__PURE__ */ jsxRuntimeExports.jsx(
+                  DraftField,
+                  {
+                    label: "Training Report Name",
+                    value: trainingReportTerminology.name,
+                    disabled: !canEditRankTerminology,
+                    maxLength: TRAINING_REPORT_NAME_MAX_LENGTH,
+                    onCommit: (value) => updateTrainingReportTerminology({ name: value }),
+                    info: "The compact name users see for a completed assessment or training report. Example: Report, Grade Form, Assessment."
+                  }
+                ),
+                /* @__PURE__ */ jsxRuntimeExports.jsx(
+                  DraftField,
+                  {
+                    label: "Continuation Training Short Label",
+                    value: sctTerminology.shortLabel,
+                    disabled: !canEditRankTerminology,
+                    maxLength: SCT_SHORT_LABEL_MAX_LENGTH,
+                    onCommit: (value) => updateSctTerminology({ shortLabel: value }),
+                    info: "The short label for staff continuation training events. Example: ContT, SCT."
+                  }
+                ),
+                /* @__PURE__ */ jsxRuntimeExports.jsx(
+                  DraftField,
+                  {
+                    label: "Continuation Training Full Name",
+                    value: sctTerminology.longLabel,
+                    disabled: !canEditRankTerminology,
+                    maxLength: SCT_LONG_LABEL_MAX_LENGTH,
+                    onCommit: (value) => updateSctTerminology({ longLabel: value }),
+                    info: "The full name for staff continuation training events. Example: Continuation Training."
+                  }
+                )
               ] })
             ] })
           ] })
@@ -94189,6 +94374,7 @@ const platformSectionTargets = {
   "platform-licensing": "platform-licensing",
   "platform-permission-profiles": "platform-permission-profiles",
   "platform-rank-terminology": "platform-rank-terminology",
+  "platform-labels-terminology": "platform-labels-terminology",
   "platform-user-access": "platform-user-access",
   "platform-scheduling-rule-sets": "platform-scheduling-rule-sets"
 };
@@ -94228,6 +94414,7 @@ const sectionLabels = {
   "platform-licensing": "Licensing & Deployment",
   "platform-permission-profiles": "Master Permission Profiles",
   "platform-rank-terminology": "Rank, Terminology & Labels",
+  "platform-labels-terminology": "Labels & Terminology",
   "platform-user-access": "Manage User Permissions",
   "platform-scheduling-rule-sets": "Scheduling Rule Sets",
   "appearance": "App Appearance",
@@ -94338,6 +94525,7 @@ const sectionIcons = {
   "platform-licensing": platformConfigurationIcon,
   "platform-permission-profiles": platformConfigurationIcon,
   "platform-user-access": platformConfigurationIcon,
+  "platform-labels-terminology": platformConfigurationIcon,
   "platform-scheduling-rule-sets": platformConfigurationIcon,
   "appearance": /* @__PURE__ */ jsxRuntimeExports.jsxs("svg", { viewBox: "0 0 24 24", fill: "none", stroke: "currentColor", strokeWidth: "1.5", strokeLinecap: "round", strokeLinejoin: "round", className: "w-full h-full", children: [
     /* @__PURE__ */ jsxRuntimeExports.jsx("circle", { cx: "12", cy: "12", r: "4" }),
@@ -94381,6 +94569,7 @@ const sectionDescriptions = {
   "platform-licensing": "Licence model, entitlements and validation status",
   "platform-permission-profiles": "Single master list of role and exception permission profiles",
   "platform-rank-terminology": "Rank ordering and local instructor terminology",
+  "platform-labels-terminology": "Central list of customer-facing labels used across the app",
   "platform-user-access": "Control where each user can work",
   "platform-scheduling-rule-sets": "Scheduling rules for selected units, aircraft and operating areas",
   "appearance": "Choose dark or light display theme",
@@ -94879,6 +95068,31 @@ const sectionSearchKeywords = {
     "formation call sign",
     "formation call signs"
   ],
+  "platform-labels-terminology": [
+    "labels",
+    "terminology",
+    "customer labels",
+    "display labels",
+    "people labels",
+    "crew labels",
+    "resource labels",
+    "duty supervisor",
+    "tower duty instructor",
+    "twr di",
+    "duty sup",
+    "student",
+    "trainee",
+    "instructor",
+    "wso",
+    "awo",
+    "ewo",
+    "mission commander",
+    "mpro",
+    "mpr",
+    "sim ip",
+    "training report",
+    "continuation training"
+  ],
   "platform-user-access": [
     "user access",
     "access scopes",
@@ -95059,6 +95273,7 @@ const sectionColors = {
   "platform-licensing": "from-cyan-500/20 to-cyan-600/10 border-cyan-500/30 text-cyan-400",
   "platform-permission-profiles": "from-cyan-500/20 to-cyan-600/10 border-cyan-500/30 text-cyan-400",
   "platform-rank-terminology": "from-cyan-500/20 to-cyan-600/10 border-cyan-500/30 text-cyan-400",
+  "platform-labels-terminology": "from-cyan-500/20 to-cyan-600/10 border-cyan-500/30 text-cyan-400",
   "platform-user-access": "from-cyan-500/20 to-cyan-600/10 border-cyan-500/30 text-cyan-400",
   "platform-scheduling-rule-sets": "from-cyan-500/20 to-cyan-600/10 border-cyan-500/30 text-cyan-400",
   "appearance": "from-purple-500/20 to-purple-600/10 border-purple-500/30 text-purple-400",
@@ -95093,6 +95308,7 @@ const sectionGroups = [
       "platform-aircraft-setup",
       "platform-dfp-resource-rows",
       "platform-unit-modules",
+      "platform-labels-terminology",
       "platform-rank-terminology",
       "organisation",
       "appearance"

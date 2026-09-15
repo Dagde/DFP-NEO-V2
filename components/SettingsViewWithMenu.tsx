@@ -260,6 +260,7 @@ const platformConfigurationSections = [
     'platform-licensing',
     'platform-permission-profiles',
     'platform-rank-terminology',
+    'platform-labels-terminology',
     'platform-user-access',
     'platform-scheduling-rule-sets',
 ] as const;
@@ -283,6 +284,7 @@ const platformSectionTargets: Record<PlatformConfigurationMenuSection, string> =
     'platform-licensing': 'platform-licensing',
     'platform-permission-profiles': 'platform-permission-profiles',
     'platform-rank-terminology': 'platform-rank-terminology',
+    'platform-labels-terminology': 'platform-labels-terminology',
     'platform-user-access': 'platform-user-access',
     'platform-scheduling-rule-sets': 'platform-scheduling-rule-sets',
 };
@@ -325,6 +327,7 @@ const sectionLabels: Record<SettingsMenuSection, string> = {
     'platform-licensing': 'Licensing & Deployment',
     'platform-permission-profiles': 'Master Permission Profiles',
     'platform-rank-terminology': 'Rank, Terminology & Labels',
+    'platform-labels-terminology': 'Labels & Terminology',
     'platform-user-access': 'Manage User Permissions',
     'platform-scheduling-rule-sets': 'Scheduling Rule Sets',
     'appearance': 'App Appearance',
@@ -476,6 +479,7 @@ const sectionIcons: Record<SettingsMenuSection, React.ReactNode> = {
   'platform-licensing': platformConfigurationIcon,
   'platform-permission-profiles': platformConfigurationIcon,
   'platform-user-access': platformConfigurationIcon,
+  'platform-labels-terminology': platformConfigurationIcon,
   'platform-scheduling-rule-sets': platformConfigurationIcon,
   'appearance': (
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="w-full h-full">
@@ -533,6 +537,7 @@ const sectionDescriptions: Record<SettingsMenuSection, string> = {
   'platform-licensing': 'Licence model, entitlements and validation status',
   'platform-permission-profiles': 'Single master list of role and exception permission profiles',
   'platform-rank-terminology': 'Rank ordering and local instructor terminology',
+  'platform-labels-terminology': 'Central list of customer-facing labels used across the app',
   'platform-user-access': 'Control where each user can work',
   'platform-scheduling-rule-sets': 'Scheduling rules for selected units, aircraft and operating areas',
   'appearance': 'Choose dark or light display theme',
@@ -693,6 +698,13 @@ const sectionSearchKeywords: Partial<Record<SettingsMenuSection, string[]>> = {
     'unit callsign', 'unit callsigns', 'formation callsign', 'formation callsigns',
     'formation call sign', 'formation call signs',
   ],
+  'platform-labels-terminology': [
+    'labels', 'terminology', 'customer labels', 'display labels', 'people labels',
+    'crew labels', 'resource labels', 'duty supervisor', 'tower duty instructor',
+    'twr di', 'duty sup', 'student', 'trainee', 'instructor', 'wso', 'awo',
+    'ewo', 'mission commander', 'mpro', 'mpr', 'sim ip', 'training report',
+    'continuation training',
+  ],
   'platform-user-access': [
     'user access', 'access scopes', 'scope', 'location access', 'unit access', 'module access',
     'active access', 'login access', 'user permissions',
@@ -816,6 +828,7 @@ const sectionColors: Record<SettingsMenuSection, string> = {
   'platform-licensing': 'from-cyan-500/20 to-cyan-600/10 border-cyan-500/30 text-cyan-400',
   'platform-permission-profiles': 'from-cyan-500/20 to-cyan-600/10 border-cyan-500/30 text-cyan-400',
   'platform-rank-terminology': 'from-cyan-500/20 to-cyan-600/10 border-cyan-500/30 text-cyan-400',
+  'platform-labels-terminology': 'from-cyan-500/20 to-cyan-600/10 border-cyan-500/30 text-cyan-400',
   'platform-user-access': 'from-cyan-500/20 to-cyan-600/10 border-cyan-500/30 text-cyan-400',
   'platform-scheduling-rule-sets': 'from-cyan-500/20 to-cyan-600/10 border-cyan-500/30 text-cyan-400',
   'appearance':        'from-purple-500/20 to-purple-600/10 border-purple-500/30 text-purple-400',
@@ -860,6 +873,7 @@ const sectionGroups: {
       'platform-aircraft-setup',
       'platform-dfp-resource-rows',
       'platform-unit-modules',
+      'platform-labels-terminology',
       'platform-rank-terminology',
       'organisation',
       'appearance',

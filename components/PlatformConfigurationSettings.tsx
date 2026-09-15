@@ -9538,8 +9538,8 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
                         `Trainer ${pool.rows.cpt}`,
                         `Standby ${pool.rows.standby}`,
                         `Ground ${pool.rows.ground}`,
-                        pool.rows.dutySupervisor ? 'Duty Sup' : '',
-                        pool.rows.towerDutyInstructor ? 'TWR DI' : '',
+                        pool.rows.dutySupervisor ? (pool.settings?.dutySupervisorShortLabel || 'Duty Sup') : '',
+                        pool.rows.towerDutyInstructor ? (pool.settings?.towerDutyInstructorShortLabel || 'TWR DI') : '',
                       ].filter(Boolean).join(' · ')}
                     </div>
                   </div>
@@ -11264,6 +11264,10 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
                         <DraftField label="Aircraft Row Label" value={pool.settings?.aircraftLabel || (displayedResourcePoolAircraftTypeCode ? getAircraftTypeDisplayLabel(displayedResourcePoolAircraftTypeCode) : '')} disabled={!canEditResourcePools} onCommit={(value) => updateResourcePoolSettings(index, { aircraftLabel: value })} />
                         <DraftField label="Simulator Row Label" value={pool.settings?.ftdLabel || 'FTD'} disabled={!canEditResourcePools} onCommit={(value) => updateResourcePoolSettings(index, { ftdLabel: value })} />
                         <DraftField label="Procedural Trainer Row Label" value={pool.settings?.cptLabel || 'CPT'} disabled={!canEditResourcePools} onCommit={(value) => updateResourcePoolSettings(index, { cptLabel: value })} />
+                        <DraftField label="Duty Supervisor Full Label" value={pool.settings?.dutySupervisorLabel || 'Duty Supervisor'} disabled={!canEditResourcePools} onCommit={(value) => updateResourcePoolSettings(index, { dutySupervisorLabel: value })} />
+                        <DraftField label="Duty Supervisor Short Label" value={pool.settings?.dutySupervisorShortLabel || 'Duty Sup'} disabled={!canEditResourcePools} onCommit={(value) => updateResourcePoolSettings(index, { dutySupervisorShortLabel: value })} />
+                        <DraftField label="Tower Duty Instructor Full Label" value={pool.settings?.towerDutyInstructorLabel || 'Tower Duty Instructor'} disabled={!canEditResourcePools} onCommit={(value) => updateResourcePoolSettings(index, { towerDutyInstructorLabel: value })} />
+                        <DraftField label="Tower Duty Instructor Short Label" value={pool.settings?.towerDutyInstructorShortLabel || 'TWR DI'} disabled={!canEditResourcePools} onCommit={(value) => updateResourcePoolSettings(index, { towerDutyInstructorShortLabel: value })} />
                       </div>
                     </div>
 
@@ -13058,6 +13062,174 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
         </div>
       </section>
 
+      )}
+
+      {shouldRenderSection('platform-labels-terminology') && (
+        <section id="platform-labels-terminology" className={getSectionClass('platform-labels-terminology')}>
+          <SectionHeader
+            title="Labels & Terminology"
+            subtitle="Central place to set the words users see across people, crew, DFP rows, schedules and reports."
+          />
+          <div className="space-y-4 p-4">
+            <div className="rounded border border-cyan-500/25 bg-cyan-500/10 px-3 py-2 text-sm text-cyan-50/80">
+              This page edits the same labels used on their original Settings pages. Changes made here also appear in those pages.
+            </div>
+
+            <div className="rounded-lg border border-cyan-400/25 bg-cyan-500/10 p-4">
+              <div className="mb-4">
+                <h5 className="text-sm font-bold text-cyan-100">People Labels</h5>
+                <p className="mt-1 text-xs leading-relaxed text-cyan-50/75">
+                  These labels describe people and appointments in schedules, records and reports.
+                </p>
+              </div>
+              <div className="grid gap-3 lg:grid-cols-2">
+                <DraftField
+                  label="Instructor Duty Display Term"
+                  value={personnelDisplaySettings.instructorLabel}
+                  disabled={!canEditRankTerminology}
+                  onCommit={(value) => updatePersonnelDisplaySettings({ instructorLabel: value })}
+                  info="The word shown when a person is performing instructor duty. Example: Instructor, Training Captain, Coach."
+                />
+                <DraftField
+                  label="Trainee / Student Label"
+                  value={personnelDisplaySettings.traineeLabel}
+                  disabled={!canEditRankTerminology}
+                  onCommit={(value) => updatePersonnelDisplaySettings({ traineeLabel: value })}
+                  info="The customer-facing word for a person under training. Use one preferred label so the app is consistent."
+                />
+                <DraftField
+                  label="Contractor Staff Label"
+                  value={personnelDisplaySettings.simIpDisplayLabel}
+                  disabled={!canEditRankTerminology}
+                  onCommit={(value) => updatePersonnelDisplaySettings({ simIpDisplayLabel: value })}
+                  info="The staff type label for contracted, civilian or specialist support personnel. Example: Contractor Staff, Contract Instructor."
+                />
+                <DraftField
+                  label="Course Commander Label"
+                  value={personnelDisplaySettings.courseCommanderLabel}
+                  disabled={!canEditRankTerminology || !personnelDisplaySettings.courseLeadershipEnabled}
+                  onCommit={(value) => updatePersonnelDisplaySettings({ courseCommanderLabel: value })}
+                  info="The first course leadership label shown on trainee course cards. Example: Course Commander, Course Lead."
+                />
+                <DraftField
+                  label="Deputy Course Commander Label"
+                  value={personnelDisplaySettings.deputyCourseCommanderLabel}
+                  disabled={!canEditRankTerminology || !personnelDisplaySettings.courseLeadershipEnabled}
+                  onCommit={(value) => updatePersonnelDisplaySettings({ deputyCourseCommanderLabel: value })}
+                  info="The second course leadership label shown on trainee course cards. Example: Deputy Course Commander, Course 2IC."
+                />
+              </div>
+            </div>
+
+            <div className="rounded-lg border border-orange-400/25 bg-orange-500/10 p-4">
+              <div className="mb-4 flex flex-wrap items-start justify-between gap-3">
+                <div>
+                  <h5 className="text-sm font-bold text-orange-100">Crew Position Labels</h5>
+                  <p className="mt-1 text-xs leading-relaxed text-orange-100/75">
+                    These are the same crew position records used by aircraft crew setup and crew requirement dropdowns.
+                  </p>
+                </div>
+                {renderRankTerminologySectionAction()}
+              </div>
+              <div className="space-y-3">
+                {crewPositionTerminology.positions.map((entry) => (
+                  <div key={`labels-hub-${entry.id}`} className="grid gap-3 rounded border border-gray-700 bg-gray-950 p-3 lg:grid-cols-[minmax(180px,0.8fr)_minmax(220px,1fr)_minmax(260px,1.2fr)]">
+                    <div>
+                      <div className="text-[11px] font-semibold uppercase tracking-wider text-gray-500">Stable Crew Position</div>
+                      <div className="mt-1 text-sm font-semibold text-gray-100">{entry.genericName}</div>
+                    </div>
+                    <DraftField
+                      label="Customer-Facing Label"
+                      value={entry.label}
+                      disabled={!canEditRankTerminology}
+                      onCommit={(value) => updateCrewPositionEntry(entry.id, { label: value })}
+                      info="The word shown to users for this crew position. Example: Combat Systems Operator can display as WSO."
+                    />
+                    <div>
+                      <div className="text-[11px] font-semibold uppercase tracking-wider text-gray-500">Where Users See It</div>
+                      <div className="mt-1 text-xs leading-relaxed text-gray-300">
+                        Aircraft crew seats, crew composition, directed tasks, scheduling dropdowns and imported crew requirements.
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <div className="rounded-lg border border-sky-400/25 bg-sky-500/10 p-4">
+              <div className="mb-4">
+                <h5 className="text-sm font-bold text-sky-100">DFP Resource And Duty Row Labels</h5>
+                <p className="mt-1 text-xs leading-relaxed text-sky-100/75">
+                  These labels are shown on DFP resource rows. Short labels are used where screen space is tight.
+                </p>
+              </div>
+              <div className="space-y-4">
+                {config.resourcePools.map((pool, index) => {
+                  const aircraftCode = String(pool.aircraftTypeCode || '').trim();
+                  const poolTitle = [
+                    pool.locationCode || 'Any location',
+                    pool.unitCode || 'Any unit',
+                    aircraftCode || 'Any aircraft',
+                  ].join(' - ');
+                  return (
+                    <div key={`labels-resource-pool-${pool.id || pool.code || index}`} className="rounded border border-gray-700 bg-gray-950 p-3">
+                      <div className="mb-3 text-sm font-bold text-gray-100">{poolTitle}</div>
+                      <div className="grid gap-3 lg:grid-cols-2">
+                        <DraftField label="Aircraft Row Label" value={pool.settings?.aircraftLabel || (aircraftCode ? getAircraftTypeDisplayLabel(aircraftCode) : '')} disabled={!canEditResourcePools} onCommit={(value) => updateResourcePoolSettings(index, { aircraftLabel: value })} info="The label shown for aircraft rows. Example: Aircraft, Jet, Helicopter." />
+                        <DraftField label="Simulator Row Label" value={pool.settings?.ftdLabel || 'FTD'} disabled={!canEditResourcePools} onCommit={(value) => updateResourcePoolSettings(index, { ftdLabel: value })} info="The label shown for simulator rows. Example: Simulator, FTD." />
+                        <DraftField label="Procedural Trainer Row Label" value={pool.settings?.cptLabel || 'CPT'} disabled={!canEditResourcePools} onCommit={(value) => updateResourcePoolSettings(index, { cptLabel: value })} info="The label shown for procedural trainer rows. Example: Procedural Trainer, CPT." />
+                        <DraftField label="Duty Supervisor Full Label" value={pool.settings?.dutySupervisorLabel || 'Duty Supervisor'} disabled={!canEditResourcePools} onCommit={(value) => updateResourcePoolSettings(index, { dutySupervisorLabel: value })} info="The full name for the person supervising daily flying operations." />
+                        <DraftField label="Duty Supervisor Short Label" value={pool.settings?.dutySupervisorShortLabel || 'Duty Sup'} disabled={!canEditResourcePools} onCommit={(value) => updateResourcePoolSettings(index, { dutySupervisorShortLabel: value })} info="The short label used on compact DFP rows and tiles. Example: Duty Sup, Duty Lead." />
+                        <DraftField label="Tower Duty Instructor Full Label" value={pool.settings?.towerDutyInstructorLabel || 'Tower Duty Instructor'} disabled={!canEditResourcePools} onCommit={(value) => updateResourcePoolSettings(index, { towerDutyInstructorLabel: value })} info="The full name for the instructor monitoring tower or circuit operations." />
+                        <DraftField label="Tower Duty Instructor Short Label" value={pool.settings?.towerDutyInstructorShortLabel || 'TWR DI'} disabled={!canEditResourcePools} onCommit={(value) => updateResourcePoolSettings(index, { towerDutyInstructorShortLabel: value })} info="The short label used on compact DFP rows and tiles. Example: TWR DI, Tower DI." />
+                      </div>
+                    </div>
+                  );
+                })}
+                {config.resourcePools.length === 0 ? (
+                  <div className="rounded border border-gray-700 bg-gray-950 p-4 text-sm font-semibold text-gray-400">
+                    Add DFP Resource Rows before setting resource and duty row labels.
+                  </div>
+                ) : null}
+              </div>
+            </div>
+
+            <div className="rounded-lg border border-emerald-400/25 bg-emerald-500/10 p-4">
+              <div className="mb-4">
+                <h5 className="text-sm font-bold text-emerald-100">Training And Report Labels</h5>
+                <p className="mt-1 text-xs leading-relaxed text-emerald-100/75">
+                  These labels control training report names and continuation training wording.
+                </p>
+              </div>
+              <div className="grid gap-3 lg:grid-cols-2">
+                <DraftField
+                  label="Training Report Name"
+                  value={trainingReportTerminology.name}
+                  disabled={!canEditRankTerminology}
+                  maxLength={TRAINING_REPORT_NAME_MAX_LENGTH}
+                  onCommit={(value) => updateTrainingReportTerminology({ name: value })}
+                  info="The compact name users see for a completed assessment or training report. Example: Report, Grade Form, Assessment."
+                />
+                <DraftField
+                  label="Continuation Training Short Label"
+                  value={sctTerminology.shortLabel}
+                  disabled={!canEditRankTerminology}
+                  maxLength={SCT_SHORT_LABEL_MAX_LENGTH}
+                  onCommit={(value) => updateSctTerminology({ shortLabel: value })}
+                  info="The short label for staff continuation training events. Example: ContT, SCT."
+                />
+                <DraftField
+                  label="Continuation Training Full Name"
+                  value={sctTerminology.longLabel}
+                  disabled={!canEditRankTerminology}
+                  maxLength={SCT_LONG_LABEL_MAX_LENGTH}
+                  onCommit={(value) => updateSctTerminology({ longLabel: value })}
+                  info="The full name for staff continuation training events. Example: Continuation Training."
+                />
+              </div>
+            </div>
+          </div>
+        </section>
       )}
 
       {shouldRenderSection('platform-rank-terminology') && (

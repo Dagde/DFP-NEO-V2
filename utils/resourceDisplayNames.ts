@@ -4,12 +4,20 @@ export interface ResourceDisplayNames {
   aircraft: string;
   ftd: string;
   cpt: string;
+  dutySupervisor: string;
+  dutySupervisorShort: string;
+  towerDutyInstructor: string;
+  towerDutyInstructorShort: string;
 }
 
 export const DEFAULT_RESOURCE_DISPLAY_NAMES: ResourceDisplayNames = {
   aircraft: 'Aircraft',
   ftd: 'FTD',
   cpt: 'CPT',
+  dutySupervisor: 'Duty Supervisor',
+  dutySupervisorShort: 'Duty Sup',
+  towerDutyInstructor: 'Tower Duty Instructor',
+  towerDutyInstructorShort: 'TWR DI',
 };
 
 const cleanLabel = (value: unknown, fallback: string): string => {
@@ -84,6 +92,10 @@ export const getResourceDisplayNames = (resourcePool?: PlatformResourcePool | nu
     aircraft: cleanLabel(settings.aircraftLabel, aircraftFallback),
     ftd: cleanLabel(settings.ftdLabel, DEFAULT_RESOURCE_DISPLAY_NAMES.ftd),
     cpt: cleanLabel(settings.cptLabel, DEFAULT_RESOURCE_DISPLAY_NAMES.cpt),
+    dutySupervisor: cleanLabel(settings.dutySupervisorLabel, DEFAULT_RESOURCE_DISPLAY_NAMES.dutySupervisor),
+    dutySupervisorShort: cleanLabel(settings.dutySupervisorShortLabel, DEFAULT_RESOURCE_DISPLAY_NAMES.dutySupervisorShort),
+    towerDutyInstructor: cleanLabel(settings.towerDutyInstructorLabel, DEFAULT_RESOURCE_DISPLAY_NAMES.towerDutyInstructor),
+    towerDutyInstructorShort: cleanLabel(settings.towerDutyInstructorShortLabel, DEFAULT_RESOURCE_DISPLAY_NAMES.towerDutyInstructorShort),
   };
 };
 
@@ -95,6 +107,8 @@ export const formatResourceLabel = (
 
   if (resourceId === 'FTD') return names.ftd;
   if (resourceId === 'CPT') return names.cpt;
+  if (resourceId === 'Duty Sup') return names.dutySupervisorShort;
+  if (resourceId === 'TWR DI') return names.towerDutyInstructorShort;
 
   const deployedMatch = resourceId.match(/^Deployed(\s+\d+)$/);
   if (deployedMatch) {

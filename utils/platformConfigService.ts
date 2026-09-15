@@ -47,6 +47,10 @@ export interface PlatformResourcePool {
     ftdLabel?: string;
     cpt?: number;
     cptLabel?: string;
+    dutySupervisorLabel?: string;
+    dutySupervisorShortLabel?: string;
+    towerDutyInstructorLabel?: string;
+    towerDutyInstructorShortLabel?: string;
     ground?: number;
     standby?: number;
     dutySupervisor?: number;

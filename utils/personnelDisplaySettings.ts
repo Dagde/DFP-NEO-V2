@@ -38,6 +38,7 @@ export interface PersonnelDisplaySettings {
   civilianTitles: string[];
   civilianContractorGroupName: string;
   instructorLabel: string;
+  traineeLabel: string;
   courseLeadershipEnabled: boolean;
   courseCommanderLabel: string;
   deputyCourseCommanderLabel: string;
@@ -333,6 +334,7 @@ export const DEFAULT_PERSONNEL_DISPLAY_SETTINGS: PersonnelDisplaySettings = {
   civilianTitles: DEFAULT_CIVILIAN_TITLES,
   civilianContractorGroupName: 'Civilian titles',
   instructorLabel: 'Instructor',
+  traineeLabel: 'Trainee',
   courseLeadershipEnabled: true,
   courseCommanderLabel: 'Cse Commander',
   deputyCourseCommanderLabel: 'Deputy Cse Commander',
@@ -487,6 +489,7 @@ export const normalisePersonnelDisplaySettings = (input?: Partial<PersonnelDispl
     civilianTitles,
     civilianContractorGroupName: preserveEditableTextSetting(input?.civilianContractorGroupName, DEFAULT_PERSONNEL_DISPLAY_SETTINGS.civilianContractorGroupName),
     instructorLabel: preserveEditableTextSetting(input?.instructorLabel, DEFAULT_PERSONNEL_DISPLAY_SETTINGS.instructorLabel),
+    traineeLabel: preserveEditableTextSetting(input?.traineeLabel, DEFAULT_PERSONNEL_DISPLAY_SETTINGS.traineeLabel),
     courseLeadershipEnabled: input?.courseLeadershipEnabled !== false,
     courseCommanderLabel: preserveEditableTextSetting(input?.courseCommanderLabel, DEFAULT_PERSONNEL_DISPLAY_SETTINGS.courseCommanderLabel),
     deputyCourseCommanderLabel: preserveEditableTextSetting(input?.deputyCourseCommanderLabel, DEFAULT_PERSONNEL_DISPLAY_SETTINGS.deputyCourseCommanderLabel),
