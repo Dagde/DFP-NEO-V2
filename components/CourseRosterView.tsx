@@ -3,7 +3,7 @@ import { useSystemFreeze } from "../hooks/useSystemFreeze";
 
 
 import React, { useState, useMemo, useEffect } from 'react';
-import { Course, Trainee, ScheduleEvent, Score, SyllabusItemDetail, Instructor, LogbookExperience , MasterCurrency, CurrencyRequirement, Pt051Assessment, PhraseBank, SctRequest } from '../types';
+import { Course, Trainee, ScheduleEvent, Score, SyllabusItemDetail, Instructor, LogbookExperience , MasterCurrency, CurrencyRequirement, TrainingReportAssessment, PhraseBank, SctRequest } from '../types';
 import TraineeProfileFlyout from './TraineeProfileFlyout';
 import RestoreCourseConfirmation from './RestoreCourseConfirmation';
 import FlightInfoFlyout from './FlightInfoFlyout';
@@ -47,9 +47,9 @@ interface CourseRosterViewProps {
     onNavigateToSyllabus: (syllabusId: string) => void;
     onNavigateToCurrency: (person: Instructor | Trainee) => void;
     onAddRemedialPackage: (trainee: Trainee) => void;
-    onSelectPt051ForEvent?: (trainee: Trainee, assessment: Pt051Assessment) => void;
-    onSavePt051Assessment?: (assessment: Pt051Assessment) => void;
-    onDeletePt051Assessment?: (assessmentId: string, eventId: string, traineeFullName: string) => void;
+    onSelectTrainingReportForEvent?: (trainee: Trainee, assessment: TrainingReportAssessment) => void;
+    onSaveTrainingReportAssessment?: (assessment: TrainingReportAssessment) => void;
+    onDeleteTrainingReportAssessment?: (assessmentId: string, eventId: string, traineeFullName: string) => void;
     instructorsData?: Instructor[];
     registerDirtyCheck?: (isDirty: () => boolean, onSave: () => void, onDiscard: () => void) => void;
     phraseBank?: PhraseBank;
@@ -83,12 +83,12 @@ interface CourseRosterViewProps {
     pt051PerformanceLoading?: boolean;
     userProfile?: any;
     canViewTraineeProfile?: (trainee: Trainee) => boolean;
-    canViewTraineePt051?: (trainee: Trainee) => boolean;
-    canEditTraineePt051?: (trainee: Trainee) => boolean;
+    canViewTraineeTrainingReport?: (trainee: Trainee) => boolean;
+    canEditTraineeTrainingReport?: (trainee: Trainee) => boolean;
     canViewTraineeLmp?: (trainee: Trainee) => boolean;
     canAddRemedialPackageForTrainee?: (trainee: Trainee) => boolean;
     onDeleteRemedialItem?: (trainee: Trainee, item: SyllabusItemDetail) => Promise<boolean> | boolean;
-    onGeneratePt051ForItem?: (trainee: Trainee, item: SyllabusItemDetail) => void;
+    onGenerateTrainingReportForItem?: (trainee: Trainee, item: SyllabusItemDetail) => void;
     onInsertCustomLmpEvent?: (trainee: Trainee, request: InsertLmpEventRequest) => Promise<boolean> | boolean;
     onUpdateLmpItem?: (trainee: Trainee, originalItem: SyllabusItemDetail, updatedItem: SyllabusItemDetail) => Promise<boolean> | boolean;
     insertEventTypes?: InsertEventTypeConfig[];
@@ -157,9 +157,9 @@ const CourseRosterView: React.FC<CourseRosterViewProps> = ({
     onNavigateToSyllabus,
     onNavigateToCurrency,
     onAddRemedialPackage,
-    onSelectPt051ForEvent,
-    onSavePt051Assessment,
-    onDeletePt051Assessment,
+    onSelectTrainingReportForEvent,
+    onSaveTrainingReportAssessment,
+    onDeleteTrainingReportAssessment,
     instructorsData = [],
     registerDirtyCheck,
     phraseBank,
@@ -192,12 +192,12 @@ const CourseRosterView: React.FC<CourseRosterViewProps> = ({
     pt051PerformanceLoading = false,
     userProfile,
     canViewTraineeProfile = () => true,
-    canViewTraineePt051 = () => true,
-    canEditTraineePt051 = () => true,
+    canViewTraineeTrainingReport = () => true,
+    canEditTraineeTrainingReport = () => true,
     canViewTraineeLmp = () => true,
     canAddRemedialPackageForTrainee = () => true,
     onDeleteRemedialItem,
-    onGeneratePt051ForItem,
+    onGenerateTrainingReportForItem,
     onInsertCustomLmpEvent,
     onUpdateLmpItem,
     insertEventTypes,
@@ -703,23 +703,23 @@ const CourseRosterView: React.FC<CourseRosterViewProps> = ({
                     traineeLMPs={traineeLMPs}
                     userProfile={userProfile}
                     initialActiveTab={profileInitialTab}
-                    canViewPt051={canViewTraineePt051(isCreatingNew && newTraineeTemplate ? newTraineeTemplate : selectedTrainee!)}
-                    canEditPt051={canEditTraineePt051(isCreatingNew && newTraineeTemplate ? newTraineeTemplate : selectedTrainee!)}
+                    canViewTrainingReport={canViewTraineeTrainingReport(isCreatingNew && newTraineeTemplate ? newTraineeTemplate : selectedTrainee!)}
+                    canEditTrainingReport={canEditTraineeTrainingReport(isCreatingNew && newTraineeTemplate ? newTraineeTemplate : selectedTrainee!)}
                     canViewIndividualLmp={canViewTraineeLmp(isCreatingNew && newTraineeTemplate ? newTraineeTemplate : selectedTrainee!)}
                     canAddRemedialPackage={canAddRemedialPackageForTrainee(isCreatingNew && newTraineeTemplate ? newTraineeTemplate : selectedTrainee!)}
                     onDeleteRemedialItem={onDeleteRemedialItem}
-                    onGeneratePt051ForItem={onGeneratePt051ForItem}
+                    onGenerateTrainingReportForItem={onGenerateTrainingReportForItem}
                     onInsertCustomLmpEvent={onInsertCustomLmpEvent}
                     onUpdateLmpItem={onUpdateLmpItem}
                     insertEventTypes={insertEventTypes}
                     aircraftConfigurations={aircraftConfigurations}
                     aircraftCrewComposition={aircraftCrewComposition}
-                    onSelectPt051ForEvent={(assessment) => onSelectPt051ForEvent?.(
+                    onSelectTrainingReportForEvent={(assessment) => onSelectTrainingReportForEvent?.(
                         isCreatingNew && newTraineeTemplate ? newTraineeTemplate : selectedTrainee!,
                         assessment
                     )}
-                    onSavePt051Assessment={onSavePt051Assessment}
-                    onDeletePt051Assessment={onDeletePt051Assessment}
+                    onSaveTrainingReportAssessment={onSaveTrainingReportAssessment}
+                    onDeleteTrainingReportAssessment={onDeleteTrainingReportAssessment}
                     instructorsData={instructorsData}
                     registerDirtyCheck={registerDirtyCheck}
                     phraseBank={phraseBank}

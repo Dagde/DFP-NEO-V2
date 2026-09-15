@@ -1,7 +1,7 @@
 
 
 import React, { useMemo, useEffect, useRef, useState } from 'react';
-import { Trainee, Score, SyllabusItemDetail, Course, Pt051Assessment } from '../types';
+import { Trainee, Score, SyllabusItemDetail, Course, TrainingReportAssessment } from '../types';
 import AuditButton from './AuditButton';
 import CourseDataWindow from './CourseDataWindow';
 import FullPageProgressGraph from './FullPageProgressGraph';
@@ -17,7 +17,7 @@ interface CourseProgressViewProps {
     traineesData: Trainee[];
     courseColors: { [key: string]: string };
     scores: Map<string, Score[]>;
-    pt051Assessments: Map<string, Pt051Assessment>;
+    pt051Assessments: Map<string, TrainingReportAssessment>;
     traineeLMPs: Map<string, SyllabusItemDetail[]>;
     courses: Course[];
     onUpdateGradDate: (courseName: string, newGradDate: string) => void;

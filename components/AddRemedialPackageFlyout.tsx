@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from 'react';
-import { Trainee, Score, SyllabusItemDetail, Instructor, Pt051Assessment } from '../types';
+import { Trainee, Score, SyllabusItemDetail, Instructor, TrainingReportAssessment } from '../types';
 import { useSystemFreeze } from '../hooks/useSystemFreeze';
 import { DEFAULT_RESOURCE_DISPLAY_NAMES, ResourceDisplayNames } from '../utils/resourceDisplayNames';
 
@@ -11,7 +11,7 @@ interface AddRemedialPackageFlyoutProps {
   trainee: Trainee;
   instructors: Instructor[];
   scores: Score[];
-  pt051Assessments?: Pt051Assessment[];
+  pt051Assessments?: TrainingReportAssessment[];
   traineeLmp: SyllabusItemDetail[];
   resourceDisplayNames?: ResourceDisplayNames;
   trainingReportName?: string;
@@ -180,7 +180,7 @@ const AddRemedialPackageFlyout: React.FC<AddRemedialPackageFlyoutProps> = ({
 
   const getScoreForEvent = (item: SyllabusItemDetail) => scores.find(s => eventMatchesLmpItem(s.event, item));
 
-  const getAssessmentGrade = (assessment: Pt051Assessment): number | null => {
+  const getAssessmentGrade = (assessment: TrainingReportAssessment): number | null => {
     if (typeof assessment.overallGrade === 'number') return assessment.overallGrade;
     if (assessment.overallGrade === 'No Grade' || assessment.overallGrade === null || assessment.overallGrade === undefined) return null;
     const parsed = Number(assessment.overallGrade);
@@ -198,7 +198,7 @@ const AddRemedialPackageFlyout: React.FC<AddRemedialPackageFlyoutProps> = ({
           ? { item, assessment, grade, date: assessment.date || '' }
           : null;
       })
-      .filter((entry): entry is { item: SyllabusItemDetail; assessment: Pt051Assessment; grade: number; date: string } => !!entry)
+      .filter((entry): entry is { item: SyllabusItemDetail; assessment: TrainingReportAssessment; grade: number; date: string } => !!entry)
       .sort((a, b) => new Date(a.date || 0).getTime() - new Date(b.date || 0).getTime());
 
     assessedLmpItems.forEach((entry, index) => {

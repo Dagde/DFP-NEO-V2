@@ -27,14 +27,14 @@ interface MyDashboardProps {
     onSelectMySct: () => void;
     sctRequests: SctRequest[];
     pt051Assessments: Map<string, TrainingReportAssessment>;
-    onSelectPt051: (assessment: TrainingReportAssessment) => void;
+    onSelectTrainingReport: (assessment: TrainingReportAssessment) => void;
     syllabusDetails?: SyllabusItemDetail[];
-    suppressedPt051EventIds?: string[];
+    suppressedTrainingReportEventIds?: string[];
     trainingReportsToComplete?: Array<{ report: AirCombatTrainingReport; staff: Instructor }>;
-    onSelectTrainingReport?: (entry: { report: AirCombatTrainingReport; staff: Instructor }) => void;
+    onSelectStaffTrainingReport?: (entry: { report: AirCombatTrainingReport; staff: Instructor }) => void;
     onReassignTrainingReport?: (entry: { report: AirCombatTrainingReport; staff: Instructor }, assignee: Instructor) => void;
-    onDeletePt051ReportMessage?: (assessment: TrainingReportAssessment) => void | Promise<void>;
-    onDeleteTrainingReportMessage?: (entry: { report: AirCombatTrainingReport; staff: Instructor }) => void | Promise<void>;
+    onDeleteTrainingReportMessage?: (assessment: TrainingReportAssessment) => void | Promise<void>;
+    onDeleteStaffTrainingReportMessage?: (entry: { report: AirCombatTrainingReport; staff: Instructor }) => void | Promise<void>;
     staffOptions?: Instructor[];
     messageContactStaffOptions?: Instructor[];
     messageContactTraineeOptions?: Trainee[];
@@ -723,13 +723,13 @@ const MyDashboard: React.FC<MyDashboardProps> = ({
     onSelectMySct, 
     sctRequests, 
     pt051Assessments, 
-    onSelectPt051,
-    suppressedPt051EventIds = [],
-    trainingReportsToComplete = [],
     onSelectTrainingReport,
+    suppressedTrainingReportEventIds = [],
+    trainingReportsToComplete = [],
+    onSelectStaffTrainingReport,
     onReassignTrainingReport,
-    onDeletePt051ReportMessage,
     onDeleteTrainingReportMessage,
+    onDeleteStaffTrainingReportMessage,
     staffOptions = [],
     messageContactStaffOptions = staffOptions,
     messageContactTraineeOptions = [],
@@ -2150,10 +2150,10 @@ const MyDashboard: React.FC<MyDashboardProps> = ({
     });
     
     // Get incomplete training report assessments assigned to current user.
-    const incompletePt051s = React.useMemo(() => {
+    const incompleteTrainingReports = React.useMemo(() => {
         const fullUserName = toDashboardSurnameFirstName(userName);
         const fullUserKey = normaliseDashboardContactName(fullUserName);
-        const suppressedEventIds = new Set(suppressedPt051EventIds.map(value => String(value || '').trim()).filter(Boolean));
+        const suppressedEventIds = new Set(suppressedTrainingReportEventIds.map(value => String(value || '').trim()).filter(Boolean));
         const assessments = Array.from(pt051Assessments.values());
         const storedIncomplete = assessments
             .filter(assessment =>
@@ -2169,31 +2169,31 @@ const MyDashboard: React.FC<MyDashboardProps> = ({
             );
         return storedIncomplete
             .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
-    }, [pt051Assessments, suppressedPt051EventIds, userName]);
+    }, [pt051Assessments, suppressedTrainingReportEventIds, userName]);
 
-    const visibleTrainingReportsToComplete = React.useMemo(() => {
-        const suppressedEventIds = new Set(suppressedPt051EventIds.map(value => String(value || '').trim()).filter(Boolean));
+    const visibleStaffTrainingReportsToComplete = React.useMemo(() => {
+        const suppressedEventIds = new Set(suppressedTrainingReportEventIds.map(value => String(value || '').trim()).filter(Boolean));
         if (suppressedEventIds.size === 0) return trainingReportsToComplete;
         return trainingReportsToComplete.filter(entry => (
             !getDashboardTrainingReportSuppressionIds(entry.report).some(candidateId => suppressedEventIds.has(candidateId))
         ));
-    }, [suppressedPt051EventIds, trainingReportsToComplete]);
+    }, [suppressedTrainingReportEventIds, trainingReportsToComplete]);
 
-    const visiblePt051ReportsToComplete = React.useMemo(() => {
-        if (visibleTrainingReportsToComplete.length === 0) return incompletePt051s;
-        const staffReportEventIds = new Set(visibleTrainingReportsToComplete
+    const visibleTrainingReportAssessmentsToComplete = React.useMemo(() => {
+        if (visibleStaffTrainingReportsToComplete.length === 0) return incompleteTrainingReports;
+        const staffReportEventIds = new Set(visibleStaffTrainingReportsToComplete
             .map(entry => String(entry.report.eventId || '').trim())
             .filter(Boolean));
-        const staffReportCodeDates = new Set(visibleTrainingReportsToComplete
+        const staffReportCodeDates = new Set(visibleStaffTrainingReportsToComplete
             .map(entry => `${String(entry.report.eventCode || '').trim().toUpperCase()}::${String(entry.report.date || '').trim()}`)
             .filter(value => !value.startsWith('::') && !value.endsWith('::')));
-        return incompletePt051s.filter(assessment => {
+        return incompleteTrainingReports.filter(assessment => {
             const eventId = String(assessment.eventId || '').trim();
             if (eventId && staffReportEventIds.has(eventId)) return false;
             const codeDate = `${String(assessment.flightNumber || '').trim().toUpperCase()}::${String(assessment.date || '').trim()}`;
             return !staffReportCodeDates.has(codeDate);
         });
-    }, [incompletePt051s, visibleTrainingReportsToComplete]);
+    }, [incompleteTrainingReports, visibleStaffTrainingReportsToComplete]);
 
     const confirmDeleteReportMessage = async (
         label: string,
@@ -2935,9 +2935,9 @@ const MyDashboard: React.FC<MyDashboardProps> = ({
                 {/* Reports to be completed */}
                 <div className="bg-gray-800 rounded-lg shadow-lg p-6 border border-gray-700">
                     <h2 className="text-xl font-semibold mb-4 text-amber-400">Reports to be completed</h2>
-                    {visiblePt051ReportsToComplete.length > 0 || visibleTrainingReportsToComplete.length > 0 ? (
+                    {visibleTrainingReportAssessmentsToComplete.length > 0 || visibleStaffTrainingReportsToComplete.length > 0 ? (
                         <ul className="space-y-2">
-                            {visiblePt051ReportsToComplete.map(assessment => (
+                            {visibleTrainingReportAssessmentsToComplete.map(assessment => (
                                 <li
                                     key={assessment.id}
                                     className="p-3 bg-gray-700/50 rounded-md hover:bg-gray-700 transition-colors"
@@ -2946,12 +2946,12 @@ const MyDashboard: React.FC<MyDashboardProps> = ({
                                     <div className="flex justify-between items-start gap-3">
                                         <div className="min-w-0">
                                             <button
-                                                onClick={() => onSelectPt051(assessment)}
+                                                onClick={() => onSelectTrainingReport(assessment)}
                                                 className="block text-left"
                                             >
                                                 <p className="font-semibold text-white">{assessment.flightNumber}</p>
                                             </button>
-                                            {onDeletePt051ReportMessage && (
+                                            {onDeleteTrainingReportMessage && (
                                                 <button
                                                     type="button"
                                                     onClick={(event) => {
@@ -2959,7 +2959,7 @@ const MyDashboard: React.FC<MyDashboardProps> = ({
                                                         event.stopPropagation();
                                                         void confirmDeleteReportMessage(
                                                             assessment.flightNumber || 'report',
-                                                            () => onDeletePt051ReportMessage(assessment),
+                                                            () => onDeleteTrainingReportMessage(assessment),
                                                         );
                                                     }}
                                                     className="mt-1 grid h-7 w-7 place-items-center rounded text-red-300 hover:bg-red-500/15 hover:text-red-200"
@@ -2970,7 +2970,7 @@ const MyDashboard: React.FC<MyDashboardProps> = ({
                                                 </button>
                                             )}
                                             <button
-                                                onClick={() => onSelectPt051(assessment)}
+                                                onClick={() => onSelectTrainingReport(assessment)}
                                                 className="block min-w-0 text-left"
                                             >
                                                 <p className="text-sm text-gray-400">{assessment.trainedFullName}</p>
@@ -2985,7 +2985,7 @@ const MyDashboard: React.FC<MyDashboardProps> = ({
                                     </div>
                                 </li>
                             ))}
-                            {visibleTrainingReportsToComplete.map(entry => (
+                            {visibleStaffTrainingReportsToComplete.map(entry => (
                                 <li
                                     key={entry.report.id}
                                     className="p-3 bg-gray-700/50 rounded-md hover:bg-gray-700 transition-colors"
@@ -2994,7 +2994,7 @@ const MyDashboard: React.FC<MyDashboardProps> = ({
                                     <div className="flex items-start gap-2">
                                         <div className="min-w-0 flex-1">
                                             <button
-                                                onClick={() => onSelectTrainingReport?.(entry)}
+                                                onClick={() => onSelectStaffTrainingReport?.(entry)}
                                                 className="w-full min-w-0 text-left"
                                             >
                                                 <div className="flex items-start justify-between gap-2">
@@ -3009,7 +3009,7 @@ const MyDashboard: React.FC<MyDashboardProps> = ({
                                                     </div>
                                                 </div>
                                             </button>
-                                            {onDeleteTrainingReportMessage && (
+                                            {onDeleteStaffTrainingReportMessage && (
                                                 <button
                                                     type="button"
                                                     onClick={(event) => {
@@ -3017,7 +3017,7 @@ const MyDashboard: React.FC<MyDashboardProps> = ({
                                                         event.stopPropagation();
                                                         void confirmDeleteReportMessage(
                                                             entry.report.eventCode || 'report',
-                                                            () => onDeleteTrainingReportMessage(entry),
+                                                            () => onDeleteStaffTrainingReportMessage(entry),
                                                         );
                                                     }}
                                                     className="mt-1 grid h-7 w-7 place-items-center rounded text-red-300 hover:bg-red-500/15 hover:text-red-200"
@@ -3081,7 +3081,7 @@ const MyDashboard: React.FC<MyDashboardProps> = ({
                                         if (staffPickerEntry.mode === 'reassign') {
                                             onReassignTrainingReport?.(staffPickerEntry, staff);
                                         } else {
-                                            onSelectTrainingReport?.({ ...staffPickerEntry, staff });
+                                            onSelectStaffTrainingReport?.({ ...staffPickerEntry, staff });
                                         }
                                         setStaffPickerEntry(null);
                                     }}

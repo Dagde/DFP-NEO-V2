@@ -1,11 +1,11 @@
 import React, { useMemo } from 'react';
-import { Trainee, SyllabusItemDetail, Course, Pt051Assessment } from '../types';
+import { Trainee, SyllabusItemDetail, Course, TrainingReportAssessment } from '../types';
 import { calculateCourseProgressMetric, CourseRiskThresholds } from '../utils/courseProgressMetrics';
 
 interface CourseDataWindowProps {
     course: Course;
     allTrainees: Trainee[];
-    pt051Assessments: Map<string, Pt051Assessment>;
+    pt051Assessments: Map<string, TrainingReportAssessment>;
     traineeLMPs: Map<string, SyllabusItemDetail[]>;
     riskThresholds: CourseRiskThresholds;
     onUpdateGradDate: (courseName: string, newGradDate: string) => void;

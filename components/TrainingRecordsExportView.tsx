@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useMemo } from 'react';
-import { Trainee, Instructor, ScheduleEvent, Course, Score, Pt051Assessment, SyllabusItemDetail, PhraseBank } from '../types';
+import { Trainee, Instructor, ScheduleEvent, Course, Score, TrainingReportAssessment, SyllabusItemDetail, PhraseBank } from '../types';
 import jsPDF from 'jspdf';
 import html2canvas from 'html2canvas';
 import { DEFAULT_RESOURCE_DISPLAY_NAMES, type ResourceDisplayNames } from '../utils/resourceDisplayNames';
@@ -24,8 +24,8 @@ interface TrainingRecordsExportViewProps {
     scores: Map<string, Score[]>;
     publishedSchedules: Record<string, ScheduleEvent[]>;
     syllabusDetails: SyllabusItemDetail[];
-    pt051Assessments: Map<string, Pt051Assessment>;
-    onSavePT051Assessment: (assessment: Pt051Assessment) => void;
+    pt051Assessments: Map<string, TrainingReportAssessment>;
+    onSaveTrainingReportAssessment: (assessment: TrainingReportAssessment) => void;
     resourceDisplayNames?: ResourceDisplayNames;
     instructorLabel?: string;
     trainingReportTemplate?: Partial<TrainingReportTemplate> | null;
@@ -228,7 +228,7 @@ const TrainingRecordsExportView: React.FC<TrainingRecordsExportViewProps> = ({
     publishedSchedules,
     syllabusDetails,
     pt051Assessments,
-    onSavePT051Assessment,
+    onSaveTrainingReportAssessment,
     resourceDisplayNames = DEFAULT_RESOURCE_DISPLAY_NAMES,
     instructorLabel = 'Instructor',
     trainingReportTemplate = null,
@@ -405,7 +405,7 @@ const TrainingRecordsExportView: React.FC<TrainingRecordsExportViewProps> = ({
 
     const pt051AssessmentList = useMemo(() => Array.from(pt051Assessments.values()), [pt051Assessments]);
 
-    const findAssessmentForEvent = (event: ScheduleEvent): Pt051Assessment | undefined => {
+    const findAssessmentForEvent = (event: ScheduleEvent): TrainingReportAssessment | undefined => {
         const eventPerson = getEventPersonName(event);
         return pt051AssessmentList.find(assessment => (
             (Boolean(event.id) && assessment.eventId === event.id) ||
@@ -833,7 +833,7 @@ const TrainingRecordsExportView: React.FC<TrainingRecordsExportViewProps> = ({
                 }
                 
                 // Render the configured training report form using native PDF text.
-                renderPT051ToPDF(pdf, event);
+                renderTrainingReportToPDF(pdf, event);
                 
                 isFirstPage = false;
             }
@@ -928,7 +928,7 @@ const TrainingRecordsExportView: React.FC<TrainingRecordsExportViewProps> = ({
         }, { ...defaults });
     };
     
-    const renderPT051ToPDF = (pdf: jsPDF, event: ScheduleEvent) => {
+    const renderTrainingReportToPDF = (pdf: jsPDF, event: ScheduleEvent) => {
         const trainee = allTrainees.find(t => t.fullName === event.student || t.fullName === event.pilot);
         const instructor = allInstructors.find(i => i.name === event.instructor);
         
@@ -1159,7 +1159,7 @@ const TrainingRecordsExportView: React.FC<TrainingRecordsExportViewProps> = ({
         
         };
     
-    const renderPT051ForEvent = (event: ScheduleEvent): string => {
+    const renderTrainingReportForEvent = (event: ScheduleEvent): string => {
         const trainee = allTrainees.find(t => t.fullName === event.student || t.fullName === event.pilot);
         const instructor = allInstructors.find(i => i.name === event.instructor);
         

@@ -697,7 +697,7 @@ import {
     PersonnelConflict,
     Score,
     PersonCurrencyStatus,
-    Pt051Assessment,
+    TrainingReportAssessment,
     UnavailabilityPeriod,
     UnavailabilityReason,
     NeoProblemTile,
@@ -7687,7 +7687,7 @@ import { savedCurrencyCache } from './components/CurrencyPanel';
 // FIX: Corrected import to be a named import as per module export.
 import { CurrencySetupFlyout } from './components/CurrencySetupFlyout';
 import UnsavedChangesWarning from './components/UnsavedChangesWarning';
-import TrainingReportView from './components/PT051View';
+import TrainingReportView from './components/TrainingReportView';
 import AirCombatTrainingReportModal from './components/AirCombatTrainingReportModal';
 import AuthorisationFlyout from './components/AuthorisationFlyout';
 // FIX: Corrected import to be a named import as per module export.
@@ -27990,12 +27990,16 @@ const App: React.FC = () => {
         })
     );
 
+    const normalizeLegacyViewKey = (view: string): string => (
+        view === 'PT051' ? 'TrainingReport' : view
+    );
+
     const [activeView, setActiveView] = useState<string>(() => {
         try {
             const restoreView = sessionStorage.getItem('dfp_restore_view_after_reload');
             if (restoreView) {
                 sessionStorage.removeItem('dfp_restore_view_after_reload');
-                return restoreView;
+                return normalizeLegacyViewKey(restoreView);
             }
         } catch (e) { /* ignore */ }
         return 'Program Schedule';
@@ -31302,8 +31306,8 @@ const App: React.FC = () => {
             setBaselineSchedules({});
             setSnapshotDates([]);
             setAlertsDataByDate({});
-            setPt051Assessments(new Map());
-            setPt051PerformanceLoading(false);
+            setTrainingReportAssessments(new Map());
+            setTrainingReportPerformanceLoading(false);
             pushDfpDataDiag('history:setup-test-skipped', {
                 setupTestProfile,
                 reason: 'Setup wizard test mode uses local browser setup records only and must not load real DFP snapshots.',
@@ -31425,8 +31429,8 @@ const App: React.FC = () => {
                 }
 
                 try {
-                    if (!cancelled) setPt051PerformanceLoading(true);
-                    const persistedAssessments: Pt051Assessment[] = [];
+                    if (!cancelled) setTrainingReportPerformanceLoading(true);
+                    const persistedAssessments: TrainingReportAssessment[] = [];
                     const pageSize = 2000;
                     let offset = 0;
                     const performanceStartedAt = performance.now();
@@ -31463,10 +31467,10 @@ const App: React.FC = () => {
 
                     if (!cancelled && persistedAssessments.length > 0) {
                         console.log(`[Training Report] ✅ Loaded ${persistedAssessments.length} persisted trainee performance records`);
-                        setPt051Assessments(prev => {
+                        setTrainingReportAssessments(prev => {
                             if (cancelled) return prev;
                             const merged = new Map(prev);
-                            persistedAssessments.forEach((assessment: Pt051Assessment) => {
+                            persistedAssessments.forEach((assessment: TrainingReportAssessment) => {
                                 if (!assessment?.eventId || !assessment?.traineeFullName) return;
                                 merged.set(`pt051-${assessment.eventId}-${assessment.traineeFullName}`, assessment);
                             });
@@ -31480,7 +31484,7 @@ const App: React.FC = () => {
                         error: String(perfErr),
                     });
                 } finally {
-                    if (!cancelled) setPt051PerformanceLoading(false);
+                    if (!cancelled) setTrainingReportPerformanceLoading(false);
                 }
 
                 if (legacySeedingMetadata) {
@@ -31501,7 +31505,7 @@ const App: React.FC = () => {
                     durationMs: Math.round(performance.now() - startedAt),
                     error: String(error),
                 });
-                if (!cancelled) setPt051PerformanceLoading(false);
+                if (!cancelled) setTrainingReportPerformanceLoading(false);
             }
         };
         loadHistoricalData();
@@ -31790,16 +31794,16 @@ const App: React.FC = () => {
         }
 
         const snapshotAssessments = snap.pt051Assessments && typeof snap.pt051Assessments === 'object'
-            ? Object.values(snap.pt051Assessments) as Pt051Assessment[]
+            ? Object.values(snap.pt051Assessments) as TrainingReportAssessment[]
             : [];
         if (snapshotAssessments.length > 0) {
-            setPt051Assessments(prev => {
+            setTrainingReportAssessments(prev => {
                 const next = new Map(prev);
                 snapshotAssessments.forEach((assessment: any) => {
                     const eventId = assessment?.eventId || assessment?.id || '';
                     const traineeName = assessment?.traineeFullName || assessment?.trainedFullName || '';
                     if (!eventId || !traineeName) return;
-                    next.set(`pt051-${eventId}-${traineeName}`, assessment as Pt051Assessment);
+                    next.set(`pt051-${eventId}-${traineeName}`, assessment as TrainingReportAssessment);
                 });
                 return next;
             });
@@ -32344,8 +32348,8 @@ const App: React.FC = () => {
         userPermission: currentUserPermission,
     }), [currentEmergencyQualificationIds, currentUserPermission, emergencyFreezeAuthority]);
     const [scores, setScores] = useState<Map<string, Score[]>>(new Map());
-    const [pt051Assessments, setPt051Assessments] = useState<Map<string, Pt051Assessment>>(new Map());
-    const [pt051PerformanceLoading, setPt051PerformanceLoading] = useState(true);
+    const [pt051Assessments, setTrainingReportAssessments] = useState<Map<string, TrainingReportAssessment>>(new Map());
+    const [pt051PerformanceLoading, setTrainingReportPerformanceLoading] = useState(true);
     const [eventCompletionsForDate, setEventCompletionsForDate] = useState<any[]>([]);
     const [historicalDfpContextByDate, setHistoricalDfpContextByDate] = useState<Record<string, {
         staffProfiles: any[];
@@ -34585,32 +34589,32 @@ const App: React.FC = () => {
 
     const [selectedTraineeForHateSheet, setSelectedTraineeForHateSheet] = useState<Trainee | null>(null);
     const [selectedScoreForDetail, setSelectedScoreForDetail] = useState<Score | null>(null);
-    const [eventForPt051, setEventForPt051] = useState<ScheduleEvent | null>(null);
+    const [eventForTrainingReport, setEventForTrainingReport] = useState<ScheduleEvent | null>(null);
     const [airCombatTrainingReportDraft, setAirCombatTrainingReportDraft] = useState<AirCombatTrainingReportDraft | null>(null);
     const [pendingDashboardTrainingReportContext, setPendingDashboardTrainingReportContext] = useState<PendingDashboardTrainingReportContext | null>(null);
     const [trainingReportRecentLogEvents, setTrainingReportRecentLogEvents] = useState<ScheduleEvent[]>([]);
-    const [loadedPt051Keys, setLoadedPt051Keys] = useState<Set<string>>(new Set());
-    const [suppressedDashboardPt051EventIds, setSuppressedDashboardPt051EventIds] = useState<string[]>(() => {
+    const [loadedTrainingReportKeys, setLoadedTrainingReportKeys] = useState<Set<string>>(new Set());
+    const [suppressedDashboardTrainingReportEventIds, setSuppressedDashboardTrainingReportEventIds] = useState<string[]>(() => {
         return loadSuppressedTrainingReportEventIds();
     });
-    const suppressDeletedPt051Report = React.useCallback((candidateIds: Array<string | number | null | undefined>) => {
+    const suppressDeletedTrainingReport = React.useCallback((candidateIds: Array<string | number | null | undefined>) => {
         const cleanedCandidateIds = candidateIds
             .map(value => String(value || '').trim())
             .filter(Boolean);
         if (cleanedCandidateIds.length === 0) return;
-        setSuppressedDashboardPt051EventIds(prev => {
+        setSuppressedDashboardTrainingReportEventIds(prev => {
             const updated = Array.from(new Set([...prev, ...cleanedCandidateIds]));
             if (updated.length === prev.length) return prev;
             saveSuppressedTrainingReportEventIds(updated);
             return updated;
         });
     }, []);
-    const unsuppressDeletedPt051Report = React.useCallback((candidateIds: Array<string | number | null | undefined>) => {
+    const unsuppressDeletedTrainingReport = React.useCallback((candidateIds: Array<string | number | null | undefined>) => {
         const cleanedCandidateIds = new Set(candidateIds
             .map(value => String(value || '').trim())
             .filter(Boolean));
         if (cleanedCandidateIds.size === 0) return;
-        setSuppressedDashboardPt051EventIds(prev => {
+        setSuppressedDashboardTrainingReportEventIds(prev => {
             const updated = prev.filter(value => !cleanedCandidateIds.has(String(value || '').trim()));
             if (updated.length === prev.length) return prev;
             saveSuppressedTrainingReportEventIds(updated);
@@ -35353,7 +35357,7 @@ const App: React.FC = () => {
     // Sync training reports when My Home opens so the dashboard is up to date.
     useEffect(() => {
         if (activeView === 'MyDashboard' || floatingDashboardWindows.MyDashboard) {
-            syncPt051WithActiveDfp(publishedSchedules, pt051Assessments);
+            syncTrainingReportWithActiveDfp(publishedSchedules, pt051Assessments);
         }
     }, [activeView, floatingDashboardWindows.MyDashboard, publishedSchedules, pt051Assessments]);
 
@@ -37573,9 +37577,9 @@ const App: React.FC = () => {
     const modelUnavailableRightViews = activeOperationalModel === 'air_combat' ? ['NextDayTraineeSchedule'] : [];
     const canViewOwnTraineeProfile = true;
     const canViewOtherTraineeProfiles = canUsePlatformPermission('trainee.profile.others');
-    const canViewOwnPt051 = true;
-    const canViewOtherPt051 = canUsePlatformPermission('trainee.pt051.others');
-    const canEditPt051Records = canUsePlatformPermission('trainee.pt051.edit');
+    const canViewOwnTrainingReport = true;
+    const canViewOtherTrainingReport = canUsePlatformPermission('trainee.pt051.others');
+    const canEditTrainingReportRecords = canUsePlatformPermission('trainee.pt051.edit');
     const canViewOwnLmp = true;
     const canViewOtherLmp = canUsePlatformPermission('trainee.lmp.others');
     const canAddRemedialPackage = canUsePlatformPermission('trainee.remedial.add');
@@ -37701,13 +37705,13 @@ const App: React.FC = () => {
         isOwnTraineeRecord(trainee) ? canViewOwnTraineeProfile : canViewOtherTraineeProfiles
     ), [isOwnTraineeRecord, canViewOwnTraineeProfile, canViewOtherTraineeProfiles]);
 
-    const canViewTraineePt051 = useCallback((trainee?: Trainee | null): boolean => (
-        canEditPt051Records || (isOwnTraineeRecord(trainee) ? canViewOwnPt051 : canViewOtherPt051)
-    ), [canEditPt051Records, isOwnTraineeRecord, canViewOwnPt051, canViewOtherPt051]);
+    const canViewTraineeTrainingReport = useCallback((trainee?: Trainee | null): boolean => (
+        canEditTrainingReportRecords || (isOwnTraineeRecord(trainee) ? canViewOwnTrainingReport : canViewOtherTrainingReport)
+    ), [canEditTrainingReportRecords, isOwnTraineeRecord, canViewOwnTrainingReport, canViewOtherTrainingReport]);
 
-    const canEditTraineePt051 = useCallback((trainee?: Trainee | null): boolean => (
-        isOwnTraineeRecord(trainee) || (canEditPt051Records && canViewTraineePt051(trainee))
-    ), [canEditPt051Records, canViewTraineePt051, isOwnTraineeRecord]);
+    const canEditTraineeTrainingReport = useCallback((trainee?: Trainee | null): boolean => (
+        isOwnTraineeRecord(trainee) || (canEditTrainingReportRecords && canViewTraineeTrainingReport(trainee))
+    ), [canEditTrainingReportRecords, canViewTraineeTrainingReport, isOwnTraineeRecord]);
 
     const canViewTraineeLmp = useCallback((trainee?: Trainee | null): boolean => (
         isOwnTraineeRecord(trainee) ? canViewOwnLmp : canViewOtherLmp
@@ -37759,17 +37763,18 @@ const App: React.FC = () => {
     }, [canOpenSelfScopedView, canUsePlatformPermission, getRequiredPlatformPermissionForView, hasPlatformModuleAccessForView, platformAccessContext]);
 
     const navigateToView = (view: string) => {
-        if (!canAccessView(view)) {
+        const normalizedView = normalizeLegacyViewKey(view);
+        if (!canAccessView(normalizedView)) {
             setShowInfoNotification('Access denied for this location or module. Ask a Platform Admin to adjust your access in Settings.');
             return;
         }
-        if (view === 'MyDashboard' || view === 'SupervisorDashboard') {
+        if (normalizedView === 'MyDashboard' || normalizedView === 'SupervisorDashboard') {
             setPreviousView(activeView);
-            setFloatingDashboardWindows(prev => ({ ...prev, [view]: true }));
+            setFloatingDashboardWindows(prev => ({ ...prev, [normalizedView]: true }));
             return;
         }
         setPreviousView(activeView);
-        setActiveView(view);
+        setActiveView(normalizedView);
         // Close Pause Flight Ops panel when navigating away and reset all pause state
         setShowPausePanel(false);
         setPauseCompletedEventIds(new Set());
@@ -37864,8 +37869,8 @@ const App: React.FC = () => {
         } as ScheduleEvent;
     }, [traineeLMPs]);
 
-    const openPt051FromTraineeProfile = useCallback((trainee: Trainee, assessment: Pt051Assessment) => {
-        if (!canViewTraineePt051(trainee)) {
+    const openTrainingReportFromTraineeProfile = useCallback((trainee: Trainee, assessment: TrainingReportAssessment) => {
+        if (!canViewTraineeTrainingReport(trainee)) {
             denyPlatformAction(`${configuredTrainingReportDisplayName} record`);
             return;
         }
@@ -37911,17 +37916,17 @@ const App: React.FC = () => {
         }
 
         setSelectedTraineeForHateSheet(trainee);
-        setEventForPt051(attachForwardedTrainingReportNotes(trainee, eventForAssessment));
+        setEventForTrainingReport(attachForwardedTrainingReportNotes(trainee, eventForAssessment));
         logAudit(
             'Performance History',
             'View',
             `Viewed ${configuredTrainingReportDisplayName} for ${assessment.traineeFullName} - Event: ${assessment.flightNumber} (${assessment.date})`
         );
-        handleNavigation('PT051');
+        handleNavigation('TrainingReport');
     }, [
         attachForwardedTrainingReportNotes,
         buildDfpDate,
-        canViewTraineePt051,
+        canViewTraineeTrainingReport,
         configuredTrainingReportDisplayName,
         denyPlatformAction,
         eventsForDate,
@@ -38035,14 +38040,14 @@ const App: React.FC = () => {
         }
     }, [activeUnitCode, allTraineesData, filterSyllabusForMasterLmpAccess, hasMasterLmpUnitAccess, pushDfpDataDiag, syllabusDetails]);
 
-    const loadPersistedPt051Assessment = useCallback(async (
+    const loadPersistedTrainingReportAssessment = useCallback(async (
         trainee: Trainee,
         event: ScheduleEvent
-    ): Promise<Pt051Assessment | null> => {
+    ): Promise<TrainingReportAssessment | null> => {
         const loadKey = `${event.id}-${trainee.fullName}`;
         try {
             const apiBase = getApiBaseUrl();
-            let assessment: Pt051Assessment | null = null;
+            let assessment: TrainingReportAssessment | null = null;
 
             if (event.id) {
                 const response = await fetch(`${apiBase}/trainee-performance/${encodeURIComponent(event.id)}`);
@@ -38067,11 +38072,11 @@ const App: React.FC = () => {
                 if (response.ok) {
                     const rows = await response.json();
                     if (Array.isArray(rows)) {
-                        assessment = rows.find((row: Pt051Assessment) =>
+                        assessment = rows.find((row: TrainingReportAssessment) =>
                             row.traineeFullName === trainee.fullName &&
                             row.flightNumber === event.flightNumber &&
                             (!event.date || !row.date || row.date === event.date)
-                        ) || rows.find((row: Pt051Assessment) => (
+                        ) || rows.find((row: TrainingReportAssessment) => (
                             row.traineeFullName === trainee.fullName &&
                             row.flightNumber === event.flightNumber
                         )) || null;
@@ -38140,7 +38145,7 @@ const App: React.FC = () => {
                     dpcoFollowUp: assessment.dpcoFollowUp || null,
                     dncoFollowUp: assessment.dncoFollowUp || null,
                 });
-                setPt051Assessments(prev => {
+                setTrainingReportAssessments(prev => {
                     const updated = new Map(prev);
                     updated.set(`pt051-${assessment!.eventId}-${assessment!.traineeFullName}`, assessment!);
                     return updated;
@@ -38153,7 +38158,7 @@ const App: React.FC = () => {
             console.warn(`[Training Report] Could not load authoritative report for ${trainee.fullName} ${event.flightNumber}:`, error);
             return null;
         } finally {
-            setLoadedPt051Keys(prev => {
+            setLoadedTrainingReportKeys(prev => {
                 const updated = new Set(prev);
                 updated.add(loadKey);
                 return updated;
@@ -38162,13 +38167,13 @@ const App: React.FC = () => {
     }, [loadPersistedTraineeLmp, pushDfpDataDiag, traineeLMPs]);
 
     useEffect(() => {
-        if (activeView !== 'PT051' || !eventForPt051 || !selectedTraineeForHateSheet) return;
-        const loadKey = `${eventForPt051.id}-${selectedTraineeForHateSheet.fullName}`;
-        if (loadedPt051Keys.has(loadKey)) return;
-        void loadPersistedPt051Assessment(selectedTraineeForHateSheet, eventForPt051);
-    }, [activeView, eventForPt051, selectedTraineeForHateSheet, loadedPt051Keys, loadPersistedPt051Assessment]);
+        if (activeView !== 'TrainingReport' || !eventForTrainingReport || !selectedTraineeForHateSheet) return;
+        const loadKey = `${eventForTrainingReport.id}-${selectedTraineeForHateSheet.fullName}`;
+        if (loadedTrainingReportKeys.has(loadKey)) return;
+        void loadPersistedTrainingReportAssessment(selectedTraineeForHateSheet, eventForTrainingReport);
+    }, [activeView, eventForTrainingReport, selectedTraineeForHateSheet, loadedTrainingReportKeys, loadPersistedTrainingReportAssessment]);
 
-    const buildPt051EventFromLmpItem = (trainee: Trainee, item: SyllabusItemDetail): ScheduleEvent => {
+    const buildTrainingReportEventFromLmpItem = (trainee: Trainee, item: SyllabusItemDetail): ScheduleEvent => {
         const eventType: ScheduleEvent['type'] =
             item.type === 'Flight' ? 'flight' :
             item.type === 'FTD' ? 'ftd' :
@@ -38267,7 +38272,7 @@ const App: React.FC = () => {
     };
 
     const removeRplTrainingReportForItem = async (trainee: Trainee, item: SyllabusItemDetail) => {
-        const eventForAssessment = buildPt051EventFromLmpItem(trainee, item);
+        const eventForAssessment = buildTrainingReportEventFromLmpItem(trainee, item);
         const eventId = eventForAssessment.id;
         const assessmentKey = `pt051-${eventId}-${trainee.fullName}`;
         const existingAssessment = pt051Assessments.get(assessmentKey)
@@ -38287,12 +38292,12 @@ const App: React.FC = () => {
             throw new Error(errorText || `Failed to remove RPL ${configuredTrainingReportDisplayName} (${response.status})`);
         }
 
-        suppressDeletedPt051Report([
+        suppressDeletedTrainingReport([
             eventId,
             existingAssessment?.id || '',
             assessmentKey,
         ].filter(Boolean));
-        setPt051Assessments(prev => {
+        setTrainingReportAssessments(prev => {
             const updated = new Map(prev);
             updated.delete(assessmentKey);
             Array.from(updated.entries()).forEach(([key, assessment]) => {
@@ -38306,7 +38311,7 @@ const App: React.FC = () => {
             });
             return updated;
         });
-        setLoadedPt051Keys(prev => {
+        setLoadedTrainingReportKeys(prev => {
             const updated = new Set(prev);
             updated.delete(`${eventId}-${trainee.fullName}`);
             return updated;
@@ -38314,11 +38319,11 @@ const App: React.FC = () => {
     };
 
     const upsertRplTrainingReportForItem = async (trainee: Trainee, item: SyllabusItemDetail) => {
-        const eventForAssessment = buildPt051EventFromLmpItem(trainee, item);
+        const eventForAssessment = buildTrainingReportEventFromLmpItem(trainee, item);
         const eventId = eventForAssessment.id;
         const grantedAt = item.rplGrantedAt || new Date().toISOString();
         const reportDate = /^\d{4}-\d{2}-\d{2}/.test(grantedAt) ? grantedAt.slice(0, 10) : getLocalDateString();
-        const assessment: Pt051Assessment = {
+        const assessment: TrainingReportAssessment = {
             id: `pt051-${eventId}-${trainee.fullName}`,
             traineeFullName: trainee.fullName,
             eventId,
@@ -38340,27 +38345,27 @@ const App: React.FC = () => {
             scores: ALL_ELEMENTS.map(element => ({ element, grade: null, comment: '' })),
             groundSchoolAssessment: { isAssessment: false, result: undefined },
         };
-        await persistPt051AssessmentRecord(assessment);
-        setPt051Assessments(prev => {
+        await persistTrainingReportAssessmentRecord(assessment);
+        setTrainingReportAssessments(prev => {
             const updated = new Map(prev);
             updated.set(`pt051-${eventId}-${trainee.fullName}`, assessment);
             return updated;
         });
-        setLoadedPt051Keys(prev => {
+        setLoadedTrainingReportKeys(prev => {
             const updated = new Set(prev);
             updated.add(`${eventId}-${trainee.fullName}`);
             return updated;
         });
     };
 
-    const handleGeneratePt051FromLmpItem = async (trainee: Trainee, item: SyllabusItemDetail) => {
+    const handleGenerateTrainingReportFromLmpItem = async (trainee: Trainee, item: SyllabusItemDetail) => {
         const reportDisplayName = trainingReportTemplate.displayName || trainingReportTemplate.genericName || 'Training Report';
-        if (!canViewTraineePt051(trainee)) {
+        if (!canViewTraineeTrainingReport(trainee)) {
             denyPlatformAction(`${reportDisplayName} from Individual LMP`);
             return;
         }
 
-        const eventForAssessment = buildPt051EventFromLmpItem(trainee, item);
+        const eventForAssessment = buildTrainingReportEventFromLmpItem(trainee, item);
         const existingAssessment = Array.from(pt051Assessments.values()).find(
             assessment =>
                 assessment.traineeFullName === trainee.fullName &&
@@ -38368,11 +38373,11 @@ const App: React.FC = () => {
                     assessment.eventId === eventForAssessment.id ||
                     assessment.flightNumber === item.code
                 )
-        ) || await loadPersistedPt051Assessment(trainee, eventForAssessment);
+        ) || await loadPersistedTrainingReportAssessment(trainee, eventForAssessment);
 
         if (existingAssessment) {
             setSelectedTraineeForHateSheet(trainee);
-            setEventForPt051({
+            setEventForTrainingReport({
                 ...eventForAssessment,
                 id: existingAssessment.eventId || eventForAssessment.id,
                 date: existingAssessment.date || eventForAssessment.date,
@@ -38386,16 +38391,16 @@ const App: React.FC = () => {
                 'info',
                 3600
             );
-            handleNavigation('PT051');
+            handleNavigation('TrainingReport');
             return;
         }
 
-        if (!canEditTraineePt051(trainee)) {
+        if (!canEditTraineeTrainingReport(trainee)) {
             denyPlatformAction(`generate ${reportDisplayName} from Individual LMP`);
             return;
         }
 
-        const newAssessment: Pt051Assessment = {
+        const newAssessment: TrainingReportAssessment = {
             id: `pt051-${eventForAssessment.id}-${trainee.fullName}`,
             traineeFullName: trainee.fullName,
             eventId: eventForAssessment.id,
@@ -38420,13 +38425,13 @@ const App: React.FC = () => {
 
         const assessmentKey = `pt051-${newAssessment.eventId}-${trainee.fullName}`;
         try {
-            await persistPt051AssessmentRecord(newAssessment);
-            setPt051Assessments(prev => {
+            await persistTrainingReportAssessmentRecord(newAssessment);
+            setTrainingReportAssessments(prev => {
                 const updated = new Map(prev);
                 updated.set(assessmentKey, newAssessment);
                 return updated;
             });
-            setLoadedPt051Keys(prev => {
+            setLoadedTrainingReportKeys(prev => {
                 const updated = new Set(prev);
                 updated.add(`${eventForAssessment.id}-${trainee.fullName}`);
                 return updated;
@@ -38443,8 +38448,8 @@ const App: React.FC = () => {
         }
 
         setSelectedTraineeForHateSheet(trainee);
-        setEventForPt051(eventForAssessment);
-        handleNavigation('PT051');
+        setEventForTrainingReport(eventForAssessment);
+        handleNavigation('TrainingReport');
     };
 
     const buildAirCombatTrainingReportEventFromItem = (
@@ -38868,7 +38873,7 @@ const App: React.FC = () => {
             .replace(/\s+/g, ' ')
             .trim()
             .toLowerCase();
-        unsuppressDeletedPt051Report([
+        unsuppressDeletedTrainingReport([
             report.id,
             report.eventId,
             sourceEvent.id,
@@ -39131,7 +39136,7 @@ const App: React.FC = () => {
         syllabusDetails,
     ]);
 
-    const handleDeleteDashboardPt051ReportMessage = React.useCallback((assessment: TrainingReportAssessment) => {
+    const handleDeleteDashboardTrainingReportMessage = React.useCallback((assessment: TrainingReportAssessment) => {
         const traineeName = String(
             assessment.traineeFullName ||
             (assessment as any).trainedFullName ||
@@ -39147,8 +39152,8 @@ const App: React.FC = () => {
             eventId && traineeNameKey ? `dashboard-due-${eventId}-${traineeNameKey}` : '',
             eventId && traineeName ? `pt051-${eventId}-${traineeName}` : '',
         ];
-        suppressDeletedPt051Report(candidateIds);
-        setPt051Assessments(prev => {
+        suppressDeletedTrainingReport(candidateIds);
+        setTrainingReportAssessments(prev => {
             const cleanedCandidateIds = new Set(candidateIds.map(value => String(value || '').trim()).filter(Boolean));
             const updated = new Map(prev);
             Array.from(updated.entries()).forEach(([key, value]) => {
@@ -39163,7 +39168,7 @@ const App: React.FC = () => {
             return updated;
         });
         if (eventId && traineeName) {
-            setLoadedPt051Keys(prev => {
+            setLoadedTrainingReportKeys(prev => {
                 const updated = new Set(prev);
                 updated.delete(`${eventId}-${traineeName}`);
                 return updated;
@@ -39174,9 +39179,9 @@ const App: React.FC = () => {
             'Delete',
             `Deleted dashboard report message for ${assessment.flightNumber || eventId || 'report'}`
         );
-    }, [suppressDeletedPt051Report]);
+    }, [suppressDeletedTrainingReport]);
 
-    const handleDeleteDashboardTrainingReportMessage = async (
+    const handleDeleteDashboardStaffTrainingReportMessage = async (
         entry: { report: AirCombatTrainingReport; staff: Instructor },
     ) => {
         const sourceStaff = allInstructorsData.find(person => (
@@ -39221,7 +39226,7 @@ const App: React.FC = () => {
                     throw new Error(errorText || `Failed to delete training report message (${response.status})`);
                 }
             }
-            suppressDeletedPt051Report([
+            suppressDeletedTrainingReport([
                 entry.report.id,
                 entry.report.eventId,
                 entry.report.eventCode,
@@ -39892,7 +39897,7 @@ const App: React.FC = () => {
         const eventRefs = Array.from(new Set([
             item.id,
             item.code,
-            buildPt051EventFromLmpItem(trainee, item).id,
+            buildTrainingReportEventFromLmpItem(trainee, item).id,
         ].filter(Boolean) as string[]));
         const eventCodeRefs = new Set([item.id, item.code].filter(Boolean) as string[]);
         const apiBase = getApiBaseUrl();
@@ -39915,12 +39920,12 @@ const App: React.FC = () => {
             const rows = await performanceResponse.json();
             if (Array.isArray(rows)) {
                 const performanceEventIds = Array.from(new Set(rows
-                    .filter((assessment: Pt051Assessment) =>
+                    .filter((assessment: TrainingReportAssessment) =>
                         eventRefs.includes(assessment.eventId) ||
                         eventRefs.includes(assessment.id) ||
                         eventCodeRefs.has(assessment.flightNumber)
                     )
-                    .map((assessment: Pt051Assessment) => assessment.eventId)
+                    .map((assessment: TrainingReportAssessment) => assessment.eventId)
                     .filter(Boolean)));
 
                 for (const eventId of performanceEventIds) {
@@ -39946,7 +39951,7 @@ const App: React.FC = () => {
             updated.set(trainee.fullName, updatedScores);
             return updated;
         });
-        setPt051Assessments(prev => {
+        setTrainingReportAssessments(prev => {
             const updated = new Map(prev);
             Array.from(updated.entries()).forEach(([key, assessment]) => {
                 if (
@@ -39962,7 +39967,7 @@ const App: React.FC = () => {
             });
             return updated;
         });
-        setLoadedPt051Keys(prev => {
+        setLoadedTrainingReportKeys(prev => {
             const updated = new Set(prev);
             eventRefs.forEach(eventRef => updated.delete(`${eventRef}-${trainee.fullName}`));
             return updated;
@@ -40757,18 +40762,18 @@ const App: React.FC = () => {
         void loadSnapshotForDate(selectedDate, { useCache: true, allowAdminFallbackContext: false });
     };
 
-    const shouldInsertTrainingReportExtraEvent = (assessment: Pt051Assessment): boolean => (
+    const shouldInsertTrainingReportExtraEvent = (assessment: TrainingReportAssessment): boolean => (
         (assessment.dcoResult === 'DPCO' && assessment.dpcoFollowUp?.action === 'extra-event') ||
         (assessment.dcoResult === 'DNCO' && assessment.dncoFollowUp?.requestExtraFlight === true)
     );
 
-    const shouldExtendTrainingReportNextEvent = (assessment: Pt051Assessment): boolean => (
+    const shouldExtendTrainingReportNextEvent = (assessment: TrainingReportAssessment): boolean => (
         assessment.dcoResult === 'DPCO' &&
         assessment.dpcoFollowUp?.action === 'extra-hours-next-event' &&
         Number(assessment.dpcoFollowUp?.extraHours) > 0
     );
 
-    const shouldPassTrainingReportNotesToNextEvent = (assessment: Pt051Assessment): boolean => (
+    const shouldPassTrainingReportNotesToNextEvent = (assessment: TrainingReportAssessment): boolean => (
         assessment.passNotesToNextEvent === true &&
         String(assessment.trainingReportNotes || '').trim().length > 0
     );
@@ -40799,7 +40804,7 @@ const App: React.FC = () => {
     const findTrainingReportSourceLmpItem = (
         lmp: SyllabusItemDetail[],
         trainee: Trainee,
-        assessment: Pt051Assessment
+        assessment: TrainingReportAssessment
     ): { item: SyllabusItemDetail; index: number } | null => {
         const eventRefs = new Set([
             assessment.eventId,
@@ -40822,7 +40827,7 @@ const App: React.FC = () => {
         return sourceIndex === -1 ? null : { item: lmp[sourceIndex], index: sourceIndex };
     };
 
-    const maybeInsertTrainingReportExtraLmpEvent = async (assessment: Pt051Assessment): Promise<void> => {
+    const maybeInsertTrainingReportExtraLmpEvent = async (assessment: TrainingReportAssessment): Promise<void> => {
         pushDfpDataDiag('report-lmp:extra-event:evaluate', {
             assessmentId: assessment.id,
             eventId: assessment.eventId,
@@ -41029,7 +41034,7 @@ const App: React.FC = () => {
         }
     };
 
-    const maybeExtendTrainingReportNextLmpEvent = async (assessment: Pt051Assessment): Promise<void> => {
+    const maybeExtendTrainingReportNextLmpEvent = async (assessment: TrainingReportAssessment): Promise<void> => {
         pushDfpDataDiag('report-lmp:extend-next:evaluate', {
             assessmentId: assessment.id,
             eventId: assessment.eventId,
@@ -41265,7 +41270,7 @@ const App: React.FC = () => {
         }
     };
 
-    const maybePassTrainingReportNotesToNextLmpEvent = async (assessment: Pt051Assessment): Promise<void> => {
+    const maybePassTrainingReportNotesToNextLmpEvent = async (assessment: TrainingReportAssessment): Promise<void> => {
         pushDfpDataDiag('report-notes:forward:evaluate', {
             assessmentId: assessment.id,
             eventId: assessment.eventId,
@@ -41528,12 +41533,12 @@ const App: React.FC = () => {
         }
     };
 
-    const onSavePT051Assessment = async (assessment: Pt051Assessment) => {
+    const onSaveTrainingReportAssessment = async (assessment: TrainingReportAssessment) => {
         // Use traineeFullName for the key to ensure consistency across the app
         const saveKey = `pt051-${assessment.eventId}-${assessment.traineeFullName}`;
         const updatedAssessments = new Map(pt051Assessments).set(saveKey, assessment);
-        setPt051Assessments(updatedAssessments);
-        void persistPt051AssessmentsForDate(assessment.date || date, updatedAssessments);
+        setTrainingReportAssessments(updatedAssessments);
+        void persistTrainingReportAssessmentsForDate(assessment.date || date, updatedAssessments);
 
         // Log to audit trail
         const changes = [
@@ -41549,20 +41554,20 @@ const App: React.FC = () => {
         await maybePassTrainingReportNotesToNextLmpEvent(assessment);
     };
 
-    const onDeletePT051Assessment = (assessmentId: string, eventId: string, traineeFullName: string) => {
+    const onDeleteTrainingReportAssessment = (assessmentId: string, eventId: string, traineeFullName: string) => {
         const dashboardDueNameKey = String(traineeFullName || '')
             .replace(/[‐‑‒–—]/g, '-')
             .replace(/\s+/g, ' ')
             .trim()
             .toLowerCase();
         const dashboardDueId = `dashboard-due-${eventId}-${dashboardDueNameKey}`;
-        suppressDeletedPt051Report([
+        suppressDeletedTrainingReport([
             eventId,
             assessmentId,
             `pt051-${eventId}-${traineeFullName}`,
             dashboardDueId,
         ]);
-        setPt051Assessments(prev => {
+        setTrainingReportAssessments(prev => {
             const updated = new Map(prev);
             updated.delete(`pt051-${eventId}-${traineeFullName}`);
             Array.from(updated.entries()).forEach(([key, assessment]) => {
@@ -41575,7 +41580,7 @@ const App: React.FC = () => {
             });
             return updated;
         });
-        setLoadedPt051Keys(prev => {
+        setLoadedTrainingReportKeys(prev => {
             const updated = new Set(prev);
             updated.delete(`${eventId}-${traineeFullName}`);
             return updated;
@@ -41982,14 +41987,14 @@ const App: React.FC = () => {
     };
     // ────────────────────────────────────────────────────────────────────────────
 
-    const persistPt051AssessmentsForDate = async (
+    const persistTrainingReportAssessmentsForDate = async (
         targetDate: string,
-        assessmentsMap: Map<string, Pt051Assessment>
+        assessmentsMap: Map<string, TrainingReportAssessment>
     ) => {
         logScheduleDebug(`[Training Report] Snapshot persistence skipped for ${targetDate}; ${assessmentsMap.size} active records use TraineePerformance`);
     };
 
-    const persistPt051AssessmentRecord = async (assessment: Pt051Assessment) => {
+    const persistTrainingReportAssessmentRecord = async (assessment: TrainingReportAssessment) => {
         const apiBase = getApiBaseUrl();
         const trainee = allTraineesData.find((t: any) => t.fullName === assessment.traineeFullName);
         const traineeId = (trainee as any)?.id;
@@ -41997,7 +42002,7 @@ const App: React.FC = () => {
             throw new Error(`Cannot save ${configuredTrainingReportDisplayName}: trainee database record not found for ${assessment.traineeFullName}`);
         }
         const assessmentAny = assessment as any;
-        const eventAny = eventForPt051 as any;
+        const eventAny = eventForTrainingReport as any;
         const resolvedDate = String(
             assessmentAny.date ||
             assessmentAny.eventDate ||
@@ -42436,8 +42441,8 @@ const App: React.FC = () => {
                 setTimeout(() => {
                     logScheduleDebug('⏰ Executing delayed training report sync...');
                     setPublishedSchedules(currentSchedules => {
-                        setPt051Assessments(currentAssessments => {
-                            syncPt051WithActiveDfp(currentSchedules, currentAssessments);
+                        setTrainingReportAssessments(currentAssessments => {
+                            syncTrainingReportWithActiveDfp(currentSchedules, currentAssessments);
                             return currentAssessments;
                         });
                         return currentSchedules;
@@ -42841,8 +42846,8 @@ const App: React.FC = () => {
             setTimeout(() => {
                 logRoutineAppDebug('⏰ Executing delayed training report sync after deletion...');
                 setPublishedSchedules(currentSchedules => {
-                    setPt051Assessments(currentAssessments => {
-                        syncPt051WithActiveDfp(currentSchedules, currentAssessments);
+                    setTrainingReportAssessments(currentAssessments => {
+                        syncTrainingReportWithActiveDfp(currentSchedules, currentAssessments);
                         return currentAssessments;
                     });
                     return currentSchedules;
@@ -43730,10 +43735,10 @@ const App: React.FC = () => {
     };
     // Training report sync system.
     // Syncs training report assessments with Active DFP events.
-    const syncPt051WithActiveDfp = (currentPublishedSchedules?: Record<string, ScheduleEvent[]>, currentPt051Assessments?: Map<string, Pt051Assessment>) => {
+    const syncTrainingReportWithActiveDfp = (currentPublishedSchedules?: Record<string, ScheduleEvent[]>, currentTrainingReportAssessments?: Map<string, TrainingReportAssessment>) => {
         // Use provided parameters or fall back to current state
         const schedules = currentPublishedSchedules || publishedSchedules;
-        const assessments = currentPt051Assessments || pt051Assessments;
+        const assessments = currentTrainingReportAssessments || pt051Assessments;
 
         logRoutineAppDebug('🔄 Starting training report sync with Active DFP...');
         logRoutineAppDebug('Published schedules keys:', Object.keys(schedules));
@@ -43758,9 +43763,9 @@ const App: React.FC = () => {
         const newAssessments = new Map(assessments);
         let created = 0;
         let deleted = 0;
-        const processedPt051LogicalKeys = new Set<string>();
-        const suppressedPt051Ids = new Set(suppressedDashboardPt051EventIds.map(value => String(value || '').trim()).filter(Boolean));
-        const normalisePt051SuppressionName = (value: string): string => (
+        const processedTrainingReportLogicalKeys = new Set<string>();
+        const suppressedTrainingReportIds = new Set(suppressedDashboardTrainingReportEventIds.map(value => String(value || '').trim()).filter(Boolean));
+        const normaliseTrainingReportSuppressionName = (value: string): string => (
             String(value || '')
                 .replace(/[‐‑‒–—]/g, '-')
                 .replace(/\s+/g, ' ')
@@ -43821,18 +43826,18 @@ const App: React.FC = () => {
             // For each trainee, check if a training report exists.
             trainees.forEach(traineeFullName => {
                 const logicalAssessmentKey = `${event.date}|||${event.flightNumber}|||${traineeFullName}`;
-                if (processedPt051LogicalKeys.has(logicalAssessmentKey)) {
+                if (processedTrainingReportLogicalKeys.has(logicalAssessmentKey)) {
                     return;
                 }
-                processedPt051LogicalKeys.add(logicalAssessmentKey);
+                processedTrainingReportLogicalKeys.add(logicalAssessmentKey);
                 const assessmentKey = `${event.id}-${traineeFullName}`;
                 const suppressedCandidateIds = [
                     event.id,
                     `pt051-${assessmentKey}`,
                     `pt051-${event.id}-${traineeFullName}`,
-                    `dashboard-due-${event.id}-${normalisePt051SuppressionName(traineeFullName)}`,
+                    `dashboard-due-${event.id}-${normaliseTrainingReportSuppressionName(traineeFullName)}`,
                 ].map(value => String(value || '').trim()).filter(Boolean);
-                if (suppressedCandidateIds.some(candidateId => suppressedPt051Ids.has(candidateId))) {
+                if (suppressedCandidateIds.some(candidateId => suppressedTrainingReportIds.has(candidateId))) {
                     logRoutineAppDebug('⏭️ Skipping deliberately deleted training report:', {
                         eventId: event.id,
                         flightNumber: event.flightNumber,
@@ -43853,7 +43858,7 @@ const App: React.FC = () => {
                     // Historical events can legitimately repeat the same flightNumber for the same trainee
                     // on different dates, so date must be part of this check.
                     const existingUnassessedForFlight = Array.from(newAssessments.values()).find(
-                        (a: Pt051Assessment) => a.traineeFullName === traineeFullName &&
+                        (a: TrainingReportAssessment) => a.traineeFullName === traineeFullName &&
                             a.flightNumber === event.flightNumber &&
                             a.date === event.date &&
                             (a.overallResult === null || a.overallResult === undefined || a.overallResult === '')
@@ -43864,7 +43869,7 @@ const App: React.FC = () => {
                     }
 
                     // Create new report, either fresh or replacing the old unassessed one.
-                    const newAssessment: Pt051Assessment = {
+                    const newAssessment: TrainingReportAssessment = {
                         id: `pt051-${assessmentKey}`,
                         traineeFullName: traineeFullName,
                         eventId: event.id,
@@ -43899,7 +43904,7 @@ const App: React.FC = () => {
             if (correspondingEvent) {
                 // Check if any fields need updating
                 let needsUpdate = false;
-                const updates: Partial<Pt051Assessment> = {};
+                const updates: Partial<TrainingReportAssessment> = {};
 
                 if (assessment.instructorName !== (correspondingEvent.instructor || '')) {
                     updates.instructorName = correspondingEvent.instructor || '';
@@ -43947,7 +43952,7 @@ const App: React.FC = () => {
         // while preserving legitimate repeats of the same event code on different dates.
         // Handles existing duplicates from
         // rescheduled events created before the dedup logic was added.
-        const dupCleanupMap = new Map<string, Pt051Assessment[]>();
+        const dupCleanupMap = new Map<string, TrainingReportAssessment[]>();
         newAssessments.forEach((assessment) => {
             if (assessment.overallResult === null || assessment.overallResult === undefined || assessment.overallResult === '') {
                 const dupKey = `${assessment.date}|||${assessment.flightNumber}|||${assessment.traineeFullName}`;
@@ -43971,7 +43976,7 @@ const App: React.FC = () => {
 
         // Update state if changes were made
         if (created > 0 || deleted > 0 || updated > 0 || dupDeleted > 0) {
-            setPt051Assessments(newAssessments);
+            setTrainingReportAssessments(newAssessments);
             logRoutineAppDebug(`📊 Training report sync complete: Created ${created}, Updated ${updated}, Deleted ${deleted}, Duplicates removed ${dupDeleted}`);
         } else {
             logRoutineAppDebug('✅ Training reports already in sync with Active DFP');
@@ -44915,7 +44920,7 @@ const App: React.FC = () => {
                     .map(name => String(name || '').trim())
                     .filter(Boolean)
             );
-            const findReportSourceLmpIndex = (lmp: SyllabusItemDetail[], trainee: Trainee | any, assessment: Pt051Assessment): number => {
+            const findReportSourceLmpIndex = (lmp: SyllabusItemDetail[], trainee: Trainee | any, assessment: TrainingReportAssessment): number => {
                 const eventRefs = new Set([
                     assessment.eventId,
                     assessment.flightNumber,
@@ -44931,12 +44936,12 @@ const App: React.FC = () => {
                     return itemRefs.some(ref => eventRefs.has(ref));
                 });
             };
-            const getAssessmentFollowUpText = (assessment: Pt051Assessment): string => [
+            const getAssessmentFollowUpText = (assessment: TrainingReportAssessment): string => [
                 assessment.trainingReportNotes,
                 assessment.overallComments,
                 (assessment as any).comments,
             ].map(value => String(value || '')).join('\n');
-            const recoverExtraHoursFromAssessmentText = (assessment: Pt051Assessment): { hours: number; targetCode?: string } | null => {
+            const recoverExtraHoursFromAssessmentText = (assessment: TrainingReportAssessment): { hours: number; targetCode?: string } | null => {
                 const text = getAssessmentFollowUpText(assessment);
                 const match = text.match(/(\d+(?:\.\d+)?)\s*(?:hrs?|hours?)\s+added\s+to\s+([A-Z0-9 _-]+)/i);
                 if (!match) return null;
@@ -44948,7 +44953,7 @@ const App: React.FC = () => {
                     targetCode: rawTarget || undefined,
                 };
             };
-            const getAssessmentRequestedExtension = (assessment: Pt051Assessment): { hours: number; targetCode?: string; source: string } | null => {
+            const getAssessmentRequestedExtension = (assessment: TrainingReportAssessment): { hours: number; targetCode?: string; source: string } | null => {
                 const configuredHours = assessment.dcoResult === 'DPCO' &&
                     assessment.dpcoFollowUp?.action === 'extra-hours-next-event'
                     ? Number(assessment.dpcoFollowUp?.extraHours || 0)
@@ -44962,7 +44967,7 @@ const App: React.FC = () => {
             const applyAssessmentFollowUpToLmp = (
                 trainee: Trainee | any,
                 lmp: SyllabusItemDetail[],
-                assessment: Pt051Assessment
+                assessment: TrainingReportAssessment
             ): { lmp: SyllabusItemDetail[]; changed: boolean; updates: Record<string, any>[] } => {
                 const sourceIndex = findReportSourceLmpIndex(lmp, trainee, assessment);
                 const updates: Record<string, any>[] = [];
@@ -45212,7 +45217,7 @@ const App: React.FC = () => {
 
             try {
                 const apiBase = getApiBaseUrl();
-                const allAssessments: Pt051Assessment[] = [];
+                const allAssessments: TrainingReportAssessment[] = [];
                 const pageSize = 2000;
                 let offset = 0;
                 const followUpFetchStartedAt = performance.now();
@@ -45289,7 +45294,7 @@ const App: React.FC = () => {
                     const normalisedKey = normaliseFollowUpNameKey(lmpKey);
                     if (normalisedKey && !buildLmpKeyLookup.has(normalisedKey)) buildLmpKeyLookup.set(normalisedKey, lmpKey);
                 });
-                const findTraineeForFollowUp = (assessment: Pt051Assessment): any | null => {
+                const findTraineeForFollowUp = (assessment: TrainingReportAssessment): any | null => {
                     const candidateNames = [
                         assessment.traineeFullName,
                         (assessment as any).traineeName,
@@ -45301,7 +45306,7 @@ const App: React.FC = () => {
                     }
                     return null;
                 };
-                const findLmpKeyForFollowUp = (assessment: Pt051Assessment, trainee: any): string | null => {
+                const findLmpKeyForFollowUp = (assessment: TrainingReportAssessment, trainee: any): string | null => {
                     const candidateNames = [
                         assessment.traineeFullName,
                         (assessment as any).traineeName,
@@ -45315,7 +45320,7 @@ const App: React.FC = () => {
                     }
                     return null;
                 };
-                const hasActionableReportFollowUp = (assessment: Pt051Assessment): boolean => (
+                const hasActionableReportFollowUp = (assessment: TrainingReportAssessment): boolean => (
                     Boolean(getAssessmentRequestedExtension(assessment)) ||
                     (
                         assessment.passNotesToNextEvent === true &&
@@ -45323,7 +45328,7 @@ const App: React.FC = () => {
                     )
                 );
                 const followUpAssessmentContexts = allAssessments
-                    .map((assessment: Pt051Assessment, inputIndex: number) => {
+                    .map((assessment: TrainingReportAssessment, inputIndex: number) => {
                         const trainee = findTraineeForFollowUp(assessment);
                         const lmpKey = trainee ? findLmpKeyForFollowUp(assessment, trainee) : null;
                         const lmp = lmpKey ? buildTraineeLMPs.get(lmpKey) : null;
@@ -46837,8 +46842,8 @@ const App: React.FC = () => {
         // 3. Sync training reports with the updated schedule (delayed to let state settle)
         setTimeout(() => {
             setPublishedSchedules(currentSchedules => {
-                setPt051Assessments(currentAssessments => {
-                    syncPt051WithActiveDfp(currentSchedules, currentAssessments);
+                setTrainingReportAssessments(currentAssessments => {
+                    syncTrainingReportWithActiveDfp(currentSchedules, currentAssessments);
                     return currentAssessments;
                 });
                 return currentSchedules;
@@ -46944,8 +46949,8 @@ const App: React.FC = () => {
         setTimeout(() => {
             logRoutineAppDebug('\u{23F0} Executing delayed training report sync after publish...');
             setPublishedSchedules(currentSchedules => {
-                setPt051Assessments(currentAssessments => {
-                    syncPt051WithActiveDfp(currentSchedules, currentAssessments);
+                setTrainingReportAssessments(currentAssessments => {
+                    syncTrainingReportWithActiveDfp(currentSchedules, currentAssessments);
                     return currentAssessments;
                 });
                 return currentSchedules;
@@ -51570,13 +51575,13 @@ appliedUpdates.forEach(update => {
                 setShowInfoNotification(`No trainee profile was found for ${candidate.flightNumber || 'this event'}.`);
                 return;
             }
-            if (!canViewTraineePt051(trainee)) {
+            if (!canViewTraineeTrainingReport(trainee)) {
                 denyPlatformAction(`${configuredTrainingReportDisplayName} record`);
                 return;
             }
-            setEventForPt051(getLatestContextEvent(candidate));
+            setEventForTrainingReport(getLatestContextEvent(candidate));
             setSelectedTraineeForHateSheet(trainee);
-            handleNavigation('PT051');
+            handleNavigation('TrainingReport');
         };
         const addPersonProfileItems = (items: DfpContextMenuItem[], candidate: ScheduleEvent) => {
             const staffNames = Array.from(new Set([
@@ -51834,7 +51839,7 @@ appliedUpdates.forEach(update => {
         canUseMultiSelect,
         canUseNeoTileAssist,
         canUsePauseFlightOps,
-        canViewTraineePt051,
+        canViewTraineeTrainingReport,
         configuredTrainingReportDisplayName,
         contextSettingsSections,
         copyContextSummary,
@@ -52371,7 +52376,7 @@ appliedUpdates.forEach(update => {
                             archivedCourses={archivedCourses}
                             personnelData={personnelData}
                             onNavigateToHateSheet={(trainee) => {
-                                if (!canViewTraineePt051(trainee)) {
+                                if (!canViewTraineeTrainingReport(trainee)) {
                                     denyPlatformAction(`${configuredTrainingReportDisplayName} performance history`);
                                     return;
                                 }
@@ -52389,20 +52394,20 @@ appliedUpdates.forEach(update => {
                             onNavigateToSyllabus={onNavigateToSyllabus}
                             onNavigateToCurrency={handleNavigateToCurrency}
                             onAddRemedialPackage={handleOpenAddRemedialPackage}
-                            onSelectPt051ForEvent={openPt051FromTraineeProfile}
-                            onSavePt051Assessment={onSavePT051Assessment}
-                            onDeletePt051Assessment={onDeletePT051Assessment}
+                            onSelectTrainingReportForEvent={openTrainingReportFromTraineeProfile}
+                            onSaveTrainingReportAssessment={onSaveTrainingReportAssessment}
+                            onDeleteTrainingReportAssessment={onDeleteTrainingReportAssessment}
                             instructorsData={activeDateInstructorsData}
                             registerDirtyCheck={registerDirtyCheck}
                             phraseBank={phraseBank}
                             canViewTraineeProfile={canViewTraineeProfile}
-                            canViewTraineePt051={canViewTraineePt051}
-                            canEditTraineePt051={canEditTraineePt051}
+                            canViewTraineeTrainingReport={canViewTraineeTrainingReport}
+                            canEditTraineeTrainingReport={canEditTraineeTrainingReport}
                             canViewTraineeLmp={canViewTraineeLmp}
                             canAddRemedialPackageForTrainee={(trainee) => isOwnTraineeRecord(trainee) || canAddRemedialPackage}
                             selfOnlyProfile={!hasFullTraineeRosterAccess ? currentUserTraineeProfile : null}
                             onDeleteRemedialItem={handleDeleteRemedialLmpItem}
-                            onGeneratePt051ForItem={handleGeneratePt051FromLmpItem}
+                            onGenerateTrainingReportForItem={handleGenerateTrainingReportFromLmpItem}
                             onInsertCustomLmpEvent={handleInsertCustomLmpEvent}
                             onUpdateLmpItem={handleUpdateIndividualLmpItem}
                             insertEventTypes={insertEventTypes}
@@ -52533,7 +52538,7 @@ appliedUpdates.forEach(update => {
                             archivedCourses={archivedCourses}
                             personnelData={personnelData}
                             onNavigateToHateSheet={(trainee) => {
-                                if (!canViewTraineePt051(trainee)) {
+                                if (!canViewTraineeTrainingReport(trainee)) {
                                     denyPlatformAction(`${configuredTrainingReportDisplayName} performance history`);
                                     return;
                                 }
@@ -52551,18 +52556,18 @@ appliedUpdates.forEach(update => {
                             onNavigateToSyllabus={onNavigateToSyllabus}
                             onNavigateToCurrency={handleNavigateToCurrency}
                             onAddRemedialPackage={handleOpenAddRemedialPackage}
-                            onSelectPt051ForEvent={openPt051FromTraineeProfile}
-                            onSavePt051Assessment={onSavePT051Assessment}
-                            onDeletePt051Assessment={onDeletePT051Assessment}
+                            onSelectTrainingReportForEvent={openTrainingReportFromTraineeProfile}
+                            onSaveTrainingReportAssessment={onSaveTrainingReportAssessment}
+                            onDeleteTrainingReportAssessment={onDeleteTrainingReportAssessment}
                             instructorsData={activeDateInstructorsData}
                             registerDirtyCheck={registerDirtyCheck}
                             phraseBank={phraseBank}
                             canViewTraineeProfile={canViewTraineeProfile}
-                            canViewTraineePt051={canViewTraineePt051}
-                            canEditTraineePt051={canEditTraineePt051}
+                            canViewTraineeTrainingReport={canViewTraineeTrainingReport}
+                            canEditTraineeTrainingReport={canEditTraineeTrainingReport}
                             canViewTraineeLmp={canViewTraineeLmp}
                             canAddRemedialPackageForTrainee={() => canAddRemedialPackage}
-                            onGeneratePt051ForItem={handleGeneratePt051FromLmpItem}
+                            onGenerateTrainingReportForItem={handleGenerateTrainingReportFromLmpItem}
                             onInsertCustomLmpEvent={handleInsertCustomLmpEvent}
                             onUpdateLmpItem={handleUpdateIndividualLmpItem}
                             insertEventTypes={insertEventTypes}
@@ -53127,7 +53132,7 @@ appliedUpdates.forEach(update => {
                     publishedSchedules={publishedSchedules}
                     syllabusDetails={syllabusDetails}
                     pt051Assessments={pt051Assessments}
-                    onSavePT051Assessment={onSavePT051Assessment}
+                    onSaveTrainingReportAssessment={onSaveTrainingReportAssessment}
                     locations={locations}
                     units={units}
                     activeLocationCode={school}
@@ -53330,7 +53335,7 @@ appliedUpdates.forEach(update => {
                             sctRequests={[...sctFlights, ...sctFtds]}
                             pt051Assessments={pt051Assessments}
                             syllabusDetails={syllabusDetails}
-                            suppressedPt051EventIds={suppressedDashboardPt051EventIds}
+                            suppressedTrainingReportEventIds={suppressedDashboardTrainingReportEventIds}
                             trainingReportsToComplete={pendingTrainingReports}
                             staffOptions={allInstructorsData}
                             messageContactStaffOptions={allInstructorsData}
@@ -53344,7 +53349,7 @@ appliedUpdates.forEach(update => {
                             currentLocationCode={activeLocationSolarProfile.code}
                             onLogout={handleLogout}
                             onShowChangePassword={() => setShowChangePassword(true)}
-                            onSelectTrainingReport={(entry) => {
+                            onSelectStaffTrainingReport={(entry) => {
                                 const dashboardReport = entry.report as AirCombatTrainingReport & { traineeFullName?: string };
                                 const reportCode = normaliseDashboardContextCode(dashboardReport.eventCode);
                                 const reportDate = String(dashboardReport.date || '').trim();
@@ -53389,7 +53394,7 @@ appliedUpdates.forEach(update => {
                                             )
                                         )
                                     ));
-                                    const assessmentForReport: Pt051Assessment = existingAssessment || {
+                                    const assessmentForReport: TrainingReportAssessment = existingAssessment || {
                                         id: `pt051-${linkedEvent.id}-${linkedTrainee.fullName}`,
                                         traineeFullName: linkedTrainee.fullName,
                                         eventId: linkedEvent.id,
@@ -53411,7 +53416,7 @@ appliedUpdates.forEach(update => {
                                         isCompleted: false,
                                         groundSchoolAssessment: { isAssessment: false },
                                     };
-                                    openPt051FromTraineeProfile(linkedTrainee, assessmentForReport);
+                                    openTrainingReportFromTraineeProfile(linkedTrainee, assessmentForReport);
                                     return;
                                 }
                                 const selectedStaff = allInstructorsData.find(staff => (
@@ -53436,21 +53441,21 @@ appliedUpdates.forEach(update => {
                                 handleNavigation('Instructors');
                             }}
                             onReassignTrainingReport={handleReassignTrainingReportNotification}
-                            onDeletePt051ReportMessage={handleDeleteDashboardPt051ReportMessage}
                             onDeleteTrainingReportMessage={handleDeleteDashboardTrainingReportMessage}
-                            onSelectPt051={(assessment) => {
+                            onDeleteStaffTrainingReportMessage={handleDeleteDashboardStaffTrainingReportMessage}
+                            onSelectTrainingReport={(assessment) => {
                                 logRoutineAppDebug('🔍 Dashboard training report clicked:', assessment);
                                 logRoutineAppDebug('Looking for event ID:', assessment.eventId);
                                 logRoutineAppDebug('Total events available:', allPublishedEvents.length);
 
                                 // Find the event associated with this training report
-                                const dashboardPt051Events = [
+                                const dashboardTrainingReportEvents = [
                                     ...eventsForDate,
                                     ...allPublishedEvents,
                                 ].filter((event, index, list) => (
                                     event?.id && list.findIndex(candidate => candidate.id === event.id) === index
                                 ));
-                                const event = dashboardPt051Events.find(e => e.id === assessment.eventId);
+                                const event = dashboardTrainingReportEvents.find(e => e.id === assessment.eventId);
                                 logRoutineAppDebug('Found event:', event);
 
                                 // Find the trainee
@@ -53461,25 +53466,25 @@ appliedUpdates.forEach(update => {
                                     logRoutineAppDebug('Setting event and trainee, navigating to Training Report');
                                     if (String(assessment.id || '').startsWith('dashboard-due-')) {
                                         const assessmentKey = `pt051-${assessment.eventId}-${assessment.traineeFullName}`;
-                                        setPt051Assessments(prev => {
+                                        setTrainingReportAssessments(prev => {
                                             if (prev.has(assessmentKey)) return prev;
                                             const updated = new Map(prev);
                                             updated.set(assessmentKey, assessment);
                                             return updated;
                                         });
-                                        setLoadedPt051Keys(prev => {
+                                        setLoadedTrainingReportKeys(prev => {
                                             const updated = new Set(prev);
                                             updated.add(`${assessment.eventId}-${assessment.traineeFullName}`);
                                             return updated;
                                         });
                                     }
                                     // Set state synchronously
-                                    setEventForPt051(event);
+                                    setEventForTrainingReport(event);
                                     setSelectedTraineeForHateSheet(trainee);
                                     // Use setTimeout to ensure state is set before navigation
                                     setTimeout(() => {
                                         logRoutineAppDebug('Navigating to Training Report view');
-                                        handleNavigation('PT051');
+                                        handleNavigation('TrainingReport');
                                     }, 0);
                                 } else {
                                     console.error('❌ Could not find event or trainee for training report:', {
@@ -53500,7 +53505,7 @@ appliedUpdates.forEach(update => {
                                         instructor: assessment.instructorName
                                     });
 
-                                    const fallbackEvent = dashboardPt051Events.find(e =>
+                                    const fallbackEvent = dashboardTrainingReportEvents.find(e =>
                                         e.flightNumber === assessment.flightNumber &&
                                         e.date === assessment.date &&
                                         e.instructor === assessment.instructorName
@@ -53510,11 +53515,11 @@ appliedUpdates.forEach(update => {
 
                                     if (fallbackEvent && trainee) {
                                         logRoutineAppDebug('✅ Found event using fallback (flight number + date + instructor):', fallbackEvent);
-                                        setEventForPt051(fallbackEvent);
+                                        setEventForTrainingReport(fallbackEvent);
                                         setSelectedTraineeForHateSheet(trainee);
                                         setTimeout(() => {
                                             logRoutineAppDebug('Navigating to Training Report view (fallback)');
-                                            handleNavigation('PT051');
+                                            handleNavigation('TrainingReport');
                                         }, 0);
                                     } else {
                                         console.error('❌ Primary fallback failed', {
@@ -53527,7 +53532,7 @@ appliedUpdates.forEach(update => {
 
                                         // Try secondary fallback: just flight number and instructor (ignore date)
                                         logRoutineAppDebug('🔄 Attempting secondary fallback (flight number + instructor only)...');
-                                        const secondaryFallbackEvent = dashboardPt051Events.find(e =>
+                                        const secondaryFallbackEvent = dashboardTrainingReportEvents.find(e =>
                                             e.flightNumber === assessment.flightNumber &&
                                             e.instructor === assessment.instructorName
                                         );
@@ -53535,11 +53540,11 @@ appliedUpdates.forEach(update => {
                                         if (secondaryFallbackEvent && trainee) {
                                             logRoutineAppDebug('✅ Found event using secondary fallback:', secondaryFallbackEvent);
                                             console.warn('⚠️ Note: Event date may differ from training report date');
-                                            setEventForPt051(secondaryFallbackEvent);
+                                            setEventForTrainingReport(secondaryFallbackEvent);
                                             setSelectedTraineeForHateSheet(trainee);
                                             setTimeout(() => {
                                                 logRoutineAppDebug('Navigating to Training Report view (secondary fallback)');
-                                                handleNavigation('PT051');
+                                                handleNavigation('TrainingReport');
                                             }, 0);
                                         } else {
                                             console.error('❌ All fallback attempts failed - cannot open training report');
@@ -53575,11 +53580,11 @@ appliedUpdates.forEach(update => {
 
                                             if (trainee) {
                                                 logRoutineAppDebug('✅ Created mock event:', mockEvent);
-                                                setEventForPt051(mockEvent);
+                                                setEventForTrainingReport(mockEvent);
                                                 setSelectedTraineeForHateSheet(trainee);
                                                 setTimeout(() => {
                                                     logRoutineAppDebug('Navigating to Training Report view (mock event)');
-                                                    handleNavigation('PT051');
+                                                    handleNavigation('TrainingReport');
                                                 }, 0);
                                             }
                                         }
@@ -54120,14 +54125,14 @@ appliedUpdates.forEach(update => {
                             crewPositionTerminology={activeCrewPositionTerminology}
                             operationalModel={activeOperationalModel}
                         />;
-            case 'PT051':
-                logRoutineAppDebug('eventForPt051:', eventForPt051);
+            case 'TrainingReport':
+                logRoutineAppDebug('eventForTrainingReport:', eventForTrainingReport);
                 logRoutineAppDebug('selectedTraineeForHateSheet:', selectedTraineeForHateSheet);
 
-                if (eventForPt051 && selectedTraineeForHateSheet) {
+                if (eventForTrainingReport && selectedTraineeForHateSheet) {
                     const selectedTrainingReportTemplate = getUnitTrainingReportTemplate(platformConfig, selectedTraineeForHateSheet.unit || activeUnitCode);
                     const selectedTrainingReportName = selectedTrainingReportTemplate.displayName || getTrainingReportDisplayNameForUnit(selectedTraineeForHateSheet.unit || activeUnitCode);
-                    if (!canViewTraineePt051(selectedTraineeForHateSheet)) {
+                    if (!canViewTraineeTrainingReport(selectedTraineeForHateSheet)) {
                         return <div className="flex-1 flex items-center justify-center bg-gray-900 text-white">
                             <div className="rounded-lg border border-red-500/40 bg-red-950/30 p-6 text-center max-w-md">
                                 <h2 className="text-xl font-bold text-red-200 mb-2">Access denied</h2>
@@ -54137,7 +54142,7 @@ appliedUpdates.forEach(update => {
                         </div>;
                     }
                     // Find the training report for this event and trainee combination
-                    const assessmentKey = `pt051-${eventForPt051.id}-${selectedTraineeForHateSheet.fullName}`;
+                    const assessmentKey = `pt051-${eventForTrainingReport.id}-${selectedTraineeForHateSheet.fullName}`;
                     logRoutineAppDebug('Looking for assessment with key:', assessmentKey);
                     logRoutineAppDebug('Available assessment keys:', Array.from(pt051Assessments.keys()));
 
@@ -54148,7 +54153,7 @@ appliedUpdates.forEach(update => {
                     if (!existingAssessment) {
                         logRoutineAppDebug('Direct lookup failed, trying fallback search...');
                         existingAssessment = Array.from(pt051Assessments.values()).find(
-                            a => a.eventId === eventForPt051.id && a.traineeFullName === selectedTraineeForHateSheet.fullName
+                            a => a.eventId === eventForTrainingReport.id && a.traineeFullName === selectedTraineeForHateSheet.fullName
                         );
                         logRoutineAppDebug('Fallback search result:', existingAssessment);
                     }
@@ -54157,17 +54162,17 @@ appliedUpdates.forEach(update => {
                         existingAssessment = Array.from(pt051Assessments.values()).find(
                             a =>
                                 a.traineeFullName === selectedTraineeForHateSheet.fullName &&
-                                a.flightNumber === eventForPt051.flightNumber &&
-                                (!eventForPt051.date || !a.date || a.date === eventForPt051.date)
+                                a.flightNumber === eventForTrainingReport.flightNumber &&
+                                (!eventForTrainingReport.date || !a.date || a.date === eventForTrainingReport.date)
                         ) || Array.from(pt051Assessments.values()).find(
                             a =>
                                 a.traineeFullName === selectedTraineeForHateSheet.fullName &&
-                                a.flightNumber === eventForPt051.flightNumber
+                                a.flightNumber === eventForTrainingReport.flightNumber
                         );
                         logRoutineAppDebug('Trainee/event/date fallback result:', existingAssessment);
                     }
-                    const pt051LoadKey = `${eventForPt051.id}-${selectedTraineeForHateSheet.fullName}`;
-                    if (!loadedPt051Keys.has(pt051LoadKey)) {
+                    const pt051LoadKey = `${eventForTrainingReport.id}-${selectedTraineeForHateSheet.fullName}`;
+                    if (!loadedTrainingReportKeys.has(pt051LoadKey)) {
                         return <div className="flex-1 flex items-center justify-center bg-gray-900 text-white">
                             <div className="rounded-lg border border-gray-700 bg-gray-800 p-6 text-center">
                                 <h2 className="text-lg font-semibold text-sky-300 mb-2">Loading {selectedTrainingReportName}</h2>
@@ -54176,9 +54181,9 @@ appliedUpdates.forEach(update => {
                         </div>;
                     }
                     return <TrainingReportView
-                        key={`${eventForPt051.id}-${selectedTraineeForHateSheet.fullName}-${existingAssessment?.overallGrade ?? 'none'}`}
+                        key={`${eventForTrainingReport.id}-${selectedTraineeForHateSheet.fullName}-${existingAssessment?.overallGrade ?? 'none'}`}
                         trainee={selectedTraineeForHateSheet}
-                        event={eventForPt051}
+                        event={eventForTrainingReport}
                         initialAssessment={existingAssessment}
                         instructorLabel={instructorLabel}
                         trainingReportTerminology={getUnitTrainingReportTerminology(platformConfig, selectedTraineeForHateSheet.unit || activeUnitCode)}
@@ -54188,13 +54193,13 @@ appliedUpdates.forEach(update => {
                         formatResourceLabel={formatResourceDisplayLabel}
                         courseCommanderLabel={personnelDisplaySettings.courseCommanderLabel || 'Cse Commander'}
                         onBack={() => {
-                            setEventForPt051(null);
+                            setEventForTrainingReport(null);
                             openTraineeProfileTab(selectedTraineeForHateSheet, 'hatesheet');
                         }}
                         onEventUpdate={(updatedEvent) => {
-                            // Update the eventForPt051 state when event is modified
-                            logRoutineAppDebug('Updating eventForPt051 with:', updatedEvent);
-                            setEventForPt051(updatedEvent);
+                            // Update the eventForTrainingReport state when event is modified
+                            logRoutineAppDebug('Updating eventForTrainingReport with:', updatedEvent);
+                            setEventForTrainingReport(updatedEvent);
 
                             // Also update the main events array if this event exists there
                             setEvents(prevEvents => {
@@ -54208,19 +54213,19 @@ appliedUpdates.forEach(update => {
                             });
                         }}
                         onDeleteAssessment={async (assessmentId) => {
-                            if (!canEditTraineePt051(selectedTraineeForHateSheet)) {
+                            if (!canEditTraineeTrainingReport(selectedTraineeForHateSheet)) {
                                 denyPlatformAction(`delete ${selectedTrainingReportName} assessment`);
                                 return;
                             }
                             logRoutineAppDebug('🗑️ App.tsx: onDeleteAssessment called with ID:', assessmentId);
-                            const deleteEventId = eventForPt051.id || existingAssessment?.eventId || assessmentId;
+                            const deleteEventId = eventForTrainingReport.id || existingAssessment?.eventId || assessmentId;
                             const dashboardDueNameKey = String(selectedTraineeForHateSheet.fullName || '')
                                 .replace(/[‐‑‒–—]/g, '-')
                                 .replace(/\s+/g, ' ')
                                 .trim()
                                 .toLowerCase();
                             const deleteCandidateIds = Array.from(new Set([
-                                eventForPt051.id,
+                                eventForTrainingReport.id,
                                 existingAssessment?.eventId,
                                 existingAssessment?.id,
                                 assessmentId,
@@ -54246,7 +54251,7 @@ appliedUpdates.forEach(update => {
                                 }
                                 logRoutineAppDebug(`[Training Report] Suppressing unsaved dashboard due report ${deleteEventId} after database returned 404.`);
                             }
-                            suppressDeletedPt051Report(deleteCandidateIds);
+                            suppressDeletedTrainingReport(deleteCandidateIds);
 
                             // Find and delete the training report assessment from local state after the database delete succeeds.
                             const assessmentKey = `pt051-${deleteEventId}-${selectedTraineeForHateSheet.fullName}`;
@@ -54262,8 +54267,8 @@ appliedUpdates.forEach(update => {
                                 }
                             });
                             logRoutineAppDebug('🗑️ App.tsx: Assessment deleted from map:', deleted);
-                            setPt051Assessments(updatedAssessments);
-                            setLoadedPt051Keys(prev => {
+                            setTrainingReportAssessments(updatedAssessments);
+                            setLoadedTrainingReportKeys(prev => {
                                 const updated = new Set(prev);
                                 updated.delete(`${deleteEventId}-${selectedTraineeForHateSheet.fullName}`);
                                 return updated;
@@ -54271,13 +54276,13 @@ appliedUpdates.forEach(update => {
 
                             // Log training report deletion to audit trail
                             logRoutineAppDebug('📋 App.tsx: Logging to audit...');
-                            logAudit('Performance History', 'Delete', `Deleted ${selectedTrainingReportName} for ${selectedTraineeForHateSheet.fullName} - Event: ${eventForPt051.flightNumber} (${eventForPt051.date})`);
+                            logAudit('Performance History', 'Delete', `Deleted ${selectedTrainingReportName} for ${selectedTraineeForHateSheet.fullName} - Event: ${eventForTrainingReport.flightNumber} (${eventForTrainingReport.date})`);
                             logRoutineAppDebug('✅ App.tsx: Audit logged successfully');
 
                             setSuccessMessage(`${selectedTrainingReportName} Assessment Deleted!`);
                         }}
                         onSave={async (assessment, isAutoSave) => {
-                            if (!canEditTraineePt051(selectedTraineeForHateSheet)) {
+                            if (!canEditTraineeTrainingReport(selectedTraineeForHateSheet)) {
                                 if (!isAutoSave) denyPlatformAction(`save ${selectedTrainingReportName} assessment`);
                                 return;
                             }
@@ -54288,7 +54293,7 @@ appliedUpdates.forEach(update => {
                             };
 
                             // Save using the correct key format: pt051-${eventId}-${traineeFullName}
-                            const saveEventId = updatedAssessment.eventId || existingAssessment?.eventId || eventForPt051.id;
+                            const saveEventId = updatedAssessment.eventId || existingAssessment?.eventId || eventForTrainingReport.id;
                             const saveKey = `pt051-${saveEventId}-${selectedTraineeForHateSheet.fullName}`;
                             let normalizedAssessment = {
                                 ...updatedAssessment,
@@ -54311,12 +54316,12 @@ appliedUpdates.forEach(update => {
                                 }
                             }
                             const updatedAssessments = new Map(pt051Assessments).set(saveKey, normalizedAssessment);
-                            setPt051Assessments(updatedAssessments);
-                            void persistPt051AssessmentsForDate(normalizedAssessment.date || eventForPt051.date || date, updatedAssessments)
+                            setTrainingReportAssessments(updatedAssessments);
+                            void persistTrainingReportAssessmentsForDate(normalizedAssessment.date || eventForTrainingReport.date || date, updatedAssessments)
                                 .catch(err => {
                                     console.warn('[Training Report] Failed to persist assessment snapshot:', err);
                                 });
-                            const performanceSave = persistPt051AssessmentRecord(normalizedAssessment)
+                            const performanceSave = persistTrainingReportAssessmentRecord(normalizedAssessment)
                                 .then(() => logRoutineAppDebug(`[Training Report] Persisted trainee performance record for ${assessment.traineeFullName} ${assessment.flightNumber}`))
                                 .catch(err => {
                                     console.warn('[Training Report] Failed to persist trainee performance record:', err);
@@ -54406,18 +54411,18 @@ appliedUpdates.forEach(update => {
                         registerDirtyCheck={registerDirtyCheck}
                         phraseBank={getUnitTrainingReportPhraseBank(platformConfig, selectedTraineeForHateSheet.unit || activeUnitCode, phraseBank)}
                         currentUserPin={currentUser?.pin || '1111'}
-                        canEditPt051={canEditTraineePt051(selectedTraineeForHateSheet)}
+                        canEditTrainingReport={canEditTraineeTrainingReport(selectedTraineeForHateSheet)}
                     />;
                 }
                 console.error('Training Report view error - missing context:', {
-                    eventForPt051,
+                    eventForTrainingReport,
                     selectedTraineeForHateSheet,
                     activeView
                 });
                 return <div className="p-8 bg-gray-900 text-white">
                     <h2 className="text-2xl font-bold text-red-500 mb-4">Error: {configuredTrainingReportDisplayName} View Context Missing</h2>
                     <p className="mb-2">Trainee: {selectedTraineeForHateSheet ? '✅ Set' : '❌ Not Set'}</p>
-                    <p className="mb-2">Event: {eventForPt051 ? '✅ Set' : '❌ Not Set'}</p>
+                    <p className="mb-2">Event: {eventForTrainingReport ? '✅ Set' : '❌ Not Set'}</p>
                     <button
                         onClick={() => handleNavigation('MyDashboard')}
                         className="mt-4 px-4 py-2 bg-sky-600 text-white rounded-md hover:bg-sky-700"
@@ -54982,26 +54987,26 @@ appliedUpdates.forEach(update => {
                                     const isAirCombatPostFlightEvent = normaliseOperationalModel(activeOperationalModel) === 'air_combat';
 
                                     if (!isAirCombatPostFlightEvent && !isCurrencyPostFlightEvent && data.result && ['DCO', 'DPCO', 'DNCO'].includes(data.result) && eventForPostFlight) {
-                                        const pfEvtForPt051 = eventForPostFlight;
-                                        const pt051TraineeName = pfEvtForPt051.student || pfEvtForPt051.pilot || '';
-                                        const pt051FlightNumber = pfEvtForPt051.flightNumber || '';
+                                        const pfEvtForTrainingReport = eventForPostFlight;
+                                        const pt051TraineeName = pfEvtForTrainingReport.student || pfEvtForTrainingReport.pilot || '';
+                                        const pt051FlightNumber = pfEvtForTrainingReport.flightNumber || '';
                                         if (pt051TraineeName && pt051FlightNumber) {
                                             // Find the matching unassessed training report for this flight + trainee
-                                            const matchingPt051 = Array.from(pt051Assessments.values()).find((a: any) =>
+                                            const matchingTrainingReport = Array.from(pt051Assessments.values()).find((a: any) =>
                                                 a.traineeFullName === pt051TraineeName &&
                                                 a.flightNumber === pt051FlightNumber &&
                                                 (a.overallResult === null || a.overallResult === undefined || a.overallResult === '')
                                             );
-                                            if (matchingPt051) {
+                                            if (matchingTrainingReport) {
                                                 const updatedAssessment = {
-                                                    ...(matchingPt051 as any),
+                                                    ...(matchingTrainingReport as any),
                                                     dcoResult: data.result,
-                                                    date: pfEvtForPt051.date || (matchingPt051 as any).date,
-                                                    instructor: pfEvtForPt051.instructor || (matchingPt051 as any).instructor,
+                                                    date: pfEvtForTrainingReport.date || (matchingTrainingReport as any).date,
+                                                    instructor: pfEvtForTrainingReport.instructor || (matchingTrainingReport as any).instructor,
                                                 };
-                                                setPt051Assessments(prev => {
+                                                setTrainingReportAssessments(prev => {
                                                     const next = new Map(prev);
-                                                    next.set((matchingPt051 as any).id, updatedAssessment);
+                                                    next.set((matchingTrainingReport as any).id, updatedAssessment);
                                                     return next;
                                                 });
                                                 logRoutineAppDebug(`[PostFlight] ✅ Training report updated with ${data.result} for ${pt051TraineeName} — ${pt051FlightNumber}`);
@@ -55784,20 +55789,20 @@ appliedUpdates.forEach(update => {
                     onNavigateToSyllabus={(id) => {
                         onNavigateToSyllabus(id);
                     }}
-                    onOpenPt051={(trainee, reportEvent) => {
-                        if (!canViewTraineePt051(trainee)) {
+                    onOpenTrainingReport={(trainee, reportEvent) => {
+                        if (!canViewTraineeTrainingReport(trainee)) {
                             denyPlatformAction(`${configuredTrainingReportDisplayName} record`);
                             return;
                         }
-                        setEventForPt051(reportEvent);
+                        setEventForTrainingReport(reportEvent);
                         setSelectedTraineeForHateSheet(trainee);
 
                         logAudit('Flight Detail', 'View', `Viewed ${configuredTrainingReportDisplayName} for ${trainee.fullName} - Event: ${reportEvent.flightNumber} (${reportEvent.date})`);
 
-                        handleNavigation('PT051');
+                        handleNavigation('TrainingReport');
                     }}
                     trainingReportDisplayName={configuredTrainingReportDisplayName}
-                    onOpenTrainingReport={(normaliseOperationalModel(activeOperationalModel) === 'air_combat' || isFixedCrewLikeOperationalModel(activeOperationalModel))
+                    onOpenStaffTrainingReport={(normaliseOperationalModel(activeOperationalModel) === 'air_combat' || isFixedCrewLikeOperationalModel(activeOperationalModel))
                         ? handleOpenAirCombatTrainingReportFromFlightDetails
                         : undefined}
                     onOpenAuth={(e) => {
@@ -55911,7 +55916,7 @@ appliedUpdates.forEach(update => {
                        currentLocation={activeLocationDisplayName}
                     onVisualAdjustStart={handleVisualAdjustStart}
                     onVisualAdjustEnd={handleVisualAdjustEnd}
-                    onSavePT051Assessment={onSavePT051Assessment}
+                    onSaveTrainingReportAssessment={onSaveTrainingReportAssessment}
                     cancellationCodes={cancellationCodes}
                     onCancelEvent={handleCancelEvent}
                     onRestoreEvent={handleRestoreEvent}

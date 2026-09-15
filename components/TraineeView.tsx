@@ -33,9 +33,9 @@ interface TraineeViewProps {
   onNavigateToSyllabus: (item: any) => void;
   onNavigateToCurrency: (person: any) => void;
   onAddRemedialPackage: (trainee: any) => void;
-  onSelectPt051ForEvent?: (trainee: any, assessment: any) => void;
-  onSavePt051Assessment?: (assessment: any) => void;
-  onDeletePt051Assessment?: (assessmentId: string, eventId: string, traineeFullName: string) => void;
+  onSelectTrainingReportForEvent?: (trainee: any, assessment: any) => void;
+  onSaveTrainingReportAssessment?: (assessment: any) => void;
+  onDeleteTrainingReportAssessment?: (assessmentId: string, eventId: string, traineeFullName: string) => void;
   instructorsData?: any[];
   registerDirtyCheck?: (isDirty: () => boolean, onSave: () => void, onDiscard: () => void) => void;
   phraseBank?: any;
@@ -49,7 +49,7 @@ interface TraineeViewProps {
   onViewLogbook: (trainee: any) => void;
   onDeleteTrainee: (trainee: any) => void;
   onDeleteRemedialItem?: (trainee: any, item: any) => Promise<boolean> | boolean;
-  onGeneratePt051ForItem?: (trainee: any, item: any) => void;
+  onGenerateTrainingReportForItem?: (trainee: any, item: any) => void;
   onUpdateLmpItem?: (trainee: any, originalItem: any, updatedItem: any) => Promise<boolean> | boolean;
   onOpenInstructorProfile?: (instructorName: string) => void;
   // Course edit callbacks
@@ -67,8 +67,8 @@ interface TraineeViewProps {
   pt051PerformanceLoading?: boolean;
   userProfile?: any;
   canViewTraineeProfile?: (trainee: any) => boolean;
-  canViewTraineePt051?: (trainee: any) => boolean;
-  canEditTraineePt051?: (trainee: any) => boolean;
+  canViewTraineeTrainingReport?: (trainee: any) => boolean;
+  canEditTraineeTrainingReport?: (trainee: any) => boolean;
   canViewTraineeLmp?: (trainee: any) => boolean;
   canAddRemedialPackageForTrainee?: (trainee: any) => boolean;
   onInsertCustomLmpEvent?: (trainee: any, request: InsertLmpEventRequest) => Promise<boolean> | boolean;
@@ -182,9 +182,9 @@ const TraineeView: React.FC<TraineeViewProps> = (props) => {
             onNavigateToSyllabus={props.onNavigateToSyllabus}
             onNavigateToCurrency={props.onNavigateToCurrency}
             onAddRemedialPackage={props.onAddRemedialPackage}
-            onSelectPt051ForEvent={props.onSelectPt051ForEvent}
-            onSavePt051Assessment={props.onSavePt051Assessment}
-            onDeletePt051Assessment={props.onDeletePt051Assessment}
+            onSelectTrainingReportForEvent={props.onSelectTrainingReportForEvent}
+            onSaveTrainingReportAssessment={props.onSaveTrainingReportAssessment}
+            onDeleteTrainingReportAssessment={props.onDeleteTrainingReportAssessment}
             instructorsData={props.instructorsData}
             registerDirtyCheck={props.registerDirtyCheck}
             phraseBank={props.phraseBank}
@@ -199,7 +199,7 @@ const TraineeView: React.FC<TraineeViewProps> = (props) => {
             onViewLogbook={props.onViewLogbook}
             onDeleteTrainee={props.onDeleteTrainee}
             onDeleteRemedialItem={props.onDeleteRemedialItem}
-            onGeneratePt051ForItem={props.onGeneratePt051ForItem}
+            onGenerateTrainingReportForItem={props.onGenerateTrainingReportForItem}
             onInsertCustomLmpEvent={props.onInsertCustomLmpEvent}
             onUpdateLmpItem={props.onUpdateLmpItem}
             insertEventTypes={props.insertEventTypes}
@@ -224,8 +224,8 @@ const TraineeView: React.FC<TraineeViewProps> = (props) => {
             pt051PerformanceLoading={props.pt051PerformanceLoading}
             userProfile={props.userProfile}
             canViewTraineeProfile={props.canViewTraineeProfile}
-            canViewTraineePt051={props.canViewTraineePt051}
-            canEditTraineePt051={props.canEditTraineePt051}
+            canViewTraineeTrainingReport={props.canViewTraineeTrainingReport}
+            canEditTraineeTrainingReport={props.canEditTraineeTrainingReport}
             canViewTraineeLmp={props.canViewTraineeLmp}
             canAddRemedialPackageForTrainee={props.canAddRemedialPackageForTrainee}
             onAccessDenied={props.onAccessDenied}

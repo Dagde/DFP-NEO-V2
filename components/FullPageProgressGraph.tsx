@@ -1,11 +1,11 @@
 import React, { useMemo, useState } from 'react';
-import { Course, Pt051Assessment, SyllabusItemDetail, Trainee } from '../types';
+import { Course, TrainingReportAssessment, SyllabusItemDetail, Trainee } from '../types';
 import { calculateCourseProgressMetric, CourseProgressMetric, CourseRiskThresholds, WeeklyCourseProgress } from '../utils/courseProgressMetrics';
 
 interface FullPageProgressGraphProps {
     courses: Course[];
     allTrainees: Trainee[];
-    pt051Assessments: Map<string, Pt051Assessment>;
+    pt051Assessments: Map<string, TrainingReportAssessment>;
     traineeLMPs: Map<string, SyllabusItemDetail[]>;
     riskThresholds: CourseRiskThresholds;
     courseColors: { [key: string]: string };

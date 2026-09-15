@@ -459,9 +459,9 @@ interface EventDetailModalProps {
   courseColors: { [key: string]: string };
   onNavigateToHateSheet: (trainee: Trainee) => void;
   onNavigateToSyllabus: (flightNumber: string) => void;
-  onOpenPt051: (trainee: Trainee, event: ScheduleEvent) => void;
+  onOpenTrainingReport: (trainee: Trainee, event: ScheduleEvent) => void;
   trainingReportDisplayName?: string;
-  onOpenTrainingReport?: (staff: Instructor, event: ScheduleEvent) => void;
+  onOpenStaffTrainingReport?: (staff: Instructor, event: ScheduleEvent) => void;
   onOpenAuth: (event: ScheduleEvent) => void;
   flightAuthorisationRequired?: boolean;
   onOpenPostFlight: (event: ScheduleEvent) => void;
@@ -485,7 +485,7 @@ interface EventDetailModalProps {
     currentLocation?: string;
     onVisualAdjustStart?: (event: ScheduleEvent) => void;
     onVisualAdjustEnd?: (event: ScheduleEvent) => void;
-    onSavePT051Assessment?: (assessment: any) => void;
+    onSaveTrainingReportAssessment?: (assessment: any) => void;
     cancellationCodes?: CancellationCode[];
     onCancelEvent?: (eventId: string, cancellationCode: string, manualCodeEntry?: string) => void;
     onRestoreEvent?: (eventId: string) => void;
@@ -659,7 +659,7 @@ const convertTimeToDecimal = (timeStr: string): number => {
     return hours + (minutes / 60);
 };
 
-export const EventDetailModal: React.FC<EventDetailModalProps> = ({ event, onClose, onSave, onDeleteRequest, isEditingDefault = false, instructors, trainees, syllabus, syllabusDetails, highlightedField, school, traineesData, instructorsData, courseColors, onNavigateToHateSheet, onNavigateToSyllabus, onOpenPt051, trainingReportDisplayName = 'Training Report', onOpenTrainingReport, onOpenAuth, flightAuthorisationRequired = true, onOpenPostFlight, onOpenPreFlightNotes, isConflict, onNeoClick, traineeLMPs, oracleContextForModal, sctRequests = [], sctEvents = [], eventsForDate = [], onScoresCreated, publishedSchedules = {}, nextDayBuildEvents = [], activeView = '', isAddingTile = false, formationCallsigns = [], currentLocation = '', onVisualAdjustStart, onVisualAdjustEnd, onSavePT051Assessment, cancellationCodes = [], onCancelEvent, onRestoreEvent, onSendAlert, canSendAlert = false, alertData = null, baselineEvent = null, onClearAlert, onEditFixedCrewTile, resourceDisplayNames = DEFAULT_RESOURCE_DISPLAY_NAMES, aircraftNumberSettings = DEFAULT_AIRCRAFT_NUMBER_SETTINGS, aircraftConfigurationDefinitions = [], aircraftCrewComposition, crewPositionTerminology, operationalModel, activeUnitCode = '', staffQualificationCatalogue, unitCallsignSettings, personnelDisplaySettings, sctTerminology = DEFAULT_SCT_TERMINOLOGY, isReadOnly = false }) => {
+export const EventDetailModal: React.FC<EventDetailModalProps> = ({ event, onClose, onSave, onDeleteRequest, isEditingDefault = false, instructors, trainees, syllabus, syllabusDetails, highlightedField, school, traineesData, instructorsData, courseColors, onNavigateToHateSheet, onNavigateToSyllabus, onOpenTrainingReport, trainingReportDisplayName = 'Training Report', onOpenStaffTrainingReport, onOpenAuth, flightAuthorisationRequired = true, onOpenPostFlight, onOpenPreFlightNotes, isConflict, onNeoClick, traineeLMPs, oracleContextForModal, sctRequests = [], sctEvents = [], eventsForDate = [], onScoresCreated, publishedSchedules = {}, nextDayBuildEvents = [], activeView = '', isAddingTile = false, formationCallsigns = [], currentLocation = '', onVisualAdjustStart, onVisualAdjustEnd, onSaveTrainingReportAssessment, cancellationCodes = [], onCancelEvent, onRestoreEvent, onSendAlert, canSendAlert = false, alertData = null, baselineEvent = null, onClearAlert, onEditFixedCrewTile, resourceDisplayNames = DEFAULT_RESOURCE_DISPLAY_NAMES, aircraftNumberSettings = DEFAULT_AIRCRAFT_NUMBER_SETTINGS, aircraftConfigurationDefinitions = [], aircraftCrewComposition, crewPositionTerminology, operationalModel, activeUnitCode = '', staffQualificationCatalogue, unitCallsignSettings, personnelDisplaySettings, sctTerminology = DEFAULT_SCT_TERMINOLOGY, isReadOnly = false }) => {
     
 
     const { isFrozen, allowedActions: freezeAllowedActions } = useSystemFreeze();
@@ -2959,9 +2959,9 @@ export const EventDetailModal: React.FC<EventDetailModalProps> = ({ event, onClo
         onClose();
     };
 
-    const handlePt051Click = () => {
+    const handleTrainingReportClick = () => {
         if (traineeObject) {
-            onOpenPt051(traineeObject, {
+            onOpenTrainingReport(traineeObject, {
                 ...event,
                 instructor: trainingReportStaffObject?.name || event.instructor,
                 student: traineeObject.fullName || traineeObject.name || event.student,
@@ -2970,9 +2970,9 @@ export const EventDetailModal: React.FC<EventDetailModalProps> = ({ event, onClo
         }
     };
 
-    const handleTrainingReportClick = () => {
-        if (trainingReportStaffObject && onOpenTrainingReport) {
-            onOpenTrainingReport(trainingReportStaffObject, event);
+    const handleStaffTrainingReportClick = () => {
+        if (trainingReportStaffObject && onOpenStaffTrainingReport) {
+            onOpenStaffTrainingReport(trainingReportStaffObject, event);
             onClose();
         }
     };
@@ -3012,7 +3012,7 @@ export const EventDetailModal: React.FC<EventDetailModalProps> = ({ event, onClo
         const instructor = event.instructor || 'System';
         
         // Create training report assessments for each trainee.
-        if (onSavePT051Assessment) {
+        if (onSaveTrainingReportAssessment) {
             confirmedTrainees.forEach(trainee => {
                 const assessment = {
                     id: `${trainee.idNumber}_${event.id}_${currentDate}`,
@@ -3034,7 +3034,7 @@ export const EventDetailModal: React.FC<EventDetailModalProps> = ({ event, onClo
                     }
                 };
                 
-                onSavePT051Assessment(assessment);
+                onSaveTrainingReportAssessment(assessment);
             });
         } else {
             console.warn('Training Report save callback is not defined!');
@@ -3527,20 +3527,20 @@ const renderCrewFields = (crewMember: CrewMember, index: number) => {
                                                 <div className="absolute inset-0 z-50 bg-transparent cursor-not-allowed" style={{pointerEvents: 'all'}} />
                                             )}
                                             <button
-                                                onClick={handlePt051Click}
+                                                onClick={handleTrainingReportClick}
                                                 className="w-[75px] h-[55px] flex items-center justify-center text-[12px] font-semibold btn-aluminium-brushed rounded-md mb-[1px]"
                                             >
                                                 <span className="text-center text-[11px] leading-tight break-words px-1">{trainingReportDisplayName}</span>
                                             </button>
                                         </div>
                                     )}
-                                    {!isFixedCrewModel && onOpenTrainingReport && trainingReportStaffObject && (
+                                    {!isFixedCrewModel && onOpenStaffTrainingReport && trainingReportStaffObject && (
                                         <div className="relative w-[75px]">
                                             {isFrozen && !freezeAllowedActions.pt051Entries && (
                                                 <div className="absolute inset-0 z-50 bg-transparent cursor-not-allowed" style={{pointerEvents: 'all'}} />
                                             )}
                                             <button
-                                                onClick={handleTrainingReportClick}
+                                                onClick={handleStaffTrainingReportClick}
                                                 className="w-[75px] h-[55px] flex items-center justify-center text-[12px] font-semibold btn-aluminium-brushed rounded-md mb-[1px]"
                                             >
                                                 <span className="text-center text-[11px] leading-tight break-words px-1">{trainingReportDisplayName}</span>

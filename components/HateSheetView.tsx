@@ -38,10 +38,10 @@ interface HateSheetViewProps {
     userProfile: any;
     refreshEvents?: () => void;
     onSelectLmpScore: (score: Score) => void;
-    onSelectPt051: (assessment: TrainingReportAssessment) => void;
+    onSelectTrainingReport: (assessment: TrainingReportAssessment) => void;
     onBackToRoster: () => void;
-    onInsertPt051: (insertIndex: number, targetDate: string) => void;
-    canEditPt051?: boolean;
+    onInsertTrainingReport: (insertIndex: number, targetDate: string) => void;
+    canEditTrainingReport?: boolean;
     onAccessDenied?: (actionLabel: string) => void;
     isLoading?: boolean;
     trainingReportTerminology?: Partial<TrainingReportTerminology> | null;
@@ -49,9 +49,9 @@ interface HateSheetViewProps {
     instructorLabel?: string;
 }
 
-const HateSheetView: React.FC<HateSheetViewProps> = ({ trainee, lmpScores, assessments, pt051Events, traineeLmp = [], userProfile, refreshEvents, onSelectLmpScore, onSelectPt051, onBackToRoster, onInsertPt051, canEditPt051 = true, onAccessDenied, isLoading = false, trainingReportTerminology = DEFAULT_TRAINING_REPORT_TERMINOLOGY, trainingReportTemplate = null, instructorLabel = 'Instructor' }) => {
+const HateSheetView: React.FC<HateSheetViewProps> = ({ trainee, lmpScores, assessments, pt051Events, traineeLmp = [], userProfile, refreshEvents, onSelectLmpScore, onSelectTrainingReport, onBackToRoster, onInsertTrainingReport, canEditTrainingReport = true, onAccessDenied, isLoading = false, trainingReportTerminology = DEFAULT_TRAINING_REPORT_TERMINOLOGY, trainingReportTemplate = null, instructorLabel = 'Instructor' }) => {
     const { isFrozen } = useSystemFreeze();
-    const [localPt051Events, setLocalPt051Events] = useState(pt051Events);
+    const [localTrainingReportEvents, setLocalTrainingReportEvents] = useState(pt051Events);
     const reportTerminology = normaliseTrainingReportTerminology(trainingReportTerminology);
     const trainingReportName = reportTerminology.name;
     const reportTemplate = React.useMemo(
@@ -139,10 +139,10 @@ const HateSheetView: React.FC<HateSheetViewProps> = ({ trainee, lmpScores, asses
               });
 
            const pt051Items = finalAssessments.map(assessment => ({ ...assessment, type: 'Training Report' as const }));
-           const visiblePt051Keys = new Set(finalAssessments.map(assessment =>
+           const visibleTrainingReportKeys = new Set(finalAssessments.map(assessment =>
                `${assessment.traineeFullName}|||${assessment.flightNumber}|||${assessment.date || ''}`
            ));
-           const visiblePt051EventKeys = new Set(finalAssessments.map(assessment =>
+           const visibleTrainingReportEventKeys = new Set(finalAssessments.map(assessment =>
                `${assessment.traineeFullName}|||${assessment.flightNumber}`
            ));
            // Filter out LMP Score placeholder records when a report row exists for
@@ -153,7 +153,7 @@ const HateSheetView: React.FC<HateSheetViewProps> = ({ trainee, lmpScores, asses
                .filter(score => {
                    const exactKey = `${trainee.fullName}|||${score.event}|||${score.date || ''}`;
                    const eventKey = `${trainee.fullName}|||${score.event}`;
-                   return !visiblePt051Keys.has(exactKey) && !visiblePt051EventKeys.has(eventKey);
+                   return !visibleTrainingReportKeys.has(exactKey) && !visibleTrainingReportEventKeys.has(eventKey);
                })
                .map(score => ({ ...score, type: 'LMP Score' as const }));
            
@@ -307,7 +307,7 @@ const HateSheetView: React.FC<HateSheetViewProps> = ({ trainee, lmpScores, asses
             );
 
             if (existingAssessment) {
-                onSelectPt051(existingAssessment);
+                onSelectTrainingReport(existingAssessment);
                 return;
             }
 
@@ -329,20 +329,20 @@ const HateSheetView: React.FC<HateSheetViewProps> = ({ trainee, lmpScores, asses
                     comment: ''
                 })) // Properly structured scores array
             };
-            onSelectPt051(mockAssessment);
+            onSelectTrainingReport(mockAssessment);
         } else if (item.type === 'Training Report') {
-            onSelectPt051(item as TrainingReportAssessment);
+            onSelectTrainingReport(item as TrainingReportAssessment);
         }
     };
 
-    const handleDeletePT051 = async (eventId: string) => {
-        if (!canEditPt051) {
+    const handleDeleteTrainingReport = async (eventId: string) => {
+        if (!canEditTrainingReport) {
             onAccessDenied?.(`delete ${trainingReportName} assessment`);
             return;
         }
         
         // Find the assessment to delete
-        const assessmentToDelete = localPt051Events.find(assessment => assessment.id === eventId || assessment.eventId === eventId);
+        const assessmentToDelete = localTrainingReportEvents.find(assessment => assessment.id === eventId || assessment.eventId === eventId);
         
         if (!assessmentToDelete) {
             await showDarkAlert(`${trainingReportName} assessment not found.`, `${trainingReportName} Not Found`, 'warning');
@@ -380,7 +380,7 @@ const HateSheetView: React.FC<HateSheetViewProps> = ({ trainee, lmpScores, asses
             logAudit('Performance History', 'Delete', `Deleted ${trainingReportName} assessment for ${traineeName}`, auditDetails);
 
             // Remove from local state after database deletion and audit logging
-            setLocalPt051Events(prev => prev.filter(assessment => assessment.id !== eventId));
+            setLocalTrainingReportEvents(prev => prev.filter(assessment => assessment.id !== eventId));
             
             // Refresh events from database to ensure consistency
             if (refreshEvents) {

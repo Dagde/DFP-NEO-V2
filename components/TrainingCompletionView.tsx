@@ -1,5 +1,5 @@
 import React, { useMemo, useState } from 'react';
-import { Course, PhraseBank, Pt051Assessment, ScheduleEvent, Trainee } from '../types';
+import { Course, PhraseBank, TrainingReportAssessment, ScheduleEvent, Trainee } from '../types';
 import {
     DEFAULT_TRAINING_REPORT_TEMPLATE,
     normaliseTrainingReportTemplate,
@@ -12,8 +12,8 @@ interface TrainingCompletionViewProps {
     courses: Course[];
     archivedCourses: { [key: string]: string };
     publishedSchedules: Record<string, ScheduleEvent[]>;
-    pt051Assessments: Map<string, Pt051Assessment>;
-    onSavePT051Assessment: (assessment: Pt051Assessment) => void;
+    pt051Assessments: Map<string, TrainingReportAssessment>;
+    onSaveTrainingReportAssessment: (assessment: TrainingReportAssessment) => void;
     trainingReportTemplate?: Partial<TrainingReportTemplate> | null;
     phraseBank?: PhraseBank;
 }
@@ -61,7 +61,7 @@ const TrainingCompletionView: React.FC<TrainingCompletionViewProps> = ({
     archivedCourses,
     publishedSchedules,
     pt051Assessments,
-    onSavePT051Assessment,
+    onSaveTrainingReportAssessment,
     trainingReportTemplate,
 }) => {
     const reportTemplate = useMemo(
@@ -176,9 +176,9 @@ const TrainingCompletionView: React.FC<TrainingCompletionViewProps> = ({
                 const trainee = allTrainees.find(item => item.name === traineeName);
                 if (!trainee) return;
 
-                const assessmentId = `${trainee.name}_${selectedEvent.id}_PT051`;
+                const assessmentId = `${trainee.name}_${selectedEvent.id}_TrainingReport`;
                 const existingAssessment = pt051Assessments.get(assessmentId);
-                const assessment: Pt051Assessment = existingAssessment
+                const assessment: TrainingReportAssessment = existingAssessment
                     ? {
                         ...existingAssessment,
                         dcoResult: 'DCO',
@@ -202,7 +202,7 @@ const TrainingCompletionView: React.FC<TrainingCompletionViewProps> = ({
                         groundSchoolAssessment: { isAssessment: false, result: undefined },
                     };
 
-                onSavePT051Assessment(assessment);
+                onSaveTrainingReportAssessment(assessment);
             });
 
             setCompletionMessage(`Marked ${selectedTrainees.length} trainee${selectedTrainees.length === 1 ? '' : 's'} as DCO for ${selectedEvent.flightNumber}.`);

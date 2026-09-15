@@ -45,14 +45,14 @@ interface TraineeLmpViewProps {
   syllabusDetails?: SyllabusItemDetail[];
   allTraineesData?: Trainee[];
   // Optional: open a training report for a specific lesson
-  onOpenPt051ForLesson?: (trainee: Trainee, lessonCode: string) => void;
-  canOpenPt051?: boolean;
+  onOpenTrainingReportForLesson?: (trainee: Trainee, lessonCode: string) => void;
+  canOpenTrainingReport?: boolean;
   onAccessDenied?: (actionLabel: string) => void;
   resourceDisplayNames?: ResourceDisplayNames;
   aircraftConfigurations?: AircraftConfigurationDefinition[];
   aircraftCrewComposition?: AircraftCrewComposition;
   onDeleteRemedialItem?: (trainee: Trainee, item: SyllabusItemDetail) => Promise<boolean> | boolean;
-  onGeneratePt051ForItem?: (trainee: Trainee, item: SyllabusItemDetail) => void;
+  onGenerateTrainingReportForItem?: (trainee: Trainee, item: SyllabusItemDetail) => void;
   insertEventTypes?: InsertEventTypeConfig[];
   onInsertCustomEvent?: (trainee: Trainee, event: InsertLmpEventRequest) => Promise<boolean> | boolean;
   onUpdateLmpItem?: (trainee: Trainee, originalItem: SyllabusItemDetail, updatedItem: SyllabusItemDetail) => Promise<boolean> | boolean;
@@ -1053,8 +1053,8 @@ interface AcademicLmpTabProps {
     scores: Score[];
     syllabusDetails: SyllabusItemDetail[];
     allTraineesData: Trainee[];
-    onOpenPt051ForLesson?: (trainee: Trainee, lessonCode: string) => void;
-    canOpenPt051?: boolean;
+    onOpenTrainingReportForLesson?: (trainee: Trainee, lessonCode: string) => void;
+    canOpenTrainingReport?: boolean;
     onAccessDenied?: (actionLabel: string) => void;
     trainingReportDisplayName?: string;
     trainingReportStatusFieldLabel?: string;
@@ -1066,8 +1066,8 @@ const AcademicLmpTab: React.FC<AcademicLmpTabProps> = ({
     scores,
     syllabusDetails,
     allTraineesData,
-    onOpenPt051ForLesson,
-    canOpenPt051 = true,
+    onOpenTrainingReportForLesson,
+    canOpenTrainingReport = true,
     onAccessDenied,
     trainingReportDisplayName = 'Training Report',
     trainingReportStatusFieldLabel = 'Mission Status',
@@ -1137,9 +1137,9 @@ const AcademicLmpTab: React.FC<AcademicLmpTabProps> = ({
         return groups;
     }, [academicSyllabus]);
 
-    const handleOpenPt051 = (lesson: SyllabusItemDetail) => {
-        if (onOpenPt051ForLesson) {
-            onOpenPt051ForLesson(trainee, lesson.code);
+    const handleOpenTrainingReport = (lesson: SyllabusItemDetail) => {
+        if (onOpenTrainingReportForLesson) {
+            onOpenTrainingReportForLesson(trainee, lesson.code);
         }
     };
 
@@ -1325,19 +1325,19 @@ const AcademicLmpTab: React.FC<AcademicLmpTabProps> = ({
                         })()}
 
                         {/* Open training report button */}
-                        {onOpenPt051ForLesson && (
+                        {onOpenTrainingReportForLesson && (
                             <div className="flex items-center gap-px pt-2">
                                 <button
                                     onClick={() => {
-                                        if (!canOpenPt051) {
+                                        if (!canOpenTrainingReport) {
                                             onAccessDenied?.(`${trainingReportDisplayName} from Individual LMP`);
                                             return;
                                         }
-                                        handleOpenPt051(selectedLesson);
+                                        handleOpenTrainingReport(selectedLesson);
                                     }}
-                                    disabled={!canOpenPt051}
-                                    title={canOpenPt051 ? undefined : `Your permission profile does not allow opening ${trainingReportDisplayName} records`}
-                                    className={`w-[140px] h-[41px] flex items-center justify-center text-center px-2 py-1 text-[11px] font-semibold rounded-md btn-aluminium-brushed ${!canOpenPt051 ? 'opacity-50 cursor-not-allowed' : ''}`}
+                                    disabled={!canOpenTrainingReport}
+                                    title={canOpenTrainingReport ? undefined : `Your permission profile does not allow opening ${trainingReportDisplayName} records`}
+                                    className={`w-[140px] h-[41px] flex items-center justify-center text-center px-2 py-1 text-[11px] font-semibold rounded-md btn-aluminium-brushed ${!canOpenTrainingReport ? 'opacity-50 cursor-not-allowed' : ''}`}
                                 >
                                     {completedLessonCodes.has(selectedLesson.code) ? `View / Edit ${trainingReportDisplayName}` : `Open ${trainingReportDisplayName}`}
                                 </button>
@@ -1401,14 +1401,14 @@ const TraineeLmpView: React.FC<TraineeLmpViewProps> = ({
     onBack,
     syllabusDetails,
     allTraineesData,
-    onOpenPt051ForLesson,
+    onOpenTrainingReportForLesson,
     resourceDisplayNames = DEFAULT_RESOURCE_DISPLAY_NAMES,
     aircraftConfigurations = [],
     aircraftCrewComposition = DEFAULT_AIRCRAFT_CREW_COMPOSITION,
-    canOpenPt051 = true,
+    canOpenTrainingReport = true,
     onAccessDenied,
     onDeleteRemedialItem,
-    onGeneratePt051ForItem,
+    onGenerateTrainingReportForItem,
     insertEventTypes = [],
     onInsertCustomEvent,
     onUpdateLmpItem,
@@ -1597,9 +1597,9 @@ const TraineeLmpView: React.FC<TraineeLmpViewProps> = ({
                             Edit
                         </button>
                     )}
-                    {activeTab === 'neo' && selectedDisplayItem && onGeneratePt051ForItem && (
+                    {activeTab === 'neo' && selectedDisplayItem && onGenerateTrainingReportForItem && (
                         <button
-                            onClick={() => onGeneratePt051ForItem(trainee, selectedDisplayItem)}
+                            onClick={() => onGenerateTrainingReportForItem(trainee, selectedDisplayItem)}
                             className="w-[56px] h-[41px] flex items-center justify-center text-center px-1 py-1 text-[10px] leading-tight font-semibold rounded-md btn-aluminium-brushed"
                         >
                             Generate<br />{trainingReportDisplayName}
@@ -1666,8 +1666,8 @@ const TraineeLmpView: React.FC<TraineeLmpViewProps> = ({
                         scores={scores}
                         syllabusDetails={syllabusDetails}
                         allTraineesData={allTraineesData}
-                        onOpenPt051ForLesson={onOpenPt051ForLesson}
-                        canOpenPt051={canOpenPt051}
+                        onOpenTrainingReportForLesson={onOpenTrainingReportForLesson}
+                        canOpenTrainingReport={canOpenTrainingReport}
                         onAccessDenied={onAccessDenied}
                         trainingReportDisplayName={trainingReportDisplayName}
                         trainingReportStatusFieldLabel={trainingReportStatusFieldLabel}

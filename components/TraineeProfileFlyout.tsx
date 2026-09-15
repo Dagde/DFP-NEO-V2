@@ -14,7 +14,7 @@ import CurrencyAuditFlyout from './CurrencyAuditFlyout';
 import MySctRequestsPanel from './MySctRequestsPanel';
 import HateSheetView from './HateSheetView';
 import TraineeLmpView from './TraineeLmpView';
-import TrainingReportView from './PT051View';
+import TrainingReportView from './TrainingReportView';
 import PermissionNotice from './PermissionNotice';
 import { DEFAULT_RESOURCE_DISPLAY_NAMES, formatResourceLabel as formatConfiguredResourceLabel, type ResourceDisplayNames } from '../utils/resourceDisplayNames';
 import {
@@ -209,19 +209,19 @@ interface TraineeProfileFlyoutProps {
   traineeLMPs?: Map<string, SyllabusItemDetail[]>;
   userProfile?: any;
   initialActiveTab?: 'unavailable' | 'currency' | 'review' | 'logbook' | 'hatesheet' | 'lmp' | 'pt051' | 'sct' | null;
-  onSelectPt051ForEvent?: (assessment: TrainingReportAssessment) => void;
-  onSavePt051Assessment?: (assessment: TrainingReportAssessment) => void;
-  onDeletePt051Assessment?: (assessmentId: string, eventId: string, traineeFullName: string) => void;
+  onSelectTrainingReportForEvent?: (assessment: TrainingReportAssessment) => void;
+  onSaveTrainingReportAssessment?: (assessment: TrainingReportAssessment) => void;
+  onDeleteTrainingReportAssessment?: (assessmentId: string, eventId: string, traineeFullName: string) => void;
   instructorsData?: Instructor[];
   registerDirtyCheck?: (isDirty: () => boolean, onSave: () => void, onDiscard: () => void) => void;
   phraseBank?: PhraseBank;
   trainingReportTemplate?: Partial<TrainingReportTemplate> | null;
-  canViewPt051?: boolean;
-  canEditPt051?: boolean;
+  canViewTrainingReport?: boolean;
+  canEditTrainingReport?: boolean;
   canViewIndividualLmp?: boolean;
   canAddRemedialPackage?: boolean;
   onDeleteRemedialItem?: (trainee: Trainee, item: SyllabusItemDetail) => Promise<boolean> | boolean;
-  onGeneratePt051ForItem?: (trainee: Trainee, item: SyllabusItemDetail) => void;
+  onGenerateTrainingReportForItem?: (trainee: Trainee, item: SyllabusItemDetail) => void;
   onInsertCustomLmpEvent?: (trainee: Trainee, request: InsertLmpEventRequest) => Promise<boolean> | boolean;
   onUpdateLmpItem?: (trainee: Trainee, originalItem: SyllabusItemDetail, updatedItem: SyllabusItemDetail) => Promise<boolean> | boolean;
   insertEventTypes?: InsertEventTypeConfig[];
@@ -569,19 +569,19 @@ const TraineeProfileFlyout: React.FC<TraineeProfileFlyoutProps> = ({
   traineeLMPs,
   userProfile,
   initialActiveTab = null,
-  onSelectPt051ForEvent,
-  onSavePt051Assessment,
-  onDeletePt051Assessment,
+  onSelectTrainingReportForEvent,
+  onSaveTrainingReportAssessment,
+  onDeleteTrainingReportAssessment,
   instructorsData = [],
   registerDirtyCheck = () => {},
   phraseBank = DEFAULT_PHRASE_BANK,
   trainingReportTemplate = null,
-  canViewPt051 = true,
-  canEditPt051 = true,
+  canViewTrainingReport = true,
+  canEditTrainingReport = true,
   canViewIndividualLmp = true,
   canAddRemedialPackage = true,
   onDeleteRemedialItem,
-  onGeneratePt051ForItem,
+  onGenerateTrainingReportForItem,
   onInsertCustomLmpEvent,
   onUpdateLmpItem,
   insertEventTypes,
@@ -625,8 +625,8 @@ const TraineeProfileFlyout: React.FC<TraineeProfileFlyoutProps> = ({
     const continuationTerminology = useMemo(() => normaliseSctTerminology(sctTerminology), [sctTerminology]);
     const continuationShortLabel = continuationTerminology.shortLabel;
     const continuationLongLabel = continuationTerminology.longLabel;
-    const [inlinePt051Assessment, setInlinePt051Assessment] = useState<TrainingReportAssessment | null>(null);
-    const [inlinePt051Event, setInlinePt051Event] = useState<ScheduleEvent | null>(null);
+    const [inlineTrainingReportAssessment, setInlineTrainingReportAssessment] = useState<TrainingReportAssessment | null>(null);
+    const [inlineTrainingReportEvent, setInlineTrainingReportEvent] = useState<ScheduleEvent | null>(null);
     // Edit controls exposed by CurrencyPanel (so we can render them in the tab header)
     const [currencyEditState, setCurrencyEditState] = useState<{
       isEditing: boolean; isSaving: boolean;
@@ -688,7 +688,7 @@ const TraineeProfileFlyout: React.FC<TraineeProfileFlyoutProps> = ({
         sct: 'trainee.profile.own',
     };
     const canOpenTraineeProfileTab = (tab: NonNullable<typeof activeTab>): boolean => {
-        if ((tab === 'hatesheet' || tab === 'pt051') && !canViewPt051) return false;
+        if ((tab === 'hatesheet' || tab === 'pt051') && !canViewTrainingReport) return false;
         if (tab === 'lmp' && !canViewIndividualLmp) return false;
         return canUseTraineeProfileAction(traineeProfileTabPermissions[tab] || 'trainee.profile.own');
     };
@@ -1994,7 +1994,7 @@ const TraineeProfileFlyout: React.FC<TraineeProfileFlyoutProps> = ({
     };
 
     const handleHateSheetClick = () => {
-        if (!canViewPt051) {
+        if (!canViewTrainingReport) {
             onAccessDenied?.(`${activeTrainingReportDisplayName} performance history`);
             return;
         }
@@ -2008,7 +2008,7 @@ const TraineeProfileFlyout: React.FC<TraineeProfileFlyoutProps> = ({
         }
     };
 
-    const buildPt051EventFromAssessment = (assessment: TrainingReportAssessment): ScheduleEvent => {
+    const buildTrainingReportEventFromAssessment = (assessment: TrainingReportAssessment): ScheduleEvent => {
         const lmpItem = currentIndividualLMP?.find(item => {
             const assessmentRefs = new Set([
                 assessment.eventId,
@@ -2079,31 +2079,31 @@ const TraineeProfileFlyout: React.FC<TraineeProfileFlyoutProps> = ({
         } as ScheduleEvent;
     };
 
-    const openInlinePt051 = (assessment: TrainingReportAssessment) => {
-        if (!canViewPt051) {
+    const openInlineTrainingReport = (assessment: TrainingReportAssessment) => {
+        if (!canViewTrainingReport) {
             onAccessDenied?.(`${activeTrainingReportDisplayName} record`);
             return;
         }
-        setInlinePt051Assessment(assessment);
-        setInlinePt051Event(buildPt051EventFromAssessment(assessment));
+        setInlineTrainingReportAssessment(assessment);
+        setInlineTrainingReportEvent(buildTrainingReportEventFromAssessment(assessment));
         setActiveTab('pt051');
         setTimeout(() => contentScrollRef.current?.scrollTo({ top: 0, behavior: 'smooth' }), 0);
     };
 
-    const persistInlinePt051Assessment = async (assessment: TrainingReportAssessment, isAutoSave?: boolean) => {
-        if (!canEditPt051) {
+    const persistInlineTrainingReportAssessment = async (assessment: TrainingReportAssessment, isAutoSave?: boolean) => {
+        if (!canEditTrainingReport) {
             if (!isAutoSave) onAccessDenied?.(`save ${activeTrainingReportDisplayName} assessment`);
             return;
         }
-        const eventId = assessment.eventId || inlinePt051Event?.id || `pt051-${trainee.idNumber}-${assessment.flightNumber}-${assessment.date || 'undated'}`;
+        const eventId = assessment.eventId || inlineTrainingReportEvent?.id || `pt051-${trainee.idNumber}-${assessment.flightNumber}-${assessment.date || 'undated'}`;
         const normalizedAssessment: TrainingReportAssessment = {
             ...assessment,
             id: assessment.id || `pt051-${eventId}-${trainee.fullName}`,
             eventId,
             traineeFullName: trainee.fullName,
         };
-        onSavePt051Assessment?.(normalizedAssessment);
-        setInlinePt051Assessment(normalizedAssessment);
+        onSaveTrainingReportAssessment?.(normalizedAssessment);
+        setInlineTrainingReportAssessment(normalizedAssessment);
 
         const traineeId = (trainee as any).id;
         if (!traineeId) {
@@ -2130,12 +2130,12 @@ const TraineeProfileFlyout: React.FC<TraineeProfileFlyoutProps> = ({
         }
     };
 
-    const deleteInlinePt051Assessment = async (assessmentId: string) => {
-        if (!canEditPt051) {
+    const deleteInlineTrainingReportAssessment = async (assessmentId: string) => {
+        if (!canEditTrainingReport) {
             onAccessDenied?.(`delete ${activeTrainingReportDisplayName} assessment`);
             return;
         }
-        const eventId = inlinePt051Assessment?.eventId || inlinePt051Event?.id || assessmentId;
+        const eventId = inlineTrainingReportAssessment?.eventId || inlineTrainingReportEvent?.id || assessmentId;
         const response = await fetch(`/api/trainee-performance/${encodeURIComponent(eventId)}`, {
             method: 'DELETE',
         });
@@ -2144,9 +2144,9 @@ const TraineeProfileFlyout: React.FC<TraineeProfileFlyoutProps> = ({
             await showDarkAlert(`Training Report could not be deleted from the database.\n\n${errorText || `HTTP ${response.status}`}`, 'Delete Failed', 'error');
             throw new Error(errorText || `Failed to delete Training Report (${response.status})`);
         }
-        onDeletePt051Assessment?.(assessmentId, eventId, trainee.fullName);
-        setInlinePt051Assessment(null);
-        setInlinePt051Event(null);
+        onDeleteTrainingReportAssessment?.(assessmentId, eventId, trainee.fullName);
+        setInlineTrainingReportAssessment(null);
+        setInlineTrainingReportEvent(null);
         setActiveTab('hatesheet');
     };
 
@@ -2972,15 +2972,15 @@ const TraineeProfileFlyout: React.FC<TraineeProfileFlyoutProps> = ({
                             userProfile={userProfile || {}}
                             refreshEvents={() => {}}
                             onSelectLmpScore={() => {}}
-                            onSelectPt051={(assessment: TrainingReportAssessment) => {
-                              openInlinePt051(assessment);
-                              if (onSelectPt051ForEvent) {
+                            onSelectTrainingReport={(assessment: TrainingReportAssessment) => {
+                              openInlineTrainingReport(assessment);
+                              if (onSelectTrainingReportForEvent) {
                                 logAudit('Performance History', 'View', `Opened embedded Training Report for ${assessment.traineeFullName} - Event: ${assessment.flightNumber} (${assessment.date})`);
                               }
                             }}
                             onBackToRoster={() => setActiveTab(null)}
-                            onInsertPt051={() => {}}
-                            canEditPt051={!isArchiveProfile && canEditPt051}
+                            onInsertTrainingReport={() => {}}
+                            canEditTrainingReport={!isArchiveProfile && canEditTrainingReport}
                             isLoading={pt051PerformanceLoading}
                             trainingReportTerminology={trainingReportTerminology}
                             trainingReportTemplate={activeTrainingReportTemplate}
@@ -2991,26 +2991,26 @@ const TraineeProfileFlyout: React.FC<TraineeProfileFlyoutProps> = ({
                     })()}
 
                     {/* ── TRAINING REPORT DETAIL TAB (inline within trainee profile) ── */}
-                    {activeTab === 'pt051' && inlinePt051Assessment && inlinePt051Event && (() => {
-                      const assessmentKey = `pt051-${inlinePt051Assessment.eventId}-${trainee.fullName}`;
+                    {activeTab === 'pt051' && inlineTrainingReportAssessment && inlineTrainingReportEvent && (() => {
+                      const assessmentKey = `pt051-${inlineTrainingReportAssessment.eventId}-${trainee.fullName}`;
                       const currentAssessment = pt051Assessments?.get(assessmentKey)
                         || Array.from(pt051Assessments?.values() || []).find((assessment: TrainingReportAssessment) =>
                           assessment.traineeFullName === trainee.fullName &&
                           (
-                            assessment.eventId === inlinePt051Assessment.eventId ||
+                            assessment.eventId === inlineTrainingReportAssessment.eventId ||
                             (
-                              assessment.flightNumber === inlinePt051Assessment.flightNumber &&
-                              (!inlinePt051Assessment.date || !assessment.date || assessment.date === inlinePt051Assessment.date)
+                              assessment.flightNumber === inlineTrainingReportAssessment.flightNumber &&
+                              (!inlineTrainingReportAssessment.date || !assessment.date || assessment.date === inlineTrainingReportAssessment.date)
                             )
                           )
                         )
-                        || inlinePt051Assessment;
+                        || inlineTrainingReportAssessment;
                       return (
                         <div className={card3d + " p-0 overflow-hidden h-full min-h-0 flex flex-col"} style={card3dStyle}>
                           <TrainingReportView
-                            key={`embedded-${inlinePt051Event.id}-${trainee.fullName}-${currentAssessment?.overallGrade ?? 'none'}`}
+                            key={`embedded-${inlineTrainingReportEvent.id}-${trainee.fullName}-${currentAssessment?.overallGrade ?? 'none'}`}
                             trainee={trainee}
-                            event={inlinePt051Event}
+                            event={inlineTrainingReportEvent}
                             initialAssessment={currentAssessment}
                             instructorLabel={activeReportAssessorDisplayLabel}
                             trainingReportTerminology={trainingReportTerminology}
@@ -3019,9 +3019,9 @@ const TraineeProfileFlyout: React.FC<TraineeProfileFlyoutProps> = ({
                             trainingReportContextUnitCode={activeTrainingReportUnitCode}
                             formatResourceLabel={formatResourceDisplayLabel}
                             onBack={() => setActiveTab('hatesheet')}
-                            onEventUpdate={setInlinePt051Event}
-                            onDeleteAssessment={isArchiveProfile ? undefined : deleteInlinePt051Assessment}
-                            onSave={isArchiveProfile ? () => {} : persistInlinePt051Assessment}
+                            onEventUpdate={setInlineTrainingReportEvent}
+                            onDeleteAssessment={isArchiveProfile ? undefined : deleteInlineTrainingReportAssessment}
+                            onSave={isArchiveProfile ? () => {} : persistInlineTrainingReportAssessment}
                             instructors={instructorsData}
                             pt051Assessments={pt051Assessments || new Map()}
                             events={events}
@@ -3031,7 +3031,7 @@ const TraineeProfileFlyout: React.FC<TraineeProfileFlyoutProps> = ({
                             registerDirtyCheck={registerDirtyCheck}
                             phraseBank={activeTrainingReportPhraseBank}
                             currentUserPin={currentUserId || '1111'}
-                            canEditPt051={!isArchiveProfile && canEditPt051}
+                            canEditTrainingReport={!isArchiveProfile && canEditTrainingReport}
                             embeddedInProfile
                           />
                         </div>
@@ -3049,7 +3049,7 @@ const TraineeProfileFlyout: React.FC<TraineeProfileFlyoutProps> = ({
                             scores={traineeScores}
                             onBack={() => setActiveTab(null)}
                             onDeleteRemedialItem={isArchiveProfile ? undefined : onDeleteRemedialItem}
-                            onGeneratePt051ForItem={isArchiveProfile ? undefined : onGeneratePt051ForItem}
+                            onGenerateTrainingReportForItem={isArchiveProfile ? undefined : onGenerateTrainingReportForItem}
                             onInsertCustomEvent={isArchiveProfile ? undefined : onInsertCustomLmpEvent}
                             onUpdateLmpItem={isArchiveProfile ? undefined : onUpdateLmpItem}
                             insertEventTypes={insertEventTypes}

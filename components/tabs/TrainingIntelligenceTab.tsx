@@ -22,7 +22,7 @@ interface TIERun {
 interface TIECourseSummary {
   courseName: string;
   totalTrainees: number;
-  totalPt051s: number;
+  totalTrainingReports: number;
   bottleneckEvents: any;
   bottleneckSkillFamilies: any;
   atRiskTrainees: any;
@@ -46,7 +46,7 @@ interface TIETraineeSummary {
   recurringWeakElements: any;
   positiveCommentThemes: any;
   negativeCommentThemes: any;
-  totalPt051Count: number;
+  totalTrainingReportCount: number;
   avgOverallGrade: number;
   recentAvgGrade: number;
   gradeProgression: any;
@@ -370,7 +370,7 @@ const evaluateTraineeRisk = (
   const avgGrade = safeN(trainee.avgOverallGrade);
   const recentAvg = safeN(trainee.recentAvgGrade);
   const weakElements = parseJ(trainee.recurringWeakElements, []) as unknown[];
-  const enoughData = Math.max(grades.length, safeN(trainee.totalPt051Count)) >= thresholds.minAssessmentsForRisk;
+  const enoughData = Math.max(grades.length, safeN(trainee.totalTrainingReportCount)) >= thresholds.minAssessmentsForRisk;
   const atRiskReasons: string[] = [];
   const monitorReasons: string[] = [];
 
@@ -1696,7 +1696,7 @@ const CourseTab: React.FC<{
           sub={`trainees avg ≥ ${thresholds.concernThresholdGrade}.0`} />
         <StatCard label="At-Risk" value={atRisk}
           color={atRisk > 0 ? 'text-red-400' : 'text-gray-400'} sub={`of ${trainees.length} trainees`} />
-        <StatCard label={`${trainingReportDisplayName} Records`} value={summary.totalPt051s} sub={`${trainees.length} trainees`} />
+        <StatCard label={`${trainingReportDisplayName} Records`} value={summary.totalTrainingReports} sub={`${trainees.length} trainees`} />
         <StatCard label="Events" value={events.length}
           sub={`${bottleneckEvents.length} elevated risk`}
           color={bottleneckEvents.length > 0 ? 'text-orange-400' : 'text-white'} />
@@ -2101,7 +2101,7 @@ const TraineeTab: React.FC<{ trainees: TIETraineeSummary[]; trainingReportDispla
                       <td className={`px-3 py-2.5 text-center font-mono font-bold ${gradeColor(safeN(t.avgOverallGrade), thresholds)}`}>{safe(t.avgOverallGrade, 2)}</td>
                       <td className={`px-3 py-2.5 text-center font-mono text-xs ${gradeColor(safeN(t.recentAvgGrade), thresholds)}`}>{safe(t.recentAvgGrade, 2)}</td>
                       <td className={`px-3 py-2.5 text-center font-bold ${trendColor(t.overallTrend)}`}>{trendIcon(t.overallTrend)}</td>
-                      <td className="px-3 py-2.5 text-center text-gray-400">{t.totalPt051Count}</td>
+                      <td className="px-3 py-2.5 text-center text-gray-400">{t.totalTrainingReportCount}</td>
                       <td className="px-3 py-2.5 text-center">
                         <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${riskBadge(displayRisk)}`}>
                           {displayRisk === 'at_risk' ? 'At Risk' : displayRisk === 'monitor' ? 'Monitor' : displayRisk === 'exceeding' ? 'Exceeding' : 'Normal'}

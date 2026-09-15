@@ -582,18 +582,18 @@ export interface Score {
   }[];
 }
 
-export type Pt051NumericGrade = 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10;
-export type Pt051Grade = 'MIN' | 'DEMO' | Pt051NumericGrade;
-export type Pt051OverallGrade = 'No Grade' | Pt051NumericGrade;
+export type TrainingReportNumericGrade = 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10;
+export type TrainingReportGrade = 'MIN' | 'DEMO' | TrainingReportNumericGrade;
+export type TrainingReportOverallGrade = 'No Grade' | TrainingReportNumericGrade;
 
-export interface Pt051Assessment {
+export interface TrainingReportAssessment {
   id: string;
   traineeFullName: string;
   eventId: string;
   flightNumber: string;
   date: string;
   instructorName: string;
-  overallGrade: Pt051OverallGrade | null;
+  overallGrade: TrainingReportOverallGrade | null;
   overallResult: 'P' | 'F' | null;
   autoNotifyChoice?: 'notify' | 'skip';
   autoNotifySentAt?: string;
@@ -619,7 +619,7 @@ export interface Pt051Assessment {
   endTime?: number;   // in hours
   scores: {
     element: string;
-    grade: Pt051Grade | null;
+    grade: TrainingReportGrade | null;
     comment: string;
   }[];
   isCompleted?: boolean; // Track whether the training report has been edited and saved.
@@ -630,12 +630,12 @@ export interface Pt051Assessment {
   };
 }
 
-// Use these names in new UI and application code. The Pt051* types above remain
-// for compatibility with existing persisted records and API payloads.
-export type TrainingReportNumericGrade = Pt051NumericGrade;
-export type TrainingReportGrade = Pt051Grade;
-export type TrainingReportOverallGrade = Pt051OverallGrade;
-export type TrainingReportAssessment = Pt051Assessment;
+// Compatibility aliases for older code paths and persisted API payload naming.
+// New UI and application code should use the TrainingReport* names above.
+export type Pt051NumericGrade = TrainingReportNumericGrade;
+export type Pt051Grade = TrainingReportGrade;
+export type Pt051OverallGrade = TrainingReportOverallGrade;
+export type Pt051Assessment = TrainingReportAssessment;
 
 export interface Conflict {
   conflictingEvent: ScheduleEvent;

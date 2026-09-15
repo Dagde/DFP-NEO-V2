@@ -1375,6 +1375,7 @@ export const getPlatformModuleForView = (view: string): string | null => {
     'TrainingRecords': 'TRAINING',
     'TraineeLMP': 'TRAINING',
     'PT051': 'TRAINING',
+    'TrainingReport': 'TRAINING',
     'Currency': 'TRAINING',
     'CurrencyBuilder': 'TRAINING',
     'NextDayBuild': 'NEO_BUILD',

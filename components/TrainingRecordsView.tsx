@@ -3,7 +3,7 @@ import AuditButton from './AuditButton';
 import CoursesManagementView from './CoursesManagementView';
 import TrainingRecordsExportView from './TrainingRecordsExportView';
 import TrainingCompletionView from './TrainingCompletionView';
-import { Course, Trainee, Instructor, ScheduleEvent, Score, SyllabusItemDetail, Pt051Assessment, PhraseBank } from '../types';
+import { Course, Trainee, Instructor, ScheduleEvent, Score, SyllabusItemDetail, TrainingReportAssessment, PhraseBank } from '../types';
 import { NewCourseData } from './AddCourseFlyout';
 import type { ResourceDisplayNames } from '../utils/resourceDisplayNames';
 import type { OperationalModelCode, PlatformConfig } from '../utils/platformConfigService';
@@ -27,8 +27,8 @@ interface TrainingRecordsViewProps {
     scores: Map<string, Score[]>;
     publishedSchedules: Record<string, ScheduleEvent[]>;
     syllabusDetails: SyllabusItemDetail[];
-    pt051Assessments: Map<string, Pt051Assessment>;
-    onSavePT051Assessment: (assessment: Pt051Assessment) => void;
+    pt051Assessments: Map<string, TrainingReportAssessment>;
+    onSaveTrainingReportAssessment: (assessment: TrainingReportAssessment) => void;
     locations?: string[];
     units?: string[];
     activeLocationCode?: string;
@@ -64,7 +64,7 @@ const TrainingRecordsView: React.FC<TrainingRecordsViewProps> = ({
     publishedSchedules,
     syllabusDetails,
     pt051Assessments,
-    onSavePT051Assessment,
+    onSaveTrainingReportAssessment,
     locations = [],
     units = [],
     activeLocationCode = '',
@@ -162,7 +162,7 @@ const TrainingRecordsView: React.FC<TrainingRecordsViewProps> = ({
                         publishedSchedules={publishedSchedules}
                         syllabusDetails={syllabusDetails}
                         pt051Assessments={pt051Assessments}
-                        onSavePT051Assessment={onSavePT051Assessment}
+                        onSaveTrainingReportAssessment={onSaveTrainingReportAssessment}
                         resourceDisplayNames={resourceDisplayNames}
                         instructorLabel={instructorLabel}
                         trainingReportTemplate={trainingReportTemplate}
@@ -178,7 +178,7 @@ const TrainingRecordsView: React.FC<TrainingRecordsViewProps> = ({
                         archivedCourses={archivedCourses}
                         publishedSchedules={publishedSchedules}
                         pt051Assessments={pt051Assessments}
-                        onSavePT051Assessment={onSavePT051Assessment}
+                        onSaveTrainingReportAssessment={onSaveTrainingReportAssessment}
                         trainingReportTemplate={trainingReportTemplate}
                         phraseBank={phraseBank}
                     />
