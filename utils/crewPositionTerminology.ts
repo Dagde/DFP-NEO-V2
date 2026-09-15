@@ -288,3 +288,21 @@ export const isPilotCrewPosition = (
   const entry = findCrewPositionEntry(value, terminology);
   return normaliseCrewPositionToken(entry?.genericName || value) === normaliseCrewPositionToken('Pilot');
 };
+
+export const isInstructorCrewPosition = (
+  value: unknown,
+  terminology?: CrewPositionTerminology,
+): boolean => {
+  const entry = findCrewPositionEntry(value, terminology);
+  const token = normaliseCrewPositionToken(entry?.genericName || value);
+  return token === normaliseCrewPositionToken('Instructor')
+    || token === normaliseCrewPositionToken('QFI')
+    || token === normaliseCrewPositionToken('Flight Instructor');
+};
+
+export const isPilotAssignableCrewPosition = (
+  value: unknown,
+  terminology?: CrewPositionTerminology,
+): boolean => (
+  isPilotCrewPosition(value, terminology) || isInstructorCrewPosition(value, terminology)
+);

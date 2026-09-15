@@ -4389,6 +4389,12 @@ const isPilotCrewPosition = (value, terminology) => {
   const entry = findCrewPositionEntry(value, terminology);
   return normaliseCrewPositionToken(entry?.genericName || value) === normaliseCrewPositionToken("Pilot");
 };
+const isInstructorCrewPosition = (value, terminology) => {
+  const entry = findCrewPositionEntry(value, terminology);
+  const token = normaliseCrewPositionToken(entry?.genericName || value);
+  return token === normaliseCrewPositionToken("Instructor") || token === normaliseCrewPositionToken("QFI") || token === normaliseCrewPositionToken("Flight Instructor");
+};
+const isPilotAssignableCrewPosition = (value, terminology) => isPilotCrewPosition(value, terminology) || isInstructorCrewPosition(value, terminology);
 const clampCrewRoleCount = (value) => {
   const parsed = Math.round(Number(value));
   if (!Number.isFinite(parsed)) return 1;
@@ -62561,6 +62567,7 @@ const MyDashboard = ({
   canCreateUnitMessageGroups = false,
   staffQualificationCatalogue: staffQualificationCatalogue2,
   onUnreadMessageCountChange,
+  crewPositionTerminology,
   sctTerminology = DEFAULT_SCT_TERMINOLOGY$1,
   currentLocationCode,
   onLogout,
@@ -62609,7 +62616,7 @@ const MyDashboard = ({
   const activeConversationKeyRef = reactExports.useRef("");
   const roleTone = (role) => {
     const value = String(role).toLowerCase();
-    if (value.includes("pilot")) return "text-sky-300 border-sky-500/30";
+    if (isPilotAssignableCrewPosition(role, crewPositionTerminology)) return "text-sky-300 border-sky-500/30";
     if (value.includes("awo") || value.includes("mpro") || value.includes("ewo")) return "text-emerald-300 border-emerald-500/30";
     if (value.includes("mission") || value.includes("crew")) return "text-amber-300 border-amber-500/30";
     return "text-gray-300 border-gray-600";
@@ -83550,7 +83557,7 @@ const normaliseImportedStaffRole = (value, crewPositionTerminology) => {
   if (["sim ip", "simulator ip", "sim instructor", "simulator instructor", "contractor staff"].includes(cleanLower)) return "Pilot";
   if (["qfi", "instructor", "flight instructor"].includes(cleanLower)) return void 0;
   const crewPosition = findCrewPositionEntry(cleanValue, crewPositionTerminology);
-  if (crewPosition) return isPilotCrewPosition(crewPosition.genericName, crewPositionTerminology) ? "Pilot" : cleanValue;
+  if (crewPosition) return isPilotAssignableCrewPosition(crewPosition.genericName, crewPositionTerminology) ? "Pilot" : crewPosition.genericName;
   if (["pilot", "aircrew pilot", "captain"].includes(cleanLower)) return "Pilot";
   return cleanValue;
 };
@@ -83582,8 +83589,12 @@ const applyRoleAssignments = (parsedData, rolesValue, crewPositionTerminology) =
   const roleTokens = splitListValue(rolesValue);
   const rolesLower = roleTokens.join(" ").toLowerCase();
   const importedCrewRole = roleTokens.map((role) => normaliseImportedStaffRole(role, crewPositionTerminology)).find((role) => role && role !== "QFI");
+  const hasInstructorRole = roleTokens.some((role) => isInstructorCrewPosition(role, crewPositionTerminology));
   if (importedCrewRole) {
     parsedData.role = importedCrewRole;
+    if (hasInstructorRole) {
+      parsedData.isQFI = true;
+    }
     if (rolesLower.includes("sim ip") || rolesLower.includes("contractor staff")) {
       parsedData.isQFI = false;
       parsedData.isContractor = true;
@@ -83594,8 +83605,9 @@ const applyRoleAssignments = (parsedData, rolesValue, crewPositionTerminology) =
     parsedData.isContractor = true;
   } else if (rolesLower.includes("pilot")) {
     parsedData.role = "Pilot";
-  } else if (rolesLower.includes("instructor")) {
+  } else if (rolesLower.includes("instructor") || hasInstructorRole) {
     parsedData.role = "Pilot";
+    parsedData.isQFI = true;
   }
 };
 const BulkUpdateFlyout = ({
@@ -96536,7 +96548,7 @@ const stripPostFlightDutyRoutePrefix = (value) => {
   const parts = text.split(/\s*:\s*/);
   return (parts.length > 1 ? parts.slice(1).join(" : ") : text).trim();
 };
-const PostFlightView = ({ event, onReturn, onSave, school, traineesData, instructorsData, masterCurrencies = [], currencyRequirements = [], resourceDisplayNames = DEFAULT_RESOURCE_DISPLAY_NAMES, aircraftNumberSettings = DEFAULT_AIRCRAFT_NUMBER_SETTINGS, personnelDisplaySettings, trainingReportTemplate, taxiGroundTime = 0.1 }) => {
+const PostFlightView = ({ event, onReturn, onSave, school, traineesData, instructorsData, masterCurrencies = [], currencyRequirements = [], resourceDisplayNames = DEFAULT_RESOURCE_DISPLAY_NAMES, aircraftNumberSettings = DEFAULT_AIRCRAFT_NUMBER_SETTINGS, personnelDisplaySettings, trainingReportTemplate, crewPositionTerminology, taxiGroundTime = 0.1 }) => {
   const { freezeState, checkAndWarn } = useSystemFreeze$1();
   reactExports.useMemo(() => {
     const personName = event.student || event.pilot;
@@ -96644,8 +96656,7 @@ const PostFlightView = ({ event, onReturn, onSave, school, traineesData, instruc
     return { crew: slashParts[0] || parts[0]?.replace(/^CREW\s*/i, "").trim() || "", unit: fallback };
   };
   const isPilotStaff = (staff) => {
-    const role = String(staff?.role || "").trim().toLowerCase();
-    return role === "pilot" || role.includes("pilot");
+    return isPilotAssignableCrewPosition(staff?.role, crewPositionTerminology);
   };
   const getFixedCrewPreviewRole = (staff) => normaliseFixedCrewStaffRole(staff?.role, staff?.unit).trim() || "Crew";
   const isCrewTraineeDisplayRole = (staff) => {
@@ -106854,8 +106865,7 @@ const DfpSidePanelTimeline = ({
   const assistCrewSelectionLimit = isAirCombatTileMode && selectedResourceKind === "flight" ? Math.max(1, assistFormationSize) * Math.max(1, aircraftCrewComposition.crewCount || 1) : 1;
   const canSelectFormationCrew = isAirCombatTileMode && selectedResourceKind === "flight" && assistCrewSelectionLimit > 1;
   const isStaffPilotCrewPosition = reactExports.useCallback((staff) => {
-    const roleText = String(staff.role || "").trim().toLowerCase();
-    return roleText === "pilot" || roleText === "qfi" || roleText === "instructor" || isPilotCrewPosition(staff.role, crewPositionTerminology);
+    return isPilotAssignableCrewPosition(staff.role, crewPositionTerminology);
   }, [crewPositionTerminology]);
   const staffMatchesRequiredCrewRole = reactExports.useCallback((staff, requiredRole) => {
     if (isPilotCrewPosition(requiredRole, crewPositionTerminology)) return isStaffPilotCrewPosition(staff);
@@ -114614,8 +114624,7 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
       inputs: {
         staffTotal: originalInstructors.length,
         pilotRoleStaff: originalInstructors.filter((staff) => {
-          const roleText = String(staff.role || "").trim().toLowerCase();
-          return !staff.isAdminStaff && Boolean(staff.name) && (roleText === "pilot" || roleText === "qfi" || roleText === "instructor" || isPilotCrewPosition(staff.role, buildCrewPositionTerminology));
+          return !staff.isAdminStaff && Boolean(staff.name) && isPilotAssignableCrewPosition(staff.role, buildCrewPositionTerminology);
         }).length,
         staffRoleInventory: originalInstructors.reduce((counts, staff) => {
           const role = String(staff.role || "Unspecified").trim() || "Unspecified";
@@ -115418,7 +115427,7 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
         return Boolean(staff.name) && !staff.isAdminStaff;
       }
       if (isPilotCrewPosition(requiredRole, buildCrewPositionTerminology)) {
-        return isPilotCrewPosition(staff.role, buildCrewPositionTerminology) || String(staff.role || "").trim().toLowerCase() === "pilot";
+        return isPilotAssignableCrewPosition(staff.role, buildCrewPositionTerminology);
       }
       return crewPositionValuesMatch(requiredRole, staff.role, buildCrewPositionTerminology) || fixedCrewRoleTokensOverlap(requiredRole, staff.role);
     };
@@ -121113,8 +121122,7 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
   const getAirCombatCrewRoleGroupsForEvent = (event) => getBuildAircraftCrewCompositionForEvent(event).seats.map((seat) => getAircraftSeatEligibleRoles(seat).filter(Boolean)).filter((group) => group.length > 0);
   const getPriorityEventCrewCount = (event) => Math.max(1, getCrewRequirementCount(event.crewRequirement, getBuildAircraftCrewCompositionForEvent(event)) || getAirCombatCrewRoleGroupsForEvent(event).length || buildAircraftCrewComposition.crewCount || 1);
   const isAirCombatPilotStaff = (staff) => {
-    const roleText = String(staff.role || "").trim().toLowerCase();
-    return Boolean(staff.name) && !staff.isAdminStaff && (roleText === "pilot" || roleText === "qfi" || roleText === "instructor" || isPilotCrewPosition(staff.role, buildCrewPositionTerminology));
+    return Boolean(staff.name) && !staff.isAdminStaff && isPilotAssignableCrewPosition(staff.role, buildCrewPositionTerminology);
   };
   const airCombatStaffMatchesCrewRole = (staff, requiredRole) => {
     if (isPilotCrewPosition(requiredRole, buildCrewPositionTerminology)) return isAirCombatPilotStaff(staff);
@@ -143033,8 +143041,7 @@ ${conflictLines.join("\n")}${moreText}`,
             inputs: {
               staffTotal: instructorsData.length,
               pilotRoleStaff: instructorsData.filter((staff) => {
-                const roleText = String(staff.role || "").trim().toLowerCase();
-                return !staff.isAdminStaff && Boolean(staff.name) && (roleText === "pilot" || roleText === "qfi" || roleText === "instructor" || isPilotCrewPosition(staff.role, activeCrewPositionTerminology));
+                return !staff.isAdminStaff && Boolean(staff.name) && isPilotAssignableCrewPosition(staff.role, activeCrewPositionTerminology);
               }).length,
               highestPriorityEvents: config.highestPriorityEvents.length,
               syllabusItems: syllabusDetails.length
@@ -144781,13 +144788,13 @@ Do not hard refresh yet. Try Publish again, then confirm the save succeeds.`,
     const normaliseImportedInstructor = (instructor) => {
       const roleText = String(instructor.role || "").trim().toLowerCase();
       String(instructor.unit || "").trim().toUpperCase();
-      const inferredQfi = roleText === "qfi" || roleText === "instructor";
-      const inferredContractor = roleText === "sim ip" || roleText === "contractor staff";
-      const normalisedRole = inferredContractor ? "Pilot" : roleText === "pilot" ? "Pilot" : roleText === "qfi" || roleText === "instructor" ? "Pilot" : normaliseFixedCrewStaffRole(instructor.role) || "Pilot";
+      const inferredQfi = isInstructorCrewPosition(instructor.role, activeCrewPositionTerminology);
+      const inferredContractor = roleText === "sim ip" || roleText === "contractor staff" || roleText === String(simIpDisplayLabel || "").trim().toLowerCase();
+      const normalisedRole = inferredContractor ? "Pilot" : isPilotAssignableCrewPosition(instructor.role, activeCrewPositionTerminology) ? "Pilot" : normaliseFixedCrewStaffRole(instructor.role) || "Pilot";
       const nextInstructor = {
         ...instructor,
         role: normalisedRole,
-        isQFI: inferredContractor ? false : instructor.isQFI ?? inferredQfi,
+        isQFI: inferredContractor ? false : Boolean(instructor.isQFI || inferredQfi),
         isContractor: inferredContractor ? true : instructor.isContractor ?? false,
         isOFI: instructor.isOFI ?? false,
         isCFI: instructor.isCFI ?? false,
@@ -144848,7 +144855,7 @@ Do not hard refresh yet. Try Publish again, then confirm the save succeeds.`,
         return [...withoutPersisted, ...persistedInstructors];
       });
     }
-  }, []);
+  }, [activeCrewPositionTerminology, simIpDisplayLabel]);
   const handleCloseStaffView = reactExports.useCallback(() => {
     handleNavigation("Program Schedule");
   }, []);
@@ -149238,6 +149245,7 @@ ${error instanceof Error ? error.message : String(error)}`,
             canCreateUnitMessageGroups: canUsePlatformPermission("messages.groups.unit.create"),
             staffQualificationCatalogue: activeStaffQualificationCatalogue,
             onUnreadMessageCountChange: setDashboardUnreadMessageCount,
+            crewPositionTerminology: activeCrewPositionTerminology,
             sctTerminology: getSctTerminology(platformConfig, activeUnitCode),
             currentLocationCode: activeLocationSolarProfile.code,
             onLogout: handleLogout,
@@ -150241,6 +150249,7 @@ ${err instanceof Error ? err.message : String(err)}`, `${selectedTrainingReportN
             {
               event: eventForPostFlight,
               trainingReportTemplate,
+              crewPositionTerminology: activeCrewPositionTerminology,
               taxiGroundTime,
               onReturn: () => {
                 setEventForPostFlight(null);
@@ -150519,8 +150528,7 @@ Do you want to replace the existing entry?`,
                     return Array.from(roster.values());
                   };
                   const isPilotStaffForLogbook = (person) => {
-                    const role = String(person.role || "").trim().toLowerCase();
-                    return role === "pilot" || role.includes("pilot");
+                    return isPilotAssignableCrewPosition(person.role, activeCrewPositionTerminology);
                   };
                   const splitDayNightHours = () => {
                     const total = parsedTotal || 0;

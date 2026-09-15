@@ -14,7 +14,11 @@ import {
     parseAircraftNumber,
     type AircraftNumberSettings,
 } from '../utils/aircraftNumberFormat';
-import { normaliseFixedCrewStaffRole } from '../utils/crewPositionTerminology';
+import {
+    isPilotAssignableCrewPosition,
+    normaliseFixedCrewStaffRole,
+    type CrewPositionTerminology,
+} from '../utils/crewPositionTerminology';
 import {
     comparePeopleByConfiguredRank,
     type PersonnelDisplaySettings,
@@ -39,6 +43,7 @@ interface PostFlightViewProps {
   aircraftNumberSettings?: AircraftNumberSettings;
   personnelDisplaySettings?: Partial<PersonnelDisplaySettings> | null;
   trainingReportTemplate?: Partial<TrainingReportTemplate> | null;
+  crewPositionTerminology?: CrewPositionTerminology;
   getSunTimesForAirfieldDate?: (targetDate: string, airfieldCode?: string | null) => any;
   taxiGroundTime?: number;
 }
@@ -55,7 +60,7 @@ const stripPostFlightDutyRoutePrefix = (value?: string | null): string => {
 };
 
 // FIX: Changed to a named export to resolve module resolution errors.
-export const PostFlightView: React.FC<PostFlightViewProps> = ({ event, onReturn, onSave, school, traineesData, instructorsData, masterCurrencies = [], currencyRequirements = [], resourceDisplayNames = DEFAULT_RESOURCE_DISPLAY_NAMES, aircraftNumberSettings = DEFAULT_AIRCRAFT_NUMBER_SETTINGS, personnelDisplaySettings, trainingReportTemplate, taxiGroundTime = 0.1 }) => {
+export const PostFlightView: React.FC<PostFlightViewProps> = ({ event, onReturn, onSave, school, traineesData, instructorsData, masterCurrencies = [], currencyRequirements = [], resourceDisplayNames = DEFAULT_RESOURCE_DISPLAY_NAMES, aircraftNumberSettings = DEFAULT_AIRCRAFT_NUMBER_SETTINGS, personnelDisplaySettings, trainingReportTemplate, crewPositionTerminology, taxiGroundTime = 0.1 }) => {
     const { freezeState, checkAndWarn } = useSystemFreeze();
     // Find trainee or pilot for header
     const person = useMemo(() => {
@@ -206,8 +211,7 @@ export const PostFlightView: React.FC<PostFlightViewProps> = ({ event, onReturn,
         return { crew: slashParts[0] || parts[0]?.replace(/^CREW\s*/i, '').trim() || '', unit: fallback };
     };
     const isPilotStaff = (staff?: Instructor | null): boolean => {
-        const role = String(staff?.role || '').trim().toLowerCase();
-        return role === 'pilot' || role.includes('pilot');
+        return isPilotAssignableCrewPosition(staff?.role, crewPositionTerminology);
     };
     const getFixedCrewPreviewRole = (staff?: Instructor | null): string => (
         normaliseFixedCrewStaffRole(staff?.role, staff?.unit).trim() || 'Crew'

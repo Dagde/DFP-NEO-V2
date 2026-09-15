@@ -89,6 +89,8 @@ import {
     getCrewPositionDisplayLabel,
     isFixedCrewLegacyAeaRole,
     isCrewPositionAvailableForOperationalModel,
+    isInstructorCrewPosition,
+    isPilotAssignableCrewPosition,
     isPilotCrewPosition,
     normaliseFixedCrewStaffRole,
     normaliseCrewPositionTerminology,
@@ -1571,8 +1573,7 @@ const DfpSidePanelTimeline: React.FC<{
         : 1;
     const canSelectFormationCrew = isAirCombatTileMode && selectedResourceKind === 'flight' && assistCrewSelectionLimit > 1;
     const isStaffPilotCrewPosition = useCallback((staff: Instructor): boolean => {
-        const roleText = String(staff.role || '').trim().toLowerCase();
-        return roleText === 'pilot' || roleText === 'qfi' || roleText === 'instructor' || isPilotCrewPosition(staff.role, crewPositionTerminology);
+        return isPilotAssignableCrewPosition(staff.role, crewPositionTerminology);
     }, [crewPositionTerminology]);
     const staffMatchesRequiredCrewRole = useCallback((staff: Instructor, requiredRole: string): boolean => {
         if (isPilotCrewPosition(requiredRole, crewPositionTerminology)) return isStaffPilotCrewPosition(staff);
@@ -11341,9 +11342,8 @@ function generateDfpInternal(
             inputs: {
                 staffTotal: originalInstructors.length,
                 pilotRoleStaff: originalInstructors.filter(staff => {
-                    const roleText = String(staff.role || '').trim().toLowerCase();
                     return !staff.isAdminStaff && Boolean(staff.name) &&
-                        (roleText === 'pilot' || roleText === 'qfi' || roleText === 'instructor' || isPilotCrewPosition(staff.role, buildCrewPositionTerminology));
+                        isPilotAssignableCrewPosition(staff.role, buildCrewPositionTerminology);
                 }).length,
                 staffRoleInventory: originalInstructors.reduce((counts: Record<string, number>, staff: any) => {
                     const role = String(staff.role || 'Unspecified').trim() || 'Unspecified';
@@ -12302,8 +12302,7 @@ function generateDfpInternal(
                 return Boolean(staff.name) && !staff.isAdminStaff;
             }
             if (isPilotCrewPosition(requiredRole, buildCrewPositionTerminology)) {
-                return isPilotCrewPosition(staff.role, buildCrewPositionTerminology)
-                    || String(staff.role || '').trim().toLowerCase() === 'pilot';
+                return isPilotAssignableCrewPosition(staff.role, buildCrewPositionTerminology);
             }
             return crewPositionValuesMatch(requiredRole, staff.role, buildCrewPositionTerminology)
                 || fixedCrewRoleTokensOverlap(requiredRole, staff.role);
@@ -19146,10 +19145,9 @@ const applyCoursePriority = (rankedList: Trainee[], diagnosticLabel = 'unlabelle
         Math.max(1, getCrewRequirementCount(event.crewRequirement, getBuildAircraftCrewCompositionForEvent(event)) || getAirCombatCrewRoleGroupsForEvent(event).length || buildAircraftCrewComposition.crewCount || 1)
     );
     const isAirCombatPilotStaff = (staff: Instructor): boolean => {
-        const roleText = String(staff.role || '').trim().toLowerCase();
         return Boolean(staff.name) &&
             !staff.isAdminStaff &&
-            (roleText === 'pilot' || roleText === 'qfi' || roleText === 'instructor' || isPilotCrewPosition(staff.role, buildCrewPositionTerminology));
+            isPilotAssignableCrewPosition(staff.role, buildCrewPositionTerminology);
     };
     const airCombatStaffMatchesCrewRole = (staff: Instructor, requiredRole: string): boolean => {
         if (isPilotCrewPosition(requiredRole, buildCrewPositionTerminology)) return isAirCombatPilotStaff(staff);
@@ -45899,9 +45897,8 @@ const App: React.FC = () => {
                         inputs: {
                             staffTotal: instructorsData.length,
                             pilotRoleStaff: instructorsData.filter(staff => {
-                                const roleText = String(staff.role || '').trim().toLowerCase();
                                 return !staff.isAdminStaff && Boolean(staff.name) &&
-                                    (roleText === 'pilot' || roleText === 'qfi' || roleText === 'instructor' || isPilotCrewPosition(staff.role, activeCrewPositionTerminology));
+                                    isPilotAssignableCrewPosition(staff.role, activeCrewPositionTerminology);
                             }).length,
                             highestPriorityEvents: config.highestPriorityEvents.length,
                             syllabusItems: syllabusDetails.length,
@@ -48084,17 +48081,16 @@ appliedUpdates.forEach(update => {
         const normaliseImportedInstructor = (instructor: Instructor): Instructor => {
             const roleText = String(instructor.role || '').trim().toLowerCase();
             const unitCode = String(instructor.unit || '').trim().toUpperCase();
-            const inferredQfi = roleText === 'qfi' || roleText === 'instructor';
-            const inferredContractor = roleText === 'sim ip' || roleText === 'contractor staff';
+            const inferredQfi = isInstructorCrewPosition(instructor.role, activeCrewPositionTerminology);
+            const inferredContractor = roleText === 'sim ip' || roleText === 'contractor staff' || roleText === String(simIpDisplayLabel || '').trim().toLowerCase();
             const normalisedRole =
                 inferredContractor ? 'Pilot' :
-                roleText === 'pilot' ? 'Pilot' :
-                roleText === 'qfi' || roleText === 'instructor' ? 'Pilot' :
+                isPilotAssignableCrewPosition(instructor.role, activeCrewPositionTerminology) ? 'Pilot' :
                 normaliseFixedCrewStaffRole(instructor.role, unitCode) || 'Pilot';
             const nextInstructor: Instructor = {
                 ...instructor,
                 role: normalisedRole,
-                isQFI: inferredContractor ? false : (instructor.isQFI ?? inferredQfi),
+                isQFI: inferredContractor ? false : Boolean(instructor.isQFI || inferredQfi),
                 isContractor: inferredContractor ? true : (instructor.isContractor ?? false),
                 isOFI: instructor.isOFI ?? false,
                 isCFI: instructor.isCFI ?? false,
@@ -48159,7 +48155,7 @@ appliedUpdates.forEach(update => {
                 return [...withoutPersisted, ...persistedInstructors];
             });
         }
-    }, []);
+    }, [activeCrewPositionTerminology, simIpDisplayLabel]);
 
     // Callbacks for StaffView/InstructorListView to prevent render loop
     const handleCloseStaffView = useCallback(() => {
@@ -53343,6 +53339,7 @@ appliedUpdates.forEach(update => {
                             canCreateUnitMessageGroups={canUsePlatformPermission('messages.groups.unit.create')}
                             staffQualificationCatalogue={activeStaffQualificationCatalogue}
                             onUnreadMessageCountChange={setDashboardUnreadMessageCount}
+                            crewPositionTerminology={activeCrewPositionTerminology}
                             sctTerminology={getSctTerminology(platformConfig, activeUnitCode)}
                             currentLocationCode={activeLocationSolarProfile.code}
                             onLogout={handleLogout}
@@ -54433,6 +54430,7 @@ appliedUpdates.forEach(update => {
                     return <PostFlightView
                                 event={eventForPostFlight}
                                 trainingReportTemplate={trainingReportTemplate}
+                                crewPositionTerminology={activeCrewPositionTerminology}
                                 taxiGroundTime={taxiGroundTime}
                                 onReturn={() => {
                                     setEventForPostFlight(null);
@@ -54784,8 +54782,7 @@ appliedUpdates.forEach(update => {
                                             return Array.from(roster.values());
                                         };
                                         const isPilotStaffForLogbook = (person: Instructor): boolean => {
-                                            const role = String(person.role || '').trim().toLowerCase();
-                                            return role === 'pilot' || role.includes('pilot');
+                                            return isPilotAssignableCrewPosition(person.role, activeCrewPositionTerminology);
                                         };
                                         const splitDayNightHours = (): { day: number; night: number } => {
                                             const total = parsedTotal || 0;

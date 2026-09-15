@@ -1,7 +1,11 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { AirCombatTrainingReport, Instructor, ScheduleEvent, SctRequest, TrainingReportAssessment, Trainee, SyllabusItemDetail } from '../types';
 import TafWeatherWidget from './TafWeatherWidget';
-import { normaliseFixedCrewStaffRole } from '../utils/crewPositionTerminology';
+import {
+    isPilotAssignableCrewPosition,
+    normaliseFixedCrewStaffRole,
+    type CrewPositionTerminology,
+} from '../utils/crewPositionTerminology';
 import { DEFAULT_SCT_TERMINOLOGY, normaliseSctTerminology, type SctTerminology } from '../utils/sctTerminology';
 import {
     getPersonAssignedQualificationIds,
@@ -38,6 +42,7 @@ interface MyDashboardProps {
     canCreateUnitMessageGroups?: boolean;
     staffQualificationCatalogue?: StaffQualificationCatalogue;
     onUnreadMessageCountChange?: (count: number) => void;
+    crewPositionTerminology?: CrewPositionTerminology;
     sctTerminology?: SctTerminology;
     currentLocationCode?: string | null;
     onLogout?: () => void;
@@ -732,6 +737,7 @@ const MyDashboard: React.FC<MyDashboardProps> = ({
     canCreateUnitMessageGroups = false,
     staffQualificationCatalogue,
     onUnreadMessageCountChange,
+    crewPositionTerminology,
     sctTerminology = DEFAULT_SCT_TERMINOLOGY,
     currentLocationCode,
     onLogout,
@@ -780,7 +786,7 @@ const MyDashboard: React.FC<MyDashboardProps> = ({
     const activeConversationKeyRef = useRef('');
     const roleTone = (role?: string) => {
         const value = String(role || '').toLowerCase();
-        if (value.includes('pilot')) return 'text-sky-300 border-sky-500/30';
+        if (isPilotAssignableCrewPosition(role, crewPositionTerminology)) return 'text-sky-300 border-sky-500/30';
         if (value.includes('awo') || value.includes('mpro') || value.includes('ewo')) return 'text-emerald-300 border-emerald-500/30';
         if (value.includes('mission') || value.includes('crew')) return 'text-amber-300 border-amber-500/30';
         return 'text-gray-300 border-gray-600';

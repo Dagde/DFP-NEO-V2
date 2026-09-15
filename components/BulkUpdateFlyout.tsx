@@ -3,7 +3,8 @@ import { Instructor, InstructorRank, InstructorCategory, SeatConfig, Trainee } f
 import {
     CrewPositionTerminology,
     findCrewPositionEntry,
-    isPilotCrewPosition,
+    isInstructorCrewPosition,
+    isPilotAssignableCrewPosition,
 } from '../utils/crewPositionTerminology';
 import {
     getInstructorQualificationDefinitions,
@@ -134,7 +135,7 @@ const normaliseImportedStaffRole = (
     if (['qfi', 'instructor', 'flight instructor'].includes(cleanLower)) return undefined;
 
     const crewPosition = findCrewPositionEntry(cleanValue, crewPositionTerminology);
-    if (crewPosition) return isPilotCrewPosition(crewPosition.genericName, crewPositionTerminology) ? 'Pilot' : cleanValue;
+    if (crewPosition) return isPilotAssignableCrewPosition(crewPosition.genericName, crewPositionTerminology) ? 'Pilot' : crewPosition.genericName;
     if (['pilot', 'aircrew pilot', 'captain'].includes(cleanLower)) return 'Pilot';
 
     return cleanValue;
@@ -182,9 +183,13 @@ const applyRoleAssignments = (
     const importedCrewRole = roleTokens
         .map(role => normaliseImportedStaffRole(role, crewPositionTerminology))
         .find(role => role && role !== 'QFI');
+    const hasInstructorRole = roleTokens.some(role => isInstructorCrewPosition(role, crewPositionTerminology));
 
     if (importedCrewRole) {
         parsedData.role = importedCrewRole;
+        if (hasInstructorRole) {
+            parsedData.isQFI = true;
+        }
         if (rolesLower.includes('sim ip') || rolesLower.includes('contractor staff')) {
             parsedData.isQFI = false;
             parsedData.isContractor = true;
@@ -195,8 +200,9 @@ const applyRoleAssignments = (
         parsedData.isContractor = true;
     } else if (rolesLower.includes('pilot')) {
         parsedData.role = 'Pilot';
-    } else if (rolesLower.includes('instructor')) {
+    } else if (rolesLower.includes('instructor') || hasInstructorRole) {
         parsedData.role = 'Pilot';
+        parsedData.isQFI = true;
     }
 };
 
