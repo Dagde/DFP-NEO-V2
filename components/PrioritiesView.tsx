@@ -44,6 +44,7 @@ import {
   type UnitCallsignEntry,
   type UnitCallsignSettings,
 } from '../utils/unitCallsigns';
+import { comparePeopleByConfiguredRank } from '../utils/personnelDisplaySettings';
 import {
   getQualificationsForOperationalModel,
   normaliseAssignedQualificationIds,
@@ -2820,8 +2821,7 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
       .filter(row => row.dueCurrencies.length > 0)
       .filter(row => crewPositionValuesMatch(selectedStaffCurrencyRole, row.instructor.role, crewPositionTerminology))
       .sort((a, b) => {
-        const rankDiff = String(a.instructor.rank || '').localeCompare(String(b.instructor.rank || ''), undefined, { sensitivity: 'base' });
-        return rankDiff !== 0 ? rankDiff : a.instructor.name.localeCompare(b.instructor.name);
+        return comparePeopleByConfiguredRank(a.instructor, b.instructor, undefined, 'staff');
       });
   }, [instructorsData, currencyNames, buildDfpDate, selectedStaffCurrencyRole, crewPositionTerminology]);
 

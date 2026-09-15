@@ -4866,11 +4866,10 @@ const buildRankSeniorityMap = (rankOrder) => {
 const ensureSeniorRankFirst = (rankOrder, referenceOrder) => {
   if (rankOrder.length < 2) return rankOrder;
   const rankSeniority = buildRankSeniorityMap(referenceOrder.length ? referenceOrder : DEFAULT_STAFF_RANK_ORDER);
-  const knownIndexes = rankOrder.map((entry) => splitRankGroup(entry).map(rankKey).map((key) => rankSeniority.get(key)).find((index) => index !== void 0)).filter((index) => index !== void 0);
-  if (knownIndexes.length < 2) return rankOrder;
-  const firstKnown = knownIndexes[0];
-  const lastKnown = knownIndexes[knownIndexes.length - 1];
-  return firstKnown > lastKnown ? [...rankOrder].reverse() : rankOrder;
+  return rankOrder.map((entry, originalIndex) => {
+    const seniority = splitRankGroup(entry).map(rankKey).map((key) => rankSeniority.get(key)).filter((index) => index !== void 0).sort((left, right) => left - right)[0];
+    return { entry, originalIndex, seniority: seniority ?? Number.MAX_SAFE_INTEGER };
+  }).sort((left, right) => left.seniority - right.seniority || left.originalIndex - right.originalIndex).map((item) => item.entry);
 };
 const normaliseRankEquivalencyCell = (cell) => ({
   rank: String(cell?.rank || ""),
@@ -68349,8 +68348,7 @@ const PrioritiesView = ({
   const getStaffCurrencyRoleLabel = (role) => getCrewPositionDisplayLabel(role, crewPositionTerminology, role);
   const staffCurrencyRows = reactExports.useMemo(() => {
     return instructorsData.map((instructor) => ({ instructor, personKey: String(instructor.id || instructor.idNumber || instructor.name), dueCurrencies: getDueCurrencies(instructor) })).filter((row) => row.dueCurrencies.length > 0).filter((row) => crewPositionValuesMatch(selectedStaffCurrencyRole, row.instructor.role, crewPositionTerminology)).sort((a, b) => {
-      const rankDiff = String(a.instructor.rank || "").localeCompare(String(b.instructor.rank || ""), void 0, { sensitivity: "base" });
-      return rankDiff !== 0 ? rankDiff : a.instructor.name.localeCompare(b.instructor.name);
+      return comparePeopleByConfiguredRank(a.instructor, b.instructor, void 0, "staff");
     });
   }, [instructorsData, currencyNames, buildDfpDate, selectedStaffCurrencyRole, crewPositionTerminology]);
   reactExports.useEffect(() => {
@@ -90795,7 +90793,8 @@ const StaffSearchDropdown = ({
   selectedStaff,
   onSelect,
   placeholder = "Search staff...",
-  disabled = false
+  disabled = false,
+  personnelDisplaySettings
 }) => {
   const [isOpen, setIsOpen] = reactExports.useState(false);
   const [searchTerm, setSearchTerm] = reactExports.useState("");
@@ -90823,16 +90822,13 @@ const StaffSearchDropdown = ({
     }, {});
     const sortedUnits = Object.keys(grouped).sort((a, b) => a.localeCompare(b, void 0, { numeric: true, sensitivity: "base" }));
     Object.keys(grouped).forEach((unit) => {
-      grouped[unit].sort((a, b) => {
-        if (a.rank !== b.rank) return a.rank.localeCompare(b.rank);
-        return a.name.localeCompare(b.name);
-      });
+      grouped[unit].sort((a, b) => comparePeopleByConfiguredRank(a, b, personnelDisplaySettings, "staff"));
     });
     return sortedUnits.reduce((acc, unit) => {
       acc[unit] = grouped[unit];
       return acc;
     }, {});
-  }, [staff]);
+  }, [staff, personnelDisplaySettings]);
   const filteredStaffByUnit = reactExports.useMemo(() => {
     if (!searchTerm) return staffByUnit;
     const filtered = {};

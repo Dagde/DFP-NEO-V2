@@ -431,13 +431,17 @@ const buildRankSeniorityMap = (rankOrder: string[]): Map<string, number> => {
 const ensureSeniorRankFirst = (rankOrder: string[], referenceOrder: string[]): string[] => {
   if (rankOrder.length < 2) return rankOrder;
   const rankSeniority = buildRankSeniorityMap(referenceOrder.length ? referenceOrder : DEFAULT_STAFF_RANK_ORDER);
-  const knownIndexes = rankOrder
-    .map((entry) => splitRankGroup(entry).map(rankKey).map((key) => rankSeniority.get(key)).find((index) => index !== undefined))
-    .filter((index): index is number => index !== undefined);
-  if (knownIndexes.length < 2) return rankOrder;
-  const firstKnown = knownIndexes[0];
-  const lastKnown = knownIndexes[knownIndexes.length - 1];
-  return firstKnown > lastKnown ? [...rankOrder].reverse() : rankOrder;
+  return rankOrder
+    .map((entry, originalIndex) => {
+      const seniority = splitRankGroup(entry)
+        .map(rankKey)
+        .map((key) => rankSeniority.get(key))
+        .filter((index): index is number => index !== undefined)
+        .sort((left, right) => left - right)[0];
+      return { entry, originalIndex, seniority: seniority ?? Number.MAX_SAFE_INTEGER };
+    })
+    .sort((left, right) => left.seniority - right.seniority || left.originalIndex - right.originalIndex)
+    .map((item) => item.entry);
 };
 
 const normaliseRankEquivalencyCell = (cell?: Partial<RankEquivalencyCell> | null): RankEquivalencyCell => ({

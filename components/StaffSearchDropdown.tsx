@@ -1,5 +1,6 @@
 import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { formatPersonDisplayName, formatPersonOptionLabel, getPersonStableKey } from '../utils/personIdentity';
+import { comparePeopleByConfiguredRank, type PersonnelDisplaySettings } from '../utils/personnelDisplaySettings';
 
 interface StaffMember {
   id?: string | number;
@@ -16,6 +17,7 @@ interface StaffSearchDropdownProps {
   onSelect: (staffName: string) => void;
   placeholder?: string;
   disabled?: boolean;
+  personnelDisplaySettings?: PersonnelDisplaySettings;
 }
 
 const StaffSearchDropdown: React.FC<StaffSearchDropdownProps> = ({
@@ -24,6 +26,7 @@ const StaffSearchDropdown: React.FC<StaffSearchDropdownProps> = ({
   onSelect,
   placeholder = "Search staff...",
   disabled = false,
+  personnelDisplaySettings,
 }) => {
   const [isOpen, setIsOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
@@ -59,17 +62,14 @@ const StaffSearchDropdown: React.FC<StaffSearchDropdownProps> = ({
 
     // Sort staff within each unit by rank then name
     Object.keys(grouped).forEach(unit => {
-      grouped[unit].sort((a, b) => {
-        if (a.rank !== b.rank) return a.rank.localeCompare(b.rank);
-        return a.name.localeCompare(b.name);
-      });
+      grouped[unit].sort((a, b) => comparePeopleByConfiguredRank(a, b, personnelDisplaySettings, 'staff'));
     });
 
     return sortedUnits.reduce((acc, unit) => {
       acc[unit] = grouped[unit];
       return acc;
     }, {} as Record<string, StaffMember[]>);
-  }, [staff]);
+  }, [staff, personnelDisplaySettings]);
 
   // Filter staff based on search term
   const filteredStaffByUnit = useMemo(() => {
