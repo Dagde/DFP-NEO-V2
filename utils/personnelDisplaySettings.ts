@@ -515,7 +515,7 @@ export const normalisePersonnelDisplaySettings = (input?: Partial<PersonnelDispl
   };
 
   return {
-    sortMode: input?.sortMode === 'alphabetical' ? 'alphabetical' : 'rank-then-name',
+    sortMode: 'rank-then-name',
     useSeparateTraineeRankOrder: Boolean(input?.useSeparateTraineeRankOrder),
     staffRankOrder,
     traineeRankOrder,

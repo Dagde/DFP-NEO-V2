@@ -13310,11 +13310,11 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
           <div className="grid gap-3 lg:grid-cols-2">
             <SelectField
               label="Personnel Sort Mode"
-              value={personnelDisplaySettings.sortMode}
-              disabled={!canEditRankTerminology}
-              options={['rank-then-name', 'alphabetical']}
-              onChange={(value) => updatePersonnelDisplaySettings({ sortMode: value === 'alphabetical' ? 'alphabetical' : 'rank-then-name' })}
-              info="Choose rank-then-name to sort by configured rank priority first, then surname and first name. Choose alphabetical to ignore rank and sort only by name."
+              value="rank-then-name"
+              disabled
+              options={['rank-then-name']}
+              onChange={() => updatePersonnelDisplaySettings({ sortMode: 'rank-then-name' })}
+              info="Personnel lists always sort by configured rank seniority first, then surname and first name within the same rank."
             />
             <div>
               <DraftField

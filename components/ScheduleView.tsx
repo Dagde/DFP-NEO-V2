@@ -2564,7 +2564,7 @@ const OrganisationMyUnitSettings: React.FC<{
             return (
                 <div className="space-y-4">
                     <UnitSettingsGroup title="Personnel Terminology" description="How people, ranks and instructors are named for this organisation." action={settingsLink('platform-rank-terminology', 'Open Terminology', { focusSubsectionId: 'platform-personnel-terminology' })}>
-                        <UnitSettingsSelect label="Personnel sort" value={personnelDisplaySettings.sortMode || 'rank-then-name'} options={['rank-then-name', 'alphabetical']} optionLabels={{ 'rank-then-name': 'Rank then name', alphabetical: 'Alphabetical' }} onChange={(value) => updatePersonnelDisplaySettings({ sortMode: value })} disabled={!canEdit} />
+                        <UnitSettingsSelect label="Personnel sort" value="rank-then-name" options={['rank-then-name']} optionLabels={{ 'rank-then-name': 'Rank seniority, then name' }} onChange={() => updatePersonnelDisplaySettings({ sortMode: 'rank-then-name' })} disabled />
                         <UnitSettingsField label="Instructor display term" value={personnelDisplaySettings.instructorLabel || ''} onChange={(value) => updatePersonnelDisplaySettings({ instructorLabel: value })} disabled={!canEdit} />
                         <UnitSettingsReadRow label="Civilian titles" value={(personnelDisplaySettings.civilianTitles || []).join(', ') || 'Mr, Ms, Dr'} />
                         <UnitSettingsSelect label="Trainee ranks" value={personnelDisplaySettings.useSeparateTraineeRankOrder ? 'separate' : 'staff'} options={['staff', 'separate']} optionLabels={{ staff: 'Uses staff rank order', separate: 'Separate trainee rank order' }} onChange={(value) => updatePersonnelDisplaySettings({ useSeparateTraineeRankOrder: value === 'separate' })} disabled={!canEdit} />
@@ -3964,14 +3964,14 @@ const InitialSetupWizard: React.FC<{
                 preset: (savedDraft.preset && RANK_EQUIVALENCY_PRESETS[savedDraft.preset as RankEquivalencyPresetKey])
                     ? savedDraft.preset as RankEquivalencyPresetKey
                     : currentPersonnelDisplaySettings.staffRankEquivalency?.preset || 'AU',
-                sortMode: savedDraft.sortMode === 'alphabetical' ? 'alphabetical' : 'rank-then-name',
+                sortMode: 'rank-then-name',
                 traineeRanks: 'staff',
                 instructorLabel: String(savedDraft.instructorLabel || currentPersonnelDisplaySettings.instructorLabel || 'Instructor'),
             };
         }
         return {
             preset: currentPersonnelDisplaySettings.staffRankEquivalency?.preset || 'AU',
-            sortMode: currentPersonnelDisplaySettings.sortMode || 'rank-then-name',
+            sortMode: 'rank-then-name',
             traineeRanks: 'staff',
             instructorLabel: currentPersonnelDisplaySettings.instructorLabel || 'Instructor',
         };
@@ -5192,7 +5192,7 @@ const InitialSetupWizard: React.FC<{
         } as any);
         return {
             ...existing,
-            sortMode: rankSettingsDraft.sortMode === 'alphabetical' ? 'alphabetical' : 'rank-then-name',
+            sortMode: 'rank-then-name',
             useSeparateTraineeRankOrder: false,
             instructorLabel: String(rankSettingsDraft.instructorLabel || existing.instructorLabel || 'Instructor').trim() || 'Instructor',
             staffRankEquivalency: selectedEquivalency,
@@ -7990,12 +7990,12 @@ const InitialSetupWizard: React.FC<{
                     )}
                     {wizardField(
                         'Sort people in lists',
-                        rankSettingsDraft.sortMode === 'alphabetical' ? 'Alphabetical' : 'Rank then name',
+                        'Rank seniority, then name',
                         (value) => updateRankSettingsDraft((current) => ({
                             ...current,
-                            sortMode: value === 'Alphabetical' ? 'alphabetical' : 'rank-then-name',
+                            sortMode: 'rank-then-name',
                         })),
-                        ['Rank then name', 'Alphabetical'],
+                        ['Rank seniority, then name'],
                     )}
                     {wizardField(
                         'Instructor display term',
@@ -10699,7 +10699,7 @@ const InitialSetupWizard: React.FC<{
                     },
                     {
                         label: 'Rank display',
-                        value: `Rank preset: ${RANK_EQUIVALENCY_PRESET_LABELS[rankSettingsDraft.preset as RankEquivalencyPresetKey] || 'Australia'}. Lists sort by ${rankSettingsDraft.sortMode === 'alphabetical' ? 'name only' : 'rank, then name'}. Trainees use the staff rank order.`,
+                        value: `Rank preset: ${RANK_EQUIVALENCY_PRESET_LABELS[rankSettingsDraft.preset as RankEquivalencyPresetKey] || 'Australia'}. Lists sort by rank seniority, then name. Trainees use the staff rank order.`,
                         help: 'This controls how names are ordered in staff, trainee and crew selection lists.',
                     },
                     {
