@@ -53035,6 +53035,50 @@ const CourseRosterView = ({
     }
   );
   const individualLmpForSelected = selectedTrainee ? traineeLMPs.get(selectedTrainee.fullName) : void 0;
+  const downloadTraineeSortTrace = () => {
+    const settings = normalisePersonnelDisplaySettings(personnelDisplaySettings || null);
+    const describeTrainee = (trainee, index) => ({
+      visibleIndex: index + 1,
+      id: trainee.id,
+      idNumber: trainee.idNumber,
+      name: trainee.name,
+      fullName: trainee.fullName,
+      rank: trainee.rank,
+      rankSortIndex: getRankSortIndex(trainee.rank, settings, "trainee"),
+      unit: trainee.unit,
+      course: trainee.course,
+      isPaused: trainee.isPaused,
+      status: getTraineeStatusLabel(trainee)
+    });
+    const trace = {
+      traceType: "dfp-neo-personnel-rank-sort",
+      buildMarker: "CCH-8.882-rank-first-trace",
+      capturedAt: (/* @__PURE__ */ new Date()).toISOString(),
+      screen: "Trainee Roster",
+      view,
+      operationalModel,
+      staffRankOrder: getRankOrderForGroup(settings, "staff"),
+      traineeRankOrder: getRankOrderForGroup(settings, "trainee"),
+      sortModeFromSettings: settings.sortMode,
+      counts: {
+        inputTrainees: traineesData.length,
+        displayedCourses: coursesToDisplay.length
+      },
+      courses: coursesToDisplay.map((courseName) => ({
+        course: courseName,
+        people: (groupedTrainees[courseName] || []).map(describeTrainee)
+      }))
+    };
+    const blob = new Blob([JSON.stringify(trace, null, 2)], { type: "application/json" });
+    const url = window.URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = `dfp-neo-trainee-rank-sort-trace-${(/* @__PURE__ */ new Date()).toISOString().replace(/[:.]/g, "-")}.json`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    window.URL.revokeObjectURL(url);
+  };
   return /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
     /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex-1 flex flex-col bg-gray-900 overflow-hidden", children: [
       /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex-shrink-0 bg-gray-800 p-4 flex justify-between items-center border-b border-gray-700", children: [
@@ -53056,6 +53100,14 @@ const CourseRosterView = ({
               disabled: !onBulkUpdateTrainees || !onReplaceTrainees,
               className: "w-[56px] h-[41px] flex items-center justify-center text-center px-1 py-1 text-[10px] font-semibold rounded-md btn-aluminium-brushed text-cyan-500 disabled:opacity-50 disabled:cursor-not-allowed",
               children: "Upload"
+            }
+          ),
+          /* @__PURE__ */ jsxRuntimeExports.jsx(
+            "button",
+            {
+              onClick: downloadTraineeSortTrace,
+              className: "w-[64px] h-[41px] flex items-center justify-center text-center px-1 py-1 text-[10px] font-semibold rounded-md btn-aluminium-brushed text-cyan-600",
+              children: "Download Sort Trace"
             }
           ),
           /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "w-[5px]" }),
@@ -84927,6 +84979,71 @@ const InstructorListView = ({
       /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "p-3 overflow-y-auto flex-1 custom-scrollbar", children: renderInstructorList(otherStaffByUnit[unit]) })
     ] }, `other-${unit}`))
   ] });
+  const downloadStaffSortTrace = () => {
+    const settings = normalisePersonnelDisplaySettings(personnelDisplaySettings || null);
+    const describePerson = (person, index) => ({
+      visibleIndex: index + 1,
+      id: person.id,
+      idNumber: person.idNumber,
+      name: person.name,
+      rank: person.rank,
+      rankSortIndex: getRankSortIndex(person.rank, settings, "staff"),
+      unit: person.unit,
+      role: person.role,
+      flight: person.flight,
+      crew: getInstructorCrewGroup(person)
+    });
+    const trace = {
+      traceType: "dfp-neo-personnel-rank-sort",
+      buildMarker: "CCH-8.882-rank-first-trace",
+      capturedAt: (/* @__PURE__ */ new Date()).toISOString(),
+      screen: "Staff Profile",
+      operationalModel: activeOperationalModel,
+      activeUnitCode: defaultUnitCode,
+      staffRankOrder: getRankOrderForGroup(settings, "staff"),
+      traineeRankOrder: getRankOrderForGroup(settings, "trainee"),
+      sortModeFromSettings: settings.sortMode,
+      counts: {
+        inputInstructors: instructorsData.length,
+        activeStaffCandidates: qfis.length,
+        contractorStaff: simIps.length,
+        ofiStaff: ofis.length,
+        otherStaff: otherStaff.length
+      },
+      groups: {
+        mainStaffByUnit: sortedUnits.map((unit) => ({
+          unit,
+          people: (qfisByUnit[unit] || []).map(describePerson)
+        })),
+        flightGroups: sortedFlightGroups.map((flight) => ({
+          flight,
+          people: (qfisByFlight[flight] || []).map(describePerson)
+        })),
+        fixedCrewGroups: sortedFixedCrewGroups.map((crew) => ({
+          crew,
+          people: (fixedCrewGroups[crew] || []).map(describePerson)
+        })),
+        contractorStaff: simIps.map(describePerson),
+        ofiByUnit: sortedOfiUnits.map((unit) => ({
+          unit,
+          people: (ofisByUnit[unit] || []).map(describePerson)
+        })),
+        otherStaffByUnit: sortedOtherStaffUnits.map((unit) => ({
+          unit,
+          people: (otherStaffByUnit[unit] || []).map(describePerson)
+        }))
+      }
+    };
+    const blob = new Blob([JSON.stringify(trace, null, 2)], { type: "application/json" });
+    const url = window.URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = `dfp-neo-staff-rank-sort-trace-${(/* @__PURE__ */ new Date()).toISOString().replace(/[:.]/g, "-")}.json`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    window.URL.revokeObjectURL(url);
+  };
   return /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
     /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex-1 flex flex-col bg-gray-900 overflow-hidden", children: [
       /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex-shrink-0 bg-gray-800 p-4 flex justify-between items-center border-b border-gray-700", children: [
@@ -84957,6 +85074,14 @@ const InstructorListView = ({
               "aria-disabled": !canEditStaffDetails,
               className: `w-[56px] h-[41px] flex items-center justify-center text-center px-1 py-1 text-[10px] font-semibold rounded-md btn-aluminium-brushed text-green-500 ${canEditStaffDetails ? "" : "cursor-not-allowed"}`,
               children: "Add Staff"
+            }
+          ),
+          /* @__PURE__ */ jsxRuntimeExports.jsx(
+            "button",
+            {
+              onClick: downloadStaffSortTrace,
+              className: "w-[64px] h-[41px] flex items-center justify-center text-center px-1 py-1 text-[10px] font-semibold rounded-md btn-aluminium-brushed text-cyan-600",
+              children: "Download Sort Trace"
             }
           ),
           /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "w-[8px]" }),

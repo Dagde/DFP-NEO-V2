@@ -12,7 +12,13 @@ import DeleteTraineeConfirmation from './DeleteTraineeConfirmation';
 import CourseEditFlyout from './CourseEditFlyout';
 import TraineeBulkUploadFlyout from './TraineeBulkUploadFlyout';
 import { DEFAULT_RESOURCE_DISPLAY_NAMES, type ResourceDisplayNames } from '../utils/resourceDisplayNames';
-import { comparePeopleByConfiguredRank, type PersonnelDisplaySettings } from '../utils/personnelDisplaySettings';
+import {
+    comparePeopleByConfiguredRank,
+    getRankOrderForGroup,
+    getRankSortIndex,
+    normalisePersonnelDisplaySettings,
+    type PersonnelDisplaySettings,
+} from '../utils/personnelDisplaySettings';
 import { scheduleEventIncludesPersonRecord } from '../utils/scheduleEventPersonnel';
 import type { TrainingReportTemplate, TrainingReportTerminology } from '../utils/trainingReportTerminology';
 import type { InsertEventTypeConfig } from '../utils/insertEventTypes';
@@ -471,6 +477,51 @@ const CourseRosterView: React.FC<CourseRosterViewProps> = ({
 
     const individualLmpForSelected = selectedTrainee ? traineeLMPs.get(selectedTrainee.fullName) : undefined;
 
+    const downloadTraineeSortTrace = () => {
+        const settings = normalisePersonnelDisplaySettings(personnelDisplaySettings || null);
+        const describeTrainee = (trainee: Trainee, index: number) => ({
+            visibleIndex: index + 1,
+            id: (trainee as any).id,
+            idNumber: (trainee as any).idNumber,
+            name: trainee.name,
+            fullName: trainee.fullName,
+            rank: trainee.rank,
+            rankSortIndex: getRankSortIndex(trainee.rank, settings, 'trainee'),
+            unit: trainee.unit,
+            course: trainee.course,
+            isPaused: trainee.isPaused,
+            status: getTraineeStatusLabel(trainee),
+        });
+        const trace = {
+            traceType: 'dfp-neo-personnel-rank-sort',
+            buildMarker: 'CCH-8.882-rank-first-trace',
+            capturedAt: new Date().toISOString(),
+            screen: 'Trainee Roster',
+            view,
+            operationalModel,
+            staffRankOrder: getRankOrderForGroup(settings, 'staff'),
+            traineeRankOrder: getRankOrderForGroup(settings, 'trainee'),
+            sortModeFromSettings: settings.sortMode,
+            counts: {
+                inputTrainees: traineesData.length,
+                displayedCourses: coursesToDisplay.length,
+            },
+            courses: coursesToDisplay.map(courseName => ({
+                course: courseName,
+                people: (groupedTrainees[courseName] || []).map(describeTrainee),
+            })),
+        };
+        const blob = new Blob([JSON.stringify(trace, null, 2)], { type: 'application/json' });
+        const url = window.URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = `dfp-neo-trainee-rank-sort-trace-${new Date().toISOString().replace(/[:.]/g, '-')}.json`;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        window.URL.revokeObjectURL(url);
+    };
+
     return (
         <>
             <div className="flex-1 flex flex-col bg-gray-900 overflow-hidden">
@@ -493,6 +544,12 @@ const CourseRosterView: React.FC<CourseRosterViewProps> = ({
                             className="w-[56px] h-[41px] flex items-center justify-center text-center px-1 py-1 text-[10px] font-semibold rounded-md btn-aluminium-brushed text-cyan-500 disabled:opacity-50 disabled:cursor-not-allowed"
                         >
                             Upload
+                        </button>
+                        <button
+                            onClick={downloadTraineeSortTrace}
+                            className="w-[64px] h-[41px] flex items-center justify-center text-center px-1 py-1 text-[10px] font-semibold rounded-md btn-aluminium-brushed text-cyan-600"
+                        >
+                            Download Sort Trace
                         </button>
                         <div className="w-[5px]"></div>
                         <AuditButton pageName="Trainee Roster" />

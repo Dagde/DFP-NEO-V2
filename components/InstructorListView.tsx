@@ -15,8 +15,10 @@ import { showDarkAlert, showDarkPrompt } from './DarkMessageModal';
 import { DEFAULT_RESOURCE_DISPLAY_NAMES, type ResourceDisplayNames } from '../utils/resourceDisplayNames';
 import {
     comparePeopleByConfiguredRank,
+    getRankOrderForGroup,
     getSimIpDisplayLabel,
     getRankSortIndex,
+    normalisePersonnelDisplaySettings,
     splitPersonName,
     type PersonnelDisplaySettings,
 } from '../utils/personnelDisplaySettings';
@@ -839,6 +841,72 @@ const InstructorListView: React.FC<InstructorListViewProps> = ({
     </>
   );
 
+  const downloadStaffSortTrace = () => {
+      const settings = normalisePersonnelDisplaySettings(personnelDisplaySettings || null);
+      const describePerson = (person: Instructor, index: number) => ({
+          visibleIndex: index + 1,
+          id: (person as any).id,
+          idNumber: person.idNumber,
+          name: person.name,
+          rank: person.rank,
+          rankSortIndex: getRankSortIndex(person.rank, settings, 'staff'),
+          unit: person.unit,
+          role: person.role,
+          flight: (person as any).flight,
+          crew: getInstructorCrewGroup(person),
+      });
+      const trace = {
+          traceType: 'dfp-neo-personnel-rank-sort',
+          buildMarker: 'CCH-8.882-rank-first-trace',
+          capturedAt: new Date().toISOString(),
+          screen: 'Staff Profile',
+          operationalModel: activeOperationalModel,
+          activeUnitCode: defaultUnitCode,
+          staffRankOrder: getRankOrderForGroup(settings, 'staff'),
+          traineeRankOrder: getRankOrderForGroup(settings, 'trainee'),
+          sortModeFromSettings: settings.sortMode,
+          counts: {
+              inputInstructors: instructorsData.length,
+              activeStaffCandidates: qfis.length,
+              contractorStaff: simIps.length,
+              ofiStaff: ofis.length,
+              otherStaff: otherStaff.length,
+          },
+          groups: {
+              mainStaffByUnit: sortedUnits.map(unit => ({
+                  unit,
+                  people: (qfisByUnit[unit] || []).map(describePerson),
+              })),
+              flightGroups: sortedFlightGroups.map(flight => ({
+                  flight,
+                  people: (qfisByFlight[flight] || []).map(describePerson),
+              })),
+              fixedCrewGroups: sortedFixedCrewGroups.map(crew => ({
+                  crew,
+                  people: (fixedCrewGroups[crew] || []).map(describePerson),
+              })),
+              contractorStaff: simIps.map(describePerson),
+              ofiByUnit: sortedOfiUnits.map(unit => ({
+                  unit,
+                  people: (ofisByUnit[unit] || []).map(describePerson),
+              })),
+              otherStaffByUnit: sortedOtherStaffUnits.map(unit => ({
+                  unit,
+                  people: (otherStaffByUnit[unit] || []).map(describePerson),
+              })),
+          },
+      };
+      const blob = new Blob([JSON.stringify(trace, null, 2)], { type: 'application/json' });
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `dfp-neo-staff-rank-sort-trace-${new Date().toISOString().replace(/[:.]/g, '-')}.json`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(url);
+  };
+
   return (
     <>
       <div className="flex-1 flex flex-col bg-gray-900 overflow-hidden">
@@ -868,6 +936,12 @@ const InstructorListView: React.FC<InstructorListViewProps> = ({
                     className={`w-[56px] h-[41px] flex items-center justify-center text-center px-1 py-1 text-[10px] font-semibold rounded-md btn-aluminium-brushed text-green-500 ${canEditStaffDetails ? '' : 'cursor-not-allowed'}`}
                 >
                     Add Staff
+                </button>
+                <button
+                    onClick={downloadStaffSortTrace}
+                    className="w-[64px] h-[41px] flex items-center justify-center text-center px-1 py-1 text-[10px] font-semibold rounded-md btn-aluminium-brushed text-cyan-600"
+                >
+                    Download Sort Trace
                 </button>
                 <div className="w-[8px]"></div>
                 <AuditButton pageName="Staff" />
