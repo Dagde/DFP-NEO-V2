@@ -2401,6 +2401,55 @@ const humaniseFieldKey = (key: string): string => (
   key.replace(/([A-Z])/g, ' $1').replace(/^./, (char) => char.toUpperCase())
 );
 
+const normaliseCrewPositionDescriptionKey = (value: unknown): string => (
+  String(value || '')
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, ' ')
+    .trim()
+);
+
+const getCrewPositionAppLabelInfo = (entry: CrewPositionTerminologyEntry): string => {
+  const terms = [
+    entry.id,
+    entry.genericName,
+    entry.label,
+  ].map(normaliseCrewPositionDescriptionKey);
+  const hasTerm = (...matches: string[]) => terms.some((term) => matches.includes(term));
+
+  if (hasTerm('combat systems operator', 'combat systems operator cso', 'cso')) {
+    return 'An aircrew member who uses the aircraft sensors, communications and other mission systems to find, track and identify targets or threats, build situational awareness, and help the crew carry out the mission.';
+  }
+  if (hasTerm('airborne mission commander', 'airborne mission commander amc', 'mission commander', 'amc')) {
+    return 'The aircrew member responsible for directing and coordinating the aircraft mission, making tactical decisions and ensuring the crew achieves the mission objectives.';
+  }
+  if (hasTerm('loadmaster')) {
+    return 'An aircrew member responsible for safely loading, securing and managing passengers and cargo, and ensuring the aircraft remains within weight and balance limits.';
+  }
+  if (hasTerm('crew')) {
+    return 'An aircrew member responsible for safely loading, securing and managing passengers and cargo, and ensuring the aircraft remains within weight and balance limits.';
+  }
+  if (hasTerm('refuelling officer', 'refueling officer')) {
+    return 'An aircrew member responsible for managing and coordinating the safe transfer of fuel between aircraft during air-to-air refuelling operations.';
+  }
+  if (hasTerm('electronic airborne analyst', 'electronic airborne analyst eaa', 'eaa')) {
+    return 'An aircrew member who analyses electronic signals and sensor information to identify, locate and assess potential threats or targets.';
+  }
+  if (hasTerm('electronic warfare operator', 'electronic warfare operator ewo', 'ewo')) {
+    return 'An aircrew member who operates electronic warfare systems to detect, identify and respond to electronic threats.';
+  }
+  if (hasTerm('trainee', 'student')) {
+    return 'A person undergoing training to gain the required knowledge, skills and qualifications for their assigned role.';
+  }
+  if (hasTerm('instructor')) {
+    return 'A qualified person responsible for delivering, supervising and assessing flight training.';
+  }
+  if (hasTerm('pilot')) {
+    return 'An aircrew member qualified to operate and control the aircraft safely and conduct the assigned mission.';
+  }
+
+  return 'The label users see in the app for this crew position.';
+};
+
 interface PlatformConfigurationSettingsProps {
   currentUserPermission: 'Super Admin' | 'Admin' | 'Staff' | 'Trainee' | 'Ops' | 'Scheduler' | 'Course Supervisor';
   onShowSuccess: (message: string) => void;
@@ -13084,7 +13133,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
               </div>
               <div className="grid gap-3 lg:grid-cols-2">
                 <DraftField
-                  label="Instructor Duty Display Term"
+                  label="Instructor Display Term"
                   value={personnelDisplaySettings.instructorLabel}
                   disabled={!canEditRankTerminology}
                   onCommit={(value) => updatePersonnelDisplaySettings({ instructorLabel: value })}
@@ -13098,25 +13147,25 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
                   info="The customer-facing word for a person under training. Use one preferred label so the app is consistent."
                 />
                 <DraftField
-                  label="Contractor Staff Label"
+                  label="Simulator Contractor Staff Label"
                   value={personnelDisplaySettings.simIpDisplayLabel}
                   disabled={!canEditRankTerminology}
                   onCommit={(value) => updatePersonnelDisplaySettings({ simIpDisplayLabel: value })}
-                  info="The staff type label for contracted, civilian or specialist support personnel. Example: Contractor Staff, Contract Instructor."
+                  info="The label for civilian contractor staff who can perform instructional duties in simulator devices. Example: Simulator Contractor Staff, Contract Simulator Instructor."
                 />
                 <DraftField
                   label="Course Commander Label"
                   value={personnelDisplaySettings.courseCommanderLabel}
                   disabled={!canEditRankTerminology || !personnelDisplaySettings.courseLeadershipEnabled}
                   onCommit={(value) => updatePersonnelDisplaySettings({ courseCommanderLabel: value })}
-                  info="The first course leadership label shown on trainee course cards. Example: Course Commander, Course Lead."
+                  info="The label for the staff member who leads or manages a course. Your organisation may call this person the Course Commander, Course Lead or another local title."
                 />
                 <DraftField
                   label="Deputy Course Commander Label"
                   value={personnelDisplaySettings.deputyCourseCommanderLabel}
                   disabled={!canEditRankTerminology || !personnelDisplaySettings.courseLeadershipEnabled}
                   onCommit={(value) => updatePersonnelDisplaySettings({ deputyCourseCommanderLabel: value })}
-                  info="The second course leadership label shown on trainee course cards. Example: Deputy Course Commander, Course 2IC."
+                  info="The label for the staff member who assists the course lead or acts as the deputy course lead. Your organisation may call this person the Deputy Course Commander, Deputy Course Lead or Course 2IC."
                 />
               </div>
             </div>
@@ -13139,11 +13188,11 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
                       <div className="mt-1 text-sm font-semibold text-gray-100">{entry.genericName}</div>
                     </div>
                     <DraftField
-                      label="Customer-Facing Label"
+                      label="App Label"
                       value={entry.label}
                       disabled={!canEditRankTerminology}
                       onCommit={(value) => updateCrewPositionEntry(entry.id, { label: value })}
-                      info="The word shown to users for this crew position. Example: Combat Systems Operator can display as WSO."
+                      info={getCrewPositionAppLabelInfo(entry)}
                     />
                     <div>
                       <div className="text-[11px] font-semibold uppercase tracking-wider text-gray-500">Where Users See It</div>
@@ -13269,7 +13318,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
             />
             <div>
               <DraftField
-                label="Instructor Duty Display Term"
+                label="Instructor Display Term"
                 value={personnelDisplaySettings.instructorLabel}
                 disabled={!canEditRankTerminology}
                 onCommit={(value) => updatePersonnelDisplaySettings({ instructorLabel: value })}
@@ -13341,14 +13390,14 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
                 value={personnelDisplaySettings.courseCommanderLabel}
                 disabled={!canEditRankTerminology || !personnelDisplaySettings.courseLeadershipEnabled}
                 onCommit={(value) => updatePersonnelDisplaySettings({ courseCommanderLabel: value })}
-                info="The first course leadership label shown directly under each course title on the Trainee page. Example: Cse Commander, Course Commander, Course Lead."
+                info="The label for the staff member who leads or manages a course. Your organisation may call this person the Course Commander, Course Lead or another local title."
               />
               <DraftField
                 label="Deputy Course Commander Label"
                 value={personnelDisplaySettings.deputyCourseCommanderLabel}
                 disabled={!canEditRankTerminology || !personnelDisplaySettings.courseLeadershipEnabled}
                 onCommit={(value) => updatePersonnelDisplaySettings({ deputyCourseCommanderLabel: value })}
-                info="The second course leadership label shown directly under each course title on the Trainee page. Example: Deputy Cse Commander, Deputy Course Commander, Course 2IC."
+                info="The label for the staff member who assists the course lead or acts as the deputy course lead. Your organisation may call this person the Deputy Course Commander, Deputy Course Lead or Course 2IC."
               />
             </div>
           </div>
@@ -13496,11 +13545,11 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
                       info={isDefaultEntry ? 'Baseline generic positions stay fixed so aircraft seat links remain stable.' : 'The generic position saved on aircraft seat configuration.'}
                     />
                     <DraftField
-                      label="Organisation Label"
+                      label="App Label"
                       value={entry.label}
                       disabled={!canEditRankTerminology}
                       onCommit={(value) => updateCrewPositionEntry(entry.id, { label: value })}
-                      info="The label users see when selecting crew positions. Example: Combat Systems Operator can be labelled Weapon System Operator."
+                      info={getCrewPositionAppLabelInfo(entry)}
                     />
                     <div>
                       <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1">Operational Models</label>
