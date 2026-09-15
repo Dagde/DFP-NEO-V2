@@ -4519,6 +4519,7 @@ const getCrewRequirementOptions = (terminology, operationalModel, extraValues = 
   }));
 };
 const DEFAULT_STAFF_RANK_ORDER = [
+  "ACM",
   "AIRMSHL",
   "AVM",
   "AIRCDRE",
@@ -4865,7 +4866,10 @@ const buildRankSeniorityMap = (rankOrder) => {
 };
 const ensureSeniorRankFirst = (rankOrder, referenceOrder) => {
   if (rankOrder.length < 2) return rankOrder;
-  const rankSeniority = buildRankSeniorityMap(referenceOrder.length ? referenceOrder : DEFAULT_STAFF_RANK_ORDER);
+  const rankSeniority = buildRankSeniorityMap(DEFAULT_STAFF_RANK_ORDER);
+  buildRankSeniorityMap(referenceOrder).forEach((seniority, key) => {
+    if (!rankSeniority.has(key)) rankSeniority.set(key, DEFAULT_STAFF_RANK_ORDER.length + seniority);
+  });
   return rankOrder.map((entry, originalIndex) => {
     const seniority = splitRankGroup(entry).map(rankKey).map((key) => rankSeniority.get(key)).filter((index) => index !== void 0).sort((left, right) => left - right)[0];
     return { entry, originalIndex, seniority: seniority ?? Number.MAX_SAFE_INTEGER };

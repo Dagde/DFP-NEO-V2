@@ -53,6 +53,7 @@ export interface PersonnelDisplaySettings {
 }
 
 export const DEFAULT_STAFF_RANK_ORDER = [
+  'ACM',
   'AIRMSHL',
   'AVM',
   'AIRCDRE',
@@ -430,7 +431,10 @@ const buildRankSeniorityMap = (rankOrder: string[]): Map<string, number> => {
 
 const ensureSeniorRankFirst = (rankOrder: string[], referenceOrder: string[]): string[] => {
   if (rankOrder.length < 2) return rankOrder;
-  const rankSeniority = buildRankSeniorityMap(referenceOrder.length ? referenceOrder : DEFAULT_STAFF_RANK_ORDER);
+  const rankSeniority = buildRankSeniorityMap(DEFAULT_STAFF_RANK_ORDER);
+  buildRankSeniorityMap(referenceOrder).forEach((seniority, key) => {
+    if (!rankSeniority.has(key)) rankSeniority.set(key, DEFAULT_STAFF_RANK_ORDER.length + seniority);
+  });
   return rankOrder
     .map((entry, originalIndex) => {
       const seniority = splitRankGroup(entry)
