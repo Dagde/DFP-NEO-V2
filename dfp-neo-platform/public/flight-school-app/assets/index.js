@@ -56034,7 +56034,7 @@ ${swapNote}` : swapNote
         onSavePT051Assessment(assessment);
       });
     } else {
-      console.warn("onSavePT051Assessment callback is not defined!");
+      console.warn("Training Report save callback is not defined!");
     }
     setCompletedTrainees(confirmedTrainees);
     setShowMassBriefConfirmation(true);

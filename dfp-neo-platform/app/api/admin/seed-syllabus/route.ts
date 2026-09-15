@@ -14,7 +14,7 @@ function getSeedSecret() {
 }
 
 // ============================================================================
-// SYLLABUS ITEMS - Using correct codes that match PT-051 score records
+// SYLLABUS ITEMS - Using correct codes that match Training Report score records
 // BGF1, BGF MB1, BGF FTD1, BIF1, BNF1, FIC1, etc.
 // These MUST match the 'event' field in Score records
 // ============================================================================
@@ -210,7 +210,7 @@ function makeGround(code: string, desc: string, courses: string[], sortOrder: nu
 const BPC_IPC = ['BPC+IPC'];
 const FIC_ONLY = ['FIC'];
 
-// Full syllabus - codes MUST match Score records (s.event field in PT-051)
+// Full syllabus - codes MUST match Score records (s.event field in Training Report score records)
 const SYLLABUS_ITEMS: SyllabusItemSeed[] = [
   // ========== BGF Phase ==========
   makeGround('BGF MB1', 'Preparation and Pre / Post Flight Admin', BPC_IPC, 10),
@@ -389,7 +389,7 @@ export async function GET(request: NextRequest) {
             changeType: 'SEED',
             changeData: { itemsCreated: created, seededAt: new Date().toISOString(), codeStyle: 'matching-scores' } as any,
             changedBy: 'seed-api',
-            changeReason: 'Re-seed with correct codes matching PT-051 score records (BGF1, BGF MB1, BGF FTD1, etc.)',
+            changeReason: 'Re-seed with correct codes matching Training Report score records (BGF1, BGF MB1, BGF FTD1, etc.)',
           },
         });
       } catch (e) {}
@@ -397,7 +397,7 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json({
       success: true,
-      message: `Successfully seeded ${created} syllabus items with codes matching PT-051 score records`,
+      message: `Successfully seeded ${created} syllabus items with codes matching Training Report score records`,
       created,
       total: SYLLABUS_ITEMS.length,
       errors: errors.length > 0 ? errors : undefined,

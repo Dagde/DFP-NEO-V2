@@ -257,7 +257,7 @@ export async function GET(request: NextRequest) {
 }
 
 // POST /api/trainees/lmp-sync
-// Syncs PT-051 Score records → IndividualLMP completedEventIds for ALL trainees.
+// Syncs Training Report score records → IndividualLMP completedEventIds for ALL trainees.
 // For each trainee: reads their Score.event values, marks those events complete in LMP.
 // Body: { syllabusData: Record<string, SyllabusItemDetail[]> }
 //   syllabusData is keyed by the configured LMP/catalogue name and contains the master syllabus items.
@@ -322,7 +322,7 @@ export async function POST(request: NextRequest) {
         continue;
       }
 
-      // Build set of completed event IDs from PT-051 Score records
+      // Build set of completed event IDs from Training Report score records
       const completedFromScores = new Set<string>(
         trainee.scores.map((s: any) => s.event as string)
       );

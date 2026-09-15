@@ -18,7 +18,7 @@
  *
  * Problem it solves:
  *   A trainee flew BGF2 today and finished at 11:00.  The post-flight paperwork
- *   (PT-051 Score record) has not been entered yet, so the IndividualLMP still
+ *   (Training Report score record) has not been entered yet, so the IndividualLMP still
  *   shows their last completed event as BGF1.  When building tomorrow's program,
  *   the scheduler should treat BGF2 as completed and schedule BGF3.
  *

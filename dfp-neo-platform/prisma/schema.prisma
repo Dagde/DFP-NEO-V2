@@ -349,7 +349,7 @@ model AppSettings {
 //  1. ELCE support in the build algorithm:
 //     The algorithm can query "what is this trainee's last SUCCESSFUL event
 //     as of <buildDate>?" without having to scan the entire Schedule JSON
-//     blob or wait for a PT-051 Score to be entered.
+//     blob or wait for a Training Report score to be entered.
 //
 //  2. DCO result history:
 //     A permanent, queryable audit trail of every DCO / DPCO / DNCO outcome
@@ -402,10 +402,10 @@ model EventCompletion {
   dcoResult       String
   // valid values: "DCO" | "DPCO" | "DNCO"
 
-  /// PT-051 overall grade 0–5, null when not graded (e.g. solo)
+  /// Training Report overall grade 0–5, null when not graded (e.g. solo)
   overallGrade    Int?
 
-  /// PT-051 overall result: "P" (pass) | "F" (fail) | null
+  /// Training Report overall result: "P" (pass) | "F" (fail) | null
   overallResult   String?
 
   // ── Flight log details ──────────────────────────────────────────────

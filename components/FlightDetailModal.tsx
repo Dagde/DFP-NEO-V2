@@ -3037,7 +3037,7 @@ export const EventDetailModal: React.FC<EventDetailModalProps> = ({ event, onClo
                 onSavePT051Assessment(assessment);
             });
         } else {
-            console.warn('onSavePT051Assessment callback is not defined!');
+            console.warn('Training Report save callback is not defined!');
         }
         
         // Show styled confirmation
