@@ -4853,6 +4853,25 @@ const groupLegacyCivilianRanks = (rankOrder) => {
   if (civilians.length <= 1) return rankOrder;
   return uniqueRankList([...otherRanks, civilians.join(" = ")], DEFAULT_STAFF_RANK_ORDER);
 };
+const buildRankSeniorityMap = (rankOrder) => {
+  const rankSeniority = /* @__PURE__ */ new Map();
+  rankOrder.forEach((entry, index) => {
+    splitRankGroup(entry).forEach((rank) => {
+      const key = rankKey(rank);
+      if (key && !rankSeniority.has(key)) rankSeniority.set(key, index);
+    });
+  });
+  return rankSeniority;
+};
+const ensureSeniorRankFirst = (rankOrder, referenceOrder) => {
+  if (rankOrder.length < 2) return rankOrder;
+  const rankSeniority = buildRankSeniorityMap(referenceOrder.length ? referenceOrder : DEFAULT_STAFF_RANK_ORDER);
+  const knownIndexes = rankOrder.map((entry) => splitRankGroup(entry).map(rankKey).map((key) => rankSeniority.get(key)).find((index) => index !== void 0)).filter((index) => index !== void 0);
+  if (knownIndexes.length < 2) return rankOrder;
+  const firstKnown = knownIndexes[0];
+  const lastKnown = knownIndexes[knownIndexes.length - 1];
+  return firstKnown > lastKnown ? [...rankOrder].reverse() : rankOrder;
+};
 const normaliseRankEquivalencyCell = (cell) => ({
   rank: String(cell?.rank || ""),
   abbreviation: String(cell?.abbreviation || "")
@@ -4890,8 +4909,15 @@ const normalisePersonnelDisplaySettings = (input) => {
   const staffRankEquivalency = normaliseRankEquivalencyConfig(input?.staffRankEquivalency, DEFAULT_RANK_EQUIVALENCY_CONFIG);
   const civilianTitleSource = input?.civilianTitles !== void 0 ? input.civilianTitles : input?.civilianRankTitles;
   const civilianTitles = normaliseCivilianTitles(civilianTitleSource);
-  const staffRankOrder = groupLegacyCivilianRanks(uniqueRankList(input?.staffRankOrder, getRankOrderFromEquivalency({ ...staffRankEquivalency, civilianTitles })));
-  const traineeRankOrder = groupLegacyCivilianRanks(uniqueRankList(input?.traineeRankOrder, staffRankOrder));
+  const seniorFirstRankOrder = getRankOrderFromEquivalency({ ...staffRankEquivalency, civilianTitles });
+  const staffRankOrder = ensureSeniorRankFirst(
+    groupLegacyCivilianRanks(uniqueRankList(input?.staffRankOrder, seniorFirstRankOrder)),
+    seniorFirstRankOrder
+  );
+  const traineeRankOrder = ensureSeniorRankFirst(
+    groupLegacyCivilianRanks(uniqueRankList(input?.traineeRankOrder, staffRankOrder)),
+    seniorFirstRankOrder
+  );
   const simIpDisplayLabel = preserveEditableTextSetting(input?.simIpDisplayLabel, DEFAULT_PERSONNEL_DISPLAY_SETTINGS.simIpDisplayLabel);
   const contractorStaffEventEligibility = {
     ...DEFAULT_PERSONNEL_DISPLAY_SETTINGS.contractorStaffEventEligibility,
