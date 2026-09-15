@@ -5042,14 +5042,12 @@ const comparePeopleByConfiguredRank = (a, b, settings, group = "staff") => {
   const safe2 = normalisePersonnelDisplaySettings(settings);
   const aName = splitPersonName(a);
   const bName = splitPersonName(b);
-  if (safe2.sortMode === "rank-then-name") {
-    const aRank = getRankSortIndex(a.rank, safe2, group);
-    const bRank = getRankSortIndex(b.rank, safe2, group);
-    if (aRank !== bRank) return aRank - bRank;
-    if (aRank >= 1e4 || bRank >= 1e4) {
-      const rankCompare = collator$1.compare(String(a.rank || ""), String(b.rank || ""));
-      if (rankCompare) return rankCompare;
-    }
+  const aRank = getRankSortIndex(a.rank, safe2, group);
+  const bRank = getRankSortIndex(b.rank, safe2, group);
+  if (aRank !== bRank) return aRank - bRank;
+  if (aRank >= 1e4 || bRank >= 1e4) {
+    const rankCompare = collator$1.compare(String(a.rank || ""), String(b.rank || ""));
+    if (rankCompare) return rankCompare;
   }
   return collator$1.compare(aName.surname, bName.surname) || collator$1.compare(aName.given, bName.given) || collator$1.compare(aName.full, bName.full);
 };

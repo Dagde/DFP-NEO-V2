@@ -695,15 +695,13 @@ export const comparePeopleByConfiguredRank = <
   const aName = splitPersonName(a);
   const bName = splitPersonName(b);
 
-  if (safe.sortMode === 'rank-then-name') {
-    const aRank = getRankSortIndex(a.rank, safe, group);
-    const bRank = getRankSortIndex(b.rank, safe, group);
-    if (aRank !== bRank) return aRank - bRank;
+  const aRank = getRankSortIndex(a.rank, safe, group);
+  const bRank = getRankSortIndex(b.rank, safe, group);
+  if (aRank !== bRank) return aRank - bRank;
 
-    if (aRank >= 10000 || bRank >= 10000) {
-      const rankCompare = collator.compare(String(a.rank || ''), String(b.rank || ''));
-      if (rankCompare) return rankCompare;
-    }
+  if (aRank >= 10000 || bRank >= 10000) {
+    const rankCompare = collator.compare(String(a.rank || ''), String(b.rank || ''));
+    if (rankCompare) return rankCompare;
   }
 
   return collator.compare(aName.surname, bName.surname)
