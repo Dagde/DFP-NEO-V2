@@ -98547,7 +98547,7 @@ const AddRemedialPackageFlyout = ({
     setValidationMessage("");
     onSave(trainee, eventToRemediate, remedialEvents);
   };
-  return /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "fixed inset-0 bg-black/60 z-[70] flex items-start justify-center px-4 pb-4 pt-[96px] animate-fade-in", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "bg-gray-800 rounded-lg shadow-xl w-full max-w-3xl border border-gray-700 flex flex-col max-h-[calc(100vh-112px)]", onClick: (e) => e.stopPropagation(), children: [
+  return /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "fixed inset-y-0 right-0 z-[80] flex w-full max-w-[780px] items-stretch justify-end px-4 py-4 pointer-events-none animate-fade-in", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "pointer-events-auto bg-gray-800 rounded-lg shadow-2xl w-full border border-gray-700 flex flex-col max-h-full", onClick: (e) => e.stopPropagation(), children: [
     /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "p-4 border-b border-gray-700 bg-gray-900/50 flex justify-between items-center", children: [
       /* @__PURE__ */ jsxRuntimeExports.jsxs("h2", { className: "text-xl font-bold text-sky-400", children: [
         "Add Remedial Package for ",
