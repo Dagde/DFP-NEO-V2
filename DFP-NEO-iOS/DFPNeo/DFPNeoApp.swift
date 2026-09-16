@@ -8,14 +8,18 @@ import UIKit
 
 @main
 struct DFPNeoApp: App {
+    @UIApplicationDelegateAdaptor(AppDelegate.self) private var appDelegate
     @StateObject private var authViewModel = AuthViewModel()
+    @StateObject private var pushNotificationManager = PushNotificationManager.shared
 
     var body: some Scene {
         WindowGroup {
             ContentView()
                 .environmentObject(authViewModel)
+                .environmentObject(pushNotificationManager)
                 .onAppear {
                     setupUI()
+                    pushNotificationManager.configureOnLaunch()
                 }
         }
     }

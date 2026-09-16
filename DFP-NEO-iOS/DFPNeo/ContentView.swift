@@ -9,6 +9,7 @@ import SwiftUI
 
 struct ContentView: View {
     @EnvironmentObject var authViewModel: AuthViewModel
+    @EnvironmentObject var pushManager: PushNotificationManager
     @StateObject private var alertsViewModel = AlertsViewModel()
 
     var body: some View {
@@ -56,11 +57,24 @@ struct ContentView: View {
                 .tabItem {
                     Label("Profile", systemImage: "person.fill")
                 }
+
+            PushDiagnosticsView()
+                .tabItem {
+                    Label("Diagnostics", systemImage: "stethoscope")
+                }
         }
         .environmentObject(alertsViewModel)
         .task {
             // Start polling for alerts when app loads
             alertsViewModel.startPolling()
+            pushManager.setAuthenticatedUser(authViewModel.currentUser?.userId ?? APIService.shared.storedUserId)
+        }
+        .onChange(of: authViewModel.isAuthenticated) { isAuthenticated in
+            let userId = isAuthenticated ? (authViewModel.currentUser?.userId ?? APIService.shared.storedUserId) : nil
+            pushManager.setAuthenticatedUser(userId)
+            if isAuthenticated {
+                pushManager.registerForPushNotifications()
+            }
         }
         .onDisappear {
             alertsViewModel.stopPolling()
@@ -134,4 +148,5 @@ struct BiometricUnlockView: View {
 #Preview {
     ContentView()
         .environmentObject(AuthViewModel())
+        .environmentObject(PushNotificationManager.shared)
 }

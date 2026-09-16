@@ -52,6 +52,8 @@ final class AuthViewModel: ObservableObject {
         )
         self.isAuthenticated = true
         self.isSessionLocked = false
+        PushNotificationManager.shared.setAuthenticatedUser(uid)
+        PushNotificationManager.shared.registerForPushNotifications()
         print("✅ Session restored from stored tokens for userId: \(uid)")
     }
 
@@ -74,6 +76,8 @@ final class AuthViewModel: ObservableObject {
             self.currentUser = resp.user
             self.isAuthenticated = true
             self.isSessionLocked = false
+            PushNotificationManager.shared.setAuthenticatedUser(resp.user.userId)
+            PushNotificationManager.shared.registerForPushNotifications()
 
             print("✅ Login successful for user: \(resp.user.displayName)")
             print("   - userId: \(resp.user.userId)")
@@ -118,6 +122,7 @@ final class AuthViewModel: ObservableObject {
         password = ""
         errorMessage = nil
         UserDefaults.standard.set(false, forKey: "biometricsEnabled")
+        PushNotificationManager.shared.setAuthenticatedUser(nil)
 
         print("👋 User logged out - tokens cleared")
     }

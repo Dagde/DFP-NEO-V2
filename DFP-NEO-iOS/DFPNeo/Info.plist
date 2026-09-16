@@ -12,11 +12,13 @@
 	<key>CFBundleDisplayName</key>
 	<string>DFP-NEO</string>
 	<key>CFBundleIdentifier</key>
-	<string>com.dfpneo.mobile</string>
+	<string>com.danieldawe.dfpneo</string>
 	<key>CFBundleVersion</key>
 	<string>1</string>
 	<key>CFBundleShortVersionString</key>
 	<string>1.0</string>
+	<key>DFPNeoAPIBaseURL</key>
+	<string>https://dfp-neo-v2-production.up.railway.app</string>
 	<key>NSAppTransportSecurity</key>
 	<dict>
 		<key>NSAllowsArbitraryLoads</key>
