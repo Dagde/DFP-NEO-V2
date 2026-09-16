@@ -39428,6 +39428,15 @@ const App: React.FC = () => {
         setShowAddRemedialPackage(true);
     };
 
+    const handleCloseAddRemedialPackage = useCallback(() => {
+        const traineeToRestore = selectedTraineeForRemedial;
+        setShowAddRemedialPackage(false);
+        setSelectedTraineeForRemedial(null);
+        if (traineeToRestore) {
+            openTraineeProfileTab(traineeToRestore, null);
+        }
+    }, [openTraineeProfileTab, selectedTraineeForRemedial]);
+
     const handleBuildDateChange = (direction: 'prev' | 'next') => {
         const currentDate = new Date(buildDfpDate + 'T00:00:00Z');
         if (direction === 'prev') {
@@ -40009,6 +40018,8 @@ const App: React.FC = () => {
             });
             void loadPersistedTraineeLmp(trainee);
             setShowAddRemedialPackage(false);
+            setSelectedTraineeForRemedial(null);
+            openTraineeProfileTab(trainee, null);
             setSuccessMessage('Remedial package added to trainee LMP.');
         } catch (error) {
             console.error('[Individual LMP] Failed to persist remedial package:', error);
@@ -56335,7 +56346,7 @@ appliedUpdates.forEach(update => {
                     traineeLmp={traineeLMPs.get(selectedTraineeForRemedial.fullName) || []}
                     trainingReportName={configuredTrainingReportDisplayName}
                     instructorLabel={instructorLabel}
-                    onClose={() => setShowAddRemedialPackage(false)}
+                    onClose={handleCloseAddRemedialPackage}
                     onSave={handleSaveRemedialPackage}
                 />
             )}

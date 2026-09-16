@@ -362,8 +362,8 @@ const AddRemedialPackageFlyout: React.FC<AddRemedialPackageFlyoutProps> = ({
   };
   
   return (
-    <div className="fixed inset-y-0 right-0 z-[80] flex w-full max-w-[780px] items-stretch justify-end px-4 py-4 pointer-events-none animate-fade-in">
-      <div className="pointer-events-auto bg-gray-800 rounded-lg shadow-2xl w-full border border-gray-700 flex flex-col max-h-full" onClick={e => e.stopPropagation()}>
+    <div className="fixed inset-0 bg-black/30 z-[110] flex items-start justify-center px-4 pb-4 pt-[9rem] animate-fade-in">
+      <div className="bg-gray-800 rounded-lg shadow-2xl w-full max-w-3xl border border-gray-700 flex flex-col max-h-[calc(100vh-10rem)]" onClick={e => e.stopPropagation()}>
         <div className="p-4 border-b border-gray-700 bg-gray-900/50 flex justify-between items-center">
           <h2 className="text-xl font-bold text-sky-400">Add Remedial Package for {trainee.name}</h2>
           <button onClick={onClose} className="text-white hover:text-gray-300"><svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg></button>

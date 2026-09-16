@@ -98547,7 +98547,7 @@ const AddRemedialPackageFlyout = ({
     setValidationMessage("");
     onSave(trainee, eventToRemediate, remedialEvents);
   };
-  return /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "fixed inset-y-0 right-0 z-[80] flex w-full max-w-[780px] items-stretch justify-end px-4 py-4 pointer-events-none animate-fade-in", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "pointer-events-auto bg-gray-800 rounded-lg shadow-2xl w-full border border-gray-700 flex flex-col max-h-full", onClick: (e) => e.stopPropagation(), children: [
+  return /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "fixed inset-0 bg-black/30 z-[110] flex items-start justify-center px-4 pb-4 pt-[9rem] animate-fade-in", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "bg-gray-800 rounded-lg shadow-2xl w-full max-w-3xl border border-gray-700 flex flex-col max-h-[calc(100vh-10rem)]", onClick: (e) => e.stopPropagation(), children: [
     /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "p-4 border-b border-gray-700 bg-gray-900/50 flex justify-between items-center", children: [
       /* @__PURE__ */ jsxRuntimeExports.jsxs("h2", { className: "text-xl font-bold text-sky-400", children: [
         "Add Remedial Package for ",
@@ -137893,6 +137893,14 @@ ${error instanceof Error ? error.message : String(error)}`,
     setSelectedTraineeForRemedial(trainee);
     setShowAddRemedialPackage(true);
   };
+  const handleCloseAddRemedialPackage = reactExports.useCallback(() => {
+    const traineeToRestore = selectedTraineeForRemedial;
+    setShowAddRemedialPackage(false);
+    setSelectedTraineeForRemedial(null);
+    if (traineeToRestore) {
+      openTraineeProfileTab(traineeToRestore, null);
+    }
+  }, [openTraineeProfileTab, selectedTraineeForRemedial]);
   const handleBuildDateChange = (direction) => {
     const currentDate = /* @__PURE__ */ new Date(buildDfpDate + "T00:00:00Z");
     if (direction === "prev") {
@@ -138395,6 +138403,8 @@ ${error instanceof Error ? error.message : String(error)}`,
       });
       void loadPersistedTraineeLmp(trainee);
       setShowAddRemedialPackage(false);
+      setSelectedTraineeForRemedial(null);
+      openTraineeProfileTab(trainee, null);
       setSuccessMessage("Remedial package added to trainee LMP.");
     } catch (error) {
       console.error("[Individual LMP] Failed to persist remedial package:", error);
@@ -152256,7 +152266,7 @@ Do you want to replace the existing entry?`,
           traineeLmp: traineeLMPs.get(selectedTraineeForRemedial.fullName) || [],
           trainingReportName: configuredTrainingReportDisplayName,
           instructorLabel: instructorLabel2,
-          onClose: () => setShowAddRemedialPackage(false),
+          onClose: handleCloseAddRemedialPackage,
           onSave: handleSaveRemedialPackage
         }
       ),
