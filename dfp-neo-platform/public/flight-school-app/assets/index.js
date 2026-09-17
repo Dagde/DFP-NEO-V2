@@ -81521,22 +81521,6 @@ const eventIncludesStaff = (event, staffName) => {
   const target = staffName.trim().toLowerCase();
   return Boolean(target) && getEventPeople$1(event).some((person) => person.toLowerCase() === target);
 };
-const eventIncludesStaffRecord = (event, staff) => {
-  const staffDbId = String(staff.id || "").trim().toLowerCase();
-  const staffUserId = String(staff.userId || "").trim().toLowerCase();
-  const staffPersonnelId = String(staff.personnelId || "").trim().toLowerCase();
-  const staffIdNumber = Number(staff.idNumber);
-  if (Array.isArray(event.personnelRefs)) {
-    const hasRefMatch = event.personnelRefs.some((ref) => {
-      if (ref.personType && ref.personType !== "staff") return false;
-      const refId = String(ref.id || "").trim().toLowerCase();
-      const refIdNumber = Number(ref.idNumber);
-      return staffDbId && refId === staffDbId || staffUserId && refId === staffUserId || staffPersonnelId && refId === staffPersonnelId || Number.isFinite(staffIdNumber) && Number.isFinite(refIdNumber) && refIdNumber === staffIdNumber || normalisePersonName(ref.name) === normalisePersonName(staff.name);
-    });
-    if (hasRefMatch) return true;
-  }
-  return eventIncludesStaff(event, staff.name);
-};
 const getLogbookEntryRoleLabel = (personRole) => {
   if (personRole === "instructor" || personRole === "fixed_crew_pic") return "Captain";
   if (personRole === "fixed_crew_p2") return "P2";
@@ -81558,7 +81542,6 @@ const InstructorProfileFlyout = ({
   traineesData,
   events = [],
   scheduleHistoryEvents = [],
-  trainingReportAssessments = [],
   syllabusDetails = [],
   insertEventTypes = [],
   aircraftConfigurations = [],
@@ -81805,33 +81788,6 @@ const InstructorProfileFlyout = ({
   const activeOperationalModel = normaliseOperationalModel(operationalModel);
   const isAirCombatModel = activeOperationalModel === "air_combat";
   const isStaffTrainingReportModel = isAirCombatModel || isFixedCrewLikeOperationalModel(activeOperationalModel);
-  const isFlightSchoolModel = activeOperationalModel === "flight_school";
-  const flightSchoolProfileStats = reactExports.useMemo(() => {
-    const now = /* @__PURE__ */ new Date();
-    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-    const windowStart = new Date(today);
-    windowStart.setDate(today.getDate() - 29);
-    const windowStartTime = windowStart.getTime();
-    const todayTime = today.getTime();
-    const dedupedEvents = /* @__PURE__ */ new Map();
-    [...scheduleHistoryEvents, ...events].filter((event) => event.type === "flight").filter((event) => event.isCancelled !== true).filter((event) => eventIncludesStaffRecord(event, instructor)).forEach((event) => {
-      const eventTime = getEventDateValue(event);
-      if (eventTime < windowStartTime || eventTime > todayTime) return;
-      const key = event.id || `${event.date || ""}-${event.flightNumber || ""}-${event.startTime}-${event.resourceId || ""}`;
-      dedupedEvents.set(key, event);
-    });
-    const reportList = trainingReportAssessments instanceof Map ? Array.from(trainingReportAssessments.values()) : Array.isArray(trainingReportAssessments) ? trainingReportAssessments : [];
-    const instructorNameKey = normalisePersonName(instructor.name);
-    const completedGrades = reportList.filter((report) => report?.isCompleted !== false).filter((report) => normalisePersonName(report?.instructorName || "") === instructorNameKey).map((report) => report.overallGrade).filter((grade) => typeof grade === "number" && Number.isFinite(grade));
-    const totalHours = Array.from(dedupedEvents.values()).reduce((sum, event) => sum + (Number.isFinite(Number(event.duration)) ? Number(event.duration) : 0), 0);
-    const averageScore = completedGrades.length > 0 ? completedGrades.reduce((sum, grade) => sum + grade, 0) / completedGrades.length : null;
-    return {
-      eventCount: dedupedEvents.size,
-      totalHours,
-      averageScore,
-      trainingReportCount: completedGrades.length
-    };
-  }, [events, instructor, scheduleHistoryEvents, trainingReportAssessments]);
   const assignedTraining = reactExports.useMemo(
     () => normaliseAirCombatTrainingAssignments(instructor.preferences),
     [instructor.preferences]
@@ -83613,29 +83569,6 @@ Confirm the Personnel ID, unit and role are correct before saving this separate 
                 /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-gray-300 font-mono", children: periodDisplay })
               ] }, p.id);
             }) : /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-sm text-gray-500 text-center italic py-2", children: "No unavailability periods scheduled." }) })
-          ] }),
-          isFlightSchoolModel && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: card3d + " p-3", style: card3dStyle, children: [
-            /* @__PURE__ */ jsxRuntimeExports.jsx("h4", { className: "text-xs font-semibold text-gray-300 mb-3", children: "Recent Activity" }),
-            /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid grid-cols-1 md:grid-cols-3 gap-3", children: [
-              /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded-md border border-sky-500/30 bg-[#0f1d2c] px-3 py-2 shadow-inner", children: [
-                /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-[10px] font-semibold uppercase tracking-[0.14em] text-sky-300", children: "Events in last 30 days" }),
-                /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-1 text-2xl font-bold text-white", children: flightSchoolProfileStats.eventCount })
-              ] }),
-              /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded-md border border-sky-500/30 bg-[#0f1d2c] px-3 py-2 shadow-inner", children: [
-                /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-[10px] font-semibold uppercase tracking-[0.14em] text-sky-300", children: "Hours flown in last 30 days" }),
-                /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-1 text-2xl font-bold text-white", children: flightSchoolProfileStats.totalHours.toFixed(1) })
-              ] }),
-              /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded-md border border-sky-500/30 bg-[#0f1d2c] px-3 py-2 shadow-inner", children: [
-                /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-[10px] font-semibold uppercase tracking-[0.14em] text-sky-300", children: "Average score given" }),
-                /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-1 text-2xl font-bold text-white", children: flightSchoolProfileStats.averageScore === null ? "N/A" : flightSchoolProfileStats.averageScore.toFixed(1) }),
-                /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mt-0.5 text-[10px] text-gray-400", children: [
-                  flightSchoolProfileStats.trainingReportCount,
-                  " completed ",
-                  trainingReportDisplayName.toLowerCase(),
-                  flightSchoolProfileStats.trainingReportCount === 1 ? "" : "s"
-                ] })
-              ] })
-            ] })
           ] })
         ] }),
         /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "w-[95px] flex-shrink-0 border-l border-gray-600 bg-[#0f1824] pt-2 pb-2 px-[10px] flex flex-col space-y-[1px]", children: [
@@ -84476,7 +84409,6 @@ const InstructorListView = ({
   instructorsData,
   archivedInstructorsData,
   scheduleHistoryEvents = [],
-  trainingReportAssessments = [],
   syllabusDetails = [],
   insertEventTypes = [],
   aircraftConfigurations = [],
@@ -85071,7 +85003,6 @@ const InstructorListView = ({
         traineesData,
         events,
         scheduleHistoryEvents,
-        trainingReportAssessments,
         syllabusDetails,
         insertEventTypes,
         aircraftConfigurations,
@@ -85600,7 +85531,6 @@ const StaffView = (props) => {
           instructorsData: scopedInstructorsData,
           archivedInstructorsData: scopedArchivedInstructorsData,
           scheduleHistoryEvents: props.scheduleHistoryEvents,
-          trainingReportAssessments: props.trainingReportAssessments,
           syllabusDetails: props.syllabusDetails,
           insertEventTypes: props.insertEventTypes,
           aircraftConfigurations: props.aircraftConfigurations,
@@ -149838,7 +149768,6 @@ ${error instanceof Error ? error.message : String(error)}`,
             instructorsData: activeDateInstructorsData,
             archivedInstructorsData,
             scheduleHistoryEvents: publishedScheduleHistoryEvents,
-            trainingReportAssessments: pt051Assessments,
             insertEventTypes,
             aircraftConfigurations,
             onInsertAirCombatTrainingEvent: handleInsertAirCombatTrainingEvent,
@@ -149968,7 +149897,6 @@ ${error instanceof Error ? error.message : String(error)}`,
             instructorsData,
             archivedInstructorsData,
             scheduleHistoryEvents: publishedScheduleHistoryEvents,
-            trainingReportAssessments: pt051Assessments,
             syllabusDetails,
             insertEventTypes,
             aircraftConfigurations,

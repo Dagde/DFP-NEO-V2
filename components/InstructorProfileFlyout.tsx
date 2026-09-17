@@ -1,6 +1,6 @@
 import { useSystemFreeze } from '../hooks/useSystemFreeze';
 import React, { useState, useMemo, useEffect, useRef, useCallback } from 'react';
-import { InstructorRank, Instructor, InstructorCategory, SeatConfig, UnavailabilityPeriod, UnavailabilityReason, Trainee, LogbookExperience, MasterCurrency, CurrencyRequirement, PersonCurrencyStatus, ScheduleEvent, SyllabusItemDetail, AirCombatTrainingAssignment, AirCombatTrainingReport, SctRequest, TrainingReportAssessment } from '../types';
+import { InstructorRank, Instructor, InstructorCategory, SeatConfig, UnavailabilityPeriod, UnavailabilityReason, Trainee, LogbookExperience, MasterCurrency, CurrencyRequirement, PersonCurrencyStatus, ScheduleEvent, SyllabusItemDetail, AirCombatTrainingAssignment, AirCombatTrainingReport, SctRequest } from '../types';
 import { v4 as uuidv4 } from 'uuid';
 import AddUnavailabilityFlyout from './AddUnavailabilityFlyout';
 import AuditButton from './AuditButton';
@@ -101,7 +101,6 @@ interface InstructorProfileFlyoutProps {
   traineesData: Trainee[];
   events?: ScheduleEvent[];
   scheduleHistoryEvents?: ScheduleEvent[];
-  trainingReportAssessments?: Map<string, TrainingReportAssessment> | TrainingReportAssessment[];
   syllabusDetails?: SyllabusItemDetail[];
   insertEventTypes?: InsertEventTypeConfig[];
   aircraftConfigurations?: AircraftConfigurationDefinition[];
@@ -355,29 +354,6 @@ const eventIncludesStaff = (event: ScheduleEvent, staffName: string): boolean =>
   return Boolean(target) && getEventPeople(event).some(person => person.toLowerCase() === target);
 };
 
-const eventIncludesStaffRecord = (event: ScheduleEvent, staff: Instructor): boolean => {
-  const staffDbId = String((staff as any).id || '').trim().toLowerCase();
-  const staffUserId = String((staff as any).userId || '').trim().toLowerCase();
-  const staffPersonnelId = String((staff as any).personnelId || '').trim().toLowerCase();
-  const staffIdNumber = Number(staff.idNumber);
-  if (Array.isArray(event.personnelRefs)) {
-    const hasRefMatch = event.personnelRefs.some(ref => {
-      if (ref.personType && ref.personType !== 'staff') return false;
-      const refId = String(ref.id || '').trim().toLowerCase();
-      const refIdNumber = Number(ref.idNumber);
-      return (
-        (staffDbId && refId === staffDbId) ||
-        (staffUserId && refId === staffUserId) ||
-        (staffPersonnelId && refId === staffPersonnelId) ||
-        (Number.isFinite(staffIdNumber) && Number.isFinite(refIdNumber) && refIdNumber === staffIdNumber) ||
-        normalisePersonName(ref.name) === normalisePersonName(staff.name)
-      );
-    });
-    if (hasRefMatch) return true;
-  }
-  return eventIncludesStaff(event, staff.name);
-};
-
 const getStaffEventRole = (event: ScheduleEvent, staffName: string): string => {
   const target = staffName.trim().toLowerCase();
   if (String(event.pilot || '').trim().toLowerCase() === target) return 'Pilot';
@@ -397,7 +373,7 @@ const getLogbookEntryRoleLabel = (personRole?: string): string => {
 export const InstructorProfileFlyout: React.FC<InstructorProfileFlyoutProps> = ({
   instructor, onClose, school, personnelData, onUpdateInstructor,
   onNavigateToCurrency, originRect, isClosing, isCreating = false,
-  locations, units, instructorsData = [], traineesData, events = [], scheduleHistoryEvents = [], trainingReportAssessments = [], syllabusDetails = [],
+  locations, units, instructorsData = [], traineesData, events = [], scheduleHistoryEvents = [], syllabusDetails = [],
   insertEventTypes = [], aircraftConfigurations = [],
   onInsertAirCombatTrainingEvent, onUpdateAirCombatTrainingEvent, onGenerateAirCombatTrainingReport, onAddTrainingReport,
   onViewLogbook, onRequestSct, sctRequests = [], onPatchSctRequest, onCancelSctRequest, onNavigateToTrainee,
@@ -681,52 +657,6 @@ export const InstructorProfileFlyout: React.FC<InstructorProfileFlyoutProps> = (
   const activeOperationalModel = normaliseOperationalModel(operationalModel);
   const isAirCombatModel = activeOperationalModel === 'air_combat';
   const isStaffTrainingReportModel = isAirCombatModel || isFixedCrewLikeOperationalModel(activeOperationalModel);
-  const isFlightSchoolModel = activeOperationalModel === 'flight_school';
-  const flightSchoolProfileStats = useMemo(() => {
-    const now = new Date();
-    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-    const windowStart = new Date(today);
-    windowStart.setDate(today.getDate() - 29);
-    const windowStartTime = windowStart.getTime();
-    const todayTime = today.getTime();
-    const dedupedEvents = new Map<string, ScheduleEvent>();
-    [...scheduleHistoryEvents, ...events]
-      .filter(event => event.type === 'flight')
-      .filter(event => event.isCancelled !== true)
-      .filter(event => eventIncludesStaffRecord(event, instructor))
-      .forEach(event => {
-        const eventTime = getEventDateValue(event);
-        if (eventTime < windowStartTime || eventTime > todayTime) return;
-        const key = event.id || `${event.date || ''}-${event.flightNumber || ''}-${event.startTime}-${event.resourceId || ''}`;
-        dedupedEvents.set(key, event);
-      });
-
-    const reportList = trainingReportAssessments instanceof Map
-      ? Array.from(trainingReportAssessments.values())
-      : Array.isArray(trainingReportAssessments)
-        ? trainingReportAssessments
-        : [];
-    const instructorNameKey = normalisePersonName(instructor.name);
-    const completedGrades = reportList
-      .filter(report => report?.isCompleted !== false)
-      .filter(report => normalisePersonName(report?.instructorName || '') === instructorNameKey)
-      .map(report => report.overallGrade)
-      .filter((grade): grade is number => typeof grade === 'number' && Number.isFinite(grade));
-
-    const totalHours = Array.from(dedupedEvents.values()).reduce((sum, event) => (
-      sum + (Number.isFinite(Number(event.duration)) ? Number(event.duration) : 0)
-    ), 0);
-    const averageScore = completedGrades.length > 0
-      ? completedGrades.reduce((sum, grade) => sum + grade, 0) / completedGrades.length
-      : null;
-
-    return {
-      eventCount: dedupedEvents.size,
-      totalHours,
-      averageScore,
-      trainingReportCount: completedGrades.length,
-    };
-  }, [events, instructor, scheduleHistoryEvents, trainingReportAssessments]);
   const assignedTraining = useMemo(
     () => normaliseAirCombatTrainingAssignments(instructor.preferences),
     [instructor.preferences],
@@ -2583,31 +2513,6 @@ export const InstructorProfileFlyout: React.FC<InstructorProfileFlyoutProps> = (
                   }) : <p className="text-sm text-gray-500 text-center italic py-2">No unavailability periods scheduled.</p>}
                 </div>
               </div>
-
-              {isFlightSchoolModel && (
-                <div className={card3d + " p-3"} style={card3dStyle}>
-                  <h4 className="text-xs font-semibold text-gray-300 mb-3">Recent Activity</h4>
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-                    <div className="rounded-md border border-sky-500/30 bg-[#0f1d2c] px-3 py-2 shadow-inner">
-                      <div className="text-[10px] font-semibold uppercase tracking-[0.14em] text-sky-300">Events in last 30 days</div>
-                      <div className="mt-1 text-2xl font-bold text-white">{flightSchoolProfileStats.eventCount}</div>
-                    </div>
-                    <div className="rounded-md border border-sky-500/30 bg-[#0f1d2c] px-3 py-2 shadow-inner">
-                      <div className="text-[10px] font-semibold uppercase tracking-[0.14em] text-sky-300">Hours flown in last 30 days</div>
-                      <div className="mt-1 text-2xl font-bold text-white">{flightSchoolProfileStats.totalHours.toFixed(1)}</div>
-                    </div>
-                    <div className="rounded-md border border-sky-500/30 bg-[#0f1d2c] px-3 py-2 shadow-inner">
-                      <div className="text-[10px] font-semibold uppercase tracking-[0.14em] text-sky-300">Average score given</div>
-                      <div className="mt-1 text-2xl font-bold text-white">
-                        {flightSchoolProfileStats.averageScore === null ? 'N/A' : flightSchoolProfileStats.averageScore.toFixed(1)}
-                      </div>
-                      <div className="mt-0.5 text-[10px] text-gray-400">
-                        {flightSchoolProfileStats.trainingReportCount} completed {trainingReportDisplayName.toLowerCase()}{flightSchoolProfileStats.trainingReportCount === 1 ? '' : 's'}
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              )}
 
             </div>
 
