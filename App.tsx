@@ -51126,9 +51126,16 @@ appliedUpdates.forEach(update => {
 
     }, [oraclePreviewEvent, oracleAnalysis, date, school, eventsForDate, nextDayBuildEvents, buildDfpDate, oracleContext, syllabusDetails, classifyStartBySolarDaylight]);
 
+    const closeMyHomeFloatingWindow = () => {
+        setFloatingDashboardWindows(prev => (
+            prev.MyDashboard ? { ...prev, MyDashboard: false } : prev
+        ));
+    };
+
     const handleSelectMyProfile = () => {
         const user = instructorsData.find(i => i.name === currentUserName);
         if (user) {
+            closeMyHomeFloatingWindow();
             setSelectedPersonForProfile(user);
             handleNavigation('Instructors');
         }
@@ -51145,6 +51152,7 @@ appliedUpdates.forEach(update => {
     const handleSelectMyCurrency = () => {
         const user = instructorsData.find(i => i.name === currentUserName);
         if (user) {
+            closeMyHomeFloatingWindow();
             setSelectedPersonForProfile(user);
             setProfileInitialTab('currency');
             handleNavigation('Instructors');
@@ -51154,6 +51162,7 @@ appliedUpdates.forEach(update => {
     const handleSelectMySct = () => {
         const user = instructorsData.find(i => i.name === currentUserName); // Current logged in user
         if (user) {
+            closeMyHomeFloatingWindow();
             setInstructorForSct(user);
             setShowSctRequest(true);
         }

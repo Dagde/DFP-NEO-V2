@@ -147490,9 +147490,13 @@ ${error instanceof Error ? error.message : String(error)}`,
     setIsEditingDefault(true);
     setOraclePreviewEvent(null);
   }, [oraclePreviewEvent, oracleAnalysis, date, school, eventsForDate, nextDayBuildEvents, buildDfpDate, oracleContext, syllabusDetails, classifyStartBySolarDaylight]);
+  const closeMyHomeFloatingWindow = () => {
+    setFloatingDashboardWindows((prev) => prev.MyDashboard ? { ...prev, MyDashboard: false } : prev);
+  };
   const handleSelectMyProfile = () => {
     const user = instructorsData.find((i) => i.name === currentUserName);
     if (user) {
+      closeMyHomeFloatingWindow();
       setSelectedPersonForProfile(user);
       handleNavigation("Instructors");
     }
@@ -147506,6 +147510,7 @@ ${error instanceof Error ? error.message : String(error)}`,
   const handleSelectMyCurrency = () => {
     const user = instructorsData.find((i) => i.name === currentUserName);
     if (user) {
+      closeMyHomeFloatingWindow();
       setSelectedPersonForProfile(user);
       setProfileInitialTab("currency");
       handleNavigation("Instructors");
@@ -147514,6 +147519,7 @@ ${error instanceof Error ? error.message : String(error)}`,
   const handleSelectMySct = () => {
     const user = instructorsData.find((i) => i.name === currentUserName);
     if (user) {
+      closeMyHomeFloatingWindow();
       setInstructorForSct(user);
       setShowSctRequest(true);
     }
