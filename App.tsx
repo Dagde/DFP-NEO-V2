@@ -12,13 +12,6 @@ import { initialiseLiveChangeBus, LIVE_CHANGE_EVENT } from './utils/liveChangeBu
 import { isEditableElement } from './utils/editableKeyEvents';
 import { getAdaptiveContextMenuPosition } from './utils/contextMenuPosition';
 import {
-    appendDfpMoveChangeTrace,
-    downloadDfpMoveChangeTrace,
-    isWatchingDfpMoveChangeEvent,
-    summariseDfpMoveEvent,
-    watchDfpMoveChangeEvents,
-} from './utils/dfpMoveChangeTrace';
-import {
     buildPlatformDataScopeQuery,
     getPlatformDataScopeForLocation,
     getLocationCodesForCurrentRuntime,
@@ -31631,36 +31624,6 @@ const App: React.FC = () => {
                 : events;
         if (!snapshotHasBaselineEvents && baselineEvts.length > 0) {
             snap.baselineEvents = JSON.parse(JSON.stringify(baselineEvts));
-            const watchedEnrichedBaseline = baselineEvts.filter(event => isWatchingDfpMoveChangeEvent(event.id));
-            if (watchedEnrichedBaseline.length > 0) {
-                appendDfpMoveChangeTrace('snapshot:baseline-enriched-for-cache', {
-                    targetDate,
-                    snapshotSchool,
-                    snapshotUnit,
-                    source,
-                    replace,
-                    snapKey: snap.date,
-                    baselineEventCount: baselineEvts.length,
-                    watchedBaseline: watchedEnrichedBaseline.map(summariseDfpMoveEvent),
-                });
-            }
-        }
-        const watchedSnapshotEvents = events.filter(event => isWatchingDfpMoveChangeEvent(event.id));
-        const watchedCurrentEvents = (publishedSchedulesRef.current[targetDate] || []).filter(event => isWatchingDfpMoveChangeEvent(event.id));
-        if (watchedSnapshotEvents.length > 0 || watchedCurrentEvents.length > 0) {
-            appendDfpMoveChangeTrace('snapshot:apply-before-state', {
-                targetDate,
-                snapshotSchool,
-                snapshotUnit,
-                source,
-                replace,
-                snapKey: snap.date,
-                incomingWatchedEvents: watchedSnapshotEvents.map(summariseDfpMoveEvent),
-                currentWatchedEvents: watchedCurrentEvents.map(summariseDfpMoveEvent),
-                incomingBaselineEvents: baselineEvts
-                    .filter(event => isWatchingDfpMoveChangeEvent(event.id))
-                    .map(summariseDfpMoveEvent),
-            });
         }
         setPublishedSchedules(prev => {
             const existingNonSeed = (prev[targetDate] || []).filter(e => !(e as any).isHistoricalSeed);
@@ -31681,33 +31644,12 @@ const App: React.FC = () => {
                 const incomingSignature = getSnapshotEventsSignature(events);
                 if (existingSignature === incomingSignature) return prev;
             }
-            const watchedBefore = existingNonSeed.filter(event => isWatchingDfpMoveChangeEvent(event.id));
-            const watchedAfter = events.filter(event => isWatchingDfpMoveChangeEvent(event.id));
-            if (watchedBefore.length > 0 || watchedAfter.length > 0) {
-                appendDfpMoveChangeTrace('snapshot:published-state-replace', {
-                    targetDate,
-                    source,
-                    replace,
-                    watchedBefore: watchedBefore.map(summariseDfpMoveEvent),
-                    watchedAfter: watchedAfter.map(summariseDfpMoveEvent),
-                });
-            }
             return { ...prev, [targetDate]: events };
         });
 
         setBaselineSchedules(prev => {
             const baselineKey = getDailySnapshotKey(targetDate, snapshotSchool, snapshotUnit);
             if (!snapshotHasBaselineEvents && prev[baselineKey]?.length > 0) {
-                const watchedExistingBaseline = (prev[baselineKey] || []).filter(event => isWatchingDfpMoveChangeEvent(event.id));
-                if (watchedExistingBaseline.length > 0) {
-                    appendDfpMoveChangeTrace('snapshot:baseline-preserved-without-snapshot-baseline', {
-                        targetDate,
-                        baselineKey,
-                        source,
-                        replace,
-                        watchedBaseline: watchedExistingBaseline.map(summariseDfpMoveEvent),
-                    });
-                }
                 return prev;
             }
             if (!replace && prev[baselineKey] && events.length > 0) return prev;
@@ -31716,18 +31658,6 @@ const App: React.FC = () => {
                 const existingSignature = getSnapshotEventsSignature(prev[baselineKey] || []);
                 const incomingSignature = getSnapshotEventsSignature(baselineEvts);
                 if (existingSignature === incomingSignature) return prev;
-            }
-            const watchedBefore = (prev[baselineKey] || []).filter(event => isWatchingDfpMoveChangeEvent(event.id));
-            const watchedAfter = baselineEvts.filter(event => isWatchingDfpMoveChangeEvent(event.id));
-            if (watchedBefore.length > 0 || watchedAfter.length > 0) {
-                appendDfpMoveChangeTrace('snapshot:baseline-state-replace', {
-                    targetDate,
-                    baselineKey,
-                    source,
-                    replace,
-                    watchedBefore: watchedBefore.map(summariseDfpMoveEvent),
-                    watchedAfter: watchedAfter.map(summariseDfpMoveEvent),
-                });
             }
             return { ...prev, [baselineKey]: JSON.parse(JSON.stringify(baselineEvts)) };
         });
@@ -41873,7 +41803,12 @@ const App: React.FC = () => {
     // persistScheduleForDate: saves the full schedule for a date to the DB.
     // Pass allEventsForDate directly (after setPublishedSchedules has been called)
     // to avoid race conditions with React's async state updates.
-    const persistScheduleForDate = async (targetDate: string, allEventsForDate: ScheduleEvent[], baselineEventsForDate?: ScheduleEvent[]): Promise<boolean> => {
+    const persistScheduleForDate = async (
+        targetDate: string,
+        allEventsForDate: ScheduleEvent[],
+        baselineEventsForDate?: ScheduleEvent[],
+        options?: { replaceBaselineEvents?: boolean }
+    ): Promise<boolean> => {
         // Skip seed data
         if (allEventsForDate.some((e: any) => e.isHistoricalSeed === true)) {
             logScheduleDebug('[Persist] Skipped seed data for', targetDate);
@@ -41993,22 +41928,8 @@ const App: React.FC = () => {
                 snapshotPayload.baselineEvents = existingBaselineEventsForDate;
             }
         }
-        const watchedPersistEvents = allEventsForDate.filter(event => isWatchingDfpMoveChangeEvent(event.id));
-        const watchedPersistBaselineEvents = Array.isArray(snapshotPayload.baselineEvents)
-            ? snapshotPayload.baselineEvents.filter((event: ScheduleEvent) => isWatchingDfpMoveChangeEvent(event.id))
-            : [];
-        if (watchedPersistEvents.length > 0 || watchedPersistBaselineEvents.length > 0) {
-            appendDfpMoveChangeTrace('snapshot:persist-payload', {
-                targetDate,
-                snapshotKey,
-                school,
-                unit: activeUnitCode,
-                scheduleEventCount: allEventsForDate.length,
-                baselineEventsIncluded: Array.isArray(snapshotPayload.baselineEvents),
-                baselineEventCount: Array.isArray(snapshotPayload.baselineEvents) ? snapshotPayload.baselineEvents.length : null,
-                watchedEvents: watchedPersistEvents.map(summariseDfpMoveEvent),
-                watchedBaselineEvents: watchedPersistBaselineEvents.map(summariseDfpMoveEvent),
-            });
+        if (options?.replaceBaselineEvents === true) {
+            snapshotPayload.replaceBaselineEvents = true;
         }
 
         logScheduleDebug(`[Persist] Saving snapshot for ${targetDate} (${school} - ${activeUnitCode}), ${allEventsForDate.length} events...`);
@@ -42242,25 +42163,6 @@ const App: React.FC = () => {
         eventsToSave = eventsToSave
             .map(normaliseCrewFieldsForSave)
             .map(annotateScheduleEventPersonnelRefs);
-        watchDfpMoveChangeEvents(eventsToSave.map(event => event.id));
-        appendDfpMoveChangeTrace('flight-details-save:received', {
-            date,
-            school,
-            unit: activeUnitCode,
-            activeView,
-            eventCount: eventsToSave.length,
-            eventsToSave: eventsToSave.map(summariseDfpMoveEvent),
-            existingEvents: eventsToSave.map(event => {
-                const eventDate = event.date || date;
-                return summariseDfpMoveEvent((publishedSchedulesRef.current[eventDate] || []).find(candidate => candidate.id === event.id));
-            }),
-            baselineEvents: eventsToSave.map(event => {
-                const eventDate = event.date || date;
-                const baselineKey = getDailySnapshotKey(eventDate, school, activeUnitCode);
-                return summariseDfpMoveEvent((baselineSchedules[baselineKey] || []).find(candidate => candidate.id === event.id));
-            }),
-        });
-
         const proposedMainEvent = eventsToSave[0];
         const isPotentialNextDayView = ['NextDayBuild', 'Priorities', 'ProgramData', 'NextDayInstructorSchedule', 'NextDayTraineeSchedule'].includes(activeView);
         const saveToNextDayBuildForConflict = oracleContextForModal
@@ -42463,19 +42365,6 @@ const App: React.FC = () => {
                             student: savedEvent?.student,
                             pilot: savedEvent?.pilot
                         });
-                        appendDfpMoveChangeTrace('flight-details-save:state-merge', {
-                            date: eventDate,
-                            savedEvents: events.map(summariseDfpMoveEvent),
-                            before: currentScheduleForDate
-                                .filter(candidate => events.some(saved => saved.id === candidate.id))
-                                .map(summariseDfpMoveEvent),
-                            after: newSchedules[eventDate]
-                                .filter(candidate => events.some(saved => saved.id === candidate.id))
-                                .map(summariseDfpMoveEvent),
-                            baselineEvents: (baselineSchedules[getDailySnapshotKey(eventDate, school, activeUnitCode)] || [])
-                                .filter(candidate => events.some(saved => saved.id === candidate.id))
-                                .map(summariseDfpMoveEvent),
-                        });
                     });
 
                     logScheduleDebug('🟢 setPublishedSchedules: COMPLETE');
@@ -42507,20 +42396,8 @@ const App: React.FC = () => {
                     const _removedConflictIds = removedPublishedConflictIdsByDate.get(d) || new Set<string>();
                     const _otherEvents = _prevForDate.filter((e: ScheduleEvent) => !_newEventIds.has(e.id) && !_removedConflictIds.has(e.id));
                     const _newEventsForDate = eventsToSave.filter(e => e.date === d);
-                    appendDfpMoveChangeTrace('flight-details-save:persist-start', {
-                        date: d,
-                        savedEvents: _newEventsForDate.map(summariseDfpMoveEvent),
-                        previousEvents: _prevForDate.filter((event: ScheduleEvent) => _newEventIds.has(event.id)).map(summariseDfpMoveEvent),
-                    });
                     activeDfpSaveInFlightRef.current += 1;
                     persistScheduleForDate(d, [..._otherEvents, ..._newEventsForDate])
-                        .then((success) => {
-                            appendDfpMoveChangeTrace('flight-details-save:persist-complete', {
-                                date: d,
-                                success,
-                                savedEventIds: _newEventsForDate.map(event => event.id),
-                            });
-                        })
                         .finally(() => {
                             activeDfpSaveInFlightRef.current = Math.max(0, activeDfpSaveInFlightRef.current - 1);
                         });
@@ -46901,7 +46778,7 @@ const App: React.FC = () => {
         }, 500);
 
         // 4. Persist to database
-        persistScheduleForDate(targetDate, finalEvents, finalEvents);
+        persistScheduleForDate(targetDate, finalEvents, finalEvents, { replaceBaselineEvents: true });
 
         // 5. Audit log
         const cancelledCount = finalEvents.filter(e =>
@@ -47155,6 +47032,7 @@ const App: React.FC = () => {
                 savedBy: authUser?.userId || (authUser as any)?.username || null,
                 // Store the baseline (original published events) for change-bar detection after page reload
                 baselineEvents: newEventsForDate,
+                replaceBaselineEvents: true,
                 ...(existingAlertsDataForDate && Object.keys(existingAlertsDataForDate).length > 0
                     ? { alertsData: existingAlertsDataForDate }
                     : {}),
@@ -47514,20 +47392,6 @@ const App: React.FC = () => {
 
         let updatedEventsForDate: ScheduleEvent[] = [];
         let appliedUpdates: ScheduleTileUpdate[] = updates;
-        watchDfpMoveChangeEvents(updates.map(update => update.eventId));
-        appendDfpMoveChangeTrace('schedule-update:received', {
-            date,
-            school,
-            unit: activeUnitCode,
-            activeView,
-            updates,
-            currentEvents: (publishedSchedulesRef.current[date] || [])
-                .filter(event => updates.some(update => update.eventId === event.id))
-                .map(summariseDfpMoveEvent),
-            baselineEvents: (baselineSchedules[activeBaselineKey] || [])
-                .filter(event => updates.some(update => update.eventId === event.id))
-                .map(summariseDfpMoveEvent),
-        });
         setPublishedSchedules((prev: Record<string, ScheduleEvent[]>) => {
             const scheduleForDate = prev[date] || [];
             appliedUpdates = expandFormationScheduleUpdates(scheduleForDate, updates);
@@ -47546,19 +47410,6 @@ const App: React.FC = () => {
                 return event;
             });
             updatedEventsForDate = newScheduleForDate; // capture for persist
-            appendDfpMoveChangeTrace('schedule-update:state-merge', {
-                date,
-                appliedUpdates,
-                before: scheduleForDate
-                    .filter(event => appliedUpdates.some(update => update.eventId === event.id))
-                    .map(summariseDfpMoveEvent),
-                after: newScheduleForDate
-                    .filter(event => appliedUpdates.some(update => update.eventId === event.id))
-                    .map(summariseDfpMoveEvent),
-                baselineEvents: (baselineSchedules[activeBaselineKey] || [])
-                    .filter(event => appliedUpdates.some(update => update.eventId === event.id))
-                    .map(summariseDfpMoveEvent),
-            });
             return { ...prev, [date]: newScheduleForDate };
         });
         // Persist the updated positions to database immediately
@@ -47568,26 +47419,8 @@ const App: React.FC = () => {
             _scheduleUpdatePersistTimer.current = null;
             if (updatedEventsForDate.length > 0) {
                 const baselineEventsForPersist = baselineSchedules[activeBaselineKey] || [];
-                appendDfpMoveChangeTrace('schedule-update:persist-start', {
-                    date,
-                    appliedUpdates,
-                    watchedEvents: updatedEventsForDate
-                        .filter(event => appliedUpdates.some(update => update.eventId === event.id))
-                        .map(summariseDfpMoveEvent),
-                    baselineEventCountForPayload: baselineEventsForPersist.length,
-                    baselineEvents: baselineEventsForPersist
-                        .filter(event => appliedUpdates.some(update => update.eventId === event.id))
-                        .map(summariseDfpMoveEvent),
-                });
                 activeDfpSaveInFlightRef.current += 1;
                 persistScheduleForDate(date, updatedEventsForDate, baselineEventsForPersist)
-                    .then((success) => {
-                        appendDfpMoveChangeTrace('schedule-update:persist-complete', {
-                            date,
-                            success,
-                            appliedUpdates,
-                        });
-                    })
                     .finally(() => {
                         activeDfpSaveInFlightRef.current = Math.max(0, activeDfpSaveInFlightRef.current - 1);
                     });
@@ -47596,14 +47429,6 @@ const App: React.FC = () => {
                 // deployment tiles that may live on a different date than the dragged flight.
                 setPublishedSchedules(prevSchedules => {
                     const allEvents = Object.values(prevSchedules).flat();
-                    appendDfpMoveChangeTrace('schedule-update:deployment-check', {
-                        date,
-                        appliedUpdates,
-                        watchedEvents: (prevSchedules[date] || [])
-                            .filter(event => appliedUpdates.some(update => update.eventId === event.id))
-                            .map(summariseDfpMoveEvent),
-                        allEventCount: allEvents.length,
-                    });
                     handleDeploymentUnavailability(allEvents);
                     return prevSchedules; // no state change, just reading
                 });
@@ -48984,32 +48809,12 @@ appliedUpdates.forEach(update => {
             return;
         }
         if (activeDfpSaveInFlightRef.current > 0 || _scheduleUpdatePersistTimer.current !== null) {
-            appendDfpMoveChangeTrace('live-sync:published-schedule-refresh-skipped-local-save', {
-                date,
-                school,
-                unit: activeUnitCode,
-                saveInFlightCount: activeDfpSaveInFlightRef.current,
-                hasPendingPersistTimer: _scheduleUpdatePersistTimer.current !== null,
-                watchedEvents: (publishedSchedulesRef.current[date] || [])
-                    .filter(event => isWatchingDfpMoveChangeEvent(event.id))
-                    .map(summariseDfpMoveEvent),
-            });
             return;
         }
         if (dfpSnapshotLoadState.date === date && dfpSnapshotLoadState.status === 'empty') {
             return;
         }
 
-        const watchedEventsBeforeSync = (publishedSchedulesRef.current[date] || []).filter(event => isWatchingDfpMoveChangeEvent(event.id));
-        if (watchedEventsBeforeSync.length > 0) {
-            appendDfpMoveChangeTrace('live-sync:published-schedule-refresh-start', {
-                date,
-                school,
-                unit: activeUnitCode,
-                watchedEvents: watchedEventsBeforeSync.map(summariseDfpMoveEvent),
-                liveSyncEnabled,
-            });
-        }
         await loadSnapshotForDate(date, {
             force: true,
             replace: true,
@@ -49019,16 +48824,6 @@ appliedUpdates.forEach(update => {
             allowAdminFallbackContext: false,
             silent: true,
         });
-        const watchedEventsAfterSync = (publishedSchedulesRef.current[date] || []).filter(event => isWatchingDfpMoveChangeEvent(event.id));
-        if (watchedEventsBeforeSync.length > 0 || watchedEventsAfterSync.length > 0) {
-            appendDfpMoveChangeTrace('live-sync:published-schedule-refresh-complete', {
-                date,
-                school,
-                unit: activeUnitCode,
-                watchedEventsBefore: watchedEventsBeforeSync.map(summariseDfpMoveEvent),
-                watchedEventsAfter: watchedEventsAfterSync.map(summariseDfpMoveEvent),
-            });
-        }
     }, [activeUnitCode, date, dfpSnapshotLoadState.date, dfpSnapshotLoadState.status, isAddFlightTileModalOpen, isInitialSetupWizardActive, isUserEditing, liveSyncEnabled, loadSnapshotForDate, school, selectedEvent, setupTestProfile]);
 
     useEffect(() => {
@@ -51408,122 +51203,6 @@ appliedUpdates.forEach(update => {
         ) as ScheduleEvent | null;
     }, [eventSegmentsForDate, scopedPublishedEventsForDate]);
 
-    const getChangeBarTraceEventAnalysis = useCallback((candidateEvent: ScheduleEvent, baselineEvent: ScheduleEvent | undefined | null) => {
-        const reasons: string[] = [];
-        const epsilon = 0.001;
-        if (!baselineEvent) {
-            reasons.push('missing-baseline-event');
-        } else {
-            if (Math.abs(candidateEvent.startTime - baselineEvent.startTime) > epsilon) reasons.push('start-time');
-            if (Math.abs(candidateEvent.duration - baselineEvent.duration) > epsilon) reasons.push('duration');
-            if (candidateEvent.resourceId !== baselineEvent.resourceId) reasons.push('resource');
-            if (candidateEvent.instructor !== baselineEvent.instructor) reasons.push('instructor');
-            if (candidateEvent.student !== baselineEvent.student) reasons.push('student');
-            if (candidateEvent.pilot !== baselineEvent.pilot) reasons.push('pilot');
-            if ((candidateEvent.area || '') !== (baselineEvent.area || '')) reasons.push('area');
-        }
-        return {
-            isChanged: reasons.length > 0,
-            reasons,
-            current: summariseDfpMoveEvent(candidateEvent),
-            baseline: summariseDfpMoveEvent(baselineEvent),
-        };
-    }, []);
-
-    const buildChangeBarTraceContext = useCallback((reason: string) => {
-        const currentEventsForDate = publishedSchedules[date] || [];
-        const baselineEventsForDate = baselineSchedules[activeBaselineKey] || [];
-        const baselineById = new Map(baselineEventsForDate.map((baselineEvent) => [baselineEvent.id, baselineEvent]));
-        const alertsForDate = alertsDataByDate[date] || {};
-        const analysedEvents = currentEventsForDate.map((event) => {
-            const alertEntry = alertsForDate[event.id];
-            const responseStatuses = alertEntry?.responses && typeof alertEntry.responses === 'object'
-                ? Object.values(alertEntry.responses).map((response: any) => response?.status || '')
-                : [];
-            return {
-                ...getChangeBarTraceEventAnalysis(event, baselineById.get(event.id)),
-                alert: alertEntry ? {
-                    alertId: alertEntry.alertId || null,
-                    sentAt: alertEntry.sentAt || null,
-                    responseStatuses,
-                    recipientCount: Array.isArray(alertEntry.recipients) ? alertEntry.recipients.length : null,
-                } : null,
-            };
-        });
-        const changedEvents = analysedEvents.filter((entry) => entry.isChanged);
-        const missingCurrentIds = baselineEventsForDate
-            .filter((baselineEvent) => !currentEventsForDate.some((event) => event.id === baselineEvent.id))
-            .map(summariseDfpMoveEvent);
-        let localSnapshotSummary: Record<string, unknown> | null = null;
-        try {
-            const cacheKey = `dfp_snapshot_cache_${activeBaselineKey}`;
-            const cached = window.localStorage.getItem(cacheKey);
-            const parsed = cached ? JSON.parse(cached) : null;
-            localSnapshotSummary = {
-                cacheKey,
-                cachePresent: Boolean(cached),
-                cachedDate: parsed?.date || null,
-                cachedScheduleEventCount: Array.isArray(parsed?.scheduleEvents) ? parsed.scheduleEvents.length : null,
-                cachedBaselineEventCount: Array.isArray(parsed?.baselineEvents) ? parsed.baselineEvents.length : null,
-                cachedAlertEventIds: parsed?.alertsData && typeof parsed.alertsData === 'object' ? Object.keys(parsed.alertsData) : [],
-                cachedChangedSample: Array.isArray(parsed?.scheduleEvents) && Array.isArray(parsed?.baselineEvents)
-                    ? parsed.scheduleEvents.slice(0, 40).map((event: ScheduleEvent) => {
-                        const baselineEvent = parsed.baselineEvents.find((candidate: ScheduleEvent) => candidate.id === event.id);
-                        return getChangeBarTraceEventAnalysis(event, baselineEvent);
-                    }).filter((entry: any) => entry.isChanged).slice(0, 20)
-                    : [],
-            };
-        } catch (error) {
-            localSnapshotSummary = {
-                error: String(error),
-            };
-        }
-        return {
-            reason,
-            date,
-            school,
-            activeUnitCode,
-            activeOperationalModel,
-            activeBaselineKey,
-            visibleEventCount: currentEventsForDate.length,
-            baselineEventCount: baselineEventsForDate.length,
-            baselineKeys: Object.keys(baselineSchedules),
-            alertEventIds: Object.keys(alertsForDate),
-            changedEventCount: changedEvents.length,
-            changedEvents: changedEvents.slice(0, 80),
-            unchangedSample: analysedEvents.filter((entry) => !entry.isChanged).slice(0, 20),
-            baselineEventsMissingCurrentTile: missingCurrentIds.slice(0, 40),
-            localSnapshotSummary,
-            selectedEvent: summariseDfpMoveEvent(selectedEvent),
-            timestamp: new Date().toISOString(),
-        };
-    }, [
-        activeBaselineKey,
-        activeOperationalModel,
-        activeUnitCode,
-        alertsDataByDate,
-        baselineSchedules,
-        date,
-        getChangeBarTraceEventAnalysis,
-        publishedSchedules,
-        school,
-        selectedEvent,
-    ]);
-
-    useEffect(() => {
-        if (activeView !== 'Program Schedule') return;
-        appendDfpMoveChangeTrace('change-bar:program-schedule-state', buildChangeBarTraceContext('program-schedule-state'));
-    }, [activeView, buildChangeBarTraceContext]);
-
-    const handleDownloadChangeBarTrace = useCallback(() => {
-        const context = buildChangeBarTraceContext('manual-download');
-        appendDfpMoveChangeTrace('change-bar:manual-download', context);
-        downloadDfpMoveChangeTrace({
-            ...context,
-            currentUserName,
-        });
-    }, [buildChangeBarTraceContext, currentUserName]);
-
     const hasChangeBarNotification = useCallback((candidateEvent: ScheduleEvent | null): boolean => {
         if (!candidateEvent) return false;
         const baselineEvents = baselineSchedules[activeBaselineKey];
@@ -51562,18 +51241,6 @@ appliedUpdates.forEach(update => {
             ...previousBaselineEvents.filter((baselineEvent) => !acknowledgedIds.has(baselineEvent.id)),
             ...acknowledgedEvents.map((event) => JSON.parse(JSON.stringify(event))),
         ];
-        watchDfpMoveChangeEvents(acknowledgedEvents.map(event => event.id));
-        appendDfpMoveChangeTrace('change-bar:acknowledge', {
-            date,
-            baselineKey: activeBaselineKey,
-            acknowledgedEvents: acknowledgedEvents.map(summariseDfpMoveEvent),
-            previousBaselineEvents: previousBaselineEvents
-                .filter(event => acknowledgedIds.has(event.id))
-                .map(summariseDfpMoveEvent),
-            nextBaselineEvents: nextBaselineEvents
-                .filter(event => acknowledgedIds.has(event.id))
-                .map(summariseDfpMoveEvent),
-        });
         setBaselineSchedules((prev) => ({
             ...prev,
             [activeBaselineKey]: nextBaselineEvents,
@@ -51582,7 +51249,7 @@ appliedUpdates.forEach(update => {
             if (alertsDataByDate[date]?.[event.id]) void handleClearAlert(event.id);
         });
         if (currentEventsForDate.length > 0) {
-            persistScheduleForDate(date, currentEventsForDate, nextBaselineEvents);
+            persistScheduleForDate(date, currentEventsForDate, nextBaselineEvents, { replaceBaselineEvents: true });
         }
         setSuccessMessage(
             acknowledgedEvents.length === 1
@@ -52244,7 +51911,6 @@ appliedUpdates.forEach(update => {
                            detectConflictsForEvent={detectConflictsForEvent}
                            baselineEvents={baselineSchedules[activeBaselineKey]}
                            alertsData={alertsDataByDate[date] || {}}
-                           onDownloadChangeBarTrace={handleDownloadChangeBarTrace}
                            formatResourceLabel={formatResourceDisplayLabel}
                            aircraftConfigLabelsByResource={aircraftConfigLabelsByResource}
                            aircraftNumberSettings={aircraftNumberSettings}

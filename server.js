@@ -18453,6 +18453,7 @@ app.post('/api/daily-snapshot/save', async (req, res) => {
       staffLogbook,
       savedBy,
       baselineEvents,
+      replaceBaselineEvents,
       aircraftConfigState,
       currencyDefinitions,
       masterCurrencies,
@@ -18473,7 +18474,7 @@ app.post('/api/daily-snapshot/save', async (req, res) => {
 
     // Upsert: update if date exists, create if not
     const existing = await db.$queryRawUnsafe(
-      `SELECT id FROM "DailySnapshot" WHERE date = $1::text LIMIT 1`,
+      `SELECT id, "baselineEvents" FROM "DailySnapshot" WHERE date = $1::text LIMIT 1`,
       date
     );
 
@@ -18482,8 +18483,13 @@ app.post('/api/daily-snapshot/save', async (req, res) => {
     const dailySnapshotId = id;
 
     if (existing && existing.length > 0) {
-      // Only update baselineEvents if explicitly provided (preserves original published baseline)
-      if (baselineEvents !== undefined && baselineEvents !== null) {
+      const existingBaselineEvents = Array.isArray(existing[0].baselineEvents) ? existing[0].baselineEvents : [];
+      const shouldReplaceBaselineEvents = baselineEvents !== undefined
+        && baselineEvents !== null
+        && (replaceBaselineEvents === true || existingBaselineEvents.length === 0);
+      // Only update baselineEvents for an explicit baseline reset, or when no baseline exists yet.
+      // Routine edits and alert status updates must preserve the original published baseline.
+      if (shouldReplaceBaselineEvents) {
         await db.$executeRawUnsafe(`
           UPDATE "DailySnapshot"
           SET
