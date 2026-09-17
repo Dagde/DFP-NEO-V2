@@ -31629,6 +31629,22 @@ const App: React.FC = () => {
             : existingBaselineEvents.length > 0
                 ? existingBaselineEvents
                 : events;
+        if (!snapshotHasBaselineEvents && baselineEvts.length > 0) {
+            snap.baselineEvents = JSON.parse(JSON.stringify(baselineEvts));
+            const watchedEnrichedBaseline = baselineEvts.filter(event => isWatchingDfpMoveChangeEvent(event.id));
+            if (watchedEnrichedBaseline.length > 0) {
+                appendDfpMoveChangeTrace('snapshot:baseline-enriched-for-cache', {
+                    targetDate,
+                    snapshotSchool,
+                    snapshotUnit,
+                    source,
+                    replace,
+                    snapKey: snap.date,
+                    baselineEventCount: baselineEvts.length,
+                    watchedBaseline: watchedEnrichedBaseline.map(summariseDfpMoveEvent),
+                });
+            }
+        }
         const watchedSnapshotEvents = events.filter(event => isWatchingDfpMoveChangeEvent(event.id));
         const watchedCurrentEvents = (publishedSchedulesRef.current[targetDate] || []).filter(event => isWatchingDfpMoveChangeEvent(event.id));
         if (watchedSnapshotEvents.length > 0 || watchedCurrentEvents.length > 0) {
@@ -41977,6 +41993,23 @@ const App: React.FC = () => {
                 snapshotPayload.baselineEvents = existingBaselineEventsForDate;
             }
         }
+        const watchedPersistEvents = allEventsForDate.filter(event => isWatchingDfpMoveChangeEvent(event.id));
+        const watchedPersistBaselineEvents = Array.isArray(snapshotPayload.baselineEvents)
+            ? snapshotPayload.baselineEvents.filter((event: ScheduleEvent) => isWatchingDfpMoveChangeEvent(event.id))
+            : [];
+        if (watchedPersistEvents.length > 0 || watchedPersistBaselineEvents.length > 0) {
+            appendDfpMoveChangeTrace('snapshot:persist-payload', {
+                targetDate,
+                snapshotKey,
+                school,
+                unit: activeUnitCode,
+                scheduleEventCount: allEventsForDate.length,
+                baselineEventsIncluded: Array.isArray(snapshotPayload.baselineEvents),
+                baselineEventCount: Array.isArray(snapshotPayload.baselineEvents) ? snapshotPayload.baselineEvents.length : null,
+                watchedEvents: watchedPersistEvents.map(summariseDfpMoveEvent),
+                watchedBaselineEvents: watchedPersistBaselineEvents.map(summariseDfpMoveEvent),
+            });
+        }
 
         logScheduleDebug(`[Persist] Saving snapshot for ${targetDate} (${school} - ${activeUnitCode}), ${allEventsForDate.length} events...`);
         cacheDailySnapshot(snapshotKey, snapshotPayload, targetDate);
@@ -47534,18 +47567,20 @@ const App: React.FC = () => {
         _scheduleUpdatePersistTimer.current = window.setTimeout(() => {
             _scheduleUpdatePersistTimer.current = null;
             if (updatedEventsForDate.length > 0) {
+                const baselineEventsForPersist = baselineSchedules[activeBaselineKey] || [];
                 appendDfpMoveChangeTrace('schedule-update:persist-start', {
                     date,
                     appliedUpdates,
                     watchedEvents: updatedEventsForDate
                         .filter(event => appliedUpdates.some(update => update.eventId === event.id))
                         .map(summariseDfpMoveEvent),
-                    baselineEvents: (baselineSchedules[activeBaselineKey] || [])
+                    baselineEventCountForPayload: baselineEventsForPersist.length,
+                    baselineEvents: baselineEventsForPersist
                         .filter(event => appliedUpdates.some(update => update.eventId === event.id))
                         .map(summariseDfpMoveEvent),
                 });
                 activeDfpSaveInFlightRef.current += 1;
-                persistScheduleForDate(date, updatedEventsForDate)
+                persistScheduleForDate(date, updatedEventsForDate, baselineEventsForPersist)
                     .then((success) => {
                         appendDfpMoveChangeTrace('schedule-update:persist-complete', {
                             date,

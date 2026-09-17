@@ -41201,10 +41201,8 @@ const ScheduleView = ({
                 ]
               }
             ),
-            isNeoBuild && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "neo-build-label", children: "NEO Build" })
-          ] }) }),
-          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { "data-schedule-time-header": "true", className: "sticky top-0 z-20 bg-gray-800 border-b border-gray-700 relative", children: [
-            onDownloadChangeBarTrace && !isNeoBuild && /* @__PURE__ */ jsxRuntimeExports.jsx(
+            isNeoBuild && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "neo-build-label", children: "NEO Build" }),
+            onDownloadChangeBarTrace && !isNeoBuild && /* @__PURE__ */ jsxRuntimeExports.jsxs(
               "button",
               {
                 type: "button",
@@ -41212,10 +41210,17 @@ const ScheduleView = ({
                   event.stopPropagation();
                   onDownloadChangeBarTrace();
                 },
-                className: "absolute right-2 top-1 z-30 rounded border border-cyan-400/40 bg-slate-900/90 px-2 py-0.5 text-[11px] font-bold uppercase tracking-[0.08em] text-cyan-100 shadow hover:border-cyan-300 hover:bg-slate-800",
-                children: "Download Change Bar Trace"
+                className: "h-full min-w-[72px] rounded-md border border-cyan-400/40 bg-slate-900 px-2 text-[9px] font-black uppercase leading-tight tracking-[0.06em] text-cyan-100 shadow hover:border-cyan-300 hover:bg-slate-800",
+                title: "Download change bar trace",
+                children: [
+                  "Download",
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("br", {}),
+                  "Trace"
+                ]
               }
-            ),
+            )
+          ] }) }),
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { "data-schedule-time-header": "true", className: "sticky top-0 z-20 bg-gray-800 border-b border-gray-700 relative", children: [
             isReadOnly && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "absolute left-2 top-1 z-30 flex items-center gap-2 rounded border border-amber-400/30 bg-gray-900/85 px-2 py-0.5 text-[11px] font-semibold uppercase tracking-wide text-amber-200 shadow", children: [
               /* @__PURE__ */ jsxRuntimeExports.jsx("span", { children: "Read-only archive" }),
               onOpenCurrentDfp && /* @__PURE__ */ jsxRuntimeExports.jsx(
@@ -131680,6 +131685,22 @@ const App = () => {
     const existingBaselineKey = getDailySnapshotKey(targetDate, snapshotSchool, snapshotUnit);
     const existingBaselineEvents = baselineSchedules[existingBaselineKey] || [];
     const baselineEvts = snapshotHasBaselineEvents ? snapshotBaselineEvents : existingBaselineEvents.length > 0 ? existingBaselineEvents : events2;
+    if (!snapshotHasBaselineEvents && baselineEvts.length > 0) {
+      snap2.baselineEvents = JSON.parse(JSON.stringify(baselineEvts));
+      const watchedEnrichedBaseline = baselineEvts.filter((event) => isWatchingDfpMoveChangeEvent(event.id));
+      if (watchedEnrichedBaseline.length > 0) {
+        appendDfpMoveChangeTrace("snapshot:baseline-enriched-for-cache", {
+          targetDate,
+          snapshotSchool,
+          snapshotUnit,
+          source,
+          replace,
+          snapKey: snap2.date,
+          baselineEventCount: baselineEvts.length,
+          watchedBaseline: watchedEnrichedBaseline.map(summariseDfpMoveEvent)
+        });
+      }
+    }
     const watchedSnapshotEvents = events2.filter((event) => isWatchingDfpMoveChangeEvent(event.id));
     const watchedCurrentEvents = (publishedSchedulesRef.current[targetDate] || []).filter((event) => isWatchingDfpMoveChangeEvent(event.id));
     if (watchedSnapshotEvents.length > 0 || watchedCurrentEvents.length > 0) {
@@ -140104,6 +140125,21 @@ ${error instanceof Error ? error.message : String(error)}`,
         snapshotPayload.baselineEvents = existingBaselineEventsForDate;
       }
     }
+    const watchedPersistEvents = allEventsForDate.filter((event) => isWatchingDfpMoveChangeEvent(event.id));
+    const watchedPersistBaselineEvents = Array.isArray(snapshotPayload.baselineEvents) ? snapshotPayload.baselineEvents.filter((event) => isWatchingDfpMoveChangeEvent(event.id)) : [];
+    if (watchedPersistEvents.length > 0 || watchedPersistBaselineEvents.length > 0) {
+      appendDfpMoveChangeTrace("snapshot:persist-payload", {
+        targetDate,
+        snapshotKey,
+        school,
+        unit: activeUnitCode,
+        scheduleEventCount: allEventsForDate.length,
+        baselineEventsIncluded: Array.isArray(snapshotPayload.baselineEvents),
+        baselineEventCount: Array.isArray(snapshotPayload.baselineEvents) ? snapshotPayload.baselineEvents.length : null,
+        watchedEvents: watchedPersistEvents.map(summariseDfpMoveEvent),
+        watchedBaselineEvents: watchedPersistBaselineEvents.map(summariseDfpMoveEvent)
+      });
+    }
     logScheduleDebug(`[Persist] Saving snapshot for ${targetDate} (${school} - ${activeUnitCode}), ${allEventsForDate.length} events...`);
     cacheDailySnapshot(snapshotKey, snapshotPayload, targetDate);
     try {
@@ -144682,14 +144718,16 @@ Do not hard refresh yet. Try Publish again, then confirm the save succeeds.`,
     _scheduleUpdatePersistTimer.current = window.setTimeout(() => {
       _scheduleUpdatePersistTimer.current = null;
       if (updatedEventsForDate.length > 0) {
+        const baselineEventsForPersist = baselineSchedules[activeBaselineKey] || [];
         appendDfpMoveChangeTrace("schedule-update:persist-start", {
           date,
           appliedUpdates,
           watchedEvents: updatedEventsForDate.filter((event) => appliedUpdates.some((update) => update.eventId === event.id)).map(summariseDfpMoveEvent),
-          baselineEvents: (baselineSchedules[activeBaselineKey] || []).filter((event) => appliedUpdates.some((update) => update.eventId === event.id)).map(summariseDfpMoveEvent)
+          baselineEventCountForPayload: baselineEventsForPersist.length,
+          baselineEvents: baselineEventsForPersist.filter((event) => appliedUpdates.some((update) => update.eventId === event.id)).map(summariseDfpMoveEvent)
         });
         activeDfpSaveInFlightRef.current += 1;
-        persistScheduleForDate(date, updatedEventsForDate).then((success) => {
+        persistScheduleForDate(date, updatedEventsForDate, baselineEventsForPersist).then((success) => {
           appendDfpMoveChangeTrace("schedule-update:persist-complete", {
             date,
             success,

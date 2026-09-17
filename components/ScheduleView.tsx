@@ -13505,23 +13505,24 @@ const ScheduleView: React.FC<ScheduleViewProps> = ({
                         {isNeoBuild && (
                             <div className="neo-build-label">NEO Build</div>
                         )}
+                        {onDownloadChangeBarTrace && !isNeoBuild && (
+                            <button
+                                type="button"
+                                onClick={(event) => {
+                                    event.stopPropagation();
+                                    onDownloadChangeBarTrace();
+                                }}
+                                className="h-full min-w-[72px] rounded-md border border-cyan-400/40 bg-slate-900 px-2 text-[9px] font-black uppercase leading-tight tracking-[0.06em] text-cyan-100 shadow hover:border-cyan-300 hover:bg-slate-800"
+                                title="Download change bar trace"
+                            >
+                                Download<br />Trace
+                            </button>
+                        )}
                     </div>
                 </div>
 
                 {/* Time Header (Top Row) */}
                 <div data-schedule-time-header="true" className="sticky top-0 z-20 bg-gray-800 border-b border-gray-700 relative">
-                    {onDownloadChangeBarTrace && !isNeoBuild && (
-                        <button
-                            type="button"
-                            onClick={(event) => {
-                                event.stopPropagation();
-                                onDownloadChangeBarTrace();
-                            }}
-                            className="absolute right-2 top-1 z-30 rounded border border-cyan-400/40 bg-slate-900/90 px-2 py-0.5 text-[11px] font-bold uppercase tracking-[0.08em] text-cyan-100 shadow hover:border-cyan-300 hover:bg-slate-800"
-                        >
-                            Download Change Bar Trace
-                        </button>
-                    )}
                     {isReadOnly && (
                         <div className="absolute left-2 top-1 z-30 flex items-center gap-2 rounded border border-amber-400/30 bg-gray-900/85 px-2 py-0.5 text-[11px] font-semibold uppercase tracking-wide text-amber-200 shadow">
                             <span>Read-only archive</span>
