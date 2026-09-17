@@ -140039,6 +140039,10 @@ ${error instanceof Error ? error.message : String(error)}`,
       aircraftConfigState: currentAircraftConfigState,
       savedBy
     };
+    const existingAlertsDataForDate = alertsDataByDate[targetDate];
+    if (existingAlertsDataForDate && Object.keys(existingAlertsDataForDate).length > 0) {
+      snapshotPayload.alertsData = existingAlertsDataForDate;
+    }
     if (baselineEventsForDate !== void 0) {
       snapshotPayload.baselineEvents = baselineEventsForDate;
     } else {
@@ -144074,9 +144078,10 @@ ${conflictLines.join("\n")}${moreText}`,
       ...prev,
       [targetDate]: finalEvents
     }));
+    const pauseBaselineKey = getDailySnapshotKey(targetDate, school, activeUnitCode);
     setBaselineSchedules((prev) => ({
       ...prev,
-      [`${school}:${targetDate}`]: JSON.parse(JSON.stringify(finalEvents))
+      [pauseBaselineKey]: JSON.parse(JSON.stringify(finalEvents))
     }));
     setTimeout(() => {
       setPublishedSchedules((currentSchedules) => {
@@ -144087,7 +144092,7 @@ ${conflictLines.join("\n")}${moreText}`,
         return currentSchedules;
       });
     }, 500);
-    persistScheduleForDate(targetDate, finalEvents);
+    persistScheduleForDate(targetDate, finalEvents, finalEvents);
     const cancelledCount = finalEvents.filter(
       (e) => e.isCancelled && e.cancellationCode === "OPS_PAUSE"
     ).length;
@@ -144162,9 +144167,10 @@ ${conflictLines.join("\n")}${moreText}`,
         return currentSchedules;
       });
     }, 500);
+    const publishBaselineKey = getDailySnapshotKey(buildDfpDate, school, activeUnitCode);
     setBaselineSchedules((prev) => ({
       ...prev,
-      [`${school}:${buildDfpDate}`]: JSON.parse(JSON.stringify(newEventsForDate))
+      [publishBaselineKey]: JSON.parse(JSON.stringify(newEventsForDate))
     }));
     const publishDisplayName = authUser ? formatAuthLoginName(authUser) : signedInDisplayName || currentUserName || "Unknown User";
     const publishRank = String(sessionUser?.militaryRank || currentUser2?.rank || "").trim();
@@ -144262,6 +144268,7 @@ ${conflictLines.join("\n")}${moreText}`,
         }
       });
       const snapshotKey = getDailySnapshotKey(buildDfpDate);
+      const existingAlertsDataForDate = alertsDataByDate[buildDfpDate];
       const snapshotPayload = {
         date: snapshotKey,
         locationCode: school,
@@ -144282,7 +144289,8 @@ ${conflictLines.join("\n")}${moreText}`,
         aircraftConfigState: currentAircraftConfigState,
         savedBy: authUser?.userId || authUser?.username || null,
         // Store the baseline (original published events) for change-bar detection after page reload
-        baselineEvents: newEventsForDate
+        baselineEvents: newEventsForDate,
+        ...existingAlertsDataForDate && Object.keys(existingAlertsDataForDate).length > 0 ? { alertsData: existingAlertsDataForDate } : {}
       };
       const apiBase = getApiBaseUrl();
       loadedSnapshotDates.current.add(snapshotKey);

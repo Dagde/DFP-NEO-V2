@@ -41961,6 +41961,10 @@ const App: React.FC = () => {
             aircraftConfigState: currentAircraftConfigState,
             savedBy,
         };
+        const existingAlertsDataForDate = alertsDataByDate[targetDate];
+        if (existingAlertsDataForDate && Object.keys(existingAlertsDataForDate).length > 0) {
+            snapshotPayload.alertsData = existingAlertsDataForDate;
+        }
         // Preserve the original published baseline for change-bar detection after page reload.
         // Initial publish passes an explicit baseline. Later tile moves/edits should keep
         // the existing baseline instead of allowing the edited schedule to become baseline.
@@ -46845,9 +46849,10 @@ const App: React.FC = () => {
         }));
 
         // 2. Snapshot as new baseline (for change-detection highlighting)
+        const pauseBaselineKey = getDailySnapshotKey(targetDate, school, activeUnitCode);
         setBaselineSchedules((prev) => ({
             ...prev,
-            [`${school}:${targetDate}`]: JSON.parse(JSON.stringify(finalEvents)),
+            [pauseBaselineKey]: JSON.parse(JSON.stringify(finalEvents)),
         }));
 
         // 3. Sync training reports with the updated schedule (delayed to let state settle)
@@ -46862,7 +46867,7 @@ const App: React.FC = () => {
         }, 500);
 
         // 4. Persist to database
-        persistScheduleForDate(targetDate, finalEvents);
+        persistScheduleForDate(targetDate, finalEvents, finalEvents);
 
         // 5. Audit log
         const cancelledCount = finalEvents.filter(e =>
@@ -46969,10 +46974,11 @@ const App: React.FC = () => {
         }, 500);
 
         // Snapshot the schedule as the baseline for change detection
+        const publishBaselineKey = getDailySnapshotKey(buildDfpDate, school, activeUnitCode);
         setBaselineSchedules((prev) => ({
             ...prev,
 
-            [`${school}:${buildDfpDate}`]: JSON.parse(JSON.stringify(newEventsForDate))
+            [publishBaselineKey]: JSON.parse(JSON.stringify(newEventsForDate))
         }));
 
         const publishDisplayName = authUser
@@ -47093,6 +47099,7 @@ const App: React.FC = () => {
             });
 
             const snapshotKey = getDailySnapshotKey(buildDfpDate);
+            const existingAlertsDataForDate = alertsDataByDate[buildDfpDate];
             const snapshotPayload = {
                 date: snapshotKey,
                 locationCode: school,
@@ -47114,6 +47121,9 @@ const App: React.FC = () => {
                 savedBy: authUser?.userId || (authUser as any)?.username || null,
                 // Store the baseline (original published events) for change-bar detection after page reload
                 baselineEvents: newEventsForDate,
+                ...(existingAlertsDataForDate && Object.keys(existingAlertsDataForDate).length > 0
+                    ? { alertsData: existingAlertsDataForDate }
+                    : {}),
             };
 
             const apiBase = getApiBaseUrl();
