@@ -53237,10 +53237,59 @@ appliedUpdates.forEach(update => {
                             )
                         )),
                     }));
+                const dashboardTeamAssignmentKey = dashboardStaff
+                    ? `staff-${dashboardStaff.idNumber}-${dashboardStaff.name}`
+                    : dashboardTrainee
+                        ? `trainee-${dashboardTrainee.idNumber}-${dashboardTrainee.fullName || dashboardTrainee.name}`
+                        : (getCurrentUserId() || dashboardUserName || 'current-user');
+                const activeDashboardOrganisation = (platformConfig?.organisations || []).find((organisation: any) => (
+                    String(organisation.status || 'ACTIVE').toUpperCase() === 'ACTIVE'
+                )) || platformConfig?.organisations?.[0];
+                const dashboardTeamAssignmentsByUser = activeDashboardOrganisation?.settings?.myTeamAssignments || {};
+                const dashboardTeamAssignments = {
+                    staffIds: Array.isArray(dashboardTeamAssignmentsByUser?.[dashboardTeamAssignmentKey]?.staffIds)
+                        ? dashboardTeamAssignmentsByUser[dashboardTeamAssignmentKey].staffIds
+                        : [],
+                    traineeIds: Array.isArray(dashboardTeamAssignmentsByUser?.[dashboardTeamAssignmentKey]?.traineeIds)
+                        ? dashboardTeamAssignmentsByUser[dashboardTeamAssignmentKey].traineeIds
+                        : [],
+                };
 
                 return <MyDashboard
                             userName={dashboardUserName}
                             currentUserId={getCurrentUserId() ?? undefined}
+                            currentDate={date}
+                            currentUserPermission={currentUserPermission}
+                            operationalModel={activeOperationalModel}
+                            currentAircraftTypeCode={activeRuntimeAircraftTypeCode}
+                            allScheduleEvents={allPublishedEvents}
+                            myTeamAssignments={dashboardTeamAssignments}
+                            onUpdateMyTeamAssignments={(assignments) => {
+                                const savedAssignments = {
+                                    staffIds: Array.from(new Set((assignments.staffIds || []).map((value: any) => String(value || '').trim()).filter(Boolean))),
+                                    traineeIds: Array.from(new Set((assignments.traineeIds || []).map((value: any) => String(value || '').trim()).filter(Boolean))),
+                                };
+                                handleUpdatePlatformConfigFromSchedule((current) => ({
+                                    ...current,
+                                    organisations: (current.organisations || []).map((organisation: any, index: number) => {
+                                        const isTarget = activeDashboardOrganisation
+                                            ? organisation === activeDashboardOrganisation || String(organisation.id || '') === String(activeDashboardOrganisation.id || '')
+                                            : index === 0;
+                                        if (!isTarget) return organisation;
+                                        const existingSettings = organisation.settings || {};
+                                        return {
+                                            ...organisation,
+                                            settings: {
+                                                ...existingSettings,
+                                                myTeamAssignments: {
+                                                    ...(existingSettings.myTeamAssignments || {}),
+                                                    [dashboardTeamAssignmentKey]: savedAssignments,
+                                                },
+                                            },
+                                        };
+                                    }),
+                                }));
+                            }}
                             userRank={dashboardStaff?.rank || dashboardTrainee?.rank || sessionUser?.militaryRank || sessionUser?.role || ''}
                             events={eventsForDate.filter(e => (
                                 [e.instructor, e.pilot, e.fixedCrewPic, e.crew]

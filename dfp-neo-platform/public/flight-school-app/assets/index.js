@@ -62418,6 +62418,67 @@ const isDashboardStandbyEvent = (event) => {
   ].map((value) => String(value || "").toUpperCase());
   return values.some((value) => value.startsWith("STBY") || value.startsWith("BNF-STBY") || value.startsWith("FTD-STBY") || /\bSTBY\b/.test(value) || value.includes("STANDBY"));
 };
+const MY_TEAM_PERIODS = [7, 30, 90, 365];
+const normaliseMyTeamId = (value) => String(value || "").trim();
+const getStaffTeamId = (staff) => normaliseMyTeamId(staff.id) || `staff-${staff.idNumber}-${staff.name}`;
+const getTraineeTeamId = (trainee) => normaliseMyTeamId(trainee.id) || `trainee-${trainee.idNumber}-${stripDashboardCourseFromName(trainee.fullName || trainee.name)}`;
+const parseDashboardEventDate = (event) => {
+  const value = String(event.date || "").trim();
+  if (!value) return null;
+  const parsed = (/* @__PURE__ */ new Date(`${value}T00:00:00Z`)).getTime();
+  return Number.isFinite(parsed) ? parsed : null;
+};
+const dashboardDateAtUtcStart = (value) => {
+  const text = String(value || "").trim();
+  const parsed = text ? (/* @__PURE__ */ new Date(`${text}T00:00:00Z`)).getTime() : NaN;
+  if (Number.isFinite(parsed)) return parsed;
+  const now = /* @__PURE__ */ new Date();
+  return Date.UTC(now.getFullYear(), now.getMonth(), now.getDate());
+};
+const isDashboardFlightEvent = (event) => String(event.type || "").toLowerCase() === "flight";
+const isDashboardSimulatorEvent = (event) => {
+  const type = String(event.type || "").toLowerCase();
+  const resource = String(event.resourceId || event.flightNumber || "").toLowerCase();
+  return type === "ftd" || type === "cpt" || resource.includes("sim") || resource.includes("ftd") || resource.includes("cpt");
+};
+const isDashboardCurrencyEvent = (event) => {
+  const values = [
+    event.currency,
+    event.eventCategory,
+    event.currencyAudience,
+    event.flightNumber,
+    event.eventCode
+  ].map((value) => String(value || "").toLowerCase());
+  return values.some((value) => value.includes("currency") || value.includes("curr"));
+};
+const getDashboardEventPersonNames = (event) => {
+  const names = [
+    event.instructor,
+    event.student,
+    event.pilot,
+    event.crew,
+    event.fixedCrewPic,
+    ...Array.isArray(event.attendees) ? event.attendees : [],
+    ...Array.isArray(event.personnelRefs) ? event.personnelRefs.map((ref) => ref.name) : []
+  ];
+  return names.map((name) => String(name || "").trim()).filter(Boolean);
+};
+const dashboardEventHasPerson = (event, personName) => getDashboardEventPersonNames(event).some((name) => dashboardPersonNamesMatch(name, personName));
+const formatDashboardMetricNumber = (value, decimals = 1) => {
+  if (!Number.isFinite(value)) return "0";
+  if (Math.abs(value - Math.round(value)) < 0.05) return String(Math.round(value));
+  return value.toFixed(decimals);
+};
+const formatDashboardDaysSince = (events, currentDate) => {
+  const currentTime = dashboardDateAtUtcStart(currentDate);
+  const latest = events.map(parseDashboardEventDate).filter((value) => value !== null && value <= currentTime).sort((a, b) => b - a)[0];
+  if (!latest) return "No flight";
+  return String(Math.max(0, Math.floor((currentTime - latest) / 864e5)));
+};
+const buildEmptyMyTeamPeriodMetrics = () => MY_TEAM_PERIODS.reduce((acc, period) => {
+  acc[period] = { events: 0, flights: 0, flightHours: 0, currencyFlights: 0, simulatorEvents: 0 };
+  return acc;
+}, {});
 const getDashboardTrainingReportSuppressionIds = (report) => {
   const traineeName = String(report.traineeFullName || "").trim();
   return [
@@ -62673,6 +62734,13 @@ const deleteDashboardMessageFromApi = async (messageId) => {
 const MyDashboard = ({
   userName,
   currentUserId,
+  currentDate,
+  currentUserPermission,
+  operationalModel,
+  currentAircraftTypeCode,
+  allScheduleEvents = [],
+  myTeamAssignments = { staffIds: [], traineeIds: [] },
+  onUpdateMyTeamAssignments,
   userRank,
   events,
   onSelectEvent,
@@ -62709,6 +62777,12 @@ const MyDashboard = ({
   const [staffPickerEntry, setStaffPickerEntry] = reactExports.useState(null);
   const dashboardActionButtonClass = "btn-aluminium-brushed relative flex h-[41px] w-[56px] shrink-0 items-center justify-center rounded-md px-1 py-1 text-center text-[9px] font-semibold leading-[0.95]";
   const [isMessagesOpen, setIsMessagesOpen] = reactExports.useState(false);
+  const [isMyTeamOpen, setIsMyTeamOpen] = reactExports.useState(false);
+  const [isMyTeamEditing, setIsMyTeamEditing] = reactExports.useState(false);
+  const [myTeamStaffDraftIds, setMyTeamStaffDraftIds] = reactExports.useState(() => new Set(myTeamAssignments.staffIds || []));
+  const [myTeamTraineeDraftIds, setMyTeamTraineeDraftIds] = reactExports.useState(() => new Set(myTeamAssignments.traineeIds || []));
+  const [myTeamFlightFilter, setMyTeamFlightFilter] = reactExports.useState("all");
+  const [myTeamCrewFilter, setMyTeamCrewFilter] = reactExports.useState("all");
   const [isContactPickerOpen, setIsContactPickerOpen] = reactExports.useState(false);
   const [messageToText, setMessageToText] = reactExports.useState("");
   const [selectedMessageContact, setSelectedMessageContact] = reactExports.useState(null);
@@ -62743,6 +62817,11 @@ const MyDashboard = ({
   const activeConversationScrollRef = reactExports.useRef(null);
   const activeConversationEndRef = reactExports.useRef(null);
   const activeConversationKeyRef = reactExports.useRef("");
+  reactExports.useEffect(() => {
+    if (isMyTeamEditing) return;
+    setMyTeamStaffDraftIds(new Set(myTeamAssignments.staffIds || []));
+    setMyTeamTraineeDraftIds(new Set(myTeamAssignments.traineeIds || []));
+  }, [isMyTeamEditing, myTeamAssignments.staffIds?.join("|"), myTeamAssignments.traineeIds?.join("|")]);
   const roleTone = (role) => {
     const value = String(role).toLowerCase();
     if (isPilotAssignableCrewPosition(role, crewPositionTerminology)) return "text-sky-300 border-sky-500/30";
@@ -63753,6 +63832,131 @@ const MyDashboard = ({
       return !staffReportCodeDates.has(codeDate);
     });
   }, [incompleteTrainingReports, visibleStaffTrainingReportsToComplete]);
+  const canEditMyTeam = ["SUPER ADMIN", "SUPER_ADMIN", "ADMIN"].includes(String(currentUserPermission || "").trim().toUpperCase());
+  const isFlightSchoolDashboard = String(operationalModel || "").toLowerCase().replace(/[\s-]+/g, "_") === "flight_school";
+  const myTeamCurrentDate = currentDate || (/* @__PURE__ */ new Date()).toISOString().slice(0, 10);
+  const myTeamReferenceTime = dashboardDateAtUtcStart(myTeamCurrentDate);
+  const myTeamEvents = reactExports.useMemo(() => (allScheduleEvents.length > 0 ? allScheduleEvents : events).filter((event) => parseDashboardEventDate(event) !== null && !event.isCancelled), [allScheduleEvents, events]);
+  const myTeamUnitMatches = (unitValue) => {
+    if (dashboardUserUnitSet.size === 0) return true;
+    const units = String(unitValue || "").split(/[+/,&]/).map((unit) => unit.trim().toUpperCase()).filter(Boolean);
+    if (units.length === 0) return true;
+    return units.some((unit) => dashboardUserUnitSet.has(unit));
+  };
+  const myTeamStaffOptions = reactExports.useMemo(() => messageContactStaffOptions.filter((staff) => staff?.name && myTeamUnitMatches(staff.unit)).sort((a, b) => compareDashboardRank(a.rank, b.rank) || String(a.name || "").localeCompare(String(b.name || ""))), [messageContactStaffOptions, dashboardUserUnitSet]);
+  const myTeamTraineeOptions = reactExports.useMemo(() => messageContactTraineeOptions.filter((trainee) => (trainee?.fullName || trainee?.name) && myTeamUnitMatches(trainee.unit)).sort((a, b) => compareDashboardRank(a.rank, b.rank) || String(a.fullName || a.name || "").localeCompare(String(b.fullName || b.name || ""))), [messageContactTraineeOptions, dashboardUserUnitSet]);
+  const myTeamFlightOptions = reactExports.useMemo(() => {
+    const values = /* @__PURE__ */ new Set();
+    [...myTeamStaffOptions, ...myTeamTraineeOptions].forEach((person) => {
+      const flight = String(person.flight || "").trim();
+      if (flight) values.add(flight);
+    });
+    return Array.from(values).sort((a, b) => a.localeCompare(b));
+  }, [myTeamStaffOptions, myTeamTraineeOptions]);
+  const myTeamCrewOptions = reactExports.useMemo(() => {
+    const values = /* @__PURE__ */ new Set();
+    [...myTeamStaffOptions, ...myTeamTraineeOptions].forEach((person) => {
+      const crew = String(person.crew || "").trim();
+      if (crew) values.add(crew);
+    });
+    return Array.from(values).sort((a, b) => a.localeCompare(b));
+  }, [myTeamStaffOptions, myTeamTraineeOptions]);
+  const personMatchesMyTeamFilters = (person) => {
+    if (myTeamFlightFilter !== "all" && String(person.flight || "") !== myTeamFlightFilter) return false;
+    if (myTeamCrewFilter !== "all" && String(person.crew || "") !== myTeamCrewFilter) return false;
+    return true;
+  };
+  const filteredMyTeamStaffOptions = reactExports.useMemo(() => myTeamStaffOptions.filter(personMatchesMyTeamFilters), [myTeamStaffOptions, myTeamFlightFilter, myTeamCrewFilter]);
+  const filteredMyTeamTraineeOptions = reactExports.useMemo(() => myTeamTraineeOptions.filter(personMatchesMyTeamFilters), [myTeamTraineeOptions, myTeamFlightFilter, myTeamCrewFilter]);
+  const selectedMyTeamStaff = reactExports.useMemo(() => {
+    const ids = new Set(myTeamAssignments.staffIds || []);
+    return myTeamStaffOptions.filter((staff) => ids.has(getStaffTeamId(staff)));
+  }, [myTeamAssignments.staffIds?.join("|"), myTeamStaffOptions]);
+  const selectedMyTeamTrainees = reactExports.useMemo(() => {
+    const ids = new Set(myTeamAssignments.traineeIds || []);
+    return myTeamTraineeOptions.filter((trainee) => ids.has(getTraineeTeamId(trainee)));
+  }, [myTeamAssignments.traineeIds?.join("|"), myTeamTraineeOptions]);
+  const getEventsForPerson = (personName) => myTeamEvents.filter((event) => dashboardEventHasPerson(event, personName));
+  const buildPersonPeriodMetrics = (personEvents) => {
+    const metrics = buildEmptyMyTeamPeriodMetrics();
+    personEvents.forEach((event) => {
+      const eventTime = parseDashboardEventDate(event);
+      if (eventTime === null || eventTime > myTeamReferenceTime) return;
+      const ageDays = Math.floor((myTeamReferenceTime - eventTime) / 864e5);
+      MY_TEAM_PERIODS.forEach((period) => {
+        if (ageDays >= period) return;
+        metrics[period].events += 1;
+        if (isDashboardFlightEvent(event)) {
+          metrics[period].flights += 1;
+          metrics[period].flightHours += Number(event.duration || 0);
+        }
+        if (isDashboardCurrencyEvent(event)) metrics[period].currencyFlights += 1;
+        if (isDashboardSimulatorEvent(event)) metrics[period].simulatorEvents += 1;
+      });
+    });
+    return metrics;
+  };
+  const buildStaffMetrics = (staff) => {
+    const staffEvents = getEventsForPerson(staff.name);
+    const flightEvents = staffEvents.filter(isDashboardFlightEvent);
+    const completedGrades = Array.from(pt051Assessments.values()).filter((assessment) => assessment.isCompleted && dashboardPersonNamesMatch(assessment.instructorName, staff.name)).map((assessment) => typeof assessment.overallGrade === "number" ? assessment.overallGrade : Number(assessment.overallGrade)).filter((value) => Number.isFinite(value));
+    const averageGrade = completedGrades.length ? formatDashboardMetricNumber(completedGrades.reduce((sum, value) => sum + value, 0) / completedGrades.length) : "No grade";
+    return {
+      periods: buildPersonPeriodMetrics(staffEvents),
+      daysSinceLastFlight: formatDashboardDaysSince(flightEvents, myTeamCurrentDate),
+      aircraftTypeHours: flightEvents.filter((event) => {
+        const aircraftCode = String(currentAircraftTypeCode || "").trim().toUpperCase();
+        if (!aircraftCode) return true;
+        return [
+          event.resourceId,
+          event.aircraftTypeCode,
+          event.aircraftType,
+          event.aircraft
+        ].some((value) => String(value || "").trim().toUpperCase() === aircraftCode);
+      }).reduce((sum, event) => sum + Number(event.duration || 0), 0),
+      instructorHours: flightEvents.filter((event) => dashboardPersonNamesMatch(event.instructor, staff.name)).reduce((sum, event) => sum + Number(event.duration || 0), 0),
+      averageOverallScore: averageGrade
+    };
+  };
+  const buildTraineeMetrics = (trainee) => {
+    const traineeName = trainee.fullName || trainee.name;
+    const traineeEvents = getEventsForPerson(traineeName);
+    const flightEvents = traineeEvents.filter(isDashboardFlightEvent);
+    const periodMetrics = buildPersonPeriodMetrics(traineeEvents);
+    const eventDates = traineeEvents.map(parseDashboardEventDate).filter((value) => value !== null && value <= myTeamReferenceTime).sort((a, b) => a - b);
+    const firstEventTime = eventDates[0];
+    const weeksSinceFirstEvent = firstEventTime ? Math.max(1, (myTeamReferenceTime - firstEventTime) / (864e5 * 7)) : 0;
+    const averageEventsPerWeek = weeksSinceFirstEvent ? formatDashboardMetricNumber(traineeEvents.length / weeksSinceFirstEvent) : "0";
+    const lastFourWeekCount = traineeEvents.filter((event) => {
+      const eventTime = parseDashboardEventDate(event);
+      return eventTime !== null && eventTime <= myTeamReferenceTime && (myTeamReferenceTime - eventTime) / 864e5 < 28;
+    }).length;
+    const previousFourWeekCount = traineeEvents.filter((event) => {
+      const eventTime = parseDashboardEventDate(event);
+      if (eventTime === null || eventTime > myTeamReferenceTime) return false;
+      const ageDays = (myTeamReferenceTime - eventTime) / 864e5;
+      return ageDays >= 28 && ageDays < 56;
+    }).length;
+    const formatInstructorShare = (count) => ({
+      count,
+      percent: flightEvents.length ? `${Math.round(count / flightEvents.length * 100)}%` : "0%"
+    });
+    const primaryNames = Array.isArray(trainee.primaryInstructor) ? trainee.primaryInstructor : [trainee.primaryInstructor].filter(Boolean);
+    const secondaryNames = Array.isArray(trainee.secondaryInstructor) ? trainee.secondaryInstructor : [trainee.secondaryInstructor].filter(Boolean);
+    const primaryCount = flightEvents.filter((event) => primaryNames.some((name) => dashboardPersonNamesMatch(event.instructor, name))).length;
+    const secondaryCount = flightEvents.filter((event) => secondaryNames.some((name) => dashboardPersonNamesMatch(event.instructor, name))).length;
+    const otherCount = Math.max(0, flightEvents.length - primaryCount - secondaryCount);
+    const progressPrefix = lastFourWeekCount > previousFourWeekCount ? "+" : "";
+    return {
+      periods: periodMetrics,
+      daysSinceLastFlight: formatDashboardDaysSince(flightEvents, myTeamCurrentDate),
+      averageEventsPerWeek,
+      fourWeekProgress: `${progressPrefix}${lastFourWeekCount - previousFourWeekCount} events`,
+      primaryInstructorFlights: formatInstructorShare(primaryCount),
+      secondaryInstructorFlights: formatInstructorShare(secondaryCount),
+      otherInstructorFlights: formatInstructorShare(otherCount)
+    };
+  };
   const confirmDeleteReportMessage = async (label, onDelete) => {
     const confirmed = await showDarkConfirm(
       `Delete ${label} from Reports to be completed? This removes the dashboard message and stops it returning.`,
@@ -63763,6 +63967,157 @@ const MyDashboard = ({
       await onDelete();
     }
   };
+  const saveMyTeamAssignments = () => {
+    onUpdateMyTeamAssignments?.({
+      staffIds: Array.from(myTeamStaffDraftIds),
+      traineeIds: Array.from(myTeamTraineeDraftIds)
+    });
+    setIsMyTeamEditing(false);
+  };
+  const toggleMyTeamStaff = (staff) => {
+    const id = getStaffTeamId(staff);
+    setMyTeamStaffDraftIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  };
+  const toggleMyTeamTrainee = (trainee) => {
+    const id = getTraineeTeamId(trainee);
+    setMyTeamTraineeDraftIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  };
+  const renderPeriodMetrics = (periods) => /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-3 overflow-x-auto rounded-lg border border-gray-700", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("table", { className: "min-w-full text-left text-xs", children: [
+    /* @__PURE__ */ jsxRuntimeExports.jsx("thead", { className: "bg-gray-950/50 text-[10px] uppercase tracking-[0.12em] text-gray-400", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("tr", { children: [
+      /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "px-3 py-2", children: "Window" }),
+      /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "px-3 py-2", children: "Events" }),
+      /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "px-3 py-2", children: "Flights" }),
+      /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "px-3 py-2", children: "Hours" }),
+      /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "px-3 py-2", children: "Currency" }),
+      /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "px-3 py-2", children: "Sim %" })
+    ] }) }),
+    /* @__PURE__ */ jsxRuntimeExports.jsx("tbody", { className: "divide-y divide-gray-700/70", children: MY_TEAM_PERIODS.map((period) => {
+      const row = periods[period] || { events: 0, flights: 0, flightHours: 0, currencyFlights: 0, simulatorEvents: 0 };
+      const simTotal = row.flights + row.simulatorEvents;
+      const simPercent = simTotal ? `${Math.round(row.simulatorEvents / simTotal * 100)}%` : "0%";
+      return /* @__PURE__ */ jsxRuntimeExports.jsxs("tr", { className: "bg-gray-800/60 text-gray-200", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("td", { className: "px-3 py-2 font-semibold text-white", children: [
+          period,
+          " days"
+        ] }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "px-3 py-2", children: row.events }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "px-3 py-2", children: row.flights }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "px-3 py-2", children: formatDashboardMetricNumber(row.flightHours) }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "px-3 py-2", children: row.currencyFlights }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "px-3 py-2", children: simPercent })
+      ] }, period);
+    }) })
+  ] }) });
+  const renderMetricPill = (label, value) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded-lg border border-gray-700 bg-gray-950/40 px-3 py-2", children: [
+    /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-[10px] font-bold uppercase tracking-[0.12em] text-gray-500", children: label }),
+    /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-1 text-sm font-semibold text-white", children: value })
+  ] });
+  const renderStaffTeamCard = (staff) => {
+    const metrics = buildStaffMetrics(staff);
+    return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded-xl border border-gray-700 bg-gray-800/75 p-4", children: [
+      /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex flex-wrap items-start justify-between gap-3", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("h4", { className: "text-base font-bold text-white", children: [
+          formatStaffRole(staff),
+          " - ",
+          staff.rank,
+          " ",
+          formatPersonDisplayName(staff, staff.name)
+        ] }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-1 text-xs font-semibold uppercase tracking-[0.08em] text-gray-400", children: [staff.unit, staff.flight ? `Flight ${staff.flight}` : "", staff.crew ? `Crew ${staff.crew}` : ""].filter(Boolean).join(" / ") || "No unit detail" })
+      ] }) }),
+      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mt-3 grid gap-2 sm:grid-cols-2 lg:grid-cols-4", children: [
+        renderMetricPill("Days since flight", metrics.daysSinceLastFlight),
+        renderMetricPill("Aircraft type hours", formatDashboardMetricNumber(metrics.aircraftTypeHours)),
+        isFlightSchoolDashboard && renderMetricPill("Instructor hours", formatDashboardMetricNumber(metrics.instructorHours)),
+        renderMetricPill("Average score given", metrics.averageOverallScore)
+      ] }),
+      renderPeriodMetrics(metrics.periods)
+    ] }, getStaffTeamId(staff));
+  };
+  const renderTraineeTeamCard = (trainee) => {
+    const metrics = buildTraineeMetrics(trainee);
+    return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded-xl border border-gray-700 bg-gray-800/75 p-4", children: [
+      /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex flex-wrap items-start justify-between gap-3", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("h4", { className: "text-base font-bold text-white", children: [
+          trainee.rank,
+          " ",
+          formatPersonDisplayName(trainee, trainee.fullName || trainee.name)
+        ] }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-1 text-xs font-semibold uppercase tracking-[0.08em] text-gray-400", children: [trainee.unit, trainee.course, trainee.flight ? `Flight ${trainee.flight}` : "", trainee.crew ? `Crew ${trainee.crew}` : ""].filter(Boolean).join(" / ") || "No unit detail" })
+      ] }) }),
+      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mt-3 grid gap-2 sm:grid-cols-2 lg:grid-cols-4", children: [
+        renderMetricPill("Days since flight", metrics.daysSinceLastFlight),
+        renderMetricPill("Events/week avg", metrics.averageEventsPerWeek),
+        renderMetricPill("Last 4 weeks", metrics.fourWeekProgress),
+        renderMetricPill("Primary instructor", `${metrics.primaryInstructorFlights.count} / ${metrics.primaryInstructorFlights.percent}`),
+        renderMetricPill("Secondary instructor", `${metrics.secondaryInstructorFlights.count} / ${metrics.secondaryInstructorFlights.percent}`),
+        renderMetricPill("Other instructor", `${metrics.otherInstructorFlights.count} / ${metrics.otherInstructorFlights.percent}`)
+      ] }),
+      renderPeriodMetrics(metrics.periods)
+    ] }, getTraineeTeamId(trainee));
+  };
+  const renderMyTeamPicker = (label, rows, selectedIds, getId, getName, onToggle, onSetIds) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded-xl border border-gray-700 bg-gray-950/35 p-3", children: [
+    /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mb-2 flex flex-wrap items-center justify-between gap-2", children: [
+      /* @__PURE__ */ jsxRuntimeExports.jsx("h4", { className: "text-sm font-bold text-white", children: label }),
+      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex gap-2", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsx(
+          "button",
+          {
+            type: "button",
+            onClick: () => onSetIds((prev) => {
+              const next = new Set(prev);
+              rows.forEach((row) => next.add(getId(row)));
+              return next;
+            }),
+            className: "rounded border border-sky-500/40 px-2 py-1 text-xs font-semibold text-sky-200 hover:bg-sky-500/10",
+            children: "Select all"
+          }
+        ),
+        /* @__PURE__ */ jsxRuntimeExports.jsx(
+          "button",
+          {
+            type: "button",
+            onClick: () => onSetIds((prev) => {
+              const next = new Set(prev);
+              rows.forEach((row) => next.delete(getId(row)));
+              return next;
+            }),
+            className: "rounded border border-gray-600 px-2 py-1 text-xs font-semibold text-gray-300 hover:bg-gray-700",
+            children: "Deselect all"
+          }
+        )
+      ] })
+    ] }),
+    /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "max-h-64 space-y-1 overflow-y-auto pr-1", children: [
+      rows.map((row) => {
+        const id = getId(row);
+        return /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "flex cursor-pointer items-center gap-3 rounded-lg bg-gray-800/70 px-3 py-2 text-sm text-gray-200 hover:bg-gray-700", children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsx(
+            "input",
+            {
+              type: "checkbox",
+              checked: selectedIds.has(id),
+              onChange: () => onToggle(row),
+              className: "h-4 w-4 accent-sky-500"
+            }
+          ),
+          /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "min-w-0 flex-1 truncate font-semibold", children: getName(row) }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "shrink-0 text-xs text-gray-500", children: [String(row.flight || ""), String(row.crew || "")].filter(Boolean).join(" / ") })
+        ] }, id);
+      }),
+      rows.length === 0 && /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "py-6 text-center text-sm italic text-gray-500", children: "No people match the current filters." })
+    ] })
+  ] });
   const EventRow = ({ event }) => {
     const isStby = isDashboardStandbyEvent(event);
     return /* @__PURE__ */ jsxRuntimeExports.jsxs("li", { className: "flex items-center justify-between p-3 bg-gray-700/50 rounded-md", children: [
@@ -64376,6 +64731,146 @@ const MyDashboard = ({
         ] })
       ] }) })
     ] }),
+    isMyTeamOpen && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "fixed inset-0 z-[92] flex items-center justify-center bg-black/65 p-4", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex h-[86vh] w-full max-w-6xl flex-col overflow-hidden rounded-2xl border border-gray-700 bg-gray-900 shadow-2xl", children: [
+      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex flex-wrap items-start justify-between gap-3 border-b border-gray-700 bg-gray-950/70 px-5 py-4", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsx("h2", { className: "text-2xl font-bold text-white", children: "My Team" }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-1 text-sm text-gray-400", children: "Assigned staff and trainees with recent activity, flying and training measures." })
+        ] }),
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex flex-wrap items-center gap-2", children: [
+          canEditMyTeam && !isMyTeamEditing && /* @__PURE__ */ jsxRuntimeExports.jsx(
+            "button",
+            {
+              type: "button",
+              onClick: () => {
+                setMyTeamStaffDraftIds(new Set(myTeamAssignments.staffIds || []));
+                setMyTeamTraineeDraftIds(new Set(myTeamAssignments.traineeIds || []));
+                setIsMyTeamEditing(true);
+              },
+              className: "rounded-lg bg-sky-600 px-4 py-2 text-sm font-bold text-white hover:bg-sky-700",
+              children: "Edit Team"
+            }
+          ),
+          isMyTeamEditing && /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx(
+              "button",
+              {
+                type: "button",
+                onClick: saveMyTeamAssignments,
+                className: "rounded-lg bg-emerald-600 px-4 py-2 text-sm font-bold text-white hover:bg-emerald-700",
+                children: "Save"
+              }
+            ),
+            /* @__PURE__ */ jsxRuntimeExports.jsx(
+              "button",
+              {
+                type: "button",
+                onClick: () => {
+                  setMyTeamStaffDraftIds(new Set(myTeamAssignments.staffIds || []));
+                  setMyTeamTraineeDraftIds(new Set(myTeamAssignments.traineeIds || []));
+                  setIsMyTeamEditing(false);
+                },
+                className: "rounded-lg border border-gray-600 px-4 py-2 text-sm font-bold text-gray-200 hover:bg-gray-800",
+                children: "Cancel"
+              }
+            )
+          ] }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx(
+            "button",
+            {
+              type: "button",
+              onClick: () => {
+                setIsMyTeamOpen(false);
+                setIsMyTeamEditing(false);
+              },
+              className: "rounded-lg border border-gray-600 px-4 py-2 text-sm font-bold text-gray-200 hover:bg-gray-800",
+              children: "Close"
+            }
+          )
+        ] })
+      ] }),
+      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex-1 overflow-y-auto px-5 py-4", children: [
+        (myTeamFlightOptions.length > 0 || myTeamCrewOptions.length > 0) && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mb-4 grid gap-3 rounded-xl border border-gray-700 bg-gray-800/70 p-3 md:grid-cols-2", children: [
+          myTeamFlightOptions.length > 0 && /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "text-xs font-bold uppercase tracking-[0.12em] text-gray-400", children: [
+            "Flight",
+            /* @__PURE__ */ jsxRuntimeExports.jsxs(
+              "select",
+              {
+                value: myTeamFlightFilter,
+                onChange: (event) => setMyTeamFlightFilter(event.target.value),
+                className: "mt-1 w-full rounded-lg border border-gray-600 bg-gray-950 px-3 py-2 text-sm font-semibold normal-case tracking-normal text-white",
+                children: [
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "all", children: "All Flights" }),
+                  myTeamFlightOptions.map((flight) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: flight, children: flight }, flight))
+                ]
+              }
+            )
+          ] }),
+          myTeamCrewOptions.length > 0 && /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "text-xs font-bold uppercase tracking-[0.12em] text-gray-400", children: [
+            "Crew",
+            /* @__PURE__ */ jsxRuntimeExports.jsxs(
+              "select",
+              {
+                value: myTeamCrewFilter,
+                onChange: (event) => setMyTeamCrewFilter(event.target.value),
+                className: "mt-1 w-full rounded-lg border border-gray-600 bg-gray-950 px-3 py-2 text-sm font-semibold normal-case tracking-normal text-white",
+                children: [
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "all", children: "All Crews" }),
+                  myTeamCrewOptions.map((crew) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: crew, children: crew }, crew))
+                ]
+              }
+            )
+          ] })
+        ] }),
+        isMyTeamEditing ? /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid gap-4 lg:grid-cols-2", children: [
+          renderMyTeamPicker(
+            "Staff",
+            filteredMyTeamStaffOptions,
+            myTeamStaffDraftIds,
+            getStaffTeamId,
+            (staff) => `${staff.rank || ""} ${formatPersonDisplayName(staff, staff.name)}`.trim(),
+            toggleMyTeamStaff,
+            setMyTeamStaffDraftIds
+          ),
+          isFlightSchoolDashboard && myTeamTraineeOptions.length > 0 && renderMyTeamPicker(
+            "Trainees",
+            filteredMyTeamTraineeOptions,
+            myTeamTraineeDraftIds,
+            getTraineeTeamId,
+            (trainee) => `${trainee.rank || ""} ${formatPersonDisplayName(trainee, trainee.fullName || trainee.name)}`.trim(),
+            toggleMyTeamTrainee,
+            setMyTeamTraineeDraftIds
+          )
+        ] }) : /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-5", children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("section", { children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mb-3 flex items-center justify-between", children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsx("h3", { className: "text-lg font-bold text-sky-300", children: "Staff" }),
+              /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "text-xs font-semibold uppercase tracking-[0.12em] text-gray-500", children: [
+                selectedMyTeamStaff.length,
+                " selected"
+              ] })
+            ] }),
+            /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-3", children: [
+              selectedMyTeamStaff.map(renderStaffTeamCard),
+              selectedMyTeamStaff.length === 0 && /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "rounded-xl border border-gray-700 bg-gray-800/70 px-4 py-8 text-center text-sm italic text-gray-500", children: "No staff assigned to My Team yet." })
+            ] })
+          ] }),
+          isFlightSchoolDashboard && /* @__PURE__ */ jsxRuntimeExports.jsxs("section", { children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mb-3 flex items-center justify-between", children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsx("h3", { className: "text-lg font-bold text-emerald-300", children: "Trainees" }),
+              /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "text-xs font-semibold uppercase tracking-[0.12em] text-gray-500", children: [
+                selectedMyTeamTrainees.length,
+                " selected"
+              ] })
+            ] }),
+            /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-3", children: [
+              selectedMyTeamTrainees.map(renderTraineeTeamCard),
+              selectedMyTeamTrainees.length === 0 && /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "rounded-xl border border-gray-700 bg-gray-800/70 px-4 py-8 text-center text-sm italic text-gray-500", children: "No trainees assigned to My Team yet." })
+            ] })
+          ] })
+        ] })
+      ] })
+    ] }) }),
     /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid grid-cols-1 lg:grid-cols-2 gap-6", children: [
       /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "bg-gray-800 rounded-lg shadow-lg p-6 border border-gray-700", children: [
         /* @__PURE__ */ jsxRuntimeExports.jsx("h2", { className: "text-xl font-semibold text-sky-400 mb-4", children: "My Hub" }),
@@ -64385,7 +64880,8 @@ const MyDashboard = ({
           /* @__PURE__ */ jsxRuntimeExports.jsxs("button", { onClick: onSelectMySct, className: "w-full text-left px-4 py-3 bg-gray-700 hover:bg-gray-600 rounded-md text-white font-semibold transition-colors", children: [
             "My ",
             continuationShortLabel
-          ] })
+          ] }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx("button", { onClick: () => setIsMyTeamOpen(true), className: "w-full text-left px-4 py-3 bg-gray-700 hover:bg-gray-600 rounded-md text-white font-semibold transition-colors", children: "My Team" })
         ] })
       ] }),
       /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "bg-gray-800 rounded-lg shadow-lg p-6 border border-gray-700", children: /* @__PURE__ */ jsxRuntimeExports.jsx(TafWeatherWidget, { defaultLocationCodes: currentLocationCode ? [currentLocationCode] : [] }) }),
@@ -149395,11 +149891,48 @@ ${error instanceof Error ? error.message : String(error)}`,
           startsWithDashboardDue: String(assessment.id || "").startsWith("dashboard-due-"),
           hasMatchingCompletion: eventCompletionsForDate.some((completion) => assessment.eventId && completion.scheduleEventId === assessment.eventId || normaliseDashboardContextCode(completion.eventCode) === normaliseDashboardContextCode(assessment.flightNumber) && String(completion.eventDate || completion.date || "") === String(assessment.date || ""))
         }));
+        const dashboardTeamAssignmentKey = dashboardStaff ? `staff-${dashboardStaff.idNumber}-${dashboardStaff.name}` : dashboardTrainee ? `trainee-${dashboardTrainee.idNumber}-${dashboardTrainee.fullName || dashboardTrainee.name}` : getCurrentUserId() || dashboardUserName || "current-user";
+        const activeDashboardOrganisation = (platformConfig?.organisations || []).find((organisation) => String(organisation.status || "ACTIVE").toUpperCase() === "ACTIVE") || platformConfig?.organisations?.[0];
+        const dashboardTeamAssignmentsByUser = activeDashboardOrganisation?.settings?.myTeamAssignments || {};
+        const dashboardTeamAssignments = {
+          staffIds: Array.isArray(dashboardTeamAssignmentsByUser?.[dashboardTeamAssignmentKey]?.staffIds) ? dashboardTeamAssignmentsByUser[dashboardTeamAssignmentKey].staffIds : [],
+          traineeIds: Array.isArray(dashboardTeamAssignmentsByUser?.[dashboardTeamAssignmentKey]?.traineeIds) ? dashboardTeamAssignmentsByUser[dashboardTeamAssignmentKey].traineeIds : []
+        };
         return /* @__PURE__ */ jsxRuntimeExports.jsx(
           MyDashboard,
           {
             userName: dashboardUserName,
             currentUserId: getCurrentUserId() ?? void 0,
+            currentDate: date,
+            currentUserPermission,
+            operationalModel: activeOperationalModel,
+            currentAircraftTypeCode: activeRuntimeAircraftTypeCode,
+            allScheduleEvents: allPublishedEvents,
+            myTeamAssignments: dashboardTeamAssignments,
+            onUpdateMyTeamAssignments: (assignments) => {
+              const savedAssignments = {
+                staffIds: Array.from(new Set((assignments.staffIds || []).map((value) => String(value || "").trim()).filter(Boolean))),
+                traineeIds: Array.from(new Set((assignments.traineeIds || []).map((value) => String(value || "").trim()).filter(Boolean)))
+              };
+              handleUpdatePlatformConfigFromSchedule((current) => ({
+                ...current,
+                organisations: (current.organisations || []).map((organisation, index) => {
+                  const isTarget = activeDashboardOrganisation ? organisation === activeDashboardOrganisation || String(organisation.id || "") === String(activeDashboardOrganisation.id || "") : index === 0;
+                  if (!isTarget) return organisation;
+                  const existingSettings = organisation.settings || {};
+                  return {
+                    ...organisation,
+                    settings: {
+                      ...existingSettings,
+                      myTeamAssignments: {
+                        ...existingSettings.myTeamAssignments || {},
+                        [dashboardTeamAssignmentKey]: savedAssignments
+                      }
+                    }
+                  };
+                })
+              }));
+            },
             userRank: dashboardStaff?.rank || dashboardTrainee?.rank || sessionUser?.militaryRank || sessionUser?.role || "",
             events: eventsForDate.filter((e) => [e.instructor, e.pilot, e.fixedCrewPic, e.crew].some((name) => normaliseDashboardName(name) === normaliseDashboardName(dashboardUserName))),
             onSelectEvent: handleOpenModal,

@@ -18,6 +18,13 @@ import { showDarkConfirm } from './DarkMessageModal';
 interface MyDashboardProps {
     userName: string;
     currentUserId?: string;
+    currentDate?: string;
+    currentUserPermission?: string;
+    operationalModel?: string;
+    currentAircraftTypeCode?: string;
+    allScheduleEvents?: ScheduleEvent[];
+    myTeamAssignments?: MyTeamAssignments;
+    onUpdateMyTeamAssignments?: (assignments: MyTeamAssignments) => void;
     userRank: string;
     events: ScheduleEvent[];
     onSelectEvent: (event: ScheduleEvent) => void;
@@ -48,6 +55,37 @@ interface MyDashboardProps {
     onLogout?: () => void;
     onShowChangePassword?: () => void;
 }
+
+type MyTeamAssignments = {
+    staffIds: string[];
+    traineeIds: string[];
+};
+
+type MyTeamPeriodMetrics = {
+    events: number;
+    flights: number;
+    flightHours: number;
+    currencyFlights: number;
+    simulatorEvents: number;
+};
+
+type MyTeamStaffMetrics = {
+    periods: Record<number, MyTeamPeriodMetrics>;
+    daysSinceLastFlight: string;
+    aircraftTypeHours: number;
+    instructorHours: number;
+    averageOverallScore: string;
+};
+
+type MyTeamTraineeMetrics = {
+    periods: Record<number, MyTeamPeriodMetrics>;
+    daysSinceLastFlight: string;
+    averageEventsPerWeek: string;
+    fourWeekProgress: string;
+    primaryInstructorFlights: { count: number; percent: string };
+    secondaryInstructorFlights: { count: number; percent: string };
+    otherInstructorFlights: { count: number; percent: string };
+};
 
 type DashboardMessageContact = {
     id: string;
@@ -359,6 +397,94 @@ const isDashboardStandbyEvent = (event: ScheduleEvent): boolean => {
     ].map(value => String(value || '').toUpperCase());
     return values.some(value => value.startsWith('STBY') || value.startsWith('BNF-STBY') || value.startsWith('FTD-STBY') || /\bSTBY\b/.test(value) || value.includes('STANDBY'));
 };
+
+const MY_TEAM_PERIODS = [7, 30, 90, 365];
+
+const normaliseMyTeamId = (value?: unknown): string => String(value || '').trim();
+
+const getStaffTeamId = (staff: Instructor): string => (
+    normaliseMyTeamId((staff as any).id) || `staff-${staff.idNumber}-${staff.name}`
+);
+
+const getTraineeTeamId = (trainee: Trainee): string => (
+    normaliseMyTeamId((trainee as any).id) || `trainee-${trainee.idNumber}-${stripDashboardCourseFromName(trainee.fullName || trainee.name)}`
+);
+
+const parseDashboardEventDate = (event: ScheduleEvent): number | null => {
+    const value = String(event.date || '').trim();
+    if (!value) return null;
+    const parsed = new Date(`${value}T00:00:00Z`).getTime();
+    return Number.isFinite(parsed) ? parsed : null;
+};
+
+const dashboardDateAtUtcStart = (value?: string): number => {
+    const text = String(value || '').trim();
+    const parsed = text ? new Date(`${text}T00:00:00Z`).getTime() : NaN;
+    if (Number.isFinite(parsed)) return parsed;
+    const now = new Date();
+    return Date.UTC(now.getFullYear(), now.getMonth(), now.getDate());
+};
+
+const isDashboardFlightEvent = (event: ScheduleEvent): boolean => (
+    String(event.type || '').toLowerCase() === 'flight'
+);
+
+const isDashboardSimulatorEvent = (event: ScheduleEvent): boolean => {
+    const type = String(event.type || '').toLowerCase();
+    const resource = String(event.resourceId || event.flightNumber || '').toLowerCase();
+    return type === 'ftd' || type === 'cpt' || resource.includes('sim') || resource.includes('ftd') || resource.includes('cpt');
+};
+
+const isDashboardCurrencyEvent = (event: ScheduleEvent): boolean => {
+    const values = [
+        event.currency,
+        event.eventCategory,
+        event.currencyAudience,
+        event.flightNumber,
+        (event as any).eventCode,
+    ].map(value => String(value || '').toLowerCase());
+    return values.some(value => value.includes('currency') || value.includes('curr'));
+};
+
+const getDashboardEventPersonNames = (event: ScheduleEvent): string[] => {
+    const names = [
+        event.instructor,
+        event.student,
+        event.pilot,
+        event.crew,
+        event.fixedCrewPic,
+        ...(Array.isArray(event.attendees) ? event.attendees : []),
+        ...(Array.isArray(event.personnelRefs) ? event.personnelRefs.map(ref => ref.name) : []),
+    ];
+    return names.map(name => String(name || '').trim()).filter(Boolean);
+};
+
+const dashboardEventHasPerson = (event: ScheduleEvent, personName?: string): boolean => (
+    getDashboardEventPersonNames(event).some(name => dashboardPersonNamesMatch(name, personName))
+);
+
+const formatDashboardMetricNumber = (value: number, decimals = 1): string => {
+    if (!Number.isFinite(value)) return '0';
+    if (Math.abs(value - Math.round(value)) < 0.05) return String(Math.round(value));
+    return value.toFixed(decimals);
+};
+
+const formatDashboardDaysSince = (events: ScheduleEvent[], currentDate: string): string => {
+    const currentTime = dashboardDateAtUtcStart(currentDate);
+    const latest = events
+        .map(parseDashboardEventDate)
+        .filter((value): value is number => value !== null && value <= currentTime)
+        .sort((a, b) => b - a)[0];
+    if (!latest) return 'No flight';
+    return String(Math.max(0, Math.floor((currentTime - latest) / 86400000)));
+};
+
+const buildEmptyMyTeamPeriodMetrics = (): Record<number, MyTeamPeriodMetrics> => (
+    MY_TEAM_PERIODS.reduce((acc, period) => {
+        acc[period] = { events: 0, flights: 0, flightHours: 0, currencyFlights: 0, simulatorEvents: 0 };
+        return acc;
+    }, {} as Record<number, MyTeamPeriodMetrics>)
+);
 
 const getDashboardTrainingReportSuppressionIds = (report: AirCombatTrainingReport): string[] => {
     const traineeName = String(report.traineeFullName || '').trim();
@@ -712,10 +838,17 @@ const deleteDashboardMessageFromApi = async (messageId: string) => {
 };
 
 const MyDashboard: React.FC<MyDashboardProps> = ({ 
-    userName, 
+    userName,
     currentUserId,
-    userRank, 
-    events, 
+    currentDate,
+    currentUserPermission,
+    operationalModel,
+    currentAircraftTypeCode,
+    allScheduleEvents = [],
+    myTeamAssignments = { staffIds: [], traineeIds: [] },
+    onUpdateMyTeamAssignments,
+    userRank,
+    events,
     onSelectEvent, 
     onNavigate, 
     onSelectMyProfile, 
@@ -750,6 +883,12 @@ const MyDashboard: React.FC<MyDashboardProps> = ({
     const [staffPickerEntry, setStaffPickerEntry] = useState<{ report: AirCombatTrainingReport; staff: Instructor; mode: 'open' | 'reassign' } | null>(null);
     const dashboardActionButtonClass = 'btn-aluminium-brushed relative flex h-[41px] w-[56px] shrink-0 items-center justify-center rounded-md px-1 py-1 text-center text-[9px] font-semibold leading-[0.95]';
     const [isMessagesOpen, setIsMessagesOpen] = useState(false);
+    const [isMyTeamOpen, setIsMyTeamOpen] = useState(false);
+    const [isMyTeamEditing, setIsMyTeamEditing] = useState(false);
+    const [myTeamStaffDraftIds, setMyTeamStaffDraftIds] = useState<Set<string>>(() => new Set(myTeamAssignments.staffIds || []));
+    const [myTeamTraineeDraftIds, setMyTeamTraineeDraftIds] = useState<Set<string>>(() => new Set(myTeamAssignments.traineeIds || []));
+    const [myTeamFlightFilter, setMyTeamFlightFilter] = useState('all');
+    const [myTeamCrewFilter, setMyTeamCrewFilter] = useState('all');
     const [isContactPickerOpen, setIsContactPickerOpen] = useState(false);
     const [messageToText, setMessageToText] = useState('');
     const [selectedMessageContact, setSelectedMessageContact] = useState<DashboardMessageContact | null>(null);
@@ -784,6 +923,11 @@ const MyDashboard: React.FC<MyDashboardProps> = ({
     const activeConversationScrollRef = useRef<HTMLDivElement | null>(null);
     const activeConversationEndRef = useRef<HTMLDivElement | null>(null);
     const activeConversationKeyRef = useRef('');
+    useEffect(() => {
+        if (isMyTeamEditing) return;
+        setMyTeamStaffDraftIds(new Set(myTeamAssignments.staffIds || []));
+        setMyTeamTraineeDraftIds(new Set(myTeamAssignments.traineeIds || []));
+    }, [isMyTeamEditing, myTeamAssignments.staffIds?.join('|'), myTeamAssignments.traineeIds?.join('|')]);
     const roleTone = (role?: string) => {
         const value = String(role || '').toLowerCase();
         if (isPilotAssignableCrewPosition(role, crewPositionTerminology)) return 'text-sky-300 border-sky-500/30';
@@ -2195,6 +2339,158 @@ const MyDashboard: React.FC<MyDashboardProps> = ({
         });
     }, [incompleteTrainingReports, visibleStaffTrainingReportsToComplete]);
 
+    const canEditMyTeam = ['SUPER ADMIN', 'SUPER_ADMIN', 'ADMIN'].includes(String(currentUserPermission || '').trim().toUpperCase());
+    const isFlightSchoolDashboard = String(operationalModel || '').toLowerCase().replace(/[\s-]+/g, '_') === 'flight_school';
+    const myTeamCurrentDate = currentDate || new Date().toISOString().slice(0, 10);
+    const myTeamReferenceTime = dashboardDateAtUtcStart(myTeamCurrentDate);
+    const myTeamEvents = useMemo(() => (
+        (allScheduleEvents.length > 0 ? allScheduleEvents : events)
+            .filter(event => parseDashboardEventDate(event) !== null && !event.isCancelled)
+    ), [allScheduleEvents, events]);
+    const myTeamUnitMatches = (unitValue?: string): boolean => {
+        if (dashboardUserUnitSet.size === 0) return true;
+        const units = String(unitValue || '')
+            .split(/[+/,&]/)
+            .map(unit => unit.trim().toUpperCase())
+            .filter(Boolean);
+        if (units.length === 0) return true;
+        return units.some(unit => dashboardUserUnitSet.has(unit));
+    };
+    const myTeamStaffOptions = useMemo(() => (
+        messageContactStaffOptions
+            .filter(staff => staff?.name && myTeamUnitMatches(staff.unit))
+            .sort((a, b) => compareDashboardRank(a.rank, b.rank) || String(a.name || '').localeCompare(String(b.name || '')))
+    ), [messageContactStaffOptions, dashboardUserUnitSet]);
+    const myTeamTraineeOptions = useMemo(() => (
+        messageContactTraineeOptions
+            .filter(trainee => (trainee?.fullName || trainee?.name) && myTeamUnitMatches(trainee.unit))
+            .sort((a, b) => compareDashboardRank(a.rank, b.rank) || String(a.fullName || a.name || '').localeCompare(String(b.fullName || b.name || '')))
+    ), [messageContactTraineeOptions, dashboardUserUnitSet]);
+    const myTeamFlightOptions = useMemo(() => {
+        const values = new Set<string>();
+        [...myTeamStaffOptions, ...myTeamTraineeOptions].forEach(person => {
+            const flight = String((person as any).flight || '').trim();
+            if (flight) values.add(flight);
+        });
+        return Array.from(values).sort((a, b) => a.localeCompare(b));
+    }, [myTeamStaffOptions, myTeamTraineeOptions]);
+    const myTeamCrewOptions = useMemo(() => {
+        const values = new Set<string>();
+        [...myTeamStaffOptions, ...myTeamTraineeOptions].forEach(person => {
+            const crew = String((person as any).crew || '').trim();
+            if (crew) values.add(crew);
+        });
+        return Array.from(values).sort((a, b) => a.localeCompare(b));
+    }, [myTeamStaffOptions, myTeamTraineeOptions]);
+    const personMatchesMyTeamFilters = (person: Instructor | Trainee): boolean => {
+        if (myTeamFlightFilter !== 'all' && String((person as any).flight || '') !== myTeamFlightFilter) return false;
+        if (myTeamCrewFilter !== 'all' && String((person as any).crew || '') !== myTeamCrewFilter) return false;
+        return true;
+    };
+    const filteredMyTeamStaffOptions = useMemo(() => myTeamStaffOptions.filter(personMatchesMyTeamFilters), [myTeamStaffOptions, myTeamFlightFilter, myTeamCrewFilter]);
+    const filteredMyTeamTraineeOptions = useMemo(() => myTeamTraineeOptions.filter(personMatchesMyTeamFilters), [myTeamTraineeOptions, myTeamFlightFilter, myTeamCrewFilter]);
+    const selectedMyTeamStaff = useMemo(() => {
+        const ids = new Set(myTeamAssignments.staffIds || []);
+        return myTeamStaffOptions.filter(staff => ids.has(getStaffTeamId(staff)));
+    }, [myTeamAssignments.staffIds?.join('|'), myTeamStaffOptions]);
+    const selectedMyTeamTrainees = useMemo(() => {
+        const ids = new Set(myTeamAssignments.traineeIds || []);
+        return myTeamTraineeOptions.filter(trainee => ids.has(getTraineeTeamId(trainee)));
+    }, [myTeamAssignments.traineeIds?.join('|'), myTeamTraineeOptions]);
+    const getEventsForPerson = (personName: string): ScheduleEvent[] => (
+        myTeamEvents.filter(event => dashboardEventHasPerson(event, personName))
+    );
+    const buildPersonPeriodMetrics = (personEvents: ScheduleEvent[]): Record<number, MyTeamPeriodMetrics> => {
+        const metrics = buildEmptyMyTeamPeriodMetrics();
+        personEvents.forEach(event => {
+            const eventTime = parseDashboardEventDate(event);
+            if (eventTime === null || eventTime > myTeamReferenceTime) return;
+            const ageDays = Math.floor((myTeamReferenceTime - eventTime) / 86400000);
+            MY_TEAM_PERIODS.forEach(period => {
+                if (ageDays >= period) return;
+                metrics[period].events += 1;
+                if (isDashboardFlightEvent(event)) {
+                    metrics[period].flights += 1;
+                    metrics[period].flightHours += Number(event.duration || 0);
+                }
+                if (isDashboardCurrencyEvent(event)) metrics[period].currencyFlights += 1;
+                if (isDashboardSimulatorEvent(event)) metrics[period].simulatorEvents += 1;
+            });
+        });
+        return metrics;
+    };
+    const buildStaffMetrics = (staff: Instructor): MyTeamStaffMetrics => {
+        const staffEvents = getEventsForPerson(staff.name);
+        const flightEvents = staffEvents.filter(isDashboardFlightEvent);
+        const completedGrades = Array.from(pt051Assessments.values())
+            .filter(assessment => assessment.isCompleted && dashboardPersonNamesMatch(assessment.instructorName, staff.name))
+            .map(assessment => typeof assessment.overallGrade === 'number' ? assessment.overallGrade : Number(assessment.overallGrade))
+            .filter(value => Number.isFinite(value));
+        const averageGrade = completedGrades.length
+            ? formatDashboardMetricNumber(completedGrades.reduce((sum, value) => sum + value, 0) / completedGrades.length)
+            : 'No grade';
+        return {
+            periods: buildPersonPeriodMetrics(staffEvents),
+            daysSinceLastFlight: formatDashboardDaysSince(flightEvents, myTeamCurrentDate),
+            aircraftTypeHours: flightEvents
+                .filter(event => {
+                    const aircraftCode = String(currentAircraftTypeCode || '').trim().toUpperCase();
+                    if (!aircraftCode) return true;
+                    return [
+                        event.resourceId,
+                        (event as any).aircraftTypeCode,
+                        (event as any).aircraftType,
+                        (event as any).aircraft,
+                    ].some(value => String(value || '').trim().toUpperCase() === aircraftCode);
+                })
+                .reduce((sum, event) => sum + Number(event.duration || 0), 0),
+            instructorHours: flightEvents.filter(event => dashboardPersonNamesMatch(event.instructor, staff.name)).reduce((sum, event) => sum + Number(event.duration || 0), 0),
+            averageOverallScore: averageGrade,
+        };
+    };
+    const buildTraineeMetrics = (trainee: Trainee): MyTeamTraineeMetrics => {
+        const traineeName = trainee.fullName || trainee.name;
+        const traineeEvents = getEventsForPerson(traineeName);
+        const flightEvents = traineeEvents.filter(isDashboardFlightEvent);
+        const periodMetrics = buildPersonPeriodMetrics(traineeEvents);
+        const eventDates = traineeEvents
+            .map(parseDashboardEventDate)
+            .filter((value): value is number => value !== null && value <= myTeamReferenceTime)
+            .sort((a, b) => a - b);
+        const firstEventTime = eventDates[0];
+        const weeksSinceFirstEvent = firstEventTime ? Math.max(1, (myTeamReferenceTime - firstEventTime) / (86400000 * 7)) : 0;
+        const averageEventsPerWeek = weeksSinceFirstEvent ? formatDashboardMetricNumber(traineeEvents.length / weeksSinceFirstEvent) : '0';
+        const lastFourWeekCount = traineeEvents.filter(event => {
+            const eventTime = parseDashboardEventDate(event);
+            return eventTime !== null && eventTime <= myTeamReferenceTime && (myTeamReferenceTime - eventTime) / 86400000 < 28;
+        }).length;
+        const previousFourWeekCount = traineeEvents.filter(event => {
+            const eventTime = parseDashboardEventDate(event);
+            if (eventTime === null || eventTime > myTeamReferenceTime) return false;
+            const ageDays = (myTeamReferenceTime - eventTime) / 86400000;
+            return ageDays >= 28 && ageDays < 56;
+        }).length;
+        const formatInstructorShare = (count: number) => ({
+            count,
+            percent: flightEvents.length ? `${Math.round((count / flightEvents.length) * 100)}%` : '0%',
+        });
+        const primaryNames = Array.isArray(trainee.primaryInstructor) ? trainee.primaryInstructor : [trainee.primaryInstructor].filter(Boolean) as string[];
+        const secondaryNames = Array.isArray(trainee.secondaryInstructor) ? trainee.secondaryInstructor : [trainee.secondaryInstructor].filter(Boolean) as string[];
+        const primaryCount = flightEvents.filter(event => primaryNames.some(name => dashboardPersonNamesMatch(event.instructor, name))).length;
+        const secondaryCount = flightEvents.filter(event => secondaryNames.some(name => dashboardPersonNamesMatch(event.instructor, name))).length;
+        const otherCount = Math.max(0, flightEvents.length - primaryCount - secondaryCount);
+        const progressPrefix = lastFourWeekCount > previousFourWeekCount ? '+' : '';
+        return {
+            periods: periodMetrics,
+            daysSinceLastFlight: formatDashboardDaysSince(flightEvents, myTeamCurrentDate),
+            averageEventsPerWeek,
+            fourWeekProgress: `${progressPrefix}${lastFourWeekCount - previousFourWeekCount} events`,
+            primaryInstructorFlights: formatInstructorShare(primaryCount),
+            secondaryInstructorFlights: formatInstructorShare(secondaryCount),
+            otherInstructorFlights: formatInstructorShare(otherCount),
+        };
+    };
+
     const confirmDeleteReportMessage = async (
         label: string,
         onDelete: () => void | Promise<void>,
@@ -2208,6 +2504,185 @@ const MyDashboard: React.FC<MyDashboardProps> = ({
             await onDelete();
         }
     };
+
+    const saveMyTeamAssignments = () => {
+        onUpdateMyTeamAssignments?.({
+            staffIds: Array.from(myTeamStaffDraftIds),
+            traineeIds: Array.from(myTeamTraineeDraftIds),
+        });
+        setIsMyTeamEditing(false);
+    };
+
+    const toggleMyTeamStaff = (staff: Instructor) => {
+        const id = getStaffTeamId(staff);
+        setMyTeamStaffDraftIds(prev => {
+            const next = new Set(prev);
+            if (next.has(id)) next.delete(id);
+            else next.add(id);
+            return next;
+        });
+    };
+
+    const toggleMyTeamTrainee = (trainee: Trainee) => {
+        const id = getTraineeTeamId(trainee);
+        setMyTeamTraineeDraftIds(prev => {
+            const next = new Set(prev);
+            if (next.has(id)) next.delete(id);
+            else next.add(id);
+            return next;
+        });
+    };
+
+    const renderPeriodMetrics = (periods: Record<number, MyTeamPeriodMetrics>) => (
+        <div className="mt-3 overflow-x-auto rounded-lg border border-gray-700">
+            <table className="min-w-full text-left text-xs">
+                <thead className="bg-gray-950/50 text-[10px] uppercase tracking-[0.12em] text-gray-400">
+                    <tr>
+                        <th className="px-3 py-2">Window</th>
+                        <th className="px-3 py-2">Events</th>
+                        <th className="px-3 py-2">Flights</th>
+                        <th className="px-3 py-2">Hours</th>
+                        <th className="px-3 py-2">Currency</th>
+                        <th className="px-3 py-2">Sim %</th>
+                    </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-700/70">
+                    {MY_TEAM_PERIODS.map(period => {
+                        const row = periods[period] || { events: 0, flights: 0, flightHours: 0, currencyFlights: 0, simulatorEvents: 0 };
+                        const simTotal = row.flights + row.simulatorEvents;
+                        const simPercent = simTotal ? `${Math.round((row.simulatorEvents / simTotal) * 100)}%` : '0%';
+                        return (
+                            <tr key={period} className="bg-gray-800/60 text-gray-200">
+                                <td className="px-3 py-2 font-semibold text-white">{period} days</td>
+                                <td className="px-3 py-2">{row.events}</td>
+                                <td className="px-3 py-2">{row.flights}</td>
+                                <td className="px-3 py-2">{formatDashboardMetricNumber(row.flightHours)}</td>
+                                <td className="px-3 py-2">{row.currencyFlights}</td>
+                                <td className="px-3 py-2">{simPercent}</td>
+                            </tr>
+                        );
+                    })}
+                </tbody>
+            </table>
+        </div>
+    );
+
+    const renderMetricPill = (label: string, value: string | number) => (
+        <div className="rounded-lg border border-gray-700 bg-gray-950/40 px-3 py-2">
+            <p className="text-[10px] font-bold uppercase tracking-[0.12em] text-gray-500">{label}</p>
+            <p className="mt-1 text-sm font-semibold text-white">{value}</p>
+        </div>
+    );
+
+    const renderStaffTeamCard = (staff: Instructor) => {
+        const metrics = buildStaffMetrics(staff);
+        return (
+            <div key={getStaffTeamId(staff)} className="rounded-xl border border-gray-700 bg-gray-800/75 p-4">
+                <div className="flex flex-wrap items-start justify-between gap-3">
+                    <div>
+                        <h4 className="text-base font-bold text-white">{formatStaffRole(staff)} - {staff.rank} {formatPersonDisplayName(staff, staff.name)}</h4>
+                        <p className="mt-1 text-xs font-semibold uppercase tracking-[0.08em] text-gray-400">
+                            {[staff.unit, staff.flight ? `Flight ${staff.flight}` : '', staff.crew ? `Crew ${staff.crew}` : ''].filter(Boolean).join(' / ') || 'No unit detail'}
+                        </p>
+                    </div>
+                </div>
+                <div className="mt-3 grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
+                    {renderMetricPill('Days since flight', metrics.daysSinceLastFlight)}
+                    {renderMetricPill('Aircraft type hours', formatDashboardMetricNumber(metrics.aircraftTypeHours))}
+                    {isFlightSchoolDashboard && renderMetricPill('Instructor hours', formatDashboardMetricNumber(metrics.instructorHours))}
+                    {renderMetricPill('Average score given', metrics.averageOverallScore)}
+                </div>
+                {renderPeriodMetrics(metrics.periods)}
+            </div>
+        );
+    };
+
+    const renderTraineeTeamCard = (trainee: Trainee) => {
+        const metrics = buildTraineeMetrics(trainee);
+        return (
+            <div key={getTraineeTeamId(trainee)} className="rounded-xl border border-gray-700 bg-gray-800/75 p-4">
+                <div className="flex flex-wrap items-start justify-between gap-3">
+                    <div>
+                        <h4 className="text-base font-bold text-white">{trainee.rank} {formatPersonDisplayName(trainee as any, trainee.fullName || trainee.name)}</h4>
+                        <p className="mt-1 text-xs font-semibold uppercase tracking-[0.08em] text-gray-400">
+                            {[trainee.unit, trainee.course, trainee.flight ? `Flight ${trainee.flight}` : '', trainee.crew ? `Crew ${trainee.crew}` : ''].filter(Boolean).join(' / ') || 'No unit detail'}
+                        </p>
+                    </div>
+                </div>
+                <div className="mt-3 grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
+                    {renderMetricPill('Days since flight', metrics.daysSinceLastFlight)}
+                    {renderMetricPill('Events/week avg', metrics.averageEventsPerWeek)}
+                    {renderMetricPill('Last 4 weeks', metrics.fourWeekProgress)}
+                    {renderMetricPill('Primary instructor', `${metrics.primaryInstructorFlights.count} / ${metrics.primaryInstructorFlights.percent}`)}
+                    {renderMetricPill('Secondary instructor', `${metrics.secondaryInstructorFlights.count} / ${metrics.secondaryInstructorFlights.percent}`)}
+                    {renderMetricPill('Other instructor', `${metrics.otherInstructorFlights.count} / ${metrics.otherInstructorFlights.percent}`)}
+                </div>
+                {renderPeriodMetrics(metrics.periods)}
+            </div>
+        );
+    };
+
+    const renderMyTeamPicker = <T extends Instructor | Trainee>(
+        label: string,
+        rows: T[],
+        selectedIds: Set<string>,
+        getId: (row: T) => string,
+        getName: (row: T) => string,
+        onToggle: (row: T) => void,
+        onSetIds: React.Dispatch<React.SetStateAction<Set<string>>>,
+    ) => (
+        <div className="rounded-xl border border-gray-700 bg-gray-950/35 p-3">
+            <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
+                <h4 className="text-sm font-bold text-white">{label}</h4>
+                <div className="flex gap-2">
+                    <button
+                        type="button"
+                        onClick={() => onSetIds(prev => {
+                            const next = new Set(prev);
+                            rows.forEach(row => next.add(getId(row)));
+                            return next;
+                        })}
+                        className="rounded border border-sky-500/40 px-2 py-1 text-xs font-semibold text-sky-200 hover:bg-sky-500/10"
+                    >
+                        Select all
+                    </button>
+                    <button
+                        type="button"
+                        onClick={() => onSetIds(prev => {
+                            const next = new Set(prev);
+                            rows.forEach(row => next.delete(getId(row)));
+                            return next;
+                        })}
+                        className="rounded border border-gray-600 px-2 py-1 text-xs font-semibold text-gray-300 hover:bg-gray-700"
+                    >
+                        Deselect all
+                    </button>
+                </div>
+            </div>
+            <div className="max-h-64 space-y-1 overflow-y-auto pr-1">
+                {rows.map(row => {
+                    const id = getId(row);
+                    return (
+                        <label key={id} className="flex cursor-pointer items-center gap-3 rounded-lg bg-gray-800/70 px-3 py-2 text-sm text-gray-200 hover:bg-gray-700">
+                            <input
+                                type="checkbox"
+                                checked={selectedIds.has(id)}
+                                onChange={() => onToggle(row)}
+                                className="h-4 w-4 accent-sky-500"
+                            />
+                            <span className="min-w-0 flex-1 truncate font-semibold">{getName(row)}</span>
+                            <span className="shrink-0 text-xs text-gray-500">
+                                {[String((row as any).flight || ''), String((row as any).crew || '')].filter(Boolean).join(' / ')}
+                            </span>
+                        </label>
+                    );
+                })}
+                {rows.length === 0 && (
+                    <p className="py-6 text-center text-sm italic text-gray-500">No people match the current filters.</p>
+                )}
+            </div>
+        </div>
+    );
 
     const EventRow: React.FC<{event: ScheduleEvent}> = ({event}) => {
         const isStby = isDashboardStandbyEvent(event);
@@ -2887,6 +3362,152 @@ const MyDashboard: React.FC<MyDashboardProps> = ({
                     )}
                 </div>
             )}
+            {isMyTeamOpen && (
+                <div className="fixed inset-0 z-[92] flex items-center justify-center bg-black/65 p-4">
+                    <div className="flex h-[86vh] w-full max-w-6xl flex-col overflow-hidden rounded-2xl border border-gray-700 bg-gray-900 shadow-2xl">
+                        <div className="flex flex-wrap items-start justify-between gap-3 border-b border-gray-700 bg-gray-950/70 px-5 py-4">
+                            <div>
+                                <h2 className="text-2xl font-bold text-white">My Team</h2>
+                                <p className="mt-1 text-sm text-gray-400">Assigned staff and trainees with recent activity, flying and training measures.</p>
+                            </div>
+                            <div className="flex flex-wrap items-center gap-2">
+                                {canEditMyTeam && !isMyTeamEditing && (
+                                    <button
+                                        type="button"
+                                        onClick={() => {
+                                            setMyTeamStaffDraftIds(new Set(myTeamAssignments.staffIds || []));
+                                            setMyTeamTraineeDraftIds(new Set(myTeamAssignments.traineeIds || []));
+                                            setIsMyTeamEditing(true);
+                                        }}
+                                        className="rounded-lg bg-sky-600 px-4 py-2 text-sm font-bold text-white hover:bg-sky-700"
+                                    >
+                                        Edit Team
+                                    </button>
+                                )}
+                                {isMyTeamEditing && (
+                                    <>
+                                        <button
+                                            type="button"
+                                            onClick={saveMyTeamAssignments}
+                                            className="rounded-lg bg-emerald-600 px-4 py-2 text-sm font-bold text-white hover:bg-emerald-700"
+                                        >
+                                            Save
+                                        </button>
+                                        <button
+                                            type="button"
+                                            onClick={() => {
+                                                setMyTeamStaffDraftIds(new Set(myTeamAssignments.staffIds || []));
+                                                setMyTeamTraineeDraftIds(new Set(myTeamAssignments.traineeIds || []));
+                                                setIsMyTeamEditing(false);
+                                            }}
+                                            className="rounded-lg border border-gray-600 px-4 py-2 text-sm font-bold text-gray-200 hover:bg-gray-800"
+                                        >
+                                            Cancel
+                                        </button>
+                                    </>
+                                )}
+                                <button
+                                    type="button"
+                                    onClick={() => {
+                                        setIsMyTeamOpen(false);
+                                        setIsMyTeamEditing(false);
+                                    }}
+                                    className="rounded-lg border border-gray-600 px-4 py-2 text-sm font-bold text-gray-200 hover:bg-gray-800"
+                                >
+                                    Close
+                                </button>
+                            </div>
+                        </div>
+                        <div className="flex-1 overflow-y-auto px-5 py-4">
+                            {(myTeamFlightOptions.length > 0 || myTeamCrewOptions.length > 0) && (
+                                <div className="mb-4 grid gap-3 rounded-xl border border-gray-700 bg-gray-800/70 p-3 md:grid-cols-2">
+                                    {myTeamFlightOptions.length > 0 && (
+                                        <label className="text-xs font-bold uppercase tracking-[0.12em] text-gray-400">
+                                            Flight
+                                            <select
+                                                value={myTeamFlightFilter}
+                                                onChange={(event) => setMyTeamFlightFilter(event.target.value)}
+                                                className="mt-1 w-full rounded-lg border border-gray-600 bg-gray-950 px-3 py-2 text-sm font-semibold normal-case tracking-normal text-white"
+                                            >
+                                                <option value="all">All Flights</option>
+                                                {myTeamFlightOptions.map(flight => <option key={flight} value={flight}>{flight}</option>)}
+                                            </select>
+                                        </label>
+                                    )}
+                                    {myTeamCrewOptions.length > 0 && (
+                                        <label className="text-xs font-bold uppercase tracking-[0.12em] text-gray-400">
+                                            Crew
+                                            <select
+                                                value={myTeamCrewFilter}
+                                                onChange={(event) => setMyTeamCrewFilter(event.target.value)}
+                                                className="mt-1 w-full rounded-lg border border-gray-600 bg-gray-950 px-3 py-2 text-sm font-semibold normal-case tracking-normal text-white"
+                                            >
+                                                <option value="all">All Crews</option>
+                                                {myTeamCrewOptions.map(crew => <option key={crew} value={crew}>{crew}</option>)}
+                                            </select>
+                                        </label>
+                                    )}
+                                </div>
+                            )}
+                            {isMyTeamEditing ? (
+                                <div className="grid gap-4 lg:grid-cols-2">
+                                    {renderMyTeamPicker(
+                                        'Staff',
+                                        filteredMyTeamStaffOptions,
+                                        myTeamStaffDraftIds,
+                                        getStaffTeamId,
+                                        staff => `${staff.rank || ''} ${formatPersonDisplayName(staff, staff.name)}`.trim(),
+                                        toggleMyTeamStaff,
+                                        setMyTeamStaffDraftIds,
+                                    )}
+                                    {isFlightSchoolDashboard && myTeamTraineeOptions.length > 0 && renderMyTeamPicker(
+                                        'Trainees',
+                                        filteredMyTeamTraineeOptions,
+                                        myTeamTraineeDraftIds,
+                                        getTraineeTeamId,
+                                        trainee => `${trainee.rank || ''} ${formatPersonDisplayName(trainee as any, trainee.fullName || trainee.name)}`.trim(),
+                                        toggleMyTeamTrainee,
+                                        setMyTeamTraineeDraftIds,
+                                    )}
+                                </div>
+                            ) : (
+                                <div className="space-y-5">
+                                    <section>
+                                        <div className="mb-3 flex items-center justify-between">
+                                            <h3 className="text-lg font-bold text-sky-300">Staff</h3>
+                                            <span className="text-xs font-semibold uppercase tracking-[0.12em] text-gray-500">{selectedMyTeamStaff.length} selected</span>
+                                        </div>
+                                        <div className="space-y-3">
+                                            {selectedMyTeamStaff.map(renderStaffTeamCard)}
+                                            {selectedMyTeamStaff.length === 0 && (
+                                                <p className="rounded-xl border border-gray-700 bg-gray-800/70 px-4 py-8 text-center text-sm italic text-gray-500">
+                                                    No staff assigned to My Team yet.
+                                                </p>
+                                            )}
+                                        </div>
+                                    </section>
+                                    {isFlightSchoolDashboard && (
+                                        <section>
+                                            <div className="mb-3 flex items-center justify-between">
+                                                <h3 className="text-lg font-bold text-emerald-300">Trainees</h3>
+                                                <span className="text-xs font-semibold uppercase tracking-[0.12em] text-gray-500">{selectedMyTeamTrainees.length} selected</span>
+                                            </div>
+                                            <div className="space-y-3">
+                                                {selectedMyTeamTrainees.map(renderTraineeTeamCard)}
+                                                {selectedMyTeamTrainees.length === 0 && (
+                                                    <p className="rounded-xl border border-gray-700 bg-gray-800/70 px-4 py-8 text-center text-sm italic text-gray-500">
+                                                        No trainees assigned to My Team yet.
+                                                    </p>
+                                                )}
+                                            </div>
+                                        </section>
+                                    )}
+                                </div>
+                            )}
+                        </div>
+                    </div>
+                </div>
+            )}
 
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                 {/* My Hub */}
@@ -2901,6 +3522,9 @@ const MyDashboard: React.FC<MyDashboardProps> = ({
                         </button>
                         <button onClick={onSelectMySct} className="w-full text-left px-4 py-3 bg-gray-700 hover:bg-gray-600 rounded-md text-white font-semibold transition-colors">
                             My {continuationShortLabel}
+                        </button>
+                        <button onClick={() => setIsMyTeamOpen(true)} className="w-full text-left px-4 py-3 bg-gray-700 hover:bg-gray-600 rounded-md text-white font-semibold transition-colors">
+                            My Team
                         </button>
                     </div>
                 </div>
