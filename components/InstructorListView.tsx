@@ -1,6 +1,6 @@
 
 import React, { useState, useMemo, useEffect, useRef } from 'react';
-import { ScheduleEvent, Instructor, Trainee, MasterCurrency, CurrencyRequirement, SyllabusItemDetail, AirCombatTrainingAssignment, SctRequest } from '../types';
+import { ScheduleEvent, Instructor, Trainee, MasterCurrency, CurrencyRequirement, SyllabusItemDetail, AirCombatTrainingAssignment, SctRequest, TrainingReportAssessment } from '../types';
 import FlightInfoFlyout from './FlightInfoFlyout';
 // FIX: Corrected import path for the InstructorProfileFlyout component.
 import { InstructorProfileFlyout } from './InstructorProfileFlyout';
@@ -136,6 +136,7 @@ interface InstructorListViewProps {
   instructorsData: Instructor[];
   archivedInstructorsData: Instructor[];
   scheduleHistoryEvents?: ScheduleEvent[];
+  trainingReportAssessments?: Map<string, TrainingReportAssessment> | TrainingReportAssessment[];
   syllabusDetails?: SyllabusItemDetail[];
   insertEventTypes?: InsertEventTypeConfig[];
   aircraftConfigurations?: AircraftConfigurationDefinition[];
@@ -206,6 +207,7 @@ const InstructorListView: React.FC<InstructorListViewProps> = ({
     instructorsData,
     archivedInstructorsData,
     scheduleHistoryEvents = [],
+    trainingReportAssessments = [],
     syllabusDetails = [],
     insertEventTypes = [],
     aircraftConfigurations = [],
@@ -937,6 +939,7 @@ const InstructorListView: React.FC<InstructorListViewProps> = ({
                     traineesData={traineesData}
                     events={events}
                     scheduleHistoryEvents={scheduleHistoryEvents}
+                    trainingReportAssessments={trainingReportAssessments}
                     syllabusDetails={syllabusDetails}
                     insertEventTypes={insertEventTypes}
                     aircraftConfigurations={aircraftConfigurations}

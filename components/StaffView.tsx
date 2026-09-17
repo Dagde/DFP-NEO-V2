@@ -10,7 +10,7 @@ import { findCrewPositionEntry, type CrewPositionTerminology } from '../utils/cr
 import type { StaffQualificationCatalogue } from '../utils/staffQualifications';
 import type { SctTerminology } from '../utils/sctTerminology';
 import { isFixedCrewLikeOperationalModel, type PlatformConfig } from '../utils/platformConfigService';
-import type { SctRequest } from '../types';
+import type { SctRequest, TrainingReportAssessment } from '../types';
 
 interface StaffViewProps {
   // Props for InstructorListView
@@ -20,6 +20,7 @@ interface StaffViewProps {
   instructorsData: any[];
   archivedInstructorsData: any[];
   scheduleHistoryEvents?: any[];
+  trainingReportAssessments?: Map<string, TrainingReportAssessment> | TrainingReportAssessment[];
   insertEventTypes?: any[];
   aircraftConfigurations?: any[];
   onInsertAirCombatTrainingEvent?: (...args: any[]) => Promise<boolean> | boolean;
@@ -237,6 +238,7 @@ const StaffView: React.FC<StaffViewProps> = (props) => {
             instructorsData={scopedInstructorsData}
             archivedInstructorsData={scopedArchivedInstructorsData}
             scheduleHistoryEvents={props.scheduleHistoryEvents}
+            trainingReportAssessments={props.trainingReportAssessments}
             syllabusDetails={props.syllabusDetails}
             insertEventTypes={props.insertEventTypes}
             aircraftConfigurations={props.aircraftConfigurations}
