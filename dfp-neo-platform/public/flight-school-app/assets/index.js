@@ -3823,6 +3823,46 @@ const isWatchingDfpMoveChangeEvent = (eventId) => {
   }
   return true;
 };
+const readJsonStorage = (key) => {
+  try {
+    const raw = window.localStorage.getItem(key);
+    return raw ? JSON.parse(raw) : null;
+  } catch {
+    return null;
+  }
+};
+const downloadDfpMoveChangeTrace = (context = {}) => {
+  if (typeof window === "undefined") return;
+  const entries = readEntries();
+  const enrichedEntries = entries.map((entry, index) => {
+    const previous = index > 0 ? entries[index - 1] : null;
+    return {
+      index,
+      sincePreviousMs: typeof entry.perfMs === "number" && typeof previous?.perfMs === "number" ? entry.perfMs - previous.perfMs : null,
+      ...entry
+    };
+  });
+  const report = {
+    reportType: "DFP_MOVE_CHANGE_BAR_TRACE",
+    generatedAt: (/* @__PURE__ */ new Date()).toISOString(),
+    context,
+    entryCount: enrichedEntries.length,
+    entries: enrichedEntries,
+    dragDiagnostics: readJsonStorage("dfp_drag_diagnostics_report"),
+    dfpDataDiagnostics: readJsonStorage("neo_dfp_data_diag")
+  };
+  const blob = new Blob([JSON.stringify(report, null, 2)], { type: "application/json" });
+  const url = URL.createObjectURL(blob);
+  const safeUser = String(context.currentUserName || "user").toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "") || "user";
+  const safeDate = String(context.date || "no-date").replace(/[^0-9-]/g, "") || "no-date";
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = `dfp-move-change-bar-trace-${safeUser}-${safeDate}-${(/* @__PURE__ */ new Date()).toISOString().replace(/[:.]/g, "-")}.json`;
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+  URL.revokeObjectURL(url);
+};
 const DEFAULT_TASK_PROFILE_CONFIG = {
   flight_school: [],
   air_combat: [],
@@ -39053,6 +39093,7 @@ const ScheduleView = ({
   pauseCompletedEventIds,
   onPauseToggleCompleted,
   alertsData,
+  onDownloadChangeBarTrace,
   formatResourceLabel: formatResourceLabel2,
   aircraftConfigLabelsByResource,
   aircraftNumberSettings,
@@ -41163,6 +41204,18 @@ const ScheduleView = ({
             isNeoBuild && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "neo-build-label", children: "NEO Build" })
           ] }) }),
           /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { "data-schedule-time-header": "true", className: "sticky top-0 z-20 bg-gray-800 border-b border-gray-700 relative", children: [
+            onDownloadChangeBarTrace && !isNeoBuild && /* @__PURE__ */ jsxRuntimeExports.jsx(
+              "button",
+              {
+                type: "button",
+                onClick: (event) => {
+                  event.stopPropagation();
+                  onDownloadChangeBarTrace();
+                },
+                className: "absolute right-2 top-1 z-30 rounded border border-cyan-400/40 bg-slate-900/90 px-2 py-0.5 text-[11px] font-bold uppercase tracking-[0.08em] text-cyan-100 shadow hover:border-cyan-300 hover:bg-slate-800",
+                children: "Download Change Bar Trace"
+              }
+            ),
             isReadOnly && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "absolute left-2 top-1 z-30 flex items-center gap-2 rounded border border-amber-400/30 bg-gray-900/85 px-2 py-0.5 text-[11px] font-semibold uppercase tracking-wide text-amber-200 shadow", children: [
               /* @__PURE__ */ jsxRuntimeExports.jsx("span", { children: "Read-only archive" }),
               onOpenCurrentDfp && /* @__PURE__ */ jsxRuntimeExports.jsx(
@@ -142122,7 +142175,7 @@ The proposed event was not scheduled. Re-open the event and choose Accept Confli
   };
   reactExports.useCallback(() => {
     if (typeof window === "undefined") return;
-    const readJsonStorage = (key) => {
+    const readJsonStorage2 = (key) => {
       try {
         const raw = window.localStorage.getItem(key);
         return raw ? JSON.parse(raw) : null;
@@ -142134,7 +142187,7 @@ The proposed event was not scheduled. Re-open the event and choose Accept Confli
     };
     const getLatestNeoBuildDiagnosticReport = () => {
       const liveReport = window.__lastNeoBuildDiagnosticReport;
-      const storedReport = readJsonStorage("neo_build_diag_report");
+      const storedReport = readJsonStorage2("neo_build_diag_report");
       const liveUpdatedAt = Date.parse(String(liveReport?.updatedAt || liveReport?.timestamp || ""));
       const storedUpdatedAt = Date.parse(String(storedReport?.updatedAt || storedReport?.timestamp || ""));
       if (liveReport && (!storedReport || !Number.isFinite(storedUpdatedAt) || liveUpdatedAt >= storedUpdatedAt)) {
@@ -142184,12 +142237,12 @@ The proposed event was not scheduled. Re-open the event and choose Accept Confli
       },
       storedReports: {
         neoBuildDiagnostic: getLatestNeoBuildDiagnosticReport(),
-        neoBuildTiming: readJsonStorage("neo_build_timing_report"),
-        neoBuildRuntimeError: readJsonStorage("neo_build_runtime_error_report"),
-        neoBuildZeroTileTrace: readJsonStorage("neo_build_zero_tile_trace"),
-        neoBuildInputTrace: readJsonStorage("neo_build_input_trace"),
-        neoDfpDataTrace: readJsonStorage("neo_dfp_data_diag"),
-        flightSchoolPriority: readJsonStorage("flight_school_priority_diag_report")
+        neoBuildTiming: readJsonStorage2("neo_build_timing_report"),
+        neoBuildRuntimeError: readJsonStorage2("neo_build_runtime_error_report"),
+        neoBuildZeroTileTrace: readJsonStorage2("neo_build_zero_tile_trace"),
+        neoBuildInputTrace: readJsonStorage2("neo_build_input_trace"),
+        neoDfpDataTrace: readJsonStorage2("neo_dfp_data_diag"),
+        flightSchoolPriority: readJsonStorage2("flight_school_priority_diag_report")
       }
     };
     const blob = new Blob([JSON.stringify(report, null, 2)], { type: "application/json" });
@@ -147690,6 +147743,112 @@ ${error instanceof Error ? error.message : String(error)}`,
     if (!eventId) return null;
     return (eventSegmentsForDate || []).find((event) => event.id === eventId) || scopedPublishedEventsForDate.find((event) => event.id === eventId) || null;
   }, [eventSegmentsForDate, scopedPublishedEventsForDate]);
+  const getChangeBarTraceEventAnalysis = reactExports.useCallback((candidateEvent, baselineEvent) => {
+    const reasons = [];
+    const epsilon = 1e-3;
+    if (!baselineEvent) {
+      reasons.push("missing-baseline-event");
+    } else {
+      if (Math.abs(candidateEvent.startTime - baselineEvent.startTime) > epsilon) reasons.push("start-time");
+      if (Math.abs(candidateEvent.duration - baselineEvent.duration) > epsilon) reasons.push("duration");
+      if (candidateEvent.resourceId !== baselineEvent.resourceId) reasons.push("resource");
+      if (candidateEvent.instructor !== baselineEvent.instructor) reasons.push("instructor");
+      if (candidateEvent.student !== baselineEvent.student) reasons.push("student");
+      if (candidateEvent.pilot !== baselineEvent.pilot) reasons.push("pilot");
+      if ((candidateEvent.area || "") !== (baselineEvent.area || "")) reasons.push("area");
+    }
+    return {
+      isChanged: reasons.length > 0,
+      reasons,
+      current: summariseDfpMoveEvent(candidateEvent),
+      baseline: summariseDfpMoveEvent(baselineEvent)
+    };
+  }, []);
+  const buildChangeBarTraceContext = reactExports.useCallback((reason) => {
+    const currentEventsForDate = publishedSchedules[date] || [];
+    const baselineEventsForDate = baselineSchedules[activeBaselineKey] || [];
+    const baselineById = new Map(baselineEventsForDate.map((baselineEvent) => [baselineEvent.id, baselineEvent]));
+    const alertsForDate = alertsDataByDate[date] || {};
+    const analysedEvents = currentEventsForDate.map((event) => {
+      const alertEntry = alertsForDate[event.id];
+      const responseStatuses = alertEntry?.responses && typeof alertEntry.responses === "object" ? Object.values(alertEntry.responses).map((response) => response?.status || "") : [];
+      return {
+        ...getChangeBarTraceEventAnalysis(event, baselineById.get(event.id)),
+        alert: alertEntry ? {
+          alertId: alertEntry.alertId || null,
+          sentAt: alertEntry.sentAt || null,
+          responseStatuses,
+          recipientCount: Array.isArray(alertEntry.recipients) ? alertEntry.recipients.length : null
+        } : null
+      };
+    });
+    const changedEvents = analysedEvents.filter((entry) => entry.isChanged);
+    const missingCurrentIds = baselineEventsForDate.filter((baselineEvent) => !currentEventsForDate.some((event) => event.id === baselineEvent.id)).map(summariseDfpMoveEvent);
+    let localSnapshotSummary = null;
+    try {
+      const cacheKey = `dfp_snapshot_cache_${activeBaselineKey}`;
+      const cached = window.localStorage.getItem(cacheKey);
+      const parsed = cached ? JSON.parse(cached) : null;
+      localSnapshotSummary = {
+        cacheKey,
+        cachePresent: Boolean(cached),
+        cachedDate: parsed?.date || null,
+        cachedScheduleEventCount: Array.isArray(parsed?.scheduleEvents) ? parsed.scheduleEvents.length : null,
+        cachedBaselineEventCount: Array.isArray(parsed?.baselineEvents) ? parsed.baselineEvents.length : null,
+        cachedAlertEventIds: parsed?.alertsData && typeof parsed.alertsData === "object" ? Object.keys(parsed.alertsData) : [],
+        cachedChangedSample: Array.isArray(parsed?.scheduleEvents) && Array.isArray(parsed?.baselineEvents) ? parsed.scheduleEvents.slice(0, 40).map((event) => {
+          const baselineEvent = parsed.baselineEvents.find((candidate) => candidate.id === event.id);
+          return getChangeBarTraceEventAnalysis(event, baselineEvent);
+        }).filter((entry) => entry.isChanged).slice(0, 20) : []
+      };
+    } catch (error) {
+      localSnapshotSummary = {
+        error: String(error)
+      };
+    }
+    return {
+      reason,
+      date,
+      school,
+      activeUnitCode,
+      activeOperationalModel,
+      activeBaselineKey,
+      visibleEventCount: currentEventsForDate.length,
+      baselineEventCount: baselineEventsForDate.length,
+      baselineKeys: Object.keys(baselineSchedules),
+      alertEventIds: Object.keys(alertsForDate),
+      changedEventCount: changedEvents.length,
+      changedEvents: changedEvents.slice(0, 80),
+      unchangedSample: analysedEvents.filter((entry) => !entry.isChanged).slice(0, 20),
+      baselineEventsMissingCurrentTile: missingCurrentIds.slice(0, 40),
+      localSnapshotSummary,
+      selectedEvent: summariseDfpMoveEvent(selectedEvent),
+      timestamp: (/* @__PURE__ */ new Date()).toISOString()
+    };
+  }, [
+    activeBaselineKey,
+    activeOperationalModel,
+    activeUnitCode,
+    alertsDataByDate,
+    baselineSchedules,
+    date,
+    getChangeBarTraceEventAnalysis,
+    publishedSchedules,
+    school,
+    selectedEvent
+  ]);
+  reactExports.useEffect(() => {
+    if (activeView !== "Program Schedule") return;
+    appendDfpMoveChangeTrace("change-bar:program-schedule-state", buildChangeBarTraceContext("program-schedule-state"));
+  }, [activeView, buildChangeBarTraceContext]);
+  const handleDownloadChangeBarTrace = reactExports.useCallback(() => {
+    const context = buildChangeBarTraceContext("manual-download");
+    appendDfpMoveChangeTrace("change-bar:manual-download", context);
+    downloadDfpMoveChangeTrace({
+      ...context,
+      currentUserName
+    });
+  }, [buildChangeBarTraceContext, currentUserName]);
   const hasChangeBarNotification = reactExports.useCallback((candidateEvent) => {
     if (!candidateEvent) return false;
     const baselineEvents = baselineSchedules[activeBaselineKey];
@@ -148332,6 +148491,7 @@ ${error instanceof Error ? error.message : String(error)}`,
             detectConflictsForEvent,
             baselineEvents: baselineSchedules[activeBaselineKey],
             alertsData: alertsDataByDate[date] || {},
+            onDownloadChangeBarTrace: handleDownloadChangeBarTrace,
             formatResourceLabel: formatResourceDisplayLabel,
             aircraftConfigLabelsByResource,
             aircraftNumberSettings,

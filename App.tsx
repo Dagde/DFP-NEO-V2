@@ -13,6 +13,7 @@ import { isEditableElement } from './utils/editableKeyEvents';
 import { getAdaptiveContextMenuPosition } from './utils/contextMenuPosition';
 import {
     appendDfpMoveChangeTrace,
+    downloadDfpMoveChangeTrace,
     isWatchingDfpMoveChangeEvent,
     summariseDfpMoveEvent,
     watchDfpMoveChangeEvents,
@@ -51372,6 +51373,122 @@ appliedUpdates.forEach(update => {
         ) as ScheduleEvent | null;
     }, [eventSegmentsForDate, scopedPublishedEventsForDate]);
 
+    const getChangeBarTraceEventAnalysis = useCallback((candidateEvent: ScheduleEvent, baselineEvent: ScheduleEvent | undefined | null) => {
+        const reasons: string[] = [];
+        const epsilon = 0.001;
+        if (!baselineEvent) {
+            reasons.push('missing-baseline-event');
+        } else {
+            if (Math.abs(candidateEvent.startTime - baselineEvent.startTime) > epsilon) reasons.push('start-time');
+            if (Math.abs(candidateEvent.duration - baselineEvent.duration) > epsilon) reasons.push('duration');
+            if (candidateEvent.resourceId !== baselineEvent.resourceId) reasons.push('resource');
+            if (candidateEvent.instructor !== baselineEvent.instructor) reasons.push('instructor');
+            if (candidateEvent.student !== baselineEvent.student) reasons.push('student');
+            if (candidateEvent.pilot !== baselineEvent.pilot) reasons.push('pilot');
+            if ((candidateEvent.area || '') !== (baselineEvent.area || '')) reasons.push('area');
+        }
+        return {
+            isChanged: reasons.length > 0,
+            reasons,
+            current: summariseDfpMoveEvent(candidateEvent),
+            baseline: summariseDfpMoveEvent(baselineEvent),
+        };
+    }, []);
+
+    const buildChangeBarTraceContext = useCallback((reason: string) => {
+        const currentEventsForDate = publishedSchedules[date] || [];
+        const baselineEventsForDate = baselineSchedules[activeBaselineKey] || [];
+        const baselineById = new Map(baselineEventsForDate.map((baselineEvent) => [baselineEvent.id, baselineEvent]));
+        const alertsForDate = alertsDataByDate[date] || {};
+        const analysedEvents = currentEventsForDate.map((event) => {
+            const alertEntry = alertsForDate[event.id];
+            const responseStatuses = alertEntry?.responses && typeof alertEntry.responses === 'object'
+                ? Object.values(alertEntry.responses).map((response: any) => response?.status || '')
+                : [];
+            return {
+                ...getChangeBarTraceEventAnalysis(event, baselineById.get(event.id)),
+                alert: alertEntry ? {
+                    alertId: alertEntry.alertId || null,
+                    sentAt: alertEntry.sentAt || null,
+                    responseStatuses,
+                    recipientCount: Array.isArray(alertEntry.recipients) ? alertEntry.recipients.length : null,
+                } : null,
+            };
+        });
+        const changedEvents = analysedEvents.filter((entry) => entry.isChanged);
+        const missingCurrentIds = baselineEventsForDate
+            .filter((baselineEvent) => !currentEventsForDate.some((event) => event.id === baselineEvent.id))
+            .map(summariseDfpMoveEvent);
+        let localSnapshotSummary: Record<string, unknown> | null = null;
+        try {
+            const cacheKey = `dfp_snapshot_cache_${activeBaselineKey}`;
+            const cached = window.localStorage.getItem(cacheKey);
+            const parsed = cached ? JSON.parse(cached) : null;
+            localSnapshotSummary = {
+                cacheKey,
+                cachePresent: Boolean(cached),
+                cachedDate: parsed?.date || null,
+                cachedScheduleEventCount: Array.isArray(parsed?.scheduleEvents) ? parsed.scheduleEvents.length : null,
+                cachedBaselineEventCount: Array.isArray(parsed?.baselineEvents) ? parsed.baselineEvents.length : null,
+                cachedAlertEventIds: parsed?.alertsData && typeof parsed.alertsData === 'object' ? Object.keys(parsed.alertsData) : [],
+                cachedChangedSample: Array.isArray(parsed?.scheduleEvents) && Array.isArray(parsed?.baselineEvents)
+                    ? parsed.scheduleEvents.slice(0, 40).map((event: ScheduleEvent) => {
+                        const baselineEvent = parsed.baselineEvents.find((candidate: ScheduleEvent) => candidate.id === event.id);
+                        return getChangeBarTraceEventAnalysis(event, baselineEvent);
+                    }).filter((entry: any) => entry.isChanged).slice(0, 20)
+                    : [],
+            };
+        } catch (error) {
+            localSnapshotSummary = {
+                error: String(error),
+            };
+        }
+        return {
+            reason,
+            date,
+            school,
+            activeUnitCode,
+            activeOperationalModel,
+            activeBaselineKey,
+            visibleEventCount: currentEventsForDate.length,
+            baselineEventCount: baselineEventsForDate.length,
+            baselineKeys: Object.keys(baselineSchedules),
+            alertEventIds: Object.keys(alertsForDate),
+            changedEventCount: changedEvents.length,
+            changedEvents: changedEvents.slice(0, 80),
+            unchangedSample: analysedEvents.filter((entry) => !entry.isChanged).slice(0, 20),
+            baselineEventsMissingCurrentTile: missingCurrentIds.slice(0, 40),
+            localSnapshotSummary,
+            selectedEvent: summariseDfpMoveEvent(selectedEvent),
+            timestamp: new Date().toISOString(),
+        };
+    }, [
+        activeBaselineKey,
+        activeOperationalModel,
+        activeUnitCode,
+        alertsDataByDate,
+        baselineSchedules,
+        date,
+        getChangeBarTraceEventAnalysis,
+        publishedSchedules,
+        school,
+        selectedEvent,
+    ]);
+
+    useEffect(() => {
+        if (activeView !== 'Program Schedule') return;
+        appendDfpMoveChangeTrace('change-bar:program-schedule-state', buildChangeBarTraceContext('program-schedule-state'));
+    }, [activeView, buildChangeBarTraceContext]);
+
+    const handleDownloadChangeBarTrace = useCallback(() => {
+        const context = buildChangeBarTraceContext('manual-download');
+        appendDfpMoveChangeTrace('change-bar:manual-download', context);
+        downloadDfpMoveChangeTrace({
+            ...context,
+            currentUserName,
+        });
+    }, [buildChangeBarTraceContext, currentUserName]);
+
     const hasChangeBarNotification = useCallback((candidateEvent: ScheduleEvent | null): boolean => {
         if (!candidateEvent) return false;
         const baselineEvents = baselineSchedules[activeBaselineKey];
@@ -52092,6 +52209,7 @@ appliedUpdates.forEach(update => {
                            detectConflictsForEvent={detectConflictsForEvent}
                            baselineEvents={baselineSchedules[activeBaselineKey]}
                            alertsData={alertsDataByDate[date] || {}}
+                           onDownloadChangeBarTrace={handleDownloadChangeBarTrace}
                            formatResourceLabel={formatResourceDisplayLabel}
                            aircraftConfigLabelsByResource={aircraftConfigLabelsByResource}
                            aircraftNumberSettings={aircraftNumberSettings}
