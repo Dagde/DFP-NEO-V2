@@ -62783,6 +62783,7 @@ const MyDashboard = ({
   const [myTeamTraineeDraftIds, setMyTeamTraineeDraftIds] = reactExports.useState(() => new Set(myTeamAssignments.traineeIds || []));
   const [myTeamFlightFilter, setMyTeamFlightFilter] = reactExports.useState("all");
   const [myTeamCrewFilter, setMyTeamCrewFilter] = reactExports.useState("all");
+  const [selectedMyTeamPersonId, setSelectedMyTeamPersonId] = reactExports.useState("");
   const [isContactPickerOpen, setIsContactPickerOpen] = reactExports.useState(false);
   const [messageToText, setMessageToText] = reactExports.useState("");
   const [selectedMessageContact, setSelectedMessageContact] = reactExports.useState(null);
@@ -63876,6 +63877,33 @@ const MyDashboard = ({
     const ids = new Set(myTeamAssignments.traineeIds || []);
     return myTeamTraineeOptions.filter((trainee) => ids.has(getTraineeTeamId(trainee)));
   }, [myTeamAssignments.traineeIds?.join("|"), myTeamTraineeOptions]);
+  const selectedMyTeamPeople = reactExports.useMemo(() => {
+    const staffEntries = selectedMyTeamStaff.map((staff) => ({
+      type: "staff",
+      id: `staff:${getStaffTeamId(staff)}`,
+      label: `${staff.rank || ""} ${formatPersonDisplayName(staff, staff.name)}`.trim(),
+      subtitle: [formatStaffRole(staff), staff.unit, staff.flight ? `Flight ${staff.flight}` : "", staff.crew ? `Crew ${staff.crew}` : ""].filter(Boolean).join(" / "),
+      person: staff
+    }));
+    const traineeEntries = selectedMyTeamTrainees.map((trainee) => ({
+      type: "trainee",
+      id: `trainee:${getTraineeTeamId(trainee)}`,
+      label: `${trainee.rank || ""} ${formatPersonDisplayName(trainee, trainee.fullName || trainee.name)}`.trim(),
+      subtitle: ["Trainee", trainee.unit, trainee.course, trainee.flight ? `Flight ${trainee.flight}` : "", trainee.crew ? `Crew ${trainee.crew}` : ""].filter(Boolean).join(" / "),
+      person: trainee
+    }));
+    return [...staffEntries, ...traineeEntries].sort((a, b) => compareDashboardRank(a.person.rank, b.person.rank) || a.label.localeCompare(b.label));
+  }, [selectedMyTeamStaff, selectedMyTeamTrainees]);
+  const selectedMyTeamPerson = reactExports.useMemo(() => selectedMyTeamPeople.find((entry) => entry.id === selectedMyTeamPersonId) || selectedMyTeamPeople[0] || null, [selectedMyTeamPeople, selectedMyTeamPersonId]);
+  reactExports.useEffect(() => {
+    if (selectedMyTeamPeople.length === 0) {
+      if (selectedMyTeamPersonId) setSelectedMyTeamPersonId("");
+      return;
+    }
+    if (!selectedMyTeamPeople.some((entry) => entry.id === selectedMyTeamPersonId)) {
+      setSelectedMyTeamPersonId(selectedMyTeamPeople[0].id);
+    }
+  }, [selectedMyTeamPeople, selectedMyTeamPersonId]);
   const getEventsForPerson = (personName) => myTeamEvents.filter((event) => dashboardEventHasPerson(event, personName));
   const buildPersonPeriodMetrics = (personEvents) => {
     const metrics = buildEmptyMyTeamPeriodMetrics();
@@ -64018,53 +64046,70 @@ const MyDashboard = ({
       ] }, period);
     }) })
   ] }) });
-  const renderMetricPill = (label, value) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded-lg border border-gray-700 bg-gray-950/40 px-3 py-2", children: [
-    /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-[10px] font-bold uppercase tracking-[0.12em] text-gray-500", children: label }),
-    /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-1 text-sm font-semibold text-white", children: value })
-  ] });
-  const renderStaffTeamCard = (staff) => {
-    const metrics = buildStaffMetrics(staff);
-    return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded-xl border border-gray-700 bg-gray-800/75 p-4", children: [
-      /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex flex-wrap items-start justify-between gap-3", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
-        /* @__PURE__ */ jsxRuntimeExports.jsxs("h4", { className: "text-base font-bold text-white", children: [
-          formatStaffRole(staff),
-          " - ",
-          staff.rank,
-          " ",
-          formatPersonDisplayName(staff, staff.name)
-        ] }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-1 text-xs font-semibold uppercase tracking-[0.08em] text-gray-400", children: [staff.unit, staff.flight ? `Flight ${staff.flight}` : "", staff.crew ? `Crew ${staff.crew}` : ""].filter(Boolean).join(" / ") || "No unit detail" })
-      ] }) }),
-      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mt-3 grid gap-2 sm:grid-cols-2 lg:grid-cols-4", children: [
-        renderMetricPill("Days since flight", metrics.daysSinceLastFlight),
-        renderMetricPill("Aircraft type hours", formatDashboardMetricNumber(metrics.aircraftTypeHours)),
-        isFlightSchoolDashboard && renderMetricPill("Instructor hours", formatDashboardMetricNumber(metrics.instructorHours)),
-        renderMetricPill("Average score given", metrics.averageOverallScore)
-      ] }),
-      renderPeriodMetrics(metrics.periods)
-    ] }, getStaffTeamId(staff));
+  const renderMyTeamStatCard = (label, value, description, tone = "cyan") => {
+    const toneClasses = {
+      cyan: "border-cyan-500/30 text-cyan-200 bg-cyan-500/10",
+      blue: "border-blue-500/30 text-blue-200 bg-blue-500/10",
+      emerald: "border-emerald-500/30 text-emerald-200 bg-emerald-500/10",
+      amber: "border-amber-500/30 text-amber-200 bg-amber-500/10",
+      rose: "border-rose-500/30 text-rose-200 bg-rose-500/10"
+    }[tone];
+    return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded-xl border border-gray-700 bg-gray-950/35 p-4", children: [
+      /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: `mb-5 flex h-12 w-12 items-center justify-center rounded-lg border text-lg font-black ${toneClasses}`, children: String(label || "?").slice(0, 1) }),
+      /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-sm font-bold text-white", children: label }),
+      /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-2 min-h-[42px] text-xs leading-5 text-gray-400", children: description }),
+      /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-5 text-3xl font-black text-white", children: value })
+    ] });
   };
-  const renderTraineeTeamCard = (trainee) => {
-    const metrics = buildTraineeMetrics(trainee);
-    return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded-xl border border-gray-700 bg-gray-800/75 p-4", children: [
-      /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex flex-wrap items-start justify-between gap-3", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
-        /* @__PURE__ */ jsxRuntimeExports.jsxs("h4", { className: "text-base font-bold text-white", children: [
-          trainee.rank,
-          " ",
-          formatPersonDisplayName(trainee, trainee.fullName || trainee.name)
+  const renderSelectedMyTeamDashboard = (entry) => {
+    if (!entry) {
+      return /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "rounded-xl border border-gray-700 bg-gray-800/70 px-4 py-10 text-center text-sm italic text-gray-500", children: "No people are assigned to My Team yet." });
+    }
+    if (entry.type === "staff") {
+      const staff = entry.person;
+      const metrics2 = buildStaffMetrics(staff);
+      const period302 = metrics2.periods[30] || buildEmptyMyTeamPeriodMetrics()[30];
+      return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-4", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("section", { className: "rounded-xl border border-cyan-500/25 bg-cyan-950/15 p-4", children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-[10px] font-bold uppercase tracking-[0.28em] text-cyan-300", children: "Team Member" }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx("h3", { className: "mt-2 text-2xl font-black text-white", children: entry.label }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-1 text-sm font-semibold text-gray-400", children: entry.subtitle || "Staff member" })
         ] }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-1 text-xs font-semibold uppercase tracking-[0.08em] text-gray-400", children: [trainee.unit, trainee.course, trainee.flight ? `Flight ${trainee.flight}` : "", trainee.crew ? `Crew ${trainee.crew}` : ""].filter(Boolean).join(" / ") || "No unit detail" })
-      ] }) }),
-      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mt-3 grid gap-2 sm:grid-cols-2 lg:grid-cols-4", children: [
-        renderMetricPill("Days since flight", metrics.daysSinceLastFlight),
-        renderMetricPill("Events/week avg", metrics.averageEventsPerWeek),
-        renderMetricPill("Last 4 weeks", metrics.fourWeekProgress),
-        renderMetricPill("Primary instructor", `${metrics.primaryInstructorFlights.count} / ${metrics.primaryInstructorFlights.percent}`),
-        renderMetricPill("Secondary instructor", `${metrics.secondaryInstructorFlights.count} / ${metrics.secondaryInstructorFlights.percent}`),
-        renderMetricPill("Other instructor", `${metrics.otherInstructorFlights.count} / ${metrics.otherInstructorFlights.percent}`)
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid gap-4 md:grid-cols-2 xl:grid-cols-4", children: [
+          renderMyTeamStatCard("Events", period302.events, "Events completed in the last 30 days.", "cyan"),
+          renderMyTeamStatCard("Flights", period302.flights, "Flight events completed in the last 30 days.", "blue"),
+          renderMyTeamStatCard("Flying hours", formatDashboardMetricNumber(period302.flightHours), "Flying hours recorded in the last 30 days.", "emerald"),
+          renderMyTeamStatCard("Days since flight", metrics2.daysSinceLastFlight, "Elapsed time since the most recent flight.", "amber"),
+          renderMyTeamStatCard("Currency flights", period302.currencyFlights, "Currency events in the last 30 days.", "rose"),
+          renderMyTeamStatCard("Aircraft type hours", formatDashboardMetricNumber(metrics2.aircraftTypeHours), "Total hours for the selected aircraft type.", "cyan"),
+          isFlightSchoolDashboard && renderMyTeamStatCard("Instructor hours", formatDashboardMetricNumber(metrics2.instructorHours), "Instructional flying hours for the selected aircraft type.", "blue"),
+          renderMyTeamStatCard("Average score given", metrics2.averageOverallScore, "Average overall score in completed training reports.", "emerald")
+        ] }),
+        renderPeriodMetrics(metrics2.periods)
+      ] });
+    }
+    const trainee = entry.person;
+    const metrics = buildTraineeMetrics(trainee);
+    const period30 = metrics.periods[30] || buildEmptyMyTeamPeriodMetrics()[30];
+    return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-4", children: [
+      /* @__PURE__ */ jsxRuntimeExports.jsxs("section", { className: "rounded-xl border border-emerald-500/25 bg-emerald-950/15 p-4", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-[10px] font-bold uppercase tracking-[0.28em] text-emerald-300", children: "Team Member" }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx("h3", { className: "mt-2 text-2xl font-black text-white", children: entry.label }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-1 text-sm font-semibold text-gray-400", children: entry.subtitle || "Trainee" })
+      ] }),
+      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid gap-4 md:grid-cols-2 xl:grid-cols-4", children: [
+        renderMyTeamStatCard("Events", period30.events, "Events completed in the last 30 days.", "cyan"),
+        renderMyTeamStatCard("Flights", period30.flights, "Flight events completed in the last 30 days.", "blue"),
+        renderMyTeamStatCard("Flying hours", formatDashboardMetricNumber(period30.flightHours), "Flying hours recorded in the last 30 days.", "emerald"),
+        renderMyTeamStatCard("Days since flight", metrics.daysSinceLastFlight, "Elapsed time since the most recent flight.", "amber"),
+        renderMyTeamStatCard("Events/week", metrics.averageEventsPerWeek, "Average events completed each week since first event.", "rose"),
+        renderMyTeamStatCard("Last 4 weeks", metrics.fourWeekProgress, "Change compared with the previous four-week period.", "cyan"),
+        renderMyTeamStatCard("Primary instructor", `${metrics.primaryInstructorFlights.count} / ${metrics.primaryInstructorFlights.percent}`, "Flights flown with the assigned primary instructor.", "blue"),
+        renderMyTeamStatCard("Secondary instructor", `${metrics.secondaryInstructorFlights.count} / ${metrics.secondaryInstructorFlights.percent}`, "Flights flown with the assigned secondary instructor.", "emerald"),
+        renderMyTeamStatCard("Other instructor", `${metrics.otherInstructorFlights.count} / ${metrics.otherInstructorFlights.percent}`, "Flights flown with other instructors.", "amber")
       ] }),
       renderPeriodMetrics(metrics.periods)
-    ] }, getTraineeTeamId(trainee));
+    ] });
   };
   const renderMyTeamPicker = (label, rows, selectedIds, getId, getName, onToggle, onSetIds) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded-xl border border-gray-700 bg-gray-950/35 p-3", children: [
     /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mb-2 flex flex-wrap items-center justify-between gap-2", children: [
@@ -64790,7 +64835,7 @@ const MyDashboard = ({
         ] })
       ] }),
       /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex-1 overflow-y-auto px-5 py-4", children: [
-        (myTeamFlightOptions.length > 0 || myTeamCrewOptions.length > 0) && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mb-4 grid gap-3 rounded-xl border border-gray-700 bg-gray-800/70 p-3 md:grid-cols-2", children: [
+        isMyTeamEditing && (myTeamFlightOptions.length > 0 || myTeamCrewOptions.length > 0) && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mb-4 grid gap-3 rounded-xl border border-gray-700 bg-gray-800/70 p-3 md:grid-cols-2", children: [
           myTeamFlightOptions.length > 0 && /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "text-xs font-bold uppercase tracking-[0.12em] text-gray-400", children: [
             "Flight",
             /* @__PURE__ */ jsxRuntimeExports.jsxs(
@@ -64841,33 +64886,29 @@ const MyDashboard = ({
             toggleMyTeamTrainee,
             setMyTeamTraineeDraftIds
           )
-        ] }) : /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-5", children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsxs("section", { children: [
-            /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mb-3 flex items-center justify-between", children: [
-              /* @__PURE__ */ jsxRuntimeExports.jsx("h3", { className: "text-lg font-bold text-sky-300", children: "Staff" }),
-              /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "text-xs font-semibold uppercase tracking-[0.12em] text-gray-500", children: [
-                selectedMyTeamStaff.length,
-                " selected"
-              ] })
+        ] }) : /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-4", children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsx("section", { className: "rounded-xl border border-gray-700 bg-gray-800/70 p-3", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex flex-wrap items-end justify-between gap-3", children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "min-w-[260px] flex-1 text-xs font-bold uppercase tracking-[0.12em] text-gray-400", children: [
+              "Team member",
+              /* @__PURE__ */ jsxRuntimeExports.jsx(
+                "select",
+                {
+                  value: selectedMyTeamPerson?.id || "",
+                  onChange: (event) => setSelectedMyTeamPersonId(event.target.value),
+                  disabled: selectedMyTeamPeople.length === 0,
+                  className: "mt-1 w-full rounded-lg border border-gray-600 bg-gray-950 px-3 py-2 text-sm font-semibold normal-case tracking-normal text-white disabled:cursor-not-allowed disabled:opacity-60",
+                  children: selectedMyTeamPeople.length === 0 ? /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "", children: "No assigned team members" }) : selectedMyTeamPeople.map((entry) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: entry.id, children: entry.label }, entry.id))
+                }
+              )
             ] }),
-            /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-3", children: [
-              selectedMyTeamStaff.map(renderStaffTeamCard),
-              selectedMyTeamStaff.length === 0 && /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "rounded-xl border border-gray-700 bg-gray-800/70 px-4 py-8 text-center text-sm italic text-gray-500", children: "No staff assigned to My Team yet." })
+            /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "text-right text-xs font-semibold uppercase tracking-[0.12em] text-gray-500", children: [
+              selectedMyTeamStaff.length,
+              " staff / ",
+              selectedMyTeamTrainees.length,
+              " trainees"
             ] })
-          ] }),
-          isFlightSchoolDashboard && /* @__PURE__ */ jsxRuntimeExports.jsxs("section", { children: [
-            /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mb-3 flex items-center justify-between", children: [
-              /* @__PURE__ */ jsxRuntimeExports.jsx("h3", { className: "text-lg font-bold text-emerald-300", children: "Trainees" }),
-              /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "text-xs font-semibold uppercase tracking-[0.12em] text-gray-500", children: [
-                selectedMyTeamTrainees.length,
-                " selected"
-              ] })
-            ] }),
-            /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-3", children: [
-              selectedMyTeamTrainees.map(renderTraineeTeamCard),
-              selectedMyTeamTrainees.length === 0 && /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "rounded-xl border border-gray-700 bg-gray-800/70 px-4 py-8 text-center text-sm italic text-gray-500", children: "No trainees assigned to My Team yet." })
-            ] })
-          ] })
+          ] }) }),
+          renderSelectedMyTeamDashboard(selectedMyTeamPerson)
         ] })
       ] })
     ] }) }),

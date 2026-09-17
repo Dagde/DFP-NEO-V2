@@ -87,6 +87,10 @@ type MyTeamTraineeMetrics = {
     otherInstructorFlights: { count: number; percent: string };
 };
 
+type MyTeamPersonEntry =
+    | { type: 'staff'; id: string; label: string; subtitle: string; person: Instructor }
+    | { type: 'trainee'; id: string; label: string; subtitle: string; person: Trainee };
+
 type DashboardMessageContact = {
     id: string;
     name: string;
@@ -889,6 +893,7 @@ const MyDashboard: React.FC<MyDashboardProps> = ({
     const [myTeamTraineeDraftIds, setMyTeamTraineeDraftIds] = useState<Set<string>>(() => new Set(myTeamAssignments.traineeIds || []));
     const [myTeamFlightFilter, setMyTeamFlightFilter] = useState('all');
     const [myTeamCrewFilter, setMyTeamCrewFilter] = useState('all');
+    const [selectedMyTeamPersonId, setSelectedMyTeamPersonId] = useState('');
     const [isContactPickerOpen, setIsContactPickerOpen] = useState(false);
     const [messageToText, setMessageToText] = useState('');
     const [selectedMessageContact, setSelectedMessageContact] = useState<DashboardMessageContact | null>(null);
@@ -2397,6 +2402,42 @@ const MyDashboard: React.FC<MyDashboardProps> = ({
         const ids = new Set(myTeamAssignments.traineeIds || []);
         return myTeamTraineeOptions.filter(trainee => ids.has(getTraineeTeamId(trainee)));
     }, [myTeamAssignments.traineeIds?.join('|'), myTeamTraineeOptions]);
+    const selectedMyTeamPeople = useMemo<MyTeamPersonEntry[]>(() => {
+        const staffEntries: MyTeamPersonEntry[] = selectedMyTeamStaff.map(staff => ({
+            type: 'staff',
+            id: `staff:${getStaffTeamId(staff)}`,
+            label: `${staff.rank || ''} ${formatPersonDisplayName(staff, staff.name)}`.trim(),
+            subtitle: [formatStaffRole(staff), staff.unit, staff.flight ? `Flight ${staff.flight}` : '', staff.crew ? `Crew ${staff.crew}` : '']
+                .filter(Boolean)
+                .join(' / '),
+            person: staff,
+        }));
+        const traineeEntries: MyTeamPersonEntry[] = selectedMyTeamTrainees.map(trainee => ({
+            type: 'trainee',
+            id: `trainee:${getTraineeTeamId(trainee)}`,
+            label: `${trainee.rank || ''} ${formatPersonDisplayName(trainee as any, trainee.fullName || trainee.name)}`.trim(),
+            subtitle: ['Trainee', trainee.unit, trainee.course, trainee.flight ? `Flight ${trainee.flight}` : '', trainee.crew ? `Crew ${trainee.crew}` : '']
+                .filter(Boolean)
+                .join(' / '),
+            person: trainee,
+        }));
+        return [...staffEntries, ...traineeEntries].sort((a, b) => (
+            compareDashboardRank((a.person as any).rank, (b.person as any).rank) ||
+            a.label.localeCompare(b.label)
+        ));
+    }, [selectedMyTeamStaff, selectedMyTeamTrainees]);
+    const selectedMyTeamPerson = useMemo(() => (
+        selectedMyTeamPeople.find(entry => entry.id === selectedMyTeamPersonId) || selectedMyTeamPeople[0] || null
+    ), [selectedMyTeamPeople, selectedMyTeamPersonId]);
+    useEffect(() => {
+        if (selectedMyTeamPeople.length === 0) {
+            if (selectedMyTeamPersonId) setSelectedMyTeamPersonId('');
+            return;
+        }
+        if (!selectedMyTeamPeople.some(entry => entry.id === selectedMyTeamPersonId)) {
+            setSelectedMyTeamPersonId(selectedMyTeamPeople[0].id);
+        }
+    }, [selectedMyTeamPeople, selectedMyTeamPersonId]);
     const getEventsForPerson = (personName: string): ScheduleEvent[] => (
         myTeamEvents.filter(event => dashboardEventHasPerson(event, personName))
     );
@@ -2567,55 +2608,86 @@ const MyDashboard: React.FC<MyDashboardProps> = ({
         </div>
     );
 
-    const renderMetricPill = (label: string, value: string | number) => (
-        <div className="rounded-lg border border-gray-700 bg-gray-950/40 px-3 py-2">
-            <p className="text-[10px] font-bold uppercase tracking-[0.12em] text-gray-500">{label}</p>
-            <p className="mt-1 text-sm font-semibold text-white">{value}</p>
-        </div>
-    );
-
-    const renderStaffTeamCard = (staff: Instructor) => {
-        const metrics = buildStaffMetrics(staff);
+    const renderMyTeamStatCard = (
+        label: string,
+        value: string | number,
+        description: string,
+        tone: 'cyan' | 'blue' | 'emerald' | 'amber' | 'rose' = 'cyan',
+    ) => {
+        const toneClasses = {
+            cyan: 'border-cyan-500/30 text-cyan-200 bg-cyan-500/10',
+            blue: 'border-blue-500/30 text-blue-200 bg-blue-500/10',
+            emerald: 'border-emerald-500/30 text-emerald-200 bg-emerald-500/10',
+            amber: 'border-amber-500/30 text-amber-200 bg-amber-500/10',
+            rose: 'border-rose-500/30 text-rose-200 bg-rose-500/10',
+        }[tone];
         return (
-            <div key={getStaffTeamId(staff)} className="rounded-xl border border-gray-700 bg-gray-800/75 p-4">
-                <div className="flex flex-wrap items-start justify-between gap-3">
-                    <div>
-                        <h4 className="text-base font-bold text-white">{formatStaffRole(staff)} - {staff.rank} {formatPersonDisplayName(staff, staff.name)}</h4>
-                        <p className="mt-1 text-xs font-semibold uppercase tracking-[0.08em] text-gray-400">
-                            {[staff.unit, staff.flight ? `Flight ${staff.flight}` : '', staff.crew ? `Crew ${staff.crew}` : ''].filter(Boolean).join(' / ') || 'No unit detail'}
-                        </p>
-                    </div>
+            <div className="rounded-xl border border-gray-700 bg-gray-950/35 p-4">
+                <div className={`mb-5 flex h-12 w-12 items-center justify-center rounded-lg border text-lg font-black ${toneClasses}`}>
+                    {String(label || '?').slice(0, 1)}
                 </div>
-                <div className="mt-3 grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
-                    {renderMetricPill('Days since flight', metrics.daysSinceLastFlight)}
-                    {renderMetricPill('Aircraft type hours', formatDashboardMetricNumber(metrics.aircraftTypeHours))}
-                    {isFlightSchoolDashboard && renderMetricPill('Instructor hours', formatDashboardMetricNumber(metrics.instructorHours))}
-                    {renderMetricPill('Average score given', metrics.averageOverallScore)}
-                </div>
-                {renderPeriodMetrics(metrics.periods)}
+                <p className="text-sm font-bold text-white">{label}</p>
+                <p className="mt-2 min-h-[42px] text-xs leading-5 text-gray-400">{description}</p>
+                <p className="mt-5 text-3xl font-black text-white">{value}</p>
             </div>
         );
     };
 
-    const renderTraineeTeamCard = (trainee: Trainee) => {
-        const metrics = buildTraineeMetrics(trainee);
-        return (
-            <div key={getTraineeTeamId(trainee)} className="rounded-xl border border-gray-700 bg-gray-800/75 p-4">
-                <div className="flex flex-wrap items-start justify-between gap-3">
-                    <div>
-                        <h4 className="text-base font-bold text-white">{trainee.rank} {formatPersonDisplayName(trainee as any, trainee.fullName || trainee.name)}</h4>
-                        <p className="mt-1 text-xs font-semibold uppercase tracking-[0.08em] text-gray-400">
-                            {[trainee.unit, trainee.course, trainee.flight ? `Flight ${trainee.flight}` : '', trainee.crew ? `Crew ${trainee.crew}` : ''].filter(Boolean).join(' / ') || 'No unit detail'}
-                        </p>
-                    </div>
+    const renderSelectedMyTeamDashboard = (entry: MyTeamPersonEntry | null) => {
+        if (!entry) {
+            return (
+                <div className="rounded-xl border border-gray-700 bg-gray-800/70 px-4 py-10 text-center text-sm italic text-gray-500">
+                    No people are assigned to My Team yet.
                 </div>
-                <div className="mt-3 grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
-                    {renderMetricPill('Days since flight', metrics.daysSinceLastFlight)}
-                    {renderMetricPill('Events/week avg', metrics.averageEventsPerWeek)}
-                    {renderMetricPill('Last 4 weeks', metrics.fourWeekProgress)}
-                    {renderMetricPill('Primary instructor', `${metrics.primaryInstructorFlights.count} / ${metrics.primaryInstructorFlights.percent}`)}
-                    {renderMetricPill('Secondary instructor', `${metrics.secondaryInstructorFlights.count} / ${metrics.secondaryInstructorFlights.percent}`)}
-                    {renderMetricPill('Other instructor', `${metrics.otherInstructorFlights.count} / ${metrics.otherInstructorFlights.percent}`)}
+            );
+        }
+
+        if (entry.type === 'staff') {
+            const staff = entry.person;
+            const metrics = buildStaffMetrics(staff);
+            const period30 = metrics.periods[30] || buildEmptyMyTeamPeriodMetrics()[30];
+            return (
+                <div className="space-y-4">
+                    <section className="rounded-xl border border-cyan-500/25 bg-cyan-950/15 p-4">
+                        <p className="text-[10px] font-bold uppercase tracking-[0.28em] text-cyan-300">Team Member</p>
+                        <h3 className="mt-2 text-2xl font-black text-white">{entry.label}</h3>
+                        <p className="mt-1 text-sm font-semibold text-gray-400">{entry.subtitle || 'Staff member'}</p>
+                    </section>
+                    <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+                        {renderMyTeamStatCard('Events', period30.events, 'Events completed in the last 30 days.', 'cyan')}
+                        {renderMyTeamStatCard('Flights', period30.flights, 'Flight events completed in the last 30 days.', 'blue')}
+                        {renderMyTeamStatCard('Flying hours', formatDashboardMetricNumber(period30.flightHours), 'Flying hours recorded in the last 30 days.', 'emerald')}
+                        {renderMyTeamStatCard('Days since flight', metrics.daysSinceLastFlight, 'Elapsed time since the most recent flight.', 'amber')}
+                        {renderMyTeamStatCard('Currency flights', period30.currencyFlights, 'Currency events in the last 30 days.', 'rose')}
+                        {renderMyTeamStatCard('Aircraft type hours', formatDashboardMetricNumber(metrics.aircraftTypeHours), 'Total hours for the selected aircraft type.', 'cyan')}
+                        {isFlightSchoolDashboard && renderMyTeamStatCard('Instructor hours', formatDashboardMetricNumber(metrics.instructorHours), 'Instructional flying hours for the selected aircraft type.', 'blue')}
+                        {renderMyTeamStatCard('Average score given', metrics.averageOverallScore, 'Average overall score in completed training reports.', 'emerald')}
+                    </div>
+                    {renderPeriodMetrics(metrics.periods)}
+                </div>
+            );
+        }
+
+        const trainee = entry.person;
+        const metrics = buildTraineeMetrics(trainee);
+        const period30 = metrics.periods[30] || buildEmptyMyTeamPeriodMetrics()[30];
+        return (
+            <div className="space-y-4">
+                <section className="rounded-xl border border-emerald-500/25 bg-emerald-950/15 p-4">
+                    <p className="text-[10px] font-bold uppercase tracking-[0.28em] text-emerald-300">Team Member</p>
+                    <h3 className="mt-2 text-2xl font-black text-white">{entry.label}</h3>
+                    <p className="mt-1 text-sm font-semibold text-gray-400">{entry.subtitle || 'Trainee'}</p>
+                </section>
+                <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+                    {renderMyTeamStatCard('Events', period30.events, 'Events completed in the last 30 days.', 'cyan')}
+                    {renderMyTeamStatCard('Flights', period30.flights, 'Flight events completed in the last 30 days.', 'blue')}
+                    {renderMyTeamStatCard('Flying hours', formatDashboardMetricNumber(period30.flightHours), 'Flying hours recorded in the last 30 days.', 'emerald')}
+                    {renderMyTeamStatCard('Days since flight', metrics.daysSinceLastFlight, 'Elapsed time since the most recent flight.', 'amber')}
+                    {renderMyTeamStatCard('Events/week', metrics.averageEventsPerWeek, 'Average events completed each week since first event.', 'rose')}
+                    {renderMyTeamStatCard('Last 4 weeks', metrics.fourWeekProgress, 'Change compared with the previous four-week period.', 'cyan')}
+                    {renderMyTeamStatCard('Primary instructor', `${metrics.primaryInstructorFlights.count} / ${metrics.primaryInstructorFlights.percent}`, 'Flights flown with the assigned primary instructor.', 'blue')}
+                    {renderMyTeamStatCard('Secondary instructor', `${metrics.secondaryInstructorFlights.count} / ${metrics.secondaryInstructorFlights.percent}`, 'Flights flown with the assigned secondary instructor.', 'emerald')}
+                    {renderMyTeamStatCard('Other instructor', `${metrics.otherInstructorFlights.count} / ${metrics.otherInstructorFlights.percent}`, 'Flights flown with other instructors.', 'amber')}
                 </div>
                 {renderPeriodMetrics(metrics.periods)}
             </div>
@@ -3419,7 +3491,7 @@ const MyDashboard: React.FC<MyDashboardProps> = ({
                             </div>
                         </div>
                         <div className="flex-1 overflow-y-auto px-5 py-4">
-                            {(myTeamFlightOptions.length > 0 || myTeamCrewOptions.length > 0) && (
+                            {isMyTeamEditing && (myTeamFlightOptions.length > 0 || myTeamCrewOptions.length > 0) && (
                                 <div className="mb-4 grid gap-3 rounded-xl border border-gray-700 bg-gray-800/70 p-3 md:grid-cols-2">
                                     {myTeamFlightOptions.length > 0 && (
                                         <label className="text-xs font-bold uppercase tracking-[0.12em] text-gray-400">
@@ -3471,37 +3543,32 @@ const MyDashboard: React.FC<MyDashboardProps> = ({
                                     )}
                                 </div>
                             ) : (
-                                <div className="space-y-5">
-                                    <section>
-                                        <div className="mb-3 flex items-center justify-between">
-                                            <h3 className="text-lg font-bold text-sky-300">Staff</h3>
-                                            <span className="text-xs font-semibold uppercase tracking-[0.12em] text-gray-500">{selectedMyTeamStaff.length} selected</span>
-                                        </div>
-                                        <div className="space-y-3">
-                                            {selectedMyTeamStaff.map(renderStaffTeamCard)}
-                                            {selectedMyTeamStaff.length === 0 && (
-                                                <p className="rounded-xl border border-gray-700 bg-gray-800/70 px-4 py-8 text-center text-sm italic text-gray-500">
-                                                    No staff assigned to My Team yet.
-                                                </p>
-                                            )}
+                                <div className="space-y-4">
+                                    <section className="rounded-xl border border-gray-700 bg-gray-800/70 p-3">
+                                        <div className="flex flex-wrap items-end justify-between gap-3">
+                                            <label className="min-w-[260px] flex-1 text-xs font-bold uppercase tracking-[0.12em] text-gray-400">
+                                                Team member
+                                                <select
+                                                    value={selectedMyTeamPerson?.id || ''}
+                                                    onChange={(event) => setSelectedMyTeamPersonId(event.target.value)}
+                                                    disabled={selectedMyTeamPeople.length === 0}
+                                                    className="mt-1 w-full rounded-lg border border-gray-600 bg-gray-950 px-3 py-2 text-sm font-semibold normal-case tracking-normal text-white disabled:cursor-not-allowed disabled:opacity-60"
+                                                >
+                                                    {selectedMyTeamPeople.length === 0 ? (
+                                                        <option value="">No assigned team members</option>
+                                                    ) : selectedMyTeamPeople.map(entry => (
+                                                        <option key={entry.id} value={entry.id}>
+                                                            {entry.label}
+                                                        </option>
+                                                    ))}
+                                                </select>
+                                            </label>
+                                            <div className="text-right text-xs font-semibold uppercase tracking-[0.12em] text-gray-500">
+                                                {selectedMyTeamStaff.length} staff / {selectedMyTeamTrainees.length} trainees
+                                            </div>
                                         </div>
                                     </section>
-                                    {isFlightSchoolDashboard && (
-                                        <section>
-                                            <div className="mb-3 flex items-center justify-between">
-                                                <h3 className="text-lg font-bold text-emerald-300">Trainees</h3>
-                                                <span className="text-xs font-semibold uppercase tracking-[0.12em] text-gray-500">{selectedMyTeamTrainees.length} selected</span>
-                                            </div>
-                                            <div className="space-y-3">
-                                                {selectedMyTeamTrainees.map(renderTraineeTeamCard)}
-                                                {selectedMyTeamTrainees.length === 0 && (
-                                                    <p className="rounded-xl border border-gray-700 bg-gray-800/70 px-4 py-8 text-center text-sm italic text-gray-500">
-                                                        No trainees assigned to My Team yet.
-                                                    </p>
-                                                )}
-                                            </div>
-                                        </section>
-                                    )}
+                                    {renderSelectedMyTeamDashboard(selectedMyTeamPerson)}
                                 </div>
                             )}
                         </div>
