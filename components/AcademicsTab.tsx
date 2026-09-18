@@ -348,6 +348,8 @@ const AcademicsTab: React.FC<AcademicsTabProps> = ({
   const [editTileId, setEditTileId] = useState<string | null>(null);
   const [editStartTime, setEditStartTime] = useState('');
   const [editDuration, setEditDuration] = useState('');
+  const [timelineEditTileId, setTimelineEditTileId] = useState<string | null>(null);
+  const [timelineContextMenu, setTimelineContextMenu] = useState<{ tileId: string; x: number; y: number } | null>(null);
 
   // Courses filtered by locality
   const coursesForLocality = useMemo(() => {
@@ -546,6 +548,7 @@ const AcademicsTab: React.FC<AcademicsTabProps> = ({
   // ── Timeline drag ──
   const timelineRef = useRef<HTMLDivElement>(null);
   const dragging = useRef<{ tileId: string; offsetX: number } | null>(null);
+  const resizing = useRef<{ tileId: string; edge: 'start' | 'end' } | null>(null);
 
   const timelineWidth = () => timelineRef.current?.clientWidth || 800;
   const pixelsPerHour = () => timelineWidth() / (TIMELINE_END - TIMELINE_START);
@@ -556,13 +559,46 @@ const AcademicsTab: React.FC<AcademicsTabProps> = ({
 
   const onMouseDownTile = (e: React.MouseEvent, tileId: string) => {
     e.preventDefault();
+    if (timelineEditTileId === tileId) return;
     const rect = (e.target as HTMLElement).closest('.acad-tile')?.getBoundingClientRect();
     if (!rect) return;
     const offsetX = e.clientX - rect.left;
     dragging.current = { tileId, offsetX };
   };
 
+  const onTileContextMenu = (e: React.MouseEvent, tileId: string) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setTimelineContextMenu({ tileId, x: e.clientX, y: e.clientY });
+  };
+
+  const startResizeTile = (e: React.MouseEvent, tileId: string, edge: 'start' | 'end') => {
+    e.preventDefault();
+    e.stopPropagation();
+    setTimelineContextMenu(null);
+    setTimelineEditTileId(tileId);
+    dragging.current = null;
+    resizing.current = { tileId, edge };
+  };
+
   const onMouseMove = useCallback((e: MouseEvent) => {
+    if (resizing.current && timelineRef.current) {
+      const rect = timelineRef.current.getBoundingClientRect();
+      const pointerTime = xToTime(e.clientX - rect.left);
+      const minDuration = 0.25;
+      setTiles(prev => prev.map(t => {
+        if (t.id !== resizing.current!.tileId) return t;
+        const start = t.startTime;
+        const end = t.startTime + t.duration;
+        if (resizing.current!.edge === 'start') {
+          const newStart = Math.max(TIMELINE_START, Math.min(pointerTime, end - minDuration));
+          return { ...t, startTime: newStart, duration: end - newStart };
+        }
+        const newEnd = Math.min(TIMELINE_END, Math.max(pointerTime, start + minDuration));
+        return { ...t, duration: newEnd - start };
+      }));
+      return;
+    }
     if (!dragging.current || !timelineRef.current) return;
     const rect = timelineRef.current.getBoundingClientRect();
     const x = e.clientX - rect.left - dragging.current.offsetX;
@@ -572,14 +608,20 @@ const AcademicsTab: React.FC<AcademicsTabProps> = ({
     ));
   }, []);
 
-  const onMouseUp = useCallback(() => { dragging.current = null; }, []);
+  const onMouseUp = useCallback(() => {
+    dragging.current = null;
+    resizing.current = null;
+  }, []);
 
   useEffect(() => {
     document.addEventListener('mousemove', onMouseMove);
     document.addEventListener('mouseup', onMouseUp);
+    const closeContextMenu = () => setTimelineContextMenu(null);
+    document.addEventListener('click', closeContextMenu);
     return () => {
       document.removeEventListener('mousemove', onMouseMove);
       document.removeEventListener('mouseup', onMouseUp);
+      document.removeEventListener('click', closeContextMenu);
     };
   }, [onMouseMove, onMouseUp]);
 
@@ -952,6 +994,7 @@ const AcademicsTab: React.FC<AcademicsTabProps> = ({
           {/* Tiles */}
           {tiles.map(tile => {
             const conflict = hasConflict(tile);
+            const isEditingTimelineTile = timelineEditTileId === tile.id;
             const pph = timelineWidth() / (TIMELINE_END - TIMELINE_START);
             const x = (tile.startTime - TIMELINE_START) * pph;
             const w = Math.max(tile.duration * pph - 2, 20);
@@ -960,6 +1003,7 @@ const AcademicsTab: React.FC<AcademicsTabProps> = ({
                 key={tile.id}
                 className="acad-tile"
                 onMouseDown={e => onMouseDownTile(e, tile.id)}
+                onContextMenu={e => onTileContextMenu(e, tile.id)}
                 onDoubleClick={e => {
                   e.preventDefault();
                   e.stopPropagation();
@@ -967,7 +1011,7 @@ const AcademicsTab: React.FC<AcademicsTabProps> = ({
                   setEditStartTime(fmtTime(tile.startTime));
                   setEditDuration(String(tile.duration));
                 }}
-                title={`${tile.label} — ${fmtTime(tile.startTime)} to ${fmtTime(tile.startTime + tile.duration)} | Double-click to edit`}
+                title={`${tile.label} — ${fmtTime(tile.startTime)} to ${fmtTime(tile.startTime + tile.duration)} | Right-click for EDIT`}
                 style={{
                   position: 'absolute',
                   top: 18,
@@ -975,9 +1019,9 @@ const AcademicsTab: React.FC<AcademicsTabProps> = ({
                   left: x,
                   width: w,
                   backgroundColor: conflict ? '#991b1b' : tile.color,
-                  border: conflict ? '2px solid #ef4444' : '1px solid rgba(255,255,255,0.2)',
+                  border: isEditingTimelineTile ? '2px solid #38bdf8' : conflict ? '2px solid #ef4444' : '1px solid rgba(255,255,255,0.2)',
                   borderRadius: 4,
-                  cursor: 'grab',
+                  cursor: isEditingTimelineTile ? 'default' : 'grab',
                   overflow: 'hidden',
                   display: 'flex',
                   flexDirection: 'column',
@@ -991,9 +1035,91 @@ const AcademicsTab: React.FC<AcademicsTabProps> = ({
                 <span style={{ fontSize: 9, color: 'rgba(255,255,255,0.7)' }}>
                   {fmtTime(tile.startTime)}–{fmtTime(tile.startTime + tile.duration)}
                 </span>
+                {isEditingTimelineTile && (
+                  <>
+                    <button
+                      type="button"
+                      aria-label={`Adjust start time for ${tile.label}`}
+                      onMouseDown={event => startResizeTile(event, tile.id, 'start')}
+                      title="Drag to adjust start time"
+                      style={{
+                        position: 'absolute',
+                        left: 0,
+                        top: 0,
+                        bottom: 0,
+                        width: 9,
+                        border: 0,
+                        padding: 0,
+                        cursor: 'ew-resize',
+                        background: 'rgba(125,211,252,0.8)',
+                        boxShadow: '1px 0 8px rgba(0,0,0,0.35)',
+                      }}
+                    />
+                    <button
+                      type="button"
+                      aria-label={`Adjust end time for ${tile.label}`}
+                      onMouseDown={event => startResizeTile(event, tile.id, 'end')}
+                      title="Drag to adjust end time"
+                      style={{
+                        position: 'absolute',
+                        right: 0,
+                        top: 0,
+                        bottom: 0,
+                        width: 9,
+                        border: 0,
+                        padding: 0,
+                        cursor: 'ew-resize',
+                        background: 'rgba(125,211,252,0.8)',
+                        boxShadow: '-1px 0 8px rgba(0,0,0,0.35)',
+                      }}
+                    />
+                  </>
+                )}
               </div>
             );
           })}
+          {timelineContextMenu && (
+            <div
+              onMouseDown={event => event.stopPropagation()}
+              onClick={event => event.stopPropagation()}
+              style={{
+                position: 'fixed',
+                left: timelineContextMenu.x,
+                top: timelineContextMenu.y,
+                zIndex: 9500,
+                minWidth: 120,
+                border: '1px solid #475569',
+                borderRadius: 6,
+                background: '#020617',
+                boxShadow: '0 16px 36px rgba(0,0,0,0.45)',
+                padding: 4,
+              }}
+            >
+              <button
+                type="button"
+                onClick={() => {
+                  setTimelineEditTileId(timelineContextMenu.tileId);
+                  setTimelineContextMenu(null);
+                }}
+                style={{
+                  display: 'block',
+                  width: '100%',
+                  border: 0,
+                  borderRadius: 4,
+                  background: 'transparent',
+                  color: '#e5e7eb',
+                  cursor: 'pointer',
+                  fontSize: 12,
+                  fontWeight: 700,
+                  letterSpacing: '0.08em',
+                  padding: '8px 10px',
+                  textAlign: 'left',
+                }}
+              >
+                EDIT
+              </button>
+            </div>
+          )}
         </div>
 
         {/* Tile list below timeline */}

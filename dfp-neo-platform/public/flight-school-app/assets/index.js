@@ -60750,6 +60750,8 @@ const AcademicsTab = ({
   const [editTileId, setEditTileId] = reactExports.useState(null);
   const [editStartTime, setEditStartTime] = reactExports.useState("");
   const [editDuration, setEditDuration] = reactExports.useState("");
+  const [timelineEditTileId, setTimelineEditTileId] = reactExports.useState(null);
+  const [timelineContextMenu, setTimelineContextMenu] = reactExports.useState(null);
   const coursesForLocality = reactExports.useMemo(() => {
     const courses = /* @__PURE__ */ new Set();
     const locationShortCode = Object.entries(locationAbbreviations || {}).find(([name, _]) => name === selectedLocality)?.[1] || "";
@@ -60912,17 +60914,49 @@ Do you still want to include them in this academic session?`,
   }, [academicSyllabus, courseTrainees, scores, selectedLessons, selectedCourse]);
   const timelineRef = reactExports.useRef(null);
   const dragging = reactExports.useRef(null);
+  const resizing = reactExports.useRef(null);
   const timelineWidth = () => timelineRef.current?.clientWidth || 800;
   const pixelsPerHour = () => timelineWidth() / (TIMELINE_END - TIMELINE_START);
   const xToTime = (x) => snap(x / pixelsPerHour() + TIMELINE_START);
   const onMouseDownTile = (e, tileId) => {
     e.preventDefault();
+    if (timelineEditTileId === tileId) return;
     const rect = e.target.closest(".acad-tile")?.getBoundingClientRect();
     if (!rect) return;
     const offsetX = e.clientX - rect.left;
     dragging.current = { tileId, offsetX };
   };
+  const onTileContextMenu = (e, tileId) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setTimelineContextMenu({ tileId, x: e.clientX, y: e.clientY });
+  };
+  const startResizeTile = (e, tileId, edge) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setTimelineContextMenu(null);
+    setTimelineEditTileId(tileId);
+    dragging.current = null;
+    resizing.current = { tileId, edge };
+  };
   const onMouseMove = reactExports.useCallback((e) => {
+    if (resizing.current && timelineRef.current) {
+      const rect2 = timelineRef.current.getBoundingClientRect();
+      const pointerTime = xToTime(e.clientX - rect2.left);
+      const minDuration = 0.25;
+      setTiles((prev) => prev.map((t) => {
+        if (t.id !== resizing.current.tileId) return t;
+        const start = t.startTime;
+        const end = t.startTime + t.duration;
+        if (resizing.current.edge === "start") {
+          const newStart2 = Math.max(TIMELINE_START, Math.min(pointerTime, end - minDuration));
+          return { ...t, startTime: newStart2, duration: end - newStart2 };
+        }
+        const newEnd = Math.min(TIMELINE_END, Math.max(pointerTime, start + minDuration));
+        return { ...t, duration: newEnd - start };
+      }));
+      return;
+    }
     if (!dragging.current || !timelineRef.current) return;
     const rect = timelineRef.current.getBoundingClientRect();
     const x = e.clientX - rect.left - dragging.current.offsetX;
@@ -60933,13 +60967,17 @@ Do you still want to include them in this academic session?`,
   }, []);
   const onMouseUp = reactExports.useCallback(() => {
     dragging.current = null;
+    resizing.current = null;
   }, []);
   reactExports.useEffect(() => {
     document.addEventListener("mousemove", onMouseMove);
     document.addEventListener("mouseup", onMouseUp);
+    const closeContextMenu = () => setTimelineContextMenu(null);
+    document.addEventListener("click", closeContextMenu);
     return () => {
       document.removeEventListener("mousemove", onMouseMove);
       document.removeEventListener("mouseup", onMouseUp);
+      document.removeEventListener("click", closeContextMenu);
     };
   }, [onMouseMove, onMouseUp]);
   const hasConflict = (tile) => {
@@ -61313,6 +61351,7 @@ Do you still want to include them in this academic session?`,
             }, children: /* @__PURE__ */ jsxRuntimeExports.jsx("span", { style: { fontSize: 9, color: "#4b5563", paddingLeft: 2, paddingTop: 2, display: "block" }, children: String(h).padStart(2, "0") }) }, h)),
             tiles.map((tile) => {
               const conflict = hasConflict(tile);
+              const isEditingTimelineTile = timelineEditTileId === tile.id;
               const pph = timelineWidth() / (TIMELINE_END - TIMELINE_START);
               const x = (tile.startTime - TIMELINE_START) * pph;
               const w = Math.max(tile.duration * pph - 2, 20);
@@ -61321,6 +61360,7 @@ Do you still want to include them in this academic session?`,
                 {
                   className: "acad-tile",
                   onMouseDown: (e) => onMouseDownTile(e, tile.id),
+                  onContextMenu: (e) => onTileContextMenu(e, tile.id),
                   onDoubleClick: (e) => {
                     e.preventDefault();
                     e.stopPropagation();
@@ -61328,7 +61368,7 @@ Do you still want to include them in this academic session?`,
                     setEditStartTime(fmtTime(tile.startTime));
                     setEditDuration(String(tile.duration));
                   },
-                  title: `${tile.label} — ${fmtTime(tile.startTime)} to ${fmtTime(tile.startTime + tile.duration)} | Double-click to edit`,
+                  title: `${tile.label} — ${fmtTime(tile.startTime)} to ${fmtTime(tile.startTime + tile.duration)} | Right-click for EDIT`,
                   style: {
                     position: "absolute",
                     top: 18,
@@ -61336,9 +61376,9 @@ Do you still want to include them in this academic session?`,
                     left: x,
                     width: w,
                     backgroundColor: conflict ? "#991b1b" : tile.color,
-                    border: conflict ? "2px solid #ef4444" : "1px solid rgba(255,255,255,0.2)",
+                    border: isEditingTimelineTile ? "2px solid #38bdf8" : conflict ? "2px solid #ef4444" : "1px solid rgba(255,255,255,0.2)",
                     borderRadius: 4,
-                    cursor: "grab",
+                    cursor: isEditingTimelineTile ? "default" : "grab",
                     overflow: "hidden",
                     display: "flex",
                     flexDirection: "column",
@@ -61351,12 +61391,100 @@ Do you still want to include them in this academic session?`,
                       fmtTime(tile.startTime),
                       "–",
                       fmtTime(tile.startTime + tile.duration)
+                    ] }),
+                    isEditingTimelineTile && /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
+                      /* @__PURE__ */ jsxRuntimeExports.jsx(
+                        "button",
+                        {
+                          type: "button",
+                          "aria-label": `Adjust start time for ${tile.label}`,
+                          onMouseDown: (event) => startResizeTile(event, tile.id, "start"),
+                          title: "Drag to adjust start time",
+                          style: {
+                            position: "absolute",
+                            left: 0,
+                            top: 0,
+                            bottom: 0,
+                            width: 9,
+                            border: 0,
+                            padding: 0,
+                            cursor: "ew-resize",
+                            background: "rgba(125,211,252,0.8)",
+                            boxShadow: "1px 0 8px rgba(0,0,0,0.35)"
+                          }
+                        }
+                      ),
+                      /* @__PURE__ */ jsxRuntimeExports.jsx(
+                        "button",
+                        {
+                          type: "button",
+                          "aria-label": `Adjust end time for ${tile.label}`,
+                          onMouseDown: (event) => startResizeTile(event, tile.id, "end"),
+                          title: "Drag to adjust end time",
+                          style: {
+                            position: "absolute",
+                            right: 0,
+                            top: 0,
+                            bottom: 0,
+                            width: 9,
+                            border: 0,
+                            padding: 0,
+                            cursor: "ew-resize",
+                            background: "rgba(125,211,252,0.8)",
+                            boxShadow: "-1px 0 8px rgba(0,0,0,0.35)"
+                          }
+                        }
+                      )
                     ] })
                   ]
                 },
                 tile.id
               );
-            })
+            }),
+            timelineContextMenu && /* @__PURE__ */ jsxRuntimeExports.jsx(
+              "div",
+              {
+                onMouseDown: (event) => event.stopPropagation(),
+                onClick: (event) => event.stopPropagation(),
+                style: {
+                  position: "fixed",
+                  left: timelineContextMenu.x,
+                  top: timelineContextMenu.y,
+                  zIndex: 9500,
+                  minWidth: 120,
+                  border: "1px solid #475569",
+                  borderRadius: 6,
+                  background: "#020617",
+                  boxShadow: "0 16px 36px rgba(0,0,0,0.45)",
+                  padding: 4
+                },
+                children: /* @__PURE__ */ jsxRuntimeExports.jsx(
+                  "button",
+                  {
+                    type: "button",
+                    onClick: () => {
+                      setTimelineEditTileId(timelineContextMenu.tileId);
+                      setTimelineContextMenu(null);
+                    },
+                    style: {
+                      display: "block",
+                      width: "100%",
+                      border: 0,
+                      borderRadius: 4,
+                      background: "transparent",
+                      color: "#e5e7eb",
+                      cursor: "pointer",
+                      fontSize: 12,
+                      fontWeight: 700,
+                      letterSpacing: "0.08em",
+                      padding: "8px 10px",
+                      textAlign: "left"
+                    },
+                    children: "EDIT"
+                  }
+                )
+              }
+            )
           ]
         }
       ),
