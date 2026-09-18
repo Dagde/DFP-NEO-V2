@@ -61441,7 +61441,7 @@ Do you still want to include them in this academic session?`,
                 tile.id
               );
             }),
-            timelineContextMenu && /* @__PURE__ */ jsxRuntimeExports.jsx(
+            timelineContextMenu && /* @__PURE__ */ jsxRuntimeExports.jsxs(
               "div",
               {
                 onMouseDown: (event) => event.stopPropagation(),
@@ -61458,31 +61458,60 @@ Do you still want to include them in this academic session?`,
                   boxShadow: "0 16px 36px rgba(0,0,0,0.45)",
                   padding: 4
                 },
-                children: /* @__PURE__ */ jsxRuntimeExports.jsx(
-                  "button",
-                  {
-                    type: "button",
-                    onClick: () => {
-                      setTimelineEditTileId(timelineContextMenu.tileId);
-                      setTimelineContextMenu(null);
-                    },
-                    style: {
-                      display: "block",
-                      width: "100%",
-                      border: 0,
-                      borderRadius: 4,
-                      background: "transparent",
-                      color: "#e5e7eb",
-                      cursor: "pointer",
-                      fontSize: 12,
-                      fontWeight: 700,
-                      letterSpacing: "0.08em",
-                      padding: "8px 10px",
-                      textAlign: "left"
-                    },
-                    children: "EDIT"
-                  }
-                )
+                children: [
+                  /* @__PURE__ */ jsxRuntimeExports.jsx(
+                    "button",
+                    {
+                      type: "button",
+                      onClick: () => {
+                        setTimelineEditTileId(timelineContextMenu.tileId);
+                        setTimelineContextMenu(null);
+                      },
+                      style: {
+                        display: "block",
+                        width: "100%",
+                        border: 0,
+                        borderRadius: 4,
+                        background: "transparent",
+                        color: "#e5e7eb",
+                        cursor: "pointer",
+                        fontSize: 12,
+                        fontWeight: 700,
+                        letterSpacing: "0.08em",
+                        padding: "8px 10px",
+                        textAlign: "left"
+                      },
+                      children: "Select"
+                    }
+                  ),
+                  /* @__PURE__ */ jsxRuntimeExports.jsx(
+                    "button",
+                    {
+                      type: "button",
+                      onClick: () => {
+                        setTimelineEditTileId(null);
+                        dragging.current = null;
+                        resizing.current = null;
+                        setTimelineContextMenu(null);
+                      },
+                      style: {
+                        display: "block",
+                        width: "100%",
+                        border: 0,
+                        borderRadius: 4,
+                        background: "transparent",
+                        color: "#cbd5e1",
+                        cursor: "pointer",
+                        fontSize: 12,
+                        fontWeight: 700,
+                        letterSpacing: "0.08em",
+                        padding: "8px 10px",
+                        textAlign: "left"
+                      },
+                      children: "De-Select"
+                    }
+                  )
+                ]
               }
             )
           ]

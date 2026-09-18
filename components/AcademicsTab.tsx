@@ -1116,7 +1116,32 @@ const AcademicsTab: React.FC<AcademicsTabProps> = ({
                   textAlign: 'left',
                 }}
               >
-                EDIT
+                Select
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setTimelineEditTileId(null);
+                  dragging.current = null;
+                  resizing.current = null;
+                  setTimelineContextMenu(null);
+                }}
+                style={{
+                  display: 'block',
+                  width: '100%',
+                  border: 0,
+                  borderRadius: 4,
+                  background: 'transparent',
+                  color: '#cbd5e1',
+                  cursor: 'pointer',
+                  fontSize: 12,
+                  fontWeight: 700,
+                  letterSpacing: '0.08em',
+                  padding: '8px 10px',
+                  textAlign: 'left',
+                }}
+              >
+                De-Select
               </button>
             </div>
           )}
