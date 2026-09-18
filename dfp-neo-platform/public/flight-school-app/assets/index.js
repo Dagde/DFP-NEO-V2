@@ -62490,6 +62490,7 @@ const MY_TEAM_GRAPH_METRICS = {
 };
 const normaliseMyTeamId = (value) => String(value || "").trim();
 const getStaffTeamId = (staff) => normaliseMyTeamId(staff.id) || `staff-${staff.idNumber}-${staff.name}`;
+const getMyTeamStaffPersonnelId = (staff) => normaliseMyTeamId(staff.personnelId) || normaliseMyTeamId(staff.staffId) || normaliseMyTeamId(staff.idNumber);
 const getTraineeTeamId = (trainee) => normaliseMyTeamId(trainee.id) || `trainee-${trainee.idNumber}-${stripDashboardCourseFromName(trainee.fullName || trainee.name)}`;
 const parseDashboardEventDate = (event) => {
   const value = String(event.date || "").trim();
@@ -62537,6 +62538,13 @@ const formatDashboardMetricNumber = (value, decimals = 1) => {
   if (!Number.isFinite(value)) return "0";
   if (Math.abs(value - Math.round(value)) < 0.05) return String(Math.round(value));
   return value.toFixed(decimals);
+};
+const parseDashboardMetricTime = (value) => {
+  if (typeof value === "number") return Number.isFinite(value) ? value : 0;
+  const text = String(value ?? "").trim();
+  if (!text) return 0;
+  const parsed = Number(text);
+  return Number.isFinite(parsed) ? parsed : 0;
 };
 const formatDashboardDaysSince = (events, currentDate) => {
   const currentTime = dashboardDateAtUtcStart(currentDate);
@@ -62855,6 +62863,7 @@ const MyDashboard = ({
   const [myTeamCrewFilter, setMyTeamCrewFilter] = reactExports.useState("all");
   const [selectedMyTeamPersonId, setSelectedMyTeamPersonId] = reactExports.useState("");
   const [selectedMyTeamGraphMetric, setSelectedMyTeamGraphMetric] = reactExports.useState(null);
+  const [myTeamStaffLogbooks, setMyTeamStaffLogbooks] = reactExports.useState({});
   const [isContactPickerOpen, setIsContactPickerOpen] = reactExports.useState(false);
   const [messageToText, setMessageToText] = reactExports.useState("");
   const [selectedMessageContact, setSelectedMessageContact] = reactExports.useState(null);
@@ -63971,6 +63980,7 @@ const MyDashboard = ({
     const ids = new Set(myTeamAssignments.staffIds || []);
     return myTeamStaffOptions.filter((staff) => ids.has(getStaffTeamId(staff)));
   }, [myTeamAssignments.staffIds?.join("|"), myTeamStaffOptions]);
+  const selectedMyTeamStaffLogbookKey = reactExports.useMemo(() => selectedMyTeamStaff.map((staff) => `${getStaffTeamId(staff)}:${getMyTeamStaffPersonnelId(staff)}:${staff.name}`).join("|"), [selectedMyTeamStaff]);
   const selectedMyTeamTrainees = reactExports.useMemo(() => {
     const ids = new Set(myTeamAssignments.traineeIds || []);
     return myTeamTraineeOptions.filter((trainee) => ids.has(getTraineeTeamId(trainee)));
@@ -64002,6 +64012,55 @@ const MyDashboard = ({
       setSelectedMyTeamPersonId(selectedMyTeamPeople[0].id);
     }
   }, [selectedMyTeamPeople, selectedMyTeamPersonId]);
+  reactExports.useEffect(() => {
+    if (!isMyTeamOpen || selectedMyTeamStaff.length === 0) return;
+    let cancelled = false;
+    selectedMyTeamStaff.forEach((staff) => {
+      const cacheKey = getStaffTeamId(staff);
+      const current = myTeamStaffLogbooks[cacheKey];
+      if (current?.status === "loading" || current?.status === "loaded") return;
+      setMyTeamStaffLogbooks((prev) => ({
+        ...prev,
+        [cacheKey]: { status: "loading", entries: prev[cacheKey]?.entries || [] }
+      }));
+      const personnelId = getMyTeamStaffPersonnelId(staff);
+      const loadByQuery = async (query) => {
+        const response = await fetch(`/api/flight-log?${query.toString()}`, { credentials: "include" });
+        if (!response.ok) throw new Error(`Flight log lookup failed (${response.status})`);
+        const json = await response.json();
+        return Array.isArray(json.entries) ? json.entries : [];
+      };
+      (async () => {
+        try {
+          let entries = [];
+          if (personnelId) {
+            entries = await loadByQuery(new URLSearchParams({ personnelId }));
+          }
+          if (entries.length === 0 && staff.name) {
+            entries = await loadByQuery(new URLSearchParams({ personName: staff.name }));
+          }
+          if (cancelled) return;
+          setMyTeamStaffLogbooks((prev) => ({
+            ...prev,
+            [cacheKey]: {
+              status: "loaded",
+              entries: entries.sort((left, right) => String(left.eventDate || "").localeCompare(String(right.eventDate || "")))
+            }
+          }));
+        } catch (error) {
+          console.warn("[MyTeam] Staff logbook lookup failed:", staff.name, error);
+          if (cancelled) return;
+          setMyTeamStaffLogbooks((prev) => ({
+            ...prev,
+            [cacheKey]: { status: "error", entries: prev[cacheKey]?.entries || [] }
+          }));
+        }
+      })();
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [isMyTeamOpen, selectedMyTeamStaffLogbookKey]);
   const getEventsForPerson = (personName) => myTeamEvents.filter((event) => dashboardEventHasPerson(event, personName));
   const getMyTeamEventKey = (event) => String(event.id || event.scheduleEventId || "").trim() || [
     String(event.date || "").trim(),
@@ -64043,6 +64102,39 @@ const MyDashboard = ({
     Array.from(pt051Assessments.values()).filter((assessment) => assessment.isCompleted).forEach((assessment) => pushCompletedFlight(assessment, "training-report"));
     return completedFlights;
   };
+  const buildStaffLogbookEvents = (staff) => {
+    const logbook = myTeamStaffLogbooks[getStaffTeamId(staff)];
+    if (!logbook || logbook.entries.length === 0) return [];
+    return logbook.entries.filter((entry) => String(entry?.eventDate || "").trim()).map((entry) => {
+      const snapshot = entry.captainLogSnapshot || entry.crewLogSnapshot || {};
+      const eventCode2 = String(entry.eventCode || snapshot.event || "").trim();
+      const isSimulator = Boolean(entry.isFtdLog) || String(entry.eventType || "").toLowerCase() === "ftd";
+      const role = String(entry.personRole || "").toLowerCase();
+      const totalTime = parseDashboardMetricTime(entry.totalTime ?? snapshot.total ?? snapshot.simTotal);
+      const instructorTime = parseDashboardMetricTime(entry.instructorTime ?? snapshot.instTime);
+      return {
+        id: String(entry.scheduleEventId || entry.id || `my-team-logbook-${getStaffTeamId(staff)}-${entry.eventDate}-${eventCode2}`),
+        date: String(entry.eventDate || "").trim(),
+        type: isSimulator ? "ftd" : "flight",
+        instructor: role === "instructor" || role === "fixed_crew_pic" ? staff.name : String(snapshot.captain || "").trim(),
+        pilot: String(snapshot.captain || "").trim() || staff.name,
+        crew: role === "instructor" || role === "fixed_crew_pic" ? String(snapshot.crew || "").trim() : staff.name,
+        flightNumber: eventCode2 || "Flight",
+        duration: totalTime,
+        startTime: 0,
+        resourceId: String(entry.aircraftNumber || snapshot.tail || snapshot.type || "").trim(),
+        color: "",
+        flightType: entry.isSolo ? "Solo" : "Dual",
+        locationType: "Local",
+        origin: String(entry.fromIcao || "").trim(),
+        destination: String(entry.toIcao || "").trim(),
+        callsign: String(entry.duty || snapshot.duty || "").trim(),
+        aircraftNumber: String(entry.aircraftNumber || snapshot.tail || "").trim(),
+        instructorTime,
+        personnelRefs: [{ id: getMyTeamStaffPersonnelId(staff), name: staff.name, role: entry.personRole || "staff" }]
+      };
+    });
+  };
   const buildPersonPeriodMetrics = (personEvents) => {
     const metrics = buildEmptyMyTeamPeriodMetrics();
     personEvents.forEach((event) => {
@@ -64063,10 +64155,10 @@ const MyDashboard = ({
     return metrics;
   };
   const buildStaffMetrics = (staff) => {
-    const staffEvents = getEventsForPerson(staff.name);
+    const logbookEvents = buildStaffLogbookEvents(staff);
+    const staffEvents = logbookEvents.length > 0 ? logbookEvents : getEventsForPerson(staff.name);
     const completedFlightEvents = buildCompletedFlightEventsForStaff(staff, staffEvents);
     const metricEvents = [...staffEvents, ...completedFlightEvents];
-    staffEvents.filter(isDashboardFlightEvent);
     const metricFlightEvents = metricEvents.filter(isDashboardFlightEvent);
     const completedGrades = Array.from(pt051Assessments.values()).filter((assessment) => assessment.isCompleted && dashboardPersonNamesMatch(assessment.instructorName, staff.name)).map((assessment) => typeof assessment.overallGrade === "number" ? assessment.overallGrade : Number(assessment.overallGrade)).filter((value) => Number.isFinite(value));
     const averageGrade = completedGrades.length ? formatDashboardMetricNumber(completedGrades.reduce((sum, value) => sum + value, 0) / completedGrades.length) : "No grade";
@@ -64083,7 +64175,7 @@ const MyDashboard = ({
           event.aircraft
         ].some((value) => String(value || "").trim().toUpperCase() === aircraftCode);
       }).reduce((sum, event) => sum + Number(event.duration || 0), 0),
-      instructorHours: metricFlightEvents.filter((event) => dashboardPersonNamesMatch(event.instructor, staff.name)).reduce((sum, event) => sum + Number(event.duration || 0), 0),
+      instructorHours: metricFlightEvents.filter((event) => dashboardPersonNamesMatch(event.instructor, staff.name)).reduce((sum, event) => sum + Number(event.instructorTime ?? event.duration ?? 0), 0),
       averageOverallScore: averageGrade
     };
   };
