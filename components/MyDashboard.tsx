@@ -2584,14 +2584,15 @@ const MyDashboard: React.FC<MyDashboardProps> = ({
                         <th className="px-3 py-2">Flights</th>
                         <th className="px-3 py-2">Hours</th>
                         <th className="px-3 py-2">Currency</th>
-                        <th className="px-3 py-2">Sim %</th>
+                        <th className="px-3 py-2">Flt / Sim %</th>
                     </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-700/70">
                     {MY_TEAM_PERIODS.map(period => {
                         const row = periods[period] || { events: 0, flights: 0, flightHours: 0, currencyFlights: 0, simulatorEvents: 0 };
                         const simTotal = row.flights + row.simulatorEvents;
-                        const simPercent = simTotal ? `${Math.round((row.simulatorEvents / simTotal) * 100)}%` : '0%';
+                        const flightPercent = simTotal ? Math.round((row.flights / simTotal) * 100) : 0;
+                        const simPercent = simTotal ? Math.max(0, 100 - flightPercent) : 0;
                         return (
                             <tr key={period} className="bg-gray-800/60 text-gray-200">
                                 <td className="px-3 py-2 font-semibold text-white">{period} days</td>
@@ -2599,7 +2600,7 @@ const MyDashboard: React.FC<MyDashboardProps> = ({
                                 <td className="px-3 py-2">{row.flights}</td>
                                 <td className="px-3 py-2">{formatDashboardMetricNumber(row.flightHours)}</td>
                                 <td className="px-3 py-2">{row.currencyFlights}</td>
-                                <td className="px-3 py-2">{simPercent}</td>
+                                <td className="px-3 py-2">{flightPercent}% / {simPercent}%</td>
                             </tr>
                         );
                     })}
@@ -2612,26 +2613,11 @@ const MyDashboard: React.FC<MyDashboardProps> = ({
         label: string,
         value: string | number,
         description: string,
-        tone: 'cyan' | 'blue' | 'emerald' | 'amber' | 'rose' = 'cyan',
     ) => {
-        const toneClasses = {
-            cyan: 'border-cyan-500/30 text-cyan-200 bg-cyan-500/10',
-            blue: 'border-blue-500/30 text-blue-200 bg-blue-500/10',
-            emerald: 'border-emerald-500/30 text-emerald-200 bg-emerald-500/10',
-            amber: 'border-amber-500/30 text-amber-200 bg-amber-500/10',
-            rose: 'border-rose-500/30 text-rose-200 bg-rose-500/10',
-        }[tone];
         return (
             <div className="flex h-[118px] flex-col rounded-lg border border-gray-700 bg-gray-950/35 p-3">
-                <div className="flex items-start justify-between gap-2">
-                    <div>
-                        <p className="text-[13px] font-black leading-tight text-white">{label}</p>
-                        <p className="mt-1 line-clamp-2 text-[11px] leading-4 text-gray-400">{description}</p>
-                    </div>
-                    <div className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-md border text-sm font-black ${toneClasses}`}>
-                        {String(label || '?').slice(0, 1)}
-                    </div>
-                </div>
+                <p className="text-[13px] font-black leading-tight text-white">{label}</p>
+                <p className="mt-1 line-clamp-2 text-[11px] leading-4 text-gray-400">{description}</p>
                 <p className="mt-auto truncate text-2xl font-black leading-none text-white" title={String(value)}>
                     {value}
                 </p>
@@ -2660,14 +2646,14 @@ const MyDashboard: React.FC<MyDashboardProps> = ({
                         <p className="mt-1 text-sm font-semibold text-gray-400">{entry.subtitle || 'Staff member'}</p>
                     </section>
                     <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
-                        {renderMyTeamStatCard('Events', period30.events, 'Events completed in the last 30 days.', 'cyan')}
-                        {renderMyTeamStatCard('Flights', period30.flights, 'Flight events completed in the last 30 days.', 'blue')}
-                        {renderMyTeamStatCard('Flying hours', formatDashboardMetricNumber(period30.flightHours), 'Flying hours recorded in the last 30 days.', 'emerald')}
-                        {renderMyTeamStatCard('Days since flight', metrics.daysSinceLastFlight, 'Elapsed time since the most recent flight.', 'amber')}
-                        {renderMyTeamStatCard('Currency flights', period30.currencyFlights, 'Currency events in the last 30 days.', 'rose')}
-                        {renderMyTeamStatCard('Aircraft type hours', formatDashboardMetricNumber(metrics.aircraftTypeHours), 'Total hours for the selected aircraft type.', 'cyan')}
-                        {isFlightSchoolDashboard && renderMyTeamStatCard('Instructor hours', formatDashboardMetricNumber(metrics.instructorHours), 'Instructional flying hours for the selected aircraft type.', 'blue')}
-                        {renderMyTeamStatCard('Average score given', metrics.averageOverallScore, 'Average overall score in completed training reports.', 'emerald')}
+                        {renderMyTeamStatCard('Events', period30.events, 'Events completed in the last 30 days.')}
+                        {renderMyTeamStatCard('Flights', period30.flights, 'Flight events completed in the last 30 days.')}
+                        {renderMyTeamStatCard('Flying hours', formatDashboardMetricNumber(period30.flightHours), 'Flying hours recorded in the last 30 days.')}
+                        {renderMyTeamStatCard('Days since flight', metrics.daysSinceLastFlight, 'Elapsed time since the most recent flight.')}
+                        {renderMyTeamStatCard('Currency flights', period30.currencyFlights, 'Currency events in the last 30 days.')}
+                        {renderMyTeamStatCard('Aircraft type hours', formatDashboardMetricNumber(metrics.aircraftTypeHours), 'Total hours for the selected aircraft type.')}
+                        {isFlightSchoolDashboard && renderMyTeamStatCard('Instructor hours', formatDashboardMetricNumber(metrics.instructorHours), 'Instructional flying hours for the selected aircraft type.')}
+                        {renderMyTeamStatCard('Average score given', metrics.averageOverallScore, 'Average overall score in completed training reports.')}
                     </div>
                     {renderPeriodMetrics(metrics.periods)}
                 </div>
@@ -2685,15 +2671,15 @@ const MyDashboard: React.FC<MyDashboardProps> = ({
                     <p className="mt-1 text-sm font-semibold text-gray-400">{entry.subtitle || 'Trainee'}</p>
                 </section>
                 <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
-                    {renderMyTeamStatCard('Events', period30.events, 'Events completed in the last 30 days.', 'cyan')}
-                    {renderMyTeamStatCard('Flights', period30.flights, 'Flight events completed in the last 30 days.', 'blue')}
-                    {renderMyTeamStatCard('Flying hours', formatDashboardMetricNumber(period30.flightHours), 'Flying hours recorded in the last 30 days.', 'emerald')}
-                    {renderMyTeamStatCard('Days since flight', metrics.daysSinceLastFlight, 'Elapsed time since the most recent flight.', 'amber')}
-                    {renderMyTeamStatCard('Events/week', metrics.averageEventsPerWeek, 'Average events completed each week since first event.', 'rose')}
-                    {renderMyTeamStatCard('Last 4 weeks', metrics.fourWeekProgress, 'Change compared with the previous four-week period.', 'cyan')}
-                    {renderMyTeamStatCard('Primary instructor', `${metrics.primaryInstructorFlights.count} / ${metrics.primaryInstructorFlights.percent}`, 'Flights flown with the assigned primary instructor.', 'blue')}
-                    {renderMyTeamStatCard('Secondary instructor', `${metrics.secondaryInstructorFlights.count} / ${metrics.secondaryInstructorFlights.percent}`, 'Flights flown with the assigned secondary instructor.', 'emerald')}
-                    {renderMyTeamStatCard('Other instructor', `${metrics.otherInstructorFlights.count} / ${metrics.otherInstructorFlights.percent}`, 'Flights flown with other instructors.', 'amber')}
+                    {renderMyTeamStatCard('Events', period30.events, 'Events completed in the last 30 days.')}
+                    {renderMyTeamStatCard('Flights', period30.flights, 'Flight events completed in the last 30 days.')}
+                    {renderMyTeamStatCard('Flying hours', formatDashboardMetricNumber(period30.flightHours), 'Flying hours recorded in the last 30 days.')}
+                    {renderMyTeamStatCard('Days since flight', metrics.daysSinceLastFlight, 'Elapsed time since the most recent flight.')}
+                    {renderMyTeamStatCard('Events/week', metrics.averageEventsPerWeek, 'Average events completed each week since first event.')}
+                    {renderMyTeamStatCard('Last 4 weeks', metrics.fourWeekProgress, 'Change compared with the previous four-week period.')}
+                    {renderMyTeamStatCard('Primary instructor', `${metrics.primaryInstructorFlights.count} / ${metrics.primaryInstructorFlights.percent}`, 'Flights flown with the assigned primary instructor.')}
+                    {renderMyTeamStatCard('Secondary instructor', `${metrics.secondaryInstructorFlights.count} / ${metrics.secondaryInstructorFlights.percent}`, 'Flights flown with the assigned secondary instructor.')}
+                    {renderMyTeamStatCard('Other instructor', `${metrics.otherInstructorFlights.count} / ${metrics.otherInstructorFlights.percent}`, 'Flights flown with other instructors.')}
                 </div>
                 {renderPeriodMetrics(metrics.periods)}
             </div>
