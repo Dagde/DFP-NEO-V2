@@ -3937,13 +3937,23 @@ const parseClassroomNames = (value) => {
     return true;
   });
 };
-const getConfiguredClassroomNames = (settings) => parseClassroomNames(settings?.classrooms ?? settings?.classroomNames ?? settings?.groundClassrooms);
-const formatClassroomNames = (value) => parseClassroomNames(value).join("\n");
+const formatClassroomNames = (value) => (Array.isArray(value) ? value.map((item) => String(item ?? "").trim()) : parseClassroomNames(value)).join("\n");
+const getClassroomNamesForRows = (value, rowCount) => {
+  const count = Math.max(0, Math.floor(Number(rowCount) || 0));
+  const rawItems = Array.isArray(value) ? value : String(value || "").includes("\n") ? String(value || "").split(/\n/) : String(value || "").split(/,/);
+  return Array.from({ length: count }, (_, index) => String(rawItems[index] ?? "").trim());
+};
+const updateClassroomNameForRow = (value, rowCount, rowIndex, nextName) => {
+  const names = getClassroomNamesForRows(value, rowCount);
+  if (rowIndex >= 0 && rowIndex < names.length) names[rowIndex] = nextName;
+  return names;
+};
+const formatClassroomRowLabel = (index) => `Ground ${index + 1}`;
 const buildClassroomResourceOptions = (settings, groundCount) => {
-  const names = getConfiguredClassroomNames(settings);
   const count = Math.max(0, Math.floor(Number(groundCount) || 0));
+  const names = getClassroomNamesForRows(settings?.classrooms ?? settings?.classroomNames ?? settings?.groundClassrooms, count);
   return Array.from({ length: count }, (_, index) => {
-    const id = `Ground ${index + 1}`;
+    const id = formatClassroomRowLabel(index);
     return {
       id,
       label: names[index] || id
@@ -25490,15 +25500,13 @@ This removes them from DFP Resource Rows. Press Save in this section to apply th
                           /* @__PURE__ */ jsxRuntimeExports.jsx(DraftField, { label: "Simulator Row Label", value: pool.settings?.ftdLabel || "FTD", disabled: !canEditResourcePools, onCommit: (value) => updateResourcePoolSettings(index, { ftdLabel: value }) }),
                           /* @__PURE__ */ jsxRuntimeExports.jsx(DraftField, { label: "Procedural Trainer Row Label", value: pool.settings?.cptLabel || "CPT", disabled: !canEditResourcePools, onCommit: (value) => updateResourcePoolSettings(index, { cptLabel: value }) }),
                           /* @__PURE__ */ jsxRuntimeExports.jsx(
-                            DraftTextAreaField,
+                            ClassroomNamesField,
                             {
-                              label: "Classroom Names",
-                              value: formatClassroomNames(pool.settings?.classrooms ?? pool.settings?.classroomNames ?? pool.settings?.groundClassrooms),
+                              value: pool.settings?.classrooms ?? pool.settings?.classroomNames ?? pool.settings?.groundClassrooms,
+                              rowCount: editableDfpRows.ground,
                               disabled: !canEditResourcePools,
-                              onCommit: (value) => updateResourcePoolSettings(index, { classrooms: parseClassroomNames(value) }),
-                              info: "Optional names for Add Ground Event > Academics classroom selection. Enter one per line or comma-separated; names apply to the configured Ground rows in order.",
-                              className: "md:col-span-3",
-                              fieldSizingClassName: "min-h-[86px]"
+                              onCommit: (value) => updateResourcePoolSettings(index, { classrooms: value }),
+                              className: "md:col-span-3"
                             }
                           ),
                           /* @__PURE__ */ jsxRuntimeExports.jsx(DraftField, { label: "Duty Supervisor Full Label", value: pool.settings?.dutySupervisorLabel || "Duty Supervisor", disabled: !canEditResourcePools, onCommit: (value) => updateResourcePoolSettings(index, { dutySupervisorLabel: value }) }),
@@ -27390,15 +27398,13 @@ This removes them from DFP Resource Rows. Press Save in this section to apply th
                       /* @__PURE__ */ jsxRuntimeExports.jsx(DraftField, { label: "Simulator Row Label", value: pool.settings?.ftdLabel || "FTD", disabled: !canEditResourcePools, onCommit: (value) => updateResourcePoolSettings(index, { ftdLabel: value }), info: "The label shown for simulator rows. Example: Simulator, FTD." }),
                       /* @__PURE__ */ jsxRuntimeExports.jsx(DraftField, { label: "Procedural Trainer Row Label", value: pool.settings?.cptLabel || "CPT", disabled: !canEditResourcePools, onCommit: (value) => updateResourcePoolSettings(index, { cptLabel: value }), info: "The label shown for procedural trainer rows. Example: Procedural Trainer, CPT." }),
                       /* @__PURE__ */ jsxRuntimeExports.jsx(
-                        DraftTextAreaField,
+                        ClassroomNamesField,
                         {
-                          label: "Classroom Names",
-                          value: formatClassroomNames(pool.settings?.classrooms ?? pool.settings?.classroomNames ?? pool.settings?.groundClassrooms),
+                          value: pool.settings?.classrooms ?? pool.settings?.classroomNames ?? pool.settings?.groundClassrooms,
+                          rowCount: Number(pool.settings?.ground ?? pool.ground ?? 0),
                           disabled: !canEditResourcePools,
-                          onCommit: (value) => updateResourcePoolSettings(index, { classrooms: parseClassroomNames(value) }),
-                          info: "Optional names for Add Ground Event > Academics classroom selection. Enter one per line or comma-separated; names apply to the configured Ground rows in order.",
-                          className: "lg:col-span-2",
-                          fieldSizingClassName: "min-h-[86px]"
+                          onCommit: (value) => updateResourcePoolSettings(index, { classrooms: value }),
+                          className: "lg:col-span-2"
                         }
                       ),
                       /* @__PURE__ */ jsxRuntimeExports.jsx(DraftField, { label: "Duty Supervisor Full Label", value: pool.settings?.dutySupervisorLabel || "Duty Supervisor", disabled: !canEditResourcePools, onCommit: (value) => updateResourcePoolSettings(index, { dutySupervisorLabel: value }), info: "The full name for the person supervising daily flying operations." }),
@@ -29193,6 +29199,39 @@ const DraftTextAreaField = ({ label, value, disabled, onCommit, info, className 
         onChange: (event) => setDraft(event.target.value)
       }
     )
+  ] });
+};
+const ClassroomNamesField = ({
+  value,
+  rowCount,
+  disabled,
+  onCommit,
+  className
+}) => {
+  const count = Math.max(0, Math.floor(Number(rowCount) || 0));
+  const names = getClassroomNamesForRows(value, count);
+  return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className, children: [
+    /* @__PURE__ */ jsxRuntimeExports.jsx(
+      FieldLabel,
+      {
+        label: "Classroom Names",
+        info: "Optional labels for the configured Ground rows used by Add Ground Event > Academics."
+      }
+    ),
+    count > 0 ? /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-1 grid gap-2 md:grid-cols-2 xl:grid-cols-3", children: names.map((name, index) => /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "rounded border border-gray-700 bg-gray-950/70 p-2", children: [
+      /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "mb-1 block text-[10px] font-black uppercase tracking-[0.14em] text-cyan-200/80", children: formatClassroomRowLabel(index) }),
+      /* @__PURE__ */ jsxRuntimeExports.jsx(
+        "input",
+        {
+          className: fieldClass,
+          value: name,
+          disabled,
+          placeholder: `Classroom ${index + 1}`,
+          onKeyDown: stopEditableKeyPropagation,
+          onChange: (event) => onCommit(updateClassroomNameForRow(value, count, index, event.target.value))
+        }
+      )
+    ] }, `classroom-name-${index}`)) }) : /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-1 rounded border border-dashed border-gray-700 bg-gray-950/60 px-3 py-2 text-xs font-semibold text-gray-400", children: "Set Ground rows above before naming classrooms." })
   ] });
 };
 const DraftTextInput$2 = ({ value, disabled, placeholder, className, onCommit }) => {
@@ -33668,7 +33707,7 @@ const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, lo
           cpt: parseNumberDraft(resourceDraft.trainer),
           standby: parseNumberDraft(resourceDraft.standby),
           ground: parseNumberDraft(resourceDraft.ground),
-          classrooms: parseClassroomNames(resourceDraft.classrooms)
+          classrooms: getClassroomNamesForRows(resourceDraft.classrooms, parseNumberDraft(resourceDraft.ground))
         }
       };
       const poolExists = resourcePools.some((pool) => poolKey && String(pool?.id || pool?.code || "") === String(poolKey) || targetUnitCode && normaliseUnitSettingsIdentifier(pool?.unitCode) === targetUnitCode && String(pool?.status || "ACTIVE").toUpperCase() !== "INACTIVE" || String(pool?.name || "").trim().toUpperCase() === String(nextPool.name || "").trim().toUpperCase());
@@ -35749,6 +35788,39 @@ const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, lo
       }
     )
   ] });
+  const wizardClassroomNamesField = () => {
+    const rowCount = Math.max(0, Math.floor(parseNumberDraft(resourceDraft.ground, 0)));
+    const classroomNames = getClassroomNamesForRows(resourceDraft.classrooms, rowCount);
+    return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "md:col-span-5 rounded-xl border border-slate-200 bg-slate-50 p-3", children: [
+      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex flex-wrap items-center justify-between gap-2", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: wizardLabelClass, children: "Classroom labels" }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-1 text-xs font-semibold text-slate-500", children: "Optional display names for the configured Ground rows used by Academics." })
+        ] }),
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded-full border border-slate-300 bg-white px-3 py-1 text-[11px] font-black uppercase tracking-[0.12em] text-slate-500", children: [
+          rowCount,
+          " ground row",
+          rowCount === 1 ? "" : "s"
+        ] })
+      ] }),
+      rowCount > 0 ? /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-3 grid gap-2 md:grid-cols-2 xl:grid-cols-3", children: classroomNames.map((name, index) => /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "rounded-lg border border-slate-200 bg-white p-2", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "mb-1 block text-[10px] font-black uppercase tracking-[0.14em] text-slate-500", children: formatClassroomRowLabel(index) }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx(
+          "input",
+          {
+            className: wizardInputClass,
+            value: name,
+            placeholder: `Classroom ${index + 1}`,
+            onKeyDown: stopEditableKeyPropagation,
+            onChange: (event) => updateResourceDraft((draft) => ({
+              ...draft,
+              classrooms: updateClassroomNameForRow(draft.classrooms, rowCount, index, event.target.value).join("\n")
+            }))
+          }
+        )
+      ] }, `wizard-classroom-${index}`)) }) : /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-3 rounded-lg border border-dashed border-slate-300 bg-white px-3 py-2 text-sm font-semibold text-slate-500", children: "Set Ground Lines before naming classrooms." })
+    ] });
+  };
   const wizardDataListField = (label, value, onChange, options, placeholder, listKey) => {
     const listId = `wizard-${(listKey || label).toLowerCase().replace(/[^a-z0-9]+/g, "-")}`;
     return /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "block", children: [
@@ -37387,7 +37459,7 @@ const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, lo
             cpt: parseNumberDraft(resourceDraft.trainer),
             standby: parseNumberDraft(resourceDraft.standby),
             ground: parseNumberDraft(resourceDraft.ground),
-            classrooms: parseClassroomNames(resourceDraft.classrooms)
+            classrooms: getClassroomNamesForRows(resourceDraft.classrooms, parseNumberDraft(resourceDraft.ground))
           }
         }] : existingResourcePools,
         modules,
@@ -38118,7 +38190,7 @@ const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, lo
           wizardField("Trainer", resourceDraft.trainer, (value) => updateResourceDraft((draft) => ({ ...draft, trainer: value }))),
           wizardField("Standby Lines", resourceDraft.standby, (value) => updateResourceDraft((draft) => ({ ...draft, standby: value }))),
           wizardField("Ground Lines", resourceDraft.ground, (value) => updateResourceDraft((draft) => ({ ...draft, ground: value }))),
-          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "md:col-span-5", children: wizardField("Classroom names", resourceDraft.classrooms, (value) => updateResourceDraft((draft) => ({ ...draft, classrooms: value })), void 0, "Briefing Room, Classroom A") })
+          wizardClassroomNamesField()
         ] })
       );
     }
@@ -38521,8 +38593,11 @@ const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, lo
         },
         {
           label: "Aircraft and rows",
-          value: `${resourceDraft.aircraftCode || "No aircraft type set"}: ${resourceDraft.aircraft || "0"} aircraft rows, ${resourceDraft.sim || "0"} simulator rows, ${resourceDraft.trainer || "0"} trainer rows, ${resourceDraft.standby || "0"} standby rows, ${resourceDraft.ground || "0"} ground rows.${parseClassroomNames(resourceDraft.classrooms).length ? `
-Classrooms: ${parseClassroomNames(resourceDraft.classrooms).join(", ")}` : ""}`,
+          value: (() => {
+            const classroomNames = getClassroomNamesForRows(resourceDraft.classrooms, parseNumberDraft(resourceDraft.ground)).filter(Boolean);
+            return `${resourceDraft.aircraftCode || "No aircraft type set"}: ${resourceDraft.aircraft || "0"} aircraft rows, ${resourceDraft.sim || "0"} simulator rows, ${resourceDraft.trainer || "0"} trainer rows, ${resourceDraft.standby || "0"} standby rows, ${resourceDraft.ground || "0"} ground rows.${classroomNames.length ? `
+Classrooms: ${classroomNames.join(", ")}` : ""}`;
+          })(),
           help: "These numbers control what rows appear on the DFP schedule for this unit."
         },
         {

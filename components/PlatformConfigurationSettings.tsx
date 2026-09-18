@@ -106,7 +106,7 @@ import {
 import { logAudit } from '../utils/auditLogger';
 import { verifyCurrentUserPassword } from '../utils/passwordVerification';
 import { handleEditableTextBeforeInput, handleEditableTextKeyDownCapture, stopEditableKeyPropagation } from '../utils/editableKeyEvents';
-import { formatClassroomNames, parseClassroomNames } from '../utils/classroomResources';
+import { formatClassroomRowLabel, getClassroomNamesForRows, updateClassroomNameForRow } from '../utils/classroomResources';
 import type { ContinuationEventSetting, CurrencyRequirement, FormationCallsign, Instructor, MasterCurrency, PhraseBank, SyllabusItemDetail, Trainee } from '../types';
 import {
   INSERT_EVENT_LABEL_MAX_LENGTH,
@@ -11314,14 +11314,12 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
                         <DraftField label="Aircraft Row Label" value={pool.settings?.aircraftLabel || (displayedResourcePoolAircraftTypeCode ? getAircraftTypeDisplayLabel(displayedResourcePoolAircraftTypeCode) : '')} disabled={!canEditResourcePools} onCommit={(value) => updateResourcePoolSettings(index, { aircraftLabel: value })} />
                         <DraftField label="Simulator Row Label" value={pool.settings?.ftdLabel || 'FTD'} disabled={!canEditResourcePools} onCommit={(value) => updateResourcePoolSettings(index, { ftdLabel: value })} />
                         <DraftField label="Procedural Trainer Row Label" value={pool.settings?.cptLabel || 'CPT'} disabled={!canEditResourcePools} onCommit={(value) => updateResourcePoolSettings(index, { cptLabel: value })} />
-                        <DraftTextAreaField
-                          label="Classroom Names"
-                          value={formatClassroomNames(pool.settings?.classrooms ?? pool.settings?.classroomNames ?? pool.settings?.groundClassrooms)}
+                        <ClassroomNamesField
+                          value={pool.settings?.classrooms ?? pool.settings?.classroomNames ?? pool.settings?.groundClassrooms}
+                          rowCount={editableDfpRows.ground}
                           disabled={!canEditResourcePools}
-                          onCommit={(value) => updateResourcePoolSettings(index, { classrooms: parseClassroomNames(value) })}
-                          info="Optional names for Add Ground Event > Academics classroom selection. Enter one per line or comma-separated; names apply to the configured Ground rows in order."
+                          onCommit={(value) => updateResourcePoolSettings(index, { classrooms: value })}
                           className="md:col-span-3"
-                          fieldSizingClassName="min-h-[86px]"
                         />
                         <DraftField label="Duty Supervisor Full Label" value={pool.settings?.dutySupervisorLabel || 'Duty Supervisor'} disabled={!canEditResourcePools} onCommit={(value) => updateResourcePoolSettings(index, { dutySupervisorLabel: value })} />
                         <DraftField label="Duty Supervisor Short Label" value={pool.settings?.dutySupervisorShortLabel || 'Duty Sup'} disabled={!canEditResourcePools} onCommit={(value) => updateResourcePoolSettings(index, { dutySupervisorShortLabel: value })} />
@@ -13237,14 +13235,12 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
                         <DraftField label="Aircraft Row Label" value={pool.settings?.aircraftLabel || (aircraftCode ? getAircraftTypeDisplayLabel(aircraftCode) : '')} disabled={!canEditResourcePools} onCommit={(value) => updateResourcePoolSettings(index, { aircraftLabel: value })} info="The label shown for aircraft rows. Example: Aircraft, Jet, Helicopter." />
                         <DraftField label="Simulator Row Label" value={pool.settings?.ftdLabel || 'FTD'} disabled={!canEditResourcePools} onCommit={(value) => updateResourcePoolSettings(index, { ftdLabel: value })} info="The label shown for simulator rows. Example: Simulator, FTD." />
                         <DraftField label="Procedural Trainer Row Label" value={pool.settings?.cptLabel || 'CPT'} disabled={!canEditResourcePools} onCommit={(value) => updateResourcePoolSettings(index, { cptLabel: value })} info="The label shown for procedural trainer rows. Example: Procedural Trainer, CPT." />
-                        <DraftTextAreaField
-                          label="Classroom Names"
-                          value={formatClassroomNames(pool.settings?.classrooms ?? pool.settings?.classroomNames ?? pool.settings?.groundClassrooms)}
+                        <ClassroomNamesField
+                          value={pool.settings?.classrooms ?? pool.settings?.classroomNames ?? pool.settings?.groundClassrooms}
+                          rowCount={Number(pool.settings?.ground ?? pool.ground ?? 0)}
                           disabled={!canEditResourcePools}
-                          onCommit={(value) => updateResourcePoolSettings(index, { classrooms: parseClassroomNames(value) })}
-                          info="Optional names for Add Ground Event > Academics classroom selection. Enter one per line or comma-separated; names apply to the configured Ground rows in order."
+                          onCommit={(value) => updateResourcePoolSettings(index, { classrooms: value })}
                           className="lg:col-span-2"
-                          fieldSizingClassName="min-h-[86px]"
                         />
                         <DraftField label="Duty Supervisor Full Label" value={pool.settings?.dutySupervisorLabel || 'Duty Supervisor'} disabled={!canEditResourcePools} onCommit={(value) => updateResourcePoolSettings(index, { dutySupervisorLabel: value })} info="The full name for the person supervising daily flying operations." />
                         <DraftField label="Duty Supervisor Short Label" value={pool.settings?.dutySupervisorShortLabel || 'Duty Sup'} disabled={!canEditResourcePools} onCommit={(value) => updateResourcePoolSettings(index, { dutySupervisorShortLabel: value })} info="The short label used on compact DFP rows and tiles. Example: Duty Sup, Duty Lead." />
@@ -15265,6 +15261,54 @@ const DraftTextAreaField = ({ label, value, disabled, onCommit, info, className 
         onChange={(event) => setDraft(event.target.value)}
       />
     </label>
+  );
+};
+
+const ClassroomNamesField = ({
+  value,
+  rowCount,
+  disabled,
+  onCommit,
+  className,
+}: {
+  value: unknown;
+  rowCount: number;
+  disabled: boolean;
+  onCommit: (value: string[]) => void;
+  className?: string;
+}) => {
+  const count = Math.max(0, Math.floor(Number(rowCount) || 0));
+  const names = getClassroomNamesForRows(value, count);
+  return (
+    <div className={className}>
+      <FieldLabel
+        label="Classroom Names"
+        info="Optional labels for the configured Ground rows used by Add Ground Event > Academics."
+      />
+      {count > 0 ? (
+        <div className="mt-1 grid gap-2 md:grid-cols-2 xl:grid-cols-3">
+          {names.map((name, index) => (
+            <label key={`classroom-name-${index}`} className="rounded border border-gray-700 bg-gray-950/70 p-2">
+              <span className="mb-1 block text-[10px] font-black uppercase tracking-[0.14em] text-cyan-200/80">
+                {formatClassroomRowLabel(index)}
+              </span>
+              <input
+                className={fieldClass}
+                value={name}
+                disabled={disabled}
+                placeholder={`Classroom ${index + 1}`}
+                onKeyDown={stopEditableKeyPropagation}
+                onChange={(event) => onCommit(updateClassroomNameForRow(value, count, index, event.target.value))}
+              />
+            </label>
+          ))}
+        </div>
+      ) : (
+        <div className="mt-1 rounded border border-dashed border-gray-700 bg-gray-950/60 px-3 py-2 text-xs font-semibold text-gray-400">
+          Set Ground rows above before naming classrooms.
+        </div>
+      )}
+    </div>
   );
 };
 

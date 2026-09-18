@@ -68,7 +68,7 @@ import {
     writeSetupTestPlatformConfig,
     writeSetupTestSyllabus,
 } from '../utils/setupTestMode';
-import { formatClassroomNames, parseClassroomNames } from '../utils/classroomResources';
+import { formatClassroomNames, formatClassroomRowLabel, getClassroomNamesForRows, updateClassroomNameForRow } from '../utils/classroomResources';
    
 declare const XLSX: any;
 
@@ -5045,7 +5045,7 @@ const InitialSetupWizard: React.FC<{
                     cpt: parseNumberDraft(resourceDraft.trainer),
                     standby: parseNumberDraft(resourceDraft.standby),
                     ground: parseNumberDraft(resourceDraft.ground),
-                    classrooms: parseClassroomNames(resourceDraft.classrooms),
+                    classrooms: getClassroomNamesForRows(resourceDraft.classrooms, parseNumberDraft(resourceDraft.ground)),
                 },
             };
             const poolExists = resourcePools.some((pool: any) => (
@@ -7458,6 +7458,50 @@ const InitialSetupWizard: React.FC<{
             )}
         </label>
     );
+    const wizardClassroomNamesField = () => {
+        const rowCount = Math.max(0, Math.floor(parseNumberDraft(resourceDraft.ground, 0)));
+        const classroomNames = getClassroomNamesForRows(resourceDraft.classrooms, rowCount);
+        return (
+            <div className="md:col-span-5 rounded-xl border border-slate-200 bg-slate-50 p-3">
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                    <div>
+                        <div className={wizardLabelClass}>Classroom labels</div>
+                        <div className="mt-1 text-xs font-semibold text-slate-500">
+                            Optional display names for the configured Ground rows used by Academics.
+                        </div>
+                    </div>
+                    <div className="rounded-full border border-slate-300 bg-white px-3 py-1 text-[11px] font-black uppercase tracking-[0.12em] text-slate-500">
+                        {rowCount} ground row{rowCount === 1 ? '' : 's'}
+                    </div>
+                </div>
+                {rowCount > 0 ? (
+                    <div className="mt-3 grid gap-2 md:grid-cols-2 xl:grid-cols-3">
+                        {classroomNames.map((name, index) => (
+                            <label key={`wizard-classroom-${index}`} className="rounded-lg border border-slate-200 bg-white p-2">
+                                <span className="mb-1 block text-[10px] font-black uppercase tracking-[0.14em] text-slate-500">
+                                    {formatClassroomRowLabel(index)}
+                                </span>
+                                <input
+                                    className={wizardInputClass}
+                                    value={name}
+                                    placeholder={`Classroom ${index + 1}`}
+                                    onKeyDown={stopEditableKeyPropagation}
+                                    onChange={(event) => updateResourceDraft((draft) => ({
+                                        ...draft,
+                                        classrooms: updateClassroomNameForRow(draft.classrooms, rowCount, index, event.target.value).join('\n'),
+                                    }))}
+                                />
+                            </label>
+                        ))}
+                    </div>
+                ) : (
+                    <div className="mt-3 rounded-lg border border-dashed border-slate-300 bg-white px-3 py-2 text-sm font-semibold text-slate-500">
+                        Set Ground Lines before naming classrooms.
+                    </div>
+                )}
+            </div>
+        );
+    };
     const wizardDataListField = (
         label: string,
         value: string,
@@ -9396,7 +9440,7 @@ const InitialSetupWizard: React.FC<{
                         cpt: parseNumberDraft(resourceDraft.trainer),
                         standby: parseNumberDraft(resourceDraft.standby),
                         ground: parseNumberDraft(resourceDraft.ground),
-                        classrooms: parseClassroomNames(resourceDraft.classrooms),
+                        classrooms: getClassroomNamesForRows(resourceDraft.classrooms, parseNumberDraft(resourceDraft.ground)),
                     },
                 }] : existingResourcePools,
                 modules,
@@ -10241,9 +10285,7 @@ const InitialSetupWizard: React.FC<{
                     {wizardField('Trainer', resourceDraft.trainer, (value) => updateResourceDraft((draft) => ({ ...draft, trainer: value })))}
                     {wizardField('Standby Lines', resourceDraft.standby, (value) => updateResourceDraft((draft) => ({ ...draft, standby: value })))}
                     {wizardField('Ground Lines', resourceDraft.ground, (value) => updateResourceDraft((draft) => ({ ...draft, ground: value })))}
-                    <div className="md:col-span-5">
-                        {wizardField('Classroom names', resourceDraft.classrooms, (value) => updateResourceDraft((draft) => ({ ...draft, classrooms: value })), undefined, 'Briefing Room, Classroom A')}
-                    </div>
+                    {wizardClassroomNamesField()}
                 </div>,
             );
         }
@@ -10649,7 +10691,10 @@ const InitialSetupWizard: React.FC<{
                     },
                     {
                         label: 'Aircraft and rows',
-                        value: `${resourceDraft.aircraftCode || 'No aircraft type set'}: ${resourceDraft.aircraft || '0'} aircraft rows, ${resourceDraft.sim || '0'} simulator rows, ${resourceDraft.trainer || '0'} trainer rows, ${resourceDraft.standby || '0'} standby rows, ${resourceDraft.ground || '0'} ground rows.${parseClassroomNames(resourceDraft.classrooms).length ? `\nClassrooms: ${parseClassroomNames(resourceDraft.classrooms).join(', ')}` : ''}`,
+                        value: (() => {
+                            const classroomNames = getClassroomNamesForRows(resourceDraft.classrooms, parseNumberDraft(resourceDraft.ground)).filter(Boolean);
+                            return `${resourceDraft.aircraftCode || 'No aircraft type set'}: ${resourceDraft.aircraft || '0'} aircraft rows, ${resourceDraft.sim || '0'} simulator rows, ${resourceDraft.trainer || '0'} trainer rows, ${resourceDraft.standby || '0'} standby rows, ${resourceDraft.ground || '0'} ground rows.${classroomNames.length ? `\nClassrooms: ${classroomNames.join(', ')}` : ''}`;
+                        })(),
                         help: 'These numbers control what rows appear on the DFP schedule for this unit.',
                     },
                     {
