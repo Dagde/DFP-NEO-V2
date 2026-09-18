@@ -841,6 +841,67 @@ const AcademicsTab: React.FC<AcademicsTabProps> = ({
     checkRow: { display: 'flex', alignItems: 'center', gap: 6, padding: '3px 0', cursor: 'pointer', userSelect: 'none' as const },
   };
 
+  const renderReadOnlyTimeline = (previewTiles: TimelineTile[], previewWorkStart: number, previewWorkEnd: number) => (
+    <div style={{ position: 'relative', height: 80, backgroundColor: '#111827', borderRadius: 6, overflow: 'hidden', userSelect: 'none' }}>
+      <div style={{
+        position: 'absolute',
+        top: 0,
+        bottom: 0,
+        left: `${((previewWorkStart - TIMELINE_START) / (TIMELINE_END - TIMELINE_START)) * 100}%`,
+        width: `${((previewWorkEnd - previewWorkStart) / (TIMELINE_END - TIMELINE_START)) * 100}%`,
+        backgroundColor: 'rgba(255,255,255,0.04)',
+        borderLeft: '1px dashed #374151',
+        borderRight: '1px dashed #374151',
+      }} />
+      {hourMarkers.map(h => (
+        <div key={h} style={{
+          position: 'absolute',
+          top: 0,
+          bottom: 0,
+          left: `${((h - TIMELINE_START) / (TIMELINE_END - TIMELINE_START)) * 100}%`,
+          borderLeft: '1px solid #1f2937',
+        }}>
+          <span style={{ fontSize: 9, color: '#4b5563', paddingLeft: 2, paddingTop: 2, display: 'block' }}>
+            {String(h).padStart(2,'0')}
+          </span>
+        </div>
+      ))}
+      {previewTiles.map(tile => {
+        const left = ((tile.startTime - TIMELINE_START) / (TIMELINE_END - TIMELINE_START)) * 100;
+        const width = (tile.duration / (TIMELINE_END - TIMELINE_START)) * 100;
+        return (
+          <div
+            key={tile.id}
+            title={`${tile.label} — ${fmtTime(tile.startTime)} to ${fmtTime(tile.startTime + tile.duration)}`}
+            style={{
+              position: 'absolute',
+              top: 18,
+              height: 52,
+              left: `${left}%`,
+              width: `max(${width}%, 20px)`,
+              backgroundColor: tile.color,
+              border: '1px solid rgba(255,255,255,0.2)',
+              borderRadius: 4,
+              overflow: 'hidden',
+              display: 'flex',
+              flexDirection: 'column',
+              justifyContent: 'center',
+              padding: '2px 5px',
+              pointerEvents: 'auto',
+            }}
+          >
+            <span style={{ fontSize: 10, fontWeight: 700, color: '#fff', lineHeight: 1.2, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+              {tile.label}
+            </span>
+            <span style={{ fontSize: 9, color: 'rgba(255,255,255,0.7)' }}>
+              {fmtTime(tile.startTime)}–{fmtTime(tile.startTime + tile.duration)}
+            </span>
+          </div>
+        );
+      })}
+    </div>
+  );
+
   return (
     <div style={S.container}>
       {/* ── Control Bar ── */}
@@ -1490,17 +1551,8 @@ const AcademicsTab: React.FC<AcademicsTabProps> = ({
                               </button>
                             </div>
                           </div>
-                          <div style={{ marginTop: 10, display: 'flex', flexWrap: 'wrap', gap: 5 }}>
-                            {schedule.tiles.slice(0, 12).map(tile => (
-                              <span key={`${schedule.id}-${tile.id}`} style={{ borderRadius: 999, background: tile.color, color: '#fff', padding: '3px 8px', fontSize: 11, fontWeight: 700 }}>
-                                {fmtTime(tile.startTime)} {tile.lessonCode}
-                              </span>
-                            ))}
-                            {schedule.tiles.length > 12 ? (
-                              <span style={{ borderRadius: 999, background: '#1f2937', color: '#cbd5e1', padding: '3px 8px', fontSize: 11, fontWeight: 700 }}>
-                                +{schedule.tiles.length - 12} more
-                              </span>
-                            ) : null}
+                          <div style={{ marginTop: 10 }}>
+                            {renderReadOnlyTimeline(schedule.tiles, schedule.workStart, schedule.workEnd)}
                           </div>
                         </div>
                       );

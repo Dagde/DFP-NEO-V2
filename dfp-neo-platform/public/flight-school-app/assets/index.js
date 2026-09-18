@@ -61331,6 +61331,60 @@ Do you still want to include them in this academic session?`,
     input: { background: "#374151", border: "1px solid #4b5563", borderRadius: 6, color: "#f9fafb", fontSize: 13, padding: "5px 8px", width: "100%" },
     checkRow: { display: "flex", alignItems: "center", gap: 6, padding: "3px 0", cursor: "pointer", userSelect: "none" }
   };
+  const renderReadOnlyTimeline = (previewTiles, previewWorkStart, previewWorkEnd) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { style: { position: "relative", height: 80, backgroundColor: "#111827", borderRadius: 6, overflow: "hidden", userSelect: "none" }, children: [
+    /* @__PURE__ */ jsxRuntimeExports.jsx("div", { style: {
+      position: "absolute",
+      top: 0,
+      bottom: 0,
+      left: `${(previewWorkStart - TIMELINE_START) / (TIMELINE_END - TIMELINE_START) * 100}%`,
+      width: `${(previewWorkEnd - previewWorkStart) / (TIMELINE_END - TIMELINE_START) * 100}%`,
+      backgroundColor: "rgba(255,255,255,0.04)",
+      borderLeft: "1px dashed #374151",
+      borderRight: "1px dashed #374151"
+    } }),
+    hourMarkers.map((h) => /* @__PURE__ */ jsxRuntimeExports.jsx("div", { style: {
+      position: "absolute",
+      top: 0,
+      bottom: 0,
+      left: `${(h - TIMELINE_START) / (TIMELINE_END - TIMELINE_START) * 100}%`,
+      borderLeft: "1px solid #1f2937"
+    }, children: /* @__PURE__ */ jsxRuntimeExports.jsx("span", { style: { fontSize: 9, color: "#4b5563", paddingLeft: 2, paddingTop: 2, display: "block" }, children: String(h).padStart(2, "0") }) }, h)),
+    previewTiles.map((tile) => {
+      const left = (tile.startTime - TIMELINE_START) / (TIMELINE_END - TIMELINE_START) * 100;
+      const width = tile.duration / (TIMELINE_END - TIMELINE_START) * 100;
+      return /* @__PURE__ */ jsxRuntimeExports.jsxs(
+        "div",
+        {
+          title: `${tile.label} — ${fmtTime(tile.startTime)} to ${fmtTime(tile.startTime + tile.duration)}`,
+          style: {
+            position: "absolute",
+            top: 18,
+            height: 52,
+            left: `${left}%`,
+            width: `max(${width}%, 20px)`,
+            backgroundColor: tile.color,
+            border: "1px solid rgba(255,255,255,0.2)",
+            borderRadius: 4,
+            overflow: "hidden",
+            display: "flex",
+            flexDirection: "column",
+            justifyContent: "center",
+            padding: "2px 5px",
+            pointerEvents: "auto"
+          },
+          children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx("span", { style: { fontSize: 10, fontWeight: 700, color: "#fff", lineHeight: 1.2, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }, children: tile.label }),
+            /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { style: { fontSize: 9, color: "rgba(255,255,255,0.7)" }, children: [
+              fmtTime(tile.startTime),
+              "–",
+              fmtTime(tile.startTime + tile.duration)
+            ] })
+          ]
+        },
+        tile.id
+      );
+    })
+  ] });
   return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { style: S.container, children: [
     /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { style: { ...S.card, display: "grid", gridTemplateColumns: "1fr 1fr 1fr 1fr 1fr 1fr", gap: 10 }, children: [
       /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
@@ -62080,18 +62134,7 @@ Do you still want to include them in this academic session?`,
                         )
                       ] })
                     ] }),
-                    /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { style: { marginTop: 10, display: "flex", flexWrap: "wrap", gap: 5 }, children: [
-                      schedule.tiles.slice(0, 12).map((tile) => /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { style: { borderRadius: 999, background: tile.color, color: "#fff", padding: "3px 8px", fontSize: 11, fontWeight: 700 }, children: [
-                        fmtTime(tile.startTime),
-                        " ",
-                        tile.lessonCode
-                      ] }, `${schedule.id}-${tile.id}`)),
-                      schedule.tiles.length > 12 ? /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { style: { borderRadius: 999, background: "#1f2937", color: "#cbd5e1", padding: "3px 8px", fontSize: 11, fontWeight: 700 }, children: [
-                        "+",
-                        schedule.tiles.length - 12,
-                        " more"
-                      ] }) : null
-                    ] })
+                    /* @__PURE__ */ jsxRuntimeExports.jsx("div", { style: { marginTop: 10 }, children: renderReadOnlyTimeline(schedule.tiles, schedule.workStart, schedule.workEnd) })
                   ] }, schedule.id);
                 }) }) : /* @__PURE__ */ jsxRuntimeExports.jsx("div", { style: { border: "1px dashed #475569", borderRadius: 8, background: "#0f172a", color: "#94a3b8", padding: 18, fontSize: 13, fontWeight: 600 }, children: "No pre-saved academic schedules yet." })
               ] }) : /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { style: { border: "1px solid #334155", borderRadius: 8, background: "#0f172a", padding: 14, maxWidth: 520 }, children: [
