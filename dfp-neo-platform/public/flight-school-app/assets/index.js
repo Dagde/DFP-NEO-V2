@@ -61927,7 +61927,7 @@ const AddGroundEventFlyout = ({
   ] });
 };
 const REFRESH_INTERVAL = 30 * 60 * 1e3;
-const normaliseTafLocationCodes = (codes = []) => codes.map((code) => String(code || "").replace(/\s+/g, "").toUpperCase()).filter((code) => code.length >= 4);
+const normaliseTafLocationCodes = (codes = []) => codes.map((code) => String(code || "").replace(/\s+/g, "").toUpperCase()).filter((code) => /^[A-Z0-9]{4}$/.test(code));
 const normaliseTafLocationDraft = (value) => String(value || "").replace(/\s+/g, "").toUpperCase();
 const readSavedTafLocations = () => {
   try {
@@ -61976,25 +61976,43 @@ const TafWeatherWidget = ({ onClose, defaultLocationCodes = [] }) => {
   };
   const fetchTaf = async (icao) => {
     if (!isExternalDataAllowed("weatherDataEnabled")) return;
-    setLoading((prev) => new Set(prev).add(icao));
+    const station = normaliseTafLocationDraft(icao);
+    if (!/^[A-Z0-9]{4}$/.test(station)) {
+      setTafData((prev) => {
+        const newMap = new Map(prev);
+        newMap.set(station || icao, {
+          station: station || icao,
+          raw: "",
+          time: (/* @__PURE__ */ new Date()).toLocaleTimeString(),
+          error: "Invalid ICAO code"
+        });
+        return newMap;
+      });
+      return;
+    }
+    setLoading((prev) => new Set(prev).add(station));
     try {
-      const response = await fetch(`/api/weather/taf/${encodeURIComponent(icao.toUpperCase())}`);
+      const response = await fetch(`/api/weather/taf/${encodeURIComponent(station)}`);
       const data = await response.json().catch(() => ({}));
       if (!response.ok) {
         throw new Error(data?.error || `HTTP ${response.status}`);
       }
-      const warning = data.meta?.warning;
-      const cacheTimestamp = data.meta?.["cache-timestamp"];
-      const isCached = !!warning;
       setTafData((prev) => {
         const newMap = new Map(prev);
-        newMap.set(icao, {
-          station: icao.toUpperCase(),
-          raw: data.raw || "No TAF available",
+        newMap.set(station, {
+          station: data.icao || station,
+          raw: data.raw || "",
           time: (/* @__PURE__ */ new Date()).toLocaleTimeString(),
+          issueTime: data.issueTime || null,
+          validFrom: data.validFrom || null,
+          validTo: data.validTo || null,
+          source: data.source || "NOAA Aviation Weather Center",
+          retrievedAt: data.retrievedAt || (/* @__PURE__ */ new Date()).toISOString(),
+          noData: data.noData === true,
+          message: data.message || null,
           error: void 0,
-          isCached,
-          cacheTimestamp
+          isCached: data.isCached === true,
+          cacheStatus: data.cacheStatus || void 0
         });
         return newMap;
       });
@@ -62002,8 +62020,8 @@ const TafWeatherWidget = ({ onClose, defaultLocationCodes = [] }) => {
       console.error(`Error fetching TAF for ${icao}:`, error);
       setTafData((prev) => {
         const newMap = new Map(prev);
-        newMap.set(icao, {
-          station: icao.toUpperCase(),
+        newMap.set(station, {
+          station,
           raw: "",
           time: (/* @__PURE__ */ new Date()).toLocaleTimeString(),
           error: error instanceof Error ? error.message : "Failed to fetch TAF"
@@ -62013,7 +62031,7 @@ const TafWeatherWidget = ({ onClose, defaultLocationCodes = [] }) => {
     } finally {
       setLoading((prev) => {
         const newSet = new Set(prev);
-        newSet.delete(icao);
+        newSet.delete(station);
         return newSet;
       });
     }
@@ -62039,7 +62057,7 @@ const TafWeatherWidget = ({ onClose, defaultLocationCodes = [] }) => {
     return () => clearInterval(interval);
   }, [locations, externalDataAllowed]);
   const handleSaveLocations = () => {
-    const validLocations = editLocations.map((loc, index) => normaliseTafLocationDraft(editLocationDrafts[index] ?? loc)).filter((loc) => loc.length >= 4);
+    const validLocations = editLocations.map((loc, index) => normaliseTafLocationDraft(editLocationDrafts[index] ?? loc)).filter((loc) => /^[A-Z0-9]{4}$/.test(loc));
     setLocations(validLocations);
     localStorage.setItem("tafLocations", JSON.stringify(validLocations));
     setEditLocationDrafts({});
@@ -62132,6 +62150,24 @@ const TafWeatherWidget = ({ onClose, defaultLocationCodes = [] }) => {
     const hours = Math.floor(minutes / 60);
     return `${hours}h ago`;
   };
+  const formatTafDateTime = (value) => {
+    if (!value) return "";
+    const date = new Date(value);
+    if (Number.isNaN(date.getTime())) return "";
+    return date.toLocaleString("en-AU", {
+      day: "2-digit",
+      month: "short",
+      hour: "2-digit",
+      minute: "2-digit",
+      hour12: false
+    });
+  };
+  const formatValidity = (from, to) => {
+    const fromText = formatTafDateTime(from);
+    const toText = formatTafDateTime(to);
+    if (fromText && toText) return `${fromText} - ${toText}`;
+    return fromText || toText || "";
+  };
   return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "bg-gray-800 rounded-lg shadow-lg p-6 border border-gray-700", children: [
     /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex justify-between items-center mb-4", children: [
       /* @__PURE__ */ jsxRuntimeExports.jsx("h2", { className: "text-xl font-semibold text-sky-400", children: "TAF Weather" }),
@@ -62181,7 +62217,7 @@ const TafWeatherWidget = ({ onClose, defaultLocationCodes = [] }) => {
     ] }),
     !externalDataAllowed && !isEditing ? /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded-lg border border-amber-700/50 bg-amber-900/20 p-4", children: [
       /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-sm font-semibold text-amber-300", children: "External weather disabled" }),
-      /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-1 text-xs text-amber-200/80", children: "TAF requests to AVWX are blocked by Settings → Records & Data → Data Sources." })
+      /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-1 text-xs text-amber-200/80", children: "TAF requests to NOAA Aviation Weather Center are blocked by Settings → Records & Data → Data Sources." })
     ] }) : isEditing ? /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-3", children: [
       /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-sm text-gray-400", children: "Enter ICAO codes." }),
       editLocations.map((location, index) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center gap-2", children: [
@@ -62251,16 +62287,34 @@ const TafWeatherWidget = ({ onClose, defaultLocationCodes = [] }) => {
         ) }),
         isLoading && !data && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-gray-400 text-sm", children: "Loading..." }),
         data && !data.error && /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "bg-gray-900 rounded p-3 pr-9", children: /* @__PURE__ */ jsxRuntimeExports.jsx("pre", { className: "text-xs leading-relaxed text-green-400 font-mono whitespace-pre-wrap break-words", children: highlightTafText(data.raw) }) }),
-          data.isCached && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mt-2 text-xs text-yellow-500/70 italic", children: [
-            "⚠️ Old cached data - provided for display purposes only",
-            data.cacheTimestamp && ` (Cached: ${new Date(data.cacheTimestamp).toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "2-digit" })})`
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mb-2 pr-8", children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex flex-wrap items-baseline gap-x-3 gap-y-1", children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsxs("h3", { className: "text-sm font-bold text-white", children: [
+                "TAF — ",
+                data.station
+              ] }),
+              data.issueTime && /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "text-[11px] font-semibold uppercase tracking-[0.12em] text-gray-400", children: [
+                "Issued ",
+                formatTafDateTime(data.issueTime)
+              ] })
+            ] }),
+            formatValidity(data.validFrom, data.validTo) && /* @__PURE__ */ jsxRuntimeExports.jsxs("p", { className: "mt-1 text-xs text-gray-400", children: [
+              "Valid ",
+              formatValidity(data.validFrom, data.validTo)
+            ] })
+          ] }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "bg-gray-900 rounded p-3 pr-9", children: data.noData ? /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-sm font-semibold text-amber-200", children: data.message || "No current TAF available from the global weather feed." }) : /* @__PURE__ */ jsxRuntimeExports.jsx("pre", { className: "text-xs leading-relaxed text-green-400 font-mono whitespace-pre-wrap break-words", children: highlightTafText(data.raw) }) }),
+          data.isCached && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-2 text-xs text-yellow-500/70 italic", children: data.cacheStatus === "stale" ? "Old cached data - provided for continuity while the live provider is unavailable" : "Served from DFP-NEO weather cache" }),
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mt-2 text-[11px] text-gray-500", children: [
+            "Source: ",
+            data.source || "NOAA Aviation Weather Center",
+            data.retrievedAt && ` • Retrieved ${formatTafDateTime(data.retrievedAt)}`
           ] })
         ] }),
         data?.error && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-2 rounded border border-amber-700/50 bg-amber-900/20 p-3 text-xs text-amber-200", children: data.error })
       ] }, location);
     }) }),
-    /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-4 pt-4 border-t border-gray-700", children: /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-xs text-gray-500", children: "Auto-refreshes every 30 minutes • Data from AVWX" }) })
+    /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-4 pt-4 border-t border-gray-700", children: /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-xs text-gray-500", children: "Auto-refreshes every 30 minutes • Data from NOAA Aviation Weather Center" }) })
   ] });
 };
 const DASHBOARD_MESSAGES_STORAGE_KEY = "dfp_dashboard_messages_v1";

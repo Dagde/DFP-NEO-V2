@@ -6,9 +6,16 @@ interface TafData {
     station: string;
     raw: string;
     time: string;
+    issueTime?: string | null;
+    validFrom?: string | null;
+    validTo?: string | null;
+    source?: string;
+    retrievedAt?: string;
+    noData?: boolean;
+    message?: string | null;
     error?: string;
     isCached?: boolean;
-    cacheTimestamp?: string;
+    cacheStatus?: string;
 }
 
 interface TafWeatherWidgetProps {
@@ -21,7 +28,7 @@ const REFRESH_INTERVAL = 30 * 60 * 1000; // 30 minutes in milliseconds
 const normaliseTafLocationCodes = (codes: string[] = []) => (
     codes
         .map(code => String(code || '').replace(/\s+/g, '').toUpperCase())
-        .filter(code => code.length >= 4)
+        .filter(code => /^[A-Z0-9]{4}$/.test(code))
 );
 
 const normaliseTafLocationDraft = (value: string) => String(value || '').replace(/\s+/g, '').toUpperCase();
@@ -82,29 +89,45 @@ const TafWeatherWidget: React.FC<TafWeatherWidgetProps> = ({ onClose, defaultLoc
     // Fetch TAF data for a specific location
     const fetchTaf = async (icao: string) => {
         if (!isExternalDataAllowed('weatherDataEnabled')) return;
-        setLoading(prev => new Set(prev).add(icao));
+        const station = normaliseTafLocationDraft(icao);
+        if (!/^[A-Z0-9]{4}$/.test(station)) {
+            setTafData(prev => {
+                const newMap = new Map(prev);
+                newMap.set(station || icao, {
+                    station: station || icao,
+                    raw: '',
+                    time: new Date().toLocaleTimeString(),
+                    error: 'Invalid ICAO code'
+                });
+                return newMap;
+            });
+            return;
+        }
+        setLoading(prev => new Set(prev).add(station));
         try {
-            const response = await fetch(`/api/weather/taf/${encodeURIComponent(icao.toUpperCase())}`);
+            const response = await fetch(`/api/weather/taf/${encodeURIComponent(station)}`);
             const data = await response.json().catch(() => ({}));
             
             if (!response.ok) {
                 throw new Error(data?.error || `HTTP ${response.status}`);
             }
-            
-            // Check for warnings about cached/outdated data
-            const warning = data.meta?.warning;
-            const cacheTimestamp = data.meta?.['cache-timestamp'];
-            const isCached = !!warning;
-            
+
             setTafData(prev => {
                 const newMap = new Map(prev);
-                newMap.set(icao, {
-                    station: icao.toUpperCase(),
-                    raw: data.raw || 'No TAF available',
+                newMap.set(station, {
+                    station: data.icao || station,
+                    raw: data.raw || '',
                     time: new Date().toLocaleTimeString(),
+                    issueTime: data.issueTime || null,
+                    validFrom: data.validFrom || null,
+                    validTo: data.validTo || null,
+                    source: data.source || 'NOAA Aviation Weather Center',
+                    retrievedAt: data.retrievedAt || new Date().toISOString(),
+                    noData: data.noData === true,
+                    message: data.message || null,
                     error: undefined,
-                    isCached: isCached,
-                    cacheTimestamp: cacheTimestamp
+                    isCached: data.isCached === true,
+                    cacheStatus: data.cacheStatus || undefined
                 });
                 return newMap;
             });
@@ -112,8 +135,8 @@ const TafWeatherWidget: React.FC<TafWeatherWidgetProps> = ({ onClose, defaultLoc
             console.error(`Error fetching TAF for ${icao}:`, error);
             setTafData(prev => {
                 const newMap = new Map(prev);
-                newMap.set(icao, {
-                    station: icao.toUpperCase(),
+                newMap.set(station, {
+                    station,
                     raw: '',
                     time: new Date().toLocaleTimeString(),
                     error: error instanceof Error ? error.message : 'Failed to fetch TAF'
@@ -123,7 +146,7 @@ const TafWeatherWidget: React.FC<TafWeatherWidgetProps> = ({ onClose, defaultLoc
         } finally {
             setLoading(prev => {
                 const newSet = new Set(prev);
-                newSet.delete(icao);
+                newSet.delete(station);
                 return newSet;
             });
         }
@@ -159,7 +182,7 @@ const TafWeatherWidget: React.FC<TafWeatherWidgetProps> = ({ onClose, defaultLoc
     const handleSaveLocations = () => {
         const validLocations = editLocations
             .map((loc, index) => normaliseTafLocationDraft(editLocationDrafts[index] ?? loc))
-            .filter(loc => loc.length >= 4);
+            .filter(loc => /^[A-Z0-9]{4}$/.test(loc));
         
         setLocations(validLocations);
         localStorage.setItem('tafLocations', JSON.stringify(validLocations));
@@ -268,6 +291,26 @@ const TafWeatherWidget: React.FC<TafWeatherWidgetProps> = ({ onClose, defaultLoc
         return `${hours}h ago`;
     };
 
+    const formatTafDateTime = (value?: string | null) => {
+        if (!value) return '';
+        const date = new Date(value);
+        if (Number.isNaN(date.getTime())) return '';
+        return date.toLocaleString('en-AU', {
+            day: '2-digit',
+            month: 'short',
+            hour: '2-digit',
+            minute: '2-digit',
+            hour12: false,
+        });
+    };
+
+    const formatValidity = (from?: string | null, to?: string | null) => {
+        const fromText = formatTafDateTime(from);
+        const toText = formatTafDateTime(to);
+        if (fromText && toText) return `${fromText} - ${toText}`;
+        return fromText || toText || '';
+    };
+
     return (
         <div className="bg-gray-800 rounded-lg shadow-lg p-6 border border-gray-700">
             <div className="flex justify-between items-center mb-4">
@@ -318,7 +361,7 @@ const TafWeatherWidget: React.FC<TafWeatherWidgetProps> = ({ onClose, defaultLoc
                 <div className="rounded-lg border border-amber-700/50 bg-amber-900/20 p-4">
                     <p className="text-sm font-semibold text-amber-300">External weather disabled</p>
                     <p className="mt-1 text-xs text-amber-200/80">
-                        TAF requests to AVWX are blocked by Settings → Records & Data → Data Sources.
+                        TAF requests to NOAA Aviation Weather Center are blocked by Settings → Records & Data → Data Sources.
                     </p>
                 </div>
             ) : isEditing ? (
@@ -396,17 +439,43 @@ const TafWeatherWidget: React.FC<TafWeatherWidgetProps> = ({ onClose, defaultLoc
                                 
                                    {data && !data.error && (
                                        <>
+                                           <div className="mb-2 pr-8">
+                                               <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
+                                                   <h3 className="text-sm font-bold text-white">TAF — {data.station}</h3>
+                                                   {data.issueTime && (
+                                                       <span className="text-[11px] font-semibold uppercase tracking-[0.12em] text-gray-400">
+                                                           Issued {formatTafDateTime(data.issueTime)}
+                                                       </span>
+                                                   )}
+                                               </div>
+                                               {formatValidity(data.validFrom, data.validTo) && (
+                                                   <p className="mt-1 text-xs text-gray-400">
+                                                       Valid {formatValidity(data.validFrom, data.validTo)}
+                                                   </p>
+                                               )}
+                                           </div>
                                            <div className="bg-gray-900 rounded p-3 pr-9">
-                                               <pre className="text-xs leading-relaxed text-green-400 font-mono whitespace-pre-wrap break-words">
-                                                   {highlightTafText(data.raw)}
-                                               </pre>
+                                               {data.noData ? (
+                                                   <p className="text-sm font-semibold text-amber-200">
+                                                       {data.message || 'No current TAF available from the global weather feed.'}
+                                                   </p>
+                                               ) : (
+                                                   <pre className="text-xs leading-relaxed text-green-400 font-mono whitespace-pre-wrap break-words">
+                                                       {highlightTafText(data.raw)}
+                                                   </pre>
+                                               )}
                                            </div>
                                            {data.isCached && (
                                                <div className="mt-2 text-xs text-yellow-500/70 italic">
-                                                   ⚠️ Old cached data - provided for display purposes only
-                                                   {data.cacheTimestamp && ` (Cached: ${new Date(data.cacheTimestamp).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: '2-digit' })})`}
+                                                   {data.cacheStatus === 'stale'
+                                                       ? 'Old cached data - provided for continuity while the live provider is unavailable'
+                                                       : 'Served from DFP-NEO weather cache'}
                                                </div>
                                            )}
+                                           <div className="mt-2 text-[11px] text-gray-500">
+                                               Source: {data.source || 'NOAA Aviation Weather Center'}
+                                               {data.retrievedAt && ` • Retrieved ${formatTafDateTime(data.retrievedAt)}`}
+                                           </div>
                                        </>
                                    )}
                                    {data?.error && (
@@ -422,7 +491,7 @@ const TafWeatherWidget: React.FC<TafWeatherWidgetProps> = ({ onClose, defaultLoc
 
             <div className="mt-4 pt-4 border-t border-gray-700">
                 <p className="text-xs text-gray-500">
-                    Auto-refreshes every 30 minutes • Data from AVWX
+                    Auto-refreshes every 30 minutes • Data from NOAA Aviation Weather Center
                 </p>
             </div>
         </div>

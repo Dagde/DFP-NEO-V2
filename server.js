@@ -20,6 +20,7 @@ import {
   isValidLongitude,
   isValidTimeZone,
 } from './utils/sunTimes.js';
+import { isValidWeatherIcao, normaliseWeatherIcao, weatherService } from './utils/weatherService.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const require = createRequire(import.meta.url);
@@ -359,7 +360,6 @@ const JWT_SECRET = requireConfiguredSecret('JWT_SECRET', 'dfp-neo-development-jw
 const EMAIL_ACTIVATION_SETTINGS_ORG_ID = '__email_activation__';
 const JWT_ACCESS_EXPIRY = '1h';
 const JWT_REFRESH_EXPIRY = '7d';
-const AVWX_API_TOKEN = (process.env.AVWX_API_TOKEN || process.env.VITE_AVWX_API_TOKEN || '').trim();
 const SECURITY_EVENT_WEBHOOK_URL = (process.env.DFP_NEO_SECURITY_EVENT_WEBHOOK_URL || '').trim();
 
 // Parse JSON bodies - increased limit to handle large settings/syllabus payloads
@@ -479,39 +479,20 @@ app.use('/api', (req, res, next) => {
 });
 
 app.get('/api/weather/taf/:icao', async (req, res) => {
-  const icao = String(req.params.icao || '').trim().toUpperCase();
-  if (!/^[A-Z0-9]{4}$/.test(icao)) {
+  const icao = normaliseWeatherIcao(req.params.icao);
+  if (!isValidWeatherIcao(icao)) {
     return res.status(400).json({ error: 'Invalid ICAO code' });
-  }
-  if (!AVWX_API_TOKEN) {
-    return res.status(503).json({ error: 'Weather provider not configured. Set AVWX_API_TOKEN on the server.' });
-  }
-  if (typeof fetch !== 'function') {
-    return res.status(503).json({ error: 'Weather provider fetch is unavailable in this runtime.' });
   }
 
   try {
-    const providerUrl = `https://avwx.rest/api/taf/${encodeURIComponent(icao)}?token=${encodeURIComponent(AVWX_API_TOKEN)}`;
-    const providerResponse = await fetch(providerUrl, {
-      headers: { Accept: 'application/json' },
-    });
-    const text = await providerResponse.text();
-    let payload = {};
-    try {
-      payload = text ? JSON.parse(text) : {};
-    } catch {
-      payload = { raw: text };
-    }
-
-    if (!providerResponse.ok) {
-      const providerError = payload?.error || payload?.message || `Weather provider returned HTTP ${providerResponse.status}`;
-      return res.status(providerResponse.status).json({ error: providerError });
-    }
-
-    return res.json(payload);
+    const taf = await weatherService.getTAF(icao);
+    return res.json(taf);
   } catch (error) {
     console.error(`❌ GET /api/weather/taf/${icao} error:`, error);
-    return res.status(502).json({ error: 'Failed to fetch TAF from weather provider' });
+    const status = Number(error?.status || 502);
+    if (status === 400) return res.status(400).json({ error: 'Invalid ICAO code' });
+    if (status === 403) return res.status(403).json({ error: 'Weather provider request blocked' });
+    return res.status(502).json({ error: 'Weather service unavailable' });
   }
 });
 
