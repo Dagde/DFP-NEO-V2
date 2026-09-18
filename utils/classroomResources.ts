@@ -52,6 +52,10 @@ export const formatClassroomRowLabel = (index: number): string => (
   `Ground ${index + 1}`
 );
 
+export const formatClassroomFieldLabel = (index: number): string => (
+  `Classroom ${index + 1}`
+);
+
 export const buildClassroomResourceOptions = (
   settings: any,
   groundCount: number,
@@ -62,7 +66,7 @@ export const buildClassroomResourceOptions = (
     const id = formatClassroomRowLabel(index);
     return {
       id,
-      label: names[index] || id,
+      label: names[index] || formatClassroomFieldLabel(index),
     };
   });
 };

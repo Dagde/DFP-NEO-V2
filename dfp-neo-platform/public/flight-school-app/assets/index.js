@@ -3949,6 +3949,7 @@ const updateClassroomNameForRow = (value, rowCount, rowIndex, nextName) => {
   return names;
 };
 const formatClassroomRowLabel = (index) => `Ground ${index + 1}`;
+const formatClassroomFieldLabel = (index) => `Classroom ${index + 1}`;
 const buildClassroomResourceOptions = (settings, groundCount) => {
   const count = Math.max(0, Math.floor(Number(groundCount) || 0));
   const names = getClassroomNamesForRows(settings?.classrooms ?? settings?.classroomNames ?? settings?.groundClassrooms, count);
@@ -3956,7 +3957,7 @@ const buildClassroomResourceOptions = (settings, groundCount) => {
     const id = formatClassroomRowLabel(index);
     return {
       id,
-      label: names[index] || id
+      label: names[index] || formatClassroomFieldLabel(index)
     };
   });
 };
@@ -25505,7 +25506,7 @@ This removes them from DFP Resource Rows. Press Save in this section to apply th
                               value: pool.settings?.classrooms ?? pool.settings?.classroomNames ?? pool.settings?.groundClassrooms,
                               rowCount: editableDfpRows.ground,
                               disabled: !canEditResourcePools,
-                              onCommit: (value) => updateResourcePoolSettings(index, { classrooms: value }),
+                              onCommit: (value, nextCount) => updateResourcePoolSettings(index, { classrooms: value, ...typeof nextCount === "number" ? { ground: nextCount } : {} }),
                               className: "md:col-span-3"
                             }
                           ),
@@ -27403,7 +27404,7 @@ This removes them from DFP Resource Rows. Press Save in this section to apply th
                           value: pool.settings?.classrooms ?? pool.settings?.classroomNames ?? pool.settings?.groundClassrooms,
                           rowCount: Number(pool.settings?.ground ?? pool.ground ?? 0),
                           disabled: !canEditResourcePools,
-                          onCommit: (value) => updateResourcePoolSettings(index, { classrooms: value }),
+                          onCommit: (value, nextCount) => updateResourcePoolSettings(index, { classrooms: value, ...typeof nextCount === "number" ? { ground: nextCount } : {} }),
                           className: "lg:col-span-2"
                         }
                       ),
@@ -29210,28 +29211,55 @@ const ClassroomNamesField = ({
 }) => {
   const count = Math.max(0, Math.floor(Number(rowCount) || 0));
   const names = getClassroomNamesForRows(value, count);
+  const addClassroom = () => onCommit([...names, ""], count + 1);
+  const deleteClassroom = (indexToDelete) => {
+    const nextNames = names.filter((_, index) => index !== indexToDelete);
+    onCommit(nextNames, nextNames.length);
+  };
   return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className, children: [
-    /* @__PURE__ */ jsxRuntimeExports.jsx(
-      FieldLabel,
-      {
-        label: "Classroom Names",
-        info: "Optional labels for the configured Ground rows used by Add Ground Event > Academics."
-      }
-    ),
-    count > 0 ? /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-1 grid gap-2 md:grid-cols-2 xl:grid-cols-3", children: names.map((name, index) => /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "rounded border border-gray-700 bg-gray-950/70 p-2", children: [
-      /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "mb-1 block text-[10px] font-black uppercase tracking-[0.14em] text-cyan-200/80", children: formatClassroomRowLabel(index) }),
+    /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex flex-wrap items-center justify-between gap-2", children: [
+      /* @__PURE__ */ jsxRuntimeExports.jsx(
+        FieldLabel,
+        {
+          label: "Classrooms",
+          info: "Classroom names used by Add Ground Event > Academics. Adding or deleting classrooms updates the Ground row count for this DFP Resource Row."
+        }
+      ),
+      /* @__PURE__ */ jsxRuntimeExports.jsx(
+        "button",
+        {
+          type: "button",
+          disabled,
+          onClick: addClassroom,
+          className: "rounded border border-cyan-500/40 bg-cyan-500/15 px-3 py-1 text-xs font-black uppercase tracking-[0.12em] text-cyan-100 hover:bg-cyan-500/25 disabled:cursor-not-allowed disabled:opacity-50",
+          children: "+ Add"
+        }
+      )
+    ] }),
+    count > 0 ? /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-2 space-y-2", children: names.map((name, index) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid gap-2 rounded border border-gray-700 bg-gray-950/70 p-2 md:grid-cols-[140px_minmax(0,1fr)_96px] md:items-end", children: [
+      /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "pb-2 text-[10px] font-black uppercase tracking-[0.14em] text-cyan-200/80 md:pb-2.5", children: formatClassroomFieldLabel(index) }),
       /* @__PURE__ */ jsxRuntimeExports.jsx(
         "input",
         {
           className: fieldClass,
           value: name,
           disabled,
-          placeholder: `Classroom ${index + 1}`,
+          placeholder: "Name",
           onKeyDown: stopEditableKeyPropagation,
           onChange: (event) => onCommit(updateClassroomNameForRow(value, count, index, event.target.value))
         }
+      ),
+      /* @__PURE__ */ jsxRuntimeExports.jsx(
+        "button",
+        {
+          type: "button",
+          disabled,
+          onClick: () => deleteClassroom(index),
+          className: "rounded border border-red-500/35 bg-red-500/10 px-3 py-2 text-xs font-black uppercase tracking-[0.12em] text-red-100 hover:bg-red-500/20 disabled:cursor-not-allowed disabled:opacity-50",
+          children: "- Delete"
+        }
       )
-    ] }, `classroom-name-${index}`)) }) : /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-1 rounded border border-dashed border-gray-700 bg-gray-950/60 px-3 py-2 text-xs font-semibold text-gray-400", children: "Set Ground rows above before naming classrooms." })
+    ] }, `classroom-name-${index}`)) }) : /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-1 rounded border border-dashed border-gray-700 bg-gray-950/60 px-3 py-2 text-xs font-semibold text-gray-400", children: "No classrooms configured. Use + Add to create the first classroom." })
   ] });
 };
 const DraftTextInput$2 = ({ value, disabled, placeholder, className, onCommit }) => {
@@ -35791,34 +35819,54 @@ const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, lo
   const wizardClassroomNamesField = () => {
     const rowCount = Math.max(0, Math.floor(parseNumberDraft(resourceDraft.ground, 0)));
     const classroomNames = getClassroomNamesForRows(resourceDraft.classrooms, rowCount);
+    const setWizardClassrooms = (names) => updateResourceDraft((draft) => ({
+      ...draft,
+      ground: String(names.length),
+      classrooms: names.join("\n")
+    }));
+    const addClassroom = () => setWizardClassrooms([...classroomNames, ""]);
+    const deleteClassroom = (indexToDelete) => setWizardClassrooms(classroomNames.filter((_, index) => index !== indexToDelete));
     return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "md:col-span-5 rounded-xl border border-slate-200 bg-slate-50 p-3", children: [
       /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex flex-wrap items-center justify-between gap-2", children: [
         /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: wizardLabelClass, children: "Classroom labels" }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-1 text-xs font-semibold text-slate-500", children: "Optional display names for the configured Ground rows used by Academics." })
+          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: wizardLabelClass, children: "Classrooms" }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-1 text-xs font-semibold text-slate-500", children: "Classroom names used by Add Ground Event > Academics." })
         ] }),
-        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded-full border border-slate-300 bg-white px-3 py-1 text-[11px] font-black uppercase tracking-[0.12em] text-slate-500", children: [
-          rowCount,
-          " ground row",
-          rowCount === 1 ? "" : "s"
-        ] })
+        /* @__PURE__ */ jsxRuntimeExports.jsx(
+          "button",
+          {
+            type: "button",
+            onClick: addClassroom,
+            className: "rounded-md border border-sky-300 bg-sky-50 px-3 py-2 text-xs font-black uppercase tracking-[0.12em] text-sky-700 transition hover:bg-sky-100",
+            children: "+ Add"
+          }
+        )
       ] }),
-      rowCount > 0 ? /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-3 grid gap-2 md:grid-cols-2 xl:grid-cols-3", children: classroomNames.map((name, index) => /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "rounded-lg border border-slate-200 bg-white p-2", children: [
-        /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "mb-1 block text-[10px] font-black uppercase tracking-[0.14em] text-slate-500", children: formatClassroomRowLabel(index) }),
+      rowCount > 0 ? /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-3 space-y-2", children: classroomNames.map((name, index) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid gap-2 rounded-lg border border-slate-200 bg-white p-2 md:grid-cols-[130px_minmax(0,1fr)_94px] md:items-end", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "pb-2 text-[10px] font-black uppercase tracking-[0.14em] text-slate-500 md:pb-2.5", children: formatClassroomFieldLabel(index) }),
         /* @__PURE__ */ jsxRuntimeExports.jsx(
           "input",
           {
             className: wizardInputClass,
             value: name,
-            placeholder: `Classroom ${index + 1}`,
+            placeholder: "Name",
             onKeyDown: stopEditableKeyPropagation,
             onChange: (event) => updateResourceDraft((draft) => ({
               ...draft,
               classrooms: updateClassroomNameForRow(draft.classrooms, rowCount, index, event.target.value).join("\n")
             }))
           }
+        ),
+        /* @__PURE__ */ jsxRuntimeExports.jsx(
+          "button",
+          {
+            type: "button",
+            onClick: () => deleteClassroom(index),
+            className: "rounded-md border border-red-200 bg-red-50 px-3 py-2 text-xs font-black uppercase tracking-[0.12em] text-red-700 transition hover:bg-red-100",
+            children: "- Delete"
+          }
         )
-      ] }, `wizard-classroom-${index}`)) }) : /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-3 rounded-lg border border-dashed border-slate-300 bg-white px-3 py-2 text-sm font-semibold text-slate-500", children: "Set Ground Lines before naming classrooms." })
+      ] }, `wizard-classroom-${index}`)) }) : /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-3 rounded-lg border border-dashed border-slate-300 bg-white px-3 py-2 text-sm font-semibold text-slate-500", children: "No classrooms configured. Use + Add to create the first classroom." })
     ] });
   };
   const wizardDataListField = (label, value, onChange, options, placeholder, listKey) => {

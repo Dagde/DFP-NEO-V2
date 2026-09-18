@@ -106,7 +106,7 @@ import {
 import { logAudit } from '../utils/auditLogger';
 import { verifyCurrentUserPassword } from '../utils/passwordVerification';
 import { handleEditableTextBeforeInput, handleEditableTextKeyDownCapture, stopEditableKeyPropagation } from '../utils/editableKeyEvents';
-import { formatClassroomRowLabel, getClassroomNamesForRows, updateClassroomNameForRow } from '../utils/classroomResources';
+import { formatClassroomFieldLabel, getClassroomNamesForRows, updateClassroomNameForRow } from '../utils/classroomResources';
 import type { ContinuationEventSetting, CurrencyRequirement, FormationCallsign, Instructor, MasterCurrency, PhraseBank, SyllabusItemDetail, Trainee } from '../types';
 import {
   INSERT_EVENT_LABEL_MAX_LENGTH,
@@ -11318,7 +11318,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
                           value={pool.settings?.classrooms ?? pool.settings?.classroomNames ?? pool.settings?.groundClassrooms}
                           rowCount={editableDfpRows.ground}
                           disabled={!canEditResourcePools}
-                          onCommit={(value) => updateResourcePoolSettings(index, { classrooms: value })}
+                          onCommit={(value, nextCount) => updateResourcePoolSettings(index, { classrooms: value, ...(typeof nextCount === 'number' ? { ground: nextCount } : {}) })}
                           className="md:col-span-3"
                         />
                         <DraftField label="Duty Supervisor Full Label" value={pool.settings?.dutySupervisorLabel || 'Duty Supervisor'} disabled={!canEditResourcePools} onCommit={(value) => updateResourcePoolSettings(index, { dutySupervisorLabel: value })} />
@@ -13239,7 +13239,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
                           value={pool.settings?.classrooms ?? pool.settings?.classroomNames ?? pool.settings?.groundClassrooms}
                           rowCount={Number(pool.settings?.ground ?? pool.ground ?? 0)}
                           disabled={!canEditResourcePools}
-                          onCommit={(value) => updateResourcePoolSettings(index, { classrooms: value })}
+                          onCommit={(value, nextCount) => updateResourcePoolSettings(index, { classrooms: value, ...(typeof nextCount === 'number' ? { ground: nextCount } : {}) })}
                           className="lg:col-span-2"
                         />
                         <DraftField label="Duty Supervisor Full Label" value={pool.settings?.dutySupervisorLabel || 'Duty Supervisor'} disabled={!canEditResourcePools} onCommit={(value) => updateResourcePoolSettings(index, { dutySupervisorLabel: value })} info="The full name for the person supervising daily flying operations." />
@@ -15274,38 +15274,61 @@ const ClassroomNamesField = ({
   value: unknown;
   rowCount: number;
   disabled: boolean;
-  onCommit: (value: string[]) => void;
+  onCommit: (value: string[], rowCount?: number) => void;
   className?: string;
 }) => {
   const count = Math.max(0, Math.floor(Number(rowCount) || 0));
   const names = getClassroomNamesForRows(value, count);
+  const addClassroom = () => onCommit([...names, ''], count + 1);
+  const deleteClassroom = (indexToDelete: number) => {
+    const nextNames = names.filter((_, index) => index !== indexToDelete);
+    onCommit(nextNames, nextNames.length);
+  };
   return (
     <div className={className}>
-      <FieldLabel
-        label="Classroom Names"
-        info="Optional labels for the configured Ground rows used by Add Ground Event > Academics."
-      />
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <FieldLabel
+          label="Classrooms"
+          info="Classroom names used by Add Ground Event > Academics. Adding or deleting classrooms updates the Ground row count for this DFP Resource Row."
+        />
+        <button
+          type="button"
+          disabled={disabled}
+          onClick={addClassroom}
+          className="rounded border border-cyan-500/40 bg-cyan-500/15 px-3 py-1 text-xs font-black uppercase tracking-[0.12em] text-cyan-100 hover:bg-cyan-500/25 disabled:cursor-not-allowed disabled:opacity-50"
+        >
+          + Add
+        </button>
+      </div>
       {count > 0 ? (
-        <div className="mt-1 grid gap-2 md:grid-cols-2 xl:grid-cols-3">
+        <div className="mt-2 space-y-2">
           {names.map((name, index) => (
-            <label key={`classroom-name-${index}`} className="rounded border border-gray-700 bg-gray-950/70 p-2">
-              <span className="mb-1 block text-[10px] font-black uppercase tracking-[0.14em] text-cyan-200/80">
-                {formatClassroomRowLabel(index)}
-              </span>
+            <div key={`classroom-name-${index}`} className="grid gap-2 rounded border border-gray-700 bg-gray-950/70 p-2 md:grid-cols-[140px_minmax(0,1fr)_96px] md:items-end">
+              <div className="pb-2 text-[10px] font-black uppercase tracking-[0.14em] text-cyan-200/80 md:pb-2.5">
+                {formatClassroomFieldLabel(index)}
+              </div>
               <input
                 className={fieldClass}
                 value={name}
                 disabled={disabled}
-                placeholder={`Classroom ${index + 1}`}
+                placeholder="Name"
                 onKeyDown={stopEditableKeyPropagation}
                 onChange={(event) => onCommit(updateClassroomNameForRow(value, count, index, event.target.value))}
               />
-            </label>
+              <button
+                type="button"
+                disabled={disabled}
+                onClick={() => deleteClassroom(index)}
+                className="rounded border border-red-500/35 bg-red-500/10 px-3 py-2 text-xs font-black uppercase tracking-[0.12em] text-red-100 hover:bg-red-500/20 disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                - Delete
+              </button>
+            </div>
           ))}
         </div>
       ) : (
         <div className="mt-1 rounded border border-dashed border-gray-700 bg-gray-950/60 px-3 py-2 text-xs font-semibold text-gray-400">
-          Set Ground rows above before naming classrooms.
+          No classrooms configured. Use + Add to create the first classroom.
         </div>
       )}
     </div>

@@ -68,7 +68,7 @@ import {
     writeSetupTestPlatformConfig,
     writeSetupTestSyllabus,
 } from '../utils/setupTestMode';
-import { formatClassroomNames, formatClassroomRowLabel, getClassroomNamesForRows, updateClassroomNameForRow } from '../utils/classroomResources';
+import { formatClassroomFieldLabel, formatClassroomNames, getClassroomNamesForRows, updateClassroomNameForRow } from '../utils/classroomResources';
    
 declare const XLSX: any;
 
@@ -7461,42 +7461,60 @@ const InitialSetupWizard: React.FC<{
     const wizardClassroomNamesField = () => {
         const rowCount = Math.max(0, Math.floor(parseNumberDraft(resourceDraft.ground, 0)));
         const classroomNames = getClassroomNamesForRows(resourceDraft.classrooms, rowCount);
+        const setWizardClassrooms = (names: string[]) => updateResourceDraft((draft) => ({
+            ...draft,
+            ground: String(names.length),
+            classrooms: names.join('\n'),
+        }));
+        const addClassroom = () => setWizardClassrooms([...classroomNames, '']);
+        const deleteClassroom = (indexToDelete: number) => setWizardClassrooms(classroomNames.filter((_, index) => index !== indexToDelete));
         return (
             <div className="md:col-span-5 rounded-xl border border-slate-200 bg-slate-50 p-3">
                 <div className="flex flex-wrap items-center justify-between gap-2">
                     <div>
-                        <div className={wizardLabelClass}>Classroom labels</div>
+                        <div className={wizardLabelClass}>Classrooms</div>
                         <div className="mt-1 text-xs font-semibold text-slate-500">
-                            Optional display names for the configured Ground rows used by Academics.
+                            Classroom names used by Add Ground Event &gt; Academics.
                         </div>
                     </div>
-                    <div className="rounded-full border border-slate-300 bg-white px-3 py-1 text-[11px] font-black uppercase tracking-[0.12em] text-slate-500">
-                        {rowCount} ground row{rowCount === 1 ? '' : 's'}
-                    </div>
+                    <button
+                        type="button"
+                        onClick={addClassroom}
+                        className="rounded-md border border-sky-300 bg-sky-50 px-3 py-2 text-xs font-black uppercase tracking-[0.12em] text-sky-700 transition hover:bg-sky-100"
+                    >
+                        + Add
+                    </button>
                 </div>
                 {rowCount > 0 ? (
-                    <div className="mt-3 grid gap-2 md:grid-cols-2 xl:grid-cols-3">
+                    <div className="mt-3 space-y-2">
                         {classroomNames.map((name, index) => (
-                            <label key={`wizard-classroom-${index}`} className="rounded-lg border border-slate-200 bg-white p-2">
-                                <span className="mb-1 block text-[10px] font-black uppercase tracking-[0.14em] text-slate-500">
-                                    {formatClassroomRowLabel(index)}
-                                </span>
+                            <div key={`wizard-classroom-${index}`} className="grid gap-2 rounded-lg border border-slate-200 bg-white p-2 md:grid-cols-[130px_minmax(0,1fr)_94px] md:items-end">
+                                <div className="pb-2 text-[10px] font-black uppercase tracking-[0.14em] text-slate-500 md:pb-2.5">
+                                    {formatClassroomFieldLabel(index)}
+                                </div>
                                 <input
                                     className={wizardInputClass}
                                     value={name}
-                                    placeholder={`Classroom ${index + 1}`}
+                                    placeholder="Name"
                                     onKeyDown={stopEditableKeyPropagation}
                                     onChange={(event) => updateResourceDraft((draft) => ({
                                         ...draft,
                                         classrooms: updateClassroomNameForRow(draft.classrooms, rowCount, index, event.target.value).join('\n'),
                                     }))}
                                 />
-                            </label>
+                                <button
+                                    type="button"
+                                    onClick={() => deleteClassroom(index)}
+                                    className="rounded-md border border-red-200 bg-red-50 px-3 py-2 text-xs font-black uppercase tracking-[0.12em] text-red-700 transition hover:bg-red-100"
+                                >
+                                    - Delete
+                                </button>
+                            </div>
                         ))}
                     </div>
                 ) : (
                     <div className="mt-3 rounded-lg border border-dashed border-slate-300 bg-white px-3 py-2 text-sm font-semibold text-slate-500">
-                        Set Ground Lines before naming classrooms.
+                        No classrooms configured. Use + Add to create the first classroom.
                     </div>
                 )}
             </div>
