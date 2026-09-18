@@ -61453,15 +61453,6 @@ Do you still want to include them in this academic session?`,
         )
       ] })
     ] }),
-    /* @__PURE__ */ jsxRuntimeExports.jsx("div", { style: {
-      ...S.card,
-      backgroundColor: "rgba(245,158,11,0.12)",
-      border: "1px solid rgba(245,158,11,0.45)",
-      color: "#fde68a",
-      fontSize: 13,
-      fontWeight: 700,
-      lineHeight: 1.45
-    }, children: "To add a lesson to the academic schedule, click the event name/code. Do not click the checkbox; the checkbox only marks whether that event is complete for the course." }),
     /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { style: { display: "flex", gap: 10 }, children: [
       /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { style: { ...S.card, width: 200, minWidth: 200, maxWidth: 200, maxHeight: 360, overflowY: "auto", flexShrink: 0 }, children: [
         /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { style: { ...S.label, marginBottom: 8 }, children: [
@@ -61566,9 +61557,14 @@ Do you still want to include them in this academic session?`,
                     /* @__PURE__ */ jsxRuntimeExports.jsx(
                       "button",
                       {
-                        onClick: (e) => {
+                        onClick: async (e) => {
                           e.stopPropagation();
                           if (onUpdateCourseAcademicProgress && selectedCourse) {
+                            await showDarkAlert(
+                              "This checkbox does not schedule the event. It marks the event as complete for the selected course.",
+                              "Course Completion",
+                              "info"
+                            );
                             onUpdateCourseAcademicProgress(selectedCourse, item.code, !isCourseDone);
                           }
                         },

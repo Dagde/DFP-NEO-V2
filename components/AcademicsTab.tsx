@@ -961,18 +961,6 @@ const AcademicsTab: React.FC<AcademicsTabProps> = ({
         </div>
       </div>
 
-      <div style={{
-        ...S.card,
-        backgroundColor: 'rgba(245,158,11,0.12)',
-        border: '1px solid rgba(245,158,11,0.45)',
-        color: '#fde68a',
-        fontSize: 13,
-        fontWeight: 700,
-        lineHeight: 1.45,
-      }}>
-        To add a lesson to the academic schedule, click the event name/code. Do not click the checkbox; the checkbox only marks whether that event is complete for the course.
-      </div>
-
       {/* ── Main 2-Panel Layout (fixed combined width = timeline) ── */}
       <div style={{ display: 'flex', gap: 10 }}>
 
@@ -1073,9 +1061,14 @@ const AcademicsTab: React.FC<AcademicsTabProps> = ({
                             }}>
                             {/* Course-level completion toggle button */}
                             <button
-                              onClick={(e) => {
+                              onClick={async (e) => {
                                 e.stopPropagation();
                                 if (onUpdateCourseAcademicProgress && selectedCourse) {
+                                  await showDarkAlert(
+                                    'This checkbox does not schedule the event. It marks the event as complete for the selected course.',
+                                    'Course Completion',
+                                    'info'
+                                  );
                                   onUpdateCourseAcademicProgress(selectedCourse, item.code, !isCourseDone);
                                 }
                               }}
