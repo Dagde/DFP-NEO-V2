@@ -721,15 +721,16 @@ const AcademicsTab: React.FC<AcademicsTabProps> = ({
   };
 
   const onMouseMove = useCallback((e: MouseEvent) => {
-    if (resizing.current && timelineRef.current) {
+    const resizeState = resizing.current;
+    if (resizeState && timelineRef.current) {
       const rect = timelineRef.current.getBoundingClientRect();
       const pointerTime = xToTime(e.clientX - rect.left);
       const minDuration = 0.25;
       setTiles(prev => prev.map(t => {
-        if (t.id !== resizing.current!.tileId) return t;
+        if (t.id !== resizeState.tileId) return t;
         const start = t.startTime;
         const end = t.startTime + t.duration;
-        if (resizing.current!.edge === 'start') {
+        if (resizeState.edge === 'start') {
           const newStart = Math.max(TIMELINE_START, Math.min(pointerTime, end - minDuration));
           return { ...t, startTime: newStart, duration: end - newStart };
         }
@@ -738,12 +739,13 @@ const AcademicsTab: React.FC<AcademicsTabProps> = ({
       }));
       return;
     }
-    if (!dragging.current || !timelineRef.current) return;
+    const dragState = dragging.current;
+    if (!dragState || !timelineRef.current) return;
     const rect = timelineRef.current.getBoundingClientRect();
-    const x = e.clientX - rect.left - dragging.current.offsetX;
+    const x = e.clientX - rect.left - dragState.offsetX;
     const newStart = Math.max(TIMELINE_START, Math.min(xToTime(x), TIMELINE_END - 0.25));
     setTiles(prev => prev.map(t =>
-      t.id === dragging.current!.tileId ? { ...t, startTime: newStart } : t
+      t.id === dragState.tileId ? { ...t, startTime: newStart } : t
     ));
   }, []);
 
