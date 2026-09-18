@@ -17,6 +17,16 @@ interface TimelineTile {
   customDescription?: string;
 }
 
+interface PresavedAcademicSchedule {
+  id: string;
+  name: string;
+  createdAt: string;
+  updatedAt: string;
+  workStart: number;
+  workEnd: number;
+  tiles: TimelineTile[];
+}
+
 interface AcademicsTabProps {
   syllabusDetails: SyllabusItemDetail[];
   allTraineesByCourse: { [course: string]: Trainee[] };
@@ -61,6 +71,7 @@ const TIMELINE_START = 5;  // 05:00
 const TIMELINE_END   = 21; // 21:00
 const SNAP_MINS      = 5;
 const SNAP           = SNAP_MINS / 60;
+const PRESAVED_ACADEMIC_SCHEDULES_KEY = 'dfp_neo_presaved_academic_schedules_v1';
 
 // Strip course code suffix from fullName, for example "Surname, First - COURSE".
 // Handles both em-dash (–) and hyphen (-) separators
@@ -483,6 +494,58 @@ const AcademicsTab: React.FC<AcademicsTabProps> = ({
   const editTile = editTileId ? tiles.find(t => t.id === editTileId) ?? null : null;
   const [selectedLessons, setSelectedLessons] = useState<Set<string>>(new Set());
   const [selectedStandard, setSelectedStandard] = useState<Set<string>>(new Set());
+  const [showPresavedSchedules, setShowPresavedSchedules] = useState(false);
+  const [presavedSchedules, setPresavedSchedules] = useState<PresavedAcademicSchedule[]>([]);
+  const [presavedScheduleName, setPresavedScheduleName] = useState('');
+
+  const syncSelectedSetsFromTiles = useCallback((nextTiles: TimelineTile[]) => {
+    setSelectedLessons(new Set(nextTiles.filter(tile => !tile.isStandard).map(tile => tile.lessonCode)));
+    setSelectedStandard(new Set(nextTiles.filter(tile => tile.isStandard).map(tile => tile.lessonCode)));
+  }, []);
+
+  const loadPresavedSchedules = useCallback((): PresavedAcademicSchedule[] => {
+    if (typeof window === 'undefined') return [];
+    try {
+      const parsed = JSON.parse(window.localStorage.getItem(PRESAVED_ACADEMIC_SCHEDULES_KEY) || '[]');
+      if (!Array.isArray(parsed)) return [];
+      return parsed
+        .map((item: any) => ({
+          id: String(item?.id || uuidv4()),
+          name: String(item?.name || 'Untitled Academic Schedule'),
+          createdAt: String(item?.createdAt || new Date().toISOString()),
+          updatedAt: String(item?.updatedAt || item?.createdAt || new Date().toISOString()),
+          workStart: Number.isFinite(Number(item?.workStart)) ? Number(item.workStart) : 8,
+          workEnd: Number.isFinite(Number(item?.workEnd)) ? Number(item.workEnd) : 17,
+          tiles: Array.isArray(item?.tiles) ? item.tiles.map((tile: any) => ({
+            id: String(tile?.id || uuidv4()),
+            lessonCode: String(tile?.lessonCode || ''),
+            label: String(tile?.label || tile?.lessonCode || 'Academic'),
+            startTime: Number.isFinite(Number(tile?.startTime)) ? Number(tile.startTime) : 8,
+            duration: Number.isFinite(Number(tile?.duration)) ? Number(tile.duration) : 1,
+            color: String(tile?.color || ACADEMIC_TILE_COLOR),
+            isStandard: Boolean(tile?.isStandard),
+            customDescription: tile?.customDescription ? String(tile.customDescription) : undefined,
+          })).filter((tile: TimelineTile) => tile.lessonCode && tile.duration > 0) : [],
+        }))
+        .filter((item: PresavedAcademicSchedule) => item.tiles.length > 0)
+        .sort((a: PresavedAcademicSchedule, b: PresavedAcademicSchedule) => b.updatedAt.localeCompare(a.updatedAt));
+    } catch {
+      return [];
+    }
+  }, []);
+
+  const persistPresavedSchedules = useCallback((nextSchedules: PresavedAcademicSchedule[]) => {
+    setPresavedSchedules(nextSchedules);
+    try {
+      window.localStorage.setItem(PRESAVED_ACADEMIC_SCHEDULES_KEY, JSON.stringify(nextSchedules));
+    } catch (error) {
+      console.error('[AcademicsTab] Could not save pre-saved schedules', error);
+    }
+  }, []);
+
+  useEffect(() => {
+    setPresavedSchedules(loadPresavedSchedules());
+  }, [loadPresavedSchedules]);
 
   // Next available time on timeline (after last tile, within working hours)
   const getNextStart = useCallback((newDuration: number) => {
@@ -492,6 +555,67 @@ const AcademicsTab: React.FC<AcademicsTabProps> = ({
     if (proposed + newDuration > TIMELINE_END) return snap(workStart);
     return proposed;
   }, [tiles, workStart]);
+
+  const handleOpenPresavedSchedules = () => {
+    setPresavedSchedules(loadPresavedSchedules());
+    if (!presavedScheduleName.trim()) {
+      const datePart = selectedDate ? ` ${selectedDate}` : '';
+      setPresavedScheduleName(`Academics${datePart}`);
+    }
+    setShowPresavedSchedules(true);
+  };
+
+  const handleSavePresavedSchedule = async () => {
+    const name = presavedScheduleName.trim();
+    if (!name) {
+      await showDarkAlert('Enter a name for the pre-saved academic schedule.', 'Pre-Saved Schedules', 'warning');
+      return;
+    }
+    if (tiles.length === 0) {
+      await showDarkAlert('Add at least one tile to the timeline before saving it as a pre-saved schedule.', 'Pre-Saved Schedules', 'warning');
+      return;
+    }
+    const now = new Date().toISOString();
+    const existing = presavedSchedules.find(schedule => schedule.name.trim().toLowerCase() === name.toLowerCase());
+    const nextSchedule: PresavedAcademicSchedule = {
+      id: existing?.id || uuidv4(),
+      name,
+      createdAt: existing?.createdAt || now,
+      updatedAt: now,
+      workStart,
+      workEnd,
+      tiles: tiles.map(tile => ({ ...tile, id: uuidv4() })),
+    };
+    persistPresavedSchedules([
+      nextSchedule,
+      ...presavedSchedules.filter(schedule => schedule.id !== nextSchedule.id),
+    ]);
+    setPresavedScheduleName(name);
+  };
+
+  const handleInsertPresavedSchedule = async (schedule: PresavedAcademicSchedule) => {
+    if (tiles.length > 0) {
+      const ok = await showDarkConfirm(
+        'Insert this pre-saved academic schedule into the current timeline? Existing tiles will remain and overlaps may need adjustment.',
+        'Insert Pre-Saved Schedule',
+        'info',
+      );
+      if (!ok) return;
+    }
+    const insertedTiles = schedule.tiles.map(tile => ({ ...tile, id: uuidv4() }));
+    const nextTiles = [...tiles, ...insertedTiles].sort((a, b) => a.startTime - b.startTime);
+    setTiles(nextTiles);
+    syncSelectedSetsFromTiles(nextTiles);
+    setWorkStart(schedule.workStart);
+    setWorkEnd(schedule.workEnd);
+    setShowPresavedSchedules(false);
+  };
+
+  const handleDeletePresavedSchedule = async (schedule: PresavedAcademicSchedule) => {
+    const ok = await showDarkConfirm(`Delete pre-saved academic schedule "${schedule.name}"?`, 'Delete Pre-Saved Schedule', 'warning');
+    if (!ok) return;
+    persistPresavedSchedules(presavedSchedules.filter(item => item.id !== schedule.id));
+  };
 
   // Add/remove lesson from timeline
   const toggleLesson = useCallback((item: SyllabusItemDetail) => {
@@ -1277,8 +1401,131 @@ const AcademicsTab: React.FC<AcademicsTabProps> = ({
         </div>
       )}
 
+      {/* ── Pre-Saved Schedules Modal ── */}
+      {showPresavedSchedules && (
+        <div
+          style={{
+            position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.68)', zIndex: 210,
+            display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24,
+          }}
+          onClick={() => setShowPresavedSchedules(false)}
+        >
+          <div
+            style={{
+              width: 'min(980px, 96vw)', maxHeight: '86vh', overflow: 'hidden',
+              background: '#111827', border: '1px solid #334155', borderRadius: 10,
+              boxShadow: '0 18px 60px rgba(0,0,0,0.65)', display: 'flex', flexDirection: 'column',
+            }}
+            onClick={event => event.stopPropagation()}
+          >
+            <div style={{ padding: '18px 20px', borderBottom: '1px solid #334155', display: 'flex', justifyContent: 'space-between', gap: 16 }}>
+              <div>
+                <div style={{ color: '#fff', fontSize: 20, fontWeight: 800 }}>Pre-Saved Schedules</div>
+                <div style={{ color: '#94a3b8', fontSize: 13, marginTop: 4 }}>
+                  Save reusable Academics timelines, then insert them into the schedule you are building.
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowPresavedSchedules(false)}
+                style={{ width: 44, height: 40, borderRadius: 6, border: '1px solid #475569', background: '#0f172a', color: '#e5e7eb', fontWeight: 800, cursor: 'pointer' }}
+              >
+                X
+              </button>
+            </div>
+
+            <div style={{ overflowY: 'auto', padding: 20, display: 'grid', gridTemplateColumns: 'minmax(0, 1fr) minmax(280px, 340px)', gap: 18 }}>
+              <div>
+                <div style={S.label}>Saved daily academic schedules</div>
+                {presavedSchedules.length > 0 ? (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                    {presavedSchedules.map(schedule => {
+                      const firstStart = Math.min(...schedule.tiles.map(tile => tile.startTime));
+                      const lastEnd = Math.max(...schedule.tiles.map(tile => tile.startTime + tile.duration));
+                      return (
+                        <div key={schedule.id} style={{ border: '1px solid #334155', borderRadius: 8, background: '#0f172a', padding: 12 }}>
+                          <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12, alignItems: 'flex-start' }}>
+                            <div>
+                              <div style={{ color: '#f8fafc', fontSize: 15, fontWeight: 800 }}>{schedule.name}</div>
+                              <div style={{ color: '#94a3b8', fontSize: 12, marginTop: 4 }}>
+                                {schedule.tiles.length} tile{schedule.tiles.length === 1 ? '' : 's'} | {fmtTime(firstStart)} to {fmtTime(lastEnd)} | Updated {new Date(schedule.updatedAt).toLocaleString()}
+                              </div>
+                            </div>
+                            <div style={{ display: 'flex', gap: 8, flexShrink: 0 }}>
+                              <button
+                                type="button"
+                                onClick={() => handleInsertPresavedSchedule(schedule)}
+                                style={{ border: '1px solid #38bdf8', background: 'rgba(14,165,233,0.18)', color: '#bae6fd', borderRadius: 6, padding: '7px 10px', fontSize: 12, fontWeight: 800, cursor: 'pointer' }}
+                              >
+                                Insert
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => handleDeletePresavedSchedule(schedule)}
+                                style={{ border: '1px solid rgba(248,113,113,0.45)', background: 'rgba(239,68,68,0.12)', color: '#fecaca', borderRadius: 6, padding: '7px 10px', fontSize: 12, fontWeight: 800, cursor: 'pointer' }}
+                              >
+                                Delete
+                              </button>
+                            </div>
+                          </div>
+                          <div style={{ marginTop: 10, display: 'flex', flexWrap: 'wrap', gap: 5 }}>
+                            {schedule.tiles.slice(0, 12).map(tile => (
+                              <span key={`${schedule.id}-${tile.id}`} style={{ borderRadius: 999, background: tile.color, color: '#fff', padding: '3px 8px', fontSize: 11, fontWeight: 700 }}>
+                                {fmtTime(tile.startTime)} {tile.lessonCode}
+                              </span>
+                            ))}
+                            {schedule.tiles.length > 12 ? (
+                              <span style={{ borderRadius: 999, background: '#1f2937', color: '#cbd5e1', padding: '3px 8px', fontSize: 11, fontWeight: 700 }}>
+                                +{schedule.tiles.length - 12} more
+                              </span>
+                            ) : null}
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                ) : (
+                  <div style={{ border: '1px dashed #475569', borderRadius: 8, background: '#0f172a', color: '#94a3b8', padding: 18, fontSize: 13, fontWeight: 600 }}>
+                    No pre-saved academic schedules yet.
+                  </div>
+                )}
+              </div>
+
+              <div style={{ border: '1px solid #334155', borderRadius: 8, background: '#0f172a', padding: 14, alignSelf: 'start' }}>
+                <div style={{ color: '#f8fafc', fontWeight: 800, fontSize: 15 }}>Add Current Timeline</div>
+                <div style={{ color: '#94a3b8', fontSize: 12, marginTop: 5, lineHeight: 1.5 }}>
+                  Name the current Academics timeline using your own naming convention, then save it for reuse.
+                </div>
+                <label style={{ display: 'block', marginTop: 12 }}>
+                  <span style={S.label}>Schedule name</span>
+                  <input
+                    value={presavedScheduleName}
+                    onChange={event => setPresavedScheduleName(event.target.value)}
+                    placeholder="Example: Monday AM Academics"
+                    style={{ ...S.input, marginTop: 4 }}
+                  />
+                </label>
+                <div style={{ marginTop: 12, color: '#cbd5e1', fontSize: 12, lineHeight: 1.6 }}>
+                  Current timeline: <strong>{tiles.length}</strong> tile{tiles.length === 1 ? '' : 's'} | {fmtTime(workStart)} to {fmtTime(workEnd)}
+                </div>
+                <button
+                  type="button"
+                  onClick={handleSavePresavedSchedule}
+                  style={{ marginTop: 14, width: '100%', border: '1px solid #22c55e', background: 'rgba(34,197,94,0.16)', color: '#bbf7d0', borderRadius: 7, padding: '10px 12px', fontSize: 13, fontWeight: 900, cursor: 'pointer' }}
+                >
+                  + Add To Pre-Saved Schedules
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* ── Footer ── */}
       <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 6, paddingTop: 4 }}>
+        <button onClick={handleOpenPresavedSchedules} className="w-[150px] h-[55px] flex items-center justify-center text-center px-2 py-1 text-[12px] font-semibold rounded-md btn-aluminium-brushed text-sky-500">
+          Pre-Saved<br/>Schedules
+        </button>
         <button onClick={onClose} className="w-[75px] h-[55px] flex items-center justify-center text-center px-1 py-1 text-[12px] font-semibold rounded-md btn-aluminium-brushed">
           Cancel
         </button>

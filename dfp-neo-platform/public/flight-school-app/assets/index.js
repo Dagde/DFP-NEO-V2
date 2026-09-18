@@ -60719,6 +60719,7 @@ const TIMELINE_START = 5;
 const TIMELINE_END = 21;
 const SNAP_MINS = 5;
 const SNAP = SNAP_MINS / 60;
+const PRESAVED_ACADEMIC_SCHEDULES_KEY = "dfp_neo_presaved_academic_schedules_v1";
 const stripCourse = (fullName) => {
   return fullName.replace(/\s[–—-]\s\S+$/, "").trim();
 };
@@ -60732,6 +60733,7 @@ const STANDARD_EVENTS = [
   { code: "FREE_TIME", label: "Free Time", duration: 1, color: "#0f766e" },
   { code: "OTHER", label: "Other", duration: 1, color: "#b45309" }
 ];
+const ACADEMIC_TILE_COLOR = "#1d4ed8";
 const fmtTime = (dec) => {
   const h = Math.floor(dec);
   const m = Math.round(dec % 1 * 60);
@@ -61032,6 +61034,51 @@ Do you still want to include them in this academic session?`,
   const editTile = editTileId ? tiles.find((t) => t.id === editTileId) ?? null : null;
   const [selectedLessons, setSelectedLessons] = reactExports.useState(/* @__PURE__ */ new Set());
   const [selectedStandard, setSelectedStandard] = reactExports.useState(/* @__PURE__ */ new Set());
+  const [showPresavedSchedules, setShowPresavedSchedules] = reactExports.useState(false);
+  const [presavedSchedules, setPresavedSchedules] = reactExports.useState([]);
+  const [presavedScheduleName, setPresavedScheduleName] = reactExports.useState("");
+  const syncSelectedSetsFromTiles = reactExports.useCallback((nextTiles) => {
+    setSelectedLessons(new Set(nextTiles.filter((tile) => !tile.isStandard).map((tile) => tile.lessonCode)));
+    setSelectedStandard(new Set(nextTiles.filter((tile) => tile.isStandard).map((tile) => tile.lessonCode)));
+  }, []);
+  const loadPresavedSchedules = reactExports.useCallback(() => {
+    if (typeof window === "undefined") return [];
+    try {
+      const parsed = JSON.parse(window.localStorage.getItem(PRESAVED_ACADEMIC_SCHEDULES_KEY) || "[]");
+      if (!Array.isArray(parsed)) return [];
+      return parsed.map((item) => ({
+        id: String(item?.id || v4()),
+        name: String(item?.name || "Untitled Academic Schedule"),
+        createdAt: String(item?.createdAt || (/* @__PURE__ */ new Date()).toISOString()),
+        updatedAt: String(item?.updatedAt || item?.createdAt || (/* @__PURE__ */ new Date()).toISOString()),
+        workStart: Number.isFinite(Number(item?.workStart)) ? Number(item.workStart) : 8,
+        workEnd: Number.isFinite(Number(item?.workEnd)) ? Number(item.workEnd) : 17,
+        tiles: Array.isArray(item?.tiles) ? item.tiles.map((tile) => ({
+          id: String(tile?.id || v4()),
+          lessonCode: String(tile?.lessonCode || ""),
+          label: String(tile?.label || tile?.lessonCode || "Academic"),
+          startTime: Number.isFinite(Number(tile?.startTime)) ? Number(tile.startTime) : 8,
+          duration: Number.isFinite(Number(tile?.duration)) ? Number(tile.duration) : 1,
+          color: String(tile?.color || ACADEMIC_TILE_COLOR),
+          isStandard: Boolean(tile?.isStandard),
+          customDescription: tile?.customDescription ? String(tile.customDescription) : void 0
+        })).filter((tile) => tile.lessonCode && tile.duration > 0) : []
+      })).filter((item) => item.tiles.length > 0).sort((a, b) => b.updatedAt.localeCompare(a.updatedAt));
+    } catch {
+      return [];
+    }
+  }, []);
+  const persistPresavedSchedules = reactExports.useCallback((nextSchedules) => {
+    setPresavedSchedules(nextSchedules);
+    try {
+      window.localStorage.setItem(PRESAVED_ACADEMIC_SCHEDULES_KEY, JSON.stringify(nextSchedules));
+    } catch (error) {
+      console.error("[AcademicsTab] Could not save pre-saved schedules", error);
+    }
+  }, []);
+  reactExports.useEffect(() => {
+    setPresavedSchedules(loadPresavedSchedules());
+  }, [loadPresavedSchedules]);
   const getNextStart = reactExports.useCallback((newDuration) => {
     if (tiles.length === 0) return workStart;
     const lastEnd = Math.max(...tiles.map((t) => t.startTime + t.duration));
@@ -61039,6 +61086,63 @@ Do you still want to include them in this academic session?`,
     if (proposed + newDuration > TIMELINE_END) return snap(workStart);
     return proposed;
   }, [tiles, workStart]);
+  const handleOpenPresavedSchedules = () => {
+    setPresavedSchedules(loadPresavedSchedules());
+    if (!presavedScheduleName.trim()) {
+      const datePart = selectedDate ? ` ${selectedDate}` : "";
+      setPresavedScheduleName(`Academics${datePart}`);
+    }
+    setShowPresavedSchedules(true);
+  };
+  const handleSavePresavedSchedule = async () => {
+    const name = presavedScheduleName.trim();
+    if (!name) {
+      await showDarkAlert("Enter a name for the pre-saved academic schedule.", "Pre-Saved Schedules", "warning");
+      return;
+    }
+    if (tiles.length === 0) {
+      await showDarkAlert("Add at least one tile to the timeline before saving it as a pre-saved schedule.", "Pre-Saved Schedules", "warning");
+      return;
+    }
+    const now = (/* @__PURE__ */ new Date()).toISOString();
+    const existing = presavedSchedules.find((schedule) => schedule.name.trim().toLowerCase() === name.toLowerCase());
+    const nextSchedule = {
+      id: existing?.id || v4(),
+      name,
+      createdAt: existing?.createdAt || now,
+      updatedAt: now,
+      workStart,
+      workEnd,
+      tiles: tiles.map((tile) => ({ ...tile, id: v4() }))
+    };
+    persistPresavedSchedules([
+      nextSchedule,
+      ...presavedSchedules.filter((schedule) => schedule.id !== nextSchedule.id)
+    ]);
+    setPresavedScheduleName(name);
+  };
+  const handleInsertPresavedSchedule = async (schedule) => {
+    if (tiles.length > 0) {
+      const ok = await showDarkConfirm(
+        "Insert this pre-saved academic schedule into the current timeline? Existing tiles will remain and overlaps may need adjustment.",
+        "Insert Pre-Saved Schedule",
+        "info"
+      );
+      if (!ok) return;
+    }
+    const insertedTiles = schedule.tiles.map((tile) => ({ ...tile, id: v4() }));
+    const nextTiles = [...tiles, ...insertedTiles].sort((a, b) => a.startTime - b.startTime);
+    setTiles(nextTiles);
+    syncSelectedSetsFromTiles(nextTiles);
+    setWorkStart(schedule.workStart);
+    setWorkEnd(schedule.workEnd);
+    setShowPresavedSchedules(false);
+  };
+  const handleDeletePresavedSchedule = async (schedule) => {
+    const ok = await showDarkConfirm(`Delete pre-saved academic schedule "${schedule.name}"?`, "Delete Pre-Saved Schedule", "warning");
+    if (!ok) return;
+    persistPresavedSchedules(presavedSchedules.filter((item) => item.id !== schedule.id));
+  };
   const toggleLesson = reactExports.useCallback((item) => {
     const key = item.code;
     if (selectedLessons.has(key)) {
@@ -61876,7 +61980,156 @@ Do you still want to include them in this academic session?`,
         )
       }
     ),
+    showPresavedSchedules && /* @__PURE__ */ jsxRuntimeExports.jsx(
+      "div",
+      {
+        style: {
+          position: "fixed",
+          inset: 0,
+          background: "rgba(0,0,0,0.68)",
+          zIndex: 210,
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          padding: 24
+        },
+        onClick: () => setShowPresavedSchedules(false),
+        children: /* @__PURE__ */ jsxRuntimeExports.jsxs(
+          "div",
+          {
+            style: {
+              width: "min(980px, 96vw)",
+              maxHeight: "86vh",
+              overflow: "hidden",
+              background: "#111827",
+              border: "1px solid #334155",
+              borderRadius: 10,
+              boxShadow: "0 18px 60px rgba(0,0,0,0.65)",
+              display: "flex",
+              flexDirection: "column"
+            },
+            onClick: (event) => event.stopPropagation(),
+            children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { style: { padding: "18px 20px", borderBottom: "1px solid #334155", display: "flex", justifyContent: "space-between", gap: 16 }, children: [
+                /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("div", { style: { color: "#fff", fontSize: 20, fontWeight: 800 }, children: "Pre-Saved Schedules" }),
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("div", { style: { color: "#94a3b8", fontSize: 13, marginTop: 4 }, children: "Save reusable Academics timelines, then insert them into the schedule you are building." })
+                ] }),
+                /* @__PURE__ */ jsxRuntimeExports.jsx(
+                  "button",
+                  {
+                    type: "button",
+                    onClick: () => setShowPresavedSchedules(false),
+                    style: { width: 44, height: 40, borderRadius: 6, border: "1px solid #475569", background: "#0f172a", color: "#e5e7eb", fontWeight: 800, cursor: "pointer" },
+                    children: "X"
+                  }
+                )
+              ] }),
+              /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { style: { overflowY: "auto", padding: 20, display: "grid", gridTemplateColumns: "minmax(0, 1fr) minmax(280px, 340px)", gap: 18 }, children: [
+                /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("div", { style: S.label, children: "Saved daily academic schedules" }),
+                  presavedSchedules.length > 0 ? /* @__PURE__ */ jsxRuntimeExports.jsx("div", { style: { display: "flex", flexDirection: "column", gap: 10 }, children: presavedSchedules.map((schedule) => {
+                    const firstStart = Math.min(...schedule.tiles.map((tile) => tile.startTime));
+                    const lastEnd = Math.max(...schedule.tiles.map((tile) => tile.startTime + tile.duration));
+                    return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { style: { border: "1px solid #334155", borderRadius: 8, background: "#0f172a", padding: 12 }, children: [
+                      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { style: { display: "flex", justifyContent: "space-between", gap: 12, alignItems: "flex-start" }, children: [
+                        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
+                          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { style: { color: "#f8fafc", fontSize: 15, fontWeight: 800 }, children: schedule.name }),
+                          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { style: { color: "#94a3b8", fontSize: 12, marginTop: 4 }, children: [
+                            schedule.tiles.length,
+                            " tile",
+                            schedule.tiles.length === 1 ? "" : "s",
+                            " | ",
+                            fmtTime(firstStart),
+                            " to ",
+                            fmtTime(lastEnd),
+                            " | Updated ",
+                            new Date(schedule.updatedAt).toLocaleString()
+                          ] })
+                        ] }),
+                        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { style: { display: "flex", gap: 8, flexShrink: 0 }, children: [
+                          /* @__PURE__ */ jsxRuntimeExports.jsx(
+                            "button",
+                            {
+                              type: "button",
+                              onClick: () => handleInsertPresavedSchedule(schedule),
+                              style: { border: "1px solid #38bdf8", background: "rgba(14,165,233,0.18)", color: "#bae6fd", borderRadius: 6, padding: "7px 10px", fontSize: 12, fontWeight: 800, cursor: "pointer" },
+                              children: "Insert"
+                            }
+                          ),
+                          /* @__PURE__ */ jsxRuntimeExports.jsx(
+                            "button",
+                            {
+                              type: "button",
+                              onClick: () => handleDeletePresavedSchedule(schedule),
+                              style: { border: "1px solid rgba(248,113,113,0.45)", background: "rgba(239,68,68,0.12)", color: "#fecaca", borderRadius: 6, padding: "7px 10px", fontSize: 12, fontWeight: 800, cursor: "pointer" },
+                              children: "Delete"
+                            }
+                          )
+                        ] })
+                      ] }),
+                      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { style: { marginTop: 10, display: "flex", flexWrap: "wrap", gap: 5 }, children: [
+                        schedule.tiles.slice(0, 12).map((tile) => /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { style: { borderRadius: 999, background: tile.color, color: "#fff", padding: "3px 8px", fontSize: 11, fontWeight: 700 }, children: [
+                          fmtTime(tile.startTime),
+                          " ",
+                          tile.lessonCode
+                        ] }, `${schedule.id}-${tile.id}`)),
+                        schedule.tiles.length > 12 ? /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { style: { borderRadius: 999, background: "#1f2937", color: "#cbd5e1", padding: "3px 8px", fontSize: 11, fontWeight: 700 }, children: [
+                          "+",
+                          schedule.tiles.length - 12,
+                          " more"
+                        ] }) : null
+                      ] })
+                    ] }, schedule.id);
+                  }) }) : /* @__PURE__ */ jsxRuntimeExports.jsx("div", { style: { border: "1px dashed #475569", borderRadius: 8, background: "#0f172a", color: "#94a3b8", padding: 18, fontSize: 13, fontWeight: 600 }, children: "No pre-saved academic schedules yet." })
+                ] }),
+                /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { style: { border: "1px solid #334155", borderRadius: 8, background: "#0f172a", padding: 14, alignSelf: "start" }, children: [
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("div", { style: { color: "#f8fafc", fontWeight: 800, fontSize: 15 }, children: "Add Current Timeline" }),
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("div", { style: { color: "#94a3b8", fontSize: 12, marginTop: 5, lineHeight: 1.5 }, children: "Name the current Academics timeline using your own naming convention, then save it for reuse." }),
+                  /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { style: { display: "block", marginTop: 12 }, children: [
+                    /* @__PURE__ */ jsxRuntimeExports.jsx("span", { style: S.label, children: "Schedule name" }),
+                    /* @__PURE__ */ jsxRuntimeExports.jsx(
+                      "input",
+                      {
+                        value: presavedScheduleName,
+                        onChange: (event) => setPresavedScheduleName(event.target.value),
+                        placeholder: "Example: Monday AM Academics",
+                        style: { ...S.input, marginTop: 4 }
+                      }
+                    )
+                  ] }),
+                  /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { style: { marginTop: 12, color: "#cbd5e1", fontSize: 12, lineHeight: 1.6 }, children: [
+                    "Current timeline: ",
+                    /* @__PURE__ */ jsxRuntimeExports.jsx("strong", { children: tiles.length }),
+                    " tile",
+                    tiles.length === 1 ? "" : "s",
+                    " | ",
+                    fmtTime(workStart),
+                    " to ",
+                    fmtTime(workEnd)
+                  ] }),
+                  /* @__PURE__ */ jsxRuntimeExports.jsx(
+                    "button",
+                    {
+                      type: "button",
+                      onClick: handleSavePresavedSchedule,
+                      style: { marginTop: 14, width: "100%", border: "1px solid #22c55e", background: "rgba(34,197,94,0.16)", color: "#bbf7d0", borderRadius: 7, padding: "10px 12px", fontSize: 13, fontWeight: 900, cursor: "pointer" },
+                      children: "+ Add To Pre-Saved Schedules"
+                    }
+                  )
+                ] })
+              ] })
+            ]
+          }
+        )
+      }
+    ),
     /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { style: { display: "flex", justifyContent: "flex-end", gap: 6, paddingTop: 4 }, children: [
+      /* @__PURE__ */ jsxRuntimeExports.jsxs("button", { onClick: handleOpenPresavedSchedules, className: "w-[150px] h-[55px] flex items-center justify-center text-center px-2 py-1 text-[12px] font-semibold rounded-md btn-aluminium-brushed text-sky-500", children: [
+        "Pre-Saved",
+        /* @__PURE__ */ jsxRuntimeExports.jsx("br", {}),
+        "Schedules"
+      ] }),
       /* @__PURE__ */ jsxRuntimeExports.jsx("button", { onClick: onClose, className: "w-[75px] h-[55px] flex items-center justify-center text-center px-1 py-1 text-[12px] font-semibold rounded-md btn-aluminium-brushed", children: "Cancel" }),
       /* @__PURE__ */ jsxRuntimeExports.jsx("button", { onClick: handleSave, className: "w-[75px] h-[55px] flex items-center justify-center text-center px-1 py-1 text-[12px] font-semibold rounded-md btn-aluminium-brushed text-green-500", children: "Publish" })
     ] })
