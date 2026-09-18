@@ -64054,11 +64054,15 @@ const MyDashboard = ({
       amber: "border-amber-500/30 text-amber-200 bg-amber-500/10",
       rose: "border-rose-500/30 text-rose-200 bg-rose-500/10"
     }[tone];
-    return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded-xl border border-gray-700 bg-gray-950/35 p-4", children: [
-      /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: `mb-5 flex h-12 w-12 items-center justify-center rounded-lg border text-lg font-black ${toneClasses}`, children: String(label || "?").slice(0, 1) }),
-      /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-sm font-bold text-white", children: label }),
-      /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-2 min-h-[42px] text-xs leading-5 text-gray-400", children: description }),
-      /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-5 text-3xl font-black text-white", children: value })
+    return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex h-[118px] flex-col rounded-lg border border-gray-700 bg-gray-950/35 p-3", children: [
+      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-start justify-between gap-2", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-[13px] font-black leading-tight text-white", children: label }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-1 line-clamp-2 text-[11px] leading-4 text-gray-400", children: description })
+        ] }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: `flex h-8 w-8 shrink-0 items-center justify-center rounded-md border text-sm font-black ${toneClasses}`, children: String(label || "?").slice(0, 1) })
+      ] }),
+      /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-auto truncate text-2xl font-black leading-none text-white", title: String(value), children: value })
     ] });
   };
   const renderSelectedMyTeamDashboard = (entry) => {
@@ -64070,12 +64074,12 @@ const MyDashboard = ({
       const metrics2 = buildStaffMetrics(staff);
       const period302 = metrics2.periods[30] || buildEmptyMyTeamPeriodMetrics()[30];
       return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-4", children: [
-        /* @__PURE__ */ jsxRuntimeExports.jsxs("section", { className: "rounded-xl border border-cyan-500/25 bg-cyan-950/15 p-4", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("section", { className: "rounded-lg border border-cyan-500/25 bg-cyan-950/15 p-3", children: [
           /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-[10px] font-bold uppercase tracking-[0.28em] text-cyan-300", children: "Team Member" }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx("h3", { className: "mt-2 text-2xl font-black text-white", children: entry.label }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx("h3", { className: "mt-1 text-xl font-black text-white", children: entry.label }),
           /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-1 text-sm font-semibold text-gray-400", children: entry.subtitle || "Staff member" })
         ] }),
-        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid gap-4 md:grid-cols-2 xl:grid-cols-4", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid grid-cols-2 gap-3 lg:grid-cols-4", children: [
           renderMyTeamStatCard("Events", period302.events, "Events completed in the last 30 days.", "cyan"),
           renderMyTeamStatCard("Flights", period302.flights, "Flight events completed in the last 30 days.", "blue"),
           renderMyTeamStatCard("Flying hours", formatDashboardMetricNumber(period302.flightHours), "Flying hours recorded in the last 30 days.", "emerald"),
@@ -64092,12 +64096,12 @@ const MyDashboard = ({
     const metrics = buildTraineeMetrics(trainee);
     const period30 = metrics.periods[30] || buildEmptyMyTeamPeriodMetrics()[30];
     return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-4", children: [
-      /* @__PURE__ */ jsxRuntimeExports.jsxs("section", { className: "rounded-xl border border-emerald-500/25 bg-emerald-950/15 p-4", children: [
+      /* @__PURE__ */ jsxRuntimeExports.jsxs("section", { className: "rounded-lg border border-emerald-500/25 bg-emerald-950/15 p-3", children: [
         /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-[10px] font-bold uppercase tracking-[0.28em] text-emerald-300", children: "Team Member" }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx("h3", { className: "mt-2 text-2xl font-black text-white", children: entry.label }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx("h3", { className: "mt-1 text-xl font-black text-white", children: entry.label }),
         /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-1 text-sm font-semibold text-gray-400", children: entry.subtitle || "Trainee" })
       ] }),
-      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid gap-4 md:grid-cols-2 xl:grid-cols-4", children: [
+      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid grid-cols-2 gap-3 lg:grid-cols-4", children: [
         renderMyTeamStatCard("Events", period30.events, "Events completed in the last 30 days.", "cyan"),
         renderMyTeamStatCard("Flights", period30.flights, "Flight events completed in the last 30 days.", "blue"),
         renderMyTeamStatCard("Flying hours", formatDashboardMetricNumber(period30.flightHours), "Flying hours recorded in the last 30 days.", "emerald"),

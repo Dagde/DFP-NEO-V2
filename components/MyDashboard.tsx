@@ -2622,13 +2622,19 @@ const MyDashboard: React.FC<MyDashboardProps> = ({
             rose: 'border-rose-500/30 text-rose-200 bg-rose-500/10',
         }[tone];
         return (
-            <div className="rounded-xl border border-gray-700 bg-gray-950/35 p-4">
-                <div className={`mb-5 flex h-12 w-12 items-center justify-center rounded-lg border text-lg font-black ${toneClasses}`}>
-                    {String(label || '?').slice(0, 1)}
+            <div className="flex h-[118px] flex-col rounded-lg border border-gray-700 bg-gray-950/35 p-3">
+                <div className="flex items-start justify-between gap-2">
+                    <div>
+                        <p className="text-[13px] font-black leading-tight text-white">{label}</p>
+                        <p className="mt-1 line-clamp-2 text-[11px] leading-4 text-gray-400">{description}</p>
+                    </div>
+                    <div className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-md border text-sm font-black ${toneClasses}`}>
+                        {String(label || '?').slice(0, 1)}
+                    </div>
                 </div>
-                <p className="text-sm font-bold text-white">{label}</p>
-                <p className="mt-2 min-h-[42px] text-xs leading-5 text-gray-400">{description}</p>
-                <p className="mt-5 text-3xl font-black text-white">{value}</p>
+                <p className="mt-auto truncate text-2xl font-black leading-none text-white" title={String(value)}>
+                    {value}
+                </p>
             </div>
         );
     };
@@ -2648,12 +2654,12 @@ const MyDashboard: React.FC<MyDashboardProps> = ({
             const period30 = metrics.periods[30] || buildEmptyMyTeamPeriodMetrics()[30];
             return (
                 <div className="space-y-4">
-                    <section className="rounded-xl border border-cyan-500/25 bg-cyan-950/15 p-4">
+                    <section className="rounded-lg border border-cyan-500/25 bg-cyan-950/15 p-3">
                         <p className="text-[10px] font-bold uppercase tracking-[0.28em] text-cyan-300">Team Member</p>
-                        <h3 className="mt-2 text-2xl font-black text-white">{entry.label}</h3>
+                        <h3 className="mt-1 text-xl font-black text-white">{entry.label}</h3>
                         <p className="mt-1 text-sm font-semibold text-gray-400">{entry.subtitle || 'Staff member'}</p>
                     </section>
-                    <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+                    <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
                         {renderMyTeamStatCard('Events', period30.events, 'Events completed in the last 30 days.', 'cyan')}
                         {renderMyTeamStatCard('Flights', period30.flights, 'Flight events completed in the last 30 days.', 'blue')}
                         {renderMyTeamStatCard('Flying hours', formatDashboardMetricNumber(period30.flightHours), 'Flying hours recorded in the last 30 days.', 'emerald')}
@@ -2673,12 +2679,12 @@ const MyDashboard: React.FC<MyDashboardProps> = ({
         const period30 = metrics.periods[30] || buildEmptyMyTeamPeriodMetrics()[30];
         return (
             <div className="space-y-4">
-                <section className="rounded-xl border border-emerald-500/25 bg-emerald-950/15 p-4">
+                <section className="rounded-lg border border-emerald-500/25 bg-emerald-950/15 p-3">
                     <p className="text-[10px] font-bold uppercase tracking-[0.28em] text-emerald-300">Team Member</p>
-                    <h3 className="mt-2 text-2xl font-black text-white">{entry.label}</h3>
+                    <h3 className="mt-1 text-xl font-black text-white">{entry.label}</h3>
                     <p className="mt-1 text-sm font-semibold text-gray-400">{entry.subtitle || 'Trainee'}</p>
                 </section>
-                <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+                <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
                     {renderMyTeamStatCard('Events', period30.events, 'Events completed in the last 30 days.', 'cyan')}
                     {renderMyTeamStatCard('Flights', period30.flights, 'Flight events completed in the last 30 days.', 'blue')}
                     {renderMyTeamStatCard('Flying hours', formatDashboardMetricNumber(period30.flightHours), 'Flying hours recorded in the last 30 days.', 'emerald')}
