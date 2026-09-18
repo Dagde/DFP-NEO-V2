@@ -37785,7 +37785,7 @@ const App: React.FC = () => {
             setShowInfoNotification('Access denied for this location or module. Ask a Platform Admin to adjust your access in Settings.');
             return;
         }
-        if (normalizedView === 'MyDashboard' || normalizedView === 'SupervisorDashboard') {
+        if (normalizedView === 'SupervisorDashboard') {
             setPreviousView(activeView);
             setFloatingDashboardWindows(prev => ({ ...prev, [normalizedView]: true }));
             return;
