@@ -1031,6 +1031,15 @@ const MyDashboard: React.FC<MyDashboardProps> = ({
         return [];
     }, [dashboardUserStaff?.unit, dashboardUserTrainee?.unit, messageContactUnitCodes]);
     const dashboardUserUnitSet = useMemo(() => new Set(dashboardUserUnitCodes), [dashboardUserUnitCodes.join('|')]);
+    const myTeamHomeUnitCodes = useMemo(() => {
+        const homeUnit = String(dashboardUserStaff?.unit || dashboardUserTrainee?.unit || '').trim().toUpperCase();
+        const units = homeUnit
+            .split(/[+/,&]/)
+            .map(unit => unit.trim())
+            .filter(Boolean);
+        return units.length > 0 ? Array.from(new Set(units)) : dashboardUserUnitCodes;
+    }, [dashboardUserStaff?.unit, dashboardUserTrainee?.unit, dashboardUserUnitCodes.join('|')]);
+    const myTeamHomeUnitSet = useMemo(() => new Set(myTeamHomeUnitCodes), [myTeamHomeUnitCodes.join('|')]);
     const peopleMessageContacts = useMemo<DashboardMessageContact[]>(() => {
         const startedAt = getDashboardMessagePerfTime();
         const contactMatchesDashboardUnitScope = (unitValue?: string | null): boolean => {
@@ -2393,24 +2402,24 @@ const MyDashboard: React.FC<MyDashboardProps> = ({
             .filter(event => parseDashboardEventDate(event) !== null && !event.isCancelled)
     ), [allScheduleEvents, events]);
     const myTeamUnitMatches = (unitValue?: string): boolean => {
-        if (dashboardUserUnitSet.size === 0) return true;
+        if (myTeamHomeUnitSet.size === 0) return true;
         const units = String(unitValue || '')
             .split(/[+/,&]/)
             .map(unit => unit.trim().toUpperCase())
             .filter(Boolean);
         if (units.length === 0) return true;
-        return units.some(unit => dashboardUserUnitSet.has(unit));
+        return units.some(unit => myTeamHomeUnitSet.has(unit));
     };
     const myTeamStaffOptions = useMemo(() => (
         messageContactStaffOptions
             .filter(staff => staff?.name && myTeamUnitMatches(staff.unit))
             .sort((a, b) => compareDashboardRank(a.rank, b.rank) || String(a.name || '').localeCompare(String(b.name || '')))
-    ), [messageContactStaffOptions, dashboardUserUnitSet]);
+    ), [messageContactStaffOptions, myTeamHomeUnitSet]);
     const myTeamTraineeOptions = useMemo(() => (
         messageContactTraineeOptions
             .filter(trainee => (trainee?.fullName || trainee?.name) && myTeamUnitMatches(trainee.unit))
             .sort((a, b) => compareDashboardRank(a.rank, b.rank) || String(a.fullName || a.name || '').localeCompare(String(b.fullName || b.name || '')))
-    ), [messageContactTraineeOptions, dashboardUserUnitSet]);
+    ), [messageContactTraineeOptions, myTeamHomeUnitSet]);
     const myTeamNameResolver = useMemo(() => buildCompactPersonNameResolver([
         ...myTeamStaffOptions.map(staff => ({
             ...staff,

@@ -62933,6 +62933,12 @@ const MyDashboard = ({
     return [];
   }, [dashboardUserStaff?.unit, dashboardUserTrainee?.unit, messageContactUnitCodes]);
   const dashboardUserUnitSet = reactExports.useMemo(() => new Set(dashboardUserUnitCodes), [dashboardUserUnitCodes.join("|")]);
+  const myTeamHomeUnitCodes = reactExports.useMemo(() => {
+    const homeUnit = String(dashboardUserStaff?.unit || dashboardUserTrainee?.unit || "").trim().toUpperCase();
+    const units = homeUnit.split(/[+/,&]/).map((unit) => unit.trim()).filter(Boolean);
+    return units.length > 0 ? Array.from(new Set(units)) : dashboardUserUnitCodes;
+  }, [dashboardUserStaff?.unit, dashboardUserTrainee?.unit, dashboardUserUnitCodes.join("|")]);
+  const myTeamHomeUnitSet = reactExports.useMemo(() => new Set(myTeamHomeUnitCodes), [myTeamHomeUnitCodes.join("|")]);
   const peopleMessageContacts = reactExports.useMemo(() => {
     const startedAt = getDashboardMessagePerfTime();
     const contactMatchesDashboardUnitScope = (unitValue) => {
@@ -63909,13 +63915,13 @@ const MyDashboard = ({
   const myTeamReferenceTime = dashboardDateAtUtcStart(myTeamCurrentDate);
   const myTeamEvents = reactExports.useMemo(() => (allScheduleEvents.length > 0 ? allScheduleEvents : events).filter((event) => parseDashboardEventDate(event) !== null && !event.isCancelled), [allScheduleEvents, events]);
   const myTeamUnitMatches = (unitValue) => {
-    if (dashboardUserUnitSet.size === 0) return true;
+    if (myTeamHomeUnitSet.size === 0) return true;
     const units = String(unitValue || "").split(/[+/,&]/).map((unit) => unit.trim().toUpperCase()).filter(Boolean);
     if (units.length === 0) return true;
-    return units.some((unit) => dashboardUserUnitSet.has(unit));
+    return units.some((unit) => myTeamHomeUnitSet.has(unit));
   };
-  const myTeamStaffOptions = reactExports.useMemo(() => messageContactStaffOptions.filter((staff) => staff?.name && myTeamUnitMatches(staff.unit)).sort((a, b) => compareDashboardRank(a.rank, b.rank) || String(a.name || "").localeCompare(String(b.name || ""))), [messageContactStaffOptions, dashboardUserUnitSet]);
-  const myTeamTraineeOptions = reactExports.useMemo(() => messageContactTraineeOptions.filter((trainee) => (trainee?.fullName || trainee?.name) && myTeamUnitMatches(trainee.unit)).sort((a, b) => compareDashboardRank(a.rank, b.rank) || String(a.fullName || a.name || "").localeCompare(String(b.fullName || b.name || ""))), [messageContactTraineeOptions, dashboardUserUnitSet]);
+  const myTeamStaffOptions = reactExports.useMemo(() => messageContactStaffOptions.filter((staff) => staff?.name && myTeamUnitMatches(staff.unit)).sort((a, b) => compareDashboardRank(a.rank, b.rank) || String(a.name || "").localeCompare(String(b.name || ""))), [messageContactStaffOptions, myTeamHomeUnitSet]);
+  const myTeamTraineeOptions = reactExports.useMemo(() => messageContactTraineeOptions.filter((trainee) => (trainee?.fullName || trainee?.name) && myTeamUnitMatches(trainee.unit)).sort((a, b) => compareDashboardRank(a.rank, b.rank) || String(a.fullName || a.name || "").localeCompare(String(b.fullName || b.name || ""))), [messageContactTraineeOptions, myTeamHomeUnitSet]);
   const myTeamNameResolver = reactExports.useMemo(() => buildCompactPersonNameResolver([
     ...myTeamStaffOptions.map((staff) => ({
       ...staff,
