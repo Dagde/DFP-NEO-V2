@@ -10242,7 +10242,7 @@ const InitialSetupWizard: React.FC<{
                     {wizardField('Standby Lines', resourceDraft.standby, (value) => updateResourceDraft((draft) => ({ ...draft, standby: value })))}
                     {wizardField('Ground Lines', resourceDraft.ground, (value) => updateResourceDraft((draft) => ({ ...draft, ground: value })))}
                     <div className="md:col-span-5">
-                        {wizardField('Classroom names', resourceDraft.classrooms, (value) => updateResourceDraft((draft) => ({ ...draft, classrooms: value })), undefined, 'Ground 1, Ground 2')}
+                        {wizardField('Classroom names', resourceDraft.classrooms, (value) => updateResourceDraft((draft) => ({ ...draft, classrooms: value })), undefined, 'Briefing Room, Classroom A')}
                     </div>
                 </div>,
             );

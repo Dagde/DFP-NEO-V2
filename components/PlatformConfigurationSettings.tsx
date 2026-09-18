@@ -11319,7 +11319,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
                           value={formatClassroomNames(pool.settings?.classrooms ?? pool.settings?.classroomNames ?? pool.settings?.groundClassrooms)}
                           disabled={!canEditResourcePools}
                           onCommit={(value) => updateResourcePoolSettings(index, { classrooms: parseClassroomNames(value) })}
-                          info="Optional names for Add Ground Event > Academics classroom selection. Enter one per line or comma-separated; blank rows use Ground 1, Ground 2 and so on."
+                          info="Optional names for Add Ground Event > Academics classroom selection. Enter one per line or comma-separated; names apply to the configured Ground rows in order."
                           className="md:col-span-3"
                           fieldSizingClassName="min-h-[86px]"
                         />
@@ -13242,7 +13242,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
                           value={formatClassroomNames(pool.settings?.classrooms ?? pool.settings?.classroomNames ?? pool.settings?.groundClassrooms)}
                           disabled={!canEditResourcePools}
                           onCommit={(value) => updateResourcePoolSettings(index, { classrooms: parseClassroomNames(value) })}
-                          info="Optional names for Add Ground Event > Academics classroom selection. Enter one per line or comma-separated; blank rows use Ground 1, Ground 2 and so on."
+                          info="Optional names for Add Ground Event > Academics classroom selection. Enter one per line or comma-separated; names apply to the configured Ground rows in order."
                           className="lg:col-span-2"
                           fieldSizingClassName="min-h-[86px]"
                         />

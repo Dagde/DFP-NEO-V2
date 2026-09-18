@@ -3941,7 +3941,7 @@ const getConfiguredClassroomNames = (settings) => parseClassroomNames(settings?.
 const formatClassroomNames = (value) => parseClassroomNames(value).join("\n");
 const buildClassroomResourceOptions = (settings, groundCount) => {
   const names = getConfiguredClassroomNames(settings);
-  const count = Math.max(1, Math.floor(Number(groundCount) || 0));
+  const count = Math.max(0, Math.floor(Number(groundCount) || 0));
   return Array.from({ length: count }, (_, index) => {
     const id = `Ground ${index + 1}`;
     return {
@@ -25496,7 +25496,7 @@ This removes them from DFP Resource Rows. Press Save in this section to apply th
                               value: formatClassroomNames(pool.settings?.classrooms ?? pool.settings?.classroomNames ?? pool.settings?.groundClassrooms),
                               disabled: !canEditResourcePools,
                               onCommit: (value) => updateResourcePoolSettings(index, { classrooms: parseClassroomNames(value) }),
-                              info: "Optional names for Add Ground Event > Academics classroom selection. Enter one per line or comma-separated; blank rows use Ground 1, Ground 2 and so on.",
+                              info: "Optional names for Add Ground Event > Academics classroom selection. Enter one per line or comma-separated; names apply to the configured Ground rows in order.",
                               className: "md:col-span-3",
                               fieldSizingClassName: "min-h-[86px]"
                             }
@@ -27396,7 +27396,7 @@ This removes them from DFP Resource Rows. Press Save in this section to apply th
                           value: formatClassroomNames(pool.settings?.classrooms ?? pool.settings?.classroomNames ?? pool.settings?.groundClassrooms),
                           disabled: !canEditResourcePools,
                           onCommit: (value) => updateResourcePoolSettings(index, { classrooms: parseClassroomNames(value) }),
-                          info: "Optional names for Add Ground Event > Academics classroom selection. Enter one per line or comma-separated; blank rows use Ground 1, Ground 2 and so on.",
+                          info: "Optional names for Add Ground Event > Academics classroom selection. Enter one per line or comma-separated; names apply to the configured Ground rows in order.",
                           className: "lg:col-span-2",
                           fieldSizingClassName: "min-h-[86px]"
                         }
@@ -38118,7 +38118,7 @@ const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, lo
           wizardField("Trainer", resourceDraft.trainer, (value) => updateResourceDraft((draft) => ({ ...draft, trainer: value }))),
           wizardField("Standby Lines", resourceDraft.standby, (value) => updateResourceDraft((draft) => ({ ...draft, standby: value }))),
           wizardField("Ground Lines", resourceDraft.ground, (value) => updateResourceDraft((draft) => ({ ...draft, ground: value }))),
-          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "md:col-span-5", children: wizardField("Classroom names", resourceDraft.classrooms, (value) => updateResourceDraft((draft) => ({ ...draft, classrooms: value })), void 0, "Ground 1, Ground 2") })
+          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "md:col-span-5", children: wizardField("Classroom names", resourceDraft.classrooms, (value) => updateResourceDraft((draft) => ({ ...draft, classrooms: value })), void 0, "Briefing Room, Classroom A") })
         ] })
       );
     }
@@ -60805,8 +60805,7 @@ const AcademicsTab = ({
   const [instructor, setInstructor] = reactExports.useState("");
   const effectiveClassroomOptions = reactExports.useMemo(() => {
     if (classroomOptions.length > 0) return classroomOptions;
-    const resources = groundResources.length > 0 ? groundResources : Array.from({ length: 6 }, (_, index) => `Ground ${index + 1}`);
-    return resources.map((resource) => ({ id: resource, label: resource }));
+    return groundResources.map((resource) => ({ id: resource, label: resource }));
   }, [classroomOptions, groundResources]);
   const [editTileId, setEditTileId] = reactExports.useState(null);
   const [editStartTime, setEditStartTime] = reactExports.useState("");
@@ -61060,6 +61059,11 @@ Do you still want to include them in this academic session?`,
     if (tiles.length === 0) {
       console.error("🎓 [AcademicsTab.handleSave] ❌ BLOCKED: no tiles in timeline");
       await showDarkAlert("Please add at least one lesson to the timeline.", "Academic Event", "warning");
+      return;
+    }
+    if (!resourceId) {
+      console.error("🎓 [AcademicsTab.handleSave] ❌ BLOCKED: no classroom resource selected");
+      await showDarkAlert("Please select a configured classroom before saving the academic event.", "Academic Event", "warning");
       return;
     }
     const lessons = tiles.filter((t) => !t.isStandard).map((t) => {
@@ -61806,9 +61810,9 @@ const AddGroundEventFlyout = ({
   const [selectedCourse, setSelectedCourse] = reactExports.useState(Object.keys(activeCourses)[0] || "");
   const [isEntireCourse, setIsEntireCourse] = reactExports.useState(false);
   const [selectedTrainees, setSelectedTrainees] = reactExports.useState([]);
-  const groundResourceOptions = reactExports.useMemo(() => groundResources.length > 0 ? groundResources : Array.from({ length: 6 }, (_, i) => `Ground ${i + 1}`), [groundResources]);
+  const groundResourceOptions = reactExports.useMemo(() => groundResources, [groundResources]);
   const cptResourceOptions = reactExports.useMemo(() => cptResources.length > 0 ? cptResources : Array.from({ length: 4 }, (_, i) => `CPT ${i + 1}`), [cptResources]);
-  const [selectedGround, setSelectedGround] = reactExports.useState(groundResourceOptions[0] || "Ground 1");
+  const [selectedGround, setSelectedGround] = reactExports.useState(groundResourceOptions[0] || "");
   const [showTraineeSelector, setShowTraineeSelector] = reactExports.useState(false);
   const [showCourseConfirm, setShowCourseConfirm] = reactExports.useState(false);
   const traineeSelectorRef = reactExports.useRef(null);
@@ -61867,6 +61871,10 @@ const AddGroundEventFlyout = ({
   const handleSaveGround = async () => {
     if (!flightNumber || !instructor) {
       await showDarkAlert("Please select an event and an instructor.", "Add Ground Event", "warning");
+      return;
+    }
+    if (!isCptEvent && !selectedGround) {
+      await showDarkAlert("No ground resource is configured for this unit. Add Ground rows in Settings > Resources & Configuration > DFP Resource Rows before saving a ground event.", "Add Ground Event", "warning");
       return;
     }
     let selectionType = "single";
@@ -116958,7 +116966,7 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
       });
       const resourceAvailabilityAtMinute = (minuteTime, eventType) => {
         const sampleEvent = fixedCrewQueue2.find((item) => item.event.type === eventType)?.event;
-        const resourceOptions = sampleEvent ? getFixedCrewResourceOptions(sampleEvent) : eventType === "flight" ? Array.from({ length: availableAircraftCount }, (_, index) => `${buildAircraftResourcePrefix} ${index + 1}`) : eventType === "ftd" ? Array.from({ length: ftdCount }, (_, index) => `FTD ${index + 1}`) : eventType === "cpt" ? Array.from({ length: cptCount }, (_, index) => `CPT ${index + 1}`) : eventType === "ground" ? Array.from({ length: 6 }, (_, index) => `Ground ${index + 1}`) : [];
+        const resourceOptions = sampleEvent ? getFixedCrewResourceOptions(sampleEvent) : eventType === "flight" ? Array.from({ length: availableAircraftCount }, (_, index) => `${buildAircraftResourcePrefix} ${index + 1}`) : eventType === "ftd" ? Array.from({ length: ftdCount }, (_, index) => `FTD ${index + 1}`) : eventType === "cpt" ? Array.from({ length: cptCount }, (_, index) => `CPT ${index + 1}`) : eventType === "ground" ? Array.from({ length: configuredGroundCount }, (_, index) => `Ground ${index + 1}`) : [];
         const busyResources = new Set(generatedEvents.filter((event) => event.type === eventType && eventActiveAtMinute(event, minuteTime)).map((event) => event.resourceId).filter(Boolean));
         const freeResources = resourceOptions.filter((resourceId) => !busyResources.has(resourceId));
         return {
@@ -134266,7 +134274,7 @@ const App = () => {
   const configuredFtdCount = getResourcePoolCount(activePlatformResourcePool, "ftd", availableFtdCount, resourceRowTargetDate);
   const configuredCptCount = getResourcePoolCount(activePlatformResourcePool, "cpt", availableCptCount, resourceRowTargetDate);
   const configuredStandbyCount = getResourcePoolCount(activePlatformResourcePool, "standby", 4, resourceRowTargetDate);
-  const configuredGroundCount = getResourcePoolCount(activePlatformResourcePool, "ground", 6, resourceRowTargetDate);
+  const configuredGroundCount2 = getResourcePoolCount(activePlatformResourcePool, "ground", 6, resourceRowTargetDate);
   const configuredDutySupervisorRowEnabled = getResourcePoolCount(activePlatformResourcePool, "dutySupervisor", 0, resourceRowTargetDate) > 0;
   const configuredTowerDutyInstructorRowEnabled = getResourcePoolCount(activePlatformResourcePool, "towerDutyInstructor", 0, resourceRowTargetDate) > 0;
   const getLocalIsoDateForResourceRows = reactExports.useCallback((offsetDays = 0) => {
@@ -134361,7 +134369,7 @@ const App = () => {
         ftd: configuredFtdCount,
         cpt: configuredCptCount,
         standby: configuredStandbyCount,
-        ground: configuredGroundCount,
+        ground: configuredGroundCount2,
         dutySupervisor: configuredDutySupervisorRowEnabled ? 1 : 0,
         towerDutyInstructor: configuredTowerDutyInstructorRowEnabled ? 1 : 0,
         targetDate: resourceRowTargetDate
@@ -134406,7 +134414,7 @@ const App = () => {
     configuredAirframeCount,
     configuredCptCount,
     configuredFtdCount,
-    configuredGroundCount,
+    configuredGroundCount2,
     configuredStandbyCount,
     configuredDutySupervisorRowEnabled,
     configuredTowerDutyInstructorRowEnabled,
@@ -135832,7 +135840,7 @@ ${"=".repeat(60)}`);
       ...Array.from({ length: stbyLineCount }, (_, i) => `STBY ${i + 1}`),
       ...Array.from({ length: configuredFtdCount }, (_, i) => `FTD ${i + 1}`),
       ...Array.from({ length: configuredCptCount }, (_, i) => `CPT ${i + 1}`),
-      ...Array.from({ length: configuredGroundCount }, (_, i) => `Ground ${i + 1}`)
+      ...Array.from({ length: configuredGroundCount2 }, (_, i) => `Ground ${i + 1}`)
     ];
     return allResources;
   }, [
@@ -135840,7 +135848,7 @@ ${"=".repeat(60)}`);
     configuredFtdCount,
     configuredCptCount,
     configuredStandbyCount,
-    configuredGroundCount,
+    configuredGroundCount2,
     configuredDutySupervisorRowEnabled,
     configuredTowerDutyInstructorRowEnabled,
     activeAircraftResourcePrefix,
@@ -147189,7 +147197,7 @@ ${error instanceof Error ? error.message : String(error)}`,
     return Object.fromEntries(entries);
   }, [addGroundTileTraineesByCourse, courseColors, scopedCourseColors]);
   const addGroundTileGroundResources = reactExports.useMemo(() => buildResources.filter((resourceId) => /^Ground\s+\d+$/i.test(String(resourceId || "").trim())), [buildResources]);
-  const addGroundTileClassroomOptions = reactExports.useMemo(() => buildClassroomResourceOptions(activePlatformResourcePool?.settings || {}, addGroundTileGroundResources.length || configuredGroundCount), [activePlatformResourcePool?.settings, addGroundTileGroundResources.length, configuredGroundCount]);
+  const addGroundTileClassroomOptions = reactExports.useMemo(() => buildClassroomResourceOptions(activePlatformResourcePool?.settings || {}, addGroundTileGroundResources.length || configuredGroundCount2), [activePlatformResourcePool?.settings, addGroundTileGroundResources.length, configuredGroundCount2]);
   const addGroundTileCptResources = reactExports.useMemo(() => buildResources.filter((resourceId) => /^CPT\s+\d+$/i.test(String(resourceId || "").trim())), [buildResources]);
   const handleSaveGroundEvent = (data) => {
     const syllabusItem = syllabusDetails.find((s) => s.code === data.flightNumber);
@@ -147197,7 +147205,11 @@ ${error instanceof Error ? error.message : String(error)}`,
     const isNextDayContext = ["NextDayBuild", "Priorities", "ProgramData", "NextDayInstructorSchedule", "NextDayTraineeSchedule"].includes(activeView);
     const eventDate = isNextDayContext ? buildDfpDate : date;
     const existingEventsForDate = isNextDayContext ? nextDayBuildEvents.map((event) => ({ ...event, date: eventDate })) : publishedSchedules[eventDate] || [];
-    const requestedResourceId = String(data.resourceId || "").trim() || "Ground 1";
+    const requestedResourceId = String(data.resourceId || "").trim();
+    if (!requestedResourceId) {
+      console.error("[AddGroundEvent] Save blocked: no configured ground resource selected.");
+      return;
+    }
     const resourceMatch = requestedResourceId.match(/^(.+?)\s*(\d+)$/);
     const resourceBase = (resourceMatch?.[1] || requestedResourceId).trim();
     const selectedResourceNumber = Number(resourceMatch?.[2] || 1);
@@ -147291,7 +147303,7 @@ ${error instanceof Error ? error.message : String(error)}`,
       attendees: data.selectedTrainees,
       student: data.selectedTrainees[0] || "",
       instructor: data.instructor || "",
-      resourceId: data.resourceId || "Ground 1",
+      resourceId: data.resourceId,
       color: "bg-blue-800/90",
       flightType: "Dual",
       locationType: "Local",

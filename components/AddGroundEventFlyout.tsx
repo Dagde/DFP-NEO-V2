@@ -101,12 +101,12 @@ const AddGroundEventFlyout: React.FC<AddGroundEventFlyoutProps> = ({
     const [isEntireCourse, setIsEntireCourse] = useState(false);
     const [selectedTrainees, setSelectedTrainees] = useState<string[]>([]);
     const groundResourceOptions = useMemo(() => (
-        groundResources.length > 0 ? groundResources : Array.from({ length: 6 }, (_, i) => `Ground ${i + 1}`)
+        groundResources
     ), [groundResources]);
     const cptResourceOptions = useMemo(() => (
         cptResources.length > 0 ? cptResources : Array.from({ length: 4 }, (_, i) => `CPT ${i + 1}`)
     ), [cptResources]);
-    const [selectedGround, setSelectedGround] = useState(groundResourceOptions[0] || 'Ground 1');
+    const [selectedGround, setSelectedGround] = useState(groundResourceOptions[0] || '');
 
     const [showTraineeSelector, setShowTraineeSelector] = useState(false);
     const [showCourseConfirm, setShowCourseConfirm] = useState(false);
@@ -175,6 +175,10 @@ const AddGroundEventFlyout: React.FC<AddGroundEventFlyoutProps> = ({
     const handleSaveGround = async () => {
         if (!flightNumber || !instructor) {
             await showDarkAlert('Please select an event and an instructor.', 'Add Ground Event', 'warning');
+            return;
+        }
+        if (!isCptEvent && !selectedGround) {
+            await showDarkAlert('No ground resource is configured for this unit. Add Ground rows in Settings > Resources & Configuration > DFP Resource Rows before saving a ground event.', 'Add Ground Event', 'warning');
             return;
         }
         let selectionType: 'course' | 'multiple' | 'single' = 'single';

@@ -12608,7 +12608,7 @@ function generateDfpInternal(
                             : eventType === 'cpt'
                                 ? Array.from({ length: cptCount }, (_, index) => `CPT ${index + 1}`)
                                 : eventType === 'ground'
-                                    ? Array.from({ length: 6 }, (_, index) => `Ground ${index + 1}`)
+                                    ? Array.from({ length: configuredGroundCount }, (_, index) => `Ground ${index + 1}`)
                                     : [];
                 const busyResources = new Set(generatedEvents
                     .filter(event => event.type === eventType && eventActiveAtMinute(event, minuteTime))
@@ -49314,7 +49314,11 @@ appliedUpdates.forEach(update => {
         const existingEventsForDate = isNextDayContext
             ? nextDayBuildEvents.map(event => ({ ...event, date: eventDate } as ScheduleEvent))
             : (publishedSchedules[eventDate] || []);
-        const requestedResourceId = String(data.resourceId || '').trim() || 'Ground 1';
+        const requestedResourceId = String(data.resourceId || '').trim();
+        if (!requestedResourceId) {
+            console.error('[AddGroundEvent] Save blocked: no configured ground resource selected.');
+            return;
+        }
         const resourceMatch = requestedResourceId.match(/^(.+?)\s*(\d+)$/);
         const resourceBase = (resourceMatch?.[1] || requestedResourceId).trim();
         const selectedResourceNumber = Number(resourceMatch?.[2] || 1);
@@ -49434,7 +49438,7 @@ appliedUpdates.forEach(update => {
             attendees: data.selectedTrainees,
             student: data.selectedTrainees[0] || '',
             instructor: data.instructor || '',
-            resourceId: data.resourceId || 'Ground 1',
+            resourceId: data.resourceId,
             color: 'bg-blue-800/90',
             flightType: 'Dual' as const,
             locationType: 'Local' as const,

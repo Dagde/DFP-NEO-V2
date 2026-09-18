@@ -32,7 +32,7 @@ export const buildClassroomResourceOptions = (
   groundCount: number,
 ): ClassroomResourceOption[] => {
   const names = getConfiguredClassroomNames(settings);
-  const count = Math.max(1, Math.floor(Number(groundCount) || 0));
+  const count = Math.max(0, Math.floor(Number(groundCount) || 0));
   return Array.from({ length: count }, (_, index) => {
     const id = `Ground ${index + 1}`;
     return {

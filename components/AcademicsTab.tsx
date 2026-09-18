@@ -350,10 +350,7 @@ const AcademicsTab: React.FC<AcademicsTabProps> = ({
   const [instructor, setInstructor] = useState(''); // allocated instructor for this academic session
   const effectiveClassroomOptions = useMemo<ClassroomResourceOption[]>(() => {
     if (classroomOptions.length > 0) return classroomOptions;
-    const resources = groundResources.length > 0
-      ? groundResources
-      : Array.from({ length: 6 }, (_, index) => `Ground ${index + 1}`);
-    return resources.map(resource => ({ id: resource, label: resource }));
+    return groundResources.map(resource => ({ id: resource, label: resource }));
   }, [classroomOptions, groundResources]);
 
   // Edit-tile modal state
@@ -662,6 +659,11 @@ const AcademicsTab: React.FC<AcademicsTabProps> = ({
     if (tiles.length === 0) {
       console.error('🎓 [AcademicsTab.handleSave] ❌ BLOCKED: no tiles in timeline');
       await showDarkAlert('Please add at least one lesson to the timeline.', 'Academic Event', 'warning');
+      return;
+    }
+    if (!resourceId) {
+      console.error('🎓 [AcademicsTab.handleSave] ❌ BLOCKED: no classroom resource selected');
+      await showDarkAlert('Please select a configured classroom before saving the academic event.', 'Academic Event', 'warning');
       return;
     }
 
