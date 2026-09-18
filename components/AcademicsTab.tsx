@@ -495,6 +495,7 @@ const AcademicsTab: React.FC<AcademicsTabProps> = ({
   const [selectedLessons, setSelectedLessons] = useState<Set<string>>(new Set());
   const [selectedStandard, setSelectedStandard] = useState<Set<string>>(new Set());
   const [showPresavedSchedules, setShowPresavedSchedules] = useState(false);
+  const [presavedScheduleMode, setPresavedScheduleMode] = useState<'list' | 'save'>('list');
   const [presavedSchedules, setPresavedSchedules] = useState<PresavedAcademicSchedule[]>([]);
   const [presavedScheduleName, setPresavedScheduleName] = useState('');
 
@@ -558,6 +559,13 @@ const AcademicsTab: React.FC<AcademicsTabProps> = ({
 
   const handleOpenPresavedSchedules = () => {
     setPresavedSchedules(loadPresavedSchedules());
+    setPresavedScheduleMode('list');
+    setShowPresavedSchedules(true);
+  };
+
+  const handleOpenSavePresavedSchedule = () => {
+    setPresavedSchedules(loadPresavedSchedules());
+    setPresavedScheduleMode('save');
     setShowPresavedSchedules(true);
   };
 
@@ -606,6 +614,7 @@ const AcademicsTab: React.FC<AcademicsTabProps> = ({
     setWorkStart(schedule.workStart);
     setWorkEnd(schedule.workEnd);
     setShowPresavedSchedules(false);
+    await showDarkAlert('Pre-saved schedule inserted. Select the course, attendees, date, classroom and instructor as required, then publish when the academic event is ready.', 'Pre-Saved Schedule Inserted', 'info');
   };
 
   const handleDeletePresavedSchedule = async (schedule: PresavedAcademicSchedule) => {
@@ -1417,9 +1426,11 @@ const AcademicsTab: React.FC<AcademicsTabProps> = ({
           >
             <div style={{ padding: '18px 20px', borderBottom: '1px solid #334155', display: 'flex', justifyContent: 'space-between', gap: 16 }}>
               <div>
-                <div style={{ color: '#fff', fontSize: 20, fontWeight: 800 }}>Pre-Saved Schedules</div>
+                <div style={{ color: '#fff', fontSize: 20, fontWeight: 800 }}>{presavedScheduleMode === 'save' ? 'Save Academic Schedule' : 'Pre-Saved Schedules'}</div>
                 <div style={{ color: '#94a3b8', fontSize: 13, marginTop: 4 }}>
-                  Save reusable Academics timelines, then insert them into the schedule you are building.
+                  {presavedScheduleMode === 'save'
+                    ? 'Name the current Academics timeline so it can be reused later.'
+                    : 'Select a saved Academics timeline to insert into the schedule you are building.'}
                 </div>
               </div>
               <button
@@ -1431,7 +1442,8 @@ const AcademicsTab: React.FC<AcademicsTabProps> = ({
               </button>
             </div>
 
-            <div style={{ overflowY: 'auto', padding: 20, display: 'grid', gridTemplateColumns: 'minmax(0, 1fr) minmax(280px, 340px)', gap: 18 }}>
+            <div style={{ overflowY: 'auto', padding: 20 }}>
+              {presavedScheduleMode === 'list' ? (
               <div>
                 <div style={S.label}>Saved daily academic schedules</div>
                 {presavedSchedules.length > 0 ? (
@@ -1487,8 +1499,8 @@ const AcademicsTab: React.FC<AcademicsTabProps> = ({
                   </div>
                 )}
               </div>
-
-              <div style={{ border: '1px solid #334155', borderRadius: 8, background: '#0f172a', padding: 14, alignSelf: 'start' }}>
+              ) : (
+              <div style={{ border: '1px solid #334155', borderRadius: 8, background: '#0f172a', padding: 14, maxWidth: 520 }}>
                 <div style={{ color: '#f8fafc', fontWeight: 800, fontSize: 15 }}>Add Current Timeline</div>
                 <div style={{ color: '#94a3b8', fontSize: 12, marginTop: 5, lineHeight: 1.5 }}>
                   Name the current Academics timeline using your own naming convention, then save it for reuse.
@@ -1513,6 +1525,7 @@ const AcademicsTab: React.FC<AcademicsTabProps> = ({
                   + Add To Pre-Saved Schedules
                 </button>
               </div>
+              )}
             </div>
           </div>
         </div>
@@ -1520,6 +1533,9 @@ const AcademicsTab: React.FC<AcademicsTabProps> = ({
 
       {/* ── Footer ── */}
       <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 6, paddingTop: 4 }}>
+        <button onClick={handleOpenSavePresavedSchedule} className="w-[75px] h-[55px] flex items-center justify-center text-center px-1 py-1 text-[12px] font-semibold rounded-md btn-aluminium-brushed text-green-500">
+          Save
+        </button>
         <button onClick={handleOpenPresavedSchedules} className="w-[75px] h-[55px] flex items-center justify-center text-center px-1 py-1 text-[11px] font-semibold rounded-md btn-aluminium-brushed text-sky-500">
           Pre-Saved
         </button>
