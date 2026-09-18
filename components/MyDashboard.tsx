@@ -111,6 +111,7 @@ type MyTeamGraphMetricDefinition = {
     label: string;
     description: string;
     unit?: string;
+    appliesTo: 'all' | 'staff' | 'trainee';
 };
 
 type DashboardMessageContact = {
@@ -426,19 +427,19 @@ const isDashboardStandbyEvent = (event: ScheduleEvent): boolean => {
 
 const MY_TEAM_PERIODS = [7, 30, 90, 365];
 const MY_TEAM_GRAPH_METRICS: Record<MyTeamGraphMetricKey, MyTeamGraphMetricDefinition> = {
-    events30: { key: 'events30', label: 'Events', description: 'Events completed in the last 30 days.' },
-    flights30: { key: 'flights30', label: 'Flights', description: 'Flight events completed in the last 30 days.' },
-    flightHours30: { key: 'flightHours30', label: 'Flying hours', description: 'Flying hours recorded in the last 30 days.', unit: 'hrs' },
-    daysSinceFlight: { key: 'daysSinceFlight', label: 'Days since flight', description: 'Elapsed time since the most recent flight.', unit: 'days' },
-    currency30: { key: 'currency30', label: 'Currency flights', description: 'Currency events in the last 30 days.' },
-    aircraftTypeHours: { key: 'aircraftTypeHours', label: 'Aircraft type hours', description: 'Total hours for the selected aircraft type.', unit: 'hrs' },
-    instructorHours: { key: 'instructorHours', label: 'Instructor hours', description: 'Instructional flying hours for the selected aircraft type.', unit: 'hrs' },
-    averageScoreGiven: { key: 'averageScoreGiven', label: 'Average score given', description: 'Average overall score in completed training reports.' },
-    eventsPerWeek: { key: 'eventsPerWeek', label: 'Events/week', description: 'Average events completed each week since first event.' },
-    fourWeekProgress: { key: 'fourWeekProgress', label: 'Last 4 weeks', description: 'Change compared with the previous four-week period.' },
-    primaryInstructorFlights: { key: 'primaryInstructorFlights', label: 'Primary instructor', description: 'Flights flown with the assigned primary instructor.' },
-    secondaryInstructorFlights: { key: 'secondaryInstructorFlights', label: 'Secondary instructor', description: 'Flights flown with the assigned secondary instructor.' },
-    otherInstructorFlights: { key: 'otherInstructorFlights', label: 'Other instructor', description: 'Flights flown with other instructors.' },
+    events30: { key: 'events30', label: 'Events', description: 'Events completed in the last 30 days.', appliesTo: 'all' },
+    flights30: { key: 'flights30', label: 'Flights', description: 'Flight events completed in the last 30 days.', appliesTo: 'all' },
+    flightHours30: { key: 'flightHours30', label: 'Flying hours', description: 'Flying hours recorded in the last 30 days.', unit: 'hrs', appliesTo: 'all' },
+    daysSinceFlight: { key: 'daysSinceFlight', label: 'Days since flight', description: 'Elapsed time since the most recent flight.', unit: 'days', appliesTo: 'all' },
+    currency30: { key: 'currency30', label: 'Currency flights', description: 'Currency events in the last 30 days.', appliesTo: 'staff' },
+    aircraftTypeHours: { key: 'aircraftTypeHours', label: 'Aircraft type hours', description: 'Total hours for the selected aircraft type.', unit: 'hrs', appliesTo: 'staff' },
+    instructorHours: { key: 'instructorHours', label: 'Instructor hours', description: 'Instructional flying hours for the selected aircraft type.', unit: 'hrs', appliesTo: 'staff' },
+    averageScoreGiven: { key: 'averageScoreGiven', label: 'Average score given', description: 'Average overall score in completed training reports.', appliesTo: 'staff' },
+    eventsPerWeek: { key: 'eventsPerWeek', label: 'Events/week', description: 'Average events completed each week since first event.', appliesTo: 'trainee' },
+    fourWeekProgress: { key: 'fourWeekProgress', label: 'Last 4 weeks', description: 'Change compared with the previous four-week period.', appliesTo: 'trainee' },
+    primaryInstructorFlights: { key: 'primaryInstructorFlights', label: 'Primary instructor', description: 'Flights flown with the assigned primary instructor.', appliesTo: 'trainee' },
+    secondaryInstructorFlights: { key: 'secondaryInstructorFlights', label: 'Secondary instructor', description: 'Flights flown with the assigned secondary instructor.', appliesTo: 'trainee' },
+    otherInstructorFlights: { key: 'otherInstructorFlights', label: 'Other instructor', description: 'Flights flown with other instructors.', appliesTo: 'trainee' },
 };
 
 
@@ -2634,13 +2635,15 @@ const MyDashboard: React.FC<MyDashboardProps> = ({
         });
     };
 
-    const parseMyTeamGraphNumber = (value: unknown): number => {
+    const parseMyTeamGraphNumber = (value: unknown): number | null => {
         if (typeof value === 'number') return Number.isFinite(value) ? value : 0;
         const match = String(value || '').match(/-?\d+(?:\.\d+)?/);
-        return match ? Number(match[0]) : 0;
+        return match ? Number(match[0]) : null;
     };
 
-    const getMyTeamGraphValue = (entry: MyTeamPersonEntry, metric: MyTeamGraphMetricDefinition): number => {
+    const getMyTeamGraphValue = (entry: MyTeamPersonEntry, metric: MyTeamGraphMetricDefinition): number | null => {
+        if (metric.appliesTo !== 'all' && metric.appliesTo !== entry.type) return null;
+
         if (entry.type === 'staff') {
             const metrics = buildStaffMetrics(entry.person);
             const period30 = metrics.periods[30] || buildEmptyMyTeamPeriodMetrics()[30];
@@ -2653,7 +2656,7 @@ const MyDashboard: React.FC<MyDashboardProps> = ({
                 case 'aircraftTypeHours': return metrics.aircraftTypeHours;
                 case 'instructorHours': return metrics.instructorHours;
                 case 'averageScoreGiven': return parseMyTeamGraphNumber(metrics.averageOverallScore);
-                default: return 0;
+                default: return null;
             }
         }
 
@@ -2669,7 +2672,7 @@ const MyDashboard: React.FC<MyDashboardProps> = ({
             case 'primaryInstructorFlights': return metrics.primaryInstructorFlights.count;
             case 'secondaryInstructorFlights': return metrics.secondaryInstructorFlights.count;
             case 'otherInstructorFlights': return metrics.otherInstructorFlights.count;
-            default: return 0;
+            default: return null;
         }
     };
 
@@ -2689,8 +2692,14 @@ const MyDashboard: React.FC<MyDashboardProps> = ({
                 type: entry.type,
                 value: getMyTeamGraphValue(entry, metric),
             }))
-            .sort((a, b) => b.value - a.value || a.label.localeCompare(b.label));
-        const maxValue = Math.max(1, ...rows.map(row => Math.abs(row.value)));
+            .filter(row => metric.appliesTo === 'all' || row.type === metric.appliesTo)
+            .sort((a, b) => {
+                if (a.value === null && b.value === null) return a.label.localeCompare(b.label);
+                if (a.value === null) return 1;
+                if (b.value === null) return -1;
+                return b.value - a.value || a.label.localeCompare(b.label);
+            });
+        const maxValue = Math.max(1, ...rows.map(row => row.value === null ? 0 : Math.abs(row.value)));
 
         return (
             <div className="absolute inset-0 z-20 flex items-center justify-center bg-black/60 p-4">
@@ -2713,12 +2722,13 @@ const MyDashboard: React.FC<MyDashboardProps> = ({
                     <div className="flex-1 overflow-y-auto p-5">
                         {rows.length === 0 ? (
                             <div className="rounded-xl border border-gray-700 bg-gray-900 px-4 py-10 text-center text-sm italic text-gray-500">
-                                No assigned team members to compare.
+                                No assigned {metric.appliesTo === 'staff' ? 'staff' : metric.appliesTo === 'trainee' ? 'trainees' : 'team members'} to compare.
                             </div>
                         ) : (
                             <div className="space-y-3">
                                 {rows.map(row => {
-                                    const width = Math.max(3, Math.min(100, (Math.abs(row.value) / maxValue) * 100));
+                                    const hasValue = row.value !== null;
+                                    const width = hasValue ? Math.max(3, Math.min(100, (Math.abs(row.value) / maxValue) * 100)) : 0;
                                     return (
                                         <div key={row.id} className="grid gap-2 rounded-xl border border-gray-800 bg-gray-900/70 p-3 md:grid-cols-[minmax(180px,260px)_1fr_92px] md:items-center">
                                             <div className="min-w-0">
@@ -2726,12 +2736,16 @@ const MyDashboard: React.FC<MyDashboardProps> = ({
                                                 <p className="truncate text-[11px] font-semibold uppercase tracking-[0.12em] text-gray-500" title={row.subtitle}>{row.subtitle}</p>
                                             </div>
                                             <div className="h-3 overflow-hidden rounded-full bg-gray-800">
-                                                <div
-                                                    className="h-full rounded-full bg-gradient-to-r from-cyan-500 to-sky-300"
-                                                    style={{ width: `${width}%` }}
-                                                />
+                                                {hasValue && (
+                                                    <div
+                                                        className="h-full rounded-full bg-gradient-to-r from-cyan-500 to-sky-300"
+                                                        style={{ width: `${width}%` }}
+                                                    />
+                                                )}
                                             </div>
-                                            <p className="text-right text-sm font-black text-white">{formatMyTeamGraphValue(row.value, metric)}</p>
+                                            <p className={`text-right text-sm font-black ${hasValue ? 'text-white' : 'text-gray-500'}`}>
+                                                {hasValue ? formatMyTeamGraphValue(row.value, metric) : 'No data'}
+                                            </p>
                                         </div>
                                     );
                                 })}

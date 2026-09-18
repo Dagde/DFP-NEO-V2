@@ -62420,19 +62420,19 @@ const isDashboardStandbyEvent = (event) => {
 };
 const MY_TEAM_PERIODS = [7, 30, 90, 365];
 const MY_TEAM_GRAPH_METRICS = {
-  events30: { key: "events30", label: "Events", description: "Events completed in the last 30 days." },
-  flights30: { key: "flights30", label: "Flights", description: "Flight events completed in the last 30 days." },
-  flightHours30: { key: "flightHours30", label: "Flying hours", description: "Flying hours recorded in the last 30 days.", unit: "hrs" },
-  daysSinceFlight: { key: "daysSinceFlight", label: "Days since flight", description: "Elapsed time since the most recent flight.", unit: "days" },
-  currency30: { key: "currency30", label: "Currency flights", description: "Currency events in the last 30 days." },
-  aircraftTypeHours: { key: "aircraftTypeHours", label: "Aircraft type hours", description: "Total hours for the selected aircraft type.", unit: "hrs" },
-  instructorHours: { key: "instructorHours", label: "Instructor hours", description: "Instructional flying hours for the selected aircraft type.", unit: "hrs" },
-  averageScoreGiven: { key: "averageScoreGiven", label: "Average score given", description: "Average overall score in completed training reports." },
-  eventsPerWeek: { key: "eventsPerWeek", label: "Events/week", description: "Average events completed each week since first event." },
-  fourWeekProgress: { key: "fourWeekProgress", label: "Last 4 weeks", description: "Change compared with the previous four-week period." },
-  primaryInstructorFlights: { key: "primaryInstructorFlights", label: "Primary instructor", description: "Flights flown with the assigned primary instructor." },
-  secondaryInstructorFlights: { key: "secondaryInstructorFlights", label: "Secondary instructor", description: "Flights flown with the assigned secondary instructor." },
-  otherInstructorFlights: { key: "otherInstructorFlights", label: "Other instructor", description: "Flights flown with other instructors." }
+  events30: { key: "events30", label: "Events", description: "Events completed in the last 30 days.", appliesTo: "all" },
+  flights30: { key: "flights30", label: "Flights", description: "Flight events completed in the last 30 days.", appliesTo: "all" },
+  flightHours30: { key: "flightHours30", label: "Flying hours", description: "Flying hours recorded in the last 30 days.", unit: "hrs", appliesTo: "all" },
+  daysSinceFlight: { key: "daysSinceFlight", label: "Days since flight", description: "Elapsed time since the most recent flight.", unit: "days", appliesTo: "all" },
+  currency30: { key: "currency30", label: "Currency flights", description: "Currency events in the last 30 days.", appliesTo: "staff" },
+  aircraftTypeHours: { key: "aircraftTypeHours", label: "Aircraft type hours", description: "Total hours for the selected aircraft type.", unit: "hrs", appliesTo: "staff" },
+  instructorHours: { key: "instructorHours", label: "Instructor hours", description: "Instructional flying hours for the selected aircraft type.", unit: "hrs", appliesTo: "staff" },
+  averageScoreGiven: { key: "averageScoreGiven", label: "Average score given", description: "Average overall score in completed training reports.", appliesTo: "staff" },
+  eventsPerWeek: { key: "eventsPerWeek", label: "Events/week", description: "Average events completed each week since first event.", appliesTo: "trainee" },
+  fourWeekProgress: { key: "fourWeekProgress", label: "Last 4 weeks", description: "Change compared with the previous four-week period.", appliesTo: "trainee" },
+  primaryInstructorFlights: { key: "primaryInstructorFlights", label: "Primary instructor", description: "Flights flown with the assigned primary instructor.", appliesTo: "trainee" },
+  secondaryInstructorFlights: { key: "secondaryInstructorFlights", label: "Secondary instructor", description: "Flights flown with the assigned secondary instructor.", appliesTo: "trainee" },
+  otherInstructorFlights: { key: "otherInstructorFlights", label: "Other instructor", description: "Flights flown with other instructors.", appliesTo: "trainee" }
 };
 const normaliseMyTeamId = (value) => String(value || "").trim();
 const getStaffTeamId = (staff) => normaliseMyTeamId(staff.id) || `staff-${staff.idNumber}-${staff.name}`;
@@ -64060,9 +64060,10 @@ const MyDashboard = ({
   const parseMyTeamGraphNumber = (value) => {
     if (typeof value === "number") return Number.isFinite(value) ? value : 0;
     const match = String(value || "").match(/-?\d+(?:\.\d+)?/);
-    return match ? Number(match[0]) : 0;
+    return match ? Number(match[0]) : null;
   };
   const getMyTeamGraphValue = (entry, metric) => {
+    if (metric.appliesTo !== "all" && metric.appliesTo !== entry.type) return null;
     if (entry.type === "staff") {
       const metrics2 = buildStaffMetrics(entry.person);
       const period302 = metrics2.periods[30] || buildEmptyMyTeamPeriodMetrics()[30];
@@ -64084,7 +64085,7 @@ const MyDashboard = ({
         case "averageScoreGiven":
           return parseMyTeamGraphNumber(metrics2.averageOverallScore);
         default:
-          return 0;
+          return null;
       }
     }
     const metrics = buildTraineeMetrics(entry.person);
@@ -64109,7 +64110,7 @@ const MyDashboard = ({
       case "otherInstructorFlights":
         return metrics.otherInstructorFlights.count;
       default:
-        return 0;
+        return null;
     }
   };
   const formatMyTeamGraphValue = (value, metric) => {
@@ -64125,8 +64126,13 @@ const MyDashboard = ({
       subtitle: entry.subtitle || (entry.type === "staff" ? "Staff member" : "Trainee"),
       type: entry.type,
       value: getMyTeamGraphValue(entry, metric)
-    })).sort((a, b) => b.value - a.value || a.label.localeCompare(b.label));
-    const maxValue = Math.max(1, ...rows.map((row) => Math.abs(row.value)));
+    })).filter((row) => metric.appliesTo === "all" || row.type === metric.appliesTo).sort((a, b) => {
+      if (a.value === null && b.value === null) return a.label.localeCompare(b.label);
+      if (a.value === null) return 1;
+      if (b.value === null) return -1;
+      return b.value - a.value || a.label.localeCompare(b.label);
+    });
+    const maxValue = Math.max(1, ...rows.map((row) => row.value === null ? 0 : Math.abs(row.value)));
     return /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "absolute inset-0 z-20 flex items-center justify-center bg-black/60 p-4", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex max-h-[78vh] w-full max-w-4xl flex-col overflow-hidden rounded-2xl border border-cyan-500/35 bg-gray-950 shadow-2xl", children: [
       /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex flex-wrap items-start justify-between gap-3 border-b border-gray-700 bg-gray-900 px-5 py-4", children: [
         /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
@@ -64145,21 +64151,26 @@ const MyDashboard = ({
           }
         )
       ] }),
-      /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex-1 overflow-y-auto p-5", children: rows.length === 0 ? /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "rounded-xl border border-gray-700 bg-gray-900 px-4 py-10 text-center text-sm italic text-gray-500", children: "No assigned team members to compare." }) : /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "space-y-3", children: rows.map((row) => {
-        const width = Math.max(3, Math.min(100, Math.abs(row.value) / maxValue * 100));
+      /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex-1 overflow-y-auto p-5", children: rows.length === 0 ? /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded-xl border border-gray-700 bg-gray-900 px-4 py-10 text-center text-sm italic text-gray-500", children: [
+        "No assigned ",
+        metric.appliesTo === "staff" ? "staff" : metric.appliesTo === "trainee" ? "trainees" : "team members",
+        " to compare."
+      ] }) : /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "space-y-3", children: rows.map((row) => {
+        const hasValue = row.value !== null;
+        const width = hasValue ? Math.max(3, Math.min(100, Math.abs(row.value) / maxValue * 100)) : 0;
         return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid gap-2 rounded-xl border border-gray-800 bg-gray-900/70 p-3 md:grid-cols-[minmax(180px,260px)_1fr_92px] md:items-center", children: [
           /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "min-w-0", children: [
             /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "truncate text-sm font-bold text-white", title: row.label, children: row.label }),
             /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "truncate text-[11px] font-semibold uppercase tracking-[0.12em] text-gray-500", title: row.subtitle, children: row.subtitle })
           ] }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "h-3 overflow-hidden rounded-full bg-gray-800", children: /* @__PURE__ */ jsxRuntimeExports.jsx(
+          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "h-3 overflow-hidden rounded-full bg-gray-800", children: hasValue && /* @__PURE__ */ jsxRuntimeExports.jsx(
             "div",
             {
               className: "h-full rounded-full bg-gradient-to-r from-cyan-500 to-sky-300",
               style: { width: `${width}%` }
             }
           ) }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-right text-sm font-black text-white", children: formatMyTeamGraphValue(row.value, metric) })
+          /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: `text-right text-sm font-black ${hasValue ? "text-white" : "text-gray-500"}`, children: hasValue ? formatMyTeamGraphValue(row.value, metric) : "No data" })
         ] }, row.id);
       }) }) })
     ] }) });
