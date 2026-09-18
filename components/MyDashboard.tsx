@@ -3134,7 +3134,7 @@ const MyDashboard: React.FC<MyDashboardProps> = ({
     };
 
     return (
-        <div className="h-full min-h-0 w-full overflow-auto bg-gray-900">
+        <div className="relative h-full min-h-0 w-full overflow-auto bg-gray-900">
             <div className="flex min-w-[760px] flex-col space-y-6 p-6">
             <header className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
                 <div className="min-w-0">
@@ -3782,8 +3782,8 @@ const MyDashboard: React.FC<MyDashboardProps> = ({
                 </div>
             )}
             {isMyTeamOpen && (
-                <div className="fixed inset-0 z-[92] flex items-center justify-center bg-black/65 p-4">
-                    <div className="relative flex h-[86vh] w-full max-w-none flex-col overflow-hidden rounded-2xl border border-gray-700 bg-gray-900 shadow-2xl">
+                <div className="absolute inset-0 z-[92] flex items-stretch justify-stretch bg-black/65 p-6">
+                    <div className="relative flex h-full w-full max-w-none flex-col overflow-hidden rounded-2xl border border-gray-700 bg-gray-900 shadow-2xl">
                         <div className="flex flex-wrap items-start justify-between gap-3 border-b border-gray-700 bg-gray-950/70 px-5 py-4">
                             <div>
                                 <h2 className="text-2xl font-bold text-white">My Team</h2>

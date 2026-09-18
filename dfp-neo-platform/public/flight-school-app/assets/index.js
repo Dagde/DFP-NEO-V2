@@ -64543,7 +64543,7 @@ const MyDashboard = ({
       ] })
     ] });
   };
-  return /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "h-full min-h-0 w-full overflow-auto bg-gray-900", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex min-w-[760px] flex-col space-y-6 p-6", children: [
+  return /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "relative h-full min-h-0 w-full overflow-auto bg-gray-900", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex min-w-[760px] flex-col space-y-6 p-6", children: [
     /* @__PURE__ */ jsxRuntimeExports.jsxs("header", { className: "flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between", children: [
       /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "min-w-0", children: [
         /* @__PURE__ */ jsxRuntimeExports.jsx("h1", { className: "text-3xl font-bold text-white", children: "My Dashboard" }),
@@ -65133,7 +65133,7 @@ const MyDashboard = ({
         ] })
       ] }) })
     ] }),
-    isMyTeamOpen && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "fixed inset-0 z-[92] flex items-center justify-center bg-black/65 p-4", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "relative flex h-[86vh] w-full max-w-none flex-col overflow-hidden rounded-2xl border border-gray-700 bg-gray-900 shadow-2xl", children: [
+    isMyTeamOpen && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "absolute inset-0 z-[92] flex items-stretch justify-stretch bg-black/65 p-6", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "relative flex h-full w-full max-w-none flex-col overflow-hidden rounded-2xl border border-gray-700 bg-gray-900 shadow-2xl", children: [
       /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex flex-wrap items-start justify-between gap-3 border-b border-gray-700 bg-gray-950/70 px-5 py-4", children: [
         /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
           /* @__PURE__ */ jsxRuntimeExports.jsx("h2", { className: "text-2xl font-bold text-white", children: "My Team" }),
