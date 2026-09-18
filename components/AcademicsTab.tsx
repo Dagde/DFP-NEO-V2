@@ -1019,7 +1019,8 @@ const AcademicsTab: React.FC<AcademicsTabProps> = ({
                   left: x,
                   width: w,
                   backgroundColor: conflict ? '#991b1b' : tile.color,
-                  border: isEditingTimelineTile ? '2px solid #38bdf8' : conflict ? '2px solid #ef4444' : '1px solid rgba(255,255,255,0.2)',
+                  border: isEditingTimelineTile ? '1px solid rgba(125,211,252,0.85)' : conflict ? '2px solid #ef4444' : '1px solid rgba(255,255,255,0.2)',
+                  boxShadow: isEditingTimelineTile ? '0 0 0 1px rgba(14,165,233,0.22)' : 'none',
                   borderRadius: 4,
                   cursor: isEditingTimelineTile ? 'default' : 'grab',
                   overflow: 'hidden',
@@ -1047,12 +1048,12 @@ const AcademicsTab: React.FC<AcademicsTabProps> = ({
                         left: 0,
                         top: 0,
                         bottom: 0,
-                        width: 9,
+                        width: 5,
                         border: 0,
                         padding: 0,
                         cursor: 'ew-resize',
-                        background: 'rgba(125,211,252,0.8)',
-                        boxShadow: '1px 0 8px rgba(0,0,0,0.35)',
+                        background: 'rgba(125,211,252,0.55)',
+                        boxShadow: '1px 0 4px rgba(0,0,0,0.25)',
                       }}
                     />
                     <button
@@ -1065,12 +1066,12 @@ const AcademicsTab: React.FC<AcademicsTabProps> = ({
                         right: 0,
                         top: 0,
                         bottom: 0,
-                        width: 9,
+                        width: 5,
                         border: 0,
                         padding: 0,
                         cursor: 'ew-resize',
-                        background: 'rgba(125,211,252,0.8)',
-                        boxShadow: '-1px 0 8px rgba(0,0,0,0.35)',
+                        background: 'rgba(125,211,252,0.55)',
+                        boxShadow: '-1px 0 4px rgba(0,0,0,0.25)',
                       }}
                     />
                   </>
