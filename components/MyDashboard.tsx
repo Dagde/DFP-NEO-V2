@@ -91,6 +91,28 @@ type MyTeamPersonEntry =
     | { type: 'staff'; id: string; label: string; subtitle: string; person: Instructor }
     | { type: 'trainee'; id: string; label: string; subtitle: string; person: Trainee };
 
+type MyTeamGraphMetricKey =
+    | 'events30'
+    | 'flights30'
+    | 'flightHours30'
+    | 'daysSinceFlight'
+    | 'currency30'
+    | 'aircraftTypeHours'
+    | 'instructorHours'
+    | 'averageScoreGiven'
+    | 'eventsPerWeek'
+    | 'fourWeekProgress'
+    | 'primaryInstructorFlights'
+    | 'secondaryInstructorFlights'
+    | 'otherInstructorFlights';
+
+type MyTeamGraphMetricDefinition = {
+    key: MyTeamGraphMetricKey;
+    label: string;
+    description: string;
+    unit?: string;
+};
+
 type DashboardMessageContact = {
     id: string;
     name: string;
@@ -403,6 +425,22 @@ const isDashboardStandbyEvent = (event: ScheduleEvent): boolean => {
 };
 
 const MY_TEAM_PERIODS = [7, 30, 90, 365];
+const MY_TEAM_GRAPH_METRICS: Record<MyTeamGraphMetricKey, MyTeamGraphMetricDefinition> = {
+    events30: { key: 'events30', label: 'Events', description: 'Events completed in the last 30 days.' },
+    flights30: { key: 'flights30', label: 'Flights', description: 'Flight events completed in the last 30 days.' },
+    flightHours30: { key: 'flightHours30', label: 'Flying hours', description: 'Flying hours recorded in the last 30 days.', unit: 'hrs' },
+    daysSinceFlight: { key: 'daysSinceFlight', label: 'Days since flight', description: 'Elapsed time since the most recent flight.', unit: 'days' },
+    currency30: { key: 'currency30', label: 'Currency flights', description: 'Currency events in the last 30 days.' },
+    aircraftTypeHours: { key: 'aircraftTypeHours', label: 'Aircraft type hours', description: 'Total hours for the selected aircraft type.', unit: 'hrs' },
+    instructorHours: { key: 'instructorHours', label: 'Instructor hours', description: 'Instructional flying hours for the selected aircraft type.', unit: 'hrs' },
+    averageScoreGiven: { key: 'averageScoreGiven', label: 'Average score given', description: 'Average overall score in completed training reports.' },
+    eventsPerWeek: { key: 'eventsPerWeek', label: 'Events/week', description: 'Average events completed each week since first event.' },
+    fourWeekProgress: { key: 'fourWeekProgress', label: 'Last 4 weeks', description: 'Change compared with the previous four-week period.' },
+    primaryInstructorFlights: { key: 'primaryInstructorFlights', label: 'Primary instructor', description: 'Flights flown with the assigned primary instructor.' },
+    secondaryInstructorFlights: { key: 'secondaryInstructorFlights', label: 'Secondary instructor', description: 'Flights flown with the assigned secondary instructor.' },
+    otherInstructorFlights: { key: 'otherInstructorFlights', label: 'Other instructor', description: 'Flights flown with other instructors.' },
+};
+
 
 const normaliseMyTeamId = (value?: unknown): string => String(value || '').trim();
 
@@ -894,6 +932,7 @@ const MyDashboard: React.FC<MyDashboardProps> = ({
     const [myTeamFlightFilter, setMyTeamFlightFilter] = useState('all');
     const [myTeamCrewFilter, setMyTeamCrewFilter] = useState('all');
     const [selectedMyTeamPersonId, setSelectedMyTeamPersonId] = useState('');
+    const [selectedMyTeamGraphMetric, setSelectedMyTeamGraphMetric] = useState<MyTeamGraphMetricDefinition | null>(null);
     const [isContactPickerOpen, setIsContactPickerOpen] = useState(false);
     const [messageToText, setMessageToText] = useState('');
     const [selectedMessageContact, setSelectedMessageContact] = useState<DashboardMessageContact | null>(null);
@@ -2595,6 +2634,115 @@ const MyDashboard: React.FC<MyDashboardProps> = ({
         });
     };
 
+    const parseMyTeamGraphNumber = (value: unknown): number => {
+        if (typeof value === 'number') return Number.isFinite(value) ? value : 0;
+        const match = String(value || '').match(/-?\d+(?:\.\d+)?/);
+        return match ? Number(match[0]) : 0;
+    };
+
+    const getMyTeamGraphValue = (entry: MyTeamPersonEntry, metric: MyTeamGraphMetricDefinition): number => {
+        if (entry.type === 'staff') {
+            const metrics = buildStaffMetrics(entry.person);
+            const period30 = metrics.periods[30] || buildEmptyMyTeamPeriodMetrics()[30];
+            switch (metric.key) {
+                case 'events30': return period30.events;
+                case 'flights30': return period30.flights;
+                case 'flightHours30': return period30.flightHours;
+                case 'daysSinceFlight': return parseMyTeamGraphNumber(metrics.daysSinceLastFlight);
+                case 'currency30': return period30.currencyFlights;
+                case 'aircraftTypeHours': return metrics.aircraftTypeHours;
+                case 'instructorHours': return metrics.instructorHours;
+                case 'averageScoreGiven': return parseMyTeamGraphNumber(metrics.averageOverallScore);
+                default: return 0;
+            }
+        }
+
+        const metrics = buildTraineeMetrics(entry.person);
+        const period30 = metrics.periods[30] || buildEmptyMyTeamPeriodMetrics()[30];
+        switch (metric.key) {
+            case 'events30': return period30.events;
+            case 'flights30': return period30.flights;
+            case 'flightHours30': return period30.flightHours;
+            case 'daysSinceFlight': return parseMyTeamGraphNumber(metrics.daysSinceLastFlight);
+            case 'eventsPerWeek': return parseMyTeamGraphNumber(metrics.averageEventsPerWeek);
+            case 'fourWeekProgress': return parseMyTeamGraphNumber(metrics.fourWeekProgress);
+            case 'primaryInstructorFlights': return metrics.primaryInstructorFlights.count;
+            case 'secondaryInstructorFlights': return metrics.secondaryInstructorFlights.count;
+            case 'otherInstructorFlights': return metrics.otherInstructorFlights.count;
+            default: return 0;
+        }
+    };
+
+    const formatMyTeamGraphValue = (value: number, metric: MyTeamGraphMetricDefinition): string => {
+        const formatted = formatDashboardMetricNumber(value);
+        return metric.unit ? `${formatted} ${metric.unit}` : formatted;
+    };
+
+    const renderMyTeamGraphFlyout = () => {
+        if (!selectedMyTeamGraphMetric) return null;
+        const metric = selectedMyTeamGraphMetric;
+        const rows = selectedMyTeamPeople
+            .map(entry => ({
+                id: entry.id,
+                label: entry.label,
+                subtitle: entry.subtitle || (entry.type === 'staff' ? 'Staff member' : 'Trainee'),
+                type: entry.type,
+                value: getMyTeamGraphValue(entry, metric),
+            }))
+            .sort((a, b) => b.value - a.value || a.label.localeCompare(b.label));
+        const maxValue = Math.max(1, ...rows.map(row => Math.abs(row.value)));
+
+        return (
+            <div className="absolute inset-0 z-20 flex items-center justify-center bg-black/60 p-4">
+                <div className="flex max-h-[78vh] w-full max-w-4xl flex-col overflow-hidden rounded-2xl border border-cyan-500/35 bg-gray-950 shadow-2xl">
+                    <div className="flex flex-wrap items-start justify-between gap-3 border-b border-gray-700 bg-gray-900 px-5 py-4">
+                        <div>
+                            <p className="text-[10px] font-black uppercase tracking-[0.28em] text-cyan-300">My Team Comparison</p>
+                            <h3 className="mt-1 text-xl font-black text-white">{metric.label}</h3>
+                            <p className="mt-1 text-sm text-gray-400">{metric.description}</p>
+                        </div>
+                        <button
+                            type="button"
+                            onClick={() => setSelectedMyTeamGraphMetric(null)}
+                            className="grid h-10 w-10 place-items-center rounded-lg border border-gray-600 text-gray-200 hover:bg-gray-800"
+                            aria-label="Close My Team comparison"
+                        >
+                            <DashboardIconX className="h-5 w-5 translate-x-px -translate-y-0.5" strokeWidth={2} />
+                        </button>
+                    </div>
+                    <div className="flex-1 overflow-y-auto p-5">
+                        {rows.length === 0 ? (
+                            <div className="rounded-xl border border-gray-700 bg-gray-900 px-4 py-10 text-center text-sm italic text-gray-500">
+                                No assigned team members to compare.
+                            </div>
+                        ) : (
+                            <div className="space-y-3">
+                                {rows.map(row => {
+                                    const width = Math.max(3, Math.min(100, (Math.abs(row.value) / maxValue) * 100));
+                                    return (
+                                        <div key={row.id} className="grid gap-2 rounded-xl border border-gray-800 bg-gray-900/70 p-3 md:grid-cols-[minmax(180px,260px)_1fr_92px] md:items-center">
+                                            <div className="min-w-0">
+                                                <p className="truncate text-sm font-bold text-white" title={row.label}>{row.label}</p>
+                                                <p className="truncate text-[11px] font-semibold uppercase tracking-[0.12em] text-gray-500" title={row.subtitle}>{row.subtitle}</p>
+                                            </div>
+                                            <div className="h-3 overflow-hidden rounded-full bg-gray-800">
+                                                <div
+                                                    className="h-full rounded-full bg-gradient-to-r from-cyan-500 to-sky-300"
+                                                    style={{ width: `${width}%` }}
+                                                />
+                                            </div>
+                                            <p className="text-right text-sm font-black text-white">{formatMyTeamGraphValue(row.value, metric)}</p>
+                                        </div>
+                                    );
+                                })}
+                            </div>
+                        )}
+                    </div>
+                </div>
+            </div>
+        );
+    };
+
     const renderPeriodMetrics = (periods: Record<number, MyTeamPeriodMetrics>) => (
         <div className="mt-3 overflow-x-auto rounded-lg border border-gray-700">
             <table className="min-w-full text-left text-xs">
@@ -2631,18 +2779,21 @@ const MyDashboard: React.FC<MyDashboardProps> = ({
     );
 
     const renderMyTeamStatCard = (
-        label: string,
+        metric: MyTeamGraphMetricDefinition,
         value: string | number,
-        description: string,
     ) => {
         return (
-            <div className="flex h-[118px] flex-col rounded-lg border border-gray-700 bg-gray-950/35 p-3">
-                <p className="text-[13px] font-black leading-tight text-white">{label}</p>
-                <p className="mt-1 line-clamp-2 text-[11px] leading-4 text-gray-400">{description}</p>
+            <button
+                type="button"
+                onClick={() => setSelectedMyTeamGraphMetric(metric)}
+                className="flex h-[118px] flex-col rounded-lg border border-gray-700 bg-gray-950/35 p-3 text-left transition hover:border-cyan-400/60 hover:bg-gray-900 focus:outline-none focus:ring-2 focus:ring-cyan-400/50"
+            >
+                <p className="text-[13px] font-black leading-tight text-white">{metric.label}</p>
+                <p className="mt-1 line-clamp-2 text-[11px] leading-4 text-gray-400">{metric.description}</p>
                 <p className="mt-auto truncate text-2xl font-black leading-none text-white" title={String(value)}>
                     {value}
                 </p>
-            </div>
+            </button>
         );
     };
 
@@ -2667,14 +2818,14 @@ const MyDashboard: React.FC<MyDashboardProps> = ({
                         <p className="mt-1 text-sm font-semibold text-gray-400">{entry.subtitle || 'Staff member'}</p>
                     </section>
                     <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
-                        {renderMyTeamStatCard('Events', period30.events, 'Events completed in the last 30 days.')}
-                        {renderMyTeamStatCard('Flights', period30.flights, 'Flight events completed in the last 30 days.')}
-                        {renderMyTeamStatCard('Flying hours', formatDashboardMetricNumber(period30.flightHours), 'Flying hours recorded in the last 30 days.')}
-                        {renderMyTeamStatCard('Days since flight', metrics.daysSinceLastFlight, 'Elapsed time since the most recent flight.')}
-                        {renderMyTeamStatCard('Currency flights', period30.currencyFlights, 'Currency events in the last 30 days.')}
-                        {renderMyTeamStatCard('Aircraft type hours', formatDashboardMetricNumber(metrics.aircraftTypeHours), 'Total hours for the selected aircraft type.')}
-                        {isFlightSchoolDashboard && renderMyTeamStatCard('Instructor hours', formatDashboardMetricNumber(metrics.instructorHours), 'Instructional flying hours for the selected aircraft type.')}
-                        {renderMyTeamStatCard('Average score given', metrics.averageOverallScore, 'Average overall score in completed training reports.')}
+                        {renderMyTeamStatCard(MY_TEAM_GRAPH_METRICS.events30, period30.events)}
+                        {renderMyTeamStatCard(MY_TEAM_GRAPH_METRICS.flights30, period30.flights)}
+                        {renderMyTeamStatCard(MY_TEAM_GRAPH_METRICS.flightHours30, formatDashboardMetricNumber(period30.flightHours))}
+                        {renderMyTeamStatCard(MY_TEAM_GRAPH_METRICS.daysSinceFlight, metrics.daysSinceLastFlight)}
+                        {renderMyTeamStatCard(MY_TEAM_GRAPH_METRICS.currency30, period30.currencyFlights)}
+                        {renderMyTeamStatCard(MY_TEAM_GRAPH_METRICS.aircraftTypeHours, formatDashboardMetricNumber(metrics.aircraftTypeHours))}
+                        {isFlightSchoolDashboard && renderMyTeamStatCard(MY_TEAM_GRAPH_METRICS.instructorHours, formatDashboardMetricNumber(metrics.instructorHours))}
+                        {renderMyTeamStatCard(MY_TEAM_GRAPH_METRICS.averageScoreGiven, metrics.averageOverallScore)}
                     </div>
                     {renderPeriodMetrics(metrics.periods)}
                 </div>
@@ -2692,15 +2843,15 @@ const MyDashboard: React.FC<MyDashboardProps> = ({
                     <p className="mt-1 text-sm font-semibold text-gray-400">{entry.subtitle || 'Trainee'}</p>
                 </section>
                 <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
-                    {renderMyTeamStatCard('Events', period30.events, 'Events completed in the last 30 days.')}
-                    {renderMyTeamStatCard('Flights', period30.flights, 'Flight events completed in the last 30 days.')}
-                    {renderMyTeamStatCard('Flying hours', formatDashboardMetricNumber(period30.flightHours), 'Flying hours recorded in the last 30 days.')}
-                    {renderMyTeamStatCard('Days since flight', metrics.daysSinceLastFlight, 'Elapsed time since the most recent flight.')}
-                    {renderMyTeamStatCard('Events/week', metrics.averageEventsPerWeek, 'Average events completed each week since first event.')}
-                    {renderMyTeamStatCard('Last 4 weeks', metrics.fourWeekProgress, 'Change compared with the previous four-week period.')}
-                    {renderMyTeamStatCard('Primary instructor', `${metrics.primaryInstructorFlights.count} / ${metrics.primaryInstructorFlights.percent}`, 'Flights flown with the assigned primary instructor.')}
-                    {renderMyTeamStatCard('Secondary instructor', `${metrics.secondaryInstructorFlights.count} / ${metrics.secondaryInstructorFlights.percent}`, 'Flights flown with the assigned secondary instructor.')}
-                    {renderMyTeamStatCard('Other instructor', `${metrics.otherInstructorFlights.count} / ${metrics.otherInstructorFlights.percent}`, 'Flights flown with other instructors.')}
+                    {renderMyTeamStatCard(MY_TEAM_GRAPH_METRICS.events30, period30.events)}
+                    {renderMyTeamStatCard(MY_TEAM_GRAPH_METRICS.flights30, period30.flights)}
+                    {renderMyTeamStatCard(MY_TEAM_GRAPH_METRICS.flightHours30, formatDashboardMetricNumber(period30.flightHours))}
+                    {renderMyTeamStatCard(MY_TEAM_GRAPH_METRICS.daysSinceFlight, metrics.daysSinceLastFlight)}
+                    {renderMyTeamStatCard(MY_TEAM_GRAPH_METRICS.eventsPerWeek, metrics.averageEventsPerWeek)}
+                    {renderMyTeamStatCard(MY_TEAM_GRAPH_METRICS.fourWeekProgress, metrics.fourWeekProgress)}
+                    {renderMyTeamStatCard(MY_TEAM_GRAPH_METRICS.primaryInstructorFlights, `${metrics.primaryInstructorFlights.count} / ${metrics.primaryInstructorFlights.percent}`)}
+                    {renderMyTeamStatCard(MY_TEAM_GRAPH_METRICS.secondaryInstructorFlights, `${metrics.secondaryInstructorFlights.count} / ${metrics.secondaryInstructorFlights.percent}`)}
+                    {renderMyTeamStatCard(MY_TEAM_GRAPH_METRICS.otherInstructorFlights, `${metrics.otherInstructorFlights.count} / ${metrics.otherInstructorFlights.percent}`)}
                 </div>
                 {renderPeriodMetrics(metrics.periods)}
             </div>
@@ -3449,7 +3600,7 @@ const MyDashboard: React.FC<MyDashboardProps> = ({
             )}
             {isMyTeamOpen && (
                 <div className="fixed inset-0 z-[92] flex items-center justify-center bg-black/65 p-4">
-                    <div className="flex h-[86vh] w-full max-w-6xl flex-col overflow-hidden rounded-2xl border border-gray-700 bg-gray-900 shadow-2xl">
+                    <div className="relative flex h-[86vh] w-full max-w-6xl flex-col overflow-hidden rounded-2xl border border-gray-700 bg-gray-900 shadow-2xl">
                         <div className="flex flex-wrap items-start justify-between gap-3 border-b border-gray-700 bg-gray-950/70 px-5 py-4">
                             <div>
                                 <h2 className="text-2xl font-bold text-white">My Team</h2>
@@ -3496,6 +3647,7 @@ const MyDashboard: React.FC<MyDashboardProps> = ({
                                     onClick={() => {
                                         setIsMyTeamOpen(false);
                                         setIsMyTeamEditing(false);
+                                        setSelectedMyTeamGraphMetric(null);
                                     }}
                                     className="rounded-lg border border-gray-600 px-4 py-2 text-sm font-bold text-gray-200 hover:bg-gray-800"
                                 >
@@ -3585,6 +3737,7 @@ const MyDashboard: React.FC<MyDashboardProps> = ({
                                 </div>
                             )}
                         </div>
+                        {renderMyTeamGraphFlyout()}
                     </div>
                 </div>
             )}

@@ -62419,6 +62419,21 @@ const isDashboardStandbyEvent = (event) => {
   return values.some((value) => value.startsWith("STBY") || value.startsWith("BNF-STBY") || value.startsWith("FTD-STBY") || /\bSTBY\b/.test(value) || value.includes("STANDBY"));
 };
 const MY_TEAM_PERIODS = [7, 30, 90, 365];
+const MY_TEAM_GRAPH_METRICS = {
+  events30: { key: "events30", label: "Events", description: "Events completed in the last 30 days." },
+  flights30: { key: "flights30", label: "Flights", description: "Flight events completed in the last 30 days." },
+  flightHours30: { key: "flightHours30", label: "Flying hours", description: "Flying hours recorded in the last 30 days.", unit: "hrs" },
+  daysSinceFlight: { key: "daysSinceFlight", label: "Days since flight", description: "Elapsed time since the most recent flight.", unit: "days" },
+  currency30: { key: "currency30", label: "Currency flights", description: "Currency events in the last 30 days." },
+  aircraftTypeHours: { key: "aircraftTypeHours", label: "Aircraft type hours", description: "Total hours for the selected aircraft type.", unit: "hrs" },
+  instructorHours: { key: "instructorHours", label: "Instructor hours", description: "Instructional flying hours for the selected aircraft type.", unit: "hrs" },
+  averageScoreGiven: { key: "averageScoreGiven", label: "Average score given", description: "Average overall score in completed training reports." },
+  eventsPerWeek: { key: "eventsPerWeek", label: "Events/week", description: "Average events completed each week since first event." },
+  fourWeekProgress: { key: "fourWeekProgress", label: "Last 4 weeks", description: "Change compared with the previous four-week period." },
+  primaryInstructorFlights: { key: "primaryInstructorFlights", label: "Primary instructor", description: "Flights flown with the assigned primary instructor." },
+  secondaryInstructorFlights: { key: "secondaryInstructorFlights", label: "Secondary instructor", description: "Flights flown with the assigned secondary instructor." },
+  otherInstructorFlights: { key: "otherInstructorFlights", label: "Other instructor", description: "Flights flown with other instructors." }
+};
 const normaliseMyTeamId = (value) => String(value || "").trim();
 const getStaffTeamId = (staff) => normaliseMyTeamId(staff.id) || `staff-${staff.idNumber}-${staff.name}`;
 const getTraineeTeamId = (trainee) => normaliseMyTeamId(trainee.id) || `trainee-${trainee.idNumber}-${stripDashboardCourseFromName(trainee.fullName || trainee.name)}`;
@@ -62784,6 +62799,7 @@ const MyDashboard = ({
   const [myTeamFlightFilter, setMyTeamFlightFilter] = reactExports.useState("all");
   const [myTeamCrewFilter, setMyTeamCrewFilter] = reactExports.useState("all");
   const [selectedMyTeamPersonId, setSelectedMyTeamPersonId] = reactExports.useState("");
+  const [selectedMyTeamGraphMetric, setSelectedMyTeamGraphMetric] = reactExports.useState(null);
   const [isContactPickerOpen, setIsContactPickerOpen] = reactExports.useState(false);
   const [messageToText, setMessageToText] = reactExports.useState("");
   const [selectedMessageContact, setSelectedMessageContact] = reactExports.useState(null);
@@ -64041,6 +64057,113 @@ const MyDashboard = ({
       return next;
     });
   };
+  const parseMyTeamGraphNumber = (value) => {
+    if (typeof value === "number") return Number.isFinite(value) ? value : 0;
+    const match = String(value || "").match(/-?\d+(?:\.\d+)?/);
+    return match ? Number(match[0]) : 0;
+  };
+  const getMyTeamGraphValue = (entry, metric) => {
+    if (entry.type === "staff") {
+      const metrics2 = buildStaffMetrics(entry.person);
+      const period302 = metrics2.periods[30] || buildEmptyMyTeamPeriodMetrics()[30];
+      switch (metric.key) {
+        case "events30":
+          return period302.events;
+        case "flights30":
+          return period302.flights;
+        case "flightHours30":
+          return period302.flightHours;
+        case "daysSinceFlight":
+          return parseMyTeamGraphNumber(metrics2.daysSinceLastFlight);
+        case "currency30":
+          return period302.currencyFlights;
+        case "aircraftTypeHours":
+          return metrics2.aircraftTypeHours;
+        case "instructorHours":
+          return metrics2.instructorHours;
+        case "averageScoreGiven":
+          return parseMyTeamGraphNumber(metrics2.averageOverallScore);
+        default:
+          return 0;
+      }
+    }
+    const metrics = buildTraineeMetrics(entry.person);
+    const period30 = metrics.periods[30] || buildEmptyMyTeamPeriodMetrics()[30];
+    switch (metric.key) {
+      case "events30":
+        return period30.events;
+      case "flights30":
+        return period30.flights;
+      case "flightHours30":
+        return period30.flightHours;
+      case "daysSinceFlight":
+        return parseMyTeamGraphNumber(metrics.daysSinceLastFlight);
+      case "eventsPerWeek":
+        return parseMyTeamGraphNumber(metrics.averageEventsPerWeek);
+      case "fourWeekProgress":
+        return parseMyTeamGraphNumber(metrics.fourWeekProgress);
+      case "primaryInstructorFlights":
+        return metrics.primaryInstructorFlights.count;
+      case "secondaryInstructorFlights":
+        return metrics.secondaryInstructorFlights.count;
+      case "otherInstructorFlights":
+        return metrics.otherInstructorFlights.count;
+      default:
+        return 0;
+    }
+  };
+  const formatMyTeamGraphValue = (value, metric) => {
+    const formatted = formatDashboardMetricNumber(value);
+    return metric.unit ? `${formatted} ${metric.unit}` : formatted;
+  };
+  const renderMyTeamGraphFlyout = () => {
+    if (!selectedMyTeamGraphMetric) return null;
+    const metric = selectedMyTeamGraphMetric;
+    const rows = selectedMyTeamPeople.map((entry) => ({
+      id: entry.id,
+      label: entry.label,
+      subtitle: entry.subtitle || (entry.type === "staff" ? "Staff member" : "Trainee"),
+      type: entry.type,
+      value: getMyTeamGraphValue(entry, metric)
+    })).sort((a, b) => b.value - a.value || a.label.localeCompare(b.label));
+    const maxValue = Math.max(1, ...rows.map((row) => Math.abs(row.value)));
+    return /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "absolute inset-0 z-20 flex items-center justify-center bg-black/60 p-4", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex max-h-[78vh] w-full max-w-4xl flex-col overflow-hidden rounded-2xl border border-cyan-500/35 bg-gray-950 shadow-2xl", children: [
+      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex flex-wrap items-start justify-between gap-3 border-b border-gray-700 bg-gray-900 px-5 py-4", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-[10px] font-black uppercase tracking-[0.28em] text-cyan-300", children: "My Team Comparison" }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx("h3", { className: "mt-1 text-xl font-black text-white", children: metric.label }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-1 text-sm text-gray-400", children: metric.description })
+        ] }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx(
+          "button",
+          {
+            type: "button",
+            onClick: () => setSelectedMyTeamGraphMetric(null),
+            className: "grid h-10 w-10 place-items-center rounded-lg border border-gray-600 text-gray-200 hover:bg-gray-800",
+            "aria-label": "Close My Team comparison",
+            children: /* @__PURE__ */ jsxRuntimeExports.jsx(DashboardIconX, { className: "h-5 w-5 translate-x-px -translate-y-0.5", strokeWidth: 2 })
+          }
+        )
+      ] }),
+      /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex-1 overflow-y-auto p-5", children: rows.length === 0 ? /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "rounded-xl border border-gray-700 bg-gray-900 px-4 py-10 text-center text-sm italic text-gray-500", children: "No assigned team members to compare." }) : /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "space-y-3", children: rows.map((row) => {
+        const width = Math.max(3, Math.min(100, Math.abs(row.value) / maxValue * 100));
+        return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid gap-2 rounded-xl border border-gray-800 bg-gray-900/70 p-3 md:grid-cols-[minmax(180px,260px)_1fr_92px] md:items-center", children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "min-w-0", children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "truncate text-sm font-bold text-white", title: row.label, children: row.label }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "truncate text-[11px] font-semibold uppercase tracking-[0.12em] text-gray-500", title: row.subtitle, children: row.subtitle })
+          ] }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "h-3 overflow-hidden rounded-full bg-gray-800", children: /* @__PURE__ */ jsxRuntimeExports.jsx(
+            "div",
+            {
+              className: "h-full rounded-full bg-gradient-to-r from-cyan-500 to-sky-300",
+              style: { width: `${width}%` }
+            }
+          ) }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-right text-sm font-black text-white", children: formatMyTeamGraphValue(row.value, metric) })
+        ] }, row.id);
+      }) }) })
+    ] }) });
+  };
   const renderPeriodMetrics = (periods) => /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-3 overflow-x-auto rounded-lg border border-gray-700", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("table", { className: "min-w-full text-left text-xs", children: [
     /* @__PURE__ */ jsxRuntimeExports.jsx("thead", { className: "bg-gray-950/50 text-[10px] uppercase tracking-[0.12em] text-gray-400", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("tr", { children: [
       /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "px-3 py-2", children: "Window" }),
@@ -64073,12 +64196,20 @@ const MyDashboard = ({
       ] }, period);
     }) })
   ] }) });
-  const renderMyTeamStatCard = (label, value, description) => {
-    return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex h-[118px] flex-col rounded-lg border border-gray-700 bg-gray-950/35 p-3", children: [
-      /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-[13px] font-black leading-tight text-white", children: label }),
-      /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-1 line-clamp-2 text-[11px] leading-4 text-gray-400", children: description }),
-      /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-auto truncate text-2xl font-black leading-none text-white", title: String(value), children: value })
-    ] });
+  const renderMyTeamStatCard = (metric, value) => {
+    return /* @__PURE__ */ jsxRuntimeExports.jsxs(
+      "button",
+      {
+        type: "button",
+        onClick: () => setSelectedMyTeamGraphMetric(metric),
+        className: "flex h-[118px] flex-col rounded-lg border border-gray-700 bg-gray-950/35 p-3 text-left transition hover:border-cyan-400/60 hover:bg-gray-900 focus:outline-none focus:ring-2 focus:ring-cyan-400/50",
+        children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-[13px] font-black leading-tight text-white", children: metric.label }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-1 line-clamp-2 text-[11px] leading-4 text-gray-400", children: metric.description }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-auto truncate text-2xl font-black leading-none text-white", title: String(value), children: value })
+        ]
+      }
+    );
   };
   const renderSelectedMyTeamDashboard = (entry) => {
     if (!entry) {
@@ -64095,14 +64226,14 @@ const MyDashboard = ({
           /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-1 text-sm font-semibold text-gray-400", children: entry.subtitle || "Staff member" })
         ] }),
         /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid grid-cols-2 gap-3 lg:grid-cols-4", children: [
-          renderMyTeamStatCard("Events", period302.events, "Events completed in the last 30 days."),
-          renderMyTeamStatCard("Flights", period302.flights, "Flight events completed in the last 30 days."),
-          renderMyTeamStatCard("Flying hours", formatDashboardMetricNumber(period302.flightHours), "Flying hours recorded in the last 30 days."),
-          renderMyTeamStatCard("Days since flight", metrics2.daysSinceLastFlight, "Elapsed time since the most recent flight."),
-          renderMyTeamStatCard("Currency flights", period302.currencyFlights, "Currency events in the last 30 days."),
-          renderMyTeamStatCard("Aircraft type hours", formatDashboardMetricNumber(metrics2.aircraftTypeHours), "Total hours for the selected aircraft type."),
-          isFlightSchoolDashboard && renderMyTeamStatCard("Instructor hours", formatDashboardMetricNumber(metrics2.instructorHours), "Instructional flying hours for the selected aircraft type."),
-          renderMyTeamStatCard("Average score given", metrics2.averageOverallScore, "Average overall score in completed training reports.")
+          renderMyTeamStatCard(MY_TEAM_GRAPH_METRICS.events30, period302.events),
+          renderMyTeamStatCard(MY_TEAM_GRAPH_METRICS.flights30, period302.flights),
+          renderMyTeamStatCard(MY_TEAM_GRAPH_METRICS.flightHours30, formatDashboardMetricNumber(period302.flightHours)),
+          renderMyTeamStatCard(MY_TEAM_GRAPH_METRICS.daysSinceFlight, metrics2.daysSinceLastFlight),
+          renderMyTeamStatCard(MY_TEAM_GRAPH_METRICS.currency30, period302.currencyFlights),
+          renderMyTeamStatCard(MY_TEAM_GRAPH_METRICS.aircraftTypeHours, formatDashboardMetricNumber(metrics2.aircraftTypeHours)),
+          isFlightSchoolDashboard && renderMyTeamStatCard(MY_TEAM_GRAPH_METRICS.instructorHours, formatDashboardMetricNumber(metrics2.instructorHours)),
+          renderMyTeamStatCard(MY_TEAM_GRAPH_METRICS.averageScoreGiven, metrics2.averageOverallScore)
         ] }),
         renderPeriodMetrics(metrics2.periods)
       ] });
@@ -64117,15 +64248,15 @@ const MyDashboard = ({
         /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-1 text-sm font-semibold text-gray-400", children: entry.subtitle || "Trainee" })
       ] }),
       /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid grid-cols-2 gap-3 lg:grid-cols-4", children: [
-        renderMyTeamStatCard("Events", period30.events, "Events completed in the last 30 days."),
-        renderMyTeamStatCard("Flights", period30.flights, "Flight events completed in the last 30 days."),
-        renderMyTeamStatCard("Flying hours", formatDashboardMetricNumber(period30.flightHours), "Flying hours recorded in the last 30 days."),
-        renderMyTeamStatCard("Days since flight", metrics.daysSinceLastFlight, "Elapsed time since the most recent flight."),
-        renderMyTeamStatCard("Events/week", metrics.averageEventsPerWeek, "Average events completed each week since first event."),
-        renderMyTeamStatCard("Last 4 weeks", metrics.fourWeekProgress, "Change compared with the previous four-week period."),
-        renderMyTeamStatCard("Primary instructor", `${metrics.primaryInstructorFlights.count} / ${metrics.primaryInstructorFlights.percent}`, "Flights flown with the assigned primary instructor."),
-        renderMyTeamStatCard("Secondary instructor", `${metrics.secondaryInstructorFlights.count} / ${metrics.secondaryInstructorFlights.percent}`, "Flights flown with the assigned secondary instructor."),
-        renderMyTeamStatCard("Other instructor", `${metrics.otherInstructorFlights.count} / ${metrics.otherInstructorFlights.percent}`, "Flights flown with other instructors.")
+        renderMyTeamStatCard(MY_TEAM_GRAPH_METRICS.events30, period30.events),
+        renderMyTeamStatCard(MY_TEAM_GRAPH_METRICS.flights30, period30.flights),
+        renderMyTeamStatCard(MY_TEAM_GRAPH_METRICS.flightHours30, formatDashboardMetricNumber(period30.flightHours)),
+        renderMyTeamStatCard(MY_TEAM_GRAPH_METRICS.daysSinceFlight, metrics.daysSinceLastFlight),
+        renderMyTeamStatCard(MY_TEAM_GRAPH_METRICS.eventsPerWeek, metrics.averageEventsPerWeek),
+        renderMyTeamStatCard(MY_TEAM_GRAPH_METRICS.fourWeekProgress, metrics.fourWeekProgress),
+        renderMyTeamStatCard(MY_TEAM_GRAPH_METRICS.primaryInstructorFlights, `${metrics.primaryInstructorFlights.count} / ${metrics.primaryInstructorFlights.percent}`),
+        renderMyTeamStatCard(MY_TEAM_GRAPH_METRICS.secondaryInstructorFlights, `${metrics.secondaryInstructorFlights.count} / ${metrics.secondaryInstructorFlights.percent}`),
+        renderMyTeamStatCard(MY_TEAM_GRAPH_METRICS.otherInstructorFlights, `${metrics.otherInstructorFlights.count} / ${metrics.otherInstructorFlights.percent}`)
       ] }),
       renderPeriodMetrics(metrics.periods)
     ] });
@@ -64795,7 +64926,7 @@ const MyDashboard = ({
         ] })
       ] }) })
     ] }),
-    isMyTeamOpen && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "fixed inset-0 z-[92] flex items-center justify-center bg-black/65 p-4", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex h-[86vh] w-full max-w-6xl flex-col overflow-hidden rounded-2xl border border-gray-700 bg-gray-900 shadow-2xl", children: [
+    isMyTeamOpen && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "fixed inset-0 z-[92] flex items-center justify-center bg-black/65 p-4", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "relative flex h-[86vh] w-full max-w-6xl flex-col overflow-hidden rounded-2xl border border-gray-700 bg-gray-900 shadow-2xl", children: [
       /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex flex-wrap items-start justify-between gap-3 border-b border-gray-700 bg-gray-950/70 px-5 py-4", children: [
         /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
           /* @__PURE__ */ jsxRuntimeExports.jsx("h2", { className: "text-2xl font-bold text-white", children: "My Team" }),
@@ -64846,6 +64977,7 @@ const MyDashboard = ({
               onClick: () => {
                 setIsMyTeamOpen(false);
                 setIsMyTeamEditing(false);
+                setSelectedMyTeamGraphMetric(null);
               },
               className: "rounded-lg border border-gray-600 px-4 py-2 text-sm font-bold text-gray-200 hover:bg-gray-800",
               children: "Close"
@@ -64929,7 +65061,8 @@ const MyDashboard = ({
           ] }) }),
           renderSelectedMyTeamDashboard(selectedMyTeamPerson)
         ] })
-      ] })
+      ] }),
+      renderMyTeamGraphFlyout()
     ] }) }),
     /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid grid-cols-1 lg:grid-cols-2 gap-6", children: [
       /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "bg-gray-800 rounded-lg shadow-lg p-6 border border-gray-700", children: [
