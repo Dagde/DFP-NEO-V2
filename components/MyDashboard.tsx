@@ -23,6 +23,7 @@ interface MyDashboardProps {
     operationalModel?: string;
     currentAircraftTypeCode?: string;
     allScheduleEvents?: ScheduleEvent[];
+    eventCompletions?: any[];
     myTeamAssignments?: MyTeamAssignments;
     onUpdateMyTeamAssignments?: (assignments: MyTeamAssignments) => void;
     userRank: string;
@@ -888,6 +889,7 @@ const MyDashboard: React.FC<MyDashboardProps> = ({
     operationalModel,
     currentAircraftTypeCode,
     allScheduleEvents = [],
+    eventCompletions = [],
     myTeamAssignments = { staffIds: [], traineeIds: [] },
     onUpdateMyTeamAssignments,
     userRank,
@@ -2511,6 +2513,52 @@ const MyDashboard: React.FC<MyDashboardProps> = ({
     const getEventsForPerson = (personName: string): ScheduleEvent[] => (
         myTeamEvents.filter(event => dashboardEventHasPerson(event, personName))
     );
+    const getMyTeamEventKey = (event: Partial<ScheduleEvent> & { scheduleEventId?: string; eventCode?: string }): string => (
+        String(event.id || event.scheduleEventId || '').trim() ||
+        [
+            String(event.date || '').trim(),
+            String(event.flightNumber || event.eventCode || '').trim().toUpperCase(),
+            String(event.startTime ?? '').trim(),
+        ].join('::')
+    );
+    const buildCompletedFlightEventsForStaff = (staff: Instructor, existingEvents: ScheduleEvent[]): ScheduleEvent[] => {
+        const existingKeys = new Set(existingEvents.map(getMyTeamEventKey).filter(Boolean));
+        const completedFlights: ScheduleEvent[] = [];
+        const pushCompletedFlight = (source: any, sourceType: 'event-completion' | 'training-report') => {
+            if (!dashboardPersonNamesMatch(source?.instructorName, staff.name)) return;
+            const eventType = String(source?.eventType || source?.type || 'flight').toLowerCase();
+            if (eventType && eventType !== 'flight') return;
+            const eventDate = String(source?.eventDate || source?.date || '').trim();
+            const eventCode = String(source?.eventCode || source?.flightNumber || '').trim();
+            const eventId = String(source?.scheduleEventId || source?.eventId || source?.id || '').trim();
+            const startTime = Number(source?.startTime ?? 0);
+            const key = eventId || [eventDate, eventCode.toUpperCase(), Number.isFinite(startTime) ? startTime : ''].join('::');
+            if (!key || existingKeys.has(key)) return;
+            existingKeys.add(key);
+            completedFlights.push({
+                id: eventId || `my-team-${sourceType}-${key}`,
+                date: eventDate,
+                type: 'flight',
+                instructor: source.instructorName || staff.name,
+                student: source.traineeFullName || '',
+                flightNumber: eventCode,
+                duration: Number(source?.totalFlightTime ?? source?.duration ?? 0),
+                startTime: Number.isFinite(startTime) ? startTime : 0,
+                resourceId: source?.aircraftNumber || source?.resourceId || '',
+                color: '',
+                flightType: source?.isSolo ? 'Solo' : 'Dual',
+                locationType: 'Local',
+                origin: '',
+                destination: '',
+            } as ScheduleEvent);
+        };
+
+        eventCompletions.forEach(completion => pushCompletedFlight(completion, 'event-completion'));
+        Array.from(pt051Assessments.values())
+            .filter(assessment => assessment.isCompleted)
+            .forEach(assessment => pushCompletedFlight(assessment, 'training-report'));
+        return completedFlights;
+    };
     const buildPersonPeriodMetrics = (personEvents: ScheduleEvent[]): Record<number, MyTeamPeriodMetrics> => {
         const metrics = buildEmptyMyTeamPeriodMetrics();
         personEvents.forEach(event => {
@@ -2532,7 +2580,10 @@ const MyDashboard: React.FC<MyDashboardProps> = ({
     };
     const buildStaffMetrics = (staff: Instructor): MyTeamStaffMetrics => {
         const staffEvents = getEventsForPerson(staff.name);
+        const completedFlightEvents = buildCompletedFlightEventsForStaff(staff, staffEvents);
+        const metricEvents = [...staffEvents, ...completedFlightEvents];
         const flightEvents = staffEvents.filter(isDashboardFlightEvent);
+        const metricFlightEvents = metricEvents.filter(isDashboardFlightEvent);
         const completedGrades = Array.from(pt051Assessments.values())
             .filter(assessment => assessment.isCompleted && dashboardPersonNamesMatch(assessment.instructorName, staff.name))
             .map(assessment => typeof assessment.overallGrade === 'number' ? assessment.overallGrade : Number(assessment.overallGrade))
@@ -2541,9 +2592,9 @@ const MyDashboard: React.FC<MyDashboardProps> = ({
             ? formatDashboardMetricNumber(completedGrades.reduce((sum, value) => sum + value, 0) / completedGrades.length)
             : 'No grade';
         return {
-            periods: buildPersonPeriodMetrics(staffEvents),
-            daysSinceLastFlight: formatDashboardDaysSince(flightEvents, myTeamCurrentDate),
-            aircraftTypeHours: flightEvents
+            periods: buildPersonPeriodMetrics(metricEvents),
+            daysSinceLastFlight: formatDashboardDaysSince(metricFlightEvents, myTeamCurrentDate),
+            aircraftTypeHours: metricFlightEvents
                 .filter(event => {
                     const aircraftCode = String(currentAircraftTypeCode || '').trim().toUpperCase();
                     if (!aircraftCode) return true;
@@ -2555,7 +2606,7 @@ const MyDashboard: React.FC<MyDashboardProps> = ({
                     ].some(value => String(value || '').trim().toUpperCase() === aircraftCode);
                 })
                 .reduce((sum, event) => sum + Number(event.duration || 0), 0),
-            instructorHours: flightEvents.filter(event => dashboardPersonNamesMatch(event.instructor, staff.name)).reduce((sum, event) => sum + Number(event.duration || 0), 0),
+            instructorHours: metricFlightEvents.filter(event => dashboardPersonNamesMatch(event.instructor, staff.name)).reduce((sum, event) => sum + Number(event.duration || 0), 0),
             averageOverallScore: averageGrade,
         };
     };

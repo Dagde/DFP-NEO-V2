@@ -62808,6 +62808,7 @@ const MyDashboard = ({
   operationalModel,
   currentAircraftTypeCode,
   allScheduleEvents = [],
+  eventCompletions = [],
   myTeamAssignments = { staffIds: [], traineeIds: [] },
   onUpdateMyTeamAssignments,
   userRank,
@@ -64002,6 +64003,46 @@ const MyDashboard = ({
     }
   }, [selectedMyTeamPeople, selectedMyTeamPersonId]);
   const getEventsForPerson = (personName) => myTeamEvents.filter((event) => dashboardEventHasPerson(event, personName));
+  const getMyTeamEventKey = (event) => String(event.id || event.scheduleEventId || "").trim() || [
+    String(event.date || "").trim(),
+    String(event.flightNumber || event.eventCode || "").trim().toUpperCase(),
+    String(event.startTime ?? "").trim()
+  ].join("::");
+  const buildCompletedFlightEventsForStaff = (staff, existingEvents) => {
+    const existingKeys = new Set(existingEvents.map(getMyTeamEventKey).filter(Boolean));
+    const completedFlights = [];
+    const pushCompletedFlight = (source, sourceType) => {
+      if (!dashboardPersonNamesMatch(source?.instructorName, staff.name)) return;
+      const eventType = String(source?.eventType || source?.type || "flight").toLowerCase();
+      if (eventType && eventType !== "flight") return;
+      const eventDate = String(source?.eventDate || source?.date || "").trim();
+      const eventCode2 = String(source?.eventCode || source?.flightNumber || "").trim();
+      const eventId = String(source?.scheduleEventId || source?.eventId || source?.id || "").trim();
+      const startTime = Number(source?.startTime ?? 0);
+      const key = eventId || [eventDate, eventCode2.toUpperCase(), Number.isFinite(startTime) ? startTime : ""].join("::");
+      if (!key || existingKeys.has(key)) return;
+      existingKeys.add(key);
+      completedFlights.push({
+        id: eventId || `my-team-${sourceType}-${key}`,
+        date: eventDate,
+        type: "flight",
+        instructor: source.instructorName || staff.name,
+        student: source.traineeFullName || "",
+        flightNumber: eventCode2,
+        duration: Number(source?.totalFlightTime ?? source?.duration ?? 0),
+        startTime: Number.isFinite(startTime) ? startTime : 0,
+        resourceId: source?.aircraftNumber || source?.resourceId || "",
+        color: "",
+        flightType: source?.isSolo ? "Solo" : "Dual",
+        locationType: "Local",
+        origin: "",
+        destination: ""
+      });
+    };
+    eventCompletions.forEach((completion) => pushCompletedFlight(completion, "event-completion"));
+    Array.from(pt051Assessments.values()).filter((assessment) => assessment.isCompleted).forEach((assessment) => pushCompletedFlight(assessment, "training-report"));
+    return completedFlights;
+  };
   const buildPersonPeriodMetrics = (personEvents) => {
     const metrics = buildEmptyMyTeamPeriodMetrics();
     personEvents.forEach((event) => {
@@ -64023,13 +64064,16 @@ const MyDashboard = ({
   };
   const buildStaffMetrics = (staff) => {
     const staffEvents = getEventsForPerson(staff.name);
-    const flightEvents = staffEvents.filter(isDashboardFlightEvent);
+    const completedFlightEvents = buildCompletedFlightEventsForStaff(staff, staffEvents);
+    const metricEvents = [...staffEvents, ...completedFlightEvents];
+    staffEvents.filter(isDashboardFlightEvent);
+    const metricFlightEvents = metricEvents.filter(isDashboardFlightEvent);
     const completedGrades = Array.from(pt051Assessments.values()).filter((assessment) => assessment.isCompleted && dashboardPersonNamesMatch(assessment.instructorName, staff.name)).map((assessment) => typeof assessment.overallGrade === "number" ? assessment.overallGrade : Number(assessment.overallGrade)).filter((value) => Number.isFinite(value));
     const averageGrade = completedGrades.length ? formatDashboardMetricNumber(completedGrades.reduce((sum, value) => sum + value, 0) / completedGrades.length) : "No grade";
     return {
-      periods: buildPersonPeriodMetrics(staffEvents),
-      daysSinceLastFlight: formatDashboardDaysSince(flightEvents, myTeamCurrentDate),
-      aircraftTypeHours: flightEvents.filter((event) => {
+      periods: buildPersonPeriodMetrics(metricEvents),
+      daysSinceLastFlight: formatDashboardDaysSince(metricFlightEvents, myTeamCurrentDate),
+      aircraftTypeHours: metricFlightEvents.filter((event) => {
         const aircraftCode = String(currentAircraftTypeCode || "").trim().toUpperCase();
         if (!aircraftCode) return true;
         return [
@@ -64039,7 +64083,7 @@ const MyDashboard = ({
           event.aircraft
         ].some((value) => String(value || "").trim().toUpperCase() === aircraftCode);
       }).reduce((sum, event) => sum + Number(event.duration || 0), 0),
-      instructorHours: flightEvents.filter((event) => dashboardPersonNamesMatch(event.instructor, staff.name)).reduce((sum, event) => sum + Number(event.duration || 0), 0),
+      instructorHours: metricFlightEvents.filter((event) => dashboardPersonNamesMatch(event.instructor, staff.name)).reduce((sum, event) => sum + Number(event.duration || 0), 0),
       averageOverallScore: averageGrade
     };
   };
@@ -150172,6 +150216,7 @@ ${error instanceof Error ? error.message : String(error)}`,
             operationalModel: activeOperationalModel,
             currentAircraftTypeCode: activeRuntimeAircraftTypeCode,
             allScheduleEvents: allPublishedEvents,
+            eventCompletions: eventCompletionsForDate,
             myTeamAssignments: dashboardTeamAssignments,
             onUpdateMyTeamAssignments: (assignments) => {
               const savedAssignments = {
@@ -151313,6 +151358,18 @@ Do you want to replace the existing entry?`,
                       logRoutineAppDebug(
                         `[PostFlight] EventCompletion ${ecData.created ? "created" : "updated"} for ${completionPayload.traineeFullName} — ${completionPayload.eventCode} -> ${data.result}`
                       );
+                      if (ecData.completion) {
+                        setEventCompletionsForDate((prev) => {
+                          const completionId = String(ecData.completion.id || "").trim();
+                          const scheduleEventId = String(ecData.completion.scheduleEventId || completionPayload.scheduleEventId || "").trim();
+                          const withoutExisting = prev.filter((completion) => {
+                            const existingId = String(completion?.id || "").trim();
+                            const existingScheduleEventId = String(completion?.scheduleEventId || "").trim();
+                            return !(completionId && existingId === completionId || scheduleEventId && existingScheduleEventId === scheduleEventId);
+                          });
+                          return [...withoutExisting, ecData.completion];
+                        });
+                      }
                     } else {
                       console.warn("[PostFlight] EventCompletion save failed:", ecRes.status, ecResponseText);
                     }

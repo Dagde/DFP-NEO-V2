@@ -53263,6 +53263,7 @@ appliedUpdates.forEach(update => {
                             operationalModel={activeOperationalModel}
                             currentAircraftTypeCode={activeRuntimeAircraftTypeCode}
                             allScheduleEvents={allPublishedEvents}
+                            eventCompletions={eventCompletionsForDate}
                             myTeamAssignments={dashboardTeamAssignments}
                             onUpdateMyTeamAssignments={(assignments) => {
                                 const savedAssignments = {
@@ -54521,6 +54522,21 @@ appliedUpdates.forEach(update => {
                                                     `for ${completionPayload.traineeFullName} — ` +
                                                     `${completionPayload.eventCode} -> ${data.result}`
                                                 );
+                                                if (ecData.completion) {
+                                                    setEventCompletionsForDate(prev => {
+                                                        const completionId = String(ecData.completion.id || '').trim();
+                                                        const scheduleEventId = String(ecData.completion.scheduleEventId || completionPayload.scheduleEventId || '').trim();
+                                                        const withoutExisting = prev.filter((completion: any) => {
+                                                            const existingId = String(completion?.id || '').trim();
+                                                            const existingScheduleEventId = String(completion?.scheduleEventId || '').trim();
+                                                            return !(
+                                                                (completionId && existingId === completionId) ||
+                                                                (scheduleEventId && existingScheduleEventId === scheduleEventId)
+                                                            );
+                                                        });
+                                                        return [...withoutExisting, ecData.completion];
+                                                    });
+                                                }
                                             } else {
                                                 console.warn('[PostFlight] EventCompletion save failed:', ecRes.status, ecResponseText);
                                             }
