@@ -61088,10 +61088,6 @@ Do you still want to include them in this academic session?`,
   }, [tiles, workStart]);
   const handleOpenPresavedSchedules = () => {
     setPresavedSchedules(loadPresavedSchedules());
-    if (!presavedScheduleName.trim()) {
-      const datePart = selectedDate ? ` ${selectedDate}` : "";
-      setPresavedScheduleName(`Academics${datePart}`);
-    }
     setShowPresavedSchedules(true);
   };
   const handleSavePresavedSchedule = async () => {
@@ -61119,7 +61115,8 @@ Do you still want to include them in this academic session?`,
       nextSchedule,
       ...presavedSchedules.filter((schedule) => schedule.id !== nextSchedule.id)
     ]);
-    setPresavedScheduleName(name);
+    setPresavedScheduleName("");
+    setShowPresavedSchedules(false);
   };
   const handleInsertPresavedSchedule = async (schedule) => {
     if (tiles.length > 0) {
@@ -62093,7 +62090,7 @@ Do you still want to include them in this academic session?`,
                       {
                         value: presavedScheduleName,
                         onChange: (event) => setPresavedScheduleName(event.target.value),
-                        placeholder: "Example: Monday AM Academics",
+                        placeholder: "Day 1",
                         style: { ...S.input, marginTop: 4 }
                       }
                     )
@@ -62125,11 +62122,7 @@ Do you still want to include them in this academic session?`,
       }
     ),
     /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { style: { display: "flex", justifyContent: "flex-end", gap: 6, paddingTop: 4 }, children: [
-      /* @__PURE__ */ jsxRuntimeExports.jsxs("button", { onClick: handleOpenPresavedSchedules, className: "w-[150px] h-[55px] flex items-center justify-center text-center px-2 py-1 text-[12px] font-semibold rounded-md btn-aluminium-brushed text-sky-500", children: [
-        "Pre-Saved",
-        /* @__PURE__ */ jsxRuntimeExports.jsx("br", {}),
-        "Schedules"
-      ] }),
+      /* @__PURE__ */ jsxRuntimeExports.jsx("button", { onClick: handleOpenPresavedSchedules, className: "w-[75px] h-[55px] flex items-center justify-center text-center px-1 py-1 text-[11px] font-semibold rounded-md btn-aluminium-brushed text-sky-500", children: "Pre-Saved" }),
       /* @__PURE__ */ jsxRuntimeExports.jsx("button", { onClick: onClose, className: "w-[75px] h-[55px] flex items-center justify-center text-center px-1 py-1 text-[12px] font-semibold rounded-md btn-aluminium-brushed", children: "Cancel" }),
       /* @__PURE__ */ jsxRuntimeExports.jsx("button", { onClick: handleSave, className: "w-[75px] h-[55px] flex items-center justify-center text-center px-1 py-1 text-[12px] font-semibold rounded-md btn-aluminium-brushed text-green-500", children: "Publish" })
     ] })

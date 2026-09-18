@@ -558,10 +558,6 @@ const AcademicsTab: React.FC<AcademicsTabProps> = ({
 
   const handleOpenPresavedSchedules = () => {
     setPresavedSchedules(loadPresavedSchedules());
-    if (!presavedScheduleName.trim()) {
-      const datePart = selectedDate ? ` ${selectedDate}` : '';
-      setPresavedScheduleName(`Academics${datePart}`);
-    }
     setShowPresavedSchedules(true);
   };
 
@@ -590,7 +586,8 @@ const AcademicsTab: React.FC<AcademicsTabProps> = ({
       nextSchedule,
       ...presavedSchedules.filter(schedule => schedule.id !== nextSchedule.id),
     ]);
-    setPresavedScheduleName(name);
+    setPresavedScheduleName('');
+    setShowPresavedSchedules(false);
   };
 
   const handleInsertPresavedSchedule = async (schedule: PresavedAcademicSchedule) => {
@@ -1501,7 +1498,7 @@ const AcademicsTab: React.FC<AcademicsTabProps> = ({
                   <input
                     value={presavedScheduleName}
                     onChange={event => setPresavedScheduleName(event.target.value)}
-                    placeholder="Example: Monday AM Academics"
+                    placeholder="Day 1"
                     style={{ ...S.input, marginTop: 4 }}
                   />
                 </label>
@@ -1523,8 +1520,8 @@ const AcademicsTab: React.FC<AcademicsTabProps> = ({
 
       {/* ── Footer ── */}
       <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 6, paddingTop: 4 }}>
-        <button onClick={handleOpenPresavedSchedules} className="w-[150px] h-[55px] flex items-center justify-center text-center px-2 py-1 text-[12px] font-semibold rounded-md btn-aluminium-brushed text-sky-500">
-          Pre-Saved<br/>Schedules
+        <button onClick={handleOpenPresavedSchedules} className="w-[75px] h-[55px] flex items-center justify-center text-center px-1 py-1 text-[11px] font-semibold rounded-md btn-aluminium-brushed text-sky-500">
+          Pre-Saved
         </button>
         <button onClick={onClose} className="w-[75px] h-[55px] flex items-center justify-center text-center px-1 py-1 text-[12px] font-semibold rounded-md btn-aluminium-brushed">
           Cancel
