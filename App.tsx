@@ -56739,9 +56739,10 @@ appliedUpdates.forEach(update => {
         )}
 
         {isAuthenticated &&
+            ['Program Schedule', 'InstructorSchedule', 'TraineeSchedule', 'NextDayBuild', 'NextDayInstructorSchedule', 'NextDayTraineeSchedule'].includes(activeView) &&
             dfpSnapshotLoadState.date === date &&
             ['loading', 'cached', 'retrying', 'error'].includes(dfpSnapshotLoadState.status) && (
-                <div className="fixed bottom-[188px] right-[18px] z-[100] flex w-[75px] flex-col items-stretch gap-px rounded border border-gray-700/50 bg-gray-900/75 px-1 py-1 text-center text-[10px] text-gray-400 shadow-sm backdrop-blur-sm select-none">
+                <div className="fixed bottom-[188px] right-[18px] z-[50] flex w-[75px] flex-col items-stretch gap-px rounded border border-gray-700/50 bg-gray-900/75 px-1 py-1 text-center text-[10px] text-gray-400 shadow-sm backdrop-blur-sm select-none">
                     <div className="flex items-center justify-center gap-1" title={dfpSnapshotLoadState.message}>
                         <span
                             className={`h-1.5 w-1.5 rounded-full ${
@@ -56774,8 +56775,8 @@ appliedUpdates.forEach(update => {
             )}
 
         {/* Live sync control - keeps mobile/iOS-originated changes visible without forcing it on low-data links */}
-        {isAuthenticated && (
-            <div className="fixed bottom-[88px] right-[18px] z-[100] flex w-[75px] flex-col items-stretch gap-px rounded border border-gray-700/50 bg-gray-900/75 px-1 py-1 text-center text-[10px] text-gray-400 shadow-sm backdrop-blur-sm select-none">
+        {isAuthenticated && ['Program Schedule', 'InstructorSchedule', 'TraineeSchedule', 'NextDayBuild', 'NextDayInstructorSchedule', 'NextDayTraineeSchedule'].includes(activeView) && (
+            <div className="fixed bottom-[88px] right-[18px] z-[50] flex w-[75px] flex-col items-stretch gap-px rounded border border-gray-700/50 bg-gray-900/75 px-1 py-1 text-center text-[10px] text-gray-400 shadow-sm backdrop-blur-sm select-none">
                 <div className="flex items-center justify-center gap-1">
                     <span
                         className={`h-1.5 w-1.5 rounded-full ${
