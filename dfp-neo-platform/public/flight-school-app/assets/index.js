@@ -63846,6 +63846,27 @@ const MyDashboard = ({
   };
   const myTeamStaffOptions = reactExports.useMemo(() => messageContactStaffOptions.filter((staff) => staff?.name && myTeamUnitMatches(staff.unit)).sort((a, b) => compareDashboardRank(a.rank, b.rank) || String(a.name || "").localeCompare(String(b.name || ""))), [messageContactStaffOptions, dashboardUserUnitSet]);
   const myTeamTraineeOptions = reactExports.useMemo(() => messageContactTraineeOptions.filter((trainee) => (trainee?.fullName || trainee?.name) && myTeamUnitMatches(trainee.unit)).sort((a, b) => compareDashboardRank(a.rank, b.rank) || String(a.fullName || a.name || "").localeCompare(String(b.fullName || b.name || ""))), [messageContactTraineeOptions, dashboardUserUnitSet]);
+  const myTeamNameResolver = reactExports.useMemo(() => buildCompactPersonNameResolver([
+    ...myTeamStaffOptions.map((staff) => ({
+      ...staff,
+      fullName: staff.name,
+      name: staff.name
+    })),
+    ...myTeamTraineeOptions.map((trainee) => ({
+      ...trainee,
+      fullName: trainee.fullName || trainee.name,
+      name: trainee.fullName || trainee.name
+    }))
+  ]), [myTeamStaffOptions, myTeamTraineeOptions]);
+  const formatMyTeamPersonLabel = (person) => {
+    const personName = person.fullName || person.name || "";
+    const duplicateSafeName = myTeamNameResolver.formatList({
+      ...person,
+      fullName: personName,
+      name: personName
+    });
+    return `${person.rank || ""} ${duplicateSafeName}`.trim();
+  };
   const myTeamFlightOptions = reactExports.useMemo(() => {
     const values = /* @__PURE__ */ new Set();
     [...myTeamStaffOptions, ...myTeamTraineeOptions].forEach((person) => {
@@ -63881,19 +63902,19 @@ const MyDashboard = ({
     const staffEntries = selectedMyTeamStaff.map((staff) => ({
       type: "staff",
       id: `staff:${getStaffTeamId(staff)}`,
-      label: `${staff.rank || ""} ${formatPersonDisplayName(staff, staff.name)}`.trim(),
+      label: formatMyTeamPersonLabel(staff),
       subtitle: [formatStaffRole(staff), staff.unit, staff.flight ? `Flight ${staff.flight}` : "", staff.crew ? `Crew ${staff.crew}` : ""].filter(Boolean).join(" / "),
       person: staff
     }));
     const traineeEntries = selectedMyTeamTrainees.map((trainee) => ({
       type: "trainee",
       id: `trainee:${getTraineeTeamId(trainee)}`,
-      label: `${trainee.rank || ""} ${formatPersonDisplayName(trainee, trainee.fullName || trainee.name)}`.trim(),
+      label: formatMyTeamPersonLabel(trainee),
       subtitle: ["Trainee", trainee.unit, trainee.course, trainee.flight ? `Flight ${trainee.flight}` : "", trainee.crew ? `Crew ${trainee.crew}` : ""].filter(Boolean).join(" / "),
       person: trainee
     }));
     return [...staffEntries, ...traineeEntries].sort((a, b) => compareDashboardRank(a.person.rank, b.person.rank) || a.label.localeCompare(b.label));
-  }, [selectedMyTeamStaff, selectedMyTeamTrainees]);
+  }, [selectedMyTeamStaff, selectedMyTeamTrainees, myTeamNameResolver]);
   const selectedMyTeamPerson = reactExports.useMemo(() => selectedMyTeamPeople.find((entry) => entry.id === selectedMyTeamPersonId) || selectedMyTeamPeople[0] || null, [selectedMyTeamPeople, selectedMyTeamPersonId]);
   reactExports.useEffect(() => {
     if (selectedMyTeamPeople.length === 0) {
@@ -64871,7 +64892,7 @@ const MyDashboard = ({
             filteredMyTeamStaffOptions,
             myTeamStaffDraftIds,
             getStaffTeamId,
-            (staff) => `${staff.rank || ""} ${formatPersonDisplayName(staff, staff.name)}`.trim(),
+            formatMyTeamPersonLabel,
             toggleMyTeamStaff,
             setMyTeamStaffDraftIds
           ),
@@ -64880,7 +64901,7 @@ const MyDashboard = ({
             filteredMyTeamTraineeOptions,
             myTeamTraineeDraftIds,
             getTraineeTeamId,
-            (trainee) => `${trainee.rank || ""} ${formatPersonDisplayName(trainee, trainee.fullName || trainee.name)}`.trim(),
+            formatMyTeamPersonLabel,
             toggleMyTeamTrainee,
             setMyTeamTraineeDraftIds
           )

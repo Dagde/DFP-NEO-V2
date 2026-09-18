@@ -12,7 +12,7 @@ import {
     normaliseStaffQualificationCatalogue,
     type StaffQualificationCatalogue,
 } from '../utils/staffQualifications';
-import { formatPersonDisplayName } from '../utils/personIdentity';
+import { buildCompactPersonNameResolver, formatPersonDisplayName } from '../utils/personIdentity';
 import { showDarkConfirm } from './DarkMessageModal';
 
 interface MyDashboardProps {
@@ -2371,6 +2371,27 @@ const MyDashboard: React.FC<MyDashboardProps> = ({
             .filter(trainee => (trainee?.fullName || trainee?.name) && myTeamUnitMatches(trainee.unit))
             .sort((a, b) => compareDashboardRank(a.rank, b.rank) || String(a.fullName || a.name || '').localeCompare(String(b.fullName || b.name || '')))
     ), [messageContactTraineeOptions, dashboardUserUnitSet]);
+    const myTeamNameResolver = useMemo(() => buildCompactPersonNameResolver([
+        ...myTeamStaffOptions.map(staff => ({
+            ...staff,
+            fullName: staff.name,
+            name: staff.name,
+        })),
+        ...myTeamTraineeOptions.map(trainee => ({
+            ...trainee,
+            fullName: trainee.fullName || trainee.name,
+            name: trainee.fullName || trainee.name,
+        })),
+    ]), [myTeamStaffOptions, myTeamTraineeOptions]);
+    const formatMyTeamPersonLabel = (person: Instructor | Trainee): string => {
+        const personName = (person as Trainee).fullName || (person as Instructor).name || '';
+        const duplicateSafeName = myTeamNameResolver.formatList({
+            ...(person as any),
+            fullName: personName,
+            name: personName,
+        });
+        return `${(person as any).rank || ''} ${duplicateSafeName}`.trim();
+    };
     const myTeamFlightOptions = useMemo(() => {
         const values = new Set<string>();
         [...myTeamStaffOptions, ...myTeamTraineeOptions].forEach(person => {
@@ -2406,7 +2427,7 @@ const MyDashboard: React.FC<MyDashboardProps> = ({
         const staffEntries: MyTeamPersonEntry[] = selectedMyTeamStaff.map(staff => ({
             type: 'staff',
             id: `staff:${getStaffTeamId(staff)}`,
-            label: `${staff.rank || ''} ${formatPersonDisplayName(staff, staff.name)}`.trim(),
+            label: formatMyTeamPersonLabel(staff),
             subtitle: [formatStaffRole(staff), staff.unit, staff.flight ? `Flight ${staff.flight}` : '', staff.crew ? `Crew ${staff.crew}` : '']
                 .filter(Boolean)
                 .join(' / '),
@@ -2415,7 +2436,7 @@ const MyDashboard: React.FC<MyDashboardProps> = ({
         const traineeEntries: MyTeamPersonEntry[] = selectedMyTeamTrainees.map(trainee => ({
             type: 'trainee',
             id: `trainee:${getTraineeTeamId(trainee)}`,
-            label: `${trainee.rank || ''} ${formatPersonDisplayName(trainee as any, trainee.fullName || trainee.name)}`.trim(),
+            label: formatMyTeamPersonLabel(trainee),
             subtitle: ['Trainee', trainee.unit, trainee.course, trainee.flight ? `Flight ${trainee.flight}` : '', trainee.crew ? `Crew ${trainee.crew}` : '']
                 .filter(Boolean)
                 .join(' / '),
@@ -2425,7 +2446,7 @@ const MyDashboard: React.FC<MyDashboardProps> = ({
             compareDashboardRank((a.person as any).rank, (b.person as any).rank) ||
             a.label.localeCompare(b.label)
         ));
-    }, [selectedMyTeamStaff, selectedMyTeamTrainees]);
+    }, [selectedMyTeamStaff, selectedMyTeamTrainees, myTeamNameResolver]);
     const selectedMyTeamPerson = useMemo(() => (
         selectedMyTeamPeople.find(entry => entry.id === selectedMyTeamPersonId) || selectedMyTeamPeople[0] || null
     ), [selectedMyTeamPeople, selectedMyTeamPersonId]);
@@ -3520,7 +3541,7 @@ const MyDashboard: React.FC<MyDashboardProps> = ({
                                         filteredMyTeamStaffOptions,
                                         myTeamStaffDraftIds,
                                         getStaffTeamId,
-                                        staff => `${staff.rank || ''} ${formatPersonDisplayName(staff, staff.name)}`.trim(),
+                                        formatMyTeamPersonLabel,
                                         toggleMyTeamStaff,
                                         setMyTeamStaffDraftIds,
                                     )}
@@ -3529,7 +3550,7 @@ const MyDashboard: React.FC<MyDashboardProps> = ({
                                         filteredMyTeamTraineeOptions,
                                         myTeamTraineeDraftIds,
                                         getTraineeTeamId,
-                                        trainee => `${trainee.rank || ''} ${formatPersonDisplayName(trainee as any, trainee.fullName || trainee.name)}`.trim(),
+                                        formatMyTeamPersonLabel,
                                         toggleMyTeamTrainee,
                                         setMyTeamTraineeDraftIds,
                                     )}
