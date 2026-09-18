@@ -55156,11 +55156,13 @@ appliedUpdates.forEach(update => {
     };
 
     const latestSavedDfpDate = snapshotDates.find(snapshotDate => snapshotDate && snapshotDate !== date) || '';
+    const isFutureSelectedDfpDate = date > getEffectiveDfpDateString();
     const showEmptyDfpNotice = isAuthenticated
         && activeView === 'Program Schedule'
         && dfpSnapshotLoadState.date === date
         && dfpSnapshotLoadState.status === 'empty'
         && eventSegmentsForDate.length === 0
+        && !isFutureSelectedDfpDate
         && !isInitialSetupWizardActive
         && !setupTestProfile;
 

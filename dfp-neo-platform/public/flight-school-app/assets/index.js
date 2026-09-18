@@ -151830,7 +151830,8 @@ Do you want to replace the existing entry?`,
     }
   };
   const latestSavedDfpDate = snapshotDates.find((snapshotDate) => snapshotDate && snapshotDate !== date) || "";
-  const showEmptyDfpNotice = isAuthenticated && activeView === "Program Schedule" && dfpSnapshotLoadState.date === date && dfpSnapshotLoadState.status === "empty" && eventSegmentsForDate.length === 0 && !isInitialSetupWizardActive && !setupTestProfile;
+  const isFutureSelectedDfpDate = date > getEffectiveDfpDateString();
+  const showEmptyDfpNotice = isAuthenticated && activeView === "Program Schedule" && dfpSnapshotLoadState.date === date && dfpSnapshotLoadState.status === "empty" && eventSegmentsForDate.length === 0 && !isFutureSelectedDfpDate && !isInitialSetupWizardActive && !setupTestProfile;
   return /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
     setupTestProfile && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "fixed left-1/2 top-2 z-[500] -translate-x-1/2 rounded-md border border-amber-300/70 bg-amber-100 px-4 py-2 text-center text-[11px] font-black uppercase tracking-[0.16em] text-slate-950 shadow-2xl shadow-black/30", children: [
       "Setup Wizard Test Mode - Local Browser Data Only - ",
