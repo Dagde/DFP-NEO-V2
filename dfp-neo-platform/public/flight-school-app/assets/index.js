@@ -61399,6 +61399,15 @@ Do you still want to include them in this academic session?`,
         )
       ] })
     ] }),
+    /* @__PURE__ */ jsxRuntimeExports.jsx("div", { style: {
+      ...S.card,
+      backgroundColor: "rgba(245,158,11,0.12)",
+      border: "1px solid rgba(245,158,11,0.45)",
+      color: "#fde68a",
+      fontSize: 13,
+      fontWeight: 700,
+      lineHeight: 1.45
+    }, children: "To add a lesson to the academic schedule, click the event name/code. Do not click the checkbox; the checkbox only marks whether that event is complete for the course." }),
     /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { style: { display: "flex", gap: 10 }, children: [
       /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { style: { ...S.card, width: 200, minWidth: 200, maxWidth: 200, maxHeight: 360, overflowY: "auto", flexShrink: 0 }, children: [
         /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { style: { ...S.label, marginBottom: 8 }, children: [
@@ -61463,10 +61472,7 @@ Do you still want to include them in this academic session?`,
         /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { style: { ...S.card, maxHeight: 300, overflowY: "auto", flex: 1, minWidth: 0 }, children: [
           /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { style: { display: "flex", alignItems: "baseline", gap: 8, marginBottom: 6, flexWrap: "wrap" }, children: [
             /* @__PURE__ */ jsxRuntimeExports.jsx("div", { style: S.label, children: "LMP Lessons" }),
-            /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { style: { fontSize: 10, color: "#6b7280" }, children: [
-              "✅ = course complete  ⬜ = not yet complete  ",
-              /* @__PURE__ */ jsxRuntimeExports.jsx("span", { style: { color: "#93c5fd" }, children: "(click ✅/⬜ to toggle course completion)" })
-            ] })
+            /* @__PURE__ */ jsxRuntimeExports.jsx("span", { style: { fontSize: 10, color: "#6b7280" }, children: "Click the event text to schedule it. The checkbox only toggles course completion." })
           ] }),
           moduleGroups.length === 0 ? /* @__PURE__ */ jsxRuntimeExports.jsx("div", { style: { color: "#6b7280", fontSize: 12, fontStyle: "italic" }, children: "No academic lessons found for this course" }) : /* @__PURE__ */ jsxRuntimeExports.jsx("div", { style: { display: "flex", gap: 8, overflowX: "auto", paddingBottom: 4 }, children: moduleGroups.map(({ moduleKey, label, items: moduleItems }) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { style: {
             minWidth: 190,
