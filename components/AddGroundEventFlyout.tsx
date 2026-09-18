@@ -8,6 +8,7 @@ import {
   ResourceDisplayNames,
   formatResourceLabel as formatConfiguredResourceLabel,
 } from '../utils/resourceDisplayNames';
+import type { ClassroomResourceOption } from '../utils/classroomResources';
 import { showDarkAlert } from './DarkMessageModal';
 
 interface AddGroundEventFlyoutProps {
@@ -36,6 +37,7 @@ interface AddGroundEventFlyoutProps {
   resourceDisplayNames?: ResourceDisplayNames;
   operationalModel?: unknown;
   groundResources?: string[];
+  classroomOptions?: ClassroomResourceOption[];
   cptResources?: string[];
   instructorLabel?: string;
 }
@@ -78,6 +80,7 @@ const AddGroundEventFlyout: React.FC<AddGroundEventFlyoutProps> = ({
     resourceDisplayNames = DEFAULT_RESOURCE_DISPLAY_NAMES,
     operationalModel,
     groundResources = [],
+    classroomOptions = [],
     cptResources = [],
     instructorLabel = 'Instructor',
 }) => {
@@ -455,6 +458,8 @@ const AddGroundEventFlyout: React.FC<AddGroundEventFlyoutProps> = ({
                                 onUpdatePersistedAcademicLmp={onUpdatePersistedAcademicLmp}
                                 instructors={instructors}
                                 instructorLabel={instructorLabel}
+                                groundResources={groundResources}
+                                classroomOptions={classroomOptions}
                                 onSave={(data) => {
                                     if (onSaveAcademic) {
                                         onSaveAcademic(data);

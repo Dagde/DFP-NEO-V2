@@ -3926,6 +3926,30 @@ const formatResourceLabel = (resourceId, names = DEFAULT_RESOURCE_DISPLAY_NAMES)
   if (cptMatch) return `${names.cpt}${cptMatch[1]}`;
   return resourceId;
 };
+const parseClassroomNames = (value) => {
+  const rawItems = Array.isArray(value) ? value : String(value || "").split(/[\n,]+/);
+  const seen = /* @__PURE__ */ new Set();
+  return rawItems.map((item) => String(item ?? "").trim()).filter((item) => {
+    if (!item) return false;
+    const key = item.toUpperCase();
+    if (seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
+};
+const getConfiguredClassroomNames = (settings) => parseClassroomNames(settings?.classrooms ?? settings?.classroomNames ?? settings?.groundClassrooms);
+const formatClassroomNames = (value) => parseClassroomNames(value).join("\n");
+const buildClassroomResourceOptions = (settings, groundCount) => {
+  const names = getConfiguredClassroomNames(settings);
+  const count = Math.max(1, Math.floor(Number(groundCount) || 0));
+  return Array.from({ length: count }, (_, index) => {
+    const id = `Ground ${index + 1}`;
+    return {
+      id,
+      label: names[index] || id
+    };
+  });
+};
 const DEFAULT_AIRCRAFT_NUMBER_SETTINGS = {
   usePrefix: false,
   prefixes: [],
@@ -25465,6 +25489,18 @@ This removes them from DFP Resource Rows. Press Save in this section to apply th
                           /* @__PURE__ */ jsxRuntimeExports.jsx(DraftField, { label: "Aircraft Row Label", value: pool.settings?.aircraftLabel || (displayedResourcePoolAircraftTypeCode ? getAircraftTypeDisplayLabel(displayedResourcePoolAircraftTypeCode) : ""), disabled: !canEditResourcePools, onCommit: (value) => updateResourcePoolSettings(index, { aircraftLabel: value }) }),
                           /* @__PURE__ */ jsxRuntimeExports.jsx(DraftField, { label: "Simulator Row Label", value: pool.settings?.ftdLabel || "FTD", disabled: !canEditResourcePools, onCommit: (value) => updateResourcePoolSettings(index, { ftdLabel: value }) }),
                           /* @__PURE__ */ jsxRuntimeExports.jsx(DraftField, { label: "Procedural Trainer Row Label", value: pool.settings?.cptLabel || "CPT", disabled: !canEditResourcePools, onCommit: (value) => updateResourcePoolSettings(index, { cptLabel: value }) }),
+                          /* @__PURE__ */ jsxRuntimeExports.jsx(
+                            DraftTextAreaField,
+                            {
+                              label: "Classroom Names",
+                              value: formatClassroomNames(pool.settings?.classrooms ?? pool.settings?.classroomNames ?? pool.settings?.groundClassrooms),
+                              disabled: !canEditResourcePools,
+                              onCommit: (value) => updateResourcePoolSettings(index, { classrooms: parseClassroomNames(value) }),
+                              info: "Optional names for Add Ground Event > Academics classroom selection. Enter one per line or comma-separated; blank rows use Ground 1, Ground 2 and so on.",
+                              className: "md:col-span-3",
+                              fieldSizingClassName: "min-h-[86px]"
+                            }
+                          ),
                           /* @__PURE__ */ jsxRuntimeExports.jsx(DraftField, { label: "Duty Supervisor Full Label", value: pool.settings?.dutySupervisorLabel || "Duty Supervisor", disabled: !canEditResourcePools, onCommit: (value) => updateResourcePoolSettings(index, { dutySupervisorLabel: value }) }),
                           /* @__PURE__ */ jsxRuntimeExports.jsx(DraftField, { label: "Duty Supervisor Short Label", value: pool.settings?.dutySupervisorShortLabel || "Duty Sup", disabled: !canEditResourcePools, onCommit: (value) => updateResourcePoolSettings(index, { dutySupervisorShortLabel: value }) }),
                           /* @__PURE__ */ jsxRuntimeExports.jsx(DraftField, { label: "Tower Duty Instructor Full Label", value: pool.settings?.towerDutyInstructorLabel || "Tower Duty Instructor", disabled: !canEditResourcePools, onCommit: (value) => updateResourcePoolSettings(index, { towerDutyInstructorLabel: value }) }),
@@ -27353,6 +27389,18 @@ This removes them from DFP Resource Rows. Press Save in this section to apply th
                       /* @__PURE__ */ jsxRuntimeExports.jsx(DraftField, { label: "Aircraft Row Label", value: pool.settings?.aircraftLabel || (aircraftCode ? getAircraftTypeDisplayLabel(aircraftCode) : ""), disabled: !canEditResourcePools, onCommit: (value) => updateResourcePoolSettings(index, { aircraftLabel: value }), info: "The label shown for aircraft rows. Example: Aircraft, Jet, Helicopter." }),
                       /* @__PURE__ */ jsxRuntimeExports.jsx(DraftField, { label: "Simulator Row Label", value: pool.settings?.ftdLabel || "FTD", disabled: !canEditResourcePools, onCommit: (value) => updateResourcePoolSettings(index, { ftdLabel: value }), info: "The label shown for simulator rows. Example: Simulator, FTD." }),
                       /* @__PURE__ */ jsxRuntimeExports.jsx(DraftField, { label: "Procedural Trainer Row Label", value: pool.settings?.cptLabel || "CPT", disabled: !canEditResourcePools, onCommit: (value) => updateResourcePoolSettings(index, { cptLabel: value }), info: "The label shown for procedural trainer rows. Example: Procedural Trainer, CPT." }),
+                      /* @__PURE__ */ jsxRuntimeExports.jsx(
+                        DraftTextAreaField,
+                        {
+                          label: "Classroom Names",
+                          value: formatClassroomNames(pool.settings?.classrooms ?? pool.settings?.classroomNames ?? pool.settings?.groundClassrooms),
+                          disabled: !canEditResourcePools,
+                          onCommit: (value) => updateResourcePoolSettings(index, { classrooms: parseClassroomNames(value) }),
+                          info: "Optional names for Add Ground Event > Academics classroom selection. Enter one per line or comma-separated; blank rows use Ground 1, Ground 2 and so on.",
+                          className: "lg:col-span-2",
+                          fieldSizingClassName: "min-h-[86px]"
+                        }
+                      ),
                       /* @__PURE__ */ jsxRuntimeExports.jsx(DraftField, { label: "Duty Supervisor Full Label", value: pool.settings?.dutySupervisorLabel || "Duty Supervisor", disabled: !canEditResourcePools, onCommit: (value) => updateResourcePoolSettings(index, { dutySupervisorLabel: value }), info: "The full name for the person supervising daily flying operations." }),
                       /* @__PURE__ */ jsxRuntimeExports.jsx(DraftField, { label: "Duty Supervisor Short Label", value: pool.settings?.dutySupervisorShortLabel || "Duty Sup", disabled: !canEditResourcePools, onCommit: (value) => updateResourcePoolSettings(index, { dutySupervisorShortLabel: value }), info: "The short label used on compact DFP rows and tiles. Example: Duty Sup, Duty Lead." }),
                       /* @__PURE__ */ jsxRuntimeExports.jsx(DraftField, { label: "Tower Duty Instructor Full Label", value: pool.settings?.towerDutyInstructorLabel || "Tower Duty Instructor", disabled: !canEditResourcePools, onCommit: (value) => updateResourcePoolSettings(index, { towerDutyInstructorLabel: value }), info: "The full name for the instructor monitoring tower or circuit operations." }),
@@ -32255,7 +32303,8 @@ const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, lo
     sim: String(primaryResourcePool?.settings?.ftd ?? primaryResourcePool?.settings?.sim ?? primaryResourcePool?.ftd ?? primaryResourcePool?.sim ?? ""),
     trainer: String(primaryResourcePool?.settings?.cpt ?? primaryResourcePool?.settings?.trainer ?? primaryResourcePool?.cpt ?? primaryResourcePool?.trainer ?? ""),
     standby: String(primaryResourcePool?.settings?.standby ?? primaryResourcePool?.standby ?? ""),
-    ground: String(primaryResourcePool?.settings?.ground ?? primaryResourcePool?.ground ?? "")
+    ground: String(primaryResourcePool?.settings?.ground ?? primaryResourcePool?.ground ?? ""),
+    classrooms: formatClassroomNames(primaryResourcePool?.settings?.classrooms ?? primaryResourcePool?.settings?.classroomNames)
   });
   const [crewDraft, setCrewDraft] = reactExports.useState({
     aircraftCode: String(primaryAircraftType?.code || resourceDraft.aircraftCode || ""),
@@ -33036,7 +33085,8 @@ const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, lo
       sim: String(primaryResourcePool?.settings?.ftd ?? primaryResourcePool?.settings?.sim ?? primaryResourcePool?.ftd ?? primaryResourcePool?.sim ?? ""),
       trainer: String(primaryResourcePool?.settings?.cpt ?? primaryResourcePool?.settings?.trainer ?? primaryResourcePool?.cpt ?? primaryResourcePool?.trainer ?? ""),
       standby: String(primaryResourcePool?.settings?.standby ?? primaryResourcePool?.standby ?? ""),
-      ground: String(primaryResourcePool?.settings?.ground ?? primaryResourcePool?.ground ?? "")
+      ground: String(primaryResourcePool?.settings?.ground ?? primaryResourcePool?.ground ?? ""),
+      classrooms: formatClassroomNames(primaryResourcePool?.settings?.classrooms ?? primaryResourcePool?.settings?.classroomNames)
     });
     setCrewDraft({
       aircraftCode: String(primaryAircraftType?.code || primaryResourcePool?.aircraftTypeCode || ""),
@@ -33617,7 +33667,8 @@ const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, lo
           ftd: parseNumberDraft(resourceDraft.sim),
           cpt: parseNumberDraft(resourceDraft.trainer),
           standby: parseNumberDraft(resourceDraft.standby),
-          ground: parseNumberDraft(resourceDraft.ground)
+          ground: parseNumberDraft(resourceDraft.ground),
+          classrooms: parseClassroomNames(resourceDraft.classrooms)
         }
       };
       const poolExists = resourcePools.some((pool) => poolKey && String(pool?.id || pool?.code || "") === String(poolKey) || targetUnitCode && normaliseUnitSettingsIdentifier(pool?.unitCode) === targetUnitCode && String(pool?.status || "ACTIVE").toUpperCase() !== "INACTIVE" || String(pool?.name || "").trim().toUpperCase() === String(nextPool.name || "").trim().toUpperCase());
@@ -37335,7 +37386,8 @@ const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, lo
             ftd: parseNumberDraft(resourceDraft.sim),
             cpt: parseNumberDraft(resourceDraft.trainer),
             standby: parseNumberDraft(resourceDraft.standby),
-            ground: parseNumberDraft(resourceDraft.ground)
+            ground: parseNumberDraft(resourceDraft.ground),
+            classrooms: parseClassroomNames(resourceDraft.classrooms)
           }
         }] : existingResourcePools,
         modules,
@@ -38065,7 +38117,8 @@ const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, lo
           wizardField("Sim", resourceDraft.sim, (value) => updateResourceDraft((draft) => ({ ...draft, sim: value }))),
           wizardField("Trainer", resourceDraft.trainer, (value) => updateResourceDraft((draft) => ({ ...draft, trainer: value }))),
           wizardField("Standby Lines", resourceDraft.standby, (value) => updateResourceDraft((draft) => ({ ...draft, standby: value }))),
-          wizardField("Ground Lines", resourceDraft.ground, (value) => updateResourceDraft((draft) => ({ ...draft, ground: value })))
+          wizardField("Ground Lines", resourceDraft.ground, (value) => updateResourceDraft((draft) => ({ ...draft, ground: value }))),
+          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "md:col-span-5", children: wizardField("Classroom names", resourceDraft.classrooms, (value) => updateResourceDraft((draft) => ({ ...draft, classrooms: value })), void 0, "Ground 1, Ground 2") })
         ] })
       );
     }
@@ -38468,7 +38521,8 @@ const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, lo
         },
         {
           label: "Aircraft and rows",
-          value: `${resourceDraft.aircraftCode || "No aircraft type set"}: ${resourceDraft.aircraft || "0"} aircraft rows, ${resourceDraft.sim || "0"} simulator rows, ${resourceDraft.trainer || "0"} trainer rows, ${resourceDraft.standby || "0"} standby rows, ${resourceDraft.ground || "0"} ground rows.`,
+          value: `${resourceDraft.aircraftCode || "No aircraft type set"}: ${resourceDraft.aircraft || "0"} aircraft rows, ${resourceDraft.sim || "0"} simulator rows, ${resourceDraft.trainer || "0"} trainer rows, ${resourceDraft.standby || "0"} standby rows, ${resourceDraft.ground || "0"} ground rows.${parseClassroomNames(resourceDraft.classrooms).length ? `
+Classrooms: ${parseClassroomNames(resourceDraft.classrooms).join(", ")}` : ""}`,
           help: "These numbers control what rows appear on the DFP schedule for this unit."
         },
         {
@@ -60716,6 +60770,8 @@ const AcademicsTab = ({
   onUpdatePersistedAcademicLmp,
   instructors = [],
   instructorLabel: instructorLabel2 = "Instructor",
+  groundResources = [],
+  classroomOptions = [],
   onSave,
   onClose
 }) => {
@@ -60747,6 +60803,11 @@ const AcademicsTab = ({
   const [otherText, setOtherText] = reactExports.useState("");
   const [resourceId, setResourceId] = reactExports.useState("");
   const [instructor, setInstructor] = reactExports.useState("");
+  const effectiveClassroomOptions = reactExports.useMemo(() => {
+    if (classroomOptions.length > 0) return classroomOptions;
+    const resources = groundResources.length > 0 ? groundResources : Array.from({ length: 6 }, (_, index) => `Ground ${index + 1}`);
+    return resources.map((resource) => ({ id: resource, label: resource }));
+  }, [classroomOptions, groundResources]);
   const [editTileId, setEditTileId] = reactExports.useState(null);
   const [editStartTime, setEditStartTime] = reactExports.useState("");
   const [editDuration, setEditDuration] = reactExports.useState("");
@@ -61322,7 +61383,7 @@ Do you still want to include them in this academic session?`,
           /* @__PURE__ */ jsxRuntimeExports.jsx("div", { style: S.label, children: "Classroom" }),
           /* @__PURE__ */ jsxRuntimeExports.jsxs("select", { style: { ...S.select, width: 120 }, value: resourceId, onChange: (e) => setResourceId(e.target.value), children: [
             /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "", children: "— Select —" }),
-            Array.from({ length: 6 }, (_, i) => `Ground ${i + 1}`).map((g) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: g, children: g }, g))
+            effectiveClassroomOptions.map((option) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: option.id, children: option.label }, option.id))
           ] })
         ] })
       ] }),
@@ -61728,6 +61789,7 @@ const AddGroundEventFlyout = ({
   resourceDisplayNames = DEFAULT_RESOURCE_DISPLAY_NAMES,
   operationalModel,
   groundResources = [],
+  classroomOptions = [],
   cptResources = [],
   instructorLabel: instructorLabel2 = "Instructor"
 }) => {
@@ -62050,6 +62112,8 @@ const AddGroundEventFlyout = ({
                     onUpdatePersistedAcademicLmp,
                     instructors,
                     instructorLabel: instructorLabel2,
+                    groundResources,
+                    classroomOptions,
                     onSave: (data) => {
                       if (onSaveAcademic) {
                         onSaveAcademic(data);
@@ -147125,6 +147189,7 @@ ${error instanceof Error ? error.message : String(error)}`,
     return Object.fromEntries(entries);
   }, [addGroundTileTraineesByCourse, courseColors, scopedCourseColors]);
   const addGroundTileGroundResources = reactExports.useMemo(() => buildResources.filter((resourceId) => /^Ground\s+\d+$/i.test(String(resourceId || "").trim())), [buildResources]);
+  const addGroundTileClassroomOptions = reactExports.useMemo(() => buildClassroomResourceOptions(activePlatformResourcePool?.settings || {}, addGroundTileGroundResources.length || configuredGroundCount), [activePlatformResourcePool?.settings, addGroundTileGroundResources.length, configuredGroundCount]);
   const addGroundTileCptResources = reactExports.useMemo(() => buildResources.filter((resourceId) => /^CPT\s+\d+$/i.test(String(resourceId || "").trim())), [buildResources]);
   const handleSaveGroundEvent = (data) => {
     const syllabusItem = syllabusDetails.find((s) => s.code === data.flightNumber);
@@ -153219,6 +153284,7 @@ Do you want to replace the existing entry?`,
           resourceDisplayNames,
           operationalModel: activeOperationalModel,
           groundResources: addGroundTileGroundResources,
+          classroomOptions: addGroundTileClassroomOptions,
           cptResources: addGroundTileCptResources,
           instructorLabel: instructorLabel2
         }

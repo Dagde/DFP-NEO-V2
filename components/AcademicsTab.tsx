@@ -2,6 +2,7 @@ import React, { useState, useMemo, useRef, useCallback, useEffect } from 'react'
 import { SyllabusItemDetail, Trainee, Score, ScheduleEvent } from '../types';
 import { v4 as uuidv4 } from 'uuid';
 import { showDarkAlert, showDarkConfirm } from './DarkMessageModal';
+import type { ClassroomResourceOption } from '../utils/classroomResources';
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -35,6 +36,8 @@ interface AcademicsTabProps {
   onUpdatePersistedAcademicLmp?: (lmp: string) => void;
   instructors?: string[];    // list of instructor names for allocation dropdown
   instructorLabel?: string;
+  groundResources?: string[];
+  classroomOptions?: ClassroomResourceOption[];
   onSave: (data: AcademicSaveData) => void;
   onClose: () => void;
 }
@@ -310,6 +313,8 @@ const AcademicsTab: React.FC<AcademicsTabProps> = ({
   onUpdatePersistedAcademicLmp,
   instructors = [],
   instructorLabel = 'Instructor',
+  groundResources = [],
+  classroomOptions = [],
   onSave,
   onClose,
 }) => {
@@ -343,6 +348,13 @@ const AcademicsTab: React.FC<AcademicsTabProps> = ({
   const [otherText, setOtherText] = useState('');
   const [resourceId, setResourceId] = useState(''); // blank by default
   const [instructor, setInstructor] = useState(''); // allocated instructor for this academic session
+  const effectiveClassroomOptions = useMemo<ClassroomResourceOption[]>(() => {
+    if (classroomOptions.length > 0) return classroomOptions;
+    const resources = groundResources.length > 0
+      ? groundResources
+      : Array.from({ length: 6 }, (_, index) => `Ground ${index + 1}`);
+    return resources.map(resource => ({ id: resource, label: resource }));
+  }, [classroomOptions, groundResources]);
 
   // Edit-tile modal state
   const [editTileId, setEditTileId] = useState<string | null>(null);
@@ -957,8 +969,8 @@ const AcademicsTab: React.FC<AcademicsTabProps> = ({
             <div style={S.label}>Classroom</div>
             <select style={{ ...S.select, width: 120 }} value={resourceId} onChange={e => setResourceId(e.target.value)}>
               <option value="">— Select —</option>
-              {Array.from({ length: 6 }, (_, i) => `Ground ${i + 1}`).map(g => (
-                <option key={g} value={g}>{g}</option>
+              {effectiveClassroomOptions.map(option => (
+                <option key={option.id} value={option.id}>{option.label}</option>
               ))}
             </select>
           </div>

@@ -68,6 +68,7 @@ import {
     writeSetupTestPlatformConfig,
     writeSetupTestSyllabus,
 } from '../utils/setupTestMode';
+import { formatClassroomNames, parseClassroomNames } from '../utils/classroomResources';
    
 declare const XLSX: any;
 
@@ -3480,6 +3481,7 @@ const InitialSetupWizard: React.FC<{
         trainer: String(primaryResourcePool?.settings?.cpt ?? primaryResourcePool?.settings?.trainer ?? primaryResourcePool?.cpt ?? primaryResourcePool?.trainer ?? ''),
         standby: String(primaryResourcePool?.settings?.standby ?? primaryResourcePool?.standby ?? ''),
         ground: String(primaryResourcePool?.settings?.ground ?? primaryResourcePool?.ground ?? ''),
+        classrooms: formatClassroomNames(primaryResourcePool?.settings?.classrooms ?? primaryResourcePool?.settings?.classroomNames),
     });
     const [crewDraft, setCrewDraft] = useState({
         aircraftCode: String(primaryAircraftType?.code || resourceDraft.aircraftCode || ''),
@@ -4398,6 +4400,7 @@ const InitialSetupWizard: React.FC<{
             trainer: String(primaryResourcePool?.settings?.cpt ?? primaryResourcePool?.settings?.trainer ?? primaryResourcePool?.cpt ?? primaryResourcePool?.trainer ?? ''),
             standby: String(primaryResourcePool?.settings?.standby ?? primaryResourcePool?.standby ?? ''),
             ground: String(primaryResourcePool?.settings?.ground ?? primaryResourcePool?.ground ?? ''),
+            classrooms: formatClassroomNames(primaryResourcePool?.settings?.classrooms ?? primaryResourcePool?.settings?.classroomNames),
         });
         setCrewDraft({
             aircraftCode: String(primaryAircraftType?.code || primaryResourcePool?.aircraftTypeCode || ''),
@@ -5042,6 +5045,7 @@ const InitialSetupWizard: React.FC<{
                     cpt: parseNumberDraft(resourceDraft.trainer),
                     standby: parseNumberDraft(resourceDraft.standby),
                     ground: parseNumberDraft(resourceDraft.ground),
+                    classrooms: parseClassroomNames(resourceDraft.classrooms),
                 },
             };
             const poolExists = resourcePools.some((pool: any) => (
@@ -9392,6 +9396,7 @@ const InitialSetupWizard: React.FC<{
                         cpt: parseNumberDraft(resourceDraft.trainer),
                         standby: parseNumberDraft(resourceDraft.standby),
                         ground: parseNumberDraft(resourceDraft.ground),
+                        classrooms: parseClassroomNames(resourceDraft.classrooms),
                     },
                 }] : existingResourcePools,
                 modules,
@@ -10236,6 +10241,9 @@ const InitialSetupWizard: React.FC<{
                     {wizardField('Trainer', resourceDraft.trainer, (value) => updateResourceDraft((draft) => ({ ...draft, trainer: value })))}
                     {wizardField('Standby Lines', resourceDraft.standby, (value) => updateResourceDraft((draft) => ({ ...draft, standby: value })))}
                     {wizardField('Ground Lines', resourceDraft.ground, (value) => updateResourceDraft((draft) => ({ ...draft, ground: value })))}
+                    <div className="md:col-span-5">
+                        {wizardField('Classroom names', resourceDraft.classrooms, (value) => updateResourceDraft((draft) => ({ ...draft, classrooms: value })), undefined, 'Ground 1, Ground 2')}
+                    </div>
                 </div>,
             );
         }
@@ -10641,7 +10649,7 @@ const InitialSetupWizard: React.FC<{
                     },
                     {
                         label: 'Aircraft and rows',
-                        value: `${resourceDraft.aircraftCode || 'No aircraft type set'}: ${resourceDraft.aircraft || '0'} aircraft rows, ${resourceDraft.sim || '0'} simulator rows, ${resourceDraft.trainer || '0'} trainer rows, ${resourceDraft.standby || '0'} standby rows, ${resourceDraft.ground || '0'} ground rows.`,
+                        value: `${resourceDraft.aircraftCode || 'No aircraft type set'}: ${resourceDraft.aircraft || '0'} aircraft rows, ${resourceDraft.sim || '0'} simulator rows, ${resourceDraft.trainer || '0'} trainer rows, ${resourceDraft.standby || '0'} standby rows, ${resourceDraft.ground || '0'} ground rows.${parseClassroomNames(resourceDraft.classrooms).length ? `\nClassrooms: ${parseClassroomNames(resourceDraft.classrooms).join(', ')}` : ''}`,
                         help: 'These numbers control what rows appear on the DFP schedule for this unit.',
                     },
                     {
