@@ -29413,7 +29413,7 @@ const AcademicStandardEventsField = ({
           children: "- Delete"
         }
       )
-    ] }, `academic-standard-event-${event.code}-${index}`)) }) : /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-1 rounded border border-dashed border-gray-700 bg-gray-950/60 px-3 py-2 text-xs font-semibold text-gray-400", children: "No standard academic events configured. Use + Add to create the first event." })
+    ] }, `academic-standard-event-${index}`)) }) : /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-1 rounded border border-dashed border-gray-700 bg-gray-950/60 px-3 py-2 text-xs font-semibold text-gray-400", children: "No standard academic events configured. Use + Add to create the first event." })
   ] });
 };
 const DraftTextInput$2 = ({ value, disabled, placeholder, className, onCommit }) => {
@@ -36113,7 +36113,7 @@ const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, lo
             children: "- Delete"
           }
         )
-      ] }, `wizard-academic-standard-${event.code}-${index}`)) }) : /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-3 rounded-lg border border-dashed border-slate-300 bg-white px-3 py-2 text-sm font-semibold text-slate-500", children: "No academic standard events configured. Use + Add to create the first event." })
+      ] }, `wizard-academic-standard-${index}`)) }) : /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-3 rounded-lg border border-dashed border-slate-300 bg-white px-3 py-2 text-sm font-semibold text-slate-500", children: "No academic standard events configured. Use + Add to create the first event." })
     ] });
   };
   const wizardDataListField = (label, value, onChange, options, placeholder, listKey) => {

@@ -15403,7 +15403,7 @@ const AcademicStandardEventsField = ({
       {events.length > 0 ? (
         <div className="mt-2 space-y-2">
           {events.map((event, index) => (
-            <div key={`academic-standard-event-${event.code}-${index}`} className="grid gap-2 rounded border border-gray-700 bg-gray-950/70 p-2 md:grid-cols-[minmax(0,1fr)_96px_82px_96px] md:items-end">
+            <div key={`academic-standard-event-${index}`} className="grid gap-2 rounded border border-gray-700 bg-gray-950/70 p-2 md:grid-cols-[minmax(0,1fr)_96px_82px_96px] md:items-end">
               <label>
                 <span className="mb-1 block text-[10px] font-black uppercase tracking-[0.14em] text-gray-400">Event name</span>
                 <input

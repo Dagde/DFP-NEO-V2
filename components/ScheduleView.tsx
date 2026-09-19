@@ -7565,7 +7565,7 @@ const InitialSetupWizard: React.FC<{
                 {events.length > 0 ? (
                     <div className="mt-3 space-y-2">
                         {events.map((event, index) => (
-                            <div key={`wizard-academic-standard-${event.code}-${index}`} className="grid gap-2 rounded-lg border border-slate-200 bg-white p-2 md:grid-cols-[minmax(0,1fr)_96px_82px_94px] md:items-end">
+                            <div key={`wizard-academic-standard-${index}`} className="grid gap-2 rounded-lg border border-slate-200 bg-white p-2 md:grid-cols-[minmax(0,1fr)_96px_82px_94px] md:items-end">
                                 <label>
                                     <span className="mb-1 block text-[10px] font-black uppercase tracking-[0.14em] text-slate-500">Event name</span>
                                     <input
