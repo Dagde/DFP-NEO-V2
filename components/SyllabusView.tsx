@@ -1384,13 +1384,19 @@ const SyllabusView: React.FC<SyllabusViewProps> = ({
       ? masterLmpTitleMap[code] || courseTitleMap[code] || code
       : courseTitleMap[code] || code
   );
+  const selectedMasterLmpCatalogueEntry = useMemo(() => (
+    activeTab === 'master'
+      ? activeMasterLmpCatalogue.find(entry => String(entry.code || '').trim().toUpperCase() === String(selectedCourseType || '').trim().toUpperCase()) || null
+      : null
+  ), [activeMasterLmpCatalogue, activeTab, selectedCourseType]);
   const selectedCourseAudience = useMemo(() => (
     getLmpAudienceForCourse(unitScopedSyllabusDetails, selectedCourseType, {
       activeTab,
       operationalModel: activeOperationalModel,
       lmpType: activeLmpType,
+      catalogueAudience: selectedMasterLmpCatalogueEntry?.audience,
     })
-  ), [activeLmpType, activeOperationalModel, activeTab, selectedCourseType, unitScopedSyllabusDetails]);
+  ), [activeLmpType, activeOperationalModel, activeTab, selectedCourseType, selectedMasterLmpCatalogueEntry?.audience, unitScopedSyllabusDetails]);
   const selectedCourseAllowsStaff = selectedCourseAudience === 'staff';
   const selectedCourseAllowsTrainees = selectedCourseAudience === 'trainee';
   const normaliseContextCode = (value?: string | null): string => String(value || '').trim().toUpperCase();
@@ -1665,10 +1671,6 @@ const SyllabusView: React.FC<SyllabusViewProps> = ({
       syllabusDetails,
       unitScopedSyllabusDetails,
   ]);
-  const selectedMasterLmpCatalogueEntry = activeTab === 'master'
-    ? activeMasterLmpCatalogue.find(entry => String(entry.code || '').trim().toUpperCase() === String(selectedCourseType || '').trim().toUpperCase()) || null
-    : null;
-
   const activeTrainingAssignmentItem = useMemo(() => (
       filteredSyllabusDetails[0] || selectedItem || null
   ), [filteredSyllabusDetails, selectedItem]);

@@ -44675,10 +44675,14 @@ const App: React.FC = () => {
                 .filter((item: any) => {
                     const courseCode = Array.isArray(item.courses) ? item.courses.find(Boolean) : '';
                     if (!courseCode) return true;
+                    const catalogueEntry = normaliseMasterLmpCatalogue(platformConfig).find((entry) => (
+                        String(entry.code || '').trim().toUpperCase() === String(courseCode || '').trim().toUpperCase()
+                    ));
                     return getLmpAudienceForCourse(syllabusDetails, String(courseCode), {
                         activeTab: 'master',
                         operationalModel: 'flight_school',
                         lmpType: item.lmpType,
+                        catalogueAudience: catalogueEntry?.audience,
                     }) === 'trainee';
                 })
             : [];

@@ -2687,6 +2687,7 @@ const normaliseMasterLmpCatalogue = (config) => {
       code: rawCode,
       name: entry?.name !== void 0 ? String(entry.name) : codeForKey,
       description: String(entry?.description || ""),
+      audience: ["staff", "trainee"].includes(String(entry?.audience || "").trim().toLowerCase()) ? String(entry.audience).trim().toLowerCase() : void 0,
       status: String(entry?.status || "ACTIVE").toUpperCase()
     });
   });
@@ -6900,6 +6901,8 @@ const getDefaultLmpAudience = (options = {}) => {
   return "staff";
 };
 const getLmpAudienceForCourse = (items, courseCode, options = {}) => {
+  const catalogueAudience = normaliseLmpAudience(options.catalogueAudience);
+  if (catalogueAudience) return catalogueAudience;
   const courseKey = String(courseCode || "").trim().toUpperCase();
   const matchingItems = items.filter((item) => item?.isActive !== false && Array.isArray(item.courses) && item.courses.some((course) => String(course || "").trim().toUpperCase() === courseKey));
   const shellAudience = matchingItems.filter(isSyllabusCourseShell).map((item) => getLmpAudienceFromNotes(item.notes)).find(Boolean);
@@ -20120,6 +20123,7 @@ This permanently removes the organisation record from platform configuration and
       code: `New Master LMP ${nextNumber}`,
       name: `New Master LMP ${nextNumber}`,
       description: "",
+      audience: "trainee",
       status: "ACTIVE"
     });
   };
@@ -20143,6 +20147,7 @@ This permanently removes the organisation record from platform configuration and
         code,
         name,
         description: masterLmpCatalogueDraft.description.trim(),
+        audience: masterLmpCatalogueDraft.audience,
         status: masterLmpCatalogueDraft.status
       }
     ]);
@@ -24235,7 +24240,7 @@ This removes them from DFP Resource Rows. Press Save in this section to apply th
                 visibleMasterLmpCatalogueRows.length === 0 && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "rounded border border-dashed border-gray-700 bg-gray-950 px-3 py-4 text-sm font-semibold text-gray-300", children: masterLmpCatalogue.length === 0 ? "No Master LMPs configured." : "No Master LMPs visible for this unit." }),
                 visibleMasterLmpCatalogueRows.map(({ entry, index }) => {
                   const linkedSyllabusCount = masterLmpSyllabusCounts.get(String(entry.code || "").trim().toUpperCase()) || 0;
-                  return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid grid-cols-[minmax(150px,0.75fr)_minmax(180px,1fr)_minmax(220px,1.25fr)_minmax(130px,0.7fr)_120px_42px] gap-3 rounded border border-gray-700 bg-gray-950 p-3", children: [
+                  return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid grid-cols-[minmax(150px,0.75fr)_minmax(180px,1fr)_minmax(220px,1.25fr)_minmax(130px,0.7fr)_130px_120px_42px] gap-3 rounded border border-gray-700 bg-gray-950 p-3", children: [
                     /* @__PURE__ */ jsxRuntimeExports.jsx(
                       DraftField,
                       {
@@ -24272,6 +24277,17 @@ This removes them from DFP Resource Rows. Press Save in this section to apply th
                         linkedSyllabusCount === 1 ? "" : "s"
                       ] })
                     ] }),
+                    /* @__PURE__ */ jsxRuntimeExports.jsx(
+                      SelectField,
+                      {
+                        label: "Audience",
+                        value: String(entry.audience || "trainee") === "staff" ? "staff" : "trainee",
+                        disabled: !canEditSection("platform-master-lmp-access"),
+                        options: ["trainee", "staff"],
+                        optionLabels: { trainee: "Trainees only", staff: "Staff only" },
+                        onChange: (value) => updateMasterLmpCatalogueEntry(index, { audience: value === "staff" ? "staff" : "trainee" })
+                      }
+                    ),
                     /* @__PURE__ */ jsxRuntimeExports.jsx(
                       SelectField,
                       {
@@ -24481,6 +24497,22 @@ This removes them from DFP Resource Rows. Press Save in this section to apply th
                       className: "min-h-[90px] w-full resize-y rounded border border-gray-700 bg-gray-950 px-3 py-2 text-sm text-white outline-none focus:border-cyan-400"
                     }
                   )
+                ] }),
+                /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { children: [
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: labelClass, children: "Assignment Audience" }),
+                  /* @__PURE__ */ jsxRuntimeExports.jsxs(
+                    "select",
+                    {
+                      value: masterLmpCatalogueDraft.audience,
+                      onChange: (event) => setMasterLmpCatalogueDraft((draft) => draft ? { ...draft, audience: event.target.value === "staff" ? "staff" : "trainee" } : draft),
+                      className: "w-full rounded border border-gray-700 bg-gray-950 px-3 py-2 text-sm font-semibold text-white outline-none focus:border-cyan-400",
+                      children: [
+                        /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "trainee", children: "Trainees only" }),
+                        /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "staff", children: "Staff only" })
+                      ]
+                    }
+                  ),
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-1 text-[11px] leading-relaxed text-gray-500", children: "Trainee Master LMPs can be assigned to trainees and feed Flight School trainee NEO Build. Staff-only Master LMPs are for staff upgrade or category progression." })
                 ] }),
                 /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { children: [
                   /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: labelClass, children: "Status" }),
@@ -89191,11 +89223,13 @@ const SyllabusView = ({
     return map;
   }, [activeTab, unitScopedSyllabusDetails]);
   const getCourseTitle = (code) => activeTab === "master" ? masterLmpTitleMap[code] || courseTitleMap[code] || code : courseTitleMap[code] || code;
+  const selectedMasterLmpCatalogueEntry = reactExports.useMemo(() => activeTab === "master" ? activeMasterLmpCatalogue.find((entry) => String(entry.code || "").trim().toUpperCase() === String(selectedCourseType || "").trim().toUpperCase()) || null : null, [activeMasterLmpCatalogue, activeTab, selectedCourseType]);
   const selectedCourseAudience = reactExports.useMemo(() => getLmpAudienceForCourse(unitScopedSyllabusDetails, selectedCourseType, {
     activeTab,
     operationalModel: activeOperationalModel,
-    lmpType: activeLmpType
-  }), [activeLmpType, activeOperationalModel, activeTab, selectedCourseType, unitScopedSyllabusDetails]);
+    lmpType: activeLmpType,
+    catalogueAudience: selectedMasterLmpCatalogueEntry?.audience
+  }), [activeLmpType, activeOperationalModel, activeTab, selectedCourseType, selectedMasterLmpCatalogueEntry?.audience, unitScopedSyllabusDetails]);
   const selectedCourseAllowsStaff = selectedCourseAudience === "staff";
   const selectedCourseAllowsTrainees = selectedCourseAudience === "trainee";
   const normaliseContextCode2 = (value) => String(value || "").trim().toUpperCase();
@@ -89432,7 +89466,6 @@ const SyllabusView = ({
     syllabusDetails,
     unitScopedSyllabusDetails
   ]);
-  const selectedMasterLmpCatalogueEntry = activeTab === "master" ? activeMasterLmpCatalogue.find((entry) => String(entry.code || "").trim().toUpperCase() === String(selectedCourseType || "").trim().toUpperCase()) || null : null;
   const activeTrainingAssignmentItem = reactExports.useMemo(() => filteredSyllabusDetails[0] || selectedItem || null, [filteredSyllabusDetails, selectedItem]);
   const activeAirCombatTrainingAssignment = reactExports.useMemo(() => {
     if (!isAirCombatModel || !activeTrainingAssignmentItem || !selectedCourseType) return null;
@@ -144533,10 +144566,12 @@ The proposed event was not scheduled. Re-open the event and choose Accept Confli
     const assignableFlightSchoolBuildSyllabus = activeOperationalModel === "flight_school" ? getFlightSchoolAssignableSyllabusForActiveScope(syllabusDetails, "Assign").filter((item) => item.type !== "Academics" && item.lmpType !== "Staff CAT").filter((item) => {
       const courseCode = Array.isArray(item.courses) ? item.courses.find(Boolean) : "";
       if (!courseCode) return true;
+      const catalogueEntry = normaliseMasterLmpCatalogue(platformConfig).find((entry) => String(entry.code || "").trim().toUpperCase() === String(courseCode || "").trim().toUpperCase());
       return getLmpAudienceForCourse(syllabusDetails, String(courseCode), {
         activeTab: "master",
         operationalModel: "flight_school",
-        lmpType: item.lmpType
+        lmpType: item.lmpType,
+        catalogueAudience: catalogueEntry?.audience
       }) === "trainee";
     }) : [];
     const assignableFlightSchoolEventKeys = new Set(

@@ -2605,6 +2605,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
     code: string;
     name: string;
     description: string;
+    audience: 'trainee' | 'staff';
     status: 'ACTIVE' | 'INACTIVE';
   } | null>(null);
   const [masterLmpAccessDraft, setMasterLmpAccessDraft] = useState<{
@@ -4884,6 +4885,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
       code: `New Master LMP ${nextNumber}`,
       name: `New Master LMP ${nextNumber}`,
       description: '',
+      audience: 'trainee',
       status: 'ACTIVE',
     });
   };
@@ -4910,6 +4912,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
         code,
         name,
         description: masterLmpCatalogueDraft.description.trim(),
+        audience: masterLmpCatalogueDraft.audience,
         status: masterLmpCatalogueDraft.status,
       },
     ]);
@@ -9935,7 +9938,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
                 {visibleMasterLmpCatalogueRows.map(({ entry, index }) => {
                   const linkedSyllabusCount = masterLmpSyllabusCounts.get(String(entry.code || '').trim().toUpperCase()) || 0;
                   return (
-                    <div key={entry.id || `master-lmp-catalogue-${index}`} className="grid grid-cols-[minmax(150px,0.75fr)_minmax(180px,1fr)_minmax(220px,1.25fr)_minmax(130px,0.7fr)_120px_42px] gap-3 rounded border border-gray-700 bg-gray-950 p-3">
+                    <div key={entry.id || `master-lmp-catalogue-${index}`} className="grid grid-cols-[minmax(150px,0.75fr)_minmax(180px,1fr)_minmax(220px,1.25fr)_minmax(130px,0.7fr)_130px_120px_42px] gap-3 rounded border border-gray-700 bg-gray-950 p-3">
                       <DraftField
                         label="Code"
                         value={entry.code}
@@ -9961,6 +9964,14 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
                           {linkedSyllabusCount} event{linkedSyllabusCount === 1 ? '' : 's'}
                         </div>
                       </div>
+                      <SelectField
+                        label="Audience"
+                        value={String(entry.audience || 'trainee') === 'staff' ? 'staff' : 'trainee'}
+                        disabled={!canEditSection('platform-master-lmp-access')}
+                        options={['trainee', 'staff']}
+                        optionLabels={{ trainee: 'Trainees only', staff: 'Staff only' }}
+                        onChange={(value) => updateMasterLmpCatalogueEntry(index, { audience: value === 'staff' ? 'staff' : 'trainee' })}
+                      />
                       <SelectField
                         label="Status"
                         value={entry.status || 'ACTIVE'}
@@ -10138,6 +10149,20 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
                       onChange={(event) => setMasterLmpCatalogueDraft((draft) => draft ? { ...draft, description: event.target.value } : draft)}
                       className="min-h-[90px] w-full resize-y rounded border border-gray-700 bg-gray-950 px-3 py-2 text-sm text-white outline-none focus:border-cyan-400"
                     />
+                  </label>
+                  <label>
+                    <span className={labelClass}>Assignment Audience</span>
+                    <select
+                      value={masterLmpCatalogueDraft.audience}
+                      onChange={(event) => setMasterLmpCatalogueDraft((draft) => draft ? { ...draft, audience: event.target.value === 'staff' ? 'staff' : 'trainee' } : draft)}
+                      className="w-full rounded border border-gray-700 bg-gray-950 px-3 py-2 text-sm font-semibold text-white outline-none focus:border-cyan-400"
+                    >
+                      <option value="trainee">Trainees only</option>
+                      <option value="staff">Staff only</option>
+                    </select>
+                    <p className="mt-1 text-[11px] leading-relaxed text-gray-500">
+                      Trainee Master LMPs can be assigned to trainees and feed Flight School trainee NEO Build. Staff-only Master LMPs are for staff upgrade or category progression.
+                    </p>
                   </label>
                   <label>
                     <span className={labelClass}>Status</span>

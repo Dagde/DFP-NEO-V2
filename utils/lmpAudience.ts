@@ -42,8 +42,11 @@ export const getLmpAudienceForCourse = (
     activeTab?: 'master' | 'packages' | string;
     operationalModel?: string | null;
     lmpType?: string | null;
+    catalogueAudience?: string | null;
   } = {},
 ): LmpAudience => {
+  const catalogueAudience = normaliseLmpAudience(options.catalogueAudience);
+  if (catalogueAudience) return catalogueAudience;
   const courseKey = String(courseCode || '').trim().toUpperCase();
   const matchingItems = items.filter(item => (
     item?.isActive !== false &&

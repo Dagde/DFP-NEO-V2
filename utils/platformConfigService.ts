@@ -403,6 +403,7 @@ export interface PlatformMasterLmpCatalogueEntry {
   code: string;
   name?: string | null;
   description?: string | null;
+  audience?: 'staff' | 'trainee' | string | null;
   status?: string | null;
 }
 
@@ -809,6 +810,9 @@ export const normaliseMasterLmpCatalogue = (config: PlatformConfig | null): Plat
       code: rawCode,
       name: entry?.name !== undefined ? String(entry.name) : codeForKey,
       description: String(entry?.description || ''),
+      audience: ['staff', 'trainee'].includes(String(entry?.audience || '').trim().toLowerCase())
+        ? String(entry.audience).trim().toLowerCase()
+        : undefined,
       status: String(entry?.status || 'ACTIVE').toUpperCase(),
     });
   });
