@@ -641,6 +641,20 @@ const AcademicsTab: React.FC<AcademicsTabProps> = ({
     persistPresavedSchedules(nextSchedules);
   };
 
+  const removeTimelineTile = useCallback((tileId: string) => {
+    const tile = tiles.find(candidate => candidate.id === tileId);
+    setTiles(prev => prev.filter(candidate => candidate.id !== tileId));
+    setTimelineEditTileId(current => current === tileId ? null : current);
+    dragging.current = null;
+    resizing.current = null;
+    if (!tile) return;
+    if (tile.isStandard) {
+      setSelectedStandard(prev => { const next = new Set(prev); next.delete(tile.lessonCode); return next; });
+    } else {
+      setSelectedLessons(prev => { const next = new Set(prev); next.delete(tile.lessonCode); return next; });
+    }
+  }, [tiles]);
+
   // Add/remove lesson from timeline
   const toggleLesson = useCallback((item: SyllabusItemDetail) => {
     const key = item.code;
@@ -1400,6 +1414,29 @@ const AcademicsTab: React.FC<AcademicsTabProps> = ({
               >
                 De-Select
               </button>
+              <button
+                type="button"
+                onClick={() => {
+                  removeTimelineTile(timelineContextMenu.tileId);
+                  setTimelineContextMenu(null);
+                }}
+                style={{
+                  display: 'block',
+                  width: '100%',
+                  border: 0,
+                  borderRadius: 4,
+                  background: 'transparent',
+                  color: '#fecaca',
+                  cursor: 'pointer',
+                  fontSize: 12,
+                  fontWeight: 700,
+                  letterSpacing: '0.08em',
+                  padding: '8px 10px',
+                  textAlign: 'left',
+                }}
+              >
+                Remove
+              </button>
             </div>
           )}
         </div>
@@ -1414,14 +1451,7 @@ const AcademicsTab: React.FC<AcademicsTabProps> = ({
               }}>
                 <span>{fmtTime(tile.startTime)} {tile.lessonCode}</span>
                 <button
-                  onClick={() => {
-                    setTiles(prev => prev.filter(t => t.id !== tile.id));
-                    if (!tile.isStandard) {
-                      setSelectedLessons(prev => { const s = new Set(prev); s.delete(tile.lessonCode); return s; });
-                    } else {
-                      setSelectedStandard(prev => { const s = new Set(prev); s.delete(tile.lessonCode); return s; });
-                    }
-                  }}
+                  onClick={() => removeTimelineTile(tile.id)}
                   style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'rgba(255,255,255,0.8)', fontSize: 13, lineHeight: 1, padding: 0 }}>
                   ×
                 </button>
