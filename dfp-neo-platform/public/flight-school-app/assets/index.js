@@ -61218,6 +61218,12 @@ const AcademicsTab = ({
     () => normaliseAcademicStandardEvents(standardEvents),
     [standardEvents]
   );
+  const displayedStandardEvents = reactExports.useMemo(() => [...effectiveStandardEvents].sort((left, right) => {
+    const leftIsOther = left.code === "OTHER" || left.label.trim().toLowerCase() === "other";
+    const rightIsOther = right.code === "OTHER" || right.label.trim().toLowerCase() === "other";
+    if (leftIsOther === rightIsOther) return 0;
+    return leftIsOther ? 1 : -1;
+  }), [effectiveStandardEvents]);
   const [editTileId, setEditTileId] = reactExports.useState(null);
   const [editStartTime, setEditStartTime] = reactExports.useState("");
   const [editDuration, setEditDuration] = reactExports.useState("");
@@ -61987,7 +61993,7 @@ Do you still want to include them in this academic session?`,
               }
             ) : null
           ] }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { style: { display: "flex", flexWrap: "wrap", gap: 6 }, children: effectiveStandardEvents.map((ev) => {
+          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { style: { display: "flex", flexWrap: "wrap", gap: 6 }, children: displayedStandardEvents.map((ev) => {
             const isSelected = selectedStandard.has(ev.code);
             ev.code === "OTHER" || ev.label.trim().toLowerCase() === "other";
             return /* @__PURE__ */ jsxRuntimeExports.jsx("div", { style: { display: "flex", alignItems: "center", gap: 4 }, children: /* @__PURE__ */ jsxRuntimeExports.jsx(

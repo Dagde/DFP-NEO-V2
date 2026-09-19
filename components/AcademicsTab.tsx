@@ -353,6 +353,14 @@ const AcademicsTab: React.FC<AcademicsTabProps> = ({
     () => normaliseAcademicStandardEvents(standardEvents),
     [standardEvents],
   );
+  const displayedStandardEvents = useMemo(() => (
+    [...effectiveStandardEvents].sort((left, right) => {
+      const leftIsOther = left.code === 'OTHER' || left.label.trim().toLowerCase() === 'other';
+      const rightIsOther = right.code === 'OTHER' || right.label.trim().toLowerCase() === 'other';
+      if (leftIsOther === rightIsOther) return 0;
+      return leftIsOther ? 1 : -1;
+    })
+  ), [effectiveStandardEvents]);
 
   // Edit-tile modal state
   const [editTileId, setEditTileId] = useState<string | null>(null);
@@ -1182,7 +1190,7 @@ const AcademicsTab: React.FC<AcademicsTabProps> = ({
               ) : null}
             </div>
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
-              {effectiveStandardEvents.map(ev => {
+              {displayedStandardEvents.map(ev => {
                 const isSelected = selectedStandard.has(ev.code);
                 const isOtherEvent = ev.code === 'OTHER' || ev.label.trim().toLowerCase() === 'other';
                 return (
