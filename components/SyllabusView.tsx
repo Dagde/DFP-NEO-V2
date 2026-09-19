@@ -2455,7 +2455,7 @@ const SyllabusView: React.FC<SyllabusViewProps> = ({
                     setEditedItem(null);
                     setIsAddingLmpEvent(false);
                 }}
-                className={`h-9 min-w-[136px] rounded px-4 text-sm font-semibold transition ${
+                className={`flex min-h-[48px] min-w-[150px] items-center justify-center rounded px-4 py-1 text-center text-sm font-semibold leading-tight transition ${
                     activeTab === tab.id
                         ? 'border border-sky-500/70 bg-sky-900/65 text-white'
                         : 'border border-transparent text-gray-300 hover:bg-gray-800 hover:text-white'
