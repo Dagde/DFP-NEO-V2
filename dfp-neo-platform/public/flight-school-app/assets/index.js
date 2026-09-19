@@ -134757,7 +134757,7 @@ const App = () => {
         const value = event?.[field];
         return Array.isArray(value) ? value : [value];
       });
-      return Array.from(new Set(values.map((value) => normalisePersonnelUnitCode(value)).filter(Boolean)));
+      return Array.from(new Set(values.flatMap((value) => String(value || "").split("+")).map((value) => normalisePersonnelUnitCode(value)).filter(Boolean)));
     };
     const collectLocationCodes = (event) => {
       const values = [
@@ -147035,6 +147035,8 @@ Do not hard refresh yet. Try Publish again, then confirm the save succeeds.`,
   const buildDroppedNeoAssistEvents = reactExports.useCallback((draft, placement, eventDate, resourcePool) => {
     const firstResourceId = placement.resourceId || draft.resourceId;
     const activeAircraftPrefix = `${activeAircraftResourcePrefix} `;
+    const activeDropUnitCodes = (activeContextUnitCodes.length > 0 ? activeContextUnitCodes : String(activeUnitCode || "").split("+")).map((unit) => normalisePersonnelUnitCode(unit)).filter(Boolean);
+    const primaryDropUnitCode = activeDropUnitCodes[0] || activeUnitCode;
     const isActiveAircraftResource = (resourceId) => String(resourceId || "").trim().startsWith(activeAircraftPrefix);
     const startTime = placement.startTime;
     if (draft.type === "deployment") {
@@ -147070,7 +147072,8 @@ Do not hard refresh yet. Try Publish again, then confirm the save succeeds.`,
           duration: segmentDuration,
           startTime: segmentStartTime,
           resourceId,
-          unitCode: activeUnitCode,
+          unitCode: primaryDropUnitCode,
+          taskingUnitCodes: activeDropUnitCodes.length > 0 ? activeDropUnitCodes : void 0,
           locationCode: school,
           operationalModel: activeOperationalModel,
           color: draft.color || "bg-gray-600/30",
@@ -147131,7 +147134,8 @@ Do not hard refresh yet. Try Publish again, then confirm the save succeeds.`,
         crew: manualCrewPair?.crew || (manualCrewPair ? "" : draft.crew),
         startTime,
         resourceId,
-        unitCode: activeUnitCode,
+        unitCode: primaryDropUnitCode,
+        taskingUnitCodes: activeDropUnitCodes.length > 0 ? activeDropUnitCodes : void 0,
         locationCode: school,
         operationalModel: activeOperationalModel,
         preStart: preOffset > 0 ? startTime - preOffset : void 0,
@@ -147144,7 +147148,7 @@ Do not hard refresh yet. Try Publish again, then confirm the save succeeds.`,
         formationSize: formationSize > 1 ? formationSize : draft.formationSize
       };
     });
-  }, [activeAircraftResourcePrefix, activeOperationalModel, activeUnitCode, neoAssistCallsignOptions, school]);
+  }, [activeAircraftResourcePrefix, activeContextUnitCodes, activeOperationalModel, activeUnitCode, neoAssistCallsignOptions, school]);
   const handleProgramScheduleExternalEventDrop = reactExports.useCallback((draft, placement) => {
     appendNeoAssistManualTileTrace("program-schedule-drop-received", {
       date,

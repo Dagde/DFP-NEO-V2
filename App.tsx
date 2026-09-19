@@ -32893,6 +32893,7 @@ const App: React.FC = () => {
                 return Array.isArray(value) ? value : [value];
             });
             return Array.from(new Set(values
+                .flatMap(value => String(value || '').split('+'))
                 .map(value => normalisePersonnelUnitCode(value))
                 .filter(Boolean)));
         };
@@ -47910,6 +47911,10 @@ appliedUpdates.forEach(update => {
     const buildDroppedNeoAssistEvents = useCallback((draft: ScheduleEvent, placement: NeoAssistDropPlacement, eventDate: string, resourcePool: string[]): ScheduleEvent[] => {
         const firstResourceId = placement.resourceId || draft.resourceId;
         const activeAircraftPrefix = `${activeAircraftResourcePrefix} `;
+        const activeDropUnitCodes = (activeContextUnitCodes.length > 0 ? activeContextUnitCodes : String(activeUnitCode || '').split('+'))
+            .map(unit => normalisePersonnelUnitCode(unit))
+            .filter(Boolean);
+        const primaryDropUnitCode = activeDropUnitCodes[0] || activeUnitCode;
         const isActiveAircraftResource = (resourceId?: string): boolean =>
             String(resourceId || '').trim().startsWith(activeAircraftPrefix);
         const startTime = placement.startTime;
@@ -47954,7 +47959,8 @@ appliedUpdates.forEach(update => {
                 duration: segmentDuration,
                 startTime: segmentStartTime,
                 resourceId,
-                unitCode: activeUnitCode,
+                unitCode: primaryDropUnitCode,
+                taskingUnitCodes: activeDropUnitCodes.length > 0 ? activeDropUnitCodes : undefined,
                 locationCode: school,
                 operationalModel: activeOperationalModel,
                 color: draft.color || 'bg-gray-600/30',
@@ -48037,7 +48043,8 @@ appliedUpdates.forEach(update => {
                 crew: manualCrewPair?.crew || (manualCrewPair ? '' : draft.crew),
                 startTime,
                 resourceId,
-                unitCode: activeUnitCode,
+                unitCode: primaryDropUnitCode,
+                taskingUnitCodes: activeDropUnitCodes.length > 0 ? activeDropUnitCodes : undefined,
                 locationCode: school,
                 operationalModel: activeOperationalModel,
                 preStart: preOffset > 0 ? startTime - preOffset : undefined,
@@ -48050,7 +48057,7 @@ appliedUpdates.forEach(update => {
                 formationSize: formationSize > 1 ? formationSize : draft.formationSize,
             };
         });
-    }, [activeAircraftResourcePrefix, activeOperationalModel, activeUnitCode, neoAssistCallsignOptions, school]);
+    }, [activeAircraftResourcePrefix, activeContextUnitCodes, activeOperationalModel, activeUnitCode, neoAssistCallsignOptions, school]);
 
     const handleProgramScheduleExternalEventDrop = useCallback((draft: ScheduleEvent, placement: NeoAssistDropPlacement) => {
         appendNeoAssistManualTileTrace('program-schedule-drop-received', {
