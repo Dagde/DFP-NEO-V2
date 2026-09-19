@@ -108644,6 +108644,7 @@ const normaliseAssistPriorityWeights = (items) => {
 const NEO_ASSIST_CURRENCY_TRACE_KEY = "neo_assist_currency_persistence_trace";
 const NEO_ASSIST_MANUAL_TILE_TRACE_KEY = "neo_assist_manual_tile_drop_trace";
 const NEO_ASSIST_MANUAL_TILE_RENDER_PROBE_KEY = "neo_assist_manual_tile_render_probe";
+const DFP_TILE_MOVE_RENDER_PROBE_KEY = "dfp_tile_move_render_probe";
 const summariseNeoAssistManualTileEvent = (event) => {
   if (!event) return null;
   return {
@@ -133847,6 +133848,24 @@ const App = () => {
   const applyDailySnapshot = React.useCallback((targetDate, snapshotSchool, snapshotUnit, snap2, replace, source) => {
     if (!snap2) return 0;
     const events2 = Array.isArray(snap2.scheduleEvents) ? snap2.scheduleEvents : [];
+    try {
+      const rawMoveProbe = typeof window !== "undefined" ? localStorage.getItem(DFP_TILE_MOVE_RENDER_PROBE_KEY) : null;
+      const moveProbe = rawMoveProbe ? JSON.parse(rawMoveProbe) : null;
+      const moveProbeIds = Array.isArray(moveProbe?.ids) ? moveProbe.ids.map((id) => String(id || "").trim()).filter(Boolean) : [];
+      if (moveProbeIds.length > 0 && moveProbe?.date === targetDate) {
+        appendNeoAssistManualTileTrace("dfp-tile-move-snapshot-apply-during-monitor", {
+          targetDate,
+          snapshotSchool,
+          snapshotUnit,
+          source,
+          replace,
+          eventCount: events2.length,
+          moveProbeIds,
+          incomingProbeEvents: events2.filter((event) => moveProbeIds.includes(event.id)).map(summariseNeoAssistManualTileEvent)
+        });
+      }
+    } catch {
+    }
     pushDfpDataDiag("snapshot:apply", {
       targetDate,
       snapshotSchool,
@@ -134734,6 +134753,7 @@ const App = () => {
   const [phraseBank, setPhraseBank] = reactExports.useState(DEFAULT_PHRASE_BANK);
   const [publishedSchedules, setPublishedSchedules] = reactExports.useState({});
   const [manualTileRenderMonitorTick, setManualTileRenderMonitorTick] = reactExports.useState(0);
+  const [dfpTileMoveRenderMonitorTick, setDfpTileMoveRenderMonitorTick] = reactExports.useState(0);
   const publishedSchedulesRef = React.useRef({});
   reactExports.useEffect(() => {
     publishedSchedulesRef.current = publishedSchedules;
@@ -137831,6 +137851,134 @@ ${"=".repeat(60)}`);
         const monitorUntilMs = Number(probe?.monitorUntilMs);
         if (Number.isFinite(monitorUntilMs) && Date.now() <= monitorUntilMs) {
           setManualTileRenderMonitorTick((tick) => tick + 1);
+        }
+      } catch {
+      }
+    }, 1e3);
+    return () => window.clearInterval(intervalId);
+  }, []);
+  reactExports.useEffect(() => {
+    if (typeof window === "undefined") return;
+    const now = Date.now();
+    let probe = null;
+    try {
+      const rawProbe = localStorage.getItem(DFP_TILE_MOVE_RENDER_PROBE_KEY);
+      probe = rawProbe ? JSON.parse(rawProbe) : null;
+    } catch (error) {
+      appendNeoAssistManualTileTrace("dfp-tile-move-render-probe-read-failed", {
+        date,
+        error: error instanceof Error ? error.message : String(error)
+      });
+      return;
+    }
+    const probeIds = Array.isArray(probe?.ids) ? probe.ids.map((id) => String(id || "").trim()).filter(Boolean) : [];
+    if (probeIds.length === 0) return;
+    const createdAtMs = Date.parse(String(probe?.createdAt || ""));
+    const monitorUntilMs = Number(probe?.monitorUntilMs);
+    const effectiveMonitorUntilMs = Number.isFinite(monitorUntilMs) ? monitorUntilMs : Number.isFinite(createdAtMs) ? createdAtMs + 2e4 : now + 2e4;
+    if (now > effectiveMonitorUntilMs) {
+      appendNeoAssistManualTileTrace("dfp-tile-move-render-monitor-expired", {
+        date,
+        probe,
+        ageMs: Number.isFinite(createdAtMs) ? now - createdAtMs : null
+      });
+      try {
+        localStorage.removeItem(DFP_TILE_MOVE_RENDER_PROBE_KEY);
+      } catch {
+      }
+      return;
+    }
+    const rawForDate = Array.isArray(publishedSchedules[date]) ? publishedSchedules[date] : [];
+    const describeProbeEvent = (event) => event ? {
+      id: event.id,
+      date: event.date,
+      type: event.type,
+      flightNumber: event.flightNumber,
+      resourceId: event.resourceId,
+      unitCode: event.unitCode || null,
+      locationCode: event.locationCode || null,
+      operationalModel: event.operationalModel || null,
+      startTime: event.startTime,
+      duration: event.duration,
+      pilot: event.pilot || null,
+      instructor: event.instructor || null,
+      student: event.student || null,
+      segmentStartTime: event.segmentStartTime ?? null,
+      segmentDuration: event.segmentDuration ?? null
+    } : null;
+    const report = probeIds.map((id) => {
+      const rawEvent = rawForDate.find((event) => event.id === id);
+      const scopedEvent = scopedPublishedEventsForDate.find((event) => event.id === id);
+      const renderInputEvent = eventsForDateWithPreFlightNotes.find((event) => event.id === id);
+      const segmentEvent = eventSegmentsForDate.find((event) => event.id === id);
+      const expected = Array.isArray(probe?.expected) ? probe.expected.find((entry) => entry?.eventId === id) : null;
+      const expectedStartTime = Number(expected?.newStartTime);
+      const expectedResourceId = String(expected?.newResourceId || "");
+      const matchesExpected = Boolean(segmentEvent) && (!Number.isFinite(expectedStartTime) || Math.abs(Number(segmentEvent.startTime) - expectedStartTime) < 1e-3) && (!expectedResourceId || segmentEvent?.resourceId === expectedResourceId);
+      return {
+        id,
+        inPublishedRawForDate: Boolean(rawEvent),
+        inScopedPublishedEventsForDate: Boolean(scopedEvent),
+        inRenderInputEventsForDateWithPreFlightNotes: Boolean(renderInputEvent),
+        inEventSegmentsForDate: Boolean(segmentEvent),
+        matchesExpected,
+        expected,
+        rawEvent: describeProbeEvent(rawEvent),
+        scopedEvent: describeProbeEvent(scopedEvent),
+        renderInputEvent: describeProbeEvent(renderInputEvent),
+        segmentEvent: describeProbeEvent(segmentEvent)
+      };
+    });
+    const hadMatchedExpected = probe?.hadMatchedExpected === true;
+    const matchesExpectedNow = report.every((entry) => entry.matchesExpected);
+    const revertedAfterExpected = hadMatchedExpected && !matchesExpectedNow;
+    const nextProbe = {
+      ...probe,
+      monitorUntilMs: effectiveMonitorUntilMs,
+      lastCheckedAt: new Date(now).toISOString(),
+      hadMatchedExpected: hadMatchedExpected || matchesExpectedNow,
+      lastStatus: report.map((entry) => ({
+        id: entry.id,
+        inPublishedRawForDate: entry.inPublishedRawForDate,
+        inScopedPublishedEventsForDate: entry.inScopedPublishedEventsForDate,
+        inRenderInputEventsForDateWithPreFlightNotes: entry.inRenderInputEventsForDateWithPreFlightNotes,
+        inEventSegmentsForDate: entry.inEventSegmentsForDate,
+        matchesExpected: entry.matchesExpected
+      }))
+    };
+    appendNeoAssistManualTileTrace(revertedAfterExpected ? "dfp-tile-move-reverted-after-render" : "dfp-tile-move-render-monitor-sample", {
+      date,
+      probe: nextProbe,
+      ageMs: Number.isFinite(createdAtMs) ? now - createdAtMs : null,
+      monitorRemainingMs: effectiveMonitorUntilMs - now,
+      hadMatchedExpected,
+      matchesExpectedNow,
+      revertedAfterExpected,
+      rawCountForDate: rawForDate.length,
+      scopedCountForDate: scopedPublishedEventsForDate.length,
+      renderInputCount: eventsForDateWithPreFlightNotes.length,
+      segmentCount: eventSegmentsForDate.length,
+      report
+    });
+    try {
+      localStorage.setItem(DFP_TILE_MOVE_RENDER_PROBE_KEY, JSON.stringify(nextProbe));
+    } catch (error) {
+      appendNeoAssistManualTileTrace("dfp-tile-move-render-probe-update-failed", {
+        date,
+        error: error instanceof Error ? error.message : String(error)
+      });
+    }
+  }, [date, dfpTileMoveRenderMonitorTick, eventSegmentsForDate, eventsForDateWithPreFlightNotes, publishedSchedules, scopedPublishedEventsForDate]);
+  reactExports.useEffect(() => {
+    if (typeof window === "undefined") return void 0;
+    const intervalId = window.setInterval(() => {
+      try {
+        const rawProbe = localStorage.getItem(DFP_TILE_MOVE_RENDER_PROBE_KEY);
+        if (!rawProbe) return;
+        const probe = JSON.parse(rawProbe);
+        const monitorUntilMs = Number(probe?.monitorUntilMs);
+        if (Number.isFinite(monitorUntilMs) && Date.now() <= monitorUntilMs) {
+          setDfpTileMoveRenderMonitorTick((tick) => tick + 1);
         }
       } catch {
       }
@@ -146904,10 +147052,20 @@ Do not hard refresh yet. Try Publish again, then confirm the save succeeds.`,
     }
     let updatedEventsForDate = [];
     let appliedUpdates = updates;
+    let moveTraceOriginalEvents = [];
+    let moveTraceUpdatedEvents = [];
     setPublishedSchedules((prev) => {
       const scheduleForDate = prev[date] || [];
       appliedUpdates = expandFormationScheduleUpdates(scheduleForDate, updates);
       const updatesMap = new Map(appliedUpdates.map((u) => [u.eventId, u]));
+      moveTraceOriginalEvents = appliedUpdates.map((update) => {
+        const event = scheduleForDate.find((candidate) => candidate.id === update.eventId);
+        return {
+          eventId: update.eventId,
+          before: event ? summariseNeoAssistManualTileEvent(event) : null,
+          requested: update
+        };
+      });
       const newScheduleForDate = scheduleForDate.map((event) => {
         if (updatesMap.has(event.id)) {
           const update = updatesMap.get(event.id);
@@ -146920,8 +147078,48 @@ Do not hard refresh yet. Try Publish again, then confirm the save succeeds.`,
         }
         return event;
       });
+      moveTraceUpdatedEvents = appliedUpdates.map((update) => {
+        const event = newScheduleForDate.find((candidate) => candidate.id === update.eventId);
+        return {
+          eventId: update.eventId,
+          after: event ? summariseNeoAssistManualTileEvent(event) : null
+        };
+      });
       updatedEventsForDate = newScheduleForDate;
       return { ...prev, [date]: newScheduleForDate };
+    });
+    const monitorStartedAt = Date.now();
+    try {
+      localStorage.setItem(DFP_TILE_MOVE_RENDER_PROBE_KEY, JSON.stringify({
+        createdAt: new Date(monitorStartedAt).toISOString(),
+        monitorUntilMs: monitorStartedAt + 2e4,
+        hadMatchedExpected: false,
+        source: "published-dfp-tile-move",
+        date,
+        ids: appliedUpdates.map((update) => update.eventId),
+        requestedUpdates: updates,
+        expected: appliedUpdates.map((update) => ({
+          eventId: update.eventId,
+          newStartTime: update.newStartTime,
+          newResourceId: update.newResourceId,
+          newAircraftNumber: update.newAircraftNumber
+        })),
+        originalEvents: moveTraceOriginalEvents,
+        updatedEvents: moveTraceUpdatedEvents
+      }));
+    } catch (error) {
+      appendNeoAssistManualTileTrace("dfp-tile-move-render-probe-store-failed", {
+        date,
+        error: error instanceof Error ? error.message : String(error)
+      });
+    }
+    appendNeoAssistManualTileTrace("dfp-tile-move-state-write-planned", {
+      date,
+      requestedUpdates: updates,
+      appliedUpdates,
+      originalEvents: moveTraceOriginalEvents,
+      updatedEvents: moveTraceUpdatedEvents,
+      updatedEventCount: updatedEventsForDate.length
     });
     if (_scheduleUpdatePersistTimer.current) clearTimeout(_scheduleUpdatePersistTimer.current);
     _scheduleUpdatePersistTimer.current = window.setTimeout(() => {
@@ -146929,7 +147127,25 @@ Do not hard refresh yet. Try Publish again, then confirm the save succeeds.`,
       if (updatedEventsForDate.length > 0) {
         const baselineEventsForPersist = baselineSchedules[activeBaselineKey] || [];
         activeDfpSaveInFlightRef.current += 1;
-        persistScheduleForDate(date, updatedEventsForDate, baselineEventsForPersist).finally(() => {
+        appendNeoAssistManualTileTrace("dfp-tile-move-persist-requested", {
+          date,
+          appliedUpdates,
+          updatedEventCount: updatedEventsForDate.length,
+          activeDfpSaveInFlight: activeDfpSaveInFlightRef.current
+        });
+        persistScheduleForDate(date, updatedEventsForDate, baselineEventsForPersist).then((success) => {
+          appendNeoAssistManualTileTrace("dfp-tile-move-persist-completed", {
+            date,
+            appliedUpdates,
+            success
+          });
+        }).catch((error) => {
+          appendNeoAssistManualTileTrace("dfp-tile-move-persist-error", {
+            date,
+            appliedUpdates,
+            error: error instanceof Error ? error.message : String(error)
+          });
+        }).finally(() => {
           activeDfpSaveInFlightRef.current = Math.max(0, activeDfpSaveInFlightRef.current - 1);
         });
         setPublishedSchedules((prevSchedules) => {

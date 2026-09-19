@@ -850,6 +850,7 @@ type NeoAssistPage = 'inputs' | 'priority' | 'manual';
 const NEO_ASSIST_CURRENCY_TRACE_KEY = 'neo_assist_currency_persistence_trace';
 const NEO_ASSIST_MANUAL_TILE_TRACE_KEY = 'neo_assist_manual_tile_drop_trace';
 const NEO_ASSIST_MANUAL_TILE_RENDER_PROBE_KEY = 'neo_assist_manual_tile_render_probe';
+const DFP_TILE_MOVE_RENDER_PROBE_KEY = 'dfp_tile_move_render_probe';
 
 const summariseNeoAssistManualTileEvent = (event: Partial<ScheduleEvent> | null | undefined): Record<string, unknown> | null => {
     if (!event) return null;
@@ -31791,6 +31792,27 @@ const App: React.FC = () => {
         if (!snap) return 0;
 
         const events: ScheduleEvent[] = Array.isArray(snap.scheduleEvents) ? snap.scheduleEvents : [];
+        try {
+            const rawMoveProbe = typeof window !== 'undefined' ? localStorage.getItem(DFP_TILE_MOVE_RENDER_PROBE_KEY) : null;
+            const moveProbe = rawMoveProbe ? JSON.parse(rawMoveProbe) : null;
+            const moveProbeIds = Array.isArray(moveProbe?.ids) ? moveProbe.ids.map((id: unknown) => String(id || '').trim()).filter(Boolean) : [];
+            if (moveProbeIds.length > 0 && moveProbe?.date === targetDate) {
+                appendNeoAssistManualTileTrace('dfp-tile-move-snapshot-apply-during-monitor', {
+                    targetDate,
+                    snapshotSchool,
+                    snapshotUnit,
+                    source,
+                    replace,
+                    eventCount: events.length,
+                    moveProbeIds,
+                    incomingProbeEvents: events
+                        .filter(event => moveProbeIds.includes(event.id))
+                        .map(summariseNeoAssistManualTileEvent),
+                });
+            }
+        } catch {
+            // Move trace diagnostics must never affect snapshot loading.
+        }
         pushDfpDataDiag('snapshot:apply', {
             targetDate,
             snapshotSchool,
@@ -32861,6 +32883,7 @@ const App: React.FC = () => {
     // Published Schedules State (must be declared before buildResources)
     const [publishedSchedules, setPublishedSchedules] = useState<Record<string, ScheduleEvent[]>>({});
     const [manualTileRenderMonitorTick, setManualTileRenderMonitorTick] = useState(0);
+    const [dfpTileMoveRenderMonitorTick, setDfpTileMoveRenderMonitorTick] = useState(0);
     const publishedSchedulesRef = React.useRef<Record<string, ScheduleEvent[]>>({});
     useEffect(() => {
         publishedSchedulesRef.current = publishedSchedules;
@@ -36570,6 +36593,148 @@ const App: React.FC = () => {
                 const monitorUntilMs = Number(probe?.monitorUntilMs);
                 if (Number.isFinite(monitorUntilMs) && Date.now() <= monitorUntilMs) {
                     setManualTileRenderMonitorTick(tick => tick + 1);
+                }
+            } catch {}
+        }, 1000);
+        return () => window.clearInterval(intervalId);
+    }, []);
+
+    useEffect(() => {
+        if (typeof window === 'undefined') return;
+        const now = Date.now();
+        let probe: any = null;
+        try {
+            const rawProbe = localStorage.getItem(DFP_TILE_MOVE_RENDER_PROBE_KEY);
+            probe = rawProbe ? JSON.parse(rawProbe) : null;
+        } catch (error) {
+            appendNeoAssistManualTileTrace('dfp-tile-move-render-probe-read-failed', {
+                date,
+                error: error instanceof Error ? error.message : String(error),
+            });
+            return;
+        }
+        const probeIds = Array.isArray(probe?.ids)
+            ? probe.ids.map((id: unknown) => String(id || '').trim()).filter(Boolean)
+            : [];
+        if (probeIds.length === 0) return;
+
+        const createdAtMs = Date.parse(String(probe?.createdAt || ''));
+        const monitorUntilMs = Number(probe?.monitorUntilMs);
+        const effectiveMonitorUntilMs = Number.isFinite(monitorUntilMs)
+            ? monitorUntilMs
+            : (Number.isFinite(createdAtMs) ? createdAtMs + 20000 : now + 20000);
+        if (now > effectiveMonitorUntilMs) {
+            appendNeoAssistManualTileTrace('dfp-tile-move-render-monitor-expired', {
+                date,
+                probe,
+                ageMs: Number.isFinite(createdAtMs) ? now - createdAtMs : null,
+            });
+            try {
+                localStorage.removeItem(DFP_TILE_MOVE_RENDER_PROBE_KEY);
+            } catch {}
+            return;
+        }
+
+        const rawForDate = Array.isArray(publishedSchedules[date]) ? publishedSchedules[date] : [];
+        const describeProbeEvent = (event: ScheduleEvent | undefined | null) => event ? {
+            id: event.id,
+            date: event.date,
+            type: event.type,
+            flightNumber: event.flightNumber,
+            resourceId: event.resourceId,
+            unitCode: event.unitCode || null,
+            locationCode: (event as any).locationCode || null,
+            operationalModel: (event as any).operationalModel || null,
+            startTime: event.startTime,
+            duration: event.duration,
+            pilot: event.pilot || null,
+            instructor: event.instructor || null,
+            student: event.student || null,
+            segmentStartTime: (event as any).segmentStartTime ?? null,
+            segmentDuration: (event as any).segmentDuration ?? null,
+        } : null;
+
+        const report = probeIds.map((id: string) => {
+            const rawEvent = rawForDate.find(event => event.id === id);
+            const scopedEvent = scopedPublishedEventsForDate.find(event => event.id === id);
+            const renderInputEvent = eventsForDateWithPreFlightNotes.find(event => event.id === id);
+            const segmentEvent = eventSegmentsForDate.find(event => event.id === id);
+            const expected = Array.isArray(probe?.expected)
+                ? probe.expected.find((entry: any) => entry?.eventId === id)
+                : null;
+            const expectedStartTime = Number(expected?.newStartTime);
+            const expectedResourceId = String(expected?.newResourceId || '');
+            const matchesExpected = Boolean(segmentEvent)
+                && (!Number.isFinite(expectedStartTime) || Math.abs(Number((segmentEvent as any).startTime) - expectedStartTime) < 0.001)
+                && (!expectedResourceId || segmentEvent?.resourceId === expectedResourceId);
+            return {
+                id,
+                inPublishedRawForDate: Boolean(rawEvent),
+                inScopedPublishedEventsForDate: Boolean(scopedEvent),
+                inRenderInputEventsForDateWithPreFlightNotes: Boolean(renderInputEvent),
+                inEventSegmentsForDate: Boolean(segmentEvent),
+                matchesExpected,
+                expected,
+                rawEvent: describeProbeEvent(rawEvent),
+                scopedEvent: describeProbeEvent(scopedEvent),
+                renderInputEvent: describeProbeEvent(renderInputEvent),
+                segmentEvent: describeProbeEvent(segmentEvent as ScheduleEvent | undefined),
+            };
+        });
+
+        const hadMatchedExpected = probe?.hadMatchedExpected === true;
+        const matchesExpectedNow = report.every(entry => entry.matchesExpected);
+        const revertedAfterExpected = hadMatchedExpected && !matchesExpectedNow;
+        const nextProbe = {
+            ...probe,
+            monitorUntilMs: effectiveMonitorUntilMs,
+            lastCheckedAt: new Date(now).toISOString(),
+            hadMatchedExpected: hadMatchedExpected || matchesExpectedNow,
+            lastStatus: report.map(entry => ({
+                id: entry.id,
+                inPublishedRawForDate: entry.inPublishedRawForDate,
+                inScopedPublishedEventsForDate: entry.inScopedPublishedEventsForDate,
+                inRenderInputEventsForDateWithPreFlightNotes: entry.inRenderInputEventsForDateWithPreFlightNotes,
+                inEventSegmentsForDate: entry.inEventSegmentsForDate,
+                matchesExpected: entry.matchesExpected,
+            })),
+        };
+
+        appendNeoAssistManualTileTrace(revertedAfterExpected ? 'dfp-tile-move-reverted-after-render' : 'dfp-tile-move-render-monitor-sample', {
+            date,
+            probe: nextProbe,
+            ageMs: Number.isFinite(createdAtMs) ? now - createdAtMs : null,
+            monitorRemainingMs: effectiveMonitorUntilMs - now,
+            hadMatchedExpected,
+            matchesExpectedNow,
+            revertedAfterExpected,
+            rawCountForDate: rawForDate.length,
+            scopedCountForDate: scopedPublishedEventsForDate.length,
+            renderInputCount: eventsForDateWithPreFlightNotes.length,
+            segmentCount: eventSegmentsForDate.length,
+            report,
+        });
+
+        try {
+            localStorage.setItem(DFP_TILE_MOVE_RENDER_PROBE_KEY, JSON.stringify(nextProbe));
+        } catch (error) {
+            appendNeoAssistManualTileTrace('dfp-tile-move-render-probe-update-failed', {
+                date,
+                error: error instanceof Error ? error.message : String(error),
+            });
+        }
+    }, [date, dfpTileMoveRenderMonitorTick, eventSegmentsForDate, eventsForDateWithPreFlightNotes, publishedSchedules, scopedPublishedEventsForDate]);
+
+    useEffect(() => {
+        if (typeof window === 'undefined') return undefined;
+        const intervalId = window.setInterval(() => {
+            try {
+                const rawProbe = localStorage.getItem(DFP_TILE_MOVE_RENDER_PROBE_KEY);
+                if (!rawProbe) return;
+                const probe = JSON.parse(rawProbe);
+                const monitorUntilMs = Number(probe?.monitorUntilMs);
+                if (Number.isFinite(monitorUntilMs) && Date.now() <= monitorUntilMs) {
+                    setDfpTileMoveRenderMonitorTick(tick => tick + 1);
                 }
             } catch {}
         }, 1000);
@@ -47752,10 +47917,20 @@ const App: React.FC = () => {
 
         let updatedEventsForDate: ScheduleEvent[] = [];
         let appliedUpdates: ScheduleTileUpdate[] = updates;
+        let moveTraceOriginalEvents: Array<Record<string, unknown>> = [];
+        let moveTraceUpdatedEvents: Array<Record<string, unknown>> = [];
         setPublishedSchedules((prev: Record<string, ScheduleEvent[]>) => {
             const scheduleForDate = prev[date] || [];
             appliedUpdates = expandFormationScheduleUpdates(scheduleForDate, updates);
             const updatesMap = new Map(appliedUpdates.map(u => [u.eventId, u]));
+            moveTraceOriginalEvents = appliedUpdates.map(update => {
+                const event = scheduleForDate.find(candidate => candidate.id === update.eventId);
+                return {
+                    eventId: update.eventId,
+                    before: event ? summariseNeoAssistManualTileEvent(event) : null,
+                    requested: update,
+                };
+            });
 
             const newScheduleForDate = scheduleForDate.map(event => {
                 if (updatesMap.has(event.id)) {
@@ -47769,8 +47944,48 @@ const App: React.FC = () => {
                 }
                 return event;
             });
+            moveTraceUpdatedEvents = appliedUpdates.map(update => {
+                const event = newScheduleForDate.find(candidate => candidate.id === update.eventId);
+                return {
+                    eventId: update.eventId,
+                    after: event ? summariseNeoAssistManualTileEvent(event) : null,
+                };
+            });
             updatedEventsForDate = newScheduleForDate; // capture for persist
             return { ...prev, [date]: newScheduleForDate };
+        });
+        const monitorStartedAt = Date.now();
+        try {
+            localStorage.setItem(DFP_TILE_MOVE_RENDER_PROBE_KEY, JSON.stringify({
+                createdAt: new Date(monitorStartedAt).toISOString(),
+                monitorUntilMs: monitorStartedAt + 20000,
+                hadMatchedExpected: false,
+                source: 'published-dfp-tile-move',
+                date,
+                ids: appliedUpdates.map(update => update.eventId),
+                requestedUpdates: updates,
+                expected: appliedUpdates.map(update => ({
+                    eventId: update.eventId,
+                    newStartTime: update.newStartTime,
+                    newResourceId: update.newResourceId,
+                    newAircraftNumber: update.newAircraftNumber,
+                })),
+                originalEvents: moveTraceOriginalEvents,
+                updatedEvents: moveTraceUpdatedEvents,
+            }));
+        } catch (error) {
+            appendNeoAssistManualTileTrace('dfp-tile-move-render-probe-store-failed', {
+                date,
+                error: error instanceof Error ? error.message : String(error),
+            });
+        }
+        appendNeoAssistManualTileTrace('dfp-tile-move-state-write-planned', {
+            date,
+            requestedUpdates: updates,
+            appliedUpdates,
+            originalEvents: moveTraceOriginalEvents,
+            updatedEvents: moveTraceUpdatedEvents,
+            updatedEventCount: updatedEventsForDate.length,
         });
         // Persist the updated positions to database immediately
         // Use a short debounce (500ms) to avoid hammering DB during a drag
@@ -47780,7 +47995,27 @@ const App: React.FC = () => {
             if (updatedEventsForDate.length > 0) {
                 const baselineEventsForPersist = baselineSchedules[activeBaselineKey] || [];
                 activeDfpSaveInFlightRef.current += 1;
+                appendNeoAssistManualTileTrace('dfp-tile-move-persist-requested', {
+                    date,
+                    appliedUpdates,
+                    updatedEventCount: updatedEventsForDate.length,
+                    activeDfpSaveInFlight: activeDfpSaveInFlightRef.current,
+                });
                 persistScheduleForDate(date, updatedEventsForDate, baselineEventsForPersist)
+                    .then((success) => {
+                        appendNeoAssistManualTileTrace('dfp-tile-move-persist-completed', {
+                            date,
+                            appliedUpdates,
+                            success,
+                        });
+                    })
+                    .catch((error) => {
+                        appendNeoAssistManualTileTrace('dfp-tile-move-persist-error', {
+                            date,
+                            appliedUpdates,
+                            error: error instanceof Error ? error.message : String(error),
+                        });
+                    })
                     .finally(() => {
                         activeDfpSaveInFlightRef.current = Math.max(0, activeDfpSaveInFlightRef.current - 1);
                     });
