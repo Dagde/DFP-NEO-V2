@@ -319,6 +319,17 @@ export interface PersonnelPreferences {
     trainingAssignments?: AirCombatTrainingAssignments;
     trainingReports?: AirCombatTrainingReport[];
   };
+  flightSchool?: {
+    masterLmpAssignments?: Array<{
+      assignmentId: string;
+      lmpCode: string;
+      title: string;
+      locationCode?: string;
+      unitCode?: string;
+      assignedAt: string;
+      assignedBy?: string;
+    }>;
+  };
   [key: string]: any;
 }
 

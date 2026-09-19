@@ -5978,7 +5978,7 @@ const buildCompactPersonNameResolver = (people = []) => {
   return { formatCompact, formatCompactWithInitial, formatList, explainCompact };
 };
 const SUPPORTED_MODELS = ["flight_school", "air_combat", "fixed_crew", "pooled_crew"];
-const normaliseCode$4 = (value, fallback) => {
+const normaliseCode$5 = (value, fallback) => {
   const token = String(value || "").trim().toUpperCase().replace(/[^A-Z]+/g, "").slice(0, 3);
   return token || fallback.slice(0, 3);
 };
@@ -6038,7 +6038,7 @@ const normaliseCrewCompositionSettings = (value) => {
     const codeScope = unitCode || compositeUnitCode || "GLOBAL";
     const usedCodes = usedCodesByScope.get(codeScope) || /* @__PURE__ */ new Set();
     usedCodesByScope.set(codeScope, usedCodes);
-    let code = normaliseCode$4(row?.code || row?.name, fallbackCode);
+    let code = normaliseCode$5(row?.code || row?.name, fallbackCode);
     code = nextAvailableThreeLetterCode(code, usedCodes);
     usedCodes.add(code);
     const operationalModels = Array.isArray(row?.operationalModels) ? Array.from(new Set(row.operationalModels.map((model) => normaliseOperationalModel(model)).filter((model) => SUPPORTED_MODELS.includes(model)))) : SUPPORTED_MODELS;
@@ -6084,12 +6084,12 @@ const normaliseCrewCompositionSettings = (value) => {
 };
 const createAlternateCrewCompositionCode = (existingProfiles, name) => {
   const usedCodes = new Set(existingProfiles.map((profile) => profile.code.toUpperCase()));
-  const base = normaliseCode$4(name, `ALT-${existingProfiles.length + 1}`);
+  const base = normaliseCode$5(name, `ALT-${existingProfiles.length + 1}`);
   return nextAvailableThreeLetterCode(base, usedCodes);
 };
 const normaliseText = (value) => String(value || "").trim();
 const normaliseUnitCode$3 = (value) => normaliseText(value).toUpperCase();
-const normaliseCode$3 = (value, fallback) => {
+const normaliseCode$4 = (value, fallback) => {
   const token = normaliseText(value).toUpperCase().replace(/[^A-Z0-9]/g, "").slice(0, 8);
   if (token) return token;
   return normaliseText(fallback).toUpperCase().replace(/[^A-Z0-9]/g, "").slice(0, 8) || "CONT";
@@ -6117,7 +6117,7 @@ const normaliseContinuationEventSettings = (events) => {
       return {
         id: `continuation-event-${index + 1}`,
         name: name2,
-        code: normaliseCode$3("", name2),
+        code: normaliseCode$4("", name2),
         config: "ANY",
         acceptableAircraftConfigs: ["ANY"],
         dayNight: normaliseContinuationDayNight("", name2),
@@ -6134,7 +6134,7 @@ const normaliseContinuationEventSettings = (events) => {
     return {
       id: normaliseText(source.id) || `continuation-event-${index + 1}`,
       name,
-      code: normaliseCode$3(source.code, name),
+      code: normaliseCode$4(source.code, name),
       unitCode: normaliseUnitCode$3(source.unitCode),
       compositeUnitCode: normaliseUnitCode$3(source.compositeUnitCode),
       aircraftTypeCode: normaliseUnitCode$3(source.aircraftTypeCode),
@@ -6168,7 +6168,7 @@ const continuationEventToCurrencyProfile = (event) => ({
   compositeUnitCode: event.compositeUnitCode || "",
   aircraftTypeCode: event.aircraftTypeCode || "",
   name: event.name,
-  code: normaliseCode$3(event.code, event.name),
+  code: normaliseCode$4(event.code, event.name),
   crew: event.crew || "",
   config: event.config || event.acceptableAircraftConfigs?.[0] || "ANY",
   acceptableAircraftConfigs: event.acceptableAircraftConfigs?.length ? event.acceptableAircraftConfigs : [event.config || "ANY"],
@@ -6461,7 +6461,7 @@ const DEFAULT_AIR_COMBAT_SCHEDULING_WEIGHTS = {
   courses: 60,
   trainingPackages: 40
 };
-const normaliseCode$2 = (value) => String(value || "").trim().toUpperCase();
+const normaliseCode$3 = (value) => String(value || "").trim().toUpperCase();
 const AIR_COMBAT_ICO_PACKAGE_CODE = "ICO";
 const AIR_COMBAT_ICO_DEFAULT_FLIGHT_OR_SIM_HOURS = 1.2;
 const AIR_COMBAT_ICO_PREFLIGHT_HOURS = 1.5;
@@ -6477,7 +6477,7 @@ const getAuthoritativeSyllabusDuration = (item) => {
 const isIntegratedCombatOperationsTrainingPackageItem = (item) => {
   if (!item || item.lmpType !== "Staff CAT") return false;
   const courses = Array.isArray(item.courses) ? item.courses : [];
-  return courses.some((course) => normaliseCode$2(course) === AIR_COMBAT_ICO_PACKAGE_CODE);
+  return courses.some((course) => normaliseCode$3(course) === AIR_COMBAT_ICO_PACKAGE_CODE);
 };
 const normaliseIntegratedCombatOperationsTiming = (item) => {
   if (!isIntegratedCombatOperationsTrainingPackageItem(item)) return item;
@@ -6504,10 +6504,10 @@ const normaliseSyllabusRuntimeTimings = (items) => items.map(normaliseSyllabusRu
 const getAirCombatTrainingKindForLmpType = (lmpType) => lmpType === "Staff CAT" ? "training_package" : "course";
 const getAirCombatTrainingKey = (kind, code, locationCode, unitCode) => [
   "air_combat",
-  normaliseCode$2(locationCode) || "GLOBAL",
-  normaliseCode$2(unitCode) || "GLOBAL",
+  normaliseCode$3(locationCode) || "GLOBAL",
+  normaliseCode$3(unitCode) || "GLOBAL",
   kind,
-  normaliseCode$2(code)
+  normaliseCode$3(code)
 ].join(":");
 const getAirCombatTrainingCodeFromItem = (item) => (item.courses || []).find(Boolean) || item.code || "";
 const getAirCombatTrainingTitleFromItem = (item) => {
@@ -6517,8 +6517,8 @@ const getAirCombatTrainingTitleFromItem = (item) => {
 const getAirCombatAssignmentFromItem = (item, locationCode, unitCode, assignedBy) => {
   const kind = getAirCombatTrainingKindForLmpType(item.lmpType);
   const code = getAirCombatTrainingCodeFromItem(item);
-  const assignmentLocation = normaliseCode$2(locationCode || item.location);
-  const assignmentUnit = normaliseCode$2(unitCode || item.unit);
+  const assignmentLocation = normaliseCode$3(locationCode || item.location);
+  const assignmentUnit = normaliseCode$3(unitCode || item.unit);
   const trainingKey = getAirCombatTrainingKey(kind, code, assignmentLocation, assignmentUnit);
   return {
     assignmentId: trainingKey,
@@ -6539,8 +6539,8 @@ const normaliseAirCombatTrainingAssignments = (preferences) => {
   const normaliseList = (items, kind) => (Array.isArray(items) ? items : []).map((item) => {
     const code = String(item.code || "").trim();
     if (!code) return null;
-    const locationCode = normaliseCode$2(item.locationCode);
-    const unitCode = normaliseCode$2(item.unitCode);
+    const locationCode = normaliseCode$3(item.locationCode);
+    const unitCode = normaliseCode$3(item.unitCode);
     const trainingKey = String(item.trainingKey || getAirCombatTrainingKey(kind, code, locationCode, unitCode));
     return {
       assignmentId: String(item.assignmentId || trainingKey),
@@ -6699,8 +6699,8 @@ const normaliseAirCombatSchedulingWeights = (value) => {
     const kind = stream?.kind === "training_package" ? "training_package" : stream?.kind === "course" ? "course" : null;
     const code = String(stream?.code || "").trim();
     if (!kind || !code) return null;
-    const locationCode = normaliseCode$2(stream?.locationCode);
-    const unitCode = normaliseCode$2(stream?.unitCode);
+    const locationCode = normaliseCode$3(stream?.locationCode);
+    const unitCode = normaliseCode$3(stream?.unitCode);
     const key = String(stream?.key || getAirCombatTrainingKey(kind, code, locationCode, unitCode));
     const weight = Number(stream?.weight);
     return {
@@ -6742,7 +6742,7 @@ const normaliseAirCombatSchedulingWeights = (value) => {
 };
 const FIXED_CREW_COURSE_PACKAGE_PREFLIGHT_HOURS = 1.5;
 const FIXED_CREW_COURSE_PACKAGE_POSTFLIGHT_HOURS = 1;
-const normaliseCode$1 = (value) => String(value || "").trim().toUpperCase();
+const normaliseCode$2 = (value) => String(value || "").trim().toUpperCase();
 const getFixedCrewCoursePackageBriefingTimes = () => ({
   preFlightTime: FIXED_CREW_COURSE_PACKAGE_PREFLIGHT_HOURS,
   postFlightTime: FIXED_CREW_COURSE_PACKAGE_POSTFLIGHT_HOURS
@@ -6755,10 +6755,10 @@ const withFixedCrewCoursePackageBriefingTimes = (item) => ({
 const getFixedCrewTrainingKindForLmpType = (lmpType) => lmpType === "Staff CAT" ? "training_package" : "course";
 const getFixedCrewTrainingKey = (kind, code, locationCode, unitCode) => [
   "fixed_crew",
-  normaliseCode$1(locationCode) || "GLOBAL",
-  normaliseCode$1(unitCode) || "GLOBAL",
+  normaliseCode$2(locationCode) || "GLOBAL",
+  normaliseCode$2(unitCode) || "GLOBAL",
   kind,
-  normaliseCode$1(code)
+  normaliseCode$2(code)
 ].join(":");
 const getFixedCrewTrainingCodeFromItem = (item) => (item.courses || []).find(Boolean) || item.code || "";
 const getFixedCrewTrainingTitleFromItem = (item) => {
@@ -6771,8 +6771,8 @@ const normaliseFixedCrewTrainingPriorities = (streams) => {
     const kind = stream.kind === "training_package" ? "training_package" : "course";
     const code = String(stream.code || "").trim();
     if (!code) return null;
-    const locationCode = normaliseCode$1(stream.locationCode);
-    const unitCode = normaliseCode$1(stream.unitCode);
+    const locationCode = normaliseCode$2(stream.locationCode);
+    const unitCode = normaliseCode$2(stream.unitCode);
     const key = String(stream.key || getFixedCrewTrainingKey(kind, code, locationCode, unitCode));
     const weight = Math.max(0, Math.min(100, Math.round(Number(stream.weight) || 0)));
     return {
@@ -78362,17 +78362,17 @@ const TrainingIntelligenceTab = ({ trainingReportDisplayName = "Training Reports
     ] })
   ] }) });
 };
-const normaliseCode = (value) => String(value || "").trim().toUpperCase();
+const normaliseCode$1 = (value) => String(value || "").trim().toUpperCase();
 const getTrainingCodeFromItem = (item) => (item.courses || []).find(Boolean) || item.code || "";
 const getTrainingTitleFromItem = (item, fallback) => item.module && item.module !== fallback ? item.module : item.eventDescription || fallback;
 const matchesTrainingAssignment = (item, kind, code, unitCode) => {
   const itemKind = item.lmpType === "Staff CAT" ? "training_package" : "course";
   if (itemKind !== kind) return false;
-  const itemCode = normaliseCode(getTrainingCodeFromItem(item));
-  const assignmentCode = normaliseCode(code);
-  if (itemCode !== assignmentCode && !normaliseCode(item.code).startsWith(assignmentCode)) return false;
-  const itemUnit = normaliseCode(item.unit);
-  const assignmentUnit = normaliseCode(unitCode);
+  const itemCode = normaliseCode$1(getTrainingCodeFromItem(item));
+  const assignmentCode = normaliseCode$1(code);
+  if (itemCode !== assignmentCode && !normaliseCode$1(item.code).startsWith(assignmentCode)) return false;
+  const itemUnit = normaliseCode$1(item.unit);
+  const assignmentUnit = normaliseCode$1(unitCode);
   return !assignmentUnit || !itemUnit || itemUnit === assignmentUnit;
 };
 const AirCombatTrainingAnalyticsTab = ({
@@ -78382,12 +78382,12 @@ const AirCombatTrainingAnalyticsTab = ({
 }) => {
   const activeUnitCodes = reactExports.useMemo(() => {
     const rawCodes = operationalContext?.unitCodes && operationalContext.unitCodes.length > 0 ? operationalContext.unitCodes : String(operationalContext?.unitCode || "").split("+");
-    return new Set(rawCodes.map(normaliseCode).filter(Boolean));
+    return new Set(rawCodes.map(normaliseCode$1).filter(Boolean));
   }, [operationalContext?.unitCode, operationalContext?.unitCodes]);
   const streams = reactExports.useMemo(() => {
     const streamMap = /* @__PURE__ */ new Map();
     const ensureStream = (kind, code, title) => {
-      const normalisedCode = normaliseCode(code);
+      const normalisedCode = normaliseCode$1(code);
       const key = `${kind}:${normalisedCode}`;
       if (!streamMap.has(key)) {
         streamMap.set(key, {
@@ -78403,11 +78403,11 @@ const AirCombatTrainingAnalyticsTab = ({
       return streamMap.get(key);
     };
     instructorsData.forEach((staff) => {
-      const staffUnit = normaliseCode(staff.unit);
+      const staffUnit = normaliseCode$1(staff.unit);
       if (activeUnitCodes.size > 0 && staffUnit && !activeUnitCodes.has(staffUnit)) return;
       const assignments = normaliseAirCombatTrainingAssignments(staff.preferences);
       [...assignments.courses, ...assignments.trainingPackages].forEach((assignment) => {
-        const assignmentUnit = normaliseCode(assignment.unitCode || staffUnit);
+        const assignmentUnit = normaliseCode$1(assignment.unitCode || staffUnit);
         if (activeUnitCodes.size > 0 && assignmentUnit && !activeUnitCodes.has(assignmentUnit)) return;
         const stream = ensureStream(assignment.kind, assignment.code, assignment.title);
         stream.assignedStaff.add(staff.name);
@@ -78415,7 +78415,7 @@ const AirCombatTrainingAnalyticsTab = ({
       normaliseAirCombatTrainingReports(staff.preferences).forEach((report) => {
         if (report.status && report.status !== "Complete") return;
         if (!report.trainingKind || !report.trainingCode) return;
-        const reportUnit = normaliseCode(report.unitCode || staffUnit);
+        const reportUnit = normaliseCode$1(report.unitCode || staffUnit);
         if (activeUnitCodes.size > 0 && reportUnit && !activeUnitCodes.has(reportUnit)) return;
         const stream = ensureStream(report.trainingKind, report.trainingCode, report.trainingTitle || report.trainingCode);
         stream.completedReports += 1;
@@ -83190,6 +83190,67 @@ const SuccessNotification = ({ message, onClose }) => {
     ) })
   ] }) });
 };
+const normaliseCode = (value) => String(value || "").trim().toUpperCase();
+const getFlightSchoolStaffLmpKey = (lmpCode, locationCode, unitCode) => [
+  "flight_school",
+  normaliseCode(locationCode) || "GLOBAL",
+  normaliseCode(unitCode) || "GLOBAL",
+  "master_lmp",
+  normaliseCode(lmpCode)
+].join(":");
+const getFlightSchoolStaffLmpAssignmentFromItem = (item, lmpCode, locationCode, unitCode, assignedBy) => {
+  const code = String(lmpCode || (item.courses || []).find(Boolean) || item.code || "").trim();
+  const assignmentLocation = normaliseCode(locationCode || item.location);
+  const assignmentUnit = normaliseCode(unitCode || item.unit);
+  const assignmentId = getFlightSchoolStaffLmpKey(code, assignmentLocation, assignmentUnit);
+  return {
+    assignmentId,
+    lmpCode: code,
+    title: String(item.module || item.phase || item.eventDescription || code),
+    locationCode: assignmentLocation,
+    unitCode: assignmentUnit,
+    assignedAt: (/* @__PURE__ */ new Date()).toISOString(),
+    assignedBy
+  };
+};
+const normaliseFlightSchoolStaffLmpAssignments = (preferences) => {
+  const raw = preferences?.flightSchool?.masterLmpAssignments;
+  return (Array.isArray(raw) ? raw : []).map((item) => {
+    const lmpCode = String(item.lmpCode || item.code || "").trim();
+    if (!lmpCode) return null;
+    const locationCode = normaliseCode(item.locationCode);
+    const unitCode = normaliseCode(item.unitCode);
+    const assignmentId = String(item.assignmentId || getFlightSchoolStaffLmpKey(lmpCode, locationCode, unitCode));
+    return {
+      assignmentId,
+      lmpCode,
+      title: String(item.title || lmpCode),
+      locationCode,
+      unitCode,
+      assignedAt: String(item.assignedAt || ""),
+      assignedBy: item.assignedBy ? String(item.assignedBy) : void 0
+    };
+  }).filter(Boolean);
+};
+const setFlightSchoolStaffLmpAssignment = (instructor, assignment, assigned) => {
+  const preferences = { ...instructor.preferences || {} };
+  const current = normaliseFlightSchoolStaffLmpAssignments(preferences);
+  const nextAssignments = assigned ? [
+    ...current.filter((item) => item.assignmentId !== assignment.assignmentId),
+    assignment
+  ] : current.filter((item) => item.assignmentId !== assignment.assignmentId);
+  return {
+    ...instructor,
+    preferences: {
+      ...preferences,
+      flightSchool: {
+        ...preferences.flightSchool || {},
+        masterLmpAssignments: nextAssignments
+      }
+    }
+  };
+};
+const staffHasFlightSchoolStaffLmpAssignment = (instructor, assignment) => normaliseFlightSchoolStaffLmpAssignments(instructor.preferences).some((item) => item.assignmentId === assignment.assignmentId);
 const LEGACY_QUALIFICATION_FIELD_BY_ID = {
   co: "isCommandingOfficer",
   cfi: "isCFI",
@@ -83632,9 +83693,14 @@ const InstructorProfileFlyout = ({
   }, [traineesData, instructor.name]);
   const activeOperationalModel = normaliseOperationalModel(operationalModel);
   const isAirCombatModel = activeOperationalModel === "air_combat";
+  const isFlightSchoolModel = activeOperationalModel === "flight_school";
   const isStaffTrainingReportModel = isAirCombatModel || isFixedCrewLikeOperationalModel(activeOperationalModel);
   const assignedTraining = reactExports.useMemo(
     () => normaliseAirCombatTrainingAssignments(instructor.preferences),
+    [instructor.preferences]
+  );
+  const assignedFlightSchoolLmps = reactExports.useMemo(
+    () => normaliseFlightSchoolStaffLmpAssignments(instructor.preferences),
     [instructor.preferences]
   );
   const assignedAirCombatTraining = reactExports.useMemo(() => [
@@ -85203,79 +85269,88 @@ Confirm the Personnel ID, unit and role are correct before saving this separate 
               ] }, item.trainingKey)) }) : /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-gray-500 text-[10px] italic", children: "Nil" })
             ] }, group.title)) })
           ] }),
-          !isEditing && !isCreating && !isAirCombatModel && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: card3d + " p-3", style: card3dStyle, children: [
-            /* @__PURE__ */ jsxRuntimeExports.jsx("h4", { className: "text-xs font-semibold text-gray-300 mb-3", children: "Assigned Trainees" }),
-            /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid grid-cols-4 gap-2", children: [
-              /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: card3d + " p-2", style: { ...card3dStyle, background: "linear-gradient(180deg, #1e2d42 0%, #192538 100%)" }, children: [
-                /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-[9px] text-sky-400 font-semibold mb-1.5", children: "Primary" }),
-                primaryTrainees[0] ? /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center gap-2", children: [
-                  /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "w-7 h-7 bg-gray-600 rounded-full flex items-center justify-center flex-shrink-0", children: /* @__PURE__ */ jsxRuntimeExports.jsx(TraineeIcon, {}) }),
-                  /* @__PURE__ */ jsxRuntimeExports.jsx(
-                    "button",
-                    {
-                      onClick: () => onNavigateToTrainee?.(primaryTrainees[0]),
-                      className: "text-white text-[10px] font-medium leading-tight hover:text-sky-400 hover:underline cursor-pointer",
-                      title: "View trainee profile",
-                      children: primaryTrainees[0].name
-                    }
-                  )
-                ] }) : /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center gap-2", children: [
-                  /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "w-7 h-7 bg-gray-700/50 rounded-full flex items-center justify-center flex-shrink-0", children: /* @__PURE__ */ jsxRuntimeExports.jsx(TraineeIcon, {}) }),
-                  /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-gray-600 text-[10px] italic", children: "Not assigned" })
-                ] })
-              ] }),
-              /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: card3d + " p-2", style: { ...card3dStyle, background: "linear-gradient(180deg, #1e2d42 0%, #192538 100%)" }, children: [
-                /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-[9px] text-sky-400 font-semibold mb-1.5", children: "Primary" }),
-                primaryTrainees[1] ? /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center gap-2", children: [
-                  /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "w-7 h-7 bg-gray-600 rounded-full flex items-center justify-center flex-shrink-0", children: /* @__PURE__ */ jsxRuntimeExports.jsx(TraineeIcon, {}) }),
-                  /* @__PURE__ */ jsxRuntimeExports.jsx(
-                    "button",
-                    {
-                      onClick: () => onNavigateToTrainee?.(primaryTrainees[1]),
-                      className: "text-white text-[10px] font-medium leading-tight hover:text-sky-400 hover:underline cursor-pointer",
-                      title: "View trainee profile",
-                      children: primaryTrainees[1].name
-                    }
-                  )
-                ] }) : /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center gap-2", children: [
-                  /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "w-7 h-7 bg-gray-700/50 rounded-full flex items-center justify-center flex-shrink-0", children: /* @__PURE__ */ jsxRuntimeExports.jsx(TraineeIcon, {}) }),
-                  /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-gray-600 text-[10px] italic", children: "Not assigned" })
-                ] })
-              ] }),
-              /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: card3d + " p-2", style: { ...card3dStyle, background: "linear-gradient(180deg, #1e2d42 0%, #192538 100%)" }, children: [
-                /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-[9px] text-amber-400 font-semibold mb-1.5", children: "Secondary" }),
-                secondaryTrainees[0] ? /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center gap-2", children: [
-                  /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "w-7 h-7 bg-gray-600 rounded-full flex items-center justify-center flex-shrink-0", children: /* @__PURE__ */ jsxRuntimeExports.jsx(TraineeIcon, {}) }),
-                  /* @__PURE__ */ jsxRuntimeExports.jsx(
-                    "button",
-                    {
-                      onClick: () => onNavigateToTrainee?.(secondaryTrainees[0]),
-                      className: "text-white text-[10px] font-medium leading-tight hover:text-sky-400 hover:underline cursor-pointer",
-                      title: "View trainee profile",
-                      children: secondaryTrainees[0].name
-                    }
-                  )
-                ] }) : /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center gap-2", children: [
-                  /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "w-7 h-7 bg-gray-700/50 rounded-full flex items-center justify-center flex-shrink-0", children: /* @__PURE__ */ jsxRuntimeExports.jsx(TraineeIcon, {}) }),
-                  /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-gray-600 text-[10px] italic", children: "Not assigned" })
-                ] })
-              ] }),
-              /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: card3d + " p-2", style: { ...card3dStyle, background: "linear-gradient(180deg, #1e2d42 0%, #192538 100%)" }, children: [
-                /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-[9px] text-amber-400 font-semibold mb-1.5", children: "Secondary" }),
-                secondaryTrainees[1] ? /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center gap-2", children: [
-                  /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "w-7 h-7 bg-gray-600 rounded-full flex items-center justify-center flex-shrink-0", children: /* @__PURE__ */ jsxRuntimeExports.jsx(TraineeIcon, {}) }),
-                  /* @__PURE__ */ jsxRuntimeExports.jsx(
-                    "button",
-                    {
-                      onClick: () => onNavigateToTrainee?.(secondaryTrainees[1]),
-                      className: "text-white text-[10px] font-medium leading-tight hover:text-sky-400 hover:underline cursor-pointer",
-                      title: "View trainee profile",
-                      children: secondaryTrainees[1].name
-                    }
-                  )
-                ] }) : /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center gap-2", children: [
-                  /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "w-7 h-7 bg-gray-700/50 rounded-full flex items-center justify-center flex-shrink-0", children: /* @__PURE__ */ jsxRuntimeExports.jsx(TraineeIcon, {}) }),
-                  /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-gray-600 text-[10px] italic", children: "Not assigned" })
+          !isEditing && !isCreating && !isAirCombatModel && /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
+            isFlightSchoolModel && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: card3d + " p-3", style: card3dStyle, children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsx("h4", { className: "text-xs font-semibold text-gray-300 mb-3", children: "Assigned LMPs" }),
+              assignedFlightSchoolLmps.length > 0 ? /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "grid grid-cols-2 gap-2", children: assignedFlightSchoolLmps.map((item) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded border border-sky-500/25 bg-sky-950/30 px-3 py-2", children: [
+                /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-[10px] font-semibold text-white", children: item.lmpCode }),
+                /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-0.5 truncate text-[9px] text-gray-400", children: item.title })
+              ] }, item.assignmentId)) }) : /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "rounded border border-gray-700 bg-gray-900/50 px-3 py-2 text-[10px] italic text-gray-500", children: "Nil assigned" })
+            ] }),
+            /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: card3d + " p-3", style: card3dStyle, children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsx("h4", { className: "text-xs font-semibold text-gray-300 mb-3", children: "Assigned Trainees" }),
+              /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid grid-cols-4 gap-2", children: [
+                /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: card3d + " p-2", style: { ...card3dStyle, background: "linear-gradient(180deg, #1e2d42 0%, #192538 100%)" }, children: [
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-[9px] text-sky-400 font-semibold mb-1.5", children: "Primary" }),
+                  primaryTrainees[0] ? /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center gap-2", children: [
+                    /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "w-7 h-7 bg-gray-600 rounded-full flex items-center justify-center flex-shrink-0", children: /* @__PURE__ */ jsxRuntimeExports.jsx(TraineeIcon, {}) }),
+                    /* @__PURE__ */ jsxRuntimeExports.jsx(
+                      "button",
+                      {
+                        onClick: () => onNavigateToTrainee?.(primaryTrainees[0]),
+                        className: "text-white text-[10px] font-medium leading-tight hover:text-sky-400 hover:underline cursor-pointer",
+                        title: "View trainee profile",
+                        children: primaryTrainees[0].name
+                      }
+                    )
+                  ] }) : /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center gap-2", children: [
+                    /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "w-7 h-7 bg-gray-700/50 rounded-full flex items-center justify-center flex-shrink-0", children: /* @__PURE__ */ jsxRuntimeExports.jsx(TraineeIcon, {}) }),
+                    /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-gray-600 text-[10px] italic", children: "Not assigned" })
+                  ] })
+                ] }),
+                /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: card3d + " p-2", style: { ...card3dStyle, background: "linear-gradient(180deg, #1e2d42 0%, #192538 100%)" }, children: [
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-[9px] text-sky-400 font-semibold mb-1.5", children: "Primary" }),
+                  primaryTrainees[1] ? /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center gap-2", children: [
+                    /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "w-7 h-7 bg-gray-600 rounded-full flex items-center justify-center flex-shrink-0", children: /* @__PURE__ */ jsxRuntimeExports.jsx(TraineeIcon, {}) }),
+                    /* @__PURE__ */ jsxRuntimeExports.jsx(
+                      "button",
+                      {
+                        onClick: () => onNavigateToTrainee?.(primaryTrainees[1]),
+                        className: "text-white text-[10px] font-medium leading-tight hover:text-sky-400 hover:underline cursor-pointer",
+                        title: "View trainee profile",
+                        children: primaryTrainees[1].name
+                      }
+                    )
+                  ] }) : /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center gap-2", children: [
+                    /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "w-7 h-7 bg-gray-700/50 rounded-full flex items-center justify-center flex-shrink-0", children: /* @__PURE__ */ jsxRuntimeExports.jsx(TraineeIcon, {}) }),
+                    /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-gray-600 text-[10px] italic", children: "Not assigned" })
+                  ] })
+                ] }),
+                /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: card3d + " p-2", style: { ...card3dStyle, background: "linear-gradient(180deg, #1e2d42 0%, #192538 100%)" }, children: [
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-[9px] text-amber-400 font-semibold mb-1.5", children: "Secondary" }),
+                  secondaryTrainees[0] ? /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center gap-2", children: [
+                    /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "w-7 h-7 bg-gray-600 rounded-full flex items-center justify-center flex-shrink-0", children: /* @__PURE__ */ jsxRuntimeExports.jsx(TraineeIcon, {}) }),
+                    /* @__PURE__ */ jsxRuntimeExports.jsx(
+                      "button",
+                      {
+                        onClick: () => onNavigateToTrainee?.(secondaryTrainees[0]),
+                        className: "text-white text-[10px] font-medium leading-tight hover:text-sky-400 hover:underline cursor-pointer",
+                        title: "View trainee profile",
+                        children: secondaryTrainees[0].name
+                      }
+                    )
+                  ] }) : /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center gap-2", children: [
+                    /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "w-7 h-7 bg-gray-700/50 rounded-full flex items-center justify-center flex-shrink-0", children: /* @__PURE__ */ jsxRuntimeExports.jsx(TraineeIcon, {}) }),
+                    /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-gray-600 text-[10px] italic", children: "Not assigned" })
+                  ] })
+                ] }),
+                /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: card3d + " p-2", style: { ...card3dStyle, background: "linear-gradient(180deg, #1e2d42 0%, #192538 100%)" }, children: [
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-[9px] text-amber-400 font-semibold mb-1.5", children: "Secondary" }),
+                  secondaryTrainees[1] ? /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center gap-2", children: [
+                    /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "w-7 h-7 bg-gray-600 rounded-full flex items-center justify-center flex-shrink-0", children: /* @__PURE__ */ jsxRuntimeExports.jsx(TraineeIcon, {}) }),
+                    /* @__PURE__ */ jsxRuntimeExports.jsx(
+                      "button",
+                      {
+                        onClick: () => onNavigateToTrainee?.(secondaryTrainees[1]),
+                        className: "text-white text-[10px] font-medium leading-tight hover:text-sky-400 hover:underline cursor-pointer",
+                        title: "View trainee profile",
+                        children: secondaryTrainees[1].name
+                      }
+                    )
+                  ] }) : /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center gap-2", children: [
+                    /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "w-7 h-7 bg-gray-700/50 rounded-full flex items-center justify-center flex-shrink-0", children: /* @__PURE__ */ jsxRuntimeExports.jsx(TraineeIcon, {}) }),
+                    /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-gray-600 text-[10px] italic", children: "Not assigned" })
+                  ] })
                 ] })
               ] })
             ] })
@@ -88152,16 +88227,34 @@ const AircraftConfigSelector = ({ value, definitions, onChange }) => {
     ] })
   ] });
 };
-const AssignTrainingModal = ({ title, staff, selectedStaffIds, saving, onToggle, onSelectAll, onDeselectAll, onCancel, onSave }) => /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "fixed inset-0 z-[1000] flex items-center justify-center bg-black/70 p-4", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "w-full max-w-2xl rounded-lg border border-sky-700/50 bg-gray-900 shadow-2xl", children: [
+const AssignTrainingModal = ({
+  heading = "Assign Training",
+  title,
+  emptyMessage = "No active squadron staff available for this unit.",
+  staff,
+  trainees = [],
+  selectedStaffIds,
+  selectedTraineeIds = /* @__PURE__ */ new Set(),
+  saving,
+  onToggle,
+  onToggleTrainee,
+  onSelectAll,
+  onDeselectAll,
+  onSelectAllTrainees,
+  onDeselectAllTrainees,
+  onCancel,
+  onSave
+}) => /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "fixed inset-0 z-[1000] flex items-center justify-center bg-black/70 p-4", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex max-h-[90vh] w-full max-w-2xl flex-col rounded-lg border border-sky-700/50 bg-gray-900 shadow-2xl", children: [
   /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-start justify-between gap-4 border-b border-gray-700 px-4 py-3", children: [
     /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
-      /* @__PURE__ */ jsxRuntimeExports.jsx("h2", { className: "text-lg font-bold text-white", children: "Assign Training" }),
+      /* @__PURE__ */ jsxRuntimeExports.jsx("h2", { className: "text-lg font-bold text-white", children: heading }),
       /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-1 text-xs text-gray-400", children: title })
     ] }),
     /* @__PURE__ */ jsxRuntimeExports.jsx("button", { type: "button", onClick: onCancel, className: "rounded px-2 py-1 text-sm text-gray-300 hover:bg-gray-800 hover:text-white", children: "Close" })
   ] }),
-  /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "p-4", children: [
+  /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "overflow-y-auto p-4", children: [
     /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mb-3 flex flex-wrap items-center gap-2", children: [
+      /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "mr-1 text-[10px] font-bold uppercase tracking-wide text-gray-500", children: "Staff" }),
       /* @__PURE__ */ jsxRuntimeExports.jsx("button", { type: "button", onClick: onSelectAll, className: "rounded border border-gray-600 bg-gray-800 px-3 py-1.5 text-xs font-semibold text-gray-100 hover:bg-gray-700", children: "Select All" }),
       /* @__PURE__ */ jsxRuntimeExports.jsx("button", { type: "button", onClick: onDeselectAll, className: "rounded border border-gray-600 bg-gray-800 px-3 py-1.5 text-xs font-semibold text-gray-100 hover:bg-gray-700", children: "Deselect All" }),
       /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "ml-auto text-xs text-gray-400", children: [
@@ -88169,7 +88262,7 @@ const AssignTrainingModal = ({ title, staff, selectedStaffIds, saving, onToggle,
         " selected"
       ] })
     ] }),
-    /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "max-h-[420px] overflow-y-auto rounded border border-gray-700", children: staff.length === 0 ? /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "p-4 text-sm italic text-gray-500", children: "No active squadron staff available for this unit." }) : staff.map((person) => /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "flex cursor-pointer items-center gap-3 border-b border-gray-800 px-3 py-2 text-sm last:border-b-0 hover:bg-gray-800/70", children: [
+    /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "max-h-[420px] overflow-y-auto rounded border border-gray-700", children: staff.length === 0 ? /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "p-4 text-sm italic text-gray-500", children: emptyMessage }) : staff.map((person) => /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "flex cursor-pointer items-center gap-3 border-b border-gray-800 px-3 py-2 text-sm last:border-b-0 hover:bg-gray-800/70", children: [
       /* @__PURE__ */ jsxRuntimeExports.jsx(
         "input",
         {
@@ -88191,7 +88284,41 @@ const AssignTrainingModal = ({ title, staff, selectedStaffIds, saving, onToggle,
           person.flight || "No flight"
         ] })
       ] })
-    ] }, person.idNumber)) })
+    ] }, person.idNumber)) }),
+    onToggleTrainee && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mt-4", children: [
+      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mb-3 flex flex-wrap items-center gap-2", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "mr-1 text-[10px] font-bold uppercase tracking-wide text-gray-500", children: "Trainees" }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx("button", { type: "button", onClick: onSelectAllTrainees, className: "rounded border border-gray-600 bg-gray-800 px-3 py-1.5 text-xs font-semibold text-gray-100 hover:bg-gray-700", children: "Select All" }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx("button", { type: "button", onClick: onDeselectAllTrainees, className: "rounded border border-gray-600 bg-gray-800 px-3 py-1.5 text-xs font-semibold text-gray-100 hover:bg-gray-700", children: "Deselect All" }),
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "ml-auto text-xs text-gray-400", children: [
+          selectedTraineeIds.size,
+          " selected"
+        ] })
+      ] }),
+      /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "max-h-[260px] overflow-y-auto rounded border border-gray-700", children: trainees.length === 0 ? /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "p-4 text-sm italic text-gray-500", children: "No active trainees available for this unit." }) : trainees.map((person) => /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "flex cursor-pointer items-center gap-3 border-b border-gray-800 px-3 py-2 text-sm last:border-b-0 hover:bg-gray-800/70", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsx(
+          "input",
+          {
+            type: "checkbox",
+            checked: selectedTraineeIds.has(person.idNumber),
+            onChange: () => onToggleTrainee(person.idNumber),
+            className: "h-4 w-4 rounded border-gray-600 bg-gray-800 text-sky-500 focus:ring-sky-500"
+          }
+        ),
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "min-w-0 flex-1", children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "block truncate font-semibold text-white", children: [
+            person.rank,
+            " ",
+            person.name
+          ] }),
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "block text-xs text-gray-400", children: [
+            person.course || "No course",
+            " · ",
+            person.flight || "No flight"
+          ] })
+        ] })
+      ] }, person.idNumber)) })
+    ] })
   ] }),
   /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex justify-end gap-2 border-t border-gray-700 px-4 py-3", children: [
     /* @__PURE__ */ jsxRuntimeExports.jsx("button", { type: "button", onClick: onCancel, className: "rounded border border-gray-600 bg-gray-800 px-4 py-2 text-sm font-semibold text-gray-100 hover:bg-gray-700", children: "Cancel" }),
@@ -88870,6 +88997,8 @@ const SyllabusView = ({
   sharedUnitTabs = [],
   masterLmpCatalogue = [],
   staffQualificationCatalogue: staffQualificationCatalogue2,
+  traineesData = [],
+  onUpdateTrainee,
   currentUserName,
   scoringMatrixPhraseBank,
   onAddScoringMatrixElement,
@@ -88897,6 +89026,7 @@ const SyllabusView = ({
   const activeCollectionSelectLabel = isTrainingPackagesTab ? "Package:" : "Course:";
   const activeOperationalModel = normaliseOperationalModel(operationalModel);
   const isAirCombatModel = activeOperationalModel === "air_combat";
+  const isFlightSchoolModel = activeOperationalModel === "flight_school";
   const isFixedCrewModel = isFixedCrewLikeOperationalModel(activeOperationalModel);
   const usesPackageTab = activeOperationalModel === "air_combat" || isFixedCrewModel;
   const normaliseUnitTabCode = (value) => String(value || "").trim().toUpperCase();
@@ -88936,6 +89066,7 @@ const SyllabusView = ({
   }, [effectiveActiveUnitCode, isFixedCrewModel, syllabusDetails]);
   const [showAssignTrainingModal, setShowAssignTrainingModal] = reactExports.useState(false);
   const [assignTrainingSelection, setAssignTrainingSelection] = reactExports.useState(/* @__PURE__ */ new Set());
+  const [assignTraineeSelection, setAssignTraineeSelection] = reactExports.useState(/* @__PURE__ */ new Set());
   const [isSavingTrainingAssignments, setIsSavingTrainingAssignments] = reactExports.useState(false);
   const activeMasterLmpCatalogue = reactExports.useMemo(() => masterLmpCatalogue.filter((entry) => String(entry.status || "ACTIVE").toUpperCase() !== "INACTIVE").filter((entry) => String(entry.code || "").trim()), [masterLmpCatalogue]);
   const masterLmpTitleMap = reactExports.useMemo(() => {
@@ -89215,7 +89346,7 @@ const SyllabusView = ({
   ]);
   const selectedMasterLmpCatalogueEntry = activeTab === "master" ? activeMasterLmpCatalogue.find((entry) => String(entry.code || "").trim().toUpperCase() === String(selectedCourseType || "").trim().toUpperCase()) || null : null;
   const activeTrainingAssignmentItem = reactExports.useMemo(() => filteredSyllabusDetails[0] || selectedItem || null, [filteredSyllabusDetails, selectedItem]);
-  const activeTrainingAssignment = reactExports.useMemo(() => {
+  const activeAirCombatTrainingAssignment = reactExports.useMemo(() => {
     if (!isAirCombatModel || !activeTrainingAssignmentItem || !selectedCourseType) return null;
     return getAirCombatAssignmentFromItem(
       { ...activeTrainingAssignmentItem, courses: [selectedCourseType] },
@@ -89224,31 +89355,74 @@ const SyllabusView = ({
       currentUserName
     );
   }, [activeTrainingAssignmentItem, activeLocationCode, effectiveActiveUnitCode, currentUserName, isAirCombatModel, selectedCourseType]);
-  const assignableAirCombatStaff = reactExports.useMemo(() => {
-    if (!isAirCombatModel) return [];
+  const activeFlightSchoolLmpAssignment = reactExports.useMemo(() => {
+    if (!isFlightSchoolModel || isTrainingPackagesTab || !activeTrainingAssignmentItem || !selectedCourseType) return null;
+    return getFlightSchoolStaffLmpAssignmentFromItem(
+      { ...activeTrainingAssignmentItem, courses: [selectedCourseType] },
+      selectedCourseType,
+      activeLocationCode,
+      effectiveActiveUnitCode,
+      currentUserName
+    );
+  }, [activeTrainingAssignmentItem, activeLocationCode, effectiveActiveUnitCode, currentUserName, isFlightSchoolModel, isTrainingPackagesTab, selectedCourseType]);
+  const activeStaffTrainingAssignment = activeAirCombatTrainingAssignment || activeFlightSchoolLmpAssignment;
+  const isAssigningFlightSchoolLmp = Boolean(activeFlightSchoolLmpAssignment && !activeAirCombatTrainingAssignment);
+  const assignableTrainingStaff = reactExports.useMemo(() => {
+    if (!isAirCombatModel && !isFlightSchoolModel) return [];
     const targetUnit = String(effectiveActiveUnitCode || "").trim().toUpperCase();
-    return instructorsData.filter((staff) => staff && staff.name && !staff.isAdminStaff).filter((staff) => !targetUnit || String(staff.unit || "").trim().toUpperCase() === targetUnit).sort((a, b) => a.name.localeCompare(b.name));
-  }, [effectiveActiveUnitCode, instructorsData, isAirCombatModel]);
+    const targetUnits = new Set(targetUnit.split(/[+,&/]+/).map((unit) => unit.trim()).filter(Boolean));
+    return instructorsData.filter((staff) => staff && staff.name && !staff.isAdminStaff).filter((staff) => {
+      if (!targetUnit) return true;
+      const staffUnit = String(staff.unit || "").trim().toUpperCase();
+      return staffUnit === targetUnit || targetUnits.has(staffUnit);
+    }).sort((a, b) => a.name.localeCompare(b.name));
+  }, [effectiveActiveUnitCode, instructorsData, isAirCombatModel, isFlightSchoolModel]);
+  const assignableFlightSchoolTrainees = reactExports.useMemo(() => {
+    if (!isFlightSchoolModel || isTrainingPackagesTab) return [];
+    const targetUnit = String(effectiveActiveUnitCode || "").trim().toUpperCase();
+    const targetUnits = new Set(targetUnit.split(/[+,&/]+/).map((unit) => unit.trim()).filter(Boolean));
+    return traineesData.filter((trainee) => trainee && trainee.name && !trainee.isPaused).filter((trainee) => {
+      if (!targetUnit) return true;
+      const traineeUnit = String(trainee.unit || "").trim().toUpperCase();
+      return traineeUnit === targetUnit || targetUnits.has(traineeUnit);
+    }).sort((a, b) => a.name.localeCompare(b.name));
+  }, [effectiveActiveUnitCode, isFlightSchoolModel, isTrainingPackagesTab, traineesData]);
   const openAssignTraining = () => {
-    if (!activeTrainingAssignment) return;
+    if (!activeStaffTrainingAssignment) return;
     setAssignTrainingSelection(new Set(
-      assignableAirCombatStaff.filter((staff) => staffHasAirCombatAssignment(staff, activeTrainingAssignment)).map((staff) => staff.idNumber)
+      assignableTrainingStaff.filter((staff) => activeAirCombatTrainingAssignment ? staffHasAirCombatAssignment(staff, activeAirCombatTrainingAssignment) : activeFlightSchoolLmpAssignment ? staffHasFlightSchoolStaffLmpAssignment(staff, activeFlightSchoolLmpAssignment) : false).map((staff) => staff.idNumber)
+    ));
+    setAssignTraineeSelection(new Set(
+      isAssigningFlightSchoolLmp ? assignableFlightSchoolTrainees.filter((trainee) => String(trainee.lmpType || "").trim().toUpperCase() === String(activeFlightSchoolLmpAssignment?.lmpCode || selectedCourseType).trim().toUpperCase()).map((trainee) => trainee.idNumber) : []
     ));
     setShowAssignTrainingModal(true);
   };
   const saveAssignTraining = async () => {
-    if (!activeTrainingAssignment || !onUpdateInstructor) return;
+    if (!activeStaffTrainingAssignment || !onUpdateInstructor) return;
     setIsSavingTrainingAssignments(true);
     try {
-      for (const staff of assignableAirCombatStaff) {
+      for (const staff of assignableTrainingStaff) {
         const shouldAssign = assignTrainingSelection.has(staff.idNumber);
-        const currentlyAssigned = staffHasAirCombatAssignment(staff, activeTrainingAssignment);
+        const currentlyAssigned = activeAirCombatTrainingAssignment ? staffHasAirCombatAssignment(staff, activeAirCombatTrainingAssignment) : activeFlightSchoolLmpAssignment ? staffHasFlightSchoolStaffLmpAssignment(staff, activeFlightSchoolLmpAssignment) : false;
         if (shouldAssign === currentlyAssigned) continue;
-        await onUpdateInstructor(setAirCombatTrainingAssignment(staff, activeTrainingAssignment, shouldAssign));
+        const updatedStaff = activeAirCombatTrainingAssignment ? setAirCombatTrainingAssignment(staff, activeAirCombatTrainingAssignment, shouldAssign) : setFlightSchoolStaffLmpAssignment(staff, activeFlightSchoolLmpAssignment, shouldAssign);
+        await onUpdateInstructor(updatedStaff);
+      }
+      if (isAssigningFlightSchoolLmp && onUpdateTrainee) {
+        const lmpCode = String(activeFlightSchoolLmpAssignment?.lmpCode || selectedCourseType || "").trim();
+        for (const trainee of assignableFlightSchoolTrainees) {
+          const shouldAssign = assignTraineeSelection.has(trainee.idNumber);
+          const currentlyAssigned = String(trainee.lmpType || "").trim().toUpperCase() === lmpCode.toUpperCase();
+          if (shouldAssign === currentlyAssigned) continue;
+          await onUpdateTrainee({
+            ...trainee,
+            lmpType: shouldAssign ? lmpCode : ""
+          });
+        }
       }
       logAudit({
         action: "Update",
-        description: `Updated Air Combat training assignment for ${activeTrainingAssignment.code}`,
+        description: isAssigningFlightSchoolLmp ? `Updated Flight School staff LMP assignment for ${activeFlightSchoolLmpAssignment?.lmpCode || selectedCourseType}` : `Updated Air Combat training assignment for ${activeAirCombatTrainingAssignment?.code || selectedCourseType}`,
         changes: `${assignTrainingSelection.size} staff selected`,
         page: "LMP/Event Details"
       });
@@ -90094,10 +90268,10 @@ const SyllabusView = ({
               /* @__PURE__ */ jsxRuntimeExports.jsx("br", {}),
               "Package"
             ] }) }),
-            isAirCombatModel && /* @__PURE__ */ jsxRuntimeExports.jsx("button", { onClick: openAssignTraining, disabled: isFrozen || !activeTrainingAssignment || !onUpdateInstructor, className: "w-[68px] h-[41px] flex items-center justify-center text-center px-1 py-1 text-[10px] leading-tight font-semibold rounded-md btn-aluminium-brushed disabled:opacity-50 disabled:cursor-not-allowed", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { children: [
+            (isAirCombatModel || isFlightSchoolModel && !isTrainingPackagesTab) && /* @__PURE__ */ jsxRuntimeExports.jsx("button", { onClick: openAssignTraining, disabled: isFrozen || !activeStaffTrainingAssignment || !onUpdateInstructor, className: "w-[68px] h-[41px] flex items-center justify-center text-center px-1 py-1 text-[10px] leading-tight font-semibold rounded-md btn-aluminium-brushed disabled:opacity-50 disabled:cursor-not-allowed", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { children: [
               "Assign",
               /* @__PURE__ */ jsxRuntimeExports.jsx("br", {}),
-              "Training"
+              isAssigningFlightSchoolLmp ? "LMP" : "Training"
             ] }) }),
             /* @__PURE__ */ jsxRuntimeExports.jsx("button", { onClick: () => {
               setUploadFile(null);
@@ -90921,12 +91095,16 @@ const SyllabusView = ({
         )
       }
     ),
-    showAssignTrainingModal && activeTrainingAssignment && /* @__PURE__ */ jsxRuntimeExports.jsx(
+    showAssignTrainingModal && activeStaffTrainingAssignment && /* @__PURE__ */ jsxRuntimeExports.jsx(
       AssignTrainingModal,
       {
-        title: `${activeTrainingAssignment.kind === "course" ? "Course" : "Training Package"}: ${activeTrainingAssignment.title || activeTrainingAssignment.code}`,
-        staff: assignableAirCombatStaff,
+        heading: isAssigningFlightSchoolLmp ? "Assign LMP" : "Assign Training",
+        title: isAssigningFlightSchoolLmp ? `Master LMP: ${activeFlightSchoolLmpAssignment?.title || activeFlightSchoolLmpAssignment?.lmpCode || selectedCourseType}` : `${activeAirCombatTrainingAssignment?.kind === "course" ? "Course" : "Training Package"}: ${activeAirCombatTrainingAssignment?.title || activeAirCombatTrainingAssignment?.code || selectedCourseType}`,
+        emptyMessage: isAssigningFlightSchoolLmp ? "No active staff available for this unit." : "No active squadron staff available for this unit.",
+        staff: assignableTrainingStaff,
+        trainees: isAssigningFlightSchoolLmp ? assignableFlightSchoolTrainees : [],
         selectedStaffIds: assignTrainingSelection,
+        selectedTraineeIds: assignTraineeSelection,
         saving: isSavingTrainingAssignments,
         onToggle: (idNumber) => {
           setAssignTrainingSelection((prev) => {
@@ -90936,8 +91114,18 @@ const SyllabusView = ({
             return next;
           });
         },
-        onSelectAll: () => setAssignTrainingSelection(new Set(assignableAirCombatStaff.map((staff) => staff.idNumber))),
+        onToggleTrainee: isAssigningFlightSchoolLmp ? (idNumber) => {
+          setAssignTraineeSelection((prev) => {
+            const next = new Set(prev);
+            if (next.has(idNumber)) next.delete(idNumber);
+            else next.add(idNumber);
+            return next;
+          });
+        } : void 0,
+        onSelectAll: () => setAssignTrainingSelection(new Set(assignableTrainingStaff.map((staff) => staff.idNumber))),
         onDeselectAll: () => setAssignTrainingSelection(/* @__PURE__ */ new Set()),
+        onSelectAllTrainees: () => setAssignTraineeSelection(new Set(assignableFlightSchoolTrainees.map((trainee) => trainee.idNumber))),
+        onDeselectAllTrainees: () => setAssignTraineeSelection(/* @__PURE__ */ new Set()),
         onCancel: () => setShowAssignTrainingModal(false),
         onSave: saveAssignTraining
       }
@@ -152029,6 +152217,8 @@ ${error instanceof Error ? error.message : String(error)}`,
             sharedUnitTabs: fixedCrewSharedResourceUnitTabs,
             trainingPackageTemplates: trainingPackageTemplatesForActiveModel,
             instructorsData,
+            traineesData,
+            onUpdateTrainee: handleUpdateTrainee,
             operationalModel: activeOperationalModel,
             masterLmpCatalogue: accessibleMasterLmpCatalogueForSyllabus,
             staffQualificationCatalogue: activeStaffQualificationCatalogue,
