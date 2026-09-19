@@ -108643,6 +108643,7 @@ const normaliseAssistPriorityWeights = (items) => {
 };
 const NEO_ASSIST_CURRENCY_TRACE_KEY = "neo_assist_currency_persistence_trace";
 const NEO_ASSIST_MANUAL_TILE_TRACE_KEY = "neo_assist_manual_tile_drop_trace";
+const NEO_ASSIST_MANUAL_TILE_RENDER_PROBE_KEY = "neo_assist_manual_tile_render_probe";
 const summariseNeoAssistManualTileEvent = (event) => {
   if (!event) return null;
   return {
@@ -137688,6 +137689,72 @@ ${"=".repeat(60)}`);
     }
     return segments;
   }, [activeFixedCrewTileColourMode, activeOperationalModel, date, eventsForDateWithPreFlightNotes]);
+  reactExports.useEffect(() => {
+    if (typeof window === "undefined") return;
+    let probe = null;
+    try {
+      const rawProbe = localStorage.getItem(NEO_ASSIST_MANUAL_TILE_RENDER_PROBE_KEY);
+      probe = rawProbe ? JSON.parse(rawProbe) : null;
+    } catch (error) {
+      appendNeoAssistManualTileTrace("manual-tile-render-probe-read-failed", {
+        date,
+        error: error instanceof Error ? error.message : String(error)
+      });
+      return;
+    }
+    const probeIds = Array.isArray(probe?.ids) ? probe.ids.map((id) => String(id || "").trim()).filter(Boolean) : [];
+    if (probeIds.length === 0) return;
+    const rawForDate = Array.isArray(publishedSchedules[date]) ? publishedSchedules[date] : [];
+    const describeProbeEvent = (event) => event ? {
+      id: event.id,
+      date: event.date,
+      type: event.type,
+      flightNumber: event.flightNumber,
+      resourceId: event.resourceId,
+      unitCode: event.unitCode || null,
+      locationCode: event.locationCode || null,
+      operationalModel: event.operationalModel || null,
+      startTime: event.startTime,
+      duration: event.duration,
+      pilot: event.pilot || null,
+      instructor: event.instructor || null,
+      student: event.student || null,
+      segmentStartTime: event.segmentStartTime ?? null,
+      segmentDuration: event.segmentDuration ?? null
+    } : null;
+    const report = probeIds.map((id) => {
+      const rawEvent = rawForDate.find((event) => event.id === id);
+      const scopedEvent = scopedPublishedEventsForDate.find((event) => event.id === id);
+      const renderInputEvent = eventsForDateWithPreFlightNotes.find((event) => event.id === id);
+      const segmentEvent = eventSegmentsForDate.find((event) => event.id === id);
+      return {
+        id,
+        inPublishedRawForDate: Boolean(rawEvent),
+        inScopedPublishedEventsForDate: Boolean(scopedEvent),
+        inRenderInputEventsForDateWithPreFlightNotes: Boolean(renderInputEvent),
+        inEventSegmentsForDate: Boolean(segmentEvent),
+        rawEvent: describeProbeEvent(rawEvent),
+        scopedEvent: describeProbeEvent(scopedEvent),
+        renderInputEvent: describeProbeEvent(renderInputEvent),
+        segmentEvent: describeProbeEvent(segmentEvent)
+      };
+    });
+    appendNeoAssistManualTileTrace("manual-tile-post-render-probe", {
+      date,
+      probe,
+      rawCountForDate: rawForDate.length,
+      scopedCountForDate: scopedPublishedEventsForDate.length,
+      renderInputCount: eventsForDateWithPreFlightNotes.length,
+      segmentCount: eventSegmentsForDate.length,
+      report
+    });
+    if (report.every((entry) => entry.inEventSegmentsForDate)) {
+      try {
+        localStorage.removeItem(NEO_ASSIST_MANUAL_TILE_RENDER_PROBE_KEY);
+      } catch {
+      }
+    }
+  }, [date, eventSegmentsForDate, eventsForDateWithPreFlightNotes, publishedSchedules, scopedPublishedEventsForDate]);
   const staffAvailabilityDiagnosticEventIds = reactExports.useMemo(() => {
     if (!isStaffAvailabilityDiagnoseActive || staffAvailabilityPointer.time === null) {
       return /* @__PURE__ */ new Set();
@@ -147065,6 +147132,22 @@ Do not hard refresh yet. Try Publish again, then confirm the save succeeds.`,
       ),
       appendedEventIds: droppedEvents.map((event) => event.id)
     });
+    try {
+      localStorage.setItem(NEO_ASSIST_MANUAL_TILE_RENDER_PROBE_KEY, JSON.stringify({
+        createdAt: (/* @__PURE__ */ new Date()).toISOString(),
+        source: "program-schedule-drop",
+        date,
+        ids: droppedEvents.map((event) => event.id),
+        placement,
+        droppedEvents: droppedEvents.map(summariseNeoAssistManualTileEvent)
+      }));
+    } catch (error) {
+      appendNeoAssistManualTileTrace("program-schedule-render-probe-store-failed", {
+        date,
+        placement,
+        error: error instanceof Error ? error.message : String(error)
+      });
+    }
     Object.entries(nextSchedulesByDate).forEach(([eventDate, eventsForDate2]) => {
       persistScheduleForDate(eventDate, eventsForDate2);
     });
