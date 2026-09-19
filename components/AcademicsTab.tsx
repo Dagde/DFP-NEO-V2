@@ -1253,7 +1253,7 @@ const AcademicsTab: React.FC<AcademicsTabProps> = ({
             left: `${((workStart - TIMELINE_START) / (TIMELINE_END - TIMELINE_START)) * 100}%`,
             width: `${((workEnd - workStart) / (TIMELINE_END - TIMELINE_START)) * 100}%`,
             backgroundColor: 'rgba(255,255,255,0.04)',
-            borderLeft: '1px dashed #374151', borderRight: '1px dashed #374151',
+            borderLeft: '1px dashed #64748b', borderRight: '1px dashed #64748b',
           }} />
 
           {/* Hour markers */}
@@ -1261,9 +1261,9 @@ const AcademicsTab: React.FC<AcademicsTabProps> = ({
             <div key={h} style={{
               position: 'absolute', top: 0, bottom: 0,
               left: `${((h - TIMELINE_START) / (TIMELINE_END - TIMELINE_START)) * 100}%`,
-              borderLeft: '1px solid #1f2937',
+              borderLeft: '1px solid rgba(148, 163, 184, 0.42)',
             }}>
-              <span style={{ fontSize: 9, color: '#4b5563', paddingLeft: 2, paddingTop: 2, display: 'block' }}>
+              <span style={{ fontSize: 9, color: '#cbd5e1', paddingLeft: 2, paddingTop: 2, display: 'block', fontWeight: 600 }}>
                 {String(h).padStart(2,'0')}
               </span>
             </div>
