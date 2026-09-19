@@ -61208,7 +61208,6 @@ const AcademicsTab = ({
   const [selectedDate, setSelectedDate] = reactExports.useState(date);
   const [workStart, setWorkStart] = reactExports.useState(8);
   const [workEnd, setWorkEnd] = reactExports.useState(17);
-  const [otherText, setOtherText] = reactExports.useState("");
   const [resourceId, setResourceId] = reactExports.useState("");
   const [instructor, setInstructor] = reactExports.useState("");
   const effectiveClassroomOptions = reactExports.useMemo(() => {
@@ -61484,7 +61483,7 @@ Do you still want to include them in this academic session?`,
       }]);
     }
   }, [selectedLessons, getNextStart]);
-  const toggleStandard = reactExports.useCallback((ev) => {
+  const toggleStandard = reactExports.useCallback(async (ev) => {
     const key = ev.code;
     const isOtherEvent = key === "OTHER" || ev.label.trim().toLowerCase() === "other";
     if (selectedStandard.has(key)) {
@@ -61495,8 +61494,21 @@ Do you still want to include them in this academic session?`,
       });
       setTiles((prev) => prev.filter((t) => t.lessonCode !== key));
     } else {
+      let label = ev.label;
+      if (isOtherEvent) {
+        const description = await showDarkPrompt({
+          title: "Other Standard Event",
+          message: "Enter the description to show on the academic schedule tile.",
+          inputLabel: "Description",
+          inputPlaceholder: "Description",
+          confirmText: "Add",
+          cancelText: "Cancel",
+          variant: "info"
+        });
+        label = String(description || "").trim();
+        if (!label) return;
+      }
       setSelectedStandard((prev) => new Set(prev).add(key));
-      const label = isOtherEvent ? otherText || ev.label : ev.label;
       const start = getNextStart(ev.duration);
       setTiles((prev) => [...prev, {
         id: v4(),
@@ -61506,10 +61518,10 @@ Do you still want to include them in this academic session?`,
         duration: ev.duration,
         color: ev.color,
         isStandard: true,
-        customDescription: isOtherEvent ? otherText : void 0
+        customDescription: isOtherEvent ? label : void 0
       }]);
     }
-  }, [selectedStandard, getNextStart, otherText]);
+  }, [selectedStandard, getNextStart]);
   const suggestions = reactExports.useMemo(() => {
     if (!selectedCourse || courseTrainees.length === 0) return [];
     return academicSyllabus.filter((s) => {
@@ -61956,40 +61968,27 @@ Do you still want to include them in this academic session?`,
           ] }),
           /* @__PURE__ */ jsxRuntimeExports.jsx("div", { style: { display: "flex", flexWrap: "wrap", gap: 6 }, children: effectiveStandardEvents.map((ev) => {
             const isSelected = selectedStandard.has(ev.code);
-            const isOtherEvent = ev.code === "OTHER" || ev.label.trim().toLowerCase() === "other";
-            return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { style: { display: "flex", alignItems: "center", gap: 4 }, children: [
-              /* @__PURE__ */ jsxRuntimeExports.jsx(
-                "button",
-                {
-                  onClick: () => {
-                    if (isOtherEvent && !otherText && !isSelected) return;
-                    toggleStandard(ev);
-                  },
-                  style: {
-                    padding: "4px 10px",
-                    borderRadius: 6,
-                    fontSize: 11,
-                    fontWeight: 600,
-                    cursor: "pointer",
-                    backgroundColor: isSelected ? ev.color : "#374151",
-                    border: `1px solid ${isSelected ? ev.color : "#4b5563"}`,
-                    color: "#f9fafb",
-                    transition: "all 0.1s"
-                  },
-                  children: ev.label
-                }
-              ),
-              isOtherEvent && !isSelected && /* @__PURE__ */ jsxRuntimeExports.jsx(
-                "input",
-                {
-                  type: "text",
-                  placeholder: "Description...",
-                  value: otherText,
-                  onChange: (e) => setOtherText(e.target.value),
-                  style: { ...S.input, width: 120, fontSize: 11 }
-                }
-              )
-            ] }, ev.code);
+            ev.code === "OTHER" || ev.label.trim().toLowerCase() === "other";
+            return /* @__PURE__ */ jsxRuntimeExports.jsx("div", { style: { display: "flex", alignItems: "center", gap: 4 }, children: /* @__PURE__ */ jsxRuntimeExports.jsx(
+              "button",
+              {
+                onClick: () => {
+                  void toggleStandard(ev);
+                },
+                style: {
+                  padding: "4px 10px",
+                  borderRadius: 6,
+                  fontSize: 11,
+                  fontWeight: 600,
+                  cursor: "pointer",
+                  backgroundColor: isSelected ? ev.color : "#374151",
+                  border: `1px solid ${isSelected ? ev.color : "#4b5563"}`,
+                  color: "#f9fafb",
+                  transition: "all 0.1s"
+                },
+                children: ev.label
+              }
+            ) }, ev.code);
           }) })
         ] })
       ] })

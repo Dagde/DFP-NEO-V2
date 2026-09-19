@@ -1,7 +1,7 @@
 import React, { useState, useMemo, useRef, useCallback, useEffect } from 'react';
 import { SyllabusItemDetail, Trainee, Score, ScheduleEvent } from '../types';
 import { v4 as uuidv4 } from 'uuid';
-import { showDarkAlert, showDarkConfirm } from './DarkMessageModal';
+import { showDarkAlert, showDarkConfirm, showDarkPrompt } from './DarkMessageModal';
 import type { ClassroomResourceOption } from '../utils/classroomResources';
 import { DEFAULT_ACADEMIC_STANDARD_EVENTS, normaliseAcademicStandardEvents, type AcademicStandardEventConfig } from '../utils/academicStandardEvents';
 
@@ -343,7 +343,6 @@ const AcademicsTab: React.FC<AcademicsTabProps> = ({
   const [selectedDate, setSelectedDate] = useState(date);
   const [workStart, setWorkStart] = useState(8);
   const [workEnd, setWorkEnd]   = useState(17);
-  const [otherText, setOtherText] = useState('');
   const [resourceId, setResourceId] = useState(''); // blank by default
   const [instructor, setInstructor] = useState(''); // allocated instructor for this academic session
   const effectiveClassroomOptions = useMemo<ClassroomResourceOption[]>(() => {
@@ -668,15 +667,28 @@ const AcademicsTab: React.FC<AcademicsTabProps> = ({
   }, [selectedLessons, getNextStart]);
 
   // Add/remove standard event
-  const toggleStandard = useCallback((ev: AcademicStandardEventConfig) => {
+  const toggleStandard = useCallback(async (ev: AcademicStandardEventConfig) => {
     const key = ev.code;
     const isOtherEvent = key === 'OTHER' || ev.label.trim().toLowerCase() === 'other';
     if (selectedStandard.has(key)) {
       setSelectedStandard(prev => { const s = new Set(prev); s.delete(key); return s; });
       setTiles(prev => prev.filter(t => t.lessonCode !== key));
     } else {
+      let label = ev.label;
+      if (isOtherEvent) {
+        const description = await showDarkPrompt({
+          title: 'Other Standard Event',
+          message: 'Enter the description to show on the academic schedule tile.',
+          inputLabel: 'Description',
+          inputPlaceholder: 'Description',
+          confirmText: 'Add',
+          cancelText: 'Cancel',
+          variant: 'info',
+        });
+        label = String(description || '').trim();
+        if (!label) return;
+      }
       setSelectedStandard(prev => new Set(prev).add(key));
-      const label = isOtherEvent ? (otherText || ev.label) : ev.label;
       const start = getNextStart(ev.duration);
       setTiles(prev => [...prev, {
         id: uuidv4(),
@@ -686,10 +698,10 @@ const AcademicsTab: React.FC<AcademicsTabProps> = ({
         duration: ev.duration,
         color: ev.color,
         isStandard: true,
-        customDescription: isOtherEvent ? otherText : undefined,
+        customDescription: isOtherEvent ? label : undefined,
       }]);
     }
-  }, [selectedStandard, getNextStart, otherText]);
+  }, [selectedStandard, getNextStart]);
 
   // ── Suggestions ──
   const suggestions = useMemo(() => {
@@ -1163,8 +1175,7 @@ const AcademicsTab: React.FC<AcademicsTabProps> = ({
                   <div key={ev.code} style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
                     <button
                       onClick={() => {
-                        if (isOtherEvent && !otherText && !isSelected) return;
-                        toggleStandard(ev);
+                        void toggleStandard(ev);
                       }}
                       style={{
                         padding: '4px 10px', borderRadius: 6, fontSize: 11, fontWeight: 600,
@@ -1174,15 +1185,6 @@ const AcademicsTab: React.FC<AcademicsTabProps> = ({
                       }}>
                       {ev.label}
                     </button>
-                    {isOtherEvent && !isSelected && (
-                      <input
-                        type="text"
-                        placeholder="Description..."
-                        value={otherText}
-                        onChange={e => setOtherText(e.target.value)}
-                        style={{ ...S.input, width: 120, fontSize: 11 }}
-                      />
-                    )}
                   </div>
                 );
               })}
