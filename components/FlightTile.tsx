@@ -114,6 +114,13 @@ const isAuthorisationWarningExempt = (event: ScheduleEvent | EventSegment): bool
         || exemptOperationalRows.has(eventCategory);
 };
 
+const isTwrDiScheduleEvent = (event: ScheduleEvent | EventSegment): boolean => {
+    const eventCategory = String((event as any).eventCategory || '').trim().toLowerCase();
+    const flightNumber = String(event.flightNumber || (event as any).eventCode || '').trim().toUpperCase();
+    const resourceId = String(event.resourceId || '').trim().toUpperCase();
+    return eventCategory === 'twr_di' || flightNumber === 'TWR DI' || resourceId === 'TWR DI';
+};
+
 const stripGeneratedTrainingReportFollowUpLines = (value: unknown): string => (
     String(value || '')
         .split(/\r?\n/)
@@ -289,15 +296,18 @@ const FlightTile: React.FC<FlightTileProps> = ({ event, traineesData, instructor
 
   // Helper: check if a color value is a hex/rgb value vs a Tailwind class (defined here for use in style)
   const isHexColorEarly = (color: string) => color && (color.startsWith('#') || color.startsWith('rgb'));
+  const isTwrDiEvent = isTwrDiScheduleEvent(event);
 
   // Resolve background color as inline style for all non-special tiles
   const resolvedBgColor: string | null = (() => {
     if (event.type === 'deployment' || event.type === 'unavailability' || isUnavailabilityConflict || isConflicting) return null;
+    if (isTwrDiEvent) return resolveScheduleTileBackgroundColor('bg-gray-500/80', 'dark');
     return resolveScheduleTileBackgroundColor(event.color, 'dark');
   })();
 
   const resolvedLightBgColor: string | null = (() => {
     if (event.type === 'deployment' || event.type === 'unavailability' || isUnavailabilityConflict || isConflicting) return null;
+    if (isTwrDiEvent) return resolveScheduleTileBackgroundColor('bg-gray-500/80', 'light');
     return resolveScheduleTileBackgroundColor(event.color, 'light');
   })();
 
@@ -410,7 +420,6 @@ const FlightTile: React.FC<FlightTileProps> = ({ event, traineesData, instructor
       || (event.type === 'flight' && !!event.pilot && !!event.crew && !event.student && !event.instructor);
   const isFixedCrewCrewEvent = !!(event as any).fixedCrewGroup;
   const isPooledCrewEvent = String(event.crew || event.group || '').trim() === 'Pooled Crew';
-  const isTwrDiEvent = event.eventCategory === 'twr_di';
   const isStbyEvent = event.resourceId && (event.resourceId.startsWith('STBY') || event.resourceId.startsWith('BNF-STBY'));
   const aircraftNumberDisplay = event.aircraftNumber
     ? parseAircraftNumber(event.aircraftNumber, aircraftNumberSettings).number

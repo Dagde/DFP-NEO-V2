@@ -10758,6 +10758,12 @@ const isAuthorisationWarningExempt = (event) => {
   const exemptOperationalRows = /* @__PURE__ */ new Set(["DUTY SUP", "TWR DI", "RUNWAY DI", "RWY DI"]);
   return event.type === "deployment" || exemptOperationalRows.has(resourceId) || exemptOperationalRows.has(flightNumber) || exemptOperationalRows.has(eventCategory);
 };
+const isTwrDiScheduleEvent = (event) => {
+  const eventCategory = String(event.eventCategory || "").trim().toLowerCase();
+  const flightNumber = String(event.flightNumber || event.eventCode || "").trim().toUpperCase();
+  const resourceId = String(event.resourceId || "").trim().toUpperCase();
+  return eventCategory === "twr_di" || flightNumber === "TWR DI" || resourceId === "TWR DI";
+};
 const stripGeneratedTrainingReportFollowUpLines$1 = (value) => String(value || "").split(/\r?\n/).flatMap((line) => {
   const trimmedLine = line.trim();
   return /^(?:\d+(?:\.\d+)?\s+hrs?\s+added to\s+.+|Re-fly requested:\s+.+)$/i.test(trimmedLine) ? [] : [line];
@@ -10868,12 +10874,15 @@ const FlightTile = ({ event, traineesData, instructorsData = [], onSelectEvent, 
   const isEndSegment = segment.segmentType === "start";
   const flyoutToLeft = isEndSegment || effectiveStartTime + effectiveDuration > 22;
   const isHexColorEarly = (color) => color && (color.startsWith("#") || color.startsWith("rgb"));
+  const isTwrDiEvent = isTwrDiScheduleEvent(event);
   const resolvedBgColor = (() => {
     if (event.type === "deployment" || event.type === "unavailability" || isUnavailabilityConflict || isConflicting) return null;
+    if (isTwrDiEvent) return resolveScheduleTileBackgroundColor("bg-gray-500/80", "dark");
     return resolveScheduleTileBackgroundColor(event.color, "dark");
   })();
   const resolvedLightBgColor = (() => {
     if (event.type === "deployment" || event.type === "unavailability" || isUnavailabilityConflict || isConflicting) return null;
+    if (isTwrDiEvent) return resolveScheduleTileBackgroundColor("bg-gray-500/80", "light");
     return resolveScheduleTileBackgroundColor(event.color, "light");
   })();
   const style = {
@@ -10946,7 +10955,6 @@ const FlightTile = ({ event, traineesData, instructorsData = [], onSelectEvent, 
   const isAirCombatCrewEvent = event._source === "air-combat-priority-formation" || event.type === "flight" && !!event.pilot && !!event.crew && !event.student && !event.instructor;
   const isFixedCrewCrewEvent = !!event.fixedCrewGroup;
   const isPooledCrewEvent = String(event.crew || event.group || "").trim() === "Pooled Crew";
-  const isTwrDiEvent = event.eventCategory === "twr_di";
   const isStbyEvent = event.resourceId && (event.resourceId.startsWith("STBY") || event.resourceId.startsWith("BNF-STBY"));
   const aircraftNumberDisplay = event.aircraftNumber ? parseAircraftNumber(event.aircraftNumber, aircraftNumberSettings).number : "";
   const preFlightNotesForTile = getPreFlightNotesForTile(event);
