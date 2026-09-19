@@ -40,6 +40,7 @@ interface AddGroundEventFlyoutProps {
   groundResources?: string[];
   classroomOptions?: ClassroomResourceOption[];
   academicStandardEvents?: AcademicStandardEventConfig[];
+  onNavigateToAcademicStandardEventsSettings?: () => void;
   cptResources?: string[];
   instructorLabel?: string;
 }
@@ -84,6 +85,7 @@ const AddGroundEventFlyout: React.FC<AddGroundEventFlyoutProps> = ({
     groundResources = [],
     classroomOptions = [],
     academicStandardEvents,
+    onNavigateToAcademicStandardEventsSettings,
     cptResources = [],
     instructorLabel = 'Instructor',
 }) => {
@@ -468,6 +470,7 @@ const AddGroundEventFlyout: React.FC<AddGroundEventFlyoutProps> = ({
                                 groundResources={groundResources}
                                 classroomOptions={classroomOptions}
                                 standardEvents={academicStandardEvents}
+                                onNavigateToStandardEventsSettings={onNavigateToAcademicStandardEventsSettings}
                                 onSave={(data) => {
                                     if (onSaveAcademic) {
                                         onSaveAcademic(data);

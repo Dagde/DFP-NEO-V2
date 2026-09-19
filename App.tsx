@@ -49306,6 +49306,17 @@ appliedUpdates.forEach(update => {
         normaliseAcademicStandardEvents(activePlatformResourcePool?.settings?.academicStandardEvents)
     ), [activePlatformResourcePool?.settings?.academicStandardEvents]);
 
+    const getSettingsFocusAnchor = (value: unknown): string => String(value || '').trim().toUpperCase().replace(/[^A-Z0-9_-]/g, '-');
+    const handleNavigateToAcademicStandardEventsSettings = useCallback(() => {
+        const poolFocusKey = String(activePlatformResourcePool?.id || activePlatformResourcePool?.code || activePlatformResourcePool?.name || '').trim();
+        setShowAddGroundEvent(false);
+        handleNavigateToSettingsSection({
+            sectionId: 'platform-dfp-resource-rows',
+            resourcePoolCode: poolFocusKey,
+            focusSubsectionId: `academic-standard-events-${getSettingsFocusAnchor(poolFocusKey || activeRuntimeAircraftTypeCode || activeUnitCode || 'resource-pool')}`,
+        });
+    }, [activePlatformResourcePool?.id, activePlatformResourcePool?.code, activePlatformResourcePool?.name, activeRuntimeAircraftTypeCode, activeUnitCode]);
+
     const addGroundTileCptResources = useMemo(() => (
         buildResources.filter(resourceId => /^CPT\s+\d+$/i.test(String(resourceId || '').trim()))
     ), [buildResources]);
@@ -56313,6 +56324,7 @@ appliedUpdates.forEach(update => {
                     groundResources={addGroundTileGroundResources}
                     classroomOptions={addGroundTileClassroomOptions}
                     academicStandardEvents={addGroundTileAcademicStandardEvents}
+                    onNavigateToAcademicStandardEventsSettings={handleNavigateToAcademicStandardEventsSettings}
                     cptResources={addGroundTileCptResources}
                     instructorLabel={instructorLabel}
                 />

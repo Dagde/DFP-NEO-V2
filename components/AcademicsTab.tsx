@@ -50,6 +50,7 @@ interface AcademicsTabProps {
   groundResources?: string[];
   classroomOptions?: ClassroomResourceOption[];
   standardEvents?: AcademicStandardEventConfig[];
+  onNavigateToStandardEventsSettings?: () => void;
   onSave: (data: AcademicSaveData) => void;
   onClose: () => void;
 }
@@ -311,6 +312,7 @@ const AcademicsTab: React.FC<AcademicsTabProps> = ({
   groundResources = [],
   classroomOptions = [],
   standardEvents = DEFAULT_ACADEMIC_STANDARD_EVENTS,
+  onNavigateToStandardEventsSettings,
   onSave,
   onClose,
 }) => {
@@ -1131,7 +1133,28 @@ const AcademicsTab: React.FC<AcademicsTabProps> = ({
 
           {/* Standard Events */}
           <div style={S.card}>
-            <div style={S.label}>Standard Events</div>
+            <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 8, marginBottom: 4 }}>
+              <div style={{ ...S.label, marginBottom: 0 }}>Standard Events</div>
+              {onNavigateToStandardEventsSettings ? (
+                <button
+                  type="button"
+                  onClick={onNavigateToStandardEventsSettings}
+                  style={{
+                    border: 0,
+                    background: 'transparent',
+                    color: '#7dd3fc',
+                    cursor: 'pointer',
+                    fontSize: 11,
+                    fontWeight: 700,
+                    padding: 0,
+                    textDecoration: 'underline',
+                    textUnderlineOffset: 3,
+                  }}
+                >
+                  Configure
+                </button>
+              ) : null}
+            </div>
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
               {effectiveStandardEvents.map(ev => {
                 const isSelected = selectedStandard.has(ev.code);

@@ -11323,6 +11323,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
                           className="md:col-span-3"
                         />
                         <AcademicStandardEventsField
+                          id={`academic-standard-events-${getConfigurationHealthFocusAnchor(pool.id || pool.code || pool.name || `resource-pool-${index}`)}`}
                           value={pool.settings?.academicStandardEvents}
                           disabled={!canEditResourcePools}
                           onCommit={(value) => updateResourcePoolSettings(index, { academicStandardEvents: value })}
@@ -13250,6 +13251,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
                           className="lg:col-span-2"
                         />
                         <AcademicStandardEventsField
+                          id={`academic-standard-events-labels-${getConfigurationHealthFocusAnchor(pool.id || pool.code || pool.name || `resource-pool-${index}`)}`}
                           value={pool.settings?.academicStandardEvents}
                           disabled={!canEditResourcePools}
                           onCommit={(value) => updateResourcePoolSettings(index, { academicStandardEvents: value })}
@@ -15349,11 +15351,13 @@ const ClassroomNamesField = ({
 };
 
 const AcademicStandardEventsField = ({
+  id,
   value,
   disabled,
   onCommit,
   className,
 }: {
+  id?: string;
   value: unknown;
   disabled: boolean;
   onCommit: (value: AcademicStandardEventConfig[]) => void;
@@ -15378,7 +15382,7 @@ const AcademicStandardEventsField = ({
   ]);
   const deleteEvent = (indexToDelete: number) => commitEvents(events.filter((_, index) => index !== indexToDelete));
   return (
-    <div className={className}>
+    <div id={id} className={className}>
       <div className="flex flex-wrap items-center justify-between gap-2">
         <FieldLabel
           label="Academic Standard Events"

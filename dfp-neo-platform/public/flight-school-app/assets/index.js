@@ -25542,6 +25542,7 @@ This removes them from DFP Resource Rows. Press Save in this section to apply th
                           /* @__PURE__ */ jsxRuntimeExports.jsx(
                             AcademicStandardEventsField,
                             {
+                              id: `academic-standard-events-${getConfigurationHealthFocusAnchor(pool.id || pool.code || pool.name || `resource-pool-${index}`)}`,
                               value: pool.settings?.academicStandardEvents,
                               disabled: !canEditResourcePools,
                               onCommit: (value) => updateResourcePoolSettings(index, { academicStandardEvents: value }),
@@ -27449,6 +27450,7 @@ This removes them from DFP Resource Rows. Press Save in this section to apply th
                       /* @__PURE__ */ jsxRuntimeExports.jsx(
                         AcademicStandardEventsField,
                         {
+                          id: `academic-standard-events-labels-${getConfigurationHealthFocusAnchor(pool.id || pool.code || pool.name || `resource-pool-${index}`)}`,
                           value: pool.settings?.academicStandardEvents,
                           disabled: !canEditResourcePools,
                           onCommit: (value) => updateResourcePoolSettings(index, { academicStandardEvents: value }),
@@ -29310,6 +29312,7 @@ const ClassroomNamesField = ({
   ] });
 };
 const AcademicStandardEventsField = ({
+  id,
   value,
   disabled,
   onCommit,
@@ -29333,7 +29336,7 @@ const AcademicStandardEventsField = ({
     { code: createAcademicStandardEventCode("New Event", events.length), label: "New Event", duration: 1, color: "#64748b" }
   ]);
   const deleteEvent = (indexToDelete) => commitEvents(events.filter((_, index) => index !== indexToDelete));
-  return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className, children: [
+  return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { id, className, children: [
     /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex flex-wrap items-center justify-between gap-2", children: [
       /* @__PURE__ */ jsxRuntimeExports.jsx(
         FieldLabel,
@@ -61125,6 +61128,7 @@ const AcademicsTab = ({
   groundResources = [],
   classroomOptions = [],
   standardEvents = DEFAULT_ACADEMIC_STANDARD_EVENTS,
+  onNavigateToStandardEventsSettings,
   onSave,
   onClose
 }) => {
@@ -61877,7 +61881,28 @@ Do you still want to include them in this academic session?`,
           ] }, moduleKey)) })
         ] }),
         /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { style: S.card, children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { style: S.label, children: "Standard Events" }),
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { style: { display: "flex", alignItems: "baseline", justifyContent: "space-between", gap: 8, marginBottom: 4 }, children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx("div", { style: { ...S.label, marginBottom: 0 }, children: "Standard Events" }),
+            onNavigateToStandardEventsSettings ? /* @__PURE__ */ jsxRuntimeExports.jsx(
+              "button",
+              {
+                type: "button",
+                onClick: onNavigateToStandardEventsSettings,
+                style: {
+                  border: 0,
+                  background: "transparent",
+                  color: "#7dd3fc",
+                  cursor: "pointer",
+                  fontSize: 11,
+                  fontWeight: 700,
+                  padding: 0,
+                  textDecoration: "underline",
+                  textUnderlineOffset: 3
+                },
+                children: "Configure"
+              }
+            ) : null
+          ] }),
           /* @__PURE__ */ jsxRuntimeExports.jsx("div", { style: { display: "flex", flexWrap: "wrap", gap: 6 }, children: effectiveStandardEvents.map((ev) => {
             const isSelected = selectedStandard.has(ev.code);
             const isOtherEvent = ev.code === "OTHER" || ev.label.trim().toLowerCase() === "other";
@@ -62512,6 +62537,7 @@ const AddGroundEventFlyout = ({
   groundResources = [],
   classroomOptions = [],
   academicStandardEvents,
+  onNavigateToAcademicStandardEventsSettings,
   cptResources = [],
   instructorLabel: instructorLabel2 = "Instructor"
 }) => {
@@ -62841,6 +62867,7 @@ const AddGroundEventFlyout = ({
                     groundResources,
                     classroomOptions,
                     standardEvents: academicStandardEvents,
+                    onNavigateToStandardEventsSettings: onNavigateToAcademicStandardEventsSettings,
                     onSave: (data) => {
                       if (onSaveAcademic) {
                         onSaveAcademic(data);
@@ -147918,6 +147945,16 @@ ${error instanceof Error ? error.message : String(error)}`,
   const addGroundTileGroundResources = reactExports.useMemo(() => buildResources.filter((resourceId) => /^Ground\s+\d+$/i.test(String(resourceId || "").trim())), [buildResources]);
   const addGroundTileClassroomOptions = reactExports.useMemo(() => buildClassroomResourceOptions(activePlatformResourcePool?.settings || {}, addGroundTileGroundResources.length || configuredGroundCount2), [activePlatformResourcePool?.settings, addGroundTileGroundResources.length, configuredGroundCount2]);
   const addGroundTileAcademicStandardEvents = reactExports.useMemo(() => normaliseAcademicStandardEvents(activePlatformResourcePool?.settings?.academicStandardEvents), [activePlatformResourcePool?.settings?.academicStandardEvents]);
+  const getSettingsFocusAnchor = (value) => String(value).trim().toUpperCase().replace(/[^A-Z0-9_-]/g, "-");
+  const handleNavigateToAcademicStandardEventsSettings = reactExports.useCallback(() => {
+    const poolFocusKey = String(activePlatformResourcePool?.id || activePlatformResourcePool?.code || activePlatformResourcePool?.name || "").trim();
+    setShowAddGroundEvent(false);
+    handleNavigateToSettingsSection({
+      sectionId: "platform-dfp-resource-rows",
+      resourcePoolCode: poolFocusKey,
+      focusSubsectionId: `academic-standard-events-${getSettingsFocusAnchor(poolFocusKey || activeRuntimeAircraftTypeCode || activeUnitCode || "resource-pool")}`
+    });
+  }, [activePlatformResourcePool?.id, activePlatformResourcePool?.code, activePlatformResourcePool?.name, activeRuntimeAircraftTypeCode, activeUnitCode]);
   const addGroundTileCptResources = reactExports.useMemo(() => buildResources.filter((resourceId) => /^CPT\s+\d+$/i.test(String(resourceId || "").trim())), [buildResources]);
   const handleSaveGroundEvent = (data) => {
     const syllabusItem = syllabusDetails.find((s) => s.code === data.flightNumber);
@@ -154018,6 +154055,7 @@ Do you want to replace the existing entry?`,
           groundResources: addGroundTileGroundResources,
           classroomOptions: addGroundTileClassroomOptions,
           academicStandardEvents: addGroundTileAcademicStandardEvents,
+          onNavigateToAcademicStandardEventsSettings: handleNavigateToAcademicStandardEventsSettings,
           cptResources: addGroundTileCptResources,
           instructorLabel: instructorLabel2
         }
