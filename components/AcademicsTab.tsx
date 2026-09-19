@@ -528,8 +528,7 @@ const AcademicsTab: React.FC<AcademicsTabProps> = ({
             customDescription: tile?.customDescription ? String(tile.customDescription) : undefined,
           })).filter((tile: TimelineTile) => tile.lessonCode && tile.duration > 0) : [],
         }))
-        .filter((item: PresavedAcademicSchedule) => item.tiles.length > 0)
-        .sort((a: PresavedAcademicSchedule, b: PresavedAcademicSchedule) => b.updatedAt.localeCompare(a.updatedAt));
+        .filter((item: PresavedAcademicSchedule) => item.tiles.length > 0);
     } catch {
       return [];
     }
@@ -580,7 +579,8 @@ const AcademicsTab: React.FC<AcademicsTabProps> = ({
       return;
     }
     const now = new Date().toISOString();
-    const existing = presavedSchedules.find(schedule => schedule.name.trim().toLowerCase() === name.toLowerCase());
+    const existingIndex = presavedSchedules.findIndex(schedule => schedule.name.trim().toLowerCase() === name.toLowerCase());
+    const existing = existingIndex >= 0 ? presavedSchedules[existingIndex] : null;
     const nextSchedule: PresavedAcademicSchedule = {
       id: existing?.id || uuidv4(),
       name,
@@ -590,12 +590,31 @@ const AcademicsTab: React.FC<AcademicsTabProps> = ({
       workEnd,
       tiles: tiles.map(tile => ({ ...tile, id: uuidv4() })),
     };
-    persistPresavedSchedules([
-      nextSchedule,
-      ...presavedSchedules.filter(schedule => schedule.id !== nextSchedule.id),
-    ]);
+    const nextSchedules = existingIndex >= 0
+      ? presavedSchedules.map((schedule, index) => index === existingIndex ? nextSchedule : schedule)
+      : [nextSchedule, ...presavedSchedules];
+    persistPresavedSchedules(nextSchedules);
     setPresavedScheduleName('');
     setShowPresavedSchedules(false);
+  };
+
+  const handleEditPresavedSchedule = async (schedule: PresavedAcademicSchedule) => {
+    if (tiles.length > 0) {
+      const ok = await showDarkConfirm(
+        'Load this pre-saved academic schedule for editing? This will replace the current Academics timeline.',
+        'Edit Pre-Saved Schedule',
+        'warning',
+      );
+      if (!ok) return;
+    }
+    const editableTiles = schedule.tiles.map(tile => ({ ...tile, id: uuidv4() }));
+    setTiles(editableTiles);
+    syncSelectedSetsFromTiles(editableTiles);
+    setWorkStart(schedule.workStart);
+    setWorkEnd(schedule.workEnd);
+    setPresavedScheduleName(schedule.name);
+    setShowPresavedSchedules(false);
+    await showDarkAlert('Pre-saved schedule loaded for editing. Adjust the timeline, then click Save to update this pre-saved schedule.', 'Edit Pre-Saved Schedule', 'info');
   };
 
   const handleInsertPresavedSchedule = async (schedule: PresavedAcademicSchedule) => {
@@ -621,6 +640,15 @@ const AcademicsTab: React.FC<AcademicsTabProps> = ({
     const ok = await showDarkConfirm(`Delete pre-saved academic schedule "${schedule.name}"?`, 'Delete Pre-Saved Schedule', 'warning');
     if (!ok) return;
     persistPresavedSchedules(presavedSchedules.filter(item => item.id !== schedule.id));
+  };
+
+  const handleMovePresavedSchedule = (scheduleId: string, direction: -1 | 1) => {
+    const index = presavedSchedules.findIndex(schedule => schedule.id === scheduleId);
+    const nextIndex = index + direction;
+    if (index < 0 || nextIndex < 0 || nextIndex >= presavedSchedules.length) return;
+    const nextSchedules = [...presavedSchedules];
+    [nextSchedules[index], nextSchedules[nextIndex]] = [nextSchedules[nextIndex], nextSchedules[index]];
+    persistPresavedSchedules(nextSchedules);
   };
 
   // Add/remove lesson from timeline
@@ -1516,9 +1544,11 @@ const AcademicsTab: React.FC<AcademicsTabProps> = ({
                 <div style={S.label}>Saved daily academic schedules</div>
                 {presavedSchedules.length > 0 ? (
                   <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-                    {presavedSchedules.map(schedule => {
+                    {presavedSchedules.map((schedule, scheduleIndex) => {
                       const firstStart = Math.min(...schedule.tiles.map(tile => tile.startTime));
                       const lastEnd = Math.max(...schedule.tiles.map(tile => tile.startTime + tile.duration));
+                      const isFirstSchedule = scheduleIndex === 0;
+                      const isLastSchedule = scheduleIndex === presavedSchedules.length - 1;
                       return (
                         <div key={schedule.id} style={{ border: '1px solid #334155', borderRadius: 8, background: '#0f172a', padding: 12 }}>
                           <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12, alignItems: 'flex-start' }}>
@@ -1529,6 +1559,33 @@ const AcademicsTab: React.FC<AcademicsTabProps> = ({
                               </div>
                             </div>
                             <div style={{ display: 'flex', gap: 8, flexShrink: 0 }}>
+                              <div style={{ display: 'flex', gap: 4, paddingRight: 2 }}>
+                                <button
+                                  type="button"
+                                  disabled={isFirstSchedule}
+                                  title="Move schedule up"
+                                  onClick={() => handleMovePresavedSchedule(schedule.id, -1)}
+                                  style={{ border: '1px solid #334155', background: isFirstSchedule ? 'rgba(15,23,42,0.6)' : '#111827', color: isFirstSchedule ? '#475569' : '#cbd5e1', borderRadius: 6, width: 30, height: 32, fontSize: 13, fontWeight: 900, cursor: isFirstSchedule ? 'not-allowed' : 'pointer' }}
+                                >
+                                  ↑
+                                </button>
+                                <button
+                                  type="button"
+                                  disabled={isLastSchedule}
+                                  title="Move schedule down"
+                                  onClick={() => handleMovePresavedSchedule(schedule.id, 1)}
+                                  style={{ border: '1px solid #334155', background: isLastSchedule ? 'rgba(15,23,42,0.6)' : '#111827', color: isLastSchedule ? '#475569' : '#cbd5e1', borderRadius: 6, width: 30, height: 32, fontSize: 13, fontWeight: 900, cursor: isLastSchedule ? 'not-allowed' : 'pointer' }}
+                                >
+                                  ↓
+                                </button>
+                              </div>
+                              <button
+                                type="button"
+                                onClick={() => handleEditPresavedSchedule(schedule)}
+                                style={{ border: '1px solid rgba(148,163,184,0.45)', background: 'rgba(148,163,184,0.12)', color: '#e2e8f0', borderRadius: 6, padding: '7px 10px', fontSize: 12, fontWeight: 800, cursor: 'pointer' }}
+                              >
+                                Edit
+                              </button>
                               <button
                                 type="button"
                                 onClick={() => handleInsertPresavedSchedule(schedule)}
