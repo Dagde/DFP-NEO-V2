@@ -133843,6 +133843,7 @@ const App = () => {
   const [baselineSchedules, setBaselineSchedules] = reactExports.useState({});
   const activeBaselineKey = getDailySnapshotKey(date);
   const activeDfpSaveInFlightRef = reactExports.useRef(0);
+  const pendingManualNeoAssistDropsRef = reactExports.useRef({});
   const applyDailySnapshot = React.useCallback((targetDate, snapshotSchool, snapshotUnit, snap2, replace, source) => {
     if (!snap2) return 0;
     const events2 = Array.isArray(snap2.scheduleEvents) ? snap2.scheduleEvents : [];
@@ -133876,6 +133877,8 @@ const App = () => {
     }
     setPublishedSchedules((prev) => {
       const existingNonSeed = (prev[targetDate] || []).filter((e) => !e.isHistoricalSeed);
+      const pendingManualDrop = pendingManualNeoAssistDropsRef.current[targetDate];
+      const pendingManualEvents = pendingManualDrop && pendingManualDrop.expiresAt > Date.now() ? pendingManualDrop.events.filter((event) => event?.id && !events2.some((incoming) => incoming.id === event.id)) : [];
       if (!replace && existingNonSeed.length > 0 && events2.length > 0) return prev;
       if (!replace && existingNonSeed.length > 0 && events2.length === 0) {
         pushDfpDataDiag("snapshot:preserve-existing-on-empty-refresh", {
@@ -133892,6 +133895,18 @@ const App = () => {
         const existingSignature = getSnapshotEventsSignature(existingNonSeed);
         const incomingSignature = getSnapshotEventsSignature(events2);
         if (existingSignature === incomingSignature) return prev;
+      }
+      if (pendingManualEvents.length > 0) {
+        appendNeoAssistManualTileTrace("manual-tile-protected-from-snapshot-overwrite", {
+          targetDate,
+          snapshotSchool,
+          snapshotUnit,
+          source,
+          replace,
+          incomingCount: events2.length,
+          pendingManualEventIds: pendingManualEvents.map((event) => event.id)
+        });
+        return { ...prev, [targetDate]: [...events2, ...pendingManualEvents] };
       }
       return { ...prev, [targetDate]: events2 };
     });
@@ -147203,6 +147218,14 @@ Do not hard refresh yet. Try Publish again, then confirm the save succeeds.`,
       ),
       appendedEventIds: droppedEvents.map((event) => event.id)
     });
+    Object.entries(droppedEventsByDate).forEach(([eventDate, eventsForDropDate]) => {
+      const existingPending = pendingManualNeoAssistDropsRef.current[eventDate]?.events || [];
+      const pendingById = new Map([...existingPending, ...eventsForDropDate].map((event) => [event.id, event]));
+      pendingManualNeoAssistDropsRef.current[eventDate] = {
+        expiresAt: Date.now() + 15e3,
+        events: Array.from(pendingById.values())
+      };
+    });
     try {
       const monitorStartedAt = Date.now();
       localStorage.setItem(NEO_ASSIST_MANUAL_TILE_RENDER_PROBE_KEY, JSON.stringify({
@@ -147230,6 +147253,22 @@ Do not hard refresh yet. Try Publish again, then confirm the save succeeds.`,
       persistedDates: Object.keys(nextSchedulesByDate),
       appendedEventIds: droppedEvents.map((event) => event.id)
     });
+    window.setTimeout(() => {
+      Object.entries(droppedEventsByDate).forEach(([eventDate, eventsForDropDate]) => {
+        const pending = pendingManualNeoAssistDropsRef.current[eventDate];
+        if (!pending) return;
+        const droppedIds = new Set(eventsForDropDate.map((event) => event.id));
+        const remaining = pending.events.filter((event) => !droppedIds.has(event.id));
+        if (remaining.length > 0) {
+          pendingManualNeoAssistDropsRef.current[eventDate] = {
+            expiresAt: pending.expiresAt,
+            events: remaining
+          };
+        } else {
+          delete pendingManualNeoAssistDropsRef.current[eventDate];
+        }
+      });
+    }, 15e3);
     logAudit("Program Schedule", "Create", "Added NEO Assist tile", `${droppedEvents.length} x ${draft.flightNumber} at ${placement.resourceId}`);
   }, [activeOperationalModel, activeUnitCode, buildDroppedNeoAssistEvents, buildResources, date, denyPastDfpEdit, isPastDfpDate, persistScheduleForDate, publishedSchedules, school]);
   const handleNextDayExternalEventDrop = reactExports.useCallback((draft, placement) => {

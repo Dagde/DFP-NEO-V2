@@ -31778,6 +31778,7 @@ const App: React.FC = () => {
     const [baselineSchedules, setBaselineSchedules] = useState<Record<string, ScheduleEvent[]>>({});
     const activeBaselineKey = getDailySnapshotKey(date);
     const activeDfpSaveInFlightRef = useRef(0);
+    const pendingManualNeoAssistDropsRef = useRef<Record<string, { expiresAt: number; events: ScheduleEvent[] }>>({});
 
     const applyDailySnapshot = React.useCallback((
         targetDate: string,
@@ -31824,6 +31825,10 @@ const App: React.FC = () => {
         }
         setPublishedSchedules(prev => {
             const existingNonSeed = (prev[targetDate] || []).filter(e => !(e as any).isHistoricalSeed);
+            const pendingManualDrop = pendingManualNeoAssistDropsRef.current[targetDate];
+            const pendingManualEvents = pendingManualDrop && pendingManualDrop.expiresAt > Date.now()
+                ? pendingManualDrop.events.filter(event => event?.id && !events.some(incoming => incoming.id === event.id))
+                : [];
             if (!replace && existingNonSeed.length > 0 && events.length > 0) return prev;
             if (!replace && existingNonSeed.length > 0 && events.length === 0) {
                 pushDfpDataDiag('snapshot:preserve-existing-on-empty-refresh', {
@@ -31840,6 +31845,18 @@ const App: React.FC = () => {
                 const existingSignature = getSnapshotEventsSignature(existingNonSeed);
                 const incomingSignature = getSnapshotEventsSignature(events);
                 if (existingSignature === incomingSignature) return prev;
+            }
+            if (pendingManualEvents.length > 0) {
+                appendNeoAssistManualTileTrace('manual-tile-protected-from-snapshot-overwrite', {
+                    targetDate,
+                    snapshotSchool,
+                    snapshotUnit,
+                    source,
+                    replace,
+                    incomingCount: events.length,
+                    pendingManualEventIds: pendingManualEvents.map(event => event.id),
+                });
+                return { ...prev, [targetDate]: [...events, ...pendingManualEvents] };
             }
             return { ...prev, [targetDate]: events };
         });
@@ -48113,6 +48130,14 @@ appliedUpdates.forEach(update => {
             ),
             appendedEventIds: droppedEvents.map(event => event.id),
         });
+        Object.entries(droppedEventsByDate).forEach(([eventDate, eventsForDropDate]) => {
+            const existingPending = pendingManualNeoAssistDropsRef.current[eventDate]?.events || [];
+            const pendingById = new Map([...existingPending, ...eventsForDropDate].map(event => [event.id, event]));
+            pendingManualNeoAssistDropsRef.current[eventDate] = {
+                expiresAt: Date.now() + 15000,
+                events: Array.from(pendingById.values()),
+            };
+        });
         try {
             const monitorStartedAt = Date.now();
             localStorage.setItem(NEO_ASSIST_MANUAL_TILE_RENDER_PROBE_KEY, JSON.stringify({
@@ -48140,6 +48165,22 @@ appliedUpdates.forEach(update => {
             persistedDates: Object.keys(nextSchedulesByDate),
             appendedEventIds: droppedEvents.map(event => event.id),
         });
+        window.setTimeout(() => {
+            Object.entries(droppedEventsByDate).forEach(([eventDate, eventsForDropDate]) => {
+                const pending = pendingManualNeoAssistDropsRef.current[eventDate];
+                if (!pending) return;
+                const droppedIds = new Set(eventsForDropDate.map(event => event.id));
+                const remaining = pending.events.filter(event => !droppedIds.has(event.id));
+                if (remaining.length > 0) {
+                    pendingManualNeoAssistDropsRef.current[eventDate] = {
+                        expiresAt: pending.expiresAt,
+                        events: remaining,
+                    };
+                } else {
+                    delete pendingManualNeoAssistDropsRef.current[eventDate];
+                }
+            });
+        }, 15000);
         logAudit('Program Schedule', 'Create', 'Added NEO Assist tile', `${droppedEvents.length} x ${draft.flightNumber} at ${placement.resourceId}`);
     }, [activeOperationalModel, activeUnitCode, buildDroppedNeoAssistEvents, buildResources, date, denyPastDfpEdit, isPastDfpDate, persistScheduleForDate, publishedSchedules, school]);
 
