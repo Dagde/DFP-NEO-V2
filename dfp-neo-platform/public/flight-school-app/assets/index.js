@@ -29263,11 +29263,26 @@ const ClassroomNamesField = ({
 }) => {
   const count = Math.max(0, Math.floor(Number(rowCount) || 0));
   const names = getClassroomNamesForRows(value, count);
-  const addClassroom = () => onCommit([...names, ""], count + 1);
+  const rowRefs = reactExports.useRef({});
+  const pendingScrollIndexRef = reactExports.useRef(null);
+  const addClassroom = () => {
+    pendingScrollIndexRef.current = count;
+    onCommit([...names, ""], count + 1);
+  };
   const deleteClassroom = (indexToDelete) => {
     const nextNames = names.filter((_, index) => index !== indexToDelete);
     onCommit(nextNames, nextNames.length);
   };
+  reactExports.useEffect(() => {
+    const pendingIndex = pendingScrollIndexRef.current;
+    if (pendingIndex === null || pendingIndex >= count) return;
+    pendingScrollIndexRef.current = null;
+    window.setTimeout(() => {
+      const target = rowRefs.current[pendingIndex];
+      target?.scrollIntoView({ behavior: "smooth", block: "center" });
+      target?.querySelector('input:not([type="color"])')?.focus();
+    }, 40);
+  }, [count]);
   return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className, children: [
     /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex flex-wrap items-center justify-between gap-2", children: [
       /* @__PURE__ */ jsxRuntimeExports.jsx(
@@ -29288,30 +29303,39 @@ const ClassroomNamesField = ({
         }
       )
     ] }),
-    count > 0 ? /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-2 space-y-2", children: names.map((name, index) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid gap-2 rounded border border-gray-700 bg-gray-950/70 p-2 md:grid-cols-[140px_minmax(0,1fr)_96px] md:items-end", children: [
-      /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "pb-2 text-[10px] font-black uppercase tracking-[0.14em] text-cyan-200/80 md:pb-2.5", children: formatClassroomFieldLabel(index) }),
-      /* @__PURE__ */ jsxRuntimeExports.jsx(
-        "input",
-        {
-          className: fieldClass,
-          value: name,
-          disabled,
-          placeholder: "Name",
-          onKeyDown: stopEditableKeyPropagation,
-          onChange: (event) => onCommit(updateClassroomNameForRow(value, count, index, event.target.value))
-        }
-      ),
-      /* @__PURE__ */ jsxRuntimeExports.jsx(
-        "button",
-        {
-          type: "button",
-          disabled,
-          onClick: () => deleteClassroom(index),
-          className: "rounded border border-red-500/35 bg-red-500/10 px-3 py-2 text-xs font-black uppercase tracking-[0.12em] text-red-100 hover:bg-red-500/20 disabled:cursor-not-allowed disabled:opacity-50",
-          children: "- Delete"
-        }
-      )
-    ] }, `classroom-name-${index}`)) }) : /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-1 rounded border border-dashed border-gray-700 bg-gray-950/60 px-3 py-2 text-xs font-semibold text-gray-400", children: "No classrooms configured. Use + Add to create the first classroom." })
+    count > 0 ? /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-2 space-y-2", children: names.map((name, index) => /* @__PURE__ */ jsxRuntimeExports.jsxs(
+      "div",
+      {
+        ref: (node) => {
+          rowRefs.current[index] = node;
+        },
+        className: "grid gap-2 rounded border border-gray-700 bg-gray-950/70 p-2 md:grid-cols-[140px_minmax(0,1fr)_96px] md:items-end",
+        children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "pb-2 text-[10px] font-black uppercase tracking-[0.14em] text-cyan-200/80 md:pb-2.5", children: formatClassroomFieldLabel(index) }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx(
+            DraftTextInput$2,
+            {
+              value: name,
+              disabled,
+              placeholder: "Name",
+              className: fieldClass,
+              onCommit: (nextName) => onCommit(updateClassroomNameForRow(value, count, index, nextName))
+            }
+          ),
+          /* @__PURE__ */ jsxRuntimeExports.jsx(
+            "button",
+            {
+              type: "button",
+              disabled,
+              onClick: () => deleteClassroom(index),
+              className: "rounded border border-red-500/35 bg-red-500/10 px-3 py-2 text-xs font-black uppercase tracking-[0.12em] text-red-100 hover:bg-red-500/20 disabled:cursor-not-allowed disabled:opacity-50",
+              children: "- Delete"
+            }
+          )
+        ]
+      },
+      `classroom-name-${index}`
+    )) }) : /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-1 rounded border border-dashed border-gray-700 bg-gray-950/60 px-3 py-2 text-xs font-semibold text-gray-400", children: "No classrooms configured. Use + Add to create the first classroom." })
   ] });
 };
 const AcademicStandardEventsField = ({
@@ -29323,6 +29347,8 @@ const AcademicStandardEventsField = ({
 }) => {
   const events = normaliseAcademicStandardEvents(value);
   const commitEvents = (nextEvents) => onCommit(normaliseAcademicStandardEvents(nextEvents, []));
+  const rowRefs = reactExports.useRef({});
+  const pendingScrollIndexRef = reactExports.useRef(null);
   const updateEvent = (indexToUpdate, changes) => {
     commitEvents(events.map((event, index) => {
       if (index !== indexToUpdate) return event;
@@ -29334,11 +29360,24 @@ const AcademicStandardEventsField = ({
       };
     }));
   };
-  const addEvent = () => commitEvents([
-    ...events,
-    { code: createAcademicStandardEventCode("New Event", events.length), label: "New Event", duration: 1, color: "#64748b" }
-  ]);
+  const addEvent = () => {
+    pendingScrollIndexRef.current = events.length;
+    commitEvents([
+      ...events,
+      { code: createAcademicStandardEventCode("New Event", events.length), label: "New Event", duration: 1, color: "#64748b" }
+    ]);
+  };
   const deleteEvent = (indexToDelete) => commitEvents(events.filter((_, index) => index !== indexToDelete));
+  reactExports.useEffect(() => {
+    const pendingIndex = pendingScrollIndexRef.current;
+    if (pendingIndex === null || pendingIndex >= events.length) return;
+    pendingScrollIndexRef.current = null;
+    window.setTimeout(() => {
+      const target = rowRefs.current[pendingIndex];
+      target?.scrollIntoView({ behavior: "smooth", block: "center" });
+      target?.querySelector('input:not([type="color"])')?.focus();
+    }, 40);
+  }, [events.length]);
   return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { id, className, children: [
     /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex flex-wrap items-center justify-between gap-2", children: [
       /* @__PURE__ */ jsxRuntimeExports.jsx(
@@ -29359,61 +29398,70 @@ const AcademicStandardEventsField = ({
         }
       )
     ] }),
-    events.length > 0 ? /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-2 space-y-2", children: events.map((event, index) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid gap-2 rounded border border-gray-700 bg-gray-950/70 p-2 md:grid-cols-[minmax(0,1fr)_96px_82px_96px] md:items-end", children: [
-      /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { children: [
-        /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "mb-1 block text-[10px] font-black uppercase tracking-[0.14em] text-gray-400", children: "Event name" }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx(
-          "input",
-          {
-            className: fieldClass,
-            value: event.label,
-            disabled,
-            placeholder: "Event name",
-            onKeyDown: stopEditableKeyPropagation,
-            onChange: (changeEvent) => updateEvent(index, { label: changeEvent.target.value })
-          }
-        )
-      ] }),
-      /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { children: [
-        /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "mb-1 block text-[10px] font-black uppercase tracking-[0.14em] text-gray-400", children: "Duration" }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx(
-          "input",
-          {
-            className: fieldClass,
-            type: "number",
-            min: "0.25",
-            step: "0.25",
-            value: event.duration,
-            disabled,
-            onKeyDown: stopEditableKeyPropagation,
-            onChange: (changeEvent) => updateEvent(index, { duration: Math.max(0.25, Number(changeEvent.target.value) || 1) })
-          }
-        )
-      ] }),
-      /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { children: [
-        /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "mb-1 block text-[10px] font-black uppercase tracking-[0.14em] text-gray-400", children: "Colour" }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx(
-          "input",
-          {
-            className: "h-10 w-full rounded border border-gray-700 bg-gray-950 p-1 disabled:cursor-not-allowed disabled:opacity-50",
-            type: "color",
-            value: event.color,
-            disabled,
-            onChange: (changeEvent) => updateEvent(index, { color: changeEvent.target.value })
-          }
-        )
-      ] }),
-      /* @__PURE__ */ jsxRuntimeExports.jsx(
-        "button",
-        {
-          type: "button",
-          disabled,
-          onClick: () => deleteEvent(index),
-          className: "rounded border border-red-500/35 bg-red-500/10 px-3 py-2 text-xs font-black uppercase tracking-[0.12em] text-red-100 hover:bg-red-500/20 disabled:cursor-not-allowed disabled:opacity-50",
-          children: "- Delete"
-        }
-      )
-    ] }, `academic-standard-event-${index}`)) }) : /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-1 rounded border border-dashed border-gray-700 bg-gray-950/60 px-3 py-2 text-xs font-semibold text-gray-400", children: "No standard academic events configured. Use + Add to create the first event." })
+    events.length > 0 ? /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-2 space-y-2", children: events.map((event, index) => /* @__PURE__ */ jsxRuntimeExports.jsxs(
+      "div",
+      {
+        ref: (node) => {
+          rowRefs.current[index] = node;
+        },
+        className: "grid gap-2 rounded border border-gray-700 bg-gray-950/70 p-2 md:grid-cols-[minmax(0,1fr)_96px_82px_96px] md:items-end",
+        children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "mb-1 block text-[10px] font-black uppercase tracking-[0.14em] text-gray-400", children: "Event name" }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx(
+              DraftTextInput$2,
+              {
+                value: event.label,
+                disabled,
+                placeholder: "Event name",
+                className: fieldClass,
+                onCommit: (nextLabel) => updateEvent(index, { label: nextLabel })
+              }
+            )
+          ] }),
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "mb-1 block text-[10px] font-black uppercase tracking-[0.14em] text-gray-400", children: "Duration" }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx(
+              "input",
+              {
+                className: fieldClass,
+                type: "number",
+                min: "0.25",
+                step: "0.25",
+                value: event.duration,
+                disabled,
+                onKeyDown: stopEditableKeyPropagation,
+                onChange: (changeEvent) => updateEvent(index, { duration: Math.max(0.25, Number(changeEvent.target.value) || 1) })
+              }
+            )
+          ] }),
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "mb-1 block text-[10px] font-black uppercase tracking-[0.14em] text-gray-400", children: "Colour" }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx(
+              "input",
+              {
+                className: "h-10 w-full rounded border border-gray-700 bg-gray-950 p-1 disabled:cursor-not-allowed disabled:opacity-50",
+                type: "color",
+                value: event.color,
+                disabled,
+                onChange: (changeEvent) => updateEvent(index, { color: changeEvent.target.value })
+              }
+            )
+          ] }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx(
+            "button",
+            {
+              type: "button",
+              disabled,
+              onClick: () => deleteEvent(index),
+              className: "rounded border border-red-500/35 bg-red-500/10 px-3 py-2 text-xs font-black uppercase tracking-[0.12em] text-red-100 hover:bg-red-500/20 disabled:cursor-not-allowed disabled:opacity-50",
+              children: "- Delete"
+            }
+          )
+        ]
+      },
+      `academic-standard-event-${index}`
+    )) }) : /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-1 rounded border border-dashed border-gray-700 bg-gray-950/60 px-3 py-2 text-xs font-semibold text-gray-400", children: "No standard academic events configured. Use + Add to create the first event." })
   ] });
 };
 const DraftTextInput$2 = ({ value, disabled, placeholder, className, onCommit }) => {

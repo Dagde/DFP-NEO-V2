@@ -15297,11 +15297,26 @@ const ClassroomNamesField = ({
 }) => {
   const count = Math.max(0, Math.floor(Number(rowCount) || 0));
   const names = getClassroomNamesForRows(value, count);
-  const addClassroom = () => onCommit([...names, ''], count + 1);
+  const rowRefs = useRef<Record<number, HTMLDivElement | null>>({});
+  const pendingScrollIndexRef = useRef<number | null>(null);
+  const addClassroom = () => {
+    pendingScrollIndexRef.current = count;
+    onCommit([...names, ''], count + 1);
+  };
   const deleteClassroom = (indexToDelete: number) => {
     const nextNames = names.filter((_, index) => index !== indexToDelete);
     onCommit(nextNames, nextNames.length);
   };
+  useEffect(() => {
+    const pendingIndex = pendingScrollIndexRef.current;
+    if (pendingIndex === null || pendingIndex >= count) return;
+    pendingScrollIndexRef.current = null;
+    window.setTimeout(() => {
+      const target = rowRefs.current[pendingIndex];
+      target?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      target?.querySelector<HTMLInputElement>('input:not([type="color"])')?.focus();
+    }, 40);
+  }, [count]);
   return (
     <div className={className}>
       <div className="flex flex-wrap items-center justify-between gap-2">
@@ -15321,17 +15336,22 @@ const ClassroomNamesField = ({
       {count > 0 ? (
         <div className="mt-2 space-y-2">
           {names.map((name, index) => (
-            <div key={`classroom-name-${index}`} className="grid gap-2 rounded border border-gray-700 bg-gray-950/70 p-2 md:grid-cols-[140px_minmax(0,1fr)_96px] md:items-end">
+            <div
+              key={`classroom-name-${index}`}
+              ref={(node) => {
+                rowRefs.current[index] = node;
+              }}
+              className="grid gap-2 rounded border border-gray-700 bg-gray-950/70 p-2 md:grid-cols-[140px_minmax(0,1fr)_96px] md:items-end"
+            >
               <div className="pb-2 text-[10px] font-black uppercase tracking-[0.14em] text-cyan-200/80 md:pb-2.5">
                 {formatClassroomFieldLabel(index)}
               </div>
-              <input
-                className={fieldClass}
+              <DraftTextInput
                 value={name}
                 disabled={disabled}
                 placeholder="Name"
-                onKeyDown={stopEditableKeyPropagation}
-                onChange={(event) => onCommit(updateClassroomNameForRow(value, count, index, event.target.value))}
+                className={fieldClass}
+                onCommit={(nextName) => onCommit(updateClassroomNameForRow(value, count, index, nextName))}
               />
               <button
                 type="button"
@@ -15368,6 +15388,8 @@ const AcademicStandardEventsField = ({
 }) => {
   const events = normaliseAcademicStandardEvents(value);
   const commitEvents = (nextEvents: AcademicStandardEventConfig[]) => onCommit(normaliseAcademicStandardEvents(nextEvents, []));
+  const rowRefs = useRef<Record<number, HTMLDivElement | null>>({});
+  const pendingScrollIndexRef = useRef<number | null>(null);
   const updateEvent = (indexToUpdate: number, changes: Partial<AcademicStandardEventConfig>) => {
     commitEvents(events.map((event, index) => {
       if (index !== indexToUpdate) return event;
@@ -15379,11 +15401,24 @@ const AcademicStandardEventsField = ({
       };
     }));
   };
-  const addEvent = () => commitEvents([
-    ...events,
-    { code: createAcademicStandardEventCode('New Event', events.length), label: 'New Event', duration: 1, color: '#64748b' },
-  ]);
+  const addEvent = () => {
+    pendingScrollIndexRef.current = events.length;
+    commitEvents([
+      ...events,
+      { code: createAcademicStandardEventCode('New Event', events.length), label: 'New Event', duration: 1, color: '#64748b' },
+    ]);
+  };
   const deleteEvent = (indexToDelete: number) => commitEvents(events.filter((_, index) => index !== indexToDelete));
+  useEffect(() => {
+    const pendingIndex = pendingScrollIndexRef.current;
+    if (pendingIndex === null || pendingIndex >= events.length) return;
+    pendingScrollIndexRef.current = null;
+    window.setTimeout(() => {
+      const target = rowRefs.current[pendingIndex];
+      target?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      target?.querySelector<HTMLInputElement>('input:not([type="color"])')?.focus();
+    }, 40);
+  }, [events.length]);
   return (
     <div id={id} className={className}>
       <div className="flex flex-wrap items-center justify-between gap-2">
@@ -15403,16 +15438,21 @@ const AcademicStandardEventsField = ({
       {events.length > 0 ? (
         <div className="mt-2 space-y-2">
           {events.map((event, index) => (
-            <div key={`academic-standard-event-${index}`} className="grid gap-2 rounded border border-gray-700 bg-gray-950/70 p-2 md:grid-cols-[minmax(0,1fr)_96px_82px_96px] md:items-end">
+            <div
+              key={`academic-standard-event-${index}`}
+              ref={(node) => {
+                rowRefs.current[index] = node;
+              }}
+              className="grid gap-2 rounded border border-gray-700 bg-gray-950/70 p-2 md:grid-cols-[minmax(0,1fr)_96px_82px_96px] md:items-end"
+            >
               <label>
                 <span className="mb-1 block text-[10px] font-black uppercase tracking-[0.14em] text-gray-400">Event name</span>
-                <input
-                  className={fieldClass}
+                <DraftTextInput
                   value={event.label}
                   disabled={disabled}
                   placeholder="Event name"
-                  onKeyDown={stopEditableKeyPropagation}
-                  onChange={(changeEvent) => updateEvent(index, { label: changeEvent.target.value })}
+                  className={fieldClass}
+                  onCommit={(nextLabel) => updateEvent(index, { label: nextLabel })}
                 />
               </label>
               <label>
