@@ -32843,6 +32843,7 @@ const App: React.FC = () => {
 
     // Published Schedules State (must be declared before buildResources)
     const [publishedSchedules, setPublishedSchedules] = useState<Record<string, ScheduleEvent[]>>({});
+    const [manualTileRenderMonitorTick, setManualTileRenderMonitorTick] = useState(0);
     const publishedSchedulesRef = React.useRef<Record<string, ScheduleEvent[]>>({});
     useEffect(() => {
         publishedSchedulesRef.current = publishedSchedules;
@@ -36415,6 +36416,7 @@ const App: React.FC = () => {
 
     useEffect(() => {
         if (typeof window === 'undefined') return;
+        const now = Date.now();
         let probe: any = null;
         try {
             const rawProbe = localStorage.getItem(NEO_ASSIST_MANUAL_TILE_RENDER_PROBE_KEY);
@@ -36430,6 +36432,23 @@ const App: React.FC = () => {
             ? probe.ids.map((id: unknown) => String(id || '').trim()).filter(Boolean)
             : [];
         if (probeIds.length === 0) return;
+
+        const createdAtMs = Date.parse(String(probe?.createdAt || ''));
+        const monitorUntilMs = Number(probe?.monitorUntilMs);
+        const effectiveMonitorUntilMs = Number.isFinite(monitorUntilMs)
+            ? monitorUntilMs
+            : (Number.isFinite(createdAtMs) ? createdAtMs + 20000 : now + 20000);
+        if (now > effectiveMonitorUntilMs) {
+            appendNeoAssistManualTileTrace('manual-tile-render-monitor-expired', {
+                date,
+                probe,
+                ageMs: Number.isFinite(createdAtMs) ? now - createdAtMs : null,
+            });
+            try {
+                localStorage.removeItem(NEO_ASSIST_MANUAL_TILE_RENDER_PROBE_KEY);
+            } catch {}
+            return;
+        }
 
         const rawForDate = Array.isArray(publishedSchedules[date]) ? publishedSchedules[date] : [];
         const describeProbeEvent = (event: ScheduleEvent | undefined | null) => event ? {
@@ -36449,6 +36468,18 @@ const App: React.FC = () => {
             segmentStartTime: (event as any).segmentStartTime ?? null,
             segmentDuration: (event as any).segmentDuration ?? null,
         } : null;
+        const nearbyEvents = (items: ScheduleEvent[], probeEvent: ScheduleEvent | null | undefined) => {
+            const resourceId = probeEvent?.resourceId || probe?.placement?.resourceId;
+            const startTime = Number(probeEvent?.startTime ?? probe?.placement?.startTime);
+            return items
+                .filter(event => {
+                    if (!resourceId || event.resourceId !== resourceId) return false;
+                    if (!Number.isFinite(startTime)) return true;
+                    return Math.abs(Number(event.startTime) - startTime) <= 1.5;
+                })
+                .slice(0, 12)
+                .map(describeProbeEvent);
+        };
 
         const report = probeIds.map((id: string) => {
             const rawEvent = rawForDate.find(event => event.id === id);
@@ -36465,12 +36496,35 @@ const App: React.FC = () => {
                 scopedEvent: describeProbeEvent(scopedEvent),
                 renderInputEvent: describeProbeEvent(renderInputEvent),
                 segmentEvent: describeProbeEvent(segmentEvent as ScheduleEvent | undefined),
+                nearbyRawEvents: nearbyEvents(rawForDate, rawEvent || scopedEvent || renderInputEvent || segmentEvent),
+                nearbySegmentEvents: nearbyEvents(eventSegmentsForDate as ScheduleEvent[], segmentEvent as ScheduleEvent | undefined),
             };
         });
+        const hadBeenVisible = probe?.hadBeenVisible === true;
+        const isVisibleNow = report.some(entry => entry.inEventSegmentsForDate);
+        const missingAfterVisible = hadBeenVisible && !isVisibleNow;
+        const nextProbe = {
+            ...probe,
+            monitorUntilMs: effectiveMonitorUntilMs,
+            lastCheckedAt: new Date(now).toISOString(),
+            hadBeenVisible: hadBeenVisible || isVisibleNow,
+            lastStatus: report.map(entry => ({
+                id: entry.id,
+                inPublishedRawForDate: entry.inPublishedRawForDate,
+                inScopedPublishedEventsForDate: entry.inScopedPublishedEventsForDate,
+                inRenderInputEventsForDateWithPreFlightNotes: entry.inRenderInputEventsForDateWithPreFlightNotes,
+                inEventSegmentsForDate: entry.inEventSegmentsForDate,
+            })),
+        };
 
-        appendNeoAssistManualTileTrace('manual-tile-post-render-probe', {
+        appendNeoAssistManualTileTrace(missingAfterVisible ? 'manual-tile-disappeared-after-render' : 'manual-tile-render-monitor-sample', {
             date,
-            probe,
+            probe: nextProbe,
+            ageMs: Number.isFinite(createdAtMs) ? now - createdAtMs : null,
+            monitorRemainingMs: effectiveMonitorUntilMs - now,
+            hadBeenVisible,
+            isVisibleNow,
+            missingAfterVisible,
             rawCountForDate: rawForDate.length,
             scopedCountForDate: scopedPublishedEventsForDate.length,
             renderInputCount: eventsForDateWithPreFlightNotes.length,
@@ -36478,12 +36532,31 @@ const App: React.FC = () => {
             report,
         });
 
-        if (report.every(entry => entry.inEventSegmentsForDate)) {
-            try {
-                localStorage.removeItem(NEO_ASSIST_MANUAL_TILE_RENDER_PROBE_KEY);
-            } catch {}
+        try {
+            localStorage.setItem(NEO_ASSIST_MANUAL_TILE_RENDER_PROBE_KEY, JSON.stringify(nextProbe));
+        } catch (error) {
+            appendNeoAssistManualTileTrace('manual-tile-render-probe-update-failed', {
+                date,
+                error: error instanceof Error ? error.message : String(error),
+            });
         }
-    }, [date, eventSegmentsForDate, eventsForDateWithPreFlightNotes, publishedSchedules, scopedPublishedEventsForDate]);
+    }, [date, eventSegmentsForDate, eventsForDateWithPreFlightNotes, manualTileRenderMonitorTick, publishedSchedules, scopedPublishedEventsForDate]);
+
+    useEffect(() => {
+        if (typeof window === 'undefined') return undefined;
+        const intervalId = window.setInterval(() => {
+            try {
+                const rawProbe = localStorage.getItem(NEO_ASSIST_MANUAL_TILE_RENDER_PROBE_KEY);
+                if (!rawProbe) return;
+                const probe = JSON.parse(rawProbe);
+                const monitorUntilMs = Number(probe?.monitorUntilMs);
+                if (Number.isFinite(monitorUntilMs) && Date.now() <= monitorUntilMs) {
+                    setManualTileRenderMonitorTick(tick => tick + 1);
+                }
+            } catch {}
+        }, 1000);
+        return () => window.clearInterval(intervalId);
+    }, []);
 
     const staffAvailabilityDiagnosticEventIds = useMemo(() => {
         if (!isStaffAvailabilityDiagnoseActive || staffAvailabilityPointer.time === null) {
@@ -48034,8 +48107,11 @@ appliedUpdates.forEach(update => {
             appendedEventIds: droppedEvents.map(event => event.id),
         });
         try {
+            const monitorStartedAt = Date.now();
             localStorage.setItem(NEO_ASSIST_MANUAL_TILE_RENDER_PROBE_KEY, JSON.stringify({
-                createdAt: new Date().toISOString(),
+                createdAt: new Date(monitorStartedAt).toISOString(),
+                monitorUntilMs: monitorStartedAt + 20000,
+                hadBeenVisible: false,
                 source: 'program-schedule-drop',
                 date,
                 ids: droppedEvents.map(event => event.id),
