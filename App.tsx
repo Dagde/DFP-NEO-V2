@@ -31780,6 +31780,7 @@ const App: React.FC = () => {
     const activeBaselineKey = getDailySnapshotKey(date);
     const activeDfpSaveInFlightRef = useRef(0);
     const pendingManualNeoAssistDropsRef = useRef<Record<string, { expiresAt: number; events: ScheduleEvent[] }>>({});
+    const pendingPublishedTileMovesRef = useRef<Record<string, { expiresAt: number; events: ScheduleEvent[] }>>({});
 
     const applyDailySnapshot = React.useCallback((
         targetDate: string,
@@ -31851,6 +31852,10 @@ const App: React.FC = () => {
             const pendingManualEvents = pendingManualDrop && pendingManualDrop.expiresAt > Date.now()
                 ? pendingManualDrop.events.filter(event => event?.id && !events.some(incoming => incoming.id === event.id))
                 : [];
+            const pendingPublishedMove = pendingPublishedTileMovesRef.current[targetDate];
+            const pendingPublishedMoveEvents = pendingPublishedMove && pendingPublishedMove.expiresAt > Date.now()
+                ? pendingPublishedMove.events.filter(event => event?.id)
+                : [];
             if (!replace && existingNonSeed.length > 0 && events.length > 0) return prev;
             if (!replace && existingNonSeed.length > 0 && events.length === 0) {
                 pushDfpDataDiag('snapshot:preserve-existing-on-empty-refresh', {
@@ -31879,6 +31884,22 @@ const App: React.FC = () => {
                     pendingManualEventIds: pendingManualEvents.map(event => event.id),
                 });
                 return { ...prev, [targetDate]: [...events, ...pendingManualEvents] };
+            }
+            if (pendingPublishedMoveEvents.length > 0) {
+                const pendingById = new Map(pendingPublishedMoveEvents.map(event => [event.id, event]));
+                const mergedEvents = events.map(event => pendingById.get(event.id) || event);
+                const missingPendingEvents = pendingPublishedMoveEvents.filter(event => !events.some(incoming => incoming.id === event.id));
+                appendNeoAssistManualTileTrace('dfp-tile-move-protected-from-snapshot-overwrite', {
+                    targetDate,
+                    snapshotSchool,
+                    snapshotUnit,
+                    source,
+                    replace,
+                    incomingCount: events.length,
+                    pendingMoveEventIds: pendingPublishedMoveEvents.map(event => event.id),
+                    missingPendingEventIds: missingPendingEvents.map(event => event.id),
+                });
+                return { ...prev, [targetDate]: [...mergedEvents, ...missingPendingEvents] };
             }
             return { ...prev, [targetDate]: events };
         });
@@ -47915,45 +47936,44 @@ const App: React.FC = () => {
             return;
         }
 
-        let updatedEventsForDate: ScheduleEvent[] = [];
-        let appliedUpdates: ScheduleTileUpdate[] = updates;
-        let moveTraceOriginalEvents: Array<Record<string, unknown>> = [];
-        let moveTraceUpdatedEvents: Array<Record<string, unknown>> = [];
-        setPublishedSchedules((prev: Record<string, ScheduleEvent[]>) => {
-            const scheduleForDate = prev[date] || [];
-            appliedUpdates = expandFormationScheduleUpdates(scheduleForDate, updates);
-            const updatesMap = new Map(appliedUpdates.map(u => [u.eventId, u]));
-            moveTraceOriginalEvents = appliedUpdates.map(update => {
-                const event = scheduleForDate.find(candidate => candidate.id === update.eventId);
-                return {
-                    eventId: update.eventId,
-                    before: event ? summariseNeoAssistManualTileEvent(event) : null,
-                    requested: update,
-                };
-            });
-
-            const newScheduleForDate = scheduleForDate.map(event => {
-                if (updatesMap.has(event.id)) {
-                    const update = updatesMap.get(event.id)!;
-                    return {
-                        ...event,
-                        startTime: update.newStartTime ?? event.startTime,
-                        resourceId: update.newResourceId ?? event.resourceId,
-                        aircraftNumber: Object.prototype.hasOwnProperty.call(update, 'newAircraftNumber') ? update.newAircraftNumber : event.aircraftNumber,
-                    };
-                }
-                return event;
-            });
-            moveTraceUpdatedEvents = appliedUpdates.map(update => {
-                const event = newScheduleForDate.find(candidate => candidate.id === update.eventId);
-                return {
-                    eventId: update.eventId,
-                    after: event ? summariseNeoAssistManualTileEvent(event) : null,
-                };
-            });
-            updatedEventsForDate = newScheduleForDate; // capture for persist
-            return { ...prev, [date]: newScheduleForDate };
+        const scheduleForDate = publishedSchedulesRef.current[date] || [];
+        const appliedUpdates: ScheduleTileUpdate[] = expandFormationScheduleUpdates(scheduleForDate, updates);
+        const updatesMap = new Map(appliedUpdates.map(u => [u.eventId, u]));
+        const moveTraceOriginalEvents = appliedUpdates.map(update => {
+            const event = scheduleForDate.find(candidate => candidate.id === update.eventId);
+            return {
+                eventId: update.eventId,
+                before: event ? summariseNeoAssistManualTileEvent(event) : null,
+                requested: update,
+            };
         });
+        const updatedEventsForDate = scheduleForDate.map(event => {
+            if (updatesMap.has(event.id)) {
+                const update = updatesMap.get(event.id)!;
+                return {
+                    ...event,
+                    startTime: update.newStartTime ?? event.startTime,
+                    resourceId: update.newResourceId ?? event.resourceId,
+                    aircraftNumber: Object.prototype.hasOwnProperty.call(update, 'newAircraftNumber') ? update.newAircraftNumber : event.aircraftNumber,
+                };
+            }
+            return event;
+        });
+        const movedEventsForProtection = appliedUpdates
+            .map(update => updatedEventsForDate.find(candidate => candidate.id === update.eventId))
+            .filter((event): event is ScheduleEvent => Boolean(event));
+        const moveTraceUpdatedEvents = appliedUpdates.map(update => {
+            const event = updatedEventsForDate.find(candidate => candidate.id === update.eventId);
+            return {
+                eventId: update.eventId,
+                after: event ? summariseNeoAssistManualTileEvent(event) : null,
+            };
+        });
+        setPublishedSchedules((prev: Record<string, ScheduleEvent[]>) => ({ ...prev, [date]: updatedEventsForDate }));
+        pendingPublishedTileMovesRef.current[date] = {
+            expiresAt: Date.now() + 15000,
+            events: movedEventsForProtection,
+        };
         const monitorStartedAt = Date.now();
         try {
             localStorage.setItem(DFP_TILE_MOVE_RENDER_PROBE_KEY, JSON.stringify({
@@ -48027,6 +48047,20 @@ const App: React.FC = () => {
                     handleDeploymentUnavailability(allEvents);
                     return prevSchedules; // no state change, just reading
                 });
+                window.setTimeout(() => {
+                    const pending = pendingPublishedTileMovesRef.current[date];
+                    if (!pending) return;
+                    const movedIds = new Set(appliedUpdates.map(update => update.eventId));
+                    const remaining = pending.events.filter(event => !movedIds.has(event.id));
+                    if (remaining.length > 0) {
+                        pendingPublishedTileMovesRef.current[date] = {
+                            expiresAt: pending.expiresAt,
+                            events: remaining,
+                        };
+                    } else {
+                        delete pendingPublishedTileMovesRef.current[date];
+                    }
+                }, 15000);
             }
         }, 500);
 

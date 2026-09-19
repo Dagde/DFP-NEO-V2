@@ -133845,6 +133845,7 @@ const App = () => {
   const activeBaselineKey = getDailySnapshotKey(date);
   const activeDfpSaveInFlightRef = reactExports.useRef(0);
   const pendingManualNeoAssistDropsRef = reactExports.useRef({});
+  const pendingPublishedTileMovesRef = reactExports.useRef({});
   const applyDailySnapshot = React.useCallback((targetDate, snapshotSchool, snapshotUnit, snap2, replace, source) => {
     if (!snap2) return 0;
     const events2 = Array.isArray(snap2.scheduleEvents) ? snap2.scheduleEvents : [];
@@ -133898,6 +133899,8 @@ const App = () => {
       const existingNonSeed = (prev[targetDate] || []).filter((e) => !e.isHistoricalSeed);
       const pendingManualDrop = pendingManualNeoAssistDropsRef.current[targetDate];
       const pendingManualEvents = pendingManualDrop && pendingManualDrop.expiresAt > Date.now() ? pendingManualDrop.events.filter((event) => event?.id && !events2.some((incoming) => incoming.id === event.id)) : [];
+      const pendingPublishedMove = pendingPublishedTileMovesRef.current[targetDate];
+      const pendingPublishedMoveEvents = pendingPublishedMove && pendingPublishedMove.expiresAt > Date.now() ? pendingPublishedMove.events.filter((event) => event?.id) : [];
       if (!replace && existingNonSeed.length > 0 && events2.length > 0) return prev;
       if (!replace && existingNonSeed.length > 0 && events2.length === 0) {
         pushDfpDataDiag("snapshot:preserve-existing-on-empty-refresh", {
@@ -133926,6 +133929,22 @@ const App = () => {
           pendingManualEventIds: pendingManualEvents.map((event) => event.id)
         });
         return { ...prev, [targetDate]: [...events2, ...pendingManualEvents] };
+      }
+      if (pendingPublishedMoveEvents.length > 0) {
+        const pendingById = new Map(pendingPublishedMoveEvents.map((event) => [event.id, event]));
+        const mergedEvents = events2.map((event) => pendingById.get(event.id) || event);
+        const missingPendingEvents = pendingPublishedMoveEvents.filter((event) => !events2.some((incoming) => incoming.id === event.id));
+        appendNeoAssistManualTileTrace("dfp-tile-move-protected-from-snapshot-overwrite", {
+          targetDate,
+          snapshotSchool,
+          snapshotUnit,
+          source,
+          replace,
+          incomingCount: events2.length,
+          pendingMoveEventIds: pendingPublishedMoveEvents.map((event) => event.id),
+          missingPendingEventIds: missingPendingEvents.map((event) => event.id)
+        });
+        return { ...prev, [targetDate]: [...mergedEvents, ...missingPendingEvents] };
       }
       return { ...prev, [targetDate]: events2 };
     });
@@ -147050,44 +147069,42 @@ Do not hard refresh yet. Try Publish again, then confirm the save succeeds.`,
       denyPastDfpEdit("move tiles");
       return;
     }
-    let updatedEventsForDate = [];
-    let appliedUpdates = updates;
-    let moveTraceOriginalEvents = [];
-    let moveTraceUpdatedEvents = [];
-    setPublishedSchedules((prev) => {
-      const scheduleForDate = prev[date] || [];
-      appliedUpdates = expandFormationScheduleUpdates(scheduleForDate, updates);
-      const updatesMap = new Map(appliedUpdates.map((u) => [u.eventId, u]));
-      moveTraceOriginalEvents = appliedUpdates.map((update) => {
-        const event = scheduleForDate.find((candidate) => candidate.id === update.eventId);
-        return {
-          eventId: update.eventId,
-          before: event ? summariseNeoAssistManualTileEvent(event) : null,
-          requested: update
-        };
-      });
-      const newScheduleForDate = scheduleForDate.map((event) => {
-        if (updatesMap.has(event.id)) {
-          const update = updatesMap.get(event.id);
-          return {
-            ...event,
-            startTime: update.newStartTime ?? event.startTime,
-            resourceId: update.newResourceId ?? event.resourceId,
-            aircraftNumber: Object.prototype.hasOwnProperty.call(update, "newAircraftNumber") ? update.newAircraftNumber : event.aircraftNumber
-          };
-        }
-        return event;
-      });
-      moveTraceUpdatedEvents = appliedUpdates.map((update) => {
-        const event = newScheduleForDate.find((candidate) => candidate.id === update.eventId);
-        return {
-          eventId: update.eventId,
-          after: event ? summariseNeoAssistManualTileEvent(event) : null
-        };
-      });
-      updatedEventsForDate = newScheduleForDate;
-      return { ...prev, [date]: newScheduleForDate };
+    const scheduleForDate = publishedSchedulesRef.current[date] || [];
+    const appliedUpdates = expandFormationScheduleUpdates(scheduleForDate, updates);
+    const updatesMap = new Map(appliedUpdates.map((u) => [u.eventId, u]));
+    const moveTraceOriginalEvents = appliedUpdates.map((update) => {
+      const event = scheduleForDate.find((candidate) => candidate.id === update.eventId);
+      return {
+        eventId: update.eventId,
+        before: event ? summariseNeoAssistManualTileEvent(event) : null,
+        requested: update
+      };
     });
+    const updatedEventsForDate = scheduleForDate.map((event) => {
+      if (updatesMap.has(event.id)) {
+        const update = updatesMap.get(event.id);
+        return {
+          ...event,
+          startTime: update.newStartTime ?? event.startTime,
+          resourceId: update.newResourceId ?? event.resourceId,
+          aircraftNumber: Object.prototype.hasOwnProperty.call(update, "newAircraftNumber") ? update.newAircraftNumber : event.aircraftNumber
+        };
+      }
+      return event;
+    });
+    const movedEventsForProtection = appliedUpdates.map((update) => updatedEventsForDate.find((candidate) => candidate.id === update.eventId)).filter((event) => Boolean(event));
+    const moveTraceUpdatedEvents = appliedUpdates.map((update) => {
+      const event = updatedEventsForDate.find((candidate) => candidate.id === update.eventId);
+      return {
+        eventId: update.eventId,
+        after: event ? summariseNeoAssistManualTileEvent(event) : null
+      };
+    });
+    setPublishedSchedules((prev) => ({ ...prev, [date]: updatedEventsForDate }));
+    pendingPublishedTileMovesRef.current[date] = {
+      expiresAt: Date.now() + 15e3,
+      events: movedEventsForProtection
+    };
     const monitorStartedAt = Date.now();
     try {
       localStorage.setItem(DFP_TILE_MOVE_RENDER_PROBE_KEY, JSON.stringify({
@@ -147153,6 +147170,20 @@ Do not hard refresh yet. Try Publish again, then confirm the save succeeds.`,
           handleDeploymentUnavailability(allEvents);
           return prevSchedules;
         });
+        window.setTimeout(() => {
+          const pending = pendingPublishedTileMovesRef.current[date];
+          if (!pending) return;
+          const movedIds = new Set(appliedUpdates.map((update) => update.eventId));
+          const remaining = pending.events.filter((event) => !movedIds.has(event.id));
+          if (remaining.length > 0) {
+            pendingPublishedTileMovesRef.current[date] = {
+              expiresAt: pending.expiresAt,
+              events: remaining
+            };
+          } else {
+            delete pendingPublishedTileMovesRef.current[date];
+          }
+        }, 15e3);
       }
     }, 500);
     appliedUpdates.forEach((update) => {
