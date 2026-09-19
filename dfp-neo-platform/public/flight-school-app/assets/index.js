@@ -83703,6 +83703,25 @@ const InstructorProfileFlyout = ({
     () => normaliseFlightSchoolStaffLmpAssignments(instructor.preferences),
     [instructor.preferences]
   );
+  const assignedMasterLmpItems = reactExports.useMemo(() => {
+    const airCombatItems = assignedTraining.courses.map((item) => ({
+      key: item.trainingKey,
+      code: item.code,
+      title: item.title
+    }));
+    const flightSchoolItems = assignedFlightSchoolLmps.map((item) => ({
+      key: item.assignmentId,
+      code: item.lmpCode,
+      title: item.title
+    }));
+    return isFlightSchoolModel ? flightSchoolItems : airCombatItems;
+  }, [assignedFlightSchoolLmps, assignedTraining.courses, isFlightSchoolModel]);
+  const assignedTrainingPackageItems = reactExports.useMemo(() => assignedTraining.trainingPackages.map((item) => ({
+    key: item.trainingKey,
+    code: item.code,
+    title: item.title
+  })), [assignedTraining.trainingPackages]);
+  const showAssignedLmpPackageWindow = !isEditing && !isCreating && (isAirCombatModel || isFixedCrewLikeOperationalModel(activeOperationalModel) || isFlightSchoolModel);
   const assignedAirCombatTraining = reactExports.useMemo(() => [
     ...assignedTraining.courses.map((item) => ({ ...item, displayKind: "Course", tone: "sky" })),
     ...assignedTraining.trainingPackages.map((item) => ({ ...item, displayKind: "Training Package", tone: "emerald" }))
@@ -85256,105 +85275,105 @@ Confirm the Personnel ID, unit and role are correct before saving this separate 
               canManage: canManageAccountAccess
             }
           ),
-          !isEditing && !isCreating && isAirCombatModel && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: card3d + " p-3", style: card3dStyle, children: [
-            /* @__PURE__ */ jsxRuntimeExports.jsx("h4", { className: "text-xs font-semibold text-gray-300 mb-3", children: "Assigned Training" }),
+          showAssignedLmpPackageWindow && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: card3d + " p-3", style: card3dStyle, children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mb-3 flex items-center justify-between gap-3", children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
+                /* @__PURE__ */ jsxRuntimeExports.jsx("h4", { className: "text-xs font-semibold text-gray-300", children: "Assigned LMP / Packages" }),
+                /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-0.5 text-[10px] text-gray-500", children: "Training assigned to this staff profile from the LMP page." })
+              ] }),
+              /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "rounded-full border border-gray-700 bg-gray-950/70 px-2.5 py-1 text-[10px] font-bold uppercase text-gray-300", children: [
+                assignedMasterLmpItems.length + assignedTrainingPackageItems.length,
+                " assigned"
+              ] })
+            ] }),
             /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "grid grid-cols-2 gap-3", children: [
-              { title: "Courses", items: assignedTraining.courses },
-              { title: "Training Packages", items: assignedTraining.trainingPackages }
+              { title: "Master LMPs", items: assignedMasterLmpItems, tone: "sky" },
+              { title: "Training Packages", items: assignedTrainingPackageItems, tone: "emerald" }
             ].map((group) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: card3d + " p-3", style: { ...card3dStyle, background: "linear-gradient(180deg, #1e2d42 0%, #192538 100%)" }, children: [
-              /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-[9px] text-sky-400 font-semibold mb-2", children: group.title }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: `mb-2 text-[9px] font-bold uppercase tracking-wide ${group.tone === "emerald" ? "text-emerald-300" : "text-sky-400"}`, children: group.title }),
               group.items.length > 0 ? /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "space-y-1", children: group.items.map((item) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded border border-gray-700 bg-gray-900/60 px-2 py-1", children: [
                 /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-[10px] font-semibold text-white", children: item.code }),
-                /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-[9px] text-gray-400 truncate", children: item.title })
-              ] }, item.trainingKey)) }) : /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-gray-500 text-[10px] italic", children: "Nil" })
+                /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "truncate text-[9px] text-gray-400", children: item.title })
+              ] }, item.key)) }) : /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "rounded border border-gray-700 bg-gray-900/50 px-2 py-2 text-gray-500 text-[10px] italic", children: "Nil assigned" })
             ] }, group.title)) })
           ] }),
-          !isEditing && !isCreating && !isAirCombatModel && /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
-            isFlightSchoolModel && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: card3d + " p-3", style: card3dStyle, children: [
-              /* @__PURE__ */ jsxRuntimeExports.jsx("h4", { className: "text-xs font-semibold text-gray-300 mb-3", children: "Assigned LMPs" }),
-              assignedFlightSchoolLmps.length > 0 ? /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "grid grid-cols-2 gap-2", children: assignedFlightSchoolLmps.map((item) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded border border-sky-500/25 bg-sky-950/30 px-3 py-2", children: [
-                /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-[10px] font-semibold text-white", children: item.lmpCode }),
-                /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-0.5 truncate text-[9px] text-gray-400", children: item.title })
-              ] }, item.assignmentId)) }) : /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "rounded border border-gray-700 bg-gray-900/50 px-3 py-2 text-[10px] italic text-gray-500", children: "Nil assigned" })
-            ] }),
-            /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: card3d + " p-3", style: card3dStyle, children: [
-              /* @__PURE__ */ jsxRuntimeExports.jsx("h4", { className: "text-xs font-semibold text-gray-300 mb-3", children: "Assigned Trainees" }),
-              /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid grid-cols-4 gap-2", children: [
-                /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: card3d + " p-2", style: { ...card3dStyle, background: "linear-gradient(180deg, #1e2d42 0%, #192538 100%)" }, children: [
-                  /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-[9px] text-sky-400 font-semibold mb-1.5", children: "Primary" }),
-                  primaryTrainees[0] ? /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center gap-2", children: [
-                    /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "w-7 h-7 bg-gray-600 rounded-full flex items-center justify-center flex-shrink-0", children: /* @__PURE__ */ jsxRuntimeExports.jsx(TraineeIcon, {}) }),
-                    /* @__PURE__ */ jsxRuntimeExports.jsx(
-                      "button",
-                      {
-                        onClick: () => onNavigateToTrainee?.(primaryTrainees[0]),
-                        className: "text-white text-[10px] font-medium leading-tight hover:text-sky-400 hover:underline cursor-pointer",
-                        title: "View trainee profile",
-                        children: primaryTrainees[0].name
-                      }
-                    )
-                  ] }) : /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center gap-2", children: [
-                    /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "w-7 h-7 bg-gray-700/50 rounded-full flex items-center justify-center flex-shrink-0", children: /* @__PURE__ */ jsxRuntimeExports.jsx(TraineeIcon, {}) }),
-                    /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-gray-600 text-[10px] italic", children: "Not assigned" })
-                  ] })
-                ] }),
-                /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: card3d + " p-2", style: { ...card3dStyle, background: "linear-gradient(180deg, #1e2d42 0%, #192538 100%)" }, children: [
-                  /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-[9px] text-sky-400 font-semibold mb-1.5", children: "Primary" }),
-                  primaryTrainees[1] ? /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center gap-2", children: [
-                    /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "w-7 h-7 bg-gray-600 rounded-full flex items-center justify-center flex-shrink-0", children: /* @__PURE__ */ jsxRuntimeExports.jsx(TraineeIcon, {}) }),
-                    /* @__PURE__ */ jsxRuntimeExports.jsx(
-                      "button",
-                      {
-                        onClick: () => onNavigateToTrainee?.(primaryTrainees[1]),
-                        className: "text-white text-[10px] font-medium leading-tight hover:text-sky-400 hover:underline cursor-pointer",
-                        title: "View trainee profile",
-                        children: primaryTrainees[1].name
-                      }
-                    )
-                  ] }) : /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center gap-2", children: [
-                    /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "w-7 h-7 bg-gray-700/50 rounded-full flex items-center justify-center flex-shrink-0", children: /* @__PURE__ */ jsxRuntimeExports.jsx(TraineeIcon, {}) }),
-                    /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-gray-600 text-[10px] italic", children: "Not assigned" })
-                  ] })
-                ] }),
-                /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: card3d + " p-2", style: { ...card3dStyle, background: "linear-gradient(180deg, #1e2d42 0%, #192538 100%)" }, children: [
-                  /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-[9px] text-amber-400 font-semibold mb-1.5", children: "Secondary" }),
-                  secondaryTrainees[0] ? /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center gap-2", children: [
-                    /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "w-7 h-7 bg-gray-600 rounded-full flex items-center justify-center flex-shrink-0", children: /* @__PURE__ */ jsxRuntimeExports.jsx(TraineeIcon, {}) }),
-                    /* @__PURE__ */ jsxRuntimeExports.jsx(
-                      "button",
-                      {
-                        onClick: () => onNavigateToTrainee?.(secondaryTrainees[0]),
-                        className: "text-white text-[10px] font-medium leading-tight hover:text-sky-400 hover:underline cursor-pointer",
-                        title: "View trainee profile",
-                        children: secondaryTrainees[0].name
-                      }
-                    )
-                  ] }) : /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center gap-2", children: [
-                    /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "w-7 h-7 bg-gray-700/50 rounded-full flex items-center justify-center flex-shrink-0", children: /* @__PURE__ */ jsxRuntimeExports.jsx(TraineeIcon, {}) }),
-                    /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-gray-600 text-[10px] italic", children: "Not assigned" })
-                  ] })
-                ] }),
-                /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: card3d + " p-2", style: { ...card3dStyle, background: "linear-gradient(180deg, #1e2d42 0%, #192538 100%)" }, children: [
-                  /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-[9px] text-amber-400 font-semibold mb-1.5", children: "Secondary" }),
-                  secondaryTrainees[1] ? /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center gap-2", children: [
-                    /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "w-7 h-7 bg-gray-600 rounded-full flex items-center justify-center flex-shrink-0", children: /* @__PURE__ */ jsxRuntimeExports.jsx(TraineeIcon, {}) }),
-                    /* @__PURE__ */ jsxRuntimeExports.jsx(
-                      "button",
-                      {
-                        onClick: () => onNavigateToTrainee?.(secondaryTrainees[1]),
-                        className: "text-white text-[10px] font-medium leading-tight hover:text-sky-400 hover:underline cursor-pointer",
-                        title: "View trainee profile",
-                        children: secondaryTrainees[1].name
-                      }
-                    )
-                  ] }) : /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center gap-2", children: [
-                    /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "w-7 h-7 bg-gray-700/50 rounded-full flex items-center justify-center flex-shrink-0", children: /* @__PURE__ */ jsxRuntimeExports.jsx(TraineeIcon, {}) }),
-                    /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-gray-600 text-[10px] italic", children: "Not assigned" })
-                  ] })
+          !isEditing && !isCreating && !isAirCombatModel && /* @__PURE__ */ jsxRuntimeExports.jsx(jsxRuntimeExports.Fragment, { children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: card3d + " p-3", style: card3dStyle, children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx("h4", { className: "text-xs font-semibold text-gray-300 mb-3", children: "Assigned Trainees" }),
+            /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid grid-cols-4 gap-2", children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: card3d + " p-2", style: { ...card3dStyle, background: "linear-gradient(180deg, #1e2d42 0%, #192538 100%)" }, children: [
+                /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-[9px] text-sky-400 font-semibold mb-1.5", children: "Primary" }),
+                primaryTrainees[0] ? /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center gap-2", children: [
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "w-7 h-7 bg-gray-600 rounded-full flex items-center justify-center flex-shrink-0", children: /* @__PURE__ */ jsxRuntimeExports.jsx(TraineeIcon, {}) }),
+                  /* @__PURE__ */ jsxRuntimeExports.jsx(
+                    "button",
+                    {
+                      onClick: () => onNavigateToTrainee?.(primaryTrainees[0]),
+                      className: "text-white text-[10px] font-medium leading-tight hover:text-sky-400 hover:underline cursor-pointer",
+                      title: "View trainee profile",
+                      children: primaryTrainees[0].name
+                    }
+                  )
+                ] }) : /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center gap-2", children: [
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "w-7 h-7 bg-gray-700/50 rounded-full flex items-center justify-center flex-shrink-0", children: /* @__PURE__ */ jsxRuntimeExports.jsx(TraineeIcon, {}) }),
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-gray-600 text-[10px] italic", children: "Not assigned" })
+                ] })
+              ] }),
+              /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: card3d + " p-2", style: { ...card3dStyle, background: "linear-gradient(180deg, #1e2d42 0%, #192538 100%)" }, children: [
+                /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-[9px] text-sky-400 font-semibold mb-1.5", children: "Primary" }),
+                primaryTrainees[1] ? /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center gap-2", children: [
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "w-7 h-7 bg-gray-600 rounded-full flex items-center justify-center flex-shrink-0", children: /* @__PURE__ */ jsxRuntimeExports.jsx(TraineeIcon, {}) }),
+                  /* @__PURE__ */ jsxRuntimeExports.jsx(
+                    "button",
+                    {
+                      onClick: () => onNavigateToTrainee?.(primaryTrainees[1]),
+                      className: "text-white text-[10px] font-medium leading-tight hover:text-sky-400 hover:underline cursor-pointer",
+                      title: "View trainee profile",
+                      children: primaryTrainees[1].name
+                    }
+                  )
+                ] }) : /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center gap-2", children: [
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "w-7 h-7 bg-gray-700/50 rounded-full flex items-center justify-center flex-shrink-0", children: /* @__PURE__ */ jsxRuntimeExports.jsx(TraineeIcon, {}) }),
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-gray-600 text-[10px] italic", children: "Not assigned" })
+                ] })
+              ] }),
+              /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: card3d + " p-2", style: { ...card3dStyle, background: "linear-gradient(180deg, #1e2d42 0%, #192538 100%)" }, children: [
+                /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-[9px] text-amber-400 font-semibold mb-1.5", children: "Secondary" }),
+                secondaryTrainees[0] ? /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center gap-2", children: [
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "w-7 h-7 bg-gray-600 rounded-full flex items-center justify-center flex-shrink-0", children: /* @__PURE__ */ jsxRuntimeExports.jsx(TraineeIcon, {}) }),
+                  /* @__PURE__ */ jsxRuntimeExports.jsx(
+                    "button",
+                    {
+                      onClick: () => onNavigateToTrainee?.(secondaryTrainees[0]),
+                      className: "text-white text-[10px] font-medium leading-tight hover:text-sky-400 hover:underline cursor-pointer",
+                      title: "View trainee profile",
+                      children: secondaryTrainees[0].name
+                    }
+                  )
+                ] }) : /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center gap-2", children: [
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "w-7 h-7 bg-gray-700/50 rounded-full flex items-center justify-center flex-shrink-0", children: /* @__PURE__ */ jsxRuntimeExports.jsx(TraineeIcon, {}) }),
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-gray-600 text-[10px] italic", children: "Not assigned" })
+                ] })
+              ] }),
+              /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: card3d + " p-2", style: { ...card3dStyle, background: "linear-gradient(180deg, #1e2d42 0%, #192538 100%)" }, children: [
+                /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-[9px] text-amber-400 font-semibold mb-1.5", children: "Secondary" }),
+                secondaryTrainees[1] ? /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center gap-2", children: [
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "w-7 h-7 bg-gray-600 rounded-full flex items-center justify-center flex-shrink-0", children: /* @__PURE__ */ jsxRuntimeExports.jsx(TraineeIcon, {}) }),
+                  /* @__PURE__ */ jsxRuntimeExports.jsx(
+                    "button",
+                    {
+                      onClick: () => onNavigateToTrainee?.(secondaryTrainees[1]),
+                      className: "text-white text-[10px] font-medium leading-tight hover:text-sky-400 hover:underline cursor-pointer",
+                      title: "View trainee profile",
+                      children: secondaryTrainees[1].name
+                    }
+                  )
+                ] }) : /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center gap-2", children: [
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "w-7 h-7 bg-gray-700/50 rounded-full flex items-center justify-center flex-shrink-0", children: /* @__PURE__ */ jsxRuntimeExports.jsx(TraineeIcon, {}) }),
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-gray-600 text-[10px] italic", children: "Not assigned" })
                 ] })
               ] })
             ] })
-          ] }),
+          ] }) }),
           !isEditing && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: card3d + " p-3", style: card3dStyle, children: [
             /* @__PURE__ */ jsxRuntimeExports.jsxs("h4", { className: "text-xs font-semibold text-gray-300 mb-3", children: [
               "Logbook – Prior Experience (",

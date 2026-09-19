@@ -667,6 +667,29 @@ export const InstructorProfileFlyout: React.FC<InstructorProfileFlyoutProps> = (
     () => normaliseFlightSchoolStaffLmpAssignments(instructor.preferences),
     [instructor.preferences],
   );
+  const assignedMasterLmpItems = useMemo(() => {
+    const airCombatItems = assignedTraining.courses.map(item => ({
+      key: item.trainingKey,
+      code: item.code,
+      title: item.title,
+    }));
+    const flightSchoolItems = assignedFlightSchoolLmps.map(item => ({
+      key: item.assignmentId,
+      code: item.lmpCode,
+      title: item.title,
+    }));
+    return isFlightSchoolModel ? flightSchoolItems : airCombatItems;
+  }, [assignedFlightSchoolLmps, assignedTraining.courses, isFlightSchoolModel]);
+  const assignedTrainingPackageItems = useMemo(() => (
+    assignedTraining.trainingPackages.map(item => ({
+      key: item.trainingKey,
+      code: item.code,
+      title: item.title,
+    }))
+  ), [assignedTraining.trainingPackages]);
+  const showAssignedLmpPackageWindow = !isEditing && !isCreating && (
+    isAirCombatModel || isFixedCrewLikeOperationalModel(activeOperationalModel) || isFlightSchoolModel
+  );
   const assignedAirCombatTraining = useMemo(() => ([
     ...assignedTraining.courses.map(item => ({ ...item, displayKind: 'Course', tone: 'sky' })),
     ...assignedTraining.trainingPackages.map(item => ({ ...item, displayKind: 'Training Package', tone: 'emerald' })),
@@ -2294,28 +2317,38 @@ export const InstructorProfileFlyout: React.FC<InstructorProfileFlyoutProps> = (
                 />
               )}
 
-              {/* ── SECTION 2: ASSIGNED TRAINING / TRAINEES (always visible, not editing) ── */}
-              {!isEditing && !isCreating && isAirCombatModel && (
+              {/* ── SECTION 2: ASSIGNED LMP / PACKAGES AND TRAINEES (always visible, not editing) ── */}
+              {showAssignedLmpPackageWindow && (
                 <div className={card3d + " p-3"} style={card3dStyle}>
-                  <h4 className="text-xs font-semibold text-gray-300 mb-3">Assigned Training</h4>
+                  <div className="mb-3 flex items-center justify-between gap-3">
+                    <div>
+                      <h4 className="text-xs font-semibold text-gray-300">Assigned LMP / Packages</h4>
+                      <p className="mt-0.5 text-[10px] text-gray-500">
+                        Training assigned to this staff profile from the LMP page.
+                      </p>
+                    </div>
+                    <span className="rounded-full border border-gray-700 bg-gray-950/70 px-2.5 py-1 text-[10px] font-bold uppercase text-gray-300">
+                      {assignedMasterLmpItems.length + assignedTrainingPackageItems.length} assigned
+                    </span>
+                  </div>
                   <div className="grid grid-cols-2 gap-3">
                     {[
-                      { title: 'Courses', items: assignedTraining.courses },
-                      { title: 'Training Packages', items: assignedTraining.trainingPackages },
+                      { title: 'Master LMPs', items: assignedMasterLmpItems, tone: 'sky' },
+                      { title: 'Training Packages', items: assignedTrainingPackageItems, tone: 'emerald' },
                     ].map(group => (
                       <div key={group.title} className={card3d + " p-3"} style={{...card3dStyle, background:'linear-gradient(180deg, #1e2d42 0%, #192538 100%)'}}>
-                        <div className="text-[9px] text-sky-400 font-semibold mb-2">{group.title}</div>
+                        <div className={`mb-2 text-[9px] font-bold uppercase tracking-wide ${group.tone === 'emerald' ? 'text-emerald-300' : 'text-sky-400'}`}>{group.title}</div>
                         {group.items.length > 0 ? (
                           <div className="space-y-1">
                             {group.items.map(item => (
-                              <div key={item.trainingKey} className="rounded border border-gray-700 bg-gray-900/60 px-2 py-1">
+                              <div key={item.key} className="rounded border border-gray-700 bg-gray-900/60 px-2 py-1">
                                 <div className="text-[10px] font-semibold text-white">{item.code}</div>
-                                <div className="text-[9px] text-gray-400 truncate">{item.title}</div>
+                                <div className="truncate text-[9px] text-gray-400">{item.title}</div>
                               </div>
                             ))}
                           </div>
                         ) : (
-                          <div className="text-gray-500 text-[10px] italic">Nil</div>
+                          <div className="rounded border border-gray-700 bg-gray-900/50 px-2 py-2 text-gray-500 text-[10px] italic">Nil assigned</div>
                         )}
                       </div>
                     ))}
@@ -2324,25 +2357,6 @@ export const InstructorProfileFlyout: React.FC<InstructorProfileFlyoutProps> = (
               )}
               {!isEditing && !isCreating && !isAirCombatModel && (
                 <>
-                {isFlightSchoolModel && (
-                  <div className={card3d + " p-3"} style={card3dStyle}>
-                    <h4 className="text-xs font-semibold text-gray-300 mb-3">Assigned LMPs</h4>
-                    {assignedFlightSchoolLmps.length > 0 ? (
-                      <div className="grid grid-cols-2 gap-2">
-                        {assignedFlightSchoolLmps.map(item => (
-                          <div key={item.assignmentId} className="rounded border border-sky-500/25 bg-sky-950/30 px-3 py-2">
-                            <div className="text-[10px] font-semibold text-white">{item.lmpCode}</div>
-                            <div className="mt-0.5 truncate text-[9px] text-gray-400">{item.title}</div>
-                          </div>
-                        ))}
-                      </div>
-                    ) : (
-                      <div className="rounded border border-gray-700 bg-gray-900/50 px-3 py-2 text-[10px] italic text-gray-500">
-                        Nil assigned
-                      </div>
-                    )}
-                  </div>
-                )}
                 <div className={card3d + " p-3"} style={card3dStyle}>
                   <h4 className="text-xs font-semibold text-gray-300 mb-3">Assigned Trainees</h4>
                   <div className="grid grid-cols-4 gap-2">
