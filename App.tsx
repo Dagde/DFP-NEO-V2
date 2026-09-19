@@ -864,6 +864,9 @@ const summariseNeoAssistManualTileEvent = (event: Partial<ScheduleEvent> | null 
         student: event.student || null,
         crew: event.crew || null,
         resourceId: event.resourceId || null,
+        unitCode: event.unitCode || null,
+        locationCode: (event as any).locationCode || null,
+        operationalModel: (event as any).operationalModel || null,
         startTime: event.startTime ?? null,
         duration: event.duration ?? null,
         preStart: event.preStart ?? null,
@@ -47805,6 +47808,9 @@ appliedUpdates.forEach(update => {
                 duration: segmentDuration,
                 startTime: segmentStartTime,
                 resourceId,
+                unitCode: activeUnitCode,
+                locationCode: school,
+                operationalModel: activeOperationalModel,
                 color: draft.color || 'bg-gray-600/30',
                 flightType: 'Dual',
                 soloOrDual: 'Dual',
@@ -47885,6 +47891,9 @@ appliedUpdates.forEach(update => {
                 crew: manualCrewPair?.crew || (manualCrewPair ? '' : draft.crew),
                 startTime,
                 resourceId,
+                unitCode: activeUnitCode,
+                locationCode: school,
+                operationalModel: activeOperationalModel,
                 preStart: preOffset > 0 ? startTime - preOffset : undefined,
                 postEnd: postOffset > 0 ? startTime + draft.duration + postOffset : undefined,
                 aircraftNumber: isActiveAircraftResource(resourceId) ? draft.aircraftNumber : undefined,
@@ -47895,7 +47904,7 @@ appliedUpdates.forEach(update => {
                 formationSize: formationSize > 1 ? formationSize : draft.formationSize,
             };
         });
-    }, [activeAircraftResourcePrefix, neoAssistCallsignOptions]);
+    }, [activeAircraftResourcePrefix, activeOperationalModel, activeUnitCode, neoAssistCallsignOptions, school]);
 
     const handleProgramScheduleExternalEventDrop = useCallback((draft: ScheduleEvent, placement: NeoAssistDropPlacement) => {
         appendNeoAssistManualTileTrace('program-schedule-drop-received', {
