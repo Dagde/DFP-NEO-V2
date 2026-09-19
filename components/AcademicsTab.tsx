@@ -1064,11 +1064,12 @@ const AcademicsTab: React.FC<AcademicsTabProps> = ({
                               onClick={async (e) => {
                                 e.stopPropagation();
                                 if (onUpdateCourseAcademicProgress && selectedCourse) {
-                                  await showDarkAlert(
-                                    'This checkbox does not schedule the event. It marks the event as complete for the selected course.',
+                                  const ok = await showDarkConfirm(
+                                    'This checkbox does not schedule the event. It marks the event as complete for the selected course.\n\nDo you want to proceed?',
                                     'Course Completion',
                                     'info'
                                   );
+                                  if (!ok) return;
                                   onUpdateCourseAcademicProgress(selectedCourse, item.code, !isCourseDone);
                                 }
                               }}
