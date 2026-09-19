@@ -39,6 +39,12 @@ import {
     setFlightSchoolStaffLmpAssignment,
 } from '../utils/flightSchoolStaffLmpAssignments';
 import {
+    getDefaultLmpAudience,
+    getLmpAudienceForCourse,
+    withLmpAudienceInNotes,
+    type LmpAudience,
+} from '../utils/lmpAudience';
+import {
     getFixedCrewCoursePackageBriefingTimes,
     withFixedCrewCoursePackageBriefingTimes,
 } from '../utils/fixedCrewTraining';
@@ -396,6 +402,7 @@ const AssignTrainingModal: React.FC<{
     heading?: string;
     title: string;
     emptyMessage?: string;
+    showStaffAssignments?: boolean;
     staff: Instructor[];
     trainees?: Trainee[];
     selectedStaffIds: Set<number>;
@@ -413,6 +420,7 @@ const AssignTrainingModal: React.FC<{
     heading = 'Assign Training',
     title,
     emptyMessage = 'No active squadron staff available for this unit.',
+    showStaffAssignments = true,
     staff,
     trainees = [],
     selectedStaffIds,
@@ -428,6 +436,7 @@ const AssignTrainingModal: React.FC<{
     onSave,
 }) => {
     const showTraineeAssignments = Boolean(onToggleTrainee);
+    const panelCount = (showStaffAssignments ? 1 : 0) + (showTraineeAssignments ? 1 : 0);
     const traineeGroups = trainees.reduce<Array<{ course: string; people: Trainee[] }>>((groups, person) => {
         const course = String(person.course || 'No course').trim() || 'No course';
         const existingGroup = groups.find(group => group.course === course);
@@ -515,7 +524,7 @@ const AssignTrainingModal: React.FC<{
 
     return (
         <div className="fixed inset-0 z-[1000] flex items-center justify-center bg-black/70 p-4">
-            <div className={`flex max-h-[90vh] w-full flex-col rounded-lg border border-sky-700/50 bg-gray-900 shadow-2xl ${showTraineeAssignments ? 'max-w-5xl' : 'max-w-2xl'}`}>
+            <div className={`flex max-h-[90vh] w-full flex-col rounded-lg border border-sky-700/50 bg-gray-900 shadow-2xl ${panelCount > 1 ? 'max-w-5xl' : 'max-w-2xl'}`}>
                 <div className="flex items-start justify-between gap-4 border-b border-gray-700 px-4 py-3">
                     <div>
                         <h2 className="text-lg font-bold text-white">{heading}</h2>
@@ -524,12 +533,12 @@ const AssignTrainingModal: React.FC<{
                     <button type="button" onClick={onCancel} className="rounded px-2 py-1 text-sm text-gray-300 hover:bg-gray-800 hover:text-white">Close</button>
                 </div>
                 <div className="overflow-y-auto p-4">
-                    {showTraineeAssignments ? (
+                    {panelCount > 1 ? (
                         <div className="grid gap-4 lg:grid-cols-2">
-                            {staffPanel}
+                            {showStaffAssignments && staffPanel}
                             {traineePanel}
                         </div>
-                    ) : staffPanel}
+                    ) : showStaffAssignments ? staffPanel : traineePanel}
                 </div>
                 <div className="flex justify-end gap-2 border-t border-gray-700 px-4 py-3">
                     <button type="button" onClick={onCancel} className="rounded border border-gray-600 bg-gray-800 px-4 py-2 text-sm font-semibold text-gray-100 hover:bg-gray-700">Cancel</button>
@@ -1258,6 +1267,7 @@ const SyllabusView: React.FC<SyllabusViewProps> = ({
       localStorage.getItem('neo_lmp_details_selected_package') || ''
   );
   const [editingCourseTitle, setEditingCourseTitle] = useState<string>('');
+  const [editingCourseAudience, setEditingCourseAudience] = useState<LmpAudience>('trainee');
   const [isAddingLmpEvent, setIsAddingLmpEvent] = useState(false);
   const isTrainingPackagesTab = activeTab === 'packages';
   const activeLmpType = getActiveLmpType(activeTab);
@@ -1374,6 +1384,15 @@ const SyllabusView: React.FC<SyllabusViewProps> = ({
       ? masterLmpTitleMap[code] || courseTitleMap[code] || code
       : courseTitleMap[code] || code
   );
+  const selectedCourseAudience = useMemo(() => (
+    getLmpAudienceForCourse(unitScopedSyllabusDetails, selectedCourseType, {
+      activeTab,
+      operationalModel: activeOperationalModel,
+      lmpType: activeLmpType,
+    })
+  ), [activeLmpType, activeOperationalModel, activeTab, selectedCourseType, unitScopedSyllabusDetails]);
+  const selectedCourseAllowsStaff = selectedCourseAudience === 'staff';
+  const selectedCourseAllowsTrainees = selectedCourseAudience === 'trainee';
   const normaliseContextCode = (value?: string | null): string => String(value || '').trim().toUpperCase();
   const activeUnitNormalised = normaliseContextCode(effectiveActiveUnitCode);
   const activeLocationNormalised = normaliseContextCode(activeLocationCode);
@@ -1441,6 +1460,11 @@ const SyllabusView: React.FC<SyllabusViewProps> = ({
   const [showAddLMPModal, setShowAddLMPModal] = useState(false);
   const [newLMPName, setNewLMPName] = useState('');       // full course title e.g. "Basic Flying Course"
   const [newLMPCourseType, setNewLMPCourseType] = useState<'Flight Training' | 'Academic Training'>('Flight Training');
+  const [newLMPAudience, setNewLMPAudience] = useState<LmpAudience>(() => getDefaultLmpAudience({
+      activeTab,
+      operationalModel: activeOperationalModel,
+      lmpType: activeLmpType,
+  }));
   const [addPackageMode, setAddPackageMode] = useState<'blank' | 'copy'>('blank');
   const [copyPackageSourceKey, setCopyPackageSourceKey] = useState('');
   const [isCopyingPackage, setIsCopyingPackage] = useState(false);
@@ -1672,9 +1696,12 @@ const SyllabusView: React.FC<SyllabusViewProps> = ({
 
   const activeStaffTrainingAssignment = activeAirCombatTrainingAssignment || activeFlightSchoolLmpAssignment;
   const isAssigningFlightSchoolLmp = Boolean(activeFlightSchoolLmpAssignment && !activeAirCombatTrainingAssignment);
+  const showStaffInAssignTraining = !isAssigningFlightSchoolLmp || selectedCourseAllowsStaff;
+  const showTraineesInAssignTraining = isAssigningFlightSchoolLmp && selectedCourseAllowsTrainees;
 
   const assignableTrainingStaff = useMemo(() => {
       if (!isAirCombatModel && !isFlightSchoolModel) return [];
+      if (isFlightSchoolModel && !selectedCourseAllowsStaff) return [];
       const targetUnit = String(effectiveActiveUnitCode || '').trim().toUpperCase();
       const targetUnits = new Set(targetUnit.split(/[+,&/]+/).map(unit => unit.trim()).filter(Boolean));
       return instructorsData
@@ -1685,10 +1712,10 @@ const SyllabusView: React.FC<SyllabusViewProps> = ({
               return staffUnit === targetUnit || targetUnits.has(staffUnit);
           })
           .sort((a, b) => a.name.localeCompare(b.name));
-  }, [effectiveActiveUnitCode, instructorsData, isAirCombatModel, isFlightSchoolModel]);
+  }, [effectiveActiveUnitCode, instructorsData, isAirCombatModel, isFlightSchoolModel, selectedCourseAllowsStaff]);
 
   const assignableFlightSchoolTrainees = useMemo(() => {
-      if (!isFlightSchoolModel || isTrainingPackagesTab) return [];
+      if (!isFlightSchoolModel || isTrainingPackagesTab || !selectedCourseAllowsTrainees) return [];
       const targetUnit = String(effectiveActiveUnitCode || '').trim().toUpperCase();
       const targetUnits = new Set(targetUnit.split(/[+,&/]+/).map(unit => unit.trim()).filter(Boolean));
       return traineesData
@@ -1699,23 +1726,25 @@ const SyllabusView: React.FC<SyllabusViewProps> = ({
               return traineeUnit === targetUnit || targetUnits.has(traineeUnit);
           })
           .sort((a, b) => a.name.localeCompare(b.name));
-  }, [effectiveActiveUnitCode, isFlightSchoolModel, isTrainingPackagesTab, traineesData]);
+  }, [effectiveActiveUnitCode, isFlightSchoolModel, isTrainingPackagesTab, selectedCourseAllowsTrainees, traineesData]);
 
   const openAssignTraining = () => {
       if (!activeStaffTrainingAssignment) return;
       setAssignTrainingSelection(new Set(
-          assignableTrainingStaff
-              .filter(staff => (
-                  activeAirCombatTrainingAssignment
-                      ? staffHasAirCombatAssignment(staff, activeAirCombatTrainingAssignment)
-                      : activeFlightSchoolLmpAssignment
-                          ? staffHasFlightSchoolStaffLmpAssignment(staff, activeFlightSchoolLmpAssignment)
-                          : false
-              ))
-              .map(staff => staff.idNumber)
+          showStaffInAssignTraining
+              ? assignableTrainingStaff
+                  .filter(staff => (
+                      activeAirCombatTrainingAssignment
+                          ? staffHasAirCombatAssignment(staff, activeAirCombatTrainingAssignment)
+                          : activeFlightSchoolLmpAssignment
+                              ? staffHasFlightSchoolStaffLmpAssignment(staff, activeFlightSchoolLmpAssignment)
+                              : false
+                  ))
+                  .map(staff => staff.idNumber)
+              : []
       ));
       setAssignTraineeSelection(new Set(
-          isAssigningFlightSchoolLmp
+          showTraineesInAssignTraining
               ? assignableFlightSchoolTrainees
                   .filter(trainee => String(trainee.lmpType || '').trim().toUpperCase() === String(activeFlightSchoolLmpAssignment?.lmpCode || selectedCourseType).trim().toUpperCase())
                   .map(trainee => trainee.idNumber)
@@ -1725,23 +1754,27 @@ const SyllabusView: React.FC<SyllabusViewProps> = ({
   };
 
   const saveAssignTraining = async () => {
-      if (!activeStaffTrainingAssignment || !onUpdateInstructor) return;
+      if (!activeStaffTrainingAssignment) return;
+      if (showStaffInAssignTraining && !onUpdateInstructor) return;
+      if (showTraineesInAssignTraining && !onUpdateTrainee) return;
       setIsSavingTrainingAssignments(true);
       try {
-          for (const staff of assignableTrainingStaff) {
-              const shouldAssign = assignTrainingSelection.has(staff.idNumber);
-              const currentlyAssigned = activeAirCombatTrainingAssignment
-                  ? staffHasAirCombatAssignment(staff, activeAirCombatTrainingAssignment)
-                  : activeFlightSchoolLmpAssignment
-                      ? staffHasFlightSchoolStaffLmpAssignment(staff, activeFlightSchoolLmpAssignment)
-                      : false;
-              if (shouldAssign === currentlyAssigned) continue;
-              const updatedStaff = activeAirCombatTrainingAssignment
-                  ? setAirCombatTrainingAssignment(staff, activeAirCombatTrainingAssignment, shouldAssign)
-                  : setFlightSchoolStaffLmpAssignment(staff, activeFlightSchoolLmpAssignment!, shouldAssign);
-              await onUpdateInstructor(updatedStaff);
+          if (showStaffInAssignTraining && onUpdateInstructor) {
+              for (const staff of assignableTrainingStaff) {
+                  const shouldAssign = assignTrainingSelection.has(staff.idNumber);
+                  const currentlyAssigned = activeAirCombatTrainingAssignment
+                      ? staffHasAirCombatAssignment(staff, activeAirCombatTrainingAssignment)
+                      : activeFlightSchoolLmpAssignment
+                          ? staffHasFlightSchoolStaffLmpAssignment(staff, activeFlightSchoolLmpAssignment)
+                          : false;
+                  if (shouldAssign === currentlyAssigned) continue;
+                  const updatedStaff = activeAirCombatTrainingAssignment
+                      ? setAirCombatTrainingAssignment(staff, activeAirCombatTrainingAssignment, shouldAssign)
+                      : setFlightSchoolStaffLmpAssignment(staff, activeFlightSchoolLmpAssignment!, shouldAssign);
+                  await onUpdateInstructor(updatedStaff);
+              }
           }
-          if (isAssigningFlightSchoolLmp && onUpdateTrainee) {
+          if (showTraineesInAssignTraining && onUpdateTrainee) {
               const lmpCode = String(activeFlightSchoolLmpAssignment?.lmpCode || selectedCourseType || '').trim();
               for (const trainee of assignableFlightSchoolTrainees) {
                   const shouldAssign = assignTraineeSelection.has(trainee.idNumber);
@@ -1756,9 +1789,9 @@ const SyllabusView: React.FC<SyllabusViewProps> = ({
           logAudit({
               action: 'Update',
               description: isAssigningFlightSchoolLmp
-                  ? `Updated Flight School staff LMP assignment for ${activeFlightSchoolLmpAssignment?.lmpCode || selectedCourseType}`
+                  ? `Updated Flight School ${selectedCourseAudience === 'staff' ? 'staff' : 'trainee'} LMP assignment for ${activeFlightSchoolLmpAssignment?.lmpCode || selectedCourseType}`
                   : `Updated Air Combat training assignment for ${activeAirCombatTrainingAssignment?.code || selectedCourseType}`,
-              changes: `${assignTrainingSelection.size} staff selected`,
+              changes: `${assignTrainingSelection.size} staff selected, ${assignTraineeSelection.size} trainees selected`,
               page: 'LMP/Event Details',
           });
           setShowAssignTrainingModal(false);
@@ -1905,6 +1938,7 @@ const SyllabusView: React.FC<SyllabusViewProps> = ({
   const handleEdit = () => {
       setIsAddingLmpEvent(false);
       setEditingCourseTitle(getCourseTitle(selectedCourseType));
+      setEditingCourseAudience(selectedCourseAudience);
       if (selectedItem) {
           setEditedItem(JSON.parse(JSON.stringify(selectedItem)));
       }
@@ -1979,10 +2013,34 @@ const SyllabusView: React.FC<SyllabusViewProps> = ({
               logAudit({ action: 'Edit', description: `Renamed ${activeCollectionNoun}: ${selectedCourseType}`, changes: `Title: "${currentTitle}" renamed to "${newTitle}"`, page: 'LMP/Event Details' });
           }
 
+          if (!isAddingLmpEvent && editingCourseAudience !== selectedCourseAudience) {
+              const courseItems = unitScopedSyllabusDetails.filter(item =>
+                  item.isActive !== false &&
+                  getItemLmpDetailsTab(item) === activeTab &&
+                  (item.courses || []).includes(selectedCourseType)
+              );
+              const shellItem = courseItems.find(isSyllabusCourseShell) || courseItems[0];
+              if (shellItem) {
+                  const updatedShell = {
+                      ...shellItem,
+                      notes: withLmpAudienceInNotes(shellItem.notes, editingCourseAudience),
+                  };
+                  const savedShell = await updateSyllabusItem(shellItem.id, updatedShell, `${activeCollectionTitle} audience changed`);
+                  onUpdateItem({ ...updatedShell, ...savedShell, id: shellItem.id });
+                  logAudit({
+                      action: 'Edit',
+                      description: `Updated ${activeCollectionNoun} audience: ${selectedCourseType}`,
+                      changes: `Audience: ${selectedCourseAudience} to ${editingCourseAudience}`,
+                      page: 'LMP/Event Details',
+                  });
+              }
+          }
+
           setIsEditing(false);
           setIsAddingLmpEvent(false);
           setEditedItem(null);
           setEditingCourseTitle('');
+          setEditingCourseAudience(selectedCourseAudience);
       } catch (err: any) {
           await showDarkAlert(`Save failed: ${err.message}`, 'Save Failed', 'error');
       } finally {
@@ -1995,6 +2053,7 @@ const SyllabusView: React.FC<SyllabusViewProps> = ({
       setIsAddingLmpEvent(false);
       setEditedItem(null);
       setEditingCourseTitle('');
+      setEditingCourseAudience(selectedCourseAudience);
   };
 
   const handleManageMasterLmps = () => {
@@ -2295,6 +2354,11 @@ const SyllabusView: React.FC<SyllabusViewProps> = ({
   const handleAddLMP = () => {
       setNewLMPName('');
       setNewLMPCourseType('Flight Training');
+      setNewLMPAudience(getDefaultLmpAudience({
+          activeTab,
+          operationalModel: activeOperationalModel,
+          lmpType: activeLmpType,
+      }));
       setAddPackageMode('blank');
       setCopyPackageSourceKey(packageCopyOptions[0]?.key || '');
       setShowAddLMPModal(true);
@@ -2442,7 +2506,7 @@ const SyllabusView: React.FC<SyllabusViewProps> = ({
           unit: shouldScopeCreatedItemsToActiveUnit ? activeUnitNormalised : undefined,
           courses: [courseCode],
           lmpType: activeLmpType,
-          notes: SYLLABUS_COURSE_SHELL_NOTE,
+          notes: withLmpAudienceInNotes(SYLLABUS_COURSE_SHELL_NOTE, newLMPAudience),
       };
       setShowAddLMPModal(false);
       try {
@@ -2584,9 +2648,34 @@ const SyllabusView: React.FC<SyllabusViewProps> = ({
               {isAddingLmpEvent
                   ? `This creates one event inside ${getCourseTitle(selectedCourseType)}. The ${activeCollectionTitle} title is fixed here; fill in the event code and event description below.`
                   : isEditing
-                      ? `Editing ${activeCollectionNoun} title - changes apply to all events in this ${activeCollectionNoun}`
+                      ? `Editing ${activeCollectionNoun} title and enrolment audience - changes apply to this ${activeCollectionNoun}`
                       : activeCollectionTitle}
           </p>
+          {selectedCourseType && (
+              <div className="mt-2 flex flex-wrap items-center gap-2">
+                  {isEditing && !isAddingLmpEvent ? (
+                      <label className="inline-flex items-center gap-2 rounded-md border border-gray-700 bg-gray-950/70 px-3 py-1.5 text-[11px] font-semibold uppercase tracking-wide text-gray-300">
+                          Audience
+                          <select
+                              value={editingCourseAudience}
+                              onChange={event => setEditingCourseAudience(event.target.value as LmpAudience)}
+                              className="rounded border border-gray-600 bg-gray-800 px-2 py-1 text-xs font-bold text-white focus:ring-sky-500"
+                          >
+                              <option value="trainee">Trainees only</option>
+                              <option value="staff">Staff only</option>
+                          </select>
+                      </label>
+                  ) : (
+                      <span className={`rounded border px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide ${
+                          selectedCourseAudience === 'staff'
+                              ? 'border-emerald-500/40 bg-emerald-500/10 text-emerald-100'
+                              : 'border-teal-500/40 bg-teal-500/10 text-teal-100'
+                      }`}>
+                          {selectedCourseAudience === 'staff' ? 'Staff only' : 'Trainees only'}
+                      </span>
+                  )}
+              </div>
+          )}
           {shouldShowUnitTabs && (
               <div className="mt-3 flex flex-wrap gap-2">
                   {fixedCrewUnitTabs.map(unitCode => (
@@ -2701,7 +2790,16 @@ const SyllabusView: React.FC<SyllabusViewProps> = ({
                         </button>
                     )}
                     {(isAirCombatModel || (isFlightSchoolModel && !isTrainingPackagesTab)) && (
-                        <button onClick={openAssignTraining} disabled={isFrozen || !activeStaffTrainingAssignment || !onUpdateInstructor} className="w-[68px] h-[41px] flex items-center justify-center text-center px-1 py-1 text-[10px] leading-tight font-semibold rounded-md btn-aluminium-brushed disabled:opacity-50 disabled:cursor-not-allowed">
+                        <button
+                            onClick={openAssignTraining}
+                            disabled={
+                                isFrozen
+                                || !activeStaffTrainingAssignment
+                                || (showStaffInAssignTraining && !onUpdateInstructor)
+                                || (showTraineesInAssignTraining && !onUpdateTrainee)
+                            }
+                            className="w-[68px] h-[41px] flex items-center justify-center text-center px-1 py-1 text-[10px] leading-tight font-semibold rounded-md btn-aluminium-brushed disabled:opacity-50 disabled:cursor-not-allowed"
+                        >
                             <span>Assign<br />{isAssigningFlightSchoolLmp ? 'LMP' : 'Training'}</span>
                         </button>
                     )}
@@ -2953,7 +3051,7 @@ const SyllabusView: React.FC<SyllabusViewProps> = ({
                 </div>}
 
                 {/* Course Type */}
-                {(!isTrainingPackagesTab || addPackageMode === 'blank') && <div style={{ marginBottom: 24 }}>
+                {(!isTrainingPackagesTab || addPackageMode === 'blank') && <div style={{ marginBottom: 16 }}>
                     <label style={{ display: 'block', fontSize: 11, fontWeight: 600, color: '#9ca3af',
                         textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 4 }}>
                         {isTrainingPackagesTab ? 'Package Type' : 'Course Type'}
@@ -2972,6 +3070,26 @@ const SyllabusView: React.FC<SyllabusViewProps> = ({
                         {newLMPCourseType === 'Academic Training'
                             ? 'Academic Training: theory/classroom instruction delivered prior to the flying phase.'
                             : 'Flight Training: airborne, simulator and associated ground events during the flying phase.'}
+                    </p>
+                </div>}
+
+                {(!isTrainingPackagesTab || addPackageMode === 'blank') && <div style={{ marginBottom: 24 }}>
+                    <label style={{ display: 'block', fontSize: 11, fontWeight: 600, color: '#9ca3af',
+                        textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 4 }}>
+                        Assignment Audience
+                    </label>
+                    <select
+                        value={newLMPAudience}
+                        onChange={e => setNewLMPAudience(e.target.value as LmpAudience)}
+                        style={{ width: '100%', backgroundColor: '#111827', border: '1px solid #4b5563',
+                            borderRadius: 6, padding: '8px 10px', color: '#fff', fontSize: 13,
+                            outline: 'none', boxSizing: 'border-box' as const }}
+                    >
+                        <option value="trainee">Trainees only</option>
+                        <option value="staff">Staff only</option>
+                    </select>
+                    <p style={{ fontSize: 10, color: '#6b7280', marginTop: 4 }}>
+                        This controls who can be enrolled from Assign LMP. Staff-only courses are for upgrades or category progression; trainee-only courses feed normal trainee LMP assignment.
                     </p>
                 </div>}
 
@@ -3328,11 +3446,12 @@ const SyllabusView: React.FC<SyllabusViewProps> = ({
         <AssignTrainingModal
             heading={isAssigningFlightSchoolLmp ? 'Assign LMP' : 'Assign Training'}
             title={isAssigningFlightSchoolLmp
-                ? `Master LMP: ${activeFlightSchoolLmpAssignment?.title || activeFlightSchoolLmpAssignment?.lmpCode || selectedCourseType}`
+                ? `Master LMP: ${activeFlightSchoolLmpAssignment?.title || activeFlightSchoolLmpAssignment?.lmpCode || selectedCourseType} · ${selectedCourseAudience === 'staff' ? 'Staff only' : 'Trainees only'}`
                 : `${activeAirCombatTrainingAssignment?.kind === 'course' ? 'Course' : 'Training Package'}: ${activeAirCombatTrainingAssignment?.title || activeAirCombatTrainingAssignment?.code || selectedCourseType}`}
             emptyMessage={isAssigningFlightSchoolLmp ? 'No active staff available for this unit.' : 'No active squadron staff available for this unit.'}
+            showStaffAssignments={showStaffInAssignTraining}
             staff={assignableTrainingStaff}
-            trainees={isAssigningFlightSchoolLmp ? assignableFlightSchoolTrainees : []}
+            trainees={showTraineesInAssignTraining ? assignableFlightSchoolTrainees : []}
             selectedStaffIds={assignTrainingSelection}
             selectedTraineeIds={assignTraineeSelection}
             saving={isSavingTrainingAssignments}
@@ -3344,7 +3463,7 @@ const SyllabusView: React.FC<SyllabusViewProps> = ({
                     return next;
                 });
             }}
-            onToggleTrainee={isAssigningFlightSchoolLmp ? (idNumber) => {
+            onToggleTrainee={showTraineesInAssignTraining ? (idNumber) => {
                 setAssignTraineeSelection(prev => {
                     const next = new Set(prev);
                     if (next.has(idNumber)) next.delete(idNumber);

@@ -196,6 +196,7 @@ import {
 import { DEFAULT_DISPATCH_RATE_WINDOW_MINUTES, normaliseDispatchRateWindowMinutes } from './utils/dispatchRate';
 import { getStaffUnavailabilityStatus } from './utils/fixedCrewAvailability';
 import { isSyllabusCourseShell } from './utils/syllabusCourseShell';
+import { getLmpAudienceForCourse } from './utils/lmpAudience';
 import { debouncedAuditLog } from './utils/auditDebounce';
 import LogbookView from './components/LogbookView';
 import { AlgoContext } from './components/App';
@@ -44671,6 +44672,15 @@ const App: React.FC = () => {
         const assignableFlightSchoolBuildSyllabus = activeOperationalModel === 'flight_school'
             ? getFlightSchoolAssignableSyllabusForActiveScope(syllabusDetails, 'Assign')
                 .filter((item: any) => item.type !== 'Academics' && item.lmpType !== 'Staff CAT')
+                .filter((item: any) => {
+                    const courseCode = Array.isArray(item.courses) ? item.courses.find(Boolean) : '';
+                    if (!courseCode) return true;
+                    return getLmpAudienceForCourse(syllabusDetails, String(courseCode), {
+                        activeTab: 'master',
+                        operationalModel: 'flight_school',
+                        lmpType: item.lmpType,
+                    }) === 'trainee';
+                })
             : [];
         const assignableFlightSchoolEventKeys = new Set(
             assignableFlightSchoolBuildSyllabus

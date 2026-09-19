@@ -6878,6 +6878,35 @@ const summariseCrewUnavailability = (members, window2) => {
 const appendUnavailableLabel = (label, reason) => reason ? `${label} - UNAVAILABLE: ${reason}` : label;
 const SYLLABUS_COURSE_SHELL_NOTE = "[DFP_COURSE_SHELL]";
 const isSyllabusCourseShell = (item) => String(item?.notes || "").includes(SYLLABUS_COURSE_SHELL_NOTE);
+const AUDIENCE_NOTE_REGEX = /\[DFP_LMP_AUDIENCE:(staff|trainee)\]/i;
+const normaliseLmpAudience = (value) => {
+  const clean = String(value || "").trim().toLowerCase();
+  if (clean === "staff") return "staff";
+  if (clean === "trainee") return "trainee";
+  return null;
+};
+const getLmpAudienceFromNotes = (notes) => {
+  const match = String(notes || "").match(AUDIENCE_NOTE_REGEX);
+  return normaliseLmpAudience(match?.[1]);
+};
+const withLmpAudienceInNotes = (notes, audience) => {
+  const withoutAudience = String(notes || "").replace(AUDIENCE_NOTE_REGEX, "").replace(/\n{3,}/g, "\n\n").trim();
+  return [withoutAudience, `[DFP_LMP_AUDIENCE:${audience}]`].filter(Boolean).join("\n");
+};
+const getDefaultLmpAudience = (options = {}) => {
+  if (String(options.lmpType || "").trim() === "Staff CAT") return "staff";
+  if (options.activeTab === "packages") return "staff";
+  if (String(options.operationalModel || "").trim().toLowerCase() === "flight_school") return "trainee";
+  return "staff";
+};
+const getLmpAudienceForCourse = (items, courseCode, options = {}) => {
+  const courseKey = String(courseCode || "").trim().toUpperCase();
+  const matchingItems = items.filter((item) => item?.isActive !== false && Array.isArray(item.courses) && item.courses.some((course) => String(course || "").trim().toUpperCase() === courseKey));
+  const shellAudience = matchingItems.filter(isSyllabusCourseShell).map((item) => getLmpAudienceFromNotes(item.notes)).find(Boolean);
+  if (shellAudience) return shellAudience;
+  const anyAudience = matchingItems.map((item) => getLmpAudienceFromNotes(item.notes)).find(Boolean);
+  return anyAudience || getDefaultLmpAudience(options);
+};
 const pendingAudits = /* @__PURE__ */ new Map();
 const debouncedAuditLog = (key, params, logFunction) => {
   const existing = pendingAudits.get(key);
@@ -88250,6 +88279,7 @@ const AssignTrainingModal = ({
   heading = "Assign Training",
   title,
   emptyMessage = "No active squadron staff available for this unit.",
+  showStaffAssignments = true,
   staff,
   trainees = [],
   selectedStaffIds,
@@ -88265,6 +88295,7 @@ const AssignTrainingModal = ({
   onSave
 }) => {
   const showTraineeAssignments = Boolean(onToggleTrainee);
+  const panelCount = (showStaffAssignments ? 1 : 0) + (showTraineeAssignments ? 1 : 0);
   const traineeGroups = trainees.reduce((groups, person) => {
     const course = String(person.course || "No course").trim() || "No course";
     const existingGroup = groups.find((group) => group.course === course);
@@ -88351,7 +88382,7 @@ const AssignTrainingModal = ({
       ] }, person.idNumber))
     ] }, group.course)) })
   ] }) : null;
-  return /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "fixed inset-0 z-[1000] flex items-center justify-center bg-black/70 p-4", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: `flex max-h-[90vh] w-full flex-col rounded-lg border border-sky-700/50 bg-gray-900 shadow-2xl ${showTraineeAssignments ? "max-w-5xl" : "max-w-2xl"}`, children: [
+  return /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "fixed inset-0 z-[1000] flex items-center justify-center bg-black/70 p-4", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: `flex max-h-[90vh] w-full flex-col rounded-lg border border-sky-700/50 bg-gray-900 shadow-2xl ${panelCount > 1 ? "max-w-5xl" : "max-w-2xl"}`, children: [
     /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-start justify-between gap-4 border-b border-gray-700 px-4 py-3", children: [
       /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
         /* @__PURE__ */ jsxRuntimeExports.jsx("h2", { className: "text-lg font-bold text-white", children: heading }),
@@ -88359,10 +88390,10 @@ const AssignTrainingModal = ({
       ] }),
       /* @__PURE__ */ jsxRuntimeExports.jsx("button", { type: "button", onClick: onCancel, className: "rounded px-2 py-1 text-sm text-gray-300 hover:bg-gray-800 hover:text-white", children: "Close" })
     ] }),
-    /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "overflow-y-auto p-4", children: showTraineeAssignments ? /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid gap-4 lg:grid-cols-2", children: [
-      staffPanel,
+    /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "overflow-y-auto p-4", children: panelCount > 1 ? /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid gap-4 lg:grid-cols-2", children: [
+      showStaffAssignments && staffPanel,
       traineePanel
-    ] }) : staffPanel }),
+    ] }) : showStaffAssignments ? staffPanel : traineePanel }),
     /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex justify-end gap-2 border-t border-gray-700 px-4 py-3", children: [
       /* @__PURE__ */ jsxRuntimeExports.jsx("button", { type: "button", onClick: onCancel, className: "rounded border border-gray-600 bg-gray-800 px-4 py-2 text-sm font-semibold text-gray-100 hover:bg-gray-700", children: "Cancel" }),
       /* @__PURE__ */ jsxRuntimeExports.jsx("button", { type: "button", onClick: onSave, disabled: saving, className: "rounded border border-sky-500 bg-sky-700 px-4 py-2 text-sm font-bold text-white hover:bg-sky-600 disabled:cursor-not-allowed disabled:opacity-60", children: saving ? "Saving..." : "Save Assignments" })
@@ -89062,6 +89093,7 @@ const SyllabusView = ({
     () => localStorage.getItem("neo_lmp_details_selected_package") || ""
   );
   const [editingCourseTitle, setEditingCourseTitle] = reactExports.useState("");
+  const [editingCourseAudience, setEditingCourseAudience] = reactExports.useState("trainee");
   const [isAddingLmpEvent, setIsAddingLmpEvent] = reactExports.useState(false);
   const isTrainingPackagesTab = activeTab === "packages";
   const activeLmpType = getActiveLmpType(activeTab);
@@ -89159,6 +89191,13 @@ const SyllabusView = ({
     return map;
   }, [activeTab, unitScopedSyllabusDetails]);
   const getCourseTitle = (code) => activeTab === "master" ? masterLmpTitleMap[code] || courseTitleMap[code] || code : courseTitleMap[code] || code;
+  const selectedCourseAudience = reactExports.useMemo(() => getLmpAudienceForCourse(unitScopedSyllabusDetails, selectedCourseType, {
+    activeTab,
+    operationalModel: activeOperationalModel,
+    lmpType: activeLmpType
+  }), [activeLmpType, activeOperationalModel, activeTab, selectedCourseType, unitScopedSyllabusDetails]);
+  const selectedCourseAllowsStaff = selectedCourseAudience === "staff";
+  const selectedCourseAllowsTrainees = selectedCourseAudience === "trainee";
   const normaliseContextCode2 = (value) => String(value || "").trim().toUpperCase();
   const activeUnitNormalised = normaliseContextCode2(effectiveActiveUnitCode);
   const activeLocationNormalised = normaliseContextCode2(activeLocationCode);
@@ -89213,6 +89252,11 @@ const SyllabusView = ({
   const [showAddLMPModal, setShowAddLMPModal] = reactExports.useState(false);
   const [newLMPName, setNewLMPName] = reactExports.useState("");
   const [newLMPCourseType, setNewLMPCourseType] = reactExports.useState("Flight Training");
+  const [newLMPAudience, setNewLMPAudience] = reactExports.useState(() => getDefaultLmpAudience({
+    activeTab,
+    operationalModel: activeOperationalModel,
+    lmpType: activeLmpType
+  }));
   const [addPackageMode, setAddPackageMode] = reactExports.useState("blank");
   const [copyPackageSourceKey, setCopyPackageSourceKey] = reactExports.useState("");
   const [isCopyingPackage, setIsCopyingPackage] = reactExports.useState(false);
@@ -89411,8 +89455,11 @@ const SyllabusView = ({
   }, [activeTrainingAssignmentItem, activeLocationCode, effectiveActiveUnitCode, currentUserName, isFlightSchoolModel, isTrainingPackagesTab, selectedCourseType]);
   const activeStaffTrainingAssignment = activeAirCombatTrainingAssignment || activeFlightSchoolLmpAssignment;
   const isAssigningFlightSchoolLmp = Boolean(activeFlightSchoolLmpAssignment && !activeAirCombatTrainingAssignment);
+  const showStaffInAssignTraining = !isAssigningFlightSchoolLmp || selectedCourseAllowsStaff;
+  const showTraineesInAssignTraining = isAssigningFlightSchoolLmp && selectedCourseAllowsTrainees;
   const assignableTrainingStaff = reactExports.useMemo(() => {
     if (!isAirCombatModel && !isFlightSchoolModel) return [];
+    if (isFlightSchoolModel && !selectedCourseAllowsStaff) return [];
     const targetUnit = String(effectiveActiveUnitCode || "").trim().toUpperCase();
     const targetUnits = new Set(targetUnit.split(/[+,&/]+/).map((unit) => unit.trim()).filter(Boolean));
     return instructorsData.filter((staff) => staff && staff.name && !staff.isAdminStaff).filter((staff) => {
@@ -89420,9 +89467,9 @@ const SyllabusView = ({
       const staffUnit = String(staff.unit || "").trim().toUpperCase();
       return staffUnit === targetUnit || targetUnits.has(staffUnit);
     }).sort((a, b) => a.name.localeCompare(b.name));
-  }, [effectiveActiveUnitCode, instructorsData, isAirCombatModel, isFlightSchoolModel]);
+  }, [effectiveActiveUnitCode, instructorsData, isAirCombatModel, isFlightSchoolModel, selectedCourseAllowsStaff]);
   const assignableFlightSchoolTrainees = reactExports.useMemo(() => {
-    if (!isFlightSchoolModel || isTrainingPackagesTab) return [];
+    if (!isFlightSchoolModel || isTrainingPackagesTab || !selectedCourseAllowsTrainees) return [];
     const targetUnit = String(effectiveActiveUnitCode || "").trim().toUpperCase();
     const targetUnits = new Set(targetUnit.split(/[+,&/]+/).map((unit) => unit.trim()).filter(Boolean));
     return traineesData.filter((trainee) => trainee && trainee.name && !trainee.isPaused).filter((trainee) => {
@@ -89430,29 +89477,33 @@ const SyllabusView = ({
       const traineeUnit = String(trainee.unit || "").trim().toUpperCase();
       return traineeUnit === targetUnit || targetUnits.has(traineeUnit);
     }).sort((a, b) => a.name.localeCompare(b.name));
-  }, [effectiveActiveUnitCode, isFlightSchoolModel, isTrainingPackagesTab, traineesData]);
+  }, [effectiveActiveUnitCode, isFlightSchoolModel, isTrainingPackagesTab, selectedCourseAllowsTrainees, traineesData]);
   const openAssignTraining = () => {
     if (!activeStaffTrainingAssignment) return;
     setAssignTrainingSelection(new Set(
-      assignableTrainingStaff.filter((staff) => activeAirCombatTrainingAssignment ? staffHasAirCombatAssignment(staff, activeAirCombatTrainingAssignment) : activeFlightSchoolLmpAssignment ? staffHasFlightSchoolStaffLmpAssignment(staff, activeFlightSchoolLmpAssignment) : false).map((staff) => staff.idNumber)
+      showStaffInAssignTraining ? assignableTrainingStaff.filter((staff) => activeAirCombatTrainingAssignment ? staffHasAirCombatAssignment(staff, activeAirCombatTrainingAssignment) : activeFlightSchoolLmpAssignment ? staffHasFlightSchoolStaffLmpAssignment(staff, activeFlightSchoolLmpAssignment) : false).map((staff) => staff.idNumber) : []
     ));
     setAssignTraineeSelection(new Set(
-      isAssigningFlightSchoolLmp ? assignableFlightSchoolTrainees.filter((trainee) => String(trainee.lmpType || "").trim().toUpperCase() === String(activeFlightSchoolLmpAssignment?.lmpCode || selectedCourseType).trim().toUpperCase()).map((trainee) => trainee.idNumber) : []
+      showTraineesInAssignTraining ? assignableFlightSchoolTrainees.filter((trainee) => String(trainee.lmpType || "").trim().toUpperCase() === String(activeFlightSchoolLmpAssignment?.lmpCode || selectedCourseType).trim().toUpperCase()).map((trainee) => trainee.idNumber) : []
     ));
     setShowAssignTrainingModal(true);
   };
   const saveAssignTraining = async () => {
-    if (!activeStaffTrainingAssignment || !onUpdateInstructor) return;
+    if (!activeStaffTrainingAssignment) return;
+    if (showStaffInAssignTraining && !onUpdateInstructor) return;
+    if (showTraineesInAssignTraining && !onUpdateTrainee) return;
     setIsSavingTrainingAssignments(true);
     try {
-      for (const staff of assignableTrainingStaff) {
-        const shouldAssign = assignTrainingSelection.has(staff.idNumber);
-        const currentlyAssigned = activeAirCombatTrainingAssignment ? staffHasAirCombatAssignment(staff, activeAirCombatTrainingAssignment) : activeFlightSchoolLmpAssignment ? staffHasFlightSchoolStaffLmpAssignment(staff, activeFlightSchoolLmpAssignment) : false;
-        if (shouldAssign === currentlyAssigned) continue;
-        const updatedStaff = activeAirCombatTrainingAssignment ? setAirCombatTrainingAssignment(staff, activeAirCombatTrainingAssignment, shouldAssign) : setFlightSchoolStaffLmpAssignment(staff, activeFlightSchoolLmpAssignment, shouldAssign);
-        await onUpdateInstructor(updatedStaff);
+      if (showStaffInAssignTraining && onUpdateInstructor) {
+        for (const staff of assignableTrainingStaff) {
+          const shouldAssign = assignTrainingSelection.has(staff.idNumber);
+          const currentlyAssigned = activeAirCombatTrainingAssignment ? staffHasAirCombatAssignment(staff, activeAirCombatTrainingAssignment) : activeFlightSchoolLmpAssignment ? staffHasFlightSchoolStaffLmpAssignment(staff, activeFlightSchoolLmpAssignment) : false;
+          if (shouldAssign === currentlyAssigned) continue;
+          const updatedStaff = activeAirCombatTrainingAssignment ? setAirCombatTrainingAssignment(staff, activeAirCombatTrainingAssignment, shouldAssign) : setFlightSchoolStaffLmpAssignment(staff, activeFlightSchoolLmpAssignment, shouldAssign);
+          await onUpdateInstructor(updatedStaff);
+        }
       }
-      if (isAssigningFlightSchoolLmp && onUpdateTrainee) {
+      if (showTraineesInAssignTraining && onUpdateTrainee) {
         const lmpCode = String(activeFlightSchoolLmpAssignment?.lmpCode || selectedCourseType || "").trim();
         for (const trainee of assignableFlightSchoolTrainees) {
           const shouldAssign = assignTraineeSelection.has(trainee.idNumber);
@@ -89466,8 +89517,8 @@ const SyllabusView = ({
       }
       logAudit({
         action: "Update",
-        description: isAssigningFlightSchoolLmp ? `Updated Flight School staff LMP assignment for ${activeFlightSchoolLmpAssignment?.lmpCode || selectedCourseType}` : `Updated Air Combat training assignment for ${activeAirCombatTrainingAssignment?.code || selectedCourseType}`,
-        changes: `${assignTrainingSelection.size} staff selected`,
+        description: isAssigningFlightSchoolLmp ? `Updated Flight School ${selectedCourseAudience === "staff" ? "staff" : "trainee"} LMP assignment for ${activeFlightSchoolLmpAssignment?.lmpCode || selectedCourseType}` : `Updated Air Combat training assignment for ${activeAirCombatTrainingAssignment?.code || selectedCourseType}`,
+        changes: `${assignTrainingSelection.size} staff selected, ${assignTraineeSelection.size} trainees selected`,
         page: "LMP/Event Details"
       });
       setShowAssignTrainingModal(false);
@@ -89600,6 +89651,7 @@ const SyllabusView = ({
   const handleEdit = () => {
     setIsAddingLmpEvent(false);
     setEditingCourseTitle(getCourseTitle(selectedCourseType));
+    setEditingCourseAudience(selectedCourseAudience);
     if (selectedItem) {
       setEditedItem(JSON.parse(JSON.stringify(selectedItem)));
     }
@@ -89660,10 +89712,31 @@ const SyllabusView = ({
         courseItems.forEach((item) => onUpdateItem({ ...item, module: newTitle }));
         logAudit({ action: "Edit", description: `Renamed ${activeCollectionNoun}: ${selectedCourseType}`, changes: `Title: "${currentTitle}" renamed to "${newTitle}"`, page: "LMP/Event Details" });
       }
+      if (!isAddingLmpEvent && editingCourseAudience !== selectedCourseAudience) {
+        const courseItems = unitScopedSyllabusDetails.filter(
+          (item) => item.isActive !== false && getItemLmpDetailsTab(item) === activeTab && (item.courses || []).includes(selectedCourseType)
+        );
+        const shellItem = courseItems.find(isSyllabusCourseShell) || courseItems[0];
+        if (shellItem) {
+          const updatedShell = {
+            ...shellItem,
+            notes: withLmpAudienceInNotes(shellItem.notes, editingCourseAudience)
+          };
+          const savedShell = await updateSyllabusItem(shellItem.id, updatedShell, `${activeCollectionTitle} audience changed`);
+          onUpdateItem({ ...updatedShell, ...savedShell, id: shellItem.id });
+          logAudit({
+            action: "Edit",
+            description: `Updated ${activeCollectionNoun} audience: ${selectedCourseType}`,
+            changes: `Audience: ${selectedCourseAudience} to ${editingCourseAudience}`,
+            page: "LMP/Event Details"
+          });
+        }
+      }
       setIsEditing(false);
       setIsAddingLmpEvent(false);
       setEditedItem(null);
       setEditingCourseTitle("");
+      setEditingCourseAudience(selectedCourseAudience);
     } catch (err) {
       await showDarkAlert(`Save failed: ${err.message}`, "Save Failed", "error");
     } finally {
@@ -89675,6 +89748,7 @@ const SyllabusView = ({
     setIsAddingLmpEvent(false);
     setEditedItem(null);
     setEditingCourseTitle("");
+    setEditingCourseAudience(selectedCourseAudience);
   };
   const handleManageMasterLmps = () => {
     onNavigateToSettingsSection?.({
@@ -89952,6 +90026,11 @@ const SyllabusView = ({
   const handleAddLMP = () => {
     setNewLMPName("");
     setNewLMPCourseType("Flight Training");
+    setNewLMPAudience(getDefaultLmpAudience({
+      activeTab,
+      operationalModel: activeOperationalModel,
+      lmpType: activeLmpType
+    }));
     setAddPackageMode("blank");
     setCopyPackageSourceKey(packageCopyOptions[0]?.key || "");
     setShowAddLMPModal(true);
@@ -90085,7 +90164,7 @@ const SyllabusView = ({
       unit: shouldScopeCreatedItemsToActiveUnit ? activeUnitNormalised : void 0,
       courses: [courseCode],
       lmpType: activeLmpType,
-      notes: SYLLABUS_COURSE_SHELL_NOTE
+      notes: withLmpAudienceInNotes(SYLLABUS_COURSE_SHELL_NOTE, newLMPAudience)
     };
     setShowAddLMPModal(false);
     try {
@@ -90210,7 +90289,22 @@ const SyllabusView = ({
               }
             ) : /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-sky-400", children: getCourseTitle(selectedCourseType) })
           ] }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-sm text-gray-400", children: isAddingLmpEvent ? `This creates one event inside ${getCourseTitle(selectedCourseType)}. The ${activeCollectionTitle} title is fixed here; fill in the event code and event description below.` : isEditing ? `Editing ${activeCollectionNoun} title - changes apply to all events in this ${activeCollectionNoun}` : activeCollectionTitle }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-sm text-gray-400", children: isAddingLmpEvent ? `This creates one event inside ${getCourseTitle(selectedCourseType)}. The ${activeCollectionTitle} title is fixed here; fill in the event code and event description below.` : isEditing ? `Editing ${activeCollectionNoun} title and enrolment audience - changes apply to this ${activeCollectionNoun}` : activeCollectionTitle }),
+          selectedCourseType && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-2 flex flex-wrap items-center gap-2", children: isEditing && !isAddingLmpEvent ? /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "inline-flex items-center gap-2 rounded-md border border-gray-700 bg-gray-950/70 px-3 py-1.5 text-[11px] font-semibold uppercase tracking-wide text-gray-300", children: [
+            "Audience",
+            /* @__PURE__ */ jsxRuntimeExports.jsxs(
+              "select",
+              {
+                value: editingCourseAudience,
+                onChange: (event) => setEditingCourseAudience(event.target.value),
+                className: "rounded border border-gray-600 bg-gray-800 px-2 py-1 text-xs font-bold text-white focus:ring-sky-500",
+                children: [
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "trainee", children: "Trainees only" }),
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "staff", children: "Staff only" })
+                ]
+              }
+            )
+          ] }) : /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: `rounded border px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide ${selectedCourseAudience === "staff" ? "border-emerald-500/40 bg-emerald-500/10 text-emerald-100" : "border-teal-500/40 bg-teal-500/10 text-teal-100"}`, children: selectedCourseAudience === "staff" ? "Staff only" : "Trainees only" }) }),
           shouldShowUnitTabs && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-3 flex flex-wrap gap-2", children: fixedCrewUnitTabs.map((unitCode) => /* @__PURE__ */ jsxRuntimeExports.jsx(
             "button",
             {
@@ -90312,11 +90406,19 @@ const SyllabusView = ({
               /* @__PURE__ */ jsxRuntimeExports.jsx("br", {}),
               "Package"
             ] }) }),
-            (isAirCombatModel || isFlightSchoolModel && !isTrainingPackagesTab) && /* @__PURE__ */ jsxRuntimeExports.jsx("button", { onClick: openAssignTraining, disabled: isFrozen || !activeStaffTrainingAssignment || !onUpdateInstructor, className: "w-[68px] h-[41px] flex items-center justify-center text-center px-1 py-1 text-[10px] leading-tight font-semibold rounded-md btn-aluminium-brushed disabled:opacity-50 disabled:cursor-not-allowed", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { children: [
-              "Assign",
-              /* @__PURE__ */ jsxRuntimeExports.jsx("br", {}),
-              isAssigningFlightSchoolLmp ? "LMP" : "Training"
-            ] }) }),
+            (isAirCombatModel || isFlightSchoolModel && !isTrainingPackagesTab) && /* @__PURE__ */ jsxRuntimeExports.jsx(
+              "button",
+              {
+                onClick: openAssignTraining,
+                disabled: isFrozen || !activeStaffTrainingAssignment || showStaffInAssignTraining && !onUpdateInstructor || showTraineesInAssignTraining && !onUpdateTrainee,
+                className: "w-[68px] h-[41px] flex items-center justify-center text-center px-1 py-1 text-[10px] leading-tight font-semibold rounded-md btn-aluminium-brushed disabled:opacity-50 disabled:cursor-not-allowed",
+                children: /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { children: [
+                  "Assign",
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("br", {}),
+                  isAssigningFlightSchoolLmp ? "LMP" : "Training"
+                ] })
+              }
+            ),
             /* @__PURE__ */ jsxRuntimeExports.jsx("button", { onClick: () => {
               setUploadFile(null);
               setUploadResult(null);
@@ -90580,7 +90682,7 @@ const SyllabusView = ({
                   ) })
                 ] })
               ] }),
-              (!isTrainingPackagesTab || addPackageMode === "blank") && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { style: { marginBottom: 24 }, children: [
+              (!isTrainingPackagesTab || addPackageMode === "blank") && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { style: { marginBottom: 16 }, children: [
                 /* @__PURE__ */ jsxRuntimeExports.jsx("label", { style: {
                   display: "block",
                   fontSize: 11,
@@ -90613,6 +90715,40 @@ const SyllabusView = ({
                   }
                 ),
                 /* @__PURE__ */ jsxRuntimeExports.jsx("p", { style: { fontSize: 10, color: "#6b7280", marginTop: 4 }, children: newLMPCourseType === "Academic Training" ? "Academic Training: theory/classroom instruction delivered prior to the flying phase." : "Flight Training: airborne, simulator and associated ground events during the flying phase." })
+              ] }),
+              (!isTrainingPackagesTab || addPackageMode === "blank") && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { style: { marginBottom: 24 }, children: [
+                /* @__PURE__ */ jsxRuntimeExports.jsx("label", { style: {
+                  display: "block",
+                  fontSize: 11,
+                  fontWeight: 600,
+                  color: "#9ca3af",
+                  textTransform: "uppercase",
+                  letterSpacing: "0.05em",
+                  marginBottom: 4
+                }, children: "Assignment Audience" }),
+                /* @__PURE__ */ jsxRuntimeExports.jsxs(
+                  "select",
+                  {
+                    value: newLMPAudience,
+                    onChange: (e) => setNewLMPAudience(e.target.value),
+                    style: {
+                      width: "100%",
+                      backgroundColor: "#111827",
+                      border: "1px solid #4b5563",
+                      borderRadius: 6,
+                      padding: "8px 10px",
+                      color: "#fff",
+                      fontSize: 13,
+                      outline: "none",
+                      boxSizing: "border-box"
+                    },
+                    children: [
+                      /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "trainee", children: "Trainees only" }),
+                      /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "staff", children: "Staff only" })
+                    ]
+                  }
+                ),
+                /* @__PURE__ */ jsxRuntimeExports.jsx("p", { style: { fontSize: 10, color: "#6b7280", marginTop: 4 }, children: "This controls who can be enrolled from Assign LMP. Staff-only courses are for upgrades or category progression; trainee-only courses feed normal trainee LMP assignment." })
               ] }),
               /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { style: { display: "flex", justifyContent: "flex-end", gap: 8 }, children: [
                 /* @__PURE__ */ jsxRuntimeExports.jsx(
@@ -91143,10 +91279,11 @@ const SyllabusView = ({
       AssignTrainingModal,
       {
         heading: isAssigningFlightSchoolLmp ? "Assign LMP" : "Assign Training",
-        title: isAssigningFlightSchoolLmp ? `Master LMP: ${activeFlightSchoolLmpAssignment?.title || activeFlightSchoolLmpAssignment?.lmpCode || selectedCourseType}` : `${activeAirCombatTrainingAssignment?.kind === "course" ? "Course" : "Training Package"}: ${activeAirCombatTrainingAssignment?.title || activeAirCombatTrainingAssignment?.code || selectedCourseType}`,
+        title: isAssigningFlightSchoolLmp ? `Master LMP: ${activeFlightSchoolLmpAssignment?.title || activeFlightSchoolLmpAssignment?.lmpCode || selectedCourseType} · ${selectedCourseAudience === "staff" ? "Staff only" : "Trainees only"}` : `${activeAirCombatTrainingAssignment?.kind === "course" ? "Course" : "Training Package"}: ${activeAirCombatTrainingAssignment?.title || activeAirCombatTrainingAssignment?.code || selectedCourseType}`,
         emptyMessage: isAssigningFlightSchoolLmp ? "No active staff available for this unit." : "No active squadron staff available for this unit.",
+        showStaffAssignments: showStaffInAssignTraining,
         staff: assignableTrainingStaff,
-        trainees: isAssigningFlightSchoolLmp ? assignableFlightSchoolTrainees : [],
+        trainees: showTraineesInAssignTraining ? assignableFlightSchoolTrainees : [],
         selectedStaffIds: assignTrainingSelection,
         selectedTraineeIds: assignTraineeSelection,
         saving: isSavingTrainingAssignments,
@@ -91158,7 +91295,7 @@ const SyllabusView = ({
             return next;
           });
         },
-        onToggleTrainee: isAssigningFlightSchoolLmp ? (idNumber) => {
+        onToggleTrainee: showTraineesInAssignTraining ? (idNumber) => {
           setAssignTraineeSelection((prev) => {
             const next = new Set(prev);
             if (next.has(idNumber)) next.delete(idNumber);
@@ -144393,7 +144530,15 @@ The proposed event was not scheduled. Re-open the event and choose Accept Confli
     logNeoBuildUiDebug("🚀 [NEO-Build] highestPriorityEvents:", highestPriorityEvents.length);
     const buildPublishedSchedules = buildPublishedSchedulesOverride || publishedSchedules;
     const normaliseBuildUnitCode = (value) => String(value || "").split("/")[0].trim().toUpperCase();
-    const assignableFlightSchoolBuildSyllabus = activeOperationalModel === "flight_school" ? getFlightSchoolAssignableSyllabusForActiveScope(syllabusDetails, "Assign").filter((item) => item.type !== "Academics" && item.lmpType !== "Staff CAT") : [];
+    const assignableFlightSchoolBuildSyllabus = activeOperationalModel === "flight_school" ? getFlightSchoolAssignableSyllabusForActiveScope(syllabusDetails, "Assign").filter((item) => item.type !== "Academics" && item.lmpType !== "Staff CAT").filter((item) => {
+      const courseCode = Array.isArray(item.courses) ? item.courses.find(Boolean) : "";
+      if (!courseCode) return true;
+      return getLmpAudienceForCourse(syllabusDetails, String(courseCode), {
+        activeTab: "master",
+        operationalModel: "flight_school",
+        lmpType: item.lmpType
+      }) === "trainee";
+    }) : [];
     const assignableFlightSchoolEventKeys = new Set(
       assignableFlightSchoolBuildSyllabus.flatMap((item) => [item.id, item.code, item.masterEventId]).map((key) => String(key || "").replace(/\*/g, "").trim()).filter(Boolean)
     );
