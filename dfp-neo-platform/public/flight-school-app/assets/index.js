@@ -18636,8 +18636,11 @@ const PlatformConfigurationSettings = ({
   reactExports.useEffect(() => {
     const cleanPoolCode = String(focusResourcePoolCode || "").trim().toUpperCase();
     if (loading || !cleanPoolCode || scrollTarget !== "platform-dfp-resource-rows") return;
+    const autoScrollKey = `resource-pool:${cleanPoolCode}:${scrollTarget || ""}`;
+    if (completedAutoScrollKeysRef.current.has(autoScrollKey)) return;
     const poolIndex = config.resourcePools.findIndex((pool2) => [pool2.id, pool2.code, pool2.name].map((value) => String(value || "").trim().toUpperCase()).some((value) => value === cleanPoolCode));
     if (poolIndex < 0) return;
+    completedAutoScrollKeysRef.current.add(autoScrollKey);
     const pool = config.resourcePools[poolIndex];
     const rowKey = pool.id || `platform-resource-pool-${poolIndex}`;
     const frame = window.requestAnimationFrame(() => {

@@ -3003,12 +3003,15 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
   useEffect(() => {
     const cleanPoolCode = String(focusResourcePoolCode || '').trim().toUpperCase();
     if (loading || !cleanPoolCode || scrollTarget !== 'platform-dfp-resource-rows') return;
+    const autoScrollKey = `resource-pool:${cleanPoolCode}:${scrollTarget || ''}`;
+    if (completedAutoScrollKeysRef.current.has(autoScrollKey)) return;
     const poolIndex = config.resourcePools.findIndex((pool) => (
       [pool.id, pool.code, pool.name]
         .map((value) => String(value || '').trim().toUpperCase())
         .some((value) => value === cleanPoolCode)
     ));
     if (poolIndex < 0) return;
+    completedAutoScrollKeysRef.current.add(autoScrollKey);
     const pool = config.resourcePools[poolIndex];
     const rowKey = pool.id || `platform-resource-pool-${poolIndex}`;
     const frame = window.requestAnimationFrame(() => {
