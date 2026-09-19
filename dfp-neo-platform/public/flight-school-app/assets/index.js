@@ -30208,47 +30208,6 @@ const buildRowRecords = (rawRows, headerRowIndex, skipExampleRow) => {
     }, {})
   })).filter((record) => !skipExampleRow || record.excelRowNumber !== headerRowIndex + 2).filter((record) => Object.values(record.row).some((value) => normaliseCellText(value)));
 };
-const NEO_ASSIST_MANUAL_TILE_TRACE_KEY$2 = "neo_assist_manual_tile_drop_trace";
-const appendNeoAssistManualTileTrace$2 = (stage, details = {}) => {
-  try {
-    if (typeof window === "undefined") return;
-    const existing = JSON.parse(localStorage.getItem(NEO_ASSIST_MANUAL_TILE_TRACE_KEY$2) || "[]");
-    const entries = Array.isArray(existing) ? existing : [];
-    entries.push({
-      stage,
-      at: (/* @__PURE__ */ new Date()).toISOString(),
-      url: window.location.href,
-      ...details
-    });
-    localStorage.setItem(NEO_ASSIST_MANUAL_TILE_TRACE_KEY$2, JSON.stringify(entries.slice(-400)));
-  } catch (error) {
-    console.warn("[NEO_ASSIST_MANUAL_TILE_TRACE] Failed to record schedule trace entry:", error);
-  }
-};
-const summariseNeoAssistDropEvent$1 = (event) => {
-  if (!event) return null;
-  return {
-    id: event.id || null,
-    date: event.date || null,
-    type: event.type || null,
-    flightNumber: event.flightNumber || null,
-    eventName: event.eventName || null,
-    eventCode: event.eventCode || null,
-    pilot: event.pilot || null,
-    instructor: event.instructor || null,
-    student: event.student || null,
-    crew: event.crew || null,
-    resourceId: event.resourceId || null,
-    unitCode: event.unitCode || null,
-    locationCode: event.locationCode || null,
-    operationalModel: event.operationalModel || null,
-    startTime: event.startTime ?? null,
-    duration: event.duration ?? null,
-    callsign: event.callsign || null,
-    aircraftNumber: event.aircraftNumber || null,
-    formationSize: event.formationSize ?? null
-  };
-};
 const PIXELS_PER_HOUR$6 = 200;
 const ROW_HEIGHT$6 = 32;
 const START_HOUR$6 = 0;
@@ -40270,46 +40229,17 @@ const ScheduleView = ({
     if (!onExternalEventDrop) return;
     const raw = event.dataTransfer.getData("application/neo-assist-event");
     if (!raw) {
-      appendNeoAssistManualTileTrace$2("program-schedule-grid-drop-missing-payload", {
-        date,
-        clientX: event.clientX,
-        clientY: event.clientY,
-        dragTypes: Array.from(event.dataTransfer.types)
-      });
       return;
     }
     const placement = getExternalDropPlacement(event);
     if (!placement) {
-      appendNeoAssistManualTileTrace$2("program-schedule-grid-drop-no-placement", {
-        date,
-        clientX: event.clientX,
-        clientY: event.clientY,
-        dragTypes: Array.from(event.dataTransfer.types),
-        rawLength: raw.length,
-        resourceCount: resources.length
-      });
       return;
     }
     event.preventDefault();
     try {
       const parsedEvent = JSON.parse(raw);
-      appendNeoAssistManualTileTrace$2("program-schedule-grid-drop-parsed", {
-        date,
-        placement,
-        clientX: event.clientX,
-        clientY: event.clientY,
-        resourceCount: resources.length,
-        eventsBeforeDrop: events.length,
-        parsed: summariseNeoAssistDropEvent$1(parsedEvent)
-      });
       onExternalEventDrop(parsedEvent, placement);
     } catch (error) {
-      appendNeoAssistManualTileTrace$2("program-schedule-grid-drop-parse-error", {
-        date,
-        placement,
-        rawLength: raw.length,
-        error: error instanceof Error ? error.message : String(error)
-      });
       console.warn("[NEO Assist] Failed to drop assist tile:", error);
     }
   };
@@ -67020,47 +66950,6 @@ const SupervisorDashboard = ({ instructorsData, traineesData, date, events, scho
     ] })
   ] }) });
 };
-const NEO_ASSIST_MANUAL_TILE_TRACE_KEY$1 = "neo_assist_manual_tile_drop_trace";
-const appendNeoAssistManualTileTrace$1 = (stage, details = {}) => {
-  try {
-    if (typeof window === "undefined") return;
-    const existing = JSON.parse(localStorage.getItem(NEO_ASSIST_MANUAL_TILE_TRACE_KEY$1) || "[]");
-    const entries = Array.isArray(existing) ? existing : [];
-    entries.push({
-      stage,
-      at: (/* @__PURE__ */ new Date()).toISOString(),
-      url: window.location.href,
-      ...details
-    });
-    localStorage.setItem(NEO_ASSIST_MANUAL_TILE_TRACE_KEY$1, JSON.stringify(entries.slice(-400)));
-  } catch (error) {
-    console.warn("[NEO_ASSIST_MANUAL_TILE_TRACE] Failed to record next-day trace entry:", error);
-  }
-};
-const summariseNeoAssistDropEvent = (event) => {
-  if (!event) return null;
-  return {
-    id: event.id || null,
-    date: event.date || null,
-    type: event.type || null,
-    flightNumber: event.flightNumber || null,
-    eventName: event.eventName || null,
-    eventCode: event.eventCode || null,
-    pilot: event.pilot || null,
-    instructor: event.instructor || null,
-    student: event.student || null,
-    crew: event.crew || null,
-    resourceId: event.resourceId || null,
-    unitCode: event.unitCode || null,
-    locationCode: event.locationCode || null,
-    operationalModel: event.operationalModel || null,
-    startTime: event.startTime ?? null,
-    duration: event.duration ?? null,
-    callsign: event.callsign || null,
-    aircraftNumber: event.aircraftNumber || null,
-    formationSize: event.formationSize ?? null
-  };
-};
 const PIXELS_PER_HOUR$3 = 200;
 const ROW_HEIGHT$3 = 32;
 const START_HOUR$3 = 0;
@@ -67288,46 +67177,17 @@ const NextDayBuildView = ({
     if (!onExternalEventDrop) return;
     const raw = event.dataTransfer.getData("application/neo-assist-event");
     if (!raw) {
-      appendNeoAssistManualTileTrace$1("next-day-grid-drop-missing-payload", {
-        date,
-        clientX: event.clientX,
-        clientY: event.clientY,
-        dragTypes: Array.from(event.dataTransfer.types)
-      });
       return;
     }
     const placement = getExternalDropPlacement(event);
     if (!placement) {
-      appendNeoAssistManualTileTrace$1("next-day-grid-drop-no-placement", {
-        date,
-        clientX: event.clientX,
-        clientY: event.clientY,
-        dragTypes: Array.from(event.dataTransfer.types),
-        rawLength: raw.length,
-        resourceCount: resources.length
-      });
       return;
     }
     event.preventDefault();
     try {
       const parsedEvent = JSON.parse(raw);
-      appendNeoAssistManualTileTrace$1("next-day-grid-drop-parsed", {
-        date,
-        placement,
-        clientX: event.clientX,
-        clientY: event.clientY,
-        resourceCount: resources.length,
-        eventsBeforeDrop: events.length,
-        parsed: summariseNeoAssistDropEvent(parsedEvent)
-      });
       onExternalEventDrop(parsedEvent, placement);
     } catch (error) {
-      appendNeoAssistManualTileTrace$1("next-day-grid-drop-parse-error", {
-        date,
-        placement,
-        rawLength: raw.length,
-        error: error instanceof Error ? error.message : String(error)
-      });
       console.warn("[NEO Assist] Failed to drop assist tile:", error);
     }
   };
@@ -108642,85 +108502,6 @@ const normaliseAssistPriorityWeights = (items) => {
   }));
 };
 const NEO_ASSIST_CURRENCY_TRACE_KEY = "neo_assist_currency_persistence_trace";
-const NEO_ASSIST_MANUAL_TILE_TRACE_KEY = "neo_assist_manual_tile_drop_trace";
-const NEO_ASSIST_MANUAL_TILE_RENDER_PROBE_KEY = "neo_assist_manual_tile_render_probe";
-const DFP_TILE_MOVE_RENDER_PROBE_KEY = "dfp_tile_move_render_probe";
-const summariseNeoAssistManualTileEvent = (event) => {
-  if (!event) return null;
-  return {
-    id: event.id || null,
-    date: event.date || null,
-    type: event.type || null,
-    flightNumber: event.flightNumber || null,
-    eventName: event.eventName || null,
-    eventCode: event.eventCode || null,
-    pilot: event.pilot || null,
-    instructor: event.instructor || null,
-    student: event.student || null,
-    crew: event.crew || null,
-    resourceId: event.resourceId || null,
-    unitCode: event.unitCode || null,
-    locationCode: event.locationCode || null,
-    operationalModel: event.operationalModel || null,
-    startTime: event.startTime ?? null,
-    duration: event.duration ?? null,
-    preStart: event.preStart ?? null,
-    postEnd: event.postEnd ?? null,
-    callsign: event.callsign || null,
-    aircraftNumber: event.aircraftNumber || null,
-    flightType: event.flightType || null,
-    soloOrDual: event.soloOrDual || null,
-    formationId: event.formationId || null,
-    formationPosition: event.formationPosition ?? null,
-    formationSize: event.formationSize ?? null,
-    fixedCrewGroup: event.fixedCrewGroup || null,
-    isDeploy: event.isDeploy || false,
-    manualCrewPairCount: Array.isArray(event.manualCrewPairs) ? event.manualCrewPairs.length : 0,
-    crewSelectionCount: Array.isArray(event.crewSelectionOrder) ? event.crewSelectionOrder.length : 0
-  };
-};
-const appendNeoAssistManualTileTrace = (stage, details = {}) => {
-  try {
-    if (typeof window === "undefined") return;
-    const existing = JSON.parse(localStorage.getItem(NEO_ASSIST_MANUAL_TILE_TRACE_KEY) || "[]");
-    const entries = Array.isArray(existing) ? existing : [];
-    entries.push({
-      stage,
-      at: (/* @__PURE__ */ new Date()).toISOString(),
-      url: window.location.href,
-      ...details
-    });
-    localStorage.setItem(NEO_ASSIST_MANUAL_TILE_TRACE_KEY, JSON.stringify(entries.slice(-400)));
-  } catch (error) {
-    console.warn("[NEO_ASSIST_MANUAL_TILE_TRACE] Failed to record trace entry:", error);
-  }
-};
-const downloadNeoAssistManualTileTrace = (context = {}) => {
-  try {
-    if (typeof window === "undefined") return;
-    const entries = JSON.parse(localStorage.getItem(NEO_ASSIST_MANUAL_TILE_TRACE_KEY) || "[]");
-    const report = {
-      reportType: "NEO_ASSIST_MANUAL_TILE_DROP_TRACE",
-      generatedAt: (/* @__PURE__ */ new Date()).toISOString(),
-      context,
-      entryCount: Array.isArray(entries) ? entries.length : 0,
-      entries: Array.isArray(entries) ? entries : []
-    };
-    const blob = new Blob([JSON.stringify(report, null, 2)], { type: "application/json" });
-    const url = URL.createObjectURL(blob);
-    const safeUser = String(context.currentUserName || "user").toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "") || "user";
-    const safeDate = String(context.date || context.buildDfpDate || "no-date").replace(/[^0-9-]/g, "") || "no-date";
-    const link = document.createElement("a");
-    link.href = url;
-    link.download = `neo-assist-manual-tile-trace-${safeUser}-${safeDate}-${(/* @__PURE__ */ new Date()).toISOString().replace(/[:.]/g, "-")}.json`;
-    document.body.appendChild(link);
-    link.click();
-    link.remove();
-    URL.revokeObjectURL(url);
-  } catch (error) {
-    console.error("[NEO_ASSIST_MANUAL_TILE_TRACE] Failed to download trace:", error);
-  }
-};
 const appendNeoAssistCurrencyTrace = (stage, details = {}) => {
   try {
     if (typeof window === "undefined") return;
@@ -108824,8 +108605,7 @@ const DfpSidePanelTimeline = ({
   onNavigateToCurrencySettings,
   onNavigateToSavedSpecialSettings,
   onManualTileDragStart,
-  onOpenPrioritiesSection,
-  manualTileTraceContext = {}
+  onOpenPrioritiesSection
 }) => {
   const timelineStartHour = 6;
   const timelineEndHour = 25;
@@ -109812,17 +109592,6 @@ const DfpSidePanelTimeline = ({
     const payload = JSON.stringify(assistDraftEvent);
     event.dataTransfer.setData("application/neo-assist-event", payload);
     event.dataTransfer.setData("text/plain", assistEventLabel);
-    appendNeoAssistManualTileTrace("manual-tile-drag-start", {
-      ...manualTileTraceContext,
-      activeAssistPage,
-      activeAssistSection,
-      selectedResourceKind,
-      assistEventLabel,
-      assistFormationSize,
-      isDeploymentAssistTile,
-      payloadLength: payload.length,
-      draft: summariseNeoAssistManualTileEvent(assistDraftEvent)
-    });
     const dragPreview = createAssistDragImage();
     assistDragPreviewRef.current = dragPreview;
     positionAssistDragPreview(event.clientX, event.clientY);
@@ -109836,14 +109605,6 @@ const DfpSidePanelTimeline = ({
     positionAssistDragPreview(event.clientX, event.clientY);
   };
   const endAssistTileDrag = () => {
-    appendNeoAssistManualTileTrace("manual-tile-drag-end", {
-      ...manualTileTraceContext,
-      activeAssistPage,
-      activeAssistSection,
-      selectedResourceKind,
-      assistEventLabel,
-      draft: summariseNeoAssistManualTileEvent(assistDraftEvent)
-    });
     clearAssistDragPreview();
   };
   reactExports.useEffect(() => {
@@ -114545,29 +114306,10 @@ This cannot be undone.`,
           }
         ) }),
         /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded-lg border border-slate-300 bg-white p-4 shadow-sm", children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mb-3 flex items-start justify-between gap-3 border-b border-slate-200 pb-2", children: [
-            /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
-              /* @__PURE__ */ jsxRuntimeExports.jsx("h4", { className: "text-[14px] font-semibold text-slate-950", children: "Manual Tile Creator" }),
-              /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-[11px] text-slate-600", children: "Create one specific DFP tile manually. These controls are separate from NEO Build priority settings." })
-            ] }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx(
-              "button",
-              {
-                type: "button",
-                onClick: () => downloadNeoAssistManualTileTrace({
-                  ...manualTileTraceContext,
-                  activeAssistPage,
-                  activeAssistSection,
-                  selectedResourceKind,
-                  assistEventLabel,
-                  isAssistTileDragging,
-                  draft: summariseNeoAssistManualTileEvent(assistDraftEvent)
-                }),
-                className: "shrink-0 rounded-md border border-slate-300 bg-slate-50 px-2.5 py-1.5 text-[10px] font-semibold text-slate-600 transition hover:border-cyan-300 hover:bg-cyan-50 hover:text-cyan-800",
-                children: "Download Tile Trace"
-              }
-            )
-          ] }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mb-3 border-b border-slate-200 pb-2", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx("h4", { className: "text-[14px] font-semibold text-slate-950", children: "Manual Tile Creator" }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-[11px] text-slate-600", children: "Create one specific DFP tile manually. These controls are separate from NEO Build priority settings." })
+          ] }) }),
           renderAssistSection()
         ] })
       ] }) : /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-3", children: [
@@ -133849,24 +133591,6 @@ const App = () => {
   const applyDailySnapshot = React.useCallback((targetDate, snapshotSchool, snapshotUnit, snap2, replace, source) => {
     if (!snap2) return 0;
     const events2 = Array.isArray(snap2.scheduleEvents) ? snap2.scheduleEvents : [];
-    try {
-      const rawMoveProbe = typeof window !== "undefined" ? localStorage.getItem(DFP_TILE_MOVE_RENDER_PROBE_KEY) : null;
-      const moveProbe = rawMoveProbe ? JSON.parse(rawMoveProbe) : null;
-      const moveProbeIds = Array.isArray(moveProbe?.ids) ? moveProbe.ids.map((id) => String(id || "").trim()).filter(Boolean) : [];
-      if (moveProbeIds.length > 0 && moveProbe?.date === targetDate) {
-        appendNeoAssistManualTileTrace("dfp-tile-move-snapshot-apply-during-monitor", {
-          targetDate,
-          snapshotSchool,
-          snapshotUnit,
-          source,
-          replace,
-          eventCount: events2.length,
-          moveProbeIds,
-          incomingProbeEvents: events2.filter((event) => moveProbeIds.includes(event.id)).map(summariseNeoAssistManualTileEvent)
-        });
-      }
-    } catch {
-    }
     pushDfpDataDiag("snapshot:apply", {
       targetDate,
       snapshotSchool,
@@ -133919,31 +133643,12 @@ const App = () => {
         if (existingSignature === incomingSignature) return prev;
       }
       if (pendingManualEvents.length > 0) {
-        appendNeoAssistManualTileTrace("manual-tile-protected-from-snapshot-overwrite", {
-          targetDate,
-          snapshotSchool,
-          snapshotUnit,
-          source,
-          replace,
-          incomingCount: events2.length,
-          pendingManualEventIds: pendingManualEvents.map((event) => event.id)
-        });
         return { ...prev, [targetDate]: [...events2, ...pendingManualEvents] };
       }
       if (pendingPublishedMoveEvents.length > 0) {
         const pendingById = new Map(pendingPublishedMoveEvents.map((event) => [event.id, event]));
         const mergedEvents = events2.map((event) => pendingById.get(event.id) || event);
         const missingPendingEvents = pendingPublishedMoveEvents.filter((event) => !events2.some((incoming) => incoming.id === event.id));
-        appendNeoAssistManualTileTrace("dfp-tile-move-protected-from-snapshot-overwrite", {
-          targetDate,
-          snapshotSchool,
-          snapshotUnit,
-          source,
-          replace,
-          incomingCount: events2.length,
-          pendingMoveEventIds: pendingPublishedMoveEvents.map((event) => event.id),
-          missingPendingEventIds: missingPendingEvents.map((event) => event.id)
-        });
         return { ...prev, [targetDate]: [...mergedEvents, ...missingPendingEvents] };
       }
       return { ...prev, [targetDate]: events2 };
@@ -134771,8 +134476,6 @@ const App = () => {
   const [eventLimits, setEventLimits] = reactExports.useState(DEFAULT_EVENT_LIMITS);
   const [phraseBank, setPhraseBank] = reactExports.useState(DEFAULT_PHRASE_BANK);
   const [publishedSchedules, setPublishedSchedules] = reactExports.useState({});
-  const [manualTileRenderMonitorTick, setManualTileRenderMonitorTick] = reactExports.useState(0);
-  const [dfpTileMoveRenderMonitorTick, setDfpTileMoveRenderMonitorTick] = reactExports.useState(0);
   const publishedSchedulesRef = React.useRef({});
   reactExports.useEffect(() => {
     publishedSchedulesRef.current = publishedSchedules;
@@ -137744,266 +137447,6 @@ ${"=".repeat(60)}`);
     }
     return segments;
   }, [activeFixedCrewTileColourMode, activeOperationalModel, date, eventsForDateWithPreFlightNotes]);
-  reactExports.useEffect(() => {
-    if (typeof window === "undefined") return;
-    const now = Date.now();
-    let probe = null;
-    try {
-      const rawProbe = localStorage.getItem(NEO_ASSIST_MANUAL_TILE_RENDER_PROBE_KEY);
-      probe = rawProbe ? JSON.parse(rawProbe) : null;
-    } catch (error) {
-      appendNeoAssistManualTileTrace("manual-tile-render-probe-read-failed", {
-        date,
-        error: error instanceof Error ? error.message : String(error)
-      });
-      return;
-    }
-    const probeIds = Array.isArray(probe?.ids) ? probe.ids.map((id) => String(id || "").trim()).filter(Boolean) : [];
-    if (probeIds.length === 0) return;
-    const createdAtMs = Date.parse(String(probe?.createdAt || ""));
-    const monitorUntilMs = Number(probe?.monitorUntilMs);
-    const effectiveMonitorUntilMs = Number.isFinite(monitorUntilMs) ? monitorUntilMs : Number.isFinite(createdAtMs) ? createdAtMs + 2e4 : now + 2e4;
-    if (now > effectiveMonitorUntilMs) {
-      appendNeoAssistManualTileTrace("manual-tile-render-monitor-expired", {
-        date,
-        probe,
-        ageMs: Number.isFinite(createdAtMs) ? now - createdAtMs : null
-      });
-      try {
-        localStorage.removeItem(NEO_ASSIST_MANUAL_TILE_RENDER_PROBE_KEY);
-      } catch {
-      }
-      return;
-    }
-    const rawForDate = Array.isArray(publishedSchedules[date]) ? publishedSchedules[date] : [];
-    const describeProbeEvent = (event) => event ? {
-      id: event.id,
-      date: event.date,
-      type: event.type,
-      flightNumber: event.flightNumber,
-      resourceId: event.resourceId,
-      unitCode: event.unitCode || null,
-      locationCode: event.locationCode || null,
-      operationalModel: event.operationalModel || null,
-      startTime: event.startTime,
-      duration: event.duration,
-      pilot: event.pilot || null,
-      instructor: event.instructor || null,
-      student: event.student || null,
-      segmentStartTime: event.segmentStartTime ?? null,
-      segmentDuration: event.segmentDuration ?? null
-    } : null;
-    const nearbyEvents = (items, probeEvent) => {
-      const resourceId = probeEvent?.resourceId || probe?.placement?.resourceId;
-      const startTime = Number(probeEvent?.startTime ?? probe?.placement?.startTime);
-      return items.filter((event) => {
-        if (!resourceId || event.resourceId !== resourceId) return false;
-        if (!Number.isFinite(startTime)) return true;
-        return Math.abs(Number(event.startTime) - startTime) <= 1.5;
-      }).slice(0, 12).map(describeProbeEvent);
-    };
-    const report = probeIds.map((id) => {
-      const rawEvent = rawForDate.find((event) => event.id === id);
-      const scopedEvent = scopedPublishedEventsForDate.find((event) => event.id === id);
-      const renderInputEvent = eventsForDateWithPreFlightNotes.find((event) => event.id === id);
-      const segmentEvent = eventSegmentsForDate.find((event) => event.id === id);
-      return {
-        id,
-        inPublishedRawForDate: Boolean(rawEvent),
-        inScopedPublishedEventsForDate: Boolean(scopedEvent),
-        inRenderInputEventsForDateWithPreFlightNotes: Boolean(renderInputEvent),
-        inEventSegmentsForDate: Boolean(segmentEvent),
-        rawEvent: describeProbeEvent(rawEvent),
-        scopedEvent: describeProbeEvent(scopedEvent),
-        renderInputEvent: describeProbeEvent(renderInputEvent),
-        segmentEvent: describeProbeEvent(segmentEvent),
-        nearbyRawEvents: nearbyEvents(rawForDate, rawEvent || scopedEvent || renderInputEvent || segmentEvent),
-        nearbySegmentEvents: nearbyEvents(eventSegmentsForDate, segmentEvent)
-      };
-    });
-    const hadBeenVisible = probe?.hadBeenVisible === true;
-    const isVisibleNow = report.some((entry) => entry.inEventSegmentsForDate);
-    const missingAfterVisible = hadBeenVisible && !isVisibleNow;
-    const nextProbe = {
-      ...probe,
-      monitorUntilMs: effectiveMonitorUntilMs,
-      lastCheckedAt: new Date(now).toISOString(),
-      hadBeenVisible: hadBeenVisible || isVisibleNow,
-      lastStatus: report.map((entry) => ({
-        id: entry.id,
-        inPublishedRawForDate: entry.inPublishedRawForDate,
-        inScopedPublishedEventsForDate: entry.inScopedPublishedEventsForDate,
-        inRenderInputEventsForDateWithPreFlightNotes: entry.inRenderInputEventsForDateWithPreFlightNotes,
-        inEventSegmentsForDate: entry.inEventSegmentsForDate
-      }))
-    };
-    appendNeoAssistManualTileTrace(missingAfterVisible ? "manual-tile-disappeared-after-render" : "manual-tile-render-monitor-sample", {
-      date,
-      probe: nextProbe,
-      ageMs: Number.isFinite(createdAtMs) ? now - createdAtMs : null,
-      monitorRemainingMs: effectiveMonitorUntilMs - now,
-      hadBeenVisible,
-      isVisibleNow,
-      missingAfterVisible,
-      rawCountForDate: rawForDate.length,
-      scopedCountForDate: scopedPublishedEventsForDate.length,
-      renderInputCount: eventsForDateWithPreFlightNotes.length,
-      segmentCount: eventSegmentsForDate.length,
-      report
-    });
-    try {
-      localStorage.setItem(NEO_ASSIST_MANUAL_TILE_RENDER_PROBE_KEY, JSON.stringify(nextProbe));
-    } catch (error) {
-      appendNeoAssistManualTileTrace("manual-tile-render-probe-update-failed", {
-        date,
-        error: error instanceof Error ? error.message : String(error)
-      });
-    }
-  }, [date, eventSegmentsForDate, eventsForDateWithPreFlightNotes, manualTileRenderMonitorTick, publishedSchedules, scopedPublishedEventsForDate]);
-  reactExports.useEffect(() => {
-    if (typeof window === "undefined") return void 0;
-    const intervalId = window.setInterval(() => {
-      try {
-        const rawProbe = localStorage.getItem(NEO_ASSIST_MANUAL_TILE_RENDER_PROBE_KEY);
-        if (!rawProbe) return;
-        const probe = JSON.parse(rawProbe);
-        const monitorUntilMs = Number(probe?.monitorUntilMs);
-        if (Number.isFinite(monitorUntilMs) && Date.now() <= monitorUntilMs) {
-          setManualTileRenderMonitorTick((tick) => tick + 1);
-        }
-      } catch {
-      }
-    }, 1e3);
-    return () => window.clearInterval(intervalId);
-  }, []);
-  reactExports.useEffect(() => {
-    if (typeof window === "undefined") return;
-    const now = Date.now();
-    let probe = null;
-    try {
-      const rawProbe = localStorage.getItem(DFP_TILE_MOVE_RENDER_PROBE_KEY);
-      probe = rawProbe ? JSON.parse(rawProbe) : null;
-    } catch (error) {
-      appendNeoAssistManualTileTrace("dfp-tile-move-render-probe-read-failed", {
-        date,
-        error: error instanceof Error ? error.message : String(error)
-      });
-      return;
-    }
-    const probeIds = Array.isArray(probe?.ids) ? probe.ids.map((id) => String(id || "").trim()).filter(Boolean) : [];
-    if (probeIds.length === 0) return;
-    const createdAtMs = Date.parse(String(probe?.createdAt || ""));
-    const monitorUntilMs = Number(probe?.monitorUntilMs);
-    const effectiveMonitorUntilMs = Number.isFinite(monitorUntilMs) ? monitorUntilMs : Number.isFinite(createdAtMs) ? createdAtMs + 2e4 : now + 2e4;
-    if (now > effectiveMonitorUntilMs) {
-      appendNeoAssistManualTileTrace("dfp-tile-move-render-monitor-expired", {
-        date,
-        probe,
-        ageMs: Number.isFinite(createdAtMs) ? now - createdAtMs : null
-      });
-      try {
-        localStorage.removeItem(DFP_TILE_MOVE_RENDER_PROBE_KEY);
-      } catch {
-      }
-      return;
-    }
-    const rawForDate = Array.isArray(publishedSchedules[date]) ? publishedSchedules[date] : [];
-    const describeProbeEvent = (event) => event ? {
-      id: event.id,
-      date: event.date,
-      type: event.type,
-      flightNumber: event.flightNumber,
-      resourceId: event.resourceId,
-      unitCode: event.unitCode || null,
-      locationCode: event.locationCode || null,
-      operationalModel: event.operationalModel || null,
-      startTime: event.startTime,
-      duration: event.duration,
-      pilot: event.pilot || null,
-      instructor: event.instructor || null,
-      student: event.student || null,
-      segmentStartTime: event.segmentStartTime ?? null,
-      segmentDuration: event.segmentDuration ?? null
-    } : null;
-    const report = probeIds.map((id) => {
-      const rawEvent = rawForDate.find((event) => event.id === id);
-      const scopedEvent = scopedPublishedEventsForDate.find((event) => event.id === id);
-      const renderInputEvent = eventsForDateWithPreFlightNotes.find((event) => event.id === id);
-      const segmentEvent = eventSegmentsForDate.find((event) => event.id === id);
-      const expected = Array.isArray(probe?.expected) ? probe.expected.find((entry) => entry?.eventId === id) : null;
-      const expectedStartTime = Number(expected?.newStartTime);
-      const expectedResourceId = String(expected?.newResourceId || "");
-      const matchesExpected = Boolean(segmentEvent) && (!Number.isFinite(expectedStartTime) || Math.abs(Number(segmentEvent.startTime) - expectedStartTime) < 1e-3) && (!expectedResourceId || segmentEvent?.resourceId === expectedResourceId);
-      return {
-        id,
-        inPublishedRawForDate: Boolean(rawEvent),
-        inScopedPublishedEventsForDate: Boolean(scopedEvent),
-        inRenderInputEventsForDateWithPreFlightNotes: Boolean(renderInputEvent),
-        inEventSegmentsForDate: Boolean(segmentEvent),
-        matchesExpected,
-        expected,
-        rawEvent: describeProbeEvent(rawEvent),
-        scopedEvent: describeProbeEvent(scopedEvent),
-        renderInputEvent: describeProbeEvent(renderInputEvent),
-        segmentEvent: describeProbeEvent(segmentEvent)
-      };
-    });
-    const hadMatchedExpected = probe?.hadMatchedExpected === true;
-    const matchesExpectedNow = report.every((entry) => entry.matchesExpected);
-    const revertedAfterExpected = hadMatchedExpected && !matchesExpectedNow;
-    const nextProbe = {
-      ...probe,
-      monitorUntilMs: effectiveMonitorUntilMs,
-      lastCheckedAt: new Date(now).toISOString(),
-      hadMatchedExpected: hadMatchedExpected || matchesExpectedNow,
-      lastStatus: report.map((entry) => ({
-        id: entry.id,
-        inPublishedRawForDate: entry.inPublishedRawForDate,
-        inScopedPublishedEventsForDate: entry.inScopedPublishedEventsForDate,
-        inRenderInputEventsForDateWithPreFlightNotes: entry.inRenderInputEventsForDateWithPreFlightNotes,
-        inEventSegmentsForDate: entry.inEventSegmentsForDate,
-        matchesExpected: entry.matchesExpected
-      }))
-    };
-    appendNeoAssistManualTileTrace(revertedAfterExpected ? "dfp-tile-move-reverted-after-render" : "dfp-tile-move-render-monitor-sample", {
-      date,
-      probe: nextProbe,
-      ageMs: Number.isFinite(createdAtMs) ? now - createdAtMs : null,
-      monitorRemainingMs: effectiveMonitorUntilMs - now,
-      hadMatchedExpected,
-      matchesExpectedNow,
-      revertedAfterExpected,
-      rawCountForDate: rawForDate.length,
-      scopedCountForDate: scopedPublishedEventsForDate.length,
-      renderInputCount: eventsForDateWithPreFlightNotes.length,
-      segmentCount: eventSegmentsForDate.length,
-      report
-    });
-    try {
-      localStorage.setItem(DFP_TILE_MOVE_RENDER_PROBE_KEY, JSON.stringify(nextProbe));
-    } catch (error) {
-      appendNeoAssistManualTileTrace("dfp-tile-move-render-probe-update-failed", {
-        date,
-        error: error instanceof Error ? error.message : String(error)
-      });
-    }
-  }, [date, dfpTileMoveRenderMonitorTick, eventSegmentsForDate, eventsForDateWithPreFlightNotes, publishedSchedules, scopedPublishedEventsForDate]);
-  reactExports.useEffect(() => {
-    if (typeof window === "undefined") return void 0;
-    const intervalId = window.setInterval(() => {
-      try {
-        const rawProbe = localStorage.getItem(DFP_TILE_MOVE_RENDER_PROBE_KEY);
-        if (!rawProbe) return;
-        const probe = JSON.parse(rawProbe);
-        const monitorUntilMs = Number(probe?.monitorUntilMs);
-        if (Number.isFinite(monitorUntilMs) && Date.now() <= monitorUntilMs) {
-          setDfpTileMoveRenderMonitorTick((tick) => tick + 1);
-        }
-      } catch {
-      }
-    }, 1e3);
-    return () => window.clearInterval(intervalId);
-  }, []);
   const staffAvailabilityDiagnosticEventIds = reactExports.useMemo(() => {
     if (!isStaffAvailabilityDiagnoseActive || staffAvailabilityPointer.time === null) {
       return /* @__PURE__ */ new Set();
@@ -147072,14 +146515,6 @@ Do not hard refresh yet. Try Publish again, then confirm the save succeeds.`,
     const scheduleForDate = publishedSchedulesRef.current[date] || [];
     const appliedUpdates = expandFormationScheduleUpdates(scheduleForDate, updates);
     const updatesMap = new Map(appliedUpdates.map((u) => [u.eventId, u]));
-    const moveTraceOriginalEvents = appliedUpdates.map((update) => {
-      const event = scheduleForDate.find((candidate) => candidate.id === update.eventId);
-      return {
-        eventId: update.eventId,
-        before: event ? summariseNeoAssistManualTileEvent(event) : null,
-        requested: update
-      };
-    });
     const updatedEventsForDate = scheduleForDate.map((event) => {
       if (updatesMap.has(event.id)) {
         const update = updatesMap.get(event.id);
@@ -147093,75 +146528,19 @@ Do not hard refresh yet. Try Publish again, then confirm the save succeeds.`,
       return event;
     });
     const movedEventsForProtection = appliedUpdates.map((update) => updatedEventsForDate.find((candidate) => candidate.id === update.eventId)).filter((event) => Boolean(event));
-    const moveTraceUpdatedEvents = appliedUpdates.map((update) => {
-      const event = updatedEventsForDate.find((candidate) => candidate.id === update.eventId);
-      return {
-        eventId: update.eventId,
-        after: event ? summariseNeoAssistManualTileEvent(event) : null
-      };
-    });
     setPublishedSchedules((prev) => ({ ...prev, [date]: updatedEventsForDate }));
     pendingPublishedTileMovesRef.current[date] = {
       expiresAt: Date.now() + 15e3,
       events: movedEventsForProtection
     };
-    const monitorStartedAt = Date.now();
-    try {
-      localStorage.setItem(DFP_TILE_MOVE_RENDER_PROBE_KEY, JSON.stringify({
-        createdAt: new Date(monitorStartedAt).toISOString(),
-        monitorUntilMs: monitorStartedAt + 2e4,
-        hadMatchedExpected: false,
-        source: "published-dfp-tile-move",
-        date,
-        ids: appliedUpdates.map((update) => update.eventId),
-        requestedUpdates: updates,
-        expected: appliedUpdates.map((update) => ({
-          eventId: update.eventId,
-          newStartTime: update.newStartTime,
-          newResourceId: update.newResourceId,
-          newAircraftNumber: update.newAircraftNumber
-        })),
-        originalEvents: moveTraceOriginalEvents,
-        updatedEvents: moveTraceUpdatedEvents
-      }));
-    } catch (error) {
-      appendNeoAssistManualTileTrace("dfp-tile-move-render-probe-store-failed", {
-        date,
-        error: error instanceof Error ? error.message : String(error)
-      });
-    }
-    appendNeoAssistManualTileTrace("dfp-tile-move-state-write-planned", {
-      date,
-      requestedUpdates: updates,
-      appliedUpdates,
-      originalEvents: moveTraceOriginalEvents,
-      updatedEvents: moveTraceUpdatedEvents,
-      updatedEventCount: updatedEventsForDate.length
-    });
     if (_scheduleUpdatePersistTimer.current) clearTimeout(_scheduleUpdatePersistTimer.current);
     _scheduleUpdatePersistTimer.current = window.setTimeout(() => {
       _scheduleUpdatePersistTimer.current = null;
       if (updatedEventsForDate.length > 0) {
         const baselineEventsForPersist = baselineSchedules[activeBaselineKey] || [];
         activeDfpSaveInFlightRef.current += 1;
-        appendNeoAssistManualTileTrace("dfp-tile-move-persist-requested", {
-          date,
-          appliedUpdates,
-          updatedEventCount: updatedEventsForDate.length,
-          activeDfpSaveInFlight: activeDfpSaveInFlightRef.current
-        });
-        persistScheduleForDate(date, updatedEventsForDate, baselineEventsForPersist).then((success) => {
-          appendNeoAssistManualTileTrace("dfp-tile-move-persist-completed", {
-            date,
-            appliedUpdates,
-            success
-          });
-        }).catch((error) => {
-          appendNeoAssistManualTileTrace("dfp-tile-move-persist-error", {
-            date,
-            appliedUpdates,
-            error: error instanceof Error ? error.message : String(error)
-          });
+        persistScheduleForDate(date, updatedEventsForDate, baselineEventsForPersist).catch((error) => {
+          console.error("[DFP] Failed to persist moved schedule tiles:", error);
         }).finally(() => {
           activeDfpSaveInFlightRef.current = Math.max(0, activeDfpSaveInFlightRef.current - 1);
         });
@@ -147412,33 +146791,11 @@ Do not hard refresh yet. Try Publish again, then confirm the save succeeds.`,
     });
   }, [activeAircraftResourcePrefix, activeContextUnitCodes, activeOperationalModel, activeUnitCode, neoAssistCallsignOptions, school]);
   const handleProgramScheduleExternalEventDrop = reactExports.useCallback((draft, placement) => {
-    appendNeoAssistManualTileTrace("program-schedule-drop-received", {
-      date,
-      activeOperationalModel,
-      activeUnitCode,
-      locationCode: school,
-      placement,
-      resourcePoolCount: buildResources.length,
-      resourcePoolContainsPlacement: buildResources.includes(placement.resourceId),
-      currentEventsForDate: (publishedSchedules[date] || []).length,
-      draft: summariseNeoAssistManualTileEvent(draft)
-    });
     if (isPastDfpDate(date)) {
-      appendNeoAssistManualTileTrace("program-schedule-drop-blocked-past-date", {
-        date,
-        placement,
-        draft: summariseNeoAssistManualTileEvent(draft)
-      });
       denyPastDfpEdit("add tiles");
       return;
     }
     const droppedEvents = buildDroppedNeoAssistEvents(draft, placement, date, buildResources);
-    appendNeoAssistManualTileTrace("program-schedule-events-built", {
-      date,
-      placement,
-      droppedEventCount: droppedEvents.length,
-      droppedEvents: droppedEvents.map(summariseNeoAssistManualTileEvent)
-    });
     const droppedEventsByDate = droppedEvents.reduce((groups, event) => {
       const eventDate = event.date || date;
       groups[eventDate] = [...groups[eventDate] || [], event];
@@ -147457,14 +146814,6 @@ Do not hard refresh yet. Try Publish again, then confirm the save succeeds.`,
       });
       return next;
     });
-    appendNeoAssistManualTileTrace("program-schedule-state-write-planned", {
-      date,
-      placement,
-      dateCountsAfterWrite: Object.fromEntries(
-        Object.entries(nextSchedulesByDate).map(([eventDate, eventsForDate2]) => [eventDate, eventsForDate2.length])
-      ),
-      appendedEventIds: droppedEvents.map((event) => event.id)
-    });
     Object.entries(droppedEventsByDate).forEach(([eventDate, eventsForDropDate]) => {
       const existingPending = pendingManualNeoAssistDropsRef.current[eventDate]?.events || [];
       const pendingById = new Map([...existingPending, ...eventsForDropDate].map((event) => [event.id, event]));
@@ -147473,32 +146822,8 @@ Do not hard refresh yet. Try Publish again, then confirm the save succeeds.`,
         events: Array.from(pendingById.values())
       };
     });
-    try {
-      const monitorStartedAt = Date.now();
-      localStorage.setItem(NEO_ASSIST_MANUAL_TILE_RENDER_PROBE_KEY, JSON.stringify({
-        createdAt: new Date(monitorStartedAt).toISOString(),
-        monitorUntilMs: monitorStartedAt + 2e4,
-        hadBeenVisible: false,
-        source: "program-schedule-drop",
-        date,
-        ids: droppedEvents.map((event) => event.id),
-        placement,
-        droppedEvents: droppedEvents.map(summariseNeoAssistManualTileEvent)
-      }));
-    } catch (error) {
-      appendNeoAssistManualTileTrace("program-schedule-render-probe-store-failed", {
-        date,
-        placement,
-        error: error instanceof Error ? error.message : String(error)
-      });
-    }
     Object.entries(nextSchedulesByDate).forEach(([eventDate, eventsForDate2]) => {
       persistScheduleForDate(eventDate, eventsForDate2);
-    });
-    appendNeoAssistManualTileTrace("program-schedule-persist-requested", {
-      placement,
-      persistedDates: Object.keys(nextSchedulesByDate),
-      appendedEventIds: droppedEvents.map((event) => event.id)
     });
     window.setTimeout(() => {
       Object.entries(droppedEventsByDate).forEach(([eventDate, eventsForDropDate]) => {
@@ -147519,37 +146844,12 @@ Do not hard refresh yet. Try Publish again, then confirm the save succeeds.`,
     logAudit("Program Schedule", "Create", "Added NEO Assist tile", `${droppedEvents.length} x ${draft.flightNumber} at ${placement.resourceId}`);
   }, [activeOperationalModel, activeUnitCode, buildDroppedNeoAssistEvents, buildResources, date, denyPastDfpEdit, isPastDfpDate, persistScheduleForDate, publishedSchedules, school]);
   const handleNextDayExternalEventDrop = reactExports.useCallback((draft, placement) => {
-    appendNeoAssistManualTileTrace("next-day-build-drop-received", {
-      buildDfpDate,
-      activeOperationalModel,
-      activeUnitCode,
-      locationCode: school,
-      placement,
-      resourcePoolCount: buildResources.length,
-      resourcePoolContainsPlacement: buildResources.includes(placement.resourceId),
-      currentNextDayEventCount: nextDayBuildEvents.length,
-      draft: summariseNeoAssistManualTileEvent(draft)
-    });
     const droppedEvents = buildDroppedNeoAssistEvents(draft, placement, buildDfpDate, buildResources);
-    appendNeoAssistManualTileTrace("next-day-build-events-built", {
-      buildDfpDate,
-      placement,
-      droppedEventCount: droppedEvents.length,
-      droppedEvents: droppedEvents.map(summariseNeoAssistManualTileEvent)
-    });
     const nextDayEvents = droppedEvents.map((droppedEvent) => {
       const { date: _date, ...nextDayEvent } = droppedEvent;
       return nextDayEvent;
     });
     setNextDayBuildEvents((prev) => [...prev, ...nextDayEvents]);
-    appendNeoAssistManualTileTrace("next-day-build-state-write-planned", {
-      buildDfpDate,
-      placement,
-      currentNextDayEventCount: nextDayBuildEvents.length,
-      plannedNextDayEventCount: nextDayBuildEvents.length + nextDayEvents.length,
-      appendedEventIds: nextDayEvents.map((event) => event.id),
-      nextDayEvents: nextDayEvents.map(summariseNeoAssistManualTileEvent)
-    });
     logAudit("Next Day Build", "Create", "Added NEO Assist tile", `${droppedEvents.length} x ${draft.flightNumber} at ${placement.resourceId}`);
   }, [activeOperationalModel, activeUnitCode, buildDroppedNeoAssistEvents, buildDfpDate, buildResources, nextDayBuildEvents.length, school]);
   const syllabusForModal = reactExports.useMemo(() => {
@@ -154235,15 +153535,6 @@ Do you want to replace the existing entry?`,
                         onNavigateToCurrencySettings: () => handleNavigateToSettingsSection({ sectionId: "sct-events", unitCode: activeUnitCode }),
                         onNavigateToSavedSpecialSettings: () => handleNavigateToSettingsSection({ sectionId: "platform-task-profiles", unitCode: activeUnitCode }),
                         onManualTileDragStart: () => setShowDfpSidePanel(false),
-                        manualTileTraceContext: {
-                          currentUserName,
-                          activeView,
-                          date,
-                          buildDfpDate,
-                          activeOperationalModel,
-                          activeUnitCode,
-                          locationCode: school
-                        },
                         onOpenPrioritiesExclusions: () => {
                           try {
                             localStorage.setItem("neo_open_departure_arrival_exclusions", "1");

@@ -43,50 +43,6 @@ import { getResourceCategory as getConfiguredResourceCategory } from '../utils/r
 import { DEFAULT_TILE_STATUS_SETTINGS, normaliseTileStatusSettings, type TileStatusSettings } from '../utils/tileStatusSettings';
 import { DEFAULT_DISPATCH_STAGGER_SETTINGS, getEffectiveDispatchStaggerMinutes, normaliseDispatchStaggerSettings, type DispatchStaggerSettings } from '../utils/dispatchStagger';
 import { DEFAULT_DISPATCH_RATE_WINDOW_MINUTES, normaliseDispatchRateWindowMinutes } from '../utils/dispatchRate';
-
-const NEO_ASSIST_MANUAL_TILE_TRACE_KEY = 'neo_assist_manual_tile_drop_trace';
-
-const appendNeoAssistManualTileTrace = (stage: string, details: Record<string, unknown> = {}) => {
-    try {
-        if (typeof window === 'undefined') return;
-        const existing = JSON.parse(localStorage.getItem(NEO_ASSIST_MANUAL_TILE_TRACE_KEY) || '[]');
-        const entries = Array.isArray(existing) ? existing : [];
-        entries.push({
-            stage,
-            at: new Date().toISOString(),
-            url: window.location.href,
-            ...details,
-        });
-        localStorage.setItem(NEO_ASSIST_MANUAL_TILE_TRACE_KEY, JSON.stringify(entries.slice(-400)));
-    } catch (error) {
-        console.warn('[NEO_ASSIST_MANUAL_TILE_TRACE] Failed to record schedule trace entry:', error);
-    }
-};
-
-const summariseNeoAssistDropEvent = (event: Partial<ScheduleEvent> | null | undefined): Record<string, unknown> | null => {
-    if (!event) return null;
-    return {
-        id: event.id || null,
-        date: event.date || null,
-        type: event.type || null,
-        flightNumber: event.flightNumber || null,
-        eventName: event.eventName || null,
-        eventCode: event.eventCode || null,
-        pilot: event.pilot || null,
-        instructor: event.instructor || null,
-        student: event.student || null,
-        crew: event.crew || null,
-        resourceId: event.resourceId || null,
-        unitCode: event.unitCode || null,
-        locationCode: (event as any).locationCode || null,
-        operationalModel: (event as any).operationalModel || null,
-        startTime: event.startTime ?? null,
-        duration: event.duration ?? null,
-        callsign: event.callsign || null,
-        aircraftNumber: event.aircraftNumber || null,
-        formationSize: event.formationSize ?? null,
-    };
-};
 import { DEFAULT_EMERGENCY_FREEZE_AUTHORITY, normaliseEmergencyFreezeAuthoritySettings, type EmergencyFreezeAuthoritySettings } from '../utils/emergencyFreezeAuthority';
 import {
     DEFAULT_EMERGENCY_FREEZE_ALLOWED_ACTIONS,
@@ -12284,46 +12240,17 @@ const ScheduleView: React.FC<ScheduleViewProps> = ({
         if (!onExternalEventDrop) return;
         const raw = event.dataTransfer.getData('application/neo-assist-event');
         if (!raw) {
-            appendNeoAssistManualTileTrace('program-schedule-grid-drop-missing-payload', {
-                date,
-                clientX: event.clientX,
-                clientY: event.clientY,
-                dragTypes: Array.from(event.dataTransfer.types),
-            });
             return;
         }
         const placement = getExternalDropPlacement(event);
         if (!placement) {
-            appendNeoAssistManualTileTrace('program-schedule-grid-drop-no-placement', {
-                date,
-                clientX: event.clientX,
-                clientY: event.clientY,
-                dragTypes: Array.from(event.dataTransfer.types),
-                rawLength: raw.length,
-                resourceCount: resources.length,
-            });
             return;
         }
         event.preventDefault();
         try {
             const parsedEvent = JSON.parse(raw) as ScheduleEvent;
-            appendNeoAssistManualTileTrace('program-schedule-grid-drop-parsed', {
-                date,
-                placement,
-                clientX: event.clientX,
-                clientY: event.clientY,
-                resourceCount: resources.length,
-                eventsBeforeDrop: events.length,
-                parsed: summariseNeoAssistDropEvent(parsedEvent),
-            });
             onExternalEventDrop(parsedEvent, placement);
         } catch (error) {
-            appendNeoAssistManualTileTrace('program-schedule-grid-drop-parse-error', {
-                date,
-                placement,
-                rawLength: raw.length,
-                error: error instanceof Error ? error.message : String(error),
-            });
             console.warn('[NEO Assist] Failed to drop assist tile:', error);
         }
     };
