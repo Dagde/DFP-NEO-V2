@@ -107,6 +107,7 @@ import { logAudit } from '../utils/auditLogger';
 import { verifyCurrentUserPassword } from '../utils/passwordVerification';
 import { handleEditableTextBeforeInput, handleEditableTextKeyDownCapture, stopEditableKeyPropagation } from '../utils/editableKeyEvents';
 import { formatClassroomFieldLabel, getClassroomNamesForRows, updateClassroomNameForRow } from '../utils/classroomResources';
+import { createAcademicStandardEventCode, normaliseAcademicStandardEvents, type AcademicStandardEventConfig } from '../utils/academicStandardEvents';
 import type { ContinuationEventSetting, CurrencyRequirement, FormationCallsign, Instructor, MasterCurrency, PhraseBank, SyllabusItemDetail, Trainee } from '../types';
 import {
   INSERT_EVENT_LABEL_MAX_LENGTH,
@@ -11321,6 +11322,12 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
                           onCommit={(value, nextCount) => updateResourcePoolSettings(index, { classrooms: value, ...(typeof nextCount === 'number' ? { ground: nextCount } : {}) })}
                           className="md:col-span-3"
                         />
+                        <AcademicStandardEventsField
+                          value={pool.settings?.academicStandardEvents}
+                          disabled={!canEditResourcePools}
+                          onCommit={(value) => updateResourcePoolSettings(index, { academicStandardEvents: value })}
+                          className="md:col-span-3"
+                        />
                         <DraftField label="Duty Supervisor Full Label" value={pool.settings?.dutySupervisorLabel || 'Duty Supervisor'} disabled={!canEditResourcePools} onCommit={(value) => updateResourcePoolSettings(index, { dutySupervisorLabel: value })} />
                         <DraftField label="Duty Supervisor Short Label" value={pool.settings?.dutySupervisorShortLabel || 'Duty Sup'} disabled={!canEditResourcePools} onCommit={(value) => updateResourcePoolSettings(index, { dutySupervisorShortLabel: value })} />
                         <DraftField label="Tower Duty Instructor Full Label" value={pool.settings?.towerDutyInstructorLabel || 'Tower Duty Instructor'} disabled={!canEditResourcePools} onCommit={(value) => updateResourcePoolSettings(index, { towerDutyInstructorLabel: value })} />
@@ -13240,6 +13247,12 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
                           rowCount={Number(pool.settings?.ground ?? pool.ground ?? 0)}
                           disabled={!canEditResourcePools}
                           onCommit={(value, nextCount) => updateResourcePoolSettings(index, { classrooms: value, ...(typeof nextCount === 'number' ? { ground: nextCount } : {}) })}
+                          className="lg:col-span-2"
+                        />
+                        <AcademicStandardEventsField
+                          value={pool.settings?.academicStandardEvents}
+                          disabled={!canEditResourcePools}
+                          onCommit={(value) => updateResourcePoolSettings(index, { academicStandardEvents: value })}
                           className="lg:col-span-2"
                         />
                         <DraftField label="Duty Supervisor Full Label" value={pool.settings?.dutySupervisorLabel || 'Duty Supervisor'} disabled={!canEditResourcePools} onCommit={(value) => updateResourcePoolSettings(index, { dutySupervisorLabel: value })} info="The full name for the person supervising daily flying operations." />
@@ -15329,6 +15342,109 @@ const ClassroomNamesField = ({
       ) : (
         <div className="mt-1 rounded border border-dashed border-gray-700 bg-gray-950/60 px-3 py-2 text-xs font-semibold text-gray-400">
           No classrooms configured. Use + Add to create the first classroom.
+        </div>
+      )}
+    </div>
+  );
+};
+
+const AcademicStandardEventsField = ({
+  value,
+  disabled,
+  onCommit,
+  className,
+}: {
+  value: unknown;
+  disabled: boolean;
+  onCommit: (value: AcademicStandardEventConfig[]) => void;
+  className?: string;
+}) => {
+  const events = normaliseAcademicStandardEvents(value);
+  const commitEvents = (nextEvents: AcademicStandardEventConfig[]) => onCommit(normaliseAcademicStandardEvents(nextEvents, []));
+  const updateEvent = (indexToUpdate: number, changes: Partial<AcademicStandardEventConfig>) => {
+    commitEvents(events.map((event, index) => {
+      if (index !== indexToUpdate) return event;
+      const next = { ...event, ...changes };
+      const labelChanged = typeof changes.label === 'string';
+      return {
+        ...next,
+        code: labelChanged ? createAcademicStandardEventCode(next.label, index) : next.code,
+      };
+    }));
+  };
+  const addEvent = () => commitEvents([
+    ...events,
+    { code: createAcademicStandardEventCode('New Event', events.length), label: 'New Event', duration: 1, color: '#64748b' },
+  ]);
+  const deleteEvent = (indexToDelete: number) => commitEvents(events.filter((_, index) => index !== indexToDelete));
+  return (
+    <div className={className}>
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <FieldLabel
+          label="Academic Standard Events"
+          info="User-defined quick-add events shown in Add Ground Event > Academics > Standard Events."
+        />
+        <button
+          type="button"
+          disabled={disabled}
+          onClick={addEvent}
+          className="rounded border border-cyan-500/40 bg-cyan-500/15 px-3 py-1 text-xs font-black uppercase tracking-[0.12em] text-cyan-100 hover:bg-cyan-500/25 disabled:cursor-not-allowed disabled:opacity-50"
+        >
+          + Add
+        </button>
+      </div>
+      {events.length > 0 ? (
+        <div className="mt-2 space-y-2">
+          {events.map((event, index) => (
+            <div key={`academic-standard-event-${event.code}-${index}`} className="grid gap-2 rounded border border-gray-700 bg-gray-950/70 p-2 md:grid-cols-[minmax(0,1fr)_96px_82px_96px] md:items-end">
+              <label>
+                <span className="mb-1 block text-[10px] font-black uppercase tracking-[0.14em] text-gray-400">Event name</span>
+                <input
+                  className={fieldClass}
+                  value={event.label}
+                  disabled={disabled}
+                  placeholder="Event name"
+                  onKeyDown={stopEditableKeyPropagation}
+                  onChange={(changeEvent) => updateEvent(index, { label: changeEvent.target.value })}
+                />
+              </label>
+              <label>
+                <span className="mb-1 block text-[10px] font-black uppercase tracking-[0.14em] text-gray-400">Duration</span>
+                <input
+                  className={fieldClass}
+                  type="number"
+                  min="0.25"
+                  step="0.25"
+                  value={event.duration}
+                  disabled={disabled}
+                  onKeyDown={stopEditableKeyPropagation}
+                  onChange={(changeEvent) => updateEvent(index, { duration: Math.max(0.25, Number(changeEvent.target.value) || 1) })}
+                />
+              </label>
+              <label>
+                <span className="mb-1 block text-[10px] font-black uppercase tracking-[0.14em] text-gray-400">Colour</span>
+                <input
+                  className="h-10 w-full rounded border border-gray-700 bg-gray-950 p-1 disabled:cursor-not-allowed disabled:opacity-50"
+                  type="color"
+                  value={event.color}
+                  disabled={disabled}
+                  onChange={(changeEvent) => updateEvent(index, { color: changeEvent.target.value })}
+                />
+              </label>
+              <button
+                type="button"
+                disabled={disabled}
+                onClick={() => deleteEvent(index)}
+                className="rounded border border-red-500/35 bg-red-500/10 px-3 py-2 text-xs font-black uppercase tracking-[0.12em] text-red-100 hover:bg-red-500/20 disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                - Delete
+              </button>
+            </div>
+          ))}
+        </div>
+      ) : (
+        <div className="mt-1 rounded border border-dashed border-gray-700 bg-gray-950/60 px-3 py-2 text-xs font-semibold text-gray-400">
+          No standard academic events configured. Use + Add to create the first event.
         </div>
       )}
     </div>

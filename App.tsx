@@ -43,6 +43,7 @@ import {
     type ResourceDisplayNames,
 } from './utils/resourceDisplayNames';
 import { buildClassroomResourceOptions } from './utils/classroomResources';
+import { normaliseAcademicStandardEvents } from './utils/academicStandardEvents';
 import { normaliseAircraftNumberSettings, parseAircraftNumber } from './utils/aircraftNumberFormat';
 import { ANY_AIRCRAFT_CONFIG, BASE_AIRCRAFT_CONFIG, getAircraftConfigurationDefinitions, normaliseAircraftConfigurationDefinitions, type AircraftConfigurationDefinition } from './utils/aircraftConfigurationSettings';
 import { getAircraftCrewCompositionForEvent, getAircraftSeatEligibleRoles, getAircraftTypeCrewComposition, normaliseAircraftCrewComposition, type AircraftCrewComposition } from './utils/aircraftCrewComposition';
@@ -49301,6 +49302,10 @@ appliedUpdates.forEach(update => {
         buildClassroomResourceOptions(activePlatformResourcePool?.settings || {}, addGroundTileGroundResources.length || configuredGroundCount)
     ), [activePlatformResourcePool?.settings, addGroundTileGroundResources.length, configuredGroundCount]);
 
+    const addGroundTileAcademicStandardEvents = useMemo(() => (
+        normaliseAcademicStandardEvents(activePlatformResourcePool?.settings?.academicStandardEvents)
+    ), [activePlatformResourcePool?.settings?.academicStandardEvents]);
+
     const addGroundTileCptResources = useMemo(() => (
         buildResources.filter(resourceId => /^CPT\s+\d+$/i.test(String(resourceId || '').trim()))
     ), [buildResources]);
@@ -56307,6 +56312,7 @@ appliedUpdates.forEach(update => {
                     operationalModel={activeOperationalModel}
                     groundResources={addGroundTileGroundResources}
                     classroomOptions={addGroundTileClassroomOptions}
+                    academicStandardEvents={addGroundTileAcademicStandardEvents}
                     cptResources={addGroundTileCptResources}
                     instructorLabel={instructorLabel}
                 />

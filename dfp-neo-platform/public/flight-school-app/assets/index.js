@@ -3961,6 +3961,35 @@ const buildClassroomResourceOptions = (settings, groundCount) => {
     };
   });
 };
+const DEFAULT_ACADEMIC_STANDARD_EVENTS = [
+  { code: "MORNING_BREAK", label: "Morning Break", duration: 0.25, color: "#64748b" },
+  { code: "LUNCH", label: "Lunch", duration: 1, color: "#78716c" },
+  { code: "AFTERNOON_BREAK", label: "Afternoon Break", duration: 0.25, color: "#64748b" },
+  { code: "SELF_STUDY", label: "Self-Study", duration: 1, color: "#475569" },
+  { code: "SPORT", label: "Sport", duration: 1, color: "#15803d" },
+  { code: "ADMIN", label: "Admin", duration: 0.5, color: "#7c3aed" },
+  { code: "FREE_TIME", label: "Free Time", duration: 1, color: "#0f766e" },
+  { code: "OTHER", label: "Other", duration: 1, color: "#b45309" }
+];
+const DEFAULT_COLORS = ["#64748b", "#78716c", "#475569", "#15803d", "#7c3aed", "#0f766e", "#b45309", "#1d4ed8"];
+const createAcademicStandardEventCode = (label, index = 0) => {
+  const token = String(label || "").trim().toUpperCase().replace(/[^A-Z0-9]+/g, "_").replace(/^_+|_+$/g, "");
+  return token || `STANDARD_EVENT_${index + 1}`;
+};
+const normaliseAcademicStandardEvents = (value, fallback = DEFAULT_ACADEMIC_STANDARD_EVENTS) => {
+  const source = Array.isArray(value) && value.length > 0 ? value : fallback;
+  return source.map((item, index) => {
+    const label = String(item?.label || item?.name || "").trim();
+    if (!label) return null;
+    const duration = Number(item?.duration);
+    return {
+      code: String(item?.code || createAcademicStandardEventCode(label, index)).trim().toUpperCase(),
+      label,
+      duration: Number.isFinite(duration) && duration > 0 ? duration : 1,
+      color: String(item?.color || DEFAULT_COLORS[index % DEFAULT_COLORS.length])
+    };
+  }).filter(Boolean);
+};
 const DEFAULT_AIRCRAFT_NUMBER_SETTINGS = {
   usePrefix: false,
   prefixes: [],
@@ -25510,6 +25539,15 @@ This removes them from DFP Resource Rows. Press Save in this section to apply th
                               className: "md:col-span-3"
                             }
                           ),
+                          /* @__PURE__ */ jsxRuntimeExports.jsx(
+                            AcademicStandardEventsField,
+                            {
+                              value: pool.settings?.academicStandardEvents,
+                              disabled: !canEditResourcePools,
+                              onCommit: (value) => updateResourcePoolSettings(index, { academicStandardEvents: value }),
+                              className: "md:col-span-3"
+                            }
+                          ),
                           /* @__PURE__ */ jsxRuntimeExports.jsx(DraftField, { label: "Duty Supervisor Full Label", value: pool.settings?.dutySupervisorLabel || "Duty Supervisor", disabled: !canEditResourcePools, onCommit: (value) => updateResourcePoolSettings(index, { dutySupervisorLabel: value }) }),
                           /* @__PURE__ */ jsxRuntimeExports.jsx(DraftField, { label: "Duty Supervisor Short Label", value: pool.settings?.dutySupervisorShortLabel || "Duty Sup", disabled: !canEditResourcePools, onCommit: (value) => updateResourcePoolSettings(index, { dutySupervisorShortLabel: value }) }),
                           /* @__PURE__ */ jsxRuntimeExports.jsx(DraftField, { label: "Tower Duty Instructor Full Label", value: pool.settings?.towerDutyInstructorLabel || "Tower Duty Instructor", disabled: !canEditResourcePools, onCommit: (value) => updateResourcePoolSettings(index, { towerDutyInstructorLabel: value }) }),
@@ -27408,6 +27446,15 @@ This removes them from DFP Resource Rows. Press Save in this section to apply th
                           className: "lg:col-span-2"
                         }
                       ),
+                      /* @__PURE__ */ jsxRuntimeExports.jsx(
+                        AcademicStandardEventsField,
+                        {
+                          value: pool.settings?.academicStandardEvents,
+                          disabled: !canEditResourcePools,
+                          onCommit: (value) => updateResourcePoolSettings(index, { academicStandardEvents: value }),
+                          className: "lg:col-span-2"
+                        }
+                      ),
                       /* @__PURE__ */ jsxRuntimeExports.jsx(DraftField, { label: "Duty Supervisor Full Label", value: pool.settings?.dutySupervisorLabel || "Duty Supervisor", disabled: !canEditResourcePools, onCommit: (value) => updateResourcePoolSettings(index, { dutySupervisorLabel: value }), info: "The full name for the person supervising daily flying operations." }),
                       /* @__PURE__ */ jsxRuntimeExports.jsx(DraftField, { label: "Duty Supervisor Short Label", value: pool.settings?.dutySupervisorShortLabel || "Duty Sup", disabled: !canEditResourcePools, onCommit: (value) => updateResourcePoolSettings(index, { dutySupervisorShortLabel: value }), info: "The short label used on compact DFP rows and tiles. Example: Duty Sup, Duty Lead." }),
                       /* @__PURE__ */ jsxRuntimeExports.jsx(DraftField, { label: "Tower Duty Instructor Full Label", value: pool.settings?.towerDutyInstructorLabel || "Tower Duty Instructor", disabled: !canEditResourcePools, onCommit: (value) => updateResourcePoolSettings(index, { towerDutyInstructorLabel: value }), info: "The full name for the instructor monitoring tower or circuit operations." }),
@@ -29260,6 +29307,107 @@ const ClassroomNamesField = ({
         }
       )
     ] }, `classroom-name-${index}`)) }) : /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-1 rounded border border-dashed border-gray-700 bg-gray-950/60 px-3 py-2 text-xs font-semibold text-gray-400", children: "No classrooms configured. Use + Add to create the first classroom." })
+  ] });
+};
+const AcademicStandardEventsField = ({
+  value,
+  disabled,
+  onCommit,
+  className
+}) => {
+  const events = normaliseAcademicStandardEvents(value);
+  const commitEvents = (nextEvents) => onCommit(normaliseAcademicStandardEvents(nextEvents, []));
+  const updateEvent = (indexToUpdate, changes) => {
+    commitEvents(events.map((event, index) => {
+      if (index !== indexToUpdate) return event;
+      const next = { ...event, ...changes };
+      const labelChanged = typeof changes.label === "string";
+      return {
+        ...next,
+        code: labelChanged ? createAcademicStandardEventCode(next.label, index) : next.code
+      };
+    }));
+  };
+  const addEvent = () => commitEvents([
+    ...events,
+    { code: createAcademicStandardEventCode("New Event", events.length), label: "New Event", duration: 1, color: "#64748b" }
+  ]);
+  const deleteEvent = (indexToDelete) => commitEvents(events.filter((_, index) => index !== indexToDelete));
+  return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className, children: [
+    /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex flex-wrap items-center justify-between gap-2", children: [
+      /* @__PURE__ */ jsxRuntimeExports.jsx(
+        FieldLabel,
+        {
+          label: "Academic Standard Events",
+          info: "User-defined quick-add events shown in Add Ground Event > Academics > Standard Events."
+        }
+      ),
+      /* @__PURE__ */ jsxRuntimeExports.jsx(
+        "button",
+        {
+          type: "button",
+          disabled,
+          onClick: addEvent,
+          className: "rounded border border-cyan-500/40 bg-cyan-500/15 px-3 py-1 text-xs font-black uppercase tracking-[0.12em] text-cyan-100 hover:bg-cyan-500/25 disabled:cursor-not-allowed disabled:opacity-50",
+          children: "+ Add"
+        }
+      )
+    ] }),
+    events.length > 0 ? /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-2 space-y-2", children: events.map((event, index) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid gap-2 rounded border border-gray-700 bg-gray-950/70 p-2 md:grid-cols-[minmax(0,1fr)_96px_82px_96px] md:items-end", children: [
+      /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "mb-1 block text-[10px] font-black uppercase tracking-[0.14em] text-gray-400", children: "Event name" }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx(
+          "input",
+          {
+            className: fieldClass,
+            value: event.label,
+            disabled,
+            placeholder: "Event name",
+            onKeyDown: stopEditableKeyPropagation,
+            onChange: (changeEvent) => updateEvent(index, { label: changeEvent.target.value })
+          }
+        )
+      ] }),
+      /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "mb-1 block text-[10px] font-black uppercase tracking-[0.14em] text-gray-400", children: "Duration" }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx(
+          "input",
+          {
+            className: fieldClass,
+            type: "number",
+            min: "0.25",
+            step: "0.25",
+            value: event.duration,
+            disabled,
+            onKeyDown: stopEditableKeyPropagation,
+            onChange: (changeEvent) => updateEvent(index, { duration: Math.max(0.25, Number(changeEvent.target.value) || 1) })
+          }
+        )
+      ] }),
+      /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "mb-1 block text-[10px] font-black uppercase tracking-[0.14em] text-gray-400", children: "Colour" }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx(
+          "input",
+          {
+            className: "h-10 w-full rounded border border-gray-700 bg-gray-950 p-1 disabled:cursor-not-allowed disabled:opacity-50",
+            type: "color",
+            value: event.color,
+            disabled,
+            onChange: (changeEvent) => updateEvent(index, { color: changeEvent.target.value })
+          }
+        )
+      ] }),
+      /* @__PURE__ */ jsxRuntimeExports.jsx(
+        "button",
+        {
+          type: "button",
+          disabled,
+          onClick: () => deleteEvent(index),
+          className: "rounded border border-red-500/35 bg-red-500/10 px-3 py-2 text-xs font-black uppercase tracking-[0.12em] text-red-100 hover:bg-red-500/20 disabled:cursor-not-allowed disabled:opacity-50",
+          children: "- Delete"
+        }
+      )
+    ] }, `academic-standard-event-${event.code}-${index}`)) }) : /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-1 rounded border border-dashed border-gray-700 bg-gray-950/60 px-3 py-2 text-xs font-semibold text-gray-400", children: "No standard academic events configured. Use + Add to create the first event." })
   ] });
 };
 const DraftTextInput$2 = ({ value, disabled, placeholder, className, onCommit }) => {
@@ -32371,7 +32519,8 @@ const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, lo
     trainer: String(primaryResourcePool?.settings?.cpt ?? primaryResourcePool?.settings?.trainer ?? primaryResourcePool?.cpt ?? primaryResourcePool?.trainer ?? ""),
     standby: String(primaryResourcePool?.settings?.standby ?? primaryResourcePool?.standby ?? ""),
     ground: String(primaryResourcePool?.settings?.ground ?? primaryResourcePool?.ground ?? ""),
-    classrooms: formatClassroomNames(primaryResourcePool?.settings?.classrooms ?? primaryResourcePool?.settings?.classroomNames)
+    classrooms: formatClassroomNames(primaryResourcePool?.settings?.classrooms ?? primaryResourcePool?.settings?.classroomNames),
+    academicStandardEvents: normaliseAcademicStandardEvents(primaryResourcePool?.settings?.academicStandardEvents)
   });
   const [crewDraft, setCrewDraft] = reactExports.useState({
     aircraftCode: String(primaryAircraftType?.code || resourceDraft.aircraftCode || ""),
@@ -33153,7 +33302,8 @@ const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, lo
       trainer: String(primaryResourcePool?.settings?.cpt ?? primaryResourcePool?.settings?.trainer ?? primaryResourcePool?.cpt ?? primaryResourcePool?.trainer ?? ""),
       standby: String(primaryResourcePool?.settings?.standby ?? primaryResourcePool?.standby ?? ""),
       ground: String(primaryResourcePool?.settings?.ground ?? primaryResourcePool?.ground ?? ""),
-      classrooms: formatClassroomNames(primaryResourcePool?.settings?.classrooms ?? primaryResourcePool?.settings?.classroomNames)
+      classrooms: formatClassroomNames(primaryResourcePool?.settings?.classrooms ?? primaryResourcePool?.settings?.classroomNames),
+      academicStandardEvents: normaliseAcademicStandardEvents(primaryResourcePool?.settings?.academicStandardEvents)
     });
     setCrewDraft({
       aircraftCode: String(primaryAircraftType?.code || primaryResourcePool?.aircraftTypeCode || ""),
@@ -33735,7 +33885,8 @@ const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, lo
           cpt: parseNumberDraft(resourceDraft.trainer),
           standby: parseNumberDraft(resourceDraft.standby),
           ground: parseNumberDraft(resourceDraft.ground),
-          classrooms: getClassroomNamesForRows(resourceDraft.classrooms, parseNumberDraft(resourceDraft.ground))
+          classrooms: getClassroomNamesForRows(resourceDraft.classrooms, parseNumberDraft(resourceDraft.ground)),
+          academicStandardEvents: normaliseAcademicStandardEvents(resourceDraft.academicStandardEvents)
         }
       };
       const poolExists = resourcePools.some((pool) => poolKey && String(pool?.id || pool?.code || "") === String(poolKey) || targetUnitCode && normaliseUnitSettingsIdentifier(pool?.unitCode) === targetUnitCode && String(pool?.status || "ACTIVE").toUpperCase() !== "INACTIVE" || String(pool?.name || "").trim().toUpperCase() === String(nextPool.name || "").trim().toUpperCase());
@@ -35869,6 +36020,96 @@ const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, lo
       ] }, `wizard-classroom-${index}`)) }) : /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-3 rounded-lg border border-dashed border-slate-300 bg-white px-3 py-2 text-sm font-semibold text-slate-500", children: "No classrooms configured. Use + Add to create the first classroom." })
     ] });
   };
+  const wizardAcademicStandardEventsField = () => {
+    const events = normaliseAcademicStandardEvents(resourceDraft.academicStandardEvents);
+    const setEvents = (nextEvents) => updateResourceDraft((draft) => ({
+      ...draft,
+      academicStandardEvents: normaliseAcademicStandardEvents(nextEvents, [])
+    }));
+    const updateEvent = (indexToUpdate, changes) => {
+      setEvents(events.map((event, index) => {
+        if (index !== indexToUpdate) return event;
+        const next = { ...event, ...changes };
+        return {
+          ...next,
+          code: typeof changes.label === "string" ? createAcademicStandardEventCode(next.label, index) : next.code
+        };
+      }));
+    };
+    const addEvent = () => setEvents([
+      ...events,
+      { code: createAcademicStandardEventCode("New Event", events.length), label: "New Event", duration: 1, color: "#64748b" }
+    ]);
+    const deleteEvent = (indexToDelete) => setEvents(events.filter((_, index) => index !== indexToDelete));
+    return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "md:col-span-5 rounded-xl border border-slate-200 bg-slate-50 p-3", children: [
+      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex flex-wrap items-center justify-between gap-2", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: wizardLabelClass, children: "Academic Standard Events" }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-1 text-xs font-semibold text-slate-500", children: "Quick-add events shown in Add Ground Event > Academics." })
+        ] }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx(
+          "button",
+          {
+            type: "button",
+            onClick: addEvent,
+            className: "rounded-md border border-sky-300 bg-sky-50 px-3 py-2 text-xs font-black uppercase tracking-[0.12em] text-sky-700 transition hover:bg-sky-100",
+            children: "+ Add"
+          }
+        )
+      ] }),
+      events.length > 0 ? /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-3 space-y-2", children: events.map((event, index) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid gap-2 rounded-lg border border-slate-200 bg-white p-2 md:grid-cols-[minmax(0,1fr)_96px_82px_94px] md:items-end", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "mb-1 block text-[10px] font-black uppercase tracking-[0.14em] text-slate-500", children: "Event name" }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx(
+            "input",
+            {
+              className: wizardInputClass,
+              value: event.label,
+              placeholder: "Event name",
+              onKeyDown: stopEditableKeyPropagation,
+              onChange: (changeEvent) => updateEvent(index, { label: changeEvent.target.value })
+            }
+          )
+        ] }),
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "mb-1 block text-[10px] font-black uppercase tracking-[0.14em] text-slate-500", children: "Duration" }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx(
+            "input",
+            {
+              className: wizardInputClass,
+              type: "number",
+              min: "0.25",
+              step: "0.25",
+              value: event.duration,
+              onKeyDown: stopEditableKeyPropagation,
+              onChange: (changeEvent) => updateEvent(index, { duration: Math.max(0.25, Number(changeEvent.target.value) || 1) })
+            }
+          )
+        ] }),
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "mb-1 block text-[10px] font-black uppercase tracking-[0.14em] text-slate-500", children: "Colour" }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx(
+            "input",
+            {
+              className: "h-10 w-full rounded-md border border-slate-300 bg-white p-1",
+              type: "color",
+              value: event.color,
+              onChange: (changeEvent) => updateEvent(index, { color: changeEvent.target.value })
+            }
+          )
+        ] }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx(
+          "button",
+          {
+            type: "button",
+            onClick: () => deleteEvent(index),
+            className: "rounded-md border border-red-200 bg-red-50 px-3 py-2 text-xs font-black uppercase tracking-[0.12em] text-red-700 transition hover:bg-red-100",
+            children: "- Delete"
+          }
+        )
+      ] }, `wizard-academic-standard-${event.code}-${index}`)) }) : /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-3 rounded-lg border border-dashed border-slate-300 bg-white px-3 py-2 text-sm font-semibold text-slate-500", children: "No academic standard events configured. Use + Add to create the first event." })
+    ] });
+  };
   const wizardDataListField = (label, value, onChange, options, placeholder, listKey) => {
     const listId = `wizard-${(listKey || label).toLowerCase().replace(/[^a-z0-9]+/g, "-")}`;
     return /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "block", children: [
@@ -37507,7 +37748,8 @@ const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, lo
             cpt: parseNumberDraft(resourceDraft.trainer),
             standby: parseNumberDraft(resourceDraft.standby),
             ground: parseNumberDraft(resourceDraft.ground),
-            classrooms: getClassroomNamesForRows(resourceDraft.classrooms, parseNumberDraft(resourceDraft.ground))
+            classrooms: getClassroomNamesForRows(resourceDraft.classrooms, parseNumberDraft(resourceDraft.ground)),
+            academicStandardEvents: normaliseAcademicStandardEvents(resourceDraft.academicStandardEvents)
           }
         }] : existingResourcePools,
         modules,
@@ -38238,7 +38480,8 @@ const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, lo
           wizardField("Trainer", resourceDraft.trainer, (value) => updateResourceDraft((draft) => ({ ...draft, trainer: value }))),
           wizardField("Standby Lines", resourceDraft.standby, (value) => updateResourceDraft((draft) => ({ ...draft, standby: value }))),
           wizardField("Ground Lines", resourceDraft.ground, (value) => updateResourceDraft((draft) => ({ ...draft, ground: value }))),
-          wizardClassroomNamesField()
+          wizardClassroomNamesField(),
+          wizardAcademicStandardEventsField()
         ] })
       );
     }
@@ -60723,16 +60966,6 @@ const PRESAVED_ACADEMIC_SCHEDULES_KEY = "dfp_neo_presaved_academic_schedules_v1"
 const stripCourse = (fullName) => {
   return fullName.replace(/\s[–—-]\s\S+$/, "").trim();
 };
-const STANDARD_EVENTS = [
-  { code: "MORNING_BREAK", label: "Morning Break", duration: 0.25, color: "#64748b" },
-  { code: "LUNCH", label: "Lunch", duration: 1, color: "#78716c" },
-  { code: "AFTERNOON_BREAK", label: "Afternoon Break", duration: 0.25, color: "#64748b" },
-  { code: "SELF_STUDY", label: "Self-Study", duration: 1, color: "#475569" },
-  { code: "SPORT", label: "Sport", duration: 1, color: "#15803d" },
-  { code: "ADMIN", label: "Admin", duration: 0.5, color: "#7c3aed" },
-  { code: "FREE_TIME", label: "Free Time", duration: 1, color: "#0f766e" },
-  { code: "OTHER", label: "Other", duration: 1, color: "#b45309" }
-];
 const ACADEMIC_TILE_COLOR = "#1d4ed8";
 const fmtTime = (dec) => {
   const h = Math.floor(dec);
@@ -60799,16 +61032,10 @@ const LESSON_CODE_COLORS = {
   "EW": "#2a3a0a",
   // dark military-olive
   // Standard / admin tiles (keep their original colors)
-  "MORNING_BREAK": "#64748b",
-  "LUNCH": "#78716c",
-  "AFTERNOON_BREAK": "#64748b",
-  "SELF_STUDY": "#475569",
-  "SPORT": "#15803d",
-  "ADMIN": "#7c3aed",
-  "FREE_TIME": "#0f766e",
-  "OTHER": "#b45309"
+  ...Object.fromEntries(DEFAULT_ACADEMIC_STANDARD_EVENTS.map((event) => [event.code, event.color]))
 };
 function getLessonTileColor(lessonCode, existingColor) {
+  DEFAULT_ACADEMIC_STANDARD_EVENTS.some((event) => event.code === lessonCode);
   const upper = lessonCode.toUpperCase();
   if (LESSON_CODE_COLORS[upper]) return LESSON_CODE_COLORS[upper];
   const prefixKeys = Object.keys(LESSON_CODE_COLORS).sort((a, b) => b.length - a.length);
@@ -60897,6 +61124,7 @@ const AcademicsTab = ({
   instructorLabel: instructorLabel2 = "Instructor",
   groundResources = [],
   classroomOptions = [],
+  standardEvents = DEFAULT_ACADEMIC_STANDARD_EVENTS,
   onSave,
   onClose
 }) => {
@@ -60932,6 +61160,10 @@ const AcademicsTab = ({
     if (classroomOptions.length > 0) return classroomOptions;
     return groundResources.map((resource) => ({ id: resource, label: resource }));
   }, [classroomOptions, groundResources]);
+  const effectiveStandardEvents = reactExports.useMemo(
+    () => normaliseAcademicStandardEvents(standardEvents),
+    [standardEvents]
+  );
   const [editTileId, setEditTileId] = reactExports.useState(null);
   const [editStartTime, setEditStartTime] = reactExports.useState("");
   const [editDuration, setEditDuration] = reactExports.useState("");
@@ -61199,6 +61431,7 @@ Do you still want to include them in this academic session?`,
   }, [selectedLessons, getNextStart]);
   const toggleStandard = reactExports.useCallback((ev) => {
     const key = ev.code;
+    const isOtherEvent = key === "OTHER" || ev.label.trim().toLowerCase() === "other";
     if (selectedStandard.has(key)) {
       setSelectedStandard((prev) => {
         const s = new Set(prev);
@@ -61208,7 +61441,7 @@ Do you still want to include them in this academic session?`,
       setTiles((prev) => prev.filter((t) => t.lessonCode !== key));
     } else {
       setSelectedStandard((prev) => new Set(prev).add(key));
-      const label = key === "OTHER" ? otherText || "Other" : ev.label;
+      const label = isOtherEvent ? otherText || ev.label : ev.label;
       const start = getNextStart(ev.duration);
       setTiles((prev) => [...prev, {
         id: v4(),
@@ -61218,7 +61451,7 @@ Do you still want to include them in this academic session?`,
         duration: ev.duration,
         color: ev.color,
         isStandard: true,
-        customDescription: key === "OTHER" ? otherText : void 0
+        customDescription: isOtherEvent ? otherText : void 0
       }]);
     }
   }, [selectedStandard, getNextStart, otherText]);
@@ -61645,14 +61878,15 @@ Do you still want to include them in this academic session?`,
         ] }),
         /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { style: S.card, children: [
           /* @__PURE__ */ jsxRuntimeExports.jsx("div", { style: S.label, children: "Standard Events" }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { style: { display: "flex", flexWrap: "wrap", gap: 6 }, children: STANDARD_EVENTS.map((ev) => {
+          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { style: { display: "flex", flexWrap: "wrap", gap: 6 }, children: effectiveStandardEvents.map((ev) => {
             const isSelected = selectedStandard.has(ev.code);
+            const isOtherEvent = ev.code === "OTHER" || ev.label.trim().toLowerCase() === "other";
             return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { style: { display: "flex", alignItems: "center", gap: 4 }, children: [
               /* @__PURE__ */ jsxRuntimeExports.jsx(
                 "button",
                 {
                   onClick: () => {
-                    if (ev.code === "OTHER" && !otherText && !isSelected) return;
+                    if (isOtherEvent && !otherText && !isSelected) return;
                     toggleStandard(ev);
                   },
                   style: {
@@ -61669,7 +61903,7 @@ Do you still want to include them in this academic session?`,
                   children: ev.label
                 }
               ),
-              ev.code === "OTHER" && !isSelected && /* @__PURE__ */ jsxRuntimeExports.jsx(
+              isOtherEvent && !isSelected && /* @__PURE__ */ jsxRuntimeExports.jsx(
                 "input",
                 {
                   type: "text",
@@ -62277,6 +62511,7 @@ const AddGroundEventFlyout = ({
   operationalModel,
   groundResources = [],
   classroomOptions = [],
+  academicStandardEvents,
   cptResources = [],
   instructorLabel: instructorLabel2 = "Instructor"
 }) => {
@@ -62605,6 +62840,7 @@ const AddGroundEventFlyout = ({
                     instructorLabel: instructorLabel2,
                     groundResources,
                     classroomOptions,
+                    standardEvents: academicStandardEvents,
                     onSave: (data) => {
                       if (onSaveAcademic) {
                         onSaveAcademic(data);
@@ -147681,6 +147917,7 @@ ${error instanceof Error ? error.message : String(error)}`,
   }, [addGroundTileTraineesByCourse, courseColors, scopedCourseColors]);
   const addGroundTileGroundResources = reactExports.useMemo(() => buildResources.filter((resourceId) => /^Ground\s+\d+$/i.test(String(resourceId || "").trim())), [buildResources]);
   const addGroundTileClassroomOptions = reactExports.useMemo(() => buildClassroomResourceOptions(activePlatformResourcePool?.settings || {}, addGroundTileGroundResources.length || configuredGroundCount2), [activePlatformResourcePool?.settings, addGroundTileGroundResources.length, configuredGroundCount2]);
+  const addGroundTileAcademicStandardEvents = reactExports.useMemo(() => normaliseAcademicStandardEvents(activePlatformResourcePool?.settings?.academicStandardEvents), [activePlatformResourcePool?.settings?.academicStandardEvents]);
   const addGroundTileCptResources = reactExports.useMemo(() => buildResources.filter((resourceId) => /^CPT\s+\d+$/i.test(String(resourceId || "").trim())), [buildResources]);
   const handleSaveGroundEvent = (data) => {
     const syllabusItem = syllabusDetails.find((s) => s.code === data.flightNumber);
@@ -153780,6 +154017,7 @@ Do you want to replace the existing entry?`,
           operationalModel: activeOperationalModel,
           groundResources: addGroundTileGroundResources,
           classroomOptions: addGroundTileClassroomOptions,
+          academicStandardEvents: addGroundTileAcademicStandardEvents,
           cptResources: addGroundTileCptResources,
           instructorLabel: instructorLabel2
         }

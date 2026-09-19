@@ -69,6 +69,7 @@ import {
     writeSetupTestSyllabus,
 } from '../utils/setupTestMode';
 import { formatClassroomFieldLabel, formatClassroomNames, getClassroomNamesForRows, updateClassroomNameForRow } from '../utils/classroomResources';
+import { createAcademicStandardEventCode, normaliseAcademicStandardEvents, type AcademicStandardEventConfig } from '../utils/academicStandardEvents';
    
 declare const XLSX: any;
 
@@ -3482,6 +3483,7 @@ const InitialSetupWizard: React.FC<{
         standby: String(primaryResourcePool?.settings?.standby ?? primaryResourcePool?.standby ?? ''),
         ground: String(primaryResourcePool?.settings?.ground ?? primaryResourcePool?.ground ?? ''),
         classrooms: formatClassroomNames(primaryResourcePool?.settings?.classrooms ?? primaryResourcePool?.settings?.classroomNames),
+        academicStandardEvents: normaliseAcademicStandardEvents(primaryResourcePool?.settings?.academicStandardEvents),
     });
     const [crewDraft, setCrewDraft] = useState({
         aircraftCode: String(primaryAircraftType?.code || resourceDraft.aircraftCode || ''),
@@ -4401,6 +4403,7 @@ const InitialSetupWizard: React.FC<{
             standby: String(primaryResourcePool?.settings?.standby ?? primaryResourcePool?.standby ?? ''),
             ground: String(primaryResourcePool?.settings?.ground ?? primaryResourcePool?.ground ?? ''),
             classrooms: formatClassroomNames(primaryResourcePool?.settings?.classrooms ?? primaryResourcePool?.settings?.classroomNames),
+            academicStandardEvents: normaliseAcademicStandardEvents(primaryResourcePool?.settings?.academicStandardEvents),
         });
         setCrewDraft({
             aircraftCode: String(primaryAircraftType?.code || primaryResourcePool?.aircraftTypeCode || ''),
@@ -5046,6 +5049,7 @@ const InitialSetupWizard: React.FC<{
                     standby: parseNumberDraft(resourceDraft.standby),
                     ground: parseNumberDraft(resourceDraft.ground),
                     classrooms: getClassroomNamesForRows(resourceDraft.classrooms, parseNumberDraft(resourceDraft.ground)),
+                    academicStandardEvents: normaliseAcademicStandardEvents(resourceDraft.academicStandardEvents),
                 },
             };
             const poolExists = resourcePools.some((pool: any) => (
@@ -7520,6 +7524,97 @@ const InitialSetupWizard: React.FC<{
             </div>
         );
     };
+    const wizardAcademicStandardEventsField = () => {
+        const events = normaliseAcademicStandardEvents(resourceDraft.academicStandardEvents);
+        const setEvents = (nextEvents: AcademicStandardEventConfig[]) => updateResourceDraft((draft) => ({
+            ...draft,
+            academicStandardEvents: normaliseAcademicStandardEvents(nextEvents, []),
+        }));
+        const updateEvent = (indexToUpdate: number, changes: Partial<AcademicStandardEventConfig>) => {
+            setEvents(events.map((event, index) => {
+                if (index !== indexToUpdate) return event;
+                const next = { ...event, ...changes };
+                return {
+                    ...next,
+                    code: typeof changes.label === 'string' ? createAcademicStandardEventCode(next.label, index) : next.code,
+                };
+            }));
+        };
+        const addEvent = () => setEvents([
+            ...events,
+            { code: createAcademicStandardEventCode('New Event', events.length), label: 'New Event', duration: 1, color: '#64748b' },
+        ]);
+        const deleteEvent = (indexToDelete: number) => setEvents(events.filter((_, index) => index !== indexToDelete));
+        return (
+            <div className="md:col-span-5 rounded-xl border border-slate-200 bg-slate-50 p-3">
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                    <div>
+                        <div className={wizardLabelClass}>Academic Standard Events</div>
+                        <div className="mt-1 text-xs font-semibold text-slate-500">
+                            Quick-add events shown in Add Ground Event &gt; Academics.
+                        </div>
+                    </div>
+                    <button
+                        type="button"
+                        onClick={addEvent}
+                        className="rounded-md border border-sky-300 bg-sky-50 px-3 py-2 text-xs font-black uppercase tracking-[0.12em] text-sky-700 transition hover:bg-sky-100"
+                    >
+                        + Add
+                    </button>
+                </div>
+                {events.length > 0 ? (
+                    <div className="mt-3 space-y-2">
+                        {events.map((event, index) => (
+                            <div key={`wizard-academic-standard-${event.code}-${index}`} className="grid gap-2 rounded-lg border border-slate-200 bg-white p-2 md:grid-cols-[minmax(0,1fr)_96px_82px_94px] md:items-end">
+                                <label>
+                                    <span className="mb-1 block text-[10px] font-black uppercase tracking-[0.14em] text-slate-500">Event name</span>
+                                    <input
+                                        className={wizardInputClass}
+                                        value={event.label}
+                                        placeholder="Event name"
+                                        onKeyDown={stopEditableKeyPropagation}
+                                        onChange={(changeEvent) => updateEvent(index, { label: changeEvent.target.value })}
+                                    />
+                                </label>
+                                <label>
+                                    <span className="mb-1 block text-[10px] font-black uppercase tracking-[0.14em] text-slate-500">Duration</span>
+                                    <input
+                                        className={wizardInputClass}
+                                        type="number"
+                                        min="0.25"
+                                        step="0.25"
+                                        value={event.duration}
+                                        onKeyDown={stopEditableKeyPropagation}
+                                        onChange={(changeEvent) => updateEvent(index, { duration: Math.max(0.25, Number(changeEvent.target.value) || 1) })}
+                                    />
+                                </label>
+                                <label>
+                                    <span className="mb-1 block text-[10px] font-black uppercase tracking-[0.14em] text-slate-500">Colour</span>
+                                    <input
+                                        className="h-10 w-full rounded-md border border-slate-300 bg-white p-1"
+                                        type="color"
+                                        value={event.color}
+                                        onChange={(changeEvent) => updateEvent(index, { color: changeEvent.target.value })}
+                                    />
+                                </label>
+                                <button
+                                    type="button"
+                                    onClick={() => deleteEvent(index)}
+                                    className="rounded-md border border-red-200 bg-red-50 px-3 py-2 text-xs font-black uppercase tracking-[0.12em] text-red-700 transition hover:bg-red-100"
+                                >
+                                    - Delete
+                                </button>
+                            </div>
+                        ))}
+                    </div>
+                ) : (
+                    <div className="mt-3 rounded-lg border border-dashed border-slate-300 bg-white px-3 py-2 text-sm font-semibold text-slate-500">
+                        No academic standard events configured. Use + Add to create the first event.
+                    </div>
+                )}
+            </div>
+        );
+    };
     const wizardDataListField = (
         label: string,
         value: string,
@@ -9459,6 +9554,7 @@ const InitialSetupWizard: React.FC<{
                         standby: parseNumberDraft(resourceDraft.standby),
                         ground: parseNumberDraft(resourceDraft.ground),
                         classrooms: getClassroomNamesForRows(resourceDraft.classrooms, parseNumberDraft(resourceDraft.ground)),
+                        academicStandardEvents: normaliseAcademicStandardEvents(resourceDraft.academicStandardEvents),
                     },
                 }] : existingResourcePools,
                 modules,
@@ -10304,6 +10400,7 @@ const InitialSetupWizard: React.FC<{
                     {wizardField('Standby Lines', resourceDraft.standby, (value) => updateResourceDraft((draft) => ({ ...draft, standby: value })))}
                     {wizardField('Ground Lines', resourceDraft.ground, (value) => updateResourceDraft((draft) => ({ ...draft, ground: value })))}
                     {wizardClassroomNamesField()}
+                    {wizardAcademicStandardEventsField()}
                 </div>,
             );
         }

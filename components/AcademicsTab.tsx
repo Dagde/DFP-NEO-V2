@@ -3,6 +3,7 @@ import { SyllabusItemDetail, Trainee, Score, ScheduleEvent } from '../types';
 import { v4 as uuidv4 } from 'uuid';
 import { showDarkAlert, showDarkConfirm } from './DarkMessageModal';
 import type { ClassroomResourceOption } from '../utils/classroomResources';
+import { DEFAULT_ACADEMIC_STANDARD_EVENTS, normaliseAcademicStandardEvents, type AcademicStandardEventConfig } from '../utils/academicStandardEvents';
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -48,6 +49,7 @@ interface AcademicsTabProps {
   instructorLabel?: string;
   groundResources?: string[];
   classroomOptions?: ClassroomResourceOption[];
+  standardEvents?: AcademicStandardEventConfig[];
   onSave: (data: AcademicSaveData) => void;
   onClose: () => void;
 }
@@ -79,17 +81,6 @@ const stripCourse = (fullName: string): string => {
   // Match " – COURSE" or " - COURSE" at the end (em dash or regular hyphen)
   return fullName.replace(/\s[–—-]\s\S+$/, '').trim();
 };
-
-const STANDARD_EVENTS = [
-  { code: 'MORNING_BREAK', label: 'Morning Break',    duration: 0.25,  color: '#64748b' },
-  { code: 'LUNCH',         label: 'Lunch',            duration: 1.0,   color: '#78716c' },
-  { code: 'AFTERNOON_BREAK', label: 'Afternoon Break',duration: 0.25,  color: '#64748b' },
-  { code: 'SELF_STUDY',    label: 'Self-Study',       duration: 1.0,   color: '#475569' },
-  { code: 'SPORT',         label: 'Sport',            duration: 1.0,   color: '#15803d' },
-  { code: 'ADMIN',         label: 'Admin',            duration: 0.5,   color: '#7c3aed' },
-  { code: 'FREE_TIME',     label: 'Free Time',        duration: 1.0,   color: '#0f766e' },
-  { code: 'OTHER',         label: 'Other',            duration: 1.0,   color: '#b45309' },
-];
 
 const ACADEMIC_TILE_COLOR = '#1d4ed8'; // blue-700 for academic lessons
 
@@ -167,14 +158,7 @@ const LESSON_CODE_COLORS: Record<string, string> = {
   // Electronic Warfare
   'EW':       '#2a3a0a',  // dark military-olive
   // Standard / admin tiles (keep their original colors)
-  'MORNING_BREAK':    '#64748b',
-  'LUNCH':            '#78716c',
-  'AFTERNOON_BREAK':  '#64748b',
-  'SELF_STUDY':       '#475569',
-  'SPORT':            '#15803d',
-  'ADMIN':            '#7c3aed',
-  'FREE_TIME':        '#0f766e',
-  'OTHER':            '#b45309',
+  ...Object.fromEntries(DEFAULT_ACADEMIC_STANDARD_EVENTS.map(event => [event.code, event.color])),
 };
 
 /**
@@ -184,7 +168,7 @@ const LESSON_CODE_COLORS: Record<string, string> = {
  */
 function getLessonTileColor(lessonCode: string, existingColor?: string): string {
   // Standard event tiles keep their configured colour
-  const isStandardCode = ['MORNING_BREAK','LUNCH','AFTERNOON_BREAK','SELF_STUDY','SPORT','ADMIN','FREE_TIME','OTHER'].includes(lessonCode);
+  const isStandardCode = DEFAULT_ACADEMIC_STANDARD_EVENTS.some(event => event.code === lessonCode);
   if (isStandardCode && existingColor) return existingColor;
 
   const upper = lessonCode.toUpperCase();
@@ -326,6 +310,7 @@ const AcademicsTab: React.FC<AcademicsTabProps> = ({
   instructorLabel = 'Instructor',
   groundResources = [],
   classroomOptions = [],
+  standardEvents = DEFAULT_ACADEMIC_STANDARD_EVENTS,
   onSave,
   onClose,
 }) => {
@@ -363,6 +348,10 @@ const AcademicsTab: React.FC<AcademicsTabProps> = ({
     if (classroomOptions.length > 0) return classroomOptions;
     return groundResources.map(resource => ({ id: resource, label: resource }));
   }, [classroomOptions, groundResources]);
+  const effectiveStandardEvents = useMemo(
+    () => normaliseAcademicStandardEvents(standardEvents),
+    [standardEvents],
+  );
 
   // Edit-tile modal state
   const [editTileId, setEditTileId] = useState<string | null>(null);
@@ -677,14 +666,15 @@ const AcademicsTab: React.FC<AcademicsTabProps> = ({
   }, [selectedLessons, getNextStart]);
 
   // Add/remove standard event
-  const toggleStandard = useCallback((ev: typeof STANDARD_EVENTS[0]) => {
+  const toggleStandard = useCallback((ev: AcademicStandardEventConfig) => {
     const key = ev.code;
+    const isOtherEvent = key === 'OTHER' || ev.label.trim().toLowerCase() === 'other';
     if (selectedStandard.has(key)) {
       setSelectedStandard(prev => { const s = new Set(prev); s.delete(key); return s; });
       setTiles(prev => prev.filter(t => t.lessonCode !== key));
     } else {
       setSelectedStandard(prev => new Set(prev).add(key));
-      const label = key === 'OTHER' ? (otherText || 'Other') : ev.label;
+      const label = isOtherEvent ? (otherText || ev.label) : ev.label;
       const start = getNextStart(ev.duration);
       setTiles(prev => [...prev, {
         id: uuidv4(),
@@ -694,7 +684,7 @@ const AcademicsTab: React.FC<AcademicsTabProps> = ({
         duration: ev.duration,
         color: ev.color,
         isStandard: true,
-        customDescription: key === 'OTHER' ? otherText : undefined,
+        customDescription: isOtherEvent ? otherText : undefined,
       }]);
     }
   }, [selectedStandard, getNextStart, otherText]);
@@ -1143,13 +1133,14 @@ const AcademicsTab: React.FC<AcademicsTabProps> = ({
           <div style={S.card}>
             <div style={S.label}>Standard Events</div>
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
-              {STANDARD_EVENTS.map(ev => {
+              {effectiveStandardEvents.map(ev => {
                 const isSelected = selectedStandard.has(ev.code);
+                const isOtherEvent = ev.code === 'OTHER' || ev.label.trim().toLowerCase() === 'other';
                 return (
                   <div key={ev.code} style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
                     <button
                       onClick={() => {
-                        if (ev.code === 'OTHER' && !otherText && !isSelected) return;
+                        if (isOtherEvent && !otherText && !isSelected) return;
                         toggleStandard(ev);
                       }}
                       style={{
@@ -1160,7 +1151,7 @@ const AcademicsTab: React.FC<AcademicsTabProps> = ({
                       }}>
                       {ev.label}
                     </button>
-                    {ev.code === 'OTHER' && !isSelected && (
+                    {isOtherEvent && !isSelected && (
                       <input
                         type="text"
                         placeholder="Description..."
