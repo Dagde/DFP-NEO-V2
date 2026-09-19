@@ -83072,24 +83072,86 @@ const BuildIntelligenceView = (props) => {
     )
   ] });
 };
-const BuildDfpLoadingFlyout = () => {
-  return /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "fixed inset-0 bg-black/60 z-[90] flex items-center justify-center animate-fade-in", children: /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "bg-gray-800 rounded-lg shadow-xl border border-sky-500 p-8", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex flex-col items-center space-y-4", children: [
-    /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "relative h-10 w-10", children: [
-      /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "absolute inset-0 rounded-full bg-sky-500 opacity-75 animate-ping" }),
-      /* @__PURE__ */ jsxRuntimeExports.jsxs("svg", { xmlns: "http://www.w3.org/2000/svg", className: "relative h-10 w-10 text-white", viewBox: "0 0 24 24", fill: "none", stroke: "currentColor", strokeWidth: "2", strokeLinecap: "round", strokeLinejoin: "round", children: [
-        /* @__PURE__ */ jsxRuntimeExports.jsx("path", { d: "M12 2a10 10 0 1 0 10 10" }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx("path", { d: "M12 2v2" }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx("path", { d: "M12 20v2" }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx("path", { d: "m4.93 4.93 1.41 1.41" }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx("path", { d: "m17.66 17.66 1.41 1.41" }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx("path", { d: "M2 12h2" }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx("path", { d: "M20 12h2" }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx("path", { d: "m6.34 17.66-1.41 1.41" }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx("path", { d: "m19.07 4.93-1.41 1.41" })
+const formatCount = (value) => {
+  if (typeof value !== "number" || !Number.isFinite(value)) return "0";
+  return Math.max(0, Math.round(value)).toLocaleString();
+};
+const formatElapsed = (elapsedMs) => {
+  if (typeof elapsedMs !== "number" || !Number.isFinite(elapsedMs) || elapsedMs < 1e3) return null;
+  return `${(elapsedMs / 1e3).toFixed(1)}s`;
+};
+const BuildDfpLoadingFlyout = ({ progress }) => {
+  const percentage = Math.max(0, Math.min(100, Math.round(progress?.percentage ?? 0)));
+  const radius = 46;
+  const circumference = 2 * Math.PI * radius;
+  const dashOffset = circumference - percentage / 100 * circumference;
+  const isComplete = progress?.phase === "complete" || percentage >= 100;
+  const isError = progress?.phase === "error";
+  const strokeColor = isError ? "#f87171" : isComplete ? "#34d399" : "#38bdf8";
+  const elapsedLabel = formatElapsed(progress?.elapsedMs);
+  return /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "fixed inset-0 bg-black/60 z-[90] flex items-center justify-center animate-fade-in", children: /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "w-[420px] max-w-[calc(100vw-32px)] rounded-xl border border-sky-500/60 bg-gray-900 shadow-2xl", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex flex-col items-center gap-5 p-8", children: [
+    /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "relative h-32 w-32", children: [
+      /* @__PURE__ */ jsxRuntimeExports.jsxs("svg", { className: "h-32 w-32 -rotate-90", viewBox: "0 0 120 120", "aria-hidden": "true", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsx(
+          "circle",
+          {
+            cx: "60",
+            cy: "60",
+            r: radius,
+            fill: "none",
+            stroke: "rgba(148, 163, 184, 0.22)",
+            strokeWidth: "10"
+          }
+        ),
+        /* @__PURE__ */ jsxRuntimeExports.jsx(
+          "circle",
+          {
+            cx: "60",
+            cy: "60",
+            r: radius,
+            fill: "none",
+            stroke: strokeColor,
+            strokeWidth: "10",
+            strokeLinecap: "round",
+            strokeDasharray: circumference,
+            strokeDashoffset: dashOffset,
+            className: "transition-all duration-300 ease-out"
+          }
+        )
+      ] }),
+      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "absolute inset-0 flex flex-col items-center justify-center", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-3xl font-black tabular-nums text-white", children: percentage }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-[11px] font-bold uppercase tracking-[0.22em] text-slate-400", children: "percent" })
       ] })
     ] }),
-    /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-xl font-semibold text-white", children: "Building DFP..." }),
-    /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-sm text-gray-400", children: "The algorithm is building an optimal schedule." })
+    /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "text-center", children: [
+      /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-xl font-semibold text-white", children: isComplete ? "Build calculations complete" : "Building DFP..." }),
+      /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-2 text-sm text-gray-300", children: progress?.message || "The algorithm is building an optimal schedule." }),
+      isComplete && !isError && /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-1 text-xs font-semibold uppercase tracking-[0.18em] text-emerald-300", children: "Finalising summary before opening NEO Build" })
+    ] }),
+    /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid w-full grid-cols-3 gap-2", children: [
+      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded-lg border border-slate-600/70 bg-slate-950/50 px-3 py-2 text-center", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-lg font-black tabular-nums text-white", children: formatCount(progress?.iterations) }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-[10px] font-bold uppercase tracking-[0.18em] text-slate-400", children: "Iterations" })
+      ] }),
+      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded-lg border border-slate-600/70 bg-slate-950/50 px-3 py-2 text-center", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-lg font-black tabular-nums text-white", children: formatCount(progress?.combinations) }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-[10px] font-bold uppercase tracking-[0.18em] text-slate-400", children: "Combinations" })
+      ] }),
+      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded-lg border border-slate-600/70 bg-slate-950/50 px-3 py-2 text-center", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-lg font-black tabular-nums text-white", children: formatCount(progress?.calculations) }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-[10px] font-bold uppercase tracking-[0.18em] text-slate-400", children: "Calculations" })
+      ] })
+    ] }),
+    (typeof progress?.generatedEvents === "number" || elapsedLabel) && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex w-full items-center justify-between rounded-lg border border-slate-700 bg-slate-950/40 px-4 py-3 text-sm", children: [
+      /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "font-semibold text-slate-300", children: "Generated tiles" }),
+      /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "font-black tabular-nums text-white", children: formatCount(progress?.generatedEvents) }),
+      elapsedLabel && /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "mx-2 h-4 w-px bg-slate-700" }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "font-semibold text-slate-300", children: "Elapsed" }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "font-black tabular-nums text-white", children: elapsedLabel })
+      ] })
+    ] })
   ] }) }) });
 };
 const buildDateWarningWeekdays = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
@@ -115021,7 +115083,7 @@ const createNeoBuildTimingReport = (buildDate, counters = {}, options = {}) => {
   };
 };
 const NEO_BUILD_GENERATION_START_DELAY_MS = 500;
-const NEO_BUILD_NAVIGATION_DELAY_MS = 250;
+const NEO_BUILD_NAVIGATION_DELAY_MS = 1600;
 const saveNeoBuildTimingReport = (report) => {
   if (!report) return;
   try {
@@ -116208,11 +116270,35 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
   const buildAircraftCrewComposition = normaliseAircraftCrewComposition(config.aircraftCrewComposition || { crewCount: 1, seats: [{ id: "seat-1", role: "Pilot", eligibleRoles: ["Pilot"] }] });
   const getBuildAircraftCrewCompositionForEvent = (event) => getAircraftCrewCompositionForEvent(buildAircraftCrewComposition, event);
   const markBuildTiming = (name, details) => markNeoBuildTiming(timingReport, name, details);
+  const buildProgressStartedAt = performance.now();
+  const buildCalculationStats = {
+    iterations: 0,
+    combinations: 0,
+    calculations: 0
+  };
+  const recordBuildCombination = (calculationWeight = 1) => {
+    buildCalculationStats.iterations += 1;
+    buildCalculationStats.combinations += 1;
+    buildCalculationStats.calculations += Math.max(1, Math.round(calculationWeight));
+  };
   const recordProgress = (progress) => {
+    const nextProgress = {
+      ...progress,
+      iterations: progress.iterations ?? buildCalculationStats.iterations,
+      combinations: progress.combinations ?? buildCalculationStats.combinations,
+      calculations: progress.calculations ?? buildCalculationStats.calculations,
+      generatedEvents: progress.generatedEvents,
+      elapsedMs: Math.round(performance.now() - buildProgressStartedAt),
+      phase: progress.phase ?? (progress.percentage >= 100 ? "complete" : "running")
+    };
     markBuildTiming(`progress:${progress.message}`, {
-      percentage: progress.percentage
+      percentage: nextProgress.percentage,
+      iterations: nextProgress.iterations,
+      combinations: nextProgress.combinations,
+      calculations: nextProgress.calculations,
+      generatedEvents: nextProgress.generatedEvents
     });
-    setProgress(progress);
+    setProgress(nextProgress);
   };
   const neoBuildVerboseDiagnostics = localStorage.getItem("neo_build_verbose_diag") === "true";
   const neoBuildLiveDiagnostics = localStorage.getItem("neo_build_live_diag") === "true";
@@ -119830,7 +119916,12 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
       }))
     };
     saveNeoBuildDiag("final");
-    recordProgress({ message: "Build complete!", percentage: 100 });
+    recordProgress({
+      message: "Build complete!",
+      percentage: 100,
+      generatedEvents: sortedFixedCrewEvents.length,
+      phase: "complete"
+    });
     return sortedFixedCrewEvents;
   };
   const countAirCombatDispatchesInWindow = (windowStart, windowEnd, excludedFormationId) => generatedEvents.filter(
@@ -121855,6 +121946,7 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
                 const ftdNoResourceCacheKey = type === "ftd" ? makeFtdNoResourceCacheKey(time, scheduledDuration, generatedEvents.length) : null;
                 const cachedFtdNoResource = ftdNoResourceCacheKey ? ftdNoResourceCache.get(ftdNoResourceCacheKey) : null;
                 if (cachedFtdNoResource) {
+                  recordBuildCombination(1);
                   listDiag.cachedResourceRejections++;
                   const cachedResourceTrace = {
                     outcome: "rejected",
@@ -122165,6 +122257,7 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
   };
   const scheduleEvent = (trainee, syllabusItem, startTime, type, isNightPass, isPlusOne, primaryPreferOnly = false, requirePreferredNightAircraft = false, options = {}) => {
     const scheduleAttemptStartedAt = performance.now();
+    recordBuildCombination(Math.max(1, generatedEvents.length + config.instructors.length + config.trainees.length));
     let scheduleAttemptTimingRecorded = false;
     const recordScheduleAttemptTiming = (outcome, reason) => {
       if (scheduleAttemptTimingRecorded) return;
@@ -130980,7 +131073,12 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
     }
   });
   buildDebugLog("DEBUG ===== END FINAL BUILD RESULTS =====");
-  recordProgress({ message: "Build complete!", percentage: 100 });
+  recordProgress({
+    message: "Build complete!",
+    percentage: 100,
+    generatedEvents: sortedEvents.length,
+    phase: "complete"
+  });
   _diagFinalizeInstructors();
   return sortedEvents;
 }
@@ -145748,7 +145846,7 @@ ${conflictLines.join("\n")}${moreText}`,
         }
         console.error("🚀 [NEO-Build] DFP Build Failed:", error);
         console.error("🚀 [NEO-Build] Error stack:", error instanceof Error ? error.stack : "No stack trace");
-        setDfpBuildProgress({ message: "Error during build!", percentage: 100 });
+        setDfpBuildProgress({ message: "Error during build!", percentage: 100, phase: "error" });
       } finally {
         markNeoBuildTiming(timingReport, "navigation:setTimeout-queued", { delayMs: NEO_BUILD_NAVIGATION_DELAY_MS });
         setTimeout(() => {

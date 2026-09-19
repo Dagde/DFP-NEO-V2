@@ -8036,7 +8036,7 @@ const createNeoBuildTimingReport = (
 };
 
 const NEO_BUILD_GENERATION_START_DELAY_MS = 500;
-const NEO_BUILD_NAVIGATION_DELAY_MS = 250;
+const NEO_BUILD_NAVIGATION_DELAY_MS = 1600;
 
 const saveNeoBuildTimingReport = (report?: NeoBuildTimingReport) => {
     if (!report) return;
@@ -10025,9 +10025,20 @@ function _diagFinalizeInstructors() {
 // END INSTRUCTOR ALLOCATION DIAGNOSTIC SYSTEM
 // ═══════════════════════════════════════════════════════════════════════════
 
+type DfpBuildProgress = {
+    message: string;
+    percentage: number;
+    iterations?: number;
+    combinations?: number;
+    calculations?: number;
+    generatedEvents?: number;
+    elapsedMs?: number;
+    phase?: 'running' | 'complete' | 'error';
+};
+
 function generateDfpInternal(
     config: DfpConfig,
-    setProgress: (progress: { message: string, percentage: number }) => void,
+    setProgress: (progress: DfpBuildProgress) => void,
     publishedSchedules: Record<string, ScheduleEvent[]>
 ): Omit<ScheduleEvent, 'date'>[] {
     const buildResourceDisplayNames = config.resourceDisplayNames ?? DEFAULT_RESOURCE_DISPLAY_NAMES;
@@ -10049,11 +10060,35 @@ function generateDfpInternal(
         getAircraftCrewCompositionForEvent(buildAircraftCrewComposition, event)
     );
     const markBuildTiming = (name: string, details?: Record<string, any>) => markNeoBuildTiming(timingReport, name, details);
-    const recordProgress = (progress: { message: string, percentage: number }) => {
+    const buildProgressStartedAt = performance.now();
+    const buildCalculationStats = {
+        iterations: 0,
+        combinations: 0,
+        calculations: 0,
+    };
+    const recordBuildCombination = (calculationWeight = 1) => {
+        buildCalculationStats.iterations += 1;
+        buildCalculationStats.combinations += 1;
+        buildCalculationStats.calculations += Math.max(1, Math.round(calculationWeight));
+    };
+    const recordProgress = (progress: DfpBuildProgress) => {
+        const nextProgress: DfpBuildProgress = {
+            ...progress,
+            iterations: progress.iterations ?? buildCalculationStats.iterations,
+            combinations: progress.combinations ?? buildCalculationStats.combinations,
+            calculations: progress.calculations ?? buildCalculationStats.calculations,
+            generatedEvents: progress.generatedEvents,
+            elapsedMs: Math.round(performance.now() - buildProgressStartedAt),
+            phase: progress.phase ?? (progress.percentage >= 100 ? 'complete' : 'running'),
+        };
         markBuildTiming(`progress:${progress.message}`, {
-            percentage: progress.percentage,
+            percentage: nextProgress.percentage,
+            iterations: nextProgress.iterations,
+            combinations: nextProgress.combinations,
+            calculations: nextProgress.calculations,
+            generatedEvents: nextProgress.generatedEvents,
         });
-        setProgress(progress);
+        setProgress(nextProgress);
     };
     const neoBuildVerboseDiagnostics = localStorage.getItem('neo_build_verbose_diag') === 'true';
     const neoBuildLiveDiagnostics = localStorage.getItem('neo_build_live_diag') === 'true';
@@ -14389,7 +14424,12 @@ function generateDfpInternal(
             })),
         };
         saveNeoBuildDiag('final');
-        recordProgress({ message: 'Build complete!', percentage: 100 });
+        recordProgress({
+            message: 'Build complete!',
+            percentage: 100,
+            generatedEvents: sortedFixedCrewEvents.length,
+            phase: 'complete',
+        });
         return sortedFixedCrewEvents;
     };
 
@@ -16890,6 +16930,7 @@ const applyCoursePriority = (rankedList: Trainee[], diagnosticLabel = 'unlabelle
                                     ? ftdNoResourceCache.get(ftdNoResourceCacheKey)
                                     : null;
                                 if (cachedFtdNoResource) {
+                                    recordBuildCombination(1);
                                     listDiag.cachedResourceRejections++;
                                     const cachedResourceTrace = {
                                         phase: 'schedule-event',
@@ -17257,6 +17298,7 @@ const applyCoursePriority = (rankedList: Trainee[], diagnosticLabel = 'unlabelle
         options: ScheduleEventOptions = {}
     ): ScheduleEventResult => {
         const scheduleAttemptStartedAt = performance.now();
+        recordBuildCombination(Math.max(1, generatedEvents.length + config.instructors.length + config.trainees.length));
         let scheduleAttemptTimingRecorded = false;
         const recordScheduleAttemptTiming = (outcome: 'placed' | 'rejected', reason?: string) => {
             if (scheduleAttemptTimingRecorded) return;
@@ -27622,7 +27664,12 @@ const applyCoursePriority = (rankedList: Trainee[], diagnosticLabel = 'unlabelle
 
     buildDebugLog('DEBUG ===== END FINAL BUILD RESULTS =====');
 
-    recordProgress({ message: 'Build complete!', percentage: 100 });
+    recordProgress({
+        message: 'Build complete!',
+        percentage: 100,
+        generatedEvents: sortedEvents.length,
+        phase: 'complete',
+    });
 
     // ── DIAGNOSTIC: Finalize and save instructor allocation report ──
     _diagFinalizeInstructors();
@@ -33844,7 +33891,7 @@ const App: React.FC = () => {
     const [isStaffLoaded, setIsStaffLoaded] = useState(false);
     const [isTraineeLoaded, setIsTraineeLoaded] = useState(false);
     const [isCoursesLoaded, setIsCoursesLoaded] = useState(false);
-    const [dfpBuildProgress, setDfpBuildProgress] = useState({ message: '', percentage: 0 });
+    const [dfpBuildProgress, setDfpBuildProgress] = useState<DfpBuildProgress>({ message: '', percentage: 0 });
     const [showDateWarning, setShowDateWarning] = useState(false);
     const [unavailabilityNotifications, setUnavailabilityNotifications] = useState<string[]>([]);
     const [isPriorityEventCreation, setIsPriorityEventCreation] = useState(false);
@@ -45973,7 +46020,7 @@ const App: React.FC = () => {
                 }
                 console.error("🚀 [NEO-Build] DFP Build Failed:", error);
                 console.error("🚀 [NEO-Build] Error stack:", error instanceof Error ? error.stack : 'No stack trace');
-                setDfpBuildProgress({ message: 'Error during build!', percentage: 100 });
+                setDfpBuildProgress({ message: 'Error during build!', percentage: 100, phase: 'error' });
             } finally {
                 markNeoBuildTiming(timingReport, 'navigation:setTimeout-queued', { delayMs: NEO_BUILD_NAVIGATION_DELAY_MS });
                 setTimeout(() => {

@@ -1,26 +1,108 @@
 import React from 'react';
 
-const BuildDfpLoadingFlyout: React.FC = () => {
+type BuildDfpProgress = {
+    message?: string;
+    percentage?: number;
+    iterations?: number;
+    combinations?: number;
+    calculations?: number;
+    generatedEvents?: number;
+    elapsedMs?: number;
+    phase?: 'running' | 'complete' | 'error';
+};
+
+type BuildDfpLoadingFlyoutProps = {
+    progress?: BuildDfpProgress;
+};
+
+const formatCount = (value?: number) => {
+    if (typeof value !== 'number' || !Number.isFinite(value)) return '0';
+    return Math.max(0, Math.round(value)).toLocaleString();
+};
+
+const formatElapsed = (elapsedMs?: number) => {
+    if (typeof elapsedMs !== 'number' || !Number.isFinite(elapsedMs) || elapsedMs < 1000) return null;
+    return `${(elapsedMs / 1000).toFixed(1)}s`;
+};
+
+const BuildDfpLoadingFlyout: React.FC<BuildDfpLoadingFlyoutProps> = ({ progress }) => {
+    const percentage = Math.max(0, Math.min(100, Math.round(progress?.percentage ?? 0)));
+    const radius = 46;
+    const circumference = 2 * Math.PI * radius;
+    const dashOffset = circumference - (percentage / 100) * circumference;
+    const isComplete = progress?.phase === 'complete' || percentage >= 100;
+    const isError = progress?.phase === 'error';
+    const strokeColor = isError ? '#f87171' : isComplete ? '#34d399' : '#38bdf8';
+    const elapsedLabel = formatElapsed(progress?.elapsedMs);
+
     return (
         <div className="fixed inset-0 bg-black/60 z-[90] flex items-center justify-center animate-fade-in">
-            <div className="bg-gray-800 rounded-lg shadow-xl border border-sky-500 p-8">
-                <div className="flex flex-col items-center space-y-4">
-                    <div className="relative h-10 w-10">
-                        <div className="absolute inset-0 rounded-full bg-sky-500 opacity-75 animate-ping"></div>
-                        <svg xmlns="http://www.w3.org/2000/svg" className="relative h-10 w-10 text-white" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                            <path d="M12 2a10 10 0 1 0 10 10" />
-                            <path d="M12 2v2" />
-                            <path d="M12 20v2" />
-                            <path d="m4.93 4.93 1.41 1.41" />
-                            <path d="m17.66 17.66 1.41 1.41" />
-                            <path d="M2 12h2" />
-                            <path d="M20 12h2" />
-                            <path d="m6.34 17.66-1.41 1.41" />
-                            <path d="m19.07 4.93-1.41 1.41" />
+            <div className="w-[420px] max-w-[calc(100vw-32px)] rounded-xl border border-sky-500/60 bg-gray-900 shadow-2xl">
+                <div className="flex flex-col items-center gap-5 p-8">
+                    <div className="relative h-32 w-32">
+                        <svg className="h-32 w-32 -rotate-90" viewBox="0 0 120 120" aria-hidden="true">
+                            <circle
+                                cx="60"
+                                cy="60"
+                                r={radius}
+                                fill="none"
+                                stroke="rgba(148, 163, 184, 0.22)"
+                                strokeWidth="10"
+                            />
+                            <circle
+                                cx="60"
+                                cy="60"
+                                r={radius}
+                                fill="none"
+                                stroke={strokeColor}
+                                strokeWidth="10"
+                                strokeLinecap="round"
+                                strokeDasharray={circumference}
+                                strokeDashoffset={dashOffset}
+                                className="transition-all duration-300 ease-out"
+                            />
                         </svg>
+                        <div className="absolute inset-0 flex flex-col items-center justify-center">
+                            <span className="text-3xl font-black tabular-nums text-white">{percentage}</span>
+                            <span className="text-[11px] font-bold uppercase tracking-[0.22em] text-slate-400">percent</span>
+                        </div>
                     </div>
-                    <p className="text-xl font-semibold text-white">Building DFP...</p>
-                    <p className="text-sm text-gray-400">The algorithm is building an optimal schedule.</p>
+                    <div className="text-center">
+                        <p className="text-xl font-semibold text-white">{isComplete ? 'Build calculations complete' : 'Building DFP...'}</p>
+                        <p className="mt-2 text-sm text-gray-300">{progress?.message || 'The algorithm is building an optimal schedule.'}</p>
+                        {isComplete && !isError && (
+                            <p className="mt-1 text-xs font-semibold uppercase tracking-[0.18em] text-emerald-300">
+                                Finalising summary before opening NEO Build
+                            </p>
+                        )}
+                    </div>
+                    <div className="grid w-full grid-cols-3 gap-2">
+                        <div className="rounded-lg border border-slate-600/70 bg-slate-950/50 px-3 py-2 text-center">
+                            <div className="text-lg font-black tabular-nums text-white">{formatCount(progress?.iterations)}</div>
+                            <div className="text-[10px] font-bold uppercase tracking-[0.18em] text-slate-400">Iterations</div>
+                        </div>
+                        <div className="rounded-lg border border-slate-600/70 bg-slate-950/50 px-3 py-2 text-center">
+                            <div className="text-lg font-black tabular-nums text-white">{formatCount(progress?.combinations)}</div>
+                            <div className="text-[10px] font-bold uppercase tracking-[0.18em] text-slate-400">Combinations</div>
+                        </div>
+                        <div className="rounded-lg border border-slate-600/70 bg-slate-950/50 px-3 py-2 text-center">
+                            <div className="text-lg font-black tabular-nums text-white">{formatCount(progress?.calculations)}</div>
+                            <div className="text-[10px] font-bold uppercase tracking-[0.18em] text-slate-400">Calculations</div>
+                        </div>
+                    </div>
+                    {(typeof progress?.generatedEvents === 'number' || elapsedLabel) && (
+                        <div className="flex w-full items-center justify-between rounded-lg border border-slate-700 bg-slate-950/40 px-4 py-3 text-sm">
+                            <span className="font-semibold text-slate-300">Generated tiles</span>
+                            <span className="font-black tabular-nums text-white">{formatCount(progress?.generatedEvents)}</span>
+                            {elapsedLabel && (
+                                <>
+                                    <span className="mx-2 h-4 w-px bg-slate-700" />
+                                    <span className="font-semibold text-slate-300">Elapsed</span>
+                                    <span className="font-black tabular-nums text-white">{elapsedLabel}</span>
+                                </>
+                            )}
+                        </div>
+                    )}
                 </div>
             </div>
         </div>
