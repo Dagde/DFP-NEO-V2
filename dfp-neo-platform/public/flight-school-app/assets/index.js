@@ -32623,6 +32623,9 @@ const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, lo
     hasTrainees: currentUnit?.settings?.hasTrainees !== false
   });
   const unitDraftDirtyRef = reactExports.useRef(false);
+  const getWizardDefaultLmpAudience = (model) => normaliseOperationalModel(model || "") === "flight_school" ? "trainee" : "staff";
+  const defaultWizardLmpAudience = getWizardDefaultLmpAudience(unitDraft.operationalModel || getUnitOperationalModel(currentUnit || {}));
+  const resolveWizardLmpAudience = (value) => normaliseLmpAudience(value) || defaultWizardLmpAudience;
   const [resourceDraft, setResourceDraft] = reactExports.useState({
     aircraftCode: String(primaryAircraftType?.code || primaryResourcePool?.aircraftTypeCode || ""),
     aircraftName: String(primaryAircraftType?.name || primaryAircraftType?.code || primaryResourcePool?.aircraftTypeCode || ""),
@@ -32656,6 +32659,7 @@ const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, lo
     lmpName: String(primaryMasterLmp?.name || primaryMasterLmp?.code || "New Master LMP"),
     description: String(primaryMasterLmp?.description || ""),
     status: String(primaryMasterLmp?.status || "ACTIVE"),
+    audience: resolveWizardLmpAudience(primaryMasterLmp?.audience),
     accessLocationCode: String(primaryMasterLmpRule?.locationCode || activeWizardLocationCode || currentLocation?.code || ""),
     accessUnitCode: String(primaryMasterLmpRule?.unitCode || currentUnit?.code || ""),
     accessModel: String(primaryMasterLmpRule?.operationalModel || primaryMasterLmpRule?.model || "Any Model"),
@@ -33448,12 +33452,13 @@ const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, lo
       lmpName: String(primaryMasterLmp?.name || primaryMasterLmp?.code || "New Master LMP"),
       description: String(primaryMasterLmp?.description || ""),
       status: String(primaryMasterLmp?.status || "ACTIVE"),
+      audience: resolveWizardLmpAudience(primaryMasterLmp?.audience),
       accessLocationCode: String(primaryMasterLmpRule?.locationCode || activeWizardLocationCode || currentLocation?.code || ""),
       accessUnitCode: String(primaryMasterLmpRule?.unitCode || currentUnit?.code || ""),
       accessModel: String(primaryMasterLmpRule?.operationalModel || primaryMasterLmpRule?.model || "Any Model"),
       accessLevel: String(primaryMasterLmpRule?.access || primaryMasterLmpRule?.accessLevel || "View")
     });
-  }, [activeWizardLocationCode, primaryMasterLmp?.code, primaryMasterLmp?.name, primaryMasterLmp?.description, primaryMasterLmp?.status, primaryMasterLmpRule?.locationCode, primaryMasterLmpRule?.unitCode, primaryMasterLmpRule?.operationalModel, primaryMasterLmpRule?.model, primaryMasterLmpRule?.access, primaryMasterLmpRule?.accessLevel, currentLocation?.code, currentUnit?.code]);
+  }, [activeWizardLocationCode, primaryMasterLmp?.code, primaryMasterLmp?.name, primaryMasterLmp?.description, primaryMasterLmp?.status, primaryMasterLmp?.audience, primaryMasterLmpRule?.locationCode, primaryMasterLmpRule?.unitCode, primaryMasterLmpRule?.operationalModel, primaryMasterLmpRule?.model, primaryMasterLmpRule?.access, primaryMasterLmpRule?.accessLevel, currentLocation?.code, currentUnit?.code, defaultWizardLmpAudience]);
   reactExports.useEffect(() => {
     if (crewRolesDraftDirtyRef.current) return;
     setCrewRolesDraft(formatWizardCrewRoleRows(
@@ -34467,12 +34472,14 @@ const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, lo
       const accessRules = getOrganisationMasterLmpAccessRules(settings);
       const catalogueExists = catalogue.some((item) => normaliseUnitSettingsIdentifier(item?.code) === normaliseUnitSettingsIdentifier(lmpCode));
       const ruleKey = primaryMasterLmpRule?.id || "";
+      const audience = resolveWizardLmpAudience(trainingDraft.audience);
       const nextCatalogueEntry = {
         id: primaryMasterLmp?.id || createWizardRecordId("master-lmp-catalogue"),
         code: lmpCode,
         name: trainingDraft.lmpName || lmpCode,
         description: trainingDraft.description,
-        status: trainingDraft.status || "ACTIVE"
+        status: trainingDraft.status || "ACTIVE",
+        audience
       };
       const nextRule = {
         id: primaryMasterLmpRule?.id || createWizardRecordId("master-lmp-access"),
@@ -37690,7 +37697,8 @@ const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, lo
         code: trainingDraft.lmpCode,
         name: trainingDraft.lmpName || trainingDraft.lmpCode,
         description: trainingDraft.description,
-        status: trainingDraft.status || "ACTIVE"
+        status: trainingDraft.status || "ACTIVE",
+        audience: resolveWizardLmpAudience(trainingDraft.audience)
       } : null;
       const draftMasterLmpAccessRule = shouldSyncDraftMasterLmp ? {
         id: createSetupTestRecordId("master-lmp-access", `${trainingDraft.lmpCode || "lmp"}-${trainingDraft.accessUnitCode || cleanUnits[0]?.code || "unit"}`),
@@ -38102,7 +38110,8 @@ const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, lo
         code: cleanLmpCode,
         name: cleanLmpName || cleanLmpCode,
         description: trainingDraft.description,
-        status: trainingDraft.status || "ACTIVE"
+        status: trainingDraft.status || "ACTIVE",
+        audience: resolveWizardLmpAudience(trainingDraft.audience)
       };
       const nextAccessRule = {
         id: primaryMasterLmpRule?.id || createWizardRecordId("master-lmp-access"),
@@ -38166,7 +38175,8 @@ const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, lo
           code: cleanLmpCode,
           name: cleanLmpName || cleanLmpCode,
           description: trainingDraft.description,
-          status: trainingDraft.status || "ACTIVE"
+          status: trainingDraft.status || "ACTIVE",
+          audience: resolveWizardLmpAudience(trainingDraft.audience)
         };
         const nextAccessRule = {
           id: primaryMasterLmpRule?.id || createWizardRecordId("master-lmp-access"),
@@ -38835,9 +38845,37 @@ const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, lo
       return promptShell(
         /* @__PURE__ */ jsxRuntimeExports.jsx("p", { children: "Choose an existing LMP if it exists, or enter the first LMP to build. This does not change the scheduler logic; it only defines the training stream the unit can use." }),
         /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid gap-3 md:grid-cols-2", children: [
-          wizardDataListField("Master LMP code", trainingDraft.lmpCode, (value) => updateTrainingDraft((draft) => ({ ...draft, lmpCode: value, lmpName: draft.lmpName || value })), activeMasterLmpCatalogue.map((lmp) => String(lmp.code || lmp.name || "")).filter(Boolean), "Master LMP", "master-lmp-code"),
+          wizardDataListField("Master LMP code", trainingDraft.lmpCode, (value) => updateTrainingDraft((draft) => {
+            const selectedLmp = activeMasterLmpCatalogue.find((lmp) => normaliseUnitSettingsIdentifier(lmp?.code || lmp?.name) === normaliseUnitSettingsIdentifier(value));
+            return {
+              ...draft,
+              lmpCode: value,
+              lmpName: draft.lmpName || value,
+              audience: selectedLmp ? resolveWizardLmpAudience(selectedLmp.audience) : draft.audience
+            };
+          }), activeMasterLmpCatalogue.map((lmp) => String(lmp.code || lmp.name || "")).filter(Boolean), "Master LMP", "master-lmp-code"),
           wizardField("Master LMP name", trainingDraft.lmpName, (value) => updateTrainingDraft((draft) => ({ ...draft, lmpName: value })), void 0, "Training Programme"),
-          wizardTextArea("Description", trainingDraft.description, (value) => updateTrainingDraft((draft) => ({ ...draft, description: value })), "Initial programme or qualification stream")
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "block", children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: wizardLabelClass, children: "Assignment Audience" }),
+            /* @__PURE__ */ jsxRuntimeExports.jsxs(
+              "select",
+              {
+                className: `${wizardInputClass} mt-1`,
+                value: resolveWizardLmpAudience(trainingDraft.audience),
+                onKeyDownCapture: stopEditableKeyPropagation,
+                onKeyDown: stopEditableKeyPropagation,
+                onChange: (event) => updateTrainingDraft((draft) => ({
+                  ...draft,
+                  audience: event.target.value === "staff" ? "staff" : "trainee"
+                })),
+                children: [
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "trainee", children: "Trainees only" }),
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "staff", children: "Staff only" })
+                ]
+              }
+            )
+          ] }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "md:col-span-2", children: wizardTextArea("Description", trainingDraft.description, (value) => updateTrainingDraft((draft) => ({ ...draft, description: value })), "Initial programme or qualification stream") })
         ] })
       );
     }
