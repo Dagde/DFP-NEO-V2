@@ -88244,25 +88244,34 @@ const AssignTrainingModal = ({
   onDeselectAllTrainees,
   onCancel,
   onSave
-}) => /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "fixed inset-0 z-[1000] flex items-center justify-center bg-black/70 p-4", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex max-h-[90vh] w-full max-w-2xl flex-col rounded-lg border border-sky-700/50 bg-gray-900 shadow-2xl", children: [
-  /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-start justify-between gap-4 border-b border-gray-700 px-4 py-3", children: [
-    /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
-      /* @__PURE__ */ jsxRuntimeExports.jsx("h2", { className: "text-lg font-bold text-white", children: heading }),
-      /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-1 text-xs text-gray-400", children: title })
-    ] }),
-    /* @__PURE__ */ jsxRuntimeExports.jsx("button", { type: "button", onClick: onCancel, className: "rounded px-2 py-1 text-sm text-gray-300 hover:bg-gray-800 hover:text-white", children: "Close" })
-  ] }),
-  /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "overflow-y-auto p-4", children: [
-    /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mb-3 flex flex-wrap items-center gap-2", children: [
-      /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "mr-1 text-[10px] font-bold uppercase tracking-wide text-gray-500", children: "Staff" }),
-      /* @__PURE__ */ jsxRuntimeExports.jsx("button", { type: "button", onClick: onSelectAll, className: "rounded border border-gray-600 bg-gray-800 px-3 py-1.5 text-xs font-semibold text-gray-100 hover:bg-gray-700", children: "Select All" }),
-      /* @__PURE__ */ jsxRuntimeExports.jsx("button", { type: "button", onClick: onDeselectAll, className: "rounded border border-gray-600 bg-gray-800 px-3 py-1.5 text-xs font-semibold text-gray-100 hover:bg-gray-700", children: "Deselect All" }),
-      /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "ml-auto text-xs text-gray-400", children: [
-        selectedStaffIds.size,
-        " selected"
+}) => {
+  const showTraineeAssignments = Boolean(onToggleTrainee);
+  const traineeGroups = trainees.reduce((groups, person) => {
+    const course = String(person.course || "No course").trim() || "No course";
+    const existingGroup = groups.find((group) => group.course === course);
+    if (existingGroup) {
+      existingGroup.people.push(person);
+    } else {
+      groups.push({ course, people: [person] });
+    }
+    return groups;
+  }, []);
+  const formatCourseHeading = (course) => course === "No course" ? "No course" : `Course ${course}`;
+  const staffPanel = /* @__PURE__ */ jsxRuntimeExports.jsxs("section", { className: "min-w-0 overflow-hidden rounded-lg border border-gray-700 bg-gray-950/40", children: [
+    /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "border-b border-sky-800/70 bg-sky-950/50 px-4 py-3", children: [
+      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center justify-between gap-3", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsx("h3", { className: "text-sm font-extrabold uppercase tracking-[0.18em] text-sky-100", children: "Staff" }),
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "rounded-full border border-sky-700/70 bg-sky-900/50 px-2.5 py-1 text-xs font-bold text-sky-100", children: [
+          selectedStaffIds.size,
+          " selected"
+        ] })
+      ] }),
+      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mt-3 flex flex-wrap gap-2", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsx("button", { type: "button", onClick: onSelectAll, className: "rounded border border-gray-600 bg-gray-800 px-3 py-1.5 text-xs font-semibold text-gray-100 hover:bg-gray-700", children: "Select All" }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx("button", { type: "button", onClick: onDeselectAll, className: "rounded border border-gray-600 bg-gray-800 px-3 py-1.5 text-xs font-semibold text-gray-100 hover:bg-gray-700", children: "Deselect All" })
       ] })
     ] }),
-    /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "max-h-[420px] overflow-y-auto rounded border border-gray-700", children: staff.length === 0 ? /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "p-4 text-sm italic text-gray-500", children: emptyMessage }) : staff.map((person) => /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "flex cursor-pointer items-center gap-3 border-b border-gray-800 px-3 py-2 text-sm last:border-b-0 hover:bg-gray-800/70", children: [
+    /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: showTraineeAssignments ? "max-h-[54vh] overflow-y-auto" : "max-h-[420px] overflow-y-auto", children: staff.length === 0 ? /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "p-4 text-sm italic text-gray-500", children: emptyMessage }) : staff.map((person) => /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "flex cursor-pointer items-center gap-3 border-b border-gray-800 px-3 py-2 text-sm last:border-b-0 hover:bg-gray-800/70", children: [
       /* @__PURE__ */ jsxRuntimeExports.jsx(
         "input",
         {
@@ -88284,18 +88293,25 @@ const AssignTrainingModal = ({
           person.flight || "No flight"
         ] })
       ] })
-    ] }, person.idNumber)) }),
-    onToggleTrainee && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mt-4", children: [
-      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mb-3 flex flex-wrap items-center gap-2", children: [
-        /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "mr-1 text-[10px] font-bold uppercase tracking-wide text-gray-500", children: "Trainees" }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx("button", { type: "button", onClick: onSelectAllTrainees, className: "rounded border border-gray-600 bg-gray-800 px-3 py-1.5 text-xs font-semibold text-gray-100 hover:bg-gray-700", children: "Select All" }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx("button", { type: "button", onClick: onDeselectAllTrainees, className: "rounded border border-gray-600 bg-gray-800 px-3 py-1.5 text-xs font-semibold text-gray-100 hover:bg-gray-700", children: "Deselect All" }),
-        /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "ml-auto text-xs text-gray-400", children: [
+    ] }, person.idNumber)) })
+  ] });
+  const traineePanel = onToggleTrainee ? /* @__PURE__ */ jsxRuntimeExports.jsxs("section", { className: "min-w-0 overflow-hidden rounded-lg border border-gray-700 bg-gray-950/40", children: [
+    /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "border-b border-teal-800/70 bg-teal-950/40 px-4 py-3", children: [
+      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center justify-between gap-3", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsx("h3", { className: "text-sm font-extrabold uppercase tracking-[0.18em] text-teal-100", children: "Trainees" }),
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "rounded-full border border-teal-700/70 bg-teal-900/50 px-2.5 py-1 text-xs font-bold text-teal-100", children: [
           selectedTraineeIds.size,
           " selected"
         ] })
       ] }),
-      /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "max-h-[260px] overflow-y-auto rounded border border-gray-700", children: trainees.length === 0 ? /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "p-4 text-sm italic text-gray-500", children: "No active trainees available for this unit." }) : trainees.map((person) => /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "flex cursor-pointer items-center gap-3 border-b border-gray-800 px-3 py-2 text-sm last:border-b-0 hover:bg-gray-800/70", children: [
+      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mt-3 flex flex-wrap gap-2", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsx("button", { type: "button", onClick: onSelectAllTrainees, className: "rounded border border-gray-600 bg-gray-800 px-3 py-1.5 text-xs font-semibold text-gray-100 hover:bg-gray-700", children: "Select All" }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx("button", { type: "button", onClick: onDeselectAllTrainees, className: "rounded border border-gray-600 bg-gray-800 px-3 py-1.5 text-xs font-semibold text-gray-100 hover:bg-gray-700", children: "Deselect All" })
+      ] })
+    ] }),
+    /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "max-h-[54vh] overflow-y-auto", children: trainees.length === 0 ? /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "p-4 text-sm italic text-gray-500", children: "No active trainees available for this unit." }) : traineeGroups.map((group) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "border-b border-gray-800 last:border-b-0", children: [
+      /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "sticky top-0 z-10 border-b border-gray-800 bg-gray-900 px-3 py-2 text-[11px] font-extrabold uppercase tracking-[0.18em] text-teal-200", children: formatCourseHeading(group.course) }),
+      group.people.map((person) => /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "flex cursor-pointer items-center gap-3 border-b border-gray-800 px-3 py-2 text-sm last:border-b-0 hover:bg-gray-800/70", children: [
         /* @__PURE__ */ jsxRuntimeExports.jsx(
           "input",
           {
@@ -88311,20 +88327,29 @@ const AssignTrainingModal = ({
             " ",
             person.name
           ] }),
-          /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "block text-xs text-gray-400", children: [
-            person.course || "No course",
-            " · ",
-            person.flight || "No flight"
-          ] })
+          /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "block text-xs text-gray-400", children: person.flight || "No flight" })
         ] })
-      ] }, person.idNumber)) })
+      ] }, person.idNumber))
+    ] }, group.course)) })
+  ] }) : null;
+  return /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "fixed inset-0 z-[1000] flex items-center justify-center bg-black/70 p-4", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: `flex max-h-[90vh] w-full flex-col rounded-lg border border-sky-700/50 bg-gray-900 shadow-2xl ${showTraineeAssignments ? "max-w-5xl" : "max-w-2xl"}`, children: [
+    /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-start justify-between gap-4 border-b border-gray-700 px-4 py-3", children: [
+      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsx("h2", { className: "text-lg font-bold text-white", children: heading }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-1 text-xs text-gray-400", children: title })
+      ] }),
+      /* @__PURE__ */ jsxRuntimeExports.jsx("button", { type: "button", onClick: onCancel, className: "rounded px-2 py-1 text-sm text-gray-300 hover:bg-gray-800 hover:text-white", children: "Close" })
+    ] }),
+    /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "overflow-y-auto p-4", children: showTraineeAssignments ? /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid gap-4 lg:grid-cols-2", children: [
+      staffPanel,
+      traineePanel
+    ] }) : staffPanel }),
+    /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex justify-end gap-2 border-t border-gray-700 px-4 py-3", children: [
+      /* @__PURE__ */ jsxRuntimeExports.jsx("button", { type: "button", onClick: onCancel, className: "rounded border border-gray-600 bg-gray-800 px-4 py-2 text-sm font-semibold text-gray-100 hover:bg-gray-700", children: "Cancel" }),
+      /* @__PURE__ */ jsxRuntimeExports.jsx("button", { type: "button", onClick: onSave, disabled: saving, className: "rounded border border-sky-500 bg-sky-700 px-4 py-2 text-sm font-bold text-white hover:bg-sky-600 disabled:cursor-not-allowed disabled:opacity-60", children: saving ? "Saving..." : "Save Assignments" })
     ] })
-  ] }),
-  /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex justify-end gap-2 border-t border-gray-700 px-4 py-3", children: [
-    /* @__PURE__ */ jsxRuntimeExports.jsx("button", { type: "button", onClick: onCancel, className: "rounded border border-gray-600 bg-gray-800 px-4 py-2 text-sm font-semibold text-gray-100 hover:bg-gray-700", children: "Cancel" }),
-    /* @__PURE__ */ jsxRuntimeExports.jsx("button", { type: "button", onClick: onSave, disabled: saving, className: "rounded border border-sky-500 bg-sky-700 px-4 py-2 text-sm font-bold text-white hover:bg-sky-600 disabled:cursor-not-allowed disabled:opacity-60", children: saving ? "Saving..." : "Save Assignments" })
-  ] })
-] }) });
+  ] }) });
+};
 const getMasterLmpDisplayType = (syllabusItem) => {
   if (syllabusItem.type === "Flight") return "Flight";
   if (syllabusItem.type === "FTD") return "FTD";

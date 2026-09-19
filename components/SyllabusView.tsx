@@ -426,79 +426,121 @@ const AssignTrainingModal: React.FC<{
     onDeselectAllTrainees,
     onCancel,
     onSave,
-}) => (
-    <div className="fixed inset-0 z-[1000] flex items-center justify-center bg-black/70 p-4">
-        <div className="flex max-h-[90vh] w-full max-w-2xl flex-col rounded-lg border border-sky-700/50 bg-gray-900 shadow-2xl">
-            <div className="flex items-start justify-between gap-4 border-b border-gray-700 px-4 py-3">
-                <div>
-                    <h2 className="text-lg font-bold text-white">{heading}</h2>
-                    <p className="mt-1 text-xs text-gray-400">{title}</p>
+}) => {
+    const showTraineeAssignments = Boolean(onToggleTrainee);
+    const traineeGroups = trainees.reduce<Array<{ course: string; people: Trainee[] }>>((groups, person) => {
+        const course = String(person.course || 'No course').trim() || 'No course';
+        const existingGroup = groups.find(group => group.course === course);
+        if (existingGroup) {
+            existingGroup.people.push(person);
+        } else {
+            groups.push({ course, people: [person] });
+        }
+        return groups;
+    }, []);
+    const formatCourseHeading = (course: string): string => course === 'No course' ? 'No course' : `Course ${course}`;
+
+    const staffPanel = (
+        <section className="min-w-0 overflow-hidden rounded-lg border border-gray-700 bg-gray-950/40">
+            <div className="border-b border-sky-800/70 bg-sky-950/50 px-4 py-3">
+                <div className="flex items-center justify-between gap-3">
+                    <h3 className="text-sm font-extrabold uppercase tracking-[0.18em] text-sky-100">Staff</h3>
+                    <span className="rounded-full border border-sky-700/70 bg-sky-900/50 px-2.5 py-1 text-xs font-bold text-sky-100">{selectedStaffIds.size} selected</span>
                 </div>
-                <button type="button" onClick={onCancel} className="rounded px-2 py-1 text-sm text-gray-300 hover:bg-gray-800 hover:text-white">Close</button>
-            </div>
-            <div className="overflow-y-auto p-4">
-                <div className="mb-3 flex flex-wrap items-center gap-2">
-                    <span className="mr-1 text-[10px] font-bold uppercase tracking-wide text-gray-500">Staff</span>
+                <div className="mt-3 flex flex-wrap gap-2">
                     <button type="button" onClick={onSelectAll} className="rounded border border-gray-600 bg-gray-800 px-3 py-1.5 text-xs font-semibold text-gray-100 hover:bg-gray-700">Select All</button>
                     <button type="button" onClick={onDeselectAll} className="rounded border border-gray-600 bg-gray-800 px-3 py-1.5 text-xs font-semibold text-gray-100 hover:bg-gray-700">Deselect All</button>
-                    <span className="ml-auto text-xs text-gray-400">{selectedStaffIds.size} selected</span>
                 </div>
-                <div className="max-h-[420px] overflow-y-auto rounded border border-gray-700">
-                    {staff.length === 0 ? (
-                        <div className="p-4 text-sm italic text-gray-500">{emptyMessage}</div>
-                    ) : staff.map(person => (
-                        <label key={person.idNumber} className="flex cursor-pointer items-center gap-3 border-b border-gray-800 px-3 py-2 text-sm last:border-b-0 hover:bg-gray-800/70">
-                            <input
-                                type="checkbox"
-                                checked={selectedStaffIds.has(person.idNumber)}
-                                onChange={() => onToggle(person.idNumber)}
-                                className="h-4 w-4 rounded border-gray-600 bg-gray-800 text-sky-500 focus:ring-sky-500"
-                            />
-                            <span className="min-w-0 flex-1">
-                                <span className="block truncate font-semibold text-white">{person.rank} {person.name}</span>
-                                <span className="block text-xs text-gray-400">{person.role || 'No role'} · {person.flight || 'No flight'}</span>
-                            </span>
-                        </label>
-                    ))}
-                </div>
-                {onToggleTrainee && (
-                    <div className="mt-4">
-                        <div className="mb-3 flex flex-wrap items-center gap-2">
-                            <span className="mr-1 text-[10px] font-bold uppercase tracking-wide text-gray-500">Trainees</span>
-                            <button type="button" onClick={onSelectAllTrainees} className="rounded border border-gray-600 bg-gray-800 px-3 py-1.5 text-xs font-semibold text-gray-100 hover:bg-gray-700">Select All</button>
-                            <button type="button" onClick={onDeselectAllTrainees} className="rounded border border-gray-600 bg-gray-800 px-3 py-1.5 text-xs font-semibold text-gray-100 hover:bg-gray-700">Deselect All</button>
-                            <span className="ml-auto text-xs text-gray-400">{selectedTraineeIds.size} selected</span>
-                        </div>
-                        <div className="max-h-[260px] overflow-y-auto rounded border border-gray-700">
-                            {trainees.length === 0 ? (
-                                <div className="p-4 text-sm italic text-gray-500">No active trainees available for this unit.</div>
-                            ) : trainees.map(person => (
-                                <label key={person.idNumber} className="flex cursor-pointer items-center gap-3 border-b border-gray-800 px-3 py-2 text-sm last:border-b-0 hover:bg-gray-800/70">
-                                    <input
-                                        type="checkbox"
-                                        checked={selectedTraineeIds.has(person.idNumber)}
-                                        onChange={() => onToggleTrainee(person.idNumber)}
-                                        className="h-4 w-4 rounded border-gray-600 bg-gray-800 text-sky-500 focus:ring-sky-500"
-                                    />
-                                    <span className="min-w-0 flex-1">
-                                        <span className="block truncate font-semibold text-white">{person.rank} {person.name}</span>
-                                        <span className="block text-xs text-gray-400">{person.course || 'No course'} · {person.flight || 'No flight'}</span>
-                                    </span>
-                                </label>
-                            ))}
-                        </div>
-                    </div>
-                )}
             </div>
-            <div className="flex justify-end gap-2 border-t border-gray-700 px-4 py-3">
-                <button type="button" onClick={onCancel} className="rounded border border-gray-600 bg-gray-800 px-4 py-2 text-sm font-semibold text-gray-100 hover:bg-gray-700">Cancel</button>
-                <button type="button" onClick={onSave} disabled={saving} className="rounded border border-sky-500 bg-sky-700 px-4 py-2 text-sm font-bold text-white hover:bg-sky-600 disabled:cursor-not-allowed disabled:opacity-60">
-                    {saving ? 'Saving...' : 'Save Assignments'}
-                </button>
+            <div className={showTraineeAssignments ? 'max-h-[54vh] overflow-y-auto' : 'max-h-[420px] overflow-y-auto'}>
+                {staff.length === 0 ? (
+                    <div className="p-4 text-sm italic text-gray-500">{emptyMessage}</div>
+                ) : staff.map(person => (
+                    <label key={person.idNumber} className="flex cursor-pointer items-center gap-3 border-b border-gray-800 px-3 py-2 text-sm last:border-b-0 hover:bg-gray-800/70">
+                        <input
+                            type="checkbox"
+                            checked={selectedStaffIds.has(person.idNumber)}
+                            onChange={() => onToggle(person.idNumber)}
+                            className="h-4 w-4 rounded border-gray-600 bg-gray-800 text-sky-500 focus:ring-sky-500"
+                        />
+                        <span className="min-w-0 flex-1">
+                            <span className="block truncate font-semibold text-white">{person.rank} {person.name}</span>
+                            <span className="block text-xs text-gray-400">{person.role || 'No role'} · {person.flight || 'No flight'}</span>
+                        </span>
+                    </label>
+                ))}
+            </div>
+        </section>
+    );
+
+    const traineePanel = onToggleTrainee ? (
+        <section className="min-w-0 overflow-hidden rounded-lg border border-gray-700 bg-gray-950/40">
+            <div className="border-b border-teal-800/70 bg-teal-950/40 px-4 py-3">
+                <div className="flex items-center justify-between gap-3">
+                    <h3 className="text-sm font-extrabold uppercase tracking-[0.18em] text-teal-100">Trainees</h3>
+                    <span className="rounded-full border border-teal-700/70 bg-teal-900/50 px-2.5 py-1 text-xs font-bold text-teal-100">{selectedTraineeIds.size} selected</span>
+                </div>
+                <div className="mt-3 flex flex-wrap gap-2">
+                    <button type="button" onClick={onSelectAllTrainees} className="rounded border border-gray-600 bg-gray-800 px-3 py-1.5 text-xs font-semibold text-gray-100 hover:bg-gray-700">Select All</button>
+                    <button type="button" onClick={onDeselectAllTrainees} className="rounded border border-gray-600 bg-gray-800 px-3 py-1.5 text-xs font-semibold text-gray-100 hover:bg-gray-700">Deselect All</button>
+                </div>
+            </div>
+            <div className="max-h-[54vh] overflow-y-auto">
+                {trainees.length === 0 ? (
+                    <div className="p-4 text-sm italic text-gray-500">No active trainees available for this unit.</div>
+                ) : traineeGroups.map(group => (
+                    <div key={group.course} className="border-b border-gray-800 last:border-b-0">
+                        <div className="sticky top-0 z-10 border-b border-gray-800 bg-gray-900 px-3 py-2 text-[11px] font-extrabold uppercase tracking-[0.18em] text-teal-200">
+                            {formatCourseHeading(group.course)}
+                        </div>
+                        {group.people.map(person => (
+                            <label key={person.idNumber} className="flex cursor-pointer items-center gap-3 border-b border-gray-800 px-3 py-2 text-sm last:border-b-0 hover:bg-gray-800/70">
+                                <input
+                                    type="checkbox"
+                                    checked={selectedTraineeIds.has(person.idNumber)}
+                                    onChange={() => onToggleTrainee(person.idNumber)}
+                                    className="h-4 w-4 rounded border-gray-600 bg-gray-800 text-sky-500 focus:ring-sky-500"
+                                />
+                                <span className="min-w-0 flex-1">
+                                    <span className="block truncate font-semibold text-white">{person.rank} {person.name}</span>
+                                    <span className="block text-xs text-gray-400">{person.flight || 'No flight'}</span>
+                                </span>
+                            </label>
+                        ))}
+                    </div>
+                ))}
+            </div>
+        </section>
+    ) : null;
+
+    return (
+        <div className="fixed inset-0 z-[1000] flex items-center justify-center bg-black/70 p-4">
+            <div className={`flex max-h-[90vh] w-full flex-col rounded-lg border border-sky-700/50 bg-gray-900 shadow-2xl ${showTraineeAssignments ? 'max-w-5xl' : 'max-w-2xl'}`}>
+                <div className="flex items-start justify-between gap-4 border-b border-gray-700 px-4 py-3">
+                    <div>
+                        <h2 className="text-lg font-bold text-white">{heading}</h2>
+                        <p className="mt-1 text-xs text-gray-400">{title}</p>
+                    </div>
+                    <button type="button" onClick={onCancel} className="rounded px-2 py-1 text-sm text-gray-300 hover:bg-gray-800 hover:text-white">Close</button>
+                </div>
+                <div className="overflow-y-auto p-4">
+                    {showTraineeAssignments ? (
+                        <div className="grid gap-4 lg:grid-cols-2">
+                            {staffPanel}
+                            {traineePanel}
+                        </div>
+                    ) : staffPanel}
+                </div>
+                <div className="flex justify-end gap-2 border-t border-gray-700 px-4 py-3">
+                    <button type="button" onClick={onCancel} className="rounded border border-gray-600 bg-gray-800 px-4 py-2 text-sm font-semibold text-gray-100 hover:bg-gray-700">Cancel</button>
+                    <button type="button" onClick={onSave} disabled={saving} className="rounded border border-sky-500 bg-sky-700 px-4 py-2 text-sm font-bold text-white hover:bg-sky-600 disabled:cursor-not-allowed disabled:opacity-60">
+                        {saving ? 'Saving...' : 'Save Assignments'}
+                    </button>
+                </div>
             </div>
         </div>
-    </div>
-);
+    );
+};
 
 const getMasterLmpDisplayType = (syllabusItem: SyllabusItemDetail): 'Flight' | 'FTD' | 'CPT' | 'Ground' | 'Academics' => {
     if (syllabusItem.type === 'Flight') return 'Flight';
