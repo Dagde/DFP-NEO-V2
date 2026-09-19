@@ -848,6 +848,84 @@ type NeoAssistSection =
 type NeoAssistPage = 'inputs' | 'priority' | 'manual';
 
 const NEO_ASSIST_CURRENCY_TRACE_KEY = 'neo_assist_currency_persistence_trace';
+const NEO_ASSIST_MANUAL_TILE_TRACE_KEY = 'neo_assist_manual_tile_drop_trace';
+
+const summariseNeoAssistManualTileEvent = (event: Partial<ScheduleEvent> | null | undefined): Record<string, unknown> | null => {
+    if (!event) return null;
+    return {
+        id: event.id || null,
+        date: event.date || null,
+        type: event.type || null,
+        flightNumber: event.flightNumber || null,
+        eventName: event.eventName || null,
+        eventCode: event.eventCode || null,
+        pilot: event.pilot || null,
+        instructor: event.instructor || null,
+        student: event.student || null,
+        crew: event.crew || null,
+        resourceId: event.resourceId || null,
+        startTime: event.startTime ?? null,
+        duration: event.duration ?? null,
+        preStart: event.preStart ?? null,
+        postEnd: event.postEnd ?? null,
+        callsign: event.callsign || null,
+        aircraftNumber: event.aircraftNumber || null,
+        flightType: event.flightType || null,
+        soloOrDual: event.soloOrDual || null,
+        formationId: event.formationId || null,
+        formationPosition: event.formationPosition ?? null,
+        formationSize: event.formationSize ?? null,
+        fixedCrewGroup: event.fixedCrewGroup || null,
+        isDeploy: event.isDeploy || false,
+        manualCrewPairCount: Array.isArray((event as any).manualCrewPairs) ? (event as any).manualCrewPairs.length : 0,
+        crewSelectionCount: Array.isArray(event.crewSelectionOrder) ? event.crewSelectionOrder.length : 0,
+    };
+};
+
+const appendNeoAssistManualTileTrace = (stage: string, details: Record<string, unknown> = {}) => {
+    try {
+        if (typeof window === 'undefined') return;
+        const existing = JSON.parse(localStorage.getItem(NEO_ASSIST_MANUAL_TILE_TRACE_KEY) || '[]');
+        const entries = Array.isArray(existing) ? existing : [];
+        entries.push({
+            stage,
+            at: new Date().toISOString(),
+            url: window.location.href,
+            ...details,
+        });
+        localStorage.setItem(NEO_ASSIST_MANUAL_TILE_TRACE_KEY, JSON.stringify(entries.slice(-400)));
+    } catch (error) {
+        console.warn('[NEO_ASSIST_MANUAL_TILE_TRACE] Failed to record trace entry:', error);
+    }
+};
+
+const downloadNeoAssistManualTileTrace = (context: Record<string, unknown> = {}) => {
+    try {
+        if (typeof window === 'undefined') return;
+        const entries = JSON.parse(localStorage.getItem(NEO_ASSIST_MANUAL_TILE_TRACE_KEY) || '[]');
+        const report = {
+            reportType: 'NEO_ASSIST_MANUAL_TILE_DROP_TRACE',
+            generatedAt: new Date().toISOString(),
+            context,
+            entryCount: Array.isArray(entries) ? entries.length : 0,
+            entries: Array.isArray(entries) ? entries : [],
+        };
+        const blob = new Blob([JSON.stringify(report, null, 2)], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+        const safeUser = String(context.currentUserName || 'user').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || 'user';
+        const safeDate = String(context.date || context.buildDfpDate || 'no-date').replace(/[^0-9-]/g, '') || 'no-date';
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = `neo-assist-manual-tile-trace-${safeUser}-${safeDate}-${new Date().toISOString().replace(/[:.]/g, '-')}.json`;
+        document.body.appendChild(link);
+        link.click();
+        link.remove();
+        URL.revokeObjectURL(url);
+    } catch (error) {
+        console.error('[NEO_ASSIST_MANUAL_TILE_TRACE] Failed to download trace:', error);
+    }
+};
+
 const appendNeoAssistCurrencyTrace = (stage: string, details: Record<string, unknown> = {}) => {
     try {
         if (typeof window === 'undefined') return;
@@ -984,6 +1062,7 @@ const DfpSidePanelTimeline: React.FC<{
     onNavigateToSavedSpecialSettings?: () => void;
     onManualTileDragStart?: () => void;
     onOpenPrioritiesSection?: (target: string) => void;
+    manualTileTraceContext?: Record<string, unknown>;
 }> = ({
     flyingStartTime,
     flyingEndTime,
@@ -1063,6 +1142,7 @@ const DfpSidePanelTimeline: React.FC<{
     onNavigateToSavedSpecialSettings,
     onManualTileDragStart,
     onOpenPrioritiesSection,
+    manualTileTraceContext = {},
 }) => {
     const timelineStartHour = 6;
     const timelineEndHour = 25;
@@ -2328,8 +2408,20 @@ const DfpSidePanelTimeline: React.FC<{
         clearAssistDragPreview();
         setIsAssistTileDragging(true);
         event.dataTransfer.effectAllowed = 'copy';
-        event.dataTransfer.setData('application/neo-assist-event', JSON.stringify(assistDraftEvent));
+        const payload = JSON.stringify(assistDraftEvent);
+        event.dataTransfer.setData('application/neo-assist-event', payload);
         event.dataTransfer.setData('text/plain', assistEventLabel);
+        appendNeoAssistManualTileTrace('manual-tile-drag-start', {
+            ...manualTileTraceContext,
+            activeAssistPage,
+            activeAssistSection,
+            selectedResourceKind,
+            assistEventLabel,
+            assistFormationSize,
+            isDeploymentAssistTile,
+            payloadLength: payload.length,
+            draft: summariseNeoAssistManualTileEvent(assistDraftEvent),
+        });
         const dragPreview = createAssistDragImage();
         assistDragPreviewRef.current = dragPreview;
         positionAssistDragPreview(event.clientX, event.clientY);
@@ -2342,6 +2434,18 @@ const DfpSidePanelTimeline: React.FC<{
 
     const updateAssistTileDrag = (event: React.DragEvent<HTMLDivElement>) => {
         positionAssistDragPreview(event.clientX, event.clientY);
+    };
+
+    const endAssistTileDrag = () => {
+        appendNeoAssistManualTileTrace('manual-tile-drag-end', {
+            ...manualTileTraceContext,
+            activeAssistPage,
+            activeAssistSection,
+            selectedResourceKind,
+            assistEventLabel,
+            draft: summariseNeoAssistManualTileEvent(assistDraftEvent),
+        });
+        clearAssistDragPreview();
     };
 
     useEffect(() => {
@@ -7540,7 +7644,7 @@ const DfpSidePanelTimeline: React.FC<{
                                         onDragStart={startAssistTileDrag}
                                         onDrag={updateAssistTileDrag}
                                         onDragOver={updateAssistTileDrag}
-                                        onDragEnd={clearAssistDragPreview}
+                                        onDragEnd={endAssistTileDrag}
                                         className={`neo-assist-tile-preview ${isAssistTileDragging ? 'neo-assist-tile-preview-dragging' : ''} w-full max-w-[520px] cursor-grab rounded-md border bg-slate-100 p-2 active:cursor-grabbing ${
                                             isDeploymentAssistTile ? 'border-slate-500/45' : 'border-pink-300/60'
                                         }`}
@@ -7582,9 +7686,26 @@ const DfpSidePanelTimeline: React.FC<{
                                     </div>
                                 </div>
                                 <div className="rounded-lg border border-slate-300 bg-white p-4 shadow-sm">
-                                    <div className="mb-3 border-b border-slate-200 pb-2">
-                                        <h4 className="text-[14px] font-semibold text-slate-950">Manual Tile Creator</h4>
-                                        <p className="text-[11px] text-slate-600">Create one specific DFP tile manually. These controls are separate from NEO Build priority settings.</p>
+                                    <div className="mb-3 flex items-start justify-between gap-3 border-b border-slate-200 pb-2">
+                                        <div>
+                                            <h4 className="text-[14px] font-semibold text-slate-950">Manual Tile Creator</h4>
+                                            <p className="text-[11px] text-slate-600">Create one specific DFP tile manually. These controls are separate from NEO Build priority settings.</p>
+                                        </div>
+                                        <button
+                                            type="button"
+                                            onClick={() => downloadNeoAssistManualTileTrace({
+                                                ...manualTileTraceContext,
+                                                activeAssistPage,
+                                                activeAssistSection,
+                                                selectedResourceKind,
+                                                assistEventLabel,
+                                                isAssistTileDragging,
+                                                draft: summariseNeoAssistManualTileEvent(assistDraftEvent),
+                                            })}
+                                            className="shrink-0 rounded-md border border-slate-300 bg-slate-50 px-2.5 py-1.5 text-[10px] font-semibold text-slate-600 transition hover:border-cyan-300 hover:bg-cyan-50 hover:text-cyan-800"
+                                        >
+                                            Download Tile Trace
+                                        </button>
                                     </div>
                                     {renderAssistSection()}
                                 </div>
@@ -47777,11 +47898,33 @@ appliedUpdates.forEach(update => {
     }, [activeAircraftResourcePrefix, neoAssistCallsignOptions]);
 
     const handleProgramScheduleExternalEventDrop = useCallback((draft: ScheduleEvent, placement: NeoAssistDropPlacement) => {
+        appendNeoAssistManualTileTrace('program-schedule-drop-received', {
+            date,
+            activeOperationalModel,
+            activeUnitCode,
+            locationCode: school,
+            placement,
+            resourcePoolCount: buildResources.length,
+            resourcePoolContainsPlacement: buildResources.includes(placement.resourceId),
+            currentEventsForDate: (publishedSchedules[date] || []).length,
+            draft: summariseNeoAssistManualTileEvent(draft),
+        });
         if (isPastDfpDate(date)) {
+            appendNeoAssistManualTileTrace('program-schedule-drop-blocked-past-date', {
+                date,
+                placement,
+                draft: summariseNeoAssistManualTileEvent(draft),
+            });
             denyPastDfpEdit('add tiles');
             return;
         }
         const droppedEvents = buildDroppedNeoAssistEvents(draft, placement, date, buildResources);
+        appendNeoAssistManualTileTrace('program-schedule-events-built', {
+            date,
+            placement,
+            droppedEventCount: droppedEvents.length,
+            droppedEvents: droppedEvents.map(summariseNeoAssistManualTileEvent),
+        });
         const droppedEventsByDate = droppedEvents.reduce<Record<string, ScheduleEvent[]>>((groups, event) => {
             const eventDate = event.date || date;
             groups[eventDate] = [...(groups[eventDate] || []), event];
@@ -47800,21 +47943,59 @@ appliedUpdates.forEach(update => {
             });
             return next;
         });
+        appendNeoAssistManualTileTrace('program-schedule-state-write-planned', {
+            date,
+            placement,
+            dateCountsAfterWrite: Object.fromEntries(
+                Object.entries(nextSchedulesByDate).map(([eventDate, eventsForDate]) => [eventDate, eventsForDate.length])
+            ),
+            appendedEventIds: droppedEvents.map(event => event.id),
+        });
         Object.entries(nextSchedulesByDate).forEach(([eventDate, eventsForDate]) => {
             persistScheduleForDate(eventDate, eventsForDate);
         });
+        appendNeoAssistManualTileTrace('program-schedule-persist-requested', {
+            placement,
+            persistedDates: Object.keys(nextSchedulesByDate),
+            appendedEventIds: droppedEvents.map(event => event.id),
+        });
         logAudit('Program Schedule', 'Create', 'Added NEO Assist tile', `${droppedEvents.length} x ${draft.flightNumber} at ${placement.resourceId}`);
-    }, [buildDroppedNeoAssistEvents, buildResources, date, denyPastDfpEdit, isPastDfpDate, persistScheduleForDate, publishedSchedules]);
+    }, [activeOperationalModel, activeUnitCode, buildDroppedNeoAssistEvents, buildResources, date, denyPastDfpEdit, isPastDfpDate, persistScheduleForDate, publishedSchedules, school]);
 
     const handleNextDayExternalEventDrop = useCallback((draft: ScheduleEvent, placement: NeoAssistDropPlacement) => {
+        appendNeoAssistManualTileTrace('next-day-build-drop-received', {
+            buildDfpDate,
+            activeOperationalModel,
+            activeUnitCode,
+            locationCode: school,
+            placement,
+            resourcePoolCount: buildResources.length,
+            resourcePoolContainsPlacement: buildResources.includes(placement.resourceId),
+            currentNextDayEventCount: nextDayBuildEvents.length,
+            draft: summariseNeoAssistManualTileEvent(draft),
+        });
         const droppedEvents = buildDroppedNeoAssistEvents(draft, placement, buildDfpDate, buildResources);
+        appendNeoAssistManualTileTrace('next-day-build-events-built', {
+            buildDfpDate,
+            placement,
+            droppedEventCount: droppedEvents.length,
+            droppedEvents: droppedEvents.map(summariseNeoAssistManualTileEvent),
+        });
         const nextDayEvents = droppedEvents.map(droppedEvent => {
             const { date: _date, ...nextDayEvent } = droppedEvent;
             return nextDayEvent;
         });
         setNextDayBuildEvents(prev => [...prev, ...nextDayEvents]);
+        appendNeoAssistManualTileTrace('next-day-build-state-write-planned', {
+            buildDfpDate,
+            placement,
+            currentNextDayEventCount: nextDayBuildEvents.length,
+            plannedNextDayEventCount: nextDayBuildEvents.length + nextDayEvents.length,
+            appendedEventIds: nextDayEvents.map(event => event.id),
+            nextDayEvents: nextDayEvents.map(summariseNeoAssistManualTileEvent),
+        });
         logAudit('Next Day Build', 'Create', 'Added NEO Assist tile', `${droppedEvents.length} x ${draft.flightNumber} at ${placement.resourceId}`);
-    }, [buildDroppedNeoAssistEvents, buildDfpDate, buildResources]);
+    }, [activeOperationalModel, activeUnitCode, buildDroppedNeoAssistEvents, buildDfpDate, buildResources, nextDayBuildEvents.length, school]);
 
     const syllabusForModal = useMemo(() => {
         return syllabusDetails.map(item => item.id);
@@ -55586,6 +55767,15 @@ appliedUpdates.forEach(update => {
                                     onNavigateToCurrencySettings={() => handleNavigateToSettingsSection({ sectionId: 'sct-events', unitCode: activeUnitCode })}
                                     onNavigateToSavedSpecialSettings={() => handleNavigateToSettingsSection({ sectionId: 'platform-task-profiles', unitCode: activeUnitCode })}
                                     onManualTileDragStart={() => setShowDfpSidePanel(false)}
+                                    manualTileTraceContext={{
+                                        currentUserName,
+                                        activeView,
+                                        date,
+                                        buildDfpDate,
+                                        activeOperationalModel,
+                                        activeUnitCode,
+                                        locationCode: school,
+                                    }}
                                     onOpenPrioritiesExclusions={() => {
                                         try {
                                             localStorage.setItem('neo_open_departure_arrival_exclusions', '1');

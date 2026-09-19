@@ -10,6 +10,47 @@ import { getResourceCategory as getConfiguredResourceCategory } from '../utils/r
 import { endDfpDragDiagnostic, recordDfpDragFlushDiagnostic, recordDfpDragMoveDiagnostic, startDfpDragDiagnostic } from '../utils/dfpDragDiagnostics';
 import { DEFAULT_DISPATCH_RATE_WINDOW_MINUTES, normaliseDispatchRateWindowMinutes } from '../utils/dispatchRate';
 
+const NEO_ASSIST_MANUAL_TILE_TRACE_KEY = 'neo_assist_manual_tile_drop_trace';
+
+const appendNeoAssistManualTileTrace = (stage: string, details: Record<string, unknown> = {}) => {
+    try {
+        if (typeof window === 'undefined') return;
+        const existing = JSON.parse(localStorage.getItem(NEO_ASSIST_MANUAL_TILE_TRACE_KEY) || '[]');
+        const entries = Array.isArray(existing) ? existing : [];
+        entries.push({
+            stage,
+            at: new Date().toISOString(),
+            url: window.location.href,
+            ...details,
+        });
+        localStorage.setItem(NEO_ASSIST_MANUAL_TILE_TRACE_KEY, JSON.stringify(entries.slice(-400)));
+    } catch (error) {
+        console.warn('[NEO_ASSIST_MANUAL_TILE_TRACE] Failed to record next-day trace entry:', error);
+    }
+};
+
+const summariseNeoAssistDropEvent = (event: Partial<ScheduleEvent> | null | undefined): Record<string, unknown> | null => {
+    if (!event) return null;
+    return {
+        id: event.id || null,
+        date: event.date || null,
+        type: event.type || null,
+        flightNumber: event.flightNumber || null,
+        eventName: event.eventName || null,
+        eventCode: event.eventCode || null,
+        pilot: event.pilot || null,
+        instructor: event.instructor || null,
+        student: event.student || null,
+        crew: event.crew || null,
+        resourceId: event.resourceId || null,
+        startTime: event.startTime ?? null,
+        duration: event.duration ?? null,
+        callsign: event.callsign || null,
+        aircraftNumber: event.aircraftNumber || null,
+        formationSize: event.formationSize ?? null,
+    };
+};
+
 
 interface NextDayBuildViewProps {
   date: string;
@@ -288,13 +329,47 @@ export const NextDayBuildView: React.FC<NextDayBuildViewProps> = ({
     const handleExternalDrop = (event: React.DragEvent<HTMLDivElement>) => {
         if (!onExternalEventDrop) return;
         const raw = event.dataTransfer.getData('application/neo-assist-event');
-        if (!raw) return;
+        if (!raw) {
+            appendNeoAssistManualTileTrace('next-day-grid-drop-missing-payload', {
+                date,
+                clientX: event.clientX,
+                clientY: event.clientY,
+                dragTypes: Array.from(event.dataTransfer.types),
+            });
+            return;
+        }
         const placement = getExternalDropPlacement(event);
-        if (!placement) return;
+        if (!placement) {
+            appendNeoAssistManualTileTrace('next-day-grid-drop-no-placement', {
+                date,
+                clientX: event.clientX,
+                clientY: event.clientY,
+                dragTypes: Array.from(event.dataTransfer.types),
+                rawLength: raw.length,
+                resourceCount: resources.length,
+            });
+            return;
+        }
         event.preventDefault();
         try {
-            onExternalEventDrop(JSON.parse(raw) as ScheduleEvent, placement);
+            const parsedEvent = JSON.parse(raw) as ScheduleEvent;
+            appendNeoAssistManualTileTrace('next-day-grid-drop-parsed', {
+                date,
+                placement,
+                clientX: event.clientX,
+                clientY: event.clientY,
+                resourceCount: resources.length,
+                eventsBeforeDrop: events.length,
+                parsed: summariseNeoAssistDropEvent(parsedEvent),
+            });
+            onExternalEventDrop(parsedEvent, placement);
         } catch (error) {
+            appendNeoAssistManualTileTrace('next-day-grid-drop-parse-error', {
+                date,
+                placement,
+                rawLength: raw.length,
+                error: error instanceof Error ? error.message : String(error),
+            });
             console.warn('[NEO Assist] Failed to drop assist tile:', error);
         }
     };
