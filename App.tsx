@@ -31752,9 +31752,9 @@ const App: React.FC = () => {
             if (!snapshotHasBaselineEvents && prev[baselineKey]?.length > 0) {
                 return prev;
             }
-            if (!replace && prev[baselineKey] && events.length > 0) return prev;
-            if (!replace && prev[baselineKey] && events.length === 0) return prev;
-            if (replace && prev[baselineKey] && baselineEvts.length > 0) {
+            if (!replace && prev[baselineKey] && events.length > 0 && !snapshotHasBaselineEvents) return prev;
+            if (!replace && prev[baselineKey] && events.length === 0 && !snapshotHasBaselineEvents) return prev;
+            if ((replace || snapshotHasBaselineEvents) && prev[baselineKey] && baselineEvts.length > 0) {
                 const existingSignature = getSnapshotEventsSignature(prev[baselineKey] || []);
                 const incomingSignature = getSnapshotEventsSignature(baselineEvts);
                 if (existingSignature === incomingSignature) return prev;
