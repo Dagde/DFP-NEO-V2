@@ -10036,11 +10036,11 @@ type DfpBuildProgress = {
     phase?: 'running' | 'complete' | 'error';
 };
 
-function generateDfpInternal(
+async function generateDfpInternal(
     config: DfpConfig,
     setProgress: (progress: DfpBuildProgress) => void,
     publishedSchedules: Record<string, ScheduleEvent[]>
-): Omit<ScheduleEvent, 'date'>[] {
+): Promise<Omit<ScheduleEvent, 'date'>[]> {
     const buildResourceDisplayNames = config.resourceDisplayNames ?? DEFAULT_RESOURCE_DISPLAY_NAMES;
     const ftdResourceLabel = buildResourceDisplayNames.ftd;
     const cptResourceLabel = buildResourceDisplayNames.cpt;
@@ -10071,7 +10071,14 @@ function generateDfpInternal(
         buildCalculationStats.combinations += 1;
         buildCalculationStats.calculations += Math.max(1, Math.round(calculationWeight));
     };
-    const recordProgress = (progress: DfpBuildProgress) => {
+    const waitForProgressPaint = () => new Promise<void>(resolve => {
+        if (typeof requestAnimationFrame === 'function') {
+            requestAnimationFrame(() => window.setTimeout(resolve, 0));
+            return;
+        }
+        setTimeout(resolve, 0);
+    });
+    const recordProgress = async (progress: DfpBuildProgress) => {
         const nextProgress: DfpBuildProgress = {
             ...progress,
             iterations: progress.iterations ?? buildCalculationStats.iterations,
@@ -10089,6 +10096,7 @@ function generateDfpInternal(
             generatedEvents: nextProgress.generatedEvents,
         });
         setProgress(nextProgress);
+        await waitForProgressPaint();
     };
     const neoBuildVerboseDiagnostics = localStorage.getItem('neo_build_verbose_diag') === 'true';
     const neoBuildLiveDiagnostics = localStorage.getItem('neo_build_live_diag') === 'true';
@@ -10958,7 +10966,7 @@ function generateDfpInternal(
 
     // enforceDayNightSeparation and detectConflictsForEventWithDayNightSeparation are now defined at component level above
 
-    recordProgress({ message: 'Initializing DFP build...', percentage: 0 });
+    await recordProgress({ message: 'Initializing DFP build...', percentage: 0 });
     buildDebugLog('[SEQ-DIAG] generateDfpInternal entered');
     if (windowNormalisationWarnings.length > 0) {
         console.warn('[NEO-Build][WindowDiagnostics] Build window values were normalised before scheduling.', {
@@ -12135,7 +12143,7 @@ function generateDfpInternal(
         rawSource: event?._source || null,
     });
 
-    const runFixedCrewBuild = (): Omit<ScheduleEvent, 'date'>[] => {
+    const runFixedCrewBuild = async (): Promise<Omit<ScheduleEvent, 'date'>[]> => {
         const diag = neoBuildDiag.fixedCrewPriority;
         const fixedCrewUnit = buildActiveUnitCode;
         const isPooledCrewBuild = buildOperationalModel === 'pooled_crew';
@@ -14223,7 +14231,7 @@ function generateDfpInternal(
                 ...summarizeFixedCrewSctEvent(item.event, `fixedCrewQueue:${item.source}`),
                 fixedStartTime: item.fixedStartTime ?? null,
             }));
-        recordProgress({ message: 'Scheduling Fixed Crew events...', percentage: 55 });
+        await recordProgress({ message: 'Scheduling Fixed Crew events...', percentage: 55 });
         const schedulingStart = fixedCrewPerfNow();
         fixedCrewQueue.forEach(item => {
             tryPlaceFixedCrewEvent(item.event, item.source, item.fixedStartTime);
@@ -14424,7 +14432,7 @@ function generateDfpInternal(
             })),
         };
         saveNeoBuildDiag('final');
-        recordProgress({
+        await recordProgress({
             message: 'Build complete!',
             percentage: 100,
             generatedEvents: sortedFixedCrewEvents.length,
@@ -14502,7 +14510,7 @@ function generateDfpInternal(
     };
 
     if (isFixedCrewLikeOperationalModel(buildOperationalModel)) {
-        return runFixedCrewBuild();
+        return await runFixedCrewBuild();
     }
 
     const remedialInstructorOverrideKey = (traineeName?: string, eventCode?: string): string =>
@@ -15233,7 +15241,7 @@ function generateDfpInternal(
     });
     buildDebugLog('DEBUG ===== RESOURCE ASSIGNMENT COMPLETE =====');
 
-    recordProgress({ message: 'Compiling "Next Event" lists...', percentage: 10 });
+    await recordProgress({ message: 'Compiling "Next Event" lists...', percentage: 10 });
 
     const activeTrainees = trainees.filter(t =>
         !t.isPaused &&
@@ -15418,7 +15426,7 @@ function generateDfpInternal(
 
     const nightFlyingTraineeNames = new Set(nextEventLists.bnf.map(t => t.fullName));
 
-    recordProgress({ message: 'Ranking trainees...', percentage: 20 });
+    await recordProgress({ message: 'Ranking trainees...', percentage: 20 });
     const getBuildProgressCount = (trainee: Trainee): number => {
         const completed = new Set<string>();
         (scores.get(trainee.fullName) || [])
@@ -15729,7 +15737,7 @@ function generateDfpInternal(
 
     // Apply reordering only to the flight list (Day Next Event List)
     nextEventLists.flight = reorderSoloWithTwrDi(nextEventLists.flight);
-    recordProgress({ message: 'Allocating course slots...', percentage: 30 });
+    await recordProgress({ message: 'Allocating course slots...', percentage: 30 });
 
     // Helper: Normalize percentages to sum to 100%
     const normalizePercentages = (percentages: Map<string, number>): Map<string, number> => {
@@ -16405,7 +16413,7 @@ const applyCoursePriority = (rankedList: Trainee[], diagnosticLabel = 'unlabelle
         return resolvedDuration;
     };
 
-    const scheduleList = (
+    const scheduleList = async (
         list: Trainee[],
         type: 'flight' | 'ftd' | 'cpt' | 'ground',
         isPlusOne: boolean,
@@ -16421,7 +16429,7 @@ const applyCoursePriority = (rankedList: Trainee[], diagnosticLabel = 'unlabelle
         const listName = diagnosticLabel || `${isNightPass ? 'BNF' : type.toUpperCase()} ${isPlusOne ? 'Next+1' : 'Next'}`;
         const isMandatoryTraceList = listName.includes('Mandatory Remedial');
         const scheduleListStartedAt = performance.now();
-        recordProgress({ message: `Placing ${listName} events...`, percentage: 40 + (['flight', 'ftd', 'cpt', 'ground'].indexOf(type) * 10) });
+        await recordProgress({ message: `Placing ${listName} events...`, percentage: 40 + (['flight', 'ftd', 'cpt', 'ground'].indexOf(type) * 10) });
 
         let unplacedTrainees = [...list];
         let placedThisPass = true;
@@ -18906,7 +18914,7 @@ const applyCoursePriority = (rankedList: Trainee[], diagnosticLabel = 'unlabelle
 
     // Schedule Duty Supervisors only when the active DFP Resource Rows include that row.
     if (showDutySupervisorRow) {
-        recordProgress({ message: 'Scheduling Duty Supervisors...', percentage: 40 });
+        await recordProgress({ message: 'Scheduling Duty Supervisors...', percentage: 40 });
 
     // Duty Supervisor MUST cover entire Day flying window regardless of flight schedule
     const dayFlights = generatedEvents.filter(e => e.type === 'flight' && !e.resourceId.startsWith('STBY') && !e.resourceId.startsWith('BNF-STBY'));
@@ -18917,7 +18925,7 @@ const applyCoursePriority = (rankedList: Trainee[], diagnosticLabel = 'unlabelle
 
     // Always schedule Duty Supervisor for day window, even if no flights
     if (dutySupStartTime >= dutySupEndTime) {
-        recordProgress({ message: 'Invalid day flying window', percentage: 90 });
+        await recordProgress({ message: 'Invalid day flying window', percentage: 90 });
         // Continue to night flying setup even if day window is invalid
     }
 
@@ -19118,7 +19126,7 @@ const applyCoursePriority = (rankedList: Trainee[], diagnosticLabel = 'unlabelle
 
     // 2. Schedule DUTY SUP for Night Flying window when any night flying is programmed
     if (isNightFlyingProgrammed() && nightDutySup) {
-        recordProgress({ message: 'Scheduling Night Duty Supervisor...', percentage: 42 });
+        await recordProgress({ message: 'Scheduling Night Duty Supervisor...', percentage: 42 });
         buildDebugLog(`Scheduling night duty supervisor: ${nightDutySup.name}`);
 
         const existingNightDutySup = generatedEvents.find(e => {
@@ -23221,16 +23229,16 @@ const applyCoursePriority = (rankedList: Trainee[], diagnosticLabel = 'unlabelle
         currencyFtdPersonKeys.has(normalizeBuildPersonnelName(event.student || event.pilot || event.instructor || ''))
     );
     if (!isAirCombatBuild && earlyCurrencyPriorityEvents.length > 0) {
-        recordProgress({ message: 'Scheduling Currency FTD Priority Events...', percentage: 44 });
+        await recordProgress({ message: 'Scheduling Currency FTD Priority Events...', percentage: 44 });
         scheduleCurrencyPriorityEvents(earlyCurrencyPriorityEvents);
     }
 
     // NEW SCHEDULING ORDER (Lines 105-126 from DFP Build Rules)
     // 3. Schedule Day Flight Events: a) Highest Priority, b) Next Events
-    recordProgress({ message: 'Scheduling Day Flight Events (Priority)...', percentage: 45 });
+    await recordProgress({ message: 'Scheduling Day Flight Events (Priority)...', percentage: 45 });
     // Highest Priority Flight Events are already added at the start
 
-    recordProgress({ message: 'Scheduling Day Flight Events (Next)...', percentage: 50 });
+    await recordProgress({ message: 'Scheduling Day Flight Events (Next)...', percentage: 50 });
 
     // SOLO SCHEDULING:
     // Solo flights (BGF11/BGF18 or sortieType='Solo') are scheduled AFTER all dual flights.
@@ -23805,13 +23813,13 @@ const applyCoursePriority = (rankedList: Trainee[], diagnosticLabel = 'unlabelle
         return candidateStarts.length > 0 ? Math.min(...candidateStarts) : null;
     };
     let deferredCurrencyFlightsScheduled = false;
-    const scheduleDeferredCurrencyFlights = () => {
+    const scheduleDeferredCurrencyFlights = async () => {
         if (deferredCurrencyFlightsScheduled || deferredCurrencyFlightPriorityEvents.length === 0) return;
-        recordProgress({ message: 'Scheduling Currency Flight Priority Events...', percentage: 54 });
+        await recordProgress({ message: 'Scheduling Currency Flight Priority Events...', percentage: 54 });
         scheduleCurrencyPriorityEvents(deferredCurrencyFlightPriorityEvents);
         deferredCurrencyFlightsScheduled = true;
     };
-    const _schedulePrioritizedDualsAndFormations = (
+    const _schedulePrioritizedDualsAndFormations = async (
         prioritizedFlightList: Trainee[],
         startTimeBoundary: number,
         endTimeBoundary: number,
@@ -23824,9 +23832,9 @@ const applyCoursePriority = (rankedList: Trainee[], diagnosticLabel = 'unlabelle
         let normalSegment = 1;
         let formationSegment = 1;
 
-        const flushPendingNormals = () => {
+        const flushPendingNormals = async () => {
             if (pendingNormalDuals.length === 0) return;
-            scheduleList(
+            await scheduleList(
                 [...pendingNormalDuals],
                 'flight',
                 false,
@@ -23841,16 +23849,16 @@ const applyCoursePriority = (rankedList: Trainee[], diagnosticLabel = 'unlabelle
             pendingNormalDuals.length = 0;
         };
 
-        prioritizedFlightList.forEach(trainee => {
-            if (_isSoloTrainee(trainee)) return;
+        for (const trainee of prioritizedFlightList) {
+            if (_isSoloTrainee(trainee)) continue;
             const next = traineeNextEventMap.get(getBuildTraineeKey(trainee))?.next;
             if (next && isMultiResourceFlightItem(next) && !isRemedialSyllabusItem(next)) {
                 const eventKey = getFormationEventKey(next);
-                if (_placedFormationKeys.has(eventKey)) return;
-                if (attemptedFormationKeys.has(eventKey)) return;
+                if (_placedFormationKeys.has(eventKey)) continue;
+                if (attemptedFormationKeys.has(eventKey)) continue;
                 attemptedFormationKeys.add(eventKey);
                 const group = _formationGroupByKey.get(eventKey);
-                flushPendingNormals();
+                await flushPendingNormals();
                 if (group) {
                     traceFormation('groupBuildTrace', {
                         phase: 'formation-group-reached-priority-position',
@@ -23871,19 +23879,19 @@ const applyCoursePriority = (rankedList: Trainee[], diagnosticLabel = 'unlabelle
                     );
                     placedKeys.forEach(key => _placedFormationKeys.add(key));
                 }
-                return;
+                continue;
             }
 
             pendingNormalDuals.push(trainee);
-        });
+        }
 
-        flushPendingNormals();
+        await flushPendingNormals();
     };
     const getTaskingRequestedStart = (event: ScheduleEvent): number => {
         const requestedStart = Number.isFinite(Number(event.startTime)) ? Number(event.startTime) : flyingStartTime;
         return Math.max(flyingStartTime, Math.round(requestedStart * 12) / 12);
     };
-    const schedulePrioritizedDualsAndFormationsWithTaskingBreaks = (
+    const schedulePrioritizedDualsAndFormationsWithTaskingBreaks = async (
         prioritizedFlightList: Trainee[],
         startTimeBoundary: number,
         endTimeBoundary: number,
@@ -23906,7 +23914,7 @@ const applyCoursePriority = (rankedList: Trainee[], diagnosticLabel = 'unlabelle
         let segment = 1;
         for (const taskingTime of taskingTimes) {
             if (taskingTime > currentStart + 0.001) {
-                _schedulePrioritizedDualsAndFormations(
+                await _schedulePrioritizedDualsAndFormations(
                     prioritizedFlightList,
                     currentStart,
                     endTimeBoundary,
@@ -23917,14 +23925,14 @@ const applyCoursePriority = (rankedList: Trainee[], diagnosticLabel = 'unlabelle
             }
             const dueTaskingEvents = pendingTaskingEvents().filter(event => getTaskingRequestedStart(event) <= taskingTime + 0.001);
             if (dueTaskingEvents.length > 0) {
-                recordProgress({ message: 'Scheduling directed task priority events...', percentage: 45 });
+                await recordProgress({ message: 'Scheduling directed task priority events...', percentage: 45 });
                 scheduleTaskingPriorityEvents(dueTaskingEvents);
             }
             currentStart = Math.max(currentStart, taskingTime);
             segment++;
         }
 
-        _schedulePrioritizedDualsAndFormations(
+        await _schedulePrioritizedDualsAndFormations(
             prioritizedFlightList,
             currentStart,
             endTimeBoundary,
@@ -24011,7 +24019,7 @@ const applyCoursePriority = (rankedList: Trainee[], diagnosticLabel = 'unlabelle
             nightWindow: { start: commenceNightFlying, end: ceaseNightFlying },
         };
         if (airCombatNightSchedulingActive && showDutySupervisorRow) {
-            recordProgress({ message: 'Scheduling Air Combat night events...', percentage: 43 });
+            await recordProgress({ message: 'Scheduling Air Combat night events...', percentage: 43 });
             if (!nightDutySup) {
                 nightDutySup = dutySupEligible.find(sup =>
                     !isPersonStaticallyUnavailable(sup, commenceNightFlying, ceaseNightFlying, buildDate, 'duty_sup') &&
@@ -24052,14 +24060,14 @@ const applyCoursePriority = (rankedList: Trainee[], diagnosticLabel = 'unlabelle
             scheduleAirCombatTrainingPriorityEvents('night');
         }
         if (airCombatDayTaskingEvents.length > 0) {
-            recordProgress({ message: 'Scheduling Air Combat mandatory directed task requests...', percentage: 45 });
+            await recordProgress({ message: 'Scheduling Air Combat mandatory directed task requests...', percentage: 45 });
             scheduleTaskingPriorityEvents(airCombatDayTaskingEvents);
         }
         if (airCombatDayCurrencyEvents.length > 0) {
-            recordProgress({ message: 'Scheduling Air Combat currency events...', percentage: 50 });
+            await recordProgress({ message: 'Scheduling Air Combat currency events...', percentage: 50 });
             scheduleCurrencyPriorityEvents(airCombatDayCurrencyEvents, 'day');
         }
-        recordProgress({ message: 'Scheduling Air Combat priority lists...', percentage: 55 });
+        await recordProgress({ message: 'Scheduling Air Combat priority lists...', percentage: 55 });
         scheduleAirCombatTrainingPriorityEvents('day');
     }
 
@@ -24069,7 +24077,7 @@ const applyCoursePriority = (rankedList: Trainee[], diagnosticLabel = 'unlabelle
     if (_mandatoryDayFlightList.length > 0) {
         const firstRemedialFlightStart = REMEDIAL_EARLIEST_START + getDispatchSearchStepHours('flight');
         if (flyingStartTime < REMEDIAL_EARLIEST_START) {
-            schedulePrioritizedDualsAndFormationsWithTaskingBreaks(
+            await schedulePrioritizedDualsAndFormationsWithTaskingBreaks(
                 _allFlightList,
                 flyingStartTime,
                 flyingEndTime,
@@ -24091,7 +24099,7 @@ const applyCoursePriority = (rankedList: Trainee[], diagnosticLabel = 'unlabelle
         );
         buildDebugLog(`[FLIGHT-WAVE] Mandatory/post-1000 wave aligned from ${_fmtT(firstRemedialFlightStart)} to ${_fmtT(alignedPostMandatoryStart)} so remedials start the clean ${buildAircraftResourcePrefix} wave.`);
 
-        scheduleList(
+        await scheduleList(
             _mandatoryDayFlightList,
             'flight',
             false,
@@ -24105,7 +24113,7 @@ const applyCoursePriority = (rankedList: Trainee[], diagnosticLabel = 'unlabelle
 
         const currencyInsertionStart = getDeferredCurrencyFlightInsertionStart();
         if (currencyInsertionStart !== null && currencyInsertionStart > alignedPostMandatoryStart + 0.001) {
-            schedulePrioritizedDualsAndFormationsWithTaskingBreaks(
+            await schedulePrioritizedDualsAndFormationsWithTaskingBreaks(
                 _allFlightList,
                 alignedPostMandatoryStart,
                 flyingEndTime,
@@ -24114,8 +24122,8 @@ const applyCoursePriority = (rankedList: Trainee[], diagnosticLabel = 'unlabelle
                 currencyInsertionStart
             );
         }
-        scheduleDeferredCurrencyFlights();
-        schedulePrioritizedDualsAndFormationsWithTaskingBreaks(
+        await scheduleDeferredCurrencyFlights();
+        await schedulePrioritizedDualsAndFormationsWithTaskingBreaks(
             _allFlightList,
             Math.max(alignedPostMandatoryStart, currencyInsertionStart ?? alignedPostMandatoryStart),
             flyingEndTime,
@@ -24125,7 +24133,7 @@ const applyCoursePriority = (rankedList: Trainee[], diagnosticLabel = 'unlabelle
     } else {
         const currencyInsertionStart = getDeferredCurrencyFlightInsertionStart();
         if (currencyInsertionStart !== null && currencyInsertionStart > flyingStartTime + 0.001) {
-            schedulePrioritizedDualsAndFormationsWithTaskingBreaks(
+            await schedulePrioritizedDualsAndFormationsWithTaskingBreaks(
                 _allFlightList,
                 flyingStartTime,
                 flyingEndTime,
@@ -24133,8 +24141,8 @@ const applyCoursePriority = (rankedList: Trainee[], diagnosticLabel = 'unlabelle
                 'FLIGHT Formation Groups Pre-Currency',
                 currencyInsertionStart
             );
-            scheduleDeferredCurrencyFlights();
-            schedulePrioritizedDualsAndFormationsWithTaskingBreaks(
+            await scheduleDeferredCurrencyFlights();
+            await schedulePrioritizedDualsAndFormationsWithTaskingBreaks(
                 _allFlightList,
                 currencyInsertionStart,
                 flyingEndTime,
@@ -24142,8 +24150,8 @@ const applyCoursePriority = (rankedList: Trainee[], diagnosticLabel = 'unlabelle
                 'FLIGHT Formation Groups'
             );
         } else {
-            scheduleDeferredCurrencyFlights();
-            schedulePrioritizedDualsAndFormationsWithTaskingBreaks(
+            await scheduleDeferredCurrencyFlights();
+            await schedulePrioritizedDualsAndFormationsWithTaskingBreaks(
                 _allFlightList,
                 flyingStartTime,
                 flyingEndTime,
@@ -24240,7 +24248,7 @@ const applyCoursePriority = (rankedList: Trainee[], diagnosticLabel = 'unlabelle
 
         // STBY pass for any solos that couldn't be placed in the main window
         // (uses the existing STBY fallback mechanism)
-        scheduleList(
+        await scheduleList(
             _soloFlightList.filter(t => !generatedEvents.some(e => {
             return eventHasNeoBuildPersonIdentity(e, t, 'trainee') && e.type === 'flight' && !e.resourceId.startsWith('STBY');
             })),
@@ -24257,16 +24265,16 @@ const applyCoursePriority = (rankedList: Trainee[], diagnosticLabel = 'unlabelle
 
     // 4. Schedule Night Flight Events (if 2+ BNF trainees): a) Highest Priority, b) Next Events
     // Night Flying Rule: Only scheduled when 2+ BNF trainees (1 trainee = no night flying)
-    recordProgress({ message: 'Scheduling Night Flying...', percentage: 55 });
+    await recordProgress({ message: 'Scheduling Night Flying...', percentage: 55 });
     if(nextEventLists.bnf.length >= 2) {
          // Highest Priority Night Flight Events are already added at the start
 
          // Schedule Night Flight Next Events (Wave One)
          const bnfWaveOneList = applyCoursePriority(nextEventLists.bnf.filter(t => !_isMandatoryRemedialFlightTrainee(t)), 'bnf-wave-one');
-         scheduleList(bnfWaveOneList, 'flight', false, commenceNightFlying, ceaseNightFlying, null, true);
+         await scheduleList(bnfWaveOneList, 'flight', false, commenceNightFlying, ceaseNightFlying, null, true);
     }
     if (_mandatoryNightFlightList.length > 0) {
-         scheduleList(
+         await scheduleList(
              _mandatoryNightFlightList,
              'flight',
              false,
@@ -24280,11 +24288,11 @@ const applyCoursePriority = (rankedList: Trainee[], diagnosticLabel = 'unlabelle
     }
 
     // 5. Schedule FTD Events: a) Highest Priority, b) Next Events
-    recordProgress({ message: `Scheduling ${ftdResourceLabel} Events (Priority)...`, percentage: 60 });
+    await recordProgress({ message: `Scheduling ${ftdResourceLabel} Events (Priority)...`, percentage: 60 });
     // Highest Priority FTD Events are already added at the start
 
-    recordProgress({ message: `Scheduling ${ftdResourceLabel} Events (Next)...`, percentage: 65 });
-    scheduleList(
+    await recordProgress({ message: `Scheduling ${ftdResourceLabel} Events (Next)...`, percentage: 65 });
+    await scheduleList(
         applyCoursePriority(filterOutBnfTrainees(nextEventLists.ftd), 'ftd-next'),
         'ftd',
         false,
@@ -24295,11 +24303,11 @@ const applyCoursePriority = (rankedList: Trainee[], diagnosticLabel = 'unlabelle
     );
 
     // 6. Schedule CPT/Ground Events: a) Highest Priority, b) Next Events
-    recordProgress({ message: `Scheduling ${cptResourceLabel} Events (Priority)...`, percentage: 70 });
+    await recordProgress({ message: `Scheduling ${cptResourceLabel} Events (Priority)...`, percentage: 70 });
     // Highest Priority CPT Events are already added at the start
 
-    recordProgress({ message: `Scheduling ${cptResourceLabel} Events (Next)...`, percentage: 72 });
-    scheduleList(
+    await recordProgress({ message: `Scheduling ${cptResourceLabel} Events (Next)...`, percentage: 72 });
+    await scheduleList(
         applyCoursePriority(filterOutBnfTrainees(nextEventLists.cpt), 'cpt-next'),
         'cpt',
         false,
@@ -24309,11 +24317,11 @@ const applyCoursePriority = (rankedList: Trainee[], diagnosticLabel = 'unlabelle
         false
     );
 
-    recordProgress({ message: 'Scheduling Ground Events (Priority)...', percentage: 74 });
+    await recordProgress({ message: 'Scheduling Ground Events (Priority)...', percentage: 74 });
     // Highest Priority Ground Events are already added at the start
 
-    recordProgress({ message: 'Scheduling Ground Events (Next)...', percentage: 76 });
-    scheduleList(
+    await recordProgress({ message: 'Scheduling Ground Events (Next)...', percentage: 76 });
+    await scheduleList(
         applyCoursePriority(filterOutBnfTrainees(nextEventLists.ground), 'ground-next'),
         'ground',
         false,
@@ -24324,8 +24332,8 @@ const applyCoursePriority = (rankedList: Trainee[], diagnosticLabel = 'unlabelle
     );
 
     // 7. Schedule Day Flight Events: Plus-One
-    recordProgress({ message: 'Scheduling Day Flight Events (Plus-One)...', percentage: 78 });
-    scheduleList(
+    await recordProgress({ message: 'Scheduling Day Flight Events (Plus-One)...', percentage: 78 });
+    await scheduleList(
         applyCoursePriority(filterOutBnfTrainees(nextPlusOneLists.flight), 'day-flight-plus-one'),
         'flight',
         true,
@@ -24339,17 +24347,17 @@ const applyCoursePriority = (rankedList: Trainee[], diagnosticLabel = 'unlabelle
     // Two-Wave System: Wave One = Next Events, Wave Two = Plus-One Events
     // Each BNF trainee can fly up to 2 night flights (special limit for BNF)
     if(nextEventLists.bnf.length >= 2) {
-         recordProgress({ message: 'Scheduling Night Flight Events (Plus-One)...', percentage: 80 });
+         await recordProgress({ message: 'Scheduling Night Flight Events (Plus-One)...', percentage: 80 });
          const bnfWaveTwoList = nextEventLists.bnf.filter(trainee => {
             const { plusOne } = traineeNextEventMap.get(getBuildTraineeKey(trainee)) || { plusOne: null };
             return plusOne && plusOne.code.startsWith('BNF') && plusOne.type === 'Flight';
          });
-         scheduleList(bnfWaveTwoList, 'flight', true, commenceNightFlying, ceaseNightFlying, null, true);
+         await scheduleList(bnfWaveTwoList, 'flight', true, commenceNightFlying, ceaseNightFlying, null, true);
     }
 
     // 8. Schedule FTD Events: Plus-One
-    recordProgress({ message: `Scheduling ${ftdResourceLabel} Events (Plus-One)...`, percentage: 82 });
-    scheduleList(
+    await recordProgress({ message: `Scheduling ${ftdResourceLabel} Events (Plus-One)...`, percentage: 82 });
+    await scheduleList(
         applyCoursePriority(filterOutBnfTrainees(nextPlusOneLists.ftd), 'ftd-plus-one'),
         'ftd',
         true,
@@ -24360,8 +24368,8 @@ const applyCoursePriority = (rankedList: Trainee[], diagnosticLabel = 'unlabelle
     );
 
     // 9. Schedule CPT/Ground Events: Plus-One
-    recordProgress({ message: `Scheduling ${cptResourceLabel} Events (Plus-One)...`, percentage: 84 });
-    scheduleList(
+    await recordProgress({ message: `Scheduling ${cptResourceLabel} Events (Plus-One)...`, percentage: 84 });
+    await scheduleList(
         applyCoursePriority(filterOutBnfTrainees(nextPlusOneLists.cpt), 'cpt-plus-one'),
         'cpt',
         true,
@@ -24371,8 +24379,8 @@ const applyCoursePriority = (rankedList: Trainee[], diagnosticLabel = 'unlabelle
         false
     );
 
-    recordProgress({ message: 'Scheduling Ground Events (Plus-One)...', percentage: 86 });
-    scheduleList(
+    await recordProgress({ message: 'Scheduling Ground Events (Plus-One)...', percentage: 86 });
+    await scheduleList(
         applyCoursePriority(filterOutBnfTrainees(nextPlusOneLists.ground), 'ground-plus-one'),
         'ground',
         true,
@@ -24384,7 +24392,7 @@ const applyCoursePriority = (rankedList: Trainee[], diagnosticLabel = 'unlabelle
 
     // NEW STBY SCHEDULING PASS - configured flights-per-hour rule
     // STBY flights are extra flights added on top of the main DFP when aircraft run out
-    recordProgress({ message: 'Scheduling STBY flights...', percentage: 88 });
+    await recordProgress({ message: 'Scheduling STBY flights...', percentage: 88 });
 
 
 
@@ -24755,7 +24763,7 @@ const applyCoursePriority = (rankedList: Trainee[], diagnosticLabel = 'unlabelle
 
     // FTD STBY SCHEDULING - Handle unscheduled FTD events
     // Fill STBY lines sequentially with proper spacing
-    recordProgress({ message: `Scheduling STBY ${ftdResourceLabel} events...`, percentage: 90 });
+    await recordProgress({ message: `Scheduling STBY ${ftdResourceLabel} events...`, percentage: 90 });
 
     const traineesNeedingStbyFtd = nextEventLists.ftd.filter(trainee => {
         const { next } = traineeNextEventMap.get(getBuildTraineeKey(trainee))!;
@@ -25471,7 +25479,7 @@ const applyCoursePriority = (rankedList: Trainee[], diagnosticLabel = 'unlabelle
         });
     }
 
-    recordProgress({ message: 'Shuffling events for distribution...', percentage: 95 });
+    await recordProgress({ message: 'Shuffling events for distribution...', percentage: 95 });
 
     const shuffleArray = <T,>(array: T[], scope: string, getIdentity: (item: T, index: number) => string): T[] => (
         orderBuildDeterministically(array, scope, getIdentity)
@@ -25527,7 +25535,7 @@ const applyCoursePriority = (rankedList: Trainee[], diagnosticLabel = 'unlabelle
 
     // Sort events by resource order to match left column headers
     // This ensures resource column labels align with event rows
-    recordProgress({ message: 'Sorting events by resource order...', percentage: 98 });
+    await recordProgress({ message: 'Sorting events by resource order...', percentage: 98 });
 
     // Define resource order matching buildResources
     const resourceOrder = [
@@ -27664,7 +27672,7 @@ const applyCoursePriority = (rankedList: Trainee[], diagnosticLabel = 'unlabelle
 
     buildDebugLog('DEBUG ===== END FINAL BUILD RESULTS =====');
 
-    recordProgress({
+    await recordProgress({
         message: 'Build complete!',
         percentage: 100,
         generatedEvents: sortedEvents.length,
@@ -45728,7 +45736,7 @@ const App: React.FC = () => {
         };
 
         markNeoBuildTiming(timingReport, 'generate:setTimeout-queued', { delayMs: NEO_BUILD_GENERATION_START_DELAY_MS });
-        setTimeout(() => {
+        setTimeout(async () => {
             try {
                 markNeoBuildTiming(timingReport, 'generate:setTimeout-fired');
                 logNeoBuildUiDebug('🚀 [NEO-Build] Starting DFP build process for', buildDfpDate);
@@ -45801,7 +45809,7 @@ const App: React.FC = () => {
                 }
 
                 markNeoBuildTiming(timingReport, 'generateDfpInternal:start');
-                const generated = generateDfpInternal(config, setDfpBuildProgress, buildPublishedSchedules);
+                const generated = await generateDfpInternal(config, setDfpBuildProgress, buildPublishedSchedules);
                 markNeoBuildTiming(timingReport, 'generateDfpInternal:complete', { generated: generated.length });
                 logNeoBuildUiDebug('🚀 [NEO-Build] DFP build completed, generated', generated.length, 'events');
                 logNeoBuildUiDebug('🚀 [NEO-Build] Generated events sample:', generated.slice(0, 3));

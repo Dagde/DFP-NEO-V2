@@ -116256,7 +116256,7 @@ function _diagFinalizeInstructors() {
     console.warn("[INSTR-DIAG] Failed to save to localStorage:", e);
   }
 }
-function generateDfpInternal(config, setProgress, publishedSchedules) {
+async function generateDfpInternal(config, setProgress, publishedSchedules) {
   const buildResourceDisplayNames = config.resourceDisplayNames ?? DEFAULT_RESOURCE_DISPLAY_NAMES;
   const ftdResourceLabel = buildResourceDisplayNames.ftd;
   const cptResourceLabel = buildResourceDisplayNames.cpt;
@@ -116281,7 +116281,14 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
     buildCalculationStats.combinations += 1;
     buildCalculationStats.calculations += Math.max(1, Math.round(calculationWeight));
   };
-  const recordProgress = (progress) => {
+  const waitForProgressPaint = () => new Promise((resolve) => {
+    if (typeof requestAnimationFrame === "function") {
+      requestAnimationFrame(() => window.setTimeout(resolve, 0));
+      return;
+    }
+    setTimeout(resolve, 0);
+  });
+  const recordProgress = async (progress) => {
     const nextProgress = {
       ...progress,
       iterations: progress.iterations ?? buildCalculationStats.iterations,
@@ -116299,6 +116306,7 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
       generatedEvents: nextProgress.generatedEvents
     });
     setProgress(nextProgress);
+    await waitForProgressPaint();
   };
   const neoBuildVerboseDiagnostics = localStorage.getItem("neo_build_verbose_diag") === "true";
   const neoBuildLiveDiagnostics = localStorage.getItem("neo_build_live_diag") === "true";
@@ -116913,7 +116921,7 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
     if (proposedDayNight === "Day" && isStaffScheduledForNightEvents(staff)) return false;
     return true;
   };
-  recordProgress({ message: "Initializing DFP build...", percentage: 0 });
+  await recordProgress({ message: "Initializing DFP build...", percentage: 0 });
   buildDebugLog("[SEQ-DIAG] generateDfpInternal entered");
   if (windowNormalisationWarnings.length > 0) {
     console.warn("[NEO-Build][WindowDiagnostics] Build window values were normalised before scheduling.", {
@@ -117902,7 +117910,7 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
     notes: event?.notes || null,
     rawSource: event?._source || null
   });
-  const runFixedCrewBuild = () => {
+  const runFixedCrewBuild = async () => {
     const diag = neoBuildDiag.fixedCrewPriority;
     const fixedCrewUnit = buildActiveUnitCode;
     const isPooledCrewBuild = buildOperationalModel === "pooled_crew";
@@ -119745,7 +119753,7 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
       ...summarizeFixedCrewSctEvent(item.event, `fixedCrewQueue:${item.source}`),
       fixedStartTime: item.fixedStartTime ?? null
     }));
-    recordProgress({ message: "Scheduling Fixed Crew events...", percentage: 55 });
+    await recordProgress({ message: "Scheduling Fixed Crew events...", percentage: 55 });
     const schedulingStart = fixedCrewPerfNow();
     fixedCrewQueue.forEach((item) => {
       tryPlaceFixedCrewEvent(item.event, item.source, item.fixedStartTime);
@@ -119916,7 +119924,7 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
       }))
     };
     saveNeoBuildDiag("final");
-    recordProgress({
+    await recordProgress({
       message: "Build complete!",
       percentage: 100,
       generatedEvents: sortedFixedCrewEvents.length,
@@ -119971,7 +119979,7 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
     return null;
   };
   if (isFixedCrewLikeOperationalModel(buildOperationalModel)) {
-    return runFixedCrewBuild();
+    return await runFixedCrewBuild();
   }
   const remedialInstructorOverrideKey = (traineeName, eventCode2) => `${normalizeBuildPersonnelName(traineeName)}::${normalizeLmpEventId(eventCode2 || "")}`;
   const remedialInstructorOverrides = /* @__PURE__ */ new Map();
@@ -120585,7 +120593,7 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
     }
   });
   buildDebugLog("DEBUG ===== RESOURCE ASSIGNMENT COMPLETE =====");
-  recordProgress({ message: 'Compiling "Next Event" lists...', percentage: 10 });
+  await recordProgress({ message: 'Compiling "Next Event" lists...', percentage: 10 });
   const activeTrainees = trainees.filter(
     (t) => !t.isPaused && !(config.excludedCourses || []).includes(t.course) && !isPersonStaticallyUnavailable(t, flyingStartTime, ceaseNightFlying, buildDate, "flight")
   );
@@ -120745,7 +120753,7 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
     }
   });
   new Set(nextEventLists.bnf.map((t) => t.fullName));
-  recordProgress({ message: "Ranking trainees...", percentage: 20 });
+  await recordProgress({ message: "Ranking trainees...", percentage: 20 });
   const getBuildProgressCount = (trainee) => {
     const completed = /* @__PURE__ */ new Set();
     (scores.get(trainee.fullName) || []).filter((score) => !isRemedialEventCode(score.event) && !String(score.event || "").includes("MB")).forEach((score) => {
@@ -121013,7 +121021,7 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
     return reorderedList;
   };
   nextEventLists.flight = reorderSoloWithTwrDi(nextEventLists.flight);
-  recordProgress({ message: "Allocating course slots...", percentage: 30 });
+  await recordProgress({ message: "Allocating course slots...", percentage: 30 });
   const normalizePercentages = (percentages) => {
     const total = Array.from(percentages.values()).reduce((sum, val) => sum + val, 0);
     if (total === 0) return percentages;
@@ -121554,12 +121562,12 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
     });
     return resolvedDuration;
   };
-  const scheduleList = (list, type, isPlusOne, startTimeBoundary, endTimeBoundary, standbyPrefix, isNightPass, diagnosticLabel, syllabusOverrides, latestStartBefore) => {
+  const scheduleList = async (list, type, isPlusOne, startTimeBoundary, endTimeBoundary, standbyPrefix, isNightPass, diagnosticLabel, syllabusOverrides, latestStartBefore) => {
     const timeIncrement = getDispatchSearchStepHours(type);
     const listName = diagnosticLabel || `${isNightPass ? "BNF" : type.toUpperCase()} ${isPlusOne ? "Next+1" : "Next"}`;
     const isMandatoryTraceList = listName.includes("Mandatory Remedial");
     const scheduleListStartedAt = performance.now();
-    recordProgress({ message: `Placing ${listName} events...`, percentage: 40 + ["flight", "ftd", "cpt", "ground"].indexOf(type) * 10 });
+    await recordProgress({ message: `Placing ${listName} events...`, percentage: 40 + ["flight", "ftd", "cpt", "ground"].indexOf(type) * 10 });
     let unplacedTrainees = [...list];
     let placedThisPass = true;
     const listDiag = {
@@ -123572,12 +123580,12 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
   let nightDutySup = null;
   let dutySupEligible = [];
   if (showDutySupervisorRow) {
-    recordProgress({ message: "Scheduling Duty Supervisors...", percentage: 40 });
+    await recordProgress({ message: "Scheduling Duty Supervisors...", percentage: 40 });
     generatedEvents.filter((e) => e.type === "flight" && !e.resourceId.startsWith("STBY") && !e.resourceId.startsWith("BNF-STBY"));
     const dutySupStartTime = flyingStartTime;
     const dutySupEndTime = flyingEndTime;
     if (dutySupStartTime >= dutySupEndTime) {
-      recordProgress({ message: "Invalid day flying window", percentage: 90 });
+      await recordProgress({ message: "Invalid day flying window", percentage: 90 });
     }
     if (isNightFlyingProgrammed()) {
       buildDebugLog("🌙 Pre-selecting night duty supervisor to prevent day assignments...");
@@ -123727,7 +123735,7 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
       }
     }
     if (isNightFlyingProgrammed() && nightDutySup) {
-      recordProgress({ message: "Scheduling Night Duty Supervisor...", percentage: 42 });
+      await recordProgress({ message: "Scheduling Night Duty Supervisor...", percentage: 42 });
       buildDebugLog(`Scheduling night duty supervisor: ${nightDutySup.name}`);
       const existingNightDutySup = generatedEvents.find((e) => {
         if (e.resourceId !== "Duty Sup") return false;
@@ -127470,11 +127478,11 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
     (event) => event.type === "flight" && currencyFtdPersonKeys.has(normalizeBuildPersonnelName(event.student || event.pilot || event.instructor || ""))
   );
   if (!isAirCombatBuild && earlyCurrencyPriorityEvents.length > 0) {
-    recordProgress({ message: "Scheduling Currency FTD Priority Events...", percentage: 44 });
+    await recordProgress({ message: "Scheduling Currency FTD Priority Events...", percentage: 44 });
     scheduleCurrencyPriorityEvents(earlyCurrencyPriorityEvents);
   }
-  recordProgress({ message: "Scheduling Day Flight Events (Priority)...", percentage: 45 });
-  recordProgress({ message: "Scheduling Day Flight Events (Next)...", percentage: 50 });
+  await recordProgress({ message: "Scheduling Day Flight Events (Priority)...", percentage: 45 });
+  await recordProgress({ message: "Scheduling Day Flight Events (Next)...", percentage: 50 });
   const _isSoloTrainee = (trainee) => {
     const next = traineeNextEventMap.get(getBuildTraineeKey(trainee))?.next;
     return !!(next && (next.sortieType === "Solo" || ["BGF11", "BGF18"].includes(next.id)));
@@ -127971,20 +127979,20 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
     return candidateStarts.length > 0 ? Math.min(...candidateStarts) : null;
   };
   let deferredCurrencyFlightsScheduled = false;
-  const scheduleDeferredCurrencyFlights = () => {
+  const scheduleDeferredCurrencyFlights = async () => {
     if (deferredCurrencyFlightsScheduled || deferredCurrencyFlightPriorityEvents.length === 0) return;
-    recordProgress({ message: "Scheduling Currency Flight Priority Events...", percentage: 54 });
+    await recordProgress({ message: "Scheduling Currency Flight Priority Events...", percentage: 54 });
     scheduleCurrencyPriorityEvents(deferredCurrencyFlightPriorityEvents);
     deferredCurrencyFlightsScheduled = true;
   };
-  const _schedulePrioritizedDualsAndFormations = (prioritizedFlightList, startTimeBoundary, endTimeBoundary, normalLabel, formationLabel, latestStartBefore) => {
+  const _schedulePrioritizedDualsAndFormations = async (prioritizedFlightList, startTimeBoundary, endTimeBoundary, normalLabel, formationLabel, latestStartBefore) => {
     const pendingNormalDuals = [];
     const attemptedFormationKeys = /* @__PURE__ */ new Set();
     let normalSegment = 1;
     let formationSegment = 1;
-    const flushPendingNormals = () => {
+    const flushPendingNormals = async () => {
       if (pendingNormalDuals.length === 0) return;
-      scheduleList(
+      await scheduleList(
         [...pendingNormalDuals],
         "flight",
         false,
@@ -127998,16 +128006,16 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
       );
       pendingNormalDuals.length = 0;
     };
-    prioritizedFlightList.forEach((trainee) => {
-      if (_isSoloTrainee(trainee)) return;
+    for (const trainee of prioritizedFlightList) {
+      if (_isSoloTrainee(trainee)) continue;
       const next = traineeNextEventMap.get(getBuildTraineeKey(trainee))?.next;
       if (next && isMultiResourceFlightItem(next) && !isRemedialSyllabusItem(next)) {
         const eventKey = getFormationEventKey(next);
-        if (_placedFormationKeys.has(eventKey)) return;
-        if (attemptedFormationKeys.has(eventKey)) return;
+        if (_placedFormationKeys.has(eventKey)) continue;
+        if (attemptedFormationKeys.has(eventKey)) continue;
         attemptedFormationKeys.add(eventKey);
         const group = _formationGroupByKey.get(eventKey);
-        flushPendingNormals();
+        await flushPendingNormals();
         if (group) {
           traceFormation("groupBuildTrace", {
             phase: "formation-group-reached-priority-position",
@@ -128028,17 +128036,17 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
           );
           placedKeys.forEach((key) => _placedFormationKeys.add(key));
         }
-        return;
+        continue;
       }
       pendingNormalDuals.push(trainee);
-    });
-    flushPendingNormals();
+    }
+    await flushPendingNormals();
   };
   const getTaskingRequestedStart = (event) => {
     const requestedStart = Number.isFinite(Number(event.startTime)) ? Number(event.startTime) : flyingStartTime;
     return Math.max(flyingStartTime, Math.round(requestedStart * 12) / 12);
   };
-  const schedulePrioritizedDualsAndFormationsWithTaskingBreaks = (prioritizedFlightList, startTimeBoundary, endTimeBoundary, normalLabel, formationLabel, latestStartBefore) => {
+  const schedulePrioritizedDualsAndFormationsWithTaskingBreaks = async (prioritizedFlightList, startTimeBoundary, endTimeBoundary, normalLabel, formationLabel, latestStartBefore) => {
     const pendingTaskingEvents = () => activeTaskingPriorityEvents.filter((event) => !scheduledTaskingPriorityEventIds.has(event.id));
     const segmentEnd = typeof latestStartBefore === "number" ? Math.min(endTimeBoundary, latestStartBefore) : endTimeBoundary;
     const taskingTimes = Array.from(new Set(
@@ -128048,7 +128056,7 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
     let segment = 1;
     for (const taskingTime of taskingTimes) {
       if (taskingTime > currentStart + 1e-3) {
-        _schedulePrioritizedDualsAndFormations(
+        await _schedulePrioritizedDualsAndFormations(
           prioritizedFlightList,
           currentStart,
           endTimeBoundary,
@@ -128059,13 +128067,13 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
       }
       const dueTaskingEvents = pendingTaskingEvents().filter((event) => getTaskingRequestedStart(event) <= taskingTime + 1e-3);
       if (dueTaskingEvents.length > 0) {
-        recordProgress({ message: "Scheduling directed task priority events...", percentage: 45 });
+        await recordProgress({ message: "Scheduling directed task priority events...", percentage: 45 });
         scheduleTaskingPriorityEvents(dueTaskingEvents);
       }
       currentStart = Math.max(currentStart, taskingTime);
       segment++;
     }
-    _schedulePrioritizedDualsAndFormations(
+    await _schedulePrioritizedDualsAndFormations(
       prioritizedFlightList,
       currentStart,
       endTimeBoundary,
@@ -128144,7 +128152,7 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
       nightWindow: { start: commenceNightFlying, end: ceaseNightFlying }
     };
     if (airCombatNightSchedulingActive && showDutySupervisorRow) {
-      recordProgress({ message: "Scheduling Air Combat night events...", percentage: 43 });
+      await recordProgress({ message: "Scheduling Air Combat night events...", percentage: 43 });
       if (!nightDutySup) {
         nightDutySup = dutySupEligible.find(
           (sup) => !isPersonStaticallyUnavailable(sup, commenceNightFlying, ceaseNightFlying, buildDate, "duty_sup") && !isPersonScheduledForDayEvents(sup.name) && !isPersonScheduledForNightEvents(sup.name)
@@ -128191,21 +128199,21 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
       scheduleAirCombatTrainingPriorityEvents("night");
     }
     if (airCombatDayTaskingEvents.length > 0) {
-      recordProgress({ message: "Scheduling Air Combat mandatory directed task requests...", percentage: 45 });
+      await recordProgress({ message: "Scheduling Air Combat mandatory directed task requests...", percentage: 45 });
       scheduleTaskingPriorityEvents(airCombatDayTaskingEvents);
     }
     if (airCombatDayCurrencyEvents.length > 0) {
-      recordProgress({ message: "Scheduling Air Combat currency events...", percentage: 50 });
+      await recordProgress({ message: "Scheduling Air Combat currency events...", percentage: 50 });
       scheduleCurrencyPriorityEvents(airCombatDayCurrencyEvents, "day");
     }
-    recordProgress({ message: "Scheduling Air Combat priority lists...", percentage: 55 });
+    await recordProgress({ message: "Scheduling Air Combat priority lists...", percentage: 55 });
     scheduleAirCombatTrainingPriorityEvents("day");
   }
   if (!isAirCombatBuild) {
     if (_mandatoryDayFlightList.length > 0) {
       const firstRemedialFlightStart = REMEDIAL_EARLIEST_START + getDispatchSearchStepHours("flight");
       if (flyingStartTime < REMEDIAL_EARLIEST_START) {
-        schedulePrioritizedDualsAndFormationsWithTaskingBreaks(
+        await schedulePrioritizedDualsAndFormationsWithTaskingBreaks(
           _allFlightList,
           flyingStartTime,
           flyingEndTime,
@@ -128223,7 +128231,7 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
         roundUpToFlightSlot(leadAircraftReadyTime)
       );
       buildDebugLog(`[FLIGHT-WAVE] Mandatory/post-1000 wave aligned from ${_fmtT(firstRemedialFlightStart)} to ${_fmtT(alignedPostMandatoryStart)} so remedials start the clean ${buildAircraftResourcePrefix} wave.`);
-      scheduleList(
+      await scheduleList(
         _mandatoryDayFlightList,
         "flight",
         false,
@@ -128236,7 +128244,7 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
       );
       const currencyInsertionStart = getDeferredCurrencyFlightInsertionStart();
       if (currencyInsertionStart !== null && currencyInsertionStart > alignedPostMandatoryStart + 1e-3) {
-        schedulePrioritizedDualsAndFormationsWithTaskingBreaks(
+        await schedulePrioritizedDualsAndFormationsWithTaskingBreaks(
           _allFlightList,
           alignedPostMandatoryStart,
           flyingEndTime,
@@ -128245,8 +128253,8 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
           currencyInsertionStart
         );
       }
-      scheduleDeferredCurrencyFlights();
-      schedulePrioritizedDualsAndFormationsWithTaskingBreaks(
+      await scheduleDeferredCurrencyFlights();
+      await schedulePrioritizedDualsAndFormationsWithTaskingBreaks(
         _allFlightList,
         Math.max(alignedPostMandatoryStart, currencyInsertionStart ?? alignedPostMandatoryStart),
         flyingEndTime,
@@ -128256,7 +128264,7 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
     } else {
       const currencyInsertionStart = getDeferredCurrencyFlightInsertionStart();
       if (currencyInsertionStart !== null && currencyInsertionStart > flyingStartTime + 1e-3) {
-        schedulePrioritizedDualsAndFormationsWithTaskingBreaks(
+        await schedulePrioritizedDualsAndFormationsWithTaskingBreaks(
           _allFlightList,
           flyingStartTime,
           flyingEndTime,
@@ -128264,8 +128272,8 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
           "FLIGHT Formation Groups Pre-Currency",
           currencyInsertionStart
         );
-        scheduleDeferredCurrencyFlights();
-        schedulePrioritizedDualsAndFormationsWithTaskingBreaks(
+        await scheduleDeferredCurrencyFlights();
+        await schedulePrioritizedDualsAndFormationsWithTaskingBreaks(
           _allFlightList,
           currencyInsertionStart,
           flyingEndTime,
@@ -128273,8 +128281,8 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
           "FLIGHT Formation Groups"
         );
       } else {
-        scheduleDeferredCurrencyFlights();
-        schedulePrioritizedDualsAndFormationsWithTaskingBreaks(
+        await scheduleDeferredCurrencyFlights();
+        await schedulePrioritizedDualsAndFormationsWithTaskingBreaks(
           _allFlightList,
           flyingStartTime,
           flyingEndTime,
@@ -128330,7 +128338,7 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
         }
         groupSearchStart = lastPlacedTime + TIME_INCREMENT;
       }
-      scheduleList(
+      await scheduleList(
         _soloFlightList.filter((t) => !generatedEvents.some((e) => {
           return eventHasNeoBuildPersonIdentity(e, t, "trainee") && e.type === "flight" && !e.resourceId.startsWith("STBY");
         })),
@@ -128343,13 +128351,13 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
       );
     }
     _fbPrintSummary();
-    recordProgress({ message: "Scheduling Night Flying...", percentage: 55 });
+    await recordProgress({ message: "Scheduling Night Flying...", percentage: 55 });
     if (nextEventLists.bnf.length >= 2) {
       const bnfWaveOneList = applyCoursePriority(nextEventLists.bnf.filter((t) => !_isMandatoryRemedialFlightTrainee(t)), "bnf-wave-one");
-      scheduleList(bnfWaveOneList, "flight", false, commenceNightFlying, ceaseNightFlying, null, true);
+      await scheduleList(bnfWaveOneList, "flight", false, commenceNightFlying, ceaseNightFlying, null, true);
     }
     if (_mandatoryNightFlightList.length > 0) {
-      scheduleList(
+      await scheduleList(
         _mandatoryNightFlightList,
         "flight",
         false,
@@ -128361,9 +128369,9 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
         mandatoryRemedialFlightItems
       );
     }
-    recordProgress({ message: `Scheduling ${ftdResourceLabel} Events (Priority)...`, percentage: 60 });
-    recordProgress({ message: `Scheduling ${ftdResourceLabel} Events (Next)...`, percentage: 65 });
-    scheduleList(
+    await recordProgress({ message: `Scheduling ${ftdResourceLabel} Events (Priority)...`, percentage: 60 });
+    await recordProgress({ message: `Scheduling ${ftdResourceLabel} Events (Next)...`, percentage: 65 });
+    await scheduleList(
       applyCoursePriority(filterOutBnfTrainees(nextEventLists.ftd), "ftd-next"),
       "ftd",
       false,
@@ -128372,9 +128380,9 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
       null,
       false
     );
-    recordProgress({ message: `Scheduling ${cptResourceLabel} Events (Priority)...`, percentage: 70 });
-    recordProgress({ message: `Scheduling ${cptResourceLabel} Events (Next)...`, percentage: 72 });
-    scheduleList(
+    await recordProgress({ message: `Scheduling ${cptResourceLabel} Events (Priority)...`, percentage: 70 });
+    await recordProgress({ message: `Scheduling ${cptResourceLabel} Events (Next)...`, percentage: 72 });
+    await scheduleList(
       applyCoursePriority(filterOutBnfTrainees(nextEventLists.cpt), "cpt-next"),
       "cpt",
       false,
@@ -128383,9 +128391,9 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
       null,
       false
     );
-    recordProgress({ message: "Scheduling Ground Events (Priority)...", percentage: 74 });
-    recordProgress({ message: "Scheduling Ground Events (Next)...", percentage: 76 });
-    scheduleList(
+    await recordProgress({ message: "Scheduling Ground Events (Priority)...", percentage: 74 });
+    await recordProgress({ message: "Scheduling Ground Events (Next)...", percentage: 76 });
+    await scheduleList(
       applyCoursePriority(filterOutBnfTrainees(nextEventLists.ground), "ground-next"),
       "ground",
       false,
@@ -128394,8 +128402,8 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
       null,
       false
     );
-    recordProgress({ message: "Scheduling Day Flight Events (Plus-One)...", percentage: 78 });
-    scheduleList(
+    await recordProgress({ message: "Scheduling Day Flight Events (Plus-One)...", percentage: 78 });
+    await scheduleList(
       applyCoursePriority(filterOutBnfTrainees(nextPlusOneLists.flight), "day-flight-plus-one"),
       "flight",
       true,
@@ -128405,15 +128413,15 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
       false
     );
     if (nextEventLists.bnf.length >= 2) {
-      recordProgress({ message: "Scheduling Night Flight Events (Plus-One)...", percentage: 80 });
+      await recordProgress({ message: "Scheduling Night Flight Events (Plus-One)...", percentage: 80 });
       const bnfWaveTwoList = nextEventLists.bnf.filter((trainee) => {
         const { plusOne } = traineeNextEventMap.get(getBuildTraineeKey(trainee)) || { plusOne: null };
         return plusOne && plusOne.code.startsWith("BNF") && plusOne.type === "Flight";
       });
-      scheduleList(bnfWaveTwoList, "flight", true, commenceNightFlying, ceaseNightFlying, null, true);
+      await scheduleList(bnfWaveTwoList, "flight", true, commenceNightFlying, ceaseNightFlying, null, true);
     }
-    recordProgress({ message: `Scheduling ${ftdResourceLabel} Events (Plus-One)...`, percentage: 82 });
-    scheduleList(
+    await recordProgress({ message: `Scheduling ${ftdResourceLabel} Events (Plus-One)...`, percentage: 82 });
+    await scheduleList(
       applyCoursePriority(filterOutBnfTrainees(nextPlusOneLists.ftd), "ftd-plus-one"),
       "ftd",
       true,
@@ -128422,8 +128430,8 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
       "STBY",
       false
     );
-    recordProgress({ message: `Scheduling ${cptResourceLabel} Events (Plus-One)...`, percentage: 84 });
-    scheduleList(
+    await recordProgress({ message: `Scheduling ${cptResourceLabel} Events (Plus-One)...`, percentage: 84 });
+    await scheduleList(
       applyCoursePriority(filterOutBnfTrainees(nextPlusOneLists.cpt), "cpt-plus-one"),
       "cpt",
       true,
@@ -128432,8 +128440,8 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
       null,
       false
     );
-    recordProgress({ message: "Scheduling Ground Events (Plus-One)...", percentage: 86 });
-    scheduleList(
+    await recordProgress({ message: "Scheduling Ground Events (Plus-One)...", percentage: 86 });
+    await scheduleList(
       applyCoursePriority(filterOutBnfTrainees(nextPlusOneLists.ground), "ground-plus-one"),
       "ground",
       true,
@@ -128442,7 +128450,7 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
       null,
       false
     );
-    recordProgress({ message: "Scheduling STBY flights...", percentage: 88 });
+    await recordProgress({ message: "Scheduling STBY flights...", percentage: 88 });
     const hasFlightStartTime = (time, events) => {
       return events.some(
         (e) => e.type === "flight" && Math.abs(e.startTime - time) < 0.01
@@ -128651,7 +128659,7 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
         }
       }
     }
-    recordProgress({ message: `Scheduling STBY ${ftdResourceLabel} events...`, percentage: 90 });
+    await recordProgress({ message: `Scheduling STBY ${ftdResourceLabel} events...`, percentage: 90 });
     const traineesNeedingStbyFtd = nextEventLists.ftd.filter((trainee) => {
       const { next } = traineeNextEventMap.get(getBuildTraineeKey(trainee));
       if (!next || next.type !== "FTD") return false;
@@ -129254,8 +129262,8 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
       generatedEvents: generatedEvents.length
     });
   }
-  recordProgress({ message: "Shuffling events for distribution...", percentage: 95 });
-  recordProgress({ message: "Sorting events by resource order...", percentage: 98 });
+  await recordProgress({ message: "Shuffling events for distribution...", percentage: 95 });
+  await recordProgress({ message: "Sorting events by resource order...", percentage: 98 });
   const resourceOrder = [
     ...buildResources,
     ...Array.from({ length: 10 }, (_, i) => `Deployed ${i + 1}`)
@@ -131073,7 +131081,7 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
     }
   });
   buildDebugLog("DEBUG ===== END FINAL BUILD RESULTS =====");
-  recordProgress({
+  await recordProgress({
     message: "Build complete!",
     percentage: 100,
     generatedEvents: sortedEvents.length,
@@ -145574,7 +145582,7 @@ The proposed event was not scheduled. Re-open the event and choose Accept Confli
       timingReport
     };
     markNeoBuildTiming(timingReport, "generate:setTimeout-queued", { delayMs: NEO_BUILD_GENERATION_START_DELAY_MS });
-    setTimeout(() => {
+    setTimeout(async () => {
       try {
         markNeoBuildTiming(timingReport, "generate:setTimeout-fired");
         logNeoBuildUiDebug("🚀 [NEO-Build] Starting DFP build process for", buildDfpDate);
@@ -145646,7 +145654,7 @@ The proposed event was not scheduled. Re-open the event and choose Accept Confli
           console.warn("[NEO-Build][InputTrace] Failed to save input trace:", error);
         }
         markNeoBuildTiming(timingReport, "generateDfpInternal:start");
-        const generated = generateDfpInternal(config, setDfpBuildProgress, buildPublishedSchedules);
+        const generated = await generateDfpInternal(config, setDfpBuildProgress, buildPublishedSchedules);
         markNeoBuildTiming(timingReport, "generateDfpInternal:complete", { generated: generated.length });
         logNeoBuildUiDebug("🚀 [NEO-Build] DFP build completed, generated", generated.length, "events");
         logNeoBuildUiDebug("🚀 [NEO-Build] Generated events sample:", generated.slice(0, 3));
