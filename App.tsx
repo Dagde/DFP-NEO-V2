@@ -29778,6 +29778,7 @@ const App: React.FC = () => {
     const canBootstrapInitialSetupFromDfp = hasAuthenticatedAdminRole
         && platformConfigLoaded
         && operationalContextOptions.length === 0;
+    const showInitialSetupBlankState = canBootstrapInitialSetupFromDfp;
 
     useEffect(() => {
         if (!setupTestProfile) return;
@@ -52159,6 +52160,8 @@ appliedUpdates.forEach(update => {
                            onSaveSetupTestPersonnel={handleSaveSetupTestPersonnel}
                            isNeoAssistPanelOpen={showDfpSidePanel}
                            isFlightLinePanelOpen={showFlightLinePanel}
+                           showInitialSetupBlankState={showInitialSetupBlankState}
+                           initialOrganisationSlideoutView={showInitialSetupBlankState ? 'setupWizard' : 'structure'}
                            onOrganisationSlideoutOpen={() => {
                                setShowDfpSidePanel(false);
                                setShowFlightLinePanel(false);
@@ -55341,6 +55344,7 @@ appliedUpdates.forEach(update => {
         && eventSegmentsForDate.length === 0
         && !isFutureSelectedDfpDate
         && !isInitialSetupWizardActive
+        && !showInitialSetupBlankState
         && !setupTestProfile;
 
     return (

@@ -167,6 +167,7 @@ interface ScheduleViewProps {
   isNeoAssistPanelOpen?: boolean;
   isFlightLinePanelOpen?: boolean;
   onOrganisationSlideoutOpen?: () => void;
+  showInitialSetupBlankState?: boolean;
   onToggleFlightLinePanel?: () => void;
   canEditFlightLineInventory?: boolean;
   canEditFlightLineAvailability?: boolean;
@@ -174,6 +175,7 @@ interface ScheduleViewProps {
   canEditTileAircraftNumber?: boolean;
   onLinkedAvailabilityChange?: (count: number) => void;
   onInitialSetupWizardActiveChange?: (active: boolean) => void;
+  initialOrganisationSlideoutView?: OrganisationSlideoutView;
   formationCallsigns?: FormationCallsign[];
   flyingStartTime?: number;
   flyingEndTime?: number;
@@ -11212,10 +11214,14 @@ const OrganisationSlideoutDiagram: React.FC<{
     onSaveSetupTestPersonnel?: (payload: { instructors: any[]; trainees: any[] }) => void;
     isOpen?: boolean;
     onInitialSetupWizardActiveChange?: (active: boolean) => void;
-}> = ({ platformConfig, organisationSettings, unitCode, locationCode, formationCallsigns = [], buildRuleSettings, flyingStartTime, flyingEndTime, ftdStartTime, ftdEndTime, cptStartTime, cptEndTime, allowNightFlying, commenceNightFlying, ceaseNightFlying, onUpdateFlyingStartTime, onUpdateFlyingEndTime, onUpdateFtdStartTime, onUpdateFtdEndTime, onUpdateCptStartTime, onUpdateCptEndTime, onUpdateAllowNightFlying, onUpdateCommenceNightFlying, onUpdateCeaseNightFlying, dispatchStaggerSettings, onUpdateDispatchStaggerSettings, tileStatusSettings, onUpdateTileStatusSettings, emergencyFreezeAuthority, onUpdateEmergencyFreezeAuthority, emergencyFreezeAllowedActions, onUpdateEmergencyFreezeAllowedActions, qualificationOptions, currentUserQualificationIds, onUpdatePlatformConfig, onNavigateToSettingsSection, currentUserPermission = 'Staff', canUsePlatformPermission, isSetupTestMode = false, onSaveSetupTestPersonnel, isOpen = false, onInitialSetupWizardActiveChange }) => {
+    initialView?: OrganisationSlideoutView;
+}> = ({ platformConfig, organisationSettings, unitCode, locationCode, formationCallsigns = [], buildRuleSettings, flyingStartTime, flyingEndTime, ftdStartTime, ftdEndTime, cptStartTime, cptEndTime, allowNightFlying, commenceNightFlying, ceaseNightFlying, onUpdateFlyingStartTime, onUpdateFlyingEndTime, onUpdateFtdStartTime, onUpdateFtdEndTime, onUpdateCptStartTime, onUpdateCptEndTime, onUpdateAllowNightFlying, onUpdateCommenceNightFlying, onUpdateCeaseNightFlying, dispatchStaggerSettings, onUpdateDispatchStaggerSettings, tileStatusSettings, onUpdateTileStatusSettings, emergencyFreezeAuthority, onUpdateEmergencyFreezeAuthority, emergencyFreezeAllowedActions, onUpdateEmergencyFreezeAllowedActions, qualificationOptions, currentUserQualificationIds, onUpdatePlatformConfig, onNavigateToSettingsSection, currentUserPermission = 'Staff', canUsePlatformPermission, isSetupTestMode = false, onSaveSetupTestPersonnel, isOpen = false, onInitialSetupWizardActiveChange, initialView = 'structure' }) => {
     const chart = useMemo(() => buildOrganisationChart(platformConfig), [platformConfig]);
     const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
-    const [activeView, setActiveView] = useState<OrganisationSlideoutView>('structure');
+    const [activeView, setActiveView] = useState<OrganisationSlideoutView>(initialView);
+    useEffect(() => {
+        if (isOpen) setActiveView(initialView);
+    }, [initialView, isOpen]);
     useEffect(() => {
         onInitialSetupWizardActiveChange?.(Boolean(isOpen && activeView === 'setupWizard'));
         return () => onInitialSetupWizardActiveChange?.(false);
@@ -11435,6 +11441,7 @@ const ScheduleView: React.FC<ScheduleViewProps> = ({
     isNeoAssistPanelOpen = false,
     isFlightLinePanelOpen = false,
     onOrganisationSlideoutOpen,
+    showInitialSetupBlankState = false,
     onToggleFlightLinePanel,
     canEditFlightLineInventory = true,
     canEditFlightLineAvailability = true,
@@ -11442,6 +11449,7 @@ const ScheduleView: React.FC<ScheduleViewProps> = ({
     canEditTileAircraftNumber = true,
     onLinkedAvailabilityChange,
     onInitialSetupWizardActiveChange,
+    initialOrganisationSlideoutView = 'structure',
     formationCallsigns = [],
     buildRuleSettings,
     flyingStartTime,
@@ -11500,6 +11508,10 @@ const ScheduleView: React.FC<ScheduleViewProps> = ({
     useEffect(() => {
         if (isNeoAssistPanelOpen) setShowResourceUnderlayPanel(false);
     }, [isNeoAssistPanelOpen]);
+    const openInitialSetupWizard = useCallback(() => {
+        onOrganisationSlideoutOpen?.();
+        setShowResourceUnderlayPanel(true);
+    }, [onOrganisationSlideoutOpen]);
     const [resourceSlideoutFrame, setResourceSlideoutFrame] = useState<{ left: number; top: number; height: number; width: number; bottom: number } | null>(null);
     const scheduleGridRef = useRef<HTMLDivElement>(null);
     const effectiveTimezoneOffset = useMemo(() => {
@@ -13201,6 +13213,46 @@ const ScheduleView: React.FC<ScheduleViewProps> = ({
 
     return (
         <div ref={scrollContainerRef} data-schedule-surface="true" className="flex-1 overflow-auto relative bg-gray-900 select-none" style={isPauseSelectMode ? { cursor: 'crosshair' } : undefined}>
+            <style>{`
+                @keyframes dfpSetupGuidePulse {
+                    0%, 100% {
+                        border-color: rgba(251, 146, 60, 0.62);
+                        box-shadow: 0 0 0 0 rgba(251, 146, 60, 0.42), 0 8px 24px rgba(0,0,0,0.35);
+                    }
+                    50% {
+                        border-color: rgba(253, 186, 116, 1);
+                        box-shadow: 0 0 0 8px rgba(251, 146, 60, 0), 0 0 22px rgba(251, 146, 60, 0.55), 0 8px 24px rgba(0,0,0,0.35);
+                    }
+                }
+                @media (prefers-reduced-motion: reduce) {
+                    .dfp-setup-guide-pulse {
+                        animation: none !important;
+                    }
+                }
+            `}</style>
+            {showInitialSetupBlankState && (
+                <div className="pointer-events-none absolute inset-0 z-[24] flex items-center justify-center px-8">
+                    <div className="pointer-events-auto flex w-[min(980px,calc(100vw-420px))] max-w-[calc(100%-64px)] flex-col items-center rounded-xl border border-orange-300/45 bg-slate-950/86 px-8 py-7 text-center shadow-2xl shadow-black/45 backdrop-blur-md">
+                        <img
+                            src="/dfp-neo-setup-logo.jpg"
+                            alt="DFP NEO"
+                            className="mb-6 w-[min(720px,90%)] max-h-44 object-contain opacity-85"
+                        />
+                        <p className="text-[11px] font-black uppercase tracking-[0.22em] text-orange-300">Initial Setup Required</p>
+                        <h2 className="mt-2 text-2xl font-black text-white">Configure this customer before building the first DFP</h2>
+                        <p className="mt-3 max-w-2xl text-sm font-medium leading-6 text-slate-300">
+                            Add the location, unit, aircraft and DFP resource rows to create the first operational workspace.
+                        </p>
+                        <button
+                            type="button"
+                            onClick={openInitialSetupWizard}
+                            className="mt-6 rounded-md border border-orange-300 bg-orange-500 px-5 py-2.5 text-sm font-black text-slate-950 shadow-[0_0_22px_rgba(251,146,60,0.32)] transition hover:bg-orange-400"
+                        >
+                            Start Initial Setup Wizard
+                        </button>
+                    </div>
+                </div>
+            )}
             {resourceSlideoutFrame && (
                 <div
                     className="fixed z-[35] pointer-events-none overflow-hidden"
@@ -13217,7 +13269,7 @@ const ScheduleView: React.FC<ScheduleViewProps> = ({
                         style={{ width: 'min(calc(clamp(360px, 40vw, 680px) + 400px), calc(100vw - 420px))' }}
                     >
                         <div className={`h-full overflow-hidden border-r border-white/5 bg-slate-950 ${showResourceUnderlayPanel ? 'pointer-events-auto' : 'pointer-events-none'}`}>
-                            <OrganisationSlideoutDiagram platformConfig={platformConfig} organisationSettings={organisationSettings} unitCode={unitCode} locationCode={locationCode} formationCallsigns={formationCallsigns} buildRuleSettings={buildRuleSettings} flyingStartTime={flyingStartTime} flyingEndTime={flyingEndTime} ftdStartTime={ftdStartTime} ftdEndTime={ftdEndTime} cptStartTime={cptStartTime} cptEndTime={cptEndTime} allowNightFlying={allowNightFlying} commenceNightFlying={commenceNightFlying} ceaseNightFlying={ceaseNightFlying} onUpdateFlyingStartTime={onUpdateFlyingStartTime} onUpdateFlyingEndTime={onUpdateFlyingEndTime} onUpdateFtdStartTime={onUpdateFtdStartTime} onUpdateFtdEndTime={onUpdateFtdEndTime} onUpdateCptStartTime={onUpdateCptStartTime} onUpdateCptEndTime={onUpdateCptEndTime} onUpdateAllowNightFlying={onUpdateAllowNightFlying} onUpdateCommenceNightFlying={onUpdateCommenceNightFlying} onUpdateCeaseNightFlying={onUpdateCeaseNightFlying} dispatchStaggerSettings={dispatchStaggerSettings} onUpdateDispatchStaggerSettings={onUpdateDispatchStaggerSettings} tileStatusSettings={tileStatusSettings} onUpdateTileStatusSettings={onUpdateTileStatusSettings} emergencyFreezeAuthority={emergencyFreezeAuthority} onUpdateEmergencyFreezeAuthority={onUpdateEmergencyFreezeAuthority} emergencyFreezeAllowedActions={emergencyFreezeAllowedActions} onUpdateEmergencyFreezeAllowedActions={onUpdateEmergencyFreezeAllowedActions} qualificationOptions={qualificationOptions} currentUserQualificationIds={currentUserQualificationIds} onUpdatePlatformConfig={onUpdatePlatformConfig} onNavigateToSettingsSection={onNavigateToSettingsSection} currentUserPermission={currentUserPermission} canUsePlatformPermission={canUsePlatformPermission} isSetupTestMode={isSetupTestMode} onSaveSetupTestPersonnel={onSaveSetupTestPersonnel} isOpen={showResourceUnderlayPanel} onInitialSetupWizardActiveChange={onInitialSetupWizardActiveChange} />
+                            <OrganisationSlideoutDiagram platformConfig={platformConfig} organisationSettings={organisationSettings} unitCode={unitCode} locationCode={locationCode} formationCallsigns={formationCallsigns} buildRuleSettings={buildRuleSettings} flyingStartTime={flyingStartTime} flyingEndTime={flyingEndTime} ftdStartTime={ftdStartTime} ftdEndTime={ftdEndTime} cptStartTime={cptStartTime} cptEndTime={cptEndTime} allowNightFlying={allowNightFlying} commenceNightFlying={commenceNightFlying} ceaseNightFlying={ceaseNightFlying} onUpdateFlyingStartTime={onUpdateFlyingStartTime} onUpdateFlyingEndTime={onUpdateFlyingEndTime} onUpdateFtdStartTime={onUpdateFtdStartTime} onUpdateFtdEndTime={onUpdateFtdEndTime} onUpdateCptStartTime={onUpdateCptStartTime} onUpdateCptEndTime={onUpdateCptEndTime} onUpdateAllowNightFlying={onUpdateAllowNightFlying} onUpdateCommenceNightFlying={onUpdateCommenceNightFlying} onUpdateCeaseNightFlying={onUpdateCeaseNightFlying} dispatchStaggerSettings={dispatchStaggerSettings} onUpdateDispatchStaggerSettings={onUpdateDispatchStaggerSettings} tileStatusSettings={tileStatusSettings} onUpdateTileStatusSettings={onUpdateTileStatusSettings} emergencyFreezeAuthority={emergencyFreezeAuthority} onUpdateEmergencyFreezeAuthority={onUpdateEmergencyFreezeAuthority} emergencyFreezeAllowedActions={emergencyFreezeAllowedActions} onUpdateEmergencyFreezeAllowedActions={onUpdateEmergencyFreezeAllowedActions} qualificationOptions={qualificationOptions} currentUserQualificationIds={currentUserQualificationIds} onUpdatePlatformConfig={onUpdatePlatformConfig} onNavigateToSettingsSection={onNavigateToSettingsSection} currentUserPermission={currentUserPermission} canUsePlatformPermission={canUsePlatformPermission} isSetupTestMode={isSetupTestMode} onSaveSetupTestPersonnel={onSaveSetupTestPersonnel} isOpen={showResourceUnderlayPanel} onInitialSetupWizardActiveChange={onInitialSetupWizardActiveChange} initialView={initialOrganisationSlideoutView} />
                         </div>
                         <button
                             type="button"
@@ -13227,7 +13279,8 @@ const ScheduleView: React.FC<ScheduleViewProps> = ({
                                 return nextValue;
                             })}
                             aria-label={showResourceUnderlayPanel ? 'Close resource slideout' : 'Open resource slideout'}
-                            className="pointer-events-auto absolute right-[-56px] top-1/2 z-[1] flex h-7 w-[96px] -translate-y-1/2 rotate-90 items-center justify-between rounded-t-md border border-b-0 border-slate-500/60 bg-slate-950/92 px-2.5 text-slate-200 shadow-[0_8px_24px_rgba(0,0,0,0.35)] backdrop-blur transition hover:border-cyan-300/70 hover:text-cyan-100"
+                            className={`pointer-events-auto absolute right-[-56px] top-1/2 z-[1] flex h-7 w-[96px] -translate-y-1/2 rotate-90 items-center justify-between rounded-t-md border border-b-0 bg-slate-950/92 px-2.5 text-slate-200 shadow-[0_8px_24px_rgba(0,0,0,0.35)] backdrop-blur transition hover:border-cyan-300/70 hover:text-cyan-100 ${showInitialSetupBlankState ? 'dfp-setup-guide-pulse border-orange-300/80 text-orange-100' : 'border-slate-500/60'}`}
+                            style={showInitialSetupBlankState ? { animation: 'dfpSetupGuidePulse 2.2s ease-in-out infinite' } : undefined}
                         >
                             <span
                                 className="h-4 w-7 opacity-80"

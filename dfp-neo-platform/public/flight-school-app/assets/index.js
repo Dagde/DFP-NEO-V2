@@ -39377,10 +39377,13 @@ Classrooms: ${classroomNames.join(", ")}` : ""}`;
     ] })
   ] });
 };
-const OrganisationSlideoutDiagram = ({ platformConfig, organisationSettings, unitCode, locationCode, formationCallsigns = [], buildRuleSettings, flyingStartTime, flyingEndTime, ftdStartTime, ftdEndTime, cptStartTime, cptEndTime, allowNightFlying, commenceNightFlying, ceaseNightFlying, onUpdateFlyingStartTime, onUpdateFlyingEndTime, onUpdateFtdStartTime, onUpdateFtdEndTime, onUpdateCptStartTime, onUpdateCptEndTime, onUpdateAllowNightFlying, onUpdateCommenceNightFlying, onUpdateCeaseNightFlying, dispatchStaggerSettings, onUpdateDispatchStaggerSettings, tileStatusSettings, onUpdateTileStatusSettings, emergencyFreezeAuthority, onUpdateEmergencyFreezeAuthority, emergencyFreezeAllowedActions, onUpdateEmergencyFreezeAllowedActions, qualificationOptions, currentUserQualificationIds, onUpdatePlatformConfig, onNavigateToSettingsSection, currentUserPermission = "Staff", canUsePlatformPermission, isSetupTestMode: isSetupTestMode2 = false, onSaveSetupTestPersonnel, isOpen = false, onInitialSetupWizardActiveChange }) => {
+const OrganisationSlideoutDiagram = ({ platformConfig, organisationSettings, unitCode, locationCode, formationCallsigns = [], buildRuleSettings, flyingStartTime, flyingEndTime, ftdStartTime, ftdEndTime, cptStartTime, cptEndTime, allowNightFlying, commenceNightFlying, ceaseNightFlying, onUpdateFlyingStartTime, onUpdateFlyingEndTime, onUpdateFtdStartTime, onUpdateFtdEndTime, onUpdateCptStartTime, onUpdateCptEndTime, onUpdateAllowNightFlying, onUpdateCommenceNightFlying, onUpdateCeaseNightFlying, dispatchStaggerSettings, onUpdateDispatchStaggerSettings, tileStatusSettings, onUpdateTileStatusSettings, emergencyFreezeAuthority, onUpdateEmergencyFreezeAuthority, emergencyFreezeAllowedActions, onUpdateEmergencyFreezeAllowedActions, qualificationOptions, currentUserQualificationIds, onUpdatePlatformConfig, onNavigateToSettingsSection, currentUserPermission = "Staff", canUsePlatformPermission, isSetupTestMode: isSetupTestMode2 = false, onSaveSetupTestPersonnel, isOpen = false, onInitialSetupWizardActiveChange, initialView = "structure" }) => {
   const chart = reactExports.useMemo(() => buildOrganisationChart(platformConfig), [platformConfig]);
   const [selectedNodeId, setSelectedNodeId] = reactExports.useState(null);
-  const [activeView, setActiveView] = reactExports.useState("structure");
+  const [activeView, setActiveView] = reactExports.useState(initialView);
+  reactExports.useEffect(() => {
+    if (isOpen) setActiveView(initialView);
+  }, [initialView, isOpen]);
   reactExports.useEffect(() => {
     onInitialSetupWizardActiveChange?.(Boolean(isOpen && activeView === "setupWizard"));
     return () => onInitialSetupWizardActiveChange?.(false);
@@ -39642,6 +39645,7 @@ const ScheduleView = ({
   isNeoAssistPanelOpen = false,
   isFlightLinePanelOpen = false,
   onOrganisationSlideoutOpen,
+  showInitialSetupBlankState = false,
   onToggleFlightLinePanel,
   canEditFlightLineInventory = true,
   canEditFlightLineAvailability = true,
@@ -39649,6 +39653,7 @@ const ScheduleView = ({
   canEditTileAircraftNumber = true,
   onLinkedAvailabilityChange,
   onInitialSetupWizardActiveChange,
+  initialOrganisationSlideoutView = "structure",
   formationCallsigns = [],
   buildRuleSettings,
   flyingStartTime,
@@ -39702,6 +39707,10 @@ const ScheduleView = ({
   reactExports.useEffect(() => {
     if (isNeoAssistPanelOpen) setShowResourceUnderlayPanel(false);
   }, [isNeoAssistPanelOpen]);
+  const openInitialSetupWizard = reactExports.useCallback(() => {
+    onOrganisationSlideoutOpen?.();
+    setShowResourceUnderlayPanel(true);
+  }, [onOrganisationSlideoutOpen]);
   const [resourceSlideoutFrame, setResourceSlideoutFrame] = reactExports.useState(null);
   const scheduleGridRef = reactExports.useRef(null);
   const effectiveTimezoneOffset = reactExports.useMemo(() => {
@@ -41191,6 +41200,45 @@ const ScheduleView = ({
     });
   };
   return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { ref: scrollContainerRef, "data-schedule-surface": "true", className: "flex-1 overflow-auto relative bg-gray-900 select-none", style: isPauseSelectMode ? { cursor: "crosshair" } : void 0, children: [
+    /* @__PURE__ */ jsxRuntimeExports.jsx("style", { children: `
+                @keyframes dfpSetupGuidePulse {
+                    0%, 100% {
+                        border-color: rgba(251, 146, 60, 0.62);
+                        box-shadow: 0 0 0 0 rgba(251, 146, 60, 0.42), 0 8px 24px rgba(0,0,0,0.35);
+                    }
+                    50% {
+                        border-color: rgba(253, 186, 116, 1);
+                        box-shadow: 0 0 0 8px rgba(251, 146, 60, 0), 0 0 22px rgba(251, 146, 60, 0.55), 0 8px 24px rgba(0,0,0,0.35);
+                    }
+                }
+                @media (prefers-reduced-motion: reduce) {
+                    .dfp-setup-guide-pulse {
+                        animation: none !important;
+                    }
+                }
+            ` }),
+    showInitialSetupBlankState && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "pointer-events-none absolute inset-0 z-[24] flex items-center justify-center px-8", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "pointer-events-auto flex w-[min(980px,calc(100vw-420px))] max-w-[calc(100%-64px)] flex-col items-center rounded-xl border border-orange-300/45 bg-slate-950/86 px-8 py-7 text-center shadow-2xl shadow-black/45 backdrop-blur-md", children: [
+      /* @__PURE__ */ jsxRuntimeExports.jsx(
+        "img",
+        {
+          src: "/dfp-neo-setup-logo.jpg",
+          alt: "DFP NEO",
+          className: "mb-6 w-[min(720px,90%)] max-h-44 object-contain opacity-85"
+        }
+      ),
+      /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-[11px] font-black uppercase tracking-[0.22em] text-orange-300", children: "Initial Setup Required" }),
+      /* @__PURE__ */ jsxRuntimeExports.jsx("h2", { className: "mt-2 text-2xl font-black text-white", children: "Configure this customer before building the first DFP" }),
+      /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-3 max-w-2xl text-sm font-medium leading-6 text-slate-300", children: "Add the location, unit, aircraft and DFP resource rows to create the first operational workspace." }),
+      /* @__PURE__ */ jsxRuntimeExports.jsx(
+        "button",
+        {
+          type: "button",
+          onClick: openInitialSetupWizard,
+          className: "mt-6 rounded-md border border-orange-300 bg-orange-500 px-5 py-2.5 text-sm font-black text-slate-950 shadow-[0_0_22px_rgba(251,146,60,0.32)] transition hover:bg-orange-400",
+          children: "Start Initial Setup Wizard"
+        }
+      )
+    ] }) }),
     resourceSlideoutFrame && /* @__PURE__ */ jsxRuntimeExports.jsx(
       "div",
       {
@@ -41208,7 +41256,7 @@ const ScheduleView = ({
             className: `absolute left-0 top-0 h-full pointer-events-none border-r border-cyan-400/25 bg-slate-950 shadow-[18px_0_36px_rgba(0,0,0,0.38)] transition-transform duration-300 ease-out ${showResourceUnderlayPanel ? "" : "-translate-x-full"}`,
             style: { width: "min(calc(clamp(360px, 40vw, 680px) + 400px), calc(100vw - 420px))" },
             children: [
-              /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: `h-full overflow-hidden border-r border-white/5 bg-slate-950 ${showResourceUnderlayPanel ? "pointer-events-auto" : "pointer-events-none"}`, children: /* @__PURE__ */ jsxRuntimeExports.jsx(OrganisationSlideoutDiagram, { platformConfig, organisationSettings, unitCode, locationCode, formationCallsigns, buildRuleSettings, flyingStartTime, flyingEndTime, ftdStartTime, ftdEndTime, cptStartTime, cptEndTime, allowNightFlying, commenceNightFlying, ceaseNightFlying, onUpdateFlyingStartTime, onUpdateFlyingEndTime, onUpdateFtdStartTime, onUpdateFtdEndTime, onUpdateCptStartTime, onUpdateCptEndTime, onUpdateAllowNightFlying, onUpdateCommenceNightFlying, onUpdateCeaseNightFlying, dispatchStaggerSettings, onUpdateDispatchStaggerSettings, tileStatusSettings, onUpdateTileStatusSettings, emergencyFreezeAuthority, onUpdateEmergencyFreezeAuthority, emergencyFreezeAllowedActions, onUpdateEmergencyFreezeAllowedActions, qualificationOptions, currentUserQualificationIds, onUpdatePlatformConfig, onNavigateToSettingsSection, currentUserPermission, canUsePlatformPermission, isSetupTestMode: isSetupTestMode2, onSaveSetupTestPersonnel, isOpen: showResourceUnderlayPanel, onInitialSetupWizardActiveChange }) }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: `h-full overflow-hidden border-r border-white/5 bg-slate-950 ${showResourceUnderlayPanel ? "pointer-events-auto" : "pointer-events-none"}`, children: /* @__PURE__ */ jsxRuntimeExports.jsx(OrganisationSlideoutDiagram, { platformConfig, organisationSettings, unitCode, locationCode, formationCallsigns, buildRuleSettings, flyingStartTime, flyingEndTime, ftdStartTime, ftdEndTime, cptStartTime, cptEndTime, allowNightFlying, commenceNightFlying, ceaseNightFlying, onUpdateFlyingStartTime, onUpdateFlyingEndTime, onUpdateFtdStartTime, onUpdateFtdEndTime, onUpdateCptStartTime, onUpdateCptEndTime, onUpdateAllowNightFlying, onUpdateCommenceNightFlying, onUpdateCeaseNightFlying, dispatchStaggerSettings, onUpdateDispatchStaggerSettings, tileStatusSettings, onUpdateTileStatusSettings, emergencyFreezeAuthority, onUpdateEmergencyFreezeAuthority, emergencyFreezeAllowedActions, onUpdateEmergencyFreezeAllowedActions, qualificationOptions, currentUserQualificationIds, onUpdatePlatformConfig, onNavigateToSettingsSection, currentUserPermission, canUsePlatformPermission, isSetupTestMode: isSetupTestMode2, onSaveSetupTestPersonnel, isOpen: showResourceUnderlayPanel, onInitialSetupWizardActiveChange, initialView: initialOrganisationSlideoutView }) }),
               /* @__PURE__ */ jsxRuntimeExports.jsxs(
                 "button",
                 {
@@ -41219,7 +41267,8 @@ const ScheduleView = ({
                     return nextValue;
                   }),
                   "aria-label": showResourceUnderlayPanel ? "Close resource slideout" : "Open resource slideout",
-                  className: "pointer-events-auto absolute right-[-56px] top-1/2 z-[1] flex h-7 w-[96px] -translate-y-1/2 rotate-90 items-center justify-between rounded-t-md border border-b-0 border-slate-500/60 bg-slate-950/92 px-2.5 text-slate-200 shadow-[0_8px_24px_rgba(0,0,0,0.35)] backdrop-blur transition hover:border-cyan-300/70 hover:text-cyan-100",
+                  className: `pointer-events-auto absolute right-[-56px] top-1/2 z-[1] flex h-7 w-[96px] -translate-y-1/2 rotate-90 items-center justify-between rounded-t-md border border-b-0 bg-slate-950/92 px-2.5 text-slate-200 shadow-[0_8px_24px_rgba(0,0,0,0.35)] backdrop-blur transition hover:border-cyan-300/70 hover:text-cyan-100 ${showInitialSetupBlankState ? "dfp-setup-guide-pulse border-orange-300/80 text-orange-100" : "border-slate-500/60"}`,
+                  style: showInitialSetupBlankState ? { animation: "dfpSetupGuidePulse 2.2s ease-in-out infinite" } : void 0,
                   children: [
                     /* @__PURE__ */ jsxRuntimeExports.jsx(
                       "span",
@@ -132770,6 +132819,7 @@ const App = () => {
     [getUnitOptionsForLocation, selectableLocationCodes]
   );
   const canBootstrapInitialSetupFromDfp = hasAuthenticatedAdminRole && platformConfigLoaded && operationalContextOptions.length === 0;
+  const showInitialSetupBlankState = canBootstrapInitialSetupFromDfp;
   reactExports.useEffect(() => {
     if (!setupTestProfile) return;
     const unitOptionsByLocation = operationalContextOptions.map((option) => ({
@@ -150908,6 +150958,8 @@ ${error instanceof Error ? error.message : String(error)}`,
             onSaveSetupTestPersonnel: handleSaveSetupTestPersonnel,
             isNeoAssistPanelOpen: showDfpSidePanel,
             isFlightLinePanelOpen: showFlightLinePanel,
+            showInitialSetupBlankState,
+            initialOrganisationSlideoutView: showInitialSetupBlankState ? "setupWizard" : "structure",
             onOrganisationSlideoutOpen: () => {
               setShowDfpSidePanel(false);
               setShowFlightLinePanel(false);
@@ -153782,7 +153834,7 @@ Do you want to replace the existing entry?`,
   };
   const latestSavedDfpDate = snapshotDates.find((snapshotDate) => snapshotDate && snapshotDate !== date) || "";
   const isFutureSelectedDfpDate = date > getEffectiveDfpDateString();
-  const showEmptyDfpNotice = isAuthenticated && activeView === "Program Schedule" && dfpSnapshotLoadState.date === date && dfpSnapshotLoadState.status === "empty" && eventSegmentsForDate.length === 0 && !isFutureSelectedDfpDate && !isInitialSetupWizardActive && !setupTestProfile;
+  const showEmptyDfpNotice = isAuthenticated && activeView === "Program Schedule" && dfpSnapshotLoadState.date === date && dfpSnapshotLoadState.status === "empty" && eventSegmentsForDate.length === 0 && !isFutureSelectedDfpDate && !isInitialSetupWizardActive && !showInitialSetupBlankState && !setupTestProfile;
   return /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
     setupTestProfile && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "fixed left-1/2 top-2 z-[500] -translate-x-1/2 rounded-md border border-amber-300/70 bg-amber-100 px-4 py-2 text-center text-[11px] font-black uppercase tracking-[0.16em] text-slate-950 shadow-2xl shadow-black/30", children: [
       "Setup Wizard Test Mode - Local Browser Data Only - ",
