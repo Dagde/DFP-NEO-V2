@@ -116276,6 +116276,8 @@ async function generateDfpInternal(config, setProgress, publishedSchedules) {
     combinations: 0,
     calculations: 0
   };
+  let lastReportedBuildPercentage = 0;
+  let lastLiveProgressPaintAt = 0;
   const recordBuildCombination = (calculationWeight = 1) => {
     buildCalculationStats.iterations += 1;
     buildCalculationStats.combinations += 1;
@@ -116289,8 +116291,12 @@ async function generateDfpInternal(config, setProgress, publishedSchedules) {
     setTimeout(resolve, 0);
   });
   const recordProgress = async (progress) => {
+    const requestedPercentage = Math.max(0, Math.min(100, Math.round(progress.percentage)));
+    const visiblePercentage = progress.phase === "error" ? requestedPercentage : Math.max(lastReportedBuildPercentage, requestedPercentage);
+    lastReportedBuildPercentage = visiblePercentage;
     const nextProgress = {
       ...progress,
+      percentage: visiblePercentage,
       iterations: progress.iterations ?? buildCalculationStats.iterations,
       combinations: progress.combinations ?? buildCalculationStats.combinations,
       calculations: progress.calculations ?? buildCalculationStats.calculations,
@@ -116307,6 +116313,12 @@ async function generateDfpInternal(config, setProgress, publishedSchedules) {
     });
     setProgress(nextProgress);
     await waitForProgressPaint();
+  };
+  const recordLiveBuildProgress = async (progress, minIntervalMs = 250) => {
+    const now = performance.now();
+    if (now - lastLiveProgressPaintAt < minIntervalMs) return;
+    lastLiveProgressPaintAt = now;
+    await recordProgress(progress);
   };
   const neoBuildVerboseDiagnostics = localStorage.getItem("neo_build_verbose_diag") === "true";
   const neoBuildLiveDiagnostics = localStorage.getItem("neo_build_live_diag") === "true";
@@ -120393,19 +120405,25 @@ async function generateDfpInternal(config, setProgress, publishedSchedules) {
   if (mandatoryRemedialFlights.length > 0) {
     buildDebugLog(`DEBUG Mandatory remedial flight queue prepared: ${mandatoryRemedialFlights.length} event(s)`);
   }
-  highestPriorityEvents.forEach((event) => {
+  for (let priorityIndex = 0; priorityIndex < highestPriorityEvents.length; priorityIndex++) {
+    const event = highestPriorityEvents[priorityIndex];
+    recordBuildCombination(1);
+    await recordLiveBuildProgress({
+      message: "Processing priority events...",
+      percentage: 4 + Math.min(4, Math.floor(priorityIndex / Math.max(1, highestPriorityEvents.length) * 4))
+    });
     buildDebugLog(`DEBUG Checking event: ${event.flightNumber} - ${event.student || event.pilot || "N/A"} (ID: ${event.id})`);
     buildDebugLog(`  - event.date: ${event.date || "Any"}, buildDate: ${buildDate}, match: ${priorityEventMatchesBuildDate(event, buildDate)}`);
     buildDebugLog(`  - event.isTimeFixed: ${event.isTimeFixed}`);
     if (isCurrencyPriorityEvent(event)) {
       skippedCount++;
       buildDebugLog(`  ↷ DEBUG QUEUED currency priority event for normal rule scheduling: ${event.flightNumber} - ${event.student || event.pilot || "N/A"}`);
-      return;
+      continue;
     }
     if (isTaskingPriorityEvent(event)) {
       skippedCount++;
       buildDebugLog(`  ↷ DEBUG QUEUED directed-task priority event for resource scheduling: ${event.flightNumber} - ${event.group || event.id}`);
-      return;
+      continue;
     }
     if (isMandatoryRemedialFlight(event)) {
       skippedCount++;
@@ -120422,7 +120440,7 @@ async function generateDfpInternal(config, setProgress, publishedSchedules) {
         outcome: "not-inserted-during-fixed-priority-pass",
         nextHandoff: "mandatory-remedial-flight-scheduler"
       });
-      return;
+      continue;
     }
     if (priorityEventMatchesBuildDate(event, buildDate) && event.isTimeFixed) {
       const { date, ...rawEventWithoutDate } = event;
@@ -120470,7 +120488,7 @@ async function generateDfpInternal(config, setProgress, publishedSchedules) {
           });
         }
         buildDebugLog(`  ↻ DEBUG UPDATED existing Active DFP event as highest priority (ID: ${event.id})`);
-        return;
+        continue;
       }
       const placedPriorityEvent = { ...eventWithoutDate, _source: "highest-priority", _isNext: void 0, _traineeName: eventWithoutDate.student || eventWithoutDate.pilot || "" };
       pushGeneratedEvent(placedPriorityEvent);
@@ -120526,7 +120544,7 @@ async function generateDfpInternal(config, setProgress, publishedSchedules) {
         });
       }
     }
-  });
+  }
   buildDebugLog(`DEBUG Summary: ${includedCount} events INCLUDED, ${skippedCount} events SKIPPED`);
   buildDebugLog("DEBUG ===== BUILD ALGORITHM: HIGHEST PRIORITY PROCESSING COMPLETE =====");
   buildDebugLog("DEBUG ===== ASSIGNING RESOURCES TO HIGHEST PRIORITY EVENTS =====");
@@ -121567,7 +121585,8 @@ async function generateDfpInternal(config, setProgress, publishedSchedules) {
     const listName = diagnosticLabel || `${isNightPass ? "BNF" : type.toUpperCase()} ${isPlusOne ? "Next+1" : "Next"}`;
     const isMandatoryTraceList = listName.includes("Mandatory Remedial");
     const scheduleListStartedAt = performance.now();
-    await recordProgress({ message: `Placing ${listName} events...`, percentage: 40 + ["flight", "ftd", "cpt", "ground"].indexOf(type) * 10 });
+    const listBasePercentage = 40 + ["flight", "ftd", "cpt", "ground"].indexOf(type) * 10;
+    await recordProgress({ message: `Placing ${listName} events...`, percentage: listBasePercentage });
     let unplacedTrainees = [...list];
     let placedThisPass = true;
     const listDiag = {
@@ -121951,6 +121970,13 @@ async function generateDfpInternal(config, setProgress, publishedSchedules) {
               }
               for (let time = earliestEventStart; time <= cappedLatestEventStart; time += timeIncrement) {
                 listDiag.attempts++;
+                if (listDiag.attempts % 250 === 0) {
+                  await recordLiveBuildProgress({
+                    message: `Trying ${listName} combinations...`,
+                    percentage: Math.min(98, listBasePercentage + Math.floor(listDiag.attempts / 2500)),
+                    generatedEvents: generatedEvents.length
+                  });
+                }
                 const ftdNoResourceCacheKey = type === "ftd" ? makeFtdNoResourceCacheKey(time, scheduledDuration, generatedEvents.length) : null;
                 const cachedFtdNoResource = ftdNoResourceCacheKey ? ftdNoResourceCache.get(ftdNoResourceCacheKey) : null;
                 if (cachedFtdNoResource) {
@@ -144770,6 +144796,14 @@ The proposed event was not scheduled. Re-open the event and choose Accept Confli
     });
     markNeoBuildTiming(timingReport, "runBuildAlgorithm:start");
     setIsBuildingDfp(true);
+    setDfpBuildProgress({
+      message: "Preparing NEO Build inputs...",
+      percentage: 1,
+      iterations: 0,
+      combinations: 0,
+      calculations: 0,
+      phase: "running"
+    });
     pushDfpDataDiag("build:start-visible-draft-state", {
       buildDate: buildDfpDate,
       existingDraftEvents: nextDayBuildEvents.length,
