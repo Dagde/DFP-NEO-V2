@@ -104,11 +104,12 @@ Current implemented controls:
 - spreadsheet uploads are limited by file size, field count and workbook dimensions;
 - macro-enabled workbooks are rejected;
 - workbook macro/ActiveX/external content indicators are checked;
-- upload security events are written.
+- all live workbook parse paths are covered by the `npm run security:workbooks` evidence report;
+- upload security events are written where server-side syllabus upload processing is used.
 
 Controls requiring further work:
 
-- formal risk treatment for the `xlsx` dependency;
+- replacement or sandboxing of the `xlsx` dependency before higher-assurance customer deployments;
 - malware scanning or sandboxing for uploaded files in higher assurance deployments;
 - file retention/deletion policy.
 

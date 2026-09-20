@@ -56,6 +56,20 @@ npm run security:dependencies -- --json
 
 This report records `npm audit` evidence for production dependencies and all dependencies. Findings still require DFP NEO context review before they are treated as exploitable, remediated or formally risk-accepted.
 
+Phase 4 workbook upload treatment evidence:
+
+```bash
+npm run security:workbooks
+```
+
+JSON format:
+
+```bash
+npm run security:workbooks -- --json
+```
+
+This report records live `xlsx` parse paths and confirms workbook validation controls run before parsing. The upstream `xlsx` advisory remains visible in dependency scans because no fixed npm version is available; DFP NEO treats this as an accepted interim risk with compensating upload controls and a replacement/sandboxing decision before higher-assurance customer deployments.
+
 Phase 4 raw SQL review evidence:
 
 ```bash
@@ -103,8 +117,7 @@ Open work remains for:
 - customer-specific central log export and alerting configuration where required;
 - backup/restore evidence;
 - enterprise SSO/MFA;
-- dependency treatment;
-- raw SQL review;
+- dependency treatment monitoring;
 - CSP tightening after frontend bundle validation.
 
 ## Evidence To Retain
@@ -120,4 +133,5 @@ For each production deployment, retain:
 - evidence of backup configuration and restore test;
 - deployment platform security settings and access list.
 - dependency security report from `npm run security:dependencies`.
+- workbook upload treatment report from `npm run security:workbooks`.
 - raw SQL review report from `npm run security:sql`.

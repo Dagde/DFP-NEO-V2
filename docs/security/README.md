@@ -10,7 +10,7 @@ Phase 4: Dependency and secure build hardening.
 
 Phase 1 technical hardening has started. Browser session restore now uses a server-validated HttpOnly cookie rather than local storage as the authority for browser authentication. Remaining Phase 1 technical risks, including dependency treatment for `xlsx` and raw SQL review, are tracked in the POA&M.
 
-Phase 2 is complete as a baseline evidence pack. Phase 3 is complete for application-level posture reporting, security event export, evidence bundles, redacted evidence bundles and accepted interim monitoring documentation. Phase 4 has started with repeatable dependency vulnerability evidence.
+Phase 2 is complete as a baseline evidence pack. Phase 3 is complete for application-level posture reporting, security event export, evidence bundles, redacted evidence bundles and accepted interim monitoring documentation. Phase 4 has repeatable dependency, workbook upload and raw SQL evidence, with workbook parsing treated as an accepted interim risk because the upstream `xlsx` package has no fixed npm release.
 
 ## Documents
 
