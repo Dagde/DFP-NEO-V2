@@ -14,6 +14,7 @@
     "generate:airfield-catalog": "node scripts/generate-airfield-catalog.mjs",
     "security:posture": "node scripts/security-posture-report.mjs",
     "security:dependencies": "node scripts/security-dependency-report.mjs",
+    "security:sql": "node scripts/security-sql-review.mjs",
     "test:sun-times": "node scripts/test-sun-times.mjs",
     "git-sync": "node git-automation.js",
     "git-sync-once": "node git-sync-once.js",

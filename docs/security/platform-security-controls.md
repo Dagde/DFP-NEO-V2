@@ -56,6 +56,20 @@ npm run security:dependencies -- --json
 
 This report records `npm audit` evidence for production dependencies and all dependencies. Findings still require DFP NEO context review before they are treated as exploitable, remediated or formally risk-accepted.
 
+Phase 4 raw SQL review evidence:
+
+```bash
+npm run security:sql
+```
+
+JSON format:
+
+```bash
+npm run security:sql -- --json
+```
+
+This report inventories Prisma raw SQL use in live source files and triages calls by risk. It is a review aid; high-risk findings require manual inspection of the SQL source, route permissions and user-controlled inputs.
+
 ## Checks Performed
 
 The posture report checks and records:
@@ -106,3 +120,4 @@ For each production deployment, retain:
 - evidence of backup configuration and restore test;
 - deployment platform security settings and access list.
 - dependency security report from `npm run security:dependencies`.
+- raw SQL review report from `npm run security:sql`.
