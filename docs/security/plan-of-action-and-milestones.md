@@ -18,9 +18,11 @@ This POA&M tracks open security work, residual risk treatment and readiness task
 | POAM-008 | Medium | Classification decision | Default sensitivity assumption only | Record customer-specific data classification | System owner | Phase 2 | Open |
 | POAM-009 | Medium | Incident response exercise | Plan created; no exercise evidence | Run tabletop and record result | System owner | Phase 3 | Open |
 | POAM-010 | Medium | Change/release evidence | Git commits exist; no formal release checklist | Add release checklist and rollback procedure | Engineering | Phase 2 | Open |
+| POAM-011 | Medium | CSP tightening | Current CSP allows inline script/style for frontend compatibility | Remove inline allowances after validating the built frontend bundle | Engineering | Phase 4 | Open |
 
 ## Closed Items
 
 | ID | Closed In | Summary |
 | --- | --- | --- |
 | POAM-CLOSED-001 | `d18996e2` | Browser auth restore now requires server-validated session; legacy local-storage auth shortcut removed. |
+| POAM-CLOSED-002 | `CCH 8.969` | Phase 3 deployment posture report added as admin API and local command. |

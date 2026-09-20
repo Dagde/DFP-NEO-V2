@@ -21,6 +21,7 @@ import {
   isValidTimeZone,
 } from './utils/sunTimes.js';
 import { isValidWeatherIcao, normaliseWeatherIcao, weatherService } from './utils/weatherService.js';
+import { buildSecurityPostureReport } from './utils/securityPosture.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const require = createRequire(import.meta.url);
@@ -6892,6 +6893,18 @@ app.get('/api/security/status', async (req, res) => {
   } catch (error) {
     console.error('❌ GET /api/security/status error:', error);
     res.status(500).json({ error: 'Failed to fetch security status', details: error.message });
+  }
+});
+
+// GET /api/security/posture - Admin-only deployment guardrail summary
+app.get('/api/security/posture', async (req, res) => {
+  try {
+    const context = await requireDirectAdmin(req, res);
+    if (!context) return;
+    res.json({ posture: buildSecurityPostureReport(process.env) });
+  } catch (error) {
+    console.error('❌ GET /api/security/posture error:', error);
+    res.status(500).json({ error: 'Failed to build security posture report', details: error.message });
   }
 });
 

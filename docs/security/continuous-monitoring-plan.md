@@ -14,6 +14,9 @@ DFP NEO currently has:
 - upload accept/reject events;
 - rate-limit blocked events;
 - platform configuration audit entries;
+- admin-only security event and status APIs;
+- admin-only deployment security posture API;
+- local `npm run security:posture` report command;
 - deployment/runtime logs through the hosting platform.
 
 ## Required Monitoring Controls
@@ -42,6 +45,7 @@ For production deployments, configure:
 - unexpected server errors on auth/admin endpoints;
 - backup/restore failure;
 - deployment or environment variable change.
+- failed security posture check before release or customer handover.
 
 ## Evidence Template
 

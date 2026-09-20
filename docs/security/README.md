@@ -6,9 +6,11 @@ This pack does not by itself certify compliance. It records the current security
 
 ## Current Phase
 
-Phase 2: Security Evidence Pack.
+Phase 3: Platform Security Controls.
 
 Phase 1 technical hardening has started. Browser session restore now uses a server-validated HttpOnly cookie rather than local storage as the authority for browser authentication. Remaining Phase 1 technical risks, including dependency treatment for `xlsx` and raw SQL review, are tracked in the POA&M.
+
+Phase 2 is complete as a baseline evidence pack. Phase 3 has started with a repeatable security posture report for deployment guardrails.
 
 ## Documents
 
@@ -19,6 +21,7 @@ Phase 1 technical hardening has started. Browser session restore now uses a serv
 - [Backup And Restore Plan](backup-and-restore-plan.md)
 - [Vulnerability Management Plan](vulnerability-management-plan.md)
 - [Continuous Monitoring Plan](continuous-monitoring-plan.md)
+- [Platform Security Controls](platform-security-controls.md)
 - [Change And Configuration Management Plan](change-and-configuration-management-plan.md)
 - [Security Assessment Report Template](security-assessment-report-template.md)
 - [Plan Of Action And Milestones](plan-of-action-and-milestones.md)
