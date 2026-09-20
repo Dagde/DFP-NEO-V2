@@ -10249,6 +10249,7 @@ app.get('/api/auth/direct-session', async (req, res) => {
     }
 
     await repairSessionPersonLink(db, session);
+    setDirectSessionCookie(req, res, sessionToken, new Date(session.expires));
 
     return res.json({
       user: {
