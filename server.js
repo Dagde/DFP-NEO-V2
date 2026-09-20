@@ -6791,53 +6791,127 @@ function mapSecurityAuditRow(row) {
   };
 }
 
+function escapeCsvCell(value) {
+  const text = value == null
+    ? ''
+    : typeof value === 'object'
+      ? JSON.stringify(value)
+      : String(value);
+  return `"${text.replace(/"/g, '""')}"`;
+}
+
+function buildSecurityEventsCsv(events) {
+  const columns = [
+    'createdAt',
+    'severity',
+    'eventType',
+    'summary',
+    'userName',
+    'method',
+    'path',
+    'ipAddress',
+    'userAgent',
+    'details',
+  ];
+  const rows = events.map((event) => columns.map((column) => escapeCsvCell(event[column])).join(','));
+  return [columns.join(','), ...rows].join('\n');
+}
+
+function buildSecurityEventsQuery(query = {}, defaultLimit = 100) {
+  const limit = Math.max(1, Math.min(Number(query.limit || defaultLimit), 1000));
+  const severity = String(query.severity || '').trim().toLowerCase();
+  const eventType = String(query.eventType || '').trim().toUpperCase();
+  const days = Math.max(1, Math.min(Number(query.days || 30), 366));
+  const params = [];
+  const where = [`a."entityType" = 'SecurityMonitoring'`];
+
+  if (severity) {
+    params.push(severity);
+    where.push(`LOWER(a.changes->>'severity') = $${params.length}`);
+  }
+
+  if (eventType) {
+    params.push(eventType);
+    where.push(`a."entityId" = $${params.length}`);
+  }
+
+  params.push(days);
+  where.push(`a."createdAt" >= NOW() - ($${params.length}::int * INTERVAL '1 day')`);
+
+  params.push(limit);
+  return { where, params, limitParamIndex: params.length, days, limit };
+}
+
+async function fetchSecurityAuditRows(db, query = {}, defaultLimit = 100) {
+  const { where, params, limitParamIndex } = buildSecurityEventsQuery(query, defaultLimit);
+  return db.$queryRawUnsafe(
+    `SELECT
+       a.id,
+       a."entityId",
+       a.changes,
+       a."ipAddress",
+       a."userAgent",
+       a."createdAt",
+       u.username,
+       u."userId",
+       u."firstName",
+       u."lastName"
+     FROM "AuditLog" a
+     LEFT JOIN "User" u ON u.id = a."userId"
+     WHERE ${where.join(' AND ')}
+     ORDER BY a."createdAt" DESC
+     LIMIT $${limitParamIndex}`,
+    ...params
+  );
+}
+
 // GET /api/security/events - Admin-only security event history
 app.get('/api/security/events', async (req, res) => {
   try {
     const context = await requireDirectAdmin(req, res);
     if (!context) return;
     const db = context.db;
-    const limit = Math.max(1, Math.min(Number(req.query.limit || 100), 500));
-    const severity = String(req.query.severity || '').trim().toLowerCase();
-    const eventType = String(req.query.eventType || '').trim().toUpperCase();
-    const params = [];
-    const where = [`a."entityType" = 'SecurityMonitoring'`];
-
-    if (severity) {
-      params.push(severity);
-      where.push(`LOWER(a.changes->>'severity') = $${params.length}`);
-    }
-
-    if (eventType) {
-      params.push(eventType);
-      where.push(`a."entityId" = $${params.length}`);
-    }
-
-    params.push(limit);
-    const rows = await db.$queryRawUnsafe(
-      `SELECT
-         a.id,
-         a."entityId",
-         a.changes,
-         a."ipAddress",
-         a."userAgent",
-         a."createdAt",
-         u.username,
-         u."userId",
-         u."firstName",
-         u."lastName"
-       FROM "AuditLog" a
-       LEFT JOIN "User" u ON u.id = a."userId"
-       WHERE ${where.join(' AND ')}
-       ORDER BY a."createdAt" DESC
-       LIMIT $${params.length}`,
-      ...params
-    );
+    const rows = await fetchSecurityAuditRows(db, req.query, 100);
 
     res.json({ events: rows.map(mapSecurityAuditRow) });
   } catch (error) {
     console.error('❌ GET /api/security/events error:', error);
     res.status(500).json({ error: 'Failed to fetch security events', details: error.message });
+  }
+});
+
+// GET /api/security/events/export - Admin-only security event evidence export
+app.get('/api/security/events/export', async (req, res) => {
+  try {
+    const context = await requireDirectAdmin(req, res);
+    if (!context) return;
+    const rows = await fetchSecurityAuditRows(context.db, req.query, 500);
+    const events = rows.map(mapSecurityAuditRow);
+    const format = String(req.query.format || 'csv').trim().toLowerCase();
+    const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+
+    if (format === 'json') {
+      res.setHeader('Content-Type', 'application/json');
+      res.setHeader('Content-Disposition', `attachment; filename="dfp-neo-security-events-${timestamp}.json"`);
+      return res.json({
+        exportedAt: new Date().toISOString(),
+        count: events.length,
+        filters: {
+          days: req.query.days || '30',
+          severity: req.query.severity || '',
+          eventType: req.query.eventType || '',
+          limit: req.query.limit || '500',
+        },
+        events,
+      });
+    }
+
+    res.setHeader('Content-Type', 'text/csv; charset=utf-8');
+    res.setHeader('Content-Disposition', `attachment; filename="dfp-neo-security-events-${timestamp}.csv"`);
+    res.send(buildSecurityEventsCsv(events));
+  } catch (error) {
+    console.error('❌ GET /api/security/events/export error:', error);
+    res.status(500).json({ error: 'Failed to export security events', details: error.message });
   }
 });
 

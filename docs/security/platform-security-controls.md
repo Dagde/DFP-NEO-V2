@@ -22,6 +22,15 @@ GET /api/security/posture
 
 The API requires the same server-side browser session cookie used by the authenticated application and is limited to `ADMIN` and `SUPER_ADMIN` users.
 
+Security event evidence export:
+
+```text
+GET /api/security/events/export
+GET /api/security/events/export?format=json
+```
+
+The export is also limited to `ADMIN` and `SUPER_ADMIN` users. CSV is the default format. JSON is available when a structured evidence file is preferred.
+
 ## Checks Performed
 
 The posture report checks and records:
@@ -36,6 +45,7 @@ The posture report checks and records:
 - testing function flag state;
 - demo seed endpoint flag state;
 - security event forwarding configuration;
+- security event evidence export availability;
 - baseline browser security header configuration;
 - current CSP inline allowance risk.
 
@@ -60,6 +70,7 @@ For each production deployment, retain:
 
 - a generated `npm run security:posture` report;
 - screenshot or export of `/api/security/posture` from an admin session;
+- a security event export from `/api/security/events/export`;
 - evidence of configured central logging or the accepted alternative;
 - evidence of backup configuration and restore test;
 - deployment platform security settings and access list.

@@ -144,6 +144,13 @@ export function buildSecurityPostureReport(env = process.env, options = {}) {
       : 'Configure DFP_NEO_SECURITY_EVENT_WEBHOOK_URL or document the approved central logging alternative.',
   });
 
+  addControl(controls, {
+    status: 'pass',
+    category: 'Monitoring',
+    control: 'Security event evidence export',
+    detail: 'Admins can export locally stored security monitoring events for review evidence.',
+  });
+
   const headerList = Array.isArray(options.requiredHeaders) && options.requiredHeaders.length > 0
     ? options.requiredHeaders
     : DEFAULT_REQUIRED_HEADERS;

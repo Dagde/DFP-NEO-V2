@@ -16,6 +16,7 @@ DFP NEO currently has:
 - platform configuration audit entries;
 - admin-only security event and status APIs;
 - admin-only deployment security posture API;
+- admin-only security event export API;
 - local `npm run security:posture` report command;
 - deployment/runtime logs through the hosting platform.
 
@@ -60,6 +61,24 @@ For production deployments, configure:
 | Last review date |  |
 | Findings |  |
 | Actions |  |
+
+## Security Event Evidence Export
+
+An administrator can export locally stored security monitoring events for review:
+
+```text
+/api/security/events/export
+```
+
+Optional filters:
+
+- `days`: number of days to include, default 30;
+- `limit`: maximum records to include, default 500;
+- `severity`: filter by severity;
+- `eventType`: filter by event type;
+- `format=json`: export JSON instead of CSV.
+
+Retain the export with the security review evidence for the deployment. This export is not a replacement for central monitoring, but it provides a practical evidence source until a customer-approved SIEM, webhook, or managed log destination is configured.
 
 ## Current Open Work
 
