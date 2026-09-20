@@ -9,7 +9,6 @@ This POA&M tracks open security work, residual risk treatment and readiness task
 | ID | Priority | Item | Current State | Required Outcome | Owner | Target | Status |
 | --- | --- | --- | --- | --- | --- | --- | --- |
 | POAM-001 | High | `xlsx` dependency risk | `npm audit` reports high advisories with no npm fix | Replace, isolate, sandbox or formally risk-accept workbook parsing | Engineering | Phase 1 | Open |
-| POAM-002 | High | Prisma/deepmerge advisory | `npm audit` reports high advisory through Prisma tooling | Safely upgrade Prisma path or risk-treat if not runtime-exposed | Engineering | Phase 1 | Open |
 | POAM-003 | High | Raw SQL review | Many raw SQL calls exist | Review unsafe queries for injection and privilege risk | Engineering | Phase 1 | Open |
 | POAM-004 | High | MFA/SSO | Password auth exists; no enterprise MFA/SSO evidence | Define and implement enterprise identity option | Product/Engineering | Phase 3 | Open |
 | POAM-005 | High | Customer central monitoring integration | Interim local audit/export control accepted for Phase 3; no customer SIEM/export destination selected | Configure central log export and review workflow when required by a customer deployment | Operations | Customer deployment | Open |
@@ -32,3 +31,4 @@ This POA&M tracks open security work, residual risk treatment and readiness task
 | POAM-CLOSED-006 | `CCH 8.975` | CORS posture clarified so same-origin-only browser access is recorded as the secure default. |
 | POAM-CLOSED-007 | `CCH 8.976` | Local audit logs, admin status, event export and evidence bundles documented as the accepted interim monitoring control. |
 | POAM-CLOSED-008 | `CCH 8.977` | Phase 4 dependency security report command added to produce repeatable npm audit evidence for production and all dependencies. |
+| POAM-CLOSED-009 | `CCH 8.978` | Prisma CLI and client pinned to `6.12.0`, removing the Prisma/deepmerge npm audit finding without adopting a release-candidate major version. |
