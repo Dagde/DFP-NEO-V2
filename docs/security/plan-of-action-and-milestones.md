@@ -12,7 +12,7 @@ This POA&M tracks open security work, residual risk treatment and readiness task
 | POAM-002 | High | Prisma/deepmerge advisory | `npm audit` reports high advisory through Prisma tooling | Safely upgrade Prisma path or risk-treat if not runtime-exposed | Engineering | Phase 1 | Open |
 | POAM-003 | High | Raw SQL review | Many raw SQL calls exist | Review unsafe queries for injection and privilege risk | Engineering | Phase 1 | Open |
 | POAM-004 | High | MFA/SSO | Password auth exists; no enterprise MFA/SSO evidence | Define and implement enterprise identity option | Product/Engineering | Phase 3 | Open |
-| POAM-005 | High | Central logging | Database audit log exists; no central SIEM/export evidence | Configure central log export and review workflow | Operations | Phase 3 | Open |
+| POAM-005 | High | Customer central monitoring integration | Interim local audit/export control accepted for Phase 3; no customer SIEM/export destination selected | Configure central log export and review workflow when required by a customer deployment | Operations | Customer deployment | Open |
 | POAM-006 | High | Backup/restore evidence | No restore-test evidence in repo | Document encrypted backups and complete restore test | Operations | Phase 3 | Open |
 | POAM-007 | Medium | Supplier/cloud register | Initial register created but incomplete | Complete Railway, database, SMTP and GitHub supplier evidence | Operations | Phase 2 | Open |
 | POAM-008 | Medium | Classification decision | Default sensitivity assumption only | Record customer-specific data classification | System owner | Phase 2 | Open |
@@ -30,3 +30,4 @@ This POA&M tracks open security work, residual risk treatment and readiness task
 | POAM-CLOSED-004 | `CCH 8.973` | Admin security evidence bundle added for posture, monitoring and recent-event review evidence. |
 | POAM-CLOSED-005 | `CCH 8.974` | Redacted security evidence bundle added for safer external/customer review sharing. |
 | POAM-CLOSED-006 | `CCH 8.975` | CORS posture clarified so same-origin-only browser access is recorded as the secure default. |
+| POAM-CLOSED-007 | `CCH 8.976` | Local audit logs, admin status, event export and evidence bundles documented as the accepted interim monitoring control. |

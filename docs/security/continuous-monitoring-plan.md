@@ -32,6 +32,19 @@ For production deployments, configure:
 - time synchronisation evidence;
 - log retention period aligned to customer requirements.
 
+## Accepted Interim Monitoring Control
+
+Until a customer-approved SIEM, webhook, managed log destination or SOC workflow is selected, DFP NEO's accepted interim monitoring control is:
+
+- security-relevant events are written to the application audit log;
+- administrators can review current security status through `/api/security/status`;
+- administrators can export security event evidence through `/api/security/events/export`;
+- administrators can download full internal evidence through `/api/security/evidence-bundle`;
+- administrators can download redacted external evidence through `/api/security/evidence-bundle?redacted=true`;
+- the security posture report clearly records whether external security event forwarding is configured.
+
+This interim control is accepted for product development, internal assurance, testbed demonstrations and early customer review. It is not a substitute for a customer-approved central monitoring destination for higher-assurance production deployments. The deployment owner must either configure external forwarding or formally accept the residual risk for that deployment.
+
 ## Events To Monitor
 
 - failed login spikes;
@@ -104,7 +117,7 @@ Use the `redacted=true` version when the file may be shared outside the internal
 
 ## Current Open Work
 
-- Select central logging/SIEM destination.
-- Define alert thresholds.
-- Define audit log retention and export.
+- Select central logging/SIEM destination when required by a customer deployment.
+- Define alert thresholds for the selected central monitoring destination.
+- Define audit log retention and export for each deployment.
 - Add operational runbook for reviewing security events.

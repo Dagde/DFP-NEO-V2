@@ -72,7 +72,7 @@ The posture report is not a certification result. It is an operational guardrail
 
 Open work remains for:
 
-- central log export and alerting configuration;
+- customer-specific central log export and alerting configuration where required;
 - backup/restore evidence;
 - enterprise SSO/MFA;
 - dependency treatment;
@@ -88,6 +88,6 @@ For each production deployment, retain:
 - a security event export from `/api/security/events/export`;
 - a security evidence bundle from `/api/security/evidence-bundle`;
 - a redacted evidence bundle from `/api/security/evidence-bundle?redacted=true` for customer or assessor sharing;
-- evidence of configured central logging or the accepted alternative;
+- evidence of configured central logging or the accepted interim local audit/export control;
 - evidence of backup configuration and restore test;
 - deployment platform security settings and access list.
