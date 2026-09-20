@@ -87,6 +87,7 @@ An administrator can download a combined JSON evidence bundle:
 
 ```text
 /api/security/evidence-bundle
+/api/security/evidence-bundle?redacted=true
 ```
 
 The bundle includes:
@@ -98,6 +99,8 @@ The bundle includes:
 - generation time and admin role.
 
 Use this as the preferred quick evidence capture during customer review, internal security review, release assurance, and pre-deployment checks.
+
+Use the `redacted=true` version when the file may be shared outside the internal operator group. The redacted version masks operational identifiers such as names, usernames, email addresses, personnel IDs, person IDs, IP addresses, user agents and message IDs.
 
 ## Current Open Work
 

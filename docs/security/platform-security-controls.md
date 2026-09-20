@@ -35,9 +35,12 @@ Security evidence bundle:
 
 ```text
 GET /api/security/evidence-bundle
+GET /api/security/evidence-bundle?redacted=true
 ```
 
 The bundle is also limited to `ADMIN` and `SUPER_ADMIN` users. It downloads one JSON file containing the deployment posture, monitoring status and recent security events for review evidence.
+
+Use `redacted=true` when the bundle may be shared outside the internal operator group. The redacted bundle masks operational identifiers such as admin names, usernames, email addresses, personnel IDs, person IDs, IP addresses, user agents and message IDs.
 
 ## Checks Performed
 
@@ -55,6 +58,7 @@ The posture report checks and records:
 - security event forwarding configuration;
 - security event evidence export availability;
 - security evidence bundle availability;
+- redacted evidence bundle availability;
 - baseline browser security header configuration;
 - current CSP inline allowance risk.
 
@@ -81,6 +85,7 @@ For each production deployment, retain:
 - screenshot or export of `/api/security/posture` from an admin session;
 - a security event export from `/api/security/events/export`;
 - a security evidence bundle from `/api/security/evidence-bundle`;
+- a redacted evidence bundle from `/api/security/evidence-bundle?redacted=true` for customer or assessor sharing;
 - evidence of configured central logging or the accepted alternative;
 - evidence of backup configuration and restore test;
 - deployment platform security settings and access list.

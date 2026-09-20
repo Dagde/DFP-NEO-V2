@@ -158,6 +158,13 @@ export function buildSecurityPostureReport(env = process.env, options = {}) {
     detail: 'Admins can download a combined posture, monitoring and recent-events evidence bundle.',
   });
 
+  addControl(controls, {
+    status: 'pass',
+    category: 'Monitoring',
+    control: 'Redacted evidence bundle',
+    detail: 'Admins can download a redacted external/shareable evidence bundle.',
+  });
+
   const headerList = Array.isArray(options.requiredHeaders) && options.requiredHeaders.length > 0
     ? options.requiredHeaders
     : DEFAULT_REQUIRED_HEADERS;

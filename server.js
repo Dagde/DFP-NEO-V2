@@ -6895,6 +6895,52 @@ async function buildSecurityMonitoringStatus(db) {
   };
 }
 
+function isRedactedEvidenceRequest(query = {}) {
+  const value = String(query.redacted || query.external || query.shareable || '').trim().toLowerCase();
+  return ['1', 'true', 'yes', 'external', 'shareable'].includes(value);
+}
+
+function redactSecurityEvidenceValue(key, value) {
+  const keyText = String(key || '').toLowerCase();
+  if (value == null) return value;
+  if (/email|messageid|personid|personnelid|targetuserid|supplieduserid|matcheduserid|matchedusername|matchedemail|matchedname|userid|username|name|ipaddress|useragent/i.test(keyText)) {
+    return '[redacted]';
+  }
+  if (Array.isArray(value)) return value.map((item) => redactSecurityEvidenceValue(key, item));
+  if (typeof value === 'object') return redactSecurityEvidenceObject(value);
+  if (typeof value !== 'string') return value;
+  return value
+    .replace(/[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/gi, '[redacted-email]')
+    .replace(/\b(?:\d{1,3}\.){3}\d{1,3}\b/g, '[redacted-ip]');
+}
+
+function redactSecurityEvidenceObject(value = {}) {
+  return Object.entries(value || {}).reduce((redacted, [key, item]) => {
+    redacted[key] = redactSecurityEvidenceValue(key, item);
+    return redacted;
+  }, Array.isArray(value) ? [] : {});
+}
+
+function redactSecurityEventForSharing(event) {
+  return {
+    ...event,
+    id: '[redacted]',
+    userName: '[redacted]',
+    ipAddress: '[redacted]',
+    userAgent: '[redacted]',
+    details: redactSecurityEvidenceObject(event.details || {}),
+  };
+}
+
+function redactSecurityMonitoringStatusForSharing(status) {
+  return {
+    ...status,
+    latestEvents: Array.isArray(status.latestEvents)
+      ? status.latestEvents.map(redactSecurityEventForSharing)
+      : [],
+  };
+}
+
 // GET /api/security/events - Admin-only security event history
 app.get('/api/security/events', async (req, res) => {
   try {
@@ -6964,17 +7010,23 @@ app.get('/api/security/evidence-bundle', async (req, res) => {
     const context = await requireDirectAdmin(req, res);
     if (!context) return;
     const timestamp = new Date().toISOString();
+    const redacted = isRedactedEvidenceRequest(req.query);
     const recentRows = await fetchSecurityAuditRows(context.db, req.query, 100);
+    const monitoringStatus = await buildSecurityMonitoringStatus(context.db);
+    const recentSecurityEvents = recentRows.map(mapSecurityAuditRow);
     const bundle = {
       exportedAt: timestamp,
+      redacted,
       generatedBy: {
-        userId: context.admin.userId || '',
-        username: context.admin.username || '',
+        userId: redacted ? '[redacted]' : context.admin.userId || '',
+        username: redacted ? '[redacted]' : context.admin.username || '',
         role: context.admin.role || '',
       },
       posture: buildSecurityPostureReport(process.env),
-      monitoringStatus: await buildSecurityMonitoringStatus(context.db),
-      recentSecurityEvents: recentRows.map(mapSecurityAuditRow),
+      monitoringStatus: redacted ? redactSecurityMonitoringStatusForSharing(monitoringStatus) : monitoringStatus,
+      recentSecurityEvents: redacted
+        ? recentSecurityEvents.map(redactSecurityEventForSharing)
+        : recentSecurityEvents,
       filters: {
         days: req.query.days || '30',
         severity: req.query.severity || '',
@@ -6982,14 +7034,17 @@ app.get('/api/security/evidence-bundle', async (req, res) => {
         limit: req.query.limit || '100',
       },
       notes: [
-        'This bundle contains operational security evidence only.',
+        redacted
+          ? 'This is a redacted external/shareable evidence bundle.'
+          : 'This bundle contains operational security evidence only.',
         'It does not include passwords, session tokens, signing secrets, database credentials or webhook URLs.',
       ],
     };
 
     const filenameTimestamp = timestamp.replace(/[:.]/g, '-');
+    const filenameSuffix = redacted ? 'redacted-security-evidence' : 'security-evidence';
     res.setHeader('Content-Type', 'application/json');
-    res.setHeader('Content-Disposition', `attachment; filename="dfp-neo-security-evidence-${filenameTimestamp}.json"`);
+    res.setHeader('Content-Disposition', `attachment; filename="dfp-neo-${filenameSuffix}-${filenameTimestamp}.json"`);
     res.json(bundle);
   } catch (error) {
     console.error('❌ GET /api/security/evidence-bundle error:', error);
