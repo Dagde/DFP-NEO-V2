@@ -31,6 +31,57 @@ const UPLOAD_TYPE_LABELS = new Set([
   'mass brief',
 ]);
 
+const MAX_WORKBOOK_BYTES = 10 * 1024 * 1024;
+const ALLOWED_WORKBOOK_EXTENSIONS = new Set(['.xlsx', '.xls']);
+
+const BLOCKED_WORKBOOK_INDICATORS = [
+  { token: 'vbaproject.bin', reason: 'The workbook contains macro content.' },
+  { token: 'xl/embeddings/', reason: 'The workbook contains embedded objects.' },
+  { token: 'xl/activexcontrols/', reason: 'The workbook contains ActiveX controls.' },
+  { token: 'xl/externallinks/', reason: 'The workbook contains external workbook links.' },
+  { token: 'application/vnd.ms-office.activex', reason: 'The workbook contains ActiveX content.' },
+];
+
+const getWorkbookExtension = (fileName = '') => {
+  const match = fileName.toLowerCase().match(/\.[^.]+$/);
+  return match?.[0] || '';
+};
+
+const hasZipWorkbookSignature = (buffer: Buffer) => (
+  buffer.length >= 4 && buffer[0] === 0x50 && buffer[1] === 0x4b
+);
+
+const hasLegacyExcelSignature = (buffer: Buffer) => {
+  const signature = [0xd0, 0xcf, 0x11, 0xe0, 0xa1, 0xb1, 0x1a, 0xe1];
+  return buffer.length >= signature.length && signature.every((byte, index) => buffer[index] === byte);
+};
+
+const validateWorkbookUploadFile = (file: File, buffer: Buffer): string => {
+  if (!buffer.length) return 'No upload file data was supplied.';
+  if (buffer.length > MAX_WORKBOOK_BYTES) return 'The upload file is too large. The maximum workbook size is 10 MB.';
+
+  const extension = getWorkbookExtension(file.name || '');
+  if (!ALLOWED_WORKBOOK_EXTENSIONS.has(extension)) {
+    if (extension === '.xlsm') return 'Macro-enabled Excel files are not accepted for syllabus uploads. Save the workbook as .xlsx and upload again.';
+    return 'Only Excel workbook files can be uploaded.';
+  }
+  if (extension === '.xlsx' && !hasZipWorkbookSignature(buffer)) {
+    return 'The uploaded workbook does not look like a valid XLSX file.';
+  }
+  if (extension === '.xls' && !hasLegacyExcelSignature(buffer) && !hasZipWorkbookSignature(buffer)) {
+    return 'The uploaded XLS file does not look like a valid Excel workbook.';
+  }
+
+  const searchable = buffer.toString('latin1').toLowerCase();
+  for (const indicator of BLOCKED_WORKBOOK_INDICATORS) {
+    if (searchable.includes(indicator.token)) return indicator.reason;
+  }
+  if (extension === '.xls' && ['_vba_project', 'vba', 'macrosheet'].some((indicator) => searchable.includes(indicator))) {
+    return 'The legacy XLS workbook appears to contain macro content.';
+  }
+  return '';
+};
+
 const getValue = (row: Record<string, any>, aliases: string[]): any => {
   for (const alias of aliases) {
     if (Object.prototype.hasOwnProperty.call(row, alias)) return row[alias];
@@ -302,6 +353,14 @@ export async function POST(request: NextRequest) {
     }
 
     const buffer = Buffer.from(await file.arrayBuffer());
+    const uploadValidationError = validateWorkbookUploadFile(file, buffer);
+    if (uploadValidationError) {
+      return NextResponse.json(
+        { error: 'Upload rejected', message: uploadValidationError },
+        { status: 415, headers: getCorsHeaders(request) }
+      );
+    }
+
     const workbook = XLSX.read(buffer, { type: 'buffer', cellStyles: true });
     const worksheetName = workbook.SheetNames.includes('Syllabus_LMP')
       ? 'Syllabus_LMP'

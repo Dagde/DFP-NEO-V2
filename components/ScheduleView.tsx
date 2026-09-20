@@ -71,6 +71,7 @@ import {
 import { formatClassroomFieldLabel, formatClassroomNames, getClassroomNamesForRows, updateClassroomNameForRow } from '../utils/classroomResources';
 import { createAcademicStandardEventCode, normaliseAcademicStandardEvents, type AcademicStandardEventConfig } from '../utils/academicStandardEvents';
 import { normaliseLmpAudience, type LmpAudience } from '../utils/lmpAudience';
+import { validateSpreadsheetBeforeParse } from '../utils/spreadsheetSecurity';
    
 declare const XLSX: any;
 
@@ -1051,6 +1052,7 @@ const readWizardTemplateRows = async (file: File): Promise<WizardTemplateReadRes
     if (['xlsx', 'xls'].includes(extension || '')) {
         if (typeof XLSX === 'undefined') throw new Error('Excel support is not available in this browser session.');
         const data = await file.arrayBuffer();
+        validateSpreadsheetBeforeParse(file.name, data);
         const workbook = XLSX.read(data, { type: 'array', cellStyles: true });
         const firstSheet = workbook.SheetNames[0];
         if (!firstSheet) return { rows: [] };

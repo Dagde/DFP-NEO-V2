@@ -27,6 +27,7 @@ import {
 } from '../utils/importExampleRow';
 import { parseImportedCallsign } from '../utils/importCallsign';
 import type { PlatformLocation } from '../utils/platformConfigService';
+import { validateSpreadsheetBeforeParse } from '../utils/spreadsheetSecurity';
 
 declare var XLSX: any;
 
@@ -261,6 +262,7 @@ const BulkUpdateFlyout: React.FC<BulkUpdateFlyoutProps> = ({
 
         try {
             const data = await selectedLocalFile.arrayBuffer();
+            validateSpreadsheetBeforeParse(selectedLocalFile.name, data);
 
             setStatusMessage('Parsing spreadsheet...');
             const workbook = XLSX.read(data, { type: 'array', cellStyles: true });

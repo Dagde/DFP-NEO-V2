@@ -20,6 +20,7 @@ import {
 import { parseImportedCallsign } from '../utils/importCallsign';
 import type { PlatformLocation } from '../utils/platformConfigService';
 import type { UnitCallsignSettings } from '../utils/unitCallsigns';
+import { validateSpreadsheetBeforeParse } from '../utils/spreadsheetSecurity';
 
 declare var XLSX: any;
 
@@ -219,6 +220,7 @@ const parseTraineeRow = (
 
 const readWorkbookRows = async (file: File, skipExampleRow = false): Promise<WorkbookRowsResult> => {
     const data = await file.arrayBuffer();
+    validateSpreadsheetBeforeParse(file.name, data);
     const workbook = XLSX.read(data, { type: 'array', cellStyles: true });
     const worksheet = workbook.Sheets[workbook.SheetNames[0]];
     const rawRows: any[][] = XLSX.utils.sheet_to_json(worksheet, { header: 1, defval: '' });

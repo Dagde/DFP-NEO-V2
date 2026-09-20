@@ -108,6 +108,7 @@ import { verifyCurrentUserPassword } from '../utils/passwordVerification';
 import { handleEditableTextBeforeInput, handleEditableTextKeyDownCapture, stopEditableKeyPropagation } from '../utils/editableKeyEvents';
 import { formatClassroomFieldLabel, getClassroomNamesForRows, updateClassroomNameForRow } from '../utils/classroomResources';
 import { createAcademicStandardEventCode, normaliseAcademicStandardEvents, type AcademicStandardEventConfig } from '../utils/academicStandardEvents';
+import { validateSpreadsheetBeforeParse } from '../utils/spreadsheetSecurity';
 import type { ContinuationEventSetting, CurrencyRequirement, FormationCallsign, Instructor, MasterCurrency, PhraseBank, SyllabusItemDetail, Trainee } from '../types';
 import {
   INSERT_EVENT_LABEL_MAX_LENGTH,
@@ -3612,6 +3613,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
     try {
       if (typeof XLSX === 'undefined') throw new Error('Excel import library is not available.');
       const data = await file.arrayBuffer();
+      validateSpreadsheetBeforeParse(file.name, data);
       const workbook = XLSX.read(data, { type: 'array' });
       const levelNames = getOrganisationLevelNamesFromWorkbook(workbook);
       const ladderSheetName = workbook.SheetNames.find((name: string) => String(name || '').trim().toLowerCase() === 'ladder view');

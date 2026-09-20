@@ -16510,6 +16510,67 @@ const FormationCallsignsSection = ({
     ] })
   ] });
 };
+const MAX_WORKBOOK_BYTES = 10 * 1024 * 1024;
+const BLOCKED_WORKBOOK_INDICATORS = [
+  { token: "vbaproject.bin", reason: "The workbook contains macro content." },
+  { token: "xl/embeddings/", reason: "The workbook contains embedded objects." },
+  { token: "xl/activexcontrols/", reason: "The workbook contains ActiveX controls." },
+  { token: "xl/externallinks/", reason: "The workbook contains external workbook links." },
+  { token: "application/vnd.ms-office.activex", reason: "The workbook contains ActiveX content." }
+];
+const LEGACY_MACRO_INDICATORS = ["_vba_project", "vba", "macrosheet"];
+const getSpreadsheetFileExtension = (fileName = "") => fileName.split(".").pop()?.toLowerCase() || "";
+const hasZipWorkbookSignature = (bytes) => bytes.length >= 4 && bytes[0] === 80 && bytes[1] === 75;
+const hasLegacyExcelSignature = (bytes) => {
+  const signature = [208, 207, 17, 224, 161, 177, 26, 225];
+  return bytes.length >= signature.length && signature.every((byte, index) => bytes[index] === byte);
+};
+const arrayBufferToLatin1Lowercase = (buffer) => {
+  const bytes = new Uint8Array(buffer);
+  let output = "";
+  const chunkSize = 8192;
+  for (let index = 0; index < bytes.length; index += chunkSize) {
+    const chunk = bytes.subarray(index, index + chunkSize);
+    output += String.fromCharCode(...Array.from(chunk));
+  }
+  return output.toLowerCase();
+};
+const validateSpreadsheetBeforeParse = (fileName, buffer, options = {}) => {
+  const maxBytes = options.maxBytes ?? MAX_WORKBOOK_BYTES;
+  const allowCsv = options.allowCsv ?? true;
+  const allowLegacyXls = options.allowLegacyXls ?? true;
+  const extension = getSpreadsheetFileExtension(fileName);
+  if (buffer.byteLength <= 0) {
+    throw new Error("No upload file data was supplied.");
+  }
+  if (buffer.byteLength > maxBytes) {
+    throw new Error(`The upload file is too large. The maximum workbook size is ${Math.round(maxBytes / 1024 / 1024)} MB.`);
+  }
+  if (extension === "csv") {
+    if (!allowCsv) throw new Error("CSV files are not accepted for this import.");
+    return;
+  }
+  if (extension !== "xlsx" && extension !== "xls") {
+    throw new Error("Please select an .xlsx, .xls or .csv file.");
+  }
+  const bytes = new Uint8Array(buffer);
+  if (extension === "xlsx" && !hasZipWorkbookSignature(bytes)) {
+    throw new Error("The uploaded workbook does not look like a valid XLSX file.");
+  }
+  if (extension === "xls") {
+    if (!allowLegacyXls) throw new Error("Legacy .xls files are not accepted for this import. Save the workbook as .xlsx or .csv and try again.");
+    if (!hasLegacyExcelSignature(bytes) && !hasZipWorkbookSignature(bytes)) {
+      throw new Error("The uploaded XLS file does not look like a valid Excel workbook.");
+    }
+  }
+  const searchable = arrayBufferToLatin1Lowercase(buffer);
+  for (const indicator of BLOCKED_WORKBOOK_INDICATORS) {
+    if (searchable.includes(indicator.token)) throw new Error(indicator.reason);
+  }
+  if (extension === "xls" && LEGACY_MACRO_INDICATORS.some((indicator) => searchable.includes(indicator))) {
+    throw new Error("The legacy XLS workbook appears to contain macro content.");
+  }
+};
 const DFP_RESOURCE_ROW_KEYS = ["aircraft", "ftd", "cpt", "standby", "ground", "dutySupervisor", "towerDutyInstructor"];
 const DEFAULT_FLIGHT_LINE_UNAVAILABLE_REASONS$1 = [
   "Maintenance",
@@ -19189,6 +19250,7 @@ const PlatformConfigurationSettings = ({
     try {
       if (typeof XLSX === "undefined") throw new Error("Excel import library is not available.");
       const data = await file.arrayBuffer();
+      validateSpreadsheetBeforeParse(file.name, data);
       const workbook = XLSX.read(data, { type: "array" });
       const levelNames = getOrganisationLevelNamesFromWorkbook(workbook);
       const ladderSheetName = workbook.SheetNames.find((name) => String(name || "").trim().toLowerCase() === "ladder view");
@@ -30910,6 +30972,7 @@ const readWizardTemplateRows = async (file) => {
   if (["xlsx", "xls"].includes(extension || "")) {
     if (typeof XLSX === "undefined") throw new Error("Excel support is not available in this browser session.");
     const data = await file.arrayBuffer();
+    validateSpreadsheetBeforeParse(file.name, data);
     const workbook = XLSX.read(data, { type: "array", cellStyles: true });
     const firstSheet = workbook.SheetNames[0];
     if (!firstSheet) return { rows: [] };
@@ -52829,6 +52892,7 @@ const parseTraineeRow = (row, options = {}) => {
 };
 const readWorkbookRows = async (file, skipExampleRow = false) => {
   const data = await file.arrayBuffer();
+  validateSpreadsheetBeforeParse(file.name, data);
   const workbook = XLSX.read(data, { type: "array", cellStyles: true });
   const worksheet = workbook.Sheets[workbook.SheetNames[0]];
   const rawRows = XLSX.utils.sheet_to_json(worksheet, { header: 1, defval: "" });
@@ -86044,6 +86108,7 @@ const BulkUpdateFlyout = ({
     let completedSuccessfully = false;
     try {
       const data = await selectedLocalFile.arrayBuffer();
+      validateSpreadsheetBeforeParse(selectedLocalFile.name, data);
       setStatusMessage("Parsing spreadsheet...");
       const workbook = XLSX.read(data, { type: "array", cellStyles: true });
       const sheetName = workbook.SheetNames[0];
