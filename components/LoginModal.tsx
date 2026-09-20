@@ -49,7 +49,7 @@ export interface AuthUser {
   permissionsRoleId: string;
 }
 
-export async function checkSession(token: string): Promise<AuthUser | null> {
+export async function checkSession(token = ''): Promise<AuthUser | null> {
   const startedAt = performance.now();
   pushAuthDiag('auth:session-check:start', {
     endpoint: API_SESSION,
@@ -57,7 +57,8 @@ export async function checkSession(token: string): Promise<AuthUser | null> {
   });
   try {
     const res = await fetch(`${AUTH_SERVER}${API_SESSION}`, {
-      headers: { 'Authorization': `Bearer ${token}` },
+      credentials: 'include',
+      headers: token ? { 'Authorization': `Bearer ${token}` } : undefined,
     });
     pushAuthDiag('auth:session-check:response', {
       endpoint: API_SESSION,
@@ -87,7 +88,7 @@ export async function checkSession(token: string): Promise<AuthUser | null> {
   }
 }
 
-export async function loginUser(userId: string, password: string): Promise<{ user: AuthUser; sessionToken: string; mustChangePassword: boolean }> {
+export async function loginUser(userId: string, password: string): Promise<{ user: AuthUser; sessionToken: string; expires?: string; mustChangePassword: boolean }> {
   const startedAt = performance.now();
   pushAuthDiag('auth:login:start', {
     endpoint: API_LOGIN,
@@ -95,6 +96,7 @@ export async function loginUser(userId: string, password: string): Promise<{ use
   });
   const res = await fetch(`${AUTH_SERVER}${API_LOGIN}`, {
     method: 'POST',
+    credentials: 'include',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ userId, password }),
   });
@@ -132,7 +134,8 @@ export async function logoutUser(token: string): Promise<void> {
   try {
     await fetch(`${AUTH_SERVER}${API_LOGOUT}`, {
       method: 'POST',
-      headers: { 'Authorization': `Bearer ${token}` },
+      credentials: 'include',
+      headers: token ? { 'Authorization': `Bearer ${token}` } : undefined,
     });
   } catch {
     // Ignore errors on logout
@@ -156,8 +159,8 @@ const LoginModal: React.FC<LoginModalProps> = ({ onLoginSuccess }) => {
 
     try {
       const result = await loginUser(userId.trim(), password);
-      // Store session token in localStorage
-      localStorage.setItem('dfp_session_token', result.sessionToken);
+      // The browser app now uses a secure HttpOnly server cookie for session restore.
+      localStorage.removeItem('dfp_session_token');
       localStorage.setItem('dfp_session_expires', result.expires || '');
       onLoginSuccess(result.user, result.sessionToken);
     } catch (err: any) {

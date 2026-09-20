@@ -361,12 +361,56 @@ const EMAIL_ACTIVATION_SETTINGS_ORG_ID = '__email_activation__';
 const JWT_ACCESS_EXPIRY = '1h';
 const JWT_REFRESH_EXPIRY = '7d';
 const SECURITY_EVENT_WEBHOOK_URL = (process.env.DFP_NEO_SECURITY_EVENT_WEBHOOK_URL || '').trim();
+const DIRECT_SESSION_COOKIE_NAME = 'dfp_neo_session';
+const DIRECT_SESSION_COOKIE_MAX_AGE_MS = 30 * 24 * 60 * 60 * 1000;
+
+function shouldUseSecureSessionCookie(req) {
+  return process.env.NODE_ENV === 'production' || req.secure || req.headers['x-forwarded-proto'] === 'https';
+}
+
+function getDirectSessionCookieOptions(req, expires = null) {
+  return {
+    httpOnly: true,
+    secure: shouldUseSecureSessionCookie(req),
+    sameSite: 'lax',
+    path: '/',
+    maxAge: DIRECT_SESSION_COOKIE_MAX_AGE_MS,
+    ...(expires ? { expires } : {}),
+  };
+}
+
+function setDirectSessionCookie(req, res, sessionToken, expires) {
+  res.cookie(DIRECT_SESSION_COOKIE_NAME, sessionToken, getDirectSessionCookieOptions(req, expires));
+}
+
+function clearDirectSessionCookie(req, res) {
+  res.clearCookie(DIRECT_SESSION_COOKIE_NAME, {
+    httpOnly: true,
+    secure: shouldUseSecureSessionCookie(req),
+    sameSite: 'lax',
+    path: '/',
+  });
+}
+
+function getDirectSessionToken(req) {
+  const authHeader = req.headers.authorization || req.headers.Authorization || '';
+  const bearerToken = String(authHeader || '').startsWith('Bearer ')
+    ? String(authHeader).slice(7).trim()
+    : '';
+  return bearerToken || String(req.cookies?.[DIRECT_SESSION_COOKIE_NAME] || '').trim();
+}
 
 // Parse JSON bodies - increased limit to handle large settings/syllabus payloads
 app.use(setSecurityHeaders);
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ limit: '10mb', extended: true }));
 app.use(cookieParser());
+app.use((req, res, next) => {
+  if (!req.headers.authorization && req.cookies?.[DIRECT_SESSION_COOKIE_NAME]) {
+    req.headers.authorization = `Bearer ${req.cookies[DIRECT_SESSION_COOKIE_NAME]}`;
+  }
+  next();
+});
 
 // CORS headers for all requests. Never use a wildcard origin; browser callers
 // must be same-origin or listed in DFP_NEO_ALLOWED_ORIGINS / ALLOWED_ORIGINS.
@@ -10148,6 +10192,8 @@ app.post('/api/auth/direct-login', authRateLimit, async (req, res) => {
       console.warn('⚠️ Direct login audit log failed:', auditError.message);
     }
 
+    setDirectSessionCookie(req, res, sessionToken, expires);
+
     return res.json({
       sessionToken,
       expires: expires.toISOString(),
@@ -10175,8 +10221,7 @@ app.post('/api/auth/direct-login', authRateLimit, async (req, res) => {
 // GET /api/auth/direct-session - Browser app session restore
 app.get('/api/auth/direct-session', async (req, res) => {
   try {
-    const authHeader = req.headers.authorization || '';
-    const sessionToken = authHeader.startsWith('Bearer ') ? authHeader.slice(7) : '';
+    const sessionToken = getDirectSessionToken(req);
     if (!sessionToken) {
       return res.status(401).json({ error: 'Unauthorized', message: 'No token provided' });
     }
@@ -10192,12 +10237,14 @@ app.get('/api/auth/direct-session', async (req, res) => {
     );
 
     if (!sessions || sessions.length === 0) {
+      clearDirectSessionCookie(req, res);
       return res.status(401).json({ error: 'Invalid token', message: 'Session not found' });
     }
 
     const session = sessions[0];
     if (new Date(session.expires).getTime() <= Date.now()) {
       await db.$executeRawUnsafe(`DELETE FROM "Session" WHERE "sessionToken" = $1`, sessionToken);
+      clearDirectSessionCookie(req, res);
       return res.status(401).json({ error: 'Token expired', message: 'Session has expired' });
     }
 
@@ -10227,12 +10274,12 @@ app.get('/api/auth/direct-session', async (req, res) => {
 // POST /api/auth/direct-logout - Browser app logout
 app.post('/api/auth/direct-logout', async (req, res) => {
   try {
-    const authHeader = req.headers.authorization || '';
-    const sessionToken = authHeader.startsWith('Bearer ') ? authHeader.slice(7) : '';
+    const sessionToken = getDirectSessionToken(req);
     if (sessionToken) {
       const db = await getPrisma();
       await db.$executeRawUnsafe(`DELETE FROM "Session" WHERE "sessionToken" = $1`, sessionToken);
     }
+    clearDirectSessionCookie(req, res);
     res.json({ message: 'Logged out successfully' });
   } catch (error) {
     console.error('❌ POST /api/auth/direct-logout error:', error);

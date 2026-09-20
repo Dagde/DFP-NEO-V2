@@ -29354,6 +29354,7 @@ const App: React.FC = () => {
                 setupTestProfile: setupTestProfile || null,
                 hasSsoUser: Boolean(localStorage.getItem('dfp_sso_user')),
                 hasStoredToken: Boolean(localStorage.getItem('dfp_session_token')),
+                supportsCookieSession: true,
             });
             let authenticatedFromStoredSession = false;
             let authSource = 'none';
@@ -29448,16 +29449,18 @@ const App: React.FC = () => {
                 }
             }
 
-            // SECOND: Check for regular session token
+            // SECOND: Check for regular session. New browser sessions restore from
+            // the server-issued HttpOnly cookie; storedToken is only a legacy bridge.
             const storedToken = localStorage.getItem('dfp_session_token');
-            if (storedToken) {
-                authSource = 'stored-token';
+            authSource = storedToken ? 'stored-token' : 'cookie-session';
+            {
                 const checkStartedAt = performance.now();
-                const user = await checkSession(storedToken);
+                const user = await checkSession(storedToken || '');
                 pushDfpDataDiag('startup:auth-session:token-check-response', {
                     durationMs: Math.round(performance.now() - checkStartedAt),
                     authenticated: Boolean(user),
                     userId: user?.userId || null,
+                    source: authSource,
                 });
                 if (user) {
                     authenticatedFromStoredSession = true;
@@ -29481,6 +29484,7 @@ const App: React.FC = () => {
                     if (cleanUser.mustChangePassword) {
                         setShowChangePassword(true);
                     }
+                    localStorage.removeItem('dfp_session_token');
                 } else {
                     localStorage.removeItem('dfp_session_token');
                     localStorage.removeItem('dfp_session_expires');
@@ -29528,9 +29532,7 @@ const App: React.FC = () => {
     };
 
     const handleLogout = async () => {
-        if (authSessionToken) {
-            await logoutUser(authSessionToken);
-        }
+        await logoutUser(authSessionToken);
         localStorage.removeItem('dfp_session_token');
         localStorage.removeItem('dfp_session_expires');
         setIsAuthenticated(false);

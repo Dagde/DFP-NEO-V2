@@ -505,7 +505,7 @@ function pushAuthDiag(stage, details = {}) {
   } catch {
   }
 }
-async function checkSession(token) {
+async function checkSession(token = "") {
   const startedAt = performance.now();
   pushAuthDiag("auth:session-check:start", {
     endpoint: API_SESSION,
@@ -513,7 +513,8 @@ async function checkSession(token) {
   });
   try {
     const res = await fetch(`${AUTH_SERVER$2}${API_SESSION}`, {
-      headers: { "Authorization": `Bearer ${token}` }
+      credentials: "include",
+      headers: token ? { "Authorization": `Bearer ${token}` } : void 0
     });
     pushAuthDiag("auth:session-check:response", {
       endpoint: API_SESSION,
@@ -550,6 +551,7 @@ async function loginUser(userId, password) {
   });
   const res = await fetch(`${AUTH_SERVER$2}${API_LOGIN}`, {
     method: "POST",
+    credentials: "include",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ userId, password })
   });
@@ -586,7 +588,8 @@ async function logoutUser(token) {
   try {
     await fetch(`${AUTH_SERVER$2}${API_LOGOUT}`, {
       method: "POST",
-      headers: { "Authorization": `Bearer ${token}` }
+      credentials: "include",
+      headers: token ? { "Authorization": `Bearer ${token}` } : void 0
     });
   } catch {
   }
@@ -606,7 +609,7 @@ const LoginModal = ({ onLoginSuccess }) => {
     setLoading(true);
     try {
       const result = await loginUser(userId.trim(), password);
-      localStorage.setItem("dfp_session_token", result.sessionToken);
+      localStorage.removeItem("dfp_session_token");
       localStorage.setItem("dfp_session_expires", result.expires || "");
       onLoginSuccess(result.user, result.sessionToken);
     } catch (err) {
@@ -132344,7 +132347,8 @@ const App = () => {
       pushDfpDataDiag("startup:auth-session:start", {
         setupTestProfile: setupTestProfile || null,
         hasSsoUser: Boolean(localStorage.getItem("dfp_sso_user")),
-        hasStoredToken: Boolean(localStorage.getItem("dfp_session_token"))
+        hasStoredToken: Boolean(localStorage.getItem("dfp_session_token")),
+        supportsCookieSession: true
       });
       let authenticatedFromStoredSession = false;
       let authSource = "none";
@@ -132434,14 +132438,15 @@ const App = () => {
         }
       }
       const storedToken = localStorage.getItem("dfp_session_token");
-      if (storedToken) {
-        authSource = "stored-token";
+      authSource = storedToken ? "stored-token" : "cookie-session";
+      {
         const checkStartedAt = performance.now();
-        const user = await checkSession(storedToken);
+        const user = await checkSession(storedToken || "");
         pushDfpDataDiag("startup:auth-session:token-check-response", {
           durationMs: Math.round(performance.now() - checkStartedAt),
           authenticated: Boolean(user),
-          userId: user?.userId || null
+          userId: user?.userId || null,
+          source: authSource
         });
         if (user) {
           authenticatedFromStoredSession = true;
@@ -132463,6 +132468,7 @@ const App = () => {
           if (cleanUser.mustChangePassword) {
             setShowChangePassword(true);
           }
+          localStorage.removeItem("dfp_session_token");
         } else {
           localStorage.removeItem("dfp_session_token");
           localStorage.removeItem("dfp_session_expires");
@@ -132506,9 +132512,7 @@ const App = () => {
     });
   };
   const handleLogout = async () => {
-    if (authSessionToken) {
-      await logoutUser(authSessionToken);
-    }
+    await logoutUser(authSessionToken);
     localStorage.removeItem("dfp_session_token");
     localStorage.removeItem("dfp_session_expires");
     setIsAuthenticated(false);
