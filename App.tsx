@@ -29775,6 +29775,9 @@ const App: React.FC = () => {
         })).filter(option => option.units.length > 0),
         [getUnitOptionsForLocation, selectableLocationCodes],
     );
+    const canBootstrapInitialSetupFromDfp = hasAuthenticatedAdminRole
+        && platformConfigLoaded
+        && operationalContextOptions.length === 0;
 
     useEffect(() => {
         if (!setupTestProfile) return;
@@ -37827,14 +37830,15 @@ const App: React.FC = () => {
 
     const canAccessView = useCallback((view: string): boolean => {
         if (view === 'MyDashboard') return true;
+        if (view === 'Program Schedule' && canBootstrapInitialSetupFromDfp) return true;
         if (view === 'Settings') {
-            return !platformAccessContext.isConfigured || platformAccessContext.isPlatformAdmin;
+            return hasAuthenticatedAdminRole || !platformAccessContext.isConfigured || platformAccessContext.isPlatformAdmin;
         }
         const requiredPermission = getRequiredPlatformPermissionForView(view);
         if (requiredPermission && !canUsePlatformPermission(requiredPermission) && !canOpenSelfScopedView(view)) return false;
         if (!hasPlatformModuleAccessForView(view) && !canOpenSelfScopedView(view)) return false;
         return true;
-    }, [canOpenSelfScopedView, canUsePlatformPermission, getRequiredPlatformPermissionForView, hasPlatformModuleAccessForView, platformAccessContext]);
+    }, [canBootstrapInitialSetupFromDfp, canOpenSelfScopedView, canUsePlatformPermission, getRequiredPlatformPermissionForView, hasAuthenticatedAdminRole, hasPlatformModuleAccessForView, platformAccessContext]);
 
     const navigateToView = (view: string) => {
         const normalizedView = normalizeLegacyViewKey(view);
