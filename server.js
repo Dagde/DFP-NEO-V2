@@ -6776,7 +6776,9 @@ app.get('/api/audit/logs', async (req, res) => {
 function mapSecurityAuditRow(row) {
   const changes = row.changes || {};
   const displayName = `${row.firstName || ''} ${row.lastName || ''}`.trim() || row.username || row.userId || 'System';
-  const createdAt = row.createdAt instanceof Date ? row.createdAt.toISOString() : row.createdAt;
+  const createdAt = row.createdAt instanceof Date
+    ? row.createdAt.toISOString()
+    : String(row.createdAt || '').replace(/^"(.+)"$/, '$1');
   return {
     id: row.id,
     eventType: changes.eventType || row.entityId || '',
@@ -6787,7 +6789,7 @@ function mapSecurityAuditRow(row) {
     method: changes.method || '',
     ipAddress: row.ipAddress || changes.ipAddress || '',
     userAgent: row.userAgent || changes.userAgent || '',
-    createdAt: row.createdAt,
+    createdAt,
     userName: displayName,
   };
 }
