@@ -6,11 +6,11 @@ This pack does not by itself certify compliance. It records the current security
 
 ## Current Phase
 
-Phase 4: Dependency and secure build hardening.
+Phase 5: Security readiness summary and customer review pack.
 
 Phase 1 technical hardening has started. Browser session restore now uses a server-validated HttpOnly cookie rather than local storage as the authority for browser authentication. Remaining Phase 1 technical risks, including dependency treatment for `xlsx` and raw SQL review, are tracked in the POA&M.
 
-Phase 2 is complete as a baseline evidence pack. Phase 3 is complete for application-level posture reporting, security event export, evidence bundles, redacted evidence bundles and accepted interim monitoring documentation. Phase 4 has repeatable dependency, workbook upload and raw SQL evidence, with workbook parsing treated as an accepted interim risk because the upstream `xlsx` package has no fixed npm release.
+Phase 2 is complete as a baseline evidence pack. Phase 3 is complete for application-level posture reporting, security event export, evidence bundles, redacted evidence bundles and accepted interim monitoring documentation. Phase 4 is complete with repeatable dependency, workbook upload and raw SQL evidence, with workbook parsing treated as an accepted interim risk because the upstream `xlsx` package has no fixed npm release. Phase 5 is complete with a plain-English readiness summary for customer and assessor review.
 
 ## Documents
 
@@ -25,6 +25,7 @@ Phase 2 is complete as a baseline evidence pack. Phase 3 is complete for applica
 - [Change And Configuration Management Plan](change-and-configuration-management-plan.md)
 - [Security Assessment Report Template](security-assessment-report-template.md)
 - [Plan Of Action And Milestones](plan-of-action-and-milestones.md)
+- [Security Readiness Summary](security-readiness-summary.md)
 
 ## Evidence Rules
 
