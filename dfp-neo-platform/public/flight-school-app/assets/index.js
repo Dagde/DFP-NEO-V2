@@ -83081,12 +83081,38 @@ const formatElapsed = (elapsedMs) => {
   return `${(elapsedMs / 1e3).toFixed(1)}s`;
 };
 const BuildDfpLoadingFlyout = ({ progress }) => {
-  const percentage = Math.max(0, Math.min(100, Math.round(progress?.percentage ?? 0)));
+  const actualPercentage = Math.max(0, Math.min(100, Math.round(progress?.percentage ?? 0)));
+  const [visiblePercentage, setVisiblePercentage] = reactExports.useState(Math.max(1, actualPercentage));
+  const startedAtRef = reactExports.useRef(Date.now());
+  const highestActualPercentageRef = reactExports.useRef(actualPercentage);
+  const isComplete = progress?.phase === "complete" || actualPercentage >= 100;
+  const isError = progress?.phase === "error";
+  reactExports.useEffect(() => {
+    highestActualPercentageRef.current = Math.max(highestActualPercentageRef.current, actualPercentage);
+    if (isComplete || isError) {
+      setVisiblePercentage(actualPercentage);
+      return;
+    }
+    setVisiblePercentage((current) => Math.max(current, actualPercentage));
+  }, [actualPercentage, isComplete, isError]);
+  reactExports.useEffect(() => {
+    if (isComplete || isError) return void 0;
+    const timer = window.setInterval(() => {
+      const elapsedSeconds = Math.max(0, (Date.now() - startedAtRef.current) / 1e3);
+      const estimatedPreparationProgress = Math.min(92, 1 + elapsedSeconds * 5.5);
+      const target = Math.max(highestActualPercentageRef.current, estimatedPreparationProgress);
+      setVisiblePercentage((current) => {
+        const safeCurrent = Math.max(current, highestActualPercentageRef.current);
+        const next = safeCurrent + Math.max(0.35, (target - safeCurrent) * 0.18);
+        return Math.min(99, Math.max(safeCurrent, next));
+      });
+    }, 120);
+    return () => window.clearInterval(timer);
+  }, [isComplete, isError]);
+  const percentage = Math.max(0, Math.min(100, Math.round(visiblePercentage)));
   const radius = 46;
   const circumference = 2 * Math.PI * radius;
   const dashOffset = circumference - percentage / 100 * circumference;
-  const isComplete = progress?.phase === "complete" || percentage >= 100;
-  const isError = progress?.phase === "error";
   const strokeColor = isError ? "#f87171" : isComplete ? "#34d399" : "#38bdf8";
   const elapsedLabel = formatElapsed(progress?.elapsedMs);
   return /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "fixed inset-0 bg-black/60 z-[90] flex items-center justify-center animate-fade-in", children: /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "w-[420px] max-w-[calc(100vw-32px)] rounded-xl border border-sky-500/60 bg-gray-900 shadow-2xl", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex flex-col items-center gap-5 p-8", children: [
@@ -115083,7 +115109,7 @@ const createNeoBuildTimingReport = (buildDate, counters = {}, options = {}) => {
   };
 };
 const NEO_BUILD_GENERATION_START_DELAY_MS = 500;
-const NEO_BUILD_NAVIGATION_DELAY_MS = 1600;
+const NEO_BUILD_NAVIGATION_DELAY_MS = 3e3;
 const saveNeoBuildTimingReport = (report) => {
   if (!report) return;
   try {

@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 
 type BuildDfpProgress = {
     message?: string;
@@ -26,12 +26,41 @@ const formatElapsed = (elapsedMs?: number) => {
 };
 
 const BuildDfpLoadingFlyout: React.FC<BuildDfpLoadingFlyoutProps> = ({ progress }) => {
-    const percentage = Math.max(0, Math.min(100, Math.round(progress?.percentage ?? 0)));
+    const actualPercentage = Math.max(0, Math.min(100, Math.round(progress?.percentage ?? 0)));
+    const [visiblePercentage, setVisiblePercentage] = useState(Math.max(1, actualPercentage));
+    const startedAtRef = useRef(Date.now());
+    const highestActualPercentageRef = useRef(actualPercentage);
+    const isComplete = progress?.phase === 'complete' || actualPercentage >= 100;
+    const isError = progress?.phase === 'error';
+
+    useEffect(() => {
+        highestActualPercentageRef.current = Math.max(highestActualPercentageRef.current, actualPercentage);
+        if (isComplete || isError) {
+            setVisiblePercentage(actualPercentage);
+            return;
+        }
+        setVisiblePercentage(current => Math.max(current, actualPercentage));
+    }, [actualPercentage, isComplete, isError]);
+
+    useEffect(() => {
+        if (isComplete || isError) return undefined;
+        const timer = window.setInterval(() => {
+            const elapsedSeconds = Math.max(0, (Date.now() - startedAtRef.current) / 1000);
+            const estimatedPreparationProgress = Math.min(92, 1 + elapsedSeconds * 5.5);
+            const target = Math.max(highestActualPercentageRef.current, estimatedPreparationProgress);
+            setVisiblePercentage(current => {
+                const safeCurrent = Math.max(current, highestActualPercentageRef.current);
+                const next = safeCurrent + Math.max(0.35, (target - safeCurrent) * 0.18);
+                return Math.min(99, Math.max(safeCurrent, next));
+            });
+        }, 120);
+        return () => window.clearInterval(timer);
+    }, [isComplete, isError]);
+
+    const percentage = Math.max(0, Math.min(100, Math.round(visiblePercentage)));
     const radius = 46;
     const circumference = 2 * Math.PI * radius;
     const dashOffset = circumference - (percentage / 100) * circumference;
-    const isComplete = progress?.phase === 'complete' || percentage >= 100;
-    const isError = progress?.phase === 'error';
     const strokeColor = isError ? '#f87171' : isComplete ? '#34d399' : '#38bdf8';
     const elapsedLabel = formatElapsed(progress?.elapsedMs);
 
