@@ -42,6 +42,20 @@ The bundle is also limited to `ADMIN` and `SUPER_ADMIN` users. It downloads one 
 
 Use `redacted=true` when the bundle may be shared outside the internal operator group. The redacted bundle masks operational identifiers such as admin names, usernames, email addresses, personnel IDs, person IDs, IP addresses, user agents and message IDs.
 
+Phase 4 dependency security evidence:
+
+```bash
+npm run security:dependencies
+```
+
+JSON format:
+
+```bash
+npm run security:dependencies -- --json
+```
+
+This report records `npm audit` evidence for production dependencies and all dependencies. Findings still require DFP NEO context review before they are treated as exploitable, remediated or formally risk-accepted.
+
 ## Checks Performed
 
 The posture report checks and records:
@@ -91,3 +105,4 @@ For each production deployment, retain:
 - evidence of configured central logging or the accepted interim local audit/export control;
 - evidence of backup configuration and restore test;
 - deployment platform security settings and access list.
+- dependency security report from `npm run security:dependencies`.

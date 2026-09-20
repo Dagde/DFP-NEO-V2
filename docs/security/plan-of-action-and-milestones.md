@@ -31,3 +31,4 @@ This POA&M tracks open security work, residual risk treatment and readiness task
 | POAM-CLOSED-005 | `CCH 8.974` | Redacted security evidence bundle added for safer external/customer review sharing. |
 | POAM-CLOSED-006 | `CCH 8.975` | CORS posture clarified so same-origin-only browser access is recorded as the secure default. |
 | POAM-CLOSED-007 | `CCH 8.976` | Local audit logs, admin status, event export and evidence bundles documented as the accepted interim monitoring control. |
+| POAM-CLOSED-008 | `CCH 8.977` | Phase 4 dependency security report command added to produce repeatable npm audit evidence for production and all dependencies. |

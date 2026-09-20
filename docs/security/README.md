@@ -6,11 +6,11 @@ This pack does not by itself certify compliance. It records the current security
 
 ## Current Phase
 
-Phase 3: Platform Security Controls.
+Phase 4: Dependency and secure build hardening.
 
 Phase 1 technical hardening has started. Browser session restore now uses a server-validated HttpOnly cookie rather than local storage as the authority for browser authentication. Remaining Phase 1 technical risks, including dependency treatment for `xlsx` and raw SQL review, are tracked in the POA&M.
 
-Phase 2 is complete as a baseline evidence pack. Phase 3 has started with a repeatable security posture report for deployment guardrails.
+Phase 2 is complete as a baseline evidence pack. Phase 3 is complete for application-level posture reporting, security event export, evidence bundles, redacted evidence bundles and accepted interim monitoring documentation. Phase 4 has started with repeatable dependency vulnerability evidence.
 
 ## Documents
 
