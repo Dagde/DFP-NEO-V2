@@ -66,8 +66,8 @@ const BuildDfpLoadingFlyout: React.FC<BuildDfpLoadingFlyoutProps> = ({ progress 
 
     return (
         <div className="fixed inset-0 bg-black/60 z-[90] flex items-center justify-center animate-fade-in">
-            <div className="w-[420px] max-w-[calc(100vw-32px)] rounded-xl border border-sky-500/60 bg-gray-900 shadow-2xl">
-                <div className="flex flex-col items-center gap-5 p-8">
+            <div className="h-[472px] w-[420px] max-h-[calc(100vh-32px)] max-w-[calc(100vw-32px)] rounded-xl border border-sky-500/60 bg-gray-900 shadow-2xl">
+                <div className="flex h-full flex-col items-center gap-5 p-8">
                     <div className="relative h-32 w-32">
                         <svg className="h-32 w-32 -rotate-90" viewBox="0 0 120 120" aria-hidden="true">
                             <circle
@@ -96,14 +96,14 @@ const BuildDfpLoadingFlyout: React.FC<BuildDfpLoadingFlyoutProps> = ({ progress 
                             <span className="text-[11px] font-bold uppercase tracking-[0.22em] text-slate-400">percent</span>
                         </div>
                     </div>
-                    <div className="text-center">
+                    <div className="h-[92px] w-full text-center">
                         <p className="text-xl font-semibold text-white">{isComplete ? 'Build calculations complete' : 'Building DFP...'}</p>
-                        <p className="mt-2 text-sm text-gray-300">{progress?.message || 'The algorithm is building an optimal schedule.'}</p>
-                        {isComplete && !isError && (
-                            <p className="mt-1 text-xs font-semibold uppercase tracking-[0.18em] text-emerald-300">
-                                Finalising summary before opening NEO Build
-                            </p>
-                        )}
+                        <p className="mx-auto mt-2 min-h-[40px] max-w-[320px] text-sm leading-5 text-gray-300">
+                            {progress?.message || 'The algorithm is building an optimal schedule.'}
+                        </p>
+                        <p className={`mt-1 text-xs font-semibold uppercase tracking-[0.18em] text-emerald-300 transition-opacity ${isComplete && !isError ? 'opacity-100' : 'opacity-0'}`}>
+                            Finalising summary before opening NEO Build
+                        </p>
                     </div>
                     <div className="grid w-full grid-cols-3 gap-2">
                         <div className="rounded-lg border border-slate-600/70 bg-slate-950/50 px-3 py-2 text-center">
@@ -119,19 +119,13 @@ const BuildDfpLoadingFlyout: React.FC<BuildDfpLoadingFlyoutProps> = ({ progress 
                             <div className="text-[10px] font-bold uppercase tracking-[0.18em] text-slate-400">Calculations</div>
                         </div>
                     </div>
-                    {(typeof progress?.generatedEvents === 'number' || elapsedLabel) && (
-                        <div className="flex w-full items-center justify-between rounded-lg border border-slate-700 bg-slate-950/40 px-4 py-3 text-sm">
+                    <div className={`flex h-[48px] w-full items-center justify-between rounded-lg border border-slate-700 bg-slate-950/40 px-4 py-3 text-sm transition-opacity ${typeof progress?.generatedEvents === 'number' || elapsedLabel ? 'opacity-100' : 'opacity-35'}`}>
                             <span className="font-semibold text-slate-300">Generated tiles</span>
                             <span className="font-black tabular-nums text-white">{formatCount(progress?.generatedEvents)}</span>
-                            {elapsedLabel && (
-                                <>
-                                    <span className="mx-2 h-4 w-px bg-slate-700" />
-                                    <span className="font-semibold text-slate-300">Elapsed</span>
-                                    <span className="font-black tabular-nums text-white">{elapsedLabel}</span>
-                                </>
-                            )}
-                        </div>
-                    )}
+                            <span className="mx-2 h-4 w-px bg-slate-700" />
+                            <span className="font-semibold text-slate-300">Elapsed</span>
+                            <span className="font-black tabular-nums text-white">{elapsedLabel || '0.0s'}</span>
+                    </div>
                 </div>
             </div>
         </div>

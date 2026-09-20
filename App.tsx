@@ -8036,7 +8036,7 @@ const createNeoBuildTimingReport = (
 };
 
 const NEO_BUILD_GENERATION_START_DELAY_MS = 500;
-const NEO_BUILD_NAVIGATION_DELAY_MS = 3000;
+const NEO_BUILD_NAVIGATION_DELAY_MS = 4000;
 
 const saveNeoBuildTimingReport = (report?: NeoBuildTimingReport) => {
     if (!report) return;

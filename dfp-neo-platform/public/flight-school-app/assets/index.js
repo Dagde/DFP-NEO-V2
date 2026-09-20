@@ -83115,7 +83115,7 @@ const BuildDfpLoadingFlyout = ({ progress }) => {
   const dashOffset = circumference - percentage / 100 * circumference;
   const strokeColor = isError ? "#f87171" : isComplete ? "#34d399" : "#38bdf8";
   const elapsedLabel = formatElapsed(progress?.elapsedMs);
-  return /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "fixed inset-0 bg-black/60 z-[90] flex items-center justify-center animate-fade-in", children: /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "w-[420px] max-w-[calc(100vw-32px)] rounded-xl border border-sky-500/60 bg-gray-900 shadow-2xl", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex flex-col items-center gap-5 p-8", children: [
+  return /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "fixed inset-0 bg-black/60 z-[90] flex items-center justify-center animate-fade-in", children: /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "h-[472px] w-[420px] max-h-[calc(100vh-32px)] max-w-[calc(100vw-32px)] rounded-xl border border-sky-500/60 bg-gray-900 shadow-2xl", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex h-full flex-col items-center gap-5 p-8", children: [
     /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "relative h-32 w-32", children: [
       /* @__PURE__ */ jsxRuntimeExports.jsxs("svg", { className: "h-32 w-32 -rotate-90", viewBox: "0 0 120 120", "aria-hidden": "true", children: [
         /* @__PURE__ */ jsxRuntimeExports.jsx(
@@ -83150,10 +83150,10 @@ const BuildDfpLoadingFlyout = ({ progress }) => {
         /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-[11px] font-bold uppercase tracking-[0.22em] text-slate-400", children: "percent" })
       ] })
     ] }),
-    /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "text-center", children: [
+    /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "h-[92px] w-full text-center", children: [
       /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-xl font-semibold text-white", children: isComplete ? "Build calculations complete" : "Building DFP..." }),
-      /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-2 text-sm text-gray-300", children: progress?.message || "The algorithm is building an optimal schedule." }),
-      isComplete && !isError && /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-1 text-xs font-semibold uppercase tracking-[0.18em] text-emerald-300", children: "Finalising summary before opening NEO Build" })
+      /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mx-auto mt-2 min-h-[40px] max-w-[320px] text-sm leading-5 text-gray-300", children: progress?.message || "The algorithm is building an optimal schedule." }),
+      /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: `mt-1 text-xs font-semibold uppercase tracking-[0.18em] text-emerald-300 transition-opacity ${isComplete && !isError ? "opacity-100" : "opacity-0"}`, children: "Finalising summary before opening NEO Build" })
     ] }),
     /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid w-full grid-cols-3 gap-2", children: [
       /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded-lg border border-slate-600/70 bg-slate-950/50 px-3 py-2 text-center", children: [
@@ -83169,14 +83169,12 @@ const BuildDfpLoadingFlyout = ({ progress }) => {
         /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-[10px] font-bold uppercase tracking-[0.18em] text-slate-400", children: "Calculations" })
       ] })
     ] }),
-    (typeof progress?.generatedEvents === "number" || elapsedLabel) && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex w-full items-center justify-between rounded-lg border border-slate-700 bg-slate-950/40 px-4 py-3 text-sm", children: [
+    /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: `flex h-[48px] w-full items-center justify-between rounded-lg border border-slate-700 bg-slate-950/40 px-4 py-3 text-sm transition-opacity ${typeof progress?.generatedEvents === "number" || elapsedLabel ? "opacity-100" : "opacity-35"}`, children: [
       /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "font-semibold text-slate-300", children: "Generated tiles" }),
       /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "font-black tabular-nums text-white", children: formatCount(progress?.generatedEvents) }),
-      elapsedLabel && /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
-        /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "mx-2 h-4 w-px bg-slate-700" }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "font-semibold text-slate-300", children: "Elapsed" }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "font-black tabular-nums text-white", children: elapsedLabel })
-      ] })
+      /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "mx-2 h-4 w-px bg-slate-700" }),
+      /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "font-semibold text-slate-300", children: "Elapsed" }),
+      /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "font-black tabular-nums text-white", children: elapsedLabel || "0.0s" })
     ] })
   ] }) }) });
 };
@@ -115109,7 +115107,7 @@ const createNeoBuildTimingReport = (buildDate, counters = {}, options = {}) => {
   };
 };
 const NEO_BUILD_GENERATION_START_DELAY_MS = 500;
-const NEO_BUILD_NAVIGATION_DELAY_MS = 3e3;
+const NEO_BUILD_NAVIGATION_DELAY_MS = 4e3;
 const saveNeoBuildTimingReport = (report) => {
   if (!report) return;
   try {
