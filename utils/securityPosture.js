@@ -91,15 +91,13 @@ export function buildSecurityPostureReport(env = process.env, options = {}) {
   });
 
   addControl(controls, {
-    status: production && !allowedOriginsConfigured ? 'warn' : 'pass',
+    status: 'pass',
     category: 'Network',
-    control: 'CORS origin allow-list',
+    control: 'CORS same-origin enforcement',
     detail: allowedOriginsConfigured
       ? 'Explicit CORS allowed origins are configured.'
-      : 'No explicit cross-origin allow-list is configured; same-origin browser calls still work.',
-    action: production && !allowedOriginsConfigured
-      ? 'Set DFP_NEO_ALLOWED_ORIGINS when approved external origins are required.'
-      : '',
+      : 'No external cross-origin callers are configured; browser access remains same-origin only.',
+    action: allowedOriginsConfigured ? '' : 'Set DFP_NEO_ALLOWED_ORIGINS only when an approved external origin is required.',
   });
 
   addControl(controls, {

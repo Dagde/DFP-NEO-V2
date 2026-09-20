@@ -51,7 +51,7 @@ The posture report checks and records:
 - session signing secret presence and minimum length;
 - server-side browser session cookie posture;
 - secure cookie mode;
-- CORS origin allow-list posture;
+- CORS same-origin enforcement posture;
 - debug route flag state;
 - testing function flag state;
 - demo seed endpoint flag state;
@@ -63,6 +63,8 @@ The posture report checks and records:
 - current CSP inline allowance risk.
 
 The report deliberately records presence and status only. It does not expose secrets, token values, database URLs, webhook URLs or customer data.
+
+DFP NEO treats same-origin-only browser access as the secure default. External CORS origins should only be configured through `DFP_NEO_ALLOWED_ORIGINS` when an approved customer portal, integration or companion application genuinely requires browser calls from another origin.
 
 ## Current Limitations
 

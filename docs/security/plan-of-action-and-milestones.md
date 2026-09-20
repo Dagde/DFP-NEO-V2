@@ -29,3 +29,4 @@ This POA&M tracks open security work, residual risk treatment and readiness task
 | POAM-CLOSED-003 | `CCH 8.970` | Admin security event evidence export added for monitoring review packs. |
 | POAM-CLOSED-004 | `CCH 8.973` | Admin security evidence bundle added for posture, monitoring and recent-event review evidence. |
 | POAM-CLOSED-005 | `CCH 8.974` | Redacted security evidence bundle added for safer external/customer review sharing. |
+| POAM-CLOSED-006 | `CCH 8.975` | CORS posture clarified so same-origin-only browser access is recorded as the secure default. |
