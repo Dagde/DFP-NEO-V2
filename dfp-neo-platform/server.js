@@ -217,22 +217,43 @@ async function ensureAircraftAvailabilityTable(db) {
       ON "AircraftAvailabilityHistory"("createdAt");
     `);
     
-    // Add missing columns if table already exists
-    const addColumnIfMissing = async (columnName, columnType) => {
+    // Add missing columns if table already exists. Keep this as an explicit allow-list
+    // so startup migrations cannot interpolate arbitrary identifiers or SQL types.
+    const addColumnIfMissing = async (columnName) => {
+      if (!['flyingWindowStart', 'flyingWindowEnd', 'lastCalculatedAt', 'effectiveEndTime'].includes(columnName)) {
+        throw new Error(`Unsupported AircraftAvailabilityHistory column: ${columnName}`);
+      }
       try {
-        await db.$executeRawUnsafe(`
-          ALTER TABLE "AircraftAvailabilityHistory" 
-          ADD COLUMN IF NOT EXISTS "${columnName}" ${columnType}
-        `);
+        if (columnName === 'flyingWindowStart') {
+          await db.$executeRawUnsafe(`
+            ALTER TABLE "AircraftAvailabilityHistory"
+            ADD COLUMN IF NOT EXISTS "flyingWindowStart" TEXT
+          `);
+        } else if (columnName === 'flyingWindowEnd') {
+          await db.$executeRawUnsafe(`
+            ALTER TABLE "AircraftAvailabilityHistory"
+            ADD COLUMN IF NOT EXISTS "flyingWindowEnd" TEXT
+          `);
+        } else if (columnName === 'lastCalculatedAt') {
+          await db.$executeRawUnsafe(`
+            ALTER TABLE "AircraftAvailabilityHistory"
+            ADD COLUMN IF NOT EXISTS "lastCalculatedAt" TIMESTAMP(3)
+          `);
+        } else if (columnName === 'effectiveEndTime') {
+          await db.$executeRawUnsafe(`
+            ALTER TABLE "AircraftAvailabilityHistory"
+            ADD COLUMN IF NOT EXISTS "effectiveEndTime" TEXT
+          `);
+        }
       } catch (err) {
         // Column might already exist, ignore error
       }
     };
     
-    await addColumnIfMissing('flyingWindowStart', 'TEXT');
-    await addColumnIfMissing('flyingWindowEnd', 'TEXT');
-    await addColumnIfMissing('lastCalculatedAt', 'TIMESTAMP(3)');
-    await addColumnIfMissing('effectiveEndTime', 'TEXT'); // The time used for calculation (e.g., "13:00")
+    await addColumnIfMissing('flyingWindowStart');
+    await addColumnIfMissing('flyingWindowEnd');
+    await addColumnIfMissing('lastCalculatedAt');
+    await addColumnIfMissing('effectiveEndTime'); // The time used for calculation (e.g., "13:00")
     
     console.log('✅ AircraftAvailabilityHistory table ready');
   } catch (err) {

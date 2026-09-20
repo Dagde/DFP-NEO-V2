@@ -9,7 +9,7 @@ This POA&M tracks open security work, residual risk treatment and readiness task
 | ID | Priority | Item | Current State | Required Outcome | Owner | Target | Status |
 | --- | --- | --- | --- | --- | --- | --- | --- |
 | POAM-001 | High | `xlsx` dependency risk | `npm audit` reports high advisories with no npm fix; pre-parse workbook safety checks added to browser and server import paths | Replace, further isolate, sandbox or formally risk-accept workbook parsing | Engineering | Phase 4 | Open |
-| POAM-003 | High | Raw SQL review | Repeatable raw SQL inventory added with high-risk dynamic SQL findings identified | Review and replace or justify high-risk unsafe raw SQL calls | Engineering | Phase 4 | Open |
+| POAM-003 | High | Raw SQL review | High-risk raw SQL findings reduced to zero; one testing-only Super Admin reset path remains marked as reviewed dynamic SQL | Retain repeatable scan evidence and review any future high-risk findings before release | Engineering | Phase 4 | Treated |
 | POAM-004 | High | MFA/SSO | Password auth exists; no enterprise MFA/SSO evidence | Define and implement enterprise identity option | Product/Engineering | Phase 3 | Open |
 | POAM-005 | High | Customer central monitoring integration | Interim local audit/export control accepted for Phase 3; no customer SIEM/export destination selected | Configure central log export and review workflow when required by a customer deployment | Operations | Customer deployment | Open |
 | POAM-006 | High | Backup/restore evidence | No restore-test evidence in repo | Document encrypted backups and complete restore test | Operations | Phase 3 | Open |

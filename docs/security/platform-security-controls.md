@@ -68,7 +68,7 @@ JSON format:
 npm run security:sql -- --json
 ```
 
-This report inventories Prisma raw SQL use in live source files and triages calls by risk. It is a review aid; high-risk findings require manual inspection of the SQL source, route permissions and user-controlled inputs.
+This report inventories Prisma raw SQL use in live source files and triages calls by risk. High-risk findings have been reduced to zero in the current baseline; reviewed dynamic SQL remains visible in the report and requires continued change-control review.
 
 ## Checks Performed
 

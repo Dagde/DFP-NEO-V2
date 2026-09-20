@@ -119,7 +119,7 @@ function classifyFinding(method, callText) {
   const firstArg = firstArgument(callText);
   const unsafe = method.endsWith('Unsafe');
   const taggedTemplate = !unsafe;
-  const staticSql = /^`[^$]*`$/.test(firstArg) || /^'[^']*'$/.test(firstArg) || /^"[^"]*"$/.test(firstArg);
+  const staticSql = /^`(?:(?!\$\{)[\s\S])*`$/.test(firstArg) || /^'[^']*'$/.test(firstArg) || /^"[^"]*"$/.test(firstArg);
   const interpolatedTemplate = /^`[\s\S]*\$\{/.test(firstArg);
   const parameterisedUnsafe = unsafe && hasTopLevelComma(callText);
   const dynamicIdentifier = unsafe && /^[A-Za-z_$][\w$]*$/.test(firstArg);
@@ -149,6 +149,14 @@ function classifyFinding(method, callText) {
   };
 }
 
+function securityReviewNoteFor(content, matchIndex) {
+  const precedingLines = content.slice(0, matchIndex).split('\n').slice(-5);
+  const marker = precedingLines
+    .map((line) => line.match(/security-sql-reviewed:\s*(.+)$/i)?.[1]?.trim())
+    .find(Boolean);
+  return marker || '';
+}
+
 function buildReport() {
   const files = listSourceFiles(rootDir);
   const findings = [];
@@ -162,6 +170,11 @@ function buildReport() {
       const openParenIndex = content.indexOf('(', match.index);
       const callText = extractCall(content, openParenIndex);
       const classification = classifyFinding(method, callText);
+      const reviewNote = securityReviewNoteFor(content, match.index);
+      if (reviewNote && classification.risk === 'high') {
+        classification.risk = 'review';
+        classification.reason = `Reviewed dynamic SQL: ${reviewNote}`;
+      }
       findings.push({
         file: relative(rootDir, file).split(sep).join('/'),
         line: lineNumberFor(content, match.index),
@@ -200,6 +213,7 @@ function formatMarkdown(report) {
     return acc;
   }, {});
   const highFindings = report.findings.filter((finding) => finding.risk === 'high');
+  const reviewFindings = report.findings.filter((finding) => finding.risk === 'review');
 
   const lines = [
     '# DFP NEO Raw SQL Security Review',
@@ -233,11 +247,21 @@ function formatMarkdown(report) {
   }
 
   lines.push('', '## High-Risk Findings', '', '| File | Line | Method | Reason | First Argument |');
-  lines.push('| --- | --- | ---: | --- | --- | --- |');
+  lines.push('| --- | --- | ---: | --- | --- |');
   if (highFindings.length === 0) {
     lines.push('| None |  |  |  |  |');
   } else {
     for (const finding of highFindings) {
+      lines.push(`| ${finding.file} | ${finding.line} | ${finding.method} | ${finding.reason} | \`${finding.firstArgument.replace(/`/g, "'")}\` |`);
+    }
+  }
+
+  lines.push('', '## Reviewed Dynamic SQL', '', '| File | Line | Method | Review Note | First Argument |');
+  lines.push('| --- | --- | ---: | --- | --- |');
+  if (reviewFindings.length === 0) {
+    lines.push('| None |  |  |  |  |');
+  } else {
+    for (const finding of reviewFindings) {
       lines.push(`| ${finding.file} | ${finding.line} | ${finding.method} | ${finding.reason} | \`${finding.firstArgument.replace(/`/g, "'")}\` |`);
     }
   }

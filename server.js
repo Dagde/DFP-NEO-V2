@@ -1619,12 +1619,6 @@ async function getConfiguredLocationScopeAliases(db, values) {
   return uniqueStrings(expanded);
 }
 
-function sqlStringList(values) {
-  return uniqueStrings(values)
-    .map((value) => `'${String(value).replace(/'/g, "''")}'`)
-    .join(', ');
-}
-
 function hasScopeQuery(req) {
   return Boolean(req.query?.organisation || req.query?.organisations || req.query?.location || req.query?.locations || req.query?.unit || req.query?.units);
 }
@@ -1632,15 +1626,13 @@ function hasScopeQuery(req) {
 async function getUnitCodesForLocationScope(db, locationValues) {
   const locationCodes = uniqueStrings(locationValues.map(normaliseLocationCode));
   if (locationCodes.length === 0) return [];
-  const codeSql = sqlStringList(locationCodes);
-  if (!codeSql) return [];
   try {
     const rows = await db.$queryRawUnsafe(`
       SELECT "code"
       FROM "CommercialUnit"
       WHERE COALESCE("status", 'ACTIVE') <> 'INACTIVE'
-        AND "locationCode" IN (${codeSql})
-    `);
+        AND "locationCode" = ANY($1::text[])
+    `, locationCodes);
     return uniqueStrings((rows || []).map((row) => row.code));
   } catch (error) {
     console.warn('[DataScope] Could not resolve units for location scope:', error.message);
@@ -5310,15 +5302,36 @@ app.post('/api/platform-config', async (req, res) => {
     const now = new Date().toISOString();
     const toJson = (value) => JSON.stringify(value || {});
     const toArray = (value) => Array.isArray(value) ? value : [];
+    const platformConfigDeleteTargets = {
+      CommercialLocation: { tableName: 'CommercialLocation', keyExpression: `"code"` },
+      CommercialUnit: { tableName: 'CommercialUnit', keyExpression: `"code"` },
+      CommercialAircraftType: { tableName: 'CommercialAircraftType', keyExpression: `"code"` },
+      CommercialResourcePool: { tableName: 'CommercialResourcePool', keyExpression: `"code"` },
+      CommercialUnitModule: { tableName: 'CommercialUnitModule', keyExpression: `("unitCode" || '|' || "moduleCode")` },
+      CommercialLicense: { tableName: 'CommercialLicense', keyExpression: `"licenseKey"` },
+      CommercialSchedulingRuleSet: { tableName: 'CommercialSchedulingRuleSet', keyExpression: `"id"` },
+      CommercialUserAccess: { tableName: 'CommercialUserAccess', keyExpression: `"scopeKey"` },
+    };
     const deleteRowsNotInPayload = async (tableName, keyExpression, keepKeys) => {
+      const target = platformConfigDeleteTargets[tableName];
+      if (!target || target.keyExpression !== keyExpression) {
+        throw new Error(`Unsupported platform config delete target: ${tableName}`);
+      }
       const uniqueKeys = Array.from(new Set(keepKeys.map((key) => String(key || '').trim()).filter(Boolean)));
       if (uniqueKeys.length === 0) {
-        await db.$executeRawUnsafe(`DELETE FROM "${tableName}"`);
+        if (tableName === 'CommercialLocation') await db.$executeRawUnsafe(`DELETE FROM "CommercialLocation"`);
+        else if (tableName === 'CommercialUnit') await db.$executeRawUnsafe(`DELETE FROM "CommercialUnit"`);
+        else if (tableName === 'CommercialAircraftType') await db.$executeRawUnsafe(`DELETE FROM "CommercialAircraftType"`);
+        else if (tableName === 'CommercialResourcePool') await db.$executeRawUnsafe(`DELETE FROM "CommercialResourcePool"`);
+        else if (tableName === 'CommercialUnitModule') await db.$executeRawUnsafe(`DELETE FROM "CommercialUnitModule"`);
+        else if (tableName === 'CommercialLicense') await db.$executeRawUnsafe(`DELETE FROM "CommercialLicense"`);
+        else if (tableName === 'CommercialSchedulingRuleSet') await db.$executeRawUnsafe(`DELETE FROM "CommercialSchedulingRuleSet"`);
+        else if (tableName === 'CommercialUserAccess') await db.$executeRawUnsafe(`DELETE FROM "CommercialUserAccess"`);
         return;
       }
       const keepPlaceholders = uniqueKeys.map((_, index) => `$${index + 1}`).join(', ');
       await db.$executeRawUnsafe(
-        `DELETE FROM "${tableName}" WHERE ${keyExpression} NOT IN (${keepPlaceholders})`,
+        `DELETE FROM "${target.tableName}" WHERE ${target.keyExpression} NOT IN (${keepPlaceholders})`,
         ...uniqueKeys
       );
     };
@@ -10588,6 +10601,7 @@ app.post('/api/testing-functions/reset-database', async (req, res) => {
 
     if (tableNames.length > 0) {
       const quotedTables = tableNames.map(quotePostgresIdentifier).join(', ');
+      // security-sql-reviewed: testing-only Super Admin reset; table names come from information_schema and are quoted with quotePostgresIdentifier.
       await context.db.$executeRawUnsafe(`TRUNCATE TABLE ${quotedTables} RESTART IDENTITY CASCADE`);
     }
 
@@ -18027,29 +18041,55 @@ async function ensureInstructorArrayColumns(db) {
       if (!dataType.includes('[]') && !dataType.includes('ARRAY')) {
         console.log(`Migrating Trainee."${colName}" from TEXT to TEXT[]...`);
 
-        await db.$executeRawUnsafe(`
-          DO $$
-          BEGIN
-            IF NOT EXISTS (
-              SELECT 1 FROM pg_catalog.pg_attribute a
-              JOIN pg_catalog.pg_class c ON c.oid = a.attrelid
-              WHERE c.relname = 'Trainee' AND a.attname = '${colName}_arr' AND NOT a.attisdropped
-            ) THEN
-              ALTER TABLE "Trainee" ADD COLUMN "${colName}_arr" TEXT[] DEFAULT ARRAY[]::TEXT[];
-            END IF;
+        if (colName === 'primaryInstructor') {
+          await db.$executeRawUnsafe(`
+            DO $$
+            BEGIN
+              IF NOT EXISTS (
+                SELECT 1 FROM pg_catalog.pg_attribute a
+                JOIN pg_catalog.pg_class c ON c.oid = a.attrelid
+                WHERE c.relname = 'Trainee' AND a.attname = 'primaryInstructor_arr' AND NOT a.attisdropped
+              ) THEN
+                ALTER TABLE "Trainee" ADD COLUMN "primaryInstructor_arr" TEXT[] DEFAULT ARRAY[]::TEXT[];
+              END IF;
 
-            UPDATE "Trainee"
-            SET "${colName}_arr" = CASE
-              WHEN "${colName}" IS NOT NULL AND "${colName}" <> ''
-              THEN ARRAY["${colName}"]::TEXT[]
-              ELSE ARRAY[]::TEXT[]
-            END;
+              UPDATE "Trainee"
+              SET "primaryInstructor_arr" = CASE
+                WHEN "primaryInstructor" IS NOT NULL AND "primaryInstructor" <> ''
+                THEN ARRAY["primaryInstructor"]::TEXT[]
+                ELSE ARRAY[]::TEXT[]
+              END;
 
-            ALTER TABLE "Trainee" DROP COLUMN IF EXISTS "${colName}";
+              ALTER TABLE "Trainee" DROP COLUMN IF EXISTS "primaryInstructor";
 
-            ALTER TABLE "Trainee" RENAME COLUMN "${colName}_arr" TO "${colName}";
-          END $$;
-        `);
+              ALTER TABLE "Trainee" RENAME COLUMN "primaryInstructor_arr" TO "primaryInstructor";
+            END $$;
+          `);
+        } else if (colName === 'secondaryInstructor') {
+          await db.$executeRawUnsafe(`
+            DO $$
+            BEGIN
+              IF NOT EXISTS (
+                SELECT 1 FROM pg_catalog.pg_attribute a
+                JOIN pg_catalog.pg_class c ON c.oid = a.attrelid
+                WHERE c.relname = 'Trainee' AND a.attname = 'secondaryInstructor_arr' AND NOT a.attisdropped
+              ) THEN
+                ALTER TABLE "Trainee" ADD COLUMN "secondaryInstructor_arr" TEXT[] DEFAULT ARRAY[]::TEXT[];
+              END IF;
+
+              UPDATE "Trainee"
+              SET "secondaryInstructor_arr" = CASE
+                WHEN "secondaryInstructor" IS NOT NULL AND "secondaryInstructor" <> ''
+                THEN ARRAY["secondaryInstructor"]::TEXT[]
+                ELSE ARRAY[]::TEXT[]
+              END;
+
+              ALTER TABLE "Trainee" DROP COLUMN IF EXISTS "secondaryInstructor";
+
+              ALTER TABLE "Trainee" RENAME COLUMN "secondaryInstructor_arr" TO "secondaryInstructor";
+            END $$;
+          `);
+        }
 
         console.log(`Migrated "${colName}" to TEXT[]`);
       } else {

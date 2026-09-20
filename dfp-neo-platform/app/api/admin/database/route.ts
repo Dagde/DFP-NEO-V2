@@ -29,35 +29,11 @@ export async function GET(request: NextRequest) {
     }
 
     const searchParams = request.nextUrl.searchParams;
-    const query = searchParams.get('query');
-    const table = searchParams.get('table');
-
-    // If a SQL query is provided, execute it (READ-ONLY queries only)
-    if (query) {
-      // Security: Only allow SELECT queries
-      const trimmedQuery = query.trim().toUpperCase();
-      if (!trimmedQuery.startsWith('SELECT')) {
-        return NextResponse.json(
-          { error: 'Only SELECT queries are allowed for security' },
-          { status: 403 }
-        );
-      }
-
-      try {
-        const result = await prisma.$queryRawUnsafe(query);
-        return NextResponse.json({
-          success: true,
-          type: 'query',
-          query: query,
-          results: result,
-          rowCount: Array.isArray(result) ? result.length : 1
-        });
-      } catch (error) {
-        return NextResponse.json(
-          { error: 'Query execution failed', details: error instanceof Error ? error.message : 'Unknown error' },
-          { status: 500 }
-        );
-      }
+    if (searchParams.has('query')) {
+      return NextResponse.json(
+        { error: 'Ad hoc SQL queries are disabled. Use approved database statistics and table views only.' },
+        { status: 403 }
+      );
     }
 
     // Get database statistics
