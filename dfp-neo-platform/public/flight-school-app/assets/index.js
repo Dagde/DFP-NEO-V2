@@ -132386,57 +132386,7 @@ const App = () => {
         });
         return;
       }
-      const ssoUserData = localStorage.getItem("dfp_sso_user");
-      if (ssoUserData) {
-        try {
-          const ssoUser = JSON.parse(ssoUserData);
-          if (ssoUser && ssoUser.userId && ssoUser.username) {
-            const nextAuthUser = cleanAuthUser({
-              id: ssoUser.id || ssoUser.userId,
-              userId: ssoUser.userId,
-              username: ssoUser.username,
-              firstName: ssoUser.firstName || "",
-              lastName: ssoUser.lastName || "",
-              displayName: ssoUser.displayName || ssoUser.username,
-              email: ssoUser.email || null,
-              role: ssoUser.role || "USER",
-              isActive: ssoUser.isActive !== false,
-              mustChangePassword: false,
-              permissionsRoleId: ""
-            });
-            setAuthUser(nextAuthUser);
-            setAuthSessionToken(localStorage.getItem("dfp_session_token") || "");
-            setIsAuthenticated(true);
-            authenticatedFromStoredSession = true;
-            authSource = "sso-local-storage";
-            setAuthLoading(false);
-            setCurrentUserName(formatAuthLoginName(nextAuthUser));
-            setCurrentUserRole(nextAuthUser.role || "USER");
-            setSessionUser({
-              firstName: nextAuthUser.firstName || "",
-              lastName: nextAuthUser.lastName || "",
-              role: nextAuthUser.role || "USER",
-              militaryRank: "",
-              userId: nextAuthUser.userId,
-              username: nextAuthUser.username
-            });
-            fetchAndSetAuditUser(nextAuthUser.firstName || null, nextAuthUser.lastName || null, nextAuthUser.displayName, nextAuthUser.role || "USER");
-            pushDfpDataDiag("startup:auth-session:end", {
-              durationMs: Math.round(performance.now() - startedAt),
-              source: "sso-local-storage",
-              authenticated: true,
-              userId: nextAuthUser.userId
-            });
-            return;
-          }
-        } catch (e) {
-          console.error("[SSO] Failed to parse SSO user data:", e);
-          pushDfpDataDiag("startup:auth-session:sso-parse-error", {
-            durationMs: Math.round(performance.now() - startedAt),
-            error: String(e)
-          });
-        }
-      }
+      localStorage.removeItem("dfp_sso_user");
       const storedToken = localStorage.getItem("dfp_session_token");
       authSource = storedToken ? "stored-token" : "cookie-session";
       {
@@ -132515,6 +132465,7 @@ const App = () => {
     await logoutUser(authSessionToken);
     localStorage.removeItem("dfp_session_token");
     localStorage.removeItem("dfp_session_expires");
+    localStorage.removeItem("dfp_sso_user");
     setIsAuthenticated(false);
     setAuthUser(null);
     setAuthSessionToken("");
@@ -136167,14 +136118,6 @@ const App = () => {
   const getCurrentUserId = () => {
     if (sessionUser?.userId) return sessionUser.userId;
     if (authUser?.userId) return authUser.userId;
-    try {
-      const ssoData = localStorage.getItem("dfp_sso_user");
-      if (ssoData) {
-        const ssoUser = JSON.parse(ssoData);
-        if (ssoUser?.userId) return ssoUser.userId;
-      }
-    } catch (e) {
-    }
     return null;
   };
   reactExports.useEffect(() => {
