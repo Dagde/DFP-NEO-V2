@@ -6776,6 +6776,7 @@ app.get('/api/audit/logs', async (req, res) => {
 function mapSecurityAuditRow(row) {
   const changes = row.changes || {};
   const displayName = `${row.firstName || ''} ${row.lastName || ''}`.trim() || row.username || row.userId || 'System';
+  const createdAt = row.createdAt instanceof Date ? row.createdAt.toISOString() : row.createdAt;
   return {
     id: row.id,
     eventType: changes.eventType || row.entityId || '',
