@@ -151,6 +151,13 @@ export function buildSecurityPostureReport(env = process.env, options = {}) {
     detail: 'Admins can export locally stored security monitoring events for review evidence.',
   });
 
+  addControl(controls, {
+    status: 'pass',
+    category: 'Monitoring',
+    control: 'Security evidence bundle',
+    detail: 'Admins can download a combined posture, monitoring and recent-events evidence bundle.',
+  });
+
   const headerList = Array.isArray(options.requiredHeaders) && options.requiredHeaders.length > 0
     ? options.requiredHeaders
     : DEFAULT_REQUIRED_HEADERS;

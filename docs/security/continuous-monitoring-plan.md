@@ -17,6 +17,7 @@ DFP NEO currently has:
 - admin-only security event and status APIs;
 - admin-only deployment security posture API;
 - admin-only security event export API;
+- admin-only security evidence bundle API;
 - local `npm run security:posture` report command;
 - deployment/runtime logs through the hosting platform.
 
@@ -45,7 +46,7 @@ For production deployments, configure:
 - emergency/freeze/security control change;
 - unexpected server errors on auth/admin endpoints;
 - backup/restore failure;
-- deployment or environment variable change.
+- deployment or environment variable change;
 - failed security posture check before release or customer handover.
 
 ## Evidence Template
@@ -79,6 +80,24 @@ Optional filters:
 - `format=json`: export JSON instead of CSV.
 
 Retain the export with the security review evidence for the deployment. This export is not a replacement for central monitoring, but it provides a practical evidence source until a customer-approved SIEM, webhook, or managed log destination is configured.
+
+## Security Evidence Bundle
+
+An administrator can download a combined JSON evidence bundle:
+
+```text
+/api/security/evidence-bundle
+```
+
+The bundle includes:
+
+- deployment posture report;
+- monitoring status;
+- recent security events;
+- the applied export filters;
+- generation time and admin role.
+
+Use this as the preferred quick evidence capture during customer review, internal security review, release assurance, and pre-deployment checks.
 
 ## Current Open Work
 

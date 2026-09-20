@@ -6868,6 +6868,33 @@ async function fetchSecurityAuditRows(db, query = {}, defaultLimit = 100) {
   );
 }
 
+async function buildSecurityMonitoringStatus(db) {
+  const [severityRows, latestRows] = await Promise.all([
+    db.$queryRawUnsafe(
+      `SELECT COALESCE(LOWER(changes->>'severity'), 'info') AS severity, COUNT(*)::int AS count
+       FROM "AuditLog"
+       WHERE "entityType" = 'SecurityMonitoring'
+         AND "createdAt" >= NOW() - INTERVAL '30 days'
+       GROUP BY COALESCE(LOWER(changes->>'severity'), 'info')
+       ORDER BY count DESC`
+    ),
+    fetchSecurityAuditRows(db, { days: 30, limit: 5 }, 5),
+  ]);
+
+  const countsLast30Days = severityRows.reduce((acc, row) => {
+    acc[row.severity || 'info'] = Number(row.count || 0);
+    return acc;
+  }, { critical: 0, warning: 0, info: 0 });
+
+  return {
+    monitoringEnabled: true,
+    externalReportingConfigured: Boolean(SECURITY_EVENT_WEBHOOK_URL),
+    evidenceExportAvailable: true,
+    countsLast30Days,
+    latestEvents: latestRows.map(mapSecurityAuditRow),
+  };
+}
+
 // GET /api/security/events - Admin-only security event history
 app.get('/api/security/events', async (req, res) => {
   try {
@@ -6923,53 +6950,50 @@ app.get('/api/security/status', async (req, res) => {
   try {
     const context = await requireDirectAdmin(req, res);
     if (!context) return;
-    const db = context.db;
 
-    const [severityRows, latestRows] = await Promise.all([
-      db.$queryRawUnsafe(
-        `SELECT COALESCE(LOWER(changes->>'severity'), 'info') AS severity, COUNT(*)::int AS count
-         FROM "AuditLog"
-         WHERE "entityType" = 'SecurityMonitoring'
-           AND "createdAt" >= NOW() - INTERVAL '30 days'
-         GROUP BY COALESCE(LOWER(changes->>'severity'), 'info')
-         ORDER BY count DESC`
-      ),
-      db.$queryRawUnsafe(
-        `SELECT
-           a.id,
-           a."entityId",
-           a.changes,
-           a."ipAddress",
-           a."userAgent",
-           a."createdAt",
-           u.username,
-           u."userId",
-           u."firstName",
-           u."lastName"
-         FROM "AuditLog" a
-         LEFT JOIN "User" u ON u.id = a."userId"
-         WHERE a."entityType" = 'SecurityMonitoring'
-         ORDER BY a."createdAt" DESC
-         LIMIT 5`
-      ),
-    ]);
-
-    const countsLast30Days = severityRows.reduce((acc, row) => {
-      acc[row.severity || 'info'] = Number(row.count || 0);
-      return acc;
-    }, { critical: 0, warning: 0, info: 0 });
-
-    res.json({
-      status: {
-        monitoringEnabled: true,
-        externalReportingConfigured: Boolean(SECURITY_EVENT_WEBHOOK_URL),
-        countsLast30Days,
-        latestEvents: latestRows.map(mapSecurityAuditRow),
-      },
-    });
+    res.json({ status: await buildSecurityMonitoringStatus(context.db) });
   } catch (error) {
     console.error('❌ GET /api/security/status error:', error);
     res.status(500).json({ error: 'Failed to fetch security status', details: error.message });
+  }
+});
+
+// GET /api/security/evidence-bundle - Admin-only security evidence bundle
+app.get('/api/security/evidence-bundle', async (req, res) => {
+  try {
+    const context = await requireDirectAdmin(req, res);
+    if (!context) return;
+    const timestamp = new Date().toISOString();
+    const recentRows = await fetchSecurityAuditRows(context.db, req.query, 100);
+    const bundle = {
+      exportedAt: timestamp,
+      generatedBy: {
+        userId: context.admin.userId || '',
+        username: context.admin.username || '',
+        role: context.admin.role || '',
+      },
+      posture: buildSecurityPostureReport(process.env),
+      monitoringStatus: await buildSecurityMonitoringStatus(context.db),
+      recentSecurityEvents: recentRows.map(mapSecurityAuditRow),
+      filters: {
+        days: req.query.days || '30',
+        severity: req.query.severity || '',
+        eventType: req.query.eventType || '',
+        limit: req.query.limit || '100',
+      },
+      notes: [
+        'This bundle contains operational security evidence only.',
+        'It does not include passwords, session tokens, signing secrets, database credentials or webhook URLs.',
+      ],
+    };
+
+    const filenameTimestamp = timestamp.replace(/[:.]/g, '-');
+    res.setHeader('Content-Type', 'application/json');
+    res.setHeader('Content-Disposition', `attachment; filename="dfp-neo-security-evidence-${filenameTimestamp}.json"`);
+    res.json(bundle);
+  } catch (error) {
+    console.error('❌ GET /api/security/evidence-bundle error:', error);
+    res.status(500).json({ error: 'Failed to build security evidence bundle', details: error.message });
   }
 });
 

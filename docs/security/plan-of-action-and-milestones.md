@@ -27,3 +27,4 @@ This POA&M tracks open security work, residual risk treatment and readiness task
 | POAM-CLOSED-001 | `d18996e2` | Browser auth restore now requires server-validated session; legacy local-storage auth shortcut removed. |
 | POAM-CLOSED-002 | `CCH 8.969` | Phase 3 deployment posture report added as admin API and local command. |
 | POAM-CLOSED-003 | `CCH 8.970` | Admin security event evidence export added for monitoring review packs. |
+| POAM-CLOSED-004 | `CCH 8.973` | Admin security evidence bundle added for posture, monitoring and recent-event review evidence. |
