@@ -36,6 +36,121 @@ const getServiceCountLabels = (serviceDefinitions: Array<{ longName?: string; sh
     ];
 };
 
+const darkenHexColor = (color: string) => {
+    if (!color.startsWith('#') || color.length < 7) return color;
+    const strength = 0.62;
+    const r = Math.round(parseInt(color.slice(1, 3), 16) * strength);
+    const g = Math.round(parseInt(color.slice(3, 5), 16) * strength);
+    const b = Math.round(parseInt(color.slice(5, 7), 16) * strength);
+    return `rgb(${r}, ${g}, ${b})`;
+};
+
+const formatCourseDate = (value: string) => {
+    if (!value) return 'Not set';
+    const date = new Date(value);
+    if (Number.isNaN(date.getTime())) return 'Not set';
+    return date.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: '2-digit' });
+};
+
+interface CourseCardProps {
+    course: Course;
+    courseColor: string;
+    primaryStudentGroupLabel: string;
+    secondaryStudentGroupLabel: string;
+    tertiaryStudentGroupLabel: string;
+    onOpenCourseRoster: (courseName: string) => void;
+    onEditCourse: (course: Course) => void;
+    onDeleteCourse: (courseName: string) => void;
+}
+
+const CourseCard = React.memo<CourseCardProps>(({
+    course,
+    courseColor,
+    primaryStudentGroupLabel,
+    secondaryStudentGroupLabel,
+    tertiaryStudentGroupLabel,
+    onOpenCourseRoster,
+    onEditCourse,
+    onDeleteCourse,
+}) => {
+    const totalStudents = course.raafStart + course.navyStart + course.armyStart;
+    const openCourseRoster = () => onOpenCourseRoster(course.name);
+
+    return (
+        <div
+            role="button"
+            tabIndex={0}
+            className="bg-gray-700 rounded-lg p-4 border border-gray-600 cursor-pointer group outline-none transition-colors duration-150 hover:border-sky-400 hover:bg-gray-700/95 hover:ring-1 hover:ring-sky-400/45 focus-visible:border-sky-300 focus-visible:ring-2 focus-visible:ring-sky-300/55"
+            onClick={openCourseRoster}
+            onKeyDown={(event) => {
+                if (event.key === 'Enter' || event.key === ' ') {
+                    event.preventDefault();
+                    openCourseRoster();
+                }
+            }}
+        >
+            <div className="flex justify-between items-start mb-3">
+                <div className="flex items-center gap-3">
+                    <div
+                        data-course-color="true"
+                        className={`w-4 h-4 rounded ${!courseColor.startsWith('#') ? (courseColor || 'bg-gray-400/50') : ''}`}
+                        style={courseColor.startsWith('#') ? { backgroundColor: darkenHexColor(courseColor) } : {}}
+                    ></div>
+                    <h3 className="text-lg font-semibold text-white group-hover:text-sky-400 transition-colors">
+                        {course.name}
+                    </h3>
+                </div>
+                <div className="flex gap-[1px]">
+                    <button
+                        onClick={(e) => {
+                            e.stopPropagation();
+                            onEditCourse(course);
+                        }}
+                        className="w-[52px] h-[28px] flex items-center justify-center text-[11px] font-semibold btn-aluminium-brushed rounded-md"
+                        title="Edit Course"
+                    >
+                        Edit
+                    </button>
+                    <button
+                        onClick={(e) => {
+                            e.stopPropagation();
+                            onDeleteCourse(course.name);
+                        }}
+                        className="text-red-400 hover:text-red-300 transition-colors p-1"
+                        title="Delete Course"
+                    >
+                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                        </svg>
+                    </button>
+                </div>
+            </div>
+
+            <div className="space-y-2 text-sm text-gray-300">
+                <div className="flex justify-between">
+                    <span className="text-gray-400">Start Date:</span>
+                    <span>{formatCourseDate(course.startDate)}</span>
+                </div>
+                <div className="flex justify-between">
+                    <span className="text-gray-400">Grad Date:</span>
+                    <span>{formatCourseDate(course.gradDate)}</span>
+                </div>
+                <div className="flex justify-between">
+                    <span className="text-gray-400">Total Students:</span>
+                    <span className="font-semibold">{totalStudents}</span>
+                </div>
+                <div className="flex justify-between text-xs">
+                    <span className="text-gray-400">{primaryStudentGroupLabel}: {course.raafStart}</span>
+                    <span className="text-gray-400">{secondaryStudentGroupLabel}: {course.navyStart}</span>
+                    <span className="text-gray-400">{tertiaryStudentGroupLabel}: {course.armyStart}</span>
+                </div>
+            </div>
+        </div>
+    );
+});
+
+CourseCard.displayName = 'CourseCard';
+
 const CoursesManagementView: React.FC<CoursesManagementViewProps> = ({
     courses,
     courseColors,
@@ -166,93 +281,6 @@ const CoursesManagementView: React.FC<CoursesManagementViewProps> = ({
         setCourseToDelete(null);
     };
 
-    const CourseCard: React.FC<{ course: Course }> = ({ course }) => {
-        const totalStudents = course.raafStart + course.navyStart + course.armyStart;
-        const darkenHexColor = (color: string) => {
-            if (!color.startsWith('#') || color.length < 7) return color;
-            const strength = 0.62;
-            const r = Math.round(parseInt(color.slice(1, 3), 16) * strength);
-            const g = Math.round(parseInt(color.slice(3, 5), 16) * strength);
-            const b = Math.round(parseInt(color.slice(5, 7), 16) * strength);
-            return `rgb(${r}, ${g}, ${b})`;
-        };
-        const courseColor = courseColors[course.name] || '';
-        
-        const openCourseRoster = () => onNavigateToCourseRoster(course.name);
-
-        return (
-            <div
-                role="button"
-                tabIndex={0}
-                className="bg-gray-700 rounded-lg p-4 border border-gray-600 cursor-pointer group outline-none transition-[border-color,box-shadow,background-color] duration-150 hover:border-sky-400 hover:bg-gray-700/95 hover:shadow-[0_0_0_1px_rgba(56,189,248,0.45)] focus-visible:border-sky-300 focus-visible:shadow-[0_0_0_2px_rgba(56,189,248,0.55)]"
-                onClick={openCourseRoster}
-                onKeyDown={(event) => {
-                    if (event.key === 'Enter' || event.key === ' ') {
-                        event.preventDefault();
-                        openCourseRoster();
-                    }
-                }}
-            >
-                <div className="flex justify-between items-start mb-3">
-                    <div className="flex items-center gap-3">
-                        <div 
-                            data-course-color="true"
-                            className={`w-4 h-4 rounded ${!courseColor.startsWith('#') ? (courseColor || 'bg-gray-400/50') : ''}`}
-                            style={courseColor.startsWith('#') ? { backgroundColor: darkenHexColor(courseColor) } : {}}
-                        ></div>
-                        <h3 className="text-lg font-semibold text-white group-hover:text-sky-400 transition-colors">
-                            {course.name}
-                        </h3>
-                    </div>
-                    <div className="flex gap-[1px]">
-                        <button
-                            onClick={(e) => {
-                                e.stopPropagation();
-                                handleEditClick(course);
-                            }}
-                            className="w-[52px] h-[28px] flex items-center justify-center text-[11px] font-semibold btn-aluminium-brushed rounded-md"
-                            title="Edit Course"
-                        >
-                            Edit
-                        </button>
-                        <button
-                            onClick={(e) => {
-                                e.stopPropagation();
-                                handleDeleteClick(course.name);
-                            }}
-                            className="text-red-400 hover:text-red-300 transition-colors p-1"
-                            title="Delete Course"
-                        >
-                            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                            </svg>
-                        </button>
-                    </div>
-                </div>
-                
-                <div className="space-y-2 text-sm text-gray-300">
-                    <div className="flex justify-between">
-                        <span className="text-gray-400">Start Date:</span>
-                        <span>{new Date(course.startDate).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: '2-digit' })}</span>
-                    </div>
-                    <div className="flex justify-between">
-                        <span className="text-gray-400">Grad Date:</span>
-                        <span>{new Date(course.gradDate).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: '2-digit' })}</span>
-                    </div>
-                    <div className="flex justify-between">
-                        <span className="text-gray-400">Total Students:</span>
-                        <span className="font-semibold">{totalStudents}</span>
-                    </div>
-                    <div className="flex justify-between text-xs">
-                        <span className="text-gray-400">{primaryStudentGroupLabel}: {course.raafStart}</span>
-                        <span className="text-gray-400">{secondaryStudentGroupLabel}: {course.navyStart}</span>
-                        <span className="text-gray-400">{tertiaryStudentGroupLabel}: {course.armyStart}</span>
-                    </div>
-                </div>
-            </div>
-        );
-    };
-
     return (
         <div className="flex-1 flex flex-col bg-gray-900 h-full overflow-hidden">
             {/* Header */}
@@ -301,7 +329,17 @@ const CoursesManagementView: React.FC<CoursesManagementViewProps> = ({
                                 </h3>
                                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
                                     {coursesInGroup.map(course => (
-                                        <CourseCard key={course.name} course={course} />
+                                        <CourseCard
+                                            key={course.name}
+                                            course={course}
+                                            courseColor={courseColors[course.name] || ''}
+                                            primaryStudentGroupLabel={primaryStudentGroupLabel}
+                                            secondaryStudentGroupLabel={secondaryStudentGroupLabel}
+                                            tertiaryStudentGroupLabel={tertiaryStudentGroupLabel}
+                                            onOpenCourseRoster={onNavigateToCourseRoster}
+                                            onEditCourse={handleEditClick}
+                                            onDeleteCourse={handleDeleteClick}
+                                        />
                                     ))}
                                 </div>
                             </div>

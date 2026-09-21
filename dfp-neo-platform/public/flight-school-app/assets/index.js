@@ -9622,7 +9622,7 @@ const Sidebar = ({ activeView, onNavigate, courseColors, onAddCourse, onArchiveC
     onArchiveCourse(courseNumber);
     setShowRemoveCourseFlyout(false);
   };
-  const darkenHexColor = (color) => {
+  const darkenHexColor2 = (color) => {
     if (!color.startsWith("#") || color.length < 7) return color;
     const strength = 0.62;
     const r = Math.round(parseInt(color.slice(1, 3), 16) * strength);
@@ -9799,7 +9799,7 @@ const Sidebar = ({ activeView, onNavigate, courseColors, onAddCourse, onArchiveC
               {
                 "data-course-color": "true",
                 className: `h-3 w-3 rounded-full ${(item.color || "").startsWith("#") ? "" : item.color} flex-shrink-0`,
-                style: (item.color || "").startsWith("#") ? { backgroundColor: darkenHexColor(item.color) } : {}
+                style: (item.color || "").startsWith("#") ? { backgroundColor: darkenHexColor2(item.color) } : {}
               }
             ),
             /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "min-w-0 truncate text-left text-[9px] text-gray-300", children: item.label })
@@ -53677,7 +53677,7 @@ const CourseRosterView = ({
       /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex-1 overflow-y-auto", children: /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "p-4 md:p-6 pb-16 max-w-[1430px] mx-auto", children: /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "grid grid-cols-1 sm:grid-cols-[repeat(auto-fill,minmax(267px,267px))] gap-6", children: coursesToDisplay.map((courseName) => {
         const courseTrainees = groupedTrainees[courseName] || [];
         const color = courseColorMap[courseName] || "bg-gray-500";
-        const darkenHexColor = (c) => {
+        const darkenHexColor2 = (c) => {
           if (!c.startsWith("#") || c.length < 7) return c;
           const strength = 0.62;
           const r = Math.round(parseInt(c.slice(1, 3), 16) * strength);
@@ -53704,7 +53704,7 @@ const CourseRosterView = ({
                 {
                   "data-course-color": "true",
                   className: `relative px-4 py-2 pr-12 text-white font-bold text-lg ${isHexColor(color) ? "" : color}`,
-                  style: isHexColor(color) ? { backgroundColor: darkenHexColor(color) } : {},
+                  style: isHexColor(color) ? { backgroundColor: darkenHexColor2(color) } : {},
                   children: [
                     /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
                       /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
@@ -101430,7 +101430,7 @@ const CourseDataWindow = ({
   const { name: courseName, color: courseColor, gradDate, startDate } = course;
   const isHexColor = (color) => color.startsWith("#") || color.startsWith("rgb");
   const courseColorClass = isHexColor(courseColor || "") ? "" : courseColor || "";
-  const darkenHexColor = (color) => {
+  const darkenHexColor2 = (color) => {
     if (!color.startsWith("#") || color.length < 7) return color;
     const strength = 0.62;
     const r = Math.round(parseInt(color.slice(1, 3), 16) * strength);
@@ -101438,7 +101438,7 @@ const CourseDataWindow = ({
     const b = Math.round(parseInt(color.slice(5, 7), 16) * strength);
     return `rgb(${r}, ${g}, ${b})`;
   };
-  const courseColorStyle = isHexColor(courseColor || "") ? { backgroundColor: darkenHexColor(courseColor) } : {};
+  const courseColorStyle = isHexColor(courseColor || "") ? { backgroundColor: darkenHexColor2(courseColor) } : {};
   const courseData = reactExports.useMemo(() => {
     return calculateCourseProgressMetric(course, allTrainees, traineeLMPs, pt051Assessments, riskThresholds);
   }, [course, allTrainees, traineeLMPs, pt051Assessments, riskThresholds]);
@@ -101519,7 +101519,7 @@ const CourseDataWindow = ({
         {
           "data-course-color": "true",
           className: `${courseColorClass} h-1.5 rounded-full`,
-          style: { width: `${percentage}%`, ...isHexColor(courseColor || "") ? { backgroundColor: darkenHexColor(courseColor) } : {} }
+          style: { width: `${percentage}%`, ...isHexColor(courseColor || "") ? { backgroundColor: darkenHexColor2(courseColor) } : {} }
         }
       ) })
     ] }, trainee.idNumber)) }),
@@ -102321,7 +102321,7 @@ const CourseProgressView = ({
     return activeCourses.find((course) => course.name === courseName)?.color || courseColors[courseName] || "";
   };
   const isCssColor2 = (color) => color.startsWith("#") || color.startsWith("rgb");
-  const darkenHexColor = (color) => {
+  const darkenHexColor2 = (color) => {
     if (!color.startsWith("#") || color.length < 7) return color;
     const strength = 0.62;
     const r = Math.round(parseInt(color.slice(1, 3), 16) * strength);
@@ -102335,7 +102335,7 @@ const CourseProgressView = ({
   };
   const getCourseHeaderStyle = (courseName) => {
     const color = getCourseColor(courseName);
-    return color && isCssColor2(color) ? { backgroundColor: darkenHexColor(color) } : {};
+    return color && isCssColor2(color) ? { backgroundColor: darkenHexColor2(color) } : {};
   };
   const getCourseBorderStyle = (courseName) => {
     const color = getCourseColor(courseName);
@@ -103484,6 +103484,121 @@ const getServiceCountLabels = (serviceDefinitions = []) => {
     labels[2] || "Group 3"
   ];
 };
+const darkenHexColor = (color) => {
+  if (!color.startsWith("#") || color.length < 7) return color;
+  const strength = 0.62;
+  const r = Math.round(parseInt(color.slice(1, 3), 16) * strength);
+  const g = Math.round(parseInt(color.slice(3, 5), 16) * strength);
+  const b = Math.round(parseInt(color.slice(5, 7), 16) * strength);
+  return `rgb(${r}, ${g}, ${b})`;
+};
+const formatCourseDate = (value) => {
+  if (!value) return "Not set";
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "Not set";
+  return date.toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "2-digit" });
+};
+const CourseCard = React.memo(({
+  course,
+  courseColor,
+  primaryStudentGroupLabel,
+  secondaryStudentGroupLabel,
+  tertiaryStudentGroupLabel,
+  onOpenCourseRoster,
+  onEditCourse,
+  onDeleteCourse
+}) => {
+  const totalStudents = course.raafStart + course.navyStart + course.armyStart;
+  const openCourseRoster = () => onOpenCourseRoster(course.name);
+  return /* @__PURE__ */ jsxRuntimeExports.jsxs(
+    "div",
+    {
+      role: "button",
+      tabIndex: 0,
+      className: "bg-gray-700 rounded-lg p-4 border border-gray-600 cursor-pointer group outline-none transition-colors duration-150 hover:border-sky-400 hover:bg-gray-700/95 hover:ring-1 hover:ring-sky-400/45 focus-visible:border-sky-300 focus-visible:ring-2 focus-visible:ring-sky-300/55",
+      onClick: openCourseRoster,
+      onKeyDown: (event) => {
+        if (event.key === "Enter" || event.key === " ") {
+          event.preventDefault();
+          openCourseRoster();
+        }
+      },
+      children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex justify-between items-start mb-3", children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center gap-3", children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx(
+              "div",
+              {
+                "data-course-color": "true",
+                className: `w-4 h-4 rounded ${!courseColor.startsWith("#") ? courseColor || "bg-gray-400/50" : ""}`,
+                style: courseColor.startsWith("#") ? { backgroundColor: darkenHexColor(courseColor) } : {}
+              }
+            ),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("h3", { className: "text-lg font-semibold text-white group-hover:text-sky-400 transition-colors", children: course.name })
+          ] }),
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex gap-[1px]", children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx(
+              "button",
+              {
+                onClick: (e) => {
+                  e.stopPropagation();
+                  onEditCourse(course);
+                },
+                className: "w-[52px] h-[28px] flex items-center justify-center text-[11px] font-semibold btn-aluminium-brushed rounded-md",
+                title: "Edit Course",
+                children: "Edit"
+              }
+            ),
+            /* @__PURE__ */ jsxRuntimeExports.jsx(
+              "button",
+              {
+                onClick: (e) => {
+                  e.stopPropagation();
+                  onDeleteCourse(course.name);
+                },
+                className: "text-red-400 hover:text-red-300 transition-colors p-1",
+                title: "Delete Course",
+                children: /* @__PURE__ */ jsxRuntimeExports.jsx("svg", { className: "w-5 h-5", fill: "none", stroke: "currentColor", viewBox: "0 0 24 24", children: /* @__PURE__ */ jsxRuntimeExports.jsx("path", { strokeLinecap: "round", strokeLinejoin: "round", strokeWidth: 2, d: "M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" }) })
+              }
+            )
+          ] })
+        ] }),
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-2 text-sm text-gray-300", children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex justify-between", children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-gray-400", children: "Start Date:" }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("span", { children: formatCourseDate(course.startDate) })
+          ] }),
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex justify-between", children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-gray-400", children: "Grad Date:" }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("span", { children: formatCourseDate(course.gradDate) })
+          ] }),
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex justify-between", children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-gray-400", children: "Total Students:" }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "font-semibold", children: totalStudents })
+          ] }),
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex justify-between text-xs", children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "text-gray-400", children: [
+              primaryStudentGroupLabel,
+              ": ",
+              course.raafStart
+            ] }),
+            /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "text-gray-400", children: [
+              secondaryStudentGroupLabel,
+              ": ",
+              course.navyStart
+            ] }),
+            /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "text-gray-400", children: [
+              tertiaryStudentGroupLabel,
+              ": ",
+              course.armyStart
+            ] })
+          ] })
+        ] })
+      ]
+    }
+  );
+});
+CourseCard.displayName = "CourseCard";
 const CoursesManagementView = ({
   courses,
   courseColors,
@@ -103591,106 +103706,6 @@ const CoursesManagementView = ({
     setDeletePasswordError("");
     setCourseToDelete(null);
   };
-  const CourseCard = ({ course }) => {
-    const totalStudents = course.raafStart + course.navyStart + course.armyStart;
-    const darkenHexColor = (color) => {
-      if (!color.startsWith("#") || color.length < 7) return color;
-      const strength = 0.62;
-      const r = Math.round(parseInt(color.slice(1, 3), 16) * strength);
-      const g = Math.round(parseInt(color.slice(3, 5), 16) * strength);
-      const b = Math.round(parseInt(color.slice(5, 7), 16) * strength);
-      return `rgb(${r}, ${g}, ${b})`;
-    };
-    const courseColor = courseColors[course.name] || "";
-    const openCourseRoster = () => onNavigateToCourseRoster(course.name);
-    return /* @__PURE__ */ jsxRuntimeExports.jsxs(
-      "div",
-      {
-        role: "button",
-        tabIndex: 0,
-        className: "bg-gray-700 rounded-lg p-4 border border-gray-600 cursor-pointer group outline-none transition-[border-color,box-shadow,background-color] duration-150 hover:border-sky-400 hover:bg-gray-700/95 hover:shadow-[0_0_0_1px_rgba(56,189,248,0.45)] focus-visible:border-sky-300 focus-visible:shadow-[0_0_0_2px_rgba(56,189,248,0.55)]",
-        onClick: openCourseRoster,
-        onKeyDown: (event) => {
-          if (event.key === "Enter" || event.key === " ") {
-            event.preventDefault();
-            openCourseRoster();
-          }
-        },
-        children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex justify-between items-start mb-3", children: [
-            /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center gap-3", children: [
-              /* @__PURE__ */ jsxRuntimeExports.jsx(
-                "div",
-                {
-                  "data-course-color": "true",
-                  className: `w-4 h-4 rounded ${!courseColor.startsWith("#") ? courseColor || "bg-gray-400/50" : ""}`,
-                  style: courseColor.startsWith("#") ? { backgroundColor: darkenHexColor(courseColor) } : {}
-                }
-              ),
-              /* @__PURE__ */ jsxRuntimeExports.jsx("h3", { className: "text-lg font-semibold text-white group-hover:text-sky-400 transition-colors", children: course.name })
-            ] }),
-            /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex gap-[1px]", children: [
-              /* @__PURE__ */ jsxRuntimeExports.jsx(
-                "button",
-                {
-                  onClick: (e) => {
-                    e.stopPropagation();
-                    handleEditClick(course);
-                  },
-                  className: "w-[52px] h-[28px] flex items-center justify-center text-[11px] font-semibold btn-aluminium-brushed rounded-md",
-                  title: "Edit Course",
-                  children: "Edit"
-                }
-              ),
-              /* @__PURE__ */ jsxRuntimeExports.jsx(
-                "button",
-                {
-                  onClick: (e) => {
-                    e.stopPropagation();
-                    handleDeleteClick(course.name);
-                  },
-                  className: "text-red-400 hover:text-red-300 transition-colors p-1",
-                  title: "Delete Course",
-                  children: /* @__PURE__ */ jsxRuntimeExports.jsx("svg", { className: "w-5 h-5", fill: "none", stroke: "currentColor", viewBox: "0 0 24 24", children: /* @__PURE__ */ jsxRuntimeExports.jsx("path", { strokeLinecap: "round", strokeLinejoin: "round", strokeWidth: 2, d: "M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" }) })
-                }
-              )
-            ] })
-          ] }),
-          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-2 text-sm text-gray-300", children: [
-            /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex justify-between", children: [
-              /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-gray-400", children: "Start Date:" }),
-              /* @__PURE__ */ jsxRuntimeExports.jsx("span", { children: new Date(course.startDate).toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "2-digit" }) })
-            ] }),
-            /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex justify-between", children: [
-              /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-gray-400", children: "Grad Date:" }),
-              /* @__PURE__ */ jsxRuntimeExports.jsx("span", { children: new Date(course.gradDate).toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "2-digit" }) })
-            ] }),
-            /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex justify-between", children: [
-              /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-gray-400", children: "Total Students:" }),
-              /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "font-semibold", children: totalStudents })
-            ] }),
-            /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex justify-between text-xs", children: [
-              /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "text-gray-400", children: [
-                primaryStudentGroupLabel,
-                ": ",
-                course.raafStart
-              ] }),
-              /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "text-gray-400", children: [
-                secondaryStudentGroupLabel,
-                ": ",
-                course.navyStart
-              ] }),
-              /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "text-gray-400", children: [
-                tertiaryStudentGroupLabel,
-                ": ",
-                course.armyStart
-              ] })
-            ] })
-          ] })
-        ]
-      }
-    );
-  };
   return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex-1 flex flex-col bg-gray-900 h-full overflow-hidden", children: [
     /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex-shrink-0 bg-gray-800 p-4 border-b border-gray-700", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex justify-between items-center", children: [
       /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
@@ -103743,7 +103758,20 @@ const CoursesManagementView = ({
           ")"
         ] })
       ] }),
-      /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4", children: coursesInGroup.map((course) => /* @__PURE__ */ jsxRuntimeExports.jsx(CourseCard, { course }, course.name)) })
+      /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4", children: coursesInGroup.map((course) => /* @__PURE__ */ jsxRuntimeExports.jsx(
+        CourseCard,
+        {
+          course,
+          courseColor: courseColors[course.name] || "",
+          primaryStudentGroupLabel,
+          secondaryStudentGroupLabel,
+          tertiaryStudentGroupLabel,
+          onOpenCourseRoster: onNavigateToCourseRoster,
+          onEditCourse: handleEditClick,
+          onDeleteCourse: handleDeleteClick
+        },
+        course.name
+      )) })
     ] }, type)) }) }),
     showAddCourseFlyout && /* @__PURE__ */ jsxRuntimeExports.jsx(
       AddCourseFlyout,
