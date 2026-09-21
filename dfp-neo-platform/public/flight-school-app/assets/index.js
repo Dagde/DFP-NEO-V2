@@ -53433,7 +53433,9 @@ const CourseRosterView = ({
   operationalModel = "flight_school",
   crewPositionTerminology,
   sctTerminology,
-  canUsePlatformPermission
+  canUsePlatformPermission,
+  focusedCourseName = null,
+  onFocusedCourseHandled
 }) => {
   const { isFrozen } = useSystemFreeze();
   const [view, setView] = reactExports.useState("active");
@@ -53444,6 +53446,8 @@ const CourseRosterView = ({
   const [courseToRestore, setCourseToRestore] = reactExports.useState(null);
   const [hoveredTrainee, setHoveredTrainee] = reactExports.useState(null);
   const [flyoutPosition, setFlyoutPosition] = reactExports.useState(null);
+  const [highlightedCourseName, setHighlightedCourseName] = reactExports.useState(null);
+  const courseCardRefs = reactExports.useRef(/* @__PURE__ */ new Map());
   const [selectedTraineeForDeletion, setSelectedTraineeForDeletion] = reactExports.useState(null);
   const [showDeleteConfirmation, setShowDeleteConfirmation] = reactExports.useState(false);
   const normalisedCurrentUserRole = String(currentUserRole2 || "").trim().toUpperCase().replace(/[\s-]+/g, "_");
@@ -53502,6 +53506,7 @@ const CourseRosterView = ({
   });
   const archivedCourseNumbers = Object.keys(archivedCourses).sort((a, b) => a.localeCompare(b));
   const coursesToDisplay = view === "active" ? activeCourseNumbers : archivedCourseNumbers;
+  const coursesToDisplayKey = coursesToDisplay.join("\0");
   const courseColorMap = view === "active" ? courseColors : archivedCourses;
   const courseRecordsByName = reactExports.useMemo(() => {
     const records = /* @__PURE__ */ new Map();
@@ -53514,6 +53519,28 @@ const CourseRosterView = ({
   const courseLeadershipEnabled = personnelDisplaySettings?.courseLeadershipEnabled !== false;
   const courseCommanderLabel = personnelDisplaySettings?.courseCommanderLabel?.trim() || "Cse Commander";
   const deputyCourseCommanderLabel = personnelDisplaySettings?.deputyCourseCommanderLabel?.trim() || "Deputy Cse Commander";
+  reactExports.useEffect(() => {
+    if (!focusedCourseName) return;
+    const targetCourse = coursesToDisplay.find((courseName) => courseName === focusedCourseName);
+    if (!targetCourse) {
+      onFocusedCourseHandled?.();
+      return;
+    }
+    setView("active");
+    setHighlightedCourseName(targetCourse);
+    window.setTimeout(() => {
+      courseCardRefs.current.get(targetCourse)?.scrollIntoView({
+        behavior: "smooth",
+        block: "center",
+        inline: "nearest"
+      });
+    }, 60);
+    const clearTimer = window.setTimeout(() => {
+      setHighlightedCourseName((current) => current === targetCourse ? null : current);
+      onFocusedCourseHandled?.();
+    }, 2600);
+    return () => window.clearTimeout(clearTimer);
+  }, [coursesToDisplayKey, focusedCourseName]);
   const handleConfirmRestore = (courseNumber) => {
     onRestoreCourse(courseNumber);
     setCourseToRestore(null);
@@ -53663,95 +53690,106 @@ const CourseRosterView = ({
         const pausedCount = courseTrainees.filter((t) => t.isPaused && !isTraineeSuspended(t)).length;
         const isHexColor = (c) => c && (c.startsWith("#") || c.startsWith("rgb"));
         const courseRecord = courseRecordsByName.get(courseName);
-        return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "bg-gray-800 rounded-lg shadow-lg flex flex-col overflow-hidden border border-gray-700", children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsxs(
-            "div",
-            {
-              "data-course-color": "true",
-              className: `relative px-4 py-2 pr-12 text-white font-bold text-lg ${isHexColor(color) ? "" : color}`,
-              style: isHexColor(color) ? { backgroundColor: darkenHexColor(color) } : {},
-              children: [
-                /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
-                  /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
-                    /* @__PURE__ */ jsxRuntimeExports.jsx("span", { children: courseName }),
-                    courseTrainees.length > 0 && /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "ml-2 text-xs font-normal opacity-80", children: courseTrainees[0].unit })
-                  ] }),
-                  courseLeadershipEnabled && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mt-1 space-y-1 text-[11px] font-normal leading-tight text-white/85", children: [
+        const isFocusedCourse = highlightedCourseName === courseName;
+        return /* @__PURE__ */ jsxRuntimeExports.jsxs(
+          "div",
+          {
+            ref: (element) => {
+              courseCardRefs.current.set(courseName, element);
+            },
+            className: `bg-gray-800 rounded-lg shadow-lg flex flex-col overflow-hidden border transition-[border-color,box-shadow] duration-150 ${isFocusedCourse ? "border-sky-300 shadow-[0_0_0_2px_rgba(56,189,248,0.55),0_18px_38px_rgba(0,0,0,0.34)]" : "border-gray-700"}`,
+            children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsxs(
+                "div",
+                {
+                  "data-course-color": "true",
+                  className: `relative px-4 py-2 pr-12 text-white font-bold text-lg ${isHexColor(color) ? "" : color}`,
+                  style: isHexColor(color) ? { backgroundColor: darkenHexColor(color) } : {},
+                  children: [
                     /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
-                      /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "uppercase tracking-wide text-white/60", children: courseCommanderLabel }),
-                      /* @__PURE__ */ jsxRuntimeExports.jsx("div", { children: courseRecord?.courseCommander || "Not assigned" })
+                      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
+                        /* @__PURE__ */ jsxRuntimeExports.jsx("span", { children: courseName }),
+                        courseTrainees.length > 0 && /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "ml-2 text-xs font-normal opacity-80", children: courseTrainees[0].unit })
+                      ] }),
+                      courseLeadershipEnabled && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mt-1 space-y-1 text-[11px] font-normal leading-tight text-white/85", children: [
+                        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
+                          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "uppercase tracking-wide text-white/60", children: courseCommanderLabel }),
+                          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { children: courseRecord?.courseCommander || "Not assigned" })
+                        ] }),
+                        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
+                          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "uppercase tracking-wide text-white/60", children: deputyCourseCommanderLabel }),
+                          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { children: courseRecord?.deputyCourseCommander || "Not assigned" })
+                        ] })
+                      ] })
                     ] }),
-                    /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
-                      /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "uppercase tracking-wide text-white/60", children: deputyCourseCommanderLabel }),
-                      /* @__PURE__ */ jsxRuntimeExports.jsx("div", { children: courseRecord?.deputyCourseCommander || "Not assigned" })
-                    ] })
-                  ] })
-                ] }),
-                /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "absolute right-2 top-2 flex items-center gap-1", children: [
-                  view === "active" && /* @__PURE__ */ jsxRuntimeExports.jsx(
-                    "button",
-                    {
-                      onClick: () => !isFrozen && setCourseToEdit(courseName),
-                      disabled: isFrozen,
-                      className: "p-1.5 rounded-full bg-black/20 hover:bg-black/40 transition-colors group",
-                      "aria-label": `Edit course ${courseName}`,
-                      title: "Edit course",
-                      children: /* @__PURE__ */ jsxRuntimeExports.jsx("svg", { xmlns: "http://www.w3.org/2000/svg", className: "h-4 w-4 group-hover:scale-110 transition-transform", viewBox: "0 0 20 20", fill: "currentColor", children: /* @__PURE__ */ jsxRuntimeExports.jsx("path", { d: "M13.586 3.586a2 2 0 112.828 2.828l-.793.793-2.828-2.828.793-.793zM11.379 5.793L3 14.172V17h2.828l8.38-8.379-2.83-2.828z" }) })
-                    }
-                  ),
-                  view === "archived" && /* @__PURE__ */ jsxRuntimeExports.jsx(
-                    "button",
-                    {
-                      onClick: () => setCourseToRestore(courseName),
-                      className: "p-1 rounded-full bg-black/20 hover:bg-black/40 transition-colors",
-                      "aria-label": `Restore course ${courseName}`,
-                      children: /* @__PURE__ */ jsxRuntimeExports.jsx("svg", { xmlns: "http://www.w3.org/2000/svg", className: "h-4 w-4", viewBox: "0 0 20 20", fill: "currentColor", children: /* @__PURE__ */ jsxRuntimeExports.jsx("path", { fillRule: "evenodd", d: "M10 5a1 1 0 011 1v3h3a1 1 0 110 2h-3v3a1 1 0 11-2 0v-3H6a1 1 0 110-2h3V6a1 1 0 011-1z", clipRule: "evenodd" }) })
-                    }
-                  )
-                ] })
-              ]
-            }
-          ),
-          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "px-4 py-1 text-right text-xs text-white opacity-70", children: [
-            activeCount,
-            " active",
-            pausedCount > 0 && `, ${pausedCount} paused`,
-            suspendedCount > 0 && `, ${suspendedCount} suspended`
-          ] }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex-1 overflow-y-auto p-3", children: courseTrainees.length > 0 ? /* @__PURE__ */ jsxRuntimeExports.jsx("ul", { className: "space-y-2", children: courseTrainees.map((trainee) => {
-            const nameColorClass = getTraineeNameColorClass(trainee);
-            const isSuspended = isTraineeSuspended(trainee);
-            const statusLabel = getTraineeStatusLabel(trainee);
-            return /* @__PURE__ */ jsxRuntimeExports.jsxs(
-              "li",
-              {
-                className: `flex items-center text-sm ${isSuspended ? "rounded border border-red-500/80 bg-red-950/20 px-1 py-0.5" : ""}`,
-                onMouseEnter: (e) => handleMouseEnter(e, trainee),
-                onMouseLeave: handleMouseLeave,
-                children: [
-                  /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "font-mono text-gray-500 w-16 flex-shrink-0", children: trainee.rank }),
-                  /* @__PURE__ */ jsxRuntimeExports.jsx(
-                    "button",
-                    {
-                      onClick: () => {
-                        if (!canViewTraineeProfile(trainee)) {
-                          onAccessDenied?.("trainee profile");
-                          return;
+                    /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "absolute right-2 top-2 flex items-center gap-1", children: [
+                      view === "active" && /* @__PURE__ */ jsxRuntimeExports.jsx(
+                        "button",
+                        {
+                          onClick: () => !isFrozen && setCourseToEdit(courseName),
+                          disabled: isFrozen,
+                          className: "p-1.5 rounded-full bg-black/20 hover:bg-black/40 transition-colors group",
+                          "aria-label": `Edit course ${courseName}`,
+                          title: "Edit course",
+                          children: /* @__PURE__ */ jsxRuntimeExports.jsx("svg", { xmlns: "http://www.w3.org/2000/svg", className: "h-4 w-4 group-hover:scale-110 transition-transform", viewBox: "0 0 20 20", fill: "currentColor", children: /* @__PURE__ */ jsxRuntimeExports.jsx("path", { d: "M13.586 3.586a2 2 0 112.828 2.828l-.793.793-2.828-2.828.793-.793zM11.379 5.793L3 14.172V17h2.828l8.38-8.379-2.83-2.828z" }) })
                         }
-                        setSelectedTrainee(trainee);
-                      },
-                      disabled: !canViewTraineeProfile(trainee),
-                      title: canViewTraineeProfile(trainee) ? statusLabel : "Your permission profile does not allow this trainee profile",
-                      className: `truncate text-left ${nameColorClass} hover:underline focus:outline-none focus:ring-1 focus:ring-sky-500 rounded px-1 ${!canViewTraineeProfile(trainee) ? "opacity-50 cursor-not-allowed hover:no-underline" : ""}`,
-                      children: traineeNameResolver.formatList(trainee)
-                    }
-                  )
-                ]
-              },
-              getPersonStableKey(trainee, "trainee")
-            );
-          }) }) : /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-gray-500 text-sm italic text-center py-4", children: "No trainees assigned." }) })
-        ] }, courseName);
+                      ),
+                      view === "archived" && /* @__PURE__ */ jsxRuntimeExports.jsx(
+                        "button",
+                        {
+                          onClick: () => setCourseToRestore(courseName),
+                          className: "p-1 rounded-full bg-black/20 hover:bg-black/40 transition-colors",
+                          "aria-label": `Restore course ${courseName}`,
+                          children: /* @__PURE__ */ jsxRuntimeExports.jsx("svg", { xmlns: "http://www.w3.org/2000/svg", className: "h-4 w-4", viewBox: "0 0 20 20", fill: "currentColor", children: /* @__PURE__ */ jsxRuntimeExports.jsx("path", { fillRule: "evenodd", d: "M10 5a1 1 0 011 1v3h3a1 1 0 110 2h-3v3a1 1 0 11-2 0v-3H6a1 1 0 110-2h3V6a1 1 0 011-1z", clipRule: "evenodd" }) })
+                        }
+                      )
+                    ] })
+                  ]
+                }
+              ),
+              /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "px-4 py-1 text-right text-xs text-white opacity-70", children: [
+                activeCount,
+                " active",
+                pausedCount > 0 && `, ${pausedCount} paused`,
+                suspendedCount > 0 && `, ${suspendedCount} suspended`
+              ] }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex-1 overflow-y-auto p-3", children: courseTrainees.length > 0 ? /* @__PURE__ */ jsxRuntimeExports.jsx("ul", { className: "space-y-2", children: courseTrainees.map((trainee) => {
+                const nameColorClass = getTraineeNameColorClass(trainee);
+                const isSuspended = isTraineeSuspended(trainee);
+                const statusLabel = getTraineeStatusLabel(trainee);
+                return /* @__PURE__ */ jsxRuntimeExports.jsxs(
+                  "li",
+                  {
+                    className: `flex items-center text-sm ${isSuspended ? "rounded border border-red-500/80 bg-red-950/20 px-1 py-0.5" : ""}`,
+                    onMouseEnter: (e) => handleMouseEnter(e, trainee),
+                    onMouseLeave: handleMouseLeave,
+                    children: [
+                      /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "font-mono text-gray-500 w-16 flex-shrink-0", children: trainee.rank }),
+                      /* @__PURE__ */ jsxRuntimeExports.jsx(
+                        "button",
+                        {
+                          onClick: () => {
+                            if (!canViewTraineeProfile(trainee)) {
+                              onAccessDenied?.("trainee profile");
+                              return;
+                            }
+                            setSelectedTrainee(trainee);
+                          },
+                          disabled: !canViewTraineeProfile(trainee),
+                          title: canViewTraineeProfile(trainee) ? statusLabel : "Your permission profile does not allow this trainee profile",
+                          className: `truncate text-left ${nameColorClass} hover:underline focus:outline-none focus:ring-1 focus:ring-sky-500 rounded px-1 ${!canViewTraineeProfile(trainee) ? "opacity-50 cursor-not-allowed hover:no-underline" : ""}`,
+                          children: traineeNameResolver.formatList(trainee)
+                        }
+                      )
+                    ]
+                  },
+                  getPersonStableKey(trainee, "trainee")
+                );
+              }) }) : /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-gray-500 text-sm italic text-center py-4", children: "No trainees assigned." }) })
+            ]
+          },
+          courseName
+        );
       }) }) }) })
     ] }),
     courseToRestore && /* @__PURE__ */ jsxRuntimeExports.jsx(
@@ -103556,11 +103594,20 @@ const CoursesManagementView = ({
       return `rgb(${r}, ${g}, ${b})`;
     };
     const courseColor = courseColors[course.name] || "";
+    const openCourseRoster = () => onNavigateToCourseRoster(course.name);
     return /* @__PURE__ */ jsxRuntimeExports.jsxs(
       "div",
       {
-        className: "bg-gray-700 rounded-lg p-4 border border-gray-600 hover:border-sky-500 transition-colors cursor-pointer group",
-        onClick: () => onNavigateToCourseRoster(course.name),
+        role: "button",
+        tabIndex: 0,
+        className: "bg-gray-700 rounded-lg p-4 border border-gray-600 cursor-pointer group outline-none transition-[border-color,box-shadow,background-color] duration-150 hover:border-sky-400 hover:bg-gray-700/95 hover:shadow-[0_0_0_1px_rgba(56,189,248,0.45)] focus-visible:border-sky-300 focus-visible:shadow-[0_0_0_2px_rgba(56,189,248,0.55)]",
+        onClick: openCourseRoster,
+        onKeyDown: (event) => {
+          if (event.key === "Enter" || event.key === " ") {
+            event.preventDefault();
+            openCourseRoster();
+          }
+        },
         children: [
           /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex justify-between items-start mb-3", children: [
             /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center gap-3", children: [
@@ -131503,6 +131550,7 @@ const App = () => {
     }
     return "Program Schedule";
   });
+  const [courseRosterFocusCourse, setCourseRosterFocusCourse] = reactExports.useState(null);
   const [floatingDashboardWindows, setFloatingDashboardWindows] = reactExports.useState({
     MyDashboard: false,
     SupervisorDashboard: false
@@ -141460,6 +141508,7 @@ ${error instanceof Error ? error.message : String(error)}`,
     }
   };
   const handleNavigateToCourseRosterFromTrainingRecords = (courseName) => {
+    setCourseRosterFocusCourse(courseName);
     handleNavigation("CourseRoster");
   };
   const handleNavigateToArchivedCoursesFromTrainingRecords = () => {
@@ -151530,7 +151579,9 @@ ${error instanceof Error ? error.message : String(error)}`,
             pt051Assessments,
             pt051PerformanceLoading,
             userProfile: currentUser2,
-            canUsePlatformPermission
+            canUsePlatformPermission,
+            focusedCourseName: courseRosterFocusCourse,
+            onFocusedCourseHandled: () => setCourseRosterFocusCourse(null)
           }
         );
       case "HateSheet":

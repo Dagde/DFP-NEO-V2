@@ -178,10 +178,20 @@ const CoursesManagementView: React.FC<CoursesManagementViewProps> = ({
         };
         const courseColor = courseColors[course.name] || '';
         
+        const openCourseRoster = () => onNavigateToCourseRoster(course.name);
+
         return (
-            <div 
-                className="bg-gray-700 rounded-lg p-4 border border-gray-600 hover:border-sky-500 transition-colors cursor-pointer group"
-                onClick={() => onNavigateToCourseRoster(course.name)}
+            <div
+                role="button"
+                tabIndex={0}
+                className="bg-gray-700 rounded-lg p-4 border border-gray-600 cursor-pointer group outline-none transition-[border-color,box-shadow,background-color] duration-150 hover:border-sky-400 hover:bg-gray-700/95 hover:shadow-[0_0_0_1px_rgba(56,189,248,0.45)] focus-visible:border-sky-300 focus-visible:shadow-[0_0_0_2px_rgba(56,189,248,0.55)]"
+                onClick={openCourseRoster}
+                onKeyDown={(event) => {
+                    if (event.key === 'Enter' || event.key === ' ') {
+                        event.preventDefault();
+                        openCourseRoster();
+                    }
+                }}
             >
                 <div className="flex justify-between items-start mb-3">
                     <div className="flex items-center gap-3">

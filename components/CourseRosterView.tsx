@@ -2,7 +2,7 @@ import { useSystemFreeze } from "../hooks/useSystemFreeze";
 
 
 
-import React, { useState, useMemo, useEffect } from 'react';
+import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { Course, Trainee, ScheduleEvent, Score, SyllabusItemDetail, Instructor, LogbookExperience , MasterCurrency, CurrencyRequirement, TrainingReportAssessment, PhraseBank, SctRequest } from '../types';
 import TraineeProfileFlyout from './TraineeProfileFlyout';
 import RestoreCourseConfirmation from './RestoreCourseConfirmation';
@@ -105,6 +105,8 @@ interface CourseRosterViewProps {
     crewPositionTerminology?: CrewPositionTerminology;
     sctTerminology?: import('../utils/sctTerminology').SctTerminology;
     canUsePlatformPermission?: (permissionId: string) => boolean;
+    focusedCourseName?: string | null;
+    onFocusedCourseHandled?: () => void;
 }
 
 const generateNewTraineeTemplate = (defaults: Partial<Pick<Trainee, 'course' | 'unit' | 'location' | 'service'>> = {}): Trainee => ({
@@ -214,6 +216,8 @@ const CourseRosterView: React.FC<CourseRosterViewProps> = ({
     crewPositionTerminology,
     sctTerminology,
     canUsePlatformPermission,
+    focusedCourseName = null,
+    onFocusedCourseHandled,
 }) => {
     const { isFrozen } = useSystemFreeze();
     const [view, setView] = useState<'active' | 'archived'>('active');
@@ -224,6 +228,8 @@ const CourseRosterView: React.FC<CourseRosterViewProps> = ({
     const [courseToRestore, setCourseToRestore] = useState<string | null>(null);
     const [hoveredTrainee, setHoveredTrainee] = useState<{ name: string; events: ScheduleEvent[] } | null>(null);
     const [flyoutPosition, setFlyoutPosition] = useState<{ top: number; left: number } | null>(null);
+    const [highlightedCourseName, setHighlightedCourseName] = useState<string | null>(null);
+    const courseCardRefs = useRef<Map<string, HTMLDivElement | null>>(new Map());
 
     // Delete Trainee state
     const [selectedTraineeForDeletion, setSelectedTraineeForDeletion] = useState<Trainee | null>(null);
@@ -312,6 +318,7 @@ const CourseRosterView: React.FC<CourseRosterViewProps> = ({
     const archivedCourseNumbers = Object.keys(archivedCourses).sort((a, b) => a.localeCompare(b));
 
     const coursesToDisplay = view === 'active' ? activeCourseNumbers : archivedCourseNumbers;
+    const coursesToDisplayKey = coursesToDisplay.join('\u0000');
     const courseColorMap = view === 'active' ? courseColors : archivedCourses;
     const courseRecordsByName = useMemo(() => {
         const records = new Map<string, Course>();
@@ -324,6 +331,32 @@ const CourseRosterView: React.FC<CourseRosterViewProps> = ({
     const courseLeadershipEnabled = personnelDisplaySettings?.courseLeadershipEnabled !== false;
     const courseCommanderLabel = personnelDisplaySettings?.courseCommanderLabel?.trim() || 'Cse Commander';
     const deputyCourseCommanderLabel = personnelDisplaySettings?.deputyCourseCommanderLabel?.trim() || 'Deputy Cse Commander';
+
+    useEffect(() => {
+        if (!focusedCourseName) return;
+        const targetCourse = coursesToDisplay.find(courseName => courseName === focusedCourseName);
+        if (!targetCourse) {
+            onFocusedCourseHandled?.();
+            return;
+        }
+
+        setView('active');
+        setHighlightedCourseName(targetCourse);
+        window.setTimeout(() => {
+            courseCardRefs.current.get(targetCourse)?.scrollIntoView({
+                behavior: 'smooth',
+                block: 'center',
+                inline: 'nearest',
+            });
+        }, 60);
+
+        const clearTimer = window.setTimeout(() => {
+            setHighlightedCourseName(current => current === targetCourse ? null : current);
+            onFocusedCourseHandled?.();
+        }, 2600);
+
+        return () => window.clearTimeout(clearTimer);
+    }, [coursesToDisplayKey, focusedCourseName]);
 
     const handleConfirmRestore = (courseNumber: string) => {
         onRestoreCourse(courseNumber);
@@ -525,8 +558,15 @@ const CourseRosterView: React.FC<CourseRosterViewProps> = ({
 
                                 const isHexColor = (c: string) => c && (c.startsWith('#') || c.startsWith('rgb'));
                                 const courseRecord = courseRecordsByName.get(courseName);
+                                const isFocusedCourse = highlightedCourseName === courseName;
                                 return (
-                                    <div key={courseName} className="bg-gray-800 rounded-lg shadow-lg flex flex-col overflow-hidden border border-gray-700">
+                                    <div
+                                        key={courseName}
+                                        ref={(element) => {
+                                            courseCardRefs.current.set(courseName, element);
+                                        }}
+                                        className={`bg-gray-800 rounded-lg shadow-lg flex flex-col overflow-hidden border transition-[border-color,box-shadow] duration-150 ${isFocusedCourse ? 'border-sky-300 shadow-[0_0_0_2px_rgba(56,189,248,0.55),0_18px_38px_rgba(0,0,0,0.34)]' : 'border-gray-700'}`}
+                                    >
                                         <div
                                             data-course-color="true"
                                             className={`relative px-4 py-2 pr-12 text-white font-bold text-lg ${isHexColor(color) ? '' : color}`}

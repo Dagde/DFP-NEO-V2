@@ -28102,6 +28102,7 @@ const App: React.FC = () => {
         } catch (e) { /* ignore */ }
         return 'Program Schedule';
     });
+    const [courseRosterFocusCourse, setCourseRosterFocusCourse] = useState<string | null>(null);
     const [floatingDashboardWindows, setFloatingDashboardWindows] = useState<Record<FloatingDashboardWindowKind, boolean>>({
         MyDashboard: false,
         SupervisorDashboard: false,
@@ -40605,7 +40606,7 @@ const App: React.FC = () => {
     };
 
     const handleNavigateToCourseRosterFromTrainingRecords = (courseName: string) => {
-        // Navigate to Course Roster view
+        setCourseRosterFocusCourse(courseName);
         handleNavigation('CourseRoster');
     };
 
@@ -52760,6 +52761,8 @@ appliedUpdates.forEach(update => {
                             pt051PerformanceLoading={pt051PerformanceLoading}
                             userProfile={currentUser}
                             canUsePlatformPermission={canUsePlatformPermission}
+                            focusedCourseName={courseRosterFocusCourse}
+                            onFocusedCourseHandled={() => setCourseRosterFocusCourse(null)}
                         />;
             case 'HateSheet':
                 return <div className="flex-1 flex items-center justify-center bg-gray-900 text-white">
