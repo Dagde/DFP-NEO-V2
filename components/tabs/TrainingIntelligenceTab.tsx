@@ -1668,21 +1668,51 @@ const CourseTab: React.FC<{
   const skillEntries = Object.entries(skillHeatmap).sort((a, b) => a[1] - b[1]);
   const bottleneckEventsFromSummary = parseJ(summary.bottleneckEvents, []) as string[];
   const overServicedEventsFromSummary = parseJ(summary.overServicedEvents, []) as string[];
+  const eventFailRatePct = (ev: TIEEventSummary): number | null => {
+    const storedPassRate = (ev as any).passRate;
+    if (storedPassRate !== null && storedPassRate !== undefined && Number.isFinite(Number(storedPassRate))) {
+      return Math.max(0, Math.min(100, 100 - Number(storedPassRate)));
+    }
+    const storedBottleneckScore = Number((ev as any).bottleneckScore);
+    if (Number.isFinite(storedBottleneckScore)) return Math.max(0, Math.min(100, storedBottleneckScore * 100));
+    return null;
+  };
+  const isElevatedRiskEvent = (ev: TIEEventSummary) => {
+    const failRate = eventFailRatePct(ev);
+    return failRate !== null && failRate >= thresholds.bottleneckThresholdPct;
+  };
+  const formatEventRiskTag = (ev: TIEEventSummary) => {
+    const failRate = eventFailRatePct(ev);
+    return failRate === null ? ev.eventCode : `${ev.eventCode} (${failRate.toFixed(0)}% below pass)`;
+  };
 
   const bottleneckEventsFromEvents = events
-    .filter(ev => safeN(ev.bottleneckScore) >= thresholds.bottleneckThresholdPct / 100)
-    .map(ev => ev.eventCode);
-  const bottleneckEvents = bottleneckEventsFromSummary.length > 0
-    ? bottleneckEventsFromSummary
-    : bottleneckEventsFromEvents;
+    .filter(isElevatedRiskEvent)
+    .map(formatEventRiskTag);
+  const bottleneckEvents = bottleneckEventsFromEvents.length > 0
+    ? bottleneckEventsFromEvents
+    : bottleneckEventsFromSummary;
+
+  const lowVarianceLimit = 0.5;
+  const isLowRiskEvent = (ev: TIEEventSummary) => (
+    ev.overServiceIndicator === true
+    || (ev as any).overServiceIndicator === 'true'
+    || (ev as any).overServiceIndicator === 1
+    || (
+      safeN(ev.avgOverallGrade) >= thresholds.overServiceGradeThreshold
+      && safeN(ev.gradeVariance) < lowVarianceLimit
+      && safeN(ev.totalAttempts) >= thresholds.minObservationsForPattern
+    )
+  );
+  const formatLowRiskTag = (ev: TIEEventSummary) => `${ev.eventCode} (${safeN(ev.avgOverallGrade).toFixed(1)} avg)`;
 
   // Derive low risk events from event data if summary is empty
   const overServicedFromEvents = events
-    .filter(ev => ev.overServiceIndicator === true || (ev as any).overServiceIndicator === 'true' || (ev as any).overServiceIndicator === 1)
-    .map(ev => ev.eventCode);
-  const overServicedEvents = overServicedEventsFromSummary.length > 0
-    ? overServicedEventsFromSummary
-    : overServicedFromEvents;
+    .filter(isLowRiskEvent)
+    .map(formatLowRiskTag);
+  const overServicedEvents = overServicedFromEvents.length > 0
+    ? overServicedFromEvents
+    : overServicedEventsFromSummary;
 
   // Difficulty ranking — sort by avgOverallGrade ascending (hardest first), filter events with valid grade
   const eventsByDiff = [...events]
@@ -1860,7 +1890,7 @@ const CourseTab: React.FC<{
                   <SparkBar value={safeN(ev.avgOverallGrade)} />
                 </div>
                 <span className="text-xs text-gray-500 w-16 flex-shrink-0 text-right">{ev.totalAttempts} tries</span>
-                {safeN(ev.bottleneckScore) >= thresholds.bottleneckThresholdPct / 100 && <span className="text-xs bg-red-900/50 text-red-300 border border-red-800 px-1.5 py-0.5 rounded flex-shrink-0">ELEVATED RISK</span>}
+                {isElevatedRiskEvent(ev) && <span className="text-xs bg-red-900/50 text-red-300 border border-red-800 px-1.5 py-0.5 rounded flex-shrink-0">{eventFailRatePct(ev)?.toFixed(0)}% below pass</span>}
               </div>
             ))}
           </div>
@@ -1915,7 +1945,7 @@ const CourseTab: React.FC<{
             ? <p className="text-gray-500 text-sm">No elevated risk events detected</p>
             : (
               <>
-                <p className="text-xs text-gray-500 mb-2">Events where trainees consistently struggle — high difficulty score, low pass rate, or recurring weak elements.</p>
+                <p className="text-xs text-gray-500 mb-2">Events where at least {thresholds.bottleneckThresholdPct}% of attempts are below the pass grade. This is different to the average-grade ranking above.</p>
                 <div className="flex flex-wrap gap-2">{bottleneckEvents.slice(0, 5).map(e => <Tag key={e} text={e} type="red" />)}</div>
                 {bottleneckEvents.length > 5 && <p className="text-xs text-gray-600 mt-2">+{bottleneckEvents.length - 5} more</p>}
               </>
@@ -1923,7 +1953,7 @@ const CourseTab: React.FC<{
         </SCard>
         <SCard title="Low Risk Events">
           <p className="text-xs text-gray-500 mb-2">
-            Low risk events are events where trainees perform well above expectations — high pass rates and grades suggest these events may require less attention than elevated risk events.
+            Low risk events require an average grade of at least {thresholds.overServiceGradeThreshold.toFixed(1)}, low variance, and enough attempts. If no event is listed, the data does not yet show any event performing well above expectations.
           </p>
           {overServicedEvents.length === 0
             ? <p className="text-gray-500 text-sm">No low risk events detected</p>

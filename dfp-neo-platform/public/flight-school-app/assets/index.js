@@ -77588,10 +77588,30 @@ const CourseTab = ({ summary, trainees, events, trainingReportDisplayName }) => 
   const skillEntries = Object.entries(skillHeatmap).sort((a, b) => a[1] - b[1]);
   const bottleneckEventsFromSummary = parseJ(summary.bottleneckEvents, []);
   const overServicedEventsFromSummary = parseJ(summary.overServicedEvents, []);
-  const bottleneckEventsFromEvents = events.filter((ev) => safeN(ev.bottleneckScore) >= thresholds.bottleneckThresholdPct / 100).map((ev) => ev.eventCode);
-  const bottleneckEvents = bottleneckEventsFromSummary.length > 0 ? bottleneckEventsFromSummary : bottleneckEventsFromEvents;
-  const overServicedFromEvents = events.filter((ev) => ev.overServiceIndicator === true || ev.overServiceIndicator === "true" || ev.overServiceIndicator === 1).map((ev) => ev.eventCode);
-  const overServicedEvents = overServicedEventsFromSummary.length > 0 ? overServicedEventsFromSummary : overServicedFromEvents;
+  const eventFailRatePct = (ev) => {
+    const storedPassRate = ev.passRate;
+    if (storedPassRate !== null && storedPassRate !== void 0 && Number.isFinite(Number(storedPassRate))) {
+      return Math.max(0, Math.min(100, 100 - Number(storedPassRate)));
+    }
+    const storedBottleneckScore = Number(ev.bottleneckScore);
+    if (Number.isFinite(storedBottleneckScore)) return Math.max(0, Math.min(100, storedBottleneckScore * 100));
+    return null;
+  };
+  const isElevatedRiskEvent = (ev) => {
+    const failRate = eventFailRatePct(ev);
+    return failRate !== null && failRate >= thresholds.bottleneckThresholdPct;
+  };
+  const formatEventRiskTag = (ev) => {
+    const failRate = eventFailRatePct(ev);
+    return failRate === null ? ev.eventCode : `${ev.eventCode} (${failRate.toFixed(0)}% below pass)`;
+  };
+  const bottleneckEventsFromEvents = events.filter(isElevatedRiskEvent).map(formatEventRiskTag);
+  const bottleneckEvents = bottleneckEventsFromEvents.length > 0 ? bottleneckEventsFromEvents : bottleneckEventsFromSummary;
+  const lowVarianceLimit = 0.5;
+  const isLowRiskEvent = (ev) => ev.overServiceIndicator === true || ev.overServiceIndicator === "true" || ev.overServiceIndicator === 1 || safeN(ev.avgOverallGrade) >= thresholds.overServiceGradeThreshold && safeN(ev.gradeVariance) < lowVarianceLimit && safeN(ev.totalAttempts) >= thresholds.minObservationsForPattern;
+  const formatLowRiskTag = (ev) => `${ev.eventCode} (${safeN(ev.avgOverallGrade).toFixed(1)} avg)`;
+  const overServicedFromEvents = events.filter(isLowRiskEvent).map(formatLowRiskTag);
+  const overServicedEvents = overServicedFromEvents.length > 0 ? overServicedFromEvents : overServicedEventsFromSummary;
   const eventsByDiff = [...events].filter((ev) => safeN(ev.avgOverallGrade) > 0).sort((a, b) => safeN(a.avgOverallGrade) - safeN(b.avgOverallGrade));
   const topByAttempts = [...events].sort((a, b) => safeN(b.totalAttempts) - safeN(a.totalAttempts)).slice(0, 12);
   const allSkills = Array.from(new Set(events.flatMap((ev) => Object.keys(parseJ(ev.skillFamilyScores, {})))));
@@ -77784,7 +77804,10 @@ const CourseTab = ({ summary, trainees, events, trainingReportDisplayName }) => 
         ev.totalAttempts,
         " tries"
       ] }),
-      safeN(ev.bottleneckScore) >= thresholds.bottleneckThresholdPct / 100 && /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-xs bg-red-900/50 text-red-300 border border-red-800 px-1.5 py-0.5 rounded flex-shrink-0", children: "ELEVATED RISK" })
+      isElevatedRiskEvent(ev) && /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "text-xs bg-red-900/50 text-red-300 border border-red-800 px-1.5 py-0.5 rounded flex-shrink-0", children: [
+        eventFailRatePct(ev)?.toFixed(0),
+        "% below pass"
+      ] })
     ] }, ev.id || ev.eventCode)) }) : events.length > 0 ? /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-gray-500 text-sm", children: "Event grades not yet computed — run analytics to populate" }) : /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-gray-500 text-sm", children: "No event data — run analytics first" }) }),
     topByAttempts.length > 0 && /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
       eventAvgExpanded && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "fixed inset-0 z-50 flex items-center justify-center bg-black/75 backdrop-blur-sm p-4", onClick: () => setEventAvgExpanded(false), children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "bg-gray-900 border border-gray-600 rounded-xl shadow-2xl w-full max-w-6xl p-6", style: { maxHeight: "90vh", overflowY: "auto" }, onClick: (e) => e.stopPropagation(), children: [
@@ -77815,7 +77838,11 @@ const CourseTab = ({ summary, trainees, events, trainingReportDisplayName }) => 
     ] }),
     /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid grid-cols-1 md:grid-cols-2 gap-4", children: [
       /* @__PURE__ */ jsxRuntimeExports.jsx(SCard, { title: "Elevated Risk Events", children: bottleneckEvents.length === 0 ? /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-gray-500 text-sm", children: "No elevated risk events detected" }) : /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
-        /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-xs text-gray-500 mb-2", children: "Events where trainees consistently struggle — high difficulty score, low pass rate, or recurring weak elements." }),
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("p", { className: "text-xs text-gray-500 mb-2", children: [
+          "Events where at least ",
+          thresholds.bottleneckThresholdPct,
+          "% of attempts are below the pass grade. This is different to the average-grade ranking above."
+        ] }),
         /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex flex-wrap gap-2", children: bottleneckEvents.slice(0, 5).map((e) => /* @__PURE__ */ jsxRuntimeExports.jsx(Tag, { text: e, type: "red" }, e)) }),
         bottleneckEvents.length > 5 && /* @__PURE__ */ jsxRuntimeExports.jsxs("p", { className: "text-xs text-gray-600 mt-2", children: [
           "+",
@@ -77824,7 +77851,11 @@ const CourseTab = ({ summary, trainees, events, trainingReportDisplayName }) => 
         ] })
       ] }) }),
       /* @__PURE__ */ jsxRuntimeExports.jsxs(SCard, { title: "Low Risk Events", children: [
-        /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-xs text-gray-500 mb-2", children: "Low risk events are events where trainees perform well above expectations — high pass rates and grades suggest these events may require less attention than elevated risk events." }),
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("p", { className: "text-xs text-gray-500 mb-2", children: [
+          "Low risk events require an average grade of at least ",
+          thresholds.overServiceGradeThreshold.toFixed(1),
+          ", low variance, and enough attempts. If no event is listed, the data does not yet show any event performing well above expectations."
+        ] }),
         overServicedEvents.length === 0 ? /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-gray-500 text-sm", children: "No low risk events detected" }) : /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex flex-wrap gap-2", children: overServicedEvents.map((e) => /* @__PURE__ */ jsxRuntimeExports.jsx(Tag, { text: e, type: "green" }, e)) })
       ] })
     ] }),
