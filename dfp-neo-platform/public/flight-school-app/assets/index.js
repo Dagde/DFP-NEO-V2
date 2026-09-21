@@ -41217,24 +41217,25 @@ const ScheduleView = ({
                     }
                 }
             ` }),
-    showInitialSetupBlankState && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "pointer-events-none absolute inset-0 z-[24] flex items-center justify-center px-8", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "pointer-events-auto flex w-[min(980px,calc(100vw-420px))] max-w-[calc(100%-64px)] flex-col items-center rounded-xl border border-orange-300/45 bg-slate-950/86 px-8 py-7 text-center shadow-2xl shadow-black/45 backdrop-blur-md", children: [
+    showInitialSetupBlankState && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "pointer-events-none fixed bottom-[8vh] left-[260px] right-[178px] top-[218px] z-[240] flex items-center justify-center px-8", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "pointer-events-auto relative flex w-[min(1040px,calc(100vw-520px))] max-w-[calc(100%-64px)] flex-col items-center overflow-hidden rounded-xl border border-orange-300/25 bg-slate-950/82 px-8 py-7 text-center shadow-[0_26px_70px_rgba(0,0,0,0.56)] backdrop-blur-md", children: [
+      /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "pointer-events-none absolute inset-x-[-18%] top-[-42%] h-[112%] rounded-full bg-[radial-gradient(ellipse_at_center,rgba(251,146,60,0.42)_0%,rgba(251,146,60,0.2)_24%,rgba(251,146,60,0.08)_46%,rgba(251,146,60,0)_72%)] blur-2xl", "aria-hidden": "true" }),
       /* @__PURE__ */ jsxRuntimeExports.jsx(
         "img",
         {
           src: "/dfp-neo-setup-logo.jpg",
           alt: "DFP NEO",
-          className: "mb-6 w-[min(720px,90%)] max-h-44 object-contain opacity-85"
+          className: "relative mb-5 w-[min(820px,92%)] max-h-32 object-contain opacity-90 drop-shadow-[0_0_22px_rgba(251,146,60,0.2)]"
         }
       ),
-      /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-[11px] font-black uppercase tracking-[0.22em] text-orange-300", children: "Initial Setup Required" }),
-      /* @__PURE__ */ jsxRuntimeExports.jsx("h2", { className: "mt-2 text-2xl font-black text-white", children: "Configure this customer before building the first DFP" }),
-      /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-3 max-w-2xl text-sm font-medium leading-6 text-slate-300", children: "Add the location, unit, aircraft and DFP resource rows to create the first operational workspace." }),
+      /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "relative text-[11px] font-black uppercase tracking-[0.22em] text-orange-300", children: "Initial Setup Required" }),
+      /* @__PURE__ */ jsxRuntimeExports.jsx("h2", { className: "relative mt-2 text-2xl font-black text-white", children: "Configure this customer before building the first DFP" }),
+      /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "relative mt-3 max-w-2xl text-sm font-medium leading-6 text-slate-300", children: "Add the location, unit, aircraft and DFP resource rows to create the first operational workspace." }),
       /* @__PURE__ */ jsxRuntimeExports.jsx(
         "button",
         {
           type: "button",
           onClick: openInitialSetupWizard,
-          className: "mt-6 rounded-md border border-orange-300 bg-orange-500 px-5 py-2.5 text-sm font-black text-slate-950 shadow-[0_0_22px_rgba(251,146,60,0.32)] transition hover:bg-orange-400",
+          className: "relative mt-6 rounded-md border border-orange-300 bg-orange-500 px-5 py-2.5 text-sm font-black text-slate-950 shadow-[0_0_22px_rgba(251,146,60,0.32)] transition hover:bg-orange-400",
           children: "Start Initial Setup Wizard"
         }
       )
