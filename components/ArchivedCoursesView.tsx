@@ -1,5 +1,6 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useState } from 'react';
 import { showDarkConfirm } from './DarkMessageModal';
+import { verifyCurrentUserPassword } from '../utils/passwordVerification';
 
 interface ArchivedCoursesViewProps {
     archivedCourses: { [key: string]: string };
@@ -14,6 +15,10 @@ const ArchivedCoursesView: React.FC<ArchivedCoursesViewProps> = ({
     onDeleteCourse,
     onNavigateBack
 }) => {
+    const [coursePendingPermanentDelete, setCoursePendingPermanentDelete] = useState<string | null>(null);
+    const [deletePassword, setDeletePassword] = useState('');
+    const [deletePasswordError, setDeletePasswordError] = useState('');
+    const [isVerifyingDeletePassword, setIsVerifyingDeletePassword] = useState(false);
     const archivedCourseNames = useMemo(
         () => Object.keys(archivedCourses).sort((a, b) => a.localeCompare(b)),
         [archivedCourses]
@@ -36,14 +41,47 @@ const ArchivedCoursesView: React.FC<ArchivedCoursesViewProps> = ({
     const handleDelete = async (courseName: string) => {
         const confirmed = await showDarkConfirm(
             'Delete Archived Course',
-            `Are you sure you want to permanently delete "${courseName}"? This action cannot be undone.`,
+            `Deleting "${courseName}" may be contrary to legal, regulatory, training-records, or audit-retention requirements.\n\nOnly continue if permanent deletion is required, keeping it archived is not sufficient, and this action has been approved.`,
             'warning',
-            'Delete',
+            'Continue',
             'Cancel'
         );
 
         if (confirmed) {
-            onDeleteCourse(courseName);
+            setCoursePendingPermanentDelete(courseName);
+            setDeletePassword('');
+            setDeletePasswordError('');
+        }
+    };
+
+    const handleCancelPassword = () => {
+        setCoursePendingPermanentDelete(null);
+        setDeletePassword('');
+        setDeletePasswordError('');
+        setIsVerifyingDeletePassword(false);
+    };
+
+    const handleConfirmPermanentDelete = async () => {
+        if (!coursePendingPermanentDelete) return;
+        if (!deletePassword.trim()) {
+            setDeletePasswordError('Enter your current password to continue.');
+            return;
+        }
+        setIsVerifyingDeletePassword(true);
+        setDeletePasswordError('');
+        try {
+            const passwordAccepted = await verifyCurrentUserPassword(deletePassword);
+            if (!passwordAccepted) {
+                setDeletePasswordError('The password was not accepted. Enter the password for the account you are currently logged in with.');
+                return;
+            }
+            onDeleteCourse(coursePendingPermanentDelete);
+            handleCancelPassword();
+        } catch (error) {
+            console.error('Archived course delete password verification failed:', error);
+            setDeletePasswordError('The app could not verify your password. Check your connection and try again.');
+        } finally {
+            setIsVerifyingDeletePassword(false);
         }
     };
 
@@ -145,6 +183,53 @@ const ArchivedCoursesView: React.FC<ArchivedCoursesViewProps> = ({
                     </div>
                 )}
             </div>
+            {coursePendingPermanentDelete && (
+                <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50">
+                    <form
+                        className="bg-gray-800 rounded-lg p-6 max-w-md w-full mx-4 border border-red-600/60"
+                        onSubmit={(event) => {
+                            event.preventDefault();
+                            if (!isVerifyingDeletePassword) void handleConfirmPermanentDelete();
+                        }}
+                    >
+                        <h3 className="text-xl font-semibold text-red-300 mb-4">Confirm Permanent Delete</h3>
+                        <p className="text-gray-300 mb-4">
+                            Enter your current password to permanently delete <span className="font-semibold text-sky-400">{coursePendingPermanentDelete}</span>.
+                        </p>
+                        <input
+                            type="password"
+                            value={deletePassword}
+                            onChange={(event) => {
+                                setDeletePassword(event.target.value);
+                                if (deletePasswordError) setDeletePasswordError('');
+                            }}
+                            placeholder="Current password"
+                            className={`w-full px-4 py-2 bg-gray-700 border rounded-md text-white focus:outline-none focus:ring-2 focus:ring-red-500 ${deletePasswordError ? 'border-red-500' : 'border-gray-600'}`}
+                            autoFocus
+                        />
+                        {deletePasswordError && (
+                            <p className="mt-2 mb-4 text-sm text-red-300">{deletePasswordError}</p>
+                        )}
+                        <div className={`${deletePasswordError ? '' : 'mt-5'} flex flex-wrap gap-3 justify-end`}>
+                            <button
+                                type="button"
+                                onClick={handleCancelPassword}
+                                className="min-w-[88px] px-4 py-2 bg-gray-700 text-white rounded-md hover:bg-gray-600 transition-colors"
+                                disabled={isVerifyingDeletePassword}
+                            >
+                                Cancel
+                            </button>
+                            <button
+                                type="submit"
+                                className="min-w-[136px] px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 disabled:opacity-60 disabled:cursor-not-allowed transition-colors"
+                                disabled={isVerifyingDeletePassword}
+                            >
+                                {isVerifyingDeletePassword ? 'Checking...' : 'Delete Permanently'}
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            )}
         </div>
     );
 };

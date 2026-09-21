@@ -3,6 +3,7 @@ import React, { useState, useMemo } from 'react';
 import { Course, SyllabusItemDetail } from '../types';
 import AddCourseFlyout, { NewCourseData } from './AddCourseFlyout';
 import EditCourseFlyout from './EditCourseFlyout';
+import { showDarkConfirm } from './DarkMessageModal';
 import type { OperationalModelCode, PlatformConfig } from '../utils/platformConfigService';
 import { verifyCurrentUserPassword } from '../utils/passwordVerification';
 
@@ -262,8 +263,16 @@ const CoursesManagementView: React.FC<CoursesManagementViewProps> = ({
         setCourseToDelete(null);
     };
 
-    const handleDeleteCoursePermanently = () => {
+    const handleDeleteCoursePermanently = async () => {
         if (!courseToDelete) return;
+        const confirmed = await showDarkConfirm(
+            'Permanently Delete Course',
+            `Deleting "${courseToDelete}" may be contrary to legal, regulatory, training-records, or audit-retention requirements.\n\nOnly continue if permanent deletion is required, archiving is not sufficient, and this action has been approved.`,
+            'warning',
+            'Delete Permanently',
+            'Cancel'
+        );
+        if (!confirmed) return;
         onDeleteCourse(courseToDelete, false); // archive = false — permanent delete
         setShowChoiceDialog(false);
         setCourseToDelete(null);
@@ -401,7 +410,7 @@ const CoursesManagementView: React.FC<CoursesManagementViewProps> = ({
                     >
                         <h3 className="text-xl font-semibold text-white mb-4">Confirm Course Removal</h3>
                         <p className="text-gray-300 mb-4">
-                            Enter your current password to archive or delete <span className="font-semibold text-sky-400">{courseToDelete}</span>.
+                            Enter your current password before changing the active status of <span className="font-semibold text-sky-400">{courseToDelete}</span>.
                         </p>
                         <input
                             type="password"

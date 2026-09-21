@@ -103697,8 +103697,16 @@ const CoursesManagementView = ({
     setShowChoiceDialog(false);
     setCourseToDelete(null);
   };
-  const handleDeleteCoursePermanently = () => {
+  const handleDeleteCoursePermanently = async () => {
     if (!courseToDelete) return;
+    const confirmed = await showDarkConfirm(
+      "Permanently Delete Course",
+      `Deleting "${courseToDelete}" may be contrary to legal, regulatory, training-records, or audit-retention requirements.
+
+Only continue if permanent deletion is required, archiving is not sufficient, and this action has been approved.`,
+      "warning"
+    );
+    if (!confirmed) return;
     onDeleteCourse(courseToDelete, false);
     setShowChoiceDialog(false);
     setCourseToDelete(null);
@@ -103830,7 +103838,7 @@ const CoursesManagementView = ({
         children: [
           /* @__PURE__ */ jsxRuntimeExports.jsx("h3", { className: "text-xl font-semibold text-white mb-4", children: "Confirm Course Removal" }),
           /* @__PURE__ */ jsxRuntimeExports.jsxs("p", { className: "text-gray-300 mb-4", children: [
-            "Enter your current password to archive or delete ",
+            "Enter your current password before changing the active status of ",
             /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "font-semibold text-sky-400", children: courseToDelete }),
             "."
           ] }),
@@ -105960,6 +105968,10 @@ const ArchivedCoursesView = ({
   onDeleteCourse,
   onNavigateBack
 }) => {
+  const [coursePendingPermanentDelete, setCoursePendingPermanentDelete] = reactExports.useState(null);
+  const [deletePassword, setDeletePassword] = reactExports.useState("");
+  const [deletePasswordError, setDeletePasswordError] = reactExports.useState("");
+  const [isVerifyingDeletePassword, setIsVerifyingDeletePassword] = reactExports.useState(false);
   const archivedCourseNames = reactExports.useMemo(
     () => Object.keys(archivedCourses).sort((a, b) => a.localeCompare(b)),
     [archivedCourses]
@@ -105977,11 +105989,44 @@ const ArchivedCoursesView = ({
   const handleDelete = async (courseName) => {
     const confirmed = await showDarkConfirm(
       "Delete Archived Course",
-      `Are you sure you want to permanently delete "${courseName}"? This action cannot be undone.`,
+      `Deleting "${courseName}" may be contrary to legal, regulatory, training-records, or audit-retention requirements.
+
+Only continue if permanent deletion is required, keeping it archived is not sufficient, and this action has been approved.`,
       "warning"
     );
     if (confirmed) {
-      onDeleteCourse(courseName);
+      setCoursePendingPermanentDelete(courseName);
+      setDeletePassword("");
+      setDeletePasswordError("");
+    }
+  };
+  const handleCancelPassword = () => {
+    setCoursePendingPermanentDelete(null);
+    setDeletePassword("");
+    setDeletePasswordError("");
+    setIsVerifyingDeletePassword(false);
+  };
+  const handleConfirmPermanentDelete = async () => {
+    if (!coursePendingPermanentDelete) return;
+    if (!deletePassword.trim()) {
+      setDeletePasswordError("Enter your current password to continue.");
+      return;
+    }
+    setIsVerifyingDeletePassword(true);
+    setDeletePasswordError("");
+    try {
+      const passwordAccepted = await verifyCurrentUserPassword(deletePassword);
+      if (!passwordAccepted) {
+        setDeletePasswordError("The password was not accepted. Enter the password for the account you are currently logged in with.");
+        return;
+      }
+      onDeleteCourse(coursePendingPermanentDelete);
+      handleCancelPassword();
+    } catch (error) {
+      console.error("Archived course delete password verification failed:", error);
+      setDeletePasswordError("The app could not verify your password. Check your connection and try again.");
+    } finally {
+      setIsVerifyingDeletePassword(false);
     }
   };
   const ArchivedCourseCard = ({ courseName, color }) => {
@@ -106061,7 +106106,61 @@ const ArchivedCoursesView = ({
         color: archivedCourses[courseName]
       },
       courseName
-    )) }) })
+    )) }) }),
+    coursePendingPermanentDelete && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "fixed inset-0 bg-black/70 flex items-center justify-center z-50", children: /* @__PURE__ */ jsxRuntimeExports.jsxs(
+      "form",
+      {
+        className: "bg-gray-800 rounded-lg p-6 max-w-md w-full mx-4 border border-red-600/60",
+        onSubmit: (event) => {
+          event.preventDefault();
+          if (!isVerifyingDeletePassword) void handleConfirmPermanentDelete();
+        },
+        children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsx("h3", { className: "text-xl font-semibold text-red-300 mb-4", children: "Confirm Permanent Delete" }),
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("p", { className: "text-gray-300 mb-4", children: [
+            "Enter your current password to permanently delete ",
+            /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "font-semibold text-sky-400", children: coursePendingPermanentDelete }),
+            "."
+          ] }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx(
+            "input",
+            {
+              type: "password",
+              value: deletePassword,
+              onChange: (event) => {
+                setDeletePassword(event.target.value);
+                if (deletePasswordError) setDeletePasswordError("");
+              },
+              placeholder: "Current password",
+              className: `w-full px-4 py-2 bg-gray-700 border rounded-md text-white focus:outline-none focus:ring-2 focus:ring-red-500 ${deletePasswordError ? "border-red-500" : "border-gray-600"}`,
+              autoFocus: true
+            }
+          ),
+          deletePasswordError && /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-2 mb-4 text-sm text-red-300", children: deletePasswordError }),
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: `${deletePasswordError ? "" : "mt-5"} flex flex-wrap gap-3 justify-end`, children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx(
+              "button",
+              {
+                type: "button",
+                onClick: handleCancelPassword,
+                className: "min-w-[88px] px-4 py-2 bg-gray-700 text-white rounded-md hover:bg-gray-600 transition-colors",
+                disabled: isVerifyingDeletePassword,
+                children: "Cancel"
+              }
+            ),
+            /* @__PURE__ */ jsxRuntimeExports.jsx(
+              "button",
+              {
+                type: "submit",
+                className: "min-w-[136px] px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 disabled:opacity-60 disabled:cursor-not-allowed transition-colors",
+                disabled: isVerifyingDeletePassword,
+                children: isVerifyingDeletePassword ? "Checking..." : "Delete Permanently"
+              }
+            )
+          ] })
+        ]
+      }
+    ) })
   ] });
 };
 const NightFlyingInfoFlyout = ({ traineeCount }) => {
@@ -115248,6 +115347,12 @@ const TRAINING_REPORT_STRUCTURE = [
 const ALL_ELEMENTS = TRAINING_REPORT_STRUCTURE.flatMap((cat) => cat.elements);
 const stripCourseDetailsFromLoginName = (value) => {
   return String(value || "").replace(/\s*[-–—]\s*(?:ADF|FIC|IFF|CSE)\s*\d+\b.*$/gi, "").replace(/\s+\b(?:ADF|FIC|IFF|CSE)\s*\d+\b.*$/gi, "").replace(/\s{2,}/g, " ").trim();
+};
+const getCourseStatus = (course) => String(course?.status || "ACTIVE").trim().toUpperCase();
+const isCourseArchived = (course) => getCourseStatus(course) === "ARCHIVED";
+const isCourseActive = (course) => {
+  const status = getCourseStatus(course);
+  return status !== "ARCHIVED" && status !== "INACTIVE";
 };
 const formatAuthLoginName = (user) => {
   if (!user) return "Unknown User";
@@ -133655,12 +133760,20 @@ const App = () => {
         if (data.courses && data.courses.length > 0) {
           setCourses(data.courses);
           const colors = {};
+          const archived = {};
           data.courses.forEach((c) => {
-            if (c.name && c.color) colors[c.name] = c.color;
+            if (!c.name || !c.color) return;
+            if (isCourseArchived(c)) {
+              archived[c.name] = c.color;
+            } else if (isCourseActive(c)) {
+              colors[c.name] = c.color;
+            }
           });
           setCourseColors((prev) => ({ ...prev, ...colors }));
+          setArchivedCourses(archived);
           setIsCoursesLoaded(true);
         } else {
+          setArchivedCourses({});
           setIsCoursesLoaded(true);
         }
         pushDfpDataDiag("startup:initial-data:state-seeded", {
@@ -135073,6 +135186,9 @@ const App = () => {
     ));
   }, []);
   const normaliseCourseName = reactExports.useCallback((value) => String(value || "").trim(), []);
+  const archivedCourseNameSet = reactExports.useMemo(() => new Set(
+    courses.filter(isCourseArchived).map((course) => normaliseCourseName(course.name)).filter(Boolean)
+  ), [courses, normaliseCourseName]);
   const activeFlightSchoolTraineeCourseNames = reactExports.useMemo(() => {
     if (activeOperationalModel !== "flight_school") return /* @__PURE__ */ new Set();
     return new Set(
@@ -135083,9 +135199,9 @@ const App = () => {
           return Boolean(traineeUnitCode && activeContextUnitCodeSet.has(traineeUnitCode));
         }
         return true;
-      }).map((trainee) => normaliseCourseName(trainee?.course)).filter(Boolean)
+      }).map((trainee) => normaliseCourseName(trainee?.course)).filter((courseName) => !archivedCourseNameSet.has(courseName)).filter(Boolean)
     );
-  }, [activeContextUnitCodeSet, activeOperationalModel, normaliseCourseName, traineesData]);
+  }, [activeContextUnitCodeSet, activeOperationalModel, archivedCourseNameSet, normaliseCourseName, traineesData]);
   const courseMatchesActiveContext = reactExports.useCallback((course) => {
     const courseUnits = getCourseUnitCodes(course);
     const hasCourseUnit = courseUnits.length > 0;
@@ -135107,7 +135223,7 @@ const App = () => {
     return hasCourseUnit || hasCourseLocation;
   }, [activeContextUnitCodeSet, getCourseUnitCodes, hasConfiguredCourseUnitScope, isActiveLocationAlias]);
   const scopedCourses = reactExports.useMemo(
-    () => courses.filter(courseMatchesActiveContext),
+    () => courses.filter((course) => isCourseActive(course) && courseMatchesActiveContext(course)),
     [courseMatchesActiveContext, courses]
   );
   const scopedCourseNameSet = reactExports.useMemo(() => {
@@ -141478,6 +141594,23 @@ ${error instanceof Error ? error.message : String(error)}`,
     setPublishedSchedules({});
     void loadSnapshotForDate(date, { force: true, replace: true, schoolOverride: newSchool, unitOverride: newUnit, allowAdminFallbackContext: false });
   };
+  const buildCourseSavePayload = (course, status = course.status || "ACTIVE") => ({
+    name: course.name,
+    code: course.code || course.name,
+    color: course.color || courseColors[course.name] || "#6366f1",
+    startDate: course.startDate || "",
+    gradDate: course.gradDate || "",
+    raafStart: course.raafStart || 0,
+    navyStart: course.navyStart || 0,
+    armyStart: course.armyStart || 0,
+    location: course.location || activeLocationDisplayName,
+    unit: course.unit || "",
+    lmpType: course.lmpType || "",
+    academicLmpType: course.academicLmpType || "",
+    courseCommander: course.courseCommander || "",
+    deputyCourseCommander: course.deputyCourseCommander || "",
+    status
+  });
   const handleAddCourseFromTrainingRecords = async (data) => {
     setCourseColors((prev) => ({ ...prev, [data.number]: data.color }));
     const newCourse = {
@@ -141490,7 +141623,9 @@ ${error instanceof Error ? error.message : String(error)}`,
       armyStart: data.armyStart,
       location: data.location || "",
       unit: data.unit || "",
-      lmpType: data.lmpType || ""
+      lmpType: data.lmpType || "",
+      academicLmpType: data.academicLmpType || "",
+      status: "ACTIVE"
     };
     setCourses((prev) => [...prev, newCourse]);
     try {
@@ -141517,27 +141652,58 @@ ${error instanceof Error ? error.message : String(error)}`,
     setSuccessMessage(`Course ${data.number} added successfully!`);
   };
   const handleDeleteCourseFromTrainingRecords = async (courseName, archive) => {
-    const color = courseColors[courseName];
+    const existingCourse = courses.find((course) => course.name === courseName || course.code === courseName);
+    const color = courseColors[courseName] || existingCourse?.color;
     if (!color) return;
     if (archive) {
-      const newActive = { ...courseColors };
-      delete newActive[courseName];
-      setCourseColors(newActive);
+      const courseToArchive = existingCourse || {
+        name: courseName,
+        code: courseName,
+        color,
+        startDate: "",
+        gradDate: "",
+        raafStart: 0,
+        navyStart: 0,
+        armyStart: 0,
+        location: activeLocationDisplayName,
+        unit: activeUnitCode,
+        status: "ACTIVE"
+      };
+      setCourseColors((prev) => {
+        const next = { ...prev };
+        delete next[courseName];
+        return next;
+      });
       setArchivedCourses((prev) => ({ ...prev, [courseName]: color }));
-      setCourses((prev) => prev.filter((c) => c.name !== courseName));
+      setCourses((prev) => {
+        const found = prev.some((c) => c.name === courseName || c.code === courseName);
+        const next = prev.map(
+          (course) => course.name === courseName || course.code === courseName ? { ...course, status: "ARCHIVED" } : course
+        );
+        return found ? next : [...next, { ...courseToArchive, status: "ARCHIVED" }];
+      });
       try {
-        const result = await deleteCourse(courseName);
+        const result = await saveCourse(buildCourseSavePayload(courseToArchive, "ARCHIVED"));
         if (!result.success) {
-          console.error("Failed to delete course from DB:", result.error);
+          console.error("Failed to archive course in DB:", result.error);
+          setSuccessMessage(`Archive failed: ${result.error || "Failed to save archived course to database"}`);
+          return;
         }
       } catch (error) {
-        console.error("Error deleting course from DB:", error);
+        console.error("Error archiving course in DB:", error);
+        setSuccessMessage(`Archive failed: ${error instanceof Error ? error.message : "Failed to save archived course to database"}`);
+        return;
       }
       setSuccessMessage(`Course ${courseName} archived successfully!`);
     } else {
       const newActive = { ...courseColors };
       delete newActive[courseName];
       setCourseColors(newActive);
+      setArchivedCourses((prev) => {
+        const next = { ...prev };
+        delete next[courseName];
+        return next;
+      });
       setCourses((prev) => prev.filter((c) => c.name !== courseName));
       try {
         const result = await deleteCourse(courseName);
@@ -141694,37 +141860,42 @@ ${error instanceof Error ? error.message : String(error)}`,
   const handleUnarchiveCourseFromArchivedView = async (courseName) => {
     const color = archivedCourses[courseName];
     if (!color) return;
-    const newArchived = { ...archivedCourses };
-    delete newArchived[courseName];
-    setArchivedCourses(newArchived);
-    setCourseColors((prev) => ({ ...prev, [courseName]: color }));
-    const restoredCourse = {
+    const existingCourse = courses.find((course) => course.name === courseName || course.code === courseName);
+    const courseToRestore = existingCourse || {
       name: courseName,
+      code: courseName,
       color,
       startDate: "",
       gradDate: "",
       raafStart: 0,
       navyStart: 0,
-      armyStart: 0
+      armyStart: 0,
+      location: activeLocationDisplayName,
+      unit: activeUnitCode,
+      status: "ARCHIVED"
     };
-    setCourses((prev) => [...prev, restoredCourse]);
+    const newArchived = { ...archivedCourses };
+    delete newArchived[courseName];
+    setArchivedCourses(newArchived);
+    setCourseColors((prev) => ({ ...prev, [courseName]: color }));
+    setCourses((prev) => {
+      const found = prev.some((course) => course.name === courseName || course.code === courseName);
+      const next = prev.map(
+        (course) => course.name === courseName || course.code === courseName ? { ...course, status: "ACTIVE" } : course
+      );
+      return found ? next : [...next, { ...courseToRestore, status: "ACTIVE" }];
+    });
     try {
-      const result = await saveCourse({
-        name: courseName,
-        color,
-        startDate: "",
-        gradDate: "",
-        raafStart: 0,
-        navyStart: 0,
-        armyStart: 0,
-        status: "ACTIVE",
-        location: activeLocationDisplayName
-      });
+      const result = await saveCourse(buildCourseSavePayload(courseToRestore, "ACTIVE"));
       if (!result.success) {
         console.error("Failed to save unarchived course to DB:", result.error);
+        setSuccessMessage(`Unarchive failed: ${result.error || "Failed to restore course in database"}`);
+        return;
       }
     } catch (error) {
       console.error("Error saving unarchived course to DB:", error);
+      setSuccessMessage(`Unarchive failed: ${error instanceof Error ? error.message : "Failed to restore course in database"}`);
+      return;
     }
     setSuccessMessage(`Course ${courseName} unarchived successfully!`);
   };

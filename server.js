@@ -6033,7 +6033,14 @@ app.delete('/api/courses/:name', async (req, res) => {
     if (!context) return;
     const db = context.db;
     const name = decodeURIComponent(req.params.name);
-    await db.course.deleteMany({ where: { code: name } });
+    await db.course.deleteMany({
+      where: {
+        OR: [
+          { code: name },
+          { name },
+        ],
+      },
+    });
     res.json({ success: true });
   } catch (error) {
     console.error('❌ DELETE /api/courses error:', error);

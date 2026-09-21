@@ -7919,6 +7919,16 @@ const stripCourseDetailsFromLoginName = (value?: string | null): string => {
         .trim();
 };
 
+const getCourseStatus = (course?: Partial<Course> | null): string => (
+    String(course?.status || 'ACTIVE').trim().toUpperCase()
+);
+
+const isCourseArchived = (course?: Partial<Course> | null): boolean => getCourseStatus(course) === 'ARCHIVED';
+const isCourseActive = (course?: Partial<Course> | null): boolean => {
+    const status = getCourseStatus(course);
+    return status !== 'ARCHIVED' && status !== 'INACTIVE';
+};
+
 const formatAuthLoginName = (user?: Partial<AuthUser> | null): string => {
     if (!user) return 'Unknown User';
     const firstName = stripCourseDetailsFromLoginName(user.firstName);
@@ -30896,12 +30906,22 @@ const App: React.FC = () => {
                 // Load courses from DB if any exist
                 if (data.courses && data.courses.length > 0) {
                     setCourses(data.courses);
-                    // Rebuild courseColors from loaded courses
+                    // Rebuild active/archived course maps from the database status.
                     const colors: { [key: string]: string } = {};
-                    data.courses.forEach((c: any) => { if (c.name && c.color) colors[c.name] = c.color; });
+                    const archived: { [key: string]: string } = {};
+                    data.courses.forEach((c: any) => {
+                        if (!c.name || !c.color) return;
+                        if (isCourseArchived(c)) {
+                            archived[c.name] = c.color;
+                        } else if (isCourseActive(c)) {
+                            colors[c.name] = c.color;
+                        }
+                    });
                     setCourseColors(prev => ({ ...prev, ...colors }));
+                    setArchivedCourses(archived);
                     setIsCoursesLoaded(true); // FIX: was never called when courses exist in DB
                 } else {
+                    setArchivedCourses({});
                     setIsCoursesLoaded(true);
                 }
                 pushDfpDataDiag('startup:initial-data:state-seeded', {
@@ -32572,6 +32592,13 @@ const App: React.FC = () => {
         String(value || '').trim()
     ), []);
 
+    const archivedCourseNameSet = useMemo(() => new Set(
+        courses
+            .filter(isCourseArchived)
+            .map(course => normaliseCourseName(course.name))
+            .filter(Boolean)
+    ), [courses, normaliseCourseName]);
+
     const activeFlightSchoolTraineeCourseNames = useMemo(() => {
         if (activeOperationalModel !== 'flight_school') return new Set<string>();
         return new Set(
@@ -32585,9 +32612,10 @@ const App: React.FC = () => {
                     return true;
                 })
                 .map((trainee: any) => normaliseCourseName(trainee?.course))
+                .filter(courseName => !archivedCourseNameSet.has(courseName))
                 .filter(Boolean)
         );
-    }, [activeContextUnitCodeSet, activeOperationalModel, normaliseCourseName, traineesData]);
+    }, [activeContextUnitCodeSet, activeOperationalModel, archivedCourseNameSet, normaliseCourseName, traineesData]);
 
     const courseMatchesActiveContext = useCallback((course: Course): boolean => {
         const courseUnits = getCourseUnitCodes(course);
@@ -32616,7 +32644,7 @@ const App: React.FC = () => {
     }, [activeContextUnitCodeSet, getCourseUnitCodes, hasConfiguredCourseUnitScope, isActiveLocationAlias]);
 
     const scopedCourses = useMemo(
-        () => courses.filter(courseMatchesActiveContext),
+        () => courses.filter(course => isCourseActive(course) && courseMatchesActiveContext(course)),
         [courseMatchesActiveContext, courses],
     );
 
@@ -40512,6 +40540,24 @@ const App: React.FC = () => {
     // Published schedules are cleared in changeSchool() which is the correct behaviour.
 
     // Training Records Handlers
+    const buildCourseSavePayload = (course: Course, status: string = course.status || 'ACTIVE') => ({
+        name: course.name,
+        code: course.code || course.name,
+        color: course.color || courseColors[course.name] || '#6366f1',
+        startDate: course.startDate || '',
+        gradDate: course.gradDate || '',
+        raafStart: course.raafStart || 0,
+        navyStart: course.navyStart || 0,
+        armyStart: course.armyStart || 0,
+        location: course.location || activeLocationDisplayName,
+        unit: course.unit || '',
+        lmpType: course.lmpType || '',
+        academicLmpType: course.academicLmpType || '',
+        courseCommander: course.courseCommander || '',
+        deputyCourseCommander: course.deputyCourseCommander || '',
+        status,
+    });
+
     const handleAddCourseFromTrainingRecords = async (data: { number: string; color: string; startDate: string; gradDate: string; raafStart: number; navyStart: number; armyStart: number; location?: string; unit?: string }) => {
         // Add to courseColors (local state)
         setCourseColors(prev => ({ ...prev, [data.number]: data.color }));
@@ -40528,6 +40574,8 @@ const App: React.FC = () => {
             location: (data as any).location || '',
             unit: (data as any).unit || '',
             lmpType: (data as any).lmpType || '',
+            academicLmpType: (data as any).academicLmpType || '',
+            status: 'ACTIVE',
         };
         setCourses(prev => [...prev, newCourse]);
 
@@ -40558,27 +40606,50 @@ const App: React.FC = () => {
     };
 
     const handleDeleteCourseFromTrainingRecords = async (courseName: string, archive: boolean) => {
-        const color = courseColors[courseName];
+        const existingCourse = courses.find(course => course.name === courseName || course.code === courseName);
+        const color = courseColors[courseName] || existingCourse?.color;
         if (!color) return;
 
         if (archive) {
-            // Archive the course
-            const newActive = { ...courseColors };
-            delete newActive[courseName];
-            setCourseColors(newActive);
+            const courseToArchive: Course = existingCourse || {
+                name: courseName,
+                code: courseName,
+                color,
+                startDate: '',
+                gradDate: '',
+                raafStart: 0,
+                navyStart: 0,
+                armyStart: 0,
+                location: activeLocationDisplayName,
+                unit: activeUnitCode,
+                status: 'ACTIVE',
+            };
+            setCourseColors(prev => {
+                const next = { ...prev };
+                delete next[courseName];
+                return next;
+            });
             setArchivedCourses(prev => ({ ...prev, [courseName]: color }));
-
-            // Remove from courses array
-            setCourses(prev => prev.filter(c => c.name !== courseName));
-
-            // Delete from database (since archived courses no longer exist in DB for now)
+            setCourses(prev => {
+                const found = prev.some(c => c.name === courseName || c.code === courseName);
+                const next = prev.map(course =>
+                    course.name === courseName || course.code === courseName
+                        ? { ...course, status: 'ARCHIVED' }
+                        : course
+                );
+                return found ? next : [...next, { ...courseToArchive, status: 'ARCHIVED' }];
+            });
             try {
-                const result = await deleteCourseFromDB(courseName);
+                const result = await saveCourseToDB(buildCourseSavePayload(courseToArchive, 'ARCHIVED'));
                 if (!result.success) {
-                    console.error('Failed to delete course from DB:', result.error);
+                    console.error('Failed to archive course in DB:', result.error);
+                    setSuccessMessage(`Archive failed: ${result.error || 'Failed to save archived course to database'}`);
+                    return;
                 }
             } catch (error) {
-                console.error('Error deleting course from DB:', error);
+                console.error('Error archiving course in DB:', error);
+                setSuccessMessage(`Archive failed: ${error instanceof Error ? error.message : 'Failed to save archived course to database'}`);
+                return;
             }
 
             setSuccessMessage(`Course ${courseName} archived successfully!`);
@@ -40587,6 +40658,11 @@ const App: React.FC = () => {
             const newActive = { ...courseColors };
             delete newActive[courseName];
             setCourseColors(newActive);
+            setArchivedCourses(prev => {
+                const next = { ...prev };
+                delete next[courseName];
+                return next;
+            });
 
             // Remove from courses array
             setCourses(prev => prev.filter(c => c.name !== courseName));
@@ -40777,6 +40853,20 @@ const App: React.FC = () => {
     const handleUnarchiveCourseFromArchivedView = async (courseName: string) => {
         const color = archivedCourses[courseName];
         if (!color) return;
+        const existingCourse = courses.find(course => course.name === courseName || course.code === courseName);
+        const courseToRestore: Course = existingCourse || {
+            name: courseName,
+            code: courseName,
+            color,
+            startDate: '',
+            gradDate: '',
+            raafStart: 0,
+            navyStart: 0,
+            armyStart: 0,
+            location: activeLocationDisplayName,
+            unit: activeUnitCode,
+            status: 'ARCHIVED',
+        };
 
         // Remove from archived courses
         const newArchived = { ...archivedCourses };
@@ -40785,42 +40875,28 @@ const App: React.FC = () => {
 
         // Add back to active courses
         setCourseColors(prev => ({ ...prev, [courseName]: color }));
-
-        // Add back to courses array using real data we already have.
-        // archivedCourses only stores { name: color } so we reconstruct with
-        // name and color. The other fields (dates, service numbers) were not
-        // preserved on archive - they default to empty/zero here.
-        // TODO: In a future step, store full course details on archive so they
-        // can be fully restored.
-        const restoredCourse: Course = {
-            name: courseName,
-            color: color,
-            startDate: '',
-            gradDate: '',
-            raafStart: 0,
-            navyStart: 0,
-            armyStart: 0,
-        };
-        setCourses(prev => [...prev, restoredCourse]);
+        setCourses(prev => {
+            const found = prev.some(course => course.name === courseName || course.code === courseName);
+            const next = prev.map(course =>
+                course.name === courseName || course.code === courseName
+                    ? { ...course, status: 'ACTIVE' }
+                    : course
+            );
+            return found ? next : [...next, { ...courseToRestore, status: 'ACTIVE' }];
+        });
 
         // Save back to database
         try {
-            const result = await saveCourseToDB({
-                name: courseName,
-                color: color,
-                startDate: '',
-                gradDate: '',
-                raafStart: 0,
-                navyStart: 0,
-                armyStart: 0,
-                status: 'ACTIVE',
-                location: activeLocationDisplayName
-            });
+            const result = await saveCourseToDB(buildCourseSavePayload(courseToRestore, 'ACTIVE'));
             if (!result.success) {
                 console.error('Failed to save unarchived course to DB:', result.error);
+                setSuccessMessage(`Unarchive failed: ${result.error || 'Failed to restore course in database'}`);
+                return;
             }
         } catch (error) {
             console.error('Error saving unarchived course to DB:', error);
+            setSuccessMessage(`Unarchive failed: ${error instanceof Error ? error.message : 'Failed to restore course in database'}`);
+            return;
         }
 
         setSuccessMessage(`Course ${courseName} unarchived successfully!`);
