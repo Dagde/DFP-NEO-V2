@@ -586,6 +586,8 @@ const DetailView: React.FC<{
     editedItem: SyllabusItemDetail | null;
     onItemChange: (newItem: SyllabusItemDetail) => void;
     onDeleteEvent?: (item: SyllabusItemDetail) => void;
+    onEdit?: () => void;
+    editDisabled?: boolean;
     resourceDisplayNames?: ResourceDisplayNames;
     aircraftConfigurations?: AircraftConfigurationDefinition[];
     aircraftCrewComposition?: AircraftCrewComposition;
@@ -603,7 +605,7 @@ const DetailView: React.FC<{
     collectionTitle?: string;
     codeExample?: string;
     descriptionExample?: string;
-}> = ({ item, isEditing, isAddingEvent = false, editedItem, onItemChange, onDeleteEvent, resourceDisplayNames = DEFAULT_RESOURCE_DISPLAY_NAMES, aircraftConfigurations = [], aircraftCrewComposition, crewPositionTerminology, instructorsData = [], activeUnitCode = '', isAirCombatModel = false, operationalModel = 'flight_school', staffQualificationCatalogue, scoringMatrixElements = DEFAULT_ASSESSED_ELEMENTS, onAddScoringMatrixElement, linkedEventOptions = [], linkedEventOverrides = {}, onLinkedEventChange, collectionTitle = 'this Master LMP', codeExample = '', descriptionExample = '' }) => {
+}> = ({ item, isEditing, isAddingEvent = false, editedItem, onItemChange, onDeleteEvent, onEdit, editDisabled = false, resourceDisplayNames = DEFAULT_RESOURCE_DISPLAY_NAMES, aircraftConfigurations = [], aircraftCrewComposition, crewPositionTerminology, instructorsData = [], activeUnitCode = '', isAirCombatModel = false, operationalModel = 'flight_school', staffQualificationCatalogue, scoringMatrixElements = DEFAULT_ASSESSED_ELEMENTS, onAddScoringMatrixElement, linkedEventOptions = [], linkedEventOverrides = {}, onLinkedEventChange, collectionTitle = 'this Master LMP', codeExample = '', descriptionExample = '' }) => {
     
     const getDisplayType = (syllabusItem: SyllabusItemDetail): 'Flight' | 'FTD' | 'CPT' | 'Ground' | 'Academics' => {
         if (syllabusItem.type === 'Flight') return 'Flight';
@@ -723,6 +725,17 @@ const DetailView: React.FC<{
                     <p className="text-lg text-gray-400 mt-1">{item.eventDescription}</p>
                 )}
             </div>
+            <div className="flex shrink-0 flex-wrap items-center justify-end gap-2">
+            {!isEditing && onEdit && (
+                <button
+                    type="button"
+                    onClick={onEdit}
+                    disabled={editDisabled}
+                    className="h-[41px] min-w-[56px] rounded-md px-3 py-1 text-[10px] font-semibold btn-aluminium-brushed disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                    Edit
+                </button>
+            )}
             {showAssessmentRequiredControl && (
                 <label
                     className={`mt-1 flex shrink-0 items-center gap-2 rounded border px-3 py-2 text-xs font-semibold ${
@@ -742,6 +755,7 @@ const DetailView: React.FC<{
                     <span>Assessment required</span>
                 </label>
             )}
+            </div>
         </div>
         
         <fieldset className="p-3 border border-gray-700 rounded-lg">
@@ -2934,6 +2948,8 @@ const SyllabusView: React.FC<SyllabusViewProps> = ({
                       editedItem={editedItem}
                       onItemChange={setEditedItem}
                       onDeleteEvent={handleDeleteEventRequest}
+                      onEdit={handleEdit}
+                      editDisabled={isFrozen}
                       resourceDisplayNames={resourceDisplayNames}
                       aircraftConfigurations={aircraftConfigurations}
                       aircraftCrewComposition={aircraftCrewComposition}

@@ -89122,7 +89122,7 @@ const formatMasterLmpHours = (value) => {
   const numericValue = Number(value);
   return Number.isFinite(numericValue) ? `${numericValue.toFixed(1)}h` : "0.0h";
 };
-const DetailView = ({ item, isEditing, isAddingEvent = false, editedItem, onItemChange, onDeleteEvent, resourceDisplayNames = DEFAULT_RESOURCE_DISPLAY_NAMES, aircraftConfigurations = [], aircraftCrewComposition, crewPositionTerminology, instructorsData = [], activeUnitCode = "", isAirCombatModel = false, operationalModel = "flight_school", staffQualificationCatalogue: staffQualificationCatalogue2, scoringMatrixElements = DEFAULT_ASSESSED_ELEMENTS, onAddScoringMatrixElement, linkedEventOptions = [], linkedEventOverrides = {}, onLinkedEventChange, collectionTitle = "this Master LMP", codeExample = "", descriptionExample = "" }) => {
+const DetailView = ({ item, isEditing, isAddingEvent = false, editedItem, onItemChange, onDeleteEvent, onEdit, editDisabled = false, resourceDisplayNames = DEFAULT_RESOURCE_DISPLAY_NAMES, aircraftConfigurations = [], aircraftCrewComposition, crewPositionTerminology, instructorsData = [], activeUnitCode = "", isAirCombatModel = false, operationalModel = "flight_school", staffQualificationCatalogue: staffQualificationCatalogue2, scoringMatrixElements = DEFAULT_ASSESSED_ELEMENTS, onAddScoringMatrixElement, linkedEventOptions = [], linkedEventOverrides = {}, onLinkedEventChange, collectionTitle = "this Master LMP", codeExample = "", descriptionExample = "" }) => {
   const getDisplayType2 = (syllabusItem) => {
     if (syllabusItem.type === "Flight") return "Flight";
     if (syllabusItem.type === "FTD") return "FTD";
@@ -89206,26 +89206,38 @@ const DetailView = ({ item, isEditing, isAddingEvent = false, editedItem, onItem
           isAddingEvent && /* @__PURE__ */ jsxRuntimeExports.jsx(AddEventHelp, { children: addEventDescriptionHelp })
         ] }) : /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-lg text-gray-400 mt-1", children: item.eventDescription })
       ] }),
-      showAssessmentRequiredControl && /* @__PURE__ */ jsxRuntimeExports.jsxs(
-        "label",
-        {
-          className: `mt-1 flex shrink-0 items-center gap-2 rounded border px-3 py-2 text-xs font-semibold ${isEditing ? "cursor-pointer border-gray-600 bg-gray-900/60 text-gray-200 hover:border-sky-600/70" : "border-gray-700 bg-gray-900/30 text-gray-400"}`,
-          title: "Creates a draft training report after completed post-flight entry.",
-          children: [
-            /* @__PURE__ */ jsxRuntimeExports.jsx(
-              "input",
-              {
-                type: "checkbox",
-                checked: currentItem.assessmentRequired === true,
-                disabled: !isEditing,
-                onChange: (event) => handleFieldChange("assessmentRequired", event.target.checked),
-                className: "h-4 w-4 rounded border-gray-600 bg-gray-800 text-sky-500 focus:ring-sky-500 disabled:opacity-70"
-              }
-            ),
-            /* @__PURE__ */ jsxRuntimeExports.jsx("span", { children: "Assessment required" })
-          ]
-        }
-      )
+      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex shrink-0 flex-wrap items-center justify-end gap-2", children: [
+        !isEditing && onEdit && /* @__PURE__ */ jsxRuntimeExports.jsx(
+          "button",
+          {
+            type: "button",
+            onClick: onEdit,
+            disabled: editDisabled,
+            className: "h-[41px] min-w-[56px] rounded-md px-3 py-1 text-[10px] font-semibold btn-aluminium-brushed disabled:cursor-not-allowed disabled:opacity-50",
+            children: "Edit"
+          }
+        ),
+        showAssessmentRequiredControl && /* @__PURE__ */ jsxRuntimeExports.jsxs(
+          "label",
+          {
+            className: `mt-1 flex shrink-0 items-center gap-2 rounded border px-3 py-2 text-xs font-semibold ${isEditing ? "cursor-pointer border-gray-600 bg-gray-900/60 text-gray-200 hover:border-sky-600/70" : "border-gray-700 bg-gray-900/30 text-gray-400"}`,
+            title: "Creates a draft training report after completed post-flight entry.",
+            children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsx(
+                "input",
+                {
+                  type: "checkbox",
+                  checked: currentItem.assessmentRequired === true,
+                  disabled: !isEditing,
+                  onChange: (event) => handleFieldChange("assessmentRequired", event.target.checked),
+                  className: "h-4 w-4 rounded border-gray-600 bg-gray-800 text-sky-500 focus:ring-sky-500 disabled:opacity-70"
+                }
+              ),
+              /* @__PURE__ */ jsxRuntimeExports.jsx("span", { children: "Assessment required" })
+            ]
+          }
+        )
+      ] })
     ] }),
     /* @__PURE__ */ jsxRuntimeExports.jsxs("fieldset", { className: "p-3 border border-gray-700 rounded-lg", children: [
       /* @__PURE__ */ jsxRuntimeExports.jsx("legend", { className: "px-2 text-xs font-semibold text-gray-300", children: "Core Details" }),
@@ -91237,6 +91249,8 @@ const SyllabusView = ({
                       editedItem,
                       onItemChange: setEditedItem,
                       onDeleteEvent: handleDeleteEventRequest,
+                      onEdit: handleEdit,
+                      editDisabled: isFrozen,
                       resourceDisplayNames,
                       aircraftConfigurations,
                       aircraftCrewComposition,
