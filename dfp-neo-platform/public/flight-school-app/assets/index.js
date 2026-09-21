@@ -53663,7 +53663,6 @@ const CourseRosterView = ({
         /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex items-center space-x-4", children: /* @__PURE__ */ jsxRuntimeExports.jsx("h1", { className: "text-2xl font-bold text-white", children: "Trainee Roster" }) }),
         /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center gap-[1px]", children: [
           /* @__PURE__ */ jsxRuntimeExports.jsx(ViewToggleButton, { label: "Active Courses", value: "active" }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx(ViewToggleButton, { label: "Archived Courses", value: "archived" }),
           /* @__PURE__ */ jsxRuntimeExports.jsx(
             "button",
             {
