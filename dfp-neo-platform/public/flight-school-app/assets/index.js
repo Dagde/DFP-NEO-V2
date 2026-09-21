@@ -14687,6 +14687,54 @@ const renderCurrencyLogicNode = (node, allCurrencies, depth = 0) => {
     /* @__PURE__ */ jsxRuntimeExports.jsx("ul", { className: "mt-2 space-y-2", children: node.children.map((child, index) => /* @__PURE__ */ jsxRuntimeExports.jsx("li", { className: "text-sm text-gray-300", children: typeof child === "string" ? /* @__PURE__ */ jsxRuntimeExports.jsx("span", { children: getCurrencyDisplayNameById(child, allCurrencies) }) : renderCurrencyLogicNode(child, allCurrencies, depth + 1) }, `${depth}-${index}`)) })
   ] });
 };
+const ScoringMatrixDraftPhraseTextArea = ({ value, readOnly, onCommit }) => {
+  const [draft, setDraft] = reactExports.useState(value || "");
+  const [isFocused, setIsFocused] = reactExports.useState(false);
+  reactExports.useEffect(() => {
+    if (!isFocused) setDraft(value || "");
+  }, [isFocused, value]);
+  const autoSize = (field) => {
+    field.style.height = "auto";
+    field.style.height = `${field.scrollHeight}px`;
+  };
+  const commitDraft = () => {
+    setIsFocused(false);
+    if (!readOnly && draft !== (value || "")) {
+      onCommit(draft);
+    }
+  };
+  return /* @__PURE__ */ jsxRuntimeExports.jsx(
+    "textarea",
+    {
+      value: isFocused ? draft : value || "",
+      onBeforeInput: (event) => {
+        if (!readOnly) handleEditableTextBeforeInput(event, setDraft);
+      },
+      onKeyDownCapture: (event) => {
+        if (!readOnly) handleEditableTextKeyDownCapture(event, setDraft);
+        else stopEditableKeyPropagation(event);
+      },
+      onKeyDown: stopEditableKeyPropagation,
+      onFocus: (event) => {
+        setDraft(value || "");
+        setIsFocused(true);
+        autoSize(event.currentTarget);
+      },
+      onBlur: commitDraft,
+      onChange: (event) => {
+        setDraft(event.target.value);
+        autoSize(event.currentTarget);
+      },
+      readOnly,
+      rows: 1,
+      className: `flex-1 rounded p-2 text-sm resize-none overflow-hidden transition-colors ${readOnly ? "bg-transparent border border-transparent text-gray-300 cursor-default" : "bg-gray-800 border border-gray-600 text-gray-200 focus:ring-1 focus:ring-sky-500 focus:border-sky-500"}`,
+      style: { minHeight: "38px", height: "auto" },
+      ref: (el) => {
+        if (el) autoSize(el);
+      }
+    }
+  );
+};
 const ScoringMatrixInline = ({ activeTab, phraseBank, onUpdatePhraseBank, readOnly = false, onElementAdded, theme = "dark" }) => {
   const [showAddElementFlyout, setShowAddElementFlyout] = reactExports.useState(false);
   const [showDeleteElementFlyout, setShowDeleteElementFlyout] = reactExports.useState(false);
@@ -14956,29 +15004,11 @@ const ScoringMatrixInline = ({ activeTab, phraseBank, onUpdatePhraseBank, readOn
         ] }),
         /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "p-4 space-y-2", children: phraseBank && phraseBank[currentDimension] && phraseBank[currentDimension][grade] ? phraseBank[currentDimension][grade].map((phrase, idx) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-start space-x-2 group", children: [
           /* @__PURE__ */ jsxRuntimeExports.jsx(
-            "textarea",
+            ScoringMatrixDraftPhraseTextArea,
             {
               value: phrase,
-              onBeforeInput: (event) => {
-                if (!readOnly && editModeGrades.has(grade)) handleEditableTextBeforeInput(event, (value) => handlePhraseChange(grade, idx, value));
-              },
-              onKeyDownCapture: (event) => {
-                if (!readOnly && editModeGrades.has(grade)) handleEditableTextKeyDownCapture(event, (value) => handlePhraseChange(grade, idx, value));
-                else stopEditableKeyPropagation(event);
-              },
-              onKeyDown: stopEditableKeyPropagation,
-              onChange: (e) => {
-                if (!readOnly && editModeGrades.has(grade)) handlePhraseChange(grade, idx, e.target.value);
-              },
               readOnly: readOnly || !editModeGrades.has(grade),
-              rows: 1,
-              className: `flex-1 rounded p-2 text-sm resize-none overflow-hidden transition-colors ${readOnly ? "bg-gray-800/50 border border-gray-700 text-gray-400 cursor-default" : editModeGrades.has(grade) ? "bg-gray-800 border border-gray-600 text-gray-200 focus:ring-1 focus:ring-sky-500 focus:border-sky-500" : "bg-transparent border border-transparent text-gray-300 cursor-default"}`,
-              style: { minHeight: "38px", height: "auto" },
-              onInput: (e) => {
-                const target = e.currentTarget;
-                target.style.height = "auto";
-                target.style.height = `${target.scrollHeight}px`;
-              }
+              onCommit: (value) => handlePhraseChange(grade, idx, value)
             }
           ),
           !readOnly && editModeGrades.has(grade) && /* @__PURE__ */ jsxRuntimeExports.jsx(
