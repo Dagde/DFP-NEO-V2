@@ -9228,6 +9228,39 @@ const DataLoadingMonitor = ({
     ] })
   ] }) });
 };
+const MAX_COURSE_STUDENT_GROUPS = 4;
+const DEFAULT_COURSE_STUDENT_GROUPS = [
+  { longName: "Group 1", shortName: "Group 1" },
+  { longName: "Group 2", shortName: "Group 2" },
+  { longName: "Group 3", shortName: "Group 3" }
+];
+const normaliseCourseStudentGroups = (definitions = [], options = {}) => {
+  const rows = definitions.slice(0, MAX_COURSE_STUDENT_GROUPS).map((definition) => {
+    const longName = String(definition?.longName || "").trim();
+    const shortName = String(definition?.shortName || "").trim();
+    const label = shortName || longName;
+    return {
+      longName: longName || label,
+      shortName: shortName || label
+    };
+  }).filter((definition) => definition.longName || definition.shortName);
+  if (rows.length > 0 || options.useFallback === false) return rows;
+  return DEFAULT_COURSE_STUDENT_GROUPS;
+};
+const getCourseStudentGroupLabels = (definitions = [], options = {}) => normaliseCourseStudentGroups(definitions, options).map((definition) => definition.shortName || definition.longName).filter(Boolean);
+const getCourseStudentGroupCounts = (course, definitions = []) => {
+  const labels = getCourseStudentGroupLabels(definitions);
+  const storedCounts = [
+    Number(course.raafStart) || 0,
+    Number(course.navyStart) || 0,
+    Number(course.armyStart) || 0,
+    0
+  ];
+  return labels.slice(0, MAX_COURSE_STUDENT_GROUPS).map((label, index) => ({
+    label,
+    count: storedCounts[index] || 0
+  }));
+};
 const ALL_COLORS = [
   "bg-sky-400/80",
   // Light Blue
@@ -9292,14 +9325,6 @@ const resolveActiveUnitOption = (unitOptions, activeUnitCode) => {
   if (!active) return unitOptions[0] || "";
   return unitOptions.find((unit) => normaliseContextValue(unit) === normaliseContextValue(active)) || active || unitOptions[0] || "";
 };
-const getServiceCountLabels$2 = (serviceDefinitions = []) => {
-  const labels = serviceDefinitions.map((service) => String(service.shortName || service.longName || "").trim()).filter(Boolean);
-  return [
-    labels[0] || "Group 1",
-    labels[1] || "Group 2",
-    labels[2] || "Group 3"
-  ];
-};
 const AddCourseFlyout = ({
   onClose,
   onSave,
@@ -9309,7 +9334,7 @@ const AddCourseFlyout = ({
   activeLocationCode = "",
   activeUnitCode = "",
   platformConfig = null,
-  serviceDefinitions = []
+  serviceDefinitions: serviceDefinitions2 = []
 }) => {
   const locationOptions = reactExports.useMemo(() => Array.from(new Set(locations.filter(Boolean))), [locations]);
   const unitOptions = reactExports.useMemo(() => buildUnitOptions(units, activeUnitCode), [units, activeUnitCode]);
@@ -9329,9 +9354,9 @@ const AddCourseFlyout = ({
   const [tertiaryStudentGroupStart, setTertiaryStudentGroupStart] = reactExports.useState(0);
   const [location, setLocation] = reactExports.useState(defaultLocation);
   const [unit, setUnit] = reactExports.useState(defaultUnit);
-  const [primaryStudentGroupLabel, secondaryStudentGroupLabel, tertiaryStudentGroupLabel] = reactExports.useMemo(
-    () => getServiceCountLabels$2(serviceDefinitions),
-    [serviceDefinitions]
+  const studentGroupLabels = reactExports.useMemo(
+    () => getCourseStudentGroupLabels(serviceDefinitions2).slice(0, 3),
+    [serviceDefinitions2]
   );
   const availableColor = reactExports.useMemo(() => {
     const usedColors = new Set(Object.values(existingCourses));
@@ -9473,9 +9498,9 @@ const AddCourseFlyout = ({
       /* @__PURE__ */ jsxRuntimeExports.jsxs("fieldset", { className: "p-4 border border-gray-600 rounded-lg", children: [
         /* @__PURE__ */ jsxRuntimeExports.jsx("legend", { className: "px-2 text-sm font-semibold text-gray-300", children: "Initial Student Numbers" }),
         /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid grid-cols-2 md:grid-cols-4 gap-4 mt-2", children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsx(Dropdown$2, { label: primaryStudentGroupLabel, id: "student-group-1-start", value: primaryStudentGroupStart, onChange: (e) => setPrimaryStudentGroupStart(parseInt(e.target.value)), children: studentNumberOptions.map((n) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: n, children: n }, n)) }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx(Dropdown$2, { label: secondaryStudentGroupLabel, id: "student-group-2-start", value: secondaryStudentGroupStart, onChange: (e) => setSecondaryStudentGroupStart(parseInt(e.target.value)), children: studentNumberOptions.map((n) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: n, children: n }, n)) }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx(Dropdown$2, { label: tertiaryStudentGroupLabel, id: "student-group-3-start", value: tertiaryStudentGroupStart, onChange: (e) => setTertiaryStudentGroupStart(parseInt(e.target.value)), children: studentNumberOptions.map((n) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: n, children: n }, n)) }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx(Dropdown$2, { label: studentGroupLabels[0] || "Group 1", id: "student-group-1-start", value: primaryStudentGroupStart, onChange: (e) => setPrimaryStudentGroupStart(parseInt(e.target.value)), children: studentNumberOptions.map((n) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: n, children: n }, n)) }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx(Dropdown$2, { label: studentGroupLabels[1] || "Group 2", id: "student-group-2-start", value: secondaryStudentGroupStart, onChange: (e) => setSecondaryStudentGroupStart(parseInt(e.target.value)), children: studentNumberOptions.map((n) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: n, children: n }, n)) }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx(Dropdown$2, { label: studentGroupLabels[2] || "Group 3", id: "student-group-3-start", value: tertiaryStudentGroupStart, onChange: (e) => setTertiaryStudentGroupStart(parseInt(e.target.value)), children: studentNumberOptions.map((n) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: n, children: n }, n)) }),
           /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
             /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "block text-sm font-medium text-gray-400", children: "Total" }),
             /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-1 p-2 bg-gray-700/50 rounded-md text-white h-[38px] flex items-center justify-center font-semibold", children: totalStart })
@@ -18305,7 +18330,9 @@ const PlatformConfigurationSettings = ({
   traineesData = [],
   unitCurrencyDefinitions = {},
   formationCallsigns = [],
-  onUpdateFormationCallsigns
+  onUpdateFormationCallsigns,
+  serviceDefinitions: serviceDefinitions2 = [],
+  onUpdateServiceDefinitions: onUpdateServiceDefinitions2
 }) => {
   const visibleSectionTarget = sectionOnly ? scrollTarget || "platform-configuration-health" : null;
   const configurationHealthActive = !visibleSectionTarget || visibleSectionTarget === "platform-configuration-health";
@@ -18323,6 +18350,37 @@ const PlatformConfigurationSettings = ({
   const [trainingReportElementGroupDrafts, setTrainingReportElementGroupDrafts] = reactExports.useState({});
   const [trainingReportNewElementDraft, setTrainingReportNewElementDraft] = reactExports.useState("");
   const [trainingReportPreviewOpen, setTrainingReportPreviewOpen] = reactExports.useState(false);
+  const courseStudentGroups2 = reactExports.useMemo(
+    () => normaliseCourseStudentGroups(serviceDefinitions2, { useFallback: false }),
+    [serviceDefinitions2]
+  );
+  const updateCourseStudentGroup2 = reactExports.useCallback((index, field, value) => {
+    if (!onUpdateServiceDefinitions2) return;
+    const next = courseStudentGroups2.map((group) => ({ ...group }));
+    while (next.length <= index && next.length < MAX_COURSE_STUDENT_GROUPS) {
+      next.push({ longName: "", shortName: "" });
+    }
+    if (!next[index]) return;
+    next[index][field] = value;
+    onUpdateServiceDefinitions2(next.slice(0, MAX_COURSE_STUDENT_GROUPS).map((group) => ({
+      longName: String(group.longName || group.shortName || "").trim(),
+      shortName: String(group.shortName || group.longName || "").trim()
+    })).filter((group) => group.longName || group.shortName));
+  }, [courseStudentGroups2, onUpdateServiceDefinitions2]);
+  const addCourseStudentGroup2 = reactExports.useCallback(() => {
+    if (!onUpdateServiceDefinitions2 || courseStudentGroups2.length >= MAX_COURSE_STUDENT_GROUPS) return;
+    onUpdateServiceDefinitions2([
+      ...courseStudentGroups2,
+      {
+        longName: `Group ${courseStudentGroups2.length + 1}`,
+        shortName: `Group ${courseStudentGroups2.length + 1}`
+      }
+    ]);
+  }, [courseStudentGroups2, onUpdateServiceDefinitions2]);
+  const removeCourseStudentGroup2 = reactExports.useCallback((index) => {
+    if (!onUpdateServiceDefinitions2) return;
+    onUpdateServiceDefinitions2(courseStudentGroups2.filter((_, groupIndex) => groupIndex !== index));
+  }, [courseStudentGroups2, onUpdateServiceDefinitions2]);
   const showPlatformConfigError = reactExports.useCallback((message, link = null) => {
     setError(message);
     setErrorLink(link);
@@ -27526,6 +27584,70 @@ This removes them from DFP Resource Rows. Press Save in this section to apply th
                 )
               ] })
             ] }),
+            /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded-lg border border-amber-400/25 bg-amber-500/10 p-4", children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mb-4 flex flex-wrap items-start justify-between gap-3", children: [
+                /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("h5", { className: "text-sm font-bold text-amber-100", children: "Course Student Groups" }),
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-1 text-xs leading-relaxed text-amber-100/75", children: "These labels are shown on course cards, Course Progress tiles and course setup screens. Configure only the groups this customer actually uses." })
+                ] }),
+                renderRankTerminologySectionAction()
+              ] }),
+              /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-3", children: [
+                (courseStudentGroups2.length > 0 ? courseStudentGroups2 : [{ longName: "Group 1", shortName: "Group 1" }]).map((group, index) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid gap-3 rounded border border-gray-700 bg-gray-950 p-3 lg:grid-cols-[80px_minmax(180px,1fr)_minmax(160px,0.7fr)_auto]", children: [
+                  /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
+                    /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-[11px] font-semibold uppercase tracking-wider text-gray-500", children: "Group" }),
+                    /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-1 text-sm font-bold text-amber-100", children: index + 1 })
+                  ] }),
+                  /* @__PURE__ */ jsxRuntimeExports.jsx(
+                    DraftField,
+                    {
+                      label: "Full Name",
+                      value: group.longName,
+                      disabled: !canEditRankTerminology || !onUpdateServiceDefinitions2,
+                      onCommit: (value) => updateCourseStudentGroup2(index, "longName", value),
+                      info: "The full description for this course student group."
+                    }
+                  ),
+                  /* @__PURE__ */ jsxRuntimeExports.jsx(
+                    DraftField,
+                    {
+                      label: "Short Label",
+                      value: group.shortName,
+                      disabled: !canEditRankTerminology || !onUpdateServiceDefinitions2,
+                      onCommit: (value) => updateCourseStudentGroup2(index, "shortName", value),
+                      info: "The compact label shown on course cards. Example: 1FTS, CFS, Group 1."
+                    }
+                  ),
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex items-end", children: /* @__PURE__ */ jsxRuntimeExports.jsx(
+                    "button",
+                    {
+                      type: "button",
+                      disabled: !canEditRankTerminology || !onUpdateServiceDefinitions2 || courseStudentGroups2.length <= 1,
+                      onClick: () => removeCourseStudentGroup2(index),
+                      className: "h-[38px] rounded border border-red-500/40 bg-red-500/10 px-3 text-xs font-bold text-red-200 transition hover:border-red-400 hover:bg-red-500/20 disabled:cursor-not-allowed disabled:opacity-40",
+                      children: "Remove"
+                    }
+                  ) })
+                ] }, `course-student-group-${index}`)),
+                /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex flex-wrap items-center justify-between gap-3 rounded border border-amber-400/20 bg-amber-500/5 px-3 py-2", children: [
+                  /* @__PURE__ */ jsxRuntimeExports.jsxs("p", { className: "text-xs font-semibold leading-5 text-amber-100/75", children: [
+                    "Up to ",
+                    MAX_COURSE_STUDENT_GROUPS,
+                    " group labels can be configured. The current course count fields store the first three group counts."
+                  ] }),
+                  /* @__PURE__ */ jsxRuntimeExports.jsx(
+                    "button",
+                    {
+                      type: "button",
+                      disabled: !canEditRankTerminology || !onUpdateServiceDefinitions2 || courseStudentGroups2.length >= MAX_COURSE_STUDENT_GROUPS,
+                      onClick: addCourseStudentGroup2,
+                      className: "rounded border border-amber-300/50 bg-amber-400/15 px-3 py-1.5 text-xs font-bold text-amber-100 transition hover:border-amber-200 hover:bg-amber-400/25 disabled:cursor-not-allowed disabled:opacity-40",
+                      children: "Add Group"
+                    }
+                  )
+                ] })
+              ] })
+            ] }),
             /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded-lg border border-orange-400/25 bg-orange-500/10 p-4", children: [
               /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mb-4 flex flex-wrap items-start justify-between gap-3", children: [
                 /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
@@ -31517,6 +31639,34 @@ const OrganisationMyUnitSettings = ({ platformConfig, unitCode, formationCallsig
     [platformConfig, unitCode]
   );
   const configuredContinuationCurrencyEventsLabel = `${configuredContinuationShortLabel} / Currency Events`;
+  const courseStudentGroups2 = reactExports.useMemo(
+    () => normaliseCourseStudentGroups(serviceDefinitions, { useFallback: false }),
+    [serviceDefinitions]
+  );
+  reactExports.useCallback((index, field, value) => {
+    if (!onUpdateServiceDefinitions) return;
+    const next = courseStudentGroups2.map((group) => ({ ...group }));
+    while (next.length <= index && next.length < MAX_COURSE_STUDENT_GROUPS) {
+      next.push({ longName: "", shortName: "" });
+    }
+    if (!next[index]) return;
+    next[index][field] = value;
+    onUpdateServiceDefinitions(next.slice(0, MAX_COURSE_STUDENT_GROUPS).map((group) => ({
+      longName: String(group.longName || group.shortName || "").trim(),
+      shortName: String(group.shortName || group.longName || "").trim()
+    })).filter((group) => group.longName || group.shortName));
+  }, [courseStudentGroups2, onUpdateServiceDefinitions]);
+  reactExports.useCallback(() => {
+    if (!onUpdateServiceDefinitions || courseStudentGroups2.length >= MAX_COURSE_STUDENT_GROUPS) return;
+    onUpdateServiceDefinitions([
+      ...courseStudentGroups2,
+      { longName: `Group ${courseStudentGroups2.length + 1}`, shortName: `Group ${courseStudentGroups2.length + 1}` }
+    ]);
+  }, [courseStudentGroups2, onUpdateServiceDefinitions]);
+  reactExports.useCallback((index) => {
+    if (!onUpdateServiceDefinitions) return;
+    onUpdateServiceDefinitions(courseStudentGroups2.filter((_, groupIndex) => groupIndex !== index));
+  }, [courseStudentGroups2, onUpdateServiceDefinitions]);
   const activeUnitCode = normaliseUnitSettingsIdentifier(unitCode);
   const activeUnitCodes = Array.from(new Set(
     activeUnitCode.split("+").map((code) => normaliseUnitSettingsIdentifier(code)).filter(Boolean)
@@ -32150,7 +32300,7 @@ const WizardFlyingWindowTimeInput = React.memo(({
     }
   );
 });
-const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, locationCode, formationCallsigns = [], buildRuleSettings, flyingStartTime = 8, flyingEndTime = 17, ftdStartTime = 8, ftdEndTime = 17, cptStartTime = 8, cptEndTime = 17, allowNightFlying = true, commenceNightFlying = 18.5, ceaseNightFlying = 23.5, onUpdateFlyingStartTime, onUpdateFlyingEndTime, onUpdateFtdStartTime, onUpdateFtdEndTime, onUpdateCptStartTime, onUpdateCptEndTime, onUpdateAllowNightFlying, onUpdateCommenceNightFlying, onUpdateCeaseNightFlying, dispatchStaggerSettings = DEFAULT_DISPATCH_STAGGER_SETTINGS, onUpdateDispatchStaggerSettings, tileStatusSettings = DEFAULT_TILE_STATUS_SETTINGS, onUpdateTileStatusSettings, emergencyFreezeAuthority = DEFAULT_EMERGENCY_FREEZE_AUTHORITY, onUpdateEmergencyFreezeAuthority, emergencyFreezeAllowedActions = DEFAULT_EMERGENCY_FREEZE_ALLOWED_ACTIONS, onUpdateEmergencyFreezeAllowedActions, qualificationOptions = [], currentUserQualificationIds = [], onUpdatePlatformConfig, onNavigateToSettingsSection, currentUserPermission = "Staff", canUsePlatformPermission, isSetupTestMode: isSetupTestMode$1 = false, onSaveSetupTestPersonnel }) => {
+const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, locationCode, formationCallsigns = [], buildRuleSettings, flyingStartTime = 8, flyingEndTime = 17, ftdStartTime = 8, ftdEndTime = 17, cptStartTime = 8, cptEndTime = 17, allowNightFlying = true, commenceNightFlying = 18.5, ceaseNightFlying = 23.5, onUpdateFlyingStartTime, onUpdateFlyingEndTime, onUpdateFtdStartTime, onUpdateFtdEndTime, onUpdateCptStartTime, onUpdateCptEndTime, onUpdateAllowNightFlying, onUpdateCommenceNightFlying, onUpdateCeaseNightFlying, dispatchStaggerSettings = DEFAULT_DISPATCH_STAGGER_SETTINGS, onUpdateDispatchStaggerSettings, tileStatusSettings = DEFAULT_TILE_STATUS_SETTINGS, onUpdateTileStatusSettings, emergencyFreezeAuthority = DEFAULT_EMERGENCY_FREEZE_AUTHORITY, onUpdateEmergencyFreezeAuthority, emergencyFreezeAllowedActions = DEFAULT_EMERGENCY_FREEZE_ALLOWED_ACTIONS, onUpdateEmergencyFreezeAllowedActions, qualificationOptions = [], currentUserQualificationIds = [], onUpdatePlatformConfig, onNavigateToSettingsSection, currentUserPermission = "Staff", canUsePlatformPermission, isSetupTestMode: isSetupTestMode$1 = false, onSaveSetupTestPersonnel, serviceDefinitions: serviceDefinitions2 = [], onUpdateServiceDefinitions: onUpdateServiceDefinitions2 }) => {
   const [mode, setMode] = reactExports.useState("detect");
   const unitTypeOptions = reactExports.useMemo(() => normaliseUnitTypeOptions(platformConfig), [platformConfig]);
   const configuredContinuationShortLabel = reactExports.useMemo(
@@ -34878,6 +35028,14 @@ const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, lo
       category: "highly-desirable"
     },
     {
+      id: "course-student-groups",
+      title: "Set course student group labels",
+      label: "Course groups",
+      body: "Name the groups used on course cards and progress tiles so staff see the same terminology everywhere.",
+      checkIds: ["access"],
+      category: "highly-desirable"
+    },
+    {
       id: "crew-roles",
       title: "Set the crew roles this unit uses",
       label: "Crew roles",
@@ -35497,6 +35655,8 @@ const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, lo
       }
       case "ranks-labels":
         return hasMeaningfulWizardText(rankSettingsDraft.preset, ["CUSTOM"]) || hasMeaningfulWizardText(rankSettingsDraft.sortMode) || hasMeaningfulWizardText(rankSettingsDraft.traineeRanks) || hasMeaningfulWizardText(rankSettingsDraft.instructorLabel, ["Instructor"]);
+      case "course-student-groups":
+        return courseStudentGroups.some((group) => hasMeaningfulWizardText(group.longName, ["Group 1", "Group 2", "Group 3", "Group 4"]) || hasMeaningfulWizardText(group.shortName, ["Group 1", "Group 2", "Group 3", "Group 4"]));
       case "crew-roles":
         return parseWizardCrewRoleRows(crewRolesDraft).some((row) => hasMeaningfulWizardText(row.role, ["Crew Role"]) && hasMeaningfulWizardText(row.label, ["Crew Role"]));
       case "resource-aircraft":
@@ -35665,6 +35825,10 @@ const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, lo
     }
     if (stepId === "ranks-labels") {
       saveRankSettingsDraft();
+      return;
+    }
+    if (stepId === "course-student-groups") {
+      onShowWizardSuccess("Course student group labels synced into Settings.");
       return;
     }
     if (stepId === "crew-roles") {
@@ -36757,6 +36921,47 @@ const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, lo
         RANK_EQUIVALENCY_PRESET_LABELS[selectedPresetKey] || "Australia",
         serviceNames ? ` (${serviceNames})` : "",
         ". The full rank equivalency table remains in Settings under Resources & Configuration, Rank, Terminology & Labels."
+      ] })
+    ] });
+  };
+  const renderCourseStudentGroupsEditor = () => {
+    const visibleGroups = courseStudentGroups.length > 0 ? courseStudentGroups : [{ longName: "Group 1", shortName: "Group 1" }];
+    return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-3", children: [
+      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs font-semibold leading-5 text-amber-900", children: [
+        "Configure the course group labels that appear on Course Progress, Training Records and course setup. Add only the groups this customer needs, up to ",
+        MAX_COURSE_STUDENT_GROUPS,
+        "."
+      ] }),
+      /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "space-y-2", children: visibleGroups.map((group, index) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid gap-3 rounded-lg border border-slate-300 bg-white p-3 md:grid-cols-[80px_minmax(0,1fr)_minmax(0,0.8fr)_auto]", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: wizardLabelClass, children: "Group" }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "mt-1 block text-lg font-black text-slate-900", children: index + 1 })
+        ] }),
+        wizardField("Full name", group.longName, (value) => updateCourseStudentGroup(index, "longName", value), void 0, `Group ${index + 1}`),
+        wizardField("Short label", group.shortName, (value) => updateCourseStudentGroup(index, "shortName", value), void 0, `G${index + 1}`),
+        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex items-end", children: /* @__PURE__ */ jsxRuntimeExports.jsx(
+          "button",
+          {
+            type: "button",
+            className: "rounded-md border border-red-200 bg-red-50 px-3 py-2 text-xs font-bold text-red-700 transition hover:border-red-300 hover:bg-red-100 disabled:cursor-not-allowed disabled:opacity-40",
+            disabled: !onUpdateServiceDefinitions2 || courseStudentGroups.length <= 1,
+            onClick: () => removeCourseStudentGroup(index),
+            children: "Remove"
+          }
+        ) })
+      ] }, `wizard-course-group-${index}`)) }),
+      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex flex-wrap items-center justify-between gap-3 rounded-lg border border-slate-300 bg-slate-50 px-3 py-2", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-xs font-semibold leading-5 text-slate-600", children: "Current course count fields store the first three group counts. A fourth label can be shown, but its count remains zero until the data model is extended." }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx(
+          "button",
+          {
+            type: "button",
+            className: wizardSmallButtonClass,
+            disabled: !onUpdateServiceDefinitions2 || courseStudentGroups.length >= MAX_COURSE_STUDENT_GROUPS,
+            onClick: addCourseStudentGroup,
+            children: "Add group"
+          }
+        )
       ] })
     ] });
   };
@@ -38971,6 +39176,12 @@ const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, lo
         renderRankLabelsEditor()
       );
     }
+    if (visibleStep.id === "course-student-groups") {
+      return promptShell(
+        /* @__PURE__ */ jsxRuntimeExports.jsx("p", { children: "Set the course student group labels used in course records and progress pages. Leave unused groups out so the app only displays the groups the customer actually uses." }),
+        renderCourseStudentGroupsEditor()
+      );
+    }
     if (visibleStep.id === "crew-roles") {
       return promptShell(
         /* @__PURE__ */ jsxRuntimeExports.jsx("p", { children: "Set the approved crew role names this unit can use. These names become the dropdown choices when you define normal and alternate crew composition." }),
@@ -39377,7 +39588,7 @@ Classrooms: ${classroomNames.join(", ")}` : ""}`;
     ] })
   ] });
 };
-const OrganisationSlideoutDiagram = ({ platformConfig, organisationSettings, unitCode, locationCode, formationCallsigns = [], buildRuleSettings, flyingStartTime, flyingEndTime, ftdStartTime, ftdEndTime, cptStartTime, cptEndTime, allowNightFlying, commenceNightFlying, ceaseNightFlying, onUpdateFlyingStartTime, onUpdateFlyingEndTime, onUpdateFtdStartTime, onUpdateFtdEndTime, onUpdateCptStartTime, onUpdateCptEndTime, onUpdateAllowNightFlying, onUpdateCommenceNightFlying, onUpdateCeaseNightFlying, dispatchStaggerSettings, onUpdateDispatchStaggerSettings, tileStatusSettings, onUpdateTileStatusSettings, emergencyFreezeAuthority, onUpdateEmergencyFreezeAuthority, emergencyFreezeAllowedActions, onUpdateEmergencyFreezeAllowedActions, qualificationOptions, currentUserQualificationIds, onUpdatePlatformConfig, onNavigateToSettingsSection, currentUserPermission = "Staff", canUsePlatformPermission, isSetupTestMode: isSetupTestMode2 = false, onSaveSetupTestPersonnel, isOpen = false, onInitialSetupWizardActiveChange, initialView = "structure" }) => {
+const OrganisationSlideoutDiagram = ({ platformConfig, organisationSettings, unitCode, locationCode, formationCallsigns = [], buildRuleSettings, flyingStartTime, flyingEndTime, ftdStartTime, ftdEndTime, cptStartTime, cptEndTime, allowNightFlying, commenceNightFlying, ceaseNightFlying, onUpdateFlyingStartTime, onUpdateFlyingEndTime, onUpdateFtdStartTime, onUpdateFtdEndTime, onUpdateCptStartTime, onUpdateCptEndTime, onUpdateAllowNightFlying, onUpdateCommenceNightFlying, onUpdateCeaseNightFlying, dispatchStaggerSettings, onUpdateDispatchStaggerSettings, tileStatusSettings, onUpdateTileStatusSettings, emergencyFreezeAuthority, onUpdateEmergencyFreezeAuthority, emergencyFreezeAllowedActions, onUpdateEmergencyFreezeAllowedActions, qualificationOptions, currentUserQualificationIds, onUpdatePlatformConfig, onNavigateToSettingsSection, currentUserPermission = "Staff", canUsePlatformPermission, isSetupTestMode: isSetupTestMode2 = false, onSaveSetupTestPersonnel, isOpen = false, onInitialSetupWizardActiveChange, initialView = "structure", serviceDefinitions: serviceDefinitions2 = [], onUpdateServiceDefinitions: onUpdateServiceDefinitions2 }) => {
   const chart = reactExports.useMemo(() => buildOrganisationChart(platformConfig), [platformConfig]);
   const [selectedNodeId, setSelectedNodeId] = reactExports.useState(null);
   const [activeView, setActiveView] = reactExports.useState(initialView);
@@ -39563,7 +39774,9 @@ const OrganisationSlideoutDiagram = ({ platformConfig, organisationSettings, uni
         currentUserPermission,
         canUsePlatformPermission,
         isSetupTestMode: isSetupTestMode2,
-        onSaveSetupTestPersonnel
+        onSaveSetupTestPersonnel,
+        serviceDefinitions: serviceDefinitions2,
+        onUpdateServiceDefinitions: onUpdateServiceDefinitions2
       }
     ) })
   ] });
@@ -39654,6 +39867,8 @@ const ScheduleView = ({
   onLinkedAvailabilityChange,
   onInitialSetupWizardActiveChange,
   initialOrganisationSlideoutView = "structure",
+  serviceDefinitions: serviceDefinitions2 = [],
+  onUpdateServiceDefinitions: onUpdateServiceDefinitions2,
   formationCallsigns = [],
   buildRuleSettings,
   flyingStartTime,
@@ -41258,7 +41473,7 @@ const ScheduleView = ({
             className: `absolute left-0 top-0 h-full pointer-events-none border-r border-cyan-400/25 bg-slate-950 shadow-[18px_0_36px_rgba(0,0,0,0.38)] transition-transform duration-300 ease-out ${showResourceUnderlayPanel ? "" : "-translate-x-full"}`,
             style: { width: "min(calc(clamp(360px, 40vw, 680px) + 400px), calc(100vw - 420px))" },
             children: [
-              /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: `h-full overflow-hidden border-r border-white/5 bg-slate-950 ${showResourceUnderlayPanel ? "pointer-events-auto" : "pointer-events-none"}`, children: /* @__PURE__ */ jsxRuntimeExports.jsx(OrganisationSlideoutDiagram, { platformConfig, organisationSettings, unitCode, locationCode, formationCallsigns, buildRuleSettings, flyingStartTime, flyingEndTime, ftdStartTime, ftdEndTime, cptStartTime, cptEndTime, allowNightFlying, commenceNightFlying, ceaseNightFlying, onUpdateFlyingStartTime, onUpdateFlyingEndTime, onUpdateFtdStartTime, onUpdateFtdEndTime, onUpdateCptStartTime, onUpdateCptEndTime, onUpdateAllowNightFlying, onUpdateCommenceNightFlying, onUpdateCeaseNightFlying, dispatchStaggerSettings, onUpdateDispatchStaggerSettings, tileStatusSettings, onUpdateTileStatusSettings, emergencyFreezeAuthority, onUpdateEmergencyFreezeAuthority, emergencyFreezeAllowedActions, onUpdateEmergencyFreezeAllowedActions, qualificationOptions, currentUserQualificationIds, onUpdatePlatformConfig, onNavigateToSettingsSection, currentUserPermission, canUsePlatformPermission, isSetupTestMode: isSetupTestMode2, onSaveSetupTestPersonnel, isOpen: showResourceUnderlayPanel, onInitialSetupWizardActiveChange, initialView: initialOrganisationSlideoutView }) }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: `h-full overflow-hidden border-r border-white/5 bg-slate-950 ${showResourceUnderlayPanel ? "pointer-events-auto" : "pointer-events-none"}`, children: /* @__PURE__ */ jsxRuntimeExports.jsx(OrganisationSlideoutDiagram, { platformConfig, organisationSettings, unitCode, locationCode, formationCallsigns, buildRuleSettings, flyingStartTime, flyingEndTime, ftdStartTime, ftdEndTime, cptStartTime, cptEndTime, allowNightFlying, commenceNightFlying, ceaseNightFlying, onUpdateFlyingStartTime, onUpdateFlyingEndTime, onUpdateFtdStartTime, onUpdateFtdEndTime, onUpdateCptStartTime, onUpdateCptEndTime, onUpdateAllowNightFlying, onUpdateCommenceNightFlying, onUpdateCeaseNightFlying, dispatchStaggerSettings, onUpdateDispatchStaggerSettings, tileStatusSettings, onUpdateTileStatusSettings, emergencyFreezeAuthority, onUpdateEmergencyFreezeAuthority, emergencyFreezeAllowedActions, onUpdateEmergencyFreezeAllowedActions, qualificationOptions, currentUserQualificationIds, onUpdatePlatformConfig, onNavigateToSettingsSection, currentUserPermission, canUsePlatformPermission, isSetupTestMode: isSetupTestMode2, onSaveSetupTestPersonnel, isOpen: showResourceUnderlayPanel, onInitialSetupWizardActiveChange, initialView: initialOrganisationSlideoutView, serviceDefinitions: serviceDefinitions2, onUpdateServiceDefinitions: onUpdateServiceDefinitions2 }) }),
               /* @__PURE__ */ jsxRuntimeExports.jsxs(
                 "button",
                 {
@@ -99029,7 +99244,9 @@ const SettingsViewWithMenu = (props) => {
               syllabusDetails: props.syllabusDetails,
               instructorsData: props.instructorsData,
               traineesData: props.traineesData,
-              unitCurrencyDefinitions: props.unitCurrencyDefinitions
+              unitCurrencyDefinitions: props.unitCurrencyDefinitions,
+              serviceDefinitions: props.serviceDefinitions,
+              onUpdateServiceDefinitions: props.onUpdateServiceDefinitions
             }
           )
         ] }),
@@ -99059,7 +99276,9 @@ const SettingsViewWithMenu = (props) => {
             syllabusDetails: props.syllabusDetails,
             instructorsData: props.instructorsData,
             traineesData: props.traineesData,
-            unitCurrencyDefinitions: props.unitCurrencyDefinitions
+            unitCurrencyDefinitions: props.unitCurrencyDefinitions,
+            serviceDefinitions: props.serviceDefinitions,
+            onUpdateServiceDefinitions: props.onUpdateServiceDefinitions
           }
         ),
         activeSection === "crew-composition" && /* @__PURE__ */ jsxRuntimeExports.jsx(
@@ -99089,7 +99308,9 @@ const SettingsViewWithMenu = (props) => {
             syllabusDetails: props.syllabusDetails,
             instructorsData: props.instructorsData,
             traineesData: props.traineesData,
-            unitCurrencyDefinitions: props.unitCurrencyDefinitions
+            unitCurrencyDefinitions: props.unitCurrencyDefinitions,
+            serviceDefinitions: props.serviceDefinitions,
+            onUpdateServiceDefinitions: props.onUpdateServiceDefinitions
           }
         ),
         activeSection === "standard-missions" && /* @__PURE__ */ jsxRuntimeExports.jsx(
@@ -99119,7 +99340,9 @@ const SettingsViewWithMenu = (props) => {
             syllabusDetails: props.syllabusDetails,
             instructorsData: props.instructorsData,
             traineesData: props.traineesData,
-            unitCurrencyDefinitions: props.unitCurrencyDefinitions
+            unitCurrencyDefinitions: props.unitCurrencyDefinitions,
+            serviceDefinitions: props.serviceDefinitions,
+            onUpdateServiceDefinitions: props.onUpdateServiceDefinitions
           }
         ),
         activeSection === "currency-profiles" && /* @__PURE__ */ jsxRuntimeExports.jsx(
@@ -99304,6 +99527,8 @@ const SettingsViewWithMenu = (props) => {
             instructorsData: props.instructorsData,
             traineesData: props.traineesData,
             unitCurrencyDefinitions: props.unitCurrencyDefinitions,
+            serviceDefinitions: props.serviceDefinitions,
+            onUpdateServiceDefinitions: props.onUpdateServiceDefinitions,
             formationCallsigns: props.formationCallsigns,
             onUpdateFormationCallsigns: props.onUpdateFormationCallsigns
           }
@@ -101435,7 +101660,8 @@ const CourseDataWindow = ({
   riskThresholds,
   onUpdateGradDate,
   onUpdateStartDate,
-  onShowFullGraph
+  onShowFullGraph,
+  studentGroupCounts = []
 }) => {
   const { name: courseName, color: courseColor, gradDate, startDate } = course;
   const isHexColor = (color) => color.startsWith("#") || color.startsWith("rgb");
@@ -101455,6 +101681,18 @@ const CourseDataWindow = ({
   return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { "data-course-progress-card": "true", className: "bg-gray-800 rounded-lg shadow-lg border border-gray-700 flex flex-col h-fit", children: [
     /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { "data-course-color": "true", className: `p-4 border-b border-gray-700 rounded-t-lg ${courseColorClass}`, style: courseColorStyle, children: [
       /* @__PURE__ */ jsxRuntimeExports.jsx("h2", { className: "text-lg font-bold text-white text-center mb-2", children: courseName }),
+      studentGroupCounts.length > 0 ? /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mb-2 flex flex-wrap justify-center gap-1.5", children: studentGroupCounts.map((group, index) => /* @__PURE__ */ jsxRuntimeExports.jsxs(
+        "span",
+        {
+          className: "rounded-full border border-white/25 bg-black/18 px-2 py-0.5 text-[10px] font-black uppercase tracking-[0.08em] text-white/90",
+          children: [
+            group.label,
+            ": ",
+            group.count
+          ]
+        },
+        `${group.label}-${index}`
+      )) }) : null,
       /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex justify-between items-center text-xs", children: [
         /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center space-x-1", children: [
           /* @__PURE__ */ jsxRuntimeExports.jsx("label", { htmlFor: `start-date-${courseName.replace(/\s+/g, "-")}`, className: "text-white/80 font-semibold cursor-pointer", children: "Start:" }),
@@ -101844,7 +102082,8 @@ const CourseProgressView = ({
   onUpdateGradDate,
   onUpdateStartDate,
   trainingReportName = "Training Report",
-  resourceDisplayNames = DEFAULT_RESOURCE_DISPLAY_NAMES
+  resourceDisplayNames = DEFAULT_RESOURCE_DISPLAY_NAMES,
+  serviceDefinitions: serviceDefinitions2 = []
 }) => {
   const [showFullGraph, setShowFullGraph] = reactExports.useState(false);
   const [selectedGraphCourse, setSelectedGraphCourse] = reactExports.useState(null);
@@ -102554,7 +102793,8 @@ const CourseProgressView = ({
           onShowFullGraph: () => {
             setSelectedGraphCourse(course.name);
             setShowFullGraph(true);
-          }
+          },
+          studentGroupCounts: getCourseStudentGroupCounts(course, serviceDefinitions2)
         },
         course.name
       )) }),
@@ -103483,14 +103723,6 @@ const EditCourseFlyout = ({
     }
   );
 };
-const getServiceCountLabels$1 = (serviceDefinitions = []) => {
-  const labels = serviceDefinitions.map((service) => String(service.shortName || service.longName || "").trim()).filter(Boolean);
-  return [
-    labels[0] || "Group 1",
-    labels[1] || "Group 2",
-    labels[2] || "Group 3"
-  ];
-};
 const darkenHexColor$1 = (color) => {
   if (!color.startsWith("#") || color.length < 7) return color;
   const strength = 0.62;
@@ -103508,14 +103740,12 @@ const formatCourseDate$1 = (value) => {
 const CourseCard = React.memo(({
   course,
   courseColor,
-  primaryStudentGroupLabel,
-  secondaryStudentGroupLabel,
-  tertiaryStudentGroupLabel,
+  studentGroupCounts,
   onOpenCourseRoster,
   onEditCourse,
   onDeleteCourse
 }) => {
-  const totalStudents = course.raafStart + course.navyStart + course.armyStart;
+  const totalStudents = studentGroupCounts.reduce((total, group) => total + group.count, 0);
   const openCourseRoster = () => onOpenCourseRoster(course.name);
   return /* @__PURE__ */ jsxRuntimeExports.jsxs(
     "div",
@@ -103583,23 +103813,11 @@ const CourseCard = React.memo(({
             /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-gray-400", children: "Total Students:" }),
             /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "font-semibold", children: totalStudents })
           ] }),
-          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex justify-between text-xs", children: [
-            /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "text-gray-400", children: [
-              primaryStudentGroupLabel,
-              ": ",
-              course.raafStart
-            ] }),
-            /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "text-gray-400", children: [
-              secondaryStudentGroupLabel,
-              ": ",
-              course.navyStart
-            ] }),
-            /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "text-gray-400", children: [
-              tertiaryStudentGroupLabel,
-              ": ",
-              course.armyStart
-            ] })
-          ] })
+          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex flex-wrap justify-between gap-x-3 gap-y-1 text-xs", children: studentGroupCounts.map((group, index) => /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "text-gray-400", children: [
+            group.label,
+            ": ",
+            group.count
+          ] }, `${group.label}-${index}`)) })
         ] })
       ]
     }
@@ -103622,7 +103840,7 @@ const CoursesManagementView = ({
   operationalModel = "flight_school",
   syllabusDetails = [],
   platformConfig = null,
-  serviceDefinitions = []
+  serviceDefinitions: serviceDefinitions2 = []
 }) => {
   const [showAddCourseFlyout, setShowAddCourseFlyout] = reactExports.useState(false);
   useSystemFreeze();
@@ -103634,10 +103852,6 @@ const CoursesManagementView = ({
   const [showPasswordDialog, setShowPasswordDialog] = reactExports.useState(false);
   const [showChoiceDialog, setShowChoiceDialog] = reactExports.useState(false);
   const [courseToDelete, setCourseToDelete] = reactExports.useState(null);
-  const [primaryStudentGroupLabel, secondaryStudentGroupLabel, tertiaryStudentGroupLabel] = reactExports.useMemo(
-    () => getServiceCountLabels$1(serviceDefinitions),
-    [serviceDefinitions]
-  );
   const groupedCourses = reactExports.useMemo(() => {
     const groups = {};
     const activeCourses = courses.filter((course) => courseColors.hasOwnProperty(course.name));
@@ -103778,9 +103992,7 @@ Only continue if permanent deletion is required, archiving is not sufficient, an
         {
           course,
           courseColor: courseColors[course.name] || "",
-          primaryStudentGroupLabel,
-          secondaryStudentGroupLabel,
-          tertiaryStudentGroupLabel,
+          studentGroupCounts: getCourseStudentGroupCounts(course, serviceDefinitions2),
           onOpenCourseRoster: onNavigateToCourseRoster,
           onEditCourse: handleEditClick,
           onDeleteCourse: handleDeleteClick
@@ -103802,7 +104014,7 @@ Only continue if permanent deletion is required, archiving is not sufficient, an
         activeLocationCode,
         activeUnitCode,
         platformConfig,
-        serviceDefinitions
+        serviceDefinitions: serviceDefinitions2
       }
     ),
     showEditFlyout && courseToEdit && /* @__PURE__ */ jsxRuntimeExports.jsx(
@@ -105857,7 +106069,7 @@ const TrainingRecordsView = ({
   activeUnitCode = "",
   operationalModel = "flight_school",
   platformConfig = null,
-  serviceDefinitions = [],
+  serviceDefinitions: serviceDefinitions2 = [],
   resourceDisplayNames,
   instructorLabel: instructorLabel2 = "Instructor",
   trainingReportTemplate = null,
@@ -105920,7 +106132,7 @@ const TrainingRecordsView = ({
           operationalModel,
           syllabusDetails,
           platformConfig,
-          serviceDefinitions
+          serviceDefinitions: serviceDefinitions2
         }
       ),
       activeTab === "export" && /* @__PURE__ */ jsxRuntimeExports.jsx(
@@ -105962,14 +106174,6 @@ const TrainingRecordsView = ({
     ] })
   ] });
 };
-const getServiceCountLabels = (serviceDefinitions = []) => {
-  const labels = serviceDefinitions.map((service) => String(service.shortName || service.longName || "").trim()).filter(Boolean);
-  return [
-    labels[0] || "Group 1",
-    labels[1] || "Group 2",
-    labels[2] || "Group 3"
-  ];
-};
 const darkenHexColor = (color) => {
   if (!color.startsWith("#") || color.length < 7) return color;
   const strength = 0.62;
@@ -105987,7 +106191,7 @@ const formatCourseDate = (value) => {
 const ArchivedCoursesView = ({
   archivedCourses,
   courses,
-  serviceDefinitions = [],
+  serviceDefinitions: serviceDefinitions2 = [],
   onUnarchiveCourse,
   onDeleteCourse,
   onNavigateBack
@@ -105999,10 +106203,6 @@ const ArchivedCoursesView = ({
   const archivedCourseNames = reactExports.useMemo(
     () => Object.keys(archivedCourses).sort((a, b) => a.localeCompare(b)),
     [archivedCourses]
-  );
-  const [primaryStudentGroupLabel, secondaryStudentGroupLabel, tertiaryStudentGroupLabel] = reactExports.useMemo(
-    () => getServiceCountLabels(serviceDefinitions),
-    [serviceDefinitions]
   );
   const courseRecordsByName = reactExports.useMemo(() => {
     const records = /* @__PURE__ */ new Map();
@@ -106083,10 +106283,8 @@ Only continue if permanent deletion is required, keeping it archived is not suff
       armyStart: 0
     };
     const courseColor = displayCourse.color || color || "";
-    const primaryCount = displayCourse.raafStart ?? 0;
-    const secondaryCount = displayCourse.navyStart ?? 0;
-    const tertiaryCount = displayCourse.armyStart ?? 0;
-    const totalStudents = primaryCount + secondaryCount + tertiaryCount;
+    const studentGroupCounts = getCourseStudentGroupCounts(displayCourse, serviceDefinitions2);
+    const totalStudents = studentGroupCounts.reduce((total, group) => total + group.count, 0);
     return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "bg-gray-700 rounded-lg p-4 border border-gray-600", children: [
       /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex justify-between items-start mb-3", children: [
         /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center gap-3", children: [
@@ -106134,23 +106332,11 @@ Only continue if permanent deletion is required, keeping it archived is not suff
           /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-gray-400", children: "Total Students:" }),
           /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "font-semibold", children: totalStudents })
         ] }),
-        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex justify-between text-xs", children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "text-gray-400", children: [
-            primaryStudentGroupLabel,
-            ": ",
-            primaryCount
-          ] }),
-          /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "text-gray-400", children: [
-            secondaryStudentGroupLabel,
-            ": ",
-            secondaryCount
-          ] }),
-          /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "text-gray-400", children: [
-            tertiaryStudentGroupLabel,
-            ": ",
-            tertiaryCount
-          ] })
-        ] }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex flex-wrap justify-between gap-x-3 gap-y-1 text-xs", children: studentGroupCounts.map((group, index) => /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "text-gray-400", children: [
+          group.label,
+          ": ",
+          group.count
+        ] }, `${group.label}-${index}`)) }),
         /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "pt-1", children: /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-gray-600 text-gray-300", children: "Archived" }) })
       ] })
     ] });
@@ -137137,7 +137323,7 @@ ${"=".repeat(60)}`);
   const [selectedPersonForLogbook, setSelectedPersonForLogbook] = reactExports.useState(null);
   const [locations, setLocations] = reactExports.useState([]);
   const [locationAbbreviations, setLocationAbbreviations] = reactExports.useState({});
-  const [serviceDefinitions, setServiceDefinitions] = reactExports.useState([]);
+  const [serviceDefinitions2, setServiceDefinitions] = reactExports.useState([]);
   const [locationOpAreas, setLocationOpAreas] = reactExports.useState({});
   const [sctEvents, setSctEvents] = reactExports.useState([]);
   const [units, setUnits] = reactExports.useState([]);
@@ -137497,7 +137683,7 @@ ${"=".repeat(60)}`);
     const snapshot = buildSettingsSnapshot({
       locations,
       locationAbbreviations,
-      serviceDefinitions,
+      serviceDefinitions: serviceDefinitions2,
       units,
       unitLocations,
       locationOpAreas,
@@ -137553,7 +137739,7 @@ ${"=".repeat(60)}`);
     settingsLoaded,
     locations,
     locationAbbreviations,
-    serviceDefinitions,
+    serviceDefinitions2,
     units,
     unitLocations,
     locationOpAreas,
@@ -151336,6 +151522,8 @@ ${error instanceof Error ? error.message : String(error)}`,
             canEditTileAircraftNumber: canEditTileAircraftNumber && !isViewingPastDfp,
             onLinkedAvailabilityChange: handleLinkedAircraftAvailabilityChange,
             onInitialSetupWizardActiveChange: setIsInitialSetupWizardActive,
+            serviceDefinitions: serviceDefinitions2,
+            onUpdateServiceDefinitions: setServiceDefinitions,
             formationCallsigns,
             buildRuleSettings: {
               maxDispatchPerHour,
@@ -152324,7 +152512,8 @@ ${error instanceof Error ? error.message : String(error)}`,
             onUpdateGradDate: handleUpdateGradDate,
             onUpdateStartDate: handleUpdateStartDate,
             trainingReportName: trainingReportTemplate.displayName || trainingReportTemplate.genericName,
-            resourceDisplayNames
+            resourceDisplayNames,
+            serviceDefinitions: serviceDefinitions2
           }
         );
       case "TrainingRecords":
@@ -152356,7 +152545,7 @@ ${error instanceof Error ? error.message : String(error)}`,
             activeUnitCode,
             operationalModel: activeOperationalModel,
             platformConfig,
-            serviceDefinitions,
+            serviceDefinitions: serviceDefinitions2,
             resourceDisplayNames,
             instructorLabel: instructorLabel2,
             trainingReportTemplate,
@@ -152370,7 +152559,7 @@ ${error instanceof Error ? error.message : String(error)}`,
           {
             archivedCourses,
             courses,
-            serviceDefinitions,
+            serviceDefinitions: serviceDefinitions2,
             onUnarchiveCourse: handleUnarchiveCourseFromArchivedView,
             onDeleteCourse: handleDeleteCourseFromArchivedView,
             onNavigateBack: () => handleNavigation("TrainingRecords")
@@ -153147,7 +153336,7 @@ ${error instanceof Error ? error.message : String(error)}`,
             onUpdateLocations: setLocations,
             locationAbbreviations,
             onUpdateLocationAbbreviations: setLocationAbbreviations,
-            serviceDefinitions,
+            serviceDefinitions: serviceDefinitions2,
             onUpdateServiceDefinitions: setServiceDefinitions,
             units,
             platformUnits: platformUnitCodes,

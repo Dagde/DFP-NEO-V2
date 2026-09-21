@@ -8,6 +8,7 @@ import FullPageProgressGraph from './FullPageProgressGraph';
 import { logAudit } from '../utils/auditLogger';
 import { CourseRiskThresholds } from '../utils/courseProgressMetrics';
 import { DEFAULT_RESOURCE_DISPLAY_NAMES, type ResourceDisplayNames } from '../utils/resourceDisplayNames';
+import { getCourseStudentGroupCounts } from '../utils/courseStudentGroups';
 
 const REMEDIAL_EVENT_CODE_REGEX = /-(?:REM-[A-Z]+\d+|RFTD\d+|RRF\d+|RT\d+|RF\d+|FTD\d+|F\d+|T\d+)$/i;
 const isRemedialEventCode = (value?: string): boolean =>
@@ -24,6 +25,7 @@ interface CourseProgressViewProps {
     onUpdateStartDate: (courseName: string, newStartDate: string) => void;
     trainingReportName?: string;
     resourceDisplayNames?: ResourceDisplayNames;
+    serviceDefinitions?: Array<{ longName?: string; shortName?: string }>;
 }
 
 type CourseScoreEventTypeKey =
@@ -167,7 +169,8 @@ const CourseProgressView: React.FC<CourseProgressViewProps> = ({
     onUpdateGradDate,
     onUpdateStartDate,
     trainingReportName = 'Training Report',
-    resourceDisplayNames = DEFAULT_RESOURCE_DISPLAY_NAMES
+    resourceDisplayNames = DEFAULT_RESOURCE_DISPLAY_NAMES,
+    serviceDefinitions = []
 }) => {
     const [showFullGraph, setShowFullGraph] = useState(false);
     const [selectedGraphCourse, setSelectedGraphCourse] = useState<string | null>(null);
@@ -1099,6 +1102,7 @@ const CourseProgressView: React.FC<CourseProgressViewProps> = ({
                                         setSelectedGraphCourse(course.name);
                                         setShowFullGraph(true);
                                     }}
+                                    studentGroupCounts={getCourseStudentGroupCounts(course, serviceDefinitions)}
                                 />
                             ))}
                         </div>

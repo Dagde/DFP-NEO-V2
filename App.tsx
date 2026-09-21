@@ -52263,6 +52263,8 @@ appliedUpdates.forEach(update => {
                            canEditTileAircraftNumber={canEditTileAircraftNumber && !isViewingPastDfp}
                            onLinkedAvailabilityChange={handleLinkedAircraftAvailabilityChange}
                            onInitialSetupWizardActiveChange={setIsInitialSetupWizardActive}
+                           serviceDefinitions={serviceDefinitions}
+                           onUpdateServiceDefinitions={setServiceDefinitions}
                            formationCallsigns={formationCallsigns}
                            buildRuleSettings={{
                                maxDispatchPerHour,
@@ -53281,6 +53283,7 @@ appliedUpdates.forEach(update => {
                             onUpdateStartDate={handleUpdateStartDate}
                             trainingReportName={trainingReportTemplate.displayName || trainingReportTemplate.genericName}
                             resourceDisplayNames={resourceDisplayNames}
+                            serviceDefinitions={serviceDefinitions}
                         />;
             case 'TrainingRecords':
                 return <TrainingRecordsView

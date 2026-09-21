@@ -1,6 +1,7 @@
 import React, { useMemo } from 'react';
 import { Trainee, SyllabusItemDetail, Course, TrainingReportAssessment } from '../types';
 import { calculateCourseProgressMetric, CourseRiskThresholds } from '../utils/courseProgressMetrics';
+import type { CourseStudentGroupCount } from '../utils/courseStudentGroups';
 
 interface CourseDataWindowProps {
     course: Course;
@@ -11,6 +12,7 @@ interface CourseDataWindowProps {
     onUpdateGradDate: (courseName: string, newGradDate: string) => void;
     onUpdateStartDate: (courseName: string, newStartDate: string) => void;
     onShowFullGraph: () => void;
+    studentGroupCounts?: CourseStudentGroupCount[];
 }
 
 const CourseDataWindow: React.FC<CourseDataWindowProps> = ({
@@ -21,7 +23,8 @@ const CourseDataWindow: React.FC<CourseDataWindowProps> = ({
     riskThresholds,
     onUpdateGradDate,
     onUpdateStartDate,
-    onShowFullGraph
+    onShowFullGraph,
+    studentGroupCounts = []
 }) => {
     const { name: courseName, color: courseColor, gradDate, startDate } = course;
 
@@ -48,6 +51,18 @@ const CourseDataWindow: React.FC<CourseDataWindowProps> = ({
         <div data-course-progress-card="true" className="bg-gray-800 rounded-lg shadow-lg border border-gray-700 flex flex-col h-fit">
             <div data-course-color="true" className={`p-4 border-b border-gray-700 rounded-t-lg ${courseColorClass}`} style={courseColorStyle}>
                  <h2 className="text-lg font-bold text-white text-center mb-2">{courseName}</h2>
+                 {studentGroupCounts.length > 0 ? (
+                    <div className="mb-2 flex flex-wrap justify-center gap-1.5">
+                        {studentGroupCounts.map((group, index) => (
+                            <span
+                                key={`${group.label}-${index}`}
+                                className="rounded-full border border-white/25 bg-black/18 px-2 py-0.5 text-[10px] font-black uppercase tracking-[0.08em] text-white/90"
+                            >
+                                {group.label}: {group.count}
+                            </span>
+                        ))}
+                    </div>
+                 ) : null}
                  <div className="flex justify-between items-center text-xs">
                      <div className="flex items-center space-x-1">
                         <label htmlFor={`start-date-${courseName.replace(/\s+/g, '-')}`} className="text-white/80 font-semibold cursor-pointer">Start:</label>

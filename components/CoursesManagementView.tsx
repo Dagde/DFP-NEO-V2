@@ -6,6 +6,7 @@ import EditCourseFlyout from './EditCourseFlyout';
 import { showDarkConfirm } from './DarkMessageModal';
 import type { OperationalModelCode, PlatformConfig } from '../utils/platformConfigService';
 import { verifyCurrentUserPassword } from '../utils/passwordVerification';
+import { getCourseStudentGroupCounts, type CourseStudentGroupCount } from '../utils/courseStudentGroups';
 
 interface CoursesManagementViewProps {
     courses: Course[];
@@ -26,17 +27,6 @@ interface CoursesManagementViewProps {
     serviceDefinitions?: Array<{ longName?: string; shortName?: string }>;
 }
 
-const getServiceCountLabels = (serviceDefinitions: Array<{ longName?: string; shortName?: string }> = []): [string, string, string] => {
-    const labels = serviceDefinitions
-        .map(service => String(service.shortName || service.longName || '').trim())
-        .filter(Boolean);
-    return [
-        labels[0] || 'Group 1',
-        labels[1] || 'Group 2',
-        labels[2] || 'Group 3',
-    ];
-};
-
 const darkenHexColor = (color: string) => {
     if (!color.startsWith('#') || color.length < 7) return color;
     const strength = 0.62;
@@ -56,9 +46,7 @@ const formatCourseDate = (value: string) => {
 interface CourseCardProps {
     course: Course;
     courseColor: string;
-    primaryStudentGroupLabel: string;
-    secondaryStudentGroupLabel: string;
-    tertiaryStudentGroupLabel: string;
+    studentGroupCounts: CourseStudentGroupCount[];
     onOpenCourseRoster: (courseName: string) => void;
     onEditCourse: (course: Course) => void;
     onDeleteCourse: (courseName: string) => void;
@@ -67,14 +55,12 @@ interface CourseCardProps {
 const CourseCard = React.memo<CourseCardProps>(({
     course,
     courseColor,
-    primaryStudentGroupLabel,
-    secondaryStudentGroupLabel,
-    tertiaryStudentGroupLabel,
+    studentGroupCounts,
     onOpenCourseRoster,
     onEditCourse,
     onDeleteCourse,
 }) => {
-    const totalStudents = course.raafStart + course.navyStart + course.armyStart;
+    const totalStudents = studentGroupCounts.reduce((total, group) => total + group.count, 0);
     const openCourseRoster = () => onOpenCourseRoster(course.name);
 
     return (
@@ -140,10 +126,10 @@ const CourseCard = React.memo<CourseCardProps>(({
                     <span className="text-gray-400">Total Students:</span>
                     <span className="font-semibold">{totalStudents}</span>
                 </div>
-                <div className="flex justify-between text-xs">
-                    <span className="text-gray-400">{primaryStudentGroupLabel}: {course.raafStart}</span>
-                    <span className="text-gray-400">{secondaryStudentGroupLabel}: {course.navyStart}</span>
-                    <span className="text-gray-400">{tertiaryStudentGroupLabel}: {course.armyStart}</span>
+                <div className="flex flex-wrap justify-between gap-x-3 gap-y-1 text-xs">
+                    {studentGroupCounts.map((group, index) => (
+                        <span key={`${group.label}-${index}`} className="text-gray-400">{group.label}: {group.count}</span>
+                    ))}
                 </div>
             </div>
         </div>
@@ -180,10 +166,6 @@ const CoursesManagementView: React.FC<CoursesManagementViewProps> = ({
     const [showPasswordDialog, setShowPasswordDialog] = useState(false);
     const [showChoiceDialog, setShowChoiceDialog] = useState(false);
     const [courseToDelete, setCourseToDelete] = useState<string | null>(null);
-    const [primaryStudentGroupLabel, secondaryStudentGroupLabel, tertiaryStudentGroupLabel] = useMemo(
-        () => getServiceCountLabels(serviceDefinitions),
-        [serviceDefinitions],
-    );
 
     // Course records stay in one course list; each course's LMP is edited inside the course.
     const groupedCourses = useMemo(() => {
@@ -342,9 +324,7 @@ const CoursesManagementView: React.FC<CoursesManagementViewProps> = ({
                                             key={course.name}
                                             course={course}
                                             courseColor={courseColors[course.name] || ''}
-                                            primaryStudentGroupLabel={primaryStudentGroupLabel}
-                                            secondaryStudentGroupLabel={secondaryStudentGroupLabel}
-                                            tertiaryStudentGroupLabel={tertiaryStudentGroupLabel}
+                                            studentGroupCounts={getCourseStudentGroupCounts(course, serviceDefinitions)}
                                             onOpenCourseRoster={onNavigateToCourseRoster}
                                             onEditCourse={handleEditClick}
                                             onDeleteCourse={handleDeleteClick}

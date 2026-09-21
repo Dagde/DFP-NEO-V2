@@ -1,6 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import type { PlatformConfig } from '../utils/platformConfigService';
 import { showDarkAlert } from './DarkMessageModal';
+import { getCourseStudentGroupLabels } from '../utils/courseStudentGroups';
 
 export interface NewCourseData {
     number: string;
@@ -94,17 +95,6 @@ const resolveActiveUnitOption = (unitOptions: string[], activeUnitCode?: string)
     return unitOptions.find(unit => normaliseContextValue(unit) === normaliseContextValue(active)) || active || unitOptions[0] || '';
 };
 
-const getServiceCountLabels = (serviceDefinitions: Array<{ longName?: string; shortName?: string }> = []): [string, string, string] => {
-    const labels = serviceDefinitions
-        .map(service => String(service.shortName || service.longName || '').trim())
-        .filter(Boolean);
-    return [
-        labels[0] || 'Group 1',
-        labels[1] || 'Group 2',
-        labels[2] || 'Group 3',
-    ];
-};
-
 const AddCourseFlyout: React.FC<AddCourseFlyoutProps> = ({
     onClose,
     onSave,
@@ -135,8 +125,8 @@ const AddCourseFlyout: React.FC<AddCourseFlyoutProps> = ({
     const [tertiaryStudentGroupStart, setTertiaryStudentGroupStart] = useState(0);
     const [location, setLocation] = useState(defaultLocation);
     const [unit, setUnit] = useState(defaultUnit);
-    const [primaryStudentGroupLabel, secondaryStudentGroupLabel, tertiaryStudentGroupLabel] = useMemo(
-        () => getServiceCountLabels(serviceDefinitions),
+    const studentGroupLabels = useMemo(
+        () => getCourseStudentGroupLabels(serviceDefinitions).slice(0, 3),
         [serviceDefinitions],
     );
 
@@ -278,13 +268,13 @@ const AddCourseFlyout: React.FC<AddCourseFlyoutProps> = ({
                     <fieldset className="p-4 border border-gray-600 rounded-lg">
                         <legend className="px-2 text-sm font-semibold text-gray-300">Initial Student Numbers</legend>
                         <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-2">
-                             <Dropdown label={primaryStudentGroupLabel} id="student-group-1-start" value={primaryStudentGroupStart} onChange={e => setPrimaryStudentGroupStart(parseInt(e.target.value))}>
+                             <Dropdown label={studentGroupLabels[0] || 'Group 1'} id="student-group-1-start" value={primaryStudentGroupStart} onChange={e => setPrimaryStudentGroupStart(parseInt(e.target.value))}>
                                 {studentNumberOptions.map(n => <option key={n} value={n}>{n}</option>)}
                             </Dropdown>
-                             <Dropdown label={secondaryStudentGroupLabel} id="student-group-2-start" value={secondaryStudentGroupStart} onChange={e => setSecondaryStudentGroupStart(parseInt(e.target.value))}>
+                             <Dropdown label={studentGroupLabels[1] || 'Group 2'} id="student-group-2-start" value={secondaryStudentGroupStart} onChange={e => setSecondaryStudentGroupStart(parseInt(e.target.value))}>
                                 {studentNumberOptions.map(n => <option key={n} value={n}>{n}</option>)}
                             </Dropdown>
-                             <Dropdown label={tertiaryStudentGroupLabel} id="student-group-3-start" value={tertiaryStudentGroupStart} onChange={e => setTertiaryStudentGroupStart(parseInt(e.target.value))}>
+                             <Dropdown label={studentGroupLabels[2] || 'Group 3'} id="student-group-3-start" value={tertiaryStudentGroupStart} onChange={e => setTertiaryStudentGroupStart(parseInt(e.target.value))}>
                                 {studentNumberOptions.map(n => <option key={n} value={n}>{n}</option>)}
                             </Dropdown>
                             <div>

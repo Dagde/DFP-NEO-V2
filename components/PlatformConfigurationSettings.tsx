@@ -137,6 +137,11 @@ import {
   getConfiguredScoringMatrixElements,
   getScoringMatrixElementGroup,
 } from '../utils/scoringMatrixElements';
+import {
+  MAX_COURSE_STUDENT_GROUPS,
+  normaliseCourseStudentGroups,
+  type CourseStudentGroupDefinition,
+} from '../utils/courseStudentGroups';
 
 declare const XLSX: any;
 
@@ -2486,6 +2491,8 @@ interface PlatformConfigurationSettingsProps {
   }>;
   formationCallsigns?: FormationCallsign[];
   onUpdateFormationCallsigns?: (callsigns: FormationCallsign[]) => void;
+  serviceDefinitions?: CourseStudentGroupDefinition[];
+  onUpdateServiceDefinitions?: (defs: Array<{ longName: string; shortName: string }>) => void;
 }
 
 const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps> = ({
@@ -2518,6 +2525,8 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
   unitCurrencyDefinitions = {},
   formationCallsigns = [],
   onUpdateFormationCallsigns,
+  serviceDefinitions = [],
+  onUpdateServiceDefinitions,
 }) => {
   const visibleSectionTarget = sectionOnly ? (scrollTarget || 'platform-configuration-health') : null;
   const configurationHealthActive = !visibleSectionTarget || visibleSectionTarget === 'platform-configuration-health';
@@ -2535,6 +2544,40 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
   const [trainingReportElementGroupDrafts, setTrainingReportElementGroupDrafts] = useState<Record<string, string>>({});
   const [trainingReportNewElementDraft, setTrainingReportNewElementDraft] = useState('');
   const [trainingReportPreviewOpen, setTrainingReportPreviewOpen] = useState(false);
+  const courseStudentGroups = useMemo(
+    () => normaliseCourseStudentGroups(serviceDefinitions, { useFallback: false }),
+    [serviceDefinitions],
+  );
+  const updateCourseStudentGroup = useCallback((index: number, field: 'longName' | 'shortName', value: string) => {
+    if (!onUpdateServiceDefinitions) return;
+    const next = courseStudentGroups.map((group) => ({ ...group }));
+    while (next.length <= index && next.length < MAX_COURSE_STUDENT_GROUPS) {
+      next.push({ longName: '', shortName: '' });
+    }
+    if (!next[index]) return;
+    next[index][field] = value;
+    onUpdateServiceDefinitions(next
+      .slice(0, MAX_COURSE_STUDENT_GROUPS)
+      .map((group) => ({
+        longName: String(group.longName || group.shortName || '').trim(),
+        shortName: String(group.shortName || group.longName || '').trim(),
+      }))
+      .filter((group) => group.longName || group.shortName));
+  }, [courseStudentGroups, onUpdateServiceDefinitions]);
+  const addCourseStudentGroup = useCallback(() => {
+    if (!onUpdateServiceDefinitions || courseStudentGroups.length >= MAX_COURSE_STUDENT_GROUPS) return;
+    onUpdateServiceDefinitions([
+      ...courseStudentGroups,
+      {
+        longName: `Group ${courseStudentGroups.length + 1}`,
+        shortName: `Group ${courseStudentGroups.length + 1}`,
+      },
+    ]);
+  }, [courseStudentGroups, onUpdateServiceDefinitions]);
+  const removeCourseStudentGroup = useCallback((index: number) => {
+    if (!onUpdateServiceDefinitions) return;
+    onUpdateServiceDefinitions(courseStudentGroups.filter((_, groupIndex) => groupIndex !== index));
+  }, [courseStudentGroups, onUpdateServiceDefinitions]);
 
   const showPlatformConfigError = useCallback((message: string, link: PlatformConfigSaveBlocker['link'] | null = null) => {
     setError(message);
@@ -13213,6 +13256,65 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
                   onCommit={(value) => updatePersonnelDisplaySettings({ deputyCourseCommanderLabel: value })}
                   info="The label for the staff member who assists the course lead or acts as the deputy course lead. Your organisation may call this person the Deputy Course Commander, Deputy Course Lead or Course 2IC."
                 />
+              </div>
+            </div>
+
+            <div className="rounded-lg border border-amber-400/25 bg-amber-500/10 p-4">
+              <div className="mb-4 flex flex-wrap items-start justify-between gap-3">
+                <div>
+                  <h5 className="text-sm font-bold text-amber-100">Course Student Groups</h5>
+                  <p className="mt-1 text-xs leading-relaxed text-amber-100/75">
+                    These labels are shown on course cards, Course Progress tiles and course setup screens. Configure only the groups this customer actually uses.
+                  </p>
+                </div>
+                {renderRankTerminologySectionAction()}
+              </div>
+              <div className="space-y-3">
+                {(courseStudentGroups.length > 0 ? courseStudentGroups : [{ longName: 'Group 1', shortName: 'Group 1' }]).map((group, index) => (
+                  <div key={`course-student-group-${index}`} className="grid gap-3 rounded border border-gray-700 bg-gray-950 p-3 lg:grid-cols-[80px_minmax(180px,1fr)_minmax(160px,0.7fr)_auto]">
+                    <div>
+                      <div className="text-[11px] font-semibold uppercase tracking-wider text-gray-500">Group</div>
+                      <div className="mt-1 text-sm font-bold text-amber-100">{index + 1}</div>
+                    </div>
+                    <DraftField
+                      label="Full Name"
+                      value={group.longName}
+                      disabled={!canEditRankTerminology || !onUpdateServiceDefinitions}
+                      onCommit={(value) => updateCourseStudentGroup(index, 'longName', value)}
+                      info="The full description for this course student group."
+                    />
+                    <DraftField
+                      label="Short Label"
+                      value={group.shortName}
+                      disabled={!canEditRankTerminology || !onUpdateServiceDefinitions}
+                      onCommit={(value) => updateCourseStudentGroup(index, 'shortName', value)}
+                      info="The compact label shown on course cards. Example: 1FTS, CFS, Group 1."
+                    />
+                    <div className="flex items-end">
+                      <button
+                        type="button"
+                        disabled={!canEditRankTerminology || !onUpdateServiceDefinitions || courseStudentGroups.length <= 1}
+                        onClick={() => removeCourseStudentGroup(index)}
+                        className="h-[38px] rounded border border-red-500/40 bg-red-500/10 px-3 text-xs font-bold text-red-200 transition hover:border-red-400 hover:bg-red-500/20 disabled:cursor-not-allowed disabled:opacity-40"
+                      >
+                        Remove
+                      </button>
+                    </div>
+                  </div>
+                ))}
+                <div className="flex flex-wrap items-center justify-between gap-3 rounded border border-amber-400/20 bg-amber-500/5 px-3 py-2">
+                  <p className="text-xs font-semibold leading-5 text-amber-100/75">
+                    Up to {MAX_COURSE_STUDENT_GROUPS} group labels can be configured. The current course count fields store the first three group counts.
+                  </p>
+                  <button
+                    type="button"
+                    disabled={!canEditRankTerminology || !onUpdateServiceDefinitions || courseStudentGroups.length >= MAX_COURSE_STUDENT_GROUPS}
+                    onClick={addCourseStudentGroup}
+                    className="rounded border border-amber-300/50 bg-amber-400/15 px-3 py-1.5 text-xs font-bold text-amber-100 transition hover:border-amber-200 hover:bg-amber-400/25 disabled:cursor-not-allowed disabled:opacity-40"
+                  >
+                    Add Group
+                  </button>
+                </div>
               </div>
             </div>
 

@@ -2219,6 +2219,8 @@ export const SettingsViewWithMenu: React.FC<SettingsViewWithMenuProps> = (props)
                                 instructorsData={props.instructorsData}
                                 traineesData={props.traineesData}
                                 unitCurrencyDefinitions={props.unitCurrencyDefinitions}
+                                serviceDefinitions={props.serviceDefinitions}
+                                onUpdateServiceDefinitions={props.onUpdateServiceDefinitions}
                             />
                         </div>
                     )}
@@ -2249,6 +2251,8 @@ export const SettingsViewWithMenu: React.FC<SettingsViewWithMenuProps> = (props)
                             instructorsData={props.instructorsData}
                             traineesData={props.traineesData}
                             unitCurrencyDefinitions={props.unitCurrencyDefinitions}
+                                serviceDefinitions={props.serviceDefinitions}
+                                onUpdateServiceDefinitions={props.onUpdateServiceDefinitions}
                         />
                     )}
 
@@ -2279,6 +2283,8 @@ export const SettingsViewWithMenu: React.FC<SettingsViewWithMenuProps> = (props)
                             instructorsData={props.instructorsData}
                             traineesData={props.traineesData}
                             unitCurrencyDefinitions={props.unitCurrencyDefinitions}
+                                serviceDefinitions={props.serviceDefinitions}
+                                onUpdateServiceDefinitions={props.onUpdateServiceDefinitions}
                         />
                     )}
 
@@ -2309,6 +2315,8 @@ export const SettingsViewWithMenu: React.FC<SettingsViewWithMenuProps> = (props)
                             instructorsData={props.instructorsData}
                             traineesData={props.traineesData}
                             unitCurrencyDefinitions={props.unitCurrencyDefinitions}
+                                serviceDefinitions={props.serviceDefinitions}
+                                onUpdateServiceDefinitions={props.onUpdateServiceDefinitions}
                         />
                     )}
 
@@ -2518,6 +2526,8 @@ export const SettingsViewWithMenu: React.FC<SettingsViewWithMenuProps> = (props)
                             instructorsData={props.instructorsData}
                             traineesData={props.traineesData}
                             unitCurrencyDefinitions={props.unitCurrencyDefinitions}
+                                serviceDefinitions={props.serviceDefinitions}
+                                onUpdateServiceDefinitions={props.onUpdateServiceDefinitions}
                             formationCallsigns={props.formationCallsigns}
                             onUpdateFormationCallsigns={props.onUpdateFormationCallsigns}
                         />

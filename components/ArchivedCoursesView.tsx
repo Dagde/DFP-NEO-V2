@@ -2,6 +2,7 @@ import React, { useMemo, useState } from 'react';
 import { Course } from '../types';
 import { showDarkConfirm } from './DarkMessageModal';
 import { verifyCurrentUserPassword } from '../utils/passwordVerification';
+import { getCourseStudentGroupCounts } from '../utils/courseStudentGroups';
 
 interface ArchivedCoursesViewProps {
     archivedCourses: { [key: string]: string };
@@ -11,17 +12,6 @@ interface ArchivedCoursesViewProps {
     onDeleteCourse: (courseName: string) => void;
     onNavigateBack: () => void;
 }
-
-const getServiceCountLabels = (serviceDefinitions: Array<{ longName?: string; shortName?: string }> = []): [string, string, string] => {
-    const labels = serviceDefinitions
-        .map(service => String(service.shortName || service.longName || '').trim())
-        .filter(Boolean);
-    return [
-        labels[0] || 'Group 1',
-        labels[1] || 'Group 2',
-        labels[2] || 'Group 3',
-    ];
-};
 
 const darkenHexColor = (color: string) => {
     if (!color.startsWith('#') || color.length < 7) return color;
@@ -54,10 +44,6 @@ const ArchivedCoursesView: React.FC<ArchivedCoursesViewProps> = ({
     const archivedCourseNames = useMemo(
         () => Object.keys(archivedCourses).sort((a, b) => a.localeCompare(b)),
         [archivedCourses]
-    );
-    const [primaryStudentGroupLabel, secondaryStudentGroupLabel, tertiaryStudentGroupLabel] = useMemo(
-        () => getServiceCountLabels(serviceDefinitions),
-        [serviceDefinitions],
     );
     const courseRecordsByName = useMemo(() => {
         const records = new Map<string, Course>();
@@ -145,10 +131,8 @@ const ArchivedCoursesView: React.FC<ArchivedCoursesViewProps> = ({
             status: 'ARCHIVED',
         };
         const courseColor = displayCourse.color || color || '';
-        const primaryCount = displayCourse.raafStart ?? 0;
-        const secondaryCount = displayCourse.navyStart ?? 0;
-        const tertiaryCount = displayCourse.armyStart ?? 0;
-        const totalStudents = primaryCount + secondaryCount + tertiaryCount;
+        const studentGroupCounts = getCourseStudentGroupCounts(displayCourse, serviceDefinitions);
+        const totalStudents = studentGroupCounts.reduce((total, group) => total + group.count, 0);
 
         return (
             <div className="bg-gray-700 rounded-lg p-4 border border-gray-600">
@@ -198,10 +182,10 @@ const ArchivedCoursesView: React.FC<ArchivedCoursesViewProps> = ({
                         <span className="text-gray-400">Total Students:</span>
                         <span className="font-semibold">{totalStudents}</span>
                     </div>
-                    <div className="flex justify-between text-xs">
-                        <span className="text-gray-400">{primaryStudentGroupLabel}: {primaryCount}</span>
-                        <span className="text-gray-400">{secondaryStudentGroupLabel}: {secondaryCount}</span>
-                        <span className="text-gray-400">{tertiaryStudentGroupLabel}: {tertiaryCount}</span>
+                    <div className="flex flex-wrap justify-between gap-x-3 gap-y-1 text-xs">
+                        {studentGroupCounts.map((group, index) => (
+                            <span key={`${group.label}-${index}`} className="text-gray-400">{group.label}: {group.count}</span>
+                        ))}
                     </div>
                     <div className="pt-1">
                         <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-gray-600 text-gray-300">

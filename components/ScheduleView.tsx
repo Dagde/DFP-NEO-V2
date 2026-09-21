@@ -72,6 +72,11 @@ import { formatClassroomFieldLabel, formatClassroomNames, getClassroomNamesForRo
 import { createAcademicStandardEventCode, normaliseAcademicStandardEvents, type AcademicStandardEventConfig } from '../utils/academicStandardEvents';
 import { normaliseLmpAudience, type LmpAudience } from '../utils/lmpAudience';
 import { validateSpreadsheetBeforeParse } from '../utils/spreadsheetSecurity';
+import {
+    MAX_COURSE_STUDENT_GROUPS,
+    normaliseCourseStudentGroups,
+    type CourseStudentGroupDefinition,
+} from '../utils/courseStudentGroups';
    
 declare const XLSX: any;
 
@@ -176,6 +181,8 @@ interface ScheduleViewProps {
   onLinkedAvailabilityChange?: (count: number) => void;
   onInitialSetupWizardActiveChange?: (active: boolean) => void;
   initialOrganisationSlideoutView?: OrganisationSlideoutView;
+  serviceDefinitions?: CourseStudentGroupDefinition[];
+  onUpdateServiceDefinitions?: (defs: Array<{ longName: string; shortName: string }>) => void;
   formationCallsigns?: FormationCallsign[];
   flyingStartTime?: number;
   flyingEndTime?: number;
@@ -1911,6 +1918,37 @@ const OrganisationMyUnitSettings: React.FC<{
         [platformConfig, unitCode],
     );
     const configuredContinuationCurrencyEventsLabel = `${configuredContinuationShortLabel} / Currency Events`;
+    const courseStudentGroups = useMemo(
+        () => normaliseCourseStudentGroups(serviceDefinitions, { useFallback: false }),
+        [serviceDefinitions],
+    );
+    const updateCourseStudentGroup = useCallback((index: number, field: 'longName' | 'shortName', value: string) => {
+        if (!onUpdateServiceDefinitions) return;
+        const next = courseStudentGroups.map((group) => ({ ...group }));
+        while (next.length <= index && next.length < MAX_COURSE_STUDENT_GROUPS) {
+            next.push({ longName: '', shortName: '' });
+        }
+        if (!next[index]) return;
+        next[index][field] = value;
+        onUpdateServiceDefinitions(next
+            .slice(0, MAX_COURSE_STUDENT_GROUPS)
+            .map((group) => ({
+                longName: String(group.longName || group.shortName || '').trim(),
+                shortName: String(group.shortName || group.longName || '').trim(),
+            }))
+            .filter((group) => group.longName || group.shortName));
+    }, [courseStudentGroups, onUpdateServiceDefinitions]);
+    const addCourseStudentGroup = useCallback(() => {
+        if (!onUpdateServiceDefinitions || courseStudentGroups.length >= MAX_COURSE_STUDENT_GROUPS) return;
+        onUpdateServiceDefinitions([
+            ...courseStudentGroups,
+            { longName: `Group ${courseStudentGroups.length + 1}`, shortName: `Group ${courseStudentGroups.length + 1}` },
+        ]);
+    }, [courseStudentGroups, onUpdateServiceDefinitions]);
+    const removeCourseStudentGroup = useCallback((index: number) => {
+        if (!onUpdateServiceDefinitions) return;
+        onUpdateServiceDefinitions(courseStudentGroups.filter((_, groupIndex) => groupIndex !== index));
+    }, [courseStudentGroups, onUpdateServiceDefinitions]);
     const activeUnitCode = normaliseUnitSettingsIdentifier(unitCode);
     const activeUnitCodes = Array.from(new Set(
         activeUnitCode
@@ -2846,7 +2884,9 @@ const InitialSetupWizard: React.FC<{
     canUsePlatformPermission?: (permissionId: string) => boolean;
     isSetupTestMode?: boolean;
     onSaveSetupTestPersonnel?: (payload: { instructors: any[]; trainees: any[] }) => void;
-}> = ({ platformConfig, organisationSettings, unitCode, locationCode, formationCallsigns = [], buildRuleSettings, flyingStartTime = 8, flyingEndTime = 17, ftdStartTime = 8, ftdEndTime = 17, cptStartTime = 8, cptEndTime = 17, allowNightFlying = true, commenceNightFlying = 18.5, ceaseNightFlying = 23.5, onUpdateFlyingStartTime, onUpdateFlyingEndTime, onUpdateFtdStartTime, onUpdateFtdEndTime, onUpdateCptStartTime, onUpdateCptEndTime, onUpdateAllowNightFlying, onUpdateCommenceNightFlying, onUpdateCeaseNightFlying, dispatchStaggerSettings = DEFAULT_DISPATCH_STAGGER_SETTINGS, onUpdateDispatchStaggerSettings, tileStatusSettings = DEFAULT_TILE_STATUS_SETTINGS, onUpdateTileStatusSettings, emergencyFreezeAuthority = DEFAULT_EMERGENCY_FREEZE_AUTHORITY, onUpdateEmergencyFreezeAuthority, emergencyFreezeAllowedActions = DEFAULT_EMERGENCY_FREEZE_ALLOWED_ACTIONS, onUpdateEmergencyFreezeAllowedActions, qualificationOptions = [], currentUserQualificationIds = [], onUpdatePlatformConfig, onNavigateToSettingsSection, currentUserPermission = 'Staff', canUsePlatformPermission, isSetupTestMode = false, onSaveSetupTestPersonnel }) => {
+    serviceDefinitions?: CourseStudentGroupDefinition[];
+    onUpdateServiceDefinitions?: (defs: Array<{ longName: string; shortName: string }>) => void;
+}> = ({ platformConfig, organisationSettings, unitCode, locationCode, formationCallsigns = [], buildRuleSettings, flyingStartTime = 8, flyingEndTime = 17, ftdStartTime = 8, ftdEndTime = 17, cptStartTime = 8, cptEndTime = 17, allowNightFlying = true, commenceNightFlying = 18.5, ceaseNightFlying = 23.5, onUpdateFlyingStartTime, onUpdateFlyingEndTime, onUpdateFtdStartTime, onUpdateFtdEndTime, onUpdateCptStartTime, onUpdateCptEndTime, onUpdateAllowNightFlying, onUpdateCommenceNightFlying, onUpdateCeaseNightFlying, dispatchStaggerSettings = DEFAULT_DISPATCH_STAGGER_SETTINGS, onUpdateDispatchStaggerSettings, tileStatusSettings = DEFAULT_TILE_STATUS_SETTINGS, onUpdateTileStatusSettings, emergencyFreezeAuthority = DEFAULT_EMERGENCY_FREEZE_AUTHORITY, onUpdateEmergencyFreezeAuthority, emergencyFreezeAllowedActions = DEFAULT_EMERGENCY_FREEZE_ALLOWED_ACTIONS, onUpdateEmergencyFreezeAllowedActions, qualificationOptions = [], currentUserQualificationIds = [], onUpdatePlatformConfig, onNavigateToSettingsSection, currentUserPermission = 'Staff', canUsePlatformPermission, isSetupTestMode = false, onSaveSetupTestPersonnel, serviceDefinitions = [], onUpdateServiceDefinitions }) => {
     const [mode, setMode] = useState<InitialSetupWizardMode>('detect');
     const unitTypeOptions = useMemo(() => normaliseUnitTypeOptions(platformConfig), [platformConfig]);
     const configuredContinuationShortLabel = useMemo(
@@ -5989,6 +6029,14 @@ const InitialSetupWizard: React.FC<{
             category: 'highly-desirable',
         },
         {
+            id: 'course-student-groups',
+            title: 'Set course student group labels',
+            label: 'Course groups',
+            body: 'Name the groups used on course cards and progress tiles so staff see the same terminology everywhere.',
+            checkIds: ['access'],
+            category: 'highly-desirable',
+        },
+        {
             id: 'crew-roles',
             title: 'Set the crew roles this unit uses',
             label: 'Crew roles',
@@ -6703,6 +6751,11 @@ const InitialSetupWizard: React.FC<{
                     || hasMeaningfulWizardText(rankSettingsDraft.traineeRanks)
                     || hasMeaningfulWizardText(rankSettingsDraft.instructorLabel, ['Instructor'])
                 );
+            case 'course-student-groups':
+                return courseStudentGroups.some((group) => (
+                    hasMeaningfulWizardText(group.longName, ['Group 1', 'Group 2', 'Group 3', 'Group 4'])
+                    || hasMeaningfulWizardText(group.shortName, ['Group 1', 'Group 2', 'Group 3', 'Group 4'])
+                ));
             case 'crew-roles':
                 return parseWizardCrewRoleRows(crewRolesDraft).some((row) => (
                     hasMeaningfulWizardText(row.role, ['Crew Role'])
@@ -6940,6 +6993,10 @@ const InitialSetupWizard: React.FC<{
         }
         if (stepId === 'ranks-labels') {
             saveRankSettingsDraft();
+            return;
+        }
+        if (stepId === 'course-student-groups') {
+            onShowWizardSuccess('Course student group labels synced into Settings.');
             return;
         }
         if (stepId === 'crew-roles') {
@@ -8203,6 +8260,51 @@ const InitialSetupWizard: React.FC<{
                 ) : null}
                 <div className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-xs font-semibold leading-5 text-slate-700">
                     Selected rank table: {RANK_EQUIVALENCY_PRESET_LABELS[selectedPresetKey] || 'Australia'}{serviceNames ? ` (${serviceNames})` : ''}. The full rank equivalency table remains in Settings under Resources & Configuration, Rank, Terminology & Labels.
+                </div>
+            </div>
+        );
+    };
+    const renderCourseStudentGroupsEditor = () => {
+        const visibleGroups = courseStudentGroups.length > 0 ? courseStudentGroups : [{ longName: 'Group 1', shortName: 'Group 1' }];
+        return (
+            <div className="space-y-3">
+                <div className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs font-semibold leading-5 text-amber-900">
+                    Configure the course group labels that appear on Course Progress, Training Records and course setup. Add only the groups this customer needs, up to {MAX_COURSE_STUDENT_GROUPS}.
+                </div>
+                <div className="space-y-2">
+                    {visibleGroups.map((group, index) => (
+                        <div key={`wizard-course-group-${index}`} className="grid gap-3 rounded-lg border border-slate-300 bg-white p-3 md:grid-cols-[80px_minmax(0,1fr)_minmax(0,0.8fr)_auto]">
+                            <div>
+                                <span className={wizardLabelClass}>Group</span>
+                                <span className="mt-1 block text-lg font-black text-slate-900">{index + 1}</span>
+                            </div>
+                            {wizardField('Full name', group.longName, (value) => updateCourseStudentGroup(index, 'longName', value), undefined, `Group ${index + 1}`)}
+                            {wizardField('Short label', group.shortName, (value) => updateCourseStudentGroup(index, 'shortName', value), undefined, `G${index + 1}`)}
+                            <div className="flex items-end">
+                                <button
+                                    type="button"
+                                    className="rounded-md border border-red-200 bg-red-50 px-3 py-2 text-xs font-bold text-red-700 transition hover:border-red-300 hover:bg-red-100 disabled:cursor-not-allowed disabled:opacity-40"
+                                    disabled={!onUpdateServiceDefinitions || courseStudentGroups.length <= 1}
+                                    onClick={() => removeCourseStudentGroup(index)}
+                                >
+                                    Remove
+                                </button>
+                            </div>
+                        </div>
+                    ))}
+                </div>
+                <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-slate-300 bg-slate-50 px-3 py-2">
+                    <span className="text-xs font-semibold leading-5 text-slate-600">
+                        Current course count fields store the first three group counts. A fourth label can be shown, but its count remains zero until the data model is extended.
+                    </span>
+                    <button
+                        type="button"
+                        className={wizardSmallButtonClass}
+                        disabled={!onUpdateServiceDefinitions || courseStudentGroups.length >= MAX_COURSE_STUDENT_GROUPS}
+                        onClick={addCourseStudentGroup}
+                    >
+                        Add group
+                    </button>
                 </div>
             </div>
         );
@@ -10722,6 +10824,12 @@ const InitialSetupWizard: React.FC<{
                 renderRankLabelsEditor(),
             );
         }
+        if (visibleStep.id === 'course-student-groups') {
+            return promptShell(
+                <p>Set the course student group labels used in course records and progress pages. Leave unused groups out so the app only displays the groups the customer actually uses.</p>,
+                renderCourseStudentGroupsEditor(),
+            );
+        }
         if (visibleStep.id === 'crew-roles') {
             return promptShell(
                 <p>Set the approved crew role names this unit can use. These names become the dropdown choices when you define normal and alternate crew composition.</p>,
@@ -11215,7 +11323,9 @@ const OrganisationSlideoutDiagram: React.FC<{
     isOpen?: boolean;
     onInitialSetupWizardActiveChange?: (active: boolean) => void;
     initialView?: OrganisationSlideoutView;
-}> = ({ platformConfig, organisationSettings, unitCode, locationCode, formationCallsigns = [], buildRuleSettings, flyingStartTime, flyingEndTime, ftdStartTime, ftdEndTime, cptStartTime, cptEndTime, allowNightFlying, commenceNightFlying, ceaseNightFlying, onUpdateFlyingStartTime, onUpdateFlyingEndTime, onUpdateFtdStartTime, onUpdateFtdEndTime, onUpdateCptStartTime, onUpdateCptEndTime, onUpdateAllowNightFlying, onUpdateCommenceNightFlying, onUpdateCeaseNightFlying, dispatchStaggerSettings, onUpdateDispatchStaggerSettings, tileStatusSettings, onUpdateTileStatusSettings, emergencyFreezeAuthority, onUpdateEmergencyFreezeAuthority, emergencyFreezeAllowedActions, onUpdateEmergencyFreezeAllowedActions, qualificationOptions, currentUserQualificationIds, onUpdatePlatformConfig, onNavigateToSettingsSection, currentUserPermission = 'Staff', canUsePlatformPermission, isSetupTestMode = false, onSaveSetupTestPersonnel, isOpen = false, onInitialSetupWizardActiveChange, initialView = 'structure' }) => {
+    serviceDefinitions?: CourseStudentGroupDefinition[];
+    onUpdateServiceDefinitions?: (defs: Array<{ longName: string; shortName: string }>) => void;
+}> = ({ platformConfig, organisationSettings, unitCode, locationCode, formationCallsigns = [], buildRuleSettings, flyingStartTime, flyingEndTime, ftdStartTime, ftdEndTime, cptStartTime, cptEndTime, allowNightFlying, commenceNightFlying, ceaseNightFlying, onUpdateFlyingStartTime, onUpdateFlyingEndTime, onUpdateFtdStartTime, onUpdateFtdEndTime, onUpdateCptStartTime, onUpdateCptEndTime, onUpdateAllowNightFlying, onUpdateCommenceNightFlying, onUpdateCeaseNightFlying, dispatchStaggerSettings, onUpdateDispatchStaggerSettings, tileStatusSettings, onUpdateTileStatusSettings, emergencyFreezeAuthority, onUpdateEmergencyFreezeAuthority, emergencyFreezeAllowedActions, onUpdateEmergencyFreezeAllowedActions, qualificationOptions, currentUserQualificationIds, onUpdatePlatformConfig, onNavigateToSettingsSection, currentUserPermission = 'Staff', canUsePlatformPermission, isSetupTestMode = false, onSaveSetupTestPersonnel, isOpen = false, onInitialSetupWizardActiveChange, initialView = 'structure', serviceDefinitions = [], onUpdateServiceDefinitions }) => {
     const chart = useMemo(() => buildOrganisationChart(platformConfig), [platformConfig]);
     const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
     const [activeView, setActiveView] = useState<OrganisationSlideoutView>(initialView);
@@ -11402,6 +11512,8 @@ const OrganisationSlideoutDiagram: React.FC<{
                         canUsePlatformPermission={canUsePlatformPermission}
                         isSetupTestMode={isSetupTestMode}
                         onSaveSetupTestPersonnel={onSaveSetupTestPersonnel}
+                        serviceDefinitions={serviceDefinitions}
+                        onUpdateServiceDefinitions={onUpdateServiceDefinitions}
                     />
                 </div>
             )}
@@ -11450,6 +11562,8 @@ const ScheduleView: React.FC<ScheduleViewProps> = ({
     onLinkedAvailabilityChange,
     onInitialSetupWizardActiveChange,
     initialOrganisationSlideoutView = 'structure',
+    serviceDefinitions = [],
+    onUpdateServiceDefinitions,
     formationCallsigns = [],
     buildRuleSettings,
     flyingStartTime,
@@ -13273,7 +13387,7 @@ const ScheduleView: React.FC<ScheduleViewProps> = ({
                         style={{ width: 'min(calc(clamp(360px, 40vw, 680px) + 400px), calc(100vw - 420px))' }}
                     >
                         <div className={`h-full overflow-hidden border-r border-white/5 bg-slate-950 ${showResourceUnderlayPanel ? 'pointer-events-auto' : 'pointer-events-none'}`}>
-                            <OrganisationSlideoutDiagram platformConfig={platformConfig} organisationSettings={organisationSettings} unitCode={unitCode} locationCode={locationCode} formationCallsigns={formationCallsigns} buildRuleSettings={buildRuleSettings} flyingStartTime={flyingStartTime} flyingEndTime={flyingEndTime} ftdStartTime={ftdStartTime} ftdEndTime={ftdEndTime} cptStartTime={cptStartTime} cptEndTime={cptEndTime} allowNightFlying={allowNightFlying} commenceNightFlying={commenceNightFlying} ceaseNightFlying={ceaseNightFlying} onUpdateFlyingStartTime={onUpdateFlyingStartTime} onUpdateFlyingEndTime={onUpdateFlyingEndTime} onUpdateFtdStartTime={onUpdateFtdStartTime} onUpdateFtdEndTime={onUpdateFtdEndTime} onUpdateCptStartTime={onUpdateCptStartTime} onUpdateCptEndTime={onUpdateCptEndTime} onUpdateAllowNightFlying={onUpdateAllowNightFlying} onUpdateCommenceNightFlying={onUpdateCommenceNightFlying} onUpdateCeaseNightFlying={onUpdateCeaseNightFlying} dispatchStaggerSettings={dispatchStaggerSettings} onUpdateDispatchStaggerSettings={onUpdateDispatchStaggerSettings} tileStatusSettings={tileStatusSettings} onUpdateTileStatusSettings={onUpdateTileStatusSettings} emergencyFreezeAuthority={emergencyFreezeAuthority} onUpdateEmergencyFreezeAuthority={onUpdateEmergencyFreezeAuthority} emergencyFreezeAllowedActions={emergencyFreezeAllowedActions} onUpdateEmergencyFreezeAllowedActions={onUpdateEmergencyFreezeAllowedActions} qualificationOptions={qualificationOptions} currentUserQualificationIds={currentUserQualificationIds} onUpdatePlatformConfig={onUpdatePlatformConfig} onNavigateToSettingsSection={onNavigateToSettingsSection} currentUserPermission={currentUserPermission} canUsePlatformPermission={canUsePlatformPermission} isSetupTestMode={isSetupTestMode} onSaveSetupTestPersonnel={onSaveSetupTestPersonnel} isOpen={showResourceUnderlayPanel} onInitialSetupWizardActiveChange={onInitialSetupWizardActiveChange} initialView={initialOrganisationSlideoutView} />
+                            <OrganisationSlideoutDiagram platformConfig={platformConfig} organisationSettings={organisationSettings} unitCode={unitCode} locationCode={locationCode} formationCallsigns={formationCallsigns} buildRuleSettings={buildRuleSettings} flyingStartTime={flyingStartTime} flyingEndTime={flyingEndTime} ftdStartTime={ftdStartTime} ftdEndTime={ftdEndTime} cptStartTime={cptStartTime} cptEndTime={cptEndTime} allowNightFlying={allowNightFlying} commenceNightFlying={commenceNightFlying} ceaseNightFlying={ceaseNightFlying} onUpdateFlyingStartTime={onUpdateFlyingStartTime} onUpdateFlyingEndTime={onUpdateFlyingEndTime} onUpdateFtdStartTime={onUpdateFtdStartTime} onUpdateFtdEndTime={onUpdateFtdEndTime} onUpdateCptStartTime={onUpdateCptStartTime} onUpdateCptEndTime={onUpdateCptEndTime} onUpdateAllowNightFlying={onUpdateAllowNightFlying} onUpdateCommenceNightFlying={onUpdateCommenceNightFlying} onUpdateCeaseNightFlying={onUpdateCeaseNightFlying} dispatchStaggerSettings={dispatchStaggerSettings} onUpdateDispatchStaggerSettings={onUpdateDispatchStaggerSettings} tileStatusSettings={tileStatusSettings} onUpdateTileStatusSettings={onUpdateTileStatusSettings} emergencyFreezeAuthority={emergencyFreezeAuthority} onUpdateEmergencyFreezeAuthority={onUpdateEmergencyFreezeAuthority} emergencyFreezeAllowedActions={emergencyFreezeAllowedActions} onUpdateEmergencyFreezeAllowedActions={onUpdateEmergencyFreezeAllowedActions} qualificationOptions={qualificationOptions} currentUserQualificationIds={currentUserQualificationIds} onUpdatePlatformConfig={onUpdatePlatformConfig} onNavigateToSettingsSection={onNavigateToSettingsSection} currentUserPermission={currentUserPermission} canUsePlatformPermission={canUsePlatformPermission} isSetupTestMode={isSetupTestMode} onSaveSetupTestPersonnel={onSaveSetupTestPersonnel} isOpen={showResourceUnderlayPanel} onInitialSetupWizardActiveChange={onInitialSetupWizardActiveChange} initialView={initialOrganisationSlideoutView} serviceDefinitions={serviceDefinitions} onUpdateServiceDefinitions={onUpdateServiceDefinitions} />
                         </div>
                         <button
                             type="button"
