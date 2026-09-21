@@ -18995,7 +18995,37 @@ app.get('/api/archive/dfp-date', async (req, res) => {
     }
 
     if (archiveRows?.length > 0) {
-      const archive = archiveRows[0];
+      let archive = archiveRows[0];
+      const snapshotRowsForArchive = await db.$queryRawUnsafe(
+        `SELECT * FROM "DailySnapshot" WHERE date = $1::text LIMIT 1`,
+        archive.snapshotKey
+      ).catch(() => []);
+      const snapshotForArchive = snapshotRowsForArchive?.[0] || null;
+      const snapshotSavedAtMs = snapshotForArchive?.savedAt ? new Date(snapshotForArchive.savedAt).getTime() : 0;
+      const archiveUpdatedAtMs = archive?.updatedAt ? new Date(archive.updatedAt).getTime() : 0;
+      if (
+        snapshotForArchive
+        && Number.isFinite(snapshotSavedAtMs)
+        && Number.isFinite(archiveUpdatedAtMs)
+        && snapshotSavedAtMs > archiveUpdatedAtMs + 500
+        && Array.isArray(snapshotForArchive.scheduleEvents)
+      ) {
+        const syncResult = await saveCompactPublishedDfpArchive(db, {
+          ...snapshotForArchive,
+          savedBy: snapshotForArchive.savedBy || 'daily-snapshot-self-heal',
+        });
+        const refreshedArchiveRows = await db.$queryRawUnsafe(
+          `SELECT * FROM "PublishedDfpArchive" WHERE id = $1::text LIMIT 1`,
+          syncResult.archiveId
+        );
+        archive = refreshedArchiveRows?.[0] || archive;
+        await writeArchiveDiagnostic(db, 'ARCHIVE_DAILY_SNAPSHOT_SELF_HEAL', archive.snapshotKey, archive.date, 'success', {
+          archiveId: archive.id,
+          snapshotSavedAt: snapshotForArchive.savedAt,
+          archiveUpdatedAt: archive.updatedAt,
+          eventCount: syncResult.eventCount,
+        }, Date.now() - startedAt);
+      }
       const eventRows = await db.$queryRawUnsafe(`
         SELECT "eventId", "date", "eventType", "eventCode", "resourceId", "startTime", "duration", "personnelRefs", "eventData", "createdAt"
         FROM "ScheduleEventArchive"
