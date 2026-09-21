@@ -115007,6 +115007,14 @@ This cannot be undone.`,
     ] }) })
   ] });
 };
+const FULL_WIDTH_WORKSPACE_VIEWS = /* @__PURE__ */ new Set([
+  "Program Schedule",
+  "InstructorSchedule",
+  "TraineeSchedule",
+  "NextDayBuild",
+  "NextDayInstructorSchedule",
+  "NextDayTraineeSchedule"
+]);
 const normalisePersonnelRecord = (person) => {
   const preferences = person?.preferences && typeof person.preferences === "object" && !Array.isArray(person.preferences) ? person.preferences : {};
   String(person?.unit || "").trim().toUpperCase();
@@ -153799,6 +153807,31 @@ Do you want to replace the existing entry?`,
         return /* @__PURE__ */ jsxRuntimeExports.jsx("div", { children: "View not found" });
     }
   };
+  const renderMainWorkspaceContent = () => {
+    const content = renderActiveView();
+    if (FULL_WIDTH_WORKSPACE_VIEWS.has(activeView)) {
+      return content;
+    }
+    return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "relative h-full min-h-0 overflow-hidden bg-slate-950", children: [
+      /* @__PURE__ */ jsxRuntimeExports.jsx(
+        "div",
+        {
+          className: "pointer-events-none absolute inset-0 opacity-70",
+          "aria-hidden": "true",
+          style: {
+            backgroundImage: [
+              "linear-gradient(90deg, rgba(148, 163, 184, 0.055) 1px, transparent 1px)",
+              "linear-gradient(0deg, rgba(148, 163, 184, 0.04) 1px, transparent 1px)",
+              "radial-gradient(circle at 18% 24%, rgba(56, 189, 248, 0.08), transparent 34%)",
+              "radial-gradient(circle at 82% 76%, rgba(251, 146, 60, 0.06), transparent 30%)"
+            ].join(", "),
+            backgroundSize: "56px 56px, 56px 56px, 100% 100%, 100% 100%"
+          }
+        }
+      ),
+      /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "relative mx-auto h-full min-h-0 w-full max-w-[1440px] overflow-hidden border-x border-slate-700/45 bg-slate-950 shadow-[0_0_44px_rgba(0,0,0,0.34)]", children: content })
+    ] });
+  };
   const handleNavigateToProfile = (user) => {
     logRoutineAppDebug("🎡 Navigating to profile:", user);
     logRoutineAppDebug("user:", JSON.stringify(user));
@@ -154029,7 +154062,7 @@ Do you want to replace the existing entry?`,
                   onClose: () => setShowDfpAuditFlyout(false)
                 }
               ),
-              /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex-1 overflow-hidden flex flex-col min-h-0", children: renderActiveView() }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex-1 overflow-hidden flex flex-col min-h-0", children: renderMainWorkspaceContent() }),
               activeView === "Program Schedule" && /* @__PURE__ */ jsxRuntimeExports.jsxs(
                 "aside",
                 {

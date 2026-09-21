@@ -7717,6 +7717,16 @@ import { DailyAvailabilityRecord } from './types/AircraftAvailability';
 import PauseFlightOpsPanel, { PausePhase, PauseBuildConfig } from './components/PauseFlightOpsPanel';
 import PropellerLoadingOverlay from './components/PropellerLoadingOverlay';
 
+const ENABLE_WIDE_SCREEN_WORKSPACE_FRAME = true;
+const FULL_WIDTH_WORKSPACE_VIEWS = new Set([
+    'Program Schedule',
+    'InstructorSchedule',
+    'TraineeSchedule',
+    'NextDayBuild',
+    'NextDayInstructorSchedule',
+    'NextDayTraineeSchedule',
+]);
+
 const normalisePersonnelRecord = (person: any): any => {
     const preferences = person?.preferences && typeof person.preferences === 'object' && !Array.isArray(person.preferences)
         ? person.preferences
@@ -55285,6 +55295,34 @@ appliedUpdates.forEach(update => {
         }
     };
 
+    const renderMainWorkspaceContent = () => {
+        const content = renderActiveView();
+        if (!ENABLE_WIDE_SCREEN_WORKSPACE_FRAME || FULL_WIDTH_WORKSPACE_VIEWS.has(activeView)) {
+            return content;
+        }
+
+        return (
+            <div className="relative h-full min-h-0 overflow-hidden bg-slate-950">
+                <div
+                    className="pointer-events-none absolute inset-0 opacity-70"
+                    aria-hidden="true"
+                    style={{
+                        backgroundImage: [
+                            'linear-gradient(90deg, rgba(148, 163, 184, 0.055) 1px, transparent 1px)',
+                            'linear-gradient(0deg, rgba(148, 163, 184, 0.04) 1px, transparent 1px)',
+                            'radial-gradient(circle at 18% 24%, rgba(56, 189, 248, 0.08), transparent 34%)',
+                            'radial-gradient(circle at 82% 76%, rgba(251, 146, 60, 0.06), transparent 30%)',
+                        ].join(', '),
+                        backgroundSize: '56px 56px, 56px 56px, 100% 100%, 100% 100%',
+                    }}
+                />
+                <div className="relative mx-auto h-full min-h-0 w-full max-w-[1440px] overflow-hidden border-x border-slate-700/45 bg-slate-950 shadow-[0_0_44px_rgba(0,0,0,0.34)]">
+                    {content}
+                </div>
+            </div>
+        );
+    };
+
     // Note: Debug code removed for production deployment
 
 
@@ -55535,7 +55573,7 @@ appliedUpdates.forEach(update => {
                         />
                     )}
                     <div className="flex-1 overflow-hidden flex flex-col min-h-0">
-                        {renderActiveView()}
+                        {renderMainWorkspaceContent()}
                     </div>
                     {activeView === 'Program Schedule' && (
                         <aside
