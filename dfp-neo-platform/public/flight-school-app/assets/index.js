@@ -77599,7 +77599,7 @@ const CourseTab = ({ summary, trainees, events, trainingReportDisplayName }) => 
   };
   const isElevatedRiskEvent = (ev) => {
     const failRate = eventFailRatePct(ev);
-    return failRate !== null && failRate >= thresholds.bottleneckThresholdPct;
+    return failRate !== null && failRate > thresholds.bottleneckThresholdPct;
   };
   const formatEventRiskTag = (ev) => {
     const failRate = eventFailRatePct(ev);
@@ -77839,7 +77839,7 @@ const CourseTab = ({ summary, trainees, events, trainingReportDisplayName }) => 
     /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid grid-cols-1 md:grid-cols-2 gap-4", children: [
       /* @__PURE__ */ jsxRuntimeExports.jsx(SCard, { title: "Elevated Risk Events", children: bottleneckEvents.length === 0 ? /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-gray-500 text-sm", children: "No elevated risk events detected" }) : /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
         /* @__PURE__ */ jsxRuntimeExports.jsxs("p", { className: "text-xs text-gray-500 mb-2", children: [
-          "Events where at least ",
+          "Events where more than ",
           thresholds.bottleneckThresholdPct,
           "% of attempts are below the pass grade. This is different to the average-grade ranking above."
         ] }),

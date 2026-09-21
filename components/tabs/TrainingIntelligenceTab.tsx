@@ -1679,7 +1679,7 @@ const CourseTab: React.FC<{
   };
   const isElevatedRiskEvent = (ev: TIEEventSummary) => {
     const failRate = eventFailRatePct(ev);
-    return failRate !== null && failRate >= thresholds.bottleneckThresholdPct;
+    return failRate !== null && failRate > thresholds.bottleneckThresholdPct;
   };
   const formatEventRiskTag = (ev: TIEEventSummary) => {
     const failRate = eventFailRatePct(ev);
@@ -1945,7 +1945,7 @@ const CourseTab: React.FC<{
             ? <p className="text-gray-500 text-sm">No elevated risk events detected</p>
             : (
               <>
-                <p className="text-xs text-gray-500 mb-2">Events where at least {thresholds.bottleneckThresholdPct}% of attempts are below the pass grade. This is different to the average-grade ranking above.</p>
+                <p className="text-xs text-gray-500 mb-2">Events where more than {thresholds.bottleneckThresholdPct}% of attempts are below the pass grade. This is different to the average-grade ranking above.</p>
                 <div className="flex flex-wrap gap-2">{bottleneckEvents.slice(0, 5).map(e => <Tag key={e} text={e} type="red" />)}</div>
                 {bottleneckEvents.length > 5 && <p className="text-xs text-gray-600 mt-2">+{bottleneckEvents.length - 5} more</p>}
               </>
