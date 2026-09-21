@@ -41220,12 +41220,12 @@ const ScheduleView = ({
             ` }),
     shouldShowInitialSetupPrompt && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "pointer-events-none fixed bottom-[8vh] left-[260px] right-[178px] top-[218px] z-[240] flex items-center justify-center px-8", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "pointer-events-auto relative flex w-[min(1040px,calc(100vw-520px))] max-w-[calc(100%-64px)] flex-col items-center overflow-hidden rounded-xl border border-orange-300/25 bg-slate-950/82 px-8 py-7 text-center shadow-[0_26px_70px_rgba(0,0,0,0.56)] backdrop-blur-md", children: [
       /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "pointer-events-none absolute inset-x-[-18%] top-[-42%] h-[112%] rounded-full bg-[radial-gradient(ellipse_at_center,rgba(251,146,60,0.42)_0%,rgba(251,146,60,0.2)_24%,rgba(251,146,60,0.08)_46%,rgba(251,146,60,0)_72%)] blur-2xl", "aria-hidden": "true" }),
-      /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "relative mb-5 flex w-[min(850px,94%)] justify-center rounded-md border border-orange-300/55 bg-black/20 px-3 py-2 shadow-[0_0_18px_rgba(251,146,60,0.16)]", children: /* @__PURE__ */ jsxRuntimeExports.jsx(
+      /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "relative mb-5 flex w-[min(850px,94%)] justify-center shadow-[0_0_18px_rgba(251,146,60,0.16)]", children: /* @__PURE__ */ jsxRuntimeExports.jsx(
         "img",
         {
           src: "/dfp-neo-setup-logo.jpg",
           alt: "DFP NEO",
-          className: "max-h-32 w-full object-contain opacity-90 drop-shadow-[0_0_22px_rgba(251,146,60,0.2)]"
+          className: "max-h-32 w-full rounded-sm border border-orange-300/60 object-contain opacity-90 drop-shadow-[0_0_22px_rgba(251,146,60,0.2)]"
         }
       ) }),
       /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "relative text-[11px] font-black uppercase tracking-[0.22em] text-orange-300", children: "Initial Setup Required" }),
