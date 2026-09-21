@@ -153829,7 +153829,7 @@ Do you want to replace the existing entry?`,
           }
         }
       ),
-      /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "relative mx-auto h-full min-h-0 w-full max-w-[1440px] overflow-hidden border-x border-slate-700/45 bg-slate-950 shadow-[0_0_44px_rgba(0,0,0,0.34)]", children: content })
+      /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "relative mx-auto h-full min-h-0 w-full max-w-[1440px] overflow-x-hidden overflow-y-auto border-x border-slate-700/45 bg-slate-950 shadow-[0_0_44px_rgba(0,0,0,0.34)]", children: content })
     ] });
   };
   const handleNavigateToProfile = (user) => {

@@ -55316,7 +55316,7 @@ appliedUpdates.forEach(update => {
                         backgroundSize: '56px 56px, 56px 56px, 100% 100%, 100% 100%',
                     }}
                 />
-                <div className="relative mx-auto h-full min-h-0 w-full max-w-[1440px] overflow-hidden border-x border-slate-700/45 bg-slate-950 shadow-[0_0_44px_rgba(0,0,0,0.34)]">
+                <div className="relative mx-auto h-full min-h-0 w-full max-w-[1440px] overflow-x-hidden overflow-y-auto border-x border-slate-700/45 bg-slate-950 shadow-[0_0_44px_rgba(0,0,0,0.34)]">
                     {content}
                 </div>
             </div>
