@@ -101839,6 +101839,7 @@ const CourseProgressView = ({
   const [showFullGraph, setShowFullGraph] = reactExports.useState(false);
   const [selectedGraphCourse, setSelectedGraphCourse] = reactExports.useState(null);
   const [scoreCourse, setScoreCourse] = reactExports.useState("");
+  const [rankingCourse, setRankingCourse] = reactExports.useState("");
   const [activeAwardId, setActiveAwardId] = reactExports.useState("");
   const [isEditingAward, setIsEditingAward] = reactExports.useState(false);
   const [showDeleteAwardConfirm, setShowDeleteAwardConfirm] = reactExports.useState(false);
@@ -101904,14 +101905,17 @@ const CourseProgressView = ({
   reactExports.useEffect(() => {
     if (!scoreCourse && defaultCourseByProgress) {
       setScoreCourse(defaultCourseByProgress);
+      if (!rankingCourse) setRankingCourse(defaultCourseByProgress);
       return;
     }
     if (scoreCourse && !activeCourses.some((course) => course.name === scoreCourse)) {
-      setScoreCourse(defaultCourseByProgress || activeCourses[0]?.name || "");
+      const nextCourse = defaultCourseByProgress || activeCourses[0]?.name || "";
+      setScoreCourse(nextCourse);
+      setRankingCourse(nextCourse);
     }
-  }, [activeCourses, defaultCourseByProgress, scoreCourse]);
+  }, [activeCourses, defaultCourseByProgress, rankingCourse, scoreCourse]);
   const activeAward = awards.find((award) => award.id === activeAwardId) || awards[0];
-  const activeAwardCourse = activeAward?.course || "";
+  const activeAwardCourse = rankingCourse || scoreCourse || activeAward?.course || "";
   const getCourseMasterLmp = (courseName) => activeCourses.find((course) => course.name === courseName)?.lmpType || "";
   const getAwardDisplayName = (award) => {
     return award.lmpType ? `${award.name} - ${award.lmpType}` : award.name;
@@ -101920,18 +101924,17 @@ const CourseProgressView = ({
     setIsEditingAward(false);
   }, [activeAwardId]);
   reactExports.useEffect(() => {
-    if (!activeAward) return;
-    if (!activeAward.course && defaultCourseByProgress) {
-      setAwards((prev) => prev.map((award) => award.id === activeAward.id ? { ...award, course: defaultCourseByProgress } : award));
+    if (!rankingCourse && defaultCourseByProgress) {
+      setRankingCourse(defaultCourseByProgress);
       return;
     }
-    if (activeAward.course !== "all" && !activeCourses.some((course) => course.name === activeAward.course)) {
-      setAwards((prev) => prev.map((award) => award.id === activeAward.id ? { ...award, course: defaultCourseByProgress || "all" } : award));
+    if (rankingCourse && rankingCourse !== "all" && !activeCourses.some((course) => course.name === rankingCourse)) {
+      setRankingCourse(defaultCourseByProgress || activeCourses[0]?.name || "");
     }
-  }, [activeAward, activeCourses, defaultCourseByProgress]);
+  }, [activeCourses, defaultCourseByProgress, rankingCourse]);
   const availableAwardLmpTypes = reactExports.useMemo(() => {
     const lmpTypes = /* @__PURE__ */ new Set();
-    const selectedCourseName = activeAward?.course || "";
+    const selectedCourseName = rankingCourse || scoreCourse || "";
     const courseIsSelected = (courseName) => !selectedCourseName || selectedCourseName === "all" || courseName === selectedCourseName;
     activeCourses.forEach((course) => {
       if (courseIsSelected(course.name) && course.lmpType) lmpTypes.add(course.lmpType);
@@ -101950,14 +101953,14 @@ const CourseProgressView = ({
       });
     });
     return Array.from(lmpTypes).sort();
-  }, [activeAward, activeCourses, activeTrainees, traineeLMPs]);
+  }, [activeCourses, activeTrainees, rankingCourse, scoreCourse, traineeLMPs]);
   reactExports.useEffect(() => {
     if (!activeAward || activeAward.lmpType) return;
-    const courseMasterLmp = getCourseMasterLmp(activeAward.course);
+    const courseMasterLmp = getCourseMasterLmp(activeAwardCourse);
     const nextLmpType = courseMasterLmp || availableAwardLmpTypes[0] || "";
     if (!nextLmpType) return;
     setAwards((prev) => prev.map((award) => award.id === activeAward.id ? { ...award, lmpType: nextLmpType } : award));
-  }, [activeAward, activeCourses, availableAwardLmpTypes]);
+  }, [activeAward, activeAwardCourse, activeCourses, availableAwardLmpTypes]);
   const eventOrder = reactExports.useMemo(() => {
     const order = /* @__PURE__ */ new Map();
     let index = 0;
@@ -101978,7 +101981,7 @@ const CourseProgressView = ({
     if (item.courses?.some((course) => course === lmpType || course.includes(lmpType))) {
       return true;
     }
-    const courseMasterLmp = activeAward?.course && activeAward.course !== "all" ? getCourseMasterLmp(activeAward.course) : "";
+    const courseMasterLmp = activeAwardCourse && activeAwardCourse !== "all" ? getCourseMasterLmp(activeAwardCourse) : "";
     return Boolean(courseMasterLmp && lmpType === courseMasterLmp && !itemLmpType && item.type !== "Academics");
   };
   const isUuidLike = (value) => /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value.trim());
@@ -102042,7 +102045,7 @@ const CourseProgressView = ({
   };
   const awardEventOptions = reactExports.useMemo(() => {
     if (!activeAward) return [];
-    const eligibleTrainees = activeTrainees.filter((trainee) => activeAward.course === "all" || trainee.course === activeAward.course);
+    const eligibleTrainees = activeTrainees.filter((trainee) => activeAwardCourse === "all" || trainee.course === activeAwardCourse);
     const eligibleNames = new Set(eligibleTrainees.map((trainee) => trainee.fullName || trainee.name));
     const optionMap = /* @__PURE__ */ new Map();
     eligibleTrainees.forEach((trainee) => {
@@ -102072,7 +102075,7 @@ const CourseProgressView = ({
       });
     });
     return Array.from(optionMap.values()).sort((a, b) => a.order - b.order || a.label.localeCompare(b.label));
-  }, [activeAward, activeTrainees, traineeLMPs, pt051Assessments, eventOrder, eventDetailByCode]);
+  }, [activeAward, activeAwardCourse, activeTrainees, traineeLMPs, pt051Assessments, eventOrder, eventDetailByCode]);
   const pt051ScoreRecords = reactExports.useMemo(() => {
     return Array.from(pt051Assessments.values()).filter((assessment) => typeof assessment.overallGrade === "number").map((assessment) => ({
       traineeName: assessment.traineeFullName,
@@ -102177,7 +102180,7 @@ const CourseProgressView = ({
   };
   const awardRankings = reactExports.useMemo(() => {
     if (!activeAward) return [];
-    const selectedTrainees = activeTrainees.filter((trainee) => activeAward.course === "all" || trainee.course === activeAward.course);
+    const selectedTrainees = activeTrainees.filter((trainee) => activeAwardCourse === "all" || trainee.course === activeAwardCourse);
     const selectedAwardEvents = new Set(filteredAwardEventOptions.map((option) => option.value.toUpperCase()));
     const criteriaWeights = new Map(
       activeAward.criteria.filter((criterion) => criterion.enabled && criterion.event.trim() && Number.isFinite(criterion.weight) && criterion.weight > 0).map((criterion) => [criterion.event.trim().toUpperCase(), criterion.weight])
@@ -102207,12 +102210,13 @@ const CourseProgressView = ({
         rankingScore: totals.weight > 0 ? totals.weightedScore / totals.weight : 0
       };
     }).filter((row) => row.scoredCount >= activeAward.minimumScoredEvents).sort((a, b) => b.rankingScore - a.rankingScore || (a.trainee.fullName || a.trainee.name).localeCompare(b.trainee.fullName || b.trainee.name));
-  }, [activeTrainees, activeAward, pt051ScoreRecords, filteredAwardEventOptions, activeAwardScoreMethod, traineeLMPs]);
+  }, [activeTrainees, activeAward, activeAwardCourse, pt051ScoreRecords, filteredAwardEventOptions, activeAwardScoreMethod, traineeLMPs]);
   const updateActiveAward = (updates) => {
     if (!activeAward) return;
     setAwards((prev) => prev.map((award) => award.id === activeAward.id ? { ...award, ...updates } : award));
   };
   const updateActiveAwardCourse = (courseName) => {
+    setRankingCourse(courseName);
     if (!activeAward) return;
     const nextCourseLmp = activeCourses.find((course) => course.name === courseName)?.lmpType;
     updateActiveAward({
@@ -102220,6 +102224,10 @@ const CourseProgressView = ({
       lmpType: nextCourseLmp || activeAward.lmpType || availableAwardLmpTypes[0] || "",
       includeAllScoredEvents: true
     });
+  };
+  const updateScoreCourse = (courseName) => {
+    setScoreCourse(courseName);
+    updateActiveAwardCourse(courseName);
   };
   const getCriterionForEvent = (eventCode2) => {
     if (!activeAward) return void 0;
@@ -102339,7 +102347,7 @@ const CourseProgressView = ({
   };
   const addAward = () => {
     const id = `award-${Date.now()}`;
-    const defaultCourse = scoreCourse || activeCourses[0]?.name || "all";
+    const defaultCourse = rankingCourse || scoreCourse || activeCourses[0]?.name || "all";
     const defaultLmpType = activeCourses.find((course) => course.name === defaultCourse)?.lmpType || availableAwardLmpTypes[0] || "";
     setAwards((prev) => [...prev, {
       id,
@@ -102580,7 +102588,7 @@ const CourseProgressView = ({
                             "select",
                             {
                               value: scoreCourse,
-                              onChange: (event) => setScoreCourse(event.target.value),
+                              onChange: (event) => updateScoreCourse(event.target.value),
                               className: "mt-1 w-full bg-gray-900 border border-gray-600 rounded-md px-3 py-2 text-white focus:outline-none focus:ring-2 focus:ring-sky-500",
                               children: activeCourses.map((course) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: course.name, children: course.name }, course.name))
                             }
@@ -102667,7 +102675,7 @@ const CourseProgressView = ({
                         /* @__PURE__ */ jsxRuntimeExports.jsxs(
                           "select",
                           {
-                            value: activeAward?.course || "",
+                            value: activeAwardCourse,
                             onChange: (event) => updateActiveAwardCourse(event.target.value),
                             disabled: !activeAward,
                             className: "mt-1 w-full bg-gray-900 border border-gray-600 rounded-md px-3 py-2 text-white focus:outline-none focus:ring-2 focus:ring-sky-500",
@@ -102770,7 +102778,7 @@ const CourseProgressView = ({
                     !isEditingAward && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "rounded-md border border-gray-700 bg-gray-900/35 px-3 py-3", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex flex-wrap items-center gap-2 text-xs text-gray-300", children: [
                       /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "rounded bg-gray-800 px-2 py-1", children: [
                         "Course: ",
-                        activeAward.course === "all" ? "All active courses" : activeAward.course
+                        activeAwardCourse === "all" ? "All active courses" : activeAwardCourse
                       ] }),
                       /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "rounded bg-gray-800 px-2 py-1", children: [
                         "LMP: ",

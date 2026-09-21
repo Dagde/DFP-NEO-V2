@@ -172,6 +172,7 @@ const CourseProgressView: React.FC<CourseProgressViewProps> = ({
     const [showFullGraph, setShowFullGraph] = useState(false);
     const [selectedGraphCourse, setSelectedGraphCourse] = useState<string | null>(null);
     const [scoreCourse, setScoreCourse] = useState<string>('');
+    const [rankingCourse, setRankingCourse] = useState<string>('');
     const [activeAwardId, setActiveAwardId] = useState('');
     const [isEditingAward, setIsEditingAward] = useState(false);
     const [showDeleteAwardConfirm, setShowDeleteAwardConfirm] = useState(false);
@@ -269,16 +270,19 @@ const CourseProgressView: React.FC<CourseProgressViewProps> = ({
     useEffect(() => {
         if (!scoreCourse && defaultCourseByProgress) {
             setScoreCourse(defaultCourseByProgress);
+            if (!rankingCourse) setRankingCourse(defaultCourseByProgress);
             return;
         }
 
         if (scoreCourse && !activeCourses.some(course => course.name === scoreCourse)) {
-            setScoreCourse(defaultCourseByProgress || activeCourses[0]?.name || '');
+            const nextCourse = defaultCourseByProgress || activeCourses[0]?.name || '';
+            setScoreCourse(nextCourse);
+            setRankingCourse(nextCourse);
         }
-    }, [activeCourses, defaultCourseByProgress, scoreCourse]);
+    }, [activeCourses, defaultCourseByProgress, rankingCourse, scoreCourse]);
 
     const activeAward = awards.find(award => award.id === activeAwardId) || awards[0];
-    const activeAwardCourse = activeAward?.course || '';
+    const activeAwardCourse = rankingCourse || scoreCourse || activeAward?.course || '';
     const getCourseMasterLmp = (courseName: string): string => (
         activeCourses.find(course => course.name === courseName)?.lmpType || ''
     );
@@ -292,20 +296,19 @@ const CourseProgressView: React.FC<CourseProgressViewProps> = ({
     }, [activeAwardId]);
 
     useEffect(() => {
-        if (!activeAward) return;
-        if (!activeAward.course && defaultCourseByProgress) {
-            setAwards(prev => prev.map(award => award.id === activeAward.id ? { ...award, course: defaultCourseByProgress } : award));
+        if (!rankingCourse && defaultCourseByProgress) {
+            setRankingCourse(defaultCourseByProgress);
             return;
         }
 
-        if (activeAward.course !== 'all' && !activeCourses.some(course => course.name === activeAward.course)) {
-            setAwards(prev => prev.map(award => award.id === activeAward.id ? { ...award, course: defaultCourseByProgress || 'all' } : award));
+        if (rankingCourse && rankingCourse !== 'all' && !activeCourses.some(course => course.name === rankingCourse)) {
+            setRankingCourse(defaultCourseByProgress || activeCourses[0]?.name || '');
         }
-    }, [activeAward, activeCourses, defaultCourseByProgress]);
+    }, [activeCourses, defaultCourseByProgress, rankingCourse]);
 
     const availableAwardLmpTypes = useMemo(() => {
         const lmpTypes = new Set<string>();
-        const selectedCourseName = activeAward?.course || '';
+        const selectedCourseName = rankingCourse || scoreCourse || '';
         const courseIsSelected = (courseName: string) => (
             !selectedCourseName || selectedCourseName === 'all' || courseName === selectedCourseName
         );
@@ -332,15 +335,15 @@ const CourseProgressView: React.FC<CourseProgressViewProps> = ({
         });
 
         return Array.from(lmpTypes).sort();
-    }, [activeAward, activeCourses, activeTrainees, traineeLMPs]);
+    }, [activeCourses, activeTrainees, rankingCourse, scoreCourse, traineeLMPs]);
 
     useEffect(() => {
         if (!activeAward || activeAward.lmpType) return;
-        const courseMasterLmp = getCourseMasterLmp(activeAward.course);
+        const courseMasterLmp = getCourseMasterLmp(activeAwardCourse);
         const nextLmpType = courseMasterLmp || availableAwardLmpTypes[0] || '';
         if (!nextLmpType) return;
         setAwards(prev => prev.map(award => award.id === activeAward.id ? { ...award, lmpType: nextLmpType } : award));
-    }, [activeAward, activeCourses, availableAwardLmpTypes]);
+    }, [activeAward, activeAwardCourse, activeCourses, availableAwardLmpTypes]);
 
     const eventOrder = useMemo(() => {
         const order = new Map<string, number>();
@@ -363,8 +366,8 @@ const CourseProgressView: React.FC<CourseProgressViewProps> = ({
         if (item.courses?.some(course => course === lmpType || course.includes(lmpType))) {
             return true;
         }
-        const courseMasterLmp = activeAward?.course && activeAward.course !== 'all'
-            ? getCourseMasterLmp(activeAward.course)
+        const courseMasterLmp = activeAwardCourse && activeAwardCourse !== 'all'
+            ? getCourseMasterLmp(activeAwardCourse)
             : '';
         return Boolean(courseMasterLmp && lmpType === courseMasterLmp && !itemLmpType && item.type !== 'Academics');
     };
@@ -446,7 +449,7 @@ const CourseProgressView: React.FC<CourseProgressViewProps> = ({
     const awardEventOptions = useMemo(() => {
         if (!activeAward) return [];
 
-        const eligibleTrainees = activeTrainees.filter(trainee => activeAward.course === 'all' || trainee.course === activeAward.course);
+        const eligibleTrainees = activeTrainees.filter(trainee => activeAwardCourse === 'all' || trainee.course === activeAwardCourse);
         const eligibleNames = new Set(eligibleTrainees.map(trainee => trainee.fullName || trainee.name));
         const optionMap = new Map<string, { value: string; label: string; order: number; eventType: CourseScoreEventTypeKey; isRemedial: boolean }>();
 
@@ -479,7 +482,7 @@ const CourseProgressView: React.FC<CourseProgressViewProps> = ({
         });
 
         return Array.from(optionMap.values()).sort((a, b) => a.order - b.order || a.label.localeCompare(b.label));
-    }, [activeAward, activeTrainees, traineeLMPs, pt051Assessments, eventOrder, eventDetailByCode]);
+    }, [activeAward, activeAwardCourse, activeTrainees, traineeLMPs, pt051Assessments, eventOrder, eventDetailByCode]);
 
     const pt051ScoreRecords = useMemo(() => {
         return Array.from(pt051Assessments.values())
@@ -631,7 +634,7 @@ const CourseProgressView: React.FC<CourseProgressViewProps> = ({
     const awardRankings = useMemo(() => {
         if (!activeAward) return [];
 
-        const selectedTrainees = activeTrainees.filter(trainee => activeAward.course === 'all' || trainee.course === activeAward.course);
+        const selectedTrainees = activeTrainees.filter(trainee => activeAwardCourse === 'all' || trainee.course === activeAwardCourse);
         const selectedAwardEvents = new Set(filteredAwardEventOptions.map(option => option.value.toUpperCase()));
         const criteriaWeights = new Map(
             activeAward.criteria
@@ -674,7 +677,7 @@ const CourseProgressView: React.FC<CourseProgressViewProps> = ({
             })
             .filter(row => row.scoredCount >= activeAward.minimumScoredEvents)
             .sort((a, b) => b.rankingScore - a.rankingScore || (a.trainee.fullName || a.trainee.name).localeCompare(b.trainee.fullName || b.trainee.name));
-    }, [activeTrainees, activeAward, pt051ScoreRecords, filteredAwardEventOptions, activeAwardScoreMethod, traineeLMPs]);
+    }, [activeTrainees, activeAward, activeAwardCourse, pt051ScoreRecords, filteredAwardEventOptions, activeAwardScoreMethod, traineeLMPs]);
 
     const updateActiveAward = (updates: Partial<CourseAward>) => {
         if (!activeAward) return;
@@ -682,6 +685,7 @@ const CourseProgressView: React.FC<CourseProgressViewProps> = ({
     };
 
     const updateActiveAwardCourse = (courseName: string) => {
+        setRankingCourse(courseName);
         if (!activeAward) return;
         const nextCourseLmp = activeCourses.find(course => course.name === courseName)?.lmpType;
         updateActiveAward({
@@ -689,6 +693,11 @@ const CourseProgressView: React.FC<CourseProgressViewProps> = ({
             lmpType: nextCourseLmp || activeAward.lmpType || availableAwardLmpTypes[0] || '',
             includeAllScoredEvents: true,
         });
+    };
+
+    const updateScoreCourse = (courseName: string) => {
+        setScoreCourse(courseName);
+        updateActiveAwardCourse(courseName);
     };
 
     const updateAwardCriterion = (id: string, updates: Partial<{ event: string; weight: number; enabled: boolean }>) => {
@@ -869,7 +878,7 @@ const CourseProgressView: React.FC<CourseProgressViewProps> = ({
 
     const addAward = () => {
         const id = `award-${Date.now()}`;
-        const defaultCourse = scoreCourse || activeCourses[0]?.name || 'all';
+        const defaultCourse = rankingCourse || scoreCourse || activeCourses[0]?.name || 'all';
         const defaultLmpType = activeCourses.find(course => course.name === defaultCourse)?.lmpType || availableAwardLmpTypes[0] || '';
         setAwards(prev => [...prev, {
             id,
@@ -1123,11 +1132,11 @@ const CourseProgressView: React.FC<CourseProgressViewProps> = ({
                                         <div className="flex flex-col sm:flex-row sm:items-end gap-2">
                                             <label className="text-sm text-gray-300 min-w-60">
                                                 Course
-                                                <select
-                                                    value={scoreCourse}
-                                                    onChange={event => setScoreCourse(event.target.value)}
-                                                    className="mt-1 w-full bg-gray-900 border border-gray-600 rounded-md px-3 py-2 text-white focus:outline-none focus:ring-2 focus:ring-sky-500"
-                                                >
+                                                    <select
+                                                        value={scoreCourse}
+                                                        onChange={event => updateScoreCourse(event.target.value)}
+                                                        className="mt-1 w-full bg-gray-900 border border-gray-600 rounded-md px-3 py-2 text-white focus:outline-none focus:ring-2 focus:ring-sky-500"
+                                                    >
                                                     {activeCourses.map(course => <option key={course.name} value={course.name}>{course.name}</option>)}
                                                 </select>
                                             </label>
@@ -1212,7 +1221,7 @@ const CourseProgressView: React.FC<CourseProgressViewProps> = ({
                                                 <label className="block text-sm text-gray-300">
                                                     Course
                                                     <select
-                                                        value={activeAward?.course || ''}
+                                                        value={activeAwardCourse}
                                                         onChange={event => updateActiveAwardCourse(event.target.value)}
                                                         disabled={!activeAward}
                                                         className="mt-1 w-full bg-gray-900 border border-gray-600 rounded-md px-3 py-2 text-white focus:outline-none focus:ring-2 focus:ring-sky-500"
@@ -1288,7 +1297,7 @@ const CourseProgressView: React.FC<CourseProgressViewProps> = ({
                                         {!isEditingAward && (
                                             <div className="rounded-md border border-gray-700 bg-gray-900/35 px-3 py-3">
                                                 <div className="flex flex-wrap items-center gap-2 text-xs text-gray-300">
-                                                    <span className="rounded bg-gray-800 px-2 py-1">Course: {activeAward.course === 'all' ? 'All active courses' : activeAward.course}</span>
+                                                    <span className="rounded bg-gray-800 px-2 py-1">Course: {activeAwardCourse === 'all' ? 'All active courses' : activeAwardCourse}</span>
                                                     <span className="rounded bg-gray-800 px-2 py-1">LMP: {activeAward.lmpType || 'Not configured'}</span>
                                                     <span className="rounded bg-gray-800 px-2 py-1">Events: {selectedAwardEventRows.length}</span>
                                                     <span className="rounded bg-gray-800 px-2 py-1">Score method: {activeAwardScoreMethodLabel}</span>
