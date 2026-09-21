@@ -89122,7 +89122,7 @@ const formatMasterLmpHours = (value) => {
   const numericValue = Number(value);
   return Number.isFinite(numericValue) ? `${numericValue.toFixed(1)}h` : "0.0h";
 };
-const DetailView = ({ item, isEditing, isAddingEvent = false, editedItem, onItemChange, onDeleteEvent, onEdit, editDisabled = false, resourceDisplayNames = DEFAULT_RESOURCE_DISPLAY_NAMES, aircraftConfigurations = [], aircraftCrewComposition, crewPositionTerminology, instructorsData = [], activeUnitCode = "", isAirCombatModel = false, operationalModel = "flight_school", staffQualificationCatalogue: staffQualificationCatalogue2, scoringMatrixElements = DEFAULT_ASSESSED_ELEMENTS, onAddScoringMatrixElement, linkedEventOptions = [], linkedEventOverrides = {}, onLinkedEventChange, collectionTitle = "this Master LMP", codeExample = "", descriptionExample = "" }) => {
+const DetailView = ({ item, isEditing, isAddingEvent = false, editedItem, onItemChange, onDeleteEvent, onEdit, editDisabled = false, onSave, onCancel, saveDisabled = false, isSaving: isSaving2 = false, resourceDisplayNames = DEFAULT_RESOURCE_DISPLAY_NAMES, aircraftConfigurations = [], aircraftCrewComposition, crewPositionTerminology, instructorsData = [], activeUnitCode = "", isAirCombatModel = false, operationalModel = "flight_school", staffQualificationCatalogue: staffQualificationCatalogue2, scoringMatrixElements = DEFAULT_ASSESSED_ELEMENTS, onAddScoringMatrixElement, linkedEventOptions = [], linkedEventOverrides = {}, onLinkedEventChange, collectionTitle = "this Master LMP", codeExample = "", descriptionExample = "" }) => {
   const getDisplayType2 = (syllabusItem) => {
     if (syllabusItem.type === "Flight") return "Flight";
     if (syllabusItem.type === "FTD") return "FTD";
@@ -89207,6 +89207,29 @@ const DetailView = ({ item, isEditing, isAddingEvent = false, editedItem, onItem
         ] }) : /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-lg text-gray-400 mt-1", children: item.eventDescription })
       ] }),
       /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex shrink-0 flex-wrap items-center justify-end gap-2", children: [
+        isEditing && /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsx(
+            "button",
+            {
+              type: "button",
+              onClick: () => {
+                void onSave?.();
+              },
+              disabled: saveDisabled || isSaving2,
+              className: "h-[41px] min-w-[56px] rounded-md px-3 py-1 text-[10px] font-semibold text-black btn-aluminium-brushed disabled:cursor-not-allowed disabled:opacity-60",
+              children: isSaving2 ? "Saving..." : "Save"
+            }
+          ),
+          /* @__PURE__ */ jsxRuntimeExports.jsx(
+            "button",
+            {
+              type: "button",
+              onClick: onCancel,
+              className: "h-[41px] min-w-[56px] rounded-md px-3 py-1 text-[10px] font-semibold btn-aluminium-brushed",
+              children: "Cancel"
+            }
+          )
+        ] }),
         !isEditing && onEdit && /* @__PURE__ */ jsxRuntimeExports.jsx(
           "button",
           {
@@ -91251,6 +91274,10 @@ const SyllabusView = ({
                       onDeleteEvent: handleDeleteEventRequest,
                       onEdit: handleEdit,
                       editDisabled: isFrozen,
+                      onSave: handleSave,
+                      onCancel: handleCancel,
+                      saveDisabled: isSaving2,
+                      isSaving: isSaving2,
                       resourceDisplayNames,
                       aircraftConfigurations,
                       aircraftCrewComposition,

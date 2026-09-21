@@ -588,6 +588,10 @@ const DetailView: React.FC<{
     onDeleteEvent?: (item: SyllabusItemDetail) => void;
     onEdit?: () => void;
     editDisabled?: boolean;
+    onSave?: () => void | Promise<void>;
+    onCancel?: () => void;
+    saveDisabled?: boolean;
+    isSaving?: boolean;
     resourceDisplayNames?: ResourceDisplayNames;
     aircraftConfigurations?: AircraftConfigurationDefinition[];
     aircraftCrewComposition?: AircraftCrewComposition;
@@ -605,7 +609,7 @@ const DetailView: React.FC<{
     collectionTitle?: string;
     codeExample?: string;
     descriptionExample?: string;
-}> = ({ item, isEditing, isAddingEvent = false, editedItem, onItemChange, onDeleteEvent, onEdit, editDisabled = false, resourceDisplayNames = DEFAULT_RESOURCE_DISPLAY_NAMES, aircraftConfigurations = [], aircraftCrewComposition, crewPositionTerminology, instructorsData = [], activeUnitCode = '', isAirCombatModel = false, operationalModel = 'flight_school', staffQualificationCatalogue, scoringMatrixElements = DEFAULT_ASSESSED_ELEMENTS, onAddScoringMatrixElement, linkedEventOptions = [], linkedEventOverrides = {}, onLinkedEventChange, collectionTitle = 'this Master LMP', codeExample = '', descriptionExample = '' }) => {
+}> = ({ item, isEditing, isAddingEvent = false, editedItem, onItemChange, onDeleteEvent, onEdit, editDisabled = false, onSave, onCancel, saveDisabled = false, isSaving = false, resourceDisplayNames = DEFAULT_RESOURCE_DISPLAY_NAMES, aircraftConfigurations = [], aircraftCrewComposition, crewPositionTerminology, instructorsData = [], activeUnitCode = '', isAirCombatModel = false, operationalModel = 'flight_school', staffQualificationCatalogue, scoringMatrixElements = DEFAULT_ASSESSED_ELEMENTS, onAddScoringMatrixElement, linkedEventOptions = [], linkedEventOverrides = {}, onLinkedEventChange, collectionTitle = 'this Master LMP', codeExample = '', descriptionExample = '' }) => {
     
     const getDisplayType = (syllabusItem: SyllabusItemDetail): 'Flight' | 'FTD' | 'CPT' | 'Ground' | 'Academics' => {
         if (syllabusItem.type === 'Flight') return 'Flight';
@@ -726,6 +730,25 @@ const DetailView: React.FC<{
                 )}
             </div>
             <div className="flex shrink-0 flex-wrap items-center justify-end gap-2">
+            {isEditing && (
+                <>
+                    <button
+                        type="button"
+                        onClick={() => { void onSave?.(); }}
+                        disabled={saveDisabled || isSaving}
+                        className="h-[41px] min-w-[56px] rounded-md px-3 py-1 text-[10px] font-semibold text-black btn-aluminium-brushed disabled:cursor-not-allowed disabled:opacity-60"
+                    >
+                        {isSaving ? 'Saving...' : 'Save'}
+                    </button>
+                    <button
+                        type="button"
+                        onClick={onCancel}
+                        className="h-[41px] min-w-[56px] rounded-md px-3 py-1 text-[10px] font-semibold btn-aluminium-brushed"
+                    >
+                        Cancel
+                    </button>
+                </>
+            )}
             {!isEditing && onEdit && (
                 <button
                     type="button"
@@ -2950,6 +2973,10 @@ const SyllabusView: React.FC<SyllabusViewProps> = ({
                       onDeleteEvent={handleDeleteEventRequest}
                       onEdit={handleEdit}
                       editDisabled={isFrozen}
+                      onSave={handleSave}
+                      onCancel={handleCancel}
+                      saveDisabled={isSaving}
+                      isSaving={isSaving}
                       resourceDisplayNames={resourceDisplayNames}
                       aircraftConfigurations={aircraftConfigurations}
                       aircraftCrewComposition={aircraftCrewComposition}
