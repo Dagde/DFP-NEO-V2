@@ -52248,7 +52248,7 @@ appliedUpdates.forEach(update => {
                            isNeoAssistPanelOpen={showDfpSidePanel}
                            isFlightLinePanelOpen={showFlightLinePanel}
                            showInitialSetupBlankState={showInitialSetupBlankState}
-                           initialOrganisationSlideoutView={showInitialSetupBlankState ? 'setupWizard' : 'structure'}
+                           initialOrganisationSlideoutView={(showInitialSetupBlankState || isInitialSetupWizardActive) ? 'setupWizard' : 'structure'}
                            onOrganisationSlideoutOpen={() => {
                                setShowDfpSidePanel(false);
                                setShowFlightLinePanel(false);

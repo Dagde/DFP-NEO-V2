@@ -39666,7 +39666,8 @@ const OrganisationSlideoutDiagram = ({ platformConfig, organisationSettings, uni
   const [selectedNodeId, setSelectedNodeId] = reactExports.useState(null);
   const [activeView, setActiveView] = reactExports.useState(initialView);
   reactExports.useEffect(() => {
-    if (isOpen) setActiveView(initialView);
+    if (!isOpen) return;
+    setActiveView((currentView) => currentView === "setupWizard" && initialView !== "setupWizard" ? currentView : initialView);
   }, [initialView, isOpen]);
   reactExports.useEffect(() => {
     onInitialSetupWizardActiveChange?.(Boolean(isOpen && activeView === "setupWizard"));
@@ -151596,7 +151597,7 @@ ${error instanceof Error ? error.message : String(error)}`,
             isNeoAssistPanelOpen: showDfpSidePanel,
             isFlightLinePanelOpen: showFlightLinePanel,
             showInitialSetupBlankState,
-            initialOrganisationSlideoutView: showInitialSetupBlankState ? "setupWizard" : "structure",
+            initialOrganisationSlideoutView: showInitialSetupBlankState || isInitialSetupWizardActive ? "setupWizard" : "structure",
             onOrganisationSlideoutOpen: () => {
               setShowDfpSidePanel(false);
               setShowFlightLinePanel(false);
