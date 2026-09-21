@@ -1,6 +1,6 @@
 import { useSystemFreeze } from "../hooks/useSystemFreeze";
 import React, { useState, useMemo } from 'react';
-import { Course, SyllabusItemDetail } from '../types';
+import { Course, SyllabusItemDetail, Trainee } from '../types';
 import AddCourseFlyout, { NewCourseData } from './AddCourseFlyout';
 import EditCourseFlyout from './EditCourseFlyout';
 import { showDarkConfirm } from './DarkMessageModal';
@@ -25,6 +25,7 @@ interface CoursesManagementViewProps {
     syllabusDetails?: SyllabusItemDetail[];
     platformConfig?: PlatformConfig | null;
     serviceDefinitions?: Array<{ longName?: string; shortName?: string }>;
+    traineesData?: Trainee[];
 }
 
 const darkenHexColor = (color: string) => {
@@ -155,6 +156,7 @@ const CoursesManagementView: React.FC<CoursesManagementViewProps> = ({
     syllabusDetails = [],
     platformConfig = null,
     serviceDefinitions = [],
+    traineesData = [],
 }) => {
     const [showAddCourseFlyout, setShowAddCourseFlyout] = useState(false);
     const { isFrozen } = useSystemFreeze();
@@ -324,7 +326,7 @@ const CoursesManagementView: React.FC<CoursesManagementViewProps> = ({
                                             key={course.name}
                                             course={course}
                                             courseColor={courseColors[course.name] || ''}
-                                            studentGroupCounts={getCourseStudentGroupCounts(course, serviceDefinitions)}
+                                            studentGroupCounts={getCourseStudentGroupCounts(course, serviceDefinitions, traineesData)}
                                             onOpenCourseRoster={onNavigateToCourseRoster}
                                             onEditCourse={handleEditClick}
                                             onDeleteCourse={handleDeleteClick}

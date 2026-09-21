@@ -1102,7 +1102,7 @@ const CourseProgressView: React.FC<CourseProgressViewProps> = ({
                                         setSelectedGraphCourse(course.name);
                                         setShowFullGraph(true);
                                     }}
-                                    studentGroupCounts={getCourseStudentGroupCounts(course, serviceDefinitions)}
+                                    studentGroupCounts={getCourseStudentGroupCounts(course, serviceDefinitions, traineesData)}
                                 />
                             ))}
                         </div>

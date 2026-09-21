@@ -147,6 +147,7 @@ const TrainingRecordsView: React.FC<TrainingRecordsViewProps> = ({
                         syllabusDetails={syllabusDetails}
                         platformConfig={platformConfig}
                         serviceDefinitions={serviceDefinitions}
+                        traineesData={traineesData}
                     />
                 )}
                 {activeTab === 'export' && (

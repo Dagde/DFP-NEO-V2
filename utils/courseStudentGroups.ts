@@ -1,4 +1,4 @@
-import type { Course } from '../types';
+import type { Course, Trainee } from '../types';
 
 export type CourseStudentGroupDefinition = {
   longName?: string;
@@ -49,8 +49,22 @@ export const getCourseStudentGroupLabels = (
 export const getCourseStudentGroupCounts = (
   course: Pick<Course, 'raafStart' | 'navyStart' | 'armyStart'>,
   definitions: CourseStudentGroupDefinition[] = [],
+  trainees?: Pick<Trainee, 'course' | 'service'>[],
 ): CourseStudentGroupCount[] => {
   const labels = getCourseStudentGroupLabels(definitions);
+  if (Array.isArray(trainees)) {
+    const courseName = 'name' in course ? String((course as Course).name || '').trim().toUpperCase() : '';
+    const traineesForCourse = trainees.filter((trainee) => (
+      String(trainee.course || '').trim().toUpperCase() === courseName
+    ));
+    return labels.slice(0, MAX_COURSE_STUDENT_GROUPS).map((label) => {
+      const serviceKey = label.trim().toUpperCase();
+      return {
+        label,
+        count: traineesForCourse.filter((trainee) => String(trainee.service || '').trim().toUpperCase() === serviceKey).length,
+      };
+    });
+  }
   const storedCounts = [
     Number(course.raafStart) || 0,
     Number(course.navyStart) || 0,
@@ -63,3 +77,11 @@ export const getCourseStudentGroupCounts = (
     count: storedCounts[index] || 0,
   }));
 };
+
+export const getTraineeServiceOptions = (
+  trainees: Pick<Trainee, 'service'>[] = [],
+): string[] => Array.from(new Set(
+  trainees
+    .map((trainee) => String(trainee.service || '').trim())
+    .filter(Boolean),
+)).sort((a, b) => a.localeCompare(b, undefined, { numeric: true, sensitivity: 'base' }));

@@ -139,6 +139,7 @@ import {
 } from '../utils/scoringMatrixElements';
 import {
   MAX_COURSE_STUDENT_GROUPS,
+  getTraineeServiceOptions,
   normaliseCourseStudentGroups,
   type CourseStudentGroupDefinition,
 } from '../utils/courseStudentGroups';
@@ -2548,14 +2549,15 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
     () => normaliseCourseStudentGroups(serviceDefinitions, { useFallback: false }),
     [serviceDefinitions],
   );
-  const updateCourseStudentGroup = useCallback((index: number, field: 'longName' | 'shortName', value: string) => {
+  const traineeServiceOptions = useMemo(() => getTraineeServiceOptions(traineesData), [traineesData]);
+  const updateCourseStudentGroup = useCallback((index: number, value: string) => {
     if (!onUpdateServiceDefinitions) return;
     const next = courseStudentGroups.map((group) => ({ ...group }));
     while (next.length <= index && next.length < MAX_COURSE_STUDENT_GROUPS) {
       next.push({ longName: '', shortName: '' });
     }
     if (!next[index]) return;
-    next[index][field] = value;
+    next[index] = { longName: value, shortName: value };
     onUpdateServiceDefinitions(next
       .slice(0, MAX_COURSE_STUDENT_GROUPS)
       .map((group) => ({
@@ -2566,14 +2568,15 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
   }, [courseStudentGroups, onUpdateServiceDefinitions]);
   const addCourseStudentGroup = useCallback(() => {
     if (!onUpdateServiceDefinitions || courseStudentGroups.length >= MAX_COURSE_STUDENT_GROUPS) return;
+    const unusedService = traineeServiceOptions.find((service) => !courseStudentGroups.some((group) => String(group.shortName || group.longName).trim().toUpperCase() === service.toUpperCase()));
     onUpdateServiceDefinitions([
       ...courseStudentGroups,
       {
-        longName: `Group ${courseStudentGroups.length + 1}`,
-        shortName: `Group ${courseStudentGroups.length + 1}`,
+        longName: unusedService || `Group ${courseStudentGroups.length + 1}`,
+        shortName: unusedService || `Group ${courseStudentGroups.length + 1}`,
       },
     ]);
-  }, [courseStudentGroups, onUpdateServiceDefinitions]);
+  }, [courseStudentGroups, onUpdateServiceDefinitions, traineeServiceOptions]);
   const removeCourseStudentGroup = useCallback((index: number) => {
     if (!onUpdateServiceDefinitions) return;
     onUpdateServiceDefinitions(courseStudentGroups.filter((_, groupIndex) => groupIndex !== index));
@@ -13264,32 +13267,36 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
                 <div>
                   <h5 className="text-sm font-bold text-amber-100">Course Student Groups</h5>
                   <p className="mt-1 text-xs leading-relaxed text-amber-100/75">
-                    These labels are shown on course cards, Course Progress tiles and course setup screens. Configure only the groups this customer actually uses.
+                    These groups come from the Service values already used in Trainee profiles. Configure only the services this customer wants counted on course cards.
                   </p>
                 </div>
                 {renderRankTerminologySectionAction()}
               </div>
               <div className="space-y-3">
                 {(courseStudentGroups.length > 0 ? courseStudentGroups : [{ longName: 'Group 1', shortName: 'Group 1' }]).map((group, index) => (
-                  <div key={`course-student-group-${index}`} className="grid gap-3 rounded border border-gray-700 bg-gray-950 p-3 lg:grid-cols-[80px_minmax(180px,1fr)_minmax(160px,0.7fr)_auto]">
+                  <div key={`course-student-group-${index}`} className="grid gap-3 rounded border border-gray-700 bg-gray-950 p-3 lg:grid-cols-[80px_minmax(220px,1fr)_auto]">
                     <div>
                       <div className="text-[11px] font-semibold uppercase tracking-wider text-gray-500">Group</div>
                       <div className="mt-1 text-sm font-bold text-amber-100">{index + 1}</div>
                     </div>
-                    <DraftField
-                      label="Full Name"
-                      value={group.longName}
-                      disabled={!canEditRankTerminology || !onUpdateServiceDefinitions}
-                      onCommit={(value) => updateCourseStudentGroup(index, 'longName', value)}
-                      info="The full description for this course student group."
-                    />
-                    <DraftField
-                      label="Short Label"
-                      value={group.shortName}
-                      disabled={!canEditRankTerminology || !onUpdateServiceDefinitions}
-                      onCommit={(value) => updateCourseStudentGroup(index, 'shortName', value)}
-                      info="The compact label shown on course cards. Example: 1FTS, CFS, Group 1."
-                    />
+                    <label>
+                      <FieldLabel
+                        label="Trainee Service"
+                        info="Select the exact Service value from trainee profiles. Counts are calculated by matching trainee course and trainee service."
+                      />
+                      <select
+                        className={fieldClass}
+                        value={String(group.shortName || group.longName || '')}
+                        disabled={!canEditRankTerminology || !onUpdateServiceDefinitions || traineeServiceOptions.length === 0}
+                        onKeyDown={stopEditableKeyPropagation}
+                        onChange={(event) => updateCourseStudentGroup(index, event.target.value)}
+                      >
+                        <option value="">Select service...</option>
+                        {traineeServiceOptions.map((service) => (
+                          <option key={service} value={service}>{service}</option>
+                        ))}
+                      </select>
+                    </label>
                     <div className="flex items-end">
                       <button
                         type="button"
@@ -13304,7 +13311,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
                 ))}
                 <div className="flex flex-wrap items-center justify-between gap-3 rounded border border-amber-400/20 bg-amber-500/5 px-3 py-2">
                   <p className="text-xs font-semibold leading-5 text-amber-100/75">
-                    Up to {MAX_COURSE_STUDENT_GROUPS} group labels can be configured. The current course count fields store the first three group counts.
+                    Up to {MAX_COURSE_STUDENT_GROUPS} service groups can be shown. Add or correct Service values in Trainee profiles if a service is missing here.
                   </p>
                   <button
                     type="button"

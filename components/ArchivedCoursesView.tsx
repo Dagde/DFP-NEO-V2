@@ -1,5 +1,5 @@
 import React, { useMemo, useState } from 'react';
-import { Course } from '../types';
+import { Course, Trainee } from '../types';
 import { showDarkConfirm } from './DarkMessageModal';
 import { verifyCurrentUserPassword } from '../utils/passwordVerification';
 import { getCourseStudentGroupCounts } from '../utils/courseStudentGroups';
@@ -7,6 +7,7 @@ import { getCourseStudentGroupCounts } from '../utils/courseStudentGroups';
 interface ArchivedCoursesViewProps {
     archivedCourses: { [key: string]: string };
     courses: Course[];
+    traineesData?: Trainee[];
     serviceDefinitions?: Array<{ longName?: string; shortName?: string }>;
     onUnarchiveCourse: (courseName: string) => void;
     onDeleteCourse: (courseName: string) => void;
@@ -32,6 +33,7 @@ const formatCourseDate = (value?: string) => {
 const ArchivedCoursesView: React.FC<ArchivedCoursesViewProps> = ({
     archivedCourses,
     courses,
+    traineesData = [],
     serviceDefinitions = [],
     onUnarchiveCourse,
     onDeleteCourse,
@@ -131,7 +133,7 @@ const ArchivedCoursesView: React.FC<ArchivedCoursesViewProps> = ({
             status: 'ARCHIVED',
         };
         const courseColor = displayCourse.color || color || '';
-        const studentGroupCounts = getCourseStudentGroupCounts(displayCourse, serviceDefinitions);
+        const studentGroupCounts = getCourseStudentGroupCounts(displayCourse, serviceDefinitions, traineesData);
         const totalStudents = studentGroupCounts.reduce((total, group) => total + group.count, 0);
 
         return (

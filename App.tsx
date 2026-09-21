@@ -53323,6 +53323,7 @@ appliedUpdates.forEach(update => {
                 return <ArchivedCoursesView
                     archivedCourses={archivedCourses}
                     courses={courses}
+                    traineesData={traineesData}
                     serviceDefinitions={serviceDefinitions}
                     onUnarchiveCourse={handleUnarchiveCourseFromArchivedView}
                     onDeleteCourse={handleDeleteCourseFromArchivedView}
