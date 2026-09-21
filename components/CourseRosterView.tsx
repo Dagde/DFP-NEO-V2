@@ -519,14 +519,14 @@ const CourseRosterView: React.FC<CourseRosterViewProps> = ({
                         <ViewToggleButton label="Active Courses" value="active" />
                         <button
                             onClick={handleAddTraineeClick}
-                            className="w-[56px] h-[41px] flex items-center justify-center text-center px-1 py-1 text-[10px] font-semibold rounded-md btn-aluminium-brushed text-green-500"
+                            className="w-[56px] h-[41px] flex items-center justify-center text-center px-1 py-1 text-[10px] font-semibold rounded-md btn-aluminium-brushed text-black"
                         >
                             Add Trainee
                         </button>
                         <button
                             onClick={() => setShowBulkUpload(true)}
                             disabled={!onBulkUpdateTrainees || !onReplaceTrainees}
-                            className="w-[56px] h-[41px] flex items-center justify-center text-center px-1 py-1 text-[10px] font-semibold rounded-md btn-aluminium-brushed text-cyan-500 disabled:opacity-50 disabled:cursor-not-allowed"
+                            className="w-[56px] h-[41px] flex items-center justify-center text-center px-1 py-1 text-[10px] font-semibold rounded-md btn-aluminium-brushed text-black disabled:opacity-50 disabled:cursor-not-allowed"
                         >
                             Upload
                         </button>
