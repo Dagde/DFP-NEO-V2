@@ -141536,14 +141536,20 @@ ${error instanceof Error ? error.message : String(error)}`,
       }
       const result = await saveCourse({
         name: course.name,
+        code: course.code || course.name,
         color: course.color,
         startDate,
         gradDate,
         raafStart: course.raafStart,
         navyStart: course.navyStart,
         armyStart: course.armyStart,
-        location: course.location,
-        status: course.status
+        location: course.location || activeLocationDisplayName,
+        unit: course.unit || "",
+        lmpType: course.lmpType || "",
+        academicLmpType: course.academicLmpType || "",
+        courseCommander: course.courseCommander || "",
+        deputyCourseCommander: course.deputyCourseCommander || "",
+        status: course.status || "ACTIVE"
       });
       if (result.success) {
         setSuccessMessage(`Course ${courseName} dates updated successfully!`);
@@ -148811,18 +148817,12 @@ ${error instanceof Error ? error.message : String(error)}`,
     }
   };
   const handleUpdateGradDate = (courseName, newGradDate) => {
-    setCourses(
-      (prevCourses) => prevCourses.map(
-        (course) => course.name === courseName ? { ...course, gradDate: newGradDate } : course
-      )
-    );
+    const course = courses.find((c) => c.name === courseName);
+    void handleUpdateCourseDatesFromTrainingRecords(courseName, course?.startDate || "", newGradDate);
   };
   const handleUpdateStartDate = (courseName, newStartDate) => {
-    setCourses(
-      (prevCourses) => prevCourses.map(
-        (course) => course.name === courseName ? { ...course, startDate: newStartDate } : course
-      )
-    );
+    const course = courses.find((c) => c.name === courseName);
+    void handleUpdateCourseDatesFromTrainingRecords(courseName, newStartDate, course?.gradDate || "");
   };
   const handleSetIsMultiSelectMode = (enabled) => {
     setIsMultiSelectMode(enabled);
