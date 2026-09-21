@@ -13233,7 +13233,7 @@ const ScheduleView: React.FC<ScheduleViewProps> = ({
             `}</style>
             {shouldShowInitialSetupPrompt && (
                 <div className="pointer-events-none fixed bottom-[8vh] left-[260px] right-[178px] top-[218px] z-[240] flex items-center justify-center px-8">
-                    <div className="pointer-events-auto relative flex w-[min(1040px,calc(100vw-520px))] max-w-[calc(100%-64px)] flex-col items-center overflow-hidden rounded-xl border-2 border-orange-300/35 bg-slate-950/82 px-8 py-7 text-center shadow-[0_26px_70px_rgba(0,0,0,0.56)] backdrop-blur-md">
+                    <div className="pointer-events-auto relative flex w-full max-w-[1040px] flex-col items-center overflow-hidden rounded-xl border-2 border-orange-300/35 bg-slate-950/82 px-8 py-7 text-center shadow-[0_26px_70px_rgba(0,0,0,0.56)] backdrop-blur-md">
                         <span className="pointer-events-none absolute inset-x-[-18%] top-[-42%] h-[112%] rounded-full bg-[radial-gradient(ellipse_at_center,rgba(251,146,60,0.42)_0%,rgba(251,146,60,0.2)_24%,rgba(251,146,60,0.08)_46%,rgba(251,146,60,0)_72%)] blur-2xl" aria-hidden="true" />
                         <div className="relative mb-5 flex w-[min(850px,94%)] justify-center shadow-[0_0_18px_rgba(251,146,60,0.16)]">
                             <img
