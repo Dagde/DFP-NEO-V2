@@ -11508,6 +11508,7 @@ const ScheduleView: React.FC<ScheduleViewProps> = ({
     useEffect(() => {
         if (isNeoAssistPanelOpen) setShowResourceUnderlayPanel(false);
     }, [isNeoAssistPanelOpen]);
+    const shouldShowInitialSetupPrompt = showInitialSetupBlankState && !showResourceUnderlayPanel;
     const openInitialSetupWizard = useCallback(() => {
         onOrganisationSlideoutOpen?.();
         setShowResourceUnderlayPanel(true);
@@ -13230,7 +13231,7 @@ const ScheduleView: React.FC<ScheduleViewProps> = ({
                     }
                 }
             `}</style>
-            {showInitialSetupBlankState && (
+            {shouldShowInitialSetupPrompt && (
                 <div className="pointer-events-none fixed bottom-[8vh] left-[260px] right-[178px] top-[218px] z-[240] flex items-center justify-center px-8">
                     <div className="pointer-events-auto relative flex w-[min(1040px,calc(100vw-520px))] max-w-[calc(100%-64px)] flex-col items-center overflow-hidden rounded-xl border border-orange-300/25 bg-slate-950/82 px-8 py-7 text-center shadow-[0_26px_70px_rgba(0,0,0,0.56)] backdrop-blur-md">
                         <span className="pointer-events-none absolute inset-x-[-18%] top-[-42%] h-[112%] rounded-full bg-[radial-gradient(ellipse_at_center,rgba(251,146,60,0.42)_0%,rgba(251,146,60,0.2)_24%,rgba(251,146,60,0.08)_46%,rgba(251,146,60,0)_72%)] blur-2xl" aria-hidden="true" />
