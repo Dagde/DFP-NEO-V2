@@ -91100,119 +91100,138 @@ const SyllabusView = ({
           ] })
         ] })
       ] }),
-      /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex-1 overflow-y-auto bg-gray-950/20", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "min-w-[980px] p-3", children: [
-        filteredSyllabusDetails.map((item, index) => {
-          const totalItems = filteredSyllabusDetails.length;
-          const midPoint = Math.ceil(totalItems / 2);
-          const phaseNum = index < midPoint ? 1 : 2;
-          const moduleNum = Math.floor(index * 12 / totalItems) + 1;
-          const actualModule = Math.min(moduleNum, 12);
-          const isSelected = selectedItem?.id === item.id;
-          const sortieLabel = formatMasterLmpSortieLabel(item, resourceDisplayNames);
-          const dayLabel = item.dayNight || "Day";
-          const durationLabel = formatMasterLmpHours(item.totalEventHours || item.duration);
-          return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mb-3 flex items-start gap-4", children: [
-            /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "relative w-[292px] shrink-0", children: [
-              eventDropIndicator?.targetId === item.id && eventDropIndicator.position === "before" && /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "pointer-events-none absolute inset-x-2 -top-[5px] z-10 h-px bg-cyan-200 shadow-[0_0_8px_rgba(125,211,252,0.9)]" }),
-              eventDropIndicator?.targetId === item.id && eventDropIndicator.position === "after" && /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "pointer-events-none absolute inset-x-2 -bottom-[5px] z-10 h-px bg-cyan-200 shadow-[0_0_8px_rgba(125,211,252,0.9)]" }),
-              /* @__PURE__ */ jsxRuntimeExports.jsxs(
-                "button",
-                {
-                  type: "button",
-                  draggable: !isEditing && !isFrozen && !isReorderingEvents,
-                  onDragStart: (event) => {
-                    if (isEditing || isFrozen || isReorderingEvents) {
-                      event.preventDefault();
-                      return;
+      /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex-1 overflow-y-auto bg-gray-950/20", children: /* @__PURE__ */ jsxRuntimeExports.jsxs(
+        "div",
+        {
+          className: "relative min-w-[980px] p-3",
+          style: {
+            minHeight: selectedItem ? Math.max(filteredSyllabusDetails.length * 74, Math.max(0, filteredSyllabusDetails.findIndex((item) => item.id === selectedItem.id)) * 74 + (isEditing ? 1320 : 760)) : void 0
+          },
+          children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "w-[292px]", children: [
+              filteredSyllabusDetails.map((item, index) => {
+                const totalItems = filteredSyllabusDetails.length;
+                const midPoint = Math.ceil(totalItems / 2);
+                const phaseNum = index < midPoint ? 1 : 2;
+                const moduleNum = Math.floor(index * 12 / totalItems) + 1;
+                const actualModule = Math.min(moduleNum, 12);
+                const isSelected = selectedItem?.id === item.id;
+                const sortieLabel = formatMasterLmpSortieLabel(item, resourceDisplayNames);
+                const dayLabel = item.dayNight || "Day";
+                const durationLabel = formatMasterLmpHours(item.totalEventHours || item.duration);
+                return /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mb-3", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "relative w-[292px] shrink-0", children: [
+                  eventDropIndicator?.targetId === item.id && eventDropIndicator.position === "before" && /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "pointer-events-none absolute inset-x-2 -top-[5px] z-10 h-px bg-cyan-200 shadow-[0_0_8px_rgba(125,211,252,0.9)]" }),
+                  eventDropIndicator?.targetId === item.id && eventDropIndicator.position === "after" && /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "pointer-events-none absolute inset-x-2 -bottom-[5px] z-10 h-px bg-cyan-200 shadow-[0_0_8px_rgba(125,211,252,0.9)]" }),
+                  /* @__PURE__ */ jsxRuntimeExports.jsxs(
+                    "button",
+                    {
+                      type: "button",
+                      draggable: !isEditing && !isFrozen && !isReorderingEvents,
+                      onDragStart: (event) => {
+                        if (isEditing || isFrozen || isReorderingEvents) {
+                          event.preventDefault();
+                          return;
+                        }
+                        event.dataTransfer.effectAllowed = "move";
+                        event.dataTransfer.setData("text/plain", item.id);
+                        setDraggedEventId(item.id);
+                        setEventDropIndicator(null);
+                      },
+                      onDragOver: (event) => {
+                        if (!draggedEventId || draggedEventId === item.id || isEditing || isFrozen || isReorderingEvents) {
+                          setEventDropIndicator(null);
+                          return;
+                        }
+                        event.preventDefault();
+                        event.dataTransfer.dropEffect = "move";
+                        const bounds = event.currentTarget.getBoundingClientRect();
+                        const position = event.clientY < bounds.top + bounds.height / 2 ? "before" : "after";
+                        setEventDropIndicator({ targetId: item.id, position });
+                      },
+                      onDrop: (event) => {
+                        event.preventDefault();
+                        const bounds = event.currentTarget.getBoundingClientRect();
+                        const position = event.clientY < bounds.top + bounds.height / 2 ? "before" : "after";
+                        void handleEventTileDrop(item.id, position);
+                      },
+                      onDragEnd: () => {
+                        setDraggedEventId(null);
+                        setEventDropIndicator(null);
+                      },
+                      onClick: () => {
+                        if (!isEditing && !isReorderingEvents) {
+                          setHoveredItem(null);
+                          setSelectedItem(item);
+                          setIsAddingLmpEvent(false);
+                        }
+                      },
+                      disabled: isEditing || isReorderingEvents,
+                      "aria-pressed": isSelected,
+                      title: `${item.code}${item.eventDescription ? ` - ${item.eventDescription}` : ""}`,
+                      className: `relative h-[62px] w-full overflow-hidden rounded-md border px-3 py-2 text-left shadow-sm transition ${isSelected ? "border-emerald-300 bg-sky-800/85 text-white shadow-sky-950/40" : draggedEventId === item.id ? "border-cyan-300 bg-gray-800/70 text-gray-100 opacity-70 shadow-cyan-950/30" : "border-emerald-500/60 bg-gray-900 text-gray-200 shadow-black/15"} ${isEditing || isReorderingEvents ? "cursor-not-allowed opacity-55" : "cursor-grab hover:border-emerald-300/80 hover:bg-gray-800 active:cursor-grabbing"}`,
+                      children: [
+                        /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: `absolute left-3 top-2 max-w-[38%] truncate text-[10px] font-bold uppercase ${isSelected ? "text-sky-100" : "text-gray-400"}`, children: [
+                          "P ",
+                          phaseNum
+                        ] }),
+                        /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: `absolute right-3 top-2 max-w-[38%] truncate text-[10px] font-bold uppercase ${isSelected ? "text-sky-100" : "text-gray-300"}`, children: sortieLabel }),
+                        /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "absolute inset-x-3 top-1/2 -translate-y-1/2 truncate text-center text-[15px] font-extrabold leading-tight", children: item.code }),
+                        /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: `absolute bottom-2 left-3 max-w-[38%] truncate text-[10px] font-semibold uppercase ${isSelected ? "text-sky-100" : "text-gray-400"}`, children: [
+                          "M ",
+                          actualModule
+                        ] }),
+                        /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: `absolute bottom-2 right-3 inline-flex max-w-[54%] items-center gap-3 overflow-hidden text-[10px] font-semibold uppercase ${isSelected ? "text-sky-100" : "text-gray-300"}`, children: [
+                          /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "truncate", children: dayLabel }),
+                          /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "shrink-0", children: durationLabel })
+                        ] })
+                      ]
                     }
-                    event.dataTransfer.effectAllowed = "move";
-                    event.dataTransfer.setData("text/plain", item.id);
-                    setDraggedEventId(item.id);
-                    setEventDropIndicator(null);
-                  },
-                  onDragOver: (event) => {
-                    if (!draggedEventId || draggedEventId === item.id || isEditing || isFrozen || isReorderingEvents) {
-                      setEventDropIndicator(null);
-                      return;
-                    }
-                    event.preventDefault();
-                    event.dataTransfer.dropEffect = "move";
-                    const bounds = event.currentTarget.getBoundingClientRect();
-                    const position = event.clientY < bounds.top + bounds.height / 2 ? "before" : "after";
-                    setEventDropIndicator({ targetId: item.id, position });
-                  },
-                  onDrop: (event) => {
-                    event.preventDefault();
-                    const bounds = event.currentTarget.getBoundingClientRect();
-                    const position = event.clientY < bounds.top + bounds.height / 2 ? "before" : "after";
-                    void handleEventTileDrop(item.id, position);
-                  },
-                  onDragEnd: () => {
-                    setDraggedEventId(null);
-                    setEventDropIndicator(null);
-                  },
-                  onClick: () => {
-                    if (!isEditing && !isReorderingEvents) {
-                      setHoveredItem(null);
-                      setSelectedItem(item);
-                      setIsAddingLmpEvent(false);
-                    }
-                  },
-                  disabled: isEditing || isReorderingEvents,
-                  "aria-pressed": isSelected,
-                  title: `${item.code}${item.eventDescription ? ` - ${item.eventDescription}` : ""}`,
-                  className: `relative h-[62px] w-full overflow-hidden rounded-md border px-3 py-2 text-left shadow-sm transition ${isSelected ? "border-emerald-300 bg-sky-800/85 text-white shadow-sky-950/40" : draggedEventId === item.id ? "border-cyan-300 bg-gray-800/70 text-gray-100 opacity-70 shadow-cyan-950/30" : "border-emerald-500/60 bg-gray-900 text-gray-200 shadow-black/15"} ${isEditing || isReorderingEvents ? "cursor-not-allowed opacity-55" : "cursor-grab hover:border-emerald-300/80 hover:bg-gray-800 active:cursor-grabbing"}`,
-                  children: [
-                    /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: `absolute left-3 top-2 max-w-[38%] truncate text-[10px] font-bold uppercase ${isSelected ? "text-sky-100" : "text-gray-400"}`, children: [
-                      "P ",
-                      phaseNum
-                    ] }),
-                    /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: `absolute right-3 top-2 max-w-[38%] truncate text-[10px] font-bold uppercase ${isSelected ? "text-sky-100" : "text-gray-300"}`, children: sortieLabel }),
-                    /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "absolute inset-x-3 top-1/2 -translate-y-1/2 truncate text-center text-[15px] font-extrabold leading-tight", children: item.code }),
-                    /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: `absolute bottom-2 left-3 max-w-[38%] truncate text-[10px] font-semibold uppercase ${isSelected ? "text-sky-100" : "text-gray-400"}`, children: [
-                      "M ",
-                      actualModule
-                    ] }),
-                    /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: `absolute bottom-2 right-3 inline-flex max-w-[54%] items-center gap-3 overflow-hidden text-[10px] font-semibold uppercase ${isSelected ? "text-sky-100" : "text-gray-300"}`, children: [
-                      /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "truncate", children: dayLabel }),
-                      /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "shrink-0", children: durationLabel })
-                    ] })
-                  ]
-                }
-              )
+                  )
+                ] }) }, item.id);
+              }),
+              filteredSyllabusDetails.length === 0 && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "p-4 text-center text-gray-500 italic text-sm", children: "No events found for this LMP." })
             ] }),
-            isSelected ? /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "min-w-[640px] max-w-5xl flex-1 rounded-lg border border-sky-700/50 bg-gray-900/65 p-5 shadow-xl shadow-black/25", children: /* @__PURE__ */ jsxRuntimeExports.jsx(
-              DetailView,
-              {
-                item: hoveredItem || selectedItem || item,
-                isEditing,
-                isAddingEvent: isAddingLmpEvent,
-                editedItem,
-                onItemChange: setEditedItem,
-                onDeleteEvent: handleDeleteEventRequest,
-                resourceDisplayNames,
-                aircraftConfigurations,
-                aircraftCrewComposition,
-                crewPositionTerminology,
-                instructorsData,
-                activeUnitCode: effectiveActiveUnitCode,
-                isAirCombatModel,
-                operationalModel,
-                staffQualificationCatalogue: staffQualificationCatalogue2,
-                scoringMatrixElements,
-                onAddScoringMatrixElement,
-                linkedEventOptions: filteredSyllabusDetails,
-                linkedEventOverrides,
-                onLinkedEventChange: handleLinkedEventChange,
-                collectionTitle: getCourseTitle(selectedCourseType),
-                codeExample: addEventExamples.code,
-                descriptionExample: addEventExamples.description
-              }
-            ) }) : /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "min-h-[62px] flex-1 border-b border-gray-800/50" })
-          ] }, item.id);
-        }),
-        filteredSyllabusDetails.length === 0 && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "p-4 text-center text-gray-500 italic text-sm", children: "No events found for this LMP." })
-      ] }) })
+            selectedItem && (() => {
+              const selectedIndex = Math.max(0, filteredSyllabusDetails.findIndex((item) => item.id === selectedItem.id));
+              return /* @__PURE__ */ jsxRuntimeExports.jsx(
+                "div",
+                {
+                  className: "absolute left-[320px] right-3 max-w-5xl rounded-lg border border-sky-700/50 bg-gray-900/90 p-5 shadow-xl shadow-black/30",
+                  style: { top: 12 + selectedIndex * 74 },
+                  children: /* @__PURE__ */ jsxRuntimeExports.jsx(
+                    DetailView,
+                    {
+                      item: hoveredItem || selectedItem,
+                      isEditing,
+                      isAddingEvent: isAddingLmpEvent,
+                      editedItem,
+                      onItemChange: setEditedItem,
+                      onDeleteEvent: handleDeleteEventRequest,
+                      resourceDisplayNames,
+                      aircraftConfigurations,
+                      aircraftCrewComposition,
+                      crewPositionTerminology,
+                      instructorsData,
+                      activeUnitCode: effectiveActiveUnitCode,
+                      isAirCombatModel,
+                      operationalModel,
+                      staffQualificationCatalogue: staffQualificationCatalogue2,
+                      scoringMatrixElements,
+                      onAddScoringMatrixElement,
+                      linkedEventOptions: filteredSyllabusDetails,
+                      linkedEventOverrides,
+                      onLinkedEventChange: handleLinkedEventChange,
+                      collectionTitle: getCourseTitle(selectedCourseType),
+                      codeExample: addEventExamples.code,
+                      descriptionExample: addEventExamples.description
+                    }
+                  )
+                }
+              );
+            })()
+          ]
+        }
+      ) })
     ] }),
     showAddLMPModal && /* @__PURE__ */ jsxRuntimeExports.jsx(
       "div",

@@ -2814,7 +2814,15 @@ const SyllabusView: React.FC<SyllabusViewProps> = ({
 
       {/* Main Content */}
       <div className="flex-1 overflow-y-auto bg-gray-950/20">
-        <div className="min-w-[980px] p-3">
+        <div
+          className="relative min-w-[980px] p-3"
+          style={{
+              minHeight: selectedItem
+                  ? Math.max(filteredSyllabusDetails.length * 74, Math.max(0, filteredSyllabusDetails.findIndex(item => item.id === selectedItem.id)) * 74 + (isEditing ? 1320 : 760))
+                  : undefined,
+          }}
+        >
+          <div className="w-[292px]">
             {filteredSyllabusDetails.map((item, index) => {
               const totalItems = filteredSyllabusDetails.length;
               const midPoint = Math.ceil(totalItems / 2);
@@ -2827,7 +2835,7 @@ const SyllabusView: React.FC<SyllabusViewProps> = ({
               const durationLabel = formatMasterLmpHours(item.totalEventHours || item.duration);
 
               return (
-                <div key={item.id} className="mb-3 flex items-start gap-4">
+                <div key={item.id} className="mb-3">
                   <div className="relative w-[292px] shrink-0">
                     {eventDropIndicator?.targetId === item.id && eventDropIndicator.position === 'before' && (
                         <span className="pointer-events-none absolute inset-x-2 -top-[5px] z-10 h-px bg-cyan-200 shadow-[0_0_8px_rgba(125,211,252,0.9)]" />
@@ -2905,43 +2913,48 @@ const SyllabusView: React.FC<SyllabusViewProps> = ({
                       </span>
                     </button>
                   </div>
-                  {isSelected ? (
-                    <div className="min-w-[640px] max-w-5xl flex-1 rounded-lg border border-sky-700/50 bg-gray-900/65 p-5 shadow-xl shadow-black/25">
-                      <DetailView
-                          item={hoveredItem || selectedItem || item}
-                          isEditing={isEditing}
-                          isAddingEvent={isAddingLmpEvent}
-                          editedItem={editedItem}
-                          onItemChange={setEditedItem}
-                          onDeleteEvent={handleDeleteEventRequest}
-                          resourceDisplayNames={resourceDisplayNames}
-                          aircraftConfigurations={aircraftConfigurations}
-                          aircraftCrewComposition={aircraftCrewComposition}
-                          crewPositionTerminology={crewPositionTerminology}
-                          instructorsData={instructorsData}
-                          activeUnitCode={effectiveActiveUnitCode}
-                          isAirCombatModel={isAirCombatModel}
-                          operationalModel={operationalModel}
-                          staffQualificationCatalogue={staffQualificationCatalogue}
-                          scoringMatrixElements={scoringMatrixElements}
-                          onAddScoringMatrixElement={onAddScoringMatrixElement}
-                          linkedEventOptions={filteredSyllabusDetails}
-                          linkedEventOverrides={linkedEventOverrides}
-                          onLinkedEventChange={handleLinkedEventChange}
-                          collectionTitle={getCourseTitle(selectedCourseType)}
-                          codeExample={addEventExamples.code}
-                          descriptionExample={addEventExamples.description}
-                      />
-                    </div>
-                  ) : (
-                    <div className="min-h-[62px] flex-1 border-b border-gray-800/50" />
-                  )}
                 </div>
               );
             })}
             {filteredSyllabusDetails.length === 0 && (
                 <div className="p-4 text-center text-gray-500 italic text-sm">No events found for this LMP.</div>
             )}
+          </div>
+          {selectedItem && (() => {
+              const selectedIndex = Math.max(0, filteredSyllabusDetails.findIndex(item => item.id === selectedItem.id));
+              return (
+                <div
+                  className="absolute left-[320px] right-3 max-w-5xl rounded-lg border border-sky-700/50 bg-gray-900/90 p-5 shadow-xl shadow-black/30"
+                  style={{ top: 12 + selectedIndex * 74 }}
+                >
+                  <DetailView
+                      item={hoveredItem || selectedItem}
+                      isEditing={isEditing}
+                      isAddingEvent={isAddingLmpEvent}
+                      editedItem={editedItem}
+                      onItemChange={setEditedItem}
+                      onDeleteEvent={handleDeleteEventRequest}
+                      resourceDisplayNames={resourceDisplayNames}
+                      aircraftConfigurations={aircraftConfigurations}
+                      aircraftCrewComposition={aircraftCrewComposition}
+                      crewPositionTerminology={crewPositionTerminology}
+                      instructorsData={instructorsData}
+                      activeUnitCode={effectiveActiveUnitCode}
+                      isAirCombatModel={isAirCombatModel}
+                      operationalModel={operationalModel}
+                      staffQualificationCatalogue={staffQualificationCatalogue}
+                      scoringMatrixElements={scoringMatrixElements}
+                      onAddScoringMatrixElement={onAddScoringMatrixElement}
+                      linkedEventOptions={filteredSyllabusDetails}
+                      linkedEventOverrides={linkedEventOverrides}
+                      onLinkedEventChange={handleLinkedEventChange}
+                      collectionTitle={getCourseTitle(selectedCourseType)}
+                      codeExample={addEventExamples.code}
+                      descriptionExample={addEventExamples.description}
+                  />
+                </div>
+              );
+          })()}
         </div>
       </div>
     </div>
