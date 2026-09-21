@@ -12694,6 +12694,92 @@ async function writeMobileFlightAuthorisationAudit(db, req, user, snapshotKey, b
   );
 }
 
+async function syncMobileEventMutationToCompactArchive(db, snapshotKey, updatedEvent, action) {
+  const startedAt = Date.now();
+  const cleanSnapshotKey = String(snapshotKey || '').trim();
+  const eventId = String(updatedEvent?.id || updatedEvent?.eventId || '').trim();
+  if (!cleanSnapshotKey || !eventId || !updatedEvent || typeof updatedEvent !== 'object') {
+    return { success: false, reason: 'missing snapshot key or event id' };
+  }
+
+  const archiveRows = await db.$queryRawUnsafe(
+    `SELECT id, date FROM "PublishedDfpArchive" WHERE "snapshotKey" = $1::text LIMIT 1`,
+    cleanSnapshotKey
+  );
+  const archive = archiveRows?.[0] || null;
+  if (!archive?.id) {
+    return { success: false, reason: 'compact archive not found' };
+  }
+
+  const updatedRows = await db.$executeRawUnsafe(
+    `UPDATE "ScheduleEventArchive"
+        SET "eventType" = $1::text,
+            "eventCode" = $2::text,
+            "resourceId" = $3::text,
+            "startTime" = $4,
+            "duration" = $5,
+            "personnelRefs" = $6::jsonb,
+            "eventData" = $7::jsonb
+      WHERE "archiveId" = $8::text
+        AND (
+          "eventId" = $9::text
+          OR "eventData"->>'id' = $9::text
+          OR "eventData"->>'eventId' = $9::text
+        )`,
+    String(updatedEvent.type || 'event'),
+    updatedEvent.flightNumber || updatedEvent.eventCode || null,
+    updatedEvent.resourceId || null,
+    Number.isFinite(Number(updatedEvent.startTime)) ? Number(updatedEvent.startTime) : null,
+    Number.isFinite(Number(updatedEvent.duration)) ? Number(updatedEvent.duration) : null,
+    JSON.stringify(getArchiveEventPersonnelRefs(updatedEvent)),
+    JSON.stringify(updatedEvent),
+    archive.id,
+    eventId
+  );
+
+  if (!updatedRows) {
+    const result = {
+      success: false,
+      reason: 'event not found in compact archive',
+      archiveId: archive.id,
+      snapshotKey: cleanSnapshotKey,
+      eventId,
+      action,
+    };
+    await writeArchiveDiagnostic(db, 'ARCHIVE_MOBILE_EVENT_MUTATION_SYNC', cleanSnapshotKey, archive.date, 'warning', result, Date.now() - startedAt);
+    return result;
+  }
+
+  const eventRows = await db.$queryRawUnsafe(
+    `SELECT "eventData"
+       FROM "ScheduleEventArchive"
+      WHERE "archiveId" = $1::text
+      ORDER BY COALESCE("resourceId", ''), COALESCE("startTime", 0), "eventId"`,
+    archive.id
+  );
+  const nextScheduleHash = hashArchiveContent((eventRows || []).map(row => row.eventData).filter(Boolean));
+  await db.$executeRawUnsafe(
+    `UPDATE "PublishedDfpArchive"
+        SET "scheduleHash" = $1::text,
+            "updatedAt" = NOW()
+      WHERE id = $2::text`,
+    nextScheduleHash,
+    archive.id
+  );
+
+  const result = {
+    success: true,
+    archiveId: archive.id,
+    snapshotKey: cleanSnapshotKey,
+    eventId,
+    action,
+    updatedRows,
+    scheduleHash: nextScheduleHash,
+  };
+  await writeArchiveDiagnostic(db, 'ARCHIVE_MOBILE_EVENT_MUTATION_SYNC', cleanSnapshotKey, archive.date, 'success', result, Date.now() - startedAt);
+  return result;
+}
+
 function toMobileTimeString(value) {
   if (value === null || value === undefined || value === '') return '';
   const text = String(value).trim();
@@ -13190,6 +13276,13 @@ app.post('/api/mobile/flight-times', authenticateMobileJWT, async (req, res) => 
       resolved.snapshot.date
     );
 
+    await syncMobileEventMutationToCompactArchive(
+      db,
+      resolved.snapshot.date,
+      updatedEvent || resolved.event,
+      'mobile-flight-times'
+    );
+
     const flightTimes = buildMobileFlightTimesDefaults(updatedEvent || resolved.event, settings, completion, savedLogs);
     await writeMobileFlightTimesAudit(db, req, resolved.effectiveUser, resolved.snapshot.date, beforeEvent, updatedEvent || resolved.event, flightTimes);
 
@@ -13465,6 +13558,12 @@ app.post('/api/mobile/flight-times', authenticateMobileJWT, async (req, res) => 
       );
 
       const auditAction = `${cleanAction}:${isVerbalRequest ? 'verbal' : role}`;
+      await syncMobileEventMutationToCompactArchive(
+        db,
+        snapshot.date,
+        updatedEvent,
+        `mobile-flight-authorisation:${auditAction}`
+      );
       await writeMobileFlightAuthorisationAudit(db, req, effectiveUser, snapshot.date, beforeEvent, updatedEvent, auditAction);
 
       console.log(`✅ POST /api/mobile/flight-authorisation - ${auditAction} event=${eventId} snapshot=${snapshot.date} user=${jwtUserId}`);
