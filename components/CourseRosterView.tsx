@@ -306,15 +306,24 @@ const CourseRosterView: React.FC<CourseRosterViewProps> = ({
         }
     }, [traineesData, isCreatingNew]);
 
-    // Show every active course represented by the scoped trainee data, even when the
-    // course colour has not been created yet. Blank course allocations remain visible
-    // as "Unallocated" so setup wizard imports cannot appear to vanish.
-    const activeCourseNumbers = Object.keys(groupedTrainees)
-        .sort((a, b) => {
+    // Show every active course in scope, even if no trainees are assigned yet.
+    // Blank trainee allocations remain visible as "Unallocated" so setup wizard
+    // imports cannot appear to vanish.
+    const activeCourseNumbers = useMemo(() => {
+        const names = new Set<string>();
+        courses.forEach(course => {
+            const courseName = String(course?.name || '').trim();
+            if (courseName && courseColors[courseName]) names.add(courseName);
+        });
+        Object.keys(groupedTrainees).forEach(courseName => {
+            if (courseName) names.add(courseName);
+        });
+        return Array.from(names).sort((a, b) => {
             if (a === UNALLOCATED_TRAINEE_COURSE) return 1;
             if (b === UNALLOCATED_TRAINEE_COURSE) return -1;
             return a.localeCompare(b);
         });
+    }, [courses, courseColors, groupedTrainees]);
     const archivedCourseNumbers = Object.keys(archivedCourses).sort((a, b) => a.localeCompare(b));
 
     const coursesToDisplay = view === 'active' ? activeCourseNumbers : archivedCourseNumbers;

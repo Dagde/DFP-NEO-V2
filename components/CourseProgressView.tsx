@@ -220,18 +220,12 @@ const CourseProgressView: React.FC<CourseProgressViewProps> = ({
     }, [activeAwardId, awards, isEditingAward, showDeleteAwardConfirm]);
 
     const activeCourses = useMemo(() => {
-        const representedCourseNames = new Set(
-            traineesData
-                .filter(trainee => !trainee.isPaused)
-                .map(trainee => String(trainee.course || '').trim())
-                .filter(Boolean)
-        );
-
-        // Filter to courses represented by the already-scoped active trainee list.
+        // Show every active course record in the current scope, including newly
+        // created courses that do not have trainees assigned yet.
         return courses
-            .filter(course => courseColors[course.name] && representedCourseNames.has(course.name))
+            .filter(course => courseColors[course.name])
             .sort((a, b) => a.name.localeCompare(b.name));
-    }, [courses, courseColors, traineesData]);
+    }, [courses, courseColors]);
 
     const activeCourseNames = useMemo(() => new Set(activeCourses.map(course => course.name)), [activeCourses]);
 

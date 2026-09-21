@@ -53499,11 +53499,21 @@ const CourseRosterView = ({
       }
     }
   }, [traineesData, isCreatingNew]);
-  const activeCourseNumbers = Object.keys(groupedTrainees).sort((a, b) => {
-    if (a === UNALLOCATED_TRAINEE_COURSE) return 1;
-    if (b === UNALLOCATED_TRAINEE_COURSE) return -1;
-    return a.localeCompare(b);
-  });
+  const activeCourseNumbers = reactExports.useMemo(() => {
+    const names = /* @__PURE__ */ new Set();
+    courses.forEach((course) => {
+      const courseName = String(course?.name || "").trim();
+      if (courseName && courseColors[courseName]) names.add(courseName);
+    });
+    Object.keys(groupedTrainees).forEach((courseName) => {
+      if (courseName) names.add(courseName);
+    });
+    return Array.from(names).sort((a, b) => {
+      if (a === UNALLOCATED_TRAINEE_COURSE) return 1;
+      if (b === UNALLOCATED_TRAINEE_COURSE) return -1;
+      return a.localeCompare(b);
+    });
+  }, [courses, courseColors, groupedTrainees]);
   const archivedCourseNumbers = Object.keys(archivedCourses).sort((a, b) => a.localeCompare(b));
   const coursesToDisplay = view === "active" ? activeCourseNumbers : archivedCourseNumbers;
   const coursesToDisplayKey = coursesToDisplay.join("\0");
@@ -101880,11 +101890,8 @@ const CourseProgressView = ({
     }
   }, [activeAwardId, awards, isEditingAward, showDeleteAwardConfirm]);
   const activeCourses = reactExports.useMemo(() => {
-    const representedCourseNames = new Set(
-      traineesData.filter((trainee) => !trainee.isPaused).map((trainee) => String(trainee.course || "").trim()).filter(Boolean)
-    );
-    return courses.filter((course) => courseColors[course.name] && representedCourseNames.has(course.name)).sort((a, b) => a.name.localeCompare(b.name));
-  }, [courses, courseColors, traineesData]);
+    return courses.filter((course) => courseColors[course.name]).sort((a, b) => a.name.localeCompare(b.name));
+  }, [courses, courseColors]);
   const activeCourseNames = reactExports.useMemo(() => new Set(activeCourses.map((course) => course.name)), [activeCourses]);
   const activeTrainees = reactExports.useMemo(() => {
     return traineesData.filter((trainee) => !trainee.isPaused && activeCourseNames.has(trainee.course)).sort((a, b) => (a.fullName || a.name).localeCompare(b.fullName || b.name));
