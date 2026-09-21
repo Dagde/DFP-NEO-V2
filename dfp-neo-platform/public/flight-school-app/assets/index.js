@@ -105986,19 +105986,10 @@ const ArchivedCoursesView = ({
       onUnarchiveCourse(courseName);
     }
   };
-  const handleDelete = async (courseName) => {
-    const confirmed = await showDarkConfirm(
-      "Delete Archived Course",
-      `Deleting "${courseName}" may be contrary to legal, regulatory, training-records, or audit-retention requirements.
-
-Only continue if permanent deletion is required, keeping it archived is not sufficient, and this action has been approved.`,
-      "warning"
-    );
-    if (confirmed) {
-      setCoursePendingPermanentDelete(courseName);
-      setDeletePassword("");
-      setDeletePasswordError("");
-    }
+  const handleDelete = (courseName) => {
+    setCoursePendingPermanentDelete(courseName);
+    setDeletePassword("");
+    setDeletePasswordError("");
   };
   const handleCancelPassword = () => {
     setCoursePendingPermanentDelete(null);
@@ -106018,6 +106009,19 @@ Only continue if permanent deletion is required, keeping it archived is not suff
       const passwordAccepted = await verifyCurrentUserPassword(deletePassword);
       if (!passwordAccepted) {
         setDeletePasswordError("The password was not accepted. Enter the password for the account you are currently logged in with.");
+        return;
+      }
+      const confirmed = await showDarkConfirm(
+        "Final Permanent Delete Warning",
+        `Deleting "${coursePendingPermanentDelete}" may be contrary to legal, regulatory, training-records, or audit-retention requirements.
+
+Only continue if permanent deletion is required, keeping it archived is not sufficient, and this action has been approved.`,
+        "warning",
+        "Delete Permanently",
+        "Cancel"
+      );
+      if (!confirmed) {
+        handleCancelPassword();
         return;
       }
       onDeleteCourse(coursePendingPermanentDelete);
@@ -106118,9 +106122,9 @@ Only continue if permanent deletion is required, keeping it archived is not suff
         children: [
           /* @__PURE__ */ jsxRuntimeExports.jsx("h3", { className: "text-xl font-semibold text-red-300 mb-4", children: "Confirm Permanent Delete" }),
           /* @__PURE__ */ jsxRuntimeExports.jsxs("p", { className: "text-gray-300 mb-4", children: [
-            "Enter your current password to permanently delete ",
+            "Enter your current password to continue. A final permanent-delete warning will appear before ",
             /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "font-semibold text-sky-400", children: coursePendingPermanentDelete }),
-            "."
+            " is removed."
           ] }),
           /* @__PURE__ */ jsxRuntimeExports.jsx(
             "input",

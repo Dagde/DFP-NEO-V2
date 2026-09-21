@@ -38,20 +38,10 @@ const ArchivedCoursesView: React.FC<ArchivedCoursesViewProps> = ({
         }
     };
 
-    const handleDelete = async (courseName: string) => {
-        const confirmed = await showDarkConfirm(
-            'Delete Archived Course',
-            `Deleting "${courseName}" may be contrary to legal, regulatory, training-records, or audit-retention requirements.\n\nOnly continue if permanent deletion is required, keeping it archived is not sufficient, and this action has been approved.`,
-            'warning',
-            'Continue',
-            'Cancel'
-        );
-
-        if (confirmed) {
-            setCoursePendingPermanentDelete(courseName);
-            setDeletePassword('');
-            setDeletePasswordError('');
-        }
+    const handleDelete = (courseName: string) => {
+        setCoursePendingPermanentDelete(courseName);
+        setDeletePassword('');
+        setDeletePasswordError('');
     };
 
     const handleCancelPassword = () => {
@@ -73,6 +63,17 @@ const ArchivedCoursesView: React.FC<ArchivedCoursesViewProps> = ({
             const passwordAccepted = await verifyCurrentUserPassword(deletePassword);
             if (!passwordAccepted) {
                 setDeletePasswordError('The password was not accepted. Enter the password for the account you are currently logged in with.');
+                return;
+            }
+            const confirmed = await showDarkConfirm(
+                'Final Permanent Delete Warning',
+                `Deleting "${coursePendingPermanentDelete}" may be contrary to legal, regulatory, training-records, or audit-retention requirements.\n\nOnly continue if permanent deletion is required, keeping it archived is not sufficient, and this action has been approved.`,
+                'warning',
+                'Delete Permanently',
+                'Cancel'
+            );
+            if (!confirmed) {
+                handleCancelPassword();
                 return;
             }
             onDeleteCourse(coursePendingPermanentDelete);
@@ -194,7 +195,7 @@ const ArchivedCoursesView: React.FC<ArchivedCoursesViewProps> = ({
                     >
                         <h3 className="text-xl font-semibold text-red-300 mb-4">Confirm Permanent Delete</h3>
                         <p className="text-gray-300 mb-4">
-                            Enter your current password to permanently delete <span className="font-semibold text-sky-400">{coursePendingPermanentDelete}</span>.
+                            Enter your current password to continue. A final permanent-delete warning will appear before <span className="font-semibold text-sky-400">{coursePendingPermanentDelete}</span> is removed.
                         </p>
                         <input
                             type="password"
