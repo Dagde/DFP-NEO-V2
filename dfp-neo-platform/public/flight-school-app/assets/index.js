@@ -77597,12 +77597,16 @@ const CourseTab = ({ summary, trainees, events, trainingReportDisplayName }) => 
     if (Number.isFinite(storedBottleneckScore)) return Math.max(0, Math.min(100, storedBottleneckScore * 100));
     return null;
   };
-  const isElevatedRiskEvent = (ev) => {
+  const displayedEventFailRatePct = (ev) => {
     const failRate = eventFailRatePct(ev);
-    return failRate !== null && failRate > thresholds.bottleneckThresholdPct;
+    return failRate === null ? null : Math.round(failRate);
+  };
+  const isElevatedRiskEvent = (ev) => {
+    const failRate = displayedEventFailRatePct(ev);
+    return failRate !== null && failRate > Math.round(thresholds.bottleneckThresholdPct);
   };
   const formatEventRiskTag = (ev) => {
-    const failRate = eventFailRatePct(ev);
+    const failRate = displayedEventFailRatePct(ev);
     return failRate === null ? ev.eventCode : `${ev.eventCode} (${failRate.toFixed(0)}% below pass)`;
   };
   const bottleneckEventsFromEvents = events.filter(isElevatedRiskEvent).map(formatEventRiskTag);
@@ -77805,7 +77809,7 @@ const CourseTab = ({ summary, trainees, events, trainingReportDisplayName }) => 
         " tries"
       ] }),
       isElevatedRiskEvent(ev) && /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "text-xs bg-red-900/50 text-red-300 border border-red-800 px-1.5 py-0.5 rounded flex-shrink-0", children: [
-        eventFailRatePct(ev)?.toFixed(0),
+        displayedEventFailRatePct(ev)?.toFixed(0),
         "% below pass"
       ] })
     ] }, ev.id || ev.eventCode)) }) : events.length > 0 ? /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-gray-500 text-sm", children: "Event grades not yet computed — run analytics to populate" }) : /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-gray-500 text-sm", children: "No event data — run analytics first" }) }),

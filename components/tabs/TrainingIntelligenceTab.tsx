@@ -1677,12 +1677,16 @@ const CourseTab: React.FC<{
     if (Number.isFinite(storedBottleneckScore)) return Math.max(0, Math.min(100, storedBottleneckScore * 100));
     return null;
   };
-  const isElevatedRiskEvent = (ev: TIEEventSummary) => {
+  const displayedEventFailRatePct = (ev: TIEEventSummary): number | null => {
     const failRate = eventFailRatePct(ev);
-    return failRate !== null && failRate > thresholds.bottleneckThresholdPct;
+    return failRate === null ? null : Math.round(failRate);
+  };
+  const isElevatedRiskEvent = (ev: TIEEventSummary) => {
+    const failRate = displayedEventFailRatePct(ev);
+    return failRate !== null && failRate > Math.round(thresholds.bottleneckThresholdPct);
   };
   const formatEventRiskTag = (ev: TIEEventSummary) => {
-    const failRate = eventFailRatePct(ev);
+    const failRate = displayedEventFailRatePct(ev);
     return failRate === null ? ev.eventCode : `${ev.eventCode} (${failRate.toFixed(0)}% below pass)`;
   };
 
@@ -1890,7 +1894,7 @@ const CourseTab: React.FC<{
                   <SparkBar value={safeN(ev.avgOverallGrade)} />
                 </div>
                 <span className="text-xs text-gray-500 w-16 flex-shrink-0 text-right">{ev.totalAttempts} tries</span>
-                {isElevatedRiskEvent(ev) && <span className="text-xs bg-red-900/50 text-red-300 border border-red-800 px-1.5 py-0.5 rounded flex-shrink-0">{eventFailRatePct(ev)?.toFixed(0)}% below pass</span>}
+                {isElevatedRiskEvent(ev) && <span className="text-xs bg-red-900/50 text-red-300 border border-red-800 px-1.5 py-0.5 rounded flex-shrink-0">{displayedEventFailRatePct(ev)?.toFixed(0)}% below pass</span>}
               </div>
             ))}
           </div>
