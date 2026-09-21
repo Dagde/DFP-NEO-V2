@@ -1,4 +1,5 @@
 import type { Course, Trainee } from '../types';
+import { resolveConfiguredServiceName, servicesMatchConfiguredName } from './serviceAliases';
 
 export type CourseStudentGroupDefinition = {
   longName?: string;
@@ -57,11 +58,11 @@ export const getCourseStudentGroupCounts = (
     const traineesForCourse = trainees.filter((trainee) => (
       String(trainee.course || '').trim().toUpperCase() === courseName
     ));
+    const configuredServices = labels.slice(0, MAX_COURSE_STUDENT_GROUPS);
     return labels.slice(0, MAX_COURSE_STUDENT_GROUPS).map((label) => {
-      const serviceKey = label.trim().toUpperCase();
       return {
         label,
-        count: traineesForCourse.filter((trainee) => String(trainee.service || '').trim().toUpperCase() === serviceKey).length,
+        count: traineesForCourse.filter((trainee) => servicesMatchConfiguredName(trainee.service, label, configuredServices)).length,
       };
     });
   }
@@ -80,8 +81,9 @@ export const getCourseStudentGroupCounts = (
 
 export const getTraineeServiceOptions = (
   trainees: Pick<Trainee, 'service'>[] = [],
+  configuredServices: string[] = [],
 ): string[] => Array.from(new Set(
   trainees
-    .map((trainee) => String(trainee.service || '').trim())
+    .map((trainee) => resolveConfiguredServiceName(trainee.service, configuredServices))
     .filter(Boolean),
 )).sort((a, b) => a.localeCompare(b, undefined, { numeric: true, sensitivity: 'base' }));

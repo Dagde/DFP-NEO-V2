@@ -51,6 +51,7 @@ import {
 import { getStaffRoleDisplay } from '../utils/staffRoleColours';
 import { DEFAULT_SCT_TERMINOLOGY, normaliseSctTerminology, type SctTerminology } from '../utils/sctTerminology';
 import { describeDuplicateNamePerson, normalisePersonName, samePersonRecord } from '../utils/personIdentity';
+import { getConfiguredServiceOptionsWithCurrent, resolveConfiguredServiceName } from '../utils/serviceAliases';
 
 type LegacyQualificationField = 'isCommandingOfficer' | 'isCFI' | 'isExecutive' | 'isFlyingSupervisor' | 'isTestingOfficer' | 'isIRE' | 'isQFI' | 'isOFI' | 'isDeputyFlightCommander' | 'isContractor' | 'isAdminStaff';
 
@@ -421,14 +422,15 @@ export const InstructorProfileFlyout: React.FC<InstructorProfileFlyoutProps> = (
   );
   const configuredServiceOptions = useMemo(() => {
     const normalised = normalisePersonnelDisplaySettings(personnelDisplaySettings);
-    const options = normalised.staffRankEquivalency.services
+    const configured = normalised.staffRankEquivalency.services
       .map(serviceOption => String(serviceOption.name || '').trim())
       .filter(Boolean);
-    const currentService = String(instructor.service || '').trim();
-    return currentService && !options.some(option => option.toLowerCase() === currentService.toLowerCase())
-      ? [...options, currentService]
-      : options;
+    return getConfiguredServiceOptionsWithCurrent(configured, instructor.service);
   }, [instructor.service, personnelDisplaySettings]);
+  const displayService = useMemo(
+    () => resolveConfiguredServiceName(instructor.service, configuredServiceOptions),
+    [configuredServiceOptions, instructor.service],
+  );
   const staffRoleOptions = useMemo(() => {
     const legacyOptions = [
       { value: 'CONTRACTOR STAFF', label: simIpDisplayLabel },
@@ -508,7 +510,7 @@ export const InstructorProfileFlyout: React.FC<InstructorProfileFlyoutProps> = (
     return assigned;
   }, [normalisedQualificationCatalogue, normaliseContractorStaffQualifications, qfiQualificationIds]);
   const [callsignNumber, setCallsignNumber] = useState(instructor.callsignNumber);
-  const [service, setService] = useState<string>(instructor.service || '');
+  const [service, setService] = useState<string>(() => displayService);
   const [category, setCategory] = useState<InstructorCategory>(instructor.category);
   const [seatConfig, setSeatConfig] = useState<SeatConfig>(instructor.seatConfig);
   const [unavailabilityPeriods, setUnavailabilityPeriods] = useState<UnavailabilityPeriod[]>(instructor.unavailability || []);
@@ -881,7 +883,7 @@ export const InstructorProfileFlyout: React.FC<InstructorProfileFlyoutProps> = (
 
   const resetState = () => {
     setIdNumber(instructor.idNumber); setName(instructor.name); setRank(instructor.rank);
-    setRole(getEditableStaffRole(instructor.role, operationalModel, crewPositionTerminology)); setCallsignNumber(instructor.callsignNumber); setService(instructor.service);
+    setRole(getEditableStaffRole(instructor.role, operationalModel, crewPositionTerminology)); setCallsignNumber(instructor.callsignNumber); setService(displayService);
     setCategory(instructor.category); setSeatConfig(instructor.seatConfig);
     setUnavailabilityPeriods(instructor.unavailability || []); setLocation(instructor.location || '');
     setUnit(instructor.unit || ''); setFlight(instructor.flight || '');
@@ -1046,7 +1048,7 @@ export const InstructorProfileFlyout: React.FC<InstructorProfileFlyoutProps> = (
       callsignNumber,
       callsign: displayCallsign,
       secondaryCallsign,
-      service: service || undefined,
+      service: resolveConfiguredServiceName(service, configuredServiceOptions) || undefined,
       category: savedCategory,
       seatConfig,
       crew,
@@ -2262,7 +2264,7 @@ export const InstructorProfileFlyout: React.FC<InstructorProfileFlyoutProps> = (
                         <div><span className="text-gray-400 block text-[10px]">Secondary Callsign</span><span className="text-gray-300">{instructor.secondaryCallsign || '[None]'}</span></div>
                         <div><span className="text-gray-400 block text-[10px]">Crew</span><span className="text-white font-medium">{instructor.crew || '[None]'}</span></div>
                         <div><span className="text-gray-400 block text-[10px]">Rank</span><span className="text-white font-medium">{instructor.rank}</span></div>
-                        <div><span className="text-gray-400 block text-[10px]">Service</span><span className="text-white font-medium">{instructor.service || '[None]'}</span></div>
+                        <div><span className="text-gray-400 block text-[10px]">Service</span><span className="text-white font-medium">{displayService || '[None]'}</span></div>
                         {/* Row 3 */}
                         <div><span className="text-gray-400 block text-[10px]">Unit</span><span className="text-white font-medium">{instructor.unit}</span></div>
                         <div><span className="text-gray-400 block text-[10px]">Seat Config</span><span className="text-white font-medium">{instructor.seatConfig}</span></div>

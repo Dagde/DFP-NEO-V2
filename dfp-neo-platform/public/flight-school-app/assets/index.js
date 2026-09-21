@@ -9228,6 +9228,38 @@ const DataLoadingMonitor = ({
     ] })
   ] }) });
 };
+const SERVICE_ALIAS_TARGETS = {
+  RAAF: "Air Force",
+  "ROYAL AUSTRALIAN AIR FORCE": "Air Force",
+  RAN: "Navy",
+  "ROYAL AUSTRALIAN NAVY": "Navy",
+  ARA: "Army",
+  "AUSTRALIAN ARMY": "Army"
+};
+const serviceKey = (value) => String(value || "").trim().toUpperCase();
+const getKnownServiceAliasTarget = (value) => SERVICE_ALIAS_TARGETS[serviceKey(value)] || String(value || "").trim();
+const resolveConfiguredServiceName = (value, configuredServices = []) => {
+  const trimmed = String(value || "").trim();
+  if (!trimmed) return "";
+  const configured = configuredServices.map((service) => String(service || "").trim()).filter(Boolean);
+  const exact = configured.find((service) => serviceKey(service) === serviceKey(trimmed));
+  if (exact) return exact;
+  const aliasTarget = getKnownServiceAliasTarget(trimmed);
+  if (aliasTarget !== trimmed) {
+    const configuredAliasTarget = configured.find((service) => serviceKey(service) === serviceKey(aliasTarget));
+    if (configuredAliasTarget) return configuredAliasTarget;
+  }
+  return trimmed;
+};
+const getConfiguredServiceOptionsWithCurrent = (configuredServices = [], currentService) => {
+  const options = configuredServices.map((service) => String(service || "").trim()).filter(Boolean);
+  const resolvedCurrent = resolveConfiguredServiceName(currentService, options);
+  return resolvedCurrent && !options.some((option) => serviceKey(option) === serviceKey(resolvedCurrent)) ? [...options, resolvedCurrent] : options;
+};
+const servicesMatchConfiguredName = (value, configuredService, configuredServices = []) => {
+  const configured = configuredServices.length > 0 ? configuredServices : [configuredService];
+  return serviceKey(resolveConfiguredServiceName(value, configured)) === serviceKey(configuredService);
+};
 const MAX_COURSE_STUDENT_GROUPS = 4;
 const DEFAULT_COURSE_STUDENT_GROUPS = [
   { longName: "Group 1", shortName: "Group 1" },
@@ -9253,11 +9285,11 @@ const getCourseStudentGroupCounts = (course, definitions = [], trainees) => {
   if (Array.isArray(trainees)) {
     const courseName = "name" in course ? String(course.name || "").trim().toUpperCase() : "";
     const traineesForCourse = trainees.filter((trainee) => String(trainee.course || "").trim().toUpperCase() === courseName);
+    const configuredServices = labels.slice(0, MAX_COURSE_STUDENT_GROUPS);
     return labels.slice(0, MAX_COURSE_STUDENT_GROUPS).map((label) => {
-      const serviceKey = label.trim().toUpperCase();
       return {
         label,
-        count: traineesForCourse.filter((trainee) => String(trainee.service || "").trim().toUpperCase() === serviceKey).length
+        count: traineesForCourse.filter((trainee) => servicesMatchConfiguredName(trainee.service, label, configuredServices)).length
       };
     });
   }
@@ -9272,8 +9304,8 @@ const getCourseStudentGroupCounts = (course, definitions = [], trainees) => {
     count: storedCounts[index] || 0
   }));
 };
-const getTraineeServiceOptions = (trainees = []) => Array.from(new Set(
-  trainees.map((trainee) => String(trainee.service || "").trim()).filter(Boolean)
+const getTraineeServiceOptions = (trainees = [], configuredServices = []) => Array.from(new Set(
+  trainees.map((trainee) => resolveConfiguredServiceName(trainee.service, configuredServices)).filter(Boolean)
 )).sort((a, b) => a.localeCompare(b, void 0, { numeric: true, sensitivity: "base" }));
 const ALL_COLORS = [
   "bg-sky-400/80",
@@ -18368,7 +18400,13 @@ const PlatformConfigurationSettings = ({
     () => normaliseCourseStudentGroups(serviceDefinitions, { useFallback: false }),
     [serviceDefinitions]
   );
-  const traineeServiceOptions = reactExports.useMemo(() => getTraineeServiceOptions(traineesData), [traineesData]);
+  const configuredPersonnelServices = reactExports.useMemo(() => normalisePersonnelDisplaySettings(
+    config.personnelDisplaySettings || config.personnelSettings || null
+  ).staffRankEquivalency.services.map((serviceOption) => String(serviceOption.name || "").trim()).filter(Boolean), [config.personnelDisplaySettings, config.personnelSettings]);
+  const traineeServiceOptions = reactExports.useMemo(
+    () => getTraineeServiceOptions(traineesData, configuredPersonnelServices),
+    [configuredPersonnelServices, traineesData]
+  );
   const updateCourseStudentGroup = reactExports.useCallback((index, value) => {
     if (!onUpdateServiceDefinitions) return;
     const next = courseStudentGroups.map((group) => ({ ...group }));
@@ -39942,7 +39980,11 @@ const ScheduleView = ({
     () => normalisePersonnelDisplaySettings(personnelDisplaySettingsInput || null),
     [personnelDisplaySettingsInput]
   );
-  const traineeServiceOptions = reactExports.useMemo(() => getTraineeServiceOptions(traineesData), [traineesData]);
+  const configuredPersonnelServices = reactExports.useMemo(() => schedulePersonnelDisplaySettings.staffRankEquivalency.services.map((serviceOption) => String(serviceOption.name || "").trim()).filter(Boolean), [schedulePersonnelDisplaySettings]);
+  const traineeServiceOptions = reactExports.useMemo(
+    () => getTraineeServiceOptions(traineesData, configuredPersonnelServices),
+    [configuredPersonnelServices, traineesData]
+  );
   const scrollContainerRef = reactExports.useRef(null);
   const [showDatePicker, setShowDatePicker] = reactExports.useState(false);
   const [showResourceUnderlayPanel, setShowResourceUnderlayPanel] = reactExports.useState(false);
@@ -49842,11 +49884,14 @@ const TraineeProfileFlyout = ({
   }, [personnelDisplaySettings, rank]);
   const configuredServiceOptions = reactExports.useMemo(() => {
     const normalised = normalisePersonnelDisplaySettings(personnelDisplaySettings);
-    const options = normalised.staffRankEquivalency.services.map((serviceOption) => String(serviceOption.name || "").trim()).filter(Boolean);
-    const currentService = String(trainee.service || "").trim();
-    return currentService && !options.some((option) => option.toLowerCase() === currentService.toLowerCase()) ? [...options, currentService] : options;
+    const configured = normalised.staffRankEquivalency.services.map((serviceOption) => String(serviceOption.name || "").trim()).filter(Boolean);
+    return getConfiguredServiceOptionsWithCurrent(configured, trainee.service);
   }, [personnelDisplaySettings, trainee.service]);
-  const [service, setService] = reactExports.useState(trainee.service || "");
+  const displayService = reactExports.useMemo(
+    () => resolveConfiguredServiceName(trainee.service, configuredServiceOptions),
+    [configuredServiceOptions, trainee.service]
+  );
+  const [service, setService] = reactExports.useState(() => displayService);
   const defaultTraineeRole = reactExports.useMemo(
     () => getDefaultTraineeRole(crewPositionTerminology, operationalModel),
     [crewPositionTerminology, operationalModel]
@@ -50053,7 +50098,7 @@ const TraineeProfileFlyout = ({
     setName(trainee.name);
     setIdNumber(trainee.idNumber);
     setRank(trainee.rank);
-    setService(trainee.service || "");
+    setService(displayService);
     setRole(trainee.role || defaultTraineeRole);
     setCourse(trainee.course || activeCourses[0] || "");
     setLmpType(trainee.lmpType || "");
@@ -50308,7 +50353,7 @@ Confirm the Personnel ID, unit and course are correct before saving this separat
       flight,
       phoneNumber,
       email,
-      service: service || void 0,
+      service: resolveConfiguredServiceName(service, configuredServiceOptions) || void 0,
       traineeCallsign,
       secondaryCallsign,
       crew,
@@ -51678,7 +51723,7 @@ ${errorText || `HTTP ${response.status}`}`, "Delete Failed", "error");
                         ] }),
                         /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
                           /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-gray-400 block text-[10px]", children: "Service" }),
-                          /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-white font-medium", children: trainee.service || "[None]" })
+                          /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-white font-medium", children: displayService || "[None]" })
                         ] }),
                         /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
                           /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-gray-400 block text-[10px]", children: "Unit" }),
@@ -84116,10 +84161,13 @@ const InstructorProfileFlyout = ({
   );
   const configuredServiceOptions = reactExports.useMemo(() => {
     const normalised = normalisePersonnelDisplaySettings(personnelDisplaySettings);
-    const options = normalised.staffRankEquivalency.services.map((serviceOption) => String(serviceOption.name || "").trim()).filter(Boolean);
-    const currentService = String(instructor.service || "").trim();
-    return currentService && !options.some((option) => option.toLowerCase() === currentService.toLowerCase()) ? [...options, currentService] : options;
+    const configured = normalised.staffRankEquivalency.services.map((serviceOption) => String(serviceOption.name || "").trim()).filter(Boolean);
+    return getConfiguredServiceOptionsWithCurrent(configured, instructor.service);
   }, [instructor.service, personnelDisplaySettings]);
+  const displayService = reactExports.useMemo(
+    () => resolveConfiguredServiceName(instructor.service, configuredServiceOptions),
+    [configuredServiceOptions, instructor.service]
+  );
   const staffRoleOptions = reactExports.useMemo(() => {
     const legacyOptions = [
       { value: "CONTRACTOR STAFF", label: simIpDisplayLabel }
@@ -84177,7 +84225,7 @@ const InstructorProfileFlyout = ({
     return assigned;
   }, [normalisedQualificationCatalogue, normaliseContractorStaffQualifications, qfiQualificationIds]);
   const [callsignNumber, setCallsignNumber] = reactExports.useState(instructor.callsignNumber);
-  const [service, setService] = reactExports.useState(instructor.service || "");
+  const [service, setService] = reactExports.useState(() => displayService);
   const [category, setCategory] = reactExports.useState(instructor.category);
   const [seatConfig, setSeatConfig] = reactExports.useState(instructor.seatConfig);
   const [unavailabilityPeriods, setUnavailabilityPeriods] = reactExports.useState(instructor.unavailability || []);
@@ -84487,7 +84535,7 @@ const InstructorProfileFlyout = ({
     setRank(instructor.rank);
     setRole(getEditableStaffRole(instructor.role, operationalModel, crewPositionTerminology));
     setCallsignNumber(instructor.callsignNumber);
-    setService(instructor.service);
+    setService(displayService);
     setCategory(instructor.category);
     setSeatConfig(instructor.seatConfig);
     setUnavailabilityPeriods(instructor.unavailability || []);
@@ -84658,7 +84706,7 @@ Confirm the Personnel ID, unit and role are correct before saving this separate 
       callsignNumber,
       callsign: displayCallsign,
       secondaryCallsign,
-      service: service || void 0,
+      service: resolveConfiguredServiceName(service, configuredServiceOptions) || void 0,
       category: savedCategory,
       seatConfig,
       crew,
@@ -85831,7 +85879,7 @@ Confirm the Personnel ID, unit and role are correct before saving this separate 
                     ] }),
                     /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
                       /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-gray-400 block text-[10px]", children: "Service" }),
-                      /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-white font-medium", children: instructor.service || "[None]" })
+                      /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-white font-medium", children: displayService || "[None]" })
                     ] }),
                     /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
                       /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-gray-400 block text-[10px]", children: "Unit" }),

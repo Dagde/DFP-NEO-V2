@@ -2549,7 +2549,15 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
     () => normaliseCourseStudentGroups(serviceDefinitions, { useFallback: false }),
     [serviceDefinitions],
   );
-  const traineeServiceOptions = useMemo(() => getTraineeServiceOptions(traineesData), [traineesData]);
+  const configuredPersonnelServices = useMemo(() => normalisePersonnelDisplaySettings(
+    config.personnelDisplaySettings || (config as any).personnelSettings || null,
+  ).staffRankEquivalency.services
+    .map(serviceOption => String(serviceOption.name || '').trim())
+    .filter(Boolean), [config.personnelDisplaySettings, (config as any).personnelSettings]);
+  const traineeServiceOptions = useMemo(
+    () => getTraineeServiceOptions(traineesData, configuredPersonnelServices),
+    [configuredPersonnelServices, traineesData],
+  );
   const updateCourseStudentGroup = useCallback((index: number, value: string) => {
     if (!onUpdateServiceDefinitions) return;
     const next = courseStudentGroups.map((group) => ({ ...group }));

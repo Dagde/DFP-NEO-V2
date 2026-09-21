@@ -69,6 +69,7 @@ import {
 } from '../utils/crewPositionTerminology';
 import { DEFAULT_PHRASE_BANK } from '../config/phraseBankConfig';
 import { DEFAULT_SCT_TERMINOLOGY, normaliseSctTerminology, type SctTerminology } from '../utils/sctTerminology';
+import { getConfiguredServiceOptionsWithCurrent, resolveConfiguredServiceName } from '../utils/serviceAliases';
 
 // ACADEMIC_LMP_COURSES is derived dynamically from syllabusDetails (DB only, no hardcoded fallback)
 
@@ -1261,15 +1262,16 @@ const TraineeProfileFlyout: React.FC<TraineeProfileFlyoutProps> = ({
     }, [personnelDisplaySettings, rank]);
     const configuredServiceOptions = useMemo(() => {
       const normalised = normalisePersonnelDisplaySettings(personnelDisplaySettings);
-      const options = normalised.staffRankEquivalency.services
+      const configured = normalised.staffRankEquivalency.services
         .map(serviceOption => String(serviceOption.name || '').trim())
         .filter(Boolean);
-      const currentService = String(trainee.service || '').trim();
-      return currentService && !options.some(option => option.toLowerCase() === currentService.toLowerCase())
-        ? [...options, currentService]
-        : options;
+      return getConfiguredServiceOptionsWithCurrent(configured, trainee.service);
     }, [personnelDisplaySettings, trainee.service]);
-    const [service, setService] = useState(trainee.service || '');
+    const displayService = useMemo(
+      () => resolveConfiguredServiceName(trainee.service, configuredServiceOptions),
+      [configuredServiceOptions, trainee.service],
+    );
+    const [service, setService] = useState(() => displayService);
     const defaultTraineeRole = useMemo(
         () => getDefaultTraineeRole(crewPositionTerminology, operationalModel),
         [crewPositionTerminology, operationalModel],
@@ -1506,7 +1508,7 @@ const TraineeProfileFlyout: React.FC<TraineeProfileFlyoutProps> = ({
         setName(trainee.name);
         setIdNumber(trainee.idNumber);
         setRank(trainee.rank);
-        setService(trainee.service || '');
+        setService(displayService);
         setRole(trainee.role || defaultTraineeRole);
         setCourse(trainee.course || activeCourses[0] || '');
         setLmpType(trainee.lmpType || '');
@@ -1834,7 +1836,7 @@ const TraineeProfileFlyout: React.FC<TraineeProfileFlyoutProps> = ({
             flight,
             phoneNumber,
             email,
-            service: service || undefined,
+            service: resolveConfiguredServiceName(service, configuredServiceOptions) || undefined,
             traineeCallsign,
             secondaryCallsign,
             crew,
@@ -3347,7 +3349,7 @@ const TraineeProfileFlyout: React.FC<TraineeProfileFlyoutProps> = ({
                               <div><span className="text-gray-400 block text-[10px]">Rank</span><span className="text-white font-medium">{trainee.rank}</span></div>
                               {/* Row 3 */}
                               <div><span className="text-gray-400 block text-[10px]">Role</span><span className="text-sky-300 font-medium">{trainee.role || <span className="text-gray-500 italic">None</span>}</span></div>
-                              <div><span className="text-gray-400 block text-[10px]">Service</span><span className="text-white font-medium">{trainee.service || '[None]'}</span></div>
+                              <div><span className="text-gray-400 block text-[10px]">Service</span><span className="text-white font-medium">{displayService || '[None]'}</span></div>
                               <div><span className="text-gray-400 block text-[10px]">Unit</span><span className="text-white font-medium">{trainee.unit}</span></div>
                               <div><span className="text-gray-400 block text-[10px]">Crew</span><span className="text-white font-medium">{trainee.crew || 'N/A'}</span></div>
                               {/* Row 4 */}

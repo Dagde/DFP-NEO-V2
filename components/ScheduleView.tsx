@@ -11622,7 +11622,13 @@ const ScheduleView: React.FC<ScheduleViewProps> = ({
         () => normalisePersonnelDisplaySettings(personnelDisplaySettingsInput || null),
         [personnelDisplaySettingsInput]
     );
-    const traineeServiceOptions = useMemo(() => getTraineeServiceOptions(traineesData), [traineesData]);
+    const configuredPersonnelServices = useMemo(() => schedulePersonnelDisplaySettings.staffRankEquivalency.services
+        .map(serviceOption => String(serviceOption.name || '').trim())
+        .filter(Boolean), [schedulePersonnelDisplaySettings]);
+    const traineeServiceOptions = useMemo(
+        () => getTraineeServiceOptions(traineesData, configuredPersonnelServices),
+        [configuredPersonnelServices, traineesData]
+    );
     const scrollContainerRef = useRef<HTMLDivElement>(null);
     const [showDatePicker, setShowDatePicker] = useState(false);
     const [showResourceUnderlayPanel, setShowResourceUnderlayPanel] = useState(false);
