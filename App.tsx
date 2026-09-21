@@ -53319,6 +53319,8 @@ appliedUpdates.forEach(update => {
             case 'ArchivedCourses':
                 return <ArchivedCoursesView
                     archivedCourses={archivedCourses}
+                    courses={courses}
+                    serviceDefinitions={serviceDefinitions}
                     onUnarchiveCourse={handleUnarchiveCourseFromArchivedView}
                     onDeleteCourse={handleDeleteCourseFromArchivedView}
                     onNavigateBack={() => handleNavigation('TrainingRecords')}

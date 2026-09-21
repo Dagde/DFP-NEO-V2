@@ -9292,7 +9292,7 @@ const resolveActiveUnitOption = (unitOptions, activeUnitCode) => {
   if (!active) return unitOptions[0] || "";
   return unitOptions.find((unit) => normaliseContextValue(unit) === normaliseContextValue(active)) || active || unitOptions[0] || "";
 };
-const getServiceCountLabels$1 = (serviceDefinitions = []) => {
+const getServiceCountLabels$2 = (serviceDefinitions = []) => {
   const labels = serviceDefinitions.map((service) => String(service.shortName || service.longName || "").trim()).filter(Boolean);
   return [
     labels[0] || "Group 1",
@@ -9330,7 +9330,7 @@ const AddCourseFlyout = ({
   const [location, setLocation] = reactExports.useState(defaultLocation);
   const [unit, setUnit] = reactExports.useState(defaultUnit);
   const [primaryStudentGroupLabel, secondaryStudentGroupLabel, tertiaryStudentGroupLabel] = reactExports.useMemo(
-    () => getServiceCountLabels$1(serviceDefinitions),
+    () => getServiceCountLabels$2(serviceDefinitions),
     [serviceDefinitions]
   );
   const availableColor = reactExports.useMemo(() => {
@@ -103483,7 +103483,7 @@ const EditCourseFlyout = ({
     }
   );
 };
-const getServiceCountLabels = (serviceDefinitions = []) => {
+const getServiceCountLabels$1 = (serviceDefinitions = []) => {
   const labels = serviceDefinitions.map((service) => String(service.shortName || service.longName || "").trim()).filter(Boolean);
   return [
     labels[0] || "Group 1",
@@ -103491,7 +103491,7 @@ const getServiceCountLabels = (serviceDefinitions = []) => {
     labels[2] || "Group 3"
   ];
 };
-const darkenHexColor = (color) => {
+const darkenHexColor$1 = (color) => {
   if (!color.startsWith("#") || color.length < 7) return color;
   const strength = 0.62;
   const r = Math.round(parseInt(color.slice(1, 3), 16) * strength);
@@ -103499,7 +103499,7 @@ const darkenHexColor = (color) => {
   const b = Math.round(parseInt(color.slice(5, 7), 16) * strength);
   return `rgb(${r}, ${g}, ${b})`;
 };
-const formatCourseDate = (value) => {
+const formatCourseDate$1 = (value) => {
   if (!value) return "Not set";
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return "Not set";
@@ -103538,7 +103538,7 @@ const CourseCard = React.memo(({
               {
                 "data-course-color": "true",
                 className: `w-4 h-4 rounded ${!courseColor.startsWith("#") ? courseColor || "bg-gray-400/50" : ""}`,
-                style: courseColor.startsWith("#") ? { backgroundColor: darkenHexColor(courseColor) } : {}
+                style: courseColor.startsWith("#") ? { backgroundColor: darkenHexColor$1(courseColor) } : {}
               }
             ),
             /* @__PURE__ */ jsxRuntimeExports.jsx("h3", { className: "text-lg font-semibold text-white group-hover:text-sky-400 transition-colors", children: course.name })
@@ -103573,11 +103573,11 @@ const CourseCard = React.memo(({
         /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-2 text-sm text-gray-300", children: [
           /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex justify-between", children: [
             /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-gray-400", children: "Start Date:" }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx("span", { children: formatCourseDate(course.startDate) })
+            /* @__PURE__ */ jsxRuntimeExports.jsx("span", { children: formatCourseDate$1(course.startDate) })
           ] }),
           /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex justify-between", children: [
             /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-gray-400", children: "Grad Date:" }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx("span", { children: formatCourseDate(course.gradDate) })
+            /* @__PURE__ */ jsxRuntimeExports.jsx("span", { children: formatCourseDate$1(course.gradDate) })
           ] }),
           /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex justify-between", children: [
             /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-gray-400", children: "Total Students:" }),
@@ -103635,7 +103635,7 @@ const CoursesManagementView = ({
   const [showChoiceDialog, setShowChoiceDialog] = reactExports.useState(false);
   const [courseToDelete, setCourseToDelete] = reactExports.useState(null);
   const [primaryStudentGroupLabel, secondaryStudentGroupLabel, tertiaryStudentGroupLabel] = reactExports.useMemo(
-    () => getServiceCountLabels(serviceDefinitions),
+    () => getServiceCountLabels$1(serviceDefinitions),
     [serviceDefinitions]
   );
   const groupedCourses = reactExports.useMemo(() => {
@@ -105962,8 +105962,32 @@ const TrainingRecordsView = ({
     ] })
   ] });
 };
+const getServiceCountLabels = (serviceDefinitions = []) => {
+  const labels = serviceDefinitions.map((service) => String(service.shortName || service.longName || "").trim()).filter(Boolean);
+  return [
+    labels[0] || "Group 1",
+    labels[1] || "Group 2",
+    labels[2] || "Group 3"
+  ];
+};
+const darkenHexColor = (color) => {
+  if (!color.startsWith("#") || color.length < 7) return color;
+  const strength = 0.62;
+  const r = Math.round(parseInt(color.slice(1, 3), 16) * strength);
+  const g = Math.round(parseInt(color.slice(3, 5), 16) * strength);
+  const b = Math.round(parseInt(color.slice(5, 7), 16) * strength);
+  return `rgb(${r}, ${g}, ${b})`;
+};
+const formatCourseDate = (value) => {
+  if (!value) return "Not set";
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "Not set";
+  return date.toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "2-digit" });
+};
 const ArchivedCoursesView = ({
   archivedCourses,
+  courses,
+  serviceDefinitions = [],
   onUnarchiveCourse,
   onDeleteCourse,
   onNavigateBack
@@ -105976,6 +106000,20 @@ const ArchivedCoursesView = ({
     () => Object.keys(archivedCourses).sort((a, b) => a.localeCompare(b)),
     [archivedCourses]
   );
+  const [primaryStudentGroupLabel, secondaryStudentGroupLabel, tertiaryStudentGroupLabel] = reactExports.useMemo(
+    () => getServiceCountLabels(serviceDefinitions),
+    [serviceDefinitions]
+  );
+  const courseRecordsByName = reactExports.useMemo(() => {
+    const records = /* @__PURE__ */ new Map();
+    courses.forEach((course) => {
+      const name = String(course?.name || "").trim();
+      const code = String(course?.code || "").trim();
+      if (name) records.set(name, course);
+      if (code) records.set(code, course);
+    });
+    return records;
+  }, [courses]);
   const handleUnarchive = async (courseName) => {
     const confirmed = await showDarkConfirm(
       "Unarchive Course",
@@ -106034,17 +106072,33 @@ Only continue if permanent deletion is required, keeping it archived is not suff
     }
   };
   const ArchivedCourseCard = ({ courseName, color }) => {
+    const course = courseRecordsByName.get(courseName);
+    const displayCourse = course || {
+      name: courseName,
+      color,
+      startDate: "",
+      gradDate: "",
+      raafStart: 0,
+      navyStart: 0,
+      armyStart: 0
+    };
+    const courseColor = displayCourse.color || color || "";
+    const primaryCount = displayCourse.raafStart ?? 0;
+    const secondaryCount = displayCourse.navyStart ?? 0;
+    const tertiaryCount = displayCourse.armyStart ?? 0;
+    const totalStudents = primaryCount + secondaryCount + tertiaryCount;
     return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "bg-gray-700 rounded-lg p-4 border border-gray-600", children: [
       /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex justify-between items-start mb-3", children: [
         /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center gap-3", children: [
           /* @__PURE__ */ jsxRuntimeExports.jsx(
             "div",
             {
-              className: `w-4 h-4 rounded ${(color || "").startsWith("#") ? "" : color}`,
-              style: (color || "").startsWith("#") ? { backgroundColor: color } : {}
+              "data-course-color": "true",
+              className: `w-4 h-4 rounded ${(courseColor || "").startsWith("#") ? "" : courseColor || "bg-gray-400/50"}`,
+              style: (courseColor || "").startsWith("#") ? { backgroundColor: darkenHexColor(courseColor) } : {}
             }
           ),
-          /* @__PURE__ */ jsxRuntimeExports.jsx("h3", { className: "text-lg font-semibold text-gray-300", children: courseName })
+          /* @__PURE__ */ jsxRuntimeExports.jsx("h3", { className: "text-lg font-semibold text-gray-300", children: displayCourse.name })
         ] }),
         /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex gap-2", children: [
           /* @__PURE__ */ jsxRuntimeExports.jsx(
@@ -106067,7 +106121,38 @@ Only continue if permanent deletion is required, keeping it archived is not suff
           )
         ] })
       ] }),
-      /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-sm text-gray-400", children: /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex items-center gap-2", children: /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-gray-600 text-gray-300", children: "Archived" }) }) })
+      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-2 text-sm text-gray-300", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex justify-between", children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-gray-400", children: "Start Date:" }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx("span", { children: formatCourseDate(displayCourse.startDate) })
+        ] }),
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex justify-between", children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-gray-400", children: "Grad Date:" }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx("span", { children: formatCourseDate(displayCourse.gradDate) })
+        ] }),
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex justify-between", children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-gray-400", children: "Total Students:" }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "font-semibold", children: totalStudents })
+        ] }),
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex justify-between text-xs", children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "text-gray-400", children: [
+            primaryStudentGroupLabel,
+            ": ",
+            primaryCount
+          ] }),
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "text-gray-400", children: [
+            secondaryStudentGroupLabel,
+            ": ",
+            secondaryCount
+          ] }),
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "text-gray-400", children: [
+            tertiaryStudentGroupLabel,
+            ": ",
+            tertiaryCount
+          ] })
+        ] }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "pt-1", children: /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-gray-600 text-gray-300", children: "Archived" }) })
+      ] })
     ] });
   };
   return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex-1 flex flex-col bg-gray-900 overflow-hidden", children: [
@@ -152284,6 +152369,8 @@ ${error instanceof Error ? error.message : String(error)}`,
           ArchivedCoursesView,
           {
             archivedCourses,
+            courses,
+            serviceDefinitions,
             onUnarchiveCourse: handleUnarchiveCourseFromArchivedView,
             onDeleteCourse: handleDeleteCourseFromArchivedView,
             onNavigateBack: () => handleNavigation("TrainingRecords")

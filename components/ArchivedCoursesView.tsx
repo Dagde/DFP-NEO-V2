@@ -1,16 +1,48 @@
 import React, { useMemo, useState } from 'react';
+import { Course } from '../types';
 import { showDarkConfirm } from './DarkMessageModal';
 import { verifyCurrentUserPassword } from '../utils/passwordVerification';
 
 interface ArchivedCoursesViewProps {
     archivedCourses: { [key: string]: string };
+    courses: Course[];
+    serviceDefinitions?: Array<{ longName?: string; shortName?: string }>;
     onUnarchiveCourse: (courseName: string) => void;
     onDeleteCourse: (courseName: string) => void;
     onNavigateBack: () => void;
 }
 
+const getServiceCountLabels = (serviceDefinitions: Array<{ longName?: string; shortName?: string }> = []): [string, string, string] => {
+    const labels = serviceDefinitions
+        .map(service => String(service.shortName || service.longName || '').trim())
+        .filter(Boolean);
+    return [
+        labels[0] || 'Group 1',
+        labels[1] || 'Group 2',
+        labels[2] || 'Group 3',
+    ];
+};
+
+const darkenHexColor = (color: string) => {
+    if (!color.startsWith('#') || color.length < 7) return color;
+    const strength = 0.62;
+    const r = Math.round(parseInt(color.slice(1, 3), 16) * strength);
+    const g = Math.round(parseInt(color.slice(3, 5), 16) * strength);
+    const b = Math.round(parseInt(color.slice(5, 7), 16) * strength);
+    return `rgb(${r}, ${g}, ${b})`;
+};
+
+const formatCourseDate = (value?: string) => {
+    if (!value) return 'Not set';
+    const date = new Date(value);
+    if (Number.isNaN(date.getTime())) return 'Not set';
+    return date.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: '2-digit' });
+};
+
 const ArchivedCoursesView: React.FC<ArchivedCoursesViewProps> = ({
     archivedCourses,
+    courses,
+    serviceDefinitions = [],
     onUnarchiveCourse,
     onDeleteCourse,
     onNavigateBack
@@ -23,6 +55,20 @@ const ArchivedCoursesView: React.FC<ArchivedCoursesViewProps> = ({
         () => Object.keys(archivedCourses).sort((a, b) => a.localeCompare(b)),
         [archivedCourses]
     );
+    const [primaryStudentGroupLabel, secondaryStudentGroupLabel, tertiaryStudentGroupLabel] = useMemo(
+        () => getServiceCountLabels(serviceDefinitions),
+        [serviceDefinitions],
+    );
+    const courseRecordsByName = useMemo(() => {
+        const records = new Map<string, Course>();
+        courses.forEach((course) => {
+            const name = String(course?.name || '').trim();
+            const code = String(course?.code || '').trim();
+            if (name) records.set(name, course);
+            if (code) records.set(code, course);
+        });
+        return records;
+    }, [courses]);
 
     const handleUnarchive = async (courseName: string) => {
         const confirmed = await showDarkConfirm(
@@ -87,16 +133,34 @@ const ArchivedCoursesView: React.FC<ArchivedCoursesViewProps> = ({
     };
 
     const ArchivedCourseCard: React.FC<{ courseName: string; color: string }> = ({ courseName, color }) => {
+        const course = courseRecordsByName.get(courseName);
+        const displayCourse: Course = course || {
+            name: courseName,
+            color,
+            startDate: '',
+            gradDate: '',
+            raafStart: 0,
+            navyStart: 0,
+            armyStart: 0,
+            status: 'ARCHIVED',
+        };
+        const courseColor = displayCourse.color || color || '';
+        const primaryCount = displayCourse.raafStart ?? 0;
+        const secondaryCount = displayCourse.navyStart ?? 0;
+        const tertiaryCount = displayCourse.armyStart ?? 0;
+        const totalStudents = primaryCount + secondaryCount + tertiaryCount;
+
         return (
             <div className="bg-gray-700 rounded-lg p-4 border border-gray-600">
                 <div className="flex justify-between items-start mb-3">
                     <div className="flex items-center gap-3">
-                        <div 
-                            className={`w-4 h-4 rounded ${(color || '').startsWith('#') ? '' : color}`}
-                            style={(color || '').startsWith('#') ? { backgroundColor: color } : {}}
+                        <div
+                            data-course-color="true"
+                            className={`w-4 h-4 rounded ${(courseColor || '').startsWith('#') ? '' : (courseColor || 'bg-gray-400/50')}`}
+                            style={(courseColor || '').startsWith('#') ? { backgroundColor: darkenHexColor(courseColor) } : {}}
                         ></div>
                         <h3 className="text-lg font-semibold text-gray-300">
-                            {courseName}
+                            {displayCourse.name}
                         </h3>
                     </div>
                     <div className="flex gap-2">
@@ -120,9 +184,26 @@ const ArchivedCoursesView: React.FC<ArchivedCoursesViewProps> = ({
                         </button>
                     </div>
                 </div>
-                
-                <div className="text-sm text-gray-400">
-                    <div className="flex items-center gap-2">
+
+                <div className="space-y-2 text-sm text-gray-300">
+                    <div className="flex justify-between">
+                        <span className="text-gray-400">Start Date:</span>
+                        <span>{formatCourseDate(displayCourse.startDate)}</span>
+                    </div>
+                    <div className="flex justify-between">
+                        <span className="text-gray-400">Grad Date:</span>
+                        <span>{formatCourseDate(displayCourse.gradDate)}</span>
+                    </div>
+                    <div className="flex justify-between">
+                        <span className="text-gray-400">Total Students:</span>
+                        <span className="font-semibold">{totalStudents}</span>
+                    </div>
+                    <div className="flex justify-between text-xs">
+                        <span className="text-gray-400">{primaryStudentGroupLabel}: {primaryCount}</span>
+                        <span className="text-gray-400">{secondaryStudentGroupLabel}: {secondaryCount}</span>
+                        <span className="text-gray-400">{tertiaryStudentGroupLabel}: {tertiaryCount}</span>
+                    </div>
+                    <div className="pt-1">
                         <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-gray-600 text-gray-300">
                             Archived
                         </span>
