@@ -2813,141 +2813,135 @@ const SyllabusView: React.FC<SyllabusViewProps> = ({
       </div>
 
       {/* Main Content */}
-      <div className="flex-1 flex flex-row overflow-hidden">
-        {/* Left Column: Event Icons */}
-        <div className="w-[292px] border-r border-gray-700 overflow-hidden flex flex-col bg-gray-950/25">
-          <div className="flex-1 overflow-y-auto p-3">
+      <div className="flex-1 overflow-y-auto bg-gray-950/20">
+        <div className="min-w-[980px] p-3">
             {filteredSyllabusDetails.map((item, index) => {
               const totalItems = filteredSyllabusDetails.length;
               const midPoint = Math.ceil(totalItems / 2);
               const phaseNum = index < midPoint ? 1 : 2;
               const moduleNum = Math.floor((index * 12) / totalItems) + 1;
               const actualModule = Math.min(moduleNum, 12);
-              const isSelected = selectedItem?.id === item.id && !isEditing;
+              const isSelected = selectedItem?.id === item.id;
               const sortieLabel = formatMasterLmpSortieLabel(item, resourceDisplayNames);
               const dayLabel = item.dayNight || 'Day';
               const durationLabel = formatMasterLmpHours(item.totalEventHours || item.duration);
 
               return (
-              <div key={item.id} className="relative mb-2">
-                {eventDropIndicator?.targetId === item.id && eventDropIndicator.position === 'before' && (
-                    <span className="pointer-events-none absolute inset-x-2 -top-[5px] z-10 h-px bg-cyan-200 shadow-[0_0_8px_rgba(125,211,252,0.9)]" />
-                )}
-                {eventDropIndicator?.targetId === item.id && eventDropIndicator.position === 'after' && (
-                    <span className="pointer-events-none absolute inset-x-2 -bottom-[5px] z-10 h-px bg-cyan-200 shadow-[0_0_8px_rgba(125,211,252,0.9)]" />
-                )}
-              <button
-                type="button"
-                draggable={!isEditing && !isFrozen && !isReorderingEvents}
-                onDragStart={(event) => {
-                    if (isEditing || isFrozen || isReorderingEvents) {
-                        event.preventDefault();
-                        return;
-                    }
-                    event.dataTransfer.effectAllowed = 'move';
-                    event.dataTransfer.setData('text/plain', item.id);
-                    setDraggedEventId(item.id);
-                    setEventDropIndicator(null);
-                }}
-                onDragOver={(event) => {
-                    if (!draggedEventId || draggedEventId === item.id || isEditing || isFrozen || isReorderingEvents) {
-                        setEventDropIndicator(null);
-                        return;
-                    }
-                    event.preventDefault();
-                    event.dataTransfer.dropEffect = 'move';
-                    const bounds = event.currentTarget.getBoundingClientRect();
-                    const position = event.clientY < bounds.top + bounds.height / 2 ? 'before' : 'after';
-                    setEventDropIndicator({ targetId: item.id, position });
-                }}
-                onDrop={(event) => {
-                    event.preventDefault();
-                    const bounds = event.currentTarget.getBoundingClientRect();
-                    const position = event.clientY < bounds.top + bounds.height / 2 ? 'before' : 'after';
-                    void handleEventTileDrop(item.id, position);
-                }}
-                onDragEnd={() => {
-                    setDraggedEventId(null);
-                    setEventDropIndicator(null);
-                }}
-                onClick={() => {
-                    if (!isEditing && !isReorderingEvents) {
-                        setHoveredItem(null);
-                        setSelectedItem(item);
-                        setIsAddingLmpEvent(false);
-                    }
-                }}
-                disabled={isEditing || isReorderingEvents}
-                aria-pressed={isSelected}
-                title={`${item.code}${item.eventDescription ? ` - ${item.eventDescription}` : ''}`}
-                className={`relative h-[62px] w-full overflow-hidden rounded-md border px-3 py-2 text-left shadow-sm transition ${
-                    isSelected
-                        ? 'border-emerald-300 bg-sky-800/85 text-white shadow-sky-950/40'
-                        : draggedEventId === item.id
-                            ? 'border-cyan-300 bg-gray-800/70 text-gray-100 opacity-70 shadow-cyan-950/30'
-                        : 'border-emerald-500/60 bg-gray-900 text-gray-200 shadow-black/15'
-                } ${isEditing || isReorderingEvents ? 'cursor-not-allowed opacity-55' : 'cursor-grab hover:border-emerald-300/80 hover:bg-gray-800 active:cursor-grabbing'}`}
-              >
-                <span className={`absolute left-3 top-2 max-w-[38%] truncate text-[10px] font-bold uppercase ${isSelected ? 'text-sky-100' : 'text-gray-400'}`}>
-                  P {phaseNum}
-                </span>
-                <span className={`absolute right-3 top-2 max-w-[38%] truncate text-[10px] font-bold uppercase ${isSelected ? 'text-sky-100' : 'text-gray-300'}`}>
-                  {sortieLabel}
-                </span>
-                <span className="absolute inset-x-3 top-1/2 -translate-y-1/2 truncate text-center text-[15px] font-extrabold leading-tight">
-                  {item.code}
-                </span>
-                <span className={`absolute bottom-2 left-3 max-w-[38%] truncate text-[10px] font-semibold uppercase ${isSelected ? 'text-sky-100' : 'text-gray-400'}`}>
-                  M {actualModule}
-                </span>
-                <span className={`absolute bottom-2 right-3 inline-flex max-w-[54%] items-center gap-3 overflow-hidden text-[10px] font-semibold uppercase ${isSelected ? 'text-sky-100' : 'text-gray-300'}`}>
-                  <span className="truncate">{dayLabel}</span>
-                  <span className="shrink-0">{durationLabel}</span>
-                </span>
-              </button>
-              </div>
-            );})}
+                <div key={item.id} className="mb-3 flex items-start gap-4">
+                  <div className="relative w-[292px] shrink-0">
+                    {eventDropIndicator?.targetId === item.id && eventDropIndicator.position === 'before' && (
+                        <span className="pointer-events-none absolute inset-x-2 -top-[5px] z-10 h-px bg-cyan-200 shadow-[0_0_8px_rgba(125,211,252,0.9)]" />
+                    )}
+                    {eventDropIndicator?.targetId === item.id && eventDropIndicator.position === 'after' && (
+                        <span className="pointer-events-none absolute inset-x-2 -bottom-[5px] z-10 h-px bg-cyan-200 shadow-[0_0_8px_rgba(125,211,252,0.9)]" />
+                    )}
+                    <button
+                      type="button"
+                      draggable={!isEditing && !isFrozen && !isReorderingEvents}
+                      onDragStart={(event) => {
+                          if (isEditing || isFrozen || isReorderingEvents) {
+                              event.preventDefault();
+                              return;
+                          }
+                          event.dataTransfer.effectAllowed = 'move';
+                          event.dataTransfer.setData('text/plain', item.id);
+                          setDraggedEventId(item.id);
+                          setEventDropIndicator(null);
+                      }}
+                      onDragOver={(event) => {
+                          if (!draggedEventId || draggedEventId === item.id || isEditing || isFrozen || isReorderingEvents) {
+                              setEventDropIndicator(null);
+                              return;
+                          }
+                          event.preventDefault();
+                          event.dataTransfer.dropEffect = 'move';
+                          const bounds = event.currentTarget.getBoundingClientRect();
+                          const position = event.clientY < bounds.top + bounds.height / 2 ? 'before' : 'after';
+                          setEventDropIndicator({ targetId: item.id, position });
+                      }}
+                      onDrop={(event) => {
+                          event.preventDefault();
+                          const bounds = event.currentTarget.getBoundingClientRect();
+                          const position = event.clientY < bounds.top + bounds.height / 2 ? 'before' : 'after';
+                          void handleEventTileDrop(item.id, position);
+                      }}
+                      onDragEnd={() => {
+                          setDraggedEventId(null);
+                          setEventDropIndicator(null);
+                      }}
+                      onClick={() => {
+                          if (!isEditing && !isReorderingEvents) {
+                              setHoveredItem(null);
+                              setSelectedItem(item);
+                              setIsAddingLmpEvent(false);
+                          }
+                      }}
+                      disabled={isEditing || isReorderingEvents}
+                      aria-pressed={isSelected}
+                      title={`${item.code}${item.eventDescription ? ` - ${item.eventDescription}` : ''}`}
+                      className={`relative h-[62px] w-full overflow-hidden rounded-md border px-3 py-2 text-left shadow-sm transition ${
+                          isSelected
+                              ? 'border-emerald-300 bg-sky-800/85 text-white shadow-sky-950/40'
+                              : draggedEventId === item.id
+                                  ? 'border-cyan-300 bg-gray-800/70 text-gray-100 opacity-70 shadow-cyan-950/30'
+                              : 'border-emerald-500/60 bg-gray-900 text-gray-200 shadow-black/15'
+                      } ${isEditing || isReorderingEvents ? 'cursor-not-allowed opacity-55' : 'cursor-grab hover:border-emerald-300/80 hover:bg-gray-800 active:cursor-grabbing'}`}
+                    >
+                      <span className={`absolute left-3 top-2 max-w-[38%] truncate text-[10px] font-bold uppercase ${isSelected ? 'text-sky-100' : 'text-gray-400'}`}>
+                        P {phaseNum}
+                      </span>
+                      <span className={`absolute right-3 top-2 max-w-[38%] truncate text-[10px] font-bold uppercase ${isSelected ? 'text-sky-100' : 'text-gray-300'}`}>
+                        {sortieLabel}
+                      </span>
+                      <span className="absolute inset-x-3 top-1/2 -translate-y-1/2 truncate text-center text-[15px] font-extrabold leading-tight">
+                        {item.code}
+                      </span>
+                      <span className={`absolute bottom-2 left-3 max-w-[38%] truncate text-[10px] font-semibold uppercase ${isSelected ? 'text-sky-100' : 'text-gray-400'}`}>
+                        M {actualModule}
+                      </span>
+                      <span className={`absolute bottom-2 right-3 inline-flex max-w-[54%] items-center gap-3 overflow-hidden text-[10px] font-semibold uppercase ${isSelected ? 'text-sky-100' : 'text-gray-300'}`}>
+                        <span className="truncate">{dayLabel}</span>
+                        <span className="shrink-0">{durationLabel}</span>
+                      </span>
+                    </button>
+                  </div>
+                  {isSelected ? (
+                    <div className="min-w-[640px] max-w-5xl flex-1 rounded-lg border border-sky-700/50 bg-gray-900/65 p-5 shadow-xl shadow-black/25">
+                      <DetailView
+                          item={hoveredItem || selectedItem || item}
+                          isEditing={isEditing}
+                          isAddingEvent={isAddingLmpEvent}
+                          editedItem={editedItem}
+                          onItemChange={setEditedItem}
+                          onDeleteEvent={handleDeleteEventRequest}
+                          resourceDisplayNames={resourceDisplayNames}
+                          aircraftConfigurations={aircraftConfigurations}
+                          aircraftCrewComposition={aircraftCrewComposition}
+                          crewPositionTerminology={crewPositionTerminology}
+                          instructorsData={instructorsData}
+                          activeUnitCode={effectiveActiveUnitCode}
+                          isAirCombatModel={isAirCombatModel}
+                          operationalModel={operationalModel}
+                          staffQualificationCatalogue={staffQualificationCatalogue}
+                          scoringMatrixElements={scoringMatrixElements}
+                          onAddScoringMatrixElement={onAddScoringMatrixElement}
+                          linkedEventOptions={filteredSyllabusDetails}
+                          linkedEventOverrides={linkedEventOverrides}
+                          onLinkedEventChange={handleLinkedEventChange}
+                          collectionTitle={getCourseTitle(selectedCourseType)}
+                          codeExample={addEventExamples.code}
+                          descriptionExample={addEventExamples.description}
+                      />
+                    </div>
+                  ) : (
+                    <div className="min-h-[62px] flex-1 border-b border-gray-800/50" />
+                  )}
+                </div>
+              );
+            })}
             {filteredSyllabusDetails.length === 0 && (
                 <div className="p-4 text-center text-gray-500 italic text-sm">No events found for this LMP.</div>
             )}
-          </div>
-        </div>
-
-        {/* Right Column: Detail View */}
-        <div className="flex-1 overflow-y-auto">
-          <div className="p-6 max-w-5xl mx-auto">
-            {(hoveredItem || selectedItem) ? (
-                <DetailView 
-                    item={hoveredItem || selectedItem}
-                    isEditing={isEditing}
-                    isAddingEvent={isAddingLmpEvent}
-                    editedItem={editedItem}
-                    onItemChange={setEditedItem}
-                    onDeleteEvent={handleDeleteEventRequest}
-                    resourceDisplayNames={resourceDisplayNames}
-	                    aircraftConfigurations={aircraftConfigurations}
-                        aircraftCrewComposition={aircraftCrewComposition}
-                        crewPositionTerminology={crewPositionTerminology}
-                        instructorsData={instructorsData}
-                        activeUnitCode={effectiveActiveUnitCode}
-	                    isAirCombatModel={isAirCombatModel}
-                        operationalModel={operationalModel}
-                        staffQualificationCatalogue={staffQualificationCatalogue}
-                        scoringMatrixElements={scoringMatrixElements}
-                        onAddScoringMatrixElement={onAddScoringMatrixElement}
-                    linkedEventOptions={filteredSyllabusDetails}
-                    linkedEventOverrides={linkedEventOverrides}
-                    onLinkedEventChange={handleLinkedEventChange}
-                    collectionTitle={getCourseTitle(selectedCourseType)}
-                    codeExample={addEventExamples.code}
-                    descriptionExample={addEventExamples.description}
-                />
-            ) : (
-              <div className="flex items-center justify-center h-full">
-                <p className="text-gray-500 italic">Select an item from the list to view its details.</p>
-              </div>
-            )}
-          </div>
         </div>
       </div>
     </div>

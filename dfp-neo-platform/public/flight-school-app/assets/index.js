@@ -91100,19 +91100,19 @@ const SyllabusView = ({
           ] })
         ] })
       ] }),
-      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex-1 flex flex-row overflow-hidden", children: [
-        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "w-[292px] border-r border-gray-700 overflow-hidden flex flex-col bg-gray-950/25", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex-1 overflow-y-auto p-3", children: [
-          filteredSyllabusDetails.map((item, index) => {
-            const totalItems = filteredSyllabusDetails.length;
-            const midPoint = Math.ceil(totalItems / 2);
-            const phaseNum = index < midPoint ? 1 : 2;
-            const moduleNum = Math.floor(index * 12 / totalItems) + 1;
-            const actualModule = Math.min(moduleNum, 12);
-            const isSelected = selectedItem?.id === item.id && !isEditing;
-            const sortieLabel = formatMasterLmpSortieLabel(item, resourceDisplayNames);
-            const dayLabel = item.dayNight || "Day";
-            const durationLabel = formatMasterLmpHours(item.totalEventHours || item.duration);
-            return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "relative mb-2", children: [
+      /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex-1 overflow-y-auto bg-gray-950/20", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "min-w-[980px] p-3", children: [
+        filteredSyllabusDetails.map((item, index) => {
+          const totalItems = filteredSyllabusDetails.length;
+          const midPoint = Math.ceil(totalItems / 2);
+          const phaseNum = index < midPoint ? 1 : 2;
+          const moduleNum = Math.floor(index * 12 / totalItems) + 1;
+          const actualModule = Math.min(moduleNum, 12);
+          const isSelected = selectedItem?.id === item.id;
+          const sortieLabel = formatMasterLmpSortieLabel(item, resourceDisplayNames);
+          const dayLabel = item.dayNight || "Day";
+          const durationLabel = formatMasterLmpHours(item.totalEventHours || item.duration);
+          return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mb-3 flex items-start gap-4", children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "relative w-[292px] shrink-0", children: [
               eventDropIndicator?.targetId === item.id && eventDropIndicator.position === "before" && /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "pointer-events-none absolute inset-x-2 -top-[5px] z-10 h-px bg-cyan-200 shadow-[0_0_8px_rgba(125,211,252,0.9)]" }),
               eventDropIndicator?.targetId === item.id && eventDropIndicator.position === "after" && /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "pointer-events-none absolute inset-x-2 -bottom-[5px] z-10 h-px bg-cyan-200 shadow-[0_0_8px_rgba(125,211,252,0.9)]" }),
               /* @__PURE__ */ jsxRuntimeExports.jsxs(
@@ -91180,39 +91180,39 @@ const SyllabusView = ({
                   ]
                 }
               )
-            ] }, item.id);
-          }),
-          filteredSyllabusDetails.length === 0 && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "p-4 text-center text-gray-500 italic text-sm", children: "No events found for this LMP." })
-        ] }) }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex-1 overflow-y-auto", children: /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "p-6 max-w-5xl mx-auto", children: hoveredItem || selectedItem ? /* @__PURE__ */ jsxRuntimeExports.jsx(
-          DetailView,
-          {
-            item: hoveredItem || selectedItem,
-            isEditing,
-            isAddingEvent: isAddingLmpEvent,
-            editedItem,
-            onItemChange: setEditedItem,
-            onDeleteEvent: handleDeleteEventRequest,
-            resourceDisplayNames,
-            aircraftConfigurations,
-            aircraftCrewComposition,
-            crewPositionTerminology,
-            instructorsData,
-            activeUnitCode: effectiveActiveUnitCode,
-            isAirCombatModel,
-            operationalModel,
-            staffQualificationCatalogue: staffQualificationCatalogue2,
-            scoringMatrixElements,
-            onAddScoringMatrixElement,
-            linkedEventOptions: filteredSyllabusDetails,
-            linkedEventOverrides,
-            onLinkedEventChange: handleLinkedEventChange,
-            collectionTitle: getCourseTitle(selectedCourseType),
-            codeExample: addEventExamples.code,
-            descriptionExample: addEventExamples.description
-          }
-        ) : /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex items-center justify-center h-full", children: /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-gray-500 italic", children: "Select an item from the list to view its details." }) }) }) })
-      ] })
+            ] }),
+            isSelected ? /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "min-w-[640px] max-w-5xl flex-1 rounded-lg border border-sky-700/50 bg-gray-900/65 p-5 shadow-xl shadow-black/25", children: /* @__PURE__ */ jsxRuntimeExports.jsx(
+              DetailView,
+              {
+                item: hoveredItem || selectedItem || item,
+                isEditing,
+                isAddingEvent: isAddingLmpEvent,
+                editedItem,
+                onItemChange: setEditedItem,
+                onDeleteEvent: handleDeleteEventRequest,
+                resourceDisplayNames,
+                aircraftConfigurations,
+                aircraftCrewComposition,
+                crewPositionTerminology,
+                instructorsData,
+                activeUnitCode: effectiveActiveUnitCode,
+                isAirCombatModel,
+                operationalModel,
+                staffQualificationCatalogue: staffQualificationCatalogue2,
+                scoringMatrixElements,
+                onAddScoringMatrixElement,
+                linkedEventOptions: filteredSyllabusDetails,
+                linkedEventOverrides,
+                onLinkedEventChange: handleLinkedEventChange,
+                collectionTitle: getCourseTitle(selectedCourseType),
+                codeExample: addEventExamples.code,
+                descriptionExample: addEventExamples.description
+              }
+            ) }) : /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "min-h-[62px] flex-1 border-b border-gray-800/50" })
+          ] }, item.id);
+        }),
+        filteredSyllabusDetails.length === 0 && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "p-4 text-center text-gray-500 italic text-sm", children: "No events found for this LMP." })
+      ] }) })
     ] }),
     showAddLMPModal && /* @__PURE__ */ jsxRuntimeExports.jsx(
       "div",
