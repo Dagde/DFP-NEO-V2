@@ -77586,8 +77586,10 @@ const CourseTab = ({ summary, trainees, events, trainingReportDisplayName }) => 
   const passRate = trainees.length > 0 ? trainees.filter((t) => safeN(t.avgOverallGrade) >= thresholds.concernThresholdGrade).length / trainees.length * 100 : 0;
   const skillHeatmap = parseJ(summary.skillHeatmap, {});
   const skillEntries = Object.entries(skillHeatmap).sort((a, b) => a[1] - b[1]);
-  const bottleneckEvents = parseJ(summary.bottleneckEvents, []);
+  const bottleneckEventsFromSummary = parseJ(summary.bottleneckEvents, []);
   const overServicedEventsFromSummary = parseJ(summary.overServicedEvents, []);
+  const bottleneckEventsFromEvents = events.filter((ev) => safeN(ev.bottleneckScore) >= thresholds.bottleneckThresholdPct / 100).map((ev) => ev.eventCode);
+  const bottleneckEvents = bottleneckEventsFromSummary.length > 0 ? bottleneckEventsFromSummary : bottleneckEventsFromEvents;
   const overServicedFromEvents = events.filter((ev) => ev.overServiceIndicator === true || ev.overServiceIndicator === "true" || ev.overServiceIndicator === 1).map((ev) => ev.eventCode);
   const overServicedEvents = overServicedEventsFromSummary.length > 0 ? overServicedEventsFromSummary : overServicedFromEvents;
   const eventsByDiff = [...events].filter((ev) => safeN(ev.avgOverallGrade) > 0).sort((a, b) => safeN(a.avgOverallGrade) - safeN(b.avgOverallGrade));

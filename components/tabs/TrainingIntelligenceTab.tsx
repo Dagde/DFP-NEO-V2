@@ -1666,8 +1666,15 @@ const CourseTab: React.FC<{
     : 0;
   const skillHeatmap = parseJ(summary.skillHeatmap, {}) as Record<string, number>;
   const skillEntries = Object.entries(skillHeatmap).sort((a, b) => a[1] - b[1]);
-  const bottleneckEvents = parseJ(summary.bottleneckEvents, []) as string[];
+  const bottleneckEventsFromSummary = parseJ(summary.bottleneckEvents, []) as string[];
   const overServicedEventsFromSummary = parseJ(summary.overServicedEvents, []) as string[];
+
+  const bottleneckEventsFromEvents = events
+    .filter(ev => safeN(ev.bottleneckScore) >= thresholds.bottleneckThresholdPct / 100)
+    .map(ev => ev.eventCode);
+  const bottleneckEvents = bottleneckEventsFromSummary.length > 0
+    ? bottleneckEventsFromSummary
+    : bottleneckEventsFromEvents;
 
   // Derive low risk events from event data if summary is empty
   const overServicedFromEvents = events

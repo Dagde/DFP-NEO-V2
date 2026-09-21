@@ -21724,8 +21724,11 @@ app.get('/api/tie/trainees/:course', async (req, res) => {
         JOIN "TIEAnalyticsRun" r ON r.id = ts."runId"
         WHERE ts."courseName" = $1::text AND r.status = 'complete'
         AND r."completedAt" = (
-          SELECT MAX(r2."completedAt") FROM "TIEAnalyticsRun" r2
+          SELECT MAX(r2."completedAt")
+          FROM "TIEAnalyticsRun" r2
+          JOIN "TIETraineeSummary" ts2 ON ts2."runId" = r2.id
           WHERE r2.status = 'complete'
+            AND ts2."courseName" = $1::text
         )
         ORDER BY ts."avgOverallGrade" ASC
       `, course);
@@ -21802,8 +21805,11 @@ app.get('/api/tie/events/:course', async (req, res) => {
         JOIN "TIEAnalyticsRun" r ON r.id = es."runId"
         WHERE es."courseName" = $1::text AND r.status = 'complete'
         AND r."completedAt" = (
-          SELECT MAX(r2."completedAt") FROM "TIEAnalyticsRun" r2
+          SELECT MAX(r2."completedAt")
+          FROM "TIEAnalyticsRun" r2
+          JOIN "TIEEventSummary" es2 ON es2."runId" = r2.id
           WHERE r2.status = 'complete'
+            AND es2."courseName" = $1::text
         )
         ORDER BY es."avgOverallGrade" ASC
       `, course);
@@ -21837,8 +21843,11 @@ app.get('/api/tie/findings/:course', async (req, res) => {
         AND (f."subjectKey" = $1::text OR f."subjectKey" LIKE $2::text)
         ${levelFilter}
         AND r."completedAt" = (
-          SELECT MAX(r2."completedAt") FROM "TIEAnalyticsRun" r2
+          SELECT MAX(r2."completedAt")
+          FROM "TIEAnalyticsRun" r2
+          JOIN "TIEFinding" f2 ON f2."runId" = r2.id
           WHERE r2.status = 'complete'
+            AND (f2."subjectKey" = $1::text OR f2."subjectKey" LIKE $2::text)
         )
         ORDER BY f."confidenceScore" DESC
         LIMIT 100
