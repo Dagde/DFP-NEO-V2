@@ -142131,20 +142131,7 @@ ${error instanceof Error ? error.message : String(error)}`,
     };
     setCourses((prev) => [...prev, newCourse]);
     try {
-      const result = await saveCourse({
-        name: data.number,
-        color: data.color,
-        startDate: data.startDate,
-        gradDate: data.gradDate,
-        raafStart: data.raafStart,
-        navyStart: data.navyStart,
-        armyStart: data.armyStart,
-        status: "ACTIVE",
-        location: data.location || activeLocationDisplayName,
-        unit: data.unit || "",
-        lmpType: data.lmpType || "",
-        academicLmpType: data.academicLmpType || ""
-      });
+      const result = await saveCourse(buildCourseSavePayload(newCourse, "ACTIVE"));
       if (!result.success) {
         console.error("Failed to save course to DB:", result.error);
       }
@@ -142237,23 +142224,11 @@ ${error instanceof Error ? error.message : String(error)}`,
         console.error("Course not found:", courseName);
         return;
       }
-      const result = await saveCourse({
-        name: course.name,
-        code: course.code || course.name,
-        color: course.color,
+      const result = await saveCourse(buildCourseSavePayload({
+        ...course,
         startDate,
-        gradDate,
-        raafStart: course.raafStart,
-        navyStart: course.navyStart,
-        armyStart: course.armyStart,
-        location: course.location || activeLocationDisplayName,
-        unit: course.unit || "",
-        lmpType: course.lmpType || "",
-        academicLmpType: course.academicLmpType || "",
-        courseCommander: course.courseCommander || "",
-        deputyCourseCommander: course.deputyCourseCommander || "",
-        status: course.status || "ACTIVE"
-      });
+        gradDate
+      }, course.status || "ACTIVE"));
       if (result.success) {
         setSuccessMessage(`Course ${courseName} dates updated successfully!`);
       } else {
@@ -142287,20 +142262,15 @@ ${error instanceof Error ? error.message : String(error)}`,
         console.error("[EditCourse] Course not found:", courseName);
         return;
       }
-      const result = await saveCourse({
-        name: course.name,
-        color: course.color,
+      const result = await saveCourse(buildCourseSavePayload({
+        ...course,
         startDate: data.startDate,
         gradDate: data.gradDate,
-        raafStart: course.raafStart,
-        navyStart: course.navyStart,
-        armyStart: course.armyStart,
         location: data.location,
         unit: data.unit,
         lmpType: data.lmpType,
-        academicLmpType: data.academicLmpType,
-        status: course.status
-      });
+        academicLmpType: data.academicLmpType
+      }, course.status || "ACTIVE"));
       if (result.success) {
         logRoutineAppDebug(`[EditCourse] ✅ Course "${courseName}" updated:`, data);
         setSuccessMessage(`Course ${courseName} updated successfully!`);
@@ -142339,9 +142309,9 @@ ${error instanceof Error ? error.message : String(error)}`,
       const result = await saveCourse(courseToSave);
       if (result.success) {
         setCourses(
-          (prevCourses) => prevCourses.map(
+          (prevCourses) => prevCourses.some((course) => course.name === courseName || course.code === courseName) ? prevCourses.map(
             (course) => course.name === courseName || course.code === courseName ? { ...course, courseCommander: trimmedCommander, deputyCourseCommander: trimmedDeputy } : course
-          )
+          ) : [...prevCourses, courseToSave]
         );
         logAudit({
           page: "Trainee Roster",

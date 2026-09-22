@@ -40581,20 +40581,7 @@ const App: React.FC = () => {
 
         // Save to database
         try {
-            const result = await saveCourseToDB({
-                name: data.number,
-                color: data.color,
-                startDate: data.startDate,
-                gradDate: data.gradDate,
-                raafStart: data.raafStart,
-                navyStart: data.navyStart,
-                armyStart: data.armyStart,
-                status: 'ACTIVE',
-                location: data.location || activeLocationDisplayName,
-                unit: data.unit || '',
-                lmpType: (data as any).lmpType || '',
-                academicLmpType: (data as any).academicLmpType || '',
-            });
+            const result = await saveCourseToDB(buildCourseSavePayload(newCourse, 'ACTIVE'));
             if (!result.success) {
                 console.error('Failed to save course to DB:', result.error);
             }
@@ -40706,23 +40693,11 @@ const App: React.FC = () => {
                 return;
             }
 
-            const result = await saveCourseToDB({
-                name: course.name,
-                code: course.code || course.name,
-                color: course.color,
-                startDate: startDate,
-                gradDate: gradDate,
-                raafStart: course.raafStart,
-                navyStart: course.navyStart,
-                armyStart: course.armyStart,
-                location: course.location || activeLocationDisplayName,
-                unit: course.unit || '',
-                lmpType: course.lmpType || '',
-                academicLmpType: course.academicLmpType || '',
-                courseCommander: course.courseCommander || '',
-                deputyCourseCommander: course.deputyCourseCommander || '',
-                status: course.status || 'ACTIVE'
-            });
+            const result = await saveCourseToDB(buildCourseSavePayload({
+                ...course,
+                startDate,
+                gradDate,
+            }, course.status || 'ACTIVE'));
 
             if (result.success) {
                 setSuccessMessage(`Course ${courseName} dates updated successfully!`);
@@ -40768,20 +40743,15 @@ const App: React.FC = () => {
                 return;
             }
 
-            const result = await saveCourseToDB({
-                name: course.name,
-                color: course.color,
+            const result = await saveCourseToDB(buildCourseSavePayload({
+                ...course,
                 startDate: data.startDate,
                 gradDate: data.gradDate,
-                raafStart: course.raafStart,
-                navyStart: course.navyStart,
-                armyStart: course.armyStart,
                 location: data.location,
                 unit: data.unit,
                 lmpType: data.lmpType,
                 academicLmpType: data.academicLmpType,
-                status: course.status,
-            });
+            }, course.status || 'ACTIVE'));
 
             if (result.success) {
                 logRoutineAppDebug(`[EditCourse] ✅ Course "${courseName}" updated:`, data);
@@ -40827,11 +40797,13 @@ const App: React.FC = () => {
             const result = await saveCourseToDB(courseToSave);
             if (result.success) {
                 setCourses(prevCourses =>
-                    prevCourses.map(course =>
-                        course.name === courseName || course.code === courseName
-                            ? { ...course, courseCommander: trimmedCommander, deputyCourseCommander: trimmedDeputy }
-                            : course
-                    )
+                    prevCourses.some(course => course.name === courseName || course.code === courseName)
+                        ? prevCourses.map(course =>
+                            course.name === courseName || course.code === courseName
+                                ? { ...course, courseCommander: trimmedCommander, deputyCourseCommander: trimmedDeputy }
+                                : course
+                        )
+                        : [...prevCourses, courseToSave]
                 );
                 logAudit({
                     page: 'Trainee Roster',
