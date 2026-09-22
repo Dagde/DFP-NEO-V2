@@ -37948,11 +37948,6 @@ const App: React.FC = () => {
             setShowInfoNotification('Access denied for this location or module. Ask a Platform Admin to adjust your access in Settings.');
             return;
         }
-        if (normalizedView === 'SupervisorDashboard') {
-            setPreviousView(activeView);
-            setFloatingDashboardWindows(prev => ({ ...prev, [normalizedView]: true }));
-            return;
-        }
         setPreviousView(activeView);
         setActiveView(normalizedView);
         // Close Pause Flight Ops panel when navigating away and reset all pause state
@@ -51964,7 +51959,7 @@ appliedUpdates.forEach(update => {
                 InstructorSchedule: 'Staff Schedule',
                 TraineeSchedule: 'Trainee Schedule',
                 MyDashboard: 'My Home',
-                DutyPilot: 'Duty Pilot',
+                SupervisorDashboard: 'Duty Pilot',
                 Priorities: 'Priorities',
                 BuildIntelligence: 'Build Intelligence',
             };
@@ -56013,18 +56008,6 @@ appliedUpdates.forEach(update => {
                     onClose={() => setFloatingDashboardWindows(prev => ({ ...prev, MyDashboard: false }))}
                 >
                     {renderActiveView('MyDashboard')}
-                </FloatingDashboardWindow>
-            )}
-            {floatingDashboardWindows.SupervisorDashboard && (
-                <FloatingDashboardWindow
-                    title="Duty Pilot"
-                    frame={floatingDashboardFrames.SupervisorDashboard}
-                    minWidth={560}
-                    minHeight={380}
-                    onFrameChange={(frame) => setFloatingDashboardFrames(prev => ({ ...prev, SupervisorDashboard: frame }))}
-                    onClose={() => setFloatingDashboardWindows(prev => ({ ...prev, SupervisorDashboard: false }))}
-                >
-                    {renderActiveView('SupervisorDashboard')}
                 </FloatingDashboardWindow>
             )}
             {isMagnifierEnabled && <Magnifier isEnabled={isMagnifierEnabled} />}

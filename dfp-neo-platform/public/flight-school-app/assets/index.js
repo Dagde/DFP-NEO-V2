@@ -67281,7 +67281,7 @@ const buildTrackerUrl = (location, enlarged = false) => {
   });
   params.append("hideSidebar", "");
   if (!enlarged) params.append("hideButtons", "");
-  return `https://globe.adsb.lol/?${params.toString()}`;
+  return `https://adsb.lol/?${params.toString()}`;
 };
 const FlightTrackingWidget = ({ school, locationName, locationProfile }) => {
   const [isExpanded, setIsExpanded] = reactExports.useState(false);
@@ -67354,7 +67354,7 @@ const FlightTrackingWidget = ({ school, locationName, locationProfile }) => {
           }
         ) : /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "px-4 py-2 rounded-md border border-gray-700 bg-gray-900 text-center text-sm font-semibold text-gray-500", children: "ADS-B.lol" })
       ] }),
-      /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-4 pt-4 border-t border-gray-700 text-xs text-gray-500", children: "Free public ADS-B display centered on the active DFP location." })
+      /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-4 pt-4 border-t border-gray-700 text-xs text-gray-500", children: "Free public ADS-B display centered on the active DFP location. If the embedded map is unavailable, open the tracker in a browser tab." })
     ] }),
     isExpanded && trackingAllowed && trackingLocation && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "fixed inset-0 z-[100] flex items-center justify-center bg-black/75 p-6", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "bg-gray-800 border border-gray-600 rounded-lg shadow-2xl w-full max-w-6xl h-[82vh] flex flex-col overflow-hidden", children: [
       /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center justify-between p-4 border-b border-gray-700", children: [
@@ -140013,11 +140013,6 @@ ${"=".repeat(60)}`);
       setShowInfoNotification("Access denied for this location or module. Ask a Platform Admin to adjust your access in Settings.");
       return;
     }
-    if (normalizedView === "SupervisorDashboard") {
-      setPreviousView(activeView);
-      setFloatingDashboardWindows((prev) => ({ ...prev, [normalizedView]: true }));
-      return;
-    }
     setPreviousView(activeView);
     setActiveView(normalizedView);
     setShowPausePanel(false);
@@ -151489,7 +151484,7 @@ ${error instanceof Error ? error.message : String(error)}`,
         InstructorSchedule: "Staff Schedule",
         TraineeSchedule: "Trainee Schedule",
         MyDashboard: "My Home",
-        DutyPilot: "Duty Pilot",
+        SupervisorDashboard: "Duty Pilot",
         Priorities: "Priorities",
         BuildIntelligence: "Build Intelligence"
       };
@@ -155225,18 +155220,6 @@ Do you want to replace the existing entry?`,
           onFrameChange: (frame) => setFloatingDashboardFrames((prev) => ({ ...prev, MyDashboard: frame })),
           onClose: () => setFloatingDashboardWindows((prev) => ({ ...prev, MyDashboard: false })),
           children: renderActiveView("MyDashboard")
-        }
-      ),
-      floatingDashboardWindows.SupervisorDashboard && /* @__PURE__ */ jsxRuntimeExports.jsx(
-        FloatingDashboardWindow,
-        {
-          title: "Duty Pilot",
-          frame: floatingDashboardFrames.SupervisorDashboard,
-          minWidth: 560,
-          minHeight: 380,
-          onFrameChange: (frame) => setFloatingDashboardFrames((prev) => ({ ...prev, SupervisorDashboard: frame })),
-          onClose: () => setFloatingDashboardWindows((prev) => ({ ...prev, SupervisorDashboard: false })),
-          children: renderActiveView("SupervisorDashboard")
         }
       ),
       isMagnifierEnabled && /* @__PURE__ */ jsxRuntimeExports.jsx(Magnifier, { isEnabled: isMagnifierEnabled }),

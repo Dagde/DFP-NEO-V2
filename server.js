@@ -280,6 +280,7 @@ function setSecurityHeaders(req, res, next) {
       "form-action 'self'",
       "img-src 'self' data: blob:",
       "font-src 'self' data:",
+      "frame-src 'self' https://adsb.lol https://globe.adsb.lol",
       "style-src 'self' 'unsafe-inline'",
       "script-src 'self' 'unsafe-inline'",
       `connect-src ${buildSecurityConnectSources(req)}`,

@@ -48,7 +48,7 @@ const buildTrackerUrl = (location: TrackingLocation, enlarged = false) => {
     });
     params.append('hideSidebar', '');
     if (!enlarged) params.append('hideButtons', '');
-    return `https://globe.adsb.lol/?${params.toString()}`;
+    return `https://adsb.lol/?${params.toString()}`;
 };
 
 const FlightTrackingWidget: React.FC<FlightTrackingWidgetProps> = ({ school, locationName, locationProfile }) => {
@@ -142,7 +142,7 @@ const FlightTrackingWidget: React.FC<FlightTrackingWidgetProps> = ({ school, loc
                 </div>
 
                 <p className="mt-4 pt-4 border-t border-gray-700 text-xs text-gray-500">
-                    Free public ADS-B display centered on the active DFP location.
+                    Free public ADS-B display centered on the active DFP location. If the embedded map is unavailable, open the tracker in a browser tab.
                 </p>
             </div>
 
