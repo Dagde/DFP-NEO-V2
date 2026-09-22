@@ -72,6 +72,21 @@ const COURSE_SCORE_EVENT_TYPE_KEYS: CourseScoreEventTypeKey[] = [
     'other',
 ];
 
+const normaliseCourseScoreEventCode = (value?: string | null): string => (
+    String(value || '').replace(/\*/g, '').trim().toUpperCase()
+);
+
+const getNumericTrainingReportGrade = (grade: unknown): number | null => {
+    if (typeof grade === 'number' && Number.isFinite(grade)) return grade;
+    if (grade === null || grade === undefined) return null;
+
+    const cleanedGrade = String(grade).trim();
+    if (!cleanedGrade || cleanedGrade.toLowerCase() === 'no grade') return null;
+
+    const parsed = Number(cleanedGrade);
+    return Number.isFinite(parsed) ? parsed : null;
+};
+
 const createDefaultCourseAwards = (): CourseAward[] => [
     {
         id: 'dux',
@@ -467,7 +482,9 @@ const CourseProgressView: React.FC<CourseProgressViewProps> = ({
         });
 
         pt051Assessments.forEach(assessment => {
-            const flightNumber = (assessment.flightNumber || '').trim();
+            const grade = getNumericTrainingReportGrade(assessment.overallGrade);
+            if (grade === null) return;
+            const flightNumber = normaliseCourseScoreEventCode(assessment.flightNumber);
             if (!eligibleNames.has(assessment.traineeFullName) || !flightNumber || isUuidLike(flightNumber) || optionMap.has(flightNumber)) return;
             optionMap.set(flightNumber, {
                 value: flightNumber,
@@ -483,13 +500,18 @@ const CourseProgressView: React.FC<CourseProgressViewProps> = ({
 
     const pt051ScoreRecords = useMemo(() => {
         return Array.from(pt051Assessments.values())
-            .filter(assessment => typeof assessment.overallGrade === 'number')
-            .map(assessment => ({
-                traineeName: assessment.traineeFullName,
-                event: assessment.flightNumber,
-                score: assessment.overallGrade as number,
-                date: assessment.date || '',
-            }));
+            .map(assessment => {
+                const score = getNumericTrainingReportGrade(assessment.overallGrade);
+                const event = normaliseCourseScoreEventCode(assessment.flightNumber);
+                if (score === null || !event || isUuidLike(event)) return null;
+                return {
+                    traineeName: assessment.traineeFullName,
+                    event,
+                    score,
+                    date: assessment.date || '',
+                };
+            })
+            .filter((record): record is { traineeName: string; event: string; score: number; date: string } => Boolean(record));
     }, [pt051Assessments]);
 
     const scoreCourseTrainees = useMemo(() => {
@@ -503,11 +525,6 @@ const CourseProgressView: React.FC<CourseProgressViewProps> = ({
         pt051ScoreRecords.forEach(record => {
             if (traineeNames.has(record.traineeName)) eventSet.add(record.event);
         });
-        scoreCourseTrainees.forEach(trainee => {
-            getTraineeRplEventCodes(trainee).forEach(eventCode => {
-                if (eventCode && !isUuidLike(eventCode)) eventSet.add(eventCode);
-            });
-        });
 
         return Array.from(eventSet).sort((a, b) => {
             const aOrder = eventOrder.get(a) ?? Number.MAX_SAFE_INTEGER;
@@ -515,7 +532,7 @@ const CourseProgressView: React.FC<CourseProgressViewProps> = ({
             if (aOrder !== bOrder) return aOrder - bOrder;
             return a.localeCompare(b);
         });
-    }, [scoreCourseTrainees, pt051ScoreRecords, eventOrder, traineeLMPs]);
+    }, [scoreCourseTrainees, pt051ScoreRecords, eventOrder]);
 
     const courseScoreEventTypeOptions = useMemo(() => {
         const typeCounts = new Map<CourseScoreEventTypeKey, number>();
@@ -568,8 +585,9 @@ const CourseProgressView: React.FC<CourseProgressViewProps> = ({
 
     const getLatestScoreForEvent = (trainee: Trainee, eventCode: string): { score: number; date: string } | undefined => {
         const traineeName = trainee.fullName || trainee.name;
+        const normalisedEventCode = normaliseCourseScoreEventCode(eventCode);
         return pt051ScoreRecords
-            .filter(record => record.traineeName === traineeName && record.event === eventCode)
+            .filter(record => record.traineeName === traineeName && record.event === normalisedEventCode)
             .sort((a, b) => (b.date || '').localeCompare(a.date || ''))[0];
     };
 
@@ -962,11 +980,10 @@ const CourseProgressView: React.FC<CourseProgressViewProps> = ({
             traineeName: getDisplayName(trainee.fullName || trainee.name),
             scores: scoredEvents.map(eventCode => {
                 const score = getLatestScoreForEvent(trainee, eventCode);
-                if (score) return score.score;
-                return getTraineeRplEventCodes(trainee).has(eventCode.toUpperCase()) ? 'RPL' : '';
+                return score ? score.score : '';
             }),
         }));
-    }, [scoreCourseTrainees, scoredEvents, pt051ScoreRecords, activeCourses, traineeLMPs]);
+    }, [scoreCourseTrainees, scoredEvents, pt051ScoreRecords, activeCourses]);
 
     const escapeCsvValue = (value: string | number): string => {
         const raw = String(value);
@@ -1182,10 +1199,9 @@ const CourseProgressView: React.FC<CourseProgressViewProps> = ({
                                                         </td>
                                                         {scoredEvents.map(eventCode => {
                                                             const score = getLatestScoreForEvent(trainee, eventCode);
-                                                            const isRpl = getTraineeRplEventCodes(trainee).has(eventCode.toUpperCase());
                                                             return (
                                                                 <td key={`${trainee.idNumber}-${eventCode}`} className="px-3 py-3 text-center font-mono text-gray-200">
-                                                                    {score ? score.score : isRpl ? <span className="text-[11px] font-bold text-emerald-300">RPL</span> : ''}
+                                                                    {score !== undefined ? score.score : ''}
                                                                 </td>
                                                             );
                                                         })}

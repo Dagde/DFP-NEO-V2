@@ -102238,6 +102238,15 @@ const COURSE_SCORE_EVENT_TYPE_KEYS = [
   "academics",
   "other"
 ];
+const normaliseCourseScoreEventCode = (value) => String(value || "").replace(/\*/g, "").trim().toUpperCase();
+const getNumericTrainingReportGrade = (grade) => {
+  if (typeof grade === "number" && Number.isFinite(grade)) return grade;
+  if (grade === null || grade === void 0) return null;
+  const cleanedGrade = String(grade).trim();
+  if (!cleanedGrade || cleanedGrade.toLowerCase() === "no grade") return null;
+  const parsed = Number(cleanedGrade);
+  return Number.isFinite(parsed) ? parsed : null;
+};
 const isLegacyCourseAwardCriteria = (criteria) => {
   const legacyEvents = /* @__PURE__ */ new Set(["BGF21", "BIF3", "BNAV4"]);
   return criteria.length === legacyEvents.size && criteria.every((criterion) => legacyEvents.has(criterion.event.trim().toUpperCase()) && criterion.enabled !== false && Number(criterion.weight) === 2);
@@ -102523,7 +102532,9 @@ const CourseProgressView = ({
       });
     });
     pt051Assessments.forEach((assessment) => {
-      const flightNumber = (assessment.flightNumber || "").trim();
+      const grade = getNumericTrainingReportGrade(assessment.overallGrade);
+      if (grade === null) return;
+      const flightNumber = normaliseCourseScoreEventCode(assessment.flightNumber);
       if (!eligibleNames.has(assessment.traineeFullName) || !flightNumber || isUuidLike(flightNumber) || optionMap.has(flightNumber)) return;
       optionMap.set(flightNumber, {
         value: flightNumber,
@@ -102536,12 +102547,17 @@ const CourseProgressView = ({
     return Array.from(optionMap.values()).sort((a, b) => a.order - b.order || a.label.localeCompare(b.label));
   }, [activeAward, activeAwardCourse, activeTrainees, traineeLMPs, pt051Assessments, eventOrder, eventDetailByCode]);
   const pt051ScoreRecords = reactExports.useMemo(() => {
-    return Array.from(pt051Assessments.values()).filter((assessment) => typeof assessment.overallGrade === "number").map((assessment) => ({
-      traineeName: assessment.traineeFullName,
-      event: assessment.flightNumber,
-      score: assessment.overallGrade,
-      date: assessment.date || ""
-    }));
+    return Array.from(pt051Assessments.values()).map((assessment) => {
+      const score = getNumericTrainingReportGrade(assessment.overallGrade);
+      const event = normaliseCourseScoreEventCode(assessment.flightNumber);
+      if (score === null || !event || isUuidLike(event)) return null;
+      return {
+        traineeName: assessment.traineeFullName,
+        event,
+        score,
+        date: assessment.date || ""
+      };
+    }).filter((record) => Boolean(record));
   }, [pt051Assessments]);
   const scoreCourseTrainees = reactExports.useMemo(() => {
     return activeTrainees.filter((trainee) => trainee.course === scoreCourse);
@@ -102552,18 +102568,13 @@ const CourseProgressView = ({
     pt051ScoreRecords.forEach((record) => {
       if (traineeNames.has(record.traineeName)) eventSet.add(record.event);
     });
-    scoreCourseTrainees.forEach((trainee) => {
-      getTraineeRplEventCodes(trainee).forEach((eventCode2) => {
-        if (eventCode2 && !isUuidLike(eventCode2)) eventSet.add(eventCode2);
-      });
-    });
     return Array.from(eventSet).sort((a, b) => {
       const aOrder = eventOrder.get(a) ?? Number.MAX_SAFE_INTEGER;
       const bOrder = eventOrder.get(b) ?? Number.MAX_SAFE_INTEGER;
       if (aOrder !== bOrder) return aOrder - bOrder;
       return a.localeCompare(b);
     });
-  }, [scoreCourseTrainees, pt051ScoreRecords, eventOrder, traineeLMPs]);
+  }, [scoreCourseTrainees, pt051ScoreRecords, eventOrder]);
   const courseScoreEventTypeOptions = reactExports.useMemo(() => {
     const typeCounts = /* @__PURE__ */ new Map();
     allScoredEvents.forEach((eventCode2) => {
@@ -102600,7 +102611,8 @@ const CourseProgressView = ({
   }, [courseScoreEventTypeOptions, selectedCourseScoreEventTypes]);
   const getLatestScoreForEvent = (trainee, eventCode2) => {
     const traineeName = trainee.fullName || trainee.name;
-    return pt051ScoreRecords.filter((record) => record.traineeName === traineeName && record.event === eventCode2).sort((a, b) => (b.date || "").localeCompare(a.date || ""))[0];
+    const normalisedEventCode = normaliseCourseScoreEventCode(eventCode2);
+    return pt051ScoreRecords.filter((record) => record.traineeName === traineeName && record.event === normalisedEventCode).sort((a, b) => (b.date || "").localeCompare(a.date || ""))[0];
   };
   const awardEventTypeOptions = reactExports.useMemo(() => {
     const typeCounts = /* @__PURE__ */ new Map();
@@ -102880,11 +102892,10 @@ const CourseProgressView = ({
       traineeName: getDisplayName(trainee.fullName || trainee.name),
       scores: scoredEvents.map((eventCode2) => {
         const score = getLatestScoreForEvent(trainee, eventCode2);
-        if (score) return score.score;
-        return getTraineeRplEventCodes(trainee).has(eventCode2.toUpperCase()) ? "RPL" : "";
+        return score ? score.score : "";
       })
     }));
-  }, [scoreCourseTrainees, scoredEvents, pt051ScoreRecords, activeCourses, traineeLMPs]);
+  }, [scoreCourseTrainees, scoredEvents, pt051ScoreRecords, activeCourses]);
   const escapeCsvValue = (value) => {
     const raw = String(value);
     return /[",\n]/.test(raw) ? `"${raw.replace(/"/g, '""')}"` : raw;
@@ -103099,8 +103110,7 @@ const CourseProgressView = ({
                       /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "sticky left-0 z-10 bg-gray-800 px-4 py-3 text-gray-100 min-w-56", children: /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "font-medium", children: getDisplayName(trainee.fullName || trainee.name) }) }),
                       scoredEvents.map((eventCode2) => {
                         const score = getLatestScoreForEvent(trainee, eventCode2);
-                        const isRpl = getTraineeRplEventCodes(trainee).has(eventCode2.toUpperCase());
-                        return /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "px-3 py-3 text-center font-mono text-gray-200", children: score ? score.score : isRpl ? /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-[11px] font-bold text-emerald-300", children: "RPL" }) : "" }, `${trainee.idNumber}-${eventCode2}`);
+                        return /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "px-3 py-3 text-center font-mono text-gray-200", children: score !== void 0 ? score.score : "" }, `${trainee.idNumber}-${eventCode2}`);
                       })
                     ] }, trainee.idNumber || trainee.fullName)),
                     scoreCourseTrainees.length === 0 && /* @__PURE__ */ jsxRuntimeExports.jsx("tr", { children: /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "px-4 py-8 text-center text-gray-400", colSpan: Math.max(1, scoredEvents.length + 1), children: "No active trainees available for this course." }) })
