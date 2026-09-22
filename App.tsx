@@ -7994,6 +7994,8 @@ const getPersonnel = (event: Omit<ScheduleEvent, 'date'> | ScheduleEvent): strin
 };
 
 const PERSONNEL_RANK_PREFIX_RE = /^(ACM|AIRMSHL|AVM|AIRCDRE|GPCAPT|WGCDR|SQNLDR|FLTLT|FLGOFF|PLTOFF|OFFCDT|WOFF|FSGT|SGT|CPL|LACW?|ACW?|MIDN|CMDR|LCDR|LEUT|SBLT|ASLT|CDRE|CAPT|COL|LTCOL|MAJ|LT|2LT|WO1|WO2|SSGT|PTE|MR|MRS|MS|MISS|DR)\s+/i;
+const DFP_NEO_ALERTS_SENDER_NAME = 'DFP-NEO Alerts';
+const DFP_NEO_ALERTS_SENDER_ID = 'system-dfp-neo-alerts';
 
 const PLACEHOLDER_PERSONNEL_NAMES = new Set(['tba', 'to be advised', 'multiple', 'group']);
 
@@ -33204,7 +33206,7 @@ const App: React.FC = () => {
             : null;
         return String(configuredResult?.label || cleanCode).trim() || cleanCode;
     }, [trainingReportTemplate]);
-    const sendDashboardAutoMessage = useCallback(async (message: { id: string; from: string; to: string; body: string; sentAt: string }) => {
+    const sendDashboardAutoMessage = useCallback(async (message: { id: string; from: string; fromId?: string; to: string; body: string; sentAt: string }) => {
         if (typeof window !== 'undefined') {
             try {
                 const storageKey = 'dfp_dashboard_messages_v1';
@@ -33282,7 +33284,7 @@ const App: React.FC = () => {
         const eventCode = String(assessment.flightNumber || assessment.eventCode || 'event').trim();
         const failLabel = activeReportTemplate.overallResults.failLabel || 'Unsatisfactory';
         const statusLabel = getConfiguredMissionStatusLabel(String(assessment.dcoResult || '')) || 'Not selected';
-        const sender = dashboardNotificationUserName || currentUserName || 'DFP NEO';
+        const sender = DFP_NEO_ALERTS_SENDER_NAME;
         const body = [
             `${reportName} notification`,
             '',
@@ -33296,6 +33298,7 @@ const App: React.FC = () => {
         await Promise.all(uniqueRecipients.map((recipient) => sendDashboardAutoMessage({
             id: `training-report-auto-notify-${assessment.id || eventCode}-${normaliseDashboardNotificationName(recipient)}`,
             from: sender,
+            fromId: DFP_NEO_ALERTS_SENDER_ID,
             to: recipient,
             body,
             sentAt,

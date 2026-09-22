@@ -115911,6 +115911,8 @@ const getPersonnel = (event) => {
   return Array.from(personnel);
 };
 const PERSONNEL_RANK_PREFIX_RE = /^(ACM|AIRMSHL|AVM|AIRCDRE|GPCAPT|WGCDR|SQNLDR|FLTLT|FLGOFF|PLTOFF|OFFCDT|WOFF|FSGT|SGT|CPL|LACW?|ACW?|MIDN|CMDR|LCDR|LEUT|SBLT|ASLT|CDRE|CAPT|COL|LTCOL|MAJ|LT|2LT|WO1|WO2|SSGT|PTE|MR|MRS|MS|MISS|DR)\s+/i;
+const DFP_NEO_ALERTS_SENDER_NAME = "DFP-NEO Alerts";
+const DFP_NEO_ALERTS_SENDER_ID = "system-dfp-neo-alerts";
 const PLACEHOLDER_PERSONNEL_NAMES = /* @__PURE__ */ new Set(["tba", "to be advised", "multiple", "group"]);
 const isPlaceholderPersonnelName = (name) => {
   const normalizedName = (name || "").replace(/\s+/g, " ").trim().toLowerCase();
@@ -136236,7 +136238,7 @@ const App = () => {
     const eventCode2 = String(assessment.flightNumber || assessment.eventCode || "event").trim();
     const failLabel = activeReportTemplate.overallResults.failLabel || "Unsatisfactory";
     const statusLabel = getConfiguredMissionStatusLabel(String(assessment.dcoResult || "")) || "Not selected";
-    const sender = dashboardNotificationUserName || currentUserName || "DFP NEO";
+    const sender = DFP_NEO_ALERTS_SENDER_NAME;
     const body = [
       `${reportName} notification`,
       "",
@@ -136249,6 +136251,7 @@ const App = () => {
     await Promise.all(uniqueRecipients.map((recipient) => sendDashboardAutoMessage({
       id: `training-report-auto-notify-${assessment.id || eventCode2}-${normaliseDashboardNotificationName(recipient)}`,
       from: sender,
+      fromId: DFP_NEO_ALERTS_SENDER_ID,
       to: recipient,
       body,
       sentAt
