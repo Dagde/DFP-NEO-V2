@@ -222,6 +222,21 @@ type DashboardConversation = {
     unreadCount: number;
 };
 
+const DFP_NEO_ALERTS_SENDER_NAME = 'DFP-NEO Alerts';
+const DFP_NEO_ALERTS_SENDER_ID = 'system-dfp-neo-alerts';
+const DFP_NEO_ALERTS_CONTACT: DashboardMessageContact = {
+    id: DFP_NEO_ALERTS_SENDER_ID,
+    name: DFP_NEO_ALERTS_SENDER_NAME,
+    displayName: DFP_NEO_ALERTS_SENDER_NAME,
+    unit: 'System',
+    role: 'System Alert',
+    rank: '',
+    surname: 'Alerts',
+    firstNames: 'DFP-NEO',
+    type: 'Staff',
+    idNumber: '',
+};
+
 const DASHBOARD_MESSAGES_STORAGE_KEY = 'dfp_dashboard_messages_v1';
 const DASHBOARD_MESSAGE_DELETION_CUTOFFS_STORAGE_KEY = 'dfp_dashboard_message_deletion_cutoffs_v1';
 const DASHBOARD_MESSAGES_LOCAL_CACHE_LIMIT = 200;
@@ -1195,7 +1210,7 @@ const MyDashboard: React.FC<MyDashboardProps> = ({
         };
     };
     const messageContactsById = useMemo(() => new Map(
-        peopleMessageContacts.map(contact => [contact.id, contact])
+        [...peopleMessageContacts, DFP_NEO_ALERTS_CONTACT].map(contact => [contact.id, contact])
     ), [peopleMessageContacts]);
     const messageFromDashboardUser = (message: DashboardMessage): boolean => (
         message.fromId === dashboardSenderContactId ||
@@ -1366,6 +1381,12 @@ const MyDashboard: React.FC<MyDashboardProps> = ({
     const getDashboardUnreadMessageKey = (message: DashboardMessage): string => getDashboardMessageLogicalKey(message);
     const resolveMessageContact = (id?: string, name?: string): DashboardMessageContact | null => {
         if (id && messageContactsById.has(id)) return messageContactsById.get(id) || null;
+        if (
+            dashboardPersonNamesMatch(name, DFP_NEO_ALERTS_SENDER_NAME) ||
+            String(id || '').trim() === DFP_NEO_ALERTS_SENDER_ID
+        ) {
+            return DFP_NEO_ALERTS_CONTACT;
+        }
         return messageContacts.find(contact => (
             dashboardPersonNamesMatch(contact.name, name) ||
             dashboardPersonNamesMatch(contact.displayName, name)

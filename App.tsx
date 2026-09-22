@@ -33206,7 +33206,7 @@ const App: React.FC = () => {
             : null;
         return String(configuredResult?.label || cleanCode).trim() || cleanCode;
     }, [trainingReportTemplate]);
-    const sendDashboardAutoMessage = useCallback(async (message: { id: string; from: string; fromId?: string; to: string; body: string; sentAt: string }) => {
+    const sendDashboardAutoMessage = useCallback(async (message: { id: string; from: string; fromId?: string; to: string; toId?: string; recipientIds?: string[]; body: string; sentAt: string }) => {
         if (typeof window !== 'undefined') {
             try {
                 const storageKey = 'dfp_dashboard_messages_v1';
@@ -33238,6 +33238,53 @@ const App: React.FC = () => {
             throw new Error(errorText || `Dashboard message send failed (${response.status})`);
         }
     }, []);
+    const resolveDashboardAutoMessageRecipient = useCallback((recipientName: string): { name: string; id?: string } => {
+        const cleanRecipient = String(recipientName || '').trim();
+        if (!cleanRecipient) return { name: '' };
+        const recipientKey = normaliseDashboardNotificationName(cleanRecipient);
+        const recipientSurnameKey = recipientKey && !recipientKey.includes(' ') ? recipientKey : '';
+        const matchingStaff = allInstructorsData.find((staff: any) => {
+            const staffName = String(staff?.name || '').trim();
+            const staffKeys = [
+                staffName,
+                staff?.displayName,
+                staff?.firstName && staff?.lastName ? `${staff.lastName}, ${staff.firstName}` : '',
+                staff?.firstName && staff?.lastName ? `${staff.firstName} ${staff.lastName}` : '',
+            ].map(normaliseDashboardNotificationName).filter(Boolean);
+            const staffSurname = normaliseDashboardNotificationName(
+                staff?.lastName || (staffName.includes(',') ? staffName.split(',')[0] : staffName.split(/\s+/).slice(-1)[0])
+            );
+            return staffKeys.includes(recipientKey) || Boolean(recipientSurnameKey && staffSurname === recipientSurnameKey);
+        });
+        if (matchingStaff) {
+            const staffName = String(matchingStaff.name || cleanRecipient).trim();
+            return {
+                name: staffName,
+                id: `staff-${matchingStaff.idNumber}-${staffName}`,
+            };
+        }
+        const matchingTrainee = allTraineesData.find((trainee: any) => {
+            const traineeName = stripCourseDetailsFromLoginName(String(trainee?.fullName || trainee?.name || '').trim());
+            const traineeKeys = [
+                traineeName,
+                trainee?.displayName,
+                trainee?.firstName && trainee?.lastName ? `${trainee.lastName}, ${trainee.firstName}` : '',
+                trainee?.firstName && trainee?.lastName ? `${trainee.firstName} ${trainee.lastName}` : '',
+            ].map(normaliseDashboardNotificationName).filter(Boolean);
+            const traineeSurname = normaliseDashboardNotificationName(
+                trainee?.lastName || (traineeName.includes(',') ? traineeName.split(',')[0] : traineeName.split(/\s+/).slice(-1)[0])
+            );
+            return traineeKeys.includes(recipientKey) || Boolean(recipientSurnameKey && traineeSurname === recipientSurnameKey);
+        });
+        if (matchingTrainee) {
+            const traineeName = stripCourseDetailsFromLoginName(String(matchingTrainee.fullName || matchingTrainee.name || cleanRecipient).trim());
+            return {
+                name: traineeName,
+                id: `trainee-${matchingTrainee.idNumber}-${traineeName}`,
+            };
+        }
+        return { name: cleanRecipient };
+    }, [allInstructorsData, allTraineesData]);
     const sendTrainingReportAutoNotifications = useCallback(async ({
         assessment,
         trainee,
@@ -33295,26 +33342,30 @@ const App: React.FC = () => {
             assessment.instructorName ? `${instructorLabel || 'Instructor'}: ${assessment.instructorName}` : null,
         ].filter(Boolean).join('\n');
 
-        await Promise.all(uniqueRecipients.map((recipient) => sendDashboardAutoMessage({
-            id: `training-report-auto-notify-${assessment.id || eventCode}-${normaliseDashboardNotificationName(recipient)}`,
-            from: sender,
-            fromId: DFP_NEO_ALERTS_SENDER_ID,
-            to: recipient,
-            body,
-            sentAt,
-        }).catch((error) => {
-            console.warn(`[Training Report Auto Notify] Could not notify ${recipient}:`, error);
-        })));
+        await Promise.all(uniqueRecipients.map((recipient) => {
+            const resolvedRecipient = resolveDashboardAutoMessageRecipient(recipient);
+            return sendDashboardAutoMessage({
+                id: `training-report-auto-notify-${assessment.id || eventCode}-${normaliseDashboardNotificationName(resolvedRecipient.id || resolvedRecipient.name || recipient)}`,
+                from: sender,
+                fromId: DFP_NEO_ALERTS_SENDER_ID,
+                to: resolvedRecipient.name || recipient,
+                toId: resolvedRecipient.id,
+                recipientIds: resolvedRecipient.id ? [resolvedRecipient.id] : undefined,
+                body,
+                sentAt,
+            }).catch((error) => {
+                console.warn(`[Training Report Auto Notify] Could not notify ${recipient}:`, error);
+            });
+        }));
         return uniqueRecipients;
     }, [
         configuredTrainingReportDisplayName,
         configuredTrainingReportStatusFieldLabel,
         courses,
-        currentUserName,
-        dashboardNotificationUserName,
         getConfiguredMissionStatusLabel,
         instructorLabel,
         normaliseDashboardNotificationName,
+        resolveDashboardAutoMessageRecipient,
         sendDashboardAutoMessage,
     ]);
     const activeTrainingReportPhraseBank = useMemo(

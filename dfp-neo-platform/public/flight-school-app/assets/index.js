@@ -63991,6 +63991,20 @@ const TafWeatherWidget = ({ onClose, defaultLocationCodes = [] }) => {
     /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-4 pt-4 border-t border-gray-700", children: /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-xs text-gray-500", children: "Auto-refreshes every 30 minutes • Data from NOAA Aviation Weather Center" }) })
   ] });
 };
+const DFP_NEO_ALERTS_SENDER_NAME$1 = "DFP-NEO Alerts";
+const DFP_NEO_ALERTS_SENDER_ID$1 = "system-dfp-neo-alerts";
+const DFP_NEO_ALERTS_CONTACT = {
+  id: DFP_NEO_ALERTS_SENDER_ID$1,
+  name: DFP_NEO_ALERTS_SENDER_NAME$1,
+  displayName: DFP_NEO_ALERTS_SENDER_NAME$1,
+  unit: "System",
+  role: "System Alert",
+  rank: "",
+  surname: "Alerts",
+  firstNames: "DFP-NEO",
+  type: "Staff",
+  idNumber: ""
+};
 const DASHBOARD_MESSAGES_STORAGE_KEY = "dfp_dashboard_messages_v1";
 const DASHBOARD_MESSAGE_DELETION_CUTOFFS_STORAGE_KEY = "dfp_dashboard_message_deletion_cutoffs_v1";
 const getDashboardMessagePerfTime = () => typeof performance !== "undefined" && typeof performance.now === "function" ? performance.now() : Date.now();
@@ -64734,7 +64748,7 @@ const MyDashboard = ({
     };
   };
   const messageContactsById = reactExports.useMemo(() => new Map(
-    peopleMessageContacts.map((contact) => [contact.id, contact])
+    [...peopleMessageContacts, DFP_NEO_ALERTS_CONTACT].map((contact) => [contact.id, contact])
   ), [peopleMessageContacts]);
   const messageFromDashboardUser = (message) => message.fromId === dashboardSenderContactId || dashboardPersonNamesMatch(message.from, dashboardMessageUserName);
   const messageDeletedForDashboardUser = (message) => Array.isArray(message.deletedForIds) && message.deletedForIds.includes(dashboardSenderContactId) || Array.isArray(message.deletedForNames) && message.deletedForNames.some((name) => dashboardPersonNamesMatch(name, dashboardMessageUserName));
@@ -64839,6 +64853,9 @@ const MyDashboard = ({
   const getDashboardUnreadMessageKey = (message) => getDashboardMessageLogicalKey(message);
   const resolveMessageContact = (id, name) => {
     if (id && messageContactsById.has(id)) return messageContactsById.get(id) || null;
+    if (dashboardPersonNamesMatch(name, DFP_NEO_ALERTS_SENDER_NAME$1) || String(id || "").trim() === DFP_NEO_ALERTS_SENDER_ID$1) {
+      return DFP_NEO_ALERTS_CONTACT;
+    }
     return messageContacts.find((contact) => dashboardPersonNamesMatch(contact.name, name) || dashboardPersonNamesMatch(contact.displayName, name)) || null;
   };
   const getGroupConversationContact = (message) => {
@@ -136213,6 +136230,53 @@ const App = () => {
       throw new Error(errorText || `Dashboard message send failed (${response.status})`);
     }
   }, []);
+  const resolveDashboardAutoMessageRecipient = reactExports.useCallback((recipientName) => {
+    const cleanRecipient = String(recipientName || "").trim();
+    if (!cleanRecipient) return { name: "" };
+    const recipientKey = normaliseDashboardNotificationName(cleanRecipient);
+    const recipientSurnameKey = recipientKey && !recipientKey.includes(" ") ? recipientKey : "";
+    const matchingStaff = allInstructorsData.find((staff) => {
+      const staffName = String(staff?.name || "").trim();
+      const staffKeys = [
+        staffName,
+        staff?.displayName,
+        staff?.firstName && staff?.lastName ? `${staff.lastName}, ${staff.firstName}` : "",
+        staff?.firstName && staff?.lastName ? `${staff.firstName} ${staff.lastName}` : ""
+      ].map(normaliseDashboardNotificationName).filter(Boolean);
+      const staffSurname = normaliseDashboardNotificationName(
+        staff?.lastName || (staffName.includes(",") ? staffName.split(",")[0] : staffName.split(/\s+/).slice(-1)[0])
+      );
+      return staffKeys.includes(recipientKey) || Boolean(recipientSurnameKey && staffSurname === recipientSurnameKey);
+    });
+    if (matchingStaff) {
+      const staffName = String(matchingStaff.name || cleanRecipient).trim();
+      return {
+        name: staffName,
+        id: `staff-${matchingStaff.idNumber}-${staffName}`
+      };
+    }
+    const matchingTrainee = allTraineesData.find((trainee) => {
+      const traineeName = stripCourseDetailsFromLoginName(String(trainee?.fullName || trainee?.name || "").trim());
+      const traineeKeys = [
+        traineeName,
+        trainee?.displayName,
+        trainee?.firstName && trainee?.lastName ? `${trainee.lastName}, ${trainee.firstName}` : "",
+        trainee?.firstName && trainee?.lastName ? `${trainee.firstName} ${trainee.lastName}` : ""
+      ].map(normaliseDashboardNotificationName).filter(Boolean);
+      const traineeSurname = normaliseDashboardNotificationName(
+        trainee?.lastName || (traineeName.includes(",") ? traineeName.split(",")[0] : traineeName.split(/\s+/).slice(-1)[0])
+      );
+      return traineeKeys.includes(recipientKey) || Boolean(recipientSurnameKey && traineeSurname === recipientSurnameKey);
+    });
+    if (matchingTrainee) {
+      const traineeName = stripCourseDetailsFromLoginName(String(matchingTrainee.fullName || matchingTrainee.name || cleanRecipient).trim());
+      return {
+        name: traineeName,
+        id: `trainee-${matchingTrainee.idNumber}-${traineeName}`
+      };
+    }
+    return { name: cleanRecipient };
+  }, [allInstructorsData, allTraineesData]);
   const sendTrainingReportAutoNotifications = reactExports.useCallback(async ({
     assessment,
     trainee,
@@ -136248,26 +136312,30 @@ const App = () => {
       `${configuredTrainingReportStatusFieldLabel}: ${statusLabel}`,
       assessment.instructorName ? `${instructorLabel2 || "Instructor"}: ${assessment.instructorName}` : null
     ].filter(Boolean).join("\n");
-    await Promise.all(uniqueRecipients.map((recipient) => sendDashboardAutoMessage({
-      id: `training-report-auto-notify-${assessment.id || eventCode2}-${normaliseDashboardNotificationName(recipient)}`,
-      from: sender,
-      fromId: DFP_NEO_ALERTS_SENDER_ID,
-      to: recipient,
-      body,
-      sentAt
-    }).catch((error) => {
-      console.warn(`[Training Report Auto Notify] Could not notify ${recipient}:`, error);
-    })));
+    await Promise.all(uniqueRecipients.map((recipient) => {
+      const resolvedRecipient = resolveDashboardAutoMessageRecipient(recipient);
+      return sendDashboardAutoMessage({
+        id: `training-report-auto-notify-${assessment.id || eventCode2}-${normaliseDashboardNotificationName(resolvedRecipient.id || resolvedRecipient.name || recipient)}`,
+        from: sender,
+        fromId: DFP_NEO_ALERTS_SENDER_ID,
+        to: resolvedRecipient.name || recipient,
+        toId: resolvedRecipient.id,
+        recipientIds: resolvedRecipient.id ? [resolvedRecipient.id] : void 0,
+        body,
+        sentAt
+      }).catch((error) => {
+        console.warn(`[Training Report Auto Notify] Could not notify ${recipient}:`, error);
+      });
+    }));
     return uniqueRecipients;
   }, [
     configuredTrainingReportDisplayName,
     configuredTrainingReportStatusFieldLabel,
     courses,
-    currentUserName,
-    dashboardNotificationUserName,
     getConfiguredMissionStatusLabel,
     instructorLabel2,
     normaliseDashboardNotificationName,
+    resolveDashboardAutoMessageRecipient,
     sendDashboardAutoMessage
   ]);
   const activeTrainingReportPhraseBank = reactExports.useMemo(
