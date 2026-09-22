@@ -28743,6 +28743,14 @@ const App: React.FC = () => {
         () => new Set(activeContextUnitCodes),
         [activeContextUnitCodes],
     );
+    const courseRosterUnitOptions = useMemo(() => {
+        const rawUnitCodes = activeContextUnitCodes.length > 0
+            ? activeContextUnitCodes
+            : String(activeUnitCode || '').split('+');
+        return Array.from(new Set(rawUnitCodes
+            .map(unit => String(unit || '').trim().toUpperCase())
+            .filter(Boolean)));
+    }, [activeContextUnitCodes, activeUnitCode]);
     const activeUnitHasTrainees = useMemo(() => {
         const normaliseActiveUnitCode = (value: unknown): string => String(value || '').trim().toUpperCase();
         const activeUnitKeys = activeContextUnitCodes.length > 0
@@ -52557,7 +52565,7 @@ appliedUpdates.forEach(update => {
                             aircraftCrewComposition={activeAircraftCrewComposition}
                             onAccessDenied={denyPlatformAction}
                             locations={locations}
-                            units={units}
+                            units={courseRosterUnitOptions}
                             selectedPersonForProfile={selectedPersonForProfile as any}
                             selectedProfileInitialTab={traineeProfileInitialTab}
                             onProfileOpened={handleProfileOpened}

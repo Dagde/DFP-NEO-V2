@@ -84,6 +84,15 @@ const CourseEditFlyout: React.FC<CourseEditFlyoutProps> = ({
         return Array.from(groups.entries());
     }, [sortedStaff]);
 
+    const selectableUnits = useMemo(() => {
+        const unitSet = new Set<string>();
+        [...availableUnits, courseUnit, newUnit]
+            .map(unit => String(unit || '').trim().toUpperCase())
+            .filter(Boolean)
+            .forEach(unit => unitSet.add(unit));
+        return Array.from(unitSet);
+    }, [availableUnits, courseUnit, newUnit]);
+
     const leadershipChanged =
         courseCommander !== (course?.courseCommander || '') ||
         deputyCourseCommander !== (course?.deputyCourseCommander || '');
@@ -211,7 +220,7 @@ const CourseEditFlyout: React.FC<CourseEditFlyoutProps> = ({
                                     onChange={(e) => handleUnitChange(e.target.value)}
                                     className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-md text-white focus:outline-none focus:ring-2 focus:ring-sky-500"
                                 >
-                                    {availableUnits.map(unit => (
+                                    {selectableUnits.map(unit => (
                                         <option key={unit} value={unit}>{unit}</option>
                                     ))}
                                 </select>

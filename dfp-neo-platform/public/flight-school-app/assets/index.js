@@ -52378,6 +52378,11 @@ const CourseEditFlyout = ({
     });
     return Array.from(groups.entries());
   }, [sortedStaff2]);
+  const selectableUnits = reactExports.useMemo(() => {
+    const unitSet = /* @__PURE__ */ new Set();
+    [...availableUnits, courseUnit, newUnit].map((unit) => String(unit || "").trim().toUpperCase()).filter(Boolean).forEach((unit) => unitSet.add(unit));
+    return Array.from(unitSet);
+  }, [availableUnits, courseUnit, newUnit]);
   const leadershipChanged = courseCommander !== (course?.courseCommander || "") || deputyCourseCommander !== (course?.deputyCourseCommander || "");
   const updateHasChanges = (nextCourseNumber = newCourseNumber, nextUnit = newUnit, nextCommander = courseCommander, nextDeputy = deputyCourseCommander) => {
     setHasChanges(
@@ -52492,7 +52497,7 @@ const CourseEditFlyout = ({
                       value: newUnit,
                       onChange: (e) => handleUnitChange(e.target.value),
                       className: "w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-md text-white focus:outline-none focus:ring-2 focus:ring-sky-500",
-                      children: availableUnits.map((unit) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: unit, children: unit }, unit))
+                      children: selectableUnits.map((unit) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: unit, children: unit }, unit))
                     }
                   )
                 ] })
@@ -54252,7 +54257,7 @@ const CourseRosterView = ({
       {
         courseName: courseToEdit,
         course: courseRecordsByName.get(courseToEdit),
-        courseUnit: groupedTrainees[courseToEdit]?.[0]?.unit || "",
+        courseUnit: courseRecordsByName.get(courseToEdit)?.unit || groupedTrainees[courseToEdit]?.[0]?.unit || units[0] || "",
         trainees: groupedTrainees[courseToEdit] || [],
         availableCourses: activeCourseNumbers,
         availableUnits: units,
@@ -132702,6 +132707,10 @@ const App = () => {
     () => new Set(activeContextUnitCodes),
     [activeContextUnitCodes]
   );
+  const courseRosterUnitOptions = reactExports.useMemo(() => {
+    const rawUnitCodes = activeContextUnitCodes.length > 0 ? activeContextUnitCodes : String(activeUnitCode || "").split("+");
+    return Array.from(new Set(rawUnitCodes.map((unit) => String(unit || "").trim().toUpperCase()).filter(Boolean)));
+  }, [activeContextUnitCodes, activeUnitCode]);
   const activeUnitHasTrainees = reactExports.useMemo(() => {
     const normaliseActiveUnitCode = (value) => String(value || "").trim().toUpperCase();
     const activeUnitKeys = activeContextUnitCodes.length > 0 ? activeContextUnitCodes : String(activeUnitCode || "").split("+").map((code) => String(code || "").trim().toUpperCase()).filter(Boolean);
@@ -152029,7 +152038,7 @@ ${error instanceof Error ? error.message : String(error)}`,
             aircraftCrewComposition: activeAircraftCrewComposition,
             onAccessDenied: denyPlatformAction,
             locations,
-            units,
+            units: courseRosterUnitOptions,
             selectedPersonForProfile,
             selectedProfileInitialTab: traineeProfileInitialTab,
             onProfileOpened: handleProfileOpened,

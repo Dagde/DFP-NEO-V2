@@ -790,7 +790,7 @@ const CourseRosterView: React.FC<CourseRosterViewProps> = ({
 	                <CourseEditFlyout
 	                    courseName={courseToEdit}
 	                    course={courseRecordsByName.get(courseToEdit)}
-	                    courseUnit={groupedTrainees[courseToEdit]?.[0]?.unit || ''}
+	                    courseUnit={courseRecordsByName.get(courseToEdit)?.unit || groupedTrainees[courseToEdit]?.[0]?.unit || units[0] || ''}
                     trainees={groupedTrainees[courseToEdit] || []}
                     availableCourses={activeCourseNumbers}
                     availableUnits={units}
