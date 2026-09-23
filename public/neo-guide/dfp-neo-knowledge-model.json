@@ -1,6 +1,6 @@
 {
   "schemaVersion": "neo-guide-runtime-model.v1",
-  "generatedAt": "2026-09-23T22:12:59.774Z",
+  "generatedAt": "2026-09-23T22:16:10.455Z",
   "source": {
     "repository": "clone-the-repo-dagde-dfp-neo",
     "sourceFileCount": 377,
@@ -8569,7 +8569,7 @@
   "curatedKnowledge": {
     "schemaVersion": "neo-guide-enrichment.v1",
     "updatedAt": "2026-09-23T00:00:00.000Z",
-    "functionCount": 23,
+    "functionCount": 27,
     "conceptCount": 5,
     "synonymCount": 7,
     "functions": [
@@ -9090,6 +9090,51 @@
         "auditStatus": "IMPLEMENTED - manually enriched from current implementation review"
       },
       {
+        "id": "function.curated.messaging.my-home-messages",
+        "name": "My Home messages",
+        "aliases": [
+          "messages",
+          "inbox",
+          "send message",
+          "compose message",
+          "message group",
+          "DFP-NEO Alerts disappeared",
+          "open messages"
+        ],
+        "location": {
+          "page": "My Home",
+          "route": null,
+          "component": "components/MyDashboard.tsx",
+          "anchor": "nav-my-home"
+        },
+        "purpose": "Shows in-app conversations, received alerts, sent messages and message groups for the logged-in user.",
+        "procedureSteps": [
+          "Open My Home.",
+          "Open Messages.",
+          "Use Inbox to read received conversations.",
+          "Use Compose to start or continue a conversation.",
+          "Use Groups if you need to create or use a saved recipient group."
+        ],
+        "inputs": [],
+        "outputs": [
+          "Displays and sends dashboard message records through the DFP-NEO message APIs and local cache."
+        ],
+        "permissions": [],
+        "dependencies": [
+          "The logged-in user must be identifiable as a message participant and the message API must be reachable."
+        ],
+        "businessRules": [
+          "Messages are scoped to the logged-in user and the contacts/groups available to that user."
+        ],
+        "failureConditions": [
+          "Messages can appear to change or disappear if the local cache and server-backed message state are refreshed and the message is not addressed to the logged-in user."
+        ],
+        "relatedFunctions": [
+          "function.curated.messaging.auto-notifications"
+        ],
+        "auditStatus": "IMPLEMENTED - manually enriched from current implementation review"
+      },
+      {
         "id": "function.curated.scheduling.neo-build",
         "name": "NEO Build",
         "aliases": [
@@ -9265,6 +9310,144 @@
         ],
         "failureConditions": [
           "Dropdown options may be limited by the active unit, course, model, personnel eligibility and resource context."
+        ],
+        "relatedFunctions": [
+          "function.curated.scheduling.validation-check",
+          "function.curated.scheduling.neo-build"
+        ],
+        "auditStatus": "IMPLEMENTED - manually enriched from current implementation review"
+      },
+      {
+        "id": "function.curated.scheduling.aircraft-availability",
+        "name": "Aircraft availability",
+        "aliases": [
+          "aircraft available",
+          "aircraft availability",
+          "make aircraft unavailable",
+          "aircraft maintenance",
+          "aircraft not available"
+        ],
+        "location": {
+          "page": "Program Schedule",
+          "route": null,
+          "component": "components/Header.tsx",
+          "anchor": "action-aircraft-availability"
+        },
+        "purpose": "Records or reviews aircraft availability for the DFP and scheduling workflow.",
+        "procedureSteps": [
+          "Open DFP.",
+          "Select the relevant date and unit.",
+          "Click Aircraft Available in the top toolbar.",
+          "Review or change the aircraft availability state.",
+          "Run Validation Check or NEO Build again if availability changes affect the schedule."
+        ],
+        "inputs": [],
+        "outputs": [
+          "Updates aircraft availability information used by DFP display, validation and build eligibility."
+        ],
+        "permissions": [
+          "dfp.view"
+        ],
+        "dependencies": [
+          "Configured aircraft/resource rows for the active unit."
+        ],
+        "businessRules": [
+          "Unavailable aircraft should not be used for conflicting schedule allocations."
+        ],
+        "failureConditions": [
+          "The control may be hidden or unavailable when the active operational model or permission set does not expose aircraft availability editing."
+        ],
+        "relatedFunctions": [
+          "function.curated.scheduling.neo-build",
+          "function.curated.scheduling.validation-check"
+        ],
+        "auditStatus": "IMPLEMENTED - manually enriched from current implementation review"
+      },
+      {
+        "id": "function.curated.scheduling.add-flight-tile",
+        "name": "Add flight tile",
+        "aliases": [
+          "add flight",
+          "add flight tile",
+          "create flight tile",
+          "insert flight",
+          "new flight"
+        ],
+        "location": {
+          "page": "Program Schedule",
+          "route": null,
+          "component": "components/Header.tsx",
+          "anchor": "action-add-flight-tile"
+        },
+        "purpose": "Creates a manual flight or simulator tile on the DFP timeline.",
+        "procedureSteps": [
+          "Open DFP.",
+          "Select the relevant date and unit.",
+          "Click Add Flight Tile in the top toolbar.",
+          "Enter the timing, resource, syllabus item and personnel details.",
+          "Save the tile, then run Validation Check."
+        ],
+        "inputs": [],
+        "outputs": [
+          "Creates or updates a scheduled event tile on the DFP timeline."
+        ],
+        "permissions": [
+          "dfp.view"
+        ],
+        "dependencies": [
+          "A valid schedule date, resource row and available personnel/event options."
+        ],
+        "businessRules": [
+          "Manual tiles still need to satisfy validation rules such as timing, conflicts and required fields."
+        ],
+        "failureConditions": [
+          "Dropdowns may be empty if resources, courses, staff or trainees are not configured for the active unit."
+        ],
+        "relatedFunctions": [
+          "function.curated.scheduling.flight-details",
+          "function.curated.scheduling.validation-check"
+        ],
+        "auditStatus": "IMPLEMENTED - manually enriched from current implementation review"
+      },
+      {
+        "id": "function.curated.scheduling.publish-dfp",
+        "name": "Publish DFP",
+        "aliases": [
+          "publish",
+          "publish DFP",
+          "publish schedule",
+          "make schedule live",
+          "send schedule live"
+        ],
+        "location": {
+          "page": "Program Schedule",
+          "route": null,
+          "component": "components/RightSidebar.tsx",
+          "anchor": "action-publish-dfp"
+        },
+        "purpose": "Publishes the current DFP schedule so it becomes the live operational schedule.",
+        "procedureSteps": [
+          "Open DFP.",
+          "Select the date and unit to publish.",
+          "Run Validation Check and review warnings.",
+          "Click Publish on the right sidebar.",
+          "Confirm the publish action if prompted."
+        ],
+        "inputs": [],
+        "outputs": [
+          "Marks or stores the current DFP state as published/live for operational use."
+        ],
+        "permissions": [
+          "dfp.publish"
+        ],
+        "dependencies": [
+          "A built or manually prepared DFP for the selected date/unit."
+        ],
+        "businessRules": [
+          "Publishing should normally occur after validation and review."
+        ],
+        "failureConditions": [
+          "Publish may be unavailable if the user lacks publish permission or no current schedule is ready to publish."
         ],
         "relatedFunctions": [
           "function.curated.scheduling.validation-check",
@@ -10711,6 +10894,41 @@
       "auditStatus": "IMPLEMENTED - manually enriched from current implementation review"
     },
     {
+      "id": "function.curated.messaging.my-home-messages",
+      "name": "My Home messages",
+      "aliases": [
+        "messages",
+        "inbox",
+        "send message",
+        "compose message",
+        "message group",
+        "DFP-NEO Alerts disappeared",
+        "open messages"
+      ],
+      "location": {
+        "page": "My Home",
+        "route": null,
+        "component": "components/MyDashboard.tsx",
+        "anchor": "nav-my-home"
+      },
+      "purpose": "Shows in-app conversations, received alerts, sent messages and message groups for the logged-in user.",
+      "inputs": [],
+      "outputs": [
+        "Displays and sends dashboard message records through the DFP-NEO message APIs and local cache."
+      ],
+      "permissions": [],
+      "dependencies": [
+        "The logged-in user must be identifiable as a message participant and the message API must be reachable."
+      ],
+      "failureConditions": [
+        "Messages can appear to change or disappear if the local cache and server-backed message state are refreshed and the message is not addressed to the logged-in user."
+      ],
+      "relatedFunctions": [
+        "function.curated.messaging.auto-notifications"
+      ],
+      "auditStatus": "IMPLEMENTED - manually enriched from current implementation review"
+    },
+    {
       "id": "function.curated.scheduling.neo-build",
       "name": "NEO Build",
       "aliases": [
@@ -10846,6 +11064,114 @@
       ],
       "failureConditions": [
         "Dropdown options may be limited by the active unit, course, model, personnel eligibility and resource context."
+      ],
+      "relatedFunctions": [
+        "function.curated.scheduling.validation-check",
+        "function.curated.scheduling.neo-build"
+      ],
+      "auditStatus": "IMPLEMENTED - manually enriched from current implementation review"
+    },
+    {
+      "id": "function.curated.scheduling.aircraft-availability",
+      "name": "Aircraft availability",
+      "aliases": [
+        "aircraft available",
+        "aircraft availability",
+        "make aircraft unavailable",
+        "aircraft maintenance",
+        "aircraft not available"
+      ],
+      "location": {
+        "page": "Program Schedule",
+        "route": null,
+        "component": "components/Header.tsx",
+        "anchor": "action-aircraft-availability"
+      },
+      "purpose": "Records or reviews aircraft availability for the DFP and scheduling workflow.",
+      "inputs": [],
+      "outputs": [
+        "Updates aircraft availability information used by DFP display, validation and build eligibility."
+      ],
+      "permissions": [
+        "dfp.view"
+      ],
+      "dependencies": [
+        "Configured aircraft/resource rows for the active unit."
+      ],
+      "failureConditions": [
+        "The control may be hidden or unavailable when the active operational model or permission set does not expose aircraft availability editing."
+      ],
+      "relatedFunctions": [
+        "function.curated.scheduling.neo-build",
+        "function.curated.scheduling.validation-check"
+      ],
+      "auditStatus": "IMPLEMENTED - manually enriched from current implementation review"
+    },
+    {
+      "id": "function.curated.scheduling.add-flight-tile",
+      "name": "Add flight tile",
+      "aliases": [
+        "add flight",
+        "add flight tile",
+        "create flight tile",
+        "insert flight",
+        "new flight"
+      ],
+      "location": {
+        "page": "Program Schedule",
+        "route": null,
+        "component": "components/Header.tsx",
+        "anchor": "action-add-flight-tile"
+      },
+      "purpose": "Creates a manual flight or simulator tile on the DFP timeline.",
+      "inputs": [],
+      "outputs": [
+        "Creates or updates a scheduled event tile on the DFP timeline."
+      ],
+      "permissions": [
+        "dfp.view"
+      ],
+      "dependencies": [
+        "A valid schedule date, resource row and available personnel/event options."
+      ],
+      "failureConditions": [
+        "Dropdowns may be empty if resources, courses, staff or trainees are not configured for the active unit."
+      ],
+      "relatedFunctions": [
+        "function.curated.scheduling.flight-details",
+        "function.curated.scheduling.validation-check"
+      ],
+      "auditStatus": "IMPLEMENTED - manually enriched from current implementation review"
+    },
+    {
+      "id": "function.curated.scheduling.publish-dfp",
+      "name": "Publish DFP",
+      "aliases": [
+        "publish",
+        "publish DFP",
+        "publish schedule",
+        "make schedule live",
+        "send schedule live"
+      ],
+      "location": {
+        "page": "Program Schedule",
+        "route": null,
+        "component": "components/RightSidebar.tsx",
+        "anchor": "action-publish-dfp"
+      },
+      "purpose": "Publishes the current DFP schedule so it becomes the live operational schedule.",
+      "inputs": [],
+      "outputs": [
+        "Marks or stores the current DFP state as published/live for operational use."
+      ],
+      "permissions": [
+        "dfp.publish"
+      ],
+      "dependencies": [
+        "A built or manually prepared DFP for the selected date/unit."
+      ],
+      "failureConditions": [
+        "Publish may be unavailable if the user lacks publish permission or no current schedule is ready to publish."
       ],
       "relatedFunctions": [
         "function.curated.scheduling.validation-check",
@@ -234609,6 +234935,24 @@
       {
         "from": "concept.instructor",
         "to": "function.curated.scheduling.flight-details",
+        "relationship": "implemented-by",
+        "source": "derived from audited function index"
+      },
+      {
+        "from": "concept.aircraft",
+        "to": "function.curated.scheduling.aircraft-availability",
+        "relationship": "implemented-by",
+        "source": "derived from audited function index"
+      },
+      {
+        "from": "concept.availability",
+        "to": "function.curated.scheduling.aircraft-availability",
+        "relationship": "implemented-by",
+        "source": "derived from audited function index"
+      },
+      {
+        "from": "concept.schedule",
+        "to": "function.curated.scheduling.publish-dfp",
         "relationship": "implemented-by",
         "source": "derived from audited function index"
       },

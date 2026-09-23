@@ -1729,7 +1729,8 @@ function buildAnswerText(intent, match) {
 }
 function formatProcedureSteps(fn) {
   if (Array.isArray(fn.procedureSteps) && fn.procedureSteps.length > 0) {
-    return `Steps: ${fn.procedureSteps.map((step, index) => `${index + 1}. ${step}`).join(" ")}`;
+    return `Steps:
+${fn.procedureSteps.map((step, index) => `${index + 1}. ${step}`).join("\n")}`;
   }
   if (fn.location?.page) return `Start from ${fn.location.page}.`;
   return "";
@@ -1971,7 +1972,7 @@ const NeoGuidePanel = ({
               {
                 className: `rounded-md border px-3 py-2 text-sm leading-5 ${message.role === "user" ? "ml-8 border-sky-400/30 bg-sky-950/30 text-sky-50" : "mr-8 border-slate-700 bg-slate-900/80 text-slate-100"}`,
                 children: [
-                  /* @__PURE__ */ jsxRuntimeExports.jsx("p", { children: message.text }),
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "whitespace-pre-line", children: message.text }),
                   message.action ? /* @__PURE__ */ jsxRuntimeExports.jsx(
                     "button",
                     {

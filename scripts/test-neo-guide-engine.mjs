@@ -119,6 +119,19 @@ const turnaroundAnswer = ask('where change ac turnround');
 assert.match(turnaroundAnswer.answer, /Open Settings/i, 'Turnaround answer should include Settings steps.');
 assert.match(turnaroundAnswer.answer, /turnaround/i, 'Turnaround answer should mention the turnaround setting.');
 
+const messagesAnswer = ask('where do I open messages');
+assert.equal(messagesAnswer.matches[0]?.functionId, 'function.curated.messaging.my-home-messages');
+assert.match(messagesAnswer.answer, /Open My Home/i, 'Messages answer should send the user to My Home.');
+assert.match(messagesAnswer.answer, /Open Messages/i, 'Messages answer should include opening Messages.');
+
+const aircraftAvailabilityAnswer = ask('where do I change aircraft availability');
+assert.equal(aircraftAvailabilityAnswer.matches[0]?.functionId, 'function.curated.scheduling.aircraft-availability');
+assert.match(aircraftAvailabilityAnswer.answer, /Aircraft Available/i, 'Aircraft availability answer should mention the toolbar action.');
+
+const publishAnswer = ask('how do I publish the schedule');
+assert.equal(publishAnswer.matches[0]?.functionId, 'function.curated.scheduling.publish-dfp');
+assert.match(publishAnswer.answer, /Validation Check/i, 'Publish answer should mention validation before publishing.');
+
 const staffFollowUp = ask('what about staff?', { conversation: answer.conversation });
 assert.equal(
   staffFollowUp.matches[0]?.functionId,

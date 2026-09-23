@@ -416,7 +416,7 @@ function buildAnswerText(intent: NeoGuideIntent, match: NeoGuideMatch): string {
 
 function formatProcedureSteps(fn: NeoGuideFunction): string {
   if (Array.isArray(fn.procedureSteps) && fn.procedureSteps.length > 0) {
-    return `Steps: ${fn.procedureSteps.map((step, index) => `${index + 1}. ${step}`).join(' ')}`;
+    return `Steps:\n${fn.procedureSteps.map((step, index) => `${index + 1}. ${step}`).join('\n')}`;
   }
   if (fn.location?.page) return `Start from ${fn.location.page}.`;
   return '';

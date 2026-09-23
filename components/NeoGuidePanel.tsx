@@ -211,7 +211,7 @@ const NeoGuidePanel: React.FC<NeoGuidePanelProps> = ({
                     : 'mr-8 border-slate-700 bg-slate-900/80 text-slate-100'
                 }`}
               >
-                <p>{message.text}</p>
+                <p className="whitespace-pre-line">{message.text}</p>
                 {message.action ? (
                   <button
                     type="button"
