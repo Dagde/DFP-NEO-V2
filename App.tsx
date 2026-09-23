@@ -4,6 +4,7 @@ import { useSystemFreeze } from './context/SystemFreezeContext';
 import LoginModal, { AuthUser, checkSession, logoutUser } from './components/LoginModal';
 import ChangePasswordModal from './components/ChangePasswordModal';
 import AdminPanel from './components/AdminPanel';
+import NeoGuidePanel from './components/NeoGuidePanel';
 import { v4 as uuidv4 } from 'uuid';
 import { initDB } from './utils/db';
 import { setCurrentUser, setCurrentUserRole, logAudit } from './utils/auditLogger';
@@ -55980,6 +55981,14 @@ appliedUpdates.forEach(update => {
                 modelUnavailableViews={modelUnavailableRightViews}
                 operationalModel={activeOperationalModel}
             />
+            {isAuthenticated && (
+                <NeoGuidePanel
+                    activeView={activeView}
+                    selectedRecordLabel={selectedPersonForProfile?.name || selectedEvent?.displayTitle || selectedEvent?.flightNumber || ''}
+                    canUsePlatformPermission={canUsePlatformPermission}
+                    onNavigate={handleNavigation}
+                />
+            )}
             {isAuthenticated && isViewingPastDfp && (
                 <div className="fixed bottom-[168px] right-[18px] z-[100] flex w-[75px] justify-center">
                     <button

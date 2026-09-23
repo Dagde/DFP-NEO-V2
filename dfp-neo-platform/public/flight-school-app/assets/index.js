@@ -1433,6 +1433,511 @@ const AdminPanel = ({ sessionToken, currentUserId, onClose }) => {
     ] })
   ] }) });
 };
+const STOP_WORDS = /* @__PURE__ */ new Set([
+  "a",
+  "an",
+  "and",
+  "are",
+  "as",
+  "at",
+  "be",
+  "can",
+  "do",
+  "does",
+  "for",
+  "from",
+  "get",
+  "go",
+  "has",
+  "have",
+  "he",
+  "her",
+  "him",
+  "his",
+  "how",
+  "i",
+  "in",
+  "is",
+  "it",
+  "me",
+  "my",
+  "of",
+  "on",
+  "or",
+  "our",
+  "she",
+  "that",
+  "the",
+  "their",
+  "there",
+  "this",
+  "to",
+  "turn",
+  "up",
+  "we",
+  "what",
+  "when",
+  "where",
+  "who",
+  "why",
+  "with",
+  "you"
+]);
+const INTENT_PATTERNS = [
+  { intent: "WHY", patterns: [/\bwhy\b/, /\bwhy\s+(?:is|are|did|didn'?t|was|wasn'?t)\b/] },
+  { intent: "HOW_TO", patterns: [/\bhow\s+(?:do|can|would|to)\b/, /\bsteps?\b/, /\bprocedure\b/] },
+  { intent: "NAVIGATE", patterns: [/\bwhere\b/, /\bopen\b/, /\bshow\b/, /\btake me\b/, /\bgo to\b/] },
+  { intent: "FIND", patterns: [/\bfind\b/, /\blocate\b/, /\bsearch\b/] },
+  { intent: "DEFINE", patterns: [/\bwhat\s+is\b/, /\bwhat'?s\b/, /\bdefine\b/, /\bmeaning\b/] },
+  { intent: "TROUBLESHOOT", patterns: [/\bcan'?t\b/, /\bcannot\b/, /\bnot working\b/, /\bmissing\b/, /\bblank\b/, /\bempty\b/, /\bunavailable\b/] },
+  { intent: "PERMISSION", patterns: [/\bpermission\b/, /\baccess\b/, /\bgreyed out\b/, /\bdisabled\b/, /\bunavailable button\b/] },
+  { intent: "SCHEDULING_LOGIC", patterns: [/\bschedule\b/, /\bscheduled\b/, /\bbuild\b/, /\ballocat/, /\bpriority\b/] },
+  { intent: "SETTINGS", patterns: [/\bsetting\b/, /\bconfigure\b/, /\bchange\b/] },
+  { intent: "EXPORT", patterns: [/\bexport\b/, /\bdownload\b/, /\bcsv\b/, /\breport\b/] },
+  { intent: "VALIDATION", patterns: [/\bvalidation\b/, /\bwarning\b/, /\bconflict\b/, /\berror\b/] },
+  { intent: "REPORTING", patterns: [/\breport\b/, /\btrg rep\b/, /\btraining record\b/, /\bgrade\b/] },
+  { intent: "BUSINESS_RULE", patterns: [/\brule\b/, /\blimit\b/, /\bconstraint\b/, /\bturnaround\b/, /\bturnround\b/] },
+  { intent: "DATA_LOCATION", patterns: [/\bstored\b/, /\bsaved\b/, /\bdata\b/, /\bdatabase\b/] }
+];
+const INTENT_HINTS = {
+  FIND: ["find", "locate", "where"],
+  NAVIGATE: ["open", "show", "page", "button", "navigate"],
+  HOW_TO: ["how", "add", "make", "change", "configure", "archive", "upload", "enter"],
+  EXPLAIN: ["explain", "mean", "why"],
+  DEFINE: ["what", "define", "meaning"],
+  TROUBLESHOOT: ["missing", "blank", "empty", "cannot", "cant", "disabled", "unavailable", "not working"],
+  WHY: ["why", "reason", "because"],
+  DATA_LOCATION: ["stored", "saved", "data", "database"],
+  PERMISSION: ["permission", "access", "role", "disabled", "greyed"],
+  BUSINESS_RULE: ["rule", "limit", "constraint", "turnaround", "turnround"],
+  SCHEDULING_LOGIC: ["schedule", "scheduled", "build", "allocation", "priority", "eligible"],
+  VALIDATION: ["validation", "warning", "conflict", "error"],
+  REPORTING: ["report", "grade", "score", "ranking", "trg"],
+  EXPORT: ["export", "download", "csv", "print"],
+  SETTINGS: ["setting", "settings", "configure", "configuration"],
+  UNKNOWN: []
+};
+function answerNeoGuideQuestion(question, model, context = {}) {
+  const interpretation = interpretNeoGuideQuestion(question, model, context);
+  const [best, second] = interpretation.matches;
+  if (!best) {
+    return {
+      ...interpretation,
+      confidence: "low",
+      answer: "I couldn't match that to a DFP-NEO function yet. Try naming the page, person, course, setting or action you are asking about.",
+      needsClarification: true,
+      clarificationQuestion: "Which DFP-NEO area are you asking about?"
+    };
+  }
+  const confidence = best.score >= 22 ? "high" : best.score >= 12 ? "medium" : "low";
+  if (confidence === "low" || second && best.score - second.score < 3) {
+    return {
+      ...interpretation,
+      confidence,
+      answer: `I found a possible match: ${best.name}. I may need a little more context before giving a firm answer.`,
+      navigationAction: buildNavigationAction(best),
+      needsClarification: true,
+      clarificationQuestion: `Do you mean ${best.name}${second ? ` or ${second.name}` : ""}?`
+    };
+  }
+  return {
+    ...interpretation,
+    confidence,
+    answer: buildAnswerText(interpretation.intent, best),
+    navigationAction: buildNavigationAction(best)
+  };
+}
+function interpretNeoGuideQuestion(question, model, context = {}) {
+  const intent = detectIntent(question);
+  const synonymMap = buildSynonymMap(model.curatedKnowledge?.synonyms || []);
+  const tokens = expandTokens(tokenize(question), synonymMap);
+  const normalisedQuestion = normalise(question);
+  const entities = extractLikelyEntities(question, tokens);
+  const userPermissions = new Set(context.userPermissions || []);
+  const sourceFunctions = [
+    ...model.curatedKnowledge?.functions || [],
+    ...(model.functions || []).filter((fn) => !String(fn.id || "").startsWith("function.curated."))
+  ];
+  const matches = sourceFunctions.map((fn) => scoreFunction(fn, tokens, normalisedQuestion, intent, context, userPermissions)).filter((match) => match.score > 0).sort((left, right) => right.score - left.score).slice(0, 5);
+  return {
+    intent,
+    entities,
+    matches,
+    needsClarification: false
+  };
+}
+function detectIntent(question) {
+  const normalised = normalise(question);
+  for (const candidate of INTENT_PATTERNS) {
+    if (candidate.patterns.some((pattern) => pattern.test(normalised))) return candidate.intent;
+  }
+  return "UNKNOWN";
+}
+function scoreFunction(fn, tokens, normalisedQuestion, intent, context, userPermissions) {
+  const haystackParts = [
+    fn.name,
+    ...fn.aliases || [],
+    fn.purpose,
+    ...fn.outputs || [],
+    ...fn.dependencies || [],
+    ...fn.businessRules || [],
+    ...fn.failureConditions || [],
+    fn.location?.page,
+    fn.location?.anchor
+  ].filter(Boolean).map(String);
+  const haystack = normalise(haystackParts.join(" "));
+  const haystackTokens = new Set(tokenize(haystack));
+  const reasons = [];
+  let score = 0;
+  const exactPhrases = [fn.name, ...fn.aliases || []].map((value) => normalise(String(value || ""))).filter((value) => value.length >= 4);
+  const questionTokens = new Set(tokenize(normalisedQuestion));
+  for (const phrase of exactPhrases) {
+    if (normalisedQuestion.includes(phrase)) {
+      score += phrase === normalise(fn.name) ? 8 : 6;
+      reasons.push(`phrase ${phrase}`);
+      break;
+    }
+    const phraseTokens = tokenize(phrase);
+    if (phraseTokens.length > 1 && phraseTokens.every((token) => questionTokens.has(token))) {
+      score += phrase === normalise(fn.name) ? 7 : 5;
+      reasons.push(`phrase tokens ${phrase}`);
+      break;
+    }
+  }
+  for (const token of tokens) {
+    if (STOP_WORDS.has(token)) continue;
+    if (haystackTokens.has(token)) {
+      score += 4;
+      reasons.push(`matched ${token}`);
+      continue;
+    }
+    if (token.length >= 5 && haystack.includes(token)) {
+      score += 2;
+      reasons.push(`partial ${token}`);
+      continue;
+    }
+    if (token.length >= 5 && hasNearToken(token, haystackTokens)) {
+      score += 1.5;
+      reasons.push(`near ${token}`);
+    }
+  }
+  const intentHints = INTENT_HINTS[intent] || [];
+  if (intentHints.some((hint) => haystack.includes(hint))) {
+    score += 3;
+    reasons.push(`intent ${intent}`);
+  }
+  if (context.page && fn.location?.page && normalise(context.page) === normalise(fn.location.page)) {
+    score += 3;
+    reasons.push("current page");
+  }
+  const permissions = fn.permissions || [];
+  if (permissions.length > 0 && userPermissions.size > 0) {
+    const hasAnyPermission = permissions.some((permission) => userPermissions.has(permission));
+    score += hasAnyPermission ? 1 : -2;
+    reasons.push(hasAnyPermission ? "permission visible" : "permission may be restricted");
+  }
+  if (String(fn.id || "").startsWith("function.curated.") || fn.auditStatus?.includes("manually enriched") || fn.auditStatus?.includes("manually")) {
+    score += 6;
+    reasons.push("curated");
+  }
+  return {
+    functionId: fn.id,
+    name: fn.name,
+    score,
+    location: fn.location,
+    permissions,
+    reasons: Array.from(new Set(reasons)).slice(0, 8),
+    function: fn
+  };
+}
+function buildAnswerText(intent, match) {
+  const fn = match.function;
+  const location = fn.location?.page ? ` Open ${fn.location.page}` : "";
+  const purpose = fn.purpose || `${fn.name} is a DFP-NEO function.`;
+  const dependency = first(fn.dependencies);
+  const failure = first(fn.failureConditions);
+  const rule = first(fn.businessRules);
+  if (intent === "WHY" || intent === "TROUBLESHOOT") {
+    const reasons = [failure, rule, dependency].filter(Boolean);
+    return reasons.length > 0 ? `${purpose} The most relevant checks are: ${reasons.join(" ")}${location ? ` ${location} to review it.` : ""}` : `${purpose}${location ? ` ${location} to review it.` : ""}`;
+  }
+  if (intent === "NAVIGATE" || intent === "FIND") {
+    return `${fn.name} is in ${fn.location?.page || "DFP-NEO"}.${fn.location?.anchor ? " I can take you to the relevant control or section." : ""}`;
+  }
+  if (intent === "HOW_TO") {
+    return `${purpose}${location ? ` Start from ${fn.location?.page}.` : ""}${rule ? ` ${rule}` : ""}`;
+  }
+  if (intent === "PERMISSION") {
+    const permissionText = match.permissions.length > 0 ? match.permissions.join(", ") : "the relevant page permission";
+    return `${fn.name} is controlled by ${permissionText}. If it is disabled, check the user role and permission profile for that function.`;
+  }
+  return `${purpose}${location ? ` ${location} for the relevant controls.` : ""}`;
+}
+function buildNavigationAction(match) {
+  const location = match.location;
+  if (!location?.page && !location?.route && !location?.anchor) return void 0;
+  return {
+    label: location?.anchor ? `Open ${match.name}` : `Open ${location.page || match.name}`,
+    page: location?.page || null,
+    route: location?.route || null,
+    anchor: location?.anchor || null,
+    highlightTarget: location?.anchor || null
+  };
+}
+function tokenize(value) {
+  return normalise(value).split(/[^a-z0-9]+/).map((token) => token.trim()).filter((token) => token.length > 1 && !STOP_WORDS.has(token));
+}
+function expandTokens(tokens, synonymMap) {
+  const expanded = /* @__PURE__ */ new Set();
+  for (const token of tokens) {
+    expanded.add(token);
+    const canonical = synonymMap.get(token);
+    if (canonical) {
+      tokenize(canonical).forEach((canonicalToken) => expanded.add(canonicalToken));
+    }
+  }
+  return Array.from(expanded);
+}
+function buildSynonymMap(groups) {
+  const map = /* @__PURE__ */ new Map();
+  for (const group of groups) {
+    const canonical = normalise(group.canonical);
+    tokenize(group.canonical).forEach((token) => map.set(token, canonical));
+    for (const term of group.terms || []) {
+      const termTokens = tokenize(term);
+      if (termTokens.length === 1) map.set(termTokens[0], canonical);
+    }
+  }
+  return map;
+}
+function extractLikelyEntities(question, tokens) {
+  const entities = /* @__PURE__ */ new Set();
+  for (const match of question.matchAll(/\b[A-Z][A-Z0-9]{2,}\b/g)) entities.add(match[0]);
+  for (const match of question.matchAll(/\b[A-Z][a-z]+(?:\s+[A-Z][a-z]+)?\b/g)) entities.add(match[0]);
+  for (const token of tokens) {
+    if (/[a-z]+\d+/.test(token) || /\d/.test(token)) entities.add(token.toUpperCase());
+  }
+  return Array.from(entities).slice(0, 8);
+}
+function hasNearToken(token, haystackTokens) {
+  for (const candidate of haystackTokens) {
+    if (Math.abs(candidate.length - token.length) > 2) continue;
+    if (levenshteinDistance(token, candidate) <= 2) return true;
+  }
+  return false;
+}
+function levenshteinDistance(left, right) {
+  const matrix = Array.from({ length: left.length + 1 }, (_, index) => [index]);
+  for (let column = 1; column <= right.length; column += 1) matrix[0][column] = column;
+  for (let row = 1; row <= left.length; row += 1) {
+    for (let column = 1; column <= right.length; column += 1) {
+      const substitutionCost = left[row - 1] === right[column - 1] ? 0 : 1;
+      matrix[row][column] = Math.min(
+        matrix[row - 1][column] + 1,
+        matrix[row][column - 1] + 1,
+        matrix[row - 1][column - 1] + substitutionCost
+      );
+    }
+  }
+  return matrix[left.length][right.length];
+}
+function normalise(value) {
+  return String(value || "").toLowerCase().replace(/[’']/g, "").replace(/[^a-z0-9]+/g, " ").replace(/\s+/g, " ").trim();
+}
+function first(values) {
+  return Array.isArray(values) && values.length > 0 ? values[0] : "";
+}
+const pageToView = {
+  "Program Schedule": "Program Schedule",
+  "Training Records": "TrainingRecords",
+  "Course Progress": "CourseProgress",
+  Trainee: "Trainee",
+  Staff: "Staff",
+  Settings: "Settings",
+  Priorities: "Priorities",
+  SupervisorDashboard: "SupervisorDashboard"
+};
+const highlightTarget = (target) => {
+  if (!target) return false;
+  const element = document.querySelector(`[data-neo-guide="${CSS.escape(target)}"]`);
+  if (!element) return false;
+  element.scrollIntoView({ behavior: "smooth", block: "center", inline: "center" });
+  element.classList.remove("neo-guide-target-highlight");
+  void element.offsetWidth;
+  element.classList.add("neo-guide-target-highlight");
+  window.setTimeout(() => element.classList.remove("neo-guide-target-highlight"), 3600);
+  return true;
+};
+const NeoGuidePanel = ({
+  activeView,
+  selectedRecordLabel,
+  canUsePlatformPermission,
+  onNavigate
+}) => {
+  const [isOpen, setIsOpen] = reactExports.useState(false);
+  const [model, setModel] = reactExports.useState(null);
+  const [loadError, setLoadError] = reactExports.useState("");
+  const [question, setQuestion] = reactExports.useState("");
+  const [messages, setMessages] = reactExports.useState([
+    {
+      id: "welcome",
+      role: "guide",
+      text: "What can I help you with?"
+    }
+  ]);
+  const inputRef = reactExports.useRef(null);
+  reactExports.useEffect(() => {
+    let cancelled = false;
+    fetch("/neo-guide/dfp-neo-knowledge-model.json", { cache: "no-store" }).then((response) => {
+      if (!response.ok) throw new Error(`HTTP ${response.status}`);
+      return response.json();
+    }).then((nextModel) => {
+      if (!cancelled) setModel(nextModel);
+    }).catch((error) => {
+      if (!cancelled) setLoadError(error instanceof Error ? error.message : String(error));
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+  reactExports.useEffect(() => {
+    if (isOpen) window.setTimeout(() => inputRef.current?.focus(), 80);
+  }, [isOpen]);
+  const userPermissions = reactExports.useMemo(() => {
+    if (!model || !canUsePlatformPermission) return [];
+    const ids = /* @__PURE__ */ new Set();
+    (model.curatedKnowledge?.functions || []).forEach((fn) => {
+      (fn.permissions || []).forEach((permission) => ids.add(permission));
+    });
+    return Array.from(ids).filter((permission) => canUsePlatformPermission(permission));
+  }, [canUsePlatformPermission, model]);
+  const submitQuestion = (event) => {
+    event?.preventDefault();
+    const trimmed = question.trim();
+    if (!trimmed || !model) return;
+    const answer = answerNeoGuideQuestion(trimmed, model, {
+      page: activeView,
+      userPermissions
+    });
+    setMessages((current) => [
+      ...current,
+      { id: `user-${Date.now()}`, role: "user", text: trimmed },
+      {
+        id: `guide-${Date.now()}`,
+        role: "guide",
+        text: answer.needsClarification && answer.clarificationQuestion ? `${answer.answer} ${answer.clarificationQuestion}` : answer.answer,
+        action: answer.navigationAction
+      }
+    ]);
+    setQuestion("");
+  };
+  const performAction = (action) => {
+    const view = action.page ? pageToView[action.page] : null;
+    if (view && view !== activeView) {
+      onNavigate(view);
+      window.setTimeout(() => highlightTarget(action.highlightTarget || action.anchor), 260);
+      return;
+    }
+    highlightTarget(action.highlightTarget || action.anchor);
+  };
+  return /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
+    /* @__PURE__ */ jsxRuntimeExports.jsx("style", { children: `
+        .neo-guide-target-highlight {
+          animation: neoGuideTargetPulse 3.4s ease-out;
+          outline: 2px solid rgba(251, 146, 60, 0.98) !important;
+          outline-offset: 4px !important;
+          box-shadow: 0 0 0 5px rgba(251, 146, 60, 0.18), 0 0 28px rgba(251, 146, 60, 0.52) !important;
+        }
+        @keyframes neoGuideTargetPulse {
+          0% { box-shadow: 0 0 0 0 rgba(251, 146, 60, 0.55), 0 0 0 rgba(251, 146, 60, 0.3); }
+          52% { box-shadow: 0 0 0 8px rgba(251, 146, 60, 0.22), 0 0 30px rgba(251, 146, 60, 0.55); }
+          100% { box-shadow: 0 0 0 5px rgba(251, 146, 60, 0.0), 0 0 0 rgba(251, 146, 60, 0.0); }
+        }
+      ` }),
+    /* @__PURE__ */ jsxRuntimeExports.jsx(
+      "button",
+      {
+        type: "button",
+        "data-neo-guide": "neo-guide-toggle",
+        onClick: () => setIsOpen((value) => !value),
+        className: "fixed bottom-5 right-[128px] z-[1400] rounded-md border border-orange-300/70 bg-slate-950/95 px-4 py-2 text-sm font-black text-orange-100 shadow-[0_14px_34px_rgba(0,0,0,0.38)] transition hover:border-orange-200 hover:bg-slate-900",
+        children: "NEO Guide"
+      }
+    ),
+    isOpen && /* @__PURE__ */ jsxRuntimeExports.jsxs(
+      "section",
+      {
+        "data-neo-guide": "neo-guide-panel",
+        className: "fixed bottom-20 right-[128px] z-[1400] flex h-[520px] w-[420px] max-w-[calc(100vw-180px)] flex-col overflow-hidden rounded-lg border border-orange-300/50 bg-slate-950 text-slate-100 shadow-[0_24px_70px_rgba(0,0,0,0.55)]",
+        "aria-label": "NEO Guide",
+        children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("header", { className: "flex items-center justify-between border-b border-slate-700 bg-slate-900 px-4 py-3", children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsx("h2", { className: "text-base font-black text-white", children: "NEO Guide" }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-xs font-semibold text-slate-400", children: "What can I help you with?" })
+            ] }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx(
+              "button",
+              {
+                type: "button",
+                onClick: () => setIsOpen(false),
+                className: "rounded border border-slate-600 px-2 py-1 text-xs font-bold text-slate-300 hover:border-slate-400 hover:text-white",
+                children: "Close"
+              }
+            )
+          ] }),
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex-1 space-y-3 overflow-y-auto px-4 py-4", children: [
+            loadError ? /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded-md border border-red-500/40 bg-red-950/30 p-3 text-sm text-red-100", children: [
+              "NEO Guide knowledge could not be loaded: ",
+              loadError
+            ] }) : null,
+            messages.map((message) => /* @__PURE__ */ jsxRuntimeExports.jsxs(
+              "div",
+              {
+                className: `rounded-md border px-3 py-2 text-sm leading-5 ${message.role === "user" ? "ml-8 border-sky-400/30 bg-sky-950/30 text-sky-50" : "mr-8 border-slate-700 bg-slate-900/80 text-slate-100"}`,
+                children: [
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("p", { children: message.text }),
+                  message.action ? /* @__PURE__ */ jsxRuntimeExports.jsx(
+                    "button",
+                    {
+                      type: "button",
+                      onClick: () => performAction(message.action),
+                      className: "mt-3 rounded-md border border-orange-300/60 bg-orange-500 px-3 py-1.5 text-xs font-black text-slate-950 hover:bg-orange-400",
+                      children: message.action.label
+                    }
+                  ) : null
+                ]
+              },
+              message.id
+            ))
+          ] }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx("form", { onSubmit: submitQuestion, className: "border-t border-slate-700 bg-slate-900 p-3", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex gap-2", children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx(
+              "input",
+              {
+                ref: inputRef,
+                value: question,
+                onChange: (event) => setQuestion(event.target.value),
+                disabled: !model,
+                placeholder: model ? "Ask how to do something..." : "Loading NEO Guide...",
+                className: "min-w-0 flex-1 rounded-md border border-slate-600 bg-slate-950 px-3 py-2 text-sm text-white outline-none focus:border-orange-300"
+              }
+            ),
+            /* @__PURE__ */ jsxRuntimeExports.jsx(
+              "button",
+              {
+                type: "submit",
+                disabled: !model || !question.trim(),
+                className: "rounded-md border border-orange-300/60 bg-orange-500 px-3 py-2 text-sm font-black text-slate-950 disabled:cursor-not-allowed disabled:opacity-45",
+                children: "Ask"
+              }
+            )
+          ] }) })
+        ]
+      }
+    )
+  ] });
+};
 const byteToHex = [];
 for (let i = 0; i < 256; ++i) {
   byteToHex.push((i + 256).toString(16).slice(1));
@@ -20067,22 +20572,22 @@ This permanently removes the organisation record from platform configuration and
     let nextTemplate = normaliseTrainingReportTemplate(sourceTemplate);
     Object.entries(drafts).forEach(([draftKey, rawValue]) => {
       const value = String(rawValue ?? "").slice(0, TRAINING_REPORT_FIELD_LABEL_MAX_LENGTH);
-      const [scope, first, second] = draftKey.split(":");
-      if (scope === "module" && first && second === "title" && first in nextTemplate.modules) {
+      const [scope, first2, second] = draftKey.split(":");
+      if (scope === "module" && first2 && second === "title" && first2 in nextTemplate.modules) {
         nextTemplate = normaliseTrainingReportTemplate({
           ...nextTemplate,
           modules: {
             ...nextTemplate.modules,
-            [first]: {
-              ...nextTemplate.modules[first],
+            [first2]: {
+              ...nextTemplate.modules[first2],
               title: value
             }
           }
         });
         return;
       }
-      if (scope === "field" && first && second && first in nextTemplate.modules) {
-        const moduleKey = first;
+      if (scope === "field" && first2 && second && first2 in nextTemplate.modules) {
+        const moduleKey = first2;
         if (!("fields" in nextTemplate.modules[moduleKey])) return;
         nextTemplate = normaliseTrainingReportTemplate({
           ...nextTemplate,
@@ -20099,25 +20604,25 @@ This permanently removes the organisation record from platform configuration and
         });
         return;
       }
-      if (scope === "completion" && first) {
+      if (scope === "completion" && first2) {
         nextTemplate = normaliseTrainingReportTemplate({
           ...nextTemplate,
-          completionResults: nextTemplate.completionResults.map((option) => option.code === first ? { ...option, label: value } : option)
+          completionResults: nextTemplate.completionResults.map((option) => option.code === first2 ? { ...option, label: value } : option)
         });
         return;
       }
-      if (scope === "overall" && first && first in nextTemplate.overallResults) {
+      if (scope === "overall" && first2 && first2 in nextTemplate.overallResults) {
         nextTemplate = normaliseTrainingReportTemplate({
           ...nextTemplate,
           overallResults: {
             ...nextTemplate.overallResults,
-            [first]: value
+            [first2]: value
           }
         });
         return;
       }
-      if (scope === "grade" && first) {
-        const gradeValue = Number(first);
+      if (scope === "grade" && first2) {
+        const gradeValue = Number(first2);
         if (!Number.isFinite(gradeValue)) return;
         nextTemplate = normaliseTrainingReportTemplate({
           ...nextTemplate,
@@ -20759,11 +21264,11 @@ This permanently removes the organisation record from platform configuration and
   const platformActionButtonClass = "w-[56px] h-[41px] flex items-center justify-center text-center px-1 py-1 text-[10px] font-semibold btn-aluminium-brushed rounded-md disabled:cursor-not-allowed disabled:opacity-50";
   const aircraftResourceMiniButtonClass = "h-[38px] min-w-[76px] rounded-md border border-gray-500 bg-gray-300 px-3 text-xs font-bold text-gray-900 hover:bg-gray-200 disabled:cursor-not-allowed disabled:opacity-50";
   const rewriteUnitCodesInSettings = (settings = {}, oldCode, nextCode) => {
-    const normalise = (value) => String(value || "").trim();
+    const normalise2 = (value) => String(value || "").trim();
     const replaceUnitList = (units) => {
       const values = Array.isArray(units) ? units : [];
       const next = values.map((unitCode) => {
-        const code = normalise(unitCode);
+        const code = normalise2(unitCode);
         if (!code) return "";
         if (code === oldCode) return nextCode || "";
         return code;
@@ -20790,7 +21295,7 @@ This permanently removes the organisation record from platform configuration and
       desiredAllocations: rewriteDesiredAllocations(settings.desiredAllocations || {}),
       resourceSharingGroups: rewriteSharingGroups(settings.resourceSharingGroups),
       staffSharingGroups: rewriteSharingGroups(settings.staffSharingGroups),
-      masterLmpAccess: Array.isArray(settings.masterLmpAccess) ? settings.masterLmpAccess.map((rule) => normalise(rule?.unitCode) === oldCode ? { ...rule, unitCode: nextCode || "" } : rule).filter((rule) => nextCode || normalise(rule?.unitCode) !== "") : settings.masterLmpAccess
+      masterLmpAccess: Array.isArray(settings.masterLmpAccess) ? settings.masterLmpAccess.map((rule) => normalise2(rule?.unitCode) === oldCode ? { ...rule, unitCode: nextCode || "" } : rule).filter((rule) => nextCode || normalise2(rule?.unitCode) !== "") : settings.masterLmpAccess
     };
   };
   const updateUnitCode = (index, value) => {
@@ -56334,15 +56839,15 @@ ${swapNote}` : swapNote
   }, [crew[0]?.student, crew[0]?.pilot, flightNumber, traineeLMPs, isAddingTile, isEditingDefault, event.id]);
   const filteredCallsigns = reactExports.useMemo(() => {
     if (formationCallsigns && formationCallsigns.length > 0 && currentLocation) {
-      const normalise = (value) => String(value || "").trim().toUpperCase();
-      const currentLocationKey = normalise(currentLocation);
+      const normalise2 = (value) => String(value || "").trim().toUpperCase();
+      const currentLocationKey = normalise2(currentLocation);
       const activeUnits = new Set(
-        String(activeUnitCode || "").split("+").map(normalise).filter(Boolean)
+        String(activeUnitCode || "").split("+").map(normalise2).filter(Boolean)
       );
       const filtered = formationCallsigns.filter((cs) => {
-        const callsignUnit = normalise(cs.unit);
-        const callsignLocation = normalise(cs.location);
-        const callsignLocationCode = normalise(cs.locationCode);
+        const callsignUnit = normalise2(cs.unit);
+        const callsignLocation = normalise2(cs.location);
+        const callsignLocationCode = normalise2(cs.locationCode);
         const matchesUnit = activeUnits.size === 0 || !callsignUnit || activeUnits.has(callsignUnit);
         const matchesLocation = callsignLocation === currentLocationKey || callsignLocationCode === currentLocationKey;
         return matchesUnit && matchesLocation;
@@ -69936,8 +70441,8 @@ const PrioritiesView = ({
   }, [activeCallsignUnitCodes, unitCallsignSettings]);
   const formationCallsignEntries = reactExports.useMemo(() => {
     const activeUnits = new Set(activeCallsignUnitCodes);
-    const normalise = (value) => String(value || "").trim().toUpperCase();
-    const activeLocation = normalise(school);
+    const normalise2 = (value) => String(value || "").trim().toUpperCase();
+    const activeLocation = normalise2(school);
     const activeLocationTokens = new Set([
       activeLocation,
       activeLocation.replace(/^Y(?=[A-Z0-9]{3}$)/, ""),
@@ -69945,11 +70450,11 @@ const PrioritiesView = ({
     ].filter(Boolean));
     const seen = /* @__PURE__ */ new Set();
     return formationCallsigns.map((callsign, index) => {
-      const unitCode = normalise(callsign.unit);
-      const code = normalise(callsign.code || callsign.name);
+      const unitCode = normalise2(callsign.unit);
+      const code = normalise2(callsign.code || callsign.name);
       if (!code) return null;
       if (unitCode && activeUnits.size > 0 && !activeUnits.has(unitCode)) return null;
-      const locationTokens = [callsign.location, callsign.locationCode].map(normalise).filter(Boolean);
+      const locationTokens = [callsign.location, callsign.locationCode].map(normalise2).filter(Boolean);
       if (locationTokens.length > 0 && !locationTokens.some((token) => activeLocationTokens.has(token))) return null;
       const key = `${unitCode || activeTaskingUnitCode}::${code}`;
       if (seen.has(key)) return null;
@@ -74205,11 +74710,11 @@ const PrioritiesViewWithMenu = (props) => {
         /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-1 text-xs text-slate-500", children: "Deployments added here are build-planner deployment tiles." })
       ] }) }),
       deploymentGroups.length === 0 ? /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-4 rounded-md border border-slate-700/70 bg-slate-900/70 px-3 py-3 text-sm text-slate-500", children: "No deployments built." }) : /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-4 space-y-2", children: deploymentGroups.map((group) => {
-        const first = group.events[0];
+        const first2 = group.events[0];
         const uniqueDates = new Set(group.events.map((event) => event.date).filter(Boolean));
         const uniqueResources = new Set(group.events.map((event) => event.resourceId).filter(Boolean));
-        const deployedCount = Number(first.deploymentAircraftCount) || Math.max(1, uniqueResources.size);
-        const label = `DEPLOYMENT ${String(first.deploymentStartTime || "").replace(":", "") || formatPlannerClock(first.startTime)} ${formatPlannerDateLabel(first.deploymentStartDate || first.date)} - ${String(first.deploymentEndTime || "").replace(":", "") || formatPlannerClock(first.startTime + first.duration)} ${formatPlannerDateLabel(first.deploymentEndDate || first.date)}`;
+        const deployedCount = Number(first2.deploymentAircraftCount) || Math.max(1, uniqueResources.size);
+        const label = `DEPLOYMENT ${String(first2.deploymentStartTime || "").replace(":", "") || formatPlannerClock(first2.startTime)} ${formatPlannerDateLabel(first2.deploymentStartDate || first2.date)} - ${String(first2.deploymentEndTime || "").replace(":", "") || formatPlannerClock(first2.startTime + first2.duration)} ${formatPlannerDateLabel(first2.deploymentEndDate || first2.date)}`;
         return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center justify-between gap-3 rounded-md border border-slate-700 bg-slate-900/80 px-3 py-2", children: [
           /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "min-w-0", children: [
             /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "truncate text-sm font-bold text-slate-100", children: label }),
@@ -79280,12 +79785,12 @@ const normaliseCourseStartDate = (value) => {
   }
   const slashMatch = /^(\d{1,2})[\/.-](\d{1,2})[\/.-](\d{2}|\d{4})$/.exec(raw);
   if (slashMatch) {
-    const first = Number(slashMatch[1]);
+    const first2 = Number(slashMatch[1]);
     const second = Number(slashMatch[2]);
     const yearValue = Number(slashMatch[3]);
     const year = yearValue < 100 ? 2e3 + yearValue : yearValue;
-    const month = second > 12 ? first : second;
-    const day = second > 12 ? second : first;
+    const month = second > 12 ? first2 : second;
+    const day = second > 12 ? second : first2;
     if (year > 1900 && month >= 1 && month <= 12 && day >= 1 && day <= 31) {
       return `${String(year).padStart(4, "0")}-${String(month).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
     }
@@ -81552,7 +82057,7 @@ const AirCombatIntelligenceTab = ({
     const aircraftUsed = new Set(
       flightEvents.map((event) => String(event.resourceId || "").trim()).filter((resourceId) => resourceId && !resourceId.startsWith("STBY") && !resourceId.startsWith("BNF-STBY"))
     );
-    const firstFlight = flightEvents.reduce((first, event) => !first || Number(event.startTime) < Number(first.startTime) ? event : first, null);
+    const firstFlight = flightEvents.reduce((first2, event) => !first2 || Number(event.startTime) < Number(first2.startTime) ? event : first2, null);
     const lastFlight = flightEvents.reduce((last, event) => {
       const end = Number(event.startTime || 0) + Number(event.duration || 0);
       const lastEnd = last ? Number(last.startTime || 0) + Number(last.duration || 0) : -1;
@@ -84408,9 +84913,9 @@ const InstructorProfileFlyout = ({
   const photoInputRef = React.useRef(null);
   const profilePhotoInitials = (value) => {
     const cleaned = String(value || "").replace(/,/g, " ").split(/\s+/).map((part) => part.trim()).filter(Boolean);
-    const first = cleaned[0]?.[0] || "";
+    const first2 = cleaned[0]?.[0] || "";
     const last = cleaned.length > 1 ? cleaned[cleaned.length - 1]?.[0] || "" : "";
-    return `${first}${last}`.toUpperCase() || "ID";
+    return `${first2}${last}`.toUpperCase() || "ID";
   };
   const savePhotoImmediately = async (dataUrl) => {
     const dbId = instructor.id;
@@ -111845,20 +112350,20 @@ const DfpSidePanelTimeline = ({
       grouped.set(key, [...grouped.get(key) || [], event]);
     });
     return Array.from(grouped.entries()).map(([id, events]) => {
-      const first = events[0];
+      const first2 = events[0];
       return {
         id,
         events,
-        tasking: first.taskingName || first.flightNumber || "Directed Task",
-        date: first.date || date,
-        takeoff: first.startTime,
-        duration: first.duration,
-        flightType: first.flightType === "Solo" ? "Solo" : "Dual",
-        depPoint: first.origin || locationCode,
-        arrivalPoint: first.destination || locationCode,
-        aircraftCount: Math.max(1, Math.floor(Number(first.formationSize || first.taskingAircraftCount || first.aircraftCount || events.length || 1) || 1)),
-        aircraftConfigId: first.aircraftConfigId || BASE_AIRCRAFT_CONFIG.id,
-        priority: first.priority || (first.isMandatoryTasking === false ? "Medium" : "High"),
+        tasking: first2.taskingName || first2.flightNumber || "Directed Task",
+        date: first2.date || date,
+        takeoff: first2.startTime,
+        duration: first2.duration,
+        flightType: first2.flightType === "Solo" ? "Solo" : "Dual",
+        depPoint: first2.origin || locationCode,
+        arrivalPoint: first2.destination || locationCode,
+        aircraftCount: Math.max(1, Math.floor(Number(first2.formationSize || first2.taskingAircraftCount || first2.aircraftCount || events.length || 1) || 1)),
+        aircraftConfigId: first2.aircraftConfigId || BASE_AIRCRAFT_CONFIG.id,
+        priority: first2.priority || (first2.isMandatoryTasking === false ? "Medium" : "High"),
         scheduled: true
       };
     });
@@ -137733,32 +138238,32 @@ ${"=".repeat(60)}`);
     return configuredText.includes("FORM");
   }, [configuredContinuationFormationLabel, getConfiguredContinuationEventByFlightNumber]);
   const activeTrainingAreas = reactExports.useMemo(() => {
-    const normalise = (value) => String(value || "").trim().toUpperCase();
+    const normalise2 = (value) => String(value || "").trim().toUpperCase();
     const selectedAliases = new Set(
-      [school, ...knownDfpLocationAliases(school)].map(normalise).filter(Boolean)
+      [school, ...knownDfpLocationAliases(school)].map(normalise2).filter(Boolean)
     );
-    const activeLocation = (platformConfig?.locations || []).filter((location) => location.status !== "INACTIVE").find((location) => getLocationSelectorAliases(location).some((alias) => selectedAliases.has(normalise(alias))));
+    const activeLocation = (platformConfig?.locations || []).filter((location) => location.status !== "INACTIVE").find((location) => getLocationSelectorAliases(location).some((alias) => selectedAliases.has(normalise2(alias))));
     const platformAreas = Array.isArray(activeLocation?.trainingAreas) ? activeLocation.trainingAreas.map((area) => String(area || "").trim()).filter(Boolean) : [];
     if (platformAreas.length > 0) return platformAreas;
     const matchingLegacyLocation = Object.keys(locationOpAreas || {}).find((locationName) => {
       const aliases = [locationName, locationAbbreviations[locationName], ...knownDfpLocationAliases(locationName)];
-      return aliases.map(normalise).some((alias) => selectedAliases.has(alias));
+      return aliases.map(normalise2).some((alias) => selectedAliases.has(alias));
     });
     return matchingLegacyLocation ? locationOpAreas[matchingLegacyLocation] || [] : [];
   }, [getLocationSelectorAliases, knownDfpLocationAliases, locationAbbreviations, locationOpAreas, platformConfig, school]);
   const neoAssistCallsignOptions = reactExports.useMemo(() => {
     const unitSet = activeContextUnitCodeSet;
-    const normalise = (value) => String(value || "").trim().toUpperCase();
-    const locationAliases = new Set([school, ...knownDfpLocationAliases(school)].map(normalise).filter(Boolean));
+    const normalise2 = (value) => String(value || "").trim().toUpperCase();
+    const locationAliases = new Set([school, ...knownDfpLocationAliases(school)].map(normalise2).filter(Boolean));
     const options = formationCallsigns.filter((callsign) => {
-      const callsignUnit = normalise(callsign.unit);
+      const callsignUnit = normalise2(callsign.unit);
       const unitMatches = !callsignUnit || unitSet.has(callsignUnit);
       const callsignLocationAliases = [
         callsign.location,
         callsign.locationCode,
         ...knownDfpLocationAliases(callsign.location),
         ...knownDfpLocationAliases(callsign.locationCode)
-      ].map(normalise).filter(Boolean);
+      ].map(normalise2).filter(Boolean);
       const locationMatches = callsignLocationAliases.length === 0 || callsignLocationAliases.some((alias) => locationAliases.has(alias));
       return unitMatches && locationMatches;
     }).map((callsign) => String(callsign.code || "").trim()).filter(Boolean);
@@ -155255,6 +155760,15 @@ Do you want to replace the existing entry?`,
           canUsePlatformPermission,
           modelUnavailableViews: modelUnavailableRightViews,
           operationalModel: activeOperationalModel
+        }
+      ),
+      isAuthenticated && /* @__PURE__ */ jsxRuntimeExports.jsx(
+        NeoGuidePanel,
+        {
+          activeView,
+          selectedRecordLabel: selectedPersonForProfile?.name || selectedEvent?.displayTitle || selectedEvent?.flightNumber || "",
+          canUsePlatformPermission,
+          onNavigate: handleNavigation
         }
       ),
       isAuthenticated && isViewingPastDfp && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "fixed bottom-[168px] right-[18px] z-[100] flex w-[75px] justify-center", children: /* @__PURE__ */ jsxRuntimeExports.jsxs(
