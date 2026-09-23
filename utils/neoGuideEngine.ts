@@ -30,6 +30,7 @@ export interface NeoGuideFunction {
   aliases?: string[];
   location?: NeoGuideLocation;
   purpose?: string;
+  procedureSteps?: string[];
   inputs?: unknown[];
   outputs?: string[];
   permissions?: string[];
@@ -370,25 +371,27 @@ function isPreviousFunctionReference(normalisedQuestion: string): boolean {
 
 function buildAnswerText(intent: NeoGuideIntent, match: NeoGuideMatch): string {
   const fn = match.function;
+  const locationPage = fn.location?.page || 'the relevant DFP-NEO page';
   const location = fn.location?.page ? ` Open ${fn.location.page}` : '';
   const purpose = fn.purpose || `${fn.name} is a DFP-NEO function.`;
   const dependency = first(fn.dependencies);
   const failure = first(fn.failureConditions);
   const rule = first(fn.businessRules);
+  const steps = formatProcedureSteps(fn);
 
   if (intent === 'WHY' || intent === 'TROUBLESHOOT') {
     const reasons = [failure, rule, dependency].filter(Boolean);
     return reasons.length > 0
-      ? `${purpose} The most relevant checks are: ${reasons.join(' ')}${location ? ` ${location} to review it.` : ''}`
-      : `${purpose}${location ? ` ${location} to review it.` : ''}`;
+      ? `${purpose}${steps ? ` ${steps}` : ''} The most relevant checks are: ${reasons.join(' ')}`
+      : `${purpose}${steps ? ` ${steps}` : location ? ` ${location} to review it.` : ''}`;
   }
 
   if (intent === 'NAVIGATE' || intent === 'FIND') {
-    return `${fn.name} is in ${fn.location?.page || 'DFP-NEO'}.${fn.location?.anchor ? ' I can take you to the relevant control or section.' : ''}`;
+    return steps || `${fn.name} is in ${locationPage}.`;
   }
 
   if (intent === 'HOW_TO') {
-    return `${purpose}${location ? ` Start from ${fn.location?.page}.` : ''}${rule ? ` ${rule}` : ''}`;
+    return `${purpose}${steps ? ` ${steps}` : location ? ` Start from ${fn.location?.page}.` : ''}${rule ? ` ${rule}` : ''}`;
   }
 
   if (intent === 'PERMISSION') {
@@ -397,6 +400,14 @@ function buildAnswerText(intent: NeoGuideIntent, match: NeoGuideMatch): string {
   }
 
   return `${purpose}${location ? ` ${location} for the relevant controls.` : ''}`;
+}
+
+function formatProcedureSteps(fn: NeoGuideFunction): string {
+  if (Array.isArray(fn.procedureSteps) && fn.procedureSteps.length > 0) {
+    return `Steps: ${fn.procedureSteps.map((step, index) => `${index + 1}. ${step}`).join(' ')}`;
+  }
+  if (fn.location?.page) return `Start from ${fn.location.page}.`;
+  return '';
 }
 
 function buildNavigationAction(match: NeoGuideMatch): NeoGuideNavigationAction | undefined {

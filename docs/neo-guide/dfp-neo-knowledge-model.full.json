@@ -1,6 +1,6 @@
 {
   "schemaVersion": "neo-guide-knowledge-model.v1",
-  "generatedAt": "2026-09-23T21:42:50.139Z",
+  "generatedAt": "2026-09-23T21:52:14.956Z",
   "source": {
     "repository": "clone-the-repo-dagde-dfp-neo",
     "sourceFileCount": 377,
@@ -72767,70 +72767,70 @@
         "line": 10
       },
       {
-        "id": "message.utils-neoguideengine-ts.permission.118",
+        "id": "message.utils-neoguideengine-ts.permission.119",
         "text": "PERMISSION",
         "file": "utils/neoGuideEngine.ts",
-        "line": 118
+        "line": 119
       },
       {
-        "id": "message.utils-neoguideengine-ts.disabled.134",
+        "id": "message.utils-neoguideengine-ts.disabled.135",
         "text": "disabled",
         "file": "utils/neoGuideEngine.ts",
-        "line": 134
+        "line": 135
       },
       {
-        "id": "message.utils-neoguideengine-ts.unavailable.134",
+        "id": "message.utils-neoguideengine-ts.unavailable.135",
         "text": "unavailable",
         "file": "utils/neoGuideEngine.ts",
-        "line": 134
+        "line": 135
       },
       {
-        "id": "message.utils-neoguideengine-ts.permission.137",
+        "id": "message.utils-neoguideengine-ts.permission.138",
         "text": "permission",
         "file": "utils/neoGuideEngine.ts",
-        "line": 137
+        "line": 138
       },
       {
-        "id": "message.utils-neoguideengine-ts.disabled.137",
+        "id": "message.utils-neoguideengine-ts.disabled.138",
         "text": "disabled",
         "file": "utils/neoGuideEngine.ts",
-        "line": 137
+        "line": 138
       },
       {
-        "id": "message.utils-neoguideengine-ts.conflict.140",
+        "id": "message.utils-neoguideengine-ts.conflict.141",
         "text": "conflict",
         "file": "utils/neoGuideEngine.ts",
-        "line": 140
+        "line": 141
       },
       {
-        "id": "message.utils-neoguideengine-ts.permission-visible.312",
+        "id": "message.utils-neoguideengine-ts.permission-visible.313",
         "text": "permission visible",
         "file": "utils/neoGuideEngine.ts",
-        "line": 312
+        "line": 313
       },
       {
-        "id": "message.utils-neoguideengine-ts.permission-may-be-restricted.312",
+        "id": "message.utils-neoguideengine-ts.permission-may-be-restricted.313",
         "text": "permission may be restricted",
         "file": "utils/neoGuideEngine.ts",
-        "line": 312
+        "line": 313
       },
       {
-        "id": "message.utils-neoguideengine-ts.permission.394",
+        "id": "message.utils-neoguideengine-ts.permission.397",
         "text": "PERMISSION",
         "file": "utils/neoGuideEngine.ts",
-        "line": 394
+        "line": 397
       },
       {
-        "id": "message.utils-neoguideengine-ts.the-relevant-page-permission.395",
+        "id": "message.utils-neoguideengine-ts.the-relevant-page-permission.398",
         "text": "the relevant page permission",
         "file": "utils/neoGuideEngine.ts",
-        "line": 395
+        "line": 398
       },
       {
-        "id": "message.utils-neoguideengine-ts.fn-name-is-controlled-by-permissiontext-if-it-is-disabled-check-the-user-role-and-permission-pro.396",
+        "id": "message.utils-neoguideengine-ts.fn-name-is-controlled-by-permissiontext-if-it-is-disabled-check-the-user-role-and-permission-pro.399",
         "text": "${fn.name} is controlled by ${permissionText}. If it is disabled, check the user role and permission profile for that function.",
         "file": "utils/neoGuideEngine.ts",
-        "line": 396
+        "line": 399
       },
       {
         "id": "message.utils-platformconfigservice-ts.staff-profile-unavailable-use.196",
@@ -73929,6 +73929,14 @@
         "anchor": "course-leadership"
       },
       "purpose": "Assigns the staff members who hold course-level leadership roles for a course.",
+      "procedureSteps": [
+        "Open Trainee.",
+        "Stay on Trainee Profile / Trainee Roster.",
+        "Find the course card.",
+        "Click the pencil/edit button on that course card.",
+        "Use Course Leadership to select the Course Commander or Deputy Course Commander.",
+        "Save the course changes."
+      ],
       "inputs": [
         {
           "fieldName": "courseCommander",
@@ -74009,6 +74017,13 @@
         "anchor": "course-scores"
       },
       "purpose": "Displays saved training-report overall grades by trainee and event for the selected course.",
+      "procedureSteps": [
+        "Open Course Progress.",
+        "Scroll to Course Scores & Rankings.",
+        "Use the Course selector in Course Scores.",
+        "Check that the selected course has trainees and saved training report overall grades.",
+        "Use Settings in Course Scores if the event types are being filtered out."
+      ],
       "inputs": [
         {
           "fieldName": "course",
@@ -74068,6 +74083,13 @@
         "anchor": "course-rankings"
       },
       "purpose": "Creates and evaluates named ranking awards against selected course/event criteria.",
+      "procedureSteps": [
+        "Open Course Progress.",
+        "Scroll to Course Scores & Rankings.",
+        "Use the Course selector in Course Rankings.",
+        "Select the Award.",
+        "If no ranking appears, check that the award includes events with saved scores for the selected course."
+      ],
       "inputs": [
         {
           "fieldName": "course",
@@ -74143,6 +74165,13 @@
         "anchor": "platform-master-lmp-access"
       },
       "purpose": "Defines which locations and units can view, assign or manage each Master LMP record.",
+      "procedureSteps": [
+        "Open Settings.",
+        "Open Deployment & Security.",
+        "Open Master LMP Access.",
+        "Add or edit the Master LMP catalogue record first.",
+        "Add or edit the access rule for the required unit."
+      ],
       "inputs": [],
       "outputs": [
         "Updates Master LMP catalogue records and access rules used by trainee/course assignment workflows."
@@ -74183,6 +74212,13 @@
         "anchor": "platform-master-lmp-access"
       },
       "purpose": "Displays and manages event-level detail for Master LMP content and related assignment workflows.",
+      "procedureSteps": [
+        "Open Settings.",
+        "Open the Master LMP area.",
+        "Select the Master LMP.",
+        "Select the event from the event list.",
+        "Use the event detail panel next to the selected event."
+      ],
       "inputs": [],
       "outputs": [
         "Shows selected event details and supports editing where the user has manage access."
@@ -74222,6 +74258,12 @@
         "anchor": "nav-duty-pilot"
       },
       "purpose": "Displays the embedded flight tracking widget within the Duty Pilot page.",
+      "procedureSteps": [
+        "Open Duty Pilot.",
+        "Go to Flight Tracking.",
+        "If the embedded view is blank, use the external link to confirm the tracking provider itself is reachable.",
+        "If the external link works but the embedded view does not, the provider or browser is probably blocking embedding."
+      ],
       "inputs": [],
       "outputs": [
         "Shows the configured tracking widget when the browser and remote tracking site allow embedding."
@@ -703919,6 +703961,14 @@
           "anchor": "course-leadership"
         },
         "purpose": "Assigns the staff members who hold course-level leadership roles for a course.",
+        "procedureSteps": [
+          "Open Trainee.",
+          "Stay on Trainee Profile / Trainee Roster.",
+          "Find the course card.",
+          "Click the pencil/edit button on that course card.",
+          "Use Course Leadership to select the Course Commander or Deputy Course Commander.",
+          "Save the course changes."
+        ],
         "inputs": [
           {
             "fieldName": "courseCommander",
@@ -703999,6 +704049,13 @@
           "anchor": "course-scores"
         },
         "purpose": "Displays saved training-report overall grades by trainee and event for the selected course.",
+        "procedureSteps": [
+          "Open Course Progress.",
+          "Scroll to Course Scores & Rankings.",
+          "Use the Course selector in Course Scores.",
+          "Check that the selected course has trainees and saved training report overall grades.",
+          "Use Settings in Course Scores if the event types are being filtered out."
+        ],
         "inputs": [
           {
             "fieldName": "course",
@@ -704058,6 +704115,13 @@
           "anchor": "course-rankings"
         },
         "purpose": "Creates and evaluates named ranking awards against selected course/event criteria.",
+        "procedureSteps": [
+          "Open Course Progress.",
+          "Scroll to Course Scores & Rankings.",
+          "Use the Course selector in Course Rankings.",
+          "Select the Award.",
+          "If no ranking appears, check that the award includes events with saved scores for the selected course."
+        ],
         "inputs": [
           {
             "fieldName": "course",
@@ -704133,6 +704197,13 @@
           "anchor": "platform-master-lmp-access"
         },
         "purpose": "Defines which locations and units can view, assign or manage each Master LMP record.",
+        "procedureSteps": [
+          "Open Settings.",
+          "Open Deployment & Security.",
+          "Open Master LMP Access.",
+          "Add or edit the Master LMP catalogue record first.",
+          "Add or edit the access rule for the required unit."
+        ],
         "inputs": [],
         "outputs": [
           "Updates Master LMP catalogue records and access rules used by trainee/course assignment workflows."
@@ -704173,6 +704244,13 @@
           "anchor": "platform-master-lmp-access"
         },
         "purpose": "Displays and manages event-level detail for Master LMP content and related assignment workflows.",
+        "procedureSteps": [
+          "Open Settings.",
+          "Open the Master LMP area.",
+          "Select the Master LMP.",
+          "Select the event from the event list.",
+          "Use the event detail panel next to the selected event."
+        ],
         "inputs": [],
         "outputs": [
           "Shows selected event details and supports editing where the user has manage access."
@@ -704212,6 +704290,12 @@
           "anchor": "nav-duty-pilot"
         },
         "purpose": "Displays the embedded flight tracking widget within the Duty Pilot page.",
+        "procedureSteps": [
+          "Open Duty Pilot.",
+          "Go to Flight Tracking.",
+          "If the embedded view is blank, use the external link to confirm the tracking provider itself is reachable.",
+          "If the external link works but the embedded view does not, the provider or browser is probably blocking embedding."
+        ],
         "inputs": [],
         "outputs": [
           "Shows the configured tracking widget when the browser and remote tracking site allow embedding."

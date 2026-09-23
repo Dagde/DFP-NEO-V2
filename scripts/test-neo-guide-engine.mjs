@@ -75,6 +75,14 @@ assert.equal(answer.intent, 'HOW_TO');
 assert.equal(answer.navigationAction?.anchor, 'trainee-availability');
 assert.ok(!/\bAI\b|ChatGPT|Artificial Intelligence/i.test(answer.answer), 'Guide answer must not describe itself with prohibited assistant terms.');
 
+const courseCommanderAnswer = ask('where is course commander ticked');
+assert.match(courseCommanderAnswer.answer, /Steps:/, 'Course commander answer should provide plain-English steps.');
+assert.match(courseCommanderAnswer.answer, /Open Trainee/i, 'Course commander answer should tell the user to open Trainee.');
+assert.match(courseCommanderAnswer.answer, /course card/i, 'Course commander answer should mention the course card.');
+assert.match(courseCommanderAnswer.answer, /pencil|edit/i, 'Course commander answer should mention editing the course card.');
+assert.match(courseCommanderAnswer.answer, /Course Leadership/i, 'Course commander answer should mention Course Leadership.');
+assert.match(courseCommanderAnswer.answer, /Save/i, 'Course commander answer should mention saving changes.');
+
 const staffFollowUp = ask('what about staff?', { conversation: answer.conversation });
 assert.equal(
   staffFollowUp.matches[0]?.functionId,

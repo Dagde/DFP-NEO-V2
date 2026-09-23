@@ -1693,26 +1693,35 @@ function isPreviousFunctionReference(normalisedQuestion) {
 }
 function buildAnswerText(intent, match) {
   const fn = match.function;
+  const locationPage = fn.location?.page || "the relevant DFP-NEO page";
   const location = fn.location?.page ? ` Open ${fn.location.page}` : "";
   const purpose = fn.purpose || `${fn.name} is a DFP-NEO function.`;
   const dependency = first(fn.dependencies);
   const failure = first(fn.failureConditions);
   const rule = first(fn.businessRules);
+  const steps = formatProcedureSteps(fn);
   if (intent === "WHY" || intent === "TROUBLESHOOT") {
     const reasons = [failure, rule, dependency].filter(Boolean);
-    return reasons.length > 0 ? `${purpose} The most relevant checks are: ${reasons.join(" ")}${location ? ` ${location} to review it.` : ""}` : `${purpose}${location ? ` ${location} to review it.` : ""}`;
+    return reasons.length > 0 ? `${purpose}${steps ? ` ${steps}` : ""} The most relevant checks are: ${reasons.join(" ")}` : `${purpose}${steps ? ` ${steps}` : location ? ` ${location} to review it.` : ""}`;
   }
   if (intent === "NAVIGATE" || intent === "FIND") {
-    return `${fn.name} is in ${fn.location?.page || "DFP-NEO"}.${fn.location?.anchor ? " I can take you to the relevant control or section." : ""}`;
+    return steps || `${fn.name} is in ${locationPage}.`;
   }
   if (intent === "HOW_TO") {
-    return `${purpose}${location ? ` Start from ${fn.location?.page}.` : ""}${rule ? ` ${rule}` : ""}`;
+    return `${purpose}${steps ? ` ${steps}` : location ? ` Start from ${fn.location?.page}.` : ""}${rule ? ` ${rule}` : ""}`;
   }
   if (intent === "PERMISSION") {
     const permissionText = match.permissions.length > 0 ? match.permissions.join(", ") : "the relevant page permission";
     return `${fn.name} is controlled by ${permissionText}. If it is disabled, check the user role and permission profile for that function.`;
   }
   return `${purpose}${location ? ` ${location} for the relevant controls.` : ""}`;
+}
+function formatProcedureSteps(fn) {
+  if (Array.isArray(fn.procedureSteps) && fn.procedureSteps.length > 0) {
+    return `Steps: ${fn.procedureSteps.map((step, index) => `${index + 1}. ${step}`).join(" ")}`;
+  }
+  if (fn.location?.page) return `Start from ${fn.location.page}.`;
+  return "";
 }
 function buildNavigationAction(match) {
   const location = match.location;
@@ -1893,8 +1902,8 @@ const NeoGuidePanel = ({
       window.setTimeout(() => tryHighlightActionTarget(action, attempt + 1, didNavigate), 220);
       return;
     }
-    const prefix = didNavigate ? `I opened ${getActionTargetLabel(action)}` : `I looked for ${getActionTargetLabel(action)}`;
-    appendGuideMessage(`${prefix}, but the exact control is not visible yet. It may be inside a tab, drawer or section that has to be opened first.`);
+    const prefix = didNavigate ? `I opened ${getActionTargetLabel(action)}.` : `I looked for ${getActionTargetLabel(action)}.`;
+    appendGuideMessage(`${prefix} Follow the steps above; the final control may only appear after you open the relevant tab, drawer, record or section.`);
   };
   const performAction = (action) => {
     const view = action.page ? pageToView[action.page] : null;

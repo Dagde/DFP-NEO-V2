@@ -146,9 +146,9 @@ const NeoGuidePanel: React.FC<NeoGuidePanelProps> = ({
       return;
     }
     const prefix = didNavigate
-      ? `I opened ${getActionTargetLabel(action)}`
-      : `I looked for ${getActionTargetLabel(action)}`;
-    appendGuideMessage(`${prefix}, but the exact control is not visible yet. It may be inside a tab, drawer or section that has to be opened first.`);
+      ? `I opened ${getActionTargetLabel(action)}.`
+      : `I looked for ${getActionTargetLabel(action)}.`;
+    appendGuideMessage(`${prefix} Follow the steps above; the final control may only appear after you open the relevant tab, drawer, record or section.`);
   };
 
   const performAction = (action: NeoGuideNavigationAction) => {
