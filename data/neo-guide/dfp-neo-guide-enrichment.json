@@ -291,7 +291,7 @@
     {
       "id": "function.curated.messaging.auto-notifications",
       "name": "Training auto notifications",
-      "aliases": ["auto message", "automatic message", "event failure notification", "course commander message", "DFP-NEO Alerts"],
+      "aliases": ["auto message", "automatic message", "who gets auto message", "who receives auto message", "failed event auto message", "event failure notification", "course commander message", "DFP-NEO Alerts"],
       "location": {
         "page": "Training Records",
         "route": null,
@@ -299,6 +299,13 @@
         "anchor": "training-records-page"
       },
       "purpose": "Sends configured notification messages when training report conditions such as an unsatisfactory grade are met.",
+      "procedureSteps": [
+        "Open Training Records.",
+        "Open the relevant training report workflow.",
+        "Enable the notification option for the report or condition.",
+        "Ensure the selected course has the relevant Course Commander or Deputy Course Commander assigned.",
+        "Check My Home messages for the delivered alert from DFP-NEO Alerts."
+      ],
       "inputs": [],
       "outputs": ["Creates in-app message records with the sender label DFP-NEO Alerts where implemented."],
       "permissions": ["trainingRecords.courseManagement.view"],
@@ -333,6 +340,33 @@
       "businessRules": ["Messages are scoped to the logged-in user and the contacts/groups available to that user."],
       "failureConditions": ["Messages can appear to change or disappear if the local cache and server-backed message state are refreshed and the message is not addressed to the logged-in user."],
       "relatedFunctions": ["function.curated.messaging.auto-notifications"],
+      "auditStatus": "IMPLEMENTED - manually enriched from current implementation review"
+    },
+    {
+      "id": "function.curated.analytics.build-intelligence-risk-events",
+      "name": "Build Intelligence risk events",
+      "aliases": ["elevated risk events", "low risk events", "risk events", "event difficulty ranking", "low risk empty", "why no low risk events", "why is event high risk", "Build Intelligence analytics"],
+      "location": {
+        "page": "SupervisorDashboard",
+        "route": null,
+        "component": "components/tabs/BuildAnalyticsTab.tsx",
+        "anchor": "nav-build-intelligence"
+      },
+      "purpose": "Explains event-level risk outputs in Build Intelligence managerial analytics.",
+      "procedureSteps": [
+        "Open Build Intelligence.",
+        "Open the managerial analytics tab.",
+        "Review Event Difficulty Ranking for average grade and attempt count.",
+        "Review Elevated Risk Events for events where the below-pass percentage crosses the elevated-risk threshold.",
+        "Review Low Risk Events for events that meet the high-performance threshold and minimum data requirements."
+      ],
+      "inputs": [],
+      "outputs": ["Displays event difficulty ranking, elevated risk events, low risk events and course analysis narrative."],
+      "permissions": [],
+      "dependencies": ["Saved training report grades, enough attempts for the event, configured risk thresholds and selected course/context."],
+      "businessRules": ["Elevated risk is not simply the lowest average score; it can depend on the proportion of attempts below pass grade. Low risk requires sufficiently strong grades, low variance and enough attempts."],
+      "failureConditions": ["Low Risk Events can be empty when no event meets the high-grade, low-variance and minimum-attempt criteria."],
+      "relatedFunctions": ["function.curated.training.training-report", "function.curated.training.course-score-table"],
       "auditStatus": "IMPLEMENTED - manually enriched from current implementation review"
     },
     {

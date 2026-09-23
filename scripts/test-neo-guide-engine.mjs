@@ -132,6 +132,14 @@ const publishAnswer = ask('how do I publish the schedule');
 assert.equal(publishAnswer.matches[0]?.functionId, 'function.curated.scheduling.publish-dfp');
 assert.match(publishAnswer.answer, /Validation Check/i, 'Publish answer should mention validation before publishing.');
 
+const riskEventsAnswer = ask('why are there no low risk events');
+assert.equal(riskEventsAnswer.matches[0]?.functionId, 'function.curated.analytics.build-intelligence-risk-events');
+assert.match(riskEventsAnswer.answer, /high-grade|low-variance|minimum-attempt/i, 'Low risk answer should explain the criteria.');
+
+const autoNotificationAnswer = ask('who gets an auto message after a failed event');
+assert.equal(autoNotificationAnswer.matches[0]?.functionId, 'function.curated.messaging.auto-notifications');
+assert.match(autoNotificationAnswer.answer, /Course Commander|Deputy Course Commander|DFP-NEO Alerts/i, 'Auto notification answer should explain recipient/source logic.');
+
 const staffFollowUp = ask('what about staff?', { conversation: answer.conversation });
 assert.equal(
   staffFollowUp.matches[0]?.functionId,
