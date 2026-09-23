@@ -1,9 +1,9 @@
 {
   "schemaVersion": "neo-guide-knowledge-model.v1",
-  "generatedAt": "2026-09-23T13:48:56.753Z",
+  "generatedAt": "2026-09-23T14:32:45.619Z",
   "source": {
     "repository": "clone-the-repo-dagde-dfp-neo",
-    "sourceFileCount": 375,
+    "sourceFileCount": 376,
     "excludedPathFragments": [
       "/node_modules/",
       "/.git/",
@@ -72664,6 +72664,78 @@
         "text": "Unavailable",
         "file": "utils/formatUtils.ts",
         "line": 53
+      },
+      {
+        "id": "message.utils-neoguideengine-ts.permission.10",
+        "text": "PERMISSION",
+        "file": "utils/neoGuideEngine.ts",
+        "line": 10
+      },
+      {
+        "id": "message.utils-neoguideengine-ts.permission.108",
+        "text": "PERMISSION",
+        "file": "utils/neoGuideEngine.ts",
+        "line": 108
+      },
+      {
+        "id": "message.utils-neoguideengine-ts.disabled.124",
+        "text": "disabled",
+        "file": "utils/neoGuideEngine.ts",
+        "line": 124
+      },
+      {
+        "id": "message.utils-neoguideengine-ts.unavailable.124",
+        "text": "unavailable",
+        "file": "utils/neoGuideEngine.ts",
+        "line": 124
+      },
+      {
+        "id": "message.utils-neoguideengine-ts.permission.127",
+        "text": "permission",
+        "file": "utils/neoGuideEngine.ts",
+        "line": 127
+      },
+      {
+        "id": "message.utils-neoguideengine-ts.disabled.127",
+        "text": "disabled",
+        "file": "utils/neoGuideEngine.ts",
+        "line": 127
+      },
+      {
+        "id": "message.utils-neoguideengine-ts.conflict.130",
+        "text": "conflict",
+        "file": "utils/neoGuideEngine.ts",
+        "line": 130
+      },
+      {
+        "id": "message.utils-neoguideengine-ts.permission-visible.288",
+        "text": "permission visible",
+        "file": "utils/neoGuideEngine.ts",
+        "line": 288
+      },
+      {
+        "id": "message.utils-neoguideengine-ts.permission-may-be-restricted.288",
+        "text": "permission may be restricted",
+        "file": "utils/neoGuideEngine.ts",
+        "line": 288
+      },
+      {
+        "id": "message.utils-neoguideengine-ts.permission.330",
+        "text": "PERMISSION",
+        "file": "utils/neoGuideEngine.ts",
+        "line": 330
+      },
+      {
+        "id": "message.utils-neoguideengine-ts.the-relevant-page-permission.331",
+        "text": "the relevant page permission",
+        "file": "utils/neoGuideEngine.ts",
+        "line": 331
+      },
+      {
+        "id": "message.utils-neoguideengine-ts.fn-name-is-controlled-by-permissiontext-if-it-is-disabled-check-the-user-role-and-permission-pro.332",
+        "text": "${fn.name} is controlled by ${permissionText}. If it is disabled, check the user role and permission profile for that function.",
+        "file": "utils/neoGuideEngine.ts",
+        "line": 332
       },
       {
         "id": "message.utils-platformconfigservice-ts.staff-profile-unavailable-use.196",
