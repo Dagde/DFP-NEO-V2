@@ -1895,7 +1895,7 @@ export const EventDetailModal: React.FC<EventDetailModalProps> = ({ event, onClo
                         handleCrewPersonSelection(index, field, e.target.value, staffSelectOptions, role);
                     }}
                     disabled={disabled}
-                    className="mt-1 block w-full bg-gray-700 border border-gray-600 rounded-md shadow-sm py-2 px-3 text-white focus:outline-none focus:ring-sky-500 focus:border-sky-500 sm:text-sm disabled:bg-gray-700/50 disabled:cursor-not-allowed appearance-none cursor-pointer z-10 "
+                    className="mt-1 block w-full bg-gray-700 border border-gray-600 rounded-md shadow-sm py-2 px-3 text-white focus:outline-none focus:ring-sky-500 focus:border-sky-500 sm:text-sm disabled:bg-gray-700/50 disabled:cursor-not-allowed cursor-pointer z-10 "
                 >
                     <option value="" disabled>Select {label.toLowerCase()}</option>
                     {staffInstructorsByUnit.sortedUnits.map(unit => (
@@ -3062,6 +3062,9 @@ const renderCrewFields = (crewMember: CrewMember, index: number) => {
     
     // Determine if we should show Trainee/Group fields (only for LMP Event and LMP Currency)
     const showTraineeFields = eventCategory === 'lmp_event' || eventCategory === 'lmp_currency';
+    const isFlightOrSimulatorTile = eventType === 'flight' || eventType === 'ftd' || eventType === 'cpt';
+    const hideGroupSelectionForModelTile = isFlightOrSimulatorTile && (normalisedOperationalModel === 'flight_school' || isAirCombatModel);
+    const showGroupSelection = showTraineeFields && !hideGroupSelectionForModelTile;
     
     // Determine if we should show Crew field (only for continuation, Staff CAT and TWR DI when Dual)
     const showCrewField = (eventCategory === 'sct' || eventCategory === 'staff_cat' || eventCategory === 'twr_di') && crewMember.flightType === 'Dual';
@@ -3118,39 +3121,41 @@ const renderCrewFields = (crewMember: CrewMember, index: number) => {
                                 flightDetailSecondaryCrewLabel
                             )}
 
-                            <div className="flex items-center justify-center my-3">
-                                <span className="text-base font-bold text-gray-500">- OR -</span>
-                            </div>
+                            {showGroupSelection && (
+                                <>
+                                    <div className="flex items-center justify-center my-3">
+                                        <span className="text-base font-bold text-gray-500">- OR -</span>
+                                    </div>
 
-                            <div className="p-4 border border-gray-600 rounded bg-gray-700/30 relative" ref={groupInputRef}>
-                                <div className="flex justify-between items-center mb-2">
-                                    <h4 className="text-sm font-medium text-gray-300">Group</h4>
-                                    {crewMember.groupTraineeIds?.length > 0 && (
-                                        <span className="text-xs text-sky-400 font-mono bg-gray-800 px-2 py-0.5 rounded-full border border-gray-600">
-                                            {crewMember.groupTraineeIds.length} Selected
-                                        </span>
-                                    )}
-                                </div>
-                                
-                                <button
-                                    type="button"
-                                    onClick={() => setActiveGroupInput(activeGroupInput === index ? null : index)}
-                                    disabled={isDeploy}
-                                    className="w-full py-2 px-4 bg-gray-700 hover:bg-gray-600 border border-gray-500 text-white rounded-md text-sm font-medium transition-colors flex items-center justify-center shadow-sm disabled:bg-gray-700/50 disabled:cursor-not-allowed disabled:opacity-50"
-                                >
-                                    <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-2 text-sky-400" viewBox="0 0 20 20" fill="currentColor">
-                                        <path d="M8 9a3 3 0 100-6 3 3 0 000 6zM8 11a6 6 0 016 6H2a6 6 0 016-6zM16 7a1 1 0 10-2 0v1h-1a1 1 0 100 2h1v1a1 1 0 102 0v-1h1a1 1 0 100-2h-1V7z" />
-                                    </svg>
-                                    Add Names
-                                </button>
-                                
-                                {/* Group Selection Flyout */}
-                                {activeGroupInput === index && (
-                                    <div className="absolute z-10 mt-1 w-full bg-gray-800 border border-gray-600 rounded-md shadow-xl max-h-60 overflow-y-auto left-0">
-                                        {coursesStruct.map(course => {
-                                            const courseTraineeIds = course.trainees.map(t => t.idNumber);
-                                            const currentIds = new Set(crewMember.groupTraineeIds || []);
-                                            const isAllSelected = courseTraineeIds.length > 0 && courseTraineeIds.every(id => currentIds.has(id));
+                                    <div className="p-4 border border-gray-600 rounded bg-gray-700/30 relative" ref={groupInputRef}>
+                                        <div className="flex justify-between items-center mb-2">
+                                            <h4 className="text-sm font-medium text-gray-300">Group</h4>
+                                            {crewMember.groupTraineeIds?.length > 0 && (
+                                                <span className="text-xs text-sky-400 font-mono bg-gray-800 px-2 py-0.5 rounded-full border border-gray-600">
+                                                    {crewMember.groupTraineeIds.length} Selected
+                                                </span>
+                                            )}
+                                        </div>
+                                        
+                                        <button
+                                            type="button"
+                                            onClick={() => setActiveGroupInput(activeGroupInput === index ? null : index)}
+                                            disabled={isDeploy}
+                                            className="w-full py-2 px-4 bg-gray-700 hover:bg-gray-600 border border-gray-500 text-white rounded-md text-sm font-medium transition-colors flex items-center justify-center shadow-sm disabled:bg-gray-700/50 disabled:cursor-not-allowed disabled:opacity-50"
+                                        >
+                                            <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-2 text-sky-400" viewBox="0 0 20 20" fill="currentColor">
+                                                <path d="M8 9a3 3 0 100-6 3 3 0 000 6zM8 11a6 6 0 016 6H2a6 6 0 016-6zM16 7a1 1 0 10-2 0v1h-1a1 1 0 100 2h1v1a1 1 0 102 0v-1h1a1 1 0 100-2h-1V7z" />
+                                            </svg>
+                                            Add Names
+                                        </button>
+                                        
+                                        {/* Group Selection Flyout */}
+                                        {activeGroupInput === index && (
+                                            <div className="absolute z-10 mt-1 w-full bg-gray-800 border border-gray-600 rounded-md shadow-xl max-h-60 overflow-y-auto left-0">
+                                                {coursesStruct.map(course => {
+                                                    const courseTraineeIds = course.trainees.map(t => t.idNumber);
+                                                    const currentIds = new Set(crewMember.groupTraineeIds || []);
+                                                    const isAllSelected = courseTraineeIds.length > 0 && courseTraineeIds.every(id => currentIds.has(id));
 
                                             return (
                                                 <div key={course.name}>
@@ -3185,10 +3190,12 @@ const renderCrewFields = (crewMember: CrewMember, index: number) => {
                                                     </div>
                                                 </div>
                                             );
-                                        })}
+                                                })}
+                                            </div>
+                                        )}
                                     </div>
-                                )}
-                            </div>
+                                </>
+                            )}
                         </>
                     )}
                     
@@ -3214,7 +3221,7 @@ const renderCrewFields = (crewMember: CrewMember, index: number) => {
                                value={getPersonSelectionValue(crewMember.pilot, crewMember.pilotRef, soloStaffSource.sortedUnits.flatMap(unit => soloStaffSource.grouped[unit]))}
                                onChange={e => handleCrewPersonSelection(index, 'pilot', e.target.value, soloStaffSource.sortedUnits.flatMap(unit => soloStaffSource.grouped[unit]), 'pilot')}
                                disabled={isDeploy}
-                               className="mt-1 block w-full bg-gray-700 border border-gray-600 rounded-md shadow-sm py-2 px-3 text-white focus:outline-none focus:ring-sky-500 focus:border-sky-500 sm:text-sm disabled:bg-gray-700/50 disabled:cursor-not-allowed appearance-none cursor-pointer z-10"
+                               className="mt-1 block w-full bg-gray-700 border border-gray-600 rounded-md shadow-sm py-2 px-3 text-white focus:outline-none focus:ring-sky-500 focus:border-sky-500 sm:text-sm disabled:bg-gray-700/50 disabled:cursor-not-allowed cursor-pointer z-10"
                            >
                                <option value="" disabled>Select pilot</option>
                                {soloStaffSource.sortedUnits.map(unit => (

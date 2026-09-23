@@ -56139,7 +56139,7 @@ ${swapNote}` : swapNote
             handleCrewPersonSelection(index, field, e.target.value, staffSelectOptions, role);
           },
           disabled,
-          className: "mt-1 block w-full bg-gray-700 border border-gray-600 rounded-md shadow-sm py-2 px-3 text-white focus:outline-none focus:ring-sky-500 focus:border-sky-500 sm:text-sm disabled:bg-gray-700/50 disabled:cursor-not-allowed appearance-none cursor-pointer z-10 ",
+          className: "mt-1 block w-full bg-gray-700 border border-gray-600 rounded-md shadow-sm py-2 px-3 text-white focus:outline-none focus:ring-sky-500 focus:border-sky-500 sm:text-sm disabled:bg-gray-700/50 disabled:cursor-not-allowed cursor-pointer z-10 ",
           children: [
             /* @__PURE__ */ jsxRuntimeExports.jsxs("option", { value: "", disabled: true, children: [
               "Select ",
@@ -57009,6 +57009,9 @@ ${swapNote}` : swapNote
     const formationCallsign = isSctForm && formationType ? `${formationType}${index + 1}` : `Aircraft ${index + 1}`;
     const useStaffOnly = eventCategory === "lmp_currency" || eventCategory === "sct" || eventCategory === "staff_cat" || eventCategory === "twr_di";
     const showTraineeFields = eventCategory === "lmp_event" || eventCategory === "lmp_currency";
+    const isFlightOrSimulatorTile = eventType === "flight" || eventType === "ftd" || eventType === "cpt";
+    const hideGroupSelectionForModelTile = isFlightOrSimulatorTile && (normalisedOperationalModel === "flight_school" || isAirCombatModel);
+    const showGroupSelection = showTraineeFields && !hideGroupSelectionForModelTile;
     const showCrewField = (eventCategory === "sct" || eventCategory === "staff_cat" || eventCategory === "twr_di") && crewMember.flightType === "Dual";
     const soloStaffSource = isAirCombatModel && eventCategory === "sct" ? airCombatPilotsByUnit : staffInstructorsByUnit;
     return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: `space-y-4 ${crew.length > 1 ? "p-3 bg-gray-700/50 rounded-lg" : ""}`, children: [
@@ -57049,70 +57052,72 @@ ${swapNote}` : swapNote
             localHighlight === "student",
             flightDetailSecondaryCrewLabel
           ),
-          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex items-center justify-center my-3", children: /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-base font-bold text-gray-500", children: "- OR -" }) }),
-          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "p-4 border border-gray-600 rounded bg-gray-700/30 relative", ref: groupInputRef, children: [
-            /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex justify-between items-center mb-2", children: [
-              /* @__PURE__ */ jsxRuntimeExports.jsx("h4", { className: "text-sm font-medium text-gray-300", children: "Group" }),
-              crewMember.groupTraineeIds?.length > 0 && /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "text-xs text-sky-400 font-mono bg-gray-800 px-2 py-0.5 rounded-full border border-gray-600", children: [
-                crewMember.groupTraineeIds.length,
-                " Selected"
-              ] })
-            ] }),
-            /* @__PURE__ */ jsxRuntimeExports.jsxs(
-              "button",
-              {
-                type: "button",
-                onClick: () => setActiveGroupInput(activeGroupInput === index ? null : index),
-                disabled: isDeploy,
-                className: "w-full py-2 px-4 bg-gray-700 hover:bg-gray-600 border border-gray-500 text-white rounded-md text-sm font-medium transition-colors flex items-center justify-center shadow-sm disabled:bg-gray-700/50 disabled:cursor-not-allowed disabled:opacity-50",
-                children: [
-                  /* @__PURE__ */ jsxRuntimeExports.jsx("svg", { xmlns: "http://www.w3.org/2000/svg", className: "h-4 w-4 mr-2 text-sky-400", viewBox: "0 0 20 20", fill: "currentColor", children: /* @__PURE__ */ jsxRuntimeExports.jsx("path", { d: "M8 9a3 3 0 100-6 3 3 0 000 6zM8 11a6 6 0 016 6H2a6 6 0 016-6zM16 7a1 1 0 10-2 0v1h-1a1 1 0 100 2h1v1a1 1 0 102 0v-1h1a1 1 0 100-2h-1V7z" }) }),
-                  "Add Names"
-                ]
-              }
-            ),
-            activeGroupInput === index && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "absolute z-10 mt-1 w-full bg-gray-800 border border-gray-600 rounded-md shadow-xl max-h-60 overflow-y-auto left-0", children: coursesStruct.map((course) => {
-              const courseTraineeIds = course.trainees.map((t) => t.idNumber);
-              const currentIds = new Set(crewMember.groupTraineeIds || []);
-              const isAllSelected = courseTraineeIds.length > 0 && courseTraineeIds.every((id) => currentIds.has(id));
-              return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
-                /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center px-3 py-2 bg-gray-900/80 font-bold text-gray-300 sticky top-0 z-10 border-b border-gray-700", children: [
-                  /* @__PURE__ */ jsxRuntimeExports.jsx(
-                    "input",
-                    {
-                      type: "checkbox",
-                      checked: isAllSelected,
-                      onChange: () => handleToggleCourse(index, course.trainees),
-                      className: "h-4 w-4 accent-sky-500 bg-gray-600 border-gray-500 rounded mr-2 cursor-pointer"
-                    }
-                  ),
-                  /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "uppercase text-xs", children: course.name })
-                ] }),
-                /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "bg-gray-800", children: course.trainees.map((trainee) => {
-                  const isSelected = currentIds.has(trainee.idNumber);
-                  return /* @__PURE__ */ jsxRuntimeExports.jsxs(
-                    "div",
-                    {
-                      className: "flex items-center px-3 py-2 pl-8 hover:bg-gray-700 cursor-pointer transition-colors border-b border-gray-700/50 last:border-0",
-                      onClick: () => handleToggleTrainee(index, trainee.idNumber),
-                      children: [
-                        /* @__PURE__ */ jsxRuntimeExports.jsx(
-                          "input",
-                          {
-                            type: "checkbox",
-                            checked: isSelected,
-                            readOnly: true,
-                            className: "h-4 w-4 accent-sky-500 bg-gray-600 border-gray-500 rounded mr-3 pointer-events-none"
-                          }
-                        ),
-                        /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-sm text-gray-300", children: trainee.name })
-                      ]
-                    },
-                    trainee.idNumber
-                  );
-                }) })
-              ] }, course.name);
-            }) })
+          showGroupSelection && /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex items-center justify-center my-3", children: /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-base font-bold text-gray-500", children: "- OR -" }) }),
+            /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "p-4 border border-gray-600 rounded bg-gray-700/30 relative", ref: groupInputRef, children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex justify-between items-center mb-2", children: [
+                /* @__PURE__ */ jsxRuntimeExports.jsx("h4", { className: "text-sm font-medium text-gray-300", children: "Group" }),
+                crewMember.groupTraineeIds?.length > 0 && /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "text-xs text-sky-400 font-mono bg-gray-800 px-2 py-0.5 rounded-full border border-gray-600", children: [
+                  crewMember.groupTraineeIds.length,
+                  " Selected"
+                ] })
+              ] }),
+              /* @__PURE__ */ jsxRuntimeExports.jsxs(
+                "button",
+                {
+                  type: "button",
+                  onClick: () => setActiveGroupInput(activeGroupInput === index ? null : index),
+                  disabled: isDeploy,
+                  className: "w-full py-2 px-4 bg-gray-700 hover:bg-gray-600 border border-gray-500 text-white rounded-md text-sm font-medium transition-colors flex items-center justify-center shadow-sm disabled:bg-gray-700/50 disabled:cursor-not-allowed disabled:opacity-50",
+                  children: [
+                    /* @__PURE__ */ jsxRuntimeExports.jsx("svg", { xmlns: "http://www.w3.org/2000/svg", className: "h-4 w-4 mr-2 text-sky-400", viewBox: "0 0 20 20", fill: "currentColor", children: /* @__PURE__ */ jsxRuntimeExports.jsx("path", { d: "M8 9a3 3 0 100-6 3 3 0 000 6zM8 11a6 6 0 016 6H2a6 6 0 016-6zM16 7a1 1 0 10-2 0v1h-1a1 1 0 100 2h1v1a1 1 0 102 0v-1h1a1 1 0 100-2h-1V7z" }) }),
+                    "Add Names"
+                  ]
+                }
+              ),
+              activeGroupInput === index && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "absolute z-10 mt-1 w-full bg-gray-800 border border-gray-600 rounded-md shadow-xl max-h-60 overflow-y-auto left-0", children: coursesStruct.map((course) => {
+                const courseTraineeIds = course.trainees.map((t) => t.idNumber);
+                const currentIds = new Set(crewMember.groupTraineeIds || []);
+                const isAllSelected = courseTraineeIds.length > 0 && courseTraineeIds.every((id) => currentIds.has(id));
+                return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
+                  /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center px-3 py-2 bg-gray-900/80 font-bold text-gray-300 sticky top-0 z-10 border-b border-gray-700", children: [
+                    /* @__PURE__ */ jsxRuntimeExports.jsx(
+                      "input",
+                      {
+                        type: "checkbox",
+                        checked: isAllSelected,
+                        onChange: () => handleToggleCourse(index, course.trainees),
+                        className: "h-4 w-4 accent-sky-500 bg-gray-600 border-gray-500 rounded mr-2 cursor-pointer"
+                      }
+                    ),
+                    /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "uppercase text-xs", children: course.name })
+                  ] }),
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "bg-gray-800", children: course.trainees.map((trainee) => {
+                    const isSelected = currentIds.has(trainee.idNumber);
+                    return /* @__PURE__ */ jsxRuntimeExports.jsxs(
+                      "div",
+                      {
+                        className: "flex items-center px-3 py-2 pl-8 hover:bg-gray-700 cursor-pointer transition-colors border-b border-gray-700/50 last:border-0",
+                        onClick: () => handleToggleTrainee(index, trainee.idNumber),
+                        children: [
+                          /* @__PURE__ */ jsxRuntimeExports.jsx(
+                            "input",
+                            {
+                              type: "checkbox",
+                              checked: isSelected,
+                              readOnly: true,
+                              className: "h-4 w-4 accent-sky-500 bg-gray-600 border-gray-500 rounded mr-3 pointer-events-none"
+                            }
+                          ),
+                          /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-sm text-gray-300", children: trainee.name })
+                        ]
+                      },
+                      trainee.idNumber
+                    );
+                  }) })
+                ] }, course.name);
+              }) })
+            ] })
           ] })
         ] }),
         showCrewField && renderStaffInstructorDropdown(
@@ -57135,7 +57140,7 @@ ${swapNote}` : swapNote
               value: getPersonSelectionValue(crewMember.pilot, crewMember.pilotRef, soloStaffSource.sortedUnits.flatMap((unit) => soloStaffSource.grouped[unit])),
               onChange: (e) => handleCrewPersonSelection(index, "pilot", e.target.value, soloStaffSource.sortedUnits.flatMap((unit) => soloStaffSource.grouped[unit]), "pilot"),
               disabled: isDeploy,
-              className: "mt-1 block w-full bg-gray-700 border border-gray-600 rounded-md shadow-sm py-2 px-3 text-white focus:outline-none focus:ring-sky-500 focus:border-sky-500 sm:text-sm disabled:bg-gray-700/50 disabled:cursor-not-allowed appearance-none cursor-pointer z-10",
+              className: "mt-1 block w-full bg-gray-700 border border-gray-600 rounded-md shadow-sm py-2 px-3 text-white focus:outline-none focus:ring-sky-500 focus:border-sky-500 sm:text-sm disabled:bg-gray-700/50 disabled:cursor-not-allowed cursor-pointer z-10",
               children: [
                 /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "", disabled: true, children: "Select pilot" }),
                 soloStaffSource.sortedUnits.map((unit) => /* @__PURE__ */ jsxRuntimeExports.jsx("optgroup", { label: `─── ${unit} ───`, children: soloStaffSource.grouped[unit].filter((instructor) => {
