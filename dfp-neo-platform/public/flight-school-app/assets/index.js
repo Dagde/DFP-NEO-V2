@@ -67412,10 +67412,11 @@ const hasTmufOrMedicalUnavailability = (person) => person?.unavailability?.some(
   const reason = String(item?.reason || "").toLowerCase();
   return reason.includes("tmuf") || reason.includes("medical");
 }) || false;
+const hasLeaveUnavailability = (person) => person?.unavailability?.some((item) => String(item?.reason || "").toLowerCase().includes("leave")) || false;
 const hasOtherUnavailability = (person) => person?.unavailability?.some((item) => {
   const reason = String(item?.reason || "").trim();
   const lowerReason = reason.toLowerCase();
-  return reason && !lowerReason.includes("tmuf") && !lowerReason.includes("medical") && lowerReason !== "leave";
+  return reason && !lowerReason.includes("tmuf") && !lowerReason.includes("medical") && !lowerReason.includes("leave");
 }) || false;
 const PersonnelCountRow = ({ label, count, countClassName, people = [], tooltipTitle }) => {
   const names = people.map(getPersonDisplayName).filter(Boolean).sort((a, b) => a.localeCompare(b));
@@ -67437,7 +67438,7 @@ const SupervisorDashboard = ({ instructorsData, traineesData, date, events, scho
       // Only show flights that haven't ended
     ).sort((a, b) => a.startTime - b.startTime).slice(0, 5);
   }, [events]);
-  const onLeaveInstructorList = instructorsData.filter((i) => i.isPaused);
+  const onLeaveInstructorList = instructorsData.filter(hasLeaveUnavailability);
   const tmufInstructorList = instructorsData.filter(hasTmufOrMedicalUnavailability);
   const otherUnavailInstructorList = instructorsData.filter(hasOtherUnavailability);
   const activeInstructors = instructorsData.filter((i) => !i.isPaused).length;
@@ -67445,7 +67446,7 @@ const SupervisorDashboard = ({ instructorsData, traineesData, date, events, scho
   const tmufInstructors = tmufInstructorList.length;
   const otherUnavailInstructors = otherUnavailInstructorList.length;
   const totalInstructors = instructorsData.length;
-  const onLeaveTraineeList = traineesData.filter((t) => t.isPaused);
+  const onLeaveTraineeList = traineesData.filter(hasLeaveUnavailability);
   const tmufTraineeList = traineesData.filter(hasTmufOrMedicalUnavailability);
   const otherUnavailTraineeList = traineesData.filter(hasOtherUnavailability);
   const activeTrainees = traineesData.filter((t) => !t.isPaused).length;

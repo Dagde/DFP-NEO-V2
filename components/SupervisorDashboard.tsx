@@ -39,11 +39,17 @@ const hasTmufOrMedicalUnavailability = (person: any): boolean => (
     }) || false
 );
 
+const hasLeaveUnavailability = (person: any): boolean => (
+    person?.unavailability?.some((item: any) => (
+        String(item?.reason || '').toLowerCase().includes('leave')
+    )) || false
+);
+
 const hasOtherUnavailability = (person: any): boolean => (
     person?.unavailability?.some((item: any) => {
         const reason = String(item?.reason || '').trim();
         const lowerReason = reason.toLowerCase();
-        return reason && !lowerReason.includes('tmuf') && !lowerReason.includes('medical') && lowerReason !== 'leave';
+        return reason && !lowerReason.includes('tmuf') && !lowerReason.includes('medical') && !lowerReason.includes('leave');
     }) || false
 );
 
@@ -91,7 +97,7 @@ const SupervisorDashboard: React.FC<SupervisorDashboardProps> = ({ instructorsDa
     }, [events]);
 
     // Calculate personnel statistics
-    const onLeaveInstructorList = instructorsData.filter(i => i.isPaused);
+    const onLeaveInstructorList = instructorsData.filter(hasLeaveUnavailability);
     const tmufInstructorList = instructorsData.filter(hasTmufOrMedicalUnavailability);
     const otherUnavailInstructorList = instructorsData.filter(hasOtherUnavailability);
     const activeInstructors = instructorsData.filter(i => !i.isPaused).length;
@@ -100,7 +106,7 @@ const SupervisorDashboard: React.FC<SupervisorDashboardProps> = ({ instructorsDa
     const otherUnavailInstructors = otherUnavailInstructorList.length;
     const totalInstructors = instructorsData.length;
 
-    const onLeaveTraineeList = traineesData.filter(t => t.isPaused);
+    const onLeaveTraineeList = traineesData.filter(hasLeaveUnavailability);
     const tmufTraineeList = traineesData.filter(hasTmufOrMedicalUnavailability);
     const otherUnavailTraineeList = traineesData.filter(hasOtherUnavailability);
     const activeTrainees = traineesData.filter(t => !t.isPaused).length;
