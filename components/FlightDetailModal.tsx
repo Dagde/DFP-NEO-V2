@@ -825,6 +825,8 @@ export const EventDetailModal: React.FC<EventDetailModalProps> = ({ event, onClo
     const sctShortLabel = resolvedSctTerminology.shortLabel;
     const sctFormationLabel = `${sctShortLabel} FORM`;
     const instructorDisplayLabel = String(personnelDisplaySettings?.instructorLabel || 'Instructor').trim() || 'Instructor';
+    const flightDetailPrimaryCrewLabel = isAirCombatModel ? 'PIC' : instructorDisplayLabel;
+    const flightDetailSecondaryCrewLabel = isAirCombatModel ? 'Crew' : 'Trainee';
     const staffNameResolver = useMemo(
         () => buildCompactPersonNameResolver(instructorsData as any),
         [instructorsData],
@@ -1919,11 +1921,11 @@ export const EventDetailModal: React.FC<EventDetailModalProps> = ({ event, onClo
         );
     };
 // Helper to render trainee dropdown with course grouping and statistics
-    const renderTraineeDropdown = (index: number, field: 'student' | 'pilot', value: string, role: ScheduleEventPersonnelRef['role'] = 'student', disabled: boolean = false, highlight: boolean = false) => {
+    const renderTraineeDropdown = (index: number, field: 'student' | 'pilot', value: string, role: ScheduleEventPersonnelRef['role'] = 'student', disabled: boolean = false, highlight: boolean = false, label: string = 'Trainee') => {
         const selectedRef = crew[index]?.[`${field}Ref` as 'studentRef' | 'pilotRef'];
         return (
             <div>
-                <label className="block text-sm font-medium text-gray-400">Trainee</label>
+                <label className="block text-sm font-medium text-gray-400">{label}</label>
                 <select 
                     value={getPersonSelectionValue(value, selectedRef, traineeSelectOptions)}
                     onChange={e => handleCrewPersonSelection(index, field, e.target.value, traineeSelectOptions, role)}
@@ -3086,7 +3088,7 @@ const renderCrewFields = (crewMember: CrewMember, index: number) => {
                             // For continuation events, use pilot field; for others, use instructor field.
                             eventCategory === 'sct' ? 'pilot' : 'instructor',
                             eventCategory === 'sct' ? crewMember.pilot : crewMember.instructor,
-                            (eventCategory === 'sct' || eventCategory === 'staff_cat' || eventCategory === 'twr_di') ? 'Pilot' : 'Instructor',
+                            isAirCombatModel ? 'PIC' : (eventCategory === 'sct' || eventCategory === 'staff_cat' || eventCategory === 'twr_di') ? 'Pilot' : 'Instructor',
                             isDeploy,
                             false,
                             eventCategory === 'sct' ? 'pilot' : 'instructor'
@@ -3096,7 +3098,7 @@ const renderCrewFields = (crewMember: CrewMember, index: number) => {
                                index,
                                'instructor',
                                crewMember.instructor,
-                               'Instructor',
+                               isAirCombatModel ? 'PIC' : 'Instructor',
                                isDeploy,
                                false,
                                'instructor'
@@ -3112,7 +3114,8 @@ const renderCrewFields = (crewMember: CrewMember, index: number) => {
                                 crewMember.student,
                                 'student',
                                 isDeploy,
-                                localHighlight === 'student'
+                                localHighlight === 'student',
+                                flightDetailSecondaryCrewLabel
                             )}
 
                             <div className="flex items-center justify-center my-3">
@@ -3206,7 +3209,7 @@ const renderCrewFields = (crewMember: CrewMember, index: number) => {
                    // Solo - use staff dropdown for continuation, Staff CAT and TWR DI events.
                    useStaffOnly ? (
                        <div>
-                           <label className="block text-sm font-medium text-gray-400">Pilot</label>
+                           <label className="block text-sm font-medium text-gray-400">{isAirCombatModel ? 'PIC' : 'Pilot'}</label>
                            <select 
                                value={getPersonSelectionValue(crewMember.pilot, crewMember.pilotRef, soloStaffSource.sortedUnits.flatMap(unit => soloStaffSource.grouped[unit]))}
                                onChange={e => handleCrewPersonSelection(index, 'pilot', e.target.value, soloStaffSource.sortedUnits.flatMap(unit => soloStaffSource.grouped[unit]), 'pilot')}
@@ -3638,6 +3641,8 @@ const renderCrewFields = (crewMember: CrewMember, index: number) => {
                                                       TWR DI
                                                   </button>                                           </div>
                                        </div>
+
+                                    <div className="space-y-4">{crew.map(renderCrewFields)}</div>
 
                                     <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
                                         <div>
@@ -4100,8 +4105,6 @@ const renderCrewFields = (crewMember: CrewMember, index: number) => {
                                             </div>
                                         </div>
                                     )}
-                                    <div className="space-y-4">{crew.map(renderCrewFields)}</div>
-                                    
                                     {/* Add to Deployment Section */}
                                     {(eventType === 'flight' || eventType === 'ftd' || eventType === 'cpt') && (
                                         <div className="border-t border-gray-600 pt-6 mt-6">
@@ -4141,6 +4144,44 @@ const renderCrewFields = (crewMember: CrewMember, index: number) => {
                                 </div>
                             ) : (
                                 <div className="text-gray-300 space-y-2">
+                                    {!isFixedCrewCrewedEvent && (
+                                        <>
+                                            <p><strong>Dual/Solo:</strong> <span className="font-semibold">{event.flightType}</span></p>
+                                            {event.flightType === 'Dual' ? (
+                                                <>
+                                                    {event.eventCategory === 'sct' ? (
+                                                        <p><strong>{flightDetailPrimaryCrewLabel}:</strong> {event.instructor || event.pilot}</p>
+                                                    ) : (
+                                                        <p><strong>{flightDetailPrimaryCrewLabel}:</strong> {event.instructor}</p>
+                                                    )}
+                                                    {(event.type === 'ground' && event.attendees && event.attendees.length > 0) ? (
+                                                        <div>
+                                                            <p><strong>Attendees ({event.attendees.length}):</strong></p>
+                                                            <div className="mt-1 bg-gray-700/50 p-2 rounded-md max-h-32 overflow-y-auto">
+                                                                <ul className="space-y-1">
+                                                                    {event.attendees.map(attendee => (
+                                                                        <li key={attendee} className="text-sm text-gray-300">{attendee.split(' – ')[0]}</li>
+                                                                    ))}
+                                                                </ul>
+                                                            </div>
+                                                        </div>
+                                                    ) : event.eventCategory === 'sct' ? null : (
+                                                        <p><strong>{flightDetailSecondaryCrewLabel}:</strong> {event.student || event.group}</p>
+                                                    )}
+                                                </>
+                                            ) : (
+                                                <>
+                                                    <p><strong>PIC:</strong> {event.pilot}</p>
+                                                    <p className="flex items-center gap-2">
+                                                        <strong>Second Position:</strong>
+                                                        <span className="inline-block px-2 py-0.5 bg-yellow-500/20 border border-yellow-500/50 text-yellow-400 rounded text-sm font-semibold">
+                                                            SOLO
+                                                        </span>
+                                                    </p>
+                                                </>
+                                            )}
+                                        </>
+                                    )}
                                     {!isFixedCrewCrewedEvent && <p><strong>Syllabus Item:</strong> {event.flightNumber}</p>}
                                     {!isFixedCrewCrewedEvent && event.type === 'flight' && <p><strong>Route:</strong> {event.origin}-{event.destination}</p>}
                                     {!isFixedCrewCrewedEvent && event.type === 'flight' && event.area && <p><strong>Area:</strong> {event.area}</p>}
@@ -4171,6 +4212,10 @@ const renderCrewFields = (crewMember: CrewMember, index: number) => {
                                         <div className="mt-3 rounded-lg border border-emerald-500/30 bg-emerald-950/20 p-3 space-y-2">
                                             <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 text-sm">
                                                 <div className="rounded bg-gray-900/50 px-3 py-2">
+                                                    <span className="block text-xs uppercase tracking-wider text-gray-500">PIC</span>
+                                                    <span className="text-gray-100">{event.fixedCrewPic || event.pilot || 'Not selected'}</span>
+                                                </div>
+                                                <div className="rounded bg-gray-900/50 px-3 py-2">
                                                     <span className="block text-xs uppercase tracking-wider text-gray-500">Syllabus Item</span>
                                                     <span className="text-gray-100">{event.flightNumber || 'Not set'}</span>
                                                 </div>
@@ -4185,10 +4230,6 @@ const renderCrewFields = (crewMember: CrewMember, index: number) => {
                                                     </span>
                                                 </div>
                                                 <div className="rounded bg-gray-900/50 px-3 py-2">
-                                                    <span className="block text-xs uppercase tracking-wider text-gray-500">PIC</span>
-                                                    <span className="text-gray-100">{event.fixedCrewPic || event.pilot || 'Not selected'}</span>
-                                                </div>
-                                                <div className="rounded bg-gray-900/50 px-3 py-2">
                                                     <span className="block text-xs uppercase tracking-wider text-gray-500">Duration</span>
                                                     <span className="text-gray-100">{event.duration.toFixed(1)} hours</span>
                                                 </div>
@@ -4199,44 +4240,6 @@ const renderCrewFields = (crewMember: CrewMember, index: number) => {
                                             </div>
                                             {renderFixedCrewRosterStatus()}
                                         </div>
-                                    )}
-                                    {!isFixedCrewCrewedEvent && (
-                                        <>
-                                            <p><strong>Dual/Solo:</strong> <span className="font-semibold">{event.flightType}</span></p>
-                                            {event.flightType === 'Dual' ? (
-                                                <>
-                                                    {event.eventCategory === 'sct' ? (
-                                                        <p><strong>{instructorDisplayLabel}:</strong> {event.instructor || event.pilot}</p>
-                                                    ) : (
-                                                        <p><strong>{instructorDisplayLabel}:</strong> {event.instructor}</p>
-                                                    )}
-                                                    {(event.type === 'ground' && event.attendees && event.attendees.length > 0) ? (
-                                                        <div>
-                                                            <p><strong>Attendees ({event.attendees.length}):</strong></p>
-                                                            <div className="mt-1 bg-gray-700/50 p-2 rounded-md max-h-32 overflow-y-auto">
-                                                                <ul className="space-y-1">
-                                                                    {event.attendees.map(attendee => (
-                                                                        <li key={attendee} className="text-sm text-gray-300">{attendee.split(' – ')[0]}</li>
-                                                                    ))}
-                                                                </ul>
-                                                            </div>
-                                                        </div>
-                                                    ) : event.eventCategory === 'sct' ? null : (
-                                                        <p><strong>Student:</strong> {event.student || event.group}</p>
-                                                    )}
-                                                </>
-                                            ) : (
-                                                <>
-                                                    <p><strong>PIC:</strong> {event.pilot}</p>
-                                                    <p className="flex items-center gap-2">
-                                                        <strong>Second Position:</strong>
-                                                        <span className="inline-block px-2 py-0.5 bg-yellow-500/20 border border-yellow-500/50 text-yellow-400 rounded text-sm font-semibold">
-                                                            SOLO
-                                                        </span>
-                                                    </p>
-                                                </>
-                                            )}
-                                        </>
                                     )}
                                     {!isFixedCrewCrewedEvent && (
                                         <>

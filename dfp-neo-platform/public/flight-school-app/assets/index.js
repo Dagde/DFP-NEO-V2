@@ -55377,6 +55377,8 @@ const EventDetailModal = ({ event, onClose, onSave, onDeleteRequest, isEditingDe
   const sctShortLabel = resolvedSctTerminology.shortLabel;
   const sctFormationLabel = `${sctShortLabel} FORM`;
   const instructorDisplayLabel = String(personnelDisplaySettings?.instructorLabel || "Instructor").trim() || "Instructor";
+  const flightDetailPrimaryCrewLabel = isAirCombatModel ? "PIC" : instructorDisplayLabel;
+  const flightDetailSecondaryCrewLabel = isAirCombatModel ? "Crew" : "Trainee";
   const staffNameResolver = reactExports.useMemo(
     () => buildCompactPersonNameResolver(instructorsData),
     [instructorsData]
@@ -56154,10 +56156,10 @@ ${swapNote}` : swapNote
       )
     ] });
   };
-  const renderTraineeDropdown = (index, field, value, role = "student", disabled = false, highlight = false) => {
+  const renderTraineeDropdown = (index, field, value, role = "student", disabled = false, highlight = false, label = "Trainee") => {
     const selectedRef = crew[index]?.[`${field}Ref`];
     return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
-      /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "block text-sm font-medium text-gray-400", children: "Trainee" }),
+      /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "block text-sm font-medium text-gray-400", children: label }),
       /* @__PURE__ */ jsxRuntimeExports.jsxs(
         "select",
         {
@@ -57024,7 +57026,7 @@ ${swapNote}` : swapNote
           // For continuation events, use pilot field; for others, use instructor field.
           eventCategory === "sct" ? "pilot" : "instructor",
           eventCategory === "sct" ? crewMember.pilot : crewMember.instructor,
-          eventCategory === "sct" || eventCategory === "staff_cat" || eventCategory === "twr_di" ? "Pilot" : "Instructor",
+          isAirCombatModel ? "PIC" : eventCategory === "sct" || eventCategory === "staff_cat" || eventCategory === "twr_di" ? "Pilot" : "Instructor",
           isDeploy,
           false,
           eventCategory === "sct" ? "pilot" : "instructor"
@@ -57032,7 +57034,7 @@ ${swapNote}` : swapNote
           index,
           "instructor",
           crewMember.instructor,
-          "Instructor",
+          isAirCombatModel ? "PIC" : "Instructor",
           isDeploy,
           false,
           "instructor"
@@ -57044,7 +57046,8 @@ ${swapNote}` : swapNote
             crewMember.student,
             "student",
             isDeploy,
-            localHighlight === "student"
+            localHighlight === "student",
+            flightDetailSecondaryCrewLabel
           ),
           /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex items-center justify-center my-3", children: /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-base font-bold text-gray-500", children: "- OR -" }) }),
           /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "p-4 border border-gray-600 rounded bg-gray-700/30 relative", ref: groupInputRef, children: [
@@ -57125,7 +57128,7 @@ ${swapNote}` : swapNote
       ] }) : (
         // Solo - use staff dropdown for continuation, Staff CAT and TWR DI events.
         useStaffOnly ? /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "block text-sm font-medium text-gray-400", children: "Pilot" }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "block text-sm font-medium text-gray-400", children: isAirCombatModel ? "PIC" : "Pilot" }),
           /* @__PURE__ */ jsxRuntimeExports.jsxs(
             "select",
             {
@@ -57505,6 +57508,7 @@ ${swapNote}` : swapNote
               "                                           "
             ] })
           ] }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "space-y-4", children: crew.map(renderCrewFields) }),
           /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid grid-cols-1 md:grid-cols-4 gap-4", children: [
             /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
               /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1", children: "Start Time" }),
@@ -57920,7 +57924,6 @@ ${swapNote}` : swapNote
               ] })
             ] })
           ] }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "space-y-4", children: crew.map(renderCrewFields) }),
           (eventType === "flight" || eventType === "ftd" || eventType === "cpt") && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "border-t border-gray-600 pt-6 mt-6", children: [
             /* @__PURE__ */ jsxRuntimeExports.jsx("h3", { className: "text-lg font-semibold text-white mb-4", children: "Add to Deployment" }),
             /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "space-y-3", children: getCurrentDeployments().length > 0 ? getCurrentDeployments().map((deployment) => /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "flex items-center space-x-3 cursor-pointer hover:bg-gray-700 p-2 rounded", children: [
@@ -57948,6 +57951,55 @@ ${swapNote}` : swapNote
             ] }, deployment.id)) : /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-sm text-gray-500 italic", children: "No deployments available for this event type" }) })
           ] })
         ] }) : /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "text-gray-300 space-y-2", children: [
+          !isFixedCrewCrewedEvent && /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsxs("p", { children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsx("strong", { children: "Dual/Solo:" }),
+              " ",
+              /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "font-semibold", children: event.flightType })
+            ] }),
+            event.flightType === "Dual" ? /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
+              event.eventCategory === "sct" ? /* @__PURE__ */ jsxRuntimeExports.jsxs("p", { children: [
+                /* @__PURE__ */ jsxRuntimeExports.jsxs("strong", { children: [
+                  flightDetailPrimaryCrewLabel,
+                  ":"
+                ] }),
+                " ",
+                event.instructor || event.pilot
+              ] }) : /* @__PURE__ */ jsxRuntimeExports.jsxs("p", { children: [
+                /* @__PURE__ */ jsxRuntimeExports.jsxs("strong", { children: [
+                  flightDetailPrimaryCrewLabel,
+                  ":"
+                ] }),
+                " ",
+                event.instructor
+              ] }),
+              event.type === "ground" && event.attendees && event.attendees.length > 0 ? /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
+                /* @__PURE__ */ jsxRuntimeExports.jsx("p", { children: /* @__PURE__ */ jsxRuntimeExports.jsxs("strong", { children: [
+                  "Attendees (",
+                  event.attendees.length,
+                  "):"
+                ] }) }),
+                /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-1 bg-gray-700/50 p-2 rounded-md max-h-32 overflow-y-auto", children: /* @__PURE__ */ jsxRuntimeExports.jsx("ul", { className: "space-y-1", children: event.attendees.map((attendee) => /* @__PURE__ */ jsxRuntimeExports.jsx("li", { className: "text-sm text-gray-300", children: attendee.split(" – ")[0] }, attendee)) }) })
+              ] }) : event.eventCategory === "sct" ? null : /* @__PURE__ */ jsxRuntimeExports.jsxs("p", { children: [
+                /* @__PURE__ */ jsxRuntimeExports.jsxs("strong", { children: [
+                  flightDetailSecondaryCrewLabel,
+                  ":"
+                ] }),
+                " ",
+                event.student || event.group
+              ] })
+            ] }) : /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsxs("p", { children: [
+                /* @__PURE__ */ jsxRuntimeExports.jsx("strong", { children: "PIC:" }),
+                " ",
+                event.pilot
+              ] }),
+              /* @__PURE__ */ jsxRuntimeExports.jsxs("p", { className: "flex items-center gap-2", children: [
+                /* @__PURE__ */ jsxRuntimeExports.jsx("strong", { children: "Second Position:" }),
+                /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "inline-block px-2 py-0.5 bg-yellow-500/20 border border-yellow-500/50 text-yellow-400 rounded text-sm font-semibold", children: "SOLO" })
+              ] })
+            ] })
+          ] }),
           !isFixedCrewCrewedEvent && /* @__PURE__ */ jsxRuntimeExports.jsxs("p", { children: [
             /* @__PURE__ */ jsxRuntimeExports.jsx("strong", { children: "Syllabus Item:" }),
             " ",
@@ -57987,6 +58039,10 @@ ${swapNote}` : swapNote
           isFixedCrewCrewedEvent && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mt-3 rounded-lg border border-emerald-500/30 bg-emerald-950/20 p-3 space-y-2", children: [
             /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid grid-cols-1 sm:grid-cols-3 gap-2 text-sm", children: [
               /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded bg-gray-900/50 px-3 py-2", children: [
+                /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "block text-xs uppercase tracking-wider text-gray-500", children: "PIC" }),
+                /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-gray-100", children: event.fixedCrewPic || event.pilot || "Not selected" })
+              ] }),
+              /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded bg-gray-900/50 px-3 py-2", children: [
                 /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "block text-xs uppercase tracking-wider text-gray-500", children: "Syllabus Item" }),
                 /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-gray-100", children: event.flightNumber || "Not set" })
               ] }),
@@ -58003,10 +58059,6 @@ ${swapNote}` : swapNote
                 /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-gray-100", children: aircraftConfigOptions.find((definition) => definition.id === (event.aircraftConfigId || BASE_AIRCRAFT_CONFIG.id))?.label || BASE_AIRCRAFT_CONFIG.label })
               ] }),
               /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded bg-gray-900/50 px-3 py-2", children: [
-                /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "block text-xs uppercase tracking-wider text-gray-500", children: "PIC" }),
-                /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-gray-100", children: event.fixedCrewPic || event.pilot || "Not selected" })
-              ] }),
-              /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded bg-gray-900/50 px-3 py-2", children: [
                 /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "block text-xs uppercase tracking-wider text-gray-500", children: "Duration" }),
                 /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "text-gray-100", children: [
                   event.duration.toFixed(1),
@@ -58019,52 +58071,6 @@ ${swapNote}` : swapNote
               ] })
             ] }),
             renderFixedCrewRosterStatus()
-          ] }),
-          !isFixedCrewCrewedEvent && /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
-            /* @__PURE__ */ jsxRuntimeExports.jsxs("p", { children: [
-              /* @__PURE__ */ jsxRuntimeExports.jsx("strong", { children: "Dual/Solo:" }),
-              " ",
-              /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "font-semibold", children: event.flightType })
-            ] }),
-            event.flightType === "Dual" ? /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
-              event.eventCategory === "sct" ? /* @__PURE__ */ jsxRuntimeExports.jsxs("p", { children: [
-                /* @__PURE__ */ jsxRuntimeExports.jsxs("strong", { children: [
-                  instructorDisplayLabel,
-                  ":"
-                ] }),
-                " ",
-                event.instructor || event.pilot
-              ] }) : /* @__PURE__ */ jsxRuntimeExports.jsxs("p", { children: [
-                /* @__PURE__ */ jsxRuntimeExports.jsxs("strong", { children: [
-                  instructorDisplayLabel,
-                  ":"
-                ] }),
-                " ",
-                event.instructor
-              ] }),
-              event.type === "ground" && event.attendees && event.attendees.length > 0 ? /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
-                /* @__PURE__ */ jsxRuntimeExports.jsx("p", { children: /* @__PURE__ */ jsxRuntimeExports.jsxs("strong", { children: [
-                  "Attendees (",
-                  event.attendees.length,
-                  "):"
-                ] }) }),
-                /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-1 bg-gray-700/50 p-2 rounded-md max-h-32 overflow-y-auto", children: /* @__PURE__ */ jsxRuntimeExports.jsx("ul", { className: "space-y-1", children: event.attendees.map((attendee) => /* @__PURE__ */ jsxRuntimeExports.jsx("li", { className: "text-sm text-gray-300", children: attendee.split(" – ")[0] }, attendee)) }) })
-              ] }) : event.eventCategory === "sct" ? null : /* @__PURE__ */ jsxRuntimeExports.jsxs("p", { children: [
-                /* @__PURE__ */ jsxRuntimeExports.jsx("strong", { children: "Student:" }),
-                " ",
-                event.student || event.group
-              ] })
-            ] }) : /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
-              /* @__PURE__ */ jsxRuntimeExports.jsxs("p", { children: [
-                /* @__PURE__ */ jsxRuntimeExports.jsx("strong", { children: "PIC:" }),
-                " ",
-                event.pilot
-              ] }),
-              /* @__PURE__ */ jsxRuntimeExports.jsxs("p", { className: "flex items-center gap-2", children: [
-                /* @__PURE__ */ jsxRuntimeExports.jsx("strong", { children: "Second Position:" }),
-                /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "inline-block px-2 py-0.5 bg-yellow-500/20 border border-yellow-500/50 text-yellow-400 rounded text-sm font-semibold", children: "SOLO" })
-              ] })
-            ] })
           ] }),
           !isFixedCrewCrewedEvent && /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
             /* @__PURE__ */ jsxRuntimeExports.jsxs("p", { children: [
