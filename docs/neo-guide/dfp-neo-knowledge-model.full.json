@@ -1,6 +1,6 @@
 {
   "schemaVersion": "neo-guide-knowledge-model.v1",
-  "generatedAt": "2026-09-23T22:05:00.836Z",
+  "generatedAt": "2026-09-23T22:12:59.774Z",
   "source": {
     "repository": "clone-the-repo-dagde-dfp-neo",
     "sourceFileCount": 377,
@@ -73206,6 +73206,12 @@
         "anchor": "nav-dfp"
       },
       "purpose": "Opens the main DFP timeline used to view, build and edit the daily schedule.",
+      "procedureSteps": [
+        "Click DFP on the left sidebar.",
+        "Use the location/unit selector if you need a different unit.",
+        "Use the date control to select the day.",
+        "Use the top and right-side controls for schedule actions such as validation, NEO Build and publish."
+      ],
       "inputs": [],
       "outputs": [
         "Displays the selected day's DFP timeline and schedule controls."
@@ -73246,6 +73252,12 @@
         "anchor": "initial-setup-wizard-tab"
       },
       "purpose": "Guides first-time customer configuration before the first operational DFP is built.",
+      "procedureSteps": [
+        "Open DFP.",
+        "On a blank customer baseline, use the Initial Setup Wizard prompt.",
+        "Enter the organisation, location, unit, aircraft/resources and training setup data.",
+        "Work through the mandatory setup steps before attempting the first operational build."
+      ],
       "inputs": [
         {
           "fieldName": "organisation",
@@ -73439,6 +73451,13 @@
         "anchor": "nav-trainee"
       },
       "purpose": "Displays trainees grouped by active course and provides course-level trainee management actions.",
+      "procedureSteps": [
+        "Open Trainee.",
+        "Stay on Trainee Profile / Trainee Roster.",
+        "Use Add Trainee to create a trainee manually.",
+        "Use Upload to import trainees.",
+        "Use Active Courses to manage which course cards are shown."
+      ],
       "inputs": [],
       "outputs": [
         "Displays active course cards, assigned trainees, status indicators and course edit controls."
@@ -73479,6 +73498,13 @@
         "anchor": "courses-management"
       },
       "purpose": "Manages active and archived course records, including course names, dates, colours and grouping labels.",
+      "procedureSteps": [
+        "Open Training Records.",
+        "Select Courses Management.",
+        "Use Add Course for a new course.",
+        "Use Edit on a course tile to change course details.",
+        "Use Archived Courses to view archived course records."
+      ],
       "inputs": [],
       "outputs": [
         "Creates or updates course records used by Trainee Roster, Course Progress and training record views."
@@ -73519,6 +73545,13 @@
         "anchor": "archived-courses"
       },
       "purpose": "Removes a course from active operational views while preserving the course record for future reference.",
+      "procedureSteps": [
+        "Open Training Records.",
+        "Select Courses Management.",
+        "Find the course tile.",
+        "Use the archive action rather than permanent delete when training history may need to be retained.",
+        "Use Archived Courses to view or reference archived courses later."
+      ],
       "inputs": [],
       "outputs": [
         "Moves a course between active and archived course views, depending on the selected action."
@@ -73557,6 +73590,13 @@
         "anchor": "nav-course-progress"
       },
       "purpose": "Displays trainee progress, course-level progress cards, risk indicators, scores and ranking outputs.",
+      "procedureSteps": [
+        "Open Course Progress.",
+        "Review the course progress tiles at the top.",
+        "Scroll to Course Scores & Rankings for saved training report scores and award rankings.",
+        "Use Risk Settings if the risk thresholds need adjustment.",
+        "Use Show Progress Graph on a course tile for detailed progress."
+      ],
       "inputs": [],
       "outputs": [
         "Displays progress metrics calculated from trainee/course/training report data."
@@ -73597,6 +73637,13 @@
         "anchor": "training-records-page"
       },
       "purpose": "Records training outcomes and grades for events and can trigger notification workflows when configured.",
+      "procedureSteps": [
+        "Open Training Records.",
+        "Open the relevant trainee or event training record.",
+        "Enter the training report grades and comments.",
+        "Use the notification options if configured.",
+        "Save the training report so the grades feed Course Progress and Build Intelligence."
+      ],
       "inputs": [],
       "outputs": [
         "Creates or updates training report records and grade-derived analytics used by Course Progress and Build Intelligence."
@@ -73675,6 +73722,13 @@
         "anchor": "nav-neo-build"
       },
       "purpose": "Runs the automated scheduling/build process for the DFP.",
+      "procedureSteps": [
+        "Open DFP.",
+        "Select the date and unit you want to build.",
+        "Click NEO Build on the right sidebar.",
+        "Review the generated schedule tiles.",
+        "Run Validation Check before publishing."
+      ],
       "inputs": [],
       "outputs": [
         "Creates or updates schedule tiles according to build rules, priorities, resources and availability data."
@@ -73715,6 +73769,13 @@
         "anchor": "nav-build-priorities"
       },
       "purpose": "Configures scheduling priority inputs used by NEO Build.",
+      "procedureSteps": [
+        "Open Priorities from the right sidebar.",
+        "Review the course, package and event priorities.",
+        "Adjust priorities for the build objective.",
+        "Return to DFP and run NEO Build.",
+        "Remember that priorities influence order but do not override hard constraints."
+      ],
       "inputs": [],
       "outputs": [
         "Updates priority settings that influence future schedule generation."
@@ -73752,6 +73813,13 @@
         "anchor": "action-validation-check"
       },
       "purpose": "Shows schedule validation warnings and conflict indicators for the current DFP.",
+      "procedureSteps": [
+        "Open DFP.",
+        "Select the date and unit to check.",
+        "Click Validation Check in the top toolbar.",
+        "Review any warning or conflict indicators.",
+        "Fix the schedule or settings that caused the warning, then run validation again."
+      ],
       "inputs": [],
       "outputs": [
         "Displays validation state for schedule tiles and conflicts."
@@ -73791,6 +73859,13 @@
         "anchor": "action-add-flight-tile"
       },
       "purpose": "Displays and edits details for a selected flight or simulator tile.",
+      "procedureSteps": [
+        "Open DFP.",
+        "Click the flight or simulator tile.",
+        "Use the details window to review timing, syllabus item and crew/personnel.",
+        "Use the personnel dropdowns to change Instructor/Trainee or PIC/Crew as applicable.",
+        "Save the tile changes."
+      ],
       "inputs": [],
       "outputs": [
         "Updates scheduled event details such as crew/personnel, timing, event/syllabus item and related tile data."
@@ -73830,6 +73905,13 @@
         "anchor": "nav-settings"
       },
       "purpose": "Configures turnaround timing rules used by scheduling and validation.",
+      "procedureSteps": [
+        "Open Settings.",
+        "Open the relevant business/build rule area.",
+        "Find the turnaround setting for the resource type.",
+        "Enter the required turnaround time.",
+        "Save the settings before running NEO Build or Validation Check again."
+      ],
       "inputs": [],
       "outputs": [
         "Updates build/validation timing assumptions for aircraft, simulator and trainer turnaround where configured."
@@ -73871,6 +73953,13 @@
         "anchor": "nav-settings"
       },
       "purpose": "Defines service/group labels used by trainee profiles and course grouping/count displays.",
+      "procedureSteps": [
+        "Open Settings.",
+        "Open the organisation or people configuration area.",
+        "Edit the service/group labels.",
+        "Use labels that match the Service values used in trainee profiles.",
+        "Save the settings so course group counts can use the configured labels."
+      ],
       "inputs": [],
       "outputs": [
         "Provides configured service options for trainee profile service values and course group labels."
@@ -73911,6 +74000,12 @@
         "anchor": "duty-pilot-personnel-management"
       },
       "purpose": "Shows duty-pilot operational personnel summaries and counts.",
+      "procedureSteps": [
+        "Open Duty Pilot.",
+        "Find Personnel Management.",
+        "Hover over On Leave, TMUF or Other Unavailability counts to see the people included.",
+        "Open the person's staff or trainee profile if the underlying status needs to be changed."
+      ],
       "inputs": [],
       "outputs": [
         "Displays personnel category counts and hover details for affected people where implemented."
@@ -703258,6 +703353,12 @@
           "anchor": "nav-dfp"
         },
         "purpose": "Opens the main DFP timeline used to view, build and edit the daily schedule.",
+        "procedureSteps": [
+          "Click DFP on the left sidebar.",
+          "Use the location/unit selector if you need a different unit.",
+          "Use the date control to select the day.",
+          "Use the top and right-side controls for schedule actions such as validation, NEO Build and publish."
+        ],
         "inputs": [],
         "outputs": [
           "Displays the selected day's DFP timeline and schedule controls."
@@ -703298,6 +703399,12 @@
           "anchor": "initial-setup-wizard-tab"
         },
         "purpose": "Guides first-time customer configuration before the first operational DFP is built.",
+        "procedureSteps": [
+          "Open DFP.",
+          "On a blank customer baseline, use the Initial Setup Wizard prompt.",
+          "Enter the organisation, location, unit, aircraft/resources and training setup data.",
+          "Work through the mandatory setup steps before attempting the first operational build."
+        ],
         "inputs": [
           {
             "fieldName": "organisation",
@@ -703491,6 +703598,13 @@
           "anchor": "nav-trainee"
         },
         "purpose": "Displays trainees grouped by active course and provides course-level trainee management actions.",
+        "procedureSteps": [
+          "Open Trainee.",
+          "Stay on Trainee Profile / Trainee Roster.",
+          "Use Add Trainee to create a trainee manually.",
+          "Use Upload to import trainees.",
+          "Use Active Courses to manage which course cards are shown."
+        ],
         "inputs": [],
         "outputs": [
           "Displays active course cards, assigned trainees, status indicators and course edit controls."
@@ -703531,6 +703645,13 @@
           "anchor": "courses-management"
         },
         "purpose": "Manages active and archived course records, including course names, dates, colours and grouping labels.",
+        "procedureSteps": [
+          "Open Training Records.",
+          "Select Courses Management.",
+          "Use Add Course for a new course.",
+          "Use Edit on a course tile to change course details.",
+          "Use Archived Courses to view archived course records."
+        ],
         "inputs": [],
         "outputs": [
           "Creates or updates course records used by Trainee Roster, Course Progress and training record views."
@@ -703571,6 +703692,13 @@
           "anchor": "archived-courses"
         },
         "purpose": "Removes a course from active operational views while preserving the course record for future reference.",
+        "procedureSteps": [
+          "Open Training Records.",
+          "Select Courses Management.",
+          "Find the course tile.",
+          "Use the archive action rather than permanent delete when training history may need to be retained.",
+          "Use Archived Courses to view or reference archived courses later."
+        ],
         "inputs": [],
         "outputs": [
           "Moves a course between active and archived course views, depending on the selected action."
@@ -703609,6 +703737,13 @@
           "anchor": "nav-course-progress"
         },
         "purpose": "Displays trainee progress, course-level progress cards, risk indicators, scores and ranking outputs.",
+        "procedureSteps": [
+          "Open Course Progress.",
+          "Review the course progress tiles at the top.",
+          "Scroll to Course Scores & Rankings for saved training report scores and award rankings.",
+          "Use Risk Settings if the risk thresholds need adjustment.",
+          "Use Show Progress Graph on a course tile for detailed progress."
+        ],
         "inputs": [],
         "outputs": [
           "Displays progress metrics calculated from trainee/course/training report data."
@@ -703649,6 +703784,13 @@
           "anchor": "training-records-page"
         },
         "purpose": "Records training outcomes and grades for events and can trigger notification workflows when configured.",
+        "procedureSteps": [
+          "Open Training Records.",
+          "Open the relevant trainee or event training record.",
+          "Enter the training report grades and comments.",
+          "Use the notification options if configured.",
+          "Save the training report so the grades feed Course Progress and Build Intelligence."
+        ],
         "inputs": [],
         "outputs": [
           "Creates or updates training report records and grade-derived analytics used by Course Progress and Build Intelligence."
@@ -703727,6 +703869,13 @@
           "anchor": "nav-neo-build"
         },
         "purpose": "Runs the automated scheduling/build process for the DFP.",
+        "procedureSteps": [
+          "Open DFP.",
+          "Select the date and unit you want to build.",
+          "Click NEO Build on the right sidebar.",
+          "Review the generated schedule tiles.",
+          "Run Validation Check before publishing."
+        ],
         "inputs": [],
         "outputs": [
           "Creates or updates schedule tiles according to build rules, priorities, resources and availability data."
@@ -703767,6 +703916,13 @@
           "anchor": "nav-build-priorities"
         },
         "purpose": "Configures scheduling priority inputs used by NEO Build.",
+        "procedureSteps": [
+          "Open Priorities from the right sidebar.",
+          "Review the course, package and event priorities.",
+          "Adjust priorities for the build objective.",
+          "Return to DFP and run NEO Build.",
+          "Remember that priorities influence order but do not override hard constraints."
+        ],
         "inputs": [],
         "outputs": [
           "Updates priority settings that influence future schedule generation."
@@ -703804,6 +703960,13 @@
           "anchor": "action-validation-check"
         },
         "purpose": "Shows schedule validation warnings and conflict indicators for the current DFP.",
+        "procedureSteps": [
+          "Open DFP.",
+          "Select the date and unit to check.",
+          "Click Validation Check in the top toolbar.",
+          "Review any warning or conflict indicators.",
+          "Fix the schedule or settings that caused the warning, then run validation again."
+        ],
         "inputs": [],
         "outputs": [
           "Displays validation state for schedule tiles and conflicts."
@@ -703843,6 +704006,13 @@
           "anchor": "action-add-flight-tile"
         },
         "purpose": "Displays and edits details for a selected flight or simulator tile.",
+        "procedureSteps": [
+          "Open DFP.",
+          "Click the flight or simulator tile.",
+          "Use the details window to review timing, syllabus item and crew/personnel.",
+          "Use the personnel dropdowns to change Instructor/Trainee or PIC/Crew as applicable.",
+          "Save the tile changes."
+        ],
         "inputs": [],
         "outputs": [
           "Updates scheduled event details such as crew/personnel, timing, event/syllabus item and related tile data."
@@ -703882,6 +704052,13 @@
           "anchor": "nav-settings"
         },
         "purpose": "Configures turnaround timing rules used by scheduling and validation.",
+        "procedureSteps": [
+          "Open Settings.",
+          "Open the relevant business/build rule area.",
+          "Find the turnaround setting for the resource type.",
+          "Enter the required turnaround time.",
+          "Save the settings before running NEO Build or Validation Check again."
+        ],
         "inputs": [],
         "outputs": [
           "Updates build/validation timing assumptions for aircraft, simulator and trainer turnaround where configured."
@@ -703923,6 +704100,13 @@
           "anchor": "nav-settings"
         },
         "purpose": "Defines service/group labels used by trainee profiles and course grouping/count displays.",
+        "procedureSteps": [
+          "Open Settings.",
+          "Open the organisation or people configuration area.",
+          "Edit the service/group labels.",
+          "Use labels that match the Service values used in trainee profiles.",
+          "Save the settings so course group counts can use the configured labels."
+        ],
         "inputs": [],
         "outputs": [
           "Provides configured service options for trainee profile service values and course group labels."
@@ -703963,6 +704147,12 @@
           "anchor": "duty-pilot-personnel-management"
         },
         "purpose": "Shows duty-pilot operational personnel summaries and counts.",
+        "procedureSteps": [
+          "Open Duty Pilot.",
+          "Find Personnel Management.",
+          "Hover over On Leave, TMUF or Other Unavailability counts to see the people included.",
+          "Open the person's staff or trainee profile if the underlying status needs to be changed."
+        ],
         "inputs": [],
         "outputs": [
           "Displays personnel category counts and hover details for affected people where implemented."

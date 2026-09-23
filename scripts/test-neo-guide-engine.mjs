@@ -107,6 +107,18 @@ assert.equal(
 assert.match(staffUnavailabilityFollowUp.answer, /Open Staff/i, 'Staff unavailability answer should include Staff page steps.');
 assert.match(staffUnavailabilityFollowUp.answer, /Add Unavailability/i, 'Staff unavailability answer should include Add Unavailability steps.');
 
+const buildAnswer = ask('how do I build the schedule automatically');
+assert.match(buildAnswer.answer, /Click NEO Build/i, 'NEO Build answer should include the NEO Build action step.');
+assert.match(buildAnswer.answer, /Validation Check/i, 'NEO Build answer should mention validating before publishing.');
+
+const archiveCourseAnswer = ask('where do I archive a course');
+assert.match(archiveCourseAnswer.answer, /Open Training Records/i, 'Archive course answer should include Training Records steps.');
+assert.match(archiveCourseAnswer.answer, /Archived Courses/i, 'Archive course answer should mention Archived Courses.');
+
+const turnaroundAnswer = ask('where change ac turnround');
+assert.match(turnaroundAnswer.answer, /Open Settings/i, 'Turnaround answer should include Settings steps.');
+assert.match(turnaroundAnswer.answer, /turnaround/i, 'Turnaround answer should mention the turnaround setting.');
+
 const staffFollowUp = ask('what about staff?', { conversation: answer.conversation });
 assert.equal(
   staffFollowUp.matches[0]?.functionId,
