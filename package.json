@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "prisma generate && vite build --outDir dfp-neo-platform/public/flight-school-app --emptyOutDir && cp dfp-neo-platform/public/flight-school-app/index.html dfp-neo-platform/public/flight-school-app/index-v2.html && node update_css.js",
+    "build": "npm run neo-guide:db-vocabulary && prisma generate && vite build --outDir dfp-neo-platform/public/flight-school-app --emptyOutDir && cp dfp-neo-platform/public/flight-school-app/index.html dfp-neo-platform/public/flight-school-app/index-v2.html && node update_css.js",
     "preview": "vite preview",
     "start": "node server.js",
     "test:air-combat-scheduler": "node scripts/test-air-combat-scheduler-contract.mjs",
