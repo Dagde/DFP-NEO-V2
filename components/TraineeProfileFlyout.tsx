@@ -2739,7 +2739,7 @@ const TraineeProfileFlyout: React.FC<TraineeProfileFlyoutProps> = ({
                     })()}
 
                     {activeTab === 'unavailable' && (
-                      <div className={card3d + " p-4"} style={card3dStyle}>
+                      <div data-neo-guide="trainee-availability" className={card3d + " p-4"} style={card3dStyle}>
                         <div className="flex items-center justify-between mb-3">
                           <h4 className="text-sm font-bold text-white">Unavailability — {trainee.name}</h4>
                           <button onClick={() => setActiveTab(null)} className="text-gray-400 hover:text-white text-xs">✕ Close</button>
@@ -2768,7 +2768,7 @@ const TraineeProfileFlyout: React.FC<TraineeProfileFlyoutProps> = ({
                           }) : <p className="text-gray-500 text-xs italic text-center py-4">No unavailability periods scheduled.</p>}
                         </div>
                         {!isArchiveProfile && (
-                          <button onClick={() => { setShowAddUnavailability(true); setActiveTab(null); }} className="mt-3 px-3 py-1.5 bg-amber-600 hover:bg-amber-500 text-white text-xs rounded">+ Add Unavailability</button>
+                          <button data-neo-guide="trainee-add-unavailability" onClick={() => { setShowAddUnavailability(true); setActiveTab(null); }} className="mt-3 px-3 py-1.5 bg-amber-600 hover:bg-amber-500 text-white text-xs rounded">+ Add Unavailability</button>
                         )}
                       </div>
                     )}
@@ -3568,7 +3568,7 @@ const TraineeProfileFlyout: React.FC<TraineeProfileFlyoutProps> = ({
                     <div className="w-[95px] flex-shrink-0 border-l border-gray-700 bg-[#0f1824] px-[10px] py-3 flex flex-col gap-px">
                       {!isEditing && (
                         <>
-                          <button onClick={(event) => handleTabClick('unavailable', event.currentTarget)} aria-disabled={!canOpenTraineeProfileTab('unavailable')} className={tabBtnClass('unavailable', canOpenTraineeProfileTab('unavailable'))}>Unavail&shy;able</button>
+                          <button data-neo-guide="trainee-availability-tab" onClick={(event) => handleTabClick('unavailable', event.currentTarget)} aria-disabled={!canOpenTraineeProfileTab('unavailable')} className={tabBtnClass('unavailable', canOpenTraineeProfileTab('unavailable'))}>Unavail&shy;able</button>
                           <button onClick={(event) => handleTabClick('currency', event.currentTarget)} aria-disabled={!canOpenTraineeProfileTab('currency')} className={tabBtnClass('currency', canOpenTraineeProfileTab('currency'))}>Currency</button>
                           <button onClick={(event) => handleTabClick('sct', event.currentTarget)} aria-disabled={!canOpenTraineeProfileTab('sct')} className={tabBtnClass('sct', canOpenTraineeProfileTab('sct'))}>Request<br />{continuationShortLabel}</button>
                           <button

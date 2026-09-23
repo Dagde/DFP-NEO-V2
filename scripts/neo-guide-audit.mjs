@@ -30,6 +30,7 @@ const excludedPathFragments = [
 ];
 
 const sourceExtensions = new Set(['.ts', '.tsx', '.js', '.jsx', '.cjs', '.mjs', '.prisma']);
+const enrichmentPath = path.join(repoRoot, 'data', 'neo-guide', 'dfp-neo-guide-enrichment.json');
 const jsxControlTags = new Set(['button', 'input', 'select', 'textarea', 'option', 'label', 'a']);
 const interestingAttributes = new Set([
   'id',
@@ -68,6 +69,15 @@ const slug = (value) => String(value || '')
 const normaliseText = (value) => String(value || '')
   .replace(/\s+/g, ' ')
   .trim();
+
+function readJsonFile(filePath, fallback) {
+  if (!fs.existsSync(filePath)) return fallback;
+  try {
+    return JSON.parse(fs.readFileSync(filePath, 'utf8'));
+  } catch (error) {
+    throw new Error(`Unable to parse ${relativePath(filePath)}: ${error.message}`);
+  }
+}
 
 const lineOf = (sourceFile, node) => sourceFile.getLineAndCharacterOfPosition(node.getStart(sourceFile)).line + 1;
 
@@ -446,7 +456,7 @@ function inferPageFromFile(file) {
   return base.replace(/([a-z0-9])([A-Z])/g, '$1 $2');
 }
 
-function buildConceptGraph(prismaModels, functions) {
+function buildConceptGraph(prismaModels, functions, curatedConcepts = []) {
   const nodes = new Map();
   const edges = [];
   const addNode = (id, label, kind, source) => nodes.set(id, { id, label, kind, source });
@@ -499,6 +509,21 @@ function buildConceptGraph(prismaModels, functions) {
     }
   });
 
+  curatedConcepts.forEach((concept) => {
+    const conceptId = concept.id || `concept.${slug(concept.name || concept.label)}`;
+    addNode(conceptId, concept.name || concept.label || conceptId, concept.kind || 'curated-application-concept', 'curated NEO Guide enrichment');
+    (concept.relationships || []).forEach((relationship) => {
+      const targetId = relationship.target || relationship.to;
+      if (!targetId) return;
+      edges.push({
+        from: conceptId,
+        to: targetId,
+        relationship: relationship.type || relationship.relationship || 'related-to',
+        source: 'curated NEO Guide enrichment',
+      });
+    });
+  });
+
   return {
     nodes: Array.from(nodes.values()).sort((a, b) => a.id.localeCompare(b.id)),
     edges,
@@ -509,14 +534,34 @@ const sourceAudits = sourceFiles.map(collectSourceAudit);
 const prismaModels = parsePrismaSchema(path.join(repoRoot, 'prisma/schema.prisma'));
 const routes = collectRoutes(sourceFiles);
 const expressEndpoints = collectExpressEndpoints();
-const functions = buildFunctionIndex(sourceAudits, [...routes, ...expressEndpoints.map((endpoint) => ({
+const sourceDerivedFunctions = buildFunctionIndex(sourceAudits, [...routes, ...expressEndpoints.map((endpoint) => ({
   id: endpoint.id,
   kind: 'express-endpoint',
   route: endpoint.route,
   file: endpoint.file,
   methods: [endpoint.method],
 }))], prismaModels);
-const conceptGraph = buildConceptGraph(prismaModels, functions);
+const curatedKnowledge = readJsonFile(enrichmentPath, {
+  schemaVersion: 'neo-guide-enrichment.v1',
+  functions: [],
+  concepts: [],
+  synonyms: [],
+});
+const curatedFunctions = (curatedKnowledge.functions || []).map((fn) => ({
+  ...fn,
+  id: fn.id || `function.curated.${slug(fn.name)}`,
+  aliases: Array.isArray(fn.aliases) ? fn.aliases : [],
+  inputs: Array.isArray(fn.inputs) ? fn.inputs : [],
+  outputs: Array.isArray(fn.outputs) ? fn.outputs : [],
+  permissions: Array.isArray(fn.permissions) ? fn.permissions : [],
+  dependencies: Array.isArray(fn.dependencies) ? fn.dependencies : [],
+  businessRules: Array.isArray(fn.businessRules) ? fn.businessRules : [],
+  failureConditions: Array.isArray(fn.failureConditions) ? fn.failureConditions : [],
+  relatedFunctions: Array.isArray(fn.relatedFunctions) ? fn.relatedFunctions : [],
+  auditStatus: fn.auditStatus || 'IMPLEMENTED - manually enriched from current implementation review',
+}));
+const functions = [...curatedFunctions, ...sourceDerivedFunctions];
+const conceptGraph = buildConceptGraph(prismaModels, functions, curatedKnowledge.concepts || []);
 
 const permissionIds = Array.from(new Map(
   sourceAudits.flatMap((audit) => audit.permissions).map((permission) => [permission.id, permission])
@@ -537,11 +582,11 @@ const knowledgeModel = {
     generationMethod: 'Static audit of current DFP-NEO source code. This is not a manually invented FAQ.',
   },
   auditStatus: {
-    phase: 'NEO Guide Phase 1 - source-derived knowledge model foundation',
+    phase: 'NEO Guide Phase 2 - source-derived model with curated implementation enrichment',
     complete: false,
     limitations: [
-      'This is a machine extraction foundation, not the final hand-enriched guide corpus.',
-      'Control purpose is extracted from code location, labels and handlers; complex workflows still need manual enrichment from audited implementation.',
+      'This combines machine extraction with a first curated enrichment pass; it is not yet the final guide corpus.',
+      'Control purpose is extracted from code location, labels and handlers unless a curated function has been added.',
       'Live-data reasoning and permission-enforced guide API are not enabled in this phase.',
     ],
   },
@@ -562,6 +607,16 @@ const knowledgeModel = {
     messages,
   },
   functions,
+  curatedKnowledge: {
+    schemaVersion: curatedKnowledge.schemaVersion || 'neo-guide-enrichment.v1',
+    updatedAt: curatedKnowledge.updatedAt || null,
+    functionCount: curatedFunctions.length,
+    conceptCount: (curatedKnowledge.concepts || []).length,
+    synonymCount: (curatedKnowledge.synonyms || []).length,
+    functions: curatedFunctions,
+    concepts: curatedKnowledge.concepts || [],
+    synonyms: curatedKnowledge.synonyms || [],
+  },
   conceptGraph,
   guideEngineRequirements: {
     prohibitedTerms: ['AI', 'Artificial Intelligence', 'ChatGPT', 'AI assistant'],
@@ -593,6 +648,16 @@ const compactKnowledgeModel = {
   })),
   permissions: {
     ids: permissionIds.map((permission) => permission.id),
+  },
+  curatedKnowledge: {
+    schemaVersion: curatedKnowledge.schemaVersion || 'neo-guide-enrichment.v1',
+    updatedAt: curatedKnowledge.updatedAt || null,
+    functionCount: curatedFunctions.length,
+    conceptCount: (curatedKnowledge.concepts || []).length,
+    synonymCount: (curatedKnowledge.synonyms || []).length,
+    functions: curatedFunctions,
+    concepts: curatedKnowledge.concepts || [],
+    synonyms: curatedKnowledge.synonyms || [],
   },
   guideTargets,
   functions: functions.map((fn) => ({
@@ -638,7 +703,7 @@ Generated: ${generatedAt}
 
 ## Status
 
-This is the Phase 1 source-derived knowledge model foundation for NEO Guide. It is generated from the current DFP-NEO implementation and is intentionally not a generic FAQ.
+This is the Phase 2 source-derived knowledge model foundation for NEO Guide, with a first curated implementation-enrichment layer. It is generated from the current DFP-NEO implementation and is intentionally not a generic FAQ.
 
 ## Counts
 
@@ -651,6 +716,9 @@ This is the Phase 1 source-derived knowledge model foundation for NEO Guide. It 
 - Prisma models found: ${prismaModels.length}
 - Permission references found: ${permissionIds.length}
 - Warning/error/status messages found: ${messages.length}
+- Curated workflow functions: ${curatedFunctions.length}
+- Curated concept records: ${(curatedKnowledge.concepts || []).length}
+- Curated synonym groups: ${(curatedKnowledge.synonyms || []).length}
 - Function records generated: ${functions.length}
 - Concept graph nodes: ${conceptGraph.nodes.length}
 - Concept graph edges: ${conceptGraph.edges.length}
@@ -663,8 +731,8 @@ This is the Phase 1 source-derived knowledge model foundation for NEO Guide. It 
 
 ## Next Required Work
 
-1. Enrich extracted functions with verified workflow summaries from implementation review.
-2. Add stable \`data-neo-guide\` targets to high-value controls and sections.
+1. Continue enriching extracted functions with verified workflow summaries from implementation review.
+2. Expand stable \`data-neo-guide\` target coverage beyond the main navigation and operational controls.
 3. Build the local interpretation/reasoning engine over this model.
 4. Add a permission-aware read-only guide API for live-data troubleshooting.
 5. Add the NEO Guide UI and navigation/highlight behavior.
@@ -681,6 +749,7 @@ console.log(`Express endpoints: ${expressEndpoints.length}`);
 console.log(`Prisma models: ${prismaModels.length}`);
 console.log(`Permissions: ${permissionIds.length}`);
 console.log(`Messages: ${messages.length}`);
+console.log(`Curated workflow functions: ${curatedFunctions.length}`);
 console.log(`Functions: ${functions.length}`);
 console.log(`Concept graph: ${conceptGraph.nodes.length} nodes, ${conceptGraph.edges.length} edges`);
 console.log(`Wrote public/neo-guide/dfp-neo-knowledge-model.json`);

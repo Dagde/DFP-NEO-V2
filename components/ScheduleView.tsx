@@ -11135,7 +11135,7 @@ const InitialSetupWizard: React.FC<{
 
     if (mode === 'detect' && isPartiallyConfigured) {
         return (
-            <div className="rounded-xl border border-slate-300 bg-slate-50 p-5 text-slate-900 shadow-sm">
+            <div data-neo-guide="initial-setup-wizard-panel" className="rounded-xl border border-slate-300 bg-slate-50 p-5 text-slate-900 shadow-sm">
                 <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-orange-600">Initial Setup Wizard</p>
                 <h3 className="mt-1 text-xl font-bold text-slate-950">DFP-NEO is partly configured</h3>
                 <p className="mt-3 text-sm leading-6 text-slate-700">
@@ -11432,6 +11432,7 @@ const OrganisationSlideoutDiagram: React.FC<{
             <div className="mb-4 border-b border-cyan-400/20 pb-3">
                 <div className="flex flex-wrap items-center gap-2">
                     <button
+                        data-neo-guide="settings-organisation-structure"
                         type="button"
                         className={activeView === 'structure' ? organisationSlideoutActiveButtonClass : organisationSlideoutInactiveButtonClass}
                         onClick={() => setActiveView('structure')}
@@ -11439,6 +11440,7 @@ const OrganisationSlideoutDiagram: React.FC<{
                         Organisation Structure
                     </button>
                     <button
+                        data-neo-guide="settings-my-unit-settings"
                         type="button"
                         className={activeView === 'unitSettings' ? organisationSlideoutActiveButtonClass : organisationSlideoutInactiveButtonClass}
                         onClick={() => setActiveView('unitSettings')}
@@ -11446,6 +11448,7 @@ const OrganisationSlideoutDiagram: React.FC<{
                         My Unit Settings
                     </button>
                     <button
+                        data-neo-guide="initial-setup-wizard-tab"
                         type="button"
                         className={activeView === 'setupWizard' ? organisationSlideoutActiveButtonClass : organisationSlideoutInactiveButtonClass}
                         onClick={() => setActiveView('setupWizard')}

@@ -200,7 +200,7 @@ const ArchivedCoursesView: React.FC<ArchivedCoursesViewProps> = ({
     };
 
     return (
-        <div className="flex-1 flex flex-col bg-gray-900 overflow-hidden">
+        <div data-neo-guide="archived-courses-page" className="flex-1 flex flex-col bg-gray-900 overflow-hidden">
             {/* Header */}
             <div className="flex-shrink-0 bg-gray-800 p-4 border-b border-gray-700">
                 <div className="flex justify-between items-center">

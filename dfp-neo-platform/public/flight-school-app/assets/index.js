@@ -9782,6 +9782,7 @@ const Sidebar = ({ activeView, onNavigate, courseColors, onAddCourse, onArchiveC
       /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex items-center justify-center flex-shrink-0 px-2 pt-2 pb-0", children: /* @__PURE__ */ jsxRuntimeExports.jsxs(
         "button",
         {
+          "data-neo-guide": "nav-my-home",
           onClick: (event) => navigateIfAllowed("MyDashboard", event.currentTarget),
           className: `relative w-[75px] h-[55px] flex items-center justify-center text-center px-1 py-1 text-[12px] font-semibold rounded-md btn-aluminium-brushed ${activeView === "MyDashboard" ? "active" : ""}`,
           "aria-current": activeView === "MyDashboard" ? "page" : void 0,
@@ -9799,6 +9800,7 @@ const Sidebar = ({ activeView, onNavigate, courseColors, onAddCourse, onArchiveC
         /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "relative", children: /* @__PURE__ */ jsxRuntimeExports.jsx(
           "button",
           {
+            "data-neo-guide": "nav-dfp",
             onClick: (event) => navigateIfAllowed("Program Schedule", event.currentTarget),
             "aria-disabled": !canOpenLeftView("Program Schedule"),
             className: `w-[75px] h-[55px] flex items-center justify-center text-[12px] font-semibold btn-aluminium-brushed rounded-md ${activeView === "Program Schedule" && !isAnyDashboardActive ? "active" : ""} ${accessButtonClass("Program Schedule")}`,
@@ -9808,6 +9810,7 @@ const Sidebar = ({ activeView, onNavigate, courseColors, onAddCourse, onArchiveC
         /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "relative", children: /* @__PURE__ */ jsxRuntimeExports.jsx(
           "button",
           {
+            "data-neo-guide": "nav-staff",
             onClick: (event) => navigateIfAllowed("Staff", event.currentTarget),
             "aria-disabled": !canOpenLeftView("Staff"),
             className: `w-[75px] h-[55px] flex items-center justify-center text-[12px] font-semibold btn-aluminium-brushed rounded-md ${activeView === "Staff" ? "active" : ""} ${accessButtonClass("Staff")}`,
@@ -9817,6 +9820,7 @@ const Sidebar = ({ activeView, onNavigate, courseColors, onAddCourse, onArchiveC
         /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "relative", children: /* @__PURE__ */ jsxRuntimeExports.jsx(
           "button",
           {
+            "data-neo-guide": "nav-trainee",
             onClick: (event) => navigateIfAllowed("Trainee", event.currentTarget),
             "aria-disabled": isModelUnavailable("Trainee") || !canOpenLeftView("Trainee"),
             title: isModelUnavailable("Trainee") ? "Trainee functions are not used by this operational model." : void 0,
@@ -9827,6 +9831,7 @@ const Sidebar = ({ activeView, onNavigate, courseColors, onAddCourse, onArchiveC
         /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "relative", children: /* @__PURE__ */ jsxRuntimeExports.jsx(
           "button",
           {
+            "data-neo-guide": "nav-lmp",
             onClick: (event) => navigateIfAllowed("Syllabus", event.currentTarget),
             "aria-disabled": !canOpenLeftView("Syllabus"),
             className: `w-[75px] h-[55px] flex items-center justify-center text-[12px] font-semibold btn-aluminium-brushed rounded-md ${activeView === "Syllabus" && !isAnyDashboardActive ? "active" : ""} ${accessButtonClass("Syllabus")}`,
@@ -9836,6 +9841,7 @@ const Sidebar = ({ activeView, onNavigate, courseColors, onAddCourse, onArchiveC
         /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "relative", children: /* @__PURE__ */ jsxRuntimeExports.jsx(
           "button",
           {
+            "data-neo-guide": "nav-course-progress",
             onClick: (event) => navigateIfAllowed("CourseProgress", event.currentTarget),
             "aria-disabled": !canOpenLeftView("CourseProgress"),
             className: `w-[75px] h-[55px] flex items-center justify-center text-[12px] font-semibold btn-aluminium-brushed rounded-md ${activeView === "CourseProgress" && !isAnyDashboardActive ? "active" : ""} ${accessButtonClass("CourseProgress")}`,
@@ -9845,6 +9851,7 @@ const Sidebar = ({ activeView, onNavigate, courseColors, onAddCourse, onArchiveC
         /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "relative", children: /* @__PURE__ */ jsxRuntimeExports.jsx(
           "button",
           {
+            "data-neo-guide": "nav-training-records",
             onClick: (event) => navigateIfAllowed("TrainingRecords", event.currentTarget),
             "aria-disabled": !canOpenLeftView("TrainingRecords"),
             className: `w-[75px] h-[55px] flex items-center justify-center text-[12px] font-semibold btn-aluminium-brushed rounded-md ${activeView === "TrainingRecords" && !isAnyDashboardActive ? "active" : ""} ${accessButtonClass("TrainingRecords")}`,
@@ -9854,6 +9861,7 @@ const Sidebar = ({ activeView, onNavigate, courseColors, onAddCourse, onArchiveC
         /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "relative", children: /* @__PURE__ */ jsxRuntimeExports.jsx(
           "button",
           {
+            "data-neo-guide": "nav-settings",
             onClick: (event) => navigateIfAllowed("Settings", event.currentTarget),
             "aria-disabled": !canOpenLeftView("Settings"),
             className: `w-[75px] h-[55px] flex items-center justify-center text-[12px] font-semibold btn-aluminium-brushed rounded-md ${activeView === "Settings" ? "active" : ""} ${accessButtonClass("Settings")}`,
@@ -10089,6 +10097,7 @@ const RightSidebar = ({
       /* @__PURE__ */ jsxRuntimeExports.jsx(
         "button",
         {
+          "data-neo-guide": "nav-duty-pilot",
           onClick: (event) => {
             if (isSupervisor && canOpen("SupervisorDashboard")) {
               onNavigate("SupervisorDashboard");
@@ -10109,6 +10118,7 @@ const RightSidebar = ({
       /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "relative mt-[14px]", children: /* @__PURE__ */ jsxRuntimeExports.jsx(
         "button",
         {
+          "data-neo-guide": "nav-neo-build",
           onClick: (event) => canBuild ? onBuildDfpClick() : showPermissionNotice(event.currentTarget),
           "aria-disabled": !canBuild,
           title: canBuild ? "Run NEO Build" : "Access denied: NEO Build permission required",
@@ -10119,6 +10129,7 @@ const RightSidebar = ({
       /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "relative", children: /* @__PURE__ */ jsxRuntimeExports.jsx(
         "button",
         {
+          "data-neo-guide": "nav-program-schedule",
           onClick: (event) => navigateIfAllowed("NextDayBuild", event.currentTarget),
           "aria-disabled": !canOpen("NextDayBuild"),
           className: `w-[75px] h-[55px] flex items-center justify-center text-[12px] font-semibold btn-aluminium-brushed rounded-md ${activeView === "NextDayBuild" ? "active" : ""} ${accessButtonClass("NextDayBuild")}`,
@@ -10128,6 +10139,7 @@ const RightSidebar = ({
       /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "relative", children: /* @__PURE__ */ jsxRuntimeExports.jsx(
         "button",
         {
+          "data-neo-guide": "nav-staff-schedule",
           onClick: (event) => navigateIfAllowed("NextDayInstructorSchedule", event.currentTarget),
           "aria-disabled": !canOpen("NextDayInstructorSchedule"),
           className: `w-[75px] h-[55px] flex items-center justify-center text-[12px] font-semibold btn-aluminium-brushed rounded-md ${activeView === "NextDayInstructorSchedule" ? "active" : ""} ${accessButtonClass("NextDayInstructorSchedule")}`,
@@ -10137,6 +10149,7 @@ const RightSidebar = ({
       /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "relative", children: /* @__PURE__ */ jsxRuntimeExports.jsx(
         "button",
         {
+          "data-neo-guide": "nav-trainee-schedule",
           onClick: (event) => navigateIfAllowed("NextDayTraineeSchedule", event.currentTarget),
           "aria-disabled": isModelUnavailable("NextDayTraineeSchedule") || !canOpen("NextDayTraineeSchedule"),
           title: isModelUnavailable("NextDayTraineeSchedule") ? "Trainee schedule functions are not used by this operational model." : void 0,
@@ -10147,6 +10160,7 @@ const RightSidebar = ({
       /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "relative", children: /* @__PURE__ */ jsxRuntimeExports.jsx(
         "button",
         {
+          "data-neo-guide": "action-publish-dfp",
           onClick: (event) => canPublish ? onPublish() : showPermissionNotice(event.currentTarget),
           "aria-disabled": !canPublish,
           title: canPublish ? "Publish DFP" : "Access denied: Publish DFP permission required",
@@ -10157,6 +10171,7 @@ const RightSidebar = ({
       /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "relative", children: /* @__PURE__ */ jsxRuntimeExports.jsx(
         "button",
         {
+          "data-neo-guide": "nav-build-priorities",
           onClick: (event) => navigateIfAllowed("Priorities", event.currentTarget),
           "aria-disabled": !canOpen("Priorities"),
           className: `w-[75px] h-[55px] flex items-center justify-center text-[12px] font-semibold btn-aluminium-brushed rounded-md ${activeView === "Priorities" ? "active" : ""} ${accessButtonClass("Priorities")}`,
@@ -10170,6 +10185,7 @@ const RightSidebar = ({
       /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "relative", children: /* @__PURE__ */ jsxRuntimeExports.jsx(
         "button",
         {
+          "data-neo-guide": "nav-build-intelligence",
           onClick: (event) => navigateIfAllowed("BuildIntelligence", event.currentTarget),
           "aria-disabled": !canOpen("BuildIntelligence"),
           className: `w-[75px] h-[55px] flex items-center justify-center text-[12px] font-semibold btn-aluminium-brushed rounded-md ${activeView === "BuildIntelligence" ? "active" : ""} ${accessButtonClass("BuildIntelligence")}`,
@@ -10180,6 +10196,7 @@ const RightSidebar = ({
     /* @__PURE__ */ jsxRuntimeExports.jsx("div", { "data-sidebar-user-footer": "true", className: "flex-shrink-0 border-t border-gray-700 p-4 flex items-center justify-center", children: /* @__PURE__ */ jsxRuntimeExports.jsx(
       "button",
       {
+        "data-neo-guide": "nav-my-home-icon",
         type: "button",
         onClick: () => onNavigate("MyDashboard"),
         title: "Open My Home",
@@ -10429,6 +10446,7 @@ const Header = ({
         /* @__PURE__ */ jsxRuntimeExports.jsx(
           "button",
           {
+            "data-neo-guide": "action-audit-log",
             onClick: (event) => {
               if (!canOpenAuditLog) {
                 showPermissionNotice(event.currentTarget);
@@ -10445,6 +10463,7 @@ const Header = ({
         /* @__PURE__ */ jsxRuntimeExports.jsx(
           "button",
           {
+            "data-neo-guide": "action-multi-select",
             onClick: (event) => {
               if (!canUseMultiSelect) {
                 showPermissionNotice(event.currentTarget);
@@ -10461,6 +10480,7 @@ const Header = ({
         /* @__PURE__ */ jsxRuntimeExports.jsx(
           "button",
           {
+            "data-neo-guide": "action-magnifier",
             onClick: () => setIsMagnifierEnabled(!isMagnifierEnabled),
             className: `${headerButtonClass} ${isMagnifierEnabled ? "active" : ""}`,
             "aria-label": "Toggle Magnifier",
@@ -10471,6 +10491,7 @@ const Header = ({
         /* @__PURE__ */ jsxRuntimeExports.jsx(
           "button",
           {
+            "data-neo-guide": "action-validation-check",
             onClick: (event) => {
               if (!canRunValidation) {
                 showPermissionNotice(event.currentTarget);
@@ -10491,6 +10512,7 @@ const Header = ({
         /* @__PURE__ */ jsxRuntimeExports.jsx(
           "button",
           {
+            "data-neo-guide": "action-dispatch-rate",
             onClick: (event) => {
               if (!canUseDispatchRate) {
                 showPermissionNotice(event.currentTarget);
@@ -10511,6 +10533,7 @@ const Header = ({
         (isFixedCrewModel || onToggleAircraftAvailability) && /* @__PURE__ */ jsxRuntimeExports.jsx(
           "button",
           {
+            "data-neo-guide": "action-aircraft-availability",
             onClick: () => {
               if (!onToggleAircraftAvailability) return;
               onToggleAircraftAvailability();
@@ -10529,6 +10552,7 @@ const Header = ({
         (isFixedCrewModel || onPauseFlightOps) && /* @__PURE__ */ jsxRuntimeExports.jsx(
           "button",
           {
+            "data-neo-guide": "action-pause-flight-ops",
             onClick: (event) => {
               if (!onPauseFlightOps || !canUsePauseFlightOps || !canRunNeoBuild) {
                 showPermissionNotice(event.currentTarget);
@@ -10549,6 +10573,7 @@ const Header = ({
         /* @__PURE__ */ jsxRuntimeExports.jsx(
           "button",
           {
+            "data-neo-guide": "action-add-ground-tile",
             onClick: (event) => {
               if (!canAddGroundTile) {
                 showPermissionNotice(event.currentTarget);
@@ -10569,6 +10594,7 @@ const Header = ({
         /* @__PURE__ */ jsxRuntimeExports.jsx(
           "button",
           {
+            "data-neo-guide": "action-add-flight-tile",
             onClick: (event) => {
               if (!canAddFlightTile) {
                 showPermissionNotice(event.currentTarget);
@@ -10589,6 +10615,7 @@ const Header = ({
         /* @__PURE__ */ jsxRuntimeExports.jsx(
           "button",
           {
+            "data-neo-guide": isFixedCrewModel ? "action-quick-tile" : "action-neo-tile",
             onClick: (event) => {
               if (isFixedCrewModel) {
                 if (!canUseNeoTile || !onQuickTile) {
@@ -10617,6 +10644,7 @@ const Header = ({
         /* @__PURE__ */ jsxRuntimeExports.jsx(
           "button",
           {
+            "data-neo-guide": "action-flight-line",
             type: "button",
             onClick: (event) => {
               if (!canOpenFlightLine || !onToggleFlightLinePanel) {
@@ -39580,7 +39608,7 @@ Classrooms: ${classroomNames.join(", ")}` : ""}`;
     );
   };
   if (mode === "detect" && isPartiallyConfigured) {
-    return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded-xl border border-slate-300 bg-slate-50 p-5 text-slate-900 shadow-sm", children: [
+    return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { "data-neo-guide": "initial-setup-wizard-panel", className: "rounded-xl border border-slate-300 bg-slate-50 p-5 text-slate-900 shadow-sm", children: [
       /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-[11px] font-bold uppercase tracking-[0.18em] text-orange-600", children: "Initial Setup Wizard" }),
       /* @__PURE__ */ jsxRuntimeExports.jsx("h3", { className: "mt-1 text-xl font-bold text-slate-950", children: "DFP-NEO is partly configured" }),
       /* @__PURE__ */ jsxRuntimeExports.jsxs("p", { className: "mt-3 text-sm leading-6 text-slate-700", children: [
@@ -39789,6 +39817,7 @@ const OrganisationSlideoutDiagram = ({ platformConfig, organisationSettings, uni
         /* @__PURE__ */ jsxRuntimeExports.jsx(
           "button",
           {
+            "data-neo-guide": "settings-organisation-structure",
             type: "button",
             className: activeView === "structure" ? organisationSlideoutActiveButtonClass : organisationSlideoutInactiveButtonClass,
             onClick: () => setActiveView("structure"),
@@ -39798,6 +39827,7 @@ const OrganisationSlideoutDiagram = ({ platformConfig, organisationSettings, uni
         /* @__PURE__ */ jsxRuntimeExports.jsx(
           "button",
           {
+            "data-neo-guide": "settings-my-unit-settings",
             type: "button",
             className: activeView === "unitSettings" ? organisationSlideoutActiveButtonClass : organisationSlideoutInactiveButtonClass,
             onClick: () => setActiveView("unitSettings"),
@@ -39807,6 +39837,7 @@ const OrganisationSlideoutDiagram = ({ platformConfig, organisationSettings, uni
         /* @__PURE__ */ jsxRuntimeExports.jsx(
           "button",
           {
+            "data-neo-guide": "initial-setup-wizard-tab",
             type: "button",
             className: activeView === "setupWizard" ? organisationSlideoutActiveButtonClass : organisationSlideoutInactiveButtonClass,
             onClick: () => setActiveView("setupWizard"),
@@ -51163,7 +51194,7 @@ ${errorText || `HTTP ${response.status}`}`, "Delete Failed", "error");
                   ] })
                 ] });
               })(),
-              activeTab === "unavailable" && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: card3d2 + " p-4", style: card3dStyle2, children: [
+              activeTab === "unavailable" && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { "data-neo-guide": "trainee-availability", className: card3d2 + " p-4", style: card3dStyle2, children: [
                 /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center justify-between mb-3", children: [
                   /* @__PURE__ */ jsxRuntimeExports.jsxs("h4", { className: "text-sm font-bold text-white", children: [
                     "Unavailability — ",
@@ -51188,7 +51219,7 @@ ${errorText || `HTTP ${response.status}`}`, "Delete Failed", "error");
                     !isArchiveProfile && /* @__PURE__ */ jsxRuntimeExports.jsx("button", { onClick: () => handleRemoveUnavailability(p.id), className: "text-red-400 hover:text-red-300 text-xs ml-2", children: "✕" })
                   ] }, p.id);
                 }) : /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-gray-500 text-xs italic text-center py-4", children: "No unavailability periods scheduled." }) }),
-                !isArchiveProfile && /* @__PURE__ */ jsxRuntimeExports.jsx("button", { onClick: () => {
+                !isArchiveProfile && /* @__PURE__ */ jsxRuntimeExports.jsx("button", { "data-neo-guide": "trainee-add-unavailability", onClick: () => {
                   setShowAddUnavailability(true);
                   setActiveTab(null);
                 }, className: "mt-3 px-3 py-1.5 bg-amber-600 hover:bg-amber-500 text-white text-xs rounded", children: "+ Add Unavailability" })
@@ -51982,7 +52013,7 @@ ${errorText || `HTTP ${response.status}`}`, "Delete Failed", "error");
         ),
         /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "w-[95px] flex-shrink-0 border-l border-gray-700 bg-[#0f1824] px-[10px] py-3 flex flex-col gap-px", children: [
           !isEditing && /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
-            /* @__PURE__ */ jsxRuntimeExports.jsx("button", { onClick: (event) => handleTabClick("unavailable", event.currentTarget), "aria-disabled": !canOpenTraineeProfileTab("unavailable"), className: tabBtnClass("unavailable", canOpenTraineeProfileTab("unavailable")), children: "Unavail­able" }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("button", { "data-neo-guide": "trainee-availability-tab", onClick: (event) => handleTabClick("unavailable", event.currentTarget), "aria-disabled": !canOpenTraineeProfileTab("unavailable"), className: tabBtnClass("unavailable", canOpenTraineeProfileTab("unavailable")), children: "Unavail­able" }),
             /* @__PURE__ */ jsxRuntimeExports.jsx("button", { onClick: (event) => handleTabClick("currency", event.currentTarget), "aria-disabled": !canOpenTraineeProfileTab("currency"), className: tabBtnClass("currency", canOpenTraineeProfileTab("currency")), children: "Currency" }),
             /* @__PURE__ */ jsxRuntimeExports.jsxs("button", { onClick: (event) => handleTabClick("sct", event.currentTarget), "aria-disabled": !canOpenTraineeProfileTab("sct"), className: tabBtnClass("sct", canOpenTraineeProfileTab("sct")), children: [
               "Request",
@@ -85327,7 +85358,7 @@ Confirm the Personnel ID, unit and role are correct before saving this separate 
               ] });
             })()
           ] }),
-          activeTab === "unavailable" && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: card3d + " p-4", style: card3dStyle, children: [
+          activeTab === "unavailable" && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { "data-neo-guide": "staff-availability", className: card3d + " p-4", style: card3dStyle, children: [
             /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center justify-between mb-3", children: [
               /* @__PURE__ */ jsxRuntimeExports.jsxs("h4", { className: "text-sm font-bold text-white", children: [
                 "Unavailability — ",
@@ -85352,7 +85383,7 @@ Confirm the Personnel ID, unit and role are correct before saving this separate 
                 !isArchiveProfile && /* @__PURE__ */ jsxRuntimeExports.jsx("button", { onClick: () => handleRemoveUnavailability(p.id), className: "text-red-400 hover:text-red-300 text-xs ml-2", children: "✕" })
               ] }, p.id);
             }) : /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-gray-500 text-xs italic text-center py-2", children: "No unavailability periods scheduled." }) }),
-            !isArchiveProfile && /* @__PURE__ */ jsxRuntimeExports.jsx("button", { onClick: () => setShowAddUnavailability(true), className: "px-4 py-1.5 bg-sky-700 hover:bg-sky-600 text-white text-xs rounded", children: "+ Add Unavailability" })
+            !isArchiveProfile && /* @__PURE__ */ jsxRuntimeExports.jsx("button", { "data-neo-guide": "staff-add-unavailability", onClick: () => setShowAddUnavailability(true), className: "px-4 py-1.5 bg-sky-700 hover:bg-sky-600 text-white text-xs rounded", children: "+ Add Unavailability" })
           ] }),
           activeTab === "sct" && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: card3d + " p-4", style: card3dStyle, children: [
             /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center justify-between mb-3", children: [
@@ -86288,7 +86319,7 @@ Confirm the Personnel ID, unit and role are correct before saving this separate 
         ] }),
         /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "w-[95px] flex-shrink-0 border-l border-gray-600 bg-[#0f1824] pt-2 pb-2 px-[10px] flex flex-col space-y-[1px]", children: [
           !isEditing && !isCreating && /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
-            /* @__PURE__ */ jsxRuntimeExports.jsx("button", { onClick: (event) => handleTabClick("unavailable", event.currentTarget), "aria-disabled": !canOpenStaffProfileTab("unavailable"), className: tabBtnClass("unavailable", canOpenStaffProfileTab("unavailable")), children: "Unavailable" }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("button", { "data-neo-guide": "staff-availability-tab", onClick: (event) => handleTabClick("unavailable", event.currentTarget), "aria-disabled": !canOpenStaffProfileTab("unavailable"), className: tabBtnClass("unavailable", canOpenStaffProfileTab("unavailable")), children: "Unavailable" }),
             /* @__PURE__ */ jsxRuntimeExports.jsx("button", { onClick: (event) => handleTabClick("currency", event.currentTarget), "aria-disabled": !canOpenStaffProfileTab("currency"), className: tabBtnClass("currency", canOpenStaffProfileTab("currency")), children: "Currency" }),
             /* @__PURE__ */ jsxRuntimeExports.jsx("button", { onClick: (event) => handleTabClick("logbook", event.currentTarget), "aria-disabled": !canOpenStaffProfileTab("logbook"), className: tabBtnClass("logbook", canOpenStaffProfileTab("logbook")), children: "Logbook" }),
             /* @__PURE__ */ jsxRuntimeExports.jsxs("button", { onClick: (event) => handleTabClick("sct", event.currentTarget), "aria-disabled": !canOpenStaffProfileTab("sct"), className: tabBtnClass("sct", canOpenStaffProfileTab("sct")), children: [
@@ -103071,7 +103102,7 @@ const CourseProgressView = ({
         },
         course.name
       )) }),
-      /* @__PURE__ */ jsxRuntimeExports.jsxs("section", { className: "space-y-4", children: [
+      /* @__PURE__ */ jsxRuntimeExports.jsxs("section", { "data-neo-guide": "course-scores-rankings", className: "space-y-4", children: [
         /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
           /* @__PURE__ */ jsxRuntimeExports.jsx("h2", { className: "text-2xl font-bold text-white", children: "Course Scores & Rankings" }),
           /* @__PURE__ */ jsxRuntimeExports.jsxs("p", { className: "text-sm text-gray-400", children: [
@@ -103083,6 +103114,7 @@ const CourseProgressView = ({
           /* @__PURE__ */ jsxRuntimeExports.jsxs(
             "div",
             {
+              "data-neo-guide": "course-scores",
               className: `bg-gray-800 rounded-lg border overflow-hidden ${getCourseBorderClass(scoreCourse)}`,
               style: getCourseBorderStyle(scoreCourse),
               children: [
@@ -103171,6 +103203,7 @@ const CourseProgressView = ({
           /* @__PURE__ */ jsxRuntimeExports.jsxs(
             "div",
             {
+              "data-neo-guide": "course-rankings",
               className: `bg-gray-800 rounded-lg border overflow-hidden ${getCourseBorderClass(activeAwardCourse)}`,
               style: getCourseBorderStyle(activeAwardCourse),
               children: [
@@ -104208,7 +104241,7 @@ Only continue if permanent deletion is required, archiving is not sufficient, an
     setDeletePasswordError("");
     setCourseToDelete(null);
   };
-  return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex-1 flex flex-col bg-gray-900 h-full overflow-hidden", children: [
+  return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { "data-neo-guide": "courses-management", className: "flex-1 flex flex-col bg-gray-900 h-full overflow-hidden", children: [
     /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex-shrink-0 bg-gray-800 p-4 border-b border-gray-700", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex justify-between items-center", children: [
       /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
         /* @__PURE__ */ jsxRuntimeExports.jsx("h2", { className: "text-2xl font-bold text-white", children: "Courses Management" }),
@@ -104218,6 +104251,7 @@ Only continue if permanent deletion is required, archiving is not sufficient, an
         /* @__PURE__ */ jsxRuntimeExports.jsx(
           "button",
           {
+            "data-neo-guide": "archived-courses",
             onClick: onNavigateToArchivedCourses,
             className: "w-[75px] h-[55px] flex items-center justify-center text-[12px] font-semibold btn-aluminium-brushed rounded-md",
             children: /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "text-center leading-tight", children: [
@@ -104230,6 +104264,7 @@ Only continue if permanent deletion is required, archiving is not sufficient, an
         /* @__PURE__ */ jsxRuntimeExports.jsx(
           "button",
           {
+            "data-neo-guide": "add-course",
             onClick: () => setShowAddCourseFlyout(true),
             className: "w-[75px] h-[55px] flex items-center justify-center text-[12px] font-semibold btn-aluminium-brushed rounded-md",
             children: /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "text-center leading-tight", style: { color: "#22c55e" }, children: [
@@ -106350,7 +106385,7 @@ const TrainingRecordsView = ({
   hasTraineesEnabled = true
 }) => {
   const [activeTab, setActiveTab] = reactExports.useState("courses");
-  return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex-1 flex flex-col bg-gray-900 h-full overflow-auto", children: [
+  return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { "data-neo-guide": "training-records-page", className: "flex-1 flex flex-col bg-gray-900 h-full overflow-auto", children: [
     /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex-shrink-0 bg-gray-800 p-4 border-b border-gray-700", children: [
       /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex justify-between items-center mb-4", children: [
         /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
@@ -106363,6 +106398,7 @@ const TrainingRecordsView = ({
         /* @__PURE__ */ jsxRuntimeExports.jsx(
           "button",
           {
+            "data-neo-guide": "training-records-course-management",
             onClick: () => setActiveTab("courses"),
             className: `px-4 py-2 rounded-t font-medium transition-colors ${activeTab === "courses" ? "bg-gray-900 text-white border-t-2 border-sky-500" : "bg-gray-700 text-gray-400 hover:bg-gray-600"}`,
             children: "Courses Management"
@@ -106371,6 +106407,7 @@ const TrainingRecordsView = ({
         /* @__PURE__ */ jsxRuntimeExports.jsx(
           "button",
           {
+            "data-neo-guide": "training-records-complete-training",
             onClick: () => setActiveTab("complete"),
             className: `px-4 py-2 rounded-t font-medium transition-colors ${activeTab === "complete" ? "bg-gray-900 text-white border-t-2 border-sky-500" : "bg-gray-700 text-gray-400 hover:bg-gray-600"}`,
             children: "Complete Training"
@@ -106379,6 +106416,7 @@ const TrainingRecordsView = ({
         /* @__PURE__ */ jsxRuntimeExports.jsx(
           "button",
           {
+            "data-neo-guide": "training-records-export-records",
             onClick: () => setActiveTab("export"),
             className: `px-4 py-2 rounded-t font-medium transition-colors ${activeTab === "export" ? "bg-gray-900 text-white border-t-2 border-sky-500" : "bg-gray-700 text-gray-400 hover:bg-gray-600"}`,
             children: "Export Records"
@@ -106617,7 +106655,7 @@ Only continue if permanent deletion is required, keeping it archived is not suff
       ] })
     ] });
   };
-  return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex-1 flex flex-col bg-gray-900 overflow-hidden", children: [
+  return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { "data-neo-guide": "archived-courses-page", className: "flex-1 flex flex-col bg-gray-900 overflow-hidden", children: [
     /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex-shrink-0 bg-gray-800 p-4 border-b border-gray-700", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex justify-between items-center", children: [
       /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center gap-3", children: [
         /* @__PURE__ */ jsxRuntimeExports.jsx(

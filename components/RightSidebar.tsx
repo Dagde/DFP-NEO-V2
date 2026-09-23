@@ -96,6 +96,7 @@ const RightSidebar: React.FC<RightSidebarProps> = ({
       <nav className="flex-1 overflow-y-auto px-2 pt-2 pb-4 flex flex-col items-center gap-px">
         {/* Duty Pilot Button */}
         <button
+          data-neo-guide="nav-duty-pilot"
           onClick={(event) => {
             if (isSupervisor && canOpen('SupervisorDashboard')) {
               onNavigate('SupervisorDashboard');
@@ -112,6 +113,7 @@ const RightSidebar: React.FC<RightSidebarProps> = ({
 
         <div className="relative mt-[14px]">
           <button
+            data-neo-guide="nav-neo-build"
             onClick={(event) => canBuild ? onBuildDfpClick() : showPermissionNotice(event.currentTarget)}
             aria-disabled={!canBuild}
             title={canBuild ? 'Run NEO Build' : 'Access denied: NEO Build permission required'}
@@ -123,6 +125,7 @@ const RightSidebar: React.FC<RightSidebarProps> = ({
 
         <div className="relative">
           <button
+            data-neo-guide="nav-program-schedule"
             onClick={(event) => navigateIfAllowed('NextDayBuild', event.currentTarget)}
             aria-disabled={!canOpen('NextDayBuild')}
             className={`w-[75px] h-[55px] flex items-center justify-center text-[12px] font-semibold btn-aluminium-brushed rounded-md ${activeView === 'NextDayBuild' ? 'active' : ''} ${accessButtonClass('NextDayBuild')}`}
@@ -133,6 +136,7 @@ const RightSidebar: React.FC<RightSidebarProps> = ({
 
         <div className="relative">
           <button
+            data-neo-guide="nav-staff-schedule"
             onClick={(event) => navigateIfAllowed('NextDayInstructorSchedule', event.currentTarget)}
             aria-disabled={!canOpen('NextDayInstructorSchedule')}
             className={`w-[75px] h-[55px] flex items-center justify-center text-[12px] font-semibold btn-aluminium-brushed rounded-md ${activeView === 'NextDayInstructorSchedule' ? 'active' : ''} ${accessButtonClass('NextDayInstructorSchedule')}`}
@@ -143,6 +147,7 @@ const RightSidebar: React.FC<RightSidebarProps> = ({
 
         <div className="relative">
           <button
+            data-neo-guide="nav-trainee-schedule"
             onClick={(event) => navigateIfAllowed('NextDayTraineeSchedule', event.currentTarget)}
             aria-disabled={isModelUnavailable('NextDayTraineeSchedule') || !canOpen('NextDayTraineeSchedule')}
             title={isModelUnavailable('NextDayTraineeSchedule') ? 'Trainee schedule functions are not used by this operational model.' : undefined}
@@ -154,6 +159,7 @@ const RightSidebar: React.FC<RightSidebarProps> = ({
 
         <div className="relative">
           <button
+            data-neo-guide="action-publish-dfp"
             onClick={(event) => canPublish ? onPublish() : showPermissionNotice(event.currentTarget)}
             aria-disabled={!canPublish}
             title={canPublish ? 'Publish DFP' : 'Access denied: Publish DFP permission required'}
@@ -165,6 +171,7 @@ const RightSidebar: React.FC<RightSidebarProps> = ({
 
         <div className="relative">
           <button
+            data-neo-guide="nav-build-priorities"
             onClick={(event) => navigateIfAllowed('Priorities', event.currentTarget)}
             aria-disabled={!canOpen('Priorities')}
             className={`w-[75px] h-[55px] flex items-center justify-center text-[12px] font-semibold btn-aluminium-brushed rounded-md ${activeView === 'Priorities' ? 'active' : ''} ${accessButtonClass('Priorities')}`}
@@ -175,6 +182,7 @@ const RightSidebar: React.FC<RightSidebarProps> = ({
 
         <div className="relative">
           <button
+            data-neo-guide="nav-build-intelligence"
             onClick={(event) => navigateIfAllowed('BuildIntelligence', event.currentTarget)}
             aria-disabled={!canOpen('BuildIntelligence')}
             className={`w-[75px] h-[55px] flex items-center justify-center text-[12px] font-semibold btn-aluminium-brushed rounded-md ${activeView === 'BuildIntelligence' ? 'active' : ''} ${accessButtonClass('BuildIntelligence')}`}
@@ -188,6 +196,7 @@ const RightSidebar: React.FC<RightSidebarProps> = ({
       {/* Footer Icon Button */}
       <div data-sidebar-user-footer="true" className="flex-shrink-0 border-t border-gray-700 p-4 flex items-center justify-center">
         <button
+          data-neo-guide="nav-my-home-icon"
           type="button"
           onClick={() => onNavigate('MyDashboard')}
           title="Open My Home"

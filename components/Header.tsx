@@ -323,6 +323,7 @@ const Header: React.FC<HeaderProps> = ({
 
                         {/* 1. Audit Log Button */}
                         <button 
+                            data-neo-guide="action-audit-log"
                             onClick={(event) => {
                                 if (!canOpenAuditLog) {
                                     showPermissionNotice(event.currentTarget);
@@ -339,6 +340,7 @@ const Header: React.FC<HeaderProps> = ({
 
                         {/* 2. Multi Select Button */}
                         <button
+                          data-neo-guide="action-multi-select"
                           onClick={(event) => {
                               if (!canUseMultiSelect) {
                                   showPermissionNotice(event.currentTarget);
@@ -355,6 +357,7 @@ const Header: React.FC<HeaderProps> = ({
 
                         {/* 3. Magnifier Button */}
                         <button
+                          data-neo-guide="action-magnifier"
                           onClick={() => setIsMagnifierEnabled(!isMagnifierEnabled)}
                           className={`${headerButtonClass} ${isMagnifierEnabled ? 'active' : ''}`}
                           aria-label="Toggle Magnifier"
@@ -365,6 +368,7 @@ const Header: React.FC<HeaderProps> = ({
 
                         {/* 4. Validation Check Button */}
                         <button
+                          data-neo-guide="action-validation-check"
                           onClick={(event) => {
                               if (!canRunValidation) {
                                   showPermissionNotice(event.currentTarget);
@@ -381,6 +385,7 @@ const Header: React.FC<HeaderProps> = ({
 
                         {/* 5. Dispatch Rate Button */}
                         <button
+                          data-neo-guide="action-dispatch-rate"
                           onClick={(event) => {
                               if (!canUseDispatchRate) {
                                   showPermissionNotice(event.currentTarget);
@@ -398,6 +403,7 @@ const Header: React.FC<HeaderProps> = ({
                         {/* 6. Aircraft Available Button */}
                         {(isFixedCrewModel || onToggleAircraftAvailability) && (
                             <button
+                              data-neo-guide="action-aircraft-availability"
                               onClick={() => {
                                   if (!onToggleAircraftAvailability) return;
                                   onToggleAircraftAvailability();
@@ -414,6 +420,7 @@ const Header: React.FC<HeaderProps> = ({
                         {/* 7. Pause Flight Ops Button */}
                         {(isFixedCrewModel || onPauseFlightOps) && (
                             <button
+                                data-neo-guide="action-pause-flight-ops"
                                 onClick={(event) => {
                                     if (!onPauseFlightOps || !canUsePauseFlightOps || !canRunNeoBuild) {
                                         showPermissionNotice(event.currentTarget);
@@ -431,6 +438,7 @@ const Header: React.FC<HeaderProps> = ({
 
                         {/* 8. Add Ground Tile Button */}
                         <button 
+                            data-neo-guide="action-add-ground-tile"
                             onClick={(event) => {
                                 if (!canAddGroundTile) {
                                     showPermissionNotice(event.currentTarget);
@@ -447,6 +455,7 @@ const Header: React.FC<HeaderProps> = ({
 
                         {/* 8. Add Flight Tile Button */}
                         <button 
+                            data-neo-guide="action-add-flight-tile"
                             onClick={(event) => {
                                 if (!canAddFlightTile) {
                                     showPermissionNotice(event.currentTarget);
@@ -463,6 +472,7 @@ const Header: React.FC<HeaderProps> = ({
 
                         {/* 9. NEO - Tile / Quick Tile Button */}
                         <button
+                            data-neo-guide={isFixedCrewModel ? 'action-quick-tile' : 'action-neo-tile'}
                             onClick={(event) => {
                                 if (isFixedCrewModel) {
                                     if (!canUseNeoTile || !onQuickTile) {
@@ -489,6 +499,7 @@ const Header: React.FC<HeaderProps> = ({
 
                         {/* 10. Flight Line Button */}
                         <button
+                            data-neo-guide="action-flight-line"
                             type="button"
                             onClick={(event) => {
                                 if (!canOpenFlightLine || !onToggleFlightLinePanel) {

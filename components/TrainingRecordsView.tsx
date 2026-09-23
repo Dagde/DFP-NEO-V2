@@ -81,7 +81,7 @@ const TrainingRecordsView: React.FC<TrainingRecordsViewProps> = ({
     const [activeTab, setActiveTab] = useState<TabType>('courses');
 
     return (
-        <div className="flex-1 flex flex-col bg-gray-900 h-full overflow-auto">
+        <div data-neo-guide="training-records-page" className="flex-1 flex flex-col bg-gray-900 h-full overflow-auto">
             <div className="flex-shrink-0 bg-gray-800 p-4 border-b border-gray-700">
                 <div className="flex justify-between items-center mb-4">
                     <div>
@@ -96,6 +96,7 @@ const TrainingRecordsView: React.FC<TrainingRecordsViewProps> = ({
                 {/* Tabs */}
                 <div className="flex space-x-2">
                     <button
+                        data-neo-guide="training-records-course-management"
                         onClick={() => setActiveTab('courses')}
                         className={`px-4 py-2 rounded-t font-medium transition-colors ${
                             activeTab === 'courses'
@@ -106,6 +107,7 @@ const TrainingRecordsView: React.FC<TrainingRecordsViewProps> = ({
                         Courses Management
                     </button>
                     <button
+                        data-neo-guide="training-records-complete-training"
                         onClick={() => setActiveTab('complete')}
                         className={`px-4 py-2 rounded-t font-medium transition-colors ${
                             activeTab === 'complete'
@@ -116,6 +118,7 @@ const TrainingRecordsView: React.FC<TrainingRecordsViewProps> = ({
                         Complete Training
                     </button>
                     <button
+                        data-neo-guide="training-records-export-records"
                         onClick={() => setActiveTab('export')}
                         className={`px-4 py-2 rounded-t font-medium transition-colors ${
                             activeTab === 'export'

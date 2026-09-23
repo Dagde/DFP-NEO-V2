@@ -178,6 +178,7 @@ const Sidebar: React.FC<SidebarProps> = ({ activeView, onNavigate, courseColors,
         {/* My Home Button - Top Level */}
         <div className="flex items-center justify-center flex-shrink-0 px-2 pt-2 pb-0">
           <button
+            data-neo-guide="nav-my-home"
             onClick={(event) => navigateIfAllowed('MyDashboard', event.currentTarget)}
             className={`relative w-[75px] h-[55px] flex items-center justify-center text-center px-1 py-1 text-[12px] font-semibold rounded-md btn-aluminium-brushed ${activeView === 'MyDashboard' ? 'active' : ''}`}
             aria-current={activeView === 'MyDashboard' ? 'page' : undefined}
@@ -196,6 +197,7 @@ const Sidebar: React.FC<SidebarProps> = ({ activeView, onNavigate, courseColors,
           {/* DFP Button */}
           <div className="relative">
             <button
+              data-neo-guide="nav-dfp"
               onClick={(event) => navigateIfAllowed('Program Schedule', event.currentTarget)}
               aria-disabled={!canOpenLeftView('Program Schedule')}
               className={`w-[75px] h-[55px] flex items-center justify-center text-[12px] font-semibold btn-aluminium-brushed rounded-md ${activeView === 'Program Schedule' && !isAnyDashboardActive ? 'active' : ''} ${accessButtonClass('Program Schedule')}`}
@@ -207,6 +209,7 @@ const Sidebar: React.FC<SidebarProps> = ({ activeView, onNavigate, courseColors,
           {/* Staff Button */}
           <div className="relative">
             <button
+              data-neo-guide="nav-staff"
               onClick={(event) => navigateIfAllowed('Staff', event.currentTarget)}
               aria-disabled={!canOpenLeftView('Staff')}
               className={`w-[75px] h-[55px] flex items-center justify-center text-[12px] font-semibold btn-aluminium-brushed rounded-md ${activeView === 'Staff' ? 'active' : ''} ${accessButtonClass('Staff')}`}
@@ -218,6 +221,7 @@ const Sidebar: React.FC<SidebarProps> = ({ activeView, onNavigate, courseColors,
           {/* Trainee Button */}
           <div className="relative">
             <button
+              data-neo-guide="nav-trainee"
               onClick={(event) => navigateIfAllowed('Trainee', event.currentTarget)}
               aria-disabled={isModelUnavailable('Trainee') || !canOpenLeftView('Trainee')}
               title={isModelUnavailable('Trainee') ? 'Trainee functions are not used by this operational model.' : undefined}
@@ -230,6 +234,7 @@ const Sidebar: React.FC<SidebarProps> = ({ activeView, onNavigate, courseColors,
           {/* LMP - Square Button with Smaller Text */}
           <div className="relative">
             <button
+              data-neo-guide="nav-lmp"
               onClick={(event) => navigateIfAllowed('Syllabus', event.currentTarget)}
               aria-disabled={!canOpenLeftView('Syllabus')}
               className={`w-[75px] h-[55px] flex items-center justify-center text-[12px] font-semibold btn-aluminium-brushed rounded-md ${activeView === 'Syllabus' && !isAnyDashboardActive ? 'active' : ''} ${accessButtonClass('Syllabus')}`}
@@ -241,6 +246,7 @@ const Sidebar: React.FC<SidebarProps> = ({ activeView, onNavigate, courseColors,
 {/* Course Progress - Square Button with Smaller Text */}
           <div className="relative">
             <button
+              data-neo-guide="nav-course-progress"
               onClick={(event) => navigateIfAllowed('CourseProgress', event.currentTarget)}
               aria-disabled={!canOpenLeftView('CourseProgress')}
               className={`w-[75px] h-[55px] flex items-center justify-center text-[12px] font-semibold btn-aluminium-brushed rounded-md ${activeView === 'CourseProgress' && !isAnyDashboardActive ? 'active' : ''} ${accessButtonClass('CourseProgress')}`}
@@ -252,6 +258,7 @@ const Sidebar: React.FC<SidebarProps> = ({ activeView, onNavigate, courseColors,
           {/* Training Records - Square Button with Smaller Text */}
           <div className="relative">
             <button
+              data-neo-guide="nav-training-records"
               onClick={(event) => navigateIfAllowed('TrainingRecords', event.currentTarget)}
               aria-disabled={!canOpenLeftView('TrainingRecords')}
               className={`w-[75px] h-[55px] flex items-center justify-center text-[12px] font-semibold btn-aluminium-brushed rounded-md ${activeView === 'TrainingRecords' && !isAnyDashboardActive ? 'active' : ''} ${accessButtonClass('TrainingRecords')}`}
@@ -263,6 +270,7 @@ const Sidebar: React.FC<SidebarProps> = ({ activeView, onNavigate, courseColors,
           {/* Settings - Square Button */}
           <div className="relative">
             <button
+              data-neo-guide="nav-settings"
               onClick={(event) => navigateIfAllowed('Settings', event.currentTarget)}
               aria-disabled={!canOpenLeftView('Settings')}
               className={`w-[75px] h-[55px] flex items-center justify-center text-[12px] font-semibold btn-aluminium-brushed rounded-md ${activeView === 'Settings' ? 'active' : ''} ${accessButtonClass('Settings')}`}

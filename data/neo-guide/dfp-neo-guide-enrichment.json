@@ -1,0 +1,439 @@
+{
+  "schemaVersion": "neo-guide-enrichment.v1",
+  "updatedAt": "2026-09-23T00:00:00.000Z",
+  "sourceNote": "Curated from implementation review of the current DFP-NEO codebase. This layer supplements, but does not replace, the generated source audit.",
+  "functions": [
+    {
+      "id": "function.curated.navigation.dfp",
+      "name": "Open the DFP schedule",
+      "aliases": ["DFP", "daily flying program", "program schedule", "today's schedule", "flight schedule"],
+      "location": {
+        "page": "Program Schedule",
+        "route": null,
+        "component": "components/Sidebar.tsx",
+        "anchor": "nav-dfp"
+      },
+      "purpose": "Opens the main DFP timeline used to view, build and edit the daily schedule.",
+      "inputs": [],
+      "outputs": ["Displays the selected day's DFP timeline and schedule controls."],
+      "permissions": ["dfp.view"],
+      "dependencies": ["A configured unit/location is required for a fully populated operational schedule."],
+      "businessRules": ["If the customer baseline has not been configured, the DFP page may show the initial setup required prompt instead of operational schedule data."],
+      "failureConditions": ["The button can be unavailable when the logged-in user lacks the DFP view permission."],
+      "relatedFunctions": ["function.curated.workflow.initial-setup-wizard", "function.curated.scheduling.neo-build", "function.curated.scheduling.validation-check"],
+      "auditStatus": "IMPLEMENTED - manually enriched from current implementation review"
+    },
+    {
+      "id": "function.curated.workflow.initial-setup-wizard",
+      "name": "Initial Setup Wizard",
+      "aliases": ["setup wizard", "initial setup", "new customer setup", "blank customer setup", "configure customer"],
+      "location": {
+        "page": "Program Schedule",
+        "route": null,
+        "component": "components/ScheduleView.tsx",
+        "anchor": "initial-setup-wizard-tab"
+      },
+      "purpose": "Guides first-time customer configuration before the first operational DFP is built.",
+      "inputs": [
+        {
+          "fieldName": "organisation",
+          "fieldType": "text and structured hierarchy",
+          "permittedValues": [],
+          "defaultValue": null,
+          "required": true,
+          "validation": ["Organisation hierarchy and location data are required before normal scheduling can be meaningful."],
+          "dependencies": [],
+          "sourceOfData": "Initial setup wizard draft and platform configuration"
+        },
+        {
+          "fieldName": "ICAO code",
+          "fieldType": "text",
+          "permittedValues": [],
+          "defaultValue": null,
+          "required": true,
+          "validation": ["Expected to be a location identifier used by the configured unit/location context."],
+          "dependencies": ["Location configuration"],
+          "sourceOfData": "Initial setup wizard"
+        }
+      ],
+      "outputs": ["Creates or updates organisation, location, unit and setup configuration used by the rest of the application."],
+      "permissions": ["settings.view"],
+      "dependencies": ["Platform configuration must be writeable by the logged-in user."],
+      "businessRules": ["The DFP page keeps the setup prompt visible until required location/unit configuration exists."],
+      "failureConditions": ["Live synchronisation of settings can change the active location while the wizard is open if the workflow does not preserve the in-progress wizard state."],
+      "relatedFunctions": ["function.curated.settings.organisation-structure", "function.curated.settings.service-groups"],
+      "auditStatus": "IMPLEMENTED - manually enriched from current implementation review"
+    },
+    {
+      "id": "function.curated.people.trainee-unavailability",
+      "name": "Trainee unavailability",
+      "aliases": ["make trainee unavailable", "stop trainee flying", "trainee leave", "student unavailable", "can't fly", "off tomorrow", "blocked out"],
+      "location": {
+        "page": "Trainee",
+        "route": null,
+        "component": "components/TraineeProfileFlyout.tsx",
+        "anchor": "trainee-availability"
+      },
+      "purpose": "Records when a trainee is not available for scheduling.",
+      "inputs": [
+        {
+          "fieldName": "person",
+          "fieldType": "trainee record",
+          "permittedValues": [],
+          "defaultValue": null,
+          "required": true,
+          "validation": ["Must identify an existing trainee."],
+          "dependencies": ["Trainee roster"],
+          "sourceOfData": "Trainee profile"
+        },
+        {
+          "fieldName": "period",
+          "fieldType": "date/time range",
+          "permittedValues": [],
+          "defaultValue": null,
+          "required": true,
+          "validation": ["Start and end must define the period to block."],
+          "dependencies": [],
+          "sourceOfData": "Trainee availability editor"
+        }
+      ],
+      "outputs": ["Updates trainee availability data used by schedule views and build eligibility checks."],
+      "permissions": ["trainee.roster.view"],
+      "dependencies": ["The trainee must exist in the active unit/course context."],
+      "businessRules": ["Unavailable periods can prevent allocation when the event overlaps the recorded period."],
+      "failureConditions": ["The trainee may still appear in historical records even if unavailable for new scheduling."],
+      "relatedFunctions": ["function.curated.scheduling.neo-build", "function.curated.people.trainee-roster"],
+      "auditStatus": "IMPLEMENTED - manually enriched from current implementation review"
+    },
+    {
+      "id": "function.curated.people.staff-unavailability",
+      "name": "Staff unavailability",
+      "aliases": ["make instructor unavailable", "staff leave", "instructor leave", "stop instructor flying", "staff unavailable"],
+      "location": {
+        "page": "Staff",
+        "route": null,
+        "component": "components/InstructorProfileFlyout.tsx",
+        "anchor": "staff-availability"
+      },
+      "purpose": "Records when a staff member or instructor is not available for scheduling.",
+      "inputs": [],
+      "outputs": ["Updates staff availability data used by schedule views, duty pilot personnel summaries and build eligibility checks."],
+      "permissions": ["staff.view"],
+      "dependencies": ["The staff member must exist in the active unit context."],
+      "businessRules": ["Unavailable staff should not be selected for conflicting scheduled events."],
+      "failureConditions": ["A staff member counted in a personnel category may not be available for scheduling if a leave or pause status applies."],
+      "relatedFunctions": ["function.curated.duty-pilot.personnel-management", "function.curated.scheduling.neo-build"],
+      "auditStatus": "IMPLEMENTED - manually enriched from current implementation review"
+    },
+    {
+      "id": "function.curated.people.trainee-roster",
+      "name": "Trainee roster",
+      "aliases": ["trainee list", "student roster", "add trainee", "upload trainees", "course cards"],
+      "location": {
+        "page": "Trainee",
+        "route": null,
+        "component": "components/TraineeRosterView.tsx",
+        "anchor": "nav-trainee"
+      },
+      "purpose": "Displays trainees grouped by active course and provides course-level trainee management actions.",
+      "inputs": [],
+      "outputs": ["Displays active course cards, assigned trainees, status indicators and course edit controls."],
+      "permissions": ["trainee.roster.view"],
+      "dependencies": ["Active courses and trainee records must exist for populated course cards."],
+      "businessRules": ["Archived courses should not be shown as active roster cards."],
+      "failureConditions": ["Courses with no active trainees can appear empty; they should be archived rather than permanently deleted when retention matters."],
+      "relatedFunctions": ["function.curated.training.course-management", "function.curated.training.archive-course"],
+      "auditStatus": "IMPLEMENTED - manually enriched from current implementation review"
+    },
+    {
+      "id": "function.curated.training.course-management",
+      "name": "Course management",
+      "aliases": ["courses management", "add course", "edit course", "course dates", "course labels", "course groups"],
+      "location": {
+        "page": "Training Records",
+        "route": null,
+        "component": "components/TrainingRecordsView.tsx",
+        "anchor": "courses-management"
+      },
+      "purpose": "Manages active and archived course records, including course names, dates, colours and grouping labels.",
+      "inputs": [],
+      "outputs": ["Creates or updates course records used by Trainee Roster, Course Progress and training record views."],
+      "permissions": ["trainingRecords.courseManagement.view"],
+      "dependencies": ["Course data must sync with trainee/course progress data for dates and counts to endure refreshes."],
+      "businessRules": ["Course labels used for group counts should come from configured trainee service values where implemented."],
+      "failureConditions": ["If dates are edited only in local UI state and not persisted, they will revert after refresh."],
+      "relatedFunctions": ["function.curated.training.archive-course", "function.curated.training.course-progress", "function.curated.settings.service-groups"],
+      "auditStatus": "IMPLEMENTED - manually enriched from current implementation review"
+    },
+    {
+      "id": "function.curated.training.archive-course",
+      "name": "Archive course",
+      "aliases": ["archived courses", "remove course", "retire course", "delete course", "permanent delete"],
+      "location": {
+        "page": "Training Records",
+        "route": null,
+        "component": "components/TrainingRecordsView.tsx",
+        "anchor": "archived-courses"
+      },
+      "purpose": "Removes a course from active operational views while preserving the course record for future reference.",
+      "inputs": [],
+      "outputs": ["Moves a course between active and archived course views, depending on the selected action."],
+      "permissions": ["trainingRecords.courseManagement.view"],
+      "dependencies": ["Course records and linked trainee/training results must be retained when archival is required."],
+      "businessRules": ["Permanent deletion is treated as a higher-risk administrative action than archiving and should require stronger warning/confirmation."],
+      "failureConditions": ["Permanent delete can remove records that may be needed for legal, regulatory or training history reasons."],
+      "relatedFunctions": ["function.curated.training.course-management"],
+      "auditStatus": "IMPLEMENTED - manually enriched from current implementation review"
+    },
+    {
+      "id": "function.curated.training.course-progress",
+      "name": "Course Progress",
+      "aliases": ["course progress tiles", "course rankings", "course scores", "award rankings", "progress graph"],
+      "location": {
+        "page": "Course Progress",
+        "route": null,
+        "component": "components/CourseProgressView.tsx",
+        "anchor": "nav-course-progress"
+      },
+      "purpose": "Displays trainee progress, course-level progress cards, risk indicators, scores and ranking outputs.",
+      "inputs": [],
+      "outputs": ["Displays progress metrics calculated from trainee/course/training report data."],
+      "permissions": ["courseProgress.view"],
+      "dependencies": ["Active courses, trainee allocations and saved training report grades are required for populated results."],
+      "businessRules": ["Ranking outputs depend on selected course, selected award criteria, eligible trainees and saved grades for included events."],
+      "failureConditions": ["No scores are shown when there are no saved TRG REP overall grades matching the selected course and award criteria."],
+      "relatedFunctions": ["function.curated.training.training-report", "function.curated.training.course-management"],
+      "auditStatus": "IMPLEMENTED - manually enriched from current implementation review"
+    },
+    {
+      "id": "function.curated.training.training-report",
+      "name": "Training report",
+      "aliases": ["TRG REP", "grades", "overall grade", "failed event", "unsatisfactory grade", "auto message"],
+      "location": {
+        "page": "Training Records",
+        "route": null,
+        "component": "components/TrainingRecordsView.tsx",
+        "anchor": "training-records-page"
+      },
+      "purpose": "Records training outcomes and grades for events and can trigger notification workflows when configured.",
+      "inputs": [],
+      "outputs": ["Creates or updates training report records and grade-derived analytics used by Course Progress and Build Intelligence."],
+      "permissions": ["trainingRecords.courseManagement.view"],
+      "dependencies": ["Configured training report templates, courses, events and trainees."],
+      "businessRules": ["Auto notifications depend on configured recipient roles and course-level staff assignments."],
+      "failureConditions": ["Scores and rankings remain empty when reports do not include saved overall grades for the selected criteria."],
+      "relatedFunctions": ["function.curated.training.course-progress", "function.curated.messaging.auto-notifications"],
+      "auditStatus": "IMPLEMENTED - manually enriched from current implementation review"
+    },
+    {
+      "id": "function.curated.messaging.auto-notifications",
+      "name": "Training auto notifications",
+      "aliases": ["auto message", "automatic message", "event failure notification", "course commander message", "DFP-NEO Alerts"],
+      "location": {
+        "page": "Training Records",
+        "route": null,
+        "component": "components/TrainingRecordsView.tsx",
+        "anchor": "training-records-page"
+      },
+      "purpose": "Sends configured notification messages when training report conditions such as an unsatisfactory grade are met.",
+      "inputs": [],
+      "outputs": ["Creates in-app message records with the sender label DFP-NEO Alerts where implemented."],
+      "permissions": ["trainingRecords.courseManagement.view"],
+      "dependencies": ["Auto notification settings, recipient role selections and course commander/deputy course commander assignments."],
+      "businessRules": ["Recipients are derived from configured notification roles and matching course-level staff assignments."],
+      "failureConditions": ["No recipient is available if the relevant course commander/deputy field is blank or the notification role is not enabled."],
+      "relatedFunctions": ["function.curated.training.training-report", "function.curated.people.trainee-roster"],
+      "auditStatus": "IMPLEMENTED - manually enriched from current implementation review"
+    },
+    {
+      "id": "function.curated.scheduling.neo-build",
+      "name": "NEO Build",
+      "aliases": ["build schedule", "auto build", "generate DFP", "NEO-Active", "build intelligence"],
+      "location": {
+        "page": "Program Schedule",
+        "route": null,
+        "component": "components/RightSidebar.tsx",
+        "anchor": "nav-neo-build"
+      },
+      "purpose": "Runs the automated scheduling/build process for the DFP.",
+      "inputs": [],
+      "outputs": ["Creates or updates schedule tiles according to build rules, priorities, resources and availability data."],
+      "permissions": ["neo.build"],
+      "dependencies": ["Courses, trainees, staff, resources, aircraft/simulator availability, build rules, priorities and duty/turnaround configuration."],
+      "businessRules": ["Build eligibility is affected by availability, qualifications, currencies, resource availability, priorities, conflicts, duty constraints and progression data."],
+      "failureConditions": ["A person or event may not be scheduled when any required dependency or eligibility condition is not satisfied."],
+      "relatedFunctions": ["function.curated.scheduling.build-priorities", "function.curated.scheduling.validation-check", "function.curated.settings.turnaround"],
+      "auditStatus": "IMPLEMENTED - manually enriched from current implementation review"
+    },
+    {
+      "id": "function.curated.scheduling.build-priorities",
+      "name": "Build priorities",
+      "aliases": ["priorities", "course priorities", "package priorities", "event priorities", "build planner"],
+      "location": {
+        "page": "Priorities",
+        "route": null,
+        "component": "components/RightSidebar.tsx",
+        "anchor": "nav-build-priorities"
+      },
+      "purpose": "Configures scheduling priority inputs used by NEO Build.",
+      "inputs": [],
+      "outputs": ["Updates priority settings that influence future schedule generation."],
+      "permissions": ["neo.priorities"],
+      "dependencies": ["Active courses, events/packages and configured build rules."],
+      "businessRules": ["Priority settings influence ordering but do not override hard eligibility constraints such as availability or resource conflicts."],
+      "failureConditions": ["A high-priority event can still remain unscheduled when mandatory resources, people or rules are not satisfied."],
+      "relatedFunctions": ["function.curated.scheduling.neo-build"],
+      "auditStatus": "IMPLEMENTED - manually enriched from current implementation review"
+    },
+    {
+      "id": "function.curated.scheduling.validation-check",
+      "name": "Validation Check",
+      "aliases": ["validate schedule", "schedule warnings", "conflicts", "validation overlay"],
+      "location": {
+        "page": "Program Schedule",
+        "route": null,
+        "component": "components/Header.tsx",
+        "anchor": "action-validation-check"
+      },
+      "purpose": "Shows schedule validation warnings and conflict indicators for the current DFP.",
+      "inputs": [],
+      "outputs": ["Displays validation state for schedule tiles and conflicts."],
+      "permissions": [],
+      "dependencies": ["Current schedule tile data and validation rules."],
+      "businessRules": ["Validation identifies issues but does not automatically fix the DFP."],
+      "failureConditions": ["The action can be unavailable when the current user lacks validation permission in the active configuration."],
+      "relatedFunctions": ["function.curated.scheduling.neo-build", "function.curated.scheduling.flight-details"],
+      "auditStatus": "IMPLEMENTED - manually enriched from current implementation review"
+    },
+    {
+      "id": "function.curated.scheduling.flight-details",
+      "name": "Flight details",
+      "aliases": ["flight tile details", "edit flight", "instructor field", "PIC field", "trainee field", "crew field", "syllabus item"],
+      "location": {
+        "page": "Program Schedule",
+        "route": null,
+        "component": "components/FlightDetailsFlyout.tsx",
+        "anchor": "action-add-flight-tile"
+      },
+      "purpose": "Displays and edits details for a selected flight or simulator tile.",
+      "inputs": [],
+      "outputs": ["Updates scheduled event details such as crew/personnel, timing, event/syllabus item and related tile data."],
+      "permissions": ["dfp.view"],
+      "dependencies": ["A selected schedule tile and relevant person/event/resource lists."],
+      "businessRules": ["Flight-school labels may use Instructor/Trainee; air-combat model labels may use PIC/Crew where configured."],
+      "failureConditions": ["Dropdown options may be limited by the active unit, course, model, personnel eligibility and resource context."],
+      "relatedFunctions": ["function.curated.scheduling.validation-check", "function.curated.scheduling.neo-build"],
+      "auditStatus": "IMPLEMENTED - manually enriched from current implementation review"
+    },
+    {
+      "id": "function.curated.settings.turnaround",
+      "name": "Turnaround settings",
+      "aliases": ["aircraft turnaround", "turnround", "sim turnaround", "trainer turnaround", "duty turnaround"],
+      "location": {
+        "page": "Settings",
+        "route": null,
+        "component": "components/PlatformConfigurationSettings.tsx",
+        "anchor": "nav-settings"
+      },
+      "purpose": "Configures turnaround timing rules used by scheduling and validation.",
+      "inputs": [],
+      "outputs": ["Updates build/validation timing assumptions for aircraft, simulator and trainer turnaround where configured."],
+      "permissions": ["settings.view"],
+      "dependencies": ["Active organisation/unit build rule settings."],
+      "businessRules": ["Turnaround rules can prevent back-to-back allocations that do not leave the required separation."],
+      "failureConditions": ["Changes affect future build and validation logic, not necessarily already-published historical schedules."],
+      "relatedFunctions": ["function.curated.scheduling.neo-build", "function.curated.scheduling.validation-check"],
+      "auditStatus": "IMPLEMENTED - manually enriched from current implementation review"
+    },
+    {
+      "id": "function.curated.settings.service-groups",
+      "name": "Service and course group labels",
+      "aliases": ["service labels", "Air Force", "Navy", "Army", "course groups", "group counts", "trainee service"],
+      "location": {
+        "page": "Settings",
+        "route": null,
+        "component": "components/ScheduleView.tsx",
+        "anchor": "nav-settings"
+      },
+      "purpose": "Defines service/group labels used by trainee profiles and course grouping/count displays.",
+      "inputs": [],
+      "outputs": ["Provides configured service options for trainee profile service values and course group labels."],
+      "permissions": ["settings.view"],
+      "dependencies": ["Organisation settings and trainee profile service fields."],
+      "businessRules": ["Course group counts are meaningful only when course group labels align with trainee service values."],
+      "failureConditions": ["Legacy or hardcoded values can remain in records until staff and trainee data are migrated to configured labels."],
+      "relatedFunctions": ["function.curated.training.course-management", "function.curated.people.trainee-roster"],
+      "auditStatus": "IMPLEMENTED - manually enriched from current implementation review"
+    },
+    {
+      "id": "function.curated.duty-pilot.personnel-management",
+      "name": "Duty Pilot personnel management",
+      "aliases": ["Duty Pilot", "personnel management", "TMUF", "paused", "on leave", "unavailability count"],
+      "location": {
+        "page": "SupervisorDashboard",
+        "route": null,
+        "component": "components/SupervisorDashboard.tsx",
+        "anchor": "nav-duty-pilot"
+      },
+      "purpose": "Shows duty-pilot operational personnel summaries and counts.",
+      "inputs": [],
+      "outputs": ["Displays personnel category counts and hover details for affected people where implemented."],
+      "permissions": [],
+      "dependencies": ["Staff/personnel status and availability data."],
+      "businessRules": ["Paused status and leave/unavailability categories should remain distinct in the displayed lists."],
+      "failureConditions": ["Counts can be misleading if the hover list mixes people from a different personnel category."],
+      "relatedFunctions": ["function.curated.people.staff-unavailability"],
+      "auditStatus": "IMPLEMENTED - manually enriched from current implementation review"
+    }
+  ],
+  "concepts": [
+    {
+      "id": "concept.trainee",
+      "name": "Trainee",
+      "kind": "application-concept",
+      "relationships": [
+        { "target": "function.curated.people.trainee-roster", "type": "managed-in" },
+        { "target": "function.curated.people.trainee-unavailability", "type": "has-availability-records" },
+        { "target": "function.curated.training.course-progress", "type": "contributes-to" }
+      ]
+    },
+    {
+      "id": "concept.scheduled-event",
+      "name": "Scheduled Event",
+      "kind": "application-concept",
+      "relationships": [
+        { "target": "function.curated.scheduling.flight-details", "type": "edited-in" },
+        { "target": "function.curated.scheduling.validation-check", "type": "validated-by" },
+        { "target": "function.curated.scheduling.neo-build", "type": "generated-or-modified-by" }
+      ]
+    },
+    {
+      "id": "concept.course",
+      "name": "Course",
+      "kind": "application-concept",
+      "relationships": [
+        { "target": "function.curated.training.course-management", "type": "managed-in" },
+        { "target": "function.curated.training.course-progress", "type": "analysed-in" },
+        { "target": "function.curated.training.archive-course", "type": "may-be-archived-by" }
+      ]
+    }
+  ],
+  "synonyms": [
+    {
+      "canonical": "unavailability",
+      "terms": ["unavailable", "not available", "away", "can't fly", "off", "blocked out", "leave"]
+    },
+    {
+      "canonical": "trainee",
+      "terms": ["student", "pilot under training", "PUT", "course member"]
+    },
+    {
+      "canonical": "turnaround",
+      "terms": ["turnround", "turn around", "gap between flights", "reset time"]
+    },
+    {
+      "canonical": "NEO Build",
+      "terms": ["build", "auto build", "generate schedule", "build DFP", "optimise schedule"]
+    }
+  ]
+}

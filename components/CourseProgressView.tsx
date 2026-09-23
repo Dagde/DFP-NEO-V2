@@ -1124,7 +1124,7 @@ const CourseProgressView: React.FC<CourseProgressViewProps> = ({
                             ))}
                         </div>
 
-                        <section className="space-y-4">
+                        <section data-neo-guide="course-scores-rankings" className="space-y-4">
                             <div>
                                 <h2 className="text-2xl font-bold text-white">Course Scores & Rankings</h2>
                                 <p className="text-sm text-gray-400">{trainingReportName} overall grades and editable award ranking criteria for active course trainees.</p>
@@ -1132,6 +1132,7 @@ const CourseProgressView: React.FC<CourseProgressViewProps> = ({
 
                             <div className="grid grid-cols-1 2xl:grid-cols-[minmax(0,1.45fr)_minmax(420px,0.55fr)] gap-6">
                                 <div
+                                    data-neo-guide="course-scores"
                                     className={`bg-gray-800 rounded-lg border overflow-hidden ${getCourseBorderClass(scoreCourse)}`}
                                     style={getCourseBorderStyle(scoreCourse)}
                                 >
@@ -1218,6 +1219,7 @@ const CourseProgressView: React.FC<CourseProgressViewProps> = ({
                                 </div>
 
                                 <div
+                                    data-neo-guide="course-rankings"
                                     className={`bg-gray-800 rounded-lg border overflow-hidden ${getCourseBorderClass(activeAwardCourse)}`}
                                     style={getCourseBorderStyle(activeAwardCourse)}
                                 >

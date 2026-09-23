@@ -275,7 +275,7 @@ const CoursesManagementView: React.FC<CoursesManagementViewProps> = ({
     };
 
     return (
-        <div className="flex-1 flex flex-col bg-gray-900 h-full overflow-hidden">
+        <div data-neo-guide="courses-management" className="flex-1 flex flex-col bg-gray-900 h-full overflow-hidden">
             {/* Header */}
             <div className="flex-shrink-0 bg-gray-800 p-4 border-b border-gray-700">
                 <div className="flex justify-between items-center">
@@ -285,12 +285,14 @@ const CoursesManagementView: React.FC<CoursesManagementViewProps> = ({
                     </div>
                     <div className="flex gap-[1px]">
                         <button
+                            data-neo-guide="archived-courses"
                             onClick={onNavigateToArchivedCourses}
                             className="w-[75px] h-[55px] flex items-center justify-center text-[12px] font-semibold btn-aluminium-brushed rounded-md"
                         >
                             <span className="text-center leading-tight">Archived<br/>Courses</span>
                         </button>
                         <button
+                            data-neo-guide="add-course"
                             onClick={() => setShowAddCourseFlyout(true)}
                             className="w-[75px] h-[55px] flex items-center justify-center text-[12px] font-semibold btn-aluminium-brushed rounded-md"
                         >

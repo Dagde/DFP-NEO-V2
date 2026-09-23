@@ -1565,7 +1565,7 @@ export const InstructorProfileFlyout: React.FC<InstructorProfileFlyoutProps> = (
               )}
 
               {activeTab === 'unavailable' && (
-                <div className={card3d + " p-4"} style={card3dStyle}>
+                <div data-neo-guide="staff-availability" className={card3d + " p-4"} style={card3dStyle}>
                   <div className="flex items-center justify-between mb-3">
                     <h4 className="text-sm font-bold text-white">Unavailability — {instructor.name}</h4>
                     <button onClick={() => setActiveTab(null)} className="text-gray-400 hover:text-white text-xs">✕ Close</button>
@@ -1594,7 +1594,7 @@ export const InstructorProfileFlyout: React.FC<InstructorProfileFlyoutProps> = (
                     }) : <p className="text-gray-500 text-xs italic text-center py-2">No unavailability periods scheduled.</p>}
                   </div>
                   {!isArchiveProfile && (
-                    <button onClick={() => setShowAddUnavailability(true)} className="px-4 py-1.5 bg-sky-700 hover:bg-sky-600 text-white text-xs rounded">+ Add Unavailability</button>
+                    <button data-neo-guide="staff-add-unavailability" onClick={() => setShowAddUnavailability(true)} className="px-4 py-1.5 bg-sky-700 hover:bg-sky-600 text-white text-xs rounded">+ Add Unavailability</button>
                   )}
                 </div>
               )}
@@ -2562,7 +2562,7 @@ export const InstructorProfileFlyout: React.FC<InstructorProfileFlyoutProps> = (
             {/* RIGHT BUTTON PANEL */}
             <div className="w-[95px] flex-shrink-0 border-l border-gray-600 bg-[#0f1824] pt-2 pb-2 px-[10px] flex flex-col space-y-[1px]">
               {!isEditing && !isCreating && (<>
-                <button onClick={(event) => handleTabClick('unavailable', event.currentTarget)} aria-disabled={!canOpenStaffProfileTab('unavailable')} className={tabBtnClass('unavailable', canOpenStaffProfileTab('unavailable'))}>Unavailable</button>
+                <button data-neo-guide="staff-availability-tab" onClick={(event) => handleTabClick('unavailable', event.currentTarget)} aria-disabled={!canOpenStaffProfileTab('unavailable')} className={tabBtnClass('unavailable', canOpenStaffProfileTab('unavailable'))}>Unavailable</button>
                 <button onClick={(event) => handleTabClick('currency', event.currentTarget)} aria-disabled={!canOpenStaffProfileTab('currency')} className={tabBtnClass('currency', canOpenStaffProfileTab('currency'))}>Currency</button>
                 <button onClick={(event) => handleTabClick('logbook', event.currentTarget)} aria-disabled={!canOpenStaffProfileTab('logbook')} className={tabBtnClass('logbook', canOpenStaffProfileTab('logbook'))}>Logbook</button>
                 <button onClick={(event) => handleTabClick('sct', event.currentTarget)} aria-disabled={!canOpenStaffProfileTab('sct')} className={tabBtnClass('sct', canOpenStaffProfileTab('sct'))}>Request {continuationShortLabel}</button>
