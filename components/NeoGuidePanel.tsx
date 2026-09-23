@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useRef, useState } from 'react';
 import {
   answerNeoGuideQuestion,
   NeoGuideAnswer,
+  NeoGuideConversationState,
   NeoGuideNavigationAction,
   NeoGuideRuntimeModel,
 } from '../utils/neoGuideEngine';
@@ -56,6 +57,7 @@ const NeoGuidePanel: React.FC<NeoGuidePanelProps> = ({
   const [model, setModel] = useState<NeoGuideRuntimeModel | null>(null);
   const [loadError, setLoadError] = useState('');
   const [question, setQuestion] = useState('');
+  const [conversation, setConversation] = useState<NeoGuideConversationState | null>(null);
   const [messages, setMessages] = useState<GuideMessage[]>([
     {
       id: 'welcome',
@@ -104,7 +106,9 @@ const NeoGuidePanel: React.FC<NeoGuidePanelProps> = ({
       page: activeView,
       selectedRecordLabel,
       userPermissions,
+      conversation,
     });
+    setConversation(answer.conversation);
     setMessages((current) => [
       ...current,
       { id: `user-${Date.now()}`, role: 'user', text: trimmed },

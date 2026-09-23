@@ -1,6 +1,6 @@
 {
   "schemaVersion": "neo-guide-runtime-model.v1",
-  "generatedAt": "2026-09-23T14:58:45.734Z",
+  "generatedAt": "2026-09-23T15:10:50.773Z",
   "source": {
     "repository": "clone-the-repo-dagde-dfp-neo",
     "sourceFileCount": 377,
@@ -9528,7 +9528,7 @@
       "id": "neo-guide-panel",
       "tagName": "section",
       "file": "components/NeoGuidePanel.tsx",
-      "line": 149
+      "line": 153
     },
     {
       "id": "nav-duty-pilot",
@@ -114362,7 +114362,7 @@
       "auditStatus": "IMPLEMENTED - extracted from JSX control"
     },
     {
-      "id": "function.control-components-neoguidepanel-tsx-close-159",
+      "id": "function.control-components-neoguidepanel-tsx-close-163",
       "name": "Close",
       "aliases": [
         "Close"
@@ -114372,7 +114372,7 @@
         "route": null,
         "component": "components/NeoGuidePanel.tsx",
         "anchor": null,
-        "line": 159
+        "line": 163
       },
       "purpose": "button control in components/NeoGuidePanel.tsx. Purpose requires manual enrichment where not evident from implementation.",
       "inputs": [],
@@ -114386,7 +114386,7 @@
       "auditStatus": "IMPLEMENTED - extracted from JSX control"
     },
     {
-      "id": "function.control-components-neoguidepanel-tsx-message-action-label-185",
+      "id": "function.control-components-neoguidepanel-tsx-message-action-label-189",
       "name": "message.action.label",
       "aliases": [
         "message.action.label"
@@ -114396,7 +114396,7 @@
         "route": null,
         "component": "components/NeoGuidePanel.tsx",
         "anchor": null,
-        "line": 185
+        "line": 189
       },
       "purpose": "button control in components/NeoGuidePanel.tsx. Purpose requires manual enrichment where not evident from implementation.",
       "inputs": [],
@@ -114410,7 +114410,7 @@
       "auditStatus": "IMPLEMENTED - extracted from JSX control"
     },
     {
-      "id": "function.control-components-neoguidepanel-tsx-model-ask-how-to-do-something-loading-neo-guide-199",
+      "id": "function.control-components-neoguidepanel-tsx-model-ask-how-to-do-something-loading-neo-guide-203",
       "name": "model ? 'Ask how to do something...' : 'Loading NEO Guide...'",
       "aliases": [
         "model ? 'Ask how to do something...' : 'Loading NEO Guide...'"
@@ -114420,7 +114420,7 @@
         "route": null,
         "component": "components/NeoGuidePanel.tsx",
         "anchor": null,
-        "line": 199
+        "line": 203
       },
       "purpose": "input control in components/NeoGuidePanel.tsx. Purpose requires manual enrichment where not evident from implementation.",
       "inputs": [
@@ -114449,7 +114449,7 @@
       "auditStatus": "IMPLEMENTED - extracted from JSX control"
     },
     {
-      "id": "function.control-components-neoguidepanel-tsx-ask-207",
+      "id": "function.control-components-neoguidepanel-tsx-ask-211",
       "name": "Ask",
       "aliases": [
         "Ask"
@@ -114459,7 +114459,7 @@
         "route": null,
         "component": "components/NeoGuidePanel.tsx",
         "anchor": null,
-        "line": 207
+        "line": 211
       },
       "purpose": "button control in components/NeoGuidePanel.tsx. Purpose requires manual enrichment where not evident from implementation.",
       "inputs": [],
@@ -218325,10 +218325,10 @@
         "line": 3924
       },
       {
-        "id": "message.components-neoguidepanel-tsx.rounded-md-border-border-orange-300-60-bg-orange-500-px-3-py-2-text-sm-font-black-text-slate-950.210",
+        "id": "message.components-neoguidepanel-tsx.rounded-md-border-border-orange-300-60-bg-orange-500-px-3-py-2-text-sm-font-black-text-slate-950.214",
         "text": "rounded-md border border-orange-300/60 bg-orange-500 px-3 py-2 text-sm font-black text-slate-950 disabled:cursor-not-allowed disabled:opacity-45",
         "file": "components/NeoGuidePanel.tsx",
-        "line": 210
+        "line": 214
       },
       {
         "id": "message.components-nextdaybuildview-tsx.neo-assist-failed-to-drop-assist-tile.303",
@@ -229725,70 +229725,70 @@
         "line": 10
       },
       {
-        "id": "message.utils-neoguideengine-ts.permission.108",
+        "id": "message.utils-neoguideengine-ts.permission.118",
         "text": "PERMISSION",
         "file": "utils/neoGuideEngine.ts",
-        "line": 108
+        "line": 118
       },
       {
-        "id": "message.utils-neoguideengine-ts.disabled.124",
+        "id": "message.utils-neoguideengine-ts.disabled.134",
         "text": "disabled",
         "file": "utils/neoGuideEngine.ts",
-        "line": 124
+        "line": 134
       },
       {
-        "id": "message.utils-neoguideengine-ts.unavailable.124",
+        "id": "message.utils-neoguideengine-ts.unavailable.134",
         "text": "unavailable",
         "file": "utils/neoGuideEngine.ts",
-        "line": 124
+        "line": 134
       },
       {
-        "id": "message.utils-neoguideengine-ts.permission.127",
+        "id": "message.utils-neoguideengine-ts.permission.137",
         "text": "permission",
         "file": "utils/neoGuideEngine.ts",
-        "line": 127
+        "line": 137
       },
       {
-        "id": "message.utils-neoguideengine-ts.disabled.127",
+        "id": "message.utils-neoguideengine-ts.disabled.137",
         "text": "disabled",
         "file": "utils/neoGuideEngine.ts",
-        "line": 127
+        "line": 137
       },
       {
-        "id": "message.utils-neoguideengine-ts.conflict.130",
+        "id": "message.utils-neoguideengine-ts.conflict.140",
         "text": "conflict",
         "file": "utils/neoGuideEngine.ts",
-        "line": 130
+        "line": 140
       },
       {
-        "id": "message.utils-neoguideengine-ts.permission-visible.288",
+        "id": "message.utils-neoguideengine-ts.permission-visible.310",
         "text": "permission visible",
         "file": "utils/neoGuideEngine.ts",
-        "line": 288
+        "line": 310
       },
       {
-        "id": "message.utils-neoguideengine-ts.permission-may-be-restricted.288",
+        "id": "message.utils-neoguideengine-ts.permission-may-be-restricted.310",
         "text": "permission may be restricted",
         "file": "utils/neoGuideEngine.ts",
-        "line": 288
+        "line": 310
       },
       {
-        "id": "message.utils-neoguideengine-ts.permission.330",
+        "id": "message.utils-neoguideengine-ts.permission.392",
         "text": "PERMISSION",
         "file": "utils/neoGuideEngine.ts",
-        "line": 330
+        "line": 392
       },
       {
-        "id": "message.utils-neoguideengine-ts.the-relevant-page-permission.331",
+        "id": "message.utils-neoguideengine-ts.the-relevant-page-permission.393",
         "text": "the relevant page permission",
         "file": "utils/neoGuideEngine.ts",
-        "line": 331
+        "line": 393
       },
       {
-        "id": "message.utils-neoguideengine-ts.fn-name-is-controlled-by-permissiontext-if-it-is-disabled-check-the-user-role-and-permission-pro.332",
+        "id": "message.utils-neoguideengine-ts.fn-name-is-controlled-by-permissiontext-if-it-is-disabled-check-the-user-role-and-permission-pro.394",
         "text": "${fn.name} is controlled by ${permissionText}. If it is disabled, check the user role and permission profile for that function.",
         "file": "utils/neoGuideEngine.ts",
-        "line": 332
+        "line": 394
       },
       {
         "id": "message.utils-platformconfigservice-ts.staff-profile-unavailable-use.196",

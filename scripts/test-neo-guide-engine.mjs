@@ -51,6 +51,20 @@ assert.equal(answer.intent, 'HOW_TO');
 assert.equal(answer.navigationAction?.anchor, 'trainee-availability');
 assert.ok(!/\bAI\b|ChatGPT|Artificial Intelligence/i.test(answer.answer), 'Guide answer must not describe itself with prohibited assistant terms.');
 
+const staffFollowUp = ask('what about staff?', { conversation: answer.conversation });
+assert.equal(
+  staffFollowUp.matches[0]?.functionId,
+  'function.curated.people.staff-unavailability',
+  'Short follow-up should retain the unavailability topic and switch to staff.'
+);
+
+const referentialFollowUp = ask('where is that?', { conversation: answer.conversation });
+assert.equal(
+  referentialFollowUp.matches[0]?.functionId,
+  'function.curated.people.trainee-unavailability',
+  'Referential follow-up should preserve the previous matched function.'
+);
+
 const contextAnswer = ask('Where is this?', { page: 'Course Progress' });
 assert.ok(Array.isArray(contextAnswer.matches), 'Contextual answer should produce a match list.');
 

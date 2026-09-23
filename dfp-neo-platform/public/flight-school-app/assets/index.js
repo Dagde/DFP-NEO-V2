@@ -1435,6 +1435,7 @@ const AdminPanel = ({ sessionToken, currentUserId, onClose }) => {
 };
 const STOP_WORDS = /* @__PURE__ */ new Set([
   "a",
+  "about",
   "an",
   "and",
   "are",
@@ -1520,11 +1521,13 @@ const INTENT_HINTS = {
 function answerNeoGuideQuestion(question, model, context = {}) {
   const interpretation = interpretNeoGuideQuestion(question, model, context);
   const [best, second] = interpretation.matches;
+  const nextConversation = buildNextConversationState(best, interpretation.intent, interpretation.entities, context.conversation);
   if (!best) {
     return {
       ...interpretation,
       confidence: "low",
       answer: "I couldn't match that to a DFP-NEO function yet. Try naming the page, person, course, setting or action you are asking about.",
+      conversation: nextConversation,
       needsClarification: true,
       clarificationQuestion: "Which DFP-NEO area are you asking about?"
     };
@@ -1536,6 +1539,7 @@ function answerNeoGuideQuestion(question, model, context = {}) {
       confidence,
       answer: `I found a possible match: ${best.name}. I may need a little more context before giving a firm answer.`,
       navigationAction: buildNavigationAction(best),
+      conversation: nextConversation,
       needsClarification: true,
       clarificationQuestion: `Do you mean ${best.name}${second ? ` or ${second.name}` : ""}?`
     };
@@ -1544,13 +1548,16 @@ function answerNeoGuideQuestion(question, model, context = {}) {
     ...interpretation,
     confidence,
     answer: buildAnswerText(interpretation.intent, best),
-    navigationAction: buildNavigationAction(best)
+    navigationAction: buildNavigationAction(best),
+    conversation: nextConversation
   };
 }
 function interpretNeoGuideQuestion(question, model, context = {}) {
   const intent = detectIntent(question);
   const synonymMap = buildSynonymMap(model.curatedKnowledge?.synonyms || []);
-  const tokens = expandTokens(tokenize(question), synonymMap);
+  const rawTokens = tokenize(question);
+  const contextTokens = getConversationContextTokens(question, context.conversation);
+  const tokens = expandTokens([...rawTokens, ...contextTokens], synonymMap);
   const normalisedQuestion = normalise(question);
   const entities = extractLikelyEntities(question, tokens);
   const userPermissions = new Set(context.userPermissions || []);
@@ -1558,7 +1565,7 @@ function interpretNeoGuideQuestion(question, model, context = {}) {
     ...model.curatedKnowledge?.functions || [],
     ...(model.functions || []).filter((fn) => !String(fn.id || "").startsWith("function.curated."))
   ];
-  const matches = sourceFunctions.map((fn) => scoreFunction(fn, tokens, normalisedQuestion, intent, context, userPermissions)).filter((match) => match.score > 0).sort((left, right) => right.score - left.score).slice(0, 5);
+  const matches = sourceFunctions.map((fn) => scoreFunction(fn, tokens, rawTokens, normalisedQuestion, intent, context, userPermissions)).filter((match) => match.score > 0).sort((left, right) => right.score - left.score).slice(0, 5);
   return {
     intent,
     entities,
@@ -1573,7 +1580,7 @@ function detectIntent(question) {
   }
   return "UNKNOWN";
 }
-function scoreFunction(fn, tokens, normalisedQuestion, intent, context, userPermissions) {
+function scoreFunction(fn, tokens, rawTokens, normalisedQuestion, intent, context, userPermissions) {
   const haystackParts = [
     fn.name,
     ...fn.aliases || [],
@@ -1626,6 +1633,10 @@ function scoreFunction(fn, tokens, normalisedQuestion, intent, context, userPerm
     score += 3;
     reasons.push(`intent ${intent}`);
   }
+  if (context.conversation?.lastFunctionId && fn.id === context.conversation.lastFunctionId && isPreviousFunctionReference(normalisedQuestion)) {
+    score += 12;
+    reasons.push("previous topic");
+  }
   if (context.page && fn.location?.page && normalise(context.page) === normalise(fn.location.page)) {
     score += 3;
     reasons.push("current page");
@@ -1649,6 +1660,35 @@ function scoreFunction(fn, tokens, normalisedQuestion, intent, context, userPerm
     reasons: Array.from(new Set(reasons)).slice(0, 8),
     function: fn
   };
+}
+function buildNextConversationState(best, intent, entities, previous) {
+  if (!best) return previous || {};
+  const topic = [
+    best.function.name,
+    ...(best.function.aliases || []).slice(0, 4)
+  ].join(" ");
+  return {
+    topic,
+    lastFunctionId: best.functionId,
+    lastFunctionName: best.name,
+    lastIntent: intent,
+    lastEntities: entities.length > 0 ? entities : previous?.lastEntities || []
+  };
+}
+function getConversationContextTokens(question, conversation) {
+  if (!conversation?.topic) return [];
+  const rawTokens = tokenize(question);
+  const normalisedQuestion = normalise(question);
+  if (rawTokens.length > 4 && !isReferentialFollowUp(normalisedQuestion, rawTokens)) return [];
+  return tokenize(conversation.topic).filter((token) => !["staff", "trainee", "course", "dfp", "neo"].includes(token)).slice(0, 6);
+}
+function isReferentialFollowUp(normalisedQuestion, rawTokens) {
+  if (/\b(that|this|it|he|she|his|her|they|them|same|also)\b/.test(normalisedQuestion)) return true;
+  if (/^what about\b/.test(normalisedQuestion)) return true;
+  return rawTokens.length > 0 && rawTokens.length <= 3;
+}
+function isPreviousFunctionReference(normalisedQuestion) {
+  return /\b(that|this|it|he|she|his|her|they|them|same)\b/.test(normalisedQuestion);
 }
 function buildAnswerText(intent, match) {
   const fn = match.function;
@@ -1779,6 +1819,7 @@ const NeoGuidePanel = ({
   const [model, setModel] = reactExports.useState(null);
   const [loadError, setLoadError] = reactExports.useState("");
   const [question, setQuestion] = reactExports.useState("");
+  const [conversation, setConversation] = reactExports.useState(null);
   const [messages, setMessages] = reactExports.useState([
     {
       id: "welcome",
@@ -1818,8 +1859,10 @@ const NeoGuidePanel = ({
     if (!trimmed || !model) return;
     const answer = answerNeoGuideQuestion(trimmed, model, {
       page: activeView,
-      userPermissions
+      userPermissions,
+      conversation
     });
+    setConversation(answer.conversation);
     setMessages((current) => [
       ...current,
       { id: `user-${Date.now()}`, role: "user", text: trimmed },
