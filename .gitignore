@@ -77,3 +77,6 @@ debug*.html
 test*.html
 preview.html
 status.html
+
+# Local customer vocabulary extracted for NEO Guide review
+data/neo-guide/db-vocabulary.local.json

@@ -19,6 +19,7 @@
     "security:workbooks": "node scripts/security-workbook-report.mjs",
     "restore:adf304": "node scripts/restore-adf304-course.mjs",
     "neo-guide:audit": "node scripts/neo-guide-audit.mjs",
+    "neo-guide:db-vocabulary": "node scripts/neo-guide-db-vocabulary.mjs",
     "test:sun-times": "node scripts/test-sun-times.mjs",
     "git-sync": "node git-automation.js",
     "git-sync-once": "node git-sync-once.js",

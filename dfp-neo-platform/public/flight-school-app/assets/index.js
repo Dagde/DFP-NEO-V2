@@ -1846,6 +1846,20 @@ const highlightTarget = (target) => {
   return true;
 };
 const getActionTargetLabel = (action) => action.page || action.anchor || action.label || "that location";
+const mergeDatabaseVocabulary = (baseModel, databaseVocabulary) => {
+  const databaseTerms = Array.isArray(databaseVocabulary?.terminologyIndex) ? databaseVocabulary.terminologyIndex : [];
+  if (!databaseTerms.length) return baseModel;
+  return {
+    ...baseModel,
+    terminologyIndex: [
+      ...baseModel.terminologyIndex || [],
+      ...databaseTerms.map((entry) => ({
+        ...entry,
+        sources: entry.sources?.length ? entry.sources : ["customer-database-vocabulary"]
+      }))
+    ]
+  };
+};
 const NeoGuidePanel = ({
   isOpen,
   activeView,
@@ -1868,11 +1882,18 @@ const NeoGuidePanel = ({
   const inputRef = reactExports.useRef(null);
   reactExports.useEffect(() => {
     let cancelled = false;
-    fetch("/neo-guide/dfp-neo-knowledge-model.json", { cache: "no-store" }).then((response) => {
-      if (!response.ok) throw new Error(`HTTP ${response.status}`);
+    const fetchJson = (url, optional = false) => fetch(url, { cache: "no-store" }).then((response) => {
+      if (!response.ok) {
+        if (optional) return null;
+        throw new Error(`HTTP ${response.status}`);
+      }
       return response.json();
-    }).then((nextModel) => {
-      if (!cancelled) setModel(nextModel);
+    });
+    Promise.all([
+      fetchJson("/neo-guide/dfp-neo-knowledge-model.json"),
+      fetchJson("/neo-guide/db-vocabulary.json", true)
+    ]).then(([nextModel, databaseVocabulary]) => {
+      if (!cancelled) setModel(mergeDatabaseVocabulary(nextModel, databaseVocabulary));
     }).catch((error) => {
       if (!cancelled) setLoadError(error instanceof Error ? error.message : String(error));
     });

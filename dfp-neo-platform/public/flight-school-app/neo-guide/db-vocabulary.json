@@ -1,0 +1,28 @@
+{
+  "schemaVersion": "neo-guide-db-vocabulary.v1",
+  "generatedAt": "2026-09-23T23:57:34.129Z",
+  "source": {
+    "type": "customer-database-safe-vocabulary",
+    "databaseConnected": false,
+    "message": "Database scan skipped by --skip-db.",
+    "modelsScanned": 0,
+    "recordsScanned": 0,
+    "fieldsScanned": 0
+  },
+  "privacy": {
+    "mode": "allowlisted-operational-terms-only",
+    "excludes": [
+      "passwords",
+      "tokens",
+      "secrets",
+      "session identifiers",
+      "emails",
+      "phone numbers",
+      "personal names",
+      "free-text notes",
+      "usernames",
+      "raw schedule payloads"
+    ]
+  },
+  "terminologyIndex": []
+}
