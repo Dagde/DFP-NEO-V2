@@ -15,6 +15,7 @@ interface SidebarProps {
     onPublish: () => void;
     currentUserName: string;
     currentUserRank: string;
+    currentUserUnit?: string;
     instructorsList: Array<{name: string; rank: string; unit?: string; pin?: string}>;
     onUserChange: (userName: string) => void;
     school?: string;
@@ -31,7 +32,7 @@ const formatCourseName = (name: string): string => {
   return String(name || '').trim();
 };
 
-const Sidebar: React.FC<SidebarProps> = ({ activeView, onNavigate, courseColors, onAddCourse, onArchiveCourse, onNextDayBuildClick, onBuildDfpClick, isSupervisor, onPublish, currentUserName, currentUserRank, instructorsList, onUserChange, school, allTraineesData, canAccessView, canUsePlatformPermission, canOpenSelfScopedView, modelUnavailableViews = [], colourKeyItems = [], unreadMessageCount = 0 }) => {
+const Sidebar: React.FC<SidebarProps> = ({ activeView, onNavigate, courseColors, onAddCourse, onArchiveCourse, onNextDayBuildClick, onBuildDfpClick, isSupervisor, onPublish, currentUserName, currentUserRank, currentUserUnit, instructorsList, onUserChange, school, allTraineesData, canAccessView, canUsePlatformPermission, canOpenSelfScopedView, modelUnavailableViews = [], colourKeyItems = [], unreadMessageCount = 0 }) => {
   const [showAddCourseFlyout, setShowAddCourseFlyout] = useState(false);
   const [showRemoveCourseFlyout, setShowRemoveCourseFlyout] = useState(false);
   const [permissionNoticeRect, setPermissionNoticeRect] = useState<DOMRect | null>(null);
@@ -296,10 +297,15 @@ const Sidebar: React.FC<SidebarProps> = ({ activeView, onNavigate, courseColors,
           </div>
 
           {/* Footer */}
-          <div data-sidebar-user-footer="true" className="p-2 border-t border-gray-700 flex-shrink-0 flex justify-center items-center">
-            <span className="text-[10px] text-gray-500 font-light">
+          <div data-sidebar-user-footer="true" className="p-2 border-t border-gray-700 flex-shrink-0 flex flex-col items-start justify-center leading-tight">
+            <span className="max-w-full truncate text-[10px] text-gray-500 font-light">
               {currentUserRank} {currentUserName.split(',')[0]}
             </span>
+            {currentUserUnit && (
+              <span className="mt-0.5 max-w-full truncate text-[9px] font-light uppercase tracking-wide text-gray-500">
+                {currentUserUnit}
+              </span>
+            )}
           </div>
         </div>
       </aside>

@@ -55528,6 +55528,7 @@ appliedUpdates.forEach(update => {
                 onPublish={handlePublish}
                 currentUserName={currentUserName}
                 currentUserRank={sessionUser?.militaryRank || sessionUser?.role || currentUser?.rank || ''}
+                currentUserUnit={activeUnitCode || currentUser?.unit || ''}
                 instructorsList={instructorsData.map(inst => ({
                     name: inst.name,
                     rank: inst.rank,

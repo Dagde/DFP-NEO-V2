@@ -9675,7 +9675,7 @@ const PermissionNotice = ({
 const formatCourseName = (name) => {
   return String(name || "").trim();
 };
-const Sidebar = ({ activeView, onNavigate, courseColors, onAddCourse, onArchiveCourse, onNextDayBuildClick, onBuildDfpClick, isSupervisor, onPublish, currentUserName, currentUserRank, instructorsList, onUserChange, school, allTraineesData, canAccessView, canUsePlatformPermission, canOpenSelfScopedView, modelUnavailableViews = [], colourKeyItems = [], unreadMessageCount = 0 }) => {
+const Sidebar = ({ activeView, onNavigate, courseColors, onAddCourse, onArchiveCourse, onNextDayBuildClick, onBuildDfpClick, isSupervisor, onPublish, currentUserName, currentUserRank, currentUserUnit, instructorsList, onUserChange, school, allTraineesData, canAccessView, canUsePlatformPermission, canOpenSelfScopedView, modelUnavailableViews = [], colourKeyItems = [], unreadMessageCount = 0 }) => {
   const [showAddCourseFlyout, setShowAddCourseFlyout] = reactExports.useState(false);
   const [showRemoveCourseFlyout, setShowRemoveCourseFlyout] = reactExports.useState(false);
   const [permissionNoticeRect, setPermissionNoticeRect] = reactExports.useState(null);
@@ -9876,11 +9876,14 @@ const Sidebar = ({ activeView, onNavigate, courseColors, onAddCourse, onArchiveC
             /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "min-w-0 truncate text-left text-[9px] text-gray-300", children: item.label })
           ] }, item.key)) }) })
         ] }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { "data-sidebar-user-footer": "true", className: "p-2 border-t border-gray-700 flex-shrink-0 flex justify-center items-center", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "text-[10px] text-gray-500 font-light", children: [
-          currentUserRank,
-          " ",
-          currentUserName.split(",")[0]
-        ] }) })
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { "data-sidebar-user-footer": "true", className: "p-2 border-t border-gray-700 flex-shrink-0 flex flex-col items-start justify-center leading-tight", children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "max-w-full truncate text-[10px] text-gray-500 font-light", children: [
+            currentUserRank,
+            " ",
+            currentUserName.split(",")[0]
+          ] }),
+          currentUserUnit && /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "mt-0.5 max-w-full truncate text-[9px] font-light uppercase tracking-wide text-gray-500", children: currentUserUnit })
+        ] })
       ] })
     ] }),
     showAddCourseFlyout && /* @__PURE__ */ jsxRuntimeExports.jsx(
@@ -10080,7 +10083,6 @@ const RightSidebar = ({
     }
     showPermissionNotice(anchor);
   };
-  const userSurname = currentUserName.split(",")[0];
   return /* @__PURE__ */ jsxRuntimeExports.jsxs("aside", { className: "w-[110px] bg-gray-900 flex-shrink-0 flex flex-col border-l border-gray-700 relative", children: [
     isFrozen && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "absolute inset-0 z-50 bg-transparent cursor-not-allowed", style: { pointerEvents: "all" } }),
     /* @__PURE__ */ jsxRuntimeExports.jsxs("nav", { className: "flex-1 overflow-y-auto px-2 pt-2 pb-4 flex flex-col items-center gap-px", children: [
@@ -10175,12 +10177,25 @@ const RightSidebar = ({
         }
       ) })
     ] }),
-    /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { "data-sidebar-user-footer": "true", className: "flex-shrink-0 border-t border-gray-700 p-4 flex flex-col items-center justify-center", children: [
-      /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-[9px] text-gray-300 font-semibold", children: currentUserRank }),
-      /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-[9px] text-gray-300", children: userSurname }),
-      /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-[9px] text-gray-300", children: currentUserLocation || "N/A" }),
-      /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-[9px] text-gray-300", children: currentUserUnit || "N/A" })
-    ] }),
+    /* @__PURE__ */ jsxRuntimeExports.jsx("div", { "data-sidebar-user-footer": "true", className: "flex-shrink-0 border-t border-gray-700 p-4 flex items-center justify-center", children: /* @__PURE__ */ jsxRuntimeExports.jsx(
+      "button",
+      {
+        type: "button",
+        onClick: () => onNavigate("MyDashboard"),
+        title: "Open My Home",
+        "aria-label": "Open My Home",
+        className: "w-[75px] h-[55px] flex items-center justify-center rounded-md border border-slate-300/50 btn-aluminium-brushed p-1",
+        children: /* @__PURE__ */ jsxRuntimeExports.jsx(
+          "img",
+          {
+            src: "/dfp-neo-sidebar-icon.jpg",
+            alt: "",
+            "aria-hidden": "true",
+            className: "h-[44px] w-auto object-contain"
+          }
+        )
+      }
+    ) }),
     /* @__PURE__ */ jsxRuntimeExports.jsx(
       PermissionNotice,
       {
@@ -154734,6 +154749,7 @@ Do you want to replace the existing entry?`,
           onPublish: handlePublish,
           currentUserName,
           currentUserRank: sessionUser?.militaryRank || sessionUser?.role || currentUser2?.rank || "",
+          currentUserUnit: activeUnitCode || currentUser2?.unit || "",
           instructorsList: instructorsData.map((inst) => ({
             name: inst.name,
             rank: inst.rank,

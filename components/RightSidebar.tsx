@@ -85,9 +85,6 @@ const RightSidebar: React.FC<RightSidebarProps> = ({
     showPermissionNotice(anchor);
   };
 
-  // Extract surname from currentUserName (format: "Bloggs, Joe")
-  const userSurname = currentUserName.split(',')[0];
-
   return (
     <aside className="w-[110px] bg-gray-900 flex-shrink-0 flex flex-col border-l border-gray-700 relative">
       {/* Transparent freeze overlay — covers all buttons in right sidebar */}
@@ -188,12 +185,22 @@ const RightSidebar: React.FC<RightSidebarProps> = ({
 
       </nav>
 
-      {/* User Info Section - Bottom */}
-      <div data-sidebar-user-footer="true" className="flex-shrink-0 border-t border-gray-700 p-4 flex flex-col items-center justify-center">
-        <span className="text-[9px] text-gray-300 font-semibold">{currentUserRank}</span>
-        <span className="text-[9px] text-gray-300">{userSurname}</span>
-        <span className="text-[9px] text-gray-300">{currentUserLocation || 'N/A'}</span>
-        <span className="text-[9px] text-gray-300">{currentUserUnit || 'N/A'}</span>
+      {/* Footer Icon Button */}
+      <div data-sidebar-user-footer="true" className="flex-shrink-0 border-t border-gray-700 p-4 flex items-center justify-center">
+        <button
+          type="button"
+          onClick={() => onNavigate('MyDashboard')}
+          title="Open My Home"
+          aria-label="Open My Home"
+          className="w-[75px] h-[55px] flex items-center justify-center rounded-md border border-slate-300/50 btn-aluminium-brushed p-1"
+        >
+          <img
+            src="/dfp-neo-sidebar-icon.jpg"
+            alt=""
+            aria-hidden="true"
+            className="h-[44px] w-auto object-contain"
+          />
+        </button>
       </div>
       <PermissionNotice
         anchorRect={permissionNoticeRect}
