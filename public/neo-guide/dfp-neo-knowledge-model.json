@@ -1,6 +1,6 @@
 {
   "schemaVersion": "neo-guide-runtime-model.v1",
-  "generatedAt": "2026-09-23T22:17:53.873Z",
+  "generatedAt": "2026-09-23T23:30:40.300Z",
   "source": {
     "repository": "clone-the-repo-dagde-dfp-neo",
     "sourceFileCount": 377,
@@ -8569,7 +8569,7 @@
   "curatedKnowledge": {
     "schemaVersion": "neo-guide-enrichment.v1",
     "updatedAt": "2026-09-23T00:00:00.000Z",
-    "functionCount": 28,
+    "functionCount": 29,
     "conceptCount": 5,
     "synonymCount": 7,
     "functions": [
@@ -10021,6 +10021,57 @@
           "function.curated.duty-pilot.personnel-management"
         ],
         "auditStatus": "IMPLEMENTED - manually enriched from current implementation review"
+      },
+      {
+        "id": "function.curated.duty-pilot.flight-authorisation",
+        "name": "Flight authorisation",
+        "aliases": [
+          "authorise flight",
+          "authorize flight",
+          "auth a flight",
+          "auth flight",
+          "flight auth",
+          "flight authorisation",
+          "flight authorization",
+          "sign AUTHO",
+          "sign PIC",
+          "captain sign",
+          "verbal AUTH"
+        ],
+        "location": {
+          "page": "SupervisorDashboard",
+          "route": null,
+          "component": "components/AuthorisationFlyout.tsx",
+          "anchor": "duty-pilot-auth-window"
+        },
+        "purpose": "Records AUTHO and PIC/captain authorisation for a flight before it proceeds.",
+        "procedureSteps": [
+          "Open Duty Pilot.",
+          "Find the AUTH window.",
+          "Select the flight that requires authorisation, or click Go to Flight Authorisation.",
+          "Select the AUTHO and PIC/captain as required.",
+          "Use Sign for the required role and enter the authorised person's PIN.",
+          "Repeat until both AUTHO and PIC/captain signatures are recorded."
+        ],
+        "inputs": [],
+        "outputs": [
+          "Updates the flight tile with AUTHO and PIC/captain authorisation signatures, notes and timestamps."
+        ],
+        "permissions": [],
+        "dependencies": [
+          "Flight authorisation must be enabled for the unit, the flight must still require authorisation, and authorised staff/PIN details must be available."
+        ],
+        "businessRules": [
+          "A flight is fully authorised only when both AUTHO and PIC/captain signatures are recorded. Verbal AUTH can record a signer acting on behalf of the selected person."
+        ],
+        "failureConditions": [
+          "The Auth controls are disabled when flight authorisation is optional for the unit, the DFP is locked, the emergency freeze blocks authorisation, or the required signer/PIN is not available."
+        ],
+        "relatedFunctions": [
+          "function.curated.scheduling.flight-details",
+          "function.curated.duty-pilot.personnel-management"
+        ],
+        "auditStatus": "IMPLEMENTED - manually enriched from current implementation review"
       }
     ],
     "concepts": [
@@ -10478,10 +10529,22 @@
       "line": 272
     },
     {
+      "id": "duty-pilot-auth-window",
+      "tagName": "div",
+      "file": "components/SupervisorDashboard.tsx",
+      "line": 129
+    },
+    {
+      "id": "go-to-flight-authorisation",
+      "tagName": "button",
+      "file": "components/SupervisorDashboard.tsx",
+      "line": 165
+    },
+    {
       "id": "duty-pilot-personnel-management",
       "tagName": "div",
       "file": "components/SupervisorDashboard.tsx",
-      "line": 202
+      "line": 203
     },
     {
       "id": "trainee-availability",
@@ -11693,6 +11756,46 @@
         "Browser frame restrictions, provider CSP/X-Frame-Options, VPN/network policy or mixed-content restrictions can prevent the embedded tracker from displaying."
       ],
       "relatedFunctions": [
+        "function.curated.duty-pilot.personnel-management"
+      ],
+      "auditStatus": "IMPLEMENTED - manually enriched from current implementation review"
+    },
+    {
+      "id": "function.curated.duty-pilot.flight-authorisation",
+      "name": "Flight authorisation",
+      "aliases": [
+        "authorise flight",
+        "authorize flight",
+        "auth a flight",
+        "auth flight",
+        "flight auth",
+        "flight authorisation",
+        "flight authorization",
+        "sign AUTHO",
+        "sign PIC",
+        "captain sign",
+        "verbal AUTH"
+      ],
+      "location": {
+        "page": "SupervisorDashboard",
+        "route": null,
+        "component": "components/AuthorisationFlyout.tsx",
+        "anchor": "duty-pilot-auth-window"
+      },
+      "purpose": "Records AUTHO and PIC/captain authorisation for a flight before it proceeds.",
+      "inputs": [],
+      "outputs": [
+        "Updates the flight tile with AUTHO and PIC/captain authorisation signatures, notes and timestamps."
+      ],
+      "permissions": [],
+      "dependencies": [
+        "Flight authorisation must be enabled for the unit, the flight must still require authorisation, and authorised staff/PIN details must be available."
+      ],
+      "failureConditions": [
+        "The Auth controls are disabled when flight authorisation is optional for the unit, the DFP is locked, the emergency freeze blocks authorisation, or the required signer/PIN is not available."
+      ],
+      "relatedFunctions": [
+        "function.curated.scheduling.flight-details",
         "function.curated.duty-pilot.personnel-management"
       ],
       "auditStatus": "IMPLEMENTED - manually enriched from current implementation review"
@@ -177423,7 +177526,7 @@
         "page": "Supervisor Dashboard",
         "route": null,
         "component": "components/SupervisorDashboard.tsx",
-        "anchor": null,
+        "anchor": "go-to-flight-authorisation",
         "line": 165
       },
       "purpose": "button control in components/SupervisorDashboard.tsx. Purpose requires manual enrichment where not evident from implementation.",
@@ -177440,7 +177543,7 @@
       "auditStatus": "IMPLEMENTED - extracted from JSX control"
     },
     {
-      "id": "function.control-components-supervisordashboard-tsx-manage-staff-238",
+      "id": "function.control-components-supervisordashboard-tsx-manage-staff-239",
       "name": "Manage Staff",
       "aliases": [
         "Manage Staff"
@@ -177450,7 +177553,7 @@
         "route": null,
         "component": "components/SupervisorDashboard.tsx",
         "anchor": null,
-        "line": 238
+        "line": 239
       },
       "purpose": "button control in components/SupervisorDashboard.tsx. Purpose requires manual enrichment where not evident from implementation.",
       "inputs": [],
@@ -177464,7 +177567,7 @@
       "auditStatus": "IMPLEMENTED - extracted from JSX control"
     },
     {
-      "id": "function.control-components-supervisordashboard-tsx-manage-trainees-244",
+      "id": "function.control-components-supervisordashboard-tsx-manage-trainees-245",
       "name": "Manage Trainees",
       "aliases": [
         "Manage Trainees"
@@ -177474,7 +177577,7 @@
         "route": null,
         "component": "components/SupervisorDashboard.tsx",
         "anchor": null,
-        "line": 244
+        "line": 245
       },
       "purpose": "button control in components/SupervisorDashboard.tsx. Purpose requires manual enrichment where not evident from implementation.",
       "inputs": [],
@@ -222274,10 +222377,10 @@
         "line": 152
       },
       {
-        "id": "message.components-supervisordashboard-tsx.w-full-text-center-px-4-py-2-rounded-md-transition-colors-font-semibold-btn-green-brushed-flight.170",
+        "id": "message.components-supervisordashboard-tsx.w-full-text-center-px-4-py-2-rounded-md-transition-colors-font-semibold-btn-green-brushed-flight.171",
         "text": "w-full text-center px-4 py-2 rounded-md transition-colors font-semibold btn-green-brushed ${flightAuthorisationRequired ? '' : 'opacity-50 cursor-not-allowed'}",
         "file": "components/SupervisorDashboard.tsx",
-        "line": 170
+        "line": 171
       },
       {
         "id": "message.components-syllabusview-tsx.onclick-onsave-disabled-saving-classname.545",

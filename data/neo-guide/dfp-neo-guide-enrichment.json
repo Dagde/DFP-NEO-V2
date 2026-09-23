@@ -852,6 +852,34 @@
       "failureConditions": ["Browser frame restrictions, provider CSP/X-Frame-Options, VPN/network policy or mixed-content restrictions can prevent the embedded tracker from displaying."],
       "relatedFunctions": ["function.curated.duty-pilot.personnel-management"],
       "auditStatus": "IMPLEMENTED - manually enriched from current implementation review"
+    },
+    {
+      "id": "function.curated.duty-pilot.flight-authorisation",
+      "name": "Flight authorisation",
+      "aliases": ["authorise flight", "authorize flight", "auth a flight", "auth flight", "flight auth", "flight authorisation", "flight authorization", "sign AUTHO", "sign PIC", "captain sign", "verbal AUTH"],
+      "location": {
+        "page": "SupervisorDashboard",
+        "route": null,
+        "component": "components/AuthorisationFlyout.tsx",
+        "anchor": "duty-pilot-auth-window"
+      },
+      "purpose": "Records AUTHO and PIC/captain authorisation for a flight before it proceeds.",
+      "procedureSteps": [
+        "Open Duty Pilot.",
+        "Find the AUTH window.",
+        "Select the flight that requires authorisation, or click Go to Flight Authorisation.",
+        "Select the AUTHO and PIC/captain as required.",
+        "Use Sign for the required role and enter the authorised person's PIN.",
+        "Repeat until both AUTHO and PIC/captain signatures are recorded."
+      ],
+      "inputs": [],
+      "outputs": ["Updates the flight tile with AUTHO and PIC/captain authorisation signatures, notes and timestamps."],
+      "permissions": [],
+      "dependencies": ["Flight authorisation must be enabled for the unit, the flight must still require authorisation, and authorised staff/PIN details must be available."],
+      "businessRules": ["A flight is fully authorised only when both AUTHO and PIC/captain signatures are recorded. Verbal AUTH can record a signer acting on behalf of the selected person."],
+      "failureConditions": ["The Auth controls are disabled when flight authorisation is optional for the unit, the DFP is locked, the emergency freeze blocks authorisation, or the required signer/PIN is not available."],
+      "relatedFunctions": ["function.curated.scheduling.flight-details", "function.curated.duty-pilot.personnel-management"],
+      "auditStatus": "IMPLEMENTED - manually enriched from current implementation review"
     }
   ],
   "concepts": [

@@ -140,6 +140,16 @@ const autoNotificationAnswer = ask('who gets an auto message after a failed even
 assert.equal(autoNotificationAnswer.matches[0]?.functionId, 'function.curated.messaging.auto-notifications');
 assert.match(autoNotificationAnswer.answer, /Course Commander|Deputy Course Commander|DFP-NEO Alerts/i, 'Auto notification answer should explain recipient/source logic.');
 
+const authoriseFlightAnswer = ask('how can I authorise a flight');
+assert.equal(authoriseFlightAnswer.matches[0]?.functionId, 'function.curated.duty-pilot.flight-authorisation');
+assert.match(authoriseFlightAnswer.answer, /Open Duty Pilot/i, 'Flight authorisation answer should start from Duty Pilot.');
+assert.match(authoriseFlightAnswer.answer, /AUTHO/i, 'Flight authorisation answer should mention AUTHO.');
+assert.match(authoriseFlightAnswer.answer, /PIC|captain/i, 'Flight authorisation answer should mention PIC/captain.');
+
+const authFlightAnswer = ask('how do I auth a flight');
+assert.equal(authFlightAnswer.matches[0]?.functionId, 'function.curated.duty-pilot.flight-authorisation');
+assert.match(authFlightAnswer.answer, /PIN/i, 'Auth flight shorthand should resolve to flight authorisation steps.');
+
 const staffFollowUp = ask('what about staff?', { conversation: answer.conversation });
 assert.equal(
   staffFollowUp.matches[0]?.functionId,

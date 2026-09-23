@@ -68101,7 +68101,7 @@ const SupervisorDashboard = ({ instructorsData, traineesData, date, events, scho
       /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-lg text-gray-400", children: "Overview of personnel and program status for today." })
     ] }),
     /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex flex-wrap items-stretch gap-6", children: [
-      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex flex-col bg-gray-800 rounded-lg shadow-lg border border-gray-700 flex-1 min-w-[350px] max-w-md min-h-[34rem]", children: [
+      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { "data-neo-guide": "duty-pilot-auth-window", className: "flex flex-col bg-gray-800 rounded-lg shadow-lg border border-gray-700 flex-1 min-w-[350px] max-w-md min-h-[34rem]", children: [
         /* @__PURE__ */ jsxRuntimeExports.jsx("h2", { className: "p-4 text-lg font-semibold text-gray-200 border-b border-gray-700 text-center", children: "AUTH" }),
         /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "p-4 space-y-3 flex-1", children: flightsNeedingAuth.length > 0 ? /* @__PURE__ */ jsxRuntimeExports.jsx("ul", { className: "space-y-3", children: flightsNeedingAuth.map((event) => /* @__PURE__ */ jsxRuntimeExports.jsxs("li", { className: "flex items-center justify-between p-3 bg-gray-700/50 rounded-md", children: [
           /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center space-x-3", children: [
@@ -68131,6 +68131,7 @@ const SupervisorDashboard = ({ instructorsData, traineesData, date, events, scho
         /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "p-4 border-t border-gray-700", children: /* @__PURE__ */ jsxRuntimeExports.jsx(
           "button",
           {
+            "data-neo-guide": "go-to-flight-authorisation",
             onClick: () => {
               if (flightAuthorisationRequired) onNavigate("AUTH");
             },

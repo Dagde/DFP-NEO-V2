@@ -126,7 +126,7 @@ const SupervisorDashboard: React.FC<SupervisorDashboardProps> = ({ instructorsDa
                 {/* Top row: AUTH, TAF, and flight tracking */}
                 <div className="flex flex-wrap items-stretch gap-6">
                     {/* AUTH Window */}
-                    <div className="flex flex-col bg-gray-800 rounded-lg shadow-lg border border-gray-700 flex-1 min-w-[350px] max-w-md min-h-[34rem]">
+                    <div data-neo-guide="duty-pilot-auth-window" className="flex flex-col bg-gray-800 rounded-lg shadow-lg border border-gray-700 flex-1 min-w-[350px] max-w-md min-h-[34rem]">
                         <h2 className="p-4 text-lg font-semibold text-gray-200 border-b border-gray-700 text-center">
                             AUTH
                         </h2>
@@ -163,6 +163,7 @@ const SupervisorDashboard: React.FC<SupervisorDashboardProps> = ({ instructorsDa
                         </div>
                          <div className="p-4 border-t border-gray-700">
                             <button 
+                                data-neo-guide="go-to-flight-authorisation"
                                 onClick={() => {
                                     if (flightAuthorisationRequired) onNavigate('AUTH');
                                 }}
