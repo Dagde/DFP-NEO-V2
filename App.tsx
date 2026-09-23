@@ -28115,6 +28115,7 @@ const App: React.FC = () => {
         } catch (e) { /* ignore */ }
         return 'Program Schedule';
     });
+    const [showNeoGuidePanel, setShowNeoGuidePanel] = useState(false);
     const [courseRosterFocusCourse, setCourseRosterFocusCourse] = useState<string | null>(null);
     const [floatingDashboardWindows, setFloatingDashboardWindows] = useState<Record<FloatingDashboardWindowKind, boolean>>({
         MyDashboard: false,
@@ -55980,13 +55981,16 @@ appliedUpdates.forEach(update => {
                 canUsePlatformPermission={canUsePlatformPermission}
                 modelUnavailableViews={modelUnavailableRightViews}
                 operationalModel={activeOperationalModel}
+                onOpenNeoGuide={() => setShowNeoGuidePanel(value => !value)}
             />
             {isAuthenticated && (
                 <NeoGuidePanel
+                    isOpen={showNeoGuidePanel}
                     activeView={activeView}
                     selectedRecordLabel={selectedPersonForProfile?.name || selectedEvent?.displayTitle || selectedEvent?.flightNumber || ''}
                     canUsePlatformPermission={canUsePlatformPermission}
                     onNavigate={handleNavigation}
+                    onClose={() => setShowNeoGuidePanel(false)}
                 />
             )}
             {isAuthenticated && isViewingPastDfp && (

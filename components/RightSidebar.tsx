@@ -20,6 +20,7 @@ interface RightSidebarProps {
     canUsePlatformPermission?: (permissionId: string) => boolean;
     modelUnavailableViews?: string[];
     operationalModel?: string;
+    onOpenNeoGuide?: () => void;
 }
 
 const RightSidebar: React.FC<RightSidebarProps> = ({
@@ -39,6 +40,7 @@ const RightSidebar: React.FC<RightSidebarProps> = ({
     canUsePlatformPermission,
     modelUnavailableViews = [],
     operationalModel,
+    onOpenNeoGuide,
 }) => {
   const isFixedCrewModel = isFixedCrewLikeOperationalModel(operationalModel);
 
@@ -196,11 +198,11 @@ const RightSidebar: React.FC<RightSidebarProps> = ({
       {/* Footer Icon Button */}
       <div data-sidebar-user-footer="true" className="flex-shrink-0 border-t border-gray-700 p-4 flex items-center justify-center">
         <button
-          data-neo-guide="nav-my-home-icon"
+          data-neo-guide="neo-guide-toggle"
           type="button"
-          onClick={() => onNavigate('MyDashboard')}
-          title="Open My Home"
-          aria-label="Open My Home"
+          onClick={onOpenNeoGuide}
+          title="Open NEO Guide"
+          aria-label="Open NEO Guide"
           className="w-[75px] h-[55px] flex items-center justify-center rounded-md border border-slate-200/80 bg-[#030303] p-1 shadow-[inset_0_1px_0_rgba(255,255,255,0.34),inset_0_-1px_0_rgba(0,0,0,0.7),0_0_0_1px_rgba(110,118,129,0.28)]"
         >
           <img

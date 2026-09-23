@@ -7,10 +7,12 @@ import {
 } from '../utils/neoGuideEngine';
 
 interface NeoGuidePanelProps {
+  isOpen: boolean;
   activeView: string;
   selectedRecordLabel?: string;
   canUsePlatformPermission?: (permissionId: string) => boolean;
   onNavigate: (view: string) => void;
+  onClose: () => void;
 }
 
 interface GuideMessage {
@@ -44,12 +46,13 @@ const highlightTarget = (target?: string | null) => {
 };
 
 const NeoGuidePanel: React.FC<NeoGuidePanelProps> = ({
+  isOpen,
   activeView,
   selectedRecordLabel,
   canUsePlatformPermission,
   onNavigate,
+  onClose,
 }) => {
-  const [isOpen, setIsOpen] = useState(false);
   const [model, setModel] = useState<NeoGuideRuntimeModel | null>(null);
   const [loadError, setLoadError] = useState('');
   const [question, setQuestion] = useState('');
@@ -142,15 +145,6 @@ const NeoGuidePanel: React.FC<NeoGuidePanelProps> = ({
           100% { box-shadow: 0 0 0 5px rgba(251, 146, 60, 0.0), 0 0 0 rgba(251, 146, 60, 0.0); }
         }
       `}</style>
-      <button
-        type="button"
-        data-neo-guide="neo-guide-toggle"
-        onClick={() => setIsOpen((value) => !value)}
-        className="fixed bottom-5 right-[128px] z-[1400] rounded-md border border-orange-300/70 bg-slate-950/95 px-4 py-2 text-sm font-black text-orange-100 shadow-[0_14px_34px_rgba(0,0,0,0.38)] transition hover:border-orange-200 hover:bg-slate-900"
-      >
-        NEO Guide
-      </button>
-
       {isOpen && (
         <section
           data-neo-guide="neo-guide-panel"
@@ -164,7 +158,7 @@ const NeoGuidePanel: React.FC<NeoGuidePanelProps> = ({
             </div>
             <button
               type="button"
-              onClick={() => setIsOpen(false)}
+              onClick={onClose}
               className="rounded border border-slate-600 px-2 py-1 text-xs font-bold text-slate-300 hover:border-slate-400 hover:text-white"
             >
               Close

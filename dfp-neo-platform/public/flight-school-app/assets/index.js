@@ -1769,12 +1769,13 @@ const highlightTarget = (target) => {
   return true;
 };
 const NeoGuidePanel = ({
+  isOpen,
   activeView,
   selectedRecordLabel,
   canUsePlatformPermission,
-  onNavigate
+  onNavigate,
+  onClose
 }) => {
-  const [isOpen, setIsOpen] = reactExports.useState(false);
   const [model, setModel] = reactExports.useState(null);
   const [loadError, setLoadError] = reactExports.useState("");
   const [question, setQuestion] = reactExports.useState("");
@@ -1854,16 +1855,6 @@ const NeoGuidePanel = ({
           100% { box-shadow: 0 0 0 5px rgba(251, 146, 60, 0.0), 0 0 0 rgba(251, 146, 60, 0.0); }
         }
       ` }),
-    /* @__PURE__ */ jsxRuntimeExports.jsx(
-      "button",
-      {
-        type: "button",
-        "data-neo-guide": "neo-guide-toggle",
-        onClick: () => setIsOpen((value) => !value),
-        className: "fixed bottom-5 right-[128px] z-[1400] rounded-md border border-orange-300/70 bg-slate-950/95 px-4 py-2 text-sm font-black text-orange-100 shadow-[0_14px_34px_rgba(0,0,0,0.38)] transition hover:border-orange-200 hover:bg-slate-900",
-        children: "NEO Guide"
-      }
-    ),
     isOpen && /* @__PURE__ */ jsxRuntimeExports.jsxs(
       "section",
       {
@@ -1880,7 +1871,7 @@ const NeoGuidePanel = ({
               "button",
               {
                 type: "button",
-                onClick: () => setIsOpen(false),
+                onClick: onClose,
                 className: "rounded border border-slate-600 px-2 py-1 text-xs font-bold text-slate-300 hover:border-slate-400 hover:text-white",
                 children: "Close"
               }
@@ -10554,7 +10545,8 @@ const RightSidebar = ({
   canPublishDfp = true,
   canUsePlatformPermission,
   modelUnavailableViews = [],
-  operationalModel
+  operationalModel,
+  onOpenNeoGuide
 }) => {
   const isFixedCrewModel = isFixedCrewLikeOperationalModel(operationalModel);
   const { isFrozen } = useSystemFreeze();
@@ -10701,11 +10693,11 @@ const RightSidebar = ({
     /* @__PURE__ */ jsxRuntimeExports.jsx("div", { "data-sidebar-user-footer": "true", className: "flex-shrink-0 border-t border-gray-700 p-4 flex items-center justify-center", children: /* @__PURE__ */ jsxRuntimeExports.jsx(
       "button",
       {
-        "data-neo-guide": "nav-my-home-icon",
+        "data-neo-guide": "neo-guide-toggle",
         type: "button",
-        onClick: () => onNavigate("MyDashboard"),
-        title: "Open My Home",
-        "aria-label": "Open My Home",
+        onClick: onOpenNeoGuide,
+        title: "Open NEO Guide",
+        "aria-label": "Open NEO Guide",
         className: "w-[75px] h-[55px] flex items-center justify-center rounded-md border border-slate-200/80 bg-[#030303] p-1 shadow-[inset_0_1px_0_rgba(255,255,255,0.34),inset_0_-1px_0_rgba(0,0,0,0.7),0_0_0_1px_rgba(110,118,129,0.28)]",
         children: /* @__PURE__ */ jsxRuntimeExports.jsx(
           "img",
@@ -132794,6 +132786,7 @@ const App = () => {
     }
     return "Program Schedule";
   });
+  const [showNeoGuidePanel, setShowNeoGuidePanel] = reactExports.useState(false);
   const [courseRosterFocusCourse, setCourseRosterFocusCourse] = reactExports.useState(null);
   const [floatingDashboardWindows, setFloatingDashboardWindows] = reactExports.useState({
     MyDashboard: false,
@@ -155759,16 +155752,19 @@ Do you want to replace the existing entry?`,
           canPublishDfp,
           canUsePlatformPermission,
           modelUnavailableViews: modelUnavailableRightViews,
-          operationalModel: activeOperationalModel
+          operationalModel: activeOperationalModel,
+          onOpenNeoGuide: () => setShowNeoGuidePanel((value) => !value)
         }
       ),
       isAuthenticated && /* @__PURE__ */ jsxRuntimeExports.jsx(
         NeoGuidePanel,
         {
+          isOpen: showNeoGuidePanel,
           activeView,
           selectedRecordLabel: selectedPersonForProfile?.name || selectedEvent?.displayTitle || selectedEvent?.flightNumber || "",
           canUsePlatformPermission,
-          onNavigate: handleNavigation
+          onNavigate: handleNavigation,
+          onClose: () => setShowNeoGuidePanel(false)
         }
       ),
       isAuthenticated && isViewingPastDfp && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "fixed bottom-[168px] right-[18px] z-[100] flex w-[75px] justify-center", children: /* @__PURE__ */ jsxRuntimeExports.jsxs(

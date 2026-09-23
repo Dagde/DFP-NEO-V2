@@ -1,6 +1,6 @@
 {
   "schemaVersion": "neo-guide-runtime-model.v1",
-  "generatedAt": "2026-09-23T14:38:17.289Z",
+  "generatedAt": "2026-09-23T14:58:45.734Z",
   "source": {
     "repository": "clone-the-repo-dagde-dfp-neo",
     "sourceFileCount": 377,
@@ -9525,70 +9525,64 @@
       "line": 2565
     },
     {
-      "id": "neo-guide-toggle",
-      "tagName": "button",
-      "file": "components/NeoGuidePanel.tsx",
-      "line": 145
-    },
-    {
       "id": "neo-guide-panel",
       "tagName": "section",
       "file": "components/NeoGuidePanel.tsx",
-      "line": 155
+      "line": 149
     },
     {
       "id": "nav-duty-pilot",
       "tagName": "button",
       "file": "components/RightSidebar.tsx",
-      "line": 98
+      "line": 100
     },
     {
       "id": "nav-neo-build",
       "tagName": "button",
       "file": "components/RightSidebar.tsx",
-      "line": 115
+      "line": 117
     },
     {
       "id": "nav-program-schedule",
       "tagName": "button",
       "file": "components/RightSidebar.tsx",
-      "line": 127
+      "line": 129
     },
     {
       "id": "nav-staff-schedule",
       "tagName": "button",
       "file": "components/RightSidebar.tsx",
-      "line": 138
+      "line": 140
     },
     {
       "id": "nav-trainee-schedule",
       "tagName": "button",
       "file": "components/RightSidebar.tsx",
-      "line": 149
+      "line": 151
     },
     {
       "id": "action-publish-dfp",
       "tagName": "button",
       "file": "components/RightSidebar.tsx",
-      "line": 161
+      "line": 163
     },
     {
       "id": "nav-build-priorities",
       "tagName": "button",
       "file": "components/RightSidebar.tsx",
-      "line": 173
+      "line": 175
     },
     {
       "id": "nav-build-intelligence",
       "tagName": "button",
       "file": "components/RightSidebar.tsx",
-      "line": 184
+      "line": 186
     },
     {
-      "id": "nav-my-home-icon",
+      "id": "neo-guide-toggle",
       "tagName": "button",
       "file": "components/RightSidebar.tsx",
-      "line": 198
+      "line": 200
     },
     {
       "id": "initial-setup-wizard-panel",
@@ -67435,7 +67429,7 @@
       "auditStatus": "IMPLEMENTED - extracted from JSX control"
     },
     {
-      "id": "function.control-app-tsx-back-54391",
+      "id": "function.control-app-tsx-back-54392",
       "name": "Back",
       "aliases": [
         "Back"
@@ -67445,7 +67439,7 @@
         "route": null,
         "component": "App.tsx",
         "anchor": null,
-        "line": 54391
+        "line": 54392
       },
       "purpose": "button control in App.tsx. Purpose requires manual enrichment where not evident from implementation.",
       "inputs": [],
@@ -67589,7 +67583,7 @@
       "auditStatus": "IMPLEMENTED - extracted from JSX control"
     },
     {
-      "id": "function.control-app-tsx-back-to-dashboard-54677",
+      "id": "function.control-app-tsx-back-to-dashboard-54678",
       "name": "Back to Dashboard",
       "aliases": [
         "Back to Dashboard"
@@ -67599,7 +67593,7 @@
         "route": null,
         "component": "App.tsx",
         "anchor": null,
-        "line": 54677
+        "line": 54678
       },
       "purpose": "button control in App.tsx. Purpose requires manual enrichment where not evident from implementation.",
       "inputs": [],
@@ -67743,7 +67737,7 @@
       "auditStatus": "IMPLEMENTED - extracted from JSX control"
     },
     {
-      "id": "function.control-app-tsx-showdfpsidepanel-close-dfp-side-panel-open-dfp-side-panel-55692",
+      "id": "function.control-app-tsx-showdfpsidepanel-close-dfp-side-panel-open-dfp-side-panel-55693",
       "name": "showDfpSidePanel ? 'Close DFP side panel' : 'Open DFP side panel'",
       "aliases": [
         "showDfpSidePanel ? 'Close DFP side panel' : 'Open DFP side panel'"
@@ -67753,7 +67747,7 @@
         "route": null,
         "component": "App.tsx",
         "anchor": null,
-        "line": 55692
+        "line": 55693
       },
       "purpose": "button control in App.tsx. Purpose requires manual enrichment where not evident from implementation.",
       "inputs": [],
@@ -67897,7 +67891,7 @@
       "auditStatus": "IMPLEMENTED - extracted from JSX control"
     },
     {
-      "id": "function.control-app-tsx-open-the-archive-health-report-for-this-dfp-date-55994",
+      "id": "function.control-app-tsx-open-the-archive-health-report-for-this-dfp-date-55998",
       "name": "Open the archive health report for this DFP date",
       "aliases": [
         "Open the archive health report for this DFP date"
@@ -67907,7 +67901,7 @@
         "route": null,
         "component": "App.tsx",
         "anchor": null,
-        "line": 55994
+        "line": 55998
       },
       "purpose": "button control in App.tsx. Purpose requires manual enrichment where not evident from implementation.",
       "inputs": [],
@@ -68051,7 +68045,7 @@
       "auditStatus": "IMPLEMENTED - extracted from JSX control"
     },
     {
-      "id": "function.control-app-tsx-temporary-56271",
+      "id": "function.control-app-tsx-temporary-56275",
       "name": "Temporary",
       "aliases": [
         "Temporary"
@@ -68061,7 +68055,7 @@
         "route": null,
         "component": "App.tsx",
         "anchor": null,
-        "line": 56271
+        "line": 56275
       },
       "purpose": "label control in App.tsx. Purpose requires manual enrichment where not evident from implementation.",
       "inputs": [],
@@ -68203,7 +68197,7 @@
       "auditStatus": "IMPLEMENTED - extracted from JSX control"
     },
     {
-      "id": "function.control-app-tsx-event-only-note-56273",
+      "id": "function.control-app-tsx-event-only-note-56277",
       "name": "Event-only note...",
       "aliases": [
         "Event-only note..."
@@ -68213,7 +68207,7 @@
         "route": null,
         "component": "App.tsx",
         "anchor": null,
-        "line": 56273
+        "line": 56277
       },
       "purpose": "textarea control in App.tsx. Purpose requires manual enrichment where not evident from implementation.",
       "inputs": [
@@ -68368,7 +68362,7 @@
       "auditStatus": "IMPLEMENTED - extracted from JSX control"
     },
     {
-      "id": "function.control-app-tsx-enduring-56280",
+      "id": "function.control-app-tsx-enduring-56284",
       "name": "Enduring",
       "aliases": [
         "Enduring"
@@ -68378,7 +68372,7 @@
         "route": null,
         "component": "App.tsx",
         "anchor": null,
-        "line": 56280
+        "line": 56284
       },
       "purpose": "label control in App.tsx. Purpose requires manual enrichment where not evident from implementation.",
       "inputs": [],
@@ -68520,7 +68514,7 @@
       "auditStatus": "IMPLEMENTED - extracted from JSX control"
     },
     {
-      "id": "function.control-app-tsx-trainee-profile-note-56282",
+      "id": "function.control-app-tsx-trainee-profile-note-56286",
       "name": "Trainee profile note...",
       "aliases": [
         "Trainee profile note..."
@@ -68530,7 +68524,7 @@
         "route": null,
         "component": "App.tsx",
         "anchor": null,
-        "line": 56282
+        "line": 56286
       },
       "purpose": "textarea control in App.tsx. Purpose requires manual enrichment where not evident from implementation.",
       "inputs": [
@@ -68689,7 +68683,7 @@
       "auditStatus": "IMPLEMENTED - extracted from JSX control"
     },
     {
-      "id": "function.control-app-tsx-cancel-56297",
+      "id": "function.control-app-tsx-cancel-56301",
       "name": "Cancel",
       "aliases": [
         "Cancel"
@@ -68699,7 +68693,7 @@
         "route": null,
         "component": "App.tsx",
         "anchor": null,
-        "line": 56297
+        "line": 56301
       },
       "purpose": "button control in App.tsx. Purpose requires manual enrichment where not evident from implementation.",
       "inputs": [],
@@ -68843,7 +68837,7 @@
       "auditStatus": "IMPLEMENTED - extracted from JSX control"
     },
     {
-      "id": "function.control-app-tsx-clear-56304",
+      "id": "function.control-app-tsx-clear-56308",
       "name": "Clear",
       "aliases": [
         "Clear"
@@ -68853,7 +68847,7 @@
         "route": null,
         "component": "App.tsx",
         "anchor": null,
-        "line": 56304
+        "line": 56308
       },
       "purpose": "button control in App.tsx. Purpose requires manual enrichment where not evident from implementation.",
       "inputs": [],
@@ -68997,7 +68991,7 @@
       "auditStatus": "IMPLEMENTED - extracted from JSX control"
     },
     {
-      "id": "function.control-app-tsx-save-56313",
+      "id": "function.control-app-tsx-save-56317",
       "name": "Save",
       "aliases": [
         "Save"
@@ -69007,7 +69001,7 @@
         "route": null,
         "component": "App.tsx",
         "anchor": null,
-        "line": 56313
+        "line": 56317
       },
       "purpose": "button control in App.tsx. Purpose requires manual enrichment where not evident from implementation.",
       "inputs": [],
@@ -69151,7 +69145,7 @@
       "auditStatus": "IMPLEMENTED - extracted from JSX control"
     },
     {
-      "id": "function.control-app-tsx-time-shift-keep-crew-change-time-56343",
+      "id": "function.control-app-tsx-time-shift-keep-crew-change-time-56347",
       "name": "Time Shift Keep crew, change time",
       "aliases": [
         "Time Shift Keep crew, change time"
@@ -69161,7 +69155,7 @@
         "route": null,
         "component": "App.tsx",
         "anchor": null,
-        "line": 56343
+        "line": 56347
       },
       "purpose": "button control in App.tsx. Purpose requires manual enrichment where not evident from implementation.",
       "inputs": [],
@@ -69305,7 +69299,7 @@
       "auditStatus": "IMPLEMENTED - extracted from JSX control"
     },
     {
-      "id": "function.control-app-tsx-change-crew-keep-time-change-instructor-56350",
+      "id": "function.control-app-tsx-change-crew-keep-time-change-instructor-56354",
       "name": "Change Crew Keep time, change instructor",
       "aliases": [
         "Change Crew Keep time, change instructor"
@@ -69315,7 +69309,7 @@
         "route": null,
         "component": "App.tsx",
         "anchor": null,
-        "line": 56350
+        "line": 56354
       },
       "purpose": "button control in App.tsx. Purpose requires manual enrichment where not evident from implementation.",
       "inputs": [],
@@ -69459,7 +69453,7 @@
       "auditStatus": "IMPLEMENTED - extracted from JSX control"
     },
     {
-      "id": "function.control-app-tsx-cancel-56396",
+      "id": "function.control-app-tsx-cancel-56400",
       "name": "Cancel",
       "aliases": [
         "Cancel"
@@ -69469,7 +69463,7 @@
         "route": null,
         "component": "App.tsx",
         "anchor": null,
-        "line": 56396
+        "line": 56400
       },
       "purpose": "button control in App.tsx. Purpose requires manual enrichment where not evident from implementation.",
       "inputs": [],
@@ -69613,7 +69607,7 @@
       "auditStatus": "IMPLEMENTED - extracted from JSX control"
     },
     {
-      "id": "function.control-app-tsx-change-crew-instead-56397",
+      "id": "function.control-app-tsx-change-crew-instead-56401",
       "name": "Change Crew Instead",
       "aliases": [
         "Change Crew Instead"
@@ -69623,7 +69617,7 @@
         "route": null,
         "component": "App.tsx",
         "anchor": null,
-        "line": 56397
+        "line": 56401
       },
       "purpose": "button control in App.tsx. Purpose requires manual enrichment where not evident from implementation.",
       "inputs": [],
@@ -69767,7 +69761,7 @@
       "auditStatus": "IMPLEMENTED - extracted from JSX control"
     },
     {
-      "id": "function.control-app-tsx-accept-time-change-56398",
+      "id": "function.control-app-tsx-accept-time-change-56402",
       "name": "Accept Time Change",
       "aliases": [
         "Accept Time Change"
@@ -69777,7 +69771,7 @@
         "route": null,
         "component": "App.tsx",
         "anchor": null,
-        "line": 56398
+        "line": 56402
       },
       "purpose": "button control in App.tsx. Purpose requires manual enrichment where not evident from implementation.",
       "inputs": [],
@@ -69921,7 +69915,7 @@
       "auditStatus": "IMPLEMENTED - extracted from JSX control"
     },
     {
-      "id": "function.control-app-tsx-close-56421",
+      "id": "function.control-app-tsx-close-56425",
       "name": "Close",
       "aliases": [
         "Close"
@@ -69931,7 +69925,7 @@
         "route": null,
         "component": "App.tsx",
         "anchor": null,
-        "line": 56421
+        "line": 56425
       },
       "purpose": "button control in App.tsx. Purpose requires manual enrichment where not evident from implementation.",
       "inputs": [],
@@ -70075,7 +70069,7 @@
       "auditStatus": "IMPLEMENTED - extracted from JSX control"
     },
     {
-      "id": "function.control-app-tsx-crew-label-56760",
+      "id": "function.control-app-tsx-crew-label-56764",
       "name": "crew.label",
       "aliases": [
         "crew.label"
@@ -70085,7 +70079,7 @@
         "route": null,
         "component": "App.tsx",
         "anchor": null,
-        "line": 56760
+        "line": 56764
       },
       "purpose": "label control in App.tsx. Purpose requires manual enrichment where not evident from implementation.",
       "inputs": [],
@@ -70227,7 +70221,7 @@
       "auditStatus": "IMPLEMENTED - extracted from JSX control"
     },
     {
-      "id": "function.control-app-tsx-input-56768",
+      "id": "function.control-app-tsx-input-56772",
       "name": "input",
       "aliases": [
         "input"
@@ -70237,7 +70231,7 @@
         "route": null,
         "component": "App.tsx",
         "anchor": null,
-        "line": 56768
+        "line": 56772
       },
       "purpose": "input control in App.tsx. Purpose requires manual enrichment where not evident from implementation.",
       "inputs": [
@@ -70392,7 +70386,7 @@
       "auditStatus": "IMPLEMENTED - extracted from JSX control"
     },
     {
-      "id": "function.control-app-tsx-assign-random-same-unit-crew-56782",
+      "id": "function.control-app-tsx-assign-random-same-unit-crew-56786",
       "name": "Assign random same-unit crew",
       "aliases": [
         "Assign random same-unit crew"
@@ -70402,7 +70396,7 @@
         "route": null,
         "component": "App.tsx",
         "anchor": null,
-        "line": 56782
+        "line": 56786
       },
       "purpose": "label control in App.tsx. Purpose requires manual enrichment where not evident from implementation.",
       "inputs": [],
@@ -70544,7 +70538,7 @@
       "auditStatus": "IMPLEMENTED - extracted from JSX control"
     },
     {
-      "id": "function.control-app-tsx-fixed-crew-random-choice-56787",
+      "id": "function.control-app-tsx-fixed-crew-random-choice-56791",
       "name": "fixed-crew-random-choice",
       "aliases": [
         "fixed-crew-random-choice"
@@ -70554,7 +70548,7 @@
         "route": null,
         "component": "App.tsx",
         "anchor": null,
-        "line": 56787
+        "line": 56791
       },
       "purpose": "input control in App.tsx. Purpose requires manual enrichment where not evident from implementation.",
       "inputs": [
@@ -70709,7 +70703,7 @@
       "auditStatus": "IMPLEMENTED - extracted from JSX control"
     },
     {
-      "id": "function.control-app-tsx-pause-build-56803",
+      "id": "function.control-app-tsx-pause-build-56807",
       "name": "Pause Build",
       "aliases": [
         "Pause Build"
@@ -70719,7 +70713,7 @@
         "route": null,
         "component": "App.tsx",
         "anchor": null,
-        "line": 56803
+        "line": 56807
       },
       "purpose": "button control in App.tsx. Purpose requires manual enrichment where not evident from implementation.",
       "inputs": [],
@@ -70863,7 +70857,7 @@
       "auditStatus": "IMPLEMENTED - extracted from JSX control"
     },
     {
-      "id": "function.control-app-tsx-continue-build-56810",
+      "id": "function.control-app-tsx-continue-build-56814",
       "name": "Continue Build",
       "aliases": [
         "Continue Build"
@@ -70873,7 +70867,7 @@
         "route": null,
         "component": "App.tsx",
         "anchor": null,
-        "line": 56810
+        "line": 56814
       },
       "purpose": "button control in App.tsx. Purpose requires manual enrichment where not evident from implementation.",
       "inputs": [],
@@ -71019,7 +71013,7 @@
       "auditStatus": "IMPLEMENTED - extracted from JSX control"
     },
     {
-      "id": "function.control-app-tsx-do-not-schedule-proposed-event-56867",
+      "id": "function.control-app-tsx-do-not-schedule-proposed-event-56871",
       "name": "Do Not Schedule Proposed Event",
       "aliases": [
         "Do Not Schedule Proposed Event"
@@ -71029,7 +71023,7 @@
         "route": null,
         "component": "App.tsx",
         "anchor": null,
-        "line": 56867
+        "line": 56871
       },
       "purpose": "button control in App.tsx. Purpose requires manual enrichment where not evident from implementation.",
       "inputs": [],
@@ -71173,7 +71167,7 @@
       "auditStatus": "IMPLEMENTED - extracted from JSX control"
     },
     {
-      "id": "function.control-app-tsx-remove-conflicting-event-s-56874",
+      "id": "function.control-app-tsx-remove-conflicting-event-s-56878",
       "name": "Remove Conflicting Event/s",
       "aliases": [
         "Remove Conflicting Event/s"
@@ -71183,7 +71177,7 @@
         "route": null,
         "component": "App.tsx",
         "anchor": null,
-        "line": 56874
+        "line": 56878
       },
       "purpose": "button control in App.tsx. Purpose requires manual enrichment where not evident from implementation.",
       "inputs": [],
@@ -71329,7 +71323,7 @@
       "auditStatus": "IMPLEMENTED - extracted from JSX control"
     },
     {
-      "id": "function.control-app-tsx-accept-conflict-56882",
+      "id": "function.control-app-tsx-accept-conflict-56886",
       "name": "Accept Conflict",
       "aliases": [
         "Accept Conflict"
@@ -71339,7 +71333,7 @@
         "route": null,
         "component": "App.tsx",
         "anchor": null,
-        "line": 56882
+        "line": 56886
       },
       "purpose": "button control in App.tsx. Purpose requires manual enrichment where not evident from implementation.",
       "inputs": [],
@@ -71483,7 +71477,7 @@
       "auditStatus": "IMPLEMENTED - extracted from JSX control"
     },
     {
-      "id": "function.control-app-tsx-retry-load-57000",
+      "id": "function.control-app-tsx-retry-load-57004",
       "name": "Retry Load",
       "aliases": [
         "Retry Load"
@@ -71493,7 +71487,7 @@
         "route": null,
         "component": "App.tsx",
         "anchor": null,
-        "line": 57000
+        "line": 57004
       },
       "purpose": "button control in App.tsx. Purpose requires manual enrichment where not evident from implementation.",
       "inputs": [],
@@ -71637,7 +71631,7 @@
       "auditStatus": "IMPLEMENTED - extracted from JSX control"
     },
     {
-      "id": "function.control-app-tsx-open-latest-saved-dfp-57008",
+      "id": "function.control-app-tsx-open-latest-saved-dfp-57012",
       "name": "Open Latest Saved DFP",
       "aliases": [
         "Open Latest Saved DFP"
@@ -71647,7 +71641,7 @@
         "route": null,
         "component": "App.tsx",
         "anchor": null,
-        "line": 57008
+        "line": 57012
       },
       "purpose": "button control in App.tsx. Purpose requires manual enrichment where not evident from implementation.",
       "inputs": [],
@@ -71791,7 +71785,7 @@
       "auditStatus": "IMPLEMENTED - extracted from JSX control"
     },
     {
-      "id": "function.control-app-tsx-download-dfp-data-trace-57016",
+      "id": "function.control-app-tsx-download-dfp-data-trace-57020",
       "name": "Download DFP Data Trace",
       "aliases": [
         "Download DFP Data Trace"
@@ -71801,7 +71795,7 @@
         "route": null,
         "component": "App.tsx",
         "anchor": null,
-        "line": 57016
+        "line": 57020
       },
       "purpose": "button control in App.tsx. Purpose requires manual enrichment where not evident from implementation.",
       "inputs": [],
@@ -71945,7 +71939,7 @@
       "auditStatus": "IMPLEMENTED - extracted from JSX control"
     },
     {
-      "id": "function.control-app-tsx-retry-loading-the-dfp-for-this-date-57076",
+      "id": "function.control-app-tsx-retry-loading-the-dfp-for-this-date-57080",
       "name": "Retry loading the DFP for this date",
       "aliases": [
         "Retry loading the DFP for this date"
@@ -71955,7 +71949,7 @@
         "route": null,
         "component": "App.tsx",
         "anchor": null,
-        "line": 57076
+        "line": 57080
       },
       "purpose": "button control in App.tsx. Purpose requires manual enrichment where not evident from implementation.",
       "inputs": [],
@@ -72109,7 +72103,7 @@
         "route": null,
         "component": "App.tsx",
         "anchor": null,
-        "line": 57103
+        "line": 57107
       },
       "purpose": "button control in App.tsx. Purpose requires manual enrichment where not evident from implementation.",
       "inputs": [],
@@ -72253,7 +72247,7 @@
       "auditStatus": "IMPLEMENTED - extracted from JSX control"
     },
     {
-      "id": "function.control-app-tsx-manually-refresh-mobile-unavailability-and-alert-responses-57115",
+      "id": "function.control-app-tsx-manually-refresh-mobile-unavailability-and-alert-responses-57119",
       "name": "Manually refresh mobile unavailability and alert responses",
       "aliases": [
         "Manually refresh mobile unavailability and alert responses"
@@ -72263,7 +72257,7 @@
         "route": null,
         "component": "App.tsx",
         "anchor": null,
-        "line": 57115
+        "line": 57119
       },
       "purpose": "button control in App.tsx. Purpose requires manual enrichment where not evident from implementation.",
       "inputs": [],
@@ -114368,31 +114362,7 @@
       "auditStatus": "IMPLEMENTED - extracted from JSX control"
     },
     {
-      "id": "function.control-components-neoguidepanel-tsx-neo-guide-145",
-      "name": "NEO Guide",
-      "aliases": [
-        "NEO Guide"
-      ],
-      "location": {
-        "page": "Neo Guide Panel",
-        "route": null,
-        "component": "components/NeoGuidePanel.tsx",
-        "anchor": "neo-guide-toggle",
-        "line": 145
-      },
-      "purpose": "button control in components/NeoGuidePanel.tsx. Purpose requires manual enrichment where not evident from implementation.",
-      "inputs": [],
-      "outputs": [
-        "handler: () => setIsOpen((value) => !value)"
-      ],
-      "permissions": [],
-      "dependencies": [],
-      "failureConditions": [],
-      "relatedFunctions": [],
-      "auditStatus": "IMPLEMENTED - extracted from JSX control"
-    },
-    {
-      "id": "function.control-components-neoguidepanel-tsx-close-165",
+      "id": "function.control-components-neoguidepanel-tsx-close-159",
       "name": "Close",
       "aliases": [
         "Close"
@@ -114402,12 +114372,12 @@
         "route": null,
         "component": "components/NeoGuidePanel.tsx",
         "anchor": null,
-        "line": 165
+        "line": 159
       },
       "purpose": "button control in components/NeoGuidePanel.tsx. Purpose requires manual enrichment where not evident from implementation.",
       "inputs": [],
       "outputs": [
-        "handler: () => setIsOpen(false)"
+        "handler: onClose"
       ],
       "permissions": [],
       "dependencies": [],
@@ -114416,7 +114386,7 @@
       "auditStatus": "IMPLEMENTED - extracted from JSX control"
     },
     {
-      "id": "function.control-components-neoguidepanel-tsx-message-action-label-191",
+      "id": "function.control-components-neoguidepanel-tsx-message-action-label-185",
       "name": "message.action.label",
       "aliases": [
         "message.action.label"
@@ -114426,7 +114396,7 @@
         "route": null,
         "component": "components/NeoGuidePanel.tsx",
         "anchor": null,
-        "line": 191
+        "line": 185
       },
       "purpose": "button control in components/NeoGuidePanel.tsx. Purpose requires manual enrichment where not evident from implementation.",
       "inputs": [],
@@ -114440,7 +114410,7 @@
       "auditStatus": "IMPLEMENTED - extracted from JSX control"
     },
     {
-      "id": "function.control-components-neoguidepanel-tsx-model-ask-how-to-do-something-loading-neo-guide-205",
+      "id": "function.control-components-neoguidepanel-tsx-model-ask-how-to-do-something-loading-neo-guide-199",
       "name": "model ? 'Ask how to do something...' : 'Loading NEO Guide...'",
       "aliases": [
         "model ? 'Ask how to do something...' : 'Loading NEO Guide...'"
@@ -114450,7 +114420,7 @@
         "route": null,
         "component": "components/NeoGuidePanel.tsx",
         "anchor": null,
-        "line": 205
+        "line": 199
       },
       "purpose": "input control in components/NeoGuidePanel.tsx. Purpose requires manual enrichment where not evident from implementation.",
       "inputs": [
@@ -114479,7 +114449,7 @@
       "auditStatus": "IMPLEMENTED - extracted from JSX control"
     },
     {
-      "id": "function.control-components-neoguidepanel-tsx-ask-213",
+      "id": "function.control-components-neoguidepanel-tsx-ask-207",
       "name": "Ask",
       "aliases": [
         "Ask"
@@ -114489,7 +114459,7 @@
         "route": null,
         "component": "components/NeoGuidePanel.tsx",
         "anchor": null,
-        "line": 213
+        "line": 207
       },
       "purpose": "button control in components/NeoGuidePanel.tsx. Purpose requires manual enrichment where not evident from implementation.",
       "inputs": [],
@@ -161635,7 +161605,7 @@
         "route": null,
         "component": "components/RightSidebar.tsx",
         "anchor": "nav-duty-pilot",
-        "line": 98
+        "line": 100
       },
       "purpose": "button control in components/RightSidebar.tsx. Purpose requires manual enrichment where not evident from implementation.",
       "inputs": [],
@@ -161666,7 +161636,7 @@
         "route": null,
         "component": "components/RightSidebar.tsx",
         "anchor": "nav-neo-build",
-        "line": 115
+        "line": 117
       },
       "purpose": "button control in components/RightSidebar.tsx. Purpose requires manual enrichment where not evident from implementation.",
       "inputs": [],
@@ -161687,7 +161657,7 @@
       "auditStatus": "IMPLEMENTED - extracted from JSX control"
     },
     {
-      "id": "function.control-components-rightsidebar-tsx-program-schedule-127",
+      "id": "function.control-components-rightsidebar-tsx-program-schedule-129",
       "name": "Program Schedule",
       "aliases": [
         "Program Schedule"
@@ -161697,7 +161667,7 @@
         "route": null,
         "component": "components/RightSidebar.tsx",
         "anchor": "nav-program-schedule",
-        "line": 127
+        "line": 129
       },
       "purpose": "button control in components/RightSidebar.tsx. Purpose requires manual enrichment where not evident from implementation.",
       "inputs": [],
@@ -161718,7 +161688,7 @@
       "auditStatus": "IMPLEMENTED - extracted from JSX control"
     },
     {
-      "id": "function.control-components-rightsidebar-tsx-staff-schedule-138",
+      "id": "function.control-components-rightsidebar-tsx-staff-schedule-140",
       "name": "Staff Schedule",
       "aliases": [
         "Staff Schedule"
@@ -161728,7 +161698,7 @@
         "route": null,
         "component": "components/RightSidebar.tsx",
         "anchor": "nav-staff-schedule",
-        "line": 138
+        "line": 140
       },
       "purpose": "button control in components/RightSidebar.tsx. Purpose requires manual enrichment where not evident from implementation.",
       "inputs": [],
@@ -161759,7 +161729,7 @@
         "route": null,
         "component": "components/RightSidebar.tsx",
         "anchor": "nav-trainee-schedule",
-        "line": 149
+        "line": 151
       },
       "purpose": "button control in components/RightSidebar.tsx. Purpose requires manual enrichment where not evident from implementation.",
       "inputs": [],
@@ -161790,7 +161760,7 @@
         "route": null,
         "component": "components/RightSidebar.tsx",
         "anchor": "action-publish-dfp",
-        "line": 161
+        "line": 163
       },
       "purpose": "button control in components/RightSidebar.tsx. Purpose requires manual enrichment where not evident from implementation.",
       "inputs": [],
@@ -161811,7 +161781,7 @@
       "auditStatus": "IMPLEMENTED - extracted from JSX control"
     },
     {
-      "id": "function.control-components-rightsidebar-tsx-button-173",
+      "id": "function.control-components-rightsidebar-tsx-button-175",
       "name": "button",
       "aliases": [
         "button"
@@ -161821,7 +161791,7 @@
         "route": null,
         "component": "components/RightSidebar.tsx",
         "anchor": "nav-build-priorities",
-        "line": 173
+        "line": 175
       },
       "purpose": "button control in components/RightSidebar.tsx. Purpose requires manual enrichment where not evident from implementation.",
       "inputs": [],
@@ -161842,7 +161812,7 @@
       "auditStatus": "IMPLEMENTED - extracted from JSX control"
     },
     {
-      "id": "function.control-components-rightsidebar-tsx-build-intelligence-184",
+      "id": "function.control-components-rightsidebar-tsx-build-intelligence-186",
       "name": "Build Intelligence",
       "aliases": [
         "Build Intelligence"
@@ -161852,7 +161822,7 @@
         "route": null,
         "component": "components/RightSidebar.tsx",
         "anchor": "nav-build-intelligence",
-        "line": 184
+        "line": 186
       },
       "purpose": "button control in components/RightSidebar.tsx. Purpose requires manual enrichment where not evident from implementation.",
       "inputs": [],
@@ -161873,22 +161843,22 @@
       "auditStatus": "IMPLEMENTED - extracted from JSX control"
     },
     {
-      "id": "function.control-components-rightsidebar-tsx-open-my-home-198",
-      "name": "Open My Home",
+      "id": "function.control-components-rightsidebar-tsx-open-neo-guide-200",
+      "name": "Open NEO Guide",
       "aliases": [
-        "Open My Home"
+        "Open NEO Guide"
       ],
       "location": {
         "page": "Right Sidebar",
         "route": null,
         "component": "components/RightSidebar.tsx",
-        "anchor": "nav-my-home-icon",
-        "line": 198
+        "anchor": "neo-guide-toggle",
+        "line": 200
       },
       "purpose": "button control in components/RightSidebar.tsx. Purpose requires manual enrichment where not evident from implementation.",
       "inputs": [],
       "outputs": [
-        "handler: () => onNavigate('MyDashboard')"
+        "handler: onOpenNeoGuide"
       ],
       "permissions": [
         "neo.programSchedule.view",
@@ -213693,2542 +213663,2542 @@
         "line": 28076
       },
       {
-        "id": "message.app-tsx.startup-platform-config-error.28331",
+        "id": "message.app-tsx.startup-platform-config-error.28332",
         "text": "startup:platform-config:error",
         "file": "App.tsx",
-        "line": 28331
+        "line": 28332
       },
       {
-        "id": "message.app-tsx.startup-audit-user-rank-error.29359",
+        "id": "message.app-tsx.startup-audit-user-rank-error.29360",
         "text": "startup:audit-user-rank:error",
         "file": "App.tsx",
-        "line": 29359
+        "line": 29360
       },
       {
-        "id": "message.app-tsx.dashboard-messages-fetch-failed-response-status.29666",
+        "id": "message.app-tsx.dashboard-messages-fetch-failed-response-status.29667",
         "text": "Dashboard messages fetch failed: ${response.status}",
         "file": "App.tsx",
-        "line": 29666
+        "line": 29667
       },
       {
-        "id": "message.app-tsx.unit-disabledreason.29822",
+        "id": "message.app-tsx.unit-disabledreason.29823",
         "text": ": unit.disabledReason ||",
         "file": "App.tsx",
-        "line": 29822
+        "line": 29823
       },
       {
-        "id": "message.app-tsx.no-suffix-required-for-this-value.30231",
+        "id": "message.app-tsx.no-suffix-required-for-this-value.30232",
         "text": "No suffix required for this value.",
         "file": "App.tsx",
-        "line": 30231
+        "line": 30232
       },
       {
-        "id": "message.app-tsx.unknown-error.30766",
+        "id": "message.app-tsx.unknown-error.30767",
         "text": "Unknown error",
-        "file": "App.tsx",
-        "line": 30766
-      },
-      {
-        "id": "message.app-tsx.syllabus-failed-to-load-syllabus.30767",
-        "text": "❌ [Syllabus] Failed to load syllabus:",
         "file": "App.tsx",
         "line": 30767
       },
       {
-        "id": "message.app-tsx.startup-syllabus-error.30770",
+        "id": "message.app-tsx.syllabus-failed-to-load-syllabus.30768",
+        "text": "❌ [Syllabus] Failed to load syllabus:",
+        "file": "App.tsx",
+        "line": 30768
+      },
+      {
+        "id": "message.app-tsx.startup-syllabus-error.30771",
         "text": "startup:syllabus:error",
         "file": "App.tsx",
-        "line": 30770
+        "line": 30771
       },
       {
-        "id": "message.app-tsx.failed-to-migrate-person-name-person-id-response-status.30897",
+        "id": "message.app-tsx.failed-to-migrate-person-name-person-id-response-status.30898",
         "text": "Failed to migrate ${person.name || person.id}: ${response.status}",
         "file": "App.tsx",
-        "line": 30897
+        "line": 30898
       },
       {
-        "id": "message.app-tsx.staffrole-failed-legacyfixedcrewroles-length-legacy-aea-role-migrations-failed.30904",
+        "id": "message.app-tsx.staffrole-failed-legacyfixedcrewroles-length-legacy-aea-role-migrations-failed.30905",
         "text": "[StaffRole] ${failed}/${legacyFixedCrewRoles.length} legacy AEA role migrations failed.",
         "file": "App.tsx",
-        "line": 30904
+        "line": 30905
       },
       {
-        "id": "message.app-tsx.automatic-startup-lmp-post-sync-is-disabled-for-startup-performance-scores-are-loaded-directly-f.30968",
+        "id": "message.app-tsx.automatic-startup-lmp-post-sync-is-disabled-for-startup-performance-scores-are-loaded-directly-f.30969",
         "text": "Automatic startup LMP POST sync is disabled for startup performance. Scores are loaded directly from the database.",
         "file": "App.tsx",
-        "line": 30968
+        "line": 30969
       },
       {
-        "id": "message.app-tsx.startup-lmp-hydrate-error.31052",
+        "id": "message.app-tsx.startup-lmp-hydrate-error.31053",
         "text": "startup:lmp-hydrate:error",
         "file": "App.tsx",
-        "line": 31052
+        "line": 31053
       },
       {
-        "id": "message.app-tsx.lmp-sync-backend-sync-failed-falling-back-to-direct-db-scores.31199",
+        "id": "message.app-tsx.lmp-sync-backend-sync-failed-falling-back-to-direct-db-scores.31200",
         "text": "[LMP Sync] Backend sync failed, falling back to direct DB scores...",
-        "file": "App.tsx",
-        "line": 31199
-      },
-      {
-        "id": "message.app-tsx.startup-lmp-sync-post-failed.31200",
-        "text": "startup:lmp-sync:post-failed",
         "file": "App.tsx",
         "line": 31200
       },
       {
-        "id": "message.app-tsx.lmp-sync-sync-error-falling-back-to-direct-db-scores.31226",
-        "text": "[LMP Sync] Sync error, falling back to direct DB scores:",
+        "id": "message.app-tsx.startup-lmp-sync-post-failed.31201",
+        "text": "startup:lmp-sync:post-failed",
         "file": "App.tsx",
-        "line": 31226
+        "line": 31201
       },
       {
-        "id": "message.app-tsx.startup-lmp-sync-error.31227",
-        "text": "startup:lmp-sync:error",
+        "id": "message.app-tsx.lmp-sync-sync-error-falling-back-to-direct-db-scores.31227",
+        "text": "[LMP Sync] Sync error, falling back to direct DB scores:",
         "file": "App.tsx",
         "line": 31227
       },
       {
-        "id": "message.app-tsx.initial-load-could-not-restore-missing-course-coursename-response-status.31367",
+        "id": "message.app-tsx.startup-lmp-sync-error.31228",
+        "text": "startup:lmp-sync:error",
+        "file": "App.tsx",
+        "line": 31228
+      },
+      {
+        "id": "message.app-tsx.initial-load-could-not-restore-missing-course-coursename-response-status.31368",
         "text": "[Initial Load] Could not restore missing course \"${courseName}\": ${response.status}",
         "file": "App.tsx",
-        "line": 31367
+        "line": 31368
       },
       {
-        "id": "message.app-tsx.initial-load-could-not-restore-missing-course-coursename.31370",
+        "id": "message.app-tsx.initial-load-could-not-restore-missing-course-coursename.31371",
         "text": "[Initial Load] Could not restore missing course \"${courseName}\":",
         "file": "App.tsx",
-        "line": 31370
+        "line": 31371
       },
       {
-        "id": "message.app-tsx.failed-to-load-initial-data.31413",
+        "id": "message.app-tsx.failed-to-load-initial-data.31414",
         "text": "❌ Failed to load initial data:",
-        "file": "App.tsx",
-        "line": 31413
-      },
-      {
-        "id": "message.app-tsx.startup-initial-data-error.31414",
-        "text": "startup:initial-data:error",
         "file": "App.tsx",
         "line": 31414
       },
       {
-        "id": "message.app-tsx.history-daily-snapshot-error.31527",
+        "id": "message.app-tsx.startup-initial-data-error.31415",
+        "text": "startup:initial-data:error",
+        "file": "App.tsx",
+        "line": 31415
+      },
+      {
+        "id": "message.app-tsx.history-daily-snapshot-error.31528",
         "text": "history:daily-snapshot-error",
         "file": "App.tsx",
-        "line": 31527
+        "line": 31528
       },
       {
-        "id": "message.app-tsx.recent-dfp-snapshots-load-on-demand-bulk-preload-is-disabled-for-startup-performance.31535",
+        "id": "message.app-tsx.recent-dfp-snapshots-load-on-demand-bulk-preload-is-disabled-for-startup-performance.31536",
         "text": "Recent DFP snapshots load on demand; bulk preload is disabled for startup performance.",
         "file": "App.tsx",
-        "line": 31535
+        "line": 31536
       },
       {
-        "id": "message.app-tsx.history-trainee-performance-error.31637",
+        "id": "message.app-tsx.history-trainee-performance-error.31638",
         "text": "history:trainee-performance:error",
         "file": "App.tsx",
-        "line": 31637
+        "line": 31638
       },
       {
-        "id": "message.app-tsx.history-load-error.31659",
+        "id": "message.app-tsx.history-load-error.31660",
         "text": "history:load-error",
         "file": "App.tsx",
-        "line": 31659
+        "line": 31660
       },
       {
-        "id": "message.app-tsx.snapshot-dates-error.31732",
+        "id": "message.app-tsx.snapshot-dates-error.31733",
         "text": "snapshot-dates:error",
         "file": "App.tsx",
-        "line": 31732
+        "line": 31733
       },
       {
-        "id": "message.app-tsx.snapshot-empty-cache-fallback-error.32196",
+        "id": "message.app-tsx.snapshot-empty-cache-fallback-error.32197",
         "text": "snapshot:empty-cache-fallback-error",
         "file": "App.tsx",
-        "line": 32196
+        "line": 32197
       },
       {
-        "id": "message.app-tsx.a-missing-database-snapshot-must-not-clear-a-dfp-date-that-may-still-exist-in-local-state-or-be-.32207",
+        "id": "message.app-tsx.a-missing-database-snapshot-must-not-clear-a-dfp-date-that-may-still-exist-in-local-state-or-be-.32208",
         "text": "A missing database snapshot must not clear a DFP date that may still exist in local state or be republished later.",
         "file": "App.tsx",
-        "line": 32207
+        "line": 32208
       },
       {
-        "id": "message.app-tsx.snapshot-request-failed-with-res-status.32228",
+        "id": "message.app-tsx.snapshot-request-failed-with-res-status.32229",
         "text": "Snapshot request failed with ${res.status}",
         "file": "App.tsx",
-        "line": 32228
+        "line": 32229
       },
       {
-        "id": "message.app-tsx.snapshot-attempt-error.32340",
+        "id": "message.app-tsx.snapshot-attempt-error.32341",
         "text": "snapshot:attempt-error",
         "file": "App.tsx",
-        "line": 32340
+        "line": 32341
       },
       {
-        "id": "message.app-tsx.snapshot-request-failed.32352",
+        "id": "message.app-tsx.snapshot-request-failed.32353",
         "text": "Snapshot request failed",
         "file": "App.tsx",
-        "line": 32352
+        "line": 32353
       },
       {
-        "id": "message.app-tsx.snapshot-load-error.32360",
+        "id": "message.app-tsx.snapshot-load-error.32361",
         "text": "snapshot:load-error",
         "file": "App.tsx",
-        "line": 32360
+        "line": 32361
       },
       {
-        "id": "message.app-tsx.dashboard-message-send-failed-response-status.33239",
+        "id": "message.app-tsx.dashboard-message-send-failed-response-status.33240",
         "text": "Dashboard message send failed (${response.status})",
         "file": "App.tsx",
-        "line": 33239
+        "line": 33240
       },
       {
-        "id": "message.app-tsx.traineename-received-faillabel-for-eventcode.33339",
+        "id": "message.app-tsx.traineename-received-faillabel-for-eventcode.33340",
         "text": "${traineeName} received ${failLabel} for ${eventCode}.",
         "file": "App.tsx",
-        "line": 33339
+        "line": 33340
       },
       {
-        "id": "message.app-tsx.save-failed-res-status.33394",
+        "id": "message.app-tsx.save-failed-res-status.33395",
         "text": "Save failed (${res.status})",
         "file": "App.tsx",
-        "line": 33394
+        "line": 33395
       },
       {
-        "id": "message.app-tsx.platformconfig-failed-to-save-unit-training-report-settings.33397",
+        "id": "message.app-tsx.platformconfig-failed-to-save-unit-training-report-settings.33398",
         "text": "[PlatformConfig] Failed to save unit training report settings:",
         "file": "App.tsx",
-        "line": 33397
+        "line": 33398
       },
       {
-        "id": "message.app-tsx.highestpriorityevents-failed-to-persist-events.34019",
+        "id": "message.app-tsx.highestpriorityevents-failed-to-persist-events.34020",
         "text": "[HighestPriorityEvents] Failed to persist events",
         "file": "App.tsx",
-        "line": 34019
+        "line": 34020
       },
       {
-        "id": "message.app-tsx.coursesettings-failed-to-load.34047",
+        "id": "message.app-tsx.coursesettings-failed-to-load.34048",
         "text": "[CourseSettings] Failed to load:",
         "file": "App.tsx",
-        "line": 34047
+        "line": 34048
       },
       {
-        "id": "message.app-tsx.excludedcourses-failed-to-save.34066",
+        "id": "message.app-tsx.excludedcourses-failed-to-save.34067",
         "text": "[ExcludedCourses] Failed to save:",
         "file": "App.tsx",
-        "line": 34066
+        "line": 34067
       },
       {
-        "id": "message.app-tsx.selectedacademiclmp-failed-to-save.34083",
+        "id": "message.app-tsx.selectedacademiclmp-failed-to-save.34084",
         "text": "[SelectedAcademicLmp] Failed to save:",
         "file": "App.tsx",
-        "line": 34083
+        "line": 34084
       },
       {
-        "id": "message.app-tsx.courseacademicprogress-failed-to-load.34104",
+        "id": "message.app-tsx.courseacademicprogress-failed-to-load.34105",
         "text": "[CourseAcademicProgress] Failed to load:",
         "file": "App.tsx",
-        "line": 34104
+        "line": 34105
       },
       {
-        "id": "message.app-tsx.courseacademicprogress-failed-to-save.34135",
+        "id": "message.app-tsx.courseacademicprogress-failed-to-save.34136",
         "text": "[CourseAcademicProgress] Failed to save:",
         "file": "App.tsx",
-        "line": 34135
+        "line": 34136
       },
       {
-        "id": "message.app-tsx.sct-requests-get-failed.34177",
+        "id": "message.app-tsx.sct-requests-get-failed.34178",
         "text": "SCT_REQUESTS_GET_FAILED",
         "file": "App.tsx",
-        "line": 34177
+        "line": 34178
       },
       {
-        "id": "message.app-tsx.continuation-failed-to-load-from-db.34182",
+        "id": "message.app-tsx.continuation-failed-to-load-from-db.34183",
         "text": "[CONTINUATION] Failed to load from DB:",
         "file": "App.tsx",
-        "line": 34182
+        "line": 34183
       },
       {
-        "id": "message.app-tsx.sct-requests-get-error.34275",
+        "id": "message.app-tsx.sct-requests-get-error.34276",
         "text": "SCT_REQUESTS_GET_ERROR",
         "file": "App.tsx",
-        "line": 34275
+        "line": 34276
       },
       {
-        "id": "message.app-tsx.continuation-failed-to-load-continuation-requests-from-db.34279",
+        "id": "message.app-tsx.continuation-failed-to-load-continuation-requests-from-db.34280",
         "text": "[CONTINUATION] Failed to load continuation requests from DB:",
         "file": "App.tsx",
-        "line": 34279
+        "line": 34280
       },
       {
-        "id": "message.app-tsx.continuation-failed-to-patch-owned-request.34307",
+        "id": "message.app-tsx.continuation-failed-to-patch-owned-request.34308",
         "text": "[CONTINUATION] Failed to patch owned request:",
         "file": "App.tsx",
-        "line": 34307
+        "line": 34308
       },
       {
-        "id": "message.app-tsx.continuation-failed-to-patch-owned-request.34310",
+        "id": "message.app-tsx.continuation-failed-to-patch-owned-request.34311",
         "text": "[CONTINUATION] Failed to patch owned request:",
         "file": "App.tsx",
-        "line": 34310
+        "line": 34311
       },
       {
-        "id": "message.app-tsx.continuation-failed-to-cancel-owned-request.34324",
+        "id": "message.app-tsx.continuation-failed-to-cancel-owned-request.34325",
         "text": "[CONTINUATION] Failed to cancel owned request:",
         "file": "App.tsx",
-        "line": 34324
+        "line": 34325
       },
       {
-        "id": "message.app-tsx.continuation-failed-to-cancel-owned-request.34327",
+        "id": "message.app-tsx.continuation-failed-to-cancel-owned-request.34328",
         "text": "[CONTINUATION] Failed to cancel owned request:",
         "file": "App.tsx",
-        "line": 34327
+        "line": 34328
       },
       {
-        "id": "message.app-tsx.av-failed-to-refresh-daily-availability-average-after-event.34438",
+        "id": "message.app-tsx.av-failed-to-refresh-daily-availability-average-after-event.34439",
         "text": "[AV] ❌ Failed to refresh daily availability average after event:",
         "file": "App.tsx",
-        "line": 34438
+        "line": 34439
       },
       {
-        "id": "message.app-tsx.av-request-failed-res-status-errtext.34445",
+        "id": "message.app-tsx.av-request-failed-res-status-errtext.34446",
         "text": "[AV] ❌ Request failed: ${res.status} ${errText}",
         "file": "App.tsx",
-        "line": 34445
+        "line": 34446
       },
       {
-        "id": "message.app-tsx.av-error-type.34451",
+        "id": "message.app-tsx.av-error-type.34452",
         "text": "[AV] ❌ Error type:",
-        "file": "App.tsx",
-        "line": 34451
-      },
-      {
-        "id": "message.app-tsx.av-error-message.34452",
-        "text": "[AV] ❌ Error message:",
         "file": "App.tsx",
         "line": 34452
       },
       {
-        "id": "message.app-tsx.av-error-stack.34453",
-        "text": "[AV] ❌ Error stack:",
+        "id": "message.app-tsx.av-error-message.34453",
+        "text": "[AV] ❌ Error message:",
         "file": "App.tsx",
         "line": 34453
       },
       {
-        "id": "message.app-tsx.json-parse-failed-response-is-not-json.34493",
+        "id": "message.app-tsx.av-error-stack.34454",
+        "text": "[AV] ❌ Error stack:",
+        "file": "App.tsx",
+        "line": 34454
+      },
+      {
+        "id": "message.app-tsx.json-parse-failed-response-is-not-json.34494",
         "text": "🧪 JSON parse failed - response is not JSON!",
         "file": "App.tsx",
-        "line": 34493
+        "line": 34494
       },
       {
-        "id": "message.app-tsx.debug-failed.34508",
+        "id": "message.app-tsx.debug-failed.34509",
         "text": "🧪 Debug failed:",
         "file": "App.tsx",
-        "line": 34508
+        "line": 34509
       },
       {
-        "id": "message.app-tsx.force-insert-failed.34536",
+        "id": "message.app-tsx.force-insert-failed.34537",
         "text": "🧪 Force insert failed:",
         "file": "App.tsx",
-        "line": 34536
+        "line": 34537
       },
       {
-        "id": "message.app-tsx.av-failed-to-fetch-current-availability.34592",
+        "id": "message.app-tsx.av-failed-to-fetch-current-availability.34593",
         "text": "[AV] ❌ Failed to fetch current availability:",
         "file": "App.tsx",
-        "line": 34592
+        "line": 34593
       },
       {
-        "id": "message.app-tsx.av-recovery-check-failed.34656",
+        "id": "message.app-tsx.av-recovery-check-failed.34657",
         "text": "[AV] Recovery check failed:",
         "file": "App.tsx",
-        "line": 34656
+        "line": 34657
       },
       {
-        "id": "message.app-tsx.unavailable.34758",
+        "id": "message.app-tsx.unavailable.34759",
         "text": "unavailable",
         "file": "App.tsx",
-        "line": 34758
+        "line": 34759
       },
       {
-        "id": "message.app-tsx.settings-failed-to-load-settings-from-db.35256",
+        "id": "message.app-tsx.settings-failed-to-load-settings-from-db.35257",
         "text": "[Settings] ❌ Failed to load settings from DB:",
-        "file": "App.tsx",
-        "line": 35256
-      },
-      {
-        "id": "message.app-tsx.startup-settings-error.35257",
-        "text": "startup:settings:error",
         "file": "App.tsx",
         "line": 35257
       },
       {
-        "id": "message.app-tsx.deploymentcount-event-has-invalid-date-format-skipping.35407",
+        "id": "message.app-tsx.startup-settings-error.35258",
+        "text": "startup:settings:error",
+        "file": "App.tsx",
+        "line": 35258
+      },
+      {
+        "id": "message.app-tsx.deploymentcount-event-has-invalid-date-format-skipping.35408",
         "text": "[DeploymentCount] Event has invalid date format, skipping:",
         "file": "App.tsx",
-        "line": 35407
+        "line": 35408
       },
       {
-        "id": "message.app-tsx.skipping-invalid-event.35515",
+        "id": "message.app-tsx.skipping-invalid-event.35516",
         "text": "Skipping invalid event:",
         "file": "App.tsx",
-        "line": 35515
+        "line": 35516
       },
       {
-        "id": "message.app-tsx.staffavailability-failed-to-read-neo-build-trace.36265",
+        "id": "message.app-tsx.staffavailability-failed-to-read-neo-build-trace.36266",
         "text": "[StaffAvailability] Failed to read NEO Build trace:",
         "file": "App.tsx",
-        "line": 36265
+        "line": 36266
       },
       {
-        "id": "message.app-tsx.eventsegmentsfordate-event-has-invalid-date-format-filtering-out.36361",
+        "id": "message.app-tsx.eventsegmentsfordate-event-has-invalid-date-format-filtering-out.36362",
         "text": "[eventSegmentsForDate] Event has invalid date format, filtering out:",
         "file": "App.tsx",
-        "line": 36361
+        "line": 36362
       },
       {
-        "id": "message.app-tsx.eventsegmentsfordate-event-has-invalid-date-skipping.36390",
+        "id": "message.app-tsx.eventsegmentsfordate-event-has-invalid-date-skipping.36391",
         "text": "[eventSegmentsForDate] Event has invalid date, skipping:",
         "file": "App.tsx",
-        "line": 36390
+        "line": 36391
       },
       {
-        "id": "message.app-tsx.neo-build-event-has-invalid-date-skipping.36566",
+        "id": "message.app-tsx.neo-build-event-has-invalid-date-skipping.36567",
         "text": "[NEO-Build] Event has invalid date, skipping:",
         "file": "App.tsx",
-        "line": 36566
+        "line": 36567
       },
       {
-        "id": "message.app-tsx.failed-to-save-callsign-for-instructor-name-response-status.36723",
+        "id": "message.app-tsx.failed-to-save-callsign-for-instructor-name-response-status.36724",
         "text": "Failed to save callsign for ${instructor.name}: ${response.status}",
         "file": "App.tsx",
-        "line": 36723
+        "line": 36724
       },
       {
-        "id": "message.app-tsx.checking-conflicts-for-continuation-formation-event-targetevent-id.36842",
+        "id": "message.app-tsx.checking-conflicts-for-continuation-formation-event-targetevent-id.36843",
         "text": "🔍 Checking conflicts for continuation formation event ${targetEvent.id}",
         "file": "App.tsx",
-        "line": 36842
+        "line": 36843
       },
       {
-        "id": "message.app-tsx.target-personnel-for-conflict-check.36924",
+        "id": "message.app-tsx.target-personnel-for-conflict-check.36925",
         "text": "Target personnel for conflict check:",
         "file": "App.tsx",
-        "line": 36924
+        "line": 36925
       },
       {
-        "id": "message.app-tsx.personnel-conflict-found.36938",
+        "id": "message.app-tsx.personnel-conflict-found.36939",
         "text": "❌ PERSONNEL CONFLICT FOUND!",
-        "file": "App.tsx",
-        "line": 36938
-      },
-      {
-        "id": "message.app-tsx.conflicting-with-event-event-id-event-flightnumber.36939",
-        "text": "Conflicting with event: ${event.id} (${event.flightNumber})",
         "file": "App.tsx",
         "line": 36939
       },
       {
-        "id": "message.app-tsx.day-night-separation-violation-personname-already-has-day-events-scheduled-and-cannot-be-assigne.37089",
+        "id": "message.app-tsx.conflicting-with-event-event-id-event-flightnumber.36940",
+        "text": "Conflicting with event: ${event.id} (${event.flightNumber})",
+        "file": "App.tsx",
+        "line": 36940
+      },
+      {
+        "id": "message.app-tsx.day-night-separation-violation-personname-already-has-day-events-scheduled-and-cannot-be-assigne.37090",
         "text": "❌ DAY/NIGHT SEPARATION VIOLATION: ${personName} already has day events scheduled and cannot be assigned to night events. This is a hard rule that cannot be violated.",
         "file": "App.tsx",
-        "line": 37089
+        "line": 37090
       },
       {
-        "id": "message.app-tsx.day-night-separation-violation-personname-already-has-night-events-scheduled-including-duty-sup-.37099",
+        "id": "message.app-tsx.day-night-separation-violation-personname-already-has-night-events-scheduled-including-duty-sup-.37100",
         "text": "❌ DAY/NIGHT SEPARATION VIOLATION: ${personName} already has night events scheduled (including DUTY SUP) and cannot be assigned to day events. This is a hard rule that cannot be violated.",
         "file": "App.tsx",
-        "line": 37099
+        "line": 37100
       },
       {
-        "id": "message.app-tsx.conflict.37343",
+        "id": "message.app-tsx.conflict.37344",
         "text": "conflict",
         "file": "App.tsx",
-        "line": 37343
+        "line": 37344
       },
       {
-        "id": "message.app-tsx.twr-di-missing.37343",
+        "id": "message.app-tsx.twr-di-missing.37344",
         "text": "twr-di-missing",
         "file": "App.tsx",
-        "line": 37343
+        "line": 37344
       },
       {
-        "id": "message.app-tsx.personnel-identity-warning.37343",
+        "id": "message.app-tsx.personnel-identity-warning.37344",
         "text": "personnel-identity-warning",
         "file": "App.tsx",
-        "line": 37343
+        "line": 37344
       },
       {
-        "id": "message.app-tsx.conflict-check-start.37385",
+        "id": "message.app-tsx.conflict-check-start.37386",
         "text": "🔴 ========== CONFLICT CHECK START ==========",
-        "file": "App.tsx",
-        "line": 37385
-      },
-      {
-        "id": "message.app-tsx.personnelandresourceconflictids-memo-recalculating.37386",
-        "text": "🔴 personnelAndResourceConflictIds memo recalculating",
         "file": "App.tsx",
         "line": 37386
       },
       {
-        "id": "message.app-tsx.conflict-check-end-empty.37393",
+        "id": "message.app-tsx.personnelandresourceconflictids-memo-recalculating.37387",
+        "text": "🔴 personnelAndResourceConflictIds memo recalculating",
+        "file": "App.tsx",
+        "line": 37387
+      },
+      {
+        "id": "message.app-tsx.conflict-check-end-empty.37394",
         "text": "🔴 ========== CONFLICT CHECK END (EMPTY) ==========",
         "file": "App.tsx",
-        "line": 37393
+        "line": 37394
       },
       {
-        "id": "message.app-tsx.personnel-identity-warning.37420",
+        "id": "message.app-tsx.personnel-identity-warning.37421",
         "text": "personnel-identity-warning",
         "file": "App.tsx",
-        "line": 37420
+        "line": 37421
       },
       {
-        "id": "message.app-tsx.conflict.37431",
+        "id": "message.app-tsx.conflict.37432",
         "text": "conflict",
         "file": "App.tsx",
-        "line": 37431
+        "line": 37432
       },
       {
-        "id": "message.app-tsx.conflict-check-complete-conflicting-event-ids.37442",
+        "id": "message.app-tsx.conflict-check-complete-conflicting-event-ids.37443",
         "text": "🔴 Conflict check complete. Conflicting event IDs:",
-        "file": "App.tsx",
-        "line": 37442
-      },
-      {
-        "id": "message.app-tsx.conflict-check-end.37443",
-        "text": "🔴 ========== CONFLICT CHECK END ==========",
         "file": "App.tsx",
         "line": 37443
       },
       {
-        "id": "message.app-tsx.twr-di-missing.37460",
-        "text": "twr-di-missing",
+        "id": "message.app-tsx.conflict-check-end.37444",
+        "text": "🔴 ========== CONFLICT CHECK END ==========",
         "file": "App.tsx",
-        "line": 37460
+        "line": 37444
       },
       {
-        "id": "message.app-tsx.personnel-identity-warning.37487",
+        "id": "message.app-tsx.twr-di-missing.37461",
+        "text": "twr-di-missing",
+        "file": "App.tsx",
+        "line": 37461
+      },
+      {
+        "id": "message.app-tsx.personnel-identity-warning.37488",
         "text": "personnel-identity-warning",
         "file": "App.tsx",
-        "line": 37487
+        "line": 37488
       },
       {
-        "id": "message.app-tsx.conflict.37497",
+        "id": "message.app-tsx.conflict.37498",
         "text": "conflict",
         "file": "App.tsx",
-        "line": 37497
+        "line": 37498
       },
       {
-        "id": "message.app-tsx.twr-di-missing.37521",
+        "id": "message.app-tsx.twr-di-missing.37522",
         "text": "twr-di-missing",
         "file": "App.tsx",
-        "line": 37521
+        "line": 37522
       },
       {
-        "id": "message.app-tsx.unavailconflicts.37618",
+        "id": "message.app-tsx.unavailconflicts.37619",
         "text": "[UnavailConflicts]",
         "file": "App.tsx",
-        "line": 37618
+        "line": 37619
       },
       {
-        "id": "message.app-tsx.unavailconflicts-no-conflicts-on.37640",
+        "id": "message.app-tsx.unavailconflicts-no-conflicts-on.37641",
         "text": "[UnavailConflicts] No conflicts on",
         "file": "App.tsx",
-        "line": 37640
+        "line": 37641
       },
       {
-        "id": "message.app-tsx.access-denied-actionlabel-ask-a-platform-admin-to-adjust-your-permission-profile.37727",
+        "id": "message.app-tsx.access-denied-actionlabel-ask-a-platform-admin-to-adjust-your-permission-profile.37728",
         "text": "Access denied: ${actionLabel}. Ask a Platform Admin to adjust your permission profile.",
         "file": "App.tsx",
-        "line": 37727
+        "line": 37728
       },
       {
-        "id": "message.app-tsx.modelunavailableleftviews-includes.37919",
+        "id": "message.app-tsx.modelunavailableleftviews-includes.37920",
         "text": "&& !modelUnavailableLeftViews.includes(",
         "file": "App.tsx",
-        "line": 37919
+        "line": 37920
       },
       {
-        "id": "message.app-tsx.access-denied-for-this-location-or-module-ask-a-platform-admin-to-adjust-your-access-in-settings.37949",
+        "id": "message.app-tsx.access-denied-for-this-location-or-module-ask-a-platform-admin-to-adjust-your-access-in-settings.37950",
         "text": "Access denied for this location or module. Ask a Platform Admin to adjust your access in Settings.",
         "file": "App.tsx",
-        "line": 37949
+        "line": 37950
       },
       {
-        "id": "message.app-tsx.unavailable.37978",
+        "id": "message.app-tsx.unavailable.37979",
         "text": "unavailable",
         "file": "App.tsx",
-        "line": 37978
+        "line": 37979
       },
       {
-        "id": "message.app-tsx.report-lmp-load-missing-trainee-db-id.38132",
+        "id": "message.app-tsx.report-lmp-load-missing-trainee-db-id.38133",
         "text": "report-lmp:load:missing-trainee-db-id",
         "file": "App.tsx",
-        "line": 38132
+        "line": 38133
       },
       {
-        "id": "message.app-tsx.report-lmp-load-blocked-access.38181",
+        "id": "message.app-tsx.report-lmp-load-blocked-access.38182",
         "text": "report-lmp:load:blocked-access",
         "file": "App.tsx",
-        "line": 38181
+        "line": 38182
       },
       {
-        "id": "message.app-tsx.individual-lmp-blocked-persisted-persistedlmptype-lmp-for-trainee-fullname-traineeunitcode-unit-.38192",
+        "id": "message.app-tsx.individual-lmp-blocked-persisted-persistedlmptype-lmp-for-trainee-fullname-traineeunitcode-unit-.38193",
         "text": "[Individual LMP] Blocked persisted ${persistedLmpType} LMP for ${trainee.fullName}; ${traineeUnitCode || 'unit'} is not authorised to assign it",
         "file": "App.tsx",
-        "line": 38192
+        "line": 38193
       },
       {
-        "id": "message.app-tsx.report-lmp-load-error.38209",
+        "id": "message.app-tsx.report-lmp-load-error.38210",
         "text": "report-lmp:load:error",
         "file": "App.tsx",
-        "line": 38209
+        "line": 38210
       },
       {
-        "id": "message.app-tsx.failed-to-remove-rpl-configuredtrainingreportdisplayname-response-status.38468",
+        "id": "message.app-tsx.failed-to-remove-rpl-configuredtrainingreportdisplayname-response-status.38469",
         "text": "Failed to remove RPL ${configuredTrainingReportDisplayName} (${response.status})",
         "file": "App.tsx",
-        "line": 38468
+        "line": 38469
       },
       {
-        "id": "message.app-tsx.training-report-failed-to-persist-generated-individual-lmp-report.38617",
+        "id": "message.app-tsx.training-report-failed-to-persist-generated-individual-lmp-report.38618",
         "text": "[Training Report] Failed to persist generated Individual LMP report:",
         "file": "App.tsx",
-        "line": 38617
+        "line": 38618
       },
       {
-        "id": "message.app-tsx.reportdisplayname-was-generated-locally-but-could-not-be-saved-to-the-database-n-n-error-instanc.38619",
+        "id": "message.app-tsx.reportdisplayname-was-generated-locally-but-could-not-be-saved-to-the-database-n-n-error-instanc.38620",
         "text": "${reportDisplayName} was generated locally, but could not be saved to the database.\\n\\n${error instanceof Error ? error.message : String(error)}",
-        "file": "App.tsx",
-        "line": 38619
-      },
-      {
-        "id": "message.app-tsx.reportdisplayname-save-failed.38620",
-        "text": "${reportDisplayName} Save Failed",
         "file": "App.tsx",
         "line": 38620
       },
       {
-        "id": "message.app-tsx.app-save-patch-error.38830",
+        "id": "message.app-tsx.reportdisplayname-save-failed.38621",
+        "text": "${reportDisplayName} Save Failed",
+        "file": "App.tsx",
+        "line": 38621
+      },
+      {
+        "id": "message.app-tsx.app-save-patch-error.38831",
         "text": "app:save-patch-error",
         "file": "App.tsx",
-        "line": 38830
+        "line": 38831
       },
       {
-        "id": "message.app-tsx.failed-to-save-air-combat-training-report-response-status.38836",
+        "id": "message.app-tsx.failed-to-save-air-combat-training-report-response-status.38837",
         "text": "Failed to save Air Combat training report (${response.status})",
         "file": "App.tsx",
-        "line": 38836
+        "line": 38837
       },
       {
-        "id": "message.app-tsx.postflight-training-report-skipped-eventcode-does-not-have-assessment-required-selected.38918",
+        "id": "message.app-tsx.postflight-training-report-skipped-eventcode-does-not-have-assessment-required-selected.38919",
         "text": "[PostFlight] Training report skipped: ${eventCode} does not have Assessment required selected",
         "file": "App.tsx",
-        "line": 38918
+        "line": 38919
       },
       {
-        "id": "message.app-tsx.failed-to-save-air-combat-post-flight-draft-report-response-status.39038",
+        "id": "message.app-tsx.failed-to-save-air-combat-post-flight-draft-report-response-status.39039",
         "text": "Failed to save Air Combat post-flight draft report (${response.status})",
         "file": "App.tsx",
-        "line": 39038
+        "line": 39039
       },
       {
-        "id": "message.app-tsx.failed-to-delete-training-report-message-response-status.39402",
+        "id": "message.app-tsx.failed-to-delete-training-report-message-response-status.39403",
         "text": "Failed to delete training report message (${response.status})",
         "file": "App.tsx",
-        "line": 39402
+        "line": 39403
       },
       {
-        "id": "message.app-tsx.the-dashboard-message-could-not-be-deleted-n-n-error-instanceof-error-error-message-string-error.39431",
+        "id": "message.app-tsx.the-dashboard-message-could-not-be-deleted-n-n-error-instanceof-error-error-message-string-error.39432",
         "text": "The dashboard message could not be deleted.\\n\\n${error instanceof Error ? error.message : String(error)}",
-        "file": "App.tsx",
-        "line": 39431
-      },
-      {
-        "id": "message.app-tsx.delete-message-failed.39432",
-        "text": "Delete message failed",
         "file": "App.tsx",
         "line": 39432
       },
       {
-        "id": "message.app-tsx.failed-to-reassign-training-report-response-status.39480",
+        "id": "message.app-tsx.delete-message-failed.39433",
+        "text": "Delete message failed",
+        "file": "App.tsx",
+        "line": 39433
+      },
+      {
+        "id": "message.app-tsx.failed-to-reassign-training-report-response-status.39481",
         "text": "Failed to reassign training report (${response.status})",
         "file": "App.tsx",
-        "line": 39480
+        "line": 39481
       },
       {
-        "id": "message.app-tsx.flight-log-lookup-failed-response-status.39571",
+        "id": "message.app-tsx.flight-log-lookup-failed-response-status.39572",
         "text": "Flight log lookup failed (${response.status})",
         "file": "App.tsx",
-        "line": 39571
+        "line": 39572
       },
       {
-        "id": "message.app-tsx.trainingreport-recent-flight-log-lookup-failed.39584",
+        "id": "message.app-tsx.trainingreport-recent-flight-log-lookup-failed.39585",
         "text": "[TrainingReport] Recent flight log lookup failed:",
         "file": "App.tsx",
-        "line": 39584
+        "line": 39585
       },
       {
-        "id": "message.app-tsx.failed-to-create-trainee.39657",
+        "id": "message.app-tsx.failed-to-create-trainee.39658",
         "text": "❌ Failed to create trainee:",
         "file": "App.tsx",
-        "line": 39657
+        "line": 39658
       },
       {
-        "id": "message.app-tsx.cannot-initialise-savedtrainee-fullname-savedtrainee-name-new-trainee-because-no-master-lmp-is-a.39668",
+        "id": "message.app-tsx.cannot-initialise-savedtrainee-fullname-savedtrainee-name-new-trainee-because-no-master-lmp-is-a.39669",
         "text": "Cannot initialise ${savedTrainee.fullName || savedTrainee.name || 'new trainee'} because no Master LMP is assigned to the trainee or course.",
         "file": "App.tsx",
-        "line": 39668
+        "line": 39669
       },
       {
-        "id": "message.app-tsx.cannot-initialise-savedtrainee-fullname-savedtrainee-name-new-trainee-with-master-lmp-lmptype-fo.39672",
+        "id": "message.app-tsx.cannot-initialise-savedtrainee-fullname-savedtrainee-name-new-trainee-with-master-lmp-lmptype-fo.39673",
         "text": "Cannot initialise ${savedTrainee.fullName || savedTrainee.name || 'new trainee'} with Master LMP \"${lmpType}\" for ${traineeUnitCode || 'this unit'}.",
         "file": "App.tsx",
-        "line": 39672
+        "line": 39673
       },
       {
-        "id": "message.app-tsx.cannot-assign-master-lmp-requestedlmptype-to-traineeunitcode-this-unit-check-settings-organisati.39705",
+        "id": "message.app-tsx.cannot-assign-master-lmp-requestedlmptype-to-traineeunitcode-this-unit-check-settings-organisati.39706",
         "text": "Cannot assign Master LMP \"${requestedLmpType}\" to ${traineeUnitCode || 'this unit'}. Check Settings -> Organisation & Operations -> Master LMP Access.",
         "file": "App.tsx",
-        "line": 39705
+        "line": 39706
       },
       {
-        "id": "message.app-tsx.cannot-assign-academic-lmp-requestedacademiclmptype-to-traineeunitcode-this-unit-check-settings-.39708",
+        "id": "message.app-tsx.cannot-assign-academic-lmp-requestedacademiclmptype-to-traineeunitcode-this-unit-check-settings-.39709",
         "text": "Cannot assign Academic LMP \"${requestedAcademicLmpType}\" to ${traineeUnitCode || 'this unit'}. Check Settings -> Organisation & Operations -> Master LMP Access.",
         "file": "App.tsx",
-        "line": 39708
+        "line": 39709
       },
       {
-        "id": "message.app-tsx.failed-to-update-db-trainee-data-name.39803",
+        "id": "message.app-tsx.failed-to-update-db-trainee-data-name.39804",
         "text": "❌ Failed to update DB trainee ${data.name}:",
         "file": "App.tsx",
-        "line": 39803
+        "line": 39804
       },
       {
-        "id": "message.app-tsx.error-updating-db-trainee-data-name.39808",
+        "id": "message.app-tsx.error-updating-db-trainee-data-name.39809",
         "text": "❌ Error updating DB trainee ${data.name}:",
         "file": "App.tsx",
-        "line": 39808
+        "line": 39809
       },
       {
-        "id": "message.app-tsx.critical-error-failed-to-find-insertion-point-lmp-not-modified.39900",
+        "id": "message.app-tsx.critical-error-failed-to-find-insertion-point-lmp-not-modified.39901",
         "text": "Critical error: Failed to find insertion point. LMP not modified.",
         "file": "App.tsx",
-        "line": 39900
+        "line": 39901
       },
       {
-        "id": "message.app-tsx.report-lmp-persist-missing-trainee-db-id.39969",
+        "id": "message.app-tsx.report-lmp-persist-missing-trainee-db-id.39970",
         "text": "report-lmp:persist:missing-trainee-db-id",
         "file": "App.tsx",
-        "line": 39969
+        "line": 39970
       },
       {
-        "id": "message.app-tsx.cannot-save-individual-lmp-trainee-database-record-not-found-for-trainee-fullname.39973",
+        "id": "message.app-tsx.cannot-save-individual-lmp-trainee-database-record-not-found-for-trainee-fullname.39974",
         "text": "Cannot save Individual LMP: trainee database record not found for ${trainee.fullName}",
         "file": "App.tsx",
-        "line": 39973
+        "line": 39974
       },
       {
-        "id": "message.app-tsx.report-lmp-persist-error-response.40018",
+        "id": "message.app-tsx.report-lmp-persist-error-response.40019",
         "text": "report-lmp:persist:error-response",
         "file": "App.tsx",
-        "line": 40018
+        "line": 40019
       },
       {
-        "id": "message.app-tsx.failed-to-persist-individual-lmp-response-status.40024",
+        "id": "message.app-tsx.failed-to-persist-individual-lmp-response-status.40025",
         "text": "Failed to persist Individual LMP (${response.status})",
         "file": "App.tsx",
-        "line": 40024
+        "line": 40025
       },
       {
-        "id": "message.app-tsx.report-lmp-persist-readback-error.40065",
+        "id": "message.app-tsx.report-lmp-persist-readback-error.40066",
         "text": "report-lmp:persist:readback-error",
         "file": "App.tsx",
-        "line": 40065
+        "line": 40066
       },
       {
-        "id": "message.app-tsx.cannot-delete-persisted-event-records-trainee-database-record-not-found-for-trainee-fullname.40079",
+        "id": "message.app-tsx.cannot-delete-persisted-event-records-trainee-database-record-not-found-for-trainee-fullname.40080",
         "text": "Cannot delete persisted event records: trainee database record not found for ${trainee.fullName}",
         "file": "App.tsx",
-        "line": 40079
+        "line": 40080
       },
       {
-        "id": "message.app-tsx.failed-to-delete-score-records-for-item-code-scoreresponse-status.40098",
+        "id": "message.app-tsx.failed-to-delete-score-records-for-item-code-scoreresponse-status.40099",
         "text": "Failed to delete score records for ${item.code} (${scoreResponse.status})",
         "file": "App.tsx",
-        "line": 40098
+        "line": 40099
       },
       {
-        "id": "message.app-tsx.failed-to-delete-configuredtrainingreportdisplayname-record-for-item-code-deleteresponse-status.40123",
+        "id": "message.app-tsx.failed-to-delete-configuredtrainingreportdisplayname-record-for-item-code-deleteresponse-status.40124",
         "text": "Failed to delete ${configuredTrainingReportDisplayName} record for ${item.code} (${deleteResponse.status})",
         "file": "App.tsx",
-        "line": 40123
+        "line": 40124
       },
       {
-        "id": "message.app-tsx.could-not-add-remedial-package-failed-to-find-the-selected-event-in-the-individual-lmp.40178",
+        "id": "message.app-tsx.could-not-add-remedial-package-failed-to-find-the-selected-event-in-the-individual-lmp.40179",
         "text": "Could not add remedial package: failed to find the selected event in the Individual LMP.",
         "file": "App.tsx",
-        "line": 40178
+        "line": 40179
       },
       {
-        "id": "message.app-tsx.individual-lmp-failed-to-persist-remedial-package.40201",
+        "id": "message.app-tsx.individual-lmp-failed-to-persist-remedial-package.40202",
         "text": "[Individual LMP] Failed to persist remedial package:",
         "file": "App.tsx",
-        "line": 40201
+        "line": 40202
       },
       {
-        "id": "message.app-tsx.remedial-package-was-added-locally-but-could-not-be-saved-to-the-database-please-try-again-befor.40203",
+        "id": "message.app-tsx.remedial-package-was-added-locally-but-could-not-be-saved-to-the-database-please-try-again-befor.40204",
         "text": "Remedial package was added locally, but could not be saved to the database. Please try again before refreshing.\\n\\n${error instanceof Error ? error.message : String(error)}",
-        "file": "App.tsx",
-        "line": 40203
-      },
-      {
-        "id": "message.app-tsx.individual-lmp-save-failed.40204",
-        "text": "Individual LMP Save Failed",
         "file": "App.tsx",
         "line": 40204
       },
       {
-        "id": "message.app-tsx.delete-remedial-event-item-code-from-trainee-fullname-s-individual-lmp-n-nthis-will-remove-the-r.40212",
+        "id": "message.app-tsx.individual-lmp-save-failed.40205",
+        "text": "Individual LMP Save Failed",
+        "file": "App.tsx",
+        "line": 40205
+      },
+      {
+        "id": "message.app-tsx.delete-remedial-event-item-code-from-trainee-fullname-s-individual-lmp-n-nthis-will-remove-the-r.40213",
         "text": "Delete remedial event ${item.code} from ${trainee.fullName}'s Individual LMP?\\n\\nThis will remove the remedial event from the package sequence and cannot be undone.",
         "file": "App.tsx",
-        "line": 40212
+        "line": 40213
       },
       {
-        "id": "message.app-tsx.individual-lmp-delete-failed.40220",
+        "id": "message.app-tsx.individual-lmp-delete-failed.40221",
         "text": "Individual LMP Delete Failed",
         "file": "App.tsx",
-        "line": 40220
+        "line": 40221
       },
       {
-        "id": "message.app-tsx.individual-lmp-failed-to-delete-remedial-item.40256",
+        "id": "message.app-tsx.individual-lmp-failed-to-delete-remedial-item.40257",
         "text": "[Individual LMP] Failed to delete remedial item:",
         "file": "App.tsx",
-        "line": 40256
+        "line": 40257
       },
       {
-        "id": "message.app-tsx.remedial-event-item-code-could-not-be-deleted-from-the-database-it-has-not-been-removed-locally-.40258",
+        "id": "message.app-tsx.remedial-event-item-code-could-not-be-deleted-from-the-database-it-has-not-been-removed-locally-.40259",
         "text": "Remedial event ${item.code} could not be deleted from the database. It has not been removed locally.\\n\\n${error instanceof Error ? error.message : String(error)}",
-        "file": "App.tsx",
-        "line": 40258
-      },
-      {
-        "id": "message.app-tsx.individual-lmp-delete-failed.40259",
-        "text": "Individual LMP Delete Failed",
         "file": "App.tsx",
         "line": 40259
       },
       {
-        "id": "message.app-tsx.insert-event-failed.40269",
-        "text": "Insert Event Failed",
+        "id": "message.app-tsx.individual-lmp-delete-failed.40260",
+        "text": "Individual LMP Delete Failed",
         "file": "App.tsx",
-        "line": 40269
+        "line": 40260
       },
       {
-        "id": "message.app-tsx.insert-event-failed.40278",
+        "id": "message.app-tsx.insert-event-failed.40270",
         "text": "Insert Event Failed",
         "file": "App.tsx",
-        "line": 40278
+        "line": 40270
       },
       {
-        "id": "message.app-tsx.people-required-peoplerequired-join-none.40364",
+        "id": "message.app-tsx.insert-event-failed.40279",
+        "text": "Insert Event Failed",
+        "file": "App.tsx",
+        "line": 40279
+      },
+      {
+        "id": "message.app-tsx.people-required-peoplerequired-join-none.40365",
         "text": "People Required: ${peopleRequired.join(', ') || 'None'}",
         "file": "App.tsx",
-        "line": 40364
+        "line": 40365
       },
       {
-        "id": "message.app-tsx.individual-lmp-failed-to-insert-custom-event.40372",
+        "id": "message.app-tsx.individual-lmp-failed-to-insert-custom-event.40373",
         "text": "[Individual LMP] Failed to insert custom event:",
         "file": "App.tsx",
-        "line": 40372
+        "line": 40373
       },
       {
-        "id": "message.app-tsx.the-event-was-not-saved-to-the-database-so-it-has-not-been-inserted-n-n-error-instanceof-error-e.40374",
+        "id": "message.app-tsx.the-event-was-not-saved-to-the-database-so-it-has-not-been-inserted-n-n-error-instanceof-error-e.40375",
         "text": "The event was not saved to the database, so it has not been inserted.\\n\\n${error instanceof Error ? error.message : String(error)}",
-        "file": "App.tsx",
-        "line": 40374
-      },
-      {
-        "id": "message.app-tsx.insert-event-failed.40375",
-        "text": "Insert Event Failed",
         "file": "App.tsx",
         "line": 40375
       },
       {
-        "id": "message.app-tsx.individual-lmp-save-failed.40389",
-        "text": "Individual LMP Save Failed",
+        "id": "message.app-tsx.insert-event-failed.40376",
+        "text": "Insert Event Failed",
         "file": "App.tsx",
-        "line": 40389
+        "line": 40376
       },
       {
-        "id": "message.app-tsx.individual-lmp-save-failed.40402",
+        "id": "message.app-tsx.individual-lmp-save-failed.40390",
         "text": "Individual LMP Save Failed",
         "file": "App.tsx",
-        "line": 40402
+        "line": 40390
       },
       {
-        "id": "message.app-tsx.rpl-cannot-be-removed-from-originalitem-code-because-later-prerequisite-dependent-events-have-al.40417",
+        "id": "message.app-tsx.individual-lmp-save-failed.40403",
+        "text": "Individual LMP Save Failed",
+        "file": "App.tsx",
+        "line": 40403
+      },
+      {
+        "id": "message.app-tsx.rpl-cannot-be-removed-from-originalitem-code-because-later-prerequisite-dependent-events-have-al.40418",
         "text": "RPL cannot be removed from ${originalItem.code} because later prerequisite-dependent events have already been completed.\\n\\nCompleted dependent events: ${dependencyList}${dependentCompletions.length > 8 ?",
-        "file": "App.tsx",
-        "line": 40417
-      },
-      {
-        "id": "message.app-tsx.rpl-cannot-be-removed.40418",
-        "text": "RPL Cannot Be Removed",
         "file": "App.tsx",
         "line": 40418
       },
       {
-        "id": "message.app-tsx.individual-lmp-save-failed.40458",
-        "text": "Individual LMP Save Failed",
+        "id": "message.app-tsx.rpl-cannot-be-removed.40419",
+        "text": "RPL Cannot Be Removed",
         "file": "App.tsx",
-        "line": 40458
+        "line": 40419
       },
       {
-        "id": "message.app-tsx.individual-lmp-failed-to-rollback-rpl-update-after-report-side-effect-failure.40484",
+        "id": "message.app-tsx.individual-lmp-save-failed.40459",
+        "text": "Individual LMP Save Failed",
+        "file": "App.tsx",
+        "line": 40459
+      },
+      {
+        "id": "message.app-tsx.individual-lmp-failed-to-rollback-rpl-update-after-report-side-effect-failure.40485",
         "text": "[Individual LMP] Failed to rollback RPL update after report side-effect failure:",
         "file": "App.tsx",
-        "line": 40484
+        "line": 40485
       },
       {
-        "id": "message.app-tsx.individual-lmp-failed-to-update-event.40517",
+        "id": "message.app-tsx.individual-lmp-failed-to-update-event.40518",
         "text": "[Individual LMP] Failed to update event:",
         "file": "App.tsx",
-        "line": 40517
+        "line": 40518
       },
       {
-        "id": "message.app-tsx.the-event-was-not-fully-saved-so-the-rpl-change-has-not-been-applied-n-n-error-instanceof-error-.40519",
+        "id": "message.app-tsx.the-event-was-not-fully-saved-so-the-rpl-change-has-not-been-applied-n-n-error-instanceof-error-.40520",
         "text": "The event was not fully saved, so the RPL change has not been applied.\\n\\n${error instanceof Error ? error.message : String(error)}",
-        "file": "App.tsx",
-        "line": 40519
-      },
-      {
-        "id": "message.app-tsx.individual-lmp-save-failed.40520",
-        "text": "Individual LMP Save Failed",
         "file": "App.tsx",
         "line": 40520
       },
       {
-        "id": "message.app-tsx.failed-to-save-course-to-db.40644",
+        "id": "message.app-tsx.individual-lmp-save-failed.40521",
+        "text": "Individual LMP Save Failed",
+        "file": "App.tsx",
+        "line": 40521
+      },
+      {
+        "id": "message.app-tsx.failed-to-save-course-to-db.40645",
         "text": "Failed to save course to DB:",
         "file": "App.tsx",
-        "line": 40644
+        "line": 40645
       },
       {
-        "id": "message.app-tsx.error-saving-course-to-db.40647",
+        "id": "message.app-tsx.error-saving-course-to-db.40648",
         "text": "Error saving course to DB:",
         "file": "App.tsx",
-        "line": 40647
+        "line": 40648
       },
       {
-        "id": "message.app-tsx.failed-to-archive-course-in-db.40690",
+        "id": "message.app-tsx.failed-to-archive-course-in-db.40691",
         "text": "Failed to archive course in DB:",
-        "file": "App.tsx",
-        "line": 40690
-      },
-      {
-        "id": "message.app-tsx.archive-failed-result-error-failed-to-save-archived-course-to-database.40691",
-        "text": "Archive failed: ${result.error || 'Failed to save archived course to database'}",
         "file": "App.tsx",
         "line": 40691
       },
       {
-        "id": "message.app-tsx.error-archiving-course-in-db.40695",
-        "text": "Error archiving course in DB:",
+        "id": "message.app-tsx.archive-failed-result-error-failed-to-save-archived-course-to-database.40692",
+        "text": "Archive failed: ${result.error || 'Failed to save archived course to database'}",
         "file": "App.tsx",
-        "line": 40695
+        "line": 40692
       },
       {
-        "id": "message.app-tsx.archive-failed-error-instanceof-error-error-message-failed-to-save-archived-course-to-database.40696",
-        "text": "Archive failed: ${error instanceof Error ? error.message : 'Failed to save archived course to database'}",
+        "id": "message.app-tsx.error-archiving-course-in-db.40696",
+        "text": "Error archiving course in DB:",
         "file": "App.tsx",
         "line": 40696
       },
       {
-        "id": "message.app-tsx.failed-to-delete-course-from-db.40719",
+        "id": "message.app-tsx.archive-failed-error-instanceof-error-error-message-failed-to-save-archived-course-to-database.40697",
+        "text": "Archive failed: ${error instanceof Error ? error.message : 'Failed to save archived course to database'}",
+        "file": "App.tsx",
+        "line": 40697
+      },
+      {
+        "id": "message.app-tsx.failed-to-delete-course-from-db.40720",
         "text": "Failed to delete course from DB:",
         "file": "App.tsx",
-        "line": 40719
+        "line": 40720
       },
       {
-        "id": "message.app-tsx.error-deleting-course-from-db.40722",
+        "id": "message.app-tsx.error-deleting-course-from-db.40723",
         "text": "Error deleting course from DB:",
         "file": "App.tsx",
-        "line": 40722
+        "line": 40723
       },
       {
-        "id": "message.app-tsx.failed-to-update-course-dates-in-db.40763",
+        "id": "message.app-tsx.failed-to-update-course-dates-in-db.40764",
         "text": "Failed to update course dates in DB:",
-        "file": "App.tsx",
-        "line": 40763
-      },
-      {
-        "id": "message.app-tsx.save-failed-result-error-failed-to-save-changes-to-database.40764",
-        "text": "Save failed: ${result.error || 'Failed to save changes to database'}",
         "file": "App.tsx",
         "line": 40764
       },
       {
-        "id": "message.app-tsx.error-updating-course-dates-in-db.40767",
-        "text": "Error updating course dates in DB:",
+        "id": "message.app-tsx.save-failed-result-error-failed-to-save-changes-to-database.40765",
+        "text": "Save failed: ${result.error || 'Failed to save changes to database'}",
         "file": "App.tsx",
-        "line": 40767
+        "line": 40765
       },
       {
-        "id": "message.app-tsx.save-failed-error-instanceof-error-error-message-failed-to-save-changes-to-database.40768",
-        "text": "Save failed: ${error instanceof Error ? error.message : 'Failed to save changes to database'}",
+        "id": "message.app-tsx.error-updating-course-dates-in-db.40768",
+        "text": "Error updating course dates in DB:",
         "file": "App.tsx",
         "line": 40768
       },
       {
-        "id": "message.app-tsx.save-failed-cannot-assign-master-lmp-data-lmptype-to-courseunitcode-this-unit-check-settings-org.40779",
+        "id": "message.app-tsx.save-failed-error-instanceof-error-error-message-failed-to-save-changes-to-database.40769",
+        "text": "Save failed: ${error instanceof Error ? error.message : 'Failed to save changes to database'}",
+        "file": "App.tsx",
+        "line": 40769
+      },
+      {
+        "id": "message.app-tsx.save-failed-cannot-assign-master-lmp-data-lmptype-to-courseunitcode-this-unit-check-settings-org.40780",
         "text": "Save failed: Cannot assign Master LMP \"${data.lmpType}\" to ${courseUnitCode || 'this unit'}. Check Settings -> Organisation & Operations -> Master LMP Access.",
         "file": "App.tsx",
-        "line": 40779
+        "line": 40780
       },
       {
-        "id": "message.app-tsx.save-failed-cannot-assign-academic-lmp-data-academiclmptype-to-courseunitcode-this-unit-check-se.40783",
+        "id": "message.app-tsx.save-failed-cannot-assign-academic-lmp-data-academiclmptype-to-courseunitcode-this-unit-check-se.40784",
         "text": "Save failed: Cannot assign Academic LMP \"${data.academicLmpType}\" to ${courseUnitCode || 'this unit'}. Check Settings -> Organisation & Operations -> Master LMP Access.",
         "file": "App.tsx",
-        "line": 40783
+        "line": 40784
       },
       {
-        "id": "message.app-tsx.editcourse-failed-to-update-course-in-db.40818",
+        "id": "message.app-tsx.editcourse-failed-to-update-course-in-db.40819",
         "text": "[EditCourse] Failed to update course in DB:",
-        "file": "App.tsx",
-        "line": 40818
-      },
-      {
-        "id": "message.app-tsx.save-failed-result-error-failed-to-save-changes-to-database.40819",
-        "text": "Save failed: ${result.error || 'Failed to save changes to database'}",
         "file": "App.tsx",
         "line": 40819
       },
       {
-        "id": "message.app-tsx.editcourse-error-updating-course-in-db.40822",
-        "text": "[EditCourse] Error updating course in DB:",
+        "id": "message.app-tsx.save-failed-result-error-failed-to-save-changes-to-database.40820",
+        "text": "Save failed: ${result.error || 'Failed to save changes to database'}",
         "file": "App.tsx",
-        "line": 40822
+        "line": 40820
       },
       {
-        "id": "message.app-tsx.save-failed-error-instanceof-error-error-message-failed-to-save-changes-to-database.40823",
-        "text": "Save failed: ${error instanceof Error ? error.message : 'Failed to save changes to database'}",
+        "id": "message.app-tsx.editcourse-error-updating-course-in-db.40823",
+        "text": "[EditCourse] Error updating course in DB:",
         "file": "App.tsx",
         "line": 40823
       },
       {
-        "id": "message.app-tsx.courseedit-failed-to-update-course-leadership-in-db.40874",
-        "text": "[CourseEdit] Failed to update course leadership in DB:",
+        "id": "message.app-tsx.save-failed-error-instanceof-error-error-message-failed-to-save-changes-to-database.40824",
+        "text": "Save failed: ${error instanceof Error ? error.message : 'Failed to save changes to database'}",
         "file": "App.tsx",
-        "line": 40874
+        "line": 40824
       },
       {
-        "id": "message.app-tsx.failed-to-save-course-leadership-to-database.40875",
-        "text": "Failed to save course leadership to database",
+        "id": "message.app-tsx.courseedit-failed-to-update-course-leadership-in-db.40875",
+        "text": "[CourseEdit] Failed to update course leadership in DB:",
         "file": "App.tsx",
         "line": 40875
       },
       {
-        "id": "message.app-tsx.courseedit-error-updating-course-leadership.40878",
+        "id": "message.app-tsx.failed-to-save-course-leadership-to-database.40876",
+        "text": "Failed to save course leadership to database",
+        "file": "App.tsx",
+        "line": 40876
+      },
+      {
+        "id": "message.app-tsx.courseedit-error-updating-course-leadership.40879",
         "text": "[CourseEdit] Error updating course leadership:",
         "file": "App.tsx",
-        "line": 40878
+        "line": 40879
       },
       {
-        "id": "message.app-tsx.failed-to-save-unarchived-course-to-db.40922",
+        "id": "message.app-tsx.failed-to-save-unarchived-course-to-db.40923",
         "text": "Failed to save unarchived course to DB:",
-        "file": "App.tsx",
-        "line": 40922
-      },
-      {
-        "id": "message.app-tsx.unarchive-failed-result-error-failed-to-restore-course-in-database.40923",
-        "text": "Unarchive failed: ${result.error || 'Failed to restore course in database'}",
         "file": "App.tsx",
         "line": 40923
       },
       {
-        "id": "message.app-tsx.error-saving-unarchived-course-to-db.40927",
-        "text": "Error saving unarchived course to DB:",
+        "id": "message.app-tsx.unarchive-failed-result-error-failed-to-restore-course-in-database.40924",
+        "text": "Unarchive failed: ${result.error || 'Failed to restore course in database'}",
         "file": "App.tsx",
-        "line": 40927
+        "line": 40924
       },
       {
-        "id": "message.app-tsx.unarchive-failed-error-instanceof-error-error-message-failed-to-restore-course-in-database.40928",
-        "text": "Unarchive failed: ${error instanceof Error ? error.message : 'Failed to restore course in database'}",
+        "id": "message.app-tsx.error-saving-unarchived-course-to-db.40928",
+        "text": "Error saving unarchived course to DB:",
         "file": "App.tsx",
         "line": 40928
       },
       {
-        "id": "message.app-tsx.failed-to-delete-course-from-db.40948",
+        "id": "message.app-tsx.unarchive-failed-error-instanceof-error-error-message-failed-to-restore-course-in-database.40929",
+        "text": "Unarchive failed: ${error instanceof Error ? error.message : 'Failed to restore course in database'}",
+        "file": "App.tsx",
+        "line": 40929
+      },
+      {
+        "id": "message.app-tsx.failed-to-delete-course-from-db.40949",
         "text": "Failed to delete course from DB:",
         "file": "App.tsx",
-        "line": 40948
+        "line": 40949
       },
       {
-        "id": "message.app-tsx.error-deleting-course-from-db.40951",
+        "id": "message.app-tsx.error-deleting-course-from-db.40952",
         "text": "Error deleting course from DB:",
         "file": "App.tsx",
-        "line": 40951
+        "line": 40952
       },
       {
-        "id": "message.app-tsx.handledatechange-invalid-current-date-state.40960",
+        "id": "message.app-tsx.handledatechange-invalid-current-date-state.40961",
         "text": "[handleDateChange] Invalid current date state:",
         "file": "App.tsx",
-        "line": 40960
+        "line": 40961
       },
       {
-        "id": "message.app-tsx.report-lmp-extra-event-error.41235",
+        "id": "message.app-tsx.report-lmp-extra-event-error.41236",
         "text": "report-lmp:extra-event:error",
         "file": "App.tsx",
-        "line": 41235
+        "line": 41236
       },
       {
-        "id": "message.app-tsx.training-report-failed-to-persist-extra-event-from-training-report.41241",
+        "id": "message.app-tsx.training-report-failed-to-persist-extra-event-from-training-report.41242",
         "text": "[Training Report] Failed to persist extra event from training report:",
         "file": "App.tsx",
-        "line": 41241
+        "line": 41242
       },
       {
-        "id": "message.app-tsx.the-training-report-was-saved-but-the-extra-sourceitem-type-ftd-sim-flight-could-not-be-inserted.41243",
+        "id": "message.app-tsx.the-training-report-was-saved-but-the-extra-sourceitem-type-ftd-sim-flight-could-not-be-inserted.41244",
         "text": "The training report was saved, but the extra ${sourceItem.type === 'FTD' ? 'sim' : 'flight'} could not be inserted into the trainee Individual LMP.\\n\\n${error instanceof Error ? error.message : String(error)}",
-        "file": "App.tsx",
-        "line": 41243
-      },
-      {
-        "id": "message.app-tsx.extra-event-insert-failed.41244",
-        "text": "Extra Event Insert Failed",
         "file": "App.tsx",
         "line": 41244
       },
       {
-        "id": "message.app-tsx.report-lmp-extend-next-error.41471",
+        "id": "message.app-tsx.extra-event-insert-failed.41245",
+        "text": "Extra Event Insert Failed",
+        "file": "App.tsx",
+        "line": 41245
+      },
+      {
+        "id": "message.app-tsx.report-lmp-extend-next-error.41472",
         "text": "report-lmp:extend-next:error",
         "file": "App.tsx",
-        "line": 41471
+        "line": 41472
       },
       {
-        "id": "message.app-tsx.training-report-failed-to-persist-next-event-extension-from-training-report.41477",
+        "id": "message.app-tsx.training-report-failed-to-persist-next-event-extension-from-training-report.41478",
         "text": "[Training Report] Failed to persist next event extension from training report:",
         "file": "App.tsx",
-        "line": 41477
+        "line": 41478
       },
       {
-        "id": "message.app-tsx.the-training-report-was-saved-but-the-next-sourceitem-type-ftd-sim-flight-could-not-be-extended-.41479",
+        "id": "message.app-tsx.the-training-report-was-saved-but-the-next-sourceitem-type-ftd-sim-flight-could-not-be-extended-.41480",
         "text": "The training report was saved, but the next ${sourceItem.type === 'FTD' ? 'sim' : 'flight'} could not be extended in the trainee Individual LMP.\\n\\n${error instanceof Error ? error.message : String(error)}",
-        "file": "App.tsx",
-        "line": 41479
-      },
-      {
-        "id": "message.app-tsx.next-event-extension-failed.41480",
-        "text": "Next Event Extension Failed",
         "file": "App.tsx",
         "line": 41480
       },
       {
-        "id": "message.app-tsx.training-report-failed-to-pass-notes-to-next-lmp-event.41740",
+        "id": "message.app-tsx.next-event-extension-failed.41481",
+        "text": "Next Event Extension Failed",
+        "file": "App.tsx",
+        "line": 41481
+      },
+      {
+        "id": "message.app-tsx.training-report-failed-to-pass-notes-to-next-lmp-event.41741",
         "text": "[Training Report] Failed to pass notes to next LMP event:",
         "file": "App.tsx",
-        "line": 41740
+        "line": 41741
       },
       {
-        "id": "message.app-tsx.the-training-report-was-saved-but-the-notes-could-not-be-passed-to-the-next-sourceitem-type-ftd-.41742",
+        "id": "message.app-tsx.the-training-report-was-saved-but-the-notes-could-not-be-passed-to-the-next-sourceitem-type-ftd-.41743",
         "text": "The training report was saved, but the notes could not be passed to the next ${sourceItem.type === 'FTD' ? 'sim' : 'flight'} event.\\n\\n${error instanceof Error ? error.message : String(error)}",
-        "file": "App.tsx",
-        "line": 41742
-      },
-      {
-        "id": "message.app-tsx.forward-notes-failed.41743",
-        "text": "Forward Notes Failed",
         "file": "App.tsx",
         "line": 41743
       },
       {
-        "id": "message.app-tsx.persist-snapshot-save-failed-for-targetdate.42205",
+        "id": "message.app-tsx.forward-notes-failed.41744",
+        "text": "Forward Notes Failed",
+        "file": "App.tsx",
+        "line": 41744
+      },
+      {
+        "id": "message.app-tsx.persist-snapshot-save-failed-for-targetdate.42206",
         "text": "⚠️ [Persist] Snapshot save failed for ${targetDate}:",
         "file": "App.tsx",
-        "line": 42205
+        "line": 42206
       },
       {
-        "id": "message.app-tsx.cannot-save-configuredtrainingreportdisplayname-trainee-database-record-not-found-for-assessment.42227",
+        "id": "message.app-tsx.cannot-save-configuredtrainingreportdisplayname-trainee-database-record-not-found-for-assessment.42228",
         "text": "Cannot save ${configuredTrainingReportDisplayName}: trainee database record not found for ${assessment.traineeFullName}",
         "file": "App.tsx",
-        "line": 42227
+        "line": 42228
       },
       {
-        "id": "message.app-tsx.pt051-persist-error.42277",
+        "id": "message.app-tsx.pt051-persist-error.42278",
         "text": "pt051:persist:error",
         "file": "App.tsx",
-        "line": 42277
+        "line": 42278
       },
       {
-        "id": "message.app-tsx.failed-to-save-configuredtrainingreportdisplayname-record-response-status.42283",
+        "id": "message.app-tsx.failed-to-save-configuredtrainingreportdisplayname-record-response-status.42284",
         "text": "Failed to save ${configuredTrainingReportDisplayName} record (${response.status})",
         "file": "App.tsx",
-        "line": 42283
+        "line": 42284
       },
       {
-        "id": "message.app-tsx.save-cancelled-user-chose-not-to-schedule-after-day-night-conflict.42433",
+        "id": "message.app-tsx.save-cancelled-user-chose-not-to-schedule-after-day-night-conflict.42434",
         "text": "SAVE CANCELLED - user chose not to schedule after day/night conflict:",
         "file": "App.tsx",
-        "line": 42433
+        "line": 42434
       },
       {
-        "id": "message.app-tsx.remove-conflicts.42437",
+        "id": "message.app-tsx.remove-conflicts.42438",
         "text": "remove-conflicts",
         "file": "App.tsx",
-        "line": 42437
+        "line": 42438
       },
       {
-        "id": "message.app-tsx.conflict-cannot-be-removed.42442",
+        "id": "message.app-tsx.conflict-cannot-be-removed.42443",
         "text": "Conflict Cannot Be Removed",
         "file": "App.tsx",
-        "line": 42442
+        "line": 42443
       },
       {
-        "id": "message.app-tsx.accept-conflict.42459",
+        "id": "message.app-tsx.accept-conflict.42460",
         "text": "accept-conflict",
         "file": "App.tsx",
-        "line": 42459
+        "line": 42460
       },
       {
-        "id": "message.app-tsx.conflict-personname-conflict-proposedevent-flightnumber-conflicts-with-conflict-conflictingevent.42461",
+        "id": "message.app-tsx.conflict-personname-conflict-proposedevent-flightnumber-conflicts-with-conflict-conflictingevent.42462",
         "text": "${conflict.personName}: ${conflict.proposedEvent.flightNumber} conflicts with ${conflict.conflictingEvent.flightNumber} at ${formatTimeForAudit(conflict.conflictingEvent.startTime)}",
         "file": "App.tsx",
-        "line": 42461
+        "line": 42462
       },
       {
-        "id": "message.app-tsx.accepted-day-night-personnel-conflict.42471",
+        "id": "message.app-tsx.accepted-day-night-personnel-conflict.42472",
         "text": "Accepted day/night personnel conflict",
         "file": "App.tsx",
-        "line": 42471
+        "line": 42472
       },
       {
-        "id": "message.app-tsx.delete-failed.43004",
+        "id": "message.app-tsx.delete-failed.43005",
         "text": "Delete Failed",
         "file": "App.tsx",
-        "line": 43004
+        "line": 43005
       },
       {
-        "id": "message.app-tsx.the-event-was-removed-from-the-screen-but-the-schedule-save-failed-refresh-the-dfp-before-making.43016",
+        "id": "message.app-tsx.the-event-was-removed-from-the-screen-but-the-schedule-save-failed-refresh-the-dfp-before-making.43017",
         "text": "The event was removed from the screen, but the schedule save failed. Refresh the DFP before making further changes, then try the delete again.",
-        "file": "App.tsx",
-        "line": 43016
-      },
-      {
-        "id": "message.app-tsx.delete-save-failed.43017",
-        "text": "Delete Save Failed",
         "file": "App.tsx",
         "line": 43017
       },
       {
-        "id": "message.app-tsx.alert-failed-to-send-alert-status.43198",
+        "id": "message.app-tsx.delete-save-failed.43018",
+        "text": "Delete Save Failed",
+        "file": "App.tsx",
+        "line": 43018
+      },
+      {
+        "id": "message.app-tsx.alert-failed-to-send-alert-status.43199",
         "text": "🔔 [Alert] Failed to send alert. Status:",
         "file": "App.tsx",
-        "line": 43198
+        "line": 43199
       },
       {
-        "id": "message.app-tsx.alert-failed-to-clear-alert.43240",
+        "id": "message.app-tsx.alert-failed-to-clear-alert.43241",
         "text": "🔔 [Alert] Failed to clear alert:",
         "file": "App.tsx",
-        "line": 43240
+        "line": 43241
       },
       {
-        "id": "message.app-tsx.skip-missing-trainee-or-syllabus.43709",
+        "id": "message.app-tsx.skip-missing-trainee-or-syllabus.43710",
         "text": "skip-missing-trainee-or-syllabus",
         "file": "App.tsx",
-        "line": 43709
+        "line": 43710
       },
       {
-        "id": "message.app-tsx.skip-missing-trainee-or-syllabus.43738",
+        "id": "message.app-tsx.skip-missing-trainee-or-syllabus.43739",
         "text": "SKIP_MISSING_TRAINEE_OR_SYLLABUS",
         "file": "App.tsx",
-        "line": 43738
+        "line": 43739
       },
       {
-        "id": "message.app-tsx.remedial-sync-diag-failed-to-save-remedial-sync-diagnostics.43900",
+        "id": "message.app-tsx.remedial-sync-diag-failed-to-save-remedial-sync-diagnostics.43901",
         "text": "[REMEDIAL-SYNC-DIAG] Failed to save remedial sync diagnostics:",
         "file": "App.tsx",
-        "line": 43900
+        "line": 43901
       },
       {
-        "id": "message.app-tsx.invalid-event-type.43984",
+        "id": "message.app-tsx.invalid-event-type.43985",
         "text": "Invalid event type",
         "file": "App.tsx",
-        "line": 43984
+        "line": 43985
       },
       {
-        "id": "message.app-tsx.crew-required.44316",
+        "id": "message.app-tsx.crew-required.44317",
         "text": "Crew Required",
         "file": "App.tsx",
-        "line": 44316
+        "line": 44317
       },
       {
-        "id": "message.app-tsx.crew-selection-required.44350",
+        "id": "message.app-tsx.crew-selection-required.44351",
         "text": "Crew Selection Required",
         "file": "App.tsx",
-        "line": 44350
+        "line": 44351
       },
       {
-        "id": "message.app-tsx.debug-locked-event-flightnumber-event-student-event-pilot-n-a-with-event-instructor-at-event-sta.44608",
+        "id": "message.app-tsx.debug-locked-event-flightnumber-event-student-event-pilot-n-a-with-event-instructor-at-event-sta.44609",
         "text": "DEBUG LOCKED: ${event.flightNumber} - ${event.student || event.pilot || 'N/A'} with ${event.instructor} at ${event.startTime.toFixed(2)} (ID: ${event.id})",
         "file": "App.tsx",
-        "line": 44608
+        "line": 44609
       },
       {
-        "id": "message.app-tsx.debug-pre-build-complete-addedcount-events-locked-as-highest-priority-must-be-included-in-build.44616",
+        "id": "message.app-tsx.debug-pre-build-complete-addedcount-events-locked-as-highest-priority-must-be-included-in-build.44617",
         "text": "DEBUG Pre-Build Complete: ${addedCount} events LOCKED as highest priority (MUST be included in build)",
         "file": "App.tsx",
-        "line": 44616
+        "line": 44617
       },
       {
-        "id": "message.app-tsx.debug-pre-build-complete-all-existing-events-already-locked.44619",
+        "id": "message.app-tsx.debug-pre-build-complete-all-existing-events-already-locked.44620",
         "text": "DEBUG Pre-Build Complete: All existing events already locked",
         "file": "App.tsx",
-        "line": 44619
+        "line": 44620
       },
       {
-        "id": "message.app-tsx.run-neo-build-is-not-permitted-for-your-assigned-permission-profile.44661",
+        "id": "message.app-tsx.run-neo-build-is-not-permitted-for-your-assigned-permission-profile.44662",
         "text": "Run NEO Build is not permitted for your assigned permission profile",
         "file": "App.tsx",
-        "line": 44661
+        "line": 44662
       },
       {
-        "id": "message.app-tsx.neo-build-build-date-is-today-or-in-the-past-showing-warning.44690",
+        "id": "message.app-tsx.neo-build-build-date-is-today-or-in-the-past-showing-warning.44691",
         "text": "🚀 [NEO-Build] Build date is today or in the past, showing warning",
         "file": "App.tsx",
-        "line": 44690
+        "line": 44691
       },
       {
-        "id": "message.app-tsx.neo-build-runtime-error-report.44771",
+        "id": "message.app-tsx.neo-build-runtime-error-report.44772",
         "text": "neo_build_runtime_error_report",
         "file": "App.tsx",
-        "line": 44771
+        "line": 44772
       },
       {
-        "id": "message.app-tsx.archive-report-failed-with-http-response-status.44806",
+        "id": "message.app-tsx.archive-report-failed-with-http-response-status.44807",
         "text": "Archive report failed with HTTP ${response.status}",
         "file": "App.tsx",
-        "line": 44806
+        "line": 44807
       },
       {
-        "id": "message.app-tsx.archive-failed-to-download-archive-diagnostic-report.44811",
+        "id": "message.app-tsx.archive-failed-to-download-archive-diagnostic-report.44812",
         "text": "[Archive] Failed to download archive diagnostic report:",
         "file": "App.tsx",
-        "line": 44811
+        "line": 44812
       },
       {
-        "id": "message.app-tsx.neo-build-runtime-error-report.44895",
+        "id": "message.app-tsx.neo-build-runtime-error-report.44896",
         "text": "neo_build_runtime_error_report",
         "file": "App.tsx",
-        "line": 44895
+        "line": 44896
       },
       {
-        "id": "message.app-tsx.elce-bulk-fetch-failed-status-elceres-status-falling-back-to-dfp-scan-elce.44979",
+        "id": "message.app-tsx.elce-bulk-fetch-failed-status-elceres-status-falling-back-to-dfp-scan-elce.44980",
         "text": "[ELCE] Bulk fetch failed (status ${elceRes.status}) — falling back to DFP-scan ELCE",
         "file": "App.tsx",
-        "line": 44979
+        "line": 44980
       },
       {
-        "id": "message.app-tsx.elce-error.44983",
+        "id": "message.app-tsx.elce-error.44984",
         "text": "elce:error",
         "file": "App.tsx",
-        "line": 44983
+        "line": 44984
       },
       {
-        "id": "message.app-tsx.neo-build-pre-build-lmp-sync-failed-syncres-status-using-current-in-memory-lmps.45015",
+        "id": "message.app-tsx.neo-build-pre-build-lmp-sync-failed-syncres-status-using-current-in-memory-lmps.45016",
         "text": "[NEO-Build] Pre-build LMP sync failed (${syncRes.status}); using current in-memory LMPs",
         "file": "App.tsx",
-        "line": 45015
+        "line": 45016
       },
       {
-        "id": "message.app-tsx.lmp-sync-json-parse-failed.45036",
+        "id": "message.app-tsx.lmp-sync-json-parse-failed.45037",
         "text": "lmp-sync:json-parse-failed",
         "file": "App.tsx",
-        "line": 45036
+        "line": 45037
       },
       {
-        "id": "message.app-tsx.neo-build-pre-build-lmp-fetch-failed-lmpres-status-using-current-in-memory-lmps.45100",
+        "id": "message.app-tsx.neo-build-pre-build-lmp-fetch-failed-lmpres-status-using-current-in-memory-lmps.45101",
         "text": "[NEO-Build] Pre-build LMP fetch failed (${lmpRes.status}); using current in-memory LMPs",
         "file": "App.tsx",
-        "line": 45100
+        "line": 45101
       },
       {
-        "id": "message.app-tsx.lmp-refresh-error.45103",
+        "id": "message.app-tsx.lmp-refresh-error.45104",
         "text": "lmp-refresh:error",
         "file": "App.tsx",
-        "line": 45103
+        "line": 45104
       },
       {
-        "id": "message.app-tsx.build-report-followups-scoped-fetch-failed-fallback.45453",
+        "id": "message.app-tsx.build-report-followups-scoped-fetch-failed-fallback.45454",
         "text": "build:report-followups:scoped-fetch-failed-fallback",
         "file": "App.tsx",
-        "line": 45453
+        "line": 45454
       },
       {
-        "id": "message.app-tsx.build-report-followups-fetch-failed.45462",
+        "id": "message.app-tsx.build-report-followups-fetch-failed.45463",
         "text": "build:report-followups:fetch-failed",
         "file": "App.tsx",
-        "line": 45462
+        "line": 45463
       },
       {
-        "id": "message.app-tsx.build-report-followups-persist-failed.45632",
+        "id": "message.app-tsx.build-report-followups-persist-failed.45633",
         "text": "build:report-followups:persist-failed",
         "file": "App.tsx",
-        "line": 45632
+        "line": 45633
       },
       {
-        "id": "message.app-tsx.build-report-followups-error.45675",
+        "id": "message.app-tsx.build-report-followups-error.45676",
         "text": "build:report-followups:error",
         "file": "App.tsx",
-        "line": 45675
+        "line": 45676
       },
       {
-        "id": "message.app-tsx.report-followups-error.45678",
+        "id": "message.app-tsx.report-followups-error.45679",
         "text": "report-followups:error",
         "file": "App.tsx",
-        "line": 45678
+        "line": 45679
       },
       {
-        "id": "message.app-tsx.neo-build-inputtrace-failed-to-save-input-trace.45915",
+        "id": "message.app-tsx.neo-build-inputtrace-failed-to-save-input-trace.45916",
         "text": "[NEO-Build][InputTrace] Failed to save input trace:",
         "file": "App.tsx",
-        "line": 45915
+        "line": 45916
       },
       {
-        "id": "message.app-tsx.n-remedialinstructorconflictevents-length-conflictlines-length-more-remedial-instructor-conflict.45972",
+        "id": "message.app-tsx.n-remedialinstructorconflictevents-length-conflictlines-length-more-remedial-instructor-conflict.45973",
         "text": "\\n+${remedialInstructorConflictEvents.length - conflictLines.length} more remedial instructor conflict(s).",
         "file": "App.tsx",
-        "line": 45972
+        "line": 45973
       },
       {
-        "id": "message.app-tsx.neo-build-scheduled-remedial-priority-event-s-with-the-assigned-instructor-despite-an-instructor.45975",
+        "id": "message.app-tsx.neo-build-scheduled-remedial-priority-event-s-with-the-assigned-instructor-despite-an-instructor.45976",
         "text": "NEO Build scheduled remedial priority event(s) with the assigned instructor despite an instructor conflict:\\n\\n${conflictLines.join('\\n')}${moreText}",
-        "file": "App.tsx",
-        "line": 45975
-      },
-      {
-        "id": "message.app-tsx.remedial-instructor-conflict.45976",
-        "text": "Remedial Instructor Conflict",
         "file": "App.tsx",
         "line": 45976
       },
       {
-        "id": "message.app-tsx.personname-in-event-event-flightnumber-at-event-starttime-tofixed-2-conflicts-with-a-static-unav.46021",
+        "id": "message.app-tsx.remedial-instructor-conflict.45977",
+        "text": "Remedial Instructor Conflict",
+        "file": "App.tsx",
+        "line": 45977
+      },
+      {
+        "id": "message.app-tsx.personname-in-event-event-flightnumber-at-event-starttime-tofixed-2-conflicts-with-a-static-unav.46022",
         "text": "${personName} in event ${event.flightNumber} at ${event.startTime.toFixed(2)} conflicts with a static unavailability period.",
         "file": "App.tsx",
-        "line": 46021
+        "line": 46022
       },
       {
-        "id": "message.app-tsx.build-error.46042",
+        "id": "message.app-tsx.build-error.46043",
         "text": "build-error",
         "file": "App.tsx",
-        "line": 46042
+        "line": 46043
       },
       {
-        "id": "message.app-tsx.build-error.46091",
+        "id": "message.app-tsx.build-error.46092",
         "text": "build:error",
         "file": "App.tsx",
-        "line": 46091
+        "line": 46092
       },
       {
-        "id": "message.app-tsx.neo-build-runtime-error-report.46093",
+        "id": "message.app-tsx.neo-build-runtime-error-report.46094",
         "text": "neo_build_runtime_error_report",
         "file": "App.tsx",
-        "line": 46093
+        "line": 46094
       },
       {
-        "id": "message.app-tsx.runtime-error-before-air-combat-diagnostics.46114",
+        "id": "message.app-tsx.runtime-error-before-air-combat-diagnostics.46115",
         "text": "runtime-error-before-air-combat-diagnostics",
         "file": "App.tsx",
-        "line": 46114
+        "line": 46115
       },
       {
-        "id": "message.app-tsx.build-failed-before-the-air-combat-scheduler-diagnostics-completed-see-runtimeerror-for-the-exac.46118",
+        "id": "message.app-tsx.build-failed-before-the-air-combat-scheduler-diagnostics-completed-see-runtimeerror-for-the-exac.46119",
         "text": "Build failed before the Air Combat scheduler diagnostics completed. See runtimeError for the exact exception.",
         "file": "App.tsx",
-        "line": 46118
+        "line": 46119
       },
       {
-        "id": "message.app-tsx.build-error.46128",
+        "id": "message.app-tsx.build-error.46129",
         "text": "build-error",
         "file": "App.tsx",
-        "line": 46128
+        "line": 46129
       },
       {
-        "id": "message.app-tsx.neo-build-diag-failed-to-persist-runtime-error-diagnostic.46134",
+        "id": "message.app-tsx.neo-build-diag-failed-to-persist-runtime-error-diagnostic.46135",
         "text": "[NEO-BUILD-DIAG] Failed to persist runtime error diagnostic:",
         "file": "App.tsx",
-        "line": 46134
+        "line": 46135
       },
       {
-        "id": "message.app-tsx.neo-build-dfp-build-failed.46136",
+        "id": "message.app-tsx.neo-build-dfp-build-failed.46137",
         "text": "🚀 [NEO-Build] DFP Build Failed:",
-        "file": "App.tsx",
-        "line": 46136
-      },
-      {
-        "id": "message.app-tsx.neo-build-error-stack.46137",
-        "text": "🚀 [NEO-Build] Error stack:",
         "file": "App.tsx",
         "line": 46137
       },
       {
-        "id": "message.app-tsx.error-during-build.46138",
-        "text": "Error during build!",
+        "id": "message.app-tsx.neo-build-error-stack.46138",
+        "text": "🚀 [NEO-Build] Error stack:",
         "file": "App.tsx",
         "line": 46138
       },
       {
-        "id": "message.app-tsx.publish-dfp-is-not-permitted-for-your-assigned-permission-profile.46155",
+        "id": "message.app-tsx.error-during-build.46139",
+        "text": "Error during build!",
+        "file": "App.tsx",
+        "line": 46139
+      },
+      {
+        "id": "message.app-tsx.publish-dfp-is-not-permitted-for-your-assigned-permission-profile.46156",
         "text": "Publish DFP is not permitted for your assigned permission profile",
         "file": "App.tsx",
-        "line": 46155
+        "line": 46156
       },
       {
-        "id": "message.app-tsx.publish-error.46170",
+        "id": "message.app-tsx.publish-error.46171",
         "text": "Publish Error",
         "file": "App.tsx",
-        "line": 46170
+        "line": 46171
       },
       {
-        "id": "message.app-tsx.pausebuild-locked-completed-non-affected-type-events.46238",
+        "id": "message.app-tsx.pausebuild-locked-completed-non-affected-type-events.46239",
         "text": "[PauseBuild] Locked (completed + non-affected type) events:",
         "file": "App.tsx",
-        "line": 46238
+        "line": 46239
       },
       {
-        "id": "message.app-tsx.locked.46460",
+        "id": "message.app-tsx.locked.46461",
         "text": "(locked:",
         "file": "App.tsx",
-        "line": 46460
+        "line": 46461
       },
       {
-        "id": "message.app-tsx.locked.47003",
+        "id": "message.app-tsx.locked.47004",
         "text": "(locked:",
         "file": "App.tsx",
-        "line": 47003
+        "line": 47004
       },
       {
-        "id": "message.app-tsx.snapshot-save-failed-with-http-saveresponse-status.47343",
+        "id": "message.app-tsx.snapshot-save-failed-with-http-saveresponse-status.47344",
         "text": "Snapshot save failed with HTTP ${saveResponse.status}",
         "file": "App.tsx",
-        "line": 47343
+        "line": 47344
       },
       {
-        "id": "message.app-tsx.the-dfp-was-built-but-it-was-not-saved-to-the-published-dfp-database-n-n-err-instanceof-error-er.47352",
+        "id": "message.app-tsx.the-dfp-was-built-but-it-was-not-saved-to-the-published-dfp-database-n-n-err-instanceof-error-er.47353",
         "text": "The DFP was built, but it was not saved to the published DFP database.\\n\\n${err instanceof Error ? err.message : String(err)}\\n\\nDo not hard refresh yet. Try Publish again, then confirm the save succeeds.",
-        "file": "App.tsx",
-        "line": 47352
-      },
-      {
-        "id": "message.app-tsx.publish-save-failed.47353",
-        "text": "Publish Save Failed",
         "file": "App.tsx",
         "line": 47353
       },
       {
-        "id": "message.app-tsx.publish-save-blocked.47362",
+        "id": "message.app-tsx.publish-save-failed.47354",
+        "text": "Publish Save Failed",
+        "file": "App.tsx",
+        "line": 47354
+      },
+      {
+        "id": "message.app-tsx.publish-save-blocked.47363",
         "text": "Publish Save Blocked",
         "file": "App.tsx",
-        "line": 47362
+        "line": 47363
       },
       {
-        "id": "message.app-tsx.deployunavail-server-cleanup-call-failed.47413",
+        "id": "message.app-tsx.deployunavail-server-cleanup-call-failed.47414",
         "text": "[DeployUnavail] Server cleanup call failed:",
         "file": "App.tsx",
-        "line": 47413
+        "line": 47414
       },
       {
-        "id": "message.app-tsx.failed-to-persist-deployed-unavailability-for-instructor.47544",
+        "id": "message.app-tsx.failed-to-persist-deployed-unavailability-for-instructor.47545",
         "text": "Failed to persist Deployed unavailability for instructor:",
         "file": "App.tsx",
-        "line": 47544
+        "line": 47545
       },
       {
-        "id": "message.app-tsx.failed-to-persist-deployed-unavailability-for-trainee.47567",
+        "id": "message.app-tsx.failed-to-persist-deployed-unavailability-for-trainee.47568",
         "text": "Failed to persist Deployed unavailability for trainee:",
         "file": "App.tsx",
-        "line": 47567
+        "line": 47568
       },
       {
-        "id": "message.app-tsx.deployunavail-patch-instructor-failed.47608",
+        "id": "message.app-tsx.deployunavail-patch-instructor-failed.47609",
         "text": "[DeployUnavail] PATCH instructor failed:",
         "file": "App.tsx",
-        "line": 47608
+        "line": 47609
       },
       {
-        "id": "message.app-tsx.deployunavail-failed-to-remove-deployed-unavailability-for-instructor.47610",
+        "id": "message.app-tsx.deployunavail-failed-to-remove-deployed-unavailability-for-instructor.47611",
         "text": "[DeployUnavail] Failed to remove Deployed unavailability for instructor:",
         "file": "App.tsx",
-        "line": 47610
+        "line": 47611
       },
       {
-        "id": "message.app-tsx.deployunavail-patch-trainee-failed.47631",
+        "id": "message.app-tsx.deployunavail-patch-trainee-failed.47632",
         "text": "[DeployUnavail] PATCH trainee failed:",
         "file": "App.tsx",
-        "line": 47631
+        "line": 47632
       },
       {
-        "id": "message.app-tsx.deployunavail-failed-to-remove-deployed-unavailability-for-trainee.47633",
+        "id": "message.app-tsx.deployunavail-failed-to-remove-deployed-unavailability-for-trainee.47634",
         "text": "[DeployUnavail] Failed to remove Deployed unavailability for trainee:",
         "file": "App.tsx",
-        "line": 47633
+        "line": 47634
       },
       {
-        "id": "message.app-tsx.dfp-failed-to-persist-moved-schedule-tiles.47702",
+        "id": "message.app-tsx.dfp-failed-to-persist-moved-schedule-tiles.47703",
         "text": "[DFP] Failed to persist moved schedule tiles:",
         "file": "App.tsx",
-        "line": 47702
+        "line": 47703
       },
       {
-        "id": "message.app-tsx.flight-authorisation-is-optional-for-this-unit-authorisation-entries-are-disabled.48105",
+        "id": "message.app-tsx.flight-authorisation-is-optional-for-this-unit-authorisation-entries-are-disabled.48106",
         "text": "Flight authorisation is optional for this unit. Authorisation entries are disabled.",
         "file": "App.tsx",
-        "line": 48105
+        "line": 48106
       },
       {
-        "id": "message.app-tsx.flight-authorisation-is-optional-for-this-unit-authorisation-entries-are-disabled.48251",
+        "id": "message.app-tsx.flight-authorisation-is-optional-for-this-unit-authorisation-entries-are-disabled.48252",
         "text": "Flight authorisation is optional for this unit. Authorisation entries are disabled.",
         "file": "App.tsx",
-        "line": 48251
+        "line": 48252
       },
       {
-        "id": "message.app-tsx.failed-to-save-staff-importedinstructor-name-importedinstructor-idnumber.48356",
+        "id": "message.app-tsx.failed-to-save-staff-importedinstructor-name-importedinstructor-idnumber.48357",
         "text": "Failed to save staff ${importedInstructor.name || importedInstructor.idNumber}",
         "file": "App.tsx",
-        "line": 48356
+        "line": 48357
       },
       {
-        "id": "message.app-tsx.archive-failed-response-status.48486",
+        "id": "message.app-tsx.archive-failed-response-status.48487",
         "text": "Archive failed (${response.status})",
         "file": "App.tsx",
-        "line": 48486
+        "line": 48487
       },
       {
-        "id": "message.app-tsx.staff-archive-failed.48503",
+        "id": "message.app-tsx.staff-archive-failed.48504",
         "text": "[Staff Archive] Failed:",
-        "file": "App.tsx",
-        "line": 48503
-      },
-      {
-        "id": "message.app-tsx.archive-failed-could-not-archive-instructortoarchive-name-error-instanceof-error-error-message-s.48504",
-        "text": "Archive failed: Could not archive ${instructorToArchive.name}. ${error instanceof Error ? error.message : String(error)}",
         "file": "App.tsx",
         "line": 48504
       },
       {
-        "id": "message.app-tsx.restore-failed-response-status.48543",
+        "id": "message.app-tsx.archive-failed-could-not-archive-instructortoarchive-name-error-instanceof-error-error-message-s.48505",
+        "text": "Archive failed: Could not archive ${instructorToArchive.name}. ${error instanceof Error ? error.message : String(error)}",
+        "file": "App.tsx",
+        "line": 48505
+      },
+      {
+        "id": "message.app-tsx.restore-failed-response-status.48544",
         "text": "Restore failed (${response.status})",
         "file": "App.tsx",
-        "line": 48543
+        "line": 48544
       },
       {
-        "id": "message.app-tsx.staff-restore-failed.48563",
+        "id": "message.app-tsx.staff-restore-failed.48564",
         "text": "[Staff Restore] Failed:",
-        "file": "App.tsx",
-        "line": 48563
-      },
-      {
-        "id": "message.app-tsx.restore-failed-could-not-restore-instructortorestore-name-error-instanceof-error-error-message-s.48564",
-        "text": "Restore failed: Could not restore ${instructorToRestore.name}. ${error instanceof Error ? error.message : String(error)}",
         "file": "App.tsx",
         "line": 48564
       },
       {
-        "id": "message.app-tsx.db-load-added-missing-coursecolor-for-course.48734",
+        "id": "message.app-tsx.restore-failed-could-not-restore-instructortorestore-name-error-instanceof-error-error-message-s.48565",
+        "text": "Restore failed: Could not restore ${instructorToRestore.name}. ${error instanceof Error ? error.message : String(error)}",
+        "file": "App.tsx",
+        "line": 48565
+      },
+      {
+        "id": "message.app-tsx.db-load-added-missing-coursecolor-for-course.48735",
         "text": "[DB Load] Added missing courseColor for \"${course}\"",
         "file": "App.tsx",
-        "line": 48734
+        "line": 48735
       },
       {
-        "id": "message.app-tsx.error-refreshing-database-data.48743",
+        "id": "message.app-tsx.error-refreshing-database-data.48744",
         "text": "❌ Error refreshing database data:",
         "file": "App.tsx",
-        "line": 48743
+        "line": 48744
       },
       {
-        "id": "message.app-tsx.handlebulkupdatetrainees-missing-idnumber-missingid-length-missing-name-missingname-length.48753",
+        "id": "message.app-tsx.handlebulkupdatetrainees-missing-idnumber-missingid-length-missing-name-missingname-length.48754",
         "text": "🔵 [handleBulkUpdateTrainees] Missing idNumber: ${missingId.length}, missing name: ${missingName.length}",
         "file": "App.tsx",
-        "line": 48753
+        "line": 48754
       },
       {
-        "id": "message.app-tsx.handlebulkupdatetrainees-db-save-failed-status.48791",
+        "id": "message.app-tsx.handlebulkupdatetrainees-db-save-failed-status.48792",
         "text": "❌ [handleBulkUpdateTrainees] DB save failed. Status:",
-        "file": "App.tsx",
-        "line": 48791
-      },
-      {
-        "id": "message.app-tsx.warning-trainees-updated-in-session-but-db-save-failed-response-status-check-console.48792",
-        "text": "Warning: Trainees updated in session but DB save failed (${response.status}). Check console.",
         "file": "App.tsx",
         "line": 48792
       },
       {
-        "id": "message.app-tsx.warning-db-save-error-err-as-error-message.48796",
+        "id": "message.app-tsx.warning-trainees-updated-in-session-but-db-save-failed-response-status-check-console.48793",
+        "text": "Warning: Trainees updated in session but DB save failed (${response.status}). Check console.",
+        "file": "App.tsx",
+        "line": 48793
+      },
+      {
+        "id": "message.app-tsx.warning-db-save-error-err-as-error-message.48797",
         "text": "Warning: DB save error — ${(err as Error).message}",
         "file": "App.tsx",
-        "line": 48796
+        "line": 48797
       },
       {
-        "id": "message.app-tsx.handlereplacetrainees-db-save-failed-status.48868",
+        "id": "message.app-tsx.handlereplacetrainees-db-save-failed-status.48869",
         "text": "❌ [handleReplaceTrainees] DB save failed. Status:",
-        "file": "App.tsx",
-        "line": 48868
-      },
-      {
-        "id": "message.app-tsx.warning-trainees-replaced-in-session-but-db-save-failed-response-status-check-console.48869",
-        "text": "Warning: Trainees replaced in session but DB save failed (${response.status}). Check console.",
         "file": "App.tsx",
         "line": 48869
       },
       {
-        "id": "message.app-tsx.database-save-failed-response-status.48870",
-        "text": "Database save failed (${response.status}).",
+        "id": "message.app-tsx.warning-trainees-replaced-in-session-but-db-save-failed-response-status-check-console.48870",
+        "text": "Warning: Trainees replaced in session but DB save failed (${response.status}). Check console.",
         "file": "App.tsx",
         "line": 48870
       },
       {
-        "id": "message.app-tsx.warning-db-save-error-err-as-error-message.48884",
+        "id": "message.app-tsx.database-save-failed-response-status.48871",
+        "text": "Database save failed (${response.status}).",
+        "file": "App.tsx",
+        "line": 48871
+      },
+      {
+        "id": "message.app-tsx.warning-db-save-error-err-as-error-message.48885",
         "text": "Warning: DB save error — ${(err as Error).message}",
         "file": "App.tsx",
-        "line": 48884
+        "line": 48885
       },
       {
-        "id": "message.app-tsx.poll-error-during-poll.49116",
+        "id": "message.app-tsx.poll-error-during-poll.49117",
         "text": "[Poll] Error during poll:",
         "file": "App.tsx",
-        "line": 49116
+        "line": 49117
       },
       {
-        "id": "message.app-tsx.insert-event-failed.49326",
+        "id": "message.app-tsx.insert-event-failed.49327",
         "text": "Insert Event Failed",
         "file": "App.tsx",
-        "line": 49326
+        "line": 49327
       },
       {
-        "id": "message.app-tsx.insert-event-failed.49334",
+        "id": "message.app-tsx.insert-event-failed.49335",
         "text": "Insert Event Failed",
         "file": "App.tsx",
-        "line": 49334
+        "line": 49335
       },
       {
-        "id": "message.app-tsx.air-combat-training-failed-to-insert-event.49411",
+        "id": "message.app-tsx.air-combat-training-failed-to-insert-event.49412",
         "text": "[Air Combat Training] Failed to insert event:",
         "file": "App.tsx",
-        "line": 49411
+        "line": 49412
       },
       {
-        "id": "message.app-tsx.the-air-combat-training-event-was-not-saved-n-n-error-instanceof-error-error-message-string-erro.49413",
+        "id": "message.app-tsx.the-air-combat-training-event-was-not-saved-n-n-error-instanceof-error-error-message-string-erro.49414",
         "text": "The Air Combat training event was not saved.\\n\\n${error instanceof Error ? error.message : String(error)}",
-        "file": "App.tsx",
-        "line": 49413
-      },
-      {
-        "id": "message.app-tsx.insert-event-failed.49414",
-        "text": "Insert Event Failed",
         "file": "App.tsx",
         "line": 49414
       },
       {
-        "id": "message.app-tsx.air-combat-training-save-failed.49436",
-        "text": "Air Combat Training Save Failed",
+        "id": "message.app-tsx.insert-event-failed.49415",
+        "text": "Insert Event Failed",
         "file": "App.tsx",
-        "line": 49436
+        "line": 49415
       },
       {
-        "id": "message.app-tsx.air-combat-training-failed-to-update-event.49484",
+        "id": "message.app-tsx.air-combat-training-save-failed.49437",
+        "text": "Air Combat Training Save Failed",
+        "file": "App.tsx",
+        "line": 49437
+      },
+      {
+        "id": "message.app-tsx.air-combat-training-failed-to-update-event.49485",
         "text": "[Air Combat Training] Failed to update event:",
         "file": "App.tsx",
-        "line": 49484
+        "line": 49485
       },
       {
-        "id": "message.app-tsx.the-air-combat-training-event-was-not-saved-n-n-error-instanceof-error-error-message-string-erro.49486",
+        "id": "message.app-tsx.the-air-combat-training-event-was-not-saved-n-n-error-instanceof-error-error-message-string-erro.49487",
         "text": "The Air Combat training event was not saved.\\n\\n${error instanceof Error ? error.message : String(error)}",
-        "file": "App.tsx",
-        "line": 49486
-      },
-      {
-        "id": "message.app-tsx.air-combat-training-save-failed.49487",
-        "text": "Air Combat Training Save Failed",
         "file": "App.tsx",
         "line": 49487
       },
       {
-        "id": "message.app-tsx.addgroundevent-save-blocked-no-configured-ground-resource-selected.49587",
+        "id": "message.app-tsx.air-combat-training-save-failed.49488",
+        "text": "Air Combat Training Save Failed",
+        "file": "App.tsx",
+        "line": 49488
+      },
+      {
+        "id": "message.app-tsx.addgroundevent-save-blocked-no-configured-ground-resource-selected.49588",
         "text": "[AddGroundEvent] Save blocked: no configured ground resource selected.",
         "file": "App.tsx",
-        "line": 49587
+        "line": 49588
       },
       {
-        "id": "message.app-tsx.academicpublish-blocked-no-selectedtrainees-returning-early.49674",
+        "id": "message.app-tsx.academicpublish-blocked-no-selectedtrainees-returning-early.49675",
         "text": "🎓 [AcademicPublish] ❌ BLOCKED: no selectedTrainees — returning early",
         "file": "App.tsx",
-        "line": 49674
+        "line": 49675
       },
       {
-        "id": "message.app-tsx.academicpublish-blocked-no-timeline-tiles-returning-early.49678",
+        "id": "message.app-tsx.academicpublish-blocked-no-timeline-tiles-returning-early.49679",
         "text": "🎓 [AcademicPublish] ❌ BLOCKED: no timeline tiles — returning early",
         "file": "App.tsx",
-        "line": 49678
+        "line": 49679
       },
       {
-        "id": "message.app-tsx.academicpublish-blocked-sessionduration-is.49690",
+        "id": "message.app-tsx.academicpublish-blocked-sessionduration-is.49691",
         "text": "🎓 [AcademicPublish] ❌ BLOCKED: sessionDuration is",
         "file": "App.tsx",
-        "line": 49690
+        "line": 49691
       },
       {
-        "id": "message.app-tsx.workstart-workend-invalid.49690",
+        "id": "message.app-tsx.workstart-workend-invalid.49691",
         "text": "— workStart/workEnd invalid",
         "file": "App.tsx",
-        "line": 49690
+        "line": 49691
       },
       {
-        "id": "message.app-tsx.qualification-failures.49954",
+        "id": "message.app-tsx.qualification-failures.49955",
         "text": "🔍 - Qualification failures:",
-        "file": "App.tsx",
-        "line": 49954
-      },
-      {
-        "id": "message.app-tsx.unavailability-failures.49955",
-        "text": "🔍 - Unavailability failures:",
         "file": "App.tsx",
         "line": 49955
       },
       {
-        "id": "message.app-tsx.overlap-failures.49956",
-        "text": "🔍 - Overlap failures:",
+        "id": "message.app-tsx.unavailability-failures.49956",
+        "text": "🔍 - Unavailability failures:",
         "file": "App.tsx",
         "line": 49956
       },
       {
-        "id": "message.app-tsx.unavailability-failures.50017",
-        "text": "🔍 - Unavailability failures:",
+        "id": "message.app-tsx.overlap-failures.49957",
+        "text": "🔍 - Overlap failures:",
         "file": "App.tsx",
-        "line": 50017
+        "line": 49957
       },
       {
-        "id": "message.app-tsx.overlap-failures.50018",
-        "text": "🔍 - Overlap failures:",
+        "id": "message.app-tsx.unavailability-failures.50018",
+        "text": "🔍 - Unavailability failures:",
         "file": "App.tsx",
         "line": 50018
       },
       {
-        "id": "message.app-tsx.aircraft-turnaround-conflict-minimum-requiredturnaroundhourstext-hrs-gaptext-after-earlier-fligh.50208",
+        "id": "message.app-tsx.overlap-failures.50019",
+        "text": "🔍 - Overlap failures:",
+        "file": "App.tsx",
+        "line": 50019
+      },
+      {
+        "id": "message.app-tsx.aircraft-turnaround-conflict-minimum-requiredturnaroundhourstext-hrs-gaptext-after-earlier-fligh.50209",
         "text": "❌ Aircraft turnaround conflict - minimum ${requiredTurnaroundHoursText} hrs, ${gapText} after ${earlier.flightNumber}.",
         "file": "App.tsx",
-        "line": 50208
+        "line": 50209
       },
       {
-        "id": "message.app-tsx.validate-mode-conflicts-detected.50240",
+        "id": "message.app-tsx.validate-mode-conflicts-detected.50241",
         "text": "⚠️ VALIDATE MODE CONFLICTS DETECTED:",
         "file": "App.tsx",
-        "line": 50240
+        "line": 50241
       },
       {
-        "id": "message.app-tsx.neo-analysis-this-event-has-no-conflicts-and-passes-all-validation-rules.50250",
+        "id": "message.app-tsx.neo-analysis-this-event-has-no-conflicts-and-passes-all-validation-rules.50251",
         "text": "NEO analysis: This event has no conflicts and passes all validation rules.",
         "file": "App.tsx",
-        "line": 50250
+        "line": 50251
       },
       {
-        "id": "message.app-tsx.neo-found-no-hard-errors-for-this-event.50252",
+        "id": "message.app-tsx.neo-found-no-hard-errors-for-this-event.50253",
         "text": "NEO found no hard errors for this event.",
         "file": "App.tsx",
-        "line": 50252
+        "line": 50253
       },
       {
-        "id": "message.app-tsx.neo-analyzing-validate-mode-conflict-for-event-eventforneo-flightnumber-eventforneo-id.50259",
+        "id": "message.app-tsx.neo-analyzing-validate-mode-conflict-for-event-eventforneo-flightnumber-eventforneo-id.50260",
         "text": "NEO: Analyzing validate-mode conflict for event ${eventForNeo.flightNumber} (${eventForNeo.id})",
-        "file": "App.tsx",
-        "line": 50259
-      },
-      {
-        "id": "message.app-tsx.validation-errors-found.50260",
-        "text": "Validation errors found:",
         "file": "App.tsx",
         "line": 50260
       },
       {
-        "id": "message.app-tsx.no-resolution-found-for-the-turnaround-violation-changing-crew-will-not-fix-this-resource-confli.50279",
+        "id": "message.app-tsx.validation-errors-found.50261",
+        "text": "Validation errors found:",
+        "file": "App.tsx",
+        "line": 50261
+      },
+      {
+        "id": "message.app-tsx.no-resolution-found-for-the-turnaround-violation-changing-crew-will-not-fix-this-resource-confli.50280",
         "text": "No resolution found for the turnaround violation. Changing crew will not fix this resource conflict.",
         "file": "App.tsx",
-        "line": 50279
+        "line": 50280
       },
       {
-        "id": "message.app-tsx.duty-warning-triggered.50333",
+        "id": "message.app-tsx.duty-warning-triggered.50334",
         "text": "⚠️ Duty warning triggered",
         "file": "App.tsx",
-        "line": 50333
+        "line": 50334
       },
       {
-        "id": "message.app-tsx.warning.50400",
+        "id": "message.app-tsx.warning.50401",
         "text": "⚠️ ${warning}",
         "file": "App.tsx",
-        "line": 50400
+        "line": 50401
       },
       {
-        "id": "message.app-tsx.for-conflictperson.50442",
+        "id": "message.app-tsx.for-conflictperson.50443",
         "text": "for ${conflictPerson}",
         "file": "App.tsx",
-        "line": 50442
+        "line": 50443
       },
       {
-        "id": "message.app-tsx.turnaround-violation-persontext-only-gap-tofixed-2-hrs-between-event-flightnumber-and-previous-e.50455",
+        "id": "message.app-tsx.turnaround-violation-persontext-only-gap-tofixed-2-hrs-between-event-flightnumber-and-previous-e.50456",
         "text": "❌ Turnaround violation${personText} - Only ${gap.toFixed(2)}hrs between ${event.flightNumber} and previous event ${conflictingEvent.flightNumber} (minimum required: ${requiredTurnaround}hrs)",
         "file": "App.tsx",
-        "line": 50455
+        "line": 50456
       },
       {
-        "id": "message.app-tsx.turnaround-violation-persontext-only-gap-tofixed-2-hrs-between-event-flightnumber-and-next-event.50459",
+        "id": "message.app-tsx.turnaround-violation-persontext-only-gap-tofixed-2-hrs-between-event-flightnumber-and-next-event.50460",
         "text": "❌ Turnaround violation${personText} - Only ${gap.toFixed(2)}hrs between ${event.flightNumber} and next event ${conflictingEvent.flightNumber} (minimum required: ${requiredTurnaround}hrs)",
         "file": "App.tsx",
-        "line": 50459
+        "line": 50460
       },
       {
-        "id": "message.app-tsx.resource-conflict-aircraft-event-resourceid-is-double-booked-with-conflictingevent-flightnumber-.50466",
+        "id": "message.app-tsx.resource-conflict-aircraft-event-resourceid-is-double-booked-with-conflictingevent-flightnumber-.50467",
         "text": "❌ Resource conflict - Aircraft ${event.resourceId} is double-booked with ${conflictingEvent.flightNumber} at ${conflictingEvent.startTime.toFixed(2)}hrs",
         "file": "App.tsx",
-        "line": 50466
+        "line": 50467
       },
       {
-        "id": "message.app-tsx.conflictperson-crew-member-is-double-booked-scheduled-for-both-event-flightnumber-and-conflictin.50473",
+        "id": "message.app-tsx.conflictperson-crew-member-is-double-booked-scheduled-for-both-event-flightnumber-and-conflictin.50474",
         "text": "❌ ${conflictPerson || 'Crew member'} is double-booked - Scheduled for both ${event.flightNumber} and ${conflictingEvent.flightNumber} at overlapping times",
         "file": "App.tsx",
-        "line": 50473
+        "line": 50474
       },
       {
-        "id": "message.app-tsx.day-night-separation-violation-conflictperson-crew-member-cannot-be-scheduled-for-both-eventclas.50482",
+        "id": "message.app-tsx.day-night-separation-violation-conflictperson-crew-member-cannot-be-scheduled-for-both-eventclas.50483",
         "text": "❌ Day/Night separation violation - ${conflictPerson || 'Crew member'} cannot be scheduled for both ${eventClassification} event (${event.flightNumber}) and ${conflictingEventClassification} event (${conflictingEvent.flightNumber})",
         "file": "App.tsx",
-        "line": 50482
+        "line": 50483
       },
       {
-        "id": "message.app-tsx.twr-di-coverage-missing-solo-flights-require-a-twr-di-event-that-starts-before-or-at-the-solo-st.50505",
+        "id": "message.app-tsx.twr-di-coverage-missing-solo-flights-require-a-twr-di-event-that-starts-before-or-at-the-solo-st.50506",
         "text": "❌ TWR DI coverage missing - Solo flights require a TWR DI event that starts before or at the solo start time and finishes after or at the solo finish time.",
         "file": "App.tsx",
-        "line": 50505
+        "line": 50506
       },
       {
-        "id": "message.app-tsx.unavailable.50521",
+        "id": "message.app-tsx.unavailable.50522",
         "text": "Unavailable",
-        "file": "App.tsx",
-        "line": 50521
-      },
-      {
-        "id": "message.app-tsx.name-split-0-is-unavailable-reason.50522",
-        "text": "❌ ${(name || '').split(',')[0]} is unavailable - ${reason}",
         "file": "App.tsx",
         "line": 50522
       },
       {
-        "id": "message.app-tsx.running-findharderrors-on-updated-tile.50782",
+        "id": "message.app-tsx.name-split-0-is-unavailable-reason.50523",
+        "text": "❌ ${(name || '').split(',')[0]} is unavailable - ${reason}",
+        "file": "App.tsx",
+        "line": 50523
+      },
+      {
+        "id": "message.app-tsx.running-findharderrors-on-updated-tile.50783",
         "text": "🟠 Running findHardErrors on updated tile...",
         "file": "App.tsx",
-        "line": 50782
+        "line": 50783
       },
       {
-        "id": "message.app-tsx.errors-found.50784",
+        "id": "message.app-tsx.errors-found.50785",
         "text": "🟠 Errors found:",
         "file": "App.tsx",
-        "line": 50784
+        "line": 50785
       },
       {
-        "id": "message.app-tsx.error-details.50786",
+        "id": "message.app-tsx.error-details.50787",
         "text": "🟠 Error details:",
         "file": "App.tsx",
-        "line": 50786
+        "line": 50787
       },
       {
-        "id": "message.app-tsx.all-conflicts-resolved-closing-flyout-and-showing-success-message.50790",
+        "id": "message.app-tsx.all-conflicts-resolved-closing-flyout-and-showing-success-message.50791",
         "text": "🟠 ✅ All conflicts resolved! Closing flyout and showing success message",
         "file": "App.tsx",
-        "line": 50790
+        "line": 50791
       },
       {
-        "id": "message.app-tsx.all-conflicts-for-updatedproblemtile-flightnumber-resolved.50792",
+        "id": "message.app-tsx.all-conflicts-for-updatedproblemtile-flightnumber-resolved.50793",
         "text": "All conflicts for ${updatedProblemTile.flightNumber} resolved.",
         "file": "App.tsx",
-        "line": 50792
+        "line": 50793
       },
       {
-        "id": "message.app-tsx.conflicts-still-exist-generating-new-remedies.50800",
+        "id": "message.app-tsx.conflicts-still-exist-generating-new-remedies.50801",
         "text": "🟠 ⚠️ Conflicts still exist, generating new remedies...",
         "file": "App.tsx",
-        "line": 50800
+        "line": 50801
       },
       {
-        "id": "message.app-tsx.instructor-errors.50810",
+        "id": "message.app-tsx.instructor-errors.50811",
         "text": "🟠 Instructor errors:",
-        "file": "App.tsx",
-        "line": 50810
-      },
-      {
-        "id": "message.app-tsx.trainee-errors.50811",
-        "text": "🟠 Trainee errors:",
         "file": "App.tsx",
         "line": 50811
       },
       {
-        "id": "message.app-tsx.neo-tile-assistance-is-not-permitted-for-your-assigned-permission-profile.51007",
+        "id": "message.app-tsx.trainee-errors.50812",
+        "text": "🟠 Trainee errors:",
+        "file": "App.tsx",
+        "line": 50812
+      },
+      {
+        "id": "message.app-tsx.neo-tile-assistance-is-not-permitted-for-your-assigned-permission-profile.51008",
         "text": "NEO tile assistance is not permitted for your assigned permission profile",
         "file": "App.tsx",
-        "line": 51007
+        "line": 51008
       },
       {
-        "id": "message.app-tsx.add-or-edit-flight-tiles-is-not-permitted-for-your-assigned-permission-profile.51036",
+        "id": "message.app-tsx.add-or-edit-flight-tiles-is-not-permitted-for-your-assigned-permission-profile.51037",
         "text": "Add or edit flight tiles is not permitted for your assigned permission profile",
         "file": "App.tsx",
-        "line": 51036
+        "line": 51037
       },
       {
-        "id": "message.app-tsx.pause-flight-ops-requires-dfp-tile-edit-permission-and-a-neo-capable-operational-model.51632",
+        "id": "message.app-tsx.pause-flight-ops-requires-dfp-tile-edit-permission-and-a-neo-capable-operational-model.51633",
         "text": "Pause Flight Ops requires DFP tile edit permission and a NEO-capable operational model",
         "file": "App.tsx",
-        "line": 51632
+        "line": 51633
       },
       {
-        "id": "message.app-tsx.master-permission-profiles.51665",
+        "id": "message.app-tsx.master-permission-profiles.51666",
         "text": "Master Permission Profiles",
         "file": "App.tsx",
-        "line": 51665
+        "line": 51666
       },
       {
-        "id": "message.app-tsx.platform-permission-profiles.51665",
+        "id": "message.app-tsx.platform-permission-profiles.51666",
         "text": "platform-permission-profiles",
         "file": "App.tsx",
-        "line": 51665
+        "line": 51666
       },
       {
-        "id": "message.app-tsx.run-validation-checks-is-not-permitted-for-your-assigned-permission-profile.51700",
+        "id": "message.app-tsx.run-validation-checks-is-not-permitted-for-your-assigned-permission-profile.51701",
         "text": "Run validation checks is not permitted for your assigned permission profile",
         "file": "App.tsx",
-        "line": 51700
+        "line": 51701
       },
       {
-        "id": "message.app-tsx.disabled-in-business-rules.51854",
+        "id": "message.app-tsx.disabled-in-business-rules.51855",
         "text": "Disabled in Business Rules.",
         "file": "App.tsx",
-        "line": 51854
+        "line": 51855
       },
       {
-        "id": "message.app-tsx.open-aircraft-inventory-and-unavailable-bays.51881",
+        "id": "message.app-tsx.open-aircraft-inventory-and-unavailable-bays.51882",
         "text": "Open aircraft inventory and unavailable bays.",
         "file": "App.tsx",
-        "line": 51881
+        "line": 51882
       },
       {
-        "id": "message.app-tsx.open-aircraft-inventory-and-unavailable-bays.51900",
+        "id": "message.app-tsx.open-aircraft-inventory-and-unavailable-bays.51901",
         "text": "Open aircraft inventory and unavailable bays.",
         "file": "App.tsx",
-        "line": 51900
+        "line": 51901
       },
       {
-        "id": "message.app-tsx.trainee-delete-failed.52115",
+        "id": "message.app-tsx.trainee-delete-failed.52116",
         "text": "[Trainee Delete] Failed:",
-        "file": "App.tsx",
-        "line": 52115
-      },
-      {
-        "id": "message.app-tsx.delete-failed-error-instanceof-error-error-message-string-error.52116",
-        "text": "Delete failed: ${error instanceof Error ? error.message : String(error)}",
         "file": "App.tsx",
         "line": 52116
       },
       {
-        "id": "message.app-tsx.coursemove-failed-to-save-trainee-course-change-for-trainee-name.52162",
+        "id": "message.app-tsx.delete-failed-error-instanceof-error-error-message-string-error.52117",
+        "text": "Delete failed: ${error instanceof Error ? error.message : String(error)}",
+        "file": "App.tsx",
+        "line": 52117
+      },
+      {
+        "id": "message.app-tsx.coursemove-failed-to-save-trainee-course-change-for-trainee-name.52163",
         "text": "[CourseMove] Failed to save trainee course change for ${trainee.name}:",
         "file": "App.tsx",
-        "line": 52162
+        "line": 52163
       },
       {
-        "id": "message.app-tsx.coursemove-error-saving-trainee-course-change-for-trainee-name.52165",
+        "id": "message.app-tsx.coursemove-error-saving-trainee-course-change-for-trainee-name.52166",
         "text": "[CourseMove] Error saving trainee course change for ${trainee.name}:",
         "file": "App.tsx",
-        "line": 52165
+        "line": 52166
       },
       {
-        "id": "message.app-tsx.coursemove-failed-to-record-direction-movement.52187",
+        "id": "message.app-tsx.coursemove-failed-to-record-direction-movement.52188",
         "text": "[CourseMove] Failed to record ${direction} movement:",
         "file": "App.tsx",
-        "line": 52187
+        "line": 52188
       },
       {
-        "id": "message.app-tsx.coursemove-error-recording-direction-movement.52190",
+        "id": "message.app-tsx.coursemove-error-recording-direction-movement.52191",
         "text": "[CourseMove] Error recording ${direction} movement:",
         "file": "App.tsx",
-        "line": 52190
+        "line": 52191
       },
       {
-        "id": "message.app-tsx.staff-schedule-error-failed-to-render-instructorscheduleview.52493",
+        "id": "message.app-tsx.staff-schedule-error-failed-to-render-instructorscheduleview.52494",
         "text": "🔴 STAFF SCHEDULE ERROR - Failed to render InstructorScheduleView:",
-        "file": "App.tsx",
-        "line": 52493
-      },
-      {
-        "id": "message.app-tsx.error-stack.52494",
-        "text": "🔴 Error stack:",
         "file": "App.tsx",
         "line": 52494
       },
       {
-        "id": "message.app-tsx.courseedit-failed-to-save-unit-change-to-database.52678",
+        "id": "message.app-tsx.error-stack.52495",
+        "text": "🔴 Error stack:",
+        "file": "App.tsx",
+        "line": 52495
+      },
+      {
+        "id": "message.app-tsx.courseedit-failed-to-save-unit-change-to-database.52679",
         "text": "[CourseEdit] ❌ Failed to save unit change to database",
         "file": "App.tsx",
-        "line": 52678
+        "line": 52679
       },
       {
-        "id": "message.app-tsx.courseedit-error-saving-unit-change.52681",
+        "id": "message.app-tsx.courseedit-error-saving-unit-change.52682",
         "text": "[CourseEdit] ❌ Error saving unit change:",
         "file": "App.tsx",
-        "line": 52681
+        "line": 52682
       },
       {
-        "id": "message.app-tsx.courseedit-failed-to-save-unit-change-to-database.52833",
+        "id": "message.app-tsx.courseedit-failed-to-save-unit-change-to-database.52834",
         "text": "[CourseEdit] ❌ Failed to save unit change to database",
         "file": "App.tsx",
-        "line": 52833
+        "line": 52834
       },
       {
-        "id": "message.app-tsx.courseedit-error-saving-unit-change.52836",
+        "id": "message.app-tsx.courseedit-error-saving-unit-change.52837",
         "text": "[CourseEdit] ❌ Error saving unit change:",
         "file": "App.tsx",
-        "line": 52836
+        "line": 52837
       },
       {
-        "id": "message.app-tsx.continuation-failed-to-save-to-db.53134",
+        "id": "message.app-tsx.continuation-failed-to-save-to-db.53135",
         "text": "[CONTINUATION] Failed to save to DB:",
         "file": "App.tsx",
-        "line": 53134
+        "line": 53135
       },
       {
-        "id": "message.app-tsx.continuation-failed-to-save-continuation-request.53136",
+        "id": "message.app-tsx.continuation-failed-to-save-continuation-request.53137",
         "text": "[CONTINUATION] Failed to save continuation request:",
         "file": "App.tsx",
-        "line": 53136
+        "line": 53137
       },
       {
-        "id": "message.app-tsx.failed-to-delete-continuation-request.53149",
+        "id": "message.app-tsx.failed-to-delete-continuation-request.53150",
         "text": "Failed to delete continuation request:",
         "file": "App.tsx",
-        "line": 53149
+        "line": 53150
       },
       {
-        "id": "message.app-tsx.failed-to-update-continuation-request.53166",
+        "id": "message.app-tsx.failed-to-update-continuation-request.53167",
         "text": "Failed to update continuation request:",
         "file": "App.tsx",
-        "line": 53166
+        "line": 53167
       },
       {
-        "id": "message.app-tsx.failed-to-patch-continuation-request.53192",
+        "id": "message.app-tsx.failed-to-patch-continuation-request.53193",
         "text": "Failed to patch continuation request:",
         "file": "App.tsx",
-        "line": 53192
+        "line": 53193
       },
       {
-        "id": "message.app-tsx.failed-to-submit-continuation-request.53215",
+        "id": "message.app-tsx.failed-to-submit-continuation-request.53216",
         "text": "Failed to submit continuation request:",
         "file": "App.tsx",
-        "line": 53215
+        "line": 53216
       },
       {
-        "id": "message.app-tsx.failed-to-update-continuation-includeinbuild.53233",
+        "id": "message.app-tsx.failed-to-update-continuation-includeinbuild.53234",
         "text": "Failed to update continuation includeInBuild:",
         "file": "App.tsx",
-        "line": 53233
+        "line": 53234
       },
       {
-        "id": "message.app-tsx.primary-fallback-failed.53774",
+        "id": "message.app-tsx.primary-fallback-failed.53775",
         "text": "❌ Primary fallback failed",
         "file": "App.tsx",
-        "line": 53774
+        "line": 53775
       },
       {
-        "id": "message.app-tsx.all-fallback-attempts-failed-cannot-open-training-report.53799",
+        "id": "message.app-tsx.all-fallback-attempts-failed-cannot-open-training-report.53800",
         "text": "❌ All fallback attempts failed - cannot open training report",
         "file": "App.tsx",
-        "line": 53799
+        "line": 53800
       },
       {
-        "id": "message.app-tsx.flight-authorisation-is-optional-for-this-unit-authorisation-entries-are-disabled.53858",
+        "id": "message.app-tsx.flight-authorisation-is-optional-for-this-unit-authorisation-entries-are-disabled.53859",
         "text": "Flight authorisation is optional for this unit. Authorisation entries are disabled.",
         "file": "App.tsx",
-        "line": 53858
+        "line": 53859
       },
       {
-        "id": "message.app-tsx.failed-to-save-staff-data-name-data-idnumber.53924",
+        "id": "message.app-tsx.failed-to-save-staff-data-name-data-idnumber.53925",
         "text": "Failed to save staff ${data.name || data.idNumber}",
         "file": "App.tsx",
-        "line": 53924
+        "line": 53925
       },
       {
-        "id": "message.app-tsx.failed-to-create-staff-data-name-data-idnumber.53935",
+        "id": "message.app-tsx.failed-to-create-staff-data-name-data-idnumber.53936",
         "text": "Failed to create staff ${data.name || data.idNumber}",
         "file": "App.tsx",
-        "line": 53935
+        "line": 53936
       },
       {
-        "id": "message.app-tsx.error-saving-instructor-to-database.53941",
+        "id": "message.app-tsx.error-saving-instructor-to-database.53942",
         "text": "❌ Error saving instructor to database:",
         "file": "App.tsx",
-        "line": 53941
+        "line": 53942
       },
       {
-        "id": "message.app-tsx.failed-to-save-staff-data-name-data-idnumber.54060",
+        "id": "message.app-tsx.failed-to-save-staff-data-name-data-idnumber.54061",
         "text": "Failed to save staff ${data.name || data.idNumber}",
         "file": "App.tsx",
-        "line": 54060
+        "line": 54061
       },
       {
-        "id": "message.app-tsx.failed-to-create-staff-data-name-data-idnumber.54071",
+        "id": "message.app-tsx.failed-to-create-staff-data-name-data-idnumber.54072",
         "text": "Failed to create staff ${data.name || data.idNumber}",
         "file": "App.tsx",
-        "line": 54071
+        "line": 54072
       },
       {
-        "id": "message.app-tsx.error-saving-instructor-to-database.54077",
+        "id": "message.app-tsx.error-saving-instructor-to-database.54078",
         "text": "❌ Error saving instructor to database:",
         "file": "App.tsx",
-        "line": 54077
+        "line": 54078
       },
       {
-        "id": "message.app-tsx.failed-to-save-staff-data-name.54209",
+        "id": "message.app-tsx.failed-to-save-staff-data-name.54210",
         "text": "Failed to save staff ${data.name}",
         "file": "App.tsx",
-        "line": 54209
+        "line": 54210
       },
       {
-        "id": "message.app-tsx.error-saving-air-combat-training-assignment.54219",
+        "id": "message.app-tsx.error-saving-air-combat-training-assignment.54220",
         "text": "❌ Error saving Air Combat training assignment:",
         "file": "App.tsx",
-        "line": 54219
+        "line": 54220
       },
       {
-        "id": "message.app-tsx.direct-lookup-failed-trying-fallback-search.54405",
+        "id": "message.app-tsx.direct-lookup-failed-trying-fallback-search.54406",
         "text": "Direct lookup failed, trying fallback search...",
         "file": "App.tsx",
-        "line": 54405
+        "line": 54406
       },
       {
-        "id": "message.app-tsx.event-id-lookup-failed-trying-trainee-event-date-fallback.54412",
+        "id": "message.app-tsx.event-id-lookup-failed-trying-trainee-event-date-fallback.54413",
         "text": "Event ID lookup failed, trying trainee/event/date fallback...",
         "file": "App.tsx",
-        "line": 54412
+        "line": 54413
       },
       {
-        "id": "message.app-tsx.selectedtrainingreportname-could-not-be-deleted-from-the-database-it-has-not-been-removed-locall.54497",
+        "id": "message.app-tsx.selectedtrainingreportname-could-not-be-deleted-from-the-database-it-has-not-been-removed-locall.54498",
         "text": "${selectedTrainingReportName} could not be deleted from the database. It has not been removed locally.\\n\\n${errorText ||",
-        "file": "App.tsx",
-        "line": 54497
-      },
-      {
-        "id": "message.app-tsx.selectedtrainingreportname-delete-failed.54498",
-        "text": "${selectedTrainingReportName} Delete Failed",
         "file": "App.tsx",
         "line": 54498
       },
       {
-        "id": "message.app-tsx.failed-to-delete-selectedtrainingreportname-record-response-status.54501",
+        "id": "message.app-tsx.selectedtrainingreportname-delete-failed.54499",
+        "text": "${selectedTrainingReportName} Delete Failed",
+        "file": "App.tsx",
+        "line": 54499
+      },
+      {
+        "id": "message.app-tsx.failed-to-delete-selectedtrainingreportname-record-response-status.54502",
         "text": "Failed to delete ${selectedTrainingReportName} record (${response.status})",
         "file": "App.tsx",
-        "line": 54501
+        "line": 54502
       },
       {
-        "id": "message.app-tsx.training-report-failed-to-persist-assessment-snapshot.54573",
+        "id": "message.app-tsx.training-report-failed-to-persist-assessment-snapshot.54574",
         "text": "[Training Report] Failed to persist assessment snapshot:",
         "file": "App.tsx",
-        "line": 54573
+        "line": 54574
       },
       {
-        "id": "message.app-tsx.training-report-failed-to-persist-trainee-performance-record.54578",
+        "id": "message.app-tsx.training-report-failed-to-persist-trainee-performance-record.54579",
         "text": "[Training Report] Failed to persist trainee performance record:",
         "file": "App.tsx",
-        "line": 54578
+        "line": 54579
       },
       {
-        "id": "message.app-tsx.selectedtrainingreportname-could-not-be-saved-to-the-database-n-n-err-instanceof-error-err-messa.54580",
+        "id": "message.app-tsx.selectedtrainingreportname-could-not-be-saved-to-the-database-n-n-err-instanceof-error-err-messa.54581",
         "text": "${selectedTrainingReportName} could not be saved to the database.\\n\\n${err instanceof Error ? err.message : String(err)}",
         "file": "App.tsx",
-        "line": 54580
+        "line": 54581
       },
       {
-        "id": "message.app-tsx.selectedtrainingreportname-save-failed.54580",
+        "id": "message.app-tsx.selectedtrainingreportname-save-failed.54581",
         "text": "${selectedTrainingReportName} Save Failed",
         "file": "App.tsx",
-        "line": 54580
+        "line": 54581
       },
       {
-        "id": "message.app-tsx.training-report-score-failed-to-persist-score.54650",
+        "id": "message.app-tsx.training-report-score-failed-to-persist-score.54651",
         "text": "[Training Report -> Score] Failed to persist score:",
         "file": "App.tsx",
-        "line": 54650
+        "line": 54651
       },
       {
-        "id": "message.app-tsx.training-report-score-error-persisting-score.54653",
+        "id": "message.app-tsx.training-report-score-error-persisting-score.54654",
         "text": "[Training Report -> Score] Error persisting score:",
         "file": "App.tsx",
-        "line": 54653
+        "line": 54654
       },
       {
-        "id": "message.app-tsx.training-report-view-error-missing-context.54668",
+        "id": "message.app-tsx.training-report-view-error-missing-context.54669",
         "text": "Training Report view error - missing context:",
         "file": "App.tsx",
-        "line": 54668
+        "line": 54669
       },
       {
-        "id": "message.app-tsx.postflight-failed-to-delete-existing-flight-log-entry-before-replace.54730",
+        "id": "message.app-tsx.postflight-failed-to-delete-existing-flight-log-entry-before-replace.54731",
         "text": "[PostFlight] Failed to delete existing flight log entry before replace:",
         "file": "App.tsx",
-        "line": 54730
+        "line": 54731
       },
       {
-        "id": "message.app-tsx.postflight-duplicate-logbook-check-failed.54736",
+        "id": "message.app-tsx.postflight-duplicate-logbook-check-failed.54737",
         "text": "[PostFlight] Duplicate logbook check failed:",
         "file": "App.tsx",
-        "line": 54736
+        "line": 54737
       },
       {
-        "id": "message.app-tsx.postflight-eventcompletion-save-failed.54823",
+        "id": "message.app-tsx.postflight-eventcompletion-save-failed.54824",
         "text": "[PostFlight] EventCompletion save failed:",
         "file": "App.tsx",
-        "line": 54823
+        "line": 54824
       },
       {
-        "id": "message.app-tsx.postflight-assessment-required-draft-training-report-generation-failed.54839",
+        "id": "message.app-tsx.postflight-assessment-required-draft-training-report-generation-failed.54840",
         "text": "[PostFlight] Assessment-required draft training report generation failed:",
         "file": "App.tsx",
-        "line": 54839
+        "line": 54840
       },
       {
-        "id": "message.app-tsx.postflight-currency-updated-for-person-name-cache-invalidated-for-dbid.54940",
+        "id": "message.app-tsx.postflight-currency-updated-for-person-name-cache-invalidated-for-dbid.54941",
         "text": "[PostFlight] ✅ Currency updated for ${person.name}, cache invalidated for ${dbId}",
         "file": "App.tsx",
-        "line": 54940
+        "line": 54941
       },
       {
-        "id": "message.app-tsx.postflight-currency-update-failed-for-person-name.54962",
+        "id": "message.app-tsx.postflight-currency-update-failed-for-person-name.54963",
         "text": "[PostFlight] ⚠️ Currency update failed for ${person.name}:",
         "file": "App.tsx",
-        "line": 54962
+        "line": 54963
       },
       {
-        "id": "message.app-tsx.label-flight-log-save-failed-response-status-errortext.54988",
+        "id": "message.app-tsx.label-flight-log-save-failed-response-status-errortext.54989",
         "text": "${label} flight log save failed (${response.status}): ${errorText}",
         "file": "App.tsx",
-        "line": 54988
+        "line": 54989
       },
       {
-        "id": "message.app-tsx.postflight-currency-draft-update-failed.55318",
+        "id": "message.app-tsx.postflight-currency-draft-update-failed.55319",
         "text": "[PostFlight] Currency draft update failed:",
         "file": "App.tsx",
-        "line": 55318
+        "line": 55319
       },
       {
-        "id": "message.app-tsx.postflight-failed-to-clear-completed-directed-task-request-after-post-flight-result.55347",
+        "id": "message.app-tsx.postflight-failed-to-clear-completed-directed-task-request-after-post-flight-result.55348",
         "text": "[PostFlight] Failed to clear completed directed-task request after post-flight result:",
         "file": "App.tsx",
-        "line": 55347
+        "line": 55348
       },
       {
-        "id": "message.app-tsx.add-flight-tile-is-not-permitted-for-your-assigned-permission-profile.55557",
+        "id": "message.app-tsx.add-flight-tile-is-not-permitted-for-your-assigned-permission-profile.55558",
         "text": "Add Flight Tile is not permitted for your assigned permission profile",
         "file": "App.tsx",
-        "line": 55557
+        "line": 55558
       },
       {
-        "id": "message.app-tsx.add-ground-tile-is-not-permitted-for-your-assigned-permission-profile.55570",
+        "id": "message.app-tsx.add-ground-tile-is-not-permitted-for-your-assigned-permission-profile.55571",
         "text": "Add Ground Tile is not permitted for your assigned permission profile",
         "file": "App.tsx",
-        "line": 55570
+        "line": 55571
       },
       {
-        "id": "message.app-tsx.run-validation-checks-is-not-permitted-for-your-assigned-permission-profile.55578",
+        "id": "message.app-tsx.run-validation-checks-is-not-permitted-for-your-assigned-permission-profile.55579",
         "text": "Run validation checks is not permitted for your assigned permission profile",
         "file": "App.tsx",
-        "line": 55578
+        "line": 55579
       },
       {
-        "id": "message.app-tsx.multi-select-is-not-permitted-for-your-assigned-permission-profile.55593",
+        "id": "message.app-tsx.multi-select-is-not-permitted-for-your-assigned-permission-profile.55594",
         "text": "Multi Select is not permitted for your assigned permission profile",
         "file": "App.tsx",
-        "line": 55593
+        "line": 55594
       },
       {
-        "id": "message.app-tsx.dispatch-rate-is-not-permitted-for-your-assigned-permission-profile.55604",
+        "id": "message.app-tsx.dispatch-rate-is-not-permitted-for-your-assigned-permission-profile.55605",
         "text": "Dispatch Rate is not permitted for your assigned permission profile",
         "file": "App.tsx",
-        "line": 55604
+        "line": 55605
       },
       {
-        "id": "message.app-tsx.pause-flight-ops-requires-permission-and-a-neo-capable-operational-model.55630",
+        "id": "message.app-tsx.pause-flight-ops-requires-permission-and-a-neo-capable-operational-model.55631",
         "text": "Pause Flight Ops requires permission and a NEO-capable operational model",
         "file": "App.tsx",
-        "line": 55630
+        "line": 55631
       },
       {
-        "id": "message.app-tsx.flight-line-access-is-not-permitted-for-your-assigned-permission-profile.55660",
+        "id": "message.app-tsx.flight-line-access-is-not-permitted-for-your-assigned-permission-profile.55661",
         "text": "Flight Line access is not permitted for your assigned permission profile",
         "file": "App.tsx",
-        "line": 55660
+        "line": 55661
       },
       {
-        "id": "message.app-tsx.sct-request-post-failed.55807",
+        "id": "message.app-tsx.sct-request-post-failed.55808",
         "text": "SCT_REQUEST_POST_FAILED",
         "file": "App.tsx",
-        "line": 55807
+        "line": 55808
       },
       {
-        "id": "message.app-tsx.failed-to-save-neo-assist-continuation-request.55813",
+        "id": "message.app-tsx.failed-to-save-neo-assist-continuation-request.55814",
         "text": "Failed to save NEO Assist continuation request:",
         "file": "App.tsx",
-        "line": 55813
+        "line": 55814
       },
       {
-        "id": "message.app-tsx.sct-request-post-error.55816",
+        "id": "message.app-tsx.sct-request-post-error.55817",
         "text": "SCT_REQUEST_POST_ERROR",
         "file": "App.tsx",
-        "line": 55816
+        "line": 55817
       },
       {
-        "id": "message.app-tsx.failed-to-save-neo-assist-continuation-request.55821",
+        "id": "message.app-tsx.failed-to-save-neo-assist-continuation-request.55822",
         "text": "Failed to save NEO Assist continuation request:",
         "file": "App.tsx",
-        "line": 55821
+        "line": 55822
       },
       {
-        "id": "message.app-tsx.failed-to-patch-neo-assist-continuation-request.55838",
+        "id": "message.app-tsx.failed-to-patch-neo-assist-continuation-request.55839",
         "text": "Failed to patch NEO Assist continuation request:",
         "file": "App.tsx",
-        "line": 55838
+        "line": 55839
       },
       {
-        "id": "message.app-tsx.flight-authorisation-is-optional-for-this-unit-authorisation-entries-are-disabled.56114",
+        "id": "message.app-tsx.flight-authorisation-is-optional-for-this-unit-authorisation-entries-are-disabled.56118",
         "text": "Flight authorisation is optional for this unit. Authorisation entries are disabled.",
         "file": "App.tsx",
-        "line": 56114
+        "line": 56118
       },
       {
-        "id": "message.app-tsx.lmp-failed-to-update-db-lmp-for-traineename.56190",
+        "id": "message.app-tsx.lmp-failed-to-update-db-lmp-for-traineename.56194",
         "text": "[LMP] Failed to update DB LMP for ${traineeName}",
         "file": "App.tsx",
-        "line": 56190
+        "line": 56194
       },
       {
-        "id": "message.app-tsx.lmp-error-updating-db-lmp-for-traineename.56193",
+        "id": "message.app-tsx.lmp-error-updating-db-lmp-for-traineename.56197",
         "text": "[LMP] Error updating DB LMP for ${traineeName}:",
         "file": "App.tsx",
-        "line": 56193
+        "line": 56197
       },
       {
-        "id": "message.app-tsx.aircraft-turnaround-conflict.56378",
+        "id": "message.app-tsx.aircraft-turnaround-conflict.56382",
         "text": "aircraft turnaround conflict",
-        "file": "App.tsx",
-        "line": 56378
-      },
-      {
-        "id": "message.app-tsx.scheduling-conflict.56382",
-        "text": "Scheduling conflict",
         "file": "App.tsx",
         "line": 56382
       },
       {
-        "id": "message.app-tsx.dutywarningremedy.56407",
-        "text": "dutyWarningRemedy",
+        "id": "message.app-tsx.scheduling-conflict.56386",
+        "text": "Scheduling conflict",
         "file": "App.tsx",
-        "line": 56407
+        "line": 56386
       },
       {
-        "id": "message.app-tsx.dutywarningremedy-instructor-name.56408",
+        "id": "message.app-tsx.dutywarningremedy.56411",
+        "text": "dutyWarningRemedy",
+        "file": "App.tsx",
+        "line": 56411
+      },
+      {
+        "id": "message.app-tsx.dutywarningremedy-instructor-name.56412",
         "text": "? dutyWarningRemedy.instructor.name :",
         "file": "App.tsx",
-        "line": 56408
+        "line": 56412
       },
       {
-        "id": "message.app-tsx.dutywarningremedy.56409",
+        "id": "message.app-tsx.dutywarningremedy.56413",
         "text": "dutyWarningRemedy",
         "file": "App.tsx",
-        "line": 56409
+        "line": 56413
       },
       {
-        "id": "message.app-tsx.the-archive-loaded-and-no-health-warnings-were-reported.56488",
+        "id": "message.app-tsx.the-archive-loaded-and-no-health-warnings-were-reported.56492",
         "text": "The archive loaded and no health warnings were reported.",
         "file": "App.tsx",
-        "line": 56488
+        "line": 56492
       },
       {
-        "id": "message.app-tsx.rounded-full-px-3-py-1-text-xs-font-bold-uppercase-warnings-length-0-bg-amber-500-15-text-amber-.56491",
+        "id": "message.app-tsx.rounded-full-px-3-py-1-text-xs-font-bold-uppercase-warnings-length-0-bg-amber-500-15-text-amber-.56495",
         "text": "rounded-full px-3 py-1 text-xs font-bold uppercase ${warnings.length > 0 ? 'bg-amber-500/15 text-amber-200 ring-1 ring-amber-500/40' : 'bg-emerald-500/15 text-emerald-200 ring-1 ring-emerald-500/40'}",
         "file": "App.tsx",
-        "line": 56491
+        "line": 56495
       },
       {
-        "id": "message.app-tsx.warning-code-warning-index.56502",
+        "id": "message.app-tsx.warning-code-warning-index.56506",
         "text": "${warning?.code || 'warning'}-${index}",
         "file": "App.tsx",
-        "line": 56502
+        "line": 56506
       },
       {
-        "id": "message.app-tsx.archive-warning.56503",
+        "id": "message.app-tsx.archive-warning.56507",
         "text": "Archive warning",
         "file": "App.tsx",
-        "line": 56503
+        "line": 56507
       },
       {
-        "id": "message.app-tsx.continuation-failed-to-save-from-flyout.56704",
+        "id": "message.app-tsx.continuation-failed-to-save-from-flyout.56708",
         "text": "[CONTINUATION] Failed to save from Flyout:",
         "file": "App.tsx",
-        "line": 56704
+        "line": 56708
       },
       {
-        "id": "message.app-tsx.continuation-error-saving-from-flyout.56707",
+        "id": "message.app-tsx.continuation-error-saving-from-flyout.56711",
         "text": "[CONTINUATION] Error saving from Flyout:",
         "file": "App.tsx",
-        "line": 56707
+        "line": 56711
       },
       {
-        "id": "message.app-tsx.rounded-md-bg-cyan-600-px-4-py-2-text-sm-font-semibold-text-white-transition-colors-hover-bg-cya.56825",
+        "id": "message.app-tsx.rounded-md-bg-cyan-600-px-4-py-2-text-sm-font-semibold-text-white-transition-colors-hover-bg-cya.56829",
         "text": "rounded-md bg-cyan-600 px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-cyan-500 disabled:cursor-not-allowed disabled:bg-gray-600 disabled:text-gray-300",
         "file": "App.tsx",
-        "line": 56825
+        "line": 56829
       },
       {
-        "id": "message.app-tsx.conflict-proposedevent-id-conflict-conflictingevent-id-conflict-personname-index.56847",
+        "id": "message.app-tsx.conflict-proposedevent-id-conflict-conflictingevent-id-conflict-personname-index.56851",
         "text": "${conflict.proposedEvent.id}-${conflict.conflictingEvent.id}-${conflict.personName}-${index}",
         "file": "App.tsx",
-        "line": 56847
+        "line": 56851
       },
       {
-        "id": "message.app-tsx.remove-conflicts.56877",
+        "id": "message.app-tsx.remove-conflicts.56881",
         "text": "remove-conflicts",
         "file": "App.tsx",
-        "line": 56877
+        "line": 56881
       },
       {
-        "id": "message.app-tsx.rounded-md-border-border-orange-400-40-bg-orange-600-px-4-py-2-text-sm-font-semibold-text-white-.56878",
+        "id": "message.app-tsx.rounded-md-border-border-orange-400-40-bg-orange-600-px-4-py-2-text-sm-font-semibold-text-white-.56882",
         "text": "rounded-md border border-orange-400/40 bg-orange-600 px-4 py-2 text-sm font-semibold text-white hover:bg-orange-500 disabled:cursor-not-allowed disabled:border-slate-700 disabled:bg-slate-700 disabled:text-slate-400",
         "file": "App.tsx",
-        "line": 56878
+        "line": 56882
       },
       {
-        "id": "message.app-tsx.accept-conflict.56884",
+        "id": "message.app-tsx.accept-conflict.56888",
         "text": "accept-conflict",
         "file": "App.tsx",
-        "line": 56884
+        "line": 56888
       },
       {
-        "id": "message.app-tsx.dfp-error.57069",
+        "id": "message.app-tsx.dfp-error.57073",
         "text": "DFP Error",
         "file": "App.tsx",
-        "line": 57069
+        "line": 57073
       },
       {
-        "id": "message.app-tsx.rounded-border-border-gray-600-50-px-1-5-py-0-5-text-gray-300-transition-colors-hover-border-gra.57119",
+        "id": "message.app-tsx.rounded-border-border-gray-600-50-px-1-5-py-0-5-text-gray-300-transition-colors-hover-border-gra.57123",
         "text": "rounded border border-gray-600/50 px-1.5 py-0.5 text-gray-300 transition-colors hover:border-gray-500 hover:text-white disabled:cursor-wait disabled:opacity-60",
         "file": "App.tsx",
-        "line": 57119
+        "line": 57123
       },
       {
         "id": "message.components-academicstab-tsx.unavailable.270",
@@ -218355,10 +218325,10 @@
         "line": 3924
       },
       {
-        "id": "message.components-neoguidepanel-tsx.rounded-md-border-border-orange-300-60-bg-orange-500-px-3-py-2-text-sm-font-black-text-slate-950.216",
+        "id": "message.components-neoguidepanel-tsx.rounded-md-border-border-orange-300-60-bg-orange-500-px-3-py-2-text-sm-font-black-text-slate-950.210",
         "text": "rounded-md border border-orange-300/60 bg-orange-500 px-3 py-2 text-sm font-black text-slate-950 disabled:cursor-not-allowed disabled:opacity-45",
         "file": "components/NeoGuidePanel.tsx",
-        "line": 216
+        "line": 210
       },
       {
         "id": "message.components-nextdaybuildview-tsx.neo-assist-failed-to-drop-assist-tile.303",
@@ -220023,22 +219993,22 @@
         "line": 4
       },
       {
-        "id": "message.components-rightsidebar-tsx.access-denied-requires-flying-supervisor-qualification.108",
+        "id": "message.components-rightsidebar-tsx.access-denied-requires-flying-supervisor-qualification.110",
         "text": "Access denied: Requires Flying Supervisor qualification.",
         "file": "components/RightSidebar.tsx",
-        "line": 108
+        "line": 110
       },
       {
-        "id": "message.components-rightsidebar-tsx.access-denied-neo-build-permission-required.119",
+        "id": "message.components-rightsidebar-tsx.access-denied-neo-build-permission-required.121",
         "text": "Access denied: NEO Build permission required",
         "file": "components/RightSidebar.tsx",
-        "line": 119
+        "line": 121
       },
       {
-        "id": "message.components-rightsidebar-tsx.access-denied-publish-dfp-permission-required.165",
+        "id": "message.components-rightsidebar-tsx.access-denied-publish-dfp-permission-required.167",
         "text": "Access denied: Publish DFP permission required",
         "file": "components/RightSidebar.tsx",
-        "line": 165
+        "line": 167
       },
       {
         "id": "message.components-safestafftraineescheduleview-tsx.errorboundary.2",
@@ -234832,31 +234802,31 @@
       },
       {
         "from": "concept.trainee",
-        "to": "function.control-app-tsx-trainee-profile-note-56282",
+        "to": "function.control-app-tsx-trainee-profile-note-56286",
         "relationship": "implemented-by",
         "source": "derived from audited function index"
       },
       {
         "from": "concept.instructor",
-        "to": "function.control-app-tsx-change-crew-keep-time-change-instructor-56350",
+        "to": "function.control-app-tsx-change-crew-keep-time-change-instructor-56354",
         "relationship": "implemented-by",
         "source": "derived from audited function index"
       },
       {
         "from": "concept.schedule",
-        "to": "function.control-app-tsx-do-not-schedule-proposed-event-56867",
+        "to": "function.control-app-tsx-do-not-schedule-proposed-event-56871",
         "relationship": "implemented-by",
         "source": "derived from audited function index"
       },
       {
         "from": "concept.availability",
-        "to": "function.control-app-tsx-manually-refresh-mobile-unavailability-and-alert-responses-57115",
+        "to": "function.control-app-tsx-manually-refresh-mobile-unavailability-and-alert-responses-57119",
         "relationship": "implemented-by",
         "source": "derived from audited function index"
       },
       {
         "from": "concept.unavailability",
-        "to": "function.control-app-tsx-manually-refresh-mobile-unavailability-and-alert-responses-57115",
+        "to": "function.control-app-tsx-manually-refresh-mobile-unavailability-and-alert-responses-57119",
         "relationship": "implemented-by",
         "source": "derived from audited function index"
       },
