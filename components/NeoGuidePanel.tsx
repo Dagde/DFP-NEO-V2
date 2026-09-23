@@ -46,6 +46,10 @@ const highlightTarget = (target?: string | null) => {
   return true;
 };
 
+const getActionTargetLabel = (action: NeoGuideNavigationAction) => (
+  action.page || action.anchor || action.label || 'that location'
+);
+
 const NeoGuidePanel: React.FC<NeoGuidePanelProps> = ({
   isOpen,
   activeView,
@@ -124,14 +128,37 @@ const NeoGuidePanel: React.FC<NeoGuidePanelProps> = ({
     setQuestion('');
   };
 
+  const appendGuideMessage = (text: string) => {
+    setMessages((current) => [
+      ...current,
+      { id: `guide-${Date.now()}-${current.length}`, role: 'guide', text },
+    ]);
+  };
+
+  const tryHighlightActionTarget = (action: NeoGuideNavigationAction, attempt = 0, didNavigate = false) => {
+    const found = highlightTarget(action.highlightTarget || action.anchor);
+    if (found) {
+      if (attempt > 0 && didNavigate) appendGuideMessage(`I opened ${getActionTargetLabel(action)} and highlighted the relevant area.`);
+      return;
+    }
+    if (attempt < 5) {
+      window.setTimeout(() => tryHighlightActionTarget(action, attempt + 1, didNavigate), 220);
+      return;
+    }
+    const prefix = didNavigate
+      ? `I opened ${getActionTargetLabel(action)}`
+      : `I looked for ${getActionTargetLabel(action)}`;
+    appendGuideMessage(`${prefix}, but the exact control is not visible yet. It may be inside a tab, drawer or section that has to be opened first.`);
+  };
+
   const performAction = (action: NeoGuideNavigationAction) => {
     const view = action.page ? pageToView[action.page] : null;
     if (view && view !== activeView) {
       onNavigate(view);
-      window.setTimeout(() => highlightTarget(action.highlightTarget || action.anchor), 260);
+      window.setTimeout(() => tryHighlightActionTarget(action, 0, true), 260);
       return;
     }
-    highlightTarget(action.highlightTarget || action.anchor);
+    tryHighlightActionTarget(action);
   };
 
   return (
