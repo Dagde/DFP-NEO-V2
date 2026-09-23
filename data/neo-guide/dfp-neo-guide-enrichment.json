@@ -67,7 +67,7 @@
     {
       "id": "function.curated.people.trainee-unavailability",
       "name": "Trainee unavailability",
-      "aliases": ["make trainee unavailable", "stop trainee flying", "trainee leave", "student unavailable", "can't fly", "off tomorrow", "blocked out"],
+      "aliases": ["make trainee unavailable", "add trainee unavailability", "insert trainee unavailability", "stop trainee flying", "trainee leave", "student unavailable", "can't fly", "off tomorrow", "blocked out"],
       "location": {
         "page": "Trainee",
         "route": null,
@@ -75,6 +75,14 @@
         "anchor": "trainee-availability"
       },
       "purpose": "Records when a trainee is not available for scheduling.",
+      "procedureSteps": [
+        "Open Trainee.",
+        "Open the trainee's profile.",
+        "Open the Unavailable tab.",
+        "Click Add Unavailability.",
+        "Enter the date/time period and reason.",
+        "Save the unavailability record."
+      ],
       "inputs": [
         {
           "fieldName": "person",
@@ -108,7 +116,7 @@
     {
       "id": "function.curated.people.staff-unavailability",
       "name": "Staff unavailability",
-      "aliases": ["make instructor unavailable", "staff leave", "instructor leave", "stop instructor flying", "staff unavailable"],
+      "aliases": ["make instructor unavailable", "add staff unavailability", "insert staff unavailability", "staff leave", "instructor leave", "stop instructor flying", "staff unavailable"],
       "location": {
         "page": "Staff",
         "route": null,
@@ -116,6 +124,14 @@
         "anchor": "staff-availability"
       },
       "purpose": "Records when a staff member or instructor is not available for scheduling.",
+      "procedureSteps": [
+        "Open Staff.",
+        "Open the staff member's profile.",
+        "Open the Unavailable tab.",
+        "Click Add Unavailability.",
+        "Enter the date/time period and reason.",
+        "Save the unavailability record."
+      ],
       "inputs": [],
       "outputs": ["Updates staff availability data used by schedule views, duty pilot personnel summaries and build eligibility checks."],
       "permissions": ["staff.view"],

@@ -166,11 +166,23 @@ export function answerNeoGuideQuestion(
   }
 
   const confidence = best.score >= 22 ? 'high' : best.score >= 12 ? 'medium' : 'low';
-  if (confidence === 'low' || (second && best.score - second.score < 3)) {
+  if (confidence === 'low') {
     return {
       ...interpretation,
       confidence,
       answer: `I found a possible match: ${best.name}. I may need a little more context before giving a firm answer.`,
+      navigationAction: buildNavigationAction(best),
+      conversation: nextConversation,
+      needsClarification: true,
+      clarificationQuestion: `Do you mean ${best.name}${second ? ` or ${second.name}` : ''}?`
+    };
+  }
+
+  if (second && best.score - second.score < 3) {
+    return {
+      ...interpretation,
+      confidence,
+      answer: buildAnswerText(interpretation.intent, best),
       navigationAction: buildNavigationAction(best),
       conversation: nextConversation,
       needsClarification: true,
@@ -353,16 +365,16 @@ function getConversationContextTokens(question: string, conversation?: NeoGuideC
   if (!conversation?.topic) return [];
   const rawTokens = tokenize(question);
   const normalisedQuestion = normalise(question);
-  if (rawTokens.length > 4 && !isReferentialFollowUp(normalisedQuestion, rawTokens)) return [];
+  if (!isReferentialFollowUp(normalisedQuestion)) return [];
   return tokenize(conversation.topic)
     .filter((token) => !['staff', 'trainee', 'course', 'dfp', 'neo'].includes(token))
     .slice(0, 6);
 }
 
-function isReferentialFollowUp(normalisedQuestion: string, rawTokens: string[]): boolean {
+function isReferentialFollowUp(normalisedQuestion: string): boolean {
   if (/\b(that|this|it|he|she|his|her|they|them|same|also)\b/.test(normalisedQuestion)) return true;
   if (/^what about\b/.test(normalisedQuestion)) return true;
-  return rawTokens.length > 0 && rawTokens.length <= 3;
+  return false;
 }
 
 function isPreviousFunctionReference(normalisedQuestion: string): boolean {

@@ -83,6 +83,21 @@ assert.match(courseCommanderAnswer.answer, /pencil|edit/i, 'Course commander ans
 assert.match(courseCommanderAnswer.answer, /Course Leadership/i, 'Course commander answer should mention Course Leadership.');
 assert.match(courseCommanderAnswer.answer, /Save/i, 'Course commander answer should mention saving changes.');
 
+const newTopicAfterCourseCommander = ask('how do I insert a unavailability', { conversation: courseCommanderAnswer.conversation });
+assert.notEqual(
+  newTopicAfterCourseCommander.matches[0]?.functionId,
+  'function.curated.training.course-leadership',
+  'A short new question with a clear topic should not stay stuck on the previous course leadership topic.'
+);
+assert.ok(
+  [
+    'function.curated.people.trainee-unavailability',
+    'function.curated.people.staff-unavailability',
+  ].includes(newTopicAfterCourseCommander.matches[0]?.functionId),
+  'Unavailability wording after another topic should resolve to an unavailability workflow.'
+);
+assert.match(newTopicAfterCourseCommander.answer, /Add Unavailability/i, 'Unavailability answer should include practical steps.');
+
 const staffFollowUp = ask('what about staff?', { conversation: answer.conversation });
 assert.equal(
   staffFollowUp.matches[0]?.functionId,

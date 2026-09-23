@@ -1,6 +1,6 @@
 {
   "schemaVersion": "neo-guide-knowledge-model.v1",
-  "generatedAt": "2026-09-23T21:52:14.956Z",
+  "generatedAt": "2026-09-23T21:58:48.588Z",
   "source": {
     "repository": "clone-the-repo-dagde-dfp-neo",
     "sourceFileCount": 377,
@@ -72803,34 +72803,34 @@
         "line": 141
       },
       {
-        "id": "message.utils-neoguideengine-ts.permission-visible.313",
+        "id": "message.utils-neoguideengine-ts.permission-visible.325",
         "text": "permission visible",
         "file": "utils/neoGuideEngine.ts",
-        "line": 313
+        "line": 325
       },
       {
-        "id": "message.utils-neoguideengine-ts.permission-may-be-restricted.313",
+        "id": "message.utils-neoguideengine-ts.permission-may-be-restricted.325",
         "text": "permission may be restricted",
         "file": "utils/neoGuideEngine.ts",
-        "line": 313
+        "line": 325
       },
       {
-        "id": "message.utils-neoguideengine-ts.permission.397",
+        "id": "message.utils-neoguideengine-ts.permission.409",
         "text": "PERMISSION",
         "file": "utils/neoGuideEngine.ts",
-        "line": 397
+        "line": 409
       },
       {
-        "id": "message.utils-neoguideengine-ts.the-relevant-page-permission.398",
+        "id": "message.utils-neoguideengine-ts.the-relevant-page-permission.410",
         "text": "the relevant page permission",
         "file": "utils/neoGuideEngine.ts",
-        "line": 398
+        "line": 410
       },
       {
-        "id": "message.utils-neoguideengine-ts.fn-name-is-controlled-by-permissiontext-if-it-is-disabled-check-the-user-role-and-permission-pro.399",
+        "id": "message.utils-neoguideengine-ts.fn-name-is-controlled-by-permissiontext-if-it-is-disabled-check-the-user-role-and-permission-pro.411",
         "text": "${fn.name} is controlled by ${permissionText}. If it is disabled, check the user role and permission profile for that function.",
         "file": "utils/neoGuideEngine.ts",
-        "line": 399
+        "line": 411
       },
       {
         "id": "message.utils-platformconfigservice-ts.staff-profile-unavailable-use.196",
@@ -73300,6 +73300,8 @@
       "name": "Trainee unavailability",
       "aliases": [
         "make trainee unavailable",
+        "add trainee unavailability",
+        "insert trainee unavailability",
         "stop trainee flying",
         "trainee leave",
         "student unavailable",
@@ -73314,6 +73316,14 @@
         "anchor": "trainee-availability"
       },
       "purpose": "Records when a trainee is not available for scheduling.",
+      "procedureSteps": [
+        "Open Trainee.",
+        "Open the trainee's profile.",
+        "Open the Unavailable tab.",
+        "Click Add Unavailability.",
+        "Enter the date/time period and reason.",
+        "Save the unavailability record."
+      ],
       "inputs": [
         {
           "fieldName": "person",
@@ -73368,6 +73378,8 @@
       "name": "Staff unavailability",
       "aliases": [
         "make instructor unavailable",
+        "add staff unavailability",
+        "insert staff unavailability",
         "staff leave",
         "instructor leave",
         "stop instructor flying",
@@ -73380,6 +73392,14 @@
         "anchor": "staff-availability"
       },
       "purpose": "Records when a staff member or instructor is not available for scheduling.",
+      "procedureSteps": [
+        "Open Staff.",
+        "Open the staff member's profile.",
+        "Open the Unavailable tab.",
+        "Click Add Unavailability.",
+        "Enter the date/time period and reason.",
+        "Save the unavailability record."
+      ],
       "inputs": [],
       "outputs": [
         "Updates staff availability data used by schedule views, duty pilot personnel summaries and build eligibility checks."
@@ -703332,6 +703352,8 @@
         "name": "Trainee unavailability",
         "aliases": [
           "make trainee unavailable",
+          "add trainee unavailability",
+          "insert trainee unavailability",
           "stop trainee flying",
           "trainee leave",
           "student unavailable",
@@ -703346,6 +703368,14 @@
           "anchor": "trainee-availability"
         },
         "purpose": "Records when a trainee is not available for scheduling.",
+        "procedureSteps": [
+          "Open Trainee.",
+          "Open the trainee's profile.",
+          "Open the Unavailable tab.",
+          "Click Add Unavailability.",
+          "Enter the date/time period and reason.",
+          "Save the unavailability record."
+        ],
         "inputs": [
           {
             "fieldName": "person",
@@ -703400,6 +703430,8 @@
         "name": "Staff unavailability",
         "aliases": [
           "make instructor unavailable",
+          "add staff unavailability",
+          "insert staff unavailability",
           "staff leave",
           "instructor leave",
           "stop instructor flying",
@@ -703412,6 +703444,14 @@
           "anchor": "staff-availability"
         },
         "purpose": "Records when a staff member or instructor is not available for scheduling.",
+        "procedureSteps": [
+          "Open Staff.",
+          "Open the staff member's profile.",
+          "Open the Unavailable tab.",
+          "Click Add Unavailability.",
+          "Enter the date/time period and reason.",
+          "Save the unavailability record."
+        ],
         "inputs": [],
         "outputs": [
           "Updates staff availability data used by schedule views, duty pilot personnel summaries and build eligibility checks."
