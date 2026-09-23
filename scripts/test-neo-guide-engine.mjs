@@ -98,6 +98,15 @@ assert.ok(
 );
 assert.match(newTopicAfterCourseCommander.answer, /Add Unavailability/i, 'Unavailability answer should include practical steps.');
 
+const staffUnavailabilityFollowUp = ask('what about a staff', { conversation: newTopicAfterCourseCommander.conversation });
+assert.equal(
+  staffUnavailabilityFollowUp.matches[0]?.functionId,
+  'function.curated.people.staff-unavailability',
+  'Staff follow-up after an unavailability question should switch to staff unavailability.'
+);
+assert.match(staffUnavailabilityFollowUp.answer, /Open Staff/i, 'Staff unavailability answer should include Staff page steps.');
+assert.match(staffUnavailabilityFollowUp.answer, /Add Unavailability/i, 'Staff unavailability answer should include Add Unavailability steps.');
+
 const staffFollowUp = ask('what about staff?', { conversation: answer.conversation });
 assert.equal(
   staffFollowUp.matches[0]?.functionId,

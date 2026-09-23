@@ -411,7 +411,7 @@ function buildAnswerText(intent: NeoGuideIntent, match: NeoGuideMatch): string {
     return `${fn.name} is controlled by ${permissionText}. If it is disabled, check the user role and permission profile for that function.`;
   }
 
-  return `${purpose}${location ? ` ${location} for the relevant controls.` : ''}`;
+  return `${purpose}${steps ? ` ${steps}` : location ? ` ${location} for the relevant controls.` : ''}`;
 }
 
 function formatProcedureSteps(fn: NeoGuideFunction): string {
