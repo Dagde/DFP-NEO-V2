@@ -28,6 +28,54 @@ const formatTime = (time: number) => {
     return `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}`;
 };
 
+const getPersonDisplayName = (person: any): string => (
+    String(person?.displayName || person?.name || person?.fullName || 'Unnamed').trim() || 'Unnamed'
+);
+
+const hasTmufOrMedicalUnavailability = (person: any): boolean => (
+    person?.unavailability?.some((item: any) => {
+        const reason = String(item?.reason || '').toLowerCase();
+        return reason.includes('tmuf') || reason.includes('medical');
+    }) || false
+);
+
+const hasOtherUnavailability = (person: any): boolean => (
+    person?.unavailability?.some((item: any) => {
+        const reason = String(item?.reason || '').trim();
+        const lowerReason = reason.toLowerCase();
+        return reason && !lowerReason.includes('tmuf') && !lowerReason.includes('medical') && lowerReason !== 'leave';
+    }) || false
+);
+
+const PersonnelCountRow: React.FC<{
+    label: string;
+    count: number;
+    countClassName: string;
+    people?: any[];
+    tooltipTitle?: string;
+}> = ({ label, count, countClassName, people = [], tooltipTitle }) => {
+    const names = people.map(getPersonDisplayName).filter(Boolean).sort((a, b) => a.localeCompare(b));
+    const hasNames = names.length > 0;
+    return (
+        <div className="group relative flex items-center justify-between rounded bg-gray-700/50 p-2">
+            <span className="text-sm text-white">{label}</span>
+            <span className={`font-semibold ${countClassName}`}>{count}</span>
+            {hasNames && (
+                <div className="pointer-events-none absolute left-full top-1/2 z-50 ml-3 hidden w-64 -translate-y-1/2 rounded-md border border-gray-600 bg-gray-950 p-3 text-left shadow-2xl shadow-black/40 group-hover:block">
+                    <p className="mb-2 text-[11px] font-bold uppercase tracking-wide text-gray-400">{tooltipTitle || label}</p>
+                    <div className="max-h-56 overflow-y-auto pr-1">
+                        {names.map((name, index) => (
+                            <p key={`${name}-${index}`} className="border-t border-gray-800 py-1 text-xs font-medium text-gray-100 first:border-t-0">
+                                {name}
+                            </p>
+                        ))}
+                    </div>
+                </div>
+            )}
+        </div>
+    );
+};
+
 const SupervisorDashboard: React.FC<SupervisorDashboardProps> = ({ instructorsData, traineesData, date, events, school, currentLocation, currentLocationProfile, flightAuthorisationRequired = true, onNavigate, onOpenAuth }) => {
     
     const flightsNeedingAuth = useMemo(() => {
@@ -43,20 +91,22 @@ const SupervisorDashboard: React.FC<SupervisorDashboardProps> = ({ instructorsDa
     }, [events]);
 
     // Calculate personnel statistics
+    const onLeaveInstructorList = instructorsData.filter(i => i.isPaused);
+    const tmufInstructorList = instructorsData.filter(hasTmufOrMedicalUnavailability);
+    const otherUnavailInstructorList = instructorsData.filter(hasOtherUnavailability);
     const activeInstructors = instructorsData.filter(i => !i.isPaused).length;
-    const onLeaveInstructors = instructorsData.filter(i => i.isPaused).length;
-    const tmufInstructors = instructorsData.filter(i => i.unavailability?.some(u => u.reason?.includes('TMUF') || u.reason?.includes('Medical'))).length;
-    const otherUnavailInstructors = instructorsData.filter(i => 
-        i.unavailability?.some(u => u.reason && !u.reason.includes('TMUF') && !u.reason.includes('Medical') && u.reason !== 'Leave')
-    ).length;
+    const onLeaveInstructors = onLeaveInstructorList.length;
+    const tmufInstructors = tmufInstructorList.length;
+    const otherUnavailInstructors = otherUnavailInstructorList.length;
     const totalInstructors = instructorsData.length;
 
+    const onLeaveTraineeList = traineesData.filter(t => t.isPaused);
+    const tmufTraineeList = traineesData.filter(hasTmufOrMedicalUnavailability);
+    const otherUnavailTraineeList = traineesData.filter(hasOtherUnavailability);
     const activeTrainees = traineesData.filter(t => !t.isPaused).length;
-    const onLeaveTrainees = traineesData.filter(t => t.isPaused).length;
-    const tmufTrainees = traineesData.filter(t => t.unavailability?.some(u => u.reason?.includes('TMUF') || u.reason?.includes('Medical'))).length;
-    const otherUnavailTrainees = traineesData.filter(t => 
-        t.unavailability?.some(u => u.reason && !u.reason.includes('TMUF') && !u.reason.includes('Medical') && u.reason !== 'Leave')
-    ).length;
+    const onLeaveTrainees = onLeaveTraineeList.length;
+    const tmufTrainees = tmufTraineeList.length;
+    const otherUnavailTrainees = otherUnavailTraineeList.length;
     const totalTrainees = traineesData.length;
 
     return (
@@ -152,22 +202,10 @@ const SupervisorDashboard: React.FC<SupervisorDashboardProps> = ({ instructorsDa
                             <div>
                                 <h3 className="text-sm font-semibold text-sky-400 mb-3">Staff</h3>
                                 <div className="space-y-2">
-                                    <div className="flex justify-between items-center p-2 bg-gray-700/50 rounded">
-                                        <span className="text-white text-sm">Active</span>
-                                        <span className="text-green-400 font-semibold">{activeInstructors}</span>
-                                    </div>
-                                    <div className="flex justify-between items-center p-2 bg-gray-700/50 rounded">
-                                        <span className="text-white text-sm">On Leave</span>
-                                        <span className="text-yellow-400 font-semibold">{onLeaveInstructors}</span>
-                                    </div>
-                                    <div className="flex justify-between items-center p-2 bg-gray-700/50 rounded">
-                                        <span className="text-white text-sm">TMUF</span>
-                                        <span className="text-orange-400 font-semibold">{tmufInstructors}</span>
-                                    </div>
-                                    <div className="flex justify-between items-center p-2 bg-gray-700/50 rounded">
-                                        <span className="text-white text-sm">Other Unavailability</span>
-                                        <span className="text-red-400 font-semibold">{otherUnavailInstructors}</span>
-                                    </div>
+                                    <PersonnelCountRow label="Active" count={activeInstructors} countClassName="text-green-400" />
+                                    <PersonnelCountRow label="On Leave" count={onLeaveInstructors} countClassName="text-yellow-400" people={onLeaveInstructorList} tooltipTitle="Staff on leave" />
+                                    <PersonnelCountRow label="TMUF" count={tmufInstructors} countClassName="text-orange-400" people={tmufInstructorList} tooltipTitle="Staff TMUF / medical" />
+                                    <PersonnelCountRow label="Other Unavailability" count={otherUnavailInstructors} countClassName="text-red-400" people={otherUnavailInstructorList} tooltipTitle="Staff other unavailability" />
                                     <div className="flex justify-between items-center p-2 bg-gray-600/50 rounded border-t border-gray-600">
                                         <span className="text-white text-sm font-medium">Total</span>
                                         <span className="text-gray-300 font-bold">{totalInstructors}</span>
@@ -179,22 +217,10 @@ const SupervisorDashboard: React.FC<SupervisorDashboardProps> = ({ instructorsDa
                             <div>
                                 <h3 className="text-sm font-semibold text-sky-400 mb-3">Trainees</h3>
                                 <div className="space-y-2">
-                                    <div className="flex justify-between items-center p-2 bg-gray-700/50 rounded">
-                                        <span className="text-white text-sm">Active</span>
-                                        <span className="text-green-400 font-semibold">{activeTrainees}</span>
-                                    </div>
-                                    <div className="flex justify-between items-center p-2 bg-gray-700/50 rounded">
-                                        <span className="text-white text-sm">On Leave</span>
-                                        <span className="text-yellow-400 font-semibold">{onLeaveTrainees}</span>
-                                    </div>
-                                    <div className="flex justify-between items-center p-2 bg-gray-700/50 rounded">
-                                        <span className="text-white text-sm">TMUF</span>
-                                        <span className="text-orange-400 font-semibold">{tmufTrainees}</span>
-                                    </div>
-                                    <div className="flex justify-between items-center p-2 bg-gray-700/50 rounded">
-                                        <span className="text-white text-sm">Other Unavailability</span>
-                                        <span className="text-red-400 font-semibold">{otherUnavailTrainees}</span>
-                                    </div>
+                                    <PersonnelCountRow label="Active" count={activeTrainees} countClassName="text-green-400" />
+                                    <PersonnelCountRow label="On Leave" count={onLeaveTrainees} countClassName="text-yellow-400" people={onLeaveTraineeList} tooltipTitle="Trainees on leave" />
+                                    <PersonnelCountRow label="TMUF" count={tmufTrainees} countClassName="text-orange-400" people={tmufTraineeList} tooltipTitle="Trainees TMUF / medical" />
+                                    <PersonnelCountRow label="Other Unavailability" count={otherUnavailTrainees} countClassName="text-red-400" people={otherUnavailTraineeList} tooltipTitle="Trainees other unavailability" />
                                     <div className="flex justify-between items-center p-2 bg-gray-600/50 rounded border-t border-gray-600">
                                         <span className="text-white text-sm font-medium">Total</span>
                                         <span className="text-gray-300 font-bold">{totalTrainees}</span>

@@ -5705,7 +5705,7 @@ const getSctTerminology = (config, unitCode) => {
   return normaliseSctTerminology((activeOrganisation || fallbackOrganisation)?.settings?.sctTerminology || null);
 };
 const normalisePersonName = (value) => String(value || "").trim().replace(/\s+/g, " ").toLowerCase();
-const getPersonDisplayName = (person) => String(person.fullName || person.name || "").trim();
+const getPersonDisplayName$1 = (person) => String(person.fullName || person.name || "").trim();
 const stripPersonContext = (value) => String(value || "").split(" – ")[0].split(" - ")[0].replace(/\s*·\s*\d{1,3}(?=\s*(?:\(|$))/g, "").replace(/\s+\((?:N|F\/S|F\/L|R\/S)\)$/i, "").trim();
 const normaliseDisplayCommaName = (value) => {
   const [surnamePart, ...givenParts] = value.split(",");
@@ -5793,7 +5793,7 @@ const getPersonStableKey = (person, fallbackPrefix = "person") => {
   if (id) return `db-${id}`;
   const idNumber = String(person.idNumber || "").trim();
   if (idNumber) return `pid-${idNumber}`;
-  const name = getPersonDisplayName(person);
+  const name = getPersonDisplayName$1(person);
   const context = [person.unit, person.course, person.role].map((value) => String(value || "").trim()).filter(Boolean).join("|");
   return `${fallbackPrefix}-${name || "unnamed"}${context ? `-${context}` : ""}`;
 };
@@ -5830,7 +5830,7 @@ const buildCompactPersonNameResolver = (people = []) => {
   const surnameCounts = /* @__PURE__ */ new Map();
   const surnameFirstNameCounts = /* @__PURE__ */ new Map();
   uniquePeople.forEach((person) => {
-    const displayName = getPersonDisplayName(person);
+    const displayName = getPersonDisplayName$1(person);
     const { surname, firstName } = getNameParts(displayName);
     const nameKey = normalisePersonName(stripPersonContext(displayName));
     const surnameKey = normalisePersonName(surname);
@@ -5858,7 +5858,7 @@ const buildCompactPersonNameResolver = (people = []) => {
     return uniquePeople.find((person) => {
       const personSuffix = getLastThreeIdDigits(person);
       if (!personSuffix || personSuffix !== visualSuffix) return false;
-      const parts = getNameParts(getPersonDisplayName(person));
+      const parts = getNameParts(getPersonDisplayName$1(person));
       return normalisePersonName(parts.surname) === surnameKey && (!firstInitial || parts.firstInitial === firstInitial);
     });
   };
@@ -5886,7 +5886,7 @@ const buildCompactPersonNameResolver = (people = []) => {
       };
     }
     const person = findPerson(name);
-    const displayName = person ? getPersonDisplayName(person) : cleaned;
+    const displayName = person ? getPersonDisplayName$1(person) : cleaned;
     const { surname, firstName, firstInitial } = getNameParts(displayName);
     const surnameKey = normalisePersonName(surname);
     const firstNameKey = `${surnameKey}|${normalisePersonName(firstName)}`;
@@ -5895,15 +5895,15 @@ const buildCompactPersonNameResolver = (people = []) => {
     const base = [surname, firstInitial].filter(Boolean).join(" ");
     const matchedPerson = person ? {
       ...person,
-      displayName: getPersonDisplayName(person),
+      displayName: getPersonDisplayName$1(person),
       lastThreeIdDigits: getLastThreeIdDigits(person)
     } : null;
     const duplicateMatches = uniquePeople.filter((candidate) => {
-      const parts = getNameParts(getPersonDisplayName(candidate));
+      const parts = getNameParts(getPersonDisplayName$1(candidate));
       return normalisePersonName(parts.surname) === surnameKey && normalisePersonName(parts.firstName) === normalisePersonName(firstName) && Boolean(parts.firstName);
     }).map((candidate) => ({
       ...candidate,
-      displayName: getPersonDisplayName(candidate),
+      displayName: getPersonDisplayName$1(candidate),
       lastThreeIdDigits: getLastThreeIdDigits(candidate)
     }));
     if (!surnameKey || surnameCount <= 1) {
@@ -42447,7 +42447,7 @@ const schedulePersonnelNamesMatch = (a, b) => {
   return !!left && left === right;
 };
 const scheduleEventIncludesPerson = (event, personName) => getScheduleEventPersonnelNames(event).some((eventPerson) => schedulePersonnelNamesMatch(eventPerson, personName));
-const getPersonScheduleName = (person) => String(getPersonDisplayName(person) || person.name || "").trim();
+const getPersonScheduleName = (person) => String(getPersonDisplayName$1(person) || person.name || "").trim();
 const getIdentityValue = (value) => String(value ?? "").trim();
 const getExactNameDuplicateCount = (person, allPeople = []) => {
   const personName = normalisePersonnelNameForScheduleMatch(getPersonScheduleName(person));
@@ -67407,6 +67407,28 @@ const formatTime$2 = (time) => {
   const minutes = Math.round(time % 1 * 60);
   return `${String(hours).padStart(2, "0")}:${String(minutes).padStart(2, "0")}`;
 };
+const getPersonDisplayName = (person) => String(person?.displayName || person?.name || person?.fullName || "Unnamed").trim() || "Unnamed";
+const hasTmufOrMedicalUnavailability = (person) => person?.unavailability?.some((item) => {
+  const reason = String(item?.reason || "").toLowerCase();
+  return reason.includes("tmuf") || reason.includes("medical");
+}) || false;
+const hasOtherUnavailability = (person) => person?.unavailability?.some((item) => {
+  const reason = String(item?.reason || "").trim();
+  const lowerReason = reason.toLowerCase();
+  return reason && !lowerReason.includes("tmuf") && !lowerReason.includes("medical") && lowerReason !== "leave";
+}) || false;
+const PersonnelCountRow = ({ label, count, countClassName, people = [], tooltipTitle }) => {
+  const names = people.map(getPersonDisplayName).filter(Boolean).sort((a, b) => a.localeCompare(b));
+  const hasNames = names.length > 0;
+  return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "group relative flex items-center justify-between rounded bg-gray-700/50 p-2", children: [
+    /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-sm text-white", children: label }),
+    /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: `font-semibold ${countClassName}`, children: count }),
+    hasNames && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "pointer-events-none absolute left-full top-1/2 z-50 ml-3 hidden w-64 -translate-y-1/2 rounded-md border border-gray-600 bg-gray-950 p-3 text-left shadow-2xl shadow-black/40 group-hover:block", children: [
+      /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mb-2 text-[11px] font-bold uppercase tracking-wide text-gray-400", children: tooltipTitle || label }),
+      /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "max-h-56 overflow-y-auto pr-1", children: names.map((name, index) => /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "border-t border-gray-800 py-1 text-xs font-medium text-gray-100 first:border-t-0", children: name }, `${name}-${index}`)) })
+    ] })
+  ] });
+};
 const SupervisorDashboard = ({ instructorsData, traineesData, date, events, school, currentLocation, currentLocationProfile, flightAuthorisationRequired = true, onNavigate, onOpenAuth }) => {
   const flightsNeedingAuth = reactExports.useMemo(() => {
     const nowInHours = (/* @__PURE__ */ new Date()).getHours() + (/* @__PURE__ */ new Date()).getMinutes() / 60;
@@ -67415,19 +67437,21 @@ const SupervisorDashboard = ({ instructorsData, traineesData, date, events, scho
       // Only show flights that haven't ended
     ).sort((a, b) => a.startTime - b.startTime).slice(0, 5);
   }, [events]);
+  const onLeaveInstructorList = instructorsData.filter((i) => i.isPaused);
+  const tmufInstructorList = instructorsData.filter(hasTmufOrMedicalUnavailability);
+  const otherUnavailInstructorList = instructorsData.filter(hasOtherUnavailability);
   const activeInstructors = instructorsData.filter((i) => !i.isPaused).length;
-  const onLeaveInstructors = instructorsData.filter((i) => i.isPaused).length;
-  const tmufInstructors = instructorsData.filter((i) => i.unavailability?.some((u) => u.reason?.includes("TMUF") || u.reason?.includes("Medical"))).length;
-  const otherUnavailInstructors = instructorsData.filter(
-    (i) => i.unavailability?.some((u) => u.reason && !u.reason.includes("TMUF") && !u.reason.includes("Medical") && u.reason !== "Leave")
-  ).length;
+  const onLeaveInstructors = onLeaveInstructorList.length;
+  const tmufInstructors = tmufInstructorList.length;
+  const otherUnavailInstructors = otherUnavailInstructorList.length;
   const totalInstructors = instructorsData.length;
+  const onLeaveTraineeList = traineesData.filter((t) => t.isPaused);
+  const tmufTraineeList = traineesData.filter(hasTmufOrMedicalUnavailability);
+  const otherUnavailTraineeList = traineesData.filter(hasOtherUnavailability);
   const activeTrainees = traineesData.filter((t) => !t.isPaused).length;
-  const onLeaveTrainees = traineesData.filter((t) => t.isPaused).length;
-  const tmufTrainees = traineesData.filter((t) => t.unavailability?.some((u) => u.reason?.includes("TMUF") || u.reason?.includes("Medical"))).length;
-  const otherUnavailTrainees = traineesData.filter(
-    (t) => t.unavailability?.some((u) => u.reason && !u.reason.includes("TMUF") && !u.reason.includes("Medical") && u.reason !== "Leave")
-  ).length;
+  const onLeaveTrainees = onLeaveTraineeList.length;
+  const tmufTrainees = tmufTraineeList.length;
+  const otherUnavailTrainees = otherUnavailTraineeList.length;
   const totalTrainees = traineesData.length;
   return /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "h-full min-h-0 w-full overflow-auto bg-gray-900", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mx-auto flex min-w-[760px] max-w-7xl flex-col space-y-6 p-6", children: [
     /* @__PURE__ */ jsxRuntimeExports.jsxs("header", { children: [
@@ -67491,22 +67515,10 @@ const SupervisorDashboard = ({ instructorsData, traineesData, date, events, scho
           /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
             /* @__PURE__ */ jsxRuntimeExports.jsx("h3", { className: "text-sm font-semibold text-sky-400 mb-3", children: "Staff" }),
             /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-2", children: [
-              /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex justify-between items-center p-2 bg-gray-700/50 rounded", children: [
-                /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-white text-sm", children: "Active" }),
-                /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-green-400 font-semibold", children: activeInstructors })
-              ] }),
-              /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex justify-between items-center p-2 bg-gray-700/50 rounded", children: [
-                /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-white text-sm", children: "On Leave" }),
-                /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-yellow-400 font-semibold", children: onLeaveInstructors })
-              ] }),
-              /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex justify-between items-center p-2 bg-gray-700/50 rounded", children: [
-                /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-white text-sm", children: "TMUF" }),
-                /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-orange-400 font-semibold", children: tmufInstructors })
-              ] }),
-              /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex justify-between items-center p-2 bg-gray-700/50 rounded", children: [
-                /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-white text-sm", children: "Other Unavailability" }),
-                /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-red-400 font-semibold", children: otherUnavailInstructors })
-              ] }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx(PersonnelCountRow, { label: "Active", count: activeInstructors, countClassName: "text-green-400" }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx(PersonnelCountRow, { label: "On Leave", count: onLeaveInstructors, countClassName: "text-yellow-400", people: onLeaveInstructorList, tooltipTitle: "Staff on leave" }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx(PersonnelCountRow, { label: "TMUF", count: tmufInstructors, countClassName: "text-orange-400", people: tmufInstructorList, tooltipTitle: "Staff TMUF / medical" }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx(PersonnelCountRow, { label: "Other Unavailability", count: otherUnavailInstructors, countClassName: "text-red-400", people: otherUnavailInstructorList, tooltipTitle: "Staff other unavailability" }),
               /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex justify-between items-center p-2 bg-gray-600/50 rounded border-t border-gray-600", children: [
                 /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-white text-sm font-medium", children: "Total" }),
                 /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-gray-300 font-bold", children: totalInstructors })
@@ -67516,22 +67528,10 @@ const SupervisorDashboard = ({ instructorsData, traineesData, date, events, scho
           /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
             /* @__PURE__ */ jsxRuntimeExports.jsx("h3", { className: "text-sm font-semibold text-sky-400 mb-3", children: "Trainees" }),
             /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-2", children: [
-              /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex justify-between items-center p-2 bg-gray-700/50 rounded", children: [
-                /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-white text-sm", children: "Active" }),
-                /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-green-400 font-semibold", children: activeTrainees })
-              ] }),
-              /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex justify-between items-center p-2 bg-gray-700/50 rounded", children: [
-                /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-white text-sm", children: "On Leave" }),
-                /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-yellow-400 font-semibold", children: onLeaveTrainees })
-              ] }),
-              /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex justify-between items-center p-2 bg-gray-700/50 rounded", children: [
-                /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-white text-sm", children: "TMUF" }),
-                /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-orange-400 font-semibold", children: tmufTrainees })
-              ] }),
-              /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex justify-between items-center p-2 bg-gray-700/50 rounded", children: [
-                /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-white text-sm", children: "Other Unavailability" }),
-                /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-red-400 font-semibold", children: otherUnavailTrainees })
-              ] }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx(PersonnelCountRow, { label: "Active", count: activeTrainees, countClassName: "text-green-400" }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx(PersonnelCountRow, { label: "On Leave", count: onLeaveTrainees, countClassName: "text-yellow-400", people: onLeaveTraineeList, tooltipTitle: "Trainees on leave" }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx(PersonnelCountRow, { label: "TMUF", count: tmufTrainees, countClassName: "text-orange-400", people: tmufTraineeList, tooltipTitle: "Trainees TMUF / medical" }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx(PersonnelCountRow, { label: "Other Unavailability", count: otherUnavailTrainees, countClassName: "text-red-400", people: otherUnavailTraineeList, tooltipTitle: "Trainees other unavailability" }),
               /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex justify-between items-center p-2 bg-gray-600/50 rounded border-t border-gray-600", children: [
                 /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-white text-sm font-medium", children: "Total" }),
                 /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-gray-300 font-bold", children: totalTrainees })
@@ -135920,7 +135920,7 @@ const App = () => {
     const personDisplayNames = (person) => [
       person?.name,
       person?.fullName,
-      getPersonDisplayName(person)
+      getPersonDisplayName$1(person)
     ].map((value) => String(value || "").trim()).filter(Boolean);
     const matchesPerson = (person, label) => personDisplayNames(person).some((personName) => personnelNamesMatch(personName, label));
     const personUnitCode = (person) => normalisePersonnelUnitCode(person?.unit);
