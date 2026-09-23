@@ -10184,7 +10184,7 @@ const RightSidebar = ({
         onClick: () => onNavigate("MyDashboard"),
         title: "Open My Home",
         "aria-label": "Open My Home",
-        className: "w-[75px] h-[55px] flex items-center justify-center rounded-md border border-amber-300/75 bg-[#030303] p-1 shadow-[inset_0_1px_0_rgba(255,199,87,0.22),inset_0_-1px_0_rgba(0,0,0,0.65)]",
+        className: "w-[75px] h-[55px] flex items-center justify-center rounded-md border border-slate-200/80 bg-[#030303] p-1 shadow-[inset_0_1px_0_rgba(255,255,255,0.34),inset_0_-1px_0_rgba(0,0,0,0.7),0_0_0_1px_rgba(110,118,129,0.28)]",
         children: /* @__PURE__ */ jsxRuntimeExports.jsx(
           "img",
           {
