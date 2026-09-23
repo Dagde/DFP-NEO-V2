@@ -199,7 +199,7 @@ const SupervisorDashboard: React.FC<SupervisorDashboardProps> = ({ instructorsDa
                 {/* Bottom row: Personnel Management and Unavailability */}
                 <div className="flex flex-wrap gap-6">
                     {/* Personnel Management */}
-                    <div className="flex flex-col bg-gray-800 rounded-lg shadow-lg border border-gray-700 h-fit flex-1 min-w-[350px] max-w-md">
+                    <div data-neo-guide="duty-pilot-personnel-management" className="flex flex-col bg-gray-800 rounded-lg shadow-lg border border-gray-700 h-fit flex-1 min-w-[350px] max-w-md">
                         <h2 className="p-4 text-lg font-semibold text-gray-200 border-b border-gray-700 text-center">
                             Personnel Management
                         </h2>

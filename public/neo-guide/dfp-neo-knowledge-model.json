@@ -1,6 +1,6 @@
 {
   "schemaVersion": "neo-guide-runtime-model.v1",
-  "generatedAt": "2026-09-23T15:25:02.229Z",
+  "generatedAt": "2026-09-23T21:42:50.139Z",
   "source": {
     "repository": "clone-the-repo-dagde-dfp-neo",
     "sourceFileCount": 377,
@@ -8569,9 +8569,9 @@
   "curatedKnowledge": {
     "schemaVersion": "neo-guide-enrichment.v1",
     "updatedAt": "2026-09-23T00:00:00.000Z",
-    "functionCount": 17,
-    "conceptCount": 3,
-    "synonymCount": 4,
+    "functionCount": 23,
+    "conceptCount": 5,
+    "synonymCount": 7,
     "functions": [
       {
         "id": "function.curated.navigation.dfp",
@@ -9272,7 +9272,7 @@
           "page": "SupervisorDashboard",
           "route": null,
           "component": "components/SupervisorDashboard.tsx",
-          "anchor": "nav-duty-pilot"
+          "anchor": "duty-pilot-personnel-management"
         },
         "purpose": "Shows duty-pilot operational personnel summaries and counts.",
         "inputs": [],
@@ -9291,6 +9291,337 @@
         ],
         "relatedFunctions": [
           "function.curated.people.staff-unavailability"
+        ],
+        "auditStatus": "IMPLEMENTED - manually enriched from current implementation review"
+      },
+      {
+        "id": "function.curated.training.course-leadership",
+        "name": "Course leadership assignments",
+        "aliases": [
+          "course commander",
+          "deputy course commander",
+          "Cse Commander",
+          "Deputy Cse Commander",
+          "course staff",
+          "course leadership",
+          "course commander ticked"
+        ],
+        "location": {
+          "page": "Trainee",
+          "route": null,
+          "component": "components/CourseEditFlyout.tsx",
+          "anchor": "course-leadership"
+        },
+        "purpose": "Assigns the staff members who hold course-level leadership roles for a course.",
+        "inputs": [
+          {
+            "fieldName": "courseCommander",
+            "fieldType": "staff selector",
+            "permittedValues": [
+              "Staff members from the relevant individual unit options shown in the edit course flyout."
+            ],
+            "defaultValue": "",
+            "required": false,
+            "validation": [
+              "Must be selected from available staff options when assigned."
+            ],
+            "dependencies": [
+              "Staff records",
+              "active course",
+              "unit context"
+            ],
+            "sourceOfData": "Course edit flyout"
+          },
+          {
+            "fieldName": "deputyCourseCommander",
+            "fieldType": "staff selector",
+            "permittedValues": [
+              "Staff members from the relevant individual unit options shown in the edit course flyout."
+            ],
+            "defaultValue": "",
+            "required": false,
+            "validation": [
+              "Must be selected from available staff options when assigned."
+            ],
+            "dependencies": [
+              "Staff records",
+              "active course",
+              "unit context"
+            ],
+            "sourceOfData": "Course edit flyout"
+          }
+        ],
+        "outputs": [
+          "Updates the selected course's course commander and deputy course commander values."
+        ],
+        "permissions": [
+          "trainee.roster.view"
+        ],
+        "dependencies": [
+          "Course leadership must be enabled and staff records must exist for the relevant unit."
+        ],
+        "businessRules": [
+          "Training auto-notification recipients can be derived from these course-level assignments when the matching recipient role is enabled."
+        ],
+        "failureConditions": [
+          "Messages cannot be sent to a course commander or deputy course commander if the course field is blank, not persisted, or the role is not enabled in notification settings."
+        ],
+        "relatedFunctions": [
+          "function.curated.messaging.auto-notifications",
+          "function.curated.people.trainee-roster"
+        ],
+        "auditStatus": "IMPLEMENTED - manually enriched from current implementation review"
+      },
+      {
+        "id": "function.curated.training.course-score-table",
+        "name": "Course Scores table",
+        "aliases": [
+          "course scores",
+          "scores table",
+          "no scores",
+          "blank scores",
+          "no scores in course scores",
+          "course scores blank",
+          "random words",
+          "TRG REP scores",
+          "overall grades"
+        ],
+        "location": {
+          "page": "Course Progress",
+          "route": null,
+          "component": "components/CourseProgressView.tsx",
+          "anchor": "course-scores"
+        },
+        "purpose": "Displays saved training-report overall grades by trainee and event for the selected course.",
+        "inputs": [
+          {
+            "fieldName": "course",
+            "fieldType": "course selector",
+            "permittedValues": [
+              "Active courses"
+            ],
+            "defaultValue": "first active course",
+            "required": true,
+            "validation": [
+              "Must match an active course with trainees and saved report scores."
+            ],
+            "dependencies": [
+              "active courses",
+              "trainee assignments",
+              "saved training report grades"
+            ],
+            "sourceOfData": "Course Progress course selector"
+          }
+        ],
+        "outputs": [
+          "Displays event columns and trainee score cells for saved overall grades."
+        ],
+        "permissions": [
+          "courseProgress.view"
+        ],
+        "dependencies": [
+          "Training reports must have saved overall grades for events included by the Course Scores settings."
+        ],
+        "businessRules": [
+          "Only events with saved training report overall grades matching the selected course and event-type filters are shown."
+        ],
+        "failureConditions": [
+          "The table can appear empty when no trainees, no saved overall grades, or filtered-out event types match the selected course."
+        ],
+        "relatedFunctions": [
+          "function.curated.training.training-report",
+          "function.curated.training.course-progress"
+        ],
+        "auditStatus": "IMPLEMENTED - manually enriched from current implementation review"
+      },
+      {
+        "id": "function.curated.training.course-ranking-awards",
+        "name": "Course ranking awards",
+        "aliases": [
+          "course rankings",
+          "award rankings",
+          "new award",
+          "ranking criteria",
+          "no ranking data",
+          "award course"
+        ],
+        "location": {
+          "page": "Course Progress",
+          "route": null,
+          "component": "components/CourseProgressView.tsx",
+          "anchor": "course-rankings"
+        },
+        "purpose": "Creates and evaluates named ranking awards against selected course/event criteria.",
+        "inputs": [
+          {
+            "fieldName": "course",
+            "fieldType": "course selector",
+            "permittedValues": [
+              "All active courses",
+              "individual active courses"
+            ],
+            "defaultValue": "first active course",
+            "required": true,
+            "validation": [
+              "The selected award must be evaluated against the currently selected course."
+            ],
+            "dependencies": [
+              "active courses",
+              "award criteria",
+              "saved training report grades"
+            ],
+            "sourceOfData": "Course rankings panel"
+          },
+          {
+            "fieldName": "award",
+            "fieldType": "ranking award selector",
+            "permittedValues": [
+              "Configured awards for the active setup"
+            ],
+            "defaultValue": "",
+            "required": true,
+            "validation": [
+              "Award criteria must include events and a scoring method."
+            ],
+            "dependencies": [
+              "course ranking settings"
+            ],
+            "sourceOfData": "Course rankings panel"
+          }
+        ],
+        "outputs": [
+          "Displays ranked trainees, average score and score count where matching data exists."
+        ],
+        "permissions": [
+          "courseProgress.view"
+        ],
+        "dependencies": [
+          "Saved overall grades for the selected award events and course trainees."
+        ],
+        "businessRules": [
+          "The selected course must be applied when evaluating a ranking award; rankings should not reuse another course's previous selection."
+        ],
+        "failureConditions": [
+          "No ranking data is available when award criteria do not match saved scores for the selected course."
+        ],
+        "relatedFunctions": [
+          "function.curated.training.course-score-table",
+          "function.curated.training.training-report"
+        ],
+        "auditStatus": "IMPLEMENTED - manually enriched from current implementation review"
+      },
+      {
+        "id": "function.curated.settings.master-lmp-access",
+        "name": "Master LMP Access",
+        "aliases": [
+          "Master LMP",
+          "LMP access",
+          "training stream access",
+          "assign Master LMP",
+          "manage Master LMP"
+        ],
+        "location": {
+          "page": "Settings",
+          "route": null,
+          "component": "components/PlatformConfigurationSettings.tsx",
+          "anchor": "platform-master-lmp-access"
+        },
+        "purpose": "Defines which locations and units can view, assign or manage each Master LMP record.",
+        "inputs": [],
+        "outputs": [
+          "Updates Master LMP catalogue records and access rules used by trainee/course assignment workflows."
+        ],
+        "permissions": [
+          "settings.view"
+        ],
+        "dependencies": [
+          "Organisation, location and unit settings must exist for scoped access rules."
+        ],
+        "businessRules": [
+          "Access levels are evaluated against the selected unit before Master LMPs can be assigned to courses or trainees."
+        ],
+        "failureConditions": [
+          "A Master LMP may not appear for a user or unit when no matching access rule exists or its catalogue record is inactive."
+        ],
+        "relatedFunctions": [
+          "function.curated.workflow.initial-setup-wizard",
+          "function.curated.training.course-management"
+        ],
+        "auditStatus": "IMPLEMENTED - manually enriched from current implementation review"
+      },
+      {
+        "id": "function.curated.training.master-lmp-event-details",
+        "name": "Master LMP event details",
+        "aliases": [
+          "event details",
+          "Master LMP event",
+          "selected event details",
+          "event tile details",
+          "LMP event edit",
+          "inline save"
+        ],
+        "location": {
+          "page": "Settings",
+          "route": null,
+          "component": "components/PlatformConfigurationSettings.tsx",
+          "anchor": "platform-master-lmp-access"
+        },
+        "purpose": "Displays and manages event-level detail for Master LMP content and related assignment workflows.",
+        "inputs": [],
+        "outputs": [
+          "Shows selected event details and supports editing where the user has manage access."
+        ],
+        "permissions": [
+          "settings.view"
+        ],
+        "dependencies": [
+          "A Master LMP catalogue record and event content must exist."
+        ],
+        "businessRules": [
+          "Users should be able to see the selected event details near the event list rather than needing to scroll away from the selected event."
+        ],
+        "failureConditions": [
+          "The edit action may be unavailable if the user lacks manage access for the Master LMP."
+        ],
+        "relatedFunctions": [
+          "function.curated.settings.master-lmp-access"
+        ],
+        "auditStatus": "IMPLEMENTED - manually enriched from current implementation review"
+      },
+      {
+        "id": "function.curated.duty-pilot.flight-tracking",
+        "name": "Duty Pilot flight tracking",
+        "aliases": [
+          "flight tracking",
+          "tracking map",
+          "ADSB",
+          "ADS-B",
+          "tracking not showing",
+          "enlarged tracking"
+        ],
+        "location": {
+          "page": "SupervisorDashboard",
+          "route": null,
+          "component": "components/SupervisorDashboard.tsx",
+          "anchor": "nav-duty-pilot"
+        },
+        "purpose": "Displays the embedded flight tracking widget within the Duty Pilot page.",
+        "inputs": [],
+        "outputs": [
+          "Shows the configured tracking widget when the browser and remote tracking site allow embedding."
+        ],
+        "permissions": [],
+        "dependencies": [
+          "The flight tracking provider must permit embedding in the deployed DFP-NEO page."
+        ],
+        "businessRules": [
+          "If the provider blocks framing or embedding, the in-page widget can fail even when the external hyperlink opens successfully."
+        ],
+        "failureConditions": [
+          "Browser frame restrictions, provider CSP/X-Frame-Options, VPN/network policy or mixed-content restrictions can prevent the embedded tracker from displaying."
+        ],
+        "relatedFunctions": [
+          "function.curated.duty-pilot.personnel-management"
         ],
         "auditStatus": "IMPLEMENTED - manually enriched from current implementation review"
       }
@@ -9348,8 +9679,54 @@
             "type": "analysed-in"
           },
           {
+            "target": "function.curated.training.course-leadership",
+            "type": "has-leadership-assigned-in"
+          },
+          {
+            "target": "function.curated.training.course-ranking-awards",
+            "type": "may-have-ranking-awards-in"
+          },
+          {
             "target": "function.curated.training.archive-course",
             "type": "may-be-archived-by"
+          }
+        ]
+      },
+      {
+        "id": "concept.master-lmp",
+        "name": "Master LMP",
+        "kind": "application-concept",
+        "relationships": [
+          {
+            "target": "function.curated.settings.master-lmp-access",
+            "type": "access-controlled-by"
+          },
+          {
+            "target": "function.curated.training.master-lmp-event-details",
+            "type": "contains-events-managed-by"
+          },
+          {
+            "target": "function.curated.scheduling.neo-build",
+            "type": "feeds-scheduling-progression"
+          }
+        ]
+      },
+      {
+        "id": "concept.training-report-grade",
+        "name": "Training report grade",
+        "kind": "application-concept",
+        "relationships": [
+          {
+            "target": "function.curated.training.training-report",
+            "type": "created-in"
+          },
+          {
+            "target": "function.curated.training.course-score-table",
+            "type": "displayed-in"
+          },
+          {
+            "target": "function.curated.training.course-ranking-awards",
+            "type": "ranked-by"
           }
         ]
       }
@@ -9394,6 +9771,35 @@
           "build DFP",
           "optimise schedule"
         ]
+      },
+      {
+        "canonical": "course commander",
+        "terms": [
+          "cse commander",
+          "course comd",
+          "commander",
+          "course boss"
+        ]
+      },
+      {
+        "canonical": "Master LMP",
+        "terms": [
+          "lmp",
+          "training stream",
+          "programme",
+          "program",
+          "syllabus"
+        ]
+      },
+      {
+        "canonical": "flight tracking",
+        "terms": [
+          "tracking",
+          "adsb",
+          "ads-b",
+          "aircraft tracker",
+          "map"
+        ]
       }
     ]
   },
@@ -9403,6 +9809,24 @@
       "tagName": "div",
       "file": "components/ArchivedCoursesView.tsx",
       "line": 203
+    },
+    {
+      "id": "course-leadership",
+      "tagName": "div",
+      "file": "components/CourseEditFlyout.tsx",
+      "line": 230
+    },
+    {
+      "id": "course-commander-field",
+      "tagName": "select",
+      "file": "components/CourseEditFlyout.tsx",
+      "line": 235
+    },
+    {
+      "id": "deputy-course-commander-field",
+      "tagName": "select",
+      "file": "components/CourseEditFlyout.tsx",
+      "line": 256
     },
     {
       "id": "course-scores-rankings",
@@ -9655,6 +10079,12 @@
       "tagName": "button",
       "file": "components/Sidebar.tsx",
       "line": 272
+    },
+    {
+      "id": "duty-pilot-personnel-management",
+      "tagName": "div",
+      "file": "components/SupervisorDashboard.tsx",
+      "line": 202
     },
     {
       "id": "trainee-availability",
@@ -10351,7 +10781,7 @@
         "page": "SupervisorDashboard",
         "route": null,
         "component": "components/SupervisorDashboard.tsx",
-        "anchor": "nav-duty-pilot"
+        "anchor": "duty-pilot-personnel-management"
       },
       "purpose": "Shows duty-pilot operational personnel summaries and counts.",
       "inputs": [],
@@ -10367,6 +10797,319 @@
       ],
       "relatedFunctions": [
         "function.curated.people.staff-unavailability"
+      ],
+      "auditStatus": "IMPLEMENTED - manually enriched from current implementation review"
+    },
+    {
+      "id": "function.curated.training.course-leadership",
+      "name": "Course leadership assignments",
+      "aliases": [
+        "course commander",
+        "deputy course commander",
+        "Cse Commander",
+        "Deputy Cse Commander",
+        "course staff",
+        "course leadership",
+        "course commander ticked"
+      ],
+      "location": {
+        "page": "Trainee",
+        "route": null,
+        "component": "components/CourseEditFlyout.tsx",
+        "anchor": "course-leadership"
+      },
+      "purpose": "Assigns the staff members who hold course-level leadership roles for a course.",
+      "inputs": [
+        {
+          "fieldName": "courseCommander",
+          "fieldType": "staff selector",
+          "permittedValues": [
+            "Staff members from the relevant individual unit options shown in the edit course flyout."
+          ],
+          "defaultValue": "",
+          "required": false,
+          "validation": [
+            "Must be selected from available staff options when assigned."
+          ],
+          "dependencies": [
+            "Staff records",
+            "active course",
+            "unit context"
+          ],
+          "sourceOfData": "Course edit flyout"
+        },
+        {
+          "fieldName": "deputyCourseCommander",
+          "fieldType": "staff selector",
+          "permittedValues": [
+            "Staff members from the relevant individual unit options shown in the edit course flyout."
+          ],
+          "defaultValue": "",
+          "required": false,
+          "validation": [
+            "Must be selected from available staff options when assigned."
+          ],
+          "dependencies": [
+            "Staff records",
+            "active course",
+            "unit context"
+          ],
+          "sourceOfData": "Course edit flyout"
+        }
+      ],
+      "outputs": [
+        "Updates the selected course's course commander and deputy course commander values."
+      ],
+      "permissions": [
+        "trainee.roster.view"
+      ],
+      "dependencies": [
+        "Course leadership must be enabled and staff records must exist for the relevant unit."
+      ],
+      "failureConditions": [
+        "Messages cannot be sent to a course commander or deputy course commander if the course field is blank, not persisted, or the role is not enabled in notification settings."
+      ],
+      "relatedFunctions": [
+        "function.curated.messaging.auto-notifications",
+        "function.curated.people.trainee-roster"
+      ],
+      "auditStatus": "IMPLEMENTED - manually enriched from current implementation review"
+    },
+    {
+      "id": "function.curated.training.course-score-table",
+      "name": "Course Scores table",
+      "aliases": [
+        "course scores",
+        "scores table",
+        "no scores",
+        "blank scores",
+        "no scores in course scores",
+        "course scores blank",
+        "random words",
+        "TRG REP scores",
+        "overall grades"
+      ],
+      "location": {
+        "page": "Course Progress",
+        "route": null,
+        "component": "components/CourseProgressView.tsx",
+        "anchor": "course-scores"
+      },
+      "purpose": "Displays saved training-report overall grades by trainee and event for the selected course.",
+      "inputs": [
+        {
+          "fieldName": "course",
+          "fieldType": "course selector",
+          "permittedValues": [
+            "Active courses"
+          ],
+          "defaultValue": "first active course",
+          "required": true,
+          "validation": [
+            "Must match an active course with trainees and saved report scores."
+          ],
+          "dependencies": [
+            "active courses",
+            "trainee assignments",
+            "saved training report grades"
+          ],
+          "sourceOfData": "Course Progress course selector"
+        }
+      ],
+      "outputs": [
+        "Displays event columns and trainee score cells for saved overall grades."
+      ],
+      "permissions": [
+        "courseProgress.view"
+      ],
+      "dependencies": [
+        "Training reports must have saved overall grades for events included by the Course Scores settings."
+      ],
+      "failureConditions": [
+        "The table can appear empty when no trainees, no saved overall grades, or filtered-out event types match the selected course."
+      ],
+      "relatedFunctions": [
+        "function.curated.training.training-report",
+        "function.curated.training.course-progress"
+      ],
+      "auditStatus": "IMPLEMENTED - manually enriched from current implementation review"
+    },
+    {
+      "id": "function.curated.training.course-ranking-awards",
+      "name": "Course ranking awards",
+      "aliases": [
+        "course rankings",
+        "award rankings",
+        "new award",
+        "ranking criteria",
+        "no ranking data",
+        "award course"
+      ],
+      "location": {
+        "page": "Course Progress",
+        "route": null,
+        "component": "components/CourseProgressView.tsx",
+        "anchor": "course-rankings"
+      },
+      "purpose": "Creates and evaluates named ranking awards against selected course/event criteria.",
+      "inputs": [
+        {
+          "fieldName": "course",
+          "fieldType": "course selector",
+          "permittedValues": [
+            "All active courses",
+            "individual active courses"
+          ],
+          "defaultValue": "first active course",
+          "required": true,
+          "validation": [
+            "The selected award must be evaluated against the currently selected course."
+          ],
+          "dependencies": [
+            "active courses",
+            "award criteria",
+            "saved training report grades"
+          ],
+          "sourceOfData": "Course rankings panel"
+        },
+        {
+          "fieldName": "award",
+          "fieldType": "ranking award selector",
+          "permittedValues": [
+            "Configured awards for the active setup"
+          ],
+          "defaultValue": "",
+          "required": true,
+          "validation": [
+            "Award criteria must include events and a scoring method."
+          ],
+          "dependencies": [
+            "course ranking settings"
+          ],
+          "sourceOfData": "Course rankings panel"
+        }
+      ],
+      "outputs": [
+        "Displays ranked trainees, average score and score count where matching data exists."
+      ],
+      "permissions": [
+        "courseProgress.view"
+      ],
+      "dependencies": [
+        "Saved overall grades for the selected award events and course trainees."
+      ],
+      "failureConditions": [
+        "No ranking data is available when award criteria do not match saved scores for the selected course."
+      ],
+      "relatedFunctions": [
+        "function.curated.training.course-score-table",
+        "function.curated.training.training-report"
+      ],
+      "auditStatus": "IMPLEMENTED - manually enriched from current implementation review"
+    },
+    {
+      "id": "function.curated.settings.master-lmp-access",
+      "name": "Master LMP Access",
+      "aliases": [
+        "Master LMP",
+        "LMP access",
+        "training stream access",
+        "assign Master LMP",
+        "manage Master LMP"
+      ],
+      "location": {
+        "page": "Settings",
+        "route": null,
+        "component": "components/PlatformConfigurationSettings.tsx",
+        "anchor": "platform-master-lmp-access"
+      },
+      "purpose": "Defines which locations and units can view, assign or manage each Master LMP record.",
+      "inputs": [],
+      "outputs": [
+        "Updates Master LMP catalogue records and access rules used by trainee/course assignment workflows."
+      ],
+      "permissions": [
+        "settings.view"
+      ],
+      "dependencies": [
+        "Organisation, location and unit settings must exist for scoped access rules."
+      ],
+      "failureConditions": [
+        "A Master LMP may not appear for a user or unit when no matching access rule exists or its catalogue record is inactive."
+      ],
+      "relatedFunctions": [
+        "function.curated.workflow.initial-setup-wizard",
+        "function.curated.training.course-management"
+      ],
+      "auditStatus": "IMPLEMENTED - manually enriched from current implementation review"
+    },
+    {
+      "id": "function.curated.training.master-lmp-event-details",
+      "name": "Master LMP event details",
+      "aliases": [
+        "event details",
+        "Master LMP event",
+        "selected event details",
+        "event tile details",
+        "LMP event edit",
+        "inline save"
+      ],
+      "location": {
+        "page": "Settings",
+        "route": null,
+        "component": "components/PlatformConfigurationSettings.tsx",
+        "anchor": "platform-master-lmp-access"
+      },
+      "purpose": "Displays and manages event-level detail for Master LMP content and related assignment workflows.",
+      "inputs": [],
+      "outputs": [
+        "Shows selected event details and supports editing where the user has manage access."
+      ],
+      "permissions": [
+        "settings.view"
+      ],
+      "dependencies": [
+        "A Master LMP catalogue record and event content must exist."
+      ],
+      "failureConditions": [
+        "The edit action may be unavailable if the user lacks manage access for the Master LMP."
+      ],
+      "relatedFunctions": [
+        "function.curated.settings.master-lmp-access"
+      ],
+      "auditStatus": "IMPLEMENTED - manually enriched from current implementation review"
+    },
+    {
+      "id": "function.curated.duty-pilot.flight-tracking",
+      "name": "Duty Pilot flight tracking",
+      "aliases": [
+        "flight tracking",
+        "tracking map",
+        "ADSB",
+        "ADS-B",
+        "tracking not showing",
+        "enlarged tracking"
+      ],
+      "location": {
+        "page": "SupervisorDashboard",
+        "route": null,
+        "component": "components/SupervisorDashboard.tsx",
+        "anchor": "nav-duty-pilot"
+      },
+      "purpose": "Displays the embedded flight tracking widget within the Duty Pilot page.",
+      "inputs": [],
+      "outputs": [
+        "Shows the configured tracking widget when the browser and remote tracking site allow embedding."
+      ],
+      "permissions": [],
+      "dependencies": [
+        "The flight tracking provider must permit embedding in the deployed DFP-NEO page."
+      ],
+      "failureConditions": [
+        "Browser frame restrictions, provider CSP/X-Frame-Options, VPN/network policy or mixed-content restrictions can prevent the embedded tracker from displaying."
+      ],
+      "relatedFunctions": [
+        "function.curated.duty-pilot.personnel-management"
       ],
       "auditStatus": "IMPLEMENTED - manually enriched from current implementation review"
     },
@@ -89563,7 +90306,7 @@
         "page": "Course Edit Flyout",
         "route": null,
         "component": "components/CourseEditFlyout.tsx",
-        "anchor": null,
+        "anchor": "course-commander-field",
         "line": 235
       },
       "purpose": "select control in components/CourseEditFlyout.tsx. Purpose requires manual enrichment where not evident from implementation.",
@@ -89601,7 +90344,7 @@
       "auditStatus": "IMPLEMENTED - extracted from JSX control"
     },
     {
-      "id": "function.control-components-courseeditflyout-tsx-not-assigned-241",
+      "id": "function.control-components-courseeditflyout-tsx-not-assigned-242",
       "name": "Not assigned",
       "aliases": [
         "Not assigned"
@@ -89611,7 +90354,7 @@
         "route": null,
         "component": "components/CourseEditFlyout.tsx",
         "anchor": null,
-        "line": 241
+        "line": 242
       },
       "purpose": "option control in components/CourseEditFlyout.tsx. Purpose requires manual enrichment where not evident from implementation.",
       "inputs": [],
@@ -89631,7 +90374,7 @@
       "auditStatus": "IMPLEMENTED - extracted from JSX control"
     },
     {
-      "id": "function.control-components-courseeditflyout-tsx-formatpersonoptionlabel-staff-245",
+      "id": "function.control-components-courseeditflyout-tsx-formatpersonoptionlabel-staff-246",
       "name": "formatPersonOptionLabel(staff)",
       "aliases": [
         "formatPersonOptionLabel(staff)"
@@ -89641,7 +90384,7 @@
         "route": null,
         "component": "components/CourseEditFlyout.tsx",
         "anchor": null,
-        "line": 245
+        "line": 246
       },
       "purpose": "option control in components/CourseEditFlyout.tsx. Purpose requires manual enrichment where not evident from implementation.",
       "inputs": [],
@@ -89661,7 +90404,7 @@
       "auditStatus": "IMPLEMENTED - extracted from JSX control"
     },
     {
-      "id": "function.control-components-courseeditflyout-tsx-deputycoursecommanderlabel-254",
+      "id": "function.control-components-courseeditflyout-tsx-deputycoursecommanderlabel-255",
       "name": "deputyCourseCommanderLabel",
       "aliases": [
         "deputyCourseCommanderLabel"
@@ -89671,7 +90414,7 @@
         "route": null,
         "component": "components/CourseEditFlyout.tsx",
         "anchor": null,
-        "line": 254
+        "line": 255
       },
       "purpose": "label control in components/CourseEditFlyout.tsx. Purpose requires manual enrichment where not evident from implementation.",
       "inputs": [],
@@ -89691,7 +90434,7 @@
       "auditStatus": "IMPLEMENTED - extracted from JSX control"
     },
     {
-      "id": "function.control-components-courseeditflyout-tsx-not-assigned-255",
+      "id": "function.control-components-courseeditflyout-tsx-not-assigned-256",
       "name": "Not assigned",
       "aliases": [
         "Not assigned"
@@ -89700,8 +90443,8 @@
         "page": "Course Edit Flyout",
         "route": null,
         "component": "components/CourseEditFlyout.tsx",
-        "anchor": null,
-        "line": 255
+        "anchor": "deputy-course-commander-field",
+        "line": 256
       },
       "purpose": "select control in components/CourseEditFlyout.tsx. Purpose requires manual enrichment where not evident from implementation.",
       "inputs": [
@@ -89738,7 +90481,7 @@
       "auditStatus": "IMPLEMENTED - extracted from JSX control"
     },
     {
-      "id": "function.control-components-courseeditflyout-tsx-not-assigned-261",
+      "id": "function.control-components-courseeditflyout-tsx-not-assigned-263",
       "name": "Not assigned",
       "aliases": [
         "Not assigned"
@@ -89748,7 +90491,7 @@
         "route": null,
         "component": "components/CourseEditFlyout.tsx",
         "anchor": null,
-        "line": 261
+        "line": 263
       },
       "purpose": "option control in components/CourseEditFlyout.tsx. Purpose requires manual enrichment where not evident from implementation.",
       "inputs": [],
@@ -89768,7 +90511,7 @@
       "auditStatus": "IMPLEMENTED - extracted from JSX control"
     },
     {
-      "id": "function.control-components-courseeditflyout-tsx-formatpersonoptionlabel-staff-265",
+      "id": "function.control-components-courseeditflyout-tsx-formatpersonoptionlabel-staff-267",
       "name": "formatPersonOptionLabel(staff)",
       "aliases": [
         "formatPersonOptionLabel(staff)"
@@ -89778,7 +90521,7 @@
         "route": null,
         "component": "components/CourseEditFlyout.tsx",
         "anchor": null,
-        "line": 265
+        "line": 267
       },
       "purpose": "option control in components/CourseEditFlyout.tsx. Purpose requires manual enrichment where not evident from implementation.",
       "inputs": [],
@@ -89798,7 +90541,7 @@
       "auditStatus": "IMPLEMENTED - extracted from JSX control"
     },
     {
-      "id": "function.control-components-courseeditflyout-tsx-save-277",
+      "id": "function.control-components-courseeditflyout-tsx-save-279",
       "name": "Save",
       "aliases": [
         "Save"
@@ -89808,7 +90551,7 @@
         "route": null,
         "component": "components/CourseEditFlyout.tsx",
         "anchor": null,
-        "line": 277
+        "line": 279
       },
       "purpose": "button control in components/CourseEditFlyout.tsx. Purpose requires manual enrichment where not evident from implementation.",
       "inputs": [],
@@ -89830,7 +90573,7 @@
       "auditStatus": "IMPLEMENTED - extracted from JSX control"
     },
     {
-      "id": "function.control-components-courseeditflyout-tsx-move-to-different-course-307",
+      "id": "function.control-components-courseeditflyout-tsx-move-to-different-course-309",
       "name": "Move to different course",
       "aliases": [
         "Move to different course"
@@ -89840,7 +90583,7 @@
         "route": null,
         "component": "components/CourseEditFlyout.tsx",
         "anchor": null,
-        "line": 307
+        "line": 309
       },
       "purpose": "button control in components/CourseEditFlyout.tsx. Purpose requires manual enrichment where not evident from implementation.",
       "inputs": [],
@@ -89862,7 +90605,7 @@
       "auditStatus": "IMPLEMENTED - extracted from JSX control"
     },
     {
-      "id": "function.control-components-courseeditflyout-tsx-delete-trainee-314",
+      "id": "function.control-components-courseeditflyout-tsx-delete-trainee-316",
       "name": "Delete trainee",
       "aliases": [
         "Delete trainee"
@@ -89872,7 +90615,7 @@
         "route": null,
         "component": "components/CourseEditFlyout.tsx",
         "anchor": null,
-        "line": 314
+        "line": 316
       },
       "purpose": "button control in components/CourseEditFlyout.tsx. Purpose requires manual enrichment where not evident from implementation.",
       "inputs": [],
@@ -89894,7 +90637,7 @@
       "auditStatus": "IMPLEMENTED - extracted from JSX control"
     },
     {
-      "id": "function.control-components-courseeditflyout-tsx-close-331",
+      "id": "function.control-components-courseeditflyout-tsx-close-333",
       "name": "Close",
       "aliases": [
         "Close"
@@ -89904,7 +90647,7 @@
         "route": null,
         "component": "components/CourseEditFlyout.tsx",
         "anchor": null,
-        "line": 331
+        "line": 333
       },
       "purpose": "button control in components/CourseEditFlyout.tsx. Purpose requires manual enrichment where not evident from implementation.",
       "inputs": [],
@@ -89926,7 +90669,7 @@
       "auditStatus": "IMPLEMENTED - extracted from JSX control"
     },
     {
-      "id": "function.control-components-courseeditflyout-tsx-select-target-course-create-new-course-351",
+      "id": "function.control-components-courseeditflyout-tsx-select-target-course-create-new-course-353",
       "name": "Select target course... + Create New Course",
       "aliases": [
         "Select target course... + Create New Course"
@@ -89936,7 +90679,7 @@
         "route": null,
         "component": "components/CourseEditFlyout.tsx",
         "anchor": null,
-        "line": 351
+        "line": 353
       },
       "purpose": "select control in components/CourseEditFlyout.tsx. Purpose requires manual enrichment where not evident from implementation.",
       "inputs": [
@@ -89969,7 +90712,7 @@
       "auditStatus": "IMPLEMENTED - extracted from JSX control"
     },
     {
-      "id": "function.control-components-courseeditflyout-tsx-select-target-course-356",
+      "id": "function.control-components-courseeditflyout-tsx-select-target-course-358",
       "name": "Select target course...",
       "aliases": [
         "Select target course..."
@@ -89979,7 +90722,7 @@
         "route": null,
         "component": "components/CourseEditFlyout.tsx",
         "anchor": null,
-        "line": 356
+        "line": 358
       },
       "purpose": "option control in components/CourseEditFlyout.tsx. Purpose requires manual enrichment where not evident from implementation.",
       "inputs": [],
@@ -89999,40 +90742,10 @@
       "auditStatus": "IMPLEMENTED - extracted from JSX control"
     },
     {
-      "id": "function.control-components-courseeditflyout-tsx-course-360",
+      "id": "function.control-components-courseeditflyout-tsx-course-362",
       "name": "course",
       "aliases": [
         "course"
-      ],
-      "location": {
-        "page": "Course Edit Flyout",
-        "route": null,
-        "component": "components/CourseEditFlyout.tsx",
-        "anchor": null,
-        "line": 360
-      },
-      "purpose": "option control in components/CourseEditFlyout.tsx. Purpose requires manual enrichment where not evident from implementation.",
-      "inputs": [],
-      "outputs": [],
-      "permissions": [
-        "staff.unit",
-        "staff.id",
-        "staff.idNumber",
-        "staff.name",
-        "trainee.fullName",
-        "trainee.rank",
-        "trainee.name"
-      ],
-      "dependencies": [],
-      "failureConditions": [],
-      "relatedFunctions": [],
-      "auditStatus": "IMPLEMENTED - extracted from JSX control"
-    },
-    {
-      "id": "function.control-components-courseeditflyout-tsx-create-new-course-362",
-      "name": "+ Create New Course",
-      "aliases": [
-        "+ Create New Course"
       ],
       "location": {
         "page": "Course Edit Flyout",
@@ -90059,7 +90772,37 @@
       "auditStatus": "IMPLEMENTED - extracted from JSX control"
     },
     {
-      "id": "function.control-components-courseeditflyout-tsx-enter-new-course-number-365",
+      "id": "function.control-components-courseeditflyout-tsx-create-new-course-364",
+      "name": "+ Create New Course",
+      "aliases": [
+        "+ Create New Course"
+      ],
+      "location": {
+        "page": "Course Edit Flyout",
+        "route": null,
+        "component": "components/CourseEditFlyout.tsx",
+        "anchor": null,
+        "line": 364
+      },
+      "purpose": "option control in components/CourseEditFlyout.tsx. Purpose requires manual enrichment where not evident from implementation.",
+      "inputs": [],
+      "outputs": [],
+      "permissions": [
+        "staff.unit",
+        "staff.id",
+        "staff.idNumber",
+        "staff.name",
+        "trainee.fullName",
+        "trainee.rank",
+        "trainee.name"
+      ],
+      "dependencies": [],
+      "failureConditions": [],
+      "relatedFunctions": [],
+      "auditStatus": "IMPLEMENTED - extracted from JSX control"
+    },
+    {
+      "id": "function.control-components-courseeditflyout-tsx-enter-new-course-number-367",
       "name": "Enter new course number...",
       "aliases": [
         "Enter new course number..."
@@ -90069,7 +90812,7 @@
         "route": null,
         "component": "components/CourseEditFlyout.tsx",
         "anchor": null,
-        "line": 365
+        "line": 367
       },
       "purpose": "input control in components/CourseEditFlyout.tsx. Purpose requires manual enrichment where not evident from implementation.",
       "inputs": [
@@ -90102,7 +90845,7 @@
       "auditStatus": "IMPLEMENTED - extracted from JSX control"
     },
     {
-      "id": "function.control-components-courseeditflyout-tsx-cancel-373",
+      "id": "function.control-components-courseeditflyout-tsx-cancel-375",
       "name": "Cancel",
       "aliases": [
         "Cancel"
@@ -90112,7 +90855,7 @@
         "route": null,
         "component": "components/CourseEditFlyout.tsx",
         "anchor": null,
-        "line": 373
+        "line": 375
       },
       "purpose": "button control in components/CourseEditFlyout.tsx. Purpose requires manual enrichment where not evident from implementation.",
       "inputs": [],
@@ -90134,7 +90877,7 @@
       "auditStatus": "IMPLEMENTED - extracted from JSX control"
     },
     {
-      "id": "function.control-components-courseeditflyout-tsx-move-trainee-379",
+      "id": "function.control-components-courseeditflyout-tsx-move-trainee-381",
       "name": "Move Trainee",
       "aliases": [
         "Move Trainee"
@@ -90144,7 +90887,7 @@
         "route": null,
         "component": "components/CourseEditFlyout.tsx",
         "anchor": null,
-        "line": 379
+        "line": 381
       },
       "purpose": "button control in components/CourseEditFlyout.tsx. Purpose requires manual enrichment where not evident from implementation.",
       "inputs": [],
@@ -90168,7 +90911,7 @@
       "auditStatus": "IMPLEMENTED - extracted from JSX control"
     },
     {
-      "id": "function.control-components-courseeditflyout-tsx-cancel-406",
+      "id": "function.control-components-courseeditflyout-tsx-cancel-408",
       "name": "Cancel",
       "aliases": [
         "Cancel"
@@ -90178,7 +90921,7 @@
         "route": null,
         "component": "components/CourseEditFlyout.tsx",
         "anchor": null,
-        "line": 406
+        "line": 408
       },
       "purpose": "button control in components/CourseEditFlyout.tsx. Purpose requires manual enrichment where not evident from implementation.",
       "inputs": [],
@@ -90200,7 +90943,7 @@
       "auditStatus": "IMPLEMENTED - extracted from JSX control"
     },
     {
-      "id": "function.control-components-courseeditflyout-tsx-delete-trainee-412",
+      "id": "function.control-components-courseeditflyout-tsx-delete-trainee-414",
       "name": "Delete Trainee",
       "aliases": [
         "Delete Trainee"
@@ -90210,7 +90953,7 @@
         "route": null,
         "component": "components/CourseEditFlyout.tsx",
         "anchor": null,
-        "line": 412
+        "line": 414
       },
       "purpose": "button control in components/CourseEditFlyout.tsx. Purpose requires manual enrichment where not evident from implementation.",
       "inputs": [],
@@ -217089,22 +217832,22 @@
         "line": 143
       },
       {
-        "id": "message.components-courseeditflyout-tsx.w-full-px-3-py-2-bg-gray-700-border-border-gray-600-rounded-md-text-white-focus-outline-none-foc.239",
+        "id": "message.components-courseeditflyout-tsx.w-full-px-3-py-2-bg-gray-700-border-border-gray-600-rounded-md-text-white-focus-outline-none-foc.240",
         "text": "w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-md text-white focus:outline-none focus:ring-2 focus:ring-sky-500 disabled:opacity-50",
         "file": "components/CourseEditFlyout.tsx",
-        "line": 239
+        "line": 240
       },
       {
-        "id": "message.components-courseeditflyout-tsx.w-full-px-3-py-2-bg-gray-700-border-border-gray-600-rounded-md-text-white-focus-outline-none-foc.259",
+        "id": "message.components-courseeditflyout-tsx.w-full-px-3-py-2-bg-gray-700-border-border-gray-600-rounded-md-text-white-focus-outline-none-foc.261",
         "text": "w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-md text-white focus:outline-none focus:ring-2 focus:ring-sky-500 disabled:opacity-50",
         "file": "components/CourseEditFlyout.tsx",
-        "line": 259
+        "line": 261
       },
       {
-        "id": "message.components-courseeditflyout-tsx.px-4-py-2-bg-amber-600-hover-bg-amber-700-disabled-bg-gray-600-disabled-cursor-not-allowed-text-.382",
+        "id": "message.components-courseeditflyout-tsx.px-4-py-2-bg-amber-600-hover-bg-amber-700-disabled-bg-gray-600-disabled-cursor-not-allowed-text-.384",
         "text": "px-4 py-2 bg-amber-600 hover:bg-amber-700 disabled:bg-gray-600 disabled:cursor-not-allowed text-white rounded-md transition-colors",
         "file": "components/CourseEditFlyout.tsx",
-        "line": 382
+        "line": 384
       },
       {
         "id": "message.components-courseprogressview-tsx.w-56px-h-41px-flex-items-center-justify-center-text-center-px-1-py-1-text-10px-font-semibold-btn.1266",
@@ -229761,34 +230504,34 @@
         "line": 140
       },
       {
-        "id": "message.utils-neoguideengine-ts.permission-visible.310",
+        "id": "message.utils-neoguideengine-ts.permission-visible.312",
         "text": "permission visible",
         "file": "utils/neoGuideEngine.ts",
-        "line": 310
+        "line": 312
       },
       {
-        "id": "message.utils-neoguideengine-ts.permission-may-be-restricted.310",
+        "id": "message.utils-neoguideengine-ts.permission-may-be-restricted.312",
         "text": "permission may be restricted",
         "file": "utils/neoGuideEngine.ts",
-        "line": 310
+        "line": 312
       },
       {
-        "id": "message.utils-neoguideengine-ts.permission.392",
+        "id": "message.utils-neoguideengine-ts.permission.394",
         "text": "PERMISSION",
         "file": "utils/neoGuideEngine.ts",
-        "line": 392
+        "line": 394
       },
       {
-        "id": "message.utils-neoguideengine-ts.the-relevant-page-permission.393",
+        "id": "message.utils-neoguideengine-ts.the-relevant-page-permission.395",
         "text": "the relevant page permission",
         "file": "utils/neoGuideEngine.ts",
-        "line": 393
+        "line": 395
       },
       {
-        "id": "message.utils-neoguideengine-ts.fn-name-is-controlled-by-permissiontext-if-it-is-disabled-check-the-user-role-and-permission-pro.394",
+        "id": "message.utils-neoguideengine-ts.fn-name-is-controlled-by-permissiontext-if-it-is-disabled-check-the-user-role-and-permission-pro.396",
         "text": "${fn.name} is controlled by ${permissionText}. If it is disabled, check the user role and permission profile for that function.",
         "file": "utils/neoGuideEngine.ts",
-        "line": 394
+        "line": 396
       },
       {
         "id": "message.utils-platformconfigservice-ts.staff-profile-unavailable-use.196",
@@ -230359,6 +231102,12 @@
         "source": "derived from function names and code text"
       },
       {
+        "id": "concept.master-lmp",
+        "label": "Master LMP",
+        "kind": "application-concept",
+        "source": "curated NEO Guide enrichment"
+      },
+      {
         "id": "concept.mobilepushdevice",
         "label": "MobilePushDevice",
         "kind": "data-model",
@@ -230465,6 +231214,12 @@
         "label": "Training Report",
         "kind": "application-concept",
         "source": "derived from function names and code text"
+      },
+      {
+        "id": "concept.training-report-grade",
+        "label": "Training report grade",
+        "kind": "application-concept",
+        "source": "curated NEO Guide enrichment"
       },
       {
         "id": "concept.trainingreportversionarchive",
@@ -233727,6 +234482,48 @@
         "source": "derived from audited function index"
       },
       {
+        "from": "concept.staff",
+        "to": "function.curated.training.course-leadership",
+        "relationship": "implemented-by",
+        "source": "derived from audited function index"
+      },
+      {
+        "from": "concept.course",
+        "to": "function.curated.training.course-leadership",
+        "relationship": "implemented-by",
+        "source": "derived from audited function index"
+      },
+      {
+        "from": "concept.trainee",
+        "to": "function.curated.training.course-score-table",
+        "relationship": "implemented-by",
+        "source": "derived from audited function index"
+      },
+      {
+        "from": "concept.course",
+        "to": "function.curated.training.course-score-table",
+        "relationship": "implemented-by",
+        "source": "derived from audited function index"
+      },
+      {
+        "from": "concept.course",
+        "to": "function.curated.training.course-ranking-awards",
+        "relationship": "implemented-by",
+        "source": "derived from audited function index"
+      },
+      {
+        "from": "concept.lmp",
+        "to": "function.curated.settings.master-lmp-access",
+        "relationship": "implemented-by",
+        "source": "derived from audited function index"
+      },
+      {
+        "from": "concept.lmp",
+        "to": "function.curated.training.master-lmp-event-details",
+        "relationship": "implemented-by",
+        "source": "derived from audited function index"
+      },
+      {
         "from": "concept.aircraft",
         "to": "function.api-route.api-aircraft-availability-current",
         "relationship": "implemented-by",
@@ -236248,145 +237045,145 @@
       },
       {
         "from": "concept.course",
-        "to": "function.control-components-courseeditflyout-tsx-not-assigned-241",
+        "to": "function.control-components-courseeditflyout-tsx-not-assigned-242",
         "relationship": "implemented-by",
         "source": "derived from audited function index"
       },
       {
         "from": "concept.staff",
-        "to": "function.control-components-courseeditflyout-tsx-formatpersonoptionlabel-staff-245",
+        "to": "function.control-components-courseeditflyout-tsx-formatpersonoptionlabel-staff-246",
         "relationship": "implemented-by",
         "source": "derived from audited function index"
       },
       {
         "from": "concept.course",
-        "to": "function.control-components-courseeditflyout-tsx-formatpersonoptionlabel-staff-245",
+        "to": "function.control-components-courseeditflyout-tsx-formatpersonoptionlabel-staff-246",
         "relationship": "implemented-by",
         "source": "derived from audited function index"
       },
       {
         "from": "concept.course",
-        "to": "function.control-components-courseeditflyout-tsx-deputycoursecommanderlabel-254",
+        "to": "function.control-components-courseeditflyout-tsx-deputycoursecommanderlabel-255",
         "relationship": "implemented-by",
         "source": "derived from audited function index"
       },
       {
         "from": "concept.course",
-        "to": "function.control-components-courseeditflyout-tsx-not-assigned-255",
+        "to": "function.control-components-courseeditflyout-tsx-not-assigned-256",
         "relationship": "implemented-by",
         "source": "derived from audited function index"
       },
       {
         "from": "concept.course",
-        "to": "function.control-components-courseeditflyout-tsx-not-assigned-261",
+        "to": "function.control-components-courseeditflyout-tsx-not-assigned-263",
         "relationship": "implemented-by",
         "source": "derived from audited function index"
       },
       {
         "from": "concept.staff",
-        "to": "function.control-components-courseeditflyout-tsx-formatpersonoptionlabel-staff-265",
+        "to": "function.control-components-courseeditflyout-tsx-formatpersonoptionlabel-staff-267",
         "relationship": "implemented-by",
         "source": "derived from audited function index"
       },
       {
         "from": "concept.course",
-        "to": "function.control-components-courseeditflyout-tsx-formatpersonoptionlabel-staff-265",
+        "to": "function.control-components-courseeditflyout-tsx-formatpersonoptionlabel-staff-267",
         "relationship": "implemented-by",
         "source": "derived from audited function index"
       },
       {
         "from": "concept.course",
-        "to": "function.control-components-courseeditflyout-tsx-save-277",
+        "to": "function.control-components-courseeditflyout-tsx-save-279",
         "relationship": "implemented-by",
         "source": "derived from audited function index"
       },
       {
         "from": "concept.course",
-        "to": "function.control-components-courseeditflyout-tsx-move-to-different-course-307",
+        "to": "function.control-components-courseeditflyout-tsx-move-to-different-course-309",
         "relationship": "implemented-by",
         "source": "derived from audited function index"
       },
       {
         "from": "concept.trainee",
-        "to": "function.control-components-courseeditflyout-tsx-delete-trainee-314",
+        "to": "function.control-components-courseeditflyout-tsx-delete-trainee-316",
         "relationship": "implemented-by",
         "source": "derived from audited function index"
       },
       {
         "from": "concept.course",
-        "to": "function.control-components-courseeditflyout-tsx-delete-trainee-314",
+        "to": "function.control-components-courseeditflyout-tsx-delete-trainee-316",
         "relationship": "implemented-by",
         "source": "derived from audited function index"
       },
       {
         "from": "concept.course",
-        "to": "function.control-components-courseeditflyout-tsx-close-331",
+        "to": "function.control-components-courseeditflyout-tsx-close-333",
         "relationship": "implemented-by",
         "source": "derived from audited function index"
       },
       {
         "from": "concept.course",
-        "to": "function.control-components-courseeditflyout-tsx-select-target-course-create-new-course-351",
+        "to": "function.control-components-courseeditflyout-tsx-select-target-course-create-new-course-353",
         "relationship": "implemented-by",
         "source": "derived from audited function index"
       },
       {
         "from": "concept.course",
-        "to": "function.control-components-courseeditflyout-tsx-select-target-course-356",
+        "to": "function.control-components-courseeditflyout-tsx-select-target-course-358",
         "relationship": "implemented-by",
         "source": "derived from audited function index"
       },
       {
         "from": "concept.course",
-        "to": "function.control-components-courseeditflyout-tsx-course-360",
+        "to": "function.control-components-courseeditflyout-tsx-course-362",
         "relationship": "implemented-by",
         "source": "derived from audited function index"
       },
       {
         "from": "concept.course",
-        "to": "function.control-components-courseeditflyout-tsx-create-new-course-362",
+        "to": "function.control-components-courseeditflyout-tsx-create-new-course-364",
         "relationship": "implemented-by",
         "source": "derived from audited function index"
       },
       {
         "from": "concept.course",
-        "to": "function.control-components-courseeditflyout-tsx-enter-new-course-number-365",
+        "to": "function.control-components-courseeditflyout-tsx-enter-new-course-number-367",
         "relationship": "implemented-by",
         "source": "derived from audited function index"
       },
       {
         "from": "concept.course",
-        "to": "function.control-components-courseeditflyout-tsx-cancel-373",
+        "to": "function.control-components-courseeditflyout-tsx-cancel-375",
         "relationship": "implemented-by",
         "source": "derived from audited function index"
       },
       {
         "from": "concept.trainee",
-        "to": "function.control-components-courseeditflyout-tsx-move-trainee-379",
+        "to": "function.control-components-courseeditflyout-tsx-move-trainee-381",
         "relationship": "implemented-by",
         "source": "derived from audited function index"
       },
       {
         "from": "concept.course",
-        "to": "function.control-components-courseeditflyout-tsx-move-trainee-379",
+        "to": "function.control-components-courseeditflyout-tsx-move-trainee-381",
         "relationship": "implemented-by",
         "source": "derived from audited function index"
       },
       {
         "from": "concept.course",
-        "to": "function.control-components-courseeditflyout-tsx-cancel-406",
+        "to": "function.control-components-courseeditflyout-tsx-cancel-408",
         "relationship": "implemented-by",
         "source": "derived from audited function index"
       },
       {
         "from": "concept.trainee",
-        "to": "function.control-components-courseeditflyout-tsx-delete-trainee-412",
+        "to": "function.control-components-courseeditflyout-tsx-delete-trainee-414",
         "relationship": "implemented-by",
         "source": "derived from audited function index"
       },
       {
         "from": "concept.course",
-        "to": "function.control-components-courseeditflyout-tsx-delete-trainee-412",
+        "to": "function.control-components-courseeditflyout-tsx-delete-trainee-414",
         "relationship": "implemented-by",
         "source": "derived from audited function index"
       },
@@ -238864,8 +239661,56 @@
       },
       {
         "from": "concept.course",
+        "to": "function.curated.training.course-leadership",
+        "relationship": "has-leadership-assigned-in",
+        "source": "curated NEO Guide enrichment"
+      },
+      {
+        "from": "concept.course",
+        "to": "function.curated.training.course-ranking-awards",
+        "relationship": "may-have-ranking-awards-in",
+        "source": "curated NEO Guide enrichment"
+      },
+      {
+        "from": "concept.course",
         "to": "function.curated.training.archive-course",
         "relationship": "may-be-archived-by",
+        "source": "curated NEO Guide enrichment"
+      },
+      {
+        "from": "concept.master-lmp",
+        "to": "function.curated.settings.master-lmp-access",
+        "relationship": "access-controlled-by",
+        "source": "curated NEO Guide enrichment"
+      },
+      {
+        "from": "concept.master-lmp",
+        "to": "function.curated.training.master-lmp-event-details",
+        "relationship": "contains-events-managed-by",
+        "source": "curated NEO Guide enrichment"
+      },
+      {
+        "from": "concept.master-lmp",
+        "to": "function.curated.scheduling.neo-build",
+        "relationship": "feeds-scheduling-progression",
+        "source": "curated NEO Guide enrichment"
+      },
+      {
+        "from": "concept.training-report-grade",
+        "to": "function.curated.training.training-report",
+        "relationship": "created-in",
+        "source": "curated NEO Guide enrichment"
+      },
+      {
+        "from": "concept.training-report-grade",
+        "to": "function.curated.training.course-score-table",
+        "relationship": "displayed-in",
+        "source": "curated NEO Guide enrichment"
+      },
+      {
+        "from": "concept.training-report-grade",
+        "to": "function.curated.training.course-ranking-awards",
+        "relationship": "ranked-by",
         "source": "curated NEO Guide enrichment"
       }
     ]

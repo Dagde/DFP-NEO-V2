@@ -227,12 +227,13 @@ const CourseEditFlyout: React.FC<CourseEditFlyoutProps> = ({
                             </div>
                         </div>
                         {courseLeadershipEnabled && (
-                            <div className="mt-4 rounded-lg border border-gray-700 bg-gray-900/70 p-4">
+                            <div data-neo-guide="course-leadership" className="mt-4 rounded-lg border border-gray-700 bg-gray-900/70 p-4">
                                 <h4 className="mb-3 text-xs font-semibold uppercase tracking-wide text-cyan-100">Course Leadership</h4>
                                 <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                                     <div>
                                         <label className="block text-sm font-medium text-gray-300 mb-2">{courseCommanderLabel}</label>
                                         <select
+                                            data-neo-guide="course-commander-field"
                                             value={courseCommander}
                                             onChange={(e) => handleCourseCommanderChange(e.target.value)}
                                             disabled={isFrozen}
@@ -253,6 +254,7 @@ const CourseEditFlyout: React.FC<CourseEditFlyoutProps> = ({
                                     <div>
                                         <label className="block text-sm font-medium text-gray-300 mb-2">{deputyCourseCommanderLabel}</label>
                                         <select
+                                            data-neo-guide="deputy-course-commander-field"
                                             value={deputyCourseCommander}
                                             onChange={(e) => handleDeputyCourseCommanderChange(e.target.value)}
                                             disabled={isFrozen}

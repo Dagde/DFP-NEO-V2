@@ -253,17 +253,19 @@ function scoreFunction(
 
   const exactPhrases = [fn.name, ...(fn.aliases || [])]
     .map((value) => normalise(String(value || '')))
-    .filter((value) => value.length >= 4);
+    .filter((value) => value.length >= 4)
+    .sort((left, right) => right.length - left.length);
   const questionTokens = new Set(tokenize(normalisedQuestion));
   for (const phrase of exactPhrases) {
+    const phraseTokens = tokenize(phrase);
+    const specificityBonus = Math.min(4, Math.max(0, phraseTokens.length - 2));
     if (normalisedQuestion.includes(phrase)) {
-      score += phrase === normalise(fn.name) ? 8 : 6;
+      score += (phrase === normalise(fn.name) ? 8 : 6) + specificityBonus;
       reasons.push(`phrase ${phrase}`);
       break;
     }
-    const phraseTokens = tokenize(phrase);
     if (phraseTokens.length > 1 && phraseTokens.every((token) => questionTokens.has(token))) {
-      score += phrase === normalise(fn.name) ? 7 : 5;
+      score += (phrase === normalise(fn.name) ? 7 : 5) + specificityBonus;
       reasons.push(`phrase tokens ${phrase}`);
       break;
     }

@@ -373,7 +373,7 @@
         "page": "SupervisorDashboard",
         "route": null,
         "component": "components/SupervisorDashboard.tsx",
-        "anchor": "nav-duty-pilot"
+        "anchor": "duty-pilot-personnel-management"
       },
       "purpose": "Shows duty-pilot operational personnel summaries and counts.",
       "inputs": [],
@@ -383,6 +383,179 @@
       "businessRules": ["Paused status and leave/unavailability categories should remain distinct in the displayed lists."],
       "failureConditions": ["Counts can be misleading if the hover list mixes people from a different personnel category."],
       "relatedFunctions": ["function.curated.people.staff-unavailability"],
+      "auditStatus": "IMPLEMENTED - manually enriched from current implementation review"
+    },
+    {
+      "id": "function.curated.training.course-leadership",
+      "name": "Course leadership assignments",
+      "aliases": ["course commander", "deputy course commander", "Cse Commander", "Deputy Cse Commander", "course staff", "course leadership", "course commander ticked"],
+      "location": {
+        "page": "Trainee",
+        "route": null,
+        "component": "components/CourseEditFlyout.tsx",
+        "anchor": "course-leadership"
+      },
+      "purpose": "Assigns the staff members who hold course-level leadership roles for a course.",
+      "inputs": [
+        {
+          "fieldName": "courseCommander",
+          "fieldType": "staff selector",
+          "permittedValues": ["Staff members from the relevant individual unit options shown in the edit course flyout."],
+          "defaultValue": "",
+          "required": false,
+          "validation": ["Must be selected from available staff options when assigned."],
+          "dependencies": ["Staff records", "active course", "unit context"],
+          "sourceOfData": "Course edit flyout"
+        },
+        {
+          "fieldName": "deputyCourseCommander",
+          "fieldType": "staff selector",
+          "permittedValues": ["Staff members from the relevant individual unit options shown in the edit course flyout."],
+          "defaultValue": "",
+          "required": false,
+          "validation": ["Must be selected from available staff options when assigned."],
+          "dependencies": ["Staff records", "active course", "unit context"],
+          "sourceOfData": "Course edit flyout"
+        }
+      ],
+      "outputs": ["Updates the selected course's course commander and deputy course commander values."],
+      "permissions": ["trainee.roster.view"],
+      "dependencies": ["Course leadership must be enabled and staff records must exist for the relevant unit."],
+      "businessRules": ["Training auto-notification recipients can be derived from these course-level assignments when the matching recipient role is enabled."],
+      "failureConditions": ["Messages cannot be sent to a course commander or deputy course commander if the course field is blank, not persisted, or the role is not enabled in notification settings."],
+      "relatedFunctions": ["function.curated.messaging.auto-notifications", "function.curated.people.trainee-roster"],
+      "auditStatus": "IMPLEMENTED - manually enriched from current implementation review"
+    },
+    {
+      "id": "function.curated.training.course-score-table",
+      "name": "Course Scores table",
+      "aliases": ["course scores", "scores table", "no scores", "blank scores", "no scores in course scores", "course scores blank", "random words", "TRG REP scores", "overall grades"],
+      "location": {
+        "page": "Course Progress",
+        "route": null,
+        "component": "components/CourseProgressView.tsx",
+        "anchor": "course-scores"
+      },
+      "purpose": "Displays saved training-report overall grades by trainee and event for the selected course.",
+      "inputs": [
+        {
+          "fieldName": "course",
+          "fieldType": "course selector",
+          "permittedValues": ["Active courses"],
+          "defaultValue": "first active course",
+          "required": true,
+          "validation": ["Must match an active course with trainees and saved report scores."],
+          "dependencies": ["active courses", "trainee assignments", "saved training report grades"],
+          "sourceOfData": "Course Progress course selector"
+        }
+      ],
+      "outputs": ["Displays event columns and trainee score cells for saved overall grades."],
+      "permissions": ["courseProgress.view"],
+      "dependencies": ["Training reports must have saved overall grades for events included by the Course Scores settings."],
+      "businessRules": ["Only events with saved training report overall grades matching the selected course and event-type filters are shown."],
+      "failureConditions": ["The table can appear empty when no trainees, no saved overall grades, or filtered-out event types match the selected course."],
+      "relatedFunctions": ["function.curated.training.training-report", "function.curated.training.course-progress"],
+      "auditStatus": "IMPLEMENTED - manually enriched from current implementation review"
+    },
+    {
+      "id": "function.curated.training.course-ranking-awards",
+      "name": "Course ranking awards",
+      "aliases": ["course rankings", "award rankings", "new award", "ranking criteria", "no ranking data", "award course"],
+      "location": {
+        "page": "Course Progress",
+        "route": null,
+        "component": "components/CourseProgressView.tsx",
+        "anchor": "course-rankings"
+      },
+      "purpose": "Creates and evaluates named ranking awards against selected course/event criteria.",
+      "inputs": [
+        {
+          "fieldName": "course",
+          "fieldType": "course selector",
+          "permittedValues": ["All active courses", "individual active courses"],
+          "defaultValue": "first active course",
+          "required": true,
+          "validation": ["The selected award must be evaluated against the currently selected course."],
+          "dependencies": ["active courses", "award criteria", "saved training report grades"],
+          "sourceOfData": "Course rankings panel"
+        },
+        {
+          "fieldName": "award",
+          "fieldType": "ranking award selector",
+          "permittedValues": ["Configured awards for the active setup"],
+          "defaultValue": "",
+          "required": true,
+          "validation": ["Award criteria must include events and a scoring method."],
+          "dependencies": ["course ranking settings"],
+          "sourceOfData": "Course rankings panel"
+        }
+      ],
+      "outputs": ["Displays ranked trainees, average score and score count where matching data exists."],
+      "permissions": ["courseProgress.view"],
+      "dependencies": ["Saved overall grades for the selected award events and course trainees."],
+      "businessRules": ["The selected course must be applied when evaluating a ranking award; rankings should not reuse another course's previous selection."],
+      "failureConditions": ["No ranking data is available when award criteria do not match saved scores for the selected course."],
+      "relatedFunctions": ["function.curated.training.course-score-table", "function.curated.training.training-report"],
+      "auditStatus": "IMPLEMENTED - manually enriched from current implementation review"
+    },
+    {
+      "id": "function.curated.settings.master-lmp-access",
+      "name": "Master LMP Access",
+      "aliases": ["Master LMP", "LMP access", "training stream access", "assign Master LMP", "manage Master LMP"],
+      "location": {
+        "page": "Settings",
+        "route": null,
+        "component": "components/PlatformConfigurationSettings.tsx",
+        "anchor": "platform-master-lmp-access"
+      },
+      "purpose": "Defines which locations and units can view, assign or manage each Master LMP record.",
+      "inputs": [],
+      "outputs": ["Updates Master LMP catalogue records and access rules used by trainee/course assignment workflows."],
+      "permissions": ["settings.view"],
+      "dependencies": ["Organisation, location and unit settings must exist for scoped access rules."],
+      "businessRules": ["Access levels are evaluated against the selected unit before Master LMPs can be assigned to courses or trainees."],
+      "failureConditions": ["A Master LMP may not appear for a user or unit when no matching access rule exists or its catalogue record is inactive."],
+      "relatedFunctions": ["function.curated.workflow.initial-setup-wizard", "function.curated.training.course-management"],
+      "auditStatus": "IMPLEMENTED - manually enriched from current implementation review"
+    },
+    {
+      "id": "function.curated.training.master-lmp-event-details",
+      "name": "Master LMP event details",
+      "aliases": ["event details", "Master LMP event", "selected event details", "event tile details", "LMP event edit", "inline save"],
+      "location": {
+        "page": "Settings",
+        "route": null,
+        "component": "components/PlatformConfigurationSettings.tsx",
+        "anchor": "platform-master-lmp-access"
+      },
+      "purpose": "Displays and manages event-level detail for Master LMP content and related assignment workflows.",
+      "inputs": [],
+      "outputs": ["Shows selected event details and supports editing where the user has manage access."],
+      "permissions": ["settings.view"],
+      "dependencies": ["A Master LMP catalogue record and event content must exist."],
+      "businessRules": ["Users should be able to see the selected event details near the event list rather than needing to scroll away from the selected event."],
+      "failureConditions": ["The edit action may be unavailable if the user lacks manage access for the Master LMP."],
+      "relatedFunctions": ["function.curated.settings.master-lmp-access"],
+      "auditStatus": "IMPLEMENTED - manually enriched from current implementation review"
+    },
+    {
+      "id": "function.curated.duty-pilot.flight-tracking",
+      "name": "Duty Pilot flight tracking",
+      "aliases": ["flight tracking", "tracking map", "ADSB", "ADS-B", "tracking not showing", "enlarged tracking"],
+      "location": {
+        "page": "SupervisorDashboard",
+        "route": null,
+        "component": "components/SupervisorDashboard.tsx",
+        "anchor": "nav-duty-pilot"
+      },
+      "purpose": "Displays the embedded flight tracking widget within the Duty Pilot page.",
+      "inputs": [],
+      "outputs": ["Shows the configured tracking widget when the browser and remote tracking site allow embedding."],
+      "permissions": [],
+      "dependencies": ["The flight tracking provider must permit embedding in the deployed DFP-NEO page."],
+      "businessRules": ["If the provider blocks framing or embedding, the in-page widget can fail even when the external hyperlink opens successfully."],
+      "failureConditions": ["Browser frame restrictions, provider CSP/X-Frame-Options, VPN/network policy or mixed-content restrictions can prevent the embedded tracker from displaying."],
+      "relatedFunctions": ["function.curated.duty-pilot.personnel-management"],
       "auditStatus": "IMPLEMENTED - manually enriched from current implementation review"
     }
   ],
@@ -414,7 +587,29 @@
       "relationships": [
         { "target": "function.curated.training.course-management", "type": "managed-in" },
         { "target": "function.curated.training.course-progress", "type": "analysed-in" },
+        { "target": "function.curated.training.course-leadership", "type": "has-leadership-assigned-in" },
+        { "target": "function.curated.training.course-ranking-awards", "type": "may-have-ranking-awards-in" },
         { "target": "function.curated.training.archive-course", "type": "may-be-archived-by" }
+      ]
+    },
+    {
+      "id": "concept.master-lmp",
+      "name": "Master LMP",
+      "kind": "application-concept",
+      "relationships": [
+        { "target": "function.curated.settings.master-lmp-access", "type": "access-controlled-by" },
+        { "target": "function.curated.training.master-lmp-event-details", "type": "contains-events-managed-by" },
+        { "target": "function.curated.scheduling.neo-build", "type": "feeds-scheduling-progression" }
+      ]
+    },
+    {
+      "id": "concept.training-report-grade",
+      "name": "Training report grade",
+      "kind": "application-concept",
+      "relationships": [
+        { "target": "function.curated.training.training-report", "type": "created-in" },
+        { "target": "function.curated.training.course-score-table", "type": "displayed-in" },
+        { "target": "function.curated.training.course-ranking-awards", "type": "ranked-by" }
       ]
     }
   ],
@@ -434,6 +629,18 @@
     {
       "canonical": "NEO Build",
       "terms": ["build", "auto build", "generate schedule", "build DFP", "optimise schedule"]
+    },
+    {
+      "canonical": "course commander",
+      "terms": ["cse commander", "course comd", "commander", "course boss"]
+    },
+    {
+      "canonical": "Master LMP",
+      "terms": ["lmp", "training stream", "programme", "program", "syllabus"]
+    },
+    {
+      "canonical": "flight tracking",
+      "terms": ["tracking", "adsb", "ads-b", "aircraft tracker", "map"]
     }
   ]
 }

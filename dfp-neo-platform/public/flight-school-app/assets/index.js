@@ -1596,17 +1596,18 @@ function scoreFunction(fn, tokens, rawTokens, normalisedQuestion, intent, contex
   const haystackTokens = new Set(tokenize(haystack));
   const reasons = [];
   let score = 0;
-  const exactPhrases = [fn.name, ...fn.aliases || []].map((value) => normalise(String(value || ""))).filter((value) => value.length >= 4);
+  const exactPhrases = [fn.name, ...fn.aliases || []].map((value) => normalise(String(value || ""))).filter((value) => value.length >= 4).sort((left, right) => right.length - left.length);
   const questionTokens = new Set(tokenize(normalisedQuestion));
   for (const phrase of exactPhrases) {
+    const phraseTokens = tokenize(phrase);
+    const specificityBonus = Math.min(4, Math.max(0, phraseTokens.length - 2));
     if (normalisedQuestion.includes(phrase)) {
-      score += phrase === normalise(fn.name) ? 8 : 6;
+      score += (phrase === normalise(fn.name) ? 8 : 6) + specificityBonus;
       reasons.push(`phrase ${phrase}`);
       break;
     }
-    const phraseTokens = tokenize(phrase);
     if (phraseTokens.length > 1 && phraseTokens.every((token) => questionTokens.has(token))) {
-      score += phrase === normalise(fn.name) ? 7 : 5;
+      score += (phrase === normalise(fn.name) ? 7 : 5) + specificityBonus;
       reasons.push(`phrase tokens ${phrase}`);
       break;
     }
@@ -53108,7 +53109,7 @@ const CourseEditFlyout = ({
                   )
                 ] })
               ] }),
-              courseLeadershipEnabled && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mt-4 rounded-lg border border-gray-700 bg-gray-900/70 p-4", children: [
+              courseLeadershipEnabled && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { "data-neo-guide": "course-leadership", className: "mt-4 rounded-lg border border-gray-700 bg-gray-900/70 p-4", children: [
                 /* @__PURE__ */ jsxRuntimeExports.jsx("h4", { className: "mb-3 text-xs font-semibold uppercase tracking-wide text-cyan-100", children: "Course Leadership" }),
                 /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid grid-cols-1 gap-4 md:grid-cols-2", children: [
                   /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
@@ -53116,6 +53117,7 @@ const CourseEditFlyout = ({
                     /* @__PURE__ */ jsxRuntimeExports.jsxs(
                       "select",
                       {
+                        "data-neo-guide": "course-commander-field",
                         value: courseCommander,
                         onChange: (e) => handleCourseCommanderChange(e.target.value),
                         disabled: isFrozen,
@@ -53132,6 +53134,7 @@ const CourseEditFlyout = ({
                     /* @__PURE__ */ jsxRuntimeExports.jsxs(
                       "select",
                       {
+                        "data-neo-guide": "deputy-course-commander-field",
                         value: deputyCourseCommander,
                         onChange: (e) => handleDeputyCourseCommanderChange(e.target.value),
                         disabled: isFrozen,
@@ -68127,7 +68130,7 @@ const SupervisorDashboard = ({ instructorsData, traineesData, date, events, scho
       ] })
     ] }),
     /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex flex-wrap gap-6", children: [
-      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex flex-col bg-gray-800 rounded-lg shadow-lg border border-gray-700 h-fit flex-1 min-w-[350px] max-w-md", children: [
+      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { "data-neo-guide": "duty-pilot-personnel-management", className: "flex flex-col bg-gray-800 rounded-lg shadow-lg border border-gray-700 h-fit flex-1 min-w-[350px] max-w-md", children: [
         /* @__PURE__ */ jsxRuntimeExports.jsx("h2", { className: "p-4 text-lg font-semibold text-gray-200 border-b border-gray-700 text-center", children: "Personnel Management" }),
         /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "p-4 space-y-6", children: [
           /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [

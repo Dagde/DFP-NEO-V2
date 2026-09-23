@@ -30,8 +30,8 @@ assert.equal(
 
 assert.equal(
   topId('Why are course scores blank?'),
-  'function.curated.training.course-progress',
-  'Course score troubleshooting should resolve to Course Progress.'
+  'function.curated.training.course-score-table',
+  'Course score troubleshooting should resolve to the Course Scores table.'
 );
 
 assert.equal(
@@ -44,6 +44,30 @@ assert.equal(
   topId('how do i build the schedule automatically'),
   'function.curated.scheduling.neo-build',
   'Build schedule wording should resolve to NEO Build.'
+);
+
+assert.equal(
+  topId('where is course commander ticked'),
+  'function.curated.training.course-leadership',
+  'Course commander wording should resolve to course leadership assignments.'
+);
+
+assert.equal(
+  topId('why are there no scores in course scores'),
+  'function.curated.training.course-score-table',
+  'Course score table troubleshooting should resolve to Course Scores table.'
+);
+
+assert.equal(
+  topId('why is flight tracking not showing in duty pilot'),
+  'function.curated.duty-pilot.flight-tracking',
+  'Flight tracking troubleshooting should resolve to Duty Pilot flight tracking.'
+);
+
+assert.equal(
+  topId('where do i configure master lmp access'),
+  'function.curated.settings.master-lmp-access',
+  'Master LMP access wording should resolve to Master LMP Access settings.'
 );
 
 const answer = ask('How do I stop Smith flying tomorrow?');
