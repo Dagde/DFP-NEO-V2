@@ -192,8 +192,7 @@ const RightSidebar: React.FC<RightSidebarProps> = ({
           onClick={() => onNavigate('MyDashboard')}
           title="Open My Home"
           aria-label="Open My Home"
-          className="w-[75px] h-[55px] flex items-center justify-center rounded-md border border-amber-200/70 bg-cover bg-center p-1 shadow-[inset_0_1px_0_rgba(255,255,255,0.45),inset_0_-1px_0_rgba(0,0,0,0.45)]"
-          style={{ backgroundImage: "url('/dfp-neo-sidebar-gold-texture.jpg')" }}
+          className="w-[75px] h-[55px] flex items-center justify-center rounded-md border border-amber-300/75 bg-[#030303] p-1 shadow-[inset_0_1px_0_rgba(255,199,87,0.22),inset_0_-1px_0_rgba(0,0,0,0.65)]"
         >
           <img
             src="/dfp-neo-sidebar-icon.jpg"
