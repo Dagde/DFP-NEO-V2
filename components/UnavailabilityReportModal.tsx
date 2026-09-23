@@ -198,7 +198,7 @@ const UnavailabilityReportModal: React.FC<UnavailabilityReportModalProps> = ({
                         <h3 className="font-semibold text-sky-400 mb-2">Trainees</h3>
                         {(unavailableTrainees.length > 0 || pausedTrainees.length > 0) ? (
                             <ul className="space-y-3">
-                                {pausedTrainees.map(u => <PersonEntry key={u.name} person={u} status="Paused/NTSC" />)}
+                                {pausedTrainees.map(u => <PersonEntry key={u.name} person={u} status="Paused" />)}
                                 {unavailableTrainees.map(u => <PersonEntry key={`${u.name}-${u.period?.id}`} person={u} />)}
                             </ul>
                         ) : (

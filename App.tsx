@@ -50956,17 +50956,10 @@ appliedUpdates.forEach(update => {
             // Enhanced eligibility logic for Oracle - proper trainee duty rules
             let isEligible = nextSyllabusEvent?.type === 'Flight';
 
-            // Rule 0: EXCLUDE PAUSED/NTSC TRAINEES - Oracle should NOT offer these trainees
+            // Rule 0: EXCLUDE PAUSED TRAINEES - Oracle should NOT offer these trainees
             if (trainee.isPaused) {
                 isEligible = false;
                 logRoutineAppDebug(`Oracle: ${trainee.fullName} excluded - trainee is PAUSED`);
-            }
-
-            // Check for NTSC status (assume it might be in course name or a status field)
-            const isNtsc = trainee.course.includes('NTSC') || trainee.fullName.includes('NTSC');
-            if (isNtsc) {
-                isEligible = false;
-                logRoutineAppDebug(`Oracle: ${trainee.fullName} excluded - trainee is NTSC`);
             }
 
             // Rule 1: EXCLUDE TRAINEES WHOSE NEXT EVENT IS REMEDIAL

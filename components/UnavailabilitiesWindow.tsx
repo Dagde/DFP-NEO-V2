@@ -135,7 +135,7 @@ const UnavailabilitiesWindow: React.FC<UnavailabilitiesWindowProps> = ({ instruc
                     <h3 className="font-semibold text-sky-400 mb-2">Trainees</h3>
                     {(traineeUnavailabilities.length > 0 || pausedTrainees.length > 0) ? (
                         <ul className="space-y-2">
-                            {pausedTrainees.map(u => <UnavailabilityItem key={u.name} name={u.name} rank={u.rank} status="Paused/NTSC" />)}
+                            {pausedTrainees.map(u => <UnavailabilityItem key={u.name} name={u.name} rank={u.rank} status="Paused" />)}
                             {traineeUnavailabilities.map(u => <UnavailabilityItem key={`${u.name}-${u.period.id}`} {...u} />)}
                         </ul>
                     ) : (

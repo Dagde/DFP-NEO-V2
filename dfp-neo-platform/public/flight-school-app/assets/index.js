@@ -67252,7 +67252,7 @@ const UnavailabilitiesWindow = ({ instructorsData, traineesData, date, title }) 
       /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
         /* @__PURE__ */ jsxRuntimeExports.jsx("h3", { className: "font-semibold text-sky-400 mb-2", children: "Trainees" }),
         traineeUnavailabilities.length > 0 || pausedTrainees.length > 0 ? /* @__PURE__ */ jsxRuntimeExports.jsxs("ul", { className: "space-y-2", children: [
-          pausedTrainees.map((u) => /* @__PURE__ */ jsxRuntimeExports.jsx(UnavailabilityItem, { name: u.name, rank: u.rank, status: "Paused/NTSC" }, u.name)),
+          pausedTrainees.map((u) => /* @__PURE__ */ jsxRuntimeExports.jsx(UnavailabilityItem, { name: u.name, rank: u.rank, status: "Paused" }, u.name)),
           traineeUnavailabilities.map((u) => /* @__PURE__ */ jsxRuntimeExports.jsx(UnavailabilityItem, { ...u }, `${u.name}-${u.period.id}`))
         ] }) : /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-sm text-gray-500 italic", children: "No trainees unavailable." })
       ] })
@@ -106983,7 +106983,7 @@ const UnavailabilityReportModal = ({
       /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
         /* @__PURE__ */ jsxRuntimeExports.jsx("h3", { className: "font-semibold text-sky-400 mb-2", children: "Trainees" }),
         unavailableTrainees.length > 0 || pausedTrainees.length > 0 ? /* @__PURE__ */ jsxRuntimeExports.jsxs("ul", { className: "space-y-3", children: [
-          pausedTrainees.map((u) => /* @__PURE__ */ jsxRuntimeExports.jsx(PersonEntry, { person: u, status: "Paused/NTSC" }, u.name)),
+          pausedTrainees.map((u) => /* @__PURE__ */ jsxRuntimeExports.jsx(PersonEntry, { person: u, status: "Paused" }, u.name)),
           unavailableTrainees.map((u) => /* @__PURE__ */ jsxRuntimeExports.jsx(PersonEntry, { person: u }, `${u.name}-${u.period?.id}`))
         ] }) : /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-sm text-gray-500 italic", children: "No trainees unavailable." })
       ] })
@@ -150652,11 +150652,6 @@ ${error instanceof Error ? error.message : String(error)}`,
       if (trainee.isPaused) {
         isEligible = false;
         logRoutineAppDebug(`Oracle: ${trainee.fullName} excluded - trainee is PAUSED`);
-      }
-      const isNtsc = trainee.course.includes("NTSC") || trainee.fullName.includes("NTSC");
-      if (isNtsc) {
-        isEligible = false;
-        logRoutineAppDebug(`Oracle: ${trainee.fullName} excluded - trainee is NTSC`);
       }
       if (nextSyllabusEvent && nextSyllabusEvent.isRemedial) {
         isEligible = false;
