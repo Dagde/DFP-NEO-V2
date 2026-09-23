@@ -10184,7 +10184,8 @@ const RightSidebar = ({
         onClick: () => onNavigate("MyDashboard"),
         title: "Open My Home",
         "aria-label": "Open My Home",
-        className: "w-[75px] h-[55px] flex items-center justify-center rounded-md border border-slate-300/50 btn-aluminium-brushed p-1",
+        className: "w-[75px] h-[55px] flex items-center justify-center rounded-md border border-amber-200/70 bg-cover bg-center p-1 shadow-[inset_0_1px_0_rgba(255,255,255,0.45),inset_0_-1px_0_rgba(0,0,0,0.45)]",
+        style: { backgroundImage: "url('/dfp-neo-sidebar-gold-texture.jpg')" },
         children: /* @__PURE__ */ jsxRuntimeExports.jsx(
           "img",
           {
