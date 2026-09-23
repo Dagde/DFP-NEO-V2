@@ -70,6 +70,64 @@ const normaliseText = (value) => String(value || '')
   .replace(/\s+/g, ' ')
   .trim();
 
+const splitIdentifierWords = (value) => String(value || '')
+  .replace(/([a-z0-9])([A-Z])/g, '$1 $2')
+  .replace(/[_./:-]+/g, ' ')
+  .replace(/\s+/g, ' ')
+  .trim();
+
+const termKey = (value) => splitIdentifierWords(value)
+  .toLowerCase()
+  .replace(/[^a-z0-9]+/g, ' ')
+  .replace(/\s+/g, ' ')
+  .trim();
+
+const terminologyStopWords = new Set([
+  'the', 'and', 'for', 'with', 'from', 'that', 'this', 'your', 'you', 'are', 'can', 'will',
+  'has', 'have', 'use', 'used', 'when', 'where', 'what', 'why', 'how', 'into', 'onto',
+  'button', 'select', 'input', 'field', 'value', 'data', 'record', 'records', 'page',
+]);
+
+function addTerm(termMap, rawTerm, source) {
+  const label = splitIdentifierWords(rawTerm);
+  const key = termKey(label);
+  if (!key || key.length < 2 || terminologyStopWords.has(key)) return;
+  if (/^\d+$/.test(key)) return;
+  const tokenCount = key.split(' ').length;
+  if (tokenCount > 7) return;
+  const current = termMap.get(key) || {
+    term: label,
+    normalised: key,
+    aliases: new Set(),
+    sources: new Set(),
+    count: 0,
+  };
+  current.count += 1;
+  current.sources.add(source);
+  if (label !== current.term) current.aliases.add(label);
+  termMap.set(key, current);
+}
+
+function addPhraseTerms(termMap, text, source) {
+  const clean = normaliseText(text);
+  if (!clean || clean.length < 2) return;
+  addTerm(termMap, clean, source);
+  const words = clean
+    .replace(/[^A-Za-z0-9/._:-]+/g, ' ')
+    .split(/\s+/)
+    .map((word) => word.trim())
+    .filter(Boolean);
+  words.forEach((word) => {
+    if (word.length >= 3 || /^[A-Z]{2,}$/.test(word)) addTerm(termMap, word, source);
+  });
+  for (let size = 2; size <= 4; size += 1) {
+    for (let index = 0; index <= words.length - size; index += 1) {
+      const phrase = words.slice(index, index + size).join(' ');
+      if (phrase.length >= 5) addTerm(termMap, phrase, source);
+    }
+  }
+}
+
 function readJsonFile(filePath, fallback) {
   if (!fs.existsSync(filePath)) return fallback;
   try {
@@ -572,6 +630,69 @@ const controls = sourceAudits.flatMap((audit) => audit.controls);
 const components = sourceAudits.flatMap((audit) => audit.components);
 const guideTargets = sourceAudits.flatMap((audit) => audit.guideTargets);
 
+function buildTerminologyIndex() {
+  const termMap = new Map();
+
+  curatedFunctions.forEach((fn) => {
+    addPhraseTerms(termMap, fn.name, `curated:${fn.id}`);
+    (fn.aliases || []).forEach((alias) => addPhraseTerms(termMap, alias, `curated:${fn.id}:alias`));
+    addPhraseTerms(termMap, fn.purpose, `curated:${fn.id}:purpose`);
+    (fn.procedureSteps || []).forEach((step) => addPhraseTerms(termMap, step, `curated:${fn.id}:steps`));
+    (fn.inputs || []).forEach((input) => {
+      addPhraseTerms(termMap, input.fieldName, `curated:${fn.id}:input`);
+      addPhraseTerms(termMap, input.fieldType, `curated:${fn.id}:input`);
+    });
+  });
+
+  (curatedKnowledge.synonyms || []).forEach((group) => {
+    addPhraseTerms(termMap, group.canonical, 'curated:synonym');
+    (group.terms || []).forEach((term) => addPhraseTerms(termMap, term, `curated:synonym:${group.canonical}`));
+  });
+
+  controls.forEach((control) => {
+    addPhraseTerms(termMap, control.label, `control:${control.file}:${control.line}`);
+    Object.entries(control.attributes || {}).forEach(([name, value]) => {
+      addPhraseTerms(termMap, name, `control-attribute:${control.file}:${control.line}`);
+      if (typeof value === 'string' && value.length < 120) addPhraseTerms(termMap, value, `control-attribute:${control.file}:${control.line}`);
+    });
+    if (control.guideTarget) addPhraseTerms(termMap, control.guideTarget, `guide-target:${control.file}:${control.line}`);
+  });
+
+  components.forEach((component) => addPhraseTerms(termMap, component.name, `component:${component.file}:${component.line}`));
+  guideTargets.forEach((target) => addPhraseTerms(termMap, target.id, `guide-target:${target.file}:${target.line}`));
+  routes.forEach((route) => {
+    addPhraseTerms(termMap, route.route, `route:${route.file}`);
+    addPhraseTerms(termMap, route.file, `route:${route.file}`);
+  });
+  expressEndpoints.forEach((endpoint) => {
+    addPhraseTerms(termMap, endpoint.route, `endpoint:${endpoint.file}:${endpoint.line}`);
+    addPhraseTerms(termMap, endpoint.method, `endpoint:${endpoint.file}:${endpoint.line}`);
+  });
+  prismaModels.forEach((model) => {
+    addPhraseTerms(termMap, model.name, `prisma:${model.name}`);
+    model.fields.forEach((field) => {
+      addPhraseTerms(termMap, field.name, `prisma:${model.name}.${field.name}`);
+      addPhraseTerms(termMap, field.type, `prisma:${model.name}.${field.name}`);
+    });
+  });
+  permissionIds.forEach((permission) => addPhraseTerms(termMap, permission.id, `permission:${permission.file}:${permission.line}`));
+  messages.forEach((message) => addPhraseTerms(termMap, message.text, `message:${message.file}:${message.line}`));
+
+  return Array.from(termMap.values())
+    .map((entry) => ({
+      term: entry.term,
+      normalised: entry.normalised,
+      aliases: Array.from(entry.aliases).slice(0, 10),
+      sources: Array.from(entry.sources).slice(0, 12),
+      count: entry.count,
+    }))
+    .filter((entry) => entry.count > 1 || entry.normalised.includes(' ') || /[A-Z]{2,}/.test(entry.term))
+    .sort((left, right) => right.count - left.count || left.normalised.localeCompare(right.normalised))
+    .slice(0, 5000);
+}
+
+const terminologyIndex = buildTerminologyIndex();
+
 const knowledgeModel = {
   schemaVersion: 'neo-guide-knowledge-model.v1',
   generatedAt,
@@ -603,6 +724,12 @@ const knowledgeModel = {
   permissions: {
     ids: permissionIds,
   },
+  terminologyIndex: terminologyIndex.map((entry) => ({
+    term: entry.term,
+    normalised: entry.normalised,
+    aliases: entry.aliases,
+    count: entry.count,
+  })),
   warningsAndErrors: {
     messages,
   },
@@ -649,6 +776,7 @@ const compactKnowledgeModel = {
   permissions: {
     ids: permissionIds.map((permission) => permission.id),
   },
+  terminologyIndex,
   curatedKnowledge: {
     schemaVersion: curatedKnowledge.schemaVersion || 'neo-guide-enrichment.v1',
     updatedAt: curatedKnowledge.updatedAt || null,
@@ -716,6 +844,7 @@ This is the Phase 2 source-derived knowledge model foundation for NEO Guide, wit
 - Prisma models found: ${prismaModels.length}
 - Permission references found: ${permissionIds.length}
 - Warning/error/status messages found: ${messages.length}
+- Terminology records generated: ${terminologyIndex.length}
 - Curated workflow functions: ${curatedFunctions.length}
 - Curated concept records: ${(curatedKnowledge.concepts || []).length}
 - Curated synonym groups: ${(curatedKnowledge.synonyms || []).length}
@@ -749,6 +878,7 @@ console.log(`Express endpoints: ${expressEndpoints.length}`);
 console.log(`Prisma models: ${prismaModels.length}`);
 console.log(`Permissions: ${permissionIds.length}`);
 console.log(`Messages: ${messages.length}`);
+console.log(`Terminology records: ${terminologyIndex.length}`);
 console.log(`Curated workflow functions: ${curatedFunctions.length}`);
 console.log(`Functions: ${functions.length}`);
 console.log(`Concept graph: ${conceptGraph.nodes.length} nodes, ${conceptGraph.edges.length} edges`);

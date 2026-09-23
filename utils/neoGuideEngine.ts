@@ -52,6 +52,7 @@ export interface NeoGuideRuntimeModel {
     synonyms?: NeoGuideSynonymGroup[];
   };
   functions?: NeoGuideFunction[];
+  terminologyIndex?: Array<{ term: string; normalised?: string; aliases?: string[]; sources?: string[]; count?: number }>;
   guideTargets?: Array<{ id: string; file?: string; line?: number; tagName?: string }>;
 }
 
@@ -205,7 +206,7 @@ export function interpretNeoGuideQuestion(
   context: NeoGuidePageContext = {}
 ): Omit<NeoGuideAnswer, 'answer' | 'confidence' | 'navigationAction' | 'conversation'> & { matches: NeoGuideMatch[] } {
   const intent = detectIntent(question);
-  const synonymMap = buildSynonymMap(model.curatedKnowledge?.synonyms || []);
+  const synonymMap = buildSynonymMap(model.curatedKnowledge?.synonyms || [], model.terminologyIndex || []);
   const rawTokens = tokenize(question);
   const contextTokens = getConversationContextTokens(question, context.conversation);
   const tokens = expandTokens([...rawTokens, ...contextTokens], synonymMap);
@@ -453,7 +454,10 @@ function expandTokens(tokens: string[], synonymMap: Map<string, string>): string
   return Array.from(expanded);
 }
 
-function buildSynonymMap(groups: NeoGuideSynonymGroup[]): Map<string, string> {
+function buildSynonymMap(
+  groups: NeoGuideSynonymGroup[],
+  terminologyIndex: Array<{ term: string; normalised?: string; aliases?: string[]; count?: number }> = []
+): Map<string, string> {
   const map = new Map<string, string>();
   for (const group of groups) {
     const canonical = normalise(group.canonical);
@@ -462,6 +466,21 @@ function buildSynonymMap(groups: NeoGuideSynonymGroup[]): Map<string, string> {
       const termTokens = tokenize(term);
       if (termTokens.length === 1) map.set(termTokens[0], canonical);
     }
+  }
+  for (const entry of terminologyIndex) {
+    const canonical = normalise(entry.normalised || entry.term);
+    if (!canonical || (entry.count || 0) < 2) continue;
+    const canonicalTokens = tokenize(canonical);
+    if (canonicalTokens.length > 4) continue;
+    canonicalTokens.forEach((token) => {
+      if (token.length >= 3 && !map.has(token)) map.set(token, canonical);
+    });
+    (entry.aliases || []).forEach((alias) => {
+      const aliasTokens = tokenize(alias);
+      if (aliasTokens.length === 1 && aliasTokens[0].length >= 3 && !map.has(aliasTokens[0])) {
+        map.set(aliasTokens[0], canonical);
+      }
+    });
   }
   return map;
 }

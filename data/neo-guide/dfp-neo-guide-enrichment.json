@@ -181,6 +181,33 @@
       "auditStatus": "IMPLEMENTED - manually enriched from current implementation review"
     },
     {
+      "id": "function.curated.people.instructor-assignment",
+      "name": "Primary and Secondary Instructor",
+      "aliases": ["primary instructor", "secondary instructor", "assign instructor", "change instructor", "instructor assignment", "why can't I select instructor", "PI", "SI"],
+      "location": {
+        "page": "Trainee",
+        "route": null,
+        "component": "components/TraineeProfileFlyout.tsx",
+        "anchor": "nav-trainee"
+      },
+      "purpose": "Records the normal instructor relationships used for trainee management and scheduling eligibility.",
+      "procedureSteps": [
+        "Open Trainee.",
+        "Open the trainee's profile.",
+        "Find the instructor assignment area.",
+        "Select the Primary Instructor or Secondary Instructor from the available staff list.",
+        "Save the trainee profile changes."
+      ],
+      "inputs": [],
+      "outputs": ["Updates the trainee's primaryInstructor and secondaryInstructor values."],
+      "permissions": ["trainee.roster.view"],
+      "dependencies": ["The instructor must exist as staff in the relevant unit/context and be available in the selector."],
+      "businessRules": ["NEO Build can prefer or require the Primary Instructor depending on priority/build settings, with Secondary Instructor used only where the configured rules allow it."],
+      "failureConditions": ["An instructor may be unavailable for selection if they are outside the unit/context, not configured as staff, not visible under the current Master LMP/unit access, or excluded by scheduling rules."],
+      "relatedFunctions": ["function.curated.people.trainee-roster", "function.curated.scheduling.neo-build", "function.curated.scheduling.build-priorities"],
+      "auditStatus": "IMPLEMENTED - manually enriched from current implementation review"
+    },
+    {
       "id": "function.curated.training.course-management",
       "name": "Course management",
       "aliases": ["courses management", "add course", "edit course", "course dates", "course labels", "course groups"],
@@ -583,6 +610,34 @@
       "businessRules": ["Turnaround rules can prevent back-to-back allocations that do not leave the required separation."],
       "failureConditions": ["Changes affect future build and validation logic, not necessarily already-published historical schedules."],
       "relatedFunctions": ["function.curated.scheduling.neo-build", "function.curated.scheduling.validation-check"],
+      "auditStatus": "IMPLEMENTED - manually enriched from current implementation review"
+    },
+    {
+      "id": "function.curated.settings.flight-authorisation-warnings",
+      "name": "Flight authorisation warning settings",
+      "aliases": ["authorisation warning minutes", "authorization warning minutes", "authorisation urgent minutes", "authorization urgent minutes", "flight tile authorisation warnings", "auth warning colours", "flight auth warning", "red urgent before start", "amber warning before start"],
+      "location": {
+        "page": "Settings",
+        "route": null,
+        "component": "components/SettingsView.tsx",
+        "anchor": "nav-settings"
+      },
+      "purpose": "Controls whether flight authorisation is required and when unsigned current-day flight tiles show warning colours.",
+      "procedureSteps": [
+        "Open Settings.",
+        "Open the DFP Build Rules or equivalent build-rule settings area.",
+        "Find Flight tile authorisation warnings.",
+        "Set Flight authorisation required.",
+        "Set the amber warning and red urgent minutes before start.",
+        "Save the settings."
+      ],
+      "inputs": [],
+      "outputs": ["Updates tile status settings used by flight tiles, Duty Pilot AUTH and current-day authorisation warning colours."],
+      "permissions": ["settings.view"],
+      "dependencies": ["The active unit/build-rule settings must be editable by the logged-in user."],
+      "businessRules": ["When flight authorisation is optional, authorisation warning colours and controls are disabled or treated as optional for that unit."],
+      "failureConditions": ["Changes affect current/future warning behaviour but do not by themselves sign any flight authorisation."],
+      "relatedFunctions": ["function.curated.duty-pilot.flight-authorisation", "function.curated.scheduling.validation-check"],
       "auditStatus": "IMPLEMENTED - manually enriched from current implementation review"
     },
     {

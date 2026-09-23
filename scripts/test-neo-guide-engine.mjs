@@ -11,6 +11,13 @@ const model = JSON.parse(fs.readFileSync(modelPath, 'utf8'));
 
 const ask = (question, context = {}) => answerNeoGuideQuestion(question, model, context);
 const topId = (question, context = {}) => ask(question, context).matches[0]?.functionId;
+const terminology = new Set((model.terminologyIndex || []).map(entry => entry.normalised || String(entry.term || '').toLowerCase()));
+
+assert.ok((model.terminologyIndex || []).length > 1000, 'Generated terminology index should contain substantial app vocabulary.');
+assert.ok(terminology.has('auth') || terminology.has('flight auth'), 'Terminology should include auth wording from the implementation.');
+assert.ok(terminology.has('unavailability'), 'Terminology should include unavailability from schema/UI.');
+assert.ok(terminology.has('course commander'), 'Terminology should include course commander wording.');
+assert.ok(terminology.has('flight authorisation') || terminology.has('flight authorization'), 'Terminology should include flight authorisation wording.');
 
 assert.equal(detectIntent('How do I make a trainee unavailable?'), 'HOW_TO');
 assert.equal(detectIntent('Why are my course scores blank?'), 'WHY');
@@ -149,6 +156,14 @@ assert.match(authoriseFlightAnswer.answer, /PIC|captain/i, 'Flight authorisation
 const authFlightAnswer = ask('how do I auth a flight');
 assert.equal(authFlightAnswer.matches[0]?.functionId, 'function.curated.duty-pilot.flight-authorisation');
 assert.match(authFlightAnswer.answer, /PIN/i, 'Auth flight shorthand should resolve to flight authorisation steps.');
+
+const primaryInstructorAnswer = ask('what is primary instructor');
+assert.equal(primaryInstructorAnswer.matches[0]?.functionId, 'function.curated.people.instructor-assignment');
+assert.match(primaryInstructorAnswer.answer, /Primary Instructor|Secondary Instructor|NEO Build/i, 'Primary instructor answer should explain instructor assignment and scheduling relevance.');
+
+const authWarningAnswer = ask('where set authorisation warning minutes');
+assert.equal(authWarningAnswer.matches[0]?.functionId, 'function.curated.settings.flight-authorisation-warnings');
+assert.match(authWarningAnswer.answer, /amber warning|red urgent|Flight authorisation required/i, 'Authorisation warning answer should explain warning minute settings.');
 
 const staffFollowUp = ask('what about staff?', { conversation: answer.conversation });
 assert.equal(
