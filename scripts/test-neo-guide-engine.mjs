@@ -259,6 +259,16 @@ if (stageThree.resolutionStage) {
     assert.equal(priorIds.has(option.intentId), false, 'Stage 3 must not repeat prior intent IDs.');
   }
 }
+const allClarificationLabels = [
+  ...(ambiguousArchiveAnswer.clarificationOptions || []),
+  ...(stageTwo.clarificationOptions || []),
+  ...(stageThree.clarificationOptions || []),
+].map((option) => option.label);
+assert.equal(
+  allClarificationLabels.some((label) => /\/api\/|server\.js|function\.|app\.tsx/i.test(label)),
+  false,
+  'Clarification options must not expose internal API routes or implementation artefacts.'
+);
 
 const learnedDeleteStaff = ask('get rid of an old employee', {
   learnedAssociations: [

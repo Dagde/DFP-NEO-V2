@@ -457,7 +457,7 @@ export function interpretNeoGuideQuestion(
   const sourceFunctions = [
     ...(model.curatedKnowledge?.functions || []),
     ...(model.functions || []).filter((fn) => !String(fn.id || '').startsWith('function.curated.'))
-  ];
+  ].filter((fn) => !isInternalGeneratedGuideFunction(fn));
 
   const matches = sourceFunctions
     .map((fn) => scoreFunction(fn, tokens, rawTokens, normalisedQuestion, intent, context, userPermissions, learnedAssociations))
@@ -514,6 +514,7 @@ function buildStagedClarificationAnswer(
   const excluded = new Set(excludedIntentIds);
   const matches = collapseNearDuplicateMatches(interpretation.matches)
     .filter((match) => !excluded.has(match.functionId))
+    .filter(isUserFacingClarificationMatch)
     .slice(0, 5);
   if (matches.length === 0) return null;
 
@@ -567,6 +568,34 @@ function collapseNearDuplicateMatches(matches: NeoGuideMatch[]): NeoGuideMatch[]
     collapsed.push(match);
   }
   return collapsed;
+}
+
+function isUserFacingClarificationMatch(match: NeoGuideMatch): boolean {
+  const fn = match.function;
+  if (isInternalGeneratedGuideFunction(fn)) return false;
+  if (String(fn.id || '').startsWith('function.curated.')) return true;
+  if (Array.isArray(fn.procedureSteps) && fn.procedureSteps.length > 0 && fn.location?.page) return true;
+  return false;
+}
+
+function isInternalGeneratedGuideFunction(fn: NeoGuideFunction): boolean {
+  const id = String(fn.id || '').toLowerCase();
+  const name = String(fn.name || '').trim();
+  const normalisedName = normalise(name);
+  const route = String(fn.location?.route || '').trim().toLowerCase();
+  const component = String(fn.location?.component || '').trim().toLowerCase();
+  const aliases = (fn.aliases || []).map((alias) => String(alias || '').toLowerCase());
+
+  if (name.startsWith('/') || route.startsWith('/api/')) return true;
+  if (id.includes('express-endpoint') || id.includes('api-route')) return true;
+  if (component === 'server.js' || component.endsWith('/server.js')) return true;
+  if (aliases.some((alias) => alias === 'server.js' || alias.startsWith('/api/'))) return true;
+  if (!String(fn.id || '').startsWith('function.curated.') && /^[a-z0-9_ -]{2,24}$/.test(normalisedName)) {
+    const hasUsefulGuideContent = Boolean(fn.procedureSteps?.length || fn.businessRules?.length || fn.failureConditions?.length);
+    const looksLikeStatusValue = /^(active|inactive|complete|completed|pending|open|closed|none|yes|no|true|false)$/i.test(name);
+    if (looksLikeStatusValue && !hasUsefulGuideContent) return true;
+  }
+  return false;
 }
 
 function inferClarificationArea(matches: NeoGuideMatch[], context: NeoGuidePageContext): string {
