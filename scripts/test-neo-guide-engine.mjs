@@ -168,6 +168,12 @@ assert.equal(dfpTileAuthAnswer.matches[0]?.functionId, 'function.curated.duty-pi
 assert.match(dfpTileAuthAnswer.answer, /Open DFP/i, 'DFP tile flight authorisation answer should start from DFP.');
 assert.match(dfpTileAuthAnswer.answer, /context menu|Flight Authorisation/i, 'DFP tile answer should mention the context menu authorisation path.');
 
+const dfpTileFollowUpAnswer = ask('dfp tile', { conversation: authoriseFlightAnswer.conversation });
+assert.equal(dfpTileFollowUpAnswer.matches[0]?.functionId, 'function.curated.duty-pilot.flight-authorisation');
+assert.match(dfpTileFollowUpAnswer.answer, /Open DFP/i, 'DFP tile follow-up should continue the pending flight authorisation workflow.');
+assert.match(dfpTileFollowUpAnswer.answer, /Flight Authorisation/i, 'DFP tile follow-up should explain the authorisation route.');
+assert.doesNotMatch(dfpTileFollowUpAnswer.answer, /Multi Select/i, 'DFP tile follow-up must not be reinterpreted as Multi Select.');
+
 const primaryInstructorAnswer = ask('what is primary instructor');
 assert.equal(primaryInstructorAnswer.matches[0]?.functionId, 'function.curated.people.instructor-assignment');
 assert.match(primaryInstructorAnswer.answer, /Primary Instructor|Secondary Instructor|NEO Build/i, 'Primary instructor answer should explain instructor assignment and scheduling relevance.');

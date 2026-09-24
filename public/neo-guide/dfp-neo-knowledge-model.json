@@ -1,6 +1,6 @@
 {
   "schemaVersion": "neo-guide-runtime-model.v1",
-  "generatedAt": "2026-09-24T00:13:54.657Z",
+  "generatedAt": "2026-09-24T00:22:40.321Z",
   "source": {
     "repository": "clone-the-repo-dagde-dfp-neo",
     "sourceFileCount": 377,
@@ -9893,7 +9893,7 @@
         "control-attribute:components/LoginModal.tsx:225",
         "control-attribute:components/LoginModal.tsx:242",
         "control-attribute:components/LoginModal.tsx:263",
-        "control:components/NeoGuidePanel.tsx:262"
+        "control:components/NeoGuidePanel.tsx:260"
       ],
       "count": 102
     },
@@ -11354,7 +11354,7 @@
         "control:components/InstructorProfileFlyout.tsx:1612",
         "control-attribute:components/LoginModal.tsx:263",
         "control-attribute:components/LoginModal.tsx:321",
-        "control-attribute:components/NeoGuidePanel.tsx:270",
+        "control-attribute:components/NeoGuidePanel.tsx:268",
         "control:components/PinEntryFlyout_BACKUP.tsx:91"
       ],
       "count": 57
@@ -16372,7 +16372,7 @@
         "message:components/CourseEditFlyout.tsx:240",
         "message:components/CourseEditFlyout.tsx:261",
         "message:components/MyDashboard.tsx:3924",
-        "message:components/NeoGuidePanel.tsx:273",
+        "message:components/NeoGuidePanel.tsx:271",
         "message:components/PlatformConfigurationSettings.tsx:2841",
         "message:components/PlatformConfigurationSettings.tsx:2843"
       ],
@@ -17172,7 +17172,7 @@
         "message:components/AddFlightTileModal.tsx:3821",
         "message:components/AirCombatTrainingReportModal.tsx:1120",
         "message:components/EmailActivationSettings.tsx:260",
-        "message:components/NeoGuidePanel.tsx:273",
+        "message:components/NeoGuidePanel.tsx:271",
         "message:components/PlatformConfigurationSettings.tsx:5397",
         "message:components/PlatformConfigurationSettings.tsx:10976",
         "message:components/PlatformConfigurationSettings.tsx:11178",
@@ -22967,9 +22967,9 @@
       ],
       "sources": [
         "control:components/AuditFlyout.tsx:798",
-        "control:components/NeoGuidePanel.tsx:262",
-        "control-attribute:components/NeoGuidePanel.tsx:262",
-        "control-attribute:components/NeoGuidePanel.tsx:270",
+        "control:components/NeoGuidePanel.tsx:260",
+        "control-attribute:components/NeoGuidePanel.tsx:260",
+        "control-attribute:components/NeoGuidePanel.tsx:268",
         "control:components/RightSidebar.tsx:151",
         "control:components/Sidebar.tsx:223",
         "control-attribute:components/Sidebar.tsx:223",
@@ -24119,7 +24119,7 @@
         "message:App.tsx:56882",
         "message:components/AddFlightTileModal.tsx:3821",
         "message:components/MyDashboard.tsx:3924",
-        "message:components/NeoGuidePanel.tsx:273",
+        "message:components/NeoGuidePanel.tsx:271",
         "message:components/PlatformConfigurationSettings.tsx:12024",
         "message:components/PlatformConfigurationSettings.tsx:12032",
         "message:components/SettingsViewWithMenu.tsx:1220",
@@ -29364,7 +29364,7 @@
       "aliases": [],
       "sources": [
         "message:App.tsx:4997",
-        "message:components/NeoGuidePanel.tsx:273",
+        "message:components/NeoGuidePanel.tsx:271",
         "message:components/PlatformConfigurationSettings.tsx:10976",
         "message:components/PlatformConfigurationSettings.tsx:11288",
         "message:components/PlatformConfigurationSettings.tsx:11493",
@@ -29779,7 +29779,7 @@
         "message:components/PlatformConfigurationSettings.tsx:6200",
         "message:components/PlatformConfigurationSettings.tsx:12878",
         "message:server.js:17731",
-        "message:utils/neoGuideEngine.ts:373"
+        "message:utils/neoGuideEngine.ts:438"
       ],
       "count": 10
     },
@@ -32098,7 +32098,7 @@
         "curated:function.curated.settings.turnaround:steps",
         "control:components/AddGroundEventFlyout.tsx:433",
         "control-attribute:components/AddGroundEventFlyout.tsx:433",
-        "message:utils/neoGuideEngine.ts:465"
+        "message:utils/neoGuideEngine.ts:530"
       ],
       "count": 9
     },
@@ -33086,9 +33086,9 @@
         "ask"
       ],
       "sources": [
-        "control:components/NeoGuidePanel.tsx:262",
-        "control-attribute:components/NeoGuidePanel.tsx:262",
-        "control:components/NeoGuidePanel.tsx:270",
+        "control:components/NeoGuidePanel.tsx:260",
+        "control-attribute:components/NeoGuidePanel.tsx:260",
+        "control:components/NeoGuidePanel.tsx:268",
         "message:App.tsx:37728",
         "message:App.tsx:37950",
         "message:server.js:10288"
@@ -37824,7 +37824,7 @@
         "message:components/InstructorListView.tsx:796",
         "message:dfp-neo-platform/app/api/admin/seed-syllabus/route.ts:338",
         "message:server.js:14167",
-        "message:utils/neoGuideEngine.ts:466"
+        "message:utils/neoGuideEngine.ts:531"
       ],
       "count": 7
     },
@@ -39071,7 +39071,7 @@
         "curated:function.curated.scheduling.aircraft-availability:steps",
         "curated:function.curated.scheduling.add-flight-tile:steps",
         "curated:function.curated.settings.turnaround:steps",
-        "message:utils/neoGuideEngine.ts:465"
+        "message:utils/neoGuideEngine.ts:530"
       ],
       "count": 7
     },
@@ -39303,7 +39303,7 @@
         "control:components/SettingsView.tsx:1141",
         "control:components/SettingsView.tsx:1375",
         "message:components/ScheduleView.tsx:13538",
-        "message:utils/neoGuideEngine.ts:373"
+        "message:utils/neoGuideEngine.ts:438"
       ],
       "count": 7
     },
@@ -42068,8 +42068,8 @@
         "guide"
       ],
       "sources": [
-        "control:components/NeoGuidePanel.tsx:262",
-        "control-attribute:components/NeoGuidePanel.tsx:262",
+        "control:components/NeoGuidePanel.tsx:260",
+        "control-attribute:components/NeoGuidePanel.tsx:260",
         "control:components/RightSidebar.tsx:200",
         "control-attribute:components/RightSidebar.tsx:200",
         "control:components/ScheduleView.tsx:11149"
@@ -44952,7 +44952,7 @@
         "message:components/PlatformConfigurationSettings.tsx:1758",
         "message:components/PlatformConfigurationSettings.tsx:1763",
         "message:components/PlatformConfigurationSettings.tsx:14530",
-        "message:utils/neoGuideEngine.ts:466"
+        "message:utils/neoGuideEngine.ts:531"
       ],
       "count": 6
     },
@@ -48290,7 +48290,7 @@
         "message:components/PlatformConfigurationSettings.tsx:1745",
         "message:components/PlatformConfigurationSettings.tsx:14530",
         "message:server.js:17731",
-        "message:utils/neoGuideEngine.ts:466"
+        "message:utils/neoGuideEngine.ts:531"
       ],
       "count": 5
     },
@@ -48982,8 +48982,8 @@
       "normalised": "neo guide",
       "aliases": [],
       "sources": [
-        "control:components/NeoGuidePanel.tsx:262",
-        "control-attribute:components/NeoGuidePanel.tsx:262",
+        "control:components/NeoGuidePanel.tsx:260",
+        "control-attribute:components/NeoGuidePanel.tsx:260",
         "control:components/RightSidebar.tsx:200",
         "control-attribute:components/RightSidebar.tsx:200"
       ],
@@ -49516,7 +49516,7 @@
       "sources": [
         "message:components/AddFlightTileModal.tsx:3821",
         "message:components/MyDashboard.tsx:3924",
-        "message:components/NeoGuidePanel.tsx:273",
+        "message:components/NeoGuidePanel.tsx:271",
         "message:components/TraineeLmpView.tsx:412",
         "message:components/TraineeLmpView.tsx:435"
       ],
@@ -56917,8 +56917,8 @@
       "normalised": "do something",
       "aliases": [],
       "sources": [
-        "control:components/NeoGuidePanel.tsx:262",
-        "control-attribute:components/NeoGuidePanel.tsx:262"
+        "control:components/NeoGuidePanel.tsx:260",
+        "control-attribute:components/NeoGuidePanel.tsx:260"
       ],
       "count": 4
     },
@@ -61887,8 +61887,8 @@
       "normalised": "loading neo",
       "aliases": [],
       "sources": [
-        "control:components/NeoGuidePanel.tsx:262",
-        "control-attribute:components/NeoGuidePanel.tsx:262"
+        "control:components/NeoGuidePanel.tsx:260",
+        "control-attribute:components/NeoGuidePanel.tsx:260"
       ],
       "count": 4
     },
@@ -61897,8 +61897,8 @@
       "normalised": "loading neo guide",
       "aliases": [],
       "sources": [
-        "control:components/NeoGuidePanel.tsx:262",
-        "control-attribute:components/NeoGuidePanel.tsx:262"
+        "control:components/NeoGuidePanel.tsx:260",
+        "control-attribute:components/NeoGuidePanel.tsx:260"
       ],
       "count": 4
     },
@@ -62778,7 +62778,7 @@
       ],
       "sources": [
         "component:components/NeoGuidePanel.tsx:77",
-        "guide-target:components/NeoGuidePanel.tsx:212"
+        "guide-target:components/NeoGuidePanel.tsx:210"
       ],
       "count": 4
     },
@@ -65985,7 +65985,7 @@
         "curated:function.curated.duty-pilot.flight-authorisation:steps",
         "message:components/SettingsViewWithMenu.tsx:538",
         "message:dfp-neo-platform/app/api/admin/users/route.ts:41",
-        "message:utils/neoGuideEngine.ts:466"
+        "message:utils/neoGuideEngine.ts:531"
       ],
       "count": 4
     },
@@ -67927,8 +67927,8 @@
       "normalised": "something",
       "aliases": [],
       "sources": [
-        "control:components/NeoGuidePanel.tsx:262",
-        "control-attribute:components/NeoGuidePanel.tsx:262"
+        "control:components/NeoGuidePanel.tsx:260",
+        "control-attribute:components/NeoGuidePanel.tsx:260"
       ],
       "count": 4
     },
@@ -69137,8 +69137,8 @@
       "normalised": "to do something",
       "aliases": [],
       "sources": [
-        "control:components/NeoGuidePanel.tsx:262",
-        "control-attribute:components/NeoGuidePanel.tsx:262"
+        "control:components/NeoGuidePanel.tsx:260",
+        "control-attribute:components/NeoGuidePanel.tsx:260"
       ],
       "count": 4
     },
@@ -74500,7 +74500,7 @@
       "sources": [
         "message:components/MyDashboard.tsx:2302",
         "message:components/MyDashboard.tsx:2317",
-        "message:utils/neoGuideEngine.ts:466"
+        "message:utils/neoGuideEngine.ts:531"
       ],
       "count": 3
     },
@@ -76277,7 +76277,7 @@
       "normalised": "disabled cursor not allowed disabled opacity 45",
       "aliases": [],
       "sources": [
-        "message:components/NeoGuidePanel.tsx:273",
+        "message:components/NeoGuidePanel.tsx:271",
         "message:components/PlatformConfigurationSettings.tsx:10045",
         "message:components/PlatformConfigurationSettings.tsx:10120"
       ],
@@ -76310,7 +76310,7 @@
       "normalised": "disabled opacity 45",
       "aliases": [],
       "sources": [
-        "message:components/NeoGuidePanel.tsx:273",
+        "message:components/NeoGuidePanel.tsx:271",
         "message:components/PlatformConfigurationSettings.tsx:10045",
         "message:components/PlatformConfigurationSettings.tsx:10120"
       ],
@@ -80275,7 +80275,7 @@
       "id": "neo-guide-panel",
       "tagName": "section",
       "file": "components/NeoGuidePanel.tsx",
-      "line": 212
+      "line": 210
     },
     {
       "id": "nav-duty-pilot",
@@ -185788,7 +185788,7 @@
       "auditStatus": "IMPLEMENTED - extracted from JSX control"
     },
     {
-      "id": "function.control-components-neoguidepanel-tsx-close-222",
+      "id": "function.control-components-neoguidepanel-tsx-close-220",
       "name": "Close",
       "aliases": [
         "Close"
@@ -185798,7 +185798,7 @@
         "route": null,
         "component": "components/NeoGuidePanel.tsx",
         "anchor": null,
-        "line": 222
+        "line": 220
       },
       "purpose": "button control in components/NeoGuidePanel.tsx. Purpose requires manual enrichment where not evident from implementation.",
       "inputs": [],
@@ -185812,7 +185812,7 @@
       "auditStatus": "IMPLEMENTED - extracted from JSX control"
     },
     {
-      "id": "function.control-components-neoguidepanel-tsx-message-action-label-248",
+      "id": "function.control-components-neoguidepanel-tsx-message-action-label-246",
       "name": "message.action.label",
       "aliases": [
         "message.action.label"
@@ -185822,7 +185822,7 @@
         "route": null,
         "component": "components/NeoGuidePanel.tsx",
         "anchor": null,
-        "line": 248
+        "line": 246
       },
       "purpose": "button control in components/NeoGuidePanel.tsx. Purpose requires manual enrichment where not evident from implementation.",
       "inputs": [],
@@ -185836,7 +185836,7 @@
       "auditStatus": "IMPLEMENTED - extracted from JSX control"
     },
     {
-      "id": "function.control-components-neoguidepanel-tsx-model-ask-how-to-do-something-loading-neo-guide-262",
+      "id": "function.control-components-neoguidepanel-tsx-model-ask-how-to-do-something-loading-neo-guide-260",
       "name": "model ? 'Ask how to do something...' : 'Loading NEO Guide...'",
       "aliases": [
         "model ? 'Ask how to do something...' : 'Loading NEO Guide...'"
@@ -185846,7 +185846,7 @@
         "route": null,
         "component": "components/NeoGuidePanel.tsx",
         "anchor": null,
-        "line": 262
+        "line": 260
       },
       "purpose": "input control in components/NeoGuidePanel.tsx. Purpose requires manual enrichment where not evident from implementation.",
       "inputs": [
@@ -185875,7 +185875,7 @@
       "auditStatus": "IMPLEMENTED - extracted from JSX control"
     },
     {
-      "id": "function.control-components-neoguidepanel-tsx-ask-270",
+      "id": "function.control-components-neoguidepanel-tsx-ask-268",
       "name": "Ask",
       "aliases": [
         "Ask"
@@ -185885,7 +185885,7 @@
         "route": null,
         "component": "components/NeoGuidePanel.tsx",
         "anchor": null,
-        "line": 270
+        "line": 268
       },
       "purpose": "button control in components/NeoGuidePanel.tsx. Purpose requires manual enrichment where not evident from implementation.",
       "inputs": [],
@@ -289751,10 +289751,10 @@
         "line": 3924
       },
       {
-        "id": "message.components-neoguidepanel-tsx.rounded-md-border-border-orange-300-60-bg-orange-500-px-3-py-2-text-sm-font-black-text-slate-950.273",
+        "id": "message.components-neoguidepanel-tsx.rounded-md-border-border-orange-300-60-bg-orange-500-px-3-py-2-text-sm-font-black-text-slate-950.271",
         "text": "rounded-md border border-orange-300/60 bg-orange-500 px-3 py-2 text-sm font-black text-slate-950 disabled:cursor-not-allowed disabled:opacity-45",
         "file": "components/NeoGuidePanel.tsx",
-        "line": 273
+        "line": 271
       },
       {
         "id": "message.components-nextdaybuildview-tsx.neo-assist-failed-to-drop-assist-tile.303",
@@ -301151,70 +301151,70 @@
         "line": 10
       },
       {
-        "id": "message.utils-neoguideengine-ts.permission.128",
+        "id": "message.utils-neoguideengine-ts.permission.129",
         "text": "PERMISSION",
         "file": "utils/neoGuideEngine.ts",
-        "line": 128
+        "line": 129
       },
       {
-        "id": "message.utils-neoguideengine-ts.disabled.144",
+        "id": "message.utils-neoguideengine-ts.disabled.145",
         "text": "disabled",
         "file": "utils/neoGuideEngine.ts",
-        "line": 144
+        "line": 145
       },
       {
-        "id": "message.utils-neoguideengine-ts.unavailable.144",
+        "id": "message.utils-neoguideengine-ts.unavailable.145",
         "text": "unavailable",
         "file": "utils/neoGuideEngine.ts",
-        "line": 144
+        "line": 145
       },
       {
-        "id": "message.utils-neoguideengine-ts.permission.147",
+        "id": "message.utils-neoguideengine-ts.permission.148",
         "text": "permission",
         "file": "utils/neoGuideEngine.ts",
-        "line": 147
+        "line": 148
       },
       {
-        "id": "message.utils-neoguideengine-ts.disabled.147",
+        "id": "message.utils-neoguideengine-ts.disabled.148",
         "text": "disabled",
         "file": "utils/neoGuideEngine.ts",
-        "line": 147
+        "line": 148
       },
       {
-        "id": "message.utils-neoguideengine-ts.conflict.150",
+        "id": "message.utils-neoguideengine-ts.conflict.151",
         "text": "conflict",
         "file": "utils/neoGuideEngine.ts",
-        "line": 150
+        "line": 151
       },
       {
-        "id": "message.utils-neoguideengine-ts.permission-visible.373",
+        "id": "message.utils-neoguideengine-ts.permission-visible.438",
         "text": "permission visible",
         "file": "utils/neoGuideEngine.ts",
-        "line": 373
+        "line": 438
       },
       {
-        "id": "message.utils-neoguideengine-ts.permission-may-be-restricted.373",
+        "id": "message.utils-neoguideengine-ts.permission-may-be-restricted.438",
         "text": "permission may be restricted",
         "file": "utils/neoGuideEngine.ts",
-        "line": 373
+        "line": 438
       },
       {
-        "id": "message.utils-neoguideengine-ts.permission.464",
+        "id": "message.utils-neoguideengine-ts.permission.529",
         "text": "PERMISSION",
         "file": "utils/neoGuideEngine.ts",
-        "line": 464
+        "line": 529
       },
       {
-        "id": "message.utils-neoguideengine-ts.the-relevant-page-permission.465",
+        "id": "message.utils-neoguideengine-ts.the-relevant-page-permission.530",
         "text": "the relevant page permission",
         "file": "utils/neoGuideEngine.ts",
-        "line": 465
+        "line": 530
       },
       {
-        "id": "message.utils-neoguideengine-ts.fn-name-is-controlled-by-permissiontext-if-it-is-disabled-check-the-user-role-and-permission-pro.466",
+        "id": "message.utils-neoguideengine-ts.fn-name-is-controlled-by-permissiontext-if-it-is-disabled-check-the-user-role-and-permission-pro.531",
         "text": "${fn.name} is controlled by ${permissionText}. If it is disabled, check the user role and permission profile for that function.",
         "file": "utils/neoGuideEngine.ts",
-        "line": 466
+        "line": 531
       },
       {
         "id": "message.utils-platformconfigservice-ts.staff-profile-unavailable-use.196",

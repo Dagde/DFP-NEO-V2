@@ -1519,6 +1519,8 @@ const INTENT_HINTS = {
   UNKNOWN: []
 };
 function answerNeoGuideQuestion(question, model, context = {}) {
+  const pendingWorkflowAnswer = answerPendingWorkflowChoice(question, model, context);
+  if (pendingWorkflowAnswer) return pendingWorkflowAnswer;
   const interpretation = interpretNeoGuideQuestion(question, model, context);
   const [best, second] = interpretation.matches;
   const nextConversation = buildNextConversationState(best, interpretation.intent, interpretation.entities, context.conversation);
@@ -1549,9 +1551,8 @@ function answerNeoGuideQuestion(question, model, context = {}) {
       ...interpretation,
       confidence,
       answer: buildWorkflowChoiceText(best.function),
-      conversation: nextConversation,
-      needsClarification: true,
-      clarificationQuestion: "Which method do you want to use?"
+      conversation: { ...nextConversation, awaitingWorkflowChoice: true },
+      needsClarification: true
     };
   }
   if (confidence === "low") {
@@ -1582,6 +1583,65 @@ function answerNeoGuideQuestion(question, model, context = {}) {
     answer: buildAnswerText(interpretation.intent, best, workflowOption),
     navigationAction: buildNavigationAction(best, workflowOption),
     conversation: nextConversation
+  };
+}
+function answerPendingWorkflowChoice(question, model, context) {
+  if (!context.conversation?.awaitingWorkflowChoice || !context.conversation.lastFunctionId) return null;
+  const functions = [
+    ...model.curatedKnowledge?.functions || [],
+    ...model.functions || []
+  ];
+  const fn = functions.find((candidate) => candidate.id === context.conversation?.lastFunctionId);
+  if (!fn || !hasWorkflowOptions(fn)) return null;
+  const workflowOption = selectWorkflowOption(fn, question);
+  if (!workflowOption) {
+    return {
+      intent: "UNKNOWN",
+      entities: extractLikelyEntities(question, tokenize(question)),
+      confidence: "low",
+      answer: `I don't recognise that method yet.
+
+${buildWorkflowChoiceText(fn)}`,
+      matches: [{
+        functionId: fn.id,
+        name: fn.name,
+        score: 0,
+        location: fn.location,
+        permissions: fn.permissions || [],
+        reasons: ["awaiting workflow choice"],
+        function: fn
+      }],
+      conversation: {
+        ...context.conversation,
+        awaitingWorkflowChoice: true
+      },
+      needsClarification: true
+    };
+  }
+  const match = {
+    functionId: fn.id,
+    name: fn.name,
+    score: 30,
+    location: fn.location,
+    permissions: fn.permissions || [],
+    reasons: ["selected workflow option"],
+    function: fn
+  };
+  return {
+    intent: "HOW_TO",
+    entities: extractLikelyEntities(question, tokenize(question)),
+    confidence: "high",
+    answer: buildAnswerText("HOW_TO", match, workflowOption),
+    matches: [match],
+    navigationAction: buildNavigationAction(match, workflowOption),
+    conversation: {
+      topic: [fn.name, workflowOption.name].join(" "),
+      lastFunctionId: fn.id,
+      lastFunctionName: fn.name,
+      lastIntent: "HOW_TO",
+      lastEntities: [],
+      awaitingWorkflowChoice: false
+    }
   };
 }
 function isThinGeneratedImplementationMatch(match) {
@@ -1995,7 +2055,7 @@ const NeoGuidePanel = ({
       {
         id: `guide-${Date.now()}`,
         role: "guide",
-        text: answer.needsClarification && answer.clarificationQuestion ? `${answer.answer} ${answer.clarificationQuestion}` : answer.answer,
+        text: answer.answer,
         action: answer.navigationAction
       }
     ]);

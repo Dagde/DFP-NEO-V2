@@ -151,9 +151,7 @@ const NeoGuidePanel: React.FC<NeoGuidePanelProps> = ({
       {
         id: `guide-${Date.now()}`,
         role: 'guide',
-        text: answer.needsClarification && answer.clarificationQuestion
-          ? `${answer.answer} ${answer.clarificationQuestion}`
-          : answer.answer,
+        text: answer.answer,
         action: answer.navigationAction,
       },
     ]);
