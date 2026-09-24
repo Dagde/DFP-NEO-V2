@@ -12,13 +12,78 @@ Current answer: Not yet applicable. No model/runtime has been selected or embedd
 
 Prefer Apache License 2.0. A candidate must be rejected or sent for legal review if the exact model weights, quantisation file, runtime or dependency include non-commercial, research-only, evaluation-only, revenue-threshold, company-size, MAU, redistribution, remote-service or ownership-transfer restrictions.
 
+## Preferred Candidate
+
+Granite 4.2 8B is the preferred language-understanding and response-generation candidate for NEO Guide, subject to exact model artefact and quantisation verification before integration.
+
+Reasons:
+
+- IBM Granite 4.2 language-model project states that all Granite 4.2 language models are distributed under Apache 2.0.
+- IBM's Granite product page describes Granite as open source under Apache 2.0.
+- IBM provides an official `ibm-granite/granite-4.2-8b-GGUF` repository for quantised local-runtime evaluation and references the base model card.
+- Granite is positioned for enterprise workloads, which better matches DFP-NEO's commercial and Defence deployment assumptions than community or research-only models.
+
+Open checks before integration:
+
+- Copy and preserve the exact Apache 2.0 licence file from the selected base-model repository.
+- Copy and preserve any NOTICE/disclosure files required by the selected base model and selected GGUF artefact.
+- Verify the exact quantisation file used for evaluation, for example `ibm-granite/granite-4.2-8b-GGUF:Q4_K_M`.
+- Verify the selected inference runtime licence at the exact commit/build used.
+- Verify that redistribution of the selected model-weight artefact with DFP-NEO is permitted and operationally practical.
+
 ## Candidate Records
+
+### Component: IBM Granite 4.2 8B
+
+Version: `ibm-granite/granite-4.2-8b`
+Developer: IBM Granite
+Purpose: Preferred candidate local language-understanding and response-generation model.
+Official source: https://huggingface.co/ibm-granite/granite-4.2-8b
+Licence: Apache-2.0 according to IBM Granite 4.2 language-model project and IBM Granite product information.
+Licence URL/file: Candidate repository licence file must be copied and reviewed before integration.
+Commercial use permitted: Preliminary yes, subject to exact file verification.
+Modification permitted: Preliminary yes, subject to exact file verification.
+Redistribution permitted: Preliminary yes, subject to exact file verification.
+Model-weight redistribution permitted: Preliminary yes, subject to exact file verification.
+Enterprise deployment permitted: Preliminary yes, subject to exact file verification.
+Government/Defence deployment restriction: None identified in preliminary IBM/Hugging Face/GitHub materials.
+Revenue/company-size restriction: None identified in preliminary IBM/Hugging Face/GitHub materials.
+Attribution requirement: Apache-2.0 notice obligations apply.
+NOTICE requirement: Check candidate repository before integration.
+Source-code requirement: None identified for Apache-2.0.
+Network requirement: None for local model use once artefacts are installed.
+Other obligations: Preserve licence, notices and IBM model/disclosure files.
+Date licence checked: 2026-09-24.
+Integration status: Preferred candidate only, not integrated.
+
+### Component: IBM Granite 4.2 8B GGUF
+
+Version: `ibm-granite/granite-4.2-8b-GGUF`, likely initial evaluation quantisation `Q4_K_M`
+Developer: IBM Granite
+Purpose: Preferred candidate quantised local-runtime artefact for CPU/local inference evaluation.
+Official source: https://huggingface.co/ibm-granite/granite-4.2-8b-GGUF
+Licence: Must inherit/align with the base Granite 4.2 8B licence; exact repository licence and files must be checked before integration.
+Licence URL/file: Candidate repository licence file must be copied and reviewed before integration.
+Commercial use permitted: Preliminary yes via base-model Apache-2.0 position, subject to exact GGUF file verification.
+Modification permitted: Preliminary yes, subject to exact GGUF file verification.
+Redistribution permitted: Preliminary yes, subject to exact GGUF file verification.
+Model-weight redistribution permitted: Preliminary yes, subject to exact GGUF file verification.
+Enterprise deployment permitted: Preliminary yes, subject to exact GGUF file verification.
+Government/Defence deployment restriction: None identified in preliminary materials.
+Revenue/company-size restriction: None identified in preliminary materials.
+Attribution requirement: Apache-2.0 notice obligations apply.
+NOTICE requirement: Check candidate repository before integration.
+Source-code requirement: None identified for Apache-2.0.
+Network requirement: None for local model use once artefacts are installed.
+Other obligations: Preserve licence, notices, model card/disclosure references and quantisation provenance.
+Date licence checked: 2026-09-24.
+Integration status: Preferred quantised candidate only, not integrated.
 
 ### Component: IBM Granite 3.3 8B Instruct
 
 Version: `ibm-granite/granite-3.3-8b-instruct`
 Developer: IBM Granite
-Purpose: Candidate local language-understanding and response-generation model.
+Purpose: Fallback candidate local language-understanding and response-generation model.
 Official source: https://huggingface.co/ibm-granite/granite-3.3-8b-instruct
 Licence: Apache-2.0 according to Hugging Face repository metadata.
 Licence URL/file: Candidate repository licence file must be copied and reviewed before integration.
@@ -112,4 +177,3 @@ Integration status: Candidate only, not integrated.
 - Any model with a provider-specific community licence containing revenue, MAU, company-size, ownership-transfer or redistribution restrictions.
 - Any model requiring cloud inference or provider telemetry.
 - Any model where the exact quantised weights have unclear provenance or licence.
-

@@ -45,3 +45,10 @@ User question
 
 The current deterministic keyword/scoring layer can still misread a user's action even when the relevant topic is present. For example, "delete a staff member" must not resolve to "staff unavailability". This has been addressed for the observed case, but the broader solution requires a semantic interpreter and a much larger evaluation set.
 
+## Preferred Model Direction
+
+Preferred language model candidate: IBM Granite 4.2 8B.
+
+Preferred first local-runtime artefact for evaluation: IBM Granite 4.2 8B GGUF, likely `Q4_K_M`, subject to exact licence and artefact verification.
+
+This preference does not integrate model weights yet. The next implementation step is to pin the exact model artefact, copy required licence/notice files, and run the NEO Guide language evaluation set locally.
