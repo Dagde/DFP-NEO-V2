@@ -122,6 +122,7 @@ const NeoGuidePanel: React.FC<NeoGuidePanelProps> = ({
     },
   ]);
   const inputRef = useRef<HTMLInputElement | null>(null);
+  const latestMessageRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -152,6 +153,14 @@ const NeoGuidePanel: React.FC<NeoGuidePanelProps> = ({
   useEffect(() => {
     if (isOpen) window.setTimeout(() => inputRef.current?.focus(), 80);
   }, [isOpen]);
+
+  useEffect(() => {
+    if (!isOpen) return;
+    const frame = window.requestAnimationFrame(() => {
+      latestMessageRef.current?.scrollIntoView({ behavior: 'smooth', block: 'end' });
+    });
+    return () => window.cancelAnimationFrame(frame);
+  }, [isOpen, messages.length, loadError]);
 
   useEffect(() => {
     setLearnedAssociations(loadLearnedAssociations());
@@ -372,6 +381,7 @@ const NeoGuidePanel: React.FC<NeoGuidePanelProps> = ({
                 ) : null}
               </div>
             ))}
+            <div ref={latestMessageRef} aria-hidden="true" />
           </div>
 
           <form onSubmit={submitQuestion} className="border-t border-slate-700 bg-slate-900 p-3">

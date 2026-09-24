@@ -2279,6 +2279,7 @@ const NeoGuidePanel = ({
     }
   ]);
   const inputRef = reactExports.useRef(null);
+  const latestMessageRef = reactExports.useRef(null);
   reactExports.useEffect(() => {
     let cancelled = false;
     const fetchJson = (url, optional = false) => fetch(url, { cache: "no-store" }).then((response) => {
@@ -2303,6 +2304,13 @@ const NeoGuidePanel = ({
   reactExports.useEffect(() => {
     if (isOpen) window.setTimeout(() => inputRef.current?.focus(), 80);
   }, [isOpen]);
+  reactExports.useEffect(() => {
+    if (!isOpen) return;
+    const frame = window.requestAnimationFrame(() => {
+      latestMessageRef.current?.scrollIntoView({ behavior: "smooth", block: "end" });
+    });
+    return () => window.cancelAnimationFrame(frame);
+  }, [isOpen, messages.length, loadError]);
   reactExports.useEffect(() => {
     setLearnedAssociations(loadLearnedAssociations());
   }, []);
@@ -2493,7 +2501,8 @@ const NeoGuidePanel = ({
                 ]
               },
               message.id
-            ))
+            )),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("div", { ref: latestMessageRef, "aria-hidden": "true" })
           ] }),
           /* @__PURE__ */ jsxRuntimeExports.jsx("form", { onSubmit: submitQuestion, className: "border-t border-slate-700 bg-slate-900 p-3", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex gap-2", children: [
             /* @__PURE__ */ jsxRuntimeExports.jsx(
