@@ -103,6 +103,19 @@ Start the sidecar:
 npm run neo-guide:local-language-service
 ```
 
+Check whether the sidecar and local model are usable:
+
+```bash
+npm run neo-guide:local-language-check
+```
+
+The check reports two separate conditions:
+
+- Sidecar reachable: confirms the NEO Guide local service is running.
+- Model interpretation working: confirms the configured local Granite-compatible runtime returned valid interpretation JSON.
+
+If the sidecar is running but the model runtime is not, the check fails at the model step. That is expected until a local OpenAI-compatible model runtime is installed and listening at `NEO_GUIDE_LLAMACPP_URL`.
+
 Expected local model runtime:
 
 - Default endpoint: `http://127.0.0.1:8080/v1/chat/completions`
@@ -128,6 +141,8 @@ Configure the browser app to call the sidecar:
 VITE_NEO_GUIDE_LOCAL_LANGUAGE_URL=http://127.0.0.1:8765/interpret
 VITE_NEO_GUIDE_LOCAL_LANGUAGE_TIMEOUT_MS=1200
 ```
+
+The production app should only set these `VITE_` variables after the sidecar and local model runtime have passed `npm run neo-guide:local-language-check`.
 
 Production or Defence deployments should set `NEO_GUIDE_ALLOWED_ORIGIN` to the exact DFP-NEO origin and should keep `NEO_GUIDE_LLAMACPP_URL` on localhost or an approved private-network inference endpoint.
 
