@@ -165,6 +165,16 @@ const authWarningAnswer = ask('where set authorisation warning minutes');
 assert.equal(authWarningAnswer.matches[0]?.functionId, 'function.curated.settings.flight-authorisation-warnings');
 assert.match(authWarningAnswer.answer, /amber warning|red urgent|Flight authorisation required/i, 'Authorisation warning answer should explain warning minute settings.');
 
+const multiSelectAnswer = ask('can I select multiple tiles at one time');
+assert.equal(multiSelectAnswer.matches[0]?.functionId, 'function.curated.scheduling.multi-select');
+assert.match(multiSelectAnswer.answer, /Multi Select/i, 'Multi Select answer should explain the toolbar control.');
+assert.match(multiSelectAnswer.answer, /Click schedule tiles|drag a selection box/i, 'Multi Select answer should explain how to select tiles.');
+assert.doesNotMatch(multiSelectAnswer.answer, /App\.tsx|manual enrichment|component/i, 'Multi Select answer must not leak audit/source-code wording.');
+
+const unknownAnswer = ask('where is the purple banana override');
+assert.match(unknownAnswer.answer, /I don't know the answer to that yet/i, 'Unknown answers should be plain English.');
+assert.doesNotMatch(unknownAnswer.answer, /App\.tsx|manual enrichment|component|source/i, 'Unknown answers must not leak implementation jargon.');
+
 const staffFollowUp = ask('what about staff?', { conversation: answer.conversation });
 assert.equal(
   staffFollowUp.matches[0]?.functionId,

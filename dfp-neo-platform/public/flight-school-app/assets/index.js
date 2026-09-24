@@ -1533,11 +1533,21 @@ function answerNeoGuideQuestion(question, model, context = {}) {
     };
   }
   const confidence = best.score >= 22 ? "high" : best.score >= 12 ? "medium" : "low";
+  if (isThinGeneratedImplementationMatch(best)) {
+    return {
+      ...interpretation,
+      confidence: "low",
+      answer: "I don't know the answer to that yet. I couldn't find a reliable DFP-NEO guide entry for that question.",
+      conversation: nextConversation,
+      needsClarification: true,
+      clarificationQuestion: "Try asking it another way, or name the page and action you are using."
+    };
+  }
   if (confidence === "low") {
     return {
       ...interpretation,
       confidence,
-      answer: `I found a possible match: ${best.name}. I may need a little more context before giving a firm answer.`,
+      answer: "I don't know the answer to that yet. I found a possible match, but it is not reliable enough to give you instructions.",
       navigationAction: buildNavigationAction(best),
       conversation: nextConversation,
       needsClarification: true,
@@ -1562,6 +1572,20 @@ function answerNeoGuideQuestion(question, model, context = {}) {
     navigationAction: buildNavigationAction(best),
     conversation: nextConversation
   };
+}
+function isThinGeneratedImplementationMatch(match) {
+  const fn = match.function;
+  const isCurated = String(fn.id || "").startsWith("function.curated.") || String(fn.auditStatus || "").toLowerCase().includes("manual");
+  if (isCurated) return false;
+  const text = normalise([
+    fn.name,
+    fn.purpose,
+    fn.auditStatus,
+    fn.location?.component
+  ].filter(Boolean).join(" "));
+  if (/manual enrichment/.test(text)) return true;
+  if (/\b(app|component|tsx|jsx|ts|js)\b/.test(text) && /\b(control|button|input|select)\b/.test(text) && !fn.procedureSteps?.length) return true;
+  return false;
 }
 function interpretNeoGuideQuestion(question, model, context = {}) {
   const intent = detectIntent(question);

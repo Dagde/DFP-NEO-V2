@@ -478,6 +478,33 @@
       "auditStatus": "IMPLEMENTED - manually enriched from current implementation review"
     },
     {
+      "id": "function.curated.scheduling.multi-select",
+      "name": "Multi Select",
+      "aliases": ["multi select", "multi-select", "select multiple tiles", "select many tiles", "multiple flight tiles", "bulk select tiles", "rubber band select", "select several flights", "select more than one tile"],
+      "location": {
+        "page": "Program Schedule",
+        "route": null,
+        "component": "components/Header.tsx",
+        "anchor": "action-multi-select"
+      },
+      "purpose": "Turns on DFP tile multi-selection so more than one schedule tile can be selected at the same time.",
+      "procedureSteps": [
+        "Open DFP.",
+        "Click Multi Select in the top toolbar.",
+        "Click schedule tiles to add or remove them from the selection, or drag a selection box across tiles on the timeline.",
+        "Use the available bulk action for the selected tiles.",
+        "Click Multi Select again to turn the mode off."
+      ],
+      "inputs": [],
+      "outputs": ["Tracks the selected schedule tile IDs while Multi Select mode is active."],
+      "permissions": ["dfp.multiSelect.use"],
+      "dependencies": ["The current permission profile must allow Multi Select, or the user must otherwise have edit access to DFP tiles."],
+      "businessRules": ["Multi Select changes selection mode; it does not by itself edit, move or delete tiles."],
+      "failureConditions": ["The Multi Select button is disabled when the logged-in user does not have the required permission for the active DFP context."],
+      "relatedFunctions": ["function.curated.navigation.dfp", "function.curated.scheduling.validation-check", "function.curated.scheduling.flight-details"],
+      "auditStatus": "IMPLEMENTED - manually enriched from current implementation review"
+    },
+    {
       "id": "function.curated.scheduling.flight-details",
       "name": "Flight details",
       "aliases": ["flight tile details", "edit flight", "instructor field", "PIC field", "trainee field", "crew field", "syllabus item"],
