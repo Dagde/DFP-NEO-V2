@@ -554,6 +554,15 @@ assert.equal(
 );
 assert.match(deleteSelectedRowsAnswer.answer, /DFP Resource Rows|Delete Selected Rows/i, 'Resource row answer should explain DFP Resource Rows.');
 
+const labelAircraftAnswer = ask('where do I label the aircraft');
+assert.equal(
+  labelAircraftAnswer.matches[0]?.functionId,
+  'function.curated.settings.dfp-resource-rows',
+  'Aircraft label wording should resolve to DFP Resource Rows.'
+);
+assert.match(labelAircraftAnswer.answer, /DFP Resource Rows|label|aircraft/i, 'Aircraft label answer should explain resource row labels.');
+assert.equal(labelAircraftAnswer.needsClarification, false, 'Aircraft label wording should answer directly, not show irrelevant clarification options.');
+
 const turnaroundAnswer = ask('where change ac turnround');
 assert.match(turnaroundAnswer.answer, /Open Settings/i, 'Turnaround answer should include Settings steps.');
 assert.match(turnaroundAnswer.answer, /turnaround/i, 'Turnaround answer should mention the turnaround setting.');
@@ -578,6 +587,11 @@ assert.match(riskEventsAnswer.answer, /strong grades|low variance|enough attempt
 const autoNotificationAnswer = ask('who gets an auto message after a failed event');
 assert.equal(autoNotificationAnswer.matches[0]?.functionId, 'function.curated.messaging.auto-notifications');
 assert.match(autoNotificationAnswer.answer, /Course Commander|Deputy Course Commander|DFP-NEO Alerts/i, 'Auto notification answer should explain recipient/source logic.');
+
+const turnOffNotificationsAnswer = ask('how do I turn off automatic notifications');
+assert.equal(turnOffNotificationsAnswer.matches[0]?.functionId, 'function.curated.messaging.auto-notifications');
+assert.match(turnOffNotificationsAnswer.answer, /Turn the notification option on or off|notifications off|automatic message/i, 'Turn off notifications answer should explain disabling notifications.');
+assert.equal(turnOffNotificationsAnswer.needsClarification, false, 'Turn off notifications should answer directly, not show unrelated clarification options.');
 
 const authoriseFlightAnswer = ask('how can I authorise a flight');
 assert.equal(authoriseFlightAnswer.matches[0]?.functionId, 'function.curated.duty-pilot.flight-authorisation');

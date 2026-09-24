@@ -1,8 +1,8 @@
 # NEO Guide Askability Audit
 
-Generated: 2026-09-24T14:46:12.074Z
+Generated: 2026-09-24T15:04:14.220Z
 Candidates tested: 1040
-Weak or risky answers: 792
+Weak or risky answers: 793
 
 This audit asks generated plain-English questions from real controls and Guide targets, then flags answers that are weak, misleading, or too loosely matched. It is designed to catch misses such as a visible Settings term not being recognised by NEO Guide.
 
@@ -109,7 +109,7 @@ This audit asks generated plain-English questions from real controls and Guide t
 - Delete Selected Rows (components/PlatformConfigurationSettings.tsx:11284)
   - Question: how do i use Delete Selected Rows
   - Top match: DFP Resource Rows (high, overlap 1)
-  - Preview: Configures the aircraft, simulator or other DFP resource rows that appear on the daily schedule. Steps: 1. Open Settings. 2. Open Resources & Configuration. 3. Open DFP Resource Rows. 4. Click Edit and confirm your password if the section is locked. 5. Add, ed
+  - Preview: Configures the aircraft, simulator or other DFP resource rows and labels that appear on the daily schedule. Steps: 1. Open Settings. 2. Open Resources & Configuration. 3. Open DFP Resource Rows. 4. Click Edit and confirm your password if the section is locked.
 - Delete Profile (components/PlatformConfigurationSettings.tsx:12207)
   - Question: how do i use Delete Profile
   - Top match: Master Permission Profiles (high, overlap 1)
@@ -194,14 +194,10 @@ This audit asks generated plain-English questions from real controls and Guide t
   - Question: where do i set Allocated Colour
   - Top match: Formation callsigns (low, overlap 0)
   - Preview: I think you're asking about the schedule. Which of these do you mean? 1. Formation callsigns 2. Flight authorisation warning settings 3. Aircraft availability 4. Open the DFP schedule 5. Initial Setup Wizard None of these
-- Total (components/AddCourseFlyout.tsx:281)
-  - Question: where do i set Total
-  - Top match: Trainee unavailability (low, overlap 0)
-  - Preview: I don't know the answer to that yet. Please include the page or area you mean, because that term appears in more than one place.
 - No. of A/C (components/AddFlightTileModal.tsx:3560)
   - Question: where do i set No. of A/C
-  - Top match: Trainee roster (low, overlap 0)
-  - Preview: I don't know the answer to that yet. Please include the page or area you mean, because that term appears in more than one place.
+  - Top match: No. of A/C (low, overlap 0)
+  - Preview: I don't know the answer to that yet. I couldn't find a reliable DFP-NEO guide entry for that question.
 - Manifest Status (components/AddFlightTileModal.tsx:3571)
   - Question: where do i set Manifest Status
   - Top match: Trainee roster (low, overlap 0)
@@ -210,18 +206,6 @@ This audit asks generated plain-English questions from real controls and Guide t
   - Question: where do i set Second Person
   - Top match: Rank, Terminology & Labels (low, overlap 0)
   - Preview: I think you're asking about the schedule. Which of these do you mean? 1. Rank, Terminology & Labels 2. Personnel Qualifications 3. Profile photo 4. Remove unavailability 5. Flight authorisation None of these
-- CONFIG (components/AddFlightTileModal.tsx:3867)
-  - Question: where do i set CONFIG
-  - Top match: Open the DFP schedule (low, overlap 0)
-  - Preview: I don't know the answer to that yet. Please include the page or area you mean, because that term appears in more than one place.
-- Area (components/AddFlightTileModal.tsx:3887)
-  - Question: where do i set Area
-  - Top match: Audit log recording settings (low, overlap 0)
-  - Preview: I don't know the answer to that yet. Please include the page or area you mean, because that term appears in more than one place.
-- Aircraft (components/AddFlightTileModal.tsx:3897)
-  - Question: where do i set Aircraft
-  - Top match: NEO Build (low, overlap 0)
-  - Preview: I don't know the answer to that yet. Please include the page or area you mean, because that term appears in more than one place.
 - cpt-resource (components/AddGroundEventFlyout.tsx:416)
   - Question: where do i set cpt-resource
   - Top match: Aircraft availability (low, overlap 0)
@@ -230,18 +214,10 @@ This audit asks generated plain-English questions from real controls and Guide t
   - Question: where do i set Ground Resource
   - Top match: Aircraft availability (low, overlap 0)
   - Preview: I think you're asking about the schedule. Which of these do you mean? 1. Aircraft availability 2. Flight detail fields 3. DFP Resource Rows 4. NEO Build 5. Build priorities None of these
-- Reason (components/AddUnavailabilityFlyout.tsx:222)
-  - Question: where do i set Reason
-  - Top match: Cancel, restore or delete a scheduled event (low, overlap 0)
-  - Preview: I don't know the answer to that yet. Please include the page or area you mean, because that term appears in more than one place.
 - Add Custom Period (components/AddUnavailabilityFlyout.tsx:237)
   - Question: how do i use Add Custom Period
   - Top match: Flight details (low, overlap 0)
   - Preview: I think you're asking about trainee management. Which of these do you mean? 1. Flight details 2. Trainee unavailability 3. Add ground event 4. Archived staff None of these
-- Assessment (components/AirCombatTrainingReportModal.tsx:1113)
-  - Question: where do i set Assessment
-  - Top match: Open the DFP schedule (low, overlap 0)
-  - Preview: I don't know the answer to that yet. Please include the page or area you mean, because that term appears in more than one place.
 - Export to CSV (components/AuditFlyout.tsx:587)
   - Question: how do i use Export to CSV
   - Top match: Flight details (low, overlap 0)
@@ -249,7 +225,7 @@ This audit asks generated plain-English questions from real controls and Guide t
 - Affected Record (components/AuditFlyout.tsx:816)
   - Question: where do i set Affected Record
   - Top match: Trainee roster (low, overlap 0)
-  - Preview: I think you're asking about trainee management. Which of these do you mean? 1. Trainee roster 2. Formation callsigns 3. User accounts 4. Course management 5. Remove unavailability None of these
+  - Preview: I think you're asking about trainee management. Which of these do you mean? 1. Trainee roster 2. Formation callsigns 3. User accounts 4. Delete or Archive Trainee 5. Course management None of these
 - Clear Auth (components/AuthorisationFlyout.tsx:684)
   - Question: how do i use Clear Auth
   - Top match: Flight details (low, overlap 0)
@@ -262,14 +238,6 @@ This audit asks generated plain-English questions from real controls and Guide t
   - Question: how do i use Export CSV
   - Top match: Flight details (low, overlap 0)
   - Preview: I think you're asking about Program Schedule. Which of these do you mean? 1. Flight details 2. Publish DFP 3. Cancel, restore or delete a scheduled event 4. Archived staff 5. Export configuration report None of these
-- course rankings (components/CourseProgressView.tsx:1221)
-  - Question: where do i set course rankings
-  - Top match: Training report (low, overlap 0)
-  - Preview: I think you're asking about trainee management. Which of these do you mean? 1. Training report 2. Training auto notifications 3. Rank, Terminology & Labels 4. Course leadership assignments 5. Trainee roster None of these
-- getAwardDisplayName(award) (components/CourseProgressView.tsx:1257)
-  - Question: where do i set getAwardDisplayName(award)
-  - Top match: Name (low, overlap 0)
-  - Preview: I don't know the answer to that yet. I couldn't find a reliable DFP-NEO guide entry for that question.
 - Add Award (components/CourseProgressView.tsx:1270)
   - Question: how do i use Add Award
   - Top match: Flight details (low, overlap 0)
@@ -281,11 +249,15 @@ This audit asks generated plain-English questions from real controls and Guide t
 - Award Name (components/CourseProgressView.tsx:1328)
   - Question: where do i set Award Name
   - Top match: Rank, Terminology & Labels (low, overlap 0)
-  - Preview: I think you're asking about Settings. Which of these do you mean? 1. Rank, Terminology & Labels 2. Staff Rank Equivalency Table 3. Personnel Qualifications 4. Course setup fields None of these
+  - Preview: I think you're asking about Settings. Which of these do you mean? 1. Rank, Terminology & Labels 2. Staff Rank Equivalency Table 3. Personnel Qualifications 4. DFP Resource Rows 5. Course setup fields None of these
 - Search currencies... (components/CurrencyBuilderView.tsx:245)
   - Question: where do i set Search currencies...
   - Top match: NEO Build (low, overlap 0)
   - Preview: I think you're asking about DFP-NEO. Which of these do you mean? 1. NEO Build 2. Priority and currency requests 3. Currency audit and dates 4. Special continuation training request None of these
+- Rolling Window (components/CurrencyBuilderView.tsx:391)
+  - Question: where do i set Rolling Window
+  - Top match: Cancel Impacted Events (low, overlap 0)
+  - Preview: I think you're asking about the schedule. Which of these do you mean? 1. Cancel Impacted Events 2. Flight authorisation None of these
 - Use Earliest Expiry (components/CurrencyBuilderView.tsx:498)
   - Question: where do i set Use Earliest Expiry
   - Top match: Rank, Terminology & Labels (low, overlap 0)
@@ -317,15 +289,11 @@ This audit asks generated plain-English questions from real controls and Guide t
 - Verify server certificate (components/EmailActivationSettings.tsx:240)
   - Question: where do i set Verify server certificate
   - Top match: My Home messages (low, overlap 0)
-  - Preview: I think you're asking about DFP-NEO. Which of these do you mean? 1. My Home messages None of these
+  - Preview: I think you're asking about DFP-NEO. Which of these do you mean? 1. My Home messages 2. Cancel Impacted Events None of these
 - PAX (components/FlightDetailModal.tsx:1916)
   - Question: where do i set PAX
   - Top match: Select label.toLowerCase() (low, overlap 0)
   - Preview: I don't know the answer to that yet. I couldn't find a reliable DFP-NEO guide entry for that question.
-- Pilot (components/FlightDetailModal.tsx:3256)
-  - Question: where do i set Pilot
-  - Top match: Staff unavailability (low, overlap 0)
-  - Preview: I don't know the answer to that yet. Please include the page or area you mean, because that term appears in more than one place.
 - Add Deployment (components/FlightDetailModal.tsx:3463)
   - Question: how do i use Add Deployment
   - Top match: Flight details (low, overlap 0)
@@ -333,14 +301,6 @@ This audit asks generated plain-English questions from real controls and Guide t
 - LMP (components/FlightDetailModal.tsx:3525)
   - Question: where do i set LMP
   - Top match: Primary and Secondary Instructor (low, overlap 0)
-  - Preview: I don't know the answer to that yet. Please include the page or area you mean, because that term appears in more than one place.
-- Area (components/FlightDetailModal.tsx:3759)
-  - Question: where do i set Area
-  - Top match: Audit log recording settings (low, overlap 0)
-  - Preview: I don't know the answer to that yet. Please include the page or area you mean, because that term appears in more than one place.
-- CONFIG (components/FlightDetailModal.tsx:3771)
-  - Question: where do i set CONFIG
-  - Top match: Open the DFP schedule (low, overlap 0)
   - Preview: I don't know the answer to that yet. Please include the page or area you mean, because that term appears in more than one place.
 - Local Land Away (components/FlightDetailModal.tsx:3788)
   - Question: where do i set Local Land Away
@@ -366,10 +326,6 @@ This audit asks generated plain-English questions from real controls and Guide t
   - Question: where do i set Invalid
   - Top match: Export configuration report (low, overlap 0)
   - Preview: I don't know the answer to that yet. Please include the page or area you mean, because that term appears in more than one place.
-- person (components/FlightDetailModal.tsx:4493)
-  - Question: where do i set person
-  - Top match: Staff unavailability (low, overlap 0)
-  - Preview: I don't know the answer to that yet. Please include the page or area you mean, because that term appears in more than one place.
 - All Courses (components/FullPageProgressGraph.tsx:76)
   - Question: what is All Courses
   - Top match: Master LMP Access (low, overlap 0)
@@ -377,7 +333,7 @@ This audit asks generated plain-English questions from real controls and Guide t
 - Filter staff by role (components/InstructorListView.tsx:735)
   - Question: where do i set Filter staff by role
   - Top match: Formation callsigns (low, overlap 0)
-  - Preview: I think you're asking about Settings. Which of these do you mean? 1. Formation callsigns 2. Rank, Terminology & Labels 3. Master Permission Profiles 4. Training report None of these
+  - Preview: I think you're asking about Settings. Which of these do you mean? 1. Formation callsigns 2. Rank, Terminology & Labels 3. Master Permission Profiles None of these
 - Open current profile (components/InstructorProfileFlyout.tsx:1321)
   - Question: how do i use Open current profile
   - Top match: Multi Select (low, overlap 0)
@@ -390,13 +346,17 @@ This audit asks generated plain-English questions from real controls and Guide t
   - Question: where do i set UnCat
   - Top match: Open the DFP schedule (low, overlap 0)
   - Preview: I don't know the answer to that yet. Please include the page or area you mean, because that term appears in more than one place.
-- Qualifications (components/InstructorProfileFlyout.tsx:2173)
-  - Question: where do i set Qualifications
-  - Top match: NEO Build (low, overlap 0)
-  - Preview: I don't know the answer to that yet. Please include the page or area you mean, because that term appears in more than one place.
+- FWD/SHORT (components/InstructorProfileFlyout.tsx:2145)
+  - Question: where do i set FWD/SHORT
+  - Top match: Print (low, overlap 0)
+  - Preview: I don't know the answer to that yet. I couldn't find a reliable DFP-NEO guide entry for that question.
+- REAR/SHORT (components/InstructorProfileFlyout.tsx:2145)
+  - Question: where do i set REAR/SHORT
+  - Top match: Print (low, overlap 0)
+  - Preview: I don't know the answer to that yet. I couldn't find a reliable DFP-NEO guide entry for that question.
 - Logbook (components/InstructorProfileFlyout.tsx:2567)
   - Question: where do i set Logbook
-  - Top match: ‹ (low, overlap 0)
+  - Top match: Print (low, overlap 0)
   - Preview: I don't know the answer to that yet. I couldn't find a reliable DFP-NEO guide entry for that question.
 - Click to select date (components/InstructorScheduleView.tsx:766)
   - Question: where do i set Click to select date
@@ -405,7 +365,7 @@ This audit asks generated plain-English questions from real controls and Guide t
 - Arrangement Name (components/OrganisationSettings.tsx:884)
   - Question: where do i set Arrangement Name
   - Top match: Rank, Terminology & Labels (low, overlap 0)
-  - Preview: I think you're asking about Settings. Which of these do you mean? 1. Rank, Terminology & Labels 2. Staff Rank Equivalency Table 3. Personnel Qualifications 4. Course setup fields None of these
+  - Preview: I think you're asking about Settings. Which of these do you mean? 1. Rank, Terminology & Labels 2. Staff Rank Equivalency Table 3. Personnel Qualifications 4. DFP Resource Rows 5. Course setup fields None of these
 - Add Arrangement (components/OrganisationSettings.tsx:896)
   - Question: how do i use Add Arrangement
   - Top match: Flight details (low, overlap 0)
@@ -473,7 +433,7 @@ This audit asks generated plain-English questions from real controls and Guide t
 - Element Name (components/PlatformConfigurationSettings.tsx:12688)
   - Question: where do i set Element Name
   - Top match: Rank, Terminology & Labels (low, overlap 0)
-  - Preview: I think you're asking about Settings. Which of these do you mean? 1. Rank, Terminology & Labels 2. Staff Rank Equivalency Table 3. Personnel Qualifications 4. Scoring matrix elements 5. Course setup fields None of these
+  - Preview: I think you're asking about Settings. Which of these do you mean? 1. Rank, Terminology & Labels 2. Staff Rank Equivalency Table 3. Personnel Qualifications 4. DFP Resource Rows 5. Scoring matrix elements None of these
 - Add Element (components/PlatformConfigurationSettings.tsx:12791)
   - Question: how do i use Add Element
   - Top match: Flight details (low, overlap 0)
@@ -486,3 +446,43 @@ This audit asks generated plain-English questions from real controls and Guide t
   - Question: how do i use Add Callsign
   - Top match: Flight details (low, overlap 0)
   - Preview: I think you're asking about staff management. Which of these do you mean? 1. Flight details 2. Add ground event 3. Archived staff None of these
+- Add Scope (components/PlatformConfigurationSettings.tsx:14213)
+  - Question: how do i use Add Scope
+  - Top match: Flight details (low, overlap 0)
+  - Preview: I think you're asking about staff management. Which of these do you mean? 1. Flight details 2. Add ground event 3. Archived staff 4. My Home messages None of these
+- Apply to Selected (components/PlatformConfigurationSettings.tsx:14389)
+  - Question: where do i set Apply to Selected
+  - Top match: Open the DFP schedule (low, overlap 0)
+  - Preview: I think you're asking about the schedule. Which of these do you mean? 1. Open the DFP schedule 2. Training report 3. Multi Select 4. Flight detail fields 5. DFP Resource Rows None of these
+- preview-mission-status (components/PlatformConfigurationSettings.tsx:15884)
+  - Question: where do i set preview-mission-status
+  - Top match: Trainee roster (low, overlap 0)
+  - Preview: I think you're asking about trainee management. Which of these do you mean? 1. Trainee roster 2. Flight authorisation warning settings 3. Aircraft availability None of these
+- Search by name... (components/PlatformConfigurationSettings.tsx:16204)
+  - Question: where do i set Search by name...
+  - Top match: Rank, Terminology & Labels (low, overlap 0)
+  - Preview: I think you're asking about Settings. Which of these do you mean? 1. Rank, Terminology & Labels 2. Formation callsigns 3. DFP Resource Rows 4. Aircraft availability 5. Course setup fields None of these
+- HH:MM (components/PostFlightView.tsx:1613)
+  - Question: where do i set HH:MM
+  - Top match: HH:MM (low, overlap 0)
+  - Preview: I don't know the answer to that yet. I couldn't find a reliable DFP-NEO guide entry for that question.
+- IF Actual (components/PostFlightView.tsx:1686)
+  - Question: where do i set IF Actual
+  - Top match: Initial Setup Wizard (low, overlap 0)
+  - Preview: I think you're asking about the schedule. Which of these do you mean? 1. Initial Setup Wizard 2. Formation callsigns 3. Add flight tile 4. Rank, Terminology & Labels 5. Open the DFP schedule None of these
+- Priority Mode (components/PrioritiesView.tsx:5560)
+  - Question: where do i set Priority Mode
+  - Top match: Staff Rank Equivalency Table (low, overlap 0)
+  - Preview: I think you're asking about staff management. Which of these do you mean? 1. Staff Rank Equivalency Table 2. Multi Select 3. Profile photo 4. Primary and Secondary Instructor 5. Build priorities None of these
+- Search trainees... (components/ProgramDataView.tsx:789)
+  - Question: where do i set Search trainees...
+  - Top match: Rank, Terminology & Labels (low, overlap 0)
+  - Preview: I think you're asking about trainee management. Which of these do you mean? 1. Rank, Terminology & Labels 2. Trainee Rank Order 3. Trainee roster 4. Training report 5. Course Scores table None of these
+- All Courses (components/ProgramDataView.tsx:812)
+  - Question: where do i set All Courses
+  - Top match: Trainee roster (low, overlap 0)
+  - Preview: I think you're asking about Trainee. Which of these do you mean? 1. Trainee roster 2. Training report 3. Delete or Archive Trainee 4. Course management None of these
+- HH:MM (components/ScheduleView.tsx:2790)
+  - Question: where do i set HH:MM
+  - Top match: HH:MM (low, overlap 0)
+  - Preview: I don't know the answer to that yet. I couldn't find a reliable DFP-NEO guide entry for that question.

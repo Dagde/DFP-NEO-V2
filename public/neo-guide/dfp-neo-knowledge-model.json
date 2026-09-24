@@ -1,6 +1,6 @@
 {
   "schemaVersion": "neo-guide-runtime-model.v1",
-  "generatedAt": "2026-09-24T14:44:29.258Z",
+  "generatedAt": "2026-09-24T15:01:40.342Z",
   "source": {
     "repository": "clone-the-repo-dagde-dfp-neo",
     "sourceFileCount": 377,
@@ -8814,6 +8814,7 @@
       ],
       "sources": [
         "curated:function.curated.people.archive-delete-trainee:steps",
+        "curated:function.curated.messaging.auto-notifications:steps",
         "curated:function.curated.scheduling.pause-flight-ops:steps",
         "curated:function.curated.people.archived-staff:steps",
         "curated:function.curated.settings.currency-builder:steps",
@@ -8823,10 +8824,9 @@
         "curated:function.curated.scheduling.priority-currency-requests:steps",
         "curated:function.curated.scheduling.sct-request:steps",
         "curated:function.curated.training.complete-training:steps",
-        "curated:function.curated.training.training-report-fields:steps",
-        "curated:function.curated.training.post-flight-inputs:steps"
+        "curated:function.curated.training.training-report-fields:steps"
       ],
-      "count": 423
+      "count": 424
     },
     {
       "term": "Delete",
@@ -8928,6 +8928,7 @@
       "sources": [
         "curated:function.curated.training.course-setup-fields:alias",
         "curated:function.curated.settings.formation-callsigns:steps",
+        "curated:function.curated.settings.dfp-resource-rows:alias",
         "control:App.tsx:1753",
         "control-attribute:App.tsx:1753",
         "control:App.tsx:4172",
@@ -8936,10 +8937,9 @@
         "control:App.tsx:4398",
         "control-attribute:App.tsx:4398",
         "control:App.tsx:4411",
-        "control-attribute:App.tsx:4411",
-        "control-attribute:App.tsx:4531"
+        "control-attribute:App.tsx:4411"
       ],
-      "count": 304
+      "count": 306
     },
     {
       "term": "text",
@@ -8976,16 +8976,16 @@
         "curated:function.curated.people.staff-unavailability:steps",
         "curated:function.curated.people.instructor-assignment:steps",
         "curated:function.curated.training.training-report:steps",
+        "curated:function.curated.messaging.auto-notifications:steps",
         "curated:function.curated.scheduling.flight-details:steps",
         "curated:function.curated.scheduling.add-flight-tile:steps",
         "curated:function.curated.people.move-trainee-course:steps",
         "curated:function.curated.settings.currency-builder:alias",
         "curated:function.curated.settings.currency-builder:steps",
         "curated:function.curated.training.scoring-matrix-elements:steps",
-        "curated:function.curated.training.syllabus-management:steps",
-        "curated:function.curated.training.remedial-packages:alias"
+        "curated:function.curated.training.syllabus-management:steps"
       ],
-      "count": 301
+      "count": 302
     },
     {
       "term": "number",
@@ -9184,6 +9184,28 @@
       "count": 248
     },
     {
+      "term": "label",
+      "normalised": "label",
+      "aliases": [
+        "Label"
+      ],
+      "sources": [
+        "curated:function.curated.settings.crew-position-labels:steps",
+        "curated:function.curated.settings.crew-position-labels:input",
+        "curated:function.curated.settings.dfp-resource-rows:alias",
+        "curated:function.curated.settings.dfp-resource-rows:steps",
+        "control:App.tsx:4878",
+        "control:App.tsx:5307",
+        "control:App.tsx:5499",
+        "control:App.tsx:5824",
+        "control-attribute:App.tsx:5824",
+        "control:App.tsx:5825",
+        "control-attribute:App.tsx:5825",
+        "control:App.tsx:5931"
+      ],
+      "count": 206
+    },
+    {
       "term": "Cancel",
       "normalised": "cancel",
       "aliases": [
@@ -9206,28 +9228,6 @@
         "control:components/ACHistoryAircraftAvailability.tsx:1025"
       ],
       "count": 199
-    },
-    {
-      "term": "label",
-      "normalised": "label",
-      "aliases": [
-        "Label"
-      ],
-      "sources": [
-        "curated:function.curated.settings.crew-position-labels:steps",
-        "curated:function.curated.settings.crew-position-labels:input",
-        "control:App.tsx:4878",
-        "control:App.tsx:5307",
-        "control:App.tsx:5499",
-        "control:App.tsx:5824",
-        "control-attribute:App.tsx:5824",
-        "control:App.tsx:5825",
-        "control-attribute:App.tsx:5825",
-        "control:App.tsx:5931",
-        "control:components/AddCourseFlyout.tsx:44",
-        "control:components/AddFlightTileModal.tsx:3435"
-      ],
-      "count": 198
     },
     {
       "term": "user",
@@ -9298,7 +9298,7 @@
         "curated:function.curated.training.course-progress:steps",
         "curated:function.curated.training.training-report:steps"
       ],
-      "count": 190
+      "count": 191
     },
     {
       "term": "All",
@@ -9480,6 +9480,29 @@
       "count": 170
     },
     {
+      "term": "Aircraft",
+      "normalised": "aircraft",
+      "aliases": [
+        "aircraft",
+        "Aircraft[]"
+      ],
+      "sources": [
+        "curated:function.curated.scheduling.aircraft-availability",
+        "curated:function.curated.scheduling.aircraft-availability:alias",
+        "curated:function.curated.scheduling.aircraft-availability:purpose",
+        "curated:function.curated.scheduling.aircraft-availability:steps",
+        "curated:function.curated.settings.configuration-report:alias",
+        "curated:function.curated.scheduling.add-flight-tile:alias",
+        "curated:function.curated.scheduling.flight-detail-fields:alias",
+        "curated:function.curated.training.post-flight-inputs:alias",
+        "curated:function.curated.settings.dfp-resource-rows:alias",
+        "curated:function.curated.settings.dfp-resource-rows:purpose",
+        "curated:function.curated.settings.turnaround:alias",
+        "curated:synonym:flight tracking"
+      ],
+      "count": 168
+    },
+    {
       "term": "not",
       "normalised": "not",
       "aliases": [
@@ -9552,6 +9575,7 @@
       ],
       "sources": [
         "curated:function.curated.training.course-progress:steps",
+        "curated:function.curated.messaging.auto-notifications:alias",
         "curated:function.curated.scheduling.validation-check:steps",
         "curated:function.curated.settings.currency-builder:steps",
         "curated:function.curated.settings.configuration-report:alias",
@@ -9561,33 +9585,9 @@
         "curated:function.curated.settings.audit-log-recording",
         "curated:function.curated.settings.audit-log-recording:alias",
         "curated:function.curated.settings.audit-log-recording:steps",
-        "curated:function.curated.settings.unit-callsigns:alias",
-        "curated:function.curated.settings.unit-callsigns:steps"
+        "curated:function.curated.settings.unit-callsigns:alias"
       ],
-      "count": 161
-    },
-    {
-      "term": "Aircraft",
-      "normalised": "aircraft",
-      "aliases": [
-        "aircraft",
-        "Aircraft[]"
-      ],
-      "sources": [
-        "curated:function.curated.scheduling.aircraft-availability",
-        "curated:function.curated.scheduling.aircraft-availability:alias",
-        "curated:function.curated.scheduling.aircraft-availability:purpose",
-        "curated:function.curated.scheduling.aircraft-availability:steps",
-        "curated:function.curated.settings.configuration-report:alias",
-        "curated:function.curated.scheduling.add-flight-tile:alias",
-        "curated:function.curated.scheduling.flight-detail-fields:alias",
-        "curated:function.curated.training.post-flight-inputs:alias",
-        "curated:function.curated.settings.dfp-resource-rows:alias",
-        "curated:function.curated.settings.dfp-resource-rows:purpose",
-        "curated:function.curated.settings.turnaround:alias",
-        "curated:synonym:flight tracking"
-      ],
-      "count": 160
+      "count": 163
     },
     {
       "term": "option",
@@ -9831,6 +9831,28 @@
       "count": 119
     },
     {
+      "term": "training",
+      "normalised": "training",
+      "aliases": [
+        "Training"
+      ],
+      "sources": [
+        "curated:function.curated.workflow.initial-setup-wizard:steps",
+        "curated:function.curated.training.course-management:steps",
+        "curated:function.curated.training.archive-course:steps",
+        "curated:function.curated.training.course-progress:steps",
+        "curated:function.curated.training.training-report",
+        "curated:function.curated.training.training-report:purpose",
+        "curated:function.curated.training.training-report:steps",
+        "curated:function.curated.messaging.auto-notifications",
+        "curated:function.curated.messaging.auto-notifications:alias",
+        "curated:function.curated.messaging.auto-notifications:purpose",
+        "curated:function.curated.messaging.auto-notifications:steps",
+        "curated:function.curated.settings.currency-builder:steps"
+      ],
+      "count": 117
+    },
+    {
       "term": "rounded md",
       "normalised": "rounded md",
       "aliases": [],
@@ -9869,28 +9891,6 @@
         "message:App.tsx:35517",
         "message:App.tsx:36363",
         "message:App.tsx:36392"
-      ],
-      "count": 115
-    },
-    {
-      "term": "training",
-      "normalised": "training",
-      "aliases": [
-        "Training"
-      ],
-      "sources": [
-        "curated:function.curated.workflow.initial-setup-wizard:steps",
-        "curated:function.curated.training.course-management:steps",
-        "curated:function.curated.training.archive-course:steps",
-        "curated:function.curated.training.course-progress:steps",
-        "curated:function.curated.training.training-report",
-        "curated:function.curated.training.training-report:purpose",
-        "curated:function.curated.training.training-report:steps",
-        "curated:function.curated.messaging.auto-notifications",
-        "curated:function.curated.messaging.auto-notifications:purpose",
-        "curated:function.curated.messaging.auto-notifications:steps",
-        "curated:function.curated.settings.currency-builder:steps",
-        "curated:function.curated.training.scoring-matrix-elements:purpose"
       ],
       "count": 115
     },
@@ -10220,26 +10220,6 @@
       "count": 92
     },
     {
-      "term": "font semibold",
-      "normalised": "font semibold",
-      "aliases": [],
-      "sources": [
-        "message:App.tsx:6024",
-        "message:App.tsx:56839",
-        "message:App.tsx:56892",
-        "message:components/AccountAccessPanel.tsx:243",
-        "message:components/AccountAccessPanel.tsx:252",
-        "message:components/AccountAccessPanel.tsx:260",
-        "message:components/AddCourseFlyout.tsx:295",
-        "message:components/AddRemedialPackageFlyout.tsx:526",
-        "message:components/AdminPanel.tsx:585",
-        "message:components/AirCombatTrainingReportModal.tsx:1120",
-        "message:components/AircraftAvailabilityPanel.tsx:261",
-        "message:components/AircraftAvailabilityPanel.tsx:268"
-      ],
-      "count": 90
-    },
-    {
       "term": "report",
       "normalised": "report",
       "aliases": [
@@ -10258,6 +10238,26 @@
         "curated:function.curated.training.training-report-fields:alias",
         "curated:function.curated.training.training-report-fields:purpose",
         "curated:function.curated.training.training-report-fields:steps"
+      ],
+      "count": 91
+    },
+    {
+      "term": "font semibold",
+      "normalised": "font semibold",
+      "aliases": [],
+      "sources": [
+        "message:App.tsx:6024",
+        "message:App.tsx:56839",
+        "message:App.tsx:56892",
+        "message:components/AccountAccessPanel.tsx:243",
+        "message:components/AccountAccessPanel.tsx:252",
+        "message:components/AccountAccessPanel.tsx:260",
+        "message:components/AddCourseFlyout.tsx:295",
+        "message:components/AddRemedialPackageFlyout.tsx:526",
+        "message:components/AdminPanel.tsx:585",
+        "message:components/AirCombatTrainingReportModal.tsx:1120",
+        "message:components/AircraftAvailabilityPanel.tsx:261",
+        "message:components/AircraftAvailabilityPanel.tsx:268"
       ],
       "count": 90
     },
@@ -11104,29 +11104,6 @@
       "count": 65
     },
     {
-      "term": "Check",
-      "normalised": "check",
-      "aliases": [
-        "check",
-        "CHECK"
-      ],
-      "sources": [
-        "curated:function.curated.messaging.auto-notifications:steps",
-        "curated:function.curated.scheduling.neo-build:steps",
-        "curated:function.curated.scheduling.validation-check",
-        "curated:function.curated.scheduling.validation-check:steps",
-        "curated:function.curated.scheduling.aircraft-availability:steps",
-        "curated:function.curated.scheduling.add-flight-tile:steps",
-        "curated:function.curated.scheduling.publish-dfp:steps",
-        "curated:function.curated.training.syllabus-management:steps",
-        "curated:function.curated.scheduling.priority-currency-requests:steps",
-        "curated:function.curated.scheduling.flight-detail-fields:steps",
-        "curated:function.curated.settings.turnaround:steps",
-        "curated:function.curated.training.course-score-table:steps"
-      ],
-      "count": 64
-    },
-    {
       "term": "created At",
       "normalised": "created at",
       "aliases": [],
@@ -11167,6 +11144,29 @@
         "control-attribute:components/MyDashboard.tsx:3675"
       ],
       "count": 64
+    },
+    {
+      "term": "Check",
+      "normalised": "check",
+      "aliases": [
+        "check",
+        "CHECK"
+      ],
+      "sources": [
+        "curated:function.curated.scheduling.neo-build:steps",
+        "curated:function.curated.scheduling.validation-check",
+        "curated:function.curated.scheduling.validation-check:steps",
+        "curated:function.curated.scheduling.aircraft-availability:steps",
+        "curated:function.curated.scheduling.add-flight-tile:steps",
+        "curated:function.curated.scheduling.publish-dfp:steps",
+        "curated:function.curated.training.syllabus-management:steps",
+        "curated:function.curated.scheduling.priority-currency-requests:steps",
+        "curated:function.curated.scheduling.flight-detail-fields:steps",
+        "curated:function.curated.settings.turnaround:steps",
+        "curated:function.curated.training.course-score-table:steps",
+        "curated:function.curated.training.course-ranking-awards:steps"
+      ],
+      "count": 63
     },
     {
       "term": "new",
@@ -11453,6 +11453,29 @@
       "count": 59
     },
     {
+      "term": "training report",
+      "normalised": "training report",
+      "aliases": [
+        "Training report",
+        "Training Report"
+      ],
+      "sources": [
+        "curated:function.curated.training.course-progress:steps",
+        "curated:function.curated.training.training-report",
+        "curated:function.curated.training.training-report:steps",
+        "curated:function.curated.messaging.auto-notifications:purpose",
+        "curated:function.curated.messaging.auto-notifications:steps",
+        "curated:function.curated.training.training-report-fields",
+        "curated:function.curated.training.training-report-fields:alias",
+        "curated:function.curated.training.training-report-fields:purpose",
+        "curated:function.curated.training.training-report-fields:steps",
+        "curated:function.curated.training.course-score-table:purpose",
+        "curated:function.curated.training.course-score-table:steps",
+        "control:components/InstructorProfileFlyout.tsx:1643"
+      ],
+      "count": 59
+    },
+    {
       "term": "audit",
       "normalised": "audit",
       "aliases": [
@@ -11491,29 +11514,6 @@
         "message:components/AccountAccessPanel.tsx:111",
         "message:components/ACHistoryAircraftAvailability.tsx:684",
         "message:components/ACHistoryIntelligencePanel.tsx:53"
-      ],
-      "count": 58
-    },
-    {
-      "term": "training report",
-      "normalised": "training report",
-      "aliases": [
-        "Training report",
-        "Training Report"
-      ],
-      "sources": [
-        "curated:function.curated.training.course-progress:steps",
-        "curated:function.curated.training.training-report",
-        "curated:function.curated.training.training-report:steps",
-        "curated:function.curated.messaging.auto-notifications:purpose",
-        "curated:function.curated.messaging.auto-notifications:steps",
-        "curated:function.curated.training.training-report-fields",
-        "curated:function.curated.training.training-report-fields:alias",
-        "curated:function.curated.training.training-report-fields:purpose",
-        "curated:function.curated.training.training-report-fields:steps",
-        "curated:function.curated.training.course-score-table:purpose",
-        "curated:function.curated.training.course-score-table:steps",
-        "control:components/InstructorProfileFlyout.tsx:1643"
       ],
       "count": 58
     },
@@ -11903,6 +11903,28 @@
       "count": 52
     },
     {
+      "term": "options",
+      "normalised": "options",
+      "aliases": [
+        "OPTIONS"
+      ],
+      "sources": [
+        "curated:function.curated.training.training-report:steps",
+        "curated:function.curated.messaging.auto-notifications:steps",
+        "curated:function.curated.settings.audit-log-recording:purpose",
+        "curated:function.curated.settings.personnel-qualifications:alias",
+        "curated:function.curated.settings.personnel-qualifications:purpose",
+        "control-attribute:components/TrainingRecordsExportView.tsx:1644",
+        "control-attribute:components/TrainingRecordsExportView.tsx:1686",
+        "component:dfp-neo-platform/app/api/aircraft-availability-current/route.ts:6",
+        "component:dfp-neo-platform/app/api/aircraft-availability-debug/route.ts:32",
+        "component:dfp-neo-platform/app/api/aircraft-availability-events/route.ts:6",
+        "component:dfp-neo-platform/app/api/aircraft-availability-history/route.ts:6",
+        "component:dfp-neo-platform/app/api/aircraft-availability-recalculate/route.ts:6"
+      ],
+      "count": 52
+    },
+    {
       "term": "py 1",
       "normalised": "py 1",
       "aliases": [],
@@ -11982,28 +12004,6 @@
         "message:components/FlightDetailModal.tsx:1898",
         "message:components/FlightDetailModal.tsx:3079",
         "message:components/FlightDetailModal.tsx:3224"
-      ],
-      "count": 51
-    },
-    {
-      "term": "options",
-      "normalised": "options",
-      "aliases": [
-        "OPTIONS"
-      ],
-      "sources": [
-        "curated:function.curated.training.training-report:steps",
-        "curated:function.curated.settings.audit-log-recording:purpose",
-        "curated:function.curated.settings.personnel-qualifications:alias",
-        "curated:function.curated.settings.personnel-qualifications:purpose",
-        "control-attribute:components/TrainingRecordsExportView.tsx:1644",
-        "control-attribute:components/TrainingRecordsExportView.tsx:1686",
-        "component:dfp-neo-platform/app/api/aircraft-availability-current/route.ts:6",
-        "component:dfp-neo-platform/app/api/aircraft-availability-debug/route.ts:32",
-        "component:dfp-neo-platform/app/api/aircraft-availability-events/route.ts:6",
-        "component:dfp-neo-platform/app/api/aircraft-availability-history/route.ts:6",
-        "component:dfp-neo-platform/app/api/aircraft-availability-recalculate/route.ts:6",
-        "component:dfp-neo-platform/app/api/aircraft/route.ts:8"
       ],
       "count": 51
     },
@@ -12893,6 +12893,28 @@
       "count": 43
     },
     {
+      "term": "resource",
+      "normalised": "resource",
+      "aliases": [
+        "Resource"
+      ],
+      "sources": [
+        "curated:function.curated.scheduling.add-flight-tile:steps",
+        "curated:function.curated.training.post-flight-inputs:alias",
+        "curated:function.curated.settings.dfp-resource-rows",
+        "curated:function.curated.settings.dfp-resource-rows:alias",
+        "curated:function.curated.settings.dfp-resource-rows:purpose",
+        "curated:function.curated.settings.dfp-resource-rows:steps",
+        "curated:function.curated.settings.turnaround:steps",
+        "control:App.tsx:5457",
+        "control:components/AddGroundEventFlyout.tsx:415",
+        "control:components/AddGroundEventFlyout.tsx:424",
+        "control:components/OrganisationSettings.tsx:1016",
+        "control:components/OrganisationSettings.tsx:1207"
+      ],
+      "count": 43
+    },
+    {
       "term": "start Time",
       "normalised": "start time",
       "aliases": [
@@ -13022,28 +13044,6 @@
         "control:components/ScheduleView.tsx:13764",
         "control:components/ScheduleView.tsx:13773",
         "control:components/ScheduleView.tsx:13775"
-      ],
-      "count": 42
-    },
-    {
-      "term": "resource",
-      "normalised": "resource",
-      "aliases": [
-        "Resource"
-      ],
-      "sources": [
-        "curated:function.curated.scheduling.add-flight-tile:steps",
-        "curated:function.curated.training.post-flight-inputs:alias",
-        "curated:function.curated.settings.dfp-resource-rows",
-        "curated:function.curated.settings.dfp-resource-rows:alias",
-        "curated:function.curated.settings.dfp-resource-rows:purpose",
-        "curated:function.curated.settings.dfp-resource-rows:steps",
-        "curated:function.curated.settings.turnaround:steps",
-        "control:App.tsx:5457",
-        "control:components/AddGroundEventFlyout.tsx:415",
-        "control:components/AddGroundEventFlyout.tsx:424",
-        "control:components/OrganisationSettings.tsx:1016",
-        "control:components/OrganisationSettings.tsx:1207"
       ],
       "count": 42
     },
@@ -14035,28 +14035,6 @@
       "count": 36
     },
     {
-      "term": "messages",
-      "normalised": "messages",
-      "aliases": [
-        "Messages"
-      ],
-      "sources": [
-        "curated:function.curated.messaging.auto-notifications:purpose",
-        "curated:function.curated.messaging.auto-notifications:steps",
-        "curated:function.curated.messaging.my-home-messages",
-        "curated:function.curated.messaging.my-home-messages:alias",
-        "curated:function.curated.messaging.my-home-messages:purpose",
-        "curated:function.curated.messaging.my-home-messages:steps",
-        "curated:function.curated.messaging.delete-message:alias",
-        "curated:function.curated.messaging.delete-message:purpose",
-        "curated:function.curated.messaging.delete-message:steps",
-        "control:components/MyDashboard.tsx:3169",
-        "control:components/MyDashboard.tsx:3213",
-        "control-attribute:components/MyDashboard.tsx:3213"
-      ],
-      "count": 36
-    },
-    {
       "term": "py 1 text",
       "normalised": "py 1 text",
       "aliases": [],
@@ -14308,6 +14286,48 @@
       "count": 35
     },
     {
+      "term": "messages",
+      "normalised": "messages",
+      "aliases": [
+        "Messages"
+      ],
+      "sources": [
+        "curated:function.curated.messaging.auto-notifications:purpose",
+        "curated:function.curated.messaging.my-home-messages",
+        "curated:function.curated.messaging.my-home-messages:alias",
+        "curated:function.curated.messaging.my-home-messages:purpose",
+        "curated:function.curated.messaging.my-home-messages:steps",
+        "curated:function.curated.messaging.delete-message:alias",
+        "curated:function.curated.messaging.delete-message:purpose",
+        "curated:function.curated.messaging.delete-message:steps",
+        "control:components/MyDashboard.tsx:3169",
+        "control:components/MyDashboard.tsx:3213",
+        "control-attribute:components/MyDashboard.tsx:3213",
+        "control:components/MyDashboard.tsx:3250"
+      ],
+      "count": 35
+    },
+    {
+      "term": "Open the",
+      "normalised": "open the",
+      "aliases": [],
+      "sources": [
+        "curated:function.curated.navigation.dfp",
+        "curated:function.curated.people.trainee-unavailability:steps",
+        "curated:function.curated.people.staff-unavailability:steps",
+        "curated:function.curated.people.delete-staff:steps",
+        "curated:function.curated.people.instructor-assignment:steps",
+        "curated:function.curated.training.training-report:steps",
+        "curated:function.curated.messaging.auto-notifications:steps",
+        "curated:function.curated.analytics.build-intelligence-risk-events:steps",
+        "curated:function.curated.people.archived-staff:steps",
+        "curated:function.curated.people.move-trainee-course:steps",
+        "curated:function.curated.training.scoring-matrix-elements:steps",
+        "curated:function.curated.training.syllabus-management:steps"
+      ],
+      "count": 35
+    },
+    {
       "term": "px 4 py 2",
       "normalised": "px 4 py 2",
       "aliases": [],
@@ -14410,26 +14430,6 @@
         "message:dfp-neo-platform/app/api/flight-log/[id]/route.ts:53",
         "message:dfp-neo-platform/app/api/flight-log/[id]/route.ts:86",
         "message:dfp-neo-platform/app/api/flight-log/route.ts:116"
-      ],
-      "count": 34
-    },
-    {
-      "term": "Open the",
-      "normalised": "open the",
-      "aliases": [],
-      "sources": [
-        "curated:function.curated.navigation.dfp",
-        "curated:function.curated.people.trainee-unavailability:steps",
-        "curated:function.curated.people.staff-unavailability:steps",
-        "curated:function.curated.people.delete-staff:steps",
-        "curated:function.curated.people.instructor-assignment:steps",
-        "curated:function.curated.training.training-report:steps",
-        "curated:function.curated.messaging.auto-notifications:steps",
-        "curated:function.curated.analytics.build-intelligence-risk-events:steps",
-        "curated:function.curated.people.archived-staff:steps",
-        "curated:function.curated.people.move-trainee-course:steps",
-        "curated:function.curated.training.scoring-matrix-elements:steps",
-        "curated:function.curated.training.syllabus-management:steps"
       ],
       "count": 34
     },
@@ -15590,6 +15590,28 @@
       "count": 30
     },
     {
+      "term": "labels",
+      "normalised": "labels",
+      "aliases": [
+        "Labels"
+      ],
+      "sources": [
+        "curated:function.curated.training.course-management:alias",
+        "curated:function.curated.training.course-management:purpose",
+        "curated:function.curated.settings.unit-callsigns:purpose",
+        "curated:function.curated.settings.formation-callsigns:steps",
+        "curated:function.curated.settings.crew-position-labels",
+        "curated:function.curated.settings.crew-position-labels:alias",
+        "curated:function.curated.settings.crew-position-labels:purpose",
+        "curated:function.curated.settings.crew-position-labels:steps",
+        "curated:function.curated.settings.rank-terminology",
+        "curated:function.curated.settings.rank-terminology:alias",
+        "curated:function.curated.settings.rank-terminology:purpose",
+        "curated:function.curated.settings.rank-terminology:steps"
+      ],
+      "count": 30
+    },
+    {
       "term": "PUT",
       "normalised": "put",
       "aliases": [],
@@ -16356,28 +16378,6 @@
       "count": 28
     },
     {
-      "term": "labels",
-      "normalised": "labels",
-      "aliases": [
-        "Labels"
-      ],
-      "sources": [
-        "curated:function.curated.training.course-management:alias",
-        "curated:function.curated.training.course-management:purpose",
-        "curated:function.curated.settings.unit-callsigns:purpose",
-        "curated:function.curated.settings.formation-callsigns:steps",
-        "curated:function.curated.settings.crew-position-labels",
-        "curated:function.curated.settings.crew-position-labels:alias",
-        "curated:function.curated.settings.crew-position-labels:purpose",
-        "curated:function.curated.settings.crew-position-labels:steps",
-        "curated:function.curated.settings.rank-terminology",
-        "curated:function.curated.settings.rank-terminology:alias",
-        "curated:function.curated.settings.rank-terminology:purpose",
-        "curated:function.curated.settings.rank-terminology:steps"
-      ],
-      "count": 28
-    },
-    {
       "term": "list",
       "normalised": "list",
       "aliases": [
@@ -16833,6 +16833,28 @@
       "count": 27
     },
     {
+      "term": "Save the",
+      "normalised": "save the",
+      "aliases": [
+        "save the"
+      ],
+      "sources": [
+        "curated:function.curated.people.trainee-unavailability:steps",
+        "curated:function.curated.people.staff-unavailability:steps",
+        "curated:function.curated.people.instructor-assignment:steps",
+        "curated:function.curated.training.training-report:steps",
+        "curated:function.curated.messaging.auto-notifications:steps",
+        "curated:function.curated.scheduling.flight-details:steps",
+        "curated:function.curated.scheduling.add-flight-tile:steps",
+        "curated:function.curated.people.move-trainee-course:steps",
+        "curated:function.curated.training.scoring-matrix-elements:steps",
+        "curated:function.curated.training.remedial-packages:steps",
+        "curated:function.curated.scheduling.add-ground-event:steps",
+        "curated:function.curated.scheduling.flight-detail-fields:steps"
+      ],
+      "count": 27
+    },
+    {
       "term": "service",
       "normalised": "service",
       "aliases": [
@@ -17142,24 +17164,24 @@
       "count": 26
     },
     {
-      "term": "Save the",
-      "normalised": "save the",
+      "term": "row",
+      "normalised": "row",
       "aliases": [
-        "save the"
+        "Row"
       ],
       "sources": [
-        "curated:function.curated.people.trainee-unavailability:steps",
-        "curated:function.curated.people.staff-unavailability:steps",
-        "curated:function.curated.people.instructor-assignment:steps",
-        "curated:function.curated.training.training-report:steps",
-        "curated:function.curated.scheduling.flight-details:steps",
-        "curated:function.curated.scheduling.add-flight-tile:steps",
-        "curated:function.curated.people.move-trainee-course:steps",
-        "curated:function.curated.training.scoring-matrix-elements:steps",
-        "curated:function.curated.training.remedial-packages:steps",
-        "curated:function.curated.scheduling.add-ground-event:steps",
-        "curated:function.curated.scheduling.flight-detail-fields:steps",
-        "curated:function.curated.training.course-setup-fields:steps"
+        "curated:function.curated.people.delete-staff:steps",
+        "curated:function.curated.settings.dfp-resource-rows:alias",
+        "curated:function.curated.settings.user-access:steps",
+        "control-attribute:App.tsx:4510",
+        "control:components/BulkUpdateFlyout.tsx:525",
+        "control-attribute:components/MyDashboard.tsx:3078",
+        "control-attribute:components/MyDashboard.tsx:3089",
+        "control:components/MyDashboard.tsx:3106",
+        "control-attribute:components/MyDashboard.tsx:3107",
+        "control-attribute:components/PrioritiesView.tsx:5924",
+        "control:components/ScheduleView.tsx:11219",
+        "control:components/UpdateConfirmationFlyout.tsx:73"
       ],
       "count": 26
     },
@@ -17619,6 +17641,28 @@
       "count": 25
     },
     {
+      "term": "simulator",
+      "normalised": "simulator",
+      "aliases": [
+        "Simulator"
+      ],
+      "sources": [
+        "curated:function.curated.scheduling.flight-details:purpose",
+        "curated:function.curated.scheduling.flight-details:steps",
+        "curated:function.curated.scheduling.add-flight-tile:purpose",
+        "curated:function.curated.scheduling.cancel-restore-delete-event:steps",
+        "curated:function.curated.scheduling.add-flight-tile:alias",
+        "curated:function.curated.settings.dfp-resource-rows:alias",
+        "curated:function.curated.settings.dfp-resource-rows:purpose",
+        "control:components/AirCombatTrainingReportModal.tsx:1254",
+        "control:components/PrioritiesView.tsx:1019",
+        "control:components/PrioritiesView.tsx:1025",
+        "control:components/SyllabusView.tsx:1031",
+        "control:components/SyllabusView.tsx:1033"
+      ],
+      "count": 25
+    },
+    {
       "term": "trainee full Name",
       "normalised": "trainee full name",
       "aliases": [
@@ -17829,26 +17873,6 @@
       "count": 24
     },
     {
-      "term": "for the",
-      "normalised": "for the",
-      "aliases": [],
-      "sources": [
-        "curated:function.curated.messaging.auto-notifications:steps",
-        "curated:function.curated.messaging.my-home-messages:purpose",
-        "curated:function.curated.scheduling.neo-build:purpose",
-        "curated:function.curated.scheduling.build-priorities:steps",
-        "curated:function.curated.scheduling.validation-check:purpose",
-        "curated:function.curated.scheduling.multi-select:steps",
-        "curated:function.curated.scheduling.aircraft-availability:purpose",
-        "curated:function.curated.people.archived-staff:steps",
-        "curated:function.curated.settings.unit-callsigns:steps",
-        "curated:function.curated.settings.turnaround:steps",
-        "curated:function.curated.training.course-score-table:purpose",
-        "curated:function.curated.training.course-ranking-awards:steps"
-      ],
-      "count": 24
-    },
-    {
       "term": "is Selected",
       "normalised": "is selected",
       "aliases": [
@@ -17974,28 +17998,6 @@
       "count": 24
     },
     {
-      "term": "row",
-      "normalised": "row",
-      "aliases": [
-        "Row"
-      ],
-      "sources": [
-        "curated:function.curated.people.delete-staff:steps",
-        "curated:function.curated.settings.dfp-resource-rows:alias",
-        "curated:function.curated.settings.user-access:steps",
-        "control-attribute:App.tsx:4510",
-        "control:components/BulkUpdateFlyout.tsx:525",
-        "control-attribute:components/MyDashboard.tsx:3078",
-        "control-attribute:components/MyDashboard.tsx:3089",
-        "control:components/MyDashboard.tsx:3106",
-        "control-attribute:components/MyDashboard.tsx:3107",
-        "control-attribute:components/PrioritiesView.tsx:5924",
-        "control:components/ScheduleView.tsx:11219",
-        "control:components/UpdateConfirmationFlyout.tsx:73"
-      ],
-      "count": 24
-    },
-    {
       "term": "selected course",
       "normalised": "selected course",
       "aliases": [
@@ -18036,28 +18038,6 @@
         "message:components/FlightDetailModal.tsx:3776",
         "message:components/FlightDetailModal.tsx:3792",
         "message:components/FlightDetailModal.tsx:3819"
-      ],
-      "count": 24
-    },
-    {
-      "term": "simulator",
-      "normalised": "simulator",
-      "aliases": [
-        "Simulator"
-      ],
-      "sources": [
-        "curated:function.curated.scheduling.flight-details:purpose",
-        "curated:function.curated.scheduling.flight-details:steps",
-        "curated:function.curated.scheduling.add-flight-tile:purpose",
-        "curated:function.curated.scheduling.cancel-restore-delete-event:steps",
-        "curated:function.curated.scheduling.add-flight-tile:alias",
-        "curated:function.curated.settings.dfp-resource-rows:alias",
-        "curated:function.curated.settings.dfp-resource-rows:purpose",
-        "control:components/AirCombatTrainingReportModal.tsx:1254",
-        "control:components/PrioritiesView.tsx:1019",
-        "control:components/PrioritiesView.tsx:1025",
-        "control:components/SyllabusView.tsx:1031",
-        "control:components/SyllabusView.tsx:1033"
       ],
       "count": 24
     },
@@ -18375,6 +18355,26 @@
         "control:components/AuditFlyout.tsx:587",
         "control-attribute:components/AuditFlyout.tsx:587",
         "control:components/CourseProgressView.tsx:1166"
+      ],
+      "count": 23
+    },
+    {
+      "term": "for the",
+      "normalised": "for the",
+      "aliases": [],
+      "sources": [
+        "curated:function.curated.messaging.auto-notifications:steps",
+        "curated:function.curated.messaging.my-home-messages:purpose",
+        "curated:function.curated.scheduling.neo-build:purpose",
+        "curated:function.curated.scheduling.build-priorities:steps",
+        "curated:function.curated.scheduling.validation-check:purpose",
+        "curated:function.curated.scheduling.multi-select:steps",
+        "curated:function.curated.scheduling.aircraft-availability:purpose",
+        "curated:function.curated.people.archived-staff:steps",
+        "curated:function.curated.settings.unit-callsigns:steps",
+        "curated:function.curated.settings.turnaround:steps",
+        "curated:function.curated.training.course-score-table:purpose",
+        "curated:function.curated.training.course-ranking-awards:steps"
       ],
       "count": 23
     },
@@ -19358,6 +19358,28 @@
         "message:dfp-neo-platform/app/api/flight-log/route.ts:187",
         "message:dfp-neo-platform/app/api/personnel/[id]/route.ts:231",
         "message:dfp-neo-platform/app/api/personnel/[id]/route.ts:329"
+      ],
+      "count": 21
+    },
+    {
+      "term": "off",
+      "normalised": "off",
+      "aliases": [
+        "Off"
+      ],
+      "sources": [
+        "curated:function.curated.people.trainee-unavailability:alias",
+        "curated:function.curated.messaging.auto-notifications:alias",
+        "curated:function.curated.messaging.auto-notifications:steps",
+        "curated:function.curated.scheduling.multi-select:steps",
+        "curated:synonym:unavailability",
+        "control:App.tsx:5094",
+        "control:App.tsx:6099",
+        "control-attribute:components/PinEntryFlyout_BACKUP.tsx:34",
+        "control:components/PrioritiesView.tsx:5116",
+        "control-attribute:components/ScheduleView.tsx:8189",
+        "control:components/ScheduleView.tsx:10714",
+        "control:components/SettingsView.tsx:1375"
       ],
       "count": 21
     },
@@ -21327,6 +21349,26 @@
       "count": 18
     },
     {
+      "term": "display name",
+      "normalised": "display name",
+      "aliases": [
+        "display Name",
+        "Display Name"
+      ],
+      "sources": [
+        "curated:function.curated.settings.dfp-resource-rows:alias",
+        "control:components/MassBriefCompleteFlyout.tsx:100",
+        "control:dfp-neo-platform/app/admin/users/[id]/EditUserForm.tsx:257",
+        "control:dfp-neo-platform/app/admin/users/[id]/EditUserForm.tsx:260",
+        "control-attribute:dfp-neo-platform/app/admin/users/[id]/EditUserForm.tsx:260",
+        "control:dfp-neo-platform/app/admin/users/create/CreateUserForm.tsx:150",
+        "control-attribute:dfp-neo-platform/app/admin/users/create/CreateUserForm.tsx:153",
+        "prisma:CommercialUserAccess.displayName",
+        "message:server.js:10204"
+      ],
+      "count": 18
+    },
+    {
       "term": "entry callsign",
       "normalised": "entry callsign",
       "aliases": [],
@@ -21545,27 +21587,6 @@
         "message:components/FlightDetailModal.tsx:3776",
         "message:components/FlightDetailModal.tsx:3792",
         "message:components/FlightDetailModal.tsx:3819"
-      ],
-      "count": 18
-    },
-    {
-      "term": "off",
-      "normalised": "off",
-      "aliases": [
-        "Off"
-      ],
-      "sources": [
-        "curated:function.curated.people.trainee-unavailability:alias",
-        "curated:function.curated.scheduling.multi-select:steps",
-        "curated:synonym:unavailability",
-        "control:App.tsx:5094",
-        "control:App.tsx:6099",
-        "control-attribute:components/PinEntryFlyout_BACKUP.tsx:34",
-        "control:components/PrioritiesView.tsx:5116",
-        "control-attribute:components/ScheduleView.tsx:8189",
-        "control:components/ScheduleView.tsx:10714",
-        "control:components/SettingsView.tsx:1375",
-        "control:components/tabs/TrainingIntelligenceTab.tsx:1469"
       ],
       "count": 18
     },
@@ -22177,24 +22198,6 @@
       "count": 17
     },
     {
-      "term": "display Name",
-      "normalised": "display name",
-      "aliases": [
-        "Display Name"
-      ],
-      "sources": [
-        "control:components/MassBriefCompleteFlyout.tsx:100",
-        "control:dfp-neo-platform/app/admin/users/[id]/EditUserForm.tsx:257",
-        "control:dfp-neo-platform/app/admin/users/[id]/EditUserForm.tsx:260",
-        "control-attribute:dfp-neo-platform/app/admin/users/[id]/EditUserForm.tsx:260",
-        "control:dfp-neo-platform/app/admin/users/create/CreateUserForm.tsx:150",
-        "control-attribute:dfp-neo-platform/app/admin/users/create/CreateUserForm.tsx:153",
-        "prisma:CommercialUserAccess.displayName",
-        "message:server.js:10204"
-      ],
-      "count": 17
-    },
-    {
       "term": "e target value 0",
       "normalised": "e target value 0",
       "aliases": [],
@@ -22742,6 +22745,26 @@
         "control:components/PlatformConfigurationSettings.tsx:10268",
         "control:components/PlatformConfigurationSettings.tsx:10273",
         "control:components/PlatformConfigurationSettings.tsx:12233"
+      ],
+      "count": 16
+    },
+    {
+      "term": "auto",
+      "normalised": "auto",
+      "aliases": [
+        "Auto"
+      ],
+      "sources": [
+        "curated:function.curated.training.training-report:alias",
+        "curated:function.curated.messaging.auto-notifications",
+        "curated:function.curated.messaging.auto-notifications:alias",
+        "curated:function.curated.scheduling.neo-build:alias",
+        "curated:synonym:NEO Build",
+        "control:App.tsx:5590",
+        "control-attribute:App.tsx:5590",
+        "control:components/AirCombatTrainingReportModal.tsx:1083",
+        "control:components/PlatformConfigurationSettings.tsx:9488",
+        "control:components/TrainingReportView.tsx:2034"
       ],
       "count": 16
     },
@@ -24527,29 +24550,6 @@
       "count": 14
     },
     {
-      "term": "alert",
-      "normalised": "alert",
-      "aliases": [
-        "Alert",
-        "ALERT"
-      ],
-      "sources": [
-        "curated:function.curated.messaging.auto-notifications:steps",
-        "control:App.tsx:57129",
-        "control-attribute:App.tsx:57129",
-        "control:components/FlightDetailModal.tsx:4555",
-        "control:components/FlightDetailModal.tsx:4573",
-        "message:App.tsx:43200",
-        "message:App.tsx:43242",
-        "message:server.js:20911",
-        "message:server.js:21047",
-        "message:server.js:21279",
-        "message:server.js:21331",
-        "message:server.js:21417"
-      ],
-      "count": 14
-    },
-    {
       "term": "allow",
       "normalised": "allow",
       "aliases": [
@@ -25674,6 +25674,28 @@
       "count": 13
     },
     {
+      "term": "alert",
+      "normalised": "alert",
+      "aliases": [
+        "Alert",
+        "ALERT"
+      ],
+      "sources": [
+        "control:App.tsx:57129",
+        "control-attribute:App.tsx:57129",
+        "control:components/FlightDetailModal.tsx:4555",
+        "control:components/FlightDetailModal.tsx:4573",
+        "message:App.tsx:43200",
+        "message:App.tsx:43242",
+        "message:server.js:20911",
+        "message:server.js:21047",
+        "message:server.js:21279",
+        "message:server.js:21331",
+        "message:server.js:21417"
+      ],
+      "count": 13
+    },
+    {
       "term": "applying Changes",
       "normalised": "applying changes",
       "aliases": [],
@@ -25729,26 +25751,6 @@
         "message:components/AuthorisationFlyout.tsx:687",
         "message:components/AuthorisationFlyout.tsx:828",
         "message:components/AuthorisationFlyout.tsx:848"
-      ],
-      "count": 13
-    },
-    {
-      "term": "auto",
-      "normalised": "auto",
-      "aliases": [
-        "Auto"
-      ],
-      "sources": [
-        "curated:function.curated.training.training-report:alias",
-        "curated:function.curated.messaging.auto-notifications",
-        "curated:function.curated.messaging.auto-notifications:alias",
-        "curated:function.curated.scheduling.neo-build:alias",
-        "curated:synonym:NEO Build",
-        "control:App.tsx:5590",
-        "control-attribute:App.tsx:5590",
-        "control:components/AirCombatTrainingReportModal.tsx:1083",
-        "control:components/PlatformConfigurationSettings.tsx:9488",
-        "control:components/TrainingReportView.tsx:2034"
       ],
       "count": 13
     },
@@ -31182,25 +31184,6 @@
       "count": 10
     },
     {
-      "term": "Home",
-      "normalised": "home",
-      "aliases": [
-        "home"
-      ],
-      "sources": [
-        "curated:function.curated.messaging.auto-notifications:steps",
-        "curated:function.curated.messaging.my-home-messages",
-        "curated:function.curated.messaging.my-home-messages:steps",
-        "curated:function.curated.messaging.delete-message:purpose",
-        "curated:function.curated.messaging.delete-message:steps",
-        "control:components/SettingsViewWithMenu.tsx:2154",
-        "control-attribute:components/SettingsViewWithMenu.tsx:2154",
-        "control:components/Sidebar.tsx:180",
-        "component:dfp-neo-platform/app/page.tsx:3"
-      ],
-      "count": 10
-    },
-    {
       "term": "href",
       "normalised": "href",
       "aliases": [],
@@ -31582,6 +31565,20 @@
         "message:App.tsx:41479",
         "message:App.tsx:41482",
         "message:App.tsx:50461"
+      ],
+      "count": 10
+    },
+    {
+      "term": "notification",
+      "normalised": "notification",
+      "aliases": [],
+      "sources": [
+        "curated:function.curated.training.training-report:purpose",
+        "curated:function.curated.training.training-report:steps",
+        "curated:function.curated.messaging.auto-notifications:alias",
+        "curated:function.curated.messaging.auto-notifications:purpose",
+        "curated:function.curated.messaging.auto-notifications:steps",
+        "message:components/PlatformConfigurationSettings.tsx:13020"
       ],
       "count": 10
     },
@@ -32553,6 +32550,23 @@
       "count": 9
     },
     {
+      "term": "as required",
+      "normalised": "as required",
+      "aliases": [],
+      "sources": [
+        "curated:function.curated.messaging.auto-notifications:steps",
+        "curated:function.curated.settings.currency-builder:steps",
+        "curated:function.curated.training.scoring-matrix-elements:steps",
+        "curated:function.curated.scheduling.priority-currency-requests:steps",
+        "curated:function.curated.training.complete-training:steps",
+        "curated:function.curated.settings.crew-position-labels:steps",
+        "curated:function.curated.settings.dfp-resource-rows:steps",
+        "curated:function.curated.duty-pilot.flight-authorisation:steps",
+        "message:components/AcademicsTab.tsx:634"
+      ],
+      "count": 9
+    },
+    {
       "term": "Assist",
       "normalised": "assist",
       "aliases": [
@@ -33422,6 +33436,24 @@
         "message:server.js:15377",
         "message:server.js:15391",
         "message:server.js:20166"
+      ],
+      "count": 9
+    },
+    {
+      "term": "Home",
+      "normalised": "home",
+      "aliases": [
+        "home"
+      ],
+      "sources": [
+        "curated:function.curated.messaging.my-home-messages",
+        "curated:function.curated.messaging.my-home-messages:steps",
+        "curated:function.curated.messaging.delete-message:purpose",
+        "curated:function.curated.messaging.delete-message:steps",
+        "control:components/SettingsViewWithMenu.tsx:2154",
+        "control-attribute:components/SettingsViewWithMenu.tsx:2154",
+        "control:components/Sidebar.tsx:180",
+        "component:dfp-neo-platform/app/page.tsx:3"
       ],
       "count": 9
     },
@@ -35228,22 +35260,6 @@
         "control:components/PrioritiesView.tsx:5423",
         "control-attribute:components/PrioritiesView.tsx:5423",
         "control:components/PrioritiesView.tsx:5424"
-      ],
-      "count": 8
-    },
-    {
-      "term": "as required",
-      "normalised": "as required",
-      "aliases": [],
-      "sources": [
-        "curated:function.curated.settings.currency-builder:steps",
-        "curated:function.curated.training.scoring-matrix-elements:steps",
-        "curated:function.curated.scheduling.priority-currency-requests:steps",
-        "curated:function.curated.training.complete-training:steps",
-        "curated:function.curated.settings.crew-position-labels:steps",
-        "curated:function.curated.settings.dfp-resource-rows:steps",
-        "curated:function.curated.duty-pilot.flight-authorisation:steps",
-        "message:components/AcademicsTab.tsx:634"
       ],
       "count": 8
     },
@@ -37854,6 +37870,19 @@
       "count": 8
     },
     {
+      "term": "row label",
+      "normalised": "row label",
+      "aliases": [],
+      "sources": [
+        "curated:function.curated.settings.dfp-resource-rows:alias",
+        "control-attribute:App.tsx:4377",
+        "control:App.tsx:4510",
+        "control-attribute:App.tsx:4510",
+        "control:components/tabs/BliTab.tsx:2311"
+      ],
+      "count": 8
+    },
+    {
       "term": "Run Validation",
       "normalised": "run validation",
       "aliases": [
@@ -38084,6 +38113,24 @@
         "control-attribute:components/PlatformConfigurationSettings.tsx:16222",
         "control-attribute:components/PrioritiesView.tsx:570",
         "control-attribute:components/PrioritiesView.tsx:674"
+      ],
+      "count": 8
+    },
+    {
+      "term": "setting",
+      "normalised": "setting",
+      "aliases": [
+        "Setting"
+      ],
+      "sources": [
+        "curated:function.curated.messaging.auto-notifications:steps",
+        "curated:function.curated.security.password-confirmation:steps",
+        "curated:function.curated.settings.turnaround:steps",
+        "control:components/PlatformConfigurationSettings.tsx:9488",
+        "control:components/SettingsViewWithMenu.tsx:1031",
+        "control:components/SettingsViewWithMenu.tsx:2117",
+        "control:dfp-neo-platform/app/(auth)/set-password/page.tsx:167",
+        "message:server.js:21966"
       ],
       "count": 8
     },
@@ -39583,6 +39630,23 @@
       "count": 7
     },
     {
+      "term": "display",
+      "normalised": "display",
+      "aliases": [
+        "Display"
+      ],
+      "sources": [
+        "curated:function.curated.scheduling.flight-detail-fields:alias",
+        "curated:function.curated.settings.unit-callsigns:steps",
+        "curated:function.curated.settings.rank-terminology:purpose",
+        "curated:function.curated.settings.trainee-rank-order:purpose",
+        "curated:function.curated.settings.dfp-resource-rows:alias",
+        "control:dfp-neo-platform/app/admin/users/[id]/EditUserForm.tsx:257",
+        "control:dfp-neo-platform/app/admin/users/create/CreateUserForm.tsx:150"
+      ],
+      "count": 7
+    },
+    {
       "term": "drag",
       "normalised": "drag",
       "aliases": [
@@ -40666,20 +40730,6 @@
       "count": 7
     },
     {
-      "term": "My Home",
-      "normalised": "my home",
-      "aliases": [],
-      "sources": [
-        "curated:function.curated.messaging.auto-notifications:steps",
-        "curated:function.curated.messaging.my-home-messages",
-        "curated:function.curated.messaging.my-home-messages:steps",
-        "curated:function.curated.messaging.delete-message:purpose",
-        "curated:function.curated.messaging.delete-message:steps",
-        "control:components/Sidebar.tsx:180"
-      ],
-      "count": 7
-    },
-    {
       "term": "new course",
       "normalised": "new course",
       "aliases": [
@@ -40737,6 +40787,16 @@
         "message:components/PostFlightView.tsx:920",
         "message:components/TraineeProfileFlyout.tsx:1901",
         "message:components/TraineeProfileFlyout.tsx:2130"
+      ],
+      "count": 7
+    },
+    {
+      "term": "notifications",
+      "normalised": "notifications",
+      "aliases": [],
+      "sources": [
+        "curated:function.curated.messaging.auto-notifications",
+        "curated:function.curated.messaging.auto-notifications:alias"
       ],
       "count": 7
     },
@@ -41498,23 +41558,6 @@
       "count": 7
     },
     {
-      "term": "setting",
-      "normalised": "setting",
-      "aliases": [
-        "Setting"
-      ],
-      "sources": [
-        "curated:function.curated.security.password-confirmation:steps",
-        "curated:function.curated.settings.turnaround:steps",
-        "control:components/PlatformConfigurationSettings.tsx:9488",
-        "control:components/SettingsViewWithMenu.tsx:1031",
-        "control:components/SettingsViewWithMenu.tsx:2117",
-        "control:dfp-neo-platform/app/(auth)/set-password/page.tsx:167",
-        "message:server.js:21966"
-      ],
-      "count": 7
-    },
-    {
       "term": "Setup Wizard",
       "normalised": "setup wizard",
       "aliases": [
@@ -41821,6 +41864,22 @@
         "curated:function.curated.scheduling.flight-detail-fields:steps",
         "curated:function.curated.duty-pilot.authorisation-notes:steps",
         "curated:function.curated.duty-pilot.flight-authorisation:steps"
+      ],
+      "count": 7
+    },
+    {
+      "term": "the training",
+      "normalised": "the training",
+      "aliases": [
+        "The training"
+      ],
+      "sources": [
+        "curated:function.curated.training.training-report:steps",
+        "curated:function.curated.messaging.auto-notifications:steps",
+        "curated:function.curated.training.scoring-matrix-elements:steps",
+        "message:App.tsx:41245",
+        "message:App.tsx:41481",
+        "message:App.tsx:41744"
       ],
       "count": 7
     },
@@ -44058,20 +44117,6 @@
       "count": 6
     },
     {
-      "term": "DFP NEO",
-      "normalised": "dfp neo",
-      "aliases": [],
-      "sources": [
-        "curated:function.curated.messaging.auto-notifications:alias",
-        "curated:function.curated.messaging.auto-notifications:steps",
-        "curated:function.curated.messaging.my-home-messages:alias",
-        "curated:function.curated.settings.user-accounts:purpose",
-        "control:components/EmailActivationSettings.tsx:223",
-        "control-attribute:components/EmailActivationSettings.tsx:223"
-      ],
-      "count": 6
-    },
-    {
       "term": "DFP schedule",
       "normalised": "dfp schedule",
       "aliases": [],
@@ -44133,22 +44178,6 @@
         "control-attribute:components/SettingsView.tsx:1265",
         "control:components/SettingsView.tsx:1274",
         "control-attribute:components/SettingsView.tsx:1274"
-      ],
-      "count": 6
-    },
-    {
-      "term": "display",
-      "normalised": "display",
-      "aliases": [
-        "Display"
-      ],
-      "sources": [
-        "curated:function.curated.scheduling.flight-detail-fields:alias",
-        "curated:function.curated.settings.unit-callsigns:steps",
-        "curated:function.curated.settings.rank-terminology:purpose",
-        "curated:function.curated.settings.trainee-rank-order:purpose",
-        "control:dfp-neo-platform/app/admin/users/[id]/EditUserForm.tsx:257",
-        "control:dfp-neo-platform/app/admin/users/create/CreateUserForm.tsx:150"
       ],
       "count": 6
     },
@@ -44306,20 +44335,6 @@
       "count": 6
     },
     {
-      "term": "edit or",
-      "normalised": "edit or",
-      "aliases": [],
-      "sources": [
-        "curated:function.curated.people.move-trainee-course:steps",
-        "curated:function.curated.settings.currency-builder:steps",
-        "curated:function.curated.settings.personnel-qualifications:steps",
-        "curated:function.curated.settings.dfp-resource-rows:steps",
-        "curated:function.curated.settings.user-access:steps",
-        "message:components/TrainingReportView.tsx:1232"
-      ],
-      "count": 6
-    },
-    {
       "term": "editable Rows filter",
       "normalised": "editable rows filter",
       "aliases": [],
@@ -44382,21 +44397,6 @@
         "component:components/EmailActivationSettings.tsx:56",
         "message:server.js:11262",
         "message:server.js:11314"
-      ],
-      "count": 6
-    },
-    {
-      "term": "Enable",
-      "normalised": "enable",
-      "aliases": [
-        "enable"
-      ],
-      "sources": [
-        "curated:function.curated.messaging.auto-notifications:steps",
-        "control:components/OrganisationSettings.tsx:825",
-        "control:components/OrganisationSettings.tsx:1016",
-        "control-attribute:components/TrainingReportView.tsx:1631",
-        "message:components/PlatformConfigurationSettings.tsx:1745"
       ],
       "count": 6
     },
@@ -45980,6 +45980,19 @@
       "count": 6
     },
     {
+      "term": "My Home",
+      "normalised": "my home",
+      "aliases": [],
+      "sources": [
+        "curated:function.curated.messaging.my-home-messages",
+        "curated:function.curated.messaging.my-home-messages:steps",
+        "curated:function.curated.messaging.delete-message:purpose",
+        "curated:function.curated.messaging.delete-message:steps",
+        "control:components/Sidebar.tsx:180"
+      ],
+      "count": 6
+    },
+    {
       "term": "name or",
       "normalised": "name or",
       "aliases": [
@@ -46298,20 +46311,6 @@
         "message:App.tsx:49488",
         "message:components/SyllabusView.tsx:1886",
         "message:components/SyllabusView.tsx:2657"
-      ],
-      "count": 6
-    },
-    {
-      "term": "notification",
-      "normalised": "notification",
-      "aliases": [],
-      "sources": [
-        "curated:function.curated.training.training-report:purpose",
-        "curated:function.curated.training.training-report:steps",
-        "curated:function.curated.messaging.auto-notifications:alias",
-        "curated:function.curated.messaging.auto-notifications:purpose",
-        "curated:function.curated.messaging.auto-notifications:steps",
-        "message:components/PlatformConfigurationSettings.tsx:13020"
       ],
       "count": 6
     },
@@ -48402,14 +48401,14 @@
       "count": 6
     },
     {
-      "term": "the training",
-      "normalised": "the training",
+      "term": "the training report",
+      "normalised": "the training report",
       "aliases": [
-        "The training"
+        "The training report"
       ],
       "sources": [
         "curated:function.curated.training.training-report:steps",
-        "curated:function.curated.training.scoring-matrix-elements:steps",
+        "curated:function.curated.messaging.auto-notifications:steps",
         "message:App.tsx:41245",
         "message:App.tsx:41481",
         "message:App.tsx:41744"
@@ -49514,6 +49513,19 @@
       "count": 5
     },
     {
+      "term": "aircraft label",
+      "normalised": "aircraft label",
+      "aliases": [
+        "aircraft Label"
+      ],
+      "sources": [
+        "curated:function.curated.settings.dfp-resource-rows:alias",
+        "control:components/ContinuationCurrencyEventsSettings.tsx:179",
+        "permission:components/PlatformConfigurationSettings.tsx:9604"
+      ],
+      "count": 5
+    },
+    {
       "term": "Aircraft serviceable",
       "normalised": "aircraft serviceable",
       "aliases": [
@@ -49535,21 +49547,6 @@
         "control-attribute:components/ContinuationCurrencyEventsSettings.tsx:379",
         "prisma:CommercialResourcePool.aircraftTypeCode",
         "prisma:CommercialSchedulingRuleSet.aircraftTypeCode"
-      ],
-      "count": 5
-    },
-    {
-      "term": "Alerts",
-      "normalised": "alerts",
-      "aliases": [
-        "alerts"
-      ],
-      "sources": [
-        "curated:function.curated.messaging.auto-notifications:alias",
-        "curated:function.curated.messaging.auto-notifications:steps",
-        "curated:function.curated.messaging.my-home-messages:alias",
-        "curated:function.curated.messaging.my-home-messages:purpose",
-        "message:server.js:21121"
       ],
       "count": 5
     },
@@ -49958,6 +49955,28 @@
         "curated:function.curated.settings.flight-authorisation-warnings:alias",
         "curated:function.curated.duty-pilot.flight-authorisation:alias",
         "message:dfp-neo-platform/app/api/mobile/auth/me/route.ts:11"
+      ],
+      "count": 5
+    },
+    {
+      "term": "auto notifications",
+      "normalised": "auto notifications",
+      "aliases": [],
+      "sources": [
+        "curated:function.curated.messaging.auto-notifications",
+        "curated:function.curated.messaging.auto-notifications:alias"
+      ],
+      "count": 5
+    },
+    {
+      "term": "automatic",
+      "normalised": "automatic",
+      "aliases": [
+        "Automatic"
+      ],
+      "sources": [
+        "curated:function.curated.messaging.auto-notifications:alias",
+        "message:App.tsx:30970"
       ],
       "count": 5
     },
@@ -51148,6 +51167,19 @@
       "count": 5
     },
     {
+      "term": "DFP NEO",
+      "normalised": "dfp neo",
+      "aliases": [],
+      "sources": [
+        "curated:function.curated.messaging.auto-notifications:alias",
+        "curated:function.curated.messaging.my-home-messages:alias",
+        "curated:function.curated.settings.user-accounts:purpose",
+        "control:components/EmailActivationSettings.tsx:223",
+        "control-attribute:components/EmailActivationSettings.tsx:223"
+      ],
+      "count": 5
+    },
+    {
       "term": "DFP Resource Rows describe Resource Pool",
       "normalised": "dfp resource rows describe resource pool",
       "aliases": [],
@@ -51365,6 +51397,19 @@
       "count": 5
     },
     {
+      "term": "edit or",
+      "normalised": "edit or",
+      "aliases": [],
+      "sources": [
+        "curated:function.curated.people.move-trainee-course:steps",
+        "curated:function.curated.settings.currency-builder:steps",
+        "curated:function.curated.settings.personnel-qualifications:steps",
+        "curated:function.curated.settings.user-access:steps",
+        "message:components/TrainingReportView.tsx:1232"
+      ],
+      "count": 5
+    },
+    {
       "term": "editing Code",
       "normalised": "editing code",
       "aliases": [],
@@ -51426,6 +51471,20 @@
         "message:components/AdminPanel.tsx:345",
         "message:server.js:10754",
         "message:server.js:10899"
+      ],
+      "count": 5
+    },
+    {
+      "term": "Enable",
+      "normalised": "enable",
+      "aliases": [
+        "enable"
+      ],
+      "sources": [
+        "control:components/OrganisationSettings.tsx:825",
+        "control:components/OrganisationSettings.tsx:1016",
+        "control-attribute:components/TrainingReportView.tsx:1631",
+        "message:components/PlatformConfigurationSettings.tsx:1745"
       ],
       "count": 5
     },
@@ -53986,18 +54045,6 @@
       "count": 5
     },
     {
-      "term": "row label",
-      "normalised": "row label",
-      "aliases": [],
-      "sources": [
-        "control-attribute:App.tsx:4377",
-        "control:App.tsx:4510",
-        "control-attribute:App.tsx:4510",
-        "control:components/tabs/BliTab.tsx:2311"
-      ],
-      "count": 5
-    },
-    {
       "term": "Rows describe Resource Pool",
       "normalised": "rows describe resource pool",
       "aliases": [],
@@ -54980,6 +55027,19 @@
       "count": 5
     },
     {
+      "term": "the aircraft",
+      "normalised": "the aircraft",
+      "aliases": [],
+      "sources": [
+        "curated:function.curated.scheduling.aircraft-availability:steps",
+        "curated:function.curated.settings.dfp-resource-rows:alias",
+        "curated:function.curated.settings.dfp-resource-rows:purpose",
+        "message:App.tsx:19484",
+        "message:components/PlatformConfigurationSettings.tsx:928"
+      ],
+      "count": 5
+    },
+    {
       "term": "the app",
       "normalised": "the app",
       "aliases": [
@@ -55080,20 +55140,6 @@
         "curated:function.curated.scheduling.flight-detail-fields:steps",
         "curated:function.curated.settings.unit-callsigns:steps",
         "message:App.tsx:27399"
-      ],
-      "count": 5
-    },
-    {
-      "term": "the training report",
-      "normalised": "the training report",
-      "aliases": [
-        "The training report"
-      ],
-      "sources": [
-        "curated:function.curated.training.training-report:steps",
-        "message:App.tsx:41245",
-        "message:App.tsx:41481",
-        "message:App.tsx:41744"
       ],
       "count": 5
     },
@@ -55423,6 +55469,20 @@
         "curated:function.curated.settings.service-groups:alias",
         "control:components/ScheduleView.tsx:8287",
         "permission:utils/courseStudentGroups.ts:87"
+      ],
+      "count": 5
+    },
+    {
+      "term": "turn",
+      "normalised": "turn",
+      "aliases": [
+        "Turn"
+      ],
+      "sources": [
+        "curated:function.curated.messaging.auto-notifications:alias",
+        "curated:function.curated.messaging.auto-notifications:steps",
+        "curated:function.curated.scheduling.multi-select:steps",
+        "curated:synonym:turnaround"
       ],
       "count": 5
     },
@@ -56999,6 +57059,20 @@
       "count": 4
     },
     {
+      "term": "Alerts",
+      "normalised": "alerts",
+      "aliases": [
+        "alerts"
+      ],
+      "sources": [
+        "curated:function.curated.messaging.auto-notifications:alias",
+        "curated:function.curated.messaging.my-home-messages:alias",
+        "curated:function.curated.messaging.my-home-messages:purpose",
+        "message:server.js:21121"
+      ],
+      "count": 4
+    },
+    {
       "term": "ALL COURSES FILTER VALUE",
       "normalised": "all courses filter value",
       "aliases": [],
@@ -57874,6 +57948,15 @@
       "sources": [
         "control-attribute:components/AirCombatTrainingReportModal.tsx:1084",
         "control-attribute:components/TrainingReportView.tsx:2035"
+      ],
+      "count": 4
+    },
+    {
+      "term": "automatic notifications",
+      "normalised": "automatic notifications",
+      "aliases": [],
+      "sources": [
+        "curated:function.curated.messaging.auto-notifications:alias"
       ],
       "count": 4
     },
@@ -61032,17 +61115,6 @@
       "sources": [
         "component:components/SyllabusView.tsx:582",
         "component:components/TraineeLmpView.tsx:875"
-      ],
-      "count": 4
-    },
-    {
-      "term": "DFP NEO Alerts",
-      "normalised": "dfp neo alerts",
-      "aliases": [],
-      "sources": [
-        "curated:function.curated.messaging.auto-notifications:alias",
-        "curated:function.curated.messaging.auto-notifications:steps",
-        "curated:function.curated.messaging.my-home-messages:alias"
       ],
       "count": 4
     },
@@ -70155,6 +70227,20 @@
       "count": 4
     },
     {
+      "term": "rename",
+      "normalised": "rename",
+      "aliases": [
+        "Rename"
+      ],
+      "sources": [
+        "curated:function.curated.settings.crew-position-labels:steps",
+        "curated:function.curated.settings.dfp-resource-rows:alias",
+        "curated:function.curated.settings.dfp-resource-rows:steps",
+        "message:components/PlatformConfigurationSettings.tsx:6192"
+      ],
+      "count": 4
+    },
+    {
       "term": "render",
       "normalised": "render",
       "aliases": [],
@@ -73378,18 +73464,6 @@
       "count": 4
     },
     {
-      "term": "the aircraft",
-      "normalised": "the aircraft",
-      "aliases": [],
-      "sources": [
-        "curated:function.curated.scheduling.aircraft-availability:steps",
-        "curated:function.curated.settings.dfp-resource-rows:purpose",
-        "message:App.tsx:19484",
-        "message:components/PlatformConfigurationSettings.tsx:928"
-      ],
-      "count": 4
-    },
-    {
       "term": "the archive",
       "normalised": "the archive",
       "aliases": [
@@ -73472,6 +73546,17 @@
         "curated:function.curated.settings.master-lmp-access:steps",
         "curated:function.curated.training.master-lmp-event-details:steps",
         "message:components/PlatformConfigurationSettings.tsx:6200"
+      ],
+      "count": 4
+    },
+    {
+      "term": "the notification",
+      "normalised": "the notification",
+      "aliases": [],
+      "sources": [
+        "curated:function.curated.training.training-report:steps",
+        "curated:function.curated.messaging.auto-notifications:steps",
+        "message:components/PlatformConfigurationSettings.tsx:13020"
       ],
       "count": 4
     },
@@ -76650,17 +76735,6 @@
       "count": 3
     },
     {
-      "term": "Add edit or",
-      "normalised": "add edit or",
-      "aliases": [],
-      "sources": [
-        "curated:function.curated.settings.personnel-qualifications:steps",
-        "curated:function.curated.settings.dfp-resource-rows:steps",
-        "curated:function.curated.settings.user-access:steps"
-      ],
-      "count": 3
-    },
-    {
       "term": "Add exclusion",
       "normalised": "add exclusion",
       "aliases": [
@@ -76870,18 +76944,6 @@
       "sources": [
         "control:components/ScheduleView.tsx:13512",
         "message:components/ScheduleView.tsx:13518"
-      ],
-      "count": 3
-    },
-    {
-      "term": "aircraft Label",
-      "normalised": "aircraft label",
-      "aliases": [
-        "aircraft label"
-      ],
-      "sources": [
-        "control:components/ContinuationCurrencyEventsSettings.tsx:179",
-        "permission:components/PlatformConfigurationSettings.tsx:9604"
       ],
       "count": 3
     },
@@ -79692,63 +79754,6 @@
         "message:App.tsx:10271"
       ],
       "count": 3
-    },
-    {
-      "term": "contact display Name is Selected ? 'On' '+'",
-      "normalised": "contact display name is selected on",
-      "aliases": [
-        "contact display Name is Selected On"
-      ],
-      "sources": [
-        "control:components/MyDashboard.tsx:3739"
-      ],
-      "count": 3
-    },
-    {
-      "term": "context",
-      "normalised": "context",
-      "aliases": [],
-      "sources": [
-        "control:components/Header.tsx:405",
-        "control:components/OrganisationSettings.tsx:1064",
-        "message:App.tsx:54670"
-      ],
-      "count": 3
-    },
-    {
-      "term": "CONTINUATION Failed to save",
-      "normalised": "continuation failed to save",
-      "aliases": [],
-      "sources": [
-        "message:App.tsx:53136",
-        "message:App.tsx:53138",
-        "message:App.tsx:56718"
-      ],
-      "count": 3
-    },
-    {
-      "term": "controls where",
-      "normalised": "controls where",
-      "aliases": [
-        "Controls where"
-      ],
-      "sources": [
-        "curated:function.curated.settings.audit-log-recording:steps",
-        "curated:function.curated.settings.user-access:purpose",
-        "curated:function.curated.settings.user-access:steps"
-      ],
-      "count": 3
-    },
-    {
-      "term": "conversation contact display Name",
-      "normalised": "conversation contact display name",
-      "aliases": [],
-      "sources": [
-        "control:components/MyDashboard.tsx:3279",
-        "control:components/MyDashboard.tsx:3353",
-        "control-attribute:components/MyDashboard.tsx:3353"
-      ],
-      "count": 3
     }
   ],
   "curatedKnowledge": {
@@ -80450,6 +80455,14 @@
         "aliases": [
           "auto message",
           "automatic message",
+          "automatic notifications",
+          "auto notifications",
+          "turn off automatic notifications",
+          "turn off auto notifications",
+          "disable automatic notifications",
+          "disable auto notifications",
+          "notification settings",
+          "training notification settings",
           "who gets auto message",
           "who receives auto message",
           "failed event auto message",
@@ -80467,9 +80480,10 @@
         "procedureSteps": [
           "Open Training Records.",
           "Open the relevant training report workflow.",
-          "Enable the notification option for the report or condition.",
+          "Open the notification options for the report or condition.",
+          "Turn the notification option on or off as required.",
           "Ensure the selected course has the relevant Course Commander or Deputy Course Commander assigned.",
-          "Check My Home messages for the delivered alert from DFP-NEO Alerts."
+          "Save the training report or notification setting."
         ],
         "inputs": [],
         "outputs": [
@@ -80482,10 +80496,10 @@
           "Auto notification settings, recipient role selections and course commander/deputy course commander assignments."
         ],
         "businessRules": [
-          "Recipients are derived from configured notification roles and matching course-level staff assignments."
+          "Recipients are derived from configured notification roles and matching course-level staff assignments. Turning notifications off prevents that workflow from sending the automatic message."
         ],
         "failureConditions": [
-          "No recipient is available if the relevant course commander/deputy field is blank or the notification role is not enabled."
+          "No recipient is available if the relevant course commander/deputy field is blank or the notification role is not enabled. If automatic notifications are turned off, no automatic message is sent for that condition."
         ],
         "relatedFunctions": [
           "function.curated.training.training-report",
@@ -82665,7 +82679,18 @@
           "remove resource rows",
           "aircraft rows",
           "simulator rows",
-          "resource row setup"
+          "resource row setup",
+          "aircraft label",
+          "aircraft labels",
+          "label the aircraft",
+          "label aircraft",
+          "rename aircraft",
+          "name aircraft",
+          "aircraft display name",
+          "aircraft row label",
+          "simulator label",
+          "resource label",
+          "row label"
         ],
         "location": {
           "page": "Settings",
@@ -82673,17 +82698,17 @@
           "component": "components/PlatformConfigurationSettings.tsx",
           "anchor": "platform-dfp-resource-rows"
         },
-        "purpose": "Configures the aircraft, simulator or other DFP resource rows that appear on the daily schedule.",
+        "purpose": "Configures the aircraft, simulator or other DFP resource rows and labels that appear on the daily schedule.",
         "procedureSteps": [
           "Open Settings.",
           "Open Resources & Configuration.",
           "Open DFP Resource Rows.",
           "Click Edit and confirm your password if the section is locked.",
-          "Add, edit or select resource rows as required.",
+          "Add, edit, rename or label the aircraft/simulator resource rows as required.",
           "Use Delete Selected Rows only for rows entered in error, then save the settings."
         ],
         "outputs": [
-          "Updates the resource rows shown on the DFP timeline and used by scheduling."
+          "Updates the resource rows and aircraft/simulator labels shown on the DFP timeline and used by scheduling."
         ],
         "permissions": [
           "settings.view",
@@ -82693,10 +82718,10 @@
           "Platform configuration access and valid unit/location configuration."
         ],
         "businessRules": [
-          "Deleting resource rows changes the resources available to the schedule. It should not be used as a substitute for marking an aircraft or simulator unavailable."
+          "Renaming or labelling resource rows changes how aircraft or simulator rows are displayed. Deleting resource rows changes the resources available to the schedule and should not be used as a substitute for marking an aircraft or simulator unavailable."
         ],
         "failureConditions": [
-          "Delete Selected Rows is unavailable until the section is unlocked, a row is selected and the user has edit permission."
+          "Resource row labels cannot be edited until the section is unlocked and the user has edit permission. Delete Selected Rows is unavailable until a row is selected."
         ],
         "relatedFunctions": [
           "function.curated.scheduling.aircraft-availability",
@@ -84720,6 +84745,14 @@
       "aliases": [
         "auto message",
         "automatic message",
+        "automatic notifications",
+        "auto notifications",
+        "turn off automatic notifications",
+        "turn off auto notifications",
+        "disable automatic notifications",
+        "disable auto notifications",
+        "notification settings",
+        "training notification settings",
         "who gets auto message",
         "who receives auto message",
         "failed event auto message",
@@ -84745,7 +84778,7 @@
         "Auto notification settings, recipient role selections and course commander/deputy course commander assignments."
       ],
       "failureConditions": [
-        "No recipient is available if the relevant course commander/deputy field is blank or the notification role is not enabled."
+        "No recipient is available if the relevant course commander/deputy field is blank or the notification role is not enabled. If automatic notifications are turned off, no automatic message is sent for that condition."
       ],
       "relatedFunctions": [
         "function.curated.training.training-report",
@@ -86484,7 +86517,18 @@
         "remove resource rows",
         "aircraft rows",
         "simulator rows",
-        "resource row setup"
+        "resource row setup",
+        "aircraft label",
+        "aircraft labels",
+        "label the aircraft",
+        "label aircraft",
+        "rename aircraft",
+        "name aircraft",
+        "aircraft display name",
+        "aircraft row label",
+        "simulator label",
+        "resource label",
+        "row label"
       ],
       "location": {
         "page": "Settings",
@@ -86492,10 +86536,10 @@
         "component": "components/PlatformConfigurationSettings.tsx",
         "anchor": "platform-dfp-resource-rows"
       },
-      "purpose": "Configures the aircraft, simulator or other DFP resource rows that appear on the daily schedule.",
+      "purpose": "Configures the aircraft, simulator or other DFP resource rows and labels that appear on the daily schedule.",
       "inputs": [],
       "outputs": [
-        "Updates the resource rows shown on the DFP timeline and used by scheduling."
+        "Updates the resource rows and aircraft/simulator labels shown on the DFP timeline and used by scheduling."
       ],
       "permissions": [
         "settings.view",
@@ -86505,7 +86549,7 @@
         "Platform configuration access and valid unit/location configuration."
       ],
       "failureConditions": [
-        "Delete Selected Rows is unavailable until the section is unlocked, a row is selected and the user has edit permission."
+        "Resource row labels cannot be edited until the section is unlocked and the user has edit permission. Delete Selected Rows is unavailable until a row is selected."
       ],
       "relatedFunctions": [
         "function.curated.scheduling.aircraft-availability",

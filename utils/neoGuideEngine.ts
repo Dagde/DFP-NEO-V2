@@ -186,7 +186,7 @@ const ACTION_FAMILIES: Array<{ name: string; terms: string[] }> = [
   { name: 'archive', terms: ['archive', 'archived', 'retire', 'retired', 'restore', 'restored'] },
   { name: 'unavailable', terms: ['unavailable', 'unavailability', 'leave', 'away', 'pause', 'paused', 'blocked'] },
   { name: 'add', terms: ['add', 'create', 'new', 'insert', 'upload', 'import'] },
-  { name: 'edit', terms: ['edit', 'change', 'update', 'modify', 'configure', 'set'] },
+  { name: 'edit', terms: ['edit', 'change', 'update', 'modify', 'configure', 'set', 'label', 'name', 'rename', 'disable', 'enable', 'turn'] },
 ];
 const LOW_SIGNAL_MATCH_TOKENS = new Set([
   'action', 'button', 'control', 'field', 'page', 'panel', 'section', 'setting', 'settings', 'override',

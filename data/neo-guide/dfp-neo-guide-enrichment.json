@@ -422,7 +422,7 @@
     {
       "id": "function.curated.messaging.auto-notifications",
       "name": "Training auto notifications",
-      "aliases": ["auto message", "automatic message", "who gets auto message", "who receives auto message", "failed event auto message", "event failure notification", "course commander message", "DFP-NEO Alerts"],
+      "aliases": ["auto message", "automatic message", "automatic notifications", "auto notifications", "turn off automatic notifications", "turn off auto notifications", "disable automatic notifications", "disable auto notifications", "notification settings", "training notification settings", "who gets auto message", "who receives auto message", "failed event auto message", "event failure notification", "course commander message", "DFP-NEO Alerts"],
       "location": {
         "page": "Training Records",
         "route": null,
@@ -433,16 +433,17 @@
       "procedureSteps": [
         "Open Training Records.",
         "Open the relevant training report workflow.",
-        "Enable the notification option for the report or condition.",
+        "Open the notification options for the report or condition.",
+        "Turn the notification option on or off as required.",
         "Ensure the selected course has the relevant Course Commander or Deputy Course Commander assigned.",
-        "Check My Home messages for the delivered alert from DFP-NEO Alerts."
+        "Save the training report or notification setting."
       ],
       "inputs": [],
       "outputs": ["Creates in-app message records with the sender label DFP-NEO Alerts where implemented."],
       "permissions": ["trainingRecords.courseManagement.view"],
       "dependencies": ["Auto notification settings, recipient role selections and course commander/deputy course commander assignments."],
-      "businessRules": ["Recipients are derived from configured notification roles and matching course-level staff assignments."],
-      "failureConditions": ["No recipient is available if the relevant course commander/deputy field is blank or the notification role is not enabled."],
+      "businessRules": ["Recipients are derived from configured notification roles and matching course-level staff assignments. Turning notifications off prevents that workflow from sending the automatic message."],
+      "failureConditions": ["No recipient is available if the relevant course commander/deputy field is blank or the notification role is not enabled. If automatic notifications are turned off, no automatic message is sent for that condition."],
       "relatedFunctions": ["function.curated.training.training-report", "function.curated.people.trainee-roster"],
       "auditStatus": "IMPLEMENTED - manually enriched from current implementation review"
     },
@@ -1666,27 +1667,27 @@
     {
       "id": "function.curated.settings.dfp-resource-rows",
       "name": "DFP Resource Rows",
-      "aliases": ["dfp resource rows", "resource rows", "delete selected rows", "delete dfp resource rows", "remove resource rows", "aircraft rows", "simulator rows", "resource row setup"],
+      "aliases": ["dfp resource rows", "resource rows", "delete selected rows", "delete dfp resource rows", "remove resource rows", "aircraft rows", "simulator rows", "resource row setup", "aircraft label", "aircraft labels", "label the aircraft", "label aircraft", "rename aircraft", "name aircraft", "aircraft display name", "aircraft row label", "simulator label", "resource label", "row label"],
       "location": {
         "page": "Settings",
         "route": null,
         "component": "components/PlatformConfigurationSettings.tsx",
         "anchor": "platform-dfp-resource-rows"
       },
-      "purpose": "Configures the aircraft, simulator or other DFP resource rows that appear on the daily schedule.",
+      "purpose": "Configures the aircraft, simulator or other DFP resource rows and labels that appear on the daily schedule.",
       "procedureSteps": [
         "Open Settings.",
         "Open Resources & Configuration.",
         "Open DFP Resource Rows.",
         "Click Edit and confirm your password if the section is locked.",
-        "Add, edit or select resource rows as required.",
+        "Add, edit, rename or label the aircraft/simulator resource rows as required.",
         "Use Delete Selected Rows only for rows entered in error, then save the settings."
       ],
-      "outputs": ["Updates the resource rows shown on the DFP timeline and used by scheduling."],
+      "outputs": ["Updates the resource rows and aircraft/simulator labels shown on the DFP timeline and used by scheduling."],
       "permissions": ["settings.view", "settings.platform.edit"],
       "dependencies": ["Platform configuration access and valid unit/location configuration."],
-      "businessRules": ["Deleting resource rows changes the resources available to the schedule. It should not be used as a substitute for marking an aircraft or simulator unavailable."],
-      "failureConditions": ["Delete Selected Rows is unavailable until the section is unlocked, a row is selected and the user has edit permission."],
+      "businessRules": ["Renaming or labelling resource rows changes how aircraft or simulator rows are displayed. Deleting resource rows changes the resources available to the schedule and should not be used as a substitute for marking an aircraft or simulator unavailable."],
+      "failureConditions": ["Resource row labels cannot be edited until the section is unlocked and the user has edit permission. Delete Selected Rows is unavailable until a row is selected."],
       "relatedFunctions": ["function.curated.scheduling.aircraft-availability", "function.curated.settings.aircraft-setup"],
       "auditStatus": "IMPLEMENTED - manually enriched from askability audit"
     },

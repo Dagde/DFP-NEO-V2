@@ -1,7 +1,7 @@
 {
-  "generatedAt": "2026-09-24T14:46:12.074Z",
+  "generatedAt": "2026-09-24T15:04:14.220Z",
   "candidateCount": 1040,
-  "weakOrRiskyCount": 792,
+  "weakOrRiskyCount": 793,
   "results": [
     {
       "label": "Password",
@@ -674,7 +674,7 @@
       },
       "subjectOverlap": 1,
       "riskScore": 6,
-      "answerPreview": "Configures the aircraft, simulator or other DFP resource rows that appear on the daily schedule. Steps: 1. Open Settings. 2. Open Resources & Configuration. 3. Open DFP Resource Rows. 4. Click Edit and confirm your password if the section is locked. 5. Add, ed"
+      "answerPreview": "Configures the aircraft, simulator or other DFP resource rows and labels that appear on the daily schedule. Steps: 1. Open Settings. 2. Open Resources & Configuration. 3. Open DFP Resource Rows. 4. Click Edit and confirm your password if the section is locked."
     },
     {
       "label": "Delete Profile",
@@ -1235,31 +1235,6 @@
       "answerPreview": "I think you're asking about the schedule. Which of these do you mean? 1. Formation callsigns 2. Flight authorisation warning settings 3. Aircraft availability 4. Open the DFP schedule 5. Initial Setup Wizard None of these"
     },
     {
-      "label": "Total",
-      "source": "control",
-      "file": "components/AddCourseFlyout.tsx",
-      "line": 281,
-      "tagName": "label",
-      "question": "where do i set Total",
-      "confidence": "low",
-      "needsClarification": true,
-      "topMatch": {
-        "id": "function.curated.people.trainee-unavailability",
-        "name": "Trainee unavailability",
-        "score": 18,
-        "reasons": [
-          "matched event",
-          "near hours",
-          "action edit",
-          "curated",
-          "single weak subject"
-        ]
-      },
-      "subjectOverlap": 0,
-      "riskScore": 5,
-      "answerPreview": "I don't know the answer to that yet. Please include the page or area you mean, because that term appears in more than one place."
-    },
-    {
       "label": "No. of A/C",
       "source": "control",
       "file": "components/AddFlightTileModal.tsx",
@@ -1269,20 +1244,18 @@
       "confidence": "low",
       "needsClarification": true,
       "topMatch": {
-        "id": "function.curated.people.trainee-roster",
-        "name": "Trainee roster",
-        "score": 18,
+        "id": "function.control-components-addflighttilemodal-tsx-no-of-a-c-3560",
+        "name": "No. of A/C",
+        "score": 20,
         "reasons": [
+          "phrase no of a c",
           "matched no",
-          "intent NAVIGATE",
-          "action edit",
-          "curated",
-          "single weak subject"
+          "action edit"
         ]
       },
       "subjectOverlap": 0,
       "riskScore": 5,
-      "answerPreview": "I don't know the answer to that yet. Please include the page or area you mean, because that term appears in more than one place."
+      "answerPreview": "I don't know the answer to that yet. I couldn't find a reliable DFP-NEO guide entry for that question."
     },
     {
       "label": "Manifest Status",
@@ -1333,79 +1306,6 @@
       "answerPreview": "I think you're asking about the schedule. Which of these do you mean? 1. Rank, Terminology & Labels 2. Personnel Qualifications 3. Profile photo 4. Remove unavailability 5. Flight authorisation None of these"
     },
     {
-      "label": "CONFIG",
-      "source": "control",
-      "file": "components/AddFlightTileModal.tsx",
-      "line": 3867,
-      "tagName": "label",
-      "question": "where do i set CONFIG",
-      "confidence": "low",
-      "needsClarification": true,
-      "topMatch": {
-        "id": "function.curated.navigation.dfp",
-        "name": "Open the DFP schedule",
-        "score": 18,
-        "reasons": [
-          "partial config",
-          "intent NAVIGATE",
-          "action edit",
-          "curated",
-          "single weak subject"
-        ]
-      },
-      "subjectOverlap": 0,
-      "riskScore": 5,
-      "answerPreview": "I don't know the answer to that yet. Please include the page or area you mean, because that term appears in more than one place."
-    },
-    {
-      "label": "Area",
-      "source": "control",
-      "file": "components/AddFlightTileModal.tsx",
-      "line": 3887,
-      "tagName": "label",
-      "question": "where do i set Area",
-      "confidence": "low",
-      "needsClarification": true,
-      "topMatch": {
-        "id": "function.curated.settings.audit-log-recording",
-        "name": "Audit log recording settings",
-        "score": 18,
-        "reasons": [
-          "matched area",
-          "action edit",
-          "curated",
-          "single weak subject"
-        ]
-      },
-      "subjectOverlap": 0,
-      "riskScore": 5,
-      "answerPreview": "I don't know the answer to that yet. Please include the page or area you mean, because that term appears in more than one place."
-    },
-    {
-      "label": "Aircraft",
-      "source": "control",
-      "file": "components/AddFlightTileModal.tsx",
-      "line": 3897,
-      "tagName": "label",
-      "question": "where do i set Aircraft",
-      "confidence": "low",
-      "needsClarification": true,
-      "topMatch": {
-        "id": "function.curated.scheduling.neo-build",
-        "name": "NEO Build",
-        "score": 18,
-        "reasons": [
-          "matched aircraft",
-          "action edit",
-          "curated",
-          "single weak subject"
-        ]
-      },
-      "subjectOverlap": 0,
-      "riskScore": 5,
-      "answerPreview": "I don't know the answer to that yet. Please include the page or area you mean, because that term appears in more than one place."
-    },
-    {
       "label": "cpt-resource",
       "source": "control",
       "file": "components/AddGroundEventFlyout.tsx",
@@ -1454,30 +1354,6 @@
       "answerPreview": "I think you're asking about the schedule. Which of these do you mean? 1. Aircraft availability 2. Flight detail fields 3. DFP Resource Rows 4. NEO Build 5. Build priorities None of these"
     },
     {
-      "label": "Reason",
-      "source": "control",
-      "file": "components/AddUnavailabilityFlyout.tsx",
-      "line": 222,
-      "tagName": "label",
-      "question": "where do i set Reason",
-      "confidence": "low",
-      "needsClarification": true,
-      "topMatch": {
-        "id": "function.curated.scheduling.cancel-restore-delete-event",
-        "name": "Cancel, restore or delete a scheduled event",
-        "score": 18,
-        "reasons": [
-          "partial reason",
-          "action edit",
-          "curated",
-          "single weak subject"
-        ]
-      },
-      "subjectOverlap": 0,
-      "riskScore": 5,
-      "answerPreview": "I don't know the answer to that yet. Please include the page or area you mean, because that term appears in more than one place."
-    },
-    {
       "label": "Add Custom Period",
       "source": "control",
       "file": "components/AddUnavailabilityFlyout.tsx",
@@ -1502,31 +1378,6 @@
       "subjectOverlap": 0,
       "riskScore": 5,
       "answerPreview": "I think you're asking about trainee management. Which of these do you mean? 1. Flight details 2. Trainee unavailability 3. Add ground event 4. Archived staff None of these"
-    },
-    {
-      "label": "Assessment",
-      "source": "control",
-      "file": "components/AirCombatTrainingReportModal.tsx",
-      "line": 1113,
-      "tagName": "label",
-      "question": "where do i set Assessment",
-      "confidence": "low",
-      "needsClarification": true,
-      "topMatch": {
-        "id": "function.curated.navigation.dfp",
-        "name": "Open the DFP schedule",
-        "score": 18,
-        "reasons": [
-          "matched required",
-          "intent NAVIGATE",
-          "action edit",
-          "curated",
-          "single weak subject"
-        ]
-      },
-      "subjectOverlap": 0,
-      "riskScore": 5,
-      "answerPreview": "I don't know the answer to that yet. Please include the page or area you mean, because that term appears in more than one place."
     },
     {
       "label": "Export to CSV",
@@ -1574,7 +1425,7 @@
       },
       "subjectOverlap": 0,
       "riskScore": 5,
-      "answerPreview": "I think you're asking about trainee management. Which of these do you mean? 1. Trainee roster 2. Formation callsigns 3. User accounts 4. Course management 5. Remove unavailability None of these"
+      "answerPreview": "I think you're asking about trainee management. Which of these do you mean? 1. Trainee roster 2. Formation callsigns 3. User accounts 4. Delete or Archive Trainee 5. Course management None of these"
     },
     {
       "label": "Clear Auth",
@@ -1648,53 +1499,6 @@
       "answerPreview": "I think you're asking about Program Schedule. Which of these do you mean? 1. Flight details 2. Publish DFP 3. Cancel, restore or delete a scheduled event 4. Archived staff 5. Export configuration report None of these"
     },
     {
-      "label": "course rankings",
-      "source": "guide-target",
-      "file": "components/CourseProgressView.tsx",
-      "line": 1221,
-      "tagName": "div",
-      "question": "where do i set course rankings",
-      "confidence": "low",
-      "needsClarification": true,
-      "topMatch": {
-        "id": "function.curated.training.training-report",
-        "name": "Training report",
-        "score": 33,
-        "reasons": [
-          "matched course",
-          "matched rankings",
-          "intent NAVIGATE",
-          "action edit",
-          "curated"
-        ]
-      },
-      "subjectOverlap": 0,
-      "riskScore": 5,
-      "answerPreview": "I think you're asking about trainee management. Which of these do you mean? 1. Training report 2. Training auto notifications 3. Rank, Terminology & Labels 4. Course leadership assignments 5. Trainee roster None of these"
-    },
-    {
-      "label": "getAwardDisplayName(award)",
-      "source": "control",
-      "file": "components/CourseProgressView.tsx",
-      "line": 1257,
-      "tagName": "option",
-      "question": "where do i set getAwardDisplayName(award)",
-      "confidence": "low",
-      "needsClarification": true,
-      "topMatch": {
-        "id": "function.control-components-formationcallsignssection-tsx-name-343",
-        "name": "Name",
-        "score": 16,
-        "reasons": [
-          "phrase name",
-          "action edit"
-        ]
-      },
-      "subjectOverlap": 0,
-      "riskScore": 5,
-      "answerPreview": "I don't know the answer to that yet. I couldn't find a reliable DFP-NEO guide entry for that question."
-    },
-    {
       "label": "Add Award",
       "source": "control",
       "file": "components/CourseProgressView.tsx",
@@ -1765,7 +1569,7 @@
       },
       "subjectOverlap": 0,
       "riskScore": 5,
-      "answerPreview": "I think you're asking about Settings. Which of these do you mean? 1. Rank, Terminology & Labels 2. Staff Rank Equivalency Table 3. Personnel Qualifications 4. Course setup fields None of these"
+      "answerPreview": "I think you're asking about Settings. Which of these do you mean? 1. Rank, Terminology & Labels 2. Staff Rank Equivalency Table 3. Personnel Qualifications 4. DFP Resource Rows 5. Course setup fields None of these"
     },
     {
       "label": "Search currencies...",
@@ -1789,6 +1593,29 @@
       "subjectOverlap": 0,
       "riskScore": 5,
       "answerPreview": "I think you're asking about DFP-NEO. Which of these do you mean? 1. NEO Build 2. Priority and currency requests 3. Currency audit and dates 4. Special continuation training request None of these"
+    },
+    {
+      "label": "Rolling Window",
+      "source": "control",
+      "file": "components/CurrencyBuilderView.tsx",
+      "line": 391,
+      "tagName": "option",
+      "question": "where do i set Rolling Window",
+      "confidence": "low",
+      "needsClarification": true,
+      "topMatch": {
+        "id": "function.curated.scheduling.cancel-impacted-events",
+        "name": "Cancel Impacted Events",
+        "score": 26,
+        "reasons": [
+          "matched window",
+          "action edit",
+          "curated"
+        ]
+      },
+      "subjectOverlap": 0,
+      "riskScore": 5,
+      "answerPreview": "I think you're asking about the schedule. Which of these do you mean? 1. Cancel Impacted Events 2. Flight authorisation None of these"
     },
     {
       "label": "Use Earliest Expiry",
@@ -1981,7 +1808,7 @@
       },
       "subjectOverlap": 0,
       "riskScore": 5,
-      "answerPreview": "I think you're asking about DFP-NEO. Which of these do you mean? 1. My Home messages None of these"
+      "answerPreview": "I think you're asking about DFP-NEO. Which of these do you mean? 1. My Home messages 2. Cancel Impacted Events None of these"
     },
     {
       "label": "PAX",
@@ -2005,30 +1832,6 @@
       "subjectOverlap": 0,
       "riskScore": 5,
       "answerPreview": "I don't know the answer to that yet. I couldn't find a reliable DFP-NEO guide entry for that question."
-    },
-    {
-      "label": "Pilot",
-      "source": "control",
-      "file": "components/FlightDetailModal.tsx",
-      "line": 3256,
-      "tagName": "label",
-      "question": "where do i set Pilot",
-      "confidence": "low",
-      "needsClarification": true,
-      "topMatch": {
-        "id": "function.curated.people.staff-unavailability",
-        "name": "Staff unavailability",
-        "score": 18,
-        "reasons": [
-          "matched pilot",
-          "action edit",
-          "curated",
-          "single weak subject"
-        ]
-      },
-      "subjectOverlap": 0,
-      "riskScore": 5,
-      "answerPreview": "I don't know the answer to that yet. Please include the page or area you mean, because that term appears in more than one place."
     },
     {
       "label": "Add Deployment",
@@ -2071,55 +1874,6 @@
         "reasons": [
           "matched lmp",
           "matched master",
-          "action edit",
-          "curated",
-          "single weak subject"
-        ]
-      },
-      "subjectOverlap": 0,
-      "riskScore": 5,
-      "answerPreview": "I don't know the answer to that yet. Please include the page or area you mean, because that term appears in more than one place."
-    },
-    {
-      "label": "Area",
-      "source": "control",
-      "file": "components/FlightDetailModal.tsx",
-      "line": 3759,
-      "tagName": "label",
-      "question": "where do i set Area",
-      "confidence": "low",
-      "needsClarification": true,
-      "topMatch": {
-        "id": "function.curated.settings.audit-log-recording",
-        "name": "Audit log recording settings",
-        "score": 18,
-        "reasons": [
-          "matched area",
-          "action edit",
-          "curated",
-          "single weak subject"
-        ]
-      },
-      "subjectOverlap": 0,
-      "riskScore": 5,
-      "answerPreview": "I don't know the answer to that yet. Please include the page or area you mean, because that term appears in more than one place."
-    },
-    {
-      "label": "CONFIG",
-      "source": "control",
-      "file": "components/FlightDetailModal.tsx",
-      "line": 3771,
-      "tagName": "label",
-      "question": "where do i set CONFIG",
-      "confidence": "low",
-      "needsClarification": true,
-      "topMatch": {
-        "id": "function.curated.navigation.dfp",
-        "name": "Open the DFP schedule",
-        "score": 18,
-        "reasons": [
-          "partial config",
-          "intent NAVIGATE",
           "action edit",
           "curated",
           "single weak subject"
@@ -2274,30 +2028,6 @@
       "answerPreview": "I don't know the answer to that yet. Please include the page or area you mean, because that term appears in more than one place."
     },
     {
-      "label": "person",
-      "source": "control",
-      "file": "components/FlightDetailModal.tsx",
-      "line": 4493,
-      "tagName": "label",
-      "question": "where do i set person",
-      "confidence": "low",
-      "needsClarification": true,
-      "topMatch": {
-        "id": "function.curated.people.staff-unavailability",
-        "name": "Staff unavailability",
-        "score": 18,
-        "reasons": [
-          "partial person",
-          "action edit",
-          "curated",
-          "single weak subject"
-        ]
-      },
-      "subjectOverlap": 0,
-      "riskScore": 5,
-      "answerPreview": "I don't know the answer to that yet. Please include the page or area you mean, because that term appears in more than one place."
-    },
-    {
       "label": "All Courses",
       "source": "control",
       "file": "components/FullPageProgressGraph.tsx",
@@ -2344,7 +2074,7 @@
       },
       "subjectOverlap": 0,
       "riskScore": 5,
-      "answerPreview": "I think you're asking about Settings. Which of these do you mean? 1. Formation callsigns 2. Rank, Terminology & Labels 3. Master Permission Profiles 4. Training report None of these"
+      "answerPreview": "I think you're asking about Settings. Which of these do you mean? 1. Formation callsigns 2. Rank, Terminology & Labels 3. Master Permission Profiles None of these"
     },
     {
       "label": "Open current profile",
@@ -2421,28 +2151,50 @@
       "answerPreview": "I don't know the answer to that yet. Please include the page or area you mean, because that term appears in more than one place."
     },
     {
-      "label": "Qualifications",
+      "label": "FWD/SHORT",
       "source": "control",
       "file": "components/InstructorProfileFlyout.tsx",
-      "line": 2173,
-      "tagName": "label",
-      "question": "where do i set Qualifications",
+      "line": 2145,
+      "tagName": "option",
+      "question": "where do i set FWD/SHORT",
       "confidence": "low",
       "needsClarification": true,
       "topMatch": {
-        "id": "function.curated.scheduling.neo-build",
-        "name": "NEO Build",
-        "score": 18,
+        "id": "function.control-components-instructorprofileflyout-tsx-print-1452",
+        "name": "Print",
+        "score": 15,
         "reasons": [
-          "matched qualifications",
-          "action edit",
-          "curated",
-          "single weak subject"
+          "matched short",
+          "intent NAVIGATE",
+          "action edit"
         ]
       },
       "subjectOverlap": 0,
       "riskScore": 5,
-      "answerPreview": "I don't know the answer to that yet. Please include the page or area you mean, because that term appears in more than one place."
+      "answerPreview": "I don't know the answer to that yet. I couldn't find a reliable DFP-NEO guide entry for that question."
+    },
+    {
+      "label": "REAR/SHORT",
+      "source": "control",
+      "file": "components/InstructorProfileFlyout.tsx",
+      "line": 2145,
+      "tagName": "option",
+      "question": "where do i set REAR/SHORT",
+      "confidence": "low",
+      "needsClarification": true,
+      "topMatch": {
+        "id": "function.control-components-instructorprofileflyout-tsx-print-1452",
+        "name": "Print",
+        "score": 15,
+        "reasons": [
+          "matched short",
+          "intent NAVIGATE",
+          "action edit"
+        ]
+      },
+      "subjectOverlap": 0,
+      "riskScore": 5,
+      "answerPreview": "I don't know the answer to that yet. I couldn't find a reliable DFP-NEO guide entry for that question."
     },
     {
       "label": "Logbook",
@@ -2454,11 +2206,11 @@
       "confidence": "low",
       "needsClarification": true,
       "topMatch": {
-        "id": "function.control-components-instructorprofileflyout-tsx-unnamed-1442",
-        "name": "‹",
-        "score": 13,
+        "id": "function.control-components-instructorprofileflyout-tsx-print-1452",
+        "name": "Print",
+        "score": 15,
         "reasons": [
-          "partial logbook",
+          "matched logbook",
           "intent NAVIGATE",
           "action edit",
           "single weak subject"
@@ -2515,7 +2267,7 @@
       },
       "subjectOverlap": 0,
       "riskScore": 5,
-      "answerPreview": "I think you're asking about Settings. Which of these do you mean? 1. Rank, Terminology & Labels 2. Staff Rank Equivalency Table 3. Personnel Qualifications 4. Course setup fields None of these"
+      "answerPreview": "I think you're asking about Settings. Which of these do you mean? 1. Rank, Terminology & Labels 2. Staff Rank Equivalency Table 3. Personnel Qualifications 4. DFP Resource Rows 5. Course setup fields None of these"
     },
     {
       "label": "Add Arrangement",
@@ -2937,7 +2689,7 @@
       },
       "subjectOverlap": 0,
       "riskScore": 5,
-      "answerPreview": "I think you're asking about Settings. Which of these do you mean? 1. Rank, Terminology & Labels 2. Staff Rank Equivalency Table 3. Personnel Qualifications 4. Scoring matrix elements 5. Course setup fields None of these"
+      "answerPreview": "I think you're asking about Settings. Which of these do you mean? 1. Rank, Terminology & Labels 2. Staff Rank Equivalency Table 3. Personnel Qualifications 4. DFP Resource Rows 5. Scoring matrix elements None of these"
     },
     {
       "label": "Add Element",
@@ -3110,153 +2862,7 @@
       },
       "subjectOverlap": 0,
       "riskScore": 5,
-      "answerPreview": "I think you're asking about Settings. Which of these do you mean? 1. Rank, Terminology & Labels 2. Formation callsigns 3. Aircraft availability 4. Course setup fields 5. Staff Rank Equivalency Table None of these"
-    },
-    {
-      "label": "Aircraft",
-      "source": "control",
-      "file": "components/PostFlightModal.tsx",
-      "line": 154,
-      "tagName": "label",
-      "question": "where do i set Aircraft",
-      "confidence": "low",
-      "needsClarification": true,
-      "topMatch": {
-        "id": "function.curated.scheduling.neo-build",
-        "name": "NEO Build",
-        "score": 18,
-        "reasons": [
-          "matched aircraft",
-          "action edit",
-          "curated",
-          "single weak subject"
-        ]
-      },
-      "subjectOverlap": 0,
-      "riskScore": 5,
-      "answerPreview": "I don't know the answer to that yet. Please include the page or area you mean, because that term appears in more than one place."
-    },
-    {
-      "label": "Route",
-      "source": "control",
-      "file": "components/PostFlightModal.tsx",
-      "line": 181,
-      "tagName": "label",
-      "question": "where do i set Route",
-      "confidence": "low",
-      "needsClarification": true,
-      "topMatch": {
-        "id": "function.curated.navigation.dfp",
-        "name": "Open the DFP schedule",
-        "score": 8,
-        "reasons": [
-          "intent NAVIGATE",
-          "action edit",
-          "curated",
-          "weak subject match",
-          "single weak subject"
-        ]
-      },
-      "subjectOverlap": 0,
-      "riskScore": 5,
-      "answerPreview": "I don't know the answer to that yet. Please include the page or area you mean, because that term appears in more than one place."
-    },
-    {
-      "label": "Land",
-      "source": "control",
-      "file": "components/PostFlightModal.tsx",
-      "line": 197,
-      "tagName": "label",
-      "question": "where do i set Land",
-      "confidence": "low",
-      "needsClarification": true,
-      "topMatch": {
-        "id": "function.control-components-addflighttilemodal-tsx-deployment-3450",
-        "name": "Deployment",
-        "score": 15,
-        "reasons": [
-          "matched land",
-          "intent NAVIGATE",
-          "action edit",
-          "single weak subject"
-        ]
-      },
-      "subjectOverlap": 0,
-      "riskScore": 5,
-      "answerPreview": "I don't know the answer to that yet. I couldn't find a reliable DFP-NEO guide entry for that question."
-    },
-    {
-      "label": "Aircraft",
-      "source": "control",
-      "file": "components/PostFlightView.tsx",
-      "line": 1546,
-      "tagName": "label",
-      "question": "where do i set Aircraft",
-      "confidence": "low",
-      "needsClarification": true,
-      "topMatch": {
-        "id": "function.curated.scheduling.neo-build",
-        "name": "NEO Build",
-        "score": 18,
-        "reasons": [
-          "matched aircraft",
-          "action edit",
-          "curated",
-          "single weak subject"
-        ]
-      },
-      "subjectOverlap": 0,
-      "riskScore": 5,
-      "answerPreview": "I don't know the answer to that yet. Please include the page or area you mean, because that term appears in more than one place."
-    },
-    {
-      "label": "Duty",
-      "source": "control",
-      "file": "components/PostFlightView.tsx",
-      "line": 1577,
-      "tagName": "label",
-      "question": "where do i set Duty",
-      "confidence": "low",
-      "needsClarification": true,
-      "topMatch": {
-        "id": "function.curated.people.staff-unavailability",
-        "name": "Staff unavailability",
-        "score": 18,
-        "reasons": [
-          "matched duty",
-          "action edit",
-          "curated",
-          "single weak subject"
-        ]
-      },
-      "subjectOverlap": 0,
-      "riskScore": 5,
-      "answerPreview": "I don't know the answer to that yet. Please include the page or area you mean, because that term appears in more than one place."
-    },
-    {
-      "label": "Route",
-      "source": "control",
-      "file": "components/PostFlightView.tsx",
-      "line": 1604,
-      "tagName": "label",
-      "question": "where do i set Route",
-      "confidence": "low",
-      "needsClarification": true,
-      "topMatch": {
-        "id": "function.curated.navigation.dfp",
-        "name": "Open the DFP schedule",
-        "score": 8,
-        "reasons": [
-          "intent NAVIGATE",
-          "action edit",
-          "curated",
-          "weak subject match",
-          "single weak subject"
-        ]
-      },
-      "subjectOverlap": 0,
-      "riskScore": 5,
-      "answerPreview": "I don't know the answer to that yet. Please include the page or area you mean, because that term appears in more than one place."
+      "answerPreview": "I think you're asking about Settings. Which of these do you mean? 1. Rank, Terminology & Labels 2. Formation callsigns 3. DFP Resource Rows 4. Aircraft availability 5. Course setup fields None of these"
     },
     {
       "label": "HH:MM",
@@ -3276,30 +2882,6 @@
           "matched hh",
           "matched mm",
           "action edit"
-        ]
-      },
-      "subjectOverlap": 0,
-      "riskScore": 5,
-      "answerPreview": "I don't know the answer to that yet. I couldn't find a reliable DFP-NEO guide entry for that question."
-    },
-    {
-      "label": "Land",
-      "source": "control",
-      "file": "components/PostFlightView.tsx",
-      "line": 1623,
-      "tagName": "label",
-      "question": "where do i set Land",
-      "confidence": "low",
-      "needsClarification": true,
-      "topMatch": {
-        "id": "function.control-components-addflighttilemodal-tsx-deployment-3450",
-        "name": "Deployment",
-        "score": 15,
-        "reasons": [
-          "matched land",
-          "intent NAVIGATE",
-          "action edit",
-          "single weak subject"
         ]
       },
       "subjectOverlap": 0,
@@ -3332,31 +2914,6 @@
       "answerPreview": "I think you're asking about the schedule. Which of these do you mean? 1. Initial Setup Wizard 2. Formation callsigns 3. Add flight tile 4. Rank, Terminology & Labels 5. Open the DFP schedule None of these"
     },
     {
-      "label": "Ineffective",
-      "source": "control",
-      "file": "components/PostFlightView.tsx",
-      "line": 1708,
-      "tagName": "label",
-      "question": "where do i set Ineffective",
-      "confidence": "low",
-      "needsClarification": true,
-      "topMatch": {
-        "id": "function.curated.workflow.initial-setup-wizard",
-        "name": "Initial Setup Wizard",
-        "score": 18,
-        "reasons": [
-          "matched time",
-          "intent NAVIGATE",
-          "action edit",
-          "curated",
-          "single weak subject"
-        ]
-      },
-      "subjectOverlap": 0,
-      "riskScore": 5,
-      "answerPreview": "I don't know the answer to that yet. Please include the page or area you mean, because that term appears in more than one place."
-    },
-    {
       "label": "Priority Mode",
       "source": "control",
       "file": "components/PrioritiesView.tsx",
@@ -3379,30 +2936,6 @@
       "subjectOverlap": 0,
       "riskScore": 5,
       "answerPreview": "I think you're asking about staff management. Which of these do you mean? 1. Staff Rank Equivalency Table 2. Multi Select 3. Profile photo 4. Primary and Secondary Instructor 5. Build priorities None of these"
-    },
-    {
-      "label": "Aircraft",
-      "source": "control",
-      "file": "components/PrioritiesViewWithMenu.tsx",
-      "line": 530,
-      "tagName": "label",
-      "question": "where do i set Aircraft",
-      "confidence": "low",
-      "needsClarification": true,
-      "topMatch": {
-        "id": "function.curated.scheduling.neo-build",
-        "name": "NEO Build",
-        "score": 18,
-        "reasons": [
-          "matched aircraft",
-          "action edit",
-          "curated",
-          "single weak subject"
-        ]
-      },
-      "subjectOverlap": 0,
-      "riskScore": 5,
-      "answerPreview": "I don't know the answer to that yet. Please include the page or area you mean, because that term appears in more than one place."
     },
     {
       "label": "Search trainees...",
@@ -3450,7 +2983,7 @@
       },
       "subjectOverlap": 0,
       "riskScore": 5,
-      "answerPreview": "I think you're asking about trainee management. Which of these do you mean? 1. Trainee roster 2. Training report 3. Course management 4. NEO Build None of these"
+      "answerPreview": "I think you're asking about Trainee. Which of these do you mean? 1. Trainee roster 2. Training report 3. Delete or Archive Trainee 4. Course management None of these"
     },
     {
       "label": "HH:MM",
@@ -3501,30 +3034,6 @@
       "subjectOverlap": 0,
       "riskScore": 5,
       "answerPreview": "I think you're asking about course management. Which of these do you mean? 1. Flight details 2. Add ground event 3. Personnel Qualifications 4. Course management 5. Training auto notifications None of these"
-    },
-    {
-      "label": "Parent",
-      "source": "control",
-      "file": "components/ScheduleView.tsx",
-      "line": 9139,
-      "tagName": "label",
-      "question": "where do i set Parent",
-      "confidence": "low",
-      "needsClarification": true,
-      "topMatch": {
-        "id": "function.control-components-platformconfigurationsettings-tsx-showallunitsinownership-show-current-setup-",
-        "name": "showAllUnitsInOwnership ? 'Show Current Setup' : 'Manage All Units'",
-        "score": 13,
-        "reasons": [
-          "partial parent",
-          "intent NAVIGATE",
-          "action edit",
-          "single weak subject"
-        ]
-      },
-      "subjectOverlap": 0,
-      "riskScore": 5,
-      "answerPreview": "I don't know the answer to that yet. I couldn't find a reliable DFP-NEO guide entry for that question."
     },
     {
       "label": "Add another locality",
@@ -3676,30 +3185,6 @@
       "answerPreview": "I think you're asking about course management. Which of these do you mean? 1. Initial Setup Wizard 2. Unit callsigns 3. Turnaround settings 4. Service and course group labels None of these"
     },
     {
-      "label": "reason",
-      "source": "control",
-      "file": "components/ScheduleView.tsx",
-      "line": 13775,
-      "tagName": "option",
-      "question": "where do i set reason",
-      "confidence": "low",
-      "needsClarification": true,
-      "topMatch": {
-        "id": "function.curated.scheduling.cancel-restore-delete-event",
-        "name": "Cancel, restore or delete a scheduled event",
-        "score": 18,
-        "reasons": [
-          "partial reason",
-          "action edit",
-          "curated",
-          "single weak subject"
-        ]
-      },
-      "subjectOverlap": 0,
-      "riskScore": 5,
-      "answerPreview": "I don't know the answer to that yet. Please include the page or area you mean, because that term appears in more than one place."
-    },
-    {
       "label": "Element Name",
       "source": "control",
       "file": "components/SettingsView.tsx",
@@ -3721,7 +3206,7 @@
       },
       "subjectOverlap": 0,
       "riskScore": 5,
-      "answerPreview": "I think you're asking about Settings. Which of these do you mean? 1. Rank, Terminology & Labels 2. Staff Rank Equivalency Table 3. Personnel Qualifications 4. Scoring matrix elements 5. Course setup fields None of these"
+      "answerPreview": "I think you're asking about Settings. Which of these do you mean? 1. Rank, Terminology & Labels 2. Staff Rank Equivalency Table 3. Personnel Qualifications 4. DFP Resource Rows 5. Scoring matrix elements None of these"
     },
     {
       "label": "Required Count",
@@ -3850,31 +3335,6 @@
       "answerPreview": "I think you're asking about Settings. Which of these do you mean? 1. Formation callsigns 2. DFP Resource Rows 3. NEO Build 4. Aircraft availability 5. Currency builder None of these"
     },
     {
-      "label": "CONFIG",
-      "source": "control",
-      "file": "components/SyllabusView.tsx",
-      "line": 373,
-      "tagName": "label",
-      "question": "where do i set CONFIG",
-      "confidence": "low",
-      "needsClarification": true,
-      "topMatch": {
-        "id": "function.curated.navigation.dfp",
-        "name": "Open the DFP schedule",
-        "score": 18,
-        "reasons": [
-          "partial config",
-          "intent NAVIGATE",
-          "action edit",
-          "curated",
-          "single weak subject"
-        ]
-      },
-      "subjectOverlap": 0,
-      "riskScore": 5,
-      "answerPreview": "I don't know the answer to that yet. Please include the page or area you mean, because that term appears in more than one place."
-    },
-    {
       "label": "ANY",
       "source": "control",
       "file": "components/SyllabusView.tsx",
@@ -3889,55 +3349,6 @@
         "score": 18,
         "reasons": [
           "matched any",
-          "action edit",
-          "curated",
-          "single weak subject"
-        ]
-      },
-      "subjectOverlap": 0,
-      "riskScore": 5,
-      "answerPreview": "I don't know the answer to that yet. Please include the page or area you mean, because that term appears in more than one place."
-    },
-    {
-      "label": "Phase",
-      "source": "control",
-      "file": "components/SyllabusView.tsx",
-      "line": 939,
-      "tagName": "label",
-      "question": "where do i set Phase",
-      "confidence": "low",
-      "needsClarification": true,
-      "topMatch": {
-        "id": "function.control-components-pauseflightopsmodal-tsx-label-399",
-        "name": "label",
-        "score": 18,
-        "reasons": [
-          "matched phase",
-          "matched configure",
-          "intent NAVIGATE",
-          "action edit",
-          "single weak subject"
-        ]
-      },
-      "subjectOverlap": 0,
-      "riskScore": 5,
-      "answerPreview": "I don't know the answer to that yet. I couldn't find a reliable DFP-NEO guide entry for that question."
-    },
-    {
-      "label": "Module",
-      "source": "control",
-      "file": "components/SyllabusView.tsx",
-      "line": 948,
-      "tagName": "label",
-      "question": "where do i set Module",
-      "confidence": "low",
-      "needsClarification": true,
-      "topMatch": {
-        "id": "function.curated.scheduling.cancel-restore-delete-event",
-        "name": "Cancel, restore or delete a scheduled event",
-        "score": 18,
-        "reasons": [
-          "matched code",
           "action edit",
           "curated",
           "single weak subject"
@@ -4265,53 +3676,6 @@
       "answerPreview": "I think you're asking about staff management. Which of these do you mean? 1. Primary and Secondary Instructor 2. NEO Build 3. Master LMP event details 4. Pause Flight Ops None of these"
     },
     {
-      "label": "Enduring",
-      "source": "control",
-      "file": "components/TraineeProfileFlyout.tsx",
-      "line": 1656,
-      "tagName": "label",
-      "question": "where do i set Enduring",
-      "confidence": "low",
-      "needsClarification": true,
-      "topMatch": {
-        "id": "function.control-app-tsx-clear-56318",
-        "name": "Clear",
-        "score": 13,
-        "reasons": [
-          "partial enduring",
-          "intent NAVIGATE",
-          "action edit",
-          "single weak subject"
-        ]
-      },
-      "subjectOverlap": 0,
-      "riskScore": 5,
-      "answerPreview": "I don't know the answer to that yet. I couldn't find a reliable DFP-NEO guide entry for that question."
-    },
-    {
-      "label": "perm",
-      "source": "control",
-      "file": "components/TraineeProfileFlyout.tsx",
-      "line": 2313,
-      "tagName": "label",
-      "question": "where do i set perm",
-      "confidence": "low",
-      "needsClarification": true,
-      "topMatch": {
-        "id": "function.control-components-traineeprofileflyout-tsx-input-2314",
-        "name": "input",
-        "score": 12,
-        "reasons": [
-          "matched perm",
-          "action edit",
-          "single weak subject"
-        ]
-      },
-      "subjectOverlap": 0,
-      "riskScore": 5,
-      "answerPreview": "I don't know the answer to that yet. I couldn't find a reliable DFP-NEO guide entry for that question."
-    },
-    {
       "label": "Open current profile",
       "source": "control",
       "file": "components/TraineeProfileFlyout.tsx",
@@ -4381,7 +3745,7 @@
       },
       "subjectOverlap": 0,
       "riskScore": 5,
-      "answerPreview": "I think you're asking about trainee management. Which of these do you mean? 1. Trainee roster 2. Formation callsigns 3. Master LMP Access 4. Training auto notifications 5. Course Scores table None of these"
+      "answerPreview": "I think you're asking about trainee management. Which of these do you mean? 1. Trainee roster 2. Formation callsigns 3. Course ranking awards 4. Master LMP Access 5. Training auto notifications None of these"
     },
     {
       "label": "lmp",
@@ -4409,6 +3773,52 @@
       "answerPreview": "I don't know the answer to that yet. Please include the page or area you mean, because that term appears in more than one place."
     },
     {
+      "label": "FWD/SHORT",
+      "source": "control",
+      "file": "components/TraineeProfileFlyout.tsx",
+      "line": 3199,
+      "tagName": "option",
+      "question": "where do i set FWD/SHORT",
+      "confidence": "low",
+      "needsClarification": true,
+      "topMatch": {
+        "id": "function.control-components-instructorprofileflyout-tsx-print-1452",
+        "name": "Print",
+        "score": 15,
+        "reasons": [
+          "matched short",
+          "intent NAVIGATE",
+          "action edit"
+        ]
+      },
+      "subjectOverlap": 0,
+      "riskScore": 5,
+      "answerPreview": "I don't know the answer to that yet. I couldn't find a reliable DFP-NEO guide entry for that question."
+    },
+    {
+      "label": "REAR/SHORT",
+      "source": "control",
+      "file": "components/TraineeProfileFlyout.tsx",
+      "line": 3199,
+      "tagName": "option",
+      "question": "where do i set REAR/SHORT",
+      "confidence": "low",
+      "needsClarification": true,
+      "topMatch": {
+        "id": "function.control-components-instructorprofileflyout-tsx-print-1452",
+        "name": "Print",
+        "score": 15,
+        "reasons": [
+          "matched short",
+          "intent NAVIGATE",
+          "action edit"
+        ]
+      },
+      "subjectOverlap": 0,
+      "riskScore": 5,
+      "answerPreview": "I don't know the answer to that yet. I couldn't find a reliable DFP-NEO guide entry for that question."
+    },
+    {
       "label": "Logbook",
       "source": "control",
       "file": "components/TraineeProfileFlyout.tsx",
@@ -4418,11 +3828,11 @@
       "confidence": "low",
       "needsClarification": true,
       "topMatch": {
-        "id": "function.control-components-instructorprofileflyout-tsx-unnamed-1442",
-        "name": "‹",
-        "score": 13,
+        "id": "function.control-components-instructorprofileflyout-tsx-print-1452",
+        "name": "Print",
+        "score": 15,
         "reasons": [
-          "partial logbook",
+          "matched logbook",
           "intent NAVIGATE",
           "action edit",
           "single weak subject"
@@ -4578,7 +3988,7 @@
       },
       "subjectOverlap": 0,
       "riskScore": 5,
-      "answerPreview": "I think you're asking about trainee management. Which of these do you mean? 1. Trainee roster 2. Training report 3. Course management 4. NEO Build None of these"
+      "answerPreview": "I think you're asking about Trainee. Which of these do you mean? 1. Trainee roster 2. Training report 3. Delete or Archive Trainee 4. Course management None of these"
     },
     {
       "label": "Search trainees...",
@@ -4626,7 +4036,7 @@
       },
       "subjectOverlap": 0,
       "riskScore": 5,
-      "answerPreview": "I think you're asking about Settings. Which of these do you mean? 1. Rank, Terminology & Labels 2. Staff Rank Equivalency Table 3. Personnel Qualifications 4. Training report 5. Course setup fields None of these"
+      "answerPreview": "I think you're asking about Settings. Which of these do you mean? 1. Rank, Terminology & Labels 2. Staff Rank Equivalency Table 3. Personnel Qualifications 4. DFP Resource Rows 5. Training report None of these"
     },
     {
       "label": "Load",
@@ -4677,57 +4087,6 @@
       "subjectOverlap": 0,
       "riskScore": 5,
       "answerPreview": "I think you're asking about Program Schedule. Which of these do you mean? 1. Initial Setup Wizard 2. Multi Select 3. Flight authorisation warning settings 4. Open the DFP schedule 5. NEO Build None of these"
-    },
-    {
-      "label": "Assessment",
-      "source": "control",
-      "file": "components/TrainingReportView.tsx",
-      "line": 2075,
-      "tagName": "label",
-      "question": "where do i set Assessment",
-      "confidence": "low",
-      "needsClarification": true,
-      "topMatch": {
-        "id": "function.curated.navigation.dfp",
-        "name": "Open the DFP schedule",
-        "score": 18,
-        "reasons": [
-          "matched required",
-          "intent NAVIGATE",
-          "action edit",
-          "curated",
-          "single weak subject"
-        ]
-      },
-      "subjectOverlap": 0,
-      "riskScore": 5,
-      "answerPreview": "I don't know the answer to that yet. Please include the page or area you mean, because that term appears in more than one place."
-    },
-    {
-      "label": "Assignment Audience Trainees only Staff only",
-      "source": "control",
-      "file": "components/ScheduleView.tsx",
-      "line": 10807,
-      "tagName": "label",
-      "question": "where do i set Assignment Audience Trainees only Staff only",
-      "confidence": "low",
-      "needsClarification": true,
-      "topMatch": {
-        "id": "function.curated.people.instructor-assignment",
-        "name": "Primary and Secondary Instructor",
-        "score": 38,
-        "reasons": [
-          "matched assignment",
-          "matched trainees",
-          "matched only",
-          "matched staff",
-          "action edit",
-          "curated"
-        ]
-      },
-      "subjectOverlap": 0.17,
-      "riskScore": 5,
-      "answerPreview": "I think you're asking about trainee management. Which of these do you mean? 1. Primary and Secondary Instructor 2. Rank, Terminology & Labels 3. Training report 4. Trainee Rank Order None of these"
     },
     {
       "label": "No matching arrangement for this unit context",
@@ -4781,30 +4140,6 @@
       "answerPreview": "I think you're asking about the schedule. Which of these do you mean? 1. Multi Select 2. Personnel Qualifications 3. Flight authorisation warning settings 4. Duty Pilot flight tracking 5. Flight authorisation None of these"
     },
     {
-      "label": "Select or drop Excel File (.xlsx)",
-      "source": "control",
-      "file": "components/SyllabusView.tsx",
-      "line": 3399,
-      "tagName": "label",
-      "question": "where do i set Select or drop Excel File (.xlsx)",
-      "confidence": "low",
-      "needsClarification": true,
-      "topMatch": {
-        "id": "function.curated.scheduling.multi-select",
-        "name": "Multi Select",
-        "score": 29,
-        "reasons": [
-          "matched select",
-          "intent NAVIGATE",
-          "action edit",
-          "curated"
-        ]
-      },
-      "subjectOverlap": 0.2,
-      "riskScore": 5,
-      "answerPreview": "I think you're asking about the schedule. Which of these do you mean? 1. Multi Select 2. Personnel Qualifications 3. Profile photo 4. Flight details 5. Add flight tile None of these"
-    },
-    {
       "label": "Select second pilot / Solo",
       "source": "control",
       "file": "components/PrioritiesView.tsx",
@@ -4852,29 +4187,6 @@
       "subjectOverlap": 0.25,
       "riskScore": 5,
       "answerPreview": "I think you're asking about the schedule. Which of these do you mean? 1. Post-flight inputs 2. Flight detail fields 3. Duty Pilot flight tracking 4. Currency builder 5. Scoring matrix elements None of these"
-    },
-    {
-      "label": "Swap / Manifest Notes",
-      "source": "control",
-      "file": "components/AddFlightTileModal.tsx",
-      "line": 3758,
-      "tagName": "label",
-      "question": "where do i set Swap / Manifest Notes",
-      "confidence": "low",
-      "needsClarification": true,
-      "topMatch": {
-        "id": "function.curated.training.training-report-fields",
-        "name": "Training report result and notes fields",
-        "score": 26,
-        "reasons": [
-          "matched notes",
-          "action edit",
-          "curated"
-        ]
-      },
-      "subjectOverlap": 0.33,
-      "riskScore": 5,
-      "answerPreview": "I think you're asking about the schedule. Which of these do you mean? 1. Training report result and notes fields 2. Flight authorisation None of these"
     },
     {
       "label": "Select second person",
@@ -5024,7 +4336,7 @@
       },
       "subjectOverlap": 0.33,
       "riskScore": 5,
-      "answerPreview": "I think you're asking about trainee management. Which of these do you mean? 1. Formation callsigns 2. Trainee unavailability 3. Training report 4. Training auto notifications 5. Flight detail fields None of these"
+      "answerPreview": "I think you're asking about trainee management. Which of these do you mean? 1. Formation callsigns 2. Trainee unavailability 3. Cancel Impacted Events 4. Training report 5. Training auto notifications None of these"
     },
     {
       "label": "Currency Short Code i",
@@ -5049,7 +4361,7 @@
       },
       "subjectOverlap": 0.33,
       "riskScore": 5,
-      "answerPreview": "I think you're asking about the schedule. Which of these do you mean? 1. Flight detail fields 2. Cancel, restore or delete a scheduled event 3. Currency builder 4. Priority and currency requests None of these"
+      "answerPreview": "I think you're asking about the schedule. Which of these do you mean? 1. Flight detail fields 2. Cancel, restore or delete a scheduled event 3. Currency builder None of these"
     },
     {
       "label": "Close unavailability details",
@@ -5077,29 +4389,6 @@
       "answerPreview": "I think you're asking about DFP-NEO. Which of these do you mean? 1. Duty Pilot personnel management 2. Master LMP event details None of these"
     },
     {
-      "label": "Swap / Manifest Notes",
-      "source": "control",
-      "file": "components/FlightDetailModal.tsx",
-      "line": 4102,
-      "tagName": "label",
-      "question": "where do i set Swap / Manifest Notes",
-      "confidence": "low",
-      "needsClarification": true,
-      "topMatch": {
-        "id": "function.curated.training.training-report-fields",
-        "name": "Training report result and notes fields",
-        "score": 26,
-        "reasons": [
-          "matched notes",
-          "action edit",
-          "curated"
-        ]
-      },
-      "subjectOverlap": 0.33,
-      "riskScore": 5,
-      "answerPreview": "I think you're asking about the schedule. Which of these do you mean? 1. Training report result and notes fields 2. Flight authorisation None of these"
-    },
-    {
       "label": "Additional message (optional)",
       "source": "control",
       "file": "components/FlightDetailModal.tsx",
@@ -5121,7 +4410,7 @@
       },
       "subjectOverlap": 0.33,
       "riskScore": 5,
-      "answerPreview": "I think you're asking about the schedule. Which of these do you mean? 1. Training report 2. Training auto notifications 3. My Home messages 4. Flight authorisation warning settings 5. Remedial packages None of these"
+      "answerPreview": "I think you're asking about Training Records. Which of these do you mean? 1. Training report 2. Training auto notifications 3. My Home messages 4. Flight authorisation warning settings None of these"
     },
     {
       "label": "Enable Staff Sharing",
@@ -5368,7 +4657,7 @@
       },
       "subjectOverlap": 0.33,
       "riskScore": 5,
-      "answerPreview": "I think you're asking about the schedule. Which of these do you mean? 1. Flight detail fields 2. Cancel, restore or delete a scheduled event 3. Currency builder 4. Priority and currency requests None of these"
+      "answerPreview": "I think you're asking about the schedule. Which of these do you mean? 1. Flight detail fields 2. Cancel, restore or delete a scheduled event 3. Currency builder None of these"
     },
     {
       "label": "Total Event Hrs",
@@ -5446,31 +4735,6 @@
       "subjectOverlap": 0.33,
       "riskScore": 5,
       "answerPreview": "I think you're asking about the schedule. Which of these do you mean? 1. Formation callsigns 2. Remedial packages 3. Training auto notifications 4. Aircraft availability 5. DFP Resource Rows None of these"
-    },
-    {
-      "label": "Day Night Both",
-      "source": "control",
-      "file": "components/TraineeLmpView.tsx",
-      "line": 377,
-      "tagName": "select",
-      "question": "where do i set Day Night Both",
-      "confidence": "low",
-      "needsClarification": true,
-      "topMatch": {
-        "id": "function.curated.settings.flight-authorisation-warnings",
-        "name": "Flight authorisation warning settings",
-        "score": 29.5,
-        "reasons": [
-          "matched day",
-          "near night",
-          "intent NAVIGATE",
-          "action edit",
-          "curated"
-        ]
-      },
-      "subjectOverlap": 0.33,
-      "riskScore": 5,
-      "answerPreview": "I think you're asking about the schedule. Which of these do you mean? 1. Flight authorisation warning settings 2. Flight authorisation None of these"
     },
     {
       "label": "Not a test event",
@@ -5650,31 +4914,6 @@
       "subjectOverlap": 0.33,
       "riskScore": 5,
       "answerPreview": "I think you're asking about Training Records. Which of these do you mean? 1. Training report 2. Training auto notifications 3. NEO Build None of these"
-    },
-    {
-      "label": "Day/Night Day Night Both",
-      "source": "control",
-      "file": "components/TraineeLmpView.tsx",
-      "line": 375,
-      "tagName": "label",
-      "question": "where do i set Day/Night Day Night Both",
-      "confidence": "low",
-      "needsClarification": true,
-      "topMatch": {
-        "id": "function.curated.settings.flight-authorisation-warnings",
-        "name": "Flight authorisation warning settings",
-        "score": 29.5,
-        "reasons": [
-          "matched day",
-          "near night",
-          "intent NAVIGATE",
-          "action edit",
-          "curated"
-        ]
-      },
-      "subjectOverlap": 0.4,
-      "riskScore": 5,
-      "answerPreview": "I think you're asking about the schedule. Which of these do you mean? 1. Flight authorisation warning settings 2. Flight authorisation None of these"
     },
     {
       "label": "Open the archive health report for this DFP date",
@@ -6256,29 +5495,6 @@
       "answerPreview": "Steps: 1. Open Settings. 2. Open Resources & Configuration. 3. Open Rank, Terminology & Labels. 4. Scroll to Formation Callsigns. 5. Add or edit the formation callsign name, code, unit and location details. 6. Save the settings."
     },
     {
-      "label": "Excel (for further analysis)",
-      "source": "control",
-      "file": "components/TrainingRecordsExportView.tsx",
-      "line": 1428,
-      "tagName": "label",
-      "question": "where do i set Excel (for further analysis)",
-      "confidence": "high",
-      "needsClarification": false,
-      "topMatch": {
-        "id": "function.curated.analytics.build-intelligence-risk-events",
-        "name": "Build Intelligence risk events",
-        "score": 26,
-        "reasons": [
-          "matched analysis",
-          "action edit",
-          "curated"
-        ]
-      },
-      "subjectOverlap": 0,
-      "riskScore": 4,
-      "answerPreview": "Steps: 1. Open Build Intelligence. 2. Open the managerial analytics tab. 3. Review Event Difficulty Ranking for average grade and attempt count. 4. Review Elevated Risk Events for events where the below-pass percentage crosses the elevated-risk threshold. 5. R"
-    },
-    {
       "label": "Remedial only",
       "source": "control",
       "file": "components/TrainingRecordsExportView.tsx",
@@ -6354,56 +5570,6 @@
       "subjectOverlap": 0.25,
       "riskScore": 4,
       "answerPreview": "Steps: 1. Open Training Records. 2. Open the relevant trainee or event training record. 3. Enter the training report grades and comments. 4. Use the notification options if configured. 5. Save the training report so the grades feed Course Progress and Build In"
-    },
-    {
-      "label": "On Track maximum events/week",
-      "source": "control",
-      "file": "components/CourseProgressView.tsx",
-      "line": 1518,
-      "tagName": "label",
-      "question": "where do i set On Track maximum events/week",
-      "confidence": "high",
-      "needsClarification": false,
-      "topMatch": {
-        "id": "function.curated.settings.formation-callsigns",
-        "name": "Formation callsigns",
-        "score": 33,
-        "reasons": [
-          "matched set",
-          "matched events",
-          "intent NAVIGATE",
-          "action edit",
-          "curated"
-        ]
-      },
-      "subjectOverlap": 0.25,
-      "riskScore": 4,
-      "answerPreview": "Steps: 1. Open Settings. 2. Open Resources & Configuration. 3. Open Rank, Terminology & Labels. 4. Scroll to Formation Callsigns. 5. Add or edit the formation callsign name, code, unit and location details. 6. Save the settings."
-    },
-    {
-      "label": "Watch maximum events/week",
-      "source": "control",
-      "file": "components/CourseProgressView.tsx",
-      "line": 1529,
-      "tagName": "label",
-      "question": "where do i set Watch maximum events/week",
-      "confidence": "high",
-      "needsClarification": false,
-      "topMatch": {
-        "id": "function.curated.settings.formation-callsigns",
-        "name": "Formation callsigns",
-        "score": 33,
-        "reasons": [
-          "matched set",
-          "matched events",
-          "intent NAVIGATE",
-          "action edit",
-          "curated"
-        ]
-      },
-      "subjectOverlap": 0.25,
-      "riskScore": 4,
-      "answerPreview": "Steps: 1. Open Settings. 2. Open Resources & Configuration. 3. Open Rank, Terminology & Labels. 4. Scroll to Formation Callsigns. 5. Add or edit the formation callsign name, code, unit and location details. 6. Save the settings."
     },
     {
       "label": "Trainees only Staff only",
@@ -6741,34 +5907,6 @@
       "answerPreview": "Steps: 1. Open Settings. 2. Open the Master LMP area. 3. Select the Master LMP. 4. Select the event from the event list. 5. Use the event detail panel next to the selected event."
     },
     {
-      "label": "Creates a draft training report after completed post-flight entry.",
-      "source": "control",
-      "file": "components/SyllabusView.tsx",
-      "line": 763,
-      "tagName": "label",
-      "question": "where do i set Creates a draft training report after completed post-flight entry.",
-      "confidence": "high",
-      "needsClarification": false,
-      "topMatch": {
-        "id": "function.curated.training.post-flight-inputs",
-        "name": "Post-flight inputs",
-        "score": 52.5,
-        "reasons": [
-          "phrase post flight",
-          "matched training",
-          "near report",
-          "matched after",
-          "matched completed",
-          "matched post",
-          "matched flight",
-          "matched tracking"
-        ]
-      },
-      "subjectOverlap": 0.33,
-      "riskScore": 4,
-      "answerPreview": "Steps: 1. Open the completed or post-flight event. 2. Open the post-flight workflow. 3. Enter aircraft/resource details and any configured currency inputs. 4. Review required fields. 5. Save or submit the post-flight information."
-    },
-    {
       "label": "Flight/Sim Hrs",
       "source": "control",
       "file": "components/SyllabusView.tsx",
@@ -6893,29 +6031,6 @@
       "answerPreview": "I think you're asking about trainee management. Which of these do you mean? 1. Initial Setup Wizard 2. Currency builder 3. Rank, Terminology & Labels 4. Trainee Rank Order None of these"
     },
     {
-      "label": "Schedule name",
-      "source": "control",
-      "file": "components/AcademicsTab.tsx",
-      "line": 1678,
-      "tagName": "label",
-      "question": "what is Schedule name",
-      "confidence": "low",
-      "needsClarification": true,
-      "topMatch": {
-        "id": "function.curated.scheduling.priority-currency-requests",
-        "name": "Priority and currency requests",
-        "score": 21,
-        "reasons": [
-          "matched schedule",
-          "intent DEFINE",
-          "curated"
-        ]
-      },
-      "subjectOverlap": 0,
-      "riskScore": 3,
-      "answerPreview": "I think you're asking about the schedule. Which of these do you mean? 1. Priority and currency requests 2. Unit callsigns 3. Personnel Qualifications 4. Flight detail fields 5. Open the DFP schedule None of these"
-    },
-    {
       "label": "Refresh to current time",
       "source": "control",
       "file": "components/ACHistoryAircraftAvailability.tsx",
@@ -6983,54 +6098,6 @@
       "subjectOverlap": 0,
       "riskScore": 3,
       "answerPreview": "I think you're asking about Program Schedule. Which of these do you mean? 1. Flight details 2. Publish DFP 3. Cancel, restore or delete a scheduled event 4. Archived staff 5. Export configuration report None of these"
-    },
-    {
-      "label": "PILOT",
-      "source": "control",
-      "file": "components/AdminPanel.tsx",
-      "line": 554,
-      "tagName": "option",
-      "question": "where do i set PILOT",
-      "confidence": "low",
-      "needsClarification": true,
-      "topMatch": {
-        "id": "function.curated.people.staff-unavailability",
-        "name": "Staff unavailability",
-        "score": 18,
-        "reasons": [
-          "matched pilot",
-          "action edit",
-          "curated",
-          "single weak subject"
-        ]
-      },
-      "subjectOverlap": 0,
-      "riskScore": 3,
-      "answerPreview": "I don't know the answer to that yet. Please include the page or area you mean, because that term appears in more than one place."
-    },
-    {
-      "label": "Aircraft",
-      "source": "control",
-      "file": "components/CancellationCodesTable.tsx",
-      "line": 269,
-      "tagName": "option",
-      "question": "where do i set Aircraft",
-      "confidence": "low",
-      "needsClarification": true,
-      "topMatch": {
-        "id": "function.curated.scheduling.neo-build",
-        "name": "NEO Build",
-        "score": 18,
-        "reasons": [
-          "matched aircraft",
-          "action edit",
-          "curated",
-          "single weak subject"
-        ]
-      },
-      "subjectOverlap": 0,
-      "riskScore": 3,
-      "answerPreview": "I don't know the answer to that yet. Please include the page or area you mean, because that term appears in more than one place."
     },
     {
       "label": "Select a course",
@@ -8104,29 +7171,6 @@
       "answerPreview": "I think you're asking about course management. Which of these do you mean? 1. Flight authorisation warning settings 2. Course management 3. Add ground event None of these"
     },
     {
-      "label": "Duration (hrs)",
-      "source": "control",
-      "file": "components/AddGroundEventFlyout.tsx",
-      "line": 406,
-      "tagName": "label",
-      "question": "where do i set Duration (hrs)",
-      "confidence": "low",
-      "needsClarification": true,
-      "topMatch": {
-        "id": "function.control-components-platformconfigurationsettings-tsx-duration-15602",
-        "name": "Duration",
-        "score": 20,
-        "reasons": [
-          "phrase duration",
-          "matched duration",
-          "action edit"
-        ]
-      },
-      "subjectOverlap": 0.5,
-      "riskScore": 3,
-      "answerPreview": "I don't know the answer to that yet. I couldn't find a reliable DFP-NEO guide entry for that question."
-    },
-    {
       "label": "ground-duration",
       "source": "control",
       "file": "components/AddGroundEventFlyout.tsx",
@@ -8348,6 +7392,29 @@
       "subjectOverlap": 0.5,
       "riskScore": 3,
       "answerPreview": "I don't know the answer to that yet. I couldn't find a reliable DFP-NEO guide entry for that question."
+    },
+    {
+      "label": "getAwardDisplayName(award)",
+      "source": "control",
+      "file": "components/CourseProgressView.tsx",
+      "line": 1257,
+      "tagName": "option",
+      "question": "where do i set getAwardDisplayName(award)",
+      "confidence": "low",
+      "needsClarification": true,
+      "topMatch": {
+        "id": "function.curated.training.course-ranking-awards",
+        "name": "Course ranking awards",
+        "score": 26,
+        "reasons": [
+          "matched award",
+          "action edit",
+          "curated"
+        ]
+      },
+      "subjectOverlap": 0.5,
+      "riskScore": 3,
+      "answerPreview": "I think you're asking about course management. Which of these do you mean? 1. Course ranking awards None of these"
     },
     {
       "label": "Import Setup",
@@ -8593,52 +7660,6 @@
       "answerPreview": "I think you're asking about Program Schedule. Which of these do you mean? 1. Publish DFP 2. My Home messages 3. Flight details 4. Cancel, restore or delete a scheduled event 5. Archived staff None of these"
     },
     {
-      "label": "FWD/SHORT",
-      "source": "control",
-      "file": "components/InstructorProfileFlyout.tsx",
-      "line": 2145,
-      "tagName": "option",
-      "question": "where do i set FWD/SHORT",
-      "confidence": "low",
-      "needsClarification": true,
-      "topMatch": {
-        "id": "function.control-components-flightdetailmodal-tsx-sctshortlabel-3617",
-        "name": "sctShortLabel",
-        "score": 13,
-        "reasons": [
-          "partial short",
-          "intent NAVIGATE",
-          "action edit"
-        ]
-      },
-      "subjectOverlap": 0.5,
-      "riskScore": 3,
-      "answerPreview": "I don't know the answer to that yet. I couldn't find a reliable DFP-NEO guide entry for that question."
-    },
-    {
-      "label": "REAR/SHORT",
-      "source": "control",
-      "file": "components/InstructorProfileFlyout.tsx",
-      "line": 2145,
-      "tagName": "option",
-      "question": "where do i set REAR/SHORT",
-      "confidence": "low",
-      "needsClarification": true,
-      "topMatch": {
-        "id": "function.control-components-flightdetailmodal-tsx-sctshortlabel-3617",
-        "name": "sctShortLabel",
-        "score": 13,
-        "reasons": [
-          "partial short",
-          "intent NAVIGATE",
-          "action edit"
-        ]
-      },
-      "subjectOverlap": 0.5,
-      "riskScore": 3,
-      "answerPreview": "I don't know the answer to that yet. I couldn't find a reliable DFP-NEO guide entry for that question."
-    },
-    {
       "label": "Training Progress",
       "source": "control",
       "file": "components/InstructorProfileFlyout.tsx",
@@ -8685,7 +7706,7 @@
       },
       "subjectOverlap": 0.5,
       "riskScore": 3,
-      "answerPreview": "I think you're asking about the schedule. Which of these do you mean? 1. Flight authorisation warning settings None of these"
+      "answerPreview": "I think you're asking about course management. Which of these do you mean? 1. Flight authorisation warning settings 2. Course ranking awards None of these"
     },
     {
       "label": "Next day",
@@ -8733,7 +7754,7 @@
       },
       "subjectOverlap": 0.5,
       "riskScore": 3,
-      "answerPreview": "I think you're asking about the schedule. Which of these do you mean? 1. Flight authorisation warning settings None of these"
+      "answerPreview": "I think you're asking about course management. Which of these do you mean? 1. Flight authorisation warning settings 2. Course ranking awards None of these"
     },
     {
       "label": "Next day",
@@ -9329,31 +8350,6 @@
       "answerPreview": "I think you're asking about the schedule. Which of these do you mean? 1. Flight authorisation warning settings None of these"
     },
     {
-      "label": "TWR DI Reqd",
-      "source": "control",
-      "file": "components/SyllabusView.tsx",
-      "line": 838,
-      "tagName": "label",
-      "question": "where do i set TWR DI Reqd",
-      "confidence": "low",
-      "needsClarification": true,
-      "topMatch": {
-        "id": "function.control-components-flightdetailmodal-tsx-twr-di-3639",
-        "name": "TWR DI",
-        "score": 27,
-        "reasons": [
-          "phrase twr di",
-          "matched twr",
-          "matched di",
-          "intent NAVIGATE",
-          "action edit"
-        ]
-      },
-      "subjectOverlap": 0.5,
-      "riskScore": 3,
-      "answerPreview": "I don't know the answer to that yet. I couldn't find a reliable DFP-NEO guide entry for that question."
-    },
-    {
       "label": "Staff only",
       "source": "control",
       "file": "components/SyllabusView.tsx",
@@ -9600,74 +8596,6 @@
       "answerPreview": "I think you're asking about course management. Which of these do you mean? 1. Flight detail fields 2. Course Scores table 3. Formation callsigns 4. Training report result and notes fields 5. Training report None of these"
     },
     {
-      "label": "Immediately Follows",
-      "source": "control",
-      "file": "components/TraineeLmpView.tsx",
-      "line": 690,
-      "tagName": "label",
-      "question": "where do i set Immediately Follows",
-      "confidence": "low",
-      "needsClarification": true,
-      "topMatch": {
-        "id": "function.control-components-scheduleview-tsx-caneditflightlineavailabilitylink-isreadonly-when-linked-the",
-        "name": "canEditFlightLineAvailabilityLink && !isReadOnly ? 'When linked, the solid aircraft availability line follows aircraft tiles minus unavailable aircraft.' : 'Permission required to change linked aircraft availability'",
-        "score": 12,
-        "reasons": [
-          "matched follows",
-          "action edit"
-        ]
-      },
-      "subjectOverlap": 0.5,
-      "riskScore": 3,
-      "answerPreview": "I don't know the answer to that yet. I couldn't find a reliable DFP-NEO guide entry for that question."
-    },
-    {
-      "label": "FWD/SHORT",
-      "source": "control",
-      "file": "components/TraineeProfileFlyout.tsx",
-      "line": 3199,
-      "tagName": "option",
-      "question": "where do i set FWD/SHORT",
-      "confidence": "low",
-      "needsClarification": true,
-      "topMatch": {
-        "id": "function.control-components-flightdetailmodal-tsx-sctshortlabel-3617",
-        "name": "sctShortLabel",
-        "score": 13,
-        "reasons": [
-          "partial short",
-          "intent NAVIGATE",
-          "action edit"
-        ]
-      },
-      "subjectOverlap": 0.5,
-      "riskScore": 3,
-      "answerPreview": "I don't know the answer to that yet. I couldn't find a reliable DFP-NEO guide entry for that question."
-    },
-    {
-      "label": "REAR/SHORT",
-      "source": "control",
-      "file": "components/TraineeProfileFlyout.tsx",
-      "line": 3199,
-      "tagName": "option",
-      "question": "where do i set REAR/SHORT",
-      "confidence": "low",
-      "needsClarification": true,
-      "topMatch": {
-        "id": "function.control-components-flightdetailmodal-tsx-sctshortlabel-3617",
-        "name": "sctShortLabel",
-        "score": 13,
-        "reasons": [
-          "partial short",
-          "intent NAVIGATE",
-          "action edit"
-        ]
-      },
-      "subjectOverlap": 0.5,
-      "riskScore": 3,
-      "answerPreview": "I don't know the answer to that yet. I couldn't find a reliable DFP-NEO guide entry for that question."
-    },
-    {
       "label": "Trainee Schedule",
       "source": "control",
       "file": "components/TraineeView.tsx",
@@ -9712,7 +8640,7 @@
       },
       "subjectOverlap": 0.5,
       "riskScore": 3,
-      "answerPreview": "I think you're asking about course management. Which of these do you mean? 1. Course management 2. Add flight tile 3. Pause Flight Ops None of these"
+      "answerPreview": "I think you're asking about course management. Which of these do you mean? 1. Course management 2. Add flight tile 3. Pause Flight Ops 4. Cancel Impacted Events None of these"
     },
     {
       "label": "Date range",
@@ -9758,7 +8686,7 @@
       },
       "subjectOverlap": 0.5,
       "riskScore": 3,
-      "answerPreview": "I think you're asking about course management. Which of these do you mean? 1. Course management 2. Add flight tile 3. Pause Flight Ops None of these"
+      "answerPreview": "I think you're asking about course management. Which of these do you mean? 1. Course management 2. Add flight tile 3. Pause Flight Ops 4. Cancel Impacted Events None of these"
     },
     {
       "label": "Date range",
@@ -9882,7 +8810,7 @@
       },
       "subjectOverlap": 0.5,
       "riskScore": 3,
-      "answerPreview": "I think you're asking about course management. Which of these do you mean? 1. Training report 2. Course Scores table 3. Training report result and notes fields None of these"
+      "answerPreview": "I think you're asking about course management. Which of these do you mean? 1. Training report 2. Course Scores table 3. Training report result and notes fields 4. Course ranking awards None of these"
     },
     {
       "label": "No ground events available",
@@ -9909,7 +8837,7 @@
       },
       "subjectOverlap": 0.67,
       "riskScore": 3,
-      "answerPreview": "I think you're asking about course management. Which of these do you mean? 1. Formation callsigns 2. Add ground event 3. Remedial packages 4. Training auto notifications 5. Course Scores table None of these"
+      "answerPreview": "I think you're asking about course management. Which of these do you mean? 1. Formation callsigns 2. Add ground event 3. Training auto notifications 4. Remedial packages 5. Course ranking awards None of these"
     },
     {
       "label": "Bulk Upload from File",
@@ -10136,7 +9064,7 @@
       },
       "subjectOverlap": 0.67,
       "riskScore": 3,
-      "answerPreview": "I think you're asking about Settings. Which of these do you mean? 1. Master LMP Access 2. Master LMP event details 3. Primary and Secondary Instructor 4. Syllabus packages and events 5. Course setup fields None of these"
+      "answerPreview": "I think you're asking about Settings. Which of these do you mean? 1. Master LMP Access 2. Master LMP event details 3. Primary and Secondary Instructor 4. Syllabus packages and events None of these"
     },
     {
       "label": "Do not Auto Notify",
@@ -10162,62 +9090,6 @@
       "subjectOverlap": 0.67,
       "riskScore": 3,
       "answerPreview": "I think you're asking about DFP-NEO. Which of these do you mean? 1. Training report 2. Training auto notifications 3. Formation callsigns 4. NEO Build 5. Aircraft availability None of these"
-    },
-    {
-      "label": "Score Method Latest attempt Best attempt Average all attempts",
-      "source": "control",
-      "file": "components/CourseProgressView.tsx",
-      "line": 1347,
-      "tagName": "label",
-      "question": "where do i set Score Method Latest attempt Best attempt Average all attempts",
-      "confidence": "low",
-      "needsClarification": true,
-      "topMatch": {
-        "id": "function.control-components-courseprogressview-tsx-latest-attempt-best-attempt-average-all-attempts-1349",
-        "name": "Latest attempt Best attempt Average all attempts",
-        "score": 48,
-        "reasons": [
-          "phrase latest attempt best attempt average all attempts",
-          "partial score",
-          "partial method",
-          "matched latest",
-          "matched attempt",
-          "matched best",
-          "matched average",
-          "matched all"
-        ]
-      },
-      "subjectOverlap": 0.78,
-      "riskScore": 3,
-      "answerPreview": "I don't know the answer to that yet. I couldn't find a reliable DFP-NEO guide entry for that question."
-    },
-    {
-      "label": "Type Flight FTD Ground School Academics",
-      "source": "control",
-      "file": "components/TraineeLmpView.tsx",
-      "line": 366,
-      "tagName": "label",
-      "question": "where do i set Type Flight FTD Ground School Academics",
-      "confidence": "low",
-      "needsClarification": true,
-      "topMatch": {
-        "id": "function.control-components-traineelmpview-tsx-flight-ftd-ground-school-academics-368",
-        "name": "Flight FTD Ground School Academics",
-        "score": 43,
-        "reasons": [
-          "phrase flight ftd ground school academics",
-          "matched type",
-          "matched flight",
-          "matched ftd",
-          "matched ground",
-          "matched school",
-          "matched academics",
-          "action edit"
-        ]
-      },
-      "subjectOverlap": 0.83,
-      "riskScore": 3,
-      "answerPreview": "I don't know the answer to that yet. I couldn't find a reliable DFP-NEO guide entry for that question."
     },
     {
       "label": "children",
@@ -10316,6 +9188,31 @@
       "answerPreview": "I don't know the answer to that yet. I couldn't find a reliable DFP-NEO guide entry for that question."
     },
     {
+      "label": "Total",
+      "source": "control",
+      "file": "components/AddCourseFlyout.tsx",
+      "line": 281,
+      "tagName": "label",
+      "question": "where do i set Total",
+      "confidence": "low",
+      "needsClarification": true,
+      "topMatch": {
+        "id": "function.control-components-addcourseflyout-tsx-total-281",
+        "name": "Total",
+        "score": 21,
+        "reasons": [
+          "phrase total",
+          "matched total",
+          "near event",
+          "near hours",
+          "action edit"
+        ]
+      },
+      "subjectOverlap": 1,
+      "riskScore": 3,
+      "answerPreview": "I don't know the answer to that yet. I couldn't find a reliable DFP-NEO guide entry for that question."
+    },
+    {
       "label": "placeholder",
       "source": "control",
       "file": "components/AddFlightTileModal.tsx",
@@ -10395,7 +9292,7 @@
       "confidence": "low",
       "needsClarification": true,
       "topMatch": {
-        "id": "function.control-components-continuationcurrencyeventssettings-tsx-crew-387",
+        "id": "function.control-components-addflighttilemodal-tsx-crew-3518",
         "name": "Crew",
         "score": 20,
         "reasons": [
@@ -10442,8 +9339,8 @@
       "confidence": "low",
       "needsClarification": true,
       "topMatch": {
-        "id": "function.control-components-editcourseflyout-tsx-location-176",
-        "name": "Location",
+        "id": "function.control-components-addcourseflyout-tsx-location-221",
+        "name": "Location *",
         "score": 20,
         "reasons": [
           "phrase location",
@@ -10465,19 +9362,18 @@
       "confidence": "low",
       "needsClarification": true,
       "topMatch": {
-        "id": "function.curated.training.course-management",
-        "name": "Course management",
-        "score": 18,
+        "id": "function.control-app-tsx-date-6403",
+        "name": "Date",
+        "score": 20,
         "reasons": [
+          "phrase date",
           "matched date",
-          "action edit",
-          "curated",
-          "single weak subject"
+          "action edit"
         ]
       },
       "subjectOverlap": 1,
       "riskScore": 3,
-      "answerPreview": "I don't know the answer to that yet. Please include the page or area you mean, because that term appears in more than one place."
+      "answerPreview": "I don't know the answer to that yet. I couldn't find a reliable DFP-NEO guide entry for that question."
     },
     {
       "label": "Origin",
@@ -10489,7 +9385,7 @@
       "confidence": "low",
       "needsClarification": true,
       "topMatch": {
-        "id": "function.control-components-addflighttilemodal-tsx-origin-3709",
+        "id": "function.control-components-addflighttilemodal-tsx-origin-3708",
         "name": "Origin",
         "score": 20,
         "reasons": [
@@ -10512,12 +9408,37 @@
       "confidence": "low",
       "needsClarification": true,
       "topMatch": {
-        "id": "function.control-components-addflighttilemodal-tsx-destination-3720",
+        "id": "function.control-components-addflighttilemodal-tsx-destination-3719",
         "name": "Destination",
         "score": 20,
         "reasons": [
           "phrase destination",
           "matched destination",
+          "action edit"
+        ]
+      },
+      "subjectOverlap": 1,
+      "riskScore": 3,
+      "answerPreview": "I don't know the answer to that yet. I couldn't find a reliable DFP-NEO guide entry for that question."
+    },
+    {
+      "label": "Swap / Manifest Notes",
+      "source": "control",
+      "file": "components/AddFlightTileModal.tsx",
+      "line": 3758,
+      "tagName": "label",
+      "question": "where do i set Swap / Manifest Notes",
+      "confidence": "low",
+      "needsClarification": true,
+      "topMatch": {
+        "id": "function.control-components-addflighttilemodal-tsx-swap-manifest-notes-3758",
+        "name": "Swap / Manifest Notes",
+        "score": 29,
+        "reasons": [
+          "phrase swap manifest notes",
+          "matched swap",
+          "matched manifest",
+          "matched notes",
           "action edit"
         ]
       },
@@ -10535,7 +9456,7 @@
       "confidence": "low",
       "needsClarification": true,
       "topMatch": {
-        "id": "function.control-components-continuationcurrencyeventssettings-tsx-event-290",
+        "id": "function.control-app-tsx-event-7150",
         "name": "Event",
         "score": 20,
         "reasons": [
@@ -10597,6 +9518,29 @@
       "answerPreview": "I don't know the answer to that yet. I couldn't find a reliable DFP-NEO guide entry for that question."
     },
     {
+      "label": "CONFIG",
+      "source": "control",
+      "file": "components/AddFlightTileModal.tsx",
+      "line": 3867,
+      "tagName": "label",
+      "question": "where do i set CONFIG",
+      "confidence": "low",
+      "needsClarification": true,
+      "topMatch": {
+        "id": "function.control-app-tsx-config-6435",
+        "name": "CONFIG",
+        "score": 20,
+        "reasons": [
+          "phrase config",
+          "matched config",
+          "action edit"
+        ]
+      },
+      "subjectOverlap": 1,
+      "riskScore": 3,
+      "answerPreview": "I don't know the answer to that yet. I couldn't find a reliable DFP-NEO guide entry for that question."
+    },
+    {
       "label": "Duration",
       "source": "control",
       "file": "components/AddFlightTileModal.tsx",
@@ -10606,12 +9550,58 @@
       "confidence": "low",
       "needsClarification": true,
       "topMatch": {
-        "id": "function.control-components-platformconfigurationsettings-tsx-duration-15602",
+        "id": "function.control-app-tsx-duration-5652",
         "name": "Duration",
         "score": 20,
         "reasons": [
           "phrase duration",
           "matched duration",
+          "action edit"
+        ]
+      },
+      "subjectOverlap": 1,
+      "riskScore": 3,
+      "answerPreview": "I don't know the answer to that yet. I couldn't find a reliable DFP-NEO guide entry for that question."
+    },
+    {
+      "label": "Area",
+      "source": "control",
+      "file": "components/AddFlightTileModal.tsx",
+      "line": 3887,
+      "tagName": "label",
+      "question": "where do i set Area",
+      "confidence": "low",
+      "needsClarification": true,
+      "topMatch": {
+        "id": "function.control-components-addflighttilemodal-tsx-area-3887",
+        "name": "Area",
+        "score": 20,
+        "reasons": [
+          "phrase area",
+          "matched area",
+          "action edit"
+        ]
+      },
+      "subjectOverlap": 1,
+      "riskScore": 3,
+      "answerPreview": "I don't know the answer to that yet. I couldn't find a reliable DFP-NEO guide entry for that question."
+    },
+    {
+      "label": "Aircraft",
+      "source": "control",
+      "file": "components/AddFlightTileModal.tsx",
+      "line": 3897,
+      "tagName": "label",
+      "question": "where do i set Aircraft",
+      "confidence": "low",
+      "needsClarification": true,
+      "topMatch": {
+        "id": "function.control-components-addflighttilemodal-tsx-aircraft-3897",
+        "name": "Aircraft",
+        "score": 20,
+        "reasons": [
+          "phrase aircraft",
+          "matched aircraft",
           "action edit"
         ]
       },
@@ -10704,19 +9694,18 @@
       "confidence": "low",
       "needsClarification": true,
       "topMatch": {
-        "id": "function.curated.training.training-report-fields",
-        "name": "Training report result and notes fields",
-        "score": 18,
+        "id": "function.control-components-addflighttilemodal-tsx-notes-4211",
+        "name": "Notes",
+        "score": 20,
         "reasons": [
+          "phrase notes",
           "matched notes",
-          "action edit",
-          "curated",
-          "single weak subject"
+          "action edit"
         ]
       },
       "subjectOverlap": 1,
       "riskScore": 3,
-      "answerPreview": "I don't know the answer to that yet. Please include the page or area you mean, because that term appears in more than one place."
+      "answerPreview": "I don't know the answer to that yet. I couldn't find a reliable DFP-NEO guide entry for that question."
     },
     {
       "label": "Academics",
@@ -10752,7 +9741,7 @@
       "confidence": "low",
       "needsClarification": true,
       "topMatch": {
-        "id": "function.control-components-continuationcurrencyeventssettings-tsx-event-290",
+        "id": "function.control-app-tsx-event-7150",
         "name": "Event",
         "score": 20,
         "reasons": [
@@ -10775,12 +9764,36 @@
       "confidence": "low",
       "needsClarification": true,
       "topMatch": {
-        "id": "function.control-components-courseeditflyout-tsx-course-362",
-        "name": "course",
+        "id": "function.control-components-addgroundeventflyout-tsx-course-362",
+        "name": "Course",
         "score": 20,
         "reasons": [
           "phrase course",
           "matched course",
+          "action edit"
+        ]
+      },
+      "subjectOverlap": 1,
+      "riskScore": 3,
+      "answerPreview": "I don't know the answer to that yet. I couldn't find a reliable DFP-NEO guide entry for that question."
+    },
+    {
+      "label": "Duration (hrs)",
+      "source": "control",
+      "file": "components/AddGroundEventFlyout.tsx",
+      "line": 406,
+      "tagName": "label",
+      "question": "where do i set Duration (hrs)",
+      "confidence": "low",
+      "needsClarification": true,
+      "topMatch": {
+        "id": "function.control-components-addgroundeventflyout-tsx-duration-hrs-406",
+        "name": "Duration (hrs)",
+        "score": 24,
+        "reasons": [
+          "phrase duration hrs",
+          "matched duration",
+          "matched hrs",
           "action edit"
         ]
       },
@@ -10914,6 +9927,29 @@
       "answerPreview": "I don't know the answer to that yet. I couldn't find a reliable DFP-NEO guide entry for that question."
     },
     {
+      "label": "Reason",
+      "source": "control",
+      "file": "components/AddUnavailabilityFlyout.tsx",
+      "line": 222,
+      "tagName": "label",
+      "question": "where do i set Reason",
+      "confidence": "low",
+      "needsClarification": true,
+      "topMatch": {
+        "id": "function.control-components-addunavailabilityflyout-tsx-reason-222",
+        "name": "Reason",
+        "score": 20,
+        "reasons": [
+          "phrase reason",
+          "matched reason",
+          "action edit"
+        ]
+      },
+      "subjectOverlap": 1,
+      "riskScore": 3,
+      "answerPreview": "I don't know the answer to that yet. I couldn't find a reliable DFP-NEO guide entry for that question."
+    },
+    {
       "label": "Done",
       "source": "control",
       "file": "components/AddUnavailabilityFlyout.tsx",
@@ -10970,18 +10006,43 @@
       "confidence": "low",
       "needsClarification": true,
       "topMatch": {
-        "id": "function.data.commerciallicense",
-        "name": "CommercialLicense data model",
-        "score": 10,
+        "id": "function.control-components-instructorprofileflyout-tsx-print-1452",
+        "name": "Print",
+        "score": 23,
         "reasons": [
-          "partial print",
-          "action edit",
-          "single weak subject"
+          "phrase print",
+          "matched print",
+          "intent NAVIGATE",
+          "action edit"
         ]
       },
       "subjectOverlap": 1,
       "riskScore": 3,
-      "answerPreview": "I don't know the answer to that yet. Please include the page or area you mean, because that term appears in more than one place."
+      "answerPreview": "I don't know the answer to that yet. I couldn't find a reliable DFP-NEO guide entry for that question."
+    },
+    {
+      "label": "Assessment",
+      "source": "control",
+      "file": "components/AirCombatTrainingReportModal.tsx",
+      "line": 1113,
+      "tagName": "label",
+      "question": "where do i set Assessment",
+      "confidence": "low",
+      "needsClarification": true,
+      "topMatch": {
+        "id": "function.control-components-aircombattrainingreportmodal-tsx-assessment-1113",
+        "name": "Assessment",
+        "score": 20.5,
+        "reasons": [
+          "phrase assessment",
+          "matched assessment",
+          "near required",
+          "action edit"
+        ]
+      },
+      "subjectOverlap": 1,
+      "riskScore": 3,
+      "answerPreview": "I don't know the answer to that yet. I couldn't find a reliable DFP-NEO guide entry for that question."
     },
     {
       "label": "Search by name or ID number...",
@@ -11044,19 +10105,18 @@
       "confidence": "low",
       "needsClarification": true,
       "topMatch": {
-        "id": "function.curated.training.training-report-fields",
-        "name": "Training report result and notes fields",
-        "score": 18,
+        "id": "function.control-components-addflighttilemodal-tsx-notes-4211",
+        "name": "Notes",
+        "score": 20,
         "reasons": [
+          "phrase notes",
           "matched notes",
-          "action edit",
-          "curated",
-          "single weak subject"
+          "action edit"
         ]
       },
       "subjectOverlap": 1,
       "riskScore": 3,
-      "answerPreview": "I don't know the answer to that yet. Please include the page or area you mean, because that term appears in more than one place."
+      "answerPreview": "I don't know the answer to that yet. I couldn't find a reliable DFP-NEO guide entry for that question."
     },
     {
       "label": "Enter code (max 4 chars)",
@@ -11094,7 +10154,7 @@
       "confidence": "low",
       "needsClarification": true,
       "topMatch": {
-        "id": "function.control-components-continuationcurrencyeventssettings-tsx-event-290",
+        "id": "function.control-app-tsx-event-7150",
         "name": "Event",
         "score": 20,
         "reasons": [
@@ -11236,8 +10296,8 @@
       "confidence": "low",
       "needsClarification": true,
       "topMatch": {
-        "id": "function.control-components-continuationcurrencyeventssettings-tsx-currency-363",
-        "name": "currency",
+        "id": "function.control-app-tsx-currency-6514",
+        "name": "Currency",
         "score": 20,
         "reasons": [
           "phrase currency",
@@ -11259,8 +10319,8 @@
       "confidence": "low",
       "needsClarification": true,
       "topMatch": {
-        "id": "function.control-components-continuationcurrencyeventssettings-tsx-unit-374",
-        "name": "unit",
+        "id": "function.control-components-addcourseflyout-tsx-unit-244",
+        "name": "Unit *",
         "score": 20,
         "reasons": [
           "phrase unit",
@@ -11282,11 +10342,11 @@
       "confidence": "low",
       "needsClarification": true,
       "topMatch": {
-        "id": "function.control-components-continuationcurrencyeventssettings-tsx-a-c-type-377",
-        "name": "A/C Type",
+        "id": "function.control-app-tsx-type-4164",
+        "name": "Type",
         "score": 20,
         "reasons": [
-          "phrase a c type",
+          "phrase type",
           "matched type",
           "action edit"
         ]
@@ -11305,7 +10365,7 @@
       "confidence": "low",
       "needsClarification": true,
       "topMatch": {
-        "id": "function.control-components-continuationcurrencyeventssettings-tsx-crew-387",
+        "id": "function.control-components-addflighttilemodal-tsx-crew-3518",
         "name": "Crew",
         "score": 20,
         "reasons": [
@@ -11328,8 +10388,8 @@
       "confidence": "low",
       "needsClarification": true,
       "topMatch": {
-        "id": "function.control-components-continuationcurrencyeventssettings-tsx-unit-374",
-        "name": "unit",
+        "id": "function.control-components-addcourseflyout-tsx-unit-244",
+        "name": "Unit *",
         "score": 20,
         "reasons": [
           "phrase unit",
@@ -11351,8 +10411,8 @@
       "confidence": "low",
       "needsClarification": true,
       "topMatch": {
-        "id": "function.control-components-courseeditflyout-tsx-course-362",
-        "name": "course",
+        "id": "function.control-components-addgroundeventflyout-tsx-course-362",
+        "name": "Course",
         "score": 20,
         "reasons": [
           "phrase course",
@@ -11399,8 +10459,8 @@
       "confidence": "low",
       "needsClarification": true,
       "topMatch": {
-        "id": "function.control-components-courseeditflyout-tsx-course-362",
-        "name": "course",
+        "id": "function.control-components-addgroundeventflyout-tsx-course-362",
+        "name": "Course",
         "score": 20,
         "reasons": [
           "phrase course",
@@ -11422,18 +10482,19 @@
       "confidence": "low",
       "needsClarification": true,
       "topMatch": {
-        "id": "function.data.commerciallicense",
-        "name": "CommercialLicense data model",
-        "score": 10,
+        "id": "function.control-components-instructorprofileflyout-tsx-print-1452",
+        "name": "Print",
+        "score": 23,
         "reasons": [
-          "partial print",
-          "action edit",
-          "single weak subject"
+          "phrase print",
+          "matched print",
+          "intent NAVIGATE",
+          "action edit"
         ]
       },
       "subjectOverlap": 1,
       "riskScore": 3,
-      "answerPreview": "I don't know the answer to that yet. Please include the page or area you mean, because that term appears in more than one place."
+      "answerPreview": "I don't know the answer to that yet. I couldn't find a reliable DFP-NEO guide entry for that question."
     },
     {
       "label": "Settings",
@@ -11469,20 +10530,46 @@
       "confidence": "low",
       "needsClarification": true,
       "topMatch": {
-        "id": "function.curated.training.course-progress",
-        "name": "Course Progress",
-        "score": 14,
+        "id": "function.control-components-courseprogressview-tsx-award-1249",
+        "name": "Award",
+        "score": 20,
         "reasons": [
+          "phrase award",
           "matched award",
-          "intent NAVIGATE",
-          "missing action edit",
-          "curated",
-          "single weak subject"
+          "action edit"
         ]
       },
       "subjectOverlap": 1,
       "riskScore": 3,
-      "answerPreview": "I don't know the answer to that yet. Please include the page or area you mean, because that term appears in more than one place."
+      "answerPreview": "I don't know the answer to that yet. I couldn't find a reliable DFP-NEO guide entry for that question."
+    },
+    {
+      "label": "Score Method Latest attempt Best attempt Average all attempts",
+      "source": "control",
+      "file": "components/CourseProgressView.tsx",
+      "line": 1347,
+      "tagName": "label",
+      "question": "where do i set Score Method Latest attempt Best attempt Average all attempts",
+      "confidence": "low",
+      "needsClarification": true,
+      "topMatch": {
+        "id": "function.control-components-courseprogressview-tsx-score-method-latest-attempt-best-attempt-average-all-a",
+        "name": "Score Method Latest attempt Best attempt Average all attempts",
+        "score": 52,
+        "reasons": [
+          "phrase score method latest attempt best attempt average all attempts",
+          "matched score",
+          "matched method",
+          "matched latest",
+          "matched attempt",
+          "matched best",
+          "matched average",
+          "matched all"
+        ]
+      },
+      "subjectOverlap": 1,
+      "riskScore": 3,
+      "answerPreview": "I don't know the answer to that yet. I couldn't find a reliable DFP-NEO guide entry for that question."
     },
     {
       "label": "Latest attempt Best attempt Average all attempts",
@@ -11539,6 +10626,58 @@
       "answerPreview": "I don't know the answer to that yet. I couldn't find a reliable DFP-NEO guide entry for that question."
     },
     {
+      "label": "On Track maximum events/week",
+      "source": "control",
+      "file": "components/CourseProgressView.tsx",
+      "line": 1518,
+      "tagName": "label",
+      "question": "where do i set On Track maximum events/week",
+      "confidence": "low",
+      "needsClarification": true,
+      "topMatch": {
+        "id": "function.control-components-courseprogressview-tsx-on-track-maximum-events-week-1518",
+        "name": "On Track maximum events/week",
+        "score": 34,
+        "reasons": [
+          "phrase on track maximum events week",
+          "matched track",
+          "matched maximum",
+          "matched events",
+          "matched week",
+          "action edit"
+        ]
+      },
+      "subjectOverlap": 1,
+      "riskScore": 3,
+      "answerPreview": "I don't know the answer to that yet. I couldn't find a reliable DFP-NEO guide entry for that question."
+    },
+    {
+      "label": "Watch maximum events/week",
+      "source": "control",
+      "file": "components/CourseProgressView.tsx",
+      "line": 1529,
+      "tagName": "label",
+      "question": "where do i set Watch maximum events/week",
+      "confidence": "low",
+      "needsClarification": true,
+      "topMatch": {
+        "id": "function.control-components-courseprogressview-tsx-watch-maximum-events-week-1529",
+        "name": "Watch maximum events/week",
+        "score": 34,
+        "reasons": [
+          "phrase watch maximum events week",
+          "matched watch",
+          "matched maximum",
+          "matched events",
+          "matched week",
+          "action edit"
+        ]
+      },
+      "subjectOverlap": 1,
+      "riskScore": 3,
+      "answerPreview": "I don't know the answer to that yet. I couldn't find a reliable DFP-NEO guide entry for that question."
+    },
+    {
       "label": "Done",
       "source": "control",
       "file": "components/CourseProgressView.tsx",
@@ -11572,8 +10711,8 @@
       "confidence": "low",
       "needsClarification": true,
       "topMatch": {
-        "id": "function.control-components-courseeditflyout-tsx-course-362",
-        "name": "course",
+        "id": "function.control-components-addgroundeventflyout-tsx-course-362",
+        "name": "Course",
         "score": 20,
         "reasons": [
           "phrase course",
@@ -11647,13 +10786,41 @@
       "confidence": "low",
       "needsClarification": true,
       "topMatch": {
-        "id": "function.control-components-deletetraineeconfirmation-tsx-action-195",
+        "id": "function.control-components-auditflyout-tsx-action-645",
         "name": "action",
         "score": 20,
         "reasons": [
           "phrase action",
           "matched action",
           "action edit"
+        ]
+      },
+      "subjectOverlap": 1,
+      "riskScore": 3,
+      "answerPreview": "I don't know the answer to that yet. I couldn't find a reliable DFP-NEO guide entry for that question."
+    },
+    {
+      "label": "Input Type(s) in Post-Flight (select all that apply)",
+      "source": "control",
+      "file": "components/CurrencyBuilderView.tsx",
+      "line": 419,
+      "tagName": "label",
+      "question": "where do i set Input Type(s) in Post-Flight (select all that apply)",
+      "confidence": "low",
+      "needsClarification": true,
+      "topMatch": {
+        "id": "function.control-components-currencybuilderview-tsx-input-type-s-in-post-flight-select-all-that-apply-419",
+        "name": "Input Type(s) in Post-Flight (select all that apply)",
+        "score": 48,
+        "reasons": [
+          "phrase input type s in post flight select all that apply",
+          "matched input",
+          "matched type",
+          "matched post",
+          "matched flight",
+          "matched select",
+          "matched all",
+          "matched apply"
         ]
       },
       "subjectOverlap": 1,
@@ -11742,8 +10909,8 @@
       "confidence": "low",
       "needsClarification": true,
       "topMatch": {
-        "id": "function.control-components-courseeditflyout-tsx-course-362",
-        "name": "course",
+        "id": "function.control-components-addgroundeventflyout-tsx-course-362",
+        "name": "Course",
         "score": 20,
         "reasons": [
           "phrase course",
@@ -11765,8 +10932,8 @@
       "confidence": "low",
       "needsClarification": true,
       "topMatch": {
-        "id": "function.control-components-editcourseflyout-tsx-location-176",
-        "name": "Location",
+        "id": "function.control-components-addcourseflyout-tsx-location-221",
+        "name": "Location *",
         "score": 20,
         "reasons": [
           "phrase location",
@@ -11837,8 +11004,8 @@
       "confidence": "low",
       "needsClarification": true,
       "topMatch": {
-        "id": "function.control-components-continuationcurrencyeventssettings-tsx-unit-374",
-        "name": "unit",
+        "id": "function.control-components-addcourseflyout-tsx-unit-244",
+        "name": "Unit *",
         "score": 20,
         "reasons": [
           "phrase unit",
@@ -12041,12 +11208,13 @@
       "confidence": "low",
       "needsClarification": true,
       "topMatch": {
-        "id": "function.control-components-emailactivationsettings-tsx-username-229",
-        "name": "Username",
-        "score": 20,
+        "id": "function.control-dfp-neo-platform-app-test-login-page-tsx-username-47",
+        "name": "Username:",
+        "score": 23,
         "reasons": [
           "phrase username",
           "matched username",
+          "intent NAVIGATE",
           "action edit"
         ]
       },
@@ -12153,6 +11321,29 @@
       "answerPreview": "I don't know the answer to that yet. I couldn't find a reliable DFP-NEO guide entry for that question."
     },
     {
+      "label": "Pilot",
+      "source": "control",
+      "file": "components/FlightDetailModal.tsx",
+      "line": 3256,
+      "tagName": "label",
+      "question": "where do i set Pilot",
+      "confidence": "low",
+      "needsClarification": true,
+      "topMatch": {
+        "id": "function.control-components-flightdetailmodal-tsx-pilot-3256",
+        "name": "Pilot",
+        "score": 20,
+        "reasons": [
+          "phrase pilot",
+          "matched pilot",
+          "action edit"
+        ]
+      },
+      "subjectOverlap": 1,
+      "riskScore": 3,
+      "answerPreview": "I don't know the answer to that yet. I couldn't find a reliable DFP-NEO guide entry for that question."
+    },
+    {
       "label": "Trainee Scores",
       "source": "control",
       "file": "components/FlightDetailModal.tsx",
@@ -12212,7 +11403,7 @@
       "confidence": "low",
       "needsClarification": true,
       "topMatch": {
-        "id": "function.control-components-platformconfigurationsettings-tsx-duration-15602",
+        "id": "function.control-app-tsx-duration-5652",
         "name": "Duration",
         "score": 20,
         "reasons": [
@@ -12250,6 +11441,52 @@
       "answerPreview": "I don't know the answer to that yet. I couldn't find a reliable DFP-NEO guide entry for that question."
     },
     {
+      "label": "Area",
+      "source": "control",
+      "file": "components/FlightDetailModal.tsx",
+      "line": 3759,
+      "tagName": "label",
+      "question": "where do i set Area",
+      "confidence": "low",
+      "needsClarification": true,
+      "topMatch": {
+        "id": "function.control-components-addflighttilemodal-tsx-area-3887",
+        "name": "Area",
+        "score": 20,
+        "reasons": [
+          "phrase area",
+          "matched area",
+          "action edit"
+        ]
+      },
+      "subjectOverlap": 1,
+      "riskScore": 3,
+      "answerPreview": "I don't know the answer to that yet. I couldn't find a reliable DFP-NEO guide entry for that question."
+    },
+    {
+      "label": "CONFIG",
+      "source": "control",
+      "file": "components/FlightDetailModal.tsx",
+      "line": 3771,
+      "tagName": "label",
+      "question": "where do i set CONFIG",
+      "confidence": "low",
+      "needsClarification": true,
+      "topMatch": {
+        "id": "function.control-app-tsx-config-6435",
+        "name": "CONFIG",
+        "score": 20,
+        "reasons": [
+          "phrase config",
+          "matched config",
+          "action edit"
+        ]
+      },
+      "subjectOverlap": 1,
+      "riskScore": 3,
+      "answerPreview": "I don't know the answer to that yet. I couldn't find a reliable DFP-NEO guide entry for that question."
+    },
+    {
       "label": "Location",
       "source": "control",
       "file": "components/FlightDetailModal.tsx",
@@ -12259,8 +11496,8 @@
       "confidence": "low",
       "needsClarification": true,
       "topMatch": {
-        "id": "function.control-components-editcourseflyout-tsx-location-176",
-        "name": "Location",
+        "id": "function.control-components-addcourseflyout-tsx-location-221",
+        "name": "Location *",
         "score": 20,
         "reasons": [
           "phrase location",
@@ -12308,7 +11545,7 @@
       "confidence": "low",
       "needsClarification": true,
       "topMatch": {
-        "id": "function.control-components-addflighttilemodal-tsx-origin-3709",
+        "id": "function.control-components-addflighttilemodal-tsx-origin-3708",
         "name": "Origin",
         "score": 20,
         "reasons": [
@@ -12354,7 +11591,7 @@
       "confidence": "low",
       "needsClarification": true,
       "topMatch": {
-        "id": "function.control-components-addflighttilemodal-tsx-destination-3720",
+        "id": "function.control-components-addflighttilemodal-tsx-destination-3719",
         "name": "Destination",
         "score": 20,
         "reasons": [
@@ -12472,19 +11709,18 @@
       "confidence": "low",
       "needsClarification": true,
       "topMatch": {
-        "id": "function.curated.training.training-report-fields",
-        "name": "Training report result and notes fields",
-        "score": 18,
+        "id": "function.control-components-addflighttilemodal-tsx-notes-4211",
+        "name": "Notes",
+        "score": 20,
         "reasons": [
+          "phrase notes",
           "matched notes",
-          "action edit",
-          "curated",
-          "single weak subject"
+          "action edit"
         ]
       },
       "subjectOverlap": 1,
       "riskScore": 3,
-      "answerPreview": "I don't know the answer to that yet. Please include the page or area you mean, because that term appears in more than one place."
+      "answerPreview": "I don't know the answer to that yet. I couldn't find a reliable DFP-NEO guide entry for that question."
     },
     {
       "label": "Crew",
@@ -12496,7 +11732,7 @@
       "confidence": "low",
       "needsClarification": true,
       "topMatch": {
-        "id": "function.control-components-continuationcurrencyeventssettings-tsx-crew-387",
+        "id": "function.control-components-addflighttilemodal-tsx-crew-3518",
         "name": "Crew",
         "score": 20,
         "reasons": [
@@ -12607,6 +11843,54 @@
       "answerPreview": "I don't know the answer to that yet. I couldn't find a reliable DFP-NEO guide entry for that question."
     },
     {
+      "label": "Swap / Manifest Notes",
+      "source": "control",
+      "file": "components/FlightDetailModal.tsx",
+      "line": 4102,
+      "tagName": "label",
+      "question": "where do i set Swap / Manifest Notes",
+      "confidence": "low",
+      "needsClarification": true,
+      "topMatch": {
+        "id": "function.control-components-addflighttilemodal-tsx-swap-manifest-notes-3758",
+        "name": "Swap / Manifest Notes",
+        "score": 29,
+        "reasons": [
+          "phrase swap manifest notes",
+          "matched swap",
+          "matched manifest",
+          "matched notes",
+          "action edit"
+        ]
+      },
+      "subjectOverlap": 1,
+      "riskScore": 3,
+      "answerPreview": "I don't know the answer to that yet. I couldn't find a reliable DFP-NEO guide entry for that question."
+    },
+    {
+      "label": "person",
+      "source": "control",
+      "file": "components/FlightDetailModal.tsx",
+      "line": 4493,
+      "tagName": "label",
+      "question": "where do i set person",
+      "confidence": "low",
+      "needsClarification": true,
+      "topMatch": {
+        "id": "function.control-components-flightdetailmodal-tsx-person-4493",
+        "name": "person",
+        "score": 20,
+        "reasons": [
+          "phrase person",
+          "matched person",
+          "action edit"
+        ]
+      },
+      "subjectOverlap": 1,
+      "riskScore": 3,
+      "answerPreview": "I don't know the answer to that yet. I couldn't find a reliable DFP-NEO guide entry for that question."
+    },
+    {
       "label": "Change Detected",
       "source": "control",
       "file": "components/FlightDetailModal.tsx",
@@ -12663,18 +11947,19 @@
       "confidence": "low",
       "needsClarification": true,
       "topMatch": {
-        "id": "function.data.commerciallicense",
-        "name": "CommercialLicense data model",
-        "score": 10,
+        "id": "function.control-components-instructorprofileflyout-tsx-print-1452",
+        "name": "Print",
+        "score": 23,
         "reasons": [
-          "partial print",
-          "action edit",
-          "single weak subject"
+          "phrase print",
+          "matched print",
+          "intent NAVIGATE",
+          "action edit"
         ]
       },
       "subjectOverlap": 1,
       "riskScore": 3,
-      "answerPreview": "I don't know the answer to that yet. Please include the page or area you mean, because that term appears in more than one place."
+      "answerPreview": "I don't know the answer to that yet. I couldn't find a reliable DFP-NEO guide entry for that question."
     },
     {
       "label": "staff availability",
@@ -12821,6 +12106,29 @@
       "answerPreview": "I don't know the answer to that yet. I couldn't find a reliable DFP-NEO guide entry for that question."
     },
     {
+      "label": "Qualifications",
+      "source": "control",
+      "file": "components/InstructorProfileFlyout.tsx",
+      "line": 2173,
+      "tagName": "label",
+      "question": "where do i set Qualifications",
+      "confidence": "low",
+      "needsClarification": true,
+      "topMatch": {
+        "id": "function.control-components-instructorprofileflyout-tsx-qualifications-2173",
+        "name": "Qualifications",
+        "score": 20,
+        "reasons": [
+          "phrase qualifications",
+          "matched qualifications",
+          "action edit"
+        ]
+      },
+      "subjectOverlap": 1,
+      "riskScore": 3,
+      "answerPreview": "I don't know the answer to that yet. I couldn't find a reliable DFP-NEO guide entry for that question."
+    },
+    {
       "label": "View trainee profile",
       "source": "control",
       "file": "components/InstructorProfileFlyout.tsx",
@@ -12880,8 +12188,8 @@
       "confidence": "low",
       "needsClarification": true,
       "topMatch": {
-        "id": "function.control-components-continuationcurrencyeventssettings-tsx-currency-363",
-        "name": "currency",
+        "id": "function.control-app-tsx-currency-6514",
+        "name": "Currency",
         "score": 20,
         "reasons": [
           "phrase currency",
@@ -12903,7 +12211,7 @@
       "confidence": "low",
       "needsClarification": true,
       "topMatch": {
-        "id": "function.control-components-continuationcurrencyeventssettings-tsx-event-290",
+        "id": "function.control-app-tsx-event-7150",
         "name": "Event",
         "score": 20,
         "reasons": [
@@ -13005,19 +12313,18 @@
       "confidence": "low",
       "needsClarification": true,
       "topMatch": {
-        "id": "function.curated.training.course-management",
-        "name": "Course management",
-        "score": 18,
+        "id": "function.control-components-coursedatawindow-tsx-start-68",
+        "name": "Start:",
+        "score": 20,
         "reasons": [
+          "phrase start",
           "matched start",
-          "action edit",
-          "curated",
-          "single weak subject"
+          "action edit"
         ]
       },
       "subjectOverlap": 1,
       "riskScore": 3,
-      "answerPreview": "I don't know the answer to that yet. Please include the page or area you mean, because that term appears in more than one place."
+      "answerPreview": "I don't know the answer to that yet. I couldn't find a reliable DFP-NEO guide entry for that question."
     },
     {
       "label": "End",
@@ -13029,8 +12336,8 @@
       "confidence": "low",
       "needsClarification": true,
       "topMatch": {
-        "id": "function.control-components-addunavailabilityflyout-tsx-end-date-205",
-        "name": "end-date",
+        "id": "function.control-components-academicstab-tsx-adjust-end-time-for-tile-label-1337",
+        "name": "`Adjust end time for ${tile.label}`",
         "score": 15,
         "reasons": [
           "matched end",
@@ -13523,7 +12830,7 @@
       "confidence": "low",
       "needsClarification": true,
       "topMatch": {
-        "id": "function.control-components-platformconfigurationsettings-tsx-role-12308",
+        "id": "function.control-components-adminpanel-tsx-role-543",
         "name": "Role",
         "score": 20,
         "reasons": [
@@ -13787,7 +13094,7 @@
       "confidence": "low",
       "needsClarification": true,
       "topMatch": {
-        "id": "function.control-components-platformconfigurationsettings-tsx-duration-15602",
+        "id": "function.control-app-tsx-duration-5652",
         "name": "Duration",
         "score": 20,
         "reasons": [
@@ -13928,19 +13235,41 @@
       "confidence": "low",
       "needsClarification": true,
       "topMatch": {
-        "id": "function.curated.training.course-management",
-        "name": "Course management",
-        "score": 18,
+        "id": "function.control-app-tsx-date-6403",
+        "name": "Date",
+        "score": 20,
         "reasons": [
+          "phrase date",
           "matched date",
-          "action edit",
-          "curated",
-          "single weak subject"
+          "action edit"
         ]
       },
       "subjectOverlap": 1,
       "riskScore": 3,
-      "answerPreview": "I don't know the answer to that yet. Please include the page or area you mean, because that term appears in more than one place."
+      "answerPreview": "I don't know the answer to that yet. I couldn't find a reliable DFP-NEO guide entry for that question."
+    },
+    {
+      "label": "Aircraft",
+      "source": "control",
+      "file": "components/PostFlightModal.tsx",
+      "line": 154,
+      "tagName": "label",
+      "question": "where do i set Aircraft",
+      "confidence": "low",
+      "needsClarification": true,
+      "topMatch": {
+        "id": "function.control-components-addflighttilemodal-tsx-aircraft-3897",
+        "name": "Aircraft",
+        "score": 20,
+        "reasons": [
+          "phrase aircraft",
+          "matched aircraft",
+          "action edit"
+        ]
+      },
+      "subjectOverlap": 1,
+      "riskScore": 3,
+      "answerPreview": "I don't know the answer to that yet. I couldn't find a reliable DFP-NEO guide entry for that question."
     },
     {
       "label": "Number",
@@ -13952,20 +13281,18 @@
       "confidence": "low",
       "needsClarification": true,
       "topMatch": {
-        "id": "function.curated.scheduling.flight-detail-fields",
-        "name": "Flight detail fields",
-        "score": 18,
+        "id": "function.control-components-postflightmodal-tsx-number-159",
+        "name": "Number",
+        "score": 20,
         "reasons": [
+          "phrase number",
           "matched number",
-          "intent NAVIGATE",
-          "action edit",
-          "curated",
-          "single weak subject"
+          "action edit"
         ]
       },
       "subjectOverlap": 1,
       "riskScore": 3,
-      "answerPreview": "I don't know the answer to that yet. Please include the page or area you mean, because that term appears in more than one place."
+      "answerPreview": "I don't know the answer to that yet. I couldn't find a reliable DFP-NEO guide entry for that question."
     },
     {
       "label": "Captain",
@@ -13977,20 +13304,18 @@
       "confidence": "low",
       "needsClarification": true,
       "topMatch": {
-        "id": "function.curated.settings.personnel-qualifications",
-        "name": "Personnel Qualifications",
-        "score": 18,
+        "id": "function.control-components-postflightmodal-tsx-captain-171",
+        "name": "Captain",
+        "score": 20,
         "reasons": [
+          "phrase captain",
           "matched captain",
-          "intent NAVIGATE",
-          "action edit",
-          "curated",
-          "single weak subject"
+          "action edit"
         ]
       },
       "subjectOverlap": 1,
       "riskScore": 3,
-      "answerPreview": "I don't know the answer to that yet. Please include the page or area you mean, because that term appears in more than one place."
+      "answerPreview": "I don't know the answer to that yet. I couldn't find a reliable DFP-NEO guide entry for that question."
     },
     {
       "label": "Crew",
@@ -14002,12 +13327,35 @@
       "confidence": "low",
       "needsClarification": true,
       "topMatch": {
-        "id": "function.control-components-continuationcurrencyeventssettings-tsx-crew-387",
+        "id": "function.control-components-addflighttilemodal-tsx-crew-3518",
         "name": "Crew",
         "score": 20,
         "reasons": [
           "phrase crew",
           "matched crew",
+          "action edit"
+        ]
+      },
+      "subjectOverlap": 1,
+      "riskScore": 3,
+      "answerPreview": "I don't know the answer to that yet. I couldn't find a reliable DFP-NEO guide entry for that question."
+    },
+    {
+      "label": "Route",
+      "source": "control",
+      "file": "components/PostFlightModal.tsx",
+      "line": 181,
+      "tagName": "label",
+      "question": "where do i set Route",
+      "confidence": "low",
+      "needsClarification": true,
+      "topMatch": {
+        "id": "function.control-components-postflightmodal-tsx-route-181",
+        "name": "Route",
+        "score": 20,
+        "reasons": [
+          "phrase route",
+          "matched route",
           "action edit"
         ]
       },
@@ -14025,14 +13373,36 @@
       "confidence": "low",
       "needsClarification": true,
       "topMatch": {
-        "id": "function.control-app-tsx-request-alreadyinhighest-confirm-schedule-at-formatcompacttime-request-takeoff-4",
-        "name": "request.alreadyInHighest ? 'Confirm ' : 'Schedule ' at formatCompactTime(request.takeoff)",
-        "score": 15,
+        "id": "function.control-app-tsx-takeoff-6406",
+        "name": "Takeoff",
+        "score": 20,
         "reasons": [
+          "phrase takeoff",
           "matched takeoff",
-          "intent NAVIGATE",
-          "action edit",
-          "single weak subject"
+          "action edit"
+        ]
+      },
+      "subjectOverlap": 1,
+      "riskScore": 3,
+      "answerPreview": "I don't know the answer to that yet. I couldn't find a reliable DFP-NEO guide entry for that question."
+    },
+    {
+      "label": "Land",
+      "source": "control",
+      "file": "components/PostFlightModal.tsx",
+      "line": 197,
+      "tagName": "label",
+      "question": "where do i set Land",
+      "confidence": "low",
+      "needsClarification": true,
+      "topMatch": {
+        "id": "function.control-components-postflightmodal-tsx-land-197",
+        "name": "Land",
+        "score": 20,
+        "reasons": [
+          "phrase land",
+          "matched land",
+          "action edit"
         ]
       },
       "subjectOverlap": 1,
@@ -14072,20 +13442,18 @@
       "confidence": "low",
       "needsClarification": true,
       "topMatch": {
-        "id": "function.curated.scheduling.flight-detail-fields",
-        "name": "Flight detail fields",
-        "score": 18,
+        "id": "function.control-components-postflightmodal-tsx-number-159",
+        "name": "Number",
+        "score": 20,
         "reasons": [
+          "phrase number",
           "matched number",
-          "intent NAVIGATE",
-          "action edit",
-          "curated",
-          "single weak subject"
+          "action edit"
         ]
       },
       "subjectOverlap": 1,
       "riskScore": 3,
-      "answerPreview": "I don't know the answer to that yet. Please include the page or area you mean, because that term appears in more than one place."
+      "answerPreview": "I don't know the answer to that yet. I couldn't find a reliable DFP-NEO guide entry for that question."
     },
     {
       "label": "Date last completed",
@@ -14122,20 +13490,18 @@
       "confidence": "low",
       "needsClarification": true,
       "topMatch": {
-        "id": "function.curated.navigation.dfp",
-        "name": "Open the DFP schedule",
-        "score": 18,
+        "id": "function.control-components-postflightview-tsx-flight-1485",
+        "name": "Flight",
+        "score": 20,
         "reasons": [
+          "phrase flight",
           "matched flight",
-          "intent NAVIGATE",
-          "action edit",
-          "curated",
-          "single weak subject"
+          "action edit"
         ]
       },
       "subjectOverlap": 1,
       "riskScore": 3,
-      "answerPreview": "I don't know the answer to that yet. Please include the page or area you mean, because that term appears in more than one place."
+      "answerPreview": "I don't know the answer to that yet. I couldn't find a reliable DFP-NEO guide entry for that question."
     },
     {
       "label": "Solo",
@@ -14195,19 +13561,41 @@
       "confidence": "low",
       "needsClarification": true,
       "topMatch": {
-        "id": "function.curated.training.course-management",
-        "name": "Course management",
-        "score": 18,
+        "id": "function.control-app-tsx-date-6403",
+        "name": "Date",
+        "score": 20,
         "reasons": [
+          "phrase date",
           "matched date",
-          "action edit",
-          "curated",
-          "single weak subject"
+          "action edit"
         ]
       },
       "subjectOverlap": 1,
       "riskScore": 3,
-      "answerPreview": "I don't know the answer to that yet. Please include the page or area you mean, because that term appears in more than one place."
+      "answerPreview": "I don't know the answer to that yet. I couldn't find a reliable DFP-NEO guide entry for that question."
+    },
+    {
+      "label": "Aircraft",
+      "source": "control",
+      "file": "components/PostFlightView.tsx",
+      "line": 1546,
+      "tagName": "label",
+      "question": "where do i set Aircraft",
+      "confidence": "low",
+      "needsClarification": true,
+      "topMatch": {
+        "id": "function.control-components-addflighttilemodal-tsx-aircraft-3897",
+        "name": "Aircraft",
+        "score": 20,
+        "reasons": [
+          "phrase aircraft",
+          "matched aircraft",
+          "action edit"
+        ]
+      },
+      "subjectOverlap": 1,
+      "riskScore": 3,
+      "answerPreview": "I don't know the answer to that yet. I couldn't find a reliable DFP-NEO guide entry for that question."
     },
     {
       "label": "prefix",
@@ -14234,6 +13622,52 @@
       "answerPreview": "I don't know the answer to that yet. I couldn't find a reliable DFP-NEO guide entry for that question."
     },
     {
+      "label": "Duty",
+      "source": "control",
+      "file": "components/PostFlightView.tsx",
+      "line": 1577,
+      "tagName": "label",
+      "question": "where do i set Duty",
+      "confidence": "low",
+      "needsClarification": true,
+      "topMatch": {
+        "id": "function.control-components-postflightview-tsx-duty-1577",
+        "name": "Duty",
+        "score": 20,
+        "reasons": [
+          "phrase duty",
+          "matched duty",
+          "action edit"
+        ]
+      },
+      "subjectOverlap": 1,
+      "riskScore": 3,
+      "answerPreview": "I don't know the answer to that yet. I couldn't find a reliable DFP-NEO guide entry for that question."
+    },
+    {
+      "label": "Route",
+      "source": "control",
+      "file": "components/PostFlightView.tsx",
+      "line": 1604,
+      "tagName": "label",
+      "question": "where do i set Route",
+      "confidence": "low",
+      "needsClarification": true,
+      "topMatch": {
+        "id": "function.control-components-postflightmodal-tsx-route-181",
+        "name": "Route",
+        "score": 20,
+        "reasons": [
+          "phrase route",
+          "matched route",
+          "action edit"
+        ]
+      },
+      "subjectOverlap": 1,
+      "riskScore": 3,
+      "answerPreview": "I don't know the answer to that yet. I couldn't find a reliable DFP-NEO guide entry for that question."
+    },
+    {
       "label": "Takeoff",
       "source": "control",
       "file": "components/PostFlightView.tsx",
@@ -14243,14 +13677,36 @@
       "confidence": "low",
       "needsClarification": true,
       "topMatch": {
-        "id": "function.control-app-tsx-request-alreadyinhighest-confirm-schedule-at-formatcompacttime-request-takeoff-4",
-        "name": "request.alreadyInHighest ? 'Confirm ' : 'Schedule ' at formatCompactTime(request.takeoff)",
-        "score": 15,
+        "id": "function.control-app-tsx-takeoff-6406",
+        "name": "Takeoff",
+        "score": 20,
         "reasons": [
+          "phrase takeoff",
           "matched takeoff",
-          "intent NAVIGATE",
-          "action edit",
-          "single weak subject"
+          "action edit"
+        ]
+      },
+      "subjectOverlap": 1,
+      "riskScore": 3,
+      "answerPreview": "I don't know the answer to that yet. I couldn't find a reliable DFP-NEO guide entry for that question."
+    },
+    {
+      "label": "Land",
+      "source": "control",
+      "file": "components/PostFlightView.tsx",
+      "line": 1623,
+      "tagName": "label",
+      "question": "where do i set Land",
+      "confidence": "low",
+      "needsClarification": true,
+      "topMatch": {
+        "id": "function.control-components-postflightmodal-tsx-land-197",
+        "name": "Land",
+        "score": 20,
+        "reasons": [
+          "phrase land",
+          "matched land",
+          "action edit"
         ]
       },
       "subjectOverlap": 1,
@@ -14267,19 +13723,18 @@
       "confidence": "low",
       "needsClarification": true,
       "topMatch": {
-        "id": "function.curated.people.trainee-unavailability",
-        "name": "Trainee unavailability",
-        "score": 18,
+        "id": "function.control-components-postflightview-tsx-block-1647",
+        "name": "Block",
+        "score": 20,
         "reasons": [
-          "partial block",
-          "action edit",
-          "curated",
-          "single weak subject"
+          "phrase block",
+          "matched block",
+          "action edit"
         ]
       },
       "subjectOverlap": 1,
       "riskScore": 3,
-      "answerPreview": "I don't know the answer to that yet. Please include the page or area you mean, because that term appears in more than one place."
+      "answerPreview": "I don't know the answer to that yet. I couldn't find a reliable DFP-NEO guide entry for that question."
     },
     {
       "label": "Captain",
@@ -14291,20 +13746,18 @@
       "confidence": "low",
       "needsClarification": true,
       "topMatch": {
-        "id": "function.curated.settings.personnel-qualifications",
-        "name": "Personnel Qualifications",
-        "score": 18,
+        "id": "function.control-components-postflightmodal-tsx-captain-171",
+        "name": "Captain",
+        "score": 20,
         "reasons": [
+          "phrase captain",
           "matched captain",
-          "intent NAVIGATE",
-          "action edit",
-          "curated",
-          "single weak subject"
+          "action edit"
         ]
       },
       "subjectOverlap": 1,
       "riskScore": 3,
-      "answerPreview": "I don't know the answer to that yet. Please include the page or area you mean, because that term appears in more than one place."
+      "answerPreview": "I don't know the answer to that yet. I couldn't find a reliable DFP-NEO guide entry for that question."
     },
     {
       "label": "Night",
@@ -14322,6 +13775,29 @@
         "reasons": [
           "phrase night",
           "matched night",
+          "action edit"
+        ]
+      },
+      "subjectOverlap": 1,
+      "riskScore": 3,
+      "answerPreview": "I don't know the answer to that yet. I couldn't find a reliable DFP-NEO guide entry for that question."
+    },
+    {
+      "label": "Ineffective",
+      "source": "control",
+      "file": "components/PostFlightView.tsx",
+      "line": 1708,
+      "tagName": "label",
+      "question": "where do i set Ineffective",
+      "confidence": "low",
+      "needsClarification": true,
+      "topMatch": {
+        "id": "function.control-components-postflightview-tsx-ineffective-1708",
+        "name": "Ineffective",
+        "score": 20,
+        "reasons": [
+          "phrase ineffective",
+          "matched ineffective",
           "action edit"
         ]
       },
@@ -14367,20 +13843,18 @@
       "confidence": "low",
       "needsClarification": true,
       "topMatch": {
-        "id": "function.curated.navigation.dfp",
-        "name": "Open the DFP schedule",
-        "score": 18,
+        "id": "function.control-components-postflightview-tsx-flight-1485",
+        "name": "Flight",
+        "score": 20,
         "reasons": [
+          "phrase flight",
           "matched flight",
-          "intent NAVIGATE",
-          "action edit",
-          "curated",
-          "single weak subject"
+          "action edit"
         ]
       },
       "subjectOverlap": 1,
       "riskScore": 3,
-      "answerPreview": "I don't know the answer to that yet. Please include the page or area you mean, because that term appears in more than one place."
+      "answerPreview": "I don't know the answer to that yet. I couldn't find a reliable DFP-NEO guide entry for that question."
     },
     {
       "label": "priority",
@@ -14490,8 +13964,8 @@
       "confidence": "low",
       "needsClarification": true,
       "topMatch": {
-        "id": "function.control-components-courseeditflyout-tsx-course-362",
-        "name": "course",
+        "id": "function.control-components-addgroundeventflyout-tsx-course-362",
+        "name": "Course",
         "score": 20,
         "reasons": [
           "phrase course",
@@ -14513,20 +13987,18 @@
       "confidence": "low",
       "needsClarification": true,
       "topMatch": {
-        "id": "function.curated.scheduling.multi-select",
-        "name": "Multi Select",
-        "score": 18,
+        "id": "function.control-components-prioritiesview-tsx-flights-5828",
+        "name": "Flights",
+        "score": 20,
         "reasons": [
+          "phrase flights",
           "matched flights",
-          "intent NAVIGATE",
-          "action edit",
-          "curated",
-          "single weak subject"
+          "action edit"
         ]
       },
       "subjectOverlap": 1,
       "riskScore": 3,
-      "answerPreview": "I don't know the answer to that yet. Please include the page or area you mean, because that term appears in more than one place."
+      "answerPreview": "I don't know the answer to that yet. I couldn't find a reliable DFP-NEO guide entry for that question."
     },
     {
       "label": "currency",
@@ -14538,12 +14010,35 @@
       "confidence": "low",
       "needsClarification": true,
       "topMatch": {
-        "id": "function.control-components-continuationcurrencyeventssettings-tsx-currency-363",
-        "name": "currency",
+        "id": "function.control-app-tsx-currency-6514",
+        "name": "Currency",
         "score": 20,
         "reasons": [
           "phrase currency",
           "matched currency",
+          "action edit"
+        ]
+      },
+      "subjectOverlap": 1,
+      "riskScore": 3,
+      "answerPreview": "I don't know the answer to that yet. I couldn't find a reliable DFP-NEO guide entry for that question."
+    },
+    {
+      "label": "Aircraft",
+      "source": "control",
+      "file": "components/PrioritiesViewWithMenu.tsx",
+      "line": 530,
+      "tagName": "label",
+      "question": "where do i set Aircraft",
+      "confidence": "low",
+      "needsClarification": true,
+      "topMatch": {
+        "id": "function.control-components-addflighttilemodal-tsx-aircraft-3897",
+        "name": "Aircraft",
+        "score": 20,
+        "reasons": [
+          "phrase aircraft",
+          "matched aircraft",
           "action edit"
         ]
       },
@@ -14561,8 +14056,8 @@
       "confidence": "low",
       "needsClarification": true,
       "topMatch": {
-        "id": "function.control-components-courseeditflyout-tsx-course-362",
-        "name": "course",
+        "id": "function.control-components-addgroundeventflyout-tsx-course-362",
+        "name": "Course",
         "score": 20,
         "reasons": [
           "phrase course",
@@ -14607,7 +14102,7 @@
       "confidence": "low",
       "needsClarification": true,
       "topMatch": {
-        "id": "function.control-components-platformconfigurationsettings-tsx-duration-15602",
+        "id": "function.control-app-tsx-duration-5652",
         "name": "Duration",
         "score": 20,
         "reasons": [
@@ -14679,8 +14174,8 @@
       "confidence": "low",
       "needsClarification": true,
       "topMatch": {
-        "id": "function.control-components-courseeditflyout-tsx-course-362",
-        "name": "course",
+        "id": "function.control-components-addgroundeventflyout-tsx-course-362",
+        "name": "Course",
         "score": 20,
         "reasons": [
           "phrase course",
@@ -14725,8 +14220,8 @@
       "confidence": "low",
       "needsClarification": true,
       "topMatch": {
-        "id": "function.control-components-continuationcurrencyeventssettings-tsx-unit-374",
-        "name": "unit",
+        "id": "function.control-components-addcourseflyout-tsx-unit-244",
+        "name": "Unit *",
         "score": 20,
         "reasons": [
           "phrase unit",
@@ -14748,7 +14243,7 @@
       "confidence": "low",
       "needsClarification": true,
       "topMatch": {
-        "id": "function.control-components-deletetraineeconfirmation-tsx-action-195",
+        "id": "function.control-components-auditflyout-tsx-action-645",
         "name": "action",
         "score": 20,
         "reasons": [
@@ -14861,6 +14356,56 @@
       "subjectOverlap": 1,
       "riskScore": 3,
       "answerPreview": "I don't know the answer to that yet. Please include the page or area you mean, because that term appears in more than one place."
+    },
+    {
+      "label": "Parent",
+      "source": "control",
+      "file": "components/ScheduleView.tsx",
+      "line": 9139,
+      "tagName": "label",
+      "question": "where do i set Parent",
+      "confidence": "low",
+      "needsClarification": true,
+      "topMatch": {
+        "id": "function.control-components-scheduleview-tsx-parent-9139",
+        "name": "Parent",
+        "score": 20,
+        "reasons": [
+          "phrase parent",
+          "matched parent",
+          "action edit"
+        ]
+      },
+      "subjectOverlap": 1,
+      "riskScore": 3,
+      "answerPreview": "I don't know the answer to that yet. I couldn't find a reliable DFP-NEO guide entry for that question."
+    },
+    {
+      "label": "Assignment Audience Trainees only Staff only",
+      "source": "control",
+      "file": "components/ScheduleView.tsx",
+      "line": 10807,
+      "tagName": "label",
+      "question": "where do i set Assignment Audience Trainees only Staff only",
+      "confidence": "low",
+      "needsClarification": true,
+      "topMatch": {
+        "id": "function.control-components-scheduleview-tsx-assignment-audience-trainees-only-staff-only-10807",
+        "name": "Assignment Audience Trainees only Staff only",
+        "score": 40,
+        "reasons": [
+          "phrase assignment audience trainees only staff only",
+          "matched assignment",
+          "matched audience",
+          "matched trainees",
+          "matched only",
+          "matched staff",
+          "action edit"
+        ]
+      },
+      "subjectOverlap": 1,
+      "riskScore": 3,
+      "answerPreview": "I don't know the answer to that yet. I couldn't find a reliable DFP-NEO guide entry for that question."
     },
     {
       "label": "Continue setup Resume from the last wizard page.",
@@ -15022,6 +14567,29 @@
       "answerPreview": "I don't know the answer to that yet. I couldn't find a reliable DFP-NEO guide entry for that question."
     },
     {
+      "label": "reason",
+      "source": "control",
+      "file": "components/ScheduleView.tsx",
+      "line": 13775,
+      "tagName": "option",
+      "question": "where do i set reason",
+      "confidence": "low",
+      "needsClarification": true,
+      "topMatch": {
+        "id": "function.control-components-addunavailabilityflyout-tsx-reason-222",
+        "name": "Reason",
+        "score": 20,
+        "reasons": [
+          "phrase reason",
+          "matched reason",
+          "action edit"
+        ]
+      },
+      "subjectOverlap": 1,
+      "riskScore": 3,
+      "answerPreview": "I don't know the answer to that yet. I couldn't find a reliable DFP-NEO guide entry for that question."
+    },
+    {
       "label": "Date",
       "source": "control",
       "file": "components/ScoreDetailView.tsx",
@@ -15031,19 +14599,18 @@
       "confidence": "low",
       "needsClarification": true,
       "topMatch": {
-        "id": "function.curated.training.course-management",
-        "name": "Course management",
-        "score": 18,
+        "id": "function.control-app-tsx-date-6403",
+        "name": "Date",
+        "score": 20,
         "reasons": [
+          "phrase date",
           "matched date",
-          "action edit",
-          "curated",
-          "single weak subject"
+          "action edit"
         ]
       },
       "subjectOverlap": 1,
       "riskScore": 3,
-      "answerPreview": "I don't know the answer to that yet. Please include the page or area you mean, because that term appears in more than one place."
+      "answerPreview": "I don't know the answer to that yet. I couldn't find a reliable DFP-NEO guide entry for that question."
     },
     {
       "label": "Event",
@@ -15055,7 +14622,7 @@
       "confidence": "low",
       "needsClarification": true,
       "topMatch": {
-        "id": "function.control-components-continuationcurrencyeventssettings-tsx-event-290",
+        "id": "function.control-app-tsx-event-7150",
         "name": "Event",
         "score": 20,
         "reasons": [
@@ -15091,7 +14658,7 @@
       },
       "subjectOverlap": 1,
       "riskScore": 3,
-      "answerPreview": "I think you're asking about course management. Which of these do you mean? 1. Course Scores table 2. Training report 3. Training report result and notes fields 4. Build Intelligence risk events 5. Syllabus packages and events None of these"
+      "answerPreview": "I think you're asking about course management. Which of these do you mean? 1. Course Scores table 2. Training report 3. Course ranking awards 4. Training report result and notes fields 5. Build Intelligence risk events None of these"
     },
     {
       "label": "textarea",
@@ -15126,7 +14693,7 @@
       "confidence": "low",
       "needsClarification": true,
       "topMatch": {
-        "id": "function.control-components-continuationcurrencyeventssettings-tsx-event-290",
+        "id": "function.control-app-tsx-event-7150",
         "name": "Event",
         "score": 20,
         "reasons": [
@@ -15173,8 +14740,8 @@
       "confidence": "low",
       "needsClarification": true,
       "topMatch": {
-        "id": "function.control-components-continuationcurrencyeventssettings-tsx-currency-363",
-        "name": "currency",
+        "id": "function.control-app-tsx-currency-6514",
+        "name": "Currency",
         "score": 20,
         "reasons": [
           "phrase currency",
@@ -15266,7 +14833,7 @@
       "confidence": "low",
       "needsClarification": true,
       "topMatch": {
-        "id": "function.control-components-settingsview-tsx-element-599",
+        "id": "function.control-components-scoringmatrixflyout-tsx-element-161",
         "name": "element",
         "score": 20,
         "reasons": [
@@ -15658,7 +15225,7 @@
       "confidence": "low",
       "needsClarification": true,
       "topMatch": {
-        "id": "function.control-components-deletetraineeconfirmation-tsx-action-195",
+        "id": "function.control-components-auditflyout-tsx-action-645",
         "name": "action",
         "score": 20,
         "reasons": [
@@ -15782,7 +15349,7 @@
       "confidence": "low",
       "needsClarification": true,
       "topMatch": {
-        "id": "function.control-components-platformconfigurationsettings-tsx-duration-15602",
+        "id": "function.control-app-tsx-duration-5652",
         "name": "Duration",
         "score": 20,
         "reasons": [
@@ -15805,8 +15372,8 @@
       "confidence": "low",
       "needsClarification": true,
       "topMatch": {
-        "id": "function.control-components-editcourseflyout-tsx-location-176",
-        "name": "Location",
+        "id": "function.control-components-addcourseflyout-tsx-location-221",
+        "name": "Location *",
         "score": 20,
         "reasons": [
           "phrase location",
@@ -15828,7 +15395,7 @@
       "confidence": "low",
       "needsClarification": true,
       "topMatch": {
-        "id": "function.control-components-settingsview-tsx-element-599",
+        "id": "function.control-components-scoringmatrixflyout-tsx-element-161",
         "name": "element",
         "score": 20,
         "reasons": [
@@ -15860,6 +15427,29 @@
           "matched item",
           "matched per",
           "matched line",
+          "action edit"
+        ]
+      },
+      "subjectOverlap": 1,
+      "riskScore": 3,
+      "answerPreview": "I don't know the answer to that yet. I couldn't find a reliable DFP-NEO guide entry for that question."
+    },
+    {
+      "label": "CONFIG",
+      "source": "control",
+      "file": "components/SyllabusView.tsx",
+      "line": 373,
+      "tagName": "label",
+      "question": "where do i set CONFIG",
+      "confidence": "low",
+      "needsClarification": true,
+      "topMatch": {
+        "id": "function.control-app-tsx-config-6435",
+        "name": "CONFIG",
+        "score": 20,
+        "reasons": [
+          "phrase config",
+          "matched config",
           "action edit"
         ]
       },
@@ -15913,6 +15503,34 @@
           "matched all",
           "intent NAVIGATE",
           "action edit"
+        ]
+      },
+      "subjectOverlap": 1,
+      "riskScore": 3,
+      "answerPreview": "I don't know the answer to that yet. I couldn't find a reliable DFP-NEO guide entry for that question."
+    },
+    {
+      "label": "Creates a draft training report after completed post-flight entry.",
+      "source": "control",
+      "file": "components/SyllabusView.tsx",
+      "line": 763,
+      "tagName": "label",
+      "question": "where do i set Creates a draft training report after completed post-flight entry.",
+      "confidence": "low",
+      "needsClarification": true,
+      "topMatch": {
+        "id": "function.control-components-syllabusview-tsx-creates-a-draft-training-report-after-completed-post-flight-",
+        "name": "Creates a draft training report after completed post-flight entry.",
+        "score": 56.5,
+        "reasons": [
+          "phrase creates a draft training report after completed post flight entry",
+          "matched creates",
+          "matched draft",
+          "matched training",
+          "matched report",
+          "matched after",
+          "matched completed",
+          "matched post"
         ]
       },
       "subjectOverlap": 1,
@@ -16025,20 +15643,18 @@
       "confidence": "low",
       "needsClarification": true,
       "topMatch": {
-        "id": "function.curated.navigation.dfp",
-        "name": "Open the DFP schedule",
-        "score": 18,
+        "id": "function.control-components-postflightview-tsx-flight-1485",
+        "name": "Flight",
+        "score": 20,
         "reasons": [
+          "phrase flight",
           "matched flight",
-          "intent NAVIGATE",
-          "action edit",
-          "curated",
-          "single weak subject"
+          "action edit"
         ]
       },
       "subjectOverlap": 1,
       "riskScore": 3,
-      "answerPreview": "I don't know the answer to that yet. Please include the page or area you mean, because that term appears in more than one place."
+      "answerPreview": "I don't know the answer to that yet. I couldn't find a reliable DFP-NEO guide entry for that question."
     },
     {
       "label": "Ground",
@@ -16089,6 +15705,31 @@
       "answerPreview": "I don't know the answer to that yet. I couldn't find a reliable DFP-NEO guide entry for that question."
     },
     {
+      "label": "TWR DI Reqd",
+      "source": "control",
+      "file": "components/SyllabusView.tsx",
+      "line": 838,
+      "tagName": "label",
+      "question": "where do i set TWR DI Reqd",
+      "confidence": "low",
+      "needsClarification": true,
+      "topMatch": {
+        "id": "function.control-components-syllabusview-tsx-twr-di-reqd-838",
+        "name": "TWR DI Reqd",
+        "score": 29,
+        "reasons": [
+          "phrase twr di reqd",
+          "matched twr",
+          "matched di",
+          "matched reqd",
+          "action edit"
+        ]
+      },
+      "subjectOverlap": 1,
+      "riskScore": 3,
+      "answerPreview": "I don't know the answer to that yet. I couldn't find a reliable DFP-NEO guide entry for that question."
+    },
+    {
       "label": "Code",
       "source": "control",
       "file": "components/SyllabusView.tsx",
@@ -16121,8 +15762,8 @@
       "confidence": "low",
       "needsClarification": true,
       "topMatch": {
-        "id": "function.control-components-courseeditflyout-tsx-course-362",
-        "name": "course",
+        "id": "function.control-components-addgroundeventflyout-tsx-course-362",
+        "name": "Course",
         "score": 20,
         "reasons": [
           "phrase course",
@@ -16154,6 +15795,52 @@
           "matched separated",
           "matched by",
           "matched commas",
+          "action edit"
+        ]
+      },
+      "subjectOverlap": 1,
+      "riskScore": 3,
+      "answerPreview": "I don't know the answer to that yet. I couldn't find a reliable DFP-NEO guide entry for that question."
+    },
+    {
+      "label": "Phase",
+      "source": "control",
+      "file": "components/SyllabusView.tsx",
+      "line": 939,
+      "tagName": "label",
+      "question": "where do i set Phase",
+      "confidence": "low",
+      "needsClarification": true,
+      "topMatch": {
+        "id": "function.control-components-syllabusview-tsx-phase-939",
+        "name": "Phase",
+        "score": 20,
+        "reasons": [
+          "phrase phase",
+          "matched phase",
+          "action edit"
+        ]
+      },
+      "subjectOverlap": 1,
+      "riskScore": 3,
+      "answerPreview": "I don't know the answer to that yet. I couldn't find a reliable DFP-NEO guide entry for that question."
+    },
+    {
+      "label": "Module",
+      "source": "control",
+      "file": "components/SyllabusView.tsx",
+      "line": 948,
+      "tagName": "label",
+      "question": "where do i set Module",
+      "confidence": "low",
+      "needsClarification": true,
+      "topMatch": {
+        "id": "function.control-components-syllabusview-tsx-module-948",
+        "name": "Module",
+        "score": 20,
+        "reasons": [
+          "phrase module",
+          "matched module",
           "action edit"
         ]
       },
@@ -16261,6 +15948,33 @@
       "answerPreview": "I think you're asking about Training Records. Which of these do you mean? 1. Course setup fields 2. Training report 3. Training auto notifications 4. Flight detail fields 5. Course Scores table None of these"
     },
     {
+      "label": "Select or drop Excel File (.xlsx)",
+      "source": "control",
+      "file": "components/SyllabusView.tsx",
+      "line": 3399,
+      "tagName": "label",
+      "question": "where do i set Select or drop Excel File (.xlsx)",
+      "confidence": "low",
+      "needsClarification": true,
+      "topMatch": {
+        "id": "function.control-components-syllabusview-tsx-select-or-drop-excel-file-xlsx-3399",
+        "name": "Select or drop Excel File (.xlsx)",
+        "score": 39,
+        "reasons": [
+          "phrase select or drop excel file xlsx",
+          "matched select",
+          "matched drop",
+          "matched excel",
+          "matched file",
+          "matched xlsx",
+          "action edit"
+        ]
+      },
+      "subjectOverlap": 1,
+      "riskScore": 3,
+      "answerPreview": "I don't know the answer to that yet. I couldn't find a reliable DFP-NEO guide entry for that question."
+    },
+    {
       "label": "Type RESET DATABASE to continue",
       "source": "control",
       "file": "components/TestingFunctionsSettings.tsx",
@@ -16334,6 +16048,34 @@
       "answerPreview": "I don't know the answer to that yet. I couldn't find a reliable DFP-NEO guide entry for that question."
     },
     {
+      "label": "Type Flight FTD Ground School Academics",
+      "source": "control",
+      "file": "components/TraineeLmpView.tsx",
+      "line": 366,
+      "tagName": "label",
+      "question": "where do i set Type Flight FTD Ground School Academics",
+      "confidence": "low",
+      "needsClarification": true,
+      "topMatch": {
+        "id": "function.control-components-traineelmpview-tsx-type-flight-ftd-ground-school-academics-366",
+        "name": "Type Flight FTD Ground School Academics",
+        "score": 44,
+        "reasons": [
+          "phrase type flight ftd ground school academics",
+          "matched type",
+          "matched flight",
+          "matched ftd",
+          "matched ground",
+          "matched school",
+          "matched academics",
+          "action edit"
+        ]
+      },
+      "subjectOverlap": 1,
+      "riskScore": 3,
+      "answerPreview": "I don't know the answer to that yet. I couldn't find a reliable DFP-NEO guide entry for that question."
+    },
+    {
       "label": "Flight FTD Ground School Academics",
       "source": "control",
       "file": "components/TraineeLmpView.tsx",
@@ -16370,20 +16112,18 @@
       "confidence": "low",
       "needsClarification": true,
       "topMatch": {
-        "id": "function.curated.navigation.dfp",
-        "name": "Open the DFP schedule",
-        "score": 18,
+        "id": "function.control-components-postflightview-tsx-flight-1485",
+        "name": "Flight",
+        "score": 20,
         "reasons": [
+          "phrase flight",
           "matched flight",
-          "intent NAVIGATE",
-          "action edit",
-          "curated",
-          "single weak subject"
+          "action edit"
         ]
       },
       "subjectOverlap": 1,
       "riskScore": 3,
-      "answerPreview": "I don't know the answer to that yet. Please include the page or area you mean, because that term appears in more than one place."
+      "answerPreview": "I don't know the answer to that yet. I couldn't find a reliable DFP-NEO guide entry for that question."
     },
     {
       "label": "Academics",
@@ -16402,6 +16142,56 @@
           "phrase academics",
           "matched academics",
           "intent NAVIGATE",
+          "action edit"
+        ]
+      },
+      "subjectOverlap": 1,
+      "riskScore": 3,
+      "answerPreview": "I don't know the answer to that yet. I couldn't find a reliable DFP-NEO guide entry for that question."
+    },
+    {
+      "label": "Day/Night Day Night Both",
+      "source": "control",
+      "file": "components/TraineeLmpView.tsx",
+      "line": 375,
+      "tagName": "label",
+      "question": "where do i set Day/Night Day Night Both",
+      "confidence": "low",
+      "needsClarification": true,
+      "topMatch": {
+        "id": "function.control-components-traineelmpview-tsx-day-night-day-night-both-375",
+        "name": "Day/Night Day Night Both",
+        "score": 31,
+        "reasons": [
+          "phrase day night day night both",
+          "matched day",
+          "matched night",
+          "matched both",
+          "action edit"
+        ]
+      },
+      "subjectOverlap": 1,
+      "riskScore": 3,
+      "answerPreview": "I don't know the answer to that yet. I couldn't find a reliable DFP-NEO guide entry for that question."
+    },
+    {
+      "label": "Day Night Both",
+      "source": "control",
+      "file": "components/TraineeLmpView.tsx",
+      "line": 377,
+      "tagName": "select",
+      "question": "where do i set Day Night Both",
+      "confidence": "low",
+      "needsClarification": true,
+      "topMatch": {
+        "id": "function.control-components-traineelmpview-tsx-day-night-day-night-both-375",
+        "name": "Day/Night Day Night Both",
+        "score": 30,
+        "reasons": [
+          "phrase tokens day night day night both",
+          "matched day",
+          "matched night",
+          "matched both",
           "action edit"
         ]
       },
@@ -16542,12 +16332,36 @@
       "confidence": "low",
       "needsClarification": true,
       "topMatch": {
-        "id": "function.control-components-platformconfigurationsettings-tsx-duration-15602",
+        "id": "function.control-app-tsx-duration-5652",
         "name": "Duration",
         "score": 20,
         "reasons": [
           "phrase duration",
           "matched duration",
+          "action edit"
+        ]
+      },
+      "subjectOverlap": 1,
+      "riskScore": 3,
+      "answerPreview": "I don't know the answer to that yet. I couldn't find a reliable DFP-NEO guide entry for that question."
+    },
+    {
+      "label": "Immediately Follows",
+      "source": "control",
+      "file": "components/TraineeLmpView.tsx",
+      "line": 690,
+      "tagName": "label",
+      "question": "where do i set Immediately Follows",
+      "confidence": "low",
+      "needsClarification": true,
+      "topMatch": {
+        "id": "function.control-components-traineelmpview-tsx-immediately-follows-690",
+        "name": "Immediately Follows",
+        "score": 24,
+        "reasons": [
+          "phrase immediately follows",
+          "matched immediately",
+          "matched follows",
           "action edit"
         ]
       },
@@ -16565,7 +16379,7 @@
       "confidence": "low",
       "needsClarification": true,
       "topMatch": {
-        "id": "function.control-components-platformconfigurationsettings-tsx-role-12308",
+        "id": "function.control-components-adminpanel-tsx-role-543",
         "name": "Role",
         "score": 20,
         "reasons": [
@@ -16676,6 +16490,52 @@
       "answerPreview": "I don't know the answer to that yet. I couldn't find a reliable DFP-NEO guide entry for that question."
     },
     {
+      "label": "Enduring",
+      "source": "control",
+      "file": "components/TraineeProfileFlyout.tsx",
+      "line": 1656,
+      "tagName": "label",
+      "question": "where do i set Enduring",
+      "confidence": "low",
+      "needsClarification": true,
+      "topMatch": {
+        "id": "function.control-app-tsx-enduring-56294",
+        "name": "Enduring",
+        "score": 20,
+        "reasons": [
+          "phrase enduring",
+          "matched enduring",
+          "action edit"
+        ]
+      },
+      "subjectOverlap": 1,
+      "riskScore": 3,
+      "answerPreview": "I don't know the answer to that yet. I couldn't find a reliable DFP-NEO guide entry for that question."
+    },
+    {
+      "label": "perm",
+      "source": "control",
+      "file": "components/TraineeProfileFlyout.tsx",
+      "line": 2313,
+      "tagName": "label",
+      "question": "where do i set perm",
+      "confidence": "low",
+      "needsClarification": true,
+      "topMatch": {
+        "id": "function.control-components-traineeprofileflyout-tsx-perm-2313",
+        "name": "perm",
+        "score": 20,
+        "reasons": [
+          "phrase perm",
+          "matched perm",
+          "action edit"
+        ]
+      },
+      "subjectOverlap": 1,
+      "riskScore": 3,
+      "answerPreview": "I don't know the answer to that yet. I couldn't find a reliable DFP-NEO guide entry for that question."
+    },
+    {
       "label": "role",
       "source": "control",
       "file": "components/TraineeProfileFlyout.tsx",
@@ -16685,7 +16545,7 @@
       "confidence": "low",
       "needsClarification": true,
       "topMatch": {
-        "id": "function.control-components-platformconfigurationsettings-tsx-role-12308",
+        "id": "function.control-components-adminpanel-tsx-role-543",
         "name": "Role",
         "score": 20,
         "reasons": [
@@ -16732,18 +16592,19 @@
       "confidence": "low",
       "needsClarification": true,
       "topMatch": {
-        "id": "function.data.commerciallicense",
-        "name": "CommercialLicense data model",
-        "score": 10,
+        "id": "function.control-components-instructorprofileflyout-tsx-print-1452",
+        "name": "Print",
+        "score": 23,
         "reasons": [
-          "partial print",
-          "action edit",
-          "single weak subject"
+          "phrase print",
+          "matched print",
+          "intent NAVIGATE",
+          "action edit"
         ]
       },
       "subjectOverlap": 1,
       "riskScore": 3,
-      "answerPreview": "I don't know the answer to that yet. Please include the page or area you mean, because that term appears in more than one place."
+      "answerPreview": "I don't know the answer to that yet. I couldn't find a reliable DFP-NEO guide entry for that question."
     },
     {
       "label": "Select...",
@@ -16850,8 +16711,8 @@
       "confidence": "low",
       "needsClarification": true,
       "topMatch": {
-        "id": "function.control-components-continuationcurrencyeventssettings-tsx-currency-363",
-        "name": "currency",
+        "id": "function.control-app-tsx-currency-6514",
+        "name": "Currency",
         "score": 20,
         "reasons": [
           "phrase currency",
@@ -16986,7 +16847,7 @@
       },
       "subjectOverlap": 1,
       "riskScore": 3,
-      "answerPreview": "I think you're asking about course management. Which of these do you mean? 1. Add flight tile 2. Initial Setup Wizard 3. Multi Select 4. Course management None of these"
+      "answerPreview": "I think you're asking about trainee management. Which of these do you mean? 1. Add flight tile 2. Initial Setup Wizard 3. Multi Select 4. Delete or Archive Trainee 5. Course management None of these"
     },
     {
       "label": "Start date",
@@ -17049,14 +16910,39 @@
       "topMatch": {
         "id": "function.control-components-trainingrecordsexportview-tsx-pdf-recommended-for-printing-and-filing-1419",
         "name": "PDF (recommended for printing and filing)",
-        "score": 19,
+        "score": 34,
         "reasons": [
           "phrase pdf recommended for printing and filing",
           "matched pdf",
           "matched recommended",
           "matched printing",
           "matched filing",
-          "missing action edit"
+          "action edit"
+        ]
+      },
+      "subjectOverlap": 1,
+      "riskScore": 3,
+      "answerPreview": "I don't know the answer to that yet. I couldn't find a reliable DFP-NEO guide entry for that question."
+    },
+    {
+      "label": "Excel (for further analysis)",
+      "source": "control",
+      "file": "components/TrainingRecordsExportView.tsx",
+      "line": 1428,
+      "tagName": "label",
+      "question": "where do i set Excel (for further analysis)",
+      "confidence": "low",
+      "needsClarification": true,
+      "topMatch": {
+        "id": "function.control-components-trainingrecordsexportview-tsx-excel-for-further-analysis-1428",
+        "name": "Excel (for further analysis)",
+        "score": 29,
+        "reasons": [
+          "phrase excel for further analysis",
+          "matched excel",
+          "matched further",
+          "matched analysis",
+          "action edit"
         ]
       },
       "subjectOverlap": 1,
@@ -17120,19 +17006,18 @@
       "confidence": "low",
       "needsClarification": true,
       "topMatch": {
-        "id": "function.curated.training.scoring-matrix-elements",
-        "name": "Scoring matrix elements",
-        "score": 18,
+        "id": "function.control-components-trainingreportview-tsx-phrase-549",
+        "name": "phrase",
+        "score": 20,
         "reasons": [
+          "phrase phrase",
           "matched phrase",
-          "action edit",
-          "curated",
-          "single weak subject"
+          "action edit"
         ]
       },
       "subjectOverlap": 1,
       "riskScore": 3,
-      "answerPreview": "I don't know the answer to that yet. Please include the page or area you mean, because that term appears in more than one place."
+      "answerPreview": "I don't know the answer to that yet. I couldn't find a reliable DFP-NEO guide entry for that question."
     },
     {
       "label": "Insert Selected",
@@ -17193,18 +17078,43 @@
       "confidence": "low",
       "needsClarification": true,
       "topMatch": {
-        "id": "function.data.commerciallicense",
-        "name": "CommercialLicense data model",
-        "score": 10,
+        "id": "function.control-components-instructorprofileflyout-tsx-print-1452",
+        "name": "Print",
+        "score": 23,
         "reasons": [
-          "partial print",
-          "action edit",
-          "single weak subject"
+          "phrase print",
+          "matched print",
+          "intent NAVIGATE",
+          "action edit"
         ]
       },
       "subjectOverlap": 1,
       "riskScore": 3,
-      "answerPreview": "I don't know the answer to that yet. Please include the page or area you mean, because that term appears in more than one place."
+      "answerPreview": "I don't know the answer to that yet. I couldn't find a reliable DFP-NEO guide entry for that question."
+    },
+    {
+      "label": "Assessment",
+      "source": "control",
+      "file": "components/TrainingReportView.tsx",
+      "line": 2075,
+      "tagName": "label",
+      "question": "where do i set Assessment",
+      "confidence": "low",
+      "needsClarification": true,
+      "topMatch": {
+        "id": "function.control-components-aircombattrainingreportmodal-tsx-assessment-1113",
+        "name": "Assessment",
+        "score": 20.5,
+        "reasons": [
+          "phrase assessment",
+          "matched assessment",
+          "near required",
+          "action edit"
+        ]
+      },
+      "subjectOverlap": 1,
+      "riskScore": 3,
+      "answerPreview": "I don't know the answer to that yet. I couldn't find a reliable DFP-NEO guide entry for that question."
     },
     {
       "label": "element",
@@ -17216,7 +17126,7 @@
       "confidence": "low",
       "needsClarification": true,
       "topMatch": {
-        "id": "function.control-components-settingsview-tsx-element-599",
+        "id": "function.control-components-scoringmatrixflyout-tsx-element-161",
         "name": "element",
         "score": 20,
         "reasons": [
@@ -17961,11 +17871,12 @@
       "topMatch": {
         "id": "function.curated.scheduling.priority-currency-requests",
         "name": "Priority and currency requests",
-        "score": 25,
+        "score": 33,
         "reasons": [
           "matched crew",
           "matched event",
           "intent DEFINE",
+          "action edit",
           "curated"
         ]
       },
@@ -18044,32 +17955,6 @@
       "subjectOverlap": 0.67,
       "riskScore": 1,
       "answerPreview": "I think you're asking about staff management. Which of these do you mean? 1. Training report 2. Build Intelligence risk events 3. Unarchive course 4. Open the DFP schedule 5. Primary and Secondary Instructor None of these"
-    },
-    {
-      "label": "Priority High Medium Low",
-      "source": "control",
-      "file": "components/MySctRequestsPanel.tsx",
-      "line": 113,
-      "tagName": "label",
-      "question": "where do i set Priority High Medium Low",
-      "confidence": "low",
-      "needsClarification": true,
-      "topMatch": {
-        "id": "function.control-app-tsx-high-medium-low-6356",
-        "name": "High Medium Low",
-        "score": 33,
-        "reasons": [
-          "phrase high medium low",
-          "matched priority",
-          "matched high",
-          "matched medium",
-          "matched low",
-          "action edit"
-        ]
-      },
-      "subjectOverlap": 0.75,
-      "riskScore": 1,
-      "answerPreview": "I don't know the answer to that yet. I couldn't find a reliable DFP-NEO guide entry for that question."
     },
     {
       "label": "Person / Crew",
@@ -18344,6 +18229,30 @@
       "answerPreview": "I don't know the answer to that yet. I couldn't find a reliable DFP-NEO guide entry for that question."
     },
     {
+      "label": "Schedule name",
+      "source": "control",
+      "file": "components/AcademicsTab.tsx",
+      "line": 1678,
+      "tagName": "label",
+      "question": "what is Schedule name",
+      "confidence": "low",
+      "needsClarification": true,
+      "topMatch": {
+        "id": "function.curated.settings.dfp-resource-rows",
+        "name": "DFP Resource Rows",
+        "score": 30,
+        "reasons": [
+          "matched schedule",
+          "matched name",
+          "action edit",
+          "curated"
+        ]
+      },
+      "subjectOverlap": 1,
+      "riskScore": 1,
+      "answerPreview": "I think you're asking about Settings. Which of these do you mean? 1. DFP Resource Rows 2. Priority and currency requests 3. Unit callsigns 4. Personnel Qualifications 5. Flight detail fields None of these"
+    },
+    {
       "label": "Click to configure fleet size",
       "source": "control",
       "file": "components/ACHistoryAircraftAvailability.tsx",
@@ -18414,6 +18323,29 @@
       "subjectOverlap": 1,
       "riskScore": 1,
       "answerPreview": "I don't know the answer to that yet. Please include the page or area you mean, because that term appears in more than one place."
+    },
+    {
+      "label": "PILOT",
+      "source": "control",
+      "file": "components/AdminPanel.tsx",
+      "line": 554,
+      "tagName": "option",
+      "question": "where do i set PILOT",
+      "confidence": "low",
+      "needsClarification": true,
+      "topMatch": {
+        "id": "function.control-components-flightdetailmodal-tsx-pilot-3256",
+        "name": "Pilot",
+        "score": 20,
+        "reasons": [
+          "phrase pilot",
+          "matched pilot",
+          "action edit"
+        ]
+      },
+      "subjectOverlap": 1,
+      "riskScore": 1,
+      "answerPreview": "I don't know the answer to that yet. I couldn't find a reliable DFP-NEO guide entry for that question."
     },
     {
       "label": "0800",
@@ -18508,6 +18440,29 @@
       "answerPreview": "I don't know the answer to that yet. I couldn't find a reliable DFP-NEO guide entry for that question."
     },
     {
+      "label": "Aircraft",
+      "source": "control",
+      "file": "components/CancellationCodesTable.tsx",
+      "line": 269,
+      "tagName": "option",
+      "question": "where do i set Aircraft",
+      "confidence": "low",
+      "needsClarification": true,
+      "topMatch": {
+        "id": "function.control-components-addflighttilemodal-tsx-aircraft-3897",
+        "name": "Aircraft",
+        "score": 20,
+        "reasons": [
+          "phrase aircraft",
+          "matched aircraft",
+          "action edit"
+        ]
+      },
+      "subjectOverlap": 1,
+      "riskScore": 1,
+      "answerPreview": "I don't know the answer to that yet. I couldn't find a reliable DFP-NEO guide entry for that question."
+    },
+    {
       "label": "Crew",
       "source": "control",
       "file": "components/CancellationCodesTable.tsx",
@@ -18517,7 +18472,7 @@
       "confidence": "low",
       "needsClarification": true,
       "topMatch": {
-        "id": "function.control-components-continuationcurrencyeventssettings-tsx-crew-387",
+        "id": "function.control-components-addflighttilemodal-tsx-crew-3518",
         "name": "Crew",
         "score": 20,
         "reasons": [
@@ -18613,20 +18568,18 @@
       "confidence": "low",
       "needsClarification": true,
       "topMatch": {
-        "id": "function.curated.navigation.dfp",
-        "name": "Open the DFP schedule",
-        "score": 18,
+        "id": "function.control-components-postflightview-tsx-flight-1485",
+        "name": "Flight",
+        "score": 20,
         "reasons": [
+          "phrase flight",
           "matched flight",
-          "intent NAVIGATE",
-          "action edit",
-          "curated",
-          "single weak subject"
+          "action edit"
         ]
       },
       "subjectOverlap": 1,
       "riskScore": 1,
-      "answerPreview": "I don't know the answer to that yet. Please include the page or area you mean, because that term appears in more than one place."
+      "answerPreview": "I don't know the answer to that yet. I couldn't find a reliable DFP-NEO guide entry for that question."
     },
     {
       "label": "Start:",
@@ -18876,7 +18829,7 @@
       "topMatch": {
         "id": "function.control-components-mydashboard-tsx-search-name-rank-role-unit-flight-or-qualification-3675",
         "name": "Search name, rank, role, unit, flight or qualification",
-        "score": 43,
+        "score": 51,
         "reasons": [
           "phrase search name rank role unit flight or qualification",
           "matched search",
@@ -18962,6 +18915,32 @@
       "answerPreview": "I think you're asking about the schedule. Which of these do you mean? 1. Priority and currency requests 2. Flight detail fields 3. Currency builder 4. Currency audit and dates 5. Special continuation training request None of these"
     },
     {
+      "label": "Priority High Medium Low",
+      "source": "control",
+      "file": "components/MySctRequestsPanel.tsx",
+      "line": 113,
+      "tagName": "label",
+      "question": "where do i set Priority High Medium Low",
+      "confidence": "low",
+      "needsClarification": true,
+      "topMatch": {
+        "id": "function.control-components-mysctrequestspanel-tsx-priority-high-medium-low-113",
+        "name": "Priority High Medium Low",
+        "score": 34,
+        "reasons": [
+          "phrase priority high medium low",
+          "matched priority",
+          "matched high",
+          "matched medium",
+          "matched low",
+          "action edit"
+        ]
+      },
+      "subjectOverlap": 1,
+      "riskScore": 1,
+      "answerPreview": "I don't know the answer to that yet. I couldn't find a reliable DFP-NEO guide entry for that question."
+    },
+    {
       "label": "textarea",
       "source": "control",
       "file": "components/MySctRequestsPanel.tsx",
@@ -19018,19 +18997,18 @@
       "confidence": "low",
       "needsClarification": true,
       "topMatch": {
-        "id": "function.curated.training.course-management",
-        "name": "Course management",
-        "score": 18,
+        "id": "function.control-components-coursedatawindow-tsx-start-68",
+        "name": "Start:",
+        "score": 20,
         "reasons": [
+          "phrase start",
           "matched start",
-          "action edit",
-          "curated",
-          "single weak subject"
+          "action edit"
         ]
       },
       "subjectOverlap": 1,
       "riskScore": 1,
-      "answerPreview": "I don't know the answer to that yet. Please include the page or area you mean, because that term appears in more than one place."
+      "answerPreview": "I don't know the answer to that yet. I couldn't find a reliable DFP-NEO guide entry for that question."
     },
     {
       "label": "End",
@@ -19042,8 +19020,8 @@
       "confidence": "low",
       "needsClarification": true,
       "topMatch": {
-        "id": "function.control-components-addunavailabilityflyout-tsx-end-date-205",
-        "name": "end-date",
+        "id": "function.control-components-academicstab-tsx-adjust-end-time-for-tile-label-1337",
+        "name": "`Adjust end time for ${tile.label}`",
         "score": 15,
         "reasons": [
           "matched end",
@@ -19106,7 +19084,7 @@
       },
       "subjectOverlap": 1,
       "riskScore": 1,
-      "answerPreview": "I think you're asking about course management. Which of these do you mean? 1. Add flight tile 2. Initial Setup Wizard 3. Multi Select 4. Course management None of these"
+      "answerPreview": "I think you're asking about trainee management. Which of these do you mean? 1. Add flight tile 2. Initial Setup Wizard 3. Multi Select 4. Delete or Archive Trainee 5. Course management None of these"
     },
     {
       "label": "course",
