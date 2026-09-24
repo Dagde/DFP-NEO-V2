@@ -1,0 +1,382 @@
+{
+  "generatedAt": "2026-09-24T10:40:46.730Z",
+  "curatedFunctionCount": 59,
+  "candidateGapCount": 25,
+  "gaps": [
+    {
+      "id": "function.control-components-flightdetailmodal-tsx-delete-event-3483",
+      "name": "Delete Event",
+      "component": "components/FlightDetailModal.tsx",
+      "page": "Flight Detail Modal",
+      "route": null,
+      "bestCuratedMatch": {
+        "id": "function.curated.scheduling.cancel-restore-delete-event",
+        "name": "Cancel, restore or delete a scheduled event",
+        "score": 0.5714285714285714,
+        "overlap": 4,
+        "ratio": 0.5714285714285714
+      },
+      "riskScore": 9
+    },
+    {
+      "id": "function.control-components-flightdetailmodal-tsx-restore-to-schedule-removes-the-cancellation-and-restor",
+      "name": "Restore to Schedule Removes the cancellation and restores this event to active status with full functionality.",
+      "component": "components/FlightDetailModal.tsx",
+      "page": "Flight Detail Modal",
+      "route": null,
+      "bestCuratedMatch": {
+        "id": "function.curated.scheduling.cancel-restore-delete-event",
+        "name": "Cancel, restore or delete a scheduled event",
+        "score": 0.8,
+        "overlap": 8,
+        "ratio": 0.8
+      },
+      "riskScore": 9
+    },
+    {
+      "id": "function.control-components-flightdetailmodal-tsx-cancel-flight-stays-on-the-schedule-with-a-redline-thro",
+      "name": "Cancel Flight Stays on the schedule with a redline through it. Requires a cancellation code.",
+      "component": "components/FlightDetailModal.tsx",
+      "page": "Flight Detail Modal",
+      "route": null,
+      "bestCuratedMatch": {
+        "id": "function.curated.scheduling.cancel-restore-delete-event",
+        "name": "Cancel, restore or delete a scheduled event",
+        "score": 0.6666666666666666,
+        "overlap": 6,
+        "ratio": 0.6666666666666666
+      },
+      "riskScore": 9
+    },
+    {
+      "id": "function.control-components-flightdetailmodal-tsx-remove-from-schedule-permanently-removes-the-event-not-",
+      "name": "Remove from Schedule Permanently removes the event. Not visible on the schedule and deleted from the database.",
+      "component": "components/FlightDetailModal.tsx",
+      "page": "Flight Detail Modal",
+      "route": null,
+      "bestCuratedMatch": {
+        "id": "function.curated.scheduling.cancel-restore-delete-event",
+        "name": "Cancel, restore or delete a scheduled event",
+        "score": 0.7777777777777778,
+        "overlap": 7,
+        "ratio": 0.7777777777777778
+      },
+      "riskScore": 9
+    },
+    {
+      "id": "function.control-components-flightdetailmodal-tsx-yes-restore-event-4757",
+      "name": "Yes, Restore Event",
+      "component": "components/FlightDetailModal.tsx",
+      "page": "Flight Detail Modal",
+      "route": null,
+      "bestCuratedMatch": {
+        "id": "function.curated.scheduling.cancel-restore-delete-event",
+        "name": "Cancel, restore or delete a scheduled event",
+        "score": 0.6666666666666666,
+        "overlap": 2,
+        "ratio": 0.6666666666666666
+      },
+      "riskScore": 9
+    },
+    {
+      "id": "function.control-components-pauseflightopspanel-tsx-clear-all-selections-and-restore-the-original-active-",
+      "name": "Clear all selections and restore the original Active DFP schedule",
+      "component": "components/PauseFlightOpsPanel.tsx",
+      "page": "Pause Flight Ops Panel",
+      "route": null,
+      "bestCuratedMatch": {
+        "id": "function.curated.scheduling.cancel-restore-delete-event",
+        "name": "Cancel, restore or delete a scheduled event",
+        "score": 0.5,
+        "overlap": 4,
+        "ratio": 0.5
+      },
+      "riskScore": 9
+    },
+    {
+      "id": "function.control-components-sctrequestflyout-tsx-configure-continuationlonglabel-events-in-settings-228",
+      "name": "Configure continuationLongLabel events in Settings",
+      "component": "components/SctRequestFlyout.tsx",
+      "page": "Sct Request Flyout",
+      "route": null,
+      "bestCuratedMatch": {
+        "id": "function.curated.workflow.initial-setup-wizard",
+        "name": "Initial Setup Wizard",
+        "score": 0.5,
+        "overlap": 2,
+        "ratio": 0.5
+      },
+      "riskScore": 8
+    },
+    {
+      "id": "function.control-components-authorisationflyout-tsx-enter-any-authorisation-notes-here-745",
+      "name": "Enter any authorisation notes here...",
+      "component": "components/AuthorisationFlyout.tsx",
+      "page": "Authorisation Flyout",
+      "route": null,
+      "bestCuratedMatch": {
+        "id": "function.curated.duty-pilot.authorisation-notes",
+        "name": "Authorisation notes",
+        "score": 0.8,
+        "overlap": 4,
+        "ratio": 0.8
+      },
+      "riskScore": 7
+    },
+    {
+      "id": "function.control-components-courserosterview-tsx-canviewtraineeprofile-trainee-statuslabel-your-permissio",
+      "name": "canViewTraineeProfile(trainee) ? statusLabel : 'Your permission profile does not allow this trainee profile'",
+      "component": "components/CourseRosterView.tsx",
+      "page": "Course Roster View",
+      "route": null,
+      "bestCuratedMatch": {
+        "id": "function.curated.people.instructor-assignment",
+        "name": "Primary and Secondary Instructor",
+        "score": 0.5,
+        "overlap": 4,
+        "ratio": 0.5
+      },
+      "riskScore": 7
+    },
+    {
+      "id": "function.control-components-pauseflightopspanel-tsx-discard-all-changes-and-restore-the-original-active-d",
+      "name": "Discard all changes and restore the original Active DFP schedule",
+      "component": "components/PauseFlightOpsPanel.tsx",
+      "page": "Pause Flight Ops Panel",
+      "route": null,
+      "bestCuratedMatch": {
+        "id": "function.curated.scheduling.pause-flight-ops",
+        "name": "Pause Flight Ops",
+        "score": 0.75,
+        "overlap": 6,
+        "ratio": 0.75
+      },
+      "riskScore": 7
+    },
+    {
+      "id": "function.control-components-addremedialpackageflyout-tsx-instructor-name-109",
+      "name": "instructor.name",
+      "component": "components/AddRemedialPackageFlyout.tsx",
+      "page": "Add Remedial Package Flyout",
+      "route": null,
+      "bestCuratedMatch": {
+        "id": "function.curated.people.staff-unavailability",
+        "name": "Staff unavailability",
+        "score": 0.5,
+        "overlap": 1,
+        "ratio": 0.5
+      },
+      "riskScore": 6
+    },
+    {
+      "id": "function.control-components-addremedialpackageflyout-tsx-geteventoptionlabel-event-415",
+      "name": "getEventOptionLabel(event)",
+      "component": "components/AddRemedialPackageFlyout.tsx",
+      "page": "Add Remedial Package Flyout",
+      "route": null,
+      "bestCuratedMatch": {
+        "id": "function.curated.people.trainee-unavailability",
+        "name": "Trainee unavailability",
+        "score": 0.5,
+        "overlap": 1,
+        "ratio": 0.5
+      },
+      "riskScore": 6
+    },
+    {
+      "id": "function.control-components-courseeditflyout-tsx-formatpersonoptionlabel-staff-246",
+      "name": "formatPersonOptionLabel(staff)",
+      "component": "components/CourseEditFlyout.tsx",
+      "page": "Course Edit Flyout",
+      "route": null,
+      "bestCuratedMatch": {
+        "id": "function.curated.people.staff-unavailability",
+        "name": "Staff unavailability",
+        "score": 0.5,
+        "overlap": 1,
+        "ratio": 0.5
+      },
+      "riskScore": 6
+    },
+    {
+      "id": "function.control-components-courseeditflyout-tsx-formatpersonoptionlabel-staff-267",
+      "name": "formatPersonOptionLabel(staff)",
+      "component": "components/CourseEditFlyout.tsx",
+      "page": "Course Edit Flyout",
+      "route": null,
+      "bestCuratedMatch": {
+        "id": "function.curated.people.staff-unavailability",
+        "name": "Staff unavailability",
+        "score": 0.5,
+        "overlap": 1,
+        "ratio": 0.5
+      },
+      "riskScore": 6
+    },
+    {
+      "id": "function.control-components-courseeditflyout-tsx-enter-new-course-number-367",
+      "name": "Enter new course number...",
+      "component": "components/CourseEditFlyout.tsx",
+      "page": "Course Edit Flyout",
+      "route": null,
+      "bestCuratedMatch": {
+        "id": "function.curated.workflow.initial-setup-wizard",
+        "name": "Initial Setup Wizard",
+        "score": 0.5,
+        "overlap": 2,
+        "ratio": 0.5
+      },
+      "riskScore": 6
+    },
+    {
+      "id": "function.control-components-currencybuilderview-tsx-input-type-s-in-post-flight-select-all-that-apply-419",
+      "name": "Input Type(s) in Post-Flight (select all that apply)",
+      "component": "components/CurrencyBuilderView.tsx",
+      "page": "Currency Builder View",
+      "route": null,
+      "bestCuratedMatch": {
+        "id": "function.curated.scheduling.sct-request",
+        "name": "Special continuation training request",
+        "score": 0.5,
+        "overlap": 4,
+        "ratio": 0.5
+      },
+      "riskScore": 6
+    },
+    {
+      "id": "function.control-components-currencybuilderview-tsx-input-type-s-in-post-flight-select-all-that-apply-528",
+      "name": "Input Type(s) in Post-Flight (select all that apply)",
+      "component": "components/CurrencyBuilderView.tsx",
+      "page": "Currency Builder View",
+      "route": null,
+      "bestCuratedMatch": {
+        "id": "function.curated.scheduling.sct-request",
+        "name": "Special continuation training request",
+        "score": 0.5,
+        "overlap": 4,
+        "ratio": 0.5
+      },
+      "riskScore": 6
+    },
+    {
+      "id": "function.control-components-currencysetupflyout-tsx-currency-name-35",
+      "name": "currency.name",
+      "component": "components/CurrencySetupFlyout.tsx",
+      "page": "Currency Setup Flyout",
+      "route": null,
+      "bestCuratedMatch": {
+        "id": "function.curated.settings.currency-builder",
+        "name": "Currency builder",
+        "score": 0.5,
+        "overlap": 1,
+        "ratio": 0.5
+      },
+      "riskScore": 6
+    },
+    {
+      "id": "function.control-components-deletetraineeconfirmation-tsx-formatpersonoptionlabel-trainee-167",
+      "name": "formatPersonOptionLabel(trainee)",
+      "component": "components/DeleteTraineeConfirmation.tsx",
+      "page": "Delete Trainee Confirmation",
+      "route": null,
+      "bestCuratedMatch": {
+        "id": "function.curated.people.trainee-unavailability",
+        "name": "Trainee unavailability",
+        "score": 0.5,
+        "overlap": 1,
+        "ratio": 0.5
+      },
+      "riskScore": 6
+    },
+    {
+      "id": "function.control-components-instructorprofileflyout-tsx-generate-report-1758",
+      "name": "Generate Report",
+      "component": "components/InstructorProfileFlyout.tsx",
+      "page": "Instructor Profile Flyout",
+      "route": null,
+      "bestCuratedMatch": {
+        "id": "function.curated.training.course-progress",
+        "name": "Course Progress",
+        "score": 0.5,
+        "overlap": 1,
+        "ratio": 0.5
+      },
+      "riskScore": 6
+    },
+    {
+      "id": "function.control-components-prioritiesview-tsx-select-second-pilot-solo-solo-3928",
+      "name": "Select second pilot / Solo Solo",
+      "component": "components/PrioritiesView.tsx",
+      "page": "Priorities View",
+      "route": null,
+      "bestCuratedMatch": {
+        "id": "function.curated.duty-pilot.authorisation-notes",
+        "name": "Authorisation notes",
+        "score": 0.5,
+        "overlap": 2,
+        "ratio": 0.5
+      },
+      "riskScore": 6
+    },
+    {
+      "id": "function.control-components-prioritiesview-tsx-select-second-pilot-solo-3939",
+      "name": "Select second pilot / Solo",
+      "component": "components/PrioritiesView.tsx",
+      "page": "Priorities View",
+      "route": null,
+      "bestCuratedMatch": {
+        "id": "function.curated.duty-pilot.authorisation-notes",
+        "name": "Authorisation notes",
+        "score": 0.5,
+        "overlap": 2,
+        "ratio": 0.5
+      },
+      "riskScore": 6
+    },
+    {
+      "id": "function.control-components-scoringmatrixflyout-tsx-add-new-flight-element-424",
+      "name": "Add new flight element",
+      "component": "components/ScoringMatrixFlyout.tsx",
+      "page": "Scoring Matrix Flyout",
+      "route": null,
+      "bestCuratedMatch": {
+        "id": "function.curated.scheduling.add-flight-tile",
+        "name": "Add flight tile",
+        "score": 0.75,
+        "overlap": 3,
+        "ratio": 0.75
+      },
+      "riskScore": 6
+    },
+    {
+      "id": "function.control-components-traineeprofileflyout-tsx-event-id-375",
+      "name": "event.id",
+      "component": "components/TraineeProfileFlyout.tsx",
+      "page": "Trainee Profile Flyout",
+      "route": null,
+      "bestCuratedMatch": {
+        "id": "function.curated.people.trainee-unavailability",
+        "name": "Trainee unavailability",
+        "score": 0.5,
+        "overlap": 1,
+        "ratio": 0.5
+      },
+      "riskScore": 6
+    },
+    {
+      "id": "function.control-components-traineeprofileflyout-tsx-view-individual-lmp-3588",
+      "name": "View Individual LMP",
+      "component": "components/TraineeProfileFlyout.tsx",
+      "page": "Trainee Profile Flyout",
+      "route": null,
+      "bestCuratedMatch": {
+        "id": "function.curated.settings.master-lmp-access",
+        "name": "Master LMP Access",
+        "score": 0.6666666666666666,
+        "overlap": 2,
+        "ratio": 0.6666666666666666
+      },
+      "riskScore": 6
+    }
+  ]
+}

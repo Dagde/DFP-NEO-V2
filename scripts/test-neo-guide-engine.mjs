@@ -162,6 +162,212 @@ assert.equal(
 );
 assert.match(staffUnavailableAnswer.answer, /Add Unavailability/i, 'Staff unavailable answer should keep the unavailability workflow.');
 
+const cancelFlightAnswer = ask('how do I cancel a flight');
+assert.equal(
+  cancelFlightAnswer.matches[0]?.functionId,
+  'function.curated.scheduling.cancel-restore-delete-event',
+  'Cancel flight wording should resolve to the scheduled-event cancellation workflow.'
+);
+assert.match(cancelFlightAnswer.answer, /Cancel Flight/i, 'Cancel flight answer should mention the Cancel Flight action.');
+assert.match(cancelFlightAnswer.answer, /cancellation code|reason/i, 'Cancel flight answer should explain cancellation details.');
+
+const restoreFlightAnswer = ask('how do I restore a cancelled flight');
+assert.equal(
+  restoreFlightAnswer.matches[0]?.functionId,
+  'function.curated.scheduling.cancel-restore-delete-event',
+  'Restore cancelled flight wording should resolve to the scheduled-event restore workflow.'
+);
+assert.match(restoreFlightAnswer.answer, /Restore to Schedule/i, 'Restore flight answer should mention Restore to Schedule.');
+
+const pauseOpsAnswer = ask('how do I pause flight ops');
+assert.equal(
+  pauseOpsAnswer.matches[0]?.functionId,
+  'function.curated.scheduling.pause-flight-ops',
+  'Pause flight ops wording should resolve to the pause-flight-ops workflow.'
+);
+assert.match(pauseOpsAnswer.answer, /Pause Flight Ops/i, 'Pause flight ops answer should name the control.');
+assert.match(pauseOpsAnswer.answer, /NEO BUILD|PUBLISH/i, 'Pause flight ops answer should mention post-pause build/publish actions.');
+
+const archivedStaffAnswer = ask('where are archived staff');
+assert.equal(
+  archivedStaffAnswer.matches[0]?.functionId,
+  'function.curated.people.archived-staff',
+  'Archived staff wording should resolve to archived staff, not archived courses or trainee archive.'
+);
+assert.match(archivedStaffAnswer.answer, /Open Staff/i, 'Archived staff answer should start from Staff.');
+assert.match(archivedStaffAnswer.answer, /Archived Staff|archived staff/i, 'Archived staff answer should mention the archived staff list.');
+
+const moveTraineeCourseAnswer = ask('how do I move a trainee to another course');
+assert.equal(
+  moveTraineeCourseAnswer.matches[0]?.functionId,
+  'function.curated.people.move-trainee-course',
+  'Move trainee wording should resolve to the move-trainee-course workflow.'
+);
+assert.match(moveTraineeCourseAnswer.answer, /Move to different course|target course/i, 'Move trainee answer should mention the target course control.');
+
+const deleteMessageAnswer = ask('how do I delete a message');
+assert.equal(
+  deleteMessageAnswer.matches[0]?.functionId,
+  'function.curated.messaging.delete-message',
+  'Delete message wording should resolve to messages, not staff/trainee deletion.'
+);
+assert.match(deleteMessageAnswer.answer, /Open My Home/i, 'Delete message answer should start from My Home.');
+assert.match(deleteMessageAnswer.answer, /Delete/i, 'Delete message answer should mention the delete action.');
+
+const configurationReportAnswer = ask('where do I export the configuration report');
+assert.equal(
+  configurationReportAnswer.matches[0]?.functionId,
+  'function.curated.settings.configuration-report',
+  'Configuration report wording should resolve to platform configuration report.'
+);
+assert.match(configurationReportAnswer.answer, /Open Settings/i, 'Configuration report answer should start from Settings.');
+assert.match(configurationReportAnswer.answer, /Export Configuration Report/i, 'Configuration report answer should name the export control.');
+
+const deleteCurrencyAnswer = ask('how do I delete a currency');
+assert.equal(
+  deleteCurrencyAnswer.matches[0]?.functionId,
+  'function.curated.settings.currency-builder',
+  'Delete currency wording should resolve to the currency builder workflow.'
+);
+assert.match(deleteCurrencyAnswer.answer, /Currency Builder|Delete Currency/i, 'Currency answer should mention Currency Builder or Delete Currency.');
+
+const syllabusPackageAnswer = ask('how do I add a syllabus package');
+assert.equal(
+  syllabusPackageAnswer.matches[0]?.functionId,
+  'function.curated.training.syllabus-management',
+  'Add syllabus package wording should resolve to syllabus management.'
+);
+assert.match(syllabusPackageAnswer.answer, /Add Package/i, 'Syllabus package answer should mention Add Package.');
+
+const remedialPackageAnswer = ask('how do I add a remedial package');
+assert.equal(
+  remedialPackageAnswer.matches[0]?.functionId,
+  'function.curated.training.remedial-packages',
+  'Add remedial package wording should resolve to remedial packages.'
+);
+assert.match(remedialPackageAnswer.answer, /Add Remedial Package|Add Events to Package/i, 'Remedial package answer should mention the package/event controls.');
+
+const removeUnavailableAnswer = ask('how do I remove staff leave');
+assert.equal(
+  removeUnavailableAnswer.matches[0]?.functionId,
+  'function.curated.people.remove-unavailability',
+  'Remove leave wording should resolve to removing unavailability.'
+);
+assert.match(removeUnavailableAnswer.answer, /Remove unavailability|delete\/remove/i, 'Remove unavailability answer should mention the remove action.');
+
+const unarchiveCourseAnswer = ask('how do I restore an archived course');
+assert.equal(
+  unarchiveCourseAnswer.matches[0]?.functionId,
+  'function.curated.training.unarchive-course',
+  'Restore archived course wording should resolve to unarchive course.'
+);
+assert.match(unarchiveCourseAnswer.answer, /Archived Courses/i, 'Unarchive course answer should mention Archived Courses.');
+assert.match(unarchiveCourseAnswer.answer, /Unarchive Course|Restore/i, 'Unarchive course answer should mention restoring/unarchiving.');
+
+const addFlightTileAnswer = ask('how do I manually add a flight');
+assert.equal(
+  addFlightTileAnswer.matches[0]?.functionId,
+  'function.curated.scheduling.add-flight-tile',
+  'Manually add flight wording should resolve to Add Flight Tile.'
+);
+assert.match(addFlightTileAnswer.answer, /Add Flight Tile/i, 'Add flight answer should mention Add Flight Tile.');
+
+const addGroundEventAnswer = ask('how do I add a ground event');
+assert.equal(
+  addGroundEventAnswer.matches[0]?.functionId,
+  'function.curated.scheduling.add-ground-event',
+  'Add ground event wording should resolve to Add Ground Tile/Event.'
+);
+assert.match(addGroundEventAnswer.answer, /Add Ground Tile|ground event/i, 'Add ground event answer should mention the ground-event workflow.');
+
+const priorityCurrencyAnswer = ask('how do I delete a crew currency request');
+assert.equal(
+  priorityCurrencyAnswer.matches[0]?.functionId,
+  'function.curated.scheduling.priority-currency-requests',
+  'Crew currency request wording should resolve to priorities/currency requests.'
+);
+assert.match(priorityCurrencyAnswer.answer, /Open Priorities/i, 'Priority currency answer should start from Priorities.');
+
+const currencyAuditAnswer = ask('where do I view the currency audit log');
+assert.equal(
+  currencyAuditAnswer.matches[0]?.functionId,
+  'function.curated.people.currency-audit-and-dates',
+  'Currency audit wording should resolve to currency audit and dates.'
+);
+assert.match(currencyAuditAnswer.answer, /View currency audit log/i, 'Currency audit answer should mention the audit log control.');
+
+const sctAnswer = ask('how do I add special continuation training');
+assert.equal(
+  sctAnswer.matches[0]?.functionId,
+  'function.curated.scheduling.sct-request',
+  'Special continuation training wording should resolve to SCT request.'
+);
+assert.match(sctAnswer.answer, /continuation|SCT/i, 'SCT answer should mention continuation/SCT.');
+
+const completeTrainingAnswer = ask('how do I mark training complete');
+assert.equal(
+  completeTrainingAnswer.matches[0]?.functionId,
+  'function.curated.training.complete-training',
+  'Mark training complete wording should resolve to Complete Training.'
+);
+assert.match(completeTrainingAnswer.answer, /Complete Training/i, 'Complete training answer should mention Complete Training.');
+
+const flightDetailFieldsAnswer = ask('what is aircraft count in flight details');
+assert.equal(
+  flightDetailFieldsAnswer.matches[0]?.functionId,
+  'function.curated.scheduling.flight-detail-fields',
+  'Flight detail field wording should resolve to flight detail fields.'
+);
+assert.match(flightDetailFieldsAnswer.answer, /flight details window|aircraft/i, 'Flight detail field answer should explain the flight details area.');
+
+const courseSetupAnswer = ask('where do I set course lmp type');
+assert.equal(
+  courseSetupAnswer.matches[0]?.functionId,
+  'function.curated.training.course-setup-fields',
+  'Course LMP type wording should resolve to course setup fields.'
+);
+assert.match(courseSetupAnswer.answer, /Courses Management|LMP type/i, 'Course setup answer should mention Courses Management and LMP type.');
+
+const trainingReportFieldsAnswer = ask('what does keep notes on this report only mean');
+assert.equal(
+  trainingReportFieldsAnswer.matches[0]?.functionId,
+  'function.curated.training.training-report-fields',
+  'Training report notes wording should resolve to training report fields.'
+);
+assert.match(trainingReportFieldsAnswer.answer, /report notes|training report/i, 'Training report fields answer should mention report notes/training report.');
+
+const auditLogSettingsAnswer = ask('where are audit log recording settings');
+assert.equal(
+  auditLogSettingsAnswer.matches[0]?.functionId,
+  'function.curated.settings.audit-log-recording',
+  'Audit log recording wording should resolve to audit-log recording settings.'
+);
+assert.match(auditLogSettingsAnswer.answer, /Audit|Audit Log/i, 'Audit settings answer should mention Audit or Audit Log.');
+
+const postFlightInputsAnswer = ask('where do I enter post-flight aircraft number');
+assert.equal(
+  postFlightInputsAnswer.matches[0]?.functionId,
+  'function.curated.training.post-flight-inputs',
+  'Post-flight aircraft number wording should resolve to post-flight inputs.'
+);
+assert.match(postFlightInputsAnswer.answer, /post-flight|aircraft/i, 'Post-flight answer should mention post-flight and aircraft details.');
+
+const callsignAnswer = ask('where do I configure unit callsigns');
+assert.equal(
+  callsignAnswer.matches[0]?.functionId,
+  'function.curated.settings.unit-callsigns',
+  'Unit callsign wording should resolve to unit callsigns.'
+);
+assert.match(callsignAnswer.answer, /Open Settings|callsign/i, 'Callsign answer should mention Settings and callsigns.');
+
+const authorisationNotesAnswer = ask('where do I enter auth notes');
+assert.equal(
+  authorisationNotesAnswer.matches[0]?.functionId,
+  'function.curated.duty-pilot.authorisation-notes',
+  'Auth notes wording should resolve to authorisation notes.'
+);
+assert.match(authorisationNotesAnswer.answer, /notes|authorisation|authorization/i, 'Authorisation notes answer should mention notes and authorisation.');
+
 const buildAnswer = ask('how do I build the schedule automatically');
 assert.match(buildAnswer.answer, /Click NEO Build/i, 'NEO Build answer should include the NEO Build action step.');
 assert.match(buildAnswer.answer, /Validation Check/i, 'NEO Build answer should mention validating before publishing.');

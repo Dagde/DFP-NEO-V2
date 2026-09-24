@@ -717,6 +717,690 @@
       "auditStatus": "IMPLEMENTED - manually enriched from current implementation review"
     },
     {
+      "id": "function.curated.scheduling.cancel-restore-delete-event",
+      "name": "Cancel, restore or delete a scheduled event",
+      "aliases": ["cancel flight", "cancel event", "delete event", "remove event", "restore event", "restore flight", "remove from schedule", "delete flight tile", "cancel tile", "redline flight", "cancellation code"],
+      "location": {
+        "page": "Program Schedule",
+        "route": null,
+        "component": "components/FlightDetailModal.tsx",
+        "anchor": "nav-dfp"
+      },
+      "purpose": "Cancels, restores or removes a selected scheduled event from the DFP timeline.",
+      "procedureSteps": [
+        "Open DFP.",
+        "Click the flight, simulator or event tile.",
+        "Use the flight details window for cancellation or removal actions.",
+        "Choose Cancel Flight when the event should remain visible with a cancellation/redline and cancellation code.",
+        "Choose Restore to Schedule when a cancelled event should return to active status.",
+        "Choose Remove from Schedule or Delete Event only when the event should be removed rather than retained as a cancellation record."
+      ],
+      "inputs": [],
+      "outputs": ["Updates the selected event's schedule status, cancellation state or database presence depending on the selected action."],
+      "permissions": ["dfp.view"],
+      "dependencies": ["A selected schedule event and, for cancellation, configured cancellation reasons/codes."],
+      "businessRules": ["Cancellation preserves operational history differently from permanent removal. Use cancellation when the event happened as a planned event but did not proceed."],
+      "failureConditions": ["Actions may be unavailable if the selected tile is locked, already published, already cancelled, or the user lacks the required schedule permission."],
+      "relatedFunctions": ["function.curated.scheduling.flight-details", "function.curated.scheduling.validation-check"],
+      "auditStatus": "IMPLEMENTED - manually enriched from coverage gap review"
+    },
+    {
+      "id": "function.curated.scheduling.pause-flight-ops",
+      "name": "Pause Flight Ops",
+      "aliases": ["pause flight ops", "pause flying", "post-pause NEO Build", "post pause build", "publish post pause", "commit to active DFP", "restore active DFP", "discard pause changes"],
+      "location": {
+        "page": "Program Schedule",
+        "route": null,
+        "component": "components/PauseFlightOpsPanel.tsx",
+        "anchor": "nav-dfp"
+      },
+      "purpose": "Supports pausing flight operations, adjusting the DFP after the pause and committing or discarding the post-pause schedule changes.",
+      "procedureSteps": [
+        "Open DFP.",
+        "Use Pause Flight Ops when flight operations need to be paused.",
+        "Review affected schedule events.",
+        "Use NEO Build (Post-Pause) to rebuild the affected schedule where required.",
+        "Use Publish or Commit to Active DFP to apply the post-pause schedule.",
+        "Use restore/discard controls if the post-pause changes should not be kept."
+      ],
+      "inputs": [],
+      "outputs": ["Updates the active DFP workflow around a pause event and post-pause rebuild/publish process."],
+      "permissions": ["dfp.view"],
+      "dependencies": ["An active DFP and pause-flight-ops controls for the selected date/unit."],
+      "businessRules": ["Post-pause publishing should be reviewed carefully because it changes the active operational schedule after disruption."],
+      "failureConditions": ["Post-pause controls may be unavailable when no active DFP exists, no pause is active, or the user lacks schedule permissions."],
+      "relatedFunctions": ["function.curated.scheduling.neo-build", "function.curated.scheduling.publish-dfp"],
+      "auditStatus": "IMPLEMENTED - manually enriched from coverage gap review"
+    },
+    {
+      "id": "function.curated.people.archived-staff",
+      "name": "Archived staff",
+      "aliases": ["archived staff", "archived instructors", "restore instructor", "restore staff", "former staff", "inactive staff", "search archived staff"],
+      "location": {
+        "page": "Staff",
+        "route": null,
+        "component": "components/ArchivedInstructorsFlyout.tsx",
+        "anchor": "nav-staff"
+      },
+      "purpose": "Shows archived staff/instructor records and supports reviewing or restoring them where the workflow permits.",
+      "procedureSteps": [
+        "Open Staff.",
+        "Open the archived staff or archived instructors list.",
+        "Search for the staff member if required.",
+        "Use the restore action if the staff member should return to the active staff list.",
+        "Close the archived staff list when finished."
+      ],
+      "inputs": [],
+      "outputs": ["Displays archived staff records and can restore selected records to active use where implemented."],
+      "permissions": ["staff.view"],
+      "dependencies": ["Archived staff records must exist."],
+      "businessRules": ["Archived staff are retained for reference and should be restored rather than recreated when the original record is still valid."],
+      "failureConditions": ["The archived staff list can appear empty if no staff have been archived or if the user lacks access."],
+      "relatedFunctions": ["function.curated.people.delete-staff", "function.curated.people.staff-unavailability"],
+      "auditStatus": "IMPLEMENTED - manually enriched from coverage gap review"
+    },
+    {
+      "id": "function.curated.people.move-trainee-course",
+      "name": "Move trainee to another course",
+      "aliases": ["move trainee", "move student", "move to different course", "transfer trainee", "change trainee course", "target course", "create new course for trainee"],
+      "location": {
+        "page": "Trainee",
+        "route": null,
+        "component": "components/CourseEditFlyout.tsx",
+        "anchor": "nav-trainee"
+      },
+      "purpose": "Moves a trainee from one course card to another course, or creates/selects a target course as part of course management.",
+      "procedureSteps": [
+        "Open Trainee.",
+        "Find the current course card.",
+        "Open the course edit or trainee management controls.",
+        "Choose Move Trainee or Move to different course.",
+        "Select the target course, or create a new course if that option is offered.",
+        "Confirm or save the move."
+      ],
+      "inputs": [],
+      "outputs": ["Updates the trainee's course assignment and changes which course roster/card displays the trainee."],
+      "permissions": ["trainee.roster.view"],
+      "dependencies": ["The trainee and target course must exist, unless a new course is created in the workflow."],
+      "businessRules": ["Moving a trainee changes course membership; it is different from archiving, deleting or making the trainee unavailable."],
+      "failureConditions": ["Move can fail if no target course is selected, the trainee no longer exists, or the user lacks course/trainee management access."],
+      "relatedFunctions": ["function.curated.people.trainee-roster", "function.curated.training.course-management"],
+      "auditStatus": "IMPLEMENTED - manually enriched from coverage gap review"
+    },
+    {
+      "id": "function.curated.settings.currency-builder",
+      "name": "Currency builder",
+      "aliases": ["currency builder", "delete currency", "currency setup", "currency input types", "post-flight currency", "edit currency dates", "save currency dates"],
+      "location": {
+        "page": "Settings",
+        "route": null,
+        "component": "components/CurrencyBuilderView.tsx",
+        "anchor": "nav-settings"
+      },
+      "purpose": "Configures currency definitions, input requirements and related currency data used by staff/trainee profiles and post-flight workflows.",
+      "procedureSteps": [
+        "Open Settings.",
+        "Open Currency Builder in the currency or training standards configuration area.",
+        "Create, edit or use Delete Currency as required.",
+        "Configure input types or post-flight requirements where shown.",
+        "Save changes and review affected staff/trainee currency records."
+      ],
+      "inputs": [],
+      "outputs": ["Updates currency configuration and related currency tracking behaviour."],
+      "permissions": ["settings.view"],
+      "dependencies": ["Currency settings and relevant staff/trainee records."],
+      "businessRules": ["Deleting or changing a currency can affect profile currency displays, post-flight inputs and eligibility checks."],
+      "failureConditions": ["Delete or save can fail if required fields are missing or existing records still depend on the currency."],
+      "relatedFunctions": ["function.curated.training.training-report", "function.curated.people.instructor-assignment"],
+      "auditStatus": "IMPLEMENTED - manually enriched from coverage gap review"
+    },
+    {
+      "id": "function.curated.messaging.delete-message",
+      "name": "Delete message",
+      "aliases": ["delete message", "remove message", "clear message", "messages disappeared", "message inbox", "my messages"],
+      "location": {
+        "page": "My Home",
+        "route": null,
+        "component": "components/MyDashboard.tsx",
+        "anchor": "my-home-messages"
+      },
+      "purpose": "Manages messages shown in My Home, including deleting or clearing messages where permitted.",
+      "procedureSteps": [
+        "Open My Home.",
+        "Open Messages.",
+        "Find the message.",
+        "Use Delete message or the available message action.",
+        "Confirm if prompted."
+      ],
+      "inputs": [],
+      "outputs": ["Removes or hides the selected message from the user's message list where implemented."],
+      "permissions": [],
+      "dependencies": ["A message must exist for the current user."],
+      "businessRules": ["System-generated messages can identify DFP-NEO Alerts as the sender while still being delivered to the relevant user's inbox."],
+      "failureConditions": ["A message can disappear if filtering, read-state handling or role-based recipient logic no longer includes it in the current view."],
+      "relatedFunctions": ["function.curated.messaging.my-home-messages", "function.curated.messaging.auto-notifications"],
+      "auditStatus": "IMPLEMENTED - manually enriched from coverage gap review"
+    },
+    {
+      "id": "function.curated.settings.configuration-report",
+      "name": "Export configuration report",
+      "aliases": ["export configuration report", "configuration report", "sync settings", "delete aircraft type", "platform configuration", "configuration import", "configuration export"],
+      "location": {
+        "page": "Settings",
+        "route": null,
+        "component": "components/PlatformConfigurationSettings.tsx",
+        "anchor": "nav-settings"
+      },
+      "purpose": "Supports platform configuration maintenance, including reports, sync/import/export and aircraft/resource configuration actions.",
+      "procedureSteps": [
+        "Open Settings.",
+        "Open Resources & Configuration or the relevant platform configuration section.",
+        "Use Export Configuration Report to download the configuration evidence/report.",
+        "Use Sync Settings when settings need to be refreshed.",
+        "Use aircraft/resource delete actions only after confirming the affected configuration is no longer required."
+      ],
+      "inputs": [],
+      "outputs": ["Exports or updates platform configuration information depending on the selected control."],
+      "permissions": ["settings.view"],
+      "dependencies": ["Configured platform resources and settings."],
+      "businessRules": ["Deleting aircraft/resource configuration can affect scheduling rows, build rules and validation assumptions."],
+      "failureConditions": ["Export/import/sync can fail when settings data is incomplete, invalid or inaccessible to the logged-in user."],
+      "relatedFunctions": ["function.curated.settings.turnaround", "function.curated.workflow.initial-setup-wizard"],
+      "auditStatus": "IMPLEMENTED - manually enriched from coverage gap review"
+    },
+    {
+      "id": "function.curated.training.scoring-matrix-elements",
+      "name": "Scoring matrix elements",
+      "aliases": ["scoring matrix", "add flight element", "delete flight element", "add phrase", "phrase bank", "slow typing", "edit scoring matrix", "delete element"],
+      "location": {
+        "page": "Settings",
+        "route": null,
+        "component": "components/ScoringMatrixFlyout.tsx",
+        "anchor": "nav-settings"
+      },
+      "purpose": "Configures scoring matrix elements and phrase-bank content used in training reports.",
+      "procedureSteps": [
+        "Open Settings.",
+        "Open the training standards or scoring matrix area.",
+        "Select the flight/event element to edit.",
+        "Add or delete elements or phrases as required.",
+        "Save the scoring matrix changes."
+      ],
+      "inputs": [],
+      "outputs": ["Updates scoring matrix and phrase options used by training report completion."],
+      "permissions": ["settings.view"],
+      "dependencies": ["Training report/scoring configuration."],
+      "businessRules": ["Scoring elements should be maintained carefully because they affect grading and report phrase choices."],
+      "failureConditions": ["Large phrase banks or uncontrolled re-rendering can make typing feel slow in edit mode."],
+      "relatedFunctions": ["function.curated.training.training-report"],
+      "auditStatus": "IMPLEMENTED - manually enriched from coverage gap review"
+    },
+    {
+      "id": "function.curated.training.syllabus-management",
+      "name": "Syllabus packages and events",
+      "aliases": ["syllabus", "add package", "delete event", "delete syllabus event", "syllabus event", "add event", "master lmp syllabus", "training package"],
+      "location": {
+        "page": "Settings",
+        "route": null,
+        "component": "components/SyllabusView.tsx",
+        "anchor": "nav-settings"
+      },
+      "purpose": "Manages syllabus packages and events used by Master LMPs, trainee progression and training reports.",
+      "procedureSteps": [
+        "Open Settings.",
+        "Open the syllabus or Master LMP configuration area.",
+        "Select the syllabus/package.",
+        "Use Add Package or Add Event to create new content.",
+        "Use Delete This Event only when the event should be removed from the syllabus.",
+        "Save changes and check affected LMP/course assignments."
+      ],
+      "inputs": [],
+      "outputs": ["Updates syllabus package/event definitions used by LMP and training workflows."],
+      "permissions": ["settings.view"],
+      "dependencies": ["Master LMP and syllabus configuration."],
+      "businessRules": ["Changing syllabus events can affect trainee progression, course scores and training report availability."],
+      "failureConditions": ["Deletion can be inappropriate when historical reports or active trainee progress depend on the event."],
+      "relatedFunctions": ["function.curated.settings.master-lmp-access", "function.curated.training.training-report"],
+      "auditStatus": "IMPLEMENTED - manually enriched from coverage gap review"
+    },
+    {
+      "id": "function.curated.training.remedial-packages",
+      "name": "Remedial packages",
+      "aliases": ["add remedial package", "delete remedial event", "save package", "add events to package", "remedial event", "extra flight request", "request extra flight"],
+      "location": {
+        "page": "Trainee",
+        "route": null,
+        "component": "components/AddRemedialPackageFlyout.tsx",
+        "anchor": "nav-trainee"
+      },
+      "purpose": "Creates and manages remedial training packages and events for a trainee.",
+      "procedureSteps": [
+        "Open Trainee.",
+        "Open the trainee profile.",
+        "Open the remedial or LMP area.",
+        "Use Add Remedial Package.",
+        "Select the events to include.",
+        "Save the package."
+      ],
+      "inputs": [],
+      "outputs": ["Creates or updates remedial package content associated with the trainee."],
+      "permissions": ["trainee.roster.view"],
+      "dependencies": ["A trainee profile, available events and remedial package configuration."],
+      "businessRules": ["Remedial packages should be used for additional or corrective training requirements rather than ordinary course progression."],
+      "failureConditions": ["Package creation can fail if no trainee, instructor, event or required package detail is selected."],
+      "relatedFunctions": ["function.curated.training.training-report", "function.curated.training.master-lmp-event-details"],
+      "auditStatus": "IMPLEMENTED - manually enriched from coverage gap review"
+    },
+    {
+      "id": "function.curated.people.remove-unavailability",
+      "name": "Remove unavailability",
+      "aliases": ["remove unavailability", "delete unavailability", "cancel unavailability", "remove leave", "delete leave", "make available again", "staff leave removal", "trainee leave removal"],
+      "location": {
+        "page": "Staff or Trainee",
+        "route": null,
+        "component": "components/AddUnavailabilityFlyout.tsx",
+        "anchor": "trainee-availability"
+      },
+      "purpose": "Removes a recorded unavailable period from a staff member or trainee so they can be considered available again for that period.",
+      "procedureSteps": [
+        "Open Staff or Trainee, depending on the person.",
+        "Open the person's profile.",
+        "Open the Unavailable or Availability tab.",
+        "Find the unavailable period.",
+        "Use Remove unavailability or the delete/remove action for that entry.",
+        "Confirm the removal if prompted."
+      ],
+      "inputs": [],
+      "outputs": ["Removes the selected unavailable period from the person's availability record."],
+      "permissions": ["staff.view", "trainee.roster.view"],
+      "dependencies": ["An existing staff or trainee unavailability record."],
+      "businessRules": ["Removing unavailability is different from archiving a person. It makes the person eligible again for overlapping schedule checks if no other restriction applies."],
+      "failureConditions": ["The entry may not be removable if it no longer exists, is outside the editable period, or the user lacks profile-edit permission."],
+      "relatedFunctions": ["function.curated.people.staff-unavailability", "function.curated.people.trainee-unavailability"],
+      "auditStatus": "IMPLEMENTED - manually enriched from coverage gap review"
+    },
+    {
+      "id": "function.curated.training.unarchive-course",
+      "name": "Unarchive course",
+      "aliases": ["unarchive course", "restore course", "reactivate course", "archived courses", "view archived course", "bring back a course"],
+      "location": {
+        "page": "Training Records",
+        "route": null,
+        "component": "components/ArchivedCoursesView.tsx",
+        "anchor": "nav-training-records"
+      },
+      "purpose": "Displays archived courses and restores a course to the active course list where restoration is available.",
+      "procedureSteps": [
+        "Open Training Records.",
+        "Stay on Courses Management.",
+        "Click Archived Courses.",
+        "Find the archived course.",
+        "Use Unarchive Course or Restore if the course should return to active use."
+      ],
+      "inputs": [],
+      "outputs": ["Moves the selected course from archived status back to active course management where supported."],
+      "permissions": ["training.records.view"],
+      "dependencies": ["An archived course must exist."],
+      "businessRules": ["Archiving preserves course history. Unarchiving should be used when the same course record should continue rather than creating a duplicate."],
+      "failureConditions": ["Archived Courses can be unavailable or empty if no courses are archived or the user lacks access."],
+      "relatedFunctions": ["function.curated.training.archive-course", "function.curated.training.course-management"],
+      "auditStatus": "IMPLEMENTED - manually enriched from coverage gap review"
+    },
+    {
+      "id": "function.curated.scheduling.add-flight-tile",
+      "name": "Add flight tile",
+      "aliases": ["add flight tile", "add flight", "manually add flight", "create flight tile", "add aircraft event", "add simulator event", "save flight tile", "add to schedule"],
+      "location": {
+        "page": "DFP",
+        "route": null,
+        "component": "components/AddFlightTileModal.tsx",
+        "anchor": "nav-dfp"
+      },
+      "purpose": "Adds a flight, simulator or related scheduled event manually to the DFP timeline.",
+      "procedureSteps": [
+        "Open DFP.",
+        "Click Add Flight Tile.",
+        "Select the event, resource type and timing details.",
+        "Select instructor/PIC and trainee/crew fields where required.",
+        "Check the details and click Add to Schedule or Save."
+      ],
+      "inputs": [],
+      "outputs": ["Creates a scheduled tile on the selected DFP date/unit."],
+      "permissions": ["dfp.view"],
+      "dependencies": ["Configured courses, people, syllabus events and aircraft/simulator resources."],
+      "businessRules": ["Manual tiles still need to satisfy validation, conflicts, resource availability and later authorisation/publish workflows."],
+      "failureConditions": ["The tile cannot be saved if required fields such as event, time, resource or crew are missing or invalid."],
+      "relatedFunctions": ["function.curated.scheduling.cancel-restore-delete-event", "function.curated.scheduling.validation-check"],
+      "auditStatus": "IMPLEMENTED - manually enriched from coverage gap review"
+    },
+    {
+      "id": "function.curated.scheduling.add-ground-event",
+      "name": "Add ground event",
+      "aliases": ["add ground event", "add ground tile", "ground event", "ground instructor", "select entire course", "add academic event", "add classroom event"],
+      "location": {
+        "page": "DFP",
+        "route": null,
+        "component": "components/AddGroundEventFlyout.tsx",
+        "anchor": "nav-dfp"
+      },
+      "purpose": "Adds a non-flying ground event to the DFP for an individual, group or entire course where supported.",
+      "procedureSteps": [
+        "Open DFP.",
+        "Click Add Ground Tile.",
+        "Choose the ground event.",
+        "Select the instructor and trainee/course participants.",
+        "Use Select Entire Course if the event applies to the whole course.",
+        "Save the event."
+      ],
+      "inputs": [],
+      "outputs": ["Creates a ground-event tile or scheduled activity on the DFP."],
+      "permissions": ["dfp.view"],
+      "dependencies": ["Configured ground events, courses and available staff/trainees."],
+      "businessRules": ["Ground events can consume people/time and may affect schedule conflicts even though they do not use an aircraft."],
+      "failureConditions": ["Save can fail when the event, instructor, course/trainee or timing details are missing."],
+      "relatedFunctions": ["function.curated.scheduling.validation-check", "function.curated.training.syllabus-management"],
+      "auditStatus": "IMPLEMENTED - manually enriched from coverage gap review"
+    },
+    {
+      "id": "function.curated.scheduling.priority-currency-requests",
+      "name": "Priority and currency requests",
+      "aliases": ["delete priority event", "remove priority event", "delete crew currency request", "remove currency event", "add currency", "standard currency event", "crew currency", "priority event"],
+      "location": {
+        "page": "Priorities",
+        "route": null,
+        "component": "components/PrioritiesView.tsx",
+        "anchor": "nav-priorities"
+      },
+      "purpose": "Manages priority events and currency requests that influence scheduling and NEO Build attention.",
+      "procedureSteps": [
+        "Open Priorities.",
+        "Find the priority event or currency request.",
+        "Add, edit, remove or delete the request as required.",
+        "Check the selected people, currency/event and date details.",
+        "Run or review NEO Build after changing priorities that should affect scheduling."
+      ],
+      "inputs": [],
+      "outputs": ["Updates priority/currency request data used by scheduling and planning views."],
+      "permissions": ["dfp.view"],
+      "dependencies": ["Configured currencies, events, staff and trainees."],
+      "businessRules": ["Priority and currency requests can influence what the build tries to schedule but do not guarantee allocation when other constraints prevent it."],
+      "failureConditions": ["Requests can fail or have no effect if required currency/event data is missing, expired or blocked by availability/conflict constraints."],
+      "relatedFunctions": ["function.curated.scheduling.neo-build", "function.curated.settings.currency-builder"],
+      "auditStatus": "IMPLEMENTED - manually enriched from coverage gap review"
+    },
+    {
+      "id": "function.curated.people.currency-audit-and-dates",
+      "name": "Currency audit and dates",
+      "aliases": ["view currency audit log", "currency audit", "edit currency dates", "save currency dates", "currency panel", "staff currency", "trainee currency"],
+      "location": {
+        "page": "Staff or Trainee",
+        "route": null,
+        "component": "components/InstructorProfileFlyout.tsx",
+        "anchor": "nav-staff"
+      },
+      "purpose": "Reviews currency history/audit information and edits saved currency dates on staff or trainee profiles where permitted.",
+      "procedureSteps": [
+        "Open Staff or Trainee.",
+        "Open the person's profile.",
+        "Open the currency panel or currency section.",
+        "Use View currency audit log to review currency changes.",
+        "Use Edit currency dates when the stored dates need to be corrected.",
+        "Save currency dates."
+      ],
+      "inputs": [],
+      "outputs": ["Displays currency audit history or updates stored currency dates for the selected person."],
+      "permissions": ["staff.view", "trainee.roster.view"],
+      "dependencies": ["Configured currencies and a selected staff/trainee profile."],
+      "businessRules": ["Currency dates can affect eligibility, warnings and post-flight currency tracking."],
+      "failureConditions": ["Currency controls may be hidden if no currencies are configured or the user lacks profile/currency access."],
+      "relatedFunctions": ["function.curated.settings.currency-builder", "function.curated.scheduling.priority-currency-requests"],
+      "auditStatus": "IMPLEMENTED - manually enriched from coverage gap review"
+    },
+    {
+      "id": "function.curated.scheduling.sct-request",
+      "name": "Special continuation training request",
+      "aliases": ["sct request", "special continuation training", "continuation training", "extra currency request", "currency expires", "specific training objectives", "flight type"],
+      "location": {
+        "page": "DFP",
+        "route": null,
+        "component": "components/SctRequestFlyout.tsx",
+        "anchor": "nav-dfp"
+      },
+      "purpose": "Captures a special continuation or currency-related training request for scheduling consideration.",
+      "procedureSteps": [
+        "Open the SCT or continuation training request control.",
+        "Select the required currency or event.",
+        "Enter expiry, flight type and training-objective details where required.",
+        "Save or submit the request.",
+        "Review the request in priorities or scheduling before building the DFP."
+      ],
+      "inputs": [],
+      "outputs": ["Creates a request that can be reviewed or considered by scheduling workflows."],
+      "permissions": ["dfp.view"],
+      "dependencies": ["Configured continuation/currency events and eligible people."],
+      "businessRules": ["The request records a training need; actual scheduling still depends on availability, resources, qualifications and other constraints."],
+      "failureConditions": ["The form can be unavailable or invalid when continuation events/currencies have not been configured."],
+      "relatedFunctions": ["function.curated.scheduling.priority-currency-requests", "function.curated.settings.currency-builder"],
+      "auditStatus": "IMPLEMENTED - manually enriched from coverage gap review"
+    },
+    {
+      "id": "function.curated.training.complete-training",
+      "name": "Complete training",
+      "aliases": ["complete training", "finish course", "graduate trainee", "mark training complete", "export records", "training completion"],
+      "location": {
+        "page": "Training Records",
+        "route": null,
+        "component": "components/TrainingRecordsView.tsx",
+        "anchor": "nav-training-records"
+      },
+      "purpose": "Supports completing training records and related training-record export/review workflows.",
+      "procedureSteps": [
+        "Open Training Records.",
+        "Open Complete Training.",
+        "Select the relevant course or trainee records.",
+        "Review the completion details.",
+        "Complete or export the records as required."
+      ],
+      "inputs": [],
+      "outputs": ["Updates or exports training completion information depending on the selected workflow."],
+      "permissions": ["training.records.view"],
+      "dependencies": ["Course and trainee training records."],
+      "businessRules": ["Training completion should preserve records for later reference rather than deleting trainee history."],
+      "failureConditions": ["Completion controls may be disabled if no eligible trainee/course record is selected or required records are incomplete."],
+      "relatedFunctions": ["function.curated.training.course-management", "function.curated.training.course-score-table"],
+      "auditStatus": "IMPLEMENTED - manually enriched from coverage gap review"
+    },
+    {
+      "id": "function.curated.scheduling.flight-detail-fields",
+      "name": "Flight detail fields",
+      "aliases": ["event category", "lmp currency", "staff cat", "aircraft number", "number of aircraft", "aircraft count", "tile callsign display", "flight details fields", "flight tile details"],
+      "location": {
+        "page": "DFP",
+        "route": null,
+        "component": "components/FlightDetailModal.tsx",
+        "anchor": "nav-dfp"
+      },
+      "purpose": "Explains the editable details shown when a scheduled flight/event tile is opened from the DFP timeline.",
+      "procedureSteps": [
+        "Open DFP.",
+        "Click the flight or event tile.",
+        "Review the flight details window.",
+        "Edit the event category, currency, crew, aircraft/resource or callsign-related fields where shown.",
+        "Save the tile and run Validation Check if the change affects the schedule."
+      ],
+      "inputs": [],
+      "outputs": ["Updates displayed tile details and scheduling/validation data for the selected event."],
+      "permissions": ["dfp.view"],
+      "dependencies": ["A selected DFP tile and configured events/resources/callsigns where applicable."],
+      "businessRules": ["Changing flight detail fields can alter validation, resource usage, authorisation requirements and what is shown on the DFP timeline."],
+      "failureConditions": ["Some fields may be hidden or fixed for a given training model, tile type, published state or permission profile."],
+      "relatedFunctions": ["function.curated.scheduling.add-flight-tile", "function.curated.scheduling.validation-check"],
+      "auditStatus": "IMPLEMENTED - manually enriched from coverage gap review"
+    },
+    {
+      "id": "function.curated.training.course-setup-fields",
+      "name": "Course setup fields",
+      "aliases": ["course name", "course number", "course cohort", "course lmp type", "academic lmp type", "master lmp for course", "course remaining", "total remaining on course", "academic lmp tab hidden"],
+      "location": {
+        "page": "Training Records",
+        "route": null,
+        "component": "components/EditCourseFlyout.tsx",
+        "anchor": "nav-training-records"
+      },
+      "purpose": "Explains the course setup fields used when adding or editing a course/cohort.",
+      "procedureSteps": [
+        "Open Training Records.",
+        "Stay on Courses Management.",
+        "Add a course or edit an existing course card.",
+        "Set the course name/number and course or LMP type.",
+        "Set the academic LMP type if the course uses academic lessons.",
+        "Save the course."
+      ],
+      "inputs": [],
+      "outputs": ["Updates course identity and the LMP/syllabus content used by trainee records and course views."],
+      "permissions": ["training.records.view"],
+      "dependencies": ["Configured Master LMP and Academic LMP options where used."],
+      "businessRules": ["The selected course/LMP type determines which syllabus events populate trainee LMPs and course-progress views."],
+      "failureConditions": ["Fields can be unavailable when the required LMP options have not been configured or the user lacks course-management access."],
+      "relatedFunctions": ["function.curated.training.course-management", "function.curated.settings.master-lmp-access"],
+      "auditStatus": "IMPLEMENTED - manually enriched from coverage gap review"
+    },
+    {
+      "id": "function.curated.training.training-report-fields",
+      "name": "Training report result and notes fields",
+      "aliases": ["training report result", "dco result", "dpco follow up", "dnco follow up", "pass notes", "keep notes on this report only", "extend next event", "next event hours", "training report notes"],
+      "location": {
+        "page": "Training Report",
+        "route": null,
+        "component": "components/AirCombatTrainingReportModal.tsx",
+        "anchor": "training-report"
+      },
+      "purpose": "Explains result, follow-up, note and next-event fields used inside training report completion.",
+      "procedureSteps": [
+        "Open the relevant training report.",
+        "Complete the result and grading fields.",
+        "Use follow-up fields for required next actions or outcomes.",
+        "Use Extend next event if the next training event needs additional planned time.",
+        "Use report notes for comments that should stay with the report.",
+        "Submit or save the report when complete."
+      ],
+      "inputs": [],
+      "outputs": ["Stores training report result data, notes, follow-up outcomes and progression effects for the trainee."],
+      "permissions": ["training.records.view"],
+      "dependencies": ["A selected scheduled event/training report and configured scoring matrix/syllabus content."],
+      "businessRules": ["Training report results can affect trainee progress, course scores, next event logic, remedial needs and auto-notification rules."],
+      "failureConditions": ["Fields can be hidden or renamed depending on the training model and event type."],
+      "relatedFunctions": ["function.curated.training.training-report", "function.curated.training.scoring-matrix-elements", "function.curated.training.course-score-table"],
+      "auditStatus": "IMPLEMENTED - manually enriched from coverage gap review"
+    },
+    {
+      "id": "function.curated.settings.audit-log-recording",
+      "name": "Audit log recording settings",
+      "aliases": ["audit log recording settings", "audit recording", "audit log settings", "audit log", "admin audit", "trainee audit", "currency audit settings"],
+      "location": {
+        "page": "Settings",
+        "route": null,
+        "component": "components/AuditFlyout.tsx",
+        "anchor": "nav-settings"
+      },
+      "purpose": "Controls and displays audit-log recording options and audit-history views where the app exposes them.",
+      "procedureSteps": [
+        "Open the relevant page or Settings area.",
+        "Click Audit or open Audit Log.",
+        "Review the recording settings or audit entries shown for that area.",
+        "Use filters or related audit controls where available."
+      ],
+      "inputs": [],
+      "outputs": ["Displays audit entries or recording configuration for the selected app area."],
+      "permissions": ["settings.view"],
+      "dependencies": ["Audit logging must be enabled or audit records must exist for the selected area."],
+      "businessRules": ["Audit views are for traceability. They do not replace the operational record being audited."],
+      "failureConditions": ["Audit information can be empty if no events have been recorded or the user lacks audit access."],
+      "relatedFunctions": ["function.curated.people.currency-audit-and-dates"],
+      "auditStatus": "IMPLEMENTED - manually enriched from coverage gap review"
+    },
+    {
+      "id": "function.curated.training.post-flight-inputs",
+      "name": "Post-flight inputs",
+      "aliases": ["post flight", "post-flight", "aircraft number after flight", "input types in post-flight", "post-flight currency", "resource aircraft number", "complete post flight"],
+      "location": {
+        "page": "DFP",
+        "route": null,
+        "component": "components/PostFlightModal.tsx",
+        "anchor": "nav-dfp"
+      },
+      "purpose": "Captures after-flight details such as resource/aircraft information and configured currency inputs.",
+      "procedureSteps": [
+        "Open the completed or post-flight event.",
+        "Open the post-flight workflow.",
+        "Enter aircraft/resource details and any configured currency inputs.",
+        "Review required fields.",
+        "Save or submit the post-flight information."
+      ],
+      "inputs": [],
+      "outputs": ["Stores post-flight details and can update currency/training records depending on configured inputs."],
+      "permissions": ["dfp.view"],
+      "dependencies": ["A flight/event record and configured post-flight input types."],
+      "businessRules": ["Post-flight inputs can feed currency tracking and training records, so configured required fields must be completed accurately."],
+      "failureConditions": ["Fields may not appear if post-flight input types are not configured for the relevant currency/event."],
+      "relatedFunctions": ["function.curated.settings.currency-builder", "function.curated.training.training-report"],
+      "auditStatus": "IMPLEMENTED - manually enriched from coverage gap review"
+    },
+    {
+      "id": "function.curated.settings.unit-callsigns",
+      "name": "Unit callsigns",
+      "aliases": ["unit callsigns", "callsign", "configure unit callsigns", "flight callsign", "tile callsign", "callsign settings"],
+      "location": {
+        "page": "Settings",
+        "route": null,
+        "component": "components/PlatformConfigurationSettings.tsx",
+        "anchor": "nav-settings"
+      },
+      "purpose": "Configures callsign labels used by flight tiles and related schedule displays.",
+      "procedureSteps": [
+        "Open Settings.",
+        "Open the organisation, unit or platform configuration area that contains unit callsigns.",
+        "Add or edit the callsign values for the required unit.",
+        "Save the settings.",
+        "Return to DFP and refresh/reopen the tile if the display needs to update."
+      ],
+      "inputs": [],
+      "outputs": ["Updates callsign configuration used by DFP flight/event displays."],
+      "permissions": ["settings.view"],
+      "dependencies": ["Configured organisation/unit records."],
+      "businessRules": ["Callsigns are display/configuration data; changing them can alter what appears on DFP tiles but does not by itself authorise or schedule a flight."],
+      "failureConditions": ["A callsign field can be unavailable if the unit/location hierarchy has not been configured."],
+      "relatedFunctions": ["function.curated.scheduling.flight-detail-fields", "function.curated.workflow.initial-setup-wizard"],
+      "auditStatus": "IMPLEMENTED - manually enriched from coverage gap review"
+    },
+    {
+      "id": "function.curated.duty-pilot.authorisation-notes",
+      "name": "Authorisation notes",
+      "aliases": ["authorisation notes", "authorization notes", "auth notes", "additional message optional", "verbal auth notes", "flight auth notes"],
+      "location": {
+        "page": "Duty Pilot",
+        "route": null,
+        "component": "components/AuthorisationFlyout.tsx",
+        "anchor": "duty-pilot-authorisation"
+      },
+      "purpose": "Captures optional notes or additional message text during flight authorisation.",
+      "procedureSteps": [
+        "Open Duty Pilot or the DFP flight authorisation workflow.",
+        "Select the flight requiring authorisation.",
+        "Complete the required AUTHO and PIC/captain signing fields.",
+        "Enter any authorisation notes or additional message if required.",
+        "Save/sign the authorisation."
+      ],
+      "inputs": [],
+      "outputs": ["Stores note text with the authorisation workflow where the field is available."],
+      "permissions": ["duty.pilot.view"],
+      "dependencies": ["A selected flight requiring authorisation."],
+      "businessRules": ["Notes are supplementary. A flight is fully authorised only when the required authorisation signatures are recorded."],
+      "failureConditions": ["The notes field may be optional, hidden, or not enough to complete authorisation if required signatures/PINs are missing."],
+      "relatedFunctions": ["function.curated.duty-pilot.flight-authorisation"],
+      "auditStatus": "IMPLEMENTED - manually enriched from coverage gap review"
+    },
+    {
       "id": "function.curated.settings.turnaround",
       "name": "Turnaround settings",
       "aliases": ["aircraft turnaround", "turnround", "sim turnaround", "trainer turnaround", "duty turnaround"],
