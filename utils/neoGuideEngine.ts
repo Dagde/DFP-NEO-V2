@@ -1063,6 +1063,9 @@ function resolveSettingsNavigationTarget(anchor: string | null | undefined, func
   if (cleanAnchor === 'platform-user-access-records') {
     return { sectionId: 'platform-user-access', focusSubsectionId: cleanAnchor };
   }
+  if (cleanAnchor === 'platform-training-report-auto-notify' || cleanAnchor === 'platform-training-report-template') {
+    return { sectionId: 'training-report-template', focusSubsectionId: cleanAnchor };
+  }
 
   const platformSectionAnchors = new Set([
     'platform-configuration-health',

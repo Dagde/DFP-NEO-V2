@@ -424,26 +424,27 @@
       "name": "Training auto notifications",
       "aliases": ["auto message", "automatic message", "automatic notifications", "auto notifications", "turn off automatic notifications", "turn off auto notifications", "disable automatic notifications", "disable auto notifications", "notification settings", "training notification settings", "who gets auto message", "who receives auto message", "failed event auto message", "event failure notification", "course commander message", "DFP-NEO Alerts"],
       "location": {
-        "page": "Training Records",
+        "page": "Settings",
         "route": null,
-        "component": "components/TrainingRecordsView.tsx",
-        "anchor": "training-records-page"
+        "component": "components/PlatformConfigurationSettings.tsx",
+        "anchor": "platform-training-report-auto-notify"
       },
-      "purpose": "Sends configured notification messages when training report conditions such as an unsatisfactory grade are met.",
+      "purpose": "Configures whether unsatisfactory training reports can offer an automatic Messages notification and which course leadership roles receive it by default.",
       "procedureSteps": [
-        "Open Training Records.",
-        "Open the relevant training report workflow.",
-        "Open the notification options for the report or condition.",
-        "Turn the notification option on or off as required.",
-        "Ensure the selected course has the relevant Course Commander or Deputy Course Commander assigned.",
-        "Save the training report or notification setting."
+        "Open Settings.",
+        "Open Training & Standards.",
+        "Open Training Reports.",
+        "Scroll to Unsatisfactory Report Auto Notify.",
+        "Turn Use Auto Notify on or off.",
+        "Set the default recipients, such as Course Commander or Deputy Course Commander.",
+        "Save the Training Reports settings."
       ],
       "inputs": [],
       "outputs": ["Creates in-app message records with the sender label DFP-NEO Alerts where implemented."],
-      "permissions": ["trainingRecords.courseManagement.view"],
+      "permissions": ["settings.view", "settings.platform.edit"],
       "dependencies": ["Auto notification settings, recipient role selections and course commander/deputy course commander assignments."],
-      "businessRules": ["Recipients are derived from configured notification roles and matching course-level staff assignments. Turning notifications off prevents that workflow from sending the automatic message."],
-      "failureConditions": ["No recipient is available if the relevant course commander/deputy field is blank or the notification role is not enabled. If automatic notifications are turned off, no automatic message is sent for that condition."],
+      "businessRules": ["Use Auto Notify controls whether the unsatisfactory-report notification choice appears in the training report. The report screen can still let the instructor choose notify or skip for that specific report when the setting is enabled. Recipients are resolved from the trainee's course leadership assignments when the report is saved."],
+      "failureConditions": ["The setting is read-only if the user lacks Settings edit permission or has not unlocked the Training Reports settings. No recipient is available if the relevant course commander/deputy field is blank or that default recipient is not enabled."],
       "relatedFunctions": ["function.curated.training.training-report", "function.curated.people.trainee-roster"],
       "auditStatus": "IMPLEMENTED - manually enriched from current implementation review"
     },

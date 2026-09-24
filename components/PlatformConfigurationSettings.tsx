@@ -12539,7 +12539,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
             />
           </div>
 
-          <div className="rounded-lg border border-gray-700 bg-gray-950/40 p-4">
+          <div id="platform-training-report-auto-notify" className="rounded-lg border border-gray-700 bg-gray-950/40 p-4">
             <div className="mb-3 flex items-center justify-between">
               <h4 className="text-sm font-bold uppercase tracking-wide text-gray-200">Modules & Field Labels</h4>
               <div className="flex items-center gap-2">

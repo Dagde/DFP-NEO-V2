@@ -2259,6 +2259,9 @@ function resolveSettingsNavigationTarget(anchor, functionName) {
   if (cleanAnchor === "platform-user-access-records") {
     return { sectionId: "platform-user-access", focusSubsectionId: cleanAnchor };
   }
+  if (cleanAnchor === "platform-training-report-auto-notify" || cleanAnchor === "platform-training-report-template") {
+    return { sectionId: "training-report-template", focusSubsectionId: cleanAnchor };
+  }
   const platformSectionAnchors = /* @__PURE__ */ new Set([
     "platform-configuration-health",
     "platform-organisation-locations",
@@ -28239,7 +28242,7 @@ This removes them from DFP Resource Rows. Press Save in this section to apply th
                 }
               )
             ] }),
-            /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded-lg border border-gray-700 bg-gray-950/40 p-4", children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { id: "platform-training-report-auto-notify", className: "rounded-lg border border-gray-700 bg-gray-950/40 p-4", children: [
               /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mb-3 flex items-center justify-between", children: [
                 /* @__PURE__ */ jsxRuntimeExports.jsx("h4", { className: "text-sm font-bold uppercase tracking-wide text-gray-200", children: "Modules & Field Labels" }),
                 /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center gap-2", children: [

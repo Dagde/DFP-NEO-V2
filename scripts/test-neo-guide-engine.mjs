@@ -586,11 +586,14 @@ assert.match(riskEventsAnswer.answer, /strong grades|low variance|enough attempt
 
 const autoNotificationAnswer = ask('who gets an auto message after a failed event');
 assert.equal(autoNotificationAnswer.matches[0]?.functionId, 'function.curated.messaging.auto-notifications');
-assert.match(autoNotificationAnswer.answer, /Course Commander|Deputy Course Commander|DFP-NEO Alerts/i, 'Auto notification answer should explain recipient/source logic.');
+assert.match(autoNotificationAnswer.answer, /Course Commander|Deputy Course Commander|Training Reports|Unsatisfactory Report Auto Notify/i, 'Auto notification answer should explain settings and recipient logic.');
 
 const turnOffNotificationsAnswer = ask('how do I turn off automatic notifications');
 assert.equal(turnOffNotificationsAnswer.matches[0]?.functionId, 'function.curated.messaging.auto-notifications');
-assert.match(turnOffNotificationsAnswer.answer, /Turn the notification option on or off|notifications off|automatic message/i, 'Turn off notifications answer should explain disabling notifications.');
+assert.match(turnOffNotificationsAnswer.answer, /Open Settings|Training Reports|Use Auto Notify|Unsatisfactory Report Auto Notify/i, 'Turn off notifications answer should point to the Settings control.');
+assert.equal(turnOffNotificationsAnswer.navigationAction?.page, 'Settings', 'Auto notification links should open Settings.');
+assert.equal(turnOffNotificationsAnswer.navigationAction?.settingsSectionId, 'training-report-template', 'Auto notification links should open Training Reports settings.');
+assert.equal(turnOffNotificationsAnswer.navigationAction?.settingsFocusSubsectionId, 'platform-training-report-auto-notify', 'Auto notification links should scroll to Unsatisfactory Report Auto Notify.');
 assert.equal(turnOffNotificationsAnswer.needsClarification, false, 'Turn off notifications should answer directly, not show unrelated clarification options.');
 
 const authoriseFlightAnswer = ask('how can I authorise a flight');
