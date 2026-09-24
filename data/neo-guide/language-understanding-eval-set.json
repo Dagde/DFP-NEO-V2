@@ -1,0 +1,66 @@
+{
+  "schemaVersion": "neo-guide-language-eval.v1",
+  "createdAt": "2026-09-24T00:00:00.000Z",
+  "status": "starter-set",
+  "purpose": "Evaluate whether NEO Guide understands user intent before adding local language-model interpretation.",
+  "cases": [
+    {
+      "id": "staff-delete-001",
+      "question": "how do I delete a staff member",
+      "expectedFunctionId": "function.curated.people.delete-staff",
+      "expectedIntent": "HOW_TO",
+      "mustNotMatch": ["function.curated.people.staff-unavailability"],
+      "notes": "Delete is destructive and must not be confused with temporary unavailability."
+    },
+    {
+      "id": "staff-unavailable-001",
+      "question": "how do I make a staff member unavailable",
+      "expectedFunctionId": "function.curated.people.staff-unavailability",
+      "expectedIntent": "HOW_TO",
+      "mustNotMatch": ["function.curated.people.delete-staff"],
+      "notes": "Temporary scheduling availability action."
+    },
+    {
+      "id": "trainee-unavailable-informal-001",
+      "question": "smith away tomorow how stop him getting flight",
+      "expectedFunctionId": "function.curated.people.trainee-unavailability",
+      "expectedIntent": "HOW_TO",
+      "mustNotMatch": [],
+      "notes": "Poor spelling and informal wording."
+    },
+    {
+      "id": "aircraft-turnaround-abbrev-001",
+      "question": "where change ac turnround",
+      "expectedFunctionId": "function.curated.settings.turnaround",
+      "expectedIntent": "NAVIGATE",
+      "mustNotMatch": [],
+      "notes": "Abbreviated aircraft turnaround wording."
+    },
+    {
+      "id": "flight-auth-multipath-001",
+      "question": "how do I authorise a flight",
+      "expectedFunctionId": "function.curated.duty-pilot.flight-authorisation",
+      "expectedIntent": "HOW_TO",
+      "expectedClarification": true,
+      "mustNotMatch": [],
+      "notes": "Broad question should ask which authorisation method the user wants."
+    },
+    {
+      "id": "flight-auth-followup-001",
+      "question": "dfp tile",
+      "conversationSeedQuestion": "how do I authorise a flight",
+      "expectedFunctionId": "function.curated.duty-pilot.flight-authorisation",
+      "expectedIntent": "HOW_TO",
+      "mustNotMatch": ["function.curated.scheduling.multi-select"],
+      "notes": "Short follow-up must be treated as selecting a method from the previous answer."
+    },
+    {
+      "id": "unknown-001",
+      "question": "where is the purple banana override",
+      "expectedFunctionId": null,
+      "expectedIntent": "UNKNOWN",
+      "mustNotMatch": ["function.curated.scheduling.build-priorities"],
+      "notes": "Nonsense must not produce a confident unrelated answer."
+    }
+  ]
+}

@@ -12,6 +12,7 @@
     "test:lmp-test-event-scheduling": "node scripts/test-lmp-test-event-scheduling-contract.mjs",
     "test:training-report-extension": "node --experimental-strip-types scripts/test-training-report-extension-replacement.mjs",
     "test:neo-guide-engine": "node --experimental-strip-types scripts/test-neo-guide-engine.mjs",
+    "test:neo-guide-language": "node --experimental-strip-types scripts/test-neo-guide-language-eval.mjs",
     "generate:airfield-catalog": "node scripts/generate-airfield-catalog.mjs",
     "security:posture": "node scripts/security-posture-report.mjs",
     "security:dependencies": "node scripts/security-dependency-report.mjs",
