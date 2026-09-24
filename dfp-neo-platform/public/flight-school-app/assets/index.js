@@ -99010,7 +99010,16 @@ const sectionSearchKeywords = {
     "overall assessment",
     "delete report",
     "add training report",
-    "staff profile"
+    "staff profile",
+    "auto",
+    "notify",
+    "notification",
+    "notifications",
+    "auto notify",
+    "automatic notification",
+    "automatic notifications",
+    "unsatisfactory report auto notify",
+    "use auto notify"
   ],
   "currencies": [
     "currency",
@@ -100428,7 +100437,18 @@ const SettingsViewWithMenu = (props) => {
       "platform-scheduling-rule-sets": collectSelectedSearchDataTerms(schedulingRuleSetTerms, unitContextTerms, aircraftTerms, locationTerms),
       "email-activation": collectSelectedSearchDataTerms("smtp", "email", "activation", "login", "mail server"),
       "scoring-matrix": collectSelectedSearchDataTerms(props.syllabusDetails, props.phraseBank),
-      "training-report-template": trainingReportTerms,
+      "training-report-template": collectSelectedSearchDataTerms(
+        trainingReportTerms,
+        "auto",
+        "notify",
+        "notification",
+        "notifications",
+        "auto notify",
+        "automatic notification",
+        "automatic notifications",
+        "unsatisfactory report auto notify",
+        "use auto notify"
+      ),
       "currencies": currencyTerms,
       "sct-events": collectSelectedSearchDataTerms(continuationTerms, currencyTerms),
       "currency-profiles": collectSelectedSearchDataTerms(continuationTerms, currencyTerms),
