@@ -1,7 +1,7 @@
 {
-  "generatedAt": "2026-09-24T10:40:46.730Z",
-  "curatedFunctionCount": 59,
-  "candidateGapCount": 25,
+  "generatedAt": "2026-09-24T14:00:17.962Z",
+  "curatedFunctionCount": 63,
+  "candidateGapCount": 24,
   "gaps": [
     {
       "id": "function.control-components-flightdetailmodal-tsx-delete-event-3483",
@@ -94,21 +94,6 @@
       "riskScore": 9
     },
     {
-      "id": "function.control-components-sctrequestflyout-tsx-configure-continuationlonglabel-events-in-settings-228",
-      "name": "Configure continuationLongLabel events in Settings",
-      "component": "components/SctRequestFlyout.tsx",
-      "page": "Sct Request Flyout",
-      "route": null,
-      "bestCuratedMatch": {
-        "id": "function.curated.workflow.initial-setup-wizard",
-        "name": "Initial Setup Wizard",
-        "score": 0.5,
-        "overlap": 2,
-        "ratio": 0.5
-      },
-      "riskScore": 8
-    },
-    {
       "id": "function.control-components-authorisationflyout-tsx-enter-any-authorisation-notes-here-745",
       "name": "Enter any authorisation notes here...",
       "component": "components/AuthorisationFlyout.tsx",
@@ -152,21 +137,6 @@
         "ratio": 0.75
       },
       "riskScore": 7
-    },
-    {
-      "id": "function.control-components-addremedialpackageflyout-tsx-instructor-name-109",
-      "name": "instructor.name",
-      "component": "components/AddRemedialPackageFlyout.tsx",
-      "page": "Add Remedial Package Flyout",
-      "route": null,
-      "bestCuratedMatch": {
-        "id": "function.curated.people.staff-unavailability",
-        "name": "Staff unavailability",
-        "score": 0.5,
-        "overlap": 1,
-        "ratio": 0.5
-      },
-      "riskScore": 6
     },
     {
       "id": "function.control-components-addremedialpackageflyout-tsx-geteventoptionlabel-event-415",
@@ -342,6 +312,21 @@
       "bestCuratedMatch": {
         "id": "function.curated.scheduling.add-flight-tile",
         "name": "Add flight tile",
+        "score": 0.75,
+        "overlap": 3,
+        "ratio": 0.75
+      },
+      "riskScore": 6
+    },
+    {
+      "id": "function.control-components-sctrequestflyout-tsx-configure-continuationlonglabel-events-in-settings-228",
+      "name": "Configure continuationLongLabel events in Settings",
+      "component": "components/SctRequestFlyout.tsx",
+      "page": "Sct Request Flyout",
+      "route": null,
+      "bestCuratedMatch": {
+        "id": "function.curated.settings.formation-callsigns",
+        "name": "Formation callsigns",
         "score": 0.75,
         "overlap": 3,
         "ratio": 0.75

@@ -314,7 +314,7 @@
     {
       "id": "function.curated.training.course-management",
       "name": "Course management",
-      "aliases": ["courses management", "add course", "edit course", "course dates", "course labels", "course groups"],
+      "aliases": ["courses management", "add course", "edit course", "course dates", "course start date", "course graduation date", "graduation date", "grad date", "course labels", "course groups", "active courses", "archived courses"],
       "location": {
         "page": "Training Records",
         "route": null,
@@ -341,7 +341,7 @@
     {
       "id": "function.curated.training.archive-course",
       "name": "Archive course",
-      "aliases": ["archived courses", "remove course", "retire course", "delete course", "permanent delete"],
+      "aliases": ["archive course", "archived courses", "archived courses page", "remove course", "retire course", "delete course", "permanent delete", "delete permanently", "delete permanently course"],
       "location": {
         "page": "Training Records",
         "route": null,
@@ -1022,7 +1022,7 @@
     {
       "id": "function.curated.training.unarchive-course",
       "name": "Unarchive course",
-      "aliases": ["unarchive course", "restore course", "reactivate course", "archived courses", "view archived course", "bring back a course"],
+      "aliases": ["unarchive course", "restore course", "reactivate course", "archived courses", "archived courses page", "open archived courses", "view archived course", "view archived courses", "bring back a course"],
       "location": {
         "page": "Training Records",
         "route": null,
@@ -1518,6 +1518,56 @@
       "failureConditions": ["Trainee rank order may be hidden or inactive when trainees are configured to use staff rank order."],
       "relatedFunctions": ["function.curated.settings.rank-terminology", "function.curated.people.trainee-roster"],
       "auditStatus": "IMPLEMENTED - manually enriched from coverage gap review"
+    },
+    {
+      "id": "function.curated.settings.personnel-qualifications",
+      "name": "Personnel Qualifications",
+      "aliases": ["personnel qualifications", "staff qualifications", "qualification catalogue", "qualification catalog", "add qualification", "remove qualification", "delete qualification", "qualification options", "profile qualifications", "instructor qualification", "crew commander qualification", "operational captain qualification"],
+      "location": {
+        "page": "Settings",
+        "route": null,
+        "component": "components/PlatformConfigurationSettings.tsx",
+        "anchor": "platform-staff-qualifications"
+      },
+      "purpose": "Defines the qualification options that can appear on staff and trainee profiles, including model-specific roles such as PIC, Crew Commander or Operational Captain.",
+      "procedureSteps": [
+        "Open Settings.",
+        "Open Resources & Configuration.",
+        "Open Rank, Terminology & Labels.",
+        "Scroll to Personnel Qualifications.",
+        "Click Edit and confirm your password if the section is locked.",
+        "Add, edit or remove the required qualification.",
+        "Save the settings."
+      ],
+      "inputs": [
+        {
+          "fieldName": "Qualification",
+          "fieldType": "text",
+          "permittedValues": [],
+          "defaultValue": null,
+          "required": true,
+          "validation": "The full qualification name shown in personnel profiles.",
+          "dependencies": ["Rank, Terminology & Labels edit permission"],
+          "sourceOfData": "Platform configuration settings"
+        },
+        {
+          "fieldName": "Code",
+          "fieldType": "text",
+          "permittedValues": [],
+          "defaultValue": null,
+          "required": false,
+          "validation": "Short qualification code used where the UI displays compact qualification labels.",
+          "dependencies": ["Personnel qualification catalogue"],
+          "sourceOfData": "Platform configuration settings"
+        }
+      ],
+      "outputs": ["Updates qualification options available in personnel profile qualification fields and related model-specific qualification displays."],
+      "permissions": ["settings.view", "settings.rankTerminology.edit"],
+      "dependencies": ["Settings access and Rank, Terminology & Labels edit permission for changes."],
+      "businessRules": ["Qualification terminology can differ from duty labels. For example, an instructor duty label may be displayed differently from the qualification name shown on a person's profile."],
+      "failureConditions": ["The section is read-only if the user lacks Rank, Terminology & Labels edit permission or has not unlocked the section with Edit and password confirmation."],
+      "relatedFunctions": ["function.curated.settings.rank-terminology", "function.curated.people.staff-management", "function.curated.people.trainee-roster"],
+      "auditStatus": "IMPLEMENTED - manually enriched from askability audit"
     },
     {
       "id": "function.curated.duty-pilot.authorisation-notes",

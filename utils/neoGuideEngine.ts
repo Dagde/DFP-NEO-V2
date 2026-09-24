@@ -233,6 +233,17 @@ export function answerNeoGuideQuestion(
     };
   }
 
+  if (best.reasons.includes('single weak subject') && !hasStrongPhraseMatch(best)) {
+    return {
+      ...interpretation,
+      confidence: 'low',
+      answer: "I don't know the answer to that yet. Please include the page or area you mean, because that term appears in more than one place.",
+      conversation: nextConversation,
+      needsClarification: true,
+      clarificationQuestion: 'Which page or workflow are you asking about?'
+    };
+  }
+
   const workflowOption = selectWorkflowOption(best.function, question);
   if (hasWorkflowOptions(best.function) && !workflowOption && (interpretation.intent === 'HOW_TO' || interpretation.intent === 'NAVIGATE' || interpretation.intent === 'UNKNOWN')) {
     return {
@@ -484,6 +495,7 @@ function shouldUseStagedClarification(
   second: NeoGuideMatch | undefined,
   confidence: 'high' | 'medium' | 'low'
 ): boolean {
+  if (best.reasons.includes('weak subject match')) return false;
   if (best.score < MIN_STAGED_CLARIFICATION_SCORE) return false;
   if (!hasSubstantiveMatch(best)) return false;
   if (best.score >= 30 && hasStrongPhraseMatch(best)) return false;
@@ -663,6 +675,7 @@ function scoreFunction(
   const requestedActionFamilies = detectActionFamilies(rawTokens);
   const reasons: string[] = [];
   const meaningfulMatchedTokens = new Set<string>();
+  const meaningfulQuestionTokens = new Set(rawTokens.filter((token) => !STOP_WORDS.has(token) && !LOW_SIGNAL_MATCH_TOKENS.has(token)));
   let exactPhraseMatched = false;
   let score = 0;
 
@@ -714,14 +727,22 @@ function scoreFunction(
     reasons.push(`intent ${intent}`);
   }
 
-  for (const family of requestedActionFamilies) {
+  const effectiveActionFamilies = requestedActionFamilies.some((family) => family !== 'edit')
+    ? requestedActionFamilies.filter((family) => family !== 'edit')
+    : requestedActionFamilies;
+  let matchedSpecificActionFamily = false;
+  for (const family of effectiveActionFamilies) {
     const familyTerms = ACTION_FAMILIES.find((candidate) => candidate.name === family)?.terms || [];
     if (familyTerms.some((term) => haystackTokens.has(term) || haystack.includes(term))) {
       score += 8;
       reasons.push(`action ${family}`);
+      if (family !== 'edit') matchedSpecificActionFamily = true;
     } else {
-      score -= 7;
-      reasons.push(`missing action ${family}`);
+      const isBroadEditMiss = family === 'edit' && matchedSpecificActionFamily;
+      if (!isBroadEditMiss) {
+        score -= 7;
+        reasons.push(`missing action ${family}`);
+      }
     }
   }
 
@@ -759,6 +780,10 @@ function scoreFunction(
   if (!exactPhraseMatched && meaningfulMatchedTokens.size === 0 && learnedScore === 0) {
     score = Math.min(score, 8);
     reasons.push('weak subject match');
+  }
+  if (!exactPhraseMatched && learnedScore === 0 && meaningfulQuestionTokens.size <= 1 && requestedActionFamilies.length > 0) {
+    score = Math.min(score, 18);
+    reasons.push('single weak subject');
   }
 
   return {
@@ -1028,6 +1053,7 @@ function resolveSettingsNavigationTarget(anchor: string | null | undefined, func
     'platform-staff-rank-equivalency',
     'platform-trainee-rank-equivalency',
     'platform-staff-qualification-catalogue',
+    'platform-staff-qualifications',
   ]);
   if (rankTerminologySubsections.has(cleanAnchor)) {
     return { sectionId: 'platform-rank-terminology', focusSubsectionId: cleanAnchor };

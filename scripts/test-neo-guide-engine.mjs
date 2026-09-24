@@ -427,6 +427,34 @@ const archiveCourseAnswer = ask('where do I archive a course');
 assert.match(archiveCourseAnswer.answer, /Open Training Records/i, 'Archive course answer should include Training Records steps.');
 assert.match(archiveCourseAnswer.answer, /Archived Courses/i, 'Archive course answer should mention Archived Courses.');
 
+const archivedCoursesAnswer = ask('where are archived courses');
+assert.ok(
+  [
+    'function.curated.training.archive-course',
+    'function.curated.training.unarchive-course',
+    'function.curated.training.course-management',
+  ].includes(archivedCoursesAnswer.matches[0]?.functionId),
+  'Archived Courses wording should resolve to course management/archive workflows, not Trainee Roster.'
+);
+assert.doesNotMatch(archivedCoursesAnswer.answer, /Open Trainee|Trainee Roster/i, 'Archived Courses answer must not send the user to Trainee Roster.');
+
+const searchArchivedStaffAnswer = ask('where do I search archived staff');
+assert.equal(
+  searchArchivedStaffAnswer.matches[0]?.functionId,
+  'function.curated.people.archived-staff',
+  'Archived staff wording should resolve to archived staff.'
+);
+assert.match(searchArchivedStaffAnswer.answer, /Open Staff/i, 'Archived staff answer should start from Staff.');
+
+const personnelQualificationsAnswer = ask('where do I set personnel qualifications');
+assert.equal(
+  personnelQualificationsAnswer.matches[0]?.functionId,
+  'function.curated.settings.personnel-qualifications',
+  'Personnel Qualifications wording should resolve to Personnel Qualifications settings.'
+);
+assert.equal(personnelQualificationsAnswer.navigationAction?.settingsSectionId, 'platform-rank-terminology', 'Personnel Qualifications should open the rank/terminology settings section.');
+assert.equal(personnelQualificationsAnswer.navigationAction?.settingsFocusSubsectionId, 'platform-staff-qualifications', 'Personnel Qualifications should scroll to the personnel qualifications subsection.');
+
 const turnaroundAnswer = ask('where change ac turnround');
 assert.match(turnaroundAnswer.answer, /Open Settings/i, 'Turnaround answer should include Settings steps.');
 assert.match(turnaroundAnswer.answer, /turnaround/i, 'Turnaround answer should mention the turnaround setting.');
@@ -497,6 +525,10 @@ const unknownAnswer = ask('where is the purple banana override');
 assert.match(unknownAnswer.answer, /I don't know the answer to that yet/i, 'Unknown answers should be plain English.');
 assert.doesNotMatch(unknownAnswer.answer, /App\.tsx|manual enrichment|component|source/i, 'Unknown answers must not leak implementation jargon.');
 assert.equal(unknownAnswer.clarificationOptions, undefined, 'Nonsense questions should not show irrelevant clarification choices.');
+
+const ambiguousSingleWordAnswer = ask('where do I set reason');
+assert.match(ambiguousSingleWordAnswer.answer, /I don't know the answer to that yet|include the page or area/i, 'Ambiguous single-word labels should not produce a confident unrelated procedure.');
+assert.doesNotMatch(ambiguousSingleWordAnswer.answer, /Cancel Flight|Restore to Schedule|Remove from Schedule/i, 'Ambiguous reason wording must not be treated as the cancellation workflow without context.');
 
 const ambiguousArchiveAnswer = ask('make inactive');
 assert.equal(ambiguousArchiveAnswer.needsClarification, true, 'Ambiguous inactive wording should ask for clarification.');

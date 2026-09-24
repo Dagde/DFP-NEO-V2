@@ -1,8 +1,8 @@
 # NEO Guide Intent Coverage Gap Report
 
-Generated: 2026-09-24T10:40:46.730Z
-Curated functions: 59
-Candidate gaps: 25
+Generated: 2026-09-24T14:00:17.962Z
+Curated functions: 63
+Candidate gaps: 24
 
 This report flags user-facing controls and generated functions that look insufficiently covered by the curated NEO Guide intent library. It is a triage aid, not proof that every listed item needs a new intent.
 
@@ -33,12 +33,6 @@ This report flags user-facing controls and generated functions that look insuffi
   - Risk score: 7
   - Best curated match: Pause Flight Ops (0.75)
 
-## components/SctRequestFlyout.tsx
-
-- Configure continuationLongLabel events in Settings
-  - Risk score: 8
-  - Best curated match: Initial Setup Wizard (0.50)
-
 ## components/AuthorisationFlyout.tsx
 
 - Enter any authorisation notes here...
@@ -53,9 +47,6 @@ This report flags user-facing controls and generated functions that look insuffi
 
 ## components/AddRemedialPackageFlyout.tsx
 
-- instructor.name
-  - Risk score: 6
-  - Best curated match: Staff unavailability (0.50)
 - getEventOptionLabel(event)
   - Risk score: 6
   - Best curated match: Trainee unavailability (0.50)
@@ -113,6 +104,12 @@ This report flags user-facing controls and generated functions that look insuffi
 - Add new flight element
   - Risk score: 6
   - Best curated match: Add flight tile (0.75)
+
+## components/SctRequestFlyout.tsx
+
+- Configure continuationLongLabel events in Settings
+  - Risk score: 6
+  - Best curated match: Formation callsigns (0.75)
 
 ## components/TraineeProfileFlyout.tsx
 
