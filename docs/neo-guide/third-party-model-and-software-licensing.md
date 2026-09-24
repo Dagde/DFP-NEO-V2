@@ -1,12 +1,12 @@
 # NEO Guide - Third-Party Model and Software Licensing
 
-Status: preliminary due-diligence record. No local language model, embedding model, vector index library or inference runtime listed below has been integrated into production DFP-NEO by this record alone.
+Status: preliminary due-diligence record. DFP-NEO includes optional local-language service plumbing, but no local language model, embedding model, vector index library or inference runtime listed below has been bundled or approved for production DFP-NEO by this record alone.
 
 ## Commercial Transfer Test
 
 Question: If DFP-NEO is sold tomorrow to a large multinational commercial or Defence company, can that company continue to use, modify, deploy, redistribute and commercially sell DFP-NEO containing these components without purchasing a separate commercial licence from the model/dependency developer?
 
-Current answer: Not yet applicable. No model/runtime has been selected or embedded. Every candidate below remains subject to exact artefact verification before integration.
+Current answer: Not yet applicable. No model/runtime has been embedded. Every candidate below remains subject to exact artefact verification before customer packaging or production integration.
 
 ## Selection Rule
 
@@ -30,6 +30,7 @@ Open checks before integration:
 - Verify the exact quantisation file used for evaluation, for example `ibm-granite/granite-4.2-8b-GGUF:Q4_K_M`.
 - Verify the selected inference runtime licence at the exact commit/build used.
 - Verify that redistribution of the selected model-weight artefact with DFP-NEO is permitted and operationally practical.
+- Decide whether model/runtime artefacts are bundled with DFP-NEO, supplied as a separate customer-controlled deployment package, or installed by the hosting environment.
 
 ## Candidate Records
 

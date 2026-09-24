@@ -14,6 +14,8 @@
     "test:neo-guide-engine": "node --experimental-strip-types scripts/test-neo-guide-engine.mjs",
     "test:neo-guide-language": "node --experimental-strip-types scripts/test-neo-guide-language-eval.mjs",
     "test:neo-guide-local-language": "node --experimental-strip-types scripts/test-neo-guide-local-language-client.mjs",
+    "test:neo-guide-local-language-service": "node scripts/test-neo-guide-local-language-service.mjs",
+    "neo-guide:local-language-service": "node scripts/neo-guide-local-language-service.mjs",
     "generate:airfield-catalog": "node scripts/generate-airfield-catalog.mjs",
     "security:posture": "node scripts/security-posture-report.mjs",
     "security:dependencies": "node scripts/security-dependency-report.mjs",
