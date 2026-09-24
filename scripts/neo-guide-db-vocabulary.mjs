@@ -149,6 +149,23 @@ function addTerm(terms, term, source) {
   terms.set(key, entry);
 }
 
+function collectFieldValueTerms(terms, modelName, fieldName, value) {
+  const source = `db:${modelName}.${fieldName}`;
+  if (value == null) return;
+  if (typeof value === 'string' || typeof value === 'number' || typeof value === 'boolean') {
+    addTerm(terms, String(value), source);
+    return;
+  }
+  if (Array.isArray(value)) {
+    value.forEach((item) => {
+      if (typeof item === 'string' || typeof item === 'number' || typeof item === 'boolean') addTerm(terms, String(item), source);
+      else collectJsonTerms(terms, item, source, fieldName);
+    });
+    return;
+  }
+  collectJsonTerms(terms, value, source, fieldName);
+}
+
 function collectJsonTerms(terms, value, source, keyPath = '', depth = 0) {
   if (depth > 6 || value == null) return;
   if (typeof value === 'string' || typeof value === 'number' || typeof value === 'boolean') {
@@ -201,25 +218,32 @@ async function collectDatabaseVocabulary() {
         fieldsScanned += fields.length;
         rows.forEach((row) => {
           fields.forEach((fieldName) => {
-            const value = row[fieldName];
-            const source = `db:${modelName}.${fieldName}`;
-            if (value == null) return;
-            if (typeof value === 'string' || typeof value === 'number' || typeof value === 'boolean') {
-              addTerm(terms, String(value), source);
-              return;
-            }
-            if (Array.isArray(value)) {
-              value.forEach((item) => {
-                if (typeof item === 'string' || typeof item === 'number' || typeof item === 'boolean') addTerm(terms, String(item), source);
-                else collectJsonTerms(terms, item, source, fieldName);
-              });
-              return;
-            }
-            collectJsonTerms(terms, value, source, fieldName);
+            collectFieldValueTerms(terms, modelName, fieldName, row[fieldName]);
           });
         });
       } catch (error) {
-        errors.push(`${modelName}: ${error instanceof Error ? error.message : String(error)}`);
+        const bulkMessage = error instanceof Error ? error.message : String(error);
+        const fieldErrors = [];
+        let modelRecordCount = 0;
+        let modelFieldsScanned = 0;
+        for (const fieldName of fields) {
+          try {
+            const rows = await delegate.findMany({ select: { [fieldName]: true }, take: MAX_RECORDS_PER_MODEL });
+            if (modelFieldsScanned === 0) modelRecordCount = rows.length;
+            modelFieldsScanned += 1;
+            rows.forEach((row) => collectFieldValueTerms(terms, modelName, fieldName, row[fieldName]));
+          } catch (fieldError) {
+            const message = fieldError instanceof Error ? fieldError.message : String(fieldError);
+            fieldErrors.push(`${fieldName}: ${message.split('\n').find((line) => line.trim() && !line.includes('Invalid `prisma.')) || message}`);
+            if (/table .* does not exist|Authentication failed|Can't reach database server/i.test(message)) break;
+          }
+        }
+        if (modelFieldsScanned > 0) {
+          modelsScanned += 1;
+          recordsScanned += modelRecordCount;
+          fieldsScanned += modelFieldsScanned;
+        }
+        errors.push(`${modelName}: ${fieldErrors.length > 0 ? fieldErrors.join('; ') : bulkMessage}`);
       }
     }
   } finally {

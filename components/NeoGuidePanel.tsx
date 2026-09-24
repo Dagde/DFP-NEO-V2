@@ -77,6 +77,16 @@ const highlightTarget = (target?: string | null) => {
   return true;
 };
 
+const dispatchSettingsFocus = (action: NeoGuideNavigationAction) => {
+  if (!action.settingsSectionId) return;
+  window.dispatchEvent(new CustomEvent('dfp-neo-guide-settings-focus', {
+    detail: {
+      sectionId: action.settingsSectionId,
+      focusSubsectionId: action.settingsFocusSubsectionId || action.highlightTarget || action.anchor || undefined,
+    },
+  }));
+};
+
 const getActionTargetLabel = (action: NeoGuideNavigationAction) => (
   action.page || action.anchor || action.label || 'that location'
 );
@@ -271,6 +281,7 @@ const NeoGuidePanel: React.FC<NeoGuidePanelProps> = ({
   };
 
   const tryHighlightActionTarget = (action: NeoGuideNavigationAction, attempt = 0, didNavigate = false) => {
+    if (action.settingsSectionId) dispatchSettingsFocus(action);
     const found = highlightTarget(action.highlightTarget || action.anchor);
     if (found) {
       if (attempt > 0 && didNavigate) appendGuideMessage(`I opened ${getActionTargetLabel(action)} and highlighted the relevant area.`);
@@ -290,12 +301,14 @@ const NeoGuidePanel: React.FC<NeoGuidePanelProps> = ({
     const view = action.page ? pageToView[action.page] : null;
     if (view && view !== activeView) {
       onNavigate(view, action);
-      window.setTimeout(() => tryHighlightActionTarget(action, 0, true), 260);
+      if (action.settingsSectionId) window.setTimeout(() => dispatchSettingsFocus(action), 120);
+      window.setTimeout(() => tryHighlightActionTarget(action, 0, true), 420);
       return;
     }
     if (view === activeView && action.settingsSectionId) {
       onNavigate(view, action);
-      window.setTimeout(() => tryHighlightActionTarget(action, 0, true), 260);
+      window.setTimeout(() => dispatchSettingsFocus(action), 80);
+      window.setTimeout(() => tryHighlightActionTarget(action, 0, true), 360);
       return;
     }
     tryHighlightActionTarget(action);

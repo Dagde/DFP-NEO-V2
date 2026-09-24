@@ -215,6 +215,7 @@ interface SettingsViewWithMenuProps {
         locationCode?: string;
         resourcePoolCode?: string;
         aircraftTypeCode?: string;
+        userId?: string;
         focusSubsectionId?: string;
     } | null;
     onSettingsSectionRequestHandled?: () => void;
@@ -1558,12 +1559,41 @@ export const SettingsViewWithMenu: React.FC<SettingsViewWithMenuProps> = (props)
                 locationCode: request.locationCode,
                 resourcePoolCode: request.resourcePoolCode,
                 aircraftTypeCode: request.aircraftTypeCode,
+                userId: request.userId,
                 focusSubsectionId: request.focusSubsectionId,
             });
             changeActiveSection(requestedSection as ActiveSection);
             props.onSettingsSectionRequestHandled?.();
         }
     }, [props.requestedSettingsSection]);
+
+    useEffect(() => {
+        const handleNeoGuideSettingsFocus = (event: Event) => {
+            const detail = (event as CustomEvent<{
+                sectionId?: string;
+                unitCode?: string;
+                locationCode?: string;
+                resourcePoolCode?: string;
+                aircraftTypeCode?: string;
+                userId?: string;
+                focusSubsectionId?: string;
+            }>).detail;
+            if (!detail?.sectionId) return;
+            const requestedSection = normaliseLegacySettingsSection(detail.sectionId);
+            if (requestedSection !== 'home' && !Object.prototype.hasOwnProperty.call(sectionLabels, requestedSection)) return;
+            setSettingsFocusTarget({
+                unitCode: detail.unitCode,
+                locationCode: detail.locationCode,
+                resourcePoolCode: detail.resourcePoolCode,
+                aircraftTypeCode: detail.aircraftTypeCode,
+                userId: detail.userId,
+                focusSubsectionId: detail.focusSubsectionId,
+            });
+            changeActiveSection(requestedSection as ActiveSection);
+        };
+        window.addEventListener('dfp-neo-guide-settings-focus', handleNeoGuideSettingsFocus);
+        return () => window.removeEventListener('dfp-neo-guide-settings-focus', handleNeoGuideSettingsFocus);
+    }, []);
 
     useEffect(() => {
         let restoreScrollTop: number | null = null;

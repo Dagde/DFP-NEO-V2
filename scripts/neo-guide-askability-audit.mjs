@@ -16,9 +16,10 @@ const STOP_WORDS = new Set([
 
 const IMPORTANT_TERMS = /(account|aircraft|archive|area|authori|availability|callsign|cancel|commander|course|crew|currency|delete|dispatch|duty|event|export|flight|formation|grade|instructor|lmp|message|permission|pilot|post[- ]?flight|priority|publish|qualification|rank|record|report|restore|schedule|score|service|settings|staff|syllabus|trainee|training|turnaround|unavailability|validation)/i;
 
-const ACTION_PREFIX = /^(add|archive|cancel|clear|configure|delete|download|export|generate|import|open|pause|publish|remove|restore|save|send|sign|submit|sync|upload|validate)\b/i;
-const INTERNAL_LABEL_PATTERN = /[{}$`?=><]|\bformat[A-Z]|\brender[A-Z]|\b[a-zA-Z]+\.[a-zA-Z]|\b[A-Za-z]+Id\b|\b[A-Za-z]+Label\b/;
-const GENERIC_LABEL_PATTERN = /^(0(?:\.\d+)?|a\/c|add|all|apply|back|both|button|custom|edit|from|high|input|label|low|medium|name|none|option|other|pending|proceed|qty|refresh|save|select|submit|type|use)$/i;
+const ACTION_PREFIX = /^(add|archive|cancel|clear|configure|delete|download|export|generate|import|open|pause|publish|remove|restore|save|send|sign|submit|sync|unarchive|upload|validate)\b/i;
+const INTERNAL_LABEL_PATTERN = /[{}$`?=><]|\bformat[A-Z]|\brender[A-Z]|\b[a-zA-Z]+\.[a-zA-Z]|\b[A-Za-z]+Id\b|\b[A-Za-z]+Label\b|\b[A-Za-z]+Text\b|^[a-z]+[A-Z][A-Za-z0-9]*$/;
+const GENERIC_LABEL_PATTERN = /^(0(?:\.\d+)?|a\/c|add|all|apply|back|both|button|cancel|close|custom|delete|edit|from|high|input|label|low|medium|name|none|option|other|pending|proceed|qty|refresh|remove|save|select|submit|type|use|yes(?:,\s*(archive|delete|remove|restore))?)$/i;
+const NON_ASKABLE_LABEL_PATTERN = /\b(this action cannot be undone|are you sure|choose an action|enter .* here|close\s*\/\s*cancel|remove from database completely|none of these)\b/i;
 
 function readJson(filePath) {
   return JSON.parse(fs.readFileSync(filePath, 'utf8'));
@@ -44,6 +45,8 @@ function isCleanUserLabel(label) {
   if (value.length < 3 || value.length > 90) return false;
   if (INTERNAL_LABEL_PATTERN.test(value)) return false;
   if (GENERIC_LABEL_PATTERN.test(value)) return false;
+  if (NON_ASKABLE_LABEL_PATTERN.test(value)) return false;
+  if (value.split(/\s+/).length < 2 && ACTION_PREFIX.test(value)) return false;
   if (!/^[A-Za-z0-9][A-Za-z0-9 /&().,'’:+-]+$/.test(value)) return false;
   return true;
 }

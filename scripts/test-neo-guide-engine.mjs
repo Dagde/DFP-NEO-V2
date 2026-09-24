@@ -275,6 +275,13 @@ assert.equal(
 assert.match(unarchiveCourseAnswer.answer, /Archived Courses/i, 'Unarchive course answer should mention Archived Courses.');
 assert.match(unarchiveCourseAnswer.answer, /Unarchive Course|Restore/i, 'Unarchive course answer should mention restoring/unarchiving.');
 
+const directUnarchiveCourseAnswer = ask('how do I unarchive course');
+assert.equal(
+  directUnarchiveCourseAnswer.matches[0]?.functionId,
+  'function.curated.training.unarchive-course',
+  'Direct unarchive course wording should resolve to unarchive course.'
+);
+
 const addFlightTileAnswer = ask('how do I manually add a flight');
 assert.equal(
   addFlightTileAnswer.matches[0]?.functionId,
@@ -298,6 +305,22 @@ assert.equal(
   'Crew currency request wording should resolve to priorities/currency requests.'
 );
 assert.match(priorityCurrencyAnswer.answer, /Open Priorities/i, 'Priority currency answer should start from Priorities.');
+
+const directedTaskAnswer = ask('how do I delete a directed task');
+assert.equal(
+  directedTaskAnswer.matches[0]?.functionId,
+  'function.curated.scheduling.priority-currency-requests',
+  'Directed task wording should resolve to priority/currency request management.'
+);
+assert.match(directedTaskAnswer.answer, /Priorities|Directed Task|manual/i, 'Directed task answer should explain the Priorities workflow.');
+
+const cancelImpactedEventsAnswer = ask('what does cancel impacted events do');
+assert.equal(
+  cancelImpactedEventsAnswer.matches[0]?.functionId,
+  'function.curated.scheduling.cancel-impacted-events',
+  'Cancel impacted events wording should resolve to the pause-flight-ops impacted-event option.'
+);
+assert.match(cancelImpactedEventsAnswer.answer, /Pause Flight Ops|impacted|cancel/i, 'Cancel impacted events answer should explain the pause-flight-ops option.');
 
 const currencyAuditAnswer = ask('where do I view the currency audit log');
 assert.equal(
@@ -347,6 +370,14 @@ assert.equal(
 );
 assert.match(trainingReportFieldsAnswer.answer, /report notes|training report/i, 'Training report fields answer should mention report notes/training report.');
 
+const deletePhraseAnswer = ask('how do I delete a scoring matrix phrase');
+assert.equal(
+  deletePhraseAnswer.matches[0]?.functionId,
+  'function.curated.training.scoring-matrix-elements',
+  'Delete phrase wording should resolve to scoring matrix elements.'
+);
+assert.match(deletePhraseAnswer.answer, /Scoring Matrix|phrase|Elements/i, 'Delete phrase answer should explain scoring matrix phrase controls.');
+
 const auditLogSettingsAnswer = ask('where are audit log recording settings');
 assert.equal(
   auditLogSettingsAnswer.matches[0]?.functionId,
@@ -381,6 +412,16 @@ assert.equal(
 );
 assert.equal(formationCallsignAnswer.navigationAction?.settingsSectionId, 'platform-rank-terminology', 'Formation callsign links should open the rank/terminology settings section.');
 assert.equal(formationCallsignAnswer.navigationAction?.settingsFocusSubsectionId, 'platform-formation-callsigns', 'Formation callsign links should scroll to the formation callsign subsection.');
+
+const crewPositionLabelsAnswer = ask('how do I remove a crew position');
+assert.equal(
+  crewPositionLabelsAnswer.matches[0]?.functionId,
+  'function.curated.settings.crew-position-labels',
+  'Crew position wording should resolve to crew position labels, not event deletion.'
+);
+assert.match(crewPositionLabelsAnswer.answer, /Crew Position Labels|crew position/i, 'Crew position answer should explain the settings workflow.');
+assert.equal(crewPositionLabelsAnswer.navigationAction?.settingsSectionId, 'platform-rank-terminology', 'Crew position links should open the rank/terminology settings section.');
+assert.equal(crewPositionLabelsAnswer.navigationAction?.settingsFocusSubsectionId, 'platform-crew-position-labels', 'Crew position links should scroll to the crew position labels subsection.');
 
 const rankTerminologyAnswer = ask('where do i set rank');
 assert.equal(
@@ -454,6 +495,64 @@ assert.equal(
 );
 assert.equal(personnelQualificationsAnswer.navigationAction?.settingsSectionId, 'platform-rank-terminology', 'Personnel Qualifications should open the rank/terminology settings section.');
 assert.equal(personnelQualificationsAnswer.navigationAction?.settingsFocusSubsectionId, 'platform-staff-qualifications', 'Personnel Qualifications should scroll to the personnel qualifications subsection.');
+
+const permissionProfilesAnswer = ask('how do I delete a permission profile');
+assert.equal(
+  permissionProfilesAnswer.matches[0]?.functionId,
+  'function.curated.settings.permission-profiles',
+  'Permission profile wording should resolve to Master Permission Profiles.'
+);
+assert.match(permissionProfilesAnswer.answer, /Master Permission Profiles|Delete Profile/i, 'Permission profile answer should mention the profile controls.');
+assert.equal(permissionProfilesAnswer.navigationAction?.settingsSectionId, 'platform-permission-profiles', 'Permission profile links should open permission profiles.');
+
+const deleteProfileAnswer = ask('how do I use Delete Profile');
+assert.equal(
+  deleteProfileAnswer.matches[0]?.functionId,
+  'function.curated.settings.permission-profiles',
+  'Delete Profile wording should resolve to Master Permission Profiles, not a generic delete control.'
+);
+assert.doesNotMatch(deleteProfileAnswer.answer, /App\.tsx|manual enrichment|component/i, 'Delete Profile answer must not expose implementation wording.');
+
+const profilePhotoAnswer = ask('how do I remove a profile photo');
+assert.equal(
+  profilePhotoAnswer.matches[0]?.functionId,
+  'function.curated.people.profile-photo',
+  'Profile photo wording should resolve to profile photo management.'
+);
+assert.match(profilePhotoAnswer.answer, /profile photo|photo/i, 'Profile photo answer should mention the photo control.');
+
+const passwordConfirmationAnswer = ask('where do I set Current password');
+assert.equal(
+  passwordConfirmationAnswer.matches[0]?.functionId,
+  'function.curated.security.password-confirmation',
+  'Current password wording should explain password confirmation rather than inventing a setting.'
+);
+assert.match(passwordConfirmationAnswer.answer, /current login password|protected action|not a separate setting/i, 'Password confirmation answer should explain what the password prompt is for.');
+
+const deleteUserAccountAnswer = ask('how do I delete a user account');
+assert.equal(
+  deleteUserAccountAnswer.matches[0]?.functionId,
+  'function.curated.settings.user-accounts',
+  'Delete user account wording should resolve to user accounts, not scheduled-event deletion.'
+);
+assert.match(deleteUserAccountAnswer.answer, /User Access|user account|login account/i, 'Delete user account answer should explain account access.');
+assert.doesNotMatch(deleteUserAccountAnswer.answer, /scheduled event|DFP timeline|Cancel Flight/i, 'Delete user account answer must not give event deletion steps.');
+
+const deleteScopeAnswer = ask('how do I delete a permission scope');
+assert.equal(
+  deleteScopeAnswer.matches[0]?.functionId,
+  'function.curated.settings.user-access',
+  'Delete scope wording should resolve to user access scopes.'
+);
+assert.match(deleteScopeAnswer.answer, /Access Scope|permissions apply/i, 'Delete scope answer should explain access scopes.');
+
+const deleteSelectedRowsAnswer = ask('how do I delete selected resource rows');
+assert.equal(
+  deleteSelectedRowsAnswer.matches[0]?.functionId,
+  'function.curated.settings.dfp-resource-rows',
+  'Delete selected resource rows wording should resolve to DFP Resource Rows.'
+);
+assert.match(deleteSelectedRowsAnswer.answer, /DFP Resource Rows|Delete Selected Rows/i, 'Resource row answer should explain DFP Resource Rows.');
 
 const turnaroundAnswer = ask('where change ac turnround');
 assert.match(turnaroundAnswer.answer, /Open Settings/i, 'Turnaround answer should include Settings steps.');

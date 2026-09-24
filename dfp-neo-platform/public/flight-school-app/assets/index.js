@@ -2249,10 +2249,15 @@ function resolveSettingsNavigationTarget(anchor, functionName) {
     "platform-staff-rank-equivalency",
     "platform-trainee-rank-equivalency",
     "platform-staff-qualification-catalogue",
-    "platform-staff-qualifications"
+    "platform-staff-qualifications",
+    "platform-crew-position-labels",
+    "platform-personnel-terminology"
   ]);
   if (rankTerminologySubsections.has(cleanAnchor)) {
     return { sectionId: "platform-rank-terminology", focusSubsectionId: cleanAnchor };
+  }
+  if (cleanAnchor === "platform-user-access-records") {
+    return { sectionId: "platform-user-access", focusSubsectionId: cleanAnchor };
   }
   const platformSectionAnchors = /* @__PURE__ */ new Set([
     "platform-configuration-health",
@@ -2392,6 +2397,15 @@ const highlightTarget = (target) => {
   element.classList.add("neo-guide-target-highlight");
   window.setTimeout(() => element.classList.remove("neo-guide-target-highlight"), 3600);
   return true;
+};
+const dispatchSettingsFocus = (action) => {
+  if (!action.settingsSectionId) return;
+  window.dispatchEvent(new CustomEvent("dfp-neo-guide-settings-focus", {
+    detail: {
+      sectionId: action.settingsSectionId,
+      focusSubsectionId: action.settingsFocusSubsectionId || action.highlightTarget || action.anchor || void 0
+    }
+  }));
 };
 const getActionTargetLabel = (action) => action.page || action.anchor || action.label || "that location";
 const mergeDatabaseVocabulary = (baseModel, databaseVocabulary) => {
@@ -2550,6 +2564,7 @@ const NeoGuidePanel = ({
     window.setTimeout(() => inputRef.current?.focus(), 80);
   };
   const tryHighlightActionTarget = (action, attempt = 0, didNavigate = false) => {
+    if (action.settingsSectionId) dispatchSettingsFocus(action);
     const found = highlightTarget(action.highlightTarget || action.anchor);
     if (found) {
       if (attempt > 0 && didNavigate) appendGuideMessage(`I opened ${getActionTargetLabel(action)} and highlighted the relevant area.`);
@@ -2566,12 +2581,14 @@ const NeoGuidePanel = ({
     const view = action.page ? pageToView[action.page] : null;
     if (view && view !== activeView) {
       onNavigate(view, action);
-      window.setTimeout(() => tryHighlightActionTarget(action, 0, true), 260);
+      if (action.settingsSectionId) window.setTimeout(() => dispatchSettingsFocus(action), 120);
+      window.setTimeout(() => tryHighlightActionTarget(action, 0, true), 420);
       return;
     }
     if (view === activeView && action.settingsSectionId) {
       onNavigate(view, action);
-      window.setTimeout(() => tryHighlightActionTarget(action, 0, true), 260);
+      window.setTimeout(() => dispatchSettingsFocus(action), 80);
+      window.setTimeout(() => tryHighlightActionTarget(action, 0, true), 360);
       return;
     }
     tryHighlightActionTarget(action);
@@ -100262,12 +100279,32 @@ const SettingsViewWithMenu = (props) => {
         locationCode: request.locationCode,
         resourcePoolCode: request.resourcePoolCode,
         aircraftTypeCode: request.aircraftTypeCode,
+        userId: request.userId,
         focusSubsectionId: request.focusSubsectionId
       });
       changeActiveSection(requestedSection);
       props.onSettingsSectionRequestHandled?.();
     }
   }, [props.requestedSettingsSection]);
+  reactExports.useEffect(() => {
+    const handleNeoGuideSettingsFocus = (event) => {
+      const detail = event.detail;
+      if (!detail?.sectionId) return;
+      const requestedSection = normaliseLegacySettingsSection(detail.sectionId);
+      if (requestedSection !== "home" && !Object.prototype.hasOwnProperty.call(sectionLabels, requestedSection)) return;
+      setSettingsFocusTarget({
+        unitCode: detail.unitCode,
+        locationCode: detail.locationCode,
+        resourcePoolCode: detail.resourcePoolCode,
+        aircraftTypeCode: detail.aircraftTypeCode,
+        userId: detail.userId,
+        focusSubsectionId: detail.focusSubsectionId
+      });
+      changeActiveSection(requestedSection);
+    };
+    window.addEventListener("dfp-neo-guide-settings-focus", handleNeoGuideSettingsFocus);
+    return () => window.removeEventListener("dfp-neo-guide-settings-focus", handleNeoGuideSettingsFocus);
+  }, []);
   reactExports.useEffect(() => {
     let restoreScrollTop = null;
     try {

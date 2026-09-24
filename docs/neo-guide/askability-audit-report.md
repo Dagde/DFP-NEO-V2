@@ -1,123 +1,11 @@
 # NEO Guide Askability Audit
 
-Generated: 2026-09-24T14:11:40.374Z
-Candidates tested: 1186
-Weak or risky answers: 925
+Generated: 2026-09-24T14:46:12.074Z
+Candidates tested: 1040
+Weak or risky answers: 792
 
 This audit asks generated plain-English questions from real controls and Guide targets, then flags answers that are weak, misleading, or too loosely matched. It is designed to catch misses such as a visible Settings term not being recognised by NEO Guide.
 
-- Current password (components/ArchivedCoursesView.tsx:267)
-  - Question: where do i set Current password
-  - Top match: Rank, Terminology & Labels (low, overlap 0)
-  - Preview: I think you're asking about Settings. Which of these do you mean? 1. Rank, Terminology & Labels 2. Staff Rank Equivalency Table 3. Multi Select 4. Personnel Qualifications 5. Flight authorisation warning settings None of these
-- Current password (components/CoursesManagementView.tsx:399)
-  - Question: where do i set Current password
-  - Top match: Rank, Terminology & Labels (low, overlap 0)
-  - Preview: I think you're asking about Settings. Which of these do you mean? 1. Rank, Terminology & Labels 2. Staff Rank Equivalency Table 3. Multi Select 4. Personnel Qualifications 5. Flight authorisation warning settings None of these
-- cancelText (components/DarkMessageModal.tsx:164)
-  - Question: where do i set cancelText
-  - Top match: Cancel (low, overlap 0)
-  - Preview: I don't know the answer to that yet. I couldn't find a reliable DFP-NEO guide entry for that question.
-- Delete Profile (components/PlatformConfigurationSettings.tsx:12207)
-  - Question: how do i use Delete Profile
-  - Top match: Multi Select (low, overlap 0)
-  - Preview: I think you're asking about DFP-NEO. Which of these do you mean? 1. Multi Select 2. Cancel, restore or delete a scheduled event 3. Currency builder 4. Remedial packages 5. Remove unavailability None of these
-- Remove profile photo (components/InstructorProfileFlyout.tsx:2093)
-  - Question: how do i use Remove profile photo
-  - Top match: Cancel, restore or delete a scheduled event (low, overlap 0.33)
-  - Preview: I think you're asking about staff management. Which of these do you mean? 1. Cancel, restore or delete a scheduled event 2. Remove unavailability 3. Personnel Qualifications 4. Delete staff member 5. Multi Select None of these
-- Remove crew position (components/PlatformConfigurationSettings.tsx:13767)
-  - Question: how do i use Remove crew position
-  - Top match: Cancel, restore or delete a scheduled event (low, overlap 0.33)
-  - Preview: I think you're asking about staff management. Which of these do you mean? 1. Cancel, restore or delete a scheduled event 2. Priority and currency requests 3. Personnel Qualifications 4. Delete staff member None of these
-- Remove profile photo (components/TraineeProfileFlyout.tsx:3141)
-  - Question: how do i use Remove profile photo
-  - Top match: Cancel, restore or delete a scheduled event (low, overlap 0.33)
-  - Preview: I think you're asking about staff management. Which of these do you mean? 1. Cancel, restore or delete a scheduled event 2. Remove unavailability 3. Personnel Qualifications 4. Delete staff member 5. Multi Select None of these
-- Cancel Impacted Events (components/PauseFlightOpsModal.tsx:530)
-  - Question: how do i use Cancel Impacted Events
-  - Top match: Cancel, restore or delete a scheduled event (high, overlap 0.33)
-  - Preview: Cancels, restores or removes a selected scheduled event from the DFP timeline. Steps: 1. Open DFP. 2. Click the flight, simulator or event tile. 3. Use the flight details window for cancellation or removal actions. 4. Choose Cancel Flight when the event should
-- Delete directed task (components/PrioritiesView.tsx:989)
-  - Question: how do i use Delete directed task
-  - Top match: Cancel, restore or delete a scheduled event (high, overlap 0.33)
-  - Preview: Cancels, restores or removes a selected scheduled event from the DFP timeline. Steps: 1. Open DFP. 2. Click the flight, simulator or event tile. 3. Use the flight details window for cancellation or removal actions. 4. Choose Cancel Flight when the event should
-- Permissions Role (dfp-neo-platform/app/admin/users/UsersList.tsx:77)
-  - Question: what is Permissions Role
-  - Top match: Training auto notifications (low, overlap 0)
-  - Preview: I think you're asking about course management. Which of these do you mean? 1. Training auto notifications 2. Pause Flight Ops 3. Delete message 4. Course leadership assignments None of these
-- Remove crew role (components/CrewRequirementEditor.tsx:265)
-  - Question: how do i use Remove crew role
-  - Top match: Cancel, restore or delete a scheduled event (low, overlap 0.33)
-  - Preview: I think you're asking about staff management. Which of these do you mean? 1. Cancel, restore or delete a scheduled event 2. Delete message 3. Priority and currency requests 4. Personnel Qualifications 5. Delete staff member None of these
-- Delete Permanently Remove from database completely. This action cannot be undone. (components/DeleteTraineeConfirmation.tsx:208)
-  - Question: how do i use Delete Permanently Remove from database completely. This action cannot be undone.
-  - Top match: Delete or Archive Trainee (low, overlap 0.33)
-  - Preview: I think you're asking about trainee management. Which of these do you mean? 1. Delete or Archive Trainee 2. Archive course 3. Cancel, restore or delete a scheduled event 4. Delete staff member None of these
-- Close / Cancel (components/PauseFlightOpsModal.tsx:568)
-  - Question: where do i set Close / Cancel
-  - Top match: Cancel (low, overlap 0.5)
-  - Preview: I don't know the answer to that yet. I couldn't find a reliable DFP-NEO guide entry for that question.
-- Delete phrase (components/PhraseBankFlyout.tsx:194)
-  - Question: how do i use Delete phrase
-  - Top match: Cancel, restore or delete a scheduled event (low, overlap 0.5)
-  - Preview: I think you're asking about staff management. Which of these do you mean? 1. Cancel, restore or delete a scheduled event 2. Scoring matrix elements 3. Delete staff member None of these
-- Yes, Restore (components/RestoreConfirmationFlyout.tsx:25)
-  - Question: where do i set Yes, Restore
-  - Top match: Archived staff (low, overlap 0.5)
-  - Preview: I think you're asking about trainee management. Which of these do you mean? 1. Archived staff 2. Unarchive course 3. Delete or Archive Trainee 4. Cancel, restore or delete a scheduled event None of these
-- Delete phrase (components/ScoringMatrixFlyout.tsx:552)
-  - Question: how do i use Delete phrase
-  - Top match: Cancel, restore or delete a scheduled event (low, overlap 0.5)
-  - Preview: I think you're asking about staff management. Which of these do you mean? 1. Cancel, restore or delete a scheduled event 2. Scoring matrix elements 3. Delete staff member None of these
-- Delete phrase (components/SettingsView.tsx:539)
-  - Question: how do i use Delete phrase
-  - Top match: Cancel, restore or delete a scheduled event (low, overlap 0.5)
-  - Preview: I think you're asking about staff management. Which of these do you mean? 1. Cancel, restore or delete a scheduled event 2. Scoring matrix elements 3. Delete staff member None of these
-- Delete Selected Rows (components/PlatformConfigurationSettings.tsx:11284)
-  - Question: how do i use Delete Selected Rows
-  - Top match: Cancel, restore or delete a scheduled event (low, overlap 0.67)
-  - Preview: I think you're asking about trainee management. Which of these do you mean? 1. Cancel, restore or delete a scheduled event 2. Export configuration report 3. Delete or Archive Trainee 4. Archive course 5. Multi Select None of these
-- Enter your password to confirm (components/SyllabusView.tsx:3193)
-  - Question: where do i set Enter your password to confirm
-  - Top match: Enter your password (low, overlap 0.75)
-  - Preview: I don't know the answer to that yet. I couldn't find a reliable DFP-NEO guide entry for that question.
-- Enter your login password (components/SyllabusView.tsx:3254)
-  - Question: where do i set Enter your login password
-  - Top match: Enter your password (low, overlap 0.75)
-  - Preview: I don't know the answer to that yet. I couldn't find a reliable DFP-NEO guide entry for that question.
-- Delete (components/AirCombatTrainingReportModal.tsx:827)
-  - Question: how do i use Delete
-  - Top match: Delete (low, overlap 1)
-  - Preview: I don't know the answer to that yet. I couldn't find a reliable DFP-NEO guide entry for that question.
-- Yes, Archive (components/ArchiveConfirmationFlyout.tsx:31)
-  - Question: where do i set Yes, Archive
-  - Top match: Yes, Archive (low, overlap 1)
-  - Preview: I don't know the answer to that yet. I couldn't find a reliable DFP-NEO guide entry for that question.
-- Enter any authorisation notes here... (components/AuthorisationFlyout.tsx:745)
-  - Question: where do i set Enter any authorisation notes here...
-  - Top match: Enter any authorisation notes here... (low, overlap 1)
-  - Preview: I don't know the answer to that yet. I couldn't find a reliable DFP-NEO guide entry for that question.
-- Yes, Remove (components/CancelConfirmationFlyout.tsx:30)
-  - Question: where do i set Yes, Remove
-  - Top match: Yes, Remove (low, overlap 1)
-  - Preview: I don't know the answer to that yet. I couldn't find a reliable DFP-NEO guide entry for that question.
-- Delete (components/ContinuationCurrencyEventsSettings.tsx:285)
-  - Question: how do i use Delete
-  - Top match: Delete (low, overlap 1)
-  - Preview: I don't know the answer to that yet. I couldn't find a reliable DFP-NEO guide entry for that question.
-- Delete (components/CourseProgressView.tsx:1277)
-  - Question: how do i use Delete
-  - Top match: Delete (low, overlap 1)
-  - Preview: I don't know the answer to that yet. I couldn't find a reliable DFP-NEO guide entry for that question.
-- Archive (components/CoursesManagementView.tsx:453)
-  - Question: how do i use Archive
-  - Top match: Archive (low, overlap 1)
-  - Preview: I don't know the answer to that yet. I couldn't find a reliable DFP-NEO guide entry for that question.
-- Delete (components/CoursesManagementView.tsx:459)
-  - Question: how do i use Delete
-  - Top match: Delete (low, overlap 1)
-  - Preview: I don't know the answer to that yet. I couldn't find a reliable DFP-NEO guide entry for that question.
 - Password (components/EmailActivationSettings.tsx:233)
   - Question: where do i set Password
   - Top match: Enter your password (low, overlap 1)
@@ -126,64 +14,12 @@ This audit asks generated plain-English questions from real controls and Guide t
   - Question: how do i use Clear saved password on Save
   - Top match: Clear saved password on Save (low, overlap 1)
   - Preview: I don't know the answer to that yet. I couldn't find a reliable DFP-NEO guide entry for that question.
-- Delete (components/InstructorProfileFlyout.tsx:1705)
-  - Question: how do i use Delete
-  - Top match: Delete (low, overlap 1)
-  - Preview: I don't know the answer to that yet. I couldn't find a reliable DFP-NEO guide entry for that question.
-- Delete (components/OrganisationSettings.tsx:903)
-  - Question: how do i use Delete
-  - Top match: Delete (low, overlap 1)
-  - Preview: I don't know the answer to that yet. I couldn't find a reliable DFP-NEO guide entry for that question.
-- Remove (components/OrganisationSettings.tsx:1303)
-  - Question: how do i use Remove
-  - Top match: Remove (low, overlap 1)
-  - Preview: I don't know the answer to that yet. I couldn't find a reliable DFP-NEO guide entry for that question.
-- Delete (components/PlatformConfigurationSettings.tsx:9232)
-  - Question: how do i use Delete
-  - Top match: Delete (low, overlap 1)
-  - Preview: I don't know the answer to that yet. I couldn't find a reliable DFP-NEO guide entry for that question.
-- Remove (components/PlatformConfigurationSettings.tsx:10533)
-  - Question: how do i use Remove
-  - Top match: Remove (low, overlap 1)
-  - Preview: I don't know the answer to that yet. I couldn't find a reliable DFP-NEO guide entry for that question.
-- Delete (components/ScheduleView.tsx:7770)
-  - Question: how do i use Delete
-  - Top match: Delete (low, overlap 1)
-  - Preview: I don't know the answer to that yet. I couldn't find a reliable DFP-NEO guide entry for that question.
-- Remove (components/ScheduleView.tsx:8304)
-  - Question: how do i use Remove
-  - Top match: Remove (low, overlap 1)
-  - Preview: I don't know the answer to that yet. I couldn't find a reliable DFP-NEO guide entry for that question.
-- DELETE (components/TraineeProfileFlyout.tsx:3622)
-  - Question: how do i use DELETE
-  - Top match: Delete (low, overlap 1)
-  - Preview: I don't know the answer to that yet. I couldn't find a reliable DFP-NEO guide entry for that question.
-- Delete (components/TrainingReportView.tsx:1641)
-  - Question: how do i use Delete
-  - Top match: Delete (low, overlap 1)
-  - Preview: I don't know the answer to that yet. I couldn't find a reliable DFP-NEO guide entry for that question.
-- Cancel Impacted Events (components/PauseFlightOpsPanel.tsx:569)
-  - Question: how do i use Cancel Impacted Events
-  - Top match: Cancel, restore or delete a scheduled event (high, overlap 0.33)
-  - Preview: Cancels, restores or removes a selected scheduled event from the DFP timeline. Steps: 1. Open DFP. 2. Click the flight, simulator or event tile. 3. Use the flight details window for cancellation or removal actions. 4. Choose Cancel Flight when the event should
-- Delete User Account (components/UserListSection.tsx:411)
-  - Question: how do i use Delete User Account
-  - Top match: Cancel, restore or delete a scheduled event (high, overlap 0.33)
-  - Preview: Cancels, restores or removes a selected scheduled event from the DFP timeline. Steps: 1. Open DFP. 2. Click the flight, simulator or event tile. 3. Use the flight details window for cancellation or removal actions. 4. Choose Cancel Flight when the event should
-- Unarchive Course (components/ArchivedCoursesView.tsx:153)
-  - Question: where do i set Unarchive Course
-  - Top match: Training auto notifications (high, overlap 0.5)
-  - Preview: Steps: 1. Open Training Records. 2. Open the relevant training report workflow. 3. Enable the notification option for the report or condition. 4. Ensure the selected course has the relevant Course Commander or Deputy Course Commander assigned. 5. Check My Home
 - Close archived staff list (components/ArchivedInstructorsFlyout.tsx:55)
   - Question: where do i set Close archived staff list
   - Top match: Archived staff (high, overlap 0.5)
   - Preview: Steps: 1. Open Staff. 2. Open the archived staff or archived instructors list. 3. Search for the staff member if required. 4. Use the restore action if the staff member should return to the active staff list. 5. Close the archived staff list when finished.
 - Cancel editing (components/InstructorProfileFlyout.tsx:1358)
   - Question: how do i use Cancel editing
-  - Top match: Cancel, restore or delete a scheduled event (high, overlap 0.5)
-  - Preview: Cancels, restores or removes a selected scheduled event from the DFP timeline. Steps: 1. Open DFP. 2. Click the flight, simulator or event tile. 3. Use the flight details window for cancellation or removal actions. 4. Choose Cancel Flight when the event should
-- Delete Scope (components/PlatformConfigurationSettings.tsx:14535)
-  - Question: how do i use Delete Scope
   - Top match: Cancel, restore or delete a scheduled event (high, overlap 0.5)
   - Preview: Cancels, restores or removes a selected scheduled event from the DFP timeline. Steps: 1. Open DFP. 2. Click the flight, simulator or event tile. 3. Use the flight details window for cancellation or removal actions. 4. Choose Cancel Flight when the event should
 - Cancel editing (components/TraineeProfileFlyout.tsx:2420)
@@ -194,30 +30,14 @@ This audit asks generated plain-English questions from real controls and Guide t
   - Question: where do i set Yes, Restore Event
   - Top match: Cancel, restore or delete a scheduled event (high, overlap 0.67)
   - Preview: Steps: 1. Open DFP. 2. Click the flight, simulator or event tile. 3. Use the flight details window for cancellation or removal actions. 4. Choose Cancel Flight when the event should remain visible with a cancellation/redline and cancellation code. 5. Choose Re
-- Cancel (components/AddCourseFlyout.tsx:296)
-  - Question: how do i use Cancel
-  - Top match: Cancel, restore or delete a scheduled event (high, overlap 1)
-  - Preview: Cancels, restores or removes a selected scheduled event from the DFP timeline. Steps: 1. Open DFP. 2. Click the flight, simulator or event tile. 3. Use the flight details window for cancellation or removal actions. 4. Choose Cancel Flight when the event should
-- Cancel (components/AddFlightTileModal.tsx:4234)
-  - Question: how do i use Cancel
-  - Top match: Cancel, restore or delete a scheduled event (high, overlap 1)
-  - Preview: Cancels, restores or removes a selected scheduled event from the DFP timeline. Steps: 1. Open DFP. 2. Click the flight, simulator or event tile. 3. Use the flight details window for cancellation or removal actions. 4. Choose Cancel Flight when the event should
-- Cancel (components/AddGroundEventFlyout.tsx:440)
-  - Question: how do i use Cancel
-  - Top match: Cancel, restore or delete a scheduled event (high, overlap 1)
-  - Preview: Cancels, restores or removes a selected scheduled event from the DFP timeline. Steps: 1. Open DFP. 2. Click the flight, simulator or event tile. 3. Use the flight details window for cancellation or removal actions. 4. Choose Cancel Flight when the event should
-- Cancel (components/AddRemedialPackageFlyout.tsx:525)
-  - Question: how do i use Cancel
-  - Top match: Cancel, restore or delete a scheduled event (high, overlap 1)
-  - Preview: Cancels, restores or removes a selected scheduled event from the DFP timeline. Steps: 1. Open DFP. 2. Click the flight, simulator or event tile. 3. Use the flight details window for cancellation or removal actions. 4. Choose Cancel Flight when the event should
 - Remove unavailability (components/AddUnavailabilityFlyout.tsx:284)
   - Question: how do i use Remove unavailability
   - Top match: Remove unavailability (high, overlap 1)
   - Preview: Removes a recorded unavailable period from a staff member or trainee so they can be considered available again for that period. Steps: 1. Open Staff or Trainee, depending on the person. 2. Open the person's profile. 3. Open the Unavailable or Availability tab.
-- Cancel (components/ArchiveConfirmationFlyout.tsx:28)
-  - Question: how do i use Cancel
-  - Top match: Cancel, restore or delete a scheduled event (high, overlap 1)
-  - Preview: Cancels, restores or removes a selected scheduled event from the DFP timeline. Steps: 1. Open DFP. 2. Click the flight, simulator or event tile. 3. Use the flight details window for cancellation or removal actions. 4. Choose Cancel Flight when the event should
+- Unarchive Course (components/ArchivedCoursesView.tsx:153)
+  - Question: how do i use Unarchive Course
+  - Top match: Unarchive course (high, overlap 1)
+  - Preview: Displays archived courses and restores a course to the active course list where restoration is available. Steps: 1. Open Training Records. 2. Stay on Courses Management. 3. Click Archived Courses. 4. Find the archived course. 5. Use Unarchive Course or Restore
 - Delete Permanently (components/ArchivedCoursesView.tsx:162)
   - Question: how do i use Delete Permanently
   - Top match: Archive course (high, overlap 1)
@@ -226,58 +46,26 @@ This audit asks generated plain-English questions from real controls and Guide t
   - Question: where do i set archived courses page
   - Top match: Archive course (high, overlap 1)
   - Preview: Steps: 1. Open Training Records. 2. Select Courses Management. 3. Find the course tile. 4. Use the archive action rather than permanent delete when training history may need to be retained. 5. Use Archived Courses to view or reference archived courses later.
-- Cancel (components/ArchivedCoursesView.tsx:282)
-  - Question: how do i use Cancel
-  - Top match: Cancel, restore or delete a scheduled event (high, overlap 1)
-  - Preview: Cancels, restores or removes a selected scheduled event from the DFP timeline. Steps: 1. Open DFP. 2. Click the flight, simulator or event tile. 3. Use the flight details window for cancellation or removal actions. 4. Choose Cancel Flight when the event should
+- Current password (components/ArchivedCoursesView.tsx:267)
+  - Question: where do i set Current password
+  - Top match: Password confirmation (high, overlap 1)
+  - Preview: Steps: 1. This is not a setting to configure. 2. When the password prompt appears, enter your own current login password. 3. Review the warning text carefully. 4. Continue only if the protected action is intended.
 - Search archived staff (components/ArchivedInstructorsFlyout.tsx:63)
   - Question: where do i set Search archived staff
   - Top match: Archived staff (high, overlap 1)
   - Preview: Steps: 1. Open Staff. 2. Open the archived staff or archived instructors list. 3. Search for the staff member if required. 4. Use the restore action if the staff member should return to the active staff list. 5. Close the archived staff list when finished.
-- Cancel (components/BuildDateWarningFlyout.tsx:52)
-  - Question: how do i use Cancel
-  - Top match: Cancel, restore or delete a scheduled event (high, overlap 1)
-  - Preview: Cancels, restores or removes a selected scheduled event from the DFP timeline. Steps: 1. Open DFP. 2. Click the flight, simulator or event tile. 3. Use the flight details window for cancellation or removal actions. 4. Choose Cancel Flight when the event should
-- Cancel (components/BulkUpdateFlyout.tsx:518)
-  - Question: how do i use Cancel
-  - Top match: Cancel, restore or delete a scheduled event (high, overlap 1)
-  - Preview: Cancels, restores or removes a selected scheduled event from the DFP timeline. Steps: 1. Open DFP. 2. Click the flight, simulator or event tile. 3. Use the flight details window for cancellation or removal actions. 4. Choose Cancel Flight when the event should
 - cancellation-code (components/CancelEventFlyout.tsx:110)
   - Question: where do i set cancellation-code
   - Top match: Cancel, restore or delete a scheduled event (high, overlap 1)
   - Preview: Steps: 1. Open DFP. 2. Click the flight, simulator or event tile. 3. Use the flight details window for cancellation or removal actions. 4. Choose Cancel Flight when the event should remain visible with a cancellation/redline and cancellation code. 5. Choose Re
-- Cancel (components/CancelEventFlyout.tsx:163)
-  - Question: how do i use Cancel
-  - Top match: Cancel, restore or delete a scheduled event (high, overlap 1)
-  - Preview: Cancels, restores or removes a selected scheduled event from the DFP timeline. Steps: 1. Open DFP. 2. Click the flight, simulator or event tile. 3. Use the flight details window for cancellation or removal actions. 4. Choose Cancel Flight when the event should
-- Cancel (components/ChangePasswordModal.tsx:213)
-  - Question: how do i use Cancel
-  - Top match: Cancel, restore or delete a scheduled event (high, overlap 1)
-  - Preview: Cancels, restores or removes a selected scheduled event from the DFP timeline. Steps: 1. Open DFP. 2. Click the flight, simulator or event tile. 3. Use the flight details window for cancellation or removal actions. 4. Choose Cancel Flight when the event should
 - Cancel & Delete Tile (components/ConflictModal.tsx:78)
   - Question: how do i use Cancel & Delete Tile
-  - Top match: Cancel, restore or delete a scheduled event (high, overlap 1)
-  - Preview: Cancels, restores or removes a selected scheduled event from the DFP timeline. Steps: 1. Open DFP. 2. Click the flight, simulator or event tile. 3. Use the flight details window for cancellation or removal actions. 4. Choose Cancel Flight when the event should
-- Cancel (components/ContinuationCurrencyEventsSettings.tsx:455)
-  - Question: how do i use Cancel
   - Top match: Cancel, restore or delete a scheduled event (high, overlap 1)
   - Preview: Cancels, restores or removes a selected scheduled event from the DFP timeline. Steps: 1. Open DFP. 2. Click the flight, simulator or event tile. 3. Use the flight details window for cancellation or removal actions. 4. Choose Cancel Flight when the event should
 - Delete trainee (components/CourseEditFlyout.tsx:316)
   - Question: how do i use Delete trainee
   - Top match: Delete or Archive Trainee (high, overlap 1)
   - Preview: Archives or permanently deletes a trainee from the Trainee Roster workflow. Archive is the recommended option because it hides the trainee from the active roster while preserving the record for later restoration. Steps: 1. Open Trainee. 2. Stay on Trainee Prof
-- Cancel (components/CourseEditFlyout.tsx:375)
-  - Question: how do i use Cancel
-  - Top match: Cancel, restore or delete a scheduled event (high, overlap 1)
-  - Preview: Cancels, restores or removes a selected scheduled event from the DFP timeline. Steps: 1. Open DFP. 2. Click the flight, simulator or event tile. 3. Use the flight details window for cancellation or removal actions. 4. Choose Cancel Flight when the event should
-- Cancel (components/CourseProgressView.tsx:1659)
-  - Question: how do i use Cancel
-  - Top match: Cancel, restore or delete a scheduled event (high, overlap 1)
-  - Preview: Cancels, restores or removes a selected scheduled event from the DFP timeline. Steps: 1. Open DFP. 2. Click the flight, simulator or event tile. 3. Use the flight details window for cancellation or removal actions. 4. Choose Cancel Flight when the event should
-- Cancel (components/CourseSelectionFlyout.tsx:160)
-  - Question: how do i use Cancel
-  - Top match: Cancel, restore or delete a scheduled event (high, overlap 1)
-  - Preview: Cancels, restores or removes a selected scheduled event from the DFP timeline. Steps: 1. Open DFP. 2. Click the flight, simulator or event tile. 3. Use the flight details window for cancellation or removal actions. 4. Choose Cancel Flight when the event should
 - Delete Course (components/CoursesManagementView.tsx:102)
   - Question: how do i use Delete Course
   - Top match: Archive course (high, overlap 1)
@@ -286,98 +74,74 @@ This audit asks generated plain-English questions from real controls and Guide t
   - Question: where do i set Archived Courses
   - Top match: Archive course (high, overlap 1)
   - Preview: Steps: 1. Open Training Records. 2. Select Courses Management. 3. Find the course tile. 4. Use the archive action rather than permanent delete when training history may need to be retained. 5. Use Archived Courses to view or reference archived courses later.
-- Cancel (components/CoursesManagementView.tsx:414)
-  - Question: how do i use Cancel
-  - Top match: Cancel, restore or delete a scheduled event (high, overlap 1)
-  - Preview: Cancels, restores or removes a selected scheduled event from the DFP timeline. Steps: 1. Open DFP. 2. Click the flight, simulator or event tile. 3. Use the flight details window for cancellation or removal actions. 4. Choose Cancel Flight when the event should
-- Cancel (components/CourseTraineeSelectionFlyout.tsx:67)
-  - Question: how do i use Cancel
-  - Top match: Cancel, restore or delete a scheduled event (high, overlap 1)
-  - Preview: Cancels, restores or removes a selected scheduled event from the DFP timeline. Steps: 1. Open DFP. 2. Click the flight, simulator or event tile. 3. Use the flight details window for cancellation or removal actions. 4. Choose Cancel Flight when the event should
+- Current password (components/CoursesManagementView.tsx:399)
+  - Question: where do i set Current password
+  - Top match: Password confirmation (high, overlap 1)
+  - Preview: Steps: 1. This is not a setting to configure. 2. When the password prompt appears, enter your own current login password. 3. Review the warning text carefully. 4. Continue only if the protected action is intended.
 - Delete Currency (components/CurrencyBuilderView.tsx:324)
   - Question: how do i use Delete Currency
   - Top match: Currency builder (high, overlap 1)
   - Preview: Configures currency definitions, input requirements and related currency data used by staff/trainee profiles and post-flight workflows. Steps: 1. Open Settings. 2. Open Currency Builder in the currency or training standards configuration area. 3. Create, edit 
-- Cancel (components/CurrencyView.tsx:170)
-  - Question: how do i use Cancel
-  - Top match: Cancel, restore or delete a scheduled event (high, overlap 1)
-  - Preview: Cancels, restores or removes a selected scheduled event from the DFP timeline. Steps: 1. Open DFP. 2. Click the flight, simulator or event tile. 3. Use the flight details window for cancellation or removal actions. 4. Choose Cancel Flight when the event should
-- Cancel (components/DutyWarningFlyout.tsx:30)
-  - Question: how do i use Cancel
-  - Top match: Cancel, restore or delete a scheduled event (high, overlap 1)
-  - Preview: Cancels, restores or removes a selected scheduled event from the DFP timeline. Steps: 1. Open DFP. 2. Click the flight, simulator or event tile. 3. Use the flight details window for cancellation or removal actions. 4. Choose Cancel Flight when the event should
-- Cancel (components/EditCourseFlyout.tsx:315)
-  - Question: how do i use Cancel
-  - Top match: Cancel, restore or delete a scheduled event (high, overlap 1)
-  - Preview: Cancels, restores or removes a selected scheduled event from the DFP timeline. Steps: 1. Open DFP. 2. Click the flight, simulator or event tile. 3. Use the flight details window for cancellation or removal actions. 4. Choose Cancel Flight when the event should
 - Delete Event (components/FlightDetailModal.tsx:3483)
   - Question: how do i use Delete Event
-  - Top match: Cancel, restore or delete a scheduled event (high, overlap 1)
-  - Preview: Cancels, restores or removes a selected scheduled event from the DFP timeline. Steps: 1. Open DFP. 2. Click the flight, simulator or event tile. 3. Use the flight details window for cancellation or removal actions. 4. Choose Cancel Flight when the event should
-- Cancel (components/FlightDetailModal.tsx:4751)
-  - Question: how do i use Cancel
   - Top match: Cancel, restore or delete a scheduled event (high, overlap 1)
   - Preview: Cancels, restores or removes a selected scheduled event from the DFP timeline. Steps: 1. Open DFP. 2. Click the flight, simulator or event tile. 3. Use the flight details window for cancellation or removal actions. 4. Choose Cancel Flight when the event should
 - View Archived (components/InstructorListView.tsx:852)
   - Question: where do i set View Archived
   - Top match: Unarchive course (high, overlap 1)
   - Preview: Steps: 1. Open Training Records. 2. Stay on Courses Management. 3. Click Archived Courses. 4. Find the archived course. 5. Use Unarchive Course or Restore if the course should return to active use.
-- Cancel (components/InstructorProfileFlyout.tsx:2584)
-  - Question: how do i use Cancel
-  - Top match: Cancel, restore or delete a scheduled event (high, overlap 1)
-  - Preview: Cancels, restores or removes a selected scheduled event from the DFP timeline. Steps: 1. Open DFP. 2. Click the flight, simulator or event tile. 3. Use the flight details window for cancellation or removal actions. 4. Choose Cancel Flight when the event should
-- Cancel (components/MassBriefCompleteFlyout.tsx:120)
-  - Question: how do i use Cancel
-  - Top match: Cancel, restore or delete a scheduled event (high, overlap 1)
-  - Preview: Cancels, restores or removes a selected scheduled event from the DFP timeline. Steps: 1. Open DFP. 2. Click the flight, simulator or event tile. 3. Use the flight details window for cancellation or removal actions. 4. Choose Cancel Flight when the event should
-- Cancel (components/NeoRemedyFlyout.tsx:150)
-  - Question: how do i use Cancel
-  - Top match: Cancel, restore or delete a scheduled event (high, overlap 1)
-  - Preview: Cancels, restores or removes a selected scheduled event from the DFP timeline. Steps: 1. Open DFP. 2. Click the flight, simulator or event tile. 3. Use the flight details window for cancellation or removal actions. 4. Choose Cancel Flight when the event should
-- Cancel (components/PinEntryFlyout_BACKUP.tsx:90)
-  - Question: how do i use Cancel
-  - Top match: Cancel, restore or delete a scheduled event (high, overlap 1)
-  - Preview: Cancels, restores or removes a selected scheduled event from the DFP timeline. Steps: 1. Open DFP. 2. Click the flight, simulator or event tile. 3. Use the flight details window for cancellation or removal actions. 4. Choose Cancel Flight when the event should
-- Cancel (components/PinEntryFlyout_NEW.tsx:149)
-  - Question: how do i use Cancel
-  - Top match: Cancel, restore or delete a scheduled event (high, overlap 1)
-  - Preview: Cancels, restores or removes a selected scheduled event from the DFP timeline. Steps: 1. Open DFP. 2. Click the flight, simulator or event tile. 3. Use the flight details window for cancellation or removal actions. 4. Choose Cancel Flight when the event should
-- Cancel (components/PinEntryFlyout.tsx:89)
-  - Question: how do i use Cancel
-  - Top match: Cancel, restore or delete a scheduled event (high, overlap 1)
-  - Preview: Cancels, restores or removes a selected scheduled event from the DFP timeline. Steps: 1. Open DFP. 2. Click the flight, simulator or event tile. 3. Use the flight details window for cancellation or removal actions. 4. Choose Cancel Flight when the event should
-- Cancel (components/PlatformConfigurationSettings.tsx:10236)
-  - Question: how do i use Cancel
-  - Top match: Cancel, restore or delete a scheduled event (high, overlap 1)
-  - Preview: Cancels, restores or removes a selected scheduled event from the DFP timeline. Steps: 1. Open DFP. 2. Click the flight, simulator or event tile. 3. Use the flight details window for cancellation or removal actions. 4. Choose Cancel Flight when the event should
+- Remove profile photo (components/InstructorProfileFlyout.tsx:2093)
+  - Question: how do i use Remove profile photo
+  - Top match: Profile photo (high, overlap 1)
+  - Preview: Adds, changes or removes the photo shown on a staff or trainee profile. Steps: 1. Open Staff or Trainee. 2. Open the person's profile. 3. Enter edit mode. 4. Click the profile photo frame to upload or change a photo. 5. Use Remove photo if an existing photo sh
+- Cancel Impacted Events (components/PauseFlightOpsModal.tsx:530)
+  - Question: how do i use Cancel Impacted Events
+  - Top match: Cancel Impacted Events (high, overlap 1)
+  - Preview: Cancels the schedule events affected by a Pause Flight Ops action without rebuilding the remainder of the DFP. Steps: 1. Open DFP. 2. Open Pause Flight Ops. 3. Enter or confirm the pause period. 4. Review the affected events. 5. Choose Cancel Impacted Events w
+- Delete phrase (components/PhraseBankFlyout.tsx:194)
+  - Question: how do i use Delete phrase
+  - Top match: Scoring matrix elements (high, overlap 1)
+  - Preview: Configures scoring matrix elements and phrase-bank content used in training reports. Steps: 1. Open Settings. 2. Open the training standards or scoring matrix area. 3. Select the flight/event element to edit. 4. Add or delete elements or phrases as required. 5
 - Delete Aircraft Type (components/PlatformConfigurationSettings.tsx:10972)
   - Question: how do i use Delete Aircraft Type
   - Top match: Export configuration report (high, overlap 1)
   - Preview: Supports platform configuration maintenance, including reports, sync/import/export and aircraft/resource configuration actions. Steps: 1. Open Settings. 2. Open Resources & Configuration or the relevant platform configuration section. 3. Use Export Configurati
+- Delete Selected Rows (components/PlatformConfigurationSettings.tsx:11284)
+  - Question: how do i use Delete Selected Rows
+  - Top match: DFP Resource Rows (high, overlap 1)
+  - Preview: Configures the aircraft, simulator or other DFP resource rows that appear on the daily schedule. Steps: 1. Open Settings. 2. Open Resources & Configuration. 3. Open DFP Resource Rows. 4. Click Edit and confirm your password if the section is locked. 5. Add, ed
+- Delete Profile (components/PlatformConfigurationSettings.tsx:12207)
+  - Question: how do i use Delete Profile
+  - Top match: Master Permission Profiles (high, overlap 1)
+  - Preview: Builds role and exception templates that control app access for users in the active unit. Steps: 1. Open Settings. 2. Open People & Permissions. 3. Open Master Permission Profiles. 4. Click Edit if the section is locked. 5. Use Add Role or Add Exception to cre
+- Remove crew position (components/PlatformConfigurationSettings.tsx:13767)
+  - Question: how do i use Remove crew position
+  - Top match: Crew Position Labels (high, overlap 1)
+  - Preview: Configures the customer-facing labels for crew positions used in scheduling and flight details. Steps: 1. Open Settings. 2. Open Resources & Configuration. 3. Open Rank, Terminology & Labels. 4. Scroll to Crew Position Labels. 5. Add, edit, remove or rename th
 - Remove qualification (components/PlatformConfigurationSettings.tsx:13865)
   - Question: how do i use Remove qualification
   - Top match: Personnel Qualifications (high, overlap 1)
   - Preview: Defines the qualification options that can appear on staff and trainee profiles, including model-specific roles such as PIC, Crew Commander or Operational Captain. Steps: 1. Open Settings. 2. Open Resources & Configuration. 3. Open Rank, Terminology & Labels. 
+- Delete Scope (components/PlatformConfigurationSettings.tsx:14535)
+  - Question: how do i use Delete Scope
+  - Top match: User access scopes (high, overlap 1)
+  - Preview: Controls where a user's permission profiles apply, such as location, unit and enabled feature area. Steps: 1. Open Settings. 2. Open People & Permissions. 3. Open User Access. 4. Select the user. 5. Add, edit or delete the Access Scope row that controls where 
+- Delete directed task (components/PrioritiesView.tsx:989)
+  - Question: how do i use Delete directed task
+  - Top match: Priority and currency requests (high, overlap 1)
+  - Preview: Manages priority events and currency requests that influence scheduling and NEO Build attention. Steps: 1. Open Priorities. 2. Find the priority event, directed task or currency request. 3. Add, edit, remove or delete the request as required. 4. Check the sele
 - Delete crew currency request (components/PrioritiesView.tsx:4042)
   - Question: how do i use Delete crew currency request
   - Top match: Priority and currency requests (high, overlap 1)
-  - Preview: Manages priority events and currency requests that influence scheduling and NEO Build attention. Steps: 1. Open Priorities. 2. Find the priority event or currency request. 3. Add, edit, remove or delete the request as required. 4. Check the selected people, cu
-- Cancel (components/PrioritiesView.tsx:4389)
-  - Question: how do i use Cancel
-  - Top match: Cancel, restore or delete a scheduled event (high, overlap 1)
-  - Preview: Cancels, restores or removes a selected scheduled event from the DFP timeline. Steps: 1. Open DFP. 2. Click the flight, simulator or event tile. 3. Use the flight details window for cancellation or removal actions. 4. Choose Cancel Flight when the event should
+  - Preview: Manages priority events and currency requests that influence scheduling and NEO Build attention. Steps: 1. Open Priorities. 2. Find the priority event, directed task or currency request. 3. Add, edit, remove or delete the request as required. 4. Check the sele
 - Delete priority event (components/PrioritiesView.tsx:4846)
   - Question: how do i use Delete priority event
   - Top match: Priority and currency requests (high, overlap 1)
-  - Preview: Manages priority events and currency requests that influence scheduling and NEO Build attention. Steps: 1. Open Priorities. 2. Find the priority event or currency request. 3. Add, edit, remove or delete the request as required. 4. Check the selected people, cu
+  - Preview: Manages priority events and currency requests that influence scheduling and NEO Build attention. Steps: 1. Open Priorities. 2. Find the priority event, directed task or currency request. 3. Add, edit, remove or delete the request as required. 4. Check the sele
 - Remove currency event (components/PrioritiesView.tsx:6220)
   - Question: how do i use Remove currency event
   - Top match: Priority and currency requests (high, overlap 1)
-  - Preview: Manages priority events and currency requests that influence scheduling and NEO Build attention. Steps: 1. Open Priorities. 2. Find the priority event or currency request. 3. Add, edit, remove or delete the request as required. 4. Check the selected people, cu
-- Cancel (components/PublishConfirmationFlyout.tsx:45)
-  - Question: how do i use Cancel
-  - Top match: Cancel, restore or delete a scheduled event (high, overlap 1)
-  - Preview: Cancels, restores or removes a selected scheduled event from the DFP timeline. Steps: 1. Open DFP. 2. Click the flight, simulator or event tile. 3. Use the flight details window for cancellation or removal actions. 4. Choose Cancel Flight when the event should
+  - Preview: Manages priority events and currency requests that influence scheduling and NEO Build attention. Steps: 1. Open Priorities. 2. Find the priority event, directed task or currency request. 3. Add, edit, remove or delete the request as required. 4. Check the sele
 - course-to-archive (components/RemoveCourseFlyout.tsx:33)
   - Question: where do i set course-to-archive
   - Top match: Archive course (high, overlap 1)
@@ -386,18 +150,6 @@ This audit asks generated plain-English questions from real controls and Guide t
   - Question: how do i use Archive Course
   - Top match: Archive course (high, overlap 1)
   - Preview: Removes a course from active operational views while preserving the course record for future reference. Steps: 1. Open Training Records. 2. Select Courses Management. 3. Find the course tile. 4. Use the archive action rather than permanent delete when training
-- Cancel (components/RemoveCourseFlyout.tsx:51)
-  - Question: how do i use Cancel
-  - Top match: Cancel, restore or delete a scheduled event (high, overlap 1)
-  - Preview: Cancels, restores or removes a selected scheduled event from the DFP timeline. Steps: 1. Open DFP. 2. Click the flight, simulator or event tile. 3. Use the flight details window for cancellation or removal actions. 4. Choose Cancel Flight when the event should
-- Cancel (components/RestoreConfirmationFlyout.tsx:22)
-  - Question: how do i use Cancel
-  - Top match: Cancel, restore or delete a scheduled event (high, overlap 1)
-  - Preview: Cancels, restores or removes a selected scheduled event from the DFP timeline. Steps: 1. Open DFP. 2. Click the flight, simulator or event tile. 3. Use the flight details window for cancellation or removal actions. 4. Choose Cancel Flight when the event should
-- Cancel (components/ScoringMatrixFlyout.tsx:114)
-  - Question: how do i use Cancel
-  - Top match: Cancel, restore or delete a scheduled event (high, overlap 1)
-  - Preview: Cancels, restores or removes a selected scheduled event from the DFP timeline. Steps: 1. Open DFP. 2. Click the flight, simulator or event tile. 3. Use the flight details window for cancellation or removal actions. 4. Choose Cancel Flight when the event should
 - Delete Selected (components/ScoringMatrixFlyout.tsx:179)
   - Question: how do i use Delete Selected
   - Top match: Cancel, restore or delete a scheduled event (high, overlap 1)
@@ -406,54 +158,38 @@ This audit asks generated plain-English questions from real controls and Guide t
   - Question: how do i use Delete flight element(s)
   - Top match: Scoring matrix elements (high, overlap 1)
   - Preview: Configures scoring matrix elements and phrase-bank content used in training reports. Steps: 1. Open Settings. 2. Open the training standards or scoring matrix area. 3. Select the flight/event element to edit. 4. Add or delete elements or phrases as required. 5
-- Cancel (components/SctRequestFlyout.tsx:313)
-  - Question: how do i use Cancel
-  - Top match: Cancel, restore or delete a scheduled event (high, overlap 1)
-  - Preview: Cancels, restores or removes a selected scheduled event from the DFP timeline. Steps: 1. Open DFP. 2. Click the flight, simulator or event tile. 3. Use the flight details window for cancellation or removal actions. 4. Choose Cancel Flight when the event should
+- Delete phrase (components/ScoringMatrixFlyout.tsx:552)
+  - Question: how do i use Delete phrase
+  - Top match: Scoring matrix elements (high, overlap 1)
+  - Preview: Configures scoring matrix elements and phrase-bank content used in training reports. Steps: 1. Open Settings. 2. Open the training standards or scoring matrix area. 3. Select the flight/event element to edit. 4. Add or delete elements or phrases as required. 5
 - Delete flight element(s) (components/SettingsView.tsx:397)
   - Question: how do i use Delete flight element(s)
   - Top match: Scoring matrix elements (high, overlap 1)
   - Preview: Configures scoring matrix elements and phrase-bank content used in training reports. Steps: 1. Open Settings. 2. Open the training standards or scoring matrix area. 3. Select the flight/event element to edit. 4. Add or delete elements or phrases as required. 5
-- Cancel (components/SettingsView.tsx:580)
-  - Question: how do i use Cancel
-  - Top match: Cancel, restore or delete a scheduled event (high, overlap 1)
-  - Preview: Cancels, restores or removes a selected scheduled event from the DFP timeline. Steps: 1. Open DFP. 2. Click the flight, simulator or event tile. 3. Use the flight details window for cancellation or removal actions. 4. Choose Cancel Flight when the event should
+- Delete phrase (components/SettingsView.tsx:539)
+  - Question: how do i use Delete phrase
+  - Top match: Scoring matrix elements (high, overlap 1)
+  - Preview: Configures scoring matrix elements and phrase-bank content used in training reports. Steps: 1. Open Settings. 2. Open the training standards or scoring matrix area. 3. Select the flight/event element to edit. 4. Add or delete elements or phrases as required. 5
 - Delete Selected (components/SettingsView.tsx:621)
   - Question: how do i use Delete Selected
   - Top match: Cancel, restore or delete a scheduled event (high, overlap 1)
   - Preview: Cancels, restores or removes a selected scheduled event from the DFP timeline. Steps: 1. Open DFP. 2. Click the flight, simulator or event tile. 3. Use the flight details window for cancellation or removal actions. 4. Choose Cancel Flight when the event should
-- Cancel (components/SyllabusView.tsx:544)
-  - Question: how do i use Cancel
-  - Top match: Cancel, restore or delete a scheduled event (high, overlap 1)
-  - Preview: Cancels, restores or removes a selected scheduled event from the DFP timeline. Steps: 1. Open DFP. 2. Click the flight, simulator or event tile. 3. Use the flight details window for cancellation or removal actions. 4. Choose Cancel Flight when the event should
-- Cancel (components/TraineeBulkUploadFlyout.tsx:597)
-  - Question: how do i use Cancel
-  - Top match: Cancel, restore or delete a scheduled event (high, overlap 1)
-  - Preview: Cancels, restores or removes a selected scheduled event from the DFP timeline. Steps: 1. Open DFP. 2. Click the flight, simulator or event tile. 3. Use the flight details window for cancellation or removal actions. 4. Choose Cancel Flight when the event should
-- Cancel (components/TraineeLmpView.tsx:497)
-  - Question: how do i use Cancel
-  - Top match: Cancel, restore or delete a scheduled event (high, overlap 1)
-  - Preview: Cancels, restores or removes a selected scheduled event from the DFP timeline. Steps: 1. Open DFP. 2. Click the flight, simulator or event tile. 3. Use the flight details window for cancellation or removal actions. 4. Choose Cancel Flight when the event should
+- Enter your password to confirm (components/SyllabusView.tsx:3193)
+  - Question: where do i set Enter your password to confirm
+  - Top match: Password confirmation (high, overlap 1)
+  - Preview: Steps: 1. This is not a setting to configure. 2. When the password prompt appears, enter your own current login password. 3. Review the warning text carefully. 4. Continue only if the protected action is intended.
+- Enter your login password (components/SyllabusView.tsx:3254)
+  - Question: where do i set Enter your login password
+  - Top match: Password confirmation (high, overlap 1)
+  - Preview: Steps: 1. This is not a setting to configure. 2. When the password prompt appears, enter your own current login password. 3. Review the warning text carefully. 4. Continue only if the protected action is intended.
 - Delete Remedial Event (components/TraineeLmpView.tsx:895)
   - Question: how do i use Delete Remedial Event
   - Top match: Remedial packages (high, overlap 1)
   - Preview: Creates and manages remedial training packages and events for a trainee. Steps: 1. Open Trainee. 2. Open the trainee profile. 3. Open the remedial or LMP area. 4. Use Add Remedial Package. 5. Select the events to include. 6. Save the package. Remedial packages
-- Cancel (components/TraineeProfileFlyout.tsx:3625)
-  - Question: how do i use Cancel
-  - Top match: Cancel, restore or delete a scheduled event (high, overlap 1)
-  - Preview: Cancels, restores or removes a selected scheduled event from the DFP timeline. Steps: 1. Open DFP. 2. Click the flight, simulator or event tile. 3. Use the flight details window for cancellation or removal actions. 4. Choose Cancel Flight when the event should
-- Cancel (components/TrainingReportView.tsx:571)
-  - Question: how do i use Cancel
-  - Top match: Cancel, restore or delete a scheduled event (high, overlap 1)
-  - Preview: Cancels, restores or removes a selected scheduled event from the DFP timeline. Steps: 1. Open DFP. 2. Click the flight, simulator or event tile. 3. Use the flight details window for cancellation or removal actions. 4. Choose Cancel Flight when the event should
-- Cancel (components/UpdateConfirmationFlyout.tsx:128)
-  - Question: how do i use Cancel
-  - Top match: Cancel, restore or delete a scheduled event (high, overlap 1)
-  - Preview: Cancels, restores or removes a selected scheduled event from the DFP timeline. Steps: 1. Open DFP. 2. Click the flight, simulator or event tile. 3. Use the flight details window for cancellation or removal actions. 4. Choose Cancel Flight when the event should
-- Cancel (components/VisualAdjustModal.tsx:44)
-  - Question: how do i use Cancel
-  - Top match: Cancel, restore or delete a scheduled event (high, overlap 1)
-  - Preview: Cancels, restores or removes a selected scheduled event from the DFP timeline. Steps: 1. Open DFP. 2. Click the flight, simulator or event tile. 3. Use the flight details window for cancellation or removal actions. 4. Choose Cancel Flight when the event should
+- Remove profile photo (components/TraineeProfileFlyout.tsx:3141)
+  - Question: how do i use Remove profile photo
+  - Top match: Profile photo (high, overlap 1)
+  - Preview: Adds, changes or removes the photo shown on a staff or trainee profile. Steps: 1. Open Staff or Trainee. 2. Open the person's profile. 3. Enter edit mode. 4. Click the profile photo frame to upload or change a photo. 5. Use Remove photo if an existing photo sh
 - Allocated Colour (components/AddCourseFlyout.tsx:202)
   - Question: where do i set Allocated Colour
   - Top match: Formation callsigns (low, overlap 0)
@@ -473,7 +209,7 @@ This audit asks generated plain-English questions from real controls and Guide t
 - Second Person (components/AddFlightTileModal.tsx:3796)
   - Question: where do i set Second Person
   - Top match: Rank, Terminology & Labels (low, overlap 0)
-  - Preview: I think you're asking about the schedule. Which of these do you mean? 1. Rank, Terminology & Labels 2. Personnel Qualifications 3. Remove unavailability 4. Flight authorisation 5. NEO Build None of these
+  - Preview: I think you're asking about the schedule. Which of these do you mean? 1. Rank, Terminology & Labels 2. Personnel Qualifications 3. Profile photo 4. Remove unavailability 5. Flight authorisation None of these
 - CONFIG (components/AddFlightTileModal.tsx:3867)
   - Question: where do i set CONFIG
   - Top match: Open the DFP schedule (low, overlap 0)
@@ -486,3 +222,267 @@ This audit asks generated plain-English questions from real controls and Guide t
   - Question: where do i set Aircraft
   - Top match: NEO Build (low, overlap 0)
   - Preview: I don't know the answer to that yet. Please include the page or area you mean, because that term appears in more than one place.
+- cpt-resource (components/AddGroundEventFlyout.tsx:416)
+  - Question: where do i set cpt-resource
+  - Top match: Aircraft availability (low, overlap 0)
+  - Preview: I think you're asking about the schedule. Which of these do you mean? 1. Aircraft availability 2. Flight detail fields 3. DFP Resource Rows 4. NEO Build 5. Build priorities None of these
+- Ground Resource (components/AddGroundEventFlyout.tsx:424)
+  - Question: where do i set Ground Resource
+  - Top match: Aircraft availability (low, overlap 0)
+  - Preview: I think you're asking about the schedule. Which of these do you mean? 1. Aircraft availability 2. Flight detail fields 3. DFP Resource Rows 4. NEO Build 5. Build priorities None of these
+- Reason (components/AddUnavailabilityFlyout.tsx:222)
+  - Question: where do i set Reason
+  - Top match: Cancel, restore or delete a scheduled event (low, overlap 0)
+  - Preview: I don't know the answer to that yet. Please include the page or area you mean, because that term appears in more than one place.
+- Add Custom Period (components/AddUnavailabilityFlyout.tsx:237)
+  - Question: how do i use Add Custom Period
+  - Top match: Flight details (low, overlap 0)
+  - Preview: I think you're asking about trainee management. Which of these do you mean? 1. Flight details 2. Trainee unavailability 3. Add ground event 4. Archived staff None of these
+- Assessment (components/AirCombatTrainingReportModal.tsx:1113)
+  - Question: where do i set Assessment
+  - Top match: Open the DFP schedule (low, overlap 0)
+  - Preview: I don't know the answer to that yet. Please include the page or area you mean, because that term appears in more than one place.
+- Export to CSV (components/AuditFlyout.tsx:587)
+  - Question: how do i use Export to CSV
+  - Top match: Flight details (low, overlap 0)
+  - Preview: I think you're asking about Program Schedule. Which of these do you mean? 1. Flight details 2. Publish DFP 3. Cancel, restore or delete a scheduled event 4. Archived staff 5. Export configuration report None of these
+- Affected Record (components/AuditFlyout.tsx:816)
+  - Question: where do i set Affected Record
+  - Top match: Trainee roster (low, overlap 0)
+  - Preview: I think you're asking about trainee management. Which of these do you mean? 1. Trainee roster 2. Formation callsigns 3. User accounts 4. Course management 5. Remove unavailability None of these
+- Clear Auth (components/AuthorisationFlyout.tsx:684)
+  - Question: how do i use Clear Auth
+  - Top match: Flight details (low, overlap 0)
+  - Preview: I think you're asking about Program Schedule. Which of these do you mean? 1. Flight details 2. Publish DFP 3. Cancel, restore or delete a scheduled event 4. Archived staff 5. Delete message None of these
+- Not assigned (components/CourseEditFlyout.tsx:235)
+  - Question: where do i set Not assigned
+  - Top match: Trainee roster (low, overlap 0)
+  - Preview: I think you're asking about trainee management. Which of these do you mean? 1. Trainee roster 2. Formation callsigns 3. Aircraft availability 4. Master LMP Access 5. Flight authorisation warning settings None of these
+- Export CSV (components/CourseProgressView.tsx:1166)
+  - Question: how do i use Export CSV
+  - Top match: Flight details (low, overlap 0)
+  - Preview: I think you're asking about Program Schedule. Which of these do you mean? 1. Flight details 2. Publish DFP 3. Cancel, restore or delete a scheduled event 4. Archived staff 5. Export configuration report None of these
+- course rankings (components/CourseProgressView.tsx:1221)
+  - Question: where do i set course rankings
+  - Top match: Training report (low, overlap 0)
+  - Preview: I think you're asking about trainee management. Which of these do you mean? 1. Training report 2. Training auto notifications 3. Rank, Terminology & Labels 4. Course leadership assignments 5. Trainee roster None of these
+- getAwardDisplayName(award) (components/CourseProgressView.tsx:1257)
+  - Question: where do i set getAwardDisplayName(award)
+  - Top match: Name (low, overlap 0)
+  - Preview: I don't know the answer to that yet. I couldn't find a reliable DFP-NEO guide entry for that question.
+- Add Award (components/CourseProgressView.tsx:1270)
+  - Question: how do i use Add Award
+  - Top match: Flight details (low, overlap 0)
+  - Preview: I think you're asking about staff management. Which of these do you mean? 1. Flight details 2. Add ground event 3. Archived staff 4. Course ranking awards None of these
+- Export Setup (components/CourseProgressView.tsx:1295)
+  - Question: how do i use Export Setup
+  - Top match: Rank, Terminology & Labels (low, overlap 0)
+  - Preview: I think you're asking about trainee management. Which of these do you mean? 1. Rank, Terminology & Labels 2. Trainee Rank Order 3. Open the DFP schedule 4. Initial Setup Wizard 5. Flight details None of these
+- Award Name (components/CourseProgressView.tsx:1328)
+  - Question: where do i set Award Name
+  - Top match: Rank, Terminology & Labels (low, overlap 0)
+  - Preview: I think you're asking about Settings. Which of these do you mean? 1. Rank, Terminology & Labels 2. Staff Rank Equivalency Table 3. Personnel Qualifications 4. Course setup fields None of these
+- Search currencies... (components/CurrencyBuilderView.tsx:245)
+  - Question: where do i set Search currencies...
+  - Top match: NEO Build (low, overlap 0)
+  - Preview: I think you're asking about DFP-NEO. Which of these do you mean? 1. NEO Build 2. Priority and currency requests 3. Currency audit and dates 4. Special continuation training request None of these
+- Use Earliest Expiry (components/CurrencyBuilderView.tsx:498)
+  - Question: where do i set Use Earliest Expiry
+  - Top match: Rank, Terminology & Labels (low, overlap 0)
+  - Preview: I think you're asking about trainee management. Which of these do you mean? 1. Rank, Terminology & Labels 2. Trainee Rank Order 3. Flight details 4. Cancel, restore or delete a scheduled event 5. Add ground event None of these
+- Use Latest Expiry (components/CurrencyBuilderView.tsx:499)
+  - Question: where do i set Use Latest Expiry
+  - Top match: Rank, Terminology & Labels (low, overlap 0)
+  - Preview: I think you're asking about trainee management. Which of these do you mean? 1. Rank, Terminology & Labels 2. Trainee Rank Order 3. Flight details 4. Cancel, restore or delete a scheduled event 5. Add ground event None of these
+- ANY of these (OR) (components/CurrencyBuilderView.tsx:615)
+  - Question: where do i set ANY of these (OR)
+  - Top match: Flight authorisation warning settings (low, overlap 0)
+  - Preview: I think you're asking about course management. Which of these do you mean? 1. Flight authorisation warning settings 2. NEO Build 3. Course leadership assignments None of these
+- Acknowledge & Proceed (components/DutyWarningFlyout.tsx:33)
+  - Question: where do i set Acknowledge & Proceed
+  - Top match: Cancel, restore or delete a scheduled event (low, overlap 0)
+  - Preview: I think you're asking about the schedule. Which of these do you mean? 1. Cancel, restore or delete a scheduled event 2. Password confirmation 3. Flight authorisation None of these
+- lmp (components/EditCourseFlyout.tsx:245)
+  - Question: where do i set lmp
+  - Top match: Primary and Secondary Instructor (low, overlap 0)
+  - Preview: I don't know the answer to that yet. Please include the page or area you mean, because that term appears in more than one place.
+- Customer SMTP (components/EmailActivationSettings.tsx:184)
+  - Question: where do i set Customer SMTP
+  - Top match: Open the DFP schedule (low, overlap 0)
+  - Preview: I think you're asking about Program Schedule. Which of these do you mean? 1. Open the DFP schedule 2. Initial Setup Wizard 3. Crew Position Labels None of these
+- Require TLS (components/EmailActivationSettings.tsx:239)
+  - Question: where do i set Require TLS
+  - Top match: Initial Setup Wizard (low, overlap 0)
+  - Preview: I think you're asking about staff management. Which of these do you mean? 1. Initial Setup Wizard 2. Flight authorisation warning settings 3. Primary and Secondary Instructor 4. Currency builder 5. Turnaround settings None of these
+- Verify server certificate (components/EmailActivationSettings.tsx:240)
+  - Question: where do i set Verify server certificate
+  - Top match: My Home messages (low, overlap 0)
+  - Preview: I think you're asking about DFP-NEO. Which of these do you mean? 1. My Home messages None of these
+- PAX (components/FlightDetailModal.tsx:1916)
+  - Question: where do i set PAX
+  - Top match: Select label.toLowerCase() (low, overlap 0)
+  - Preview: I don't know the answer to that yet. I couldn't find a reliable DFP-NEO guide entry for that question.
+- Pilot (components/FlightDetailModal.tsx:3256)
+  - Question: where do i set Pilot
+  - Top match: Staff unavailability (low, overlap 0)
+  - Preview: I don't know the answer to that yet. Please include the page or area you mean, because that term appears in more than one place.
+- Add Deployment (components/FlightDetailModal.tsx:3463)
+  - Question: how do i use Add Deployment
+  - Top match: Flight details (low, overlap 0)
+  - Preview: I think you're asking about staff management. Which of these do you mean? 1. Flight details 2. Add ground event 3. Archived staff None of these
+- LMP (components/FlightDetailModal.tsx:3525)
+  - Question: where do i set LMP
+  - Top match: Primary and Secondary Instructor (low, overlap 0)
+  - Preview: I don't know the answer to that yet. Please include the page or area you mean, because that term appears in more than one place.
+- Area (components/FlightDetailModal.tsx:3759)
+  - Question: where do i set Area
+  - Top match: Audit log recording settings (low, overlap 0)
+  - Preview: I don't know the answer to that yet. Please include the page or area you mean, because that term appears in more than one place.
+- CONFIG (components/FlightDetailModal.tsx:3771)
+  - Question: where do i set CONFIG
+  - Top match: Open the DFP schedule (low, overlap 0)
+  - Preview: I don't know the answer to that yet. Please include the page or area you mean, because that term appears in more than one place.
+- Local Land Away (components/FlightDetailModal.tsx:3788)
+  - Question: where do i set Local Land Away
+  - Top match: Duty Pilot personnel management (low, overlap 0)
+  - Preview: I think you're asking about trainee management. Which of these do you mean? 1. Duty Pilot personnel management 2. Master LMP event details 3. Trainee unavailability 4. Staff unavailability None of these
+- Local (components/FlightDetailModal.tsx:3794)
+  - Question: where do i set Local
+  - Top match: Course management (low, overlap 0)
+  - Preview: I don't know the answer to that yet. Please include the page or area you mean, because that term appears in more than one place.
+- Land Away (components/FlightDetailModal.tsx:3795)
+  - Question: where do i set Land Away
+  - Top match: Duty Pilot personnel management (low, overlap 0)
+  - Preview: I think you're asking about trainee management. Which of these do you mean? 1. Duty Pilot personnel management 2. Master LMP event details 3. Trainee unavailability 4. Staff unavailability 5. Delete staff member None of these
+- Manifest Status (components/FlightDetailModal.tsx:4051)
+  - Question: where do i set Manifest Status
+  - Top match: Trainee roster (low, overlap 0)
+  - Preview: I think you're asking about trainee management. Which of these do you mean? 1. Trainee roster 2. Flight authorisation warning settings 3. Staff unavailability 4. Cancel, restore or delete a scheduled event None of these
+- Complete (components/FlightDetailModal.tsx:4058)
+  - Question: where do i set Complete
+  - Top match: Export configuration report (low, overlap 0)
+  - Preview: I don't know the answer to that yet. Please include the page or area you mean, because that term appears in more than one place.
+- Invalid (components/FlightDetailModal.tsx:4061)
+  - Question: where do i set Invalid
+  - Top match: Export configuration report (low, overlap 0)
+  - Preview: I don't know the answer to that yet. Please include the page or area you mean, because that term appears in more than one place.
+- person (components/FlightDetailModal.tsx:4493)
+  - Question: where do i set person
+  - Top match: Staff unavailability (low, overlap 0)
+  - Preview: I don't know the answer to that yet. Please include the page or area you mean, because that term appears in more than one place.
+- All Courses (components/FullPageProgressGraph.tsx:76)
+  - Question: what is All Courses
+  - Top match: Master LMP Access (low, overlap 0)
+  - Preview: I think you're asking about trainee management. Which of these do you mean? 1. Master LMP Access 2. Delete or Archive Trainee 3. Trainee roster 4. Course management 5. Archive course None of these
+- Filter staff by role (components/InstructorListView.tsx:735)
+  - Question: where do i set Filter staff by role
+  - Top match: Formation callsigns (low, overlap 0)
+  - Preview: I think you're asking about Settings. Which of these do you mean? 1. Formation callsigns 2. Rank, Terminology & Labels 3. Master Permission Profiles 4. Training report None of these
+- Open current profile (components/InstructorProfileFlyout.tsx:1321)
+  - Question: how do i use Open current profile
+  - Top match: Multi Select (low, overlap 0)
+  - Preview: I think you're asking about the schedule. Which of these do you mean? 1. Multi Select 2. Publish DFP 3. Currency builder 4. Currency audit and dates 5. Flight detail fields None of these
+- Generate Report (components/InstructorProfileFlyout.tsx:1758)
+  - Question: how do i use Generate Report
+  - Top match: Archived staff (low, overlap 0)
+  - Preview: I think you're asking about staff management. Which of these do you mean? 1. Archived staff 2. Course Progress 3. Training report 4. Training auto notifications 5. Build Intelligence risk events None of these
+- UnCat (components/InstructorProfileFlyout.tsx:2141)
+  - Question: where do i set UnCat
+  - Top match: Open the DFP schedule (low, overlap 0)
+  - Preview: I don't know the answer to that yet. Please include the page or area you mean, because that term appears in more than one place.
+- Qualifications (components/InstructorProfileFlyout.tsx:2173)
+  - Question: where do i set Qualifications
+  - Top match: NEO Build (low, overlap 0)
+  - Preview: I don't know the answer to that yet. Please include the page or area you mean, because that term appears in more than one place.
+- Logbook (components/InstructorProfileFlyout.tsx:2567)
+  - Question: where do i set Logbook
+  - Top match: ‹ (low, overlap 0)
+  - Preview: I don't know the answer to that yet. I couldn't find a reliable DFP-NEO guide entry for that question.
+- Click to select date (components/InstructorScheduleView.tsx:766)
+  - Question: where do i set Click to select date
+  - Top match: Add flight tile (low, overlap 0)
+  - Preview: I think you're asking about the schedule. Which of these do you mean? 1. Add flight tile 2. Multi Select 3. Personnel Qualifications None of these
+- Arrangement Name (components/OrganisationSettings.tsx:884)
+  - Question: where do i set Arrangement Name
+  - Top match: Rank, Terminology & Labels (low, overlap 0)
+  - Preview: I think you're asking about Settings. Which of these do you mean? 1. Rank, Terminology & Labels 2. Staff Rank Equivalency Table 3. Personnel Qualifications 4. Course setup fields None of these
+- Add Arrangement (components/OrganisationSettings.tsx:896)
+  - Question: how do i use Add Arrangement
+  - Top match: Flight details (low, overlap 0)
+  - Preview: I think you're asking about staff management. Which of these do you mean? 1. Flight details 2. Add ground event 3. Archived staff None of these
+- Desired Allocation (components/OrganisationSettings.tsx:1336)
+  - Question: where do i set Desired Allocation
+  - Top match: Aircraft availability (low, overlap 0)
+  - Preview: I think you're asking about trainee management. Which of these do you mean? 1. Aircraft availability 2. Trainee unavailability 3. Priority and currency requests 4. Turnaround settings None of these
+- Clear All (components/PauseFlightOpsModal.tsx:582)
+  - Question: how do i use Clear All
+  - Top match: Delete or Archive Trainee (low, overlap 0)
+  - Preview: I think you're asking about trainee management. Which of these do you mean? 1. Delete or Archive Trainee 2. Flight details 3. Publish DFP 4. Cancel, restore or delete a scheduled event 5. Archived staff None of these
+- Download Trace (components/PlatformConfigurationSettings.tsx:9358)
+  - Question: how do i use Download Trace
+  - Top match: Flight details (low, overlap 0)
+  - Preview: I think you're asking about Program Schedule. Which of these do you mean? 1. Flight details 2. Publish DFP 3. Cancel, restore or delete a scheduled event 4. Archived staff 5. Add ground event None of these
+- Add Location (components/PlatformConfigurationSettings.tsx:9362)
+  - Question: how do i use Add Location
+  - Top match: Flight details (low, overlap 0)
+  - Preview: I think you're asking about trainee management. Which of these do you mean? 1. Flight details 2. Add ground event 3. Trainee unavailability 4. Priority and currency requests 5. Initial Setup Wizard None of these
+- Trainees only (components/PlatformConfigurationSettings.tsx:10216)
+  - Question: where do i set Trainees only
+  - Top match: Rank, Terminology & Labels (low, overlap 0)
+  - Preview: I think you're asking about Settings. Which of these do you mean? 1. Rank, Terminology & Labels 2. Formation callsigns 3. Course Scores table 4. Primary and Secondary Instructor 5. Trainee Rank Order None of these
+- ACTIVE INACTIVE (components/PlatformConfigurationSettings.tsx:10225)
+  - Question: where do i set ACTIVE INACTIVE
+  - Top match: Formation callsigns (low, overlap 0)
+  - Preview: I think you're asking about trainee management. Which of these do you mean? 1. Formation callsigns 2. Trainee Rank Order 3. Aircraft availability 4. Initial Setup Wizard 5. Trainee roster None of these
+- ACTIVE (components/PlatformConfigurationSettings.tsx:10230)
+  - Question: where do i set ACTIVE
+  - Top match: Initial Setup Wizard (low, overlap 0)
+  - Preview: I don't know the answer to that yet. Please include the page or area you mean, because that term appears in more than one place.
+- INACTIVE (components/PlatformConfigurationSettings.tsx:10231)
+  - Question: where do i set INACTIVE
+  - Top match: Trainee Rank Order (low, overlap 0)
+  - Preview: I don't know the answer to that yet. Please include the page or area you mean, because that term appears in more than one place.
+- Add Access (components/PlatformConfigurationSettings.tsx:10294)
+  - Question: how do i use Add Access
+  - Top match: Flight details (low, overlap 0)
+  - Preview: I think you're asking about staff management. Which of these do you mean? 1. Flight details 2. Archived staff 3. Add ground event 4. Personnel Qualifications 5. Master Permission Profiles None of these
+- Add Position (components/PlatformConfigurationSettings.tsx:10634)
+  - Question: how do i use Add Position
+  - Top match: Flight details (low, overlap 0)
+  - Preview: I think you're asking about staff management. Which of these do you mean? 1. Flight details 2. Add ground event 3. Archived staff None of these
+- Add Config (components/PlatformConfigurationSettings.tsx:11146)
+  - Question: how do i use Add Config
+  - Top match: Flight details (low, overlap 0)
+  - Preview: I think you're asking about course management. Which of these do you mean? 1. Flight details 2. Add ground event 3. Course management 4. Add flight tile 5. Scoring matrix elements None of these
+- Add DFP Resource Rows (components/PlatformConfigurationSettings.tsx:11219)
+  - Question: how do i use Add DFP Resource Rows
+  - Top match: Flight details (low, overlap 0)
+  - Preview: I think you're asking about Program Schedule. Which of these do you mean? 1. Flight details 2. Add flight tile 3. Add ground event None of these
+- Add Prefix (components/PlatformConfigurationSettings.tsx:11431)
+  - Question: how do i use Add Prefix
+  - Top match: Flight details (low, overlap 0)
+  - Preview: I think you're asking about Program Schedule. Which of these do you mean? 1. Flight details 2. Add ground event 3. Archived staff 4. Publish DFP None of these
+- Add Licence (components/PlatformConfigurationSettings.tsx:11980)
+  - Question: how do i use Add Licence
+  - Top match: Flight details (low, overlap 0)
+  - Preview: I think you're asking about Program Schedule. Which of these do you mean? 1. Flight details 2. Add ground event 3. Archived staff 4. Publish DFP None of these
+- Add to Templates (components/PlatformConfigurationSettings.tsx:12288)
+  - Question: how do i use Add to Templates
+  - Top match: Flight details (low, overlap 0)
+  - Preview: I think you're asking about staff management. Which of these do you mean? 1. Flight details 2. Add ground event 3. Master Permission Profiles 4. Training report 5. Archived staff None of these
+- Element Name (components/PlatformConfigurationSettings.tsx:12688)
+  - Question: where do i set Element Name
+  - Top match: Rank, Terminology & Labels (low, overlap 0)
+  - Preview: I think you're asking about Settings. Which of these do you mean? 1. Rank, Terminology & Labels 2. Staff Rank Equivalency Table 3. Personnel Qualifications 4. Scoring matrix elements 5. Course setup fields None of these
+- Add Element (components/PlatformConfigurationSettings.tsx:12791)
+  - Question: how do i use Add Element
+  - Top match: Flight details (low, overlap 0)
+  - Preview: I think you're asking about staff management. Which of these do you mean? 1. Flight details 2. Scoring matrix elements 3. Add ground event 4. Archived staff None of these
+- Operational Models (components/PlatformConfigurationSettings.tsx:13732)
+  - Question: where do i set Operational Models
+  - Top match: Aircraft availability (low, overlap 0)
+  - Preview: I think you're asking about Program Schedule. Which of these do you mean? 1. Aircraft availability 2. Personnel Qualifications 3. Open the DFP schedule 4. Initial Setup Wizard 5. Cancel, restore or delete a scheduled event None of these
+- Add Callsign (components/PlatformConfigurationSettings.tsx:13889)
+  - Question: how do i use Add Callsign
+  - Top match: Flight details (low, overlap 0)
+  - Preview: I think you're asking about staff management. Which of these do you mean? 1. Flight details 2. Add ground event 3. Archived staff None of these

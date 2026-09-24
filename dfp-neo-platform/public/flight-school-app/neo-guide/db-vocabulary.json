@@ -1,13 +1,31 @@
 {
   "schemaVersion": "neo-guide-db-vocabulary.v1",
-  "generatedAt": "2026-09-24T06:11:23.174Z",
+  "generatedAt": "2026-09-24T14:47:11.016Z",
   "source": {
     "type": "customer-database-safe-vocabulary",
-    "databaseConnected": false,
-    "message": "DATABASE_URL is not configured; database vocabulary was not scanned.",
-    "modelsScanned": 0,
-    "recordsScanned": 0,
-    "fieldsScanned": 0
+    "databaseConnected": true,
+    "modelsScanned": 7,
+    "recordsScanned": 246,
+    "fieldsScanned": 38,
+    "errors": [
+      "Course: lmpType: The column `Course.lmpType` does not exist in the current database.; academicLmpType: The column `Course.academicLmpType` does not exist in the current database.",
+      "CourseAcademicProgress: courseCode: The table `public.CourseAcademicProgress` does not exist in the current database.",
+      "CourseSettings: selectedAcademicLmp: The table `public.CourseSettings` does not exist in the current database.",
+      "EventCompletion: eventCode: The table `public.EventCompletion` does not exist in the current database.",
+      "IndividualLMP: lmpType: The table `public.IndividualLMP` does not exist in the current database.",
+      "ScheduleEventArchive: eventType: The table `public.ScheduleEventArchive` does not exist in the current database.",
+      "SctRequest: requestType: The table `public.SctRequest` does not exist in the current database.",
+      "Trainee: role: The column `Trainee.role` does not exist in the current database.; academicLmpType: The column `Trainee.academicLmpType` does not exist in the current database.",
+      "CommercialOrganisation: code: The table `public.CommercialOrganisation` does not exist in the current database.",
+      "CommercialLocation: organisationCode: The table `public.CommercialLocation` does not exist in the current database.",
+      "CommercialUnit: organisationCode: The table `public.CommercialUnit` does not exist in the current database.",
+      "CommercialAircraftType: code: The table `public.CommercialAircraftType` does not exist in the current database.",
+      "CommercialResourcePool: organisationCode: The table `public.CommercialResourcePool` does not exist in the current database.",
+      "CommercialModule: code: The table `public.CommercialModule` does not exist in the current database.",
+      "CommercialUnitModule: unitCode: The table `public.CommercialUnitModule` does not exist in the current database.",
+      "CommercialSchedulingRuleSet: organisationCode: The table `public.CommercialSchedulingRuleSet` does not exist in the current database.",
+      "AppSettings: orgId: The table `public.AppSettings` does not exist in the current database."
+    ]
   },
   "privacy": {
     "mode": "allowlisted-operational-terms-only",
@@ -24,5 +42,345 @@
       "raw schedule payloads"
     ]
   },
-  "terminologyIndex": []
+  "terminologyIndex": [
+    {
+      "term": "Normal",
+      "normalised": "normal",
+      "aliases": [],
+      "sources": [
+        "db:Personnel.seatConfig",
+        "db:Trainee.seatConfig"
+      ],
+      "count": 214
+    },
+    {
+      "term": "RAAF",
+      "normalised": "raaf",
+      "aliases": [],
+      "sources": [
+        "db:Personnel.service",
+        "db:Trainee.service"
+      ],
+      "count": 189
+    },
+    {
+      "term": "1FTS",
+      "normalised": "1fts",
+      "aliases": [],
+      "sources": [
+        "db:Course.unit",
+        "db:Personnel.unit",
+        "db:Trainee.unit"
+      ],
+      "count": 135
+    },
+    {
+      "term": "BPC+IPC",
+      "normalised": "bpc+ipc",
+      "aliases": [],
+      "sources": [
+        "db:Trainee.lmpType"
+      ],
+      "count": 127
+    },
+    {
+      "term": "PLTOFF",
+      "normalised": "pltoff",
+      "aliases": [],
+      "sources": [
+        "db:Trainee.rank"
+      ],
+      "count": 127
+    },
+    {
+      "term": "Trainee",
+      "normalised": "trainee",
+      "aliases": [],
+      "sources": [
+        "db:Trainee.permissions"
+      ],
+      "count": 127
+    },
+    {
+      "term": "QFI",
+      "normalised": "qfi",
+      "aliases": [],
+      "sources": [
+        "db:Personnel.role"
+      ],
+      "count": 79
+    },
+    {
+      "term": "Staff",
+      "normalised": "staff",
+      "aliases": [],
+      "sources": [
+        "db:Personnel.permissions"
+      ],
+      "count": 79
+    },
+    {
+      "term": "2FTS",
+      "normalised": "2fts",
+      "aliases": [],
+      "sources": [
+        "db:Personnel.unit",
+        "db:Trainee.unit"
+      ],
+      "count": 78
+    },
+    {
+      "term": "Pearce",
+      "normalised": "pearce",
+      "aliases": [],
+      "sources": [
+        "db:Personnel.location",
+        "db:Trainee.location"
+      ],
+      "count": 78
+    },
+    {
+      "term": "FLTLT",
+      "normalised": "fltlt",
+      "aliases": [],
+      "sources": [
+        "db:Personnel.rank"
+      ],
+      "count": 62
+    },
+    {
+      "term": "ADF301",
+      "normalised": "adf301",
+      "aliases": [],
+      "sources": [
+        "db:Course.code",
+        "db:Course.name",
+        "db:Trainee.course"
+      ],
+      "count": 27
+    },
+    {
+      "term": "ADF302",
+      "normalised": "adf302",
+      "aliases": [],
+      "sources": [
+        "db:Course.code",
+        "db:Course.name",
+        "db:Trainee.course"
+      ],
+      "count": 27
+    },
+    {
+      "term": "ADF303",
+      "normalised": "adf303",
+      "aliases": [],
+      "sources": [
+        "db:Course.code",
+        "db:Course.name",
+        "db:Trainee.course"
+      ],
+      "count": 27
+    },
+    {
+      "term": "available",
+      "normalised": "available",
+      "aliases": [],
+      "sources": [
+        "db:Aircraft.status"
+      ],
+      "count": 27
+    },
+    {
+      "term": "PC-21",
+      "normalised": "pc-21",
+      "aliases": [],
+      "sources": [
+        "db:Aircraft.type"
+      ],
+      "count": 27
+    },
+    {
+      "term": "FIC211",
+      "normalised": "fic211",
+      "aliases": [],
+      "sources": [
+        "db:Course.code",
+        "db:Course.name",
+        "db:Trainee.course"
+      ],
+      "count": 22
+    },
+    {
+      "term": "UnCat",
+      "normalised": "uncat",
+      "aliases": [],
+      "sources": [
+        "db:Personnel.category"
+      ],
+      "count": 16
+    },
+    {
+      "term": "ESL",
+      "normalised": "esl",
+      "aliases": [],
+      "sources": [
+        "db:Aircraft.configuration.configuration.location"
+      ],
+      "count": 15
+    },
+    {
+      "term": "SQNLDR",
+      "normalised": "sqnldr",
+      "aliases": [],
+      "sources": [
+        "db:Personnel.rank"
+      ],
+      "count": 13
+    },
+    {
+      "term": "ADF304",
+      "normalised": "adf304",
+      "aliases": [],
+      "sources": [
+        "db:Trainee.course"
+      ],
+      "count": 12
+    },
+    {
+      "term": "ADF305",
+      "normalised": "adf305",
+      "aliases": [],
+      "sources": [
+        "db:Trainee.course"
+      ],
+      "count": 12
+    },
+    {
+      "term": "Admin",
+      "normalised": "admin",
+      "aliases": [],
+      "sources": [
+        "db:Personnel.permissions"
+      ],
+      "count": 12
+    },
+    {
+      "term": "PEA",
+      "normalised": "pea",
+      "aliases": [],
+      "sources": [
+        "db:Aircraft.configuration.configuration.location"
+      ],
+      "count": 12
+    },
+    {
+      "term": "Mr",
+      "normalised": "mr",
+      "aliases": [],
+      "sources": [
+        "db:Personnel.rank"
+      ],
+      "count": 8
+    },
+    {
+      "term": "SIM IP",
+      "normalised": "sim ip",
+      "aliases": [],
+      "sources": [
+        "db:Personnel.role"
+      ],
+      "count": 8
+    },
+    {
+      "term": "B1",
+      "normalised": "b1",
+      "aliases": [],
+      "sources": [
+        "db:Personnel.category"
+      ],
+      "count": 6
+    },
+    {
+      "term": "CFS",
+      "normalised": "cfs",
+      "aliases": [],
+      "sources": [
+        "db:Personnel.unit"
+      ],
+      "count": 6
+    },
+    {
+      "term": "ACTIVE",
+      "normalised": "active",
+      "aliases": [],
+      "sources": [
+        "db:Course.status"
+      ],
+      "count": 5
+    },
+    {
+      "term": "FIC 210",
+      "normalised": "fic 210",
+      "aliases": [],
+      "sources": [
+        "db:Course.name",
+        "db:Trainee.course"
+      ],
+      "count": 5
+    },
+    {
+      "term": "RAN",
+      "normalised": "ran",
+      "aliases": [],
+      "sources": [
+        "db:Personnel.service"
+      ],
+      "count": 5
+    },
+    {
+      "term": "ARA",
+      "normalised": "ara",
+      "aliases": [],
+      "sources": [
+        "db:Personnel.service"
+      ],
+      "count": 4
+    },
+    {
+      "term": "IFF 6",
+      "normalised": "iff 6",
+      "aliases": [],
+      "sources": [
+        "db:Trainee.course"
+      ],
+      "count": 4
+    },
+    {
+      "term": "WGCDR",
+      "normalised": "wgcdr",
+      "aliases": [],
+      "sources": [
+        "db:Personnel.rank"
+      ],
+      "count": 4
+    },
+    {
+      "term": "EXEC",
+      "normalised": "exec",
+      "aliases": [],
+      "sources": [
+        "db:Personnel.flight"
+      ],
+      "count": 3
+    },
+    {
+      "term": "FIC210",
+      "normalised": "fic210",
+      "aliases": [],
+      "sources": [
+        "db:Course.code"
+      ],
+      "count": 1
+    }
+  ]
 }

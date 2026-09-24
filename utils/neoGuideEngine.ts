@@ -1054,9 +1054,14 @@ function resolveSettingsNavigationTarget(anchor: string | null | undefined, func
     'platform-trainee-rank-equivalency',
     'platform-staff-qualification-catalogue',
     'platform-staff-qualifications',
+    'platform-crew-position-labels',
+    'platform-personnel-terminology',
   ]);
   if (rankTerminologySubsections.has(cleanAnchor)) {
     return { sectionId: 'platform-rank-terminology', focusSubsectionId: cleanAnchor };
+  }
+  if (cleanAnchor === 'platform-user-access-records') {
+    return { sectionId: 'platform-user-access', focusSubsectionId: cleanAnchor };
   }
 
   const platformSectionAnchors = new Set([

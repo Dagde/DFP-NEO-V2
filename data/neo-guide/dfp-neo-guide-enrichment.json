@@ -773,6 +773,34 @@
       "auditStatus": "IMPLEMENTED - manually enriched from coverage gap review"
     },
     {
+      "id": "function.curated.scheduling.cancel-impacted-events",
+      "name": "Cancel Impacted Events",
+      "aliases": ["cancel impacted events", "pause cancel impacted events", "cancel affected events", "pause flight ops cancel", "cancel events after pause", "cancel only after pause"],
+      "location": {
+        "page": "Program Schedule",
+        "route": null,
+        "component": "components/PauseFlightOpsPanel.tsx",
+        "anchor": "nav-dfp"
+      },
+      "purpose": "Cancels the schedule events affected by a Pause Flight Ops action without rebuilding the remainder of the DFP.",
+      "procedureSteps": [
+        "Open DFP.",
+        "Open Pause Flight Ops.",
+        "Enter or confirm the pause period.",
+        "Review the affected events.",
+        "Choose Cancel Impacted Events when those affected events should be cancelled rather than rebuilt.",
+        "Review the resulting schedule before publishing."
+      ],
+      "inputs": [],
+      "outputs": ["Marks the events affected by the pause as cancelled according to the Pause Flight Ops workflow."],
+      "permissions": ["dfp.view"],
+      "dependencies": ["A pause period and affected schedule events."],
+      "businessRules": ["Cancel Impacted Events is part of the pause workflow. It is different from cancelling a single selected tile from the flight details window."],
+      "failureConditions": ["The action is disabled when there are no affected event types, validation errors exist, or the user lacks schedule permissions."],
+      "relatedFunctions": ["function.curated.scheduling.pause-flight-ops", "function.curated.scheduling.cancel-restore-delete-event"],
+      "auditStatus": "IMPLEMENTED - manually enriched from askability audit"
+    },
+    {
       "id": "function.curated.people.archived-staff",
       "name": "Archived staff",
       "aliases": ["archived staff", "archived instructors", "restore instructor", "restore staff", "former staff", "inactive staff", "search archived staff"],
@@ -911,7 +939,7 @@
     {
       "id": "function.curated.training.scoring-matrix-elements",
       "name": "Scoring matrix elements",
-      "aliases": ["scoring matrix", "add flight element", "delete flight element", "add phrase", "phrase bank", "slow typing", "edit scoring matrix", "delete element"],
+      "aliases": ["scoring matrix", "add flight element", "delete flight element", "add phrase", "delete phrase", "phrase bank", "slow typing", "edit scoring matrix", "delete element"],
       "location": {
         "page": "Settings",
         "route": null,
@@ -1104,7 +1132,7 @@
     {
       "id": "function.curated.scheduling.priority-currency-requests",
       "name": "Priority and currency requests",
-      "aliases": ["delete priority event", "remove priority event", "delete crew currency request", "remove currency event", "add currency", "standard currency event", "crew currency", "priority event"],
+      "aliases": ["delete priority event", "remove priority event", "delete crew currency request", "remove currency event", "add currency", "standard currency event", "crew currency", "priority event", "directed task", "manual directed task", "delete directed task", "remove directed task", "tasking request"],
       "location": {
         "page": "Priorities",
         "route": null,
@@ -1114,7 +1142,7 @@
       "purpose": "Manages priority events and currency requests that influence scheduling and NEO Build attention.",
       "procedureSteps": [
         "Open Priorities.",
-        "Find the priority event or currency request.",
+        "Find the priority event, directed task or currency request.",
         "Add, edit, remove or delete the request as required.",
         "Check the selected people, currency/event and date details.",
         "Run or review NEO Build after changing priorities that should affect scheduling."
@@ -1123,7 +1151,7 @@
       "outputs": ["Updates priority/currency request data used by scheduling and planning views."],
       "permissions": ["dfp.view"],
       "dependencies": ["Configured currencies, events, staff and trainees."],
-      "businessRules": ["Priority and currency requests can influence what the build tries to schedule but do not guarantee allocation when other constraints prevent it."],
+      "businessRules": ["Priority, directed task and currency requests can influence what the build tries to schedule but do not guarantee allocation when other constraints prevent it."],
       "failureConditions": ["Requests can fail or have no effect if required currency/event data is missing, expired or blocked by availability/conflict constraints."],
       "relatedFunctions": ["function.curated.scheduling.neo-build", "function.curated.settings.currency-builder"],
       "auditStatus": "IMPLEMENTED - manually enriched from coverage gap review"
@@ -1402,6 +1430,45 @@
       "auditStatus": "IMPLEMENTED - manually enriched from coverage gap review"
     },
     {
+      "id": "function.curated.settings.crew-position-labels",
+      "name": "Crew Position Labels",
+      "aliases": ["crew position labels", "crew position", "crew positions", "crew role", "crew roles", "remove crew position", "remove crew role", "delete crew position", "delete crew role", "crew labels", "position labels"],
+      "location": {
+        "page": "Settings",
+        "route": null,
+        "component": "components/PlatformConfigurationSettings.tsx",
+        "anchor": "platform-crew-position-labels"
+      },
+      "purpose": "Configures the customer-facing labels for crew positions used in scheduling and flight details.",
+      "procedureSteps": [
+        "Open Settings.",
+        "Open Resources & Configuration.",
+        "Open Rank, Terminology & Labels.",
+        "Scroll to Crew Position Labels.",
+        "Add, edit, remove or rename the crew position label as required.",
+        "Save the settings."
+      ],
+      "inputs": [
+        {
+          "fieldName": "Crew Position Label",
+          "fieldType": "text/list",
+          "permittedValues": ["Configured local crew position names"],
+          "defaultValue": "Configured deployment default",
+          "required": false,
+          "validation": "Requires Rank, Terminology & Labels edit permission and password unlock.",
+          "dependencies": ["settings.rankTerminology.edit permission"],
+          "sourceOfData": "Platform configuration settings"
+        }
+      ],
+      "outputs": ["Updates crew role labels displayed in scheduling, flight details and related people/resource views."],
+      "permissions": ["settings.view", "settings.rankTerminology.edit"],
+      "dependencies": ["Settings access and, for edits, Rank, Terminology & Labels edit permission plus password confirmation."],
+      "businessRules": ["Crew position labels change displayed terminology; they do not delete historic records by themselves."],
+      "failureConditions": ["The section is read-only if the user lacks Rank, Terminology & Labels edit permission. The fields remain locked until Edit is pressed and the password is accepted."],
+      "relatedFunctions": ["function.curated.settings.rank-terminology", "function.curated.scheduling.flight-detail-fields"],
+      "auditStatus": "IMPLEMENTED - manually enriched from askability audit"
+    },
+    {
       "id": "function.curated.settings.rank-terminology",
       "name": "Rank, Terminology & Labels",
       "aliases": ["rank", "ranks", "set rank", "set ranks", "rank settings", "rank terminology", "rank labels", "rank order", "rank ordering", "rank equivalency", "rank equivalence", "rank preset", "service ranks"],
@@ -1567,6 +1634,170 @@
       "businessRules": ["Qualification terminology can differ from duty labels. For example, an instructor duty label may be displayed differently from the qualification name shown on a person's profile."],
       "failureConditions": ["The section is read-only if the user lacks Rank, Terminology & Labels edit permission or has not unlocked the section with Edit and password confirmation."],
       "relatedFunctions": ["function.curated.settings.rank-terminology", "function.curated.people.staff-management", "function.curated.people.trainee-roster"],
+      "auditStatus": "IMPLEMENTED - manually enriched from askability audit"
+    },
+    {
+      "id": "function.curated.settings.user-accounts",
+      "name": "User accounts",
+      "aliases": ["user account", "user accounts", "delete user account", "remove user account", "login account", "delete login", "remove login", "user list", "account access"],
+      "location": {
+        "page": "Settings",
+        "route": null,
+        "component": "components/UserListSection.tsx",
+        "anchor": "platform-user-access-records"
+      },
+      "purpose": "Manages login/user account records and the account list used for access to DFP-NEO.",
+      "procedureSteps": [
+        "Open Settings.",
+        "Open People & Permissions.",
+        "Open User Access.",
+        "Find the user account in the list.",
+        "Use Edit to change the account, or the trash/delete action only when the login account must be removed.",
+        "Confirm the protected action if prompted."
+      ],
+      "outputs": ["Updates or removes user account records used for application access."],
+      "permissions": ["settings.view", "settings.userAccess.edit"],
+      "dependencies": ["User Access edit permission and password confirmation for protected actions."],
+      "businessRules": ["Deleting a user account affects application access. It is separate from archiving or deleting a staff or trainee operational record."],
+      "failureConditions": ["The delete action is unavailable if the user lacks User Access edit permission or the section is locked."],
+      "relatedFunctions": ["function.curated.settings.user-access", "function.curated.settings.permission-profiles", "function.curated.people.delete-staff", "function.curated.people.archive-delete-trainee"],
+      "auditStatus": "IMPLEMENTED - manually enriched from askability audit"
+    },
+    {
+      "id": "function.curated.settings.dfp-resource-rows",
+      "name": "DFP Resource Rows",
+      "aliases": ["dfp resource rows", "resource rows", "delete selected rows", "delete dfp resource rows", "remove resource rows", "aircraft rows", "simulator rows", "resource row setup"],
+      "location": {
+        "page": "Settings",
+        "route": null,
+        "component": "components/PlatformConfigurationSettings.tsx",
+        "anchor": "platform-dfp-resource-rows"
+      },
+      "purpose": "Configures the aircraft, simulator or other DFP resource rows that appear on the daily schedule.",
+      "procedureSteps": [
+        "Open Settings.",
+        "Open Resources & Configuration.",
+        "Open DFP Resource Rows.",
+        "Click Edit and confirm your password if the section is locked.",
+        "Add, edit or select resource rows as required.",
+        "Use Delete Selected Rows only for rows entered in error, then save the settings."
+      ],
+      "outputs": ["Updates the resource rows shown on the DFP timeline and used by scheduling."],
+      "permissions": ["settings.view", "settings.platform.edit"],
+      "dependencies": ["Platform configuration access and valid unit/location configuration."],
+      "businessRules": ["Deleting resource rows changes the resources available to the schedule. It should not be used as a substitute for marking an aircraft or simulator unavailable."],
+      "failureConditions": ["Delete Selected Rows is unavailable until the section is unlocked, a row is selected and the user has edit permission."],
+      "relatedFunctions": ["function.curated.scheduling.aircraft-availability", "function.curated.settings.aircraft-setup"],
+      "auditStatus": "IMPLEMENTED - manually enriched from askability audit"
+    },
+    {
+      "id": "function.curated.settings.user-access",
+      "name": "User access scopes",
+      "aliases": ["user access", "access scope", "delete scope", "remove scope", "permission scope", "scope", "user permission scope", "where permissions apply", "location scope", "unit scope", "feature scope"],
+      "location": {
+        "page": "Settings",
+        "route": null,
+        "component": "components/PlatformConfigurationSettings.tsx",
+        "anchor": "platform-user-access-records"
+      },
+      "purpose": "Controls where a user's permission profiles apply, such as location, unit and enabled feature area.",
+      "procedureSteps": [
+        "Open Settings.",
+        "Open People & Permissions.",
+        "Open User Access.",
+        "Select the user.",
+        "Add, edit or delete the Access Scope row that controls where the user's permissions apply.",
+        "Save the settings."
+      ],
+      "outputs": ["Updates the access scope records that connect users, permission profiles, locations, units and feature areas."],
+      "permissions": ["settings.view", "settings.userAccess.edit"],
+      "dependencies": ["User Access edit permission and valid location/unit/module configuration."],
+      "businessRules": ["Permission profiles define what a user can do; access scopes define where those permissions apply."],
+      "failureConditions": ["Delete Scope is unavailable if the section is locked or the user lacks User Access edit permission."],
+      "relatedFunctions": ["function.curated.settings.permission-profiles", "function.curated.settings.user-accounts"],
+      "auditStatus": "IMPLEMENTED - manually enriched from askability audit"
+    },
+    {
+      "id": "function.curated.settings.permission-profiles",
+      "name": "Master Permission Profiles",
+      "aliases": ["permission profiles", "permissions role", "master permission profiles", "add role", "delete profile", "delete permission profile", "add exception", "role templates", "permission role"],
+      "location": {
+        "page": "Settings",
+        "route": null,
+        "component": "components/PlatformConfigurationSettings.tsx",
+        "anchor": "platform-permission-profiles"
+      },
+      "purpose": "Builds role and exception templates that control app access for users in the active unit.",
+      "procedureSteps": [
+        "Open Settings.",
+        "Open People & Permissions.",
+        "Open Master Permission Profiles.",
+        "Click Edit if the section is locked.",
+        "Use Add Role or Add Exception to create a profile.",
+        "Select an existing profile and use Delete Profile only when that access template should be removed.",
+        "Save the settings."
+      ],
+      "inputs": [],
+      "outputs": ["Creates, edits or deletes permission profile templates used by user access controls."],
+      "permissions": ["settings.view", "settings.permissionProfiles.edit"],
+      "dependencies": ["Active unit context and permission to edit permission profiles."],
+      "businessRules": ["Permission profiles control application access only. Operational staff and trainee roles remain separate scheduling/training data."],
+      "failureConditions": ["Delete Profile is disabled until a profile is selected and the section is unlocked for editing."],
+      "relatedFunctions": ["function.curated.settings.user-access", "function.curated.settings.rank-terminology"],
+      "auditStatus": "IMPLEMENTED - manually enriched from askability audit"
+    },
+    {
+      "id": "function.curated.people.profile-photo",
+      "name": "Profile photo",
+      "aliases": ["profile photo", "profile picture", "remove profile photo", "remove photo", "add profile photo", "change profile photo", "upload profile photo", "staff profile photo", "trainee profile photo"],
+      "location": {
+        "page": "Staff",
+        "route": null,
+        "component": "components/InstructorProfileFlyout.tsx",
+        "anchor": "staff-profile-photo"
+      },
+      "purpose": "Adds, changes or removes the photo shown on a staff or trainee profile.",
+      "procedureSteps": [
+        "Open Staff or Trainee.",
+        "Open the person's profile.",
+        "Enter edit mode.",
+        "Click the profile photo frame to upload or change a photo.",
+        "Use Remove photo if an existing photo should be removed.",
+        "Save the profile changes."
+      ],
+      "inputs": [],
+      "outputs": ["Updates the person's profile photo state after the profile is saved."],
+      "permissions": ["staff.view", "trainee.roster.view"],
+      "dependencies": ["The profile must be editable and the image must meet the displayed file type and size limits."],
+      "businessRules": ["Photo changes are staged in edit mode and saved when the profile is saved."],
+      "failureConditions": ["Upload or removal may fail if the file is too large, an unsupported type, or the user lacks permission to edit the profile."],
+      "relatedFunctions": ["function.curated.people.staff-management", "function.curated.people.trainee-roster"],
+      "auditStatus": "IMPLEMENTED - manually enriched from askability audit"
+    },
+    {
+      "id": "function.curated.security.password-confirmation",
+      "name": "Password confirmation",
+      "aliases": ["current password", "enter your password", "enter your password to confirm", "enter your login password", "password confirmation", "confirm password", "login password", "password prompt"],
+      "location": {
+        "page": "Application shell",
+        "route": null,
+        "component": "components/DarkMessageModal.tsx",
+        "anchor": "password-confirmation"
+      },
+      "purpose": "Confirms the current user's password before a protected action such as permanent deletion or restricted editing proceeds.",
+      "procedureSteps": [
+        "This is not a setting to configure.",
+        "When the password prompt appears, enter your own current login password.",
+        "Review the warning text carefully.",
+        "Continue only if the protected action is intended."
+      ],
+      "inputs": [],
+      "outputs": ["Allows or blocks the protected action depending on password verification."],
+      "permissions": [],
+      "dependencies": ["The user must know their current login password and have permission for the protected action."],
+      "businessRules": ["Password confirmation is used as an extra guard for high-impact operations. It does not change the user's password."],
+      "failureConditions": ["The action will not proceed if the password is incorrect or the user lacks the required permission."],
+      "relatedFunctions": ["function.curated.people.archive-delete-trainee", "function.curated.training.archive-course", "function.curated.settings.permission-profiles"],
       "auditStatus": "IMPLEMENTED - manually enriched from askability audit"
     },
     {
