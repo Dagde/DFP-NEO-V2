@@ -17,6 +17,7 @@ const model = JSON.parse(fs.readFileSync(modelPath, 'utf8'));
 const ask = (question, context = {}) => answerNeoGuideQuestion(question, model, context);
 const topId = (question, context = {}) => ask(question, context).matches[0]?.functionId;
 const terminology = new Set((model.terminologyIndex || []).map(entry => entry.normalised || String(entry.term || '').toLowerCase()));
+const countMatches = (value, pattern) => (value.match(pattern) || []).length;
 
 assert.ok((model.terminologyIndex || []).length > 1000, 'Generated terminology index should contain substantial app vocabulary.');
 assert.ok(terminology.has('auth') || terminology.has('flight auth'), 'Terminology should include auth wording from the implementation.');
@@ -145,6 +146,16 @@ assert.match(archiveTraineeAnswer.answer, /Archive Trainee \(Recommended\)/i, 'A
 assert.match(archiveTraineeAnswer.answer, /Open Trainee/i, 'Archive trainee answer should start from Trainee.');
 assert.match(archiveTraineeAnswer.answer, /password/i, 'Archive trainee answer should mention password confirmation.');
 assert.doesNotMatch(archiveTraineeAnswer.answer, /Staff|Course management/i, 'Archive trainee answer must not give staff or course workflow.');
+assert.equal(
+  countMatches(archiveTraineeAnswer.answer, /Archive Trainee is recommended/i),
+  0,
+  'Archive trainee answer should not repeat the archive/delete warning after the numbered steps.'
+);
+assert.equal(
+  countMatches(archiveTraineeAnswer.answer, /Delete Permanently/i),
+  1,
+  'Archive trainee answer should not repeat the permanent-delete warning.'
+);
 
 const deleteTraineeAnswer = ask('how do I delete a trainee');
 assert.equal(
@@ -395,7 +406,7 @@ assert.match(publishAnswer.answer, /Validation Check/i, 'Publish answer should m
 
 const riskEventsAnswer = ask('why are there no low risk events');
 assert.equal(riskEventsAnswer.matches[0]?.functionId, 'function.curated.analytics.build-intelligence-risk-events');
-assert.match(riskEventsAnswer.answer, /high-grade|low-variance|minimum-attempt/i, 'Low risk answer should explain the criteria.');
+assert.match(riskEventsAnswer.answer, /strong grades|low variance|enough attempts|high-grade|low-variance|minimum-attempt/i, 'Low risk answer should explain the criteria.');
 
 const autoNotificationAnswer = ask('who gets an auto message after a failed event');
 assert.equal(autoNotificationAnswer.matches[0]?.functionId, 'function.curated.messaging.auto-notifications');

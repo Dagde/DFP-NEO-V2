@@ -2065,21 +2065,71 @@ function buildAnswerText(intent, match, workflowOption) {
   const rule = first(fn.businessRules);
   const steps = workflowOption ? formatWorkflowOptionSteps(workflowOption) : formatProcedureSteps(fn);
   const optionPrefix = workflowOption ? `${workflowOption.name}: ${workflowOption.summary || purpose}` : purpose;
+  const additiveRule = rule && !isMeaningfullyCovered(rule, [steps, purpose]) ? rule : "";
   if (intent === "WHY" || intent === "TROUBLESHOOT") {
-    const reasons = [failure, rule, dependency].filter(Boolean);
+    const reasons = dedupeAnswerFragments([failure, rule, dependency], [optionPrefix, steps]);
     return reasons.length > 0 ? `${optionPrefix}${steps ? ` ${steps}` : ""} The most relevant checks are: ${reasons.join(" ")}` : `${optionPrefix}${steps ? ` ${steps}` : location ? ` ${location} to review it.` : ""}`;
   }
   if (intent === "NAVIGATE" || intent === "FIND") {
     return steps || `${fn.name} is in ${locationPage}.`;
   }
   if (intent === "HOW_TO") {
-    return `${optionPrefix}${steps ? ` ${steps}` : location ? ` Start from ${fn.location?.page}.` : ""}${rule ? ` ${rule}` : ""}`;
+    return `${optionPrefix}${steps ? ` ${steps}` : location ? ` Start from ${fn.location?.page}.` : ""}${additiveRule ? ` ${additiveRule}` : ""}`;
   }
   if (intent === "PERMISSION") {
     const permissionText = match.permissions.length > 0 ? match.permissions.join(", ") : "the relevant page permission";
     return `${fn.name} is controlled by ${permissionText}. If it is disabled, check the user role and permission profile for that function.`;
   }
   return `${optionPrefix}${steps ? ` ${steps}` : location ? ` ${location} for the relevant controls.` : ""}`;
+}
+function dedupeAnswerFragments(values, existingContext) {
+  const accepted = [];
+  for (const value of values) {
+    if (!value) continue;
+    const contexts = [...existingContext, ...accepted];
+    if (isMeaningfullyCovered(value, contexts)) continue;
+    accepted.push(value);
+  }
+  return accepted;
+}
+function isMeaningfullyCovered(candidate, contexts) {
+  const candidateText = normaliseForAnswerDedup(candidate);
+  if (candidateText.length < 18) return false;
+  const candidateTokens = meaningfulAnswerTokens(candidate);
+  if (candidateTokens.length < 4) return false;
+  return contexts.some((context) => {
+    if (!context) return false;
+    const contextText = normaliseForAnswerDedup(context);
+    if (!contextText) return false;
+    if (contextText.includes(candidateText) || candidateText.includes(contextText)) return true;
+    const contextTokens = new Set(meaningfulAnswerTokens(context));
+    if (contextTokens.size < 4) return false;
+    const overlap = candidateTokens.filter((token) => contextTokens.has(token)).length;
+    const candidateCoverage = overlap / candidateTokens.length;
+    const contextCoverage = overlap / contextTokens.size;
+    return candidateCoverage >= 0.45 && contextCoverage >= 0.25;
+  });
+}
+function normaliseForAnswerDedup(value) {
+  return normalise(value).replace(/\brecommended\b/g, "").replace(/\brequired\b/g, "").replace(/\s+/g, " ").trim();
+}
+function meaningfulAnswerTokens(value) {
+  const seen = /* @__PURE__ */ new Set();
+  const tokens = tokenize(value).filter((token) => token.length > 2 && !LOW_SIGNAL_MATCH_TOKENS.has(token)).map((token) => {
+    if (token === "keeping") return "keep";
+    if (token === "keeps") return "keep";
+    if (token === "hidden") return "hide";
+    if (token === "hides") return "hide";
+    if (token === "restored") return "restore";
+    if (token === "removes") return "remove";
+    if (token === "removed") return "remove";
+    return token;
+  });
+  return tokens.filter((token) => {
+    if (seen.has(token)) return false;
+    seen.add(token);
+    return true;
+  });
 }
 function formatProcedureSteps(fn) {
   if (Array.isArray(fn.procedureSteps) && fn.procedureSteps.length > 0) {

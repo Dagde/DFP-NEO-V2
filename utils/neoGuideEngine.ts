@@ -857,9 +857,10 @@ function buildAnswerText(
     ? formatWorkflowOptionSteps(workflowOption)
     : formatProcedureSteps(fn);
   const optionPrefix = workflowOption ? `${workflowOption.name}: ${workflowOption.summary || purpose}` : purpose;
+  const additiveRule = rule && !isMeaningfullyCovered(rule, [steps, purpose]) ? rule : '';
 
   if (intent === 'WHY' || intent === 'TROUBLESHOOT') {
-    const reasons = [failure, rule, dependency].filter(Boolean);
+    const reasons = dedupeAnswerFragments([failure, rule, dependency], [optionPrefix, steps]);
     return reasons.length > 0
       ? `${optionPrefix}${steps ? ` ${steps}` : ''} The most relevant checks are: ${reasons.join(' ')}`
       : `${optionPrefix}${steps ? ` ${steps}` : location ? ` ${location} to review it.` : ''}`;
@@ -870,7 +871,7 @@ function buildAnswerText(
   }
 
   if (intent === 'HOW_TO') {
-    return `${optionPrefix}${steps ? ` ${steps}` : location ? ` Start from ${fn.location?.page}.` : ''}${rule ? ` ${rule}` : ''}`;
+    return `${optionPrefix}${steps ? ` ${steps}` : location ? ` Start from ${fn.location?.page}.` : ''}${additiveRule ? ` ${additiveRule}` : ''}`;
   }
 
   if (intent === 'PERMISSION') {
@@ -879,6 +880,67 @@ function buildAnswerText(
   }
 
   return `${optionPrefix}${steps ? ` ${steps}` : location ? ` ${location} for the relevant controls.` : ''}`;
+}
+
+function dedupeAnswerFragments(values: Array<string | undefined>, existingContext: Array<string | undefined>): string[] {
+  const accepted: string[] = [];
+  for (const value of values) {
+    if (!value) continue;
+    const contexts = [...existingContext, ...accepted];
+    if (isMeaningfullyCovered(value, contexts)) continue;
+    accepted.push(value);
+  }
+  return accepted;
+}
+
+function isMeaningfullyCovered(candidate: string, contexts: Array<string | undefined>): boolean {
+  const candidateText = normaliseForAnswerDedup(candidate);
+  if (candidateText.length < 18) return false;
+  const candidateTokens = meaningfulAnswerTokens(candidate);
+  if (candidateTokens.length < 4) return false;
+
+  return contexts.some((context) => {
+    if (!context) return false;
+    const contextText = normaliseForAnswerDedup(context);
+    if (!contextText) return false;
+    if (contextText.includes(candidateText) || candidateText.includes(contextText)) return true;
+
+    const contextTokens = new Set(meaningfulAnswerTokens(context));
+    if (contextTokens.size < 4) return false;
+    const overlap = candidateTokens.filter((token) => contextTokens.has(token)).length;
+    const candidateCoverage = overlap / candidateTokens.length;
+    const contextCoverage = overlap / contextTokens.size;
+    return candidateCoverage >= 0.45 && contextCoverage >= 0.25;
+  });
+}
+
+function normaliseForAnswerDedup(value: string): string {
+  return normalise(value)
+    .replace(/\brecommended\b/g, '')
+    .replace(/\brequired\b/g, '')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+function meaningfulAnswerTokens(value: string): string[] {
+  const seen = new Set<string>();
+  const tokens = tokenize(value)
+    .filter((token) => token.length > 2 && !LOW_SIGNAL_MATCH_TOKENS.has(token))
+    .map((token) => {
+      if (token === 'keeping') return 'keep';
+      if (token === 'keeps') return 'keep';
+      if (token === 'hidden') return 'hide';
+      if (token === 'hides') return 'hide';
+      if (token === 'restored') return 'restore';
+      if (token === 'removes') return 'remove';
+      if (token === 'removed') return 'remove';
+      return token;
+    });
+  return tokens.filter((token) => {
+    if (seen.has(token)) return false;
+    seen.add(token);
+    return true;
+  });
 }
 
 function formatProcedureSteps(fn: NeoGuideFunction): string {
