@@ -55989,7 +55989,16 @@ appliedUpdates.forEach(update => {
                     activeView={activeView}
                     selectedRecordLabel={selectedPersonForProfile?.name || selectedEvent?.displayTitle || selectedEvent?.flightNumber || ''}
                     canUsePlatformPermission={canUsePlatformPermission}
-                    onNavigate={handleNavigation}
+                    onNavigate={(view, action) => {
+                        if (view === 'Settings' && action?.settingsSectionId) {
+                            handleNavigateToSettingsSection({
+                                sectionId: action.settingsSectionId,
+                                focusSubsectionId: action.settingsFocusSubsectionId || action.highlightTarget || action.anchor || undefined,
+                            });
+                            return;
+                        }
+                        handleNavigation(view);
+                    }}
                     onClose={() => setShowNeoGuidePanel(false)}
                 />
             )}

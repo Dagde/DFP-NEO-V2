@@ -16,7 +16,7 @@ interface NeoGuidePanelProps {
   activeView: string;
   selectedRecordLabel?: string;
   canUsePlatformPermission?: (permissionId: string) => boolean;
-  onNavigate: (view: string) => void;
+  onNavigate: (view: string, action?: NeoGuideNavigationAction) => void;
   onClose: () => void;
 }
 
@@ -289,7 +289,12 @@ const NeoGuidePanel: React.FC<NeoGuidePanelProps> = ({
   const performAction = (action: NeoGuideNavigationAction) => {
     const view = action.page ? pageToView[action.page] : null;
     if (view && view !== activeView) {
-      onNavigate(view);
+      onNavigate(view, action);
+      window.setTimeout(() => tryHighlightActionTarget(action, 0, true), 260);
+      return;
+    }
+    if (view === activeView && action.settingsSectionId) {
+      onNavigate(view, action);
       window.setTimeout(() => tryHighlightActionTarget(action, 0, true), 260);
       return;
     }

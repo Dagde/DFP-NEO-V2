@@ -1,6 +1,6 @@
 # NEO Guide Source Audit
 
-Generated: 2026-09-24T10:38:14.147Z
+Generated: 2026-09-24T13:34:58.380Z
 
 ## Status
 
@@ -16,12 +16,12 @@ This is the Phase 2 source-derived knowledge model foundation for NEO Guide, wit
 - Express endpoints found: 198
 - Prisma models found: 37
 - Permission references found: 510
-- Warning/error/status messages found: 2933
+- Warning/error/status messages found: 2934
 - Terminology records generated: 5000
-- Curated workflow functions: 59
+- Curated workflow functions: 60
 - Curated concept records: 5
 - Curated synonym groups: 7
-- Function records generated: 3793
+- Function records generated: 3794
 - Concept graph nodes: 59
 - Concept graph edges: 1463
 

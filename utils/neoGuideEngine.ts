@@ -98,6 +98,8 @@ export interface NeoGuideNavigationAction {
   route?: string | null;
   anchor?: string | null;
   highlightTarget?: string | null;
+  settingsSectionId?: string | null;
+  settingsFocusSubsectionId?: string | null;
 }
 
 export interface NeoGuideMatch {
@@ -989,13 +991,71 @@ function buildNavigationAction(
   const page = workflowOption?.page || location?.page || null;
   const anchor = workflowOption?.anchor || location?.anchor || null;
   if (!page && !location?.route && !anchor) return undefined;
+  const settingsTarget = page === 'Settings'
+    ? resolveSettingsNavigationTarget(anchor, match.name)
+    : null;
   return {
     label: anchor ? `Open ${workflowOption?.name || match.name}` : `Open ${page || match.name}`,
     page,
     route: location?.route || null,
     anchor,
-    highlightTarget: anchor
+    highlightTarget: anchor,
+    settingsSectionId: settingsTarget?.sectionId || null,
+    settingsFocusSubsectionId: settingsTarget?.focusSubsectionId || null,
   };
+}
+
+function resolveSettingsNavigationTarget(anchor: string | null | undefined, functionName: string): { sectionId: string; focusSubsectionId?: string } | null {
+  const cleanAnchor = String(anchor || '').trim();
+  const cleanName = normalise(functionName);
+  if (!cleanAnchor || cleanAnchor === 'nav-settings') {
+    if (/\bformation\b.*\bcallsign|\bcallsign\b.*\bformation\b/.test(cleanName)) {
+      return { sectionId: 'platform-rank-terminology', focusSubsectionId: 'platform-formation-callsigns' };
+    }
+    if (/\bcallsign/.test(cleanName)) {
+      return { sectionId: 'platform-rank-terminology', focusSubsectionId: 'platform-unit-callsigns' };
+    }
+    return null;
+  }
+
+  const rankTerminologySubsections = new Set([
+    'platform-unit-callsigns',
+    'platform-formation-callsigns',
+    'platform-staff-rank-equivalency',
+    'platform-trainee-rank-equivalency',
+    'platform-staff-qualification-catalogue',
+  ]);
+  if (rankTerminologySubsections.has(cleanAnchor)) {
+    return { sectionId: 'platform-rank-terminology', focusSubsectionId: cleanAnchor };
+  }
+
+  const platformSectionAnchors = new Set([
+    'platform-configuration-health',
+    'platform-organisation-locations',
+    'platform-units',
+    'platform-task-profiles',
+    'platform-master-lmp-access',
+    'platform-aircraft-setup',
+    'platform-dfp-resource-rows',
+    'platform-unit-modules',
+    'platform-settings-visibility',
+    'platform-deployment-readiness',
+    'platform-operational-runbook',
+    'platform-licensing',
+    'platform-permission-profiles',
+    'platform-rank-terminology',
+    'platform-labels-terminology',
+    'platform-user-access',
+    'platform-scheduling-rule-sets',
+  ]);
+  if (platformSectionAnchors.has(cleanAnchor)) {
+    return { sectionId: cleanAnchor, focusSubsectionId: cleanAnchor };
+  }
+  if (cleanAnchor.startsWith('platform-')) {
+    return { sectionId: cleanAnchor, focusSubsectionId: cleanAnchor };
+  }
+
+  return null;
 }
 
 function tokenize(value: string): string[] {

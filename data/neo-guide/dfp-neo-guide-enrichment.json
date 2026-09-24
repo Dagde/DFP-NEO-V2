@@ -1354,7 +1354,7 @@
         "page": "Settings",
         "route": null,
         "component": "components/PlatformConfigurationSettings.tsx",
-        "anchor": "nav-settings"
+        "anchor": "platform-unit-callsigns"
       },
       "purpose": "Configures callsign labels used by flight tiles and related schedule displays.",
       "procedureSteps": [
@@ -1371,6 +1371,34 @@
       "businessRules": ["Callsigns are display/configuration data; changing them can alter what appears on DFP tiles but does not by itself authorise or schedule a flight."],
       "failureConditions": ["A callsign field can be unavailable if the unit/location hierarchy has not been configured."],
       "relatedFunctions": ["function.curated.scheduling.flight-detail-fields", "function.curated.workflow.initial-setup-wizard"],
+      "auditStatus": "IMPLEMENTED - manually enriched from coverage gap review"
+    },
+    {
+      "id": "function.curated.settings.formation-callsigns",
+      "name": "Formation callsigns",
+      "aliases": ["formation callsigns", "formation callsign", "set formation callsigns", "configure formation callsigns", "formation call signs", "formation call sign"],
+      "location": {
+        "page": "Settings",
+        "route": null,
+        "component": "components/PlatformConfigurationSettings.tsx",
+        "anchor": "platform-formation-callsigns"
+      },
+      "purpose": "Configures the formation callsigns available for unit formation events.",
+      "procedureSteps": [
+        "Open Settings.",
+        "Open Resources & Configuration.",
+        "Open Rank, Terminology & Labels.",
+        "Scroll to Formation Callsigns.",
+        "Add or edit the formation callsign name, code, unit and location details.",
+        "Save the settings."
+      ],
+      "inputs": [],
+      "outputs": ["Updates formation callsign configuration used when creating or scheduling formation events."],
+      "permissions": ["settings.view"],
+      "dependencies": ["Configured units and locations."],
+      "businessRules": ["Formation callsigns are filtered by unit so only relevant formation options are shown for the active unit context."],
+      "failureConditions": ["Formation callsigns may not appear if no unit/location records exist or the Settings section is locked/read-only."],
+      "relatedFunctions": ["function.curated.settings.unit-callsigns", "function.curated.scheduling.flight-detail-fields"],
       "auditStatus": "IMPLEMENTED - manually enriched from coverage gap review"
     },
     {

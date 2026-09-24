@@ -2173,13 +2173,65 @@ function buildNavigationAction(match, workflowOption) {
   const page = workflowOption?.page || location?.page || null;
   const anchor = workflowOption?.anchor || location?.anchor || null;
   if (!page && !location?.route && !anchor) return void 0;
+  const settingsTarget = page === "Settings" ? resolveSettingsNavigationTarget(anchor, match.name) : null;
   return {
     label: anchor ? `Open ${workflowOption?.name || match.name}` : `Open ${page || match.name}`,
     page,
     route: location?.route || null,
     anchor,
-    highlightTarget: anchor
+    highlightTarget: anchor,
+    settingsSectionId: settingsTarget?.sectionId || null,
+    settingsFocusSubsectionId: settingsTarget?.focusSubsectionId || null
   };
+}
+function resolveSettingsNavigationTarget(anchor, functionName) {
+  const cleanAnchor = String(anchor || "").trim();
+  const cleanName = normalise(functionName);
+  if (!cleanAnchor || cleanAnchor === "nav-settings") {
+    if (/\bformation\b.*\bcallsign|\bcallsign\b.*\bformation\b/.test(cleanName)) {
+      return { sectionId: "platform-rank-terminology", focusSubsectionId: "platform-formation-callsigns" };
+    }
+    if (/\bcallsign/.test(cleanName)) {
+      return { sectionId: "platform-rank-terminology", focusSubsectionId: "platform-unit-callsigns" };
+    }
+    return null;
+  }
+  const rankTerminologySubsections = /* @__PURE__ */ new Set([
+    "platform-unit-callsigns",
+    "platform-formation-callsigns",
+    "platform-staff-rank-equivalency",
+    "platform-trainee-rank-equivalency",
+    "platform-staff-qualification-catalogue"
+  ]);
+  if (rankTerminologySubsections.has(cleanAnchor)) {
+    return { sectionId: "platform-rank-terminology", focusSubsectionId: cleanAnchor };
+  }
+  const platformSectionAnchors = /* @__PURE__ */ new Set([
+    "platform-configuration-health",
+    "platform-organisation-locations",
+    "platform-units",
+    "platform-task-profiles",
+    "platform-master-lmp-access",
+    "platform-aircraft-setup",
+    "platform-dfp-resource-rows",
+    "platform-unit-modules",
+    "platform-settings-visibility",
+    "platform-deployment-readiness",
+    "platform-operational-runbook",
+    "platform-licensing",
+    "platform-permission-profiles",
+    "platform-rank-terminology",
+    "platform-labels-terminology",
+    "platform-user-access",
+    "platform-scheduling-rule-sets"
+  ]);
+  if (platformSectionAnchors.has(cleanAnchor)) {
+    return { sectionId: cleanAnchor, focusSubsectionId: cleanAnchor };
+  }
+  if (cleanAnchor.startsWith("platform-")) {
+    return { sectionId: cleanAnchor, focusSubsectionId: cleanAnchor };
+  }
+  return null;
 }
 function tokenize(value) {
   return normalise(value).split(/[^a-z0-9]+/).map((token) => token.trim()).filter((token) => token.length > 1 && !STOP_WORDS.has(token));
@@ -2465,7 +2517,12 @@ const NeoGuidePanel = ({
   const performAction = (action) => {
     const view = action.page ? pageToView[action.page] : null;
     if (view && view !== activeView) {
-      onNavigate(view);
+      onNavigate(view, action);
+      window.setTimeout(() => tryHighlightActionTarget(action, 0, true), 260);
+      return;
+    }
+    if (view === activeView && action.settingsSectionId) {
+      onNavigate(view, action);
       window.setTimeout(() => tryHighlightActionTarget(action, 0, true), 260);
       return;
     }
@@ -156418,7 +156475,16 @@ Do you want to replace the existing entry?`,
           activeView,
           selectedRecordLabel: selectedPersonForProfile?.name || selectedEvent?.displayTitle || selectedEvent?.flightNumber || "",
           canUsePlatformPermission,
-          onNavigate: handleNavigation,
+          onNavigate: (view, action) => {
+            if (view === "Settings" && action?.settingsSectionId) {
+              handleNavigateToSettingsSection({
+                sectionId: action.settingsSectionId,
+                focusSubsectionId: action.settingsFocusSubsectionId || action.highlightTarget || action.anchor || void 0
+              });
+              return;
+            }
+            handleNavigation(view);
+          },
           onClose: () => setShowNeoGuidePanel(false)
         }
       ),

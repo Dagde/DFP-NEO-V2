@@ -370,6 +370,17 @@ assert.equal(
   'Unit callsign wording should resolve to unit callsigns.'
 );
 assert.match(callsignAnswer.answer, /Open Settings|callsign/i, 'Callsign answer should mention Settings and callsigns.');
+assert.equal(callsignAnswer.navigationAction?.settingsSectionId, 'platform-rank-terminology', 'Unit callsign links should open the rank/terminology settings section.');
+assert.equal(callsignAnswer.navigationAction?.settingsFocusSubsectionId, 'platform-unit-callsigns', 'Unit callsign links should scroll to the unit callsign subsection.');
+
+const formationCallsignAnswer = ask('where do I set formation callsigns');
+assert.equal(
+  formationCallsignAnswer.matches[0]?.functionId,
+  'function.curated.settings.formation-callsigns',
+  'Formation callsign wording should resolve to formation callsigns, not generic unit callsigns.'
+);
+assert.equal(formationCallsignAnswer.navigationAction?.settingsSectionId, 'platform-rank-terminology', 'Formation callsign links should open the rank/terminology settings section.');
+assert.equal(formationCallsignAnswer.navigationAction?.settingsFocusSubsectionId, 'platform-formation-callsigns', 'Formation callsign links should scroll to the formation callsign subsection.');
 
 const authorisationNotesAnswer = ask('where do I enter auth notes');
 assert.equal(
