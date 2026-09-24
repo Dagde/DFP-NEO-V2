@@ -1526,6 +1526,10 @@ const ACTION_FAMILIES = [
   { name: "edit", terms: ["edit", "change", "update", "modify", "configure", "set"] }
 ];
 const LOW_SIGNAL_MATCH_TOKENS = /* @__PURE__ */ new Set(["action", "button", "control", "field", "page", "panel", "section", "setting", "settings", "override"]);
+const STAGED_CLARIFICATION_SCORE = 12;
+const MIN_STAGED_CLARIFICATION_SCORE = 6;
+const HIGH_CONFIDENCE_SCORE = 22;
+const CLOSE_MATCH_GAP = 3;
 function answerNeoGuideQuestion(question, model, context = {}) {
   const pendingWorkflowAnswer = answerPendingWorkflowChoice(question, model, context);
   if (pendingWorkflowAnswer) return pendingWorkflowAnswer;
@@ -1563,26 +1567,18 @@ function answerNeoGuideQuestion(question, model, context = {}) {
       needsClarification: true
     };
   }
+  if (shouldUseStagedClarification(best, second, confidence)) {
+    const staged = buildStagedClarificationAnswer(question, interpretation, context, 1, []);
+    if (staged) return staged;
+  }
   if (confidence === "low") {
     return {
       ...interpretation,
       confidence,
-      answer: "I don't know the answer to that yet. I found a possible match, but it is not reliable enough to give you instructions.",
-      navigationAction: buildNavigationAction(best),
+      answer: "I don't know the answer to that yet. Try rephrasing the question and include what you're working with - for example a trainee, staff member, course, event, aircraft or setting.",
       conversation: nextConversation,
       needsClarification: true,
-      clarificationQuestion: `Do you mean ${best.name}${second ? ` or ${second.name}` : ""}?`
-    };
-  }
-  if (second && best.score - second.score < 3) {
-    return {
-      ...interpretation,
-      confidence,
-      answer: buildAnswerText(interpretation.intent, best),
-      navigationAction: buildNavigationAction(best),
-      conversation: nextConversation,
-      needsClarification: true,
-      clarificationQuestion: `Do you mean ${best.name}${second ? ` or ${second.name}` : ""}?`
+      clarificationQuestion: "Please rephrase the question with the DFP-NEO area or record type."
     };
   }
   return {
@@ -1591,6 +1587,93 @@ function answerNeoGuideQuestion(question, model, context = {}) {
     answer: buildAnswerText(interpretation.intent, best, workflowOption),
     navigationAction: buildNavigationAction(best, workflowOption),
     conversation: nextConversation
+  };
+}
+function answerNeoGuideClarificationSelection(selectedIntentId, model, context = {}) {
+  const fn = findNeoGuideFunction(model, selectedIntentId);
+  const previousResolution = context.conversation?.resolution;
+  if (!fn) {
+    return {
+      intent: "UNKNOWN",
+      entities: [],
+      confidence: "low",
+      answer: "I don't recognise that option anymore. Please ask the question again.",
+      matches: [],
+      conversation: { ...context.conversation || {}, resolution: void 0 },
+      needsClarification: true
+    };
+  }
+  const intent = context.conversation?.lastIntent || "HOW_TO";
+  const match = {
+    functionId: fn.id,
+    name: fn.name,
+    score: 100,
+    location: fn.location,
+    permissions: fn.permissions || [],
+    reasons: ["selected clarification option"],
+    function: fn
+  };
+  const workflowOption = previousResolution ? selectWorkflowOption(fn, previousResolution.originalQuestion) : void 0;
+  return {
+    intent,
+    entities: [],
+    confidence: "high",
+    answer: buildAnswerText(intent, match, workflowOption),
+    matches: [match],
+    navigationAction: buildNavigationAction(match, workflowOption),
+    conversation: buildNextConversationState(match, intent, [], context.conversation)
+  };
+}
+function answerNeoGuideClarificationNone(model, context = {}) {
+  const resolution = context.conversation?.resolution;
+  if (!resolution) {
+    return {
+      intent: "UNKNOWN",
+      entities: [],
+      confidence: "low",
+      answer: "I haven't identified what you're trying to do yet. Please rephrase the question and, if possible, tell me what you're working with - for example a trainee, staff member, course, event, aircraft or setting.",
+      matches: [],
+      conversation: context.conversation || {},
+      needsClarification: true
+    };
+  }
+  if (resolution.stage >= 3) {
+    return {
+      intent: "UNKNOWN",
+      entities: [],
+      confidence: "low",
+      answer: "I haven't identified what you're trying to do yet. Please rephrase the question and, if possible, tell me what you're working with - for example a trainee, staff member, course, event, aircraft or setting.",
+      matches: [],
+      conversation: {
+        ...context.conversation || {},
+        resolution: void 0,
+        awaitingWorkflowChoice: false
+      },
+      needsClarification: true
+    };
+  }
+  const nextStage = resolution.stage + 1;
+  const interpretation = interpretNeoGuideQuestion(resolution.originalQuestion, model, context, 40);
+  const staged = buildStagedClarificationAnswer(
+    resolution.originalQuestion,
+    interpretation,
+    context,
+    nextStage,
+    resolution.shownIntentIds
+  );
+  if (staged) return staged;
+  return {
+    intent: "UNKNOWN",
+    entities: interpretation.entities,
+    confidence: "low",
+    answer: "I haven't identified what you're trying to do yet. Please rephrase the question and, if possible, tell me what you're working with - for example a trainee, staff member, course, event, aircraft or setting.",
+    matches: interpretation.matches,
+    conversation: {
+      ...context.conversation || {},
+      resolution: void 0,
+      awaitingWorkflowChoice: false
+    },
+    needsClarification: true
   };
 }
 function answerPendingWorkflowChoice(question, model, context) {
@@ -1666,7 +1749,7 @@ function isThinGeneratedImplementationMatch(match) {
   if (/\b(app|component|tsx|jsx|ts|js)\b/.test(text) && /\b(control|button|input|select)\b/.test(text) && !fn.procedureSteps?.length) return true;
   return false;
 }
-function interpretNeoGuideQuestion(question, model, context = {}) {
+function interpretNeoGuideQuestion(question, model, context = {}, maxMatches = 5) {
   const intent = detectIntent(question);
   const synonymMap = buildSynonymMap(model.curatedKnowledge?.synonyms || [], model.terminologyIndex || []);
   const rawTokens = tokenize(question);
@@ -1675,17 +1758,103 @@ function interpretNeoGuideQuestion(question, model, context = {}) {
   const normalisedQuestion = normalise(question);
   const entities = extractLikelyEntities(question, tokens);
   const userPermissions = new Set(context.userPermissions || []);
+  const learnedAssociations = context.learnedAssociations || [];
   const sourceFunctions = [
     ...model.curatedKnowledge?.functions || [],
     ...(model.functions || []).filter((fn) => !String(fn.id || "").startsWith("function.curated."))
   ];
-  const matches = sourceFunctions.map((fn) => scoreFunction(fn, tokens, rawTokens, normalisedQuestion, intent, context, userPermissions)).filter((match) => match.score > 0).sort((left, right) => right.score - left.score).slice(0, 5);
+  const matches = sourceFunctions.map((fn) => scoreFunction(fn, tokens, rawTokens, normalisedQuestion, intent, context, userPermissions, learnedAssociations)).filter((match) => match.score > 0).sort((left, right) => right.score - left.score).slice(0, maxMatches);
   return {
     intent,
     entities,
     matches,
     needsClarification: false
   };
+}
+function shouldUseStagedClarification(best, second, confidence) {
+  if (best.score < MIN_STAGED_CLARIFICATION_SCORE) return false;
+  if (!hasSubstantiveMatch(best)) return false;
+  if (best.score >= 30 && hasStrongPhraseMatch(best)) return false;
+  if (second && best.score - second.score < CLOSE_MATCH_GAP) return true;
+  if (best.score < STAGED_CLARIFICATION_SCORE) return true;
+  if (confidence !== "high" && second && best.score - second.score < CLOSE_MATCH_GAP) return true;
+  if (best.score < HIGH_CONFIDENCE_SCORE && second && best.score - second.score < 2) return true;
+  return false;
+}
+function hasStrongPhraseMatch(match) {
+  return match.reasons.some((reason) => reason.startsWith("phrase"));
+}
+function hasSubstantiveMatch(match) {
+  return match.reasons.some((reason) => reason.startsWith("phrase") || reason.startsWith("matched") || reason.startsWith("partial") || reason.startsWith("action") || reason === "previous topic" || reason === "current page" || reason === "learned wording");
+}
+function buildStagedClarificationAnswer(question, interpretation, context, stage, excludedIntentIds) {
+  const excluded = new Set(excludedIntentIds);
+  const matches = collapseNearDuplicateMatches(interpretation.matches).filter((match) => !excluded.has(match.functionId)).slice(0, 5);
+  if (matches.length === 0) return null;
+  const optionLines = matches.map((match, index) => `${index + 1}. ${match.name}`).join("\n");
+  const lead = stage === 1 ? `I think you're asking about ${inferClarificationArea(matches, context)}. Which of these do you mean?` : stage === 2 ? "No problem. You may mean one of these instead:" : "Let's try a broader search. Are you looking for:";
+  const noneText = stage === 3 ? "None of these - I'll rephrase my question" : "None of these";
+  const shownIntentIds = [...excludedIntentIds, ...matches.map((match) => match.functionId)];
+  return {
+    intent: interpretation.intent,
+    entities: interpretation.entities,
+    confidence: "low",
+    answer: `${lead}
+
+${optionLines}
+
+${noneText}`,
+    matches,
+    conversation: {
+      ...context.conversation || {},
+      lastIntent: interpretation.intent,
+      resolution: {
+        originalQuestion: question,
+        stage,
+        shownIntentIds
+      },
+      awaitingWorkflowChoice: false
+    },
+    needsClarification: true,
+    clarificationOptions: matches.map((match) => ({
+      intentId: match.functionId,
+      label: match.name,
+      category: match.location?.page || void 0
+    })),
+    resolutionStage: stage
+  };
+}
+function collapseNearDuplicateMatches(matches) {
+  const seenNames = /* @__PURE__ */ new Set();
+  const collapsed = [];
+  for (const match of matches) {
+    const key = normalise(match.name).replace(/\b(open|view|manage|the|a|an)\b/g, "").replace(/\s+/g, " ").trim();
+    if (seenNames.has(key)) continue;
+    seenNames.add(key);
+    collapsed.push(match);
+  }
+  return collapsed;
+}
+function inferClarificationArea(matches, context) {
+  if (context.page) return `${context.page}`;
+  const pages = matches.map((match) => match.location?.page).filter((page) => Boolean(page));
+  const [firstPage] = pages;
+  if (firstPage && pages.filter((page) => page === firstPage).length >= Math.max(2, Math.ceil(matches.length / 2))) {
+    return firstPage;
+  }
+  const nameText = normalise(matches.map((match) => match.name).join(" "));
+  if (/\btrainee|student\b/.test(nameText)) return "trainee management";
+  if (/\bstaff|instructor\b/.test(nameText)) return "staff management";
+  if (/\bcourse\b/.test(nameText)) return "course management";
+  if (/\bflight|dfp|schedule\b/.test(nameText)) return "the schedule";
+  if (/\bsetting|configure\b/.test(nameText)) return "settings";
+  return "DFP-NEO";
+}
+function findNeoGuideFunction(model, id) {
+  return [
+    ...model.curatedKnowledge?.functions || [],
+    ...model.functions || []
+  ].find((fn) => fn.id === id);
 }
 function detectIntent(question) {
   const normalised = normalise(question);
@@ -1694,7 +1863,7 @@ function detectIntent(question) {
   }
   return "UNKNOWN";
 }
-function scoreFunction(fn, tokens, rawTokens, normalisedQuestion, intent, context, userPermissions) {
+function scoreFunction(fn, tokens, rawTokens, normalisedQuestion, intent, context, userPermissions, learnedAssociations = []) {
   const haystackParts = [
     fn.name,
     ...fn.aliases || [],
@@ -1769,6 +1938,11 @@ function scoreFunction(fn, tokens, rawTokens, normalisedQuestion, intent, contex
     score += 12;
     reasons.push("previous topic");
   }
+  const learnedScore = scoreLearnedAssociation(fn.id, normalisedQuestion, learnedAssociations);
+  if (learnedScore > 0) {
+    score += learnedScore;
+    reasons.push("learned wording");
+  }
   if (context.page && fn.location?.page && normalise(context.page) === normalise(fn.location.page)) {
     score += 3;
     reasons.push("current page");
@@ -1786,7 +1960,7 @@ function scoreFunction(fn, tokens, rawTokens, normalisedQuestion, intent, contex
     score -= 8;
     reasons.push("thin generated record");
   }
-  if (!exactPhraseMatched && meaningfulMatchedTokens.size === 0 && requestedActionFamilies.length === 0) {
+  if (!exactPhraseMatched && meaningfulMatchedTokens.size === 0 && requestedActionFamilies.length === 0 && learnedScore === 0) {
     score = Math.min(score, 8);
     reasons.push("weak subject match");
   }
@@ -1799,6 +1973,29 @@ function scoreFunction(fn, tokens, rawTokens, normalisedQuestion, intent, contex
     reasons: Array.from(new Set(reasons)).slice(0, 8),
     function: fn
   };
+}
+function scoreLearnedAssociation(functionId, normalisedQuestion, associations) {
+  let score = 0;
+  const questionTokens = new Set(tokenize(normalisedQuestion));
+  for (const association of associations) {
+    if (association.intentId !== functionId) continue;
+    const phrase = normalise(association.normalisedPhrase || association.phrase);
+    if (!phrase) continue;
+    if (phrase === normalisedQuestion) {
+      score = Math.max(score, 18 + Math.min(8, association.count || 0));
+      continue;
+    }
+    if (normalisedQuestion.includes(phrase) || phrase.includes(normalisedQuestion)) {
+      score = Math.max(score, 10 + Math.min(5, association.count || 0));
+      continue;
+    }
+    const phraseTokens = tokenize(phrase);
+    if (phraseTokens.length > 0) {
+      const overlap = phraseTokens.filter((token) => questionTokens.has(token)).length / phraseTokens.length;
+      if (overlap >= 0.75) score = Math.max(score, 6 + Math.min(4, association.count || 0));
+    }
+  }
+  return score;
 }
 function detectActionFamilies(tokens) {
   const tokenSet = new Set(tokens);
@@ -1987,94 +2184,6 @@ function normalise(value) {
 function first(values) {
   return Array.isArray(values) && values.length > 0 ? values[0] : "";
 }
-const __vite_import_meta_env__ = { "BASE_URL": "./", "DEV": false, "MODE": "production", "PROD": true, "SSR": false };
-const DEFAULT_TIMEOUT_MS = 1200;
-const MAX_TIMEOUT_MS = 2500;
-function readViteEnv() {
-  return __vite_import_meta_env__ || {};
-}
-function getNeoGuideLocalLanguageConfig() {
-  const env = readViteEnv();
-  const endpoint = String(env.VITE_NEO_GUIDE_LOCAL_LANGUAGE_URL || "").trim();
-  const timeoutDraft = Number(env.VITE_NEO_GUIDE_LOCAL_LANGUAGE_TIMEOUT_MS || DEFAULT_TIMEOUT_MS);
-  const timeoutMs = Number.isFinite(timeoutDraft) ? Math.max(250, Math.min(MAX_TIMEOUT_MS, timeoutDraft)) : DEFAULT_TIMEOUT_MS;
-  return {
-    enabled: Boolean(endpoint),
-    endpoint,
-    timeoutMs
-  };
-}
-function shouldUseNeoGuideLocalLanguage(question, answer, config = getNeoGuideLocalLanguageConfig()) {
-  if (!config.enabled || !question.trim()) return false;
-  if (answer.confidence === "low") return true;
-  if (answer.needsClarification) return true;
-  if (/I don't know|couldn't match|not reliable enough/i.test(answer.answer)) return true;
-  return false;
-}
-function buildNeoGuideLocalLanguageRequest(question, answer, context) {
-  const topMatch = answer.matches[0];
-  return {
-    question,
-    pageContext: {
-      page: context.page,
-      activeTab: context.activeTab,
-      selectedRecordLabel: context.selectedRecordLabel,
-      selectedRecordId: context.selectedRecordId,
-      userPermissions: context.userPermissions
-    },
-    conversation: context.conversation || null,
-    deterministicAnswer: {
-      intent: answer.intent,
-      confidence: answer.confidence,
-      answer: answer.answer,
-      topFunctionId: topMatch?.functionId || null,
-      topFunctionName: topMatch?.name || null,
-      needsClarification: answer.needsClarification
-    }
-  };
-}
-async function requestNeoGuideLocalLanguageInterpretation(request, config = getNeoGuideLocalLanguageConfig(), fetchImpl = fetch) {
-  if (!config.enabled) return null;
-  const controller = new AbortController();
-  const timer = globalThis.setTimeout(() => controller.abort(), config.timeoutMs);
-  try {
-    const response = await fetchImpl(config.endpoint, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(request),
-      signal: controller.signal
-    });
-    if (!response.ok) return null;
-    const payload = await response.json();
-    return normaliseLocalLanguageInterpretation(payload);
-  } catch {
-    return null;
-  } finally {
-    globalThis.clearTimeout(timer);
-  }
-}
-function normaliseLocalLanguageInterpretation(value) {
-  if (!value || typeof value !== "object") return null;
-  const payload = value;
-  const confidence = Number(payload.confidence);
-  if (!Number.isFinite(confidence) || confidence < 0 || confidence > 1) return null;
-  const rewrittenQuestion = typeof payload.rewrittenQuestion === "string" ? payload.rewrittenQuestion.trim().slice(0, 500) : void 0;
-  const clarificationQuestion = typeof payload.clarificationQuestion === "string" ? payload.clarificationQuestion.trim().slice(0, 300) : void 0;
-  const intent = typeof payload.intent === "string" ? payload.intent.trim().slice(0, 80) : void 0;
-  const concepts = Array.isArray(payload.concepts) ? payload.concepts.filter((item) => typeof item === "string").map((item) => item.slice(0, 80)).slice(0, 12) : void 0;
-  const entities = payload.entities && typeof payload.entities === "object" && !Array.isArray(payload.entities) ? Object.fromEntries(
-    Object.entries(payload.entities).filter(([, item]) => typeof item === "string").map(([key, item]) => [key.slice(0, 80), String(item).slice(0, 160)]).slice(0, 12)
-  ) : void 0;
-  return {
-    confidence,
-    rewrittenQuestion,
-    intent,
-    concepts,
-    entities,
-    clarificationQuestion,
-    requiresLiveData: Boolean(payload.requiresLiveData)
-  };
-}
 const pageToView = {
   "Program Schedule": "Program Schedule",
   "Training Records": "TrainingRecords",
@@ -2084,6 +2193,19 @@ const pageToView = {
   Settings: "Settings",
   Priorities: "Priorities",
   SupervisorDashboard: "SupervisorDashboard"
+};
+const LEARNED_ASSOCIATIONS_KEY = "dfp-neo-guide-learned-associations.v1";
+const normaliseLearnedPhrase = (value) => value.toLowerCase().replace(/[’']/g, "").replace(/[^a-z0-9]+/g, " ").replace(/\s+/g, " ").trim();
+const loadLearnedAssociations = () => {
+  try {
+    const parsed = JSON.parse(window.localStorage.getItem(LEARNED_ASSOCIATIONS_KEY) || "[]");
+    return Array.isArray(parsed) ? parsed.slice(0, 250) : [];
+  } catch {
+    return [];
+  }
+};
+const saveLearnedAssociations = (associations) => {
+  window.localStorage.setItem(LEARNED_ASSOCIATIONS_KEY, JSON.stringify(associations.slice(0, 250)));
 };
 const highlightTarget = (target) => {
   if (!target) return false;
@@ -2123,6 +2245,7 @@ const NeoGuidePanel = ({
   const [loadError, setLoadError] = reactExports.useState("");
   const [question, setQuestion] = reactExports.useState("");
   const [conversation, setConversation] = reactExports.useState(null);
+  const [learnedAssociations, setLearnedAssociations] = reactExports.useState([]);
   const [messages, setMessages] = reactExports.useState([
     {
       id: "welcome",
@@ -2155,6 +2278,9 @@ const NeoGuidePanel = ({
   reactExports.useEffect(() => {
     if (isOpen) window.setTimeout(() => inputRef.current?.focus(), 80);
   }, [isOpen]);
+  reactExports.useEffect(() => {
+    setLearnedAssociations(loadLearnedAssociations());
+  }, []);
   const userPermissions = reactExports.useMemo(() => {
     if (!model || !canUsePlatformPermission) return [];
     const ids = /* @__PURE__ */ new Set();
@@ -2171,47 +2297,74 @@ const NeoGuidePanel = ({
       page: activeView,
       selectedRecordLabel,
       userPermissions,
-      conversation
+      conversation,
+      learnedAssociations
     };
     const answer = answerNeoGuideQuestion(trimmed, model, {
       ...guideContext
     });
+    appendAnswer(trimmed, answer);
+    setQuestion("");
+  };
+  const appendAnswer = (userText, answer) => {
     setConversation(answer.conversation);
     setMessages((current) => [
       ...current,
-      { id: `user-${Date.now()}`, role: "user", text: trimmed },
+      ...userText ? [{ id: `user-${Date.now()}`, role: "user", text: userText }] : [],
       {
         id: `guide-${Date.now()}`,
         role: "guide",
         text: answer.answer,
-        action: answer.navigationAction
+        action: answer.navigationAction,
+        clarificationOptions: answer.clarificationOptions,
+        noneOptionLabel: answer.resolutionStage === 3 ? "None of these - I'll rephrase my question" : answer.clarificationOptions?.length ? "None of these" : void 0
       }
     ]);
-    setQuestion("");
-    if (shouldUseNeoGuideLocalLanguage(trimmed, answer)) {
-      const localRequest = buildNeoGuideLocalLanguageRequest(trimmed, answer, guideContext);
-      void requestNeoGuideLocalLanguageInterpretation(localRequest).then((interpretation) => {
-        if (!interpretation) return;
-        const rewrittenQuestion = interpretation.rewrittenQuestion?.trim();
-        if (rewrittenQuestion && rewrittenQuestion.toLowerCase() !== trimmed.toLowerCase()) {
-          const refinedAnswer = answerNeoGuideQuestion(rewrittenQuestion, model, guideContext);
-          if (refinedAnswer.confidence !== "low" && refinedAnswer.answer !== answer.answer) {
-            setConversation(refinedAnswer.conversation);
-            appendGuideMessage(`I understood that as: "${rewrittenQuestion}"
-
-${refinedAnswer.answer}`, refinedAnswer.navigationAction);
-            return;
-          }
-        }
-        if (interpretation.clarificationQuestion) appendGuideMessage(interpretation.clarificationQuestion);
-      });
-    }
   };
   const appendGuideMessage = (text, action) => {
     setMessages((current) => [
       ...current,
       { id: `guide-${Date.now()}-${current.length}`, role: "guide", text, action }
     ]);
+  };
+  const selectClarificationOption = (option) => {
+    if (!model) return;
+    const originalQuestion = conversation?.resolution?.originalQuestion;
+    if (originalQuestion) {
+      const normalisedPhrase = normaliseLearnedPhrase(originalQuestion);
+      if (normalisedPhrase) {
+        setLearnedAssociations((current) => {
+          const existing = current.find((item) => item.normalisedPhrase === normalisedPhrase && item.intentId === option.intentId);
+          const next = existing ? current.map((item) => item === existing ? { ...item, count: item.count + 1, lastSelectedAt: (/* @__PURE__ */ new Date()).toISOString() } : item) : [
+            {
+              phrase: originalQuestion,
+              normalisedPhrase,
+              intentId: option.intentId,
+              count: 1,
+              lastSelectedAt: (/* @__PURE__ */ new Date()).toISOString()
+            },
+            ...current
+          ];
+          saveLearnedAssociations(next);
+          return next.slice(0, 250);
+        });
+      }
+    }
+    const answer = answerNeoGuideClarificationSelection(option.intentId, model, {
+      conversation
+    });
+    appendAnswer(option.label, answer);
+  };
+  const selectNoneOfThese = () => {
+    if (!model) return;
+    const answer = answerNeoGuideClarificationNone(model, {
+      page: activeView,
+      userPermissions,
+      conversation,
+      learnedAssociations
+    });
+    appendAnswer("None of these", answer);
+    window.setTimeout(() => inputRef.current?.focus(), 80);
   };
   const tryHighlightActionTarget = (action, attempt = 0, didNavigate = false) => {
     const found = highlightTarget(action.highlightTarget || action.anchor);
@@ -2290,7 +2443,28 @@ ${refinedAnswer.answer}`, refinedAnswer.navigationAction);
                       className: "mt-3 rounded-md border border-orange-300/60 bg-orange-500 px-3 py-1.5 text-xs font-black text-slate-950 hover:bg-orange-400",
                       children: message.action.label
                     }
-                  ) : null
+                  ) : null,
+                  message.clarificationOptions?.length ? /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mt-3 space-y-2", children: [
+                    message.clarificationOptions.map((option) => /* @__PURE__ */ jsxRuntimeExports.jsx(
+                      "button",
+                      {
+                        type: "button",
+                        onClick: () => selectClarificationOption(option),
+                        className: "block w-full rounded-md border border-slate-600 bg-slate-800 px-3 py-2 text-left text-xs font-bold text-slate-100 hover:border-orange-300 hover:bg-slate-700",
+                        children: option.label
+                      },
+                      option.intentId
+                    )),
+                    message.noneOptionLabel ? /* @__PURE__ */ jsxRuntimeExports.jsx(
+                      "button",
+                      {
+                        type: "button",
+                        onClick: selectNoneOfThese,
+                        className: "block w-full rounded-md border border-slate-700 bg-slate-950 px-3 py-2 text-left text-xs font-bold text-slate-300 hover:border-slate-400 hover:text-white",
+                        children: message.noneOptionLabel
+                      }
+                    ) : null
+                  ] }) : null
                 ]
               },
               message.id

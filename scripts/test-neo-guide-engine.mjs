@@ -2,7 +2,12 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { answerNeoGuideQuestion, detectIntent } from '../utils/neoGuideEngine.ts';
+import {
+  answerNeoGuideClarificationNone,
+  answerNeoGuideClarificationSelection,
+  answerNeoGuideQuestion,
+  detectIntent,
+} from '../utils/neoGuideEngine.ts';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const repoRoot = path.resolve(__dirname, '..');
@@ -103,9 +108,15 @@ assert.ok(
   ].includes(newTopicAfterCourseCommander.matches[0]?.functionId),
   'Unavailability wording after another topic should resolve to an unavailability workflow.'
 );
-assert.match(newTopicAfterCourseCommander.answer, /Add Unavailability/i, 'Unavailability answer should include practical steps.');
+assert.equal(newTopicAfterCourseCommander.needsClarification, true, 'Generic unavailability wording should clarify trainee or staff.');
+const selectedUnavailability = answerNeoGuideClarificationSelection(
+  'function.curated.people.trainee-unavailability',
+  model,
+  { conversation: newTopicAfterCourseCommander.conversation }
+);
+assert.match(selectedUnavailability.answer, /Add Unavailability/i, 'Selected unavailability answer should include practical steps.');
 
-const staffUnavailabilityFollowUp = ask('what about a staff', { conversation: newTopicAfterCourseCommander.conversation });
+const staffUnavailabilityFollowUp = ask('what about a staff', { conversation: selectedUnavailability.conversation });
 assert.equal(
   staffUnavailabilityFollowUp.matches[0]?.functionId,
   'function.curated.people.staff-unavailability',
@@ -209,6 +220,61 @@ assert.doesNotMatch(multiSelectAnswer.answer, /App\.tsx|manual enrichment|compon
 const unknownAnswer = ask('where is the purple banana override');
 assert.match(unknownAnswer.answer, /I don't know the answer to that yet/i, 'Unknown answers should be plain English.');
 assert.doesNotMatch(unknownAnswer.answer, /App\.tsx|manual enrichment|component|source/i, 'Unknown answers must not leak implementation jargon.');
+assert.equal(unknownAnswer.clarificationOptions, undefined, 'Nonsense questions should not show irrelevant clarification choices.');
+
+const ambiguousArchiveAnswer = ask('make inactive');
+assert.equal(ambiguousArchiveAnswer.needsClarification, true, 'Ambiguous inactive wording should ask for clarification.');
+assert.equal(ambiguousArchiveAnswer.resolutionStage, 1, 'Ambiguous archive wording should start at Stage 1.');
+assert.ok((ambiguousArchiveAnswer.clarificationOptions || []).length > 0, 'Stage 1 should include clickable options.');
+assert.equal(
+  new Set((ambiguousArchiveAnswer.clarificationOptions || []).map((option) => option.intentId)).size,
+  (ambiguousArchiveAnswer.clarificationOptions || []).length,
+  'Stage 1 options should not duplicate intent IDs.'
+);
+
+const selectedClarification = answerNeoGuideClarificationSelection(
+  ambiguousArchiveAnswer.clarificationOptions[0].intentId,
+  model,
+  { conversation: ambiguousArchiveAnswer.conversation }
+);
+assert.equal(selectedClarification.confidence, 'high', 'Selecting a clarification option should confirm the intent.');
+assert.equal(selectedClarification.matches[0]?.functionId, ambiguousArchiveAnswer.clarificationOptions[0].intentId);
+
+const stageTwo = answerNeoGuideClarificationNone(model, { conversation: ambiguousArchiveAnswer.conversation });
+assert.equal(stageTwo.resolutionStage, 2, 'None of these from Stage 1 should move to Stage 2.');
+assert.ok(stageTwo.clarificationOptions?.length > 0, 'Stage 2 should show new options when available.');
+const stageOneIds = new Set((ambiguousArchiveAnswer.clarificationOptions || []).map((option) => option.intentId));
+for (const option of stageTwo.clarificationOptions || []) {
+  assert.equal(stageOneIds.has(option.intentId), false, 'Stage 2 must not repeat Stage 1 intent IDs.');
+}
+
+const stageThree = answerNeoGuideClarificationNone(model, { conversation: stageTwo.conversation });
+if (stageThree.resolutionStage) {
+  assert.equal(stageThree.resolutionStage, 3, 'Second None of these should move to Stage 3 when options remain.');
+  const priorIds = new Set([
+    ...(ambiguousArchiveAnswer.clarificationOptions || []).map((option) => option.intentId),
+    ...(stageTwo.clarificationOptions || []).map((option) => option.intentId),
+  ]);
+  for (const option of stageThree.clarificationOptions || []) {
+    assert.equal(priorIds.has(option.intentId), false, 'Stage 3 must not repeat prior intent IDs.');
+  }
+}
+
+const learnedDeleteStaff = ask('get rid of an old employee', {
+  learnedAssociations: [
+    {
+      phrase: 'get rid of an old employee',
+      normalisedPhrase: 'get rid of an old employee',
+      intentId: 'function.curated.people.delete-staff',
+      count: 2,
+    },
+  ],
+});
+assert.equal(
+  learnedDeleteStaff.matches[0]?.functionId,
+  'function.curated.people.delete-staff',
+  'Learned wording should boost the selected intent on future matching.'
+);
 
 const staffFollowUp = ask('what about staff?', { conversation: answer.conversation });
 assert.equal(

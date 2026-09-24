@@ -71,6 +71,15 @@ export interface NeoGuidePageContext {
   selectedRecordId?: string;
   userPermissions?: string[];
   conversation?: NeoGuideConversationState | null;
+  learnedAssociations?: NeoGuideLearnedAssociation[];
+}
+
+export interface NeoGuideLearnedAssociation {
+  phrase: string;
+  normalisedPhrase: string;
+  intentId: string;
+  count: number;
+  lastSelectedAt?: string;
 }
 
 export interface NeoGuideConversationState {
@@ -80,6 +89,7 @@ export interface NeoGuideConversationState {
   lastIntent?: NeoGuideIntent;
   lastEntities?: string[];
   awaitingWorkflowChoice?: boolean;
+  resolution?: NeoGuideResolutionState;
 }
 
 export interface NeoGuideNavigationAction {
@@ -100,6 +110,18 @@ export interface NeoGuideMatch {
   function: NeoGuideFunction;
 }
 
+export interface NeoGuideClarificationOption {
+  intentId: string;
+  label: string;
+  category?: string;
+}
+
+export interface NeoGuideResolutionState {
+  originalQuestion: string;
+  stage: 1 | 2 | 3;
+  shownIntentIds: string[];
+}
+
 export interface NeoGuideAnswer {
   intent: NeoGuideIntent;
   entities: string[];
@@ -110,6 +132,8 @@ export interface NeoGuideAnswer {
   conversation: NeoGuideConversationState;
   needsClarification?: boolean;
   clarificationQuestion?: string;
+  clarificationOptions?: NeoGuideClarificationOption[];
+  resolutionStage?: 1 | 2 | 3;
 }
 
 const STOP_WORDS = new Set([
@@ -163,6 +187,10 @@ const ACTION_FAMILIES: Array<{ name: string; terms: string[] }> = [
   { name: 'edit', terms: ['edit', 'change', 'update', 'modify', 'configure', 'set'] },
 ];
 const LOW_SIGNAL_MATCH_TOKENS = new Set(['action', 'button', 'control', 'field', 'page', 'panel', 'section', 'setting', 'settings', 'override']);
+const STAGED_CLARIFICATION_SCORE = 12;
+const MIN_STAGED_CLARIFICATION_SCORE = 6;
+const HIGH_CONFIDENCE_SCORE = 22;
+const CLOSE_MATCH_GAP = 3;
 
 export function answerNeoGuideQuestion(
   question: string,
@@ -210,27 +238,19 @@ export function answerNeoGuideQuestion(
     };
   }
 
+  if (shouldUseStagedClarification(best, second, confidence)) {
+    const staged = buildStagedClarificationAnswer(question, interpretation, context, 1, []);
+    if (staged) return staged;
+  }
+
   if (confidence === 'low') {
     return {
       ...interpretation,
       confidence,
-      answer: "I don't know the answer to that yet. I found a possible match, but it is not reliable enough to give you instructions.",
-      navigationAction: buildNavigationAction(best),
+      answer: "I don't know the answer to that yet. Try rephrasing the question and include what you're working with - for example a trainee, staff member, course, event, aircraft or setting.",
       conversation: nextConversation,
       needsClarification: true,
-      clarificationQuestion: `Do you mean ${best.name}${second ? ` or ${second.name}` : ''}?`
-    };
-  }
-
-  if (second && best.score - second.score < 3) {
-    return {
-      ...interpretation,
-      confidence,
-      answer: buildAnswerText(interpretation.intent, best),
-      navigationAction: buildNavigationAction(best),
-      conversation: nextConversation,
-      needsClarification: true,
-      clarificationQuestion: `Do you mean ${best.name}${second ? ` or ${second.name}` : ''}?`
+      clarificationQuestion: 'Please rephrase the question with the DFP-NEO area or record type.'
     };
   }
 
@@ -240,6 +260,104 @@ export function answerNeoGuideQuestion(
     answer: buildAnswerText(interpretation.intent, best, workflowOption),
     navigationAction: buildNavigationAction(best, workflowOption),
     conversation: nextConversation
+  };
+}
+
+export function answerNeoGuideClarificationSelection(
+  selectedIntentId: string,
+  model: NeoGuideRuntimeModel,
+  context: NeoGuidePageContext = {}
+): NeoGuideAnswer {
+  const fn = findNeoGuideFunction(model, selectedIntentId);
+  const previousResolution = context.conversation?.resolution;
+  if (!fn) {
+    return {
+      intent: 'UNKNOWN',
+      entities: [],
+      confidence: 'low',
+      answer: "I don't recognise that option anymore. Please ask the question again.",
+      matches: [],
+      conversation: { ...(context.conversation || {}), resolution: undefined },
+      needsClarification: true,
+    };
+  }
+  const intent = context.conversation?.lastIntent || 'HOW_TO';
+  const match: NeoGuideMatch = {
+    functionId: fn.id,
+    name: fn.name,
+    score: 100,
+    location: fn.location,
+    permissions: fn.permissions || [],
+    reasons: ['selected clarification option'],
+    function: fn,
+  };
+  const workflowOption = previousResolution
+    ? selectWorkflowOption(fn, previousResolution.originalQuestion)
+    : undefined;
+  return {
+    intent,
+    entities: [],
+    confidence: 'high',
+    answer: buildAnswerText(intent, match, workflowOption),
+    matches: [match],
+    navigationAction: buildNavigationAction(match, workflowOption),
+    conversation: buildNextConversationState(match, intent, [], context.conversation),
+  };
+}
+
+export function answerNeoGuideClarificationNone(
+  model: NeoGuideRuntimeModel,
+  context: NeoGuidePageContext = {}
+): NeoGuideAnswer {
+  const resolution = context.conversation?.resolution;
+  if (!resolution) {
+    return {
+      intent: 'UNKNOWN',
+      entities: [],
+      confidence: 'low',
+      answer: "I haven't identified what you're trying to do yet. Please rephrase the question and, if possible, tell me what you're working with - for example a trainee, staff member, course, event, aircraft or setting.",
+      matches: [],
+      conversation: context.conversation || {},
+      needsClarification: true,
+    };
+  }
+  if (resolution.stage >= 3) {
+    return {
+      intent: 'UNKNOWN',
+      entities: [],
+      confidence: 'low',
+      answer: "I haven't identified what you're trying to do yet. Please rephrase the question and, if possible, tell me what you're working with - for example a trainee, staff member, course, event, aircraft or setting.",
+      matches: [],
+      conversation: {
+        ...(context.conversation || {}),
+        resolution: undefined,
+        awaitingWorkflowChoice: false,
+      },
+      needsClarification: true,
+    };
+  }
+  const nextStage = (resolution.stage + 1) as 2 | 3;
+  const interpretation = interpretNeoGuideQuestion(resolution.originalQuestion, model, context, 40);
+  const staged = buildStagedClarificationAnswer(
+    resolution.originalQuestion,
+    interpretation,
+    context,
+    nextStage,
+    resolution.shownIntentIds
+  );
+  if (staged) return staged;
+  return {
+    intent: 'UNKNOWN',
+    entities: interpretation.entities,
+    confidence: 'low',
+    answer: "I haven't identified what you're trying to do yet. Please rephrase the question and, if possible, tell me what you're working with - for example a trainee, staff member, course, event, aircraft or setting.",
+    matches: interpretation.matches,
+    conversation: {
+      ...(context.conversation || {}),
+      resolution: undefined,
+      awaitingWorkflowChoice: false,
+    },
+    needsClarification: true,
   };
 }
 
@@ -324,7 +442,8 @@ function isThinGeneratedImplementationMatch(match: NeoGuideMatch): boolean {
 export function interpretNeoGuideQuestion(
   question: string,
   model: NeoGuideRuntimeModel,
-  context: NeoGuidePageContext = {}
+  context: NeoGuidePageContext = {},
+  maxMatches = 5
 ): Omit<NeoGuideAnswer, 'answer' | 'confidence' | 'navigationAction' | 'conversation'> & { matches: NeoGuideMatch[] } {
   const intent = detectIntent(question);
   const synonymMap = buildSynonymMap(model.curatedKnowledge?.synonyms || [], model.terminologyIndex || []);
@@ -334,16 +453,17 @@ export function interpretNeoGuideQuestion(
   const normalisedQuestion = normalise(question);
   const entities = extractLikelyEntities(question, tokens);
   const userPermissions = new Set(context.userPermissions || []);
+  const learnedAssociations = context.learnedAssociations || [];
   const sourceFunctions = [
     ...(model.curatedKnowledge?.functions || []),
     ...(model.functions || []).filter((fn) => !String(fn.id || '').startsWith('function.curated.'))
   ];
 
   const matches = sourceFunctions
-    .map((fn) => scoreFunction(fn, tokens, rawTokens, normalisedQuestion, intent, context, userPermissions))
+    .map((fn) => scoreFunction(fn, tokens, rawTokens, normalisedQuestion, intent, context, userPermissions, learnedAssociations))
     .filter((match) => match.score > 0)
     .sort((left, right) => right.score - left.score)
-    .slice(0, 5);
+    .slice(0, maxMatches);
 
   return {
     intent,
@@ -351,6 +471,127 @@ export function interpretNeoGuideQuestion(
     matches,
     needsClarification: false
   };
+}
+
+function shouldUseStagedClarification(
+  best: NeoGuideMatch,
+  second: NeoGuideMatch | undefined,
+  confidence: 'high' | 'medium' | 'low'
+): boolean {
+  if (best.score < MIN_STAGED_CLARIFICATION_SCORE) return false;
+  if (!hasSubstantiveMatch(best)) return false;
+  if (best.score >= 30 && hasStrongPhraseMatch(best)) return false;
+  if (second && best.score - second.score < CLOSE_MATCH_GAP) return true;
+  if (best.score < STAGED_CLARIFICATION_SCORE) return true;
+  if (confidence !== 'high' && second && best.score - second.score < CLOSE_MATCH_GAP) return true;
+  if (best.score < HIGH_CONFIDENCE_SCORE && second && best.score - second.score < 2) return true;
+  return false;
+}
+
+function hasStrongPhraseMatch(match: NeoGuideMatch): boolean {
+  return match.reasons.some((reason) => reason.startsWith('phrase'));
+}
+
+function hasSubstantiveMatch(match: NeoGuideMatch): boolean {
+  return match.reasons.some((reason) => (
+    reason.startsWith('phrase')
+    || reason.startsWith('matched')
+    || reason.startsWith('partial')
+    || reason.startsWith('action')
+    || reason === 'previous topic'
+    || reason === 'current page'
+    || reason === 'learned wording'
+  ));
+}
+
+function buildStagedClarificationAnswer(
+  question: string,
+  interpretation: ReturnType<typeof interpretNeoGuideQuestion>,
+  context: NeoGuidePageContext,
+  stage: 1 | 2 | 3,
+  excludedIntentIds: string[]
+): NeoGuideAnswer | null {
+  const excluded = new Set(excludedIntentIds);
+  const matches = collapseNearDuplicateMatches(interpretation.matches)
+    .filter((match) => !excluded.has(match.functionId))
+    .slice(0, 5);
+  if (matches.length === 0) return null;
+
+  const optionLines = matches.map((match, index) => `${index + 1}. ${match.name}`).join('\n');
+  const lead = stage === 1
+    ? `I think you're asking about ${inferClarificationArea(matches, context)}. Which of these do you mean?`
+    : stage === 2
+      ? 'No problem. You may mean one of these instead:'
+      : "Let's try a broader search. Are you looking for:";
+  const noneText = stage === 3
+    ? "None of these - I'll rephrase my question"
+    : 'None of these';
+  const shownIntentIds = [...excludedIntentIds, ...matches.map((match) => match.functionId)];
+
+  return {
+    intent: interpretation.intent,
+    entities: interpretation.entities,
+    confidence: 'low',
+    answer: `${lead}\n\n${optionLines}\n\n${noneText}`,
+    matches,
+    conversation: {
+      ...(context.conversation || {}),
+      lastIntent: interpretation.intent,
+      resolution: {
+        originalQuestion: question,
+        stage,
+        shownIntentIds,
+      },
+      awaitingWorkflowChoice: false,
+    },
+    needsClarification: true,
+    clarificationOptions: matches.map((match) => ({
+      intentId: match.functionId,
+      label: match.name,
+      category: match.location?.page || undefined,
+    })),
+    resolutionStage: stage,
+  };
+}
+
+function collapseNearDuplicateMatches(matches: NeoGuideMatch[]): NeoGuideMatch[] {
+  const seenNames = new Set<string>();
+  const collapsed: NeoGuideMatch[] = [];
+  for (const match of matches) {
+    const key = normalise(match.name)
+      .replace(/\b(open|view|manage|the|a|an)\b/g, '')
+      .replace(/\s+/g, ' ')
+      .trim();
+    if (seenNames.has(key)) continue;
+    seenNames.add(key);
+    collapsed.push(match);
+  }
+  return collapsed;
+}
+
+function inferClarificationArea(matches: NeoGuideMatch[], context: NeoGuidePageContext): string {
+  if (context.page) return `${context.page}`;
+  const pages = matches
+    .map((match) => match.location?.page)
+    .filter((page): page is string => Boolean(page));
+  const [firstPage] = pages;
+  if (firstPage && pages.filter((page) => page === firstPage).length >= Math.max(2, Math.ceil(matches.length / 2))) {
+    return firstPage;
+  }
+  const nameText = normalise(matches.map((match) => match.name).join(' '));
+  if (/\btrainee|student\b/.test(nameText)) return 'trainee management';
+  if (/\bstaff|instructor\b/.test(nameText)) return 'staff management';
+  if (/\bcourse\b/.test(nameText)) return 'course management';
+  if (/\bflight|dfp|schedule\b/.test(nameText)) return 'the schedule';
+  if (/\bsetting|configure\b/.test(nameText)) return 'settings';
+  return 'DFP-NEO';
+}
+
+function findNeoGuideFunction(model: NeoGuideRuntimeModel, id: string): NeoGuideFunction | undefined {
+  return [
+    ...(model.curatedKnowledge?.functions || []),
+    ...(model.functions || []),
+  ].find((fn) => fn.id === id);
 }
 
 export function detectIntent(question: string): NeoGuideIntent {
@@ -368,7 +609,8 @@ function scoreFunction(
   normalisedQuestion: string,
   intent: NeoGuideIntent,
   context: NeoGuidePageContext,
-  userPermissions: Set<string>
+  userPermissions: Set<string>,
+  learnedAssociations: NeoGuideLearnedAssociation[] = []
 ): NeoGuideMatch {
   const haystackParts = [
     fn.name,
@@ -453,6 +695,12 @@ function scoreFunction(
     reasons.push('previous topic');
   }
 
+  const learnedScore = scoreLearnedAssociation(fn.id, normalisedQuestion, learnedAssociations);
+  if (learnedScore > 0) {
+    score += learnedScore;
+    reasons.push('learned wording');
+  }
+
   if (context.page && fn.location?.page && normalise(context.page) === normalise(fn.location.page)) {
     score += 3;
     reasons.push('current page');
@@ -473,7 +721,7 @@ function scoreFunction(
     reasons.push('thin generated record');
   }
 
-  if (!exactPhraseMatched && meaningfulMatchedTokens.size === 0 && requestedActionFamilies.length === 0) {
+  if (!exactPhraseMatched && meaningfulMatchedTokens.size === 0 && requestedActionFamilies.length === 0 && learnedScore === 0) {
     score = Math.min(score, 8);
     reasons.push('weak subject match');
   }
@@ -487,6 +735,34 @@ function scoreFunction(
     reasons: Array.from(new Set(reasons)).slice(0, 8),
     function: fn
   };
+}
+
+function scoreLearnedAssociation(
+  functionId: string,
+  normalisedQuestion: string,
+  associations: NeoGuideLearnedAssociation[]
+): number {
+  let score = 0;
+  const questionTokens = new Set(tokenize(normalisedQuestion));
+  for (const association of associations) {
+    if (association.intentId !== functionId) continue;
+    const phrase = normalise(association.normalisedPhrase || association.phrase);
+    if (!phrase) continue;
+    if (phrase === normalisedQuestion) {
+      score = Math.max(score, 18 + Math.min(8, association.count || 0));
+      continue;
+    }
+    if (normalisedQuestion.includes(phrase) || phrase.includes(normalisedQuestion)) {
+      score = Math.max(score, 10 + Math.min(5, association.count || 0));
+      continue;
+    }
+    const phraseTokens = tokenize(phrase);
+    if (phraseTokens.length > 0) {
+      const overlap = phraseTokens.filter((token) => questionTokens.has(token)).length / phraseTokens.length;
+      if (overlap >= 0.75) score = Math.max(score, 6 + Math.min(4, association.count || 0));
+    }
+  }
+  return score;
 }
 
 function detectActionFamilies(tokens: string[]): string[] {

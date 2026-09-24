@@ -1,16 +1,15 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import {
+  answerNeoGuideClarificationNone,
+  answerNeoGuideClarificationSelection,
   answerNeoGuideQuestion,
+  NeoGuideClarificationOption,
   NeoGuideAnswer,
   NeoGuideConversationState,
+  NeoGuideLearnedAssociation,
   NeoGuideNavigationAction,
   NeoGuideRuntimeModel,
 } from '../utils/neoGuideEngine';
-import {
-  buildNeoGuideLocalLanguageRequest,
-  requestNeoGuideLocalLanguageInterpretation,
-  shouldUseNeoGuideLocalLanguage,
-} from '../utils/neoGuideLocalLanguageClient';
 
 interface NeoGuidePanelProps {
   isOpen: boolean;
@@ -26,6 +25,8 @@ interface GuideMessage {
   role: 'guide' | 'user';
   text: string;
   action?: NeoGuideNavigationAction;
+  clarificationOptions?: NeoGuideClarificationOption[];
+  noneOptionLabel?: string;
 }
 
 interface NeoGuideDatabaseVocabulary {
@@ -41,6 +42,27 @@ const pageToView: Record<string, string> = {
   Settings: 'Settings',
   Priorities: 'Priorities',
   SupervisorDashboard: 'SupervisorDashboard',
+};
+const LEARNED_ASSOCIATIONS_KEY = 'dfp-neo-guide-learned-associations.v1';
+
+const normaliseLearnedPhrase = (value: string) => value
+  .toLowerCase()
+  .replace(/[’']/g, '')
+  .replace(/[^a-z0-9]+/g, ' ')
+  .replace(/\s+/g, ' ')
+  .trim();
+
+const loadLearnedAssociations = (): NeoGuideLearnedAssociation[] => {
+  try {
+    const parsed = JSON.parse(window.localStorage.getItem(LEARNED_ASSOCIATIONS_KEY) || '[]');
+    return Array.isArray(parsed) ? parsed.slice(0, 250) : [];
+  } catch {
+    return [];
+  }
+};
+
+const saveLearnedAssociations = (associations: NeoGuideLearnedAssociation[]) => {
+  window.localStorage.setItem(LEARNED_ASSOCIATIONS_KEY, JSON.stringify(associations.slice(0, 250)));
 };
 
 const highlightTarget = (target?: string | null) => {
@@ -91,6 +113,7 @@ const NeoGuidePanel: React.FC<NeoGuidePanelProps> = ({
   const [loadError, setLoadError] = useState('');
   const [question, setQuestion] = useState('');
   const [conversation, setConversation] = useState<NeoGuideConversationState | null>(null);
+  const [learnedAssociations, setLearnedAssociations] = useState<NeoGuideLearnedAssociation[]>([]);
   const [messages, setMessages] = useState<GuideMessage[]>([
     {
       id: 'welcome',
@@ -130,6 +153,10 @@ const NeoGuidePanel: React.FC<NeoGuidePanelProps> = ({
     if (isOpen) window.setTimeout(() => inputRef.current?.focus(), 80);
   }, [isOpen]);
 
+  useEffect(() => {
+    setLearnedAssociations(loadLearnedAssociations());
+  }, []);
+
   const userPermissions = useMemo(() => {
     if (!model || !canUsePlatformPermission) return [];
     const ids = new Set<string>();
@@ -148,39 +175,33 @@ const NeoGuidePanel: React.FC<NeoGuidePanelProps> = ({
       selectedRecordLabel,
       userPermissions,
       conversation,
+      learnedAssociations,
     };
     const answer: NeoGuideAnswer = answerNeoGuideQuestion(trimmed, model, {
       ...guideContext,
     });
+    appendAnswer(trimmed, answer);
+    setQuestion('');
+  };
+
+  const appendAnswer = (userText: string | null, answer: NeoGuideAnswer) => {
     setConversation(answer.conversation);
     setMessages((current) => [
       ...current,
-      { id: `user-${Date.now()}`, role: 'user', text: trimmed },
+      ...(userText ? [{ id: `user-${Date.now()}`, role: 'user' as const, text: userText }] : []),
       {
         id: `guide-${Date.now()}`,
-        role: 'guide',
+        role: 'guide' as const,
         text: answer.answer,
         action: answer.navigationAction,
+        clarificationOptions: answer.clarificationOptions,
+        noneOptionLabel: answer.resolutionStage === 3
+          ? "None of these - I'll rephrase my question"
+          : answer.clarificationOptions?.length
+            ? 'None of these'
+            : undefined,
       },
     ]);
-    setQuestion('');
-
-    if (shouldUseNeoGuideLocalLanguage(trimmed, answer)) {
-      const localRequest = buildNeoGuideLocalLanguageRequest(trimmed, answer, guideContext);
-      void requestNeoGuideLocalLanguageInterpretation(localRequest).then((interpretation) => {
-        if (!interpretation) return;
-        const rewrittenQuestion = interpretation.rewrittenQuestion?.trim();
-        if (rewrittenQuestion && rewrittenQuestion.toLowerCase() !== trimmed.toLowerCase()) {
-          const refinedAnswer = answerNeoGuideQuestion(rewrittenQuestion, model, guideContext);
-          if (refinedAnswer.confidence !== 'low' && refinedAnswer.answer !== answer.answer) {
-            setConversation(refinedAnswer.conversation);
-            appendGuideMessage(`I understood that as: "${rewrittenQuestion}"\n\n${refinedAnswer.answer}`, refinedAnswer.navigationAction);
-            return;
-          }
-        }
-        if (interpretation.clarificationQuestion) appendGuideMessage(interpretation.clarificationQuestion);
-      });
-    }
   };
 
   const appendGuideMessage = (text: string, action?: NeoGuideNavigationAction) => {
@@ -188,6 +209,56 @@ const NeoGuidePanel: React.FC<NeoGuidePanelProps> = ({
       ...current,
       { id: `guide-${Date.now()}-${current.length}`, role: 'guide', text, action },
     ]);
+  };
+
+  const selectClarificationOption = (option: NeoGuideClarificationOption) => {
+    if (!model) return;
+    const originalQuestion = conversation?.resolution?.originalQuestion;
+    if (originalQuestion) {
+      const normalisedPhrase = normaliseLearnedPhrase(originalQuestion);
+      if (normalisedPhrase) {
+        setLearnedAssociations((current) => {
+          const existing = current.find((item) => item.normalisedPhrase === normalisedPhrase && item.intentId === option.intentId);
+          const next = existing
+            ? current.map((item) => item === existing
+              ? { ...item, count: item.count + 1, lastSelectedAt: new Date().toISOString() }
+              : item)
+            : [
+              {
+                phrase: originalQuestion,
+                normalisedPhrase,
+                intentId: option.intentId,
+                count: 1,
+                lastSelectedAt: new Date().toISOString(),
+              },
+              ...current,
+            ];
+          saveLearnedAssociations(next);
+          return next.slice(0, 250);
+        });
+      }
+    }
+    const answer = answerNeoGuideClarificationSelection(option.intentId, model, {
+      page: activeView,
+      selectedRecordLabel,
+      userPermissions,
+      conversation,
+      learnedAssociations,
+    });
+    appendAnswer(option.label, answer);
+  };
+
+  const selectNoneOfThese = () => {
+    if (!model) return;
+    const answer = answerNeoGuideClarificationNone(model, {
+      page: activeView,
+      selectedRecordLabel,
+      userPermissions,
+      conversation,
+      learnedAssociations,
+    });
+    appendAnswer('None of these', answer);
+    window.setTimeout(() => inputRef.current?.focus(), 80);
   };
 
   const tryHighlightActionTarget = (action: NeoGuideNavigationAction, attempt = 0, didNavigate = false) => {
@@ -275,6 +346,29 @@ const NeoGuidePanel: React.FC<NeoGuidePanelProps> = ({
                   >
                     {message.action.label}
                   </button>
+                ) : null}
+                {message.clarificationOptions?.length ? (
+                  <div className="mt-3 space-y-2">
+                    {message.clarificationOptions.map((option) => (
+                      <button
+                        key={option.intentId}
+                        type="button"
+                        onClick={() => selectClarificationOption(option)}
+                        className="block w-full rounded-md border border-slate-600 bg-slate-800 px-3 py-2 text-left text-xs font-bold text-slate-100 hover:border-orange-300 hover:bg-slate-700"
+                      >
+                        {option.label}
+                      </button>
+                    ))}
+                    {message.noneOptionLabel ? (
+                      <button
+                        type="button"
+                        onClick={selectNoneOfThese}
+                        className="block w-full rounded-md border border-slate-700 bg-slate-950 px-3 py-2 text-left text-xs font-bold text-slate-300 hover:border-slate-400 hover:text-white"
+                      >
+                        {message.noneOptionLabel}
+                      </button>
+                    ) : null}
+                  </div>
                 ) : null}
               </div>
             ))}
