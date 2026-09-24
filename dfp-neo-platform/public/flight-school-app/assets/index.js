@@ -1987,6 +1987,94 @@ function normalise(value) {
 function first(values) {
   return Array.isArray(values) && values.length > 0 ? values[0] : "";
 }
+const __vite_import_meta_env__ = { "BASE_URL": "./", "DEV": false, "MODE": "production", "PROD": true, "SSR": false };
+const DEFAULT_TIMEOUT_MS = 1200;
+const MAX_TIMEOUT_MS = 2500;
+function readViteEnv() {
+  return __vite_import_meta_env__ || {};
+}
+function getNeoGuideLocalLanguageConfig() {
+  const env = readViteEnv();
+  const endpoint = String(env.VITE_NEO_GUIDE_LOCAL_LANGUAGE_URL || "").trim();
+  const timeoutDraft = Number(env.VITE_NEO_GUIDE_LOCAL_LANGUAGE_TIMEOUT_MS || DEFAULT_TIMEOUT_MS);
+  const timeoutMs = Number.isFinite(timeoutDraft) ? Math.max(250, Math.min(MAX_TIMEOUT_MS, timeoutDraft)) : DEFAULT_TIMEOUT_MS;
+  return {
+    enabled: Boolean(endpoint),
+    endpoint,
+    timeoutMs
+  };
+}
+function shouldUseNeoGuideLocalLanguage(question, answer, config = getNeoGuideLocalLanguageConfig()) {
+  if (!config.enabled || !question.trim()) return false;
+  if (answer.confidence === "low") return true;
+  if (answer.needsClarification) return true;
+  if (/I don't know|couldn't match|not reliable enough/i.test(answer.answer)) return true;
+  return false;
+}
+function buildNeoGuideLocalLanguageRequest(question, answer, context) {
+  const topMatch = answer.matches[0];
+  return {
+    question,
+    pageContext: {
+      page: context.page,
+      activeTab: context.activeTab,
+      selectedRecordLabel: context.selectedRecordLabel,
+      selectedRecordId: context.selectedRecordId,
+      userPermissions: context.userPermissions
+    },
+    conversation: context.conversation || null,
+    deterministicAnswer: {
+      intent: answer.intent,
+      confidence: answer.confidence,
+      answer: answer.answer,
+      topFunctionId: topMatch?.functionId || null,
+      topFunctionName: topMatch?.name || null,
+      needsClarification: answer.needsClarification
+    }
+  };
+}
+async function requestNeoGuideLocalLanguageInterpretation(request, config = getNeoGuideLocalLanguageConfig(), fetchImpl = fetch) {
+  if (!config.enabled) return null;
+  const controller = new AbortController();
+  const timer = globalThis.setTimeout(() => controller.abort(), config.timeoutMs);
+  try {
+    const response = await fetchImpl(config.endpoint, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(request),
+      signal: controller.signal
+    });
+    if (!response.ok) return null;
+    const payload = await response.json();
+    return normaliseLocalLanguageInterpretation(payload);
+  } catch {
+    return null;
+  } finally {
+    globalThis.clearTimeout(timer);
+  }
+}
+function normaliseLocalLanguageInterpretation(value) {
+  if (!value || typeof value !== "object") return null;
+  const payload = value;
+  const confidence = Number(payload.confidence);
+  if (!Number.isFinite(confidence) || confidence < 0 || confidence > 1) return null;
+  const rewrittenQuestion = typeof payload.rewrittenQuestion === "string" ? payload.rewrittenQuestion.trim().slice(0, 500) : void 0;
+  const clarificationQuestion = typeof payload.clarificationQuestion === "string" ? payload.clarificationQuestion.trim().slice(0, 300) : void 0;
+  const intent = typeof payload.intent === "string" ? payload.intent.trim().slice(0, 80) : void 0;
+  const concepts = Array.isArray(payload.concepts) ? payload.concepts.filter((item) => typeof item === "string").map((item) => item.slice(0, 80)).slice(0, 12) : void 0;
+  const entities = payload.entities && typeof payload.entities === "object" && !Array.isArray(payload.entities) ? Object.fromEntries(
+    Object.entries(payload.entities).filter(([, item]) => typeof item === "string").map(([key, item]) => [key.slice(0, 80), String(item).slice(0, 160)]).slice(0, 12)
+  ) : void 0;
+  return {
+    confidence,
+    rewrittenQuestion,
+    intent,
+    concepts,
+    entities,
+    clarificationQuestion,
+    requiresLiveData: Boolean(payload.requiresLiveData)
+  };
+}
 const pageToView = {
   "Program Schedule": "Program Schedule",
   "Training Records": "TrainingRecords",
@@ -2079,10 +2167,14 @@ const NeoGuidePanel = ({
     event?.preventDefault();
     const trimmed = question.trim();
     if (!trimmed || !model) return;
-    const answer = answerNeoGuideQuestion(trimmed, model, {
+    const guideContext = {
       page: activeView,
+      selectedRecordLabel,
       userPermissions,
       conversation
+    };
+    const answer = answerNeoGuideQuestion(trimmed, model, {
+      ...guideContext
     });
     setConversation(answer.conversation);
     setMessages((current) => [
@@ -2096,11 +2188,29 @@ const NeoGuidePanel = ({
       }
     ]);
     setQuestion("");
+    if (shouldUseNeoGuideLocalLanguage(trimmed, answer)) {
+      const localRequest = buildNeoGuideLocalLanguageRequest(trimmed, answer, guideContext);
+      void requestNeoGuideLocalLanguageInterpretation(localRequest).then((interpretation) => {
+        if (!interpretation) return;
+        const rewrittenQuestion = interpretation.rewrittenQuestion?.trim();
+        if (rewrittenQuestion && rewrittenQuestion.toLowerCase() !== trimmed.toLowerCase()) {
+          const refinedAnswer = answerNeoGuideQuestion(rewrittenQuestion, model, guideContext);
+          if (refinedAnswer.confidence !== "low" && refinedAnswer.answer !== answer.answer) {
+            setConversation(refinedAnswer.conversation);
+            appendGuideMessage(`I understood that as: "${rewrittenQuestion}"
+
+${refinedAnswer.answer}`, refinedAnswer.navigationAction);
+            return;
+          }
+        }
+        if (interpretation.clarificationQuestion) appendGuideMessage(interpretation.clarificationQuestion);
+      });
+    }
   };
-  const appendGuideMessage = (text) => {
+  const appendGuideMessage = (text, action) => {
     setMessages((current) => [
       ...current,
-      { id: `guide-${Date.now()}-${current.length}`, role: "guide", text }
+      { id: `guide-${Date.now()}-${current.length}`, role: "guide", text, action }
     ]);
   };
   const tryHighlightActionTarget = (action, attempt = 0, didNavigate = false) => {

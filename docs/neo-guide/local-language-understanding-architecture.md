@@ -52,3 +52,16 @@ Preferred language model candidate: IBM Granite 4.2 8B.
 Preferred first local-runtime artefact for evaluation: IBM Granite 4.2 8B GGUF, likely `Q4_K_M`, subject to exact licence and artefact verification.
 
 This preference does not integrate model weights yet. The next implementation step is to pin the exact model artefact, copy required licence/notice files, and run the NEO Guide language evaluation set locally.
+
+## Performance Policy
+
+The local language layer must be optional, lazy and time-boxed.
+
+- DFP-NEO must start and run without the local model service.
+- The browser must never load model weights.
+- The main application must not wait for Granite during startup.
+- NEO Guide must answer immediately using the deterministic guide.
+- Local language interpretation is used only when configured and when the deterministic answer is low-confidence, ambiguous or explicitly asks for clarification.
+- Local interpretation requests must have a short timeout.
+- If the local service is unavailable, slow or returns invalid data, NEO Guide silently keeps the deterministic answer.
+- The local model service must run out-of-process from the main application.

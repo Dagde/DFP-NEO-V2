@@ -6,6 +6,11 @@ import {
   NeoGuideNavigationAction,
   NeoGuideRuntimeModel,
 } from '../utils/neoGuideEngine';
+import {
+  buildNeoGuideLocalLanguageRequest,
+  requestNeoGuideLocalLanguageInterpretation,
+  shouldUseNeoGuideLocalLanguage,
+} from '../utils/neoGuideLocalLanguageClient';
 
 interface NeoGuidePanelProps {
   isOpen: boolean;
@@ -138,11 +143,14 @@ const NeoGuidePanel: React.FC<NeoGuidePanelProps> = ({
     event?.preventDefault();
     const trimmed = question.trim();
     if (!trimmed || !model) return;
-    const answer: NeoGuideAnswer = answerNeoGuideQuestion(trimmed, model, {
+    const guideContext = {
       page: activeView,
       selectedRecordLabel,
       userPermissions,
       conversation,
+    };
+    const answer: NeoGuideAnswer = answerNeoGuideQuestion(trimmed, model, {
+      ...guideContext,
     });
     setConversation(answer.conversation);
     setMessages((current) => [
@@ -156,12 +164,29 @@ const NeoGuidePanel: React.FC<NeoGuidePanelProps> = ({
       },
     ]);
     setQuestion('');
+
+    if (shouldUseNeoGuideLocalLanguage(trimmed, answer)) {
+      const localRequest = buildNeoGuideLocalLanguageRequest(trimmed, answer, guideContext);
+      void requestNeoGuideLocalLanguageInterpretation(localRequest).then((interpretation) => {
+        if (!interpretation) return;
+        const rewrittenQuestion = interpretation.rewrittenQuestion?.trim();
+        if (rewrittenQuestion && rewrittenQuestion.toLowerCase() !== trimmed.toLowerCase()) {
+          const refinedAnswer = answerNeoGuideQuestion(rewrittenQuestion, model, guideContext);
+          if (refinedAnswer.confidence !== 'low' && refinedAnswer.answer !== answer.answer) {
+            setConversation(refinedAnswer.conversation);
+            appendGuideMessage(`I understood that as: "${rewrittenQuestion}"\n\n${refinedAnswer.answer}`, refinedAnswer.navigationAction);
+            return;
+          }
+        }
+        if (interpretation.clarificationQuestion) appendGuideMessage(interpretation.clarificationQuestion);
+      });
+    }
   };
 
-  const appendGuideMessage = (text: string) => {
+  const appendGuideMessage = (text: string, action?: NeoGuideNavigationAction) => {
     setMessages((current) => [
       ...current,
-      { id: `guide-${Date.now()}-${current.length}`, role: 'guide', text },
+      { id: `guide-${Date.now()}-${current.length}`, role: 'guide', text, action },
     ]);
   };
 
