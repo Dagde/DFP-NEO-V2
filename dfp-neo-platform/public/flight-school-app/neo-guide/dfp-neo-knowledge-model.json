@@ -1,6 +1,6 @@
 {
   "schemaVersion": "neo-guide-runtime-model.v1",
-  "generatedAt": "2026-09-24T01:06:44.631Z",
+  "generatedAt": "2026-09-24T10:15:07.223Z",
   "source": {
     "repository": "clone-the-repo-dagde-dfp-neo",
     "sourceFileCount": 377,
@@ -8585,7 +8585,7 @@
         "control-attribute:App.tsx:4755",
         "control-attribute:App.tsx:4756"
       ],
-      "count": 2360
+      "count": 2364
     },
     {
       "term": "type",
@@ -8607,7 +8607,7 @@
         "control-attribute:App.tsx:4345",
         "control-attribute:App.tsx:4455"
       ],
-      "count": 2344
+      "count": 2348
     },
     {
       "term": "on Change",
@@ -8813,6 +8813,7 @@
         "Required"
       ],
       "sources": [
+        "curated:function.curated.people.archive-delete-trainee:steps",
         "curated:function.curated.settings.turnaround:steps",
         "curated:function.curated.settings.flight-authorisation-warnings:purpose",
         "curated:function.curated.settings.flight-authorisation-warnings:steps",
@@ -8823,19 +8824,19 @@
         "control:components/Header.tsx:325",
         "control-attribute:components/Header.tsx:325",
         "control:components/Header.tsx:342",
-        "control-attribute:components/Header.tsx:342",
-        "control:components/Header.tsx:370"
+        "control-attribute:components/Header.tsx:342"
       ],
-      "count": 403
+      "count": 404
     },
     {
-      "term": "GET",
+      "term": "get",
       "normalised": "get",
       "aliases": [
-        "Get",
-        "get"
+        "GET",
+        "Get"
       ],
       "sources": [
+        "curated:function.curated.people.archive-delete-trainee:alias",
         "component:dfp-neo-platform/app/api/admin/database/route.ts:20",
         "component:dfp-neo-platform/app/api/admin/seed-syllabus/route.ts:315",
         "component:dfp-neo-platform/app/api/admin/setup/route.ts:113",
@@ -8846,10 +8847,9 @@
         "component:dfp-neo-platform/app/api/aircraft-availability-events/route.ts:14",
         "component:dfp-neo-platform/app/api/aircraft-availability-history/route.ts:14",
         "component:dfp-neo-platform/app/api/aircraft/[id]/route.ts:8",
-        "component:dfp-neo-platform/app/api/aircraft/route.ts:14",
-        "component:dfp-neo-platform/app/api/auth/session/route.ts:7"
+        "component:dfp-neo-platform/app/api/aircraft/route.ts:14"
       ],
-      "count": 375
+      "count": 376
     },
     {
       "term": "Delete",
@@ -8862,17 +8862,17 @@
         "curated:function.curated.people.delete-staff",
         "curated:function.curated.people.delete-staff:alias",
         "curated:function.curated.people.delete-staff:steps",
+        "curated:function.curated.people.archive-delete-trainee",
+        "curated:function.curated.people.archive-delete-trainee:alias",
+        "curated:function.curated.people.archive-delete-trainee:steps",
         "curated:function.curated.training.archive-course:alias",
         "curated:function.curated.training.archive-course:steps",
         "control:App.tsx:4510",
         "control-attribute:App.tsx:4510",
         "control:components/AcademicsTab.tsx:1650",
-        "control:components/AdminPanel.tsx:360",
-        "control-attribute:components/AdminPanel.tsx:360",
-        "control:components/AdminPanel.tsx:442",
-        "control:components/AirCombatTrainingReportModal.tsx:827"
+        "control:components/AdminPanel.tsx:360"
       ],
-      "count": 332
+      "count": 340
     },
     {
       "term": "title",
@@ -8919,6 +8919,29 @@
       "count": 302
     },
     {
+      "term": "course",
+      "normalised": "course",
+      "aliases": [
+        "Course",
+        "Course *"
+      ],
+      "sources": [
+        "curated:function.curated.people.archive-delete-trainee:steps",
+        "curated:function.curated.people.archive-delete-trainee:input",
+        "curated:function.curated.people.trainee-roster:alias",
+        "curated:function.curated.people.trainee-roster:purpose",
+        "curated:function.curated.people.trainee-roster:steps",
+        "curated:function.curated.training.course-management",
+        "curated:function.curated.training.course-management:alias",
+        "curated:function.curated.training.course-management:purpose",
+        "curated:function.curated.training.course-management:steps",
+        "curated:function.curated.training.archive-course",
+        "curated:function.curated.training.archive-course:alias",
+        "curated:function.curated.training.archive-course:purpose"
+      ],
+      "count": 301
+    },
+    {
       "term": "text",
       "normalised": "text",
       "aliases": [
@@ -8939,29 +8962,6 @@
         "control-attribute:components/AddFlightTileModal.tsx:4194"
       ],
       "count": 298
-    },
-    {
-      "term": "course",
-      "normalised": "course",
-      "aliases": [
-        "Course",
-        "Course *"
-      ],
-      "sources": [
-        "curated:function.curated.people.trainee-roster:alias",
-        "curated:function.curated.people.trainee-roster:purpose",
-        "curated:function.curated.people.trainee-roster:steps",
-        "curated:function.curated.training.course-management",
-        "curated:function.curated.training.course-management:alias",
-        "curated:function.curated.training.course-management:purpose",
-        "curated:function.curated.training.course-management:steps",
-        "curated:function.curated.training.archive-course",
-        "curated:function.curated.training.archive-course:alias",
-        "curated:function.curated.training.archive-course:purpose",
-        "curated:function.curated.training.archive-course:steps",
-        "curated:function.curated.training.course-progress"
-      ],
-      "count": 297
     },
     {
       "term": "number",
@@ -9072,6 +9072,29 @@
       "count": 273
     },
     {
+      "term": "password",
+      "normalised": "password",
+      "aliases": [
+        "Password",
+        "Password *"
+      ],
+      "sources": [
+        "curated:function.curated.people.archive-delete-trainee:steps",
+        "curated:function.curated.people.archive-delete-trainee:input",
+        "control:components/AdminPanel.tsx:349",
+        "control:components/AdminPanel.tsx:380",
+        "control-attribute:components/AdminPanel.tsx:380",
+        "control:components/AdminPanel.tsx:433",
+        "control-attribute:components/AdminPanel.tsx:433",
+        "control:components/AdminPanel.tsx:490",
+        "control:components/AdminPanel.tsx:493",
+        "control-attribute:components/AdminPanel.tsx:493",
+        "control:components/AdminPanel.tsx:561",
+        "control:components/ArchivedCoursesView.tsx:267"
+      ],
+      "count": 268
+    },
+    {
       "term": "checkbox",
       "normalised": "checkbox",
       "aliases": [],
@@ -9090,29 +9113,6 @@
         "control-attribute:components/AuditFlyout.tsx:649"
       ],
       "count": 267
-    },
-    {
-      "term": "Password",
-      "normalised": "password",
-      "aliases": [
-        "password",
-        "Password *"
-      ],
-      "sources": [
-        "control:components/AdminPanel.tsx:349",
-        "control:components/AdminPanel.tsx:380",
-        "control-attribute:components/AdminPanel.tsx:380",
-        "control:components/AdminPanel.tsx:433",
-        "control-attribute:components/AdminPanel.tsx:433",
-        "control:components/AdminPanel.tsx:490",
-        "control:components/AdminPanel.tsx:493",
-        "control-attribute:components/AdminPanel.tsx:493",
-        "control:components/AdminPanel.tsx:561",
-        "control:components/ArchivedCoursesView.tsx:267",
-        "control-attribute:components/ArchivedCoursesView.tsx:267",
-        "control:components/ChangePasswordModal.tsx:123"
-      ],
-      "count": 263
     },
     {
       "term": "date",
@@ -9137,6 +9137,30 @@
       "count": 243
     },
     {
+      "term": "Trainee",
+      "normalised": "trainee",
+      "aliases": [
+        "trainee",
+        "Trainee *",
+        "Trainee?"
+      ],
+      "sources": [
+        "curated:function.curated.people.trainee-unavailability",
+        "curated:function.curated.people.trainee-unavailability:alias",
+        "curated:function.curated.people.trainee-unavailability:purpose",
+        "curated:function.curated.people.trainee-unavailability:steps",
+        "curated:function.curated.people.trainee-unavailability:input",
+        "curated:function.curated.people.archive-delete-trainee",
+        "curated:function.curated.people.archive-delete-trainee:alias",
+        "curated:function.curated.people.archive-delete-trainee:purpose",
+        "curated:function.curated.people.archive-delete-trainee:steps",
+        "curated:function.curated.people.archive-delete-trainee:input",
+        "curated:function.curated.people.trainee-roster",
+        "curated:function.curated.people.trainee-roster:alias"
+      ],
+      "count": 240
+    },
+    {
       "term": "flight",
       "normalised": "flight",
       "aliases": [
@@ -9157,30 +9181,6 @@
         "curated:function.curated.settings.flight-authorisation-warnings:alias"
       ],
       "count": 220
-    },
-    {
-      "term": "Trainee",
-      "normalised": "trainee",
-      "aliases": [
-        "trainee",
-        "Trainee *",
-        "Trainee?"
-      ],
-      "sources": [
-        "curated:function.curated.people.trainee-unavailability",
-        "curated:function.curated.people.trainee-unavailability:alias",
-        "curated:function.curated.people.trainee-unavailability:purpose",
-        "curated:function.curated.people.trainee-unavailability:steps",
-        "curated:function.curated.people.trainee-unavailability:input",
-        "curated:function.curated.people.trainee-roster",
-        "curated:function.curated.people.trainee-roster:alias",
-        "curated:function.curated.people.trainee-roster:purpose",
-        "curated:function.curated.people.trainee-roster:steps",
-        "curated:function.curated.people.instructor-assignment:purpose",
-        "curated:function.curated.people.instructor-assignment:steps",
-        "curated:function.curated.training.course-progress:purpose"
-      ],
-      "count": 212
     },
     {
       "term": "label",
@@ -9473,6 +9473,26 @@
       "count": 158
     },
     {
+      "term": "option",
+      "normalised": "option",
+      "aliases": [],
+      "sources": [
+        "curated:function.curated.people.archive-delete-trainee:purpose",
+        "curated:function.curated.messaging.auto-notifications:steps",
+        "control:App.tsx:4183",
+        "control-attribute:App.tsx:4183",
+        "control:App.tsx:4186",
+        "control:App.tsx:5619",
+        "control:App.tsx:5643",
+        "control:App.tsx:5770",
+        "control:App.tsx:6610",
+        "control:components/AddGroundEventFlyout.tsx:351",
+        "control:components/AddGroundEventFlyout.tsx:418",
+        "control-attribute:components/AddRemedialPackageFlyout.tsx:66"
+      ],
+      "count": 158
+    },
+    {
       "term": "date time",
       "normalised": "date time",
       "aliases": [
@@ -9494,26 +9514,6 @@
         "prisma:MobilePushDevice.createdAt"
       ],
       "count": 157
-    },
-    {
-      "term": "option",
-      "normalised": "option",
-      "aliases": [],
-      "sources": [
-        "curated:function.curated.messaging.auto-notifications:steps",
-        "control:App.tsx:4183",
-        "control-attribute:App.tsx:4183",
-        "control:App.tsx:4186",
-        "control:App.tsx:5619",
-        "control:App.tsx:5643",
-        "control:App.tsx:5770",
-        "control:App.tsx:6610",
-        "control:components/AddGroundEventFlyout.tsx:351",
-        "control:components/AddGroundEventFlyout.tsx:418",
-        "control-attribute:components/AddRemedialPackageFlyout.tsx:66",
-        "control:components/AuditFlyout.tsx:706"
-      ],
-      "count": 156
     },
     {
       "term": "add",
@@ -9795,15 +9795,15 @@
         "curated:function.curated.people.trainee-unavailability:steps",
         "curated:function.curated.people.staff-unavailability:steps",
         "curated:function.curated.people.delete-staff:steps",
+        "curated:function.curated.people.archive-delete-trainee:steps",
         "curated:function.curated.people.trainee-roster:steps",
         "curated:function.curated.people.instructor-assignment:steps",
         "curated:function.curated.training.course-management:steps",
         "curated:function.curated.training.archive-course:steps",
         "curated:function.curated.training.course-progress:steps",
-        "curated:function.curated.training.training-report:steps",
-        "curated:function.curated.messaging.auto-notifications:steps"
+        "curated:function.curated.training.training-report:steps"
       ],
-      "count": 111
+      "count": 113
     },
     {
       "term": "JSON",
@@ -9862,6 +9862,7 @@
       "sources": [
         "curated:function.curated.people.trainee-unavailability:steps",
         "curated:function.curated.people.staff-unavailability:steps",
+        "curated:function.curated.people.archive-delete-trainee:steps",
         "curated:function.curated.people.trainee-roster:steps",
         "curated:function.curated.people.instructor-assignment:steps",
         "curated:function.curated.duty-pilot.personnel-management:steps",
@@ -9870,10 +9871,9 @@
         "control-attribute:App.tsx:6397",
         "control-attribute:App.tsx:6786",
         "control:App.tsx:56286",
-        "control-attribute:App.tsx:56286",
-        "control:components/CourseRosterView.tsx:647"
+        "control-attribute:App.tsx:56286"
       ],
-      "count": 103
+      "count": 105
     },
     {
       "term": "loading",
@@ -9893,7 +9893,7 @@
         "control-attribute:components/LoginModal.tsx:225",
         "control-attribute:components/LoginModal.tsx:242",
         "control-attribute:components/LoginModal.tsx:263",
-        "control:components/NeoGuidePanel.tsx:260"
+        "control:components/NeoGuidePanel.tsx:379"
       ],
       "count": 102
     },
@@ -9920,6 +9920,26 @@
       "count": 101
     },
     {
+      "term": "option label",
+      "normalised": "option label",
+      "aliases": [],
+      "sources": [
+        "control:App.tsx:4148",
+        "control:App.tsx:4167",
+        "control:App.tsx:4447",
+        "control:App.tsx:5432",
+        "control:App.tsx:5442",
+        "control:App.tsx:5635",
+        "control:App.tsx:5725",
+        "control:App.tsx:5745",
+        "control:App.tsx:6332",
+        "control:App.tsx:6408",
+        "control:App.tsx:6525",
+        "control:App.tsx:6625"
+      ],
+      "count": 101
+    },
+    {
       "term": "Access",
       "normalised": "access",
       "aliases": [
@@ -9938,6 +9958,26 @@
         "control:components/Header.tsx:387",
         "control:components/Header.tsx:422",
         "control:components/Header.tsx:440"
+      ],
+      "count": 100
+    },
+    {
+      "term": "is required",
+      "normalised": "is required",
+      "aliases": [],
+      "sources": [
+        "curated:function.curated.people.archive-delete-trainee:steps",
+        "curated:function.curated.settings.flight-authorisation-warnings:purpose",
+        "control:components/AdminPanel.tsx:341",
+        "control-attribute:components/AdminPanel.tsx:341",
+        "message:components/ACHistoryPage.tsx:77",
+        "message:components/ACHistoryPage.tsx:110",
+        "message:components/ACHistoryPage.tsx:142",
+        "message:components/ACHistoryPage.tsx:169",
+        "message:components/AddFlightTileModal.tsx:3132",
+        "message:components/AddFlightTileModal.tsx:3133",
+        "message:components/AddFlightTileModal.tsx:3134",
+        "message:components/AddFlightTileModal.tsx:3137"
       ],
       "count": 100
     },
@@ -9978,46 +10018,6 @@
         "curated:function.curated.scheduling.build-priorities:steps",
         "curated:function.curated.scheduling.validation-check:purpose",
         "curated:function.curated.scheduling.validation-check:steps"
-      ],
-      "count": 99
-    },
-    {
-      "term": "is required",
-      "normalised": "is required",
-      "aliases": [],
-      "sources": [
-        "curated:function.curated.settings.flight-authorisation-warnings:purpose",
-        "control:components/AdminPanel.tsx:341",
-        "control-attribute:components/AdminPanel.tsx:341",
-        "message:components/ACHistoryPage.tsx:77",
-        "message:components/ACHistoryPage.tsx:110",
-        "message:components/ACHistoryPage.tsx:142",
-        "message:components/ACHistoryPage.tsx:169",
-        "message:components/AddFlightTileModal.tsx:3132",
-        "message:components/AddFlightTileModal.tsx:3133",
-        "message:components/AddFlightTileModal.tsx:3134",
-        "message:components/AddFlightTileModal.tsx:3137",
-        "message:components/AddFlightTileModal.tsx:3138"
-      ],
-      "count": 99
-    },
-    {
-      "term": "option label",
-      "normalised": "option label",
-      "aliases": [],
-      "sources": [
-        "control:App.tsx:4148",
-        "control:App.tsx:4167",
-        "control:App.tsx:4447",
-        "control:App.tsx:5432",
-        "control:App.tsx:5442",
-        "control:App.tsx:5635",
-        "control:App.tsx:5725",
-        "control:App.tsx:5745",
-        "control:App.tsx:6332",
-        "control:App.tsx:6408",
-        "control:App.tsx:6525",
-        "control:App.tsx:6625"
       ],
       "count": 99
     },
@@ -10425,6 +10425,29 @@
       "count": 80
     },
     {
+      "term": "active",
+      "normalised": "active",
+      "aliases": [
+        "Active",
+        "ACTIVE"
+      ],
+      "sources": [
+        "curated:function.curated.people.archive-delete-trainee:purpose",
+        "curated:function.curated.people.archive-delete-trainee:steps",
+        "curated:function.curated.people.trainee-roster:purpose",
+        "curated:function.curated.people.trainee-roster:steps",
+        "curated:function.curated.training.course-management:purpose",
+        "curated:function.curated.training.archive-course:purpose",
+        "control:components/CancellationCodesTable.tsx:376",
+        "control:components/CancellationCodesTable.tsx:411",
+        "control-attribute:components/CancellationCodesTable.tsx:411",
+        "control:components/CourseProgressView.tsx:1237",
+        "control:components/CourseProgressView.tsx:1239",
+        "control:components/CourseProgressView.tsx:1245"
+      ],
+      "count": 79
+    },
+    {
       "term": "Boolean",
       "normalised": "boolean",
       "aliases": [
@@ -10493,29 +10516,6 @@
         "curated:function.curated.scheduling.aircraft-availability:steps"
       ],
       "count": 78
-    },
-    {
-      "term": "active",
-      "normalised": "active",
-      "aliases": [
-        "Active",
-        "ACTIVE"
-      ],
-      "sources": [
-        "curated:function.curated.people.trainee-roster:purpose",
-        "curated:function.curated.people.trainee-roster:steps",
-        "curated:function.curated.training.course-management:purpose",
-        "curated:function.curated.training.archive-course:purpose",
-        "control:components/CancellationCodesTable.tsx:376",
-        "control:components/CancellationCodesTable.tsx:411",
-        "control-attribute:components/CancellationCodesTable.tsx:411",
-        "control:components/CourseProgressView.tsx:1237",
-        "control:components/CourseProgressView.tsx:1239",
-        "control:components/CourseProgressView.tsx:1245",
-        "control:components/CurrencyPanel.tsx:607",
-        "control-attribute:components/CurrencyPanel.tsx:607"
-      ],
-      "count": 77
     },
     {
       "term": "Failed to fetch",
@@ -10611,6 +10611,7 @@
         "curated:function.curated.workflow.initial-setup-wizard:steps",
         "curated:function.curated.people.trainee-unavailability:steps",
         "curated:function.curated.people.staff-unavailability:steps",
+        "curated:function.curated.people.archive-delete-trainee:steps",
         "curated:function.curated.training.training-report:steps",
         "curated:function.curated.scheduling.add-flight-tile:steps",
         "curated:function.curated.settings.turnaround:steps",
@@ -10618,10 +10619,9 @@
         "control:components/AddCourseFlyout.tsx:191",
         "control-attribute:components/AddCourseFlyout.tsx:191",
         "control:components/AddCourseFlyout.tsx:233",
-        "control-attribute:components/AddCourseFlyout.tsx:233",
-        "control:components/AddCourseFlyout.tsx:256"
+        "control-attribute:components/AddCourseFlyout.tsx:233"
       ],
-      "count": 73
+      "count": 74
     },
     {
       "term": "can Edit Section",
@@ -10818,6 +10818,28 @@
       "count": 68
     },
     {
+      "term": "only",
+      "normalised": "only",
+      "aliases": [
+        "Only"
+      ],
+      "sources": [
+        "curated:function.curated.people.archive-delete-trainee:steps",
+        "control:App.tsx:4806",
+        "control:App.tsx:5058",
+        "control:App.tsx:5116",
+        "control:components/AddUnavailabilityFlyout.tsx:140",
+        "control:components/AirCombatTrainingReportModal.tsx:1264",
+        "control-attribute:components/PinEntryFlyout_BACKUP.tsx:34",
+        "control:components/PlatformConfigurationSettings.tsx:10209",
+        "control:components/PlatformConfigurationSettings.tsx:10211",
+        "control:components/PlatformConfigurationSettings.tsx:10216",
+        "control:components/PlatformConfigurationSettings.tsx:10217",
+        "control:components/PrioritiesView.tsx:4422"
+      ],
+      "count": 68
+    },
+    {
       "term": "px 3",
       "normalised": "px 3",
       "aliases": [],
@@ -10836,28 +10858,6 @@
         "message:components/AircraftAvailabilityPanel.tsx:268"
       ],
       "count": 68
-    },
-    {
-      "term": "only",
-      "normalised": "only",
-      "aliases": [
-        "Only"
-      ],
-      "sources": [
-        "control:App.tsx:4806",
-        "control:App.tsx:5058",
-        "control:App.tsx:5116",
-        "control:components/AddUnavailabilityFlyout.tsx:140",
-        "control:components/AirCombatTrainingReportModal.tsx:1264",
-        "control-attribute:components/PinEntryFlyout_BACKUP.tsx:34",
-        "control:components/PlatformConfigurationSettings.tsx:10209",
-        "control:components/PlatformConfigurationSettings.tsx:10211",
-        "control:components/PlatformConfigurationSettings.tsx:10216",
-        "control:components/PlatformConfigurationSettings.tsx:10217",
-        "control:components/PrioritiesView.tsx:4422",
-        "control:components/ScheduleView.tsx:10807"
-      ],
-      "count": 67
     },
     {
       "term": "database",
@@ -10921,6 +10921,28 @@
         "control:components/CourseProgressView.tsx:1359",
         "control:components/CourseProgressView.tsx:1377",
         "control:components/EditCourseFlyout.tsx:233"
+      ],
+      "count": 65
+    },
+    {
+      "term": "remove",
+      "normalised": "remove",
+      "aliases": [
+        "Remove"
+      ],
+      "sources": [
+        "curated:function.curated.people.delete-staff:alias",
+        "curated:function.curated.people.archive-delete-trainee:alias",
+        "curated:function.curated.training.archive-course:alias",
+        "curated:function.curated.scheduling.multi-select:steps",
+        "control:App.tsx:56878",
+        "control:components/AcademicsTab.tsx:1425",
+        "control:components/AddUnavailabilityFlyout.tsx:284",
+        "control-attribute:components/AddUnavailabilityFlyout.tsx:284",
+        "control:components/AircraftAvailabilityCalculator.tsx:143",
+        "control:components/CancelConfirmationFlyout.tsx:30",
+        "control:components/CrewRequirementEditor.tsx:265",
+        "control-attribute:components/CrewRequirementEditor.tsx:265"
       ],
       "count": 65
     },
@@ -11030,28 +11052,6 @@
         "message:components/PlatformConfigurationSettings.tsx:12198"
       ],
       "count": 63
-    },
-    {
-      "term": "remove",
-      "normalised": "remove",
-      "aliases": [
-        "Remove"
-      ],
-      "sources": [
-        "curated:function.curated.people.delete-staff:alias",
-        "curated:function.curated.training.archive-course:alias",
-        "curated:function.curated.scheduling.multi-select:steps",
-        "control:App.tsx:56878",
-        "control:components/AcademicsTab.tsx:1425",
-        "control:components/AddUnavailabilityFlyout.tsx:284",
-        "control-attribute:components/AddUnavailabilityFlyout.tsx:284",
-        "control:components/AircraftAvailabilityCalculator.tsx:143",
-        "control:components/CancelConfirmationFlyout.tsx:30",
-        "control:components/CrewRequirementEditor.tsx:265",
-        "control-attribute:components/CrewRequirementEditor.tsx:265",
-        "control:components/DeleteTraineeConfirmation.tsx:208"
-      ],
-      "count": 62
     },
     {
       "term": "Search",
@@ -11354,7 +11354,7 @@
         "control:components/InstructorProfileFlyout.tsx:1612",
         "control-attribute:components/LoginModal.tsx:263",
         "control-attribute:components/LoginModal.tsx:321",
-        "control-attribute:components/NeoGuidePanel.tsx:268",
+        "control-attribute:components/NeoGuidePanel.tsx:387",
         "control:components/PinEntryFlyout_BACKUP.tsx:91"
       ],
       "count": 57
@@ -11651,6 +11651,28 @@
       "count": 52
     },
     {
+      "term": "action",
+      "normalised": "action",
+      "aliases": [
+        "Action"
+      ],
+      "sources": [
+        "curated:function.curated.people.archive-delete-trainee:steps",
+        "curated:function.curated.training.archive-course:steps",
+        "curated:function.curated.scheduling.multi-select:steps",
+        "curated:function.curated.scheduling.publish-dfp:steps",
+        "control-attribute:components/AirCombatTrainingReportModal.tsx:883",
+        "control-attribute:components/AirCombatTrainingReportModal.tsx:941",
+        "control-attribute:components/AirCombatTrainingReportModal.tsx:999",
+        "control:components/AuditFlyout.tsx:645",
+        "control-attribute:components/AuditFlyout.tsx:649",
+        "control:components/AuditFlyout.tsx:710",
+        "control:components/CurrencyAuditFlyout.tsx:145",
+        "control-attribute:components/CurrencyAuditFlyout.tsx:149"
+      ],
+      "count": 51
+    },
+    {
       "term": "border gray 600",
       "normalised": "border gray 600",
       "aliases": [],
@@ -11758,28 +11780,6 @@
         "control:components/RightSidebar.tsx:151"
       ],
       "count": 51
-    },
-    {
-      "term": "action",
-      "normalised": "action",
-      "aliases": [
-        "Action"
-      ],
-      "sources": [
-        "curated:function.curated.training.archive-course:steps",
-        "curated:function.curated.scheduling.multi-select:steps",
-        "curated:function.curated.scheduling.publish-dfp:steps",
-        "control-attribute:components/AirCombatTrainingReportModal.tsx:883",
-        "control-attribute:components/AirCombatTrainingReportModal.tsx:941",
-        "control-attribute:components/AirCombatTrainingReportModal.tsx:999",
-        "control:components/AuditFlyout.tsx:645",
-        "control-attribute:components/AuditFlyout.tsx:649",
-        "control:components/AuditFlyout.tsx:710",
-        "control:components/CurrencyAuditFlyout.tsx:145",
-        "control-attribute:components/CurrencyAuditFlyout.tsx:149",
-        "control:components/DeleteTraineeConfirmation.tsx:195"
-      ],
-      "count": 50
     },
     {
       "term": "conflict",
@@ -12472,6 +12472,28 @@
         "control-attribute:components/AirCombatTrainingReportModal.tsx:771"
       ],
       "count": 43
+    },
+    {
+      "term": "Archive",
+      "normalised": "archive",
+      "aliases": [
+        "archive"
+      ],
+      "sources": [
+        "curated:function.curated.people.archive-delete-trainee",
+        "curated:function.curated.people.archive-delete-trainee:alias",
+        "curated:function.curated.people.archive-delete-trainee:purpose",
+        "curated:function.curated.people.archive-delete-trainee:steps",
+        "curated:function.curated.training.archive-course",
+        "curated:function.curated.training.archive-course:steps",
+        "control:App.tsx:55998",
+        "control-attribute:App.tsx:55998",
+        "control:components/ArchiveConfirmationFlyout.tsx:31",
+        "control:components/CoursesManagementView.tsx:453",
+        "control:components/DeleteTraineeConfirmation.tsx:194",
+        "control-attribute:components/DeleteTraineeConfirmation.tsx:195"
+      ],
+      "count": 42
     },
     {
       "term": "Audit",
@@ -13185,6 +13207,28 @@
       "count": 38
     },
     {
+      "term": "Click",
+      "normalised": "click",
+      "aliases": [
+        "click"
+      ],
+      "sources": [
+        "curated:function.curated.navigation.dfp:steps",
+        "curated:function.curated.people.trainee-unavailability:steps",
+        "curated:function.curated.people.staff-unavailability:steps",
+        "curated:function.curated.people.archive-delete-trainee:steps",
+        "curated:function.curated.scheduling.neo-build:steps",
+        "curated:function.curated.scheduling.validation-check:steps",
+        "curated:function.curated.scheduling.multi-select:steps",
+        "curated:function.curated.scheduling.flight-details:steps",
+        "curated:function.curated.scheduling.aircraft-availability:steps",
+        "curated:function.curated.scheduling.add-flight-tile:steps",
+        "curated:function.curated.scheduling.publish-dfp:steps",
+        "curated:function.curated.training.course-leadership:steps"
+      ],
+      "count": 38
+    },
+    {
       "term": "DB",
       "normalised": "db",
       "aliases": [],
@@ -13411,28 +13455,6 @@
         "message:dfp-neo-platform/app/api/mobile/auth/login/route.ts:14",
         "message:dfp-neo-platform/app/api/mobile/unavailability/create/route.ts:17",
         "message:dfp-neo-platform/app/api/mobile/unavailability/quick/route.ts:17"
-      ],
-      "count": 37
-    },
-    {
-      "term": "Click",
-      "normalised": "click",
-      "aliases": [
-        "click"
-      ],
-      "sources": [
-        "curated:function.curated.navigation.dfp:steps",
-        "curated:function.curated.people.trainee-unavailability:steps",
-        "curated:function.curated.people.staff-unavailability:steps",
-        "curated:function.curated.scheduling.neo-build:steps",
-        "curated:function.curated.scheduling.validation-check:steps",
-        "curated:function.curated.scheduling.multi-select:steps",
-        "curated:function.curated.scheduling.flight-details:steps",
-        "curated:function.curated.scheduling.aircraft-availability:steps",
-        "curated:function.curated.scheduling.add-flight-tile:steps",
-        "curated:function.curated.scheduling.publish-dfp:steps",
-        "curated:function.curated.training.course-leadership:steps",
-        "curated:function.curated.duty-pilot.flight-authorisation:steps"
       ],
       "count": 37
     },
@@ -14009,28 +14031,6 @@
         "control:dfp-neo-platform/app/select/page.tsx:85",
         "control-attribute:dfp-neo-platform/app/select/page.tsx:85",
         "route:dfp-neo-platform/app/admin/page.tsx"
-      ],
-      "count": 34
-    },
-    {
-      "term": "Archive",
-      "normalised": "archive",
-      "aliases": [
-        "archive"
-      ],
-      "sources": [
-        "curated:function.curated.training.archive-course",
-        "curated:function.curated.training.archive-course:steps",
-        "control:App.tsx:55998",
-        "control-attribute:App.tsx:55998",
-        "control:components/ArchiveConfirmationFlyout.tsx:31",
-        "control:components/CoursesManagementView.tsx:453",
-        "control:components/DeleteTraineeConfirmation.tsx:194",
-        "control-attribute:components/DeleteTraineeConfirmation.tsx:195",
-        "control:components/InstructorListView.tsx:858",
-        "control:components/RemoveCourseFlyout.tsx:50",
-        "message:App.tsx:40691",
-        "message:App.tsx:40692"
       ],
       "count": 34
     },
@@ -16395,7 +16395,7 @@
         "message:components/CourseEditFlyout.tsx:240",
         "message:components/CourseEditFlyout.tsx:261",
         "message:components/MyDashboard.tsx:3924",
-        "message:components/NeoGuidePanel.tsx:271",
+        "message:components/NeoGuidePanel.tsx:390",
         "message:components/PlatformConfigurationSettings.tsx:2841",
         "message:components/PlatformConfigurationSettings.tsx:2843"
       ],
@@ -16463,6 +16463,29 @@
         "control-attribute:components/InstructorProfileFlyout.tsx:1767",
         "control-attribute:components/ScoringMatrixFlyout.tsx:394",
         "control-attribute:components/tabs/TrainingIntelligenceTab.tsx:3276"
+      ],
+      "count": 26
+    },
+    {
+      "term": "Trainee Profile",
+      "normalised": "trainee profile",
+      "aliases": [
+        "trainee profile",
+        "Trainee profile"
+      ],
+      "sources": [
+        "curated:function.curated.people.archive-delete-trainee:steps",
+        "curated:function.curated.people.trainee-roster:steps",
+        "curated:function.curated.people.instructor-assignment:steps",
+        "curated:function.curated.duty-pilot.personnel-management:steps",
+        "curated:function.curated.training.course-leadership:steps",
+        "control:App.tsx:56286",
+        "control-attribute:App.tsx:56286",
+        "control:components/CourseRosterView.tsx:647",
+        "control-attribute:components/CourseRosterView.tsx:647",
+        "control:components/InstructorProfileFlyout.tsx:2371",
+        "control-attribute:components/InstructorProfileFlyout.tsx:2371",
+        "control:components/InstructorProfileFlyout.tsx:2392"
       ],
       "count": 26
     },
@@ -16662,6 +16685,26 @@
       "count": 25
     },
     {
+      "term": "from the",
+      "normalised": "from the",
+      "aliases": [],
+      "sources": [
+        "curated:function.curated.people.delete-staff:purpose",
+        "curated:function.curated.people.archive-delete-trainee:purpose",
+        "curated:function.curated.people.archive-delete-trainee:steps",
+        "curated:function.curated.people.instructor-assignment:steps",
+        "curated:function.curated.scheduling.build-priorities:steps",
+        "curated:function.curated.scheduling.multi-select:steps",
+        "curated:function.curated.training.master-lmp-event-details:steps",
+        "control:components/FlightDetailModal.tsx:4662",
+        "control:components/OrganisationSettings.tsx:1227",
+        "control:components/ScheduleView.tsx:11145",
+        "control:components/tabs/BliTab.tsx:1663",
+        "message:App.tsx:4002"
+      ],
+      "count": 25
+    },
+    {
       "term": "Internal",
       "normalised": "internal",
       "aliases": [],
@@ -16827,6 +16870,26 @@
         "message:dfp-neo-platform/app/api/auth/session/route.ts:57",
         "message:dfp-neo-platform/app/api/debug/staff-counts/route.ts:73",
         "message:dfp-neo-platform/app/api/mobile/auth/debug-user/route.ts:28"
+      ],
+      "count": 24
+    },
+    {
+      "term": "because",
+      "normalised": "because",
+      "aliases": [],
+      "sources": [
+        "curated:function.curated.people.archive-delete-trainee:purpose",
+        "message:App.tsx:13896",
+        "message:App.tsx:17923",
+        "message:App.tsx:19448",
+        "message:App.tsx:19451",
+        "message:App.tsx:19453",
+        "message:App.tsx:19457",
+        "message:App.tsx:19459",
+        "message:App.tsx:19461",
+        "message:App.tsx:19464",
+        "message:App.tsx:19468",
+        "message:App.tsx:19476"
       ],
       "count": 24
     },
@@ -17164,6 +17227,28 @@
       "count": 24
     },
     {
+      "term": "restore",
+      "normalised": "restore",
+      "aliases": [
+        "Restore"
+      ],
+      "sources": [
+        "curated:function.curated.people.archive-delete-trainee:alias",
+        "control:components/ArchivedInstructorsFlyout.tsx:84",
+        "control-attribute:components/ArchivedInstructorsFlyout.tsx:84",
+        "control:components/CourseRosterView.tsx:616",
+        "control-attribute:components/CourseRosterView.tsx:616",
+        "control:components/FlightDetailModal.tsx:4621",
+        "control:components/FlightDetailModal.tsx:4757",
+        "control:components/PauseFlightOpsPanel.tsx:603",
+        "control-attribute:components/PauseFlightOpsPanel.tsx:603",
+        "control:components/PauseFlightOpsPanel.tsx:617",
+        "control-attribute:components/PauseFlightOpsPanel.tsx:617",
+        "control:components/RestoreConfirmationFlyout.tsx:25"
+      ],
+      "count": 24
+    },
+    {
       "term": "rounded md border",
       "normalised": "rounded md border",
       "aliases": [],
@@ -17172,7 +17257,7 @@
         "message:components/AddFlightTileModal.tsx:3821",
         "message:components/AirCombatTrainingReportModal.tsx:1120",
         "message:components/EmailActivationSettings.tsx:260",
-        "message:components/NeoGuidePanel.tsx:271",
+        "message:components/NeoGuidePanel.tsx:390",
         "message:components/PlatformConfigurationSettings.tsx:5397",
         "message:components/PlatformConfigurationSettings.tsx:10976",
         "message:components/PlatformConfigurationSettings.tsx:11178",
@@ -17271,25 +17356,26 @@
       "count": 24
     },
     {
-      "term": "Trainee Profile",
-      "normalised": "trainee profile",
+      "term": "your password",
+      "normalised": "your password",
       "aliases": [
-        "trainee profile",
-        "Trainee profile"
+        "Your password",
+        "Your Password *",
+        "Your Password"
       ],
       "sources": [
-        "curated:function.curated.people.trainee-roster:steps",
-        "curated:function.curated.people.instructor-assignment:steps",
-        "curated:function.curated.duty-pilot.personnel-management:steps",
-        "curated:function.curated.training.course-leadership:steps",
-        "control:App.tsx:56286",
-        "control-attribute:App.tsx:56286",
-        "control:components/CourseRosterView.tsx:647",
-        "control-attribute:components/CourseRosterView.tsx:647",
-        "control:components/InstructorProfileFlyout.tsx:2371",
-        "control-attribute:components/InstructorProfileFlyout.tsx:2371",
-        "control:components/InstructorProfileFlyout.tsx:2392",
-        "control-attribute:components/InstructorProfileFlyout.tsx:2392"
+        "curated:function.curated.people.archive-delete-trainee:steps",
+        "control:components/AdminPanel.tsx:433",
+        "control-attribute:components/AdminPanel.tsx:433",
+        "control:components/DeleteTraineeConfirmation.tsx:231",
+        "control-attribute:components/DeleteTraineeConfirmation.tsx:231",
+        "control:components/LoginModal.tsx:242",
+        "control-attribute:components/LoginModal.tsx:242",
+        "control:components/LoginModal.tsx:281",
+        "control:components/SyllabusView.tsx:3189",
+        "control:components/SyllabusView.tsx:3193",
+        "control-attribute:components/SyllabusView.tsx:3193",
+        "control:components/SyllabusView.tsx:3250"
       ],
       "count": 24
     },
@@ -17355,26 +17441,6 @@
         "control-attribute:components/PostFlightModal.tsx:91",
         "control-attribute:components/PostFlightView.tsx:1010",
         "control:components/PrioritiesView.tsx:371"
-      ],
-      "count": 23
-    },
-    {
-      "term": "because",
-      "normalised": "because",
-      "aliases": [],
-      "sources": [
-        "message:App.tsx:13896",
-        "message:App.tsx:17923",
-        "message:App.tsx:19448",
-        "message:App.tsx:19451",
-        "message:App.tsx:19453",
-        "message:App.tsx:19457",
-        "message:App.tsx:19459",
-        "message:App.tsx:19461",
-        "message:App.tsx:19464",
-        "message:App.tsx:19468",
-        "message:App.tsx:19476",
-        "message:App.tsx:19484"
       ],
       "count": 23
     },
@@ -17627,28 +17693,6 @@
       "count": 23
     },
     {
-      "term": "Restore",
-      "normalised": "restore",
-      "aliases": [
-        "restore"
-      ],
-      "sources": [
-        "control:components/ArchivedInstructorsFlyout.tsx:84",
-        "control-attribute:components/ArchivedInstructorsFlyout.tsx:84",
-        "control:components/CourseRosterView.tsx:616",
-        "control-attribute:components/CourseRosterView.tsx:616",
-        "control:components/FlightDetailModal.tsx:4621",
-        "control:components/FlightDetailModal.tsx:4757",
-        "control:components/PauseFlightOpsPanel.tsx:603",
-        "control-attribute:components/PauseFlightOpsPanel.tsx:603",
-        "control:components/PauseFlightOpsPanel.tsx:617",
-        "control-attribute:components/PauseFlightOpsPanel.tsx:617",
-        "control:components/RestoreConfirmationFlyout.tsx:25",
-        "control:components/RestoreCourseConfirmation.tsx:25"
-      ],
-      "count": 23
-    },
-    {
       "term": "() => set Active Tab(null)",
       "normalised": "set active tab null",
       "aliases": [
@@ -17771,30 +17815,6 @@
         "message:dfp-neo-platform/app/api/admin/users/[id]/force-password-reset/route.ts:78",
         "message:dfp-neo-platform/app/api/admin/users/[id]/route.ts:84",
         "message:dfp-neo-platform/app/api/admin/users/[id]/route.ts:153"
-      ],
-      "count": 23
-    },
-    {
-      "term": "Your password",
-      "normalised": "your password",
-      "aliases": [
-        "your password",
-        "Your Password *",
-        "Your Password"
-      ],
-      "sources": [
-        "control:components/AdminPanel.tsx:433",
-        "control-attribute:components/AdminPanel.tsx:433",
-        "control:components/DeleteTraineeConfirmation.tsx:231",
-        "control-attribute:components/DeleteTraineeConfirmation.tsx:231",
-        "control:components/LoginModal.tsx:242",
-        "control-attribute:components/LoginModal.tsx:242",
-        "control:components/LoginModal.tsx:281",
-        "control:components/SyllabusView.tsx:3189",
-        "control:components/SyllabusView.tsx:3193",
-        "control-attribute:components/SyllabusView.tsx:3193",
-        "control:components/SyllabusView.tsx:3250",
-        "control:components/UserListSection.tsx:440"
       ],
       "count": 23
     },
@@ -17959,26 +17979,6 @@
         "curated:function.curated.training.course-ranking-awards:steps",
         "curated:function.curated.settings.master-lmp-access:steps",
         "curated:function.curated.duty-pilot.flight-authorisation:steps"
-      ],
-      "count": 22
-    },
-    {
-      "term": "from the",
-      "normalised": "from the",
-      "aliases": [],
-      "sources": [
-        "curated:function.curated.people.delete-staff:purpose",
-        "curated:function.curated.people.instructor-assignment:steps",
-        "curated:function.curated.scheduling.build-priorities:steps",
-        "curated:function.curated.scheduling.multi-select:steps",
-        "curated:function.curated.training.master-lmp-event-details:steps",
-        "control:components/FlightDetailModal.tsx:4662",
-        "control:components/OrganisationSettings.tsx:1227",
-        "control:components/ScheduleView.tsx:11145",
-        "control:components/tabs/BliTab.tsx:1663",
-        "message:App.tsx:4002",
-        "message:App.tsx:30969",
-        "message:App.tsx:40213"
       ],
       "count": 22
     },
@@ -19547,6 +19547,26 @@
       "count": 19
     },
     {
+      "term": "Enter your",
+      "normalised": "enter your",
+      "aliases": [],
+      "sources": [
+        "curated:function.curated.people.archive-delete-trainee:steps",
+        "control:components/DeleteTraineeConfirmation.tsx:231",
+        "control-attribute:components/DeleteTraineeConfirmation.tsx:231",
+        "control:components/LoginModal.tsx:225",
+        "control-attribute:components/LoginModal.tsx:225",
+        "control:components/LoginModal.tsx:242",
+        "control-attribute:components/LoginModal.tsx:242",
+        "control:components/LoginModal.tsx:300",
+        "control-attribute:components/LoginModal.tsx:300",
+        "control:components/SyllabusView.tsx:3193",
+        "control-attribute:components/SyllabusView.tsx:3193",
+        "control:components/SyllabusView.tsx:3254"
+      ],
+      "count": 19
+    },
+    {
       "term": "entry",
       "normalised": "entry",
       "aliases": [],
@@ -20007,6 +20027,28 @@
       "count": 19
     },
     {
+      "term": "select the",
+      "normalised": "select the",
+      "aliases": [
+        "Select the"
+      ],
+      "sources": [
+        "curated:function.curated.navigation.dfp:steps",
+        "curated:function.curated.people.archive-delete-trainee:steps",
+        "curated:function.curated.people.instructor-assignment:steps",
+        "curated:function.curated.scheduling.neo-build:steps",
+        "curated:function.curated.scheduling.validation-check:steps",
+        "curated:function.curated.scheduling.aircraft-availability:steps",
+        "curated:function.curated.scheduling.add-flight-tile:steps",
+        "curated:function.curated.scheduling.publish-dfp:steps",
+        "curated:function.curated.training.course-leadership:steps",
+        "curated:function.curated.training.course-ranking-awards:steps",
+        "curated:function.curated.training.master-lmp-event-details:steps",
+        "curated:function.curated.duty-pilot.flight-authorisation:steps"
+      ],
+      "count": 19
+    },
+    {
       "term": "set Is Editing true",
       "normalised": "set is editing true",
       "aliases": [
@@ -20333,26 +20375,6 @@
         "message:components/PrioritiesView.tsx:6116",
         "message:components/PrioritiesView.tsx:6140",
         "message:components/PrioritiesView.tsx:6159"
-      ],
-      "count": 18
-    },
-    {
-      "term": "Enter your",
-      "normalised": "enter your",
-      "aliases": [],
-      "sources": [
-        "control:components/DeleteTraineeConfirmation.tsx:231",
-        "control-attribute:components/DeleteTraineeConfirmation.tsx:231",
-        "control:components/LoginModal.tsx:225",
-        "control-attribute:components/LoginModal.tsx:225",
-        "control:components/LoginModal.tsx:242",
-        "control-attribute:components/LoginModal.tsx:242",
-        "control:components/LoginModal.tsx:300",
-        "control-attribute:components/LoginModal.tsx:300",
-        "control:components/SyllabusView.tsx:3193",
-        "control-attribute:components/SyllabusView.tsx:3193",
-        "control:components/SyllabusView.tsx:3254",
-        "control-attribute:components/SyllabusView.tsx:3254"
       ],
       "count": 18
     },
@@ -20907,6 +20929,26 @@
         "control-attribute:components/AirCombatTrainingReportModal.tsx:1071",
         "control-attribute:components/AirCombatTrainingReportModal.tsx:1084",
         "control-attribute:components/AirCombatTrainingReportModal.tsx:1101"
+      ],
+      "count": 18
+    },
+    {
+      "term": "while",
+      "normalised": "while",
+      "aliases": [],
+      "sources": [
+        "curated:function.curated.people.archive-delete-trainee:purpose",
+        "curated:function.curated.people.archive-delete-trainee:steps",
+        "curated:function.curated.training.archive-course:purpose",
+        "message:components/ErrorBoundary.tsx:33",
+        "message:components/PlatformConfigurationSettings.tsx:986",
+        "message:components/PlatformConfigurationSettings.tsx:987",
+        "message:components/PlatformConfigurationSettings.tsx:988",
+        "message:components/TafWeatherWidget.tsx:471",
+        "message:dfp-neo-platform/app/api/debug/staff-counts/route.ts:73",
+        "message:dfp-neo-platform/app/api/mobile/auth/debug-user/route.ts:28",
+        "message:dfp-neo-platform/app/api/mobile/schedule/debug-query/route.ts:95",
+        "message:dfp-neo-platform/app/api/mobile/schedule/route.ts:84"
       ],
       "count": 18
     },
@@ -21521,28 +21563,6 @@
       "count": 17
     },
     {
-      "term": "select the",
-      "normalised": "select the",
-      "aliases": [
-        "Select the"
-      ],
-      "sources": [
-        "curated:function.curated.navigation.dfp:steps",
-        "curated:function.curated.people.instructor-assignment:steps",
-        "curated:function.curated.scheduling.neo-build:steps",
-        "curated:function.curated.scheduling.validation-check:steps",
-        "curated:function.curated.scheduling.aircraft-availability:steps",
-        "curated:function.curated.scheduling.add-flight-tile:steps",
-        "curated:function.curated.scheduling.publish-dfp:steps",
-        "curated:function.curated.training.course-leadership:steps",
-        "curated:function.curated.training.course-ranking-awards:steps",
-        "curated:function.curated.training.master-lmp-event-details:steps",
-        "curated:function.curated.duty-pilot.flight-authorisation:steps",
-        "message:components/AcademicsTab.tsx:634"
-      ],
-      "count": 17
-    },
-    {
       "term": "Standard",
       "normalised": "standard",
       "aliases": [
@@ -21842,6 +21862,25 @@
         "control:components/SettingsView.tsx:568",
         "message:components/PlatformConfigurationSettings.tsx:4374",
         "message:components/PlatformConfigurationSettings.tsx:4407"
+      ],
+      "count": 16
+    },
+    {
+      "term": "Enter your password",
+      "normalised": "enter your password",
+      "aliases": [],
+      "sources": [
+        "curated:function.curated.people.archive-delete-trainee:steps",
+        "control:components/DeleteTraineeConfirmation.tsx:231",
+        "control-attribute:components/DeleteTraineeConfirmation.tsx:231",
+        "control:components/LoginModal.tsx:242",
+        "control-attribute:components/LoginModal.tsx:242",
+        "control:components/SyllabusView.tsx:3193",
+        "control-attribute:components/SyllabusView.tsx:3193",
+        "control:components/UserListSection.tsx:440",
+        "control:dfp-neo-platform/app/(auth)/set-password/page.tsx:134",
+        "control-attribute:dfp-neo-platform/app/(auth)/set-password/page.tsx:134",
+        "message:components/FlightDetailModal.tsx:4704"
       ],
       "count": 16
     },
@@ -22375,6 +22414,28 @@
       "count": 16
     },
     {
+      "term": "Use the",
+      "normalised": "use the",
+      "aliases": [
+        "use the"
+      ],
+      "sources": [
+        "curated:function.curated.navigation.dfp:steps",
+        "curated:function.curated.workflow.initial-setup-wizard:steps",
+        "curated:function.curated.people.archive-delete-trainee:steps",
+        "curated:function.curated.training.archive-course:steps",
+        "curated:function.curated.training.training-report:steps",
+        "curated:function.curated.scheduling.multi-select:steps",
+        "curated:function.curated.scheduling.flight-details:steps",
+        "curated:function.curated.settings.service-groups:steps",
+        "curated:function.curated.training.course-score-table:steps",
+        "curated:function.curated.training.course-ranking-awards:steps",
+        "curated:function.curated.training.master-lmp-event-details:steps",
+        "curated:function.curated.duty-pilot.flight-tracking:steps"
+      ],
+      "count": 16
+    },
+    {
       "term": "View trainee profile",
       "normalised": "view trainee profile",
       "aliases": [],
@@ -22408,26 +22469,6 @@
         "message:utils/weatherService.js:109",
         "message:utils/weatherService.js:267",
         "message:utils/weatherService.js:271"
-      ],
-      "count": 16
-    },
-    {
-      "term": "while",
-      "normalised": "while",
-      "aliases": [],
-      "sources": [
-        "curated:function.curated.training.archive-course:purpose",
-        "message:components/ErrorBoundary.tsx:33",
-        "message:components/PlatformConfigurationSettings.tsx:986",
-        "message:components/PlatformConfigurationSettings.tsx:987",
-        "message:components/PlatformConfigurationSettings.tsx:988",
-        "message:components/TafWeatherWidget.tsx:471",
-        "message:dfp-neo-platform/app/api/debug/staff-counts/route.ts:73",
-        "message:dfp-neo-platform/app/api/mobile/auth/debug-user/route.ts:28",
-        "message:dfp-neo-platform/app/api/mobile/schedule/debug-query/route.ts:95",
-        "message:dfp-neo-platform/app/api/mobile/schedule/route.ts:84",
-        "message:dfp-neo-platform/app/api/mobile/unavailability/create/route.ts:106",
-        "message:dfp-neo-platform/app/api/mobile/unavailability/quick/route.ts:100"
       ],
       "count": 16
     },
@@ -22987,9 +23028,9 @@
       ],
       "sources": [
         "control:components/AuditFlyout.tsx:798",
-        "control:components/NeoGuidePanel.tsx:260",
-        "control-attribute:components/NeoGuidePanel.tsx:260",
-        "control-attribute:components/NeoGuidePanel.tsx:268",
+        "control:components/NeoGuidePanel.tsx:379",
+        "control-attribute:components/NeoGuidePanel.tsx:379",
+        "control-attribute:components/NeoGuidePanel.tsx:387",
         "control:components/RightSidebar.tsx:151",
         "control:components/Sidebar.tsx:223",
         "control-attribute:components/Sidebar.tsx:223",
@@ -23378,28 +23419,6 @@
       "count": 15
     },
     {
-      "term": "Use the",
-      "normalised": "use the",
-      "aliases": [
-        "use the"
-      ],
-      "sources": [
-        "curated:function.curated.navigation.dfp:steps",
-        "curated:function.curated.workflow.initial-setup-wizard:steps",
-        "curated:function.curated.training.archive-course:steps",
-        "curated:function.curated.training.training-report:steps",
-        "curated:function.curated.scheduling.multi-select:steps",
-        "curated:function.curated.scheduling.flight-details:steps",
-        "curated:function.curated.settings.service-groups:steps",
-        "curated:function.curated.training.course-score-table:steps",
-        "curated:function.curated.training.course-ranking-awards:steps",
-        "curated:function.curated.training.master-lmp-event-details:steps",
-        "curated:function.curated.duty-pilot.flight-tracking:steps",
-        "control:components/PlatformConfigurationSettings.tsx:14177"
-      ],
-      "count": 15
-    },
-    {
       "term": "10px font semibold btn aluminium brushed",
       "normalised": "10px font semibold btn aluminium brushed",
       "aliases": [],
@@ -23665,24 +23684,6 @@
       "count": 14
     },
     {
-      "term": "Enter your password",
-      "normalised": "enter your password",
-      "aliases": [],
-      "sources": [
-        "control:components/DeleteTraineeConfirmation.tsx:231",
-        "control-attribute:components/DeleteTraineeConfirmation.tsx:231",
-        "control:components/LoginModal.tsx:242",
-        "control-attribute:components/LoginModal.tsx:242",
-        "control:components/SyllabusView.tsx:3193",
-        "control-attribute:components/SyllabusView.tsx:3193",
-        "control:components/UserListSection.tsx:440",
-        "control:dfp-neo-platform/app/(auth)/set-password/page.tsx:134",
-        "control-attribute:dfp-neo-platform/app/(auth)/set-password/page.tsx:134",
-        "message:components/FlightDetailModal.tsx:4704"
-      ],
-      "count": 14
-    },
-    {
       "term": "Error saving",
       "normalised": "error saving",
       "aliases": [],
@@ -23845,6 +23846,28 @@
         "message:server.js:3294",
         "message:server.js:3304",
         "message:server.js:3323"
+      ],
+      "count": 14
+    },
+    {
+      "term": "hide",
+      "normalised": "hide",
+      "aliases": [
+        "Hide"
+      ],
+      "sources": [
+        "curated:function.curated.people.archive-delete-trainee:alias",
+        "curated:function.curated.people.archive-delete-trainee:steps",
+        "control:App.tsx:6384",
+        "control:App.tsx:6505",
+        "control:components/ACHistoryAircraftAvailability.tsx:1072",
+        "control:components/DeleteTraineeConfirmation.tsx:194",
+        "control:components/PlatformConfigurationSettings.tsx:10105",
+        "control:components/PlatformConfigurationSettings.tsx:11211",
+        "control-attribute:components/PlatformConfigurationSettings.tsx:11211",
+        "control:components/PlatformConfigurationSettings.tsx:14381",
+        "control:components/PlatformConfigurationSettings.tsx:14574",
+        "control:components/PrioritiesView.tsx:5266"
       ],
       "count": 14
     },
@@ -24139,7 +24162,7 @@
         "message:App.tsx:56882",
         "message:components/AddFlightTileModal.tsx:3821",
         "message:components/MyDashboard.tsx:3924",
-        "message:components/NeoGuidePanel.tsx:271",
+        "message:components/NeoGuidePanel.tsx:390",
         "message:components/PlatformConfigurationSettings.tsx:12024",
         "message:components/PlatformConfigurationSettings.tsx:12032",
         "message:components/SettingsViewWithMenu.tsx:1220",
@@ -24263,6 +24286,28 @@
         "message:components/PlatformConfigurationSettings.tsx:2842",
         "message:components/PlatformConfigurationSettings.tsx:5396",
         "message:components/SettingsView.tsx:754"
+      ],
+      "count": 14
+    },
+    {
+      "term": "the course",
+      "normalised": "the course",
+      "aliases": [
+        "the Course"
+      ],
+      "sources": [
+        "curated:function.curated.people.archive-delete-trainee:steps",
+        "curated:function.curated.training.archive-course:purpose",
+        "curated:function.curated.training.archive-course:steps",
+        "curated:function.curated.training.course-progress:steps",
+        "curated:function.curated.scheduling.build-priorities:steps",
+        "curated:function.curated.training.course-leadership:steps",
+        "curated:function.curated.training.course-score-table:steps",
+        "curated:function.curated.training.course-ranking-awards:steps",
+        "control:components/AddCourseFlyout.tsx:191",
+        "control-attribute:components/AddCourseFlyout.tsx:191",
+        "message:components/AcademicsTab.tsx:634",
+        "message:components/CourseSelectionFlyout.tsx:75"
       ],
       "count": 14
     },
@@ -24619,6 +24664,25 @@
         "control:components/RecentCancellationsTable.tsx:130",
         "control:components/RecentCancellationsTable.tsx:131",
         "control:components/SettingsView.tsx:1155"
+      ],
+      "count": 13
+    },
+    {
+      "term": "delete trainee",
+      "normalised": "delete trainee",
+      "aliases": [
+        "Delete Trainee",
+        "Delete trainee"
+      ],
+      "sources": [
+        "curated:function.curated.people.archive-delete-trainee:alias",
+        "curated:function.curated.people.archive-delete-trainee:steps",
+        "control:components/CourseEditFlyout.tsx:316",
+        "control-attribute:components/CourseEditFlyout.tsx:316",
+        "control:components/CourseEditFlyout.tsx:414",
+        "message:components/TraineeDatabaseTable.tsx:159",
+        "message:dfp-neo-platform/app/api/trainees/[id]/route.ts:194",
+        "message:server.js:7320"
       ],
       "count": 13
     },
@@ -25235,23 +25299,22 @@
       "count": 13
     },
     {
-      "term": "the course",
-      "normalised": "the course",
+      "term": "the trainee",
+      "normalised": "the trainee",
       "aliases": [
-        "the Course"
+        "the Trainee",
+        "The trainee"
       ],
       "sources": [
-        "curated:function.curated.training.archive-course:purpose",
-        "curated:function.curated.training.archive-course:steps",
-        "curated:function.curated.training.course-progress:steps",
-        "curated:function.curated.scheduling.build-priorities:steps",
-        "curated:function.curated.training.course-leadership:steps",
-        "curated:function.curated.training.course-score-table:steps",
-        "curated:function.curated.training.course-ranking-awards:steps",
-        "control:components/AddCourseFlyout.tsx:191",
-        "control-attribute:components/AddCourseFlyout.tsx:191",
-        "message:components/AcademicsTab.tsx:634",
-        "message:components/CourseSelectionFlyout.tsx:75"
+        "curated:function.curated.people.trainee-unavailability:steps",
+        "curated:function.curated.people.archive-delete-trainee:purpose",
+        "curated:function.curated.people.archive-delete-trainee:steps",
+        "curated:function.curated.people.instructor-assignment:steps",
+        "message:App.tsx:39669",
+        "message:App.tsx:41244",
+        "message:App.tsx:41480",
+        "message:components/PrioritiesView.tsx:5624",
+        "message:components/TraineeProfileFlyout.tsx:1901"
       ],
       "count": 13
     },
@@ -25975,27 +26038,6 @@
         "message:components/PlatformConfigurationSettings.tsx:2276",
         "message:components/PlatformConfigurationSettings.tsx:2279",
         "message:utils/dataRepair.ts:111"
-      ],
-      "count": 12
-    },
-    {
-      "term": "Hide",
-      "normalised": "hide",
-      "aliases": [
-        "hide"
-      ],
-      "sources": [
-        "control:App.tsx:6384",
-        "control:App.tsx:6505",
-        "control:components/ACHistoryAircraftAvailability.tsx:1072",
-        "control:components/DeleteTraineeConfirmation.tsx:194",
-        "control:components/PlatformConfigurationSettings.tsx:10105",
-        "control:components/PlatformConfigurationSettings.tsx:11211",
-        "control-attribute:components/PlatformConfigurationSettings.tsx:11211",
-        "control:components/PlatformConfigurationSettings.tsx:14381",
-        "control:components/PlatformConfigurationSettings.tsx:14574",
-        "control:components/PrioritiesView.tsx:5266",
-        "control:components/PrioritiesView.tsx:5780"
       ],
       "count": 12
     },
@@ -28543,6 +28585,22 @@
       "count": 10
     },
     {
+      "term": "a trainee",
+      "normalised": "a trainee",
+      "aliases": [],
+      "sources": [
+        "curated:function.curated.people.trainee-unavailability:purpose",
+        "curated:function.curated.people.archive-delete-trainee:alias",
+        "curated:function.curated.people.archive-delete-trainee:purpose",
+        "curated:function.curated.people.trainee-roster:steps",
+        "control:components/DeleteTraineeConfirmation.tsx:160",
+        "control:components/DeleteTraineeConfirmation.tsx:165",
+        "control:components/FlightDetailModal.tsx:1929",
+        "control:components/FlightDetailModal.tsx:1936"
+      ],
+      "count": 10
+    },
+    {
       "term": "Access denied Add",
       "normalised": "access denied add",
       "aliases": [],
@@ -29384,7 +29442,7 @@
       "aliases": [],
       "sources": [
         "message:App.tsx:4997",
-        "message:components/NeoGuidePanel.tsx:271",
+        "message:components/NeoGuidePanel.tsx:390",
         "message:components/PlatformConfigurationSettings.tsx:10976",
         "message:components/PlatformConfigurationSettings.tsx:11288",
         "message:components/PlatformConfigurationSettings.tsx:11493",
@@ -29799,7 +29857,7 @@
         "message:components/PlatformConfigurationSettings.tsx:6200",
         "message:components/PlatformConfigurationSettings.tsx:12878",
         "message:server.js:17731",
-        "message:utils/neoGuideEngine.ts:465"
+        "message:utils/neoGuideEngine.ts:742"
       ],
       "count": 10
     },
@@ -29891,6 +29949,19 @@
         "message:dfp-neo-platform/app/admin/users/[id]/EditUserForm.tsx:150",
         "message:dfp-neo-platform/app/admin/users/create/CreateUserForm.tsx:50",
         "message:dfp-neo-platform/app/login/page.tsx:35"
+      ],
+      "count": 10
+    },
+    {
+      "term": "Open Trainee",
+      "normalised": "open trainee",
+      "aliases": [],
+      "sources": [
+        "curated:function.curated.people.trainee-unavailability:steps",
+        "curated:function.curated.people.archive-delete-trainee:steps",
+        "curated:function.curated.people.trainee-roster:steps",
+        "curated:function.curated.people.instructor-assignment:steps",
+        "curated:function.curated.training.course-leadership:steps"
       ],
       "count": 10
     },
@@ -30027,6 +30098,26 @@
       "count": 10
     },
     {
+      "term": "permanently",
+      "normalised": "permanently",
+      "aliases": [
+        "Permanently"
+      ],
+      "sources": [
+        "curated:function.curated.people.delete-staff:alias",
+        "curated:function.curated.people.archive-delete-trainee:alias",
+        "curated:function.curated.people.archive-delete-trainee:purpose",
+        "curated:function.curated.people.archive-delete-trainee:steps",
+        "control:components/ArchivedCoursesView.tsx:162",
+        "control-attribute:components/ArchivedCoursesView.tsx:162",
+        "control:components/ArchivedCoursesView.tsx:290",
+        "control:components/DeleteTraineeConfirmation.tsx:208",
+        "control:components/FlightDetailModal.tsx:4662",
+        "message:components/FlightDetailModal.tsx:4704"
+      ],
+      "count": 10
+    },
+    {
       "term": "Primary",
       "normalised": "primary",
       "aliases": [
@@ -30124,6 +30215,24 @@
         "control-attribute:App.tsx:5673",
         "message:App.tsx:13896",
         "message:components/PlatformConfigurationSettings.tsx:1745"
+      ],
+      "count": 10
+    },
+    {
+      "term": "roster",
+      "normalised": "roster",
+      "aliases": [
+        "Roster"
+      ],
+      "sources": [
+        "curated:function.curated.people.archive-delete-trainee:alias",
+        "curated:function.curated.people.archive-delete-trainee:purpose",
+        "curated:function.curated.people.archive-delete-trainee:steps",
+        "curated:function.curated.people.trainee-roster",
+        "curated:function.curated.people.trainee-roster:alias",
+        "curated:function.curated.people.trainee-roster:steps",
+        "curated:function.curated.training.course-leadership:steps",
+        "control:components/DeleteTraineeConfirmation.tsx:194"
       ],
       "count": 10
     },
@@ -30265,6 +30374,21 @@
         "control-attribute:App.tsx:6897",
         "control:App.tsx:6905",
         "control-attribute:App.tsx:6905"
+      ],
+      "count": 10
+    },
+    {
+      "term": "selector",
+      "normalised": "selector",
+      "aliases": [],
+      "sources": [
+        "curated:function.curated.navigation.dfp:steps",
+        "curated:function.curated.people.archive-delete-trainee:input",
+        "curated:function.curated.training.course-leadership:input",
+        "curated:function.curated.training.course-score-table:steps",
+        "curated:function.curated.training.course-score-table:input",
+        "curated:function.curated.training.course-ranking-awards:steps",
+        "curated:function.curated.training.course-ranking-awards:input"
       ],
       "count": 10
     },
@@ -31170,23 +31294,6 @@
         "message:components/SyllabusView.tsx:2375",
         "message:dfp-neo-platform/app/api/event-completions/[id]/route.ts:203",
         "message:dfp-neo-platform/app/api/event-completions/[id]/route.ts:208"
-      ],
-      "count": 9
-    },
-    {
-      "term": "Delete trainee",
-      "normalised": "delete trainee",
-      "aliases": [
-        "Delete Trainee",
-        "delete trainee"
-      ],
-      "sources": [
-        "control:components/CourseEditFlyout.tsx:316",
-        "control-attribute:components/CourseEditFlyout.tsx:316",
-        "control:components/CourseEditFlyout.tsx:414",
-        "message:components/TraineeDatabaseTable.tsx:159",
-        "message:dfp-neo-platform/app/api/trainees/[id]/route.ts:194",
-        "message:server.js:7320"
       ],
       "count": 9
     },
@@ -32118,7 +32225,7 @@
         "curated:function.curated.settings.turnaround:steps",
         "control:components/AddGroundEventFlyout.tsx:433",
         "control-attribute:components/AddGroundEventFlyout.tsx:433",
-        "message:utils/neoGuideEngine.ts:572"
+        "message:utils/neoGuideEngine.ts:877"
       ],
       "count": 9
     },
@@ -32458,6 +32565,19 @@
       "count": 9
     },
     {
+      "term": "student",
+      "normalised": "student",
+      "aliases": [],
+      "sources": [
+        "curated:function.curated.people.trainee-unavailability:alias",
+        "curated:function.curated.people.archive-delete-trainee:alias",
+        "curated:function.curated.people.trainee-roster:alias",
+        "curated:synonym:trainee",
+        "control-attribute:components/PrioritiesView.tsx:4805"
+      ],
+      "count": 9
+    },
+    {
       "term": "Summary",
       "normalised": "summary",
       "aliases": [
@@ -32553,6 +32673,21 @@
         "message:App.tsx:52163",
         "message:App.tsx:52166",
         "message:utils/dataRepair.ts:104"
+      ],
+      "count": 9
+    },
+    {
+      "term": "Trainee Roster",
+      "normalised": "trainee roster",
+      "aliases": [
+        "Trainee roster"
+      ],
+      "sources": [
+        "curated:function.curated.people.archive-delete-trainee:purpose",
+        "curated:function.curated.people.archive-delete-trainee:steps",
+        "curated:function.curated.people.trainee-roster",
+        "curated:function.curated.people.trainee-roster:steps",
+        "curated:function.curated.training.course-leadership:steps"
       ],
       "count": 9
     },
@@ -33106,9 +33241,9 @@
         "ask"
       ],
       "sources": [
-        "control:components/NeoGuidePanel.tsx:260",
-        "control-attribute:components/NeoGuidePanel.tsx:260",
-        "control:components/NeoGuidePanel.tsx:268",
+        "control:components/NeoGuidePanel.tsx:379",
+        "control-attribute:components/NeoGuidePanel.tsx:379",
+        "control:components/NeoGuidePanel.tsx:387",
         "message:App.tsx:37728",
         "message:App.tsx:37950",
         "message:server.js:10288"
@@ -33456,6 +33591,21 @@
       "count": 8
     },
     {
+      "term": "course selector",
+      "normalised": "course selector",
+      "aliases": [
+        "Course selector"
+      ],
+      "sources": [
+        "curated:function.curated.people.archive-delete-trainee:input",
+        "curated:function.curated.training.course-score-table:steps",
+        "curated:function.curated.training.course-score-table:input",
+        "curated:function.curated.training.course-ranking-awards:steps",
+        "curated:function.curated.training.course-ranking-awards:input"
+      ],
+      "count": 8
+    },
+    {
       "term": "Course Settings",
       "normalised": "course settings",
       "aliases": [
@@ -33617,6 +33767,19 @@
         "message:components/ArchivedCoursesView.tsx:281",
         "message:components/CoursesManagementView.tsx:407",
         "message:components/CoursesManagementView.tsx:413"
+      ],
+      "count": 8
+    },
+    {
+      "term": "Delete Permanently",
+      "normalised": "delete permanently",
+      "aliases": [],
+      "sources": [
+        "curated:function.curated.people.archive-delete-trainee:steps",
+        "control:components/ArchivedCoursesView.tsx:162",
+        "control-attribute:components/ArchivedCoursesView.tsx:162",
+        "control:components/ArchivedCoursesView.tsx:290",
+        "control:components/DeleteTraineeConfirmation.tsx:208"
       ],
       "count": 8
     },
@@ -34957,18 +35120,6 @@
       "count": 8
     },
     {
-      "term": "Open Trainee",
-      "normalised": "open trainee",
-      "aliases": [],
-      "sources": [
-        "curated:function.curated.people.trainee-unavailability:steps",
-        "curated:function.curated.people.trainee-roster:steps",
-        "curated:function.curated.people.instructor-assignment:steps",
-        "curated:function.curated.training.course-leadership:steps"
-      ],
-      "count": 8
-    },
-    {
       "term": "Open Training Records",
       "normalised": "open training records",
       "aliases": [],
@@ -35591,20 +35742,6 @@
       "count": 8
     },
     {
-      "term": "selector",
-      "normalised": "selector",
-      "aliases": [],
-      "sources": [
-        "curated:function.curated.navigation.dfp:steps",
-        "curated:function.curated.training.course-leadership:input",
-        "curated:function.curated.training.course-score-table:steps",
-        "curated:function.curated.training.course-score-table:input",
-        "curated:function.curated.training.course-ranking-awards:steps",
-        "curated:function.curated.training.course-ranking-awards:input"
-      ],
-      "count": 8
-    },
-    {
       "term": "set Delete Password",
       "normalised": "set delete password",
       "aliases": [],
@@ -35918,23 +36055,6 @@
         "control:components/PlatformConfigurationSettings.tsx:14177",
         "message:App.tsx:19464",
         "message:components/InstructorProfileFlyout.tsx:1117"
-      ],
-      "count": 8
-    },
-    {
-      "term": "the trainee",
-      "normalised": "the trainee",
-      "aliases": [
-        "The trainee"
-      ],
-      "sources": [
-        "curated:function.curated.people.trainee-unavailability:steps",
-        "curated:function.curated.people.instructor-assignment:steps",
-        "message:App.tsx:39669",
-        "message:App.tsx:41244",
-        "message:App.tsx:41480",
-        "message:components/PrioritiesView.tsx:5624",
-        "message:components/TraineeProfileFlyout.tsx:1901"
       ],
       "count": 8
     },
@@ -36472,6 +36592,20 @@
         "message:server.js:5955",
         "message:server.js:6025",
         "message:server.js:6047"
+      ],
+      "count": 7
+    },
+    {
+      "term": "Archive Trainee",
+      "normalised": "archive trainee",
+      "aliases": [
+        "archive trainee"
+      ],
+      "sources": [
+        "curated:function.curated.people.archive-delete-trainee",
+        "curated:function.curated.people.archive-delete-trainee:alias",
+        "curated:function.curated.people.archive-delete-trainee:steps",
+        "control:components/DeleteTraineeConfirmation.tsx:194"
       ],
       "count": 7
     },
@@ -37045,18 +37179,6 @@
         "control-attribute:components/PlatformConfigurationSettings.tsx:11516",
         "message:components/PlatformConfigurationSettings.tsx:11523",
         "message:components/PlatformConfigurationSettings.tsx:11524"
-      ],
-      "count": 7
-    },
-    {
-      "term": "Delete Permanently",
-      "normalised": "delete permanently",
-      "aliases": [],
-      "sources": [
-        "control:components/ArchivedCoursesView.tsx:162",
-        "control-attribute:components/ArchivedCoursesView.tsx:162",
-        "control:components/ArchivedCoursesView.tsx:290",
-        "control:components/DeleteTraineeConfirmation.tsx:208"
       ],
       "count": 7
     },
@@ -37862,7 +37984,7 @@
         "message:components/InstructorListView.tsx:796",
         "message:dfp-neo-platform/app/api/admin/seed-syllabus/route.ts:338",
         "message:server.js:14167",
-        "message:utils/neoGuideEngine.ts:573"
+        "message:utils/neoGuideEngine.ts:878"
       ],
       "count": 7
     },
@@ -37949,6 +38071,21 @@
         "control:components/AuditFlyout.tsx:692",
         "control:components/RecentCancellationsTable.tsx:124",
         "control:components/RecentCancellationsTable.tsx:129"
+      ],
+      "count": 7
+    },
+    {
+      "term": "later",
+      "normalised": "later",
+      "aliases": [],
+      "sources": [
+        "curated:function.curated.people.archive-delete-trainee:alias",
+        "curated:function.curated.people.archive-delete-trainee:purpose",
+        "curated:function.curated.training.archive-course:steps",
+        "control:components/DeleteTraineeConfirmation.tsx:194",
+        "message:App.tsx:32208",
+        "message:App.tsx:40418",
+        "message:server.js:10288"
       ],
       "count": 7
     },
@@ -38447,19 +38584,18 @@
       "count": 7
     },
     {
-      "term": "permanently",
-      "normalised": "permanently",
+      "term": "permanent",
+      "normalised": "permanent",
       "aliases": [
-        "Permanently"
+        "Permanent"
       ],
       "sources": [
-        "curated:function.curated.people.delete-staff:alias",
-        "control:components/ArchivedCoursesView.tsx:162",
-        "control-attribute:components/ArchivedCoursesView.tsx:162",
-        "control:components/ArchivedCoursesView.tsx:290",
-        "control:components/DeleteTraineeConfirmation.tsx:208",
-        "control:components/FlightDetailModal.tsx:4662",
-        "message:components/FlightDetailModal.tsx:4704"
+        "curated:function.curated.people.archive-delete-trainee:steps",
+        "curated:function.curated.training.archive-course:alias",
+        "curated:function.curated.training.archive-course:steps",
+        "control:components/PrioritiesView.tsx:4415",
+        "message:components/ArchivedCoursesView.tsx:103",
+        "message:components/CoursesManagementView.tsx:254"
       ],
       "count": 7
     },
@@ -39126,7 +39262,7 @@
         "curated:function.curated.scheduling.aircraft-availability:steps",
         "curated:function.curated.scheduling.add-flight-tile:steps",
         "curated:function.curated.settings.turnaround:steps",
-        "message:utils/neoGuideEngine.ts:572"
+        "message:utils/neoGuideEngine.ts:877"
       ],
       "count": 7
     },
@@ -39358,7 +39494,7 @@
         "control:components/SettingsView.tsx:1141",
         "control:components/SettingsView.tsx:1375",
         "message:components/ScheduleView.tsx:13538",
-        "message:utils/neoGuideEngine.ts:465"
+        "message:utils/neoGuideEngine.ts:742"
       ],
       "count": 7
     },
@@ -39443,20 +39579,6 @@
         "control:components/TraineeLmpView.tsx:409",
         "control:components/TraineeLmpView.tsx:411",
         "control:components/TraineeLmpView.tsx:422"
-      ],
-      "count": 6
-    },
-    {
-      "term": "a trainee",
-      "normalised": "a trainee",
-      "aliases": [],
-      "sources": [
-        "curated:function.curated.people.trainee-unavailability:purpose",
-        "curated:function.curated.people.trainee-roster:steps",
-        "control:components/DeleteTraineeConfirmation.tsx:160",
-        "control:components/DeleteTraineeConfirmation.tsx:165",
-        "control:components/FlightDetailModal.tsx:1929",
-        "control:components/FlightDetailModal.tsx:1936"
       ],
       "count": 6
     },
@@ -40692,20 +40814,6 @@
         "control-attribute:components/CourseSelectionFlyout.tsx:82",
         "control:components/SyllabusView.tsx:2774",
         "control-attribute:components/SyllabusView.tsx:2774"
-      ],
-      "count": 6
-    },
-    {
-      "term": "Course selector",
-      "normalised": "course selector",
-      "aliases": [
-        "course selector"
-      ],
-      "sources": [
-        "curated:function.curated.training.course-score-table:steps",
-        "curated:function.curated.training.course-score-table:input",
-        "curated:function.curated.training.course-ranking-awards:steps",
-        "curated:function.curated.training.course-ranking-awards:input"
       ],
       "count": 6
     },
@@ -42107,8 +42215,8 @@
         "guide"
       ],
       "sources": [
-        "control:components/NeoGuidePanel.tsx:260",
-        "control-attribute:components/NeoGuidePanel.tsx:260",
+        "control:components/NeoGuidePanel.tsx:379",
+        "control-attribute:components/NeoGuidePanel.tsx:379",
         "control:components/RightSidebar.tsx:200",
         "control-attribute:components/RightSidebar.tsx:200",
         "control:components/ScheduleView.tsx:11149"
@@ -43242,6 +43350,17 @@
       "count": 6
     },
     {
+      "term": "on Trainee Profile",
+      "normalised": "on trainee profile",
+      "aliases": [],
+      "sources": [
+        "curated:function.curated.people.archive-delete-trainee:steps",
+        "curated:function.curated.people.trainee-roster:steps",
+        "curated:function.curated.training.course-leadership:steps"
+      ],
+      "count": 6
+    },
+    {
       "term": "on Update Service Definitions",
       "normalised": "on update service definitions",
       "aliases": [],
@@ -43573,21 +43692,6 @@
       "count": 6
     },
     {
-      "term": "permanent",
-      "normalised": "permanent",
-      "aliases": [
-        "Permanent"
-      ],
-      "sources": [
-        "curated:function.curated.training.archive-course:alias",
-        "curated:function.curated.training.archive-course:steps",
-        "control:components/PrioritiesView.tsx:4415",
-        "message:components/ArchivedCoursesView.tsx:103",
-        "message:components/CoursesManagementView.tsx:254"
-      ],
-      "count": 6
-    },
-    {
       "term": "permission to delete",
       "normalised": "permission to delete",
       "aliases": [],
@@ -43873,6 +43977,22 @@
         "control:components/ScheduleView.tsx:13764",
         "control:components/ScheduleView.tsx:13773",
         "message:components/ScheduleView.tsx:13686"
+      ],
+      "count": 6
+    },
+    {
+      "term": "recommended",
+      "normalised": "recommended",
+      "aliases": [
+        "Recommended"
+      ],
+      "sources": [
+        "curated:function.curated.people.archive-delete-trainee:purpose",
+        "curated:function.curated.people.archive-delete-trainee:steps",
+        "control:components/DeleteTraineeConfirmation.tsx:194",
+        "control:components/PlatformConfigurationSettings.tsx:14559",
+        "control:components/TrainingRecordsExportView.tsx:1419",
+        "control:dfp-neo-platform/app/admin/users/create/CreateUserForm.tsx:208"
       ],
       "count": 6
     },
@@ -44925,6 +45045,20 @@
       "count": 6
     },
     {
+      "term": "the active",
+      "normalised": "the active",
+      "aliases": [],
+      "sources": [
+        "curated:function.curated.people.archive-delete-trainee:purpose",
+        "curated:function.curated.people.archive-delete-trainee:steps",
+        "message:App.tsx:26875",
+        "message:components/PlatformConfigurationSettings.tsx:1763",
+        "message:components/ScheduleView.tsx:8632",
+        "message:components/ScheduleView.tsx:9900"
+      ],
+      "count": 6
+    },
+    {
       "term": "the required standard",
       "normalised": "the required standard",
       "aliases": [],
@@ -44975,7 +45109,7 @@
         "message:components/PlatformConfigurationSettings.tsx:1758",
         "message:components/PlatformConfigurationSettings.tsx:1763",
         "message:components/PlatformConfigurationSettings.tsx:14530",
-        "message:utils/neoGuideEngine.ts:573"
+        "message:utils/neoGuideEngine.ts:878"
       ],
       "count": 6
     },
@@ -45205,19 +45339,6 @@
         "permission:utils/platformConfigService.ts:215",
         "message:components/TraineeProfileFlyout.tsx:682",
         "message:utils/platformConfigService.ts:215"
-      ],
-      "count": 6
-    },
-    {
-      "term": "Trainee roster",
-      "normalised": "trainee roster",
-      "aliases": [
-        "Trainee Roster"
-      ],
-      "sources": [
-        "curated:function.curated.people.trainee-roster",
-        "curated:function.curated.people.trainee-roster:steps",
-        "curated:function.curated.training.course-leadership:steps"
       ],
       "count": 6
     },
@@ -48338,7 +48459,7 @@
         "message:components/PlatformConfigurationSettings.tsx:1745",
         "message:components/PlatformConfigurationSettings.tsx:14530",
         "message:server.js:17731",
-        "message:utils/neoGuideEngine.ts:573"
+        "message:utils/neoGuideEngine.ts:878"
       ],
       "count": 5
     },
@@ -48766,19 +48887,6 @@
       "count": 5
     },
     {
-      "term": "later",
-      "normalised": "later",
-      "aliases": [],
-      "sources": [
-        "curated:function.curated.training.archive-course:steps",
-        "control:components/DeleteTraineeConfirmation.tsx:194",
-        "message:App.tsx:32208",
-        "message:App.tsx:40418",
-        "message:server.js:10288"
-      ],
-      "count": 5
-    },
-    {
       "term": "linked Event Code",
       "normalised": "linked event code",
       "aliases": [],
@@ -49030,8 +49138,8 @@
       "normalised": "neo guide",
       "aliases": [],
       "sources": [
-        "control:components/NeoGuidePanel.tsx:260",
-        "control-attribute:components/NeoGuidePanel.tsx:260",
+        "control:components/NeoGuidePanel.tsx:379",
+        "control-attribute:components/NeoGuidePanel.tsx:379",
         "control:components/RightSidebar.tsx:200",
         "control-attribute:components/RightSidebar.tsx:200"
       ],
@@ -49564,7 +49672,7 @@
       "sources": [
         "message:components/AddFlightTileModal.tsx:3821",
         "message:components/MyDashboard.tsx:3924",
-        "message:components/NeoGuidePanel.tsx:271",
+        "message:components/NeoGuidePanel.tsx:390",
         "message:components/TraineeLmpView.tsx:412",
         "message:components/TraineeLmpView.tsx:435"
       ],
@@ -49994,21 +50102,6 @@
       "count": 5
     },
     {
-      "term": "roster",
-      "normalised": "roster",
-      "aliases": [
-        "Roster"
-      ],
-      "sources": [
-        "curated:function.curated.people.trainee-roster",
-        "curated:function.curated.people.trainee-roster:alias",
-        "curated:function.curated.people.trainee-roster:steps",
-        "curated:function.curated.training.course-leadership:steps",
-        "control:components/DeleteTraineeConfirmation.tsx:194"
-      ],
-      "count": 5
-    },
-    {
       "term": "rounded border gray 600",
       "normalised": "rounded border gray 600",
       "aliases": [],
@@ -50280,6 +50373,20 @@
         "control:App.tsx:6393",
         "control:App.tsx:6395",
         "control:App.tsx:6396"
+      ],
+      "count": 5
+    },
+    {
+      "term": "Select the course",
+      "normalised": "select the course",
+      "aliases": [
+        "select the Course"
+      ],
+      "sources": [
+        "curated:function.curated.people.archive-delete-trainee:steps",
+        "curated:function.curated.training.course-leadership:steps",
+        "message:components/AcademicsTab.tsx:634",
+        "message:components/CourseSelectionFlyout.tsx:75"
       ],
       "count": 5
     },
@@ -50817,6 +50924,21 @@
       "count": 5
     },
     {
+      "term": "Stay",
+      "normalised": "stay",
+      "aliases": [
+        "stay"
+      ],
+      "sources": [
+        "curated:function.curated.people.archive-delete-trainee:steps",
+        "curated:function.curated.people.trainee-roster:steps",
+        "curated:function.curated.training.course-leadership:steps",
+        "control:components/SettingsView.tsx:1375",
+        "message:components/SyllabusView.tsx:3436"
+      ],
+      "count": 5
+    },
+    {
       "term": "stream key",
       "normalised": "stream key",
       "aliases": [],
@@ -50825,18 +50947,6 @@
         "control-attribute:App.tsx:6099",
         "control-attribute:components/PrioritiesView.tsx:5116",
         "control-attribute:components/tabs/AirCombatTrainingAnalyticsTab.tsx:149"
-      ],
-      "count": 5
-    },
-    {
-      "term": "student",
-      "normalised": "student",
-      "aliases": [],
-      "sources": [
-        "curated:function.curated.people.trainee-unavailability:alias",
-        "curated:function.curated.people.trainee-roster:alias",
-        "curated:synonym:trainee",
-        "control-attribute:components/PrioritiesView.tsx:4805"
       ],
       "count": 5
     },
@@ -56964,8 +57074,8 @@
       "normalised": "do something",
       "aliases": [],
       "sources": [
-        "control:components/NeoGuidePanel.tsx:260",
-        "control-attribute:components/NeoGuidePanel.tsx:260"
+        "control:components/NeoGuidePanel.tsx:379",
+        "control-attribute:components/NeoGuidePanel.tsx:379"
       ],
       "count": 4
     },
@@ -61934,8 +62044,8 @@
       "normalised": "loading neo",
       "aliases": [],
       "sources": [
-        "control:components/NeoGuidePanel.tsx:260",
-        "control-attribute:components/NeoGuidePanel.tsx:260"
+        "control:components/NeoGuidePanel.tsx:379",
+        "control-attribute:components/NeoGuidePanel.tsx:379"
       ],
       "count": 4
     },
@@ -61944,8 +62054,8 @@
       "normalised": "loading neo guide",
       "aliases": [],
       "sources": [
-        "control:components/NeoGuidePanel.tsx:260",
-        "control-attribute:components/NeoGuidePanel.tsx:260"
+        "control:components/NeoGuidePanel.tsx:379",
+        "control-attribute:components/NeoGuidePanel.tsx:379"
       ],
       "count": 4
     },
@@ -62824,8 +62934,8 @@
         "neo guide panel"
       ],
       "sources": [
-        "component:components/NeoGuidePanel.tsx:77",
-        "guide-target:components/NeoGuidePanel.tsx:210"
+        "component:components/NeoGuidePanel.tsx:104",
+        "guide-target:components/NeoGuidePanel.tsx:306"
       ],
       "count": 4
     },
@@ -63386,16 +63496,6 @@
       "aliases": [],
       "sources": [
         "message:components/Header.tsx:413"
-      ],
-      "count": 4
-    },
-    {
-      "term": "on Trainee Profile",
-      "normalised": "on trainee profile",
-      "aliases": [],
-      "sources": [
-        "curated:function.curated.people.trainee-roster:steps",
-        "curated:function.curated.training.course-leadership:steps"
       ],
       "count": 4
     },
@@ -65278,20 +65378,6 @@
       "count": 4
     },
     {
-      "term": "Recommended",
-      "normalised": "recommended",
-      "aliases": [
-        "recommended"
-      ],
-      "sources": [
-        "control:components/DeleteTraineeConfirmation.tsx:194",
-        "control:components/PlatformConfigurationSettings.tsx:14559",
-        "control:components/TrainingRecordsExportView.tsx:1419",
-        "control:dfp-neo-platform/app/admin/users/create/CreateUserForm.tsx:208"
-      ],
-      "count": 4
-    },
-    {
       "term": "record Type",
       "normalised": "record type",
       "aliases": [],
@@ -66042,7 +66128,7 @@
         "curated:function.curated.duty-pilot.flight-authorisation:steps",
         "message:components/SettingsViewWithMenu.tsx:538",
         "message:dfp-neo-platform/app/api/admin/users/route.ts:41",
-        "message:utils/neoGuideEngine.ts:573"
+        "message:utils/neoGuideEngine.ts:878"
       ],
       "count": 4
     },
@@ -67984,8 +68070,8 @@
       "normalised": "something",
       "aliases": [],
       "sources": [
-        "control:components/NeoGuidePanel.tsx:260",
-        "control-attribute:components/NeoGuidePanel.tsx:260"
+        "control:components/NeoGuidePanel.tsx:379",
+        "control-attribute:components/NeoGuidePanel.tsx:379"
       ],
       "count": 4
     },
@@ -68193,20 +68279,6 @@
       "sources": [
         "control:components/CourseRosterView.tsx:647",
         "control-attribute:components/CourseRosterView.tsx:647"
-      ],
-      "count": 4
-    },
-    {
-      "term": "Stay",
-      "normalised": "stay",
-      "aliases": [
-        "stay"
-      ],
-      "sources": [
-        "curated:function.curated.people.trainee-roster:steps",
-        "curated:function.curated.training.course-leadership:steps",
-        "control:components/SettingsView.tsx:1375",
-        "message:components/SyllabusView.tsx:3436"
       ],
       "count": 4
     },
@@ -68744,18 +68816,6 @@
       "count": 4
     },
     {
-      "term": "the active",
-      "normalised": "the active",
-      "aliases": [],
-      "sources": [
-        "message:App.tsx:26875",
-        "message:components/PlatformConfigurationSettings.tsx:1763",
-        "message:components/ScheduleView.tsx:8632",
-        "message:components/ScheduleView.tsx:9900"
-      ],
-      "count": 4
-    },
-    {
       "term": "the Air",
       "normalised": "the air",
       "aliases": [
@@ -69208,8 +69268,8 @@
       "normalised": "to do something",
       "aliases": [],
       "sources": [
-        "control:components/NeoGuidePanel.tsx:260",
-        "control-attribute:components/NeoGuidePanel.tsx:260"
+        "control:components/NeoGuidePanel.tsx:379",
+        "control-attribute:components/NeoGuidePanel.tsx:379"
       ],
       "count": 4
     },
@@ -69704,6 +69764,17 @@
         "message:App.tsx:39974",
         "message:App.tsx:40080",
         "message:App.tsx:42228"
+      ],
+      "count": 4
+    },
+    {
+      "term": "trainee from",
+      "normalised": "trainee from",
+      "aliases": [],
+      "sources": [
+        "curated:function.curated.people.archive-delete-trainee:alias",
+        "curated:function.curated.people.archive-delete-trainee:purpose",
+        "curated:function.curated.people.archive-delete-trainee:steps"
       ],
       "count": 4
     },
@@ -71903,6 +71974,17 @@
         "message:components/PlatformConfigurationSettings.tsx:986",
         "message:components/PlatformConfigurationSettings.tsx:2030",
         "message:server.js:5375"
+      ],
+      "count": 3
+    },
+    {
+      "term": "active roster",
+      "normalised": "active roster",
+      "aliases": [],
+      "sources": [
+        "curated:function.curated.people.archive-delete-trainee:purpose",
+        "curated:function.curated.people.archive-delete-trainee:steps",
+        "control:components/DeleteTraineeConfirmation.tsx:194"
       ],
       "count": 3
     },
@@ -74571,7 +74653,7 @@
       "sources": [
         "message:components/MyDashboard.tsx:2302",
         "message:components/MyDashboard.tsx:2317",
-        "message:utils/neoGuideEngine.ts:573"
+        "message:utils/neoGuideEngine.ts:878"
       ],
       "count": 3
     },
@@ -75713,6 +75795,16 @@
       "count": 3
     },
     {
+      "term": "Delete or Archive Trainee",
+      "normalised": "delete or archive trainee",
+      "aliases": [],
+      "sources": [
+        "curated:function.curated.people.archive-delete-trainee",
+        "curated:function.curated.people.archive-delete-trainee:steps"
+      ],
+      "count": 3
+    },
+    {
       "term": "Delete permission profile",
       "normalised": "delete permission profile",
       "aliases": [
@@ -76324,7 +76416,7 @@
       "normalised": "disabled cursor not allowed disabled opacity 45",
       "aliases": [],
       "sources": [
-        "message:components/NeoGuidePanel.tsx:271",
+        "message:components/NeoGuidePanel.tsx:390",
         "message:components/PlatformConfigurationSettings.tsx:10045",
         "message:components/PlatformConfigurationSettings.tsx:10120"
       ],
@@ -76357,7 +76449,7 @@
       "normalised": "disabled opacity 45",
       "aliases": [],
       "sources": [
-        "message:components/NeoGuidePanel.tsx:271",
+        "message:components/NeoGuidePanel.tsx:390",
         "message:components/PlatformConfigurationSettings.tsx:10045",
         "message:components/PlatformConfigurationSettings.tsx:10120"
       ],
@@ -78176,70 +78268,12 @@
         "message:dfp-neo-platform/app/admin/database/page.tsx:381"
       ],
       "count": 3
-    },
-    {
-      "term": "flex min h",
-      "normalised": "flex min h",
-      "aliases": [],
-      "sources": [
-        "message:components/PlatformConfigurationSettings.tsx:9706",
-        "message:components/PlatformConfigurationSettings.tsx:10045",
-        "message:components/PlatformConfigurationSettings.tsx:10120"
-      ],
-      "count": 3
-    },
-    {
-      "term": "flex min h 38px",
-      "normalised": "flex min h 38px",
-      "aliases": [],
-      "sources": [
-        "message:components/PlatformConfigurationSettings.tsx:9706",
-        "message:components/PlatformConfigurationSettings.tsx:10045",
-        "message:components/PlatformConfigurationSettings.tsx:10120"
-      ],
-      "count": 3
-    },
-    {
-      "term": "flight auth",
-      "normalised": "flight auth",
-      "aliases": [],
-      "sources": [
-        "curated:function.curated.settings.flight-authorisation-warnings:alias",
-        "curated:function.curated.duty-pilot.flight-authorisation:alias"
-      ],
-      "count": 3
-    },
-    {
-      "term": "Flight FTD",
-      "normalised": "flight ftd",
-      "aliases": [
-        "flight ftd"
-      ],
-      "sources": [
-        "control:components/TraineeLmpView.tsx:366",
-        "control:components/TraineeLmpView.tsx:368",
-        "message:dfp-neo-platform/app/api/event-completions/route.ts:161"
-      ],
-      "count": 3
-    },
-    {
-      "term": "Flight Line Access",
-      "normalised": "flight line access",
-      "aliases": [
-        "Flight Line access"
-      ],
-      "sources": [
-        "control:components/Header.tsx:501",
-        "control-attribute:components/Header.tsx:501",
-        "message:App.tsx:55661"
-      ],
-      "count": 3
     }
   ],
   "curatedKnowledge": {
     "schemaVersion": "neo-guide-enrichment.v1",
     "updatedAt": "2026-09-23T00:00:00.000Z",
-    "functionCount": 33,
+    "functionCount": 34,
     "conceptCount": 5,
     "synonymCount": 7,
     "functions": [
@@ -78536,6 +78570,106 @@
           "function.curated.people.instructor-assignment"
         ],
         "auditStatus": "IMPLEMENTED - manually enriched from current implementation review"
+      },
+      {
+        "id": "function.curated.people.archive-delete-trainee",
+        "name": "Delete or Archive Trainee",
+        "aliases": [
+          "archive trainee",
+          "archive a trainee",
+          "delete trainee",
+          "delete a trainee",
+          "remove trainee",
+          "remove a trainee",
+          "archive student",
+          "delete student",
+          "remove student",
+          "old trainee has left",
+          "student has left",
+          "get rid of old trainee",
+          "hide trainee from roster",
+          "restore later",
+          "permanently delete trainee"
+        ],
+        "location": {
+          "page": "Trainee",
+          "route": null,
+          "component": "components/DeleteTraineeConfirmation.tsx",
+          "anchor": "nav-trainee"
+        },
+        "purpose": "Archives or permanently deletes a trainee from the Trainee Roster workflow. Archive is the recommended option because it hides the trainee from the active roster while preserving the record for later restoration.",
+        "procedureSteps": [
+          "Open Trainee.",
+          "Stay on Trainee Profile / Trainee Roster.",
+          "Use the trainee removal/delete action to open Delete or Archive Trainee.",
+          "Select the course.",
+          "Select the trainee.",
+          "Choose Archive Trainee (Recommended) to hide the trainee from the active roster while keeping the record, or choose Delete Permanently only when permanent removal is required.",
+          "Enter your password.",
+          "Click Archive Trainee or Delete Trainee."
+        ],
+        "inputs": [
+          {
+            "fieldName": "course",
+            "fieldType": "course selector",
+            "permittedValues": [],
+            "defaultValue": null,
+            "required": true,
+            "validation": [
+              "A course must be selected before a trainee can be selected."
+            ],
+            "dependencies": [
+              "Active trainee courses"
+            ],
+            "sourceOfData": "Trainee roster courses"
+          },
+          {
+            "fieldName": "trainee",
+            "fieldType": "trainee selector",
+            "permittedValues": [],
+            "defaultValue": null,
+            "required": true,
+            "validation": [
+              "A trainee in the selected course must be selected."
+            ],
+            "dependencies": [
+              "Selected course"
+            ],
+            "sourceOfData": "Trainees in selected course"
+          },
+          {
+            "fieldName": "password",
+            "fieldType": "password",
+            "permittedValues": [],
+            "defaultValue": null,
+            "required": true,
+            "validation": [
+              "Password is required to confirm archive/delete action."
+            ],
+            "dependencies": [],
+            "sourceOfData": "Logged-in user"
+          }
+        ],
+        "outputs": [
+          "Archives the trainee for active roster purposes or permanently deletes the trainee record, depending on the selected action."
+        ],
+        "permissions": [
+          "trainee.roster.view"
+        ],
+        "dependencies": [
+          "The selected course and trainee must exist in the active roster data."
+        ],
+        "businessRules": [
+          "Archive Trainee is recommended because it hides the trainee from the active roster but keeps all data and can be restored later. Delete Permanently removes the trainee from the database and cannot be undone."
+        ],
+        "failureConditions": [
+          "The action is disabled until course, trainee and password are entered. Permanent delete should only be used when approved and not when record retention is required."
+        ],
+        "relatedFunctions": [
+          "function.curated.people.trainee-roster",
+          "function.curated.training.course-management"
+        ],
+        "auditStatus": "IMPLEMENTED - manually enriched from DeleteTraineeConfirmation.tsx"
       },
       {
         "id": "function.curated.people.trainee-roster",
@@ -80336,7 +80470,7 @@
       "id": "neo-guide-panel",
       "tagName": "section",
       "file": "components/NeoGuidePanel.tsx",
-      "line": 210
+      "line": 306
     },
     {
       "id": "nav-duty-pilot",
@@ -80769,6 +80903,93 @@
         "function.curated.people.instructor-assignment"
       ],
       "auditStatus": "IMPLEMENTED - manually enriched from current implementation review"
+    },
+    {
+      "id": "function.curated.people.archive-delete-trainee",
+      "name": "Delete or Archive Trainee",
+      "aliases": [
+        "archive trainee",
+        "archive a trainee",
+        "delete trainee",
+        "delete a trainee",
+        "remove trainee",
+        "remove a trainee",
+        "archive student",
+        "delete student",
+        "remove student",
+        "old trainee has left",
+        "student has left",
+        "get rid of old trainee",
+        "hide trainee from roster",
+        "restore later",
+        "permanently delete trainee"
+      ],
+      "location": {
+        "page": "Trainee",
+        "route": null,
+        "component": "components/DeleteTraineeConfirmation.tsx",
+        "anchor": "nav-trainee"
+      },
+      "purpose": "Archives or permanently deletes a trainee from the Trainee Roster workflow. Archive is the recommended option because it hides the trainee from the active roster while preserving the record for later restoration.",
+      "inputs": [
+        {
+          "fieldName": "course",
+          "fieldType": "course selector",
+          "permittedValues": [],
+          "defaultValue": null,
+          "required": true,
+          "validation": [
+            "A course must be selected before a trainee can be selected."
+          ],
+          "dependencies": [
+            "Active trainee courses"
+          ],
+          "sourceOfData": "Trainee roster courses"
+        },
+        {
+          "fieldName": "trainee",
+          "fieldType": "trainee selector",
+          "permittedValues": [],
+          "defaultValue": null,
+          "required": true,
+          "validation": [
+            "A trainee in the selected course must be selected."
+          ],
+          "dependencies": [
+            "Selected course"
+          ],
+          "sourceOfData": "Trainees in selected course"
+        },
+        {
+          "fieldName": "password",
+          "fieldType": "password",
+          "permittedValues": [],
+          "defaultValue": null,
+          "required": true,
+          "validation": [
+            "Password is required to confirm archive/delete action."
+          ],
+          "dependencies": [],
+          "sourceOfData": "Logged-in user"
+        }
+      ],
+      "outputs": [
+        "Archives the trainee for active roster purposes or permanently deletes the trainee record, depending on the selected action."
+      ],
+      "permissions": [
+        "trainee.roster.view"
+      ],
+      "dependencies": [
+        "The selected course and trainee must exist in the active roster data."
+      ],
+      "failureConditions": [
+        "The action is disabled until course, trainee and password are entered. Permanent delete should only be used when approved and not when record retention is required."
+      ],
+      "relatedFunctions": [
+        "function.curated.people.trainee-roster",
+        "function.curated.training.course-management"
+      ],
+      "auditStatus": "IMPLEMENTED - manually enriched from DeleteTraineeConfirmation.tsx"
     },
     {
       "id": "function.curated.people.trainee-roster",
@@ -185888,7 +186109,7 @@
       "auditStatus": "IMPLEMENTED - extracted from JSX control"
     },
     {
-      "id": "function.control-components-neoguidepanel-tsx-close-220",
+      "id": "function.control-components-neoguidepanel-tsx-close-316",
       "name": "Close",
       "aliases": [
         "Close"
@@ -185898,7 +186119,7 @@
         "route": null,
         "component": "components/NeoGuidePanel.tsx",
         "anchor": null,
-        "line": 220
+        "line": 316
       },
       "purpose": "button control in components/NeoGuidePanel.tsx. Purpose requires manual enrichment where not evident from implementation.",
       "inputs": [],
@@ -185912,7 +186133,7 @@
       "auditStatus": "IMPLEMENTED - extracted from JSX control"
     },
     {
-      "id": "function.control-components-neoguidepanel-tsx-message-action-label-246",
+      "id": "function.control-components-neoguidepanel-tsx-message-action-label-342",
       "name": "message.action.label",
       "aliases": [
         "message.action.label"
@@ -185922,7 +186143,7 @@
         "route": null,
         "component": "components/NeoGuidePanel.tsx",
         "anchor": null,
-        "line": 246
+        "line": 342
       },
       "purpose": "button control in components/NeoGuidePanel.tsx. Purpose requires manual enrichment where not evident from implementation.",
       "inputs": [],
@@ -185936,7 +186157,55 @@
       "auditStatus": "IMPLEMENTED - extracted from JSX control"
     },
     {
-      "id": "function.control-components-neoguidepanel-tsx-model-ask-how-to-do-something-loading-neo-guide-260",
+      "id": "function.control-components-neoguidepanel-tsx-option-label-353",
+      "name": "option.label",
+      "aliases": [
+        "option.label"
+      ],
+      "location": {
+        "page": "Neo Guide Panel",
+        "route": null,
+        "component": "components/NeoGuidePanel.tsx",
+        "anchor": null,
+        "line": 353
+      },
+      "purpose": "button control in components/NeoGuidePanel.tsx. Purpose requires manual enrichment where not evident from implementation.",
+      "inputs": [],
+      "outputs": [
+        "handler: () => selectClarificationOption(option)"
+      ],
+      "permissions": [],
+      "dependencies": [],
+      "failureConditions": [],
+      "relatedFunctions": [],
+      "auditStatus": "IMPLEMENTED - extracted from JSX control"
+    },
+    {
+      "id": "function.control-components-neoguidepanel-tsx-message-noneoptionlabel-363",
+      "name": "message.noneOptionLabel",
+      "aliases": [
+        "message.noneOptionLabel"
+      ],
+      "location": {
+        "page": "Neo Guide Panel",
+        "route": null,
+        "component": "components/NeoGuidePanel.tsx",
+        "anchor": null,
+        "line": 363
+      },
+      "purpose": "button control in components/NeoGuidePanel.tsx. Purpose requires manual enrichment where not evident from implementation.",
+      "inputs": [],
+      "outputs": [
+        "handler: selectNoneOfThese"
+      ],
+      "permissions": [],
+      "dependencies": [],
+      "failureConditions": [],
+      "relatedFunctions": [],
+      "auditStatus": "IMPLEMENTED - extracted from JSX control"
+    },
+    {
+      "id": "function.control-components-neoguidepanel-tsx-model-ask-how-to-do-something-loading-neo-guide-379",
       "name": "model ? 'Ask how to do something...' : 'Loading NEO Guide...'",
       "aliases": [
         "model ? 'Ask how to do something...' : 'Loading NEO Guide...'"
@@ -185946,7 +186215,7 @@
         "route": null,
         "component": "components/NeoGuidePanel.tsx",
         "anchor": null,
-        "line": 260
+        "line": 379
       },
       "purpose": "input control in components/NeoGuidePanel.tsx. Purpose requires manual enrichment where not evident from implementation.",
       "inputs": [
@@ -185975,7 +186244,7 @@
       "auditStatus": "IMPLEMENTED - extracted from JSX control"
     },
     {
-      "id": "function.control-components-neoguidepanel-tsx-ask-268",
+      "id": "function.control-components-neoguidepanel-tsx-ask-387",
       "name": "Ask",
       "aliases": [
         "Ask"
@@ -185985,7 +186254,7 @@
         "route": null,
         "component": "components/NeoGuidePanel.tsx",
         "anchor": null,
-        "line": 268
+        "line": 387
       },
       "purpose": "button control in components/NeoGuidePanel.tsx. Purpose requires manual enrichment where not evident from implementation.",
       "inputs": [],
@@ -289851,10 +290120,10 @@
         "line": 3924
       },
       {
-        "id": "message.components-neoguidepanel-tsx.rounded-md-border-border-orange-300-60-bg-orange-500-px-3-py-2-text-sm-font-black-text-slate-950.271",
+        "id": "message.components-neoguidepanel-tsx.rounded-md-border-border-orange-300-60-bg-orange-500-px-3-py-2-text-sm-font-black-text-slate-950.390",
         "text": "rounded-md border border-orange-300/60 bg-orange-500 px-3 py-2 text-sm font-black text-slate-950 disabled:cursor-not-allowed disabled:opacity-45",
         "file": "components/NeoGuidePanel.tsx",
-        "line": 271
+        "line": 390
       },
       {
         "id": "message.components-nextdaybuildview-tsx.neo-assist-failed-to-drop-assist-tile.303",
@@ -301251,88 +301520,88 @@
         "line": 10
       },
       {
-        "id": "message.utils-neoguideengine-ts.permission.129",
+        "id": "message.utils-neoguideengine-ts.permission.153",
         "text": "PERMISSION",
         "file": "utils/neoGuideEngine.ts",
-        "line": 129
+        "line": 153
       },
       {
-        "id": "message.utils-neoguideengine-ts.disabled.145",
+        "id": "message.utils-neoguideengine-ts.disabled.169",
         "text": "disabled",
         "file": "utils/neoGuideEngine.ts",
-        "line": 145
+        "line": 169
       },
       {
-        "id": "message.utils-neoguideengine-ts.unavailable.145",
+        "id": "message.utils-neoguideengine-ts.unavailable.169",
         "text": "unavailable",
         "file": "utils/neoGuideEngine.ts",
-        "line": 145
+        "line": 169
       },
       {
-        "id": "message.utils-neoguideengine-ts.permission.148",
+        "id": "message.utils-neoguideengine-ts.permission.172",
         "text": "permission",
         "file": "utils/neoGuideEngine.ts",
-        "line": 148
+        "line": 172
       },
       {
-        "id": "message.utils-neoguideengine-ts.disabled.148",
+        "id": "message.utils-neoguideengine-ts.disabled.172",
         "text": "disabled",
         "file": "utils/neoGuideEngine.ts",
-        "line": 148
+        "line": 172
       },
       {
-        "id": "message.utils-neoguideengine-ts.conflict.151",
+        "id": "message.utils-neoguideengine-ts.conflict.175",
         "text": "conflict",
         "file": "utils/neoGuideEngine.ts",
-        "line": 151
+        "line": 175
       },
       {
-        "id": "message.utils-neoguideengine-ts.unavailable.161",
+        "id": "message.utils-neoguideengine-ts.unavailable.185",
         "text": "unavailable",
         "file": "utils/neoGuideEngine.ts",
-        "line": 161
+        "line": 185
       },
       {
-        "id": "message.utils-neoguideengine-ts.unavailable.161",
+        "id": "message.utils-neoguideengine-ts.unavailable.185",
         "text": "unavailable",
         "file": "utils/neoGuideEngine.ts",
-        "line": 161
+        "line": 185
       },
       {
-        "id": "message.utils-neoguideengine-ts.missing-action-family.447",
+        "id": "message.utils-neoguideengine-ts.missing-action-family.718",
         "text": "missing action ${family}",
         "file": "utils/neoGuideEngine.ts",
-        "line": 447
+        "line": 718
       },
       {
-        "id": "message.utils-neoguideengine-ts.permission-visible.465",
+        "id": "message.utils-neoguideengine-ts.permission-visible.742",
         "text": "permission visible",
         "file": "utils/neoGuideEngine.ts",
-        "line": 465
+        "line": 742
       },
       {
-        "id": "message.utils-neoguideengine-ts.permission-may-be-restricted.465",
+        "id": "message.utils-neoguideengine-ts.permission-may-be-restricted.742",
         "text": "permission may be restricted",
         "file": "utils/neoGuideEngine.ts",
-        "line": 465
+        "line": 742
       },
       {
-        "id": "message.utils-neoguideengine-ts.permission.571",
+        "id": "message.utils-neoguideengine-ts.permission.876",
         "text": "PERMISSION",
         "file": "utils/neoGuideEngine.ts",
-        "line": 571
+        "line": 876
       },
       {
-        "id": "message.utils-neoguideengine-ts.the-relevant-page-permission.572",
+        "id": "message.utils-neoguideengine-ts.the-relevant-page-permission.877",
         "text": "the relevant page permission",
         "file": "utils/neoGuideEngine.ts",
-        "line": 572
+        "line": 877
       },
       {
-        "id": "message.utils-neoguideengine-ts.fn-name-is-controlled-by-permissiontext-if-it-is-disabled-check-the-user-role-and-permission-pro.573",
+        "id": "message.utils-neoguideengine-ts.fn-name-is-controlled-by-permissiontext-if-it-is-disabled-check-the-user-role-and-permission-pro.878",
         "text": "${fn.name} is controlled by ${permissionText}. If it is disabled, check the user role and permission profile for that function.",
         "file": "utils/neoGuideEngine.ts",
-        "line": 573
+        "line": 878
       },
       {
         "id": "message.utils-platformconfigservice-ts.staff-profile-unavailable-use.196",
@@ -305159,6 +305428,12 @@
       {
         "from": "concept.staff",
         "to": "function.curated.people.delete-staff",
+        "relationship": "implemented-by",
+        "source": "derived from audited function index"
+      },
+      {
+        "from": "concept.trainee",
+        "to": "function.curated.people.archive-delete-trainee",
         "relationship": "implemented-by",
         "source": "derived from audited function index"
       },
@@ -310439,12 +310714,6 @@
       {
         "from": "concept.neo-build",
         "to": "function.control-components-pauseflightopspanel-tsx-neo-build-post-pause-560",
-        "relationship": "implemented-by",
-        "source": "derived from audited function index"
-      },
-      {
-        "from": "concept.schedule",
-        "to": "function.control-components-pauseflightopspanel-tsx-discard-all-changes-and-restore-the-original-active-d",
         "relationship": "implemented-by",
         "source": "derived from audited function index"
       },

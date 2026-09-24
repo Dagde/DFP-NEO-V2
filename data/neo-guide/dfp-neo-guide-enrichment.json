@@ -181,6 +181,83 @@
       "auditStatus": "IMPLEMENTED - manually enriched from current implementation review"
     },
     {
+      "id": "function.curated.people.archive-delete-trainee",
+      "name": "Delete or Archive Trainee",
+      "aliases": [
+        "archive trainee",
+        "archive a trainee",
+        "delete trainee",
+        "delete a trainee",
+        "remove trainee",
+        "remove a trainee",
+        "archive student",
+        "delete student",
+        "remove student",
+        "old trainee has left",
+        "student has left",
+        "get rid of old trainee",
+        "hide trainee from roster",
+        "restore later",
+        "permanently delete trainee"
+      ],
+      "location": {
+        "page": "Trainee",
+        "route": null,
+        "component": "components/DeleteTraineeConfirmation.tsx",
+        "anchor": "nav-trainee"
+      },
+      "purpose": "Archives or permanently deletes a trainee from the Trainee Roster workflow. Archive is the recommended option because it hides the trainee from the active roster while preserving the record for later restoration.",
+      "procedureSteps": [
+        "Open Trainee.",
+        "Stay on Trainee Profile / Trainee Roster.",
+        "Use the trainee removal/delete action to open Delete or Archive Trainee.",
+        "Select the course.",
+        "Select the trainee.",
+        "Choose Archive Trainee (Recommended) to hide the trainee from the active roster while keeping the record, or choose Delete Permanently only when permanent removal is required.",
+        "Enter your password.",
+        "Click Archive Trainee or Delete Trainee."
+      ],
+      "inputs": [
+        {
+          "fieldName": "course",
+          "fieldType": "course selector",
+          "permittedValues": [],
+          "defaultValue": null,
+          "required": true,
+          "validation": ["A course must be selected before a trainee can be selected."],
+          "dependencies": ["Active trainee courses"],
+          "sourceOfData": "Trainee roster courses"
+        },
+        {
+          "fieldName": "trainee",
+          "fieldType": "trainee selector",
+          "permittedValues": [],
+          "defaultValue": null,
+          "required": true,
+          "validation": ["A trainee in the selected course must be selected."],
+          "dependencies": ["Selected course"],
+          "sourceOfData": "Trainees in selected course"
+        },
+        {
+          "fieldName": "password",
+          "fieldType": "password",
+          "permittedValues": [],
+          "defaultValue": null,
+          "required": true,
+          "validation": ["Password is required to confirm archive/delete action."],
+          "dependencies": [],
+          "sourceOfData": "Logged-in user"
+        }
+      ],
+      "outputs": ["Archives the trainee for active roster purposes or permanently deletes the trainee record, depending on the selected action."],
+      "permissions": ["trainee.roster.view"],
+      "dependencies": ["The selected course and trainee must exist in the active roster data."],
+      "businessRules": ["Archive Trainee is recommended because it hides the trainee from the active roster but keeps all data and can be restored later. Delete Permanently removes the trainee from the database and cannot be undone."],
+      "failureConditions": ["The action is disabled until course, trainee and password are entered. Permanent delete should only be used when approved and not when record retention is required."],
+      "relatedFunctions": ["function.curated.people.trainee-roster", "function.curated.training.course-management"],
+      "auditStatus": "IMPLEMENTED - manually enriched from DeleteTraineeConfirmation.tsx"
+    },
+    {
       "id": "function.curated.people.trainee-roster",
       "name": "Trainee roster",
       "aliases": ["trainee list", "student roster", "add trainee", "upload trainees", "course cards"],

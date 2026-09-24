@@ -135,6 +135,25 @@ assert.match(deleteStaffAnswer.answer, /Delete/i, 'Delete staff answer should in
 assert.match(deleteStaffAnswer.answer, /different from making them unavailable/i, 'Delete staff answer should distinguish deletion from unavailability.');
 assert.doesNotMatch(deleteStaffAnswer.answer, /Add Unavailability/i, 'Delete staff answer must not give unavailability steps.');
 
+const archiveTraineeAnswer = ask('how do I archive a trainee');
+assert.equal(
+  archiveTraineeAnswer.matches[0]?.functionId,
+  'function.curated.people.archive-delete-trainee',
+  'Archive trainee wording should resolve to Delete or Archive Trainee.'
+);
+assert.match(archiveTraineeAnswer.answer, /Archive Trainee \(Recommended\)/i, 'Archive trainee answer should mention the recommended archive option.');
+assert.match(archiveTraineeAnswer.answer, /Open Trainee/i, 'Archive trainee answer should start from Trainee.');
+assert.match(archiveTraineeAnswer.answer, /password/i, 'Archive trainee answer should mention password confirmation.');
+assert.doesNotMatch(archiveTraineeAnswer.answer, /Staff|Course management/i, 'Archive trainee answer must not give staff or course workflow.');
+
+const deleteTraineeAnswer = ask('how do I delete a trainee');
+assert.equal(
+  deleteTraineeAnswer.matches[0]?.functionId,
+  'function.curated.people.archive-delete-trainee',
+  'Delete trainee wording should resolve to Delete or Archive Trainee.'
+);
+assert.match(deleteTraineeAnswer.answer, /Delete Permanently/i, 'Delete trainee answer should mention the permanent delete option.');
+
 const staffUnavailableAnswer = ask('how do I make a staff member unavailable');
 assert.equal(
   staffUnavailableAnswer.matches[0]?.functionId,
