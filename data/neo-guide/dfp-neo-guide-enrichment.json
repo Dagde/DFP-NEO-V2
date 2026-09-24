@@ -1402,6 +1402,124 @@
       "auditStatus": "IMPLEMENTED - manually enriched from coverage gap review"
     },
     {
+      "id": "function.curated.settings.rank-terminology",
+      "name": "Rank, Terminology & Labels",
+      "aliases": ["rank", "ranks", "set rank", "set ranks", "rank settings", "rank terminology", "rank labels", "rank order", "rank ordering", "rank equivalency", "rank equivalence", "rank preset", "service ranks"],
+      "location": {
+        "page": "Settings",
+        "route": null,
+        "component": "components/PlatformConfigurationSettings.tsx",
+        "anchor": "platform-staff-rank-equivalency"
+      },
+      "purpose": "Configures staff and trainee rank terminology, rank equivalency, rank display order and related people labels.",
+      "procedureSteps": [
+        "Open Settings.",
+        "Open Resources & Configuration.",
+        "Open Rank, Terminology & Labels.",
+        "Click Edit and confirm your password if the section is locked.",
+        "Use Staff Rank Equivalency Table for staff ranks.",
+        "Use Trainee Rank Order if trainees need a separate rank order.",
+        "Save the settings."
+      ],
+      "inputs": [
+        {
+          "fieldName": "Rank Preset",
+          "fieldType": "selector",
+          "permittedValues": ["Configured rank equivalency presets or Custom"],
+          "defaultValue": "Configured deployment default",
+          "required": false,
+          "validation": "Requires Rank, Terminology & Labels edit permission and password unlock.",
+          "dependencies": ["settings.rankTerminology.edit permission"],
+          "sourceOfData": "Platform configuration settings"
+        },
+        {
+          "fieldName": "Staff Rank Equivalency Table",
+          "fieldType": "rank equivalency table",
+          "permittedValues": ["Rank names and abbreviations by service"],
+          "defaultValue": "Configured deployment default",
+          "required": false,
+          "validation": "Ranks should be ordered by equivalent seniority.",
+          "dependencies": ["Configured services"],
+          "sourceOfData": "Platform configuration settings"
+        },
+        {
+          "fieldName": "Trainee Rank Source",
+          "fieldType": "selector/toggle",
+          "permittedValues": ["Use staff rank order", "Use separate trainee rank order"],
+          "defaultValue": "Use staff rank order",
+          "required": false,
+          "validation": "Separate trainee rank order is only needed when trainee display order differs from staff.",
+          "dependencies": ["Rank, Terminology & Labels settings"],
+          "sourceOfData": "Platform configuration settings"
+        }
+      ],
+      "outputs": ["Updates rank labels, rank sorting and staff/trainee display terminology across personnel lists and related displays."],
+      "permissions": ["settings.view", "settings.rankTerminology.edit"],
+      "dependencies": ["Settings access and, for edits, Rank, Terminology & Labels edit permission plus password confirmation."],
+      "businessRules": ["Personnel lists sort by configured rank seniority first, then by name within the same rank. Trainees can either use the staff rank order or a separate trainee rank order."],
+      "failureConditions": ["The section is read-only if the user lacks Rank, Terminology & Labels edit permission. The rank fields remain locked until Edit is pressed and the password is accepted."],
+      "relatedFunctions": ["function.curated.settings.unit-callsigns", "function.curated.settings.formation-callsigns", "function.curated.people.staff-management", "function.curated.people.trainee-roster"],
+      "auditStatus": "IMPLEMENTED - manually enriched from coverage gap review"
+    },
+    {
+      "id": "function.curated.settings.staff-rank-equivalency",
+      "name": "Staff Rank Equivalency Table",
+      "aliases": ["staff rank", "staff ranks", "staff rank order", "staff rank ordering", "staff rank settings", "staff rank equivalency", "staff rank equivalence", "set staff rank", "set staff ranks", "configure staff rank", "instructor rank", "instructor ranks"],
+      "location": {
+        "page": "Settings",
+        "route": null,
+        "component": "components/PlatformConfigurationSettings.tsx",
+        "anchor": "platform-staff-rank-equivalency"
+      },
+      "purpose": "Sets staff rank names, abbreviations and equivalent rank order across the configured services.",
+      "procedureSteps": [
+        "Open Settings.",
+        "Open Resources & Configuration.",
+        "Open Rank, Terminology & Labels.",
+        "Click Edit and confirm your password if the section is locked.",
+        "Go to Staff Rank Equivalency Table.",
+        "Choose a Rank Preset or Custom.",
+        "Update the rank names or abbreviations, then save."
+      ],
+      "inputs": [],
+      "outputs": ["Updates staff rank display order and staff rank labels."],
+      "permissions": ["settings.view", "settings.rankTerminology.edit"],
+      "dependencies": ["Configured services and Rank, Terminology & Labels edit permission for changes."],
+      "businessRules": ["Staff rank order controls staff display priority before surname/first name sorting."],
+      "failureConditions": ["Staff rank fields are locked until the section is unlocked with Edit and password confirmation."],
+      "relatedFunctions": ["function.curated.settings.rank-terminology", "function.curated.people.staff-management"],
+      "auditStatus": "IMPLEMENTED - manually enriched from coverage gap review"
+    },
+    {
+      "id": "function.curated.settings.trainee-rank-order",
+      "name": "Trainee Rank Order",
+      "aliases": ["trainee rank", "trainee ranks", "trainee rank order", "trainee rank ordering", "trainee rank settings", "trainee rank equivalency", "trainee rank equivalence", "set trainee rank", "set trainee ranks", "configure trainee rank", "student rank", "student ranks"],
+      "location": {
+        "page": "Settings",
+        "route": null,
+        "component": "components/PlatformConfigurationSettings.tsx",
+        "anchor": "platform-trainee-rank-equivalency"
+      },
+      "purpose": "Sets trainee rank display order when trainees need a different order from staff.",
+      "procedureSteps": [
+        "Open Settings.",
+        "Open Resources & Configuration.",
+        "Open Rank, Terminology & Labels.",
+        "Click Edit and confirm your password if the section is locked.",
+        "Set Trainee Rank Source to Use separate trainee rank order if required.",
+        "Go to Trainee Rank Order.",
+        "Update the trainee rank order, then save."
+      ],
+      "inputs": [],
+      "outputs": ["Updates trainee rank display order where separate trainee rank ordering is enabled."],
+      "permissions": ["settings.view", "settings.rankTerminology.edit"],
+      "dependencies": ["Rank, Terminology & Labels edit permission and the trainee rank source setting."],
+      "businessRules": ["Trainees use the staff rank order unless separate trainee rank ordering is enabled."],
+      "failureConditions": ["Trainee rank order may be hidden or inactive when trainees are configured to use staff rank order."],
+      "relatedFunctions": ["function.curated.settings.rank-terminology", "function.curated.people.trainee-roster"],
+      "auditStatus": "IMPLEMENTED - manually enriched from coverage gap review"
+    },
+    {
       "id": "function.curated.duty-pilot.authorisation-notes",
       "name": "Authorisation notes",
       "aliases": ["authorisation notes", "authorization notes", "auth notes", "additional message optional", "verbal auth notes", "flight auth notes"],

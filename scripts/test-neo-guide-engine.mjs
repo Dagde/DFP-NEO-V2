@@ -382,6 +382,35 @@ assert.equal(
 assert.equal(formationCallsignAnswer.navigationAction?.settingsSectionId, 'platform-rank-terminology', 'Formation callsign links should open the rank/terminology settings section.');
 assert.equal(formationCallsignAnswer.navigationAction?.settingsFocusSubsectionId, 'platform-formation-callsigns', 'Formation callsign links should scroll to the formation callsign subsection.');
 
+const rankTerminologyAnswer = ask('where do i set rank');
+assert.equal(
+  rankTerminologyAnswer.matches[0]?.functionId,
+  'function.curated.settings.rank-terminology',
+  'Generic rank wording should resolve to Rank, Terminology & Labels settings.'
+);
+assert.match(rankTerminologyAnswer.answer, /Rank, Terminology & Labels/i, 'Rank answer should name the settings section.');
+assert.equal(rankTerminologyAnswer.navigationAction?.settingsSectionId, 'platform-rank-terminology', 'Rank links should open the rank/terminology settings section.');
+assert.equal(rankTerminologyAnswer.navigationAction?.settingsFocusSubsectionId, 'platform-staff-rank-equivalency', 'Generic rank links should focus the staff rank equivalency subsection first.');
+assert.doesNotMatch(rankTerminologyAnswer.answer, /Program Schedule|Multi Select|Flight details/i, 'Rank answer must not drift into unrelated schedule options.');
+
+const staffRankAnswer = ask('where do i set staff ranks');
+assert.equal(
+  staffRankAnswer.matches[0]?.functionId,
+  'function.curated.settings.staff-rank-equivalency',
+  'Staff rank wording should resolve to Staff Rank Equivalency Table.'
+);
+assert.equal(staffRankAnswer.navigationAction?.settingsSectionId, 'platform-rank-terminology', 'Staff rank links should open the rank/terminology settings section.');
+assert.equal(staffRankAnswer.navigationAction?.settingsFocusSubsectionId, 'platform-staff-rank-equivalency', 'Staff rank links should scroll to staff rank equivalency.');
+
+const traineeRankAnswer = ask('where do i set trainee rank');
+assert.equal(
+  traineeRankAnswer.matches[0]?.functionId,
+  'function.curated.settings.trainee-rank-order',
+  'Trainee rank wording should resolve to Trainee Rank Order.'
+);
+assert.equal(traineeRankAnswer.navigationAction?.settingsSectionId, 'platform-rank-terminology', 'Trainee rank links should open the rank/terminology settings section.');
+assert.equal(traineeRankAnswer.navigationAction?.settingsFocusSubsectionId, 'platform-trainee-rank-equivalency', 'Trainee rank links should scroll to trainee rank order.');
+
 const authorisationNotesAnswer = ask('where do I enter auth notes');
 assert.equal(
   authorisationNotesAnswer.matches[0]?.functionId,

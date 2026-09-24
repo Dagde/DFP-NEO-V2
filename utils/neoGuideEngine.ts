@@ -188,7 +188,11 @@ const ACTION_FAMILIES: Array<{ name: string; terms: string[] }> = [
   { name: 'add', terms: ['add', 'create', 'new', 'insert', 'upload', 'import'] },
   { name: 'edit', terms: ['edit', 'change', 'update', 'modify', 'configure', 'set'] },
 ];
-const LOW_SIGNAL_MATCH_TOKENS = new Set(['action', 'button', 'control', 'field', 'page', 'panel', 'section', 'setting', 'settings', 'override']);
+const LOW_SIGNAL_MATCH_TOKENS = new Set([
+  'action', 'button', 'control', 'field', 'page', 'panel', 'section', 'setting', 'settings', 'override',
+  'add', 'archive', 'change', 'configure', 'create', 'delete', 'edit', 'insert', 'modify', 'new', 'remove',
+  'set', 'update', 'upload',
+]);
 const STAGED_CLARIFICATION_SCORE = 12;
 const MIN_STAGED_CLARIFICATION_SCORE = 6;
 const HIGH_CONFIDENCE_SCORE = 22;
@@ -752,7 +756,7 @@ function scoreFunction(
     reasons.push('thin generated record');
   }
 
-  if (!exactPhraseMatched && meaningfulMatchedTokens.size === 0 && requestedActionFamilies.length === 0 && learnedScore === 0) {
+  if (!exactPhraseMatched && meaningfulMatchedTokens.size === 0 && learnedScore === 0) {
     score = Math.min(score, 8);
     reasons.push('weak subject match');
   }

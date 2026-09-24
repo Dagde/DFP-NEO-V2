@@ -1,6 +1,6 @@
 {
   "schemaVersion": "neo-guide-runtime-model.v1",
-  "generatedAt": "2026-09-24T13:34:58.380Z",
+  "generatedAt": "2026-09-24T13:46:55.949Z",
   "source": {
     "repository": "clone-the-repo-dagde-dfp-neo",
     "sourceFileCount": 377,
@@ -8826,7 +8826,7 @@
         "curated:function.curated.training.training-report-fields:steps",
         "curated:function.curated.training.post-flight-inputs:steps"
       ],
-      "count": 419
+      "count": 420
     },
     {
       "term": "get",
@@ -9007,7 +9007,7 @@
         "curated:function.curated.training.syllabus-management:steps",
         "curated:function.curated.training.remedial-packages:alias"
       ],
-      "count": 292
+      "count": 295
     },
     {
       "term": "post",
@@ -9053,6 +9053,30 @@
       "count": 285
     },
     {
+      "term": "Trainee",
+      "normalised": "trainee",
+      "aliases": [
+        "trainee",
+        "Trainee *",
+        "Trainee?"
+      ],
+      "sources": [
+        "curated:function.curated.people.trainee-unavailability",
+        "curated:function.curated.people.trainee-unavailability:alias",
+        "curated:function.curated.people.trainee-unavailability:purpose",
+        "curated:function.curated.people.trainee-unavailability:steps",
+        "curated:function.curated.people.trainee-unavailability:input",
+        "curated:function.curated.people.archive-delete-trainee",
+        "curated:function.curated.people.archive-delete-trainee:alias",
+        "curated:function.curated.people.archive-delete-trainee:purpose",
+        "curated:function.curated.people.archive-delete-trainee:steps",
+        "curated:function.curated.people.archive-delete-trainee:input",
+        "curated:function.curated.people.trainee-roster",
+        "curated:function.curated.people.trainee-roster:alias"
+      ],
+      "count": 281
+    },
+    {
       "term": "e target value",
       "normalised": "e target value",
       "aliases": [],
@@ -9082,18 +9106,18 @@
       "sources": [
         "curated:function.curated.people.archive-delete-trainee:steps",
         "curated:function.curated.people.archive-delete-trainee:input",
+        "curated:function.curated.settings.rank-terminology:steps",
+        "curated:function.curated.settings.staff-rank-equivalency:steps",
+        "curated:function.curated.settings.trainee-rank-order:steps",
         "control:components/AdminPanel.tsx:349",
         "control:components/AdminPanel.tsx:380",
         "control-attribute:components/AdminPanel.tsx:380",
         "control:components/AdminPanel.tsx:433",
         "control-attribute:components/AdminPanel.tsx:433",
         "control:components/AdminPanel.tsx:490",
-        "control:components/AdminPanel.tsx:493",
-        "control-attribute:components/AdminPanel.tsx:493",
-        "control:components/AdminPanel.tsx:561",
-        "control:components/ArchivedCoursesView.tsx:267"
+        "control:components/AdminPanel.tsx:493"
       ],
-      "count": 268
+      "count": 271
     },
     {
       "term": "checkbox",
@@ -9114,30 +9138,6 @@
         "control-attribute:components/AuditFlyout.tsx:649"
       ],
       "count": 267
-    },
-    {
-      "term": "Trainee",
-      "normalised": "trainee",
-      "aliases": [
-        "trainee",
-        "Trainee *",
-        "Trainee?"
-      ],
-      "sources": [
-        "curated:function.curated.people.trainee-unavailability",
-        "curated:function.curated.people.trainee-unavailability:alias",
-        "curated:function.curated.people.trainee-unavailability:purpose",
-        "curated:function.curated.people.trainee-unavailability:steps",
-        "curated:function.curated.people.trainee-unavailability:input",
-        "curated:function.curated.people.archive-delete-trainee",
-        "curated:function.curated.people.archive-delete-trainee:alias",
-        "curated:function.curated.people.archive-delete-trainee:purpose",
-        "curated:function.curated.people.archive-delete-trainee:steps",
-        "curated:function.curated.people.archive-delete-trainee:input",
-        "curated:function.curated.people.trainee-roster",
-        "curated:function.curated.people.trainee-roster:alias"
-      ],
-      "count": 262
     },
     {
       "term": "flight",
@@ -9367,6 +9367,29 @@
       "count": 175
     },
     {
+      "term": "Staff",
+      "normalised": "staff",
+      "aliases": [
+        "staff",
+        "STAFF"
+      ],
+      "sources": [
+        "curated:function.curated.people.staff-unavailability",
+        "curated:function.curated.people.staff-unavailability:alias",
+        "curated:function.curated.people.staff-unavailability:purpose",
+        "curated:function.curated.people.staff-unavailability:steps",
+        "curated:function.curated.people.delete-staff",
+        "curated:function.curated.people.delete-staff:alias",
+        "curated:function.curated.people.delete-staff:purpose",
+        "curated:function.curated.people.delete-staff:steps",
+        "curated:function.curated.people.instructor-assignment:steps",
+        "curated:function.curated.people.archived-staff",
+        "curated:function.curated.people.archived-staff:alias",
+        "curated:function.curated.people.archived-staff:steps"
+      ],
+      "count": 171
+    },
+    {
       "term": "unit",
       "normalised": "unit",
       "aliases": [
@@ -9456,6 +9479,28 @@
       "count": 167
     },
     {
+      "term": "Open",
+      "normalised": "open",
+      "aliases": [
+        "open"
+      ],
+      "sources": [
+        "curated:function.curated.navigation.dfp",
+        "curated:function.curated.workflow.initial-setup-wizard:steps",
+        "curated:function.curated.people.trainee-unavailability:steps",
+        "curated:function.curated.people.staff-unavailability:steps",
+        "curated:function.curated.people.delete-staff:steps",
+        "curated:function.curated.people.archive-delete-trainee:steps",
+        "curated:function.curated.people.trainee-roster:steps",
+        "curated:function.curated.people.instructor-assignment:steps",
+        "curated:function.curated.training.course-management:steps",
+        "curated:function.curated.training.archive-course:steps",
+        "curated:function.curated.training.course-progress:steps",
+        "curated:function.curated.training.training-report:steps"
+      ],
+      "count": 167
+    },
+    {
       "term": "radio",
       "normalised": "radio",
       "aliases": [
@@ -9541,28 +9586,6 @@
       "count": 158
     },
     {
-      "term": "Open",
-      "normalised": "open",
-      "aliases": [
-        "open"
-      ],
-      "sources": [
-        "curated:function.curated.navigation.dfp",
-        "curated:function.curated.workflow.initial-setup-wizard:steps",
-        "curated:function.curated.people.trainee-unavailability:steps",
-        "curated:function.curated.people.staff-unavailability:steps",
-        "curated:function.curated.people.delete-staff:steps",
-        "curated:function.curated.people.archive-delete-trainee:steps",
-        "curated:function.curated.people.trainee-roster:steps",
-        "curated:function.curated.people.instructor-assignment:steps",
-        "curated:function.curated.training.course-management:steps",
-        "curated:function.curated.training.archive-course:steps",
-        "curated:function.curated.training.course-progress:steps",
-        "curated:function.curated.training.training-report:steps"
-      ],
-      "count": 158
-    },
-    {
       "term": "date time",
       "normalised": "date time",
       "aliases": [
@@ -9630,27 +9653,50 @@
       "count": 153
     },
     {
-      "term": "Staff",
-      "normalised": "staff",
+      "term": "Settings",
+      "normalised": "settings",
       "aliases": [
-        "staff",
-        "STAFF"
+        "settings"
       ],
       "sources": [
-        "curated:function.curated.people.staff-unavailability",
-        "curated:function.curated.people.staff-unavailability:alias",
-        "curated:function.curated.people.staff-unavailability:purpose",
-        "curated:function.curated.people.staff-unavailability:steps",
-        "curated:function.curated.people.delete-staff",
-        "curated:function.curated.people.delete-staff:alias",
-        "curated:function.curated.people.delete-staff:purpose",
-        "curated:function.curated.people.delete-staff:steps",
-        "curated:function.curated.people.instructor-assignment:steps",
-        "curated:function.curated.people.archived-staff",
-        "curated:function.curated.people.archived-staff:alias",
-        "curated:function.curated.people.archived-staff:steps"
+        "curated:function.curated.training.course-progress:steps",
+        "curated:function.curated.scheduling.validation-check:steps",
+        "curated:function.curated.settings.currency-builder:steps",
+        "curated:function.curated.settings.configuration-report:alias",
+        "curated:function.curated.settings.configuration-report:steps",
+        "curated:function.curated.training.scoring-matrix-elements:steps",
+        "curated:function.curated.training.syllabus-management:steps",
+        "curated:function.curated.settings.audit-log-recording",
+        "curated:function.curated.settings.audit-log-recording:alias",
+        "curated:function.curated.settings.audit-log-recording:steps",
+        "curated:function.curated.settings.unit-callsigns:alias",
+        "curated:function.curated.settings.unit-callsigns:steps"
       ],
-      "count": 153
+      "count": 150
+    },
+    {
+      "term": "edit",
+      "normalised": "edit",
+      "aliases": [
+        "Edit",
+        "EDIT",
+        "✎ Edit"
+      ],
+      "sources": [
+        "curated:function.curated.navigation.dfp:purpose",
+        "curated:function.curated.training.course-management:alias",
+        "curated:function.curated.training.course-management:steps",
+        "curated:function.curated.scheduling.flight-details:alias",
+        "curated:function.curated.people.move-trainee-course:steps",
+        "curated:function.curated.settings.currency-builder:alias",
+        "curated:function.curated.settings.currency-builder:steps",
+        "curated:function.curated.training.scoring-matrix-elements:alias",
+        "curated:function.curated.training.scoring-matrix-elements:steps",
+        "curated:function.curated.scheduling.priority-currency-requests:steps",
+        "curated:function.curated.people.currency-audit-and-dates:alias",
+        "curated:function.curated.people.currency-audit-and-dates:steps"
+      ],
+      "count": 149
     },
     {
       "term": "permission",
@@ -9696,52 +9742,6 @@
         "curated:function.curated.people.currency-audit-and-dates:steps"
       ],
       "count": 148
-    },
-    {
-      "term": "edit",
-      "normalised": "edit",
-      "aliases": [
-        "Edit",
-        "EDIT",
-        "✎ Edit"
-      ],
-      "sources": [
-        "curated:function.curated.navigation.dfp:purpose",
-        "curated:function.curated.training.course-management:alias",
-        "curated:function.curated.training.course-management:steps",
-        "curated:function.curated.scheduling.flight-details:alias",
-        "curated:function.curated.people.move-trainee-course:steps",
-        "curated:function.curated.settings.currency-builder:alias",
-        "curated:function.curated.settings.currency-builder:steps",
-        "curated:function.curated.training.scoring-matrix-elements:alias",
-        "curated:function.curated.training.scoring-matrix-elements:steps",
-        "curated:function.curated.scheduling.priority-currency-requests:steps",
-        "curated:function.curated.people.currency-audit-and-dates:alias",
-        "curated:function.curated.people.currency-audit-and-dates:steps"
-      ],
-      "count": 146
-    },
-    {
-      "term": "Settings",
-      "normalised": "settings",
-      "aliases": [
-        "settings"
-      ],
-      "sources": [
-        "curated:function.curated.training.course-progress:steps",
-        "curated:function.curated.scheduling.validation-check:steps",
-        "curated:function.curated.settings.currency-builder:steps",
-        "curated:function.curated.settings.configuration-report:alias",
-        "curated:function.curated.settings.configuration-report:steps",
-        "curated:function.curated.training.scoring-matrix-elements:steps",
-        "curated:function.curated.training.syllabus-management:steps",
-        "curated:function.curated.settings.audit-log-recording",
-        "curated:function.curated.settings.audit-log-recording:alias",
-        "curated:function.curated.settings.audit-log-recording:steps",
-        "curated:function.curated.settings.unit-callsigns:alias",
-        "curated:function.curated.settings.unit-callsigns:steps"
-      ],
-      "count": 143
     },
     {
       "term": "true",
@@ -10909,6 +10909,28 @@
       "count": 69
     },
     {
+      "term": "Rank",
+      "normalised": "rank",
+      "aliases": [
+        "rank"
+      ],
+      "sources": [
+        "curated:function.curated.settings.formation-callsigns:steps",
+        "curated:function.curated.settings.rank-terminology",
+        "curated:function.curated.settings.rank-terminology:alias",
+        "curated:function.curated.settings.rank-terminology:purpose",
+        "curated:function.curated.settings.rank-terminology:steps",
+        "curated:function.curated.settings.rank-terminology:input",
+        "curated:function.curated.settings.staff-rank-equivalency",
+        "curated:function.curated.settings.staff-rank-equivalency:alias",
+        "curated:function.curated.settings.staff-rank-equivalency:purpose",
+        "curated:function.curated.settings.staff-rank-equivalency:steps",
+        "curated:function.curated.settings.trainee-rank-order",
+        "curated:function.curated.settings.trainee-rank-order:alias"
+      ],
+      "count": 69
+    },
+    {
       "term": "Dual",
       "normalised": "dual",
       "aliases": [],
@@ -10945,6 +10967,29 @@
         "message:components/AdminPanel.tsx:445",
         "message:components/AircraftAvailabilityPanel.tsx:261",
         "message:components/AircraftAvailabilityPanel.tsx:268"
+      ],
+      "count": 68
+    },
+    {
+      "term": "update",
+      "normalised": "update",
+      "aliases": [
+        "Update",
+        "UPDATE"
+      ],
+      "sources": [
+        "curated:function.curated.settings.unit-callsigns:steps",
+        "curated:function.curated.settings.staff-rank-equivalency:steps",
+        "curated:function.curated.settings.trainee-rank-order:steps",
+        "control:components/MyDashboard.tsx:3766",
+        "control:components/UpdateConfirmationFlyout.tsx:95",
+        "control:components/UpdateConfirmationFlyout.tsx:109",
+        "control:components/UpdateConfirmationFlyout.tsx:129",
+        "control:dfp-neo-platform/app/admin/users/[id]/EditUserForm.tsx:319",
+        "message:App.tsx:39804",
+        "message:App.tsx:40485",
+        "message:App.tsx:40518",
+        "message:App.tsx:40764"
       ],
       "count": 68
     },
@@ -10988,29 +11033,6 @@
         "message:components/AuthorisationFlyout.tsx:687",
         "message:components/AuthorisationFlyout.tsx:826",
         "message:components/CancellationCodesTable.tsx:415"
-      ],
-      "count": 66
-    },
-    {
-      "term": "update",
-      "normalised": "update",
-      "aliases": [
-        "Update",
-        "UPDATE"
-      ],
-      "sources": [
-        "curated:function.curated.settings.unit-callsigns:steps",
-        "control:components/MyDashboard.tsx:3766",
-        "control:components/UpdateConfirmationFlyout.tsx:95",
-        "control:components/UpdateConfirmationFlyout.tsx:109",
-        "control:components/UpdateConfirmationFlyout.tsx:129",
-        "control:dfp-neo-platform/app/admin/users/[id]/EditUserForm.tsx:319",
-        "message:App.tsx:39804",
-        "message:App.tsx:40485",
-        "message:App.tsx:40518",
-        "message:App.tsx:40764",
-        "message:App.tsx:40819",
-        "message:App.tsx:40875"
       ],
       "count": 66
     },
@@ -11074,6 +11096,29 @@
         "prisma:Aircraft.createdAt",
         "prisma:Course.createdAt",
         "prisma:Score.createdAt"
+      ],
+      "count": 64
+    },
+    {
+      "term": "instructor",
+      "normalised": "instructor",
+      "aliases": [
+        "Instructor",
+        "INSTRUCTOR"
+      ],
+      "sources": [
+        "curated:function.curated.people.staff-unavailability:alias",
+        "curated:function.curated.people.staff-unavailability:purpose",
+        "curated:function.curated.people.delete-staff:alias",
+        "curated:function.curated.people.instructor-assignment",
+        "curated:function.curated.people.instructor-assignment:alias",
+        "curated:function.curated.people.instructor-assignment:purpose",
+        "curated:function.curated.people.instructor-assignment:steps",
+        "curated:function.curated.scheduling.flight-details:alias",
+        "curated:function.curated.people.archived-staff:alias",
+        "curated:function.curated.scheduling.add-ground-event:alias",
+        "curated:function.curated.scheduling.add-ground-event:steps",
+        "curated:function.curated.settings.staff-rank-equivalency:alias"
       ],
       "count": 64
     },
@@ -11143,29 +11188,6 @@
         "control-attribute:components/ChangePasswordModal.tsx:143"
       ],
       "count": 63
-    },
-    {
-      "term": "instructor",
-      "normalised": "instructor",
-      "aliases": [
-        "Instructor",
-        "INSTRUCTOR"
-      ],
-      "sources": [
-        "curated:function.curated.people.staff-unavailability:alias",
-        "curated:function.curated.people.staff-unavailability:purpose",
-        "curated:function.curated.people.delete-staff:alias",
-        "curated:function.curated.people.instructor-assignment",
-        "curated:function.curated.people.instructor-assignment:alias",
-        "curated:function.curated.people.instructor-assignment:purpose",
-        "curated:function.curated.people.instructor-assignment:steps",
-        "curated:function.curated.scheduling.flight-details:alias",
-        "curated:function.curated.people.archived-staff:alias",
-        "curated:function.curated.scheduling.add-ground-event:alias",
-        "curated:function.curated.scheduling.add-ground-event:steps",
-        "control:App.tsx:56363"
-      ],
-      "count": 62
     },
     {
       "term": "NEO",
@@ -11536,6 +11558,28 @@
       "count": 57
     },
     {
+      "term": "trainees",
+      "normalised": "trainees",
+      "aliases": [
+        "Trainees"
+      ],
+      "sources": [
+        "curated:function.curated.people.trainee-roster:alias",
+        "curated:function.curated.people.trainee-roster:purpose",
+        "curated:function.curated.people.trainee-roster:steps",
+        "curated:function.curated.settings.rank-terminology:steps",
+        "curated:function.curated.settings.trainee-rank-order:purpose",
+        "curated:function.curated.training.course-score-table:steps",
+        "control:components/MyDashboard.tsx:3682",
+        "control:components/MyDashboard.tsx:3685",
+        "control:components/PlatformConfigurationSettings.tsx:10209",
+        "control:components/PlatformConfigurationSettings.tsx:10211",
+        "control:components/PlatformConfigurationSettings.tsx:10216",
+        "control:components/PlatformConfigurationSettings.tsx:14177"
+      ],
+      "count": 57
+    },
+    {
       "term": "draft",
       "normalised": "draft",
       "aliases": [],
@@ -11596,28 +11640,6 @@
       "count": 56
     },
     {
-      "term": "trainees",
-      "normalised": "trainees",
-      "aliases": [
-        "Trainees"
-      ],
-      "sources": [
-        "curated:function.curated.people.trainee-roster:alias",
-        "curated:function.curated.people.trainee-roster:purpose",
-        "curated:function.curated.people.trainee-roster:steps",
-        "curated:function.curated.training.course-score-table:steps",
-        "control:components/MyDashboard.tsx:3682",
-        "control:components/MyDashboard.tsx:3685",
-        "control:components/PlatformConfigurationSettings.tsx:10209",
-        "control:components/PlatformConfigurationSettings.tsx:10211",
-        "control:components/PlatformConfigurationSettings.tsx:10216",
-        "control:components/PlatformConfigurationSettings.tsx:14177",
-        "control:components/ProgramDataView.tsx:789",
-        "control-attribute:components/ProgramDataView.tsx:789"
-      ],
-      "count": 55
-    },
-    {
       "term": "action",
       "normalised": "action",
       "aliases": [
@@ -11636,6 +11658,52 @@
         "control-attribute:components/AirCombatTrainingReportModal.tsx:999",
         "control:components/AuditFlyout.tsx:645",
         "control-attribute:components/AuditFlyout.tsx:649"
+      ],
+      "count": 54
+    },
+    {
+      "term": "configuration",
+      "normalised": "configuration",
+      "aliases": [
+        "Configuration"
+      ],
+      "sources": [
+        "curated:function.curated.workflow.initial-setup-wizard:purpose",
+        "curated:function.curated.settings.currency-builder:steps",
+        "curated:function.curated.settings.configuration-report",
+        "curated:function.curated.settings.configuration-report:alias",
+        "curated:function.curated.settings.configuration-report:purpose",
+        "curated:function.curated.settings.configuration-report:steps",
+        "curated:function.curated.training.syllabus-management:steps",
+        "curated:function.curated.settings.unit-callsigns:steps",
+        "curated:function.curated.settings.formation-callsigns:steps",
+        "curated:function.curated.settings.rank-terminology:steps",
+        "curated:function.curated.settings.staff-rank-equivalency:steps",
+        "curated:function.curated.settings.trainee-rank-order:steps"
+      ],
+      "count": 54
+    },
+    {
+      "term": "locked",
+      "normalised": "locked",
+      "aliases": [
+        "Locked",
+        "LOCKED",
+        "(locked"
+      ],
+      "sources": [
+        "curated:function.curated.settings.rank-terminology:steps",
+        "curated:function.curated.settings.staff-rank-equivalency:steps",
+        "curated:function.curated.settings.trainee-rank-order:steps",
+        "control-attribute:components/FlightDetailModal.tsx:3483",
+        "control:components/FlightDetailModal.tsx:3572",
+        "control-attribute:components/FlightDetailModal.tsx:3572",
+        "control:components/FlightDetailModal.tsx:4278",
+        "control-attribute:components/FlightDetailModal.tsx:4278",
+        "control:components/FlightDetailModal.tsx:4295",
+        "control:components/FlightDetailModal.tsx:4314",
+        "control-attribute:components/FlightDetailModal.tsx:4314",
+        "message:App.tsx:27710"
       ],
       "count": 54
     },
@@ -11746,6 +11814,29 @@
       "count": 53
     },
     {
+      "term": "Set",
+      "normalised": "set",
+      "aliases": [
+        "set",
+        "SET"
+      ],
+      "sources": [
+        "curated:function.curated.training.course-setup-fields:steps",
+        "curated:function.curated.settings.formation-callsigns:alias",
+        "curated:function.curated.settings.rank-terminology:alias",
+        "curated:function.curated.settings.staff-rank-equivalency:alias",
+        "curated:function.curated.settings.trainee-rank-order:alias",
+        "curated:function.curated.settings.trainee-rank-order:steps",
+        "curated:function.curated.settings.flight-authorisation-warnings:steps",
+        "control:App.tsx:4855",
+        "control:App.tsx:5673",
+        "control-attribute:App.tsx:5673",
+        "control:components/CurrencyPanel.tsx:607",
+        "control-attribute:components/CurrencyPanel.tsx:607"
+      ],
+      "count": 53
+    },
+    {
       "term": "to delete",
       "normalised": "to delete",
       "aliases": [],
@@ -11844,52 +11935,6 @@
         "message:components/FlightDetailModal.tsx:1898",
         "message:components/FlightDetailModal.tsx:3079",
         "message:components/FlightDetailModal.tsx:3224"
-      ],
-      "count": 51
-    },
-    {
-      "term": "configuration",
-      "normalised": "configuration",
-      "aliases": [
-        "Configuration"
-      ],
-      "sources": [
-        "curated:function.curated.workflow.initial-setup-wizard:purpose",
-        "curated:function.curated.settings.currency-builder:steps",
-        "curated:function.curated.settings.configuration-report",
-        "curated:function.curated.settings.configuration-report:alias",
-        "curated:function.curated.settings.configuration-report:purpose",
-        "curated:function.curated.settings.configuration-report:steps",
-        "curated:function.curated.training.syllabus-management:steps",
-        "curated:function.curated.settings.unit-callsigns:steps",
-        "curated:function.curated.settings.formation-callsigns:steps",
-        "curated:function.curated.settings.service-groups:steps",
-        "control:App.tsx:5673",
-        "control-attribute:App.tsx:5673"
-      ],
-      "count": 51
-    },
-    {
-      "term": "locked",
-      "normalised": "locked",
-      "aliases": [
-        "Locked",
-        "LOCKED",
-        "(locked"
-      ],
-      "sources": [
-        "control-attribute:components/FlightDetailModal.tsx:3483",
-        "control:components/FlightDetailModal.tsx:3572",
-        "control-attribute:components/FlightDetailModal.tsx:3572",
-        "control:components/FlightDetailModal.tsx:4278",
-        "control-attribute:components/FlightDetailModal.tsx:4278",
-        "control:components/FlightDetailModal.tsx:4295",
-        "control:components/FlightDetailModal.tsx:4314",
-        "control-attribute:components/FlightDetailModal.tsx:4314",
-        "message:App.tsx:27710",
-        "message:App.tsx:28007",
-        "message:App.tsx:28008",
-        "message:App.tsx:44609"
       ],
       "count": 51
     },
@@ -12266,6 +12311,28 @@
       "count": 49
     },
     {
+      "term": "Click",
+      "normalised": "click",
+      "aliases": [
+        "click"
+      ],
+      "sources": [
+        "curated:function.curated.navigation.dfp:steps",
+        "curated:function.curated.people.trainee-unavailability:steps",
+        "curated:function.curated.people.staff-unavailability:steps",
+        "curated:function.curated.people.archive-delete-trainee:steps",
+        "curated:function.curated.scheduling.neo-build:steps",
+        "curated:function.curated.scheduling.validation-check:steps",
+        "curated:function.curated.scheduling.multi-select:steps",
+        "curated:function.curated.scheduling.flight-details:steps",
+        "curated:function.curated.scheduling.aircraft-availability:steps",
+        "curated:function.curated.scheduling.add-flight-tile:steps",
+        "curated:function.curated.scheduling.publish-dfp:steps",
+        "curated:function.curated.scheduling.cancel-restore-delete-event:steps"
+      ],
+      "count": 48
+    },
+    {
       "term": "log",
       "normalised": "log",
       "aliases": [
@@ -12418,29 +12485,6 @@
       "count": 46
     },
     {
-      "term": "Set",
-      "normalised": "set",
-      "aliases": [
-        "set",
-        "SET"
-      ],
-      "sources": [
-        "curated:function.curated.training.course-setup-fields:steps",
-        "curated:function.curated.settings.formation-callsigns:alias",
-        "curated:function.curated.settings.flight-authorisation-warnings:steps",
-        "control:App.tsx:4855",
-        "control:App.tsx:5673",
-        "control-attribute:App.tsx:5673",
-        "control:components/CurrencyPanel.tsx:607",
-        "control-attribute:components/CurrencyPanel.tsx:607",
-        "control-attribute:components/MyDashboard.tsx:3078",
-        "control-attribute:components/MyDashboard.tsx:3089",
-        "control-attribute:components/PauseFlightOpsModal.tsx:461",
-        "control-attribute:components/PauseFlightOpsModal.tsx:582"
-      ],
-      "count": 46
-    },
-    {
       "term": "change",
       "normalised": "change",
       "aliases": [
@@ -12459,28 +12503,6 @@
         "control:App.tsx:56411",
         "control:components/AdminPanel.tsx:389",
         "control:components/AdminPanel.tsx:561"
-      ],
-      "count": 45
-    },
-    {
-      "term": "Click",
-      "normalised": "click",
-      "aliases": [
-        "click"
-      ],
-      "sources": [
-        "curated:function.curated.navigation.dfp:steps",
-        "curated:function.curated.people.trainee-unavailability:steps",
-        "curated:function.curated.people.staff-unavailability:steps",
-        "curated:function.curated.people.archive-delete-trainee:steps",
-        "curated:function.curated.scheduling.neo-build:steps",
-        "curated:function.curated.scheduling.validation-check:steps",
-        "curated:function.curated.scheduling.multi-select:steps",
-        "curated:function.curated.scheduling.flight-details:steps",
-        "curated:function.curated.scheduling.aircraft-availability:steps",
-        "curated:function.curated.scheduling.add-flight-tile:steps",
-        "curated:function.curated.scheduling.publish-dfp:steps",
-        "curated:function.curated.scheduling.cancel-restore-delete-event:steps"
       ],
       "count": 45
     },
@@ -13254,6 +13276,28 @@
       "count": 39
     },
     {
+      "term": "Confirm",
+      "normalised": "confirm",
+      "aliases": [
+        "confirm"
+      ],
+      "sources": [
+        "curated:function.curated.people.delete-staff:steps",
+        "curated:function.curated.scheduling.publish-dfp:steps",
+        "curated:function.curated.people.move-trainee-course:steps",
+        "curated:function.curated.messaging.delete-message:steps",
+        "curated:function.curated.people.remove-unavailability:steps",
+        "curated:function.curated.settings.rank-terminology:steps",
+        "curated:function.curated.settings.staff-rank-equivalency:steps",
+        "curated:function.curated.settings.trainee-rank-order:steps",
+        "curated:function.curated.duty-pilot.flight-tracking:steps",
+        "control:App.tsx:4985",
+        "control:App.tsx:5012",
+        "control:components/ChangePasswordModal.tsx:178"
+      ],
+      "count": 39
+    },
+    {
       "term": "course name",
       "normalised": "course name",
       "aliases": [
@@ -13815,28 +13859,6 @@
       "count": 36
     },
     {
-      "term": "Confirm",
-      "normalised": "confirm",
-      "aliases": [
-        "confirm"
-      ],
-      "sources": [
-        "curated:function.curated.people.delete-staff:steps",
-        "curated:function.curated.scheduling.publish-dfp:steps",
-        "curated:function.curated.people.move-trainee-course:steps",
-        "curated:function.curated.messaging.delete-message:steps",
-        "curated:function.curated.people.remove-unavailability:steps",
-        "curated:function.curated.duty-pilot.flight-tracking:steps",
-        "control:App.tsx:4985",
-        "control:App.tsx:5012",
-        "control:components/ChangePasswordModal.tsx:178",
-        "control:components/ChangePasswordModal.tsx:181",
-        "control-attribute:components/ChangePasswordModal.tsx:181",
-        "control:components/CourseTraineeSelectionFlyout.tsx:68"
-      ],
-      "count": 36
-    },
-    {
       "term": "flex items center",
       "normalised": "flex items center",
       "aliases": [],
@@ -14130,6 +14152,26 @@
       "count": 35
     },
     {
+      "term": "Open Settings",
+      "normalised": "open settings",
+      "aliases": [],
+      "sources": [
+        "curated:function.curated.settings.currency-builder:steps",
+        "curated:function.curated.settings.configuration-report:steps",
+        "curated:function.curated.training.scoring-matrix-elements:steps",
+        "curated:function.curated.training.syllabus-management:steps",
+        "curated:function.curated.settings.unit-callsigns:steps",
+        "curated:function.curated.settings.formation-callsigns:steps",
+        "curated:function.curated.settings.rank-terminology:steps",
+        "curated:function.curated.settings.staff-rank-equivalency:steps",
+        "curated:function.curated.settings.trainee-rank-order:steps",
+        "curated:function.curated.settings.turnaround:steps",
+        "curated:function.curated.settings.flight-authorisation-warnings:steps",
+        "curated:function.curated.settings.service-groups:steps"
+      ],
+      "count": 35
+    },
+    {
       "term": "px 4 py 2",
       "normalised": "px 4 py 2",
       "aliases": [],
@@ -14212,6 +14254,28 @@
         "curated:function.curated.training.unarchive-course:purpose",
         "curated:function.curated.settings.audit-log-recording:steps",
         "curated:function.curated.settings.formation-callsigns:purpose"
+      ],
+      "count": 34
+    },
+    {
+      "term": "configure",
+      "normalised": "configure",
+      "aliases": [
+        "Configure"
+      ],
+      "sources": [
+        "curated:function.curated.workflow.initial-setup-wizard:alias",
+        "curated:function.curated.settings.currency-builder:steps",
+        "curated:function.curated.settings.unit-callsigns:alias",
+        "curated:function.curated.settings.formation-callsigns:alias",
+        "curated:function.curated.settings.staff-rank-equivalency:alias",
+        "curated:function.curated.settings.trainee-rank-order:alias",
+        "control:App.tsx:5617",
+        "control:components/AcademicsTab.tsx:1173",
+        "control:components/ACHistoryAircraftAvailability.tsx:1038",
+        "control-attribute:components/ACHistoryAircraftAvailability.tsx:1038",
+        "control:components/FlightDetailModal.tsx:3813",
+        "control-attribute:components/FlightDetailModal.tsx:3813"
       ],
       "count": 34
     },
@@ -14644,28 +14708,6 @@
       "count": 32
     },
     {
-      "term": "configure",
-      "normalised": "configure",
-      "aliases": [
-        "Configure"
-      ],
-      "sources": [
-        "curated:function.curated.workflow.initial-setup-wizard:alias",
-        "curated:function.curated.settings.currency-builder:steps",
-        "curated:function.curated.settings.unit-callsigns:alias",
-        "curated:function.curated.settings.formation-callsigns:alias",
-        "control:App.tsx:5617",
-        "control:components/AcademicsTab.tsx:1173",
-        "control:components/ACHistoryAircraftAvailability.tsx:1038",
-        "control-attribute:components/ACHistoryAircraftAvailability.tsx:1038",
-        "control:components/FlightDetailModal.tsx:3813",
-        "control-attribute:components/FlightDetailModal.tsx:3813",
-        "control:components/FlightDetailModal.tsx:4026",
-        "control-attribute:components/PauseFlightOpsModal.tsx:367"
-      ],
-      "count": 32
-    },
-    {
       "term": "error instanceof",
       "normalised": "error instanceof",
       "aliases": [],
@@ -14904,6 +14946,29 @@
         "control-attribute:components/PlatformConfigurationSettings.tsx:15124",
         "control-attribute:components/PlatformConfigurationSettings.tsx:15177",
         "control-attribute:components/PlatformConfigurationSettings.tsx:15215"
+      ],
+      "count": 32
+    },
+    {
+      "term": "table",
+      "normalised": "table",
+      "aliases": [
+        "Table",
+        "TABLE"
+      ],
+      "sources": [
+        "curated:function.curated.people.delete-staff:steps",
+        "curated:function.curated.settings.rank-terminology:steps",
+        "curated:function.curated.settings.rank-terminology:input",
+        "curated:function.curated.settings.staff-rank-equivalency",
+        "curated:function.curated.settings.staff-rank-equivalency:steps",
+        "curated:function.curated.training.course-score-table",
+        "curated:function.curated.training.course-score-table:alias",
+        "control:App.tsx:7483",
+        "control:components/ACHistoryAircraftAvailability.tsx:1072",
+        "message:App.tsx:4002",
+        "message:dfp-neo-platform/app/api/admin/database/route.ts:34",
+        "message:dfp-neo-platform/app/api/aircraft-availability-debug/route.ts:98"
       ],
       "count": 32
     },
@@ -15746,26 +15811,6 @@
       "count": 29
     },
     {
-      "term": "Open Settings",
-      "normalised": "open settings",
-      "aliases": [],
-      "sources": [
-        "curated:function.curated.settings.currency-builder:steps",
-        "curated:function.curated.settings.configuration-report:steps",
-        "curated:function.curated.training.scoring-matrix-elements:steps",
-        "curated:function.curated.training.syllabus-management:steps",
-        "curated:function.curated.settings.unit-callsigns:steps",
-        "curated:function.curated.settings.formation-callsigns:steps",
-        "curated:function.curated.settings.turnaround:steps",
-        "curated:function.curated.settings.flight-authorisation-warnings:steps",
-        "curated:function.curated.settings.service-groups:steps",
-        "curated:function.curated.settings.master-lmp-access:steps",
-        "curated:function.curated.training.master-lmp-event-details:steps",
-        "message:components/PlatformConfigurationSettings.tsx:1745"
-      ],
-      "count": 29
-    },
-    {
       "term": "text white focus outline none",
       "normalised": "text white focus outline none",
       "aliases": [],
@@ -16276,6 +16321,26 @@
       "count": 27
     },
     {
+      "term": "configured",
+      "normalised": "configured",
+      "aliases": [],
+      "sources": [
+        "curated:function.curated.training.training-report:purpose",
+        "curated:function.curated.training.training-report:steps",
+        "curated:function.curated.messaging.auto-notifications:purpose",
+        "curated:function.curated.training.post-flight-inputs:purpose",
+        "curated:function.curated.training.post-flight-inputs:steps",
+        "curated:function.curated.settings.staff-rank-equivalency:purpose",
+        "curated:function.curated.settings.service-groups:steps",
+        "control:App.tsx:5422",
+        "control:App.tsx:6516",
+        "control:components/CourseProgressView.tsx:1343",
+        "control:components/EmailActivationSettings.tsx:235",
+        "control-attribute:components/EmailActivationSettings.tsx:235"
+      ],
+      "count": 27
+    },
+    {
       "term": "continue",
       "normalised": "continue",
       "aliases": [
@@ -16478,25 +16543,24 @@
       "count": 27
     },
     {
-      "term": "table",
-      "normalised": "table",
+      "term": "service",
+      "normalised": "service",
       "aliases": [
-        "Table",
-        "TABLE"
+        "Service"
       ],
       "sources": [
-        "curated:function.curated.people.delete-staff:steps",
-        "curated:function.curated.training.course-score-table",
-        "curated:function.curated.training.course-score-table:alias",
-        "control:App.tsx:7483",
-        "control:components/ACHistoryAircraftAvailability.tsx:1072",
-        "message:App.tsx:4002",
-        "message:dfp-neo-platform/app/api/admin/database/route.ts:34",
-        "message:dfp-neo-platform/app/api/aircraft-availability-debug/route.ts:98",
-        "message:dfp-neo-platform/app/api/aircraft-availability-debug/route.ts:118",
-        "message:server.js:560",
-        "message:server.js:1189",
-        "message:server.js:1741"
+        "curated:function.curated.settings.rank-terminology:alias",
+        "curated:function.curated.settings.service-groups",
+        "curated:function.curated.settings.service-groups:alias",
+        "curated:function.curated.settings.service-groups:steps",
+        "control:components/PlatformConfigurationSettings.tsx:13290",
+        "control:components/PlatformConfigurationSettings.tsx:13295",
+        "control:components/PlatformConfigurationSettings.tsx:13302",
+        "control:components/PlatformConfigurationSettings.tsx:13304",
+        "control-attribute:components/PlatformConfigurationSettings.tsx:13304",
+        "control:components/ScheduleView.tsx:8287",
+        "control:components/ScheduleView.tsx:8289",
+        "control:components/ScheduleView.tsx:8297"
       ],
       "count": 27
     },
@@ -16560,6 +16624,30 @@
         "message:components/InstructorProfileFlyout.tsx:866",
         "message:components/InstructorProfileFlyout.tsx:1369",
         "message:components/PeopleProfilePage.tsx:24"
+      ],
+      "count": 27
+    },
+    {
+      "term": "your password",
+      "normalised": "your password",
+      "aliases": [
+        "Your password",
+        "Your Password *",
+        "Your Password"
+      ],
+      "sources": [
+        "curated:function.curated.people.archive-delete-trainee:steps",
+        "curated:function.curated.settings.rank-terminology:steps",
+        "curated:function.curated.settings.staff-rank-equivalency:steps",
+        "curated:function.curated.settings.trainee-rank-order:steps",
+        "control:components/AdminPanel.tsx:433",
+        "control-attribute:components/AdminPanel.tsx:433",
+        "control:components/DeleteTraineeConfirmation.tsx:231",
+        "control-attribute:components/DeleteTraineeConfirmation.tsx:231",
+        "control:components/LoginModal.tsx:242",
+        "control-attribute:components/LoginModal.tsx:242",
+        "control:components/LoginModal.tsx:281",
+        "control:components/SyllabusView.tsx:3189"
       ],
       "count": 27
     },
@@ -16642,26 +16730,6 @@
         "message:App.tsx:11458",
         "message:App.tsx:11506",
         "message:App.tsx:40418"
-      ],
-      "count": 26
-    },
-    {
-      "term": "configured",
-      "normalised": "configured",
-      "aliases": [],
-      "sources": [
-        "curated:function.curated.training.training-report:purpose",
-        "curated:function.curated.training.training-report:steps",
-        "curated:function.curated.messaging.auto-notifications:purpose",
-        "curated:function.curated.training.post-flight-inputs:purpose",
-        "curated:function.curated.training.post-flight-inputs:steps",
-        "curated:function.curated.settings.service-groups:steps",
-        "control:App.tsx:5422",
-        "control:App.tsx:6516",
-        "control:components/CourseProgressView.tsx:1343",
-        "control:components/EmailActivationSettings.tsx:235",
-        "control-attribute:components/EmailActivationSettings.tsx:235",
-        "control:components/FlightDetailModal.tsx:3950"
       ],
       "count": 26
     },
@@ -16815,28 +16883,6 @@
       "count": 26
     },
     {
-      "term": "Service",
-      "normalised": "service",
-      "aliases": [
-        "service"
-      ],
-      "sources": [
-        "curated:function.curated.settings.service-groups",
-        "curated:function.curated.settings.service-groups:alias",
-        "curated:function.curated.settings.service-groups:steps",
-        "control:components/PlatformConfigurationSettings.tsx:13290",
-        "control:components/PlatformConfigurationSettings.tsx:13295",
-        "control:components/PlatformConfigurationSettings.tsx:13302",
-        "control:components/PlatformConfigurationSettings.tsx:13304",
-        "control-attribute:components/PlatformConfigurationSettings.tsx:13304",
-        "control:components/ScheduleView.tsx:8287",
-        "control:components/ScheduleView.tsx:8289",
-        "control:components/ScheduleView.tsx:8297",
-        "control:components/ScheduleView.tsx:8299"
-      ],
-      "count": 26
-    },
-    {
       "term": "set Active Tab",
       "normalised": "set active tab",
       "aliases": [],
@@ -16982,6 +17028,29 @@
         "control-attribute:components/PostFlightView.tsx:1049",
         "control-attribute:components/PostFlightView.tsx:1059",
         "control-attribute:components/PostFlightView.tsx:1070"
+      ],
+      "count": 25
+    },
+    {
+      "term": "Custom",
+      "normalised": "custom",
+      "aliases": [
+        "custom",
+        "CUSTOM"
+      ],
+      "sources": [
+        "curated:function.curated.settings.staff-rank-equivalency:steps",
+        "control:components/AddUnavailabilityFlyout.tsx:237",
+        "control:components/AuditFlyout.tsx:683",
+        "control:components/AuditFlyout.tsx:685",
+        "control:components/AuditFlyout.tsx:694",
+        "control-attribute:components/AuditFlyout.tsx:694",
+        "control:components/CrewRequirementEditor.tsx:209",
+        "control:components/CrewRequirementEditor.tsx:217",
+        "control-attribute:components/CrewRequirementEditor.tsx:217",
+        "control:components/CrewRequirementEditor.tsx:220",
+        "control:components/CrewRequirementEditor.tsx:226",
+        "control-attribute:components/CrewRequirementEditor.tsx:226"
       ],
       "count": 25
     },
@@ -17265,6 +17334,26 @@
       "count": 25
     },
     {
+      "term": "Resources",
+      "normalised": "resources",
+      "aliases": [],
+      "sources": [
+        "curated:function.curated.settings.configuration-report:steps",
+        "curated:function.curated.settings.formation-callsigns:steps",
+        "curated:function.curated.settings.rank-terminology:steps",
+        "curated:function.curated.settings.staff-rank-equivalency:steps",
+        "curated:function.curated.settings.trainee-rank-order:steps",
+        "control:App.tsx:5673",
+        "control-attribute:App.tsx:5673",
+        "control:components/TraineeLmpView.tsx:482",
+        "control:components/TraineeLmpView.tsx:716",
+        "message:App.tsx:13896",
+        "message:components/PlatformConfigurationSettings.tsx:1745",
+        "message:components/ScheduleView.tsx:899"
+      ],
+      "count": 25
+    },
+    {
       "term": "Review",
       "normalised": "review",
       "aliases": [
@@ -17287,6 +17376,28 @@
       "count": 25
     },
     {
+      "term": "section",
+      "normalised": "section",
+      "aliases": [
+        "Section"
+      ],
+      "sources": [
+        "curated:function.curated.settings.configuration-report:steps",
+        "curated:function.curated.people.currency-audit-and-dates:steps",
+        "curated:function.curated.settings.rank-terminology:steps",
+        "curated:function.curated.settings.staff-rank-equivalency:steps",
+        "curated:function.curated.settings.trainee-rank-order:steps",
+        "control:components/PlatformConfigurationSettings.tsx:12717",
+        "control-attribute:components/PlatformConfigurationSettings.tsx:12762",
+        "control:components/ScoringMatrixFlyout.tsx:461",
+        "control:components/ScoringMatrixFlyout.tsx:499",
+        "control:components/ScoringMatrixFlyout.tsx:501",
+        "control-attribute:components/ScoringMatrixFlyout.tsx:501",
+        "control:components/SettingsView.tsx:444"
+      ],
+      "count": 25
+    },
+    {
       "term": "trainee full Name",
       "normalised": "trainee full name",
       "aliases": [
@@ -17305,6 +17416,28 @@
         "message:App.tsx:39974",
         "message:App.tsx:40080",
         "message:App.tsx:40213"
+      ],
+      "count": 25
+    },
+    {
+      "term": "trainee rank",
+      "normalised": "trainee rank",
+      "aliases": [
+        "Trainee Rank"
+      ],
+      "sources": [
+        "curated:function.curated.settings.rank-terminology:purpose",
+        "curated:function.curated.settings.rank-terminology:steps",
+        "curated:function.curated.settings.rank-terminology:input",
+        "curated:function.curated.settings.trainee-rank-order",
+        "curated:function.curated.settings.trainee-rank-order:alias",
+        "curated:function.curated.settings.trainee-rank-order:purpose",
+        "curated:function.curated.settings.trainee-rank-order:steps",
+        "control:components/CourseTraineeSelectionFlyout.tsx:52",
+        "control:components/PlatformConfigurationSettings.tsx:14150",
+        "control-attribute:components/TraineeDatabaseTable.tsx:447",
+        "control:components/TrainingCompletionView.tsx:419",
+        "control:components/TrainingRecordsExportView.tsx:1655"
       ],
       "count": 25
     },
@@ -17423,29 +17556,6 @@
         "control-attribute:dfp-neo-platform/app/(auth)/reset-password/page.tsx:154",
         "control:dfp-neo-platform/app/(auth)/set-password/page.tsx:151",
         "control-attribute:dfp-neo-platform/app/(auth)/set-password/page.tsx:154"
-      ],
-      "count": 24
-    },
-    {
-      "term": "Custom",
-      "normalised": "custom",
-      "aliases": [
-        "custom",
-        "CUSTOM"
-      ],
-      "sources": [
-        "control:components/AddUnavailabilityFlyout.tsx:237",
-        "control:components/AuditFlyout.tsx:683",
-        "control:components/AuditFlyout.tsx:685",
-        "control:components/AuditFlyout.tsx:694",
-        "control-attribute:components/AuditFlyout.tsx:694",
-        "control:components/CrewRequirementEditor.tsx:209",
-        "control:components/CrewRequirementEditor.tsx:217",
-        "control-attribute:components/CrewRequirementEditor.tsx:217",
-        "control:components/CrewRequirementEditor.tsx:220",
-        "control:components/CrewRequirementEditor.tsx:226",
-        "control-attribute:components/CrewRequirementEditor.tsx:226",
-        "control-attribute:components/PlatformConfigurationSettings.tsx:10523"
       ],
       "count": 24
     },
@@ -17765,30 +17875,6 @@
         "permission:utils/dataValidation.ts:65",
         "message:dfp-neo-platform/app/api/scores/route.ts:108",
         "message:server.js:6458"
-      ],
-      "count": 24
-    },
-    {
-      "term": "your password",
-      "normalised": "your password",
-      "aliases": [
-        "Your password",
-        "Your Password *",
-        "Your Password"
-      ],
-      "sources": [
-        "curated:function.curated.people.archive-delete-trainee:steps",
-        "control:components/AdminPanel.tsx:433",
-        "control-attribute:components/AdminPanel.tsx:433",
-        "control:components/DeleteTraineeConfirmation.tsx:231",
-        "control-attribute:components/DeleteTraineeConfirmation.tsx:231",
-        "control:components/LoginModal.tsx:242",
-        "control-attribute:components/LoginModal.tsx:242",
-        "control:components/LoginModal.tsx:281",
-        "control:components/SyllabusView.tsx:3189",
-        "control:components/SyllabusView.tsx:3193",
-        "control-attribute:components/SyllabusView.tsx:3193",
-        "control:components/SyllabusView.tsx:3250"
       ],
       "count": 24
     },
@@ -18590,26 +18676,6 @@
       "count": 22
     },
     {
-      "term": "Resources",
-      "normalised": "resources",
-      "aliases": [],
-      "sources": [
-        "curated:function.curated.settings.configuration-report:steps",
-        "curated:function.curated.settings.formation-callsigns:steps",
-        "control:App.tsx:5673",
-        "control-attribute:App.tsx:5673",
-        "control:components/TraineeLmpView.tsx:482",
-        "control:components/TraineeLmpView.tsx:716",
-        "message:App.tsx:13896",
-        "message:components/PlatformConfigurationSettings.tsx:1745",
-        "message:components/ScheduleView.tsx:899",
-        "message:components/ScheduleView.tsx:7229",
-        "message:components/ScheduleView.tsx:7230",
-        "message:components/ScheduleView.tsx:7232"
-      ],
-      "count": 22
-    },
-    {
       "term": "Return",
       "normalised": "return",
       "aliases": [
@@ -18650,28 +18716,6 @@
         "control:components/UpdateConfirmationFlyout.tsx:73",
         "message:components/BulkUpdateFlyout.tsx:355",
         "message:components/BulkUpdateFlyout.tsx:383"
-      ],
-      "count": 22
-    },
-    {
-      "term": "section",
-      "normalised": "section",
-      "aliases": [
-        "Section"
-      ],
-      "sources": [
-        "curated:function.curated.settings.configuration-report:steps",
-        "curated:function.curated.people.currency-audit-and-dates:steps",
-        "control:components/PlatformConfigurationSettings.tsx:12717",
-        "control-attribute:components/PlatformConfigurationSettings.tsx:12762",
-        "control:components/ScoringMatrixFlyout.tsx:461",
-        "control:components/ScoringMatrixFlyout.tsx:499",
-        "control:components/ScoringMatrixFlyout.tsx:501",
-        "control-attribute:components/ScoringMatrixFlyout.tsx:501",
-        "control:components/SettingsView.tsx:444",
-        "control:components/SettingsView.tsx:484",
-        "control:components/SettingsView.tsx:486",
-        "control-attribute:components/SettingsView.tsx:486"
       ],
       "count": 22
     },
@@ -19169,6 +19213,28 @@
       "count": 21
     },
     {
+      "term": "Staff Rank",
+      "normalised": "staff rank",
+      "aliases": [
+        "staff rank"
+      ],
+      "sources": [
+        "curated:function.curated.settings.rank-terminology:steps",
+        "curated:function.curated.settings.rank-terminology:input",
+        "curated:function.curated.settings.staff-rank-equivalency",
+        "curated:function.curated.settings.staff-rank-equivalency:alias",
+        "curated:function.curated.settings.staff-rank-equivalency:purpose",
+        "curated:function.curated.settings.staff-rank-equivalency:steps",
+        "control:components/MyDashboard.tsx:4138",
+        "control:components/PlatformConfigurationSettings.tsx:14177",
+        "control-attribute:components/StaffDatabaseTable.tsx:492",
+        "permission:dfp-neo-platform/app/api/debug/staff-database/route.ts:66",
+        "message:components/FlightDetailModal.tsx:1229",
+        "message:components/FlightDetailModal.tsx:1230"
+      ],
+      "count": 21
+    },
+    {
       "term": "syllabus item",
       "normalised": "syllabus item",
       "aliases": [
@@ -19641,6 +19707,28 @@
       "count": 20
     },
     {
+      "term": "labels",
+      "normalised": "labels",
+      "aliases": [
+        "Labels"
+      ],
+      "sources": [
+        "curated:function.curated.training.course-management:alias",
+        "curated:function.curated.training.course-management:purpose",
+        "curated:function.curated.settings.unit-callsigns:purpose",
+        "curated:function.curated.settings.formation-callsigns:steps",
+        "curated:function.curated.settings.rank-terminology",
+        "curated:function.curated.settings.rank-terminology:alias",
+        "curated:function.curated.settings.rank-terminology:purpose",
+        "curated:function.curated.settings.rank-terminology:steps",
+        "curated:function.curated.settings.staff-rank-equivalency:steps",
+        "curated:function.curated.settings.trainee-rank-order:steps",
+        "curated:function.curated.settings.service-groups",
+        "curated:function.curated.settings.service-groups:alias"
+      ],
+      "count": 20
+    },
+    {
       "term": "optional",
       "normalised": "optional",
       "aliases": [
@@ -19803,6 +19891,28 @@
         "control-attribute:components/RightSidebar.tsx:117",
         "control:components/tabs/TrainingIntelligenceTab.tsx:3257",
         "message:App.tsx:13896"
+      ],
+      "count": 20
+    },
+    {
+      "term": "Save the",
+      "normalised": "save the",
+      "aliases": [
+        "save the"
+      ],
+      "sources": [
+        "curated:function.curated.people.trainee-unavailability:steps",
+        "curated:function.curated.people.staff-unavailability:steps",
+        "curated:function.curated.people.instructor-assignment:steps",
+        "curated:function.curated.training.training-report:steps",
+        "curated:function.curated.scheduling.flight-details:steps",
+        "curated:function.curated.scheduling.add-flight-tile:steps",
+        "curated:function.curated.people.move-trainee-course:steps",
+        "curated:function.curated.training.scoring-matrix-elements:steps",
+        "curated:function.curated.training.remedial-packages:steps",
+        "curated:function.curated.scheduling.add-ground-event:steps",
+        "curated:function.curated.scheduling.flight-detail-fields:steps",
+        "curated:function.curated.training.course-setup-fields:steps"
       ],
       "count": 20
     },
@@ -20469,28 +20579,6 @@
         "control:dfp-neo-platform/app/admin/database/page.tsx:141",
         "message:components/MyDashboard.tsx:2316",
         "message:components/MyDashboard.tsx:2317"
-      ],
-      "count": 19
-    },
-    {
-      "term": "Save the",
-      "normalised": "save the",
-      "aliases": [
-        "save the"
-      ],
-      "sources": [
-        "curated:function.curated.people.trainee-unavailability:steps",
-        "curated:function.curated.people.staff-unavailability:steps",
-        "curated:function.curated.people.instructor-assignment:steps",
-        "curated:function.curated.training.training-report:steps",
-        "curated:function.curated.scheduling.flight-details:steps",
-        "curated:function.curated.scheduling.add-flight-tile:steps",
-        "curated:function.curated.people.move-trainee-course:steps",
-        "curated:function.curated.training.scoring-matrix-elements:steps",
-        "curated:function.curated.training.remedial-packages:steps",
-        "curated:function.curated.scheduling.add-ground-event:steps",
-        "curated:function.curated.scheduling.flight-detail-fields:steps",
-        "curated:function.curated.training.course-setup-fields:steps"
       ],
       "count": 19
     },
@@ -22102,6 +22190,28 @@
       "count": 17
     },
     {
+      "term": "order",
+      "normalised": "order",
+      "aliases": [
+        "Order"
+      ],
+      "sources": [
+        "curated:function.curated.scheduling.build-priorities:steps",
+        "curated:function.curated.settings.rank-terminology:alias",
+        "curated:function.curated.settings.rank-terminology:purpose",
+        "curated:function.curated.settings.rank-terminology:steps",
+        "curated:function.curated.settings.staff-rank-equivalency:alias",
+        "curated:function.curated.settings.staff-rank-equivalency:purpose",
+        "curated:function.curated.settings.trainee-rank-order",
+        "curated:function.curated.settings.trainee-rank-order:alias",
+        "curated:function.curated.settings.trainee-rank-order:purpose",
+        "curated:function.curated.settings.trainee-rank-order:steps",
+        "control:components/PlatformConfigurationSettings.tsx:14150",
+        "control:components/PlatformConfigurationSettings.tsx:14177"
+      ],
+      "count": 17
+    },
+    {
       "term": "Organisation Operations",
       "normalised": "organisation operations",
       "aliases": [],
@@ -22111,6 +22221,28 @@
         "message:App.tsx:39709",
         "message:App.tsx:40780",
         "message:App.tsx:40784"
+      ],
+      "count": 17
+    },
+    {
+      "term": "people",
+      "normalised": "people",
+      "aliases": [
+        "People"
+      ],
+      "sources": [
+        "curated:function.curated.scheduling.priority-currency-requests:steps",
+        "curated:function.curated.settings.rank-terminology:purpose",
+        "curated:function.curated.settings.service-groups:steps",
+        "curated:function.curated.duty-pilot.personnel-management:steps",
+        "control:components/MyDashboard.tsx:3682",
+        "control:components/MyDashboard.tsx:3683",
+        "control:components/TraineeLmpView.tsx:486",
+        "message:App.tsx:40365",
+        "message:components/PlatformConfigurationSettings.tsx:1758",
+        "message:components/PlatformConfigurationSettings.tsx:1761",
+        "message:components/PlatformConfigurationSettings.tsx:1763",
+        "message:components/PlatformConfigurationSettings.tsx:1766"
       ],
       "count": 17
     },
@@ -22668,6 +22800,28 @@
       "count": 16
     },
     {
+      "term": "if the",
+      "normalised": "if the",
+      "aliases": [
+        "If the"
+      ],
+      "sources": [
+        "curated:function.curated.training.course-progress:steps",
+        "curated:function.curated.scheduling.pause-flight-ops:steps",
+        "curated:function.curated.people.archived-staff:steps",
+        "curated:function.curated.training.unarchive-course:steps",
+        "curated:function.curated.scheduling.add-ground-event:steps",
+        "curated:function.curated.scheduling.flight-detail-fields:steps",
+        "curated:function.curated.training.course-setup-fields:steps",
+        "curated:function.curated.training.training-report-fields:steps",
+        "curated:function.curated.settings.unit-callsigns:steps",
+        "curated:function.curated.settings.rank-terminology:steps",
+        "curated:function.curated.settings.staff-rank-equivalency:steps",
+        "curated:function.curated.settings.trainee-rank-order:steps"
+      ],
+      "count": 16
+    },
+    {
       "term": "Invalid date",
       "normalised": "invalid date",
       "aliases": [
@@ -22808,28 +22962,6 @@
         "control-attribute:components/PrioritiesView.tsx:5397",
         "control-attribute:components/PrioritiesView.tsx:5407",
         "control-attribute:components/SettingsView.tsx:1568"
-      ],
-      "count": 16
-    },
-    {
-      "term": "people",
-      "normalised": "people",
-      "aliases": [
-        "People"
-      ],
-      "sources": [
-        "curated:function.curated.scheduling.priority-currency-requests:steps",
-        "curated:function.curated.settings.service-groups:steps",
-        "curated:function.curated.duty-pilot.personnel-management:steps",
-        "control:components/MyDashboard.tsx:3682",
-        "control:components/MyDashboard.tsx:3683",
-        "control:components/TraineeLmpView.tsx:486",
-        "message:App.tsx:40365",
-        "message:components/PlatformConfigurationSettings.tsx:1758",
-        "message:components/PlatformConfigurationSettings.tsx:1761",
-        "message:components/PlatformConfigurationSettings.tsx:1763",
-        "message:components/PlatformConfigurationSettings.tsx:1766",
-        "message:components/PlatformConfigurationSettings.tsx:2268"
       ],
       "count": 16
     },
@@ -23866,6 +23998,23 @@
       "count": 15
     },
     {
+      "term": "Resources Configuration",
+      "normalised": "resources configuration",
+      "aliases": [],
+      "sources": [
+        "curated:function.curated.settings.configuration-report:steps",
+        "curated:function.curated.settings.formation-callsigns:steps",
+        "curated:function.curated.settings.rank-terminology:steps",
+        "curated:function.curated.settings.staff-rank-equivalency:steps",
+        "curated:function.curated.settings.trainee-rank-order:steps",
+        "control:App.tsx:5673",
+        "control-attribute:App.tsx:5673",
+        "message:App.tsx:13896",
+        "message:components/PlatformConfigurationSettings.tsx:1745"
+      ],
+      "count": 15
+    },
+    {
       "term": "School",
       "normalised": "school",
       "aliases": [
@@ -23965,6 +24114,28 @@
         "message:components/PlatformConfigurationSettings.tsx:13328",
         "message:components/PlatformConfigurationSettings.tsx:14315",
         "message:components/PlatformConfigurationSettings.tsx:14393"
+      ],
+      "count": 15
+    },
+    {
+      "term": "the trainee",
+      "normalised": "the trainee",
+      "aliases": [
+        "the Trainee",
+        "The trainee"
+      ],
+      "sources": [
+        "curated:function.curated.people.trainee-unavailability:steps",
+        "curated:function.curated.people.archive-delete-trainee:purpose",
+        "curated:function.curated.people.archive-delete-trainee:steps",
+        "curated:function.curated.people.instructor-assignment:steps",
+        "curated:function.curated.training.remedial-packages:steps",
+        "curated:function.curated.settings.trainee-rank-order:steps",
+        "message:App.tsx:39669",
+        "message:App.tsx:41244",
+        "message:App.tsx:41480",
+        "message:components/PrioritiesView.tsx:5624",
+        "message:components/TraineeProfileFlyout.tsx:1901"
       ],
       "count": 15
     },
@@ -24599,28 +24770,6 @@
       "count": 14
     },
     {
-      "term": "labels",
-      "normalised": "labels",
-      "aliases": [
-        "Labels"
-      ],
-      "sources": [
-        "curated:function.curated.training.course-management:alias",
-        "curated:function.curated.training.course-management:purpose",
-        "curated:function.curated.settings.unit-callsigns:purpose",
-        "curated:function.curated.settings.formation-callsigns:steps",
-        "curated:function.curated.settings.service-groups",
-        "curated:function.curated.settings.service-groups:alias",
-        "curated:function.curated.settings.service-groups:purpose",
-        "curated:function.curated.settings.service-groups:steps",
-        "message:App.tsx:13896",
-        "message:components/PlatformConfigurationSettings.tsx:2824",
-        "message:components/PlatformConfigurationSettings.tsx:2828",
-        "message:components/ScheduleView.tsx:2561"
-      ],
-      "count": 14
-    },
-    {
       "term": "LMP Access",
       "normalised": "lmp access",
       "aliases": [
@@ -24825,28 +24974,6 @@
       "count": 14
     },
     {
-      "term": "Rank",
-      "normalised": "rank",
-      "aliases": [
-        "rank"
-      ],
-      "sources": [
-        "curated:function.curated.settings.formation-callsigns:steps",
-        "control:components/MyDashboard.tsx:3675",
-        "control-attribute:components/MyDashboard.tsx:3675",
-        "control:components/PlatformConfigurationSettings.tsx:14055",
-        "control:components/PlatformConfigurationSettings.tsx:14150",
-        "control:components/PlatformConfigurationSettings.tsx:14177",
-        "control:components/ScheduleView.tsx:8255",
-        "prisma:Personnel.rank",
-        "prisma:Trainee.rank",
-        "message:App.tsx:13896",
-        "message:components/PlatformConfigurationSettings.tsx:2824",
-        "message:components/PlatformConfigurationSettings.tsx:2828"
-      ],
-      "count": 14
-    },
-    {
       "term": "Save Blocked",
       "normalised": "save blocked",
       "aliases": [
@@ -25002,27 +25129,6 @@
         "message:components/PlatformConfigurationSettings.tsx:2842",
         "message:components/PlatformConfigurationSettings.tsx:5396",
         "message:components/SettingsView.tsx:754"
-      ],
-      "count": 14
-    },
-    {
-      "term": "the trainee",
-      "normalised": "the trainee",
-      "aliases": [
-        "the Trainee",
-        "The trainee"
-      ],
-      "sources": [
-        "curated:function.curated.people.trainee-unavailability:steps",
-        "curated:function.curated.people.archive-delete-trainee:purpose",
-        "curated:function.curated.people.archive-delete-trainee:steps",
-        "curated:function.curated.people.instructor-assignment:steps",
-        "curated:function.curated.training.remedial-packages:steps",
-        "message:App.tsx:39669",
-        "message:App.tsx:41244",
-        "message:App.tsx:41480",
-        "message:components/PrioritiesView.tsx:5624",
-        "message:components/TraineeProfileFlyout.tsx:1901"
       ],
       "count": 14
     },
@@ -25541,28 +25647,6 @@
       "count": 13
     },
     {
-      "term": "if the",
-      "normalised": "if the",
-      "aliases": [
-        "If the"
-      ],
-      "sources": [
-        "curated:function.curated.training.course-progress:steps",
-        "curated:function.curated.scheduling.pause-flight-ops:steps",
-        "curated:function.curated.people.archived-staff:steps",
-        "curated:function.curated.training.unarchive-course:steps",
-        "curated:function.curated.scheduling.add-ground-event:steps",
-        "curated:function.curated.scheduling.flight-detail-fields:steps",
-        "curated:function.curated.training.course-setup-fields:steps",
-        "curated:function.curated.training.training-report-fields:steps",
-        "curated:function.curated.settings.unit-callsigns:steps",
-        "curated:function.curated.duty-pilot.personnel-management:steps",
-        "curated:function.curated.training.course-score-table:steps",
-        "curated:function.curated.duty-pilot.flight-tracking:steps"
-      ],
-      "count": 13
-    },
-    {
       "term": "in the",
       "normalised": "in the",
       "aliases": [],
@@ -25721,6 +25805,26 @@
       "count": 13
     },
     {
+      "term": "need",
+      "normalised": "need",
+      "aliases": [],
+      "sources": [
+        "curated:function.curated.navigation.dfp:steps",
+        "curated:function.curated.training.archive-course:steps",
+        "curated:function.curated.training.course-progress:steps",
+        "curated:function.curated.messaging.my-home-messages:steps",
+        "curated:function.curated.scheduling.pause-flight-ops:steps",
+        "curated:function.curated.settings.configuration-report:steps",
+        "curated:function.curated.people.currency-audit-and-dates:steps",
+        "curated:function.curated.settings.rank-terminology:steps",
+        "curated:function.curated.settings.trainee-rank-order:purpose",
+        "message:components/PlatformConfigurationSettings.tsx:942",
+        "message:components/PlatformConfigurationSettings.tsx:951",
+        "message:components/ScheduleView.tsx:8632"
+      ],
+      "count": 13
+    },
+    {
       "term": "Next day",
       "normalised": "next day",
       "aliases": [
@@ -25819,6 +25923,39 @@
       "count": 13
     },
     {
+      "term": "rank order",
+      "normalised": "rank order",
+      "aliases": [
+        "Rank Order"
+      ],
+      "sources": [
+        "curated:function.curated.settings.rank-terminology:alias",
+        "curated:function.curated.settings.rank-terminology:steps",
+        "curated:function.curated.settings.staff-rank-equivalency:alias",
+        "curated:function.curated.settings.staff-rank-equivalency:purpose",
+        "curated:function.curated.settings.trainee-rank-order",
+        "curated:function.curated.settings.trainee-rank-order:alias",
+        "curated:function.curated.settings.trainee-rank-order:steps",
+        "control:components/PlatformConfigurationSettings.tsx:14150",
+        "control:components/PlatformConfigurationSettings.tsx:14177"
+      ],
+      "count": 13
+    },
+    {
+      "term": "ranks",
+      "normalised": "ranks",
+      "aliases": [],
+      "sources": [
+        "curated:function.curated.settings.rank-terminology:alias",
+        "curated:function.curated.settings.rank-terminology:steps",
+        "curated:function.curated.settings.staff-rank-equivalency:alias",
+        "curated:function.curated.settings.trainee-rank-order:alias",
+        "control:components/MyDashboard.tsx:3695",
+        "control:components/MyDashboard.tsx:3696"
+      ],
+      "count": 13
+    },
+    {
       "term": "Rate",
       "normalised": "rate",
       "aliases": [
@@ -25855,7 +25992,7 @@
         "curated:function.curated.settings.turnaround:steps",
         "control:components/AddGroundEventFlyout.tsx:433",
         "control-attribute:components/AddGroundEventFlyout.tsx:433",
-        "message:utils/neoGuideEngine.ts:880"
+        "message:utils/neoGuideEngine.ts:884"
       ],
       "count": 13
     },
@@ -27293,20 +27430,6 @@
       "count": 12
     },
     {
-      "term": "Resources Configuration",
-      "normalised": "resources configuration",
-      "aliases": [],
-      "sources": [
-        "curated:function.curated.settings.configuration-report:steps",
-        "curated:function.curated.settings.formation-callsigns:steps",
-        "control:App.tsx:5673",
-        "control-attribute:App.tsx:5673",
-        "message:App.tsx:13896",
-        "message:components/PlatformConfigurationSettings.tsx:1745"
-      ],
-      "count": 12
-    },
-    {
       "term": "rule",
       "normalised": "rule",
       "aliases": [
@@ -27395,6 +27518,22 @@
       "count": 12
     },
     {
+      "term": "selector",
+      "normalised": "selector",
+      "aliases": [],
+      "sources": [
+        "curated:function.curated.navigation.dfp:steps",
+        "curated:function.curated.people.archive-delete-trainee:input",
+        "curated:function.curated.settings.rank-terminology:input",
+        "curated:function.curated.training.course-leadership:input",
+        "curated:function.curated.training.course-score-table:steps",
+        "curated:function.curated.training.course-score-table:input",
+        "curated:function.curated.training.course-ranking-awards:steps",
+        "curated:function.curated.training.course-ranking-awards:input"
+      ],
+      "count": 12
+    },
+    {
       "term": "Show",
       "normalised": "show",
       "aliases": [
@@ -27448,6 +27587,41 @@
         "message:server.js:16710",
         "message:server.js:16731",
         "message:server.js:17004"
+      ],
+      "count": 12
+    },
+    {
+      "term": "student",
+      "normalised": "student",
+      "aliases": [],
+      "sources": [
+        "curated:function.curated.people.trainee-unavailability:alias",
+        "curated:function.curated.people.archive-delete-trainee:alias",
+        "curated:function.curated.people.trainee-roster:alias",
+        "curated:function.curated.people.move-trainee-course:alias",
+        "curated:function.curated.settings.trainee-rank-order:alias",
+        "curated:synonym:trainee",
+        "control-attribute:components/PrioritiesView.tsx:4805"
+      ],
+      "count": 12
+    },
+    {
+      "term": "then",
+      "normalised": "then",
+      "aliases": [],
+      "sources": [
+        "curated:function.curated.scheduling.validation-check:steps",
+        "curated:function.curated.scheduling.add-flight-tile:steps",
+        "curated:function.curated.settings.staff-rank-equivalency:steps",
+        "curated:function.curated.settings.trainee-rank-order:steps",
+        "message:App.tsx:43017",
+        "message:App.tsx:47353",
+        "message:components/AcademicsTab.tsx:634",
+        "message:components/PlatformConfigurationSettings.tsx:1758",
+        "message:components/PlatformConfigurationSettings.tsx:1763",
+        "message:components/PlatformConfigurationSettings.tsx:2268",
+        "message:components/PlatformConfigurationSettings.tsx:6192",
+        "message:components/PlatformConfigurationSettings.tsx:14207"
       ],
       "count": 12
     },
@@ -28436,25 +28610,6 @@
       "count": 11
     },
     {
-      "term": "need",
-      "normalised": "need",
-      "aliases": [],
-      "sources": [
-        "curated:function.curated.navigation.dfp:steps",
-        "curated:function.curated.training.archive-course:steps",
-        "curated:function.curated.training.course-progress:steps",
-        "curated:function.curated.messaging.my-home-messages:steps",
-        "curated:function.curated.scheduling.pause-flight-ops:steps",
-        "curated:function.curated.settings.configuration-report:steps",
-        "curated:function.curated.people.currency-audit-and-dates:steps",
-        "message:components/PlatformConfigurationSettings.tsx:942",
-        "message:components/PlatformConfigurationSettings.tsx:951",
-        "message:components/ScheduleView.tsx:8632",
-        "message:components/ScheduleView.tsx:9900"
-      ],
-      "count": 11
-    },
-    {
       "term": "not permitted",
       "normalised": "not permitted",
       "aliases": [],
@@ -28762,6 +28917,26 @@
         "prisma:Personnel.qualifications",
         "message:App.tsx:13896",
         "message:components/PlatformConfigurationSettings.tsx:2450"
+      ],
+      "count": 11
+    },
+    {
+      "term": "Rank Terminology",
+      "normalised": "rank terminology",
+      "aliases": [
+        "rank terminology"
+      ],
+      "sources": [
+        "curated:function.curated.settings.formation-callsigns:steps",
+        "curated:function.curated.settings.rank-terminology",
+        "curated:function.curated.settings.rank-terminology:alias",
+        "curated:function.curated.settings.rank-terminology:purpose",
+        "curated:function.curated.settings.rank-terminology:steps",
+        "curated:function.curated.settings.staff-rank-equivalency:steps",
+        "curated:function.curated.settings.trainee-rank-order:steps",
+        "message:App.tsx:13896",
+        "message:components/PlatformConfigurationSettings.tsx:2824",
+        "message:components/PlatformConfigurationSettings.tsx:2828"
       ],
       "count": 11
     },
@@ -29122,7 +29297,7 @@
         "curated:function.curated.training.training-report-fields:steps",
         "curated:function.curated.settings.audit-log-recording:steps",
         "curated:function.curated.settings.turnaround:steps",
-        "message:utils/neoGuideEngine.ts:880"
+        "message:utils/neoGuideEngine.ts:884"
       ],
       "count": 11
     },
@@ -30877,7 +31052,7 @@
         "message:components/PlatformConfigurationSettings.tsx:6200",
         "message:components/PlatformConfigurationSettings.tsx:12878",
         "message:server.js:17731",
-        "message:utils/neoGuideEngine.ts:744"
+        "message:utils/neoGuideEngine.ts:748"
       ],
       "count": 10
     },
@@ -31183,6 +31358,24 @@
       "count": 10
     },
     {
+      "term": "rank equivalency",
+      "normalised": "rank equivalency",
+      "aliases": [
+        "Rank Equivalency"
+      ],
+      "sources": [
+        "curated:function.curated.settings.rank-terminology:alias",
+        "curated:function.curated.settings.rank-terminology:purpose",
+        "curated:function.curated.settings.rank-terminology:steps",
+        "curated:function.curated.settings.rank-terminology:input",
+        "curated:function.curated.settings.staff-rank-equivalency",
+        "curated:function.curated.settings.staff-rank-equivalency:alias",
+        "curated:function.curated.settings.staff-rank-equivalency:steps",
+        "curated:function.curated.settings.trainee-rank-order:alias"
+      ],
+      "count": 10
+    },
+    {
       "term": "removed",
       "normalised": "removed",
       "aliases": [
@@ -31255,6 +31448,20 @@
         "route:dfp-neo-platform/app/api/trainees/[id]/route.ts",
         "route:dfp-neo-platform/app/api/unavailability/[id]/route.ts",
         "route:dfp-neo-platform/app/api/users/[id]/route.ts"
+      ],
+      "count": 10
+    },
+    {
+      "term": "Save the settings",
+      "normalised": "save the settings",
+      "aliases": [],
+      "sources": [
+        "curated:function.curated.settings.unit-callsigns:steps",
+        "curated:function.curated.settings.formation-callsigns:steps",
+        "curated:function.curated.settings.rank-terminology:steps",
+        "curated:function.curated.settings.turnaround:steps",
+        "curated:function.curated.settings.flight-authorisation-warnings:steps",
+        "curated:function.curated.settings.service-groups:steps"
       ],
       "count": 10
     },
@@ -31344,21 +31551,6 @@
       "count": 10
     },
     {
-      "term": "selector",
-      "normalised": "selector",
-      "aliases": [],
-      "sources": [
-        "curated:function.curated.navigation.dfp:steps",
-        "curated:function.curated.people.archive-delete-trainee:input",
-        "curated:function.curated.training.course-leadership:input",
-        "curated:function.curated.training.course-score-table:steps",
-        "curated:function.curated.training.course-score-table:input",
-        "curated:function.curated.training.course-ranking-awards:steps",
-        "curated:function.curated.training.course-ranking-awards:input"
-      ],
-      "count": 10
-    },
-    {
       "term": "settings permission Profile Ids",
       "normalised": "settings permission profile ids",
       "aliases": [],
@@ -31399,20 +31591,6 @@
         "message:server.js:2273",
         "message:server.js:2283",
         "message:server.js:2308"
-      ],
-      "count": 10
-    },
-    {
-      "term": "student",
-      "normalised": "student",
-      "aliases": [],
-      "sources": [
-        "curated:function.curated.people.trainee-unavailability:alias",
-        "curated:function.curated.people.archive-delete-trainee:alias",
-        "curated:function.curated.people.trainee-roster:alias",
-        "curated:function.curated.people.move-trainee-course:alias",
-        "curated:synonym:trainee",
-        "control-attribute:components/PrioritiesView.tsx:4805"
       ],
       "count": 10
     },
@@ -31468,6 +31646,26 @@
       "count": 10
     },
     {
+      "term": "Terminology",
+      "normalised": "terminology",
+      "aliases": [
+        "terminology"
+      ],
+      "sources": [
+        "curated:function.curated.settings.formation-callsigns:steps",
+        "curated:function.curated.settings.rank-terminology",
+        "curated:function.curated.settings.rank-terminology:alias",
+        "curated:function.curated.settings.rank-terminology:purpose",
+        "curated:function.curated.settings.rank-terminology:steps",
+        "curated:function.curated.settings.staff-rank-equivalency:steps",
+        "curated:function.curated.settings.trainee-rank-order:steps",
+        "message:App.tsx:13896",
+        "message:components/PlatformConfigurationSettings.tsx:2824",
+        "message:components/PlatformConfigurationSettings.tsx:2828"
+      ],
+      "count": 10
+    },
+    {
       "term": "text gray 300",
       "normalised": "text gray 300",
       "aliases": [],
@@ -31515,24 +31713,6 @@
         "control:components/PlatformConfigurationSettings.tsx:14177",
         "message:App.tsx:19464",
         "message:components/InstructorProfileFlyout.tsx:1117"
-      ],
-      "count": 10
-    },
-    {
-      "term": "then",
-      "normalised": "then",
-      "aliases": [],
-      "sources": [
-        "curated:function.curated.scheduling.validation-check:steps",
-        "curated:function.curated.scheduling.add-flight-tile:steps",
-        "message:App.tsx:43017",
-        "message:App.tsx:47353",
-        "message:components/AcademicsTab.tsx:634",
-        "message:components/PlatformConfigurationSettings.tsx:1758",
-        "message:components/PlatformConfigurationSettings.tsx:1763",
-        "message:components/PlatformConfigurationSettings.tsx:2268",
-        "message:components/PlatformConfigurationSettings.tsx:6192",
-        "message:components/PlatformConfigurationSettings.tsx:14207"
       ],
       "count": 10
     },
@@ -32430,6 +32610,24 @@
       "count": 9
     },
     {
+      "term": "equivalency",
+      "normalised": "equivalency",
+      "aliases": [
+        "Equivalency"
+      ],
+      "sources": [
+        "curated:function.curated.settings.rank-terminology:alias",
+        "curated:function.curated.settings.rank-terminology:purpose",
+        "curated:function.curated.settings.rank-terminology:steps",
+        "curated:function.curated.settings.rank-terminology:input",
+        "curated:function.curated.settings.staff-rank-equivalency",
+        "curated:function.curated.settings.staff-rank-equivalency:alias",
+        "curated:function.curated.settings.staff-rank-equivalency:steps",
+        "curated:function.curated.settings.trainee-rank-order:alias"
+      ],
+      "count": 9
+    },
+    {
       "term": "event target value 0",
       "normalised": "event target value 0",
       "aliases": [],
@@ -33039,6 +33237,21 @@
       "count": 9
     },
     {
+      "term": "Open Resources Configuration",
+      "normalised": "open resources configuration",
+      "aliases": [
+        "Open Resources & Configuration"
+      ],
+      "sources": [
+        "curated:function.curated.settings.configuration-report:steps",
+        "curated:function.curated.settings.formation-callsigns:steps",
+        "curated:function.curated.settings.rank-terminology:steps",
+        "curated:function.curated.settings.staff-rank-equivalency:steps",
+        "curated:function.curated.settings.trainee-rank-order:steps"
+      ],
+      "count": 9
+    },
+    {
       "term": "Ops",
       "normalised": "ops",
       "aliases": [
@@ -33269,6 +33482,24 @@
         "message:components/PrioritiesView.tsx:5863",
         "message:components/PrioritiesView.tsx:5870",
         "message:components/TraineeProfileFlyout.tsx:1631"
+      ],
+      "count": 9
+    },
+    {
+      "term": "Rank Terminology Labels",
+      "normalised": "rank terminology labels",
+      "aliases": [
+        "Rank, Terminology & Labels"
+      ],
+      "sources": [
+        "curated:function.curated.settings.formation-callsigns:steps",
+        "curated:function.curated.settings.rank-terminology",
+        "curated:function.curated.settings.rank-terminology:steps",
+        "curated:function.curated.settings.staff-rank-equivalency:steps",
+        "curated:function.curated.settings.trainee-rank-order:steps",
+        "message:App.tsx:13896",
+        "message:components/PlatformConfigurationSettings.tsx:2824",
+        "message:components/PlatformConfigurationSettings.tsx:2828"
       ],
       "count": 9
     },
@@ -33826,6 +34057,21 @@
         "control:components/TraineeLmpView.tsx:712",
         "message:dfp-neo-platform/app/api/syllabus/bulk-upload/route.ts:149",
         "message:server.js:9408"
+      ],
+      "count": 9
+    },
+    {
+      "term": "Trainee Rank Order",
+      "normalised": "trainee rank order",
+      "aliases": [
+        "trainee rank order"
+      ],
+      "sources": [
+        "curated:function.curated.settings.rank-terminology:steps",
+        "curated:function.curated.settings.trainee-rank-order",
+        "curated:function.curated.settings.trainee-rank-order:alias",
+        "curated:function.curated.settings.trainee-rank-order:steps",
+        "control:components/PlatformConfigurationSettings.tsx:14150"
       ],
       "count": 9
     },
@@ -34681,6 +34927,21 @@
         "control:components/CurrencyBuilderView.tsx:719",
         "control:components/InstructorProfileFlyout.tsx:165",
         "control:components/TraineeProfileFlyout.tsx:269"
+      ],
+      "count": 8
+    },
+    {
+      "term": "Choose",
+      "normalised": "choose",
+      "aliases": [
+        "choose"
+      ],
+      "sources": [
+        "curated:function.curated.people.archive-delete-trainee:steps",
+        "curated:function.curated.scheduling.cancel-restore-delete-event:steps",
+        "curated:function.curated.people.move-trainee-course:steps",
+        "curated:function.curated.scheduling.add-ground-event:steps",
+        "curated:function.curated.settings.staff-rank-equivalency:steps"
       ],
       "count": 8
     },
@@ -35610,7 +35871,7 @@
         "message:components/PlatformConfigurationSettings.tsx:1745",
         "message:components/PlatformConfigurationSettings.tsx:14530",
         "message:server.js:17731",
-        "message:utils/neoGuideEngine.ts:881"
+        "message:utils/neoGuideEngine.ts:885"
       ],
       "count": 8
     },
@@ -36221,6 +36482,24 @@
       "count": 8
     },
     {
+      "term": "names",
+      "normalised": "names",
+      "aliases": [
+        "Names"
+      ],
+      "sources": [
+        "curated:function.curated.training.course-management:purpose",
+        "curated:function.curated.settings.staff-rank-equivalency:purpose",
+        "curated:function.curated.settings.staff-rank-equivalency:steps",
+        "control:components/FlightDetailModal.tsx:3140",
+        "control:components/tabs/TrainingIntelligenceTab.tsx:1759",
+        "control:components/tabs/TrainingIntelligenceTab.tsx:1797",
+        "message:components/PlatformConfigurationSettings.tsx:4407",
+        "message:components/TraineeBulkUploadFlyout.tsx:490"
+      ],
+      "count": 8
+    },
+    {
       "term": "`neo assist push ${row event id}`",
       "normalised": "neo assist push row event id",
       "aliases": [
@@ -36393,6 +36672,20 @@
         "control-attribute:components/Header.tsx:501",
         "control:components/ScheduleView.tsx:13477",
         "control-attribute:components/ScheduleView.tsx:13477"
+      ],
+      "count": 8
+    },
+    {
+      "term": "Open Rank, Terminology & Labels",
+      "normalised": "open rank terminology labels",
+      "aliases": [
+        "Open Rank Terminology Labels"
+      ],
+      "sources": [
+        "curated:function.curated.settings.formation-callsigns:steps",
+        "curated:function.curated.settings.rank-terminology:steps",
+        "curated:function.curated.settings.staff-rank-equivalency:steps",
+        "curated:function.curated.settings.trainee-rank-order:steps"
       ],
       "count": 8
     },
@@ -37012,19 +37305,6 @@
       "count": 8
     },
     {
-      "term": "Save the settings",
-      "normalised": "save the settings",
-      "aliases": [],
-      "sources": [
-        "curated:function.curated.settings.unit-callsigns:steps",
-        "curated:function.curated.settings.formation-callsigns:steps",
-        "curated:function.curated.settings.turnaround:steps",
-        "curated:function.curated.settings.flight-authorisation-warnings:steps",
-        "curated:function.curated.settings.service-groups:steps"
-      ],
-      "count": 8
-    },
-    {
       "term": "schedule Event Id",
       "normalised": "schedule event id",
       "aliases": [],
@@ -37333,6 +37613,23 @@
       "count": 8
     },
     {
+      "term": "Source",
+      "normalised": "source",
+      "aliases": [
+        "source"
+      ],
+      "sources": [
+        "curated:function.curated.settings.rank-terminology:input",
+        "curated:function.curated.settings.trainee-rank-order:steps",
+        "control:components/PlatformConfigurationSettings.tsx:12447",
+        "control:components/PlatformConfigurationSettings.tsx:12453",
+        "control:components/SyllabusView.tsx:3047",
+        "control:components/SyllabusView.tsx:3058",
+        "prisma:EventCompletion.source"
+      ],
+      "count": 8
+    },
+    {
       "term": "starter",
       "normalised": "starter",
       "aliases": [],
@@ -37390,6 +37687,22 @@
         "message:server.js:5375",
         "message:server.js:5376",
         "message:server.js:5377"
+      ],
+      "count": 8
+    },
+    {
+      "term": "Terminology Labels",
+      "normalised": "terminology labels",
+      "aliases": [],
+      "sources": [
+        "curated:function.curated.settings.formation-callsigns:steps",
+        "curated:function.curated.settings.rank-terminology",
+        "curated:function.curated.settings.rank-terminology:steps",
+        "curated:function.curated.settings.staff-rank-equivalency:steps",
+        "curated:function.curated.settings.trainee-rank-order:steps",
+        "message:App.tsx:13896",
+        "message:components/PlatformConfigurationSettings.tsx:2824",
+        "message:components/PlatformConfigurationSettings.tsx:2828"
       ],
       "count": 8
     },
@@ -37710,7 +38023,7 @@
         "control:components/SettingsView.tsx:1141",
         "control:components/SettingsView.tsx:1375",
         "message:components/ScheduleView.tsx:13538",
-        "message:utils/neoGuideEngine.ts:744"
+        "message:utils/neoGuideEngine.ts:748"
       ],
       "count": 8
     },
@@ -38342,16 +38655,15 @@
       "count": 7
     },
     {
-      "term": "Choose",
-      "normalised": "choose",
-      "aliases": [
-        "choose"
-      ],
+      "term": "Click Edit",
+      "normalised": "click edit",
+      "aliases": [],
       "sources": [
-        "curated:function.curated.people.archive-delete-trainee:steps",
-        "curated:function.curated.scheduling.cancel-restore-delete-event:steps",
-        "curated:function.curated.people.move-trainee-course:steps",
-        "curated:function.curated.scheduling.add-ground-event:steps"
+        "curated:function.curated.settings.rank-terminology:steps",
+        "curated:function.curated.settings.staff-rank-equivalency:steps",
+        "curated:function.curated.settings.trainee-rank-order:steps",
+        "control:components/CancellationCodesTable.tsx:411",
+        "control-attribute:components/CancellationCodesTable.tsx:411"
       ],
       "count": 7
     },
@@ -38397,6 +38709,36 @@
         "control:components/FlightDetailModal.tsx:3813",
         "control-attribute:components/FlightDetailModal.tsx:3813",
         "control:components/FlightDetailModal.tsx:4026"
+      ],
+      "count": 7
+    },
+    {
+      "term": "Configures",
+      "normalised": "configures",
+      "aliases": [],
+      "sources": [
+        "curated:function.curated.scheduling.build-priorities:purpose",
+        "curated:function.curated.settings.currency-builder:purpose",
+        "curated:function.curated.training.scoring-matrix-elements:purpose",
+        "curated:function.curated.settings.unit-callsigns:purpose",
+        "curated:function.curated.settings.formation-callsigns:purpose",
+        "curated:function.curated.settings.rank-terminology:purpose",
+        "curated:function.curated.settings.turnaround:purpose"
+      ],
+      "count": 7
+    },
+    {
+      "term": "confirm your password",
+      "normalised": "confirm your password",
+      "aliases": [
+        "Confirm your password"
+      ],
+      "sources": [
+        "curated:function.curated.settings.rank-terminology:steps",
+        "curated:function.curated.settings.staff-rank-equivalency:steps",
+        "curated:function.curated.settings.trainee-rank-order:steps",
+        "control:dfp-neo-platform/app/(auth)/set-password/page.tsx:154",
+        "control-attribute:dfp-neo-platform/app/(auth)/set-password/page.tsx:154"
       ],
       "count": 7
     },
@@ -39325,7 +39667,7 @@
         "message:components/InstructorListView.tsx:796",
         "message:dfp-neo-platform/app/api/admin/seed-syllabus/route.ts:338",
         "message:server.js:14167",
-        "message:utils/neoGuideEngine.ts:881"
+        "message:utils/neoGuideEngine.ts:885"
       ],
       "count": 7
     },
@@ -40063,6 +40405,20 @@
       "count": 7
     },
     {
+      "term": "rank preset",
+      "normalised": "rank preset",
+      "aliases": [
+        "Rank Preset"
+      ],
+      "sources": [
+        "curated:function.curated.settings.rank-terminology:alias",
+        "curated:function.curated.settings.rank-terminology:input",
+        "curated:function.curated.settings.staff-rank-equivalency:steps",
+        "control:components/PlatformConfigurationSettings.tsx:14055"
+      ],
+      "count": 7
+    },
+    {
       "term": "Raw",
       "normalised": "raw",
       "aliases": [],
@@ -40101,6 +40457,21 @@
         "control:components/AuditFlyout.tsx:863",
         "control:components/PostFlightView.tsx:1395",
         "control-attribute:components/PostFlightView.tsx:1395"
+      ],
+      "count": 7
+    },
+    {
+      "term": "related",
+      "normalised": "related",
+      "aliases": [],
+      "sources": [
+        "curated:function.curated.settings.currency-builder:purpose",
+        "curated:function.curated.scheduling.add-flight-tile:purpose",
+        "curated:function.curated.training.complete-training:purpose",
+        "curated:function.curated.settings.audit-log-recording:steps",
+        "curated:function.curated.settings.unit-callsigns:purpose",
+        "curated:function.curated.settings.rank-terminology:purpose",
+        "curated:function.curated.training.master-lmp-event-details:purpose"
       ],
       "count": 7
     },
@@ -40595,20 +40966,6 @@
       "count": 7
     },
     {
-      "term": "staff rank",
-      "normalised": "staff rank",
-      "aliases": [],
-      "sources": [
-        "control:components/MyDashboard.tsx:4138",
-        "control:components/PlatformConfigurationSettings.tsx:14177",
-        "control-attribute:components/StaffDatabaseTable.tsx:492",
-        "permission:dfp-neo-platform/app/api/debug/staff-database/route.ts:66",
-        "message:components/FlightDetailModal.tsx:1229",
-        "message:components/FlightDetailModal.tsx:1230"
-      ],
-      "count": 7
-    },
-    {
       "term": "SUPER ADMIN",
       "normalised": "super admin",
       "aliases": [
@@ -40841,20 +41198,6 @@
         "message:components/MyDashboard.tsx:2302",
         "message:server.js:3064",
         "message:server.js:21047"
-      ],
-      "count": 7
-    },
-    {
-      "term": "trainee rank",
-      "normalised": "trainee rank",
-      "aliases": [],
-      "sources": [
-        "control:components/CourseTraineeSelectionFlyout.tsx:52",
-        "control:components/PlatformConfigurationSettings.tsx:14150",
-        "control-attribute:components/TraineeDatabaseTable.tsx:447",
-        "control:components/TrainingCompletionView.tsx:419",
-        "control:components/TrainingRecordsExportView.tsx:1655",
-        "permission:utils/traineeDataValidator.ts:44"
       ],
       "count": 7
     },
@@ -42312,20 +42655,6 @@
       "count": 6
     },
     {
-      "term": "Configures",
-      "normalised": "configures",
-      "aliases": [],
-      "sources": [
-        "curated:function.curated.scheduling.build-priorities:purpose",
-        "curated:function.curated.settings.currency-builder:purpose",
-        "curated:function.curated.training.scoring-matrix-elements:purpose",
-        "curated:function.curated.settings.unit-callsigns:purpose",
-        "curated:function.curated.settings.formation-callsigns:purpose",
-        "curated:function.curated.settings.turnaround:purpose"
-      ],
-      "count": 6
-    },
-    {
       "term": "confirm Delete",
       "normalised": "confirm delete",
       "aliases": [],
@@ -42953,6 +43282,20 @@
       "count": 6
     },
     {
+      "term": "different",
+      "normalised": "different",
+      "aliases": [],
+      "sources": [
+        "curated:function.curated.navigation.dfp:steps",
+        "curated:function.curated.people.move-trainee-course:alias",
+        "curated:function.curated.people.move-trainee-course:steps",
+        "curated:function.curated.settings.trainee-rank-order:purpose",
+        "control:components/CourseEditFlyout.tsx:309",
+        "control-attribute:components/CourseEditFlyout.tsx:309"
+      ],
+      "count": 6
+    },
+    {
       "term": "disabled text gray 400",
       "normalised": "disabled text gray 400",
       "aliases": [],
@@ -42976,6 +43319,22 @@
         "control-attribute:components/SettingsView.tsx:1265",
         "control:components/SettingsView.tsx:1274",
         "control-attribute:components/SettingsView.tsx:1274"
+      ],
+      "count": 6
+    },
+    {
+      "term": "display",
+      "normalised": "display",
+      "aliases": [
+        "Display"
+      ],
+      "sources": [
+        "curated:function.curated.scheduling.flight-detail-fields:alias",
+        "curated:function.curated.settings.unit-callsigns:steps",
+        "curated:function.curated.settings.rank-terminology:purpose",
+        "curated:function.curated.settings.trainee-rank-order:purpose",
+        "control:dfp-neo-platform/app/admin/users/[id]/EditUserForm.tsx:257",
+        "control:dfp-neo-platform/app/admin/users/create/CreateUserForm.tsx:150"
       ],
       "count": 6
     },
@@ -44710,22 +45069,6 @@
       "count": 6
     },
     {
-      "term": "names",
-      "normalised": "names",
-      "aliases": [
-        "Names"
-      ],
-      "sources": [
-        "curated:function.curated.training.course-management:purpose",
-        "control:components/FlightDetailModal.tsx:3140",
-        "control:components/tabs/TrainingIntelligenceTab.tsx:1759",
-        "control:components/tabs/TrainingIntelligenceTab.tsx:1797",
-        "message:components/PlatformConfigurationSettings.tsx:4407",
-        "message:components/TraineeBulkUploadFlyout.tsx:490"
-      ],
-      "count": 6
-    },
-    {
       "term": "nav build intelligence",
       "normalised": "nav build intelligence",
       "aliases": [],
@@ -44872,6 +45215,20 @@
       "sources": [
         "control-attribute:components/Sidebar.tsx:260",
         "guide-target:components/Sidebar.tsx:260"
+      ],
+      "count": 6
+    },
+    {
+      "term": "need a",
+      "normalised": "need a",
+      "aliases": [],
+      "sources": [
+        "curated:function.curated.navigation.dfp:steps",
+        "curated:function.curated.settings.rank-terminology:steps",
+        "curated:function.curated.settings.trainee-rank-order:purpose",
+        "message:components/PlatformConfigurationSettings.tsx:942",
+        "message:components/ScheduleView.tsx:8632",
+        "message:components/ScheduleView.tsx:9900"
       ],
       "count": 6
     },
@@ -45541,6 +45898,21 @@
       "count": 6
     },
     {
+      "term": "preset",
+      "normalised": "preset",
+      "aliases": [
+        "Preset"
+      ],
+      "sources": [
+        "curated:function.curated.settings.rank-terminology:alias",
+        "curated:function.curated.settings.rank-terminology:input",
+        "curated:function.curated.settings.staff-rank-equivalency:steps",
+        "control:components/PlatformConfigurationSettings.tsx:14055",
+        "control-attribute:components/PlatformConfigurationSettings.tsx:14068"
+      ],
+      "count": 6
+    },
+    {
       "term": "preset id",
       "normalised": "preset id",
       "aliases": [],
@@ -45690,6 +46062,20 @@
       "count": 6
     },
     {
+      "term": "Rank Equivalency Table",
+      "normalised": "rank equivalency table",
+      "aliases": [
+        "rank equivalency table"
+      ],
+      "sources": [
+        "curated:function.curated.settings.rank-terminology:steps",
+        "curated:function.curated.settings.rank-terminology:input",
+        "curated:function.curated.settings.staff-rank-equivalency",
+        "curated:function.curated.settings.staff-rank-equivalency:steps"
+      ],
+      "count": 6
+    },
+    {
       "term": "reason ID",
       "normalised": "reason id",
       "aliases": [
@@ -45754,20 +46140,6 @@
         "message:dfp-neo-platform/app/api/mobile/auth/refresh/route.ts:12",
         "message:mobile-endpoints.js:96",
         "message:server.js:11769"
-      ],
-      "count": 6
-    },
-    {
-      "term": "related",
-      "normalised": "related",
-      "aliases": [],
-      "sources": [
-        "curated:function.curated.settings.currency-builder:purpose",
-        "curated:function.curated.scheduling.add-flight-tile:purpose",
-        "curated:function.curated.training.complete-training:purpose",
-        "curated:function.curated.settings.audit-log-recording:steps",
-        "curated:function.curated.settings.unit-callsigns:purpose",
-        "curated:function.curated.training.master-lmp-event-details:purpose"
       ],
       "count": 6
     },
@@ -46623,21 +46995,6 @@
       "count": 6
     },
     {
-      "term": "source",
-      "normalised": "source",
-      "aliases": [
-        "Source"
-      ],
-      "sources": [
-        "control:components/PlatformConfigurationSettings.tsx:12447",
-        "control:components/PlatformConfigurationSettings.tsx:12453",
-        "control:components/SyllabusView.tsx:3047",
-        "control:components/SyllabusView.tsx:3058",
-        "prisma:EventCompletion.source"
-      ],
-      "count": 6
-    },
-    {
       "term": "source Item type FTD sim",
       "normalised": "source item type ftd sim",
       "aliases": [],
@@ -46703,6 +47060,33 @@
         "permission:utils/platformConfigService.ts:196",
         "message:components/InstructorProfileFlyout.tsx:1244",
         "message:utils/platformConfigService.ts:196"
+      ],
+      "count": 6
+    },
+    {
+      "term": "Staff Rank Equivalency",
+      "normalised": "staff rank equivalency",
+      "aliases": [
+        "staff rank equivalency"
+      ],
+      "sources": [
+        "curated:function.curated.settings.rank-terminology:steps",
+        "curated:function.curated.settings.rank-terminology:input",
+        "curated:function.curated.settings.staff-rank-equivalency",
+        "curated:function.curated.settings.staff-rank-equivalency:alias",
+        "curated:function.curated.settings.staff-rank-equivalency:steps"
+      ],
+      "count": 6
+    },
+    {
+      "term": "Staff Rank Equivalency Table",
+      "normalised": "staff rank equivalency table",
+      "aliases": [],
+      "sources": [
+        "curated:function.curated.settings.rank-terminology:steps",
+        "curated:function.curated.settings.rank-terminology:input",
+        "curated:function.curated.settings.staff-rank-equivalency",
+        "curated:function.curated.settings.staff-rank-equivalency:steps"
       ],
       "count": 6
     },
@@ -46870,6 +47254,20 @@
       "count": 6
     },
     {
+      "term": "the settings",
+      "normalised": "the settings",
+      "aliases": [],
+      "sources": [
+        "curated:function.curated.settings.unit-callsigns:steps",
+        "curated:function.curated.settings.formation-callsigns:steps",
+        "curated:function.curated.settings.rank-terminology:steps",
+        "curated:function.curated.settings.turnaround:steps",
+        "curated:function.curated.settings.flight-authorisation-warnings:steps",
+        "curated:function.curated.settings.service-groups:steps"
+      ],
+      "count": 6
+    },
+    {
       "term": "the top",
       "normalised": "the top",
       "aliases": [],
@@ -46907,7 +47305,7 @@
         "message:components/PlatformConfigurationSettings.tsx:1758",
         "message:components/PlatformConfigurationSettings.tsx:1763",
         "message:components/PlatformConfigurationSettings.tsx:14530",
-        "message:utils/neoGuideEngine.ts:881"
+        "message:utils/neoGuideEngine.ts:885"
       ],
       "count": 6
     },
@@ -48179,6 +48577,19 @@
       "count": 5
     },
     {
+      "term": "and related",
+      "normalised": "and related",
+      "aliases": [],
+      "sources": [
+        "curated:function.curated.settings.currency-builder:purpose",
+        "curated:function.curated.training.complete-training:purpose",
+        "curated:function.curated.settings.unit-callsigns:purpose",
+        "curated:function.curated.settings.rank-terminology:purpose",
+        "curated:function.curated.training.master-lmp-event-details:purpose"
+      ],
+      "count": 5
+    },
+    {
       "term": "and unit",
       "normalised": "and unit",
       "aliases": [],
@@ -48981,7 +49392,7 @@
         "curated:function.curated.scheduling.priority-currency-requests:steps",
         "message:components/MyDashboard.tsx:2302",
         "message:components/MyDashboard.tsx:2317",
-        "message:utils/neoGuideEngine.ts:881"
+        "message:utils/neoGuideEngine.ts:885"
       ],
       "count": 5
     },
@@ -49129,6 +49540,21 @@
         "curated:function.curated.people.remove-unavailability:steps",
         "curated:function.curated.duty-pilot.flight-tracking:steps",
         "message:App.tsx:47353"
+      ],
+      "count": 5
+    },
+    {
+      "term": "confirm your",
+      "normalised": "confirm your",
+      "aliases": [
+        "Confirm your"
+      ],
+      "sources": [
+        "curated:function.curated.settings.rank-terminology:steps",
+        "curated:function.curated.settings.staff-rank-equivalency:steps",
+        "curated:function.curated.settings.trainee-rank-order:steps",
+        "control:dfp-neo-platform/app/(auth)/set-password/page.tsx:154",
+        "control-attribute:dfp-neo-platform/app/(auth)/set-password/page.tsx:154"
       ],
       "count": 5
     },
@@ -49605,19 +50031,6 @@
       "count": 5
     },
     {
-      "term": "different",
-      "normalised": "different",
-      "aliases": [],
-      "sources": [
-        "curated:function.curated.navigation.dfp:steps",
-        "curated:function.curated.people.move-trainee-course:alias",
-        "curated:function.curated.people.move-trainee-course:steps",
-        "control:components/CourseEditFlyout.tsx:309",
-        "control-attribute:components/CourseEditFlyout.tsx:309"
-      ],
-      "count": 5
-    },
-    {
       "term": "disabled bg gray 700",
       "normalised": "disabled bg gray 700",
       "aliases": [],
@@ -49873,6 +50286,20 @@
         "control:components/EmailActivationSettings.tsx:178",
         "control:components/EmailActivationSettings.tsx:186",
         "control-attribute:components/EmailActivationSettings.tsx:186"
+      ],
+      "count": 5
+    },
+    {
+      "term": "Equivalency Table",
+      "normalised": "equivalency table",
+      "aliases": [
+        "equivalency table"
+      ],
+      "sources": [
+        "curated:function.curated.settings.rank-terminology:steps",
+        "curated:function.curated.settings.rank-terminology:input",
+        "curated:function.curated.settings.staff-rank-equivalency",
+        "curated:function.curated.settings.staff-rank-equivalency:steps"
       ],
       "count": 5
     },
@@ -50532,6 +50959,19 @@
         "message:dfp-neo-platform/app/api/event-completions/[id]/route.ts:69",
         "message:dfp-neo-platform/app/api/flight-log/[id]/route.ts:23",
         "message:dfp-neo-platform/app/api/trainees/[id]/route.ts:76"
+      ],
+      "count": 5
+    },
+    {
+      "term": "Go to",
+      "normalised": "go to",
+      "aliases": [],
+      "sources": [
+        "curated:function.curated.settings.staff-rank-equivalency:steps",
+        "curated:function.curated.settings.trainee-rank-order:steps",
+        "curated:function.curated.duty-pilot.flight-tracking:steps",
+        "curated:function.curated.duty-pilot.flight-authorisation:steps",
+        "control:dfp-neo-platform/app/(auth)/set-password/page.tsx:101"
       ],
       "count": 5
     },
@@ -51324,6 +51764,32 @@
       "count": 5
     },
     {
+      "term": "Open Rank",
+      "normalised": "open rank",
+      "aliases": [],
+      "sources": [
+        "curated:function.curated.settings.formation-callsigns:steps",
+        "curated:function.curated.settings.rank-terminology:steps",
+        "curated:function.curated.settings.staff-rank-equivalency:steps",
+        "curated:function.curated.settings.trainee-rank-order:steps",
+        "control:components/ScheduleView.tsx:8255"
+      ],
+      "count": 5
+    },
+    {
+      "term": "Open Resources",
+      "normalised": "open resources",
+      "aliases": [],
+      "sources": [
+        "curated:function.curated.settings.configuration-report:steps",
+        "curated:function.curated.settings.formation-callsigns:steps",
+        "curated:function.curated.settings.rank-terminology:steps",
+        "curated:function.curated.settings.staff-rank-equivalency:steps",
+        "curated:function.curated.settings.trainee-rank-order:steps"
+      ],
+      "count": 5
+    },
+    {
       "term": "Open Settings People",
       "normalised": "open settings people",
       "aliases": [],
@@ -51794,6 +52260,20 @@
         "message:components/EmailActivationSettings.tsx:260",
         "message:components/EmergencyPage.tsx:525",
         "message:components/PlatformConfigurationSettings.tsx:12256"
+      ],
+      "count": 5
+    },
+    {
+      "term": "rank settings",
+      "normalised": "rank settings",
+      "aliases": [
+        "Rank Settings"
+      ],
+      "sources": [
+        "curated:function.curated.settings.rank-terminology:alias",
+        "curated:function.curated.settings.staff-rank-equivalency:alias",
+        "curated:function.curated.settings.trainee-rank-order:alias",
+        "control:components/ScheduleView.tsx:8255"
       ],
       "count": 5
     },
@@ -53348,19 +53828,6 @@
         "message:components/FlightDetailModal.tsx:1306",
         "message:components/PlatformConfigurationSettings.tsx:969",
         "message:components/SyllabusView.tsx:3436"
-      ],
-      "count": 5
-    },
-    {
-      "term": "the settings",
-      "normalised": "the settings",
-      "aliases": [],
-      "sources": [
-        "curated:function.curated.settings.unit-callsigns:steps",
-        "curated:function.curated.settings.formation-callsigns:steps",
-        "curated:function.curated.settings.turnaround:steps",
-        "curated:function.curated.settings.flight-authorisation-warnings:steps",
-        "curated:function.curated.settings.service-groups:steps"
       ],
       "count": 5
     },
@@ -55412,18 +55879,6 @@
       "count": 4
     },
     {
-      "term": "and related",
-      "normalised": "and related",
-      "aliases": [],
-      "sources": [
-        "curated:function.curated.settings.currency-builder:purpose",
-        "curated:function.curated.training.complete-training:purpose",
-        "curated:function.curated.settings.unit-callsigns:purpose",
-        "curated:function.curated.training.master-lmp-event-details:purpose"
-      ],
-      "count": 4
-    },
-    {
       "term": "and restore",
       "normalised": "and restore",
       "aliases": [],
@@ -57267,16 +57722,6 @@
       "count": 4
     },
     {
-      "term": "Click Edit",
-      "normalised": "click edit",
-      "aliases": [],
-      "sources": [
-        "control:components/CancellationCodesTable.tsx:411",
-        "control-attribute:components/CancellationCodesTable.tsx:411"
-      ],
-      "count": 4
-    },
-    {
       "term": "Click Edit above",
       "normalised": "click edit above",
       "aliases": [],
@@ -57715,16 +58160,6 @@
       "sources": [
         "control:components/tabs/TrainingIntelligenceTab.tsx:3215",
         "control-attribute:components/tabs/TrainingIntelligenceTab.tsx:3215"
-      ],
-      "count": 4
-    },
-    {
-      "term": "Confirm your password",
-      "normalised": "confirm your password",
-      "aliases": [],
-      "sources": [
-        "control:dfp-neo-platform/app/(auth)/set-password/page.tsx:154",
-        "control-attribute:dfp-neo-platform/app/(auth)/set-password/page.tsx:154"
       ],
       "count": 4
     },
@@ -59529,20 +59964,6 @@
         "control-attribute:components/SettingsView.tsx:1265",
         "control:components/SettingsView.tsx:1274",
         "control-attribute:components/SettingsView.tsx:1274"
-      ],
-      "count": 4
-    },
-    {
-      "term": "display",
-      "normalised": "display",
-      "aliases": [
-        "Display"
-      ],
-      "sources": [
-        "curated:function.curated.scheduling.flight-detail-fields:alias",
-        "curated:function.curated.settings.unit-callsigns:steps",
-        "control:dfp-neo-platform/app/admin/users/[id]/EditUserForm.tsx:257",
-        "control:dfp-neo-platform/app/admin/users/create/CreateUserForm.tsx:150"
       ],
       "count": 4
     },
@@ -65519,18 +65940,6 @@
       "count": 4
     },
     {
-      "term": "need a",
-      "normalised": "need a",
-      "aliases": [],
-      "sources": [
-        "curated:function.curated.navigation.dfp:steps",
-        "message:components/PlatformConfigurationSettings.tsx:942",
-        "message:components/ScheduleView.tsx:8632",
-        "message:components/ScheduleView.tsx:9900"
-      ],
-      "count": 4
-    },
-    {
       "term": "need to be",
       "normalised": "need to be",
       "aliases": [],
@@ -66327,6 +66736,18 @@
       "count": 4
     },
     {
+      "term": "Open Rank Terminology",
+      "normalised": "open rank terminology",
+      "aliases": [],
+      "sources": [
+        "curated:function.curated.settings.formation-callsigns:steps",
+        "curated:function.curated.settings.rank-terminology:steps",
+        "curated:function.curated.settings.staff-rank-equivalency:steps",
+        "curated:function.curated.settings.trainee-rank-order:steps"
+      ],
+      "count": 4
+    },
+    {
       "term": "Open resource",
       "normalised": "open resource",
       "aliases": [],
@@ -66581,18 +67002,6 @@
         "curated:function.curated.settings.configuration-report:steps",
         "curated:function.curated.people.remove-unavailability:steps",
         "curated:function.curated.duty-pilot.authorisation-notes:steps"
-      ],
-      "count": 4
-    },
-    {
-      "term": "order",
-      "normalised": "order",
-      "aliases": [],
-      "sources": [
-        "curated:function.curated.scheduling.build-priorities:steps",
-        "control:components/PlatformConfigurationSettings.tsx:14150",
-        "control:components/PlatformConfigurationSettings.tsx:14177",
-        "message:components/SyllabusView.tsx:2657"
       ],
       "count": 4
     },
@@ -67956,26 +68365,24 @@
       "count": 4
     },
     {
-      "term": "Rank Terminology",
-      "normalised": "rank terminology",
+      "term": "rank equivalence",
+      "normalised": "rank equivalence",
       "aliases": [],
       "sources": [
-        "curated:function.curated.settings.formation-callsigns:steps",
-        "message:App.tsx:13896",
-        "message:components/PlatformConfigurationSettings.tsx:2824",
-        "message:components/PlatformConfigurationSettings.tsx:2828"
+        "curated:function.curated.settings.rank-terminology:alias",
+        "curated:function.curated.settings.staff-rank-equivalency:alias",
+        "curated:function.curated.settings.trainee-rank-order:alias"
       ],
       "count": 4
     },
     {
-      "term": "Rank Terminology Labels",
-      "normalised": "rank terminology labels",
+      "term": "rank ordering",
+      "normalised": "rank ordering",
       "aliases": [],
       "sources": [
-        "curated:function.curated.settings.formation-callsigns:steps",
-        "message:App.tsx:13896",
-        "message:components/PlatformConfigurationSettings.tsx:2824",
-        "message:components/PlatformConfigurationSettings.tsx:2828"
+        "curated:function.curated.settings.rank-terminology:alias",
+        "curated:function.curated.settings.staff-rank-equivalency:alias",
+        "curated:function.curated.settings.trainee-rank-order:alias"
       ],
       "count": 4
     },
@@ -68878,7 +69285,7 @@
         "curated:function.curated.duty-pilot.flight-authorisation:steps",
         "message:components/SettingsViewWithMenu.tsx:538",
         "message:dfp-neo-platform/app/api/admin/users/route.ts:41",
-        "message:utils/neoGuideEngine.ts:881"
+        "message:utils/neoGuideEngine.ts:885"
       ],
       "count": 4
     },
@@ -70985,6 +71392,16 @@
       "count": 4
     },
     {
+      "term": "staff ranks",
+      "normalised": "staff ranks",
+      "aliases": [],
+      "sources": [
+        "curated:function.curated.settings.rank-terminology:steps",
+        "curated:function.curated.settings.staff-rank-equivalency:alias"
+      ],
+      "count": 4
+    },
+    {
       "term": "staff selector",
       "normalised": "staff selector",
       "aliases": [],
@@ -71438,30 +71855,6 @@
       "sources": [
         "control-attribute:components/SettingsView.tsx:1615",
         "control-attribute:components/SettingsView.tsx:1621"
-      ],
-      "count": 4
-    },
-    {
-      "term": "Terminology",
-      "normalised": "terminology",
-      "aliases": [],
-      "sources": [
-        "curated:function.curated.settings.formation-callsigns:steps",
-        "message:App.tsx:13896",
-        "message:components/PlatformConfigurationSettings.tsx:2824",
-        "message:components/PlatformConfigurationSettings.tsx:2828"
-      ],
-      "count": 4
-    },
-    {
-      "term": "Terminology Labels",
-      "normalised": "terminology labels",
-      "aliases": [],
-      "sources": [
-        "curated:function.curated.settings.formation-callsigns:steps",
-        "message:App.tsx:13896",
-        "message:components/PlatformConfigurationSettings.tsx:2824",
-        "message:components/PlatformConfigurationSettings.tsx:2828"
       ],
       "count": 4
     },
@@ -75468,6 +75861,39 @@
       "count": 3
     },
     {
+      "term": "and confirm",
+      "normalised": "and confirm",
+      "aliases": [],
+      "sources": [
+        "curated:function.curated.settings.rank-terminology:steps",
+        "curated:function.curated.settings.staff-rank-equivalency:steps",
+        "curated:function.curated.settings.trainee-rank-order:steps"
+      ],
+      "count": 3
+    },
+    {
+      "term": "and confirm your",
+      "normalised": "and confirm your",
+      "aliases": [],
+      "sources": [
+        "curated:function.curated.settings.rank-terminology:steps",
+        "curated:function.curated.settings.staff-rank-equivalency:steps",
+        "curated:function.curated.settings.trainee-rank-order:steps"
+      ],
+      "count": 3
+    },
+    {
+      "term": "and confirm your password",
+      "normalised": "and confirm your password",
+      "aliases": [],
+      "sources": [
+        "curated:function.curated.settings.rank-terminology:steps",
+        "curated:function.curated.settings.staff-rank-equivalency:steps",
+        "curated:function.curated.settings.trainee-rank-order:steps"
+      ],
+      "count": 3
+    },
+    {
       "term": "and events",
       "normalised": "and events",
       "aliases": [],
@@ -77649,6 +78075,28 @@
       "count": 3
     },
     {
+      "term": "Click Edit and",
+      "normalised": "click edit and",
+      "aliases": [],
+      "sources": [
+        "curated:function.curated.settings.rank-terminology:steps",
+        "curated:function.curated.settings.staff-rank-equivalency:steps",
+        "curated:function.curated.settings.trainee-rank-order:steps"
+      ],
+      "count": 3
+    },
+    {
+      "term": "Click Edit and confirm",
+      "normalised": "click edit and confirm",
+      "aliases": [],
+      "sources": [
+        "curated:function.curated.settings.rank-terminology:steps",
+        "curated:function.curated.settings.staff-rank-equivalency:steps",
+        "curated:function.curated.settings.trainee-rank-order:steps"
+      ],
+      "count": 3
+    },
+    {
       "term": "Click the flight",
       "normalised": "click the flight",
       "aliases": [],
@@ -77896,6 +78344,17 @@
         "control:components/FlightDetailModal.tsx:3813",
         "control-attribute:components/FlightDetailModal.tsx:3813",
         "control:components/FlightDetailModal.tsx:4026"
+      ],
+      "count": 3
+    },
+    {
+      "term": "confirm your password if",
+      "normalised": "confirm your password if",
+      "aliases": [],
+      "sources": [
+        "curated:function.curated.settings.rank-terminology:steps",
+        "curated:function.curated.settings.staff-rank-equivalency:steps",
+        "curated:function.curated.settings.trainee-rank-order:steps"
       ],
       "count": 3
     },
@@ -78871,325 +79330,12 @@
         "control-attribute:components/PlatformConfigurationSettings.tsx:10114"
       ],
       "count": 3
-    },
-    {
-      "term": "Delete This Event",
-      "normalised": "delete this event",
-      "aliases": [
-        "🗑 Delete This Event"
-      ],
-      "sources": [
-        "curated:function.curated.training.syllabus-management:steps",
-        "control:components/SyllabusView.tsx:1225"
-      ],
-      "count": 3
-    },
-    {
-      "term": "delivery",
-      "normalised": "delivery",
-      "aliases": [],
-      "sources": [
-        "message:server.js:10981",
-        "message:server.js:11235",
-        "message:server.js:11330"
-      ],
-      "count": 3
-    },
-    {
-      "term": "Demo syllabus",
-      "normalised": "demo syllabus",
-      "aliases": [
-        "demo syllabus"
-      ],
-      "sources": [
-        "message:dfp-neo-platform/app/api/admin/seed-syllabus/route.ts:338",
-        "message:server.js:14166",
-        "message:server.js:14167"
-      ],
-      "count": 3
-    },
-    {
-      "term": "Demo syllabus seed",
-      "normalised": "demo syllabus seed",
-      "aliases": [
-        "demo syllabus seed"
-      ],
-      "sources": [
-        "message:dfp-neo-platform/app/api/admin/seed-syllabus/route.ts:338",
-        "message:server.js:14166",
-        "message:server.js:14167"
-      ],
-      "count": 3
-    },
-    {
-      "term": "denied Add Flight",
-      "normalised": "denied add flight",
-      "aliases": [],
-      "sources": [
-        "control:components/Header.tsx:457",
-        "control-attribute:components/Header.tsx:457",
-        "message:components/Header.tsx:468"
-      ],
-      "count": 3
-    },
-    {
-      "term": "denied Add Flight Tile",
-      "normalised": "denied add flight tile",
-      "aliases": [],
-      "sources": [
-        "control:components/Header.tsx:457",
-        "control-attribute:components/Header.tsx:457",
-        "message:components/Header.tsx:468"
-      ],
-      "count": 3
-    },
-    {
-      "term": "denied Add Ground",
-      "normalised": "denied add ground",
-      "aliases": [],
-      "sources": [
-        "control:components/Header.tsx:440",
-        "control-attribute:components/Header.tsx:440",
-        "message:components/Header.tsx:451"
-      ],
-      "count": 3
-    },
-    {
-      "term": "denied Add Ground Tile",
-      "normalised": "denied add ground tile",
-      "aliases": [],
-      "sources": [
-        "control:components/Header.tsx:440",
-        "control-attribute:components/Header.tsx:440",
-        "message:components/Header.tsx:451"
-      ],
-      "count": 3
-    },
-    {
-      "term": "denied Audit",
-      "normalised": "denied audit",
-      "aliases": [],
-      "sources": [
-        "control:components/Header.tsx:325",
-        "control-attribute:components/Header.tsx:325",
-        "message:components/Header.tsx:336"
-      ],
-      "count": 3
-    },
-    {
-      "term": "denied Audit Log",
-      "normalised": "denied audit log",
-      "aliases": [],
-      "sources": [
-        "control:components/Header.tsx:325",
-        "control-attribute:components/Header.tsx:325",
-        "message:components/Header.tsx:336"
-      ],
-      "count": 3
-    },
-    {
-      "term": "denied Audit Log permission",
-      "normalised": "denied audit log permission",
-      "aliases": [],
-      "sources": [
-        "control:components/Header.tsx:325",
-        "control-attribute:components/Header.tsx:325",
-        "message:components/Header.tsx:336"
-      ],
-      "count": 3
-    },
-    {
-      "term": "denied Flight",
-      "normalised": "denied flight",
-      "aliases": [],
-      "sources": [
-        "control:components/Header.tsx:501",
-        "control-attribute:components/Header.tsx:501",
-        "message:components/Header.tsx:513"
-      ],
-      "count": 3
-    },
-    {
-      "term": "denied Flight Line",
-      "normalised": "denied flight line",
-      "aliases": [],
-      "sources": [
-        "control:components/Header.tsx:501",
-        "control-attribute:components/Header.tsx:501",
-        "message:components/Header.tsx:513"
-      ],
-      "count": 3
-    },
-    {
-      "term": "denied Flight Line permission",
-      "normalised": "denied flight line permission",
-      "aliases": [],
-      "sources": [
-        "control:components/Header.tsx:501",
-        "control-attribute:components/Header.tsx:501",
-        "message:components/Header.tsx:513"
-      ],
-      "count": 3
-    },
-    {
-      "term": "denied Multi",
-      "normalised": "denied multi",
-      "aliases": [],
-      "sources": [
-        "control:components/Header.tsx:342",
-        "control-attribute:components/Header.tsx:342",
-        "message:components/Header.tsx:353"
-      ],
-      "count": 3
-    },
-    {
-      "term": "denied Multi Select",
-      "normalised": "denied multi select",
-      "aliases": [],
-      "sources": [
-        "control:components/Header.tsx:342",
-        "control-attribute:components/Header.tsx:342",
-        "message:components/Header.tsx:353"
-      ],
-      "count": 3
-    },
-    {
-      "term": "denied Multi Select permission",
-      "normalised": "denied multi select permission",
-      "aliases": [],
-      "sources": [
-        "control:components/Header.tsx:342",
-        "control-attribute:components/Header.tsx:342",
-        "message:components/Header.tsx:353"
-      ],
-      "count": 3
-    },
-    {
-      "term": "denied NEO Build",
-      "normalised": "denied neo build",
-      "aliases": [],
-      "sources": [
-        "control:components/RightSidebar.tsx:117",
-        "control-attribute:components/RightSidebar.tsx:117",
-        "message:components/RightSidebar.tsx:121"
-      ],
-      "count": 3
-    },
-    {
-      "term": "denied NEO Build permission",
-      "normalised": "denied neo build permission",
-      "aliases": [],
-      "sources": [
-        "control:components/RightSidebar.tsx:117",
-        "control-attribute:components/RightSidebar.tsx:117",
-        "message:components/RightSidebar.tsx:121"
-      ],
-      "count": 3
-    },
-    {
-      "term": "denied Publish",
-      "normalised": "denied publish",
-      "aliases": [],
-      "sources": [
-        "control:components/RightSidebar.tsx:163",
-        "control-attribute:components/RightSidebar.tsx:163",
-        "message:components/RightSidebar.tsx:167"
-      ],
-      "count": 3
-    },
-    {
-      "term": "denied Publish DFP",
-      "normalised": "denied publish dfp",
-      "aliases": [],
-      "sources": [
-        "control:components/RightSidebar.tsx:163",
-        "control-attribute:components/RightSidebar.tsx:163",
-        "message:components/RightSidebar.tsx:167"
-      ],
-      "count": 3
-    },
-    {
-      "term": "denied Publish DFP permission",
-      "normalised": "denied publish dfp permission",
-      "aliases": [],
-      "sources": [
-        "control:components/RightSidebar.tsx:163",
-        "control-attribute:components/RightSidebar.tsx:163",
-        "message:components/RightSidebar.tsx:167"
-      ],
-      "count": 3
-    },
-    {
-      "term": "denied Requires",
-      "normalised": "denied requires",
-      "aliases": [],
-      "sources": [
-        "control:components/RightSidebar.tsx:100",
-        "control-attribute:components/RightSidebar.tsx:100",
-        "message:components/RightSidebar.tsx:110"
-      ],
-      "count": 3
-    },
-    {
-      "term": "denied Requires Flying",
-      "normalised": "denied requires flying",
-      "aliases": [],
-      "sources": [
-        "control:components/RightSidebar.tsx:100",
-        "control-attribute:components/RightSidebar.tsx:100",
-        "message:components/RightSidebar.tsx:110"
-      ],
-      "count": 3
-    },
-    {
-      "term": "denied Requires Flying Supervisor",
-      "normalised": "denied requires flying supervisor",
-      "aliases": [],
-      "sources": [
-        "control:components/RightSidebar.tsx:100",
-        "control-attribute:components/RightSidebar.tsx:100",
-        "message:components/RightSidebar.tsx:110"
-      ],
-      "count": 3
-    },
-    {
-      "term": "denied validation",
-      "normalised": "denied validation",
-      "aliases": [],
-      "sources": [
-        "control:components/Header.tsx:370",
-        "control-attribute:components/Header.tsx:370",
-        "message:components/Header.tsx:381"
-      ],
-      "count": 3
-    },
-    {
-      "term": "denied validation permission",
-      "normalised": "denied validation permission",
-      "aliases": [],
-      "sources": [
-        "control:components/Header.tsx:370",
-        "control-attribute:components/Header.tsx:370",
-        "message:components/Header.tsx:381"
-      ],
-      "count": 3
-    },
-    {
-      "term": "denied validation permission required",
-      "normalised": "denied validation permission required",
-      "aliases": [],
-      "sources": [
-        "control:components/Header.tsx:370",
-        "control-attribute:components/Header.tsx:370",
-        "message:components/Header.tsx:381"
-      ],
-      "count": 3
     }
   ],
   "curatedKnowledge": {
     "schemaVersion": "neo-guide-enrichment.v1",
     "updatedAt": "2026-09-23T00:00:00.000Z",
-    "functionCount": 60,
+    "functionCount": 63,
     "conceptCount": 5,
     "synonymCount": 7,
     "functions": [
@@ -81599,6 +81745,221 @@
         "relatedFunctions": [
           "function.curated.settings.unit-callsigns",
           "function.curated.scheduling.flight-detail-fields"
+        ],
+        "auditStatus": "IMPLEMENTED - manually enriched from coverage gap review"
+      },
+      {
+        "id": "function.curated.settings.rank-terminology",
+        "name": "Rank, Terminology & Labels",
+        "aliases": [
+          "rank",
+          "ranks",
+          "set rank",
+          "set ranks",
+          "rank settings",
+          "rank terminology",
+          "rank labels",
+          "rank order",
+          "rank ordering",
+          "rank equivalency",
+          "rank equivalence",
+          "rank preset",
+          "service ranks"
+        ],
+        "location": {
+          "page": "Settings",
+          "route": null,
+          "component": "components/PlatformConfigurationSettings.tsx",
+          "anchor": "platform-staff-rank-equivalency"
+        },
+        "purpose": "Configures staff and trainee rank terminology, rank equivalency, rank display order and related people labels.",
+        "procedureSteps": [
+          "Open Settings.",
+          "Open Resources & Configuration.",
+          "Open Rank, Terminology & Labels.",
+          "Click Edit and confirm your password if the section is locked.",
+          "Use Staff Rank Equivalency Table for staff ranks.",
+          "Use Trainee Rank Order if trainees need a separate rank order.",
+          "Save the settings."
+        ],
+        "inputs": [
+          {
+            "fieldName": "Rank Preset",
+            "fieldType": "selector",
+            "permittedValues": [
+              "Configured rank equivalency presets or Custom"
+            ],
+            "defaultValue": "Configured deployment default",
+            "required": false,
+            "validation": "Requires Rank, Terminology & Labels edit permission and password unlock.",
+            "dependencies": [
+              "settings.rankTerminology.edit permission"
+            ],
+            "sourceOfData": "Platform configuration settings"
+          },
+          {
+            "fieldName": "Staff Rank Equivalency Table",
+            "fieldType": "rank equivalency table",
+            "permittedValues": [
+              "Rank names and abbreviations by service"
+            ],
+            "defaultValue": "Configured deployment default",
+            "required": false,
+            "validation": "Ranks should be ordered by equivalent seniority.",
+            "dependencies": [
+              "Configured services"
+            ],
+            "sourceOfData": "Platform configuration settings"
+          },
+          {
+            "fieldName": "Trainee Rank Source",
+            "fieldType": "selector/toggle",
+            "permittedValues": [
+              "Use staff rank order",
+              "Use separate trainee rank order"
+            ],
+            "defaultValue": "Use staff rank order",
+            "required": false,
+            "validation": "Separate trainee rank order is only needed when trainee display order differs from staff.",
+            "dependencies": [
+              "Rank, Terminology & Labels settings"
+            ],
+            "sourceOfData": "Platform configuration settings"
+          }
+        ],
+        "outputs": [
+          "Updates rank labels, rank sorting and staff/trainee display terminology across personnel lists and related displays."
+        ],
+        "permissions": [
+          "settings.view",
+          "settings.rankTerminology.edit"
+        ],
+        "dependencies": [
+          "Settings access and, for edits, Rank, Terminology & Labels edit permission plus password confirmation."
+        ],
+        "businessRules": [
+          "Personnel lists sort by configured rank seniority first, then by name within the same rank. Trainees can either use the staff rank order or a separate trainee rank order."
+        ],
+        "failureConditions": [
+          "The section is read-only if the user lacks Rank, Terminology & Labels edit permission. The rank fields remain locked until Edit is pressed and the password is accepted."
+        ],
+        "relatedFunctions": [
+          "function.curated.settings.unit-callsigns",
+          "function.curated.settings.formation-callsigns",
+          "function.curated.people.staff-management",
+          "function.curated.people.trainee-roster"
+        ],
+        "auditStatus": "IMPLEMENTED - manually enriched from coverage gap review"
+      },
+      {
+        "id": "function.curated.settings.staff-rank-equivalency",
+        "name": "Staff Rank Equivalency Table",
+        "aliases": [
+          "staff rank",
+          "staff ranks",
+          "staff rank order",
+          "staff rank ordering",
+          "staff rank settings",
+          "staff rank equivalency",
+          "staff rank equivalence",
+          "set staff rank",
+          "set staff ranks",
+          "configure staff rank",
+          "instructor rank",
+          "instructor ranks"
+        ],
+        "location": {
+          "page": "Settings",
+          "route": null,
+          "component": "components/PlatformConfigurationSettings.tsx",
+          "anchor": "platform-staff-rank-equivalency"
+        },
+        "purpose": "Sets staff rank names, abbreviations and equivalent rank order across the configured services.",
+        "procedureSteps": [
+          "Open Settings.",
+          "Open Resources & Configuration.",
+          "Open Rank, Terminology & Labels.",
+          "Click Edit and confirm your password if the section is locked.",
+          "Go to Staff Rank Equivalency Table.",
+          "Choose a Rank Preset or Custom.",
+          "Update the rank names or abbreviations, then save."
+        ],
+        "inputs": [],
+        "outputs": [
+          "Updates staff rank display order and staff rank labels."
+        ],
+        "permissions": [
+          "settings.view",
+          "settings.rankTerminology.edit"
+        ],
+        "dependencies": [
+          "Configured services and Rank, Terminology & Labels edit permission for changes."
+        ],
+        "businessRules": [
+          "Staff rank order controls staff display priority before surname/first name sorting."
+        ],
+        "failureConditions": [
+          "Staff rank fields are locked until the section is unlocked with Edit and password confirmation."
+        ],
+        "relatedFunctions": [
+          "function.curated.settings.rank-terminology",
+          "function.curated.people.staff-management"
+        ],
+        "auditStatus": "IMPLEMENTED - manually enriched from coverage gap review"
+      },
+      {
+        "id": "function.curated.settings.trainee-rank-order",
+        "name": "Trainee Rank Order",
+        "aliases": [
+          "trainee rank",
+          "trainee ranks",
+          "trainee rank order",
+          "trainee rank ordering",
+          "trainee rank settings",
+          "trainee rank equivalency",
+          "trainee rank equivalence",
+          "set trainee rank",
+          "set trainee ranks",
+          "configure trainee rank",
+          "student rank",
+          "student ranks"
+        ],
+        "location": {
+          "page": "Settings",
+          "route": null,
+          "component": "components/PlatformConfigurationSettings.tsx",
+          "anchor": "platform-trainee-rank-equivalency"
+        },
+        "purpose": "Sets trainee rank display order when trainees need a different order from staff.",
+        "procedureSteps": [
+          "Open Settings.",
+          "Open Resources & Configuration.",
+          "Open Rank, Terminology & Labels.",
+          "Click Edit and confirm your password if the section is locked.",
+          "Set Trainee Rank Source to Use separate trainee rank order if required.",
+          "Go to Trainee Rank Order.",
+          "Update the trainee rank order, then save."
+        ],
+        "inputs": [],
+        "outputs": [
+          "Updates trainee rank display order where separate trainee rank ordering is enabled."
+        ],
+        "permissions": [
+          "settings.view",
+          "settings.rankTerminology.edit"
+        ],
+        "dependencies": [
+          "Rank, Terminology & Labels edit permission and the trainee rank source setting."
+        ],
+        "businessRules": [
+          "Trainees use the staff rank order unless separate trainee rank ordering is enabled."
+        ],
+        "failureConditions": [
+          "Trainee rank order may be hidden or inactive when trainees are configured to use staff rank order."
+        ],
+        "relatedFunctions": [
+          "function.curated.settings.rank-terminology",
+          "function.curated.people.trainee-roster"
         ],
         "auditStatus": "IMPLEMENTED - manually enriched from coverage gap review"
       },
@@ -84755,6 +85116,185 @@
       "relatedFunctions": [
         "function.curated.settings.unit-callsigns",
         "function.curated.scheduling.flight-detail-fields"
+      ],
+      "auditStatus": "IMPLEMENTED - manually enriched from coverage gap review"
+    },
+    {
+      "id": "function.curated.settings.rank-terminology",
+      "name": "Rank, Terminology & Labels",
+      "aliases": [
+        "rank",
+        "ranks",
+        "set rank",
+        "set ranks",
+        "rank settings",
+        "rank terminology",
+        "rank labels",
+        "rank order",
+        "rank ordering",
+        "rank equivalency",
+        "rank equivalence",
+        "rank preset",
+        "service ranks"
+      ],
+      "location": {
+        "page": "Settings",
+        "route": null,
+        "component": "components/PlatformConfigurationSettings.tsx",
+        "anchor": "platform-staff-rank-equivalency"
+      },
+      "purpose": "Configures staff and trainee rank terminology, rank equivalency, rank display order and related people labels.",
+      "inputs": [
+        {
+          "fieldName": "Rank Preset",
+          "fieldType": "selector",
+          "permittedValues": [
+            "Configured rank equivalency presets or Custom"
+          ],
+          "defaultValue": "Configured deployment default",
+          "required": false,
+          "validation": "Requires Rank, Terminology & Labels edit permission and password unlock.",
+          "dependencies": [
+            "settings.rankTerminology.edit permission"
+          ],
+          "sourceOfData": "Platform configuration settings"
+        },
+        {
+          "fieldName": "Staff Rank Equivalency Table",
+          "fieldType": "rank equivalency table",
+          "permittedValues": [
+            "Rank names and abbreviations by service"
+          ],
+          "defaultValue": "Configured deployment default",
+          "required": false,
+          "validation": "Ranks should be ordered by equivalent seniority.",
+          "dependencies": [
+            "Configured services"
+          ],
+          "sourceOfData": "Platform configuration settings"
+        },
+        {
+          "fieldName": "Trainee Rank Source",
+          "fieldType": "selector/toggle",
+          "permittedValues": [
+            "Use staff rank order",
+            "Use separate trainee rank order"
+          ],
+          "defaultValue": "Use staff rank order",
+          "required": false,
+          "validation": "Separate trainee rank order is only needed when trainee display order differs from staff.",
+          "dependencies": [
+            "Rank, Terminology & Labels settings"
+          ],
+          "sourceOfData": "Platform configuration settings"
+        }
+      ],
+      "outputs": [
+        "Updates rank labels, rank sorting and staff/trainee display terminology across personnel lists and related displays."
+      ],
+      "permissions": [
+        "settings.view",
+        "settings.rankTerminology.edit"
+      ],
+      "dependencies": [
+        "Settings access and, for edits, Rank, Terminology & Labels edit permission plus password confirmation."
+      ],
+      "failureConditions": [
+        "The section is read-only if the user lacks Rank, Terminology & Labels edit permission. The rank fields remain locked until Edit is pressed and the password is accepted."
+      ],
+      "relatedFunctions": [
+        "function.curated.settings.unit-callsigns",
+        "function.curated.settings.formation-callsigns",
+        "function.curated.people.staff-management",
+        "function.curated.people.trainee-roster"
+      ],
+      "auditStatus": "IMPLEMENTED - manually enriched from coverage gap review"
+    },
+    {
+      "id": "function.curated.settings.staff-rank-equivalency",
+      "name": "Staff Rank Equivalency Table",
+      "aliases": [
+        "staff rank",
+        "staff ranks",
+        "staff rank order",
+        "staff rank ordering",
+        "staff rank settings",
+        "staff rank equivalency",
+        "staff rank equivalence",
+        "set staff rank",
+        "set staff ranks",
+        "configure staff rank",
+        "instructor rank",
+        "instructor ranks"
+      ],
+      "location": {
+        "page": "Settings",
+        "route": null,
+        "component": "components/PlatformConfigurationSettings.tsx",
+        "anchor": "platform-staff-rank-equivalency"
+      },
+      "purpose": "Sets staff rank names, abbreviations and equivalent rank order across the configured services.",
+      "inputs": [],
+      "outputs": [
+        "Updates staff rank display order and staff rank labels."
+      ],
+      "permissions": [
+        "settings.view",
+        "settings.rankTerminology.edit"
+      ],
+      "dependencies": [
+        "Configured services and Rank, Terminology & Labels edit permission for changes."
+      ],
+      "failureConditions": [
+        "Staff rank fields are locked until the section is unlocked with Edit and password confirmation."
+      ],
+      "relatedFunctions": [
+        "function.curated.settings.rank-terminology",
+        "function.curated.people.staff-management"
+      ],
+      "auditStatus": "IMPLEMENTED - manually enriched from coverage gap review"
+    },
+    {
+      "id": "function.curated.settings.trainee-rank-order",
+      "name": "Trainee Rank Order",
+      "aliases": [
+        "trainee rank",
+        "trainee ranks",
+        "trainee rank order",
+        "trainee rank ordering",
+        "trainee rank settings",
+        "trainee rank equivalency",
+        "trainee rank equivalence",
+        "set trainee rank",
+        "set trainee ranks",
+        "configure trainee rank",
+        "student rank",
+        "student ranks"
+      ],
+      "location": {
+        "page": "Settings",
+        "route": null,
+        "component": "components/PlatformConfigurationSettings.tsx",
+        "anchor": "platform-trainee-rank-equivalency"
+      },
+      "purpose": "Sets trainee rank display order when trainees need a different order from staff.",
+      "inputs": [],
+      "outputs": [
+        "Updates trainee rank display order where separate trainee rank ordering is enabled."
+      ],
+      "permissions": [
+        "settings.view",
+        "settings.rankTerminology.edit"
+      ],
+      "dependencies": [
+        "Rank, Terminology & Labels edit permission and the trainee rank source setting."
+      ],
+      "failureConditions": [
+        "Trainee rank order may be hidden or inactive when trainees are configured to use staff rank order."
+      ],
+      "relatedFunctions": [
+        "function.curated.settings.rank-terminology",
+        "function.curated.people.trainee-roster"
       ],
       "auditStatus": "IMPLEMENTED - manually enriched from coverage gap review"
     },
@@ -304746,46 +305286,46 @@
         "line": 187
       },
       {
-        "id": "message.utils-neoguideengine-ts.missing-action-family.720",
+        "id": "message.utils-neoguideengine-ts.missing-action-family.724",
         "text": "missing action ${family}",
         "file": "utils/neoGuideEngine.ts",
-        "line": 720
+        "line": 724
       },
       {
-        "id": "message.utils-neoguideengine-ts.permission-visible.744",
+        "id": "message.utils-neoguideengine-ts.permission-visible.748",
         "text": "permission visible",
         "file": "utils/neoGuideEngine.ts",
-        "line": 744
+        "line": 748
       },
       {
-        "id": "message.utils-neoguideengine-ts.permission-may-be-restricted.744",
+        "id": "message.utils-neoguideengine-ts.permission-may-be-restricted.748",
         "text": "permission may be restricted",
         "file": "utils/neoGuideEngine.ts",
-        "line": 744
+        "line": 748
       },
       {
-        "id": "message.utils-neoguideengine-ts.permission.879",
+        "id": "message.utils-neoguideengine-ts.permission.883",
         "text": "PERMISSION",
         "file": "utils/neoGuideEngine.ts",
-        "line": 879
+        "line": 883
       },
       {
-        "id": "message.utils-neoguideengine-ts.the-relevant-page-permission.880",
+        "id": "message.utils-neoguideengine-ts.the-relevant-page-permission.884",
         "text": "the relevant page permission",
         "file": "utils/neoGuideEngine.ts",
-        "line": 880
+        "line": 884
       },
       {
-        "id": "message.utils-neoguideengine-ts.fn-name-is-controlled-by-permissiontext-if-it-is-disabled-check-the-user-role-and-permission-pro.881",
+        "id": "message.utils-neoguideengine-ts.fn-name-is-controlled-by-permissiontext-if-it-is-disabled-check-the-user-role-and-permission-pro.885",
         "text": "${fn.name} is controlled by ${permissionText}. If it is disabled, check the user role and permission profile for that function.",
         "file": "utils/neoGuideEngine.ts",
-        "line": 881
+        "line": 885
       },
       {
-        "id": "message.utils-neoguideengine-ts.platform-permission-profiles.1045",
+        "id": "message.utils-neoguideengine-ts.platform-permission-profiles.1049",
         "text": "platform-permission-profiles",
         "file": "utils/neoGuideEngine.ts",
-        "line": 1045
+        "line": 1049
       },
       {
         "id": "message.utils-platformconfigservice-ts.staff-profile-unavailable-use.196",
@@ -309044,6 +309584,42 @@
       {
         "from": "concept.schedule",
         "to": "function.curated.settings.unit-callsigns",
+        "relationship": "implemented-by",
+        "source": "derived from audited function index"
+      },
+      {
+        "from": "concept.trainee",
+        "to": "function.curated.settings.rank-terminology",
+        "relationship": "implemented-by",
+        "source": "derived from audited function index"
+      },
+      {
+        "from": "concept.staff",
+        "to": "function.curated.settings.rank-terminology",
+        "relationship": "implemented-by",
+        "source": "derived from audited function index"
+      },
+      {
+        "from": "concept.instructor",
+        "to": "function.curated.settings.staff-rank-equivalency",
+        "relationship": "implemented-by",
+        "source": "derived from audited function index"
+      },
+      {
+        "from": "concept.staff",
+        "to": "function.curated.settings.staff-rank-equivalency",
+        "relationship": "implemented-by",
+        "source": "derived from audited function index"
+      },
+      {
+        "from": "concept.trainee",
+        "to": "function.curated.settings.trainee-rank-order",
+        "relationship": "implemented-by",
+        "source": "derived from audited function index"
+      },
+      {
+        "from": "concept.staff",
+        "to": "function.curated.settings.trainee-rank-order",
         "relationship": "implemented-by",
         "source": "derived from audited function index"
       },
