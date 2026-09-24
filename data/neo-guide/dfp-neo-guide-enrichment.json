@@ -954,6 +954,52 @@
         "Use Sign for the required role and enter the authorised person's PIN.",
         "Repeat until both AUTHO and PIC/captain signatures are recorded."
       ],
+      "workflowOptions": [
+        {
+          "name": "Duty Pilot AUTH window",
+          "aliases": ["duty pilot", "auth window", "go to flight authorisation", "authorisation window"],
+          "summary": "Use Duty Pilot when you want to work through flights requiring authorisation from the duty page.",
+          "page": "SupervisorDashboard",
+          "anchor": "duty-pilot-auth-window",
+          "procedureSteps": [
+            "Open Duty Pilot.",
+            "Find the AUTH window.",
+            "Select the flight that requires authorisation, or click Go to Flight Authorisation.",
+            "Select the AUTHO and PIC/captain as required.",
+            "Use Sign for the required role and enter the authorised person's PIN.",
+            "Repeat until both AUTHO and PIC/captain signatures are recorded."
+          ]
+        },
+        {
+          "name": "DFP tile context menu",
+          "aliases": ["dfp tile", "schedule tile", "flight tile", "right click", "context menu", "from the DFP", "from dfp"],
+          "summary": "Use the DFP tile when you already know which scheduled flight needs authorisation.",
+          "page": "Program Schedule",
+          "anchor": "nav-dfp",
+          "procedureSteps": [
+            "Open DFP.",
+            "Find the scheduled flight tile.",
+            "Open the tile context menu.",
+            "Select Flight Authorisation.",
+            "Select or confirm the AUTHO and PIC/captain.",
+            "Sign the required roles with the authorised person's PIN."
+          ]
+        },
+        {
+          "name": "Mobile app",
+          "aliases": ["mobile", "ios", "iphone", "app", "phone"],
+          "summary": "Use the mobile app when the authorised person is completing the authorisation from the mobile workflow.",
+          "page": null,
+          "anchor": null,
+          "procedureSteps": [
+            "Open the DFP-NEO mobile app.",
+            "Open the flight requiring authorisation.",
+            "Complete the AUTHO and PIC/captain authorisation steps in the app.",
+            "Sync back to DFP-NEO.",
+            "Confirm the completed authorisation appears against the flight in the DFP or Duty Pilot view."
+          ]
+        }
+      ],
       "inputs": [],
       "outputs": ["Updates the flight tile with AUTHO and PIC/captain authorisation signatures, notes and timestamps."],
       "permissions": [],

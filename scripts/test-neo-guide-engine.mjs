@@ -149,13 +149,24 @@ assert.match(autoNotificationAnswer.answer, /Course Commander|Deputy Course Comm
 
 const authoriseFlightAnswer = ask('how can I authorise a flight');
 assert.equal(authoriseFlightAnswer.matches[0]?.functionId, 'function.curated.duty-pilot.flight-authorisation');
-assert.match(authoriseFlightAnswer.answer, /Open Duty Pilot/i, 'Flight authorisation answer should start from Duty Pilot.');
-assert.match(authoriseFlightAnswer.answer, /AUTHO/i, 'Flight authorisation answer should mention AUTHO.');
-assert.match(authoriseFlightAnswer.answer, /PIC|captain/i, 'Flight authorisation answer should mention PIC/captain.');
+assert.match(authoriseFlightAnswer.answer, /multiple ways|Which method/i, 'Broad flight authorisation answer should ask which method the user wants.');
+assert.match(authoriseFlightAnswer.answer, /Duty Pilot AUTH window/i, 'Flight authorisation choices should include Duty Pilot.');
+assert.match(authoriseFlightAnswer.answer, /DFP tile context menu/i, 'Flight authorisation choices should include DFP tile context menu.');
+assert.match(authoriseFlightAnswer.answer, /Mobile app/i, 'Flight authorisation choices should include mobile app.');
 
 const authFlightAnswer = ask('how do I auth a flight');
 assert.equal(authFlightAnswer.matches[0]?.functionId, 'function.curated.duty-pilot.flight-authorisation');
-assert.match(authFlightAnswer.answer, /PIN/i, 'Auth flight shorthand should resolve to flight authorisation steps.');
+assert.match(authFlightAnswer.answer, /Which method/i, 'Auth flight shorthand should ask which method to use.');
+
+const dutyPilotAuthAnswer = ask('how do I authorise a flight from duty pilot');
+assert.equal(dutyPilotAuthAnswer.matches[0]?.functionId, 'function.curated.duty-pilot.flight-authorisation');
+assert.match(dutyPilotAuthAnswer.answer, /Open Duty Pilot/i, 'Duty Pilot flight authorisation answer should start from Duty Pilot.');
+assert.match(dutyPilotAuthAnswer.answer, /PIN/i, 'Duty Pilot flight authorisation answer should include PIN signing.');
+
+const dfpTileAuthAnswer = ask('how do I authorise a flight from the DFP tile');
+assert.equal(dfpTileAuthAnswer.matches[0]?.functionId, 'function.curated.duty-pilot.flight-authorisation');
+assert.match(dfpTileAuthAnswer.answer, /Open DFP/i, 'DFP tile flight authorisation answer should start from DFP.');
+assert.match(dfpTileAuthAnswer.answer, /context menu|Flight Authorisation/i, 'DFP tile answer should mention the context menu authorisation path.');
 
 const primaryInstructorAnswer = ask('what is primary instructor');
 assert.equal(primaryInstructorAnswer.matches[0]?.functionId, 'function.curated.people.instructor-assignment');

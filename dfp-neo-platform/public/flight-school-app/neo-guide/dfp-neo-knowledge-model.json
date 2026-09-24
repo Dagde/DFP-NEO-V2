@@ -1,6 +1,6 @@
 {
   "schemaVersion": "neo-guide-runtime-model.v1",
-  "generatedAt": "2026-09-24T00:05:02.289Z",
+  "generatedAt": "2026-09-24T00:13:54.657Z",
   "source": {
     "repository": "clone-the-repo-dagde-dfp-neo",
     "sourceFileCount": 377,
@@ -29779,7 +29779,7 @@
         "message:components/PlatformConfigurationSettings.tsx:6200",
         "message:components/PlatformConfigurationSettings.tsx:12878",
         "message:server.js:17731",
-        "message:utils/neoGuideEngine.ts:353"
+        "message:utils/neoGuideEngine.ts:373"
       ],
       "count": 10
     },
@@ -32098,7 +32098,7 @@
         "curated:function.curated.settings.turnaround:steps",
         "control:components/AddGroundEventFlyout.tsx:433",
         "control-attribute:components/AddGroundEventFlyout.tsx:433",
-        "message:utils/neoGuideEngine.ts:438"
+        "message:utils/neoGuideEngine.ts:465"
       ],
       "count": 9
     },
@@ -37824,7 +37824,7 @@
         "message:components/InstructorListView.tsx:796",
         "message:dfp-neo-platform/app/api/admin/seed-syllabus/route.ts:338",
         "message:server.js:14167",
-        "message:utils/neoGuideEngine.ts:439"
+        "message:utils/neoGuideEngine.ts:466"
       ],
       "count": 7
     },
@@ -39071,7 +39071,7 @@
         "curated:function.curated.scheduling.aircraft-availability:steps",
         "curated:function.curated.scheduling.add-flight-tile:steps",
         "curated:function.curated.settings.turnaround:steps",
-        "message:utils/neoGuideEngine.ts:438"
+        "message:utils/neoGuideEngine.ts:465"
       ],
       "count": 7
     },
@@ -39303,7 +39303,7 @@
         "control:components/SettingsView.tsx:1141",
         "control:components/SettingsView.tsx:1375",
         "message:components/ScheduleView.tsx:13538",
-        "message:utils/neoGuideEngine.ts:353"
+        "message:utils/neoGuideEngine.ts:373"
       ],
       "count": 7
     },
@@ -44952,7 +44952,7 @@
         "message:components/PlatformConfigurationSettings.tsx:1758",
         "message:components/PlatformConfigurationSettings.tsx:1763",
         "message:components/PlatformConfigurationSettings.tsx:14530",
-        "message:utils/neoGuideEngine.ts:439"
+        "message:utils/neoGuideEngine.ts:466"
       ],
       "count": 6
     },
@@ -48290,7 +48290,7 @@
         "message:components/PlatformConfigurationSettings.tsx:1745",
         "message:components/PlatformConfigurationSettings.tsx:14530",
         "message:server.js:17731",
-        "message:utils/neoGuideEngine.ts:439"
+        "message:utils/neoGuideEngine.ts:466"
       ],
       "count": 5
     },
@@ -65985,7 +65985,7 @@
         "curated:function.curated.duty-pilot.flight-authorisation:steps",
         "message:components/SettingsViewWithMenu.tsx:538",
         "message:dfp-neo-platform/app/api/admin/users/route.ts:41",
-        "message:utils/neoGuideEngine.ts:439"
+        "message:utils/neoGuideEngine.ts:466"
       ],
       "count": 4
     },
@@ -74500,7 +74500,7 @@
       "sources": [
         "message:components/MyDashboard.tsx:2302",
         "message:components/MyDashboard.tsx:2317",
-        "message:utils/neoGuideEngine.ts:439"
+        "message:utils/neoGuideEngine.ts:466"
       ],
       "count": 3
     },
@@ -79862,6 +79862,71 @@
           "Select the AUTHO and PIC/captain as required.",
           "Use Sign for the required role and enter the authorised person's PIN.",
           "Repeat until both AUTHO and PIC/captain signatures are recorded."
+        ],
+        "workflowOptions": [
+          {
+            "name": "Duty Pilot AUTH window",
+            "aliases": [
+              "duty pilot",
+              "auth window",
+              "go to flight authorisation",
+              "authorisation window"
+            ],
+            "summary": "Use Duty Pilot when you want to work through flights requiring authorisation from the duty page.",
+            "page": "SupervisorDashboard",
+            "anchor": "duty-pilot-auth-window",
+            "procedureSteps": [
+              "Open Duty Pilot.",
+              "Find the AUTH window.",
+              "Select the flight that requires authorisation, or click Go to Flight Authorisation.",
+              "Select the AUTHO and PIC/captain as required.",
+              "Use Sign for the required role and enter the authorised person's PIN.",
+              "Repeat until both AUTHO and PIC/captain signatures are recorded."
+            ]
+          },
+          {
+            "name": "DFP tile context menu",
+            "aliases": [
+              "dfp tile",
+              "schedule tile",
+              "flight tile",
+              "right click",
+              "context menu",
+              "from the DFP",
+              "from dfp"
+            ],
+            "summary": "Use the DFP tile when you already know which scheduled flight needs authorisation.",
+            "page": "Program Schedule",
+            "anchor": "nav-dfp",
+            "procedureSteps": [
+              "Open DFP.",
+              "Find the scheduled flight tile.",
+              "Open the tile context menu.",
+              "Select Flight Authorisation.",
+              "Select or confirm the AUTHO and PIC/captain.",
+              "Sign the required roles with the authorised person's PIN."
+            ]
+          },
+          {
+            "name": "Mobile app",
+            "aliases": [
+              "mobile",
+              "ios",
+              "iphone",
+              "app",
+              "phone"
+            ],
+            "summary": "Use the mobile app when the authorised person is completing the authorisation from the mobile workflow.",
+            "page": null,
+            "anchor": null,
+            "procedureSteps": [
+              "Open the DFP-NEO mobile app.",
+              "Open the flight requiring authorisation.",
+              "Complete the AUTHO and PIC/captain authorisation steps in the app.",
+              "Sync back to DFP-NEO.",
+              "Confirm the completed authorisation appears against the flight in the DFP or Duty Pilot view."
+            ]
+          }
         ],
         "inputs": [],
         "outputs": [
@@ -301086,70 +301151,70 @@
         "line": 10
       },
       {
-        "id": "message.utils-neoguideengine-ts.permission.120",
+        "id": "message.utils-neoguideengine-ts.permission.128",
         "text": "PERMISSION",
         "file": "utils/neoGuideEngine.ts",
-        "line": 120
+        "line": 128
       },
       {
-        "id": "message.utils-neoguideengine-ts.disabled.136",
+        "id": "message.utils-neoguideengine-ts.disabled.144",
         "text": "disabled",
         "file": "utils/neoGuideEngine.ts",
-        "line": 136
+        "line": 144
       },
       {
-        "id": "message.utils-neoguideengine-ts.unavailable.136",
+        "id": "message.utils-neoguideengine-ts.unavailable.144",
         "text": "unavailable",
         "file": "utils/neoGuideEngine.ts",
-        "line": 136
+        "line": 144
       },
       {
-        "id": "message.utils-neoguideengine-ts.permission.139",
+        "id": "message.utils-neoguideengine-ts.permission.147",
         "text": "permission",
         "file": "utils/neoGuideEngine.ts",
-        "line": 139
+        "line": 147
       },
       {
-        "id": "message.utils-neoguideengine-ts.disabled.139",
+        "id": "message.utils-neoguideengine-ts.disabled.147",
         "text": "disabled",
         "file": "utils/neoGuideEngine.ts",
-        "line": 139
+        "line": 147
       },
       {
-        "id": "message.utils-neoguideengine-ts.conflict.142",
+        "id": "message.utils-neoguideengine-ts.conflict.150",
         "text": "conflict",
         "file": "utils/neoGuideEngine.ts",
-        "line": 142
+        "line": 150
       },
       {
-        "id": "message.utils-neoguideengine-ts.permission-visible.353",
+        "id": "message.utils-neoguideengine-ts.permission-visible.373",
         "text": "permission visible",
         "file": "utils/neoGuideEngine.ts",
-        "line": 353
+        "line": 373
       },
       {
-        "id": "message.utils-neoguideengine-ts.permission-may-be-restricted.353",
+        "id": "message.utils-neoguideengine-ts.permission-may-be-restricted.373",
         "text": "permission may be restricted",
         "file": "utils/neoGuideEngine.ts",
-        "line": 353
+        "line": 373
       },
       {
-        "id": "message.utils-neoguideengine-ts.permission.437",
+        "id": "message.utils-neoguideengine-ts.permission.464",
         "text": "PERMISSION",
         "file": "utils/neoGuideEngine.ts",
-        "line": 437
+        "line": 464
       },
       {
-        "id": "message.utils-neoguideengine-ts.the-relevant-page-permission.438",
+        "id": "message.utils-neoguideengine-ts.the-relevant-page-permission.465",
         "text": "the relevant page permission",
         "file": "utils/neoGuideEngine.ts",
-        "line": 438
+        "line": 465
       },
       {
-        "id": "message.utils-neoguideengine-ts.fn-name-is-controlled-by-permissiontext-if-it-is-disabled-check-the-user-role-and-permission-pro.439",
+        "id": "message.utils-neoguideengine-ts.fn-name-is-controlled-by-permissiontext-if-it-is-disabled-check-the-user-role-and-permission-pro.466",
         "text": "${fn.name} is controlled by ${permissionText}. If it is disabled, check the user role and permission profile for that function.",
         "file": "utils/neoGuideEngine.ts",
-        "line": 439
+        "line": 466
       },
       {
         "id": "message.utils-platformconfigservice-ts.staff-profile-unavailable-use.196",

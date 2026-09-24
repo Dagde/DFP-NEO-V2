@@ -31,6 +31,14 @@ export interface NeoGuideFunction {
   location?: NeoGuideLocation;
   purpose?: string;
   procedureSteps?: string[];
+  workflowOptions?: Array<{
+    name: string;
+    aliases?: string[];
+    summary?: string;
+    procedureSteps?: string[];
+    anchor?: string | null;
+    page?: string | null;
+  }>;
   inputs?: unknown[];
   outputs?: string[];
   permissions?: string[];
@@ -178,6 +186,18 @@ export function answerNeoGuideQuestion(
     };
   }
 
+  const workflowOption = selectWorkflowOption(best.function, question);
+  if (hasWorkflowOptions(best.function) && !workflowOption && (interpretation.intent === 'HOW_TO' || interpretation.intent === 'NAVIGATE' || interpretation.intent === 'UNKNOWN')) {
+    return {
+      ...interpretation,
+      confidence,
+      answer: buildWorkflowChoiceText(best.function),
+      conversation: nextConversation,
+      needsClarification: true,
+      clarificationQuestion: 'Which method do you want to use?'
+    };
+  }
+
   if (confidence === 'low') {
     return {
       ...interpretation,
@@ -205,8 +225,8 @@ export function answerNeoGuideQuestion(
   return {
     ...interpretation,
     confidence,
-    answer: buildAnswerText(interpretation.intent, best),
-    navigationAction: buildNavigationAction(best),
+    answer: buildAnswerText(interpretation.intent, best, workflowOption),
+    navigationAction: buildNavigationAction(best, workflowOption),
     conversation: nextConversation
   };
 }
@@ -409,7 +429,11 @@ function isPreviousFunctionReference(normalisedQuestion: string): boolean {
   return /\b(that|this|it|he|she|his|her|they|them|same)\b/.test(normalisedQuestion);
 }
 
-function buildAnswerText(intent: NeoGuideIntent, match: NeoGuideMatch): string {
+function buildAnswerText(
+  intent: NeoGuideIntent,
+  match: NeoGuideMatch,
+  workflowOption?: NonNullable<NeoGuideFunction['workflowOptions']>[number]
+): string {
   const fn = match.function;
   const locationPage = fn.location?.page || 'the relevant DFP-NEO page';
   const location = fn.location?.page ? ` Open ${fn.location.page}` : '';
@@ -417,13 +441,16 @@ function buildAnswerText(intent: NeoGuideIntent, match: NeoGuideMatch): string {
   const dependency = first(fn.dependencies);
   const failure = first(fn.failureConditions);
   const rule = first(fn.businessRules);
-  const steps = formatProcedureSteps(fn);
+  const steps = workflowOption
+    ? formatWorkflowOptionSteps(workflowOption)
+    : formatProcedureSteps(fn);
+  const optionPrefix = workflowOption ? `${workflowOption.name}: ${workflowOption.summary || purpose}` : purpose;
 
   if (intent === 'WHY' || intent === 'TROUBLESHOOT') {
     const reasons = [failure, rule, dependency].filter(Boolean);
     return reasons.length > 0
-      ? `${purpose}${steps ? ` ${steps}` : ''} The most relevant checks are: ${reasons.join(' ')}`
-      : `${purpose}${steps ? ` ${steps}` : location ? ` ${location} to review it.` : ''}`;
+      ? `${optionPrefix}${steps ? ` ${steps}` : ''} The most relevant checks are: ${reasons.join(' ')}`
+      : `${optionPrefix}${steps ? ` ${steps}` : location ? ` ${location} to review it.` : ''}`;
   }
 
   if (intent === 'NAVIGATE' || intent === 'FIND') {
@@ -431,7 +458,7 @@ function buildAnswerText(intent: NeoGuideIntent, match: NeoGuideMatch): string {
   }
 
   if (intent === 'HOW_TO') {
-    return `${purpose}${steps ? ` ${steps}` : location ? ` Start from ${fn.location?.page}.` : ''}${rule ? ` ${rule}` : ''}`;
+    return `${optionPrefix}${steps ? ` ${steps}` : location ? ` Start from ${fn.location?.page}.` : ''}${rule ? ` ${rule}` : ''}`;
   }
 
   if (intent === 'PERMISSION') {
@@ -439,7 +466,7 @@ function buildAnswerText(intent: NeoGuideIntent, match: NeoGuideMatch): string {
     return `${fn.name} is controlled by ${permissionText}. If it is disabled, check the user role and permission profile for that function.`;
   }
 
-  return `${purpose}${steps ? ` ${steps}` : location ? ` ${location} for the relevant controls.` : ''}`;
+  return `${optionPrefix}${steps ? ` ${steps}` : location ? ` ${location} for the relevant controls.` : ''}`;
 }
 
 function formatProcedureSteps(fn: NeoGuideFunction): string {
@@ -450,15 +477,50 @@ function formatProcedureSteps(fn: NeoGuideFunction): string {
   return '';
 }
 
-function buildNavigationAction(match: NeoGuideMatch): NeoGuideNavigationAction | undefined {
+function formatWorkflowOptionSteps(option: NonNullable<NeoGuideFunction['workflowOptions']>[number]): string {
+  if (Array.isArray(option.procedureSteps) && option.procedureSteps.length > 0) {
+    return `Steps:\n${option.procedureSteps.map((step, index) => `${index + 1}. ${step}`).join('\n')}`;
+  }
+  if (option.page) return `Start from ${option.page}.`;
+  return '';
+}
+
+function hasWorkflowOptions(fn: NeoGuideFunction): boolean {
+  return Array.isArray(fn.workflowOptions) && fn.workflowOptions.length > 1;
+}
+
+function selectWorkflowOption(
+  fn: NeoGuideFunction,
+  question: string
+): NonNullable<NeoGuideFunction['workflowOptions']>[number] | undefined {
+  if (!hasWorkflowOptions(fn)) return undefined;
+  const normalisedQuestion = normalise(question);
+  return fn.workflowOptions?.find((option) => {
+    const optionTerms = [option.name, ...(option.aliases || [])].map((term) => normalise(term));
+    return optionTerms.some((term) => term && normalisedQuestion.includes(term));
+  });
+}
+
+function buildWorkflowChoiceText(fn: NeoGuideFunction): string {
+  const options = fn.workflowOptions || [];
+  const optionLines = options.map((option, index) => `${index + 1}. ${option.name}${option.summary ? ` - ${option.summary}` : ''}`);
+  return `${fn.purpose || `${fn.name} can be done in more than one way.`}\n\nThere are multiple ways to do this:\n${optionLines.join('\n')}\n\nWhich method do you want to use?`;
+}
+
+function buildNavigationAction(
+  match: NeoGuideMatch,
+  workflowOption?: NonNullable<NeoGuideFunction['workflowOptions']>[number]
+): NeoGuideNavigationAction | undefined {
   const location = match.location;
-  if (!location?.page && !location?.route && !location?.anchor) return undefined;
+  const page = workflowOption?.page || location?.page || null;
+  const anchor = workflowOption?.anchor || location?.anchor || null;
+  if (!page && !location?.route && !anchor) return undefined;
   return {
-    label: location?.anchor ? `Open ${match.name}` : `Open ${location.page || match.name}`,
-    page: location?.page || null,
+    label: anchor ? `Open ${workflowOption?.name || match.name}` : `Open ${page || match.name}`,
+    page,
     route: location?.route || null,
-    anchor: location?.anchor || null,
-    highlightTarget: location?.anchor || null
+    anchor,
+    highlightTarget: anchor
   };
 }
 

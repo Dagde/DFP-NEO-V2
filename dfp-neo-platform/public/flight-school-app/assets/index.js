@@ -1543,6 +1543,17 @@ function answerNeoGuideQuestion(question, model, context = {}) {
       clarificationQuestion: "Try asking it another way, or name the page and action you are using."
     };
   }
+  const workflowOption = selectWorkflowOption(best.function, question);
+  if (hasWorkflowOptions(best.function) && !workflowOption && (interpretation.intent === "HOW_TO" || interpretation.intent === "NAVIGATE" || interpretation.intent === "UNKNOWN")) {
+    return {
+      ...interpretation,
+      confidence,
+      answer: buildWorkflowChoiceText(best.function),
+      conversation: nextConversation,
+      needsClarification: true,
+      clarificationQuestion: "Which method do you want to use?"
+    };
+  }
   if (confidence === "low") {
     return {
       ...interpretation,
@@ -1568,8 +1579,8 @@ function answerNeoGuideQuestion(question, model, context = {}) {
   return {
     ...interpretation,
     confidence,
-    answer: buildAnswerText(interpretation.intent, best),
-    navigationAction: buildNavigationAction(best),
+    answer: buildAnswerText(interpretation.intent, best, workflowOption),
+    navigationAction: buildNavigationAction(best, workflowOption),
     conversation: nextConversation
   };
 }
@@ -1726,7 +1737,7 @@ function isReferentialFollowUp(normalisedQuestion) {
 function isPreviousFunctionReference(normalisedQuestion) {
   return /\b(that|this|it|he|she|his|her|they|them|same)\b/.test(normalisedQuestion);
 }
-function buildAnswerText(intent, match) {
+function buildAnswerText(intent, match, workflowOption) {
   const fn = match.function;
   const locationPage = fn.location?.page || "the relevant DFP-NEO page";
   const location = fn.location?.page ? ` Open ${fn.location.page}` : "";
@@ -1734,22 +1745,23 @@ function buildAnswerText(intent, match) {
   const dependency = first(fn.dependencies);
   const failure = first(fn.failureConditions);
   const rule = first(fn.businessRules);
-  const steps = formatProcedureSteps(fn);
+  const steps = workflowOption ? formatWorkflowOptionSteps(workflowOption) : formatProcedureSteps(fn);
+  const optionPrefix = workflowOption ? `${workflowOption.name}: ${workflowOption.summary || purpose}` : purpose;
   if (intent === "WHY" || intent === "TROUBLESHOOT") {
     const reasons = [failure, rule, dependency].filter(Boolean);
-    return reasons.length > 0 ? `${purpose}${steps ? ` ${steps}` : ""} The most relevant checks are: ${reasons.join(" ")}` : `${purpose}${steps ? ` ${steps}` : location ? ` ${location} to review it.` : ""}`;
+    return reasons.length > 0 ? `${optionPrefix}${steps ? ` ${steps}` : ""} The most relevant checks are: ${reasons.join(" ")}` : `${optionPrefix}${steps ? ` ${steps}` : location ? ` ${location} to review it.` : ""}`;
   }
   if (intent === "NAVIGATE" || intent === "FIND") {
     return steps || `${fn.name} is in ${locationPage}.`;
   }
   if (intent === "HOW_TO") {
-    return `${purpose}${steps ? ` ${steps}` : location ? ` Start from ${fn.location?.page}.` : ""}${rule ? ` ${rule}` : ""}`;
+    return `${optionPrefix}${steps ? ` ${steps}` : location ? ` Start from ${fn.location?.page}.` : ""}${rule ? ` ${rule}` : ""}`;
   }
   if (intent === "PERMISSION") {
     const permissionText = match.permissions.length > 0 ? match.permissions.join(", ") : "the relevant page permission";
     return `${fn.name} is controlled by ${permissionText}. If it is disabled, check the user role and permission profile for that function.`;
   }
-  return `${purpose}${steps ? ` ${steps}` : location ? ` ${location} for the relevant controls.` : ""}`;
+  return `${optionPrefix}${steps ? ` ${steps}` : location ? ` ${location} for the relevant controls.` : ""}`;
 }
 function formatProcedureSteps(fn) {
   if (Array.isArray(fn.procedureSteps) && fn.procedureSteps.length > 0) {
@@ -1759,15 +1771,46 @@ ${fn.procedureSteps.map((step, index) => `${index + 1}. ${step}`).join("\n")}`;
   if (fn.location?.page) return `Start from ${fn.location.page}.`;
   return "";
 }
-function buildNavigationAction(match) {
+function formatWorkflowOptionSteps(option) {
+  if (Array.isArray(option.procedureSteps) && option.procedureSteps.length > 0) {
+    return `Steps:
+${option.procedureSteps.map((step, index) => `${index + 1}. ${step}`).join("\n")}`;
+  }
+  if (option.page) return `Start from ${option.page}.`;
+  return "";
+}
+function hasWorkflowOptions(fn) {
+  return Array.isArray(fn.workflowOptions) && fn.workflowOptions.length > 1;
+}
+function selectWorkflowOption(fn, question) {
+  if (!hasWorkflowOptions(fn)) return void 0;
+  const normalisedQuestion = normalise(question);
+  return fn.workflowOptions?.find((option) => {
+    const optionTerms = [option.name, ...option.aliases || []].map((term) => normalise(term));
+    return optionTerms.some((term) => term && normalisedQuestion.includes(term));
+  });
+}
+function buildWorkflowChoiceText(fn) {
+  const options = fn.workflowOptions || [];
+  const optionLines = options.map((option, index) => `${index + 1}. ${option.name}${option.summary ? ` - ${option.summary}` : ""}`);
+  return `${fn.purpose || `${fn.name} can be done in more than one way.`}
+
+There are multiple ways to do this:
+${optionLines.join("\n")}
+
+Which method do you want to use?`;
+}
+function buildNavigationAction(match, workflowOption) {
   const location = match.location;
-  if (!location?.page && !location?.route && !location?.anchor) return void 0;
+  const page = workflowOption?.page || location?.page || null;
+  const anchor = workflowOption?.anchor || location?.anchor || null;
+  if (!page && !location?.route && !anchor) return void 0;
   return {
-    label: location?.anchor ? `Open ${match.name}` : `Open ${location.page || match.name}`,
-    page: location?.page || null,
+    label: anchor ? `Open ${workflowOption?.name || match.name}` : `Open ${page || match.name}`,
+    page,
     route: location?.route || null,
-    anchor: location?.anchor || null,
-    highlightTarget: location?.anchor || null
+    anchor,
+    highlightTarget: anchor
   };
 }
 function tokenize(value) {
