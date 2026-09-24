@@ -154,6 +154,33 @@
       "auditStatus": "IMPLEMENTED - manually enriched from current implementation review"
     },
     {
+      "id": "function.curated.people.delete-staff",
+      "name": "Delete staff member",
+      "aliases": ["delete staff", "delete instructor", "remove staff member", "remove instructor", "delete personnel", "remove personnel", "permanently delete staff", "staff database delete"],
+      "location": {
+        "page": "Staff",
+        "route": null,
+        "component": "components/StaffDatabaseTable.tsx",
+        "anchor": "nav-staff"
+      },
+      "purpose": "Deletes a staff/personnel record from the staff database.",
+      "procedureSteps": [
+        "Open Staff.",
+        "Open the staff database or staff management table.",
+        "Find the staff member.",
+        "Use Delete on that staff row.",
+        "Confirm the delete prompt."
+      ],
+      "inputs": [],
+      "outputs": ["Calls the personnel delete endpoint and removes the staff record from the database table."],
+      "permissions": ["staff.view"],
+      "dependencies": ["The logged-in user must have admin-level access to the staff database controls."],
+      "businessRules": ["Deleting a staff member is different from making them unavailable. Use unavailability when the person is temporarily unable to fly; use delete only when the staff/personnel record should be removed."],
+      "failureConditions": ["Delete can fail if the user lacks permission, the personnel record no longer exists, or the backend refuses the personnel delete request."],
+      "relatedFunctions": ["function.curated.people.staff-unavailability", "function.curated.people.instructor-assignment"],
+      "auditStatus": "IMPLEMENTED - manually enriched from current implementation review"
+    },
+    {
       "id": "function.curated.people.trainee-roster",
       "name": "Trainee roster",
       "aliases": ["trainee list", "student roster", "add trainee", "upload trainees", "course cards"],

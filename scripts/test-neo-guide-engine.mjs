@@ -114,6 +114,24 @@ assert.equal(
 assert.match(staffUnavailabilityFollowUp.answer, /Open Staff/i, 'Staff unavailability answer should include Staff page steps.');
 assert.match(staffUnavailabilityFollowUp.answer, /Add Unavailability/i, 'Staff unavailability answer should include Add Unavailability steps.');
 
+const deleteStaffAnswer = ask('how do I delete a staff member');
+assert.equal(
+  deleteStaffAnswer.matches[0]?.functionId,
+  'function.curated.people.delete-staff',
+  'Delete staff wording should resolve to staff deletion, not staff unavailability.'
+);
+assert.match(deleteStaffAnswer.answer, /Delete/i, 'Delete staff answer should include the delete action.');
+assert.match(deleteStaffAnswer.answer, /different from making them unavailable/i, 'Delete staff answer should distinguish deletion from unavailability.');
+assert.doesNotMatch(deleteStaffAnswer.answer, /Add Unavailability/i, 'Delete staff answer must not give unavailability steps.');
+
+const staffUnavailableAnswer = ask('how do I make a staff member unavailable');
+assert.equal(
+  staffUnavailableAnswer.matches[0]?.functionId,
+  'function.curated.people.staff-unavailability',
+  'Staff unavailable wording should still resolve to staff unavailability.'
+);
+assert.match(staffUnavailableAnswer.answer, /Add Unavailability/i, 'Staff unavailable answer should keep the unavailability workflow.');
+
 const buildAnswer = ask('how do I build the schedule automatically');
 assert.match(buildAnswer.answer, /Click NEO Build/i, 'NEO Build answer should include the NEO Build action step.');
 assert.match(buildAnswer.answer, /Validation Check/i, 'NEO Build answer should mention validating before publishing.');

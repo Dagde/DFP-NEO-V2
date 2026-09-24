@@ -1518,6 +1518,14 @@ const INTENT_HINTS = {
   SETTINGS: ["setting", "settings", "configure", "configuration"],
   UNKNOWN: []
 };
+const ACTION_FAMILIES = [
+  { name: "delete", terms: ["delete", "deleted", "deleting", "remove", "removed", "removing", "permanent", "permanently"] },
+  { name: "archive", terms: ["archive", "archived", "retire", "retired", "restore", "restored"] },
+  { name: "unavailable", terms: ["unavailable", "unavailability", "leave", "away", "pause", "paused", "blocked"] },
+  { name: "add", terms: ["add", "create", "new", "insert", "upload", "import"] },
+  { name: "edit", terms: ["edit", "change", "update", "modify", "configure", "set"] }
+];
+const LOW_SIGNAL_MATCH_TOKENS = /* @__PURE__ */ new Set(["action", "button", "control", "field", "page", "panel", "section", "setting", "settings", "override"]);
 function answerNeoGuideQuestion(question, model, context = {}) {
   const pendingWorkflowAnswer = answerPendingWorkflowChoice(question, model, context);
   if (pendingWorkflowAnswer) return pendingWorkflowAnswer;
@@ -1700,7 +1708,10 @@ function scoreFunction(fn, tokens, rawTokens, normalisedQuestion, intent, contex
   ].filter(Boolean).map(String);
   const haystack = normalise(haystackParts.join(" "));
   const haystackTokens = new Set(tokenize(haystack));
+  const requestedActionFamilies = detectActionFamilies(rawTokens);
   const reasons = [];
+  const meaningfulMatchedTokens = /* @__PURE__ */ new Set();
+  let exactPhraseMatched = false;
   let score = 0;
   const exactPhrases = [fn.name, ...fn.aliases || []].map((value) => normalise(String(value || ""))).filter((value) => value.length >= 4).sort((left, right) => right.length - left.length);
   const questionTokens = new Set(tokenize(normalisedQuestion));
@@ -1710,11 +1721,13 @@ function scoreFunction(fn, tokens, rawTokens, normalisedQuestion, intent, contex
     if (normalisedQuestion.includes(phrase)) {
       score += (phrase === normalise(fn.name) ? 8 : 6) + specificityBonus;
       reasons.push(`phrase ${phrase}`);
+      exactPhraseMatched = true;
       break;
     }
     if (phraseTokens.length > 1 && phraseTokens.every((token) => questionTokens.has(token))) {
       score += (phrase === normalise(fn.name) ? 7 : 5) + specificityBonus;
       reasons.push(`phrase tokens ${phrase}`);
+      exactPhraseMatched = true;
       break;
     }
   }
@@ -1723,15 +1736,17 @@ function scoreFunction(fn, tokens, rawTokens, normalisedQuestion, intent, contex
     if (haystackTokens.has(token)) {
       score += 4;
       reasons.push(`matched ${token}`);
+      if (!LOW_SIGNAL_MATCH_TOKENS.has(token)) meaningfulMatchedTokens.add(token);
       continue;
     }
     if (token.length >= 5 && haystack.includes(token)) {
       score += 2;
       reasons.push(`partial ${token}`);
+      if (!LOW_SIGNAL_MATCH_TOKENS.has(token)) meaningfulMatchedTokens.add(token);
       continue;
     }
     if (token.length >= 5 && hasNearToken(token, haystackTokens)) {
-      score += 1.5;
+      score += 0.5;
       reasons.push(`near ${token}`);
     }
   }
@@ -1739,6 +1754,16 @@ function scoreFunction(fn, tokens, rawTokens, normalisedQuestion, intent, contex
   if (intentHints.some((hint) => haystack.includes(hint))) {
     score += 3;
     reasons.push(`intent ${intent}`);
+  }
+  for (const family of requestedActionFamilies) {
+    const familyTerms = ACTION_FAMILIES.find((candidate) => candidate.name === family)?.terms || [];
+    if (familyTerms.some((term) => haystackTokens.has(term) || haystack.includes(term))) {
+      score += 8;
+      reasons.push(`action ${family}`);
+    } else {
+      score -= 7;
+      reasons.push(`missing action ${family}`);
+    }
   }
   if (context.conversation?.lastFunctionId && fn.id === context.conversation.lastFunctionId && isPreviousFunctionReference(normalisedQuestion)) {
     score += 12;
@@ -1755,8 +1780,15 @@ function scoreFunction(fn, tokens, rawTokens, normalisedQuestion, intent, contex
     reasons.push(hasAnyPermission ? "permission visible" : "permission may be restricted");
   }
   if (String(fn.id || "").startsWith("function.curated.") || fn.auditStatus?.includes("manually enriched") || fn.auditStatus?.includes("manually")) {
-    score += 6;
+    score += 14;
     reasons.push("curated");
+  } else if (/manual enrichment|requires manual|not evident/i.test(String(fn.auditStatus || fn.purpose || ""))) {
+    score -= 8;
+    reasons.push("thin generated record");
+  }
+  if (!exactPhraseMatched && meaningfulMatchedTokens.size === 0 && requestedActionFamilies.length === 0) {
+    score = Math.min(score, 8);
+    reasons.push("weak subject match");
   }
   return {
     functionId: fn.id,
@@ -1767,6 +1799,10 @@ function scoreFunction(fn, tokens, rawTokens, normalisedQuestion, intent, contex
     reasons: Array.from(new Set(reasons)).slice(0, 8),
     function: fn
   };
+}
+function detectActionFamilies(tokens) {
+  const tokenSet = new Set(tokens);
+  return ACTION_FAMILIES.filter((family) => family.terms.some((term) => tokenSet.has(term))).map((family) => family.name);
 }
 function buildNextConversationState(best, intent, entities, previous) {
   if (!best) return previous || {};
