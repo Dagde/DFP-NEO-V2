@@ -1006,12 +1006,14 @@ const downloadNeoAssistDragDiagnosticReport = () => {
                 stage: 'report-empty',
                 at: new Date().toISOString(),
                 details: {
-                    reason: 'No NEO Assist tile drag events were captured before this report was downloaded.',
-                    nextStep: 'Open NEO Assist, drag the tile preview onto the DFP timeline, then download the report again.',
+                    reason: 'No NEO Assist pointer or drag activity was captured before this report was downloaded.',
+                    nextStep: 'Open NEO Assist, perform the laggy drag action, then download the report again before refreshing the page.',
                 },
             }];
-        } else if (!report.entries.some((entry: NeoAssistDragDiagnosticEntry) => String(entry.stage || '').includes('pointer') || String(entry.stage || '').includes('tile-preview'))) {
-            report.diagnosticNote = 'No NEO Assist tile drag was captured. If you dragged before reopening the panel, install commit 83a49446 or later plus the preserve fix; if this persists, the tested control is not the instrumented NEO Assist tile preview.';
+        } else if (!report.entries.some((entry: NeoAssistDragDiagnosticEntry) => ['pointer-down', 'mini-timeline-drag-start'].includes(String(entry.stage || '')))) {
+            report.diagnosticNote = 'NEO Assist pointer activity was captured, but no recognised drag start was recorded. The tested control is not using the instrumented drag path yet.';
+        } else if (!report.entries.some((entry: NeoAssistDragDiagnosticEntry) => ['pointer-up', 'mini-timeline-drag-commit', 'mini-timeline-drag-commit-slow'].includes(String(entry.stage || '')))) {
+            report.diagnosticNote = 'A NEO Assist drag started, but no drag completion was captured. The pointer may be cancelling, leaving the panel, or being handled by another layer.';
         }
         report.downloadedAt = new Date().toISOString();
         const blob = new Blob([JSON.stringify(report, null, 2)], { type: 'application/json' });
@@ -5095,6 +5097,8 @@ const DfpSidePanelTimeline: React.FC<{
                             <button
                                 key={marker.key}
                                 type="button"
+                                data-neo-assist-control={`mini-timeline-${marker.key}`}
+                                aria-label={`Drag ${marker.label}`}
                                 onPointerDown={(event) => startDrag(event, marker.target, marker.label, marker.time)}
                                 className="absolute inset-y-0 z-30 flex w-3 -translate-x-1/2 cursor-ew-resize touch-none items-center justify-center focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-200"
                                 style={{ left: `${getLeft(displayTime)}%` }}
@@ -7634,8 +7638,50 @@ const DfpSidePanelTimeline: React.FC<{
         );
     };
 
+    const describeNeoAssistPointerTarget = (target: EventTarget | null): Record<string, unknown> => {
+        const element = target instanceof HTMLElement ? target : null;
+        if (!element) return {};
+        const interactive = element.closest('button, input, select, textarea, [role="button"], [data-neo-assist-control]');
+        const labelled = interactive instanceof HTMLElement ? interactive : element;
+        const rawText = (labelled.textContent || '').replace(/\s+/g, ' ').trim();
+        return {
+            tag: labelled.tagName.toLowerCase(),
+            control: labelled.getAttribute('data-neo-assist-control') || undefined,
+            ariaLabel: labelled.getAttribute('aria-label') || undefined,
+            title: labelled.getAttribute('title') || undefined,
+            text: rawText ? rawText.slice(0, 90) : undefined,
+            className: typeof labelled.className === 'string' ? labelled.className.slice(0, 160) : undefined,
+        };
+    };
+
+    const recordNeoAssistPanelPointer = (
+        stage: 'panel-pointer-down-capture' | 'panel-pointer-up-capture' | 'panel-pointer-cancel-capture',
+        event: React.PointerEvent<HTMLDivElement>,
+    ) => {
+        recordNeoAssistDragDiagnostic({
+            stage,
+            details: {
+                activeAssistPage,
+                activeAssistSection,
+                selectedResourceKind,
+                airCombatAssistMode,
+                pointerType: event.pointerType,
+                button: event.button,
+                clientX: event.clientX,
+                clientY: event.clientY,
+                target: describeNeoAssistPointerTarget(event.target),
+            },
+        });
+    };
+
     return (
-        <div className="neo-assist-light-shell min-h-full border-b border-slate-300 bg-slate-100 p-4 text-slate-900">
+        <div
+            className="neo-assist-light-shell min-h-full border-b border-slate-300 bg-slate-100 p-4 text-slate-900"
+            data-neo-assist-control="panel"
+            onPointerDownCapture={(event) => recordNeoAssistPanelPointer('panel-pointer-down-capture', event)}
+            onPointerUpCapture={(event) => recordNeoAssistPanelPointer('panel-pointer-up-capture', event)}
+            onPointerCancelCapture={(event) => recordNeoAssistPanelPointer('panel-pointer-cancel-capture', event)}
+        >
             <style>{`
                 .neo-assist-light-shell {
                     color: #0f172a;
@@ -8033,6 +8079,7 @@ const DfpSidePanelTimeline: React.FC<{
                                 {renderAssistDfpOverview()}
                                 <div className="flex justify-center rounded-lg border border-slate-300 bg-white p-3 shadow-sm">
                                     <div
+                                        data-neo-assist-control="manual-tile-preview"
                                         onPointerDownCapture={event => recordNeoAssistDragDiagnostic({
                                             stage: 'tile-preview-pointer-down-capture',
                                             details: {
