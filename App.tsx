@@ -9237,6 +9237,7 @@ interface DfpConfig {
     enabled?: boolean;
   }>;
   excludedCourses: string[];
+  isTraineePausedForCourseLmp?: (trainee: Trainee) => boolean;
   // ── DB-backed ELCE map (optional) ──────────────────────────────────────
   // Pre-fetched from /api/event-completions/elce before the build runs.
   // Maps traineeFullName → { eventCode, eventDate, dcoResult, isCountedAsElce }
@@ -10136,6 +10137,11 @@ async function generateDfpInternal(
     const buildAircraftCrewComposition = normaliseAircraftCrewComposition(config.aircraftCrewComposition || { crewCount: 1, seats: [{ id: 'seat-1', role: 'Pilot', eligibleRoles: ['Pilot'] }] });
     const getBuildAircraftCrewCompositionForEvent = (event?: { type?: string; resourceId?: string } | null): AircraftCrewComposition => (
         getAircraftCrewCompositionForEvent(buildAircraftCrewComposition, event)
+    );
+    const isBuildTraineePausedForCourseLmp = (trainee: Trainee): boolean => (
+        typeof config.isTraineePausedForCourseLmp === 'function'
+            ? config.isTraineePausedForCourseLmp(trainee)
+            : false
     );
     const markBuildTiming = (name: string, details?: Record<string, any>) => markNeoBuildTiming(timingReport, name, details);
     const buildProgressStartedAt = performance.now();
@@ -15358,15 +15364,15 @@ async function generateDfpInternal(
 
     const activeTrainees = trainees.filter(t =>
         !t.isPaused &&
-        !isTraineePausedForCourseLmp(t) &&
+        !isBuildTraineePausedForCourseLmp(t) &&
         !(config.excludedCourses || []).includes(t.course) &&
         !isPersonStaticallyUnavailable(t, flyingStartTime, ceaseNightFlying, buildDate, 'flight')
     );
     neoBuildDiag.activeTrainees.total = activeTrainees.length;
-    neoBuildDiag.activeTrainees.excludedCourses = trainees.filter(t => !t.isPaused && !isTraineePausedForCourseLmp(t) && (config.excludedCourses || []).includes(t.course)).length;
+    neoBuildDiag.activeTrainees.excludedCourses = trainees.filter(t => !t.isPaused && !isBuildTraineePausedForCourseLmp(t) && (config.excludedCourses || []).includes(t.course)).length;
     neoBuildDiag.activeTrainees.excludedStaticUnavailable = trainees.filter(t =>
         !t.isPaused &&
-        !isTraineePausedForCourseLmp(t) &&
+        !isBuildTraineePausedForCourseLmp(t) &&
         !(config.excludedCourses || []).includes(t.course) &&
         isPersonStaticallyUnavailable(t, flyingStartTime, ceaseNightFlying, buildDate, 'flight')
     ).length;
@@ -46011,6 +46017,7 @@ const App: React.FC = () => {
             staffSharingUnits: organisationSettings.staffSharingUnits,
             staffSharingGroups: organisationSettings.staffSharingGroups,
             excludedCourses: excludedCourses,
+            isTraineePausedForCourseLmp,
             dbElceMap,  // DB-backed ELCE map (undefined = fall back to DFP-scan)
             timingReport,
         };

@@ -118800,6 +118800,7 @@ async function generateDfpInternal(config, setProgress, publishedSchedules) {
   const buildCrewPositionTerminology = normaliseCrewPositionTerminology(config.crewPositionTerminology || null);
   const buildAircraftCrewComposition = normaliseAircraftCrewComposition(config.aircraftCrewComposition || { crewCount: 1, seats: [{ id: "seat-1", role: "Pilot", eligibleRoles: ["Pilot"] }] });
   const getBuildAircraftCrewCompositionForEvent = (event) => getAircraftCrewCompositionForEvent(buildAircraftCrewComposition, event);
+  const isBuildTraineePausedForCourseLmp = (trainee) => typeof config.isTraineePausedForCourseLmp === "function" ? config.isTraineePausedForCourseLmp(trainee) : false;
   const markBuildTiming = (name, details) => markNeoBuildTiming(timingReport, name, details);
   const buildProgressStartedAt = performance.now();
   const buildCalculationStats = {
@@ -123159,12 +123160,12 @@ async function generateDfpInternal(config, setProgress, publishedSchedules) {
   buildDebugLog("DEBUG ===== RESOURCE ASSIGNMENT COMPLETE =====");
   await recordProgress({ message: 'Compiling "Next Event" lists...', percentage: 10 });
   const activeTrainees = trainees.filter(
-    (t) => !t.isPaused && !isTraineePausedForCourseLmp(t) && !(config.excludedCourses || []).includes(t.course) && !isPersonStaticallyUnavailable(t, flyingStartTime, ceaseNightFlying, buildDate, "flight")
+    (t) => !t.isPaused && !isBuildTraineePausedForCourseLmp(t) && !(config.excludedCourses || []).includes(t.course) && !isPersonStaticallyUnavailable(t, flyingStartTime, ceaseNightFlying, buildDate, "flight")
   );
   neoBuildDiag.activeTrainees.total = activeTrainees.length;
-  neoBuildDiag.activeTrainees.excludedCourses = trainees.filter((t) => !t.isPaused && !isTraineePausedForCourseLmp(t) && (config.excludedCourses || []).includes(t.course)).length;
+  neoBuildDiag.activeTrainees.excludedCourses = trainees.filter((t) => !t.isPaused && !isBuildTraineePausedForCourseLmp(t) && (config.excludedCourses || []).includes(t.course)).length;
   neoBuildDiag.activeTrainees.excludedStaticUnavailable = trainees.filter(
-    (t) => !t.isPaused && !isTraineePausedForCourseLmp(t) && !(config.excludedCourses || []).includes(t.course) && isPersonStaticallyUnavailable(t, flyingStartTime, ceaseNightFlying, buildDate, "flight")
+    (t) => !t.isPaused && !isBuildTraineePausedForCourseLmp(t) && !(config.excludedCourses || []).includes(t.course) && isPersonStaticallyUnavailable(t, flyingStartTime, ceaseNightFlying, buildDate, "flight")
   ).length;
   const countTraineesByCourse = (list) => list.reduce((counts, trainee) => {
     const courseName = String(trainee.course || "Unassigned").trim() || "Unassigned";
@@ -143346,7 +143347,7 @@ ${error instanceof Error ? error.message : String(error)}`,
     return String(matchingCourse?.lmpType || "").trim();
   }
   const getCourseLmpPauseKey2 = (courseName, lmpType) => `${normaliseCourseName(courseName).toUpperCase()}::${String(lmpType || "").trim().toUpperCase()}`;
-  const isTraineePausedForCourseLmp2 = reactExports.useCallback((trainee, lmpTypeOverride) => {
+  const isTraineePausedForCourseLmp = reactExports.useCallback((trainee, lmpTypeOverride) => {
     const courseName = normaliseCourseName(trainee.course);
     const lmpType = String(lmpTypeOverride || getConfiguredLmpTypeForTrainee(trainee) || "").trim();
     if (!courseName || !lmpType) return false;
@@ -147250,7 +147251,7 @@ The proposed event was not scheduled. Re-open the event and choose Accept Confli
     }
     const finalPreservedEvents = resolvedPicCrewPriorityEvents;
     logNeoBuildUiDebug(`DEBUG Final preserved events count: ${finalPreservedEvents.length}`);
-    const activeTrainees = allTraineesData.filter((t) => !t.isPaused && !isTraineePausedForCourseLmp2(t) && !excludedCourses.includes(t.course) && !isPersonStaticallyUnavailable(t, flyingStartTime, ceaseNightFlying, buildDfpDate, "flight"));
+    const activeTrainees = allTraineesData.filter((t) => !t.isPaused && !isTraineePausedForCourseLmp(t) && !excludedCourses.includes(t.course) && !isPersonStaticallyUnavailable(t, flyingStartTime, ceaseNightFlying, buildDfpDate, "flight"));
     let bnfTraineeCount = 0;
     activeTrainees.forEach((trainee) => {
       const { next } = computeNextEventsForTrainee(trainee, traineeLMPs, scores, syllabusDetails, buildPublishedSchedulesForRun, buildDfpDate);
@@ -147507,7 +147508,7 @@ The proposed event was not scheduled. Re-open the event and choose Accept Confli
     });
     let dbElceMap;
     try {
-      const activeTraineeNames = traineesForBuildScope.filter((t) => !t.isPaused && !isTraineePausedForCourseLmp2(t)).map((t) => t.fullName).filter(Boolean);
+      const activeTraineeNames = traineesForBuildScope.filter((t) => !t.isPaused && !isTraineePausedForCourseLmp(t)).map((t) => t.fullName).filter(Boolean);
       if (activeTraineeNames.length > 0) {
         const apiBase = getAppApiBase();
         markNeoBuildTiming(timingReport, "elce:request-start", { activeTrainees: activeTraineeNames.length });
@@ -148286,6 +148287,7 @@ The proposed event was not scheduled. Re-open the event and choose Accept Confli
       staffSharingUnits: organisationSettings.staffSharingUnits,
       staffSharingGroups: organisationSettings.staffSharingGroups,
       excludedCourses,
+      isTraineePausedForCourseLmp,
       dbElceMap,
       // DB-backed ELCE map (undefined = fall back to DFP-scan)
       timingReport
