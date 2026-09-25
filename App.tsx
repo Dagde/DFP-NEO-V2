@@ -1383,6 +1383,40 @@ const DfpSidePanelTimeline: React.FC<{
         if (wizardRepeatRef.current !== null) window.clearInterval(wizardRepeatRef.current);
     }, []);
 
+    const normaliseAssistFormationCallsignBase = useCallback((callsign?: string): string => (
+        String(callsign || '').trim().toUpperCase().replace(/[^A-Z0-9]/g, '').replace(/\d+$/g, '')
+    ), []);
+
+    const getAssistAutoCallsignForStaff = useCallback((staff?: Instructor | null): string => {
+        const unitCodes = String(staff?.unit || '')
+            .split(/[+\/,]/)
+            .map(unit => unit.trim().toUpperCase())
+            .filter(Boolean);
+        if (unitCodes.length === 0) return '';
+
+        const staffCallsignBases = [
+            normaliseAssistFormationCallsignBase(staff?.callsign),
+            normaliseAssistFormationCallsignBase(staff?.secondaryCallsign),
+        ].filter(Boolean);
+
+        for (const unitCode of unitCodes) {
+            const entries = getUnitCallsignEntries(unitCallsignSettings, unitCode)
+                .map(entry => normaliseAssistFormationCallsignBase(entry.callsign))
+                .filter(Boolean);
+            if (entries.length === 0) continue;
+
+            const configuredBases = new Set(entries);
+            const matchingStaffCallsign = staffCallsignBases.find(callsign => configuredBases.has(callsign));
+            if (matchingStaffCallsign) return matchingStaffCallsign;
+
+            const defaultCallsign = normaliseAssistFormationCallsignBase(getDefaultUnitCallsign(unitCallsignSettings, unitCode));
+            if (defaultCallsign) return defaultCallsign;
+            return entries[0] || '';
+        }
+
+        return '';
+    }, [normaliseAssistFormationCallsignBase, unitCallsignSettings]);
+
     useEffect(() => {
         const syncTaskingRequests = () => {
             const storedRequests = loadStoredAssistTaskRequests();
@@ -1403,15 +1437,23 @@ const DfpSidePanelTimeline: React.FC<{
     ), [instructors, selectedCrewName]);
     useEffect(() => {
         if (isFixedCrewNeoAssist) return;
-        const nextCallsign = String(selectedCrewRecord?.callsign || '').trim().toUpperCase();
-        if (!nextCallsign) return;
+        const nextCallsign = getAssistAutoCallsignForStaff(selectedCrewRecord);
+        if (!nextCallsign) {
+            setAssistCallsign(current => {
+                const currentValue = String(current || '').trim();
+                if (!currentValue || currentValue !== lastAutoAssistCallsignRef.current) return current;
+                lastAutoAssistCallsignRef.current = '';
+                return '';
+            });
+            return;
+        }
         setAssistCallsign(current => {
             const currentValue = String(current || '').trim();
             if (currentValue && currentValue !== lastAutoAssistCallsignRef.current) return current;
             lastAutoAssistCallsignRef.current = nextCallsign;
             return nextCallsign;
         });
-    }, [isFixedCrewNeoAssist, selectedCrewRecord?.callsign]);
+    }, [getAssistAutoCallsignForStaff, isFixedCrewNeoAssist, selectedCrewRecord]);
 
     const selectedCrewAssignments = useMemo(() => (
         selectedCrewRecord
@@ -1609,7 +1651,7 @@ const DfpSidePanelTimeline: React.FC<{
             const next = Array.from({ length: nextLength }, (_, positionIndex) => {
                 const picIndex = hasSecondSeat ? positionIndex * 2 : positionIndex;
                 const picName = selectedCrewNames[picIndex] || '';
-                const autoCallsign = String(staffByAssistName.get(picName)?.callsign || '').trim().toUpperCase();
+                const autoCallsign = getAssistAutoCallsignForStaff(staffByAssistName.get(picName));
                 const current = String(prev[positionIndex] || '').trim();
                 const previousAuto = lastAutoAssistManualCallsignsRef.current[positionIndex] || '';
                 if (autoCallsign && (!current || current === previousAuto)) {
@@ -1617,13 +1659,18 @@ const DfpSidePanelTimeline: React.FC<{
                     lastAutoAssistManualCallsignsRef.current[positionIndex] = autoCallsign;
                     return autoCallsign;
                 }
+                if (!autoCallsign && previousAuto && current === previousAuto) {
+                    changed = true;
+                    lastAutoAssistManualCallsignsRef.current[positionIndex] = '';
+                    return '';
+                }
                 return current;
             });
             lastAutoAssistManualCallsignsRef.current = lastAutoAssistManualCallsignsRef.current.slice(0, nextLength);
             if (!changed && next.join('|') === prev.join('|')) return prev;
             return next;
         });
-    }, [activeAssistSection, assistFormationSize, assistManualFlightType, effectiveAssistManualEventSource, isFixedCrewNeoAssist, isSingleSeatFlightResource, selectedCrewNames, selectedResourceKind, staffByAssistName]);
+    }, [activeAssistSection, assistFormationSize, assistManualFlightType, effectiveAssistManualEventSource, getAssistAutoCallsignForStaff, isFixedCrewNeoAssist, isSingleSeatFlightResource, selectedCrewNames, selectedResourceKind, staffByAssistName]);
     const getAssistTraineeName = useCallback((person: any): string => (
         String(person?.name || person?.fullName || '').trim()
     ), []);
@@ -1894,9 +1941,6 @@ const DfpSidePanelTimeline: React.FC<{
             return next;
         });
     }, [activeAssistSection, assistFormationSize, canSelectFormationCrew, isFixedCrewNeoAssist, manualAssistCrewSlotCount, selectedCrewName, selectedResourceKind]);
-    const normaliseAssistFormationCallsignBase = (callsign?: string): string => (
-        String(callsign || '').trim().toUpperCase().replace(/[^A-Z0-9]/g, '').replace(/\d+$/g, '')
-    );
     const getConfiguredAssistFormationCallsignBase = (): string => (
         callsignOptions.map(normaliseAssistFormationCallsignBase).find(Boolean) || ''
     );
