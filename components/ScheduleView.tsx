@@ -8522,7 +8522,7 @@ const InitialSetupWizard: React.FC<{
                         <div className="grid min-w-0 gap-2 md:grid-cols-2 xl:grid-cols-3 xl:items-end">
                             {wizardField('Event name', row.name || '', (value) => updateRow(index, 'name', value), undefined, 'Annual Instrument Check')}
                             {wizardField('Short title', row.shortTitle || '', (value) => updateRow(index, 'shortTitle', value.toUpperCase()), undefined, 'INST')}
-                            {wizardField('Resource type', row.resourceType || 'Flight', (value) => updateRow(index, 'resourceType', value), ['Flight', 'FTD', 'CPT', 'Ground'])}
+                            {wizardField('Resource type', row.resourceType === 'FTD' ? 'Simulator' : row.resourceType || 'Flight', (value) => updateRow(index, 'resourceType', value === 'Simulator' ? 'FTD' : value), ['Flight', 'Simulator', 'CPT', 'Ground'])}
                             {wizardField('Duration', row.duration || '90', (value) => updateRow(index, 'duration', value), undefined, '90')}
                             {wizardField('Pre-flight', row.preFlight || '90', (value) => updateRow(index, 'preFlight', value), undefined, '90')}
                             {wizardField('Post-flight', row.postFlight || '60', (value) => updateRow(index, 'postFlight', value), undefined, '60')}

@@ -1,6 +1,6 @@
 # NEO Guide Source Audit
 
-Generated: 2026-09-24T15:17:06.226Z
+Generated: 2026-09-25T03:59:27.558Z
 
 ## Status
 
@@ -10,7 +10,7 @@ This is the Phase 2 source-derived knowledge model foundation for NEO Guide, wit
 
 - Source files inspected: 377
 - Components found: 559
-- Controls found: 3419
+- Controls found: 3426
 - Stable guide targets already present: 56
 - Page/API routes found: 80
 - Express endpoints found: 198
@@ -21,9 +21,9 @@ This is the Phase 2 source-derived knowledge model foundation for NEO Guide, wit
 - Curated workflow functions: 72
 - Curated concept records: 5
 - Curated synonym groups: 7
-- Function records generated: 3806
+- Function records generated: 3813
 - Concept graph nodes: 59
-- Concept graph edges: 1480
+- Concept graph edges: 1484
 
 ## Outputs
 

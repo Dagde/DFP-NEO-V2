@@ -12,7 +12,7 @@ export interface ResourceDisplayNames {
 
 export const DEFAULT_RESOURCE_DISPLAY_NAMES: ResourceDisplayNames = {
   aircraft: 'Aircraft',
-  ftd: 'FTD',
+  ftd: 'Simulator',
   cpt: 'CPT',
   dutySupervisor: 'Duty Supervisor',
   dutySupervisorShort: 'Duty Sup',
@@ -24,6 +24,11 @@ const cleanLabel = (value: unknown, fallback: string): string => {
   if (typeof value !== 'string') return fallback;
   const trimmed = value.trim();
   return trimmed || fallback;
+};
+
+const cleanSimulatorLabel = (value: unknown): string => {
+  const label = cleanLabel(value, DEFAULT_RESOURCE_DISPLAY_NAMES.ftd);
+  return label.toUpperCase() === 'FTD' ? DEFAULT_RESOURCE_DISPLAY_NAMES.ftd : label;
 };
 
 const isNonAircraftResourceId = (resourceId: string): boolean => (
@@ -90,7 +95,7 @@ export const getResourceDisplayNames = (resourcePool?: PlatformResourcePool | nu
 
   return {
     aircraft: cleanLabel(settings.aircraftLabel, aircraftFallback),
-    ftd: cleanLabel(settings.ftdLabel, DEFAULT_RESOURCE_DISPLAY_NAMES.ftd),
+    ftd: cleanSimulatorLabel(settings.ftdLabel),
     cpt: cleanLabel(settings.cptLabel, DEFAULT_RESOURCE_DISPLAY_NAMES.cpt),
     dutySupervisor: cleanLabel(settings.dutySupervisorLabel, DEFAULT_RESOURCE_DISPLAY_NAMES.dutySupervisor),
     dutySupervisorShort: cleanLabel(settings.dutySupervisorShortLabel, DEFAULT_RESOURCE_DISPLAY_NAMES.dutySupervisorShort),

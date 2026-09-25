@@ -5116,7 +5116,7 @@ const getTaskProfileAbbreviationsForUnit = (config, unitCode) => {
 };
 const DEFAULT_RESOURCE_DISPLAY_NAMES = {
   aircraft: "Aircraft",
-  ftd: "FTD",
+  ftd: "Simulator",
   cpt: "CPT",
   dutySupervisor: "Duty Supervisor",
   dutySupervisorShort: "Duty Sup",
@@ -5127,6 +5127,10 @@ const cleanLabel$2 = (value, fallback) => {
   if (typeof value !== "string") return fallback;
   const trimmed = value.trim();
   return trimmed || fallback;
+};
+const cleanSimulatorLabel = (value) => {
+  const label = cleanLabel$2(value, DEFAULT_RESOURCE_DISPLAY_NAMES.ftd);
+  return label.toUpperCase() === "FTD" ? DEFAULT_RESOURCE_DISPLAY_NAMES.ftd : label;
 };
 const isNonAircraftResourceId = (resourceId) => /^SIM(\s+\d+)?$/i.test(resourceId) || /^FTD(\s+\d+)?$/i.test(resourceId) || /^CPT(\s+\d+)?$/i.test(resourceId) || /^Ground(\s+\d+)?$/i.test(resourceId) || /^STBY(\s+\d+)?$/i.test(resourceId) || /^BNF-STBY(\s+\d+)?$/i.test(resourceId) || resourceId === "Duty Sup" || resourceId === "TWR DI";
 const getAircraftResourceMatch = (resourceId) => {
@@ -5175,7 +5179,7 @@ const getResourceDisplayNames = (resourcePool) => {
   );
   return {
     aircraft: cleanLabel$2(settings.aircraftLabel, aircraftFallback),
-    ftd: cleanLabel$2(settings.ftdLabel, DEFAULT_RESOURCE_DISPLAY_NAMES.ftd),
+    ftd: cleanSimulatorLabel(settings.ftdLabel),
     cpt: cleanLabel$2(settings.cptLabel, DEFAULT_RESOURCE_DISPLAY_NAMES.cpt),
     dutySupervisor: cleanLabel$2(settings.dutySupervisorLabel, DEFAULT_RESOURCE_DISPLAY_NAMES.dutySupervisor),
     dutySupervisorShort: cleanLabel$2(settings.dutySupervisorShortLabel, DEFAULT_RESOURCE_DISPLAY_NAMES.dutySupervisorShort),
@@ -8257,7 +8261,7 @@ const DataCell = ({
   bgColor = "bg-gray-800",
   borderColor = "border-gray-600"
 }) => /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: `flex items-center justify-center ${width} flex-shrink-0 border-r ${borderColor} last:border-r-0 ${bgColor} h-7`, children: /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-white text-xs font-mono truncate px-0.5", children: value || "" }) });
-const HeaderRow = ({ resourceDisplayNames }) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex flex-nowrap min-w-max bg-gray-900/60 border-b border-gray-600", children: [
+const HeaderRow = ({ resourceDisplayNames: resourceDisplayNames2 }) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex flex-nowrap min-w-max bg-gray-900/60 border-b border-gray-600", children: [
   /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "w-24 flex-shrink-0 border-r border-gray-600 bg-gray-900/30" }),
   /* @__PURE__ */ jsxRuntimeExports.jsx(HdrCell, { label: "Year", width: "w-12" }),
   /* @__PURE__ */ jsxRuntimeExports.jsx(HdrCell, { label: "Date", width: "w-16" }),
@@ -8290,7 +8294,7 @@ const HeaderRow = ({ resourceDisplayNames }) => /* @__PURE__ */ jsxRuntimeExport
   /* @__PURE__ */ jsxRuntimeExports.jsx(HdrCell, { label: "2D App", width: "w-10" }),
   /* @__PURE__ */ jsxRuntimeExports.jsx(HdrCell, { label: "3D App", width: "w-10" }),
   /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex flex-col", children: [
-    /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-[9px] font-bold text-gray-400 uppercase text-center border-b border-gray-700 bg-gray-900/30 px-1", children: resourceDisplayNames.ftd }),
+    /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-[9px] font-bold text-gray-400 uppercase text-center border-b border-gray-700 bg-gray-900/30 px-1", children: resourceDisplayNames2.ftd }),
     /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex", children: [
       /* @__PURE__ */ jsxRuntimeExports.jsx(HdrCell, { label: "P1", width: "w-10", bgColor: "bg-gray-800/30" }),
       /* @__PURE__ */ jsxRuntimeExports.jsx(HdrCell, { label: "P2", width: "w-10", bgColor: "bg-gray-800/30" }),
@@ -8338,7 +8342,7 @@ const DataRow = ({ row, isEven }) => {
     ] })
   ] });
 };
-const LogbookView = ({ person, events, onBack, resourceDisplayNames = DEFAULT_RESOURCE_DISPLAY_NAMES }) => {
+const LogbookView = ({ person, events, onBack, resourceDisplayNames: resourceDisplayNames2 = DEFAULT_RESOURCE_DISPLAY_NAMES }) => {
   const [rows, setRows] = reactExports.useState([]);
   const [loading, setLoading] = reactExports.useState(true);
   const [error, setError] = reactExports.useState(null);
@@ -8359,7 +8363,7 @@ const LogbookView = ({ person, events, onBack, resourceDisplayNames = DEFAULT_RE
         logRows.push({
           year: snap2.year || (entry.eventDate ? new Date(entry.eventDate).getFullYear().toString() : ""),
           date: snap2.date || (entry.eventDate ? new Date(entry.eventDate).toLocaleDateString("en-GB", { day: "2-digit", month: "short" }) : ""),
-          type: snap2.type || (entry.isFtdLog ? resourceDisplayNames.ftd : resourceDisplayNames.aircraft),
+          type: snap2.type || (entry.isFtdLog ? resourceDisplayNames2.ftd : resourceDisplayNames2.aircraft),
           tail: snap2.tail || "",
           captain: snap2.captain || "",
           crew: snap2.crew || "",
@@ -8430,7 +8434,7 @@ const LogbookView = ({ person, events, onBack, resourceDisplayNames = DEFAULT_RE
         "."
       ] }) }),
       !loading && !error && rows.length > 0 && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "overflow-x-auto", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "inline-flex flex-col bg-gray-900 border border-gray-600 rounded-md min-w-max", children: [
-        /* @__PURE__ */ jsxRuntimeExports.jsx(HeaderRow, { resourceDisplayNames }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx(HeaderRow, { resourceDisplayNames: resourceDisplayNames2 }),
         rows.map((row, idx) => /* @__PURE__ */ jsxRuntimeExports.jsx(DataRow, { row, isEven: idx % 2 === 0 }, `${row._eventDate}-${row._role}-${idx}`))
       ] }) })
     ] })
@@ -14221,7 +14225,7 @@ const CancellationCodesTable = ({
   canEdit,
   usedCodes,
   isLoading = false,
-  resourceDisplayNames = DEFAULT_RESOURCE_DISPLAY_NAMES
+  resourceDisplayNames: resourceDisplayNames2 = DEFAULT_RESOURCE_DISPLAY_NAMES
 }) => {
   const [isAddingNew, setIsAddingNew] = reactExports.useState(false);
   const [editingCode, setEditingCode] = reactExports.useState(null);
@@ -14316,8 +14320,8 @@ const CancellationCodesTable = ({
   });
   const deletingCodeHasHistory = deletingCode ? usedCodes.has(deletingCode) : false;
   const formatAppliesToLabel = (value) => {
-    if (value === "FTD") return resourceDisplayNames.ftd;
-    if (value === "Both") return `Flight + ${resourceDisplayNames.ftd}`;
+    if (value === "FTD") return resourceDisplayNames2.ftd;
+    if (value === "Both") return `Flight + ${resourceDisplayNames2.ftd}`;
     return "Flight";
   };
   if (isLoading) {
@@ -14442,10 +14446,10 @@ const CancellationCodesTable = ({
               className: "w-full bg-gray-700 border border-gray-600 rounded px-2 py-1 text-white text-sm",
               children: [
                 /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "Flight", children: "Flight" }),
-                /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "FTD", children: resourceDisplayNames.ftd }),
+                /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "FTD", children: resourceDisplayNames2.ftd }),
                 /* @__PURE__ */ jsxRuntimeExports.jsxs("option", { value: "Both", children: [
                   "Flight + ",
-                  resourceDisplayNames.ftd
+                  resourceDisplayNames2.ftd
                 ] })
               ]
             }
@@ -14522,10 +14526,10 @@ const CancellationCodesTable = ({
                   className: "w-full bg-gray-700 border border-gray-600 rounded px-2 py-1 text-white text-sm",
                   children: [
                     /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "Flight", children: "Flight" }),
-                    /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "FTD", children: resourceDisplayNames.ftd }),
+                    /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "FTD", children: resourceDisplayNames2.ftd }),
                     /* @__PURE__ */ jsxRuntimeExports.jsxs("option", { value: "Both", children: [
                       "Flight + ",
-                      resourceDisplayNames.ftd
+                      resourceDisplayNames2.ftd
                     ] })
                   ]
                 }
@@ -14655,7 +14659,7 @@ const ACHistoryPage = ({
   currentUserRole: currentUserRole2,
   cancellationRecords,
   currentUserId,
-  resourceDisplayNames = DEFAULT_RESOURCE_DISPLAY_NAMES
+  resourceDisplayNames: resourceDisplayNames2 = DEFAULT_RESOURCE_DISPLAY_NAMES
 }) => {
   const [cancellationCodes, setCancellationCodes] = reactExports.useState([]);
   const [usedCodes, setUsedCodes] = reactExports.useState(/* @__PURE__ */ new Set());
@@ -14836,7 +14840,7 @@ const ACHistoryPage = ({
           canEdit,
           usedCodes,
           isLoading: codesLoading,
-          resourceDisplayNames
+          resourceDisplayNames: resourceDisplayNames2
         }
       )
     ] })
@@ -14857,7 +14861,7 @@ const DutyTurnaroundSection = ({
   onUpdateTaxiGroundTime,
   canEdit = true,
   onShowSuccess,
-  resourceDisplayNames = DEFAULT_RESOURCE_DISPLAY_NAMES
+  resourceDisplayNames: resourceDisplayNames2 = DEFAULT_RESOURCE_DISPLAY_NAMES
 }) => {
   const [isEditing, setIsEditing] = reactExports.useState(false);
   const [draftPreferredDutyPeriod, setDraftPreferredDutyPeriod] = reactExports.useState(preferredDutyPeriod);
@@ -15045,7 +15049,7 @@ const DutyTurnaroundSection = ({
           /* @__PURE__ */ jsxRuntimeExports.jsx(
             TurnaroundInput,
             {
-              label: resourceDisplayNames.ftd,
+              label: resourceDisplayNames2.ftd,
               value: draftFtdTurnaround,
               onChange: setDraftFtdTurnaround,
               options: turnaroundOptions
@@ -15054,7 +15058,7 @@ const DutyTurnaroundSection = ({
           /* @__PURE__ */ jsxRuntimeExports.jsx(
             TurnaroundInput,
             {
-              label: resourceDisplayNames.cpt,
+              label: resourceDisplayNames2.cpt,
               value: draftCptTurnaround,
               onChange: setDraftCptTurnaround,
               options: turnaroundOptions
@@ -16437,7 +16441,7 @@ const SettingsView = ({
   totalAircraft,
   dayFlyingStart = "08:00",
   dayFlyingEnd = "17:00",
-  resourceDisplayNames = DEFAULT_RESOURCE_DISPLAY_NAMES,
+  resourceDisplayNames: resourceDisplayNames2 = DEFAULT_RESOURCE_DISPLAY_NAMES,
   sctTerminology = DEFAULT_SCT_TERMINOLOGY$1,
   personnelDisplaySettings = DEFAULT_PERSONNEL_DISPLAY_SETTINGS,
   trainingReportDisplayName = "Training Report",
@@ -16711,7 +16715,7 @@ const SettingsView = ({
           timezoneOffset,
           dayFlyingStart,
           dayFlyingEnd,
-          resourceDisplayNames
+          resourceDisplayNames: resourceDisplayNames2
         }
       ) }),
       shouldShowSection("scoring-matrix") && /* @__PURE__ */ jsxRuntimeExports.jsx(
@@ -16741,7 +16745,7 @@ const SettingsView = ({
           onUpdateTaxiGroundTime,
           canEdit: canEditSettings,
           onShowSuccess,
-          resourceDisplayNames
+          resourceDisplayNames: resourceDisplayNames2
         }
       ),
       shouldShowSection("sct-events") && /* @__PURE__ */ jsxRuntimeExports.jsx(
@@ -17165,7 +17169,7 @@ const SettingsView = ({
               /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex justify-between items-center", children: [
                 /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "text-sm text-gray-400", children: [
                   "Max Flight/",
-                  resourceDisplayNames.ftd,
+                  resourceDisplayNames2.ftd,
                   " per day:"
                 ] }),
                 isEditingLimits ? /* @__PURE__ */ jsxRuntimeExports.jsx("input", { type: "number", value: tempLimits.exec.maxFlightFtd, onChange: (e) => setTempLimits({ ...tempLimits, exec: { ...tempLimits.exec, maxFlightFtd: parseInt(e.target.value) || 0 } }), className: "w-12 bg-gray-700 border border-gray-600 rounded text-center text-white text-sm focus:outline-none focus:ring-sky-500" }) : /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-white font-mono", children: eventLimits.exec.maxFlightFtd })
@@ -17186,7 +17190,7 @@ const SettingsView = ({
               /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex justify-between items-center", children: [
                 /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "text-sm text-gray-400", children: [
                   "Max Flight/",
-                  resourceDisplayNames.ftd,
+                  resourceDisplayNames2.ftd,
                   " per day:"
                 ] }),
                 isEditingLimits ? /* @__PURE__ */ jsxRuntimeExports.jsx("input", { type: "number", value: tempLimits.instructor.maxFlightFtd || 2, onChange: (e) => setTempLimits({ ...tempLimits, instructor: { ...tempLimits.instructor, maxFlightFtd: parseInt(e.target.value) || 0, maxFlightSim: parseInt(e.target.value) || 0 } }), className: "w-12 bg-gray-700 border border-gray-600 rounded text-center text-white text-sm focus:outline-none focus:ring-sky-500" }) : /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-white font-mono", children: eventLimits.instructor.maxFlightFtd })
@@ -17215,7 +17219,7 @@ const SettingsView = ({
                   /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex justify-between items-center", children: [
                     /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "text-sm text-gray-400", children: [
                       "Max Flight/",
-                      resourceDisplayNames.ftd,
+                      resourceDisplayNames2.ftd,
                       " per day:"
                     ] }),
                     canEditTraineeLimits ? /* @__PURE__ */ jsxRuntimeExports.jsx("input", { type: "number", value: tempLimits.trainee.maxFlightFtd || 1, onChange: (e) => setTempLimits({ ...tempLimits, trainee: { ...tempLimits.trainee, maxFlightFtd: parseInt(e.target.value) || 0 } }), className: "w-12 bg-gray-700 border border-gray-600 rounded text-center text-white text-sm focus:outline-none focus:ring-sky-500" }) : /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-white font-mono", children: eventLimits.trainee.maxFlightFtd })
@@ -17234,7 +17238,7 @@ const SettingsView = ({
               /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex justify-between items-center", children: [
                 /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "text-sm text-gray-400", children: [
                   "Max Flight/",
-                  resourceDisplayNames.ftd,
+                  resourceDisplayNames2.ftd,
                   " per day:"
                 ] }),
                 isEditingLimits ? /* @__PURE__ */ jsxRuntimeExports.jsx("input", { type: "number", value: tempLimits.simIp.maxFtd || 2, onChange: (e) => setTempLimits({ ...tempLimits, simIp: { ...tempLimits.simIp, maxFtd: parseInt(e.target.value) || 0 } }), className: "w-12 bg-gray-700 border border-gray-600 rounded text-center text-white text-sm focus:outline-none focus:ring-sky-500" }) : /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-white font-mono", children: eventLimits.simIp.maxFtd })
@@ -22381,7 +22385,7 @@ This removes the aircraft type from Settings${affectedText ? ` and clears it fro
               aircraftNumberUsePrefix: true,
               aircraftNumberPrefixes: [],
               aircraftNumberDefaultPrefix: "",
-              ftdLabel: "FTD",
+              ftdLabel: "Simulator",
               cptLabel: "CPT",
               aircraft: 0,
               ftd: 0,
@@ -27124,7 +27128,7 @@ This removes them from DFP Resource Rows. Press Save in this section to apply th
                         ] }) }),
                         /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid gap-3 md:grid-cols-3", children: [
                           /* @__PURE__ */ jsxRuntimeExports.jsx(DraftField, { label: "Aircraft Row Label", value: pool.settings?.aircraftLabel || (displayedResourcePoolAircraftTypeCode ? getAircraftTypeDisplayLabel(displayedResourcePoolAircraftTypeCode) : ""), disabled: !canEditResourcePools, onCommit: (value) => updateResourcePoolSettings(index, { aircraftLabel: value }) }),
-                          /* @__PURE__ */ jsxRuntimeExports.jsx(DraftField, { label: "Simulator Row Label", value: pool.settings?.ftdLabel || "FTD", disabled: !canEditResourcePools, onCommit: (value) => updateResourcePoolSettings(index, { ftdLabel: value }) }),
+                          /* @__PURE__ */ jsxRuntimeExports.jsx(DraftField, { label: "Simulator Row Label", value: String(pool.settings?.ftdLabel || "").trim().toUpperCase() === "FTD" ? "Simulator" : pool.settings?.ftdLabel || "Simulator", disabled: !canEditResourcePools, onCommit: (value) => updateResourcePoolSettings(index, { ftdLabel: value }) }),
                           /* @__PURE__ */ jsxRuntimeExports.jsx(DraftField, { label: "Procedural Trainer Row Label", value: pool.settings?.cptLabel || "CPT", disabled: !canEditResourcePools, onCommit: (value) => updateResourcePoolSettings(index, { cptLabel: value }) }),
                           /* @__PURE__ */ jsxRuntimeExports.jsx(
                             ClassroomNamesField,
@@ -29099,7 +29103,7 @@ This removes them from DFP Resource Rows. Press Save in this section to apply th
                     /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mb-3 text-sm font-bold text-gray-100", children: poolTitle }),
                     /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid gap-3 lg:grid-cols-2", children: [
                       /* @__PURE__ */ jsxRuntimeExports.jsx(DraftField, { label: "Aircraft Row Label", value: pool.settings?.aircraftLabel || (aircraftCode ? getAircraftTypeDisplayLabel(aircraftCode) : ""), disabled: !canEditResourcePools, onCommit: (value) => updateResourcePoolSettings(index, { aircraftLabel: value }), info: "The label shown for aircraft rows. Example: Aircraft, Jet, Helicopter." }),
-                      /* @__PURE__ */ jsxRuntimeExports.jsx(DraftField, { label: "Simulator Row Label", value: pool.settings?.ftdLabel || "FTD", disabled: !canEditResourcePools, onCommit: (value) => updateResourcePoolSettings(index, { ftdLabel: value }), info: "The label shown for simulator rows. Example: Simulator, FTD." }),
+                      /* @__PURE__ */ jsxRuntimeExports.jsx(DraftField, { label: "Simulator Row Label", value: String(pool.settings?.ftdLabel || "").trim().toUpperCase() === "FTD" ? "Simulator" : pool.settings?.ftdLabel || "Simulator", disabled: !canEditResourcePools, onCommit: (value) => updateResourcePoolSettings(index, { ftdLabel: value }), info: "The label shown for simulator rows. Example: Simulator." }),
                       /* @__PURE__ */ jsxRuntimeExports.jsx(DraftField, { label: "Procedural Trainer Row Label", value: pool.settings?.cptLabel || "CPT", disabled: !canEditResourcePools, onCommit: (value) => updateResourcePoolSettings(index, { cptLabel: value }), info: "The label shown for procedural trainer rows. Example: Procedural Trainer, CPT." }),
                       /* @__PURE__ */ jsxRuntimeExports.jsx(
                         ClassroomNamesField,
@@ -30248,6 +30252,7 @@ This removes them from DFP Resource Rows. Press Save in this section to apply th
                       value: eventType.syllabusType,
                       disabled: !canEditSection("platform-scheduling-rule-sets"),
                       options: ["Flight", "FTD", "Ground School", "Academics"],
+                      optionLabels: { FTD: "Simulator" },
                       onChange: (value) => updateInsertEventType(eventTypeIndex, { syllabusType: value })
                     }
                   ),
@@ -38527,7 +38532,7 @@ const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, lo
         /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid min-w-0 gap-2 md:grid-cols-2 xl:grid-cols-3 xl:items-end", children: [
           wizardField("Event name", row.name || "", (value) => updateRow(index, "name", value), void 0, "Annual Instrument Check"),
           wizardField("Short title", row.shortTitle || "", (value) => updateRow(index, "shortTitle", value.toUpperCase()), void 0, "INST"),
-          wizardField("Resource type", row.resourceType || "Flight", (value) => updateRow(index, "resourceType", value), ["Flight", "FTD", "CPT", "Ground"]),
+          wizardField("Resource type", row.resourceType === "FTD" ? "Simulator" : row.resourceType || "Flight", (value) => updateRow(index, "resourceType", value === "Simulator" ? "FTD" : value), ["Flight", "Simulator", "CPT", "Ground"]),
           wizardField("Duration", row.duration || "90", (value) => updateRow(index, "duration", value), void 0, "90"),
           wizardField("Pre-flight", row.preFlight || "90", (value) => updateRow(index, "preFlight", value), void 0, "90"),
           wizardField("Post-flight", row.postFlight || "60", (value) => updateRow(index, "postFlight", value), void 0, "60")
@@ -46464,7 +46469,7 @@ const MySctRequestsPanel = ({
           /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
             /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-sm font-bold text-white", children: request.event || "Untitled request" }),
             /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mt-1 flex flex-wrap gap-1.5 text-[10px] font-semibold uppercase tracking-wide", children: [
-              /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "rounded bg-gray-800 px-2 py-0.5 text-gray-300", children: type === "ftd" ? "FTD" : "Flight" }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "rounded bg-gray-800 px-2 py-0.5 text-gray-300", children: type === "ftd" ? "Simulator" : "Flight" }),
               /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "rounded bg-gray-800 px-2 py-0.5 text-gray-300", children: request.priority || "Medium" }),
               request.submitted && /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "rounded bg-emerald-900/60 px-2 py-0.5 text-emerald-200", children: "Submitted" })
             ] })
@@ -47076,7 +47081,7 @@ const LmpEventEditModal = ({ item, aircraftConfigurations, testingOfficerQualifi
         /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-xs font-semibold uppercase tracking-wide text-gray-400", children: "Type" }),
         /* @__PURE__ */ jsxRuntimeExports.jsxs("select", { className: "w-full rounded border border-gray-600 bg-gray-950 px-3 py-2 text-sm text-white", value: type, onChange: (event) => setType(event.target.value), children: [
           /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "Flight", children: "Flight" }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "FTD", children: "FTD" }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "FTD", children: resourceDisplayNames.ftd }),
           /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "Ground School", children: "Ground School" }),
           /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "Academics", children: "Academics" })
         ] })
@@ -47440,9 +47445,9 @@ const getDisplayType = (syllabusItem) => {
   }
   return "Flight";
 };
-const formatDisplayType = (displayType, resourceDisplayNames) => {
-  if (displayType === "FTD") return resourceDisplayNames.ftd;
-  if (displayType === "CPT") return resourceDisplayNames.cpt;
+const formatDisplayType = (displayType, resourceDisplayNames2) => {
+  if (displayType === "FTD") return resourceDisplayNames2.ftd;
+  if (displayType === "CPT") return resourceDisplayNames2.cpt;
   return displayType;
 };
 const REMEDIAL_EVENT_CODE_REGEX$2 = /-(?:REM-[A-Z]+\d+|RFTD\d+|RRF\d+|RT\d+|RF\d+|FTD\d+|F\d+|T\d+)$/i;
@@ -47469,9 +47474,9 @@ const formatLmpModuleLabel = (value) => {
   const moduleNumber = cleanValue.match(/\d+/)?.[0];
   return moduleNumber ? `M ${moduleNumber}` : cleanValue;
 };
-const formatLmpSortieLabel = (item, resourceDisplayNames) => {
+const formatLmpSortieLabel = (item, resourceDisplayNames2) => {
   if (item.type === "Flight") return item.sortieType || "Dual";
-  return formatDisplayType(getDisplayType(item), resourceDisplayNames);
+  return formatDisplayType(getDisplayType(item), resourceDisplayNames2);
 };
 const formatLmpDurationLabel = (item) => `${formatHours$1(item.duration)}h`;
 const getAssessedElements = (item) => Array.isArray(item.assessedElements) ? item.assessedElements : [];
@@ -47490,7 +47495,7 @@ const canManageRplForRole = (role) => {
   const normalisedRole = String(role || "").trim().toUpperCase().replace(/[\s-]+/g, "_");
   return normalisedRole === "ADMIN" || normalisedRole === "SUPER_ADMIN";
 };
-const DetailView$1 = ({ item, score, resourceDisplayNames = DEFAULT_RESOURCE_DISPLAY_NAMES, aircraftConfigurations = [], testingOfficerQualifications = [], instructorLabel: instructorLabel2 = "Instructor", isRemedial = false, isAddedItem = false, onDelete, canManageRpl = false, onToggleRpl }) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-6", children: [
+const DetailView$1 = ({ item, score, resourceDisplayNames: resourceDisplayNames2 = DEFAULT_RESOURCE_DISPLAY_NAMES, aircraftConfigurations = [], testingOfficerQualifications = [], instructorLabel: instructorLabel2 = "Instructor", isRemedial = false, isAddedItem = false, onDelete, canManageRpl = false, onToggleRpl }) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-6", children: [
   isRemedial && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center justify-between rounded-lg border border-red-500/40 bg-red-950/35 px-4 py-3", children: [
     /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
       /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-sm font-bold text-red-100", children: "Remedial Package Event" }),
@@ -47538,7 +47543,7 @@ const DetailView$1 = ({ item, score, resourceDisplayNames = DEFAULT_RESOURCE_DIS
     /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid grid-cols-2 md:grid-cols-4 gap-4 mt-2", children: [
       /* @__PURE__ */ jsxRuntimeExports.jsx(DetailCard$1, { label: "Phase", value: item.phase }),
       /* @__PURE__ */ jsxRuntimeExports.jsx(DetailCard$1, { label: "Module", value: item.module }),
-      /* @__PURE__ */ jsxRuntimeExports.jsx(DetailCard$1, { label: "Type", value: formatDisplayType(getDisplayType(item), resourceDisplayNames) }),
+      /* @__PURE__ */ jsxRuntimeExports.jsx(DetailCard$1, { label: "Type", value: formatDisplayType(getDisplayType(item), resourceDisplayNames2) }),
       /* @__PURE__ */ jsxRuntimeExports.jsx(DetailCard$1, { label: "Day/Night", value: item.dayNight || "Day" }),
       /* @__PURE__ */ jsxRuntimeExports.jsx(DetailCard$1, { label: "Dual/Solo", value: item.sortieType || "Dual" }),
       /* @__PURE__ */ jsxRuntimeExports.jsx(DetailCard$1, { label: "Duration", value: /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
@@ -47926,7 +47931,7 @@ const TraineeLmpView = ({
   syllabusDetails,
   allTraineesData,
   onOpenTrainingReportForLesson,
-  resourceDisplayNames = DEFAULT_RESOURCE_DISPLAY_NAMES,
+  resourceDisplayNames: resourceDisplayNames2 = DEFAULT_RESOURCE_DISPLAY_NAMES,
   aircraftConfigurations = [],
   aircraftCrewComposition = DEFAULT_AIRCRAFT_CREW_COMPOSITION,
   canOpenTrainingReport = true,
@@ -48164,7 +48169,7 @@ This records RPL against this Individual LMP event.`,
             const isSelected = selectedDisplayItem?.code === item.code;
             const phaseLabel = item.phase || "Phase";
             const moduleLabel = formatLmpModuleLabel(item.module);
-            const sortieLabel = formatLmpSortieLabel(item, resourceDisplayNames);
+            const sortieLabel = formatLmpSortieLabel(item, resourceDisplayNames2);
             const dayLabel = item.dayNight || "Day";
             const durationLabel = formatLmpDurationLabel(item);
             return /* @__PURE__ */ jsxRuntimeExports.jsx("li", { children: /* @__PURE__ */ jsxRuntimeExports.jsxs(
@@ -48194,7 +48199,7 @@ This records RPL against this Individual LMP event.`,
             {
               item: selectedDisplayItem,
               score: scores.find((s) => s.event === selectedDisplayItem.code),
-              resourceDisplayNames,
+              resourceDisplayNames: resourceDisplayNames2,
               aircraftConfigurations,
               testingOfficerQualifications,
               instructorLabel: instructorLabel2,
@@ -50668,7 +50673,7 @@ const TraineeProfileFlyout = ({
   aircraftConfigurations = [],
   aircraftCrewComposition,
   onAccessDenied,
-  resourceDisplayNames = DEFAULT_RESOURCE_DISPLAY_NAMES,
+  resourceDisplayNames: resourceDisplayNames2 = DEFAULT_RESOURCE_DISPLAY_NAMES,
   personnelDisplaySettings = DEFAULT_PERSONNEL_DISPLAY_SETTINGS,
   trainingReportTerminology = DEFAULT_TRAINING_REPORT_TERMINOLOGY,
   platformConfig = null,
@@ -50713,8 +50718,8 @@ const TraineeProfileFlyout = ({
   const [logbookError, setLogbookError] = reactExports.useState(null);
   const [logbookMonth, setLogbookMonth] = reactExports.useState(() => getProfileLogbookMonth$1(trainee));
   const formatResourceDisplayLabel = reactExports.useMemo(
-    () => (resourceId) => formatResourceLabel(resourceId, resourceDisplayNames),
-    [resourceDisplayNames]
+    () => (resourceId) => formatResourceLabel(resourceId, resourceDisplayNames2),
+    [resourceDisplayNames2]
   );
   const [localCurrencyStatus, setLocalCurrencyStatus] = reactExports.useState(void 0);
   const localCurrencyStatusRef = reactExports.useRef(void 0);
@@ -53197,7 +53202,7 @@ ${errorText || `HTTP ${response.status}`}`, "Delete Failed", "error");
               activeTab !== "lmp" && activeTab !== "pt051" && !isEditing && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: card3d2 + " p-3", style: card3dStyle2, children: [
                 /* @__PURE__ */ jsxRuntimeExports.jsxs("h4", { className: "text-xs font-semibold text-gray-300 mb-3", children: [
                   "Logbook – Prior Experience (",
-                  resourceDisplayNames.aircraft,
+                  resourceDisplayNames2.aircraft,
                   " only)"
                 ] }),
                 /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex gap-2", children: [
@@ -53272,7 +53277,7 @@ ${errorText || `HTTP ${response.status}`}`, "Delete Failed", "error");
                     ] }) })
                   ] }),
                   /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex-1 rounded-lg border border-gray-600/70 bg-gray-800/50 p-2 flex flex-col items-center", children: [
-                    /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-[11px] font-semibold text-gray-200 mb-2", children: resourceDisplayNames.ftd }),
+                    /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-[11px] font-semibold text-gray-200 mb-2", children: resourceDisplayNames2.ftd }),
                     /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "w-14 h-14 rounded-full border-4 border-sky-500/60 flex items-center justify-center mb-2", children: /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-white font-bold text-sm", children: exp.simulator.total.toFixed(1) }) }),
                     /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "w-full space-y-0.5", children: [
                       /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex justify-between text-[10px]", children: [
@@ -53399,7 +53404,7 @@ const RestoreCourseConfirmation = ({ courseNumber, onConfirm, onClose }) => {
     ] })
   ] }) });
 };
-const FlightInfoFlyout = ({ events, position, personName, personType, resourceDisplayNames = DEFAULT_RESOURCE_DISPLAY_NAMES }) => {
+const FlightInfoFlyout = ({ events, position, personName, personType, resourceDisplayNames: resourceDisplayNames2 = DEFAULT_RESOURCE_DISPLAY_NAMES }) => {
   const formatTime2 = (time) => {
     const hours = Math.floor(time);
     const minutes = Math.round(time % 1 * 60);
@@ -53428,7 +53433,7 @@ const FlightInfoFlyout = ({ events, position, personName, personType, resourceDi
                 event.flightNumber,
                 event.type === "ftd" && /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "text-indigo-400 font-bold", children: [
                   " (",
-                  resourceDisplayNames.ftd,
+                  resourceDisplayNames2.ftd,
                   ")"
                 ] })
               ] }),
@@ -55092,7 +55097,7 @@ const CourseRosterView = ({
   aircraftConfigurations = [],
   aircraftCrewComposition,
   onAccessDenied,
-  resourceDisplayNames = DEFAULT_RESOURCE_DISPLAY_NAMES,
+  resourceDisplayNames: resourceDisplayNames2 = DEFAULT_RESOURCE_DISPLAY_NAMES,
   personnelDisplaySettings,
   trainingReportTerminology,
   trainingReportTemplate,
@@ -55540,7 +55545,7 @@ const CourseRosterView = ({
         currentUserId,
         currentUserName,
         currentUserRole: currentUserRole2,
-        resourceDisplayNames,
+        resourceDisplayNames: resourceDisplayNames2,
         personnelDisplaySettings,
         trainingReportTerminology,
         platformConfig,
@@ -55796,7 +55801,7 @@ const CancelEventFlyout = ({
   onConfirm,
   onClose,
   cancellationCodes,
-  resourceDisplayNames = DEFAULT_RESOURCE_DISPLAY_NAMES
+  resourceDisplayNames: resourceDisplayNames2 = DEFAULT_RESOURCE_DISPLAY_NAMES
 }) => {
   const [selectedCode, setSelectedCode] = reactExports.useState("");
   const [manualCode, setManualCode] = reactExports.useState("");
@@ -55841,7 +55846,7 @@ const CancelEventFlyout = ({
     setShowPinEntry(false);
   };
   const isPinEnabled = selectedCode && (selectedCode !== "OTHER" || manualCode.trim());
-  const eventTypeLabel = eventType === "flight" ? "Flight" : resourceDisplayNames.ftd;
+  const eventTypeLabel = eventType === "flight" ? "Flight" : resourceDisplayNames2.ftd;
   return /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
     /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "fixed inset-0 bg-black/70 z-[80] flex items-center justify-center animate-fade-in", onClick: onClose, children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "bg-gray-800 rounded-lg shadow-xl w-full max-w-md border border-red-500/50", onClick: (e) => e.stopPropagation(), children: [
       /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "p-4 border-b border-gray-700 bg-red-900/20 flex items-center space-x-3", children: [
@@ -56585,7 +56590,7 @@ const convertTimeToDecimal = (timeStr) => {
   if (isNaN(hours) || isNaN(minutes)) return 0;
   return hours + minutes / 60;
 };
-const EventDetailModal = ({ event, onClose, onSave, onDeleteRequest, isEditingDefault = false, instructors, trainees, syllabus, syllabusDetails, highlightedField, school, traineesData, instructorsData, courseColors, onNavigateToHateSheet, onNavigateToSyllabus, onOpenTrainingReport, trainingReportDisplayName = "Training Report", onOpenStaffTrainingReport, onOpenAuth, flightAuthorisationRequired = true, onOpenPostFlight, onOpenPreFlightNotes, isConflict, onNeoClick, traineeLMPs, oracleContextForModal, sctRequests = [], sctEvents = [], eventsForDate = [], onScoresCreated, publishedSchedules = {}, nextDayBuildEvents = [], activeView = "", isAddingTile = false, formationCallsigns = [], currentLocation = "", onVisualAdjustStart, onVisualAdjustEnd, onSaveTrainingReportAssessment, cancellationCodes = [], onCancelEvent, onRestoreEvent, onSendAlert, canSendAlert = false, alertData = null, baselineEvent = null, onClearAlert, onEditFixedCrewTile, resourceDisplayNames = DEFAULT_RESOURCE_DISPLAY_NAMES, aircraftNumberSettings = DEFAULT_AIRCRAFT_NUMBER_SETTINGS, aircraftConfigurationDefinitions = [], aircraftCrewComposition, crewPositionTerminology, operationalModel, activeUnitCode = "", staffQualificationCatalogue: staffQualificationCatalogue2, unitCallsignSettings, personnelDisplaySettings, sctTerminology = DEFAULT_SCT_TERMINOLOGY$1, isReadOnly = false }) => {
+const EventDetailModal = ({ event, onClose, onSave, onDeleteRequest, isEditingDefault = false, instructors, trainees, syllabus, syllabusDetails, highlightedField, school, traineesData, instructorsData, courseColors, onNavigateToHateSheet, onNavigateToSyllabus, onOpenTrainingReport, trainingReportDisplayName = "Training Report", onOpenStaffTrainingReport, onOpenAuth, flightAuthorisationRequired = true, onOpenPostFlight, onOpenPreFlightNotes, isConflict, onNeoClick, traineeLMPs, oracleContextForModal, sctRequests = [], sctEvents = [], eventsForDate = [], onScoresCreated, publishedSchedules = {}, nextDayBuildEvents = [], activeView = "", isAddingTile = false, formationCallsigns = [], currentLocation = "", onVisualAdjustStart, onVisualAdjustEnd, onSaveTrainingReportAssessment, cancellationCodes = [], onCancelEvent, onRestoreEvent, onSendAlert, canSendAlert = false, alertData = null, baselineEvent = null, onClearAlert, onEditFixedCrewTile, resourceDisplayNames: resourceDisplayNames2 = DEFAULT_RESOURCE_DISPLAY_NAMES, aircraftNumberSettings = DEFAULT_AIRCRAFT_NUMBER_SETTINGS, aircraftConfigurationDefinitions = [], aircraftCrewComposition, crewPositionTerminology, operationalModel, activeUnitCode = "", staffQualificationCatalogue: staffQualificationCatalogue2, unitCallsignSettings, personnelDisplaySettings, sctTerminology = DEFAULT_SCT_TERMINOLOGY$1, isReadOnly = false }) => {
   const { isFrozen, allowedActions: freezeAllowedActions } = useSystemFreeze();
   const [isEditing, setIsEditing] = reactExports.useState(isReadOnly ? false : isEditingDefault);
   const [localHighlight, setLocalHighlight] = reactExports.useState(highlightedField);
@@ -57697,9 +57702,9 @@ ${swapNote}` : swapNote
   const modalTitle = reactExports.useMemo(() => {
     if (isUnavailabilityDetailsEvent) return "Unavailability Details";
     if (eventType === "flight") return "Flight Details";
-    if (eventType === "ftd") return `${resourceDisplayNames.ftd} Session Details`;
+    if (eventType === "ftd") return `${resourceDisplayNames2.ftd} Session Details`;
     return "Ground Event Details";
-  }, [eventType, isUnavailabilityDetailsEvent, resourceDisplayNames.ftd]);
+  }, [eventType, isUnavailabilityDetailsEvent, resourceDisplayNames2.ftd]);
   reactExports.useEffect(() => {
     setFlightNumber(event.flightNumber);
     const inferredCategory = inferEventCategory(event);
@@ -58918,7 +58923,7 @@ ${swapNote}` : swapNote
                       value: aircraftNumberPrefix,
                       onChange: (e) => setAircraftNumberPrefix(e.target.value),
                       disabled: isDeploy,
-                      "aria-label": `${resourceDisplayNames.aircraft} number prefix`,
+                      "aria-label": `${resourceDisplayNames2.aircraft} number prefix`,
                       className: "block w-32 flex-shrink-0 rounded-l-md rounded-r-none bg-gray-700 border border-r-0 border-gray-600 shadow-sm py-2 px-2 text-center text-white focus:z-10 focus:outline-none focus:ring-sky-500 focus:border-sky-500 sm:text-sm disabled:bg-gray-700/50 disabled:cursor-not-allowed",
                       children: aircraftNumberSettings.prefixes.map((prefix) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: prefix, children: prefix }, prefix))
                     }
@@ -58931,7 +58936,7 @@ ${swapNote}` : swapNote
                       onChange: (e) => setAircraftNumber(e.target.value.toUpperCase()),
                       disabled: isDeploy,
                       list: "flight-detail-aircraft-number-options",
-                      "aria-label": `${resourceDisplayNames.aircraft} number`,
+                      "aria-label": `${resourceDisplayNames2.aircraft} number`,
                       className: `block min-w-0 flex-1 bg-gray-700 border border-gray-600 shadow-sm py-2 px-3 text-center text-white focus:z-10 focus:outline-none focus:ring-sky-500 focus:border-sky-500 sm:text-sm disabled:bg-gray-700/50 disabled:cursor-not-allowed ${aircraftNumberSettings.usePrefix ? "rounded-l-none rounded-r-md" : "rounded-md"}`
                     }
                   ),
@@ -59851,7 +59856,7 @@ ${swapNote}` : swapNote
         },
         onClose: () => setShowCancelConfirm(false),
         cancellationCodes,
-        resourceDisplayNames
+        resourceDisplayNames: resourceDisplayNames2
       }
     ),
     showMassBriefComplete && /* @__PURE__ */ jsxRuntimeExports.jsx(
@@ -62832,7 +62837,7 @@ const ConflictModal = ({
   conflict,
   onResolve,
   onCancel,
-  resourceDisplayNames = DEFAULT_RESOURCE_DISPLAY_NAMES,
+  resourceDisplayNames: resourceDisplayNames2 = DEFAULT_RESOURCE_DISPLAY_NAMES,
   instructorLabel: instructorLabel2 = "Instructor"
 }) => {
   const formatTime2 = (time) => {
@@ -62842,8 +62847,8 @@ const ConflictModal = ({
   };
   const conflictingEventEndTime = conflict.conflictingEvent.startTime + conflict.conflictingEvent.duration;
   const personTypeDisplay = conflict.conflictedPerson === "instructor" ? instructorLabel2 : "Trainee";
-  const existingEventTypeDisplay = conflict.conflictingEvent.type === "ftd" ? `${resourceDisplayNames.ftd} session` : "flight";
-  const newEventTypeDisplay = conflict.newEvent.type === "ftd" ? `${resourceDisplayNames.ftd} session` : "flight";
+  const existingEventTypeDisplay = conflict.conflictingEvent.type === "ftd" ? `${resourceDisplayNames2.ftd} session` : "flight";
+  const newEventTypeDisplay = conflict.newEvent.type === "ftd" ? `${resourceDisplayNames2.ftd} session` : "flight";
   return /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "fixed inset-0 bg-black/70 z-[70] flex items-center justify-center", children: /* @__PURE__ */ jsxRuntimeExports.jsxs(
     "div",
     {
@@ -64613,7 +64618,7 @@ const AddGroundEventFlyout = ({
   onUpdateCourseAcademicProgress,
   persistedAcademicLmp,
   onUpdatePersistedAcademicLmp,
-  resourceDisplayNames = DEFAULT_RESOURCE_DISPLAY_NAMES,
+  resourceDisplayNames: resourceDisplayNames2 = DEFAULT_RESOURCE_DISPLAY_NAMES,
   operationalModel,
   groundResources = [],
   classroomOptions = [],
@@ -64652,7 +64657,7 @@ const AddGroundEventFlyout = ({
   }, [groundSyllabus, selectedCourse]);
   const isCptEvent = reactExports.useMemo(() => flightNumber.includes("CPT"), [flightNumber]);
   const [selectedCpt, setSelectedCpt] = reactExports.useState(cptResourceOptions[0] || "CPT 1");
-  const cptLabel = resourceDisplayNames.cpt;
+  const cptLabel = resourceDisplayNames2.cpt;
   reactExports.useEffect(() => {
     const selectedSyllabus = selectedCourseGroundSyllabus.find((s) => s.code === flightNumber) || groundSyllabus.find((s) => s.code === flightNumber);
     if (selectedSyllabus) setDuration(selectedSyllabus.duration);
@@ -64898,7 +64903,7 @@ const AddGroundEventFlyout = ({
                       cptLabel,
                       " Resource"
                     ] }),
-                    /* @__PURE__ */ jsxRuntimeExports.jsx("select", { id: "cpt-resource", value: selectedCpt, onChange: (e) => setSelectedCpt(e.target.value), className: "mt-1 block w-full bg-gray-700 border border-gray-600 rounded-md py-2 px-3 text-white focus:outline-none focus:ring-sky-500 sm:text-sm", children: cptResourceOptions.map((c) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: c, children: formatResourceLabel(c, resourceDisplayNames) }, c)) })
+                    /* @__PURE__ */ jsxRuntimeExports.jsx("select", { id: "cpt-resource", value: selectedCpt, onChange: (e) => setSelectedCpt(e.target.value), className: "mt-1 block w-full bg-gray-700 border border-gray-600 rounded-md py-2 px-3 text-white focus:outline-none focus:ring-sky-500 sm:text-sm", children: cptResourceOptions.map((c) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: c, children: formatResourceLabel(c, resourceDisplayNames2) }, c)) })
                   ] }) : /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
                     /* @__PURE__ */ jsxRuntimeExports.jsx("label", { htmlFor: "ground-resource", className: "block text-sm font-medium text-gray-400", children: "Ground Resource" }),
                     /* @__PURE__ */ jsxRuntimeExports.jsx("select", { id: "ground-resource", value: selectedGround, onChange: (e) => setSelectedGround(e.target.value), className: "mt-1 block w-full bg-gray-700 border border-gray-600 rounded-md py-2 px-3 text-white focus:outline-none focus:ring-sky-500 sm:text-sm", children: groundResourceOptions.map((g) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: g, children: g }, g)) })
@@ -71001,7 +71006,7 @@ const PrioritiesView = ({
   onUpdateRemedialAircraftConfig = (_traineeId, _eventCode, _aircraftConfigId) => {
   },
   currencyNames,
-  resourceDisplayNames = DEFAULT_RESOURCE_DISPLAY_NAMES,
+  resourceDisplayNames: resourceDisplayNames2 = DEFAULT_RESOURCE_DISPLAY_NAMES,
   taskProfiles = [],
   taskProfileAbbreviations = {},
   operationalModel = "flight_school",
@@ -71028,9 +71033,9 @@ const PrioritiesView = ({
   currentUserRole: currentUserRole2 = "",
   onNavigateToSettingsSection
 }) => {
-  const aircraftLabel = resourceDisplayNames.aircraft;
-  const ftdLabel = resourceDisplayNames.ftd;
-  const cptLabel = resourceDisplayNames.cpt;
+  const aircraftLabel = resourceDisplayNames2.aircraft;
+  const ftdLabel = resourceDisplayNames2.ftd;
+  const cptLabel = resourceDisplayNames2.cpt;
   const continuationCurrencyRequestsLabel = `${continuationShortLabel} / Currency Requests`;
   const aircraftCapacityMax = Math.max(0, Math.floor(Number(maxAircraftCount ?? availableAircraftCount) || 0));
   const ftdCapacityMax = Math.max(0, Math.floor(Number(maxFtdCount ?? availableFtdCount) || 0));
@@ -73472,7 +73477,7 @@ const PrioritiesView = ({
                     value: resourceType,
                     onChange: (event) => updateStandardMissionDraft(profile.id, { resourceType: event.target.value }),
                     className: "w-full rounded-md border border-slate-700 bg-slate-950 px-2 py-2 text-sm font-semibold text-slate-100 outline-none focus:border-cyan-400",
-                    children: ["Flight", "FTD", "CPT", "Ground"].map((option) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: option, children: option }, option))
+                    children: ["Flight", "FTD", "CPT", "Ground"].map((option) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: option, children: option === "FTD" ? "Simulator" : option }, option))
                   }
                 ),
                 /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "[&_select]:w-full [&_select]:rounded-md [&_select]:border-slate-700 [&_select]:bg-slate-950 [&_select]:px-2 [&_select]:py-2 [&_select]:text-sm [&_select]:font-semibold [&_select]:text-slate-100", children: /* @__PURE__ */ jsxRuntimeExports.jsx(
@@ -75872,7 +75877,7 @@ const PeopleTab = ({
   traineeLMPs,
   syllabusDetails = [],
   courseColors,
-  resourceDisplayNames = DEFAULT_RESOURCE_DISPLAY_NAMES,
+  resourceDisplayNames: resourceDisplayNames2 = DEFAULT_RESOURCE_DISPLAY_NAMES,
   instructorLabel: instructorLabel2 = "Instructor",
   operationalModel,
   operationalContext
@@ -76022,7 +76027,7 @@ const PeopleTab = ({
         total: load.total,
         breakdown: [
           buildGroup("Flight", "flight"),
-          buildGroup("FTD", "ftd"),
+          buildGroup(resourceDisplayNames2.ftd, "ftd"),
           buildGroup("CPT", "cpt"),
           buildGroup("Ground", "ground")
         ]
@@ -76490,8 +76495,8 @@ const PeopleTab = ({
           ] }),
           /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid grid-cols-1 gap-4 lg:grid-cols-4", children: [
             /* @__PURE__ */ jsxRuntimeExports.jsx(AirCombatPriorityTable, { title: "Next Flight", rows: airCombatPeopleMetrics.nextLists.flight, limit: 8 }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx(AirCombatPriorityTable, { title: `Next ${resourceDisplayNames.ftd}`, rows: airCombatPeopleMetrics.nextLists.ftd, limit: 8 }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx(AirCombatPriorityTable, { title: `Next ${resourceDisplayNames.cpt}`, rows: airCombatPeopleMetrics.nextLists.cpt, limit: 8 }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx(AirCombatPriorityTable, { title: `Next ${resourceDisplayNames2.ftd}`, rows: airCombatPeopleMetrics.nextLists.ftd, limit: 8 }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx(AirCombatPriorityTable, { title: `Next ${resourceDisplayNames2.cpt}`, rows: airCombatPeopleMetrics.nextLists.cpt, limit: 8 }),
             /* @__PURE__ */ jsxRuntimeExports.jsx(AirCombatPriorityTable, { title: "Next Ground", rows: airCombatPeopleMetrics.nextLists.ground, limit: 8 })
           ] })
         ] })
@@ -76764,12 +76769,12 @@ const PeopleTab = ({
       /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: sectionHeader, children: /* @__PURE__ */ jsxRuntimeExports.jsx("h2", { className: "text-lg font-semibold text-white", children: "Next Event Lists" }) }),
       /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: sectionBody, children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6", children: [
         /* @__PURE__ */ jsxRuntimeExports.jsx(ListCard, { title: "Next Event – Flight", trainees: nextEventLists.flight }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx(ListCard, { title: `Next Event – ${resourceDisplayNames.ftd}`, trainees: nextEventLists.ftd }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx(ListCard, { title: `Next Event – ${resourceDisplayNames.cpt}`, trainees: nextEventLists.cpt }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx(ListCard, { title: `Next Event – ${resourceDisplayNames2.ftd}`, trainees: nextEventLists.ftd }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx(ListCard, { title: `Next Event – ${resourceDisplayNames2.cpt}`, trainees: nextEventLists.cpt }),
         /* @__PURE__ */ jsxRuntimeExports.jsx(ListCard, { title: "Next Event – Ground", trainees: nextEventLists.ground }),
         /* @__PURE__ */ jsxRuntimeExports.jsx(ListCard, { title: "Next +1 – Flight", trainees: nextPlusOneLists.flight }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx(ListCard, { title: `Next +1 – ${resourceDisplayNames.ftd}`, trainees: nextPlusOneLists.ftd }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx(ListCard, { title: `Next +1 – ${resourceDisplayNames.cpt}`, trainees: nextPlusOneLists.cpt }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx(ListCard, { title: `Next +1 – ${resourceDisplayNames2.ftd}`, trainees: nextPlusOneLists.ftd }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx(ListCard, { title: `Next +1 – ${resourceDisplayNames2.cpt}`, trainees: nextPlusOneLists.cpt }),
         /* @__PURE__ */ jsxRuntimeExports.jsx(ListCard, { title: "Next +1 – Ground School", trainees: nextPlusOneLists.ground })
       ] }) })
     ] })
@@ -76777,7 +76782,7 @@ const PeopleTab = ({
 };
 const CourseDistributionTable = ({
   courseAnalysis,
-  resourceDisplayNames = DEFAULT_RESOURCE_DISPLAY_NAMES
+  resourceDisplayNames: resourceDisplayNames2 = DEFAULT_RESOURCE_DISPLAY_NAMES
 }) => {
   return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "overflow-hidden rounded-lg border border-cyan-500/20 bg-slate-900/80 shadow-[0_12px_30px_rgba(0,0,0,0.25)]", children: [
     /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "border-b border-cyan-500/20 bg-cyan-500/10 px-5 py-4", children: /* @__PURE__ */ jsxRuntimeExports.jsx("h2", { className: "text-xl font-semibold text-white", children: "Course Distribution Analysis" }) }),
@@ -76791,8 +76796,8 @@ const CourseDistributionTable = ({
         /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "px-4 py-3 text-right font-semibold text-slate-300", children: "Scheduled" }),
         /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "px-4 py-3 text-right font-semibold text-slate-300", children: "Efficiency" }),
         /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "px-4 py-3 text-right font-semibold text-slate-300", children: "Flight" }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "px-4 py-3 text-right font-semibold text-slate-300", children: resourceDisplayNames.ftd }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "px-4 py-3 text-right font-semibold text-slate-300", children: resourceDisplayNames.cpt }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "px-4 py-3 text-right font-semibold text-slate-300", children: resourceDisplayNames2.ftd }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "px-4 py-3 text-right font-semibold text-slate-300", children: resourceDisplayNames2.cpt }),
         /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "px-4 py-3 text-right font-semibold text-slate-300", children: "Ground" }),
         /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "px-4 py-3 text-center font-semibold text-slate-300", children: "Status" })
       ] }) }),
@@ -76910,7 +76915,7 @@ const CourseMetricsTab = ({
   courseColors = {},
   onNavigateAndSelectPerson,
   analysis,
-  resourceDisplayNames = DEFAULT_RESOURCE_DISPLAY_NAMES,
+  resourceDisplayNames: resourceDisplayNames2 = DEFAULT_RESOURCE_DISPLAY_NAMES,
   instructorsData = [],
   syllabusDetails = [],
   operationalModel,
@@ -77252,7 +77257,7 @@ const CourseMetricsTab = ({
             /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "px-4 py-3", children: "LMP Events" }),
             /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "px-4 py-3", children: "Scheduled" }),
             /* @__PURE__ */ jsxRuntimeExports.jsxs("th", { className: "px-4 py-3", children: [
-              resourceDisplayNames.aircraft,
+              resourceDisplayNames2.aircraft,
               " Flight"
             ] }),
             /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "px-4 py-3", children: "Sim / CPT" }),
@@ -77325,7 +77330,7 @@ const CourseMetricsTab = ({
         CourseDistributionTable,
         {
           courseAnalysis: analysis.courseAnalysis,
-          resourceDisplayNames
+          resourceDisplayNames: resourceDisplayNames2
         }
       ),
       /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid grid-cols-1 lg:grid-cols-2 gap-6", children: [
@@ -77368,7 +77373,7 @@ const StatCard$2 = ({ title, value, description }) => /* @__PURE__ */ jsxRuntime
 ] });
 const LimitingFactorsSection = ({
   courseAnalysis,
-  resourceDisplayNames = DEFAULT_RESOURCE_DISPLAY_NAMES,
+  resourceDisplayNames: resourceDisplayNames2 = DEFAULT_RESOURCE_DISPLAY_NAMES,
   instructorLabel: instructorLabel2 = "Instructor"
 }) => {
   const configuredInstructorLabel = String(instructorLabel2 || "Instructor").trim() || "Instructor";
@@ -77413,40 +77418,40 @@ const LimitingFactorsSection = ({
         totalLimitingFactors.noAircraftSlots > 0 && /* @__PURE__ */ jsxRuntimeExports.jsxs("li", { className: "text-slate-300", children: [
           /* @__PURE__ */ jsxRuntimeExports.jsxs("strong", { className: "text-white", children: [
             "No ",
-            resourceDisplayNames.aircraft,
+            resourceDisplayNames2.aircraft,
             " Slots:"
           ] }),
           " ",
           totalLimitingFactors.noAircraftSlots,
           " flight events could not be scheduled due to lack of available ",
-          resourceDisplayNames.aircraft.toLowerCase()
+          resourceDisplayNames2.aircraft.toLowerCase()
         ] }),
         totalLimitingFactors.noFtdSlots > 0 && /* @__PURE__ */ jsxRuntimeExports.jsxs("li", { className: "text-slate-300", children: [
           /* @__PURE__ */ jsxRuntimeExports.jsxs("strong", { className: "text-white", children: [
             "No ",
-            resourceDisplayNames.ftd,
+            resourceDisplayNames2.ftd,
             " Slots:"
           ] }),
           " ",
           totalLimitingFactors.noFtdSlots,
           " ",
-          resourceDisplayNames.ftd,
+          resourceDisplayNames2.ftd,
           " events could not be scheduled due to lack of available ",
-          resourceDisplayNames.ftd.toLowerCase(),
+          resourceDisplayNames2.ftd.toLowerCase(),
           " resources"
         ] }),
         totalLimitingFactors.noCptSlots > 0 && /* @__PURE__ */ jsxRuntimeExports.jsxs("li", { className: "text-slate-300", children: [
           /* @__PURE__ */ jsxRuntimeExports.jsxs("strong", { className: "text-white", children: [
             "No ",
-            resourceDisplayNames.cpt,
+            resourceDisplayNames2.cpt,
             " Slots:"
           ] }),
           " ",
           totalLimitingFactors.noCptSlots,
           " ",
-          resourceDisplayNames.cpt,
+          resourceDisplayNames2.cpt,
           " events could not be scheduled due to lack of available ",
-          resourceDisplayNames.cpt.toLowerCase(),
+          resourceDisplayNames2.cpt.toLowerCase(),
           " resources"
         ] }),
         totalLimitingFactors.traineeLimit > 0 && /* @__PURE__ */ jsxRuntimeExports.jsxs("li", { className: "text-slate-300", children: [
@@ -77541,13 +77546,13 @@ const InsightsSection = ({ insights }) => {
 const BuildAnalyticsTab = ({
   events,
   analysis,
-  resourceDisplayNames = DEFAULT_RESOURCE_DISPLAY_NAMES,
+  resourceDisplayNames: resourceDisplayNames2 = DEFAULT_RESOURCE_DISPLAY_NAMES,
   instructorLabel: instructorLabel2 = "Instructor"
 }) => {
   const sectionClass2 = "rounded-lg border border-cyan-500/20 bg-slate-900/80 p-5 shadow-[0_12px_30px_rgba(0,0,0,0.25)]";
   const legendClass = "px-2 text-lg font-semibold text-white";
-  const aircraftLabel = resourceDisplayNames.aircraft;
-  const ftdLabel = resourceDisplayNames.ftd;
+  const aircraftLabel = resourceDisplayNames2.aircraft;
+  const ftdLabel = resourceDisplayNames2.ftd;
   const aircraftNoun = aircraftLabel.toLowerCase();
   const formattedBuildDate = reactExports.useMemo(() => {
     if (!analysis?.buildDate) return "";
@@ -77625,7 +77630,7 @@ const BuildAnalyticsTab = ({
         )
       ] })
     ] }),
-    /* @__PURE__ */ jsxRuntimeExports.jsx(LimitingFactorsSection, { courseAnalysis: analysis.courseAnalysis, resourceDisplayNames, instructorLabel: instructorLabel2 }),
+    /* @__PURE__ */ jsxRuntimeExports.jsx(LimitingFactorsSection, { courseAnalysis: analysis.courseAnalysis, resourceDisplayNames: resourceDisplayNames2, instructorLabel: instructorLabel2 }),
     /* @__PURE__ */ jsxRuntimeExports.jsx(TimeDistributionChart, { timeDistribution: analysis.timeDistribution }),
     /* @__PURE__ */ jsxRuntimeExports.jsx(InsightsSection, { insights: analysis.insights })
   ] });
@@ -81301,7 +81306,7 @@ const buildMetricDefinitions = (metrics, date, events, currentAircraftAvailable,
     {
       key: "simulator",
       title: "Simulator events per day",
-      subtitle: "FTD and simulator events counted by published DFP day.",
+      subtitle: "Simulator events counted by published DFP day.",
       icon: ForwardRef$8,
       color: "border-emerald-400/40 bg-emerald-400/10 text-emerald-200",
       series: simPoints,
@@ -81311,7 +81316,7 @@ const buildMetricDefinitions = (metrics, date, events, currentAircraftAvailable,
     {
       key: "simulatorHours",
       title: "Simulator hours per day",
-      subtitle: "Total scheduled FTD and simulator hours by published DFP day.",
+      subtitle: "Total scheduled simulator hours by published DFP day.",
       icon: ForwardRef$9,
       color: "border-teal-400/40 bg-teal-400/10 text-teal-200",
       unit: "h",
@@ -82835,7 +82840,7 @@ const AirCombatIntelligenceTab = ({
   instructorsData,
   currentAircraftAvailable,
   totalAircraft,
-  resourceDisplayNames,
+  resourceDisplayNames: resourceDisplayNames2,
   operationalContext,
   operationalModel
 }) => {
@@ -83011,7 +83016,7 @@ const AirCombatIntelligenceTab = ({
       /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mt-4 grid grid-cols-1 gap-3 md:grid-cols-4", children: [
         /* @__PURE__ */ jsxRuntimeExports.jsx(StatCard, { label: "First flight", value: timeLabel(analysis.firstFlight?.startTime), subtext: analysis.firstFlight ? eventCode(analysis.firstFlight) || "Flight event" : "No flight events" }),
         /* @__PURE__ */ jsxRuntimeExports.jsx(StatCard, { label: "Last landing", value: timeLabel(lastFlightEnd), subtext: analysis.lastFlight ? eventCode(analysis.lastFlight) || "Flight event" : "No flight events" }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx(StatCard, { label: resourceDisplayNames.aircraft || "Aircraft", value: numberLabel(analysis.aircraftUsed.size), subtext: "Distinct aircraft/resource rows used" }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx(StatCard, { label: resourceDisplayNames2.aircraft || "Aircraft", value: numberLabel(analysis.aircraftUsed.size), subtext: "Distinct aircraft/resource rows used" }),
         /* @__PURE__ */ jsxRuntimeExports.jsx(StatCard, { label: isFixedCrewLike ? "Crew groups" : "Ground events", value: numberLabel(isFixedCrewLike ? analysis.crewGroupValues.size : analysis.groundEvents.length), subtext: isFixedCrewLike ? "Distinct crew groups/crew labels on flight events" : "Non-flying scheduled events" })
       ] })
     ] })
@@ -83020,7 +83025,7 @@ const AirCombatIntelligenceTab = ({
 const ACHistoryAnalytics = ({
   cancellationRecords,
   cancellationCodes,
-  resourceDisplayNames = DEFAULT_RESOURCE_DISPLAY_NAMES
+  resourceDisplayNames: resourceDisplayNames2 = DEFAULT_RESOURCE_DISPLAY_NAMES
 }) => {
   const [selectedPeriod, setSelectedPeriod] = reactExports.useState("month");
   const [showAllCodes, setShowAllCodes] = reactExports.useState(false);
@@ -83265,7 +83270,7 @@ const ACHistoryAnalytics = ({
     /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mt-4 text-sm text-gray-400", children: [
       /* @__PURE__ */ jsxRuntimeExports.jsxs("p", { children: [
         "• Percentages are calculated relative to all Flight + ",
-        resourceDisplayNames.ftd,
+        resourceDisplayNames2.ftd,
         " cancellations in the selected period."
       ] }),
       /* @__PURE__ */ jsxRuntimeExports.jsx("p", { children: "• Trend indicators compare the selected period to the immediately preceding equivalent period." }),
@@ -84754,7 +84759,7 @@ const ACHistoryIntelligencePanel = ({
   dayFlyingStart = "08:00",
   dayFlyingEnd = "17:00",
   operationalContext,
-  resourceDisplayNames = DEFAULT_RESOURCE_DISPLAY_NAMES
+  resourceDisplayNames: resourceDisplayNames2 = DEFAULT_RESOURCE_DISPLAY_NAMES
 }) => {
   const [cancellationCodes, setCancellationCodes] = reactExports.useState([]);
   const [codesLoading, setCodesLoading] = reactExports.useState(true);
@@ -84820,7 +84825,7 @@ const ACHistoryIntelligencePanel = ({
       {
         cancellationRecords,
         cancellationCodes,
-        resourceDisplayNames
+        resourceDisplayNames: resourceDisplayNames2
       }
     )
   ] });
@@ -84841,7 +84846,7 @@ const BuildIntelligenceView = (props) => {
   const activeModelLabel = getOperationalModelLabel(activeModel);
   const [activeTab, setActiveTab] = reactExports.useState(isCrewOperationalModel ? "air-combat" : "people");
   const [permissionNoticeRect, setPermissionNoticeRect] = reactExports.useState(null);
-  const resourceDisplayNames = props.resourceDisplayNames || DEFAULT_RESOURCE_DISPLAY_NAMES;
+  const resourceDisplayNames2 = props.resourceDisplayNames || DEFAULT_RESOURCE_DISPLAY_NAMES;
   const canUsePermission = props.canUsePlatformPermission || (() => true);
   const hasAnySpecificTabPermission = Object.values(TAB_PERMISSION_IDS).some((permissionId) => canUsePermission(permissionId));
   const canOpenTab = (tabId) => canUsePermission(TAB_PERMISSION_IDS[tabId]) || !hasAnySpecificTabPermission && canUsePermission("neo.intelligence");
@@ -84919,7 +84924,7 @@ const BuildIntelligenceView = (props) => {
             traineeLMPs: props.traineeLMPs,
             syllabusDetails: props.syllabusDetails,
             courseColors: props.courseColors,
-            resourceDisplayNames,
+            resourceDisplayNames: resourceDisplayNames2,
             instructorLabel: props.instructorLabel,
             operationalModel: props.operationalModel,
             operationalContext: props.operationalContext,
@@ -84934,7 +84939,7 @@ const BuildIntelligenceView = (props) => {
             instructorsData: props.instructorsData,
             currentAircraftAvailable: props.currentAircraftAvailable,
             totalAircraft: props.totalAircraft,
-            resourceDisplayNames,
+            resourceDisplayNames: resourceDisplayNames2,
             operationalContext: props.operationalContext,
             operationalModel: props.operationalModel
           }
@@ -84949,7 +84954,7 @@ const BuildIntelligenceView = (props) => {
             courseColors: props.courseColors,
             onNavigateAndSelectPerson: props.onNavigateAndSelectPerson,
             analysis: props.analysis,
-            resourceDisplayNames,
+            resourceDisplayNames: resourceDisplayNames2,
             instructorsData: props.instructorsData,
             syllabusDetails: props.syllabusDetails,
             operationalModel: props.operationalModel,
@@ -84961,7 +84966,7 @@ const BuildIntelligenceView = (props) => {
           {
             events: props.events,
             analysis: props.analysis,
-            resourceDisplayNames,
+            resourceDisplayNames: resourceDisplayNames2,
             instructorLabel: props.instructorLabel
           }
         ),
@@ -84977,7 +84982,7 @@ const BuildIntelligenceView = (props) => {
             dayFlyingStart: props.dayFlyingStart,
             dayFlyingEnd: props.dayFlyingEnd,
             operationalContext: props.operationalContext,
-            resourceDisplayNames
+            resourceDisplayNames: resourceDisplayNames2
           }
         ),
         activeTab === "managerial-analytics" && (isAirCombatModel ? /* @__PURE__ */ jsxRuntimeExports.jsx(
@@ -85602,7 +85607,7 @@ const InstructorProfileFlyout = ({
   currentUserId,
   currentUserName,
   currentUserRole: currentUserRole2 = "",
-  resourceDisplayNames = DEFAULT_RESOURCE_DISPLAY_NAMES,
+  resourceDisplayNames: resourceDisplayNames2 = DEFAULT_RESOURCE_DISPLAY_NAMES,
   instructorLabel: instructorLabel2 = "Instructor",
   personnelDisplaySettings = DEFAULT_PERSONNEL_DISPLAY_SETTINGS,
   operationalModel = "flight_school",
@@ -87514,7 +87519,7 @@ Confirm the Personnel ID, unit and role are correct before saving this separate 
           !isEditing && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: card3d + " p-3", style: card3dStyle, children: [
             /* @__PURE__ */ jsxRuntimeExports.jsxs("h4", { className: "text-xs font-semibold text-gray-300 mb-3", children: [
               "Logbook – Prior Experience (",
-              resourceDisplayNames.aircraft,
+              resourceDisplayNames2.aircraft,
               " only)"
             ] }),
             /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex gap-2", children: [
@@ -87572,16 +87577,16 @@ Confirm the Personnel ID, unit and role are correct before saving this separate 
                   { label: "Prior P2", value: exp.simulator.p2 },
                   { label: "Prior Dual", value: exp.simulator.dual },
                   { label: "Prior Total", value: exp.simulator.total },
-                  ...ftdTotal > 0 ? [{ label: resourceDisplayNames.ftd, value: ftdTotal }] : []
+                  ...ftdTotal > 0 ? [{ label: resourceDisplayNames2.ftd, value: ftdTotal }] : []
                 ];
-                return /* @__PURE__ */ jsxRuntimeExports.jsx(CircularGauge, { title: resourceDisplayNames.ftd, mainValue: simMainValue, subItems: simSubItems });
+                return /* @__PURE__ */ jsxRuntimeExports.jsx(CircularGauge, { title: resourceDisplayNames2.ftd, mainValue: simMainValue, subItems: simSubItems });
               })()
             ] })
           ] }),
           isEditing && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: card3d + " p-3", style: card3dStyle, children: [
             /* @__PURE__ */ jsxRuntimeExports.jsxs("h4", { className: "text-xs font-semibold text-sky-400 mb-3", children: [
               "Logbook – Prior Experience (",
-              resourceDisplayNames.aircraft,
+              resourceDisplayNames2.aircraft,
               " only)"
             ] }),
             /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid grid-cols-2 md:grid-cols-3 gap-4", children: [
@@ -87617,7 +87622,7 @@ Confirm the Personnel ID, unit and role are correct before saving this separate 
                 ] })
               ] }),
               /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
-                /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "block text-xs font-bold text-gray-300 mb-2 text-center", children: resourceDisplayNames.ftd }),
+                /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "block text-xs font-bold text-gray-300 mb-2 text-center", children: resourceDisplayNames2.ftd }),
                 /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex justify-center space-x-2", children: [
                   /* @__PURE__ */ jsxRuntimeExports.jsx(ExperienceInput, { label: "P1", value: exp.simulator.p1, onChange: (v) => handleExperienceChange("simulator", "p1", v) }),
                   /* @__PURE__ */ jsxRuntimeExports.jsx(ExperienceInput, { label: "P2", value: exp.simulator.p2, onChange: (v) => handleExperienceChange("simulator", "p2", v) }),
@@ -88519,7 +88524,7 @@ const InstructorListView = ({
   currentUserId,
   currentUserName,
   currentUserRole: currentUserRole2,
-  resourceDisplayNames = DEFAULT_RESOURCE_DISPLAY_NAMES,
+  resourceDisplayNames: resourceDisplayNames2 = DEFAULT_RESOURCE_DISPLAY_NAMES,
   personnelDisplaySettings,
   instructorLabel: instructorLabel2 = "Instructor",
   operationalModel = "flight_school",
@@ -89105,7 +89110,7 @@ const InstructorListView = ({
         currentUserId,
         currentUserName,
         currentUserRole: currentUserRole2,
-        resourceDisplayNames,
+        resourceDisplayNames: resourceDisplayNames2,
         personnelDisplaySettings,
         instructorLabel: instructorLabel2,
         operationalModel,
@@ -90519,20 +90524,20 @@ const getMasterLmpDisplayType = (syllabusItem) => {
   }
   return "Flight";
 };
-const formatMasterLmpDisplayType = (displayType, resourceDisplayNames) => {
-  if (displayType === "FTD") return resourceDisplayNames.ftd;
-  if (displayType === "CPT") return resourceDisplayNames.cpt;
+const formatMasterLmpDisplayType = (displayType, resourceDisplayNames2) => {
+  if (displayType === "FTD") return resourceDisplayNames2.ftd;
+  if (displayType === "CPT") return resourceDisplayNames2.cpt;
   return displayType;
 };
-const formatMasterLmpSortieLabel = (item, resourceDisplayNames) => {
+const formatMasterLmpSortieLabel = (item, resourceDisplayNames2) => {
   if (item.type === "Flight") return item.sortieType || "Dual";
-  return formatMasterLmpDisplayType(getMasterLmpDisplayType(item), resourceDisplayNames);
+  return formatMasterLmpDisplayType(getMasterLmpDisplayType(item), resourceDisplayNames2);
 };
 const formatMasterLmpHours = (value) => {
   const numericValue = Number(value);
   return Number.isFinite(numericValue) ? `${numericValue.toFixed(1)}h` : "0.0h";
 };
-const DetailView = ({ item, isEditing, isAddingEvent = false, editedItem, onItemChange, onDeleteEvent, onEdit, editDisabled = false, onSave, onCancel, saveDisabled = false, isSaving: isSaving2 = false, resourceDisplayNames = DEFAULT_RESOURCE_DISPLAY_NAMES, aircraftConfigurations = [], aircraftCrewComposition, crewPositionTerminology, instructorsData = [], activeUnitCode = "", isAirCombatModel = false, operationalModel = "flight_school", staffQualificationCatalogue: staffQualificationCatalogue2, scoringMatrixElements = DEFAULT_ASSESSED_ELEMENTS, onAddScoringMatrixElement, linkedEventOptions = [], linkedEventOverrides = {}, onLinkedEventChange, collectionTitle = "this Master LMP", codeExample = "", descriptionExample = "" }) => {
+const DetailView = ({ item, isEditing, isAddingEvent = false, editedItem, onItemChange, onDeleteEvent, onEdit, editDisabled = false, onSave, onCancel, saveDisabled = false, isSaving: isSaving2 = false, resourceDisplayNames: resourceDisplayNames2 = DEFAULT_RESOURCE_DISPLAY_NAMES, aircraftConfigurations = [], aircraftCrewComposition, crewPositionTerminology, instructorsData = [], activeUnitCode = "", isAirCombatModel = false, operationalModel = "flight_school", staffQualificationCatalogue: staffQualificationCatalogue2, scoringMatrixElements = DEFAULT_ASSESSED_ELEMENTS, onAddScoringMatrixElement, linkedEventOptions = [], linkedEventOverrides = {}, onLinkedEventChange, collectionTitle = "this Master LMP", codeExample = "", descriptionExample = "" }) => {
   const getDisplayType2 = (syllabusItem) => {
     if (syllabusItem.type === "Flight") return "Flight";
     if (syllabusItem.type === "FTD") return "FTD";
@@ -90544,8 +90549,8 @@ const DetailView = ({ item, isEditing, isAddingEvent = false, editedItem, onItem
     return "Flight";
   };
   const formatDisplayType2 = (displayType) => {
-    if (displayType === "FTD") return resourceDisplayNames.ftd;
-    if (displayType === "CPT") return resourceDisplayNames.cpt;
+    if (displayType === "FTD") return resourceDisplayNames2.ftd;
+    if (displayType === "CPT") return resourceDisplayNames2.cpt;
     return displayType;
   };
   const handleTypeChange = (e) => {
@@ -90716,8 +90721,8 @@ const DetailView = ({ item, isEditing, isAddingEvent = false, editedItem, onItem
               className: "mt-0.5 block w-full bg-gray-800 border border-gray-600 rounded shadow-sm py-0.5 px-1 text-white focus:outline-none focus:ring-sky-500 focus:border-sky-500 text-[10px]",
               children: [
                 /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "Flight", children: "Flight" }),
-                /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "FTD", children: resourceDisplayNames.ftd }),
-                /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "CPT", children: resourceDisplayNames.cpt }),
+                /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "FTD", children: resourceDisplayNames2.ftd }),
+                /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "CPT", children: resourceDisplayNames2.cpt }),
                 /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "Ground", children: "Ground" }),
                 /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "Academics", children: "Academics" })
               ]
@@ -91203,7 +91208,7 @@ const SyllabusView = ({
   initialSelectedId,
   onUpdateItem,
   onAddItem,
-  resourceDisplayNames = DEFAULT_RESOURCE_DISPLAY_NAMES,
+  resourceDisplayNames: resourceDisplayNames2 = DEFAULT_RESOURCE_DISPLAY_NAMES,
   aircraftConfigurations = [],
   aircraftCrewComposition,
   crewPositionTerminology,
@@ -92591,7 +92596,7 @@ const SyllabusView = ({
                 const moduleNum = Math.floor(index * 12 / totalItems) + 1;
                 const actualModule = Math.min(moduleNum, 12);
                 const isSelected = selectedItem?.id === item.id;
-                const sortieLabel = formatMasterLmpSortieLabel(item, resourceDisplayNames);
+                const sortieLabel = formatMasterLmpSortieLabel(item, resourceDisplayNames2);
                 const dayLabel = item.dayNight || "Day";
                 const durationLabel = formatMasterLmpHours(item.totalEventHours || item.duration);
                 return /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mb-3", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "relative w-[292px] shrink-0", children: [
@@ -92688,7 +92693,7 @@ const SyllabusView = ({
                       onCancel: handleCancel,
                       saveDisabled: isSaving2,
                       isSaving: isSaving2,
-                      resourceDisplayNames,
+                      resourceDisplayNames: resourceDisplayNames2,
                       aircraftConfigurations,
                       aircraftCrewComposition,
                       crewPositionTerminology,
@@ -101263,7 +101268,7 @@ const stripPostFlightDutyRoutePrefix = (value) => {
   const parts = text.split(/\s*:\s*/);
   return (parts.length > 1 ? parts.slice(1).join(" : ") : text).trim();
 };
-const PostFlightView = ({ event, onReturn, onSave, school, traineesData, instructorsData, masterCurrencies = [], currencyRequirements = [], resourceDisplayNames = DEFAULT_RESOURCE_DISPLAY_NAMES, aircraftNumberSettings = DEFAULT_AIRCRAFT_NUMBER_SETTINGS, personnelDisplaySettings, trainingReportTemplate, crewPositionTerminology, taxiGroundTime = 0.1 }) => {
+const PostFlightView = ({ event, onReturn, onSave, school, traineesData, instructorsData, masterCurrencies = [], currencyRequirements = [], resourceDisplayNames: resourceDisplayNames2 = DEFAULT_RESOURCE_DISPLAY_NAMES, aircraftNumberSettings = DEFAULT_AIRCRAFT_NUMBER_SETTINGS, personnelDisplaySettings, trainingReportTemplate, crewPositionTerminology, taxiGroundTime = 0.1 }) => {
   const { freezeState, checkAndWarn } = useSystemFreeze$1();
   reactExports.useMemo(() => {
     const personName = event.student || event.pilot;
@@ -101834,7 +101839,7 @@ const PostFlightView = ({ event, onReturn, onSave, school, traineesData, instruc
     return {
       year: yearStr,
       date: dateStr,
-      type: isFtdLog ? resourceDisplayNames.ftd : resourceDisplayNames.aircraft,
+      type: isFtdLog ? resourceDisplayNames2.ftd : resourceDisplayNames2.aircraft,
       tail: isFtdLog ? `FTD-${aircraftNumber}` : formatAircraftNumber(aircraftNumber, aircraftNumberPrefix, aircraftNumberSettings),
       captain: captainName,
       crew: crewName,
@@ -102363,7 +102368,7 @@ ${error instanceof Error ? error.message : String(error)}`, "Post Flight Save Fa
               ) })
             ] }),
             /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex-shrink-0 flex flex-col items-center", children: [
-              /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "block text-sm font-medium text-gray-400", children: resourceDisplayNames.ftd }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "block text-sm font-medium text-gray-400", children: resourceDisplayNames2.ftd }),
               /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-1 h-[38px] flex items-center justify-center", children: /* @__PURE__ */ jsxRuntimeExports.jsx(
                 "input",
                 {
@@ -102406,7 +102411,7 @@ ${error instanceof Error ? error.message : String(error)}`, "Post Flight Save Fa
             ] }),
             /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex-shrink-0", children: [
               /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "block text-sm font-medium text-gray-400", children: "Aircraft" }),
-              /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-1 p-2 bg-gray-700 rounded-md text-white h-[38px] flex items-center", children: resourceDisplayNames.aircraft })
+              /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-1 p-2 bg-gray-700 rounded-md text-white h-[38px] flex items-center", children: resourceDisplayNames2.aircraft })
             ] }),
             /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex-shrink-0", style: { width: "calc(6.75rem + 10px)" }, children: [
               /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "block text-sm font-medium text-gray-400", children: "Number" }),
@@ -102651,7 +102656,7 @@ ${error instanceof Error ? error.message : String(error)}`, "Post Flight Save Fa
             /* @__PURE__ */ jsxRuntimeExports.jsx(EditableLogbookCell, { label: "3D App", fieldKey: "__hdr__", overrides: {}, onChange: () => {
             }, width: "w-10", readOnly: true }),
             /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex flex-col", children: [
-              /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-[9px] font-bold text-gray-400 uppercase text-center border-b border-gray-700 bg-gray-900/30", children: resourceDisplayNames.ftd }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-[9px] font-bold text-gray-400 uppercase text-center border-b border-gray-700 bg-gray-900/30", children: resourceDisplayNames2.ftd }),
               /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex", children: [
                 /* @__PURE__ */ jsxRuntimeExports.jsx(EditableLogbookCell, { subLabel: "P1", fieldKey: "__hdr__", overrides: {}, onChange: () => {
                 }, width: "w-10", borderColor: "border-gray-700", bgColor: "bg-gray-800/50", readOnly: true }),
@@ -102828,7 +102833,7 @@ const AddRemedialPackageFlyout = ({
   scores,
   pt051Assessments = [],
   traineeLmp,
-  resourceDisplayNames = DEFAULT_RESOURCE_DISPLAY_NAMES,
+  resourceDisplayNames: resourceDisplayNames2 = DEFAULT_RESOURCE_DISPLAY_NAMES,
   trainingReportName = "Training Report",
   instructorLabel: instructorLabel2 = "Instructor",
   onClose,
@@ -103075,7 +103080,7 @@ const AddRemedialPackageFlyout = ({
             /* @__PURE__ */ jsxRuntimeExports.jsx(
               RemedialInputRow,
               {
-                label: `${resourceDisplayNames.ftd}s`,
+                label: `${resourceDisplayNames2.ftd}s`,
                 menuKey: "ftd",
                 state: ftdState,
                 setState: setFtdState,
@@ -103755,7 +103760,7 @@ const CourseProgressView = ({
   onUpdateGradDate,
   onUpdateStartDate,
   trainingReportName = "Training Report",
-  resourceDisplayNames = DEFAULT_RESOURCE_DISPLAY_NAMES,
+  resourceDisplayNames: resourceDisplayNames2 = DEFAULT_RESOURCE_DISPLAY_NAMES,
   serviceDefinitions = [],
   courseLmpPauses = {}
 }) => {
@@ -103943,15 +103948,15 @@ const CourseProgressView = ({
   };
   const courseScoreEventTypeLabels = reactExports.useMemo(() => ({
     flight: "Flight",
-    simulator: resourceDisplayNames.ftd || "FTD",
-    proceduralTrainer: resourceDisplayNames.cpt || "CPT",
+    simulator: resourceDisplayNames2.ftd || "Simulator",
+    proceduralTrainer: resourceDisplayNames2.cpt || "CPT",
     tutorial: "Tutorial",
     massBrief: "Mass Brief",
     groundSchoolAssessment: "Ground School Assessment",
     groundSchool: "Ground School",
     academics: "Academics",
     other: "Other"
-  }), [resourceDisplayNames]);
+  }), [resourceDisplayNames2]);
   const getCourseScoreEventType = (eventCode2) => {
     const code = String(eventCode2 || "").trim().toUpperCase();
     const item = eventDetailByCode.get(code);
@@ -106082,7 +106087,7 @@ const TrainingRecordsExportView = ({
   syllabusDetails,
   pt051Assessments,
   onSaveTrainingReportAssessment,
-  resourceDisplayNames = DEFAULT_RESOURCE_DISPLAY_NAMES,
+  resourceDisplayNames: resourceDisplayNames2 = DEFAULT_RESOURCE_DISPLAY_NAMES,
   instructorLabel: instructorLabel2 = "Instructor",
   trainingReportTemplate = null,
   phraseBank,
@@ -106147,8 +106152,8 @@ const TrainingRecordsExportView = ({
     }
   }, [canExportTraineeRecords, recordType]);
   const getEventTypeLabel = (type) => {
-    if (type === "FTD") return resourceDisplayNames.ftd;
-    if (type === "CPT") return resourceDisplayNames.cpt;
+    if (type === "FTD") return resourceDisplayNames2.ftd;
+    if (type === "CPT") return resourceDisplayNames2.cpt;
     return type;
   };
   const formatDate2 = (dateStr) => {
@@ -107911,7 +107916,7 @@ const TrainingRecordsView = ({
   operationalModel = "flight_school",
   platformConfig = null,
   serviceDefinitions = [],
-  resourceDisplayNames,
+  resourceDisplayNames: resourceDisplayNames2,
   instructorLabel: instructorLabel2 = "Instructor",
   trainingReportTemplate = null,
   phraseBank,
@@ -107997,7 +108002,7 @@ const TrainingRecordsView = ({
           syllabusDetails,
           pt051Assessments,
           onSaveTrainingReportAssessment,
-          resourceDisplayNames,
+          resourceDisplayNames: resourceDisplayNames2,
           instructorLabel: instructorLabel2,
           trainingReportTemplate,
           phraseBank,
@@ -108300,7 +108305,7 @@ const formatTime = (time) => {
   const minutes = Math.round(time % 1 * 60);
   return `${String(hours).padStart(2, "0")}${String(minutes).padStart(2, "0")}`;
 };
-const NeoRemedyFlyout = ({ problemTile, remedies, resourceDisplayNames = DEFAULT_RESOURCE_DISPLAY_NAMES, onApplyRemedy, onCancel }) => {
+const NeoRemedyFlyout = ({ problemTile, remedies, resourceDisplayNames: resourceDisplayNames2 = DEFAULT_RESOURCE_DISPLAY_NAMES, onApplyRemedy, onCancel }) => {
   const { event, errors } = problemTile;
   const instructorSwapRemedies = remedies.filter((r) => r.type === "instructor");
   const timeShiftRemedies = remedies.filter((r) => r.type === "timeshift");
@@ -108348,12 +108353,12 @@ const NeoRemedyFlyout = ({ problemTile, remedies, resourceDisplayNames = DEFAULT
                   /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "font-mono", children: remedy.trainee.flightsToday })
                 ] }),
                 /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "text-center w-10", children: [
-                  /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-gray-400 text-xs", children: resourceDisplayNames.ftd }),
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-gray-400 text-xs", children: resourceDisplayNames2.ftd }),
                   /* @__PURE__ */ jsxRuntimeExports.jsx("br", {}),
                   /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "font-mono", children: remedy.trainee.ftdsToday })
                 ] }),
                 /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "text-center w-10", children: [
-                  /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-gray-400 text-xs", children: resourceDisplayNames.cpt }),
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-gray-400 text-xs", children: resourceDisplayNames2.cpt }),
                   /* @__PURE__ */ jsxRuntimeExports.jsx("br", {}),
                   /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "font-mono", children: remedy.trainee.cptsToday })
                 ] }),
@@ -108385,12 +108390,12 @@ const NeoRemedyFlyout = ({ problemTile, remedies, resourceDisplayNames = DEFAULT
                   /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "font-mono", children: remedy.instructor.flightsToday })
                 ] }),
                 /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "text-center w-10", children: [
-                  /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-gray-400 text-xs", children: resourceDisplayNames.ftd }),
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-gray-400 text-xs", children: resourceDisplayNames2.ftd }),
                   /* @__PURE__ */ jsxRuntimeExports.jsx("br", {}),
                   /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "font-mono", children: remedy.instructor.ftdsToday })
                 ] }),
                 /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "text-center w-10", children: [
-                  /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-gray-400 text-xs", children: resourceDisplayNames.cpt }),
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-gray-400 text-xs", children: resourceDisplayNames2.cpt }),
                   /* @__PURE__ */ jsxRuntimeExports.jsx("br", {}),
                   /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "font-mono", children: remedy.instructor.cptsToday })
                 ] }),
@@ -108426,12 +108431,12 @@ const NeoRemedyFlyout = ({ problemTile, remedies, resourceDisplayNames = DEFAULT
                     /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "font-mono text-xs", children: remedy.instructor.flightsToday })
                   ] }),
                   /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "text-center w-10", children: [
-                    /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-gray-500 text-[10px]", children: resourceDisplayNames.ftd }),
+                    /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-gray-500 text-[10px]", children: resourceDisplayNames2.ftd }),
                     /* @__PURE__ */ jsxRuntimeExports.jsx("br", {}),
                     /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "font-mono text-xs", children: remedy.instructor.ftdsToday })
                   ] }),
                   /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "text-center w-10", children: [
-                    /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-gray-500 text-[10px]", children: resourceDisplayNames.cpt }),
+                    /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-gray-500 text-[10px]", children: resourceDisplayNames2.cpt }),
                     /* @__PURE__ */ jsxRuntimeExports.jsx("br", {}),
                     /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "font-mono text-xs", children: remedy.instructor.cptsToday })
                   ] }),
@@ -110034,7 +110039,7 @@ const PauseFlightOpsPanel = ({
   onPhaseChange,
   stagedEvents,
   onStagedEventsChange,
-  resourceDisplayNames = DEFAULT_RESOURCE_DISPLAY_NAMES
+  resourceDisplayNames: resourceDisplayNames2 = DEFAULT_RESOURCE_DISPLAY_NAMES
 }) => {
   const [pauseStart, setPauseStart] = reactExports.useState(decToHHMM(flyingStartTime + 2));
   const [pauseEnd, setPauseEnd] = reactExports.useState(decToHHMM(flyingStartTime + 3));
@@ -110045,8 +110050,8 @@ const PauseFlightOpsPanel = ({
   const [buildProgress, setBuildProgress] = reactExports.useState("");
   const pauseStartDec = reactExports.useMemo(() => isValidHHMM(pauseStart) ? hhmmToDec(pauseStart) : null, [pauseStart]);
   const pauseEndDec = reactExports.useMemo(() => isValidHHMM(pauseEnd) ? hhmmToDec(pauseEnd) : null, [pauseEnd]);
-  const ftdLabel = resourceDisplayNames.ftd;
-  const cptLabel = resourceDisplayNames.cpt;
+  const ftdLabel = resourceDisplayNames2.ftd;
+  const cptLabel = resourceDisplayNames2.cpt;
   const validationError = reactExports.useMemo(() => {
     if (!pauseStartDec || !pauseEndDec) return "Enter valid times (HH:MM).";
     if (pauseEndDec <= pauseStartDec) return "Pause end must be after pause start.";
@@ -119884,7 +119889,7 @@ async function generateDfpInternal(config, setProgress, publishedSchedules) {
       conclusion: []
     },
     individualLmpDurationDiagnostics: {
-      purpose: "Tracks whether NEO Build uses the trainee Individual LMP row, including DPCO/DNCO added time, when sizing Flight and FTD tiles.",
+      purpose: "Tracks whether NEO Build uses the trainee Individual LMP row, including DPCO/DNCO added time, when sizing Flight and Simulator tiles.",
       lookups: [],
       placements: [],
       finalEvents: [],
@@ -126492,7 +126497,7 @@ async function generateDfpInternal(config, setProgress, publishedSchedules) {
         return `No event scheduled because the linked formation pairing could not be built. A ${required}-ship was required, but only ${selected} eligible linked-event staff were available.`;
       }
       case "FLIGHT_FTD_LIMIT":
-        return "No event scheduled because a staff member had already reached the configured flight/FTD duty limit.";
+        return "No event scheduled because a staff member had already reached the configured flight/simulator duty limit.";
       case "DUTY_LIMIT":
       case "TOTAL_EVENT_LIMIT":
         return "No event scheduled because a staff member had already reached the configured total duty/event limit.";
@@ -129976,7 +129981,7 @@ async function generateDfpInternal(config, setProgress, publishedSchedules) {
     (event) => event.type === "flight" && currencyFtdPersonKeys.has(normalizeBuildPersonnelName(event.student || event.pilot || event.instructor || ""))
   );
   if (!isAirCombatBuild && earlyCurrencyPriorityEvents.length > 0) {
-    await recordProgress({ message: "Scheduling Currency FTD Priority Events...", percentage: 44 });
+    await recordProgress({ message: "Scheduling Currency Simulator Priority Events...", percentage: 44 });
     scheduleCurrencyPriorityEvents(earlyCurrencyPriorityEvents);
   }
   await recordProgress({ message: "Scheduling Day Flight Events (Priority)...", percentage: 45 });
@@ -137752,11 +137757,11 @@ const App = () => {
   const [aircraftConfigStateByDate, setAircraftConfigStateByDate] = reactExports.useState({});
   const [availableFtdCount, setAvailableFtdCount] = reactExports.useState(school === "ESL" ? 5 : 4);
   const [availableCptCount, setAvailableCptCount] = reactExports.useState(4);
-  const resourceDisplayNames = reactExports.useMemo(
+  const resourceDisplayNames2 = reactExports.useMemo(
     () => getResourceDisplayNames(activePlatformResourcePool),
     [activePlatformResourcePool]
   );
-  const activeAircraftResourcePrefix = reactExports.useMemo(() => String(activeRuntimeAircraftTypeCode || resourceDisplayNames.aircraft || "Aircraft").trim() || "Aircraft", [activeRuntimeAircraftTypeCode, resourceDisplayNames.aircraft]);
+  const activeAircraftResourcePrefix = reactExports.useMemo(() => String(activeRuntimeAircraftTypeCode || resourceDisplayNames2.aircraft || "Aircraft").trim() || "Aircraft", [activeRuntimeAircraftTypeCode, resourceDisplayNames2.aircraft]);
   const activeNeoAircraftCapacityUnitKey = reactExports.useMemo(() => {
     const locationKey = String(school || "DEFAULT").trim().toUpperCase() || "DEFAULT";
     const unitKey = String(activeUnitCode || "DEFAULT").trim().toUpperCase() || "DEFAULT";
@@ -138204,8 +138209,8 @@ const App = () => {
     return true;
   };
   const formatResourceDisplayLabel = reactExports.useCallback(
-    (resourceId) => formatResourceLabel(resourceId, resourceDisplayNames),
-    [resourceDisplayNames]
+    (resourceId) => formatResourceLabel(resourceId, resourceDisplayNames2),
+    [resourceDisplayNames2]
   );
   const resourceRowTargetDate = ["NextDayBuild", "Priorities", "ProgramData", "NextDayInstructorSchedule", "NextDayTraineeSchedule", "BuildAnalysis"].includes(activeView) ? buildDfpDate : date;
   const configuredAirframeCount = getResourcePoolCount(activePlatformResourcePool, "aircraft", 24, resourceRowTargetDate);
@@ -148146,7 +148151,7 @@ The proposed event was not scheduled. Re-open the event and choose Accept Confli
       formationCallsigns,
       locationAbbreviations,
       unitLocations,
-      resourceDisplayNames,
+      resourceDisplayNames: resourceDisplayNames2,
       aircraftConfigurationDefinitions: aircraftConfigCapacityDefinitions,
       aircraftConfigIdsByResource: buildAircraftConfigIdsByResource(currentAircraftConfigState),
       aircraftCrewComposition: activeAircraftCrewComposition,
@@ -148346,7 +148351,7 @@ ${conflictLines.join("\n")}${moreText}`,
                 "Next Day Build",
                 "Add",
                 `NEO-Build completed for ${buildDfpDate}`,
-                `Generated ${generated.length} events, Flight: ${generated.filter((e) => e.type === "flight").length}, ${resourceDisplayNames.ftd}: ${generated.filter((e) => e.type === "ftd").length}, Ground: ${generated.filter((e) => e.type === "ground").length}`
+                `Generated ${generated.length} events, Flight: ${generated.filter((e) => e.type === "flight").length}, ${resourceDisplayNames2.ftd}: ${generated.filter((e) => e.type === "ftd").length}, Ground: ${generated.filter((e) => e.type === "ground").length}`
               );
             }
           });
@@ -149264,7 +149269,7 @@ ${conflictLines.join("\n")}${moreText}`,
       "Program Schedule",
       "Edit",
       `DFP published for ${buildDfpDate}`,
-      `Published by: ${publishedBy}; Total events: ${newEventsForDate.length}; Flight: ${newEventsForDate.filter((e) => e.type === "flight").length}; ${resourceDisplayNames.ftd}: ${newEventsForDate.filter((e) => e.type === "ftd").length}; Ground: ${newEventsForDate.filter((e) => e.type === "ground").length}`
+      `Published by: ${publishedBy}; Total events: ${newEventsForDate.length}; Flight: ${newEventsForDate.filter((e) => e.type === "flight").length}; ${resourceDisplayNames2.ftd}: ${newEventsForDate.filter((e) => e.type === "ftd").length}; Ground: ${newEventsForDate.filter((e) => e.type === "ground").length}`
     );
     const hasSeedData = newEventsForDate.some((e) => e.isHistoricalSeed === true);
     if (!hasSeedData && newEventsForDate.length > 0) {
@@ -153842,7 +153847,7 @@ ${error instanceof Error ? error.message : String(error)}`,
             currentUserId: getCurrentUserId() ?? void 0,
             currentUserName,
             currentUserRole: sessionUser?.role || authUser?.role || "",
-            resourceDisplayNames,
+            resourceDisplayNames: resourceDisplayNames2,
             personnelDisplaySettings,
             trainingReportTerminology,
             trainingReportTemplate,
@@ -153978,7 +153983,7 @@ ${error instanceof Error ? error.message : String(error)}`,
             currentUserId: getCurrentUserId() ?? void 0,
             currentUserName,
             currentUserRole: sessionUser?.role || authUser?.role || "",
-            resourceDisplayNames,
+            resourceDisplayNames: resourceDisplayNames2,
             personnelDisplaySettings,
             trainingReportTerminology,
             trainingReportTemplate,
@@ -154402,7 +154407,7 @@ ${error instanceof Error ? error.message : String(error)}`,
               });
             },
             currencyNames,
-            resourceDisplayNames,
+            resourceDisplayNames: resourceDisplayNames2,
             taskProfiles: activeTaskProfiles,
             taskProfileAbbreviations: activeTaskProfileAbbreviations,
             operationalModel: activeOperationalModel,
@@ -154428,7 +154433,7 @@ ${error instanceof Error ? error.message : String(error)}`,
             onUpdateGradDate: handleUpdateGradDate,
             onUpdateStartDate: handleUpdateStartDate,
             trainingReportName: trainingReportTemplate.displayName || trainingReportTemplate.genericName,
-            resourceDisplayNames,
+            resourceDisplayNames: resourceDisplayNames2,
             serviceDefinitions,
             courseLmpPauses
           }
@@ -154465,7 +154470,7 @@ ${error instanceof Error ? error.message : String(error)}`,
             operationalModel: activeOperationalModel,
             platformConfig,
             serviceDefinitions,
-            resourceDisplayNames,
+            resourceDisplayNames: resourceDisplayNames2,
             instructorLabel: instructorLabel2,
             trainingReportTemplate,
             phraseBank: activeTrainingReportPhraseBank,
@@ -154516,7 +154521,7 @@ ${error instanceof Error ? error.message : String(error)}`,
             dayFlyingEnd: `${Math.floor(flyingEndTime).toString().padStart(2, "0")}:${Math.round(flyingEndTime % 1 * 60).toString().padStart(2, "0")}`,
             buildDate: buildIntelligenceDate,
             analysis: buildIntelligenceAnalysis,
-            resourceDisplayNames,
+            resourceDisplayNames: resourceDisplayNames2,
             instructorLabel: instructorLabel2,
             operationalModel: activeOperationalModel,
             operationalContext: activeOperationalContext,
@@ -155002,7 +155007,7 @@ ${error instanceof Error ? error.message : String(error)}`,
             currentUserId: getCurrentUserId() ?? void 0,
             currentUserName,
             currentUserRole: sessionUser?.role || authUser?.role || "",
-            resourceDisplayNames,
+            resourceDisplayNames: resourceDisplayNames2,
             personnelDisplaySettings,
             instructorLabel: instructorLabel2,
             operationalModel: activeOperationalModel,
@@ -155129,7 +155134,7 @@ ${error instanceof Error ? error.message : String(error)}`,
             currentUserId: getCurrentUserId() ?? void 0,
             currentUserName,
             currentUserRole: sessionUser?.role || authUser?.role || "",
-            resourceDisplayNames,
+            resourceDisplayNames: resourceDisplayNames2,
             personnelDisplaySettings,
             instructorLabel: instructorLabel2,
             operationalModel: activeOperationalModel,
@@ -155349,7 +155354,7 @@ ${error instanceof Error ? error.message : String(error)}`,
             onUpdateOrganisationSettings: setOrganisationSettings,
             excludedCourses,
             onUpdateExcludedCourses: handleUpdateExcludedCourses,
-            resourceDisplayNames,
+            resourceDisplayNames: resourceDisplayNames2,
             personnelDisplaySettings,
             trainingReportDisplayName: trainingReportTemplate.displayName,
             emergencyFreezeAuthority,
@@ -156042,7 +156047,7 @@ Do you want to replace the existing entry?`,
                     const baseSnapshot = {
                       year: Number.isFinite(dateObj.getTime()) ? dateObj.getFullYear().toString() : "",
                       date: Number.isFinite(dateObj.getTime()) ? dateObj.toLocaleDateString("en-GB", { day: "2-digit", month: "short" }) : "",
-                      type: data.isFtdLog ? resourceDisplayNames.ftd : resourceDisplayNames.aircraft,
+                      type: data.isFtdLog ? resourceDisplayNames2.ftd : resourceDisplayNames2.aircraft,
                       tail: data.aircraftNumber || "",
                       captain: captainDisplay,
                       crew: coPilotDisplay,
@@ -156231,7 +156236,7 @@ Do you want to replace the existing entry?`,
               instructorsData,
               masterCurrencies,
               currencyRequirements,
-              resourceDisplayNames,
+              resourceDisplayNames: resourceDisplayNames2,
               aircraftNumberSettings,
               personnelDisplaySettings,
               getSunTimesForAirfieldDate
@@ -156246,7 +156251,7 @@ Do you want to replace the existing entry?`,
             {
               person: selectedPersonForLogbook,
               events,
-              resourceDisplayNames,
+              resourceDisplayNames: resourceDisplayNames2,
               onBack: () => {
                 if ("role" in selectedPersonForLogbook) {
                   setSelectedPersonForProfile(selectedPersonForLogbook);
@@ -156816,7 +156821,7 @@ Do you want to replace the existing entry?`,
                     setPauseOverlayStart(start);
                     setPauseOverlayEnd(end);
                   },
-                  resourceDisplayNames
+                  resourceDisplayNames: resourceDisplayNames2
                 }
               )
             ]
@@ -157095,7 +157100,7 @@ Do you want to replace the existing entry?`,
             setIsAddingTile(true);
           },
           canSendAlert: ["Super Admin", "Admin", "Scheduler"].includes(currentUserPermission) && activeView === "Program Schedule" && !isPastDfpDate(selectedEvent.date),
-          resourceDisplayNames,
+          resourceDisplayNames: resourceDisplayNames2,
           aircraftNumberSettings,
           aircraftConfigurationDefinitions: aircraftConfigCapacityDefinitions,
           aircraftCrewComposition: activeAircraftCrewComposition,
@@ -157186,7 +157191,7 @@ Do you want to replace the existing entry?`,
         ] })
       ] }) }),
       conflict && /* @__PURE__ */ jsxRuntimeExports.jsx(ConflictModal, { conflict, onResolve: () => {
-      }, onCancel: () => setConflict(null), resourceDisplayNames, instructorLabel: instructorLabel2 }),
+      }, onCancel: () => setConflict(null), resourceDisplayNames: resourceDisplayNames2, instructorLabel: instructorLabel2 }),
       neoProblemTileForFlyout && !showTimeOnlyRemedyConfirm && !showNeoChoiceModal && /* @__PURE__ */ jsxRuntimeExports.jsx(
         NeoRemedyFlyout,
         {
@@ -157417,7 +157422,7 @@ Do you want to replace the existing entry?`,
           onUpdateCourseAcademicProgress: handleUpdateCourseAcademicProgress,
           persistedAcademicLmp,
           onUpdatePersistedAcademicLmp: handleUpdatePersistedAcademicLmp,
-          resourceDisplayNames,
+          resourceDisplayNames: resourceDisplayNames2,
           operationalModel: activeOperationalModel,
           groundResources: addGroundTileGroundResources,
           classroomOptions: addGroundTileClassroomOptions,

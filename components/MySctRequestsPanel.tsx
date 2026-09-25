@@ -88,7 +88,7 @@ const MySctRequestsPanel: React.FC<MySctRequestsPanelProps> = ({
                     <div>
                       <div className="text-sm font-bold text-white">{request.event || 'Untitled request'}</div>
                       <div className="mt-1 flex flex-wrap gap-1.5 text-[10px] font-semibold uppercase tracking-wide">
-                        <span className="rounded bg-gray-800 px-2 py-0.5 text-gray-300">{type === 'ftd' ? 'FTD' : 'Flight'}</span>
+                        <span className="rounded bg-gray-800 px-2 py-0.5 text-gray-300">{type === 'ftd' ? 'Simulator' : 'Flight'}</span>
                         <span className="rounded bg-gray-800 px-2 py-0.5 text-gray-300">{request.priority || 'Medium'}</span>
                         {request.submitted && <span className="rounded bg-emerald-900/60 px-2 py-0.5 text-emerald-200">Submitted</span>}
                       </div>

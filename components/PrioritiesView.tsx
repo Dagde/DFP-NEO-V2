@@ -4455,7 +4455,7 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
                           onChange={event => updateStandardMissionDraft(profile.id, { resourceType: event.target.value as StandardMissionProfile['resourceType'] })}
                           className="w-full rounded-md border border-slate-700 bg-slate-950 px-2 py-2 text-sm font-semibold text-slate-100 outline-none focus:border-cyan-400"
                         >
-                          {['Flight', 'FTD', 'CPT', 'Ground'].map(option => <option key={option} value={option}>{option}</option>)}
+                          {['Flight', 'FTD', 'CPT', 'Ground'].map(option => <option key={option} value={option}>{option === 'FTD' ? 'Simulator' : option}</option>)}
                         </select>
                         <div className="[&_select]:w-full [&_select]:rounded-md [&_select]:border-slate-700 [&_select]:bg-slate-950 [&_select]:px-2 [&_select]:py-2 [&_select]:text-sm [&_select]:font-semibold [&_select]:text-slate-100">
                           <AircraftConfigSelect

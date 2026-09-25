@@ -444,7 +444,7 @@ const CourseProgressView: React.FC<CourseProgressViewProps> = ({
 
     const courseScoreEventTypeLabels = useMemo<Record<CourseScoreEventTypeKey, string>>(() => ({
         flight: 'Flight',
-        simulator: resourceDisplayNames.ftd || 'FTD',
+        simulator: resourceDisplayNames.ftd || 'Simulator',
         proceduralTrainer: resourceDisplayNames.cpt || 'CPT',
         tutorial: 'Tutorial',
         massBrief: 'Mass Brief',

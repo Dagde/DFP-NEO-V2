@@ -11537,7 +11537,7 @@ async function generateDfpInternal(
             conclusion: [] as string[],
         },
         individualLmpDurationDiagnostics: {
-            purpose: 'Tracks whether NEO Build uses the trainee Individual LMP row, including DPCO/DNCO added time, when sizing Flight and FTD tiles.',
+            purpose: 'Tracks whether NEO Build uses the trainee Individual LMP row, including DPCO/DNCO added time, when sizing Flight and Simulator tiles.',
             lookups: [] as any[],
             placements: [] as any[],
             finalEvents: [] as any[],
@@ -19471,7 +19471,7 @@ const applyCoursePriority = (rankedList: Trainee[], diagnosticLabel = 'unlabelle
                 return `No event scheduled because the linked formation pairing could not be built. A ${required}-ship was required, but only ${selected} eligible linked-event staff were available.`;
             }
             case 'FLIGHT_FTD_LIMIT':
-                return 'No event scheduled because a staff member had already reached the configured flight/FTD duty limit.';
+                return 'No event scheduled because a staff member had already reached the configured flight/simulator duty limit.';
             case 'DUTY_LIMIT':
             case 'TOTAL_EVENT_LIMIT':
                 return 'No event scheduled because a staff member had already reached the configured total duty/event limit.';
@@ -23283,7 +23283,7 @@ const applyCoursePriority = (rankedList: Trainee[], diagnosticLabel = 'unlabelle
         currencyFtdPersonKeys.has(normalizeBuildPersonnelName(event.student || event.pilot || event.instructor || ''))
     );
     if (!isAirCombatBuild && earlyCurrencyPriorityEvents.length > 0) {
-        await recordProgress({ message: 'Scheduling Currency FTD Priority Events...', percentage: 44 });
+        await recordProgress({ message: 'Scheduling Currency Simulator Priority Events...', percentage: 44 });
         scheduleCurrencyPriorityEvents(earlyCurrencyPriorityEvents);
     }
 

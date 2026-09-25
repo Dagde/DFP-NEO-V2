@@ -225,7 +225,7 @@ const PeopleTab: React.FC<PeopleTabProps> = ({
         total: load.total,
         breakdown: [
           buildGroup('Flight', 'flight'),
-          buildGroup('FTD', 'ftd'),
+          buildGroup(resourceDisplayNames.ftd, 'ftd'),
           buildGroup('CPT', 'cpt'),
           buildGroup('Ground', 'ground'),
         ],

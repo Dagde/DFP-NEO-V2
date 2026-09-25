@@ -1250,7 +1250,7 @@ const buildMetricDefinitions = (
     {
       key: 'simulator',
       title: 'Simulator events per day',
-      subtitle: 'FTD and simulator events counted by published DFP day.',
+      subtitle: 'Simulator events counted by published DFP day.',
       icon: ComputerDesktopIcon,
       color: 'border-emerald-400/40 bg-emerald-400/10 text-emerald-200',
       series: simPoints,
@@ -1260,7 +1260,7 @@ const buildMetricDefinitions = (
     {
       key: 'simulatorHours',
       title: 'Simulator hours per day',
-      subtitle: 'Total scheduled FTD and simulator hours by published DFP day.',
+      subtitle: 'Total scheduled simulator hours by published DFP day.',
       icon: ClockIcon,
       color: 'border-teal-400/40 bg-teal-400/10 text-teal-200',
       unit: 'h',

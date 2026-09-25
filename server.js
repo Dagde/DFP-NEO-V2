@@ -9398,7 +9398,7 @@ function getRequiredUploadDataErrors(row) {
 
   const typeValue = getUploadString(row, ['Type']);
   if (typeValue && !BULK_UPLOAD_TYPE_LABELS.has(typeValue.trim().toLowerCase())) {
-    errors.push('Type must be one of: Flight, FTD, Academics, Ground School, CPT');
+    errors.push('Type must be one of: Flight, Simulator, Academics, Ground School, CPT');
   }
 
   const flightOrSimHours = getUploadNumber(row, ['Flight or Sim Hours', 'flightOrSimHours']);
@@ -14856,7 +14856,7 @@ async function seedCommercialConfigIfEmpty(db) {
         aircraftNumberUsePrefix: seedAircraftPrefixes.length > 0,
         aircraftNumberPrefixes: seedAircraftPrefixes,
         aircraftNumberDefaultPrefix: seedAircraftDefaultPrefix,
-        ftdLabel: 'FTD',
+        ftdLabel: 'Simulator',
         cptLabel: 'CPT',
         aircraft: Number(settings.availableAircraftCount ?? 24),
         ftd: Number(settings.availableFtdCount ?? 5),

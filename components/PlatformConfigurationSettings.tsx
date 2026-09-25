@@ -5854,7 +5854,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
               aircraftNumberUsePrefix: true,
               aircraftNumberPrefixes: [],
               aircraftNumberDefaultPrefix: '',
-              ftdLabel: 'FTD',
+              ftdLabel: 'Simulator',
               cptLabel: 'CPT',
               aircraft: 0,
               ftd: 0,
@@ -11397,7 +11397,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
                       </div>
                       <div className="grid gap-3 md:grid-cols-3">
                         <DraftField label="Aircraft Row Label" value={pool.settings?.aircraftLabel || (displayedResourcePoolAircraftTypeCode ? getAircraftTypeDisplayLabel(displayedResourcePoolAircraftTypeCode) : '')} disabled={!canEditResourcePools} onCommit={(value) => updateResourcePoolSettings(index, { aircraftLabel: value })} />
-                        <DraftField label="Simulator Row Label" value={pool.settings?.ftdLabel || 'FTD'} disabled={!canEditResourcePools} onCommit={(value) => updateResourcePoolSettings(index, { ftdLabel: value })} />
+                        <DraftField label="Simulator Row Label" value={String(pool.settings?.ftdLabel || '').trim().toUpperCase() === 'FTD' ? 'Simulator' : pool.settings?.ftdLabel || 'Simulator'} disabled={!canEditResourcePools} onCommit={(value) => updateResourcePoolSettings(index, { ftdLabel: value })} />
                         <DraftField label="Procedural Trainer Row Label" value={pool.settings?.cptLabel || 'CPT'} disabled={!canEditResourcePools} onCommit={(value) => updateResourcePoolSettings(index, { cptLabel: value })} />
                         <ClassroomNamesField
                           value={pool.settings?.classrooms ?? pool.settings?.classroomNames ?? pool.settings?.groundClassrooms}
@@ -13388,7 +13388,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
                       <div className="mb-3 text-sm font-bold text-gray-100">{poolTitle}</div>
                       <div className="grid gap-3 lg:grid-cols-2">
                         <DraftField label="Aircraft Row Label" value={pool.settings?.aircraftLabel || (aircraftCode ? getAircraftTypeDisplayLabel(aircraftCode) : '')} disabled={!canEditResourcePools} onCommit={(value) => updateResourcePoolSettings(index, { aircraftLabel: value })} info="The label shown for aircraft rows. Example: Aircraft, Jet, Helicopter." />
-                        <DraftField label="Simulator Row Label" value={pool.settings?.ftdLabel || 'FTD'} disabled={!canEditResourcePools} onCommit={(value) => updateResourcePoolSettings(index, { ftdLabel: value })} info="The label shown for simulator rows. Example: Simulator, FTD." />
+                        <DraftField label="Simulator Row Label" value={String(pool.settings?.ftdLabel || '').trim().toUpperCase() === 'FTD' ? 'Simulator' : pool.settings?.ftdLabel || 'Simulator'} disabled={!canEditResourcePools} onCommit={(value) => updateResourcePoolSettings(index, { ftdLabel: value })} info="The label shown for simulator rows. Example: Simulator." />
                         <DraftField label="Procedural Trainer Row Label" value={pool.settings?.cptLabel || 'CPT'} disabled={!canEditResourcePools} onCommit={(value) => updateResourcePoolSettings(index, { cptLabel: value })} info="The label shown for procedural trainer rows. Example: Procedural Trainer, CPT." />
                         <ClassroomNamesField
                           value={pool.settings?.classrooms ?? pool.settings?.classroomNames ?? pool.settings?.groundClassrooms}
@@ -14647,6 +14647,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
                     value={eventType.syllabusType}
                     disabled={!canEditSection('platform-scheduling-rule-sets')}
                     options={['Flight', 'FTD', 'Ground School', 'Academics']}
+                    optionLabels={{ FTD: 'Simulator' }}
                     onChange={(value) => updateInsertEventType(eventTypeIndex, { syllabusType: value as InsertEventSyllabusType })}
                   />
                   <SelectField

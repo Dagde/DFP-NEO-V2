@@ -367,7 +367,7 @@ export const LmpEventEditModal: React.FC<{
                         <span className="text-xs font-semibold uppercase tracking-wide text-gray-400">Type</span>
                         <select className="w-full rounded border border-gray-600 bg-gray-950 px-3 py-2 text-sm text-white" value={type} onChange={(event) => setType(event.target.value as SyllabusItemDetail['type'])}>
                             <option value="Flight">Flight</option>
-                            <option value="FTD">FTD</option>
+                            <option value="FTD">{resourceDisplayNames.ftd}</option>
                             <option value="Ground School">Ground School</option>
                             <option value="Academics">Academics</option>
                         </select>
