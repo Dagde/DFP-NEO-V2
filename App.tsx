@@ -913,6 +913,7 @@ const NEO_ASSIST_POINTER_DROP_EVENT = 'neoAssistPointerDrop';
 const NEO_ASSIST_DRAG_DIAGNOSTIC_EVENT = 'neoAssistDragDiagnostic';
 const NEO_ASSIST_DRAG_DIAGNOSTIC_STORAGE_KEY = 'neo_assist_drag_diagnostic_report';
 const DFP_DRAG_DIAGNOSTIC_STORAGE_KEY = 'dfp_drag_diagnostics_report';
+const NEO_ASSIST_DRAG_DIAGNOSTIC_VERSION = 2;
 
 type NeoAssistDragDiagnosticEntry = {
     id?: string;
@@ -948,6 +949,7 @@ const recordNeoAssistDragDiagnostic = (entry: Omit<NeoAssistDragDiagnosticEntry,
             generatedAt: new Date().toISOString(),
             app: 'DFP-NEO',
             reportType: 'neo-assist-drag-diagnostic',
+            version: NEO_ASSIST_DRAG_DIAGNOSTIC_VERSION,
             userAgent: window.navigator?.userAgent || '',
             viewport: {
                 width: window.innerWidth,
@@ -991,6 +993,7 @@ const downloadNeoAssistDragDiagnosticReport = () => {
                 generatedAt: new Date().toISOString(),
                 app: 'DFP-NEO',
                 reportType: 'neo-assist-drag-diagnostic',
+                version: NEO_ASSIST_DRAG_DIAGNOSTIC_VERSION,
                 entries: fallbackEntries,
             };
         const dfpDragStored = window.localStorage?.getItem(DFP_DRAG_DIAGNOSTIC_STORAGE_KEY);
@@ -1215,6 +1218,8 @@ const DfpSidePanelTimeline: React.FC<{
         maxMoveGapMs: number;
         maxPreviewUpdateMs: number;
         firstMoveDelayMs?: number;
+        lastSlowMoveDiagnosticAt?: number;
+        lastPreviewDiagnosticAt?: number;
         lastClientX?: number;
         lastClientY?: number;
     } | null>(null);
@@ -2389,15 +2394,17 @@ const DfpSidePanelTimeline: React.FC<{
     ]);
 
     const positionAssistDragPreview = (clientX: number, clientY: number) => {
-        const startedAt = getNeoAssistPerfNow();
         const preview = assistDragPreviewRef.current;
         if (!preview || !clientX || !clientY) return;
-        preview.style.transform = `translate3d(${clientX + 12}px, ${clientY + 12}px, 0)`;
-        const elapsed = getNeoAssistPerfNow() - startedAt;
         const dragSession = assistPointerDragSessionRef.current;
+        const startedAt = dragSession ? getNeoAssistPerfNow() : 0;
+        preview.style.transform = `translate3d(${clientX + 12}px, ${clientY + 12}px, 0)`;
         if (dragSession) {
+            const elapsed = getNeoAssistPerfNow() - startedAt;
             dragSession.maxPreviewUpdateMs = Math.max(dragSession.maxPreviewUpdateMs, elapsed);
-            if (elapsed > 8) {
+            const shouldRecordSlowPreview = elapsed > 8 && startedAt - (dragSession.lastPreviewDiagnosticAt || 0) > 250;
+            if (shouldRecordSlowPreview) {
+                dragSession.lastPreviewDiagnosticAt = startedAt;
                 recordNeoAssistDragDiagnostic({
                     sessionId: dragSession.sessionId,
                     stage: 'preview-update-slow',
@@ -2411,10 +2418,10 @@ const DfpSidePanelTimeline: React.FC<{
         }
     };
 
-    const clearAssistDragPreview = () => {
+    const clearAssistDragPreview = (updateDragState = true) => {
         assistDragPreviewRef.current?.remove();
         assistDragPreviewRef.current = null;
-        setIsAssistTileDragging(false);
+        if (updateDragState) setIsAssistTileDragging(false);
     };
 
     const createAssistDragImage = (): HTMLElement => {
@@ -2591,8 +2598,15 @@ const DfpSidePanelTimeline: React.FC<{
         if (event.button !== 0) return;
         const sessionId = `assist-drag-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
         const startedAt = getNeoAssistPerfNow();
+        const captureTarget = event.currentTarget;
+        const pointerId = event.pointerId;
         event.preventDefault();
         event.stopPropagation();
+        try {
+            captureTarget.setPointerCapture(pointerId);
+        } catch {
+            // Document-level capture listeners below still keep the drag alive.
+        }
 
         const sourceEvent = assistDraftEvent;
         assistPointerDragSessionRef.current = {
@@ -2619,11 +2633,10 @@ const DfpSidePanelTimeline: React.FC<{
                 duration: sourceEvent.duration,
                 formationSize: sourceEvent.formationSize,
                 resourceId: sourceEvent.resourceId,
-                panelWillClose: Boolean(onManualTileDragStart),
+                panelCloseTiming: onManualTileDragStart ? 'after-drop' : 'none',
             },
         });
-        clearAssistDragPreview();
-        setIsAssistTileDragging(true);
+        clearAssistDragPreview(false);
         const dragPreview = createAssistDragImage();
         assistDragPreviewRef.current = dragPreview;
         positionAssistDragPreview(event.clientX, event.clientY);
@@ -2638,16 +2651,6 @@ const DfpSidePanelTimeline: React.FC<{
             },
         });
         document.body.classList.add('no-select');
-        const callbackStart = getNeoAssistPerfNow();
-        onManualTileDragStart?.();
-        const callbackElapsed = getNeoAssistPerfNow() - callbackStart;
-        recordNeoAssistDragDiagnostic({
-            sessionId,
-            stage: callbackElapsed > 20 ? 'manual-start-callback-slow' : 'manual-start-callback',
-            details: {
-                elapsedMs: Math.round(callbackElapsed * 100) / 100,
-            },
-        });
 
         const handlePointerMove = (pointerEvent: PointerEvent) => {
             const moveStartedAt = getNeoAssistPerfNow();
@@ -2671,16 +2674,19 @@ const DfpSidePanelTimeline: React.FC<{
                 }
                 if (gapMs > 50) {
                     dragSession.slowMoveCount += 1;
-                    recordNeoAssistDragDiagnostic({
-                        sessionId: dragSession.sessionId,
-                        stage: 'pointer-move-slow',
-                        details: {
-                            gapMs: Math.round(gapMs * 100) / 100,
-                            moveCount: dragSession.moveCount,
-                            clientX: pointerEvent.clientX,
-                            clientY: pointerEvent.clientY,
-                        },
-                    });
+                    if (moveStartedAt - (dragSession.lastSlowMoveDiagnosticAt || 0) > 250) {
+                        dragSession.lastSlowMoveDiagnosticAt = moveStartedAt;
+                        recordNeoAssistDragDiagnostic({
+                            sessionId: dragSession.sessionId,
+                            stage: 'pointer-move-slow',
+                            details: {
+                                gapMs: Math.round(gapMs * 100) / 100,
+                                moveCount: dragSession.moveCount,
+                                clientX: pointerEvent.clientX,
+                                clientY: pointerEvent.clientY,
+                            },
+                        });
+                    }
                 }
             }
             pointerEvent.preventDefault();
@@ -2688,12 +2694,17 @@ const DfpSidePanelTimeline: React.FC<{
         };
 
         const cleanup = () => {
-            document.removeEventListener('pointermove', handlePointerMove);
-            document.removeEventListener('pointerup', handlePointerUp);
-            document.removeEventListener('pointercancel', handlePointerCancel);
+            document.removeEventListener('pointermove', handlePointerMove, true);
+            document.removeEventListener('pointerup', handlePointerUp, true);
+            document.removeEventListener('pointercancel', handlePointerCancel, true);
+            try {
+                if (captureTarget.hasPointerCapture(pointerId)) captureTarget.releasePointerCapture(pointerId);
+            } catch {
+                // The panel may have unmounted by the time cleanup runs.
+            }
             document.body.classList.remove('no-select');
             assistPointerDragActiveRef.current = false;
-            clearAssistDragPreview();
+            clearAssistDragPreview(false);
             assistPointerDragSessionRef.current = null;
         };
 
@@ -2725,6 +2736,20 @@ const DfpSidePanelTimeline: React.FC<{
                     pointerUpPerfMs: getNeoAssistPerfNow(),
                 },
             }));
+            if (onManualTileDragStart) {
+                window.setTimeout(() => {
+                    const callbackStart = getNeoAssistPerfNow();
+                    onManualTileDragStart();
+                    const callbackElapsed = getNeoAssistPerfNow() - callbackStart;
+                    recordNeoAssistDragDiagnostic({
+                        sessionId,
+                        stage: callbackElapsed > 20 ? 'panel-close-after-drop-slow' : 'panel-close-after-drop',
+                        details: {
+                            elapsedMs: Math.round(callbackElapsed * 100) / 100,
+                        },
+                    });
+                }, 0);
+            }
             cleanup();
         };
 
@@ -2740,9 +2765,9 @@ const DfpSidePanelTimeline: React.FC<{
         };
 
         assistPointerDragActiveRef.current = true;
-        document.addEventListener('pointermove', handlePointerMove, { passive: false });
-        document.addEventListener('pointerup', handlePointerUp, { once: true });
-        document.addEventListener('pointercancel', handlePointerCancel, { once: true });
+        document.addEventListener('pointermove', handlePointerMove, { passive: false, capture: true });
+        document.addEventListener('pointerup', handlePointerUp, { once: true, capture: true });
+        document.addEventListener('pointercancel', handlePointerCancel, { once: true, capture: true });
     };
 
     useEffect(() => {
