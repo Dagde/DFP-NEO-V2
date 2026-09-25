@@ -232,9 +232,52 @@ const START_HOUR = 0;
 const END_HOUR = 24;
 const TOTAL_HOURS = END_HOUR - START_HOUR;
 const NEO_ASSIST_POINTER_DROP_EVENT = 'neoAssistPointerDrop';
+const NEO_ASSIST_DRAG_DIAGNOSTIC_STORAGE_KEY = 'neo_assist_drag_diagnostic_report';
 const AIRFRAME_COLUMN_WIDTH = 108; // Header cell width (date selector)
 const RESOURCE_COLUMN_WIDTH = 105; // Resource row header width.
 const TIME_HEADER_HEIGHT = 40;
+
+const getNeoAssistPerfNow = (): number => (
+    typeof performance !== 'undefined' && typeof performance.now === 'function'
+        ? performance.now()
+        : Date.now()
+);
+
+const recordNeoAssistDragDiagnostic = (entry: { sessionId?: string; stage: string; details?: Record<string, any>; perfMs?: number }) => {
+    if (typeof window === 'undefined') return;
+    const fullEntry = {
+        ...entry,
+        at: new Date().toISOString(),
+        perfMs: typeof entry.perfMs === 'number'
+            ? Math.round(entry.perfMs * 100) / 100
+            : Math.round(getNeoAssistPerfNow() * 100) / 100,
+    };
+    try {
+        const win = window as any;
+        const entries = Array.isArray(win.__neoAssistDragDiagnostics) ? win.__neoAssistDragDiagnostics : [];
+        entries.push(fullEntry);
+        const trimmed = entries.slice(-500);
+        win.__neoAssistDragDiagnostics = trimmed;
+        const stored = window.localStorage?.getItem(NEO_ASSIST_DRAG_DIAGNOSTIC_STORAGE_KEY);
+        const previous = stored ? JSON.parse(stored) : {};
+        window.localStorage?.setItem(NEO_ASSIST_DRAG_DIAGNOSTIC_STORAGE_KEY, JSON.stringify({
+            ...previous,
+            generatedAt: new Date().toISOString(),
+            app: 'DFP-NEO',
+            reportType: 'neo-assist-drag-diagnostic',
+            userAgent: window.navigator?.userAgent || '',
+            viewport: {
+                width: window.innerWidth,
+                height: window.innerHeight,
+                devicePixelRatio: window.devicePixelRatio,
+            },
+            entries: trimmed,
+        }));
+        if (fullEntry.stage.includes('slow')) console.warn('[NEO Assist Drag Diagnostic]', fullEntry);
+    } catch {
+        // Diagnostics must never interrupt schedule interaction.
+    }
+};
 const DEFAULT_FLIGHT_LINE_UNAVAILABLE_REASONS = [
     'Maintenance',
     'Unserviceable',
@@ -12503,10 +12546,36 @@ const ScheduleView: React.FC<ScheduleViewProps> = ({
         };
     }, [draggingState, flushPendingDragUpdate]);
 
-    const getExternalDropPlacementFromClient = useCallback((clientX: number, clientY: number) => {
-        if (!scheduleGridRef.current) return null;
+    const getExternalDropPlacementFromClient = useCallback((clientX: number, clientY: number, diagnosticSessionId?: string) => {
+        const startedAt = getNeoAssistPerfNow();
+        if (!scheduleGridRef.current) {
+            if (diagnosticSessionId) {
+                recordNeoAssistDragDiagnostic({
+                    sessionId: diagnosticSessionId,
+                    stage: 'drop-placement-missing-grid',
+                    details: { clientX, clientY },
+                });
+            }
+            return null;
+        }
         const gridRect = scheduleGridRef.current.getBoundingClientRect();
-        if (clientX < gridRect.left || clientX > gridRect.right || clientY < gridRect.top || clientY > gridRect.bottom) return null;
+        if (clientX < gridRect.left || clientX > gridRect.right || clientY < gridRect.top || clientY > gridRect.bottom) {
+            if (diagnosticSessionId) {
+                recordNeoAssistDragDiagnostic({
+                    sessionId: diagnosticSessionId,
+                    stage: 'drop-placement-outside-grid',
+                    details: {
+                        clientX,
+                        clientY,
+                        gridLeft: Math.round(gridRect.left),
+                        gridTop: Math.round(gridRect.top),
+                        gridRight: Math.round(gridRect.right),
+                        gridBottom: Math.round(gridRect.bottom),
+                    },
+                });
+            }
+            return null;
+        }
         const relativeX = clientX - gridRect.left;
         const relativeY = clientY - gridRect.top;
         const rawStartTime = START_HOUR + (relativeX / (PIXELS_PER_HOUR * zoomLevel));
@@ -12514,6 +12583,22 @@ const ScheduleView: React.FC<ScheduleViewProps> = ({
         const rowIndex = Math.max(0, Math.min(resources.length - 1, Math.floor(relativeY / ROW_HEIGHT)));
         const resourceId = resources[rowIndex];
         if (!resourceId) return null;
+        if (diagnosticSessionId) {
+            recordNeoAssistDragDiagnostic({
+                sessionId: diagnosticSessionId,
+                stage: 'drop-placement',
+                details: {
+                    elapsedMs: Math.round((getNeoAssistPerfNow() - startedAt) * 100) / 100,
+                    clientX,
+                    clientY,
+                    startTime,
+                    rowIndex,
+                    resourceId,
+                    resourceCount: resources.length,
+                    zoomLevel,
+                },
+            });
+        }
         return { startTime, resourceId };
     }, [resources, zoomLevel]);
 
@@ -12591,11 +12676,33 @@ const ScheduleView: React.FC<ScheduleViewProps> = ({
     useEffect(() => {
         const handleAssistPointerDrop = (event: Event) => {
             if (isReadOnly || !onExternalEventDrop) return;
-            const detail = (event as CustomEvent<{ event?: ScheduleEvent; clientX?: number; clientY?: number }>).detail;
+            const receiveStartedAt = getNeoAssistPerfNow();
+            const detail = (event as CustomEvent<{ event?: ScheduleEvent; clientX?: number; clientY?: number; sessionId?: string; pointerUpPerfMs?: number }>).detail;
             if (!detail?.event || typeof detail.clientX !== 'number' || typeof detail.clientY !== 'number') return;
-            const placement = getExternalDropPlacementFromClient(detail.clientX, detail.clientY);
+            recordNeoAssistDragDiagnostic({
+                sessionId: detail.sessionId,
+                stage: 'schedule-pointer-drop-received',
+                details: {
+                    sincePointerUpMs: typeof detail.pointerUpPerfMs === 'number'
+                        ? Math.round((receiveStartedAt - detail.pointerUpPerfMs) * 100) / 100
+                        : null,
+                    eventType: detail.event.type,
+                    flightNumber: detail.event.flightNumber,
+                },
+            });
+            const placement = getExternalDropPlacementFromClient(detail.clientX, detail.clientY, detail.sessionId);
             if (!placement) return;
-            onExternalEventDrop(detail.event, placement);
+            const handlerStartedAt = getNeoAssistPerfNow();
+            onExternalEventDrop({ ...detail.event, neoAssistDragSessionId: detail.sessionId } as ScheduleEvent, placement);
+            const handlerElapsed = getNeoAssistPerfNow() - handlerStartedAt;
+            recordNeoAssistDragDiagnostic({
+                sessionId: detail.sessionId,
+                stage: handlerElapsed > 50 ? 'drop-handler-slow' : 'drop-handler',
+                details: {
+                    elapsedMs: Math.round(handlerElapsed * 100) / 100,
+                    placement,
+                },
+            });
         };
         window.addEventListener(NEO_ASSIST_POINTER_DROP_EVENT, handleAssistPointerDrop as EventListener);
         return () => {

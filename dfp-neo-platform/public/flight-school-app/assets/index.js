@@ -31882,9 +31882,43 @@ const START_HOUR$6 = 0;
 const END_HOUR$6 = 24;
 const TOTAL_HOURS$6 = END_HOUR$6 - START_HOUR$6;
 const NEO_ASSIST_POINTER_DROP_EVENT$2 = "neoAssistPointerDrop";
+const NEO_ASSIST_DRAG_DIAGNOSTIC_STORAGE_KEY$2 = "neo_assist_drag_diagnostic_report";
 const AIRFRAME_COLUMN_WIDTH$1 = 108;
 const RESOURCE_COLUMN_WIDTH = 105;
 const TIME_HEADER_HEIGHT$6 = 40;
+const getNeoAssistPerfNow$2 = () => typeof performance !== "undefined" && typeof performance.now === "function" ? performance.now() : Date.now();
+const recordNeoAssistDragDiagnostic$2 = (entry) => {
+  if (typeof window === "undefined") return;
+  const fullEntry = {
+    ...entry,
+    at: (/* @__PURE__ */ new Date()).toISOString(),
+    perfMs: typeof entry.perfMs === "number" ? Math.round(entry.perfMs * 100) / 100 : Math.round(getNeoAssistPerfNow$2() * 100) / 100
+  };
+  try {
+    const win = window;
+    const entries = Array.isArray(win.__neoAssistDragDiagnostics) ? win.__neoAssistDragDiagnostics : [];
+    entries.push(fullEntry);
+    const trimmed = entries.slice(-500);
+    win.__neoAssistDragDiagnostics = trimmed;
+    const stored = window.localStorage?.getItem(NEO_ASSIST_DRAG_DIAGNOSTIC_STORAGE_KEY$2);
+    const previous = stored ? JSON.parse(stored) : {};
+    window.localStorage?.setItem(NEO_ASSIST_DRAG_DIAGNOSTIC_STORAGE_KEY$2, JSON.stringify({
+      ...previous,
+      generatedAt: (/* @__PURE__ */ new Date()).toISOString(),
+      app: "DFP-NEO",
+      reportType: "neo-assist-drag-diagnostic",
+      userAgent: window.navigator?.userAgent || "",
+      viewport: {
+        width: window.innerWidth,
+        height: window.innerHeight,
+        devicePixelRatio: window.devicePixelRatio
+      },
+      entries: trimmed
+    }));
+    if (fullEntry.stage.includes("slow")) console.warn("[NEO Assist Drag Diagnostic]", fullEntry);
+  } catch {
+  }
+};
 const DEFAULT_FLIGHT_LINE_UNAVAILABLE_REASONS = [
   "Maintenance",
   "Unserviceable",
@@ -42083,10 +42117,36 @@ const ScheduleView = ({
       document.removeEventListener("mouseup", handleGlobalMouseUp);
     };
   }, [draggingState, flushPendingDragUpdate]);
-  const getExternalDropPlacementFromClient = reactExports.useCallback((clientX, clientY) => {
-    if (!scheduleGridRef.current) return null;
+  const getExternalDropPlacementFromClient = reactExports.useCallback((clientX, clientY, diagnosticSessionId) => {
+    const startedAt = getNeoAssistPerfNow$2();
+    if (!scheduleGridRef.current) {
+      if (diagnosticSessionId) {
+        recordNeoAssistDragDiagnostic$2({
+          sessionId: diagnosticSessionId,
+          stage: "drop-placement-missing-grid",
+          details: { clientX, clientY }
+        });
+      }
+      return null;
+    }
     const gridRect = scheduleGridRef.current.getBoundingClientRect();
-    if (clientX < gridRect.left || clientX > gridRect.right || clientY < gridRect.top || clientY > gridRect.bottom) return null;
+    if (clientX < gridRect.left || clientX > gridRect.right || clientY < gridRect.top || clientY > gridRect.bottom) {
+      if (diagnosticSessionId) {
+        recordNeoAssistDragDiagnostic$2({
+          sessionId: diagnosticSessionId,
+          stage: "drop-placement-outside-grid",
+          details: {
+            clientX,
+            clientY,
+            gridLeft: Math.round(gridRect.left),
+            gridTop: Math.round(gridRect.top),
+            gridRight: Math.round(gridRect.right),
+            gridBottom: Math.round(gridRect.bottom)
+          }
+        });
+      }
+      return null;
+    }
     const relativeX = clientX - gridRect.left;
     const relativeY = clientY - gridRect.top;
     const rawStartTime = START_HOUR$6 + relativeX / (PIXELS_PER_HOUR$6 * zoomLevel);
@@ -42094,6 +42154,22 @@ const ScheduleView = ({
     const rowIndex = Math.max(0, Math.min(resources.length - 1, Math.floor(relativeY / ROW_HEIGHT$6)));
     const resourceId = resources[rowIndex];
     if (!resourceId) return null;
+    if (diagnosticSessionId) {
+      recordNeoAssistDragDiagnostic$2({
+        sessionId: diagnosticSessionId,
+        stage: "drop-placement",
+        details: {
+          elapsedMs: Math.round((getNeoAssistPerfNow$2() - startedAt) * 100) / 100,
+          clientX,
+          clientY,
+          startTime,
+          rowIndex,
+          resourceId,
+          resourceCount: resources.length,
+          zoomLevel
+        }
+      });
+    }
     return { startTime, resourceId };
   }, [resources, zoomLevel]);
   const getExternalDropPlacement = (event) => getExternalDropPlacementFromClient(event.clientX, event.clientY);
@@ -42162,11 +42238,31 @@ const ScheduleView = ({
   reactExports.useEffect(() => {
     const handleAssistPointerDrop = (event) => {
       if (isReadOnly || !onExternalEventDrop) return;
+      const receiveStartedAt = getNeoAssistPerfNow$2();
       const detail = event.detail;
       if (!detail?.event || typeof detail.clientX !== "number" || typeof detail.clientY !== "number") return;
-      const placement = getExternalDropPlacementFromClient(detail.clientX, detail.clientY);
+      recordNeoAssistDragDiagnostic$2({
+        sessionId: detail.sessionId,
+        stage: "schedule-pointer-drop-received",
+        details: {
+          sincePointerUpMs: typeof detail.pointerUpPerfMs === "number" ? Math.round((receiveStartedAt - detail.pointerUpPerfMs) * 100) / 100 : null,
+          eventType: detail.event.type,
+          flightNumber: detail.event.flightNumber
+        }
+      });
+      const placement = getExternalDropPlacementFromClient(detail.clientX, detail.clientY, detail.sessionId);
       if (!placement) return;
-      onExternalEventDrop(detail.event, placement);
+      const handlerStartedAt = getNeoAssistPerfNow$2();
+      onExternalEventDrop({ ...detail.event, neoAssistDragSessionId: detail.sessionId }, placement);
+      const handlerElapsed = getNeoAssistPerfNow$2() - handlerStartedAt;
+      recordNeoAssistDragDiagnostic$2({
+        sessionId: detail.sessionId,
+        stage: handlerElapsed > 50 ? "drop-handler-slow" : "drop-handler",
+        details: {
+          elapsedMs: Math.round(handlerElapsed * 100) / 100,
+          placement
+        }
+      });
     };
     window.addEventListener(NEO_ASSIST_POINTER_DROP_EVENT$2, handleAssistPointerDrop);
     return () => {
@@ -68992,8 +69088,42 @@ const START_HOUR$3 = 0;
 const END_HOUR$3 = 24;
 const TOTAL_HOURS$3 = END_HOUR$3 - START_HOUR$3;
 const NEO_ASSIST_POINTER_DROP_EVENT$1 = "neoAssistPointerDrop";
+const NEO_ASSIST_DRAG_DIAGNOSTIC_STORAGE_KEY$1 = "neo_assist_drag_diagnostic_report";
 const AIRFRAME_COLUMN_WIDTH = 144;
 const TIME_HEADER_HEIGHT$3 = 40;
+const getNeoAssistPerfNow$1 = () => typeof performance !== "undefined" && typeof performance.now === "function" ? performance.now() : Date.now();
+const recordNeoAssistDragDiagnostic$1 = (entry) => {
+  if (typeof window === "undefined") return;
+  const fullEntry = {
+    ...entry,
+    at: (/* @__PURE__ */ new Date()).toISOString(),
+    perfMs: typeof entry.perfMs === "number" ? Math.round(entry.perfMs * 100) / 100 : Math.round(getNeoAssistPerfNow$1() * 100) / 100
+  };
+  try {
+    const win = window;
+    const entries = Array.isArray(win.__neoAssistDragDiagnostics) ? win.__neoAssistDragDiagnostics : [];
+    entries.push(fullEntry);
+    const trimmed = entries.slice(-500);
+    win.__neoAssistDragDiagnostics = trimmed;
+    const stored = window.localStorage?.getItem(NEO_ASSIST_DRAG_DIAGNOSTIC_STORAGE_KEY$1);
+    const previous = stored ? JSON.parse(stored) : {};
+    window.localStorage?.setItem(NEO_ASSIST_DRAG_DIAGNOSTIC_STORAGE_KEY$1, JSON.stringify({
+      ...previous,
+      generatedAt: (/* @__PURE__ */ new Date()).toISOString(),
+      app: "DFP-NEO",
+      reportType: "neo-assist-drag-diagnostic",
+      userAgent: window.navigator?.userAgent || "",
+      viewport: {
+        width: window.innerWidth,
+        height: window.innerHeight,
+        devicePixelRatio: window.devicePixelRatio
+      },
+      entries: trimmed
+    }));
+    if (fullEntry.stage.includes("slow")) console.warn("[NEO Assist Drag Diagnostic]", fullEntry);
+  } catch {
+  }
+};
 const getPersonnel$3 = (event) => {
   const personnel = [];
   if (event.flightType === "Solo") {
@@ -69188,10 +69318,36 @@ const NextDayBuildView = ({
     const timerId = setInterval(() => setCurrentTime(/* @__PURE__ */ new Date()), 1e3);
     return () => clearInterval(timerId);
   }, [date]);
-  const getExternalDropPlacementFromClient = reactExports.useCallback((clientX, clientY) => {
-    if (!scheduleGridRef.current) return null;
+  const getExternalDropPlacementFromClient = reactExports.useCallback((clientX, clientY, diagnosticSessionId) => {
+    const startedAt = getNeoAssistPerfNow$1();
+    if (!scheduleGridRef.current) {
+      if (diagnosticSessionId) {
+        recordNeoAssistDragDiagnostic$1({
+          sessionId: diagnosticSessionId,
+          stage: "next-day-drop-placement-missing-grid",
+          details: { clientX, clientY }
+        });
+      }
+      return null;
+    }
     const gridRect = scheduleGridRef.current.getBoundingClientRect();
-    if (clientX < gridRect.left || clientX > gridRect.right || clientY < gridRect.top || clientY > gridRect.bottom) return null;
+    if (clientX < gridRect.left || clientX > gridRect.right || clientY < gridRect.top || clientY > gridRect.bottom) {
+      if (diagnosticSessionId) {
+        recordNeoAssistDragDiagnostic$1({
+          sessionId: diagnosticSessionId,
+          stage: "next-day-drop-placement-outside-grid",
+          details: {
+            clientX,
+            clientY,
+            gridLeft: Math.round(gridRect.left),
+            gridTop: Math.round(gridRect.top),
+            gridRight: Math.round(gridRect.right),
+            gridBottom: Math.round(gridRect.bottom)
+          }
+        });
+      }
+      return null;
+    }
     const relativeX = clientX - gridRect.left;
     const relativeY = clientY - gridRect.top;
     const rawStartTime = START_HOUR$3 + relativeX / (PIXELS_PER_HOUR$3 * zoomLevel);
@@ -69199,6 +69355,22 @@ const NextDayBuildView = ({
     const rowIndex = Math.max(0, Math.min(resources.length - 1, Math.floor(relativeY / ROW_HEIGHT$3)));
     const resourceId = resources[rowIndex];
     if (!resourceId) return null;
+    if (diagnosticSessionId) {
+      recordNeoAssistDragDiagnostic$1({
+        sessionId: diagnosticSessionId,
+        stage: "next-day-drop-placement",
+        details: {
+          elapsedMs: Math.round((getNeoAssistPerfNow$1() - startedAt) * 100) / 100,
+          clientX,
+          clientY,
+          startTime,
+          rowIndex,
+          resourceId,
+          resourceCount: resources.length,
+          zoomLevel
+        }
+      });
+    }
     return { startTime, resourceId };
   }, [resources, zoomLevel]);
   const getExternalDropPlacement = (event) => getExternalDropPlacementFromClient(event.clientX, event.clientY);
@@ -69229,11 +69401,31 @@ const NextDayBuildView = ({
   reactExports.useEffect(() => {
     const handleAssistPointerDrop = (event) => {
       if (!onExternalEventDrop) return;
+      const receiveStartedAt = getNeoAssistPerfNow$1();
       const detail = event.detail;
       if (!detail?.event || typeof detail.clientX !== "number" || typeof detail.clientY !== "number") return;
-      const placement = getExternalDropPlacementFromClient(detail.clientX, detail.clientY);
+      recordNeoAssistDragDiagnostic$1({
+        sessionId: detail.sessionId,
+        stage: "next-day-pointer-drop-received",
+        details: {
+          sincePointerUpMs: typeof detail.pointerUpPerfMs === "number" ? Math.round((receiveStartedAt - detail.pointerUpPerfMs) * 100) / 100 : null,
+          eventType: detail.event.type,
+          flightNumber: detail.event.flightNumber
+        }
+      });
+      const placement = getExternalDropPlacementFromClient(detail.clientX, detail.clientY, detail.sessionId);
       if (!placement) return;
-      onExternalEventDrop(detail.event, placement);
+      const handlerStartedAt = getNeoAssistPerfNow$1();
+      onExternalEventDrop({ ...detail.event, neoAssistDragSessionId: detail.sessionId }, placement);
+      const handlerElapsed = getNeoAssistPerfNow$1() - handlerStartedAt;
+      recordNeoAssistDragDiagnostic$1({
+        sessionId: detail.sessionId,
+        stage: handlerElapsed > 50 ? "next-day-drop-handler-slow" : "next-day-drop-handler",
+        details: {
+          elapsedMs: Math.round(handlerElapsed * 100) / 100,
+          placement
+        }
+      });
     };
     window.addEventListener(NEO_ASSIST_POINTER_DROP_EVENT$1, handleAssistPointerDrop);
     return () => {
@@ -111477,6 +111669,68 @@ const CURRENCY_DRAFT_STORAGE_KEY = "neoCurrencyDraftEvents.v2";
 const FIXED_CREW_DEFAULT_TASKING_DURATION_HOURS = 4;
 const FIXED_CREW_DEFAULT_CURRENCY_DURATION_HOURS = 2;
 const NEO_ASSIST_POINTER_DROP_EVENT = "neoAssistPointerDrop";
+const NEO_ASSIST_DRAG_DIAGNOSTIC_EVENT = "neoAssistDragDiagnostic";
+const NEO_ASSIST_DRAG_DIAGNOSTIC_STORAGE_KEY = "neo_assist_drag_diagnostic_report";
+const getNeoAssistPerfNow = () => typeof performance !== "undefined" && typeof performance.now === "function" ? performance.now() : Date.now();
+const recordNeoAssistDragDiagnostic = (entry) => {
+  if (typeof window === "undefined") return;
+  const fullEntry = {
+    ...entry,
+    at: (/* @__PURE__ */ new Date()).toISOString(),
+    perfMs: typeof entry.perfMs === "number" ? Math.round(entry.perfMs * 100) / 100 : Math.round(getNeoAssistPerfNow() * 100) / 100
+  };
+  try {
+    const win = window;
+    const entries = Array.isArray(win.__neoAssistDragDiagnostics) ? win.__neoAssistDragDiagnostics : [];
+    entries.push(fullEntry);
+    const trimmed = entries.slice(-500);
+    win.__neoAssistDragDiagnostics = trimmed;
+    const report = {
+      generatedAt: (/* @__PURE__ */ new Date()).toISOString(),
+      app: "DFP-NEO",
+      reportType: "neo-assist-drag-diagnostic",
+      userAgent: window.navigator?.userAgent || "",
+      viewport: {
+        width: window.innerWidth,
+        height: window.innerHeight,
+        devicePixelRatio: window.devicePixelRatio
+      },
+      entries: trimmed
+    };
+    window.localStorage?.setItem(NEO_ASSIST_DRAG_DIAGNOSTIC_STORAGE_KEY, JSON.stringify(report));
+    window.dispatchEvent(new CustomEvent(NEO_ASSIST_DRAG_DIAGNOSTIC_EVENT, { detail: fullEntry }));
+    if (fullEntry.stage === "pointer-move-slow" || fullEntry.stage === "drop-handler-slow" || fullEntry.stage === "schedule-create-slow") {
+      console.warn("[NEO Assist Drag Diagnostic]", fullEntry);
+    }
+  } catch (error) {
+    console.warn("[NEO Assist Drag Diagnostic] Failed to record entry:", error);
+  }
+};
+const downloadNeoAssistDragDiagnosticReport = () => {
+  if (typeof window === "undefined") return;
+  try {
+    const stored = window.localStorage?.getItem(NEO_ASSIST_DRAG_DIAGNOSTIC_STORAGE_KEY);
+    const fallbackEntries = Array.isArray(window.__neoAssistDragDiagnostics) ? window.__neoAssistDragDiagnostics : [];
+    const report = stored ? JSON.parse(stored) : {
+      generatedAt: (/* @__PURE__ */ new Date()).toISOString(),
+      app: "DFP-NEO",
+      reportType: "neo-assist-drag-diagnostic",
+      entries: fallbackEntries
+    };
+    report.downloadedAt = (/* @__PURE__ */ new Date()).toISOString();
+    const blob = new Blob([JSON.stringify(report, null, 2)], { type: "application/json" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = `neo-assist-drag-diagnostic-${(/* @__PURE__ */ new Date()).toISOString().replace(/[:.]/g, "-")}.json`;
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    URL.revokeObjectURL(url);
+  } catch (error) {
+    console.error("[NEO Assist Drag Diagnostic] Failed to download report:", error);
+  }
+};
 const DfpSidePanelTimeline = ({
   flyingStartTime,
   flyingEndTime,
@@ -111571,6 +111825,7 @@ const DfpSidePanelTimeline = ({
   const scrollRef = reactExports.useRef(null);
   const assistDragPreviewRef = reactExports.useRef(null);
   const assistPointerDragActiveRef = reactExports.useRef(false);
+  const assistPointerDragSessionRef = reactExports.useRef(null);
   const wizardRepeatRef = reactExports.useRef(null);
   const [activeDrag, setActiveDrag] = reactExports.useState(null);
   const [activeAssistPage, setActiveAssistPage] = reactExports.useState("inputs");
@@ -112439,9 +112694,26 @@ const DfpSidePanelTimeline = ({
     selectedTaskProfile
   ]);
   const positionAssistDragPreview = (clientX, clientY) => {
+    const startedAt = getNeoAssistPerfNow();
     const preview = assistDragPreviewRef.current;
     if (!preview || !clientX || !clientY) return;
     preview.style.transform = `translate3d(${clientX + 12}px, ${clientY + 12}px, 0)`;
+    const elapsed = getNeoAssistPerfNow() - startedAt;
+    const dragSession = assistPointerDragSessionRef.current;
+    if (dragSession) {
+      dragSession.maxPreviewUpdateMs = Math.max(dragSession.maxPreviewUpdateMs, elapsed);
+      if (elapsed > 8) {
+        recordNeoAssistDragDiagnostic({
+          sessionId: dragSession.sessionId,
+          stage: "preview-update-slow",
+          details: {
+            elapsedMs: Math.round(elapsed * 100) / 100,
+            clientX,
+            clientY
+          }
+        });
+      }
+    }
   };
   const clearAssistDragPreview = () => {
     assistDragPreviewRef.current?.remove();
@@ -112574,17 +112846,98 @@ const DfpSidePanelTimeline = ({
   };
   const startAssistTilePointerDrag = (event) => {
     if (event.button !== 0) return;
+    const sessionId = `assist-drag-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+    const startedAt = getNeoAssistPerfNow();
     event.preventDefault();
     event.stopPropagation();
     const sourceEvent = assistDraftEvent;
+    assistPointerDragSessionRef.current = {
+      sessionId,
+      startedAt,
+      lastMoveAt: startedAt,
+      moveCount: 0,
+      slowMoveCount: 0,
+      maxMoveGapMs: 0,
+      maxPreviewUpdateMs: 0,
+      lastClientX: event.clientX,
+      lastClientY: event.clientY
+    };
+    recordNeoAssistDragDiagnostic({
+      sessionId,
+      stage: "pointer-down",
+      perfMs: startedAt,
+      details: {
+        pointerType: event.pointerType,
+        clientX: event.clientX,
+        clientY: event.clientY,
+        tileType: sourceEvent.type,
+        flightNumber: sourceEvent.flightNumber,
+        duration: sourceEvent.duration,
+        formationSize: sourceEvent.formationSize,
+        resourceId: sourceEvent.resourceId,
+        panelWillClose: Boolean(onManualTileDragStart)
+      }
+    });
     clearAssistDragPreview();
     setIsAssistTileDragging(true);
     const dragPreview = createAssistDragImage();
     assistDragPreviewRef.current = dragPreview;
     positionAssistDragPreview(event.clientX, event.clientY);
+    recordNeoAssistDragDiagnostic({
+      sessionId,
+      stage: "preview-created",
+      details: {
+        elapsedSincePointerDownMs: Math.round((getNeoAssistPerfNow() - startedAt) * 100) / 100,
+        previewWidth: dragPreview.style.width,
+        previewHeight: dragPreview.style.height,
+        childCount: dragPreview.childElementCount
+      }
+    });
     document.body.classList.add("no-select");
+    const callbackStart = getNeoAssistPerfNow();
     onManualTileDragStart?.();
+    const callbackElapsed = getNeoAssistPerfNow() - callbackStart;
+    recordNeoAssistDragDiagnostic({
+      sessionId,
+      stage: callbackElapsed > 20 ? "manual-start-callback-slow" : "manual-start-callback",
+      details: {
+        elapsedMs: Math.round(callbackElapsed * 100) / 100
+      }
+    });
     const handlePointerMove = (pointerEvent) => {
+      const moveStartedAt = getNeoAssistPerfNow();
+      const dragSession = assistPointerDragSessionRef.current;
+      if (dragSession) {
+        const gapMs = moveStartedAt - dragSession.lastMoveAt;
+        dragSession.moveCount += 1;
+        dragSession.maxMoveGapMs = Math.max(dragSession.maxMoveGapMs, gapMs);
+        dragSession.lastMoveAt = moveStartedAt;
+        dragSession.lastClientX = pointerEvent.clientX;
+        dragSession.lastClientY = pointerEvent.clientY;
+        if (dragSession.moveCount === 1) {
+          dragSession.firstMoveDelayMs = moveStartedAt - dragSession.startedAt;
+          recordNeoAssistDragDiagnostic({
+            sessionId: dragSession.sessionId,
+            stage: "first-pointer-move",
+            details: {
+              firstMoveDelayMs: Math.round(dragSession.firstMoveDelayMs * 100) / 100
+            }
+          });
+        }
+        if (gapMs > 50) {
+          dragSession.slowMoveCount += 1;
+          recordNeoAssistDragDiagnostic({
+            sessionId: dragSession.sessionId,
+            stage: "pointer-move-slow",
+            details: {
+              gapMs: Math.round(gapMs * 100) / 100,
+              moveCount: dragSession.moveCount,
+              clientX: pointerEvent.clientX,
+              clientY: pointerEvent.clientY
+            }
+          });
+        }
+      }
       pointerEvent.preventDefault();
       positionAssistDragPreview(pointerEvent.clientX, pointerEvent.clientY);
     };
@@ -112595,18 +112948,46 @@ const DfpSidePanelTimeline = ({
       document.body.classList.remove("no-select");
       assistPointerDragActiveRef.current = false;
       clearAssistDragPreview();
+      assistPointerDragSessionRef.current = null;
     };
     const handlePointerUp = (pointerEvent) => {
+      const dragSession = assistPointerDragSessionRef.current;
+      recordNeoAssistDragDiagnostic({
+        sessionId,
+        stage: "pointer-up",
+        details: dragSession ? {
+          totalMs: Math.round((getNeoAssistPerfNow() - dragSession.startedAt) * 100) / 100,
+          moveCount: dragSession.moveCount,
+          slowMoveCount: dragSession.slowMoveCount,
+          maxMoveGapMs: Math.round(dragSession.maxMoveGapMs * 100) / 100,
+          maxPreviewUpdateMs: Math.round(dragSession.maxPreviewUpdateMs * 100) / 100,
+          firstMoveDelayMs: dragSession.firstMoveDelayMs !== void 0 ? Math.round(dragSession.firstMoveDelayMs * 100) / 100 : null,
+          clientX: pointerEvent.clientX,
+          clientY: pointerEvent.clientY
+        } : {
+          clientX: pointerEvent.clientX,
+          clientY: pointerEvent.clientY
+        }
+      });
       window.dispatchEvent(new CustomEvent(NEO_ASSIST_POINTER_DROP_EVENT, {
         detail: {
           event: sourceEvent,
           clientX: pointerEvent.clientX,
-          clientY: pointerEvent.clientY
+          clientY: pointerEvent.clientY,
+          sessionId,
+          pointerUpPerfMs: getNeoAssistPerfNow()
         }
       }));
       cleanup();
     };
     const handlePointerCancel = () => {
+      recordNeoAssistDragDiagnostic({
+        sessionId,
+        stage: "pointer-cancel",
+        details: {
+          totalMs: Math.round((getNeoAssistPerfNow() - startedAt) * 100) / 100
+        }
+      });
       cleanup();
     };
     assistPointerDragActiveRef.current = true;
@@ -117175,15 +117556,27 @@ This cannot be undone.`,
       )
     ] }) : /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mb-3 flex items-start justify-between gap-3", children: [
       /* @__PURE__ */ jsxRuntimeExports.jsx("div", { children: /* @__PURE__ */ jsxRuntimeExports.jsx("h3", { className: "text-sm font-semibold text-white", children: "NEO Assist" }) }),
-      /* @__PURE__ */ jsxRuntimeExports.jsx(
-        "button",
-        {
-          type: "button",
-          onClick: onOpenPrioritiesExclusions,
-          className: "shrink-0 rounded-md border border-cyan-400/40 bg-cyan-400/10 px-2.5 py-1.5 text-[11px] font-semibold text-cyan-50 transition hover:border-cyan-200",
-          children: "Open Priorities"
-        }
-      )
+      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex shrink-0 items-center gap-2", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsx(
+          "button",
+          {
+            type: "button",
+            onClick: downloadNeoAssistDragDiagnosticReport,
+            title: "Download recent NEO Assist drag timing diagnostics",
+            className: "rounded-md border border-orange-400/40 bg-orange-400/10 px-2.5 py-1.5 text-[11px] font-semibold text-orange-50 transition hover:border-orange-200",
+            children: "Drag Report"
+          }
+        ),
+        /* @__PURE__ */ jsxRuntimeExports.jsx(
+          "button",
+          {
+            type: "button",
+            onClick: onOpenPrioritiesExclusions,
+            className: "rounded-md border border-cyan-400/40 bg-cyan-400/10 px-2.5 py-1.5 text-[11px] font-semibold text-cyan-50 transition hover:border-cyan-200",
+            children: "Open Priorities"
+          }
+        )
+      ] })
     ] }),
     isNeoAssistWizardMode && renderAssistDfpOverview(),
     isNeoAssistWizardMode ? /* @__PURE__ */ jsxRuntimeExports.jsxs(
@@ -150081,11 +150474,31 @@ Do not hard refresh yet. Try Publish again, then confirm the save succeeds.`,
     });
   }, [activeAircraftResourcePrefix, activeContextUnitCodes, activeOperationalModel, activeUnitCode, neoAssistCallsignOptions, school]);
   const handleProgramScheduleExternalEventDrop = reactExports.useCallback((draft, placement) => {
+    const dropStartedAt = getNeoAssistPerfNow();
+    const diagnosticSessionId = draft.neoAssistDragSessionId || void 0;
+    const { neoAssistDragSessionId: _neoAssistDragSessionId, ...persistableDraft } = draft;
     if (isPastDfpDate(date)) {
+      recordNeoAssistDragDiagnostic({
+        sessionId: diagnosticSessionId,
+        stage: "schedule-create-denied-past-date",
+        details: { date, placement, draftType: draft.type, flightNumber: draft.flightNumber }
+      });
       denyPastDfpEdit("add tiles");
       return;
     }
-    const droppedEvents = buildDroppedNeoAssistEvents(draft, placement, date, buildResources);
+    const buildStartedAt = getNeoAssistPerfNow();
+    const droppedEvents = buildDroppedNeoAssistEvents(persistableDraft, placement, date, buildResources);
+    recordNeoAssistDragDiagnostic({
+      sessionId: diagnosticSessionId,
+      stage: "schedule-create-build-events",
+      details: {
+        elapsedMs: Math.round((getNeoAssistPerfNow() - buildStartedAt) * 100) / 100,
+        droppedEventCount: droppedEvents.length,
+        draftType: draft.type,
+        flightNumber: draft.flightNumber,
+        placement
+      }
+    });
     const droppedEventsByDate = droppedEvents.reduce((groups, event) => {
       const eventDate = event.date || date;
       groups[eventDate] = [...groups[eventDate] || [], event];
@@ -150115,6 +150528,16 @@ Do not hard refresh yet. Try Publish again, then confirm the save succeeds.`,
     Object.entries(nextSchedulesByDate).forEach(([eventDate, eventsForDate2]) => {
       persistScheduleForDate(eventDate, eventsForDate2);
     });
+    recordNeoAssistDragDiagnostic({
+      sessionId: diagnosticSessionId,
+      stage: getNeoAssistPerfNow() - dropStartedAt > 80 ? "schedule-create-slow" : "schedule-create",
+      details: {
+        elapsedMs: Math.round((getNeoAssistPerfNow() - dropStartedAt) * 100) / 100,
+        droppedEventCount: droppedEvents.length,
+        affectedDates: Object.keys(droppedEventsByDate),
+        placement
+      }
+    });
     window.setTimeout(() => {
       Object.entries(droppedEventsByDate).forEach(([eventDate, eventsForDropDate]) => {
         const pending = pendingManualNeoAssistDropsRef.current[eventDate];
@@ -150134,12 +150557,25 @@ Do not hard refresh yet. Try Publish again, then confirm the save succeeds.`,
     logAudit("Program Schedule", "Create", "Added NEO Assist tile", `${droppedEvents.length} x ${draft.flightNumber} at ${placement.resourceId}`);
   }, [activeOperationalModel, activeUnitCode, buildDroppedNeoAssistEvents, buildResources, date, denyPastDfpEdit, isPastDfpDate, persistScheduleForDate, publishedSchedules, school]);
   const handleNextDayExternalEventDrop = reactExports.useCallback((draft, placement) => {
-    const droppedEvents = buildDroppedNeoAssistEvents(draft, placement, buildDfpDate, buildResources);
+    const dropStartedAt = getNeoAssistPerfNow();
+    const diagnosticSessionId = draft.neoAssistDragSessionId || void 0;
+    const { neoAssistDragSessionId: _neoAssistDragSessionId, ...persistableDraft } = draft;
+    const droppedEvents = buildDroppedNeoAssistEvents(persistableDraft, placement, buildDfpDate, buildResources);
     const nextDayEvents = droppedEvents.map((droppedEvent) => {
       const { date: _date, ...nextDayEvent } = droppedEvent;
       return nextDayEvent;
     });
     setNextDayBuildEvents((prev) => [...prev, ...nextDayEvents]);
+    recordNeoAssistDragDiagnostic({
+      sessionId: diagnosticSessionId,
+      stage: getNeoAssistPerfNow() - dropStartedAt > 80 ? "next-day-schedule-create-slow" : "next-day-schedule-create",
+      details: {
+        elapsedMs: Math.round((getNeoAssistPerfNow() - dropStartedAt) * 100) / 100,
+        droppedEventCount: droppedEvents.length,
+        placement,
+        buildDfpDate
+      }
+    });
     logAudit("Next Day Build", "Create", "Added NEO Assist tile", `${droppedEvents.length} x ${draft.flightNumber} at ${placement.resourceId}`);
   }, [activeOperationalModel, activeUnitCode, buildDroppedNeoAssistEvents, buildDfpDate, buildResources, nextDayBuildEvents.length, school]);
   const syllabusForModal = reactExports.useMemo(() => {

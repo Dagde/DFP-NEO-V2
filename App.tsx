@@ -910,6 +910,94 @@ const CURRENCY_DRAFT_STORAGE_KEY = 'neoCurrencyDraftEvents.v2';
 const FIXED_CREW_DEFAULT_TASKING_DURATION_HOURS = 4;
 const FIXED_CREW_DEFAULT_CURRENCY_DURATION_HOURS = 2;
 const NEO_ASSIST_POINTER_DROP_EVENT = 'neoAssistPointerDrop';
+const NEO_ASSIST_DRAG_DIAGNOSTIC_EVENT = 'neoAssistDragDiagnostic';
+const NEO_ASSIST_DRAG_DIAGNOSTIC_STORAGE_KEY = 'neo_assist_drag_diagnostic_report';
+
+type NeoAssistDragDiagnosticEntry = {
+    id?: string;
+    stage: string;
+    at: string;
+    perfMs?: number;
+    sessionId?: string;
+    details?: Record<string, any>;
+};
+
+const getNeoAssistPerfNow = (): number => (
+    typeof performance !== 'undefined' && typeof performance.now === 'function'
+        ? performance.now()
+        : Date.now()
+);
+
+const recordNeoAssistDragDiagnostic = (entry: Omit<NeoAssistDragDiagnosticEntry, 'at' | 'perfMs'> & { perfMs?: number }) => {
+    if (typeof window === 'undefined') return;
+    const fullEntry: NeoAssistDragDiagnosticEntry = {
+        ...entry,
+        at: new Date().toISOString(),
+        perfMs: typeof entry.perfMs === 'number' ? Math.round(entry.perfMs * 100) / 100 : Math.round(getNeoAssistPerfNow() * 100) / 100,
+    };
+    try {
+        const win = window as any;
+        const entries: NeoAssistDragDiagnosticEntry[] = Array.isArray(win.__neoAssistDragDiagnostics)
+            ? win.__neoAssistDragDiagnostics
+            : [];
+        entries.push(fullEntry);
+        const trimmed = entries.slice(-500);
+        win.__neoAssistDragDiagnostics = trimmed;
+        const report = {
+            generatedAt: new Date().toISOString(),
+            app: 'DFP-NEO',
+            reportType: 'neo-assist-drag-diagnostic',
+            userAgent: window.navigator?.userAgent || '',
+            viewport: {
+                width: window.innerWidth,
+                height: window.innerHeight,
+                devicePixelRatio: window.devicePixelRatio,
+            },
+            entries: trimmed,
+        };
+        window.localStorage?.setItem(NEO_ASSIST_DRAG_DIAGNOSTIC_STORAGE_KEY, JSON.stringify(report));
+        window.dispatchEvent(new CustomEvent(NEO_ASSIST_DRAG_DIAGNOSTIC_EVENT, { detail: fullEntry }));
+        if (
+            fullEntry.stage === 'pointer-move-slow' ||
+            fullEntry.stage === 'drop-handler-slow' ||
+            fullEntry.stage === 'schedule-create-slow'
+        ) {
+            console.warn('[NEO Assist Drag Diagnostic]', fullEntry);
+        }
+    } catch (error) {
+        console.warn('[NEO Assist Drag Diagnostic] Failed to record entry:', error);
+    }
+};
+
+const downloadNeoAssistDragDiagnosticReport = () => {
+    if (typeof window === 'undefined') return;
+    try {
+        const stored = window.localStorage?.getItem(NEO_ASSIST_DRAG_DIAGNOSTIC_STORAGE_KEY);
+        const fallbackEntries = Array.isArray((window as any).__neoAssistDragDiagnostics)
+            ? (window as any).__neoAssistDragDiagnostics
+            : [];
+        const report = stored
+            ? JSON.parse(stored)
+            : {
+                generatedAt: new Date().toISOString(),
+                app: 'DFP-NEO',
+                reportType: 'neo-assist-drag-diagnostic',
+                entries: fallbackEntries,
+            };
+        report.downloadedAt = new Date().toISOString();
+        const blob = new Blob([JSON.stringify(report, null, 2)], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = `neo-assist-drag-diagnostic-${new Date().toISOString().replace(/[:.]/g, '-')}.json`;
+        document.body.appendChild(link);
+        link.click();
+        link.remove();
+        URL.revokeObjectURL(url);
+    } catch (error) {
+        console.error('[NEO Assist Drag Diagnostic] Failed to download report:', error);
+    }
+};
 
 const DfpSidePanelTimeline: React.FC<{
     flyingStartTime: number;
@@ -1080,6 +1168,18 @@ const DfpSidePanelTimeline: React.FC<{
     const scrollRef = useRef<HTMLDivElement | null>(null);
     const assistDragPreviewRef = useRef<HTMLElement | null>(null);
     const assistPointerDragActiveRef = useRef(false);
+    const assistPointerDragSessionRef = useRef<{
+        sessionId: string;
+        startedAt: number;
+        lastMoveAt: number;
+        moveCount: number;
+        slowMoveCount: number;
+        maxMoveGapMs: number;
+        maxPreviewUpdateMs: number;
+        firstMoveDelayMs?: number;
+        lastClientX?: number;
+        lastClientY?: number;
+    } | null>(null);
     const wizardRepeatRef = useRef<number | null>(null);
     const [activeDrag, setActiveDrag] = useState<DfpMiniTimelineDragState | null>(null);
     const [activeAssistPage, setActiveAssistPage] = useState<NeoAssistPage>('inputs');
@@ -2219,9 +2319,26 @@ const DfpSidePanelTimeline: React.FC<{
     ]);
 
     const positionAssistDragPreview = (clientX: number, clientY: number) => {
+        const startedAt = getNeoAssistPerfNow();
         const preview = assistDragPreviewRef.current;
         if (!preview || !clientX || !clientY) return;
         preview.style.transform = `translate3d(${clientX + 12}px, ${clientY + 12}px, 0)`;
+        const elapsed = getNeoAssistPerfNow() - startedAt;
+        const dragSession = assistPointerDragSessionRef.current;
+        if (dragSession) {
+            dragSession.maxPreviewUpdateMs = Math.max(dragSession.maxPreviewUpdateMs, elapsed);
+            if (elapsed > 8) {
+                recordNeoAssistDragDiagnostic({
+                    sessionId: dragSession.sessionId,
+                    stage: 'preview-update-slow',
+                    details: {
+                        elapsedMs: Math.round(elapsed * 100) / 100,
+                        clientX,
+                        clientY,
+                    },
+                });
+            }
+        }
     };
 
     const clearAssistDragPreview = () => {
@@ -2402,19 +2519,100 @@ const DfpSidePanelTimeline: React.FC<{
 
     const startAssistTilePointerDrag = (event: React.PointerEvent<HTMLDivElement>) => {
         if (event.button !== 0) return;
+        const sessionId = `assist-drag-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+        const startedAt = getNeoAssistPerfNow();
         event.preventDefault();
         event.stopPropagation();
 
         const sourceEvent = assistDraftEvent;
+        assistPointerDragSessionRef.current = {
+            sessionId,
+            startedAt,
+            lastMoveAt: startedAt,
+            moveCount: 0,
+            slowMoveCount: 0,
+            maxMoveGapMs: 0,
+            maxPreviewUpdateMs: 0,
+            lastClientX: event.clientX,
+            lastClientY: event.clientY,
+        };
+        recordNeoAssistDragDiagnostic({
+            sessionId,
+            stage: 'pointer-down',
+            perfMs: startedAt,
+            details: {
+                pointerType: event.pointerType,
+                clientX: event.clientX,
+                clientY: event.clientY,
+                tileType: sourceEvent.type,
+                flightNumber: sourceEvent.flightNumber,
+                duration: sourceEvent.duration,
+                formationSize: sourceEvent.formationSize,
+                resourceId: sourceEvent.resourceId,
+                panelWillClose: Boolean(onManualTileDragStart),
+            },
+        });
         clearAssistDragPreview();
         setIsAssistTileDragging(true);
         const dragPreview = createAssistDragImage();
         assistDragPreviewRef.current = dragPreview;
         positionAssistDragPreview(event.clientX, event.clientY);
+        recordNeoAssistDragDiagnostic({
+            sessionId,
+            stage: 'preview-created',
+            details: {
+                elapsedSincePointerDownMs: Math.round((getNeoAssistPerfNow() - startedAt) * 100) / 100,
+                previewWidth: dragPreview.style.width,
+                previewHeight: dragPreview.style.height,
+                childCount: dragPreview.childElementCount,
+            },
+        });
         document.body.classList.add('no-select');
+        const callbackStart = getNeoAssistPerfNow();
         onManualTileDragStart?.();
+        const callbackElapsed = getNeoAssistPerfNow() - callbackStart;
+        recordNeoAssistDragDiagnostic({
+            sessionId,
+            stage: callbackElapsed > 20 ? 'manual-start-callback-slow' : 'manual-start-callback',
+            details: {
+                elapsedMs: Math.round(callbackElapsed * 100) / 100,
+            },
+        });
 
         const handlePointerMove = (pointerEvent: PointerEvent) => {
+            const moveStartedAt = getNeoAssistPerfNow();
+            const dragSession = assistPointerDragSessionRef.current;
+            if (dragSession) {
+                const gapMs = moveStartedAt - dragSession.lastMoveAt;
+                dragSession.moveCount += 1;
+                dragSession.maxMoveGapMs = Math.max(dragSession.maxMoveGapMs, gapMs);
+                dragSession.lastMoveAt = moveStartedAt;
+                dragSession.lastClientX = pointerEvent.clientX;
+                dragSession.lastClientY = pointerEvent.clientY;
+                if (dragSession.moveCount === 1) {
+                    dragSession.firstMoveDelayMs = moveStartedAt - dragSession.startedAt;
+                    recordNeoAssistDragDiagnostic({
+                        sessionId: dragSession.sessionId,
+                        stage: 'first-pointer-move',
+                        details: {
+                            firstMoveDelayMs: Math.round(dragSession.firstMoveDelayMs * 100) / 100,
+                        },
+                    });
+                }
+                if (gapMs > 50) {
+                    dragSession.slowMoveCount += 1;
+                    recordNeoAssistDragDiagnostic({
+                        sessionId: dragSession.sessionId,
+                        stage: 'pointer-move-slow',
+                        details: {
+                            gapMs: Math.round(gapMs * 100) / 100,
+                            moveCount: dragSession.moveCount,
+                            clientX: pointerEvent.clientX,
+                            clientY: pointerEvent.clientY,
+                        },
+                    });
+                }
+            }
             pointerEvent.preventDefault();
             positionAssistDragPreview(pointerEvent.clientX, pointerEvent.clientY);
         };
@@ -2426,20 +2624,48 @@ const DfpSidePanelTimeline: React.FC<{
             document.body.classList.remove('no-select');
             assistPointerDragActiveRef.current = false;
             clearAssistDragPreview();
+            assistPointerDragSessionRef.current = null;
         };
 
         const handlePointerUp = (pointerEvent: PointerEvent) => {
+            const dragSession = assistPointerDragSessionRef.current;
+            recordNeoAssistDragDiagnostic({
+                sessionId,
+                stage: 'pointer-up',
+                details: dragSession ? {
+                    totalMs: Math.round((getNeoAssistPerfNow() - dragSession.startedAt) * 100) / 100,
+                    moveCount: dragSession.moveCount,
+                    slowMoveCount: dragSession.slowMoveCount,
+                    maxMoveGapMs: Math.round(dragSession.maxMoveGapMs * 100) / 100,
+                    maxPreviewUpdateMs: Math.round(dragSession.maxPreviewUpdateMs * 100) / 100,
+                    firstMoveDelayMs: dragSession.firstMoveDelayMs !== undefined ? Math.round(dragSession.firstMoveDelayMs * 100) / 100 : null,
+                    clientX: pointerEvent.clientX,
+                    clientY: pointerEvent.clientY,
+                } : {
+                    clientX: pointerEvent.clientX,
+                    clientY: pointerEvent.clientY,
+                },
+            });
             window.dispatchEvent(new CustomEvent(NEO_ASSIST_POINTER_DROP_EVENT, {
                 detail: {
                     event: sourceEvent,
                     clientX: pointerEvent.clientX,
                     clientY: pointerEvent.clientY,
+                    sessionId,
+                    pointerUpPerfMs: getNeoAssistPerfNow(),
                 },
             }));
             cleanup();
         };
 
         const handlePointerCancel = () => {
+            recordNeoAssistDragDiagnostic({
+                sessionId,
+                stage: 'pointer-cancel',
+                details: {
+                    totalMs: Math.round((getNeoAssistPerfNow() - startedAt) * 100) / 100,
+                },
+            });
             cleanup();
         };
 
@@ -7524,13 +7750,23 @@ const DfpSidePanelTimeline: React.FC<{
                     <div>
                         <h3 className="text-sm font-semibold text-white">NEO Assist</h3>
                     </div>
-                    <button
-                        type="button"
-                        onClick={onOpenPrioritiesExclusions}
-                        className="shrink-0 rounded-md border border-cyan-400/40 bg-cyan-400/10 px-2.5 py-1.5 text-[11px] font-semibold text-cyan-50 transition hover:border-cyan-200"
-                    >
-                        Open Priorities
-                    </button>
+                    <div className="flex shrink-0 items-center gap-2">
+                        <button
+                            type="button"
+                            onClick={downloadNeoAssistDragDiagnosticReport}
+                            title="Download recent NEO Assist drag timing diagnostics"
+                            className="rounded-md border border-orange-400/40 bg-orange-400/10 px-2.5 py-1.5 text-[11px] font-semibold text-orange-50 transition hover:border-orange-200"
+                        >
+                            Drag Report
+                        </button>
+                        <button
+                            type="button"
+                            onClick={onOpenPrioritiesExclusions}
+                            className="rounded-md border border-cyan-400/40 bg-cyan-400/10 px-2.5 py-1.5 text-[11px] font-semibold text-cyan-50 transition hover:border-cyan-200"
+                        >
+                            Open Priorities
+                        </button>
+                    </div>
                 </div>
             )}
             {isNeoAssistWizardMode && renderAssistDfpOverview()}
@@ -48289,11 +48525,31 @@ appliedUpdates.forEach(update => {
     }, [activeAircraftResourcePrefix, activeContextUnitCodes, activeOperationalModel, activeUnitCode, neoAssistCallsignOptions, school]);
 
     const handleProgramScheduleExternalEventDrop = useCallback((draft: ScheduleEvent, placement: NeoAssistDropPlacement) => {
+        const dropStartedAt = getNeoAssistPerfNow();
+        const diagnosticSessionId = (draft as any).neoAssistDragSessionId || undefined;
+        const { neoAssistDragSessionId: _neoAssistDragSessionId, ...persistableDraft } = draft as any;
         if (isPastDfpDate(date)) {
+            recordNeoAssistDragDiagnostic({
+                sessionId: diagnosticSessionId,
+                stage: 'schedule-create-denied-past-date',
+                details: { date, placement, draftType: draft.type, flightNumber: draft.flightNumber },
+            });
             denyPastDfpEdit('add tiles');
             return;
         }
-        const droppedEvents = buildDroppedNeoAssistEvents(draft, placement, date, buildResources);
+        const buildStartedAt = getNeoAssistPerfNow();
+        const droppedEvents = buildDroppedNeoAssistEvents(persistableDraft as ScheduleEvent, placement, date, buildResources);
+        recordNeoAssistDragDiagnostic({
+            sessionId: diagnosticSessionId,
+            stage: 'schedule-create-build-events',
+            details: {
+                elapsedMs: Math.round((getNeoAssistPerfNow() - buildStartedAt) * 100) / 100,
+                droppedEventCount: droppedEvents.length,
+                draftType: draft.type,
+                flightNumber: draft.flightNumber,
+                placement,
+            },
+        });
         const droppedEventsByDate = droppedEvents.reduce<Record<string, ScheduleEvent[]>>((groups, event) => {
             const eventDate = event.date || date;
             groups[eventDate] = [...(groups[eventDate] || []), event];
@@ -48323,6 +48579,16 @@ appliedUpdates.forEach(update => {
         Object.entries(nextSchedulesByDate).forEach(([eventDate, eventsForDate]) => {
             persistScheduleForDate(eventDate, eventsForDate);
         });
+        recordNeoAssistDragDiagnostic({
+            sessionId: diagnosticSessionId,
+            stage: getNeoAssistPerfNow() - dropStartedAt > 80 ? 'schedule-create-slow' : 'schedule-create',
+            details: {
+                elapsedMs: Math.round((getNeoAssistPerfNow() - dropStartedAt) * 100) / 100,
+                droppedEventCount: droppedEvents.length,
+                affectedDates: Object.keys(droppedEventsByDate),
+                placement,
+            },
+        });
         window.setTimeout(() => {
             Object.entries(droppedEventsByDate).forEach(([eventDate, eventsForDropDate]) => {
                 const pending = pendingManualNeoAssistDropsRef.current[eventDate];
@@ -48343,12 +48609,25 @@ appliedUpdates.forEach(update => {
     }, [activeOperationalModel, activeUnitCode, buildDroppedNeoAssistEvents, buildResources, date, denyPastDfpEdit, isPastDfpDate, persistScheduleForDate, publishedSchedules, school]);
 
     const handleNextDayExternalEventDrop = useCallback((draft: ScheduleEvent, placement: NeoAssistDropPlacement) => {
-        const droppedEvents = buildDroppedNeoAssistEvents(draft, placement, buildDfpDate, buildResources);
+        const dropStartedAt = getNeoAssistPerfNow();
+        const diagnosticSessionId = (draft as any).neoAssistDragSessionId || undefined;
+        const { neoAssistDragSessionId: _neoAssistDragSessionId, ...persistableDraft } = draft as any;
+        const droppedEvents = buildDroppedNeoAssistEvents(persistableDraft as ScheduleEvent, placement, buildDfpDate, buildResources);
         const nextDayEvents = droppedEvents.map(droppedEvent => {
             const { date: _date, ...nextDayEvent } = droppedEvent;
             return nextDayEvent;
         });
         setNextDayBuildEvents(prev => [...prev, ...nextDayEvents]);
+        recordNeoAssistDragDiagnostic({
+            sessionId: diagnosticSessionId,
+            stage: getNeoAssistPerfNow() - dropStartedAt > 80 ? 'next-day-schedule-create-slow' : 'next-day-schedule-create',
+            details: {
+                elapsedMs: Math.round((getNeoAssistPerfNow() - dropStartedAt) * 100) / 100,
+                droppedEventCount: droppedEvents.length,
+                placement,
+                buildDfpDate,
+            },
+        });
         logAudit('Next Day Build', 'Create', 'Added NEO Assist tile', `${droppedEvents.length} x ${draft.flightNumber} at ${placement.resourceId}`);
     }, [activeOperationalModel, activeUnitCode, buildDroppedNeoAssistEvents, buildDfpDate, buildResources, nextDayBuildEvents.length, school]);
 
