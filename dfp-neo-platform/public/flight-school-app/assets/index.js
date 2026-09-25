@@ -111732,6 +111732,8 @@ const downloadNeoAssistDragDiagnosticReport = () => {
           nextStep: "Open NEO Assist, drag the tile preview onto the DFP timeline, then download the report again."
         }
       }];
+    } else if (!report.entries.some((entry) => String(entry.stage || "").includes("pointer") || String(entry.stage || "").includes("tile-preview"))) {
+      report.diagnosticNote = "No NEO Assist tile drag was captured. If you dragged before reopening the panel, install commit 83a49446 or later plus the preserve fix; if this persists, the tested control is not the instrumented NEO Assist tile preview.";
     }
     report.downloadedAt = (/* @__PURE__ */ new Date()).toISOString();
     const blob = new Blob([JSON.stringify(report, null, 2)], { type: "application/json" });
@@ -112246,9 +112248,15 @@ const DfpSidePanelTimeline = ({
     const wasOpen = previousAssistPanelOpenRef.current;
     previousAssistPanelOpenRef.current = isOpen;
     if (!isOpen || wasOpen || typeof window === "undefined") return;
+    const preservedEntryCount = Array.isArray(window.__neoAssistDragDiagnostics) ? window.__neoAssistDragDiagnostics.length : 0;
     try {
-      window.__neoAssistDragDiagnostics = [];
-      window.localStorage?.removeItem(NEO_ASSIST_DRAG_DIAGNOSTIC_STORAGE_KEY);
+      const stored = window.localStorage?.getItem(NEO_ASSIST_DRAG_DIAGNOSTIC_STORAGE_KEY);
+      if (stored && !Array.isArray(window.__neoAssistDragDiagnostics)) {
+        const parsed = JSON.parse(stored);
+        if (Array.isArray(parsed?.entries)) {
+          window.__neoAssistDragDiagnostics = parsed.entries.slice(-500);
+        }
+      }
     } catch {
     }
     recordNeoAssistDragDiagnostic({
@@ -112258,7 +112266,8 @@ const DfpSidePanelTimeline = ({
         usesNeoAssistModeHeader,
         airCombatAssistMode,
         selectedResourceKind,
-        scheduleZoomLevel
+        scheduleZoomLevel,
+        preservedEntryCount
       }
     });
   }, [activeAssistPage, airCombatAssistMode, isOpen, scheduleZoomLevel, selectedResourceKind, usesNeoAssistModeHeader]);
