@@ -118371,9 +118371,6 @@ const isCompletedLmpItem = (item, completedEventIds) => {
     item.completedAt || maybeCompleted.isComplete || maybeCompleted.completed || maybeCompleted.rplGranted || completedEventIds.has(normalizeLmpEventId(item.id)) || completedEventIds.has(normalizeLmpEventId(item.code)) || completedEventIds.has(normalizeLmpEventId(item.masterEventId))
   );
 };
-const areLmpPrerequisitesMet = (item, completedEventIds) => {
-  return areAllLmpPrerequisitesMet(item, completedEventIds);
-};
 const getFallbackMasterLmpForTrainee = (trainee, masterSyllabus) => {
   const normaliseToken = (value) => String(value || "").trim().toUpperCase();
   const traineeCourse = normaliseToken(trainee.course);
@@ -118391,6 +118388,20 @@ const computeNextEventsForTrainee = (trainee, traineeLMPs, scores, masterSyllabu
   const verboseNeoBuild = isNeoBuildVerboseDiagnosticsEnabled();
   const hasIndividualLMP = traineeLMPs.has(trainee.fullName);
   const individualLMP = traineeLMPs.get(trainee.fullName) || getFallbackMasterLmpForTrainee(trainee, masterSyllabus);
+  const diagnostic = {
+    trainee: trainee.fullName || trainee.name || "Unknown trainee",
+    course: trainee.course || null,
+    hasIndividualLMP,
+    lmpLength: individualLMP?.length || 0,
+    completedAliasCount: 0,
+    skippedCompleted: 0,
+    skippedMassBrief: 0,
+    blockedByPrerequisites: 0,
+    blockedPrerequisiteSamples: [],
+    selectedNext: null,
+    selectedPlusOne: null,
+    reason: "NOT_EVALUATED"
+  };
   if (verboseNeoBuild && hasIndividualLMP) {
     const remedialEvents = individualLMP.filter((item) => item.isRemedial);
     if (remedialEvents.length > 0) {
@@ -118400,7 +118411,8 @@ const computeNextEventsForTrainee = (trainee, traineeLMPs, scores, masterSyllabu
     console.log(`⚠️ [${trainee.fullName}] Using scoped Master LMP fallback (no Individual LMP found): ${individualLMP.length} events`);
   }
   if (!individualLMP || individualLMP.length === 0) {
-    return { next: null, plusOne: null };
+    diagnostic.reason = hasIndividualLMP ? "INDIVIDUAL_LMP_EMPTY" : "NO_INDIVIDUAL_OR_MATCHING_MASTER_LMP";
+    return { next: null, plusOne: null, diagnostic };
   }
   const traineeScores = scores.get(trainee.fullName) || [];
   const completedEventIds = /* @__PURE__ */ new Set();
@@ -118431,22 +118443,41 @@ const computeNextEventsForTrainee = (trainee, traineeLMPs, scores, masterSyllabu
       if (verboseNeoBuild) console.log(`[ELCE/DFP] ${trainee.fullName}: ${elce} — DFP-scan fallback (no DB ELCE found)`);
     }
   }
+  diagnostic.completedAliasCount = completedEventIds.size;
   let nextEvt = null;
   let plusOneEvt = null;
   let nextEventIndex = -1;
   for (let i = 0; i < individualLMP.length; i++) {
     const item = individualLMP[i];
-    if (isCompletedLmpItem(item, completedEventIds) || item.code.includes(" MB")) {
+    if (isCompletedLmpItem(item, completedEventIds)) {
+      diagnostic.skippedCompleted += 1;
       continue;
     }
-    const prereqsMet = areLmpPrerequisitesMet(item, completedEventIds);
-    if (prereqsMet) {
+    if (item.code.includes(" MB")) {
+      diagnostic.skippedMassBrief += 1;
+      continue;
+    }
+    const prerequisites = getAllLmpPrerequisiteKeys(item);
+    const unmetPrerequisites = prerequisites.filter((prerequisite) => !completedEventIds.has(prerequisite));
+    if (unmetPrerequisites.length === 0) {
       nextEvt = item;
       nextEventIndex = i;
+      diagnostic.selectedNext = item.code || item.id || null;
+      diagnostic.reason = "NEXT_EVENT_FOUND";
       if (verboseNeoBuild && item.isRemedial) {
         console.log(`✅ [${trainee.fullName}] Next event is REMEDIAL: ${item.code}`);
       }
       break;
+    }
+    diagnostic.blockedByPrerequisites += 1;
+    if (diagnostic.blockedPrerequisiteSamples.length < 5) {
+      diagnostic.blockedPrerequisiteSamples.push({
+        event: item.code || item.id || "Unknown event",
+        eventId: item.id || null,
+        type: item.type || null,
+        prerequisites,
+        unmetPrerequisites
+      });
     }
   }
   if (nextEventIndex !== -1) {
@@ -118454,11 +118485,15 @@ const computeNextEventsForTrainee = (trainee, traineeLMPs, scores, masterSyllabu
       const item = individualLMP[i];
       if (!item.code.includes(" MB") && !isCompletedLmpItem(item, completedEventIds)) {
         plusOneEvt = item;
+        diagnostic.selectedPlusOne = item.code || item.id || null;
         break;
       }
     }
   }
-  return { next: nextEvt, plusOne: plusOneEvt };
+  if (!nextEvt && diagnostic.reason === "NOT_EVALUATED") {
+    diagnostic.reason = diagnostic.blockedByPrerequisites > 0 ? "ALL_REMAINING_EVENTS_BLOCKED_BY_PREREQUISITES" : "NO_INCOMPLETE_SCHEDULABLE_EVENT_FOUND";
+  }
+  return { next: nextEvt, plusOne: plusOneEvt, diagnostic };
 };
 const calculateTraineePriorityScore = (trainee, buildDate, courseMedian, traineeProgress, isRemedial) => {
   const today = (/* @__PURE__ */ new Date(buildDate + "T00:00:00Z")).getTime();
@@ -119893,6 +119928,21 @@ async function generateDfpInternal(config, setProgress, publishedSchedules) {
       purpose: "Tracks why NEO Build produced no visible tiles.",
       checkpoints: [],
       conclusion: []
+    },
+    nextEventEligibility: {
+      purpose: "Explains why each active trainee did or did not produce a schedulable next event.",
+      totals: {
+        activeTrainees: 0,
+        nextFound: 0,
+        noNext: 0,
+        blockedByPrerequisites: 0,
+        noLmp: 0,
+        emptyLmp: 0
+      },
+      byReason: {},
+      prerequisiteBlockedSamples: [],
+      noNextSamples: [],
+      selectedSamples: []
     },
     individualLmpDurationDiagnostics: {
       purpose: "Tracks whether NEO Build uses the trainee Individual LMP row, including DPCO/DNCO added time, when sizing Flight and Simulator tiles.",
@@ -123157,6 +123207,40 @@ async function generateDfpInternal(config, setProgress, publishedSchedules) {
   activeTrainees.forEach((trainee) => {
     const nextEvents = computeNextEventsForTrainee(trainee, traineeLMPs, scores, syllabusDetails, publishedSchedules, buildDate, config.dbElceMap);
     traineeNextEventMap.set(getBuildTraineeKey(trainee), nextEvents);
+    const eligibility = nextEvents.diagnostic;
+    const eligibilityDiag = neoBuildDiag.nextEventEligibility;
+    eligibilityDiag.totals.activeTrainees += 1;
+    if (nextEvents.next) eligibilityDiag.totals.nextFound += 1;
+    else eligibilityDiag.totals.noNext += 1;
+    if (eligibility.blockedByPrerequisites > 0) eligibilityDiag.totals.blockedByPrerequisites += 1;
+    if (eligibility.reason === "NO_INDIVIDUAL_OR_MATCHING_MASTER_LMP") eligibilityDiag.totals.noLmp += 1;
+    if (eligibility.reason === "INDIVIDUAL_LMP_EMPTY") eligibilityDiag.totals.emptyLmp += 1;
+    eligibilityDiag.byReason[eligibility.reason] = (eligibilityDiag.byReason[eligibility.reason] || 0) + 1;
+    if (eligibility.blockedPrerequisiteSamples.length > 0 && eligibilityDiag.prerequisiteBlockedSamples.length < 80) {
+      eligibilityDiag.prerequisiteBlockedSamples.push({
+        trainee: eligibility.trainee,
+        course: eligibility.course,
+        hasIndividualLMP: eligibility.hasIndividualLMP,
+        lmpLength: eligibility.lmpLength,
+        completedAliasCount: eligibility.completedAliasCount,
+        blockedByPrerequisites: eligibility.blockedByPrerequisites,
+        blockedPrerequisiteSamples: eligibility.blockedPrerequisiteSamples
+      });
+    }
+    if (!nextEvents.next && eligibilityDiag.noNextSamples.length < 80) {
+      eligibilityDiag.noNextSamples.push(eligibility);
+    }
+    if (nextEvents.next && eligibilityDiag.selectedSamples.length < 80) {
+      eligibilityDiag.selectedSamples.push({
+        trainee: eligibility.trainee,
+        course: eligibility.course,
+        next: eligibility.selectedNext,
+        plusOne: eligibility.selectedPlusOne,
+        completedAliasCount: eligibility.completedAliasCount,
+        skippedCompleted: eligibility.skippedCompleted,
+        skippedMassBrief: eligibility.skippedMassBrief
+      });
+    }
   });
   const nextEventLists = { flight: [], ftd: [], cpt: [], ground: [], bnf: [] };
   const nextPlusOneLists = { flight: [], ftd: [], cpt: [], ground: [] };
@@ -123459,7 +123543,7 @@ async function generateDfpInternal(config, setProgress, publishedSchedules) {
       nextMethodOfDelivery: nextDiag.methodOfDelivery,
       nextClassificationBucket: nextDiag.classificationBucket,
       nextClassificationReason: nextDiag.classificationReason,
-      nextPrerequisites: ev.next?.prerequisites || [],
+      nextPrerequisites: getAllLmpPrerequisiteKeys(ev.next),
       plusOneCode: ev.plusOne?.code || null,
       plusOneType: ev.plusOne?.type || null,
       plusOneMethodOfDelivery: plusOneDiag.methodOfDelivery,
@@ -123472,6 +123556,7 @@ async function generateDfpInternal(config, setProgress, publishedSchedules) {
     activeTrainees: activeTrainees.length,
     traineeLMPs: traineeLMPs.size,
     nextEventLists: neoBuildDiag.nextEventLists,
+    nextEventEligibility: neoBuildDiag.nextEventEligibility,
     noNextByCourse: neoBuildDiag.noNextByCourse,
     nextSamples: neoBuildDiag.nextSamples.slice(0, 40)
   });
@@ -133517,6 +133602,7 @@ async function generateDfpInternal(config, setProgress, publishedSchedules) {
     if ((neoBuildDiag.input?.trainees || 0) === 0) conclusions.push("Build received zero trainees.");
     if ((neoBuildDiag.activeTrainees?.total || 0) === 0) conclusions.push("All trainees were filtered out before next-event classification.");
     if ((neoBuildDiag.input?.traineeLmps || 0) === 0) conclusions.push("Build received zero Individual LMP records.");
+    if (nextTotal === 0 && (neoBuildDiag.nextEventEligibility?.totals?.blockedByPrerequisites || 0) > 0) conclusions.push("Active trainees exist, but their next candidate events were blocked by unmet LMP prerequisites. Inspect nextEventEligibility.prerequisiteBlockedSamples.");
     if (nextTotal === 0 && (neoBuildDiag.activeTrainees?.total || 0) > 0) conclusions.push("Active trainees exist, but none had a schedulable next event.");
     if (nextTotal > 0) conclusions.push("Schedulable next-event buckets existed, but no schedule list placed an event; inspect scheduleListSummary rejection samples.");
     if (generatedEventsBeforeFinalCleanup > 0 && sortedEvents.length === 0) conclusions.push("Events existed before final cleanup but all were removed by final cleanup guards.");
@@ -133526,6 +133612,7 @@ async function generateDfpInternal(config, setProgress, publishedSchedules) {
       generatedEventsBeforeFinalCleanup,
       finalCleanup: neoBuildDiag.finalCleanup,
       final: neoBuildDiag.final,
+      nextEventEligibility: neoBuildDiag.nextEventEligibility,
       scheduleListSummary
     });
     neoBuildDiag.zeroTileInvestigation.conclusion = conclusions;
@@ -133535,6 +133622,7 @@ async function generateDfpInternal(config, setProgress, publishedSchedules) {
       input: neoBuildDiag.input,
       activeTrainees: neoBuildDiag.activeTrainees,
       nextEventLists: neoBuildDiag.nextEventLists,
+      nextEventEligibility: neoBuildDiag.nextEventEligibility,
       finalCleanup: neoBuildDiag.finalCleanup,
       scheduleListSummary
     });
