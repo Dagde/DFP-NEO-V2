@@ -1206,6 +1206,49 @@ const locationMatchesKey = (location: any, key: string): boolean => {
     ].some((value) => normaliseUnitSettingsIdentifier(value) === key);
 };
 
+const getLocationDisplayCode = (location: any): string => (
+    String(
+        location?.iataCode
+        || location?.settings?.iataCode
+        || location?.iata
+        || location?.code
+        || location?.icao
+        || location?.icaoCode
+        || ''
+    ).trim().toUpperCase()
+);
+
+const getLocationCanonicalCode = (location: any): string => (
+    normaliseUnitSettingsIdentifier(
+        location?.code
+        || location?.icao
+        || location?.icaoCode
+        || location?.settings?.icaoCode
+        || location?.iataCode
+        || location?.settings?.iataCode
+        || location?.iata
+        || location?.name
+    )
+);
+
+const getLocationLookupKeys = (location: any): string[] => (
+    [
+        location?.code,
+        location?.iataCode,
+        location?.iata,
+        location?.icao,
+        location?.icaoCode,
+        location?.settings?.iataCode,
+        location?.settings?.icaoCode,
+        location?.settings?.legacyCode,
+        location?.name,
+        ...(Array.isArray(location?.aliases) ? location.aliases : []),
+        ...(Array.isArray(location?.settings?.aliases) ? location.settings.aliases : []),
+    ]
+        .map(normaliseUnitSettingsIdentifier)
+        .filter(Boolean)
+);
+
 const makeWizardResourcePoolCode = (locationCode: unknown, unitCode: unknown, aircraftCode: unknown): string => {
     const parts = [locationCode, unitCode, aircraftCode]
         .map((part) => normaliseUnitSettingsIdentifier(part).replace(/[^A-Z0-9]+/g, '-').replace(/^-|-$/g, ''))
@@ -11740,6 +11783,25 @@ const ScheduleView: React.FC<ScheduleViewProps> = ({
         const fallbackOffset = Number(timezoneOffset);
         return Number.isFinite(fallbackOffset) ? fallbackOffset : 10;
     }, [locationCode, platformConfig, timezoneOffset, unitCode]);
+    const tileLocationDisplayContext = useMemo(() => {
+        const displayCodes: Record<string, string> = {};
+        const canonicalCodes: Record<string, string> = {};
+        const addLocation = (location: any) => {
+            const canonical = getLocationCanonicalCode(location);
+            const display = getLocationDisplayCode(location);
+            if (!canonical && !display) return;
+            getLocationLookupKeys(location).forEach((key) => {
+                if (!key) return;
+                if (display && !displayCodes[key]) displayCodes[key] = display;
+                if (canonical && !canonicalCodes[key]) canonicalCodes[key] = canonical;
+            });
+        };
+
+        Object.values(DEFAULT_AIRFIELD_SOLAR_PROFILES || {}).forEach(addLocation);
+        (Array.isArray(platformConfig?.locations) ? platformConfig.locations : []).forEach(addLocation);
+
+        return { displayCodes, canonicalCodes };
+    }, [platformConfig]);
     const flightLinePoolContext = useMemo(() => {
         const cleanUnitCode = normaliseUnitSettingsIdentifier(unitCode);
         const units = Array.isArray(platformConfig?.units) ? platformConfig.units : [];
@@ -13411,6 +13473,9 @@ const ScheduleView: React.FC<ScheduleViewProps> = ({
                         aircraftNumberSettings={aircraftNumberSettings}
                         disableLayoutTransition={isDraggedTile}
                         instructorLabel={schedulePersonnelDisplaySettings.instructorLabel || 'Instructor'}
+                        homeLocationCode={locationCode}
+                        locationDisplayCodes={tileLocationDisplayContext.displayCodes}
+                        locationCanonicalCodes={tileLocationDisplayContext.canonicalCodes}
                     />
                 );
             });
@@ -14060,6 +14125,9 @@ const ScheduleView: React.FC<ScheduleViewProps> = ({
                                 currentTime={currentTime}
                                 aircraftNumberSettings={aircraftNumberSettings}
                                 instructorLabel={schedulePersonnelDisplaySettings.instructorLabel || 'Instructor'}
+                                homeLocationCode={locationCode}
+                                locationDisplayCodes={tileLocationDisplayContext.displayCodes}
+                                locationCanonicalCodes={tileLocationDisplayContext.canonicalCodes}
                             />
                             <div
                                 className="absolute top-1/2 -translate-y-1/2 h-1 bg-sky-300/40 pointer-events-none z-50"

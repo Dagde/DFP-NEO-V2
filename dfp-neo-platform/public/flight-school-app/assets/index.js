@@ -12175,6 +12175,20 @@ const stripGeneratedTrainingReportFollowUpLines$1 = (value) => String(value || "
   const trimmedLine = line.trim();
   return /^(?:\d+(?:\.\d+)?\s+hrs?\s+added to\s+.+|Re-fly requested:\s+.+)$/i.test(trimmedLine) ? [] : [line];
 }).join("\n").replace(/\n{3,}/g, "\n\n").trim();
+const normaliseLocationMarkerKey = (value) => String(value || "").trim().toUpperCase().replace(/[^A-Z0-9]/g, "");
+const getLocationMarkerCode = (value, displayCodes = {}) => {
+  const key = normaliseLocationMarkerKey(value);
+  if (!key) return "";
+  const configuredDisplay = String(displayCodes[key] || "").trim().toUpperCase();
+  if (configuredDisplay) return configuredDisplay;
+  if (key.length === 3) return key;
+  if (key.length === 4) return key.slice(1);
+  return key.slice(0, 3);
+};
+const getCanonicalLocationMarkerCode = (value, canonicalCodes = {}) => {
+  const key = normaliseLocationMarkerKey(value);
+  return String(canonicalCodes[key] || key).trim().toUpperCase();
+};
 const formatTrainingReportExtensionHours = (value) => {
   const hours = Number(value);
   if (!Number.isFinite(hours) || hours <= 0) return "";
@@ -12243,7 +12257,7 @@ const getAuthorizationTextColorClass = (event, currentTime, settings) => {
   }
   return "";
 };
-const FlightTile = ({ event, traineesData, instructorsData = [], onSelectEvent, onSelectAcademicTile, onMouseDown, onMouseEnter, onMouseLeave, pixelsPerHour, rowHeight, startHour, row, isDragging, isConflicting, conflictedPersonnelName, personnelData, seatConfigs, isDraggable = true, currentTime, isUnavailabilityConflict, unavailablePersonnel, isSelected = false, isChanged = false, isPreview = false, isPauseCompleted = false, isDiagnosticHighlighted = false, alertStatus = null, aircraftNumberSettings = DEFAULT_AIRCRAFT_NUMBER_SETTINGS, disableLayoutTransition = false, suppressAuthorisationWarnings = false, instructorLabel: instructorLabel2 = "Instructor" }) => {
+const FlightTile = ({ event, traineesData, instructorsData = [], onSelectEvent, onSelectAcademicTile, onMouseDown, onMouseEnter, onMouseLeave, pixelsPerHour, rowHeight, startHour, row, isDragging, isConflicting, conflictedPersonnelName, personnelData, seatConfigs, isDraggable = true, currentTime, isUnavailabilityConflict, unavailablePersonnel, isSelected = false, isChanged = false, isPreview = false, isPauseCompleted = false, isDiagnosticHighlighted = false, alertStatus = null, aircraftNumberSettings = DEFAULT_AIRCRAFT_NUMBER_SETTINGS, disableLayoutTransition = false, suppressAuthorisationWarnings = false, instructorLabel: instructorLabel2 = "Instructor", homeLocationCode = "", locationDisplayCodes = {}, locationCanonicalCodes = {} }) => {
   try {
     const testAccess = seatConfigs;
   } catch (error) {
@@ -12866,24 +12880,31 @@ const FlightTile = ({ event, traineesData, instructorsData = [], onSelectEvent, 
   const renderCallsignMarker = () => {
     const eventTypeToken = String(event.type || "").trim().toLowerCase();
     const canShowCallsignMarker = ["flight", "ftd", "cpt", "sim", "simulator"].includes(eventTypeToken);
-    if (!canShowCallsignMarker || !callsign && !event.area || isPreview || isSmallTile || isDutySup) return null;
+    const homeLocation = getCanonicalLocationMarkerCode(homeLocationCode, locationCanonicalCodes);
+    const originLocation = getCanonicalLocationMarkerCode(event.origin, locationCanonicalCodes);
+    const destinationLocation = getCanonicalLocationMarkerCode(event.destination, locationCanonicalCodes);
+    const isAwayFromHomebase = eventTypeToken === "flight" && Boolean(homeLocation) && (originLocation && originLocation !== homeLocation || destinationLocation && destinationLocation !== homeLocation);
+    const areaMarker = isAwayFromHomebase ? getLocationMarkerCode(event.destination, locationDisplayCodes) : String(event.area || "").trim();
+    if (!canShowCallsignMarker || !callsign && !areaMarker || isPreview || isSmallTile || isDutySup) return null;
+    const isTrainingAreaMarker = !isAwayFromHomebase && ["A", "B", "C", "D", "E", "F", "G", "H"].includes(areaMarker);
     return /* @__PURE__ */ jsxRuntimeExports.jsxs(
       "div",
       {
         className: "absolute bottom-0.5 flex items-center gap-1 pointer-events-none text-right",
         style: { right: "calc(0.25rem + 5px)" },
         children: [
-          event.area && /* @__PURE__ */ jsxRuntimeExports.jsx(
+          areaMarker && /* @__PURE__ */ jsxRuntimeExports.jsx(
             "div",
             {
-              className: `font-sans font-light ${["A", "B", "C", "D", "E", "F", "G", "H"].includes(event.area) ? "text-white" : "text-yellow-300"}`,
+              className: `font-sans font-light ${isTrainingAreaMarker ? "text-white" : "text-yellow-300"}`,
               style: {
                 fontSize: `${scaledFontSize}px`,
                 lineHeight: "1",
                 opacity: 0.7,
                 marginRight: "5px"
               },
-              children: event.area
+              title: isAwayFromHomebase ? `Arrival destination ${areaMarker}` : `Training area ${areaMarker}`,
+              children: areaMarker
             }
           ),
           callsign && /* @__PURE__ */ jsxRuntimeExports.jsx(
@@ -32637,6 +32658,25 @@ const locationMatchesKey = (location, key) => {
     ...Array.isArray(location?.settings?.aliases) ? location.settings.aliases : []
   ].some((value) => normaliseUnitSettingsIdentifier(value) === key);
 };
+const getLocationDisplayCode = (location) => String(
+  location?.iataCode || location?.settings?.iataCode || location?.iata || location?.code || location?.icao || location?.icaoCode || ""
+).trim().toUpperCase();
+const getLocationCanonicalCode = (location) => normaliseUnitSettingsIdentifier(
+  location?.code || location?.icao || location?.icaoCode || location?.settings?.icaoCode || location?.iataCode || location?.settings?.iataCode || location?.iata || location?.name
+);
+const getLocationLookupKeys = (location) => [
+  location?.code,
+  location?.iataCode,
+  location?.iata,
+  location?.icao,
+  location?.icaoCode,
+  location?.settings?.iataCode,
+  location?.settings?.icaoCode,
+  location?.settings?.legacyCode,
+  location?.name,
+  ...Array.isArray(location?.aliases) ? location.aliases : [],
+  ...Array.isArray(location?.settings?.aliases) ? location.settings.aliases : []
+].map(normaliseUnitSettingsIdentifier).filter(Boolean);
 const makeWizardResourcePoolCode = (locationCode, unitCode, aircraftCode) => {
   const parts = [locationCode, unitCode, aircraftCode].map((part) => normaliseUnitSettingsIdentifier(part).replace(/[^A-Z0-9]+/g, "-").replace(/^-|-$/g, "")).filter(Boolean);
   return [...parts, "ROWS"].join("-") || "";
@@ -41438,6 +41478,23 @@ const ScheduleView = ({
     const fallbackOffset = Number(timezoneOffset);
     return Number.isFinite(fallbackOffset) ? fallbackOffset : 10;
   }, [locationCode, platformConfig, timezoneOffset, unitCode]);
+  const tileLocationDisplayContext = reactExports.useMemo(() => {
+    const displayCodes = {};
+    const canonicalCodes = {};
+    const addLocation = (location) => {
+      const canonical = getLocationCanonicalCode(location);
+      const display = getLocationDisplayCode(location);
+      if (!canonical && !display) return;
+      getLocationLookupKeys(location).forEach((key) => {
+        if (!key) return;
+        if (display && !displayCodes[key]) displayCodes[key] = display;
+        if (canonical && !canonicalCodes[key]) canonicalCodes[key] = canonical;
+      });
+    };
+    Object.values(DEFAULT_AIRFIELD_SOLAR_PROFILES || {}).forEach(addLocation);
+    (Array.isArray(platformConfig?.locations) ? platformConfig.locations : []).forEach(addLocation);
+    return { displayCodes, canonicalCodes };
+  }, [platformConfig]);
   const flightLinePoolContext = reactExports.useMemo(() => {
     const cleanUnitCode = normaliseUnitSettingsIdentifier(unitCode);
     const units = Array.isArray(platformConfig?.units) ? platformConfig.units : [];
@@ -42900,7 +42957,10 @@ const ScheduleView = ({
             alertStatus,
             aircraftNumberSettings,
             disableLayoutTransition: isDraggedTile,
-            instructorLabel: schedulePersonnelDisplaySettings.instructorLabel || "Instructor"
+            instructorLabel: schedulePersonnelDisplaySettings.instructorLabel || "Instructor",
+            homeLocationCode: locationCode,
+            locationDisplayCodes: tileLocationDisplayContext.displayCodes,
+            locationCanonicalCodes: tileLocationDisplayContext.canonicalCodes
           },
           event.id
         );
@@ -43566,7 +43626,10 @@ const ScheduleView = ({
                       seatConfigs: /* @__PURE__ */ new Map(),
                       currentTime,
                       aircraftNumberSettings,
-                      instructorLabel: schedulePersonnelDisplaySettings.instructorLabel || "Instructor"
+                      instructorLabel: schedulePersonnelDisplaySettings.instructorLabel || "Instructor",
+                      homeLocationCode: locationCode,
+                      locationDisplayCodes: tileLocationDisplayContext.displayCodes,
+                      locationCanonicalCodes: tileLocationDisplayContext.canonicalCodes
                     }
                   ),
                   /* @__PURE__ */ jsxRuntimeExports.jsx(

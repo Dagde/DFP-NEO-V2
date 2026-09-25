@@ -48,6 +48,9 @@ interface FlightTileProps {
   disableLayoutTransition?: boolean;
   suppressAuthorisationWarnings?: boolean;
   instructorLabel?: string;
+  homeLocationCode?: string;
+  locationDisplayCodes?: Record<string, string>;
+  locationCanonicalCodes?: Record<string, string>;
 }
 
 const formatTime = (time: number): string => {
@@ -132,6 +135,31 @@ const stripGeneratedTrainingReportFollowUpLines = (value: unknown): string => (
         .replace(/\n{3,}/g, '\n\n')
         .trim()
 );
+
+const normaliseLocationMarkerKey = (value: unknown): string => (
+    String(value || '').trim().toUpperCase().replace(/[^A-Z0-9]/g, '')
+);
+
+const getLocationMarkerCode = (
+    value: unknown,
+    displayCodes: Record<string, string> = {},
+): string => {
+    const key = normaliseLocationMarkerKey(value);
+    if (!key) return '';
+    const configuredDisplay = String(displayCodes[key] || '').trim().toUpperCase();
+    if (configuredDisplay) return configuredDisplay;
+    if (key.length === 3) return key;
+    if (key.length === 4) return key.slice(1);
+    return key.slice(0, 3);
+};
+
+const getCanonicalLocationMarkerCode = (
+    value: unknown,
+    canonicalCodes: Record<string, string> = {},
+): string => {
+    const key = normaliseLocationMarkerKey(value);
+    return String(canonicalCodes[key] || key).trim().toUpperCase();
+};
 
 const formatTrainingReportExtensionHours = (value: unknown): string => {
     const hours = Number(value);
@@ -242,7 +270,7 @@ const getAuthorizationTextColorClass = (
 };
 
 
-const FlightTile: React.FC<FlightTileProps> = ({ event, traineesData, instructorsData = [], onSelectEvent, onSelectAcademicTile, onMouseDown, onMouseEnter, onMouseLeave, pixelsPerHour, rowHeight, startHour, row, isDragging, isConflicting, conflictedPersonnelName, personnelData, seatConfigs, isDraggable = true, currentTime, isUnavailabilityConflict, unavailablePersonnel, isSelected = false, isChanged = false, isPreview = false, isPauseCompleted = false, isDiagnosticHighlighted = false, alertStatus = null, aircraftNumberSettings = DEFAULT_AIRCRAFT_NUMBER_SETTINGS, disableLayoutTransition = false, suppressAuthorisationWarnings = false, instructorLabel = 'Instructor' }) => {
+const FlightTile: React.FC<FlightTileProps> = ({ event, traineesData, instructorsData = [], onSelectEvent, onSelectAcademicTile, onMouseDown, onMouseEnter, onMouseLeave, pixelsPerHour, rowHeight, startHour, row, isDragging, isConflicting, conflictedPersonnelName, personnelData, seatConfigs, isDraggable = true, currentTime, isUnavailabilityConflict, unavailablePersonnel, isSelected = false, isChanged = false, isPreview = false, isPauseCompleted = false, isDiagnosticHighlighted = false, alertStatus = null, aircraftNumberSettings = DEFAULT_AIRCRAFT_NUMBER_SETTINGS, disableLayoutTransition = false, suppressAuthorisationWarnings = false, instructorLabel = 'Instructor', homeLocationCode = '', locationDisplayCodes = {}, locationCanonicalCodes = {} }) => {
   // ERROR TRACKING: Log props to identify missing seatConfigs
 
   // Removed unit color logic - colors are now handled in PersonnelColumn only
@@ -1037,24 +1065,36 @@ const FlightTile: React.FC<FlightTileProps> = ({ event, traineesData, instructor
   const renderCallsignMarker = () => {
       const eventTypeToken = String(event.type || '').trim().toLowerCase();
       const canShowCallsignMarker = ['flight', 'ftd', 'cpt', 'sim', 'simulator'].includes(eventTypeToken);
-      if (!canShowCallsignMarker || (!callsign && !event.area) || isPreview || isSmallTile || isDutySup) return null;
+      const homeLocation = getCanonicalLocationMarkerCode(homeLocationCode, locationCanonicalCodes);
+      const originLocation = getCanonicalLocationMarkerCode(event.origin, locationCanonicalCodes);
+      const destinationLocation = getCanonicalLocationMarkerCode(event.destination, locationCanonicalCodes);
+      const isAwayFromHomebase = eventTypeToken === 'flight' && Boolean(homeLocation) && (
+          (originLocation && originLocation !== homeLocation)
+          || (destinationLocation && destinationLocation !== homeLocation)
+      );
+      const areaMarker = isAwayFromHomebase
+          ? getLocationMarkerCode(event.destination, locationDisplayCodes)
+          : String(event.area || '').trim();
+      if (!canShowCallsignMarker || (!callsign && !areaMarker) || isPreview || isSmallTile || isDutySup) return null;
+      const isTrainingAreaMarker = !isAwayFromHomebase && ['A','B','C','D','E','F','G','H'].includes(areaMarker);
 
       return (
           <div
               className="absolute bottom-0.5 flex items-center gap-1 pointer-events-none text-right"
               style={{ right: 'calc(0.25rem + 5px)' }}
           >
-              {event.area && (
+              {areaMarker && (
                   <div
-                      className={`font-sans font-light ${['A','B','C','D','E','F','G','H'].includes(event.area) ? 'text-white' : 'text-yellow-300'}`}
+                      className={`font-sans font-light ${isTrainingAreaMarker ? 'text-white' : 'text-yellow-300'}`}
                       style={{
                           fontSize: `${scaledFontSize}px`,
                           lineHeight: '1',
                           opacity: 0.7,
                           marginRight: '5px',
                       }}
+                      title={isAwayFromHomebase ? `Arrival destination ${areaMarker}` : `Training area ${areaMarker}`}
                   >
-                      {event.area}
+                      {areaMarker}
                   </div>
               )}
               {callsign && (
