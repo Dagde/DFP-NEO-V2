@@ -1,5 +1,5 @@
 
-import React, { MouseEvent, useEffect, useMemo, useRef, useState } from 'react';
+import React, { MouseEvent, PointerEvent, useEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { ScheduleEvent, Trainee, Instructor, EventSegment } from '../types';
 import {
@@ -23,6 +23,7 @@ interface FlightTileProps {
   onSelectEvent: () => void;
   onSelectAcademicTile?: (tile: { lessonCode: string; label: string; startTime: number; duration: number; color: string; isStandard?: boolean }) => void;
   onMouseDown: (e: MouseEvent<HTMLDivElement>) => void;
+  onPointerDown?: (e: PointerEvent<HTMLDivElement>) => void;
   onMouseEnter: () => void;
   onMouseLeave: () => void;
   pixelsPerHour: number;
@@ -270,7 +271,7 @@ const getAuthorizationTextColorClass = (
 };
 
 
-const FlightTile: React.FC<FlightTileProps> = ({ event, traineesData, instructorsData = [], onSelectEvent, onSelectAcademicTile, onMouseDown, onMouseEnter, onMouseLeave, pixelsPerHour, rowHeight, startHour, row, isDragging, isConflicting, conflictedPersonnelName, personnelData, seatConfigs, isDraggable = true, currentTime, isUnavailabilityConflict, unavailablePersonnel, isSelected = false, isChanged = false, isPreview = false, isPauseCompleted = false, isDiagnosticHighlighted = false, alertStatus = null, aircraftNumberSettings = DEFAULT_AIRCRAFT_NUMBER_SETTINGS, disableLayoutTransition = false, suppressAuthorisationWarnings = false, instructorLabel = 'Instructor', homeLocationCode = '', locationDisplayCodes = {}, locationCanonicalCodes = {} }) => {
+const FlightTile: React.FC<FlightTileProps> = ({ event, traineesData, instructorsData = [], onSelectEvent, onSelectAcademicTile, onMouseDown, onPointerDown, onMouseEnter, onMouseLeave, pixelsPerHour, rowHeight, startHour, row, isDragging, isConflicting, conflictedPersonnelName, personnelData, seatConfigs, isDraggable = true, currentTime, isUnavailabilityConflict, unavailablePersonnel, isSelected = false, isChanged = false, isPreview = false, isPauseCompleted = false, isDiagnosticHighlighted = false, alertStatus = null, aircraftNumberSettings = DEFAULT_AIRCRAFT_NUMBER_SETTINGS, disableLayoutTransition = false, suppressAuthorisationWarnings = false, instructorLabel = 'Instructor', homeLocationCode = '', locationDisplayCodes = {}, locationCanonicalCodes = {} }) => {
   // ERROR TRACKING: Log props to identify missing seatConfigs
 
   // Removed unit color logic - colors are now handled in PersonnelColumn only
@@ -1186,7 +1187,15 @@ const FlightTile: React.FC<FlightTileProps> = ({ event, traineesData, instructor
       style={style}
       className={finalClasses.join(' ')}
       onClick={onSelectEvent}
+      onPointerDown={onPointerDown ? (e) => {
+          e.stopPropagation();
+          onPointerDown(e);
+      } : undefined}
       onMouseDown={(e) => {
+          if (onPointerDown) {
+              e.stopPropagation();
+              return;
+          }
           e.stopPropagation(); // Prevent grid's handleMouseDown from being called
           onMouseDown(e);
       }}

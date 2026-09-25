@@ -12257,7 +12257,7 @@ const getAuthorizationTextColorClass = (event, currentTime, settings) => {
   }
   return "";
 };
-const FlightTile = ({ event, traineesData, instructorsData = [], onSelectEvent, onSelectAcademicTile, onMouseDown, onMouseEnter, onMouseLeave, pixelsPerHour, rowHeight, startHour, row, isDragging, isConflicting, conflictedPersonnelName, personnelData, seatConfigs, isDraggable = true, currentTime, isUnavailabilityConflict, unavailablePersonnel, isSelected = false, isChanged = false, isPreview = false, isPauseCompleted = false, isDiagnosticHighlighted = false, alertStatus = null, aircraftNumberSettings = DEFAULT_AIRCRAFT_NUMBER_SETTINGS, disableLayoutTransition = false, suppressAuthorisationWarnings = false, instructorLabel: instructorLabel2 = "Instructor", homeLocationCode = "", locationDisplayCodes = {}, locationCanonicalCodes = {} }) => {
+const FlightTile = ({ event, traineesData, instructorsData = [], onSelectEvent, onSelectAcademicTile, onMouseDown, onPointerDown, onMouseEnter, onMouseLeave, pixelsPerHour, rowHeight, startHour, row, isDragging, isConflicting, conflictedPersonnelName, personnelData, seatConfigs, isDraggable = true, currentTime, isUnavailabilityConflict, unavailablePersonnel, isSelected = false, isChanged = false, isPreview = false, isPauseCompleted = false, isDiagnosticHighlighted = false, alertStatus = null, aircraftNumberSettings = DEFAULT_AIRCRAFT_NUMBER_SETTINGS, disableLayoutTransition = false, suppressAuthorisationWarnings = false, instructorLabel: instructorLabel2 = "Instructor", homeLocationCode = "", locationDisplayCodes = {}, locationCanonicalCodes = {} }) => {
   try {
     const testAccess = seatConfigs;
   } catch (error) {
@@ -12996,7 +12996,15 @@ const FlightTile = ({ event, traineesData, instructorsData = [], onSelectEvent, 
       style,
       className: finalClasses.join(" "),
       onClick: onSelectEvent,
+      onPointerDown: onPointerDown ? (e) => {
+        e.stopPropagation();
+        onPointerDown(e);
+      } : void 0,
       onMouseDown: (e) => {
+        if (onPointerDown) {
+          e.stopPropagation();
+          return;
+        }
         e.stopPropagation();
         onMouseDown(e);
       },
@@ -42017,6 +42025,7 @@ const ScheduleView = ({
     };
   }, [date, resources.length, updateResourceSlideoutFrame, zoomLevel]);
   const [draggingState, setDraggingState] = reactExports.useState(null);
+  const draggingStateRef = reactExports.useRef(null);
   const [realtimeConflict, setRealtimeConflict] = reactExports.useState(null);
   const [realtimeResourceConflictId, setRealtimeResourceConflictId] = reactExports.useState(null);
   const [draggedCptConflict, setDraggedCptConflict] = reactExports.useState(null);
@@ -42033,8 +42042,9 @@ const ScheduleView = ({
     return Array.from(document.querySelectorAll(`[data-dfp-event-id="${escapedId}"]`));
   }, []);
   const clearDragVisualStyles = reactExports.useCallback(() => {
-    if (!draggingState) return;
-    draggingState.initialPositions.forEach((_initialPosition, eventId) => {
+    const activeDraggingState = draggingStateRef.current || draggingState;
+    if (!activeDraggingState) return;
+    activeDraggingState.initialPositions.forEach((_initialPosition, eventId) => {
       getDragTileElements(eventId).forEach((element) => {
         element.style.transform = "";
         element.style.transition = "";
@@ -42043,9 +42053,10 @@ const ScheduleView = ({
     });
   }, [draggingState, getDragTileElements]);
   const applyDragVisualUpdates = reactExports.useCallback((updates) => {
-    if (!draggingState) return;
+    const activeDraggingState = draggingStateRef.current || draggingState;
+    if (!activeDraggingState) return;
     updates.forEach((update) => {
-      const initialPosition = draggingState.initialPositions.get(update.eventId);
+      const initialPosition = activeDraggingState.initialPositions.get(update.eventId);
       if (!initialPosition) return;
       const newRowIndex = resources.indexOf(update.newResourceId);
       if (newRowIndex < 0) return;
@@ -42115,29 +42126,44 @@ const ScheduleView = ({
       }
     };
   }, []);
+  const finishScheduleTileDrag = reactExports.useCallback(() => {
+    const finishingDragState = draggingStateRef.current || draggingState;
+    flushPendingDragUpdate(true);
+    document.body.classList.remove("no-select");
+    if (finishingDragState) {
+      window.requestAnimationFrame(() => {
+        finishingDragState.initialPositions.forEach((_initialPosition, eventId) => {
+          getDragTileElements(eventId).forEach((element) => {
+            element.style.transform = "";
+            element.style.transition = "";
+            element.style.willChange = "";
+          });
+        });
+      });
+    }
+    draggingStateRef.current = null;
+    setDraggingState(null);
+    setRealtimeConflict(null);
+    setRealtimeResourceConflictId(null);
+    setDraggedCptConflict(null);
+    lastDragUpdateSignatureRef.current = "";
+    lastDragCommitUpdatesRef.current = null;
+    dragGridRectRef.current = null;
+    endDfpDragDiagnostic(dragDiagnosticSessionRef.current);
+    dragDiagnosticSessionRef.current = null;
+  }, [draggingState, flushPendingDragUpdate, getDragTileElements]);
   const selectionStartPoint = reactExports.useRef(null);
   const [selectionRect, setSelectionRect] = reactExports.useState(null);
   const [validateOverlayTime, setValidateOverlayTime] = reactExports.useState(null);
   reactExports.useEffect(() => {
     const handleGlobalMouseMove = (e) => {
-      if (draggingState) {
+      if (draggingStateRef.current || draggingState) {
         handleMouseMove(e);
       }
     };
     const handleGlobalMouseUp = (e) => {
-      if (draggingState) {
-        flushPendingDragUpdate(true);
-        document.body.classList.remove("no-select");
-        setDraggingState(null);
-        setRealtimeConflict(null);
-        setRealtimeResourceConflictId(null);
-        setDraggedCptConflict(null);
-        window.requestAnimationFrame(clearDragVisualStyles);
-        lastDragUpdateSignatureRef.current = "";
-        lastDragCommitUpdatesRef.current = null;
-        dragGridRectRef.current = null;
-        endDfpDragDiagnostic(dragDiagnosticSessionRef.current);
-        dragDiagnosticSessionRef.current = null;
+      if (draggingStateRef.current || draggingState) {
+        finishScheduleTileDrag();
       }
     };
     document.addEventListener("mousemove", handleGlobalMouseMove);
@@ -42146,7 +42172,7 @@ const ScheduleView = ({
       document.removeEventListener("mousemove", handleGlobalMouseMove);
       document.removeEventListener("mouseup", handleGlobalMouseUp);
     };
-  }, [draggingState, flushPendingDragUpdate]);
+  }, [draggingState, finishScheduleTileDrag]);
   const getExternalDropPlacementFromClient = reactExports.useCallback((clientX, clientY, diagnosticSessionId) => {
     const startedAt = getNeoAssistPerfNow$2();
     if (!scheduleGridRef.current) {
@@ -42407,6 +42433,13 @@ const ScheduleView = ({
         processEventWithFormation(event);
       }
       if (initialPositions.size > 0) {
+        const nextDraggingState = {
+          mainEventId: event.id,
+          xOffset: (e.clientX - rect.left) / zoomLevel,
+          yOffset: e.clientY - rect.top,
+          initialPositions,
+          originalResourceIds
+        };
         lastDragUpdateSignatureRef.current = "";
         lastDragCommitUpdatesRef.current = null;
         pendingDragUpdateRef.current = null;
@@ -42422,13 +42455,8 @@ const ScheduleView = ({
           resourceCount: resources.length,
           zoomLevel
         });
-        setDraggingState({
-          mainEventId: event.id,
-          xOffset: (e.clientX - rect.left) / zoomLevel,
-          yOffset: e.clientY - rect.top,
-          initialPositions,
-          originalResourceIds
-        });
+        draggingStateRef.current = nextDraggingState;
+        setDraggingState(nextDraggingState);
       }
     } else {
       if (!isMultiSelectMode) return;
@@ -42486,16 +42514,17 @@ const ScheduleView = ({
         setSelectedEventIds(newSelectedIds);
         return;
       }
-      if (!draggingState) {
+      const activeDraggingState = draggingStateRef.current || draggingState;
+      if (!activeDraggingState) {
         return;
       }
-      const mainEventInitialPos = draggingState.initialPositions.get(draggingState.mainEventId);
+      const mainEventInitialPos = activeDraggingState.initialPositions.get(activeDraggingState.mainEventId);
       if (!mainEventInitialPos) return;
       const updateBuildStartedAt = performance.now();
-      const timeShift = (xInGrid / zoomLevel - draggingState.xOffset) / PIXELS_PER_HOUR$6 - mainEventInitialPos.startTime;
-      const rowShift = Math.floor((yInGrid - draggingState.yOffset + ROW_HEIGHT$6 / 2) / ROW_HEIGHT$6) - mainEventInitialPos.rowIndex;
+      const timeShift = (xInGrid / zoomLevel - activeDraggingState.xOffset) / PIXELS_PER_HOUR$6 - mainEventInitialPos.startTime;
+      const rowShift = Math.floor((yInGrid - activeDraggingState.yOffset + ROW_HEIGHT$6 / 2) / ROW_HEIGHT$6) - mainEventInitialPos.rowIndex;
       const updates = [];
-      for (const [id, initialPos] of draggingState.initialPositions.entries()) {
+      for (const [id, initialPos] of activeDraggingState.initialPositions.entries()) {
         const eventData = events.find((ev) => ev.id === id);
         if (!eventData) continue;
         let newStartTime = initialPos.startTime + timeShift;
@@ -42553,9 +42582,8 @@ const ScheduleView = ({
     }
   };
   const handleMouseUp = (e) => {
-    if (draggingState) {
-      flushPendingDragUpdate(true);
-      window.requestAnimationFrame(clearDragVisualStyles);
+    if (draggingStateRef.current || draggingState) {
+      finishScheduleTileDrag();
       return;
     }
     document.body.classList.remove("no-select");
@@ -42565,10 +42593,11 @@ const ScheduleView = ({
     if (draggedCptConflict) {
       onCptConflict(draggedCptConflict);
     }
-    setDraggingState(null);
     setRealtimeConflict(null);
     setRealtimeResourceConflictId(null);
     setDraggedCptConflict(null);
+    draggingStateRef.current = null;
+    setDraggingState(null);
     window.requestAnimationFrame(clearDragVisualStyles);
     lastDragCommitUpdatesRef.current = null;
     dragGridRectRef.current = null;
@@ -42588,6 +42617,43 @@ const ScheduleView = ({
     setTimeout(() => {
       didDragRef.current = false;
     }, 0);
+  };
+  const handleTilePointerDown = (e, event) => {
+    if (e.button !== 0) return;
+    if (isReadOnly) {
+      didDragRef.current = false;
+      return;
+    }
+    e.preventDefault();
+    e.stopPropagation();
+    try {
+      e.currentTarget.setPointerCapture(e.pointerId);
+    } catch {
+    }
+    handleMouseDown(e, event);
+    if (!draggingStateRef.current) return;
+    const handlePointerMove = (pointerEvent) => {
+      if (!draggingStateRef.current) return;
+      pointerEvent.preventDefault();
+      handleMouseMove(pointerEvent);
+    };
+    const cleanupPointerListeners = () => {
+      document.removeEventListener("pointermove", handlePointerMove);
+      document.removeEventListener("pointerup", handlePointerUp);
+      document.removeEventListener("pointercancel", handlePointerCancel);
+    };
+    const handlePointerUp = (pointerEvent) => {
+      pointerEvent.preventDefault();
+      cleanupPointerListeners();
+      if (draggingStateRef.current) finishScheduleTileDrag();
+    };
+    const handlePointerCancel = () => {
+      cleanupPointerListeners();
+      if (draggingStateRef.current) finishScheduleTileDrag();
+    };
+    document.addEventListener("pointermove", handlePointerMove, { passive: false });
+    document.addEventListener("pointerup", handlePointerUp, { once: true });
+    document.addEventListener("pointercancel", handlePointerCancel, { once: true });
   };
   const timeStringToHours2 = reactExports.useCallback((timeString) => {
     if (!timeString || !/^\d{2}:\d{2}$/.test(timeString)) return null;
@@ -42986,6 +43052,7 @@ const ScheduleView = ({
               onSelectEvent(syntheticEvent);
             },
             onMouseDown: (e) => handleMouseDown(e, event),
+            onPointerDown: (e) => handleTilePointerDown(e, event),
             onMouseEnter: () => {
             },
             onMouseLeave: () => {

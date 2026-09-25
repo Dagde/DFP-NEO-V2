@@ -12384,13 +12384,16 @@ const ScheduleView: React.FC<ScheduleViewProps> = ({
     }, [date, resources.length, updateResourceSlideoutFrame, zoomLevel]);
     
 
-    const [draggingState, setDraggingState] = useState<{
+    type ScheduleDraggingState = {
         mainEventId: string;
         xOffset: number;
         yOffset: number;
         initialPositions: Map<string, { startTime: number, rowIndex: number }>;
         originalResourceIds: Map<string, string>;
-    } | null>(null);
+    };
+
+    const [draggingState, setDraggingState] = useState<ScheduleDraggingState | null>(null);
+    const draggingStateRef = useRef<ScheduleDraggingState | null>(null);
 
     const [realtimeConflict, setRealtimeConflict] = useState<{ conflictingEventId: string; conflictedPersonName: string; } | null>(null);
     const [realtimeResourceConflictId, setRealtimeResourceConflictId] = useState<string | null>(null);
@@ -12417,8 +12420,9 @@ const ScheduleView: React.FC<ScheduleViewProps> = ({
     }, []);
 
     const clearDragVisualStyles = useCallback(() => {
-        if (!draggingState) return;
-        draggingState.initialPositions.forEach((_initialPosition, eventId) => {
+        const activeDraggingState = draggingStateRef.current || draggingState;
+        if (!activeDraggingState) return;
+        activeDraggingState.initialPositions.forEach((_initialPosition, eventId) => {
             getDragTileElements(eventId).forEach(element => {
                 element.style.transform = '';
                 element.style.transition = '';
@@ -12428,9 +12432,10 @@ const ScheduleView: React.FC<ScheduleViewProps> = ({
     }, [draggingState, getDragTileElements]);
 
     const applyDragVisualUpdates = useCallback((updates: { eventId: string, newStartTime: number, newResourceId: string }[]) => {
-        if (!draggingState) return;
+        const activeDraggingState = draggingStateRef.current || draggingState;
+        if (!activeDraggingState) return;
         updates.forEach(update => {
-            const initialPosition = draggingState.initialPositions.get(update.eventId);
+            const initialPosition = activeDraggingState.initialPositions.get(update.eventId);
             if (!initialPosition) return;
             const newRowIndex = resources.indexOf(update.newResourceId);
             if (newRowIndex < 0) return;
@@ -12504,6 +12509,33 @@ const ScheduleView: React.FC<ScheduleViewProps> = ({
         };
     }, []);
 
+    const finishScheduleTileDrag = useCallback(() => {
+        const finishingDragState = draggingStateRef.current || draggingState;
+        flushPendingDragUpdate(true);
+        document.body.classList.remove('no-select');
+        if (finishingDragState) {
+            window.requestAnimationFrame(() => {
+                finishingDragState.initialPositions.forEach((_initialPosition, eventId) => {
+                    getDragTileElements(eventId).forEach(element => {
+                        element.style.transform = '';
+                        element.style.transition = '';
+                        element.style.willChange = '';
+                    });
+                });
+            });
+        }
+        draggingStateRef.current = null;
+        setDraggingState(null);
+        setRealtimeConflict(null);
+        setRealtimeResourceConflictId(null);
+        setDraggedCptConflict(null);
+        lastDragUpdateSignatureRef.current = '';
+        lastDragCommitUpdatesRef.current = null;
+        dragGridRectRef.current = null;
+        endDfpDragDiagnostic(dragDiagnosticSessionRef.current);
+        dragDiagnosticSessionRef.current = null;
+    }, [draggingState, flushPendingDragUpdate, getDragTileElements]);
+
     // Multi-select State
     const selectionStartPoint = useRef<{ x: number, y: number } | null>(null);
     const [selectionRect, setSelectionRect] = useState<{ x: number, y: number, width: number, height: number } | null>(null);
@@ -12514,25 +12546,14 @@ const ScheduleView: React.FC<ScheduleViewProps> = ({
     useEffect(() => {
         // Global drag handlers
         const handleGlobalMouseMove = (e: MouseEvent) => {
-            if (draggingState) {
+            if (draggingStateRef.current || draggingState) {
                 handleMouseMove(e as any);
             }
         };
         
         const handleGlobalMouseUp = (e: MouseEvent) => {
-            if (draggingState) {
-                flushPendingDragUpdate(true);
-                document.body.classList.remove('no-select');
-                setDraggingState(null);
-                setRealtimeConflict(null);
-                setRealtimeResourceConflictId(null);
-                setDraggedCptConflict(null);
-                window.requestAnimationFrame(clearDragVisualStyles);
-                lastDragUpdateSignatureRef.current = '';
-                lastDragCommitUpdatesRef.current = null;
-                dragGridRectRef.current = null;
-                endDfpDragDiagnostic(dragDiagnosticSessionRef.current);
-                dragDiagnosticSessionRef.current = null;
+            if (draggingStateRef.current || draggingState) {
+                finishScheduleTileDrag();
             }
         };
         
@@ -12544,7 +12565,7 @@ const ScheduleView: React.FC<ScheduleViewProps> = ({
             document.removeEventListener('mousemove', handleGlobalMouseMove);
             document.removeEventListener('mouseup', handleGlobalMouseUp);
         };
-    }, [draggingState, flushPendingDragUpdate]);
+    }, [draggingState, finishScheduleTileDrag]);
 
     const getExternalDropPlacementFromClient = useCallback((clientX: number, clientY: number, diagnosticSessionId?: string) => {
         const startedAt = getNeoAssistPerfNow();
@@ -12847,6 +12868,13 @@ const ScheduleView: React.FC<ScheduleViewProps> = ({
             }
 
             if (initialPositions.size > 0) {
+                const nextDraggingState: ScheduleDraggingState = {
+                    mainEventId: event.id,
+                    xOffset: (e.clientX - rect.left) / zoomLevel,
+                    yOffset: e.clientY - rect.top,
+                    initialPositions,
+                    originalResourceIds,
+                };
                 lastDragUpdateSignatureRef.current = '';
                 lastDragCommitUpdatesRef.current = null;
                 pendingDragUpdateRef.current = null;
@@ -12862,13 +12890,8 @@ const ScheduleView: React.FC<ScheduleViewProps> = ({
                     resourceCount: resources.length,
                     zoomLevel,
                 });
-                setDraggingState({
-                    mainEventId: event.id,
-                    xOffset: (e.clientX - rect.left) / zoomLevel,
-                    yOffset: e.clientY - rect.top,
-                    initialPositions,
-                    originalResourceIds,
-                });
+                draggingStateRef.current = nextDraggingState;
+                setDraggingState(nextDraggingState);
             }
         } else {
             // Grid Selection Start (Marquee)
@@ -12942,20 +12965,21 @@ const ScheduleView: React.FC<ScheduleViewProps> = ({
                 return;
             }
 
-            if (!draggingState) {
+            const activeDraggingState = draggingStateRef.current || draggingState;
+            if (!activeDraggingState) {
                     return;
                 }
 
-            const mainEventInitialPos = draggingState.initialPositions.get(draggingState.mainEventId);
+            const mainEventInitialPos = activeDraggingState.initialPositions.get(activeDraggingState.mainEventId);
             if (!mainEventInitialPos) return;
             const updateBuildStartedAt = performance.now();
 
-            const timeShift = ((xInGrid / zoomLevel) - draggingState.xOffset) / PIXELS_PER_HOUR - mainEventInitialPos.startTime;
-            const rowShift = Math.floor((yInGrid - draggingState.yOffset + ROW_HEIGHT / 2) / ROW_HEIGHT) - mainEventInitialPos.rowIndex;
+            const timeShift = ((xInGrid / zoomLevel) - activeDraggingState.xOffset) / PIXELS_PER_HOUR - mainEventInitialPos.startTime;
+            const rowShift = Math.floor((yInGrid - activeDraggingState.yOffset + ROW_HEIGHT / 2) / ROW_HEIGHT) - mainEventInitialPos.rowIndex;
 
             const updates: { eventId: string, newStartTime: number, newResourceId: string }[] = [];
 
-            for (const [id, initialPos] of draggingState.initialPositions.entries()) {
+            for (const [id, initialPos] of activeDraggingState.initialPositions.entries()) {
                 const eventData = events.find(ev => ev.id === id);
                 if (!eventData) continue;
 
@@ -13021,10 +13045,9 @@ const ScheduleView: React.FC<ScheduleViewProps> = ({
     };
 
     const handleMouseUp = (e: MouseEvent<HTMLDivElement>) => {
-        if (draggingState) {
-            flushPendingDragUpdate(true);
-            window.requestAnimationFrame(clearDragVisualStyles);
-            return; // Don't clear drag state if we're in a drag operation
+        if (draggingStateRef.current || draggingState) {
+            finishScheduleTileDrag();
+            return;
         }
         document.body.classList.remove('no-select');
         
@@ -13035,10 +13058,11 @@ const ScheduleView: React.FC<ScheduleViewProps> = ({
         if (draggedCptConflict) {
             onCptConflict(draggedCptConflict);
         }
-        setDraggingState(null);
         setRealtimeConflict(null);
         setRealtimeResourceConflictId(null);
         setDraggedCptConflict(null);
+        draggingStateRef.current = null;
+        setDraggingState(null);
         window.requestAnimationFrame(clearDragVisualStyles);
         lastDragCommitUpdatesRef.current = null;
         dragGridRectRef.current = null;
@@ -13062,6 +13086,50 @@ const ScheduleView: React.FC<ScheduleViewProps> = ({
         }
         
         setTimeout(() => { didDragRef.current = false; }, 0);
+    };
+
+    const handleTilePointerDown = (e: React.PointerEvent<HTMLDivElement>, event: ScheduleEvent) => {
+        if (e.button !== 0) return;
+        if (isReadOnly) {
+            didDragRef.current = false;
+            return;
+        }
+        e.preventDefault();
+        e.stopPropagation();
+        try {
+            e.currentTarget.setPointerCapture(e.pointerId);
+        } catch {
+            // Pointer capture is best-effort; document listeners below still keep the drag alive.
+        }
+        handleMouseDown(e as unknown as MouseEvent<HTMLDivElement>, event);
+        if (!draggingStateRef.current) return;
+
+        const handlePointerMove = (pointerEvent: PointerEvent) => {
+            if (!draggingStateRef.current) return;
+            pointerEvent.preventDefault();
+            handleMouseMove(pointerEvent as unknown as MouseEvent<HTMLDivElement>);
+        };
+
+        const cleanupPointerListeners = () => {
+            document.removeEventListener('pointermove', handlePointerMove);
+            document.removeEventListener('pointerup', handlePointerUp);
+            document.removeEventListener('pointercancel', handlePointerCancel);
+        };
+
+        const handlePointerUp = (pointerEvent: PointerEvent) => {
+            pointerEvent.preventDefault();
+            cleanupPointerListeners();
+            if (draggingStateRef.current) finishScheduleTileDrag();
+        };
+
+        const handlePointerCancel = () => {
+            cleanupPointerListeners();
+            if (draggingStateRef.current) finishScheduleTileDrag();
+        };
+
+        document.addEventListener('pointermove', handlePointerMove, { passive: false });
+        document.addEventListener('pointerup', handlePointerUp, { once: true });
+        document.addEventListener('pointercancel', handlePointerCancel, { once: true });
     };
 
     const timeStringToHours = useCallback((timeString: string | null): number | null => {
@@ -13515,6 +13583,7 @@ const ScheduleView: React.FC<ScheduleViewProps> = ({
                             onSelectEvent(syntheticEvent);
                         }}
                         onMouseDown={(e) => handleMouseDown(e, event)}
+                        onPointerDown={(e) => handleTilePointerDown(e, event)}
                         onMouseEnter={() => {}}
                         onMouseLeave={() => {}}
                         pixelsPerHour={PIXELS_PER_HOUR * zoomLevel}
