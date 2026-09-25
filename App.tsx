@@ -909,6 +909,7 @@ const TASKING_REQUESTS_UPDATED_EVENT = 'neoTaskingRequestsUpdated';
 const CURRENCY_DRAFT_STORAGE_KEY = 'neoCurrencyDraftEvents.v2';
 const FIXED_CREW_DEFAULT_TASKING_DURATION_HOURS = 4;
 const FIXED_CREW_DEFAULT_CURRENCY_DURATION_HOURS = 2;
+const NEO_ASSIST_POINTER_DROP_EVENT = 'neoAssistPointerDrop';
 
 const DfpSidePanelTimeline: React.FC<{
     flyingStartTime: number;
@@ -1078,6 +1079,7 @@ const DfpSidePanelTimeline: React.FC<{
     const chartRef = useRef<HTMLDivElement | null>(null);
     const scrollRef = useRef<HTMLDivElement | null>(null);
     const assistDragPreviewRef = useRef<HTMLElement | null>(null);
+    const assistPointerDragActiveRef = useRef(false);
     const wizardRepeatRef = useRef<number | null>(null);
     const [activeDrag, setActiveDrag] = useState<DfpMiniTimelineDragState | null>(null);
     const [activeAssistPage, setActiveAssistPage] = useState<NeoAssistPage>('inputs');
@@ -2219,8 +2221,7 @@ const DfpSidePanelTimeline: React.FC<{
     const positionAssistDragPreview = (clientX: number, clientY: number) => {
         const preview = assistDragPreviewRef.current;
         if (!preview || !clientX || !clientY) return;
-        preview.style.left = `${clientX}px`;
-        preview.style.top = `${clientY}px`;
+        preview.style.transform = `translate3d(${clientX + 12}px, ${clientY + 12}px, 0)`;
     };
 
     const clearAssistDragPreview = () => {
@@ -2246,7 +2247,8 @@ const DfpSidePanelTimeline: React.FC<{
         ghost.style.pointerEvents = 'none';
         ghost.style.zIndex = '99999';
         ghost.style.opacity = '0.92';
-        ghost.style.transform = 'translate(0, 0)';
+        ghost.style.transform = 'translate3d(0, 0, 0)';
+        ghost.style.willChange = 'transform';
 
         const buildTile = (position: number) => {
             const tile = document.createElement('div');
@@ -2398,6 +2400,55 @@ const DfpSidePanelTimeline: React.FC<{
         clearAssistDragPreview();
     };
 
+    const startAssistTilePointerDrag = (event: React.PointerEvent<HTMLDivElement>) => {
+        if (event.button !== 0) return;
+        event.preventDefault();
+        event.stopPropagation();
+
+        const sourceEvent = assistDraftEvent;
+        clearAssistDragPreview();
+        setIsAssistTileDragging(true);
+        const dragPreview = createAssistDragImage();
+        assistDragPreviewRef.current = dragPreview;
+        positionAssistDragPreview(event.clientX, event.clientY);
+        document.body.classList.add('no-select');
+        onManualTileDragStart?.();
+
+        const handlePointerMove = (pointerEvent: PointerEvent) => {
+            pointerEvent.preventDefault();
+            positionAssistDragPreview(pointerEvent.clientX, pointerEvent.clientY);
+        };
+
+        const cleanup = () => {
+            document.removeEventListener('pointermove', handlePointerMove);
+            document.removeEventListener('pointerup', handlePointerUp);
+            document.removeEventListener('pointercancel', handlePointerCancel);
+            document.body.classList.remove('no-select');
+            assistPointerDragActiveRef.current = false;
+            clearAssistDragPreview();
+        };
+
+        const handlePointerUp = (pointerEvent: PointerEvent) => {
+            window.dispatchEvent(new CustomEvent(NEO_ASSIST_POINTER_DROP_EVENT, {
+                detail: {
+                    event: sourceEvent,
+                    clientX: pointerEvent.clientX,
+                    clientY: pointerEvent.clientY,
+                },
+            }));
+            cleanup();
+        };
+
+        const handlePointerCancel = () => {
+            cleanup();
+        };
+
+        assistPointerDragActiveRef.current = true;
+        document.addEventListener('pointermove', handlePointerMove, { passive: false });
+        document.addEventListener('pointerup', handlePointerUp, { once: true });
+        document.addEventListener('pointercancel', handlePointerCancel, { once: true });
+    };
+
     useEffect(() => {
         const handleWindowDragOver = (event: DragEvent) => {
             positionAssistDragPreview(event.clientX, event.clientY);
@@ -2412,7 +2463,7 @@ const DfpSidePanelTimeline: React.FC<{
             window.removeEventListener('dragover', handleWindowDragOver);
             window.removeEventListener('drop', handleWindowDragDone);
             window.removeEventListener('dragend', handleWindowDragDone);
-            clearAssistDragPreview();
+            if (!assistPointerDragActiveRef.current) clearAssistDragPreview();
         };
     }, []);
 
@@ -7589,12 +7640,7 @@ const DfpSidePanelTimeline: React.FC<{
                                 {renderAssistDfpOverview()}
                                 <div className="flex justify-center rounded-lg border border-slate-300 bg-white p-3 shadow-sm">
                                     <div
-                                        draggable
-                                        onPointerDown={onManualTileDragStart}
-                                        onDragStart={startAssistTileDrag}
-                                        onDrag={updateAssistTileDrag}
-                                        onDragOver={updateAssistTileDrag}
-                                        onDragEnd={endAssistTileDrag}
+                                        onPointerDown={startAssistTilePointerDrag}
                                         className={`neo-assist-tile-preview ${isAssistTileDragging ? 'neo-assist-tile-preview-dragging' : ''} w-full max-w-[520px] cursor-grab rounded-md border bg-slate-100 p-2 active:cursor-grabbing ${
                                             isDeploymentAssistTile ? 'border-slate-500/45' : 'border-pink-300/60'
                                         }`}

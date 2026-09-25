@@ -31881,6 +31881,7 @@ const ROW_HEIGHT$6 = 32;
 const START_HOUR$6 = 0;
 const END_HOUR$6 = 24;
 const TOTAL_HOURS$6 = END_HOUR$6 - START_HOUR$6;
+const NEO_ASSIST_POINTER_DROP_EVENT$2 = "neoAssistPointerDrop";
 const AIRFRAME_COLUMN_WIDTH$1 = 108;
 const RESOURCE_COLUMN_WIDTH = 105;
 const TIME_HEADER_HEIGHT$6 = 40;
@@ -42082,18 +42083,20 @@ const ScheduleView = ({
       document.removeEventListener("mouseup", handleGlobalMouseUp);
     };
   }, [draggingState, flushPendingDragUpdate]);
-  const getExternalDropPlacement = (event) => {
+  const getExternalDropPlacementFromClient = reactExports.useCallback((clientX, clientY) => {
     if (!scheduleGridRef.current) return null;
     const gridRect = scheduleGridRef.current.getBoundingClientRect();
-    const relativeX = event.clientX - gridRect.left;
-    const relativeY = event.clientY - gridRect.top;
+    if (clientX < gridRect.left || clientX > gridRect.right || clientY < gridRect.top || clientY > gridRect.bottom) return null;
+    const relativeX = clientX - gridRect.left;
+    const relativeY = clientY - gridRect.top;
     const rawStartTime = START_HOUR$6 + relativeX / (PIXELS_PER_HOUR$6 * zoomLevel);
     const startTime = Math.max(START_HOUR$6, Math.min(END_HOUR$6, Math.round(rawStartTime * 12) / 12));
     const rowIndex = Math.max(0, Math.min(resources.length - 1, Math.floor(relativeY / ROW_HEIGHT$6)));
     const resourceId = resources[rowIndex];
     if (!resourceId) return null;
     return { startTime, resourceId };
-  };
+  }, [resources, zoomLevel]);
+  const getExternalDropPlacement = (event) => getExternalDropPlacementFromClient(event.clientX, event.clientY);
   const getNearestFlightLineEventForDrop = (event) => {
     if (!scheduleGridRef.current) return null;
     const gridRect = scheduleGridRef.current.getBoundingClientRect();
@@ -42156,6 +42159,20 @@ const ScheduleView = ({
       console.warn("[NEO Assist] Failed to drop assist tile:", error);
     }
   };
+  reactExports.useEffect(() => {
+    const handleAssistPointerDrop = (event) => {
+      if (isReadOnly || !onExternalEventDrop) return;
+      const detail = event.detail;
+      if (!detail?.event || typeof detail.clientX !== "number" || typeof detail.clientY !== "number") return;
+      const placement = getExternalDropPlacementFromClient(detail.clientX, detail.clientY);
+      if (!placement) return;
+      onExternalEventDrop(detail.event, placement);
+    };
+    window.addEventListener(NEO_ASSIST_POINTER_DROP_EVENT$2, handleAssistPointerDrop);
+    return () => {
+      window.removeEventListener(NEO_ASSIST_POINTER_DROP_EVENT$2, handleAssistPointerDrop);
+    };
+  }, [getExternalDropPlacementFromClient, isReadOnly, onExternalEventDrop]);
   const formattedDisplayDate = reactExports.useMemo(() => {
     const [year, month, day] = date.split("-").map(Number);
     const dateObj = new Date(Date.UTC(year, month - 1, day));
@@ -68974,6 +68991,7 @@ const ROW_HEIGHT$3 = 32;
 const START_HOUR$3 = 0;
 const END_HOUR$3 = 24;
 const TOTAL_HOURS$3 = END_HOUR$3 - START_HOUR$3;
+const NEO_ASSIST_POINTER_DROP_EVENT$1 = "neoAssistPointerDrop";
 const AIRFRAME_COLUMN_WIDTH = 144;
 const TIME_HEADER_HEIGHT$3 = 40;
 const getPersonnel$3 = (event) => {
@@ -69170,18 +69188,20 @@ const NextDayBuildView = ({
     const timerId = setInterval(() => setCurrentTime(/* @__PURE__ */ new Date()), 1e3);
     return () => clearInterval(timerId);
   }, [date]);
-  const getExternalDropPlacement = (event) => {
+  const getExternalDropPlacementFromClient = reactExports.useCallback((clientX, clientY) => {
     if (!scheduleGridRef.current) return null;
     const gridRect = scheduleGridRef.current.getBoundingClientRect();
-    const relativeX = event.clientX - gridRect.left;
-    const relativeY = event.clientY - gridRect.top;
+    if (clientX < gridRect.left || clientX > gridRect.right || clientY < gridRect.top || clientY > gridRect.bottom) return null;
+    const relativeX = clientX - gridRect.left;
+    const relativeY = clientY - gridRect.top;
     const rawStartTime = START_HOUR$3 + relativeX / (PIXELS_PER_HOUR$3 * zoomLevel);
     const startTime = Math.max(START_HOUR$3, Math.min(END_HOUR$3, Math.round(rawStartTime * 12) / 12));
     const rowIndex = Math.max(0, Math.min(resources.length - 1, Math.floor(relativeY / ROW_HEIGHT$3)));
     const resourceId = resources[rowIndex];
     if (!resourceId) return null;
     return { startTime, resourceId };
-  };
+  }, [resources, zoomLevel]);
+  const getExternalDropPlacement = (event) => getExternalDropPlacementFromClient(event.clientX, event.clientY);
   const handleExternalDragOver = (event) => {
     if (!onExternalEventDrop) return;
     if (!Array.from(event.dataTransfer.types).includes("application/neo-assist-event")) return;
@@ -69206,6 +69226,20 @@ const NextDayBuildView = ({
       console.warn("[NEO Assist] Failed to drop assist tile:", error);
     }
   };
+  reactExports.useEffect(() => {
+    const handleAssistPointerDrop = (event) => {
+      if (!onExternalEventDrop) return;
+      const detail = event.detail;
+      if (!detail?.event || typeof detail.clientX !== "number" || typeof detail.clientY !== "number") return;
+      const placement = getExternalDropPlacementFromClient(detail.clientX, detail.clientY);
+      if (!placement) return;
+      onExternalEventDrop(detail.event, placement);
+    };
+    window.addEventListener(NEO_ASSIST_POINTER_DROP_EVENT$1, handleAssistPointerDrop);
+    return () => {
+      window.removeEventListener(NEO_ASSIST_POINTER_DROP_EVENT$1, handleAssistPointerDrop);
+    };
+  }, [getExternalDropPlacementFromClient, onExternalEventDrop]);
   reactExports.useMemo(() => {
     const [year, month, day] = date.split("-").map(Number);
     const dateObj = new Date(Date.UTC(year, month - 1, day));
@@ -111442,6 +111476,7 @@ const TASKING_REQUESTS_UPDATED_EVENT = "neoTaskingRequestsUpdated";
 const CURRENCY_DRAFT_STORAGE_KEY = "neoCurrencyDraftEvents.v2";
 const FIXED_CREW_DEFAULT_TASKING_DURATION_HOURS = 4;
 const FIXED_CREW_DEFAULT_CURRENCY_DURATION_HOURS = 2;
+const NEO_ASSIST_POINTER_DROP_EVENT = "neoAssistPointerDrop";
 const DfpSidePanelTimeline = ({
   flyingStartTime,
   flyingEndTime,
@@ -111535,6 +111570,7 @@ const DfpSidePanelTimeline = ({
   const chartRef = reactExports.useRef(null);
   const scrollRef = reactExports.useRef(null);
   const assistDragPreviewRef = reactExports.useRef(null);
+  const assistPointerDragActiveRef = reactExports.useRef(false);
   const wizardRepeatRef = reactExports.useRef(null);
   const [activeDrag, setActiveDrag] = reactExports.useState(null);
   const [activeAssistPage, setActiveAssistPage] = reactExports.useState("inputs");
@@ -112405,8 +112441,7 @@ const DfpSidePanelTimeline = ({
   const positionAssistDragPreview = (clientX, clientY) => {
     const preview = assistDragPreviewRef.current;
     if (!preview || !clientX || !clientY) return;
-    preview.style.left = `${clientX}px`;
-    preview.style.top = `${clientY}px`;
+    preview.style.transform = `translate3d(${clientX + 12}px, ${clientY + 12}px, 0)`;
   };
   const clearAssistDragPreview = () => {
     assistDragPreviewRef.current?.remove();
@@ -112430,7 +112465,8 @@ const DfpSidePanelTimeline = ({
     ghost.style.pointerEvents = "none";
     ghost.style.zIndex = "99999";
     ghost.style.opacity = "0.92";
-    ghost.style.transform = "translate(0, 0)";
+    ghost.style.transform = "translate3d(0, 0, 0)";
+    ghost.style.willChange = "transform";
     const buildTile = (position) => {
       const tile = document.createElement("div");
       tile.style.position = "relative";
@@ -112536,27 +112572,47 @@ const DfpSidePanelTimeline = ({
     document.body.appendChild(ghost);
     return ghost;
   };
-  const startAssistTileDrag = (event) => {
+  const startAssistTilePointerDrag = (event) => {
+    if (event.button !== 0) return;
+    event.preventDefault();
+    event.stopPropagation();
+    const sourceEvent = assistDraftEvent;
     clearAssistDragPreview();
     setIsAssistTileDragging(true);
-    event.dataTransfer.effectAllowed = "copy";
-    const payload = JSON.stringify(assistDraftEvent);
-    event.dataTransfer.setData("application/neo-assist-event", payload);
-    event.dataTransfer.setData("text/plain", assistEventLabel);
     const dragPreview = createAssistDragImage();
     assistDragPreviewRef.current = dragPreview;
     positionAssistDragPreview(event.clientX, event.clientY);
-    const transparentImage = document.createElement("canvas");
-    transparentImage.width = 1;
-    transparentImage.height = 1;
-    event.dataTransfer.setDragImage(transparentImage, 0, 0);
+    document.body.classList.add("no-select");
     onManualTileDragStart?.();
-  };
-  const updateAssistTileDrag = (event) => {
-    positionAssistDragPreview(event.clientX, event.clientY);
-  };
-  const endAssistTileDrag = () => {
-    clearAssistDragPreview();
+    const handlePointerMove = (pointerEvent) => {
+      pointerEvent.preventDefault();
+      positionAssistDragPreview(pointerEvent.clientX, pointerEvent.clientY);
+    };
+    const cleanup = () => {
+      document.removeEventListener("pointermove", handlePointerMove);
+      document.removeEventListener("pointerup", handlePointerUp);
+      document.removeEventListener("pointercancel", handlePointerCancel);
+      document.body.classList.remove("no-select");
+      assistPointerDragActiveRef.current = false;
+      clearAssistDragPreview();
+    };
+    const handlePointerUp = (pointerEvent) => {
+      window.dispatchEvent(new CustomEvent(NEO_ASSIST_POINTER_DROP_EVENT, {
+        detail: {
+          event: sourceEvent,
+          clientX: pointerEvent.clientX,
+          clientY: pointerEvent.clientY
+        }
+      }));
+      cleanup();
+    };
+    const handlePointerCancel = () => {
+      cleanup();
+    };
+    assistPointerDragActiveRef.current = true;
+    document.addEventListener("pointermove", handlePointerMove, { passive: false });
+    document.addEventListener("pointerup", handlePointerUp, { once: true });
+    document.addEventListener("pointercancel", handlePointerCancel, { once: true });
   };
   reactExports.useEffect(() => {
     const handleWindowDragOver = (event) => {
@@ -112572,7 +112628,7 @@ const DfpSidePanelTimeline = ({
       window.removeEventListener("dragover", handleWindowDragOver);
       window.removeEventListener("drop", handleWindowDragDone);
       window.removeEventListener("dragend", handleWindowDragDone);
-      clearAssistDragPreview();
+      if (!assistPointerDragActiveRef.current) clearAssistDragPreview();
     };
   }, []);
   const normalizeHour = (time) => {
@@ -117212,12 +117268,7 @@ This cannot be undone.`,
         /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex justify-center rounded-lg border border-slate-300 bg-white p-3 shadow-sm", children: /* @__PURE__ */ jsxRuntimeExports.jsx(
           "div",
           {
-            draggable: true,
-            onPointerDown: onManualTileDragStart,
-            onDragStart: startAssistTileDrag,
-            onDrag: updateAssistTileDrag,
-            onDragOver: updateAssistTileDrag,
-            onDragEnd: endAssistTileDrag,
+            onPointerDown: startAssistTilePointerDrag,
             className: `neo-assist-tile-preview ${isAssistTileDragging ? "neo-assist-tile-preview-dragging" : ""} w-full max-w-[520px] cursor-grab rounded-md border bg-slate-100 p-2 active:cursor-grabbing ${isDeploymentAssistTile ? "border-slate-500/45" : "border-pink-300/60"}`,
             title: "Drag this tile onto the DFP to create a copy",
             children: isDeploymentAssistTile ? /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "relative h-10 overflow-hidden rounded-sm border border-white/60 bg-gray-600/30 px-2 text-center text-xs font-semibold text-white/80 shadow-md", children: [

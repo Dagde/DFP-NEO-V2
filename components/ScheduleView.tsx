@@ -231,6 +231,7 @@ const ROW_HEIGHT = 32;
 const START_HOUR = 0;
 const END_HOUR = 24;
 const TOTAL_HOURS = END_HOUR - START_HOUR;
+const NEO_ASSIST_POINTER_DROP_EVENT = 'neoAssistPointerDrop';
 const AIRFRAME_COLUMN_WIDTH = 108; // Header cell width (date selector)
 const RESOURCE_COLUMN_WIDTH = 105; // Resource row header width.
 const TIME_HEADER_HEIGHT = 40;
@@ -12502,18 +12503,23 @@ const ScheduleView: React.FC<ScheduleViewProps> = ({
         };
     }, [draggingState, flushPendingDragUpdate]);
 
-    const getExternalDropPlacement = (event: React.DragEvent<HTMLDivElement>) => {
+    const getExternalDropPlacementFromClient = useCallback((clientX: number, clientY: number) => {
         if (!scheduleGridRef.current) return null;
         const gridRect = scheduleGridRef.current.getBoundingClientRect();
-        const relativeX = event.clientX - gridRect.left;
-        const relativeY = event.clientY - gridRect.top;
+        if (clientX < gridRect.left || clientX > gridRect.right || clientY < gridRect.top || clientY > gridRect.bottom) return null;
+        const relativeX = clientX - gridRect.left;
+        const relativeY = clientY - gridRect.top;
         const rawStartTime = START_HOUR + (relativeX / (PIXELS_PER_HOUR * zoomLevel));
         const startTime = Math.max(START_HOUR, Math.min(END_HOUR, Math.round(rawStartTime * 12) / 12));
         const rowIndex = Math.max(0, Math.min(resources.length - 1, Math.floor(relativeY / ROW_HEIGHT)));
         const resourceId = resources[rowIndex];
         if (!resourceId) return null;
         return { startTime, resourceId };
-    };
+    }, [resources, zoomLevel]);
+
+    const getExternalDropPlacement = (event: React.DragEvent<HTMLDivElement>) => (
+        getExternalDropPlacementFromClient(event.clientX, event.clientY)
+    );
 
     const getNearestFlightLineEventForDrop = (event: React.DragEvent<HTMLDivElement>): ScheduleEvent | null => {
         if (!scheduleGridRef.current) return null;
@@ -12581,6 +12587,21 @@ const ScheduleView: React.FC<ScheduleViewProps> = ({
             console.warn('[NEO Assist] Failed to drop assist tile:', error);
         }
     };
+
+    useEffect(() => {
+        const handleAssistPointerDrop = (event: Event) => {
+            if (isReadOnly || !onExternalEventDrop) return;
+            const detail = (event as CustomEvent<{ event?: ScheduleEvent; clientX?: number; clientY?: number }>).detail;
+            if (!detail?.event || typeof detail.clientX !== 'number' || typeof detail.clientY !== 'number') return;
+            const placement = getExternalDropPlacementFromClient(detail.clientX, detail.clientY);
+            if (!placement) return;
+            onExternalEventDrop(detail.event, placement);
+        };
+        window.addEventListener(NEO_ASSIST_POINTER_DROP_EVENT, handleAssistPointerDrop as EventListener);
+        return () => {
+            window.removeEventListener(NEO_ASSIST_POINTER_DROP_EVENT, handleAssistPointerDrop as EventListener);
+        };
+    }, [getExternalDropPlacementFromClient, isReadOnly, onExternalEventDrop]);
 
     const formattedDisplayDate = useMemo(() => {
         const [year, month, day] = date.split('-').map(Number);
