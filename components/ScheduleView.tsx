@@ -54,7 +54,7 @@ import {
     getAuditRecordingSettingsForPage,
     saveAuditRecordingSettingsForPage,
 } from '../utils/auditLogger';
-import { endDfpDragDiagnostic, recordDfpDragFlushDiagnostic, startDfpDragDiagnostic } from '../utils/dfpDragDiagnostics';
+import { endDfpDragDiagnostic, recordDfpDragFlushDiagnostic, recordDfpDragMoveDiagnostic, startDfpDragDiagnostic } from '../utils/dfpDragDiagnostics';
 import { getAdaptiveContextMenuPosition } from '../utils/contextMenuPosition';
 import { DEFAULT_AIRFIELD_SOLAR_PROFILES } from '../utils/sunTimes';
 import {
@@ -12885,6 +12885,7 @@ const ScheduleView: React.FC<ScheduleViewProps> = ({
     };
 
     const handleMouseMove = (e: MouseEvent<HTMLDivElement>) => {
+        const moveStartedAt = performance.now();
         if (!scheduleGridRef.current) {
             return;
         }
@@ -12894,6 +12895,7 @@ const ScheduleView: React.FC<ScheduleViewProps> = ({
             : scheduleGridRef.current.getBoundingClientRect();
         const xInGrid = e.clientX - gridRect.left;
         const yInGrid = e.clientY - gridRect.top;
+        const geometryMeasuredAt = performance.now();
         
         // Update validate overlay position when dispatch rate mode is ON
         if (showDepartureDensityOverlay) {
@@ -12946,6 +12948,7 @@ const ScheduleView: React.FC<ScheduleViewProps> = ({
 
             const mainEventInitialPos = draggingState.initialPositions.get(draggingState.mainEventId);
             if (!mainEventInitialPos) return;
+            const updateBuildStartedAt = performance.now();
 
             const timeShift = ((xInGrid / zoomLevel) - draggingState.xOffset) / PIXELS_PER_HOUR - mainEventInitialPos.startTime;
             const rowShift = Math.floor((yInGrid - draggingState.yOffset + ROW_HEIGHT / 2) / ROW_HEIGHT) - mainEventInitialPos.rowIndex;
@@ -12974,8 +12977,20 @@ const ScheduleView: React.FC<ScheduleViewProps> = ({
                 .map(update => `${update.eventId}:${update.newStartTime}:${update.newResourceId}`)
                 .join('|');
             if (updateSignature === lastDragUpdateSignatureRef.current) {
+                recordDfpDragMoveDiagnostic(dragDiagnosticSessionRef.current, {
+                    xInGrid,
+                    yInGrid,
+                    updateCount: updates.length,
+                    duplicateSkipped: true,
+                    totalMoveMs: performance.now() - moveStartedAt,
+                    geometryMs: geometryMeasuredAt - moveStartedAt,
+                    buildUpdatesMs: performance.now() - updateBuildStartedAt,
+                    conflictMs: 0,
+                    signature: updateSignature,
+                });
                 return;
             }
+            const buildUpdatesEndedAt = performance.now();
             lastDragUpdateSignatureRef.current = updateSignature;
             pendingDragUpdateRef.current = {
                 updates,
@@ -12991,6 +13006,17 @@ const ScheduleView: React.FC<ScheduleViewProps> = ({
                     flushPendingDragUpdate(false);
                 });
             }
+            recordDfpDragMoveDiagnostic(dragDiagnosticSessionRef.current, {
+                xInGrid,
+                yInGrid,
+                updateCount: updates.length,
+                duplicateSkipped: false,
+                totalMoveMs: performance.now() - moveStartedAt,
+                geometryMs: geometryMeasuredAt - moveStartedAt,
+                buildUpdatesMs: buildUpdatesEndedAt - updateBuildStartedAt,
+                conflictMs: 0,
+                signature: updateSignature,
+            });
         }
     };
 

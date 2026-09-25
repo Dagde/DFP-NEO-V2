@@ -912,6 +912,7 @@ const FIXED_CREW_DEFAULT_CURRENCY_DURATION_HOURS = 2;
 const NEO_ASSIST_POINTER_DROP_EVENT = 'neoAssistPointerDrop';
 const NEO_ASSIST_DRAG_DIAGNOSTIC_EVENT = 'neoAssistDragDiagnostic';
 const NEO_ASSIST_DRAG_DIAGNOSTIC_STORAGE_KEY = 'neo_assist_drag_diagnostic_report';
+const DFP_DRAG_DIAGNOSTIC_STORAGE_KEY = 'dfp_drag_diagnostics_report';
 
 type NeoAssistDragDiagnosticEntry = {
     id?: string;
@@ -992,6 +993,14 @@ const downloadNeoAssistDragDiagnosticReport = () => {
                 reportType: 'neo-assist-drag-diagnostic',
                 entries: fallbackEntries,
             };
+        const dfpDragStored = window.localStorage?.getItem(DFP_DRAG_DIAGNOSTIC_STORAGE_KEY);
+        if (dfpDragStored) {
+            try {
+                report.dfpScheduleTileDragDiagnostics = JSON.parse(dfpDragStored);
+            } catch {
+                report.dfpScheduleTileDragDiagnostics = { parseError: true, rawLength: dfpDragStored.length };
+            }
+        }
         if (!Array.isArray(report.entries) || report.entries.length === 0) {
             report.entries = [{
                 stage: 'report-empty',

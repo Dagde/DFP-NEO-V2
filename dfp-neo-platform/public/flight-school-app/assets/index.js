@@ -31782,6 +31782,36 @@ const startDfpDragDiagnostic = (details) => {
   persistReport(report);
   return sessionId;
 };
+const recordDfpDragMoveDiagnostic = (sessionId, sample) => {
+  const session = getSession(sessionId);
+  if (!session) return;
+  session.moveCount += 1;
+  if (sample.duplicateSkipped) session.skippedDuplicateCount += 1;
+  session.totalUpdateCount += sample.updateCount;
+  session.maxTotalMoveMs = Math.max(session.maxTotalMoveMs, sample.totalMoveMs);
+  session.maxConflictMs = Math.max(session.maxConflictMs, sample.conflictMs);
+  const previous = session.samples[session.samples.length - 1];
+  const pointerGapMs = previous?.recordedAtMs ? nowMs() - previous.recordedAtMs : 0;
+  session.maxPointerGapMs = Math.max(session.maxPointerGapMs, pointerGapMs);
+  const compactSample = {
+    recordedAt: (/* @__PURE__ */ new Date()).toISOString(),
+    recordedAtMs: nowMs(),
+    xInGrid: Number(sample.xInGrid.toFixed(1)),
+    yInGrid: Number(sample.yInGrid.toFixed(1)),
+    updateCount: sample.updateCount,
+    duplicateSkipped: sample.duplicateSkipped,
+    pointerGapMs: Number(pointerGapMs.toFixed(1)),
+    totalMoveMs: Number(sample.totalMoveMs.toFixed(2)),
+    geometryMs: Number(sample.geometryMs.toFixed(2)),
+    buildUpdatesMs: Number(sample.buildUpdatesMs.toFixed(2)),
+    conflictMs: Number(sample.conflictMs.toFixed(2)),
+    signature: sample.signature.slice(0, 260)
+  };
+  if (session.samples.length < 20 || compactSample.totalMoveMs >= 8 || compactSample.pointerGapMs >= 80) {
+    session.samples = pushLimited(session.samples, compactSample);
+  }
+  persistReport(getReport());
+};
 const recordDfpDragFlushDiagnostic = (sessionId, sample) => {
   const session = getSession(sessionId);
   if (!session) return;
@@ -42411,6 +42441,7 @@ const ScheduleView = ({
     }
   };
   const handleMouseMove = (e) => {
+    const moveStartedAt = performance.now();
     if (!scheduleGridRef.current) {
       return;
     }
@@ -42418,6 +42449,7 @@ const ScheduleView = ({
     const gridRect = draggingState ? dragGridRectRef.current || scheduleGridRef.current.getBoundingClientRect() : scheduleGridRef.current.getBoundingClientRect();
     const xInGrid = e.clientX - gridRect.left;
     const yInGrid = e.clientY - gridRect.top;
+    const geometryMeasuredAt = performance.now();
     if (showDepartureDensityOverlay) {
       const mouseTimeInHours = xInGrid / (PIXELS_PER_HOUR$6 * zoomLevel) + START_HOUR$6;
       setValidateOverlayTime(mouseTimeInHours);
@@ -42459,6 +42491,7 @@ const ScheduleView = ({
       }
       const mainEventInitialPos = draggingState.initialPositions.get(draggingState.mainEventId);
       if (!mainEventInitialPos) return;
+      const updateBuildStartedAt = performance.now();
       const timeShift = (xInGrid / zoomLevel - draggingState.xOffset) / PIXELS_PER_HOUR$6 - mainEventInitialPos.startTime;
       const rowShift = Math.floor((yInGrid - draggingState.yOffset + ROW_HEIGHT$6 / 2) / ROW_HEIGHT$6) - mainEventInitialPos.rowIndex;
       const updates = [];
@@ -42477,8 +42510,20 @@ const ScheduleView = ({
       }
       const updateSignature = updates.map((update) => `${update.eventId}:${update.newStartTime}:${update.newResourceId}`).join("|");
       if (updateSignature === lastDragUpdateSignatureRef.current) {
+        recordDfpDragMoveDiagnostic(dragDiagnosticSessionRef.current, {
+          xInGrid,
+          yInGrid,
+          updateCount: updates.length,
+          duplicateSkipped: true,
+          totalMoveMs: performance.now() - moveStartedAt,
+          geometryMs: geometryMeasuredAt - moveStartedAt,
+          buildUpdatesMs: performance.now() - updateBuildStartedAt,
+          conflictMs: 0,
+          signature: updateSignature
+        });
         return;
       }
+      const buildUpdatesEndedAt = performance.now();
       lastDragUpdateSignatureRef.current = updateSignature;
       pendingDragUpdateRef.current = {
         updates,
@@ -42494,6 +42539,17 @@ const ScheduleView = ({
           flushPendingDragUpdate(false);
         });
       }
+      recordDfpDragMoveDiagnostic(dragDiagnosticSessionRef.current, {
+        xInGrid,
+        yInGrid,
+        updateCount: updates.length,
+        duplicateSkipped: false,
+        totalMoveMs: performance.now() - moveStartedAt,
+        geometryMs: geometryMeasuredAt - moveStartedAt,
+        buildUpdatesMs: buildUpdatesEndedAt - updateBuildStartedAt,
+        conflictMs: 0,
+        signature: updateSignature
+      });
     }
   };
   const handleMouseUp = (e) => {
@@ -111671,6 +111727,7 @@ const FIXED_CREW_DEFAULT_CURRENCY_DURATION_HOURS = 2;
 const NEO_ASSIST_POINTER_DROP_EVENT = "neoAssistPointerDrop";
 const NEO_ASSIST_DRAG_DIAGNOSTIC_EVENT = "neoAssistDragDiagnostic";
 const NEO_ASSIST_DRAG_DIAGNOSTIC_STORAGE_KEY = "neo_assist_drag_diagnostic_report";
+const DFP_DRAG_DIAGNOSTIC_STORAGE_KEY = "dfp_drag_diagnostics_report";
 const getNeoAssistPerfNow = () => typeof performance !== "undefined" && typeof performance.now === "function" ? performance.now() : Date.now();
 const recordNeoAssistDragDiagnostic = (entry) => {
   if (typeof window === "undefined") return;
@@ -111723,6 +111780,14 @@ const downloadNeoAssistDragDiagnosticReport = () => {
       reportType: "neo-assist-drag-diagnostic",
       entries: fallbackEntries
     };
+    const dfpDragStored = window.localStorage?.getItem(DFP_DRAG_DIAGNOSTIC_STORAGE_KEY);
+    if (dfpDragStored) {
+      try {
+        report.dfpScheduleTileDragDiagnostics = JSON.parse(dfpDragStored);
+      } catch {
+        report.dfpScheduleTileDragDiagnostics = { parseError: true, rawLength: dfpDragStored.length };
+      }
+    }
     if (!Array.isArray(report.entries) || report.entries.length === 0) {
       report.entries = [{
         stage: "report-empty",
