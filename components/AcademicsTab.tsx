@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useRef, useCallback, useEffect } from 'react';
-import { SyllabusItemDetail, Trainee, Score, ScheduleEvent } from '../types';
+import { CourseLmpPauseEntry, SyllabusItemDetail, Trainee, Score, ScheduleEvent } from '../types';
 import { v4 as uuidv4 } from 'uuid';
 import { showDarkAlert, showDarkConfirm, showDarkPrompt } from './DarkMessageModal';
 import type { ClassroomResourceOption } from '../utils/classroomResources';
@@ -50,6 +50,7 @@ interface AcademicsTabProps {
   groundResources?: string[];
   classroomOptions?: ClassroomResourceOption[];
   standardEvents?: AcademicStandardEventConfig[];
+  courseLmpPauses?: Record<string, CourseLmpPauseEntry>;
   onNavigateToStandardEventsSettings?: () => void;
   onSave: (data: AcademicSaveData) => void;
   onClose: () => void;
@@ -266,8 +267,10 @@ function groupByModule(items: SyllabusItemDetail[]): { moduleKey: string; label:
 function getTraineeStatus(
   trainee: Trainee,
   events: ScheduleEvent[],
-  date: string
+  date: string,
+  courseLmpPauseReason?: string
 ): { status: 'available' | 'unavailable' | 'paused'; reason?: string } {
+  if (courseLmpPauseReason) return { status: 'paused', reason: courseLmpPauseReason };
   if (trainee.isPaused) return { status: 'paused', reason: 'Trainee is currently paused' };
 
   // Check unavailability periods
@@ -312,6 +315,7 @@ const AcademicsTab: React.FC<AcademicsTabProps> = ({
   groundResources = [],
   classroomOptions = [],
   standardEvents = DEFAULT_ACADEMIC_STANDARD_EVENTS,
+  courseLmpPauses = {},
   onNavigateToStandardEventsSettings,
   onSave,
   onClose,
@@ -395,12 +399,27 @@ const AcademicsTab: React.FC<AcademicsTabProps> = ({
     [allTraineesByCourse, selectedCourse]
   );
 
+  const academicPauseEntry = useMemo(() => {
+    const lmpType = String(persistedAcademicLmp || '').trim();
+    if (!selectedCourse || !lmpType) return null;
+    return courseLmpPauses[`${String(selectedCourse || '').trim().toUpperCase()}::${lmpType.toUpperCase()}`] || null;
+  }, [courseLmpPauses, persistedAcademicLmp, selectedCourse]);
+
   const traineeStatuses = useMemo(() =>
     courseTrainees.reduce((acc, t) => {
-      acc[t.fullName] = getTraineeStatus(t, events, selectedDate);
+      const aliases = [t.fullName, t.name]
+        .map(value => String(value || '').trim().toUpperCase())
+        .filter(Boolean);
+      const pausedForAcademicLmp = academicPauseEntry?.traineeNames?.some(name => aliases.includes(String(name || '').trim().toUpperCase()));
+      acc[t.fullName] = getTraineeStatus(
+        t,
+        events,
+        selectedDate,
+        pausedForAcademicLmp ? `Course is paused for ${academicPauseEntry?.lmpType || 'this LMP'}` : undefined
+      );
       return acc;
     }, {} as Record<string, { status: 'available' | 'unavailable' | 'paused'; reason?: string }>),
-    [courseTrainees, events, selectedDate]
+    [academicPauseEntry, courseTrainees, events, selectedDate]
   );
 
   const [selectedTrainees, setSelectedTrainees] = useState<string[]>([]);

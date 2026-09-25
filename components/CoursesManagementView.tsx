@@ -1,6 +1,6 @@
 import { useSystemFreeze } from "../hooks/useSystemFreeze";
 import React, { useState, useMemo } from 'react';
-import { Course, SyllabusItemDetail, Trainee } from '../types';
+import { Course, CourseLmpPauseEntry, SyllabusItemDetail, Trainee } from '../types';
 import AddCourseFlyout, { NewCourseData } from './AddCourseFlyout';
 import EditCourseFlyout from './EditCourseFlyout';
 import { showDarkConfirm } from './DarkMessageModal';
@@ -17,6 +17,8 @@ interface CoursesManagementViewProps {
     onNavigateToArchivedCourses: () => void;
     onUpdateCourseDates: (courseName: string, startDate: string, gradDate: string) => void;
     onUpdateCourse?: (courseName: string, data: { startDate: string; gradDate: string; location: string; unit: string; lmpType: string; academicLmpType: string }) => void;
+    courseLmpPauses?: Record<string, CourseLmpPauseEntry>;
+    onUpdateCourseLmpPause?: (entry: CourseLmpPauseEntry) => void;
     locations?: string[];
     units?: string[];
     activeLocationCode?: string;
@@ -148,6 +150,8 @@ const CoursesManagementView: React.FC<CoursesManagementViewProps> = ({
     onNavigateToArchivedCourses,
     onUpdateCourseDates,
     onUpdateCourse,
+    courseLmpPauses = {},
+    onUpdateCourseLmpPause,
     locations = [],
     units = [],
     activeLocationCode = '',
@@ -374,6 +378,9 @@ const CoursesManagementView: React.FC<CoursesManagementViewProps> = ({
                     syllabusDetails={syllabusDetails}
                     platformConfig={platformConfig}
                     operationalModel={operationalModel}
+                    trainees={traineesData}
+                    courseLmpPauses={courseLmpPauses}
+                    onUpdateCourseLmpPause={onUpdateCourseLmpPause}
                     onClose={() => {
                         setShowEditFlyout(false);
                         setCourseToEdit(null);

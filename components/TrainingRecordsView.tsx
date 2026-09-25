@@ -3,7 +3,7 @@ import AuditButton from './AuditButton';
 import CoursesManagementView from './CoursesManagementView';
 import TrainingRecordsExportView from './TrainingRecordsExportView';
 import TrainingCompletionView from './TrainingCompletionView';
-import { Course, Trainee, Instructor, ScheduleEvent, Score, SyllabusItemDetail, TrainingReportAssessment, PhraseBank } from '../types';
+import { Course, CourseLmpPauseEntry, Trainee, Instructor, ScheduleEvent, Score, SyllabusItemDetail, TrainingReportAssessment, PhraseBank } from '../types';
 import { NewCourseData } from './AddCourseFlyout';
 import type { ResourceDisplayNames } from '../utils/resourceDisplayNames';
 import type { OperationalModelCode, PlatformConfig } from '../utils/platformConfigService';
@@ -19,6 +19,8 @@ interface TrainingRecordsViewProps {
     onNavigateToArchivedCourses: () => void;
     onUpdateCourseDates: (courseName: string, startDate: string, gradDate: string) => void;
     onUpdateCourse?: (courseName: string, data: { startDate: string; gradDate: string; location: string; unit: string; lmpType: string; academicLmpType: string }) => void;
+    courseLmpPauses?: Record<string, CourseLmpPauseEntry>;
+    onUpdateCourseLmpPause?: (entry: CourseLmpPauseEntry) => void;
     traineesData: Trainee[];
     instructorsData: Instructor[];
     archivedTraineesData: Trainee[];
@@ -55,6 +57,8 @@ const TrainingRecordsView: React.FC<TrainingRecordsViewProps> = ({
     onNavigateToArchivedCourses,
     onUpdateCourseDates,
     onUpdateCourse,
+    courseLmpPauses = {},
+    onUpdateCourseLmpPause,
     traineesData,
     instructorsData,
     archivedTraineesData,
@@ -142,6 +146,8 @@ const TrainingRecordsView: React.FC<TrainingRecordsViewProps> = ({
                         onNavigateToArchivedCourses={onNavigateToArchivedCourses}
                         onUpdateCourseDates={onUpdateCourseDates}
                         onUpdateCourse={onUpdateCourse}
+                        courseLmpPauses={courseLmpPauses}
+                        onUpdateCourseLmpPause={onUpdateCourseLmpPause}
                         locations={locations}
                         units={units}
                         activeLocationCode={activeLocationCode}

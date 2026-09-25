@@ -26,7 +26,7 @@ import {
   normaliseEmergencyFreezeAllowedActions,
 } from './emergencyFreezeAllowedActions';
 import type { AllowedActions } from '../context/SystemFreezeContext';
-import type { FlyingWindowExclusionPeriod } from '../types';
+import type { CourseLmpPauseEntry, FlyingWindowExclusionPeriod } from '../types';
 
 export interface ServiceDefinition {
   longName: string;   // e.g. "Air Force"
@@ -103,6 +103,7 @@ export interface AppSettingsData {
   // Course Priorities & Percentages
   coursePriorities: string[];
   coursePercentages: Record<string, number>;
+  courseLmpPauses?: Record<string, CourseLmpPauseEntry>;
   fixedCrewTrainingPriorities?: any[];
   fixedCrewTileColourModeByUnit?: Record<string, FixedCrewTileColourMode>;
   /** NEO Build aircraft capacity. Separate from live DFP aircraft availability. */
@@ -361,6 +362,7 @@ export const buildSettingsSnapshot = (state: Partial<AppSettingsData>): AppSetti
     courseColors: state.courseColors || {},
     coursePriorities: state.coursePriorities || [],
     coursePercentages: state.coursePercentages || {},
+    courseLmpPauses: state.courseLmpPauses || {},
     fixedCrewTrainingPriorities: Array.isArray(state.fixedCrewTrainingPriorities) ? state.fixedCrewTrainingPriorities : [],
     fixedCrewTileColourModeByUnit: normaliseFixedCrewTileColourModeByUnit(state.fixedCrewTileColourModeByUnit),
     neoAvailableAircraftCount: state.neoAvailableAircraftCount ?? state.availableAircraftCount ?? 15,

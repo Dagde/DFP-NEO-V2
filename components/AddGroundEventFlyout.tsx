@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useEffect, useRef } from 'react';
-import { SyllabusItemDetail, Trainee, Score, ScheduleEvent } from '../types';
+import { CourseLmpPauseEntry, SyllabusItemDetail, Trainee, Score, ScheduleEvent } from '../types';
 import CourseTraineeSelectionFlyout from './CourseTraineeSelectionFlyout';
 import AcademicsTab, { AcademicSaveData } from './AcademicsTab';
 import { isFixedCrewLikeOperationalModel, normaliseOperationalModel } from '../utils/platformConfigService';
@@ -40,6 +40,7 @@ interface AddGroundEventFlyoutProps {
   groundResources?: string[];
   classroomOptions?: ClassroomResourceOption[];
   academicStandardEvents?: AcademicStandardEventConfig[];
+  courseLmpPauses?: Record<string, CourseLmpPauseEntry>;
   onNavigateToAcademicStandardEventsSettings?: () => void;
   cptResources?: string[];
   instructorLabel?: string;
@@ -85,6 +86,7 @@ const AddGroundEventFlyout: React.FC<AddGroundEventFlyoutProps> = ({
     groundResources = [],
     classroomOptions = [],
     academicStandardEvents,
+    courseLmpPauses = {},
     onNavigateToAcademicStandardEventsSettings,
     cptResources = [],
     instructorLabel = 'Instructor',
@@ -470,6 +472,7 @@ const AddGroundEventFlyout: React.FC<AddGroundEventFlyoutProps> = ({
                                 groundResources={groundResources}
                                 classroomOptions={classroomOptions}
                                 standardEvents={academicStandardEvents}
+                                courseLmpPauses={courseLmpPauses}
                                 onNavigateToStandardEventsSettings={onNavigateToAcademicStandardEventsSettings}
                                 onSave={(data) => {
                                     if (onSaveAcademic) {

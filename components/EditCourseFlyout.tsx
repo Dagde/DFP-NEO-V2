@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { SyllabusItemDetail } from '../types';
+import { CourseLmpPauseEntry, SyllabusItemDetail, Trainee } from '../types';
 import {
     filterMasterLmpCodesForAccess,
     type OperationalModelCode,
@@ -23,6 +23,10 @@ const uniqueSortedValues = (values: string[]): string[] => {
         .sort((a, b) => a.localeCompare(b));
 };
 
+const getCourseLmpPauseKey = (courseName: string, lmpType: string): string => (
+    `${String(courseName || '').trim().toUpperCase()}::${String(lmpType || '').trim().toUpperCase()}`
+);
+
 interface EditCourseFlyoutProps {
     courseName: string;
     startDate: string;
@@ -36,6 +40,8 @@ interface EditCourseFlyoutProps {
     syllabusDetails?: SyllabusItemDetail[];
     platformConfig?: PlatformConfig | null;
     operationalModel?: OperationalModelCode | string;
+    trainees?: Trainee[];
+    courseLmpPauses?: Record<string, CourseLmpPauseEntry>;
     onClose: () => void;
     onSave: (data: {
         startDate: string;
@@ -45,6 +51,7 @@ interface EditCourseFlyoutProps {
         lmpType: string;
         academicLmpType: string;
     }) => void;
+    onUpdateCourseLmpPause?: (entry: CourseLmpPauseEntry) => void;
 }
 
 const EditCourseFlyout: React.FC<EditCourseFlyoutProps> = ({
@@ -60,8 +67,11 @@ const EditCourseFlyout: React.FC<EditCourseFlyoutProps> = ({
     syllabusDetails = [],
     platformConfig = null,
     operationalModel = 'flight_school',
+    trainees = [],
+    courseLmpPauses = {},
     onClose,
     onSave,
+    onUpdateCourseLmpPause,
 }) => {
     const [startDate, setStartDate] = useState(initialStartDate);
     const [gradDate, setGradDate] = useState(initialGradDate);
@@ -69,6 +79,8 @@ const EditCourseFlyout: React.FC<EditCourseFlyoutProps> = ({
     const [unit, setUnit] = useState(initialUnit);
     const [lmpType, setLmpType] = useState(initialLmpType || '');
     const [academicLmpType, setAcademicLmpType] = useState(initialAcademicLmpType || '');
+    const [pauseDraftLmp, setPauseDraftLmp] = useState<string | null>(null);
+    const [pauseDraftSelection, setPauseDraftSelection] = useState<Set<string>>(new Set());
 
     const activeMasterLmpCatalogue = useMemo(() => (
         (platformConfig?.masterLmpCatalogue || [])
@@ -133,6 +145,50 @@ const EditCourseFlyout: React.FC<EditCourseFlyoutProps> = ({
         }
         onSave({ startDate, gradDate, location, unit, lmpType, academicLmpType });
         onClose();
+    };
+
+    const enrolledLmpOptions = useMemo(() => (
+        uniqueSortedValues([lmpType, academicLmpType])
+    ), [academicLmpType, lmpType]);
+
+    const sortedCourseMembers = useMemo(() => (
+        [...trainees]
+            .filter(trainee => String(trainee.course || '').trim().toUpperCase() === String(courseName || '').trim().toUpperCase())
+            .sort((a, b) => String(a.fullName || a.name).localeCompare(String(b.fullName || b.name), undefined, { sensitivity: 'base' }))
+    ), [courseName, trainees]);
+
+    const openPauseManager = (selectedLmpType: string) => {
+        const pauseKey = getCourseLmpPauseKey(courseName, selectedLmpType);
+        const existing = courseLmpPauses[pauseKey];
+        const defaultNames = existing
+            ? existing.traineeNames || []
+            : sortedCourseMembers.map(trainee => trainee.fullName || trainee.name).filter(Boolean);
+        setPauseDraftLmp(selectedLmpType);
+        setPauseDraftSelection(new Set(defaultNames));
+    };
+
+    const togglePauseDraftTrainee = (traineeName: string) => {
+        setPauseDraftSelection(prev => {
+            const next = new Set(prev);
+            if (next.has(traineeName)) {
+                next.delete(traineeName);
+            } else {
+                next.add(traineeName);
+            }
+            return next;
+        });
+    };
+
+    const confirmPauseDraft = () => {
+        if (!pauseDraftLmp || !onUpdateCourseLmpPause) return;
+        onUpdateCourseLmpPause({
+            courseName,
+            lmpType: pauseDraftLmp,
+            traineeNames: Array.from(pauseDraftSelection),
+            pausedAt: new Date().toISOString(),
+        });
+        setPauseDraftLmp(null);
+        setPauseDraftSelection(new Set());
     };
 
     const fieldClass = "w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-md text-white focus:outline-none focus:ring-2 focus:ring-sky-500 text-sm";
@@ -308,6 +364,40 @@ const EditCourseFlyout: React.FC<EditCourseFlyoutProps> = ({
                             <span className="font-semibold text-sky-300">Note:</span> Changing the LMP Type will update the syllabus events available for all trainees in this course. Location and Unit are used for filtering trainees in schedule views.
                         </p>
                     </div>
+
+                    <div className="rounded-lg border border-amber-700/40 bg-amber-950/10 p-4">
+                        <div className="mb-3">
+                            <h3 className="text-sm font-semibold uppercase tracking-wide text-amber-300">Course LMP Pause</h3>
+                            <p className="mt-1 text-xs text-gray-400">
+                                Pause selected course members for one enrolled LMP without pausing their other LMPs.
+                            </p>
+                        </div>
+                        {enrolledLmpOptions.length === 0 ? (
+                            <p className="text-xs text-gray-500">Assign a Course / LMP Type or Academic LMP Type before pausing course members.</p>
+                        ) : (
+                            <div className="space-y-2">
+                                {enrolledLmpOptions.map((option) => {
+                                    const pauseKey = getCourseLmpPauseKey(courseName, option);
+                                    const pausedCount = courseLmpPauses[pauseKey]?.traineeNames?.length || 0;
+                                    return (
+                                        <div key={option} className="flex items-center justify-between gap-3 rounded-md border border-gray-700 bg-gray-900/60 p-3">
+                                            <div>
+                                                <p className="text-sm font-semibold text-white">{option}</p>
+                                                <p className="text-xs text-gray-400">{pausedCount} of {sortedCourseMembers.length} course member{sortedCourseMembers.length === 1 ? '' : 's'} paused</p>
+                                            </div>
+                                            <button
+                                                type="button"
+                                                onClick={() => openPauseManager(option)}
+                                                className="px-3 py-2 text-xs font-semibold rounded-md bg-amber-600 text-black hover:bg-amber-500 transition-colors"
+                                            >
+                                                Pause
+                                            </button>
+                                        </div>
+                                    );
+                                })}
+                            </div>
+                        )}
+                    </div>
                 </div>
 
                 {/* Footer */}
@@ -326,6 +416,74 @@ const EditCourseFlyout: React.FC<EditCourseFlyoutProps> = ({
                     </button>
                 </div>
             </div>
+            {pauseDraftLmp && (
+                <div className="fixed inset-0 z-[70] flex items-center justify-center bg-black/70" onClick={() => setPauseDraftLmp(null)}>
+                    <div className="w-full max-w-lg rounded-lg border border-amber-600/60 bg-gray-800 shadow-2xl" onClick={(event) => event.stopPropagation()}>
+                        <div className="border-b border-gray-700 bg-gray-900/80 p-4">
+                            <h3 className="text-lg font-bold text-amber-300">Pause Course Members</h3>
+                            <p className="mt-1 text-sm text-gray-400">{courseName} — {pauseDraftLmp}</p>
+                        </div>
+                        <div className="max-h-[52vh] overflow-y-auto p-4">
+                            <div className="mb-3 flex items-center justify-between gap-3">
+                                <p className="text-xs uppercase tracking-wide text-gray-400">{pauseDraftSelection.size} selected</p>
+                                <div className="flex gap-2">
+                                    <button
+                                        type="button"
+                                        onClick={() => setPauseDraftSelection(new Set(sortedCourseMembers.map(trainee => trainee.fullName || trainee.name).filter(Boolean)))}
+                                        className="rounded border border-gray-600 px-3 py-1 text-xs text-gray-200 hover:bg-gray-700"
+                                    >
+                                        Select all
+                                    </button>
+                                    <button
+                                        type="button"
+                                        onClick={() => setPauseDraftSelection(new Set())}
+                                        className="rounded border border-gray-600 px-3 py-1 text-xs text-gray-200 hover:bg-gray-700"
+                                    >
+                                        Deselect all
+                                    </button>
+                                </div>
+                            </div>
+                            {sortedCourseMembers.length === 0 ? (
+                                <p className="rounded-md border border-gray-700 bg-gray-900 p-4 text-sm text-gray-400">No members are currently assigned to this course.</p>
+                            ) : (
+                                <div className="space-y-2">
+                                    {sortedCourseMembers.map((trainee) => {
+                                        const traineeName = trainee.fullName || trainee.name;
+                                        return (
+                                            <label key={`${trainee.idNumber}-${traineeName}`} className="flex cursor-pointer items-center gap-3 rounded-md border border-gray-700 bg-gray-900/60 p-3 hover:border-amber-500/60">
+                                                <input
+                                                    type="checkbox"
+                                                    checked={pauseDraftSelection.has(traineeName)}
+                                                    onChange={() => togglePauseDraftTrainee(traineeName)}
+                                                    className="h-4 w-4 accent-amber-500"
+                                                />
+                                                <span className="font-mono text-xs text-gray-500">{trainee.rank}</span>
+                                                <span className="text-sm font-medium text-white">{trainee.name || trainee.fullName}</span>
+                                            </label>
+                                        );
+                                    })}
+                                </div>
+                            )}
+                        </div>
+                        <div className="flex justify-end gap-3 border-t border-gray-700 bg-gray-800/80 px-4 py-3">
+                            <button
+                                type="button"
+                                onClick={() => setPauseDraftLmp(null)}
+                                className="rounded-md border border-gray-600 px-4 py-2 text-sm text-gray-200 hover:bg-gray-700"
+                            >
+                                Cancel
+                            </button>
+                            <button
+                                type="button"
+                                onClick={confirmPauseDraft}
+                                className="rounded-md bg-amber-600 px-4 py-2 text-sm font-semibold text-black hover:bg-amber-500"
+                            >
+                                Confirm Pause
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 };

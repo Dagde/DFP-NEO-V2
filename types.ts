@@ -140,6 +140,14 @@ export interface Course {
   status?: string;
 }
 
+export interface CourseLmpPauseEntry {
+  courseName: string;
+  lmpType: string;
+  traineeNames: string[];
+  pausedAt?: string;
+  pausedBy?: string;
+}
+
 export type InstructorRank = 'WGCDR' | 'SQNLDR' | 'FLTLT' | 'FLGOFF' | 'PLTOFF' | 'Mr';
 export type TraineeRank = 'OCDT' | 'MIDN' | 'PLTOFF' | 'FLGOFF' | 'SBLT' | '2LT' | 'FLTLT';
 

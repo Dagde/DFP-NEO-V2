@@ -703,6 +703,7 @@ import {
     NeoInstructorRemedy,
     NeoTimeShiftRemedy,
     Course,
+    CourseLmpPauseEntry,
     EventLimits,
     PhraseBank,
     SctRequest,
@@ -15288,13 +15289,15 @@ async function generateDfpInternal(
 
     const activeTrainees = trainees.filter(t =>
         !t.isPaused &&
+        !isTraineePausedForCourseLmp(t) &&
         !(config.excludedCourses || []).includes(t.course) &&
         !isPersonStaticallyUnavailable(t, flyingStartTime, ceaseNightFlying, buildDate, 'flight')
     );
     neoBuildDiag.activeTrainees.total = activeTrainees.length;
-    neoBuildDiag.activeTrainees.excludedCourses = trainees.filter(t => !t.isPaused && (config.excludedCourses || []).includes(t.course)).length;
+    neoBuildDiag.activeTrainees.excludedCourses = trainees.filter(t => !t.isPaused && !isTraineePausedForCourseLmp(t) && (config.excludedCourses || []).includes(t.course)).length;
     neoBuildDiag.activeTrainees.excludedStaticUnavailable = trainees.filter(t =>
         !t.isPaused &&
+        !isTraineePausedForCourseLmp(t) &&
         !(config.excludedCourses || []).includes(t.course) &&
         isPersonStaticallyUnavailable(t, flyingStartTime, ceaseNightFlying, buildDate, 'flight')
     ).length;
@@ -32539,6 +32542,7 @@ const App: React.FC = () => {
     const dashboardReportReconcileKeysRef = useRef<Set<string>>(new Set());
     const [courses, setCourses] = useState<Course[]>([]);
     const [courseColors, setCourseColors] = useState<{ [key: string]: string }>({});
+    const [courseLmpPauses, setCourseLmpPauses] = useState<Record<string, CourseLmpPauseEntry>>({});
     const [archivedCourses, setArchivedCourses] = useState<{ [key: string]: string }>({});
     const [coursePriorities, setCoursePriorities] = useState<string[]>([]);
     const [coursePercentages, setCoursePercentages] = useState<Map<string, number>>(new Map());
@@ -35166,6 +35170,9 @@ const App: React.FC = () => {
                 if (Array.isArray(saved.sctEvents)) setSctEvents(saved.sctEvents);
                 if (Array.isArray(saved.formationCallsigns)) setFormationCallsigns(saved.formationCallsigns);
                 if (saved.courseColors && typeof saved.courseColors === 'object') setCourseColors(saved.courseColors);
+                if ((saved as any).courseLmpPauses && typeof (saved as any).courseLmpPauses === 'object') {
+                    setCourseLmpPauses((saved as any).courseLmpPauses);
+                }
                 if (saved.coursePercentages && typeof saved.coursePercentages === 'object') {
                     setCoursePercentages(new Map(Object.entries(saved.coursePercentages).map(([k, v]) => [k, v as number])));
                 }
@@ -35344,6 +35351,7 @@ const App: React.FC = () => {
             sctEvents,
             formationCallsigns,
             courseColors,
+            courseLmpPauses,
             phraseBank,
             cancellationCodes,
             masterCurrencies,
@@ -35373,7 +35381,7 @@ const App: React.FC = () => {
         flyingWindowExclusions, flyingWindowExclusionsByUnit, activeFlyingWindowExclusionUnitKey,
         availableAircraftCount, neoAvailableAircraftCount, neoAircraftConfigCapacities, neoAircraftCapacityByUnit, activeNeoAircraftCapacityUnitKey, availableFtdCount, availableCptCount,
         timezoneOffset, tileStatusSettings, emergencyFreezeAuthority, emergencyFreezeAllowedActions,
-        sctEvents, formationCallsigns, courseColors,
+        sctEvents, formationCallsigns, courseColors, courseLmpPauses,
         phraseBank, cancellationCodes,
         masterCurrencies, currencyRequirements, unitCurrencyDefinitions,
         organisationSettings,
@@ -39954,6 +39962,62 @@ const App: React.FC = () => {
         ));
         return String((matchingCourse as any)?.lmpType || '').trim();
     }
+
+    const getCourseLmpPauseKey = (courseName: string, lmpType: string): string => (
+        `${normaliseCourseName(courseName).toUpperCase()}::${String(lmpType || '').trim().toUpperCase()}`
+    );
+
+    const isTraineePausedForCourseLmp = useCallback((trainee: Trainee, lmpTypeOverride?: string): boolean => {
+        const courseName = normaliseCourseName(trainee.course);
+        const lmpType = String(lmpTypeOverride || getConfiguredLmpTypeForTrainee(trainee) || '').trim();
+        if (!courseName || !lmpType) return false;
+        const pauseEntry = courseLmpPauses[getCourseLmpPauseKey(courseName, lmpType)];
+        if (!pauseEntry || !Array.isArray(pauseEntry.traineeNames) || pauseEntry.traineeNames.length === 0) return false;
+        const traineeAliases = [trainee.fullName, trainee.name]
+            .map(value => String(value || '').trim().toUpperCase())
+            .filter(Boolean);
+        return pauseEntry.traineeNames.some(name => traineeAliases.includes(String(name || '').trim().toUpperCase()));
+    }, [courseLmpPauses, courses]);
+
+    const handleUpdateCourseLmpPause = useCallback((entry: CourseLmpPauseEntry) => {
+        const courseName = normaliseCourseName(entry.courseName);
+        const lmpType = String(entry.lmpType || '').trim();
+        if (!courseName || !lmpType) return;
+
+        const traineeNames = Array.from(new Set(
+            (entry.traineeNames || [])
+                .map(name => String(name || '').trim())
+                .filter(Boolean)
+        ));
+        const pauseKey = getCourseLmpPauseKey(courseName, lmpType);
+        setCourseLmpPauses(prev => {
+            const next = { ...prev };
+            if (traineeNames.length === 0) {
+                delete next[pauseKey];
+            } else {
+                next[pauseKey] = {
+                    courseName,
+                    lmpType,
+                    traineeNames,
+                    pausedAt: entry.pausedAt || new Date().toISOString(),
+                    pausedBy: entry.pausedBy || currentUserName || sessionUser?.displayName || sessionUser?.userId || '',
+                };
+            }
+            return next;
+        });
+        logAudit(
+            'Training Records',
+            'Edit',
+            traineeNames.length > 0
+                ? `Paused ${traineeNames.length} ${courseName} trainee${traineeNames.length === 1 ? '' : 's'} for ${lmpType}`
+                : `Cleared ${courseName} pause list for ${lmpType}`
+        );
+        setSuccessMessage(
+            traineeNames.length > 0
+                ? `${courseName} paused for ${traineeNames.length} member${traineeNames.length === 1 ? '' : 's'} on ${lmpType}.`
+                : `${courseName} pause list cleared for ${lmpType}.`
+        );
+    }, [currentUserName, sessionUser?.displayName, sessionUser?.userId]);
 
     const getLmpTypeForTrainee = (trainee: Trainee): string => {
         return getConfiguredLmpTypeForTrainee(trainee);
@@ -44638,7 +44702,7 @@ const App: React.FC = () => {
         logNeoBuildUiDebug(`DEBUG Final preserved events count: ${finalPreservedEvents.length}`);
 
         // Now proceed with normal build process
-        const activeTrainees = allTraineesData.filter(t => !t.isPaused && !excludedCourses.includes(t.course) && !isPersonStaticallyUnavailable(t, flyingStartTime, ceaseNightFlying, buildDfpDate, 'flight'));
+        const activeTrainees = allTraineesData.filter(t => !t.isPaused && !isTraineePausedForCourseLmp(t) && !excludedCourses.includes(t.course) && !isPersonStaticallyUnavailable(t, flyingStartTime, ceaseNightFlying, buildDfpDate, 'flight'));
         let bnfTraineeCount = 0;
 
         activeTrainees.forEach(trainee => {
@@ -44954,7 +45018,7 @@ const App: React.FC = () => {
         let dbElceMap: Map<string, { eventCode: string; eventDate: string; dcoResult: 'DCO' | 'DPCO' | 'DNCO'; isCountedAsElce: boolean } | null> | undefined;
         try {
             const activeTraineeNames = traineesForBuildScope
-                .filter((t: any) => !t.isPaused)
+                .filter((t: any) => !t.isPaused && !isTraineePausedForCourseLmp(t))
                 .map((t: any) => t.fullName as string)
                 .filter(Boolean);
 
@@ -53309,6 +53373,7 @@ appliedUpdates.forEach(update => {
                             trainingReportName={trainingReportTemplate.displayName || trainingReportTemplate.genericName}
                             resourceDisplayNames={resourceDisplayNames}
                             serviceDefinitions={serviceDefinitions}
+                            courseLmpPauses={courseLmpPauses}
                         />;
             case 'TrainingRecords':
                 return <TrainingRecordsView
@@ -53321,6 +53386,8 @@ appliedUpdates.forEach(update => {
                     onNavigateToArchivedCourses={handleNavigateToArchivedCoursesFromTrainingRecords}
                     onUpdateCourseDates={handleUpdateCourseDatesFromTrainingRecords}
                     onUpdateCourse={handleUpdateCourseFromTrainingRecords}
+                    courseLmpPauses={courseLmpPauses}
+                    onUpdateCourseLmpPause={handleUpdateCourseLmpPause}
                     traineesData={traineesData}
                     instructorsData={instructorsData}
                     archivedTraineesData={archivedTraineesData}
@@ -56621,6 +56688,7 @@ appliedUpdates.forEach(update => {
                     groundResources={addGroundTileGroundResources}
                     classroomOptions={addGroundTileClassroomOptions}
                     academicStandardEvents={addGroundTileAcademicStandardEvents}
+                    courseLmpPauses={courseLmpPauses}
                     onNavigateToAcademicStandardEventsSettings={handleNavigateToAcademicStandardEventsSettings}
                     cptResources={addGroundTileCptResources}
                     instructorLabel={instructorLabel}

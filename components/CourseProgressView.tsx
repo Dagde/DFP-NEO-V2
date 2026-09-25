@@ -1,7 +1,7 @@
 
 
 import React, { useMemo, useEffect, useRef, useState } from 'react';
-import { Trainee, Score, SyllabusItemDetail, Course, TrainingReportAssessment } from '../types';
+import { Trainee, Score, SyllabusItemDetail, Course, TrainingReportAssessment, CourseLmpPauseEntry } from '../types';
 import AuditButton from './AuditButton';
 import CourseDataWindow from './CourseDataWindow';
 import FullPageProgressGraph from './FullPageProgressGraph';
@@ -13,6 +13,10 @@ import { getCourseStudentGroupCounts } from '../utils/courseStudentGroups';
 const REMEDIAL_EVENT_CODE_REGEX = /-(?:REM-[A-Z]+\d+|RFTD\d+|RRF\d+|RT\d+|RF\d+|FTD\d+|F\d+|T\d+)$/i;
 const isRemedialEventCode = (value?: string): boolean =>
     !!value && REMEDIAL_EVENT_CODE_REGEX.test(value);
+
+const getCourseLmpPauseKey = (courseName: string, lmpType: string): string => (
+    `${String(courseName || '').trim().toUpperCase()}::${String(lmpType || '').trim().toUpperCase()}`
+);
 
 interface CourseProgressViewProps {
     traineesData: Trainee[];
@@ -26,6 +30,7 @@ interface CourseProgressViewProps {
     trainingReportName?: string;
     resourceDisplayNames?: ResourceDisplayNames;
     serviceDefinitions?: Array<{ longName?: string; shortName?: string }>;
+    courseLmpPauses?: Record<string, CourseLmpPauseEntry>;
 }
 
 type CourseScoreEventTypeKey =
@@ -185,7 +190,8 @@ const CourseProgressView: React.FC<CourseProgressViewProps> = ({
     onUpdateStartDate,
     trainingReportName = 'Training Report',
     resourceDisplayNames = DEFAULT_RESOURCE_DISPLAY_NAMES,
-    serviceDefinitions = []
+    serviceDefinitions = [],
+    courseLmpPauses = {}
 }) => {
     const [showFullGraph, setShowFullGraph] = useState(false);
     const [selectedGraphCourse, setSelectedGraphCourse] = useState<string | null>(null);
@@ -247,11 +253,23 @@ const CourseProgressView: React.FC<CourseProgressViewProps> = ({
 
     const activeCourseNames = useMemo(() => new Set(activeCourses.map(course => course.name)), [activeCourses]);
 
+    const isPausedForCoursePrimaryLmp = (trainee: Trainee): boolean => {
+        const course = activeCourses.find(candidate => candidate.name === trainee.course);
+        const lmpType = String((trainee as any).lmpType || course?.lmpType || '').trim();
+        if (!lmpType) return false;
+        const pauseEntry = courseLmpPauses[getCourseLmpPauseKey(trainee.course, lmpType)];
+        if (!pauseEntry?.traineeNames?.length) return false;
+        const aliases = [trainee.fullName, trainee.name]
+            .map(value => String(value || '').trim().toUpperCase())
+            .filter(Boolean);
+        return pauseEntry.traineeNames.some(name => aliases.includes(String(name || '').trim().toUpperCase()));
+    };
+
     const activeTrainees = useMemo(() => {
         return traineesData
-            .filter(trainee => !trainee.isPaused && activeCourseNames.has(trainee.course))
+            .filter(trainee => !trainee.isPaused && activeCourseNames.has(trainee.course) && !isPausedForCoursePrimaryLmp(trainee))
             .sort((a, b) => (a.fullName || a.name).localeCompare(b.fullName || b.name));
-    }, [traineesData, activeCourseNames]);
+    }, [traineesData, activeCourseNames, activeCourses, courseLmpPauses]);
 
     const defaultCourseByProgress = useMemo(() => {
         if (activeCourses.length === 0) return '';

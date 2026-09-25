@@ -4887,6 +4887,7 @@ const buildSettingsSnapshot = (state) => {
     courseColors: state.courseColors || {},
     coursePriorities: state.coursePriorities || [],
     coursePercentages: state.coursePercentages || {},
+    courseLmpPauses: state.courseLmpPauses || {},
     fixedCrewTrainingPriorities: Array.isArray(state.fixedCrewTrainingPriorities) ? state.fixedCrewTrainingPriorities : [],
     fixedCrewTileColourModeByUnit: normaliseFixedCrewTileColourModeByUnit(state.fixedCrewTileColourModeByUnit),
     neoAvailableAircraftCount: state.neoAvailableAircraftCount ?? state.availableAircraftCount ?? 15,
@@ -63086,7 +63087,8 @@ function groupByModule(items) {
     return { moduleKey: key, label, items: groups[key] };
   });
 }
-function getTraineeStatus(trainee, events, date) {
+function getTraineeStatus(trainee, events, date, courseLmpPauseReason) {
+  if (courseLmpPauseReason) return { status: "paused", reason: courseLmpPauseReason };
   if (trainee.isPaused) return { status: "paused", reason: "Trainee is currently paused" };
   for (const u of trainee.unavailability || []) {
     if (date >= u.startDate && date <= u.endDate) {
@@ -63123,6 +63125,7 @@ const AcademicsTab = ({
   groundResources = [],
   classroomOptions = [],
   standardEvents = DEFAULT_ACADEMIC_STANDARD_EVENTS,
+  courseLmpPauses = {},
   onNavigateToStandardEventsSettings,
   onSave,
   onClose
@@ -63193,12 +63196,24 @@ const AcademicsTab = ({
     () => allTraineesByCourse[selectedCourse] || [],
     [allTraineesByCourse, selectedCourse]
   );
+  const academicPauseEntry = reactExports.useMemo(() => {
+    const lmpType = String(persistedAcademicLmp || "").trim();
+    if (!selectedCourse || !lmpType) return null;
+    return courseLmpPauses[`${String(selectedCourse || "").trim().toUpperCase()}::${lmpType.toUpperCase()}`] || null;
+  }, [courseLmpPauses, persistedAcademicLmp, selectedCourse]);
   const traineeStatuses = reactExports.useMemo(
     () => courseTrainees.reduce((acc, t) => {
-      acc[t.fullName] = getTraineeStatus(t, events, selectedDate);
+      const aliases = [t.fullName, t.name].map((value) => String(value || "").trim().toUpperCase()).filter(Boolean);
+      const pausedForAcademicLmp = academicPauseEntry?.traineeNames?.some((name) => aliases.includes(String(name || "").trim().toUpperCase()));
+      acc[t.fullName] = getTraineeStatus(
+        t,
+        events,
+        selectedDate,
+        pausedForAcademicLmp ? `Course is paused for ${academicPauseEntry?.lmpType || "this LMP"}` : void 0
+      );
       return acc;
     }, {}),
-    [courseTrainees, events, selectedDate]
+    [academicPauseEntry, courseTrainees, events, selectedDate]
   );
   const [selectedTrainees, setSelectedTrainees] = reactExports.useState([]);
   reactExports.useEffect(() => {
@@ -64568,6 +64583,7 @@ const AddGroundEventFlyout = ({
   groundResources = [],
   classroomOptions = [],
   academicStandardEvents,
+  courseLmpPauses = {},
   onNavigateToAcademicStandardEventsSettings,
   cptResources = [],
   instructorLabel: instructorLabel2 = "Instructor"
@@ -64898,6 +64914,7 @@ const AddGroundEventFlyout = ({
                     groundResources,
                     classroomOptions,
                     standardEvents: academicStandardEvents,
+                    courseLmpPauses,
                     onNavigateToStandardEventsSettings: onNavigateToAcademicStandardEventsSettings,
                     onSave: (data) => {
                       if (onSaveAcademic) {
@@ -103623,6 +103640,7 @@ const CourseGraph = ({ data, trainingReportName }) => {
 };
 const REMEDIAL_EVENT_CODE_REGEX$1 = /-(?:REM-[A-Z]+\d+|RFTD\d+|RRF\d+|RT\d+|RF\d+|FTD\d+|F\d+|T\d+)$/i;
 const isRemedialEventCode$1 = (value) => !!value && REMEDIAL_EVENT_CODE_REGEX$1.test(value);
+const getCourseLmpPauseKey$1 = (courseName, lmpType) => `${String(courseName || "").trim().toUpperCase()}::${String(lmpType || "").trim().toUpperCase()}`;
 const COURSE_AWARD_SETTINGS_STORAGE_KEY = "dfpNeo.courseProgress.awards.v1";
 const COURSE_SCORE_EVENT_TYPE_KEYS = [
   "flight",
@@ -103702,7 +103720,8 @@ const CourseProgressView = ({
   onUpdateStartDate,
   trainingReportName = "Training Report",
   resourceDisplayNames = DEFAULT_RESOURCE_DISPLAY_NAMES,
-  serviceDefinitions = []
+  serviceDefinitions = [],
+  courseLmpPauses = {}
 }) => {
   const [showFullGraph, setShowFullGraph] = reactExports.useState(false);
   const [selectedGraphCourse, setSelectedGraphCourse] = reactExports.useState(null);
@@ -103751,9 +103770,18 @@ const CourseProgressView = ({
     return courses.filter((course) => courseColors[course.name]).sort((a, b) => a.name.localeCompare(b.name));
   }, [courses, courseColors]);
   const activeCourseNames = reactExports.useMemo(() => new Set(activeCourses.map((course) => course.name)), [activeCourses]);
+  const isPausedForCoursePrimaryLmp = (trainee) => {
+    const course = activeCourses.find((candidate) => candidate.name === trainee.course);
+    const lmpType = String(trainee.lmpType || course?.lmpType || "").trim();
+    if (!lmpType) return false;
+    const pauseEntry = courseLmpPauses[getCourseLmpPauseKey$1(trainee.course, lmpType)];
+    if (!pauseEntry?.traineeNames?.length) return false;
+    const aliases = [trainee.fullName, trainee.name].map((value) => String(value || "").trim().toUpperCase()).filter(Boolean);
+    return pauseEntry.traineeNames.some((name) => aliases.includes(String(name || "").trim().toUpperCase()));
+  };
   const activeTrainees = reactExports.useMemo(() => {
-    return traineesData.filter((trainee) => !trainee.isPaused && activeCourseNames.has(trainee.course)).sort((a, b) => (a.fullName || a.name).localeCompare(b.fullName || b.name));
-  }, [traineesData, activeCourseNames]);
+    return traineesData.filter((trainee) => !trainee.isPaused && activeCourseNames.has(trainee.course) && !isPausedForCoursePrimaryLmp(trainee)).sort((a, b) => (a.fullName || a.name).localeCompare(b.fullName || b.name));
+  }, [traineesData, activeCourseNames, activeCourses, courseLmpPauses]);
   const defaultCourseByProgress = reactExports.useMemo(() => {
     if (activeCourses.length === 0) return "";
     const completedByCourse = new Map(activeCourses.map((course) => [course.name, 0]));
@@ -105079,6 +105107,7 @@ const uniqueSortedValues = (values) => {
     return true;
   }).sort((a, b) => a.localeCompare(b));
 };
+const getCourseLmpPauseKey = (courseName, lmpType) => `${String(courseName || "").trim().toUpperCase()}::${String(lmpType || "").trim().toUpperCase()}`;
 const EditCourseFlyout = ({
   courseName,
   startDate: initialStartDate,
@@ -105092,8 +105121,11 @@ const EditCourseFlyout = ({
   syllabusDetails = [],
   platformConfig = null,
   operationalModel = "flight_school",
+  trainees = [],
+  courseLmpPauses = {},
   onClose,
-  onSave
+  onSave,
+  onUpdateCourseLmpPause
 }) => {
   const [startDate, setStartDate] = reactExports.useState(initialStartDate);
   const [gradDate, setGradDate] = reactExports.useState(initialGradDate);
@@ -105101,6 +105133,8 @@ const EditCourseFlyout = ({
   const [unit, setUnit] = reactExports.useState(initialUnit);
   const [lmpType, setLmpType] = reactExports.useState(initialLmpType || "");
   const [academicLmpType, setAcademicLmpType] = reactExports.useState(initialAcademicLmpType || "");
+  const [pauseDraftLmp, setPauseDraftLmp] = reactExports.useState(null);
+  const [pauseDraftSelection, setPauseDraftSelection] = reactExports.useState(/* @__PURE__ */ new Set());
   const activeMasterLmpCatalogue = reactExports.useMemo(() => (platformConfig?.masterLmpCatalogue || []).filter((entry) => String(entry?.status || "ACTIVE").toUpperCase() !== "INACTIVE"), [platformConfig]);
   const lmpDescriptionByCode = reactExports.useMemo(() => activeMasterLmpCatalogue.reduce((map, entry) => {
     const code = normaliseLmpCode(entry?.code || entry?.name);
@@ -105153,195 +105187,334 @@ const EditCourseFlyout = ({
     onSave({ startDate, gradDate, location, unit, lmpType, academicLmpType });
     onClose();
   };
+  const enrolledLmpOptions = reactExports.useMemo(() => uniqueSortedValues([lmpType, academicLmpType]), [academicLmpType, lmpType]);
+  const sortedCourseMembers = reactExports.useMemo(() => [...trainees].filter((trainee) => String(trainee.course || "").trim().toUpperCase() === String(courseName || "").trim().toUpperCase()).sort((a, b) => String(a.fullName || a.name).localeCompare(String(b.fullName || b.name), void 0, { sensitivity: "base" })), [courseName, trainees]);
+  const openPauseManager = (selectedLmpType) => {
+    const pauseKey = getCourseLmpPauseKey(courseName, selectedLmpType);
+    const existing = courseLmpPauses[pauseKey];
+    const defaultNames = existing ? existing.traineeNames || [] : sortedCourseMembers.map((trainee) => trainee.fullName || trainee.name).filter(Boolean);
+    setPauseDraftLmp(selectedLmpType);
+    setPauseDraftSelection(new Set(defaultNames));
+  };
+  const togglePauseDraftTrainee = (traineeName) => {
+    setPauseDraftSelection((prev) => {
+      const next = new Set(prev);
+      if (next.has(traineeName)) {
+        next.delete(traineeName);
+      } else {
+        next.add(traineeName);
+      }
+      return next;
+    });
+  };
+  const confirmPauseDraft = () => {
+    if (!pauseDraftLmp || !onUpdateCourseLmpPause) return;
+    onUpdateCourseLmpPause({
+      courseName,
+      lmpType: pauseDraftLmp,
+      traineeNames: Array.from(pauseDraftSelection),
+      pausedAt: (/* @__PURE__ */ new Date()).toISOString()
+    });
+    setPauseDraftLmp(null);
+    setPauseDraftSelection(/* @__PURE__ */ new Set());
+  };
   const fieldClass2 = "w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-md text-white focus:outline-none focus:ring-2 focus:ring-sky-500 text-sm";
   const labelClass2 = "block text-sm font-medium text-gray-400 mb-1";
-  return /* @__PURE__ */ jsxRuntimeExports.jsx(
+  return /* @__PURE__ */ jsxRuntimeExports.jsxs(
     "div",
     {
       className: "fixed inset-0 bg-black/60 z-[60] flex items-start justify-center overflow-y-auto pt-[92px] pb-8 animate-fade-in",
       onClick: onClose,
-      children: /* @__PURE__ */ jsxRuntimeExports.jsxs(
-        "div",
-        {
-          className: "bg-gray-800 rounded-lg shadow-xl w-full max-w-lg border border-gray-700",
-          onClick: (e) => e.stopPropagation(),
-          children: [
-            /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "p-4 border-b border-gray-700 flex justify-between items-center bg-gray-900/50", children: [
-              /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
-                /* @__PURE__ */ jsxRuntimeExports.jsx("h2", { className: "text-xl font-bold text-sky-400", children: "Edit Course" }),
-                /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-xs text-gray-500 mt-0.5", children: "Modify course details, dates, and LMP type" })
-              ] }),
-              /* @__PURE__ */ jsxRuntimeExports.jsx("button", { onClick: onClose, className: "text-white hover:text-gray-300", "aria-label": "Close", children: /* @__PURE__ */ jsxRuntimeExports.jsx("svg", { xmlns: "http://www.w3.org/2000/svg", className: "h-6 w-6", fill: "none", viewBox: "0 0 24 24", stroke: "currentColor", children: /* @__PURE__ */ jsxRuntimeExports.jsx("path", { strokeLinecap: "round", strokeLinejoin: "round", strokeWidth: 2, d: "M6 18L18 6M6 6l12 12" }) }) })
-            ] }),
-            /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "p-6 space-y-5 max-h-[calc(100vh-250px)] overflow-y-auto", children: [
-              /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
-                /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: labelClass2, children: "Course" }),
-                /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "px-4 py-2 bg-gray-700/50 border border-gray-600/50 rounded-md text-white font-semibold text-sm tracking-wide", children: courseName })
-              ] }),
-              /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid grid-cols-2 gap-4", children: [
+      children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsxs(
+          "div",
+          {
+            className: "bg-gray-800 rounded-lg shadow-xl w-full max-w-lg border border-gray-700",
+            onClick: (e) => e.stopPropagation(),
+            children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "p-4 border-b border-gray-700 flex justify-between items-center bg-gray-900/50", children: [
                 /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
-                  /* @__PURE__ */ jsxRuntimeExports.jsx("label", { htmlFor: "edit-location", className: labelClass2, children: "Location" }),
-                  locations.length > 0 ? /* @__PURE__ */ jsxRuntimeExports.jsxs(
-                    "select",
-                    {
-                      id: "edit-location",
-                      value: location,
-                      onChange: (e) => setLocation(e.target.value),
-                      className: fieldClass2,
-                      children: [
-                        /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "", children: "— Select Location —" }),
-                        locations.map((loc) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: loc, children: loc }, loc))
-                      ]
-                    }
-                  ) : /* @__PURE__ */ jsxRuntimeExports.jsx(
-                    "input",
-                    {
-                      type: "text",
-                      id: "edit-location",
-                      value: location,
-                      onChange: (e) => setLocation(e.target.value),
-                      placeholder: "Enter location code or name",
-                      className: fieldClass2
-                    }
-                  )
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("h2", { className: "text-xl font-bold text-sky-400", children: "Edit Course" }),
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-xs text-gray-500 mt-0.5", children: "Modify course details, dates, and LMP type" })
                 ] }),
+                /* @__PURE__ */ jsxRuntimeExports.jsx("button", { onClick: onClose, className: "text-white hover:text-gray-300", "aria-label": "Close", children: /* @__PURE__ */ jsxRuntimeExports.jsx("svg", { xmlns: "http://www.w3.org/2000/svg", className: "h-6 w-6", fill: "none", viewBox: "0 0 24 24", stroke: "currentColor", children: /* @__PURE__ */ jsxRuntimeExports.jsx("path", { strokeLinecap: "round", strokeLinejoin: "round", strokeWidth: 2, d: "M6 18L18 6M6 6l12 12" }) }) })
+              ] }),
+              /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "p-6 space-y-5 max-h-[calc(100vh-250px)] overflow-y-auto", children: [
                 /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
-                  /* @__PURE__ */ jsxRuntimeExports.jsx("label", { htmlFor: "edit-unit", className: labelClass2, children: "Unit" }),
-                  units.length > 0 ? /* @__PURE__ */ jsxRuntimeExports.jsxs(
-                    "select",
-                    {
-                      id: "edit-unit",
-                      value: unit,
-                      onChange: (e) => setUnit(e.target.value),
-                      className: fieldClass2,
-                      children: [
-                        /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "", children: "— Select Unit —" }),
-                        units.map((u) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: u, children: u }, u))
-                      ]
-                    }
-                  ) : /* @__PURE__ */ jsxRuntimeExports.jsx(
-                    "input",
-                    {
-                      type: "text",
-                      id: "edit-unit",
-                      value: unit,
-                      onChange: (e) => setUnit(e.target.value),
-                      placeholder: "Enter unit code",
-                      className: fieldClass2
-                    }
-                  )
-                ] })
-              ] }),
-              /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
-                /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { htmlFor: "edit-lmp-type", className: labelClass2, children: [
-                  "Course / LMP Type",
-                  /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "ml-1 text-xs text-gray-500 font-normal", children: "— determines which syllabus events populate each trainee's Individual LMP" })
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: labelClass2, children: "Course" }),
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "px-4 py-2 bg-gray-700/50 border border-gray-600/50 rounded-md text-white font-semibold text-sm tracking-wide", children: courseName })
                 ] }),
-                /* @__PURE__ */ jsxRuntimeExports.jsxs(
-                  "select",
-                  {
-                    id: "edit-lmp-type",
-                    value: lmpType,
-                    onChange: (e) => setLmpType(e.target.value),
-                    className: fieldClass2,
-                    children: [
-                      /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "", children: "— Select Master LMP —" }),
-                      assignableMasterLmps.map((lmp) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: lmp, children: lmp }, lmp))
-                    ]
-                  }
-                ),
-                lmpType && lmpDescriptionByCode[lmpType] && /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-1 text-xs text-sky-400/70 italic", children: lmpDescriptionByCode[lmpType] })
-              ] }),
-              /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
-                /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { htmlFor: "edit-academic-lmp-type", className: labelClass2, children: [
-                  "Academic LMP Type",
-                  /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "ml-1 text-xs text-gray-500 font-normal", children: [
-                    "— determines which ",
-                    /* @__PURE__ */ jsxRuntimeExports.jsx("strong", { children: "Academics" }),
-                    " lessons appear in the Academic LMP tab"
+                /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid grid-cols-2 gap-4", children: [
+                  /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
+                    /* @__PURE__ */ jsxRuntimeExports.jsx("label", { htmlFor: "edit-location", className: labelClass2, children: "Location" }),
+                    locations.length > 0 ? /* @__PURE__ */ jsxRuntimeExports.jsxs(
+                      "select",
+                      {
+                        id: "edit-location",
+                        value: location,
+                        onChange: (e) => setLocation(e.target.value),
+                        className: fieldClass2,
+                        children: [
+                          /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "", children: "— Select Location —" }),
+                          locations.map((loc) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: loc, children: loc }, loc))
+                        ]
+                      }
+                    ) : /* @__PURE__ */ jsxRuntimeExports.jsx(
+                      "input",
+                      {
+                        type: "text",
+                        id: "edit-location",
+                        value: location,
+                        onChange: (e) => setLocation(e.target.value),
+                        placeholder: "Enter location code or name",
+                        className: fieldClass2
+                      }
+                    )
+                  ] }),
+                  /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
+                    /* @__PURE__ */ jsxRuntimeExports.jsx("label", { htmlFor: "edit-unit", className: labelClass2, children: "Unit" }),
+                    units.length > 0 ? /* @__PURE__ */ jsxRuntimeExports.jsxs(
+                      "select",
+                      {
+                        id: "edit-unit",
+                        value: unit,
+                        onChange: (e) => setUnit(e.target.value),
+                        className: fieldClass2,
+                        children: [
+                          /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "", children: "— Select Unit —" }),
+                          units.map((u) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: u, children: u }, u))
+                        ]
+                      }
+                    ) : /* @__PURE__ */ jsxRuntimeExports.jsx(
+                      "input",
+                      {
+                        type: "text",
+                        id: "edit-unit",
+                        value: unit,
+                        onChange: (e) => setUnit(e.target.value),
+                        placeholder: "Enter unit code",
+                        className: fieldClass2
+                      }
+                    )
                   ] })
                 ] }),
-                /* @__PURE__ */ jsxRuntimeExports.jsxs(
-                  "select",
-                  {
-                    id: "edit-academic-lmp-type",
-                    value: academicLmpType,
-                    onChange: (e) => setAcademicLmpType(e.target.value),
-                    className: fieldClass2,
-                    children: [
-                      /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "", children: "— None (Academic LMP tab hidden) —" }),
-                      academicLmpCourses.map((lmp) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: lmp, children: lmp }, lmp))
-                    ]
-                  }
-                ),
-                academicLmpType && /* @__PURE__ */ jsxRuntimeExports.jsxs("p", { className: "mt-1 text-xs text-sky-400/70 italic", children: [
-                  'Academic lessons from the "',
-                  academicLmpType,
-                  `" LMP will appear in each trainee's Academic LMP tab.`
-                ] })
-              ] }),
-              /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid grid-cols-2 gap-4", children: [
                 /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
-                  /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { htmlFor: "edit-start-date", className: labelClass2, children: [
-                    "Start Date ",
-                    /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-red-400", children: "*" })
+                  /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { htmlFor: "edit-lmp-type", className: labelClass2, children: [
+                    "Course / LMP Type",
+                    /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "ml-1 text-xs text-gray-500 font-normal", children: "— determines which syllabus events populate each trainee's Individual LMP" })
                   ] }),
-                  /* @__PURE__ */ jsxRuntimeExports.jsx(
-                    "input",
+                  /* @__PURE__ */ jsxRuntimeExports.jsxs(
+                    "select",
                     {
-                      type: "date",
-                      id: "edit-start-date",
-                      value: startDate,
-                      onChange: (e) => setStartDate(e.target.value),
-                      style: { colorScheme: "dark" },
-                      className: fieldClass2
+                      id: "edit-lmp-type",
+                      value: lmpType,
+                      onChange: (e) => setLmpType(e.target.value),
+                      className: fieldClass2,
+                      children: [
+                        /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "", children: "— Select Master LMP —" }),
+                        assignableMasterLmps.map((lmp) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: lmp, children: lmp }, lmp))
+                      ]
                     }
-                  )
+                  ),
+                  lmpType && lmpDescriptionByCode[lmpType] && /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-1 text-xs text-sky-400/70 italic", children: lmpDescriptionByCode[lmpType] })
                 ] }),
                 /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
-                  /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { htmlFor: "edit-grad-date", className: labelClass2, children: [
-                    "Graduation Date ",
-                    /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-red-400", children: "*" })
+                  /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { htmlFor: "edit-academic-lmp-type", className: labelClass2, children: [
+                    "Academic LMP Type",
+                    /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "ml-1 text-xs text-gray-500 font-normal", children: [
+                      "— determines which ",
+                      /* @__PURE__ */ jsxRuntimeExports.jsx("strong", { children: "Academics" }),
+                      " lessons appear in the Academic LMP tab"
+                    ] })
                   ] }),
-                  /* @__PURE__ */ jsxRuntimeExports.jsx(
-                    "input",
+                  /* @__PURE__ */ jsxRuntimeExports.jsxs(
+                    "select",
                     {
-                      type: "date",
-                      id: "edit-grad-date",
-                      value: gradDate,
-                      onChange: (e) => setGradDate(e.target.value),
-                      style: { colorScheme: "dark" },
-                      className: fieldClass2
+                      id: "edit-academic-lmp-type",
+                      value: academicLmpType,
+                      onChange: (e) => setAcademicLmpType(e.target.value),
+                      className: fieldClass2,
+                      children: [
+                        /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "", children: "— None (Academic LMP tab hidden) —" }),
+                        academicLmpCourses.map((lmp) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: lmp, children: lmp }, lmp))
+                      ]
                     }
-                  )
+                  ),
+                  academicLmpType && /* @__PURE__ */ jsxRuntimeExports.jsxs("p", { className: "mt-1 text-xs text-sky-400/70 italic", children: [
+                    'Academic lessons from the "',
+                    academicLmpType,
+                    `" LMP will appear in each trainee's Academic LMP tab.`
+                  ] })
+                ] }),
+                /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid grid-cols-2 gap-4", children: [
+                  /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
+                    /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { htmlFor: "edit-start-date", className: labelClass2, children: [
+                      "Start Date ",
+                      /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-red-400", children: "*" })
+                    ] }),
+                    /* @__PURE__ */ jsxRuntimeExports.jsx(
+                      "input",
+                      {
+                        type: "date",
+                        id: "edit-start-date",
+                        value: startDate,
+                        onChange: (e) => setStartDate(e.target.value),
+                        style: { colorScheme: "dark" },
+                        className: fieldClass2
+                      }
+                    )
+                  ] }),
+                  /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
+                    /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { htmlFor: "edit-grad-date", className: labelClass2, children: [
+                      "Graduation Date ",
+                      /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-red-400", children: "*" })
+                    ] }),
+                    /* @__PURE__ */ jsxRuntimeExports.jsx(
+                      "input",
+                      {
+                        type: "date",
+                        id: "edit-grad-date",
+                        value: gradDate,
+                        onChange: (e) => setGradDate(e.target.value),
+                        style: { colorScheme: "dark" },
+                        className: fieldClass2
+                      }
+                    )
+                  ] })
+                ] }),
+                /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "p-3 bg-sky-900/20 border border-sky-700/30 rounded-md", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("p", { className: "text-xs text-sky-300/80 leading-relaxed", children: [
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "font-semibold text-sky-300", children: "Note:" }),
+                  " Changing the LMP Type will update the syllabus events available for all trainees in this course. Location and Unit are used for filtering trainees in schedule views."
+                ] }) }),
+                /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded-lg border border-amber-700/40 bg-amber-950/10 p-4", children: [
+                  /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mb-3", children: [
+                    /* @__PURE__ */ jsxRuntimeExports.jsx("h3", { className: "text-sm font-semibold uppercase tracking-wide text-amber-300", children: "Course LMP Pause" }),
+                    /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-1 text-xs text-gray-400", children: "Pause selected course members for one enrolled LMP without pausing their other LMPs." })
+                  ] }),
+                  enrolledLmpOptions.length === 0 ? /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-xs text-gray-500", children: "Assign a Course / LMP Type or Academic LMP Type before pausing course members." }) : /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "space-y-2", children: enrolledLmpOptions.map((option) => {
+                    const pauseKey = getCourseLmpPauseKey(courseName, option);
+                    const pausedCount = courseLmpPauses[pauseKey]?.traineeNames?.length || 0;
+                    return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center justify-between gap-3 rounded-md border border-gray-700 bg-gray-900/60 p-3", children: [
+                      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
+                        /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-sm font-semibold text-white", children: option }),
+                        /* @__PURE__ */ jsxRuntimeExports.jsxs("p", { className: "text-xs text-gray-400", children: [
+                          pausedCount,
+                          " of ",
+                          sortedCourseMembers.length,
+                          " course member",
+                          sortedCourseMembers.length === 1 ? "" : "s",
+                          " paused"
+                        ] })
+                      ] }),
+                      /* @__PURE__ */ jsxRuntimeExports.jsx(
+                        "button",
+                        {
+                          type: "button",
+                          onClick: () => openPauseManager(option),
+                          className: "px-3 py-2 text-xs font-semibold rounded-md bg-amber-600 text-black hover:bg-amber-500 transition-colors",
+                          children: "Pause"
+                        }
+                      )
+                    ] }, option);
+                  }) })
                 ] })
               ] }),
-              /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "p-3 bg-sky-900/20 border border-sky-700/30 rounded-md", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("p", { className: "text-xs text-sky-300/80 leading-relaxed", children: [
-                /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "font-semibold text-sky-300", children: "Note:" }),
-                " Changing the LMP Type will update the syllabus events available for all trainees in this course. Location and Unit are used for filtering trainees in schedule views."
-              ] }) })
-            ] }),
-            /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "px-6 py-4 bg-gray-800/50 border-t border-gray-700 flex justify-end space-x-3", children: [
-              /* @__PURE__ */ jsxRuntimeExports.jsx(
-                "button",
-                {
-                  onClick: onClose,
-                  className: "px-4 py-2 bg-transparent border border-gray-600 text-gray-300 rounded-md hover:bg-gray-700 hover:text-white transition-colors text-sm",
-                  children: "Cancel"
-                }
-              ),
-              /* @__PURE__ */ jsxRuntimeExports.jsx(
-                "button",
-                {
-                  onClick: handleSave,
-                  className: "px-4 py-2 bg-sky-600 text-white rounded-md hover:bg-sky-700 transition-colors text-sm font-semibold",
-                  children: "Save Changes"
-                }
-              )
+              /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "px-6 py-4 bg-gray-800/50 border-t border-gray-700 flex justify-end space-x-3", children: [
+                /* @__PURE__ */ jsxRuntimeExports.jsx(
+                  "button",
+                  {
+                    onClick: onClose,
+                    className: "px-4 py-2 bg-transparent border border-gray-600 text-gray-300 rounded-md hover:bg-gray-700 hover:text-white transition-colors text-sm",
+                    children: "Cancel"
+                  }
+                ),
+                /* @__PURE__ */ jsxRuntimeExports.jsx(
+                  "button",
+                  {
+                    onClick: handleSave,
+                    className: "px-4 py-2 bg-sky-600 text-white rounded-md hover:bg-sky-700 transition-colors text-sm font-semibold",
+                    children: "Save Changes"
+                  }
+                )
+              ] })
+            ]
+          }
+        ),
+        pauseDraftLmp && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "fixed inset-0 z-[70] flex items-center justify-center bg-black/70", onClick: () => setPauseDraftLmp(null), children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "w-full max-w-lg rounded-lg border border-amber-600/60 bg-gray-800 shadow-2xl", onClick: (event) => event.stopPropagation(), children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "border-b border-gray-700 bg-gray-900/80 p-4", children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx("h3", { className: "text-lg font-bold text-amber-300", children: "Pause Course Members" }),
+            /* @__PURE__ */ jsxRuntimeExports.jsxs("p", { className: "mt-1 text-sm text-gray-400", children: [
+              courseName,
+              " — ",
+              pauseDraftLmp
             ] })
-          ]
-        }
-      )
+          ] }),
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "max-h-[52vh] overflow-y-auto p-4", children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mb-3 flex items-center justify-between gap-3", children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsxs("p", { className: "text-xs uppercase tracking-wide text-gray-400", children: [
+                pauseDraftSelection.size,
+                " selected"
+              ] }),
+              /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex gap-2", children: [
+                /* @__PURE__ */ jsxRuntimeExports.jsx(
+                  "button",
+                  {
+                    type: "button",
+                    onClick: () => setPauseDraftSelection(new Set(sortedCourseMembers.map((trainee) => trainee.fullName || trainee.name).filter(Boolean))),
+                    className: "rounded border border-gray-600 px-3 py-1 text-xs text-gray-200 hover:bg-gray-700",
+                    children: "Select all"
+                  }
+                ),
+                /* @__PURE__ */ jsxRuntimeExports.jsx(
+                  "button",
+                  {
+                    type: "button",
+                    onClick: () => setPauseDraftSelection(/* @__PURE__ */ new Set()),
+                    className: "rounded border border-gray-600 px-3 py-1 text-xs text-gray-200 hover:bg-gray-700",
+                    children: "Deselect all"
+                  }
+                )
+              ] })
+            ] }),
+            sortedCourseMembers.length === 0 ? /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "rounded-md border border-gray-700 bg-gray-900 p-4 text-sm text-gray-400", children: "No members are currently assigned to this course." }) : /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "space-y-2", children: sortedCourseMembers.map((trainee) => {
+              const traineeName = trainee.fullName || trainee.name;
+              return /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "flex cursor-pointer items-center gap-3 rounded-md border border-gray-700 bg-gray-900/60 p-3 hover:border-amber-500/60", children: [
+                /* @__PURE__ */ jsxRuntimeExports.jsx(
+                  "input",
+                  {
+                    type: "checkbox",
+                    checked: pauseDraftSelection.has(traineeName),
+                    onChange: () => togglePauseDraftTrainee(traineeName),
+                    className: "h-4 w-4 accent-amber-500"
+                  }
+                ),
+                /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "font-mono text-xs text-gray-500", children: trainee.rank }),
+                /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-sm font-medium text-white", children: trainee.name || trainee.fullName })
+              ] }, `${trainee.idNumber}-${traineeName}`);
+            }) })
+          ] }),
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex justify-end gap-3 border-t border-gray-700 bg-gray-800/80 px-4 py-3", children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx(
+              "button",
+              {
+                type: "button",
+                onClick: () => setPauseDraftLmp(null),
+                className: "rounded-md border border-gray-600 px-4 py-2 text-sm text-gray-200 hover:bg-gray-700",
+                children: "Cancel"
+              }
+            ),
+            /* @__PURE__ */ jsxRuntimeExports.jsx(
+              "button",
+              {
+                type: "button",
+                onClick: confirmPauseDraft,
+                className: "rounded-md bg-amber-600 px-4 py-2 text-sm font-semibold text-black hover:bg-amber-500",
+                children: "Confirm Pause"
+              }
+            )
+          ] })
+        ] }) })
+      ]
     }
   );
 };
@@ -105455,6 +105628,8 @@ const CoursesManagementView = ({
   onNavigateToArchivedCourses,
   onUpdateCourseDates,
   onUpdateCourse,
+  courseLmpPauses = {},
+  onUpdateCourseLmpPause,
   locations = [],
   units = [],
   activeLocationCode = "",
@@ -105657,6 +105832,9 @@ Only continue if permanent deletion is required, archiving is not sufficient, an
         syllabusDetails,
         platformConfig,
         operationalModel,
+        trainees: traineesData,
+        courseLmpPauses,
+        onUpdateCourseLmpPause,
         onClose: () => {
           setShowEditFlyout(false);
           setCourseToEdit(null);
@@ -107678,6 +107856,8 @@ const TrainingRecordsView = ({
   onNavigateToArchivedCourses,
   onUpdateCourseDates,
   onUpdateCourse,
+  courseLmpPauses = {},
+  onUpdateCourseLmpPause,
   traineesData,
   instructorsData,
   archivedTraineesData,
@@ -107753,6 +107933,8 @@ const TrainingRecordsView = ({
           onNavigateToArchivedCourses,
           onUpdateCourseDates,
           onUpdateCourse,
+          courseLmpPauses,
+          onUpdateCourseLmpPause,
           locations,
           units,
           activeLocationCode,
@@ -122867,12 +123049,12 @@ async function generateDfpInternal(config, setProgress, publishedSchedules) {
   buildDebugLog("DEBUG ===== RESOURCE ASSIGNMENT COMPLETE =====");
   await recordProgress({ message: 'Compiling "Next Event" lists...', percentage: 10 });
   const activeTrainees = trainees.filter(
-    (t) => !t.isPaused && !(config.excludedCourses || []).includes(t.course) && !isPersonStaticallyUnavailable(t, flyingStartTime, ceaseNightFlying, buildDate, "flight")
+    (t) => !t.isPaused && !isTraineePausedForCourseLmp(t) && !(config.excludedCourses || []).includes(t.course) && !isPersonStaticallyUnavailable(t, flyingStartTime, ceaseNightFlying, buildDate, "flight")
   );
   neoBuildDiag.activeTrainees.total = activeTrainees.length;
-  neoBuildDiag.activeTrainees.excludedCourses = trainees.filter((t) => !t.isPaused && (config.excludedCourses || []).includes(t.course)).length;
+  neoBuildDiag.activeTrainees.excludedCourses = trainees.filter((t) => !t.isPaused && !isTraineePausedForCourseLmp(t) && (config.excludedCourses || []).includes(t.course)).length;
   neoBuildDiag.activeTrainees.excludedStaticUnavailable = trainees.filter(
-    (t) => !t.isPaused && !(config.excludedCourses || []).includes(t.course) && isPersonStaticallyUnavailable(t, flyingStartTime, ceaseNightFlying, buildDate, "flight")
+    (t) => !t.isPaused && !isTraineePausedForCourseLmp(t) && !(config.excludedCourses || []).includes(t.course) && isPersonStaticallyUnavailable(t, flyingStartTime, ceaseNightFlying, buildDate, "flight")
   ).length;
   const countTraineesByCourse = (list) => list.reduce((counts, trainee) => {
     const courseName = String(trainee.course || "Unassigned").trim() || "Unassigned";
@@ -137060,6 +137242,7 @@ const App = () => {
   const dashboardReportReconcileKeysRef = reactExports.useRef(/* @__PURE__ */ new Set());
   const [courses, setCourses] = reactExports.useState([]);
   const [courseColors, setCourseColors] = reactExports.useState({});
+  const [courseLmpPauses, setCourseLmpPauses] = reactExports.useState({});
   const [archivedCourses, setArchivedCourses] = reactExports.useState({});
   const [coursePriorities, setCoursePriorities] = reactExports.useState([]);
   const [coursePercentages, setCoursePercentages] = reactExports.useState(/* @__PURE__ */ new Map());
@@ -139256,6 +139439,9 @@ ${"=".repeat(60)}`);
         if (Array.isArray(saved.sctEvents)) setSctEvents(saved.sctEvents);
         if (Array.isArray(saved.formationCallsigns)) setFormationCallsigns(saved.formationCallsigns);
         if (saved.courseColors && typeof saved.courseColors === "object") setCourseColors(saved.courseColors);
+        if (saved.courseLmpPauses && typeof saved.courseLmpPauses === "object") {
+          setCourseLmpPauses(saved.courseLmpPauses);
+        }
         if (saved.coursePercentages && typeof saved.coursePercentages === "object") {
           setCoursePercentages(new Map(Object.entries(saved.coursePercentages).map(([k, v]) => [k, v])));
         }
@@ -139410,6 +139596,7 @@ ${"=".repeat(60)}`);
       sctEvents,
       formationCallsigns,
       courseColors,
+      courseLmpPauses,
       phraseBank,
       cancellationCodes,
       masterCurrencies,
@@ -139469,6 +139656,7 @@ ${"=".repeat(60)}`);
     sctEvents,
     formationCallsigns,
     courseColors,
+    courseLmpPauses,
     phraseBank,
     cancellationCodes,
     masterCurrencies,
@@ -143009,6 +143197,48 @@ ${error instanceof Error ? error.message : String(error)}`,
     const matchingCourse = courseList.find((course) => normaliseCourseName(course.name || course.code) === traineeCourse);
     return String(matchingCourse?.lmpType || "").trim();
   }
+  const getCourseLmpPauseKey2 = (courseName, lmpType) => `${normaliseCourseName(courseName).toUpperCase()}::${String(lmpType || "").trim().toUpperCase()}`;
+  const isTraineePausedForCourseLmp2 = reactExports.useCallback((trainee, lmpTypeOverride) => {
+    const courseName = normaliseCourseName(trainee.course);
+    const lmpType = String(lmpTypeOverride || getConfiguredLmpTypeForTrainee(trainee) || "").trim();
+    if (!courseName || !lmpType) return false;
+    const pauseEntry = courseLmpPauses[getCourseLmpPauseKey2(courseName, lmpType)];
+    if (!pauseEntry || !Array.isArray(pauseEntry.traineeNames) || pauseEntry.traineeNames.length === 0) return false;
+    const traineeAliases = [trainee.fullName, trainee.name].map((value) => String(value || "").trim().toUpperCase()).filter(Boolean);
+    return pauseEntry.traineeNames.some((name) => traineeAliases.includes(String(name || "").trim().toUpperCase()));
+  }, [courseLmpPauses, courses]);
+  const handleUpdateCourseLmpPause = reactExports.useCallback((entry) => {
+    const courseName = normaliseCourseName(entry.courseName);
+    const lmpType = String(entry.lmpType || "").trim();
+    if (!courseName || !lmpType) return;
+    const traineeNames = Array.from(new Set(
+      (entry.traineeNames || []).map((name) => String(name || "").trim()).filter(Boolean)
+    ));
+    const pauseKey = getCourseLmpPauseKey2(courseName, lmpType);
+    setCourseLmpPauses((prev) => {
+      const next = { ...prev };
+      if (traineeNames.length === 0) {
+        delete next[pauseKey];
+      } else {
+        next[pauseKey] = {
+          courseName,
+          lmpType,
+          traineeNames,
+          pausedAt: entry.pausedAt || (/* @__PURE__ */ new Date()).toISOString(),
+          pausedBy: entry.pausedBy || currentUserName || sessionUser?.displayName || sessionUser?.userId || ""
+        };
+      }
+      return next;
+    });
+    logAudit(
+      "Training Records",
+      "Edit",
+      traineeNames.length > 0 ? `Paused ${traineeNames.length} ${courseName} trainee${traineeNames.length === 1 ? "" : "s"} for ${lmpType}` : `Cleared ${courseName} pause list for ${lmpType}`
+    );
+    setSuccessMessage(
+      traineeNames.length > 0 ? `${courseName} paused for ${traineeNames.length} member${traineeNames.length === 1 ? "" : "s"} on ${lmpType}.` : `${courseName} pause list cleared for ${lmpType}.`
+    );
+  }, [currentUserName, sessionUser?.displayName, sessionUser?.userId]);
   const getLmpTypeForTrainee = (trainee) => {
     return getConfiguredLmpTypeForTrainee(trainee);
   };
@@ -146872,7 +147102,7 @@ The proposed event was not scheduled. Re-open the event and choose Accept Confli
     }
     const finalPreservedEvents = resolvedPicCrewPriorityEvents;
     logNeoBuildUiDebug(`DEBUG Final preserved events count: ${finalPreservedEvents.length}`);
-    const activeTrainees = allTraineesData.filter((t) => !t.isPaused && !excludedCourses.includes(t.course) && !isPersonStaticallyUnavailable(t, flyingStartTime, ceaseNightFlying, buildDfpDate, "flight"));
+    const activeTrainees = allTraineesData.filter((t) => !t.isPaused && !isTraineePausedForCourseLmp2(t) && !excludedCourses.includes(t.course) && !isPersonStaticallyUnavailable(t, flyingStartTime, ceaseNightFlying, buildDfpDate, "flight"));
     let bnfTraineeCount = 0;
     activeTrainees.forEach((trainee) => {
       const { next } = computeNextEventsForTrainee(trainee, traineeLMPs, scores, syllabusDetails, buildPublishedSchedulesForRun, buildDfpDate);
@@ -147129,7 +147359,7 @@ The proposed event was not scheduled. Re-open the event and choose Accept Confli
     });
     let dbElceMap;
     try {
-      const activeTraineeNames = traineesForBuildScope.filter((t) => !t.isPaused).map((t) => t.fullName).filter(Boolean);
+      const activeTraineeNames = traineesForBuildScope.filter((t) => !t.isPaused && !isTraineePausedForCourseLmp2(t)).map((t) => t.fullName).filter(Boolean);
       if (activeTraineeNames.length > 0) {
         const apiBase = getAppApiBase();
         markNeoBuildTiming(timingReport, "elce:request-start", { activeTrainees: activeTraineeNames.length });
@@ -154163,7 +154393,8 @@ ${error instanceof Error ? error.message : String(error)}`,
             onUpdateStartDate: handleUpdateStartDate,
             trainingReportName: trainingReportTemplate.displayName || trainingReportTemplate.genericName,
             resourceDisplayNames,
-            serviceDefinitions
+            serviceDefinitions,
+            courseLmpPauses
           }
         );
       case "TrainingRecords":
@@ -154179,6 +154410,8 @@ ${error instanceof Error ? error.message : String(error)}`,
             onNavigateToArchivedCourses: handleNavigateToArchivedCoursesFromTrainingRecords,
             onUpdateCourseDates: handleUpdateCourseDatesFromTrainingRecords,
             onUpdateCourse: handleUpdateCourseFromTrainingRecords,
+            courseLmpPauses,
+            onUpdateCourseLmpPause: handleUpdateCourseLmpPause,
             traineesData,
             instructorsData,
             archivedTraineesData,
@@ -157152,6 +157385,7 @@ Do you want to replace the existing entry?`,
           groundResources: addGroundTileGroundResources,
           classroomOptions: addGroundTileClassroomOptions,
           academicStandardEvents: addGroundTileAcademicStandardEvents,
+          courseLmpPauses,
           onNavigateToAcademicStandardEventsSettings: handleNavigateToAcademicStandardEventsSettings,
           cptResources: addGroundTileCptResources,
           instructorLabel: instructorLabel2
