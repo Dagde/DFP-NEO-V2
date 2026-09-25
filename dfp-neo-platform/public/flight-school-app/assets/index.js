@@ -5114,6 +5114,17 @@ const getTaskProfileAbbreviationsForUnit = (config, unitCode) => {
     return cleanProfile && cleanAbbreviation ? { ...items, [cleanProfile]: cleanAbbreviation } : items;
   }, {});
 };
+const normaliseLmpPrerequisiteKey = (value) => String(value || "").replace(/\*/g, "").trim();
+const getAllLmpPrerequisiteKeys = (item) => {
+  if (!item) return [];
+  const values = [
+    ...item.prerequisites || [],
+    ...item.prerequisitesGround || [],
+    ...item.prerequisitesFlying || []
+  ];
+  return Array.from(new Set(values.map(normaliseLmpPrerequisiteKey).filter(Boolean)));
+};
+const areAllLmpPrerequisitesMet = (item, completedEventIds) => getAllLmpPrerequisiteKeys(item).every((prerequisite) => completedEventIds.has(prerequisite));
 const DEFAULT_RESOURCE_DISPLAY_NAMES = {
   aircraft: "Aircraft",
   ftd: "Simulator",
@@ -51437,7 +51448,7 @@ const TraineeProfileFlyout = ({
       if (completedEventIds.has(item.id) || item.code.includes(" MB")) {
         continue;
       }
-      const prereqsMet = item.prerequisites.every((prereqId) => completedEventIds.has(prereqId));
+      const prereqsMet = areAllLmpPrerequisitesMet(item, completedEventIds);
       if (prereqsMet) {
         nextEvt = item;
         nextEventIndex = i;
@@ -61378,13 +61389,13 @@ const AddFlightTileModal = ({
     ].map((value) => String(value || "").trim()).filter(Boolean)));
     const isDone = (item) => Boolean(done.has(item.id) || done.has(item.code));
     const isScheduled = (item) => Boolean(scheduled.has(item.id) || scheduled.has(item.code));
-    const prerequisitesMet = (item) => (item.prerequisites || []).every((prerequisite) => done.has(prerequisite));
+    const prerequisitesMet = (item) => areAllLmpPrerequisitesMet(item, done);
     for (const item of lmp) {
       if (!isFlight(item) || item.isRemedial) continue;
       if (isDone(item) || isScheduled(item)) continue;
       if (prerequisitesMet(item)) return item;
     }
-    return lmp.find((item) => isFlight(item) && !isDone(item) && !isScheduled(item)) || lmp.find((item) => isFlight(item) && !isDone(item) && prerequisitesMet(item)) || lmp.find((item) => isFlight(item) && !isDone(item)) || null;
+    return lmp.find((item) => isFlight(item) && !isDone(item) && prerequisitesMet(item)) || null;
   }, [eventCategory, eventsForDate, findTraineeByRefOrName, flightType, normalisePersonNameForAddTile, picName, scores, selectedPicRef, selectedStudentRef, studentName, traineeLMPs]);
   const buildCallsignFromNumber = (_num) => {
     return "";
@@ -75955,7 +75966,7 @@ const PeopleTab = ({
       });
       for (const item of individualLMP) {
         if (completedEventIds.has(item.id) || item.code.includes(" MB")) continue;
-        const prereqsMet = item.prerequisites.every((p) => completedEventIds.has(p));
+        const prereqsMet = areAllLmpPrerequisitesMet(item, completedEventIds);
         if (prereqsMet) {
           if (item.code.startsWith("BNF") && item.type === "Flight") {
             waitingList.push({ trainee, event: item });
@@ -76143,7 +76154,7 @@ const PeopleTab = ({
         if (completedEventIds.has(item.id) || item.code.includes(" MB")) {
           continue;
         }
-        const prereqsMet = item.prerequisites.every((p) => completedEventIds.has(p));
+        const prereqsMet = areAllLmpPrerequisitesMet(item, completedEventIds);
         if (prereqsMet) {
           nextEvt = item;
           nextEventIndex = i;
@@ -103238,7 +103249,7 @@ const calculateCourseProgressMetric = (course, allTrainees, traineeLMPs, pt051As
       for (const item of traineeProgressEvents) {
         const eventCode2 = getEventCode(item);
         if (!eventCode2 || completedEventDates.has(eventCode2)) continue;
-        const prerequisitesMet = item.prerequisites.every((prereq) => {
+        const prerequisitesMet = getAllLmpPrerequisiteKeys(item).every((prereq) => {
           const prereqCode = traineeEventIdToCode.get(prereq) || prereq;
           return !traineeValidCodes.has(prereqCode) || completedEventDates.has(prereqCode);
         });
@@ -118347,9 +118358,7 @@ const getEffectiveLastCompletedEvent = (traineeName, publishedSchedules, buildDa
   }
   return lastEvent.flightNumber;
 };
-const normalizeLmpEventId = (value) => {
-  return String(value || "").replace(/\*/g, "").trim();
-};
+const normalizeLmpEventId = normaliseLmpPrerequisiteKey;
 const addLmpCompletionAlias = (completedEventIds, value) => {
   const raw = String(value || "").trim();
   const normalized = normalizeLmpEventId(raw);
@@ -118363,10 +118372,7 @@ const isCompletedLmpItem = (item, completedEventIds) => {
   );
 };
 const areLmpPrerequisitesMet = (item, completedEventIds) => {
-  return (item.prerequisites || []).every((prerequisite) => {
-    const normalized = normalizeLmpEventId(prerequisite);
-    return !normalized || completedEventIds.has(normalized);
-  });
+  return areAllLmpPrerequisitesMet(item, completedEventIds);
 };
 const getFallbackMasterLmpForTrainee = (trainee, masterSyllabus) => {
   const normaliseToken = (value) => String(value || "").trim().toUpperCase();
@@ -123189,7 +123195,7 @@ async function generateDfpInternal(config, setProgress, publishedSchedules) {
       sortieType: item?.sortieType || null,
       duration: typeof item?.duration === "number" ? item.duration : null,
       resourceNumber: typeof item?.resourceNumber === "number" ? item.resourceNumber : null,
-      prerequisites: item?.prerequisites || [],
+      prerequisites: getAllLmpPrerequisiteKeys(item),
       classificationBucket: classification.bucket,
       classificationReason: classification.reason
     };

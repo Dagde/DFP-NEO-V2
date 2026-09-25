@@ -36,6 +36,7 @@ import {
     PlatformConfig,
 } from './utils/platformConfigService';
 import { getTaskProfileAbbreviationsForUnit, getTaskProfilesForModel } from './utils/taskProfiles';
+import { areAllLmpPrerequisitesMet, getAllLmpPrerequisiteKeys, normaliseLmpPrerequisiteKey } from './utils/lmpPrerequisites';
 import {
     DEFAULT_RESOURCE_DISPLAY_NAMES,
     formatResourceLabel as formatConfiguredResourceLabel,
@@ -9388,9 +9389,7 @@ const getEffectiveLastCompletedEvent = (
     return lastEvent.flightNumber;
 };
 
-const normalizeLmpEventId = (value?: string | null): string => {
-    return String(value || '').replace(/\*/g, '').trim();
-};
+const normalizeLmpEventId = normaliseLmpPrerequisiteKey;
 
 const addLmpCompletionAlias = (completedEventIds: Set<string>, value?: string | null): void => {
     const raw = String(value || '').trim();
@@ -9413,10 +9412,7 @@ const isCompletedLmpItem = (item: SyllabusItemDetail, completedEventIds: Set<str
 };
 
 const areLmpPrerequisitesMet = (item: SyllabusItemDetail, completedEventIds: Set<string>): boolean => {
-    return (item.prerequisites || []).every(prerequisite => {
-        const normalized = normalizeLmpEventId(prerequisite);
-        return !normalized || completedEventIds.has(normalized);
-    });
+    return areAllLmpPrerequisitesMet(item, completedEventIds);
 };
 
 const getFallbackMasterLmpForTrainee = (
@@ -15404,7 +15400,7 @@ async function generateDfpInternal(
             sortieType: item?.sortieType || null,
             duration: typeof item?.duration === 'number' ? item.duration : null,
             resourceNumber: typeof item?.resourceNumber === 'number' ? item.resourceNumber : null,
-            prerequisites: item?.prerequisites || [],
+            prerequisites: getAllLmpPrerequisiteKeys(item),
             classificationBucket: classification.bucket,
             classificationReason: classification.reason,
         };

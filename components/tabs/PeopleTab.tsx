@@ -14,6 +14,7 @@ import {
   isFixedCrewLikeOperationalModel,
   normaliseOperationalModel,
 } from '../../utils/platformConfigService';
+import { areAllLmpPrerequisitesMet } from '../../utils/lmpPrerequisites';
 
 interface PeopleTabProps {
   date: string;
@@ -139,7 +140,7 @@ const PeopleTab: React.FC<PeopleTabProps> = ({
       for (const item of individualLMP) {
         if (completedEventIds.has(item.id) || item.code.includes(' MB')) continue;
         
-        const prereqsMet = item.prerequisites.every(p => completedEventIds.has(p));
+        const prereqsMet = areAllLmpPrerequisitesMet(item, completedEventIds);
         if (prereqsMet) {
           if (item.code.startsWith('BNF') && item.type === 'Flight') {
             waitingList.push({ trainee, event: item });
@@ -371,7 +372,7 @@ const PeopleTab: React.FC<PeopleTabProps> = ({
         if (completedEventIds.has(item.id) || item.code.includes(' MB')) {
           continue;
         }
-        const prereqsMet = item.prerequisites.every(p => completedEventIds.has(p));
+        const prereqsMet = areAllLmpPrerequisitesMet(item, completedEventIds);
         if (prereqsMet) {
           nextEvt = item;
           nextEventIndex = i;

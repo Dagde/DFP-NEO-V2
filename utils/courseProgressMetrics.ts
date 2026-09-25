@@ -1,4 +1,5 @@
 import { Course, SyllabusItemDetail, Trainee, TrainingReportAssessment } from '../types';
+import { getAllLmpPrerequisiteKeys } from './lmpPrerequisites';
 
 export interface CourseRiskThresholds {
     onTrackMax: number;
@@ -187,7 +188,7 @@ export const calculateCourseProgressMetric = (
             for (const item of traineeProgressEvents) {
                 const eventCode = getEventCode(item);
                 if (!eventCode || completedEventDates.has(eventCode)) continue;
-                const prerequisitesMet = item.prerequisites.every(prereq => {
+                const prerequisitesMet = getAllLmpPrerequisiteKeys(item).every(prereq => {
                     const prereqCode = traineeEventIdToCode.get(prereq) || prereq;
                     return !traineeValidCodes.has(prereqCode) || completedEventDates.has(prereqCode);
                 });

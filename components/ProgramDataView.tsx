@@ -3,6 +3,7 @@
 import React, { useMemo, useState } from 'react';
 import { ScheduleEvent, Instructor, Trainee, UnavailabilityPeriod, Score, SyllabusItemDetail } from '../types';
 import { DEFAULT_RESOURCE_DISPLAY_NAMES, type ResourceDisplayNames } from '../utils/resourceDisplayNames';
+import { areAllLmpPrerequisitesMet } from '../utils/lmpPrerequisites';
 
 
 interface ProgramDataViewProps {
@@ -371,7 +372,7 @@ const ProgramDataView: React.FC<ProgramDataViewProps> = ({
                 if (completedEventIds.has(item.id) || item.code.includes(' MB')) {
                     continue;
                 }
-                const prereqsMet = item.prerequisites.every(p => completedEventIds.has(p));
+                const prereqsMet = areAllLmpPrerequisitesMet(item, completedEventIds);
                 if (prereqsMet) {
                     nextEvt = item;
                     nextEventIndex = i;
@@ -511,7 +512,7 @@ const ProgramDataView: React.FC<ProgramDataViewProps> = ({
             for (const item of individualLMP) {
                 if (completedEventIds.has(item.id) || item.code.includes(' MB')) continue;
                 
-                const prereqsMet = item.prerequisites.every(p => completedEventIds.has(p));
+                const prereqsMet = areAllLmpPrerequisitesMet(item, completedEventIds);
                 if (prereqsMet) {
                     if (item.code.startsWith('BNF') && item.type === 'Flight') {
                         waitingList.push({ trainee, event: item });

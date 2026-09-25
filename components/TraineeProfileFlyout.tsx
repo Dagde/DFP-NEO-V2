@@ -67,6 +67,7 @@ import {
   getCrewPositionOptions,
   type CrewPositionTerminology,
 } from '../utils/crewPositionTerminology';
+import { areAllLmpPrerequisitesMet } from '../utils/lmpPrerequisites';
 import { DEFAULT_PHRASE_BANK } from '../config/phraseBankConfig';
 import { DEFAULT_SCT_TERMINOLOGY, normaliseSctTerminology, type SctTerminology } from '../utils/sctTerminology';
 import { getConfiguredServiceOptionsWithCurrent, resolveConfiguredServiceName } from '../utils/serviceAliases';
@@ -1488,7 +1489,7 @@ const TraineeProfileFlyout: React.FC<TraineeProfileFlyoutProps> = ({
             if (completedEventIds.has(item.id) || item.code.includes(' MB')) {
                 continue;
             }
-            const prereqsMet = item.prerequisites.every(prereqId => completedEventIds.has(prereqId));
+            const prereqsMet = areAllLmpPrerequisitesMet(item, completedEventIds);
             if (prereqsMet) {
                 nextEvt = item;
                 nextEventIndex = i;

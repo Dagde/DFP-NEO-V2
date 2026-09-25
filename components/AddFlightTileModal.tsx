@@ -40,6 +40,7 @@ import {
 } from '../utils/fixedCrewAvailability';
 import { handleEditableTextBeforeInput, handleEditableTextKeyDownCapture, stopEditableKeyPropagation } from '../utils/editableKeyEvents';
 import { buildCompactPersonNameResolver, getPersonStableKey, type PersonIdentityRecord } from '../utils/personIdentity';
+import { areAllLmpPrerequisitesMet } from '../utils/lmpPrerequisites';
 
 const CONTINUATION_COURSE_KEY = '__continuation_events__';
 
@@ -2715,16 +2716,14 @@ const AddFlightTileModal: React.FC<AddFlightTileModalProps> = ({
     ].map(value => String(value || '').trim()).filter(Boolean)));
     const isDone = (item: SyllabusItemDetail) => Boolean(done.has(item.id) || done.has(item.code));
     const isScheduled = (item: SyllabusItemDetail) => Boolean(scheduled.has(item.id) || scheduled.has(item.code));
-    const prerequisitesMet = (item: SyllabusItemDetail) => (item.prerequisites || []).every(prerequisite => done.has(prerequisite));
+    const prerequisitesMet = (item: SyllabusItemDetail) => areAllLmpPrerequisitesMet(item, done);
 
     for (const item of lmp) {
       if (!isFlight(item) || item.isRemedial) continue;
       if (isDone(item) || isScheduled(item)) continue;
       if (prerequisitesMet(item)) return item;
     }
-    return lmp.find(item => isFlight(item) && !isDone(item) && !isScheduled(item))
-      || lmp.find(item => isFlight(item) && !isDone(item) && prerequisitesMet(item))
-      || lmp.find(item => isFlight(item) && !isDone(item))
+    return lmp.find(item => isFlight(item) && !isDone(item) && prerequisitesMet(item))
       || null;
   }, [eventCategory, eventsForDate, findTraineeByRefOrName, flightType, normalisePersonNameForAddTile, picName, scores, selectedPicRef, selectedStudentRef, studentName, traineeLMPs]);
 
