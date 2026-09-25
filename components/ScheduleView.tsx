@@ -12399,6 +12399,7 @@ const ScheduleView: React.FC<ScheduleViewProps> = ({
     const [realtimeResourceConflictId, setRealtimeResourceConflictId] = useState<string | null>(null);
     const [draggedCptConflict, setDraggedCptConflict] = useState<Conflict | null>(null);
     const didDragRef = useRef(false);
+    const scheduleDirectMouseDragActiveRef = useRef(false);
     const schedulePointerDragActiveRef = useRef(false);
     const lastSchedulePointerMoveAtRef = useRef(0);
     const dragFrameRef = useRef<number | null>(null);
@@ -12549,6 +12550,7 @@ const ScheduleView: React.FC<ScheduleViewProps> = ({
     useEffect(() => {
         // Global drag handlers
         const handleGlobalMouseMove = (e: MouseEvent) => {
+            if (scheduleDirectMouseDragActiveRef.current) return;
             if (schedulePointerDragActiveRef.current && performance.now() - lastSchedulePointerMoveAtRef.current < 32) return;
             if (draggingStateRef.current || draggingState) {
                 handleMouseMove(e as any);
@@ -12556,6 +12558,7 @@ const ScheduleView: React.FC<ScheduleViewProps> = ({
         };
         
         const handleGlobalMouseUp = (e: MouseEvent) => {
+            if (scheduleDirectMouseDragActiveRef.current) return;
             if (schedulePointerDragActiveRef.current && performance.now() - lastSchedulePointerMoveAtRef.current < 32) return;
             if (draggingStateRef.current || draggingState) {
                 finishScheduleTileDrag();
@@ -13091,6 +13094,34 @@ const ScheduleView: React.FC<ScheduleViewProps> = ({
         setTimeout(() => { didDragRef.current = false; }, 0);
     };
 
+    const handleTileMouseDownDirect = (e: MouseEvent<HTMLDivElement>, event: ScheduleEvent) => {
+        if (e.button !== 0) return;
+        handleMouseDown(e, event);
+        if (!draggingStateRef.current) return;
+        scheduleDirectMouseDragActiveRef.current = true;
+
+        const handleDocumentMouseMove = (mouseEvent: globalThis.MouseEvent) => {
+            if (!draggingStateRef.current) return;
+            mouseEvent.preventDefault();
+            handleMouseMove(mouseEvent as unknown as MouseEvent<HTMLDivElement>);
+        };
+
+        const cleanupDocumentMouseDrag = () => {
+            scheduleDirectMouseDragActiveRef.current = false;
+            document.removeEventListener('mousemove', handleDocumentMouseMove);
+            document.removeEventListener('mouseup', handleDocumentMouseUp);
+        };
+
+        const handleDocumentMouseUp = (mouseEvent: globalThis.MouseEvent) => {
+            mouseEvent.preventDefault();
+            cleanupDocumentMouseDrag();
+            if (draggingStateRef.current) finishScheduleTileDrag();
+        };
+
+        document.addEventListener('mousemove', handleDocumentMouseMove, { passive: false });
+        document.addEventListener('mouseup', handleDocumentMouseUp, { once: true });
+    };
+
     const handleTilePointerDown = (e: React.PointerEvent<HTMLDivElement>, event: ScheduleEvent) => {
         if (e.button !== 0) return;
         if (isReadOnly) {
@@ -13589,8 +13620,7 @@ const ScheduleView: React.FC<ScheduleViewProps> = ({
                             } as any;
                             onSelectEvent(syntheticEvent);
                         }}
-                        onMouseDown={(e) => handleMouseDown(e, event)}
-                        onPointerDown={(e) => handleTilePointerDown(e, event)}
+                        onMouseDown={(e) => handleTileMouseDownDirect(e, event)}
                         onMouseEnter={() => {}}
                         onMouseLeave={() => {}}
                         pixelsPerHour={PIXELS_PER_HOUR * zoomLevel}

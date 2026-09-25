@@ -31728,11 +31728,11 @@ const SAMPLE_LIMIT = 80;
 const nowMs = () => typeof performance !== "undefined" ? performance.now() : Date.now();
 const getReport = () => {
   const existing = typeof window !== "undefined" ? window[REPORT_KEY] : null;
-  if (existing?.reportType === "dfp-drag-diagnostics" && Number(existing.version || 0) >= 2) return existing;
+  if (existing?.reportType === "dfp-drag-diagnostics" && Number(existing.version || 0) >= 3) return existing;
   const report = {
     reportType: "dfp-drag-diagnostics",
     generatedAt: (/* @__PURE__ */ new Date()).toISOString(),
-    version: 2,
+    version: 3,
     activeSessionId: null,
     sessions: []
   };
@@ -42030,6 +42030,7 @@ const ScheduleView = ({
   const [realtimeResourceConflictId, setRealtimeResourceConflictId] = reactExports.useState(null);
   const [draggedCptConflict, setDraggedCptConflict] = reactExports.useState(null);
   const didDragRef = reactExports.useRef(false);
+  const scheduleDirectMouseDragActiveRef = reactExports.useRef(false);
   const schedulePointerDragActiveRef = reactExports.useRef(false);
   const lastSchedulePointerMoveAtRef = reactExports.useRef(0);
   const dragFrameRef = reactExports.useRef(null);
@@ -42159,12 +42160,14 @@ const ScheduleView = ({
   const [validateOverlayTime, setValidateOverlayTime] = reactExports.useState(null);
   reactExports.useEffect(() => {
     const handleGlobalMouseMove = (e) => {
+      if (scheduleDirectMouseDragActiveRef.current) return;
       if (schedulePointerDragActiveRef.current && performance.now() - lastSchedulePointerMoveAtRef.current < 32) return;
       if (draggingStateRef.current || draggingState) {
         handleMouseMove(e);
       }
     };
     const handleGlobalMouseUp = (e) => {
+      if (scheduleDirectMouseDragActiveRef.current) return;
       if (schedulePointerDragActiveRef.current && performance.now() - lastSchedulePointerMoveAtRef.current < 32) return;
       if (draggingStateRef.current || draggingState) {
         finishScheduleTileDrag();
@@ -42620,46 +42623,28 @@ const ScheduleView = ({
       didDragRef.current = false;
     }, 0);
   };
-  const handleTilePointerDown = (e, event) => {
+  const handleTileMouseDownDirect = (e, event) => {
     if (e.button !== 0) return;
-    if (isReadOnly) {
-      didDragRef.current = false;
-      return;
-    }
-    e.preventDefault();
-    e.stopPropagation();
-    try {
-      e.currentTarget.setPointerCapture(e.pointerId);
-    } catch {
-    }
     handleMouseDown(e, event);
     if (!draggingStateRef.current) return;
-    schedulePointerDragActiveRef.current = true;
-    lastSchedulePointerMoveAtRef.current = 0;
-    const handlePointerMove = (pointerEvent) => {
+    scheduleDirectMouseDragActiveRef.current = true;
+    const handleDocumentMouseMove = (mouseEvent) => {
       if (!draggingStateRef.current) return;
-      lastSchedulePointerMoveAtRef.current = performance.now();
-      pointerEvent.preventDefault();
-      handleMouseMove(pointerEvent);
+      mouseEvent.preventDefault();
+      handleMouseMove(mouseEvent);
     };
-    const cleanupPointerListeners = () => {
-      schedulePointerDragActiveRef.current = false;
-      document.removeEventListener("pointermove", handlePointerMove);
-      document.removeEventListener("pointerup", handlePointerUp);
-      document.removeEventListener("pointercancel", handlePointerCancel);
+    const cleanupDocumentMouseDrag = () => {
+      scheduleDirectMouseDragActiveRef.current = false;
+      document.removeEventListener("mousemove", handleDocumentMouseMove);
+      document.removeEventListener("mouseup", handleDocumentMouseUp);
     };
-    const handlePointerUp = (pointerEvent) => {
-      pointerEvent.preventDefault();
-      cleanupPointerListeners();
+    const handleDocumentMouseUp = (mouseEvent) => {
+      mouseEvent.preventDefault();
+      cleanupDocumentMouseDrag();
       if (draggingStateRef.current) finishScheduleTileDrag();
     };
-    const handlePointerCancel = () => {
-      cleanupPointerListeners();
-      if (draggingStateRef.current) finishScheduleTileDrag();
-    };
-    document.addEventListener("pointermove", handlePointerMove, { passive: false });
-    document.addEventListener("pointerup", handlePointerUp, { once: true });
-    document.addEventListener("pointercancel", handlePointerCancel, { once: true });
+    document.addEventListener("mousemove", handleDocumentMouseMove, { passive: false });
+    document.addEventListener("mouseup", handleDocumentMouseUp, { once: true });
   };
   const timeStringToHours2 = reactExports.useCallback((timeString) => {
     if (!timeString || !/^\d{2}:\d{2}$/.test(timeString)) return null;
@@ -43057,8 +43042,7 @@ const ScheduleView = ({
               };
               onSelectEvent(syntheticEvent);
             },
-            onMouseDown: (e) => handleMouseDown(e, event),
-            onPointerDown: (e) => handleTilePointerDown(e, event),
+            onMouseDown: (e) => handleTileMouseDownDirect(e, event),
             onMouseEnter: () => {
             },
             onMouseLeave: () => {
