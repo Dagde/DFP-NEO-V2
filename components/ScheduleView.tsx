@@ -781,6 +781,7 @@ type InitialSetupWizardUploadResult = {
     headers?: string[];
     dataRows?: string[][];
     exampleRowDetection?: ExampleRowDetection;
+    suggestedExampleRowNumber?: number;
 };
 
 type InitialSetupWizardCheck = {
@@ -1081,6 +1082,7 @@ const validateWizardTemplateFile = async (
     template: InitialSetupWizardTemplate,
     file: File,
     skipConfirmedExampleRow = false,
+    confirmedExampleRowNumber?: number | null,
 ): Promise<InitialSetupWizardUploadResult> => {
     const { rows, worksheet, workbook } = await readWizardTemplateRows(file);
     const headerRowIndex = findWizardTemplateHeaderRowIndex(rows, template);
@@ -1094,13 +1096,14 @@ const validateWizardTemplateFile = async (
     const exampleRowDetection = worksheet && headers.length > 0
         ? detectStyledExampleRow(worksheet, headerRowIndex + 1, rawHeaderRow.length, workbook)
         : null;
+    const suggestedExampleRowNumber = exampleRowDetection?.rowNumber || 3;
     const dataRows = rows
         .slice(headerRowIndex + 1)
         .map((row, index) => ({
             excelRowNumber: headerRowIndex + index + 2,
             values: headerEntries.map((entry) => String(row[entry.index] || '').trim()),
         }))
-        .filter((record) => !(skipConfirmedExampleRow && exampleRowDetection?.isStyledExampleRow && record.excelRowNumber === exampleRowDetection.rowNumber))
+        .filter((record) => !(skipConfirmedExampleRow && confirmedExampleRowNumber && record.excelRowNumber === confirmedExampleRowNumber))
         .map((record) => record.values)
         .filter((row) => row.some((cell) => String(cell || '').trim()));
     const issues: string[] = [];
@@ -1119,15 +1122,16 @@ const validateWizardTemplateFile = async (
             ],
         };
     }
-    if (exampleRowDetection?.isStyledExampleRow && !skipConfirmedExampleRow) {
+    if (!skipConfirmedExampleRow) {
         return {
             status: 'needs-confirmation',
             fileName: file.name,
             rowCount: dataRows.length,
-            message: `Row ${exampleRowDetection.rowNumber} appears to be the styled example row. Confirm it is only an example so I can skip it before importing.`,
+            message: `Before importing ${file.name}, confirm whether it contains an example row that should be skipped.`,
             headers,
             dataRows,
-            exampleRowDetection,
+            exampleRowDetection: exampleRowDetection || undefined,
+            suggestedExampleRowNumber,
         };
     }
     return {
@@ -1138,6 +1142,7 @@ const validateWizardTemplateFile = async (
         headers,
         dataRows,
         exampleRowDetection: exampleRowDetection || undefined,
+        suggestedExampleRowNumber,
     };
 };
 
@@ -2918,6 +2923,7 @@ const InitialSetupWizard: React.FC<{
     const wizardCurrentStepMenuItemRef = useRef<HTMLButtonElement | null>(null);
     const [uploadResults, setUploadResults] = useState<Record<string, InitialSetupWizardUploadResult>>({});
     const [importConfirmations, setImportConfirmations] = useState<Record<string, string>>({});
+    const [exampleRowSelections, setExampleRowSelections] = useState<Record<string, number>>({});
     const [pendingTemplateId, setPendingTemplateId] = useState<string | null>(null);
     const [saveMessage, setSaveMessage] = useState('');
     const [uploadedStaffProfileRows, setUploadedStaffProfileRows] = useState<any[]>([]);
@@ -7094,7 +7100,12 @@ const InitialSetupWizard: React.FC<{
         fileInputRef.current?.click();
     };
 
-    const handleTemplateFile = async (templateId: string, file?: File | null, skipConfirmedExampleRow = false) => {
+    const handleTemplateFile = async (
+        templateId: string,
+        file?: File | null,
+        skipConfirmedExampleRow = false,
+        confirmedExampleRowNumber?: number | null,
+    ) => {
         if (!file) return;
         const template = initialSetupTemplates.find((item) => item.id === templateId);
         if (!template) return;
@@ -7111,8 +7122,14 @@ const InitialSetupWizard: React.FC<{
             [templateId]: { status: 'idle', fileName: file.name, message: `Checking ${file.name}...` },
         }));
         try {
-            const result = await validateWizardTemplateFile(template, file, skipConfirmedExampleRow);
+            const result = await validateWizardTemplateFile(template, file, skipConfirmedExampleRow, confirmedExampleRowNumber);
             setUploadResults((current) => ({ ...current, [templateId]: result }));
+            if (result.status === 'needs-confirmation') {
+                setExampleRowSelections((current) => ({
+                    ...current,
+                    [templateId]: result.suggestedExampleRowNumber || current[templateId] || 3,
+                }));
+            }
             pushWizardImportDiag('template:validated', {
                 templateId,
                 fileName: file.name,
@@ -7162,13 +7179,14 @@ const InitialSetupWizard: React.FC<{
         }
     };
 
-    const confirmWizardTemplateExampleRow = (templateId: string) => {
+    const confirmWizardTemplateExampleRow = (templateId: string, hasExampleRow = true) => {
         const pendingFile = pendingWizardTemplateFilesRef.current[templateId];
         if (!pendingFile) {
-            setSaveMessage('Upload the file again so I can confirm and skip the example row.');
+            setSaveMessage('Upload the file again so I can confirm the example row choice.');
             return;
         }
-        void handleTemplateFile(templateId, pendingFile, true);
+        const selectedRow = Number(exampleRowSelections[templateId] || 3);
+        void handleTemplateFile(templateId, pendingFile, true, hasExampleRow && Number.isFinite(selectedRow) ? selectedRow : null);
     };
 
     const parseWizardTemplateList = (value: string): string[] => String(value || '')
@@ -7183,10 +7201,16 @@ const InitialSetupWizard: React.FC<{
 
     const normaliseWizardTemplateEventType = (value: string): SyllabusItemDetail['type'] => {
         const clean = String(value || '').trim().toLowerCase();
+        if (clean.includes('procedural trainer') || clean.includes('procedural') || clean.includes('trainer')) return 'FTD';
         if (clean.includes('ftd') || clean.includes('sim')) return 'FTD';
         if (clean.includes('academic')) return 'Academics';
         if (clean.includes('ground')) return 'Ground School';
         return 'Flight';
+    };
+
+    const isWizardProceduralTrainerType = (value: string): boolean => {
+        const clean = String(value || '').trim().toLowerCase();
+        return clean.includes('procedural trainer') || clean.includes('procedural') || clean.includes('trainer');
     };
 
     const buildWizardCourseUploadItems = (result: InitialSetupWizardUploadResult): SyllabusItemDetail[] => {
@@ -7200,6 +7224,11 @@ const InitialSetupWizard: React.FC<{
                 .filter(Boolean);
             const itemCourses = courses.length > 0 ? courses : [masterLmp];
             const eventType = normaliseWizardTemplateEventType(getWizardCellByHeader(headers, row, 'Type'));
+            const sourceEventType = getWizardCellByHeader(headers, row, 'Type');
+            const methodOfDelivery = parseWizardTemplateList(getWizardCellByAnyHeader(headers, row, ['Method/s of Delivery', 'Method Of Delivery', 'Delivery Method']));
+            if (isWizardProceduralTrainerType(sourceEventType) && !methodOfDelivery.some(label => label.toLowerCase() === 'procedural trainer')) {
+                methodOfDelivery.push('Procedural Trainer');
+            }
             const flightOrSimHours = parseWizardTemplateNumber(getWizardCellByAnyHeader(headers, row, ['Flight or Sim Hours', 'Flight Or Sim Hours', 'Flight/Sim Hours', 'Flight Sim Hours']), 0);
             const totalEventHours = parseWizardTemplateNumber(getWizardCellByAnyHeader(headers, row, ['Total Event Hours', 'Total Hours']), flightOrSimHours);
             const duration = parseWizardTemplateNumber(getWizardCellByAnyHeader(headers, row, ['Duration Minutes', 'Duration', 'Total Event Hours', 'Flight or Sim Hours']), flightOrSimHours || totalEventHours || 0);
@@ -7224,7 +7253,7 @@ const InitialSetupWizard: React.FC<{
                 sortieType: (getWizardCellByAnyHeader(headers, row, ['Sortie Type', 'Dual/Solo']) || undefined) as SyllabusItemDetail['sortieType'],
                 twrDiReqd: (getWizardCellByAnyHeader(headers, row, ['Twr Di Reqd', 'TWR DI Required']) || 'NO') as SyllabusItemDetail['twrDiReqd'],
                 cctOnly: (getWizardCellByAnyHeader(headers, row, ['Cct Only', 'CCT Only']) || 'NO') as SyllabusItemDetail['cctOnly'],
-                methodOfDelivery: parseWizardTemplateList(getWizardCellByAnyHeader(headers, row, ['Method/s of Delivery', 'Method Of Delivery', 'Delivery Method'])),
+                methodOfDelivery,
                 methodOfAssessment: parseWizardTemplateList(getWizardCellByAnyHeader(headers, row, ['Type/s and Method/s of Assessment', 'Method Of Assessment', 'Assessment Method'])),
                 resourcesPhysical: parseWizardTemplateList(getWizardCellByAnyHeader(headers, row, ['Resources Required (physical)', 'Resources Physical', 'Aircraft Type', 'Resource'])),
                 resourceNumber: parseWizardTemplateNumber(getWizardCellByAnyHeader(headers, row, ['Resource Number', 'Resources Required Number']), 0),
@@ -11214,15 +11243,40 @@ const InitialSetupWizard: React.FC<{
                                     {needsConfirmation ? (
                                         <div className="mt-3 rounded-md border border-amber-300 bg-white px-3 py-2">
                                             <p className="font-semibold text-amber-900">
-                                                Confirm row {result.exampleRowDetection?.rowNumber || 2} is an example row only and should not be imported.
+                                                Does this template include an example row that should not be imported?
                                             </p>
-                                            <button
-                                                type="button"
-                                                className={`${wizardPrimaryButtonClass} mt-3`}
-                                                onClick={() => confirmWizardTemplateExampleRow(template.id)}
-                                            >
-                                                Confirm and skip example row
-                                            </button>
+                                            <label className="mt-2 block text-[11px] font-bold uppercase tracking-[0.12em] text-amber-800">
+                                                Example row number
+                                            </label>
+                                            <input
+                                                type="number"
+                                                min={1}
+                                                value={exampleRowSelections[template.id] || result.suggestedExampleRowNumber || 3}
+                                                onChange={(event) => {
+                                                    const rowNumber = Number(event.target.value);
+                                                    setExampleRowSelections((current) => ({
+                                                        ...current,
+                                                        [template.id]: Number.isFinite(rowNumber) ? rowNumber : 3,
+                                                    }));
+                                                }}
+                                                className="mt-1 w-full rounded-md border border-amber-300 bg-amber-50 px-2 py-1.5 text-sm font-semibold text-slate-950 outline-none focus:border-orange-400"
+                                            />
+                                            <div className="mt-3 flex flex-wrap gap-2">
+                                                <button
+                                                    type="button"
+                                                    className={wizardPrimaryButtonClass}
+                                                    onClick={() => confirmWizardTemplateExampleRow(template.id, true)}
+                                                >
+                                                    Yes, skip this row
+                                                </button>
+                                                <button
+                                                    type="button"
+                                                    className={wizardSmallButtonClass}
+                                                    onClick={() => confirmWizardTemplateExampleRow(template.id, false)}
+                                                >
+                                                    No, import all rows
+                                                </button>
+                                            </div>
                                         </div>
                                     ) : null}
                                     {isValid ? (

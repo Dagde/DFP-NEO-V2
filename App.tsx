@@ -15498,8 +15498,8 @@ async function generateDfpInternal(
         if (!item) return { bucket: 'none', reason: 'NO_EVENT' };
         const eventType = String(item.type || '').trim();
         if (eventType === 'Flight') return { bucket: 'flight', reason: 'TYPE_FLIGHT' };
-        if (eventType === 'FTD') return { bucket: 'ftd', reason: 'TYPE_FTD' };
         if (isBuildCptTrainingEvent(item)) return { bucket: 'cpt', reason: 'CPT_TYPE_CODE_OR_DELIVERY' };
+        if (eventType === 'FTD') return { bucket: 'ftd', reason: 'TYPE_FTD' };
         if (eventType === 'Ground School') return { bucket: 'ground', reason: 'TYPE_GROUND_SCHOOL' };
         return { bucket: 'none', reason: 'UNSUPPORTED_EVENT_TYPE' };
     };
