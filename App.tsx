@@ -912,8 +912,9 @@ const FIXED_CREW_DEFAULT_CURRENCY_DURATION_HOURS = 2;
 const NEO_ASSIST_POINTER_DROP_EVENT = 'neoAssistPointerDrop';
 const NEO_ASSIST_DRAG_DIAGNOSTIC_EVENT = 'neoAssistDragDiagnostic';
 const NEO_ASSIST_DRAG_DIAGNOSTIC_STORAGE_KEY = 'neo_assist_drag_diagnostic_report';
-const DFP_DRAG_DIAGNOSTIC_STORAGE_KEY = 'dfp_drag_diagnostics_report';
 const NEO_ASSIST_DRAG_DIAGNOSTIC_VERSION = 2;
+const NEO_TILE_DIAGNOSTIC_STORAGE_KEY = 'neo_tile_diagnostic_report';
+const NEO_TILE_DIAGNOSTIC_VERSION = 1;
 
 type NeoAssistDragDiagnosticEntry = {
     id?: string;
@@ -929,6 +930,88 @@ const getNeoAssistPerfNow = (): number => (
         ? performance.now()
         : Date.now()
 );
+
+const recordNeoTileDiagnostic = (entry: Omit<NeoAssistDragDiagnosticEntry, 'at' | 'perfMs'> & { perfMs?: number }) => {
+    if (typeof window === 'undefined') return;
+    const fullEntry: NeoAssistDragDiagnosticEntry = {
+        ...entry,
+        at: new Date().toISOString(),
+        perfMs: typeof entry.perfMs === 'number' ? Math.round(entry.perfMs * 100) / 100 : Math.round(getNeoAssistPerfNow() * 100) / 100,
+    };
+    try {
+        const win = window as any;
+        const entries: NeoAssistDragDiagnosticEntry[] = Array.isArray(win.__neoTileDiagnostics)
+            ? win.__neoTileDiagnostics
+            : [];
+        entries.push(fullEntry);
+        const trimmed = entries.slice(-500);
+        win.__neoTileDiagnostics = trimmed;
+        window.localStorage?.setItem(NEO_TILE_DIAGNOSTIC_STORAGE_KEY, JSON.stringify({
+            generatedAt: new Date().toISOString(),
+            app: 'DFP-NEO',
+            reportType: 'neo-tile-diagnostic',
+            version: NEO_TILE_DIAGNOSTIC_VERSION,
+            userAgent: window.navigator?.userAgent || '',
+            viewport: {
+                width: window.innerWidth,
+                height: window.innerHeight,
+                devicePixelRatio: window.devicePixelRatio,
+            },
+            entries: trimmed,
+        }));
+    } catch (error) {
+        console.warn('[NEO Tile Diagnostic] Failed to record entry:', error);
+    }
+};
+
+const downloadNeoTileDiagnosticReport = () => {
+    if (typeof window === 'undefined') return;
+    try {
+        recordNeoTileDiagnostic({
+            stage: 'top-neo-tile-report-download-requested',
+            details: {
+                existingEntryCount: Array.isArray((window as any).__neoTileDiagnostics)
+                    ? (window as any).__neoTileDiagnostics.length
+                    : 0,
+            },
+        });
+        const stored = window.localStorage?.getItem(NEO_TILE_DIAGNOSTIC_STORAGE_KEY);
+        const fallbackEntries = Array.isArray((window as any).__neoTileDiagnostics)
+            ? (window as any).__neoTileDiagnostics
+            : [];
+        const report = stored
+            ? JSON.parse(stored)
+            : {
+                generatedAt: new Date().toISOString(),
+                app: 'DFP-NEO',
+                reportType: 'neo-tile-diagnostic',
+                version: NEO_TILE_DIAGNOSTIC_VERSION,
+                entries: fallbackEntries,
+            };
+        report.downloadedAt = new Date().toISOString();
+        if (!Array.isArray(report.entries) || report.entries.length === 0) {
+            report.entries = [{
+                stage: 'report-empty',
+                at: new Date().toISOString(),
+                details: {
+                    reason: 'No top-toolbar NEO Tile activity was captured before this report was downloaded.',
+                    nextStep: 'Click the top toolbar NEO - Tile button, place a tile on the DFP, then download this report again.',
+                },
+            }];
+        }
+        const blob = new Blob([JSON.stringify(report, null, 2)], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = `neo-tile-diagnostic-${new Date().toISOString().replace(/[:.]/g, '-')}.json`;
+        document.body.appendChild(link);
+        link.click();
+        link.remove();
+        URL.revokeObjectURL(url);
+    } catch (error) {
+        console.error('[NEO Tile Diagnostic] Failed to download report:', error);
+    }
+};
 
 const recordNeoAssistDragDiagnostic = (entry: Omit<NeoAssistDragDiagnosticEntry, 'at' | 'perfMs'> & { perfMs?: number }) => {
     if (typeof window === 'undefined') return;
@@ -969,74 +1052,6 @@ const recordNeoAssistDragDiagnostic = (entry: Omit<NeoAssistDragDiagnosticEntry,
         }
     } catch (error) {
         console.warn('[NEO Assist Drag Diagnostic] Failed to record entry:', error);
-    }
-};
-
-const downloadNeoAssistDragDiagnosticReport = () => {
-    if (typeof window === 'undefined') return;
-    try {
-        recordNeoAssistDragDiagnostic({
-            stage: 'report-download-requested',
-            details: {
-                existingEntryCount: Array.isArray((window as any).__neoAssistDragDiagnostics)
-                    ? (window as any).__neoAssistDragDiagnostics.length
-                    : 0,
-            },
-        });
-        const stored = window.localStorage?.getItem(NEO_ASSIST_DRAG_DIAGNOSTIC_STORAGE_KEY);
-        const fallbackEntries = Array.isArray((window as any).__neoAssistDragDiagnostics)
-            ? (window as any).__neoAssistDragDiagnostics
-            : [];
-        const report = stored
-            ? JSON.parse(stored)
-            : {
-                generatedAt: new Date().toISOString(),
-                app: 'DFP-NEO',
-                reportType: 'neo-assist-drag-diagnostic',
-                version: NEO_ASSIST_DRAG_DIAGNOSTIC_VERSION,
-                entries: fallbackEntries,
-            };
-        const dfpDragStored = window.localStorage?.getItem(DFP_DRAG_DIAGNOSTIC_STORAGE_KEY);
-        if (dfpDragStored) {
-            try {
-                const parsedDfpDragReport = JSON.parse(dfpDragStored);
-                report.dfpScheduleTileDragDiagnostics = parsedDfpDragReport;
-                const dfpGeneratedAt = Date.parse(String(parsedDfpDragReport?.generatedAt || ''));
-                const reportGeneratedAt = Date.parse(String(report.generatedAt || new Date().toISOString()));
-                if (Number.isFinite(dfpGeneratedAt) && Number.isFinite(reportGeneratedAt) && reportGeneratedAt - dfpGeneratedAt > 60000) {
-                    report.dfpScheduleTileDragDiagnosticsStale = true;
-                    report.dfpScheduleTileDragDiagnosticsNote = 'The attached DFP schedule tile drag diagnostics are more than one minute older than this report download and may not describe the drag just tested.';
-                }
-            } catch {
-                report.dfpScheduleTileDragDiagnostics = { parseError: true, rawLength: dfpDragStored.length };
-            }
-        }
-        if (!Array.isArray(report.entries) || report.entries.length === 0) {
-            report.entries = [{
-                stage: 'report-empty',
-                at: new Date().toISOString(),
-                details: {
-                    reason: 'No NEO Assist pointer or drag activity was captured before this report was downloaded.',
-                    nextStep: 'Open NEO Assist, perform the laggy drag action, then download the report again before refreshing the page.',
-                },
-            }];
-        } else if (!report.entries.some((entry: NeoAssistDragDiagnosticEntry) => ['pointer-down', 'mini-timeline-drag-start'].includes(String(entry.stage || '')))) {
-            report.diagnosticNote = 'NEO Assist pointer activity was captured, but no recognised drag start was recorded. The tested control is not using the instrumented drag path yet.';
-        } else if (!report.entries.some((entry: NeoAssistDragDiagnosticEntry) => ['pointer-up', 'mini-timeline-drag-commit', 'mini-timeline-drag-commit-slow'].includes(String(entry.stage || '')))) {
-            report.diagnosticNote = 'A NEO Assist drag started, but no drag completion was captured. The pointer may be cancelling, leaving the panel, or being handled by another layer.';
-        }
-        report.downloadedAt = new Date().toISOString();
-        const blob = new Blob([JSON.stringify(report, null, 2)], { type: 'application/json' });
-        const url = URL.createObjectURL(blob);
-        const link = document.createElement('a');
-        link.href = url;
-        link.download = `neo-assist-drag-diagnostic-${new Date().toISOString().replace(/[:.]/g, '-')}.json`;
-        document.body.appendChild(link);
-        link.click();
-        link.remove();
-        URL.revokeObjectURL(url);
-    } catch (error) {
-        console.error('[NEO Assist Drag Diagnostic] Failed to download report:', error);
     }
 };
 
@@ -7962,14 +7977,6 @@ const DfpSidePanelTimeline: React.FC<{
                     <div className="flex justify-self-end items-center gap-2">
                         <button
                             type="button"
-                            onClick={downloadNeoAssistDragDiagnosticReport}
-                            title="Download recent NEO Assist drag timing diagnostics"
-                            className="rounded-md border border-orange-400/40 bg-orange-400/10 px-2.5 py-1.5 text-[11px] font-semibold text-orange-50 transition hover:border-orange-200"
-                        >
-                            Drag Report
-                        </button>
-                        <button
-                            type="button"
                             onClick={() => {
                                 if (usesNeoAssistModeHeader) setAirCombatAssistMode('wizard');
                             }}
@@ -7986,14 +7993,6 @@ const DfpSidePanelTimeline: React.FC<{
                         <h3 className="text-sm font-semibold text-white">NEO Assist</h3>
                     </div>
                     <div className="flex shrink-0 items-center gap-2">
-                        <button
-                            type="button"
-                            onClick={downloadNeoAssistDragDiagnosticReport}
-                            title="Download recent NEO Assist drag timing diagnostics"
-                            className="rounded-md border border-orange-400/40 bg-orange-400/10 px-2.5 py-1.5 text-[11px] font-semibold text-orange-50 transition hover:border-orange-200"
-                        >
-                            Drag Report
-                        </button>
                         <button
                             type="button"
                             onClick={onOpenPrioritiesExclusions}
@@ -34861,6 +34860,17 @@ const App: React.FC = () => {
         startTime: Number.NaN,
         resourceId: '',
     });
+    const oracleTileDragSessionRef = useRef<{
+        sessionId: string;
+        startedAt: number;
+        lastMoveAt: number;
+        moveCount: number;
+        analysisCount: number;
+        slowAnalysisCount: number;
+        maxMoveGapMs: number;
+        maxAnalysisMs: number;
+        firstMoveDelayMs?: number;
+    } | null>(null);
 
 
     // Continuation and remedial state.
@@ -51842,6 +51852,16 @@ appliedUpdates.forEach(update => {
             setOracleAnalysis(null);
             setOraclePreviewEvent(null);
         }
+        recordNeoTileDiagnostic({
+            stage: isOracleMode ? 'top-neo-tile-mode-disabled' : 'top-neo-tile-mode-enabled',
+            details: {
+                activeView,
+                context: isNextDay ? 'nextDayBuild' : 'program',
+                activeOperationalModel,
+                activeUnitCode,
+                school,
+            },
+        });
         setIsOracleMode(prev => !prev);
     }, [activeOperationalModel, activeOperationalModelLabel, activeUnitCode, isNeoCapableOperationalModel, isOracleMode, activeView, canRunNeoBuild, denyPlatformAction, school]);
 
@@ -51972,6 +51992,29 @@ appliedUpdates.forEach(update => {
         oracleMoveAnalysisRef.current = { checkedAt: 0, startTime: Number.NaN, resourceId: '' };
         oraclePendingMoveRef.current = null;
         oraclePreviewEventRef.current = mockEvent;
+        const startedAt = getNeoAssistPerfNow();
+        const sessionId = `top-neo-tile-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+        oracleTileDragSessionRef.current = {
+            sessionId,
+            startedAt,
+            lastMoveAt: startedAt,
+            moveCount: 0,
+            analysisCount: 0,
+            slowAnalysisCount: 0,
+            maxMoveGapMs: 0,
+            maxAnalysisMs: 0,
+        };
+        recordNeoTileDiagnostic({
+            sessionId,
+            stage: 'top-neo-tile-drag-start',
+            perfMs: startedAt,
+            details: {
+                startTime,
+                resourceId,
+                context: oracleContext,
+                date: oracleContext === 'nextDayBuild' ? buildDfpDate : date,
+            },
+        });
         setOraclePreviewEvent(mockEvent);
     }, [date, buildDfpDate, oracleContext, school]);
 
@@ -51980,6 +52023,25 @@ appliedUpdates.forEach(update => {
         if (!currentPreview || !oracleAnalysis) return;
 
         const now = typeof performance !== 'undefined' ? performance.now() : Date.now();
+        const dragSession = oracleTileDragSessionRef.current;
+        if (dragSession) {
+            const gapMs = now - dragSession.lastMoveAt;
+            dragSession.moveCount += 1;
+            dragSession.maxMoveGapMs = Math.max(dragSession.maxMoveGapMs, gapMs);
+            dragSession.lastMoveAt = now;
+            if (dragSession.moveCount === 1) {
+                dragSession.firstMoveDelayMs = now - dragSession.startedAt;
+                recordNeoTileDiagnostic({
+                    sessionId: dragSession.sessionId,
+                    stage: 'top-neo-tile-first-move',
+                    details: {
+                        firstMoveDelayMs: Math.round(dragSession.firstMoveDelayMs * 100) / 100,
+                        startTime: newStartTime,
+                        resourceId: newResourceId,
+                    },
+                });
+            }
+        }
         const lastAnalysis = oracleMoveAnalysisRef.current;
         const shouldRefreshAvailability =
             now - lastAnalysis.checkedAt > 150 ||
@@ -51991,6 +52053,7 @@ appliedUpdates.forEach(update => {
         let traineeLabel: string | undefined;
 
         if (shouldRefreshAvailability) {
+            const analysisStartedAt = getNeoAssistPerfNow();
             oracleMoveAnalysisRef.current = { checkedAt: now, startTime: newStartTime, resourceId: newResourceId };
             const currentEvents = (oracleContext === 'nextDayBuild'
                 ? nextDayBuildEvents.map(e => ({ ...e, date: buildDfpDate }))
@@ -52027,6 +52090,24 @@ appliedUpdates.forEach(update => {
 
             instructorLabel = instructorAvailable ? 'Instructor ✓' : 'NO INSTRUCTOR ✕';
             traineeLabel = traineeAvailable ? 'Trainee ✓' : 'NO TRAINEE ✕';
+            const analysisElapsed = getNeoAssistPerfNow() - analysisStartedAt;
+            if (dragSession) {
+                dragSession.analysisCount += 1;
+                dragSession.maxAnalysisMs = Math.max(dragSession.maxAnalysisMs, analysisElapsed);
+                if (analysisElapsed > 20) {
+                    dragSession.slowAnalysisCount += 1;
+                    recordNeoTileDiagnostic({
+                        sessionId: dragSession.sessionId,
+                        stage: 'top-neo-tile-availability-slow',
+                        details: {
+                            elapsedMs: Math.round(analysisElapsed * 100) / 100,
+                            analysisCount: dragSession.analysisCount,
+                            startTime: newStartTime,
+                            resourceId: newResourceId,
+                        },
+                    });
+                }
+            }
         }
 
         oraclePendingMoveRef.current = {
@@ -52059,6 +52140,7 @@ appliedUpdates.forEach(update => {
     }, [oracleAnalysis, eventsForDate, date, nextDayBuildEvents, buildDfpDate, oracleContext, syllabusDetails]);
 
     const handleOracleMouseUp = useCallback(() => {
+        const mouseUpStartedAt = getNeoAssistPerfNow();
         let activePreviewEvent = oraclePreviewEventRef.current || oraclePreviewEvent;
         const pendingMove = oraclePendingMoveRef.current;
         if (activePreviewEvent && pendingMove) {
@@ -52077,6 +52159,7 @@ appliedUpdates.forEach(update => {
             oracleMoveFrameRef.current = null;
         }
         if (!activePreviewEvent || !oracleAnalysis) return;
+        const dragSession = oracleTileDragSessionRef.current;
 
         const currentEvents = (oracleContext === 'nextDayBuild' ? nextDayBuildEvents.map(e => ({...e, date: buildDfpDate})) : eventsForDate).filter(e => !e.resourceId.startsWith('STBY') && !e.resourceId.startsWith('BNF-STBY'));
         const analysisDate = oracleContext === 'nextDayBuild' ? buildDfpDate : date;
@@ -52196,6 +52279,27 @@ appliedUpdates.forEach(update => {
         setSelectedEvent(newEvent);
         setIsEditingDefault(true);
         oraclePreviewEventRef.current = null;
+        if (dragSession) {
+            recordNeoTileDiagnostic({
+                sessionId: dragSession.sessionId,
+                stage: 'top-neo-tile-drag-end',
+                details: {
+                    totalMs: Math.round((getNeoAssistPerfNow() - dragSession.startedAt) * 100) / 100,
+                    mouseUpMs: Math.round((getNeoAssistPerfNow() - mouseUpStartedAt) * 100) / 100,
+                    moveCount: dragSession.moveCount,
+                    analysisCount: dragSession.analysisCount,
+                    slowAnalysisCount: dragSession.slowAnalysisCount,
+                    maxMoveGapMs: Math.round(dragSession.maxMoveGapMs * 100) / 100,
+                    maxAnalysisMs: Math.round(dragSession.maxAnalysisMs * 100) / 100,
+                    firstMoveDelayMs: dragSession.firstMoveDelayMs !== undefined ? Math.round(dragSession.firstMoveDelayMs * 100) / 100 : null,
+                    finalStartTime: activePreviewEvent.startTime,
+                    finalResourceId: activePreviewEvent.resourceId,
+                    availableInstructorCount: availableInstructors.length,
+                    availableTraineeCount: availableTraineesAnalysis.length,
+                },
+            });
+            oracleTileDragSessionRef.current = null;
+        }
         setOraclePreviewEvent(null);
 
     }, [oraclePreviewEvent, oracleAnalysis, date, school, eventsForDate, nextDayBuildEvents, buildDfpDate, oracleContext, syllabusDetails, classifyStartBySolarDaylight]);
@@ -56495,6 +56599,7 @@ appliedUpdates.forEach(update => {
                     isOracleMode={isOracleMode}
                     onToggleOracleMode={handleToggleOracleMode}
                     onQuickTile={handleQuickTile}
+                    onDownloadNeoTileReport={downloadNeoTileDiagnosticReport}
                     showDepartureDensityOverlay={showDepartureDensityOverlay}
                     onToggleDepartureDensityOverlay={() => {
                         if (!canUseDispatchRate) {
