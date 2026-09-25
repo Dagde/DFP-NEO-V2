@@ -46118,6 +46118,14 @@ const App: React.FC = () => {
                 }));
                 markNeoBuildTiming(timingReport, 'state:setNextDayBuildEvents', { generated: generated.length });
                 logNeoBuildUiDebug('🚀 [NEO-Build] setNextDayBuildEvents called with', generated.length, 'events');
+                if (generated.length === 0) {
+                    void showDarkAlert(
+                        'NEO Build completed but did not add any tiles. Open the NEO Build page and click Download Build Report to export the diagnostic report for this run.',
+                        'No Tiles Added',
+                        'warning',
+                        12000
+                    );
+                }
 
                 const consumedRemedialPriorityIds = new Set(
                     config.remedialRequests
@@ -53129,6 +53137,7 @@ appliedUpdates.forEach(update => {
                             aircraftNumberSettings={aircraftNumberSettings}
                             onExternalEventDrop={handleNextDayExternalEventDrop}
                             diagnosticHighlightedEventIds={staffAvailabilityDiagnosticEventIds}
+                            onDownloadBuildReport={handleDownloadNeoBuildReport}
                        />;
             case 'Priorities':
                 return <PrioritiesViewWithMenu

@@ -69064,7 +69064,8 @@ const NextDayBuildView = ({
   aircraftConfigLabelsByResource,
   aircraftNumberSettings,
   onExternalEventDrop,
-  diagnosticHighlightedEventIds = /* @__PURE__ */ new Set()
+  diagnosticHighlightedEventIds = /* @__PURE__ */ new Set(),
+  onDownloadBuildReport
 }) => {
   const scrollContainerRef = reactExports.useRef(null);
   const scheduleGridRef = reactExports.useRef(null);
@@ -69970,7 +69971,19 @@ const NextDayBuildView = ({
               ] }),
               /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "neo-build-label", children: "NEO Build" })
             ] }) }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "sticky top-0 z-20 bg-gray-800 border-b border-gray-700 relative", children: renderTimeHeaders() }),
+            /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "sticky top-0 z-20 bg-gray-800 border-b border-gray-700 relative", children: [
+              renderTimeHeaders(),
+              onDownloadBuildReport && /* @__PURE__ */ jsxRuntimeExports.jsx(
+                "button",
+                {
+                  type: "button",
+                  onClick: onDownloadBuildReport,
+                  className: "absolute left-3 top-1/2 z-30 -translate-y-1/2 rounded border border-amber-400/65 bg-slate-950/90 px-3 py-1.5 text-[11px] font-bold uppercase tracking-[0.08em] text-amber-100 shadow-lg shadow-black/35 transition hover:border-amber-200 hover:bg-amber-500/20",
+                  title: "Download the latest NEO Build diagnostic report",
+                  children: "Download Build Report"
+                }
+              )
+            ] }),
             /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "sticky left-0 z-30 bg-gray-800 border-r border-gray-700", children: /* @__PURE__ */ jsxRuntimeExports.jsx(
               AirframeColumn,
               {
@@ -147286,7 +147299,7 @@ The proposed event was not scheduled. Re-open the event and choose Accept Confli
     setShowDateWarning(false);
     void startBuildProcess();
   };
-  reactExports.useCallback(() => {
+  const handleDownloadNeoBuildReport = reactExports.useCallback(() => {
     if (typeof window === "undefined") return;
     const readJsonStorage = (key) => {
       try {
@@ -148378,6 +148391,14 @@ The proposed event was not scheduled. Re-open the event and choose Accept Confli
         }));
         markNeoBuildTiming(timingReport, "state:setNextDayBuildEvents", { generated: generated.length });
         logNeoBuildUiDebug("🚀 [NEO-Build] setNextDayBuildEvents called with", generated.length, "events");
+        if (generated.length === 0) {
+          void showDarkAlert2(
+            "NEO Build completed but did not add any tiles. Open the NEO Build page and click Download Build Report to export the diagnostic report for this run.",
+            "No Tiles Added",
+            "warning",
+            12e3
+          );
+        }
         const consumedRemedialPriorityIds = new Set(
           config.remedialRequests.filter((request) => request.forceSchedule).map((request) => `remedial-${request.traineeId}-${request.eventCode}`)
         );
@@ -154180,7 +154201,8 @@ ${error instanceof Error ? error.message : String(error)}`,
             aircraftConfigLabelsByResource: nextDayBuildAircraftConfigLabelsByResource,
             aircraftNumberSettings,
             onExternalEventDrop: handleNextDayExternalEventDrop,
-            diagnosticHighlightedEventIds: staffAvailabilityDiagnosticEventIds
+            diagnosticHighlightedEventIds: staffAvailabilityDiagnosticEventIds,
+            onDownloadBuildReport: handleDownloadNeoBuildReport
           }
         );
       case "Priorities":
