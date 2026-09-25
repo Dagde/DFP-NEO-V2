@@ -31728,11 +31728,11 @@ const SAMPLE_LIMIT = 80;
 const nowMs = () => typeof performance !== "undefined" ? performance.now() : Date.now();
 const getReport = () => {
   const existing = typeof window !== "undefined" ? window[REPORT_KEY] : null;
-  if (existing?.reportType === "dfp-drag-diagnostics") return existing;
+  if (existing?.reportType === "dfp-drag-diagnostics" && Number(existing.version || 0) >= 2) return existing;
   const report = {
     reportType: "dfp-drag-diagnostics",
     generatedAt: (/* @__PURE__ */ new Date()).toISOString(),
-    version: 1,
+    version: 2,
     activeSessionId: null,
     sessions: []
   };
@@ -42031,6 +42031,7 @@ const ScheduleView = ({
   const [draggedCptConflict, setDraggedCptConflict] = reactExports.useState(null);
   const didDragRef = reactExports.useRef(false);
   const schedulePointerDragActiveRef = reactExports.useRef(false);
+  const lastSchedulePointerMoveAtRef = reactExports.useRef(0);
   const dragFrameRef = reactExports.useRef(null);
   const dragGridRectRef = reactExports.useRef(null);
   const lastDragUpdateSignatureRef = reactExports.useRef("");
@@ -42158,13 +42159,13 @@ const ScheduleView = ({
   const [validateOverlayTime, setValidateOverlayTime] = reactExports.useState(null);
   reactExports.useEffect(() => {
     const handleGlobalMouseMove = (e) => {
-      if (schedulePointerDragActiveRef.current) return;
+      if (schedulePointerDragActiveRef.current && performance.now() - lastSchedulePointerMoveAtRef.current < 32) return;
       if (draggingStateRef.current || draggingState) {
         handleMouseMove(e);
       }
     };
     const handleGlobalMouseUp = (e) => {
-      if (schedulePointerDragActiveRef.current) return;
+      if (schedulePointerDragActiveRef.current && performance.now() - lastSchedulePointerMoveAtRef.current < 32) return;
       if (draggingStateRef.current || draggingState) {
         finishScheduleTileDrag();
       }
@@ -42634,8 +42635,10 @@ const ScheduleView = ({
     handleMouseDown(e, event);
     if (!draggingStateRef.current) return;
     schedulePointerDragActiveRef.current = true;
+    lastSchedulePointerMoveAtRef.current = 0;
     const handlePointerMove = (pointerEvent) => {
       if (!draggingStateRef.current) return;
+      lastSchedulePointerMoveAtRef.current = performance.now();
       pointerEvent.preventDefault();
       handleMouseMove(pointerEvent);
     };

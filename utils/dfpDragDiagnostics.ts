@@ -42,11 +42,11 @@ const nowMs = (): number => (typeof performance !== 'undefined' ? performance.no
 
 const getReport = (): DragDiagnosticsReport => {
   const existing = typeof window !== 'undefined' ? (window as any)[REPORT_KEY] : null;
-  if (existing?.reportType === 'dfp-drag-diagnostics') return existing;
+  if (existing?.reportType === 'dfp-drag-diagnostics' && Number(existing.version || 0) >= 2) return existing;
   const report: DragDiagnosticsReport = {
     reportType: 'dfp-drag-diagnostics',
     generatedAt: new Date().toISOString(),
-    version: 1,
+    version: 2,
     activeSessionId: null,
     sessions: [],
   };

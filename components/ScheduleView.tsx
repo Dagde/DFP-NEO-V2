@@ -12400,6 +12400,7 @@ const ScheduleView: React.FC<ScheduleViewProps> = ({
     const [draggedCptConflict, setDraggedCptConflict] = useState<Conflict | null>(null);
     const didDragRef = useRef(false);
     const schedulePointerDragActiveRef = useRef(false);
+    const lastSchedulePointerMoveAtRef = useRef(0);
     const dragFrameRef = useRef<number | null>(null);
     const dragGridRectRef = useRef<DOMRect | null>(null);
     const lastDragUpdateSignatureRef = useRef('');
@@ -12548,14 +12549,14 @@ const ScheduleView: React.FC<ScheduleViewProps> = ({
     useEffect(() => {
         // Global drag handlers
         const handleGlobalMouseMove = (e: MouseEvent) => {
-            if (schedulePointerDragActiveRef.current) return;
+            if (schedulePointerDragActiveRef.current && performance.now() - lastSchedulePointerMoveAtRef.current < 32) return;
             if (draggingStateRef.current || draggingState) {
                 handleMouseMove(e as any);
             }
         };
         
         const handleGlobalMouseUp = (e: MouseEvent) => {
-            if (schedulePointerDragActiveRef.current) return;
+            if (schedulePointerDragActiveRef.current && performance.now() - lastSchedulePointerMoveAtRef.current < 32) return;
             if (draggingStateRef.current || draggingState) {
                 finishScheduleTileDrag();
             }
@@ -13106,9 +13107,11 @@ const ScheduleView: React.FC<ScheduleViewProps> = ({
         handleMouseDown(e as unknown as MouseEvent<HTMLDivElement>, event);
         if (!draggingStateRef.current) return;
         schedulePointerDragActiveRef.current = true;
+        lastSchedulePointerMoveAtRef.current = 0;
 
         const handlePointerMove = (pointerEvent: PointerEvent) => {
             if (!draggingStateRef.current) return;
+            lastSchedulePointerMoveAtRef.current = performance.now();
             pointerEvent.preventDefault();
             handleMouseMove(pointerEvent as unknown as MouseEvent<HTMLDivElement>);
         };
