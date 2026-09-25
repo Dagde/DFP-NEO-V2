@@ -34853,6 +34853,14 @@ const App: React.FC = () => {
         availableTraineesAnalysis: OracleTraineeAnalysis[];
     } | null>(null);
     const [oracleContext, setOracleContext] = useState<'program' | 'nextDayBuild'>('program');
+    const oraclePreviewEventRef = useRef<ScheduleEvent | null>(null);
+    const oracleMoveFrameRef = useRef<number | null>(null);
+    const oraclePendingMoveRef = useRef<{ startTime: number; resourceId: string; instructor?: string; student?: string } | null>(null);
+    const oracleMoveAnalysisRef = useRef<{ checkedAt: number; startTime: number; resourceId: string }>({
+        checkedAt: 0,
+        startTime: Number.NaN,
+        resourceId: '',
+    });
 
 
     // Continuation and remedial state.
@@ -51934,6 +51942,15 @@ appliedUpdates.forEach(update => {
         }
     }, [isOracleMode, oracleContext, runOracleAnalysis]);
 
+    useEffect(() => {
+        oraclePreviewEventRef.current = oraclePreviewEvent;
+    }, [oraclePreviewEvent]);
+
+    useEffect(() => () => {
+        if (oracleMoveFrameRef.current !== null && typeof window !== 'undefined') {
+            window.cancelAnimationFrame(oracleMoveFrameRef.current);
+        }
+    }, []);
 
     const handleOracleMouseDown = useCallback((startTime: number, resourceId: string) => {
         const mockEvent: ScheduleEvent = {
@@ -51952,58 +51969,119 @@ appliedUpdates.forEach(update => {
             origin: school,
             destination: school
         };
+        oracleMoveAnalysisRef.current = { checkedAt: 0, startTime: Number.NaN, resourceId: '' };
+        oraclePendingMoveRef.current = null;
+        oraclePreviewEventRef.current = mockEvent;
         setOraclePreviewEvent(mockEvent);
     }, [date, buildDfpDate, oracleContext, school]);
 
     const handleOracleMouseMove = useCallback((newStartTime: number, newResourceId: string) => {
-        if (!oraclePreviewEvent || !oracleAnalysis) return;
+        const currentPreview = oraclePreviewEventRef.current;
+        if (!currentPreview || !oracleAnalysis) return;
 
-        const currentEvents = (oracleContext === 'nextDayBuild' ? nextDayBuildEvents.map(e => ({...e, date: buildDfpDate})) : eventsForDate).filter(e => !e.resourceId.startsWith('STBY') && !e.resourceId.startsWith('BNF-STBY'));
-        const analysisDate = oracleContext === 'nextDayBuild' ? buildDfpDate : date;
+        const now = typeof performance !== 'undefined' ? performance.now() : Date.now();
+        const lastAnalysis = oracleMoveAnalysisRef.current;
+        const shouldRefreshAvailability =
+            now - lastAnalysis.checkedAt > 150 ||
+            !Number.isFinite(lastAnalysis.startTime) ||
+            Math.abs(newStartTime - lastAnalysis.startTime) >= 0.25 ||
+            newResourceId !== lastAnalysis.resourceId;
 
-        const preFlightTime = 1.0;
-        const postFlightTime = 0.5;
-        const duration = 1.2;
-        const bookingWindow = {
-            start: newStartTime - preFlightTime,
-            end: newStartTime + duration + postFlightTime
-        };
+        let instructorLabel: string | undefined;
+        let traineeLabel: string | undefined;
 
-        const instructorAvailable = oracleAnalysis.instructors.some(inst => {
-            const personEvents = currentEvents.filter(e => getPersonnel(e).includes(inst.instructor.name));
-            const hasOverlap = personEvents.some(e => {
-                const existingWindow = getEventBookingWindow(e, syllabusDetails);
-                return bookingWindow.start < existingWindow.end && bookingWindow.end > existingWindow.start;
+        if (shouldRefreshAvailability) {
+            oracleMoveAnalysisRef.current = { checkedAt: now, startTime: newStartTime, resourceId: newResourceId };
+            const currentEvents = (oracleContext === 'nextDayBuild'
+                ? nextDayBuildEvents.map(e => ({ ...e, date: buildDfpDate }))
+                : eventsForDate
+            ).filter(e => !e.resourceId.startsWith('STBY') && !e.resourceId.startsWith('BNF-STBY'));
+            const analysisDate = oracleContext === 'nextDayBuild' ? buildDfpDate : date;
+
+            const preFlightTime = 1.0;
+            const postFlightTime = 0.5;
+            const duration = 1.2;
+            const bookingWindow = {
+                start: newStartTime - preFlightTime,
+                end: newStartTime + duration + postFlightTime
+            };
+
+            const instructorAvailable = oracleAnalysis.instructors.some(inst => {
+                const personEvents = currentEvents.filter(e => getPersonnel(e).includes(inst.instructor.name));
+                const hasOverlap = personEvents.some(e => {
+                    const existingWindow = getEventBookingWindow(e, syllabusDetails);
+                    return bookingWindow.start < existingWindow.end && bookingWindow.end > existingWindow.start;
+                });
+                return !isPersonStaticallyUnavailable(inst.instructor, bookingWindow.start, bookingWindow.end, analysisDate, 'flight') && !hasOverlap;
             });
-            return !isPersonStaticallyUnavailable(inst.instructor, bookingWindow.start, bookingWindow.end, analysisDate, 'flight') && !hasOverlap;
-        });
 
-        const traineeAvailable = oracleAnalysis.trainees.some(tr => {
-            if (!tr.isEligible) return false;
-            const personEvents = currentEvents.filter(e => getPersonnel(e).includes(tr.trainee.fullName));
-            const hasOverlap = personEvents.some(e => {
-                const existingWindow = getEventBookingWindow(e, syllabusDetails);
-                return bookingWindow.start < existingWindow.end && bookingWindow.end > existingWindow.start;
+            const traineeAvailable = oracleAnalysis.trainees.some(tr => {
+                if (!tr.isEligible) return false;
+                const personEvents = currentEvents.filter(e => getPersonnel(e).includes(tr.trainee.fullName));
+                const hasOverlap = personEvents.some(e => {
+                    const existingWindow = getEventBookingWindow(e, syllabusDetails);
+                    return bookingWindow.start < existingWindow.end && bookingWindow.end > existingWindow.start;
+                });
+                return !isPersonStaticallyUnavailable(tr.trainee, bookingWindow.start, bookingWindow.end, analysisDate, 'flight') && !hasOverlap;
             });
-            return !isPersonStaticallyUnavailable(tr.trainee, bookingWindow.start, bookingWindow.end, analysisDate, 'flight') && !hasOverlap;
-        });
 
-        setOraclePreviewEvent({
-            ...oraclePreviewEvent,
+            instructorLabel = instructorAvailable ? 'Instructor ✓' : 'NO INSTRUCTOR ✕';
+            traineeLabel = traineeAvailable ? 'Trainee ✓' : 'NO TRAINEE ✕';
+        }
+
+        oraclePendingMoveRef.current = {
             startTime: newStartTime,
             resourceId: newResourceId,
-            instructor: instructorAvailable ? 'Instructor ✓' : 'NO INSTRUCTOR ✕',
-            student: traineeAvailable ? 'Trainee ✓' : 'NO TRAINEE ✕',
+            instructor: instructorLabel,
+            student: traineeLabel,
+        };
+
+        if (oracleMoveFrameRef.current !== null) return;
+
+        oracleMoveFrameRef.current = window.requestAnimationFrame(() => {
+            oracleMoveFrameRef.current = null;
+            const pendingMove = oraclePendingMoveRef.current;
+            if (!pendingMove) return;
+            oraclePendingMoveRef.current = null;
+            setOraclePreviewEvent(previous => {
+                if (!previous) return previous;
+                const nextPreview = {
+                    ...previous,
+                    startTime: pendingMove.startTime,
+                    resourceId: pendingMove.resourceId,
+                    instructor: pendingMove.instructor ?? previous.instructor,
+                    student: pendingMove.student ?? previous.student,
+                };
+                oraclePreviewEventRef.current = nextPreview;
+                return nextPreview;
+            });
         });
-    }, [oraclePreviewEvent, oracleAnalysis, eventsForDate, date, nextDayBuildEvents, buildDfpDate, oracleContext, syllabusDetails]);
+    }, [oracleAnalysis, eventsForDate, date, nextDayBuildEvents, buildDfpDate, oracleContext, syllabusDetails]);
 
     const handleOracleMouseUp = useCallback(() => {
-        if (!oraclePreviewEvent || !oracleAnalysis) return;
+        let activePreviewEvent = oraclePreviewEventRef.current || oraclePreviewEvent;
+        const pendingMove = oraclePendingMoveRef.current;
+        if (activePreviewEvent && pendingMove) {
+            activePreviewEvent = {
+                ...activePreviewEvent,
+                startTime: pendingMove.startTime,
+                resourceId: pendingMove.resourceId,
+                instructor: pendingMove.instructor ?? activePreviewEvent.instructor,
+                student: pendingMove.student ?? activePreviewEvent.student,
+            };
+            oraclePreviewEventRef.current = activePreviewEvent;
+            oraclePendingMoveRef.current = null;
+        }
+        if (oracleMoveFrameRef.current !== null) {
+            window.cancelAnimationFrame(oracleMoveFrameRef.current);
+            oracleMoveFrameRef.current = null;
+        }
+        if (!activePreviewEvent || !oracleAnalysis) return;
 
         const currentEvents = (oracleContext === 'nextDayBuild' ? nextDayBuildEvents.map(e => ({...e, date: buildDfpDate})) : eventsForDate).filter(e => !e.resourceId.startsWith('STBY') && !e.resourceId.startsWith('BNF-STBY'));
         const analysisDate = oracleContext === 'nextDayBuild' ? buildDfpDate : date;
 
-        const { startTime, duration } = oraclePreviewEvent;
+        const { startTime, duration } = activePreviewEvent;
         const preFlightTime = 1.0;
         const postFlightTime = 0.5;
         const bookingWindow = { start: startTime - preFlightTime, end: startTime + duration + postFlightTime };
@@ -52105,9 +52183,9 @@ appliedUpdates.forEach(update => {
             date: analysisDate,
             type: 'flight',
             flightNumber: '',
-            duration: oraclePreviewEvent.duration,
-            startTime: oraclePreviewEvent.startTime,
-            resourceId: oraclePreviewEvent.resourceId,
+            duration: activePreviewEvent.duration,
+            startTime: activePreviewEvent.startTime,
+            resourceId: activePreviewEvent.resourceId,
             color: 'bg-sky-400/80',
             flightType: 'Dual',
             locationType: 'Local',
@@ -52117,6 +52195,7 @@ appliedUpdates.forEach(update => {
 
         setSelectedEvent(newEvent);
         setIsEditingDefault(true);
+        oraclePreviewEventRef.current = null;
         setOraclePreviewEvent(null);
 
     }, [oraclePreviewEvent, oracleAnalysis, date, school, eventsForDate, nextDayBuildEvents, buildDfpDate, oracleContext, syllabusDetails, classifyStartBySolarDaylight]);
