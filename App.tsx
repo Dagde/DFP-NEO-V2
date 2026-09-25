@@ -56668,6 +56668,7 @@ appliedUpdates.forEach(update => {
                     groundSyllabus={visibleSyllabusDetails.filter(s => s.type === 'Ground School')}
                     activeCourses={addGroundTileCourseColors}
                     allTraineesByCourse={addGroundTileTraineesByCourse}
+                    courseRecords={courses}
                     instructors={instructorsData.map(i => i.name)}
                     traineesData={addGroundTileTrainees}
                     syllabusDetails={visibleSyllabusDetails}

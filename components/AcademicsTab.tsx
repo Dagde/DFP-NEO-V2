@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useRef, useCallback, useEffect } from 'react';
-import { CourseLmpPauseEntry, SyllabusItemDetail, Trainee, Score, ScheduleEvent } from '../types';
+import { Course, CourseLmpPauseEntry, SyllabusItemDetail, Trainee, Score, ScheduleEvent } from '../types';
 import { v4 as uuidv4 } from 'uuid';
 import { showDarkAlert, showDarkConfirm, showDarkPrompt } from './DarkMessageModal';
 import type { ClassroomResourceOption } from '../utils/classroomResources';
@@ -31,6 +31,7 @@ interface PresavedAcademicSchedule {
 interface AcademicsTabProps {
   syllabusDetails: SyllabusItemDetail[];
   allTraineesByCourse: { [course: string]: Trainee[] };
+  courseRecords?: Course[];
   traineesData: Trainee[];
   scores: Map<string, Score[]>;
   traineeLMPs: Map<string, SyllabusItemDetail[]>;
@@ -76,6 +77,7 @@ const TIMELINE_END   = 21; // 21:00
 const SNAP_MINS      = 5;
 const SNAP           = SNAP_MINS / 60;
 const PRESAVED_ACADEMIC_SCHEDULES_KEY = 'dfp_neo_presaved_academic_schedules_v1';
+const normaliseAcademicLmpKey = (value: unknown): string => String(value || '').trim().toUpperCase();
 
 // Strip course code suffix from fullName, for example "Surname, First - COURSE".
 // Handles both em-dash (–) and hyphen (-) separators
@@ -297,6 +299,7 @@ function getTraineeStatus(
 const AcademicsTab: React.FC<AcademicsTabProps> = ({
   syllabusDetails,
   allTraineesByCourse,
+  courseRecords = [],
   traineesData,
   scores,
   traineeLMPs,
@@ -365,6 +368,14 @@ const AcademicsTab: React.FC<AcademicsTabProps> = ({
       return leftIsOther ? 1 : -1;
     })
   ), [effectiveStandardEvents]);
+  const [selectedAcademicLmp, setSelectedAcademicLmp] = useState<string>(() => persistedAcademicLmp || '');
+
+  // When persistedAcademicLmp arrives from DB (async), update if we don't have a value yet
+  useEffect(() => {
+    if (persistedAcademicLmp && !selectedAcademicLmp) {
+      setSelectedAcademicLmp(persistedAcademicLmp);
+    }
+  }, [persistedAcademicLmp, selectedAcademicLmp]);
 
   // Edit-tile modal state
   const [editTileId, setEditTileId] = useState<string | null>(null);
@@ -385,13 +396,34 @@ const AcademicsTab: React.FC<AcademicsTabProps> = ({
     return Array.from(courses).sort();
   }, [traineesData, selectedLocality, localities, locationAbbreviations]);
 
-  const [selectedCourse, setSelectedCourse] = useState(coursesForLocality[0] || '');
+  const enrolledCoursesForSelectedAcademicLmp = useMemo(() => {
+    const selectedAcademicLmpKey = normaliseAcademicLmpKey(selectedAcademicLmp);
+    if (!selectedAcademicLmpKey) return coursesForLocality;
+
+    const enrolledCourseNames = new Set<string>();
+    courseRecords.forEach(course => {
+      if (normaliseAcademicLmpKey(course?.academicLmpType) === selectedAcademicLmpKey) {
+        const courseName = String(course?.name || '').trim();
+        if (courseName) enrolledCourseNames.add(courseName);
+      }
+    });
+    traineesData.forEach(trainee => {
+      if (normaliseAcademicLmpKey((trainee as any)?.academicLmpType) === selectedAcademicLmpKey) {
+        const courseName = String(trainee?.course || '').trim();
+        if (courseName) enrolledCourseNames.add(courseName);
+      }
+    });
+
+    return coursesForLocality.filter(courseName => enrolledCourseNames.has(courseName));
+  }, [courseRecords, coursesForLocality, selectedAcademicLmp, traineesData]);
+
+  const [selectedCourse, setSelectedCourse] = useState(enrolledCoursesForSelectedAcademicLmp[0] || '');
 
   useEffect(() => {
-    if (!coursesForLocality.includes(selectedCourse)) {
-      setSelectedCourse(coursesForLocality[0] || '');
+    if (!enrolledCoursesForSelectedAcademicLmp.includes(selectedCourse)) {
+      setSelectedCourse(enrolledCoursesForSelectedAcademicLmp[0] || '');
     }
-  }, [coursesForLocality, selectedCourse]);
+  }, [enrolledCoursesForSelectedAcademicLmp, selectedCourse]);
 
   // ── Trainees ──
   const courseTrainees = useMemo(() =>
@@ -400,10 +432,10 @@ const AcademicsTab: React.FC<AcademicsTabProps> = ({
   );
 
   const academicPauseEntry = useMemo(() => {
-    const lmpType = String(persistedAcademicLmp || '').trim();
+    const lmpType = String(selectedAcademicLmp || '').trim();
     if (!selectedCourse || !lmpType) return null;
     return courseLmpPauses[`${String(selectedCourse || '').trim().toUpperCase()}::${lmpType.toUpperCase()}`] || null;
-  }, [courseLmpPauses, persistedAcademicLmp, selectedCourse]);
+  }, [courseLmpPauses, selectedAcademicLmp, selectedCourse]);
 
   const traineeStatuses = useMemo(() =>
     courseTrainees.reduce((acc, t) => {
@@ -468,16 +500,6 @@ const AcademicsTab: React.FC<AcademicsTabProps> = ({
       return { code, title };
     }).sort((a, b) => a.title.localeCompare(b.title));
   }, [syllabusDetails]);
-
-  // selectedAcademicLmp: initialise from persisted DB value, fall back to first available
-  const [selectedAcademicLmp, setSelectedAcademicLmp] = useState<string>(() => persistedAcademicLmp || '');
-
-  // When persistedAcademicLmp arrives from DB (async), update if we don't have a value yet
-  useEffect(() => {
-    if (persistedAcademicLmp && !selectedAcademicLmp) {
-      setSelectedAcademicLmp(persistedAcademicLmp);
-    }
-  }, [persistedAcademicLmp]);
 
   // Auto-select first academic LMP course if nothing is persisted yet
   useEffect(() => {
@@ -989,8 +1011,13 @@ const AcademicsTab: React.FC<AcademicsTabProps> = ({
           <div style={S.label}>Course</div>
           <select style={S.select} value={selectedCourse} onChange={e => setSelectedCourse(e.target.value)}>
             <option value="">-- Select --</option>
-            {coursesForLocality.map(c => <option key={c} value={c}>{c}</option>)}
+            {enrolledCoursesForSelectedAcademicLmp.map(c => <option key={c} value={c}>{c}</option>)}
           </select>
+          {selectedAcademicLmp && enrolledCoursesForSelectedAcademicLmp.length === 0 && (
+            <div style={{ marginTop: 4, color: '#f59e0b', fontSize: 11 }}>
+              No courses are enrolled in this Academic LMP.
+            </div>
+          )}
         </div>
         <div>
           <div style={{ ...S.label, color: '#93c5fd' }}>Academic LMP</div>

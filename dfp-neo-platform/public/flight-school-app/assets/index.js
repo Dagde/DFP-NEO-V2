@@ -62975,6 +62975,7 @@ const TIMELINE_END = 21;
 const SNAP_MINS = 5;
 const SNAP = SNAP_MINS / 60;
 const PRESAVED_ACADEMIC_SCHEDULES_KEY = "dfp_neo_presaved_academic_schedules_v1";
+const normaliseAcademicLmpKey = (value) => String(value || "").trim().toUpperCase();
 const stripCourse = (fullName) => {
   return fullName.replace(/\s[–—-]\s\S+$/, "").trim();
 };
@@ -63120,6 +63121,7 @@ function getTraineeStatus(trainee, events, date, courseLmpPauseReason) {
 const AcademicsTab = ({
   syllabusDetails,
   allTraineesByCourse,
+  courseRecords = [],
   traineesData,
   scores,
   traineeLMPs,
@@ -63184,6 +63186,12 @@ const AcademicsTab = ({
     if (leftIsOther === rightIsOther) return 0;
     return leftIsOther ? 1 : -1;
   }), [effectiveStandardEvents]);
+  const [selectedAcademicLmp, setSelectedAcademicLmp] = reactExports.useState(() => persistedAcademicLmp || "");
+  reactExports.useEffect(() => {
+    if (persistedAcademicLmp && !selectedAcademicLmp) {
+      setSelectedAcademicLmp(persistedAcademicLmp);
+    }
+  }, [persistedAcademicLmp, selectedAcademicLmp]);
   const [editTileId, setEditTileId] = reactExports.useState(null);
   const [editStartTime, setEditStartTime] = reactExports.useState("");
   const [editDuration, setEditDuration] = reactExports.useState("");
@@ -63199,21 +63207,39 @@ const AcademicsTab = ({
     });
     return Array.from(courses).sort();
   }, [traineesData, selectedLocality, localities, locationAbbreviations]);
-  const [selectedCourse, setSelectedCourse] = reactExports.useState(coursesForLocality[0] || "");
+  const enrolledCoursesForSelectedAcademicLmp = reactExports.useMemo(() => {
+    const selectedAcademicLmpKey = normaliseAcademicLmpKey(selectedAcademicLmp);
+    if (!selectedAcademicLmpKey) return coursesForLocality;
+    const enrolledCourseNames = /* @__PURE__ */ new Set();
+    courseRecords.forEach((course) => {
+      if (normaliseAcademicLmpKey(course?.academicLmpType) === selectedAcademicLmpKey) {
+        const courseName = String(course?.name || "").trim();
+        if (courseName) enrolledCourseNames.add(courseName);
+      }
+    });
+    traineesData.forEach((trainee) => {
+      if (normaliseAcademicLmpKey(trainee?.academicLmpType) === selectedAcademicLmpKey) {
+        const courseName = String(trainee?.course || "").trim();
+        if (courseName) enrolledCourseNames.add(courseName);
+      }
+    });
+    return coursesForLocality.filter((courseName) => enrolledCourseNames.has(courseName));
+  }, [courseRecords, coursesForLocality, selectedAcademicLmp, traineesData]);
+  const [selectedCourse, setSelectedCourse] = reactExports.useState(enrolledCoursesForSelectedAcademicLmp[0] || "");
   reactExports.useEffect(() => {
-    if (!coursesForLocality.includes(selectedCourse)) {
-      setSelectedCourse(coursesForLocality[0] || "");
+    if (!enrolledCoursesForSelectedAcademicLmp.includes(selectedCourse)) {
+      setSelectedCourse(enrolledCoursesForSelectedAcademicLmp[0] || "");
     }
-  }, [coursesForLocality, selectedCourse]);
+  }, [enrolledCoursesForSelectedAcademicLmp, selectedCourse]);
   const courseTrainees = reactExports.useMemo(
     () => allTraineesByCourse[selectedCourse] || [],
     [allTraineesByCourse, selectedCourse]
   );
   const academicPauseEntry = reactExports.useMemo(() => {
-    const lmpType = String(persistedAcademicLmp || "").trim();
+    const lmpType = String(selectedAcademicLmp || "").trim();
     if (!selectedCourse || !lmpType) return null;
     return courseLmpPauses[`${String(selectedCourse || "").trim().toUpperCase()}::${lmpType.toUpperCase()}`] || null;
-  }, [courseLmpPauses, persistedAcademicLmp, selectedCourse]);
+  }, [courseLmpPauses, selectedAcademicLmp, selectedCourse]);
   const traineeStatuses = reactExports.useMemo(
     () => courseTrainees.reduce((acc, t) => {
       const aliases = [t.fullName, t.name].map((value) => String(value || "").trim().toUpperCase()).filter(Boolean);
@@ -63268,12 +63294,6 @@ Do you still want to include them in this academic session?`,
       return { code, title };
     }).sort((a, b) => a.title.localeCompare(b.title));
   }, [syllabusDetails]);
-  const [selectedAcademicLmp, setSelectedAcademicLmp] = reactExports.useState(() => persistedAcademicLmp || "");
-  reactExports.useEffect(() => {
-    if (persistedAcademicLmp && !selectedAcademicLmp) {
-      setSelectedAcademicLmp(persistedAcademicLmp);
-    }
-  }, [persistedAcademicLmp]);
   reactExports.useEffect(() => {
     const availableCodes = new Set(academicLmpCourses.map((course) => course.code));
     if (academicLmpCourses.length === 0) {
@@ -63719,8 +63739,9 @@ Do you still want to include them in this academic session?`,
         /* @__PURE__ */ jsxRuntimeExports.jsx("div", { style: S.label, children: "Course" }),
         /* @__PURE__ */ jsxRuntimeExports.jsxs("select", { style: S.select, value: selectedCourse, onChange: (e) => setSelectedCourse(e.target.value), children: [
           /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "", children: "-- Select --" }),
-          coursesForLocality.map((c) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: c, children: c }, c))
-        ] })
+          enrolledCoursesForSelectedAcademicLmp.map((c) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: c, children: c }, c))
+        ] }),
+        selectedAcademicLmp && enrolledCoursesForSelectedAcademicLmp.length === 0 && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { style: { marginTop: 4, color: "#f59e0b", fontSize: 11 }, children: "No courses are enrolled in this Academic LMP." })
       ] }),
       /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
         /* @__PURE__ */ jsxRuntimeExports.jsx("div", { style: { ...S.label, color: "#93c5fd" }, children: "Academic LMP" }),
@@ -64576,6 +64597,7 @@ const AddGroundEventFlyout = ({
   groundSyllabus,
   activeCourses,
   allTraineesByCourse,
+  courseRecords,
   instructors,
   traineesData,
   syllabusDetails,
@@ -64909,6 +64931,7 @@ const AddGroundEventFlyout = ({
                   {
                     syllabusDetails: syllabusDetails || groundSyllabus,
                     allTraineesByCourse,
+                    courseRecords,
                     traineesData,
                     scores: scores || /* @__PURE__ */ new Map(),
                     traineeLMPs: traineeLMPs || /* @__PURE__ */ new Map(),
@@ -157378,6 +157401,7 @@ Do you want to replace the existing entry?`,
           groundSyllabus: visibleSyllabusDetails.filter((s) => s.type === "Ground School"),
           activeCourses: addGroundTileCourseColors,
           allTraineesByCourse: addGroundTileTraineesByCourse,
+          courseRecords: courses,
           instructors: instructorsData.map((i) => i.name),
           traineesData: addGroundTileTrainees,
           syllabusDetails: visibleSyllabusDetails,

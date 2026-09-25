@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useEffect, useRef } from 'react';
-import { CourseLmpPauseEntry, SyllabusItemDetail, Trainee, Score, ScheduleEvent } from '../types';
+import { Course, CourseLmpPauseEntry, SyllabusItemDetail, Trainee, Score, ScheduleEvent } from '../types';
 import CourseTraineeSelectionFlyout from './CourseTraineeSelectionFlyout';
 import AcademicsTab, { AcademicSaveData } from './AcademicsTab';
 import { isFixedCrewLikeOperationalModel, normaliseOperationalModel } from '../utils/platformConfigService';
@@ -19,6 +19,7 @@ interface AddGroundEventFlyoutProps {
   groundSyllabus: SyllabusItemDetail[];
   activeCourses: { [key: string]: string };
   allTraineesByCourse: { [course: string]: Trainee[] };
+  courseRecords?: Course[];
   instructors: string[];
   traineesData: Trainee[];
   // Extra props for Academics tab
@@ -66,6 +67,7 @@ const AddGroundEventFlyout: React.FC<AddGroundEventFlyoutProps> = ({
     groundSyllabus,
     activeCourses,
     allTraineesByCourse,
+    courseRecords,
     instructors,
     traineesData,
     syllabusDetails,
@@ -454,6 +456,7 @@ const AddGroundEventFlyout: React.FC<AddGroundEventFlyoutProps> = ({
                             <AcademicsTab
                                 syllabusDetails={syllabusDetails || groundSyllabus}
                                 allTraineesByCourse={allTraineesByCourse}
+                                courseRecords={courseRecords}
                                 traineesData={traineesData}
                                 scores={scores || new Map()}
                                 traineeLMPs={traineeLMPs || new Map()}
