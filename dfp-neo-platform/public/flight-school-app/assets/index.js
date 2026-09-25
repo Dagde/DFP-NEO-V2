@@ -111709,6 +111709,12 @@ const recordNeoAssistDragDiagnostic = (entry) => {
 const downloadNeoAssistDragDiagnosticReport = () => {
   if (typeof window === "undefined") return;
   try {
+    recordNeoAssistDragDiagnostic({
+      stage: "report-download-requested",
+      details: {
+        existingEntryCount: Array.isArray(window.__neoAssistDragDiagnostics) ? window.__neoAssistDragDiagnostics.length : 0
+      }
+    });
     const stored = window.localStorage?.getItem(NEO_ASSIST_DRAG_DIAGNOSTIC_STORAGE_KEY);
     const fallbackEntries = Array.isArray(window.__neoAssistDragDiagnostics) ? window.__neoAssistDragDiagnostics : [];
     const report = stored ? JSON.parse(stored) : {
@@ -111717,6 +111723,16 @@ const downloadNeoAssistDragDiagnosticReport = () => {
       reportType: "neo-assist-drag-diagnostic",
       entries: fallbackEntries
     };
+    if (!Array.isArray(report.entries) || report.entries.length === 0) {
+      report.entries = [{
+        stage: "report-empty",
+        at: (/* @__PURE__ */ new Date()).toISOString(),
+        details: {
+          reason: "No NEO Assist tile drag events were captured before this report was downloaded.",
+          nextStep: "Open NEO Assist, drag the tile preview onto the DFP timeline, then download the report again."
+        }
+      }];
+    }
     report.downloadedAt = (/* @__PURE__ */ new Date()).toISOString();
     const blob = new Blob([JSON.stringify(report, null, 2)], { type: "application/json" });
     const url = URL.createObjectURL(blob);
@@ -111826,6 +111842,7 @@ const DfpSidePanelTimeline = ({
   const assistDragPreviewRef = reactExports.useRef(null);
   const assistPointerDragActiveRef = reactExports.useRef(false);
   const assistPointerDragSessionRef = reactExports.useRef(null);
+  const previousAssistPanelOpenRef = reactExports.useRef(false);
   const wizardRepeatRef = reactExports.useRef(null);
   const [activeDrag, setActiveDrag] = reactExports.useState(null);
   const [activeAssistPage, setActiveAssistPage] = reactExports.useState("inputs");
@@ -112225,6 +112242,26 @@ const DfpSidePanelTimeline = ({
   const isNeoAssistWizardMode = usesNeoAssistModeHeader && airCombatAssistMode === "wizard";
   const isAirCombatTileMode = isAirCombatNeoAssist && airCombatAssistMode === "tile";
   const isSingleSeatFlightResource = selectedResourceKind === "flight" && aircraftCrewComposition.crewCount === 1;
+  reactExports.useEffect(() => {
+    const wasOpen = previousAssistPanelOpenRef.current;
+    previousAssistPanelOpenRef.current = isOpen;
+    if (!isOpen || wasOpen || typeof window === "undefined") return;
+    try {
+      window.__neoAssistDragDiagnostics = [];
+      window.localStorage?.removeItem(NEO_ASSIST_DRAG_DIAGNOSTIC_STORAGE_KEY);
+    } catch {
+    }
+    recordNeoAssistDragDiagnostic({
+      stage: "neo-assist-panel-open",
+      details: {
+        activeAssistPage,
+        usesNeoAssistModeHeader,
+        airCombatAssistMode,
+        selectedResourceKind,
+        scheduleZoomLevel
+      }
+    });
+  }, [activeAssistPage, airCombatAssistMode, isOpen, scheduleZoomLevel, selectedResourceKind, usesNeoAssistModeHeader]);
   const requiredAssistCrewRoles = reactExports.useMemo(() => isAirCombatTileMode && selectedResourceKind === "flight" ? aircraftCrewComposition.seats.flatMap((seat) => getAircraftSeatEligibleRoles(seat)).filter(Boolean) : [], [aircraftCrewComposition.seats, isAirCombatTileMode, selectedResourceKind]);
   const assistCrewSelectionLimit = isAirCombatTileMode && selectedResourceKind === "flight" ? Math.max(1, assistFormationSize) * Math.max(1, aircraftCrewComposition.crewCount || 1) : 1;
   const canSelectFormationCrew = isAirCombatTileMode && selectedResourceKind === "flight" && assistCrewSelectionLimit > 1;
@@ -117542,18 +117579,30 @@ This cannot be undone.`,
         /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "absolute inset-x-0 top-1/2 h-6 -translate-y-1/2 rounded-full bg-orange-500/35 blur-md animate-[pulse_3.5s_ease-in-out_infinite]", "aria-hidden": "true" }),
         /* @__PURE__ */ jsxRuntimeExports.jsx("h3", { className: "relative text-center text-sm font-semibold text-white", children: "NEO Assist" })
       ] }),
-      /* @__PURE__ */ jsxRuntimeExports.jsx(
-        "button",
-        {
-          type: "button",
-          onClick: () => {
-            if (usesNeoAssistModeHeader) setAirCombatAssistMode("wizard");
-          },
-          title: "NEO - Wizard",
-          className: `justify-self-end rounded-md border px-3 py-1.5 text-[11px] font-semibold shadow-[0_0_14px_rgba(251,146,60,0.22)] transition hover:border-orange-200 hover:bg-orange-500/18 ${isNeoAssistWizardMode ? "border-orange-300 bg-orange-500/20 text-orange-50" : "border-orange-400/55 bg-orange-500/10 text-orange-100/80"}`,
-          children: "NEO - Wizard"
-        }
-      )
+      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex justify-self-end items-center gap-2", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsx(
+          "button",
+          {
+            type: "button",
+            onClick: downloadNeoAssistDragDiagnosticReport,
+            title: "Download recent NEO Assist drag timing diagnostics",
+            className: "rounded-md border border-orange-400/40 bg-orange-400/10 px-2.5 py-1.5 text-[11px] font-semibold text-orange-50 transition hover:border-orange-200",
+            children: "Drag Report"
+          }
+        ),
+        /* @__PURE__ */ jsxRuntimeExports.jsx(
+          "button",
+          {
+            type: "button",
+            onClick: () => {
+              if (usesNeoAssistModeHeader) setAirCombatAssistMode("wizard");
+            },
+            title: "NEO - Wizard",
+            className: `rounded-md border px-3 py-1.5 text-[11px] font-semibold shadow-[0_0_14px_rgba(251,146,60,0.22)] transition hover:border-orange-200 hover:bg-orange-500/18 ${isNeoAssistWizardMode ? "border-orange-300 bg-orange-500/20 text-orange-50" : "border-orange-400/55 bg-orange-500/10 text-orange-100/80"}`,
+            children: "NEO - Wizard"
+          }
+        )
+      ] })
     ] }) : /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mb-3 flex items-start justify-between gap-3", children: [
       /* @__PURE__ */ jsxRuntimeExports.jsx("div", { children: /* @__PURE__ */ jsxRuntimeExports.jsx("h3", { className: "text-sm font-semibold text-white", children: "NEO Assist" }) }),
       /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex shrink-0 items-center gap-2", children: [
@@ -117661,6 +117710,27 @@ This cannot be undone.`,
         /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex justify-center rounded-lg border border-slate-300 bg-white p-3 shadow-sm", children: /* @__PURE__ */ jsxRuntimeExports.jsx(
           "div",
           {
+            onPointerDownCapture: (event) => recordNeoAssistDragDiagnostic({
+              stage: "tile-preview-pointer-down-capture",
+              details: {
+                pointerType: event.pointerType,
+                clientX: event.clientX,
+                clientY: event.clientY,
+                button: event.button,
+                activeAssistPage,
+                selectedResourceKind
+              }
+            }),
+            onMouseDownCapture: (event) => recordNeoAssistDragDiagnostic({
+              stage: "tile-preview-mouse-down-capture",
+              details: {
+                clientX: event.clientX,
+                clientY: event.clientY,
+                button: event.button,
+                activeAssistPage,
+                selectedResourceKind
+              }
+            }),
             onPointerDown: startAssistTilePointerDrag,
             className: `neo-assist-tile-preview ${isAssistTileDragging ? "neo-assist-tile-preview-dragging" : ""} w-full max-w-[520px] cursor-grab rounded-md border bg-slate-100 p-2 active:cursor-grabbing ${isDeploymentAssistTile ? "border-slate-500/45" : "border-pink-300/60"}`,
             title: "Drag this tile onto the DFP to create a copy",

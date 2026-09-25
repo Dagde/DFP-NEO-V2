@@ -972,6 +972,14 @@ const recordNeoAssistDragDiagnostic = (entry: Omit<NeoAssistDragDiagnosticEntry,
 const downloadNeoAssistDragDiagnosticReport = () => {
     if (typeof window === 'undefined') return;
     try {
+        recordNeoAssistDragDiagnostic({
+            stage: 'report-download-requested',
+            details: {
+                existingEntryCount: Array.isArray((window as any).__neoAssistDragDiagnostics)
+                    ? (window as any).__neoAssistDragDiagnostics.length
+                    : 0,
+            },
+        });
         const stored = window.localStorage?.getItem(NEO_ASSIST_DRAG_DIAGNOSTIC_STORAGE_KEY);
         const fallbackEntries = Array.isArray((window as any).__neoAssistDragDiagnostics)
             ? (window as any).__neoAssistDragDiagnostics
@@ -984,6 +992,16 @@ const downloadNeoAssistDragDiagnosticReport = () => {
                 reportType: 'neo-assist-drag-diagnostic',
                 entries: fallbackEntries,
             };
+        if (!Array.isArray(report.entries) || report.entries.length === 0) {
+            report.entries = [{
+                stage: 'report-empty',
+                at: new Date().toISOString(),
+                details: {
+                    reason: 'No NEO Assist tile drag events were captured before this report was downloaded.',
+                    nextStep: 'Open NEO Assist, drag the tile preview onto the DFP timeline, then download the report again.',
+                },
+            }];
+        }
         report.downloadedAt = new Date().toISOString();
         const blob = new Blob([JSON.stringify(report, null, 2)], { type: 'application/json' });
         const url = URL.createObjectURL(blob);
@@ -1180,6 +1198,7 @@ const DfpSidePanelTimeline: React.FC<{
         lastClientX?: number;
         lastClientY?: number;
     } | null>(null);
+    const previousAssistPanelOpenRef = useRef(false);
     const wizardRepeatRef = useRef<number | null>(null);
     const [activeDrag, setActiveDrag] = useState<DfpMiniTimelineDragState | null>(null);
     const [activeAssistPage, setActiveAssistPage] = useState<NeoAssistPage>('inputs');
@@ -1708,6 +1727,27 @@ const DfpSidePanelTimeline: React.FC<{
     const isNeoAssistWizardMode = usesNeoAssistModeHeader && airCombatAssistMode === 'wizard';
     const isAirCombatTileMode = isAirCombatNeoAssist && airCombatAssistMode === 'tile';
     const isSingleSeatFlightResource = selectedResourceKind === 'flight' && aircraftCrewComposition.crewCount === 1;
+    useEffect(() => {
+        const wasOpen = previousAssistPanelOpenRef.current;
+        previousAssistPanelOpenRef.current = isOpen;
+        if (!isOpen || wasOpen || typeof window === 'undefined') return;
+        try {
+            (window as any).__neoAssistDragDiagnostics = [];
+            window.localStorage?.removeItem(NEO_ASSIST_DRAG_DIAGNOSTIC_STORAGE_KEY);
+        } catch {
+            // Diagnostics are best-effort only.
+        }
+        recordNeoAssistDragDiagnostic({
+            stage: 'neo-assist-panel-open',
+            details: {
+                activeAssistPage,
+                usesNeoAssistModeHeader,
+                airCombatAssistMode,
+                selectedResourceKind,
+                scheduleZoomLevel,
+            },
+        });
+    }, [activeAssistPage, airCombatAssistMode, isOpen, scheduleZoomLevel, selectedResourceKind, usesNeoAssistModeHeader]);
     const requiredAssistCrewRoles = useMemo(() => (
         isAirCombatTileMode && selectedResourceKind === 'flight'
             ? aircraftCrewComposition.seats.flatMap(seat => getAircraftSeatEligibleRoles(seat)).filter(Boolean)
@@ -7734,16 +7774,26 @@ const DfpSidePanelTimeline: React.FC<{
                             NEO Assist
                         </h3>
                     </div>
-                    <button
-                        type="button"
-                        onClick={() => {
-                            if (usesNeoAssistModeHeader) setAirCombatAssistMode('wizard');
-                        }}
-                        title="NEO - Wizard"
-                        className={`justify-self-end rounded-md border px-3 py-1.5 text-[11px] font-semibold shadow-[0_0_14px_rgba(251,146,60,0.22)] transition hover:border-orange-200 hover:bg-orange-500/18 ${isNeoAssistWizardMode ? 'border-orange-300 bg-orange-500/20 text-orange-50' : 'border-orange-400/55 bg-orange-500/10 text-orange-100/80'}`}
-                    >
-                        NEO - Wizard
-                    </button>
+                    <div className="flex justify-self-end items-center gap-2">
+                        <button
+                            type="button"
+                            onClick={downloadNeoAssistDragDiagnosticReport}
+                            title="Download recent NEO Assist drag timing diagnostics"
+                            className="rounded-md border border-orange-400/40 bg-orange-400/10 px-2.5 py-1.5 text-[11px] font-semibold text-orange-50 transition hover:border-orange-200"
+                        >
+                            Drag Report
+                        </button>
+                        <button
+                            type="button"
+                            onClick={() => {
+                                if (usesNeoAssistModeHeader) setAirCombatAssistMode('wizard');
+                            }}
+                            title="NEO - Wizard"
+                            className={`rounded-md border px-3 py-1.5 text-[11px] font-semibold shadow-[0_0_14px_rgba(251,146,60,0.22)] transition hover:border-orange-200 hover:bg-orange-500/18 ${isNeoAssistWizardMode ? 'border-orange-300 bg-orange-500/20 text-orange-50' : 'border-orange-400/55 bg-orange-500/10 text-orange-100/80'}`}
+                        >
+                            NEO - Wizard
+                        </button>
+                    </div>
                 </div>
             ) : (
                 <div className="mb-3 flex items-start justify-between gap-3">
@@ -7876,6 +7926,27 @@ const DfpSidePanelTimeline: React.FC<{
                                 {renderAssistDfpOverview()}
                                 <div className="flex justify-center rounded-lg border border-slate-300 bg-white p-3 shadow-sm">
                                     <div
+                                        onPointerDownCapture={event => recordNeoAssistDragDiagnostic({
+                                            stage: 'tile-preview-pointer-down-capture',
+                                            details: {
+                                                pointerType: event.pointerType,
+                                                clientX: event.clientX,
+                                                clientY: event.clientY,
+                                                button: event.button,
+                                                activeAssistPage,
+                                                selectedResourceKind,
+                                            },
+                                        })}
+                                        onMouseDownCapture={event => recordNeoAssistDragDiagnostic({
+                                            stage: 'tile-preview-mouse-down-capture',
+                                            details: {
+                                                clientX: event.clientX,
+                                                clientY: event.clientY,
+                                                button: event.button,
+                                                activeAssistPage,
+                                                selectedResourceKind,
+                                            },
+                                        })}
                                         onPointerDown={startAssistTilePointerDrag}
                                         className={`neo-assist-tile-preview ${isAssistTileDragging ? 'neo-assist-tile-preview-dragging' : ''} w-full max-w-[520px] cursor-grab rounded-md border bg-slate-100 p-2 active:cursor-grabbing ${
                                             isDeploymentAssistTile ? 'border-slate-500/45' : 'border-pink-300/60'
