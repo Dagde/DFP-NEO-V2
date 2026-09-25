@@ -54,7 +54,7 @@ import {
     getAuditRecordingSettingsForPage,
     saveAuditRecordingSettingsForPage,
 } from '../utils/auditLogger';
-import { endDfpDragDiagnostic, recordDfpDragFlushDiagnostic, recordDfpDragMoveDiagnostic, startDfpDragDiagnostic } from '../utils/dfpDragDiagnostics';
+import { endDfpDragDiagnostic, recordDfpDragFlushDiagnostic, startDfpDragDiagnostic } from '../utils/dfpDragDiagnostics';
 import { getAdaptiveContextMenuPosition } from '../utils/contextMenuPosition';
 import { DEFAULT_AIRFIELD_SOLAR_PROFILES } from '../utils/sunTimes';
 import {
@@ -12353,6 +12353,7 @@ const ScheduleView: React.FC<ScheduleViewProps> = ({
     const [draggedCptConflict, setDraggedCptConflict] = useState<Conflict | null>(null);
     const didDragRef = useRef(false);
     const dragFrameRef = useRef<number | null>(null);
+    const dragGridRectRef = useRef<DOMRect | null>(null);
     const lastDragUpdateSignatureRef = useRef('');
     const dragDiagnosticSessionRef = useRef<string | null>(null);
     const lastDragCommitUpdatesRef = useRef<{ eventId: string, newStartTime: number, newResourceId: string }[] | null>(null);
@@ -12485,6 +12486,7 @@ const ScheduleView: React.FC<ScheduleViewProps> = ({
                 window.requestAnimationFrame(clearDragVisualStyles);
                 lastDragUpdateSignatureRef.current = '';
                 lastDragCommitUpdatesRef.current = null;
+                dragGridRectRef.current = null;
                 endDfpDragDiagnostic(dragDiagnosticSessionRef.current);
                 dragDiagnosticSessionRef.current = null;
             }
@@ -12720,6 +12722,7 @@ const ScheduleView: React.FC<ScheduleViewProps> = ({
                 lastDragUpdateSignatureRef.current = '';
                 lastDragCommitUpdatesRef.current = null;
                 pendingDragUpdateRef.current = null;
+                dragGridRectRef.current = scheduleGridRef.current?.getBoundingClientRect() || null;
                 dragDiagnosticSessionRef.current = startDfpDragDiagnostic({
                     board: 'DFP',
                     eventId: event.id,
@@ -12754,16 +12757,15 @@ const ScheduleView: React.FC<ScheduleViewProps> = ({
     };
 
     const handleMouseMove = (e: MouseEvent<HTMLDivElement>) => {
-        const moveStartedAt = performance.now();
         if (!scheduleGridRef.current) {
             return;
         }
         didDragRef.current = true;
-        const geometryStartedAt = performance.now();
-        const gridRect = scheduleGridRef.current.getBoundingClientRect();
+        const gridRect = draggingState
+            ? dragGridRectRef.current || scheduleGridRef.current.getBoundingClientRect()
+            : scheduleGridRef.current.getBoundingClientRect();
         const xInGrid = e.clientX - gridRect.left;
         const yInGrid = e.clientY - gridRect.top;
-        const geometryMs = performance.now() - geometryStartedAt;
         
         // Update validate overlay position when dispatch rate mode is ON
         if (showDepartureDensityOverlay) {
@@ -12821,11 +12823,6 @@ const ScheduleView: React.FC<ScheduleViewProps> = ({
             const rowShift = Math.floor((yInGrid - draggingState.yOffset + ROW_HEIGHT / 2) / ROW_HEIGHT) - mainEventInitialPos.rowIndex;
 
             const updates: { eventId: string, newStartTime: number, newResourceId: string }[] = [];
-            const tempEvents = [...events];
-            let resourceConflictId: string | null = null;
-            let tempCptConflict: Conflict | null = null;
-            let tempRealtimeConflict: { conflictingEventId: string; conflictedPersonName: string; } | null = null;
-            const buildUpdatesStartedAt = performance.now();
 
             for (const [id, initialPos] of draggingState.initialPositions.entries()) {
                 const eventData = events.find(ev => ev.id === id);
@@ -12843,110 +12840,23 @@ const ScheduleView: React.FC<ScheduleViewProps> = ({
                 const newResourceId = resources[newRowIndex];
 
                 updates.push({ eventId: id, newStartTime: snappedStartTime, newResourceId });
-
-                const tempEventIndex = tempEvents.findIndex(e => e.id === id);
-                if (tempEventIndex !== -1) {
-                    tempEvents[tempEventIndex] = { ...tempEvents[tempEventIndex], startTime: snappedStartTime, resourceId: newResourceId };
-                }
-
-                const conflictingEvent = events.find(ev => 
-                    ev.id !== id && 
-                    !draggingState.initialPositions.has(ev.id) &&
-                    ev.resourceId === newResourceId &&
-                    isOverlapping({ ...eventData, startTime: snappedStartTime, resourceId: newResourceId } as ScheduleEvent, ev)
-                );
-
-                if (conflictingEvent) {
-                    resourceConflictId = conflictingEvent.id;
-                }
             }
-            const buildUpdatesMs = performance.now() - buildUpdatesStartedAt;
-            
-            const conflictStartedAt = performance.now();
-            const mainUpdate = updates.find(u => u.eventId === draggingState.mainEventId);
-            if (mainUpdate) {
-                const mainEvent = tempEvents.find(e => e.id === draggingState.mainEventId)!;
-                const otherEvents = tempEvents.filter(e => !draggingState.initialPositions.has(e.id));
-                
-                // Use new conflict detection if available, otherwise fall back to old method
-                let conflictResult = null;
-                if (detectConflictsForEvent) {
-                    conflictResult = detectConflictsForEvent(mainEvent, otherEvents);
-                    if (conflictResult.hasConflict) {
-                        tempRealtimeConflict = {
-                            conflictingEventId: conflictResult.conflictingEventId!, 
-                            conflictedPersonName: conflictResult.conflictedPersonnel || '' 
-                        };
-                        if (mainEvent.flightNumber.includes('CPT') && conflictResult.conflictType === 'personnel') {
-                            const conflictingEvent = otherEvents.find(e => e.id === conflictResult.conflictingEventId);
-                            if (conflictingEvent) {
-                                tempCptConflict = {
-                                    conflictingEvent: conflictingEvent,
-                                    newEvent: mainEvent,
-                                    conflictedPerson: 'trainee',
-                                };
-                            }
-                        }
-                    }
-                } else {
-                    // Fallback to old method
-                    const conflict = findConflict([mainEvent], otherEvents);
-                    
-                    if (conflict) {
-                        tempRealtimeConflict = {
-                            conflictingEventId: conflict.conflictingEvent.id, 
-                            conflictedPersonName: conflict.personName 
-                        };
-                        if (mainEvent.flightNumber.includes('CPT')) {
-                            tempCptConflict = {
-                                conflictingEvent: conflict.conflictingEvent,
-                                newEvent: mainEvent,
-                                conflictedPerson: 'trainee',
-                                personName: conflict.personName
-                            } as Conflict;
-                        }
-                    }
-                }
-            }
-            const conflictMs = performance.now() - conflictStartedAt;
 
             const updateSignature = updates
                 .map(update => `${update.eventId}:${update.newStartTime}:${update.newResourceId}`)
                 .join('|');
             if (updateSignature === lastDragUpdateSignatureRef.current) {
-                recordDfpDragMoveDiagnostic(dragDiagnosticSessionRef.current, {
-                    xInGrid,
-                    yInGrid,
-                    updateCount: updates.length,
-                    duplicateSkipped: true,
-                    totalMoveMs: performance.now() - moveStartedAt,
-                    geometryMs,
-                    buildUpdatesMs,
-                    conflictMs,
-                    signature: updateSignature,
-                });
                 return;
             }
             lastDragUpdateSignatureRef.current = updateSignature;
             pendingDragUpdateRef.current = {
                 updates,
-                realtimeConflict: tempRealtimeConflict,
-                resourceConflictId,
-                cptConflict: tempCptConflict,
+                realtimeConflict: null,
+                resourceConflictId: null,
+                cptConflict: null,
                 queuedAtMs: performance.now(),
                 signature: updateSignature,
             };
-            recordDfpDragMoveDiagnostic(dragDiagnosticSessionRef.current, {
-                xInGrid,
-                yInGrid,
-                updateCount: updates.length,
-                duplicateSkipped: false,
-                totalMoveMs: performance.now() - moveStartedAt,
-                geometryMs,
-                buildUpdatesMs,
-                conflictMs,
-                signature: updateSignature,
-            });
             if (dragFrameRef.current === null) {
                 dragFrameRef.current = window.requestAnimationFrame(() => {
                     dragFrameRef.current = null;
@@ -12977,6 +12887,7 @@ const ScheduleView: React.FC<ScheduleViewProps> = ({
         setDraggedCptConflict(null);
         window.requestAnimationFrame(clearDragVisualStyles);
         lastDragCommitUpdatesRef.current = null;
+        dragGridRectRef.current = null;
         endDfpDragDiagnostic(dragDiagnosticSessionRef.current);
         dragDiagnosticSessionRef.current = null;
         

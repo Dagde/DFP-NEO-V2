@@ -31782,36 +31782,6 @@ const startDfpDragDiagnostic = (details) => {
   persistReport(report);
   return sessionId;
 };
-const recordDfpDragMoveDiagnostic = (sessionId, sample) => {
-  const session = getSession(sessionId);
-  if (!session) return;
-  session.moveCount += 1;
-  if (sample.duplicateSkipped) session.skippedDuplicateCount += 1;
-  session.totalUpdateCount += sample.updateCount;
-  session.maxTotalMoveMs = Math.max(session.maxTotalMoveMs, sample.totalMoveMs);
-  session.maxConflictMs = Math.max(session.maxConflictMs, sample.conflictMs);
-  const previous = session.samples[session.samples.length - 1];
-  const pointerGapMs = previous?.recordedAtMs ? nowMs() - previous.recordedAtMs : 0;
-  session.maxPointerGapMs = Math.max(session.maxPointerGapMs, pointerGapMs);
-  const compactSample = {
-    recordedAt: (/* @__PURE__ */ new Date()).toISOString(),
-    recordedAtMs: nowMs(),
-    xInGrid: Number(sample.xInGrid.toFixed(1)),
-    yInGrid: Number(sample.yInGrid.toFixed(1)),
-    updateCount: sample.updateCount,
-    duplicateSkipped: sample.duplicateSkipped,
-    pointerGapMs: Number(pointerGapMs.toFixed(1)),
-    totalMoveMs: Number(sample.totalMoveMs.toFixed(2)),
-    geometryMs: Number(sample.geometryMs.toFixed(2)),
-    buildUpdatesMs: Number(sample.buildUpdatesMs.toFixed(2)),
-    conflictMs: Number(sample.conflictMs.toFixed(2)),
-    signature: sample.signature.slice(0, 260)
-  };
-  if (session.samples.length < 20 || compactSample.totalMoveMs >= 8 || compactSample.pointerGapMs >= 80) {
-    session.samples = pushLimited(session.samples, compactSample);
-  }
-  persistReport(getReport());
-};
 const recordDfpDragFlushDiagnostic = (sessionId, sample) => {
   const session = getSession(sessionId);
   if (!session) return;
@@ -31945,12 +31915,6 @@ const formatFlightLineMaintenanceWindowTime = (value) => {
   const match = /^(\d{1,2}):?(\d{2})$/.exec(String(value || "").trim());
   if (!match) return null;
   return `${match[1].padStart(2, "0")}${match[2]}`;
-};
-const isOverlapping$2 = (f1, f2) => {
-  if (!f1 || !f2 || f1.duration <= 0 || f2.duration <= 0) return false;
-  const f1_end = f1.startTime + f1.duration;
-  const f2_end = f2.startTime + f2.duration;
-  return f1.startTime < f2_end && f1_end > f2.startTime;
 };
 const getPersonnel$6 = (event) => {
   const personnel = [];
@@ -41993,6 +41957,7 @@ const ScheduleView = ({
   const [draggedCptConflict, setDraggedCptConflict] = reactExports.useState(null);
   const didDragRef = reactExports.useRef(false);
   const dragFrameRef = reactExports.useRef(null);
+  const dragGridRectRef = reactExports.useRef(null);
   const lastDragUpdateSignatureRef = reactExports.useRef("");
   const dragDiagnosticSessionRef = reactExports.useRef(null);
   const lastDragCommitUpdatesRef = reactExports.useRef(null);
@@ -42105,6 +42070,7 @@ const ScheduleView = ({
         window.requestAnimationFrame(clearDragVisualStyles);
         lastDragUpdateSignatureRef.current = "";
         lastDragCommitUpdatesRef.current = null;
+        dragGridRectRef.current = null;
         endDfpDragDiagnostic(dragDiagnosticSessionRef.current);
         dragDiagnosticSessionRef.current = null;
       }
@@ -42221,7 +42187,7 @@ const ScheduleView = ({
     }
     prevZoomLevelRef.current = zoomLevel;
   }, [zoomLevel]);
-  const findConflict = reactExports.useCallback((eventsToCheck, existingEvents) => {
+  reactExports.useCallback((eventsToCheck, existingEvents) => {
     for (const eventToCheck of eventsToCheck) {
       if (eventToCheck.resourceId?.startsWith("STBY") || eventToCheck.type === "deployment") continue;
       const s1 = syllabusDetails.find((d) => d.id === eventToCheck.flightNumber);
@@ -42301,6 +42267,7 @@ const ScheduleView = ({
         lastDragUpdateSignatureRef.current = "";
         lastDragCommitUpdatesRef.current = null;
         pendingDragUpdateRef.current = null;
+        dragGridRectRef.current = scheduleGridRef.current?.getBoundingClientRect() || null;
         dragDiagnosticSessionRef.current = startDfpDragDiagnostic({
           board: "DFP",
           eventId: event.id,
@@ -42331,16 +42298,13 @@ const ScheduleView = ({
     }
   };
   const handleMouseMove = (e) => {
-    const moveStartedAt = performance.now();
     if (!scheduleGridRef.current) {
       return;
     }
     didDragRef.current = true;
-    const geometryStartedAt = performance.now();
-    const gridRect = scheduleGridRef.current.getBoundingClientRect();
+    const gridRect = draggingState ? dragGridRectRef.current || scheduleGridRef.current.getBoundingClientRect() : scheduleGridRef.current.getBoundingClientRect();
     const xInGrid = e.clientX - gridRect.left;
     const yInGrid = e.clientY - gridRect.top;
-    const geometryMs = performance.now() - geometryStartedAt;
     if (showDepartureDensityOverlay) {
       const mouseTimeInHours = xInGrid / (PIXELS_PER_HOUR$6 * zoomLevel) + START_HOUR$6;
       setValidateOverlayTime(mouseTimeInHours);
@@ -42385,11 +42349,6 @@ const ScheduleView = ({
       const timeShift = (xInGrid / zoomLevel - draggingState.xOffset) / PIXELS_PER_HOUR$6 - mainEventInitialPos.startTime;
       const rowShift = Math.floor((yInGrid - draggingState.yOffset + ROW_HEIGHT$6 / 2) / ROW_HEIGHT$6) - mainEventInitialPos.rowIndex;
       const updates = [];
-      const tempEvents = [...events];
-      let resourceConflictId = null;
-      let tempCptConflict = null;
-      let tempRealtimeConflict = null;
-      const buildUpdatesStartedAt = performance.now();
       for (const [id, initialPos] of draggingState.initialPositions.entries()) {
         const eventData = events.find((ev) => ev.id === id);
         if (!eventData) continue;
@@ -42402,96 +42361,20 @@ const ScheduleView = ({
         const snappedStartTime = Math.round(newStartTime * 12) / 12;
         const newResourceId = resources[newRowIndex];
         updates.push({ eventId: id, newStartTime: snappedStartTime, newResourceId });
-        const tempEventIndex = tempEvents.findIndex((e2) => e2.id === id);
-        if (tempEventIndex !== -1) {
-          tempEvents[tempEventIndex] = { ...tempEvents[tempEventIndex], startTime: snappedStartTime, resourceId: newResourceId };
-        }
-        const conflictingEvent = events.find(
-          (ev) => ev.id !== id && !draggingState.initialPositions.has(ev.id) && ev.resourceId === newResourceId && isOverlapping$2({ ...eventData, startTime: snappedStartTime }, ev)
-        );
-        if (conflictingEvent) {
-          resourceConflictId = conflictingEvent.id;
-        }
       }
-      const buildUpdatesMs = performance.now() - buildUpdatesStartedAt;
-      const conflictStartedAt = performance.now();
-      const mainUpdate = updates.find((u) => u.eventId === draggingState.mainEventId);
-      if (mainUpdate) {
-        const mainEvent = tempEvents.find((e2) => e2.id === draggingState.mainEventId);
-        const otherEvents = tempEvents.filter((e2) => !draggingState.initialPositions.has(e2.id));
-        let conflictResult = null;
-        if (detectConflictsForEvent) {
-          conflictResult = detectConflictsForEvent(mainEvent, otherEvents);
-          if (conflictResult.hasConflict) {
-            tempRealtimeConflict = {
-              conflictingEventId: conflictResult.conflictingEventId,
-              conflictedPersonName: conflictResult.conflictedPersonnel || ""
-            };
-            if (mainEvent.flightNumber.includes("CPT") && conflictResult.conflictType === "personnel") {
-              const conflictingEvent = otherEvents.find((e2) => e2.id === conflictResult.conflictingEventId);
-              if (conflictingEvent) {
-                tempCptConflict = {
-                  conflictingEvent,
-                  newEvent: mainEvent,
-                  conflictedPerson: "trainee"
-                };
-              }
-            }
-          }
-        } else {
-          const conflict = findConflict([mainEvent], otherEvents);
-          if (conflict) {
-            tempRealtimeConflict = {
-              conflictingEventId: conflict.conflictingEvent.id,
-              conflictedPersonName: conflict.personName
-            };
-            if (mainEvent.flightNumber.includes("CPT")) {
-              tempCptConflict = {
-                conflictingEvent: conflict.conflictingEvent,
-                newEvent: mainEvent,
-                conflictedPerson: "trainee",
-                personName: conflict.personName
-              };
-            }
-          }
-        }
-      }
-      const conflictMs = performance.now() - conflictStartedAt;
       const updateSignature = updates.map((update) => `${update.eventId}:${update.newStartTime}:${update.newResourceId}`).join("|");
       if (updateSignature === lastDragUpdateSignatureRef.current) {
-        recordDfpDragMoveDiagnostic(dragDiagnosticSessionRef.current, {
-          xInGrid,
-          yInGrid,
-          updateCount: updates.length,
-          duplicateSkipped: true,
-          totalMoveMs: performance.now() - moveStartedAt,
-          geometryMs,
-          buildUpdatesMs,
-          conflictMs,
-          signature: updateSignature
-        });
         return;
       }
       lastDragUpdateSignatureRef.current = updateSignature;
       pendingDragUpdateRef.current = {
         updates,
-        realtimeConflict: tempRealtimeConflict,
-        resourceConflictId,
-        cptConflict: tempCptConflict,
+        realtimeConflict: null,
+        resourceConflictId: null,
+        cptConflict: null,
         queuedAtMs: performance.now(),
         signature: updateSignature
       };
-      recordDfpDragMoveDiagnostic(dragDiagnosticSessionRef.current, {
-        xInGrid,
-        yInGrid,
-        updateCount: updates.length,
-        duplicateSkipped: false,
-        totalMoveMs: performance.now() - moveStartedAt,
-        geometryMs,
-        buildUpdatesMs,
-        conflictMs,
-        signature: updateSignature
-      });
       if (dragFrameRef.current === null) {
         dragFrameRef.current = window.requestAnimationFrame(() => {
           dragFrameRef.current = null;
@@ -42519,6 +42402,7 @@ const ScheduleView = ({
     setDraggedCptConflict(null);
     window.requestAnimationFrame(clearDragVisualStyles);
     lastDragCommitUpdatesRef.current = null;
+    dragGridRectRef.current = null;
     endDfpDragDiagnostic(dragDiagnosticSessionRef.current);
     dragDiagnosticSessionRef.current = null;
     setValidateOverlayTime(null);
@@ -69092,12 +68976,6 @@ const END_HOUR$3 = 24;
 const TOTAL_HOURS$3 = END_HOUR$3 - START_HOUR$3;
 const AIRFRAME_COLUMN_WIDTH = 144;
 const TIME_HEADER_HEIGHT$3 = 40;
-const isOverlapping$1 = (f1, f2) => {
-  if (!f1 || !f2 || f1.duration <= 0 || f2.duration <= 0) return false;
-  const f1_end = f1.startTime + f1.duration;
-  const f2_end = f2.startTime + f2.duration;
-  return f1.startTime < f2_end && f1_end > f2.startTime;
-};
 const getPersonnel$3 = (event) => {
   const personnel = [];
   if (event.flightType === "Solo") {
@@ -69187,6 +69065,7 @@ const NextDayBuildView = ({
   const [validateOverlayTime, setValidateOverlayTime] = reactExports.useState(null);
   const didDragRef = reactExports.useRef(false);
   const dragFrameRef = reactExports.useRef(null);
+  const dragGridRectRef = reactExports.useRef(null);
   const lastDragUpdateSignatureRef = reactExports.useRef("");
   const dragDiagnosticSessionRef = reactExports.useRef(null);
   const lastDragCommitUpdatesRef = reactExports.useRef(null);
@@ -69354,7 +69233,7 @@ const NextDayBuildView = ({
     }
     prevZoomLevelRef.current = zoomLevel;
   }, [zoomLevel]);
-  const findConflict = reactExports.useCallback((eventsToCheck, existingEvents) => {
+  reactExports.useCallback((eventsToCheck, existingEvents) => {
     for (const eventToCheck of eventsToCheck) {
       const s1 = syllabusDetails.find((d) => d.id === eventToCheck.flightNumber);
       if (!s1) continue;
@@ -69430,6 +69309,7 @@ const NextDayBuildView = ({
         lastDragUpdateSignatureRef.current = "";
         lastDragCommitUpdatesRef.current = null;
         pendingDragUpdateRef.current = null;
+        dragGridRectRef.current = scheduleGridRef.current?.getBoundingClientRect() || null;
         dragDiagnosticSessionRef.current = startDfpDragDiagnostic({
           board: "NEO Build Schedule",
           eventId: event.id,
@@ -69460,14 +69340,11 @@ const NextDayBuildView = ({
     }
   };
   const handleMouseMove = (e) => {
-    const moveStartedAt = performance.now();
     if (!scheduleGridRef.current) return;
     didDragRef.current = true;
-    const geometryStartedAt = performance.now();
-    const gridRect = scheduleGridRef.current.getBoundingClientRect();
+    const gridRect = draggingState ? dragGridRectRef.current || scheduleGridRef.current.getBoundingClientRect() : scheduleGridRef.current.getBoundingClientRect();
     const xInGrid = e.clientX - gridRect.left;
     const yInGrid = e.clientY - gridRect.top;
-    const geometryMs = performance.now() - geometryStartedAt;
     if (showDepartureDensityOverlay) {
       const mouseTimeInHours = xInGrid / (PIXELS_PER_HOUR$3 * zoomLevel) + START_HOUR$3;
       setValidateOverlayTime(mouseTimeInHours);
@@ -69512,11 +69389,6 @@ const NextDayBuildView = ({
     const timeShift = (xInGrid / zoomLevel - draggingState.xOffset) / PIXELS_PER_HOUR$3 - mainEventInitialPos.startTime;
     const rowShift = Math.floor((yInGrid - draggingState.yOffset + ROW_HEIGHT$3 / 2) / ROW_HEIGHT$3) - mainEventInitialPos.rowIndex;
     const updates = [];
-    const tempEvents = [...events];
-    let resourceConflictId = null;
-    let tempCptConflict = null;
-    let tempRealtimeConflict = null;
-    const buildUpdatesStartedAt = performance.now();
     for (const [id, initialPos] of draggingState.initialPositions.entries()) {
       const eventData = events.find((ev) => ev.id === id);
       if (!eventData) continue;
@@ -69529,77 +69401,20 @@ const NextDayBuildView = ({
       const snappedStartTime = Math.round(newStartTime * 12) / 12;
       const newResourceId = resources[newRowIndex];
       updates.push({ eventId: id, newStartTime: snappedStartTime, newResourceId });
-      const conflictingEvent = events.find(
-        (ev) => ev.id !== id && !draggingState.initialPositions.has(ev.id) && ev.resourceId === newResourceId && isOverlapping$1({ ...eventData, startTime: snappedStartTime }, ev)
-      );
-      if (conflictingEvent) {
-        resourceConflictId = conflictingEvent.id;
-      }
     }
-    const buildUpdatesMs = performance.now() - buildUpdatesStartedAt;
-    const conflictStartedAt = performance.now();
-    updates.forEach((u) => {
-      const idx = tempEvents.findIndex((e2) => e2.id === u.eventId);
-      if (idx !== -1) {
-        tempEvents[idx] = { ...tempEvents[idx], startTime: u.newStartTime, resourceId: u.newResourceId };
-      }
-    });
-    const mainUpdate = updates.find((u) => u.eventId === draggingState.mainEventId);
-    if (mainUpdate) {
-      const mainEvent = tempEvents.find((e2) => e2.id === draggingState.mainEventId);
-      const otherEvents = tempEvents.filter((e2) => e2.id !== mainEvent.id);
-      const conflict = findConflict([mainEvent], otherEvents);
-      if (conflict) {
-        tempRealtimeConflict = {
-          conflictingEventId: conflict.conflictingEvent.id,
-          conflictedPersonName: conflict.personName
-        };
-        if (mainEvent.flightNumber.includes("CPT")) {
-          tempCptConflict = {
-            conflictingEvent: conflict.conflictingEvent,
-            newEvent: mainEvent,
-            conflictedPerson: "trainee",
-            personName: conflict.personName
-          };
-        }
-      }
-    }
-    const conflictMs = performance.now() - conflictStartedAt;
     const updateSignature = updates.map((update) => `${update.eventId}:${update.newStartTime}:${update.newResourceId}`).join("|");
     if (updateSignature === lastDragUpdateSignatureRef.current) {
-      recordDfpDragMoveDiagnostic(dragDiagnosticSessionRef.current, {
-        xInGrid,
-        yInGrid,
-        updateCount: updates.length,
-        duplicateSkipped: true,
-        totalMoveMs: performance.now() - moveStartedAt,
-        geometryMs,
-        buildUpdatesMs,
-        conflictMs,
-        signature: updateSignature
-      });
       return;
     }
     lastDragUpdateSignatureRef.current = updateSignature;
     pendingDragUpdateRef.current = {
       updates,
-      realtimeConflict: tempRealtimeConflict,
-      resourceConflictId,
-      cptConflict: tempCptConflict,
+      realtimeConflict: null,
+      resourceConflictId: null,
+      cptConflict: null,
       queuedAtMs: performance.now(),
       signature: updateSignature
     };
-    recordDfpDragMoveDiagnostic(dragDiagnosticSessionRef.current, {
-      xInGrid,
-      yInGrid,
-      updateCount: updates.length,
-      duplicateSkipped: false,
-      totalMoveMs: performance.now() - moveStartedAt,
-      geometryMs,
-      buildUpdatesMs,
-      conflictMs,
-      signature: updateSignature
-    });
     if (dragFrameRef.current === null) {
       dragFrameRef.current = window.requestAnimationFrame(() => {
         dragFrameRef.current = null;
@@ -69623,6 +69438,7 @@ const NextDayBuildView = ({
     window.requestAnimationFrame(clearDragVisualStyles);
     lastDragUpdateSignatureRef.current = "";
     lastDragCommitUpdatesRef.current = null;
+    dragGridRectRef.current = null;
     endDfpDragDiagnostic(dragDiagnosticSessionRef.current);
     dragDiagnosticSessionRef.current = null;
     setValidateOverlayTime(null);
