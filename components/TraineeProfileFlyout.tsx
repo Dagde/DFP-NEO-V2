@@ -3,7 +3,7 @@ import { useSystemFreeze } from '../hooks/useSystemFreeze';
 import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { v4 as uuidv4 } from 'uuid';
 import { jsPDF } from 'jspdf';
-import { Trainee, TraineeRank, SeatConfig, UnavailabilityPeriod, ScheduleEvent, Score, SyllabusItemDetail, UnavailabilityReason, Instructor, LogbookExperience, MasterCurrency, CurrencyRequirement, PersonCurrencyStatus, TrainingReportAssessment, PhraseBank, SctRequest } from '../types';
+import { Trainee, TraineeRank, SeatConfig, UnavailabilityPeriod, ScheduleEvent, Score, SyllabusItemDetail, UnavailabilityReason, Instructor, LogbookExperience, MasterCurrency, CurrencyRequirement, PersonCurrencyStatus, TrainingReportAssessment, PhraseBank, SctRequest, Course } from '../types';
 import AddUnavailabilityFlyout from './AddUnavailabilityFlyout';
 import PauseConfirmationFlyout from './PauseConfirmationFlyout';
 import ScheduleWarningFlyout from './ScheduleWarningFlyout';
@@ -199,6 +199,7 @@ interface TraineeProfileFlyoutProps {
   onCancelSctRequest?: (id: string, type: 'flight' | 'ftd') => void | Promise<void>;
   isCreating?: boolean;
   activeCourses?: string[];
+  courseRecords?: Course[];
   onOpenInstructorProfile?: (instructorName: string) => void;
   masterCurrencies?: MasterCurrency[];
   currencyRequirements?: CurrencyRequirement[];
@@ -559,6 +560,7 @@ const TraineeProfileFlyout: React.FC<TraineeProfileFlyoutProps> = ({
   onCancelSctRequest,
   isCreating = false,
   activeCourses = [],
+  courseRecords = [],
   onOpenInstructorProfile,
   masterCurrencies = [],
   currencyRequirements = [],
@@ -1278,8 +1280,21 @@ const TraineeProfileFlyout: React.FC<TraineeProfileFlyoutProps> = ({
     );
     const [role, setRole] = useState(trainee.role || defaultTraineeRole);
     const [course, setCourse] = useState(trainee.course || activeCourses[0] || '');
+  const courseRecordAcademicLmpType = useMemo(() => {
+      const traineeCourse = String(trainee.course || '').trim();
+      if (!traineeCourse) return '';
+      const matchingCourse = courseRecords.find(record => String(record?.name || '').trim() === traineeCourse);
+      return String(matchingCourse?.academicLmpType || '').trim();
+  }, [courseRecords, trainee.course]);
+  const effectiveAcademicLmpType = useMemo(() => (
+      String((trainee as any).academicLmpType || '').trim() || courseRecordAcademicLmpType
+  ), [courseRecordAcademicLmpType, (trainee as any).academicLmpType]);
+  const traineeWithEffectiveAcademicLmp = useMemo(() => ({
+      ...trainee,
+      academicLmpType: effectiveAcademicLmpType,
+  }), [trainee, effectiveAcademicLmpType]);
   const [lmpType, setLmpType] = useState(trainee.lmpType || '');
-  const [academicLmpType, setAcademicLmpType] = useState((trainee as any).academicLmpType || '');
+  const [academicLmpType, setAcademicLmpType] = useState(effectiveAcademicLmpType);
     const [seatConfig, setSeatConfig] = useState<SeatConfig>(trainee.seatConfig);
     const [isPaused, setIsPaused] = useState(trainee.isPaused);
     const [unavailability, setUnavailability] = useState<UnavailabilityPeriod[]>(trainee.unavailability || []);
@@ -1512,7 +1527,7 @@ const TraineeProfileFlyout: React.FC<TraineeProfileFlyoutProps> = ({
         setRole(trainee.role || defaultTraineeRole);
         setCourse(trainee.course || activeCourses[0] || '');
         setLmpType(trainee.lmpType || '');
-        setAcademicLmpType((trainee as any).academicLmpType || '');
+        setAcademicLmpType(effectiveAcademicLmpType);
         setSeatConfig(trainee.seatConfig);
         setIsPaused(trainee.isPaused);
         setUnavailability(trainee.unavailability || []);
@@ -1535,7 +1550,7 @@ const TraineeProfileFlyout: React.FC<TraineeProfileFlyoutProps> = ({
     useEffect(() => {
         resetState();
         setIsEditing(isCreating);
-    }, [trainee, isCreating]);
+    }, [trainee, isCreating, effectiveAcademicLmpType]);
 
     useEffect(() => {
         if (initialActiveTab) {
@@ -3046,7 +3061,7 @@ const TraineeProfileFlyout: React.FC<TraineeProfileFlyoutProps> = ({
                       return (
                         <div className={card3d + " p-0 overflow-hidden h-full min-h-0 flex flex-col"} style={card3dStyle}>
                           <TraineeLmpView
-                            trainee={trainee}
+                            trainee={traineeWithEffectiveAcademicLmp}
                             traineeLmp={currentIndividualLMP || []}
                             scores={traineeScores}
                             onBack={() => setActiveTab(null)}
@@ -3341,7 +3356,7 @@ const TraineeProfileFlyout: React.FC<TraineeProfileFlyoutProps> = ({
                                 style={(courseColors[trainee.course] || '').startsWith('#') ? { backgroundColor: courseColors[trainee.course] } : {}}
                               >{trainee.course}</span></div>
                               <div><span className="text-gray-400 block text-[10px]">LMP</span><span className="text-sky-300 font-medium">{trainee.lmpType || <span className="text-gray-500 italic">None</span>}</span></div>
-                              <div><span className="text-gray-400 block text-[10px]">Academic LMP</span><span className="text-purple-300 font-medium">{(trainee as any).academicLmpType || <span className="text-gray-500 italic">None</span>}</span></div>
+                              <div><span className="text-gray-400 block text-[10px]">Academic LMP</span><span className="text-purple-300 font-medium">{effectiveAcademicLmpType || <span className="text-gray-500 italic">None</span>}</span></div>
                               {/* Row 2 */}
                               <div><span className="text-gray-400 block text-[10px]">Callsign</span><span className="text-white font-medium">{trainee.traineeCallsign || `${callsignData?.callsignPrefix || ''}${callsignData?.callsignNumber || ''}`}</span></div>
                               <div><span className="text-gray-400 block text-[10px]">Secondary Callsign</span><span className="text-white font-medium">{trainee.secondaryCallsign || '-'}</span></div>

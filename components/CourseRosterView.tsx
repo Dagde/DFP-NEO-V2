@@ -734,6 +734,7 @@ const CourseRosterView: React.FC<CourseRosterViewProps> = ({
                     onOpenInstructorProfile={onOpenInstructorProfile}
                     isCreating={isCreatingNew}
                     activeCourses={activeCourseNumbers}
+                    courseRecords={courses}
                     masterCurrencies={masterCurrencies}
                     currencyRequirements={currencyRequirements}
                     currentUserId={currentUserId}

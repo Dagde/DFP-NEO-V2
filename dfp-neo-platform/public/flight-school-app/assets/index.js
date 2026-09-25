@@ -50636,6 +50636,7 @@ const TraineeProfileFlyout = ({
   onCancelSctRequest,
   isCreating = false,
   activeCourses = [],
+  courseRecords = [],
   onOpenInstructorProfile,
   masterCurrencies = [],
   currencyRequirements = [],
@@ -51250,8 +51251,19 @@ const TraineeProfileFlyout = ({
   );
   const [role, setRole] = reactExports.useState(trainee.role || defaultTraineeRole);
   const [course, setCourse] = reactExports.useState(trainee.course || activeCourses[0] || "");
+  const courseRecordAcademicLmpType = reactExports.useMemo(() => {
+    const traineeCourse = String(trainee.course || "").trim();
+    if (!traineeCourse) return "";
+    const matchingCourse = courseRecords.find((record) => String(record?.name || "").trim() === traineeCourse);
+    return String(matchingCourse?.academicLmpType || "").trim();
+  }, [courseRecords, trainee.course]);
+  const effectiveAcademicLmpType = reactExports.useMemo(() => String(trainee.academicLmpType || "").trim() || courseRecordAcademicLmpType, [courseRecordAcademicLmpType, trainee.academicLmpType]);
+  const traineeWithEffectiveAcademicLmp = reactExports.useMemo(() => ({
+    ...trainee,
+    academicLmpType: effectiveAcademicLmpType
+  }), [trainee, effectiveAcademicLmpType]);
   const [lmpType, setLmpType] = reactExports.useState(trainee.lmpType || "");
-  const [academicLmpType, setAcademicLmpType] = reactExports.useState(trainee.academicLmpType || "");
+  const [academicLmpType, setAcademicLmpType] = reactExports.useState(effectiveAcademicLmpType);
   const [seatConfig, setSeatConfig] = reactExports.useState(trainee.seatConfig);
   const [isPaused, setIsPaused] = reactExports.useState(trainee.isPaused);
   const [unavailability, setUnavailability] = reactExports.useState(trainee.unavailability || []);
@@ -51454,7 +51466,7 @@ const TraineeProfileFlyout = ({
     setRole(trainee.role || defaultTraineeRole);
     setCourse(trainee.course || activeCourses[0] || "");
     setLmpType(trainee.lmpType || "");
-    setAcademicLmpType(trainee.academicLmpType || "");
+    setAcademicLmpType(effectiveAcademicLmpType);
     setSeatConfig(trainee.seatConfig);
     setIsPaused(trainee.isPaused);
     setUnavailability(trainee.unavailability || []);
@@ -51476,7 +51488,7 @@ const TraineeProfileFlyout = ({
   reactExports.useEffect(() => {
     resetState();
     setIsEditing(isCreating);
-  }, [trainee, isCreating]);
+  }, [trainee, isCreating, effectiveAcademicLmpType]);
   reactExports.useEffect(() => {
     if (initialActiveTab) {
       setActiveTab(initialActiveTab);
@@ -52796,7 +52808,7 @@ ${errorText || `HTTP ${response.status}`}`, "Delete Failed", "error");
                 return /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: card3d2 + " p-0 overflow-hidden h-full min-h-0 flex flex-col", style: card3dStyle2, children: /* @__PURE__ */ jsxRuntimeExports.jsx(
                   TraineeLmpView,
                   {
-                    trainee,
+                    trainee: traineeWithEffectiveAcademicLmp,
                     traineeLmp: currentIndividualLMP || [],
                     scores: traineeScores,
                     onBack: () => setActiveTab(null),
@@ -53051,7 +53063,7 @@ ${errorText || `HTTP ${response.status}`}`, "Delete Failed", "error");
                         ] }),
                         /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
                           /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-gray-400 block text-[10px]", children: "Academic LMP" }),
-                          /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-purple-300 font-medium", children: trainee.academicLmpType || /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-gray-500 italic", children: "None" }) })
+                          /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-purple-300 font-medium", children: effectiveAcademicLmpType || /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-gray-500 italic", children: "None" }) })
                         ] }),
                         /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
                           /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-gray-400 block text-[10px]", children: "Callsign" }),
@@ -55522,6 +55534,7 @@ const CourseRosterView = ({
         onOpenInstructorProfile,
         isCreating: isCreatingNew,
         activeCourses: activeCourseNumbers,
+        courseRecords: courses,
         masterCurrencies,
         currencyRequirements,
         currentUserId,
