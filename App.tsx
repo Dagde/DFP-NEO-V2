@@ -996,7 +996,14 @@ const downloadNeoAssistDragDiagnosticReport = () => {
         const dfpDragStored = window.localStorage?.getItem(DFP_DRAG_DIAGNOSTIC_STORAGE_KEY);
         if (dfpDragStored) {
             try {
-                report.dfpScheduleTileDragDiagnostics = JSON.parse(dfpDragStored);
+                const parsedDfpDragReport = JSON.parse(dfpDragStored);
+                report.dfpScheduleTileDragDiagnostics = parsedDfpDragReport;
+                const dfpGeneratedAt = Date.parse(String(parsedDfpDragReport?.generatedAt || ''));
+                const reportGeneratedAt = Date.parse(String(report.generatedAt || new Date().toISOString()));
+                if (Number.isFinite(dfpGeneratedAt) && Number.isFinite(reportGeneratedAt) && reportGeneratedAt - dfpGeneratedAt > 60000) {
+                    report.dfpScheduleTileDragDiagnosticsStale = true;
+                    report.dfpScheduleTileDragDiagnosticsNote = 'The attached DFP schedule tile drag diagnostics are more than one minute older than this report download and may not describe the drag just tested.';
+                }
             } catch {
                 report.dfpScheduleTileDragDiagnostics = { parseError: true, rawLength: dfpDragStored.length };
             }

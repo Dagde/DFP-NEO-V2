@@ -42568,12 +42568,7 @@ const ScheduleView = ({
         queuedAtMs: performance.now(),
         signature: updateSignature
       };
-      if (dragFrameRef.current === null) {
-        dragFrameRef.current = window.requestAnimationFrame(() => {
-          dragFrameRef.current = null;
-          flushPendingDragUpdate(false);
-        });
-      }
+      applyDragVisualUpdates(visualUpdates);
       recordDfpDragMoveDiagnostic(dragDiagnosticSessionRef.current, {
         xInGrid,
         yInGrid,
@@ -111858,7 +111853,14 @@ const downloadNeoAssistDragDiagnosticReport = () => {
     const dfpDragStored = window.localStorage?.getItem(DFP_DRAG_DIAGNOSTIC_STORAGE_KEY);
     if (dfpDragStored) {
       try {
-        report.dfpScheduleTileDragDiagnostics = JSON.parse(dfpDragStored);
+        const parsedDfpDragReport = JSON.parse(dfpDragStored);
+        report.dfpScheduleTileDragDiagnostics = parsedDfpDragReport;
+        const dfpGeneratedAt = Date.parse(String(parsedDfpDragReport?.generatedAt || ""));
+        const reportGeneratedAt = Date.parse(String(report.generatedAt || (/* @__PURE__ */ new Date()).toISOString()));
+        if (Number.isFinite(dfpGeneratedAt) && Number.isFinite(reportGeneratedAt) && reportGeneratedAt - dfpGeneratedAt > 6e4) {
+          report.dfpScheduleTileDragDiagnosticsStale = true;
+          report.dfpScheduleTileDragDiagnosticsNote = "The attached DFP schedule tile drag diagnostics are more than one minute older than this report download and may not describe the drag just tested.";
+        }
       } catch {
         report.dfpScheduleTileDragDiagnostics = { parseError: true, rawLength: dfpDragStored.length };
       }

@@ -13031,12 +13031,7 @@ const ScheduleView: React.FC<ScheduleViewProps> = ({
                 queuedAtMs: performance.now(),
                 signature: updateSignature,
             };
-            if (dragFrameRef.current === null) {
-                dragFrameRef.current = window.requestAnimationFrame(() => {
-                    dragFrameRef.current = null;
-                    flushPendingDragUpdate(false);
-                });
-            }
+            applyDragVisualUpdates(visualUpdates);
             recordDfpDragMoveDiagnostic(dragDiagnosticSessionRef.current, {
                 xInGrid,
                 yInGrid,
