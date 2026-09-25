@@ -12399,6 +12399,7 @@ const ScheduleView: React.FC<ScheduleViewProps> = ({
     const [realtimeResourceConflictId, setRealtimeResourceConflictId] = useState<string | null>(null);
     const [draggedCptConflict, setDraggedCptConflict] = useState<Conflict | null>(null);
     const didDragRef = useRef(false);
+    const schedulePointerDragActiveRef = useRef(false);
     const dragFrameRef = useRef<number | null>(null);
     const dragGridRectRef = useRef<DOMRect | null>(null);
     const lastDragUpdateSignatureRef = useRef('');
@@ -12406,6 +12407,7 @@ const ScheduleView: React.FC<ScheduleViewProps> = ({
     const lastDragCommitUpdatesRef = useRef<{ eventId: string, newStartTime: number, newResourceId: string }[] | null>(null);
     const pendingDragUpdateRef = useRef<{
         updates: { eventId: string, newStartTime: number, newResourceId: string }[];
+        visualUpdates?: { eventId: string, newStartTime: number, newResourceId: string }[];
         realtimeConflict: { conflictingEventId: string; conflictedPersonName: string; } | null;
         resourceConflictId: string | null;
         cptConflict: Conflict | null;
@@ -12497,7 +12499,7 @@ const ScheduleView: React.FC<ScheduleViewProps> = ({
             onUpdateEvent(pending.updates);
             lastDragCommitUpdatesRef.current = null;
         } else {
-            applyDragVisualUpdates(pending.updates);
+            applyDragVisualUpdates(pending.visualUpdates || pending.updates);
         }
     }, [applyDragVisualUpdates, applyFinalDragVisualPositions, onUpdateEvent]);
 
@@ -12546,12 +12548,14 @@ const ScheduleView: React.FC<ScheduleViewProps> = ({
     useEffect(() => {
         // Global drag handlers
         const handleGlobalMouseMove = (e: MouseEvent) => {
+            if (schedulePointerDragActiveRef.current) return;
             if (draggingStateRef.current || draggingState) {
                 handleMouseMove(e as any);
             }
         };
         
         const handleGlobalMouseUp = (e: MouseEvent) => {
+            if (schedulePointerDragActiveRef.current) return;
             if (draggingStateRef.current || draggingState) {
                 finishScheduleTileDrag();
             }
@@ -12978,6 +12982,7 @@ const ScheduleView: React.FC<ScheduleViewProps> = ({
             const rowShift = Math.floor((yInGrid - activeDraggingState.yOffset + ROW_HEIGHT / 2) / ROW_HEIGHT) - mainEventInitialPos.rowIndex;
 
             const updates: { eventId: string, newStartTime: number, newResourceId: string }[] = [];
+            const visualUpdates: { eventId: string, newStartTime: number, newResourceId: string }[] = [];
 
             for (const [id, initialPos] of activeDraggingState.initialPositions.entries()) {
                 const eventData = events.find(ev => ev.id === id);
@@ -12995,10 +13000,11 @@ const ScheduleView: React.FC<ScheduleViewProps> = ({
                 const newResourceId = resources[newRowIndex];
 
                 updates.push({ eventId: id, newStartTime: snappedStartTime, newResourceId });
+                visualUpdates.push({ eventId: id, newStartTime, newResourceId });
             }
 
-            const updateSignature = updates
-                .map(update => `${update.eventId}:${update.newStartTime}:${update.newResourceId}`)
+            const updateSignature = visualUpdates
+                .map(update => `${update.eventId}:${Math.round((update.newStartTime - START_HOUR) * PIXELS_PER_HOUR * zoomLevel)}:${update.newResourceId}`)
                 .join('|');
             if (updateSignature === lastDragUpdateSignatureRef.current) {
                 recordDfpDragMoveDiagnostic(dragDiagnosticSessionRef.current, {
@@ -13018,6 +13024,7 @@ const ScheduleView: React.FC<ScheduleViewProps> = ({
             lastDragUpdateSignatureRef.current = updateSignature;
             pendingDragUpdateRef.current = {
                 updates,
+                visualUpdates,
                 realtimeConflict: null,
                 resourceConflictId: null,
                 cptConflict: null,
@@ -13103,6 +13110,7 @@ const ScheduleView: React.FC<ScheduleViewProps> = ({
         }
         handleMouseDown(e as unknown as MouseEvent<HTMLDivElement>, event);
         if (!draggingStateRef.current) return;
+        schedulePointerDragActiveRef.current = true;
 
         const handlePointerMove = (pointerEvent: PointerEvent) => {
             if (!draggingStateRef.current) return;
@@ -13111,6 +13119,7 @@ const ScheduleView: React.FC<ScheduleViewProps> = ({
         };
 
         const cleanupPointerListeners = () => {
+            schedulePointerDragActiveRef.current = false;
             document.removeEventListener('pointermove', handlePointerMove);
             document.removeEventListener('pointerup', handlePointerUp);
             document.removeEventListener('pointercancel', handlePointerCancel);

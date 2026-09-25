@@ -42030,6 +42030,7 @@ const ScheduleView = ({
   const [realtimeResourceConflictId, setRealtimeResourceConflictId] = reactExports.useState(null);
   const [draggedCptConflict, setDraggedCptConflict] = reactExports.useState(null);
   const didDragRef = reactExports.useRef(false);
+  const schedulePointerDragActiveRef = reactExports.useRef(false);
   const dragFrameRef = reactExports.useRef(null);
   const dragGridRectRef = reactExports.useRef(null);
   const lastDragUpdateSignatureRef = reactExports.useRef("");
@@ -42116,7 +42117,7 @@ const ScheduleView = ({
       onUpdateEvent(pending.updates);
       lastDragCommitUpdatesRef.current = null;
     } else {
-      applyDragVisualUpdates(pending.updates);
+      applyDragVisualUpdates(pending.visualUpdates || pending.updates);
     }
   }, [applyDragVisualUpdates, applyFinalDragVisualPositions, onUpdateEvent]);
   reactExports.useEffect(() => {
@@ -42157,11 +42158,13 @@ const ScheduleView = ({
   const [validateOverlayTime, setValidateOverlayTime] = reactExports.useState(null);
   reactExports.useEffect(() => {
     const handleGlobalMouseMove = (e) => {
+      if (schedulePointerDragActiveRef.current) return;
       if (draggingStateRef.current || draggingState) {
         handleMouseMove(e);
       }
     };
     const handleGlobalMouseUp = (e) => {
+      if (schedulePointerDragActiveRef.current) return;
       if (draggingStateRef.current || draggingState) {
         finishScheduleTileDrag();
       }
@@ -42524,6 +42527,7 @@ const ScheduleView = ({
       const timeShift = (xInGrid / zoomLevel - activeDraggingState.xOffset) / PIXELS_PER_HOUR$6 - mainEventInitialPos.startTime;
       const rowShift = Math.floor((yInGrid - activeDraggingState.yOffset + ROW_HEIGHT$6 / 2) / ROW_HEIGHT$6) - mainEventInitialPos.rowIndex;
       const updates = [];
+      const visualUpdates = [];
       for (const [id, initialPos] of activeDraggingState.initialPositions.entries()) {
         const eventData = events.find((ev) => ev.id === id);
         if (!eventData) continue;
@@ -42536,8 +42540,9 @@ const ScheduleView = ({
         const snappedStartTime = Math.round(newStartTime * 12) / 12;
         const newResourceId = resources[newRowIndex];
         updates.push({ eventId: id, newStartTime: snappedStartTime, newResourceId });
+        visualUpdates.push({ eventId: id, newStartTime, newResourceId });
       }
-      const updateSignature = updates.map((update) => `${update.eventId}:${update.newStartTime}:${update.newResourceId}`).join("|");
+      const updateSignature = visualUpdates.map((update) => `${update.eventId}:${Math.round((update.newStartTime - START_HOUR$6) * PIXELS_PER_HOUR$6 * zoomLevel)}:${update.newResourceId}`).join("|");
       if (updateSignature === lastDragUpdateSignatureRef.current) {
         recordDfpDragMoveDiagnostic(dragDiagnosticSessionRef.current, {
           xInGrid,
@@ -42556,6 +42561,7 @@ const ScheduleView = ({
       lastDragUpdateSignatureRef.current = updateSignature;
       pendingDragUpdateRef.current = {
         updates,
+        visualUpdates,
         realtimeConflict: null,
         resourceConflictId: null,
         cptConflict: null,
@@ -42632,12 +42638,14 @@ const ScheduleView = ({
     }
     handleMouseDown(e, event);
     if (!draggingStateRef.current) return;
+    schedulePointerDragActiveRef.current = true;
     const handlePointerMove = (pointerEvent) => {
       if (!draggingStateRef.current) return;
       pointerEvent.preventDefault();
       handleMouseMove(pointerEvent);
     };
     const cleanupPointerListeners = () => {
+      schedulePointerDragActiveRef.current = false;
       document.removeEventListener("pointermove", handlePointerMove);
       document.removeEventListener("pointerup", handlePointerUp);
       document.removeEventListener("pointercancel", handlePointerCancel);
