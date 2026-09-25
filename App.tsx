@@ -1212,6 +1212,7 @@ const DfpSidePanelTimeline: React.FC<{
     const previousAssistPanelOpenRef = useRef(false);
     const wizardRepeatRef = useRef<number | null>(null);
     const [activeDrag, setActiveDrag] = useState<DfpMiniTimelineDragState | null>(null);
+    const activeDragRef = useRef<DfpMiniTimelineDragState | null>(null);
     const [activeAssistPage, setActiveAssistPage] = useState<NeoAssistPage>('inputs');
     const [assistPriorityTypeFilter, setAssistPriorityTypeFilter] = useState('all');
     const [assistPriorityPersonFilter, setAssistPriorityPersonFilter] = useState('');
@@ -2912,13 +2913,31 @@ const DfpSidePanelTimeline: React.FC<{
         event.preventDefault();
         event.stopPropagation();
         const constrainedTime = constrainTime(target, time);
-        setActiveDrag({
+        const nextDrag = {
             ...target,
             label,
             originalTime: constrainedTime,
             time: constrainedTime,
             left: getLeft(constrainedTime),
+        };
+        activeDragRef.current = nextDrag;
+        setActiveDrag(nextDrag);
+        recordNeoAssistDragDiagnostic({
+            stage: 'mini-timeline-drag-start',
+            details: {
+                label,
+                target,
+                time: constrainedTime,
+                activeAssistPage,
+            },
         });
+    };
+
+    const getActiveDragDisplayTime = (target: DfpMiniTimelineDragTarget, fallbackTime: number): number => {
+        const drag = activeDragRef.current;
+        if (!drag || drag.kind !== target.kind || drag.edge !== target.edge) return fallbackTime;
+        if (target.kind === 'exclusion' && drag.kind === 'exclusion' && drag.id !== target.id) return fallbackTime;
+        return drag.time;
     };
 
     useLayoutEffect(() => {
@@ -2941,23 +2960,57 @@ const DfpSidePanelTimeline: React.FC<{
         if (!activeDrag) return undefined;
 
         const handlePointerMove = (event: PointerEvent) => {
+            const startedAt = getNeoAssistPerfNow();
+            const currentDrag = activeDragRef.current;
+            if (!currentDrag) return;
             event.preventDefault();
             const nextTime = getTimeFromPointer(event.clientX);
-            const appliedTime = applyDrag(activeDrag, nextTime);
+            const appliedTime = constrainTime(currentDrag, nextTime);
+            const nextDrag = {
+                ...currentDrag,
+                time: appliedTime,
+                left: getLeft(appliedTime),
+            };
+            activeDragRef.current = nextDrag;
             setActiveDrag(previous => previous ? {
                 ...previous,
                 time: appliedTime,
                 left: getLeft(appliedTime),
             } : previous);
+            const elapsed = getNeoAssistPerfNow() - startedAt;
+            if (elapsed > 8) {
+                recordNeoAssistDragDiagnostic({
+                    stage: 'mini-timeline-pointer-move-slow',
+                    details: {
+                        label: currentDrag.label,
+                        elapsedMs: Math.round(elapsed * 100) / 100,
+                        time: appliedTime,
+                    },
+                });
+            }
         };
 
         const handlePointerUp = () => {
+            const finalDrag = activeDragRef.current || activeDrag;
+            const commitStartedAt = getNeoAssistPerfNow();
+            const committedTime = applyDrag(finalDrag, finalDrag.time);
+            const commitElapsed = getNeoAssistPerfNow() - commitStartedAt;
             logAudit(
                 'DFP Side Panel',
                 'Edit',
-                `Dragged ${activeDrag.label}`,
-                `${formatTime(activeDrag.originalTime)} → ${formatTime(activeDrag.time)}`,
+                `Dragged ${finalDrag.label}`,
+                `${formatTime(finalDrag.originalTime)} → ${formatTime(committedTime)}`,
             );
+            recordNeoAssistDragDiagnostic({
+                stage: commitElapsed > 20 ? 'mini-timeline-drag-commit-slow' : 'mini-timeline-drag-commit',
+                details: {
+                    label: finalDrag.label,
+                    originalTime: finalDrag.originalTime,
+                    committedTime,
+                    elapsedMs: Math.round(commitElapsed * 100) / 100,
+                },
+            });
+            activeDragRef.current = null;
             setActiveDrag(null);
         };
 
@@ -2967,7 +3020,17 @@ const DfpSidePanelTimeline: React.FC<{
             window.removeEventListener('pointermove', handlePointerMove);
             window.removeEventListener('pointerup', handlePointerUp);
         };
-    }, [activeDrag, flyingStartTime, flyingEndTime, commenceNightFlying, ceaseNightFlying, flyingWindowExclusions]);
+    }, [
+        activeDrag?.kind,
+        activeDrag?.edge,
+        activeDrag?.kind === 'exclusion' ? activeDrag.id : undefined,
+        activeDrag?.label,
+        flyingStartTime,
+        flyingEndTime,
+        commenceNightFlying,
+        ceaseNightFlying,
+        flyingWindowExclusions,
+    ]);
 
     const dayShade = 'bg-cyan-400/30 ring-cyan-100/30';
     const nightShade = 'bg-violet-500/30 ring-violet-100/30';
@@ -4968,13 +5031,25 @@ const DfpSidePanelTimeline: React.FC<{
                     <div className="absolute inset-x-0 top-1/2 h-px bg-slate-300" />
                     <div
                         className={`absolute inset-y-0 rounded-sm ring-1 ring-inset ${dayShade}`}
-                        style={{ left: `${getLeft(flyingStartTime)}%`, width: `${getWidth(flyingStartTime, flyingEndTime)}%` }}
+                        style={{
+                            left: `${getLeft(getActiveDragDisplayTime({ kind: 'day', edge: 'start' }, flyingStartTime))}%`,
+                            width: `${getWidth(
+                                getActiveDragDisplayTime({ kind: 'day', edge: 'start' }, flyingStartTime),
+                                getActiveDragDisplayTime({ kind: 'day', edge: 'end' }, flyingEndTime)
+                            )}%`,
+                        }}
                         title={`Day flying ${formatTime(flyingStartTime)}-${formatTime(flyingEndTime)}`}
                     />
                     {allowNightFlying && (
                         <div
                             className={`absolute inset-y-0 rounded-sm ring-1 ring-inset ${nightShade}`}
-                            style={{ left: `${getLeft(commenceNightFlying)}%`, width: `${getWidth(commenceNightFlying, ceaseNightFlying)}%` }}
+                            style={{
+                                left: `${getLeft(getActiveDragDisplayTime({ kind: 'night', edge: 'start' }, commenceNightFlying))}%`,
+                                width: `${getWidth(
+                                    getActiveDragDisplayTime({ kind: 'night', edge: 'start' }, commenceNightFlying),
+                                    getActiveDragDisplayTime({ kind: 'night', edge: 'end' }, ceaseNightFlying)
+                                )}%`,
+                            }}
                             title={`Night flying ${formatTime(commenceNightFlying)}-${formatTime(ceaseNightFlying)}`}
                         />
                     )}
@@ -4982,7 +5057,13 @@ const DfpSidePanelTimeline: React.FC<{
                         <div
                             key={period.id}
                             className={`absolute inset-y-0 rounded-sm ring-1 ring-inset ${exclusionShade}`}
-                            style={{ left: `${getLeft(period.startTime)}%`, width: `${getWidth(period.startTime, period.endTime)}%` }}
+                            style={{
+                                left: `${getLeft(getActiveDragDisplayTime({ kind: 'exclusion', id: period.id, edge: 'start' }, period.startTime))}%`,
+                                width: `${getWidth(
+                                    getActiveDragDisplayTime({ kind: 'exclusion', id: period.id, edge: 'start' }, period.startTime),
+                                    getActiveDragDisplayTime({ kind: 'exclusion', id: period.id, edge: 'end' }, period.endTime)
+                                )}%`,
+                            }}
                             title={`Exclusion ${formatTime(period.startTime)}-${formatTime(period.endTime)}`}
                         />
                     ))}
@@ -5008,18 +5089,21 @@ const DfpSidePanelTimeline: React.FC<{
                             style={{ left: `${((hour - timelineStartHour) / timelineSpanHours) * 100}%` }}
                         />
                     ))}
-                    {markers.map(marker => (
-                        <button
-                            key={marker.key}
-                            type="button"
-                            onPointerDown={(event) => startDrag(event, marker.target, marker.label, marker.time)}
-                            className="absolute inset-y-0 z-30 flex w-3 -translate-x-1/2 cursor-ew-resize touch-none items-center justify-center focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-200"
-                            style={{ left: `${getLeft(marker.time)}%` }}
-                            title={`Drag ${marker.label}: ${formatTime(marker.time)}`}
-                        >
-                            <span className={`h-full w-px rounded-full ${marker.color} opacity-70 shadow-[0_0_5px_currentColor]`} />
-                        </button>
-                    ))}
+                    {markers.map(marker => {
+                        const displayTime = getActiveDragDisplayTime(marker.target, marker.time);
+                        return (
+                            <button
+                                key={marker.key}
+                                type="button"
+                                onPointerDown={(event) => startDrag(event, marker.target, marker.label, marker.time)}
+                                className="absolute inset-y-0 z-30 flex w-3 -translate-x-1/2 cursor-ew-resize touch-none items-center justify-center focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-200"
+                                style={{ left: `${getLeft(displayTime)}%` }}
+                                title={`Drag ${marker.label}: ${formatTime(displayTime)}`}
+                            >
+                                <span className={`h-full w-px rounded-full ${marker.color} opacity-70 shadow-[0_0_5px_currentColor]`} />
+                            </button>
+                        );
+                    })}
                     {activeDrag && (
                         <div
                             className="pointer-events-none absolute -top-10 z-40 -translate-x-1/2 rounded-md border border-cyan-300 bg-white px-2 py-1 text-[10px] font-semibold text-slate-900 shadow-xl"
@@ -5031,15 +5115,18 @@ const DfpSidePanelTimeline: React.FC<{
                     )}
                 </div>
                 <div className="relative mt-1 h-8">
-                    {markers.map(marker => (
-                        <span
-                            key={`mini-label-${marker.key}`}
-                            className="absolute -translate-x-1/2 whitespace-nowrap rounded border border-slate-300 bg-white px-1.5 py-1 text-[9px] font-semibold text-slate-800 shadow-sm"
-                            style={{ left: `${getLeft(marker.time)}%` }}
-                        >
-                            {formatCompactTime(marker.time)}
-                        </span>
-                    ))}
+                    {markers.map(marker => {
+                        const displayTime = getActiveDragDisplayTime(marker.target, marker.time);
+                        return (
+                            <span
+                                key={`mini-label-${marker.key}`}
+                                className="absolute -translate-x-1/2 whitespace-nowrap rounded border border-slate-300 bg-white px-1.5 py-1 text-[9px] font-semibold text-slate-800 shadow-sm"
+                                style={{ left: `${getLeft(displayTime)}%` }}
+                            >
+                                {formatCompactTime(displayTime)}
+                            </span>
+                        );
+                    })}
                 </div>
                 <div className="flex flex-wrap gap-x-3 gap-y-0.5 text-[9px] font-semibold text-slate-600">
                     <span className="inline-flex items-center gap-1"><span className={`h-2 w-3 rounded-sm ring-1 ring-inset ${dayShade}`} /> Day</span>
