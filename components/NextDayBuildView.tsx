@@ -300,6 +300,7 @@ export const NextDayBuildView: React.FC<NextDayBuildViewProps> = ({
     // Multi-select State
     const selectionStartPoint = useRef<{ x: number, y: number } | null>(null);
     const [selectionRect, setSelectionRect] = useState<{ x: number, y: number, width: number, height: number } | null>(null);
+    const oraclePlacementActiveRef = useRef(false);
 
     useEffect(() => {
         const getTodayString = () => {
@@ -311,6 +312,50 @@ export const NextDayBuildView: React.FC<NextDayBuildViewProps> = ({
         const timerId = setInterval(() => setCurrentTime(new Date()), 1000);
         return () => clearInterval(timerId);
     }, [date]);
+
+    const getOraclePlacementFromClient = useCallback((clientX: number, clientY: number) => {
+        if (!scheduleGridRef.current) return null;
+        const gridRect = scheduleGridRef.current.getBoundingClientRect();
+        const xInGrid = Math.max(0, Math.min(gridRect.width, clientX - gridRect.left));
+        const yInGrid = Math.max(0, Math.min(gridRect.height, clientY - gridRect.top));
+        const rawStartTime = xInGrid / (PIXELS_PER_HOUR * zoomLevel) + START_HOUR;
+        const startTime = Math.max(START_HOUR, Math.min(END_HOUR, rawStartTime));
+        const row = Math.max(0, Math.min(resources.length - 1, Math.floor(yInGrid / ROW_HEIGHT)));
+        const resourceId = resources[row] || resources[0];
+        return resourceId ? { startTime, resourceId } : null;
+    }, [resources, zoomLevel]);
+
+    const updateOraclePlacementFromClient = useCallback((clientX: number, clientY: number) => {
+        const placement = getOraclePlacementFromClient(clientX, clientY);
+        if (!placement) return;
+        onOracleMouseMove(placement.startTime, placement.resourceId);
+    }, [getOraclePlacementFromClient, onOracleMouseMove]);
+
+    const finishOraclePlacement = useCallback(() => {
+        if (!oraclePlacementActiveRef.current) return;
+        oraclePlacementActiveRef.current = false;
+        document.body.classList.remove('no-select');
+        onOracleMouseUp();
+        setValidateOverlayTime(null);
+    }, [onOracleMouseUp]);
+
+    useEffect(() => {
+        const handleGlobalMouseMove = (event: globalThis.MouseEvent) => {
+            if (!oraclePlacementActiveRef.current) return;
+            didDragRef.current = true;
+            updateOraclePlacementFromClient(event.clientX, event.clientY);
+        };
+        const handleGlobalMouseUp = (_event: globalThis.MouseEvent) => {
+            if (!oraclePlacementActiveRef.current) return;
+            finishOraclePlacement();
+        };
+        document.addEventListener('mousemove', handleGlobalMouseMove);
+        document.addEventListener('mouseup', handleGlobalMouseUp);
+        return () => {
+            document.removeEventListener('mousemove', handleGlobalMouseMove);
+            document.removeEventListener('mouseup', handleGlobalMouseUp);
+        };
+    }, [finishOraclePlacement, updateOraclePlacementFromClient]);
 
     const getExternalDropPlacementFromClient = useCallback((clientX: number, clientY: number, diagnosticSessionId?: string) => {
         const startedAt = getNeoAssistPerfNow();
@@ -507,16 +552,11 @@ export const NextDayBuildView: React.FC<NextDayBuildViewProps> = ({
         document.body.classList.add('no-select');
 
         if (isOracleMode && !event) {
-            if (!scheduleGridRef.current) return;
-            const gridRect = scheduleGridRef.current.getBoundingClientRect();
-            const xInGrid = e.clientX - gridRect.left;
-            
-            const startTime = xInGrid / (PIXELS_PER_HOUR * zoomLevel) + START_HOUR;
-            const yInGrid = e.clientY - gridRect.top;
-            const row = Math.floor(yInGrid / ROW_HEIGHT);
-            const resourceId = resources[row] || resources[0];
-            
-            onOracleMouseDown(startTime, resourceId);
+            e.preventDefault();
+            const placement = getOraclePlacementFromClient(e.clientX, e.clientY);
+            if (!placement) return;
+            oraclePlacementActiveRef.current = true;
+            onOracleMouseDown(placement.startTime, placement.resourceId);
             return;
         }
 
@@ -609,11 +649,8 @@ export const NextDayBuildView: React.FC<NextDayBuildViewProps> = ({
             setValidateOverlayTime(mouseTimeInHours);
         }
 
-        if (isOracleMode && oraclePreviewEvent) {
-            const startTime = xInGrid / (PIXELS_PER_HOUR * zoomLevel) + START_HOUR;
-            const row = Math.floor(yInGrid / ROW_HEIGHT);
-            const resourceId = resources[row] || resources[0];
-            onOracleMouseMove(startTime, resourceId);
+        if (isOracleMode && oraclePlacementActiveRef.current) {
+            updateOraclePlacementFromClient(e.clientX, e.clientY);
             return;
         }
 
@@ -704,6 +741,10 @@ export const NextDayBuildView: React.FC<NextDayBuildViewProps> = ({
     };
 
     const handleMouseUp = (e: MouseEvent<HTMLDivElement>) => {
+        if (oraclePlacementActiveRef.current) {
+            finishOraclePlacement();
+            return;
+        }
         flushPendingDragUpdate(true);
         document.body.classList.remove('no-select');
 

@@ -42172,16 +42172,49 @@ const ScheduleView = ({
   }, [draggingState, flushPendingDragUpdate, getDragTileElements]);
   const selectionStartPoint = reactExports.useRef(null);
   const [selectionRect, setSelectionRect] = reactExports.useState(null);
+  const oraclePlacementActiveRef = reactExports.useRef(false);
   const [validateOverlayTime, setValidateOverlayTime] = reactExports.useState(null);
+  const getOraclePlacementFromClient = reactExports.useCallback((clientX, clientY) => {
+    if (!scheduleGridRef.current) return null;
+    const gridRect = scheduleGridRef.current.getBoundingClientRect();
+    const xInGrid = Math.max(0, Math.min(gridRect.width, clientX - gridRect.left));
+    const yInGrid = Math.max(0, Math.min(gridRect.height, clientY - gridRect.top));
+    const rawStartTime = xInGrid / (PIXELS_PER_HOUR$6 * zoomLevel) + START_HOUR$6;
+    const startTime = Math.max(START_HOUR$6, Math.min(END_HOUR$6, rawStartTime));
+    const row = Math.max(0, Math.min(resources.length - 1, Math.floor(yInGrid / ROW_HEIGHT$6)));
+    const resourceId = resources[row] || resources[0];
+    return resourceId ? { startTime, resourceId } : null;
+  }, [resources, zoomLevel]);
+  const updateOraclePlacementFromClient = reactExports.useCallback((clientX, clientY) => {
+    const placement = getOraclePlacementFromClient(clientX, clientY);
+    if (!placement) return;
+    onOracleMouseMove(placement.startTime, placement.resourceId);
+  }, [getOraclePlacementFromClient, onOracleMouseMove]);
+  const finishOraclePlacement = reactExports.useCallback(() => {
+    if (!oraclePlacementActiveRef.current) return;
+    oraclePlacementActiveRef.current = false;
+    document.body.classList.remove("no-select");
+    onOracleMouseUp();
+    setValidateOverlayTime(null);
+  }, [onOracleMouseUp]);
   reactExports.useEffect(() => {
     const handleGlobalMouseMove = (e) => {
+      if (oraclePlacementActiveRef.current) {
+        didDragRef.current = true;
+        updateOraclePlacementFromClient(e.clientX, e.clientY);
+        return;
+      }
       if (scheduleDirectMouseDragActiveRef.current) return;
       if (schedulePointerDragActiveRef.current && performance.now() - lastSchedulePointerMoveAtRef.current < 32) return;
       if (draggingStateRef.current || draggingState) {
         handleMouseMove(e);
       }
     };
-    const handleGlobalMouseUp = (e) => {
+    const handleGlobalMouseUp = (_e) => {
+      if (oraclePlacementActiveRef.current) {
+        finishOraclePlacement();
+        return;
+      }
       if (scheduleDirectMouseDragActiveRef.current) return;
       if (schedulePointerDragActiveRef.current && performance.now() - lastSchedulePointerMoveAtRef.current < 32) return;
       if (draggingStateRef.current || draggingState) {
@@ -42194,7 +42227,7 @@ const ScheduleView = ({
       document.removeEventListener("mousemove", handleGlobalMouseMove);
       document.removeEventListener("mouseup", handleGlobalMouseUp);
     };
-  }, [draggingState, finishScheduleTileDrag]);
+  }, [draggingState, finishOraclePlacement, finishScheduleTileDrag, updateOraclePlacementFromClient]);
   const getExternalDropPlacementFromClient = reactExports.useCallback((clientX, clientY, diagnosticSessionId) => {
     const startedAt = getNeoAssistPerfNow$2();
     if (!scheduleGridRef.current) {
@@ -42413,14 +42446,11 @@ const ScheduleView = ({
     didDragRef.current = false;
     document.body.classList.add("no-select");
     if (isOracleMode && !event) {
-      if (!scheduleGridRef.current) return;
-      const gridRect = scheduleGridRef.current.getBoundingClientRect();
-      const xInGrid = e.clientX - gridRect.left;
-      const startTime = xInGrid / (PIXELS_PER_HOUR$6 * zoomLevel) + START_HOUR$6;
-      const yInGrid = e.clientY - gridRect.top;
-      const row = Math.floor(yInGrid / ROW_HEIGHT$6);
-      const resourceId = resources[row] || resources[0];
-      onOracleMouseDown(startTime, resourceId);
+      e.preventDefault();
+      const placement = getOraclePlacementFromClient(e.clientX, e.clientY);
+      if (!placement) return;
+      oraclePlacementActiveRef.current = true;
+      onOracleMouseDown(placement.startTime, placement.resourceId);
       return;
     }
     if (event) {
@@ -42504,10 +42534,8 @@ const ScheduleView = ({
       const mouseTimeInHours = xInGrid / (PIXELS_PER_HOUR$6 * zoomLevel) + START_HOUR$6;
       setValidateOverlayTime(mouseTimeInHours);
     }
-    if (isOracleMode && oraclePreviewEvent) {
-      const startTime = xInGrid / (PIXELS_PER_HOUR$6 * zoomLevel) + START_HOUR$6;
-      const resourceId = resources[Math.floor(yInGrid / ROW_HEIGHT$6)] || resources[0];
-      onOracleMouseMove(startTime, resourceId);
+    if (isOracleMode && oraclePlacementActiveRef.current) {
+      updateOraclePlacementFromClient(e.clientX, e.clientY);
     } else {
       if (selectionStartPoint.current) {
         const currentX = e.clientX - gridRect.left;
@@ -42602,6 +42630,10 @@ const ScheduleView = ({
     }
   };
   const handleMouseUp = (e) => {
+    if (oraclePlacementActiveRef.current) {
+      finishOraclePlacement();
+      return;
+    }
     if (draggingStateRef.current || draggingState) {
       finishScheduleTileDrag();
       return;
@@ -69436,6 +69468,7 @@ const NextDayBuildView = ({
   }, []);
   const selectionStartPoint = reactExports.useRef(null);
   const [selectionRect, setSelectionRect] = reactExports.useState(null);
+  const oraclePlacementActiveRef = reactExports.useRef(false);
   reactExports.useEffect(() => {
     const getTodayString = () => {
       const now = /* @__PURE__ */ new Date();
@@ -69446,6 +69479,46 @@ const NextDayBuildView = ({
     const timerId = setInterval(() => setCurrentTime(/* @__PURE__ */ new Date()), 1e3);
     return () => clearInterval(timerId);
   }, [date]);
+  const getOraclePlacementFromClient = reactExports.useCallback((clientX, clientY) => {
+    if (!scheduleGridRef.current) return null;
+    const gridRect = scheduleGridRef.current.getBoundingClientRect();
+    const xInGrid = Math.max(0, Math.min(gridRect.width, clientX - gridRect.left));
+    const yInGrid = Math.max(0, Math.min(gridRect.height, clientY - gridRect.top));
+    const rawStartTime = xInGrid / (PIXELS_PER_HOUR$3 * zoomLevel) + START_HOUR$3;
+    const startTime = Math.max(START_HOUR$3, Math.min(END_HOUR$3, rawStartTime));
+    const row = Math.max(0, Math.min(resources.length - 1, Math.floor(yInGrid / ROW_HEIGHT$3)));
+    const resourceId = resources[row] || resources[0];
+    return resourceId ? { startTime, resourceId } : null;
+  }, [resources, zoomLevel]);
+  const updateOraclePlacementFromClient = reactExports.useCallback((clientX, clientY) => {
+    const placement = getOraclePlacementFromClient(clientX, clientY);
+    if (!placement) return;
+    onOracleMouseMove(placement.startTime, placement.resourceId);
+  }, [getOraclePlacementFromClient, onOracleMouseMove]);
+  const finishOraclePlacement = reactExports.useCallback(() => {
+    if (!oraclePlacementActiveRef.current) return;
+    oraclePlacementActiveRef.current = false;
+    document.body.classList.remove("no-select");
+    onOracleMouseUp();
+    setValidateOverlayTime(null);
+  }, [onOracleMouseUp]);
+  reactExports.useEffect(() => {
+    const handleGlobalMouseMove = (event) => {
+      if (!oraclePlacementActiveRef.current) return;
+      didDragRef.current = true;
+      updateOraclePlacementFromClient(event.clientX, event.clientY);
+    };
+    const handleGlobalMouseUp = (_event) => {
+      if (!oraclePlacementActiveRef.current) return;
+      finishOraclePlacement();
+    };
+    document.addEventListener("mousemove", handleGlobalMouseMove);
+    document.addEventListener("mouseup", handleGlobalMouseUp);
+    return () => {
+      document.removeEventListener("mousemove", handleGlobalMouseMove);
+      document.removeEventListener("mouseup", handleGlobalMouseUp);
+    };
+  }, [finishOraclePlacement, updateOraclePlacementFromClient]);
   const getExternalDropPlacementFromClient = reactExports.useCallback((clientX, clientY, diagnosticSessionId) => {
     const startedAt = getNeoAssistPerfNow$1();
     if (!scheduleGridRef.current) {
@@ -69618,14 +69691,11 @@ const NextDayBuildView = ({
     didDragRef.current = false;
     document.body.classList.add("no-select");
     if (isOracleMode && !event) {
-      if (!scheduleGridRef.current) return;
-      const gridRect = scheduleGridRef.current.getBoundingClientRect();
-      const xInGrid = e.clientX - gridRect.left;
-      const startTime = xInGrid / (PIXELS_PER_HOUR$3 * zoomLevel) + START_HOUR$3;
-      const yInGrid = e.clientY - gridRect.top;
-      const row = Math.floor(yInGrid / ROW_HEIGHT$3);
-      const resourceId = resources[row] || resources[0];
-      onOracleMouseDown(startTime, resourceId);
+      e.preventDefault();
+      const placement = getOraclePlacementFromClient(e.clientX, e.clientY);
+      if (!placement) return;
+      oraclePlacementActiveRef.current = true;
+      onOracleMouseDown(placement.startTime, placement.resourceId);
       return;
     }
     if (event) {
@@ -69703,11 +69773,8 @@ const NextDayBuildView = ({
       const mouseTimeInHours = xInGrid / (PIXELS_PER_HOUR$3 * zoomLevel) + START_HOUR$3;
       setValidateOverlayTime(mouseTimeInHours);
     }
-    if (isOracleMode && oraclePreviewEvent) {
-      const startTime = xInGrid / (PIXELS_PER_HOUR$3 * zoomLevel) + START_HOUR$3;
-      const row = Math.floor(yInGrid / ROW_HEIGHT$3);
-      const resourceId = resources[row] || resources[0];
-      onOracleMouseMove(startTime, resourceId);
+    if (isOracleMode && oraclePlacementActiveRef.current) {
+      updateOraclePlacementFromClient(e.clientX, e.clientY);
       return;
     }
     if (selectionStartPoint.current) {
@@ -69777,6 +69844,10 @@ const NextDayBuildView = ({
     }
   };
   const handleMouseUp = (e) => {
+    if (oraclePlacementActiveRef.current) {
+      finishOraclePlacement();
+      return;
+    }
     flushPendingDragUpdate(true);
     document.body.classList.remove("no-select");
     if (isOracleMode) {
