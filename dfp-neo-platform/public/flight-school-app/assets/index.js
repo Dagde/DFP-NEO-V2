@@ -57048,11 +57048,11 @@ const convertTimeToDecimal = (timeStr) => {
   if (isNaN(hours) || isNaN(minutes)) return 0;
   return hours + minutes / 60;
 };
-const EventDetailModal = ({ event, onClose, onSave, onDeleteRequest, isEditingDefault = false, instructors, trainees, syllabus, syllabusDetails, highlightedField, school, traineesData, instructorsData, courseColors, onNavigateToHateSheet, onNavigateToSyllabus, onOpenTrainingReport, trainingReportDisplayName = "Training Report", onOpenStaffTrainingReport, onOpenAuth, flightAuthorisationRequired = true, onOpenPostFlight, onOpenPreFlightNotes, isConflict, onNeoClick, traineeLMPs, oracleContextForModal, sctRequests = [], sctEvents = [], eventsForDate = [], onScoresCreated, publishedSchedules = {}, nextDayBuildEvents = [], activeView = "", isAddingTile = false, formationCallsigns = [], currentLocation = "", onVisualAdjustStart, onVisualAdjustEnd, onSaveTrainingReportAssessment, cancellationCodes = [], onCancelEvent, onRestoreEvent, onSendAlert, canSendAlert = false, alertData = null, baselineEvent = null, onClearAlert, onEditFixedCrewTile, resourceDisplayNames: resourceDisplayNames2 = DEFAULT_RESOURCE_DISPLAY_NAMES, aircraftNumberSettings = DEFAULT_AIRCRAFT_NUMBER_SETTINGS, aircraftConfigurationDefinitions = [], aircraftCrewComposition, crewPositionTerminology, operationalModel, activeUnitCode = "", staffQualificationCatalogue: staffQualificationCatalogue2, unitCallsignSettings, personnelDisplaySettings, sctTerminology = DEFAULT_SCT_TERMINOLOGY$1, isReadOnly = false }) => {
+const EventDetailModal = ({ event, onClose, onSave, onDeleteRequest, isEditingDefault = false, instructors, trainees, syllabus, syllabusDetails, highlightedField, school, traineesData, instructorsData, courseColors, onNavigateToHateSheet, onNavigateToSyllabus, onOpenTrainingReport, trainingReportDisplayName = "Training Report", onOpenStaffTrainingReport, onOpenAuth, flightAuthorisationRequired = true, onOpenPostFlight, onOpenPreFlightNotes, isConflict, onNeoClick, traineeLMPs, oracleContextForModal, sctRequests = [], sctEvents = [], eventsForDate = [], onScoresCreated, publishedSchedules = {}, nextDayBuildEvents = [], activeView = "", isAddingTile = false, formationCallsigns = [], currentLocation = "", onVisualAdjustStart, onVisualAdjustEnd, onSaveTrainingReportAssessment, cancellationCodes = [], onCancelEvent, onRestoreEvent, onSendAlert, canSendAlert = false, alertData = null, baselineEvent = null, onClearAlert, onEditFixedCrewTile, resourceDisplayNames: resourceDisplayNames2 = DEFAULT_RESOURCE_DISPLAY_NAMES, aircraftNumberSettings = DEFAULT_AIRCRAFT_NUMBER_SETTINGS, aircraftConfigurationDefinitions = [], aircraftCrewComposition, crewPositionTerminology, operationalModel, activeUnitCode = "", staffQualificationCatalogue: staffQualificationCatalogue2, unitCallsignSettings, personnelDisplaySettings, sctTerminology = DEFAULT_SCT_TERMINOLOGY$1, isReadOnly = false, openDeleteChoice = false }) => {
   const { isFrozen, allowedActions: freezeAllowedActions } = useSystemFreeze();
   const [isEditing, setIsEditing] = reactExports.useState(isReadOnly ? false : isEditingDefault);
   const [localHighlight, setLocalHighlight] = reactExports.useState(highlightedField);
-  const [showDeleteChoice, setShowDeleteChoice] = reactExports.useState(false);
+  const [showDeleteChoice, setShowDeleteChoice] = reactExports.useState(openDeleteChoice);
   const [showCancelConfirm, setShowCancelConfirm] = reactExports.useState(false);
   const [showRemovePin, setShowRemovePin] = reactExports.useState(false);
   const [showRestoreConfirm, setShowRestoreConfirm] = reactExports.useState(false);
@@ -135285,6 +135285,7 @@ const App = () => {
   const hasSyncedInitialDfpDateWithEffectiveTimezoneRef = reactExports.useRef(false);
   const [events, setEvents] = reactExports.useState([]);
   const [selectedEvent, setSelectedEvent] = reactExports.useState(null);
+  const [openSelectedEventDeleteChoice, setOpenSelectedEventDeleteChoice] = reactExports.useState(false);
   const [isEditingDefault, setIsEditingDefault] = reactExports.useState(false);
   const [highlightedField, setHighlightedField] = reactExports.useState(null);
   const [conflict, setConflict] = reactExports.useState(null);
@@ -146375,6 +146376,7 @@ ${error instanceof Error ? error.message : String(error)}`,
     return relevantResources[0] || `${resourcePrefix}1`;
   };
   const handleOpenModal = (event, options = {}) => {
+    setOpenSelectedEventDeleteChoice(false);
     if (!event) {
       const targetDate = oracleContext === "nextDayBuild" || activeView === "NextDayBuild" || activeView === "Priorities" || activeView === "ProgramData" ? buildDfpDate : date;
       if (!options.isPriority && isPastDfpDate(targetDate)) {
@@ -154864,6 +154866,11 @@ It will not clear the published DFP.`,
       handleOpenModal(getLatestContextEvent(candidate));
       setIsEditingDefault(edit);
     };
+    const openContextEventDeleteChoice = (candidate) => {
+      handleOpenModal(getLatestContextEvent(candidate));
+      setIsEditingDefault(false);
+      setOpenSelectedEventDeleteChoice(true);
+    };
     const openContextAuth = (candidate) => {
       if (!flightAuthorisationRequired) return;
       setEventForAuth(getLatestContextEvent(candidate));
@@ -154964,7 +154971,7 @@ It will not clear the published DFP.`,
       if (isNeoBuildScheduleView) {
         menuItems.push(
           { label: "Go to DFP", onSelect: openTodayDfpFromContextMenu },
-          { label: "Delete", detail: "Open the event so Delete can be confirmed.", danger: true, onSelect: () => openContextEventInDetails(selectedEvent2) }
+          { label: "Delete", detail: "Open Delete Event options.", danger: true, onSelect: () => openContextEventDeleteChoice(selectedEvent2) }
         );
         addPersonProfileItems(menuItems, selectedEvent2);
         menuItems.push({ label: "My Home", onSelect: () => handleNavigation("MyDashboard") });
@@ -154981,7 +154988,7 @@ It will not clear the published DFP.`,
           } },
           { label: "NEO", detail: "Show conflict resolution.", disabled: !canUseNeoTileAssist, onSelect: () => handleNeoClick(selectedEvent2) },
           { label: "Send Alert", detail: "Open the event alert panel.", onSelect: () => openContextEventInDetails(selectedEvent2) },
-          { label: "Delete", detail: "Open the event so Delete can be confirmed.", danger: true, onSelect: () => openContextEventInDetails(selectedEvent2) }
+          { label: "Delete", detail: "Open Delete Event options.", danger: true, onSelect: () => openContextEventDeleteChoice(selectedEvent2) }
         );
         addPersonProfileItems(menuItems, selectedEvent2);
         menuItems.push({ label: "My Home", onSelect: () => handleNavigation("MyDashboard") });
@@ -158933,9 +158940,11 @@ Do you want to replace the existing entry?`,
             setSelectedEvent(null);
             setOracleContextForModal(null);
             setIsAddingTile(false);
+            setOpenSelectedEventDeleteChoice(false);
           },
           onSave: (events2) => handleSaveEvents(events2, isPriorityEventCreation),
           onDeleteRequest: handleDeleteEvent,
+          openDeleteChoice: openSelectedEventDeleteChoice,
           isEditingDefault,
           instructors: instructorsData.map((i) => i.name),
           trainees: allTraineesData.map((t) => t.fullName),
@@ -159095,7 +159104,7 @@ Do you want to replace the existing entry?`,
           unitCallsignSettings: activeUnitCallsignSettings,
           sctTerminology: getSctTerminology(platformConfig, activeUnitCode)
         },
-        `${selectedEvent.id}-${selectedEvent.instructor || "no-instructor"}`
+        `${selectedEvent.id}-${selectedEvent.instructor || "no-instructor"}-${openSelectedEventDeleteChoice ? "delete" : "details"}`
       ),
       preFlightNotesEditor && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "fixed inset-0 z-[950] flex items-center justify-center bg-black/70 backdrop-blur-sm", onClick: () => setPreFlightNotesEditor(null), children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "w-full max-w-2xl rounded-lg border border-sky-700/50 bg-gray-900 shadow-2xl", onClick: (event) => event.stopPropagation(), children: [
         /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "border-b border-gray-700 bg-gray-800/80 px-5 py-4", children: [

@@ -28968,6 +28968,7 @@ const App: React.FC = () => {
     const hasSyncedInitialDfpDateWithEffectiveTimezoneRef = useRef(false);
     const [events, setEvents] = useState<ScheduleEvent[]>([]);
     const [selectedEvent, setSelectedEvent] = useState<ScheduleEvent | null>(null);
+    const [openSelectedEventDeleteChoice, setOpenSelectedEventDeleteChoice] = useState(false);
     const [isEditingDefault, setIsEditingDefault] = useState(false);
     const [highlightedField, setHighlightedField] = useState<'startTime' | 'instructor' | 'student' | null>(null);
     const [conflict, setConflict] = useState<Conflict | null>(null);
@@ -42806,6 +42807,7 @@ const App: React.FC = () => {
     };
 
     const handleOpenModal = (event: ScheduleEvent | null, options: { type?: 'flight' | 'ftd' | 'ground', isPriority?: boolean, oracleContext?: typeof oracleContextForModal, startTime?: number } = {}) => {
+        setOpenSelectedEventDeleteChoice(false);
         if (!event) { // Creating a new event
             const targetDate = oracleContext === 'nextDayBuild' || activeView === 'NextDayBuild' || activeView === 'Priorities' || activeView === 'ProgramData' ? buildDfpDate : date;
             if (!options.isPriority && isPastDfpDate(targetDate)) {
@@ -53161,6 +53163,11 @@ appliedUpdates.forEach(update => {
             handleOpenModal(getLatestContextEvent(candidate));
             setIsEditingDefault(edit);
         };
+        const openContextEventDeleteChoice = (candidate: ScheduleEvent) => {
+            handleOpenModal(getLatestContextEvent(candidate));
+            setIsEditingDefault(false);
+            setOpenSelectedEventDeleteChoice(true);
+        };
         const openContextAuth = (candidate: ScheduleEvent) => {
             if (!flightAuthorisationRequired) return;
             setEventForAuth(getLatestContextEvent(candidate));
@@ -53273,7 +53280,7 @@ appliedUpdates.forEach(update => {
             if (isNeoBuildScheduleView) {
                 menuItems.push(
                     { label: 'Go to DFP', onSelect: openTodayDfpFromContextMenu },
-                    { label: 'Delete', detail: 'Open the event so Delete can be confirmed.', danger: true, onSelect: () => openContextEventInDetails(selectedEvent) }
+                    { label: 'Delete', detail: 'Open Delete Event options.', danger: true, onSelect: () => openContextEventDeleteChoice(selectedEvent) }
                 );
                 addPersonProfileItems(menuItems, selectedEvent);
                 menuItems.push({ label: 'My Home', onSelect: () => handleNavigation('MyDashboard') });
@@ -53290,7 +53297,7 @@ appliedUpdates.forEach(update => {
                     }},
                     { label: 'NEO', detail: 'Show conflict resolution.', disabled: !canUseNeoTileAssist, onSelect: () => handleNeoClick(selectedEvent) },
                     { label: 'Send Alert', detail: 'Open the event alert panel.', onSelect: () => openContextEventInDetails(selectedEvent) },
-                    { label: 'Delete', detail: 'Open the event so Delete can be confirmed.', danger: true, onSelect: () => openContextEventInDetails(selectedEvent) }
+                    { label: 'Delete', detail: 'Open Delete Event options.', danger: true, onSelect: () => openContextEventDeleteChoice(selectedEvent) }
                 );
                 addPersonProfileItems(menuItems, selectedEvent);
                 menuItems.push({ label: 'My Home', onSelect: () => handleNavigation('MyDashboard') });
@@ -57554,15 +57561,17 @@ appliedUpdates.forEach(update => {
             )}
             {selectedEvent && !isAddingTile && (
                 <EventDetailModal
-                    key={`${selectedEvent.id}-${selectedEvent.instructor || 'no-instructor'}`}
+                    key={`${selectedEvent.id}-${selectedEvent.instructor || 'no-instructor'}-${openSelectedEventDeleteChoice ? 'delete' : 'details'}`}
                     event={isVisualAdjustMode && visualAdjustEvent ? visualAdjustEvent : selectedEvent}
                     onClose={() => {
                         setSelectedEvent(null);
                         setOracleContextForModal(null);
                         setIsAddingTile(false);
+                        setOpenSelectedEventDeleteChoice(false);
                     }}
                     onSave={(events) => handleSaveEvents(events, isPriorityEventCreation)}
                     onDeleteRequest={handleDeleteEvent}
+                    openDeleteChoice={openSelectedEventDeleteChoice}
                     isEditingDefault={isEditingDefault}
                     instructors={instructorsData.map(i => i.name)}
                     trainees={allTraineesData.map(t => t.fullName)}
