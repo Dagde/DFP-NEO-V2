@@ -46975,11 +46975,29 @@ const App: React.FC = () => {
             ftdEndTime: pFtdEnd,
         } = config;
 
-        // IMPORTANT: Always use the FULL raw publishedSchedules[date].
-        const fullRawEvents: ScheduleEvent[] = publishedSchedules[pauseDate] || [];
+        const normalisePauseBuildEvent = (event: ScheduleEvent): ScheduleEvent => ({
+            ...event,
+            date: event.date || pauseDate,
+        });
+        const publishedRawEvents: ScheduleEvent[] = Array.isArray(publishedSchedules[pauseDate])
+            ? publishedSchedules[pauseDate].map(normalisePauseBuildEvent)
+            : [];
+        const visiblePanelEvents: ScheduleEvent[] = Array.isArray(config.existingEvents)
+            ? config.existingEvents.map(normalisePauseBuildEvent)
+            : [];
+        const mergedEventsById = new Map<string, ScheduleEvent>();
+        publishedRawEvents.forEach(event => mergedEventsById.set(event.id, event));
+        visiblePanelEvents.forEach(event => mergedEventsById.set(event.id, event));
+        const fullRawEvents: ScheduleEvent[] = Array.from(mergedEventsById.values());
         logRoutineAppDebug('[PauseBuild] Starting pause build for', pauseDate,
             'pauseEnd:', pauseEnd, 'dayEnd:', dayEnd,
+            'publishedRawEvents:', publishedRawEvents.length,
+            'visiblePanelEvents:', visiblePanelEvents.length,
             'fullRawEvents:', fullRawEvents.length);
+
+        if (fullRawEvents.length === 0) {
+            throw new Error('Pause Flight Ops could not find any active DFP events to rebuild.');
+        }
 
         // Record the pause window overlay for the NEO Build schedule view
         setPauseOverlayStart(pauseStart);
@@ -46992,11 +47010,12 @@ const App: React.FC = () => {
         const isToBeCleared = (e: ScheduleEvent): boolean => {
             if (e.isCancelled) return false;                          // already cancelled
             if (completedEventIds.has(e.id)) return false;            // completed, keep in place
-            const typeKey = e.type === 'ground' ? 'ground' : e.type;
+            const rawType = String(e.type || '').trim().toLowerCase();
+            const typeKey = rawType === 'sim' || rawType === 'simulator' ? 'ftd' : rawType;
             if (!(affectedTypes as string[]).includes(typeKey)) return false; // not affected type
             // Flight and FTD events: clear ALL for the entire day so they can be rescheduled.
             // Flights reschedule from pauseEnd; FTDs cascade on their resource lines.
-            if (e.type === 'flight' || e.type === 'ftd') return true;
+            if (typeKey === 'flight' || typeKey === 'ftd') return true;
             // CPT / Ground: ONLY cancel events that overlap the pause window.
             // Events after the pause remain unchanged — they are NOT rescheduled.
             const eEnd = e.startTime + e.duration;
@@ -47020,6 +47039,10 @@ const App: React.FC = () => {
             return e;
         });
         logRoutineAppDebug('[PauseBuild] Cleared for rebuild:', cancelledIds.size, 'events');
+
+        if (cancelledIds.size === 0) {
+            throw new Error('Pause Flight Ops found no matching events to clear. Check the affected types and pause period.');
+        }
 
         // ── Step 3: Locked events = completed events + non-affected-type events ─────────
         // These stay exactly where they are; everything else will be rebuilt from pauseEnd.

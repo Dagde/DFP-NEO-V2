@@ -65,6 +65,14 @@ const hhmmToDec = (hhmm: string): number => {
 
 const isValidHHMM = (s: string) => /^\d{2}:\d{2}$/.test(s);
 
+const normalisePauseTypeKey = (type: string): EventTypeKey => {
+    const normalised = String(type || '').trim().toLowerCase();
+    if (normalised === 'sim' || normalised === 'simulator' || normalised === 'ftd') return 'ftd';
+    if (normalised === 'cpt') return 'cpt';
+    if (normalised === 'ground') return 'ground';
+    return 'flight';
+};
+
 // ─── Component ───────────────────────────────────────────────────────────────
 
 const PauseFlightOpsPanel: React.FC<PauseFlightOpsPanelProps> = ({
@@ -122,7 +130,7 @@ const PauseFlightOpsPanel: React.FC<PauseFlightOpsPanelProps> = ({
     const impactedEvents = useMemo(() => {
         if (!pauseStartDec || !pauseEndDec) return [];
         return eventsForDate.filter(e => {
-            const typeKey = e.type === 'ground' ? 'ground' : e.type as EventTypeKey;
+            const typeKey = normalisePauseTypeKey(e.type);
             if (!affectedTypes.has(typeKey)) return false;
             if (e.isCancelled) return false;
             const end = e.startTime + e.duration;
@@ -137,7 +145,7 @@ const PauseFlightOpsPanel: React.FC<PauseFlightOpsPanelProps> = ({
     const impactedByType = useMemo(() => {
         const counts: Record<EventTypeKey, number> = { flight: 0, ftd: 0, cpt: 0, ground: 0 };
         impactedEvents.forEach(e => {
-            const k = e.type === 'ground' ? 'ground' : e.type as EventTypeKey;
+            const k = normalisePauseTypeKey(e.type);
             if (k in counts) counts[k]++;
         });
         return counts;
@@ -210,7 +218,7 @@ const PauseFlightOpsPanel: React.FC<PauseFlightOpsPanelProps> = ({
             setBuildProgress('Build complete – review and publish.');
             onPhaseChange('review');
         } catch (err) {
-            setBuildProgress('Build failed. Please try again.');
+            setBuildProgress(err instanceof Error && err.message ? err.message : 'Build failed. Please try again.');
             onPhaseChange('configure');
         }
     };
@@ -556,6 +564,11 @@ const PauseFlightOpsPanel: React.FC<PauseFlightOpsPanelProps> = ({
             <div className="px-4 py-3 border-t border-gray-700/60 space-y-2 flex-shrink-0" style={{ background: '#1a2030' }}>
                 {phase === 'configure' && (
                     <>
+                        {buildProgress && (
+                            <div className="rounded border border-amber-700/50 bg-amber-950/30 px-3 py-2 text-[11px] text-amber-200">
+                                {buildProgress}
+                            </div>
+                        )}
                         {actionChoice === 'reprogram' ? (
                             <button
                                 onClick={handleBuild}

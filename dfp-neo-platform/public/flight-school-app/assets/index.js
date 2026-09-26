@@ -110755,6 +110755,13 @@ const hhmmToDec = (hhmm) => {
   return h + (m || 0) / 60;
 };
 const isValidHHMM = (s) => /^\d{2}:\d{2}$/.test(s);
+const normalisePauseTypeKey = (type) => {
+  const normalised = String(type || "").trim().toLowerCase();
+  if (normalised === "sim" || normalised === "simulator" || normalised === "ftd") return "ftd";
+  if (normalised === "cpt") return "cpt";
+  if (normalised === "ground") return "ground";
+  return "flight";
+};
 const PauseFlightOpsPanel = ({
   isOpen,
   onClose,
@@ -110804,7 +110811,7 @@ const PauseFlightOpsPanel = ({
   const impactedEvents = reactExports.useMemo(() => {
     if (!pauseStartDec || !pauseEndDec) return [];
     return eventsForDate.filter((e) => {
-      const typeKey = e.type === "ground" ? "ground" : e.type;
+      const typeKey = normalisePauseTypeKey(e.type);
       if (!affectedTypes.has(typeKey)) return false;
       if (e.isCancelled) return false;
       const end = e.startTime + e.duration;
@@ -110818,7 +110825,7 @@ const PauseFlightOpsPanel = ({
   const impactedByType = reactExports.useMemo(() => {
     const counts = { flight: 0, ftd: 0, cpt: 0, ground: 0 };
     impactedEvents.forEach((e) => {
-      const k = e.type === "ground" ? "ground" : e.type;
+      const k = normalisePauseTypeKey(e.type);
       if (k in counts) counts[k]++;
     });
     return counts;
@@ -110885,7 +110892,7 @@ const PauseFlightOpsPanel = ({
       setBuildProgress("Build complete – review and publish.");
       onPhaseChange("review");
     } catch (err) {
-      setBuildProgress("Build failed. Please try again.");
+      setBuildProgress(err instanceof Error && err.message ? err.message : "Build failed. Please try again.");
       onPhaseChange("configure");
     }
   };
@@ -111188,24 +111195,27 @@ const PauseFlightOpsPanel = ({
           ] })
         ] }),
         /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "px-4 py-3 border-t border-gray-700/60 space-y-2 flex-shrink-0", style: { background: "#1a2030" }, children: [
-          phase === "configure" && /* @__PURE__ */ jsxRuntimeExports.jsx(jsxRuntimeExports.Fragment, { children: actionChoice === "reprogram" ? /* @__PURE__ */ jsxRuntimeExports.jsx(
-            "button",
-            {
-              onClick: handleBuild,
-              disabled: !buildEnabled,
-              className: `w-full py-2 rounded font-bold text-sm tracking-wide transition-all ${buildEnabled ? "btn-aluminium-brushed hover:opacity-90" : "bg-gray-700 text-gray-500 cursor-not-allowed"}`,
-              style: buildEnabled ? { color: "#fb923c" } : {},
-              children: "⚡ NEO BUILD (Post-Pause)"
-            }
-          ) : /* @__PURE__ */ jsxRuntimeExports.jsx(
-            "button",
-            {
-              onClick: handleCancelOnly,
-              disabled: !!validationError || affectedTypes.size === 0,
-              className: `w-full py-2 rounded font-bold text-sm tracking-wide transition-all ${!validationError && affectedTypes.size > 0 ? "bg-amber-700 hover:bg-amber-600 text-white border border-amber-500" : "bg-gray-700 text-gray-500 cursor-not-allowed"}`,
-              children: "Cancel Impacted Events"
-            }
-          ) }),
+          phase === "configure" && /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
+            buildProgress && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "rounded border border-amber-700/50 bg-amber-950/30 px-3 py-2 text-[11px] text-amber-200", children: buildProgress }),
+            actionChoice === "reprogram" ? /* @__PURE__ */ jsxRuntimeExports.jsx(
+              "button",
+              {
+                onClick: handleBuild,
+                disabled: !buildEnabled,
+                className: `w-full py-2 rounded font-bold text-sm tracking-wide transition-all ${buildEnabled ? "btn-aluminium-brushed hover:opacity-90" : "bg-gray-700 text-gray-500 cursor-not-allowed"}`,
+                style: buildEnabled ? { color: "#fb923c" } : {},
+                children: "⚡ NEO BUILD (Post-Pause)"
+              }
+            ) : /* @__PURE__ */ jsxRuntimeExports.jsx(
+              "button",
+              {
+                onClick: handleCancelOnly,
+                disabled: !!validationError || affectedTypes.size === 0,
+                className: `w-full py-2 rounded font-bold text-sm tracking-wide transition-all ${!validationError && affectedTypes.size > 0 ? "bg-amber-700 hover:bg-amber-600 text-white border border-amber-500" : "bg-gray-700 text-gray-500 cursor-not-allowed"}`,
+                children: "Cancel Impacted Events"
+              }
+            )
+          ] }),
           phase === "building" && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center gap-2 text-sky-400 text-xs py-2", children: [
             /* @__PURE__ */ jsxRuntimeExports.jsx("svg", { className: "w-4 h-4 animate-spin", viewBox: "0 0 24 24", fill: "none", stroke: "currentColor", strokeWidth: 2, children: /* @__PURE__ */ jsxRuntimeExports.jsx("path", { d: "M12 2a10 10 0 1 0 10 10" }) }),
             buildProgress
@@ -149827,7 +149837,16 @@ ${conflictLines.join("\n")}${moreText}`,
       ftdStartTime: pFtdStart,
       ftdEndTime: pFtdEnd
     } = config;
-    const fullRawEvents = publishedSchedules[pauseDate] || [];
+    const normalisePauseBuildEvent = (event) => ({
+      ...event,
+      date: event.date || pauseDate
+    });
+    const publishedRawEvents = Array.isArray(publishedSchedules[pauseDate]) ? publishedSchedules[pauseDate].map(normalisePauseBuildEvent) : [];
+    const visiblePanelEvents = Array.isArray(config.existingEvents) ? config.existingEvents.map(normalisePauseBuildEvent) : [];
+    const mergedEventsById = /* @__PURE__ */ new Map();
+    publishedRawEvents.forEach((event) => mergedEventsById.set(event.id, event));
+    visiblePanelEvents.forEach((event) => mergedEventsById.set(event.id, event));
+    const fullRawEvents = Array.from(mergedEventsById.values());
     logRoutineAppDebug(
       "[PauseBuild] Starting pause build for",
       pauseDate,
@@ -149835,17 +149854,25 @@ ${conflictLines.join("\n")}${moreText}`,
       pauseEnd,
       "dayEnd:",
       dayEnd,
+      "publishedRawEvents:",
+      publishedRawEvents.length,
+      "visiblePanelEvents:",
+      visiblePanelEvents.length,
       "fullRawEvents:",
       fullRawEvents.length
     );
+    if (fullRawEvents.length === 0) {
+      throw new Error("Pause Flight Ops could not find any active DFP events to rebuild.");
+    }
     setPauseOverlayStart(pauseStart);
     setPauseOverlayEnd(pauseEnd);
     const isToBeCleared = (e) => {
       if (e.isCancelled) return false;
       if (completedEventIds.has(e.id)) return false;
-      const typeKey = e.type === "ground" ? "ground" : e.type;
+      const rawType = String(e.type || "").trim().toLowerCase();
+      const typeKey = rawType === "sim" || rawType === "simulator" ? "ftd" : rawType;
       if (!affectedTypes.includes(typeKey)) return false;
-      if (e.type === "flight" || e.type === "ftd") return true;
+      if (typeKey === "flight" || typeKey === "ftd") return true;
       const eEnd = e.startTime + e.duration;
       const overlapsPause = e.startTime < pauseEnd && eEnd > pauseStart;
       return overlapsPause;
@@ -149865,6 +149892,9 @@ ${conflictLines.join("\n")}${moreText}`,
       return e;
     });
     logRoutineAppDebug("[PauseBuild] Cleared for rebuild:", cancelledIds.size, "events");
+    if (cancelledIds.size === 0) {
+      throw new Error("Pause Flight Ops found no matching events to clear. Check the affected types and pause period.");
+    }
     const lockedEvents = eventsAfterCancel.filter((e) => !e.isCancelled);
     logRoutineAppDebug("[PauseBuild] Locked (completed + non-affected type) events:", lockedEvents.length);
     if (isFixedCrewLikeOperationalModel(activeOperationalModel)) {
