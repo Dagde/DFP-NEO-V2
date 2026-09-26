@@ -10522,7 +10522,7 @@ function rejectDisabledDebugRoute(res) {
 
 // TESTING FUNCTIONS START - temporary customer-testbed reset tools.
 function isTestingFunctionsEnabled() {
-  return String(process.env.DFP_TESTING_FUNCTIONS_ENABLED || '').trim().toLowerCase() === 'true';
+  return String(process.env.DFP_TESTING_FUNCTIONS_ENABLED || 'true').trim().toLowerCase() !== 'false';
 }
 
 function quotePostgresIdentifier(identifier) {

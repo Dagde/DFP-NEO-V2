@@ -100723,8 +100723,7 @@ const sectionGroups = [
       "platform-settings-visibility",
       "platform-deployment-readiness",
       "email-activation",
-      "platform-licensing",
-      "testing-functions"
+      "platform-licensing"
     ]
   },
   {
@@ -100797,6 +100796,14 @@ const sectionGroups = [
     accent: "red",
     defaultSection: "emergency",
     sections: ["emergency"]
+  },
+  {
+    label: "Testing",
+    shortLabel: "Testing",
+    description: "Temporary customer-testbed tools for rapid end-to-end testing.",
+    accent: "amber",
+    defaultSection: "testing-functions",
+    sections: ["testing-functions"]
   }
 ];
 const getSettingsGroupId = (label) => `settings-${label.toLowerCase().replace(/[^a-z0-9]+/g, "-")}`;
@@ -101177,7 +101184,7 @@ const SettingsViewWithMenu = (props) => {
   };
   const canAccessSettingsSection = (section) => {
     if (section === "testing-functions") {
-      return currentSettingsPermission === "Super Admin" && testingFunctionsAvailable;
+      return currentSettingsPermission === "Super Admin";
     }
     if (hasLegacySettingsAdminRole || hasGeneralSettingsEditPermission) return true;
     if (hasSpecificSettingsEditPermission) {
@@ -101233,6 +101240,7 @@ const SettingsViewWithMenu = (props) => {
       setTestingFunctionsAvailable(false);
       return;
     }
+    setTestingFunctionsAvailable(true);
     let cancelled = false;
     const readTestingFunctionStatus = async () => {
       try {

@@ -893,7 +893,6 @@ const sectionGroups: {
       'platform-deployment-readiness',
       'email-activation',
       'platform-licensing',
-      'testing-functions',
     ],
   },
   {
@@ -966,6 +965,14 @@ const sectionGroups: {
     accent: 'red',
     defaultSection: 'emergency',
     sections: ['emergency'],
+  },
+  {
+    label: 'Testing',
+    shortLabel: 'Testing',
+    description: 'Temporary customer-testbed tools for rapid end-to-end testing.',
+    accent: 'amber',
+    defaultSection: 'testing-functions',
+    sections: ['testing-functions'],
   },
 ];
 
@@ -1440,7 +1447,7 @@ export const SettingsViewWithMenu: React.FC<SettingsViewWithMenuProps> = (props)
     };
     const canAccessSettingsSection = (section: SettingsMenuSection): boolean => {
         if (section === 'testing-functions') {
-            return currentSettingsPermission === 'Super Admin' && testingFunctionsAvailable;
+            return currentSettingsPermission === 'Super Admin';
         }
         if (hasLegacySettingsAdminRole || hasGeneralSettingsEditPermission) return true;
         if (hasSpecificSettingsEditPermission) {
@@ -1498,6 +1505,7 @@ export const SettingsViewWithMenu: React.FC<SettingsViewWithMenuProps> = (props)
             setTestingFunctionsAvailable(false);
             return;
         }
+        setTestingFunctionsAvailable(true);
 
         let cancelled = false;
         const readTestingFunctionStatus = async () => {
