@@ -31934,6 +31934,11 @@ const ROW_HEIGHT$6 = 32;
 const START_HOUR$6 = 0;
 const END_HOUR$6 = 24;
 const TOTAL_HOURS$6 = END_HOUR$6 - START_HOUR$6;
+const formatGhostTime$1 = (time) => {
+  const hours = Math.floor(time);
+  const minutes = Math.round(time % 1 * 60);
+  return `${String(hours).padStart(2, "0")}:${String(minutes).padStart(2, "0")}`;
+};
 const NEO_ASSIST_POINTER_DROP_EVENT$2 = "neoAssistPointerDrop";
 const NEO_ASSIST_DRAG_DIAGNOSTIC_STORAGE_KEY$2 = "neo_assist_drag_diagnostic_report";
 const AIRFRAME_COLUMN_WIDTH$1 = 108;
@@ -42049,7 +42054,11 @@ const ScheduleView = ({
   const schedulePointerDragActiveRef = reactExports.useRef(false);
   const lastSchedulePointerMoveAtRef = reactExports.useRef(0);
   const oracleGhostRef = reactExports.useRef(null);
+  const oracleGhostTimeRef = reactExports.useRef(null);
+  const oracleGhostInstructorRef = reactExports.useRef(null);
+  const oracleGhostTraineeRef = reactExports.useRef(null);
   const oracleGhostFrameRef = reactExports.useRef(null);
+  const oraclePointerCaptureActiveRef = reactExports.useRef(false);
   const latestOraclePlacementRef = reactExports.useRef(null);
   const lastOracleNotifyRef = reactExports.useRef({ at: 0, startTime: Number.NaN, resourceId: "" });
   const [isOraclePlacementActive, setIsOraclePlacementActive] = reactExports.useState(false);
@@ -42203,6 +42212,9 @@ const ScheduleView = ({
       const top = Math.max(0, latestPlacement.row * ROW_HEIGHT$6 + 2);
       ghost.style.transform = `translate3d(${left}px, ${top}px, 0)`;
       ghost.style.width = `${width}px`;
+      if (oracleGhostTimeRef.current) {
+        oracleGhostTimeRef.current.textContent = formatGhostTime$1(latestPlacement.startTime);
+      }
     };
     if (typeof window === "undefined") {
       applyPosition();
@@ -42217,7 +42229,7 @@ const ScheduleView = ({
     positionOracleGhost(placement);
     const now = typeof performance !== "undefined" ? performance.now() : Date.now();
     const lastNotify = lastOracleNotifyRef.current;
-    const shouldNotify = now - lastNotify.at > 180 || Math.abs(placement.startTime - lastNotify.startTime) >= 0.25 || placement.resourceId !== lastNotify.resourceId;
+    const shouldNotify = now - lastNotify.at > 240 || Math.abs(placement.startTime - lastNotify.startTime) >= 0.5;
     if (!shouldNotify) return;
     lastOracleNotifyRef.current = { at: now, startTime: placement.startTime, resourceId: placement.resourceId };
     onOracleMouseMove(placement.startTime, placement.resourceId);
@@ -42225,6 +42237,7 @@ const ScheduleView = ({
   const finishOraclePlacement = reactExports.useCallback(() => {
     if (!oraclePlacementActiveRef.current) return;
     oraclePlacementActiveRef.current = false;
+    oraclePointerCaptureActiveRef.current = false;
     const finalPlacement = latestOraclePlacementRef.current;
     if (finalPlacement) {
       lastOracleNotifyRef.current = {
@@ -42260,7 +42273,12 @@ const ScheduleView = ({
     if (targetElement?.closest("[data-dfp-event-id]")) return;
     event.preventDefault();
     document.body.classList.add("no-select");
+    oraclePointerCaptureActiveRef.current = true;
     const didStart = beginOraclePlacementFromClient(event.clientX, event.clientY);
+    if (!didStart) {
+      oraclePointerCaptureActiveRef.current = false;
+      return;
+    }
     if (didStart) {
       try {
         event.currentTarget.setPointerCapture(event.pointerId);
@@ -42270,6 +42288,7 @@ const ScheduleView = ({
   }, [beginOraclePlacementFromClient, isOracleMode]);
   reactExports.useEffect(() => {
     const handleGlobalMouseMove = (e) => {
+      if (oraclePointerCaptureActiveRef.current) return;
       if (oraclePlacementActiveRef.current) {
         didDragRef.current = true;
         updateOraclePlacementFromClient(e.clientX, e.clientY);
@@ -42287,6 +42306,7 @@ const ScheduleView = ({
       updateOraclePlacementFromClient(e.clientX, e.clientY);
     };
     const handleGlobalMouseUp = (_e) => {
+      if (oraclePointerCaptureActiveRef.current) return;
       if (oraclePlacementActiveRef.current) {
         finishOraclePlacement();
         return;
@@ -43847,13 +43867,33 @@ const ScheduleView = ({
                   "div",
                   {
                     ref: oracleGhostRef,
-                    className: "absolute left-0 top-0 z-[95] h-[28px] rounded-sm border border-sky-200/80 bg-sky-500/80 px-1.5 py-0.5 text-[10px] font-bold leading-tight text-white shadow-lg shadow-black/35 pointer-events-none will-change-transform",
+                    className: "absolute left-0 top-0 z-[95] h-[28px] rounded-sm border-2 border-dashed border-sky-300 bg-sky-500/80 text-white shadow-lg shadow-black/35 pointer-events-none will-change-transform overflow-hidden",
                     style: { transform: "translate3d(0, 0, 0)", width: `${Math.max(52, 1.2 * PIXELS_PER_HOUR$6 * zoomLevel)}px` },
                     children: [
-                      /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "truncate", children: "Next Event" }),
-                      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center justify-between gap-1 text-[8px] font-semibold uppercase tracking-[0.02em]", children: [
-                        /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: `truncate ${String(oraclePreviewEvent?.instructor || "").toUpperCase().includes("NO ") ? "text-red-200" : "text-emerald-200"}`, children: oraclePreviewEvent?.instructor || "Instructor..." }),
-                        /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: `truncate ${String(oraclePreviewEvent?.student || "").toUpperCase().includes("NO ") ? "text-red-200" : "text-emerald-200"}`, children: oraclePreviewEvent?.student || "Trainee..." })
+                      /* @__PURE__ */ jsxRuntimeExports.jsx("div", { ref: oracleGhostTimeRef, className: "absolute -top-px left-1 font-mono text-[8px] text-white/60", children: formatGhostTime$1(latestOraclePlacementRef.current?.startTime ?? oraclePreviewEvent?.startTime ?? START_HOUR$6) }),
+                      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex h-full w-full items-center justify-between px-2 text-[9px] font-bold leading-tight", children: [
+                        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "min-w-0 flex-1 overflow-hidden pr-1", style: { paddingLeft: "calc(10% + 2px)" }, children: [
+                          /* @__PURE__ */ jsxRuntimeExports.jsx(
+                            "div",
+                            {
+                              ref: oracleGhostInstructorRef,
+                              className: `overflow-hidden text-ellipsis whitespace-nowrap ${String(oraclePreviewEvent?.instructor || "").toUpperCase().includes("NO ") ? "text-red-300" : "text-emerald-300"}`,
+                              children: oraclePreviewEvent?.instructor || "Instructor..."
+                            }
+                          ),
+                          /* @__PURE__ */ jsxRuntimeExports.jsx(
+                            "div",
+                            {
+                              ref: oracleGhostTraineeRef,
+                              className: `overflow-hidden text-ellipsis whitespace-nowrap ${String(oraclePreviewEvent?.student || "").toUpperCase().includes("NO ") ? "text-red-300" : "text-emerald-300"}`,
+                              children: oraclePreviewEvent?.student || "Trainee..."
+                            }
+                          )
+                        ] }),
+                        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex shrink-0 flex-col items-end justify-between pl-1 font-mono text-[9px] text-white/80", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "whitespace-nowrap", children: [
+                          /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-[7px]", children: "[1.2]" }),
+                          " Next"
+                        ] }) })
                       ] })
                     ]
                   }
@@ -69347,6 +69387,11 @@ const ROW_HEIGHT$3 = 32;
 const START_HOUR$3 = 0;
 const END_HOUR$3 = 24;
 const TOTAL_HOURS$3 = END_HOUR$3 - START_HOUR$3;
+const formatGhostTime = (time) => {
+  const hours = Math.floor(time);
+  const minutes = Math.round(time % 1 * 60);
+  return `${String(hours).padStart(2, "0")}:${String(minutes).padStart(2, "0")}`;
+};
 const NEO_ASSIST_POINTER_DROP_EVENT$1 = "neoAssistPointerDrop";
 const NEO_ASSIST_DRAG_DIAGNOSTIC_STORAGE_KEY$1 = "neo_assist_drag_diagnostic_report";
 const AIRFRAME_COLUMN_WIDTH = 144;
@@ -69473,7 +69518,11 @@ const NextDayBuildView = ({
   const [validateOverlayTime, setValidateOverlayTime] = reactExports.useState(null);
   const didDragRef = reactExports.useRef(false);
   const oracleGhostRef = reactExports.useRef(null);
+  const oracleGhostTimeRef = reactExports.useRef(null);
+  const oracleGhostInstructorRef = reactExports.useRef(null);
+  const oracleGhostTraineeRef = reactExports.useRef(null);
   const oracleGhostFrameRef = reactExports.useRef(null);
+  const oraclePointerCaptureActiveRef = reactExports.useRef(false);
   const latestOraclePlacementRef = reactExports.useRef(null);
   const lastOracleNotifyRef = reactExports.useRef({ at: 0, startTime: Number.NaN, resourceId: "" });
   const [isOraclePlacementActive, setIsOraclePlacementActive] = reactExports.useState(false);
@@ -69608,6 +69657,9 @@ const NextDayBuildView = ({
       const top = Math.max(0, latestPlacement.row * ROW_HEIGHT$3 + 2);
       ghost.style.transform = `translate3d(${left}px, ${top}px, 0)`;
       ghost.style.width = `${width}px`;
+      if (oracleGhostTimeRef.current) {
+        oracleGhostTimeRef.current.textContent = formatGhostTime(latestPlacement.startTime);
+      }
     };
     if (typeof window === "undefined") {
       applyPosition();
@@ -69622,7 +69674,7 @@ const NextDayBuildView = ({
     positionOracleGhost(placement);
     const now = typeof performance !== "undefined" ? performance.now() : Date.now();
     const lastNotify = lastOracleNotifyRef.current;
-    const shouldNotify = now - lastNotify.at > 180 || Math.abs(placement.startTime - lastNotify.startTime) >= 0.25 || placement.resourceId !== lastNotify.resourceId;
+    const shouldNotify = now - lastNotify.at > 240 || Math.abs(placement.startTime - lastNotify.startTime) >= 0.5;
     if (!shouldNotify) return;
     lastOracleNotifyRef.current = { at: now, startTime: placement.startTime, resourceId: placement.resourceId };
     onOracleMouseMove(placement.startTime, placement.resourceId);
@@ -69630,6 +69682,7 @@ const NextDayBuildView = ({
   const finishOraclePlacement = reactExports.useCallback(() => {
     if (!oraclePlacementActiveRef.current) return;
     oraclePlacementActiveRef.current = false;
+    oraclePointerCaptureActiveRef.current = false;
     const finalPlacement = latestOraclePlacementRef.current;
     if (finalPlacement) {
       lastOracleNotifyRef.current = {
@@ -69665,7 +69718,12 @@ const NextDayBuildView = ({
     if (targetElement?.closest("[data-dfp-event-id]")) return;
     event.preventDefault();
     document.body.classList.add("no-select");
+    oraclePointerCaptureActiveRef.current = true;
     const didStart = beginOraclePlacementFromClient(event.clientX, event.clientY);
+    if (!didStart) {
+      oraclePointerCaptureActiveRef.current = false;
+      return;
+    }
     if (didStart) {
       try {
         event.currentTarget.setPointerCapture(event.pointerId);
@@ -69675,6 +69733,7 @@ const NextDayBuildView = ({
   }, [beginOraclePlacementFromClient, isOracleMode]);
   reactExports.useEffect(() => {
     const handleGlobalMouseMove = (event) => {
+      if (oraclePointerCaptureActiveRef.current) return;
       if (!oraclePlacementActiveRef.current) return;
       didDragRef.current = true;
       updateOraclePlacementFromClient(event.clientX, event.clientY);
@@ -69685,6 +69744,7 @@ const NextDayBuildView = ({
       updateOraclePlacementFromClient(event.clientX, event.clientY);
     };
     const handleGlobalMouseUp = (_event) => {
+      if (oraclePointerCaptureActiveRef.current) return;
       if (!oraclePlacementActiveRef.current) return;
       finishOraclePlacement();
     };
@@ -70569,13 +70629,33 @@ const NextDayBuildView = ({
                     "div",
                     {
                       ref: oracleGhostRef,
-                      className: "absolute left-0 top-0 z-[95] h-[28px] rounded-sm border border-sky-200/80 bg-sky-500/80 px-1.5 py-0.5 text-[10px] font-bold leading-tight text-white shadow-lg shadow-black/35 pointer-events-none will-change-transform",
+                      className: "absolute left-0 top-0 z-[95] h-[28px] rounded-sm border-2 border-dashed border-sky-300 bg-sky-500/80 text-white shadow-lg shadow-black/35 pointer-events-none will-change-transform overflow-hidden",
                       style: { transform: "translate3d(0, 0, 0)", width: `${Math.max(52, 1.2 * PIXELS_PER_HOUR$3 * zoomLevel)}px` },
                       children: [
-                        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "truncate", children: "Next Event" }),
-                        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center justify-between gap-1 text-[8px] font-semibold uppercase tracking-[0.02em]", children: [
-                          /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: `truncate ${String(oraclePreviewEvent?.instructor || "").toUpperCase().includes("NO ") ? "text-red-200" : "text-emerald-200"}`, children: oraclePreviewEvent?.instructor || "Instructor..." }),
-                          /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: `truncate ${String(oraclePreviewEvent?.student || "").toUpperCase().includes("NO ") ? "text-red-200" : "text-emerald-200"}`, children: oraclePreviewEvent?.student || "Trainee..." })
+                        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { ref: oracleGhostTimeRef, className: "absolute -top-px left-1 font-mono text-[8px] text-white/60", children: formatGhostTime(latestOraclePlacementRef.current?.startTime ?? oraclePreviewEvent?.startTime ?? START_HOUR$3) }),
+                        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex h-full w-full items-center justify-between px-2 text-[9px] font-bold leading-tight", children: [
+                          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "min-w-0 flex-1 overflow-hidden pr-1", style: { paddingLeft: "calc(10% + 2px)" }, children: [
+                            /* @__PURE__ */ jsxRuntimeExports.jsx(
+                              "div",
+                              {
+                                ref: oracleGhostInstructorRef,
+                                className: `overflow-hidden text-ellipsis whitespace-nowrap ${String(oraclePreviewEvent?.instructor || "").toUpperCase().includes("NO ") ? "text-red-300" : "text-emerald-300"}`,
+                                children: oraclePreviewEvent?.instructor || "Instructor..."
+                              }
+                            ),
+                            /* @__PURE__ */ jsxRuntimeExports.jsx(
+                              "div",
+                              {
+                                ref: oracleGhostTraineeRef,
+                                className: `overflow-hidden text-ellipsis whitespace-nowrap ${String(oraclePreviewEvent?.student || "").toUpperCase().includes("NO ") ? "text-red-300" : "text-emerald-300"}`,
+                                children: oraclePreviewEvent?.student || "Trainee..."
+                              }
+                            )
+                          ] }),
+                          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex shrink-0 flex-col items-end justify-between pl-1 font-mono text-[9px] text-white/80", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "whitespace-nowrap", children: [
+                            /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-[7px]", children: "[1.2]" }),
+                            " Next"
+                          ] }) })
                         ] })
                       ]
                     }

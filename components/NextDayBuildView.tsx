@@ -69,6 +69,12 @@ const ROW_HEIGHT = 32;
 const START_HOUR = 0;
 const END_HOUR = 24;
 const TOTAL_HOURS = END_HOUR - START_HOUR;
+
+const formatGhostTime = (time: number): string => {
+    const hours = Math.floor(time);
+    const minutes = Math.round((time % 1) * 60);
+    return `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}`;
+};
 const NEO_ASSIST_POINTER_DROP_EVENT = 'neoAssistPointerDrop';
 const NEO_ASSIST_DRAG_DIAGNOSTIC_STORAGE_KEY = 'neo_assist_drag_diagnostic_report';
 const AIRFRAME_COLUMN_WIDTH = 144;
@@ -190,7 +196,11 @@ export const NextDayBuildView: React.FC<NextDayBuildViewProps> = ({
     const [validateOverlayTime, setValidateOverlayTime] = useState<number | null>(null);
     const didDragRef = useRef(false);
     const oracleGhostRef = useRef<HTMLDivElement | null>(null);
+    const oracleGhostTimeRef = useRef<HTMLDivElement | null>(null);
+    const oracleGhostInstructorRef = useRef<HTMLDivElement | null>(null);
+    const oracleGhostTraineeRef = useRef<HTMLDivElement | null>(null);
     const oracleGhostFrameRef = useRef<number | null>(null);
+    const oraclePointerCaptureActiveRef = useRef(false);
     const latestOraclePlacementRef = useRef<{ startTime: number; resourceId: string; row: number } | null>(null);
     const lastOracleNotifyRef = useRef({ at: 0, startTime: Number.NaN, resourceId: '' });
     const [isOraclePlacementActive, setIsOraclePlacementActive] = useState(false);
@@ -343,6 +353,9 @@ export const NextDayBuildView: React.FC<NextDayBuildViewProps> = ({
             const top = Math.max(0, latestPlacement.row * ROW_HEIGHT + 2);
             ghost.style.transform = `translate3d(${left}px, ${top}px, 0)`;
             ghost.style.width = `${width}px`;
+            if (oracleGhostTimeRef.current) {
+                oracleGhostTimeRef.current.textContent = formatGhostTime(latestPlacement.startTime);
+            }
         };
         if (typeof window === 'undefined') {
             applyPosition();
@@ -359,9 +372,8 @@ export const NextDayBuildView: React.FC<NextDayBuildViewProps> = ({
         const now = typeof performance !== 'undefined' ? performance.now() : Date.now();
         const lastNotify = lastOracleNotifyRef.current;
         const shouldNotify =
-            now - lastNotify.at > 180 ||
-            Math.abs(placement.startTime - lastNotify.startTime) >= 0.25 ||
-            placement.resourceId !== lastNotify.resourceId;
+            now - lastNotify.at > 240 ||
+            Math.abs(placement.startTime - lastNotify.startTime) >= 0.5;
         if (!shouldNotify) return;
         lastOracleNotifyRef.current = { at: now, startTime: placement.startTime, resourceId: placement.resourceId };
         onOracleMouseMove(placement.startTime, placement.resourceId);
@@ -370,6 +382,7 @@ export const NextDayBuildView: React.FC<NextDayBuildViewProps> = ({
     const finishOraclePlacement = useCallback(() => {
         if (!oraclePlacementActiveRef.current) return;
         oraclePlacementActiveRef.current = false;
+        oraclePointerCaptureActiveRef.current = false;
         const finalPlacement = latestOraclePlacementRef.current;
         if (finalPlacement) {
             lastOracleNotifyRef.current = {
@@ -407,7 +420,12 @@ export const NextDayBuildView: React.FC<NextDayBuildViewProps> = ({
         if (targetElement?.closest('[data-dfp-event-id]')) return;
         event.preventDefault();
         document.body.classList.add('no-select');
+        oraclePointerCaptureActiveRef.current = true;
         const didStart = beginOraclePlacementFromClient(event.clientX, event.clientY);
+        if (!didStart) {
+            oraclePointerCaptureActiveRef.current = false;
+            return;
+        }
         if (didStart) {
             try {
                 event.currentTarget.setPointerCapture(event.pointerId);
@@ -419,6 +437,7 @@ export const NextDayBuildView: React.FC<NextDayBuildViewProps> = ({
 
     useEffect(() => {
         const handleGlobalMouseMove = (event: globalThis.MouseEvent) => {
+            if (oraclePointerCaptureActiveRef.current) return;
             if (!oraclePlacementActiveRef.current) return;
             didDragRef.current = true;
             updateOraclePlacementFromClient(event.clientX, event.clientY);
@@ -429,6 +448,7 @@ export const NextDayBuildView: React.FC<NextDayBuildViewProps> = ({
             updateOraclePlacementFromClient(event.clientX, event.clientY);
         };
         const handleGlobalMouseUp = (_event: globalThis.MouseEvent) => {
+            if (oraclePointerCaptureActiveRef.current) return;
             if (!oraclePlacementActiveRef.current) return;
             finishOraclePlacement();
         };
@@ -1411,17 +1431,30 @@ export const NextDayBuildView: React.FC<NextDayBuildViewProps> = ({
                     {isOracleMode && isOraclePlacementActive && (
                         <div
                             ref={oracleGhostRef}
-                            className="absolute left-0 top-0 z-[95] h-[28px] rounded-sm border border-sky-200/80 bg-sky-500/80 px-1.5 py-0.5 text-[10px] font-bold leading-tight text-white shadow-lg shadow-black/35 pointer-events-none will-change-transform"
+                            className="absolute left-0 top-0 z-[95] h-[28px] rounded-sm border-2 border-dashed border-sky-300 bg-sky-500/80 text-white shadow-lg shadow-black/35 pointer-events-none will-change-transform overflow-hidden"
                             style={{ transform: 'translate3d(0, 0, 0)', width: `${Math.max(52, 1.2 * PIXELS_PER_HOUR * zoomLevel)}px` }}
                         >
-                            <div className="truncate">Next Event</div>
-                            <div className="flex items-center justify-between gap-1 text-[8px] font-semibold uppercase tracking-[0.02em]">
-                                <span className={`truncate ${String(oraclePreviewEvent?.instructor || '').toUpperCase().includes('NO ') ? 'text-red-200' : 'text-emerald-200'}`}>
+                            <div ref={oracleGhostTimeRef} className="absolute -top-px left-1 font-mono text-[8px] text-white/60">
+                                {formatGhostTime(latestOraclePlacementRef.current?.startTime ?? oraclePreviewEvent?.startTime ?? START_HOUR)}
+                            </div>
+                            <div className="flex h-full w-full items-center justify-between px-2 text-[9px] font-bold leading-tight">
+                                <div className="min-w-0 flex-1 overflow-hidden pr-1" style={{ paddingLeft: 'calc(10% + 2px)' }}>
+                                    <div
+                                        ref={oracleGhostInstructorRef}
+                                        className={`overflow-hidden text-ellipsis whitespace-nowrap ${String(oraclePreviewEvent?.instructor || '').toUpperCase().includes('NO ') ? 'text-red-300' : 'text-emerald-300'}`}
+                                    >
                                     {oraclePreviewEvent?.instructor || 'Instructor...'}
-                                </span>
-                                <span className={`truncate ${String(oraclePreviewEvent?.student || '').toUpperCase().includes('NO ') ? 'text-red-200' : 'text-emerald-200'}`}>
-                                    {oraclePreviewEvent?.student || 'Trainee...'}
-                                </span>
+                                    </div>
+                                    <div
+                                        ref={oracleGhostTraineeRef}
+                                        className={`overflow-hidden text-ellipsis whitespace-nowrap ${String(oraclePreviewEvent?.student || '').toUpperCase().includes('NO ') ? 'text-red-300' : 'text-emerald-300'}`}
+                                    >
+                                        {oraclePreviewEvent?.student || 'Trainee...'}
+                                    </div>
+                                </div>
+                                <div className="flex shrink-0 flex-col items-end justify-between pl-1 font-mono text-[9px] text-white/80">
+                                    <div className="whitespace-nowrap"><span className="text-[7px]">[1.2]</span> Next</div>
+                                </div>
                             </div>
                         </div>
                     )}
