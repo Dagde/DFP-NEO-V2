@@ -28856,7 +28856,13 @@ const App: React.FC = () => {
         });
     };
 
-    const showDarkConfirm = (message: string, title: string = 'Confirm', variant: 'error' | 'warning' | 'info' | 'success' = 'warning'): Promise<boolean> => {
+    const showDarkConfirm = (
+        message: string,
+        title: string = 'Confirm',
+        variant: 'error' | 'warning' | 'info' | 'success' = 'warning',
+        confirmText: string = 'Yes',
+        cancelText: string = 'Cancel'
+    ): Promise<boolean> => {
         return new Promise((resolve) => {
             setDarkMessageModal({
                 type: 'confirm',
@@ -28871,8 +28877,8 @@ const App: React.FC = () => {
                     setDarkMessageModal(null);
                     resolve(false);
                 },
-                confirmText: 'Yes',
-                cancelText: 'Cancel'
+                confirmText,
+                cancelText
             });
         });
     };
@@ -53047,15 +53053,19 @@ appliedUpdates.forEach(update => {
         setShowPausePanel(true);
     }, [activeOperationalModel, activeUnitCode, activeView, canEditDfpTiles, canRunNeoBuildForActiveModel, date, denyPlatformAction, handleNavigation, isViewingPastDfp, school, scopedPublishedEventsForDate]);
 
-    const clearNeoBuildScheduleFromContextMenu = useCallback(() => {
+    const clearNeoBuildScheduleFromContextMenu = useCallback(async () => {
         const eventCount = nextDayBuildEvents.length;
         if (eventCount === 0) {
             setShowInfoNotification('There is no NEO Build schedule to clear.');
             return;
         }
 
-        const confirmed = window.confirm(
-            `Clear the current NEO Build schedule?\n\nThis will remove ${eventCount} staged schedule tile${eventCount === 1 ? '' : 's'} from the NEO Build view. It will not clear the published DFP.`
+        const confirmed = await showDarkConfirm(
+            `This will remove ${eventCount} staged schedule tile${eventCount === 1 ? '' : 's'} from the NEO Build view.\n\nIt will not clear the published DFP.`,
+            'Clear NEO Build Schedule',
+            'warning',
+            'Clear Schedule',
+            'Cancel'
         );
         if (!confirmed) return;
 
