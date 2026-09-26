@@ -10543,6 +10543,27 @@ function normaliseTestingUnitCode(value) {
   return String(value || '').trim().toUpperCase();
 }
 
+function getTestingUnitParts(unitCode) {
+  const cleanUnit = normaliseTestingUnitCode(unitCode);
+  return cleanUnit
+    .split('+')
+    .map(part => normaliseTestingUnitCode(part))
+    .filter(Boolean);
+}
+
+function testingUnitMatches(candidateUnit, requestedUnit) {
+  const candidate = normaliseTestingUnitCode(candidateUnit);
+  const requested = normaliseTestingUnitCode(requestedUnit);
+  if (!requested) return true;
+  if (!candidate) return false;
+  if (candidate === requested) return true;
+  const requestedParts = getTestingUnitParts(requested);
+  const candidateParts = getTestingUnitParts(candidate);
+  return requestedParts.includes(candidate) ||
+    candidateParts.includes(requested) ||
+    candidateParts.some(part => requestedParts.includes(part));
+}
+
 function normaliseTestingPersonName(value) {
   return String(value || '')
     .replace(/\s+/g, ' ')
@@ -10758,15 +10779,17 @@ async function loadTestingDaySnapshot(db, { date, unitCode, school }) {
     const parsed = parseDailySnapshotDateKey(row.date);
     const rowUnit = normaliseTestingUnitCode(parsed.unit);
     if (!cleanUnit) return true;
-    return rowUnit === cleanUnit || (Array.isArray(row.scheduleEvents) && row.scheduleEvents.some(event => getTestingEventUnit(event, rowUnit) === cleanUnit));
+    return testingUnitMatches(rowUnit, cleanUnit) ||
+      (Array.isArray(row.scheduleEvents) && row.scheduleEvents.some(event => testingUnitMatches(getTestingEventUnit(event, rowUnit), cleanUnit)));
   }) || rows?.[0];
   if (!matching) return null;
 
   const parsed = parseDailySnapshotDateKey(matching.date);
   const fallbackUnit = parsed.unit || cleanUnit;
+  const snapshotMatchesRequestedUnit = testingUnitMatches(fallbackUnit, cleanUnit);
   const scheduleEvents = (Array.isArray(matching.scheduleEvents) ? matching.scheduleEvents : [])
     .map(event => ({ ...event, date: parsed.date || cleanDate }))
-    .filter(event => !cleanUnit || getTestingEventUnit(event, fallbackUnit) === cleanUnit);
+    .filter(event => !cleanUnit || snapshotMatchesRequestedUnit || testingUnitMatches(getTestingEventUnit(event, fallbackUnit), cleanUnit));
 
   return {
     snapshot: matching,

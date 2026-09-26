@@ -79,6 +79,7 @@ const TestingFunctionsSettings: React.FC<TestingFunctionsSettingsProps> = ({
     .filter(row => Number(row.percent) > 0)
     .map(row => `${row.percent}% score ${row.score}`)
     .join(', ');
+  const previewHasNoScheduleEvents = Boolean(preview?.counts && preview.counts.scheduleEvents === 0);
 
   const canReset = confirmation.trim() === REQUIRED_CONFIRMATION && !isResetting;
 
@@ -339,15 +340,38 @@ const TestingFunctionsSettings: React.FC<TestingFunctionsSettingsProps> = ({
           </div>
 
           {preview?.counts && (
-            <div className="grid gap-3 md:grid-cols-3">
-              {Object.entries(preview.counts).map(([key, value]) => (
-                <div key={key} className="rounded-md border border-slate-700 bg-slate-950/50 p-3">
-                  <div className="text-[10px] font-bold uppercase tracking-widest text-slate-500">{key.replace(/([A-Z])/g, ' $1')}</div>
-                  <div className="mt-1 text-2xl font-bold text-white">{value}</div>
+            <>
+              {previewHasNoScheduleEvents ? (
+                <div className="rounded-md border border-amber-500/60 bg-amber-950/30 p-3 text-sm text-amber-100">
+                  No schedule events were found for <strong>{preview.unitCode || effectiveUnit}</strong> on <strong>{preview.date || testDate}</strong>.
+                  {preview.snapshotKey ? <> Snapshot checked: <strong>{preview.snapshotKey}</strong>.</> : null}
                 </div>
-              ))}
-            </div>
+              ) : null}
+              <div className="grid gap-3 md:grid-cols-3">
+                {Object.entries(preview.counts).map(([key, value]) => (
+                  <div key={key} className="rounded-md border border-slate-700 bg-slate-950/50 p-3">
+                    <div className="text-[10px] font-bold uppercase tracking-widest text-slate-500">{key.replace(/([A-Z])/g, ' $1')}</div>
+                    <div className="mt-1 text-2xl font-bold text-white">{value}</div>
+                  </div>
+                ))}
+              </div>
+            </>
           )}
+
+          {preview?.samples && preview.samples.length > 0 ? (
+            <div className="rounded-md border border-slate-700 bg-slate-950/40 p-3">
+              <div className="text-[10px] font-bold uppercase tracking-widest text-slate-500">Sample Events Found</div>
+              <div className="mt-2 grid gap-2 md:grid-cols-2">
+                {preview.samples.slice(0, 6).map(sample => (
+                  <div key={sample.id} className="rounded border border-slate-800 bg-slate-900/70 px-3 py-2 text-xs text-slate-200">
+                    <span className="font-bold text-white">{sample.event || sample.type}</span>
+                    {sample.startTime != null ? <span className="ml-2 text-slate-400">{sample.startTime}</span> : null}
+                    <div className="text-slate-400">{sample.instructor || 'No instructor'} / {sample.trainee || 'No trainee'}</div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          ) : null}
 
           {result?.summary && (
             <div className="rounded-md border border-emerald-600/50 bg-emerald-950/30 p-3 text-sm text-emerald-100">

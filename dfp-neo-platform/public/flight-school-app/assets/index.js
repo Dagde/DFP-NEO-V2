@@ -99330,6 +99330,7 @@ const TestingFunctionsSettings = ({
     return distribution;
   }, {}), [scoreDistributionRows]);
   const scoreDistributionText = scoreDistributionRows.filter((row) => Number(row.percent) > 0).map((row) => `${row.percent}% score ${row.score}`).join(", ");
+  const previewHasNoScheduleEvents = Boolean(preview?.counts && preview.counts.scheduleEvents === 0);
   const canReset = confirmation.trim() === REQUIRED_CONFIRMATION && !isResetting;
   const authHeaders2 = () => {
     const sessionToken = localStorage.getItem("dfp_session_token") || "";
@@ -99582,10 +99583,36 @@ Continue?`,
             ] })
           ] }, index)) }) : null
         ] }),
-        preview?.counts && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "grid gap-3 md:grid-cols-3", children: Object.entries(preview.counts).map(([key, value]) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded-md border border-slate-700 bg-slate-950/50 p-3", children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-[10px] font-bold uppercase tracking-widest text-slate-500", children: key.replace(/([A-Z])/g, " $1") }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-1 text-2xl font-bold text-white", children: value })
-        ] }, key)) }),
+        preview?.counts && /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
+          previewHasNoScheduleEvents ? /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded-md border border-amber-500/60 bg-amber-950/30 p-3 text-sm text-amber-100", children: [
+            "No schedule events were found for ",
+            /* @__PURE__ */ jsxRuntimeExports.jsx("strong", { children: preview.unitCode || effectiveUnit }),
+            " on ",
+            /* @__PURE__ */ jsxRuntimeExports.jsx("strong", { children: preview.date || testDate }),
+            ".",
+            preview.snapshotKey ? /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
+              " Snapshot checked: ",
+              /* @__PURE__ */ jsxRuntimeExports.jsx("strong", { children: preview.snapshotKey }),
+              "."
+            ] }) : null
+          ] }) : null,
+          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "grid gap-3 md:grid-cols-3", children: Object.entries(preview.counts).map(([key, value]) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded-md border border-slate-700 bg-slate-950/50 p-3", children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-[10px] font-bold uppercase tracking-widest text-slate-500", children: key.replace(/([A-Z])/g, " $1") }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-1 text-2xl font-bold text-white", children: value })
+          ] }, key)) })
+        ] }),
+        preview?.samples && preview.samples.length > 0 ? /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded-md border border-slate-700 bg-slate-950/40 p-3", children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-[10px] font-bold uppercase tracking-widest text-slate-500", children: "Sample Events Found" }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-2 grid gap-2 md:grid-cols-2", children: preview.samples.slice(0, 6).map((sample) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded border border-slate-800 bg-slate-900/70 px-3 py-2 text-xs text-slate-200", children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "font-bold text-white", children: sample.event || sample.type }),
+            sample.startTime != null ? /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "ml-2 text-slate-400", children: sample.startTime }) : null,
+            /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "text-slate-400", children: [
+              sample.instructor || "No instructor",
+              " / ",
+              sample.trainee || "No trainee"
+            ] })
+          ] }, sample.id)) })
+        ] }) : null,
         result?.summary && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded-md border border-emerald-600/50 bg-emerald-950/30 p-3 text-sm text-emerald-100", children: [
           /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "font-bold", children: "Last run complete" }),
           /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mt-1", children: [
