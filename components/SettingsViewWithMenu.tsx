@@ -1446,7 +1446,7 @@ export const SettingsViewWithMenu: React.FC<SettingsViewWithMenuProps> = (props)
     };
     const canAccessSettingsSection = (section: SettingsMenuSection): boolean => {
         if (section === 'testing-functions') {
-            return currentSettingsPermission === 'Super Admin';
+            return true;
         }
         if (hasLegacySettingsAdminRole || hasGeneralSettingsEditPermission) return true;
         if (hasSpecificSettingsEditPermission) {

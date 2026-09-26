@@ -101183,7 +101183,7 @@ const SettingsViewWithMenu = (props) => {
   };
   const canAccessSettingsSection = (section) => {
     if (section === "testing-functions") {
-      return currentSettingsPermission === "Super Admin";
+      return true;
     }
     if (hasLegacySettingsAdminRole || hasGeneralSettingsEditPermission) return true;
     if (hasSpecificSettingsEditPermission) {
