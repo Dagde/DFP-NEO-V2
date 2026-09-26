@@ -47728,6 +47728,31 @@ const App: React.FC = () => {
             return null;
         };
 
+        const normalisePausePreferredInstructorList = (value: unknown): string[] => {
+            if (Array.isArray(value)) {
+                return value.flatMap(item => normalisePausePreferredInstructorList(item));
+            }
+
+            if (typeof value !== 'string') return [];
+
+            const trimmed = value.trim();
+            if (!trimmed) return [];
+
+            try {
+                const parsed = JSON.parse(trimmed);
+                if (Array.isArray(parsed)) {
+                    return normalisePausePreferredInstructorList(parsed);
+                }
+            } catch {
+                // Plain-text instructor names are expected here.
+            }
+
+            return trimmed
+                .split(/[;,/|]+/)
+                .map(name => name.trim())
+                .filter(Boolean);
+        };
+
         // Helper: find the best available instructor for a trainee/syllabus item
         const findBestInstructor = (
             trainee: Trainee,
@@ -47762,14 +47787,14 @@ const App: React.FC = () => {
             if (activeInstructors.length === 0) return null;
 
             // Prefer primary instructor from trainee record
-            const primaryNames = normalisePreferredInstructorList(trainee.primaryInstructor);
+            const primaryNames = normalisePausePreferredInstructorList(trainee.primaryInstructor);
             for (const pName of primaryNames) {
                 const found = activeInstructors.find((ip: Instructor) => personnelNamesMatch(ip.name, pName));
                 if (found) return found.name;
             }
 
             // Then try secondary instructor
-            const secondaryNames = normalisePreferredInstructorList(trainee.secondaryInstructor);
+            const secondaryNames = normalisePausePreferredInstructorList(trainee.secondaryInstructor);
             for (const sName of secondaryNames) {
                 const found = activeInstructors.find((ip: Instructor) => personnelNamesMatch(ip.name, sName));
                 if (found) return found.name;
@@ -48065,21 +48090,19 @@ const App: React.FC = () => {
 
         return finalEvents;
         } catch (error) {
-            const fallbackEvents = eventsAfterCancel.map(event => ({ ...event, date: pauseDate }));
             recordPauseFlightOpsDiagnostic({
-                stage: 'build-failed-after-clear-fallback-staged',
+                stage: 'build-failed-after-clear-aborted',
                 details: {
                     pauseDate,
                     errorName: error instanceof Error ? error.name : typeof error,
                     errorMessage: error instanceof Error ? error.message : String(error),
                     errorStack: error instanceof Error ? error.stack : null,
-                    fallbackCount: fallbackEvents.length,
-                    fallbackByType: countPauseEventsBy(fallbackEvents, event => event.type),
-                    fallbackCancelledCount: fallbackEvents.filter(event => event.isCancelled).length,
-                    fallbackSample: fallbackEvents.slice(0, 100).map(summarisePauseEvent),
+                    clearedEventCount: eventsAfterCancel.filter(event => event.isCancelled).length,
+                    sourceEventCount: fullRawEvents.length,
+                    note: 'Post-pause build failed after calculating clear candidates. Cancel-only fallback was blocked so Re-program remainder does not stage cancellations without replacements.',
                 },
             });
-            return fallbackEvents;
+            throw error instanceof Error ? error : new Error(String(error));
         }
     };
 

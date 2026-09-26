@@ -120583,8 +120583,8 @@ async function generateDfpInternal(config, setProgress, publishedSchedules) {
       return instructorUnit === traineeUnit;
     }
     if (priorityEnabled) {
-      const primaryArr = normalisePreferredInstructorList2(trainee.primaryInstructor);
-      const secondaryArr = normalisePreferredInstructorList2(trainee.secondaryInstructor);
+      const primaryArr = normalisePreferredInstructorList(trainee.primaryInstructor);
+      const secondaryArr = normalisePreferredInstructorList(trainee.secondaryInstructor);
       if (softGroups.primary && preferredInstructorListIncludes(primaryArr, instructor.name)) return true;
       if (softGroups.secondary && preferredInstructorListIncludes(secondaryArr, instructor.name)) return true;
       if (hardGroups.primary && preferredInstructorListIncludes(primaryArr, instructor.name)) return true;
@@ -120642,9 +120642,9 @@ async function generateDfpInternal(config, setProgress, publishedSchedules) {
     return totalDutyHours;
   };
   const normalizeBuildPersonnelName = (name) => (name || "").replace(/\s+/g, " ").trim().replace(/^(ACM|AIRMSHL|AVM|AIRCDRE|GPCAPT|WGCDR|SQNLDR|FLTLT|FLGOFF|PLTOFF|OFFCDT|WOFF|FSGT|SGT|CPL|LACW?|ACW?|MIDN|CMDR|LCDR|LEUT|SBLT|ASLT|CDRE|CAPT|COL|LTCOL|MAJ|LT|2LT|WO1|WO2|SSGT|PTE|MR|MRS|MS|MISS|DR)\s+/i, "").toLowerCase();
-  const normalisePreferredInstructorList2 = (value) => {
+  const normalisePreferredInstructorList = (value) => {
     if (Array.isArray(value)) {
-      return value.flatMap((item) => normalisePreferredInstructorList2(item));
+      return value.flatMap((item) => normalisePreferredInstructorList(item));
     }
     if (value === null || value === void 0) return [];
     if (typeof value !== "string") return [];
@@ -120653,7 +120653,7 @@ async function generateDfpInternal(config, setProgress, publishedSchedules) {
     if (trimmed.startsWith("[") && trimmed.endsWith("]")) {
       try {
         const parsed = JSON.parse(trimmed);
-        if (Array.isArray(parsed)) return normalisePreferredInstructorList2(parsed);
+        if (Array.isArray(parsed)) return normalisePreferredInstructorList(parsed);
       } catch {
       }
     }
@@ -120662,7 +120662,7 @@ async function generateDfpInternal(config, setProgress, publishedSchedules) {
   const preferredInstructorListIncludes = (preferredNames, instructorName) => {
     const instructorKey = normalizeBuildPersonnelName(instructorName);
     if (!instructorKey) return false;
-    return normalisePreferredInstructorList2(preferredNames).some((preferredName) => normalizeBuildPersonnelName(preferredName) === instructorKey);
+    return normalisePreferredInstructorList(preferredNames).some((preferredName) => normalizeBuildPersonnelName(preferredName) === instructorKey);
   };
   const eventIncludesPerson = (event, personName) => {
     const personKey2 = normalizeBuildPersonnelName(personName);
@@ -124475,7 +124475,7 @@ async function generateDfpInternal(config, setProgress, publishedSchedules) {
   }, {});
   neoBuildDiag.activeTrainees.byCourse = countTraineesByCourse(activeTrainees);
   const describePreferredInstructorValueForDiag = (value) => {
-    const normalised = normalisePreferredInstructorList2(value);
+    const normalised = normalisePreferredInstructorList(value);
     return {
       count: normalised.length,
       normalised,
@@ -124485,8 +124485,8 @@ async function generateDfpInternal(config, setProgress, publishedSchedules) {
   };
   neoBuildDiag.activeTrainees.preferredInstructorCoverageByCourse = activeTrainees.reduce((coverage, trainee) => {
     const courseName = String(trainee.course || "Unassigned").trim() || "Unassigned";
-    const primary = normalisePreferredInstructorList2(trainee.primaryInstructor);
-    const secondary = normalisePreferredInstructorList2(trainee.secondaryInstructor);
+    const primary = normalisePreferredInstructorList(trainee.primaryInstructor);
+    const secondary = normalisePreferredInstructorList(trainee.secondaryInstructor);
     const record = coverage[courseName] || {
       total: 0,
       withPrimary: 0,
@@ -126695,8 +126695,8 @@ async function generateDfpInternal(config, setProgress, publishedSchedules) {
         return c.flightFtd * 2 + c.cpt + c.ground;
       };
       if (priorityEnabled) {
-        const primaryNames = normalisePreferredInstructorList2(traineeForCheck.primaryInstructor);
-        const secondaryNames = normalisePreferredInstructorList2(traineeForCheck.secondaryInstructor);
+        const primaryNames = normalisePreferredInstructorList(traineeForCheck.primaryInstructor);
+        const secondaryNames = normalisePreferredInstructorList(traineeForCheck.secondaryInstructor);
         fullUnit(traineeForCheck.unit || "");
         const traineeBase = normalizeUnit(traineeForCheck.unit || "");
         const traineeFlight = (traineeForCheck.flight || "").trim();
@@ -127118,8 +127118,8 @@ async function generateDfpInternal(config, setProgress, publishedSchedules) {
       if (anyHardGroup && (type === "flight" || type === "ftd") && !isNightPass && !primaryPreferOnly) {
         const traineeFlight = (trainee.flight || "").trim();
         const traineeBase = normalizeUnit(trainee.unit || "");
-        const traineePrimaryArr = normalisePreferredInstructorList2(trainee.primaryInstructor);
-        const traineeSecondaryArr = normalisePreferredInstructorList2(trainee.secondaryInstructor);
+        const traineePrimaryArr = normalisePreferredInstructorList(trainee.primaryInstructor);
+        const traineeSecondaryArr = normalisePreferredInstructorList(trainee.secondaryInstructor);
         const instructorInHardGroup = hardGroups.primary && preferredInstructorListIncludes(traineePrimaryArr, instructor.name) || hardGroups.secondary && preferredInstructorListIncludes(traineeSecondaryArr, instructor.name) || hardGroups.sameFlight && (() => {
           const instrFlight = (instructor.flight || "").trim();
           const instrBase = normalizeUnit(instructor.unit || "");
@@ -133542,8 +133542,8 @@ async function generateDfpInternal(config, setProgress, publishedSchedules) {
       const trainee = traineeByName.get(normalizeBuildPersonnelName(traineeName));
       if (!trainee) return;
       const traineeKey = getBuildTraineeKey(trainee);
-      const primaryNames = normalisePreferredInstructorList2(trainee.primaryInstructor);
-      const secondaryNames = normalisePreferredInstructorList2(trainee.secondaryInstructor);
+      const primaryNames = normalisePreferredInstructorList(trainee.primaryInstructor);
+      const secondaryNames = normalisePreferredInstructorList(trainee.secondaryInstructor);
       if (preferredInstructorListIncludes(primaryNames, event.instructor)) traineesWithPrimary.add(traineeKey);
       else if (preferredInstructorListIncludes(secondaryNames, event.instructor)) traineesWithSecondary.add(traineeKey);
       else traineesWithOther.add(traineeKey);
@@ -133716,8 +133716,8 @@ async function generateDfpInternal(config, setProgress, publishedSchedules) {
       }
       const courseStats = getCourseOptimisationStats(trainee);
       courseStats.candidateEvents++;
-      const primaryNames = normalisePreferredInstructorList2(trainee.primaryInstructor);
-      const secondaryNames = normalisePreferredInstructorList2(trainee.secondaryInstructor);
+      const primaryNames = normalisePreferredInstructorList(trainee.primaryInstructor);
+      const secondaryNames = normalisePreferredInstructorList(trainee.secondaryInstructor);
       if (preferredInstructorListIncludes(primaryNames, event.instructor) || preferredInstructorListIncludes(secondaryNames, event.instructor)) {
         counters.alreadyPreferred++;
         courseStats.alreadyPreferred++;
@@ -150485,6 +150485,22 @@ ${conflictLines.join("\n")}${moreText}`,
         }
         return null;
       };
+      const normalisePausePreferredInstructorList = (value) => {
+        if (Array.isArray(value)) {
+          return value.flatMap((item) => normalisePausePreferredInstructorList(item));
+        }
+        if (typeof value !== "string") return [];
+        const trimmed = value.trim();
+        if (!trimmed) return [];
+        try {
+          const parsed = JSON.parse(trimmed);
+          if (Array.isArray(parsed)) {
+            return normalisePausePreferredInstructorList(parsed);
+          }
+        } catch {
+        }
+        return trimmed.split(/[;,/|]+/).map((name) => name.trim()).filter(Boolean);
+      };
       const findBestInstructor = (trainee, syllabusItem, windowStart, windowEnd) => {
         const activeInstructors = instructorsData.filter((ip) => {
           if (isPersonStaticallyUnavailable(ip, windowStart, windowEnd, pauseDate, "flight")) return false;
@@ -150504,12 +150520,12 @@ ${conflictLines.join("\n")}${moreText}`,
           return true;
         });
         if (activeInstructors.length === 0) return null;
-        const primaryNames = normalisePreferredInstructorList(trainee.primaryInstructor);
+        const primaryNames = normalisePausePreferredInstructorList(trainee.primaryInstructor);
         for (const pName of primaryNames) {
           const found = activeInstructors.find((ip) => personnelNamesMatch(ip.name, pName));
           if (found) return found.name;
         }
-        const secondaryNames = normalisePreferredInstructorList(trainee.secondaryInstructor);
+        const secondaryNames = normalisePausePreferredInstructorList(trainee.secondaryInstructor);
         for (const sName of secondaryNames) {
           const found = activeInstructors.find((ip) => personnelNamesMatch(ip.name, sName));
           if (found) return found.name;
@@ -150752,21 +150768,19 @@ ${conflictLines.join("\n")}${moreText}`,
       });
       return finalEvents;
     } catch (error) {
-      const fallbackEvents = eventsAfterCancel.map((event) => ({ ...event, date: pauseDate }));
       recordPauseFlightOpsDiagnostic({
-        stage: "build-failed-after-clear-fallback-staged",
+        stage: "build-failed-after-clear-aborted",
         details: {
           pauseDate,
           errorName: error instanceof Error ? error.name : typeof error,
           errorMessage: error instanceof Error ? error.message : String(error),
           errorStack: error instanceof Error ? error.stack : null,
-          fallbackCount: fallbackEvents.length,
-          fallbackByType: countPauseEventsBy(fallbackEvents, (event) => event.type),
-          fallbackCancelledCount: fallbackEvents.filter((event) => event.isCancelled).length,
-          fallbackSample: fallbackEvents.slice(0, 100).map(summarisePauseEvent)
+          clearedEventCount: eventsAfterCancel.filter((event) => event.isCancelled).length,
+          sourceEventCount: fullRawEvents.length,
+          note: "Post-pause build failed after calculating clear candidates. Cancel-only fallback was blocked so Re-program remainder does not stage cancellations without replacements."
         }
       });
-      return fallbackEvents;
+      throw error instanceof Error ? error : new Error(String(error));
     }
   };
   const handlePausePublish = (stagedEvents) => {
