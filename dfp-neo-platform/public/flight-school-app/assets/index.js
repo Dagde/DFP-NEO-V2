@@ -154769,6 +154769,26 @@ ${error instanceof Error ? error.message : String(error)}`,
     handleNavigation("NextDayBuild");
     setShowPausePanel(true);
   }, [activeOperationalModel, activeUnitCode, activeView, canEditDfpTiles, canRunNeoBuildForActiveModel, date, denyPlatformAction, handleNavigation, isViewingPastDfp, school, scopedPublishedEventsForDate]);
+  const clearNeoBuildScheduleFromContextMenu = reactExports.useCallback(() => {
+    const eventCount = nextDayBuildEvents.length;
+    if (eventCount === 0) {
+      setShowInfoNotification("There is no NEO Build schedule to clear.");
+      return;
+    }
+    const confirmed = window.confirm(
+      `Clear the current NEO Build schedule?
+
+This will remove ${eventCount} staged schedule tile${eventCount === 1 ? "" : "s"} from the NEO Build view. It will not clear the published DFP.`
+    );
+    if (!confirmed) return;
+    setNextDayBuildEvents([]);
+    setPauseStagedEvents([]);
+    setPauseOriginalEvents([]);
+    setPauseCompletedEventIds(/* @__PURE__ */ new Set());
+    setPauseIsSelectingCompleted(false);
+    setPausePanelPhase("configure");
+    setShowInfoNotification("NEO Build schedule cleared.");
+  }, [nextDayBuildEvents.length]);
   const contextSettingsSections = reactExports.useMemo(() => [
     { label: "Configuration Health", sectionId: "platform-configuration-health" },
     { label: "Organisation, Bases & Areas", sectionId: "platform-organisation-locations" },
@@ -155013,6 +155033,13 @@ ${error instanceof Error ? error.message : String(error)}`,
       const isNeoBuildScheduleView = ["NextDayBuild", "ProgramData"].includes(activeView);
       menuItems.push(
         ...isNeoBuildScheduleView ? [{ label: "Go to DFP", onSelect: openTodayDfpFromContextMenu }] : [],
+        ...isNeoBuildScheduleView ? [{
+          label: "Clear NEO Build Schedule",
+          detail: nextDayBuildEvents.length > 0 ? `Remove ${nextDayBuildEvents.length} staged tile${nextDayBuildEvents.length === 1 ? "" : "s"} after confirmation.` : "No staged NEO Build tiles to clear.",
+          danger: true,
+          disabled: nextDayBuildEvents.length === 0,
+          onSelect: clearNeoBuildScheduleFromContextMenu
+        }] : [],
         { label: "Staff Schedule", onSelect: openStaffScheduleFromContextMenu },
         ...activeUnitHasTrainees ? [{ label: "Trainee Schedule", onSelect: openTraineeScheduleFromContextMenu }] : [],
         { label: "Add Flight Tile", detail: canAddFlightOnActiveDfp ? "Create a new flight event." : "Add Flight Tile is not available for this profile or DFP.", disabled: !canAddFlightOnActiveDfp, onSelect: () => {
@@ -155119,6 +155146,7 @@ ${error instanceof Error ? error.message : String(error)}`,
     canUseNeoTileAssist,
     canUsePauseFlightOps,
     canViewTraineeTrainingReport,
+    clearNeoBuildScheduleFromContextMenu,
     configuredTrainingReportDisplayName,
     contextSettingsSections,
     copyContextSummary,
