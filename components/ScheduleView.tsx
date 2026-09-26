@@ -12402,6 +12402,11 @@ const ScheduleView: React.FC<ScheduleViewProps> = ({
     const scheduleDirectMouseDragActiveRef = useRef(false);
     const schedulePointerDragActiveRef = useRef(false);
     const lastSchedulePointerMoveAtRef = useRef(0);
+    const oracleGhostRef = useRef<HTMLDivElement | null>(null);
+    const oracleGhostFrameRef = useRef<number | null>(null);
+    const latestOraclePlacementRef = useRef<{ startTime: number; resourceId: string; row: number } | null>(null);
+    const lastOracleNotifyRef = useRef({ at: 0, startTime: Number.NaN, resourceId: '' });
+    const [isOraclePlacementActive, setIsOraclePlacementActive] = useState(false);
     const dragFrameRef = useRef<number | null>(null);
     const dragGridRectRef = useRef<DOMRect | null>(null);
     const lastDragUpdateSignatureRef = useRef('');
@@ -12557,22 +12562,63 @@ const ScheduleView: React.FC<ScheduleViewProps> = ({
         const startTime = Math.max(START_HOUR, Math.min(END_HOUR, rawStartTime));
         const row = Math.max(0, Math.min(resources.length - 1, Math.floor(yInGrid / ROW_HEIGHT)));
         const resourceId = resources[row] || resources[0];
-        return resourceId ? { startTime, resourceId } : null;
+        return resourceId ? { startTime, resourceId, row } : null;
     }, [resources, zoomLevel]);
+
+    const positionOracleGhost = useCallback((placement: { startTime: number; resourceId: string; row: number }) => {
+        latestOraclePlacementRef.current = placement;
+        const applyPosition = () => {
+            oracleGhostFrameRef.current = null;
+            const ghost = oracleGhostRef.current;
+            const latestPlacement = latestOraclePlacementRef.current;
+            if (!ghost || !latestPlacement) return;
+            const width = Math.max(52, 1.2 * PIXELS_PER_HOUR * zoomLevel);
+            const maxLeft = Math.max(0, TOTAL_HOURS * PIXELS_PER_HOUR * zoomLevel - width);
+            const left = Math.max(0, Math.min(maxLeft, (latestPlacement.startTime - START_HOUR) * PIXELS_PER_HOUR * zoomLevel));
+            const top = Math.max(0, latestPlacement.row * ROW_HEIGHT + 2);
+            ghost.style.transform = `translate3d(${left}px, ${top}px, 0)`;
+            ghost.style.width = `${width}px`;
+        };
+        if (typeof window === 'undefined') {
+            applyPosition();
+            return;
+        }
+        if (oracleGhostFrameRef.current !== null) return;
+        oracleGhostFrameRef.current = window.requestAnimationFrame(applyPosition);
+    }, [zoomLevel]);
 
     const updateOraclePlacementFromClient = useCallback((clientX: number, clientY: number) => {
         const placement = getOraclePlacementFromClient(clientX, clientY);
         if (!placement) return;
+        positionOracleGhost(placement);
+        const now = typeof performance !== 'undefined' ? performance.now() : Date.now();
+        const lastNotify = lastOracleNotifyRef.current;
+        const shouldNotify =
+            now - lastNotify.at > 180 ||
+            Math.abs(placement.startTime - lastNotify.startTime) >= 0.25 ||
+            placement.resourceId !== lastNotify.resourceId;
+        if (!shouldNotify) return;
+        lastOracleNotifyRef.current = { at: now, startTime: placement.startTime, resourceId: placement.resourceId };
         onOracleMouseMove(placement.startTime, placement.resourceId);
-    }, [getOraclePlacementFromClient, onOracleMouseMove]);
+    }, [getOraclePlacementFromClient, onOracleMouseMove, positionOracleGhost]);
 
     const finishOraclePlacement = useCallback(() => {
         if (!oraclePlacementActiveRef.current) return;
         oraclePlacementActiveRef.current = false;
+        const finalPlacement = latestOraclePlacementRef.current;
+        if (finalPlacement) {
+            lastOracleNotifyRef.current = {
+                at: typeof performance !== 'undefined' ? performance.now() : Date.now(),
+                startTime: finalPlacement.startTime,
+                resourceId: finalPlacement.resourceId,
+            };
+            onOracleMouseMove(finalPlacement.startTime, finalPlacement.resourceId);
+        }
+        setIsOraclePlacementActive(false);
         document.body.classList.remove('no-select');
         onOracleMouseUp();
         setValidateOverlayTime(null);
-    }, [onOracleMouseUp]);
+    }, [onOracleMouseMove, onOracleMouseUp]);
 
     useEffect(() => {
         // Global drag handlers
@@ -12865,6 +12911,14 @@ const ScheduleView: React.FC<ScheduleViewProps> = ({
             const placement = getOraclePlacementFromClient(e.clientX, e.clientY);
             if (!placement) return;
             oraclePlacementActiveRef.current = true;
+            latestOraclePlacementRef.current = placement;
+            lastOracleNotifyRef.current = {
+                at: typeof performance !== 'undefined' ? performance.now() : Date.now(),
+                startTime: placement.startTime,
+                resourceId: placement.resourceId,
+            };
+            setIsOraclePlacementActive(true);
+            positionOracleGhost(placement);
             onOracleMouseDown(placement.startTime, placement.resourceId);
             return;
         }
@@ -14308,7 +14362,18 @@ const ScheduleView: React.FC<ScheduleViewProps> = ({
                         />
                     )}
                     
-                    {isOracleMode && oraclePreviewEvent && (
+                    {isOracleMode && isOraclePlacementActive && (
+                        <div
+                            ref={oracleGhostRef}
+                            className="absolute left-0 top-0 z-[95] h-[28px] rounded-sm border border-sky-200/80 bg-sky-500/80 px-1.5 py-0.5 text-[10px] font-bold leading-tight text-white shadow-lg shadow-black/35 pointer-events-none will-change-transform"
+                            style={{ transform: 'translate3d(0, 0, 0)', width: `${Math.max(52, 1.2 * PIXELS_PER_HOUR * zoomLevel)}px` }}
+                        >
+                            <div className="truncate">Next Event</div>
+                            <div className="truncate text-[9px] font-semibold text-sky-50/90">Checking...</div>
+                        </div>
+                    )}
+
+                    {isOracleMode && oraclePreviewEvent && !isOraclePlacementActive && (
                         <>
                             <FlightTile
                                 isPreview

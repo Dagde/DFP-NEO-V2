@@ -42048,6 +42048,11 @@ const ScheduleView = ({
   const scheduleDirectMouseDragActiveRef = reactExports.useRef(false);
   const schedulePointerDragActiveRef = reactExports.useRef(false);
   const lastSchedulePointerMoveAtRef = reactExports.useRef(0);
+  const oracleGhostRef = reactExports.useRef(null);
+  const oracleGhostFrameRef = reactExports.useRef(null);
+  const latestOraclePlacementRef = reactExports.useRef(null);
+  const lastOracleNotifyRef = reactExports.useRef({ at: 0, startTime: Number.NaN, resourceId: "" });
+  const [isOraclePlacementActive, setIsOraclePlacementActive] = reactExports.useState(false);
   const dragFrameRef = reactExports.useRef(null);
   const dragGridRectRef = reactExports.useRef(null);
   const lastDragUpdateSignatureRef = reactExports.useRef("");
@@ -42183,20 +42188,57 @@ const ScheduleView = ({
     const startTime = Math.max(START_HOUR$6, Math.min(END_HOUR$6, rawStartTime));
     const row = Math.max(0, Math.min(resources.length - 1, Math.floor(yInGrid / ROW_HEIGHT$6)));
     const resourceId = resources[row] || resources[0];
-    return resourceId ? { startTime, resourceId } : null;
+    return resourceId ? { startTime, resourceId, row } : null;
   }, [resources, zoomLevel]);
+  const positionOracleGhost = reactExports.useCallback((placement) => {
+    latestOraclePlacementRef.current = placement;
+    const applyPosition = () => {
+      oracleGhostFrameRef.current = null;
+      const ghost = oracleGhostRef.current;
+      const latestPlacement = latestOraclePlacementRef.current;
+      if (!ghost || !latestPlacement) return;
+      const width = Math.max(52, 1.2 * PIXELS_PER_HOUR$6 * zoomLevel);
+      const maxLeft = Math.max(0, TOTAL_HOURS$6 * PIXELS_PER_HOUR$6 * zoomLevel - width);
+      const left = Math.max(0, Math.min(maxLeft, (latestPlacement.startTime - START_HOUR$6) * PIXELS_PER_HOUR$6 * zoomLevel));
+      const top = Math.max(0, latestPlacement.row * ROW_HEIGHT$6 + 2);
+      ghost.style.transform = `translate3d(${left}px, ${top}px, 0)`;
+      ghost.style.width = `${width}px`;
+    };
+    if (typeof window === "undefined") {
+      applyPosition();
+      return;
+    }
+    if (oracleGhostFrameRef.current !== null) return;
+    oracleGhostFrameRef.current = window.requestAnimationFrame(applyPosition);
+  }, [zoomLevel]);
   const updateOraclePlacementFromClient = reactExports.useCallback((clientX, clientY) => {
     const placement = getOraclePlacementFromClient(clientX, clientY);
     if (!placement) return;
+    positionOracleGhost(placement);
+    const now = typeof performance !== "undefined" ? performance.now() : Date.now();
+    const lastNotify = lastOracleNotifyRef.current;
+    const shouldNotify = now - lastNotify.at > 180 || Math.abs(placement.startTime - lastNotify.startTime) >= 0.25 || placement.resourceId !== lastNotify.resourceId;
+    if (!shouldNotify) return;
+    lastOracleNotifyRef.current = { at: now, startTime: placement.startTime, resourceId: placement.resourceId };
     onOracleMouseMove(placement.startTime, placement.resourceId);
-  }, [getOraclePlacementFromClient, onOracleMouseMove]);
+  }, [getOraclePlacementFromClient, onOracleMouseMove, positionOracleGhost]);
   const finishOraclePlacement = reactExports.useCallback(() => {
     if (!oraclePlacementActiveRef.current) return;
     oraclePlacementActiveRef.current = false;
+    const finalPlacement = latestOraclePlacementRef.current;
+    if (finalPlacement) {
+      lastOracleNotifyRef.current = {
+        at: typeof performance !== "undefined" ? performance.now() : Date.now(),
+        startTime: finalPlacement.startTime,
+        resourceId: finalPlacement.resourceId
+      };
+      onOracleMouseMove(finalPlacement.startTime, finalPlacement.resourceId);
+    }
+    setIsOraclePlacementActive(false);
     document.body.classList.remove("no-select");
     onOracleMouseUp();
     setValidateOverlayTime(null);
-  }, [onOracleMouseUp]);
+  }, [onOracleMouseMove, onOracleMouseUp]);
   reactExports.useEffect(() => {
     const handleGlobalMouseMove = (e) => {
       if (oraclePlacementActiveRef.current) {
@@ -42450,6 +42492,14 @@ const ScheduleView = ({
       const placement = getOraclePlacementFromClient(e.clientX, e.clientY);
       if (!placement) return;
       oraclePlacementActiveRef.current = true;
+      latestOraclePlacementRef.current = placement;
+      lastOracleNotifyRef.current = {
+        at: typeof performance !== "undefined" ? performance.now() : Date.now(),
+        startTime: placement.startTime,
+        resourceId: placement.resourceId
+      };
+      setIsOraclePlacementActive(true);
+      positionOracleGhost(placement);
       onOracleMouseDown(placement.startTime, placement.resourceId);
       return;
     }
@@ -43758,7 +43808,19 @@ const ScheduleView = ({
                     pixelsPerHour: PIXELS_PER_HOUR$6 * zoomLevel
                   }
                 ),
-                isOracleMode && oraclePreviewEvent && /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
+                isOracleMode && isOraclePlacementActive && /* @__PURE__ */ jsxRuntimeExports.jsxs(
+                  "div",
+                  {
+                    ref: oracleGhostRef,
+                    className: "absolute left-0 top-0 z-[95] h-[28px] rounded-sm border border-sky-200/80 bg-sky-500/80 px-1.5 py-0.5 text-[10px] font-bold leading-tight text-white shadow-lg shadow-black/35 pointer-events-none will-change-transform",
+                    style: { transform: "translate3d(0, 0, 0)", width: `${Math.max(52, 1.2 * PIXELS_PER_HOUR$6 * zoomLevel)}px` },
+                    children: [
+                      /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "truncate", children: "Next Event" }),
+                      /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "truncate text-[9px] font-semibold text-sky-50/90", children: "Checking..." })
+                    ]
+                  }
+                ),
+                isOracleMode && oraclePreviewEvent && !isOraclePlacementActive && /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
                   /* @__PURE__ */ jsxRuntimeExports.jsx(
                     FlightTile,
                     {
@@ -69372,6 +69434,11 @@ const NextDayBuildView = ({
   const [draggedCptConflict, setDraggedCptConflict] = reactExports.useState(null);
   const [validateOverlayTime, setValidateOverlayTime] = reactExports.useState(null);
   const didDragRef = reactExports.useRef(false);
+  const oracleGhostRef = reactExports.useRef(null);
+  const oracleGhostFrameRef = reactExports.useRef(null);
+  const latestOraclePlacementRef = reactExports.useRef(null);
+  const lastOracleNotifyRef = reactExports.useRef({ at: 0, startTime: Number.NaN, resourceId: "" });
+  const [isOraclePlacementActive, setIsOraclePlacementActive] = reactExports.useState(false);
   const dragFrameRef = reactExports.useRef(null);
   const dragGridRectRef = reactExports.useRef(null);
   const lastDragUpdateSignatureRef = reactExports.useRef("");
@@ -69488,20 +69555,57 @@ const NextDayBuildView = ({
     const startTime = Math.max(START_HOUR$3, Math.min(END_HOUR$3, rawStartTime));
     const row = Math.max(0, Math.min(resources.length - 1, Math.floor(yInGrid / ROW_HEIGHT$3)));
     const resourceId = resources[row] || resources[0];
-    return resourceId ? { startTime, resourceId } : null;
+    return resourceId ? { startTime, resourceId, row } : null;
   }, [resources, zoomLevel]);
+  const positionOracleGhost = reactExports.useCallback((placement) => {
+    latestOraclePlacementRef.current = placement;
+    const applyPosition = () => {
+      oracleGhostFrameRef.current = null;
+      const ghost = oracleGhostRef.current;
+      const latestPlacement = latestOraclePlacementRef.current;
+      if (!ghost || !latestPlacement) return;
+      const width = Math.max(52, 1.2 * PIXELS_PER_HOUR$3 * zoomLevel);
+      const maxLeft = Math.max(0, TOTAL_HOURS$3 * PIXELS_PER_HOUR$3 * zoomLevel - width);
+      const left = Math.max(0, Math.min(maxLeft, (latestPlacement.startTime - START_HOUR$3) * PIXELS_PER_HOUR$3 * zoomLevel));
+      const top = Math.max(0, latestPlacement.row * ROW_HEIGHT$3 + 2);
+      ghost.style.transform = `translate3d(${left}px, ${top}px, 0)`;
+      ghost.style.width = `${width}px`;
+    };
+    if (typeof window === "undefined") {
+      applyPosition();
+      return;
+    }
+    if (oracleGhostFrameRef.current !== null) return;
+    oracleGhostFrameRef.current = window.requestAnimationFrame(applyPosition);
+  }, [zoomLevel]);
   const updateOraclePlacementFromClient = reactExports.useCallback((clientX, clientY) => {
     const placement = getOraclePlacementFromClient(clientX, clientY);
     if (!placement) return;
+    positionOracleGhost(placement);
+    const now = typeof performance !== "undefined" ? performance.now() : Date.now();
+    const lastNotify = lastOracleNotifyRef.current;
+    const shouldNotify = now - lastNotify.at > 180 || Math.abs(placement.startTime - lastNotify.startTime) >= 0.25 || placement.resourceId !== lastNotify.resourceId;
+    if (!shouldNotify) return;
+    lastOracleNotifyRef.current = { at: now, startTime: placement.startTime, resourceId: placement.resourceId };
     onOracleMouseMove(placement.startTime, placement.resourceId);
-  }, [getOraclePlacementFromClient, onOracleMouseMove]);
+  }, [getOraclePlacementFromClient, onOracleMouseMove, positionOracleGhost]);
   const finishOraclePlacement = reactExports.useCallback(() => {
     if (!oraclePlacementActiveRef.current) return;
     oraclePlacementActiveRef.current = false;
+    const finalPlacement = latestOraclePlacementRef.current;
+    if (finalPlacement) {
+      lastOracleNotifyRef.current = {
+        at: typeof performance !== "undefined" ? performance.now() : Date.now(),
+        startTime: finalPlacement.startTime,
+        resourceId: finalPlacement.resourceId
+      };
+      onOracleMouseMove(finalPlacement.startTime, finalPlacement.resourceId);
+    }
+    setIsOraclePlacementActive(false);
     document.body.classList.remove("no-select");
     onOracleMouseUp();
     setValidateOverlayTime(null);
-  }, [onOracleMouseUp]);
+  }, [onOracleMouseMove, onOracleMouseUp]);
   reactExports.useEffect(() => {
     const handleGlobalMouseMove = (event) => {
       if (!oraclePlacementActiveRef.current) return;
@@ -69695,6 +69799,14 @@ const NextDayBuildView = ({
       const placement = getOraclePlacementFromClient(e.clientX, e.clientY);
       if (!placement) return;
       oraclePlacementActiveRef.current = true;
+      latestOraclePlacementRef.current = placement;
+      lastOracleNotifyRef.current = {
+        at: typeof performance !== "undefined" ? performance.now() : Date.now(),
+        startTime: placement.startTime,
+        resourceId: placement.resourceId
+      };
+      setIsOraclePlacementActive(true);
+      positionOracleGhost(placement);
       onOracleMouseDown(placement.startTime, placement.resourceId);
       return;
     }
@@ -70380,7 +70492,19 @@ const NextDayBuildView = ({
                       pixelsPerHour: PIXELS_PER_HOUR$3 * zoomLevel
                     }
                   ),
-                  isOracleMode && oraclePreviewEvent && /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
+                  isOracleMode && isOraclePlacementActive && /* @__PURE__ */ jsxRuntimeExports.jsxs(
+                    "div",
+                    {
+                      ref: oracleGhostRef,
+                      className: "absolute left-0 top-0 z-[95] h-[28px] rounded-sm border border-sky-200/80 bg-sky-500/80 px-1.5 py-0.5 text-[10px] font-bold leading-tight text-white shadow-lg shadow-black/35 pointer-events-none will-change-transform",
+                      style: { transform: "translate3d(0, 0, 0)", width: `${Math.max(52, 1.2 * PIXELS_PER_HOUR$3 * zoomLevel)}px` },
+                      children: [
+                        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "truncate", children: "Next Event" }),
+                        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "truncate text-[9px] font-semibold text-sky-50/90", children: "Checking..." })
+                      ]
+                    }
+                  ),
+                  isOracleMode && oraclePreviewEvent && !isOraclePlacementActive && /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
                     /* @__PURE__ */ jsxRuntimeExports.jsx(
                       FlightTile,
                       {
