@@ -101143,7 +101143,6 @@ const SettingsViewWithMenu = (props) => {
   const [auditRecordingPage, setAuditRecordingPage] = reactExports.useState(auditRecordingPageOptions[0]);
   const [auditRecordingUnlocked, setAuditRecordingUnlocked] = reactExports.useState(false);
   const [, setAuditRecordingRefreshKey] = reactExports.useState(0);
-  const [testingFunctionsAvailable, setTestingFunctionsAvailable] = reactExports.useState(false);
   const sctTerminology = props.sctTerminology || DEFAULT_SCT_TERMINOLOGY$1;
   const continuationCurrencyLabel = `${String(sctTerminology.shortLabel || DEFAULT_SCT_TERMINOLOGY$1.shortLabel || "CT").trim() || "CT"} / Currency Events`;
   const isContinuationCurrencySection = (section) => section === "sct-events" || section === "currency-profiles";
@@ -101235,34 +101234,6 @@ const SettingsViewWithMenu = (props) => {
     setAuditRecordingRefreshKey((current) => current + 1);
     props.onShowSuccess(enabled ? "Audit recording enabled for all actions on this page." : "Audit recording disabled for all actions on this page.");
   };
-  reactExports.useEffect(() => {
-    if (currentSettingsPermission !== "Super Admin") {
-      setTestingFunctionsAvailable(false);
-      return;
-    }
-    setTestingFunctionsAvailable(true);
-    let cancelled = false;
-    const readTestingFunctionStatus = async () => {
-      try {
-        const sessionToken = localStorage.getItem("dfp_session_token") || "";
-        const response = await fetch("/api/testing-functions/status", {
-          headers: sessionToken ? { Authorization: `Bearer ${sessionToken}` } : void 0
-        });
-        if (!response.ok) {
-          if (!cancelled) setTestingFunctionsAvailable(false);
-          return;
-        }
-        const payload = await response.json().catch(() => ({}));
-        if (!cancelled) setTestingFunctionsAvailable(Boolean(payload?.enabled));
-      } catch {
-        if (!cancelled) setTestingFunctionsAvailable(false);
-      }
-    };
-    void readTestingFunctionStatus();
-    return () => {
-      cancelled = true;
-    };
-  }, [currentSettingsPermission]);
   const changeActiveSection = (section) => {
     if (section !== "currencies") {
       setEmbeddedCurrencyBuilderOpen(false);

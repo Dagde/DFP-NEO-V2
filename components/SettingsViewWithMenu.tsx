@@ -1395,7 +1395,6 @@ export const SettingsViewWithMenu: React.FC<SettingsViewWithMenuProps> = (props)
     const [auditRecordingPage, setAuditRecordingPage] = useState(auditRecordingPageOptions[0]);
     const [auditRecordingUnlocked, setAuditRecordingUnlocked] = useState(false);
     const [, setAuditRecordingRefreshKey] = useState(0);
-    const [testingFunctionsAvailable, setTestingFunctionsAvailable] = useState(false);
     const sctTerminology = props.sctTerminology || DEFAULT_SCT_TERMINOLOGY;
     const continuationCurrencyLabel = `${String(sctTerminology.shortLabel || DEFAULT_SCT_TERMINOLOGY.shortLabel || 'CT').trim() || 'CT'} / Currency Events`;
     const isContinuationCurrencySection = (section: SettingsMenuSection): boolean =>
@@ -1498,39 +1497,6 @@ export const SettingsViewWithMenu: React.FC<SettingsViewWithMenuProps> = (props)
         setAuditRecordingRefreshKey((current) => current + 1);
         props.onShowSuccess(enabled ? 'Audit recording enabled for all actions on this page.' : 'Audit recording disabled for all actions on this page.');
     };
-
-    // TESTING FUNCTIONS START - temporary customer-testbed reset tools.
-    useEffect(() => {
-        if (currentSettingsPermission !== 'Super Admin') {
-            setTestingFunctionsAvailable(false);
-            return;
-        }
-        setTestingFunctionsAvailable(true);
-
-        let cancelled = false;
-        const readTestingFunctionStatus = async () => {
-            try {
-                const sessionToken = localStorage.getItem('dfp_session_token') || '';
-                const response = await fetch('/api/testing-functions/status', {
-                    headers: sessionToken ? { Authorization: `Bearer ${sessionToken}` } : undefined,
-                });
-                if (!response.ok) {
-                    if (!cancelled) setTestingFunctionsAvailable(false);
-                    return;
-                }
-                const payload = await response.json().catch(() => ({}));
-                if (!cancelled) setTestingFunctionsAvailable(Boolean(payload?.enabled));
-            } catch {
-                if (!cancelled) setTestingFunctionsAvailable(false);
-            }
-        };
-
-        void readTestingFunctionStatus();
-        return () => {
-            cancelled = true;
-        };
-    }, [currentSettingsPermission]);
-    // TESTING FUNCTIONS END
 
     const changeActiveSection = (section: ActiveSection) => {
         if (section !== 'currencies') {
