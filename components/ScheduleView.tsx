@@ -2956,7 +2956,11 @@ const InitialSetupWizard: React.FC<{
     onUpdateServiceDefinitions?: (defs: Array<{ longName: string; shortName: string }>) => void;
     traineeServiceOptions?: string[];
 }> = ({ platformConfig, organisationSettings, unitCode, locationCode, formationCallsigns = [], buildRuleSettings, flyingStartTime = 8, flyingEndTime = 17, ftdStartTime = 8, ftdEndTime = 17, cptStartTime = 8, cptEndTime = 17, allowNightFlying = true, commenceNightFlying = 18.5, ceaseNightFlying = 23.5, onUpdateFlyingStartTime, onUpdateFlyingEndTime, onUpdateFtdStartTime, onUpdateFtdEndTime, onUpdateCptStartTime, onUpdateCptEndTime, onUpdateAllowNightFlying, onUpdateCommenceNightFlying, onUpdateCeaseNightFlying, dispatchStaggerSettings = DEFAULT_DISPATCH_STAGGER_SETTINGS, onUpdateDispatchStaggerSettings, tileStatusSettings = DEFAULT_TILE_STATUS_SETTINGS, onUpdateTileStatusSettings, emergencyFreezeAuthority = DEFAULT_EMERGENCY_FREEZE_AUTHORITY, onUpdateEmergencyFreezeAuthority, emergencyFreezeAllowedActions = DEFAULT_EMERGENCY_FREEZE_ALLOWED_ACTIONS, onUpdateEmergencyFreezeAllowedActions, qualificationOptions = [], currentUserQualificationIds = [], onUpdatePlatformConfig, onNavigateToSettingsSection, currentUserPermission = 'Staff', canUsePlatformPermission, isSetupTestMode = false, onSaveSetupTestPersonnel, serviceDefinitions = [], onUpdateServiceDefinitions, traineeServiceOptions = [] }) => {
-    const [mode, setMode] = useState<InitialSetupWizardMode>('detect');
+    const [mode, setMode] = useState<InitialSetupWizardMode>(() => {
+        if (typeof window === 'undefined') return 'detect';
+        const storedStep = Number(window.localStorage.getItem(initialSetupWizardStorageKey));
+        return Number.isFinite(storedStep) && storedStep > 0 ? 'active' : 'detect';
+    });
     const unitTypeOptions = useMemo(() => normaliseUnitTypeOptions(platformConfig), [platformConfig]);
     const configuredContinuationShortLabel = useMemo(
         () => getSctTerminology(platformConfig, unitCode).shortLabel || 'CT',
