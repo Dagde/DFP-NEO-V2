@@ -10573,9 +10573,36 @@ function normaliseTestingPersonName(value) {
     .toLowerCase();
 }
 
+function isTestingStandbyEvent(event) {
+  if (!event || typeof event !== 'object') return false;
+  const values = [
+    event.flightNumber,
+    event.eventCode,
+    event.taskingName,
+    event.taskingDisplayLabel,
+    event.eventDescription,
+    event.status,
+    event.type,
+    event.eventType,
+    event.resourceId,
+    event.aircraftNumber,
+    event.label,
+    event.title,
+  ];
+  return values.some(value => {
+    const text = String(value || '').trim().toUpperCase();
+    if (!text) return false;
+    return text === 'STBY' ||
+      text === 'STANDBY' ||
+      /(^|[^A-Z0-9])STBY([^A-Z0-9]|$)/.test(text) ||
+      /(^|[^A-Z0-9])STANDBY([^A-Z0-9]|$)/.test(text);
+  });
+}
+
 function isTestingSchedulableEvent(event) {
   if (!event || typeof event !== 'object') return false;
   if (event.isCancelled || event.type === 'deployment' || event.isDeploy) return false;
+  if (isTestingStandbyEvent(event)) return false;
   const eventCode = String(event.flightNumber || event.eventCode || '').trim();
   if (!eventCode) return false;
   if (/^(STBY|DUTY\s*SUP|DUTY)$/i.test(eventCode)) return false;
