@@ -10685,7 +10685,7 @@ function isTestingTrainingReportComplete(report) {
   const missionStatus = String(report.dcoResult || report.missionStatus || report.dutyCompletionStatus || '').trim().toUpperCase();
   const overallGrade = String(report.overallGrade ?? report.grade ?? '').trim();
   const hasMissionStatus = ['DCO', 'DPCO', 'DNCO'].includes(missionStatus);
-  const hasOverallGrade = !!overallGrade && overallGrade.toLowerCase() !== 'no grade';
+  const hasOverallGrade = !!overallGrade;
   return hasMissionStatus && hasOverallGrade;
 }
 
