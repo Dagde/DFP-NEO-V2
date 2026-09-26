@@ -47242,6 +47242,8 @@ const App: React.FC = () => {
             throw new Error('Pause Flight Ops found no matching events to clear. Check the affected types and pause period.');
         }
 
+        try {
+
         // ── Step 3: Locked events = completed events + non-affected-type events ─────────
         // These stay exactly where they are; everything else will be rebuilt from pauseEnd.
         const lockedEvents: ScheduleEvent[] = eventsAfterCancel.filter(e => !e.isCancelled);
@@ -47612,6 +47614,23 @@ const App: React.FC = () => {
         logRoutineAppDebug('[PauseBuild] Affected trainees to reschedule:', affectedEntries.length,
             '(flights:', affectedEntries.filter(e => e.eventType === 'flight').length,
             'FTDs:', affectedEntries.filter(e => e.eventType === 'ftd').length, ')');
+        recordPauseFlightOpsDiagnostic({
+            stage: 'affected-entries-built',
+            details: {
+                pauseDate,
+                affectedEntryCount: affectedEntries.length,
+                flights: affectedEntries.filter(e => e.eventType === 'flight').length,
+                ftds: affectedEntries.filter(e => e.eventType === 'ftd').length,
+                sample: affectedEntries.slice(0, 80).map(entry => ({
+                    trainee: entry.trainee.fullName,
+                    course: entry.trainee.course,
+                    eventCode: entry.syllabusItem.code,
+                    eventType: entry.eventType,
+                    duration: entry.syllabusItem.duration,
+                    priorityScore: entry.originalPriorityScore,
+                })),
+            },
+        });
 
         // ── Step 5: Slot-fill algorithm from pauseEnd at 5-min intervals ─────────────────
         // We maintain a running list of scheduled events (starts from lockedEvents)
@@ -48045,6 +48064,23 @@ const App: React.FC = () => {
         });
 
         return finalEvents;
+        } catch (error) {
+            const fallbackEvents = eventsAfterCancel.map(event => ({ ...event, date: pauseDate }));
+            recordPauseFlightOpsDiagnostic({
+                stage: 'build-failed-after-clear-fallback-staged',
+                details: {
+                    pauseDate,
+                    errorName: error instanceof Error ? error.name : typeof error,
+                    errorMessage: error instanceof Error ? error.message : String(error),
+                    errorStack: error instanceof Error ? error.stack : null,
+                    fallbackCount: fallbackEvents.length,
+                    fallbackByType: countPauseEventsBy(fallbackEvents, event => event.type),
+                    fallbackCancelledCount: fallbackEvents.filter(event => event.isCancelled).length,
+                    fallbackSample: fallbackEvents.slice(0, 100).map(summarisePauseEvent),
+                },
+            });
+            return fallbackEvents;
+        }
     };
 
 
