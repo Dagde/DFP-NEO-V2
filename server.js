@@ -10992,6 +10992,7 @@ app.post('/api/testing-functions/bulk-day', async (req, res) => {
       staffTrainingReports: 0,
       skippedTrainingReportsNoTrainee: 0,
       skippedTrainingReportsNoStaff: 0,
+      skippedExistingTrainingReports: 0,
       skippedNonSchedulable: 0,
     };
 
@@ -11137,10 +11138,12 @@ app.post('/api/testing-functions/bulk-day', async (req, res) => {
             ? { ...preferences.airCombat }
             : {};
           const existingReports = Array.isArray(airCombat.trainingReports) ? airCombat.trainingReports : [];
-          const nextReports = [
-            staffReport,
-            ...existingReports.filter(report => String(report?.id || '') !== staffReport.id && String(report?.eventId || '') !== String(event.id || '')),
-          ];
+          const alreadyHasReport = existingReports.some(report => String(report?.id || '') === staffReport.id || String(report?.eventId || '') === String(event.id || ''));
+          if (alreadyHasReport) {
+            summary.skippedExistingTrainingReports += 1;
+            continue;
+          }
+          const nextReports = [staffReport, ...existingReports];
           const nextPreferences = {
             ...preferences,
             airCombat: {
@@ -11164,6 +11167,11 @@ app.post('/api/testing-functions/bulk-day', async (req, res) => {
           recordedBy
         );
         const row = mapAssessmentToRow(report);
+        const existingRows = await db.$queryRawUnsafe(`SELECT * FROM "TraineePerformance" WHERE "eventId" = $1::text LIMIT 1`, row.eventId);
+        if (existingRows?.[0]) {
+          summary.skippedExistingTrainingReports += 1;
+          continue;
+        }
         await db.$executeRawUnsafe(`
           INSERT INTO "TraineePerformance" (
             "id", "traineeId", "traineeFullName", "eventId", "eventCode", "flightNumber",
@@ -11180,28 +11188,7 @@ app.post('/api/testing-functions/bulk-day', async (req, res) => {
             $18::jsonb, $19::boolean, $20::boolean, $21,
             $22::text, $23::text, $24, NOW(), NOW(), $25::text
           )
-          ON CONFLICT ("eventId") DO UPDATE SET
-            "traineeId"                = EXCLUDED."traineeId",
-            "traineeFullName"          = EXCLUDED."traineeFullName",
-            "eventCode"                = EXCLUDED."eventCode",
-            "flightNumber"             = EXCLUDED."flightNumber",
-            "eventDescription"         = EXCLUDED."eventDescription",
-            "date"                     = EXCLUDED."date",
-            "instructorName"           = EXCLUDED."instructorName",
-            "overallGrade"             = EXCLUDED."overallGrade",
-            "overallResult"            = EXCLUDED."overallResult",
-            "dcoResult"                = EXCLUDED."dcoResult",
-            "startTime"                = EXCLUDED."startTime",
-            "duration"                 = EXCLUDED."duration",
-            "endTime"                  = EXCLUDED."endTime",
-            "comments"                 = EXCLUDED."comments",
-            "elementScores"            = EXCLUDED."elementScores",
-            "isCompleted"              = EXCLUDED."isCompleted",
-            "isGroundSchoolAssessment" = EXCLUDED."isGroundSchoolAssessment",
-            "groundSchoolResult"       = EXCLUDED."groundSchoolResult",
-            "course"                   = EXCLUDED."course",
-            "updatedAt"                = NOW(),
-            "updatedBy"                = EXCLUDED."createdBy"
+          ON CONFLICT ("eventId") DO NOTHING
         `,
           row.id, row.traineeId, row.traineeFullName, row.eventId, row.eventCode, row.flightNumber,
           row.eventDescription, row.date, row.instructorName, row.instructorId,
