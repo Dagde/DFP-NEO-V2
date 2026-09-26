@@ -99296,7 +99296,9 @@ const getSelectedTestingUnit = (activeCompositeUnitCode = "", activeUnitCode = "
 const TestingFunctionsSettings = ({
   onShowSuccess,
   activeUnitCode = "",
-  activeCompositeUnitCode = ""
+  activeCompositeUnitCode = "",
+  activeDfpDate = "",
+  visibleDfpScheduleEvents = []
 }) => {
   const [confirmation, setConfirmation] = reactExports.useState("");
   const [isResetting, setIsResetting] = reactExports.useState(false);
@@ -99331,6 +99333,7 @@ const TestingFunctionsSettings = ({
   }, {}), [scoreDistributionRows]);
   const scoreDistributionText = scoreDistributionRows.filter((row) => Number(row.percent) > 0).map((row) => `${row.percent}% score ${row.score}`).join(", ");
   const previewHasNoScheduleEvents = Boolean(preview?.counts && preview.counts.scheduleEvents === 0);
+  const visibleEventsForSelectedDate = testDate === String(activeDfpDate || "").slice(0, 10) ? visibleDfpScheduleEvents : [];
   const canReset = confirmation.trim() === REQUIRED_CONFIRMATION && !isResetting;
   const authHeaders2 = () => {
     const sessionToken = localStorage.getItem("dfp_session_token") || "";
@@ -99406,7 +99409,7 @@ const TestingFunctionsSettings = ({
       const response = await fetch("/api/testing-functions/bulk-day-preview", {
         method: "POST",
         headers: authHeaders2(),
-        body: JSON.stringify({ date: testDate, unitCode: effectiveUnit })
+        body: JSON.stringify({ date: testDate, unitCode: effectiveUnit, clientScheduleEvents: visibleEventsForSelectedDate })
       });
       const payload = await response.json().catch(() => ({}));
       if (!response.ok) throw new Error(payload.message || "Could not preview test day.");
@@ -99449,6 +99452,7 @@ Continue?`,
         body: JSON.stringify({
           date: testDate,
           unitCode: effectiveUnit,
+          clientScheduleEvents: visibleEventsForSelectedDate,
           actions: {
             authoriseFlights,
             postFlightTimes,
@@ -99592,6 +99596,15 @@ Continue?`,
             ".",
             preview.snapshotKey ? /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
               " Snapshot checked: ",
+              /* @__PURE__ */ jsxRuntimeExports.jsx("strong", { children: preview.snapshotKey }),
+              "."
+            ] }) : null
+          ] }) : preview.source ? /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded-md border border-sky-500/50 bg-sky-950/30 p-3 text-sm text-sky-100", children: [
+            "Preview source: ",
+            /* @__PURE__ */ jsxRuntimeExports.jsx("strong", { children: preview.source === "visible-dfp-client-state" ? "visible DFP schedule on this screen" : preview.source }),
+            ".",
+            preview.snapshotKey ? /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
+              " Snapshot key: ",
               /* @__PURE__ */ jsxRuntimeExports.jsx("strong", { children: preview.snapshotKey }),
               "."
             ] }) : null
@@ -102220,7 +102233,9 @@ const SettingsViewWithMenu = (props) => {
           {
             onShowSuccess: props.onShowSuccess,
             activeUnitCode: props.activeUnitCode,
-            activeCompositeUnitCode: props.activeCompositeUnitCode
+            activeCompositeUnitCode: props.activeCompositeUnitCode,
+            activeDfpDate: props.activeDfpDate,
+            visibleDfpScheduleEvents: props.visibleDfpScheduleEvents
           }
         ),
         activeSection === "people-profile" && /* @__PURE__ */ jsxRuntimeExports.jsx(
@@ -157582,6 +157597,8 @@ It will not clear the published DFP.`,
             activeUnitCode: activeTrainingReportUnitCode,
             activeUnitCodes: activeContextUnitCodes,
             activeCompositeUnitCode: activeUnitCode,
+            activeDfpDate: date,
+            visibleDfpScheduleEvents: scopedPublishedEventsForDate,
             activeAircraftTypeCode: activeRuntimeAircraftTypeCode,
             activeOperationalModel,
             activeUnitHasTrainees,

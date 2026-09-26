@@ -13,7 +13,7 @@ import TestingFunctionsSettings from './TestingFunctionsSettings';
 import PeopleProfilePage from './PeopleProfilePage';
 import { showDarkAlert, showDarkPrompt } from './DarkMessageModal';
 import CurrencyBuilderView from './CurrencyBuilderView';
-import { Instructor, Trainee, SyllabusItemDetail, EventLimits, PhraseBank, MasterCurrency, CurrencyRequirement, CurrencyDefinition, FormationCallsign, CancellationRecord, CancellationCode } from '../types';
+import { Instructor, Trainee, SyllabusItemDetail, EventLimits, PhraseBank, MasterCurrency, CurrencyRequirement, CurrencyDefinition, FormationCallsign, CancellationRecord, CancellationCode, ScheduleEvent } from '../types';
 import {
     handleEditableTextBeforeInput,
     handleEditableTextKeyDownCapture,
@@ -146,6 +146,8 @@ interface SettingsViewWithMenuProps {
     activeUnitCode?: string;
     activeUnitCodes?: string[];
     activeCompositeUnitCode?: string;
+    activeDfpDate?: string;
+    visibleDfpScheduleEvents?: ScheduleEvent[];
     activeAircraftTypeCode?: string | null;
     activeOperationalModel?: string;
     activeUnitHasTrainees?: boolean;
@@ -2570,6 +2572,8 @@ export const SettingsViewWithMenu: React.FC<SettingsViewWithMenuProps> = (props)
                             onShowSuccess={props.onShowSuccess}
                             activeUnitCode={props.activeUnitCode}
                             activeCompositeUnitCode={props.activeCompositeUnitCode}
+                            activeDfpDate={props.activeDfpDate}
+                            visibleDfpScheduleEvents={props.visibleDfpScheduleEvents}
                         />
                     )}
                     {activeSection === 'people-profile' && (

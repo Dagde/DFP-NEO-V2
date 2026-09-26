@@ -10766,6 +10766,9 @@ function getTestingSnapshotKeys(date, unitCode, school) {
 async function loadTestingDaySnapshot(db, { date, unitCode, school }) {
   const cleanDate = String(date || '').slice(0, 10);
   const cleanUnit = normaliseTestingUnitCode(unitCode);
+  const clientScheduleEvents = Array.isArray(arguments[1]?.clientScheduleEvents)
+    ? arguments[1].clientScheduleEvents
+    : [];
   const keys = getTestingSnapshotKeys(cleanDate, cleanUnit, school);
   const rows = await db.$queryRawUnsafe(
     `SELECT * FROM "DailySnapshot"
@@ -10782,22 +10785,27 @@ async function loadTestingDaySnapshot(db, { date, unitCode, school }) {
     return testingUnitMatches(rowUnit, cleanUnit) ||
       (Array.isArray(row.scheduleEvents) && row.scheduleEvents.some(event => testingUnitMatches(getTestingEventUnit(event, rowUnit), cleanUnit)));
   }) || rows?.[0];
-  if (!matching) return null;
+  if (!matching && clientScheduleEvents.length === 0) return null;
 
-  const parsed = parseDailySnapshotDateKey(matching.date);
+  const parsed = parseDailySnapshotDateKey(matching?.date || keys[0] || cleanDate);
   const fallbackUnit = parsed.unit || cleanUnit;
   const snapshotMatchesRequestedUnit = testingUnitMatches(fallbackUnit, cleanUnit);
-  const scheduleEvents = (Array.isArray(matching.scheduleEvents) ? matching.scheduleEvents : [])
+  const serverScheduleEvents = (Array.isArray(matching?.scheduleEvents) ? matching.scheduleEvents : [])
     .map(event => ({ ...event, date: parsed.date || cleanDate }))
     .filter(event => !cleanUnit || snapshotMatchesRequestedUnit || testingUnitMatches(getTestingEventUnit(event, fallbackUnit), cleanUnit));
+  const usingClientScheduleEvents = serverScheduleEvents.length === 0 && clientScheduleEvents.length > 0;
+  const scheduleEvents = usingClientScheduleEvents
+    ? clientScheduleEvents.map(event => ({ ...event, date: parsed.date || cleanDate }))
+    : serverScheduleEvents;
 
   return {
-    snapshot: matching,
-    snapshotKey: matching.date,
+    snapshot: matching || { date: parsed.date || cleanDate, scheduleEvents: [], staffEvents: [], traineeEvents: [] },
+    snapshotKey: matching?.date || keys[0] || cleanDate,
     parsed,
     date: parsed.date || cleanDate,
     unitCode: cleanUnit || fallbackUnit || '',
     scheduleEvents,
+    source: usingClientScheduleEvents ? 'visible-dfp-client-state' : 'daily-snapshot',
   };
 }
 
@@ -10819,6 +10827,7 @@ async function buildTestingDayPreview(db, request) {
     snapshotKey: loaded.snapshotKey,
     date: loaded.date,
     unitCode: loaded.unitCode,
+    source: loaded.source,
     counts: {
       scheduleEvents: loaded.scheduleEvents.length,
       authorisableFlights: authorisableFlights.length,
@@ -10874,7 +10883,12 @@ app.post('/api/testing-functions/bulk-day-preview', async (req, res) => {
       return res.status(400).json({ error: 'date and unitCode are required', message: 'Select a date and unit before previewing test data.' });
     }
 
-    const preview = await buildTestingDayPreview(context.db, { date, unitCode, school });
+    const preview = await buildTestingDayPreview(context.db, {
+      date,
+      unitCode,
+      school,
+      clientScheduleEvents: Array.isArray(req.body?.clientScheduleEvents) ? req.body.clientScheduleEvents : [],
+    });
     if (!preview) {
       return res.status(404).json({ error: 'Snapshot not found', message: `No published DFP snapshot was found for ${unitCode} on ${date}.` });
     }
@@ -10911,7 +10925,12 @@ app.post('/api/testing-functions/bulk-day', async (req, res) => {
       return res.status(400).json({ error: 'No action selected', message: 'Select at least one bulk testing action.' });
     }
 
-    const loaded = await loadTestingDaySnapshot(db, { date, unitCode, school });
+    const loaded = await loadTestingDaySnapshot(db, {
+      date,
+      unitCode,
+      school,
+      clientScheduleEvents: Array.isArray(req.body?.clientScheduleEvents) ? req.body.clientScheduleEvents : [],
+    });
     if (!loaded) {
       return res.status(404).json({ error: 'Snapshot not found', message: `No published DFP snapshot was found for ${unitCode} on ${date}.` });
     }
@@ -11200,7 +11219,12 @@ app.post('/api/testing-functions/bulk-day', async (req, res) => {
       console.warn('[TestingFunctions] Could not refresh compact archive after bulk-day:', archiveError.message);
     }
 
-    const preview = await buildTestingDayPreview(db, { date, unitCode, school });
+    const preview = await buildTestingDayPreview(db, {
+      date,
+      unitCode,
+      school,
+      clientScheduleEvents: Array.isArray(req.body?.clientScheduleEvents) ? req.body.clientScheduleEvents : [],
+    });
     res.json({
       success: true,
       snapshotKey: loaded.snapshotKey,

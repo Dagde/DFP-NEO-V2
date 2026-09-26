@@ -1,17 +1,21 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { showDarkAlert, showDarkConfirm, showDarkPrompt } from './DarkMessageModal';
 import { verifyCurrentUserPassword } from '../utils/passwordVerification';
+import type { ScheduleEvent } from '../types';
 
 interface TestingFunctionsSettingsProps {
   onShowSuccess?: (message: string) => void;
   activeUnitCode?: string;
   activeCompositeUnitCode?: string;
+  activeDfpDate?: string;
+  visibleDfpScheduleEvents?: ScheduleEvent[];
 }
 
 type TestingPreview = {
   snapshotKey?: string;
   date?: string;
   unitCode?: string;
+  source?: string;
   counts?: {
     scheduleEvents: number;
     authorisableFlights: number;
@@ -35,6 +39,8 @@ const TestingFunctionsSettings: React.FC<TestingFunctionsSettingsProps> = ({
   onShowSuccess,
   activeUnitCode = '',
   activeCompositeUnitCode = '',
+  activeDfpDate = '',
+  visibleDfpScheduleEvents = [],
 }) => {
   const [confirmation, setConfirmation] = useState('');
   const [isResetting, setIsResetting] = useState(false);
@@ -80,6 +86,9 @@ const TestingFunctionsSettings: React.FC<TestingFunctionsSettingsProps> = ({
     .map(row => `${row.percent}% score ${row.score}`)
     .join(', ');
   const previewHasNoScheduleEvents = Boolean(preview?.counts && preview.counts.scheduleEvents === 0);
+  const visibleEventsForSelectedDate = testDate === String(activeDfpDate || '').slice(0, 10)
+    ? visibleDfpScheduleEvents
+    : [];
 
   const canReset = confirmation.trim() === REQUIRED_CONFIRMATION && !isResetting;
 
@@ -164,7 +173,7 @@ const TestingFunctionsSettings: React.FC<TestingFunctionsSettingsProps> = ({
       const response = await fetch('/api/testing-functions/bulk-day-preview', {
         method: 'POST',
         headers: authHeaders(),
-        body: JSON.stringify({ date: testDate, unitCode: effectiveUnit }),
+        body: JSON.stringify({ date: testDate, unitCode: effectiveUnit, clientScheduleEvents: visibleEventsForSelectedDate }),
       });
       const payload = await response.json().catch(() => ({}));
       if (!response.ok) throw new Error(payload.message || 'Could not preview test day.');
@@ -205,6 +214,7 @@ const TestingFunctionsSettings: React.FC<TestingFunctionsSettingsProps> = ({
         body: JSON.stringify({
           date: testDate,
           unitCode: effectiveUnit,
+          clientScheduleEvents: visibleEventsForSelectedDate,
           actions: {
             authoriseFlights,
             postFlightTimes,
@@ -345,6 +355,11 @@ const TestingFunctionsSettings: React.FC<TestingFunctionsSettingsProps> = ({
                 <div className="rounded-md border border-amber-500/60 bg-amber-950/30 p-3 text-sm text-amber-100">
                   No schedule events were found for <strong>{preview.unitCode || effectiveUnit}</strong> on <strong>{preview.date || testDate}</strong>.
                   {preview.snapshotKey ? <> Snapshot checked: <strong>{preview.snapshotKey}</strong>.</> : null}
+                </div>
+              ) : preview.source ? (
+                <div className="rounded-md border border-sky-500/50 bg-sky-950/30 p-3 text-sm text-sky-100">
+                  Preview source: <strong>{preview.source === 'visible-dfp-client-state' ? 'visible DFP schedule on this screen' : preview.source}</strong>.
+                  {preview.snapshotKey ? <> Snapshot key: <strong>{preview.snapshotKey}</strong>.</> : null}
                 </div>
               ) : null}
               <div className="grid gap-3 md:grid-cols-3">
