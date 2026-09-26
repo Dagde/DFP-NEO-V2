@@ -10680,6 +10680,15 @@ function pickTestingScore(distribution, seedText) {
   return usableEntries[0].score;
 }
 
+function isTestingTrainingReportComplete(report) {
+  if (!report || typeof report !== 'object') return false;
+  const missionStatus = String(report.dcoResult || report.missionStatus || report.dutyCompletionStatus || '').trim().toUpperCase();
+  const overallGrade = String(report.overallGrade ?? report.grade ?? '').trim();
+  const hasMissionStatus = ['DCO', 'DPCO', 'DNCO'].includes(missionStatus);
+  const hasOverallGrade = !!overallGrade && overallGrade.toLowerCase() !== 'no grade';
+  return hasMissionStatus && hasOverallGrade;
+}
+
 function buildTestingTrainingReport(event, trainee, scoreMode, scoreDistribution, recordedBy) {
   const traineeName = trainee?.fullName || trainee?.name || getTestingEventTraineeName(event) || 'Unknown';
   const instructorName = getTestingEventInstructorName(event);
@@ -11138,12 +11147,16 @@ app.post('/api/testing-functions/bulk-day', async (req, res) => {
             ? { ...preferences.airCombat }
             : {};
           const existingReports = Array.isArray(airCombat.trainingReports) ? airCombat.trainingReports : [];
-          const alreadyHasReport = existingReports.some(report => String(report?.id || '') === staffReport.id || String(report?.eventId || '') === String(event.id || ''));
-          if (alreadyHasReport) {
+          const matchingExistingReports = existingReports.filter(report => String(report?.id || '') === staffReport.id || String(report?.eventId || '') === String(event.id || ''));
+          const alreadyHasCompleteReport = matchingExistingReports.some(isTestingTrainingReportComplete);
+          if (alreadyHasCompleteReport) {
             summary.skippedExistingTrainingReports += 1;
             continue;
           }
-          const nextReports = [staffReport, ...existingReports];
+          const nextReports = [
+            staffReport,
+            ...existingReports.filter(report => String(report?.id || '') !== staffReport.id && String(report?.eventId || '') !== String(event.id || '')),
+          ];
           const nextPreferences = {
             ...preferences,
             airCombat: {
@@ -11168,7 +11181,7 @@ app.post('/api/testing-functions/bulk-day', async (req, res) => {
         );
         const row = mapAssessmentToRow(report);
         const existingRows = await db.$queryRawUnsafe(`SELECT * FROM "TraineePerformance" WHERE "eventId" = $1::text LIMIT 1`, row.eventId);
-        if (existingRows?.[0]) {
+        if (isTestingTrainingReportComplete(existingRows?.[0])) {
           summary.skippedExistingTrainingReports += 1;
           continue;
         }
@@ -11188,7 +11201,28 @@ app.post('/api/testing-functions/bulk-day', async (req, res) => {
             $18::jsonb, $19::boolean, $20::boolean, $21,
             $22::text, $23::text, $24, NOW(), NOW(), $25::text
           )
-          ON CONFLICT ("eventId") DO NOTHING
+          ON CONFLICT ("eventId") DO UPDATE SET
+            "traineeId"                = EXCLUDED."traineeId",
+            "traineeFullName"          = EXCLUDED."traineeFullName",
+            "eventCode"                = EXCLUDED."eventCode",
+            "flightNumber"             = EXCLUDED."flightNumber",
+            "eventDescription"         = EXCLUDED."eventDescription",
+            "date"                     = EXCLUDED."date",
+            "instructorName"           = EXCLUDED."instructorName",
+            "overallGrade"             = EXCLUDED."overallGrade",
+            "overallResult"            = EXCLUDED."overallResult",
+            "dcoResult"                = EXCLUDED."dcoResult",
+            "startTime"                = EXCLUDED."startTime",
+            "duration"                 = EXCLUDED."duration",
+            "endTime"                  = EXCLUDED."endTime",
+            "comments"                 = EXCLUDED."comments",
+            "elementScores"            = EXCLUDED."elementScores",
+            "isCompleted"              = EXCLUDED."isCompleted",
+            "isGroundSchoolAssessment" = EXCLUDED."isGroundSchoolAssessment",
+            "groundSchoolResult"       = EXCLUDED."groundSchoolResult",
+            "course"                   = EXCLUDED."course",
+            "updatedAt"                = NOW(),
+            "updatedBy"                = EXCLUDED."createdBy"
         `,
           row.id, row.traineeId, row.traineeFullName, row.eventId, row.eventCode, row.flightNumber,
           row.eventDescription, row.date, row.instructorName, row.instructorId,
