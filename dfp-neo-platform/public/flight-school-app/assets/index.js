@@ -149948,6 +149948,8 @@ ${conflictLines.join("\n")}${moreText}`,
       acc[key] = (acc[key] || 0) + 1;
       return acc;
     }, {});
+    const normalisePausePersonLabel = (value) => String(value || "").replace(/\s+[–-]\s+[^–-]+$/, "").trim();
+    const pauseEventTraineeName = (event) => normalisePausePersonLabel(event.student || event.pilot || "");
     recordPauseFlightOpsDiagnostic({
       stage: "build-requested",
       details: {
@@ -150031,6 +150033,7 @@ ${conflictLines.join("\n")}${moreText}`,
     const isToBeCleared = (e) => {
       if (e.isCancelled) return false;
       if (completedEventIds.has(e.id)) return false;
+      if ((Number(e.duration) || 0) <= 0) return false;
       const rawType = String(e.type || "").trim().toLowerCase();
       const typeKey = rawType === "sim" || rawType === "simulator" ? "ftd" : rawType;
       if (!affectedTypes.includes(typeKey)) return false;
@@ -150324,12 +150327,12 @@ ${conflictLines.join("\n")}${moreText}`,
     for (const cancelledEvent of eventsAfterCancel) {
       if (!cancelledIds.has(cancelledEvent.id)) continue;
       if (cancelledEvent.type !== "flight" && cancelledEvent.type !== "ftd") continue;
-      const traineeName = cancelledEvent.student || cancelledEvent.pilot || "";
+      const traineeName = pauseEventTraineeName(cancelledEvent);
       if (!traineeName) continue;
       const dedupeKey = cancelledEvent.type === "ftd" ? `ftd:${cancelledEvent.id}` : traineeName;
       if (seenTraineeNames.has(dedupeKey)) continue;
       seenTraineeNames.add(dedupeKey);
-      const trainee = allTraineesData.find((t) => t.fullName === traineeName);
+      const trainee = allTraineesData.find((t) => t.fullName === traineeName || normalisePausePersonLabel(t.fullName) === traineeName || normalisePausePersonLabel(t.name) === traineeName);
       if (!trainee) continue;
       if (cancelledEvent.type === "ftd") {
         const ftdSyllabusItem = {
@@ -150497,7 +150500,7 @@ ${conflictLines.join("\n")}${moreText}`,
       const resourceId = orig.resourceId || "FTD 1";
       if (!ftdByResource.has(resourceId)) ftdByResource.set(resourceId, []);
       const entry = ftdEntries.find(
-        (e) => e.trainee.fullName === (orig.student || orig.pilot) && e.syllabusItem.id === (orig.flightNumber || orig.id)
+        (e) => e.trainee.fullName === pauseEventTraineeName(orig) && e.syllabusItem.id === (orig.flightNumber || orig.id)
       );
       if (entry) {
         ftdByResource.get(resourceId).push({ orig, entry });
@@ -150658,7 +150661,7 @@ ${conflictLines.join("\n")}${moreText}`,
       if (!cancelledIds.has(ev.id)) continue;
       if (completedEventIds.has(ev.id)) continue;
       if (ev.type === "cpt" || ev.type === "ground") continue;
-      const traineeName = ev.student || ev.pilot || "";
+      const traineeName = pauseEventTraineeName(ev);
       if (ev.type === "flight") {
         if (traineeName && successfullyScheduled.has(traineeName)) continue;
       }

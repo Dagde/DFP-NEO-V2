@@ -47087,6 +47087,14 @@ const App: React.FC = () => {
                 return acc;
             }, {})
         );
+        const normalisePausePersonLabel = (value?: string | null): string => (
+            String(value || '')
+                .replace(/\s+[–-]\s+[^–-]+$/, '')
+                .trim()
+        );
+        const pauseEventTraineeName = (event: ScheduleEvent): string => (
+            normalisePausePersonLabel(event.student || event.pilot || '')
+        );
 
         recordPauseFlightOpsDiagnostic({
             stage: 'build-requested',
@@ -47175,6 +47183,7 @@ const App: React.FC = () => {
         const isToBeCleared = (e: ScheduleEvent): boolean => {
             if (e.isCancelled) return false;                          // already cancelled
             if (completedEventIds.has(e.id)) return false;            // completed, keep in place
+            if ((Number(e.duration) || 0) <= 0) return false;          // ignore placeholders/invalid zero-duration tiles
             const rawType = String(e.type || '').trim().toLowerCase();
             const typeKey = rawType === 'sim' || rawType === 'simulator' ? 'ftd' : rawType;
             if (!(affectedTypes as string[]).includes(typeKey)) return false; // not affected type
@@ -47528,7 +47537,7 @@ const App: React.FC = () => {
             // Only flight and FTD events are rescheduled in the slot-fill loop
             if (cancelledEvent.type !== 'flight' && cancelledEvent.type !== 'ftd') continue;
 
-            const traineeName = cancelledEvent.student || cancelledEvent.pilot || '';
+            const traineeName = pauseEventTraineeName(cancelledEvent);
             if (!traineeName) continue;
 
             // For FTD, allow same trainee multiple times (they may have multiple FTD events)
@@ -47539,7 +47548,11 @@ const App: React.FC = () => {
             if (seenTraineeNames.has(dedupeKey)) continue;
             seenTraineeNames.add(dedupeKey);
 
-            const trainee = allTraineesData.find((t: Trainee) => t.fullName === traineeName);
+            const trainee = allTraineesData.find((t: Trainee) => (
+                t.fullName === traineeName
+                || normalisePausePersonLabel(t.fullName) === traineeName
+                || normalisePausePersonLabel(t.name) === traineeName
+            ));
             if (!trainee) continue;
 
             if (cancelledEvent.type === 'ftd') {
@@ -47778,7 +47791,7 @@ const App: React.FC = () => {
             const resourceId = orig.resourceId || 'FTD 1';
             if (!ftdByResource.has(resourceId)) ftdByResource.set(resourceId, []);
             const entry = ftdEntries.find(e =>
-                (e.trainee.fullName === (orig.student || orig.pilot)) &&
+                (e.trainee.fullName === pauseEventTraineeName(orig)) &&
                 e.syllabusItem.id === (orig.flightNumber || orig.id)
             );
             if (entry) {
@@ -47980,7 +47993,7 @@ const App: React.FC = () => {
             // CPT and Ground are silently dropped — no STBY placement
             if (ev.type === 'cpt' || ev.type === 'ground') continue;
 
-            const traineeName = ev.student || ev.pilot || '';
+            const traineeName = pauseEventTraineeName(ev);
 
             if (ev.type === 'flight') {
                 if (traineeName && successfullyScheduled.has(traineeName)) continue;
