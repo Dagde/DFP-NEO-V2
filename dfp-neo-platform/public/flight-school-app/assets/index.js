@@ -99291,6 +99291,8 @@ const EmailActivationSettings = ({ currentUserPermission, onShowSuccess }) => {
 };
 const REQUIRED_CONFIRMATION = "RESET DATABASE";
 const todayIso$1 = () => (/* @__PURE__ */ new Date()).toISOString().slice(0, 10);
+const normaliseUnitInput = (value) => String(value || "").trim().toUpperCase();
+const getSelectedTestingUnit = (activeCompositeUnitCode = "", activeUnitCode = "") => normaliseUnitInput(activeCompositeUnitCode) || normaliseUnitInput(activeUnitCode);
 const TestingFunctionsSettings = ({
   onShowSuccess,
   activeUnitCode = "",
@@ -99302,14 +99304,32 @@ const TestingFunctionsSettings = ({
   const [message, setMessage] = reactExports.useState("");
   const [error, setError] = reactExports.useState("");
   const [testDate, setTestDate] = reactExports.useState(todayIso$1());
-  const [testUnit, setTestUnit] = reactExports.useState(activeUnitCode || activeCompositeUnitCode || "");
+  const [testUnit, setTestUnit] = reactExports.useState(getSelectedTestingUnit(activeCompositeUnitCode, activeUnitCode));
   const [authoriseFlights, setAuthoriseFlights] = reactExports.useState(true);
   const [postFlightTimes, setPostFlightTimes] = reactExports.useState(true);
   const [completeReports, setCompleteReports] = reactExports.useState(true);
   const [scoreReports, setScoreReports] = reactExports.useState(true);
+  const [scoreDistributionRows, setScoreDistributionRows] = reactExports.useState([
+    { score: 3, percent: 80 },
+    { score: 2, percent: 10 },
+    { score: 4, percent: 10 }
+  ]);
   const [preview, setPreview] = reactExports.useState(null);
   const [result, setResult] = reactExports.useState(null);
-  const effectiveUnit = reactExports.useMemo(() => testUnit.trim() || activeUnitCode || activeCompositeUnitCode || "", [activeCompositeUnitCode, activeUnitCode, testUnit]);
+  reactExports.useEffect(() => {
+    const selectedUnit = getSelectedTestingUnit(activeCompositeUnitCode, activeUnitCode);
+    if (selectedUnit) setTestUnit(selectedUnit);
+  }, [activeCompositeUnitCode, activeUnitCode]);
+  const effectiveUnit = reactExports.useMemo(() => normaliseUnitInput(testUnit) || getSelectedTestingUnit(activeCompositeUnitCode, activeUnitCode), [activeCompositeUnitCode, activeUnitCode, testUnit]);
+  const scoreDistribution = reactExports.useMemo(() => scoreDistributionRows.reduce((distribution, row) => {
+    const score = Number(row.score);
+    const percent = Number(row.percent);
+    if (Number.isFinite(score) && Number.isFinite(percent) && percent > 0) {
+      distribution[String(score)] = percent;
+    }
+    return distribution;
+  }, {}), [scoreDistributionRows]);
+  const scoreDistributionText = scoreDistributionRows.filter((row) => Number(row.percent) > 0).map((row) => `${row.percent}% score ${row.score}`).join(", ");
   const canReset = confirmation.trim() === REQUIRED_CONFIRMATION && !isResetting;
   const authHeaders2 = () => {
     const sessionToken = localStorage.getItem("dfp_session_token") || "";
@@ -99435,7 +99455,7 @@ Continue?`,
           },
           trainingReports: {
             scoreMode: scoreReports ? "score" : "completeOnly",
-            scoreDistribution: { "3": 80, "2": 10, "4": 10 }
+            scoreDistribution
           }
         })
       });
@@ -99479,8 +99499,8 @@ Continue?`,
               {
                 type: "text",
                 value: testUnit,
-                onChange: (event) => setTestUnit(event.target.value.toUpperCase()),
-                placeholder: activeUnitCode || activeCompositeUnitCode || "e.g. 1FTS",
+                onChange: (event) => setTestUnit(normaliseUnitInput(event.target.value)),
+                placeholder: getSelectedTestingUnit(activeCompositeUnitCode, activeUnitCode) || "e.g. 1FTS+CFS",
                 className: "w-full rounded-md border border-gray-700 bg-gray-950 px-3 py-2 text-sm font-semibold text-white outline-none transition focus:border-orange-400 focus:ring-1 focus:ring-orange-400"
               }
             )
@@ -99522,10 +99542,46 @@ Continue?`,
             "Complete training reports for all event types"
           ] })
         ] }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "rounded-md border border-gray-700 bg-gray-900/60 p-4", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "flex items-start gap-2 text-sm text-gray-200", children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsx("input", { type: "checkbox", checked: scoreReports, onChange: (event) => setScoreReports(event.target.checked), className: "mt-1", disabled: !completeReports }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx("span", { children: "Generate scores where reports are completed. Distribution is fixed for testing: 80% score 3, 10% score 2, 10% score 4. Overall and element scores are the same for each individual report." })
-        ] }) }),
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded-md border border-gray-700 bg-gray-900/60 p-4", children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "flex items-start gap-2 text-sm text-gray-200", children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx("input", { type: "checkbox", checked: scoreReports, onChange: (event) => setScoreReports(event.target.checked), className: "mt-1", disabled: !completeReports }),
+            /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { children: [
+              "Generate scores where reports are completed. Current distribution: ",
+              scoreDistributionText || "no score distribution configured",
+              ". Overall and element scores are the same for each individual report."
+            ] })
+          ] }),
+          scoreReports && completeReports ? /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-4 grid gap-3 md:grid-cols-3", children: scoreDistributionRows.map((row, index) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid grid-cols-2 gap-2 rounded-md border border-gray-700 bg-gray-950/60 p-3", children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "block", children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "mb-1 block text-[10px] font-bold uppercase tracking-widest text-gray-500", children: "Score" }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx(
+                "input",
+                {
+                  type: "number",
+                  min: "0",
+                  step: "1",
+                  value: row.score,
+                  onChange: (event) => setScoreDistributionRows((current) => current.map((item, rowIndex) => rowIndex === index ? { ...item, score: Number(event.target.value) } : item)),
+                  className: "w-full rounded border border-gray-700 bg-gray-900 px-2 py-1 text-sm font-bold text-white outline-none focus:border-orange-400"
+                }
+              )
+            ] }),
+            /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "block", children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "mb-1 block text-[10px] font-bold uppercase tracking-widest text-gray-500", children: "Percent" }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx(
+                "input",
+                {
+                  type: "number",
+                  min: "0",
+                  step: "1",
+                  value: row.percent,
+                  onChange: (event) => setScoreDistributionRows((current) => current.map((item, rowIndex) => rowIndex === index ? { ...item, percent: Number(event.target.value) } : item)),
+                  className: "w-full rounded border border-gray-700 bg-gray-900 px-2 py-1 text-sm font-bold text-white outline-none focus:border-orange-400"
+                }
+              )
+            ] })
+          ] }, index)) }) : null
+        ] }),
         preview?.counts && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "grid gap-3 md:grid-cols-3", children: Object.entries(preview.counts).map(([key, value]) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded-md border border-slate-700 bg-slate-950/50 p-3", children: [
           /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-[10px] font-bold uppercase tracking-widest text-slate-500", children: key.replace(/([A-Z])/g, " $1") }),
           /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-1 text-2xl font-bold text-white", children: value })

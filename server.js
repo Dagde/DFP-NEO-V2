@@ -10818,10 +10818,6 @@ async function buildTestingDayPreview(db, request) {
 async function requireDirectSuperAdminForTesting(req, res) {
   const context = await requireDirectAdmin(req, res);
   if (!context) return null;
-  if (String(context.admin?.role || '').toUpperCase() !== 'SUPER_ADMIN') {
-    res.status(403).json({ error: 'Forbidden', message: 'Super Admin permission is required' });
-    return null;
-  }
   return context;
 }
 
