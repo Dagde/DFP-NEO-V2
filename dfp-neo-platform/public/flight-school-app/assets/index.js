@@ -42239,6 +42239,35 @@ const ScheduleView = ({
     onOracleMouseUp();
     setValidateOverlayTime(null);
   }, [onOracleMouseMove, onOracleMouseUp]);
+  const beginOraclePlacementFromClient = reactExports.useCallback((clientX, clientY) => {
+    const placement = getOraclePlacementFromClient(clientX, clientY);
+    if (!placement) return false;
+    oraclePlacementActiveRef.current = true;
+    latestOraclePlacementRef.current = placement;
+    lastOracleNotifyRef.current = {
+      at: typeof performance !== "undefined" ? performance.now() : Date.now(),
+      startTime: placement.startTime,
+      resourceId: placement.resourceId
+    };
+    setIsOraclePlacementActive(true);
+    positionOracleGhost(placement);
+    onOracleMouseDown(placement.startTime, placement.resourceId);
+    return true;
+  }, [getOraclePlacementFromClient, onOracleMouseDown, positionOracleGhost]);
+  const handleOraclePointerDown = reactExports.useCallback((event) => {
+    if (!isOracleMode || event.button !== 0 || oraclePlacementActiveRef.current) return;
+    const targetElement = event.target;
+    if (targetElement?.closest("[data-dfp-event-id]")) return;
+    event.preventDefault();
+    document.body.classList.add("no-select");
+    const didStart = beginOraclePlacementFromClient(event.clientX, event.clientY);
+    if (didStart) {
+      try {
+        event.currentTarget.setPointerCapture(event.pointerId);
+      } catch {
+      }
+    }
+  }, [beginOraclePlacementFromClient, isOracleMode]);
   reactExports.useEffect(() => {
     const handleGlobalMouseMove = (e) => {
       if (oraclePlacementActiveRef.current) {
@@ -42252,6 +42281,11 @@ const ScheduleView = ({
         handleMouseMove(e);
       }
     };
+    const handleGlobalPointerMove = (e) => {
+      if (!oraclePlacementActiveRef.current) return;
+      didDragRef.current = true;
+      updateOraclePlacementFromClient(e.clientX, e.clientY);
+    };
     const handleGlobalMouseUp = (_e) => {
       if (oraclePlacementActiveRef.current) {
         finishOraclePlacement();
@@ -42263,11 +42297,21 @@ const ScheduleView = ({
         finishScheduleTileDrag();
       }
     };
+    const handleGlobalPointerUp = (_e) => {
+      if (!oraclePlacementActiveRef.current) return;
+      finishOraclePlacement();
+    };
     document.addEventListener("mousemove", handleGlobalMouseMove);
     document.addEventListener("mouseup", handleGlobalMouseUp);
+    document.addEventListener("pointermove", handleGlobalPointerMove);
+    document.addEventListener("pointerup", handleGlobalPointerUp);
+    document.addEventListener("pointercancel", handleGlobalPointerUp);
     return () => {
       document.removeEventListener("mousemove", handleGlobalMouseMove);
       document.removeEventListener("mouseup", handleGlobalMouseUp);
+      document.removeEventListener("pointermove", handleGlobalPointerMove);
+      document.removeEventListener("pointerup", handleGlobalPointerUp);
+      document.removeEventListener("pointercancel", handleGlobalPointerUp);
     };
   }, [draggingState, finishOraclePlacement, finishScheduleTileDrag, updateOraclePlacementFromClient]);
   const getExternalDropPlacementFromClient = reactExports.useCallback((clientX, clientY, diagnosticSessionId) => {
@@ -42481,6 +42525,7 @@ const ScheduleView = ({
   }, [syllabusDetails]);
   const handleMouseDown = (e, event) => {
     if (e.button !== 0) return;
+    if (oraclePlacementActiveRef.current) return;
     if (isReadOnly && event) {
       didDragRef.current = false;
       return;
@@ -42489,18 +42534,7 @@ const ScheduleView = ({
     document.body.classList.add("no-select");
     if (isOracleMode && !event) {
       e.preventDefault();
-      const placement = getOraclePlacementFromClient(e.clientX, e.clientY);
-      if (!placement) return;
-      oraclePlacementActiveRef.current = true;
-      latestOraclePlacementRef.current = placement;
-      lastOracleNotifyRef.current = {
-        at: typeof performance !== "undefined" ? performance.now() : Date.now(),
-        startTime: placement.startTime,
-        resourceId: placement.resourceId
-      };
-      setIsOraclePlacementActive(true);
-      positionOracleGhost(placement);
-      onOracleMouseDown(placement.startTime, placement.resourceId);
+      beginOraclePlacementFromClient(e.clientX, e.clientY);
       return;
     }
     if (event) {
@@ -43753,6 +43787,7 @@ const ScheduleView = ({
               "data-schedule-start-hour": START_HOUR$6,
               "data-schedule-pixels-per-hour": PIXELS_PER_HOUR$6 * zoomLevel,
               className: "relative bg-gray-900",
+              onPointerDown: handleOraclePointerDown,
               onMouseDown: (e) => handleMouseDown(e),
               onMouseMove: handleMouseMove,
               onMouseUp: handleMouseUp,
@@ -43816,7 +43851,10 @@ const ScheduleView = ({
                     style: { transform: "translate3d(0, 0, 0)", width: `${Math.max(52, 1.2 * PIXELS_PER_HOUR$6 * zoomLevel)}px` },
                     children: [
                       /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "truncate", children: "Next Event" }),
-                      /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "truncate text-[9px] font-semibold text-sky-50/90", children: "Checking..." })
+                      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center justify-between gap-1 text-[8px] font-semibold uppercase tracking-[0.02em]", children: [
+                        /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: `truncate ${String(oraclePreviewEvent?.instructor || "").toUpperCase().includes("NO ") ? "text-red-200" : "text-emerald-200"}`, children: oraclePreviewEvent?.instructor || "Instructor..." }),
+                        /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: `truncate ${String(oraclePreviewEvent?.student || "").toUpperCase().includes("NO ") ? "text-red-200" : "text-emerald-200"}`, children: oraclePreviewEvent?.student || "Trainee..." })
+                      ] })
                     ]
                   }
                 ),
@@ -69606,8 +69644,42 @@ const NextDayBuildView = ({
     onOracleMouseUp();
     setValidateOverlayTime(null);
   }, [onOracleMouseMove, onOracleMouseUp]);
+  const beginOraclePlacementFromClient = reactExports.useCallback((clientX, clientY) => {
+    const placement = getOraclePlacementFromClient(clientX, clientY);
+    if (!placement) return false;
+    oraclePlacementActiveRef.current = true;
+    latestOraclePlacementRef.current = placement;
+    lastOracleNotifyRef.current = {
+      at: typeof performance !== "undefined" ? performance.now() : Date.now(),
+      startTime: placement.startTime,
+      resourceId: placement.resourceId
+    };
+    setIsOraclePlacementActive(true);
+    positionOracleGhost(placement);
+    onOracleMouseDown(placement.startTime, placement.resourceId);
+    return true;
+  }, [getOraclePlacementFromClient, onOracleMouseDown, positionOracleGhost]);
+  const handleOraclePointerDown = reactExports.useCallback((event) => {
+    if (!isOracleMode || event.button !== 0 || oraclePlacementActiveRef.current) return;
+    const targetElement = event.target;
+    if (targetElement?.closest("[data-dfp-event-id]")) return;
+    event.preventDefault();
+    document.body.classList.add("no-select");
+    const didStart = beginOraclePlacementFromClient(event.clientX, event.clientY);
+    if (didStart) {
+      try {
+        event.currentTarget.setPointerCapture(event.pointerId);
+      } catch {
+      }
+    }
+  }, [beginOraclePlacementFromClient, isOracleMode]);
   reactExports.useEffect(() => {
     const handleGlobalMouseMove = (event) => {
+      if (!oraclePlacementActiveRef.current) return;
+      didDragRef.current = true;
+      updateOraclePlacementFromClient(event.clientX, event.clientY);
+    };
+    const handleGlobalPointerMove = (event) => {
       if (!oraclePlacementActiveRef.current) return;
       didDragRef.current = true;
       updateOraclePlacementFromClient(event.clientX, event.clientY);
@@ -69616,11 +69688,21 @@ const NextDayBuildView = ({
       if (!oraclePlacementActiveRef.current) return;
       finishOraclePlacement();
     };
+    const handleGlobalPointerUp = (_event) => {
+      if (!oraclePlacementActiveRef.current) return;
+      finishOraclePlacement();
+    };
     document.addEventListener("mousemove", handleGlobalMouseMove);
     document.addEventListener("mouseup", handleGlobalMouseUp);
+    document.addEventListener("pointermove", handleGlobalPointerMove);
+    document.addEventListener("pointerup", handleGlobalPointerUp);
+    document.addEventListener("pointercancel", handleGlobalPointerUp);
     return () => {
       document.removeEventListener("mousemove", handleGlobalMouseMove);
       document.removeEventListener("mouseup", handleGlobalMouseUp);
+      document.removeEventListener("pointermove", handleGlobalPointerMove);
+      document.removeEventListener("pointerup", handleGlobalPointerUp);
+      document.removeEventListener("pointercancel", handleGlobalPointerUp);
     };
   }, [finishOraclePlacement, updateOraclePlacementFromClient]);
   const getExternalDropPlacementFromClient = reactExports.useCallback((clientX, clientY, diagnosticSessionId) => {
@@ -69792,22 +69874,12 @@ const NextDayBuildView = ({
   }, [syllabusDetails]);
   const handleMouseDown = (e, event) => {
     if (e.button !== 0) return;
+    if (oraclePlacementActiveRef.current) return;
     didDragRef.current = false;
     document.body.classList.add("no-select");
     if (isOracleMode && !event) {
       e.preventDefault();
-      const placement = getOraclePlacementFromClient(e.clientX, e.clientY);
-      if (!placement) return;
-      oraclePlacementActiveRef.current = true;
-      latestOraclePlacementRef.current = placement;
-      lastOracleNotifyRef.current = {
-        at: typeof performance !== "undefined" ? performance.now() : Date.now(),
-        startTime: placement.startTime,
-        resourceId: placement.resourceId
-      };
-      setIsOraclePlacementActive(true);
-      positionOracleGhost(placement);
-      onOracleMouseDown(placement.startTime, placement.resourceId);
+      beginOraclePlacementFromClient(e.clientX, e.clientY);
       return;
     }
     if (event) {
@@ -70468,6 +70540,7 @@ const NextDayBuildView = ({
                 "data-schedule-start-hour": START_HOUR$3,
                 "data-schedule-pixels-per-hour": PIXELS_PER_HOUR$3 * zoomLevel,
                 className: "relative bg-gray-900",
+                onPointerDown: handleOraclePointerDown,
                 onMouseDown: (e) => handleMouseDown(e),
                 onMouseMove: handleMouseMove,
                 onMouseUp: handleMouseUp,
@@ -70500,7 +70573,10 @@ const NextDayBuildView = ({
                       style: { transform: "translate3d(0, 0, 0)", width: `${Math.max(52, 1.2 * PIXELS_PER_HOUR$3 * zoomLevel)}px` },
                       children: [
                         /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "truncate", children: "Next Event" }),
-                        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "truncate text-[9px] font-semibold text-sky-50/90", children: "Checking..." })
+                        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center justify-between gap-1 text-[8px] font-semibold uppercase tracking-[0.02em]", children: [
+                          /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: `truncate ${String(oraclePreviewEvent?.instructor || "").toUpperCase().includes("NO ") ? "text-red-200" : "text-emerald-200"}`, children: oraclePreviewEvent?.instructor || "Instructor..." }),
+                          /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: `truncate ${String(oraclePreviewEvent?.student || "").toUpperCase().includes("NO ") ? "text-red-200" : "text-emerald-200"}`, children: oraclePreviewEvent?.student || "Trainee..." })
+                        ] })
                       ]
                     }
                   ),
