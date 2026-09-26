@@ -99290,12 +99290,34 @@ const EmailActivationSettings = ({ currentUserPermission, onShowSuccess }) => {
   ] });
 };
 const REQUIRED_CONFIRMATION = "RESET DATABASE";
-const TestingFunctionsSettings = ({ onShowSuccess }) => {
+const todayIso$1 = () => (/* @__PURE__ */ new Date()).toISOString().slice(0, 10);
+const TestingFunctionsSettings = ({
+  onShowSuccess,
+  activeUnitCode = "",
+  activeCompositeUnitCode = ""
+}) => {
   const [confirmation, setConfirmation] = reactExports.useState("");
   const [isResetting, setIsResetting] = reactExports.useState(false);
+  const [isWorking, setIsWorking] = reactExports.useState(false);
   const [message, setMessage] = reactExports.useState("");
   const [error, setError] = reactExports.useState("");
+  const [testDate, setTestDate] = reactExports.useState(todayIso$1());
+  const [testUnit, setTestUnit] = reactExports.useState(activeUnitCode || activeCompositeUnitCode || "");
+  const [authoriseFlights, setAuthoriseFlights] = reactExports.useState(true);
+  const [postFlightTimes, setPostFlightTimes] = reactExports.useState(true);
+  const [completeReports, setCompleteReports] = reactExports.useState(true);
+  const [scoreReports, setScoreReports] = reactExports.useState(true);
+  const [preview, setPreview] = reactExports.useState(null);
+  const [result, setResult] = reactExports.useState(null);
+  const effectiveUnit = reactExports.useMemo(() => testUnit.trim() || activeUnitCode || activeCompositeUnitCode || "", [activeCompositeUnitCode, activeUnitCode, testUnit]);
   const canReset = confirmation.trim() === REQUIRED_CONFIRMATION && !isResetting;
+  const authHeaders2 = () => {
+    const sessionToken = localStorage.getItem("dfp_session_token") || "";
+    return {
+      "Content-Type": "application/json",
+      ...sessionToken ? { Authorization: `Bearer ${sessionToken}` } : {}
+    };
+  };
   const resetDatabase = async () => {
     if (!canReset) return;
     setMessage("");
@@ -99324,13 +99346,9 @@ const TestingFunctionsSettings = ({ onShowSuccess }) => {
       );
       if (!finalConfirmation) return;
       setIsResetting(true);
-      const sessionToken = localStorage.getItem("dfp_session_token") || "";
       const response = await fetch("/api/testing-functions/reset-database", {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          ...sessionToken ? { Authorization: `Bearer ${sessionToken}` } : {}
-        },
+        headers: authHeaders2(),
         body: JSON.stringify({ confirmation: REQUIRED_CONFIRMATION, password })
       });
       const payload = await response.json().catch(() => ({}));
@@ -99349,44 +99367,225 @@ const TestingFunctionsSettings = ({ onShowSuccess }) => {
       setIsResetting(false);
     }
   };
-  return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded-lg border border-red-800/50 bg-gray-800 shadow-lg", children: [
-    /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "border-b border-red-900/50 bg-red-950/30 px-5 py-4", children: [
-      /* @__PURE__ */ jsxRuntimeExports.jsx("h3", { className: "text-lg font-bold text-white", children: "Testing Functions" }),
-      /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-1 max-w-3xl text-sm text-red-100/80", children: "Temporary tools for customer testbeds. These controls are intended for setup testing only and should be removed before final product release." })
-    ] }),
-    /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-5 p-5", children: [
-      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded-md border border-red-700/50 bg-red-950/25 p-4", children: [
-        /* @__PURE__ */ jsxRuntimeExports.jsx("h4", { className: "text-sm font-bold uppercase tracking-widest text-red-200", children: "Reset Test Database" }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-2 text-sm leading-6 text-gray-200", children: "This clears the current test database back to first-delivery state. It removes configured organisations, units, people, schedules, settings, sessions and imported data, then recreates the initial Organisation Administrator account from the deployment settings." }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-2 text-sm font-semibold text-red-100", children: "You will be signed out after the reset because saved sessions are removed with the database data." }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-2 text-sm font-semibold text-red-100", children: "After typing the reset phrase, you must enter your password and accept one final irreversible warning before anything is erased." })
+  const previewBulkDay = async () => {
+    setError("");
+    setMessage("");
+    setResult(null);
+    setPreview(null);
+    if (!testDate) {
+      setError("Select a date first.");
+      return;
+    }
+    if (!effectiveUnit) {
+      setError("Enter or select the unit to test.");
+      return;
+    }
+    try {
+      setIsWorking(true);
+      const response = await fetch("/api/testing-functions/bulk-day-preview", {
+        method: "POST",
+        headers: authHeaders2(),
+        body: JSON.stringify({ date: testDate, unitCode: effectiveUnit })
+      });
+      const payload = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(payload.message || "Could not preview test day.");
+      setPreview(payload);
+      setMessage(`Preview loaded for ${payload.snapshotKey || testDate}.`);
+    } catch (previewError) {
+      setError(previewError?.message || "Could not preview test day.");
+    } finally {
+      setIsWorking(false);
+    }
+  };
+  const runBulkDay = async () => {
+    setError("");
+    setMessage("");
+    setResult(null);
+    if (!testDate || !effectiveUnit) {
+      setError("Select a date and unit first.");
+      return;
+    }
+    if (!authoriseFlights && !postFlightTimes && !completeReports) {
+      setError("Select at least one testing action.");
+      return;
+    }
+    const confirmed = await showDarkConfirm(
+      `This will write test data for ${effectiveUnit} on ${testDate}.
+
+Selected actions:
+${authoriseFlights ? "- Bulk authorise flights\n" : ""}${postFlightTimes ? "- Bulk post-flight times for flights and simulators\n" : ""}${completeReports ? `- Complete training reports (${scoreReports ? "with generated scores" : "complete only"})
+` : ""}
+Continue?`,
+      "Run Bulk Test Actions?",
+      "warning"
+    );
+    if (!confirmed) return;
+    try {
+      setIsWorking(true);
+      const response = await fetch("/api/testing-functions/bulk-day", {
+        method: "POST",
+        headers: authHeaders2(),
+        body: JSON.stringify({
+          date: testDate,
+          unitCode: effectiveUnit,
+          actions: {
+            authoriseFlights,
+            postFlightTimes,
+            completeReports
+          },
+          trainingReports: {
+            scoreMode: scoreReports ? "score" : "completeOnly",
+            scoreDistribution: { "3": 80, "2": 10, "4": 10 }
+          }
+        })
+      });
+      const payload = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(payload.message || "Bulk test action failed.");
+      setResult(payload);
+      setPreview(payload.preview || null);
+      const successMessage = `Bulk test data written: ${payload.summary?.authorisedFlights || 0} authorised, ${payload.summary?.eventCompletions || 0} completions, ${payload.summary?.trainingReports || 0} trainee reports, ${payload.summary?.staffTrainingReports || 0} staff reports.`;
+      setMessage(successMessage);
+      onShowSuccess?.(successMessage);
+    } catch (runError) {
+      setError(runError?.message || "Bulk test action failed.");
+    } finally {
+      setIsWorking(false);
+    }
+  };
+  return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-5", children: [
+    /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded-lg border border-orange-500/40 bg-gray-800 shadow-lg", children: [
+      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "border-b border-orange-900/50 bg-orange-950/20 px-5 py-4", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsx("h3", { className: "text-lg font-bold text-white", children: "Temporary Testing Functions" }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-1 max-w-3xl text-sm text-orange-100/80", children: "Customer testbed tools for rapidly creating realistic operational records. Remove this page and the matching `/api/testing-functions/*` routes before final production release." })
       ] }),
-      /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "block max-w-xl", children: [
-        /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "mb-2 block text-[11px] font-semibold uppercase tracking-widest text-gray-400", children: "Type RESET DATABASE to continue" }),
+      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-5 p-5", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid gap-4 md:grid-cols-3", children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "block", children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "mb-2 block text-[11px] font-semibold uppercase tracking-widest text-gray-400", children: "Test date" }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx(
+              "input",
+              {
+                type: "date",
+                value: testDate,
+                onChange: (event) => setTestDate(event.target.value),
+                className: "w-full rounded-md border border-gray-700 bg-gray-950 px-3 py-2 text-sm font-semibold text-white outline-none transition focus:border-orange-400 focus:ring-1 focus:ring-orange-400"
+              }
+            )
+          ] }),
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "block", children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "mb-2 block text-[11px] font-semibold uppercase tracking-widest text-gray-400", children: "Unit" }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx(
+              "input",
+              {
+                type: "text",
+                value: testUnit,
+                onChange: (event) => setTestUnit(event.target.value.toUpperCase()),
+                placeholder: activeUnitCode || activeCompositeUnitCode || "e.g. 1FTS",
+                className: "w-full rounded-md border border-gray-700 bg-gray-950 px-3 py-2 text-sm font-semibold text-white outline-none transition focus:border-orange-400 focus:ring-1 focus:ring-orange-400"
+              }
+            )
+          ] }),
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-end gap-2", children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx(
+              "button",
+              {
+                type: "button",
+                onClick: previewBulkDay,
+                disabled: isWorking,
+                className: "rounded-md border border-sky-500/70 bg-sky-600 px-4 py-2 text-sm font-bold text-white transition hover:bg-sky-500 disabled:cursor-not-allowed disabled:border-gray-700 disabled:bg-gray-700 disabled:text-gray-400",
+                children: isWorking ? "Working..." : "Preview Day"
+              }
+            ),
+            /* @__PURE__ */ jsxRuntimeExports.jsx(
+              "button",
+              {
+                type: "button",
+                onClick: runBulkDay,
+                disabled: isWorking,
+                className: "rounded-md border border-orange-500/70 bg-orange-600 px-4 py-2 text-sm font-bold text-white transition hover:bg-orange-500 disabled:cursor-not-allowed disabled:border-gray-700 disabled:bg-gray-700 disabled:text-gray-400",
+                children: "Run Selected"
+              }
+            )
+          ] })
+        ] }),
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid gap-3 lg:grid-cols-3", children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "rounded-md border border-gray-700 bg-gray-900/60 p-3 text-sm text-gray-200", children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx("input", { type: "checkbox", checked: authoriseFlights, onChange: (event) => setAuthoriseFlights(event.target.checked), className: "mr-2" }),
+            "Bulk authorise all flight tiles"
+          ] }),
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "rounded-md border border-gray-700 bg-gray-900/60 p-3 text-sm text-gray-200", children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx("input", { type: "checkbox", checked: postFlightTimes, onChange: (event) => setPostFlightTimes(event.target.checked), className: "mr-2" }),
+            "Bulk post-flight times for flights and simulators"
+          ] }),
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "rounded-md border border-gray-700 bg-gray-900/60 p-3 text-sm text-gray-200", children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx("input", { type: "checkbox", checked: completeReports, onChange: (event) => setCompleteReports(event.target.checked), className: "mr-2" }),
+            "Complete training reports for all event types"
+          ] })
+        ] }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "rounded-md border border-gray-700 bg-gray-900/60 p-4", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "flex items-start gap-2 text-sm text-gray-200", children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsx("input", { type: "checkbox", checked: scoreReports, onChange: (event) => setScoreReports(event.target.checked), className: "mt-1", disabled: !completeReports }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx("span", { children: "Generate scores where reports are completed. Distribution is fixed for testing: 80% score 3, 10% score 2, 10% score 4. Overall and element scores are the same for each individual report." })
+        ] }) }),
+        preview?.counts && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "grid gap-3 md:grid-cols-3", children: Object.entries(preview.counts).map(([key, value]) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded-md border border-slate-700 bg-slate-950/50 p-3", children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-[10px] font-bold uppercase tracking-widest text-slate-500", children: key.replace(/([A-Z])/g, " $1") }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-1 text-2xl font-bold text-white", children: value })
+        ] }, key)) }),
+        result?.summary && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded-md border border-emerald-600/50 bg-emerald-950/30 p-3 text-sm text-emerald-100", children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "font-bold", children: "Last run complete" }),
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mt-1", children: [
+            "Authorised: ",
+            result.summary.authorisedFlights || 0,
+            " | Post-flight completions: ",
+            result.summary.eventCompletions || 0,
+            " | Trainee reports: ",
+            result.summary.trainingReports || 0,
+            " | Staff reports: ",
+            result.summary.staffTrainingReports || 0
+          ] }),
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mt-1 text-xs text-emerald-200/80", children: [
+            "Skipped without trainee/staff match: ",
+            Math.max(result.summary.skippedTrainingReportsNoTrainee || 0, result.summary.skippedTrainingReportsNoStaff || 0)
+          ] })
+        ] })
+      ] })
+    ] }),
+    /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded-lg border border-red-800/50 bg-gray-800 shadow-lg", children: [
+      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "border-b border-red-900/50 bg-red-950/30 px-5 py-4", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsx("h3", { className: "text-lg font-bold text-white", children: "Reset Test Database" }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-1 max-w-3xl text-sm text-red-100/80", children: "Clears the current test database back to first-delivery state. Keep this separate from the bulk test-data actions." })
+      ] }),
+      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-5 p-5", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded-md border border-red-700/50 bg-red-950/25 p-4", children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-sm leading-6 text-gray-200", children: "This removes configured organisations, units, people, schedules, settings, sessions and imported data, then recreates the initial Organisation Administrator account from deployment settings." }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-2 text-sm font-semibold text-red-100", children: "You will be signed out after the reset because saved sessions are removed with the database data." })
+        ] }),
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "block max-w-xl", children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "mb-2 block text-[11px] font-semibold uppercase tracking-widest text-gray-400", children: "Type RESET DATABASE to continue" }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx(
+            "input",
+            {
+              type: "text",
+              value: confirmation,
+              onChange: (event) => setConfirmation(event.target.value),
+              className: "w-full rounded-md border border-gray-700 bg-gray-950 px-3 py-2 text-sm font-semibold text-white outline-none transition focus:border-red-400 focus:ring-1 focus:ring-red-400",
+              placeholder: REQUIRED_CONFIRMATION,
+              autoComplete: "off"
+            }
+          )
+        ] }),
+        error ? /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "rounded-md border border-red-600/60 bg-red-950/40 px-3 py-2 text-sm font-semibold text-red-100", children: error }) : null,
+        message ? /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "rounded-md border border-emerald-600/50 bg-emerald-950/30 px-3 py-2 text-sm font-semibold text-emerald-100", children: message }) : null,
         /* @__PURE__ */ jsxRuntimeExports.jsx(
-          "input",
+          "button",
           {
-            type: "text",
-            value: confirmation,
-            onChange: (event) => setConfirmation(event.target.value),
-            className: "w-full rounded-md border border-gray-700 bg-gray-950 px-3 py-2 text-sm font-semibold text-white outline-none transition focus:border-red-400 focus:ring-1 focus:ring-red-400",
-            placeholder: REQUIRED_CONFIRMATION,
-            autoComplete: "off"
+            type: "button",
+            onClick: resetDatabase,
+            disabled: !canReset,
+            className: "rounded-md border border-red-500/70 bg-red-600 px-4 py-2 text-sm font-bold text-white shadow-sm transition hover:bg-red-500 disabled:cursor-not-allowed disabled:border-gray-700 disabled:bg-gray-700 disabled:text-gray-400",
+            children: isResetting ? "Resetting database..." : "Reset Test Database"
           }
         )
-      ] }),
-      error ? /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "rounded-md border border-red-600/60 bg-red-950/40 px-3 py-2 text-sm font-semibold text-red-100", children: error }) : null,
-      message ? /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "rounded-md border border-emerald-600/50 bg-emerald-950/30 px-3 py-2 text-sm font-semibold text-emerald-100", children: message }) : null,
-      /* @__PURE__ */ jsxRuntimeExports.jsx(
-        "button",
-        {
-          type: "button",
-          onClick: resetDatabase,
-          disabled: !canReset,
-          className: "rounded-md border border-red-500/70 bg-red-600 px-4 py-2 text-sm font-bold text-white shadow-sm transition hover:bg-red-500 disabled:cursor-not-allowed disabled:border-gray-700 disabled:bg-gray-700 disabled:text-gray-400",
-          children: isResetting ? "Resetting database..." : "Reset Test Database"
-        }
-      )
+      ] })
     ] })
   ] });
 };
@@ -101957,7 +102156,9 @@ const SettingsViewWithMenu = (props) => {
         activeSection === "testing-functions" && /* @__PURE__ */ jsxRuntimeExports.jsx(
           TestingFunctionsSettings,
           {
-            onShowSuccess: props.onShowSuccess
+            onShowSuccess: props.onShowSuccess,
+            activeUnitCode: props.activeUnitCode,
+            activeCompositeUnitCode: props.activeCompositeUnitCode
           }
         ),
         activeSection === "people-profile" && /* @__PURE__ */ jsxRuntimeExports.jsx(

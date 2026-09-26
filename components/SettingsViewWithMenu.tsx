@@ -2594,6 +2594,8 @@ export const SettingsViewWithMenu: React.FC<SettingsViewWithMenuProps> = (props)
                     {activeSection === 'testing-functions' && (
                         <TestingFunctionsSettings
                             onShowSuccess={props.onShowSuccess}
+                            activeUnitCode={props.activeUnitCode}
+                            activeCompositeUnitCode={props.activeCompositeUnitCode}
                         />
                     )}
                     {activeSection === 'people-profile' && (

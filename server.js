@@ -10529,6 +10529,292 @@ function quotePostgresIdentifier(identifier) {
   return `"${String(identifier || '').replace(/"/g, '""')}"`;
 }
 
+const TESTING_SCORING_ELEMENTS = [
+  'Airmanship',
+  'Preparation',
+  'Technique',
+  'Pre-Post Flight',
+  'Radio Comms',
+  'Situational Awareness',
+  'Knowledge',
+];
+
+function normaliseTestingUnitCode(value) {
+  return String(value || '').trim().toUpperCase();
+}
+
+function normaliseTestingPersonName(value) {
+  return String(value || '')
+    .replace(/\s+/g, ' ')
+    .replace(/\s+-\s+.*$/, '')
+    .replace(/\s+–\s+.*$/, '')
+    .trim()
+    .toLowerCase();
+}
+
+function isTestingSchedulableEvent(event) {
+  if (!event || typeof event !== 'object') return false;
+  if (event.isCancelled || event.type === 'deployment' || event.isDeploy) return false;
+  const eventCode = String(event.flightNumber || event.eventCode || '').trim();
+  if (!eventCode) return false;
+  if (/^(STBY|DUTY\s*SUP|DUTY)$/i.test(eventCode)) return false;
+  return true;
+}
+
+function isTestingFlightEvent(event) {
+  return String(event?.type || '').trim().toLowerCase() === 'flight';
+}
+
+function isTestingSimulatorEvent(event) {
+  const type = String(event?.type || '').trim().toLowerCase();
+  return type === 'ftd' || type === 'sim' || type === 'simulator';
+}
+
+function isTestingPostFlightEvent(event) {
+  return isTestingFlightEvent(event) || isTestingSimulatorEvent(event);
+}
+
+function getTestingEventUnit(event, fallbackUnit) {
+  return normaliseTestingUnitCode(
+    event?.unitCode ||
+    event?.unit ||
+    event?.fixedCrewUnitCode ||
+    event?.fixedCrewUnit ||
+    event?.taskingUnitCode ||
+    fallbackUnit
+  );
+}
+
+function getTestingEventTraineeName(event) {
+  return String(event?.student || event?.traineeFullName || event?.traineeName || event?.crew || event?.pilot || '').trim();
+}
+
+function getTestingEventInstructorName(event) {
+  return String(event?.instructor || event?.fixedCrewPic || event?.pilot || event?.captain || '').trim();
+}
+
+function getTestingEventStaffName(event) {
+  return String(
+    event?.instructor ||
+    event?.fixedCrewPic ||
+    event?.pilot ||
+    event?.captain ||
+    event?.crew ||
+    ''
+  ).trim();
+}
+
+function decimalHourToHHMM(value) {
+  const raw = Number(value);
+  const safe = Number.isFinite(raw) ? raw : 0;
+  const hours = Math.floor(safe);
+  const minutes = Math.round((safe - hours) * 60);
+  const normalisedHours = hours + Math.floor(minutes / 60);
+  const normalisedMinutes = minutes % 60;
+  return `${String(normalisedHours).padStart(2, '0')}:${String(normalisedMinutes).padStart(2, '0')}`;
+}
+
+function pickTestingScore(distribution, seedText) {
+  const entries = Object.entries(distribution || { 3: 80, 2: 10, 4: 10 })
+    .map(([score, weight]) => ({ score: Number(score), weight: Math.max(0, Number(weight) || 0) }))
+    .filter(entry => Number.isFinite(entry.score) && entry.weight > 0);
+  const usableEntries = entries.length > 0 ? entries : [{ score: 3, weight: 1 }];
+  const total = usableEntries.reduce((sum, entry) => sum + entry.weight, 0);
+  let hash = 0;
+  for (const char of String(seedText || 'test')) {
+    hash = ((hash << 5) - hash + char.charCodeAt(0)) | 0;
+  }
+  let cursor = Math.abs(hash) % total;
+  for (const entry of usableEntries) {
+    if (cursor < entry.weight) return entry.score;
+    cursor -= entry.weight;
+  }
+  return usableEntries[0].score;
+}
+
+function buildTestingTrainingReport(event, trainee, scoreMode, scoreDistribution, recordedBy) {
+  const traineeName = trainee?.fullName || trainee?.name || getTestingEventTraineeName(event) || 'Unknown';
+  const instructorName = getTestingEventInstructorName(event);
+  const score = scoreMode === 'score'
+    ? pickTestingScore(scoreDistribution, `${event.id}:${traineeName}:${event.flightNumber}`)
+    : null;
+  const overallResult = score == null || score >= 3 ? 'P' : 'F';
+  const elementScores = score == null
+    ? []
+    : TESTING_SCORING_ELEMENTS.map(element => ({
+        element,
+        grade: String(score),
+        comment: 'Generated for test data completion.',
+      }));
+  const isGround = String(event.type || '').toLowerCase() === 'ground' || event.isAcademic === true;
+
+  return {
+    id: `test-${event.id}-${String(trainee?.id || traineeName).replace(/[^a-zA-Z0-9_-]+/g, '-')}`.slice(0, 180),
+    traineeId: trainee?.id || String(event.traineeId || ''),
+    traineeFullName: traineeName,
+    eventId: String(event.id),
+    eventCode: String(event.eventCode || event.flightNumber || event.id),
+    flightNumber: String(event.flightNumber || event.eventCode || event.id),
+    eventDescription: event.eventDescription || event.taskingName || event.taskingDisplayLabel || null,
+    date: String(event.date || ''),
+    instructorName,
+    overallGrade: score == null ? 'No Grade' : score,
+    overallResult,
+    dcoResult: 'DCO',
+    startTime: Number(event.startTime || 0),
+    duration: Number(event.duration || 0),
+    endTime: Number(event.startTime || 0) + Number(event.duration || 0),
+    comments: 'Assessor: Generated by temporary testing functions.\nWeather: Test data.\nProfile: Test data.\nOverall: Generated completion for app testing.\nNEST:',
+    scores: elementScores,
+    isCompleted: true,
+    groundSchoolAssessment: isGround ? { isAssessment: true, result: score == null ? 100 : Math.max(0, Math.min(100, score * 20)) } : undefined,
+    course: trainee?.course || event.course || null,
+    createdBy: recordedBy || 'testing-functions',
+  };
+}
+
+function buildTestingStaffTrainingReport(event, staff, scoreMode, scoreDistribution, recordedBy, unitCode) {
+  const score = scoreMode === 'score'
+    ? pickTestingScore(scoreDistribution, `${event.id}:${staff.name}:${event.flightNumber}`)
+    : null;
+  const eventCode = String(event.eventCode || event.flightNumber || event.taskingName || event.id || 'TEST').trim();
+  const overallResult = score == null || score >= 3 ? 'P' : 'F';
+  const elementScores = score == null
+    ? []
+    : TESTING_SCORING_ELEMENTS.map(element => ({
+        element,
+        grade: String(score),
+        comment: 'Generated for test data completion.',
+      }));
+  const isGround = ['ground', 'academic', 'classroom'].some(token => String(event.type || '').toLowerCase().includes(token)) || event.isAcademic === true;
+  const now = new Date().toISOString();
+
+  return {
+    id: `test-staff-${staff.id || staff.idNumber}-${String(event.id || eventCode).replace(/[^a-zA-Z0-9_-]+/g, '-')}`.slice(0, 180),
+    reportName: `${eventCode} Training Report`,
+    staffIdNumber: Number(staff.idNumber || 0),
+    staffName: staff.name,
+    locationCode: event.location || event.origin || null,
+    unitCode: event.unit || unitCode || staff.unit || null,
+    trainingKey: event.course || event.packageCode || event.taskingName || null,
+    trainingKind: event.packageCode ? 'training_package' : 'course',
+    trainingCode: event.course || event.packageCode || event.taskingName || null,
+    trainingTitle: event.eventDescription || event.taskingDisplayLabel || event.taskingName || eventCode,
+    eventId: String(event.id || ''),
+    eventCode,
+    eventDescription: event.eventDescription || event.taskingDisplayLabel || event.taskingName || null,
+    eventType: String(event.type || event.eventType || 'training'),
+    source: 'testing-functions',
+    generatedReason: 'testing-functions-bulk-completion',
+    generatedAt: now,
+    date: String(event.date || ''),
+    startTime: Number(event.startTime || 0),
+    duration: Number(event.duration || 0),
+    resourceId: event.aircraftNumber || event.resourceId || null,
+    callsign: event.callsign || null,
+    instructorName: getTestingEventInstructorName(event) || recordedBy || 'testing-functions',
+    traineeFullName: getTestingEventTraineeName(event) || '',
+    overallGrade: score == null ? 'No Grade' : String(score),
+    overallResult,
+    dcoResult: 'DCO',
+    assessedElementScores: elementScores,
+    groundSchoolAssessment: isGround ? {
+      isAssessment: true,
+      result: score == null ? '100' : String(Math.max(0, Math.min(100, score * 20))),
+    } : undefined,
+    notes: 'Generated by temporary testing functions.',
+    status: 'Complete',
+    createdAt: now,
+    createdBy: recordedBy || 'testing-functions',
+    updatedAt: now,
+    updatedBy: recordedBy || 'testing-functions',
+  };
+}
+
+function getTestingSnapshotKeys(date, unitCode, school) {
+  const cleanDate = String(date || '').slice(0, 10);
+  const cleanUnit = normaliseTestingUnitCode(unitCode);
+  const cleanSchool = String(school || '').trim().toUpperCase();
+  return [
+    cleanSchool && cleanUnit ? `${cleanDate}__${cleanSchool}__${cleanUnit}` : '',
+    cleanUnit ? `${cleanDate}__${cleanUnit}` : '',
+    cleanDate,
+  ].filter(Boolean);
+}
+
+async function loadTestingDaySnapshot(db, { date, unitCode, school }) {
+  const cleanDate = String(date || '').slice(0, 10);
+  const cleanUnit = normaliseTestingUnitCode(unitCode);
+  const keys = getTestingSnapshotKeys(cleanDate, cleanUnit, school);
+  const rows = await db.$queryRawUnsafe(
+    `SELECT * FROM "DailySnapshot"
+     WHERE date = ANY($1::text[]) OR date LIKE $2::text
+     ORDER BY CASE WHEN date = ANY($1::text[]) THEN 0 ELSE 1 END, "savedAt" DESC NULLS LAST
+     LIMIT 8`,
+    keys,
+    `${cleanDate}__%`
+  );
+  const matching = (rows || []).find(row => {
+    const parsed = parseDailySnapshotDateKey(row.date);
+    const rowUnit = normaliseTestingUnitCode(parsed.unit);
+    if (!cleanUnit) return true;
+    return rowUnit === cleanUnit || (Array.isArray(row.scheduleEvents) && row.scheduleEvents.some(event => getTestingEventUnit(event, rowUnit) === cleanUnit));
+  }) || rows?.[0];
+  if (!matching) return null;
+
+  const parsed = parseDailySnapshotDateKey(matching.date);
+  const fallbackUnit = parsed.unit || cleanUnit;
+  const scheduleEvents = (Array.isArray(matching.scheduleEvents) ? matching.scheduleEvents : [])
+    .map(event => ({ ...event, date: parsed.date || cleanDate }))
+    .filter(event => !cleanUnit || getTestingEventUnit(event, fallbackUnit) === cleanUnit);
+
+  return {
+    snapshot: matching,
+    snapshotKey: matching.date,
+    parsed,
+    date: parsed.date || cleanDate,
+    unitCode: cleanUnit || fallbackUnit || '',
+    scheduleEvents,
+  };
+}
+
+async function buildTestingDayPreview(db, request) {
+  const loaded = await loadTestingDaySnapshot(db, request);
+  if (!loaded) return null;
+  const eventIds = loaded.scheduleEvents.map(event => String(event.id || '')).filter(Boolean);
+  const completions = eventIds.length
+    ? await db.$queryRawUnsafe(`SELECT "scheduleEventId" FROM "EventCompletion" WHERE "scheduleEventId" = ANY($1::text[])`, eventIds).catch(() => [])
+    : [];
+  const reports = eventIds.length
+    ? await db.$queryRawUnsafe(`SELECT "eventId" FROM "TraineePerformance" WHERE "eventId" = ANY($1::text[])`, eventIds).catch(() => [])
+    : [];
+  const authorisableFlights = loaded.scheduleEvents.filter(event => isTestingSchedulableEvent(event) && isTestingFlightEvent(event));
+  const postFlightEvents = loaded.scheduleEvents.filter(event => isTestingSchedulableEvent(event) && isTestingPostFlightEvent(event));
+  const trainingReportEvents = loaded.scheduleEvents.filter(isTestingSchedulableEvent);
+
+  return {
+    snapshotKey: loaded.snapshotKey,
+    date: loaded.date,
+    unitCode: loaded.unitCode,
+    counts: {
+      scheduleEvents: loaded.scheduleEvents.length,
+      authorisableFlights: authorisableFlights.length,
+      postFlightEvents: postFlightEvents.length,
+      trainingReportEvents: trainingReportEvents.length,
+      existingCompletions: completions.length,
+      existingTrainingReports: reports.length,
+    },
+    samples: trainingReportEvents.slice(0, 8).map(event => ({
+      id: event.id,
+      type: event.type,
+      event: event.flightNumber || event.eventCode,
+      instructor: getTestingEventInstructorName(event),
+      trainee: getTestingEventTraineeName(event),
+      startTime: event.startTime,
+    })),
+  };
+}
+
 async function requireDirectSuperAdminForTesting(req, res) {
   const context = await requireDirectAdmin(req, res);
   if (!context) return null;
@@ -10545,11 +10831,369 @@ app.get('/api/testing-functions/status', async (req, res) => {
     if (!context) return;
     return res.json({
       enabled: isTestingFunctionsEnabled(),
-      functions: isTestingFunctionsEnabled() ? ['reset-database'] : [],
+      functions: isTestingFunctionsEnabled() ? ['reset-database', 'bulk-day-preview', 'bulk-day'] : [],
     });
   } catch (error) {
     console.error('❌ GET /api/testing-functions/status error:', error);
     res.status(500).json({ error: 'Internal server error', message: 'Failed to read testing function status' });
+  }
+});
+
+app.post('/api/testing-functions/bulk-day-preview', async (req, res) => {
+  try {
+    if (!isTestingFunctionsEnabled()) {
+      return res.status(404).json({ error: 'Not found' });
+    }
+
+    const context = await requireDirectSuperAdminForTesting(req, res);
+    if (!context) return;
+
+    const date = String(req.body?.date || '').slice(0, 10);
+    const unitCode = normaliseTestingUnitCode(req.body?.unitCode);
+    const school = String(req.body?.school || '').trim().toUpperCase();
+    if (!date || !unitCode) {
+      return res.status(400).json({ error: 'date and unitCode are required', message: 'Select a date and unit before previewing test data.' });
+    }
+
+    const preview = await buildTestingDayPreview(context.db, { date, unitCode, school });
+    if (!preview) {
+      return res.status(404).json({ error: 'Snapshot not found', message: `No published DFP snapshot was found for ${unitCode} on ${date}.` });
+    }
+    res.json(preview);
+  } catch (error) {
+    console.error('❌ POST /api/testing-functions/bulk-day-preview error:', error);
+    res.status(500).json({ error: 'Internal server error', message: 'Failed to preview bulk testing data' });
+  }
+});
+
+app.post('/api/testing-functions/bulk-day', async (req, res) => {
+  try {
+    if (!isTestingFunctionsEnabled()) {
+      return res.status(404).json({ error: 'Not found' });
+    }
+
+    const context = await requireDirectSuperAdminForTesting(req, res);
+    if (!context) return;
+    const db = context.db;
+
+    const date = String(req.body?.date || '').slice(0, 10);
+    const unitCode = normaliseTestingUnitCode(req.body?.unitCode);
+    const school = String(req.body?.school || '').trim().toUpperCase();
+    const actions = req.body?.actions || {};
+    const reportOptions = req.body?.trainingReports || {};
+    const scoreMode = reportOptions.scoreMode === 'completeOnly' ? 'completeOnly' : 'score';
+    const scoreDistribution = reportOptions.scoreDistribution || { 3: 80, 2: 10, 4: 10 };
+    const recordedBy = context.admin?.userId || context.admin?.id || 'testing-functions';
+
+    if (!date || !unitCode) {
+      return res.status(400).json({ error: 'date and unitCode are required', message: 'Select a date and unit before running test data.' });
+    }
+    if (!actions.authoriseFlights && !actions.postFlightTimes && !actions.completeReports) {
+      return res.status(400).json({ error: 'No action selected', message: 'Select at least one bulk testing action.' });
+    }
+
+    const loaded = await loadTestingDaySnapshot(db, { date, unitCode, school });
+    if (!loaded) {
+      return res.status(404).json({ error: 'Snapshot not found', message: `No published DFP snapshot was found for ${unitCode} on ${date}.` });
+    }
+
+    const nowIso = new Date().toISOString();
+    const trainees = await db.trainee.findMany({
+      where: { isActive: true },
+      select: { id: true, idNumber: true, name: true, fullName: true, course: true, unit: true, location: true },
+    });
+    const traineesByName = new Map();
+    const traineesByIdNumber = new Map();
+    trainees.forEach(trainee => {
+      traineesByName.set(normaliseTestingPersonName(trainee.fullName), trainee);
+      traineesByName.set(normaliseTestingPersonName(trainee.name), trainee);
+      traineesByIdNumber.set(String(trainee.idNumber), trainee);
+    });
+
+    const personnel = await db.personnel.findMany({
+      where: { isActive: true },
+      select: { id: true, idNumber: true, name: true, unit: true, location: true, preferences: true },
+    });
+    const personnelByName = new Map();
+    personnel.forEach(person => personnelByName.set(normaliseTestingPersonName(person.name), person));
+
+    const nextScheduleEvents = loaded.scheduleEvents.map(event => ({ ...event }));
+    const scheduleEventById = new Map(nextScheduleEvents.map(event => [String(event.id), event]));
+    const summary = {
+      authorisedFlights: 0,
+      eventCompletions: 0,
+      flightLogEntries: 0,
+      trainingReports: 0,
+      staffTrainingReports: 0,
+      skippedTrainingReportsNoTrainee: 0,
+      skippedTrainingReportsNoStaff: 0,
+      skippedNonSchedulable: 0,
+    };
+
+    if (actions.authoriseFlights) {
+      for (const event of nextScheduleEvents) {
+        if (!isTestingSchedulableEvent(event) || !isTestingFlightEvent(event)) continue;
+        const authoName = getTestingEventInstructorName(event) || 'DFP-NEO Test AUTHO';
+        const captainName = event.flightType === 'Solo'
+          ? getTestingEventTraineeName(event) || authoName
+          : getTestingEventInstructorName(event) || authoName;
+        event.authoSignedBy = event.authoSignedBy || authoName;
+        event.authoSignedAt = event.authoSignedAt || nowIso;
+        event.captainSignedBy = event.captainSignedBy || captainName;
+        event.captainSignedAt = event.captainSignedAt || nowIso;
+        event.authNotes = event.authNotes || 'Bulk authorised by temporary testing functions.';
+        summary.authorisedFlights += 1;
+      }
+    }
+
+    if (actions.postFlightTimes) {
+      await ensureEventCompletionTimeColumns(db);
+      await ensureFlightLogSnapshotColumns(db);
+      const completionEvents = nextScheduleEvents.filter(event => isTestingSchedulableEvent(event) && isTestingPostFlightEvent(event));
+      for (const event of completionEvents) {
+        const traineeName = getTestingEventTraineeName(event);
+        const trainee = traineesByIdNumber.get(String(event.traineeId || '')) || traineesByName.get(normaliseTestingPersonName(traineeName));
+        const instructorName = getTestingEventInstructorName(event);
+        const takeoffTime = decimalHourToHHMM(Number(event.startTime || 0));
+        const landTime = decimalHourToHHMM(Number(event.startTime || 0) + Number(event.duration || 0));
+        const blockTime = Number(event.duration || 0);
+        const completionPayload = {
+          scheduleEventId: String(event.id),
+          eventCode: String(event.eventCode || event.flightNumber || event.id),
+          eventDate: loaded.date,
+          eventType: String(event.type || 'flight'),
+          startTime: Number(event.startTime || 0),
+          duration: Number(event.duration || 0),
+          traineeId: trainee?.id || null,
+          traineeFullName: trainee?.fullName || traineeName || 'Unknown',
+          instructorName,
+          dcoResult: 'DCO',
+          overallGrade: null,
+          overallResult: 'P',
+          aircraftNumber: event.aircraftNumber || null,
+          takeoffTime,
+          landTime,
+          airborneTime: blockTime,
+          taxiGroundTime: 0,
+          blockTime,
+          totalFlightTime: blockTime,
+          isSolo: event.flightType === 'Solo' || event.soloOrDual === 'Solo',
+          isDual: event.flightType !== 'Solo' && event.soloOrDual !== 'Solo',
+          isCountedAsElce: true,
+          recordedBy,
+          source: 'testing-functions',
+          notes: 'Generated by temporary testing functions.',
+        };
+        const existing = await db.eventCompletion.findUnique({
+          where: { scheduleEventId: completionPayload.scheduleEventId },
+          select: { id: true },
+        }).catch(() => null);
+        await db.eventCompletion.upsert({
+          where: { scheduleEventId: completionPayload.scheduleEventId },
+          create: completionPayload,
+          update: completionPayload,
+        });
+        if (!existing) summary.eventCompletions += 1;
+
+        const logPeople = [
+          { name: instructorName, role: 'captain', personnelId: personnelByName.get(normaliseTestingPersonName(instructorName))?.id || null, traineeId: null },
+          { name: trainee?.fullName || traineeName, role: 'crew', personnelId: null, traineeId: trainee?.id || null },
+        ].filter(item => String(item.name || '').trim());
+        for (const person of logPeople) {
+          const existingLog = await db.flightLogEntry.findFirst({
+            where: { scheduleEventId: String(event.id), personRole: person.role },
+            select: { id: true },
+          });
+          const logPayload = {
+            scheduleEventId: String(event.id),
+            eventCode: String(event.eventCode || event.flightNumber || event.id),
+            eventDate: loaded.date,
+            eventType: String(event.type || 'flight'),
+            traineeId: person.traineeId,
+            personnelId: person.personnelId,
+            personName: person.name,
+            personRole: person.role,
+            aircraftNumber: event.aircraftNumber || null,
+            fromIcao: event.origin || null,
+            toIcao: event.destination || null,
+            duty: event.flightNumber || event.eventCode || null,
+            isSolo: event.flightType === 'Solo' || event.soloOrDual === 'Solo',
+            isDual: event.flightType !== 'Solo' && event.soloOrDual !== 'Solo',
+            isFlightLog: isTestingFlightEvent(event),
+            isFtdLog: isTestingSimulatorEvent(event),
+            takeoffTime,
+            landTime,
+            airborneTime: blockTime,
+            taxiGroundTime: 0,
+            blockTime,
+            totalTime: blockTime,
+            captainTime: person.role === 'captain' ? blockTime : 0,
+            instructorTime: person.role === 'captain' ? blockTime : 0,
+            recordedBy,
+            notes: 'Generated by temporary testing functions.',
+          };
+          if (existingLog) {
+            await db.flightLogEntry.update({ where: { id: existingLog.id }, data: logPayload });
+          } else {
+            await db.flightLogEntry.create({ data: logPayload });
+            summary.flightLogEntries += 1;
+          }
+        }
+      }
+    }
+
+    if (actions.completeReports) {
+      const reportEvents = nextScheduleEvents.filter(isTestingSchedulableEvent);
+      for (const event of reportEvents) {
+        const traineeName = getTestingEventTraineeName(event);
+        const trainee = traineesByIdNumber.get(String(event.traineeId || '')) || traineesByName.get(normaliseTestingPersonName(traineeName));
+        if (!trainee) {
+          const staffName = getTestingEventStaffName(event);
+          const staff = personnelByName.get(normaliseTestingPersonName(staffName));
+          if (!staff?.id) {
+            summary.skippedTrainingReportsNoTrainee += 1;
+            summary.skippedTrainingReportsNoStaff += 1;
+            continue;
+          }
+          const staffReport = buildTestingStaffTrainingReport(
+            { ...event, date: loaded.date },
+            staff,
+            scoreMode,
+            scoreDistribution,
+            recordedBy,
+            unitCode
+          );
+          const preferences = (staff.preferences && typeof staff.preferences === 'object' && !Array.isArray(staff.preferences))
+            ? { ...staff.preferences }
+            : {};
+          const airCombat = (preferences.airCombat && typeof preferences.airCombat === 'object' && !Array.isArray(preferences.airCombat))
+            ? { ...preferences.airCombat }
+            : {};
+          const existingReports = Array.isArray(airCombat.trainingReports) ? airCombat.trainingReports : [];
+          const nextReports = [
+            staffReport,
+            ...existingReports.filter(report => String(report?.id || '') !== staffReport.id && String(report?.eventId || '') !== String(event.id || '')),
+          ];
+          const nextPreferences = {
+            ...preferences,
+            airCombat: {
+              ...airCombat,
+              trainingReports: nextReports,
+            },
+          };
+          await db.personnel.update({
+            where: { id: staff.id },
+            data: { preferences: nextPreferences },
+          });
+          staff.preferences = nextPreferences;
+          summary.staffTrainingReports += 1;
+          continue;
+        }
+        const report = buildTestingTrainingReport(
+          { ...event, date: loaded.date },
+          trainee,
+          scoreMode,
+          scoreDistribution,
+          recordedBy
+        );
+        const row = mapAssessmentToRow(report);
+        await db.$executeRawUnsafe(`
+          INSERT INTO "TraineePerformance" (
+            "id", "traineeId", "traineeFullName", "eventId", "eventCode", "flightNumber",
+            "eventDescription", "date", "instructorName", "instructorId",
+            "overallGrade", "overallResult", "dcoResult",
+            "startTime", "duration", "endTime", "comments",
+            "elementScores", "isCompleted", "isGroundSchoolAssessment", "groundSchoolResult",
+            "course", "syllabusPhase", "eventSequence", "createdAt", "updatedAt", "createdBy"
+          ) VALUES (
+            $1::text, $2::text, $3::text, $4::text, $5::text, $6::text,
+            $7::text, $8::text, $9::text, $10::text,
+            $11::text, $12::text, $13::text,
+            $14, $15, $16, $17::text,
+            $18::jsonb, $19::boolean, $20::boolean, $21,
+            $22::text, $23::text, $24, NOW(), NOW(), $25::text
+          )
+          ON CONFLICT ("eventId") DO UPDATE SET
+            "traineeId"                = EXCLUDED."traineeId",
+            "traineeFullName"          = EXCLUDED."traineeFullName",
+            "eventCode"                = EXCLUDED."eventCode",
+            "flightNumber"             = EXCLUDED."flightNumber",
+            "eventDescription"         = EXCLUDED."eventDescription",
+            "date"                     = EXCLUDED."date",
+            "instructorName"           = EXCLUDED."instructorName",
+            "overallGrade"             = EXCLUDED."overallGrade",
+            "overallResult"            = EXCLUDED."overallResult",
+            "dcoResult"                = EXCLUDED."dcoResult",
+            "startTime"                = EXCLUDED."startTime",
+            "duration"                 = EXCLUDED."duration",
+            "endTime"                  = EXCLUDED."endTime",
+            "comments"                 = EXCLUDED."comments",
+            "elementScores"            = EXCLUDED."elementScores",
+            "isCompleted"              = EXCLUDED."isCompleted",
+            "isGroundSchoolAssessment" = EXCLUDED."isGroundSchoolAssessment",
+            "groundSchoolResult"       = EXCLUDED."groundSchoolResult",
+            "course"                   = EXCLUDED."course",
+            "updatedAt"                = NOW(),
+            "updatedBy"                = EXCLUDED."createdBy"
+        `,
+          row.id, row.traineeId, row.traineeFullName, row.eventId, row.eventCode, row.flightNumber,
+          row.eventDescription, row.date, row.instructorName, row.instructorId,
+          row.overallGrade, row.overallResult, row.dcoResult,
+          row.startTime, row.duration, row.endTime, row.comments,
+          JSON.stringify(row.elementScores), row.isCompleted, row.isGroundSchoolAssessment, row.groundSchoolResult,
+          row.course, row.syllabusPhase, row.eventSequence, row.createdBy
+        );
+        const savedRows = await db.$queryRawUnsafe(`SELECT * FROM "TraineePerformance" WHERE "eventId" = $1::text`, row.eventId);
+        if (savedRows?.[0]) {
+          await saveTrainingReportVersionArchive(db, 'testing-functions', mapRowToAssessment(savedRows[0]), recordedBy);
+        }
+        summary.trainingReports += 1;
+      }
+    }
+
+    await db.$executeRawUnsafe(`
+      UPDATE "DailySnapshot"
+      SET "scheduleEvents" = $1::jsonb,
+          "savedAt" = NOW(),
+          "savedBy" = $2::text
+      WHERE date = $3::text
+    `, JSON.stringify(nextScheduleEvents), recordedBy, loaded.snapshotKey);
+
+    try {
+      await saveCompactPublishedDfpArchive(db, {
+        date: loaded.snapshotKey,
+        scheduleEvents: nextScheduleEvents,
+        staffEvents: loaded.snapshot.staffEvents || [],
+        traineeEvents: loaded.snapshot.traineeEvents || [],
+        pt051Assessments: loaded.snapshot.pt051Assessments || {},
+        traineeProfiles: loaded.snapshot.traineeProfiles || [],
+        staffProfiles: loaded.snapshot.staffProfiles || [],
+        lmpCompletedIds: loaded.snapshot.lmpCompletedIds || {},
+        staffCurrency: loaded.snapshot.staffCurrency || {},
+        staffLogbook: loaded.snapshot.staffLogbook || {},
+        aircraftConfigState: loaded.snapshot.aircraftConfigState || {},
+        currencyDefinitions: loaded.snapshot.currencyDefinitions || null,
+        masterCurrencies: loaded.snapshot.masterCurrencies || [],
+        currencyRequirements: loaded.snapshot.currencyRequirements || [],
+        savedBy: recordedBy,
+      });
+    } catch (archiveError) {
+      console.warn('[TestingFunctions] Could not refresh compact archive after bulk-day:', archiveError.message);
+    }
+
+    const preview = await buildTestingDayPreview(db, { date, unitCode, school });
+    res.json({
+      success: true,
+      snapshotKey: loaded.snapshotKey,
+      date: loaded.date,
+      unitCode,
+      summary,
+      preview,
+      ranAt: new Date().toISOString(),
+    });
+  } catch (error) {
+    console.error('❌ POST /api/testing-functions/bulk-day error:', error);
+    res.status(500).json({ error: 'Internal server error', message: 'Failed to run bulk testing data actions', details: error.message });
   }
 });
 
@@ -12645,6 +13289,34 @@ function isMobileFlightAuthorisationRequired(settings) {
 function isMobileFlightAuthorisationFrozen(settings) {
   const freeze = settings?.emergencyFreezeState;
   return !!(freeze?.isFrozen && !freeze?.allowedActions?.flightAuthorisation);
+}
+
+function normaliseMobileFreezeState(settings) {
+  const freeze = settings?.emergencyFreezeState && typeof settings.emergencyFreezeState === 'object'
+    ? settings.emergencyFreezeState
+    : {};
+  const isFrozen = freeze.isFrozen === true;
+  return {
+    isFrozen,
+    freezeReason: isFrozen ? (freeze.freezeReason || 'Emergency Freeze') : null,
+    frozenAt: isFrozen ? (freeze.frozenAt || null) : null,
+    frozenBy: isFrozen ? (freeze.frozenBy || freeze.initiatedBy || null) : null,
+    allowedActions: freeze.allowedActions && typeof freeze.allowedActions === 'object' ? freeze.allowedActions : {},
+  };
+}
+
+function isMobileSystemFrozen(settings) {
+  return normaliseMobileFreezeState(settings).isFrozen === true;
+}
+
+function sendMobileFreezeBlocked(res, settings) {
+  return res.status(423).json({
+    success: false,
+    error: 'System is frozen',
+    message: 'Emergency Freeze is active. This function is unavailable until the freeze is cancelled.',
+    freezeState: normaliseMobileFreezeState(settings),
+    serverTime: new Date().toISOString(),
+  });
 }
 
 function isPastMobileDfpDate(dateValue) {
