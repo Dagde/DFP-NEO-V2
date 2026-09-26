@@ -915,6 +915,8 @@ const NEO_ASSIST_DRAG_DIAGNOSTIC_STORAGE_KEY = 'neo_assist_drag_diagnostic_repor
 const NEO_ASSIST_DRAG_DIAGNOSTIC_VERSION = 2;
 const NEO_TILE_DIAGNOSTIC_STORAGE_KEY = 'neo_tile_diagnostic_report';
 const NEO_TILE_DIAGNOSTIC_VERSION = 1;
+const PAUSE_FLIGHT_OPS_DIAGNOSTIC_STORAGE_KEY = 'pause_flight_ops_diagnostic_report';
+const PAUSE_FLIGHT_OPS_DIAGNOSTIC_VERSION = 1;
 
 type NeoAssistDragDiagnosticEntry = {
     id?: string;
@@ -922,6 +924,12 @@ type NeoAssistDragDiagnosticEntry = {
     at: string;
     perfMs?: number;
     sessionId?: string;
+    details?: Record<string, any>;
+};
+
+type PauseFlightOpsDiagnosticEntry = {
+    stage: string;
+    at: string;
     details?: Record<string, any>;
 };
 
@@ -1010,6 +1018,90 @@ const downloadNeoTileDiagnosticReport = () => {
         URL.revokeObjectURL(url);
     } catch (error) {
         console.error('[NEO Tile Diagnostic] Failed to download report:', error);
+    }
+};
+
+const recordPauseFlightOpsDiagnostic = (entry: Omit<PauseFlightOpsDiagnosticEntry, 'at'>) => {
+    if (typeof window === 'undefined') return;
+    const fullEntry: PauseFlightOpsDiagnosticEntry = {
+        ...entry,
+        at: new Date().toISOString(),
+    };
+    try {
+        const win = window as any;
+        const entries: PauseFlightOpsDiagnosticEntry[] = Array.isArray(win.__pauseFlightOpsDiagnostics)
+            ? win.__pauseFlightOpsDiagnostics
+            : [];
+        entries.push(fullEntry);
+        const trimmed = entries.slice(-500);
+        win.__pauseFlightOpsDiagnostics = trimmed;
+        window.localStorage?.setItem(PAUSE_FLIGHT_OPS_DIAGNOSTIC_STORAGE_KEY, JSON.stringify({
+            generatedAt: new Date().toISOString(),
+            app: 'DFP-NEO',
+            reportType: 'pause-flight-ops-diagnostic',
+            version: PAUSE_FLIGHT_OPS_DIAGNOSTIC_VERSION,
+            userAgent: window.navigator?.userAgent || '',
+            viewport: {
+                width: window.innerWidth,
+                height: window.innerHeight,
+                devicePixelRatio: window.devicePixelRatio,
+            },
+            entries: trimmed,
+        }));
+    } catch (error) {
+        console.warn('[Pause Flight Ops Diagnostic] Failed to record entry:', error);
+    }
+};
+
+const downloadPauseFlightOpsDiagnosticReport = (context: Record<string, unknown> = {}) => {
+    if (typeof window === 'undefined') return;
+    try {
+        recordPauseFlightOpsDiagnostic({
+            stage: 'report-download-requested',
+            details: {
+                context,
+                existingEntryCount: Array.isArray((window as any).__pauseFlightOpsDiagnostics)
+                    ? (window as any).__pauseFlightOpsDiagnostics.length
+                    : 0,
+            },
+        });
+        const stored = window.localStorage?.getItem(PAUSE_FLIGHT_OPS_DIAGNOSTIC_STORAGE_KEY);
+        const fallbackEntries = Array.isArray((window as any).__pauseFlightOpsDiagnostics)
+            ? (window as any).__pauseFlightOpsDiagnostics
+            : [];
+        const report = stored
+            ? JSON.parse(stored)
+            : {
+                generatedAt: new Date().toISOString(),
+                app: 'DFP-NEO',
+                reportType: 'pause-flight-ops-diagnostic',
+                version: PAUSE_FLIGHT_OPS_DIAGNOSTIC_VERSION,
+                entries: fallbackEntries,
+            };
+        report.downloadedAt = new Date().toISOString();
+        report.context = context;
+        if (!Array.isArray(report.entries) || report.entries.length === 0) {
+            report.entries = [{
+                stage: 'report-empty',
+                at: new Date().toISOString(),
+                details: {
+                    reason: 'No Pause Flight Ops activity was captured before this report was downloaded.',
+                    nextStep: 'Open Pause Flight Ops, select completed events if required, run NEO BUILD (Post-Pause), then download this report again.',
+                },
+            }];
+        }
+        const blob = new Blob([JSON.stringify(report, null, 2)], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+        const safeDate = String(context.date || 'no-date').replace(/[^0-9-]/g, '') || 'no-date';
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = `pause-flight-ops-diagnostic-${safeDate}-${new Date().toISOString().replace(/[:.]/g, '-')}.json`;
+        document.body.appendChild(link);
+        link.click();
+        link.remove();
+        URL.revokeObjectURL(url);
+    } catch (error) {
+        console.error('[Pause Flight Ops Diagnostic] Failed to download report:', error);
     }
 };
 
@@ -46974,6 +47066,51 @@ const App: React.FC = () => {
             ftdStartTime: pFtdStart,
             ftdEndTime: pFtdEnd,
         } = config;
+        const summarisePauseEvent = (event: ScheduleEvent) => ({
+            id: event.id,
+            date: event.date || null,
+            type: event.type,
+            flightNumber: event.flightNumber,
+            resourceId: event.resourceId,
+            startTime: event.startTime,
+            duration: event.duration,
+            instructor: event.instructor || null,
+            pilot: event.pilot || null,
+            student: event.student || null,
+            isCancelled: Boolean(event.isCancelled),
+            cancellationCode: (event as any).cancellationCode || null,
+        });
+        const countPauseEventsBy = (events: ScheduleEvent[], getKey: (event: ScheduleEvent) => string | undefined | null): Record<string, number> => (
+            events.reduce<Record<string, number>>((acc, event) => {
+                const key = String(getKey(event) || 'blank');
+                acc[key] = (acc[key] || 0) + 1;
+                return acc;
+            }, {})
+        );
+
+        recordPauseFlightOpsDiagnostic({
+            stage: 'build-requested',
+            details: {
+                pauseDate,
+                pauseStart,
+                pauseEnd,
+                pauseRule,
+                affectedTypes,
+                completedEventIds: Array.from(completedEventIds),
+                windows: {
+                    flyingStartTime: dayStart,
+                    flyingEndTime: dayEnd,
+                    ftdStartTime: pFtdStart,
+                    ftdEndTime: pFtdEnd,
+                },
+                existingEventsFromPanel: {
+                    count: Array.isArray(config.existingEvents) ? config.existingEvents.length : 0,
+                    byType: countPauseEventsBy(Array.isArray(config.existingEvents) ? config.existingEvents : [], event => event.type),
+                    byResource: countPauseEventsBy(Array.isArray(config.existingEvents) ? config.existingEvents : [], event => event.resourceId),
+                    sample: (Array.isArray(config.existingEvents) ? config.existingEvents : []).slice(0, 40).map(summarisePauseEvent),
+                },
+            },
+        });
 
         const normalisePauseBuildEvent = (event: ScheduleEvent): ScheduleEvent => ({
             ...event,
@@ -46994,8 +47131,36 @@ const App: React.FC = () => {
             'publishedRawEvents:', publishedRawEvents.length,
             'visiblePanelEvents:', visiblePanelEvents.length,
             'fullRawEvents:', fullRawEvents.length);
+        recordPauseFlightOpsDiagnostic({
+            stage: 'source-events-resolved',
+            details: {
+                pauseDate,
+                publishedRawEvents: {
+                    count: publishedRawEvents.length,
+                    byType: countPauseEventsBy(publishedRawEvents, event => event.type),
+                    byResource: countPauseEventsBy(publishedRawEvents, event => event.resourceId),
+                    sample: publishedRawEvents.slice(0, 40).map(summarisePauseEvent),
+                },
+                visiblePanelEvents: {
+                    count: visiblePanelEvents.length,
+                    byType: countPauseEventsBy(visiblePanelEvents, event => event.type),
+                    byResource: countPauseEventsBy(visiblePanelEvents, event => event.resourceId),
+                    sample: visiblePanelEvents.slice(0, 40).map(summarisePauseEvent),
+                },
+                mergedEvents: {
+                    count: fullRawEvents.length,
+                    byType: countPauseEventsBy(fullRawEvents, event => event.type),
+                    byResource: countPauseEventsBy(fullRawEvents, event => event.resourceId),
+                    sample: fullRawEvents.slice(0, 60).map(summarisePauseEvent),
+                },
+            },
+        });
 
         if (fullRawEvents.length === 0) {
+            recordPauseFlightOpsDiagnostic({
+                stage: 'build-failed-no-source-events',
+                details: { pauseDate, affectedTypes, completedEventIds: Array.from(completedEventIds) },
+            });
             throw new Error('Pause Flight Ops could not find any active DFP events to rebuild.');
         }
 
@@ -47039,8 +47204,32 @@ const App: React.FC = () => {
             return e;
         });
         logRoutineAppDebug('[PauseBuild] Cleared for rebuild:', cancelledIds.size, 'events');
+        recordPauseFlightOpsDiagnostic({
+            stage: 'events-cleared',
+            details: {
+                pauseDate,
+                clearableCount: cancelledIds.size,
+                clearedIds: Array.from(cancelledIds),
+                clearedEvents: eventsAfterCancel.filter(event => cancelledIds.has(event.id)).slice(0, 80).map(summarisePauseEvent),
+                retainedEvents: eventsAfterCancel.filter(event => !cancelledIds.has(event.id)).slice(0, 80).map(summarisePauseEvent),
+            },
+        });
 
         if (cancelledIds.size === 0) {
+            recordPauseFlightOpsDiagnostic({
+                stage: 'build-failed-no-matching-events',
+                details: {
+                    pauseDate,
+                    pauseStart,
+                    pauseEnd,
+                    pauseRule,
+                    affectedTypes,
+                    completedEventIds: Array.from(completedEventIds),
+                    sourceCount: fullRawEvents.length,
+                    sourceByType: countPauseEventsBy(fullRawEvents, event => event.type),
+                    sourceSample: fullRawEvents.slice(0, 80).map(summarisePauseEvent),
+                },
+            });
             throw new Error('Pause Flight Ops found no matching events to clear. Check the affected types and pause period.');
         }
 
@@ -47272,6 +47461,19 @@ const App: React.FC = () => {
                 '(locked:', lockedEvents.length,
                 'reprogrammed:', rescheduledCancelledIds.size,
                 'STBY cancelled:', stbyEvents.length, ')');
+            recordPauseFlightOpsDiagnostic({
+                stage: 'build-complete-crew-model',
+                details: {
+                    pauseDate,
+                    finalCount: finalEvents.length,
+                    lockedCount: lockedEvents.length,
+                    reprogrammedCount: rescheduledCancelledIds.size,
+                    stbyCancelledCount: stbyEvents.length,
+                    finalByType: countPauseEventsBy(finalEvents, event => event.type),
+                    finalByResource: countPauseEventsBy(finalEvents, event => event.resourceId),
+                    finalSample: finalEvents.slice(0, 100).map(summarisePauseEvent),
+                },
+            });
             return finalEvents;
         }
 
@@ -47815,6 +48017,19 @@ const App: React.FC = () => {
             '(locked:', lockedEvents.length,
             'newly scheduled:', successfullyScheduled.size,
             'STBY cancelled:', stbyEvents.length, ')');
+        recordPauseFlightOpsDiagnostic({
+            stage: 'build-complete-flight-school-model',
+            details: {
+                pauseDate,
+                finalCount: finalEvents.length,
+                lockedCount: lockedEvents.length,
+                newlyScheduledCount: successfullyScheduled.size,
+                stbyCancelledCount: stbyEvents.length,
+                finalByType: countPauseEventsBy(finalEvents, event => event.type),
+                finalByResource: countPauseEventsBy(finalEvents, event => event.resourceId),
+                finalSample: finalEvents.slice(0, 100).map(summarisePauseEvent),
+            },
+        });
 
         return finalEvents;
     };
@@ -52658,6 +52873,31 @@ appliedUpdates.forEach(update => {
             const { date: _d, ...rest } = e as any;
             return rest as Omit<ScheduleEvent, 'date'>;
         });
+        recordPauseFlightOpsDiagnostic({
+            stage: 'panel-opened-context-menu',
+            details: {
+                pauseDate,
+                activeView,
+                activeOperationalModel,
+                activeUnitCode,
+                activeLocationCode: school,
+                scopedPublishedEventsForDate: scopedPublishedEventsForDate.length,
+                loadedIntoNextDayBuild: activeDfpEventsForPause.length,
+                sample: scopedPublishedEventsForDate.slice(0, 40).map(event => ({
+                    id: event.id,
+                    date: event.date || null,
+                    type: event.type,
+                    flightNumber: event.flightNumber,
+                    resourceId: event.resourceId,
+                    startTime: event.startTime,
+                    duration: event.duration,
+                    instructor: event.instructor || null,
+                    pilot: event.pilot || null,
+                    student: event.student || null,
+                    isCancelled: Boolean(event.isCancelled),
+                })),
+            },
+        });
         setNextDayBuildEvents(activeDfpEventsForPause);
         setPauseOriginalEvents(activeDfpEventsForPause);
         setPauseCompletedEventIds(new Set());
@@ -52666,7 +52906,7 @@ appliedUpdates.forEach(update => {
         setPauseStagedEvents([]);
         handleNavigation('NextDayBuild');
         setShowPausePanel(true);
-    }, [canEditDfpTiles, canRunNeoBuildForActiveModel, date, denyPlatformAction, handleNavigation, isViewingPastDfp, scopedPublishedEventsForDate]);
+    }, [activeOperationalModel, activeUnitCode, activeView, canEditDfpTiles, canRunNeoBuildForActiveModel, date, denyPlatformAction, handleNavigation, isViewingPastDfp, school, scopedPublishedEventsForDate]);
 
     const contextSettingsSections = useMemo(() => ([
         { label: 'Configuration Health', sectionId: 'platform-configuration-health' },
@@ -56663,6 +56903,31 @@ appliedUpdates.forEach(update => {
                            const activeDfpEventsForPause = scopedPublishedEventsForDate.map(
                                (e: ScheduleEvent) => { const { date: _d, ...rest } = e as any; return rest as Omit<ScheduleEvent, 'date'>; }
                            );
+                           recordPauseFlightOpsDiagnostic({
+                               stage: 'panel-opened-top-toolbar',
+                               details: {
+                                   pauseDate,
+                                   activeView,
+                                   activeOperationalModel,
+                                   activeUnitCode,
+                                   activeLocationCode: school,
+                                   scopedPublishedEventsForDate: scopedPublishedEventsForDate.length,
+                                   loadedIntoNextDayBuild: activeDfpEventsForPause.length,
+                                   sample: scopedPublishedEventsForDate.slice(0, 40).map(event => ({
+                                       id: event.id,
+                                       date: event.date || null,
+                                       type: event.type,
+                                       flightNumber: event.flightNumber,
+                                       resourceId: event.resourceId,
+                                       startTime: event.startTime,
+                                       duration: event.duration,
+                                       instructor: event.instructor || null,
+                                       pilot: event.pilot || null,
+                                       student: event.student || null,
+                                       isCancelled: Boolean(event.isCancelled),
+                                   })),
+                               },
+                           });
                            setNextDayBuildEvents(activeDfpEventsForPause);
                            // Snapshot the originals so "Revert to Original" can restore them
                            setPauseOriginalEvents(activeDfpEventsForPause);
@@ -56979,6 +57244,20 @@ appliedUpdates.forEach(update => {
                             onPhaseChange={setPausePanelPhase}
                             stagedEvents={pauseStagedEvents}
                             onStagedEventsChange={setPauseStagedEvents}
+                            onDownloadDiagnostic={() => downloadPauseFlightOpsDiagnosticReport({
+                                date,
+                                buildDfpDate,
+                                activeView,
+                                activeOperationalModel,
+                                activeUnitCode,
+                                activeLocationCode: school,
+                                currentUserName,
+                                phase: pausePanelPhase,
+                                stagedEvents: pauseStagedEvents.length,
+                                completedEventIds: Array.from(pauseCompletedEventIds),
+                                nextDayBuildEvents: nextDayBuildEvents.length,
+                                scopedPublishedEventsForDate: scopedPublishedEventsForDate.length,
+                            })}
                             onOverlayTimesChange={(start, end) => {
                                 setPauseOverlayStart(start);
                                 setPauseOverlayEnd(end);

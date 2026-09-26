@@ -47,6 +47,8 @@ interface PauseFlightOpsPanelProps {
     onPhaseChange: (phase: PausePhase) => void;
     stagedEvents: ScheduleEvent[];
     onStagedEventsChange: (events: ScheduleEvent[]) => void;
+    onDownloadDiagnostic?: () => void;
+    onOverlayTimesChange?: (start: number | null, end: number | null) => void;
     resourceDisplayNames?: ResourceDisplayNames;
 }
 
@@ -64,6 +66,14 @@ const hhmmToDec = (hhmm: string): number => {
 };
 
 const isValidHHMM = (s: string) => /^\d{2}:\d{2}$/.test(s);
+
+const formatPauseDateLabel = (value: string): string => {
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(value || '')) return value;
+    const [year, month, day] = value.split('-').map(Number);
+    const date = new Date(Date.UTC(year, month - 1, day));
+    const monthLabel = date.toLocaleString('en-GB', { month: 'short', timeZone: 'UTC' });
+    return `${String(day).padStart(2, '0')} ${monthLabel} ${String(year).slice(-2)}`;
+};
 
 const normalisePauseTypeKey = (type: string): EventTypeKey => {
     const normalised = String(type || '').trim().toLowerCase();
@@ -96,6 +106,7 @@ const PauseFlightOpsPanel: React.FC<PauseFlightOpsPanelProps> = ({
     onPhaseChange,
     stagedEvents,
     onStagedEventsChange,
+    onDownloadDiagnostic,
     resourceDisplayNames = DEFAULT_RESOURCE_DISPLAY_NAMES,
 }) => {
     // ── Config state ──────────────────────────────────────────────────────────
@@ -303,7 +314,7 @@ const PauseFlightOpsPanel: React.FC<PauseFlightOpsPanelProps> = ({
                     </svg>
                     <div>
                         <h2 className="text-xs font-bold tracking-widest text-amber-300 uppercase leading-tight">Pause Flight Ops</h2>
-                        <p className="text-[9px] text-gray-400 leading-tight">{date}</p>
+                        <p className="text-[9px] text-gray-400 leading-tight">{formatPauseDateLabel(date)}</p>
                     </div>
                 </div>
                 <button
@@ -636,6 +647,15 @@ const PauseFlightOpsPanel: React.FC<PauseFlightOpsPanelProps> = ({
                             <path strokeLinecap="round" strokeLinejoin="round" d="M9 15L3 9m0 0l6-6M3 9h12a6 6 0 010 12h-3" />
                         </svg>
                         Revert to Original Daily Schedule
+                    </button>
+                )}
+
+                {onDownloadDiagnostic && (
+                    <button
+                        onClick={onDownloadDiagnostic}
+                        className="w-full py-1.5 rounded text-xs text-amber-200 hover:text-amber-100 hover:bg-amber-900/25 transition-colors border border-amber-800/50 hover:border-amber-600"
+                    >
+                        Download Pause Build Diagnostic
                     </button>
                 )}
 

@@ -110755,6 +110755,13 @@ const hhmmToDec = (hhmm) => {
   return h + (m || 0) / 60;
 };
 const isValidHHMM = (s) => /^\d{2}:\d{2}$/.test(s);
+const formatPauseDateLabel = (value) => {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(value || "")) return value;
+  const [year, month, day] = value.split("-").map(Number);
+  const date = new Date(Date.UTC(year, month - 1, day));
+  const monthLabel = date.toLocaleString("en-GB", { month: "short", timeZone: "UTC" });
+  return `${String(day).padStart(2, "0")} ${monthLabel} ${String(year).slice(-2)}`;
+};
 const normalisePauseTypeKey = (type) => {
   const normalised = String(type || "").trim().toLowerCase();
   if (normalised === "sim" || normalised === "simulator" || normalised === "ftd") return "ftd";
@@ -110783,6 +110790,7 @@ const PauseFlightOpsPanel = ({
   onPhaseChange,
   stagedEvents,
   onStagedEventsChange,
+  onDownloadDiagnostic,
   resourceDisplayNames: resourceDisplayNames2 = DEFAULT_RESOURCE_DISPLAY_NAMES
 }) => {
   const [pauseStart, setPauseStart] = reactExports.useState(decToHHMM(flyingStartTime + 2));
@@ -110966,7 +110974,7 @@ const PauseFlightOpsPanel = ({
                 /* @__PURE__ */ jsxRuntimeExports.jsx("svg", { className: "w-4 h-4 text-amber-400 flex-shrink-0", fill: "none", viewBox: "0 0 24 24", stroke: "currentColor", strokeWidth: 2, children: /* @__PURE__ */ jsxRuntimeExports.jsx("path", { strokeLinecap: "round", strokeLinejoin: "round", d: "M10 9v6m4-6v6M9 3h6l1 3H8l1-3zM5 21h14a2 2 0 002-2V8H3v11a2 2 0 002 2z" }) }),
                 /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
                   /* @__PURE__ */ jsxRuntimeExports.jsx("h2", { className: "text-xs font-bold tracking-widest text-amber-300 uppercase leading-tight", children: "Pause Flight Ops" }),
-                  /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-[9px] text-gray-400 leading-tight", children: date })
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-[9px] text-gray-400 leading-tight", children: formatPauseDateLabel(date) })
                 ] })
               ] }),
               /* @__PURE__ */ jsxRuntimeExports.jsx(
@@ -111260,6 +111268,14 @@ const PauseFlightOpsPanel = ({
                 /* @__PURE__ */ jsxRuntimeExports.jsx("svg", { className: "w-3 h-3 flex-shrink-0", fill: "none", viewBox: "0 0 24 24", stroke: "currentColor", strokeWidth: 2.5, children: /* @__PURE__ */ jsxRuntimeExports.jsx("path", { strokeLinecap: "round", strokeLinejoin: "round", d: "M9 15L3 9m0 0l6-6M3 9h12a6 6 0 010 12h-3" }) }),
                 "Revert to Original Daily Schedule"
               ]
+            }
+          ),
+          onDownloadDiagnostic && /* @__PURE__ */ jsxRuntimeExports.jsx(
+            "button",
+            {
+              onClick: onDownloadDiagnostic,
+              className: "w-full py-1.5 rounded text-xs text-amber-200 hover:text-amber-100 hover:bg-amber-900/25 transition-colors border border-amber-800/50 hover:border-amber-600",
+              children: "Download Pause Build Diagnostic"
             }
           ),
           /* @__PURE__ */ jsxRuntimeExports.jsx(
@@ -112247,6 +112263,8 @@ const NEO_ASSIST_DRAG_DIAGNOSTIC_STORAGE_KEY = "neo_assist_drag_diagnostic_repor
 const NEO_ASSIST_DRAG_DIAGNOSTIC_VERSION = 2;
 const NEO_TILE_DIAGNOSTIC_STORAGE_KEY = "neo_tile_diagnostic_report";
 const NEO_TILE_DIAGNOSTIC_VERSION = 1;
+const PAUSE_FLIGHT_OPS_DIAGNOSTIC_STORAGE_KEY = "pause_flight_ops_diagnostic_report";
+const PAUSE_FLIGHT_OPS_DIAGNOSTIC_VERSION = 1;
 const getNeoAssistPerfNow = () => typeof performance !== "undefined" && typeof performance.now === "function" ? performance.now() : Date.now();
 const recordNeoTileDiagnostic = (entry) => {
   if (typeof window === "undefined") return;
@@ -112318,6 +112336,80 @@ const downloadNeoTileDiagnosticReport = () => {
     URL.revokeObjectURL(url);
   } catch (error) {
     console.error("[NEO Tile Diagnostic] Failed to download report:", error);
+  }
+};
+const recordPauseFlightOpsDiagnostic = (entry) => {
+  if (typeof window === "undefined") return;
+  const fullEntry = {
+    ...entry,
+    at: (/* @__PURE__ */ new Date()).toISOString()
+  };
+  try {
+    const win = window;
+    const entries = Array.isArray(win.__pauseFlightOpsDiagnostics) ? win.__pauseFlightOpsDiagnostics : [];
+    entries.push(fullEntry);
+    const trimmed = entries.slice(-500);
+    win.__pauseFlightOpsDiagnostics = trimmed;
+    window.localStorage?.setItem(PAUSE_FLIGHT_OPS_DIAGNOSTIC_STORAGE_KEY, JSON.stringify({
+      generatedAt: (/* @__PURE__ */ new Date()).toISOString(),
+      app: "DFP-NEO",
+      reportType: "pause-flight-ops-diagnostic",
+      version: PAUSE_FLIGHT_OPS_DIAGNOSTIC_VERSION,
+      userAgent: window.navigator?.userAgent || "",
+      viewport: {
+        width: window.innerWidth,
+        height: window.innerHeight,
+        devicePixelRatio: window.devicePixelRatio
+      },
+      entries: trimmed
+    }));
+  } catch (error) {
+    console.warn("[Pause Flight Ops Diagnostic] Failed to record entry:", error);
+  }
+};
+const downloadPauseFlightOpsDiagnosticReport = (context = {}) => {
+  if (typeof window === "undefined") return;
+  try {
+    recordPauseFlightOpsDiagnostic({
+      stage: "report-download-requested",
+      details: {
+        context,
+        existingEntryCount: Array.isArray(window.__pauseFlightOpsDiagnostics) ? window.__pauseFlightOpsDiagnostics.length : 0
+      }
+    });
+    const stored = window.localStorage?.getItem(PAUSE_FLIGHT_OPS_DIAGNOSTIC_STORAGE_KEY);
+    const fallbackEntries = Array.isArray(window.__pauseFlightOpsDiagnostics) ? window.__pauseFlightOpsDiagnostics : [];
+    const report = stored ? JSON.parse(stored) : {
+      generatedAt: (/* @__PURE__ */ new Date()).toISOString(),
+      app: "DFP-NEO",
+      reportType: "pause-flight-ops-diagnostic",
+      version: PAUSE_FLIGHT_OPS_DIAGNOSTIC_VERSION,
+      entries: fallbackEntries
+    };
+    report.downloadedAt = (/* @__PURE__ */ new Date()).toISOString();
+    report.context = context;
+    if (!Array.isArray(report.entries) || report.entries.length === 0) {
+      report.entries = [{
+        stage: "report-empty",
+        at: (/* @__PURE__ */ new Date()).toISOString(),
+        details: {
+          reason: "No Pause Flight Ops activity was captured before this report was downloaded.",
+          nextStep: "Open Pause Flight Ops, select completed events if required, run NEO BUILD (Post-Pause), then download this report again."
+        }
+      }];
+    }
+    const blob = new Blob([JSON.stringify(report, null, 2)], { type: "application/json" });
+    const url = URL.createObjectURL(blob);
+    const safeDate = String(context.date || "no-date").replace(/[^0-9-]/g, "") || "no-date";
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = `pause-flight-ops-diagnostic-${safeDate}-${(/* @__PURE__ */ new Date()).toISOString().replace(/[:.]/g, "-")}.json`;
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    URL.revokeObjectURL(url);
+  } catch (error) {
+    console.error("[Pause Flight Ops Diagnostic] Failed to download report:", error);
   }
 };
 const recordNeoAssistDragDiagnostic = (entry) => {
@@ -149837,6 +149929,48 @@ ${conflictLines.join("\n")}${moreText}`,
       ftdStartTime: pFtdStart,
       ftdEndTime: pFtdEnd
     } = config;
+    const summarisePauseEvent = (event) => ({
+      id: event.id,
+      date: event.date || null,
+      type: event.type,
+      flightNumber: event.flightNumber,
+      resourceId: event.resourceId,
+      startTime: event.startTime,
+      duration: event.duration,
+      instructor: event.instructor || null,
+      pilot: event.pilot || null,
+      student: event.student || null,
+      isCancelled: Boolean(event.isCancelled),
+      cancellationCode: event.cancellationCode || null
+    });
+    const countPauseEventsBy = (events2, getKey) => events2.reduce((acc, event) => {
+      const key = String(getKey(event) || "blank");
+      acc[key] = (acc[key] || 0) + 1;
+      return acc;
+    }, {});
+    recordPauseFlightOpsDiagnostic({
+      stage: "build-requested",
+      details: {
+        pauseDate,
+        pauseStart,
+        pauseEnd,
+        pauseRule,
+        affectedTypes,
+        completedEventIds: Array.from(completedEventIds),
+        windows: {
+          flyingStartTime: dayStart,
+          flyingEndTime: dayEnd,
+          ftdStartTime: pFtdStart,
+          ftdEndTime: pFtdEnd
+        },
+        existingEventsFromPanel: {
+          count: Array.isArray(config.existingEvents) ? config.existingEvents.length : 0,
+          byType: countPauseEventsBy(Array.isArray(config.existingEvents) ? config.existingEvents : [], (event) => event.type),
+          byResource: countPauseEventsBy(Array.isArray(config.existingEvents) ? config.existingEvents : [], (event) => event.resourceId),
+          sample: (Array.isArray(config.existingEvents) ? config.existingEvents : []).slice(0, 40).map(summarisePauseEvent)
+        }
+      }
+    });
     const normalisePauseBuildEvent = (event) => ({
       ...event,
       date: event.date || pauseDate
@@ -149861,7 +149995,35 @@ ${conflictLines.join("\n")}${moreText}`,
       "fullRawEvents:",
       fullRawEvents.length
     );
+    recordPauseFlightOpsDiagnostic({
+      stage: "source-events-resolved",
+      details: {
+        pauseDate,
+        publishedRawEvents: {
+          count: publishedRawEvents.length,
+          byType: countPauseEventsBy(publishedRawEvents, (event) => event.type),
+          byResource: countPauseEventsBy(publishedRawEvents, (event) => event.resourceId),
+          sample: publishedRawEvents.slice(0, 40).map(summarisePauseEvent)
+        },
+        visiblePanelEvents: {
+          count: visiblePanelEvents.length,
+          byType: countPauseEventsBy(visiblePanelEvents, (event) => event.type),
+          byResource: countPauseEventsBy(visiblePanelEvents, (event) => event.resourceId),
+          sample: visiblePanelEvents.slice(0, 40).map(summarisePauseEvent)
+        },
+        mergedEvents: {
+          count: fullRawEvents.length,
+          byType: countPauseEventsBy(fullRawEvents, (event) => event.type),
+          byResource: countPauseEventsBy(fullRawEvents, (event) => event.resourceId),
+          sample: fullRawEvents.slice(0, 60).map(summarisePauseEvent)
+        }
+      }
+    });
     if (fullRawEvents.length === 0) {
+      recordPauseFlightOpsDiagnostic({
+        stage: "build-failed-no-source-events",
+        details: { pauseDate, affectedTypes, completedEventIds: Array.from(completedEventIds) }
+      });
       throw new Error("Pause Flight Ops could not find any active DFP events to rebuild.");
     }
     setPauseOverlayStart(pauseStart);
@@ -149892,7 +150054,31 @@ ${conflictLines.join("\n")}${moreText}`,
       return e;
     });
     logRoutineAppDebug("[PauseBuild] Cleared for rebuild:", cancelledIds.size, "events");
+    recordPauseFlightOpsDiagnostic({
+      stage: "events-cleared",
+      details: {
+        pauseDate,
+        clearableCount: cancelledIds.size,
+        clearedIds: Array.from(cancelledIds),
+        clearedEvents: eventsAfterCancel.filter((event) => cancelledIds.has(event.id)).slice(0, 80).map(summarisePauseEvent),
+        retainedEvents: eventsAfterCancel.filter((event) => !cancelledIds.has(event.id)).slice(0, 80).map(summarisePauseEvent)
+      }
+    });
     if (cancelledIds.size === 0) {
+      recordPauseFlightOpsDiagnostic({
+        stage: "build-failed-no-matching-events",
+        details: {
+          pauseDate,
+          pauseStart,
+          pauseEnd,
+          pauseRule,
+          affectedTypes,
+          completedEventIds: Array.from(completedEventIds),
+          sourceCount: fullRawEvents.length,
+          sourceByType: countPauseEventsBy(fullRawEvents, (event) => event.type),
+          sourceSample: fullRawEvents.slice(0, 80).map(summarisePauseEvent)
+        }
+      });
       throw new Error("Pause Flight Ops found no matching events to clear. Check the affected types and pause period.");
     }
     const lockedEvents = eventsAfterCancel.filter((e) => !e.isCancelled);
@@ -150094,6 +150280,19 @@ ${conflictLines.join("\n")}${moreText}`,
         stbyEvents2.length,
         ")"
       );
+      recordPauseFlightOpsDiagnostic({
+        stage: "build-complete-crew-model",
+        details: {
+          pauseDate,
+          finalCount: finalEvents2.length,
+          lockedCount: lockedEvents.length,
+          reprogrammedCount: rescheduledCancelledIds.size,
+          stbyCancelledCount: stbyEvents2.length,
+          finalByType: countPauseEventsBy(finalEvents2, (event) => event.type),
+          finalByResource: countPauseEventsBy(finalEvents2, (event) => event.resourceId),
+          finalSample: finalEvents2.slice(0, 100).map(summarisePauseEvent)
+        }
+      });
       return finalEvents2;
     }
     const getMedianProgressLocal = (courseName) => {
@@ -150499,6 +150698,19 @@ ${conflictLines.join("\n")}${moreText}`,
       stbyEvents.length,
       ")"
     );
+    recordPauseFlightOpsDiagnostic({
+      stage: "build-complete-flight-school-model",
+      details: {
+        pauseDate,
+        finalCount: finalEvents.length,
+        lockedCount: lockedEvents.length,
+        newlyScheduledCount: successfullyScheduled.size,
+        stbyCancelledCount: stbyEvents.length,
+        finalByType: countPauseEventsBy(finalEvents, (event) => event.type),
+        finalByResource: countPauseEventsBy(finalEvents, (event) => event.resourceId),
+        finalSample: finalEvents.slice(0, 100).map(summarisePauseEvent)
+      }
+    });
     return finalEvents;
   };
   const handlePausePublish = (stagedEvents) => {
@@ -154399,6 +154611,31 @@ ${error instanceof Error ? error.message : String(error)}`,
       const { date: _d, ...rest } = e;
       return rest;
     });
+    recordPauseFlightOpsDiagnostic({
+      stage: "panel-opened-context-menu",
+      details: {
+        pauseDate,
+        activeView,
+        activeOperationalModel,
+        activeUnitCode,
+        activeLocationCode: school,
+        scopedPublishedEventsForDate: scopedPublishedEventsForDate.length,
+        loadedIntoNextDayBuild: activeDfpEventsForPause.length,
+        sample: scopedPublishedEventsForDate.slice(0, 40).map((event) => ({
+          id: event.id,
+          date: event.date || null,
+          type: event.type,
+          flightNumber: event.flightNumber,
+          resourceId: event.resourceId,
+          startTime: event.startTime,
+          duration: event.duration,
+          instructor: event.instructor || null,
+          pilot: event.pilot || null,
+          student: event.student || null,
+          isCancelled: Boolean(event.isCancelled)
+        }))
+      }
+    });
     setNextDayBuildEvents(activeDfpEventsForPause);
     setPauseOriginalEvents(activeDfpEventsForPause);
     setPauseCompletedEventIds(/* @__PURE__ */ new Set());
@@ -154407,7 +154644,7 @@ ${error instanceof Error ? error.message : String(error)}`,
     setPauseStagedEvents([]);
     handleNavigation("NextDayBuild");
     setShowPausePanel(true);
-  }, [canEditDfpTiles, canRunNeoBuildForActiveModel, date, denyPlatformAction, handleNavigation, isViewingPastDfp, scopedPublishedEventsForDate]);
+  }, [activeOperationalModel, activeUnitCode, activeView, canEditDfpTiles, canRunNeoBuildForActiveModel, date, denyPlatformAction, handleNavigation, isViewingPastDfp, school, scopedPublishedEventsForDate]);
   const contextSettingsSections = reactExports.useMemo(() => [
     { label: "Configuration Health", sectionId: "platform-configuration-health" },
     { label: "Organisation, Bases & Areas", sectionId: "platform-organisation-locations" },
@@ -158041,6 +158278,31 @@ Do you want to replace the existing entry?`,
                   return rest;
                 }
               );
+              recordPauseFlightOpsDiagnostic({
+                stage: "panel-opened-top-toolbar",
+                details: {
+                  pauseDate,
+                  activeView,
+                  activeOperationalModel,
+                  activeUnitCode,
+                  activeLocationCode: school,
+                  scopedPublishedEventsForDate: scopedPublishedEventsForDate.length,
+                  loadedIntoNextDayBuild: activeDfpEventsForPause.length,
+                  sample: scopedPublishedEventsForDate.slice(0, 40).map((event) => ({
+                    id: event.id,
+                    date: event.date || null,
+                    type: event.type,
+                    flightNumber: event.flightNumber,
+                    resourceId: event.resourceId,
+                    startTime: event.startTime,
+                    duration: event.duration,
+                    instructor: event.instructor || null,
+                    pilot: event.pilot || null,
+                    student: event.student || null,
+                    isCancelled: Boolean(event.isCancelled)
+                  }))
+                }
+              });
               setNextDayBuildEvents(activeDfpEventsForPause);
               setPauseOriginalEvents(activeDfpEventsForPause);
               setPauseCompletedEventIds(/* @__PURE__ */ new Set());
@@ -158369,6 +158631,20 @@ Do you want to replace the existing entry?`,
                   onPhaseChange: setPausePanelPhase,
                   stagedEvents: pauseStagedEvents,
                   onStagedEventsChange: setPauseStagedEvents,
+                  onDownloadDiagnostic: () => downloadPauseFlightOpsDiagnosticReport({
+                    date,
+                    buildDfpDate,
+                    activeView,
+                    activeOperationalModel,
+                    activeUnitCode,
+                    activeLocationCode: school,
+                    currentUserName,
+                    phase: pausePanelPhase,
+                    stagedEvents: pauseStagedEvents.length,
+                    completedEventIds: Array.from(pauseCompletedEventIds),
+                    nextDayBuildEvents: nextDayBuildEvents.length,
+                    scopedPublishedEventsForDate: scopedPublishedEventsForDate.length
+                  }),
                   onOverlayTimesChange: (start, end) => {
                     setPauseOverlayStart(start);
                     setPauseOverlayEnd(end);
