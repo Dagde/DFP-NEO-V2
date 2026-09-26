@@ -1323,6 +1323,28 @@ export const NextDayBuildView: React.FC<NextDayBuildViewProps> = ({
         }
     };
 
+    const getOracleTurnaroundConflicts = (previewEvent: ScheduleEvent | null) => {
+        if (!previewEvent) return { pre: false, post: false };
+        const preDuration = previewEvent.preStart || 1.0;
+        const postDuration = previewEvent.postEnd || 0.5;
+        const preStart = previewEvent.startTime - preDuration;
+        const preEnd = previewEvent.startTime;
+        const postStart = previewEvent.startTime + previewEvent.duration;
+        const postEnd = postStart + postDuration;
+        const overlaps = (startA: number, endA: number, startB: number, endB: number) => startA < endB && endA > startB;
+        const sameRowEvents = events.filter(event =>
+            event.id !== previewEvent.id &&
+            event.resourceId === previewEvent.resourceId &&
+            !event.isCancelled &&
+            !event.resourceId?.startsWith('STBY') &&
+            !event.resourceId?.startsWith('BNF-STBY')
+        );
+        return {
+            pre: sameRowEvents.some(event => overlaps(preStart, preEnd, event.startTime, event.startTime + event.duration)),
+            post: sameRowEvents.some(event => overlaps(postStart, postEnd, event.startTime, event.startTime + event.duration)),
+        };
+    };
+
     return (
         <div
             ref={scrollContainerRef}
@@ -1431,9 +1453,34 @@ export const NextDayBuildView: React.FC<NextDayBuildViewProps> = ({
                     {isOracleMode && isOraclePlacementActive && (
                         <div
                             ref={oracleGhostRef}
-                            className="absolute left-0 top-0 z-[95] h-[28px] rounded-sm border-2 border-dashed border-sky-300 bg-sky-500/80 text-white shadow-lg shadow-black/35 pointer-events-none will-change-transform overflow-hidden"
+                            className="absolute left-0 top-0 z-[95] h-[28px] rounded-sm border-2 border-dashed border-sky-300 bg-sky-500/80 text-white shadow-lg shadow-black/35 pointer-events-none will-change-transform overflow-visible"
                             style={{ transform: 'translate3d(0, 0, 0)', width: `${Math.max(52, 1.2 * PIXELS_PER_HOUR * zoomLevel)}px` }}
                         >
+                            {(() => {
+                                const preDuration = oraclePreviewEvent?.preStart || 1.0;
+                                const postDuration = oraclePreviewEvent?.postEnd || 0.5;
+                                const conflicts = getOracleTurnaroundConflicts(oraclePreviewEvent);
+                                const preWidth = preDuration * PIXELS_PER_HOUR * zoomLevel;
+                                const postWidth = postDuration * PIXELS_PER_HOUR * zoomLevel;
+                                const preClass = conflicts.pre ? 'bg-red-500/50 border-red-400/30' : 'bg-white/50 border-white/30';
+                                const postClass = conflicts.post ? 'bg-red-500/50 border-red-400/30' : 'bg-white/50 border-white/30';
+                                return (
+                                    <>
+                                        {preDuration > 0 && (
+                                            <div
+                                                className={`absolute top-1/2 h-1 -translate-y-1/2 rounded-full border shadow-lg backdrop-blur-sm ${preClass}`}
+                                                style={{ left: `${-preWidth}px`, width: `${preWidth}px` }}
+                                            />
+                                        )}
+                                        {postDuration > 0 && (
+                                            <div
+                                                className={`absolute top-1/2 h-1 -translate-y-1/2 rounded-full border shadow-lg backdrop-blur-sm ${postClass}`}
+                                                style={{ left: '100%', width: `${postWidth}px` }}
+                                            />
+                                        )}
+                                    </>
+                                );
+                            })()}
                             <div ref={oracleGhostTimeRef} className="absolute -top-px left-1 font-mono text-[8px] text-white/60">
                                 {formatGhostTime(latestOraclePlacementRef.current?.startTime ?? oraclePreviewEvent?.startTime ?? START_HOUR)}
                             </div>

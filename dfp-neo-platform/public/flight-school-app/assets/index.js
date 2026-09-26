@@ -43074,6 +43074,23 @@ const ScheduleView = ({
       )
     ] });
   };
+  const getOracleTurnaroundConflicts = (previewEvent) => {
+    if (!previewEvent) return { pre: false, post: false };
+    const preDuration = previewEvent.preStart || 1;
+    const postDuration = previewEvent.postEnd || 0.5;
+    const preStart = previewEvent.startTime - preDuration;
+    const preEnd = previewEvent.startTime;
+    const postStart = previewEvent.startTime + previewEvent.duration;
+    const postEnd = postStart + postDuration;
+    const overlaps = (startA, endA, startB, endB) => startA < endB && endA > startB;
+    const sameRowEvents = events.filter(
+      (event) => event.id !== previewEvent.id && event.resourceId === previewEvent.resourceId && !event.isCancelled && !event.resourceId?.startsWith("STBY") && !event.resourceId?.startsWith("BNF-STBY")
+    );
+    return {
+      pre: sameRowEvents.some((event) => overlaps(preStart, preEnd, event.startTime, event.startTime + event.duration)),
+      post: sameRowEvents.some((event) => overlaps(postStart, postEnd, event.startTime, event.startTime + event.duration))
+    };
+  };
   const renderFlightLineAircraftMarkers = () => /* @__PURE__ */ jsxRuntimeExports.jsx(jsxRuntimeExports.Fragment, { children: flightLineAircraftMarkerEntries.map(({ aircraftNumber, event, hasAircraftConflict, isPreview }) => {
     const rowIndex = resources.indexOf(event.resourceId);
     if (rowIndex < 0) return null;
@@ -43867,9 +43884,34 @@ const ScheduleView = ({
                   "div",
                   {
                     ref: oracleGhostRef,
-                    className: "absolute left-0 top-0 z-[95] h-[28px] rounded-sm border-2 border-dashed border-sky-300 bg-sky-500/80 text-white shadow-lg shadow-black/35 pointer-events-none will-change-transform overflow-hidden",
+                    className: "absolute left-0 top-0 z-[95] h-[28px] rounded-sm border-2 border-dashed border-sky-300 bg-sky-500/80 text-white shadow-lg shadow-black/35 pointer-events-none will-change-transform overflow-visible",
                     style: { transform: "translate3d(0, 0, 0)", width: `${Math.max(52, 1.2 * PIXELS_PER_HOUR$6 * zoomLevel)}px` },
                     children: [
+                      (() => {
+                        const preDuration = oraclePreviewEvent?.preStart || 1;
+                        const postDuration = oraclePreviewEvent?.postEnd || 0.5;
+                        const conflicts = getOracleTurnaroundConflicts(oraclePreviewEvent);
+                        const preWidth = preDuration * PIXELS_PER_HOUR$6 * zoomLevel;
+                        const postWidth = postDuration * PIXELS_PER_HOUR$6 * zoomLevel;
+                        const preClass = conflicts.pre ? "bg-red-500/50 border-red-400/30" : "bg-white/50 border-white/30";
+                        const postClass = conflicts.post ? "bg-red-500/50 border-red-400/30" : "bg-white/50 border-white/30";
+                        return /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
+                          preDuration > 0 && /* @__PURE__ */ jsxRuntimeExports.jsx(
+                            "div",
+                            {
+                              className: `absolute top-1/2 h-1 -translate-y-1/2 rounded-full border shadow-lg backdrop-blur-sm ${preClass}`,
+                              style: { left: `${-preWidth}px`, width: `${preWidth}px` }
+                            }
+                          ),
+                          postDuration > 0 && /* @__PURE__ */ jsxRuntimeExports.jsx(
+                            "div",
+                            {
+                              className: `absolute top-1/2 h-1 -translate-y-1/2 rounded-full border shadow-lg backdrop-blur-sm ${postClass}`,
+                              style: { left: "100%", width: `${postWidth}px` }
+                            }
+                          )
+                        ] });
+                      })(),
                       /* @__PURE__ */ jsxRuntimeExports.jsx("div", { ref: oracleGhostTimeRef, className: "absolute -top-px left-1 font-mono text-[8px] text-white/60", children: formatGhostTime$1(latestOraclePlacementRef.current?.startTime ?? oraclePreviewEvent?.startTime ?? START_HOUR$6) }),
                       /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex h-full w-full items-center justify-between px-2 text-[9px] font-bold leading-tight", children: [
                         /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "min-w-0 flex-1 overflow-hidden pr-1", style: { paddingLeft: "calc(10% + 2px)" }, children: [
@@ -70522,6 +70564,23 @@ const NextDayBuildView = ({
       return "-";
     }
   };
+  const getOracleTurnaroundConflicts = (previewEvent) => {
+    if (!previewEvent) return { pre: false, post: false };
+    const preDuration = previewEvent.preStart || 1;
+    const postDuration = previewEvent.postEnd || 0.5;
+    const preStart = previewEvent.startTime - preDuration;
+    const preEnd = previewEvent.startTime;
+    const postStart = previewEvent.startTime + previewEvent.duration;
+    const postEnd = postStart + postDuration;
+    const overlaps = (startA, endA, startB, endB) => startA < endB && endA > startB;
+    const sameRowEvents = events.filter(
+      (event) => event.id !== previewEvent.id && event.resourceId === previewEvent.resourceId && !event.isCancelled && !event.resourceId?.startsWith("STBY") && !event.resourceId?.startsWith("BNF-STBY")
+    );
+    return {
+      pre: sameRowEvents.some((event) => overlaps(preStart, preEnd, event.startTime, event.startTime + event.duration)),
+      post: sameRowEvents.some((event) => overlaps(postStart, postEnd, event.startTime, event.startTime + event.duration))
+    };
+  };
   return /* @__PURE__ */ jsxRuntimeExports.jsx(
     "div",
     {
@@ -70629,9 +70688,34 @@ const NextDayBuildView = ({
                     "div",
                     {
                       ref: oracleGhostRef,
-                      className: "absolute left-0 top-0 z-[95] h-[28px] rounded-sm border-2 border-dashed border-sky-300 bg-sky-500/80 text-white shadow-lg shadow-black/35 pointer-events-none will-change-transform overflow-hidden",
+                      className: "absolute left-0 top-0 z-[95] h-[28px] rounded-sm border-2 border-dashed border-sky-300 bg-sky-500/80 text-white shadow-lg shadow-black/35 pointer-events-none will-change-transform overflow-visible",
                       style: { transform: "translate3d(0, 0, 0)", width: `${Math.max(52, 1.2 * PIXELS_PER_HOUR$3 * zoomLevel)}px` },
                       children: [
+                        (() => {
+                          const preDuration = oraclePreviewEvent?.preStart || 1;
+                          const postDuration = oraclePreviewEvent?.postEnd || 0.5;
+                          const conflicts = getOracleTurnaroundConflicts(oraclePreviewEvent);
+                          const preWidth = preDuration * PIXELS_PER_HOUR$3 * zoomLevel;
+                          const postWidth = postDuration * PIXELS_PER_HOUR$3 * zoomLevel;
+                          const preClass = conflicts.pre ? "bg-red-500/50 border-red-400/30" : "bg-white/50 border-white/30";
+                          const postClass = conflicts.post ? "bg-red-500/50 border-red-400/30" : "bg-white/50 border-white/30";
+                          return /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
+                            preDuration > 0 && /* @__PURE__ */ jsxRuntimeExports.jsx(
+                              "div",
+                              {
+                                className: `absolute top-1/2 h-1 -translate-y-1/2 rounded-full border shadow-lg backdrop-blur-sm ${preClass}`,
+                                style: { left: `${-preWidth}px`, width: `${preWidth}px` }
+                              }
+                            ),
+                            postDuration > 0 && /* @__PURE__ */ jsxRuntimeExports.jsx(
+                              "div",
+                              {
+                                className: `absolute top-1/2 h-1 -translate-y-1/2 rounded-full border shadow-lg backdrop-blur-sm ${postClass}`,
+                                style: { left: "100%", width: `${postWidth}px` }
+                              }
+                            )
+                          ] });
+                        })(),
                         /* @__PURE__ */ jsxRuntimeExports.jsx("div", { ref: oracleGhostTimeRef, className: "absolute -top-px left-1 font-mono text-[8px] text-white/60", children: formatGhostTime(latestOraclePlacementRef.current?.startTime ?? oraclePreviewEvent?.startTime ?? START_HOUR$3) }),
                         /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex h-full w-full items-center justify-between px-2 text-[9px] font-bold leading-tight", children: [
                           /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "min-w-0 flex-1 overflow-hidden pr-1", style: { paddingLeft: "calc(10% + 2px)" }, children: [
