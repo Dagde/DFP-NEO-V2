@@ -25013,13 +25013,27 @@ const applyCoursePriority = (rankedList: Trainee[], diagnosticLabel = 'unlabelle
         const SOLO_WINDOW_START = 9;    // 09:00 — matches check inside scheduleEvent
         const SOLO_WINDOW_END   = 15;   // 15:00
 
-        // Split solo list into groups of up to MAX_SOLO_GROUP_SIZE
+        const getSoloGroupingEventCode = (trainee: Trainee): string => {
+            const next = traineeNextEventMap.get(getBuildTraineeKey(trainee))?.next;
+            return normalizeLmpEventId(next?.code || next?.id || next?.masterEventId || 'SOLO');
+        };
+
+        // Split solo list into same-event groups, then into batches of up to MAX_SOLO_GROUP_SIZE.
+        // This keeps GF11s together and GF21s together instead of mixing solo event numbers.
         const soloGroups: Trainee[][] = [];
-        for (let gi = 0; gi < _soloFlightList.length; gi += MAX_SOLO_GROUP_SIZE) {
-            soloGroups.push(_soloFlightList.slice(gi, gi + MAX_SOLO_GROUP_SIZE));
+        const soloGroupsByEvent = new Map<string, Trainee[]>();
+        for (const trainee of _soloFlightList) {
+            const eventCode = getSoloGroupingEventCode(trainee);
+            if (!soloGroupsByEvent.has(eventCode)) soloGroupsByEvent.set(eventCode, []);
+            soloGroupsByEvent.get(eventCode)!.push(trainee);
+        }
+        for (const sameEventSoloList of soloGroupsByEvent.values()) {
+            for (let gi = 0; gi < sameEventSoloList.length; gi += MAX_SOLO_GROUP_SIZE) {
+                soloGroups.push(sameEventSoloList.slice(gi, gi + MAX_SOLO_GROUP_SIZE));
+            }
         }
 
-        buildDebugLog(`[SOLO] ${_soloFlightList.length} solo trainees → ${soloGroups.length} group(s) of up to ${MAX_SOLO_GROUP_SIZE}`);
+        buildDebugLog(`[SOLO] ${_soloFlightList.length} solo trainees → ${soloGroups.length} same-event group(s) of up to ${MAX_SOLO_GROUP_SIZE}. Event groups: ${Array.from(soloGroupsByEvent.entries()).map(([code, trainees]) => `${code}:${trainees.length}`).join(', ')}`);
 
         // Track where to start searching for the next group.
         // Begin at the solo window start (09:00), but never before flyingStartTime.
@@ -47915,7 +47929,60 @@ const App: React.FC = () => {
         }
 
         // ── Step 5b: Reschedule FLIGHT events ──────────────────────────────────────────
-        const flightEntries = affectedEntries.filter(e => e.eventType === 'flight');
+        const getPauseSoloGroupingEventCode = (entry: AffectedTraineeEntry): string =>
+            normalizeLmpEventId(entry.syllabusItem.code || entry.syllabusItem.id || entry.syllabusItem.masterEventId || 'SOLO');
+
+        const isPauseSoloEntry = (entry: AffectedTraineeEntry): boolean =>
+            String(entry.syllabusItem.sortieType || '').trim().toLowerCase() === 'solo';
+
+        const orderPauseFlightEntriesForScheduling = (entries: AffectedTraineeEntry[]): AffectedTraineeEntry[] => {
+            const orderedGroups: AffectedTraineeEntry[][] = [];
+            const soloGroupIndexes = new Map<string, number>();
+
+            for (const entry of entries) {
+                if (!isPauseSoloEntry(entry)) {
+                    orderedGroups.push([entry]);
+                    continue;
+                }
+
+                const eventCode = getPauseSoloGroupingEventCode(entry);
+                const existingGroupIndex = soloGroupIndexes.get(eventCode);
+                if (typeof existingGroupIndex === 'number') {
+                    orderedGroups[existingGroupIndex].push(entry);
+                } else {
+                    soloGroupIndexes.set(eventCode, orderedGroups.length);
+                    orderedGroups.push([entry]);
+                }
+            }
+
+            return orderedGroups.flat();
+        };
+
+        const rawFlightEntries = affectedEntries.filter(e => e.eventType === 'flight');
+        const flightEntries = orderPauseFlightEntriesForScheduling(rawFlightEntries);
+        recordPauseFlightOpsDiagnostic({
+            stage: 'flight-entries-ordered',
+            details: {
+                pauseDate,
+                flightEntryCount: flightEntries.length,
+                soloEventGroups: Array.from(
+                    rawFlightEntries
+                        .filter(isPauseSoloEntry)
+                        .reduce((groups, entry) => {
+                            const eventCode = getPauseSoloGroupingEventCode(entry);
+                            groups.set(eventCode, (groups.get(eventCode) || 0) + 1);
+                            return groups;
+                        }, new Map<string, number>())
+                        .entries()
+                ).map(([eventCode, count]) => ({ eventCode, count })),
+                orderedSample: flightEntries.slice(0, 80).map(entry => ({
+                    trainee: entry.trainee.fullName,
+                    eventCode: entry.syllabusItem.code || entry.syllabusItem.id,
+                    sortieType: entry.syllabusItem.sortieType || null,
+                    priorityScore: entry.originalPriorityScore,
+                })),
+            },
+        });
 
         for (const entry of flightEntries) {
             const { trainee, syllabusItem, eventType } = entry;

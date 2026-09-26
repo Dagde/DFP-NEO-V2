@@ -132204,11 +132204,23 @@ async function generateDfpInternal(config, setProgress, publishedSchedules) {
       const MAX_SOLO_GROUP_SIZE = 4;
       const SOLO_WINDOW_START = 9;
       const SOLO_WINDOW_END = 15;
+      const getSoloGroupingEventCode = (trainee) => {
+        const next = traineeNextEventMap.get(getBuildTraineeKey(trainee))?.next;
+        return normalizeLmpEventId(next?.code || next?.id || next?.masterEventId || "SOLO");
+      };
       const soloGroups = [];
-      for (let gi = 0; gi < _soloFlightList.length; gi += MAX_SOLO_GROUP_SIZE) {
-        soloGroups.push(_soloFlightList.slice(gi, gi + MAX_SOLO_GROUP_SIZE));
+      const soloGroupsByEvent = /* @__PURE__ */ new Map();
+      for (const trainee of _soloFlightList) {
+        const eventCode2 = getSoloGroupingEventCode(trainee);
+        if (!soloGroupsByEvent.has(eventCode2)) soloGroupsByEvent.set(eventCode2, []);
+        soloGroupsByEvent.get(eventCode2).push(trainee);
       }
-      buildDebugLog(`[SOLO] ${_soloFlightList.length} solo trainees → ${soloGroups.length} group(s) of up to ${MAX_SOLO_GROUP_SIZE}`);
+      for (const sameEventSoloList of soloGroupsByEvent.values()) {
+        for (let gi = 0; gi < sameEventSoloList.length; gi += MAX_SOLO_GROUP_SIZE) {
+          soloGroups.push(sameEventSoloList.slice(gi, gi + MAX_SOLO_GROUP_SIZE));
+        }
+      }
+      buildDebugLog(`[SOLO] ${_soloFlightList.length} solo trainees → ${soloGroups.length} same-event group(s) of up to ${MAX_SOLO_GROUP_SIZE}. Event groups: ${Array.from(soloGroupsByEvent.entries()).map(([code, trainees2]) => `${code}:${trainees2.length}`).join(", ")}`);
       let groupSearchStart = Math.max(flyingStartTime, SOLO_WINDOW_START);
       for (let gi = 0; gi < soloGroups.length; gi++) {
         const group = soloGroups[gi];
@@ -150616,7 +150628,49 @@ ${conflictLines.join("\n")}${moreText}`,
           }
         }
       }
-      const flightEntries = affectedEntries.filter((e) => e.eventType === "flight");
+      const getPauseSoloGroupingEventCode = (entry) => normalizeLmpEventId(entry.syllabusItem.code || entry.syllabusItem.id || entry.syllabusItem.masterEventId || "SOLO");
+      const isPauseSoloEntry = (entry) => String(entry.syllabusItem.sortieType || "").trim().toLowerCase() === "solo";
+      const orderPauseFlightEntriesForScheduling = (entries) => {
+        const orderedGroups = [];
+        const soloGroupIndexes = /* @__PURE__ */ new Map();
+        for (const entry of entries) {
+          if (!isPauseSoloEntry(entry)) {
+            orderedGroups.push([entry]);
+            continue;
+          }
+          const eventCode2 = getPauseSoloGroupingEventCode(entry);
+          const existingGroupIndex = soloGroupIndexes.get(eventCode2);
+          if (typeof existingGroupIndex === "number") {
+            orderedGroups[existingGroupIndex].push(entry);
+          } else {
+            soloGroupIndexes.set(eventCode2, orderedGroups.length);
+            orderedGroups.push([entry]);
+          }
+        }
+        return orderedGroups.flat();
+      };
+      const rawFlightEntries = affectedEntries.filter((e) => e.eventType === "flight");
+      const flightEntries = orderPauseFlightEntriesForScheduling(rawFlightEntries);
+      recordPauseFlightOpsDiagnostic({
+        stage: "flight-entries-ordered",
+        details: {
+          pauseDate,
+          flightEntryCount: flightEntries.length,
+          soloEventGroups: Array.from(
+            rawFlightEntries.filter(isPauseSoloEntry).reduce((groups, entry) => {
+              const eventCode2 = getPauseSoloGroupingEventCode(entry);
+              groups.set(eventCode2, (groups.get(eventCode2) || 0) + 1);
+              return groups;
+            }, /* @__PURE__ */ new Map()).entries()
+          ).map(([eventCode2, count]) => ({ eventCode: eventCode2, count })),
+          orderedSample: flightEntries.slice(0, 80).map((entry) => ({
+            trainee: entry.trainee.fullName,
+            eventCode: entry.syllabusItem.code || entry.syllabusItem.id,
+            sortieType: entry.syllabusItem.sortieType || null,
+            priorityScore: entry.originalPriorityScore
+          }))
+        }
+      });
       for (const entry of flightEntries) {
         const { trainee, syllabusItem, eventType } = entry;
         const duration = syllabusItem.duration;
