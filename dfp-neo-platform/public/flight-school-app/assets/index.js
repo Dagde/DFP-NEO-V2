@@ -38215,6 +38215,14 @@ const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, lo
             className: wizardInputClass,
             value: name,
             placeholder: "Name",
+            onKeyDownCapture: (event) => handleEditableTextKeyDownCapture(event, (nextValue) => updateResourceDraft((draft) => ({
+              ...draft,
+              classrooms: updateClassroomNameForRow(draft.classrooms, rowCount, index, nextValue).join("\n")
+            }))),
+            onBeforeInput: (event) => handleEditableTextBeforeInput(event, (nextValue) => updateResourceDraft((draft) => ({
+              ...draft,
+              classrooms: updateClassroomNameForRow(draft.classrooms, rowCount, index, nextValue).join("\n")
+            }))),
             onKeyDown: stopEditableKeyPropagation,
             onChange: (event) => updateResourceDraft((draft) => ({
               ...draft,
@@ -38280,6 +38288,8 @@ const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, lo
               className: wizardInputClass,
               value: event.label,
               placeholder: "Event name",
+              onKeyDownCapture: (keyEvent) => handleEditableTextKeyDownCapture(keyEvent, (nextValue) => updateEvent(index, { label: nextValue })),
+              onBeforeInput: (inputEvent) => handleEditableTextBeforeInput(inputEvent, (nextValue) => updateEvent(index, { label: nextValue })),
               onKeyDown: stopEditableKeyPropagation,
               onChange: (changeEvent) => updateEvent(index, { label: changeEvent.target.value })
             }

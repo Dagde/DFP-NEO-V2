@@ -13,7 +13,7 @@ import { VisualAdjustGuide } from './VisualAdjustGuide';
 import { AircraftNumberSettings, normaliseAircraftNumberSettings } from '../utils/aircraftNumberFormat';
 import { getOperationalModelLabel, getPlatformPermissionProfiles, getUnitOperationalModel, normaliseMasterLmpAccessRules, normaliseOperationalModel, OPERATIONAL_MODEL_OPTIONS } from '../utils/platformConfigService';
 import { getTaskProfileAbbreviationsForUnit, getTaskProfilesForModel } from '../utils/taskProfiles';
-import { stopEditableKeyPropagation } from '../utils/editableKeyEvents';
+import { handleEditableTextBeforeInput, handleEditableTextKeyDownCapture, stopEditableKeyPropagation } from '../utils/editableKeyEvents';
 import { AIRCRAFT_CREW_RESOURCE_KINDS, normaliseAircraftCrewComposition } from '../utils/aircraftCrewComposition';
 import { normaliseCrewCompositionSettings } from '../utils/crewCompositionProfiles';
 import { getCrewPositionLabelMap, getCrewPositionOptions, normaliseCrewPositionTerminology } from '../utils/crewPositionTerminology';
@@ -8087,6 +8087,14 @@ const InitialSetupWizard: React.FC<{
                                     className={wizardInputClass}
                                     value={name}
                                     placeholder="Name"
+                                    onKeyDownCapture={(event) => handleEditableTextKeyDownCapture(event, (nextValue) => updateResourceDraft((draft) => ({
+                                        ...draft,
+                                        classrooms: updateClassroomNameForRow(draft.classrooms, rowCount, index, nextValue).join('\n'),
+                                    })))}
+                                    onBeforeInput={(event) => handleEditableTextBeforeInput(event, (nextValue) => updateResourceDraft((draft) => ({
+                                        ...draft,
+                                        classrooms: updateClassroomNameForRow(draft.classrooms, rowCount, index, nextValue).join('\n'),
+                                    })))}
                                     onKeyDown={stopEditableKeyPropagation}
                                     onChange={(event) => updateResourceDraft((draft) => ({
                                         ...draft,
@@ -8159,6 +8167,8 @@ const InitialSetupWizard: React.FC<{
                                         className={wizardInputClass}
                                         value={event.label}
                                         placeholder="Event name"
+                                        onKeyDownCapture={(keyEvent) => handleEditableTextKeyDownCapture(keyEvent, (nextValue) => updateEvent(index, { label: nextValue }))}
+                                        onBeforeInput={(inputEvent) => handleEditableTextBeforeInput(inputEvent, (nextValue) => updateEvent(index, { label: nextValue }))}
                                         onKeyDown={stopEditableKeyPropagation}
                                         onChange={(changeEvent) => updateEvent(index, { label: changeEvent.target.value })}
                                     />
