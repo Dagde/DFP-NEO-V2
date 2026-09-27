@@ -57134,9 +57134,9 @@ appliedUpdates.forEach(update => {
                         }
                         setShowValidation(show);
                     }}
-                    contextOptions={operationalContextOptions}
-                    activeLocation={school}
-                    activeUnit={activeUnitCode}
+                    contextOptions={showInitialSetupBlankState ? [] : operationalContextOptions}
+                    activeLocation={showInitialSetupBlankState ? '' : school}
+                    activeUnit={showInitialSetupBlankState ? '' : activeUnitCode}
                     onContextChange={(loc, unit) => changeOperationalContext(loc, unit)}
                     activeModelLabel={activeOperationalModelLabel}
                     isMagnifierEnabled={isMagnifierEnabled}
