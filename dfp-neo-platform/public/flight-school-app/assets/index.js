@@ -41622,7 +41622,7 @@ const OrganisationSlideoutDiagram = ({ platformConfig, organisationSettings, uni
   const [activeView, setActiveView] = reactExports.useState(initialView);
   reactExports.useEffect(() => {
     if (!isOpen) return;
-    setActiveView((currentView) => currentView === "setupWizard" && initialView !== "setupWizard" ? currentView : initialView);
+    setActiveView(initialView);
   }, [initialView, isOpen]);
   reactExports.useEffect(() => {
     onInitialSetupWizardActiveChange?.(Boolean(isOpen && activeView === "setupWizard"));
@@ -156247,7 +156247,7 @@ It will not clear the published DFP.`,
             isNeoAssistPanelOpen: showDfpSidePanel,
             isFlightLinePanelOpen: showFlightLinePanel,
             showInitialSetupBlankState,
-            initialOrganisationSlideoutView: showInitialSetupBlankState || isInitialSetupWizardActive ? "setupWizard" : "structure",
+            initialOrganisationSlideoutView: showInitialSetupBlankState ? "setupWizard" : "structure",
             onOrganisationSlideoutOpen: () => {
               setShowDfpSidePanel(false);
               setShowFlightLinePanel(false);

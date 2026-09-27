@@ -12036,11 +12036,7 @@ const OrganisationSlideoutDiagram: React.FC<{
     const [activeView, setActiveView] = useState<OrganisationSlideoutView>(initialView);
     useEffect(() => {
         if (!isOpen) return;
-        setActiveView((currentView) => (
-            currentView === 'setupWizard' && initialView !== 'setupWizard'
-                ? currentView
-                : initialView
-        ));
+        setActiveView(initialView);
     }, [initialView, isOpen]);
     useEffect(() => {
         onInitialSetupWizardActiveChange?.(Boolean(isOpen && activeView === 'setupWizard'));
