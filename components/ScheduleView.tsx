@@ -12290,11 +12290,32 @@ const ScheduleView: React.FC<ScheduleViewProps> = ({
             return false;
         }
     }, []);
+    const hasPersistedInitialSetupWizardProgress = useCallback(() => (
+        (platformConfig?.organisations || []).some((organisation: any) => {
+            const settings = organisation?.settings || {};
+            const drafts = settings.initialSetupWizardDrafts || settings.initialSetupWizardDraft;
+            if (!drafts || typeof drafts !== 'object') return false;
+            return Boolean(
+                drafts.updatedAt ||
+                drafts.organisationDraft ||
+                drafts.locationsTodayDraft ||
+                drafts.locationDraft ||
+                drafts.unitsTodayDraft ||
+                drafts.unitDraft ||
+                drafts.resourceDraft ||
+                drafts.unitModulesDraft ||
+                drafts.buildRules
+            );
+        })
+    ), [platformConfig]);
+    const hasInitialSetupWizardProgress = useCallback(() => (
+        hasStoredInitialSetupWizardProgress() || hasPersistedInitialSetupWizardProgress()
+    ), [hasPersistedInitialSetupWizardProgress, hasStoredInitialSetupWizardProgress]);
     useEffect(() => {
-        if (!showInitialSetupBlankState || showResourceUnderlayPanel || !hasStoredInitialSetupWizardProgress()) return;
+        if (!showInitialSetupBlankState || showResourceUnderlayPanel || !hasInitialSetupWizardProgress()) return;
         onOrganisationSlideoutOpen?.();
         setShowResourceUnderlayPanel(true);
-    }, [hasStoredInitialSetupWizardProgress, onOrganisationSlideoutOpen, platformConfig, showInitialSetupBlankState, showResourceUnderlayPanel]);
+    }, [hasInitialSetupWizardProgress, onOrganisationSlideoutOpen, platformConfig, showInitialSetupBlankState, showResourceUnderlayPanel]);
     const downloadInitialSetupLocationTrace = useCallback(() => {
         if (typeof window === 'undefined') return;
         let persistedTrace: any[] = [];
@@ -12325,7 +12346,7 @@ const ScheduleView: React.FC<ScheduleViewProps> = ({
         document.body.removeChild(link);
         window.URL.revokeObjectURL(url);
     }, [locationCode, unitCode]);
-    const shouldShowInitialSetupPrompt = showInitialSetupBlankState && !showResourceUnderlayPanel && !hasStoredInitialSetupWizardProgress();
+    const shouldShowInitialSetupPrompt = showInitialSetupBlankState && !showResourceUnderlayPanel && !hasInitialSetupWizardProgress();
     const openInitialSetupWizard = useCallback(() => {
         onOrganisationSlideoutOpen?.();
         setShowResourceUnderlayPanel(true);

@@ -41996,11 +41996,20 @@ const ScheduleView = ({
       return false;
     }
   }, []);
+  const hasPersistedInitialSetupWizardProgress = reactExports.useCallback(() => (platformConfig?.organisations || []).some((organisation) => {
+    const settings = organisation?.settings || {};
+    const drafts = settings.initialSetupWizardDrafts || settings.initialSetupWizardDraft;
+    if (!drafts || typeof drafts !== "object") return false;
+    return Boolean(
+      drafts.updatedAt || drafts.organisationDraft || drafts.locationsTodayDraft || drafts.locationDraft || drafts.unitsTodayDraft || drafts.unitDraft || drafts.resourceDraft || drafts.unitModulesDraft || drafts.buildRules
+    );
+  }), [platformConfig]);
+  const hasInitialSetupWizardProgress = reactExports.useCallback(() => hasStoredInitialSetupWizardProgress() || hasPersistedInitialSetupWizardProgress(), [hasPersistedInitialSetupWizardProgress, hasStoredInitialSetupWizardProgress]);
   reactExports.useEffect(() => {
-    if (!showInitialSetupBlankState || showResourceUnderlayPanel || !hasStoredInitialSetupWizardProgress()) return;
+    if (!showInitialSetupBlankState || showResourceUnderlayPanel || !hasInitialSetupWizardProgress()) return;
     onOrganisationSlideoutOpen?.();
     setShowResourceUnderlayPanel(true);
-  }, [hasStoredInitialSetupWizardProgress, onOrganisationSlideoutOpen, platformConfig, showInitialSetupBlankState, showResourceUnderlayPanel]);
+  }, [hasInitialSetupWizardProgress, onOrganisationSlideoutOpen, platformConfig, showInitialSetupBlankState, showResourceUnderlayPanel]);
   const downloadInitialSetupLocationTrace = reactExports.useCallback(() => {
     if (typeof window === "undefined") return;
     let persistedTrace = [];
@@ -42031,7 +42040,7 @@ const ScheduleView = ({
     document.body.removeChild(link);
     window.URL.revokeObjectURL(url);
   }, [locationCode, unitCode]);
-  const shouldShowInitialSetupPrompt = showInitialSetupBlankState && !showResourceUnderlayPanel && !hasStoredInitialSetupWizardProgress();
+  const shouldShowInitialSetupPrompt = showInitialSetupBlankState && !showResourceUnderlayPanel && !hasInitialSetupWizardProgress();
   const openInitialSetupWizard = reactExports.useCallback(() => {
     onOrganisationSlideoutOpen?.();
     setShowResourceUnderlayPanel(true);
@@ -137389,7 +137398,32 @@ const App = () => {
     })).filter((option) => option.units.length > 0),
     [getUnitOptionsForLocation, selectableLocationCodes]
   );
-  const canBootstrapInitialSetupFromDfp = hasAuthenticatedAdminRole && platformConfigLoaded && operationalContextOptions.length === 0;
+  const hasStoredInitialSetupWizardProgress = reactExports.useCallback(() => {
+    if (typeof window === "undefined") return false;
+    const storedStep = Number(window.localStorage.getItem("dfp-initial-setup-wizard-step"));
+    if (Number.isFinite(storedStep) && storedStep > 0) return true;
+    if (window.localStorage.getItem("dfp-initial-setup-wizard-organisation-draft")) return true;
+    try {
+      const completedSteps = JSON.parse(window.localStorage.getItem("dfp-initial-setup-wizard-completed-steps") || "[]");
+      return Array.isArray(completedSteps) && completedSteps.length > 0;
+    } catch {
+      return false;
+    }
+  }, []);
+  const hasPersistedInitialSetupWizardProgress = reactExports.useMemo(() => (platformConfig?.organisations || []).some((organisation) => {
+    const settings = organisation?.settings || {};
+    const drafts = settings.initialSetupWizardDrafts || settings.initialSetupWizardDraft;
+    if (!drafts || typeof drafts !== "object") return false;
+    return Boolean(
+      drafts.updatedAt || drafts.organisationDraft || drafts.locationsTodayDraft || drafts.locationDraft || drafts.unitsTodayDraft || drafts.unitDraft || drafts.resourceDraft || drafts.unitModulesDraft || drafts.buildRules
+    );
+  }), [platformConfig]);
+  const hasActiveOperationalUnit = operationalContextOptions.some((option) => option.units.length > 0);
+  const hasActiveOperationalResourcePool = reactExports.useMemo(() => (platformConfig?.resourcePools || []).some((pool) => String(pool?.status || "ACTIVE").toUpperCase() !== "INACTIVE" && String(pool?.unitCode || "").trim()), [platformConfig]);
+  const hasActiveOperationalAircraftType = reactExports.useMemo(() => (platformConfig?.aircraftTypes || []).some((aircraftType) => String(aircraftType?.status || "ACTIVE").toUpperCase() !== "INACTIVE" && String(aircraftType?.code || "").trim()), [platformConfig]);
+  const hasOperationalSetupReadyForDfp = hasActiveOperationalUnit && hasActiveOperationalResourcePool && hasActiveOperationalAircraftType;
+  const hasInitialSetupWizardProgress = hasPersistedInitialSetupWizardProgress || hasStoredInitialSetupWizardProgress();
+  const canBootstrapInitialSetupFromDfp = hasAuthenticatedAdminRole && platformConfigLoaded && (operationalContextOptions.length === 0 || hasInitialSetupWizardProgress && !hasOperationalSetupReadyForDfp);
   const showInitialSetupBlankState = canBootstrapInitialSetupFromDfp;
   reactExports.useEffect(() => {
     if (!setupTestProfile) return;
@@ -137714,28 +137748,16 @@ const App = () => {
     platformDataScopeQuery,
     selectableLocationCodes
   ]);
-  const hasStoredInitialSetupWizardProgress = reactExports.useCallback(() => {
-    if (typeof window === "undefined") return false;
-    const storedStep = Number(window.localStorage.getItem("dfp-initial-setup-wizard-step"));
-    if (Number.isFinite(storedStep) && storedStep > 0) return true;
-    if (window.localStorage.getItem("dfp-initial-setup-wizard-organisation-draft")) return true;
-    try {
-      const completedSteps = JSON.parse(window.localStorage.getItem("dfp-initial-setup-wizard-completed-steps") || "[]");
-      return Array.isArray(completedSteps) && completedSteps.length > 0;
-    } catch {
-      return false;
-    }
-  }, []);
   reactExports.useEffect(() => {
     if (!platformConfigLoaded || selectableLocationCodes.length === 0) return;
     if (selectableLocationCodes.includes(school)) return;
-    const hasInitialSetupWizardProgress = hasStoredInitialSetupWizardProgress();
-    if (isInitialSetupWizardActive || hasInitialSetupWizardProgress) {
+    const hasInitialSetupWizardProgress2 = hasStoredInitialSetupWizardProgress();
+    if (isInitialSetupWizardActive || hasInitialSetupWizardProgress2) {
       pushDfpDataDiag("context:auto-location-switch-suppressed-for-initial-setup", {
         school,
         selectableLocationCodes,
         isInitialSetupWizardActive,
-        hasInitialSetupWizardProgress
+        hasInitialSetupWizardProgress: hasInitialSetupWizardProgress2
       });
       return;
     }
@@ -139420,7 +139442,7 @@ const App = () => {
     }
   }, [activeUnitCode, applyDailySnapshot, getDailySnapshotLocationAliases, hasRuntimePlatformWideAccess, school]);
   reactExports.useEffect(() => {
-    if (setupTestProfile || isInitialSetupWizardActive) {
+    if (setupTestProfile || isInitialSetupWizardActive || showInitialSetupBlankState) {
       loadingSnapshotDates.current.clear();
       if (setupTestProfile) {
         loadedSnapshotDates.current.clear();
@@ -139434,7 +139456,7 @@ const App = () => {
     }
     if (!date || !/^\d{4}-\d{2}-\d{2}$/.test(date)) return;
     void loadSnapshotForDate(date, { useCache: true, allowAdminFallbackContext: false });
-  }, [activeUnitCode, date, school, loadSnapshotForDate, isInitialSetupWizardActive, setupTestProfile]);
+  }, [activeUnitCode, date, school, loadSnapshotForDate, isInitialSetupWizardActive, setupTestProfile, showInitialSetupBlankState]);
   reactExports.useEffect(() => {
     if (activeView !== "Program Schedule") {
       lastProgramScheduleMountKeyRef.current = "";
@@ -139447,14 +139469,14 @@ const App = () => {
       setProgramScheduleViewKey((value) => value + 1);
     }
     if (!shouldRefreshOnEntry) return;
-    if (setupTestProfile || isInitialSetupWizardActive || !date || !/^\d{4}-\d{2}-\d{2}$/.test(date)) return;
+    if (setupTestProfile || isInitialSetupWizardActive || showInitialSetupBlankState || !date || !/^\d{4}-\d{2}-\d{2}$/.test(date)) return;
     const currentEvents = publishedSchedulesRef.current[date] || [];
     if (currentEvents.length > 0) return;
     const snapshotKey = getDailySnapshotKey(date, school, activeUnitCode);
     if (loadedSnapshotDates.current.has(snapshotKey)) return;
     loadedSnapshotDates.current.delete(snapshotKey);
     void loadSnapshotForDate(date, { force: true, replace: false, useCache: true, allowAdminFallbackContext: false });
-  }, [activeUnitCode, activeView, date, isInitialSetupWizardActive, loadSnapshotForDate, school, setupTestProfile]);
+  }, [activeUnitCode, activeView, date, isInitialSetupWizardActive, loadSnapshotForDate, school, setupTestProfile, showInitialSetupBlankState]);
   const handleUserChange = (userName) => {
     setCurrentUserName(userName);
     const newUser = instructorsData.find((inst) => inst.name === userName);
@@ -153528,7 +153550,7 @@ Do not hard refresh yet. Try Publish again, then confirm the save succeeds.`,
     return () => clearInterval(pollInterval);
   }, [isAddFlightTileModalOpen, liveSyncEnabled, syncUnavailabilityFromDatabase]);
   const syncPublishedScheduleForCurrentDate = reactExports.useCallback(async () => {
-    if (setupTestProfile || isInitialSetupWizardActive || !liveSyncEnabled || isAddFlightTileModalOpen || Boolean(selectedEvent) || isUserEditing() || !date || !/^\d{4}-\d{2}-\d{2}$/.test(date)) {
+    if (setupTestProfile || isInitialSetupWizardActive || showInitialSetupBlankState || !liveSyncEnabled || isAddFlightTileModalOpen || Boolean(selectedEvent) || isUserEditing() || !date || !/^\d{4}-\d{2}-\d{2}$/.test(date)) {
       return;
     }
     if (activeDfpSaveInFlightRef.current > 0 || _scheduleUpdatePersistTimer.current !== null) {
@@ -153546,7 +153568,7 @@ Do not hard refresh yet. Try Publish again, then confirm the save succeeds.`,
       allowAdminFallbackContext: false,
       silent: true
     });
-  }, [activeUnitCode, date, dfpSnapshotLoadState.date, dfpSnapshotLoadState.status, isAddFlightTileModalOpen, isInitialSetupWizardActive, isUserEditing, liveSyncEnabled, loadSnapshotForDate, school, selectedEvent, setupTestProfile]);
+  }, [activeUnitCode, date, dfpSnapshotLoadState.date, dfpSnapshotLoadState.status, isAddFlightTileModalOpen, isInitialSetupWizardActive, isUserEditing, liveSyncEnabled, loadSnapshotForDate, school, selectedEvent, setupTestProfile, showInitialSetupBlankState]);
   reactExports.useEffect(() => {
     const handleLiveDfpSnapshotChange = (event) => {
       if (!liveSyncEnabled || isAddFlightTileModalOpen || Boolean(selectedEvent) || isUserEditing()) return;
