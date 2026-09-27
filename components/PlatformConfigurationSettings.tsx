@@ -881,7 +881,7 @@ const getPlatformConfigSaveBlocker = (config: PlatformConfig): PlatformConfigSav
   ));
   const incompleteResourcePool = (Array.isArray(config.resourcePools) ? config.resourcePools : []).find((pool) => (
     String(pool?.status || 'ACTIVE').toUpperCase() !== 'INACTIVE' &&
-    (!String(pool?.code || '').trim() || !String(pool?.name || '').trim())
+    !String(pool?.name || '').trim()
   ));
   const missingResourcePoolAircraftType = (Array.isArray(config.resourcePools) ? config.resourcePools : []).find((pool) => (
     String(pool?.status || 'ACTIVE').toUpperCase() !== 'INACTIVE' &&
@@ -959,10 +959,10 @@ const getPlatformConfigSaveBlocker = (config: PlatformConfig): PlatformConfigSav
   }
   if (incompleteResourcePool) {
     return {
-      message: `Save blocked: the DFP Resource Rows "${describeResourcePool(incompleteResourcePool)}" need a row code and row name. Open`,
+      message: `Save blocked: the DFP Resource Rows "${describeResourcePool(incompleteResourcePool)}" need a row name. Open`,
       link: getResourcePoolSettingsLink(
         incompleteResourcePool,
-        'open DFP Resource Rows, complete the row code and row name, then save again.'
+        'open DFP Resource Rows, complete the row name, then save again.'
       ),
     };
   }
@@ -1482,6 +1482,47 @@ type ConfigurationHealthItem = {
 const isActiveRecord = (item: any): boolean => String(item?.status || 'ACTIVE').toUpperCase() !== 'INACTIVE';
 
 const toIdentifier = (value: any): string => String(value || '').trim();
+
+const toResourcePoolCodePart = (value: unknown): string => (
+  String(value || '')
+    .trim()
+    .toUpperCase()
+    .replace(/[^A-Z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '')
+);
+
+const createAutoResourcePoolCode = (pool: any, index: number, usedCodes: Set<string>): string => {
+  const owner = toResourcePoolCodePart(pool?.unitCode) || toResourcePoolCodePart(pool?.locationCode) || 'SHARED';
+  const aircraft = toResourcePoolCodePart(pool?.aircraftTypeCode) || 'RESOURCE';
+  const base = [owner, aircraft, 'ROWS'].filter(Boolean).join('-') || `RESOURCE-ROWS-${index + 1}`;
+  let candidate = base;
+  let suffix = 2;
+  while (usedCodes.has(candidate)) {
+    candidate = `${base}-${suffix}`;
+    suffix += 1;
+  }
+  usedCodes.add(candidate);
+  return candidate;
+};
+
+const ensureResourcePoolCodes = (config: PlatformConfig): PlatformConfig => {
+  const resourcePools = Array.isArray(config.resourcePools) ? config.resourcePools : [];
+  let changed = false;
+  const usedCodes = new Set(
+    resourcePools
+      .map((pool) => toResourcePoolCodePart(pool?.code))
+      .filter(Boolean)
+  );
+  const nextResourcePools = resourcePools.map((pool, index) => {
+    if (toIdentifier(pool?.code)) return pool;
+    changed = true;
+    return {
+      ...pool,
+      code: createAutoResourcePoolCode(pool, index, usedCodes),
+    };
+  });
+  return changed ? { ...config, resourcePools: nextResourcePools } : config;
+};
 
 const toNumber = (value: any): number => {
   const parsed = Number(value);
@@ -7499,11 +7540,11 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
     restoreSection?: string,
     options?: { reloadPage?: boolean; successMessage?: string; skipResourceRowProtection?: boolean },
   ) => {
-    const candidateConfig = fillSingleAircraftTypeForResourceRows(
+    const candidateConfig = ensureResourcePoolCodes(fillSingleAircraftTypeForResourceRows(
       configOverride && Array.isArray(configOverride.locations)
         ? configOverride
         : config
-    );
+    ));
     const rowSavePlan = options?.skipResourceRowProtection
       ? null
       : buildResourceRowSavePlan(candidateConfig);
@@ -11555,11 +11596,10 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
                       <div className={resourceSectionPanelHeaderClass}>
                         <div>
                           <div className={resourceSectionPanelTitleClass}>DFP Resource Row Administration</div>
-                          <div className={resourceSectionPanelHintClass}>Administrative identity and whether these DFP Resource Rows are dedicated or shared.</div>
+                          <div className={resourceSectionPanelHintClass}>Set the user-facing name and whether these DFP Resource Rows are dedicated or shared. The internal row ID is generated automatically.</div>
                         </div>
                       </div>
-                      <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
-                        <DraftField label="Resource Row Code" value={pool.code} disabled={!canEditResourcePools} onCommit={(value) => updateRow('resourcePools', index, { code: value })} />
+                      <div className="grid gap-3 md:grid-cols-2">
                         <DraftField label="Resource Row Name" value={pool.name} disabled={!canEditResourcePools} onCommit={(value) => updateRow('resourcePools', index, { name: value })} />
                         <SelectField label="Sharing" value={pool.poolType || 'Dedicated'} disabled={!canEditResourcePools} options={['Dedicated', 'Shared']} onChange={(value) => updateRow('resourcePools', index, { poolType: value })} />
                       </div>

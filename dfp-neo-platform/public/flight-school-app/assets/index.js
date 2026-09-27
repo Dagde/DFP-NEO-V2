@@ -18488,7 +18488,7 @@ const getPlatformConfigSaveBlocker = (config) => {
   const hasActiveUnits = hasActivePlatformRecords(Array.isArray(config.units) ? config.units : []);
   const activeAircraftTypeCodes = getActiveAircraftTypeCodeSet(config);
   const incompleteAircraftType = (Array.isArray(config.aircraftTypes) ? config.aircraftTypes : []).find((aircraftType) => String(aircraftType?.status || "ACTIVE").toUpperCase() !== "INACTIVE" && (!String(aircraftType?.code || "").trim() || !String(aircraftType?.name || "").trim()));
-  const incompleteResourcePool = (Array.isArray(config.resourcePools) ? config.resourcePools : []).find((pool) => String(pool?.status || "ACTIVE").toUpperCase() !== "INACTIVE" && (!String(pool?.code || "").trim() || !String(pool?.name || "").trim()));
+  const incompleteResourcePool = (Array.isArray(config.resourcePools) ? config.resourcePools : []).find((pool) => String(pool?.status || "ACTIVE").toUpperCase() !== "INACTIVE" && !String(pool?.name || "").trim());
   const missingResourcePoolAircraftType = (Array.isArray(config.resourcePools) ? config.resourcePools : []).find((pool) => String(pool?.status || "ACTIVE").toUpperCase() !== "INACTIVE" && activeAircraftTypeCodes.size > 0 && !String(pool?.aircraftTypeCode || "").trim());
   const invalidResourcePoolAircraftType = (Array.isArray(config.resourcePools) ? config.resourcePools : []).find((pool) => {
     const aircraftTypeCode = String(pool?.aircraftTypeCode || "").trim().toUpperCase();
@@ -18554,10 +18554,10 @@ const getPlatformConfigSaveBlocker = (config) => {
   }
   if (incompleteResourcePool) {
     return {
-      message: `Save blocked: the DFP Resource Rows "${describeResourcePool(incompleteResourcePool)}" need a row code and row name. Open`,
+      message: `Save blocked: the DFP Resource Rows "${describeResourcePool(incompleteResourcePool)}" need a row name. Open`,
       link: getResourcePoolSettingsLink(
         incompleteResourcePool,
-        "open DFP Resource Rows, complete the row code and row name, then save again."
+        "open DFP Resource Rows, complete the row name, then save again."
       )
     };
   }
@@ -18962,6 +18962,36 @@ const getLicenceStatusSummary = (license) => {
 };
 const isActiveRecord = (item) => String(item?.status || "ACTIVE").toUpperCase() !== "INACTIVE";
 const toIdentifier = (value) => String(value || "").trim();
+const toResourcePoolCodePart = (value) => String(value || "").trim().toUpperCase().replace(/[^A-Z0-9]+/g, "-").replace(/^-+|-+$/g, "");
+const createAutoResourcePoolCode = (pool, index, usedCodes) => {
+  const owner = toResourcePoolCodePart(pool?.unitCode) || toResourcePoolCodePart(pool?.locationCode) || "SHARED";
+  const aircraft = toResourcePoolCodePart(pool?.aircraftTypeCode) || "RESOURCE";
+  const base = [owner, aircraft, "ROWS"].filter(Boolean).join("-") || `RESOURCE-ROWS-${index + 1}`;
+  let candidate = base;
+  let suffix = 2;
+  while (usedCodes.has(candidate)) {
+    candidate = `${base}-${suffix}`;
+    suffix += 1;
+  }
+  usedCodes.add(candidate);
+  return candidate;
+};
+const ensureResourcePoolCodes = (config) => {
+  const resourcePools = Array.isArray(config.resourcePools) ? config.resourcePools : [];
+  let changed = false;
+  const usedCodes = new Set(
+    resourcePools.map((pool) => toResourcePoolCodePart(pool?.code)).filter(Boolean)
+  );
+  const nextResourcePools = resourcePools.map((pool, index) => {
+    if (toIdentifier(pool?.code)) return pool;
+    changed = true;
+    return {
+      ...pool,
+      code: createAutoResourcePoolCode(pool, index, usedCodes)
+    };
+  });
+  return changed ? { ...config, resourcePools: nextResourcePools } : config;
+};
 const toNumber = (value) => {
   const parsed = Number(value);
   return Number.isFinite(parsed) ? parsed : 0;
@@ -23770,9 +23800,9 @@ This removes them from DFP Resource Rows. Press Save in this section to apply th
     onShowSuccess(`DFP Resource Rows "${selectedResourcePoolDeleteOption.name}" removed. Press Save to apply the deletion.`);
   };
   const save = async (configOverride, restoreSection, options) => {
-    const candidateConfig = fillSingleAircraftTypeForResourceRows(
+    const candidateConfig = ensureResourcePoolCodes(fillSingleAircraftTypeForResourceRows(
       configOverride && Array.isArray(configOverride.locations) ? configOverride : config
-    );
+    ));
     const rowSavePlan = options?.skipResourceRowProtection ? null : buildResourceRowSavePlan(candidateConfig);
     const hasRowChanges = (rowSavePlan?.changedContexts.length || 0) > 0;
     const rowSaveTomorrowDisplay = rowSavePlan ? formatDateLabel(rowSavePlan.tomorrow) : "";
@@ -27353,10 +27383,9 @@ This removes them from DFP Resource Rows. Press Save in this section to apply th
                       /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: resourceSectionPanelClass, children: [
                         /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: resourceSectionPanelHeaderClass, children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
                           /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: resourceSectionPanelTitleClass, children: "DFP Resource Row Administration" }),
-                          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: resourceSectionPanelHintClass, children: "Administrative identity and whether these DFP Resource Rows are dedicated or shared." })
+                          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: resourceSectionPanelHintClass, children: "Set the user-facing name and whether these DFP Resource Rows are dedicated or shared. The internal row ID is generated automatically." })
                         ] }) }),
-                        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid gap-3 md:grid-cols-2 xl:grid-cols-3", children: [
-                          /* @__PURE__ */ jsxRuntimeExports.jsx(DraftField, { label: "Resource Row Code", value: pool.code, disabled: !canEditResourcePools, onCommit: (value) => updateRow("resourcePools", index, { code: value }) }),
+                        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid gap-3 md:grid-cols-2", children: [
                           /* @__PURE__ */ jsxRuntimeExports.jsx(DraftField, { label: "Resource Row Name", value: pool.name, disabled: !canEditResourcePools, onCommit: (value) => updateRow("resourcePools", index, { name: value }) }),
                           /* @__PURE__ */ jsxRuntimeExports.jsx(SelectField, { label: "Sharing", value: pool.poolType || "Dedicated", disabled: !canEditResourcePools, options: ["Dedicated", "Shared"], onChange: (value) => updateRow("resourcePools", index, { poolType: value }) })
                         ] })
