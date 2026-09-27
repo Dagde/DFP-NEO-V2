@@ -10593,8 +10593,11 @@ const getCourseStudentGroupCounts = (course, definitions = [], trainees) => {
     count: storedCounts[index] || 0
   }));
 };
-const getTraineeServiceOptions = (trainees = [], configuredServices = []) => Array.from(new Set(
-  trainees.map((trainee) => resolveConfiguredServiceName(trainee.service, configuredServices)).filter(Boolean)
+const getTraineeServiceOptions = (trainees = [], configuredServices = []) => Array.from(/* @__PURE__ */ new Set(
+  [
+    ...configuredServices.map((service) => String(service || "").trim()).filter(Boolean),
+    ...trainees.map((trainee) => resolveConfiguredServiceName(trainee.service, configuredServices)).filter(Boolean)
+  ]
 )).sort((a, b) => a.localeCompare(b, void 0, { numeric: true, sensitivity: "base" }));
 const ALL_COLORS = [
   "bg-sky-400/80",
@@ -31960,6 +31963,7 @@ const formatGhostTime$1 = (time) => {
 };
 const NEO_ASSIST_POINTER_DROP_EVENT$2 = "neoAssistPointerDrop";
 const NEO_ASSIST_DRAG_DIAGNOSTIC_STORAGE_KEY$2 = "neo_assist_drag_diagnostic_report";
+const DEFAULT_TRAINEE_SUB_GROUP_OPTIONS = ["Air Force", "Army", "Navy", "International", "Other"];
 const AIRFRAME_COLUMN_WIDTH$1 = 108;
 const RESOURCE_COLUMN_WIDTH = 105;
 const TIME_HEADER_HEIGHT$6 = 40;
@@ -33854,9 +33858,17 @@ const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, lo
   );
   const configuredContinuationCurrencyEventsLabel = `${configuredContinuationShortLabel} / Currency Events`;
   const courseStudentGroups = reactExports.useMemo(
-    () => normaliseCourseStudentGroups(serviceDefinitions, { useFallback: false }),
+    () => normaliseCourseStudentGroups(serviceDefinitions, { useFallback: false }).filter((group) => {
+      const label = String(group.shortName || group.longName || "").trim();
+      return label && !/^group\s+\d+$/i.test(label);
+    }),
     [serviceDefinitions]
   );
+  const traineeSubGroupOptions = reactExports.useMemo(() => Array.from(new Set([
+    ...traineeServiceOptions,
+    ...courseStudentGroups.map((group) => group.shortName || group.longName).filter(Boolean),
+    ...DEFAULT_TRAINEE_SUB_GROUP_OPTIONS
+  ].map((option) => String(option || "").trim()).filter(Boolean))).sort((a, b) => a.localeCompare(b, void 0, { numeric: true, sensitivity: "base" })), [courseStudentGroups, traineeServiceOptions]);
   const updateCourseStudentGroup = reactExports.useCallback((index, value) => {
     if (!onUpdateServiceDefinitions) return;
     const next = courseStudentGroups.map((group) => ({ ...group }));
@@ -33872,7 +33884,7 @@ const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, lo
   }, [courseStudentGroups, onUpdateServiceDefinitions]);
   const addCourseStudentGroup = reactExports.useCallback(() => {
     if (!onUpdateServiceDefinitions || courseStudentGroups.length >= MAX_COURSE_STUDENT_GROUPS) return;
-    const unusedService = traineeServiceOptions.find((service) => !courseStudentGroups.some((group) => String(group.shortName || group.longName).trim().toUpperCase() === service.toUpperCase()));
+    const unusedService = traineeSubGroupOptions.find((service) => !courseStudentGroups.some((group) => String(group.shortName || group.longName).trim().toUpperCase() === service.toUpperCase()));
     onUpdateServiceDefinitions([
       ...courseStudentGroups,
       {
@@ -33880,7 +33892,7 @@ const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, lo
         shortName: unusedService || `Group ${courseStudentGroups.length + 1}`
       }
     ]);
-  }, [courseStudentGroups, onUpdateServiceDefinitions, traineeServiceOptions]);
+  }, [courseStudentGroups, onUpdateServiceDefinitions, traineeSubGroupOptions]);
   const removeCourseStudentGroup = reactExports.useCallback((index) => {
     if (!onUpdateServiceDefinitions) return;
     onUpdateServiceDefinitions(courseStudentGroups.filter((_, groupIndex) => groupIndex !== index));
@@ -38794,9 +38806,8 @@ const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, lo
     ] });
   };
   const renderCourseStudentGroupsEditor = () => {
-    const visibleGroups = courseStudentGroups.length > 0 ? courseStudentGroups : [{ longName: "Group 1", shortName: "Group 1" }];
+    const visibleGroups = courseStudentGroups.length > 0 ? courseStudentGroups : [{ longName: "", shortName: "" }];
     return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-3", children: [
-      /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs font-semibold leading-5 text-amber-900", children: "Do you want trainees within a course to be shown in separate sub-groups? If yes, select the sub-groups you want to use. For example, CSE201 could be shown as Air Force, Army and Navy sub-groups. If you do not need sub-groups, leave this blank." }),
       /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "space-y-2", children: visibleGroups.map((group, index) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid gap-3 rounded-lg border border-slate-300 bg-white p-3 md:grid-cols-[80px_minmax(0,1fr)_auto]", children: [
         /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
           /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: wizardLabelClass, children: "Display group" }),
@@ -38809,13 +38820,13 @@ const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, lo
             {
               className: `${wizardInputClass} mt-1`,
               value: String(group.shortName || group.longName || ""),
-              disabled: !onUpdateServiceDefinitions || traineeServiceOptions.length === 0,
+              disabled: !onUpdateServiceDefinitions,
               onKeyDownCapture: stopEditableKeyPropagation,
               onKeyDown: stopEditableKeyPropagation,
               onChange: (event) => updateCourseStudentGroup(index, event.target.value),
               children: [
                 /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "", children: "Select sub-group..." }),
-                traineeServiceOptions.map((service) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: service, children: service }, service))
+                traineeSubGroupOptions.map((service) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: service, children: service }, service))
               ]
             }
           )

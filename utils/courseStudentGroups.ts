@@ -83,7 +83,10 @@ export const getTraineeServiceOptions = (
   trainees: Pick<Trainee, 'service'>[] = [],
   configuredServices: string[] = [],
 ): string[] => Array.from(new Set(
-  trainees
-    .map((trainee) => resolveConfiguredServiceName(trainee.service, configuredServices))
-    .filter(Boolean),
+  [
+    ...configuredServices.map((service) => String(service || '').trim()).filter(Boolean),
+    ...trainees
+      .map((trainee) => resolveConfiguredServiceName(trainee.service, configuredServices))
+      .filter(Boolean),
+  ],
 )).sort((a, b) => a.localeCompare(b, undefined, { numeric: true, sensitivity: 'base' }));

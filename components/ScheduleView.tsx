@@ -239,6 +239,7 @@ const formatGhostTime = (time: number): string => {
 };
 const NEO_ASSIST_POINTER_DROP_EVENT = 'neoAssistPointerDrop';
 const NEO_ASSIST_DRAG_DIAGNOSTIC_STORAGE_KEY = 'neo_assist_drag_diagnostic_report';
+const DEFAULT_TRAINEE_SUB_GROUP_OPTIONS = ['Air Force', 'Army', 'Navy', 'International', 'Other'];
 const AIRFRAME_COLUMN_WIDTH = 108; // Header cell width (date selector)
 const RESOURCE_COLUMN_WIDTH = 105; // Resource row header width.
 const TIME_HEADER_HEIGHT = 40;
@@ -3007,9 +3008,17 @@ const InitialSetupWizard: React.FC<{
     );
     const configuredContinuationCurrencyEventsLabel = `${configuredContinuationShortLabel} / Currency Events`;
     const courseStudentGroups = useMemo(
-        () => normaliseCourseStudentGroups(serviceDefinitions, { useFallback: false }),
+        () => normaliseCourseStudentGroups(serviceDefinitions, { useFallback: false }).filter((group) => {
+            const label = String(group.shortName || group.longName || '').trim();
+            return label && !/^group\s+\d+$/i.test(label);
+        }),
         [serviceDefinitions],
     );
+    const traineeSubGroupOptions = useMemo(() => Array.from(new Set([
+        ...traineeServiceOptions,
+        ...courseStudentGroups.map((group) => group.shortName || group.longName).filter(Boolean),
+        ...DEFAULT_TRAINEE_SUB_GROUP_OPTIONS,
+    ].map((option) => String(option || '').trim()).filter(Boolean))).sort((a, b) => a.localeCompare(b, undefined, { numeric: true, sensitivity: 'base' })), [courseStudentGroups, traineeServiceOptions]);
     const updateCourseStudentGroup = useCallback((index: number, value: string) => {
         if (!onUpdateServiceDefinitions) return;
         const next = courseStudentGroups.map((group) => ({ ...group }));
@@ -3028,7 +3037,7 @@ const InitialSetupWizard: React.FC<{
     }, [courseStudentGroups, onUpdateServiceDefinitions]);
     const addCourseStudentGroup = useCallback(() => {
         if (!onUpdateServiceDefinitions || courseStudentGroups.length >= MAX_COURSE_STUDENT_GROUPS) return;
-        const unusedService = traineeServiceOptions.find((service) => !courseStudentGroups.some((group) => String(group.shortName || group.longName).trim().toUpperCase() === service.toUpperCase()));
+        const unusedService = traineeSubGroupOptions.find((service) => !courseStudentGroups.some((group) => String(group.shortName || group.longName).trim().toUpperCase() === service.toUpperCase()));
         onUpdateServiceDefinitions([
             ...courseStudentGroups,
             {
@@ -3036,7 +3045,7 @@ const InitialSetupWizard: React.FC<{
                 shortName: unusedService || `Group ${courseStudentGroups.length + 1}`,
             },
         ]);
-    }, [courseStudentGroups, onUpdateServiceDefinitions, traineeServiceOptions]);
+    }, [courseStudentGroups, onUpdateServiceDefinitions, traineeSubGroupOptions]);
     const removeCourseStudentGroup = useCallback((index: number) => {
         if (!onUpdateServiceDefinitions) return;
         onUpdateServiceDefinitions(courseStudentGroups.filter((_, groupIndex) => groupIndex !== index));
@@ -8831,12 +8840,9 @@ const InitialSetupWizard: React.FC<{
         );
     };
     const renderCourseStudentGroupsEditor = () => {
-        const visibleGroups = courseStudentGroups.length > 0 ? courseStudentGroups : [{ longName: 'Group 1', shortName: 'Group 1' }];
+        const visibleGroups = courseStudentGroups.length > 0 ? courseStudentGroups : [{ longName: '', shortName: '' }];
         return (
             <div className="space-y-3">
-                <div className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs font-semibold leading-5 text-amber-900">
-                    Do you want trainees within a course to be shown in separate sub-groups? If yes, select the sub-groups you want to use. For example, CSE201 could be shown as Air Force, Army and Navy sub-groups. If you do not need sub-groups, leave this blank.
-                </div>
                 <div className="space-y-2">
                     {visibleGroups.map((group, index) => (
                         <div key={`wizard-course-group-${index}`} className="grid gap-3 rounded-lg border border-slate-300 bg-white p-3 md:grid-cols-[80px_minmax(0,1fr)_auto]">
@@ -8849,13 +8855,13 @@ const InitialSetupWizard: React.FC<{
                                 <select
                                     className={`${wizardInputClass} mt-1`}
                                     value={String(group.shortName || group.longName || '')}
-                                    disabled={!onUpdateServiceDefinitions || traineeServiceOptions.length === 0}
+                                    disabled={!onUpdateServiceDefinitions}
                                     onKeyDownCapture={stopEditableKeyPropagation}
                                     onKeyDown={stopEditableKeyPropagation}
                                     onChange={(event) => updateCourseStudentGroup(index, event.target.value)}
                                 >
                                     <option value="">Select sub-group...</option>
-                                    {traineeServiceOptions.map((service) => (
+                                    {traineeSubGroupOptions.map((service) => (
                                         <option key={service} value={service}>{service}</option>
                                     ))}
                                 </select>
