@@ -18399,11 +18399,30 @@ const normaliseSettingsVisibilityPolicy = (value) => {
   };
 };
 const getDefaultHasTraineesForUnit$1 = (_unitCode) => false;
+const DEFAULT_UNIT_TYPE_OPTIONS$1 = [
+  "Training",
+  "Fighter",
+  "Strike",
+  "Bomber",
+  "Maritime Patrol",
+  "ISR / Surveillance",
+  "Airborne Command & Control",
+  "Airlift",
+  "Air-to-Air Refuelling",
+  "Special Operations Aviation",
+  "Rotary Wing",
+  "Search & Rescue",
+  "Electronic Warfare",
+  "Reconnaissance",
+  "VIP",
+  "Test & Evaluation",
+  "UAS"
+];
 const normaliseUnitTypes = (values, units = []) => {
   const sourceValues = Array.isArray(values) ? values : [];
   const usedValues = Array.isArray(units) ? units.map((unit) => unit?.unitType) : [];
   const seen = /* @__PURE__ */ new Set();
-  return [...sourceValues, ...usedValues].map((value) => String(value || "").trim()).filter((value) => {
+  return [...sourceValues, ...usedValues, ...DEFAULT_UNIT_TYPE_OPTIONS$1].map((value) => String(value || "").trim()).filter((value) => {
     if (!value) return false;
     const key = value.toUpperCase();
     if (seen.has(key)) return false;
@@ -32042,7 +32061,25 @@ const checkIsChanged = (event, baselineEvents) => {
   if (Math.abs(event.duration - baseline.duration) > epsilon) return true;
   return event.resourceId !== baseline.resourceId || event.instructor !== baseline.instructor || event.student !== baseline.student || event.pilot !== baseline.pilot || (event.area || "") !== (baseline.area || "");
 };
-const DEFAULT_UNIT_TYPE_OPTIONS = ["Training", "Operational", "Support", "Headquarters"];
+const DEFAULT_UNIT_TYPE_OPTIONS = [
+  "Training",
+  "Fighter",
+  "Strike",
+  "Bomber",
+  "Maritime Patrol",
+  "ISR / Surveillance",
+  "Airborne Command & Control",
+  "Airlift",
+  "Air-to-Air Refuelling",
+  "Special Operations Aviation",
+  "Rotary Wing",
+  "Search & Rescue",
+  "Electronic Warfare",
+  "Reconnaissance",
+  "VIP",
+  "Test & Evaluation",
+  "UAS"
+];
 const normaliseUnitTypeOptions = (platformConfig) => {
   const seen = /* @__PURE__ */ new Set();
   const sourceValues = Array.isArray(platformConfig?.unitTypes) ? platformConfig.unitTypes : [];

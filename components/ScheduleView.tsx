@@ -385,7 +385,25 @@ const getLocalDateString = (date: Date = new Date()): string => {
     return `${year}-${month}-${day}`;
 };
 
-const DEFAULT_UNIT_TYPE_OPTIONS = ['Training', 'Operational', 'Support', 'Headquarters'];
+const DEFAULT_UNIT_TYPE_OPTIONS = [
+    'Training',
+    'Fighter',
+    'Strike',
+    'Bomber',
+    'Maritime Patrol',
+    'ISR / Surveillance',
+    'Airborne Command & Control',
+    'Airlift',
+    'Air-to-Air Refuelling',
+    'Special Operations Aviation',
+    'Rotary Wing',
+    'Search & Rescue',
+    'Electronic Warfare',
+    'Reconnaissance',
+    'VIP',
+    'Test & Evaluation',
+    'UAS',
+];
 
 const normaliseUnitTypeOptions = (platformConfig?: any): string[] => {
     const seen = new Set<string>();

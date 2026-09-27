@@ -3338,7 +3338,25 @@ const normaliseAuditDateOnly = (value) => {
   return String(value).slice(0, 10);
 };
 
-const DEFAULT_COMMERCIAL_UNIT_TYPES = ['Training', 'Operational', 'Support', 'Headquarters'];
+const DEFAULT_COMMERCIAL_UNIT_TYPES = [
+  'Training',
+  'Fighter',
+  'Strike',
+  'Bomber',
+  'Maritime Patrol',
+  'ISR / Surveillance',
+  'Airborne Command & Control',
+  'Airlift',
+  'Air-to-Air Refuelling',
+  'Special Operations Aviation',
+  'Rotary Wing',
+  'Search & Rescue',
+  'Electronic Warfare',
+  'Reconnaissance',
+  'VIP',
+  'Test & Evaluation',
+  'UAS',
+];
 
 const normaliseCommercialUnitTypes = (values, units = []) => {
   const seen = new Set();

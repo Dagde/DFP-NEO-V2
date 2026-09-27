@@ -751,11 +751,31 @@ const normaliseSettingsVisibilityPolicy = (value?: Partial<SettingsVisibilityPol
 
 const getDefaultHasTraineesForUnit = (_unitCode: unknown): boolean => false;
 
+const DEFAULT_UNIT_TYPE_OPTIONS = [
+  'Training',
+  'Fighter',
+  'Strike',
+  'Bomber',
+  'Maritime Patrol',
+  'ISR / Surveillance',
+  'Airborne Command & Control',
+  'Airlift',
+  'Air-to-Air Refuelling',
+  'Special Operations Aviation',
+  'Rotary Wing',
+  'Search & Rescue',
+  'Electronic Warfare',
+  'Reconnaissance',
+  'VIP',
+  'Test & Evaluation',
+  'UAS',
+];
+
 const normaliseUnitTypes = (values: unknown, units: any[] = []): string[] => {
   const sourceValues = Array.isArray(values) ? values : [];
   const usedValues = Array.isArray(units) ? units.map((unit) => unit?.unitType) : [];
   const seen = new Set<string>();
-  return [...sourceValues, ...usedValues]
+  return [...sourceValues, ...usedValues, ...DEFAULT_UNIT_TYPE_OPTIONS]
     .map((value) => String(value || '').trim())
     .filter((value) => {
       if (!value) return false;
