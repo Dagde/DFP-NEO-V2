@@ -36846,9 +36846,9 @@ const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, lo
     },
     {
       id: "unit-model",
-      title: "Set up unit details",
+      title: "Set up the first unit",
       label: "Unit setup",
-      body: "Select each unit from the unit list, then set its home location, unit type, trainee use, and operating model.",
+      body: "Set up the first unit now. Other units can be added after the wizard is complete.",
       checkIds: ["units"],
       category: "mandatory"
     },
@@ -40751,51 +40751,9 @@ const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, lo
     if (visibleStep.id === "unit-model") {
       const wizardUnitRows = getWizardUnitRowsForSetup();
       const wizardUnitOptions = wizardUnitRows.map((row) => row.code).filter(Boolean);
-      const currentUnitIndex = Math.max(0, wizardUnitRows.findIndex((row) => normaliseUnitSettingsIdentifier(row.code) === normaliseUnitSettingsIdentifier(unitDraft.code)));
-      const previousUnitCode = wizardUnitRows[currentUnitIndex - 1]?.code || "";
-      const nextUnitCode = wizardUnitRows[currentUnitIndex + 1]?.code || "";
-      const configuredCount = wizardUnitRows.filter((row, index) => {
-        const draft = resolveWizardUnitSetupDraft(row, index, getWizardUnitDraftMapWithCurrent());
-        return draft.locationCode && draft.unitType && draft.operationalModel;
-      }).length;
       return promptShell(
         /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-2", children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsx("p", { children: "Select a unit from the units entered in step 8, then set its home location, type, trainee setting and operating model. Repeat for each unit you are setting up." }),
-          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex flex-wrap items-center gap-2 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-xs font-black text-slate-700", children: [
-            /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { children: [
-              "Unit ",
-              wizardUnitRows.length > 0 ? currentUnitIndex + 1 : 0,
-              " of ",
-              wizardUnitRows.length
-            ] }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-slate-400", children: "|" }),
-            /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { children: [
-              configuredCount,
-              " configured"
-            ] }),
-            /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "ml-auto flex gap-2", children: [
-              /* @__PURE__ */ jsxRuntimeExports.jsx(
-                "button",
-                {
-                  type: "button",
-                  className: "rounded-md border border-slate-300 bg-white px-3 py-1.5 text-xs font-black text-slate-700 disabled:opacity-40",
-                  disabled: !previousUnitCode,
-                  onClick: () => selectWizardUnitSetupDraft(previousUnitCode),
-                  children: "Previous unit"
-                }
-              ),
-              /* @__PURE__ */ jsxRuntimeExports.jsx(
-                "button",
-                {
-                  type: "button",
-                  className: "rounded-md border border-slate-300 bg-white px-3 py-1.5 text-xs font-black text-slate-700 disabled:opacity-40",
-                  disabled: !nextUnitCode,
-                  onClick: () => selectWizardUnitSetupDraft(nextUnitCode),
-                  children: "Next unit"
-                }
-              )
-            ] })
-          ] }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx("p", { children: "Set up the first unit that will use DFP NEO. The wizard uses this unit to create the initial operating model, home location and trainee setting. Other units can be added after the wizard is complete." }),
           wizardUnitRows.length === 0 ? /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "rounded-lg border border-amber-300 bg-amber-50 px-3 py-2 text-sm font-semibold text-amber-900", children: "Add at least one unit in step 8 before setting unit details here." }) : null
         ] }),
         /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid gap-3 md:grid-cols-2", children: [

@@ -6478,9 +6478,9 @@ const InitialSetupWizard: React.FC<{
         },
         {
             id: 'unit-model',
-            title: 'Set up unit details',
+            title: 'Set up the first unit',
             label: 'Unit setup',
-            body: 'Select each unit from the unit list, then set its home location, unit type, trainee use, and operating model.',
+            body: 'Set up the first unit now. Other units can be added after the wizard is complete.',
             checkIds: ['units'],
             category: 'mandatory',
         },
@@ -11096,39 +11096,9 @@ const InitialSetupWizard: React.FC<{
         if (visibleStep.id === 'unit-model') {
             const wizardUnitRows = getWizardUnitRowsForSetup();
             const wizardUnitOptions = wizardUnitRows.map((row) => row.code).filter(Boolean);
-            const currentUnitIndex = Math.max(0, wizardUnitRows.findIndex((row) => normaliseUnitSettingsIdentifier(row.code) === normaliseUnitSettingsIdentifier(unitDraft.code)));
-            const previousUnitCode = wizardUnitRows[currentUnitIndex - 1]?.code || '';
-            const nextUnitCode = wizardUnitRows[currentUnitIndex + 1]?.code || '';
-            const configuredCount = wizardUnitRows.filter((row, index) => {
-                const draft = resolveWizardUnitSetupDraft(row, index, getWizardUnitDraftMapWithCurrent());
-                return draft.locationCode && draft.unitType && draft.operationalModel;
-            }).length;
             return promptShell(
                 <div className="space-y-2">
-                    <p>Select a unit from the units entered in step 8, then set its home location, type, trainee setting and operating model. Repeat for each unit you are setting up.</p>
-                    <div className="flex flex-wrap items-center gap-2 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-xs font-black text-slate-700">
-                        <span>Unit {wizardUnitRows.length > 0 ? currentUnitIndex + 1 : 0} of {wizardUnitRows.length}</span>
-                        <span className="text-slate-400">|</span>
-                        <span>{configuredCount} configured</span>
-                        <div className="ml-auto flex gap-2">
-                            <button
-                                type="button"
-                                className="rounded-md border border-slate-300 bg-white px-3 py-1.5 text-xs font-black text-slate-700 disabled:opacity-40"
-                                disabled={!previousUnitCode}
-                                onClick={() => selectWizardUnitSetupDraft(previousUnitCode)}
-                            >
-                                Previous unit
-                            </button>
-                            <button
-                                type="button"
-                                className="rounded-md border border-slate-300 bg-white px-3 py-1.5 text-xs font-black text-slate-700 disabled:opacity-40"
-                                disabled={!nextUnitCode}
-                                onClick={() => selectWizardUnitSetupDraft(nextUnitCode)}
-                            >
-                                Next unit
-                            </button>
-                        </div>
-                    </div>
+                    <p>Set up the first unit that will use DFP NEO. The wizard uses this unit to create the initial operating model, home location and trainee setting. Other units can be added after the wizard is complete.</p>
                     {wizardUnitRows.length === 0 ? (
                         <div className="rounded-lg border border-amber-300 bg-amber-50 px-3 py-2 text-sm font-semibold text-amber-900">
                             Add at least one unit in step 8 before setting unit details here.
