@@ -27,14 +27,21 @@ export const formatClassroomNames = (value: unknown): string => (
   (Array.isArray(value) ? value.map((item) => String(item ?? '').trim()) : parseClassroomNames(value)).join('\n')
 );
 
-export const getClassroomNamesForRows = (value: unknown, rowCount: number): string[] => {
+export const getClassroomNamesForRows = (
+  value: unknown,
+  rowCount: number,
+  options: { preserveWhitespace?: boolean } = {},
+): string[] => {
   const count = Math.max(0, Math.floor(Number(rowCount) || 0));
   const rawItems = Array.isArray(value)
     ? value
     : String(value || '').includes('\n')
       ? String(value || '').split(/\n/)
       : String(value || '').split(/,/);
-  return Array.from({ length: count }, (_, index) => String(rawItems[index] ?? '').trim());
+  return Array.from({ length: count }, (_, index) => {
+    const item = String(rawItems[index] ?? '');
+    return options.preserveWhitespace ? item : item.trim();
+  });
 };
 
 export const updateClassroomNameForRow = (
@@ -42,8 +49,9 @@ export const updateClassroomNameForRow = (
   rowCount: number,
   rowIndex: number,
   nextName: string,
+  options: { preserveWhitespace?: boolean } = {},
 ): string[] => {
-  const names = getClassroomNamesForRows(value, rowCount);
+  const names = getClassroomNamesForRows(value, rowCount, options);
   if (rowIndex >= 0 && rowIndex < names.length) names[rowIndex] = nextName;
   return names;
 };

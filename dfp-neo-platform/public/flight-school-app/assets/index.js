@@ -5231,13 +5231,16 @@ const parseClassroomNames = (value) => {
   });
 };
 const formatClassroomNames = (value) => (Array.isArray(value) ? value.map((item) => String(item ?? "").trim()) : parseClassroomNames(value)).join("\n");
-const getClassroomNamesForRows = (value, rowCount) => {
+const getClassroomNamesForRows = (value, rowCount, options = {}) => {
   const count = Math.max(0, Math.floor(Number(rowCount) || 0));
   const rawItems = Array.isArray(value) ? value : String(value || "").includes("\n") ? String(value || "").split(/\n/) : String(value || "").split(/,/);
-  return Array.from({ length: count }, (_, index) => String(rawItems[index] ?? "").trim());
+  return Array.from({ length: count }, (_, index) => {
+    const item = String(rawItems[index] ?? "");
+    return options.preserveWhitespace ? item : item.trim();
+  });
 };
-const updateClassroomNameForRow = (value, rowCount, rowIndex, nextName) => {
-  const names = getClassroomNamesForRows(value, rowCount);
+const updateClassroomNameForRow = (value, rowCount, rowIndex, nextName, options = {}) => {
+  const names = getClassroomNamesForRows(value, rowCount, options);
   if (rowIndex >= 0 && rowIndex < names.length) names[rowIndex] = nextName;
   return names;
 };
@@ -38183,7 +38186,7 @@ const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, lo
   ] });
   const wizardClassroomNamesField = () => {
     const rowCount = Math.max(0, Math.floor(parseNumberDraft(resourceDraft.ground, 0)));
-    const classroomNames = getClassroomNamesForRows(resourceDraft.classrooms, rowCount);
+    const classroomNames = getClassroomNamesForRows(resourceDraft.classrooms, rowCount, { preserveWhitespace: true });
     const setWizardClassrooms = (names) => updateResourceDraft((draft) => ({
       ...draft,
       ground: String(names.length),
@@ -38217,16 +38220,16 @@ const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, lo
             placeholder: "Name",
             onKeyDownCapture: (event) => handleEditableTextKeyDownCapture(event, (nextValue) => updateResourceDraft((draft) => ({
               ...draft,
-              classrooms: updateClassroomNameForRow(draft.classrooms, rowCount, index, nextValue).join("\n")
+              classrooms: updateClassroomNameForRow(draft.classrooms, rowCount, index, nextValue, { preserveWhitespace: true }).join("\n")
             }))),
             onBeforeInput: (event) => handleEditableTextBeforeInput(event, (nextValue) => updateResourceDraft((draft) => ({
               ...draft,
-              classrooms: updateClassroomNameForRow(draft.classrooms, rowCount, index, nextValue).join("\n")
+              classrooms: updateClassroomNameForRow(draft.classrooms, rowCount, index, nextValue, { preserveWhitespace: true }).join("\n")
             }))),
             onKeyDown: stopEditableKeyPropagation,
             onChange: (event) => updateResourceDraft((draft) => ({
               ...draft,
-              classrooms: updateClassroomNameForRow(draft.classrooms, rowCount, index, event.target.value).join("\n")
+              classrooms: updateClassroomNameForRow(draft.classrooms, rowCount, index, event.target.value, { preserveWhitespace: true }).join("\n")
             }))
           }
         ),
@@ -38270,7 +38273,7 @@ const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, lo
       ] }) }),
       events.length > 0 ? /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-3 space-y-2", children: events.map((event, index) => {
         const isLastEvent = index === events.length - 1;
-        return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid gap-2 rounded-lg border border-slate-200 bg-white p-2 md:grid-cols-[minmax(0,1fr)_96px_82px_142px] md:items-end", children: [
+        return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid gap-2 rounded-lg border border-slate-200 bg-white p-2 md:grid-cols-[minmax(0,1fr)_96px_82px_172px] md:items-end", children: [
           /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { children: [
             /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "mb-1 block text-[10px] font-black uppercase tracking-[0.14em] text-slate-500", children: "Event name" }),
             /* @__PURE__ */ jsxRuntimeExports.jsx(
@@ -38313,13 +38316,13 @@ const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, lo
               }
             )
           ] }),
-          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex gap-2", children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex justify-end gap-2", children: [
             /* @__PURE__ */ jsxRuntimeExports.jsx(
               "button",
               {
                 type: "button",
                 onClick: () => deleteEvent(index),
-                className: "min-w-0 flex-1 rounded-md border border-red-200 bg-red-50 px-2 py-2 text-xs font-black uppercase tracking-[0.08em] text-red-700 transition hover:bg-red-100",
+                className: "w-20 shrink-0 rounded-md border border-red-200 bg-red-50 px-2 py-2 text-xs font-black uppercase tracking-[0.08em] text-red-700 transition hover:bg-red-100",
                 children: "Delete"
               }
             ),
@@ -38328,7 +38331,7 @@ const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, lo
               {
                 type: "button",
                 onClick: addEvent,
-                className: "min-w-0 flex-1 rounded-md border border-sky-300 bg-sky-50 px-2 py-2 text-xs font-black uppercase tracking-[0.08em] text-sky-700 transition hover:bg-sky-100",
+                className: "w-20 shrink-0 rounded-md border border-sky-300 bg-sky-50 px-2 py-2 text-xs font-black uppercase tracking-[0.08em] text-sky-700 transition hover:bg-sky-100",
                 children: "+ Add"
               }
             )

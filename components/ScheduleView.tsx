@@ -8051,7 +8051,7 @@ const InitialSetupWizard: React.FC<{
     );
     const wizardClassroomNamesField = () => {
         const rowCount = Math.max(0, Math.floor(parseNumberDraft(resourceDraft.ground, 0)));
-        const classroomNames = getClassroomNamesForRows(resourceDraft.classrooms, rowCount);
+        const classroomNames = getClassroomNamesForRows(resourceDraft.classrooms, rowCount, { preserveWhitespace: true });
         const setWizardClassrooms = (names: string[]) => updateResourceDraft((draft) => ({
             ...draft,
             ground: String(names.length),
@@ -8089,16 +8089,16 @@ const InitialSetupWizard: React.FC<{
                                     placeholder="Name"
                                     onKeyDownCapture={(event) => handleEditableTextKeyDownCapture(event, (nextValue) => updateResourceDraft((draft) => ({
                                         ...draft,
-                                        classrooms: updateClassroomNameForRow(draft.classrooms, rowCount, index, nextValue).join('\n'),
+                                        classrooms: updateClassroomNameForRow(draft.classrooms, rowCount, index, nextValue, { preserveWhitespace: true }).join('\n'),
                                     })))}
                                     onBeforeInput={(event) => handleEditableTextBeforeInput(event, (nextValue) => updateResourceDraft((draft) => ({
                                         ...draft,
-                                        classrooms: updateClassroomNameForRow(draft.classrooms, rowCount, index, nextValue).join('\n'),
+                                        classrooms: updateClassroomNameForRow(draft.classrooms, rowCount, index, nextValue, { preserveWhitespace: true }).join('\n'),
                                     })))}
                                     onKeyDown={stopEditableKeyPropagation}
                                     onChange={(event) => updateResourceDraft((draft) => ({
                                         ...draft,
-                                        classrooms: updateClassroomNameForRow(draft.classrooms, rowCount, index, event.target.value).join('\n'),
+                                        classrooms: updateClassroomNameForRow(draft.classrooms, rowCount, index, event.target.value, { preserveWhitespace: true }).join('\n'),
                                     }))}
                                 />
                                 <button
@@ -8155,7 +8155,7 @@ const InitialSetupWizard: React.FC<{
                         {events.map((event, index) => {
                             const isLastEvent = index === events.length - 1;
                             return (
-                                <div key={`wizard-academic-standard-${index}`} className="grid gap-2 rounded-lg border border-slate-200 bg-white p-2 md:grid-cols-[minmax(0,1fr)_96px_82px_142px] md:items-end">
+                                <div key={`wizard-academic-standard-${index}`} className="grid gap-2 rounded-lg border border-slate-200 bg-white p-2 md:grid-cols-[minmax(0,1fr)_96px_82px_172px] md:items-end">
                                     <label>
                                         <span className="mb-1 block text-[10px] font-black uppercase tracking-[0.14em] text-slate-500">Event name</span>
                                         <input
@@ -8189,11 +8189,11 @@ const InitialSetupWizard: React.FC<{
                                             onChange={(changeEvent) => updateEvent(index, { color: changeEvent.target.value })}
                                         />
                                     </label>
-                                    <div className="flex gap-2">
+                                    <div className="flex justify-end gap-2">
                                         <button
                                             type="button"
                                             onClick={() => deleteEvent(index)}
-                                            className="min-w-0 flex-1 rounded-md border border-red-200 bg-red-50 px-2 py-2 text-xs font-black uppercase tracking-[0.08em] text-red-700 transition hover:bg-red-100"
+                                            className="w-20 shrink-0 rounded-md border border-red-200 bg-red-50 px-2 py-2 text-xs font-black uppercase tracking-[0.08em] text-red-700 transition hover:bg-red-100"
                                         >
                                             Delete
                                         </button>
@@ -8201,7 +8201,7 @@ const InitialSetupWizard: React.FC<{
                                             <button
                                                 type="button"
                                                 onClick={addEvent}
-                                                className="min-w-0 flex-1 rounded-md border border-sky-300 bg-sky-50 px-2 py-2 text-xs font-black uppercase tracking-[0.08em] text-sky-700 transition hover:bg-sky-100"
+                                                className="w-20 shrink-0 rounded-md border border-sky-300 bg-sky-50 px-2 py-2 text-xs font-black uppercase tracking-[0.08em] text-sky-700 transition hover:bg-sky-100"
                                             >
                                                 + Add
                                             </button>
