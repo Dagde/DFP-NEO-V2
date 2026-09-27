@@ -6855,7 +6855,6 @@ const InitialSetupWizard: React.FC<{
         'staff': ['staff'],
         'trainee-upload': unitDraft.hasTrainees ? ['trainees'] : [],
         'master-lmp': ['courses'],
-        'scoring': ['scoring'],
     };
     const visibleStepTemplateIds = templateIdsByStep[visibleStep.id] || [];
     const visibleTemplates = initialSetupTemplates.filter((template) => (
@@ -11582,7 +11581,7 @@ const InitialSetupWizard: React.FC<{
         }
         if (visibleStep.id === 'scoring') {
             return promptShell(
-                <p>Set up the wording instructors will use when grading training report assessment areas. You can enter it here or upload the scoring matrix template below.</p>,
+                <p>Set up the wording instructors will use when grading training report assessment areas.</p>,
                 renderScoringEditor(),
             );
         }

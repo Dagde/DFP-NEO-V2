@@ -37270,8 +37270,7 @@ const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, lo
     "locations-today": ["locations"],
     "staff": ["staff"],
     "trainee-upload": unitDraft.hasTrainees ? ["trainees"] : [],
-    "master-lmp": ["courses"],
-    "scoring": ["scoring"]
+    "master-lmp": ["courses"]
   };
   const visibleStepTemplateIds = templateIdsByStep[visibleStep.id] || [];
   const visibleTemplates = initialSetupTemplates.filter((template) => visibleStepTemplateIds.includes(template.id));
@@ -41282,7 +41281,7 @@ const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, lo
     }
     if (visibleStep.id === "scoring") {
       return promptShell(
-        /* @__PURE__ */ jsxRuntimeExports.jsx("p", { children: "Set up the wording instructors will use when grading training report assessment areas. You can enter it here or upload the scoring matrix template below." }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx("p", { children: "Set up the wording instructors will use when grading training report assessment areas." }),
         renderScoringEditor()
       );
     }
