@@ -27384,7 +27384,7 @@ This removes them from DFP Resource Rows. Press Save in this section to apply th
                                 onClick: () => updateResourcePoolSettings(index, {
                                   flightLineUnavailableReasonOptions: normaliseFlightLineUnavailableReasons$1(aircraftUnavailableReasons.filter((_, removeIndex) => removeIndex !== reasonIndex))
                                 }),
-                                className: "h-[38px] w-8 rounded-md border border-rose-400/45 bg-rose-500/10 text-base font-black leading-none text-rose-100 hover:bg-rose-500/20 disabled:cursor-not-allowed disabled:opacity-50",
+                                className: "h-[38px] w-8 rounded-md border border-rose-500/55 bg-rose-100 text-base font-black leading-none text-red-900 hover:border-rose-700 hover:bg-rose-200 disabled:cursor-not-allowed disabled:opacity-50",
                                 title: "Delete aircraft unavailable reason",
                                 "aria-label": `Delete aircraft unavailable reason ${reasonIndex + 1}`,
                                 children: "-"
