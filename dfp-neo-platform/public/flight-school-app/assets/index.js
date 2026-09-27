@@ -39227,7 +39227,7 @@ const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, lo
     const rows = [
       { key: "flight", label: "Day flying", enabled: true, start: flyingStartTime, end: flyingEndTime, setStart: onUpdateFlyingStartTime, setEnd: onUpdateFlyingEndTime },
       { key: "ftd", label: "Simulator operating", enabled: true, start: ftdStartTime, end: ftdEndTime, setStart: onUpdateFtdStartTime, setEnd: onUpdateFtdEndTime },
-      { key: "cpt", label: "Trainer operating", enabled: true, start: cptStartTime, end: cptEndTime, setStart: onUpdateCptStartTime, setEnd: onUpdateCptEndTime },
+      { key: "cpt", label: "Procedural trainer operating window", enabled: true, start: cptStartTime, end: cptEndTime, setStart: onUpdateCptStartTime, setEnd: onUpdateCptEndTime },
       { key: "night", label: "Night flying", enabled: allowNightFlying, start: commenceNightFlying, end: ceaseNightFlying, setStart: onUpdateCommenceNightFlying, setEnd: onUpdateCeaseNightFlying, setEnabled: onUpdateAllowNightFlying }
     ];
     return /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "overflow-hidden rounded-lg border border-slate-300 bg-white", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("table", { className: "w-full text-left text-sm text-slate-900", children: [
