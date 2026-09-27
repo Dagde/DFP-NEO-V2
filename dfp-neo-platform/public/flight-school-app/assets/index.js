@@ -38273,7 +38273,7 @@ const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, lo
       ] }) }),
       events.length > 0 ? /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-3 space-y-2", children: events.map((event, index) => {
         const isLastEvent = index === events.length - 1;
-        return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid gap-2 rounded-lg border border-slate-200 bg-white p-2 md:grid-cols-[minmax(0,1fr)_96px_82px_172px] md:items-end", children: [
+        return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid gap-2 rounded-lg border border-slate-200 bg-white p-2 md:grid-cols-[minmax(0,1fr)_96px_82px_80px_80px] md:items-end", children: [
           /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { children: [
             /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "mb-1 block text-[10px] font-black uppercase tracking-[0.14em] text-slate-500", children: "Event name" }),
             /* @__PURE__ */ jsxRuntimeExports.jsx(
@@ -38316,26 +38316,24 @@ const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, lo
               }
             )
           ] }),
-          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex justify-end gap-2", children: [
-            /* @__PURE__ */ jsxRuntimeExports.jsx(
-              "button",
-              {
-                type: "button",
-                onClick: () => deleteEvent(index),
-                className: "w-20 shrink-0 rounded-md border border-red-200 bg-red-50 px-2 py-2 text-xs font-black uppercase tracking-[0.08em] text-red-700 transition hover:bg-red-100",
-                children: "Delete"
-              }
-            ),
-            isLastEvent && /* @__PURE__ */ jsxRuntimeExports.jsx(
-              "button",
-              {
-                type: "button",
-                onClick: addEvent,
-                className: "w-20 shrink-0 rounded-md border border-sky-300 bg-sky-50 px-2 py-2 text-xs font-black uppercase tracking-[0.08em] text-sky-700 transition hover:bg-sky-100",
-                children: "+ Add"
-              }
-            )
-          ] })
+          /* @__PURE__ */ jsxRuntimeExports.jsx(
+            "button",
+            {
+              type: "button",
+              onClick: () => deleteEvent(index),
+              className: "w-20 rounded-md border border-red-200 bg-red-50 px-2 py-2 text-xs font-black uppercase tracking-[0.08em] text-red-700 transition hover:bg-red-100",
+              children: "Delete"
+            }
+          ),
+          isLastEvent ? /* @__PURE__ */ jsxRuntimeExports.jsx(
+            "button",
+            {
+              type: "button",
+              onClick: addEvent,
+              className: "w-20 rounded-md border border-sky-300 bg-sky-50 px-2 py-2 text-xs font-black uppercase tracking-[0.08em] text-sky-700 transition hover:bg-sky-100",
+              children: "+ Add"
+            }
+          ) : /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "hidden w-20 md:block", "aria-hidden": "true" })
         ] }, `wizard-academic-standard-${index}`);
       }) }) : /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-3 rounded-lg border border-dashed border-slate-300 bg-white px-3 py-2 text-sm font-semibold text-slate-500", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex flex-wrap items-center justify-between gap-3", children: [
         /* @__PURE__ */ jsxRuntimeExports.jsx("span", { children: "No academic standard events configured. Use + Add to create the first event." }),

@@ -8155,7 +8155,7 @@ const InitialSetupWizard: React.FC<{
                         {events.map((event, index) => {
                             const isLastEvent = index === events.length - 1;
                             return (
-                                <div key={`wizard-academic-standard-${index}`} className="grid gap-2 rounded-lg border border-slate-200 bg-white p-2 md:grid-cols-[minmax(0,1fr)_96px_82px_172px] md:items-end">
+                                <div key={`wizard-academic-standard-${index}`} className="grid gap-2 rounded-lg border border-slate-200 bg-white p-2 md:grid-cols-[minmax(0,1fr)_96px_82px_80px_80px] md:items-end">
                                     <label>
                                         <span className="mb-1 block text-[10px] font-black uppercase tracking-[0.14em] text-slate-500">Event name</span>
                                         <input
@@ -8189,24 +8189,24 @@ const InitialSetupWizard: React.FC<{
                                             onChange={(changeEvent) => updateEvent(index, { color: changeEvent.target.value })}
                                         />
                                     </label>
-                                    <div className="flex justify-end gap-2">
+                                    <button
+                                        type="button"
+                                        onClick={() => deleteEvent(index)}
+                                        className="w-20 rounded-md border border-red-200 bg-red-50 px-2 py-2 text-xs font-black uppercase tracking-[0.08em] text-red-700 transition hover:bg-red-100"
+                                    >
+                                        Delete
+                                    </button>
+                                    {isLastEvent ? (
                                         <button
                                             type="button"
-                                            onClick={() => deleteEvent(index)}
-                                            className="w-20 shrink-0 rounded-md border border-red-200 bg-red-50 px-2 py-2 text-xs font-black uppercase tracking-[0.08em] text-red-700 transition hover:bg-red-100"
+                                            onClick={addEvent}
+                                            className="w-20 rounded-md border border-sky-300 bg-sky-50 px-2 py-2 text-xs font-black uppercase tracking-[0.08em] text-sky-700 transition hover:bg-sky-100"
                                         >
-                                            Delete
+                                            + Add
                                         </button>
-                                        {isLastEvent && (
-                                            <button
-                                                type="button"
-                                                onClick={addEvent}
-                                                className="w-20 shrink-0 rounded-md border border-sky-300 bg-sky-50 px-2 py-2 text-xs font-black uppercase tracking-[0.08em] text-sky-700 transition hover:bg-sky-100"
-                                            >
-                                                + Add
-                                            </button>
-                                        )}
-                                    </div>
+                                    ) : (
+                                        <div className="hidden w-20 md:block" aria-hidden="true" />
+                                    )}
                                 </div>
                             );
                         })}
