@@ -31474,12 +31474,19 @@ const App: React.FC = () => {
         if (!platformConfigLoaded || selectableLocationCodes.length === 0) return;
         if (selectableLocationCodes.includes(school)) return;
         const hasInitialSetupWizardProgress = hasStoredInitialSetupWizardProgress();
-        if (isInitialSetupWizardActive || hasInitialSetupWizardProgress) {
+        const shouldSuppressAutoLocationSwitch = isInitialSetupWizardActive || (
+            hasInitialSetupWizardProgress && !hasOperationalSetupReadyForDfp
+        );
+        if (shouldSuppressAutoLocationSwitch) {
             pushDfpDataDiag('context:auto-location-switch-suppressed-for-initial-setup', {
                 school,
                 selectableLocationCodes,
                 isInitialSetupWizardActive,
                 hasInitialSetupWizardProgress,
+                hasOperationalSetupReadyForDfp,
+                reason: isInitialSetupWizardActive
+                    ? 'setup-wizard-open'
+                    : 'stored-wizard-progress-and-operational-setup-not-ready',
             });
             return;
         }
@@ -31504,7 +31511,7 @@ const App: React.FC = () => {
             changeSchool(selectableLocationCodes[0]);
             setShowInfoNotification(`Access context changed. Location switched to ${selectableLocationCodes[0]}.`);
         }
-    }, [activeUnitCode, getLocationSelectorAliases, getUnitOptionsForLocation, hasStoredInitialSetupWizardProgress, isInitialSetupWizardActive, platformAccessContext.accessibleLocations, platformConfig, platformConfigLoaded, platformDataScopeQuery, selectableLocationCodes, school]);
+    }, [activeUnitCode, getLocationSelectorAliases, getUnitOptionsForLocation, hasOperationalSetupReadyForDfp, hasStoredInitialSetupWizardProgress, isInitialSetupWizardActive, platformAccessContext.accessibleLocations, platformConfig, platformConfigLoaded, platformDataScopeQuery, selectableLocationCodes, school]);
 //     useEffect(() => {
 //         const fetchCurrentUser = async () => {
 //            console.log('🔍 [SESSION DEBUG] useEffect hook running');

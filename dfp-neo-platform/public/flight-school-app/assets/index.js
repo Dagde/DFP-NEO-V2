@@ -137887,12 +137887,15 @@ const App = () => {
     if (!platformConfigLoaded || selectableLocationCodes.length === 0) return;
     if (selectableLocationCodes.includes(school)) return;
     const hasInitialSetupWizardProgress2 = hasStoredInitialSetupWizardProgress();
-    if (isInitialSetupWizardActive || hasInitialSetupWizardProgress2) {
+    const shouldSuppressAutoLocationSwitch = isInitialSetupWizardActive || hasInitialSetupWizardProgress2 && !hasOperationalSetupReadyForDfp;
+    if (shouldSuppressAutoLocationSwitch) {
       pushDfpDataDiag("context:auto-location-switch-suppressed-for-initial-setup", {
         school,
         selectableLocationCodes,
         isInitialSetupWizardActive,
-        hasInitialSetupWizardProgress: hasInitialSetupWizardProgress2
+        hasInitialSetupWizardProgress: hasInitialSetupWizardProgress2,
+        hasOperationalSetupReadyForDfp,
+        reason: isInitialSetupWizardActive ? "setup-wizard-open" : "stored-wizard-progress-and-operational-setup-not-ready"
       });
       return;
     }
@@ -137913,7 +137916,7 @@ const App = () => {
       changeSchool(selectableLocationCodes[0]);
       setShowInfoNotification(`Access context changed. Location switched to ${selectableLocationCodes[0]}.`);
     }
-  }, [activeUnitCode, getLocationSelectorAliases, getUnitOptionsForLocation, hasStoredInitialSetupWizardProgress, isInitialSetupWizardActive, platformAccessContext.accessibleLocations, platformConfig, platformConfigLoaded, platformDataScopeQuery, selectableLocationCodes, school]);
+  }, [activeUnitCode, getLocationSelectorAliases, getUnitOptionsForLocation, hasOperationalSetupReadyForDfp, hasStoredInitialSetupWizardProgress, isInitialSetupWizardActive, platformAccessContext.accessibleLocations, platformConfig, platformConfigLoaded, platformDataScopeQuery, selectableLocationCodes, school]);
   const [currentUserId, setCurrentUserId] = reactExports.useState(currentUser2?.idNumber || 1);
   reactExports.useEffect(() => {
     if (!authUser && currentUser2) {
