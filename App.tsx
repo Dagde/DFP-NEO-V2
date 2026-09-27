@@ -9203,9 +9203,36 @@ const createLmpOrderKey = (index: number): string => String(index + 1).padStart(
 const REMEDIAL_EARLIEST_START = 10.0;
 const REMEDIAL_FORCE_SCHEDULE_STORAGE_KEY = 'neo_remedial_force_schedule_requests';
 const ACTIVE_OPERATIONAL_CONTEXT_STORAGE_KEY = 'dfp_active_operational_context';
+const INITIAL_SETUP_WIZARD_LOCAL_STORAGE_KEYS = [
+    'dfp-initial-setup-wizard-step',
+    'dfp-initial-setup-wizard-organisation-draft',
+    'dfp-initial-setup-wizard-draft-snapshot',
+    'dfp-initial-setup-wizard-completed-steps',
+    'dfp-initial-setup-wizard-completed-at',
+] as const;
 const PLATFORM_CONFIG_UPDATED_EVENT = 'dfp-platform-config-updated';
 const HIGHEST_PRIORITY_EVENTS_STORAGE_PREFIX = 'dfp_highest_priority_events_v1';
 const REMEDIAL_EVENT_CODE_REGEX = /-(?:REM-[A-Z]+\d+|RFTD\d+|RRF\d+|RT\d+|RF\d+|FTD\d+|F\d+|T\d+)$/i;
+
+const getBrowserDeploymentStorageScope = (): string => {
+    if (typeof window === 'undefined') return 'server';
+    const host = String(window.location?.host || window.location?.hostname || 'local').trim().toLowerCase() || 'local';
+    return host.replace(/[^a-z0-9.-]+/g, '-');
+};
+
+const isOperationalContextPayloadForCurrentScope = (payload: any): boolean => {
+    const payloadScope = String(payload?.storageScope || payload?.deploymentScope || '').trim().toLowerCase();
+    if (!payloadScope) return true;
+    return payloadScope === getBrowserDeploymentStorageScope();
+};
+
+const buildOperationalContextPayload = (location: string, unit: string, source: string) => ({
+    location,
+    unit,
+    source,
+    storageScope: getBrowserDeploymentStorageScope(),
+    updatedAt: new Date().toISOString(),
+});
 
 const buildHighestPriorityEventsStorageKey = (locationCode: string, unitCode: string): string => (
     `${HIGHEST_PRIORITY_EVENTS_STORAGE_PREFIX}:${String(locationCode || 'UNKNOWN').trim().toUpperCase()}:${String(unitCode || 'UNKNOWN').trim().toUpperCase()}`
@@ -29017,6 +29044,9 @@ const App: React.FC = () => {
             const raw = localStorage.getItem(ACTIVE_OPERATIONAL_CONTEXT_STORAGE_KEY);
             if (!raw) return { location: '', unit: '' };
             const parsed = JSON.parse(raw);
+            if (!isOperationalContextPayloadForCurrentScope(parsed)) {
+                return { location: '', unit: '' };
+            }
             const location = String(parsed?.location || '').trim().toUpperCase();
             const unit = String(parsed?.unit || '').trim().toUpperCase();
             return {
@@ -29509,10 +29539,7 @@ const App: React.FC = () => {
 
     useEffect(() => {
         try {
-            const payload = {
-                location: school,
-                unit: activeUnitCode,
-            };
+            const payload = buildOperationalContextPayload(school, activeUnitCode, 'state-sync');
             localStorage.setItem(ACTIVE_OPERATIONAL_CONTEXT_STORAGE_KEY, JSON.stringify(payload));
         } catch (error) {
             // Ignore persistence failures; the selector remains functional for the active session.
@@ -30623,12 +30650,12 @@ const App: React.FC = () => {
     const initialSetupWizardCompletedAtStorageKey = 'dfp-initial-setup-wizard-completed-at';
     const hasStoredInitialSetupWizardProgress = useCallback(() => {
         if (typeof window === 'undefined') return false;
-        const storedStep = Number(window.localStorage.getItem('dfp-initial-setup-wizard-step'));
+        const storedStep = Number(window.localStorage.getItem(INITIAL_SETUP_WIZARD_LOCAL_STORAGE_KEYS[0]));
         if (Number.isFinite(storedStep) && storedStep > 0) return true;
-        if (window.localStorage.getItem('dfp-initial-setup-wizard-organisation-draft')) return true;
-        if (window.localStorage.getItem('dfp-initial-setup-wizard-draft-snapshot')) return true;
+        if (window.localStorage.getItem(INITIAL_SETUP_WIZARD_LOCAL_STORAGE_KEYS[1])) return true;
+        if (window.localStorage.getItem(INITIAL_SETUP_WIZARD_LOCAL_STORAGE_KEYS[2])) return true;
         try {
-            const completedSteps = JSON.parse(window.localStorage.getItem('dfp-initial-setup-wizard-completed-steps') || '[]');
+            const completedSteps = JSON.parse(window.localStorage.getItem(INITIAL_SETUP_WIZARD_LOCAL_STORAGE_KEYS[3]) || '[]');
             return Array.isArray(completedSteps) && completedSteps.length > 0;
         } catch {
             return false;
@@ -30641,11 +30668,7 @@ const App: React.FC = () => {
     function readInitialSetupWizardLocalStorageState(): Record<string, any> {
         if (typeof window === 'undefined') return { available: false };
         const keys = [
-            'dfp-initial-setup-wizard-step',
-            'dfp-initial-setup-wizard-organisation-draft',
-            'dfp-initial-setup-wizard-draft-snapshot',
-            'dfp-initial-setup-wizard-completed-steps',
-            initialSetupWizardCompletedAtStorageKey,
+            ...INITIAL_SETUP_WIZARD_LOCAL_STORAGE_KEYS,
             ACTIVE_OPERATIONAL_CONTEXT_STORAGE_KEY,
         ];
         return keys.reduce((acc: Record<string, any>, key) => {
@@ -30808,6 +30831,34 @@ const App: React.FC = () => {
             // Best-effort cleanup only; the UI is still masked while setup is incomplete.
         }
     }, [activeUnitCode, school, showInitialSetupBlankState]);
+
+    useEffect(() => {
+        if (!platformConfigLoaded || showInitialSetupBlankState || isInitialSetupWizardActive || !hasOperationalSetupReadyForDfp) return;
+        if (!hasStoredInitialSetupWizardProgress() && !hasStoredInitialSetupWizardCompleted()) return;
+        try {
+            const removedKeys = INITIAL_SETUP_WIZARD_LOCAL_STORAGE_KEYS.filter((key) => {
+                const exists = window.localStorage.getItem(key) !== null;
+                if (exists) window.localStorage.removeItem(key);
+                return exists;
+            });
+            if (removedKeys.length > 0) {
+                pushDfpDataDiag('startup:stale-initial-setup-local-state-cleared', {
+                    removedKeys,
+                    storageScope: getBrowserDeploymentStorageScope(),
+                    hasOperationalSetupReadyForDfp,
+                });
+            }
+        } catch {
+            // Best-effort cleanup only. The operational setup gate above still protects startup.
+        }
+    }, [
+        hasOperationalSetupReadyForDfp,
+        hasStoredInitialSetupWizardCompleted,
+        hasStoredInitialSetupWizardProgress,
+        isInitialSetupWizardActive,
+        platformConfigLoaded,
+        showInitialSetupBlankState,
+    ]);
 
     useEffect(() => {
         if (!setupTestProfile) return;
@@ -33389,12 +33440,7 @@ const App: React.FC = () => {
                     cacheDailySnapshot(snapshotKey, snap, targetDate);
                     loadedSnapshotDates.current.add(snapshotKey);
                     if (isAdminContextFallback && canAdoptAdminFallbackContext && eventCount > 0) {
-                        const fallbackPayload = {
-                            location: resolvedSchool,
-                            unit: resolvedUnit,
-                            source: 'snapshot-fallback',
-                            updatedAt: new Date().toISOString(),
-                        };
+                        const fallbackPayload = buildOperationalContextPayload(resolvedSchool, resolvedUnit, 'snapshot-fallback');
                         setSchool(resolvedSchool);
                         setActiveUnitCode(resolvedUnit);
                         try {
@@ -41765,10 +41811,7 @@ const App: React.FC = () => {
 
     const persistOperationalContextSelection = (location: string, unit: string, source: string) => {
         try {
-            const payload = {
-                location,
-                unit,
-            };
+            const payload = buildOperationalContextPayload(location, unit, source);
             const previousStoredContext = localStorage.getItem(ACTIVE_OPERATIONAL_CONTEXT_STORAGE_KEY);
             localStorage.setItem(ACTIVE_OPERATIONAL_CONTEXT_STORAGE_KEY, JSON.stringify(payload));
         } catch (error) {

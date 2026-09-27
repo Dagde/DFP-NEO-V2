@@ -10555,11 +10555,27 @@ function rejectDisabledDebugRoute(res) {
 }
 
 // TESTING FUNCTIONS START - temporary customer-testbed reset tools.
+function getRequestHostName(req) {
+  return String(req?.hostname || req?.headers?.host || '')
+    .split(':')[0]
+    .trim()
+    .toLowerCase();
+}
+
+function isProtectedProductionHost(req) {
+  const host = getRequestHostName(req);
+  return (
+    host === 'dfp-neo-v2-production.up.railway.app' ||
+    host.includes('dfp-neo-v2-production')
+  );
+}
+
 function isTestingFunctionsEnabled(req) {
+  if (isProtectedProductionHost(req)) return false;
   const explicitValue = String(process.env.DFP_TESTING_FUNCTIONS_ENABLED || '').trim().toLowerCase();
   if (['true', '1', 'yes', 'on'].includes(explicitValue)) return true;
   if (['false', '0', 'no', 'off'].includes(explicitValue)) return false;
-  const host = String(req?.hostname || req?.headers?.host || '').toLowerCase();
+  const host = getRequestHostName(req);
   return host.includes('new-customer-test') || host.includes('localhost') || host.includes('127.0.0.1');
 }
 

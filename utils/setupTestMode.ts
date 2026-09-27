@@ -5,6 +5,13 @@ export const SETUP_TEST_PLATFORM_EVENT = 'dfp-setup-test-platform-config-updated
 export const SETUP_TEST_PERSONNEL_EVENT = 'dfp-setup-test-personnel-updated';
 export const SETUP_TEST_SYLLABUS_EVENT = 'dfp-setup-test-syllabus-updated';
 const INITIAL_SETUP_WIZARD_STEP_KEY = 'dfp-initial-setup-wizard-step';
+const INITIAL_SETUP_WIZARD_STORAGE_KEYS = [
+  INITIAL_SETUP_WIZARD_STEP_KEY,
+  'dfp-initial-setup-wizard-organisation-draft',
+  'dfp-initial-setup-wizard-draft-snapshot',
+  'dfp-initial-setup-wizard-completed-steps',
+  'dfp-initial-setup-wizard-completed-at',
+] as const;
 const ACTIVE_OPERATIONAL_CONTEXT_STORAGE_KEY = 'dfp_active_operational_context';
 
 const safeWindow = (): Window | null => (typeof window === 'undefined' ? null : window);
@@ -24,7 +31,6 @@ export const resetSetupTestProfile = (profile: string): void => {
     ))
     .forEach((key) => win.localStorage.removeItem(key));
   [
-    INITIAL_SETUP_WIZARD_STEP_KEY,
     'dfp_last_viewed_date',
     'dfp_build_date',
     'systemFreezeState',
@@ -43,6 +49,7 @@ export const resetSetupTestProfile = (profile: string): void => {
     'neo_dfp_data_diag',
     'neo_lmp_details_active_tab',
     'neo_lmp_details_selected_package',
+    ...INITIAL_SETUP_WIZARD_STORAGE_KEYS,
   ].forEach((key) => win.localStorage.removeItem(key));
   const emptyConfig = createEmptySetupTestPlatformConfig();
   win.localStorage.setItem(`${setupPrefix}platform_config`, JSON.stringify(emptyConfig));
@@ -53,6 +60,9 @@ export const resetSetupTestProfile = (profile: string): void => {
   win.localStorage.setItem(ACTIVE_OPERATIONAL_CONTEXT_STORAGE_KEY, JSON.stringify({
     location: '',
     unit: '',
+    source: 'setup-test-reset',
+    storageScope: String(win.location?.host || win.location?.hostname || 'local').trim().toLowerCase() || 'local',
+    updatedAt: new Date().toISOString(),
   }));
   win.sessionStorage.removeItem('dfp_setup_test_profile');
   win.dispatchEvent(new CustomEvent(SETUP_TEST_PLATFORM_EVENT, { detail: { config: emptyConfig } }));
