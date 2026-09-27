@@ -35893,12 +35893,24 @@ const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, lo
         else nextLocations.push(nextLocation);
       });
       const savedLocationsTodayDraft = normalisedLocationsTodayDraft || buildWizardLocationsTodayDraftFromLocations(nextLocations.filter(isWizardLocationScopedToCurrentContext));
-      const firstLocationCode = parseWizardLocationRows(savedLocationsTodayDraft)[0]?.icao || normalisedDraftRows[0]?.icao || "";
+      const firstSavedLocationRow = parseWizardLocationRows(savedLocationsTodayDraft)[0] || normalisedDraftRows[0] || null;
+      const firstLocationCode = firstSavedLocationRow?.icao || normalisedDraftRows[0]?.icao || "";
+      const firstLocationProfile = firstSavedLocationRow ? findWizardLocationProfile(firstSavedLocationRow.icao || firstSavedLocationRow.iata || firstSavedLocationRow.name) : null;
+      const savedLocationDraft = firstSavedLocationRow ? {
+        code: String(firstSavedLocationRow.icao || firstLocationProfile?.icao || "").trim().toUpperCase(),
+        iataCode: String(firstSavedLocationRow.iata || firstLocationProfile?.iata || "").trim().toUpperCase(),
+        name: String(firstSavedLocationRow.name || firstLocationProfile?.name || firstSavedLocationRow.icao || "").trim(),
+        timezone: firstLocationProfile?.timezone || locationDraft.timezone || "UTC",
+        latitude: firstLocationProfile?.latitude != null ? String(firstLocationProfile.latitude) : String(locationDraft.latitude || ""),
+        longitude: firstLocationProfile?.longitude != null ? String(firstLocationProfile.longitude) : String(locationDraft.longitude || ""),
+        trainingAreas: locationDraft.trainingAreas || ""
+      } : null;
       const nextUnits = firstLocationCode && wizardScopedUnitCodeSet.size > 0 ? units.map((unit) => wizardScopedUnitCodeSet.has(normaliseUnitSettingsIdentifier(unit?.code)) ? { ...unit, locationCode: firstLocationCode } : unit) : units;
       pushWizardLocationScopeTrace("save-location-rows-returning-config", {
         ...traceBeforeSave,
         savedLocationsTodayDraft,
         firstLocationCode,
+        savedLocationDraft,
         nextUnits: nextUnits.map(summariseWizardLocationScopeUnit),
         nextLocations: nextLocations.map(summariseWizardLocationScopeLocation),
         visibleByCurrentScopeAfterSave: nextLocations.filter(isWizardLocationScopedToCurrentContext).map(summariseWizardLocationScopeLocation)
@@ -35913,11 +35925,13 @@ const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, lo
           ...settings.initialSetupWizardDraft || {},
           locationsToday: parseWizardLocationRows(savedLocationsTodayDraft),
           locationsTodayDraft: savedLocationsTodayDraft,
+          ...savedLocationDraft ? { locationDraft: savedLocationDraft } : {},
           updatedAt: (/* @__PURE__ */ new Date()).toISOString()
         },
         initialSetupWizardDrafts: {
           ...settings.initialSetupWizardDrafts || {},
           locationsTodayDraft: savedLocationsTodayDraft,
+          ...savedLocationDraft ? { locationDraft: savedLocationDraft } : {},
           updatedAt: (/* @__PURE__ */ new Date()).toISOString()
         }
       }));
@@ -137656,21 +137670,22 @@ const App = () => {
     platformDataScopeQuery,
     selectableLocationCodes
   ]);
+  const hasStoredInitialSetupWizardProgress = reactExports.useCallback(() => {
+    if (typeof window === "undefined") return false;
+    const storedStep = Number(window.localStorage.getItem("dfp-initial-setup-wizard-step"));
+    if (Number.isFinite(storedStep) && storedStep > 0) return true;
+    if (window.localStorage.getItem("dfp-initial-setup-wizard-organisation-draft")) return true;
+    try {
+      const completedSteps = JSON.parse(window.localStorage.getItem("dfp-initial-setup-wizard-completed-steps") || "[]");
+      return Array.isArray(completedSteps) && completedSteps.length > 0;
+    } catch {
+      return false;
+    }
+  }, []);
   reactExports.useEffect(() => {
     if (!platformConfigLoaded || selectableLocationCodes.length === 0) return;
     if (selectableLocationCodes.includes(school)) return;
-    const hasInitialSetupWizardProgress = (() => {
-      if (typeof window === "undefined") return false;
-      const storedStep = Number(window.localStorage.getItem("dfp-initial-setup-wizard-step"));
-      if (Number.isFinite(storedStep) && storedStep > 0) return true;
-      if (window.localStorage.getItem("dfp-initial-setup-wizard-organisation-draft")) return true;
-      try {
-        const completedSteps = JSON.parse(window.localStorage.getItem("dfp-initial-setup-wizard-completed-steps") || "[]");
-        return Array.isArray(completedSteps) && completedSteps.length > 0;
-      } catch {
-        return false;
-      }
-    })();
+    const hasInitialSetupWizardProgress = hasStoredInitialSetupWizardProgress();
     if (isInitialSetupWizardActive || hasInitialSetupWizardProgress) {
       pushDfpDataDiag("context:auto-location-switch-suppressed-for-initial-setup", {
         school,
@@ -137697,7 +137712,7 @@ const App = () => {
       changeSchool(selectableLocationCodes[0]);
       setShowInfoNotification(`Access context changed. Location switched to ${selectableLocationCodes[0]}.`);
     }
-  }, [activeUnitCode, getLocationSelectorAliases, getUnitOptionsForLocation, isInitialSetupWizardActive, platformAccessContext.accessibleLocations, platformConfig, platformConfigLoaded, platformDataScopeQuery, selectableLocationCodes, school]);
+  }, [activeUnitCode, getLocationSelectorAliases, getUnitOptionsForLocation, hasStoredInitialSetupWizardProgress, isInitialSetupWizardActive, platformAccessContext.accessibleLocations, platformConfig, platformConfigLoaded, platformDataScopeQuery, selectableLocationCodes, school]);
   const [currentUserId, setCurrentUserId] = reactExports.useState(currentUser2?.idNumber || 1);
   reactExports.useEffect(() => {
     if (!authUser && currentUser2) {
@@ -140141,44 +140156,86 @@ const App = () => {
     () => getUnitTrainingReportPhraseBank(platformConfig, activeTrainingReportUnitCode, phraseBank),
     [activeTrainingReportUnitCode, phraseBank, platformConfig]
   );
-  const savePlatformConfigDebounced = reactExports.useCallback((nextConfig) => {
-    if (platformConfigSaveTimerRef.current) {
-      clearTimeout(platformConfigSaveTimerRef.current);
+  const persistPlatformConfigNow = reactExports.useCallback(async (nextConfig, reason = "platform-config") => {
+    const summary = {
+      reason,
+      locations: Array.isArray(nextConfig?.locations) ? nextConfig.locations.length : 0,
+      units: Array.isArray(nextConfig?.units) ? nextConfig.units.length : 0,
+      organisations: Array.isArray(nextConfig?.organisations) ? nextConfig.organisations.length : 0
+    };
+    if (isSetupTestMode()) {
+      writeSetupTestPlatformConfig(nextConfig);
+      window.dispatchEvent(new CustomEvent(PLATFORM_CONFIG_UPDATED_EVENT, { detail: { config: nextConfig } }));
+      pushDfpDataDiag("platform-config:save:setup-test", summary);
+      return true;
     }
-    platformConfigSaveTimerRef.current = setTimeout(() => {
-      if (isSetupTestMode()) {
-        writeSetupTestPlatformConfig(nextConfig);
-        return;
-      }
-      const sessionToken = localStorage.getItem("dfp_session_token") || "";
-      fetch(`${getApiBase2()}/platform-config`, {
+    const sessionToken = localStorage.getItem("dfp_session_token") || "";
+    try {
+      const res = await fetch(`${getApiBase2()}/platform-config`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
           ...sessionToken ? { Authorization: `Bearer ${sessionToken}` } : {}
         },
         body: JSON.stringify(nextConfig)
-      }).then((res) => {
-        if (!res.ok) throw new Error(`Save failed (${res.status})`);
-        window.dispatchEvent(new CustomEvent(PLATFORM_CONFIG_UPDATED_EVENT, { detail: { config: nextConfig } }));
-      }).catch((error) => {
-        console.warn("[PlatformConfig] Failed to save unit training report settings:", error);
       });
-    }, 900);
+      if (!res.ok) throw new Error(`Save failed (${res.status})`);
+      window.dispatchEvent(new CustomEvent(PLATFORM_CONFIG_UPDATED_EVENT, { detail: { config: nextConfig } }));
+      pushDfpDataDiag("platform-config:save:success", {
+        ...summary,
+        status: res.status
+      });
+      return true;
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      console.warn("[PlatformConfig] Failed to save platform config:", error);
+      pushDfpDataDiag("platform-config:save:error", {
+        ...summary,
+        error: message,
+        hasSessionToken: Boolean(sessionToken)
+      });
+      try {
+        const existing = JSON.parse(localStorage.getItem("dfp_platform_config_save_diag") || "[]");
+        const next = [
+          ...Array.isArray(existing) ? existing : [],
+          { ts: (/* @__PURE__ */ new Date()).toISOString(), ...summary, error: message, hasSessionToken: Boolean(sessionToken) }
+        ].slice(-80);
+        localStorage.setItem("dfp_platform_config_save_diag", JSON.stringify(next));
+      } catch {
+      }
+      return false;
+    }
   }, []);
+  const savePlatformConfigDebounced = reactExports.useCallback((nextConfig) => {
+    if (platformConfigSaveTimerRef.current) {
+      clearTimeout(platformConfigSaveTimerRef.current);
+    }
+    platformConfigSaveTimerRef.current = setTimeout(() => {
+      void persistPlatformConfigNow(nextConfig, "debounced-platform-config");
+    }, 900);
+  }, [persistPlatformConfigNow]);
   const handleUpdatePlatformConfigFromSchedule = reactExports.useCallback((updater) => {
     setPlatformConfig((prev) => {
       if (!prev) return prev;
       const nextConfig = updater(prev);
-      if (!isSetupTestMode()) {
+      const shouldPersistImmediately = isInitialSetupWizardActive || hasStoredInitialSetupWizardProgress();
+      if (shouldPersistImmediately && platformConfigSaveTimerRef.current) {
+        clearTimeout(platformConfigSaveTimerRef.current);
+        platformConfigSaveTimerRef.current = null;
+      }
+      if (!isSetupTestMode() && !shouldPersistImmediately) {
         window.setTimeout(() => {
           window.dispatchEvent(new CustomEvent(PLATFORM_CONFIG_UPDATED_EVENT, { detail: { config: nextConfig } }));
         }, 0);
       }
-      savePlatformConfigDebounced(nextConfig);
+      if (shouldPersistImmediately) {
+        void persistPlatformConfigNow(nextConfig, "initial-setup-wizard");
+      } else {
+        savePlatformConfigDebounced(nextConfig);
+      }
       return nextConfig;
     });
-  }, [savePlatformConfigDebounced]);
+  }, [hasStoredInitialSetupWizardProgress, isInitialSetupWizardActive, persistPlatformConfigNow, savePlatformConfigDebounced]);
   const registerSetupTestCoursesFromTrainees = reactExports.useCallback((trainees) => {
     const defaultColors = [
       "bg-sky-400/80",

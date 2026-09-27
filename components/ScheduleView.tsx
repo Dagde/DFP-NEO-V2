@@ -5337,7 +5337,20 @@ const InitialSetupWizard: React.FC<{
                 else nextLocations.push(nextLocation);
             });
             const savedLocationsTodayDraft = normalisedLocationsTodayDraft || buildWizardLocationsTodayDraftFromLocations(nextLocations.filter(isWizardLocationScopedToCurrentContext));
-            const firstLocationCode = parseWizardLocationRows(savedLocationsTodayDraft)[0]?.icao || normalisedDraftRows[0]?.icao || '';
+            const firstSavedLocationRow = parseWizardLocationRows(savedLocationsTodayDraft)[0] || normalisedDraftRows[0] || null;
+            const firstLocationCode = firstSavedLocationRow?.icao || normalisedDraftRows[0]?.icao || '';
+            const firstLocationProfile = firstSavedLocationRow
+                ? findWizardLocationProfile(firstSavedLocationRow.icao || firstSavedLocationRow.iata || firstSavedLocationRow.name)
+                : null;
+            const savedLocationDraft = firstSavedLocationRow ? {
+                code: String(firstSavedLocationRow.icao || firstLocationProfile?.icao || '').trim().toUpperCase(),
+                iataCode: String(firstSavedLocationRow.iata || firstLocationProfile?.iata || '').trim().toUpperCase(),
+                name: String(firstSavedLocationRow.name || firstLocationProfile?.name || firstSavedLocationRow.icao || '').trim(),
+                timezone: firstLocationProfile?.timezone || locationDraft.timezone || 'UTC',
+                latitude: firstLocationProfile?.latitude != null ? String(firstLocationProfile.latitude) : String(locationDraft.latitude || ''),
+                longitude: firstLocationProfile?.longitude != null ? String(firstLocationProfile.longitude) : String(locationDraft.longitude || ''),
+                trainingAreas: locationDraft.trainingAreas || '',
+            } : null;
             const nextUnits = firstLocationCode && wizardScopedUnitCodeSet.size > 0
                 ? units.map((unit: any) => (
                     wizardScopedUnitCodeSet.has(normaliseUnitSettingsIdentifier(unit?.code))
@@ -5349,6 +5362,7 @@ const InitialSetupWizard: React.FC<{
                 ...traceBeforeSave,
                 savedLocationsTodayDraft,
                 firstLocationCode,
+                savedLocationDraft,
                 nextUnits: nextUnits.map(summariseWizardLocationScopeUnit),
                 nextLocations: nextLocations.map(summariseWizardLocationScopeLocation),
                 visibleByCurrentScopeAfterSave: nextLocations
@@ -5365,11 +5379,13 @@ const InitialSetupWizard: React.FC<{
                     ...(settings.initialSetupWizardDraft || {}),
                     locationsToday: parseWizardLocationRows(savedLocationsTodayDraft),
                     locationsTodayDraft: savedLocationsTodayDraft,
+                    ...(savedLocationDraft ? { locationDraft: savedLocationDraft } : {}),
                     updatedAt: new Date().toISOString(),
                 },
                 initialSetupWizardDrafts: {
                     ...(settings.initialSetupWizardDrafts || {}),
                     locationsTodayDraft: savedLocationsTodayDraft,
+                    ...(savedLocationDraft ? { locationDraft: savedLocationDraft } : {}),
                     updatedAt: new Date().toISOString(),
                 },
             }));
