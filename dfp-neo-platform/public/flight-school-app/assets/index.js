@@ -32380,6 +32380,7 @@ const initialSetupWizardStorageKey = "dfp-initial-setup-wizard-step";
 const initialSetupWizardOrganisationDraftStorageKey = "dfp-initial-setup-wizard-organisation-draft";
 const initialSetupWizardCompletedStepsStorageKey = "dfp-initial-setup-wizard-completed-steps";
 const initialSetupWizardLocationDiagStorageKey = "dfp_setup_wizard_location_diag";
+const initialSetupWizardStep6DiagStorageKey = "dfp_setup_wizard_step_6_diag";
 const MAX_INITIAL_SETUP_ORGANISATION_LEVELS = 12;
 const createWizardRecordId = (prefix) => `${prefix}-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
 const createSetupTestRecordId = (prefix, key = "") => {
@@ -33884,11 +33885,14 @@ const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, lo
   const wizardStep24RenderCountRef = reactExports.useRef(0);
   const wizardLocationScopeTraceRef = reactExports.useRef([]);
   const wizardLocationScopeTraceSequenceRef = reactExports.useRef(0);
+  const wizardStep6TraceRef = reactExports.useRef([]);
+  const wizardStep6TraceSequenceRef = reactExports.useRef(0);
   const wizardDiagnosticStorageKeys = [
     "dfp_setup_wizard_import_diag",
     "dfp_setup_test_lmp_diag",
     "dfp_setup_wizard_org_diag",
-    initialSetupWizardLocationDiagStorageKey
+    initialSetupWizardLocationDiagStorageKey,
+    initialSetupWizardStep6DiagStorageKey
   ];
   const safeSetWizardLocalStorage = (key, value) => {
     if (typeof window === "undefined") return false;
@@ -35090,6 +35094,14 @@ const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, lo
       locationsToday: hydratedLocations,
       locationDraft: hydratedLocationDraft
     });
+    pushWizardStep6Trace(`hydrate:${stage}-step-6-location`, {
+      hydratedLocations,
+      hydratedLocationDraft,
+      sourceDrafts: {
+        savedLocationDraft: readPlainWizardObject(getSavedInitialSetupWizardDrafts()?.locationDraft),
+        savedLocationsTodayDraft: getSavedInitialSetupWizardDrafts()?.locationsTodayDraft || ""
+      }
+    });
     setOrganisationDraft(hydratedOrganisation);
     setUnitsTodayDraft(hydratedUnits);
     setUnitParentDraft(hydratedUnitParents);
@@ -35393,6 +35405,104 @@ const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, lo
     document.body.removeChild(link);
     window.URL.revokeObjectURL(url);
   };
+  const getInitialSetupWizardStorageSnapshot = () => {
+    if (typeof window === "undefined") return {};
+    const readJsonCount = (key) => {
+      try {
+        const parsed = JSON.parse(window.localStorage.getItem(key) || "[]");
+        return Array.isArray(parsed) ? parsed.length : 0;
+      } catch {
+        return -1;
+      }
+    };
+    return {
+      storedStep: window.localStorage.getItem(initialSetupWizardStorageKey),
+      storedCompletedSteps: window.localStorage.getItem(initialSetupWizardCompletedStepsStorageKey),
+      hasStoredOrganisationDraft: Boolean(window.localStorage.getItem(initialSetupWizardOrganisationDraftStorageKey)),
+      storedOrganisationDraftLength: String(window.localStorage.getItem(initialSetupWizardOrganisationDraftStorageKey) || "").length,
+      locationDiagCount: readJsonCount(initialSetupWizardLocationDiagStorageKey),
+      step6DiagCount: readJsonCount(initialSetupWizardStep6DiagStorageKey)
+    };
+  };
+  const pushWizardStep6Trace = (eventType, details = {}) => {
+    if (typeof window === "undefined") return;
+    const savedDrafts = getSavedInitialSetupWizardDrafts();
+    const entry = {
+      sequence: wizardStep6TraceSequenceRef.current += 1,
+      timestamp: (/* @__PURE__ */ new Date()).toISOString(),
+      eventType,
+      currentStep,
+      stepNumber: currentStep + 1,
+      visibleStepId: visibleStep.id,
+      mode,
+      storage: getInitialSetupWizardStorageSnapshot(),
+      locationDraft,
+      locationsTodayDraft,
+      parsedLocationsToday: parseWizardLocationRows(locationsTodayDraft),
+      savedWizardDrafts: {
+        locationDraft: readPlainWizardObject(savedDrafts?.locationDraft),
+        locationsTodayDraft: savedDrafts?.locationsTodayDraft || "",
+        updatedAt: savedDrafts?.updatedAt || ""
+      },
+      activeContext: {
+        unitCode,
+        locationCode,
+        activeWizardLocationCode,
+        currentUnit: summariseWizardLocationScopeUnit(currentUnit),
+        currentLocation: summariseWizardLocationScopeLocation(currentLocation),
+        activeOrganisation: {
+          id: activeOrganisation?.id || "",
+          code: activeOrganisation?.code || "",
+          name: activeOrganisation?.name || ""
+        }
+      },
+      platformSnapshot: {
+        locations: (platformConfig?.locations || []).map(summariseWizardLocationScopeLocation),
+        units: (platformConfig?.units || []).map(summariseWizardLocationScopeUnit)
+      },
+      catalogue: {
+        configuredCount: configuredWizardLocationProfiles.length,
+        fallbackCount: fallbackWizardLocationProfiles.length,
+        airfieldCount: wizardAirfieldCatalogueProfiles.length,
+        kcbmProfile: summariseWizardLocationProfile(findWizardLocationProfile("KCBM", "icao"))
+      },
+      details: compactWizardDiagDetails(details)
+    };
+    wizardStep6TraceRef.current = [...wizardStep6TraceRef.current.slice(-299), entry];
+    try {
+      const existing = JSON.parse(window.localStorage.getItem(initialSetupWizardStep6DiagStorageKey) || "[]");
+      const next = [...Array.isArray(existing) ? existing : [], entry].slice(-160);
+      safeSetWizardLocalStorage(initialSetupWizardStep6DiagStorageKey, JSON.stringify(next));
+      window.neoSetupWizardStep6Diag = next;
+    } catch {
+    }
+  };
+  const downloadWizardStep6Trace = () => {
+    if (typeof window === "undefined") return;
+    pushWizardStep6Trace("download-requested");
+    let persistedTrace = [];
+    try {
+      const parsed = JSON.parse(window.localStorage.getItem(initialSetupWizardStep6DiagStorageKey) || "[]");
+      persistedTrace = Array.isArray(parsed) ? parsed : [];
+    } catch {
+      persistedTrace = [];
+    }
+    const unitLabel = (unitDraft.code || unitCode || locationCode || "step-6").replace(/[^A-Za-z0-9+_-]+/g, "-");
+    const blob = new Blob([JSON.stringify({
+      exportedAt: (/* @__PURE__ */ new Date()).toISOString(),
+      reportType: "initial-setup-wizard-step-6-location-diagnostic",
+      liveTrace: wizardStep6TraceRef.current,
+      persistedTrace
+    }, null, 2)], { type: "application/json" });
+    const url = window.URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = `dfp-neo-initial-setup-step-6-location-trace-${unitLabel}-${(/* @__PURE__ */ new Date()).toISOString().replace(/[:.]/g, "-")}.json`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    window.URL.revokeObjectURL(url);
+  };
   const updatePrimaryOrganisationWithSettings = (baseConfig, settingsUpdater) => {
     const organisations = Array.isArray(baseConfig.organisations) ? baseConfig.organisations : [];
     const fallbackOrganisation = {
@@ -35520,6 +35630,11 @@ const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, lo
       locationDraft: effectiveLocationDraft,
       cleanCode
     });
+    pushWizardStep6Trace("save-location-detail-requested", {
+      effectiveLocationDraft,
+      cleanCode,
+      savedDraftBefore: readPlainWizardObject(getSavedInitialSetupWizardDrafts()?.locationDraft)
+    });
     saveWizardConfig(message, (baseConfig) => {
       const locations = Array.isArray(baseConfig.locations) ? baseConfig.locations : [];
       const units = Array.isArray(baseConfig.units) ? baseConfig.units : [];
@@ -35606,6 +35721,17 @@ const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, lo
         nextLocations: nextLocations.map(summariseWizardLocationScopeLocation),
         visibleByCurrentScopeAfterSave: nextLocations.filter(isWizardLocationScopedToCurrentContext).map(summariseWizardLocationScopeLocation)
       });
+      pushWizardStep6Trace("save-location-detail-returning-config", {
+        cleanCode,
+        previousLocationCodes: Array.from(previousLocationCodes),
+        nextLocation: summariseWizardLocationScopeLocation(nextLocation),
+        nextUnits: nextUnits.map(summariseWizardLocationScopeUnit),
+        nextOrganisationsDraftTarget: {
+          activeOrganisationId: activeOrganisation?.id || "",
+          activeOrganisationCode: activeOrganisation?.code || "",
+          willWriteLocationDraft: true
+        }
+      });
       return {
         ...baseConfig,
         locations: nextLocations,
@@ -35681,6 +35807,13 @@ const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, lo
     }).filter((row) => row.icao || row.iata || row.name);
     const normalisedLocationsTodayDraft = formatWizardLocationRows(normalisedDraftRows);
     pushWizardLocationScopeTrace("save-location-rows-requested", {
+      message,
+      draftValue,
+      locationRows,
+      normalisedDraftRows,
+      normalisedLocationsTodayDraft
+    });
+    pushWizardStep6Trace("save-location-rows-requested", {
       message,
       draftValue,
       locationRows,
@@ -36925,6 +37058,10 @@ const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, lo
       storedCompletedSteps: typeof window !== "undefined" ? window.localStorage.getItem(initialSetupWizardCompletedStepsStorageKey) : null,
       kcbmProfile: summariseWizardLocationProfile(findWizardLocationProfile("KCBM", "icao"))
     });
+    pushWizardStep6Trace("step-6-location-state", {
+      isStep6Number: currentStep + 1 === 6,
+      isLocationSetupStep: ["locations-today", "location-code", "location-details"].includes(visibleStep?.id || "")
+    });
   }, [mode, currentStep, visibleStep?.id, wizardAirfieldCatalogueProfiles.length]);
   const shouldTraceWizardStep24Scroll = currentStep + 1 === 24 || visibleStep.id === "scoring";
   const getWizardOuterScrollElement = () => wizardShellRef.current?.closest(".organisation-slideout-scroll-stable");
@@ -37953,6 +38090,10 @@ const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, lo
       code: locationDraft.code,
       matchedProfile: summariseWizardLocationProfile(profile)
     });
+    pushWizardStep6Trace("location-detail-auto-resolve-check", {
+      code: locationDraft.code,
+      matchedProfile: summariseWizardLocationProfile(profile)
+    });
     if (!profile) return;
     const nextDraft = {
       ...locationDraft,
@@ -37966,6 +38107,11 @@ const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, lo
     const changed = nextDraft.code !== locationDraft.code || nextDraft.iataCode !== locationDraft.iataCode || nextDraft.name !== locationDraft.name || nextDraft.timezone !== locationDraft.timezone || nextDraft.latitude !== locationDraft.latitude || nextDraft.longitude !== locationDraft.longitude;
     if (!changed) return;
     pushWizardLocationScopeTrace("location-detail-auto-resolve-save", {
+      before: locationDraft,
+      after: nextDraft,
+      matchedProfile: summariseWizardLocationProfile(profile)
+    });
+    pushWizardStep6Trace("location-detail-auto-resolve-save", {
       before: locationDraft,
       after: nextDraft,
       matchedProfile: summariseWizardLocationProfile(profile)
@@ -38213,6 +38359,13 @@ const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, lo
       matchedProfile: summariseWizardLocationProfile(matchedProfile),
       kcbmProfile: summariseWizardLocationProfile(findWizardLocationProfile("KCBM", "icao"))
     });
+    pushWizardStep6Trace("locations-today-input", {
+      rowIndex,
+      field,
+      rawValue: value,
+      formattedValue,
+      matchedProfile: summariseWizardLocationProfile(matchedProfile)
+    });
     nextRows[rowIndex] = {
       ...nextRows[rowIndex],
       [field]: formattedValue,
@@ -38232,9 +38385,22 @@ const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, lo
         nextDraft,
         matchedProfile: summariseWizardLocationProfile(matchedProfile)
       });
+      pushWizardStep6Trace("locations-today-matched-save", {
+        rowIndex,
+        field,
+        formattedValue,
+        nextDraft,
+        matchedProfile: summariseWizardLocationProfile(matchedProfile)
+      });
       saveWizardLocationRowsDraft("Location list synced into Settings.", nextDraft);
     } else {
       pushWizardLocationScopeTrace("locations-today-unmatched-no-save", {
+        rowIndex,
+        field,
+        formattedValue,
+        nextDraft
+      });
+      pushWizardStep6Trace("locations-today-unmatched-no-save", {
         rowIndex,
         field,
         formattedValue,
@@ -39251,16 +39417,28 @@ const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, lo
                 children: "Download Step 24 Trace"
               }
             ) : null,
-            ["locations-today", "location-code", "location-details"].includes(visibleStep.id) ? /* @__PURE__ */ jsxRuntimeExports.jsx(
-              "button",
-              {
-                type: "button",
-                className: "mt-3 ml-2 inline-flex items-center rounded-md border border-amber-300 bg-amber-50 px-3 py-1.5 text-xs font-bold text-amber-900 shadow-sm hover:bg-amber-100",
-                onClick: downloadWizardLocationScopeTrace,
-                onKeyDown: stopEditableKeyPropagation,
-                children: "Download Location Scope Trace"
-              }
-            ) : null
+            ["locations-today", "location-code", "location-details"].includes(visibleStep.id) ? /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsx(
+                "button",
+                {
+                  type: "button",
+                  className: "mt-3 ml-2 inline-flex items-center rounded-md border border-amber-300 bg-amber-50 px-3 py-1.5 text-xs font-bold text-amber-900 shadow-sm hover:bg-amber-100",
+                  onClick: downloadWizardStep6Trace,
+                  onKeyDown: stopEditableKeyPropagation,
+                  children: "Download Step 6 Trace"
+                }
+              ),
+              /* @__PURE__ */ jsxRuntimeExports.jsx(
+                "button",
+                {
+                  type: "button",
+                  className: "mt-3 ml-2 inline-flex items-center rounded-md border border-amber-300 bg-amber-50 px-3 py-1.5 text-xs font-bold text-amber-900 shadow-sm hover:bg-amber-100",
+                  onClick: downloadWizardLocationScopeTrace,
+                  onKeyDown: stopEditableKeyPropagation,
+                  children: "Download Location Scope Trace"
+                }
+              )
+            ] }) : null
           ] }),
           /* @__PURE__ */ jsxRuntimeExports.jsxs(
             "div",
@@ -40541,6 +40719,11 @@ const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, lo
           matchedProfile: summariseWizardLocationProfile(matchedProfile),
           willSave: Boolean(matchedProfile)
         });
+        pushWizardStep6Trace("location-detail-resolved-draft", {
+          nextDraft,
+          matchedProfile: summariseWizardLocationProfile(matchedProfile),
+          willSave: Boolean(matchedProfile)
+        });
         if (matchedProfile) saveLocationDraft(nextDraft, "Location saved into Settings.");
       };
       return promptShell(
@@ -40554,6 +40737,11 @@ const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, lo
               matchedProfile: summariseWizardLocationProfile(matchedProfile),
               kcbmProfile: summariseWizardLocationProfile(findWizardLocationProfile("KCBM", "icao"))
             });
+            pushWizardStep6Trace("location-detail-icao-input", {
+              rawValue: value,
+              formattedValue: value.toUpperCase(),
+              matchedProfile: summariseWizardLocationProfile(matchedProfile)
+            });
             const nextDraft = { ...locationDraft, code: value.toUpperCase(), iataCode: matchedProfile?.iata || locationDraft.iataCode, name: matchedProfile?.name || locationDraft.name, timezone: matchedProfile?.timezone || locationDraft.timezone, latitude: matchedProfile?.latitude != null ? String(matchedProfile.latitude) : locationDraft.latitude, longitude: matchedProfile?.longitude != null ? String(matchedProfile.longitude) : locationDraft.longitude };
             saveResolvedLocationDraft(nextDraft, matchedProfile);
           }, wizardLocationIcaoOptions, "ICAO code"),
@@ -40564,12 +40752,21 @@ const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, lo
               formattedValue: value.toUpperCase(),
               matchedProfile: summariseWizardLocationProfile(matchedProfile)
             });
+            pushWizardStep6Trace("location-detail-iata-input", {
+              rawValue: value,
+              formattedValue: value.toUpperCase(),
+              matchedProfile: summariseWizardLocationProfile(matchedProfile)
+            });
             const nextDraft = { ...locationDraft, iataCode: value.toUpperCase(), code: matchedProfile?.icao || locationDraft.code, name: matchedProfile?.name || locationDraft.name, timezone: matchedProfile?.timezone || locationDraft.timezone, latitude: matchedProfile?.latitude != null ? String(matchedProfile.latitude) : locationDraft.latitude, longitude: matchedProfile?.longitude != null ? String(matchedProfile.longitude) : locationDraft.longitude };
             saveResolvedLocationDraft(nextDraft, matchedProfile);
           }, wizardLocationIataOptions, "IATA code"),
           wizardDataListField("Location name", locationDraft.name, (value) => {
             const matchedProfile = findWizardLocationProfile(value, "name");
             pushWizardLocationScopeTrace("location-detail-name-input", {
+              rawValue: value,
+              matchedProfile: summariseWizardLocationProfile(matchedProfile)
+            });
+            pushWizardStep6Trace("location-detail-name-input", {
               rawValue: value,
               matchedProfile: summariseWizardLocationProfile(matchedProfile)
             });
