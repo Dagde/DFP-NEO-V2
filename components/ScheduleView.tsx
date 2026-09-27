@@ -875,6 +875,7 @@ const accreditationStatusOptions = ['Not started', 'In preparation', 'Submitted'
 const initialSetupWizardStorageKey = 'dfp-initial-setup-wizard-step';
 const initialSetupWizardOrganisationDraftStorageKey = 'dfp-initial-setup-wizard-organisation-draft';
 const initialSetupWizardCompletedStepsStorageKey = 'dfp-initial-setup-wizard-completed-steps';
+const initialSetupWizardLocationDiagStorageKey = 'dfp_setup_wizard_location_diag';
 const MAX_INITIAL_SETUP_ORGANISATION_LEVELS = 12;
 const createWizardRecordId = (prefix: string): string => `${prefix}-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
 const createSetupTestRecordId = (prefix: string, key = ''): string => {
@@ -3052,6 +3053,7 @@ const InitialSetupWizard: React.FC<{
         'dfp_setup_wizard_import_diag',
         'dfp_setup_test_lmp_diag',
         'dfp_setup_wizard_org_diag',
+        initialSetupWizardLocationDiagStorageKey,
     ];
     const safeSetWizardLocalStorage = (key: string, value: string) => {
         if (typeof window === 'undefined') return false;
@@ -4661,52 +4663,100 @@ const InitialSetupWizard: React.FC<{
         locationCode: unit?.locationCode || '',
         locationKey: normaliseUnitSettingsIdentifier(unit?.locationCode),
     });
+    const summariseWizardLocationProfile = (profile: any) => profile ? ({
+        icao: profile.icao || '',
+        iata: profile.iata || '',
+        name: profile.name || '',
+        timezone: profile.timezone || '',
+        latitude: profile.latitude ?? null,
+        longitude: profile.longitude ?? null,
+    }) : null;
     const pushWizardLocationScopeTrace = (eventType: string, details: Record<string, any> = {}) => {
+        const entry = {
+            sequence: wizardLocationScopeTraceSequenceRef.current += 1,
+            timestamp: new Date().toISOString(),
+            eventType,
+            currentStep,
+            visibleStepId: visibleStep.id,
+            mode,
+            catalogue: {
+                configuredCount: configuredWizardLocationProfiles.length,
+                fallbackCount: fallbackWizardLocationProfiles.length,
+                airfieldCount: wizardAirfieldCatalogueProfiles.length,
+                lookupCount: wizardLocationLookupProfiles.length,
+                hasKCBM: Boolean(findWizardLocationProfile('KCBM', 'icao')),
+            },
+            unitContext: {
+                unitCode,
+                locationCode,
+                currentWizardUnitCode,
+                currentWizardUnitCodes,
+                currentUnit: summariseWizardLocationScopeUnit(currentUnit),
+                wizardScopedUnitCodes,
+                wizardScopedLocationCodes: Array.from(wizardScopedLocationCodes),
+                activeWizardLocationCode,
+            },
+            draft: {
+                locationDraft,
+                locationsTodayDraft,
+                parsedRows: parseWizardLocationRows(locationsTodayDraft),
+            },
+            settingsSnapshot: {
+                scopedActiveLocations: scopedActiveLocations.map(summariseWizardLocationScopeLocation),
+                units: (platformConfig?.units || []).map(summariseWizardLocationScopeUnit),
+                locations: (platformConfig?.locations || []).map(summariseWizardLocationScopeLocation),
+                resourcePools: (platformConfig?.resourcePools || []).map((pool: any) => ({
+                    id: pool?.id || '',
+                    code: pool?.code || '',
+                    unitCode: pool?.unitCode || '',
+                    locationCode: pool?.locationCode || '',
+                    status: pool?.status || '',
+                })),
+            },
+            details,
+        };
         wizardLocationScopeTraceRef.current = [
             ...wizardLocationScopeTraceRef.current.slice(-499),
-            {
-                sequence: wizardLocationScopeTraceSequenceRef.current += 1,
-                timestamp: new Date().toISOString(),
-                eventType,
-                currentStep,
-                visibleStepId: visibleStep.id,
-                unitContext: {
-                    unitCode,
-                    locationCode,
-                    currentWizardUnitCode,
-                    currentWizardUnitCodes,
-                    currentUnit: summariseWizardLocationScopeUnit(currentUnit),
-                    wizardScopedUnitCodes,
-                    wizardScopedLocationCodes: Array.from(wizardScopedLocationCodes),
-                    activeWizardLocationCode,
-                },
-                draft: {
-                    locationsTodayDraft,
-                    parsedRows: parseWizardLocationRows(locationsTodayDraft),
-                },
-                settingsSnapshot: {
-                    scopedActiveLocations: scopedActiveLocations.map(summariseWizardLocationScopeLocation),
-                    units: (platformConfig?.units || []).map(summariseWizardLocationScopeUnit),
-                    locations: (platformConfig?.locations || []).map(summariseWizardLocationScopeLocation),
-                    resourcePools: (platformConfig?.resourcePools || []).map((pool: any) => ({
-                        id: pool?.id || '',
-                        code: pool?.code || '',
-                        unitCode: pool?.unitCode || '',
-                        locationCode: pool?.locationCode || '',
-                        status: pool?.status || '',
-                    })),
-                },
-                details,
-            },
+            entry,
         ];
+        if (typeof window !== 'undefined') {
+            try {
+                const existing = JSON.parse(window.localStorage.getItem(initialSetupWizardLocationDiagStorageKey) || '[]');
+                const compactEntry = {
+                    sequence: entry.sequence,
+                    timestamp: entry.timestamp,
+                    eventType: entry.eventType,
+                    currentStep: entry.currentStep,
+                    visibleStepId: entry.visibleStepId,
+                    mode: entry.mode,
+                    catalogue: entry.catalogue,
+                    locationDraft: entry.draft.locationDraft,
+                    parsedRows: entry.draft.parsedRows,
+                    details: compactWizardDiagDetails(details),
+                };
+                const next = [...(Array.isArray(existing) ? existing : []), compactEntry].slice(-120);
+                safeSetWizardLocalStorage(initialSetupWizardLocationDiagStorageKey, JSON.stringify(next));
+                (window as any).neoSetupWizardLocationDiag = next;
+            } catch {
+                /* ignore diagnostic persistence failure */
+            }
+        }
     };
     const downloadWizardLocationScopeTrace = () => {
         if (typeof window === 'undefined') return;
         pushWizardLocationScopeTrace('download-requested');
+        let persistedTrace: any[] = [];
+        try {
+            const parsed = JSON.parse(window.localStorage.getItem(initialSetupWizardLocationDiagStorageKey) || '[]');
+            persistedTrace = Array.isArray(parsed) ? parsed : [];
+        } catch {
+            persistedTrace = [];
+        }
         const unitLabel = (unitDraft.code || unitCode || 'unit').replace(/[^A-Za-z0-9+_-]+/g, '-');
         const blob = new Blob([JSON.stringify({
             exportedAt: new Date().toISOString(),
             trace: wizardLocationScopeTraceRef.current,
+            persistedTrace,
         }, null, 2)], { type: 'application/json' });
         const url = window.URL.createObjectURL(blob);
         const link = document.createElement('a');
@@ -4717,7 +4767,6 @@ const InitialSetupWizard: React.FC<{
         document.body.removeChild(link);
         window.URL.revokeObjectURL(url);
     };
-
     const updatePrimaryOrganisationWithSettings = (baseConfig: any, settingsUpdater: (settings: any, organisation: any) => any) => {
         const organisations = Array.isArray(baseConfig.organisations) ? baseConfig.organisations : [];
         const fallbackOrganisation = {
@@ -6402,6 +6451,18 @@ const InitialSetupWizard: React.FC<{
     ];
     const currentStep = Math.min(wizardStep, steps.length - 1);
     const visibleStep = steps[currentStep];
+    useEffect(() => {
+        if (!['locations-today', 'location-code', 'location-details'].includes(visibleStep?.id || '')) return;
+        pushWizardLocationScopeTrace('location-step-state', {
+            mode,
+            currentStep,
+            visibleStepId: visibleStep?.id,
+            isPartiallyConfigured,
+            storedStep: typeof window !== 'undefined' ? window.localStorage.getItem(initialSetupWizardStorageKey) : null,
+            storedCompletedSteps: typeof window !== 'undefined' ? window.localStorage.getItem(initialSetupWizardCompletedStepsStorageKey) : null,
+            kcbmProfile: summariseWizardLocationProfile(findWizardLocationProfile('KCBM', 'icao')),
+        });
+    }, [mode, currentStep, visibleStep?.id, wizardAirfieldCatalogueProfiles.length]);
     const shouldTraceWizardStep24Scroll = currentStep + 1 === 24 || visibleStep.id === 'scoring';
     const getWizardOuterScrollElement = () => (
         wizardShellRef.current?.closest('.organisation-slideout-scroll-stable') as HTMLElement | null
@@ -7625,6 +7686,10 @@ const InitialSetupWizard: React.FC<{
     useEffect(() => {
         if (visibleStep?.id !== 'location-details') return;
         const profile = findWizardLocationProfile(locationDraft.code, 'icao');
+        pushWizardLocationScopeTrace('location-detail-auto-resolve-check', {
+            code: locationDraft.code,
+            matchedProfile: summariseWizardLocationProfile(profile),
+        });
         if (!profile) return;
         const nextDraft = {
             ...locationDraft,
@@ -7644,6 +7709,11 @@ const InitialSetupWizard: React.FC<{
             || nextDraft.longitude !== locationDraft.longitude
         );
         if (!changed) return;
+        pushWizardLocationScopeTrace('location-detail-auto-resolve-save', {
+            before: locationDraft,
+            after: nextDraft,
+            matchedProfile: summariseWizardLocationProfile(profile),
+        });
         setLocationDraft(nextDraft);
         saveLocationDraft(nextDraft, 'Location saved into Settings.');
     }, [visibleStep?.id, locationDraft.code, wizardAirfieldCatalogueProfiles.length]);
@@ -7869,15 +7939,28 @@ const InitialSetupWizard: React.FC<{
         const listId = `wizard-${(listKey || label).toLowerCase().replace(/[^a-z0-9]+/g, '-')}`;
         const cleanValue = normaliseUnitSettingsIdentifier(value);
         const uniqueOptions = Array.from(new Set(options.filter(Boolean)));
+        const optionRank = (option: string) => {
+            const cleanOption = normaliseUnitSettingsIdentifier(option);
+            if (!cleanValue) return 0;
+            if (cleanOption === cleanValue) return 0;
+            if (cleanOption.startsWith(cleanValue)) return 1;
+            if (cleanOption.includes(cleanValue)) return 2;
+            return 3;
+        };
         const rankedOptions = cleanValue
-            ? [
-                ...uniqueOptions.filter((option) => normaliseUnitSettingsIdentifier(option).startsWith(cleanValue)),
-                ...uniqueOptions.filter((option) => {
-                    const cleanOption = normaliseUnitSettingsIdentifier(option);
-                    return !cleanOption.startsWith(cleanValue) && cleanOption.includes(cleanValue);
-                }),
-            ].slice(0, 250)
-            : uniqueOptions.slice(0, 250);
+            ? uniqueOptions
+                .filter((option) => normaliseUnitSettingsIdentifier(option).includes(cleanValue))
+                .sort((left, right) => {
+                    const leftRank = optionRank(left);
+                    const rightRank = optionRank(right);
+                    if (leftRank !== rightRank) return leftRank - rightRank;
+                    return normaliseUnitSettingsIdentifier(left).localeCompare(normaliseUnitSettingsIdentifier(right));
+                })
+                .slice(0, 250)
+            : uniqueOptions
+                .slice()
+                .sort((left, right) => normaliseUnitSettingsIdentifier(left).localeCompare(normaliseUnitSettingsIdentifier(right)))
+                .slice(0, 250);
         return (
             <label className="block">
                 <span className={wizardLabelClass}>{label}</span>
@@ -7903,6 +7986,14 @@ const InitialSetupWizard: React.FC<{
         while (nextRows.length <= rowIndex) nextRows.push({ icao: '', iata: '', name: '' });
         const formattedValue = field === 'name' ? value : value.toUpperCase();
         const matchedProfile = findWizardLocationProfile(formattedValue, field);
+        pushWizardLocationScopeTrace('locations-today-input', {
+            rowIndex,
+            field,
+            rawValue: value,
+            formattedValue,
+            matchedProfile: summariseWizardLocationProfile(matchedProfile),
+            kcbmProfile: summariseWizardLocationProfile(findWizardLocationProfile('KCBM', 'icao')),
+        });
         nextRows[rowIndex] = {
             ...nextRows[rowIndex],
             [field]: formattedValue,
@@ -7915,7 +8006,21 @@ const InitialSetupWizard: React.FC<{
         const nextDraft = formatWizardLocationRows(nextRows);
         setLocationsTodayDraft(nextDraft);
         if (matchedProfile) {
+            pushWizardLocationScopeTrace('locations-today-matched-save', {
+                rowIndex,
+                field,
+                formattedValue,
+                nextDraft,
+                matchedProfile: summariseWizardLocationProfile(matchedProfile),
+            });
             saveWizardLocationRowsDraft('Location list synced into Settings.', nextDraft);
+        } else {
+            pushWizardLocationScopeTrace('locations-today-unmatched-no-save', {
+                rowIndex,
+                field,
+                formattedValue,
+                nextDraft,
+            });
         }
     };
     const renderCrewCompositionEditor = (
@@ -10626,6 +10731,11 @@ const InitialSetupWizard: React.FC<{
         if (visibleStep.id === 'location-details') {
             const saveResolvedLocationDraft = (nextDraft: typeof locationDraft, matchedProfile: ReturnType<typeof findWizardLocationProfile> | undefined) => {
                 updateLocationDraft(nextDraft);
+                pushWizardLocationScopeTrace('location-detail-resolved-draft', {
+                    nextDraft,
+                    matchedProfile: summariseWizardLocationProfile(matchedProfile),
+                    willSave: Boolean(matchedProfile),
+                });
                 if (matchedProfile) saveLocationDraft(nextDraft, 'Location saved into Settings.');
             };
             return promptShell(
@@ -10633,16 +10743,31 @@ const InitialSetupWizard: React.FC<{
                 <div className="grid gap-3 md:grid-cols-2">
                     {wizardDataListField('ICAO code', locationDraft.code, (value) => {
                         const matchedProfile = findWizardLocationProfile(value, 'icao');
+                        pushWizardLocationScopeTrace('location-detail-icao-input', {
+                            rawValue: value,
+                            formattedValue: value.toUpperCase(),
+                            matchedProfile: summariseWizardLocationProfile(matchedProfile),
+                            kcbmProfile: summariseWizardLocationProfile(findWizardLocationProfile('KCBM', 'icao')),
+                        });
                         const nextDraft = { ...locationDraft, code: value.toUpperCase(), iataCode: matchedProfile?.iata || locationDraft.iataCode, name: matchedProfile?.name || locationDraft.name, timezone: matchedProfile?.timezone || locationDraft.timezone, latitude: matchedProfile?.latitude != null ? String(matchedProfile.latitude) : locationDraft.latitude, longitude: matchedProfile?.longitude != null ? String(matchedProfile.longitude) : locationDraft.longitude };
                         saveResolvedLocationDraft(nextDraft, matchedProfile);
                     }, wizardLocationIcaoOptions, 'ICAO code')}
                     {wizardDataListField('IATA code', locationDraft.iataCode, (value) => {
                         const matchedProfile = findWizardLocationProfile(value, 'iata');
+                        pushWizardLocationScopeTrace('location-detail-iata-input', {
+                            rawValue: value,
+                            formattedValue: value.toUpperCase(),
+                            matchedProfile: summariseWizardLocationProfile(matchedProfile),
+                        });
                         const nextDraft = { ...locationDraft, iataCode: value.toUpperCase(), code: matchedProfile?.icao || locationDraft.code, name: matchedProfile?.name || locationDraft.name, timezone: matchedProfile?.timezone || locationDraft.timezone, latitude: matchedProfile?.latitude != null ? String(matchedProfile.latitude) : locationDraft.latitude, longitude: matchedProfile?.longitude != null ? String(matchedProfile.longitude) : locationDraft.longitude };
                         saveResolvedLocationDraft(nextDraft, matchedProfile);
                     }, wizardLocationIataOptions, 'IATA code')}
                     {wizardDataListField('Location name', locationDraft.name, (value) => {
                         const matchedProfile = findWizardLocationProfile(value, 'name');
+                        pushWizardLocationScopeTrace('location-detail-name-input', {
+                            rawValue: value,
+                            matchedProfile: summariseWizardLocationProfile(matchedProfile),
+                        });
                         const nextDraft = { ...locationDraft, name: value, code: matchedProfile?.icao || locationDraft.code, iataCode: matchedProfile?.iata || locationDraft.iataCode, timezone: matchedProfile?.timezone || locationDraft.timezone, latitude: matchedProfile?.latitude != null ? String(matchedProfile.latitude) : locationDraft.latitude, longitude: matchedProfile?.longitude != null ? String(matchedProfile.longitude) : locationDraft.longitude };
                         saveResolvedLocationDraft(nextDraft, matchedProfile);
                     }, wizardLocationNameOptions, 'Location name')}
@@ -11312,6 +11437,14 @@ const InitialSetupWizard: React.FC<{
                 <p className="mt-3 text-sm leading-6 text-slate-700">
                     I found {completedMandatory} of {mandatoryChecks.length} mandatory setup areas already complete. You can continue from your last wizard page, or start the guide again from the beginning. Each step syncs into Settings when you click Next.
                 </p>
+                <button
+                    type="button"
+                    className="mt-4 inline-flex items-center rounded-md border border-amber-300 bg-amber-50 px-3 py-1.5 text-xs font-bold text-amber-900 shadow-sm hover:bg-amber-100"
+                    onClick={downloadWizardLocationScopeTrace}
+                    onKeyDown={stopEditableKeyPropagation}
+                >
+                    Download Location Scope Trace
+                </button>
                 <div className="mt-5 grid gap-3 sm:grid-cols-2">
                     <button type="button" className={wizardChoiceClass} onClick={resumeWizard}>
                         <span className="block text-base font-bold">Continue setup</span>
