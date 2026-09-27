@@ -14684,10 +14684,12 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
           <div className="rounded-lg border border-cyan-400/45 bg-cyan-500/10 p-3 shadow-[inset_4px_0_0_rgba(34,211,238,0.45)]">
             <div className="mb-3 flex flex-wrap items-center gap-3">
               <div>
-                <div className="mb-1 text-[10px] font-bold uppercase tracking-wide text-cyan-200/80">Subset of Scheduling Rule Sets</div>
-                <h5 className="text-sm font-bold text-cyan-100">Default Timing for Inserted Events</h5>
+                <h5 className="text-sm font-bold text-cyan-100">Default Event Times</h5>
+                <p className="mt-1 text-xs font-bold leading-relaxed text-cyan-50">
+                  Set the default time allowed before and after an event.
+                </p>
                 <p className="mt-1 text-xs leading-relaxed text-cyan-100/75">
-                  One default pre-event and post-event timing is used for inserted Individual LMP events and scheduled events that do not have LMP timing. Inserted events remain editable inside the trainee's Individual LMP.
+                  These times are automatically applied to events that do not already have pre-event or post-event times. You can change the times for individual events later.
                 </p>
               </div>
               {canEdit && (
@@ -14697,8 +14699,8 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
               )}
             </div>
             <div className="mb-4 grid gap-3 rounded border border-cyan-300/30 bg-gray-950/70 p-3 md:grid-cols-2">
-              <NumberField label="Default Pre Event Time" value={insertEventTimingDefaults.preFlightTime} disabled={!canEditSection('platform-scheduling-rule-sets')} min={0} step={0.1} commitOnChange onChange={(value) => updateInsertEventTimingDefaults({ preFlightTime: value })} />
-              <NumberField label="Default Post Event Time" value={insertEventTimingDefaults.postFlightTime} disabled={!canEditSection('platform-scheduling-rule-sets')} min={0} step={0.1} commitOnChange onChange={(value) => updateInsertEventTimingDefaults({ postFlightTime: value })} />
+              <NumberField label="Default Time Before Event" value={insertEventTimingDefaults.preFlightTime} disabled={!canEditSection('platform-scheduling-rule-sets')} min={0} step={0.1} displayDecimals={1} suffix="hours" commitOnChange onChange={(value) => updateInsertEventTimingDefaults({ preFlightTime: value })} />
+              <NumberField label="Default Time After Event" value={insertEventTimingDefaults.postFlightTime} disabled={!canEditSection('platform-scheduling-rule-sets')} min={0} step={0.1} displayDecimals={1} suffix="hours" commitOnChange onChange={(value) => updateInsertEventTimingDefaults({ postFlightTime: value })} />
             </div>
             <div className="space-y-3">
               {insertEventTypes.map((eventType, eventTypeIndex) => (
@@ -14743,16 +14745,16 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
               ))}
               {insertEventTypes.length === 0 && (
                 <div className="rounded border border-gray-700 bg-gray-950 p-4 text-sm text-gray-400">
-                  No Individual LMP insert event types are configured.
+                  No additional event types have been added.
                 </div>
               )}
             </div>
           </div>
           <div id="platform-scheduling-rule-records" className="rounded-lg border border-amber-400/30 bg-amber-500/[0.06] p-3 shadow-[inset_4px_0_0_rgba(251,191,36,0.28)]">
             <div className="mb-3">
-              <div className="mb-1 text-[10px] font-bold uppercase tracking-wide text-amber-200/70">Main Rule Set Records</div>
-              <h5 className="text-sm font-bold text-white">Scheduling Rule Set Records</h5>
-              <p className="mt-1 text-xs leading-relaxed text-amber-50/60">
+              <div className={`mb-1 text-[10px] font-bold uppercase tracking-wide ${wizardEditMode ? 'text-amber-950' : 'text-amber-200'}`}>Main Rule Set Records</div>
+              <h5 className={`text-sm font-bold ${wizardEditMode ? 'text-amber-950' : 'text-white'}`}>Scheduling Rule Set Records</h5>
+              <p className={`mt-1 text-xs leading-relaxed ${wizardEditMode ? 'text-amber-950/80' : 'text-amber-50/70'}`}>
                 Use these records to apply named scheduling rules to selected units, aircraft types or operating scopes.
               </p>
             </div>
@@ -15152,6 +15154,8 @@ const NumberField = ({
   min,
   max,
   step,
+  suffix,
+  displayDecimals,
 }: {
   label: string;
   value: number;
@@ -15162,11 +15166,19 @@ const NumberField = ({
   min?: number;
   max?: number;
   step?: number | 'any';
+  suffix?: string;
+  displayDecimals?: number;
 }) => {
-  const normaliseNumberDraft = (nextValue: unknown) => String(nextValue ?? '');
+  const normaliseNumberDraft = (nextValue: unknown, fixedDecimals = false) => {
+    const numericValue = Number(nextValue);
+    if (fixedDecimals && typeof displayDecimals === 'number' && Number.isFinite(numericValue)) {
+      return numericValue.toFixed(displayDecimals);
+    }
+    return String(nextValue ?? '');
+  };
   const [draftValue, setDraftValue] = useState(() => normaliseNumberDraft(value ?? 0));
   const [isEditing, setIsEditing] = useState(false);
-  const displayedValue = isEditing ? draftValue : normaliseNumberDraft(value ?? 0);
+  const displayedValue = isEditing ? draftValue : normaliseNumberDraft(value ?? 0, true);
   const clampValue = (nextValue: number) => {
     let safeNumber = Number.isFinite(nextValue) ? nextValue : 0;
     if (typeof min === 'number') safeNumber = Math.max(min, safeNumber);
@@ -15176,48 +15188,51 @@ const NumberField = ({
   };
 
   useEffect(() => {
-    if (!isEditing) setDraftValue(normaliseNumberDraft(value ?? 0));
-  }, [isEditing, value]);
+    if (!isEditing) setDraftValue(normaliseNumberDraft(value ?? 0, true));
+  }, [displayDecimals, isEditing, value]);
 
   const commitDraftValue = () => {
     setIsEditing(false);
     const nextNumber = Number(draftValue);
     const safeNumber = clampValue(nextNumber);
     if (safeNumber !== Number(value ?? 0)) onChange(safeNumber);
-    setDraftValue(normaliseNumberDraft(safeNumber));
+    setDraftValue(normaliseNumberDraft(safeNumber, true));
   };
 
   return (
     <label>
       <FieldLabel label={label} info={info} />
-      <input
-        className={fieldClass}
-        type="number"
-        value={displayedValue}
-        disabled={disabled}
-        min={min}
-        max={max}
-        step={step}
-        onMouseDown={(event) => event.stopPropagation()}
-        onClick={(event) => event.stopPropagation()}
-        onKeyDownCapture={stopEditableKeyPropagation}
-        onKeyDown={stopEditableKeyPropagation}
-        onFocus={() => {
-          setIsEditing(true);
-          setDraftValue(normaliseNumberDraft(value ?? 0));
-        }}
-        onBlur={commitDraftValue}
-        onChange={(event) => {
-          const nextValue = event.target.value;
-          setDraftValue(nextValue);
-          if (!commitOnChange || nextValue.trim() === '') return;
-          const nextNumber = Number(nextValue);
-          if (!Number.isFinite(nextNumber)) return;
-          const safeNumber = clampValue(nextNumber);
-          setDraftValue(normaliseNumberDraft(safeNumber));
-          if (safeNumber !== Number(value ?? 0)) onChange(safeNumber);
-        }}
-      />
+      <div className={suffix ? 'mt-1 flex items-center gap-2' : undefined}>
+        <input
+          className={suffix ? `${fieldClass} mt-0` : fieldClass}
+          type="number"
+          value={displayedValue}
+          disabled={disabled}
+          min={min}
+          max={max}
+          step={step}
+          onMouseDown={(event) => event.stopPropagation()}
+          onClick={(event) => event.stopPropagation()}
+          onKeyDownCapture={stopEditableKeyPropagation}
+          onKeyDown={stopEditableKeyPropagation}
+          onFocus={() => {
+            setIsEditing(true);
+            setDraftValue(normaliseNumberDraft(value ?? 0));
+          }}
+          onBlur={commitDraftValue}
+          onChange={(event) => {
+            const nextValue = event.target.value;
+            setDraftValue(nextValue);
+            if (!commitOnChange || nextValue.trim() === '') return;
+            const nextNumber = Number(nextValue);
+            if (!Number.isFinite(nextNumber)) return;
+            const safeNumber = clampValue(nextNumber);
+            setDraftValue(normaliseNumberDraft(safeNumber));
+            if (safeNumber !== Number(value ?? 0)) onChange(safeNumber);
+          }}
+        />
+        {suffix ? <span className="shrink-0 text-xs font-bold text-gray-300">{suffix}</span> : null}
+      </div>
     </label>
   );
 };

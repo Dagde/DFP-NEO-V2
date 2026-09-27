@@ -11351,7 +11351,7 @@ const InitialSetupWizard: React.FC<{
         }
         if (visibleStep.id === 'advanced-scheduling-rules') {
             return promptShell(
-                <p>Check the detailed timing rules and scheduling rule sets. These are the same records used by Settings when NEO places events.</p>,
+                <p>Set the default timing used before and after events, then add any event-specific timing defaults your unit needs.</p>,
                 renderWizardPlatformSettingsEmbed(
                     'platform-scheduling-rule-sets',
                     'platform-scheduling-rule-records',

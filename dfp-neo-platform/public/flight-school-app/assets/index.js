@@ -30349,15 +30349,15 @@ This removes them from DFP Resource Rows. Press Save in this section to apply th
             /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded-lg border border-cyan-400/45 bg-cyan-500/10 p-3 shadow-[inset_4px_0_0_rgba(34,211,238,0.45)]", children: [
               /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mb-3 flex flex-wrap items-center gap-3", children: [
                 /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
-                  /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mb-1 text-[10px] font-bold uppercase tracking-wide text-cyan-200/80", children: "Subset of Scheduling Rule Sets" }),
-                  /* @__PURE__ */ jsxRuntimeExports.jsx("h5", { className: "text-sm font-bold text-cyan-100", children: "Default Timing for Inserted Events" }),
-                  /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-1 text-xs leading-relaxed text-cyan-100/75", children: "One default pre-event and post-event timing is used for inserted Individual LMP events and scheduled events that do not have LMP timing. Inserted events remain editable inside the trainee's Individual LMP." })
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("h5", { className: "text-sm font-bold text-cyan-100", children: "Default Event Times" }),
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-1 text-xs font-bold leading-relaxed text-cyan-50", children: "Set the default time allowed before and after an event." }),
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-1 text-xs leading-relaxed text-cyan-100/75", children: "These times are automatically applied to events that do not already have pre-event or post-event times. You can change the times for individual events later." })
                 ] }),
                 canEdit && /* @__PURE__ */ jsxRuntimeExports.jsx("button", { type: "button", onClick: addInsertEventType, disabled: !canEditSection("platform-scheduling-rule-sets"), className: "ml-auto rounded border border-gray-500 bg-gray-300 px-3 py-2 text-xs font-bold text-gray-900 hover:bg-gray-200 disabled:cursor-not-allowed disabled:opacity-50", children: "Add Event Type" })
               ] }),
               /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mb-4 grid gap-3 rounded border border-cyan-300/30 bg-gray-950/70 p-3 md:grid-cols-2", children: [
-                /* @__PURE__ */ jsxRuntimeExports.jsx(NumberField, { label: "Default Pre Event Time", value: insertEventTimingDefaults.preFlightTime, disabled: !canEditSection("platform-scheduling-rule-sets"), min: 0, step: 0.1, commitOnChange: true, onChange: (value) => updateInsertEventTimingDefaults({ preFlightTime: value }) }),
-                /* @__PURE__ */ jsxRuntimeExports.jsx(NumberField, { label: "Default Post Event Time", value: insertEventTimingDefaults.postFlightTime, disabled: !canEditSection("platform-scheduling-rule-sets"), min: 0, step: 0.1, commitOnChange: true, onChange: (value) => updateInsertEventTimingDefaults({ postFlightTime: value }) })
+                /* @__PURE__ */ jsxRuntimeExports.jsx(NumberField, { label: "Default Time Before Event", value: insertEventTimingDefaults.preFlightTime, disabled: !canEditSection("platform-scheduling-rule-sets"), min: 0, step: 0.1, displayDecimals: 1, suffix: "hours", commitOnChange: true, onChange: (value) => updateInsertEventTimingDefaults({ preFlightTime: value }) }),
+                /* @__PURE__ */ jsxRuntimeExports.jsx(NumberField, { label: "Default Time After Event", value: insertEventTimingDefaults.postFlightTime, disabled: !canEditSection("platform-scheduling-rule-sets"), min: 0, step: 0.1, displayDecimals: 1, suffix: "hours", commitOnChange: true, onChange: (value) => updateInsertEventTimingDefaults({ postFlightTime: value }) })
               ] }),
               /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-3", children: [
                 insertEventTypes.map((eventType, eventTypeIndex) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid gap-3 rounded border border-gray-700 bg-gray-950 p-3 md:grid-cols-6", children: [
@@ -30407,14 +30407,14 @@ This removes them from DFP Resource Rows. Press Save in this section to apply th
                     }
                   ) })
                 ] }, `${eventType.label}-${eventTypeIndex}`)),
-                insertEventTypes.length === 0 && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "rounded border border-gray-700 bg-gray-950 p-4 text-sm text-gray-400", children: "No Individual LMP insert event types are configured." })
+                insertEventTypes.length === 0 && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "rounded border border-gray-700 bg-gray-950 p-4 text-sm text-gray-400", children: "No additional event types have been added." })
               ] })
             ] }),
             /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { id: "platform-scheduling-rule-records", className: "rounded-lg border border-amber-400/30 bg-amber-500/[0.06] p-3 shadow-[inset_4px_0_0_rgba(251,191,36,0.28)]", children: [
               /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mb-3", children: [
-                /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mb-1 text-[10px] font-bold uppercase tracking-wide text-amber-200/70", children: "Main Rule Set Records" }),
-                /* @__PURE__ */ jsxRuntimeExports.jsx("h5", { className: "text-sm font-bold text-white", children: "Scheduling Rule Set Records" }),
-                /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-1 text-xs leading-relaxed text-amber-50/60", children: "Use these records to apply named scheduling rules to selected units, aircraft types or operating scopes." })
+                /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: `mb-1 text-[10px] font-bold uppercase tracking-wide ${wizardEditMode ? "text-amber-950" : "text-amber-200"}`, children: "Main Rule Set Records" }),
+                /* @__PURE__ */ jsxRuntimeExports.jsx("h5", { className: `text-sm font-bold ${wizardEditMode ? "text-amber-950" : "text-white"}`, children: "Scheduling Rule Set Records" }),
+                /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: `mt-1 text-xs leading-relaxed ${wizardEditMode ? "text-amber-950/80" : "text-amber-50/70"}`, children: "Use these records to apply named scheduling rules to selected units, aircraft types or operating scopes." })
               ] }),
               /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "space-y-3", children: visibleSchedulingRuleSetRows.map(({ ruleSet, index }) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid gap-3 rounded border border-gray-700 bg-gray-950 p-3 md:grid-cols-5", children: [
                 /* @__PURE__ */ jsxRuntimeExports.jsx(DraftField, { label: "Name", value: ruleSet.name, disabled: !canEditSection("platform-scheduling-rule-sets"), onCommit: (value) => updateRow("schedulingRuleSets", index, { name: value }) }),
@@ -30749,12 +30749,20 @@ const NumberField = ({
   commitOnChange = false,
   min,
   max,
-  step
+  step,
+  suffix,
+  displayDecimals
 }) => {
-  const normaliseNumberDraft = (nextValue) => String(nextValue ?? "");
+  const normaliseNumberDraft = (nextValue, fixedDecimals = false) => {
+    const numericValue = Number(nextValue);
+    if (fixedDecimals && typeof displayDecimals === "number" && Number.isFinite(numericValue)) {
+      return numericValue.toFixed(displayDecimals);
+    }
+    return String(nextValue ?? "");
+  };
   const [draftValue, setDraftValue] = reactExports.useState(() => normaliseNumberDraft(value ?? 0));
   const [isEditing, setIsEditing] = reactExports.useState(false);
-  const displayedValue = isEditing ? draftValue : normaliseNumberDraft(value ?? 0);
+  const displayedValue = isEditing ? draftValue : normaliseNumberDraft(value ?? 0, true);
   const clampValue = (nextValue) => {
     let safeNumber = Number.isFinite(nextValue) ? nextValue : 0;
     if (typeof min === "number") safeNumber = Math.max(min, safeNumber);
@@ -30763,48 +30771,51 @@ const NumberField = ({
     return safeNumber;
   };
   reactExports.useEffect(() => {
-    if (!isEditing) setDraftValue(normaliseNumberDraft(value ?? 0));
-  }, [isEditing, value]);
+    if (!isEditing) setDraftValue(normaliseNumberDraft(value ?? 0, true));
+  }, [displayDecimals, isEditing, value]);
   const commitDraftValue = () => {
     setIsEditing(false);
     const nextNumber = Number(draftValue);
     const safeNumber = clampValue(nextNumber);
     if (safeNumber !== Number(value ?? 0)) onChange(safeNumber);
-    setDraftValue(normaliseNumberDraft(safeNumber));
+    setDraftValue(normaliseNumberDraft(safeNumber, true));
   };
   return /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { children: [
     /* @__PURE__ */ jsxRuntimeExports.jsx(FieldLabel, { label, info }),
-    /* @__PURE__ */ jsxRuntimeExports.jsx(
-      "input",
-      {
-        className: fieldClass,
-        type: "number",
-        value: displayedValue,
-        disabled,
-        min,
-        max,
-        step,
-        onMouseDown: (event) => event.stopPropagation(),
-        onClick: (event) => event.stopPropagation(),
-        onKeyDownCapture: stopEditableKeyPropagation,
-        onKeyDown: stopEditableKeyPropagation,
-        onFocus: () => {
-          setIsEditing(true);
-          setDraftValue(normaliseNumberDraft(value ?? 0));
-        },
-        onBlur: commitDraftValue,
-        onChange: (event) => {
-          const nextValue = event.target.value;
-          setDraftValue(nextValue);
-          if (!commitOnChange || nextValue.trim() === "") return;
-          const nextNumber = Number(nextValue);
-          if (!Number.isFinite(nextNumber)) return;
-          const safeNumber = clampValue(nextNumber);
-          setDraftValue(normaliseNumberDraft(safeNumber));
-          if (safeNumber !== Number(value ?? 0)) onChange(safeNumber);
+    /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: suffix ? "mt-1 flex items-center gap-2" : void 0, children: [
+      /* @__PURE__ */ jsxRuntimeExports.jsx(
+        "input",
+        {
+          className: suffix ? `${fieldClass} mt-0` : fieldClass,
+          type: "number",
+          value: displayedValue,
+          disabled,
+          min,
+          max,
+          step,
+          onMouseDown: (event) => event.stopPropagation(),
+          onClick: (event) => event.stopPropagation(),
+          onKeyDownCapture: stopEditableKeyPropagation,
+          onKeyDown: stopEditableKeyPropagation,
+          onFocus: () => {
+            setIsEditing(true);
+            setDraftValue(normaliseNumberDraft(value ?? 0));
+          },
+          onBlur: commitDraftValue,
+          onChange: (event) => {
+            const nextValue = event.target.value;
+            setDraftValue(nextValue);
+            if (!commitOnChange || nextValue.trim() === "") return;
+            const nextNumber = Number(nextValue);
+            if (!Number.isFinite(nextNumber)) return;
+            const safeNumber = clampValue(nextNumber);
+            setDraftValue(normaliseNumberDraft(safeNumber));
+            if (safeNumber !== Number(value ?? 0)) onChange(safeNumber);
+          }
         }
-      }
-    )
+      ),
+      suffix ? /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "shrink-0 text-xs font-bold text-gray-300", children: suffix }) : null
+    ] })
   ] });
 };
 const formatDateInput = (value) => value ? String(value).slice(0, 10) : "";
@@ -41040,7 +41051,7 @@ const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, lo
     }
     if (visibleStep.id === "advanced-scheduling-rules") {
       return promptShell(
-        /* @__PURE__ */ jsxRuntimeExports.jsx("p", { children: "Check the detailed timing rules and scheduling rule sets. These are the same records used by Settings when NEO places events." }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx("p", { children: "Set the default timing used before and after events, then add any event-specific timing defaults your unit needs." }),
         renderWizardPlatformSettingsEmbed(
           "platform-scheduling-rule-sets",
           "platform-scheduling-rule-records",
