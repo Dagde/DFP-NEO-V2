@@ -3989,6 +3989,31 @@ const InitialSetupWizard: React.FC<{
         if (savedWizardLocations) return savedWizardLocations;
         return formatWizardLocationRows([activeWizardLocationRow]) || 'LOC1 | LOC | Home Location';
     };
+    const buildHydratedLocationDraft = () => {
+        const savedDraft = readPlainWizardObject(getSavedInitialSetupWizardDrafts()?.locationDraft);
+        if (Object.keys(savedDraft).length > 0) {
+            return {
+                code: String(savedDraft.code || currentLocation?.code || activeWizardLocationCode || currentUnit?.locationCode || 'LOC1').trim().toUpperCase(),
+                iataCode: String(savedDraft.iataCode || savedDraft.iata || currentLocation?.iataCode || currentLocation?.settings?.iataCode || 'LOC').trim().toUpperCase(),
+                name: String(savedDraft.name || currentLocation?.name || 'Home Location'),
+                timezone: String(savedDraft.timezone || currentLocation?.timezone || 'UTC'),
+                latitude: String(savedDraft.latitude ?? currentLocation?.latitude ?? currentLocation?.settings?.latitude ?? activeWizardLocationProfile?.latitude ?? ''),
+                longitude: String(savedDraft.longitude ?? currentLocation?.longitude ?? currentLocation?.settings?.longitude ?? activeWizardLocationProfile?.longitude ?? ''),
+                trainingAreas: Array.isArray(savedDraft.trainingAreas)
+                    ? savedDraft.trainingAreas.join(', ')
+                    : String(savedDraft.trainingAreas ?? (Array.isArray(currentLocation?.trainingAreas) ? currentLocation.trainingAreas.join(', ') : '')),
+            };
+        }
+        return {
+            code: String(currentLocation?.code || activeWizardLocationCode || currentUnit?.locationCode || 'LOC1'),
+            iataCode: String(currentLocation?.iataCode || currentLocation?.settings?.iataCode || 'LOC'),
+            name: String(currentLocation?.name || 'Home Location'),
+            timezone: String(currentLocation?.timezone || 'UTC'),
+            latitude: String(currentLocation?.latitude ?? currentLocation?.settings?.latitude ?? activeWizardLocationProfile?.latitude ?? ''),
+            longitude: String(currentLocation?.longitude ?? currentLocation?.settings?.longitude ?? activeWizardLocationProfile?.longitude ?? ''),
+            trainingAreas: Array.isArray(currentLocation?.trainingAreas) ? currentLocation.trainingAreas.join(', ') : '',
+        };
+    };
     const getSavedWizardString = (...keys: string[]) => {
         const drafts = getSavedInitialSetupWizardDrafts();
         for (const key of keys) {
@@ -4422,6 +4447,7 @@ const InitialSetupWizard: React.FC<{
         const hydratedUnits = buildHydratedUnitsTodayDraft();
         const hydratedUnitParents = buildHydratedUnitParentDraft(hydratedUnits, hydratedOrganisation);
         const hydratedLocations = buildHydratedLocationsTodayDraft();
+        const hydratedLocationDraft = buildHydratedLocationDraft();
         const hydratedCrew = buildHydratedCrewDraft();
         organisationDraftDirtyRef.current = false;
         locationDraftDirtyRef.current = false;
@@ -4439,11 +4465,13 @@ const InitialSetupWizard: React.FC<{
             unitsToday: hydratedUnits,
             unitParents: hydratedUnitParents,
             locationsToday: hydratedLocations,
+            locationDraft: hydratedLocationDraft,
         });
         setOrganisationDraft(hydratedOrganisation);
         setUnitsTodayDraft(hydratedUnits);
         setUnitParentDraft(hydratedUnitParents);
         setLocationsTodayDraft(hydratedLocations);
+        setLocationDraft(hydratedLocationDraft);
         setUnitModulesDraft(buildHydratedUnitModulesDraft());
         setCrewDraft(hydratedCrew);
         hydrateSupplementaryWizardDrafts();
@@ -4504,15 +4532,7 @@ const InitialSetupWizard: React.FC<{
 
     useEffect(() => {
         if (locationDraftDirtyRef.current) return;
-        setLocationDraft({
-            code: String(currentLocation?.code || activeWizardLocationCode || currentUnit?.locationCode || 'LOC1'),
-            iataCode: String(currentLocation?.iataCode || currentLocation?.settings?.iataCode || 'LOC'),
-            name: String(currentLocation?.name || 'Home Location'),
-            timezone: String(currentLocation?.timezone || 'UTC'),
-            latitude: String(currentLocation?.latitude ?? currentLocation?.settings?.latitude ?? activeWizardLocationProfile?.latitude ?? ''),
-            longitude: String(currentLocation?.longitude ?? currentLocation?.settings?.longitude ?? activeWizardLocationProfile?.longitude ?? ''),
-            trainingAreas: Array.isArray(currentLocation?.trainingAreas) ? currentLocation.trainingAreas.join(', ') : '',
-        });
+        setLocationDraft(buildHydratedLocationDraft());
     }, [activeWizardLocationCode, currentLocation?.code, currentLocation?.name, currentLocation?.timezone, currentLocation?.latitude, currentLocation?.longitude, currentLocation?.settings?.latitude, currentLocation?.settings?.longitude, activeWizardLocationProfile?.latitude, activeWizardLocationProfile?.longitude, JSON.stringify(currentLocation?.trainingAreas || [])]);
 
     useEffect(() => {
@@ -5019,6 +5039,36 @@ const InitialSetupWizard: React.FC<{
                 locations: nextLocations,
                 units: nextUnits,
                 resourcePools: nextResourcePools,
+                organisations: Array.isArray(baseConfig.organisations)
+                    ? baseConfig.organisations.map((organisation: any) => (
+                        organisation?.id === activeOrganisation?.id || normaliseUnitSettingsIdentifier(organisation?.code) === normaliseUnitSettingsIdentifier(activeOrganisation?.code)
+                            ? {
+                                ...organisation,
+                                settings: {
+                                    ...(organisation.settings || {}),
+                                    initialSetupWizardDrafts: {
+                                        ...(organisation.settings?.initialSetupWizardDrafts || {}),
+                                        locationDraft: {
+                                            code: cleanCode,
+                                            iataCode: String(effectiveLocationDraft.iataCode || '').trim().toUpperCase(),
+                                            name: effectiveLocationDraft.name || cleanCode,
+                                            timezone: effectiveLocationDraft.timezone || 'UTC',
+                                            latitude: String(effectiveLocationDraft.latitude || ''),
+                                            longitude: String(effectiveLocationDraft.longitude || ''),
+                                            trainingAreas: effectiveLocationDraft.trainingAreas,
+                                        },
+                                        locationsTodayDraft: locationsTodayDraft || formatWizardLocationRows([{
+                                            icao: cleanCode,
+                                            iata: String(effectiveLocationDraft.iataCode || '').trim().toUpperCase(),
+                                            name: effectiveLocationDraft.name || cleanCode,
+                                        }]),
+                                        updatedAt: new Date().toISOString(),
+                                    },
+                                },
+                            }
+                            : organisation
+                    ))
+                    : baseConfig.organisations,
             };
         });
     };
