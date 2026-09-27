@@ -31091,6 +31091,31 @@ const App: React.FC = () => {
                 snapshotKey,
                 snapshotLoadState: dfpSnapshotLoadState,
             },
+            authenticatedUser: {
+                authUser: authUser ? {
+                    id: authUser.id || null,
+                    userId: authUser.userId || null,
+                    username: authUser.username || null,
+                    displayName: authUser.displayName || null,
+                    firstName: authUser.firstName || null,
+                    lastName: authUser.lastName || null,
+                    role: authUser.role || null,
+                    email: (authUser as any).email || null,
+                } : null,
+                sessionUser,
+                currentUserName,
+                currentUserPermission,
+                combinedPermissions,
+                matchedCurrentStaffUser: matchedCurrentStaffUser ? {
+                    id: (matchedCurrentStaffUser as any).id || null,
+                    idNumber: matchedCurrentStaffUser.idNumber || null,
+                    name: matchedCurrentStaffUser.name || null,
+                    rank: matchedCurrentStaffUser.rank || null,
+                    role: matchedCurrentStaffUser.role || null,
+                    unit: matchedCurrentStaffUser.unit || null,
+                    permissions: matchedCurrentStaffUser.permissions || [],
+                } : null,
+            },
             initialSetupBootstrap: {
                 hasAuthenticatedAdminRole,
                 platformConfigLoaded,
@@ -39054,6 +39079,7 @@ const App: React.FC = () => {
 
     const canAccessView = useCallback((view: string): boolean => {
         if (view === 'MyDashboard') return true;
+        if (hasAuthenticatedAdminRole || platformAccessContext.isSuperAdmin || platformAccessContext.isPlatformAdmin) return true;
         if (view === 'Program Schedule' && canBootstrapInitialSetupFromDfp) return true;
         if (view === 'Settings') {
             return hasAuthenticatedAdminRole || !platformAccessContext.isConfigured || platformAccessContext.isPlatformAdmin;
@@ -57242,7 +57268,7 @@ appliedUpdates.forEach(update => {
             isTraineeLoaded={isTraineeLoaded}
             isCoursesLoaded={isCoursesLoaded}
         />
-        {isAuthenticated && (showInitialSetupBlankState || isInitialSetupWizardActive) && (
+        {isAuthenticated && (
             <button
                 type="button"
                 onClick={() => downloadDfpDataDiagReport('dfp-startup-context-trace')}

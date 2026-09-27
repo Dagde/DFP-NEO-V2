@@ -137736,6 +137736,31 @@ const App = () => {
         snapshotKey,
         snapshotLoadState: dfpSnapshotLoadState
       },
+      authenticatedUser: {
+        authUser: authUser ? {
+          id: authUser.id || null,
+          userId: authUser.userId || null,
+          username: authUser.username || null,
+          displayName: authUser.displayName || null,
+          firstName: authUser.firstName || null,
+          lastName: authUser.lastName || null,
+          role: authUser.role || null,
+          email: authUser.email || null
+        } : null,
+        sessionUser,
+        currentUserName,
+        currentUserPermission,
+        combinedPermissions,
+        matchedCurrentStaffUser: matchedCurrentStaffUser ? {
+          id: matchedCurrentStaffUser.id || null,
+          idNumber: matchedCurrentStaffUser.idNumber || null,
+          name: matchedCurrentStaffUser.name || null,
+          rank: matchedCurrentStaffUser.rank || null,
+          role: matchedCurrentStaffUser.role || null,
+          unit: matchedCurrentStaffUser.unit || null,
+          permissions: matchedCurrentStaffUser.permissions || []
+        } : null
+      },
       initialSetupBootstrap: {
         hasAuthenticatedAdminRole,
         platformConfigLoaded,
@@ -144044,6 +144069,7 @@ ${"=".repeat(60)}`);
   const hasFullTraineeRosterAccess = canUsePlatformPermission("trainee.roster.view") && hasPlatformModuleAccessForView("Trainee");
   const canAccessView = reactExports.useCallback((view) => {
     if (view === "MyDashboard") return true;
+    if (hasAuthenticatedAdminRole || platformAccessContext.isSuperAdmin || platformAccessContext.isPlatformAdmin) return true;
     if (view === "Program Schedule" && canBootstrapInitialSetupFromDfp) return true;
     if (view === "Settings") {
       return hasAuthenticatedAdminRole || !platformAccessContext.isConfigured || platformAccessContext.isPlatformAdmin;
@@ -159310,7 +159336,7 @@ Do you want to replace the existing entry?`,
         isCoursesLoaded
       }
     ),
-    isAuthenticated && (showInitialSetupBlankState || isInitialSetupWizardActive) && /* @__PURE__ */ jsxRuntimeExports.jsx(
+    isAuthenticated && /* @__PURE__ */ jsxRuntimeExports.jsx(
       "button",
       {
         type: "button",
