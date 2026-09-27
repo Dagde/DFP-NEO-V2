@@ -1099,6 +1099,10 @@ html[data-theme="light"] body {
     color: #0f172a !important;
 }
 
+.scoring-matrix-inline--wizard .scoring-matrix-element-action-icon {
+    color: #ffffff !important;
+}
+
 .scoring-matrix-inline--wizard .text-gray-400,
 .scoring-matrix-inline--wizard .text-gray-500 {
     color: #64748b !important;
