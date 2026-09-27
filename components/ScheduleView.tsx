@@ -2959,7 +2959,16 @@ const InitialSetupWizard: React.FC<{
     const [mode, setMode] = useState<InitialSetupWizardMode>(() => {
         if (typeof window === 'undefined') return 'detect';
         const storedStep = Number(window.localStorage.getItem(initialSetupWizardStorageKey));
-        return Number.isFinite(storedStep) && storedStep > 0 ? 'active' : 'detect';
+        const hasStoredStep = Number.isFinite(storedStep) && storedStep > 0;
+        let hasCompletedSteps = false;
+        try {
+            const completedSteps = JSON.parse(window.localStorage.getItem(initialSetupWizardCompletedStepsStorageKey) || '[]');
+            hasCompletedSteps = Array.isArray(completedSteps) && completedSteps.length > 0;
+        } catch {
+            hasCompletedSteps = false;
+        }
+        const hasOrganisationDraft = Boolean(window.localStorage.getItem(initialSetupWizardOrganisationDraftStorageKey));
+        return hasStoredStep || hasCompletedSteps || hasOrganisationDraft ? 'active' : 'detect';
     });
     const unitTypeOptions = useMemo(() => normaliseUnitTypeOptions(platformConfig), [platformConfig]);
     const configuredContinuationShortLabel = useMemo(
@@ -3508,12 +3517,7 @@ const InitialSetupWizard: React.FC<{
         }
     };
     const storedOrganisationDraft = useMemo(() => readStoredOrganisationDraft(), []);
-    const storedWizardStepForDraftRestore = useMemo(() => {
-        if (typeof window === 'undefined') return 0;
-        const storedStep = Number(window.localStorage.getItem(initialSetupWizardStorageKey));
-        return Number.isFinite(storedStep) ? Math.max(0, storedStep) : 0;
-    }, []);
-    const shouldUseStoredOrganisationDraft = Boolean(storedOrganisationDraft) && (storedWizardStepForDraftRestore > 0 || !orgStructureConfigured);
+    const shouldUseStoredOrganisationDraft = Boolean(storedOrganisationDraft);
     const organisationDraftDirtyRef = useRef(shouldUseStoredOrganisationDraft);
     const buildHydratedOrganisationDraft = () => ({
         code: String(activeOrganisation?.code || 'ORG'),
