@@ -897,6 +897,7 @@ const initialSetupWizardStorageKey = 'dfp-initial-setup-wizard-step';
 const initialSetupWizardOrganisationDraftStorageKey = 'dfp-initial-setup-wizard-organisation-draft';
 const initialSetupWizardDraftSnapshotStorageKey = 'dfp-initial-setup-wizard-draft-snapshot';
 const initialSetupWizardCompletedStepsStorageKey = 'dfp-initial-setup-wizard-completed-steps';
+const initialSetupWizardCompletedAtStorageKey = 'dfp-initial-setup-wizard-completed-at';
 const MAX_INITIAL_SETUP_ORGANISATION_LEVELS = 12;
 const createWizardRecordId = (prefix: string): string => `${prefix}-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
 const createSetupTestRecordId = (prefix: string, key = ''): string => {
@@ -7898,6 +7899,7 @@ const InitialSetupWizard: React.FC<{
         setMode('active');
         setUploadResults({});
         safeSetWizardLocalStorage(initialSetupWizardStorageKey, '0');
+        if (typeof window !== 'undefined') window.localStorage.removeItem(initialSetupWizardCompletedAtStorageKey);
         clearWizardStepCompletions();
     };
 
@@ -10342,6 +10344,7 @@ const InitialSetupWizard: React.FC<{
             saveSetupTestWizardDrafts();
             return;
         }
+        const completedAt = new Date().toISOString();
         saveOrganisationDraft();
         const locationRows = parseWizardLocationRows(locationsTodayDraft);
         const unitRows = parseWizardUnitRows(unitsTodayDraft);
@@ -10411,6 +10414,7 @@ const InitialSetupWizard: React.FC<{
         saveCurrencyProfilesDraft();
         saveWizardConfig('Setup saved into Settings.', (baseConfig) => updatePrimaryOrganisationWithSettings(baseConfig, (settings) => ({
             ...settings,
+            initialSetupWizardCompletedAt: completedAt,
             personnelDisplaySettings: buildRankSettingsToSave(settings),
             initialSetupWizardDraft: {
                 unitsToday: parseWizardUnitRows(unitsTodayDraft),
@@ -10431,11 +10435,17 @@ const InitialSetupWizard: React.FC<{
                 currencies: currencyDraft,
                 scoringMatrix: wizardPhraseBankToScoringDraft(wizardScoringPhraseBank),
                 staffCurrencyEvents: staffCurrencyEventsDraft,
+                completedAt,
+            },
+            initialSetupWizardDrafts: {
+                ...(settings.initialSetupWizardDrafts || {}),
+                completedAt,
             },
         })));
         setCompletedWizardStepIds(new Set(steps.map((step) => step.id)));
         if (typeof window !== 'undefined') {
             safeSetWizardLocalStorage(initialSetupWizardCompletedStepsStorageKey, JSON.stringify(steps.map((step) => step.id)));
+            safeSetWizardLocalStorage(initialSetupWizardCompletedAtStorageKey, completedAt);
             window.localStorage.removeItem(initialSetupWizardDraftSnapshotStorageKey);
         }
         setSaveMessage('Setup saved into Settings.');

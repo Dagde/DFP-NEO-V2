@@ -11046,6 +11046,7 @@ const Sidebar = ({ activeView, onNavigate, courseColors, onAddCourse, onArchiveC
     Settings: "settings.view"
   };
   const canOpenLeftView = (view) => {
+    if (view === "Program Schedule") return canOpen(view);
     const permissionId = leftNavigationPermissions[view];
     if (!permissionId) return canOpen(view);
     return canOpen(view) && (canUsePermission(permissionId) || Boolean(canOpenSelfScopedView?.(view)));
@@ -32422,6 +32423,7 @@ const initialSetupWizardStorageKey = "dfp-initial-setup-wizard-step";
 const initialSetupWizardOrganisationDraftStorageKey = "dfp-initial-setup-wizard-organisation-draft";
 const initialSetupWizardDraftSnapshotStorageKey = "dfp-initial-setup-wizard-draft-snapshot";
 const initialSetupWizardCompletedStepsStorageKey = "dfp-initial-setup-wizard-completed-steps";
+const initialSetupWizardCompletedAtStorageKey = "dfp-initial-setup-wizard-completed-at";
 const MAX_INITIAL_SETUP_ORGANISATION_LEVELS = 12;
 const createWizardRecordId = (prefix) => `${prefix}-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
 const createSetupTestRecordId = (prefix, key = "") => {
@@ -38057,6 +38059,7 @@ const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, lo
     setMode("active");
     setUploadResults({});
     safeSetWizardLocalStorage(initialSetupWizardStorageKey, "0");
+    if (typeof window !== "undefined") window.localStorage.removeItem(initialSetupWizardCompletedAtStorageKey);
     clearWizardStepCompletions();
   };
   const resumeWizard = () => {
@@ -137255,17 +137258,23 @@ const App = () => {
     })).filter((option) => option.units.length > 0),
     [getUnitOptionsForLocation, selectableLocationCodes]
   );
+  const initialSetupWizardCompletedAtStorageKey2 = "dfp-initial-setup-wizard-completed-at";
   const hasStoredInitialSetupWizardProgress = reactExports.useCallback(() => {
     if (typeof window === "undefined") return false;
     const storedStep = Number(window.localStorage.getItem("dfp-initial-setup-wizard-step"));
     if (Number.isFinite(storedStep) && storedStep > 0) return true;
     if (window.localStorage.getItem("dfp-initial-setup-wizard-organisation-draft")) return true;
+    if (window.localStorage.getItem("dfp-initial-setup-wizard-draft-snapshot")) return true;
     try {
       const completedSteps = JSON.parse(window.localStorage.getItem("dfp-initial-setup-wizard-completed-steps") || "[]");
       return Array.isArray(completedSteps) && completedSteps.length > 0;
     } catch {
       return false;
     }
+  }, []);
+  const hasStoredInitialSetupWizardCompleted = reactExports.useCallback(() => {
+    if (typeof window === "undefined") return false;
+    return Boolean(window.localStorage.getItem(initialSetupWizardCompletedAtStorageKey2));
   }, []);
   const hasPersistedInitialSetupWizardProgress = reactExports.useMemo(() => (platformConfig?.organisations || []).some((organisation) => {
     const settings = organisation?.settings || {};
@@ -137275,12 +137284,29 @@ const App = () => {
       drafts.updatedAt || drafts.organisationDraft || drafts.locationsTodayDraft || drafts.locationDraft || drafts.unitsTodayDraft || drafts.unitDraft || drafts.resourceDraft || drafts.unitModulesDraft || drafts.buildRules
     );
   }), [platformConfig]);
+  const hasPersistedInitialSetupWizardCompleted = reactExports.useMemo(() => (platformConfig?.organisations || []).some((organisation) => {
+    const settings = organisation?.settings || {};
+    const drafts = settings.initialSetupWizardDrafts || settings.initialSetupWizardDraft;
+    return Boolean(settings.initialSetupWizardCompletedAt || drafts?.completedAt);
+  }), [platformConfig]);
+  const hasPersistedIncompleteInitialSetupWizardProgress = reactExports.useMemo(() => (platformConfig?.organisations || []).some((organisation) => {
+    const settings = organisation?.settings || {};
+    if (settings.initialSetupWizardCompletedAt) return false;
+    const drafts = settings.initialSetupWizardDrafts || settings.initialSetupWizardDraft;
+    if (!drafts || typeof drafts !== "object" || drafts.completedAt) return false;
+    const activeStepIndex = Number(drafts.activeStepIndex);
+    return Boolean(
+      drafts.activeStepId || Number.isFinite(activeStepIndex) && activeStepIndex > 0 || Array.isArray(drafts.completedStepIds) && drafts.completedStepIds.length > 0
+    );
+  }), [platformConfig]);
   const hasActiveOperationalUnit = operationalContextOptions.some((option) => option.units.length > 0);
   const hasActiveOperationalResourcePool = reactExports.useMemo(() => (platformConfig?.resourcePools || []).some((pool) => String(pool?.status || "ACTIVE").toUpperCase() !== "INACTIVE" && String(pool?.unitCode || "").trim()), [platformConfig]);
   const hasActiveOperationalAircraftType = reactExports.useMemo(() => (platformConfig?.aircraftTypes || []).some((aircraftType) => String(aircraftType?.status || "ACTIVE").toUpperCase() !== "INACTIVE" && String(aircraftType?.code || "").trim()), [platformConfig]);
   const hasOperationalSetupReadyForDfp = hasActiveOperationalUnit && hasActiveOperationalResourcePool && hasActiveOperationalAircraftType;
   const hasInitialSetupWizardProgress = hasPersistedInitialSetupWizardProgress || hasStoredInitialSetupWizardProgress();
-  const canBootstrapInitialSetupFromDfp = hasAuthenticatedAdminRole && platformConfigLoaded && (operationalContextOptions.length === 0 || hasInitialSetupWizardProgress && !hasOperationalSetupReadyForDfp);
+  const hasInitialSetupWizardCompleted = hasPersistedInitialSetupWizardCompleted || hasStoredInitialSetupWizardCompleted();
+  const hasIncompleteInitialSetupWizardProgress = !hasInitialSetupWizardCompleted && (hasPersistedIncompleteInitialSetupWizardProgress || hasStoredInitialSetupWizardProgress());
+  const canBootstrapInitialSetupFromDfp = hasAuthenticatedAdminRole && platformConfigLoaded && (operationalContextOptions.length === 0 || hasIncompleteInitialSetupWizardProgress || hasInitialSetupWizardProgress && !hasOperationalSetupReadyForDfp);
   const showInitialSetupBlankState = canBootstrapInitialSetupFromDfp;
   reactExports.useEffect(() => {
     if (!showInitialSetupBlankState) return;

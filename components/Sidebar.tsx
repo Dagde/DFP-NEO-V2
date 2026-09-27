@@ -147,6 +147,7 @@ const Sidebar: React.FC<SidebarProps> = ({ activeView, onNavigate, courseColors,
     Settings: 'settings.view',
   };
   const canOpenLeftView = (view: string) => {
+    if (view === 'Program Schedule') return canOpen(view);
     const permissionId = leftNavigationPermissions[view];
     if (!permissionId) return canOpen(view);
     return canOpen(view) && (canUsePermission(permissionId) || Boolean(canOpenSelfScopedView?.(view)));

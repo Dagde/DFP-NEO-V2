@@ -30620,17 +30620,23 @@ const App: React.FC = () => {
         })).filter(option => option.units.length > 0),
         [getUnitOptionsForLocation, selectableLocationCodes],
     );
+    const initialSetupWizardCompletedAtStorageKey = 'dfp-initial-setup-wizard-completed-at';
     const hasStoredInitialSetupWizardProgress = useCallback(() => {
         if (typeof window === 'undefined') return false;
         const storedStep = Number(window.localStorage.getItem('dfp-initial-setup-wizard-step'));
         if (Number.isFinite(storedStep) && storedStep > 0) return true;
         if (window.localStorage.getItem('dfp-initial-setup-wizard-organisation-draft')) return true;
+        if (window.localStorage.getItem('dfp-initial-setup-wizard-draft-snapshot')) return true;
         try {
             const completedSteps = JSON.parse(window.localStorage.getItem('dfp-initial-setup-wizard-completed-steps') || '[]');
             return Array.isArray(completedSteps) && completedSteps.length > 0;
         } catch {
             return false;
         }
+    }, []);
+    const hasStoredInitialSetupWizardCompleted = useCallback(() => {
+        if (typeof window === 'undefined') return false;
+        return Boolean(window.localStorage.getItem(initialSetupWizardCompletedAtStorageKey));
     }, []);
     const hasPersistedInitialSetupWizardProgress = useMemo(() => (
         (platformConfig?.organisations || []).some((organisation: any) => {
@@ -30650,6 +30656,27 @@ const App: React.FC = () => {
             );
         })
     ), [platformConfig]);
+    const hasPersistedInitialSetupWizardCompleted = useMemo(() => (
+        (platformConfig?.organisations || []).some((organisation: any) => {
+            const settings = organisation?.settings || {};
+            const drafts = settings.initialSetupWizardDrafts || settings.initialSetupWizardDraft;
+            return Boolean(settings.initialSetupWizardCompletedAt || drafts?.completedAt);
+        })
+    ), [platformConfig]);
+    const hasPersistedIncompleteInitialSetupWizardProgress = useMemo(() => (
+        (platformConfig?.organisations || []).some((organisation: any) => {
+            const settings = organisation?.settings || {};
+            if (settings.initialSetupWizardCompletedAt) return false;
+            const drafts = settings.initialSetupWizardDrafts || settings.initialSetupWizardDraft;
+            if (!drafts || typeof drafts !== 'object' || drafts.completedAt) return false;
+            const activeStepIndex = Number(drafts.activeStepIndex);
+            return Boolean(
+                drafts.activeStepId ||
+                (Number.isFinite(activeStepIndex) && activeStepIndex > 0) ||
+                (Array.isArray(drafts.completedStepIds) && drafts.completedStepIds.length > 0)
+            );
+        })
+    ), [platformConfig]);
     const hasActiveOperationalUnit = operationalContextOptions.some(option => option.units.length > 0);
     const hasActiveOperationalResourcePool = useMemo(() => (
         (platformConfig?.resourcePools || []).some((pool: any) => (
@@ -30665,10 +30692,15 @@ const App: React.FC = () => {
     ), [platformConfig]);
     const hasOperationalSetupReadyForDfp = hasActiveOperationalUnit && hasActiveOperationalResourcePool && hasActiveOperationalAircraftType;
     const hasInitialSetupWizardProgress = hasPersistedInitialSetupWizardProgress || hasStoredInitialSetupWizardProgress();
+    const hasInitialSetupWizardCompleted = hasPersistedInitialSetupWizardCompleted || hasStoredInitialSetupWizardCompleted();
+    const hasIncompleteInitialSetupWizardProgress = !hasInitialSetupWizardCompleted && (
+        hasPersistedIncompleteInitialSetupWizardProgress || hasStoredInitialSetupWizardProgress()
+    );
     const canBootstrapInitialSetupFromDfp = hasAuthenticatedAdminRole
         && platformConfigLoaded
         && (
             operationalContextOptions.length === 0 ||
+            hasIncompleteInitialSetupWizardProgress ||
             (hasInitialSetupWizardProgress && !hasOperationalSetupReadyForDfp)
         );
     const showInitialSetupBlankState = canBootstrapInitialSetupFromDfp;
