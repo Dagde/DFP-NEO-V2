@@ -385,11 +385,13 @@ const getLocalDateString = (date: Date = new Date()): string => {
     return `${year}-${month}-${day}`;
 };
 
+const DEFAULT_UNIT_TYPE_OPTIONS = ['Training', 'Operational', 'Support', 'Headquarters'];
+
 const normaliseUnitTypeOptions = (platformConfig?: any): string[] => {
     const seen = new Set<string>();
     const sourceValues = Array.isArray(platformConfig?.unitTypes) ? platformConfig.unitTypes : [];
     const usedValues = Array.isArray(platformConfig?.units) ? platformConfig.units.map((unit: any) => unit?.unitType) : [];
-    return [...sourceValues, ...usedValues]
+    return [...sourceValues, ...usedValues, ...DEFAULT_UNIT_TYPE_OPTIONS]
         .map((value) => String(value || '').trim())
         .filter((value) => {
             if (!value) return false;
@@ -3639,7 +3641,7 @@ const InitialSetupWizard: React.FC<{
         code: String(currentUnit?.code || unitCode || 'UNIT-01'),
         name: String(currentUnit?.name || currentUnit?.code || unitCode || 'Unit'),
         locationCode: String(currentUnit?.locationCode || activeWizardLocationCode || currentLocation?.code || ''),
-        unitType: String(currentUnit?.unitType || ''),
+        unitType: String(currentUnit?.unitType || unitTypeOptions[0] || ''),
         operationalModel: String(getUnitOperationalModel(currentUnit || {}) || 'pooled-crew'),
         hasTrainees: currentUnit?.settings?.hasTrainees !== false,
     });
@@ -4570,7 +4572,7 @@ const InitialSetupWizard: React.FC<{
             code: String(currentUnit?.code || unitCode || 'UNIT-01'),
             name: String(currentUnit?.name || currentUnit?.code || unitCode || 'Unit'),
             locationCode: String(currentUnit?.locationCode || activeWizardLocationCode || currentLocation?.code || ''),
-            unitType: String(currentUnit?.unitType || ''),
+            unitType: String(currentUnit?.unitType || unitTypeOptions[0] || ''),
             operationalModel: String(getUnitOperationalModel(currentUnit || {}) || 'pooled-crew'),
             hasTrainees: currentUnit?.settings?.hasTrainees !== false,
         });

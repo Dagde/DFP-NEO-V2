@@ -3338,11 +3338,13 @@ const normaliseAuditDateOnly = (value) => {
   return String(value).slice(0, 10);
 };
 
+const DEFAULT_COMMERCIAL_UNIT_TYPES = ['Training', 'Operational', 'Support', 'Headquarters'];
+
 const normaliseCommercialUnitTypes = (values, units = []) => {
   const seen = new Set();
   const sourceValues = Array.isArray(values) ? values : [];
   const usedValues = Array.isArray(units) ? units.map((unit) => unit?.unitType) : [];
-  return [...sourceValues, ...usedValues]
+  return [...sourceValues, ...usedValues, ...DEFAULT_COMMERCIAL_UNIT_TYPES]
     .map((value) => String(value || '').trim())
     .filter((value) => {
       if (!value) return false;

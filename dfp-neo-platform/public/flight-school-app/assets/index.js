@@ -32042,11 +32042,12 @@ const checkIsChanged = (event, baselineEvents) => {
   if (Math.abs(event.duration - baseline.duration) > epsilon) return true;
   return event.resourceId !== baseline.resourceId || event.instructor !== baseline.instructor || event.student !== baseline.student || event.pilot !== baseline.pilot || (event.area || "") !== (baseline.area || "");
 };
+const DEFAULT_UNIT_TYPE_OPTIONS = ["Training", "Operational", "Support", "Headquarters"];
 const normaliseUnitTypeOptions = (platformConfig) => {
   const seen = /* @__PURE__ */ new Set();
   const sourceValues = Array.isArray(platformConfig?.unitTypes) ? platformConfig.unitTypes : [];
   const usedValues = Array.isArray(platformConfig?.units) ? platformConfig.units.map((unit) => unit?.unitType) : [];
-  return [...sourceValues, ...usedValues].map((value) => String(value || "").trim()).filter((value) => {
+  return [...sourceValues, ...usedValues, ...DEFAULT_UNIT_TYPE_OPTIONS].map((value) => String(value || "").trim()).filter((value) => {
     if (!value) return false;
     const key = value.toUpperCase();
     if (seen.has(key)) return false;
@@ -34394,7 +34395,7 @@ const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, lo
     code: String(currentUnit?.code || unitCode || "UNIT-01"),
     name: String(currentUnit?.name || currentUnit?.code || unitCode || "Unit"),
     locationCode: String(currentUnit?.locationCode || activeWizardLocationCode || currentLocation?.code || ""),
-    unitType: String(currentUnit?.unitType || ""),
+    unitType: String(currentUnit?.unitType || unitTypeOptions[0] || ""),
     operationalModel: String(getUnitOperationalModel(currentUnit || {}) || "pooled-crew"),
     hasTrainees: currentUnit?.settings?.hasTrainees !== false
   });
@@ -35185,7 +35186,7 @@ const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, lo
       code: String(currentUnit?.code || unitCode || "UNIT-01"),
       name: String(currentUnit?.name || currentUnit?.code || unitCode || "Unit"),
       locationCode: String(currentUnit?.locationCode || activeWizardLocationCode || currentLocation?.code || ""),
-      unitType: String(currentUnit?.unitType || ""),
+      unitType: String(currentUnit?.unitType || unitTypeOptions[0] || ""),
       operationalModel: String(getUnitOperationalModel(currentUnit || {}) || "pooled-crew"),
       hasTrainees: currentUnit?.settings?.hasTrainees !== false
     });
