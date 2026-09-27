@@ -6493,9 +6493,9 @@ const InitialSetupWizard: React.FC<{
         },
         {
             id: 'course-student-groups',
-            title: 'Choose trainee service groups',
-            label: 'Service groups',
-            body: 'Choose which trainee Service categories should be shown separately on course cards and Course Progress.',
+            title: 'Split this course into trainee sub-groups',
+            label: 'Sub-groups',
+            body: 'Choose whether trainees within a course should be shown in separate sub-groups.',
             checkIds: ['access'],
             category: 'highly-desirable',
         },
@@ -8835,7 +8835,7 @@ const InitialSetupWizard: React.FC<{
         return (
             <div className="space-y-3">
                 <div className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs font-semibold leading-5 text-amber-900">
-                    If trainees are divided by Service or customer category, choose the categories you want DFP NEO to show and count separately. These choices come from the Service field in Trainee profiles.
+                    Do you want trainees within a course to be shown in separate sub-groups? If yes, select the sub-groups you want to use. For example, CSE201 could be shown as Air Force, Army and Navy sub-groups. If you do not need sub-groups, leave this blank.
                 </div>
                 <div className="space-y-2">
                     {visibleGroups.map((group, index) => (
@@ -8845,7 +8845,7 @@ const InitialSetupWizard: React.FC<{
                                 <span className="mt-1 block text-lg font-black text-slate-900">{index + 1}</span>
                             </div>
                             <label>
-                                <span className={wizardLabelClass}>Trainee Service</span>
+                                <span className={wizardLabelClass}>Sub-group</span>
                                 <select
                                     className={`${wizardInputClass} mt-1`}
                                     value={String(group.shortName || group.longName || '')}
@@ -8854,7 +8854,7 @@ const InitialSetupWizard: React.FC<{
                                     onKeyDown={stopEditableKeyPropagation}
                                     onChange={(event) => updateCourseStudentGroup(index, event.target.value)}
                                 >
-                                    <option value="">Select service...</option>
+                                    <option value="">Select sub-group...</option>
                                     {traineeServiceOptions.map((service) => (
                                         <option key={service} value={service}>{service}</option>
                                     ))}
@@ -8883,7 +8883,7 @@ const InitialSetupWizard: React.FC<{
                         disabled={!onUpdateServiceDefinitions || courseStudentGroups.length >= MAX_COURSE_STUDENT_GROUPS}
                         onClick={addCourseStudentGroup}
                     >
-                        Add group
+                        Add sub-group
                     </button>
                 </div>
             </div>
@@ -11481,7 +11481,7 @@ const InitialSetupWizard: React.FC<{
         }
         if (visibleStep.id === 'course-student-groups') {
             return promptShell(
-                <p>This controls whether course cards and Course Progress split trainees into separate Service/category groups. Select only the categories this customer actually uses.</p>,
+                <p>Do you want trainees within a course to be shown in separate sub-groups? If yes, select the sub-groups you want to use. For example, CSE201 could be shown as Air Force, Army and Navy sub-groups. If you do not need sub-groups, leave this blank.</p>,
                 renderCourseStudentGroupsEditor(),
             );
         }
