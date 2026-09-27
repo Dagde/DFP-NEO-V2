@@ -36858,9 +36858,9 @@ const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, lo
     },
     {
       id: "course-student-groups",
-      title: "Set course student group labels",
-      label: "Course groups",
-      body: "Name the groups used on course cards and progress tiles so staff see the same terminology everywhere.",
+      title: "Choose trainee service groups",
+      label: "Service groups",
+      body: "Choose which trainee Service categories should be shown separately on course cards and Course Progress.",
       checkIds: ["access"],
       category: "highly-desirable"
     },
@@ -38796,10 +38796,10 @@ const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, lo
   const renderCourseStudentGroupsEditor = () => {
     const visibleGroups = courseStudentGroups.length > 0 ? courseStudentGroups : [{ longName: "Group 1", shortName: "Group 1" }];
     return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-3", children: [
-      /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs font-semibold leading-5 text-amber-900", children: "Select the trainee Service values that should be counted on course cards. These options come from the Service field already populated in Trainee profiles." }),
+      /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs font-semibold leading-5 text-amber-900", children: "If trainees are divided by Service or customer category, choose the categories you want DFP NEO to show and count separately. These choices come from the Service field in Trainee profiles." }),
       /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "space-y-2", children: visibleGroups.map((group, index) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid gap-3 rounded-lg border border-slate-300 bg-white p-3 md:grid-cols-[80px_minmax(0,1fr)_auto]", children: [
         /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: wizardLabelClass, children: "Group" }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: wizardLabelClass, children: "Display group" }),
           /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "mt-1 block text-lg font-black text-slate-900", children: index + 1 })
         ] }),
         /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { children: [
@@ -38832,7 +38832,7 @@ const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, lo
         ) })
       ] }, `wizard-course-group-${index}`)) }),
       /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex flex-wrap items-center justify-between gap-3 rounded-lg border border-slate-300 bg-slate-50 px-3 py-2", children: [
-        /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-xs font-semibold leading-5 text-slate-600", children: "Add or correct Service values in Trainee profiles if an expected service is missing from this list." }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-xs font-semibold leading-5 text-slate-600", children: "If a category is missing, add or correct the trainee Service value in Trainee profiles first." }),
         /* @__PURE__ */ jsxRuntimeExports.jsx(
           "button",
           {
@@ -41133,7 +41133,7 @@ const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, lo
     }
     if (visibleStep.id === "course-student-groups") {
       return promptShell(
-        /* @__PURE__ */ jsxRuntimeExports.jsx("p", { children: "Set the course student group labels used in course records and progress pages. Leave unused groups out so the app only displays the groups the customer actually uses." }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx("p", { children: "This controls whether course cards and Course Progress split trainees into separate Service/category groups. Select only the categories this customer actually uses." }),
         renderCourseStudentGroupsEditor()
       );
     }

@@ -6493,9 +6493,9 @@ const InitialSetupWizard: React.FC<{
         },
         {
             id: 'course-student-groups',
-            title: 'Set course student group labels',
-            label: 'Course groups',
-            body: 'Name the groups used on course cards and progress tiles so staff see the same terminology everywhere.',
+            title: 'Choose trainee service groups',
+            label: 'Service groups',
+            body: 'Choose which trainee Service categories should be shown separately on course cards and Course Progress.',
             checkIds: ['access'],
             category: 'highly-desirable',
         },
@@ -8835,13 +8835,13 @@ const InitialSetupWizard: React.FC<{
         return (
             <div className="space-y-3">
                 <div className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs font-semibold leading-5 text-amber-900">
-                    Select the trainee Service values that should be counted on course cards. These options come from the Service field already populated in Trainee profiles.
+                    If trainees are divided by Service or customer category, choose the categories you want DFP NEO to show and count separately. These choices come from the Service field in Trainee profiles.
                 </div>
                 <div className="space-y-2">
                     {visibleGroups.map((group, index) => (
                         <div key={`wizard-course-group-${index}`} className="grid gap-3 rounded-lg border border-slate-300 bg-white p-3 md:grid-cols-[80px_minmax(0,1fr)_auto]">
                             <div>
-                                <span className={wizardLabelClass}>Group</span>
+                                <span className={wizardLabelClass}>Display group</span>
                                 <span className="mt-1 block text-lg font-black text-slate-900">{index + 1}</span>
                             </div>
                             <label>
@@ -8875,7 +8875,7 @@ const InitialSetupWizard: React.FC<{
                 </div>
                 <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-slate-300 bg-slate-50 px-3 py-2">
                     <span className="text-xs font-semibold leading-5 text-slate-600">
-                        Add or correct Service values in Trainee profiles if an expected service is missing from this list.
+                        If a category is missing, add or correct the trainee Service value in Trainee profiles first.
                     </span>
                     <button
                         type="button"
@@ -11481,7 +11481,7 @@ const InitialSetupWizard: React.FC<{
         }
         if (visibleStep.id === 'course-student-groups') {
             return promptShell(
-                <p>Set the course student group labels used in course records and progress pages. Leave unused groups out so the app only displays the groups the customer actually uses.</p>,
+                <p>This controls whether course cards and Course Progress split trainees into separate Service/category groups. Select only the categories this customer actually uses.</p>,
                 renderCourseStudentGroupsEditor(),
             );
         }
