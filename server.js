@@ -10555,8 +10555,12 @@ function rejectDisabledDebugRoute(res) {
 }
 
 // TESTING FUNCTIONS START - temporary customer-testbed reset tools.
-function isTestingFunctionsEnabled() {
-  return String(process.env.DFP_TESTING_FUNCTIONS_ENABLED || 'true').trim().toLowerCase() !== 'false';
+function isTestingFunctionsEnabled(req) {
+  const explicitValue = String(process.env.DFP_TESTING_FUNCTIONS_ENABLED || '').trim().toLowerCase();
+  if (['true', '1', 'yes', 'on'].includes(explicitValue)) return true;
+  if (['false', '0', 'no', 'off'].includes(explicitValue)) return false;
+  const host = String(req?.hostname || req?.headers?.host || '').toLowerCase();
+  return host.includes('new-customer-test') || host.includes('localhost') || host.includes('127.0.0.1');
 }
 
 function quotePostgresIdentifier(identifier) {
@@ -10925,11 +10929,15 @@ async function requireDirectSuperAdminForTesting(req, res) {
 
 app.get('/api/testing-functions/status', async (req, res) => {
   try {
+    if (!isTestingFunctionsEnabled(req)) {
+      return res.status(404).json({ error: 'Not found' });
+    }
+
     const context = await requireDirectSuperAdminForTesting(req, res);
     if (!context) return;
     return res.json({
-      enabled: isTestingFunctionsEnabled(),
-      functions: isTestingFunctionsEnabled() ? ['reset-database', 'bulk-day-preview', 'bulk-day'] : [],
+      enabled: true,
+      functions: ['reset-database', 'bulk-day-preview', 'bulk-day'],
     });
   } catch (error) {
     console.error('❌ GET /api/testing-functions/status error:', error);
@@ -10939,7 +10947,7 @@ app.get('/api/testing-functions/status', async (req, res) => {
 
 app.post('/api/testing-functions/bulk-day-preview', async (req, res) => {
   try {
-    if (!isTestingFunctionsEnabled()) {
+    if (!isTestingFunctionsEnabled(req)) {
       return res.status(404).json({ error: 'Not found' });
     }
 
@@ -10971,7 +10979,7 @@ app.post('/api/testing-functions/bulk-day-preview', async (req, res) => {
 
 app.post('/api/testing-functions/bulk-day', async (req, res) => {
   try {
-    if (!isTestingFunctionsEnabled()) {
+    if (!isTestingFunctionsEnabled(req)) {
       return res.status(404).json({ error: 'Not found' });
     }
 
@@ -11326,7 +11334,7 @@ app.post('/api/testing-functions/bulk-day', async (req, res) => {
 
 app.post('/api/testing-functions/reset-database', async (req, res) => {
   try {
-    if (!isTestingFunctionsEnabled()) {
+    if (!isTestingFunctionsEnabled(req)) {
       return res.status(404).json({ error: 'Not found' });
     }
 

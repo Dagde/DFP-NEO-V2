@@ -980,6 +980,11 @@ const sectionGroups: {
 
 const highlightedCrewPageSections: SettingsMenuSection[] = ['crew-composition', 'standard-missions'];
 const isHighlightedCrewPageSection = (section: SettingsMenuSection) => highlightedCrewPageSections.includes(section);
+const isTestingFunctionsClientHost = () => {
+    if (typeof window === 'undefined') return false;
+    const host = window.location.hostname.toLowerCase();
+    return host.includes('new-customer-test') || host === 'localhost' || host === '127.0.0.1';
+};
 
 type VisibleSettingGroup = typeof sectionGroups[number] & { visibleSections: SettingsMenuSection[] };
 
@@ -1448,7 +1453,7 @@ export const SettingsViewWithMenu: React.FC<SettingsViewWithMenuProps> = (props)
     };
     const canAccessSettingsSection = (section: SettingsMenuSection): boolean => {
         if (section === 'testing-functions') {
-            return true;
+            return isTestingFunctionsClientHost();
         }
         if (hasLegacySettingsAdminRole || hasGeneralSettingsEditPermission) return true;
         if (hasSpecificSettingsEditPermission) {
