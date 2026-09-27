@@ -983,7 +983,7 @@ const isHighlightedCrewPageSection = (section: SettingsMenuSection) => highlight
 const isTestingFunctionsClientHost = () => {
     if (typeof window === 'undefined') return false;
     const host = window.location.hostname.toLowerCase();
-    return host.includes('new-customer-test') || host === 'localhost' || host === '127.0.0.1';
+    return host.includes('dfp-neo-v2-production') || host.includes('new-customer-test') || host === 'localhost' || host === '127.0.0.1';
 };
 
 type VisibleSettingGroup = typeof sectionGroups[number] & { visibleSections: SettingsMenuSection[] };

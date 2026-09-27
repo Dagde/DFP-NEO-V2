@@ -10562,21 +10562,12 @@ function getRequestHostName(req) {
     .toLowerCase();
 }
 
-function isProtectedProductionHost(req) {
-  const host = getRequestHostName(req);
-  return (
-    host === 'dfp-neo-v2-production.up.railway.app' ||
-    host.includes('dfp-neo-v2-production')
-  );
-}
-
 function isTestingFunctionsEnabled(req) {
-  if (isProtectedProductionHost(req)) return false;
   const explicitValue = String(process.env.DFP_TESTING_FUNCTIONS_ENABLED || '').trim().toLowerCase();
   if (['true', '1', 'yes', 'on'].includes(explicitValue)) return true;
   if (['false', '0', 'no', 'off'].includes(explicitValue)) return false;
   const host = getRequestHostName(req);
-  return host.includes('new-customer-test') || host.includes('localhost') || host.includes('127.0.0.1');
+  return host.includes('dfp-neo-v2-production') || host.includes('new-customer-test') || host.includes('localhost') || host.includes('127.0.0.1');
 }
 
 function quotePostgresIdentifier(identifier) {

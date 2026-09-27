@@ -101411,7 +101411,7 @@ const sectionGroups = [
 const isTestingFunctionsClientHost = () => {
   if (typeof window === "undefined") return false;
   const host = window.location.hostname.toLowerCase();
-  return host.includes("new-customer-test") || host === "localhost" || host === "127.0.0.1";
+  return host.includes("dfp-neo-v2-production") || host.includes("new-customer-test") || host === "localhost" || host === "127.0.0.1";
 };
 const getSettingsGroupId = (label) => `settings-${label.toLowerCase().replace(/[^a-z0-9]+/g, "-")}`;
 const normaliseSettingsPermissionLabel = (permission) => {
