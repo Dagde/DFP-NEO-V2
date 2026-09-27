@@ -34093,11 +34093,18 @@ const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, lo
   const wizardLocationIcaoOptions = wizardLocationOptionProfiles.map((profile) => profile.icao).filter(Boolean);
   const wizardLocationIataOptions = wizardLocationOptionProfiles.map((profile) => profile.iata).filter(Boolean);
   const wizardLocationNameOptions = wizardLocationOptionProfiles.map((profile) => profile.name).filter(Boolean);
-  const findWizardLocationProfile = (value) => {
+  const findWizardLocationProfile = (value, preferredField = "any") => {
     const key = normaliseUnitSettingsIdentifier(value);
-    return wizardLocationLookupProfiles.find((profile) => normaliseUnitSettingsIdentifier(profile.icao) === key || normaliseUnitSettingsIdentifier(profile.iata) === key || normaliseUnitSettingsIdentifier(profile.name) === key);
+    if (!key) return void 0;
+    const matchByIcao = () => wizardLocationLookupProfiles.find((profile) => normaliseUnitSettingsIdentifier(profile.icao) === key);
+    const matchByIata = () => wizardLocationLookupProfiles.find((profile) => normaliseUnitSettingsIdentifier(profile.iata) === key);
+    const matchByName = () => wizardLocationLookupProfiles.find((profile) => normaliseUnitSettingsIdentifier(profile.name) === key);
+    if (preferredField === "icao") return matchByIcao();
+    if (preferredField === "iata") return matchByIata();
+    if (preferredField === "name") return matchByName();
+    return matchByIcao() || matchByIata() || matchByName();
   };
-  const activeWizardLocationProfile = findWizardLocationProfile(activeWizardLocationCode);
+  const activeWizardLocationProfile = findWizardLocationProfile(activeWizardLocationCode, "icao") || findWizardLocationProfile(activeWizardLocationCode);
   const activeWizardLocationRow = {
     icao: activeWizardLocationProfile?.icao || activeWizardLocationCode || "",
     iata: activeWizardLocationProfile?.iata || "",
@@ -37836,6 +37843,24 @@ const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, lo
     locationDraftDirtyRef.current = true;
     setLocationDraft(updater);
   };
+  reactExports.useEffect(() => {
+    if (visibleStep?.id !== "location-details") return;
+    const profile = findWizardLocationProfile(locationDraft.code, "icao");
+    if (!profile) return;
+    const nextDraft = {
+      ...locationDraft,
+      code: profile.icao || locationDraft.code,
+      iataCode: profile.iata || locationDraft.iataCode,
+      name: profile.name || locationDraft.name,
+      timezone: profile.timezone || locationDraft.timezone,
+      latitude: profile.latitude != null ? String(profile.latitude) : locationDraft.latitude,
+      longitude: profile.longitude != null ? String(profile.longitude) : locationDraft.longitude
+    };
+    const changed = nextDraft.code !== locationDraft.code || nextDraft.iataCode !== locationDraft.iataCode || nextDraft.name !== locationDraft.name || nextDraft.timezone !== locationDraft.timezone || nextDraft.latitude !== locationDraft.latitude || nextDraft.longitude !== locationDraft.longitude;
+    if (!changed) return;
+    setLocationDraft(nextDraft);
+    saveLocationDraft(nextDraft, "Location saved into Settings.");
+  }, [visibleStep?.id, locationDraft.code, wizardAirfieldCatalogueProfiles.length]);
   const updateUnitDraft = (updater) => {
     unitDraftDirtyRef.current = true;
     setUnitDraft(updater);
@@ -38060,7 +38085,7 @@ const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, lo
     const nextRows = rows.length > 0 ? [...rows] : [{ icao: "", iata: "", name: "" }];
     while (nextRows.length <= rowIndex) nextRows.push({ icao: "", iata: "", name: "" });
     const formattedValue = field === "name" ? value : value.toUpperCase();
-    const matchedProfile = findWizardLocationProfile(formattedValue);
+    const matchedProfile = findWizardLocationProfile(formattedValue, field);
     nextRows[rowIndex] = {
       ...nextRows[rowIndex],
       [field]: formattedValue,
@@ -38072,8 +38097,7 @@ const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, lo
     };
     const nextDraft = formatWizardLocationRows(nextRows);
     setLocationsTodayDraft(nextDraft);
-    const completedLocationValue = Boolean(matchedProfile) || field === "icao" && formattedValue.trim().length >= 4 || field === "iata" && formattedValue.trim().length >= 3;
-    if (completedLocationValue) {
+    if (matchedProfile) {
       saveWizardLocationRowsDraft("Location list synced into Settings.", nextDraft);
     }
   };
@@ -40369,28 +40393,27 @@ const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, lo
       );
     }
     if (visibleStep.id === "location-details") {
-      const saveResolvedLocationDraft = (nextDraft, matchedProfile, value, minLength = 0) => {
+      const saveResolvedLocationDraft = (nextDraft, matchedProfile) => {
         updateLocationDraft(nextDraft);
-        const shouldSave = Boolean(matchedProfile) || minLength > 0 && String(value || "").trim().length >= minLength;
-        if (shouldSave) saveLocationDraft(nextDraft, "Location saved into Settings.");
+        if (matchedProfile) saveLocationDraft(nextDraft, "Location saved into Settings.");
       };
       return promptShell(
         /* @__PURE__ */ jsxRuntimeExports.jsx("p", { children: "Confirm the details for the first locality. You will use the same pattern for every locality listed earlier." }),
         /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid gap-3 md:grid-cols-2", children: [
           wizardDataListField("ICAO code", locationDraft.code, (value) => {
-            const matchedProfile = findWizardLocationProfile(value);
+            const matchedProfile = findWizardLocationProfile(value, "icao");
             const nextDraft = { ...locationDraft, code: value.toUpperCase(), iataCode: matchedProfile?.iata || locationDraft.iataCode, name: matchedProfile?.name || locationDraft.name, timezone: matchedProfile?.timezone || locationDraft.timezone, latitude: matchedProfile?.latitude != null ? String(matchedProfile.latitude) : locationDraft.latitude, longitude: matchedProfile?.longitude != null ? String(matchedProfile.longitude) : locationDraft.longitude };
-            saveResolvedLocationDraft(nextDraft, matchedProfile, value, 4);
+            saveResolvedLocationDraft(nextDraft, matchedProfile);
           }, wizardLocationIcaoOptions, "ICAO code"),
           wizardDataListField("IATA code", locationDraft.iataCode, (value) => {
-            const matchedProfile = findWizardLocationProfile(value);
+            const matchedProfile = findWizardLocationProfile(value, "iata");
             const nextDraft = { ...locationDraft, iataCode: value.toUpperCase(), code: matchedProfile?.icao || locationDraft.code, name: matchedProfile?.name || locationDraft.name, timezone: matchedProfile?.timezone || locationDraft.timezone, latitude: matchedProfile?.latitude != null ? String(matchedProfile.latitude) : locationDraft.latitude, longitude: matchedProfile?.longitude != null ? String(matchedProfile.longitude) : locationDraft.longitude };
-            saveResolvedLocationDraft(nextDraft, matchedProfile, value, 3);
+            saveResolvedLocationDraft(nextDraft, matchedProfile);
           }, wizardLocationIataOptions, "IATA code"),
           wizardDataListField("Location name", locationDraft.name, (value) => {
-            const matchedProfile = findWizardLocationProfile(value);
+            const matchedProfile = findWizardLocationProfile(value, "name");
             const nextDraft = { ...locationDraft, name: value, code: matchedProfile?.icao || locationDraft.code, iataCode: matchedProfile?.iata || locationDraft.iataCode, timezone: matchedProfile?.timezone || locationDraft.timezone, latitude: matchedProfile?.latitude != null ? String(matchedProfile.latitude) : locationDraft.latitude, longitude: matchedProfile?.longitude != null ? String(matchedProfile.longitude) : locationDraft.longitude };
-            saveResolvedLocationDraft(nextDraft, matchedProfile, value);
+            saveResolvedLocationDraft(nextDraft, matchedProfile);
           }, wizardLocationNameOptions, "Location name"),
           wizardField("Timezone", locationDraft.timezone, (value) => updateLocationDraft((draft) => ({ ...draft, timezone: value })), void 0, "UTC"),
           wizardField("Latitude", locationDraft.latitude, (value) => updateLocationDraft((draft) => ({ ...draft, latitude: value })), void 0, "-27.3842"),
