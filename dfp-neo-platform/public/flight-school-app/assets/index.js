@@ -32867,9 +32867,9 @@ const formatWizardBuildRulesDraft = (draft) => [
   `Maximum flights per day: ${draft.maxFlightsPerDay || "Not set"}`,
   `Minimum gap between events: ${draft.minGapBetweenEventsMinutes || "0"} minutes`,
   `Flight stagger minutes: ${draft.flightStaggerMinutes || DEFAULT_DISPATCH_STAGGER_SETTINGS.flightMinutes}`,
-  `Flight stagger no minimum: ${draft.flightStaggerNoMinimum || (DEFAULT_DISPATCH_STAGGER_SETTINGS.flightNoMinimum ? "Yes" : "No")}`,
+  `Enforce minimum flight stagger: ${noMinimumToEnforceMinimum(draft.flightStaggerNoMinimum || "", DEFAULT_DISPATCH_STAGGER_SETTINGS.flightNoMinimum)}`,
   `Simulator stagger minutes: ${draft.simulatorStaggerMinutes || DEFAULT_DISPATCH_STAGGER_SETTINGS.simulatorMinutes}`,
-  `Simulator stagger no minimum: ${draft.simulatorStaggerNoMinimum || (DEFAULT_DISPATCH_STAGGER_SETTINGS.simulatorNoMinimum ? "Yes" : "No")}`,
+  `Enforce minimum simulator stagger: ${noMinimumToEnforceMinimum(draft.simulatorStaggerNoMinimum || "", DEFAULT_DISPATCH_STAGGER_SETTINGS.simulatorNoMinimum)}`,
   `Flight authorisation required: ${draft.flightAuthorisationRequired || (DEFAULT_TILE_STATUS_SETTINGS.flightAuthorisationRequired ? "Yes" : "No")}`,
   `Authorisation warning minutes: ${draft.authorizationWarningMinutes || DEFAULT_TILE_STATUS_SETTINGS.authorizationWarningMinutes}`,
   `Authorisation urgent minutes: ${draft.authorizationUrgentMinutes || DEFAULT_TILE_STATUS_SETTINGS.authorizationUrgentMinutes}`
@@ -32941,6 +32941,10 @@ const parseWizardEditablePipeRows = (value, keys) => String(value || "").split(/
   }, {});
 }).filter((row) => Object.values(row).some((entry) => String(entry || "").trim()));
 const formatWizardEditablePipeRows = (rows, keys) => rows.filter((row) => keys.some((key) => String(row[key] || "").trim())).map((row) => keys.map((key) => String(row[key] || "")).join("|")).join("\n");
+const yesNoFromBoolean = (value) => value ? "Yes" : "No";
+const invertYesNo = (value) => /^yes$/i.test(String(value || "").trim()) ? "No" : "Yes";
+const noMinimumToEnforceMinimum = (value, fallbackNoMinimum = false) => invertYesNo(value || yesNoFromBoolean(fallbackNoMinimum));
+const enforceMinimumToNoMinimum = (value) => invertYesNo(value);
 const parseWizardTrainingReportRows = (value) => parseWizardPipeRows(value, ["genericName", "organisationName", "gradeMin", "gradeMax", "showNumbers", "noGradeOption", "passLabel", "failLabel"]);
 const formatWizardTrainingReportRows = (rows) => formatWizardPipeRows(rows, ["genericName", "organisationName", "gradeMin", "gradeMax", "showNumbers", "noGradeOption", "passLabel", "failLabel"]);
 const parseWizardCrewRoleRows = (value) => parseWizardPipeRows(value, ["role", "label", "models"]);
@@ -34851,9 +34855,15 @@ const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, lo
       maxFlightsPerDay: readRule("Maximum flights per day", "").replace(/^Not set$/i, ""),
       minGapBetweenEventsMinutes: readRule("Minimum gap between events", "0"),
       flightStaggerMinutes: readRule("Flight stagger minutes", String(DEFAULT_DISPATCH_STAGGER_SETTINGS.flightMinutes)),
-      flightStaggerNoMinimum: readRule("Flight stagger no minimum", DEFAULT_DISPATCH_STAGGER_SETTINGS.flightNoMinimum ? "Yes" : "No"),
+      flightStaggerNoMinimum: enforceMinimumToNoMinimum(readRule(
+        "Enforce minimum flight stagger",
+        noMinimumToEnforceMinimum(readRule("Flight stagger no minimum", DEFAULT_DISPATCH_STAGGER_SETTINGS.flightNoMinimum ? "Yes" : "No"))
+      )),
       simulatorStaggerMinutes: readRule("Simulator stagger minutes", String(DEFAULT_DISPATCH_STAGGER_SETTINGS.simulatorMinutes)),
-      simulatorStaggerNoMinimum: readRule("Simulator stagger no minimum", DEFAULT_DISPATCH_STAGGER_SETTINGS.simulatorNoMinimum ? "Yes" : "No"),
+      simulatorStaggerNoMinimum: enforceMinimumToNoMinimum(readRule(
+        "Enforce minimum simulator stagger",
+        noMinimumToEnforceMinimum(readRule("Simulator stagger no minimum", DEFAULT_DISPATCH_STAGGER_SETTINGS.simulatorNoMinimum ? "Yes" : "No"))
+      )),
       flightAuthorisationRequired: readRule("Flight authorisation required", DEFAULT_TILE_STATUS_SETTINGS.flightAuthorisationRequired ? "Yes" : "No"),
       authorizationWarningMinutes: readRule("Authorisation warning minutes", String(DEFAULT_TILE_STATUS_SETTINGS.authorizationWarningMinutes)),
       authorizationUrgentMinutes: readRule("Authorisation urgent minutes", String(DEFAULT_TILE_STATUS_SETTINGS.authorizationUrgentMinutes))
@@ -41009,9 +41019,9 @@ const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, lo
           /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded-lg border border-slate-300 bg-white p-3", children: [
             /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: wizardSectionHeadingClass, children: "Dispatch spacing" }),
             /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mt-3 grid gap-3 md:grid-cols-2", children: [
-              wizardField("Flight stagger no minimum", buildRulesDraft.flightStaggerNoMinimum, (value) => updateBuildRulesDraft((draft) => ({ ...draft, flightStaggerNoMinimum: value })), ["Yes", "No"]),
+              wizardField("Enforce minimum flight stagger", noMinimumToEnforceMinimum(buildRulesDraft.flightStaggerNoMinimum), (value) => updateBuildRulesDraft((draft) => ({ ...draft, flightStaggerNoMinimum: enforceMinimumToNoMinimum(value) })), ["Yes", "No"]),
               wizardField("Flight stagger minutes", buildRulesDraft.flightStaggerMinutes, (value) => updateBuildRulesDraft((draft) => ({ ...draft, flightStaggerMinutes: value })), void 0, "5"),
-              wizardField("Simulator stagger no minimum", buildRulesDraft.simulatorStaggerNoMinimum, (value) => updateBuildRulesDraft((draft) => ({ ...draft, simulatorStaggerNoMinimum: value })), ["Yes", "No"]),
+              wizardField("Enforce minimum simulator stagger", noMinimumToEnforceMinimum(buildRulesDraft.simulatorStaggerNoMinimum), (value) => updateBuildRulesDraft((draft) => ({ ...draft, simulatorStaggerNoMinimum: enforceMinimumToNoMinimum(value) })), ["Yes", "No"]),
               wizardField("Simulator stagger minutes", buildRulesDraft.simulatorStaggerMinutes, (value) => updateBuildRulesDraft((draft) => ({ ...draft, simulatorStaggerMinutes: value })), void 0, "0")
             ] })
           ] }),
