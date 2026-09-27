@@ -3263,7 +3263,7 @@ const InitialSetupWizard: React.FC<{
         profile,
     ])).values());
     const wizardLocationLookupProfiles = [...configuredWizardLocationProfiles, ...fallbackWizardLocationProfiles, ...wizardAirfieldCatalogueProfiles];
-    const wizardLocationOptionProfiles = [...configuredWizardLocationProfiles, ...fallbackWizardLocationProfiles, ...wizardAirfieldCatalogueProfiles].slice(0, 2000);
+    const wizardLocationOptionProfiles = [...configuredWizardLocationProfiles, ...fallbackWizardLocationProfiles, ...wizardAirfieldCatalogueProfiles];
     const wizardLocationIcaoOptions = wizardLocationOptionProfiles.map((profile) => profile.icao).filter(Boolean);
     const wizardLocationIataOptions = wizardLocationOptionProfiles.map((profile) => profile.iata).filter(Boolean);
     const wizardLocationNameOptions = wizardLocationOptionProfiles.map((profile) => profile.name).filter(Boolean);
@@ -7829,6 +7829,17 @@ const InitialSetupWizard: React.FC<{
         listKey?: string,
     ) => {
         const listId = `wizard-${(listKey || label).toLowerCase().replace(/[^a-z0-9]+/g, '-')}`;
+        const cleanValue = normaliseUnitSettingsIdentifier(value);
+        const uniqueOptions = Array.from(new Set(options.filter(Boolean)));
+        const rankedOptions = cleanValue
+            ? [
+                ...uniqueOptions.filter((option) => normaliseUnitSettingsIdentifier(option).startsWith(cleanValue)),
+                ...uniqueOptions.filter((option) => {
+                    const cleanOption = normaliseUnitSettingsIdentifier(option);
+                    return !cleanOption.startsWith(cleanValue) && cleanOption.includes(cleanValue);
+                }),
+            ].slice(0, 250)
+            : uniqueOptions.slice(0, 250);
         return (
             <label className="block">
                 <span className={wizardLabelClass}>{label}</span>
@@ -7837,11 +7848,13 @@ const InitialSetupWizard: React.FC<{
                     value={value}
                     list={listId}
                     placeholder={placeholder}
+                    autoComplete="off"
+                    spellCheck={false}
                     onKeyDown={stopEditableKeyPropagation}
                     onChange={(event) => onChange(event.target.value)}
                 />
                 <datalist id={listId}>
-                    {Array.from(new Set(options.filter(Boolean))).map((option) => <option key={option} value={option} />)}
+                    {rankedOptions.map((option) => <option key={option} value={option} />)}
                 </datalist>
             </label>
         );
