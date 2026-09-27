@@ -4590,14 +4590,54 @@ const InitialSetupWizard: React.FC<{
 
     useEffect(() => {
         if (organisationDraftDirtyRef.current) {
+            const hydratedUnits = buildHydratedUnitsTodayDraft();
+            const hydratedUnitParents = buildHydratedUnitParentDraft(hydratedUnits, organisationDraft);
+            const hydratedLocations = buildHydratedLocationsTodayDraft();
+            const hydratedLocationDraft = buildHydratedLocationDraft();
+            const hydratedCrew = buildHydratedCrewDraft();
+            const shouldRestoreUnits = Boolean(hydratedUnits.trim()) && (
+                !unitsTodayDraft.trim()
+                || unitsTodayDraft.trim() === 'UNIT-01 | Unit Name'
+            );
+            const shouldRestoreLocations = Boolean(hydratedLocations.trim()) && (
+                !locationsTodayDraft.trim()
+                || locationsTodayDraft.includes('LOC1 | LOC | Home Location')
+            );
+            if (shouldRestoreUnits) setUnitsTodayDraft(hydratedUnits);
+            if (hydratedUnitParents.trim() && !unitParentDraft.trim()) setUnitParentDraft(hydratedUnitParents);
+            if (shouldRestoreLocations) setLocationsTodayDraft(hydratedLocations);
+            if (Object.keys(readPlainWizardObject(getSavedInitialSetupWizardDrafts()?.locationDraft)).length > 0 && !locationDraftDirtyRef.current) {
+                setLocationDraft(hydratedLocationDraft);
+            }
+            if (!crewDraftDirtyRef.current) setCrewDraft(hydratedCrew);
+            setUnitModulesDraft(buildHydratedUnitModulesDraft());
+            hydrateSupplementaryWizardDrafts();
+            pushWizardPersistenceTrace('hydrate:dirty-organisation-restored-other-drafts', {
+                hydratedUnits,
+                liveUnitsBefore: unitsTodayDraft,
+                shouldRestoreUnits,
+                hydratedLocations,
+                shouldRestoreLocations,
+            });
             pushWizardOrgDiag('hydrate:skipped-dirty-draft', {
                 activeOrganisation: summariseActiveOrganisation(),
                 draft: summariseOrganisationDraft(organisationDraft),
+                restoredOtherDrafts: true,
+                hydratedUnits,
+                hydratedLocations,
             });
             return;
         }
         hydrateWizardDraftsFromSettings('active-organisation');
-    }, [activeOrganisation?.code, activeOrganisation?.name, JSON.stringify(organisationStructureLevels)]);
+    }, [
+        activeOrganisation?.code,
+        activeOrganisation?.name,
+        JSON.stringify(organisationStructureLevels),
+        activeOrganisation?.settings?.initialSetupWizardDrafts?.unitsTodayDraft,
+        activeOrganisation?.settings?.initialSetupWizardDraft?.unitsTodayDraft,
+        activeOrganisation?.settings?.initialSetupWizardDrafts?.locationsTodayDraft,
+        activeOrganisation?.settings?.initialSetupWizardDraft?.locationsTodayDraft,
+    ]);
 
     useEffect(() => {
         if (unitModulesDraftDirtyRef.current) return;
