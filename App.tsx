@@ -30674,6 +30674,19 @@ const App: React.FC = () => {
     const showInitialSetupBlankState = canBootstrapInitialSetupFromDfp;
 
     useEffect(() => {
+        if (!showInitialSetupBlankState) return;
+        if (school || activeUnitCode) {
+            setSchool('');
+            setActiveUnitCode('');
+        }
+        try {
+            localStorage.removeItem(ACTIVE_OPERATIONAL_CONTEXT_STORAGE_KEY);
+        } catch {
+            // Best-effort cleanup only; the UI is still masked while setup is incomplete.
+        }
+    }, [activeUnitCode, school, showInitialSetupBlankState]);
+
+    useEffect(() => {
         if (!setupTestProfile) return;
         const unitOptionsByLocation = operationalContextOptions.map((option) => ({
             location: option.location,

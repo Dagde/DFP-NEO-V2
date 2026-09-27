@@ -32416,9 +32416,11 @@ const unitSettingsRowClass = "grid gap-2 border-t border-white/10 px-4 py-3 firs
 const unitSettingsMutedPillClass = "rounded-full border border-white/10 bg-white/[0.055] px-2.5 py-1 text-[11px] font-semibold text-slate-300";
 const initialSetupWizardStorageKey = "dfp-initial-setup-wizard-step";
 const initialSetupWizardOrganisationDraftStorageKey = "dfp-initial-setup-wizard-organisation-draft";
+const initialSetupWizardDraftSnapshotStorageKey = "dfp-initial-setup-wizard-draft-snapshot";
 const initialSetupWizardCompletedStepsStorageKey = "dfp-initial-setup-wizard-completed-steps";
 const initialSetupWizardLocationDiagStorageKey = "dfp_setup_wizard_location_diag";
 const initialSetupWizardStep6DiagStorageKey = "dfp_setup_wizard_step_6_diag";
+const initialSetupWizardPersistenceDiagStorageKey = "dfp_setup_wizard_persistence_diag";
 const MAX_INITIAL_SETUP_ORGANISATION_LEVELS = 12;
 const createWizardRecordId = (prefix) => `${prefix}-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
 const createSetupTestRecordId = (prefix, key = "") => {
@@ -33930,7 +33932,8 @@ const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, lo
     "dfp_setup_test_lmp_diag",
     "dfp_setup_wizard_org_diag",
     initialSetupWizardLocationDiagStorageKey,
-    initialSetupWizardStep6DiagStorageKey
+    initialSetupWizardStep6DiagStorageKey,
+    initialSetupWizardPersistenceDiagStorageKey
   ];
   const safeSetWizardLocalStorage = (key, value) => {
     if (typeof window === "undefined") return false;
@@ -34051,6 +34054,60 @@ const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, lo
       safeSetWizardLocalStorage("dfp_setup_wizard_org_diag", JSON.stringify(next));
       window.neoSetupWizardOrgDiag = next;
     } catch (error) {
+    }
+  };
+  const pushWizardPersistenceTrace = (stage, details = {}) => {
+    if (typeof window === "undefined") return;
+    let localSnapshot = null;
+    const rawLocalSnapshot = window.localStorage.getItem(initialSetupWizardDraftSnapshotStorageKey) || "";
+    try {
+      localSnapshot = rawLocalSnapshot ? JSON.parse(rawLocalSnapshot) : null;
+    } catch {
+      localSnapshot = null;
+    }
+    const settingsDrafts = activeOrganisation?.settings?.initialSetupWizardDrafts || activeOrganisation?.settings?.initialSetupWizardDraft || null;
+    const entry = {
+      ts: (/* @__PURE__ */ new Date()).toISOString(),
+      stage,
+      mode,
+      currentStep: typeof currentStep === "number" ? currentStep : null,
+      stepNumber: typeof currentStep === "number" ? currentStep + 1 : null,
+      visibleStepId: typeof visibleStep !== "undefined" ? visibleStep?.id : "",
+      unitCode,
+      locationCode,
+      localSnapshot: localSnapshot ? {
+        updatedAt: localSnapshot.updatedAt || "",
+        activeStepId: localSnapshot.activeStepId || "",
+        activeStepIndex: localSnapshot.activeStepIndex ?? null,
+        unitsTodayDraft: localSnapshot.unitsTodayDraft || "",
+        parsedUnitsToday: parseWizardUnitRows(localSnapshot.unitsTodayDraft || ""),
+        keys: Object.keys(localSnapshot),
+        rawLength: rawLocalSnapshot.length
+      } : {
+        updatedAt: "",
+        activeStepId: "",
+        activeStepIndex: null,
+        unitsTodayDraft: "",
+        parsedUnitsToday: [],
+        keys: [],
+        rawLength: rawLocalSnapshot.length
+      },
+      settingsDrafts: settingsDrafts ? {
+        updatedAt: settingsDrafts.updatedAt || "",
+        activeStepId: settingsDrafts.activeStepId || "",
+        activeStepIndex: settingsDrafts.activeStepIndex ?? null,
+        unitsTodayDraft: settingsDrafts.unitsTodayDraft || "",
+        parsedUnitsToday: parseWizardUnitRows(settingsDrafts.unitsTodayDraft || ""),
+        keys: Object.keys(settingsDrafts)
+      } : null,
+      details: compactWizardDiagDetails(details)
+    };
+    try {
+      const existing = JSON.parse(window.localStorage.getItem(initialSetupWizardPersistenceDiagStorageKey) || "[]");
+      const next = [...Array.isArray(existing) ? existing : [], entry].slice(-180);
+      safeSetWizardLocalStorage(initialSetupWizardPersistenceDiagStorageKey, JSON.stringify(next));
+      window.neoSetupWizardPersistenceDiag = next;
+    } catch {
     }
   };
   reactExports.useEffect(() => {
@@ -34360,7 +34417,10 @@ const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, lo
   const [organisationDraft, setOrganisationDraft] = reactExports.useState(() => shouldUseStoredOrganisationDraft ? storedOrganisationDraft : buildHydratedOrganisationDraft());
   reactExports.useEffect(() => {
     if (!storedOrganisationDraft || shouldUseStoredOrganisationDraft) return;
-    if (typeof window !== "undefined") window.localStorage.removeItem(initialSetupWizardOrganisationDraftStorageKey);
+    if (typeof window !== "undefined") {
+      window.localStorage.removeItem(initialSetupWizardOrganisationDraftStorageKey);
+      window.localStorage.removeItem(initialSetupWizardDraftSnapshotStorageKey);
+    }
     pushWizardOrgDiag("stored-draft:ignored-synced-settings-present", {
       storedDraft: summariseOrganisationDraft(storedOrganisationDraft),
       activeOrganisation: summariseActiveOrganisation()
@@ -34659,9 +34719,19 @@ const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, lo
   const getSavedInitialSetupWizardDrafts = () => {
     const legacyDraft = activeOrganisation?.settings?.initialSetupWizardDraft;
     const drafts = activeOrganisation?.settings?.initialSetupWizardDrafts;
+    let localDraftSnapshot = {};
+    if (typeof window !== "undefined") {
+      try {
+        const parsed = JSON.parse(window.localStorage.getItem(initialSetupWizardDraftSnapshotStorageKey) || "{}");
+        localDraftSnapshot = parsed && typeof parsed === "object" ? parsed : {};
+      } catch {
+        localDraftSnapshot = {};
+      }
+    }
     return {
       ...legacyDraft && typeof legacyDraft === "object" ? legacyDraft : {},
-      ...drafts && typeof drafts === "object" ? drafts : {}
+      ...drafts && typeof drafts === "object" ? drafts : {},
+      ...localDraftSnapshot && typeof localDraftSnapshot === "object" ? localDraftSnapshot : {}
     };
   };
   const buildHydratedUnitsTodayDraft = () => {
@@ -35363,12 +35433,25 @@ const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, lo
       activeStepId: visibleStep.id,
       activeStepIndex: currentStep,
       completedStepIds: Array.from(completedWizardStepIds),
+      organisationKey: String(activeOrganisation?.id || activeOrganisation?.code || ""),
+      unitContext: unitCode,
+      locationContext: locationCode,
       updatedAt: (/* @__PURE__ */ new Date()).toISOString()
     };
   };
   const saveWizardDraftSnapshot = (message = "Wizard progress saved.", options = { silent: true }) => {
-    if (!onUpdatePlatformConfig || isSetupTestMode$1) return;
+    if (isSetupTestMode$1) return;
     const snapshot = buildWizardDraftSnapshot();
+    let localSaved = false;
+    if (typeof window !== "undefined") {
+      localSaved = safeSetWizardLocalStorage(initialSetupWizardDraftSnapshotStorageKey, JSON.stringify(snapshot));
+    }
+    pushWizardPersistenceTrace("draft-snapshot:local-write", {
+      localSaved,
+      unitsTodayDraft: snapshot.unitsTodayDraft,
+      parsedUnitsToday: parseWizardUnitRows(snapshot.unitsTodayDraft)
+    });
+    if (!onUpdatePlatformConfig) return;
     saveWizardConfig(message, (baseConfig) => updatePrimaryOrganisationWithSettings(baseConfig, (settings) => ({
       ...settings,
       initialSetupWizardDraft: {
@@ -35405,6 +35488,10 @@ const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, lo
         ...snapshot
       }
     })), options);
+    pushWizardPersistenceTrace("draft-snapshot:platform-save-queued", {
+      unitsTodayDraft: snapshot.unitsTodayDraft,
+      parsedUnitsToday: parseWizardUnitRows(snapshot.unitsTodayDraft)
+    });
   };
   const summariseWizardLocationScopeLocation = (location) => ({
     id: location?.id || "",
@@ -35631,6 +35718,67 @@ const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, lo
     const link = document.createElement("a");
     link.href = url;
     link.download = `dfp-neo-initial-setup-step-6-location-trace-${unitLabel}-${(/* @__PURE__ */ new Date()).toISOString().replace(/[:.]/g, "-")}.json`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    window.URL.revokeObjectURL(url);
+  };
+  const downloadWizardPersistenceTrace = () => {
+    if (typeof window === "undefined") return;
+    pushWizardPersistenceTrace("download-requested", {
+      unitsTodayDraft,
+      parsedUnitsToday: parseWizardUnitRows(unitsTodayDraft)
+    });
+    const readLocalArray = (key) => {
+      try {
+        const parsed = JSON.parse(window.localStorage.getItem(key) || "[]");
+        return Array.isArray(parsed) ? parsed : [];
+      } catch {
+        return [];
+      }
+    };
+    const readLocalObject = (key) => {
+      try {
+        const parsed = JSON.parse(window.localStorage.getItem(key) || "{}");
+        return parsed && typeof parsed === "object" ? parsed : {};
+      } catch {
+        return {};
+      }
+    };
+    const snapshot = readLocalObject(initialSetupWizardDraftSnapshotStorageKey);
+    const blob = new Blob([JSON.stringify({
+      exportedAt: (/* @__PURE__ */ new Date()).toISOString(),
+      reportType: "initial-setup-wizard-persistence-diagnostic",
+      currentStep,
+      stepNumber: currentStep + 1,
+      visibleStepId: visibleStep.id,
+      liveDrafts: {
+        unitsTodayDraft,
+        parsedUnitsToday: parseWizardUnitRows(unitsTodayDraft),
+        locationsTodayDraft,
+        locationDraft,
+        unitDraft,
+        resourceDraft,
+        crewDraft
+      },
+      localStorage: {
+        wizardStep: window.localStorage.getItem(initialSetupWizardStorageKey),
+        completedSteps: window.localStorage.getItem(initialSetupWizardCompletedStepsStorageKey),
+        draftSnapshot: snapshot,
+        draftSnapshotLength: String(window.localStorage.getItem(initialSetupWizardDraftSnapshotStorageKey) || "").length
+      },
+      settingsDrafts: {
+        legacy: activeOrganisation?.settings?.initialSetupWizardDraft || null,
+        current: activeOrganisation?.settings?.initialSetupWizardDrafts || null
+      },
+      persistenceTrace: readLocalArray(initialSetupWizardPersistenceDiagStorageKey),
+      platformConfigSaveTrace: readLocalArray("dfp_platform_config_save_diag")
+    }, null, 2)], { type: "application/json" });
+    const url = window.URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    const unitLabel = (unitDraft.code || unitCode || "wizard").replace(/[^A-Za-z0-9+_-]+/g, "-");
+    link.href = url;
+    link.download = `dfp-neo-initial-setup-wizard-persistence-trace-${unitLabel}-${(/* @__PURE__ */ new Date()).toISOString().replace(/[:.]/g, "-")}.json`;
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
@@ -37823,10 +37971,19 @@ const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, lo
       saveWizardSupplementaryDrafts();
     }
   };
+  const wizardDraftAutosaveTimerRef = reactExports.useRef(null);
+  const wizardDraftAutosaveReadyRef = reactExports.useRef(false);
   reactExports.useEffect(() => {
     if (typeof window === "undefined") return;
     safeSetWizardLocalStorage(initialSetupWizardStorageKey, String(currentStep));
-    saveWizardDraftSnapshot("Wizard progress saved.", { silent: true });
+    if (wizardDraftAutosaveReadyRef.current) {
+      saveWizardDraftSnapshot("Wizard progress saved.", { silent: true });
+    } else {
+      pushWizardPersistenceTrace("wizard:step-rendered-before-autosave-ready", {
+        unitsTodayDraft,
+        parsedUnitsToday: parseWizardUnitRows(unitsTodayDraft)
+      });
+    }
     pushWizardOrgDiag("wizard:step-rendered", {
       step: visibleStep?.id,
       currentStep,
@@ -37836,8 +37993,6 @@ const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, lo
       storedDraft: readStoredOrganisationDraft()
     });
   }, [currentStep]);
-  const wizardDraftAutosaveTimerRef = reactExports.useRef(null);
-  const wizardDraftAutosaveReadyRef = reactExports.useRef(false);
   reactExports.useEffect(() => {
     if (typeof window === "undefined") return;
     const readyTimer = window.setTimeout(() => {
@@ -37852,7 +38007,7 @@ const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, lo
     wizardDraftAutosaveTimerRef.current = window.setTimeout(() => {
       saveWizardDraftSnapshot("Wizard progress saved.", { silent: true });
       wizardDraftAutosaveTimerRef.current = null;
-    }, 700);
+    }, 250);
     return () => {
       if (wizardDraftAutosaveTimerRef.current) {
         window.clearTimeout(wizardDraftAutosaveTimerRef.current);
@@ -37863,6 +38018,51 @@ const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, lo
     mode,
     isSetupTestMode$1,
     onUpdatePlatformConfig,
+    currentStep,
+    visibleStep.id,
+    JSON.stringify(organisationDraft),
+    unitsTodayDraft,
+    unitParentDraft,
+    locationsTodayDraft,
+    JSON.stringify(locationDraft),
+    JSON.stringify(unitDraft),
+    JSON.stringify(resourceDraft),
+    JSON.stringify(crewDraft),
+    JSON.stringify(accessDraft),
+    JSON.stringify(trainingDraft),
+    crewLabelsDraft,
+    alternateCrewDraft,
+    buildRulesDraftText,
+    staffDraft,
+    traineeCourseOptionsDraft,
+    traineeDraft,
+    trainingRecordsDraft,
+    unitModulesDraft,
+    rankLabelsDraft,
+    JSON.stringify(rankSettingsDraft),
+    crewRolesDraft,
+    resourceSharingDraft,
+    currencyDraft,
+    JSON.stringify(wizardScoringPhraseBank),
+    staffCurrencyEventsDraft
+  ]);
+  reactExports.useEffect(() => {
+    if (typeof window === "undefined") return;
+    const persistBeforeUnload = () => {
+      saveWizardDraftSnapshot("Wizard progress saved.", { silent: true });
+    };
+    const persistWhenHidden = () => {
+      if (document.visibilityState === "hidden") persistBeforeUnload();
+    };
+    window.addEventListener("beforeunload", persistBeforeUnload);
+    document.addEventListener("visibilitychange", persistWhenHidden);
+    return () => {
+      window.removeEventListener("beforeunload", persistBeforeUnload);
+      document.removeEventListener("visibilitychange", persistWhenHidden);
+    };
+  }, [
+    mode,
+    isSetupTestMode$1,
     currentStep,
     visibleStep.id,
     JSON.stringify(organisationDraft),
@@ -39622,6 +39822,16 @@ const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, lo
                 children: "Download Step 24 Trace"
               }
             ) : null,
+            /* @__PURE__ */ jsxRuntimeExports.jsx(
+              "button",
+              {
+                type: "button",
+                className: "mt-3 ml-2 inline-flex items-center rounded-md border border-amber-300 bg-amber-50 px-3 py-1.5 text-xs font-bold text-amber-900 shadow-sm hover:bg-amber-100",
+                onClick: downloadWizardPersistenceTrace,
+                onKeyDown: stopEditableKeyPropagation,
+                children: "Download Wizard Persistence Trace"
+              }
+            ),
             ["locations-today", "location-code", "location-details"].includes(visibleStep.id) ? /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
               /* @__PURE__ */ jsxRuntimeExports.jsx(
                 "button",
@@ -137584,6 +137794,17 @@ const App = () => {
   const hasInitialSetupWizardProgress = hasPersistedInitialSetupWizardProgress || hasStoredInitialSetupWizardProgress();
   const canBootstrapInitialSetupFromDfp = hasAuthenticatedAdminRole && platformConfigLoaded && (operationalContextOptions.length === 0 || hasInitialSetupWizardProgress && !hasOperationalSetupReadyForDfp);
   const showInitialSetupBlankState = canBootstrapInitialSetupFromDfp;
+  reactExports.useEffect(() => {
+    if (!showInitialSetupBlankState) return;
+    if (school || activeUnitCode) {
+      setSchool("");
+      setActiveUnitCode("");
+    }
+    try {
+      localStorage.removeItem(ACTIVE_OPERATIONAL_CONTEXT_STORAGE_KEY);
+    } catch {
+    }
+  }, [activeUnitCode, school, showInitialSetupBlankState]);
   reactExports.useEffect(() => {
     if (!setupTestProfile) return;
     const unitOptionsByLocation = operationalContextOptions.map((option) => ({
