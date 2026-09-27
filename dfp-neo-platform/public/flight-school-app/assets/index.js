@@ -34270,7 +34270,12 @@ const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, lo
     }
   };
   const storedOrganisationDraft = reactExports.useMemo(() => readStoredOrganisationDraft(), []);
-  const shouldUseStoredOrganisationDraft = Boolean(storedOrganisationDraft) && !orgStructureConfigured;
+  const storedWizardStepForDraftRestore = reactExports.useMemo(() => {
+    if (typeof window === "undefined") return 0;
+    const storedStep = Number(window.localStorage.getItem(initialSetupWizardStorageKey));
+    return Number.isFinite(storedStep) ? Math.max(0, storedStep) : 0;
+  }, []);
+  const shouldUseStoredOrganisationDraft = Boolean(storedOrganisationDraft) && (storedWizardStepForDraftRestore > 0 || !orgStructureConfigured);
   const organisationDraftDirtyRef = reactExports.useRef(shouldUseStoredOrganisationDraft);
   const buildHydratedOrganisationDraft = () => ({
     code: String(activeOrganisation?.code || "ORG"),

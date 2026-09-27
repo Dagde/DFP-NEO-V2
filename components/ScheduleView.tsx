@@ -3508,7 +3508,12 @@ const InitialSetupWizard: React.FC<{
         }
     };
     const storedOrganisationDraft = useMemo(() => readStoredOrganisationDraft(), []);
-    const shouldUseStoredOrganisationDraft = Boolean(storedOrganisationDraft) && !orgStructureConfigured;
+    const storedWizardStepForDraftRestore = useMemo(() => {
+        if (typeof window === 'undefined') return 0;
+        const storedStep = Number(window.localStorage.getItem(initialSetupWizardStorageKey));
+        return Number.isFinite(storedStep) ? Math.max(0, storedStep) : 0;
+    }, []);
+    const shouldUseStoredOrganisationDraft = Boolean(storedOrganisationDraft) && (storedWizardStepForDraftRestore > 0 || !orgStructureConfigured);
     const organisationDraftDirtyRef = useRef(shouldUseStoredOrganisationDraft);
     const buildHydratedOrganisationDraft = () => ({
         code: String(activeOrganisation?.code || 'ORG'),
