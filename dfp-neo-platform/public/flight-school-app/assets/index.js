@@ -41687,7 +41687,54 @@ const ScheduleView = ({
   reactExports.useEffect(() => {
     if (isNeoAssistPanelOpen) setShowResourceUnderlayPanel(false);
   }, [isNeoAssistPanelOpen]);
-  const shouldShowInitialSetupPrompt = showInitialSetupBlankState && !showResourceUnderlayPanel;
+  const hasStoredInitialSetupWizardProgress = reactExports.useCallback(() => {
+    if (typeof window === "undefined") return false;
+    const storedStep = Number(window.localStorage.getItem(initialSetupWizardStorageKey));
+    if (Number.isFinite(storedStep) && storedStep > 0) return true;
+    if (window.localStorage.getItem(initialSetupWizardOrganisationDraftStorageKey)) return true;
+    try {
+      const completedSteps = JSON.parse(window.localStorage.getItem(initialSetupWizardCompletedStepsStorageKey) || "[]");
+      return Array.isArray(completedSteps) && completedSteps.length > 0;
+    } catch {
+      return false;
+    }
+  }, []);
+  reactExports.useEffect(() => {
+    if (!showInitialSetupBlankState || showResourceUnderlayPanel || !hasStoredInitialSetupWizardProgress()) return;
+    onOrganisationSlideoutOpen?.();
+    setShowResourceUnderlayPanel(true);
+  }, [hasStoredInitialSetupWizardProgress, onOrganisationSlideoutOpen, platformConfig, showInitialSetupBlankState, showResourceUnderlayPanel]);
+  const downloadInitialSetupLocationTrace = reactExports.useCallback(() => {
+    if (typeof window === "undefined") return;
+    let persistedTrace = [];
+    try {
+      const parsed = JSON.parse(window.localStorage.getItem(initialSetupWizardLocationDiagStorageKey) || "[]");
+      persistedTrace = Array.isArray(parsed) ? parsed : [];
+    } catch {
+      persistedTrace = [];
+    }
+    const blob = new Blob([JSON.stringify({
+      exportedAt: (/* @__PURE__ */ new Date()).toISOString(),
+      source: "initial-setup-required-overlay",
+      activeContext: { unitCode, locationCode },
+      storedWizardState: {
+        step: window.localStorage.getItem(initialSetupWizardStorageKey),
+        completedSteps: window.localStorage.getItem(initialSetupWizardCompletedStepsStorageKey),
+        hasOrganisationDraft: Boolean(window.localStorage.getItem(initialSetupWizardOrganisationDraftStorageKey))
+      },
+      persistedTrace
+    }, null, 2)], { type: "application/json" });
+    const url = window.URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    const unitLabel = (unitCode || locationCode || "setup").replace(/[^A-Za-z0-9+_-]+/g, "-");
+    link.href = url;
+    link.download = `dfp-neo-wizard-location-scope-trace-${unitLabel}-${(/* @__PURE__ */ new Date()).toISOString().replace(/[:.]/g, "-")}.json`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    window.URL.revokeObjectURL(url);
+  }, [locationCode, unitCode]);
+  const shouldShowInitialSetupPrompt = showInitialSetupBlankState && !showResourceUnderlayPanel && !hasStoredInitialSetupWizardProgress();
   const openInitialSetupWizard = reactExports.useCallback(() => {
     onOrganisationSlideoutOpen?.();
     setShowResourceUnderlayPanel(true);
@@ -43459,6 +43506,15 @@ const ScheduleView = ({
           onClick: openInitialSetupWizard,
           className: "relative mt-6 rounded-md border border-orange-300 bg-orange-500 px-5 py-2.5 text-sm font-black text-slate-950 shadow-[0_0_22px_rgba(251,146,60,0.32)] transition hover:bg-orange-400",
           children: "Start Initial Setup Wizard"
+        }
+      ),
+      /* @__PURE__ */ jsxRuntimeExports.jsx(
+        "button",
+        {
+          type: "button",
+          onClick: downloadInitialSetupLocationTrace,
+          className: "relative mt-3 rounded-md border border-amber-300/70 bg-slate-900/85 px-4 py-2 text-xs font-black text-amber-100 shadow-[0_0_18px_rgba(251,146,60,0.18)] transition hover:border-amber-200 hover:bg-slate-800",
+          children: "Download Location Scope Trace"
         }
       )
     ] }) }),
@@ -137364,6 +137420,27 @@ const App = () => {
   reactExports.useEffect(() => {
     if (!platformConfigLoaded || selectableLocationCodes.length === 0) return;
     if (selectableLocationCodes.includes(school)) return;
+    const hasInitialSetupWizardProgress = (() => {
+      if (typeof window === "undefined") return false;
+      const storedStep = Number(window.localStorage.getItem("dfp-initial-setup-wizard-step"));
+      if (Number.isFinite(storedStep) && storedStep > 0) return true;
+      if (window.localStorage.getItem("dfp-initial-setup-wizard-organisation-draft")) return true;
+      try {
+        const completedSteps = JSON.parse(window.localStorage.getItem("dfp-initial-setup-wizard-completed-steps") || "[]");
+        return Array.isArray(completedSteps) && completedSteps.length > 0;
+      } catch {
+        return false;
+      }
+    })();
+    if (isInitialSetupWizardActive || hasInitialSetupWizardProgress) {
+      pushDfpDataDiag("context:auto-location-switch-suppressed-for-initial-setup", {
+        school,
+        selectableLocationCodes,
+        isInitialSetupWizardActive,
+        hasInitialSetupWizardProgress
+      });
+      return;
+    }
     const normalisedSchool = String(school || "").trim().toUpperCase();
     const aliasMatchedLocation = selectableLocationCodes.find((locationCode) => {
       const normalisedLocationCode = String(locationCode || "").trim().toUpperCase();
@@ -137381,7 +137458,7 @@ const App = () => {
       changeSchool(selectableLocationCodes[0]);
       setShowInfoNotification(`Access context changed. Location switched to ${selectableLocationCodes[0]}.`);
     }
-  }, [activeUnitCode, getLocationSelectorAliases, getUnitOptionsForLocation, platformAccessContext.accessibleLocations, platformConfig, platformConfigLoaded, platformDataScopeQuery, selectableLocationCodes, school]);
+  }, [activeUnitCode, getLocationSelectorAliases, getUnitOptionsForLocation, isInitialSetupWizardActive, platformAccessContext.accessibleLocations, platformConfig, platformConfigLoaded, platformDataScopeQuery, selectableLocationCodes, school]);
   const [currentUserId, setCurrentUserId] = reactExports.useState(currentUser2?.idNumber || 1);
   reactExports.useEffect(() => {
     if (!authUser && currentUser2) {

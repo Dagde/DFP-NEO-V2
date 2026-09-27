@@ -31218,6 +31218,27 @@ const App: React.FC = () => {
     useEffect(() => {
         if (!platformConfigLoaded || selectableLocationCodes.length === 0) return;
         if (selectableLocationCodes.includes(school)) return;
+        const hasInitialSetupWizardProgress = (() => {
+            if (typeof window === 'undefined') return false;
+            const storedStep = Number(window.localStorage.getItem('dfp-initial-setup-wizard-step'));
+            if (Number.isFinite(storedStep) && storedStep > 0) return true;
+            if (window.localStorage.getItem('dfp-initial-setup-wizard-organisation-draft')) return true;
+            try {
+                const completedSteps = JSON.parse(window.localStorage.getItem('dfp-initial-setup-wizard-completed-steps') || '[]');
+                return Array.isArray(completedSteps) && completedSteps.length > 0;
+            } catch {
+                return false;
+            }
+        })();
+        if (isInitialSetupWizardActive || hasInitialSetupWizardProgress) {
+            pushDfpDataDiag('context:auto-location-switch-suppressed-for-initial-setup', {
+                school,
+                selectableLocationCodes,
+                isInitialSetupWizardActive,
+                hasInitialSetupWizardProgress,
+            });
+            return;
+        }
 
         const normalisedSchool = String(school || '').trim().toUpperCase();
         const aliasMatchedLocation = selectableLocationCodes.find((locationCode) => {
@@ -31239,7 +31260,7 @@ const App: React.FC = () => {
             changeSchool(selectableLocationCodes[0]);
             setShowInfoNotification(`Access context changed. Location switched to ${selectableLocationCodes[0]}.`);
         }
-    }, [activeUnitCode, getLocationSelectorAliases, getUnitOptionsForLocation, platformAccessContext.accessibleLocations, platformConfig, platformConfigLoaded, platformDataScopeQuery, selectableLocationCodes, school]);
+    }, [activeUnitCode, getLocationSelectorAliases, getUnitOptionsForLocation, isInitialSetupWizardActive, platformAccessContext.accessibleLocations, platformConfig, platformConfigLoaded, platformDataScopeQuery, selectableLocationCodes, school]);
 //     useEffect(() => {
 //         const fetchCurrentUser = async () => {
 //            console.log('🔍 [SESSION DEBUG] useEffect hook running');
