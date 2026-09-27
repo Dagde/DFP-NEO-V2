@@ -30665,32 +30665,6 @@ const App: React.FC = () => {
         if (typeof window === 'undefined') return false;
         return Boolean(window.localStorage.getItem(initialSetupWizardCompletedAtStorageKey));
     }, []);
-    function readInitialSetupWizardLocalStorageState(): Record<string, any> {
-        if (typeof window === 'undefined') return { available: false };
-        const keys = [
-            ...INITIAL_SETUP_WIZARD_LOCAL_STORAGE_KEYS,
-            ACTIVE_OPERATIONAL_CONTEXT_STORAGE_KEY,
-        ];
-        return keys.reduce((acc: Record<string, any>, key) => {
-            const rawValue = window.localStorage.getItem(key);
-            if (rawValue === null) {
-                acc[key] = { present: false };
-                return acc;
-            }
-            let parsed: any = null;
-            try {
-                parsed = JSON.parse(rawValue);
-            } catch {
-                parsed = rawValue;
-            }
-            acc[key] = {
-                present: true,
-                byteLength: rawValue.length,
-                value: typeof parsed === 'string' && parsed.length > 240 ? `${parsed.slice(0, 240)}...` : parsed,
-            };
-            return acc;
-        }, { available: true });
-    }
     const hasPersistedInitialSetupWizardProgress = useMemo(() => (
         (platformConfig?.organisations || []).some((organisation: any) => {
             const settings = organisation?.settings || {};
@@ -30793,7 +30767,6 @@ const App: React.FC = () => {
                 school,
                 activeUnitCode,
             },
-            localSetupState: readInitialSetupWizardLocalStorageState(),
         });
     }, [
         activeUnitCode,
@@ -31127,7 +31100,7 @@ const App: React.FC = () => {
         }, {});
 
         return {
-            reportType: 'DFP-NEO startup/load diagnostics',
+            reportType: 'DFP-NEO data diagnostics',
             generatedAt: new Date().toISOString(),
             url: window.location.href,
             userAgent: navigator.userAgent,
@@ -31166,37 +31139,6 @@ const App: React.FC = () => {
                     unit: matchedCurrentStaffUser.unit || null,
                     permissions: matchedCurrentStaffUser.permissions || [],
                 } : null,
-            },
-            initialSetupBootstrap: {
-                hasAuthenticatedAdminRole,
-                platformConfigLoaded,
-                operationalContextOptionCount: operationalContextOptions.length,
-                operationalContextOptions,
-                selectableLocationCodes,
-                activeLocationUnitOptions: activeLocationUnitOptions.map((unit: any) => ({
-                    code: unit?.code,
-                    name: unit?.name,
-                    disabled: unit?.disabled === true,
-                    disabledReason: unit?.disabledReason || '',
-                    memberUnits: unit?.memberUnits || [],
-                    isSharedFleetContext: unit?.isSharedFleetContext === true,
-                })),
-                hasActiveOperationalUnit,
-                hasActiveOperationalResourcePool,
-                hasActiveOperationalAircraftType,
-                hasOperationalSetupReadyForDfp,
-                hasPersistedInitialSetupWizardProgress,
-                hasPersistedIncompleteInitialSetupWizardProgress,
-                hasPersistedInitialSetupWizardCompleted,
-                hasStoredInitialSetupWizardProgress: hasStoredInitialSetupWizardProgress(),
-                hasStoredInitialSetupWizardCompleted: hasStoredInitialSetupWizardCompleted(),
-                hasInitialSetupWizardProgress,
-                hasInitialSetupWizardCompleted,
-                hasIncompleteInitialSetupWizardProgress,
-                shouldResumeInitialSetupWizard,
-                canBootstrapInitialSetupFromDfp,
-                showInitialSetupBlankState,
-                localSetupState: readInitialSetupWizardLocalStorageState(),
             },
             dataScope: {
                 hasRuntimePlatformWideAccess,
@@ -57318,16 +57260,6 @@ appliedUpdates.forEach(update => {
             isTraineeLoaded={isTraineeLoaded}
             isCoursesLoaded={isCoursesLoaded}
         />
-        {isAuthenticated && (
-            <button
-                type="button"
-                onClick={() => downloadDfpDataDiagReport('dfp-startup-context-trace')}
-                className="fixed right-[104px] top-[286px] z-[360] rounded-md border border-amber-300/70 bg-slate-950/95 px-3 py-2 text-[11px] font-black uppercase tracking-[0.12em] text-amber-100 shadow-2xl shadow-black/40 transition hover:border-amber-100 hover:bg-amber-500/20"
-                title="Download startup and context trace"
-            >
-                Download Startup Trace
-            </button>
-        )}
         <div id="app-content" data-theme={theme} className="flex h-screen bg-gray-900 text-white">
             <Sidebar
                 activeView={activeView}

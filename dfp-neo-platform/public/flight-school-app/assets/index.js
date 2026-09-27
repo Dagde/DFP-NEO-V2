@@ -137392,32 +137392,6 @@ const App = () => {
     if (typeof window === "undefined") return false;
     return Boolean(window.localStorage.getItem(initialSetupWizardCompletedAtStorageKey2));
   }, []);
-  function readInitialSetupWizardLocalStorageState() {
-    if (typeof window === "undefined") return { available: false };
-    const keys = [
-      ...INITIAL_SETUP_WIZARD_LOCAL_STORAGE_KEYS,
-      ACTIVE_OPERATIONAL_CONTEXT_STORAGE_KEY
-    ];
-    return keys.reduce((acc, key) => {
-      const rawValue = window.localStorage.getItem(key);
-      if (rawValue === null) {
-        acc[key] = { present: false };
-        return acc;
-      }
-      let parsed = null;
-      try {
-        parsed = JSON.parse(rawValue);
-      } catch {
-        parsed = rawValue;
-      }
-      acc[key] = {
-        present: true,
-        byteLength: rawValue.length,
-        value: typeof parsed === "string" && parsed.length > 240 ? `${parsed.slice(0, 240)}...` : parsed
-      };
-      return acc;
-    }, { available: true });
-  }
   const hasPersistedInitialSetupWizardProgress = reactExports.useMemo(() => (platformConfig?.organisations || []).some((organisation) => {
     const settings = organisation?.settings || {};
     const drafts = settings.initialSetupWizardDrafts || settings.initialSetupWizardDraft;
@@ -137482,8 +137456,7 @@ const App = () => {
       activeContextBeforeDecision: {
         school,
         activeUnitCode
-      },
-      localSetupState: readInitialSetupWizardLocalStorageState()
+      }
     });
   }, [
     activeUnitCode,
@@ -137777,7 +137750,7 @@ const App = () => {
       return acc;
     }, {});
     return {
-      reportType: "DFP-NEO startup/load diagnostics",
+      reportType: "DFP-NEO data diagnostics",
       generatedAt: (/* @__PURE__ */ new Date()).toISOString(),
       url: window.location.href,
       userAgent: navigator.userAgent,
@@ -137816,37 +137789,6 @@ const App = () => {
           unit: matchedCurrentStaffUser.unit || null,
           permissions: matchedCurrentStaffUser.permissions || []
         } : null
-      },
-      initialSetupBootstrap: {
-        hasAuthenticatedAdminRole,
-        platformConfigLoaded,
-        operationalContextOptionCount: operationalContextOptions.length,
-        operationalContextOptions,
-        selectableLocationCodes,
-        activeLocationUnitOptions: activeLocationUnitOptions.map((unit) => ({
-          code: unit?.code,
-          name: unit?.name,
-          disabled: unit?.disabled === true,
-          disabledReason: unit?.disabledReason || "",
-          memberUnits: unit?.memberUnits || [],
-          isSharedFleetContext: unit?.isSharedFleetContext === true
-        })),
-        hasActiveOperationalUnit,
-        hasActiveOperationalResourcePool,
-        hasActiveOperationalAircraftType,
-        hasOperationalSetupReadyForDfp,
-        hasPersistedInitialSetupWizardProgress,
-        hasPersistedIncompleteInitialSetupWizardProgress,
-        hasPersistedInitialSetupWizardCompleted,
-        hasStoredInitialSetupWizardProgress: hasStoredInitialSetupWizardProgress(),
-        hasStoredInitialSetupWizardCompleted: hasStoredInitialSetupWizardCompleted(),
-        hasInitialSetupWizardProgress,
-        hasInitialSetupWizardCompleted,
-        hasIncompleteInitialSetupWizardProgress,
-        shouldResumeInitialSetupWizard,
-        canBootstrapInitialSetupFromDfp,
-        showInitialSetupBlankState,
-        localSetupState: readInitialSetupWizardLocalStorageState()
       },
       dataScope: {
         hasRuntimePlatformWideAccess,
@@ -159385,16 +159327,6 @@ Do you want to replace the existing entry?`,
         isStaffLoaded,
         isTraineeLoaded,
         isCoursesLoaded
-      }
-    ),
-    isAuthenticated && /* @__PURE__ */ jsxRuntimeExports.jsx(
-      "button",
-      {
-        type: "button",
-        onClick: () => downloadDfpDataDiagReport("dfp-startup-context-trace"),
-        className: "fixed right-[104px] top-[286px] z-[360] rounded-md border border-amber-300/70 bg-slate-950/95 px-3 py-2 text-[11px] font-black uppercase tracking-[0.12em] text-amber-100 shadow-2xl shadow-black/40 transition hover:border-amber-100 hover:bg-amber-500/20",
-        title: "Download startup and context trace",
-        children: "Download Startup Trace"
       }
     ),
     /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { id: "app-content", "data-theme": theme, className: "flex h-screen bg-gray-900 text-white", children: [
