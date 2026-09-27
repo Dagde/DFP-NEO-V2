@@ -8149,64 +8149,80 @@ const InitialSetupWizard: React.FC<{
                             Quick-add events shown in Add Ground Event &gt; Academics.
                         </div>
                     </div>
-                    <button
-                        type="button"
-                        onClick={addEvent}
-                        className="rounded-md border border-sky-300 bg-sky-50 px-3 py-2 text-xs font-black uppercase tracking-[0.12em] text-sky-700 transition hover:bg-sky-100"
-                    >
-                        + Add
-                    </button>
                 </div>
                 {events.length > 0 ? (
                     <div className="mt-3 space-y-2">
-                        {events.map((event, index) => (
-                            <div key={`wizard-academic-standard-${index}`} className="grid gap-2 rounded-lg border border-slate-200 bg-white p-2 md:grid-cols-[minmax(0,1fr)_96px_82px_94px] md:items-end">
-                                <label>
-                                    <span className="mb-1 block text-[10px] font-black uppercase tracking-[0.14em] text-slate-500">Event name</span>
-                                    <input
-                                        className={wizardInputClass}
-                                        value={event.label}
-                                        placeholder="Event name"
-                                        onKeyDownCapture={(keyEvent) => handleEditableTextKeyDownCapture(keyEvent, (nextValue) => updateEvent(index, { label: nextValue }))}
-                                        onBeforeInput={(inputEvent) => handleEditableTextBeforeInput(inputEvent, (nextValue) => updateEvent(index, { label: nextValue }))}
-                                        onKeyDown={stopEditableKeyPropagation}
-                                        onChange={(changeEvent) => updateEvent(index, { label: changeEvent.target.value })}
-                                    />
-                                </label>
-                                <label>
-                                    <span className="mb-1 block text-[10px] font-black uppercase tracking-[0.14em] text-slate-500">Duration</span>
-                                    <input
-                                        className={wizardInputClass}
-                                        type="number"
-                                        min="0.25"
-                                        step="0.25"
-                                        value={event.duration}
-                                        onKeyDown={stopEditableKeyPropagation}
-                                        onChange={(changeEvent) => updateEvent(index, { duration: Math.max(0.25, Number(changeEvent.target.value) || 1) })}
-                                    />
-                                </label>
-                                <label>
-                                    <span className="mb-1 block text-[10px] font-black uppercase tracking-[0.14em] text-slate-500">Colour</span>
-                                    <input
-                                        className="h-10 w-full rounded-md border border-slate-300 bg-white p-1"
-                                        type="color"
-                                        value={event.color}
-                                        onChange={(changeEvent) => updateEvent(index, { color: changeEvent.target.value })}
-                                    />
-                                </label>
-                                <button
-                                    type="button"
-                                    onClick={() => deleteEvent(index)}
-                                    className="rounded-md border border-red-200 bg-red-50 px-3 py-2 text-xs font-black uppercase tracking-[0.12em] text-red-700 transition hover:bg-red-100"
-                                >
-                                    - Delete
-                                </button>
-                            </div>
-                        ))}
+                        {events.map((event, index) => {
+                            const isLastEvent = index === events.length - 1;
+                            return (
+                                <div key={`wizard-academic-standard-${index}`} className="grid gap-2 rounded-lg border border-slate-200 bg-white p-2 md:grid-cols-[minmax(0,1fr)_96px_82px_142px] md:items-end">
+                                    <label>
+                                        <span className="mb-1 block text-[10px] font-black uppercase tracking-[0.14em] text-slate-500">Event name</span>
+                                        <input
+                                            className={wizardInputClass}
+                                            value={event.label}
+                                            placeholder="Event name"
+                                            onKeyDownCapture={(keyEvent) => handleEditableTextKeyDownCapture(keyEvent, (nextValue) => updateEvent(index, { label: nextValue }))}
+                                            onBeforeInput={(inputEvent) => handleEditableTextBeforeInput(inputEvent, (nextValue) => updateEvent(index, { label: nextValue }))}
+                                            onKeyDown={stopEditableKeyPropagation}
+                                            onChange={(changeEvent) => updateEvent(index, { label: changeEvent.target.value })}
+                                        />
+                                    </label>
+                                    <label>
+                                        <span className="mb-1 block text-[10px] font-black uppercase tracking-[0.14em] text-slate-500">Duration</span>
+                                        <input
+                                            className={wizardInputClass}
+                                            type="number"
+                                            min="0.25"
+                                            step="0.25"
+                                            value={event.duration}
+                                            onKeyDown={stopEditableKeyPropagation}
+                                            onChange={(changeEvent) => updateEvent(index, { duration: Math.max(0.25, Number(changeEvent.target.value) || 1) })}
+                                        />
+                                    </label>
+                                    <label>
+                                        <span className="mb-1 block text-[10px] font-black uppercase tracking-[0.14em] text-slate-500">Colour</span>
+                                        <input
+                                            className="h-10 w-full rounded-md border border-slate-300 bg-white p-1"
+                                            type="color"
+                                            value={event.color}
+                                            onChange={(changeEvent) => updateEvent(index, { color: changeEvent.target.value })}
+                                        />
+                                    </label>
+                                    <div className="flex gap-2">
+                                        <button
+                                            type="button"
+                                            onClick={() => deleteEvent(index)}
+                                            className="min-w-0 flex-1 rounded-md border border-red-200 bg-red-50 px-2 py-2 text-xs font-black uppercase tracking-[0.08em] text-red-700 transition hover:bg-red-100"
+                                        >
+                                            Delete
+                                        </button>
+                                        {isLastEvent && (
+                                            <button
+                                                type="button"
+                                                onClick={addEvent}
+                                                className="min-w-0 flex-1 rounded-md border border-sky-300 bg-sky-50 px-2 py-2 text-xs font-black uppercase tracking-[0.08em] text-sky-700 transition hover:bg-sky-100"
+                                            >
+                                                + Add
+                                            </button>
+                                        )}
+                                    </div>
+                                </div>
+                            );
+                        })}
                     </div>
                 ) : (
                     <div className="mt-3 rounded-lg border border-dashed border-slate-300 bg-white px-3 py-2 text-sm font-semibold text-slate-500">
-                        No academic standard events configured. Use + Add to create the first event.
+                        <div className="flex flex-wrap items-center justify-between gap-3">
+                            <span>No academic standard events configured. Use + Add to create the first event.</span>
+                            <button
+                                type="button"
+                                onClick={addEvent}
+                                className="rounded-md border border-sky-300 bg-sky-50 px-3 py-2 text-xs font-black uppercase tracking-[0.12em] text-sky-700 transition hover:bg-sky-100"
+                            >
+                                + Add
+                            </button>
+                        </div>
                     </div>
                 )}
             </div>

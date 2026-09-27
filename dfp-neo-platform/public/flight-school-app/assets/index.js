@@ -38264,11 +38264,78 @@ const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, lo
     ]);
     const deleteEvent = (indexToDelete) => setEvents(events.filter((_, index) => index !== indexToDelete));
     return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "md:col-span-5 rounded-xl border border-slate-200 bg-slate-50 p-3", children: [
-      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex flex-wrap items-center justify-between gap-2", children: [
-        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: wizardLabelClass, children: "Academic Standard Events" }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-1 text-xs font-semibold text-slate-500", children: "Quick-add events shown in Add Ground Event > Academics." })
-        ] }),
+      /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex flex-wrap items-center justify-between gap-2", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: wizardLabelClass, children: "Academic Standard Events" }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-1 text-xs font-semibold text-slate-500", children: "Quick-add events shown in Add Ground Event > Academics." })
+      ] }) }),
+      events.length > 0 ? /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-3 space-y-2", children: events.map((event, index) => {
+        const isLastEvent = index === events.length - 1;
+        return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid gap-2 rounded-lg border border-slate-200 bg-white p-2 md:grid-cols-[minmax(0,1fr)_96px_82px_142px] md:items-end", children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "mb-1 block text-[10px] font-black uppercase tracking-[0.14em] text-slate-500", children: "Event name" }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx(
+              "input",
+              {
+                className: wizardInputClass,
+                value: event.label,
+                placeholder: "Event name",
+                onKeyDownCapture: (keyEvent) => handleEditableTextKeyDownCapture(keyEvent, (nextValue) => updateEvent(index, { label: nextValue })),
+                onBeforeInput: (inputEvent) => handleEditableTextBeforeInput(inputEvent, (nextValue) => updateEvent(index, { label: nextValue })),
+                onKeyDown: stopEditableKeyPropagation,
+                onChange: (changeEvent) => updateEvent(index, { label: changeEvent.target.value })
+              }
+            )
+          ] }),
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "mb-1 block text-[10px] font-black uppercase tracking-[0.14em] text-slate-500", children: "Duration" }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx(
+              "input",
+              {
+                className: wizardInputClass,
+                type: "number",
+                min: "0.25",
+                step: "0.25",
+                value: event.duration,
+                onKeyDown: stopEditableKeyPropagation,
+                onChange: (changeEvent) => updateEvent(index, { duration: Math.max(0.25, Number(changeEvent.target.value) || 1) })
+              }
+            )
+          ] }),
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "mb-1 block text-[10px] font-black uppercase tracking-[0.14em] text-slate-500", children: "Colour" }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx(
+              "input",
+              {
+                className: "h-10 w-full rounded-md border border-slate-300 bg-white p-1",
+                type: "color",
+                value: event.color,
+                onChange: (changeEvent) => updateEvent(index, { color: changeEvent.target.value })
+              }
+            )
+          ] }),
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex gap-2", children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx(
+              "button",
+              {
+                type: "button",
+                onClick: () => deleteEvent(index),
+                className: "min-w-0 flex-1 rounded-md border border-red-200 bg-red-50 px-2 py-2 text-xs font-black uppercase tracking-[0.08em] text-red-700 transition hover:bg-red-100",
+                children: "Delete"
+              }
+            ),
+            isLastEvent && /* @__PURE__ */ jsxRuntimeExports.jsx(
+              "button",
+              {
+                type: "button",
+                onClick: addEvent,
+                className: "min-w-0 flex-1 rounded-md border border-sky-300 bg-sky-50 px-2 py-2 text-xs font-black uppercase tracking-[0.08em] text-sky-700 transition hover:bg-sky-100",
+                children: "+ Add"
+              }
+            )
+          ] })
+        ] }, `wizard-academic-standard-${index}`);
+      }) }) : /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-3 rounded-lg border border-dashed border-slate-300 bg-white px-3 py-2 text-sm font-semibold text-slate-500", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex flex-wrap items-center justify-between gap-3", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsx("span", { children: "No academic standard events configured. Use + Add to create the first event." }),
         /* @__PURE__ */ jsxRuntimeExports.jsx(
           "button",
           {
@@ -38278,60 +38345,7 @@ const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, lo
             children: "+ Add"
           }
         )
-      ] }),
-      events.length > 0 ? /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-3 space-y-2", children: events.map((event, index) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid gap-2 rounded-lg border border-slate-200 bg-white p-2 md:grid-cols-[minmax(0,1fr)_96px_82px_94px] md:items-end", children: [
-        /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "mb-1 block text-[10px] font-black uppercase tracking-[0.14em] text-slate-500", children: "Event name" }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx(
-            "input",
-            {
-              className: wizardInputClass,
-              value: event.label,
-              placeholder: "Event name",
-              onKeyDownCapture: (keyEvent) => handleEditableTextKeyDownCapture(keyEvent, (nextValue) => updateEvent(index, { label: nextValue })),
-              onBeforeInput: (inputEvent) => handleEditableTextBeforeInput(inputEvent, (nextValue) => updateEvent(index, { label: nextValue })),
-              onKeyDown: stopEditableKeyPropagation,
-              onChange: (changeEvent) => updateEvent(index, { label: changeEvent.target.value })
-            }
-          )
-        ] }),
-        /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "mb-1 block text-[10px] font-black uppercase tracking-[0.14em] text-slate-500", children: "Duration" }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx(
-            "input",
-            {
-              className: wizardInputClass,
-              type: "number",
-              min: "0.25",
-              step: "0.25",
-              value: event.duration,
-              onKeyDown: stopEditableKeyPropagation,
-              onChange: (changeEvent) => updateEvent(index, { duration: Math.max(0.25, Number(changeEvent.target.value) || 1) })
-            }
-          )
-        ] }),
-        /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "mb-1 block text-[10px] font-black uppercase tracking-[0.14em] text-slate-500", children: "Colour" }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx(
-            "input",
-            {
-              className: "h-10 w-full rounded-md border border-slate-300 bg-white p-1",
-              type: "color",
-              value: event.color,
-              onChange: (changeEvent) => updateEvent(index, { color: changeEvent.target.value })
-            }
-          )
-        ] }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx(
-          "button",
-          {
-            type: "button",
-            onClick: () => deleteEvent(index),
-            className: "rounded-md border border-red-200 bg-red-50 px-3 py-2 text-xs font-black uppercase tracking-[0.12em] text-red-700 transition hover:bg-red-100",
-            children: "- Delete"
-          }
-        )
-      ] }, `wizard-academic-standard-${index}`)) }) : /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-3 rounded-lg border border-dashed border-slate-300 bg-white px-3 py-2 text-sm font-semibold text-slate-500", children: "No academic standard events configured. Use + Add to create the first event." })
+      ] }) })
     ] });
   };
   const wizardDataListField = (label, value, onChange, options, placeholder, listKey) => {
