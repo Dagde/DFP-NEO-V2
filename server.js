@@ -5370,8 +5370,22 @@ app.post('/api/platform-config', async (req, res) => {
     const hasActiveOrganisations = hasActiveRecords(organisations);
     const hasActiveLocations = hasActiveRecords(locations);
     const hasActiveUnits = hasActiveRecords(units);
+    const isInitialSetupWizardPayload = organisations.some((org) => {
+      const settings = org?.settings || {};
+      const drafts = settings.initialSetupWizardDrafts || settings.initialSetupWizardDraft;
+      if (!drafts || typeof drafts !== 'object') return false;
+      return Boolean(
+        drafts.updatedAt ||
+        drafts.organisationDraft ||
+        drafts.locationsTodayDraft ||
+        drafts.locationDraft ||
+        drafts.unitsTodayDraft ||
+        drafts.unitDraft ||
+        drafts.resourceDraft
+      );
+    });
     const isDeliberatelyEmptyStructure = !hasActiveOrganisations && !hasActiveLocations && !hasActiveUnits;
-    const structuralBlocker = isDeliberatelyEmptyStructure ? '' :
+    const structuralBlocker = isDeliberatelyEmptyStructure || isInitialSetupWizardPayload ? '' :
       !hasActiveOrganisations ? 'At least one active organisation is required while locations or units still exist.' :
       !hasActiveLocations ? 'At least one active location is required while units still exist.' :
       !hasActiveUnits ? 'At least one active unit is required while organisations or locations still exist.' :

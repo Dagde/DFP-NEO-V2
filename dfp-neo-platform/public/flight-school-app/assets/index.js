@@ -35480,19 +35480,25 @@ const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, lo
   const downloadWizardStep6Trace = () => {
     if (typeof window === "undefined") return;
     pushWizardStep6Trace("download-requested");
-    let persistedTrace = [];
-    try {
-      const parsed = JSON.parse(window.localStorage.getItem(initialSetupWizardStep6DiagStorageKey) || "[]");
-      persistedTrace = Array.isArray(parsed) ? parsed : [];
-    } catch {
-      persistedTrace = [];
-    }
+    const readLocalArray = (key) => {
+      try {
+        const parsed = JSON.parse(window.localStorage.getItem(key) || "[]");
+        return Array.isArray(parsed) ? parsed : [];
+      } catch {
+        return [];
+      }
+    };
+    const persistedTrace = readLocalArray(initialSetupWizardStep6DiagStorageKey);
+    const platformConfigSaveTrace = readLocalArray("dfp_platform_config_save_diag");
+    const dfpDataTrace = readLocalArray("neo_dfp_data_diag").filter((entry) => String(entry?.stage || "").startsWith("platform-config:save:")).slice(-60);
     const unitLabel = (unitDraft.code || unitCode || locationCode || "step-6").replace(/[^A-Za-z0-9+_-]+/g, "-");
     const blob = new Blob([JSON.stringify({
       exportedAt: (/* @__PURE__ */ new Date()).toISOString(),
       reportType: "initial-setup-wizard-step-6-location-diagnostic",
       liveTrace: wizardStep6TraceRef.current,
-      persistedTrace
+      persistedTrace,
+      platformConfigSaveTrace,
+      dfpDataTrace
     }, null, 2)], { type: "application/json" });
     const url = window.URL.createObjectURL(blob);
     const link = document.createElement("a");
