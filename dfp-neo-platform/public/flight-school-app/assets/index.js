@@ -24355,6 +24355,7 @@ This removes them from DFP Resource Rows. Press Save in this section to apply th
   const resourceSectionPanelHeaderClass = "mb-3 flex flex-wrap items-center justify-between gap-2 border-b border-gray-800 pb-2";
   const resourceSectionPanelTitleClass = "text-xs font-black uppercase tracking-wide text-gray-300";
   const resourceSectionPanelHintClass = "text-[11px] leading-relaxed text-gray-500";
+  const resourceRowsDeleteButtonClass = wizardEditMode ? "rounded border border-red-300 bg-red-50 px-3 py-2 text-xs font-black uppercase tracking-[0.12em] text-red-900 shadow-sm hover:border-red-400 hover:bg-red-100 disabled:cursor-not-allowed disabled:opacity-50" : "rounded border border-red-500/35 bg-red-500/10 px-3 py-2 text-xs font-black uppercase tracking-[0.12em] text-red-100 hover:bg-red-500/20 disabled:cursor-not-allowed disabled:opacity-50";
   const getSettingsFocusAnchor = (value) => String(value || "").trim().toUpperCase().replace(/[^A-Z0-9_-]/g, "-");
   const crewCompositionRoleOptions = getCrewPositionOptions(crewPositionTerminology);
   const activeCrewCompositionAircraftIndex = Math.max(
@@ -27248,6 +27249,7 @@ This removes them from DFP Resource Rows. Press Save in this section to apply th
                               rowCount: editableDfpRows.ground,
                               disabled: !canEditResourcePools,
                               onCommit: (value, nextCount) => updateResourcePoolSettings(index, { classrooms: value, ...typeof nextCount === "number" ? { ground: nextCount } : {} }),
+                              deleteButtonClassName: resourceRowsDeleteButtonClass,
                               className: "md:col-span-3"
                             }
                           ),
@@ -27258,6 +27260,7 @@ This removes them from DFP Resource Rows. Press Save in this section to apply th
                               value: pool.settings?.academicStandardEvents,
                               disabled: !canEditResourcePools,
                               onCommit: (value) => updateResourcePoolSettings(index, { academicStandardEvents: value }),
+                              deleteButtonClassName: resourceRowsDeleteButtonClass,
                               className: "md:col-span-3"
                             }
                           ),
@@ -29222,6 +29225,7 @@ This removes them from DFP Resource Rows. Press Save in this section to apply th
                           rowCount: Number(pool.settings?.ground ?? pool.ground ?? 0),
                           disabled: !canEditResourcePools,
                           onCommit: (value, nextCount) => updateResourcePoolSettings(index, { classrooms: value, ...typeof nextCount === "number" ? { ground: nextCount } : {} }),
+                          deleteButtonClassName: resourceRowsDeleteButtonClass,
                           className: "lg:col-span-2"
                         }
                       ),
@@ -29232,6 +29236,7 @@ This removes them from DFP Resource Rows. Press Save in this section to apply th
                           value: pool.settings?.academicStandardEvents,
                           disabled: !canEditResourcePools,
                           onCommit: (value) => updateResourcePoolSettings(index, { academicStandardEvents: value }),
+                          deleteButtonClassName: resourceRowsDeleteButtonClass,
                           className: "lg:col-span-2"
                         }
                       ),
@@ -31035,6 +31040,7 @@ const ClassroomNamesField = ({
   rowCount,
   disabled,
   onCommit,
+  deleteButtonClassName,
   className
 }) => {
   const count = Math.max(0, Math.floor(Number(rowCount) || 0));
@@ -31104,7 +31110,7 @@ const ClassroomNamesField = ({
               type: "button",
               disabled,
               onClick: () => deleteClassroom(index),
-              className: "rounded border border-red-500/35 bg-red-500/10 px-3 py-2 text-xs font-black uppercase tracking-[0.12em] text-red-100 hover:bg-red-500/20 disabled:cursor-not-allowed disabled:opacity-50",
+              className: deleteButtonClassName || "rounded border border-red-500/35 bg-red-500/10 px-3 py-2 text-xs font-black uppercase tracking-[0.12em] text-red-100 hover:bg-red-500/20 disabled:cursor-not-allowed disabled:opacity-50",
               children: "- Delete"
             }
           )
@@ -31119,6 +31125,7 @@ const AcademicStandardEventsField = ({
   value,
   disabled,
   onCommit,
+  deleteButtonClassName,
   className
 }) => {
   const events = normaliseAcademicStandardEvents(value);
@@ -31230,7 +31237,7 @@ const AcademicStandardEventsField = ({
               type: "button",
               disabled,
               onClick: () => deleteEvent(index),
-              className: "rounded border border-red-500/35 bg-red-500/10 px-3 py-2 text-xs font-black uppercase tracking-[0.12em] text-red-100 hover:bg-red-500/20 disabled:cursor-not-allowed disabled:opacity-50",
+              className: deleteButtonClassName || "rounded border border-red-500/35 bg-red-500/10 px-3 py-2 text-xs font-black uppercase tracking-[0.12em] text-red-100 hover:bg-red-500/20 disabled:cursor-not-allowed disabled:opacity-50",
               children: "- Delete"
             }
           )
@@ -38101,6 +38108,8 @@ const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, lo
   };
   const wizardChoiceClass = "rounded-lg border border-slate-300 bg-white px-4 py-3 text-left text-sm font-semibold text-slate-800 shadow-sm transition hover:border-orange-300 hover:bg-orange-50 hover:text-orange-900";
   const wizardSmallButtonClass = "rounded-md border border-slate-300 bg-white px-3 py-2 text-xs font-semibold text-slate-700 shadow-sm transition hover:border-orange-300 hover:bg-orange-50 hover:text-orange-900";
+  const wizardDeleteButtonClass = "rounded-md border border-red-300 bg-red-50 px-3 py-2 text-xs font-black uppercase tracking-[0.12em] text-red-900 shadow-sm transition hover:border-red-400 hover:bg-red-100 disabled:cursor-not-allowed disabled:opacity-50";
+  const wizardCompactDeleteButtonClass = "w-20 rounded-md border border-red-300 bg-red-50 px-2 py-2 text-xs font-black uppercase tracking-[0.08em] text-red-900 shadow-sm transition hover:border-red-400 hover:bg-red-100 disabled:cursor-not-allowed disabled:opacity-50";
   const wizardPrimaryButtonClass = "rounded-md bg-orange-500 px-3 py-2 text-xs font-bold text-white shadow-sm transition hover:bg-orange-600";
   const wizardInputClass = "w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm font-semibold text-slate-900 outline-none transition focus:border-orange-400 focus:ring-2 focus:ring-orange-200";
   const wizardLabelClass = "text-[10px] font-black uppercase tracking-[0.14em] text-slate-500";
@@ -38267,7 +38276,7 @@ const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, lo
           {
             type: "button",
             onClick: () => deleteClassroom(index),
-            className: "rounded-md border border-red-200 bg-red-50 px-3 py-2 text-xs font-black uppercase tracking-[0.12em] text-red-700 transition hover:bg-red-100",
+            className: wizardDeleteButtonClass,
             children: "- Delete"
           }
         )
@@ -38350,7 +38359,7 @@ const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, lo
             {
               type: "button",
               onClick: () => deleteEvent(index),
-              className: "w-20 rounded-md border border-red-200 bg-red-50 px-2 py-2 text-xs font-black uppercase tracking-[0.08em] text-red-700 transition hover:bg-red-100",
+              className: wizardCompactDeleteButtonClass,
               children: "Delete"
             }
           ),
@@ -38892,7 +38901,7 @@ const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, lo
           "button",
           {
             type: "button",
-            className: "rounded-md border border-red-200 bg-red-50 px-3 py-2 text-xs font-bold text-red-700 transition hover:border-red-300 hover:bg-red-100 disabled:cursor-not-allowed disabled:opacity-40",
+            className: wizardDeleteButtonClass,
             disabled: !onUpdateServiceDefinitions || courseStudentGroups.length <= 1,
             onClick: () => removeCourseStudentGroup(index),
             children: "Remove"

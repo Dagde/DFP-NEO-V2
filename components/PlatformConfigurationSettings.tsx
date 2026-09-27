@@ -8172,6 +8172,9 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
   const resourceSectionPanelHeaderClass = 'mb-3 flex flex-wrap items-center justify-between gap-2 border-b border-gray-800 pb-2';
   const resourceSectionPanelTitleClass = 'text-xs font-black uppercase tracking-wide text-gray-300';
   const resourceSectionPanelHintClass = 'text-[11px] leading-relaxed text-gray-500';
+  const resourceRowsDeleteButtonClass = wizardEditMode
+    ? 'rounded border border-red-300 bg-red-50 px-3 py-2 text-xs font-black uppercase tracking-[0.12em] text-red-900 shadow-sm hover:border-red-400 hover:bg-red-100 disabled:cursor-not-allowed disabled:opacity-50'
+    : 'rounded border border-red-500/35 bg-red-500/10 px-3 py-2 text-xs font-black uppercase tracking-[0.12em] text-red-100 hover:bg-red-500/20 disabled:cursor-not-allowed disabled:opacity-50';
   const getSettingsFocusAnchor = (value: any) => String(value || '').trim().toUpperCase().replace(/[^A-Z0-9_-]/g, '-');
   const crewCompositionRoleOptions = getCrewPositionOptions(crewPositionTerminology);
   const activeCrewCompositionAircraftIndex = Math.max(
@@ -11465,6 +11468,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
                           rowCount={editableDfpRows.ground}
                           disabled={!canEditResourcePools}
                           onCommit={(value, nextCount) => updateResourcePoolSettings(index, { classrooms: value, ...(typeof nextCount === 'number' ? { ground: nextCount } : {}) })}
+                          deleteButtonClassName={resourceRowsDeleteButtonClass}
                           className="md:col-span-3"
                         />
                         <AcademicStandardEventsField
@@ -11472,6 +11476,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
                           value={pool.settings?.academicStandardEvents}
                           disabled={!canEditResourcePools}
                           onCommit={(value) => updateResourcePoolSettings(index, { academicStandardEvents: value })}
+                          deleteButtonClassName={resourceRowsDeleteButtonClass}
                           className="md:col-span-3"
                         />
                         <DraftField label="Duty Supervisor Full Label" value={pool.settings?.dutySupervisorLabel || 'Duty Supervisor'} disabled={!canEditResourcePools} onCommit={(value) => updateResourcePoolSettings(index, { dutySupervisorLabel: value })} />
@@ -13455,6 +13460,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
                           rowCount={Number(pool.settings?.ground ?? pool.ground ?? 0)}
                           disabled={!canEditResourcePools}
                           onCommit={(value, nextCount) => updateResourcePoolSettings(index, { classrooms: value, ...(typeof nextCount === 'number' ? { ground: nextCount } : {}) })}
+                          deleteButtonClassName={resourceRowsDeleteButtonClass}
                           className="lg:col-span-2"
                         />
                         <AcademicStandardEventsField
@@ -13462,6 +13468,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
                           value={pool.settings?.academicStandardEvents}
                           disabled={!canEditResourcePools}
                           onCommit={(value) => updateResourcePoolSettings(index, { academicStandardEvents: value })}
+                          deleteButtonClassName={resourceRowsDeleteButtonClass}
                           className="lg:col-span-2"
                         />
                         <DraftField label="Duty Supervisor Full Label" value={pool.settings?.dutySupervisorLabel || 'Duty Supervisor'} disabled={!canEditResourcePools} onCommit={(value) => updateResourcePoolSettings(index, { dutySupervisorLabel: value })} info="The full name for the person supervising daily flying operations." />
@@ -15492,12 +15499,14 @@ const ClassroomNamesField = ({
   rowCount,
   disabled,
   onCommit,
+  deleteButtonClassName,
   className,
 }: {
   value: unknown;
   rowCount: number;
   disabled: boolean;
   onCommit: (value: string[], rowCount?: number) => void;
+  deleteButtonClassName?: string;
   className?: string;
 }) => {
   const count = Math.max(0, Math.floor(Number(rowCount) || 0));
@@ -15562,7 +15571,7 @@ const ClassroomNamesField = ({
                 type="button"
                 disabled={disabled}
                 onClick={() => deleteClassroom(index)}
-                className="rounded border border-red-500/35 bg-red-500/10 px-3 py-2 text-xs font-black uppercase tracking-[0.12em] text-red-100 hover:bg-red-500/20 disabled:cursor-not-allowed disabled:opacity-50"
+                className={deleteButtonClassName || 'rounded border border-red-500/35 bg-red-500/10 px-3 py-2 text-xs font-black uppercase tracking-[0.12em] text-red-100 hover:bg-red-500/20 disabled:cursor-not-allowed disabled:opacity-50'}
               >
                 - Delete
               </button>
@@ -15583,12 +15592,14 @@ const AcademicStandardEventsField = ({
   value,
   disabled,
   onCommit,
+  deleteButtonClassName,
   className,
 }: {
   id?: string;
   value: unknown;
   disabled: boolean;
   onCommit: (value: AcademicStandardEventConfig[]) => void;
+  deleteButtonClassName?: string;
   className?: string;
 }) => {
   const events = normaliseAcademicStandardEvents(value);
@@ -15687,7 +15698,7 @@ const AcademicStandardEventsField = ({
                 type="button"
                 disabled={disabled}
                 onClick={() => deleteEvent(index)}
-                className="rounded border border-red-500/35 bg-red-500/10 px-3 py-2 text-xs font-black uppercase tracking-[0.12em] text-red-100 hover:bg-red-500/20 disabled:cursor-not-allowed disabled:opacity-50"
+                className={deleteButtonClassName || 'rounded border border-red-500/35 bg-red-500/10 px-3 py-2 text-xs font-black uppercase tracking-[0.12em] text-red-100 hover:bg-red-500/20 disabled:cursor-not-allowed disabled:opacity-50'}
               >
                 - Delete
               </button>

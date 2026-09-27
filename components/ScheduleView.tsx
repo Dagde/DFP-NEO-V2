@@ -7911,6 +7911,8 @@ const InitialSetupWizard: React.FC<{
 
     const wizardChoiceClass = 'rounded-lg border border-slate-300 bg-white px-4 py-3 text-left text-sm font-semibold text-slate-800 shadow-sm transition hover:border-orange-300 hover:bg-orange-50 hover:text-orange-900';
     const wizardSmallButtonClass = 'rounded-md border border-slate-300 bg-white px-3 py-2 text-xs font-semibold text-slate-700 shadow-sm transition hover:border-orange-300 hover:bg-orange-50 hover:text-orange-900';
+    const wizardDeleteButtonClass = 'rounded-md border border-red-300 bg-red-50 px-3 py-2 text-xs font-black uppercase tracking-[0.12em] text-red-900 shadow-sm transition hover:border-red-400 hover:bg-red-100 disabled:cursor-not-allowed disabled:opacity-50';
+    const wizardCompactDeleteButtonClass = 'w-20 rounded-md border border-red-300 bg-red-50 px-2 py-2 text-xs font-black uppercase tracking-[0.08em] text-red-900 shadow-sm transition hover:border-red-400 hover:bg-red-100 disabled:cursor-not-allowed disabled:opacity-50';
     const wizardPrimaryButtonClass = 'rounded-md bg-orange-500 px-3 py-2 text-xs font-bold text-white shadow-sm transition hover:bg-orange-600';
     const wizardInputClass = 'w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm font-semibold text-slate-900 outline-none transition focus:border-orange-400 focus:ring-2 focus:ring-orange-200';
     const wizardLabelClass = 'text-[10px] font-black uppercase tracking-[0.14em] text-slate-500';
@@ -8104,7 +8106,7 @@ const InitialSetupWizard: React.FC<{
                                 <button
                                     type="button"
                                     onClick={() => deleteClassroom(index)}
-                                    className="rounded-md border border-red-200 bg-red-50 px-3 py-2 text-xs font-black uppercase tracking-[0.12em] text-red-700 transition hover:bg-red-100"
+                                    className={wizardDeleteButtonClass}
                                 >
                                     - Delete
                                 </button>
@@ -8192,7 +8194,7 @@ const InitialSetupWizard: React.FC<{
                                     <button
                                         type="button"
                                         onClick={() => deleteEvent(index)}
-                                        className="w-20 rounded-md border border-red-200 bg-red-50 px-2 py-2 text-xs font-black uppercase tracking-[0.08em] text-red-700 transition hover:bg-red-100"
+                                        className={wizardCompactDeleteButtonClass}
                                     >
                                         Delete
                                     </button>
@@ -8897,7 +8899,7 @@ const InitialSetupWizard: React.FC<{
                             <div className="flex items-end">
                                 <button
                                     type="button"
-                                    className="rounded-md border border-red-200 bg-red-50 px-3 py-2 text-xs font-bold text-red-700 transition hover:border-red-300 hover:bg-red-100 disabled:cursor-not-allowed disabled:opacity-40"
+                                    className={wizardDeleteButtonClass}
                                     disabled={!onUpdateServiceDefinitions || courseStudentGroups.length <= 1}
                                     onClick={() => removeCourseStudentGroup(index)}
                                 >
