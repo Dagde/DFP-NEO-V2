@@ -32418,9 +32418,6 @@ const initialSetupWizardStorageKey = "dfp-initial-setup-wizard-step";
 const initialSetupWizardOrganisationDraftStorageKey = "dfp-initial-setup-wizard-organisation-draft";
 const initialSetupWizardDraftSnapshotStorageKey = "dfp-initial-setup-wizard-draft-snapshot";
 const initialSetupWizardCompletedStepsStorageKey = "dfp-initial-setup-wizard-completed-steps";
-const initialSetupWizardLocationDiagStorageKey = "dfp_setup_wizard_location_diag";
-const initialSetupWizardStep6DiagStorageKey = "dfp_setup_wizard_step_6_diag";
-const initialSetupWizardPersistenceDiagStorageKey = "dfp_setup_wizard_persistence_diag";
 const MAX_INITIAL_SETUP_ORGANISATION_LEVELS = 12;
 const createWizardRecordId = (prefix) => `${prefix}-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
 const createSetupTestRecordId = (prefix, key = "") => {
@@ -33920,20 +33917,10 @@ const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, lo
   const wizardPlatformSettingsSaveRef = reactExports.useRef(null);
   const flyingWindowDraftRef = reactExports.useRef({});
   const wizardAnswerPanelRef = reactExports.useRef(null);
-  const wizardStep24ScrollTraceRef = reactExports.useRef([]);
-  const wizardStep24ScrollTraceSequenceRef = reactExports.useRef(0);
-  const wizardStep24RenderCountRef = reactExports.useRef(0);
-  const wizardLocationScopeTraceRef = reactExports.useRef([]);
-  const wizardLocationScopeTraceSequenceRef = reactExports.useRef(0);
-  const wizardStep6TraceRef = reactExports.useRef([]);
-  const wizardStep6TraceSequenceRef = reactExports.useRef(0);
   const wizardDiagnosticStorageKeys = [
     "dfp_setup_wizard_import_diag",
     "dfp_setup_test_lmp_diag",
-    "dfp_setup_wizard_org_diag",
-    initialSetupWizardLocationDiagStorageKey,
-    initialSetupWizardStep6DiagStorageKey,
-    initialSetupWizardPersistenceDiagStorageKey
+    "dfp_setup_wizard_org_diag"
   ];
   const safeSetWizardLocalStorage = (key, value) => {
     if (typeof window === "undefined") return false;
@@ -34056,59 +34043,7 @@ const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, lo
     } catch (error) {
     }
   };
-  const pushWizardPersistenceTrace = (stage, details = {}) => {
-    if (typeof window === "undefined") return;
-    let localSnapshot = null;
-    const rawLocalSnapshot = window.localStorage.getItem(initialSetupWizardDraftSnapshotStorageKey) || "";
-    try {
-      localSnapshot = rawLocalSnapshot ? JSON.parse(rawLocalSnapshot) : null;
-    } catch {
-      localSnapshot = null;
-    }
-    const settingsDrafts = activeOrganisation?.settings?.initialSetupWizardDrafts || activeOrganisation?.settings?.initialSetupWizardDraft || null;
-    const entry = {
-      ts: (/* @__PURE__ */ new Date()).toISOString(),
-      stage,
-      mode,
-      currentStep: typeof currentStep === "number" ? currentStep : null,
-      stepNumber: typeof currentStep === "number" ? currentStep + 1 : null,
-      visibleStepId: typeof visibleStep !== "undefined" ? visibleStep?.id : "",
-      unitCode,
-      locationCode,
-      localSnapshot: localSnapshot ? {
-        updatedAt: localSnapshot.updatedAt || "",
-        activeStepId: localSnapshot.activeStepId || "",
-        activeStepIndex: localSnapshot.activeStepIndex ?? null,
-        unitsTodayDraft: localSnapshot.unitsTodayDraft || "",
-        parsedUnitsToday: parseWizardUnitRows(localSnapshot.unitsTodayDraft || ""),
-        keys: Object.keys(localSnapshot),
-        rawLength: rawLocalSnapshot.length
-      } : {
-        updatedAt: "",
-        activeStepId: "",
-        activeStepIndex: null,
-        unitsTodayDraft: "",
-        parsedUnitsToday: [],
-        keys: [],
-        rawLength: rawLocalSnapshot.length
-      },
-      settingsDrafts: settingsDrafts ? {
-        updatedAt: settingsDrafts.updatedAt || "",
-        activeStepId: settingsDrafts.activeStepId || "",
-        activeStepIndex: settingsDrafts.activeStepIndex ?? null,
-        unitsTodayDraft: settingsDrafts.unitsTodayDraft || "",
-        parsedUnitsToday: parseWizardUnitRows(settingsDrafts.unitsTodayDraft || ""),
-        keys: Object.keys(settingsDrafts)
-      } : null,
-      details: compactWizardDiagDetails(details)
-    };
-    try {
-      const existing = JSON.parse(window.localStorage.getItem(initialSetupWizardPersistenceDiagStorageKey) || "[]");
-      const next = [...Array.isArray(existing) ? existing : [], entry].slice(-180);
-      safeSetWizardLocalStorage(initialSetupWizardPersistenceDiagStorageKey, JSON.stringify(next));
-      window.neoSetupWizardPersistenceDiag = next;
-    } catch {
-    }
+  const pushWizardPersistenceTrace = (_stage, _details = {}) => {
   };
   reactExports.useEffect(() => {
     pushWizardLmpDiag("wizard:staged-items-state", {
@@ -35211,8 +35146,6 @@ const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, lo
       locationDraft: hydratedLocationDraft
     });
     pushWizardStep6Trace(`hydrate:${stage}-step-6-location`, {
-      hydratedLocations,
-      hydratedLocationDraft,
       sourceDrafts: {
         savedLocationDraft: readPlainWizardObject(getSavedInitialSetupWizardDrafts()?.locationDraft),
         savedLocationsTodayDraft: getSavedInitialSetupWizardDrafts()?.locationsTodayDraft || ""
@@ -35245,13 +35178,6 @@ const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, lo
       if (!crewDraftDirtyRef.current) setCrewDraft(hydratedCrew);
       setUnitModulesDraft(buildHydratedUnitModulesDraft());
       hydrateSupplementaryWizardDrafts();
-      pushWizardPersistenceTrace("hydrate:dirty-organisation-restored-other-drafts", {
-        hydratedUnits,
-        liveUnitsBefore: unitsTodayDraft,
-        shouldRestoreUnits,
-        hydratedLocations,
-        shouldRestoreLocations
-      });
       pushWizardOrgDiag("hydrate:skipped-dirty-draft", {
         activeOrganisation: summariseActiveOrganisation(),
         draft: summariseOrganisationDraft(organisationDraft),
@@ -35476,12 +35402,10 @@ const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, lo
   const saveWizardDraftSnapshot = (message = "Wizard progress saved.", options = { silent: true }) => {
     if (isSetupTestMode$1) return;
     const snapshot = buildWizardDraftSnapshot();
-    let localSaved = false;
     if (typeof window !== "undefined") {
-      localSaved = safeSetWizardLocalStorage(initialSetupWizardDraftSnapshotStorageKey, JSON.stringify(snapshot));
+      safeSetWizardLocalStorage(initialSetupWizardDraftSnapshotStorageKey, JSON.stringify(snapshot));
     }
     pushWizardPersistenceTrace("draft-snapshot:local-write", {
-      localSaved,
       unitsTodayDraft: snapshot.unitsTodayDraft,
       parsedUnitsToday: parseWizardUnitRows(snapshot.unitsTodayDraft)
     });
@@ -35558,265 +35482,9 @@ const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, lo
     latitude: profile.latitude ?? null,
     longitude: profile.longitude ?? null
   } : null;
-  const pushWizardLocationScopeTrace = (eventType, details = {}) => {
-    const entry = {
-      sequence: wizardLocationScopeTraceSequenceRef.current += 1,
-      timestamp: (/* @__PURE__ */ new Date()).toISOString(),
-      eventType,
-      currentStep,
-      visibleStepId: visibleStep.id,
-      mode,
-      catalogue: {
-        configuredCount: configuredWizardLocationProfiles.length,
-        fallbackCount: fallbackWizardLocationProfiles.length,
-        airfieldCount: wizardAirfieldCatalogueProfiles.length,
-        lookupCount: wizardLocationLookupProfiles.length,
-        hasKCBM: Boolean(findWizardLocationProfile("KCBM", "icao"))
-      },
-      unitContext: {
-        unitCode,
-        locationCode,
-        currentWizardUnitCode,
-        currentWizardUnitCodes,
-        currentUnit: summariseWizardLocationScopeUnit(currentUnit),
-        wizardScopedUnitCodes,
-        wizardScopedLocationCodes: Array.from(wizardScopedLocationCodes),
-        activeWizardLocationCode
-      },
-      draft: {
-        locationDraft,
-        locationsTodayDraft,
-        parsedRows: parseWizardLocationRows(locationsTodayDraft)
-      },
-      settingsSnapshot: {
-        scopedActiveLocations: scopedActiveLocations.map(summariseWizardLocationScopeLocation),
-        units: (platformConfig?.units || []).map(summariseWizardLocationScopeUnit),
-        locations: (platformConfig?.locations || []).map(summariseWizardLocationScopeLocation),
-        resourcePools: (platformConfig?.resourcePools || []).map((pool) => ({
-          id: pool?.id || "",
-          code: pool?.code || "",
-          unitCode: pool?.unitCode || "",
-          locationCode: pool?.locationCode || "",
-          status: pool?.status || ""
-        }))
-      },
-      details
-    };
-    wizardLocationScopeTraceRef.current = [
-      ...wizardLocationScopeTraceRef.current.slice(-499),
-      entry
-    ];
-    if (typeof window !== "undefined") {
-      try {
-        const existing = JSON.parse(window.localStorage.getItem(initialSetupWizardLocationDiagStorageKey) || "[]");
-        const compactEntry = {
-          sequence: entry.sequence,
-          timestamp: entry.timestamp,
-          eventType: entry.eventType,
-          currentStep: entry.currentStep,
-          visibleStepId: entry.visibleStepId,
-          mode: entry.mode,
-          catalogue: entry.catalogue,
-          locationDraft: entry.draft.locationDraft,
-          parsedRows: entry.draft.parsedRows,
-          details: compactWizardDiagDetails(details)
-        };
-        const next = [...Array.isArray(existing) ? existing : [], compactEntry].slice(-120);
-        safeSetWizardLocalStorage(initialSetupWizardLocationDiagStorageKey, JSON.stringify(next));
-        window.neoSetupWizardLocationDiag = next;
-      } catch {
-      }
-    }
+  const pushWizardLocationScopeTrace = (_eventType, _details = {}) => {
   };
-  const downloadWizardLocationScopeTrace = () => {
-    if (typeof window === "undefined") return;
-    pushWizardLocationScopeTrace("download-requested");
-    let persistedTrace = [];
-    try {
-      const parsed = JSON.parse(window.localStorage.getItem(initialSetupWizardLocationDiagStorageKey) || "[]");
-      persistedTrace = Array.isArray(parsed) ? parsed : [];
-    } catch {
-      persistedTrace = [];
-    }
-    const unitLabel = (unitDraft.code || unitCode || "unit").replace(/[^A-Za-z0-9+_-]+/g, "-");
-    const blob = new Blob([JSON.stringify({
-      exportedAt: (/* @__PURE__ */ new Date()).toISOString(),
-      trace: wizardLocationScopeTraceRef.current,
-      persistedTrace
-    }, null, 2)], { type: "application/json" });
-    const url = window.URL.createObjectURL(blob);
-    const link = document.createElement("a");
-    link.href = url;
-    link.download = `dfp-neo-wizard-location-scope-trace-${unitLabel}-${(/* @__PURE__ */ new Date()).toISOString().replace(/[:.]/g, "-")}.json`;
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    window.URL.revokeObjectURL(url);
-  };
-  const getInitialSetupWizardStorageSnapshot = () => {
-    if (typeof window === "undefined") return {};
-    const readJsonCount = (key) => {
-      try {
-        const parsed = JSON.parse(window.localStorage.getItem(key) || "[]");
-        return Array.isArray(parsed) ? parsed.length : 0;
-      } catch {
-        return -1;
-      }
-    };
-    return {
-      storedStep: window.localStorage.getItem(initialSetupWizardStorageKey),
-      storedCompletedSteps: window.localStorage.getItem(initialSetupWizardCompletedStepsStorageKey),
-      hasStoredOrganisationDraft: Boolean(window.localStorage.getItem(initialSetupWizardOrganisationDraftStorageKey)),
-      storedOrganisationDraftLength: String(window.localStorage.getItem(initialSetupWizardOrganisationDraftStorageKey) || "").length,
-      locationDiagCount: readJsonCount(initialSetupWizardLocationDiagStorageKey),
-      step6DiagCount: readJsonCount(initialSetupWizardStep6DiagStorageKey)
-    };
-  };
-  const pushWizardStep6Trace = (eventType, details = {}) => {
-    if (typeof window === "undefined") return;
-    const savedDrafts = getSavedInitialSetupWizardDrafts();
-    const entry = {
-      sequence: wizardStep6TraceSequenceRef.current += 1,
-      timestamp: (/* @__PURE__ */ new Date()).toISOString(),
-      eventType,
-      currentStep,
-      stepNumber: currentStep + 1,
-      visibleStepId: visibleStep.id,
-      mode,
-      storage: getInitialSetupWizardStorageSnapshot(),
-      locationDraft,
-      locationsTodayDraft,
-      parsedLocationsToday: parseWizardLocationRows(locationsTodayDraft),
-      savedWizardDrafts: {
-        locationDraft: readPlainWizardObject(savedDrafts?.locationDraft),
-        locationsTodayDraft: savedDrafts?.locationsTodayDraft || "",
-        updatedAt: savedDrafts?.updatedAt || ""
-      },
-      activeContext: {
-        unitCode,
-        locationCode,
-        activeWizardLocationCode,
-        currentUnit: summariseWizardLocationScopeUnit(currentUnit),
-        currentLocation: summariseWizardLocationScopeLocation(currentLocation),
-        activeOrganisation: {
-          id: activeOrganisation?.id || "",
-          code: activeOrganisation?.code || "",
-          name: activeOrganisation?.name || ""
-        }
-      },
-      platformSnapshot: {
-        locations: (platformConfig?.locations || []).map(summariseWizardLocationScopeLocation),
-        units: (platformConfig?.units || []).map(summariseWizardLocationScopeUnit)
-      },
-      catalogue: {
-        configuredCount: configuredWizardLocationProfiles.length,
-        fallbackCount: fallbackWizardLocationProfiles.length,
-        airfieldCount: wizardAirfieldCatalogueProfiles.length,
-        kcbmProfile: summariseWizardLocationProfile(findWizardLocationProfile("KCBM", "icao"))
-      },
-      details: compactWizardDiagDetails(details)
-    };
-    wizardStep6TraceRef.current = [...wizardStep6TraceRef.current.slice(-299), entry];
-    try {
-      const existing = JSON.parse(window.localStorage.getItem(initialSetupWizardStep6DiagStorageKey) || "[]");
-      const next = [...Array.isArray(existing) ? existing : [], entry].slice(-160);
-      safeSetWizardLocalStorage(initialSetupWizardStep6DiagStorageKey, JSON.stringify(next));
-      window.neoSetupWizardStep6Diag = next;
-    } catch {
-    }
-  };
-  const downloadWizardStep6Trace = () => {
-    if (typeof window === "undefined") return;
-    pushWizardStep6Trace("download-requested");
-    const readLocalArray = (key) => {
-      try {
-        const parsed = JSON.parse(window.localStorage.getItem(key) || "[]");
-        return Array.isArray(parsed) ? parsed : [];
-      } catch {
-        return [];
-      }
-    };
-    const persistedTrace = readLocalArray(initialSetupWizardStep6DiagStorageKey);
-    const platformConfigSaveTrace = readLocalArray("dfp_platform_config_save_diag");
-    const dfpDataTrace = readLocalArray("neo_dfp_data_diag").filter((entry) => String(entry?.stage || "").startsWith("platform-config:save:")).slice(-60);
-    const unitLabel = (unitDraft.code || unitCode || locationCode || "step-6").replace(/[^A-Za-z0-9+_-]+/g, "-");
-    const blob = new Blob([JSON.stringify({
-      exportedAt: (/* @__PURE__ */ new Date()).toISOString(),
-      reportType: "initial-setup-wizard-step-6-location-diagnostic",
-      liveTrace: wizardStep6TraceRef.current,
-      persistedTrace,
-      platformConfigSaveTrace,
-      dfpDataTrace
-    }, null, 2)], { type: "application/json" });
-    const url = window.URL.createObjectURL(blob);
-    const link = document.createElement("a");
-    link.href = url;
-    link.download = `dfp-neo-initial-setup-step-6-location-trace-${unitLabel}-${(/* @__PURE__ */ new Date()).toISOString().replace(/[:.]/g, "-")}.json`;
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    window.URL.revokeObjectURL(url);
-  };
-  const downloadWizardPersistenceTrace = () => {
-    if (typeof window === "undefined") return;
-    pushWizardPersistenceTrace("download-requested", {
-      unitsTodayDraft,
-      parsedUnitsToday: parseWizardUnitRows(unitsTodayDraft)
-    });
-    const readLocalArray = (key) => {
-      try {
-        const parsed = JSON.parse(window.localStorage.getItem(key) || "[]");
-        return Array.isArray(parsed) ? parsed : [];
-      } catch {
-        return [];
-      }
-    };
-    const readLocalObject = (key) => {
-      try {
-        const parsed = JSON.parse(window.localStorage.getItem(key) || "{}");
-        return parsed && typeof parsed === "object" ? parsed : {};
-      } catch {
-        return {};
-      }
-    };
-    const snapshot = readLocalObject(initialSetupWizardDraftSnapshotStorageKey);
-    const blob = new Blob([JSON.stringify({
-      exportedAt: (/* @__PURE__ */ new Date()).toISOString(),
-      reportType: "initial-setup-wizard-persistence-diagnostic",
-      currentStep,
-      stepNumber: currentStep + 1,
-      visibleStepId: visibleStep.id,
-      liveDrafts: {
-        unitsTodayDraft,
-        parsedUnitsToday: parseWizardUnitRows(unitsTodayDraft),
-        locationsTodayDraft,
-        locationDraft,
-        unitDraft,
-        resourceDraft,
-        crewDraft
-      },
-      localStorage: {
-        wizardStep: window.localStorage.getItem(initialSetupWizardStorageKey),
-        completedSteps: window.localStorage.getItem(initialSetupWizardCompletedStepsStorageKey),
-        draftSnapshot: snapshot,
-        draftSnapshotLength: String(window.localStorage.getItem(initialSetupWizardDraftSnapshotStorageKey) || "").length
-      },
-      settingsDrafts: {
-        legacy: activeOrganisation?.settings?.initialSetupWizardDraft || null,
-        current: activeOrganisation?.settings?.initialSetupWizardDrafts || null
-      },
-      persistenceTrace: readLocalArray(initialSetupWizardPersistenceDiagStorageKey),
-      platformConfigSaveTrace: readLocalArray("dfp_platform_config_save_diag")
-    }, null, 2)], { type: "application/json" });
-    const url = window.URL.createObjectURL(blob);
-    const link = document.createElement("a");
-    const unitLabel = (unitDraft.code || unitCode || "wizard").replace(/[^A-Za-z0-9+_-]+/g, "-");
-    link.href = url;
-    link.download = `dfp-neo-initial-setup-wizard-persistence-trace-${unitLabel}-${(/* @__PURE__ */ new Date()).toISOString().replace(/[:.]/g, "-")}.json`;
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    window.URL.revokeObjectURL(url);
+  const pushWizardStep6Trace = (_eventType, _details = {}) => {
   };
   const updatePrimaryOrganisationWithSettings = (baseConfig, settingsUpdater) => {
     const organisations = Array.isArray(baseConfig.organisations) ? baseConfig.organisations : [];
@@ -35941,13 +35609,7 @@ const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, lo
       setSaveMessage("Enter a location code before saving.");
       return;
     }
-    pushWizardLocationScopeTrace("save-location-detail-requested", {
-      locationDraft: effectiveLocationDraft,
-      cleanCode
-    });
     pushWizardStep6Trace("save-location-detail-requested", {
-      effectiveLocationDraft,
-      cleanCode,
       savedDraftBefore: readPlainWizardObject(getSavedInitialSetupWizardDrafts()?.locationDraft)
     });
     saveWizardConfig(message, (baseConfig) => {
@@ -36013,7 +35675,6 @@ const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, lo
       const nextUnits = wizardScopedUnitCodeSet.size > 0 ? units.map((unit) => wizardScopedUnitCodeSet.has(normaliseUnitSettingsIdentifier(unit?.code)) ? { ...unit, locationCode: cleanCode } : unit) : units;
       const nextResourcePools = wizardScopedUnitCodeSet.size > 0 ? resourcePools.map((pool) => wizardScopedUnitCodeSet.has(normaliseUnitSettingsIdentifier(pool?.unitCode)) ? { ...pool, locationCode: cleanCode } : pool) : resourcePools;
       pushWizardLocationScopeTrace("save-location-detail-returning-config", {
-        cleanCode,
         previousLocationCodes: Array.from(previousLocationCodes),
         baseUnits: units.map(summariseWizardLocationScopeUnit),
         baseLocations: locations.map(summariseWizardLocationScopeLocation),
@@ -36037,14 +35698,12 @@ const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, lo
         visibleByCurrentScopeAfterSave: nextLocations.filter(isWizardLocationScopedToCurrentContext).map(summariseWizardLocationScopeLocation)
       });
       pushWizardStep6Trace("save-location-detail-returning-config", {
-        cleanCode,
         previousLocationCodes: Array.from(previousLocationCodes),
         nextLocation: summariseWizardLocationScopeLocation(nextLocation),
         nextUnits: nextUnits.map(summariseWizardLocationScopeUnit),
         nextOrganisationsDraftTarget: {
           activeOrganisationId: activeOrganisation?.id || "",
-          activeOrganisationCode: activeOrganisation?.code || "",
-          willWriteLocationDraft: true
+          activeOrganisationCode: activeOrganisation?.code || ""
         }
       });
       return {
@@ -36121,20 +35780,6 @@ const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, lo
       return { icao, iata, name };
     }).filter((row) => row.icao || row.iata || row.name);
     const normalisedLocationsTodayDraft = formatWizardLocationRows(normalisedDraftRows);
-    pushWizardLocationScopeTrace("save-location-rows-requested", {
-      message,
-      draftValue,
-      locationRows,
-      normalisedDraftRows,
-      normalisedLocationsTodayDraft
-    });
-    pushWizardStep6Trace("save-location-rows-requested", {
-      message,
-      draftValue,
-      locationRows,
-      normalisedDraftRows,
-      normalisedLocationsTodayDraft
-    });
     saveWizardConfig(message, (baseConfig) => {
       const locations = Array.isArray(baseConfig.locations) ? baseConfig.locations : [];
       const units = Array.isArray(baseConfig.units) ? baseConfig.units : [];
@@ -36142,9 +35787,8 @@ const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, lo
       const selectedLocationCodes = new Set(
         normalisedDraftRows.map((row) => normaliseUnitSettingsIdentifier(row.icao)).filter(Boolean)
       );
-      const traceBeforeSave = {
+      ({
         selectedLocationCodes: Array.from(selectedLocationCodes),
-        wizardScopedUnitCodes,
         wizardScopedLocationCodes: Array.from(wizardScopedLocationCodes),
         baseUnits: units.map(summariseWizardLocationScopeUnit),
         baseLocations: locations.map(summariseWizardLocationScopeLocation),
@@ -36155,7 +35799,7 @@ const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, lo
           locationCode: pool?.locationCode || "",
           status: pool?.status || ""
         }))
-      };
+      });
       const removeScopedUnitCodesFromLocation = (location) => {
         if (wizardScopedUnitCodeSet.size === 0) return location;
         const remainingUnitCodes = getWizardLocationUnitCodes(location).filter((unitCode2) => !wizardScopedUnitCodeSet.has(unitCode2));
@@ -36222,10 +35866,6 @@ const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, lo
       } : null;
       const nextUnits = firstLocationCode && wizardScopedUnitCodeSet.size > 0 ? units.map((unit) => wizardScopedUnitCodeSet.has(normaliseUnitSettingsIdentifier(unit?.code)) ? { ...unit, locationCode: firstLocationCode } : unit) : units;
       pushWizardLocationScopeTrace("save-location-rows-returning-config", {
-        ...traceBeforeSave,
-        savedLocationsTodayDraft,
-        firstLocationCode,
-        savedLocationDraft,
         nextUnits: nextUnits.map(summariseWizardLocationScopeUnit),
         nextLocations: nextLocations.map(summariseWizardLocationScopeLocation),
         visibleByCurrentScopeAfterSave: nextLocations.filter(isWizardLocationScopedToCurrentContext).map(summariseWizardLocationScopeLocation)
@@ -37379,148 +37019,16 @@ const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, lo
   reactExports.useEffect(() => {
     if (!["locations-today", "location-code", "location-details"].includes(visibleStep?.id || "")) return;
     pushWizardLocationScopeTrace("location-step-state", {
-      mode,
-      currentStep,
       visibleStepId: visibleStep?.id,
-      isPartiallyConfigured,
       storedStep: typeof window !== "undefined" ? window.localStorage.getItem(initialSetupWizardStorageKey) : null,
       storedCompletedSteps: typeof window !== "undefined" ? window.localStorage.getItem(initialSetupWizardCompletedStepsStorageKey) : null,
       kcbmProfile: summariseWizardLocationProfile(findWizardLocationProfile("KCBM", "icao"))
     });
     pushWizardStep6Trace("step-6-location-state", {
-      isStep6Number: currentStep + 1 === 6,
       isLocationSetupStep: ["locations-today", "location-code", "location-details"].includes(visibleStep?.id || "")
     });
   }, [mode, currentStep, visibleStep?.id, wizardAirfieldCatalogueProfiles.length]);
-  const shouldTraceWizardStep24Scroll = currentStep + 1 === 24 || visibleStep.id === "scoring";
   const getWizardOuterScrollElement = () => wizardShellRef.current?.closest(".organisation-slideout-scroll-stable");
-  const getWizardTraceRect = (element) => {
-    if (!element || typeof window === "undefined") return null;
-    const rect = element.getBoundingClientRect();
-    return {
-      top: Math.round(rect.top),
-      left: Math.round(rect.left),
-      width: Math.round(rect.width),
-      height: Math.round(rect.height),
-      bottom: Math.round(rect.bottom),
-      right: Math.round(rect.right)
-    };
-  };
-  const getWizardTraceStyles = (element) => {
-    if (!element || typeof window === "undefined") return null;
-    const styles = window.getComputedStyle(element);
-    return {
-      display: styles.display,
-      position: styles.position,
-      overflowX: styles.overflowX,
-      overflowY: styles.overflowY,
-      contain: styles.contain,
-      contentVisibility: styles.contentVisibility,
-      height: styles.height,
-      minHeight: styles.minHeight,
-      maxHeight: styles.maxHeight,
-      pointerEvents: styles.pointerEvents,
-      overscrollBehaviorX: styles.overscrollBehaviorX,
-      overscrollBehaviorY: styles.overscrollBehaviorY,
-      transform: styles.transform,
-      willChange: styles.willChange
-    };
-  };
-  const summariseWizardTraceElement = (element) => {
-    const htmlElement = element;
-    return {
-      exists: Boolean(element),
-      className: htmlElement?.className ? String(htmlElement.className) : "",
-      id: htmlElement?.id || "",
-      rect: getWizardTraceRect(element),
-      styles: getWizardTraceStyles(element),
-      scrollTop: typeof htmlElement?.scrollTop === "number" ? Math.round(htmlElement.scrollTop) : null,
-      scrollLeft: typeof htmlElement?.scrollLeft === "number" ? Math.round(htmlElement.scrollLeft) : null,
-      scrollHeight: typeof htmlElement?.scrollHeight === "number" ? Math.round(htmlElement.scrollHeight) : null,
-      scrollWidth: typeof htmlElement?.scrollWidth === "number" ? Math.round(htmlElement.scrollWidth) : null,
-      clientHeight: typeof htmlElement?.clientHeight === "number" ? Math.round(htmlElement.clientHeight) : null,
-      clientWidth: typeof htmlElement?.clientWidth === "number" ? Math.round(htmlElement.clientWidth) : null
-    };
-  };
-  const summariseWizardTraceTarget = (target) => {
-    const element = target instanceof Element ? target : null;
-    if (!element) return null;
-    return {
-      tagName: element.tagName,
-      id: element.id || "",
-      className: element.className ? String(element.className) : "",
-      rect: getWizardTraceRect(element)
-    };
-  };
-  const pushWizardStep24ScrollTrace = reactExports.useCallback((eventType, details = {}) => {
-    if (typeof window === "undefined" || !shouldTraceWizardStep24Scroll) return;
-    const shell = wizardShellRef.current;
-    const scoringMatrix = shell?.querySelector(".scoring-matrix-inline--wizard") || null;
-    const scoringBody = shell?.querySelector(".scoring-matrix-inline--wizard > .flex-1") || null;
-    const scoringBlocks = Array.from(shell?.querySelectorAll(".scoring-matrix-inline--wizard > .flex-1 > div") || []).slice(0, 16);
-    const outerScrollElement = getWizardOuterScrollElement();
-    const entry = {
-      sequence: wizardStep24ScrollTraceSequenceRef.current += 1,
-      timestamp: (/* @__PURE__ */ new Date()).toISOString(),
-      eventType,
-      step: {
-        index: currentStep + 1,
-        id: visibleStep.id,
-        title: visibleStep.title,
-        renderCount: wizardStep24RenderCountRef.current
-      },
-      viewport: {
-        width: window.innerWidth,
-        height: window.innerHeight,
-        scrollX: Math.round(window.scrollX || 0),
-        scrollY: Math.round(window.scrollY || 0)
-      },
-      activeElement: summariseWizardTraceTarget(document.activeElement),
-      outerScrollElement: summariseWizardTraceElement(outerScrollElement),
-      wizardShell: summariseWizardTraceElement(shell),
-      answerPanel: summariseWizardTraceElement(wizardAnswerPanelRef.current),
-      scoringMatrix: summariseWizardTraceElement(scoringMatrix),
-      scoringBody: summariseWizardTraceElement(scoringBody),
-      scoringBlocks: scoringBlocks.map((block, index) => ({
-        index,
-        textPreview: String(block.textContent || "").replace(/\s+/g, " ").trim().slice(0, 120),
-        summary: summariseWizardTraceElement(block)
-      })),
-      details
-    };
-    wizardStep24ScrollTraceRef.current = [
-      ...wizardStep24ScrollTraceRef.current.slice(-1499),
-      entry
-    ];
-  }, [currentStep, shouldTraceWizardStep24Scroll, visibleStep.id, visibleStep.title]);
-  const downloadWizardStep24ScrollTrace = reactExports.useCallback(() => {
-    if (typeof window === "undefined") return;
-    pushWizardStep24ScrollTrace("download-requested");
-    const unitLabel = (unitDraft.code || unitCode || "unit").replace(/[^A-Za-z0-9+_-]+/g, "-");
-    const payload = {
-      exportedAt: (/* @__PURE__ */ new Date()).toISOString(),
-      step: {
-        index: currentStep + 1,
-        id: visibleStep.id,
-        title: visibleStep.title
-      },
-      unit: {
-        propUnitCode: unitCode || "",
-        draftUnitCode: unitDraft.code || "",
-        activeUnitCodes: getWizardActiveUnitCodes()
-      },
-      trace: wizardStep24ScrollTraceRef.current
-    };
-    const blob = new Blob([JSON.stringify(payload, null, 2)], { type: "application/json" });
-    const url = window.URL.createObjectURL(blob);
-    const link = document.createElement("a");
-    link.href = url;
-    link.download = `dfp-neo-wizard-step-24-scroll-trace-${unitLabel}-${(/* @__PURE__ */ new Date()).toISOString().replace(/[:.]/g, "-")}.json`;
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    window.URL.revokeObjectURL(url);
-  }, [currentStep, pushWizardStep24ScrollTrace, unitCode, unitDraft.code, visibleStep.id, visibleStep.title]);
   reactExports.useEffect(() => {
     if (typeof window === "undefined") return;
     const resetScroll = () => {
@@ -37534,61 +37042,6 @@ const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, lo
     });
     return () => window.cancelAnimationFrame(animationFrameId);
   }, [currentStep, visibleStep.id]);
-  reactExports.useEffect(() => {
-    if (typeof window === "undefined" || !shouldTraceWizardStep24Scroll) return;
-    wizardStep24RenderCountRef.current += 1;
-    const animationFrameId = window.requestAnimationFrame(() => {
-      pushWizardStep24ScrollTrace("step-24-rendered");
-    });
-    return () => window.cancelAnimationFrame(animationFrameId);
-  }, [pushWizardStep24ScrollTrace, shouldTraceWizardStep24Scroll]);
-  reactExports.useEffect(() => {
-    if (typeof window === "undefined" || !shouldTraceWizardStep24Scroll) return;
-    const outerScrollElement = getWizardOuterScrollElement();
-    const scoringBody = wizardShellRef.current?.querySelector(".scoring-matrix-inline--wizard > .flex-1");
-    let animationFrameId = 0;
-    const scheduleTrace = (eventType, details = {}) => {
-      if (animationFrameId) return;
-      animationFrameId = window.requestAnimationFrame(() => {
-        animationFrameId = 0;
-        pushWizardStep24ScrollTrace(eventType, details);
-      });
-    };
-    const handleOuterScroll = () => scheduleTrace("outer-slideout-scroll");
-    const handleScoringBodyScroll = () => scheduleTrace("scoring-body-scroll");
-    const handleWheel = (event) => scheduleTrace("wheel", {
-      deltaX: Math.round(event.deltaX),
-      deltaY: Math.round(event.deltaY),
-      deltaMode: event.deltaMode,
-      cancelable: event.cancelable,
-      defaultPrevented: event.defaultPrevented,
-      target: summariseWizardTraceTarget(event.target)
-    });
-    const handleResize = () => scheduleTrace("window-resize");
-    const handleVisibilityChange = () => pushWizardStep24ScrollTrace("visibility-change", {
-      visibilityState: document.visibilityState
-    });
-    outerScrollElement?.addEventListener("scroll", handleOuterScroll, { passive: true });
-    outerScrollElement?.addEventListener("wheel", handleWheel, { passive: true });
-    scoringBody?.addEventListener("scroll", handleScoringBodyScroll, { passive: true });
-    scoringBody?.addEventListener("wheel", handleWheel, { passive: true });
-    window.addEventListener("resize", handleResize);
-    document.addEventListener("visibilitychange", handleVisibilityChange);
-    pushWizardStep24ScrollTrace("step-24-scroll-listeners-attached", {
-      hasOuterScrollElement: Boolean(outerScrollElement),
-      hasScoringBody: Boolean(scoringBody)
-    });
-    return () => {
-      if (animationFrameId) window.cancelAnimationFrame(animationFrameId);
-      outerScrollElement?.removeEventListener("scroll", handleOuterScroll);
-      outerScrollElement?.removeEventListener("wheel", handleWheel);
-      scoringBody?.removeEventListener("scroll", handleScoringBodyScroll);
-      scoringBody?.removeEventListener("wheel", handleWheel);
-      window.removeEventListener("resize", handleResize);
-      document.removeEventListener("visibilitychange", handleVisibilityChange);
-      pushWizardStep24ScrollTrace("step-24-scroll-listeners-detached");
-    };
-  }, [pushWizardStep24ScrollTrace, shouldTraceWizardStep24Scroll, visibleStep.id]);
   reactExports.useEffect(() => {
     if (typeof window === "undefined") return;
     const shell = wizardShellRef.current;
@@ -38014,7 +37467,6 @@ const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, lo
       saveWizardDraftSnapshot("Wizard progress saved.", { silent: true });
     } else {
       pushWizardPersistenceTrace("wizard:step-rendered-before-autosave-ready", {
-        unitsTodayDraft,
         parsedUnitsToday: parseWizardUnitRows(unitsTodayDraft)
       });
     }
@@ -38544,13 +37996,9 @@ const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, lo
     const changed = nextDraft.code !== locationDraft.code || nextDraft.iataCode !== locationDraft.iataCode || nextDraft.name !== locationDraft.name || nextDraft.timezone !== locationDraft.timezone || nextDraft.latitude !== locationDraft.latitude || nextDraft.longitude !== locationDraft.longitude;
     if (!changed) return;
     pushWizardLocationScopeTrace("location-detail-auto-resolve-save", {
-      before: locationDraft,
-      after: nextDraft,
       matchedProfile: summariseWizardLocationProfile(profile)
     });
     pushWizardStep6Trace("location-detail-auto-resolve-save", {
-      before: locationDraft,
-      after: nextDraft,
       matchedProfile: summariseWizardLocationProfile(profile)
     });
     setLocationDraft(nextDraft);
@@ -38789,18 +38237,10 @@ const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, lo
     const formattedValue = field === "name" ? value : value.toUpperCase();
     const matchedProfile = findWizardLocationProfile(formattedValue, field);
     pushWizardLocationScopeTrace("locations-today-input", {
-      rowIndex,
-      field,
-      rawValue: value,
-      formattedValue,
       matchedProfile: summariseWizardLocationProfile(matchedProfile),
       kcbmProfile: summariseWizardLocationProfile(findWizardLocationProfile("KCBM", "icao"))
     });
     pushWizardStep6Trace("locations-today-input", {
-      rowIndex,
-      field,
-      rawValue: value,
-      formattedValue,
       matchedProfile: summariseWizardLocationProfile(matchedProfile)
     });
     nextRows[rowIndex] = {
@@ -38816,33 +38256,12 @@ const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, lo
     setLocationsTodayDraft(nextDraft);
     if (matchedProfile) {
       pushWizardLocationScopeTrace("locations-today-matched-save", {
-        rowIndex,
-        field,
-        formattedValue,
-        nextDraft,
         matchedProfile: summariseWizardLocationProfile(matchedProfile)
       });
       pushWizardStep6Trace("locations-today-matched-save", {
-        rowIndex,
-        field,
-        formattedValue,
-        nextDraft,
         matchedProfile: summariseWizardLocationProfile(matchedProfile)
       });
       saveWizardLocationRowsDraft("Location list synced into Settings.", nextDraft);
-    } else {
-      pushWizardLocationScopeTrace("locations-today-unmatched-no-save", {
-        rowIndex,
-        field,
-        formattedValue,
-        nextDraft
-      });
-      pushWizardStep6Trace("locations-today-unmatched-no-save", {
-        rowIndex,
-        field,
-        formattedValue,
-        nextDraft
-      });
     }
   };
   const renderCrewCompositionEditor = (title, value, onChange, addLabel = "Add crew role") => {
@@ -39845,49 +39264,7 @@ const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, lo
               ] })
             ] }),
             /* @__PURE__ */ jsxRuntimeExports.jsx("h4", { className: "mt-1 text-lg font-bold leading-tight text-slate-950", children: visibleStep.title }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-2 text-sm leading-5 text-slate-700", children: question }),
-            shouldTraceWizardStep24Scroll ? /* @__PURE__ */ jsxRuntimeExports.jsx(
-              "button",
-              {
-                type: "button",
-                className: "mt-3 inline-flex items-center rounded-md border border-amber-300 bg-amber-50 px-3 py-1.5 text-xs font-bold text-amber-900 shadow-sm hover:bg-amber-100",
-                onClick: downloadWizardStep24ScrollTrace,
-                onKeyDown: stopEditableKeyPropagation,
-                children: "Download Step 24 Trace"
-              }
-            ) : null,
-            /* @__PURE__ */ jsxRuntimeExports.jsx(
-              "button",
-              {
-                type: "button",
-                className: "mt-3 ml-2 inline-flex items-center rounded-md border border-amber-300 bg-amber-50 px-3 py-1.5 text-xs font-bold text-amber-900 shadow-sm hover:bg-amber-100",
-                onClick: downloadWizardPersistenceTrace,
-                onKeyDown: stopEditableKeyPropagation,
-                children: "Download Wizard Persistence Trace"
-              }
-            ),
-            ["locations-today", "location-code", "location-details"].includes(visibleStep.id) ? /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
-              /* @__PURE__ */ jsxRuntimeExports.jsx(
-                "button",
-                {
-                  type: "button",
-                  className: "mt-3 ml-2 inline-flex items-center rounded-md border border-amber-300 bg-amber-50 px-3 py-1.5 text-xs font-bold text-amber-900 shadow-sm hover:bg-amber-100",
-                  onClick: downloadWizardStep6Trace,
-                  onKeyDown: stopEditableKeyPropagation,
-                  children: "Download Step 6 Trace"
-                }
-              ),
-              /* @__PURE__ */ jsxRuntimeExports.jsx(
-                "button",
-                {
-                  type: "button",
-                  className: "mt-3 ml-2 inline-flex items-center rounded-md border border-amber-300 bg-amber-50 px-3 py-1.5 text-xs font-bold text-amber-900 shadow-sm hover:bg-amber-100",
-                  onClick: downloadWizardLocationScopeTrace,
-                  onKeyDown: stopEditableKeyPropagation,
-                  children: "Download Location Scope Trace"
-                }
-              )
-            ] }) : null
+            /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-2 text-sm leading-5 text-slate-700", children: question })
           ] }),
           /* @__PURE__ */ jsxRuntimeExports.jsxs(
             "div",
@@ -41176,14 +40553,10 @@ const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, lo
       const saveResolvedLocationDraft = (nextDraft, matchedProfile) => {
         updateLocationDraft(nextDraft);
         pushWizardLocationScopeTrace("location-detail-resolved-draft", {
-          nextDraft,
-          matchedProfile: summariseWizardLocationProfile(matchedProfile),
-          willSave: Boolean(matchedProfile)
+          matchedProfile: summariseWizardLocationProfile(matchedProfile)
         });
         pushWizardStep6Trace("location-detail-resolved-draft", {
-          nextDraft,
-          matchedProfile: summariseWizardLocationProfile(matchedProfile),
-          willSave: Boolean(matchedProfile)
+          matchedProfile: summariseWizardLocationProfile(matchedProfile)
         });
         if (matchedProfile) saveLocationDraft(nextDraft, "Location saved into Settings.");
       };
@@ -41193,13 +40566,11 @@ const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, lo
           wizardDataListField("ICAO code", locationDraft.code, (value) => {
             const matchedProfile = findWizardLocationProfile(value, "icao");
             pushWizardLocationScopeTrace("location-detail-icao-input", {
-              rawValue: value,
               formattedValue: value.toUpperCase(),
               matchedProfile: summariseWizardLocationProfile(matchedProfile),
               kcbmProfile: summariseWizardLocationProfile(findWizardLocationProfile("KCBM", "icao"))
             });
             pushWizardStep6Trace("location-detail-icao-input", {
-              rawValue: value,
               formattedValue: value.toUpperCase(),
               matchedProfile: summariseWizardLocationProfile(matchedProfile)
             });
@@ -41209,12 +40580,10 @@ const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, lo
           wizardDataListField("IATA code", locationDraft.iataCode, (value) => {
             const matchedProfile = findWizardLocationProfile(value, "iata");
             pushWizardLocationScopeTrace("location-detail-iata-input", {
-              rawValue: value,
               formattedValue: value.toUpperCase(),
               matchedProfile: summariseWizardLocationProfile(matchedProfile)
             });
             pushWizardStep6Trace("location-detail-iata-input", {
-              rawValue: value,
               formattedValue: value.toUpperCase(),
               matchedProfile: summariseWizardLocationProfile(matchedProfile)
             });
@@ -41224,11 +40593,9 @@ const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, lo
           wizardDataListField("Location name", locationDraft.name, (value) => {
             const matchedProfile = findWizardLocationProfile(value, "name");
             pushWizardLocationScopeTrace("location-detail-name-input", {
-              rawValue: value,
               matchedProfile: summariseWizardLocationProfile(matchedProfile)
             });
             pushWizardStep6Trace("location-detail-name-input", {
-              rawValue: value,
               matchedProfile: summariseWizardLocationProfile(matchedProfile)
             });
             const nextDraft = { ...locationDraft, name: value, code: matchedProfile?.icao || locationDraft.code, iataCode: matchedProfile?.iata || locationDraft.iataCode, timezone: matchedProfile?.timezone || locationDraft.timezone, latitude: matchedProfile?.latitude != null ? String(matchedProfile.latitude) : locationDraft.latitude, longitude: matchedProfile?.longitude != null ? String(matchedProfile.longitude) : locationDraft.longitude };
@@ -41893,16 +41260,6 @@ Classrooms: ${classroomNames.join(", ")}` : ""}`;
         mandatoryChecks.length,
         " mandatory setup areas already complete. You can continue from your last wizard page, or start the guide again from the beginning. Each step syncs into Settings when you click Next."
       ] }),
-      /* @__PURE__ */ jsxRuntimeExports.jsx(
-        "button",
-        {
-          type: "button",
-          className: "mt-4 inline-flex items-center rounded-md border border-amber-300 bg-amber-50 px-3 py-1.5 text-xs font-bold text-amber-900 shadow-sm hover:bg-amber-100",
-          onClick: downloadWizardLocationScopeTrace,
-          onKeyDown: stopEditableKeyPropagation,
-          children: "Download Location Scope Trace"
-        }
-      ),
       /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mt-5 grid gap-3 sm:grid-cols-2", children: [
         /* @__PURE__ */ jsxRuntimeExports.jsxs("button", { type: "button", className: wizardChoiceClass, onClick: resumeWizard, children: [
           /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "block text-base font-bold", children: "Continue setup" }),
@@ -42413,36 +41770,6 @@ const ScheduleView = ({
     onOrganisationSlideoutOpen?.();
     setShowResourceUnderlayPanel(true);
   }, [hasInitialSetupWizardProgress, onOrganisationSlideoutOpen, platformConfig, showInitialSetupBlankState, showResourceUnderlayPanel]);
-  const downloadInitialSetupLocationTrace = reactExports.useCallback(() => {
-    if (typeof window === "undefined") return;
-    let persistedTrace = [];
-    try {
-      const parsed = JSON.parse(window.localStorage.getItem(initialSetupWizardLocationDiagStorageKey) || "[]");
-      persistedTrace = Array.isArray(parsed) ? parsed : [];
-    } catch {
-      persistedTrace = [];
-    }
-    const blob = new Blob([JSON.stringify({
-      exportedAt: (/* @__PURE__ */ new Date()).toISOString(),
-      source: "initial-setup-required-overlay",
-      activeContext: { unitCode, locationCode },
-      storedWizardState: {
-        step: window.localStorage.getItem(initialSetupWizardStorageKey),
-        completedSteps: window.localStorage.getItem(initialSetupWizardCompletedStepsStorageKey),
-        hasOrganisationDraft: Boolean(window.localStorage.getItem(initialSetupWizardOrganisationDraftStorageKey))
-      },
-      persistedTrace
-    }, null, 2)], { type: "application/json" });
-    const url = window.URL.createObjectURL(blob);
-    const link = document.createElement("a");
-    const unitLabel = (unitCode || locationCode || "setup").replace(/[^A-Za-z0-9+_-]+/g, "-");
-    link.href = url;
-    link.download = `dfp-neo-wizard-location-scope-trace-${unitLabel}-${(/* @__PURE__ */ new Date()).toISOString().replace(/[:.]/g, "-")}.json`;
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    window.URL.revokeObjectURL(url);
-  }, [locationCode, unitCode]);
   const shouldShowInitialSetupPrompt = showInitialSetupBlankState && !showResourceUnderlayPanel && !hasInitialSetupWizardProgress();
   const openInitialSetupWizard = reactExports.useCallback(() => {
     onOrganisationSlideoutOpen?.();
@@ -44215,15 +43542,6 @@ const ScheduleView = ({
           onClick: openInitialSetupWizard,
           className: "relative mt-6 rounded-md border border-orange-300 bg-orange-500 px-5 py-2.5 text-sm font-black text-slate-950 shadow-[0_0_22px_rgba(251,146,60,0.32)] transition hover:bg-orange-400",
           children: "Start Initial Setup Wizard"
-        }
-      ),
-      /* @__PURE__ */ jsxRuntimeExports.jsx(
-        "button",
-        {
-          type: "button",
-          onClick: downloadInitialSetupLocationTrace,
-          className: "relative mt-3 rounded-md border border-amber-300/70 bg-slate-900/85 px-4 py-2 text-xs font-black text-amber-100 shadow-[0_0_18px_rgba(251,146,60,0.18)] transition hover:border-amber-200 hover:bg-slate-800",
-          children: "Download Location Scope Trace"
         }
       )
     ] }) }),
