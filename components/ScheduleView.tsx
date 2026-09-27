@@ -11154,7 +11154,17 @@ const InitialSetupWizard: React.FC<{
         }
         if (visibleStep.id === 'resource-counts') {
             return promptShell(
-                <p>Enter how many rows this unit can use on the schedule. These numbers tell NEO what it can place on the flying program.</p>,
+                <>
+                    <p>Enter how many rows this unit can use on the schedule. These numbers tell NEO what it can place on the flying program.</p>
+                    <div className="rounded-lg border border-cyan-200 bg-cyan-50 px-4 py-3 text-sm font-semibold text-slate-700">
+                        <p>
+                            Type a number in each box. For example, <strong>Aircraft = 12</strong> means this unit has 12 aircraft rows on the DFP. <strong>Sim = 2</strong> means it has 2 simulator rows. <strong>Ground Lines = 3</strong> means it can show 3 ground or classroom events at the same time.
+                        </p>
+                        <p className="mt-2 text-xs font-bold uppercase tracking-[0.14em] text-slate-500">
+                            Leave a box blank, or enter 0, if this unit does not use that row type.
+                        </p>
+                    </div>
+                </>,
                 <div className="grid gap-3 md:grid-cols-5">
                     {wizardField('Aircraft', resourceDraft.aircraft, (value) => updateResourceDraft((draft) => ({ ...draft, aircraft: value })))}
                     {wizardField('Sim', resourceDraft.sim, (value) => updateResourceDraft((draft) => ({ ...draft, sim: value })))}

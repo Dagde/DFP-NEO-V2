@@ -40804,7 +40804,21 @@ const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, lo
     }
     if (visibleStep.id === "resource-counts") {
       return promptShell(
-        /* @__PURE__ */ jsxRuntimeExports.jsx("p", { children: "Enter how many rows this unit can use on the schedule. These numbers tell NEO what it can place on the flying program." }),
+        /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsx("p", { children: "Enter how many rows this unit can use on the schedule. These numbers tell NEO what it can place on the flying program." }),
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded-lg border border-cyan-200 bg-cyan-50 px-4 py-3 text-sm font-semibold text-slate-700", children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsxs("p", { children: [
+              "Type a number in each box. For example, ",
+              /* @__PURE__ */ jsxRuntimeExports.jsx("strong", { children: "Aircraft = 12" }),
+              " means this unit has 12 aircraft rows on the DFP. ",
+              /* @__PURE__ */ jsxRuntimeExports.jsx("strong", { children: "Sim = 2" }),
+              " means it has 2 simulator rows. ",
+              /* @__PURE__ */ jsxRuntimeExports.jsx("strong", { children: "Ground Lines = 3" }),
+              " means it can show 3 ground or classroom events at the same time."
+            ] }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-2 text-xs font-bold uppercase tracking-[0.14em] text-slate-500", children: "Leave a box blank, or enter 0, if this unit does not use that row type." })
+          ] })
+        ] }),
         /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid gap-3 md:grid-cols-5", children: [
           wizardField("Aircraft", resourceDraft.aircraft, (value) => updateResourceDraft((draft) => ({ ...draft, aircraft: value }))),
           wizardField("Sim", resourceDraft.sim, (value) => updateResourceDraft((draft) => ({ ...draft, sim: value }))),
