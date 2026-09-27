@@ -2806,7 +2806,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
   const canEdit = hasLegacySettingsAdminRole || hasAnySettingsEditPermission;
   const hasRankTerminologyEditPermission = hasSettingsPermission('settings.rankTerminology.edit') || hasSettingsPermission('settings.edit');
   const canUnlockRankTerminology = canEdit && hasRankTerminologyEditPermission;
-  const canEditRankTerminology = canUnlockRankTerminology && rankTerminologyUnlocked;
+  const canEditRankTerminology = canUnlockRankTerminology && (rankTerminologyUnlocked || wizardEditMode);
   const canEditTrainingReportTemplate = canEdit && !!trainingReportTemplateUnlocked;
   const canEditTrainingReportTemplateSection = (sectionId: string) => canEdit && trainingReportTemplateUnlocked === sectionId;
   const resourcePoolsEditActive = resourcePoolsUnlocked || wizardEditMode;
@@ -2896,7 +2896,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
 
   const saveRankTerminology = async () => {
     const saved = await save(undefined, 'platform-rank-terminology');
-    if (saved) setRankTerminologyUnlocked(false);
+    if (saved && !wizardEditMode) setRankTerminologyUnlocked(false);
   };
 
   const rankTerminologyButtonClass = 'rounded border border-gray-500 bg-gray-300 px-3 py-2 text-[10px] font-semibold uppercase tracking-wide text-gray-900 hover:bg-gray-200 disabled:cursor-not-allowed disabled:opacity-50';
@@ -2905,6 +2905,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
 
   const renderRankTerminologySectionAction = () => {
     if (!canUnlockRankTerminology) return null;
+    if (wizardEditMode) return null;
     return rankTerminologyUnlocked ? (
       <button
         type="button"
@@ -13537,7 +13538,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
             <div className="rounded border border-amber-500/25 bg-amber-500/10 px-3 py-2 text-sm text-amber-50/80">
               Rank, Terminology & Labels is read-only for your permission profile. Grant “Edit rank and terminology settings” in Master Permission Profiles before this section can be edited.
             </div>
-          ) : !rankTerminologyUnlocked ? (
+          ) : !rankTerminologyUnlocked && !wizardEditMode ? (
             <div className="rounded border border-cyan-500/25 bg-cyan-500/10 px-3 py-2 text-sm text-cyan-50/80">
               Rank, Terminology & Labels is locked. Press Edit and confirm your password before changing rank order, terminology or labels.
             </div>

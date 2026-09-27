@@ -20039,7 +20039,7 @@ const PlatformConfigurationSettings = ({
   const canEdit = hasLegacySettingsAdminRole || hasAnySettingsEditPermission;
   const hasRankTerminologyEditPermission = hasSettingsPermission("settings.rankTerminology.edit") || hasSettingsPermission("settings.edit");
   const canUnlockRankTerminology = canEdit && hasRankTerminologyEditPermission;
-  const canEditRankTerminology = canUnlockRankTerminology && rankTerminologyUnlocked;
+  const canEditRankTerminology = canUnlockRankTerminology && (rankTerminologyUnlocked || wizardEditMode);
   const canEditTrainingReportTemplateSection = (sectionId) => canEdit && trainingReportTemplateUnlocked === sectionId;
   const resourcePoolsEditActive = resourcePoolsUnlocked || wizardEditMode;
   const canEditResourcePools = canEdit && resourcePoolsEditActive;
@@ -20120,13 +20120,14 @@ const PlatformConfigurationSettings = ({
   };
   const saveRankTerminology = async () => {
     const saved = await save(void 0, "platform-rank-terminology");
-    if (saved) setRankTerminologyUnlocked(false);
+    if (saved && !wizardEditMode) setRankTerminologyUnlocked(false);
   };
   const rankTerminologyButtonClass = "rounded border border-gray-500 bg-gray-300 px-3 py-2 text-[10px] font-semibold uppercase tracking-wide text-gray-900 hover:bg-gray-200 disabled:cursor-not-allowed disabled:opacity-50";
   const rankTerminologySectionActionButtonClass = "w-[56px] h-[41px] flex items-center justify-center text-center px-1 py-1 text-[10px] font-semibold btn-aluminium-brushed rounded-md disabled:cursor-not-allowed disabled:opacity-50";
   const rankTerminologyDangerButtonClass = "w-full rounded border border-red-500/40 bg-red-500/15 px-3 py-2 text-[10px] font-semibold uppercase tracking-wide text-red-100 hover:bg-red-500/25 disabled:cursor-not-allowed disabled:opacity-40";
   const renderRankTerminologySectionAction = () => {
     if (!canUnlockRankTerminology) return null;
+    if (wizardEditMode) return null;
     return rankTerminologyUnlocked ? /* @__PURE__ */ jsxRuntimeExports.jsx(
       "button",
       {
@@ -29312,7 +29313,7 @@ This removes them from DFP Resource Rows. Press Save in this section to apply th
             }
           ),
           /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-4 p-4", children: [
-            !hasRankTerminologyEditPermission ? /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "rounded border border-amber-500/25 bg-amber-500/10 px-3 py-2 text-sm text-amber-50/80", children: "Rank, Terminology & Labels is read-only for your permission profile. Grant “Edit rank and terminology settings” in Master Permission Profiles before this section can be edited." }) : !rankTerminologyUnlocked ? /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "rounded border border-cyan-500/25 bg-cyan-500/10 px-3 py-2 text-sm text-cyan-50/80", children: "Rank, Terminology & Labels is locked. Press Edit and confirm your password before changing rank order, terminology or labels." }) : null,
+            !hasRankTerminologyEditPermission ? /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "rounded border border-amber-500/25 bg-amber-500/10 px-3 py-2 text-sm text-amber-50/80", children: "Rank, Terminology & Labels is read-only for your permission profile. Grant “Edit rank and terminology settings” in Master Permission Profiles before this section can be edited." }) : !rankTerminologyUnlocked && !wizardEditMode ? /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "rounded border border-cyan-500/25 bg-cyan-500/10 px-3 py-2 text-sm text-cyan-50/80", children: "Rank, Terminology & Labels is locked. Press Edit and confirm your password before changing rank order, terminology or labels." }) : null,
             /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { id: "platform-personnel-terminology", className: "flex flex-wrap items-start justify-between gap-3 rounded-lg border border-gray-700 bg-gray-950/70 p-4", children: [
               /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
                 /* @__PURE__ */ jsxRuntimeExports.jsx("h5", { className: "text-sm font-bold text-cyan-100", children: "Personnel Terminology" }),
