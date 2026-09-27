@@ -1664,6 +1664,15 @@ const parseWizardUnitRows = (value: string): Array<{ code: string; name: string 
     }).filter((row) => row.code || row.name)
 );
 
+type WizardUnitSetupDraft = {
+    code: string;
+    name: string;
+    locationCode: string;
+    unitType: string;
+    operationalModel: string;
+    hasTrainees: boolean;
+};
+
 const parseWizardParentRows = (value: string): Array<{ child: string; parent: string }> => (
     parseWizardLineItems(value).map((line) => {
         const separator = line.includes('=') ? '=' : line.includes('|') ? '|' : '>';
@@ -3649,7 +3658,7 @@ const InitialSetupWizard: React.FC<{
             ? scopedActiveLocations.map((location: any) => `${location.code || ''} | ${location.iataCode || location.settings?.iataCode || ''} | ${location.name || location.code || ''}`).join('\n')
             : formatWizardLocationRows([activeWizardLocationRow]) || 'LOC1 | LOC | Home Location',
     ).length));
-    const [unitDraft, setUnitDraft] = useState({
+    const [unitDraft, setUnitDraft] = useState<WizardUnitSetupDraft>({
         code: String(currentUnit?.code || unitCode || 'UNIT-01'),
         name: String(currentUnit?.name || currentUnit?.code || unitCode || 'Unit'),
         locationCode: String(currentUnit?.locationCode || activeWizardLocationCode || currentLocation?.code || ''),
@@ -3657,6 +3666,7 @@ const InitialSetupWizard: React.FC<{
         operationalModel: String(getUnitOperationalModel(currentUnit || {}) || 'pooled-crew'),
         hasTrainees: currentUnit?.settings?.hasTrainees !== false,
     });
+    const [unitDraftsByCode, setUnitDraftsByCode] = useState<Record<string, WizardUnitSetupDraft>>({});
     const unitDraftDirtyRef = useRef(false);
     const getWizardDefaultLmpAudience = (model?: string | null): LmpAudience => (
         normaliseOperationalModel(model || '') === 'flight_school' ? 'trainee' : 'staff'
@@ -4639,15 +4649,59 @@ const InitialSetupWizard: React.FC<{
     useEffect(() => {
         if (unitDraftDirtyRef.current) return;
         const savedDraft = getSavedWizardObject('unitDraft');
-        setUnitDraft({
+        const savedDraftMap = readPlainWizardObject(getSavedInitialSetupWizardDrafts()?.unitDraftsByCode);
+        const normalisedDraftMap = Object.entries(savedDraftMap).reduce((map, [key, value]) => {
+            const draft = readPlainWizardObject(value);
+            const cleanCode = String(draft.code || key || '').trim().toUpperCase();
+            const cleanKey = normaliseUnitSettingsIdentifier(cleanCode);
+            if (!cleanKey) return map;
+            return {
+                ...map,
+                [cleanKey]: {
+                    code: cleanCode,
+                    name: String(draft.name || cleanCode),
+                    locationCode: String(draft.locationCode || '').trim().toUpperCase(),
+                    unitType: String(draft.unitType || ''),
+                    operationalModel: String(draft.operationalModel || 'pooled-crew'),
+                    hasTrainees: typeof draft.hasTrainees === 'boolean' ? draft.hasTrainees : true,
+                },
+            };
+        }, {} as Record<string, WizardUnitSetupDraft>);
+        const nextUnitDraft = {
             code: String(savedDraft.code || currentUnit?.code || unitCode || 'UNIT-01'),
             name: String(savedDraft.name || currentUnit?.name || currentUnit?.code || unitCode || 'Unit'),
             locationCode: String(savedDraft.locationCode || currentUnit?.locationCode || activeWizardLocationCode || currentLocation?.code || ''),
             unitType: String(savedDraft.unitType || currentUnit?.unitType || unitTypeOptions[0] || ''),
             operationalModel: String(savedDraft.operationalModel || getUnitOperationalModel(currentUnit || {}) || 'pooled-crew'),
             hasTrainees: typeof savedDraft.hasTrainees === 'boolean' ? savedDraft.hasTrainees : currentUnit?.settings?.hasTrainees !== false,
-        });
-    }, [activeWizardLocationCode, activeOrganisation?.settings?.initialSetupWizardDrafts?.unitDraft, activeOrganisation?.settings?.initialSetupWizardDraft?.unitDraft, currentUnit?.code, currentUnit?.name, currentUnit?.locationCode, currentUnit?.unitType, currentUnit?.settings?.operationalModel, currentUnit?.settings?.hasTrainees, unitCode, currentLocation?.code, unitTypeOptions]);
+        };
+        setUnitDraftsByCode(normaliseUnitSettingsIdentifier(nextUnitDraft.code)
+            ? { ...normalisedDraftMap, [normaliseUnitSettingsIdentifier(nextUnitDraft.code)]: nextUnitDraft }
+            : normalisedDraftMap);
+        setUnitDraft(nextUnitDraft);
+    }, [activeWizardLocationCode, activeOrganisation?.settings?.initialSetupWizardDrafts?.unitDraft, activeOrganisation?.settings?.initialSetupWizardDrafts?.unitDraftsByCode, activeOrganisation?.settings?.initialSetupWizardDraft?.unitDraft, currentUnit?.code, currentUnit?.name, currentUnit?.locationCode, currentUnit?.unitType, currentUnit?.settings?.operationalModel, currentUnit?.settings?.hasTrainees, unitCode, currentLocation?.code, unitTypeOptions]);
+
+    useEffect(() => {
+        const unitRows = parseWizardUnitRows(unitsTodayDraft).filter((row) => row.code);
+        if (unitRows.length === 0) return;
+        const currentKey = normaliseUnitSettingsIdentifier(unitDraft.code);
+        const rowKeys = new Set(unitRows.map((row) => normaliseUnitSettingsIdentifier(row.code)));
+        const currentDraftMap = getWizardUnitDraftMapWithCurrent();
+        const nextDraftMap = unitRows.reduce((map, row, index) => {
+            const key = normaliseUnitSettingsIdentifier(row.code);
+            if (!key) return map;
+            return {
+                ...map,
+                [key]: resolveWizardUnitSetupDraft(row, index, currentDraftMap),
+            };
+        }, currentDraftMap);
+        setUnitDraftsByCode(nextDraftMap);
+        if (!currentKey || !rowKeys.has(currentKey)) {
+            const nextDraft = resolveWizardUnitSetupDraft(unitRows[0], 0, nextDraftMap);
+            unitDraftDirtyRef.current = false;
+            setUnitDraft(nextDraft);
+        }
+    }, [unitsTodayDraft, locationsTodayDraft, locationDraft.code, activeWizardLocationCode, currentLocation?.code, JSON.stringify(activeUnits.map((unit: any) => [unit?.code, unit?.name, unit?.locationCode, unit?.unitType, unit?.settings?.operationalModel, unit?.settings?.hasTrainees]))]);
 
     useEffect(() => {
         locationDraftDirtyRef.current = false;
@@ -4758,6 +4812,7 @@ const InitialSetupWizard: React.FC<{
             locationsTodayDraft,
             locationDraft,
             unitDraft,
+            unitDraftsByCode: getWizardUnitDraftMapWithCurrent(),
             resourceDraft,
             crewDraft,
             accessDraft,
@@ -4811,6 +4866,7 @@ const InitialSetupWizard: React.FC<{
                 unitParents: snapshot.unitParentDraft,
                 locationDraft: snapshot.locationDraft,
                 unitDraft: snapshot.unitDraft,
+                unitDraftsByCode: snapshot.unitDraftsByCode,
                 resourceDraft: snapshot.resourceDraft,
                 crewDraft: snapshot.crewDraft,
                 accessDraft: snapshot.accessDraft,
@@ -5177,33 +5233,88 @@ const InitialSetupWizard: React.FC<{
         });
     };
 
+    const getWizardUnitRowsForSetup = () => {
+        const parsedRows = parseWizardUnitRows(unitsTodayDraft).filter((row) => row.code);
+        if (parsedRows.length > 0) return parsedRows;
+        const fallbackCode = String(unitDraft.code || currentUnit?.code || unitCode || '').trim().toUpperCase();
+        return fallbackCode ? [{ code: fallbackCode, name: unitDraft.name || currentUnit?.name || fallbackCode }] : [];
+    };
+
+    const getWizardUnitDraftMapWithCurrent = (currentDraft: WizardUnitSetupDraft = unitDraft) => {
+        const currentKey = normaliseUnitSettingsIdentifier(currentDraft.code);
+        return currentKey
+            ? { ...unitDraftsByCode, [currentKey]: currentDraft }
+            : { ...unitDraftsByCode };
+    };
+
+    const resolveWizardUnitSetupDraft = (
+        row: { code: string; name: string },
+        index = 0,
+        draftMap: Record<string, WizardUnitSetupDraft> = getWizardUnitDraftMapWithCurrent(),
+        fallbackDraft: WizardUnitSetupDraft = unitDraft,
+    ): WizardUnitSetupDraft => {
+        const code = String(row?.code || fallbackDraft.code || currentUnit?.code || unitCode || `UNIT${index + 1}`).trim().toUpperCase();
+        const key = normaliseUnitSettingsIdentifier(code);
+        const mappedDraft = readPlainWizardObject(draftMap[key]) as Partial<WizardUnitSetupDraft>;
+        const existingUnit = activeUnits.find((unit: any) => normaliseUnitSettingsIdentifier(unit?.code) === key);
+        const defaultLocationCode = parseWizardLocationRows(locationsTodayDraft)[0]?.icao || locationDraft.code || activeWizardLocationCode || currentLocation?.code || '';
+        const sourceDraft = key === normaliseUnitSettingsIdentifier(fallbackDraft.code)
+            ? { ...mappedDraft, ...fallbackDraft }
+            : mappedDraft;
+        return {
+            code,
+            name: String(sourceDraft.name || row?.name || existingUnit?.name || code),
+            locationCode: String(sourceDraft.locationCode || existingUnit?.locationCode || defaultLocationCode || '').trim().toUpperCase(),
+            unitType: String(sourceDraft.unitType || existingUnit?.unitType || unitTypeOptions[0] || ''),
+            operationalModel: String(sourceDraft.operationalModel || existingUnit?.settings?.operationalModel || getUnitOperationalModel(existingUnit || {}) || fallbackDraft.operationalModel || 'pooled-crew'),
+            hasTrainees: typeof sourceDraft.hasTrainees === 'boolean'
+                ? sourceDraft.hasTrainees
+                : existingUnit?.settings?.hasTrainees !== false,
+        };
+    };
+
+    const getWizardUnitSetupEntries = (draftOverride: WizardUnitSetupDraft = unitDraft) => {
+        const draftMap = getWizardUnitDraftMapWithCurrent(draftOverride);
+        const rows = getWizardUnitRowsForSetup();
+        return rows.map((row, index) => ({
+            row,
+            draft: resolveWizardUnitSetupDraft(row, index, draftMap, draftOverride),
+        }));
+    };
+
     const saveUnitDraft = () => {
-        const cleanCode = String(unitDraft.code || '').trim().toUpperCase();
-        if (!cleanCode) {
-            setSaveMessage('Enter a unit code before saving.');
+        const unitEntries = getWizardUnitSetupEntries();
+        if (unitEntries.length === 0) {
+            setSaveMessage('Add at least one unit before saving.');
             return;
         }
-        saveWizardConfig('Unit saved into Settings.', (baseConfig) => {
+        saveWizardConfig(unitEntries.length === 1 ? 'Unit saved into Settings.' : 'Units saved into Settings.', (baseConfig) => {
             const units = Array.isArray(baseConfig.units) ? baseConfig.units : [];
-            const nextUnit = {
-                id: currentUnit?.id || createWizardRecordId('unit'),
-                code: cleanCode,
-                name: unitDraft.name || cleanCode,
-                locationCode: unitDraft.locationCode,
-                unitType: unitDraft.unitType || '',
-                status: 'ACTIVE',
-                settings: {
-                    ...(currentUnit?.settings || {}),
-                    operationalModel: unitDraft.operationalModel,
-                    hasTrainees: unitDraft.hasTrainees,
-                },
-            };
-            const exists = units.some((unit: any) => normaliseUnitSettingsIdentifier(unit?.code) === normaliseUnitSettingsIdentifier(cleanCode));
+            let nextUnits = [...units];
+            unitEntries.forEach(({ row, draft }) => {
+                const cleanCode = String(draft.code || row.code || '').trim().toUpperCase();
+                if (!cleanCode) return;
+                const existingIndex = nextUnits.findIndex((unit: any) => normaliseUnitSettingsIdentifier(unit?.code) === normaliseUnitSettingsIdentifier(cleanCode));
+                const existingUnit = existingIndex >= 0 ? nextUnits[existingIndex] : null;
+                const nextUnit = {
+                    ...(existingUnit || { id: createWizardRecordId('unit') }),
+                    code: cleanCode,
+                    name: draft.name || row.name || cleanCode,
+                    locationCode: draft.locationCode,
+                    unitType: draft.unitType || '',
+                    status: existingUnit?.status || 'ACTIVE',
+                    settings: {
+                        ...(existingUnit?.settings || {}),
+                        operationalModel: draft.operationalModel,
+                        hasTrainees: draft.hasTrainees,
+                    },
+                };
+                if (existingIndex >= 0) nextUnits[existingIndex] = nextUnit;
+                else nextUnits.push(nextUnit);
+            });
             return {
                 ...baseConfig,
-                units: exists
-                    ? units.map((unit: any) => normaliseUnitSettingsIdentifier(unit?.code) === normaliseUnitSettingsIdentifier(cleanCode) ? { ...unit, ...nextUnit, settings: { ...(unit.settings || {}), ...nextUnit.settings } } : unit)
-                    : [...units, nextUnit],
+                units: nextUnits,
             };
         });
     };
@@ -5379,22 +5490,24 @@ const InitialSetupWizard: React.FC<{
         saveWizardConfig(message, (baseConfig) => {
             const units = Array.isArray(baseConfig.units) ? baseConfig.units : [];
             const nextUnits = [...units];
+            const draftMap = getWizardUnitDraftMapWithCurrent();
             unitRows.forEach((row) => {
                 const code = String(row.code || '').trim().toUpperCase();
                 if (!code) return;
+                const draft = resolveWizardUnitSetupDraft(row, unitRows.findIndex((unitRow) => normaliseUnitSettingsIdentifier(unitRow.code) === normaliseUnitSettingsIdentifier(code)), draftMap);
                 const existingIndex = nextUnits.findIndex((unit: any) => normaliseUnitSettingsIdentifier(unit?.code) === normaliseUnitSettingsIdentifier(code));
                 const existingUnit = existingIndex >= 0 ? nextUnits[existingIndex] : null;
                 const nextUnit = {
                     ...(existingUnit || { id: createWizardRecordId('unit') }),
                     code,
                     name: row.name || existingUnit?.name || code,
-                    locationCode: existingUnit?.locationCode || defaultLocationCode || unitDraft.locationCode,
-                    unitType: existingUnit?.unitType || unitDraft.unitType,
+                    locationCode: draft.locationCode || existingUnit?.locationCode || defaultLocationCode || unitDraft.locationCode,
+                    unitType: draft.unitType || existingUnit?.unitType || unitDraft.unitType,
                     status: existingUnit?.status || 'ACTIVE',
                     settings: {
                         ...(existingUnit?.settings || {}),
-                        operationalModel: existingUnit?.settings?.operationalModel || unitDraft.operationalModel,
-                        hasTrainees: existingUnit?.settings?.hasTrainees ?? unitDraft.hasTrainees,
+                        operationalModel: draft.operationalModel || existingUnit?.settings?.operationalModel || unitDraft.operationalModel,
+                        hasTrainees: typeof draft.hasTrainees === 'boolean' ? draft.hasTrainees : existingUnit?.settings?.hasTrainees ?? unitDraft.hasTrainees,
                     },
                 };
                 if (existingIndex >= 0) nextUnits[existingIndex] = nextUnit;
@@ -6062,6 +6175,8 @@ const InitialSetupWizard: React.FC<{
             initialSetupWizardDraft: {
                 ...(settings.initialSetupWizardDraft || {}),
                 unitsToday: parseWizardUnitRows(unitsTodayDraft),
+                unitDraft,
+                unitDraftsByCode: getWizardUnitDraftMapWithCurrent(),
                 locationsToday: parseWizardLocationRows(locationsTodayDraft),
                 unitParents: unitParentDraft,
                 crewLabels: crewLabelsDraft,
@@ -6354,9 +6469,9 @@ const InitialSetupWizard: React.FC<{
         },
         {
             id: 'unit-model',
-            title: 'Set up the first unit',
+            title: 'Set up unit details',
             label: 'Unit setup',
-            body: 'Set the unit identity, home location, unit type, and operating model. The operating model controls which scheduling logic applies.',
+            body: 'Select each unit from the unit list, then set its home location, unit type, trainee use, and operating model.',
             checkIds: ['units'],
             category: 'mandatory',
         },
@@ -6911,13 +7026,13 @@ const InitialSetupWizard: React.FC<{
                     && hasMeaningfulWizardText(unitDraft.name, ['Unit'])
                 );
             case 'unit-model':
-                return (
-                    hasMeaningfulWizardText(unitDraft.code, ['UNIT', 'UNIT-01'])
-                    && hasMeaningfulWizardText(unitDraft.name, ['Unit'])
-                    && hasMeaningfulWizardText(unitDraft.locationCode, ['LOC1', 'LOC'])
-                    && hasMeaningfulWizardText(unitDraft.unitType, ['Not set'])
-                    && hasMeaningfulWizardText(unitDraft.operationalModel, ['pooled-crew'])
-                );
+                return getWizardUnitSetupEntries().length > 0 && getWizardUnitSetupEntries().every(({ draft }) => (
+                    hasMeaningfulWizardText(draft.code, ['UNIT', 'UNIT-01'])
+                    && hasMeaningfulWizardText(draft.name, ['Unit'])
+                    && hasMeaningfulWizardText(draft.locationCode, ['LOC1', 'LOC'])
+                    && hasMeaningfulWizardText(draft.unitType, ['Not set'])
+                    && hasMeaningfulWizardText(draft.operationalModel, ['pooled-crew'])
+                ));
             case 'unit-modules': {
                 const rows = parseWizardPipeRows<{ module: string; enabled: string }>(unitModulesDraft, ['module', 'enabled']);
                 return rows.some((row) => (
@@ -7838,7 +7953,36 @@ const InitialSetupWizard: React.FC<{
     }, [visibleStep?.id, locationDraft.code, wizardAirfieldCatalogueProfiles.length]);
     const updateUnitDraft = (updater: React.SetStateAction<typeof unitDraft>) => {
         unitDraftDirtyRef.current = true;
-        setUnitDraft(updater);
+        setUnitDraft((current) => {
+            const next = typeof updater === 'function'
+                ? (updater as (value: WizardUnitSetupDraft) => WizardUnitSetupDraft)(current)
+                : updater;
+            const key = normaliseUnitSettingsIdentifier(next.code || current.code);
+            if (key) {
+                setUnitDraftsByCode((drafts) => ({
+                    ...drafts,
+                    [key]: next,
+                }));
+            }
+            return next;
+        });
+    };
+    const selectWizardUnitSetupDraft = (selectedCode: string) => {
+        const unitRows = getWizardUnitRowsForSetup();
+        const selectedKey = normaliseUnitSettingsIdentifier(selectedCode);
+        const selectedIndex = unitRows.findIndex((row) => normaliseUnitSettingsIdentifier(row.code) === selectedKey);
+        if (selectedIndex < 0) return;
+        const currentKey = normaliseUnitSettingsIdentifier(unitDraft.code);
+        const nextDraftMap = currentKey
+            ? { ...unitDraftsByCode, [currentKey]: unitDraft }
+            : { ...unitDraftsByCode };
+        const nextDraft = resolveWizardUnitSetupDraft(unitRows[selectedIndex], selectedIndex, nextDraftMap);
+        setUnitDraftsByCode({
+            ...nextDraftMap,
+            [selectedKey]: nextDraft,
+        });
+        unitDraftDirtyRef.current = true;
+        setUnitDraft(nextDraft);
     };
     const updateResourceDraft = (updater: React.SetStateAction<typeof resourceDraft>) => {
         resourceDraftDirtyRef.current = true;
@@ -9956,32 +10100,36 @@ const InitialSetupWizard: React.FC<{
                     settings: { iataCode: row.iata || profile?.iata || '' },
                 };
             });
-            const nextUnits = cleanUnits.map((row, index) => ({
-                id: createSetupTestRecordId('unit', row.code || row.name || index + 1),
-                code: row.code || `UNIT${index + 1}`,
-                name: row.name || row.code || `Unit ${index + 1}`,
-                locationCode: index === 0 ? (effectiveUnitDraft.locationCode || primaryLocationCode) : primaryLocationCode,
-                unitType: index === 0 ? effectiveUnitDraft.unitType || '' : '',
-                status: 'ACTIVE',
-                settings: {
-                    operationalModel: effectiveUnitDraft.operationalModel,
-                    hasTrainees: index === 0 ? effectiveUnitDraft.hasTrainees : false,
-                    parentOrganisationPath: unitParentPaths[normaliseUnitSettingsIdentifier(row.code)] || fallbackUnitParentPath,
-                    trainingReportTemplate: trainingReportRow ? {
-                        displayName: trainingReportRow.organisationName || trainingReportRow.genericName || 'Training Report',
-                        grades: {
-                            scaleMin: Number(trainingReportRow.gradeMin) || 0,
-                            scaleMax: Number(trainingReportRow.gradeMax) || 5,
-                            showNumbers: String(trainingReportRow.showNumbers || '').toLowerCase() !== 'no',
-                        },
-                        overallResults: {
-                            passLabel: trainingReportRow.passLabel || 'Satisfactory',
-                            failLabel: trainingReportRow.failLabel || 'Unsatisfactory',
-                        },
-                    } : undefined,
-                    trainingReportPhraseBank,
-                },
-            }));
+            const unitSetupDraftMap = getWizardUnitDraftMapWithCurrent(effectiveUnitDraft);
+            const nextUnits = cleanUnits.map((row, index) => {
+                const draft = resolveWizardUnitSetupDraft(row, index, unitSetupDraftMap, effectiveUnitDraft);
+                return {
+                    id: createSetupTestRecordId('unit', draft.code || row.code || row.name || index + 1),
+                    code: draft.code || row.code || `UNIT${index + 1}`,
+                    name: draft.name || row.name || row.code || `Unit ${index + 1}`,
+                    locationCode: draft.locationCode || primaryLocationCode,
+                    unitType: draft.unitType || '',
+                    status: 'ACTIVE',
+                    settings: {
+                        operationalModel: draft.operationalModel,
+                        hasTrainees: draft.hasTrainees,
+                        parentOrganisationPath: unitParentPaths[normaliseUnitSettingsIdentifier(row.code)] || fallbackUnitParentPath,
+                        trainingReportTemplate: trainingReportRow ? {
+                            displayName: trainingReportRow.organisationName || trainingReportRow.genericName || 'Training Report',
+                            grades: {
+                                scaleMin: Number(trainingReportRow.gradeMin) || 0,
+                                scaleMax: Number(trainingReportRow.gradeMax) || 5,
+                                showNumbers: String(trainingReportRow.showNumbers || '').toLowerCase() !== 'no',
+                            },
+                            overallResults: {
+                                passLabel: trainingReportRow.passLabel || 'Satisfactory',
+                                failLabel: trainingReportRow.failLabel || 'Unsatisfactory',
+                            },
+                        } : undefined,
+                        trainingReportPhraseBank,
+                    },
+                };
+            });
             const modules = parseWizardLineItems(unitModulesDraft).map((line, index) => {
                 const [namePart] = line.split('|').map((part) => part.trim());
                 const code = (namePart || `Module ${index + 1}`).toUpperCase().replace(/[^A-Z0-9]+/g, '_').replace(/^_|_$/g, '');
@@ -10035,6 +10183,7 @@ const InitialSetupWizard: React.FC<{
                     initialSetupWizardDraft: {
                         organisation: organisationDraft,
                         unitsToday: cleanUnits,
+                        unitDraftsByCode: unitSetupDraftMap,
                         locationsToday: cleanLocations,
                         unitParents: unitParentDraft,
                         crewLabels: crewLabelsDraft,
@@ -10217,21 +10366,23 @@ const InitialSetupWizard: React.FC<{
                 });
                 const defaultLocationCode = locationRows[0]?.icao || locationDraft.code;
                 const nextUnits = [...existingUnits];
+                const draftMap = getWizardUnitDraftMapWithCurrent();
                 unitRows.forEach((row) => {
                     const code = row.code;
                     if (!code) return;
+                    const draft = resolveWizardUnitSetupDraft(row, unitRows.findIndex((unitRow) => normaliseUnitSettingsIdentifier(unitRow.code) === normaliseUnitSettingsIdentifier(code)), draftMap);
                     const existingIndex = nextUnits.findIndex((unit: any) => normaliseUnitSettingsIdentifier(unit?.code) === normaliseUnitSettingsIdentifier(code));
                     const nextUnit = {
                         ...(existingIndex >= 0 ? nextUnits[existingIndex] : { id: createWizardRecordId('unit') }),
                         code,
                         name: row.name || code,
-                        locationCode: existingIndex >= 0 ? nextUnits[existingIndex].locationCode || defaultLocationCode : defaultLocationCode,
-                        unitType: existingIndex >= 0 ? nextUnits[existingIndex].unitType || unitDraft.unitType : unitDraft.unitType,
+                        locationCode: draft.locationCode || (existingIndex >= 0 ? nextUnits[existingIndex].locationCode || defaultLocationCode : defaultLocationCode),
+                        unitType: draft.unitType || (existingIndex >= 0 ? nextUnits[existingIndex].unitType || unitDraft.unitType : unitDraft.unitType),
                         status: 'ACTIVE',
                         settings: {
                             ...(existingIndex >= 0 ? nextUnits[existingIndex].settings || {} : {}),
-                            operationalModel: existingIndex >= 0 ? nextUnits[existingIndex].settings?.operationalModel || unitDraft.operationalModel : unitDraft.operationalModel,
-                            hasTrainees: existingIndex >= 0 ? nextUnits[existingIndex].settings?.hasTrainees ?? unitDraft.hasTrainees : unitDraft.hasTrainees,
+                            operationalModel: draft.operationalModel || (existingIndex >= 0 ? nextUnits[existingIndex].settings?.operationalModel || unitDraft.operationalModel : unitDraft.operationalModel),
+                            hasTrainees: typeof draft.hasTrainees === 'boolean' ? draft.hasTrainees : existingIndex >= 0 ? nextUnits[existingIndex].settings?.hasTrainees ?? unitDraft.hasTrainees : unitDraft.hasTrainees,
                         },
                     };
                     if (existingIndex >= 0) nextUnits[existingIndex] = nextUnit;
@@ -10937,10 +11088,49 @@ const InitialSetupWizard: React.FC<{
             );
         }
         if (visibleStep.id === 'unit-model') {
+            const wizardUnitRows = getWizardUnitRowsForSetup();
+            const wizardUnitOptions = wizardUnitRows.map((row) => row.code).filter(Boolean);
+            const currentUnitIndex = Math.max(0, wizardUnitRows.findIndex((row) => normaliseUnitSettingsIdentifier(row.code) === normaliseUnitSettingsIdentifier(unitDraft.code)));
+            const previousUnitCode = wizardUnitRows[currentUnitIndex - 1]?.code || '';
+            const nextUnitCode = wizardUnitRows[currentUnitIndex + 1]?.code || '';
+            const configuredCount = wizardUnitRows.filter((row, index) => {
+                const draft = resolveWizardUnitSetupDraft(row, index, getWizardUnitDraftMapWithCurrent());
+                return draft.locationCode && draft.unitType && draft.operationalModel;
+            }).length;
             return promptShell(
-                <p>Set the identity and operating model for the first unit. The operating model is important because it controls which scheduler logic applies.</p>,
+                <div className="space-y-2">
+                    <p>Select a unit from the units entered in step 8, then set its home location, type, trainee setting and operating model. Repeat for each unit you are setting up.</p>
+                    <div className="flex flex-wrap items-center gap-2 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-xs font-black text-slate-700">
+                        <span>Unit {wizardUnitRows.length > 0 ? currentUnitIndex + 1 : 0} of {wizardUnitRows.length}</span>
+                        <span className="text-slate-400">|</span>
+                        <span>{configuredCount} configured</span>
+                        <div className="ml-auto flex gap-2">
+                            <button
+                                type="button"
+                                className="rounded-md border border-slate-300 bg-white px-3 py-1.5 text-xs font-black text-slate-700 disabled:opacity-40"
+                                disabled={!previousUnitCode}
+                                onClick={() => selectWizardUnitSetupDraft(previousUnitCode)}
+                            >
+                                Previous unit
+                            </button>
+                            <button
+                                type="button"
+                                className="rounded-md border border-slate-300 bg-white px-3 py-1.5 text-xs font-black text-slate-700 disabled:opacity-40"
+                                disabled={!nextUnitCode}
+                                onClick={() => selectWizardUnitSetupDraft(nextUnitCode)}
+                            >
+                                Next unit
+                            </button>
+                        </div>
+                    </div>
+                    {wizardUnitRows.length === 0 ? (
+                        <div className="rounded-lg border border-amber-300 bg-amber-50 px-3 py-2 text-sm font-semibold text-amber-900">
+                            Add at least one unit in step 8 before setting unit details here.
+                        </div>
+                    ) : null}
+                </div>,
                 <div className="grid gap-3 md:grid-cols-2">
-                    {wizardField('Unit code', unitDraft.code, (value) => updateUnitDraft((draft) => ({ ...draft, code: value.toUpperCase() })), undefined, 'UNIT-01')}
+                    {wizardField('Unit code', unitDraft.code, (value) => selectWizardUnitSetupDraft(value), wizardUnitOptions)}
                     {wizardField('Unit name', unitDraft.name, (value) => updateUnitDraft((draft) => ({ ...draft, name: value })), undefined, 'Unit')}
                     {wizardDataListField('Home location', unitDraft.locationCode, (value) => updateUnitDraft((draft) => ({ ...draft, locationCode: value.toUpperCase() })), wizardLocationIcaoOptions, 'LOC1')}
                     {wizardField('Unit type', unitDraft.unitType, (value) => updateUnitDraft((draft) => ({ ...draft, unitType: value })), unitTypeOptions)}
