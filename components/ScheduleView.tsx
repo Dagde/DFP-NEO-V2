@@ -5596,7 +5596,7 @@ const InitialSetupWizard: React.FC<{
             const generatedPoolCode = makeWizardResourcePoolCode(effectivePoolLocationCode, effectivePoolUnitCode, aircraftCode);
             const nextPool = {
                 id: targetPool?.id || createWizardRecordId('pool'),
-                code: targetPool?.code || generatedPoolCode,
+                code: generatedPoolCode,
                 name: poolName,
                 organisationCode: activeOrganisation?.code || organisationDraft.code || 'DEFAULT',
                 locationCode: effectivePoolLocationCode,
@@ -5615,25 +5615,20 @@ const InitialSetupWizard: React.FC<{
                     academicStandardEvents: normaliseAcademicStandardEvents(resourceDraft.academicStandardEvents),
                 },
             };
-            const poolExists = resourcePools.some((pool: any) => (
+            const shouldReplacePool = (pool: any) => (
                 (poolKey && String(pool?.id || pool?.code || '') === String(poolKey))
                 || (targetUnitCode && normaliseUnitSettingsIdentifier(pool?.unitCode) === targetUnitCode && String(pool?.status || 'ACTIVE').toUpperCase() !== 'INACTIVE')
                 || String(pool?.name || '').trim().toUpperCase() === String(nextPool.name || '').trim().toUpperCase()
-            ));
+            );
             return {
                 ...baseConfig,
                 aircraftTypes: aircraftExists
                     ? aircraftTypes.map((aircraft: any) => normaliseUnitSettingsIdentifier(aircraft?.code) === normaliseUnitSettingsIdentifier(aircraftCode) ? { ...aircraft, name: resourceDraft.aircraftName || aircraftCode, status: aircraft.status || 'ACTIVE' } : aircraft)
                     : [...aircraftTypes, { id: createWizardRecordId('aircraft-type'), code: aircraftCode, name: resourceDraft.aircraftName || aircraftCode, category: 'Other', status: 'ACTIVE', crewComposition: normaliseAircraftCrewComposition(null) }],
-                resourcePools: poolExists
-                    ? resourcePools.map((pool: any) => (
-                        (poolKey && String(pool?.id || pool?.code || '') === String(poolKey))
-                        || (targetUnitCode && normaliseUnitSettingsIdentifier(pool?.unitCode) === targetUnitCode && String(pool?.status || 'ACTIVE').toUpperCase() !== 'INACTIVE')
-                        || String(pool?.name || '').trim().toUpperCase() === String(nextPool.name || '').trim().toUpperCase()
-                            ? { ...pool, ...nextPool, settings: { ...(pool.settings || {}), ...nextPool.settings } }
-                            : pool
-                    ))
-                    : [...resourcePools, nextPool],
+                resourcePools: [
+                    ...resourcePools.filter((pool: any) => !shouldReplacePool(pool)),
+                    nextPool,
+                ],
             };
         });
     };
@@ -10470,14 +10465,204 @@ const InitialSetupWizard: React.FC<{
         );
     };
 
-    const saveAllWizardDrafts = () => {
+    const getResolvedWizardTraineeRowsForCommit = () => {
+        const displayedRows = parseWizardTraineeRows(traineeDraft);
+        return displayedRows.length > 0
+            ? displayedRows.map((row, index) => ({
+                ...(uploadedTraineeProfileRows[index] || {}),
+                ...row,
+            }))
+            : uploadedTraineeProfileRows;
+    };
+
+    const getWizardPersonnelForCommit = (
+        overrides: { staffDraft?: string; traineeDraft?: string; unitDraft?: typeof unitDraft; staffRows?: any[]; traineeRows?: any[] } = {},
+    ) => {
+        const effectiveUnitDraft = overrides.unitDraft ?? unitDraft;
+        const unitRows = parseWizardUnitRows(unitsTodayDraft);
+        const cleanUnits = (unitRows.length > 0 ? unitRows : [{
+            code: effectiveUnitDraft.code || unitCode || 'UNIT',
+            name: effectiveUnitDraft.name || effectiveUnitDraft.code || unitCode || 'Unit',
+        }]).filter((row) => row.code || row.name);
+        return buildSetupTestPersonnel(cleanUnits, overrides);
+    };
+
+    const requestWizardApiJson = async (path: string, options: RequestInit = {}) => {
+        const headers = new Headers(options.headers || {});
+        if (options.body && !headers.has('Content-Type') && !(options.body instanceof FormData)) {
+            headers.set('Content-Type', 'application/json');
+        }
+        const response = await fetch(path, {
+            credentials: 'include',
+            ...options,
+            headers,
+        });
+        const responseText = await response.text();
+        let payload: any = null;
+        if (responseText) {
+            try {
+                payload = JSON.parse(responseText);
+            } catch {
+                payload = { message: responseText };
+            }
+        }
+        if (!response.ok) {
+            const message = payload?.message || payload?.error || payload?.details || response.statusText || `HTTP ${response.status}`;
+            throw new Error(String(message));
+        }
+        return payload || {};
+    };
+
+    const persistWizardStaffProfilesToDatabase = async (
+        overrides: { staffDraft?: string; staffRows?: any[] } = {},
+    ) => {
+        const { instructors } = getWizardPersonnelForCommit(overrides);
+        const staffToPersist = instructors.filter((person: any) => (
+            String(person?.name || '').trim()
+            && Number(person?.idNumber) > 0
+        ));
+        if (staffToPersist.length === 0) return 0;
+        const existingPayload = await requestWizardApiJson('/api/personnel');
+        const existingByPersonnelId = new Map(
+            (Array.isArray(existingPayload.personnel) ? existingPayload.personnel : [])
+                .filter((person: any) => Number(person?.idNumber) > 0)
+                .map((person: any) => [String(Number(person.idNumber)), person]),
+        );
+        for (const person of staffToPersist) {
+            const existing = existingByPersonnelId.get(String(Number(person.idNumber)));
+            const payload = {
+                name: person.name,
+                rank: person.rank,
+                role: person.role,
+                category: person.category,
+                unit: person.unit,
+                flight: person.flight,
+                location: person.location,
+                idNumber: Number(person.idNumber),
+                callsignNumber: person.callsignNumber,
+                email: person.email,
+                phoneNumber: person.phoneNumber,
+                seatConfig: person.seatConfig,
+                service: person.service,
+                qualifications: person.qualifications,
+                isQFI: person.isQFI === true,
+                isOFI: person.isOFI === true,
+                isCFI: person.isCFI === true,
+                isIRE: person.isIRE === true,
+                isFlyingSupervisor: person.isFlyingSupervisor === true,
+                isTestingOfficer: person.isTestingOfficer === true,
+                isExecutive: person.isExecutive === true,
+                isCommandingOfficer: person.isCommandingOfficer === true,
+                isContractor: person.isContractor === true,
+                isAdminStaff: person.isAdminStaff === true,
+                preferences: {
+                    callsign: person.callsign || null,
+                    secondaryCallsign: person.secondaryCallsign || null,
+                    crew: person.crew || null,
+                },
+                permissions: Array.isArray(person.permissions) ? person.permissions : [],
+                unavailability: Array.isArray(person.unavailability) ? person.unavailability : [],
+            };
+            if (existing?.id) {
+                await requestWizardApiJson(`/api/personnel/${encodeURIComponent(String(existing.id))}`, {
+                    method: 'PATCH',
+                    body: JSON.stringify(payload),
+                });
+            } else {
+                await requestWizardApiJson('/api/personnel', {
+                    method: 'POST',
+                    body: JSON.stringify(payload),
+                });
+            }
+        }
+        return staffToPersist.length;
+    };
+
+    const persistWizardTraineeProfilesToDatabase = async (
+        traineeRows: any[] = getResolvedWizardTraineeRowsForCommit(),
+        effectiveUnitDraft: typeof unitDraft = unitDraft,
+    ) => {
+        const { trainees } = getWizardPersonnelForCommit({
+            traineeRows,
+            unitDraft: effectiveUnitDraft,
+        });
+        const traineesToPersist = trainees.filter((person: any) => (
+            String(person?.name || person?.fullName || '').trim()
+            && Number(person?.idNumber) > 0
+        ));
+        if (traineesToPersist.length === 0) return 0;
+        const payload = traineesToPersist.map((person: any) => ({
+            idNumber: Number(person.idNumber),
+            name: person.name || person.fullName,
+            fullName: person.fullName || person.name,
+            rank: person.rank,
+            role: person.role || 'Trainee',
+            course: person.course,
+            lmpType: person.lmpType,
+            unit: person.unit,
+            flight: person.flight || '',
+            location: person.location,
+            service: person.service || null,
+            seatConfig: person.seatConfig || 'ANY',
+            isPaused: person.isPaused === true,
+            email: person.email || '',
+            phoneNumber: person.phoneNumber || '',
+            unavailability: Array.isArray(person.unavailability) ? person.unavailability : [],
+        }));
+        const result = await requestWizardApiJson('/api/trainees/bulk', {
+            method: 'POST',
+            body: JSON.stringify({
+                trainees: payload,
+                replaceAll: false,
+            }),
+        });
+        if (Number(result.skipped || 0) > 0) {
+            const skipped = Array.isArray(result.results)
+                ? result.results.filter((row: any) => row.action === 'skipped' || row.action === 'error')
+                : [];
+            const sample = skipped.slice(0, 3).map((row: any) => row.error || row.name || row.idNumber).filter(Boolean).join('; ');
+            throw new Error(`${result.skipped} trainee profile${Number(result.skipped) === 1 ? '' : 's'} could not be committed${sample ? `: ${sample}` : ''}`);
+        }
+        return traineesToPersist.length;
+    };
+
+    const persistWizardLmpEventsToDatabase = async (items: any[], lmpCode: string) => {
+        if (items.length === 0) return 0;
+        const existingPayload = await requestWizardApiJson(`/api/syllabus?course=${encodeURIComponent(lmpCode)}&includeInactive=true`);
+        const existingByCode = new Map(
+            (Array.isArray(existingPayload.syllabus) ? existingPayload.syllabus : [])
+                .map((item: any) => [normaliseUnitSettingsIdentifier(item?.code), item]),
+        );
+        for (const item of items) {
+            const codeKey = normaliseUnitSettingsIdentifier(item?.code);
+            const existing = existingByCode.get(codeKey);
+            const payload = {
+                ...item,
+                isActive: true,
+            };
+            if (existing?.id || existing?.code) {
+                await requestWizardApiJson(`/api/syllabus/${encodeURIComponent(String(existing.id || existing.code))}`, {
+                    method: 'PUT',
+                    body: JSON.stringify(payload),
+                });
+            } else {
+                await requestWizardApiJson('/api/syllabus', {
+                    method: 'POST',
+                    body: JSON.stringify(payload),
+                });
+            }
+        }
+        return items.length;
+    };
+
+    const saveAllWizardDrafts = async () => {
         if (isSetupTestMode) {
             const completedAt = new Date().toISOString();
             const shouldCommitStagedLmpEvents = !lmpEventsCommitted && (
                 uploadedCourseLmpItems.length > 0 || uploadResults.courses?.status === 'valid'
             );
             if (shouldCommitStagedLmpEvents) {
-                commitWizardCourseLmpEvents();
+                await commitWizardCourseLmpEvents();
             }
             saveSetupTestWizardDrafts(true);
             const allStepIds = steps.map((step) => step.id);
@@ -10559,6 +10744,14 @@ const InitialSetupWizard: React.FC<{
         saveTrainingDraft();
         saveBuildRulesDraft();
         saveCurrencyProfilesDraft();
+        await persistWizardStaffProfilesToDatabase({
+            staffRows: uploadedStaffProfileRows.length > 0 ? uploadedStaffProfileRows : undefined,
+        });
+        const rowsToCommit = getResolvedWizardTraineeRowsForCommit();
+        await persistWizardTraineeProfilesToDatabase(rowsToCommit, { ...unitDraft, hasTrainees: true });
+        if (uploadedCourseLmpItems.length > 0 || uploadResults.courses?.status === 'valid') {
+            await commitWizardCourseLmpEvents();
+        }
         saveWizardConfig('Setup saved into Settings.', (baseConfig) => updatePrimaryOrganisationWithSettings(baseConfig, (settings) => ({
             ...settings,
             initialSetupWizardCompletedAt: completedAt,
@@ -10597,13 +10790,13 @@ const InitialSetupWizard: React.FC<{
         }
         setSaveMessage('Setup saved into Settings.');
     };
-    const finishWizardReview = () => {
+    const finishWizardReview = async () => {
         if (wizardFinishInProgress) return;
         setWizardFinishInProgress(true);
         setWizardReviewComplete(false);
         setSaveMessage('Finishing setup review...');
         try {
-            saveAllWizardDrafts();
+            await saveAllWizardDrafts();
             window.setTimeout(() => {
                 setWizardFinishInProgress(false);
                 setWizardReviewComplete(true);
@@ -10616,31 +10809,41 @@ const InitialSetupWizard: React.FC<{
             setSaveMessage(`Setup review could not be completed: ${errorMessage}`);
         }
     };
-    const commitWizardStaffProfiles = () => {
+    const commitWizardStaffProfiles = async () => {
         const staffRows = uploadedStaffProfileRows.length > 0 ? uploadedStaffProfileRows : undefined;
         const staffCount = (staffRows || parseWizardStaffRows(staffDraft)).filter((row) => (
             row.surname || row.givenNames || row.unit || row.position || row.personnelId || row.qualifications
         )).length;
-        saveSetupTestWizardDrafts(false, { staffDraft, staffRows });
-        const message = `Committed ${staffCount} staff profile${staffCount === 1 ? '' : 's'} to Staff Profiles in this setup.`;
-        setImportConfirmations((current) => ({ ...current, staff: message }));
-        setStaffProfilesCommitted(true);
-        setStaffCommitSummary(message);
-        setSaveMessage(message);
+        setStaffProfilesCommitted(false);
+        setStaffCommitSummary('Committing staff profiles...');
+        setSaveMessage('Committing staff profiles...');
+        try {
+            if (isSetupTestMode || isSetupTestBrowserMode()) {
+                saveSetupTestWizardDrafts(false, { staffDraft, staffRows });
+            } else {
+                await persistWizardStaffProfilesToDatabase({ staffDraft, staffRows });
+            }
+            const message = `Committed ${staffCount} staff profile${staffCount === 1 ? '' : 's'} to Staff Profiles.`;
+            setImportConfirmations((current) => ({ ...current, staff: message }));
+            setStaffProfilesCommitted(true);
+            setStaffCommitSummary(message);
+            setSaveMessage(message);
+        } catch (error) {
+            const errorMessage = error instanceof Error ? error.message : String(error);
+            const message = `Staff profile commit failed: ${errorMessage}`;
+            setImportConfirmations((current) => ({ ...current, staff: message }));
+            setStaffProfilesCommitted(false);
+            setStaffCommitSummary(message);
+            setSaveMessage(message);
+        }
     };
-    const commitWizardTraineeProfiles = () => {
+    const commitWizardTraineeProfiles = async () => {
         if (traineeCommitInProgress) return;
         setTraineeCommitInProgress(true);
         setTraineeAllocationCommitted(false);
         setTraineeCommitSummary('Committing trainee profiles...');
         setSaveMessage('Committing trainee profiles...');
-        const displayedRows = parseWizardTraineeRows(traineeDraft);
-        const rowsToCommit = displayedRows.length > 0
-            ? displayedRows.map((row, index) => ({
-                ...(uploadedTraineeProfileRows[index] || {}),
-                ...row,
-            }))
-            : uploadedTraineeProfileRows;
+        const rowsToCommit = getResolvedWizardTraineeRowsForCommit();
         const courseOptions = parseWizardLineItems(traineeCourseOptionsDraft);
         const validCourses = new Set(courseOptions.map((course) => course.toUpperCase()));
         const missingCourseCount = rowsToCommit.filter((row) => (
@@ -10668,9 +10871,13 @@ const InitialSetupWizard: React.FC<{
         setUploadedTraineeProfileRows(rowsToCommit);
         setTraineeAllocationCommitted(true);
         setShowMoreTraineesPrompt(false);
-        const message = `Committed ${traineeCount} trainee profile${traineeCount === 1 ? '' : 's'} to the trainee list in this setup.`;
+        const message = `Committed ${traineeCount} trainee profile${traineeCount === 1 ? '' : 's'} to Trainee Profiles.`;
         try {
-            saveSetupTestWizardDrafts(false, { traineeDraft: nextTraineeDraft, traineeRows: rowsToCommit, unitDraft: nextUnitDraft });
+            if (isSetupTestMode || isSetupTestBrowserMode()) {
+                saveSetupTestWizardDrafts(false, { traineeDraft: nextTraineeDraft, traineeRows: rowsToCommit, unitDraft: nextUnitDraft });
+            } else {
+                await persistWizardTraineeProfilesToDatabase(rowsToCommit, nextUnitDraft);
+            }
         } catch (error) {
             const errorMessage = error instanceof Error ? error.message : String(error);
             const message = `Trainee profile commit failed before it could finish: ${errorMessage}`;
@@ -10689,7 +10896,7 @@ const InitialSetupWizard: React.FC<{
             setSaveMessage(message);
         }, 450);
     };
-    const commitWizardCourseLmpEvents = () => {
+    const commitWizardCourseLmpEvents = async () => {
         if (lmpCommitInProgress) return;
         setLmpCommitInProgress(true);
         setLmpEventsCommitted(false);
@@ -11037,6 +11244,15 @@ const InitialSetupWizard: React.FC<{
             });
         }
         const message = `Committed ${scopedItems.length} LMP event${scopedItems.length === 1 ? '' : 's'} for ${cleanLmpCode} to this setup.`;
+        if (!(isSetupTestMode || isSetupTestBrowserMode())) {
+            await persistWizardLmpEventsToDatabase(scopedItems, cleanLmpCode);
+            try {
+                window.localStorage.setItem('neo_lmp_details_active_tab', 'master');
+                window.localStorage.setItem('neo_lmp_details_selected_package', cleanLmpCode);
+            } catch {
+                // Local selection persistence is helpful only; the database commit has already succeeded.
+            }
+        }
         window.setTimeout(() => {
             setImportConfirmations((current) => ({ ...current, courses: message }));
             setLmpCommitInProgress(false);

@@ -54076,6 +54076,23 @@ appliedUpdates.forEach(update => {
                            canEditTileAircraftNumber={canEditTileAircraftNumber && !isViewingPastDfp}
                            onLinkedAvailabilityChange={handleLinkedAircraftAvailabilityChange}
                            onInitialSetupWizardActiveChange={setIsInitialSetupWizardActive}
+                           onInitialSetupWizardFinished={async () => {
+                               setIsInitialSetupWizardActive(false);
+                               setShowDfpSidePanel(false);
+                               setShowFlightLinePanel(false);
+                               await handleDatabaseDataChanged();
+                               clearSyllabusCache();
+                               try {
+                                   const result = await loadSyllabusFromDB();
+                                   setSyllabusDetails(result.syllabus || []);
+                                   setSyllabusError(result.error || null);
+                               } catch (error) {
+                                   const message = error instanceof Error ? error.message : 'Failed to refresh syllabus after setup review';
+                                   setSyllabusError(message);
+                               }
+                               setProgramScheduleViewKey(value => value + 1);
+                               navigateToView('Program Schedule');
+                           }}
                            serviceDefinitions={serviceDefinitions}
                            onUpdateServiceDefinitions={setServiceDefinitions}
                            formationCallsigns={formationCallsigns}
