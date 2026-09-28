@@ -32485,6 +32485,7 @@ const initialSetupWizardOrganisationDraftStorageKey = "dfp-initial-setup-wizard-
 const initialSetupWizardDraftSnapshotStorageKey = "dfp-initial-setup-wizard-draft-snapshot";
 const initialSetupWizardCompletedStepsStorageKey = "dfp-initial-setup-wizard-completed-steps";
 const initialSetupWizardCompletedAtStorageKey = "dfp-initial-setup-wizard-completed-at";
+const WIZARD_SYLLABUS_COURSE_SHELL_NOTE = "[DFP_COURSE_SHELL]";
 const MAX_INITIAL_SETUP_ORGANISATION_LEVELS = 12;
 const createWizardRecordId = (prefix) => `${prefix}-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
 const createSetupTestRecordId = (prefix, key = "") => {
@@ -32905,6 +32906,15 @@ const formatWizardStaffRows = (rows) => rows.filter((row) => row.surname || row.
   const name = surname && givenNames ? `${surname}, ${givenNames}` : surname || givenNames;
   return [name, String(row.unit || ""), String(row.position || ""), String(row.personnelId || ""), String(row.qualifications || "")].join("|");
 }).join("\n");
+const normaliseWizardPersonnelId = (row) => {
+  const value = row?.personnelId ?? row?.idNumber ?? row?.personnelID ?? row?.["Personnel ID"] ?? row?.serviceNumber ?? "";
+  const numeric = Number(String(value || "").trim());
+  return Number.isFinite(numeric) && numeric > 0 ? numeric : 0;
+};
+const getWizardRowName = (row) => String(row?.name || row?.fullName || [row?.surname, row?.givenNames].filter(Boolean).join(", ") || row?.givenNames || row?.surname || "").trim();
+const isDefaultWizardStaffPlaceholder = (row) => /^surname,\s*first$/i.test(getWizardRowName(row)) && /^unit-?01$/i.test(String(row?.unit || "").trim()) && /^pilot$/i.test(String(row?.position || row?.role || "").trim()) && /^qualification$/i.test(String(row?.qualifications || "").trim()) && !normaliseWizardPersonnelId(row);
+const isMeaningfulWizardStaffRow = (row) => !isDefaultWizardStaffPlaceholder(row) && Boolean(getWizardRowName(row) || row?.unit || row?.position || row?.role || row?.personnelId || row?.idNumber || row?.qualifications);
+const isMeaningfulWizardTraineeRow = (row) => Boolean(getWizardRowName(row) || row?.unit || row?.rank || row?.personnelId || row?.idNumber || row?.courseNumber || row?.course || row?.masterLmp || row?.startDate);
 const parseWizardTraineeRows = (value) => String(value || "").split(/\n/).map((line) => {
   const parts = line.split("|").map((part, index) => index === 0 ? part : part.replace(/^\s/, ""));
   const namePart = parts[0] || "";
@@ -33993,6 +34003,7 @@ const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, lo
   const [lmpCommitSummary, setLmpCommitSummary] = reactExports.useState("");
   const [wizardFinishInProgress, setWizardFinishInProgress] = reactExports.useState(false);
   const [wizardReviewComplete, setWizardReviewComplete] = reactExports.useState(false);
+  const wizardReviewAutoReturnScheduledRef = reactExports.useRef(false);
   const wizardFinishTraceStorageKey = "dfp_setup_wizard_finish_trace";
   const [wizardFinishTrace, setWizardFinishTrace] = reactExports.useState(() => {
     if (typeof window === "undefined") return [];
@@ -34281,7 +34292,12 @@ const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, lo
     setSaveMessage("Step 41 finish trace downloaded.");
   };
   reactExports.useEffect(() => {
-    if (!wizardReviewComplete) return;
+    if (!wizardReviewComplete) {
+      wizardReviewAutoReturnScheduledRef.current = false;
+      return;
+    }
+    if (wizardReviewAutoReturnScheduledRef.current) return;
+    wizardReviewAutoReturnScheduledRef.current = true;
     pushWizardPersistenceTrace("auto-return:scheduled", { delayMs: 5e3 });
     const timer = window.setTimeout(() => {
       const run = async () => {
@@ -34690,19 +34706,26 @@ const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, lo
   const getWizardDefaultLmpAudience = (model) => normaliseOperationalModel(model || "") === "flight_school" ? "trainee" : "staff";
   const defaultWizardLmpAudience = getWizardDefaultLmpAudience(unitDraft.operationalModel || getUnitOperationalModel(currentUnit || {}));
   const resolveWizardLmpAudience = (value) => normaliseLmpAudience(value) || defaultWizardLmpAudience;
+  const initialWizardSetupCompleted = Boolean(activeOrganisation?.settings?.initialSetupWizardCompletedAt) || (() => {
+    try {
+      return typeof window !== "undefined" && Boolean(window.localStorage.getItem("dfp-initial-setup-wizard-completed-at"));
+    } catch {
+      return false;
+    }
+  })();
   const [resourceDraft, setResourceDraft] = reactExports.useState({
-    aircraftCode: String(primaryAircraftType?.code || primaryResourcePool?.aircraftTypeCode || ""),
-    aircraftName: String(primaryAircraftType?.name || primaryAircraftType?.code || primaryResourcePool?.aircraftTypeCode || ""),
-    poolName: String(primaryResourcePool?.name || ""),
-    poolUnitCode: String(primaryResourcePool?.unitCode || currentUnit?.code || ""),
-    poolLocationCode: String(primaryResourcePool?.locationCode || currentUnit?.locationCode || currentLocation?.code || ""),
-    aircraft: String(primaryResourcePool?.settings?.aircraft ?? primaryResourcePool?.aircraft ?? ""),
-    sim: String(primaryResourcePool?.settings?.ftd ?? primaryResourcePool?.settings?.sim ?? primaryResourcePool?.ftd ?? primaryResourcePool?.sim ?? ""),
-    trainer: String(primaryResourcePool?.settings?.cpt ?? primaryResourcePool?.settings?.trainer ?? primaryResourcePool?.cpt ?? primaryResourcePool?.trainer ?? ""),
-    standby: String(primaryResourcePool?.settings?.standby ?? primaryResourcePool?.standby ?? ""),
-    ground: String(primaryResourcePool?.settings?.ground ?? primaryResourcePool?.ground ?? ""),
-    classrooms: formatClassroomNames(primaryResourcePool?.settings?.classrooms ?? primaryResourcePool?.settings?.classroomNames),
-    academicStandardEvents: normaliseAcademicStandardEvents(primaryResourcePool?.settings?.academicStandardEvents)
+    aircraftCode: String(initialWizardSetupCompleted ? primaryAircraftType?.code || primaryResourcePool?.aircraftTypeCode || "" : ""),
+    aircraftName: String(initialWizardSetupCompleted ? primaryAircraftType?.name || primaryAircraftType?.code || primaryResourcePool?.aircraftTypeCode || "" : ""),
+    poolName: String(initialWizardSetupCompleted ? primaryResourcePool?.name || "" : ""),
+    poolUnitCode: String((initialWizardSetupCompleted ? primaryResourcePool?.unitCode : "") || currentUnit?.code || ""),
+    poolLocationCode: String((initialWizardSetupCompleted ? primaryResourcePool?.locationCode : "") || currentUnit?.locationCode || currentLocation?.code || ""),
+    aircraft: String(initialWizardSetupCompleted ? primaryResourcePool?.settings?.aircraft ?? primaryResourcePool?.aircraft ?? "" : ""),
+    sim: String(initialWizardSetupCompleted ? primaryResourcePool?.settings?.ftd ?? primaryResourcePool?.settings?.sim ?? primaryResourcePool?.ftd ?? primaryResourcePool?.sim ?? "" : ""),
+    trainer: String(initialWizardSetupCompleted ? primaryResourcePool?.settings?.cpt ?? primaryResourcePool?.settings?.trainer ?? primaryResourcePool?.cpt ?? primaryResourcePool?.trainer ?? "" : ""),
+    standby: String(initialWizardSetupCompleted ? primaryResourcePool?.settings?.standby ?? primaryResourcePool?.standby ?? "" : ""),
+    ground: String(initialWizardSetupCompleted ? primaryResourcePool?.settings?.ground ?? primaryResourcePool?.ground ?? "" : ""),
+    classrooms: initialWizardSetupCompleted ? formatClassroomNames(primaryResourcePool?.settings?.classrooms ?? primaryResourcePool?.settings?.classroomNames) : "",
+    academicStandardEvents: initialWizardSetupCompleted ? normaliseAcademicStandardEvents(primaryResourcePool?.settings?.academicStandardEvents) : ""
   });
   const [crewDraft, setCrewDraft] = reactExports.useState({
     aircraftCode: String(primaryAircraftType?.code || resourceDraft.aircraftCode || ""),
@@ -35604,23 +35627,32 @@ const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, lo
     if (resourceDraftDirtyRef.current || crewDraftDirtyRef.current) return;
     const savedResourceDraft = getSavedWizardObject("resourceDraft");
     const savedCrewDraft = getSavedWizardObject("crewDraft");
+    const hasSavedResourceDraft = Object.keys(savedResourceDraft).length > 0;
+    const setupCompleted = Boolean(activeOrganisation?.settings?.initialSetupWizardCompletedAt) || (() => {
+      try {
+        return Boolean(window.localStorage.getItem(initialSetupWizardCompletedAtStorageKey));
+      } catch {
+        return false;
+      }
+    })();
+    const useOperationalResourceFallback = hasSavedResourceDraft || setupCompleted;
     setResourceDraft({
-      aircraftCode: String(savedResourceDraft.aircraftCode || primaryAircraftType?.code || primaryResourcePool?.aircraftTypeCode || ""),
-      aircraftName: String(savedResourceDraft.aircraftName || primaryAircraftType?.name || primaryAircraftType?.code || primaryResourcePool?.aircraftTypeCode || ""),
-      poolName: String(savedResourceDraft.poolName || primaryResourcePool?.name || ""),
-      poolUnitCode: String(savedResourceDraft.poolUnitCode || primaryResourcePool?.unitCode || currentUnit?.code || ""),
-      poolLocationCode: String(savedResourceDraft.poolLocationCode || primaryResourcePool?.locationCode || currentUnit?.locationCode || currentLocation?.code || ""),
-      aircraft: String(savedResourceDraft.aircraft ?? primaryResourcePool?.settings?.aircraft ?? primaryResourcePool?.aircraft ?? ""),
-      sim: String(savedResourceDraft.sim ?? primaryResourcePool?.settings?.ftd ?? primaryResourcePool?.settings?.sim ?? primaryResourcePool?.ftd ?? primaryResourcePool?.sim ?? ""),
-      trainer: String(savedResourceDraft.trainer ?? primaryResourcePool?.settings?.cpt ?? primaryResourcePool?.settings?.trainer ?? primaryResourcePool?.cpt ?? primaryResourcePool?.trainer ?? ""),
-      standby: String(savedResourceDraft.standby ?? primaryResourcePool?.settings?.standby ?? primaryResourcePool?.standby ?? ""),
-      ground: String(savedResourceDraft.ground ?? primaryResourcePool?.settings?.ground ?? primaryResourcePool?.ground ?? ""),
-      classrooms: String(savedResourceDraft.classrooms ?? formatClassroomNames(primaryResourcePool?.settings?.classrooms ?? primaryResourcePool?.settings?.classroomNames)),
-      academicStandardEvents: String(savedResourceDraft.academicStandardEvents ?? normaliseAcademicStandardEvents(primaryResourcePool?.settings?.academicStandardEvents))
+      aircraftCode: String(savedResourceDraft.aircraftCode || (useOperationalResourceFallback ? primaryAircraftType?.code || primaryResourcePool?.aircraftTypeCode : "") || ""),
+      aircraftName: String(savedResourceDraft.aircraftName || (useOperationalResourceFallback ? primaryAircraftType?.name || primaryAircraftType?.code || primaryResourcePool?.aircraftTypeCode : "") || ""),
+      poolName: String(savedResourceDraft.poolName || (useOperationalResourceFallback ? primaryResourcePool?.name : "") || ""),
+      poolUnitCode: String(savedResourceDraft.poolUnitCode || (useOperationalResourceFallback ? primaryResourcePool?.unitCode : "") || currentUnit?.code || ""),
+      poolLocationCode: String(savedResourceDraft.poolLocationCode || (useOperationalResourceFallback ? primaryResourcePool?.locationCode : "") || currentUnit?.locationCode || currentLocation?.code || ""),
+      aircraft: String(savedResourceDraft.aircraft ?? (useOperationalResourceFallback ? primaryResourcePool?.settings?.aircraft ?? primaryResourcePool?.aircraft : "") ?? ""),
+      sim: String(savedResourceDraft.sim ?? (useOperationalResourceFallback ? primaryResourcePool?.settings?.ftd ?? primaryResourcePool?.settings?.sim ?? primaryResourcePool?.ftd ?? primaryResourcePool?.sim : "") ?? ""),
+      trainer: String(savedResourceDraft.trainer ?? (useOperationalResourceFallback ? primaryResourcePool?.settings?.cpt ?? primaryResourcePool?.settings?.trainer ?? primaryResourcePool?.cpt ?? primaryResourcePool?.trainer : "") ?? ""),
+      standby: String(savedResourceDraft.standby ?? (useOperationalResourceFallback ? primaryResourcePool?.settings?.standby ?? primaryResourcePool?.standby : "") ?? ""),
+      ground: String(savedResourceDraft.ground ?? (useOperationalResourceFallback ? primaryResourcePool?.settings?.ground ?? primaryResourcePool?.ground : "") ?? ""),
+      classrooms: String(savedResourceDraft.classrooms ?? (useOperationalResourceFallback ? formatClassroomNames(primaryResourcePool?.settings?.classrooms ?? primaryResourcePool?.settings?.classroomNames) : "")),
+      academicStandardEvents: String(savedResourceDraft.academicStandardEvents ?? (useOperationalResourceFallback ? normaliseAcademicStandardEvents(primaryResourcePool?.settings?.academicStandardEvents) : ""))
     });
     setCrewDraft({
-      aircraftCode: String(savedCrewDraft.aircraftCode || primaryAircraftType?.code || primaryResourcePool?.aircraftTypeCode || ""),
-      standardSeats: String(savedCrewDraft.standardSeats || formatRoleRequirementsText(getAircraftStandardSeats(primaryAircraftType)))
+      aircraftCode: String(savedCrewDraft.aircraftCode || (useOperationalResourceFallback ? primaryAircraftType?.code || primaryResourcePool?.aircraftTypeCode : "") || ""),
+      standardSeats: String(savedCrewDraft.standardSeats || (useOperationalResourceFallback ? formatRoleRequirementsText(getAircraftStandardSeats(primaryAircraftType)) : ""))
     });
   }, [activeOrganisation?.settings?.initialSetupWizardDrafts?.resourceDraft, activeOrganisation?.settings?.initialSetupWizardDrafts?.crewDraft, activeOrganisation?.settings?.initialSetupWizardDraft?.resourceDraft, activeOrganisation?.settings?.initialSetupWizardDraft?.crewDraft, primaryAircraftType?.code, primaryAircraftType?.name, JSON.stringify(primaryAircraftType?.crewComposition || {}), primaryResourcePool?.name, primaryResourcePool?.unitCode, primaryResourcePool?.locationCode, primaryResourcePool?.aircraftTypeCode, JSON.stringify(primaryResourcePool?.settings || {}), currentUnit?.code, currentUnit?.locationCode, currentLocation?.code, currentLocation?.name]);
   reactExports.useEffect(() => {
@@ -40007,14 +40039,14 @@ const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, lo
       };
     };
     const instructors = effectiveStaffRows.map((row, index) => {
-      const fullName = [row.surname, row.givenNames].filter(Boolean).join(", ") || row.givenNames || row.surname || `Staff ${index + 1}`;
-      const flags = qualificationsToFlags(row.qualifications);
+      const fullName = getWizardRowName(row) || `Staff ${index + 1}`;
+      const flags = qualificationsToFlags(String(row.qualifications || ""));
       return {
         id: `setup-staff-${index + 1}`,
-        idNumber: Number(row.personnelId) || 0,
+        idNumber: normaliseWizardPersonnelId(row),
         name: fullName,
         rank: row.rank || "Rank",
-        role: row.position || "Instructor",
+        role: row.position || row.role || "Instructor",
         category: row.category || "B",
         callsign: row.callsign || "",
         secondaryCallsign: row.secondaryCallsign || "",
@@ -40040,9 +40072,9 @@ const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, lo
     });
     const traineesEnabled = effectiveUnitDraft.hasTrainees || effectiveTraineeRows.length > 0;
     const trainees = traineesEnabled ? effectiveTraineeRows.map((row, index) => {
-      const fullName = [row.surname, row.givenNames].filter(Boolean).join(", ") || row.givenNames || row.surname || `Trainee ${index + 1}`;
+      const fullName = getWizardRowName(row) || `Trainee ${index + 1}`;
       return {
-        idNumber: Number(row.personnelId) || 0,
+        idNumber: normaliseWizardPersonnelId(row),
         fullName,
         name: fullName,
         rank: row.rank || "Rank",
@@ -40523,12 +40555,19 @@ const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, lo
   };
   const persistWizardStaffProfilesToDatabase = async (overrides = {}) => {
     const { instructors } = getWizardPersonnelForCommit(overrides);
+    const sourceRows = Array.isArray(overrides.staffRows) && overrides.staffRows.length > 0 ? overrides.staffRows : parseWizardStaffRows(overrides.staffDraft ?? staffDraft);
+    const meaningfulRows = sourceRows.filter(isMeaningfulWizardStaffRow);
     const staffToPersist = instructors.filter((person) => String(person?.name || "").trim() && Number(person?.idNumber) > 0);
     pushWizardPersistenceTrace("staff:persist:start", {
       candidates: instructors.length,
+      sourceRows: sourceRows.length,
+      meaningfulRows: meaningfulRows.length,
       persistedCandidates: staffToPersist.length,
       sample: staffToPersist.slice(0, 8).map((person) => ({ name: person.name, idNumber: person.idNumber, unit: person.unit, location: person.location }))
     });
+    if (meaningfulRows.length > 0 && staffToPersist.length < meaningfulRows.length) {
+      throw new Error(`${meaningfulRows.length - staffToPersist.length} staff row${meaningfulRows.length - staffToPersist.length === 1 ? "" : "s"} cannot be committed because Personnel ID is missing or invalid.`);
+    }
     if (staffToPersist.length === 0) return 0;
     const existingPayload = await requestWizardApiJson("/api/personnel");
     const existingByPersonnelId = new Map(
@@ -40589,13 +40628,18 @@ const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, lo
       traineeRows,
       unitDraft: effectiveUnitDraft
     });
+    const meaningfulRows = traineeRows.filter(isMeaningfulWizardTraineeRow);
     const traineesToPersist = trainees.filter((person) => String(person?.name || person?.fullName || "").trim() && Number(person?.idNumber) > 0);
     pushWizardPersistenceTrace("trainees:persist:start", {
       sourceRows: traineeRows.length,
+      meaningfulRows: meaningfulRows.length,
       candidates: trainees.length,
       persistedCandidates: traineesToPersist.length,
       sample: traineesToPersist.slice(0, 8).map((person) => ({ name: person.name || person.fullName, idNumber: person.idNumber, course: person.course, lmpType: person.lmpType, unit: person.unit }))
     });
+    if (meaningfulRows.length > 0 && traineesToPersist.length < meaningfulRows.length) {
+      throw new Error(`${meaningfulRows.length - traineesToPersist.length} trainee row${meaningfulRows.length - traineesToPersist.length === 1 ? "" : "s"} cannot be committed because Personnel ID is missing or invalid.`);
+    }
     if (traineesToPersist.length === 0) return 0;
     const payload = traineesToPersist.map((person) => ({
       idNumber: Number(person.idNumber),
@@ -40668,6 +40712,94 @@ const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, lo
     pushWizardPersistenceTrace("lmp:persist:done", { lmpCode, persisted: items.length });
     return items.length;
   };
+  const buildWizardMasterLmpShellItem = (lmpCode, lmpName) => {
+    const cleanLmpCode = String(lmpCode || "").trim();
+    const cleanLmpName = String(lmpName || cleanLmpCode).trim();
+    const cleanAccessUnitCode = String(trainingDraft.accessUnitCode || unitDraft.code || "").trim().toUpperCase();
+    const cleanUnitHomeLocationCode = String(unitDraft.locationCode || "").trim().toUpperCase();
+    const cleanTrainingAccessLocationCode = String(trainingDraft.accessLocationCode || "").trim().toUpperCase();
+    const cleanLocationDraftCode = String(locationDraft.code || "").trim().toUpperCase();
+    const cleanAccessLocationCode = cleanAccessUnitCode && cleanAccessUnitCode === String(unitDraft.code || "").trim().toUpperCase() && cleanUnitHomeLocationCode ? cleanUnitHomeLocationCode : cleanTrainingAccessLocationCode || cleanUnitHomeLocationCode || cleanLocationDraftCode;
+    return {
+      id: `setup-lmp-shell-${normaliseUnitSettingsIdentifier(cleanLmpCode).replace(/[^A-Z0-9]+/g, "-") || Date.now()}`,
+      code: cleanLmpCode,
+      phase: cleanLmpCode,
+      module: cleanLmpName,
+      dayNight: "Day",
+      eventDescription: cleanLmpName,
+      prerequisites: [],
+      prerequisitesGround: [],
+      prerequisitesFlying: [],
+      eventDetailsCommon: [],
+      eventDetailsSortie: [],
+      totalEventHours: 0,
+      flightOrSimHours: 0,
+      duration: 0,
+      preFlightTime: 0,
+      postFlightTime: 0,
+      type: "Ground School",
+      methodOfDelivery: [],
+      methodOfAssessment: [],
+      resourcesPhysical: [],
+      resourceNumber: 0,
+      acceptableAircraftConfigs: ["ANY"],
+      assessedElements: [],
+      assessmentRequired: false,
+      testEventType: "NONE",
+      resourcesHuman: [],
+      location: cleanAccessLocationCode || "",
+      unit: cleanAccessUnitCode || unitDraft.code || "",
+      courses: [cleanLmpCode],
+      lmpType: "Master LMP",
+      isActive: true,
+      sortOrder: 0,
+      notes: WIZARD_SYLLABUS_COURSE_SHELL_NOTE
+    };
+  };
+  const persistWizardMasterLmpShellToDatabase = async (lmpCode, lmpName) => {
+    const cleanLmpCode = String(lmpCode || "").trim();
+    if (!cleanLmpCode) return 0;
+    const shellItem = buildWizardMasterLmpShellItem(cleanLmpCode, lmpName);
+    pushWizardPersistenceTrace("lmp-shell:persist:start", {
+      lmpCode: cleanLmpCode,
+      name: shellItem.eventDescription,
+      unit: shellItem.unit,
+      location: shellItem.location
+    });
+    const existingPayload = await requestWizardApiJson(`/api/syllabus?course=${encodeURIComponent(cleanLmpCode)}&includeInactive=true`);
+    const existingShell = (Array.isArray(existingPayload.syllabus) ? existingPayload.syllabus : []).find((item) => String(item?.notes || "").includes(WIZARD_SYLLABUS_COURSE_SHELL_NOTE) && (normaliseUnitSettingsIdentifier(item?.code) === normaliseUnitSettingsIdentifier(cleanLmpCode) || Array.isArray(item?.courses) && item.courses.some((course) => normaliseUnitSettingsIdentifier(course) === normaliseUnitSettingsIdentifier(cleanLmpCode))));
+    if (existingShell?.id || existingShell?.code) {
+      await requestWizardApiJson(`/api/syllabus/${encodeURIComponent(String(existingShell.id || existingShell.code))}`, {
+        method: "PUT",
+        body: JSON.stringify(shellItem)
+      });
+    } else {
+      await requestWizardApiJson("/api/syllabus", {
+        method: "POST",
+        body: JSON.stringify(shellItem)
+      });
+    }
+    pushWizardPersistenceTrace("lmp-shell:persist:done", {
+      lmpCode: cleanLmpCode,
+      action: existingShell ? "updated" : "created"
+    });
+    return 1;
+  };
+  const persistWizardMasterLmpShellToSetupTest = (lmpCode, lmpName) => {
+    const cleanLmpCode = String(lmpCode || "").trim();
+    if (!cleanLmpCode) return 0;
+    const shellItem = buildWizardMasterLmpShellItem(cleanLmpCode, lmpName);
+    const existingItems = readSetupTestSyllabus();
+    const existingIndex = existingItems.findIndex((item) => String(item?.notes || "").includes(WIZARD_SYLLABUS_COURSE_SHELL_NOTE) && (normaliseUnitSettingsIdentifier(item?.code) === normaliseUnitSettingsIdentifier(cleanLmpCode) || Array.isArray(item?.courses) && item.courses.some((course) => normaliseUnitSettingsIdentifier(course) === normaliseUnitSettingsIdentifier(cleanLmpCode))));
+    const nextItems = existingIndex >= 0 ? existingItems.map((item, index) => index === existingIndex ? { ...item, ...shellItem, id: item.id || shellItem.id } : item) : [...existingItems, shellItem];
+    writeSetupTestSyllabus(nextItems);
+    pushWizardPersistenceTrace("lmp-shell:setup-test:done", {
+      lmpCode: cleanLmpCode,
+      action: existingIndex >= 0 ? "updated" : "created",
+      totalSetupSyllabusItems: nextItems.length
+    });
+    return 1;
+  };
   const saveAllWizardDrafts = async () => {
     pushWizardPersistenceTrace("finish:save-all:start");
     if (isSetupTestMode$1) {
@@ -40676,6 +40808,10 @@ const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, lo
       pushWizardPersistenceTrace("finish:setup-test:start", { completedAt: completedAt2, shouldCommitStagedLmpEvents });
       if (shouldCommitStagedLmpEvents) {
         await commitWizardCourseLmpEvents();
+      } else if (String(trainingDraft.lmpCode || trainingDraft.lmpName || "").trim()) {
+        const lmpCode = String(trainingDraft.lmpCode || trainingDraft.lmpName || "").trim();
+        persistWizardMasterLmpShellToSetupTest(lmpCode, trainingDraft.lmpName || lmpCode);
+        pushWizardPersistenceTrace("finish:setup-test:lmp-shell-committed", { lmpCode });
       }
       saveSetupTestWizardDrafts(true);
       const allStepIds = steps.map((step) => step.id);
@@ -40772,6 +40908,10 @@ const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, lo
     await persistWizardTraineeProfilesToDatabase(rowsToCommit, { ...unitDraft, hasTrainees: true });
     if (uploadedCourseLmpItems.length > 0 || uploadResults.courses?.status === "valid") {
       await commitWizardCourseLmpEvents();
+    } else if (String(trainingDraft.lmpCode || trainingDraft.lmpName || "").trim()) {
+      const lmpCode = String(trainingDraft.lmpCode || trainingDraft.lmpName || "").trim();
+      await persistWizardMasterLmpShellToDatabase(lmpCode, trainingDraft.lmpName || lmpCode);
+      pushWizardPersistenceTrace("finish:normal:lmp-shell-committed", { lmpCode });
     } else {
       pushWizardPersistenceTrace("finish:normal:lmp-skipped", {
         uploadedCourseLmpItems: uploadedCourseLmpItems.length,
@@ -40958,6 +41098,30 @@ const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, lo
         }))
       });
       if (itemsForCommit.length === 0) {
+        const draftLmpCode = String(trainingDraft.lmpCode || trainingDraft.lmpName || "").trim();
+        if (draftLmpCode && uploadResult?.status !== "valid") {
+          const draftLmpName = String(trainingDraft.lmpName || draftLmpCode).trim();
+          saveTrainingDraft();
+          if (isSetupTestMode$1 || isSetupTestMode()) {
+            persistWizardMasterLmpShellToSetupTest(draftLmpCode, draftLmpName);
+          } else {
+            await persistWizardMasterLmpShellToDatabase(draftLmpCode, draftLmpName);
+          }
+          const message2 = `Committed Master LMP ${draftLmpCode} with no event rows yet.`;
+          pushWizardLmpDiag("commit:shell-only-done", {
+            lmpCode: draftLmpCode,
+            lmpName: draftLmpName,
+            reason: "No uploaded LMP event rows were provided; created or updated the Master LMP shell."
+          });
+          window.setTimeout(() => {
+            setImportConfirmations((current) => ({ ...current, courses: message2 }));
+            setLmpCommitInProgress(false);
+            setLmpEventsCommitted(true);
+            setLmpCommitSummary(message2);
+            setSaveMessage(message2);
+          }, 450);
+          return;
+        }
         if (uploadResult?.status === "valid") {
           importWizardTemplateRows(initialSetupTemplates.find((template) => template.id === "courses"), uploadResult);
           setSaveMessage("The uploaded LMP was valid, but no importable event rows were available to commit. Review the parsed LMP rows before trying again.");
