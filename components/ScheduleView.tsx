@@ -1007,7 +1007,7 @@ const wizardRequiredHeaderAliases: Record<string, string[]> = {
     name: ['fullname', 'nameandsurname', 'namesurnamefirstname', 'namesurnamefirstnames', 'surnamefirstname', 'surnamefirstnames', 'surname', 'lastname', 'familyname', 'givennames', 'givenname', 'firstname', 'forename'],
     role: ['position', 'crewrole', 'primaryrole'],
     qualifications: ['qualification', 'qualificationsandroles', 'qualificationsroles', 'quals', 'roles'],
-    personnelId: ['personnelid', 'personid', 'staffid', 'employeeid', 'serviceid', 'employeenumber', 'personnelnumber'],
+    personnelId: ['personnelid', 'personid', 'staffid', 'employeeid', 'serviceid', 'servicenumber', 'employeenumber', 'personnelnumber', 'idnumber', 'idno', 'id'],
     code: ['icao', 'locationcode', 'basecode'],
     aircrafttype: ['aircraft', 'resource'],
     course: ['courseallocation', 'allocatedcourse', 'courseassigned', 'trainingcourse', 'package', 'masterlmp', 'masterlmpname', 'lmp', 'lmpname'],
@@ -1462,7 +1462,16 @@ const formatWizardStaffRows = (rows: Array<{ surname?: string; givenNames?: stri
 );
 
 const normaliseWizardPersonnelId = (row: any): number => {
-    const value = row?.personnelId ?? row?.idNumber ?? row?.personnelID ?? row?.['Personnel ID'] ?? row?.serviceNumber ?? '';
+    const value = row?.personnelId
+        ?? row?.idNumber
+        ?? row?.personnelID
+        ?? row?.idNo
+        ?? row?.['Personnel ID']
+        ?? row?.['ID Number']
+        ?? row?.['ID No']
+        ?? row?.serviceNumber
+        ?? row?.['Service Number']
+        ?? '';
     const numeric = Number(String(value || '').trim());
     return Number.isFinite(numeric) && numeric > 0 ? numeric : 0;
 };
@@ -7971,7 +7980,7 @@ const InitialSetupWizard: React.FC<{
                     position: getWizardCellByHeader(headers, row, 'Role'),
                     qualifications: getWizardCellByHeader(headers, row, 'Qualifications'),
                     rank: getWizardCellByHeader(headers, row, 'Rank'),
-                    personnelId: getWizardCellByAnyHeader(headers, row, ['Personnel ID', 'Employee ID', 'Service ID']),
+                    personnelId: getWizardCellByAnyHeader(headers, row, ['Personnel ID', 'ID Number', 'ID No', 'Employee ID', 'Service ID', 'Service Number']),
                     email: getWizardCellByHeader(headers, row, 'Email'),
                     phoneNumber: getWizardCellByAnyHeader(headers, row, ['Phone', 'Phone Number', 'Mobile', 'Mobile Number']),
                     location: getWizardCellByAnyHeader(headers, row, ['Location', 'Base', 'Home Location', 'Airfield']),
@@ -8021,7 +8030,7 @@ const InitialSetupWizard: React.FC<{
                     givenNames: givenValue || givenPart || '',
                     unit: (getWizardCellByHeader(headers, row, 'Unit') || unitDraft.code || '').toUpperCase(),
                     rank: getWizardCellByHeader(headers, row, 'Rank'),
-                    personnelId: getWizardCellByAnyHeader(headers, row, ['Personnel ID', 'Employee ID', 'Service ID']),
+                    personnelId: getWizardCellByAnyHeader(headers, row, ['Personnel ID', 'ID Number', 'ID No', 'Employee ID', 'Service ID', 'Service Number']),
                     courseNumber: getWizardCellByHeader(headers, row, 'Course Number'),
                     course: getWizardCellByHeader(headers, row, 'Course'),
                     masterLmp: getWizardCellByHeader(headers, row, 'Master LMP'),
@@ -8030,7 +8039,10 @@ const InitialSetupWizard: React.FC<{
                     phoneNumber: getWizardCellByAnyHeader(headers, row, ['Phone', 'Phone Number', 'Mobile', 'Mobile Number']),
                     location: getWizardCellByAnyHeader(headers, row, ['Location', 'Base', 'Home Location', 'Airfield']),
                     category: getWizardCellByHeader(headers, row, 'Category'),
+                    service: getWizardCellByHeader(headers, row, 'Service'),
+                    role: getWizardCellByHeader(headers, row, 'Role'),
                     callsign: getWizardCellByHeader(headers, row, 'Callsign'),
+                    permissions: parseWizardTemplateList(getWizardCellByHeader(headers, row, 'Permissions')),
                     seatConfig: getWizardCellByAnyHeader(headers, row, ['Seat Config', 'Seat Configuration', 'Config']),
                 };
             }).filter((row) => row.surname || row.givenNames || row.unit || row.rank || row.personnelId || row.courseNumber || row.masterLmp || row.startDate);
@@ -10257,6 +10269,9 @@ const InitialSetupWizard: React.FC<{
                     seatConfig: row.seatConfig || 'ANY',
                     category: row.category || '',
                     callsign: row.callsign || '',
+                    service: row.service || '',
+                    role: row.role || 'Trainee',
+                    permissions: Array.isArray(row.permissions) ? row.permissions : parseWizardTemplateList(row.permissions || ''),
                     isPaused: false,
                     unit: String(row.unit || firstUnitCode).trim().toUpperCase(),
                     location: row.location || firstLocationCode,
@@ -10709,10 +10724,25 @@ const InitialSetupWizard: React.FC<{
     const getResolvedWizardTraineeRowsForCommit = () => {
         const displayedRows = parseWizardTraineeRows(traineeDraft);
         return displayedRows.length > 0
-            ? displayedRows.map((row, index) => ({
-                ...(uploadedTraineeProfileRows[index] || {}),
-                ...row,
-            }))
+            ? displayedRows.map((row, index) => {
+                const displayedRow = row as any;
+                const uploadedRow = (uploadedTraineeProfileRows[index] || {}) as any;
+                return {
+                    ...uploadedRow,
+                    ...displayedRow,
+                    personnelId: displayedRow.personnelId || uploadedRow.personnelId || uploadedRow.idNumber || '',
+                    idNumber: displayedRow.personnelId || uploadedRow.idNumber || uploadedRow.personnelId || '',
+                    courseNumber: displayedRow.courseNumber || uploadedRow.courseNumber || '',
+                    course: displayedRow.course || uploadedRow.course || '',
+                    masterLmp: displayedRow.masterLmp || uploadedRow.masterLmp || '',
+                    startDate: displayedRow.startDate || uploadedRow.startDate || '',
+                    service: displayedRow.service || uploadedRow.service || '',
+                    role: displayedRow.role || uploadedRow.role || '',
+                    callsign: displayedRow.callsign || uploadedRow.callsign || '',
+                    permissions: displayedRow.permissions || uploadedRow.permissions || [],
+                    sourceTemplateData: uploadedRow.sourceTemplateData || displayedRow.sourceTemplateData,
+                };
+            })
             : uploadedTraineeProfileRows;
     };
 
@@ -10932,6 +10962,10 @@ const InitialSetupWizard: React.FC<{
             flight: person.flight || '',
             location: person.location,
             service: person.service || null,
+            traineeCallsign: person.traineeCallsign || person.callsign || '',
+            permissions: Array.isArray(person.permissions)
+                ? person.permissions
+                : parseWizardTemplateList(person.permissions || ''),
             seatConfig: person.seatConfig || 'ANY',
             isPaused: person.isPaused === true,
             email: person.email || '',
