@@ -33991,6 +33991,8 @@ const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, lo
   const [lmpCommitInProgress, setLmpCommitInProgress] = reactExports.useState(false);
   const [lmpEventsCommitted, setLmpEventsCommitted] = reactExports.useState(false);
   const [lmpCommitSummary, setLmpCommitSummary] = reactExports.useState("");
+  const [wizardFinishInProgress, setWizardFinishInProgress] = reactExports.useState(false);
+  const [wizardReviewComplete, setWizardReviewComplete] = reactExports.useState(false);
   const fileInputRef = reactExports.useRef(null);
   const pendingWizardTemplateFilesRef = reactExports.useRef({});
   const lastSetupTestPersonnelSnapshotRef = reactExports.useRef("");
@@ -40288,6 +40290,146 @@ const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, lo
       markComplete ? "Setup saved in this setup workspace." : "This step has been synced into Settings for this setup workspace."
     );
   };
+  const saveAllWizardDrafts = () => {
+    if (isSetupTestMode$1) {
+      const completedAt2 = (/* @__PURE__ */ new Date()).toISOString();
+      saveSetupTestWizardDrafts();
+      const allStepIds = steps.map((step) => step.id);
+      setCompletedWizardStepIds(new Set(allStepIds));
+      if (typeof window !== "undefined") {
+        safeSetWizardLocalStorage(initialSetupWizardStorageKey, String(steps.length - 1));
+        safeSetWizardLocalStorage(initialSetupWizardCompletedStepsStorageKey, JSON.stringify(allStepIds));
+        safeSetWizardLocalStorage(initialSetupWizardCompletedAtStorageKey, completedAt2);
+        window.localStorage.removeItem(initialSetupWizardDraftSnapshotStorageKey);
+      }
+      setSaveMessage("Setup review complete. The Initial Setup Wizard is marked complete.");
+      return;
+    }
+    const completedAt = (/* @__PURE__ */ new Date()).toISOString();
+    saveOrganisationDraft();
+    const locationRows = parseWizardLocationRows(locationsTodayDraft);
+    const unitRows = parseWizardUnitRows(unitsTodayDraft);
+    if (onUpdatePlatformConfig && (locationRows.length > 0 || unitRows.length > 0)) {
+      onUpdatePlatformConfig((current) => {
+        const baseConfig = current || platformConfig || {};
+        const existingLocations = Array.isArray(baseConfig.locations) ? baseConfig.locations : [];
+        const existingUnits = Array.isArray(baseConfig.units) ? baseConfig.units : [];
+        const nextLocations = [...existingLocations];
+        locationRows.forEach((row) => {
+          const code = row.icao || row.iata;
+          if (!code) return;
+          const existingIndex = nextLocations.findIndex((location) => normaliseUnitSettingsIdentifier(location?.code) === normaliseUnitSettingsIdentifier(code));
+          const nextLocation = {
+            ...existingIndex >= 0 ? nextLocations[existingIndex] : { id: createWizardRecordId("location") },
+            code,
+            iataCode: row.iata,
+            name: row.name || code,
+            timezone: existingIndex >= 0 ? nextLocations[existingIndex].timezone || "UTC" : "UTC",
+            status: "ACTIVE",
+            settings: {
+              ...existingIndex >= 0 ? nextLocations[existingIndex].settings || {} : {},
+              iataCode: row.iata
+            }
+          };
+          if (existingIndex >= 0) nextLocations[existingIndex] = nextLocation;
+          else nextLocations.push(nextLocation);
+        });
+        const defaultLocationCode = locationRows[0]?.icao || locationDraft.code;
+        const nextUnits = [...existingUnits];
+        const draftMap = getWizardUnitDraftMapWithCurrent();
+        unitRows.forEach((row) => {
+          const code = row.code;
+          if (!code) return;
+          const draft = resolveWizardUnitSetupDraft(row, unitRows.findIndex((unitRow) => normaliseUnitSettingsIdentifier(unitRow.code) === normaliseUnitSettingsIdentifier(code)), draftMap);
+          const existingIndex = nextUnits.findIndex((unit) => normaliseUnitSettingsIdentifier(unit?.code) === normaliseUnitSettingsIdentifier(code));
+          const nextUnit = {
+            ...existingIndex >= 0 ? nextUnits[existingIndex] : { id: createWizardRecordId("unit") },
+            code,
+            name: row.name || code,
+            locationCode: draft.locationCode || (existingIndex >= 0 ? nextUnits[existingIndex].locationCode || defaultLocationCode : defaultLocationCode),
+            unitType: draft.unitType || (existingIndex >= 0 ? nextUnits[existingIndex].unitType || unitDraft.unitType : unitDraft.unitType),
+            status: "ACTIVE",
+            settings: {
+              ...existingIndex >= 0 ? nextUnits[existingIndex].settings || {} : {},
+              operationalModel: draft.operationalModel || (existingIndex >= 0 ? nextUnits[existingIndex].settings?.operationalModel || unitDraft.operationalModel : unitDraft.operationalModel),
+              hasTrainees: typeof draft.hasTrainees === "boolean" ? draft.hasTrainees : existingIndex >= 0 ? nextUnits[existingIndex].settings?.hasTrainees ?? unitDraft.hasTrainees : unitDraft.hasTrainees
+            }
+          };
+          if (existingIndex >= 0) nextUnits[existingIndex] = nextUnit;
+          else nextUnits.push(nextUnit);
+        });
+        return {
+          ...baseConfig,
+          locations: nextLocations,
+          units: nextUnits
+        };
+      });
+    }
+    saveLocationDraft();
+    saveUnitDraft();
+    saveResourceDraft();
+    saveCrewDraft();
+    saveRankSettingsDraft();
+    saveTrainingDraft();
+    saveBuildRulesDraft();
+    saveCurrencyProfilesDraft();
+    saveWizardConfig("Setup saved into Settings.", (baseConfig) => updatePrimaryOrganisationWithSettings(baseConfig, (settings) => ({
+      ...settings,
+      initialSetupWizardCompletedAt: completedAt,
+      personnelDisplaySettings: buildRankSettingsToSave(settings),
+      initialSetupWizardDraft: {
+        unitsToday: parseWizardUnitRows(unitsTodayDraft),
+        locationsToday: parseWizardLocationRows(locationsTodayDraft),
+        unitParents: unitParentDraft,
+        crewLabels: crewLabelsDraft,
+        alternateCrews: alternateCrewDraft,
+        buildRules: buildRulesDraftText,
+        staff: staffDraft,
+        traineesEnabled: unitDraft.hasTrainees,
+        traineeCourses: traineeCourseOptionsDraft,
+        trainees: traineeDraft,
+        trainingRecords: trainingRecordsDraft,
+        unitModules: unitModulesDraft,
+        ranksAndLabels: rankLabelsDraft,
+        rankSettings: rankSettingsDraft,
+        resourceSharing: resourceSharingDraft,
+        currencies: currencyDraft,
+        scoringMatrix: wizardPhraseBankToScoringDraft(wizardScoringPhraseBank),
+        staffCurrencyEvents: staffCurrencyEventsDraft,
+        completedAt
+      },
+      initialSetupWizardDrafts: {
+        ...settings.initialSetupWizardDrafts || {},
+        completedAt
+      }
+    })));
+    setCompletedWizardStepIds(new Set(steps.map((step) => step.id)));
+    if (typeof window !== "undefined") {
+      safeSetWizardLocalStorage(initialSetupWizardCompletedStepsStorageKey, JSON.stringify(steps.map((step) => step.id)));
+      safeSetWizardLocalStorage(initialSetupWizardCompletedAtStorageKey, completedAt);
+      window.localStorage.removeItem(initialSetupWizardDraftSnapshotStorageKey);
+    }
+    setSaveMessage("Setup saved into Settings.");
+  };
+  const finishWizardReview = () => {
+    if (wizardFinishInProgress) return;
+    setWizardFinishInProgress(true);
+    setWizardReviewComplete(false);
+    setSaveMessage("Finishing setup review...");
+    try {
+      saveAllWizardDrafts();
+      window.setTimeout(() => {
+        setWizardFinishInProgress(false);
+        setWizardReviewComplete(true);
+        setSaveMessage("Setup review complete. The Initial Setup Wizard is marked complete.");
+      }, 450);
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      setWizardFinishInProgress(false);
+      setWizardReviewComplete(false);
+      setSaveMessage(`Setup review could not be completed: ${errorMessage}`);
+    }
+  };
   const commitWizardStaffProfiles = () => {
     const staffRows = uploadedStaffProfileRows.length > 0 ? uploadedStaffProfileRows : void 0;
     const staffCount = (staffRows || parseWizardStaffRows(staffDraft)).filter((row) => row.surname || row.givenNames || row.unit || row.position || row.personnelId || row.qualifications).length;
@@ -41618,8 +41760,8 @@ Classrooms: ${classroomNames.join(", ")}` : ""}`;
           /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "mt-1 block text-xs font-semibold leading-5 text-slate-500", children: help })
         ] })
       ] }, label)) }),
-      "Finish review",
-      () => setSaveMessage("Setup review complete. Each step has already been saved into Settings.")
+      wizardFinishInProgress ? "Finishing..." : wizardReviewComplete ? "✓ Review Finished" : "Finish review",
+      finishWizardReview
     );
   };
   if (mode === "detect" && isPartiallyConfigured) {

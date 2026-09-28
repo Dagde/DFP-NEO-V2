@@ -3086,6 +3086,8 @@ const InitialSetupWizard: React.FC<{
     const [lmpCommitInProgress, setLmpCommitInProgress] = useState(false);
     const [lmpEventsCommitted, setLmpEventsCommitted] = useState(false);
     const [lmpCommitSummary, setLmpCommitSummary] = useState('');
+    const [wizardFinishInProgress, setWizardFinishInProgress] = useState(false);
+    const [wizardReviewComplete, setWizardReviewComplete] = useState(false);
     const fileInputRef = useRef<HTMLInputElement | null>(null);
     const pendingWizardTemplateFilesRef = useRef<Record<string, File>>({});
     const lastSetupTestPersonnelSnapshotRef = useRef('');
@@ -10450,7 +10452,17 @@ const InitialSetupWizard: React.FC<{
 
     const saveAllWizardDrafts = () => {
         if (isSetupTestMode) {
+            const completedAt = new Date().toISOString();
             saveSetupTestWizardDrafts();
+            const allStepIds = steps.map((step) => step.id);
+            setCompletedWizardStepIds(new Set(allStepIds));
+            if (typeof window !== 'undefined') {
+                safeSetWizardLocalStorage(initialSetupWizardStorageKey, String(steps.length - 1));
+                safeSetWizardLocalStorage(initialSetupWizardCompletedStepsStorageKey, JSON.stringify(allStepIds));
+                safeSetWizardLocalStorage(initialSetupWizardCompletedAtStorageKey, completedAt);
+                window.localStorage.removeItem(initialSetupWizardDraftSnapshotStorageKey);
+            }
+            setSaveMessage('Setup review complete. The Initial Setup Wizard is marked complete.');
             return;
         }
         const completedAt = new Date().toISOString();
@@ -10558,6 +10570,25 @@ const InitialSetupWizard: React.FC<{
             window.localStorage.removeItem(initialSetupWizardDraftSnapshotStorageKey);
         }
         setSaveMessage('Setup saved into Settings.');
+    };
+    const finishWizardReview = () => {
+        if (wizardFinishInProgress) return;
+        setWizardFinishInProgress(true);
+        setWizardReviewComplete(false);
+        setSaveMessage('Finishing setup review...');
+        try {
+            saveAllWizardDrafts();
+            window.setTimeout(() => {
+                setWizardFinishInProgress(false);
+                setWizardReviewComplete(true);
+                setSaveMessage('Setup review complete. The Initial Setup Wizard is marked complete.');
+            }, 450);
+        } catch (error) {
+            const errorMessage = error instanceof Error ? error.message : String(error);
+            setWizardFinishInProgress(false);
+            setWizardReviewComplete(false);
+            setSaveMessage(`Setup review could not be completed: ${errorMessage}`);
+        }
     };
     const commitWizardStaffProfiles = () => {
         const staffRows = uploadedStaffProfileRows.length > 0 ? uploadedStaffProfileRows : undefined;
@@ -11928,8 +11959,8 @@ const InitialSetupWizard: React.FC<{
                     </div>
                 ))}
             </div>,
-            'Finish review',
-            () => setSaveMessage('Setup review complete. Each step has already been saved into Settings.'),
+            wizardFinishInProgress ? 'Finishing...' : wizardReviewComplete ? '✓ Review Finished' : 'Finish review',
+            finishWizardReview,
         );
     };
 
