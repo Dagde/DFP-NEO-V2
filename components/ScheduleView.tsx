@@ -10165,19 +10165,20 @@ const InitialSetupWizard: React.FC<{
                 ? existingOrganisationSettings.masterLmpCatalogue
                 : [];
             const existingMasterLmpAccess = getOrganisationMasterLmpAccessRules(existingOrganisationSettings);
-            const draftLmpCode = String(trainingDraft.lmpCode || '').trim();
+            const stagedLmpCode = String(uploadedCourseLmpItems[0]?.courses?.[0] || '').trim();
+            const draftLmpCode = String(trainingDraft.lmpCode || stagedLmpCode || '').trim();
             const shouldSyncDraftMasterLmp = Boolean(draftLmpCode && !/^new master lmp$/i.test(draftLmpCode));
             const draftMasterLmpCatalogueEntry = shouldSyncDraftMasterLmp ? {
-                id: createSetupTestRecordId('master-lmp-catalogue', trainingDraft.lmpCode || trainingDraft.lmpName || 'master-lmp'),
-                code: trainingDraft.lmpCode,
-                name: trainingDraft.lmpName || trainingDraft.lmpCode,
+                id: createSetupTestRecordId('master-lmp-catalogue', draftLmpCode || trainingDraft.lmpName || 'master-lmp'),
+                code: draftLmpCode,
+                name: trainingDraft.lmpName || draftLmpCode,
                 description: trainingDraft.description,
                 status: trainingDraft.status || 'ACTIVE',
                 audience: resolveWizardLmpAudience(trainingDraft.audience),
             } : null;
             const draftMasterLmpAccessRule = shouldSyncDraftMasterLmp ? {
-                id: createSetupTestRecordId('master-lmp-access', `${trainingDraft.lmpCode || 'lmp'}-${trainingDraft.accessUnitCode || cleanUnits[0]?.code || 'unit'}`),
-                lmpCode: trainingDraft.lmpCode,
+                id: createSetupTestRecordId('master-lmp-access', `${draftLmpCode || 'lmp'}-${trainingDraft.accessUnitCode || cleanUnits[0]?.code || 'unit'}`),
+                lmpCode: draftLmpCode,
                 locationCode: trainingDraft.accessLocationCode || primaryLocationCode,
                 unitCode: trainingDraft.accessUnitCode || cleanUnits[0]?.code || '',
                 operationalModel: trainingDraft.accessModel === 'Any Model' ? null : trainingDraft.accessModel,
@@ -10193,6 +10194,12 @@ const InitialSetupWizard: React.FC<{
                     ? rows.map((row: any) => normaliseUnitSettingsIdentifier(row?.[codeKey]) === nextKey ? { ...row, ...nextRow } : row)
                     : [...rows, nextRow];
             };
+            const nextMasterLmpCatalogue = isSetupTestMode
+                ? (draftMasterLmpCatalogueEntry ? [draftMasterLmpCatalogueEntry] : [])
+                : mergeByNormalisedCode(existingMasterLmpCatalogue, draftMasterLmpCatalogueEntry, 'code');
+            const nextMasterLmpAccess = isSetupTestMode
+                ? (draftMasterLmpAccessRule ? [draftMasterLmpAccessRule] : [])
+                : mergeByNormalisedCode(existingMasterLmpAccess, draftMasterLmpAccessRule, 'lmpCode');
             const nextLocations = cleanLocations.map((row, index) => {
                 const profile = findWizardLocationProfile(row.icao || row.iata || row.name);
                 return {
@@ -10303,8 +10310,8 @@ const InitialSetupWizard: React.FC<{
                     ...existingOrganisationSettingsWithoutWizardCompletion,
                     ...(setupWizardCompletionAt ? { initialSetupWizardCompletedAt: setupWizardCompletionAt } : {}),
                     organisationStructure: structure,
-                    masterLmpCatalogue: mergeByNormalisedCode(existingMasterLmpCatalogue, draftMasterLmpCatalogueEntry, 'code'),
-                    masterLmpAccess: mergeByNormalisedCode(existingMasterLmpAccess, draftMasterLmpAccessRule, 'lmpCode'),
+                    masterLmpCatalogue: nextMasterLmpCatalogue,
+                    masterLmpAccess: nextMasterLmpAccess,
                     crewCompositionSettings: normaliseCrewCompositionSettings({
                         alternateCompositions: alternateCrewRows,
                         currencyProfiles,
@@ -10424,13 +10431,17 @@ const InitialSetupWizard: React.FC<{
                 }],
             };
         });
-        const shouldHandoffPersonnel = Array.isArray(overrides.staffRows) || Array.isArray(overrides.traineeRows);
+        const shouldHandoffPersonnel = markComplete || Array.isArray(overrides.staffRows) || Array.isArray(overrides.traineeRows);
         const setupPersonnelSnapshot = JSON.stringify(setupPersonnel);
         if (shouldHandoffPersonnel && setupPersonnelSnapshot !== lastSetupTestPersonnelSnapshotRef.current) {
             lastSetupTestPersonnelSnapshotRef.current = setupPersonnelSnapshot;
             pushWizardImportDiag('personnel:handoff-to-app', {
                 markComplete,
-                handoffReason: Array.isArray(overrides.staffRows) ? 'staff-rows-override' : 'trainee-rows-override',
+                handoffReason: markComplete
+                    ? 'finish-review'
+                    : Array.isArray(overrides.staffRows)
+                    ? 'staff-rows-override'
+                    : 'trainee-rows-override',
                 instructors: setupPersonnel.instructors.length,
                 trainees: setupPersonnel.trainees.length,
                 instructorSample: setupPersonnel.instructors.slice(0, 8).map((person: any) => ({
@@ -10462,7 +10473,13 @@ const InitialSetupWizard: React.FC<{
     const saveAllWizardDrafts = () => {
         if (isSetupTestMode) {
             const completedAt = new Date().toISOString();
-            saveSetupTestWizardDrafts();
+            const shouldCommitStagedLmpEvents = !lmpEventsCommitted && (
+                uploadedCourseLmpItems.length > 0 || uploadResults.courses?.status === 'valid'
+            );
+            if (shouldCommitStagedLmpEvents) {
+                commitWizardCourseLmpEvents();
+            }
+            saveSetupTestWizardDrafts(true);
             const allStepIds = steps.map((step) => step.id);
             setCompletedWizardStepIds(new Set(allStepIds));
             if (typeof window !== 'undefined') {

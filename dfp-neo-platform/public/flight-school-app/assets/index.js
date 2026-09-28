@@ -40007,19 +40007,20 @@ const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, lo
       };
       const existingMasterLmpCatalogue = Array.isArray(existingOrganisationSettings.masterLmpCatalogue) ? existingOrganisationSettings.masterLmpCatalogue : [];
       const existingMasterLmpAccess = getOrganisationMasterLmpAccessRules(existingOrganisationSettings);
-      const draftLmpCode = String(trainingDraft.lmpCode || "").trim();
+      const stagedLmpCode = String(uploadedCourseLmpItems[0]?.courses?.[0] || "").trim();
+      const draftLmpCode = String(trainingDraft.lmpCode || stagedLmpCode || "").trim();
       const shouldSyncDraftMasterLmp = Boolean(draftLmpCode && !/^new master lmp$/i.test(draftLmpCode));
       const draftMasterLmpCatalogueEntry = shouldSyncDraftMasterLmp ? {
-        id: createSetupTestRecordId("master-lmp-catalogue", trainingDraft.lmpCode || trainingDraft.lmpName || "master-lmp"),
-        code: trainingDraft.lmpCode,
-        name: trainingDraft.lmpName || trainingDraft.lmpCode,
+        id: createSetupTestRecordId("master-lmp-catalogue", draftLmpCode || trainingDraft.lmpName || "master-lmp"),
+        code: draftLmpCode,
+        name: trainingDraft.lmpName || draftLmpCode,
         description: trainingDraft.description,
         status: trainingDraft.status || "ACTIVE",
         audience: resolveWizardLmpAudience(trainingDraft.audience)
       } : null;
       const draftMasterLmpAccessRule = shouldSyncDraftMasterLmp ? {
-        id: createSetupTestRecordId("master-lmp-access", `${trainingDraft.lmpCode || "lmp"}-${trainingDraft.accessUnitCode || cleanUnits[0]?.code || "unit"}`),
-        lmpCode: trainingDraft.lmpCode,
+        id: createSetupTestRecordId("master-lmp-access", `${draftLmpCode || "lmp"}-${trainingDraft.accessUnitCode || cleanUnits[0]?.code || "unit"}`),
+        lmpCode: draftLmpCode,
         locationCode: trainingDraft.accessLocationCode || primaryLocationCode,
         unitCode: trainingDraft.accessUnitCode || cleanUnits[0]?.code || "",
         operationalModel: trainingDraft.accessModel === "Any Model" ? null : trainingDraft.accessModel,
@@ -40033,6 +40034,8 @@ const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, lo
         const exists = rows.some((row) => normaliseUnitSettingsIdentifier(row?.[codeKey]) === nextKey);
         return exists ? rows.map((row) => normaliseUnitSettingsIdentifier(row?.[codeKey]) === nextKey ? { ...row, ...nextRow } : row) : [...rows, nextRow];
       };
+      const nextMasterLmpCatalogue = isSetupTestMode$1 ? draftMasterLmpCatalogueEntry ? [draftMasterLmpCatalogueEntry] : [] : mergeByNormalisedCode(existingMasterLmpCatalogue, draftMasterLmpCatalogueEntry, "code");
+      const nextMasterLmpAccess = isSetupTestMode$1 ? draftMasterLmpAccessRule ? [draftMasterLmpAccessRule] : [] : mergeByNormalisedCode(existingMasterLmpAccess, draftMasterLmpAccessRule, "lmpCode");
       const nextLocations = cleanLocations.map((row, index) => {
         const profile = findWizardLocationProfile(row.icao || row.iata || row.name);
         return {
@@ -40143,8 +40146,8 @@ const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, lo
           ...existingOrganisationSettingsWithoutWizardCompletion,
           ...setupWizardCompletionAt ? { initialSetupWizardCompletedAt: setupWizardCompletionAt } : {},
           organisationStructure: structure,
-          masterLmpCatalogue: mergeByNormalisedCode(existingMasterLmpCatalogue, draftMasterLmpCatalogueEntry, "code"),
-          masterLmpAccess: mergeByNormalisedCode(existingMasterLmpAccess, draftMasterLmpAccessRule, "lmpCode"),
+          masterLmpCatalogue: nextMasterLmpCatalogue,
+          masterLmpAccess: nextMasterLmpAccess,
           crewCompositionSettings: normaliseCrewCompositionSettings({
             alternateCompositions: alternateCrewRows,
             currencyProfiles
@@ -40264,13 +40267,13 @@ const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, lo
         }]
       };
     });
-    const shouldHandoffPersonnel = Array.isArray(overrides.staffRows) || Array.isArray(overrides.traineeRows);
+    const shouldHandoffPersonnel = markComplete || Array.isArray(overrides.staffRows) || Array.isArray(overrides.traineeRows);
     const setupPersonnelSnapshot = JSON.stringify(setupPersonnel);
     if (shouldHandoffPersonnel && setupPersonnelSnapshot !== lastSetupTestPersonnelSnapshotRef.current) {
       lastSetupTestPersonnelSnapshotRef.current = setupPersonnelSnapshot;
       pushWizardImportDiag("personnel:handoff-to-app", {
         markComplete,
-        handoffReason: Array.isArray(overrides.staffRows) ? "staff-rows-override" : "trainee-rows-override",
+        handoffReason: markComplete ? "finish-review" : Array.isArray(overrides.staffRows) ? "staff-rows-override" : "trainee-rows-override",
         instructors: setupPersonnel.instructors.length,
         trainees: setupPersonnel.trainees.length,
         instructorSample: setupPersonnel.instructors.slice(0, 8).map((person) => ({
@@ -40300,7 +40303,11 @@ const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, lo
   const saveAllWizardDrafts = () => {
     if (isSetupTestMode$1) {
       const completedAt2 = (/* @__PURE__ */ new Date()).toISOString();
-      saveSetupTestWizardDrafts();
+      const shouldCommitStagedLmpEvents = !lmpEventsCommitted && (uploadedCourseLmpItems.length > 0 || uploadResults.courses?.status === "valid");
+      if (shouldCommitStagedLmpEvents) {
+        commitWizardCourseLmpEvents();
+      }
+      saveSetupTestWizardDrafts(true);
       const allStepIds = steps.map((step) => step.id);
       setCompletedWizardStepIds(new Set(allStepIds));
       if (typeof window !== "undefined") {
@@ -140764,7 +140771,11 @@ const App = () => {
     const courseNames = Array.from(new Set(
       (trainees || []).map((trainee) => String(trainee?.course || "").trim()).filter(Boolean)
     ));
-    if (courseNames.length === 0) return;
+    if (courseNames.length === 0) {
+      setCourses([]);
+      setCourseColors({});
+      return;
+    }
     setCourseColors((prev) => {
       const next = { ...prev };
       courseNames.forEach((courseName, index) => {
@@ -140772,29 +140783,23 @@ const App = () => {
       });
       return next;
     });
-    setCourses((prevCourses) => {
-      const seen = new Set(prevCourses.map((course) => normaliseCourseName(course.name || course.code)).filter(Boolean));
-      const nextCourses = [...prevCourses];
-      courseNames.forEach((courseName, index) => {
-        const normalisedName = normaliseCourseName(courseName);
-        if (!normalisedName || seen.has(normalisedName)) return;
-        nextCourses.push({
-          id: `setup-course-${normalisedName.replace(/[^A-Z0-9]+/gi, "-")}`,
-          name: courseName,
-          color: defaultColors[(nextCourses.length + index) % defaultColors.length],
-          startDate: "",
-          gradDate: "",
-          raafStart: 0,
-          navyStart: 0,
-          armyStart: 0,
-          location: school,
-          unit: activeUnitCode,
-          status: "ACTIVE"
-        });
-        seen.add(normalisedName);
-      });
-      return nextCourses;
-    });
+    setCourses(() => courseNames.map((courseName, index) => {
+      const normalisedName = normaliseCourseName(courseName);
+      if (!normalisedName) return null;
+      return {
+        id: `setup-course-${normalisedName.replace(/[^A-Z0-9]+/gi, "-")}`,
+        name: courseName,
+        color: defaultColors[index % defaultColors.length],
+        startDate: "",
+        gradDate: "",
+        raafStart: 0,
+        navyStart: 0,
+        armyStart: 0,
+        location: school,
+        unit: activeUnitCode,
+        status: "ACTIVE"
+      };
+    }).filter(Boolean));
   }, [activeUnitCode, normaliseCourseName, school]);
   const handleSaveSetupTestPersonnel = reactExports.useCallback((payload) => {
     if (!isSetupTestMode()) return;
@@ -142486,6 +142491,9 @@ ${"=".repeat(60)}`);
   const onDiscardRef = reactExports.useRef(() => {
   });
   const buildResources = reactExports.useMemo(() => {
+    if (setupTestProfile && !hasInitialSetupWizardCompleted) {
+      return [];
+    }
     if (setupTestProfile && !activePlatformResourcePool) {
       return [];
     }
@@ -142568,7 +142576,8 @@ ${"=".repeat(60)}`);
     activeView,
     publishedSchedules,
     scopedPublishedEventsForDate,
-    nextDayBuildEvents
+    nextDayBuildEvents,
+    hasInitialSetupWizardCompleted
   ]);
   reactExports.useCallback((events2, allResources) => {
     if (!events2 || events2.length === 0) {

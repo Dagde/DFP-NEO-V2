@@ -34565,7 +34565,11 @@ const App: React.FC = () => {
                 .map((trainee: any) => String(trainee?.course || '').trim())
                 .filter(Boolean),
         ));
-        if (courseNames.length === 0) return;
+        if (courseNames.length === 0) {
+            setCourses([]);
+            setCourseColors({});
+            return;
+        }
         setCourseColors(prev => {
             const next = { ...prev };
             courseNames.forEach((courseName, index) => {
@@ -34573,29 +34577,27 @@ const App: React.FC = () => {
             });
             return next;
         });
-        setCourses(prevCourses => {
-            const seen = new Set(prevCourses.map(course => normaliseCourseName(course.name || (course as any).code)).filter(Boolean));
-            const nextCourses = [...prevCourses];
-            courseNames.forEach((courseName, index) => {
-                const normalisedName = normaliseCourseName(courseName);
-                if (!normalisedName || seen.has(normalisedName)) return;
-                nextCourses.push({
-                    id: `setup-course-${normalisedName.replace(/[^A-Z0-9]+/gi, '-')}`,
-                    name: courseName,
-                    color: defaultColors[(nextCourses.length + index) % defaultColors.length],
-                    startDate: '',
-                    gradDate: '',
-                    raafStart: 0,
-                    navyStart: 0,
-                    armyStart: 0,
-                    location: school,
-                    unit: activeUnitCode,
-                    status: 'ACTIVE',
-                });
-                seen.add(normalisedName);
-            });
-            return nextCourses;
-        });
+        setCourses(() => (
+            courseNames
+                .map((courseName, index) => {
+                    const normalisedName = normaliseCourseName(courseName);
+                    if (!normalisedName) return null;
+                    return {
+                        id: `setup-course-${normalisedName.replace(/[^A-Z0-9]+/gi, '-')}`,
+                        name: courseName,
+                        color: defaultColors[index % defaultColors.length],
+                        startDate: '',
+                        gradDate: '',
+                        raafStart: 0,
+                        navyStart: 0,
+                        armyStart: 0,
+                        location: school,
+                        unit: activeUnitCode,
+                        status: 'ACTIVE',
+                    };
+                })
+                .filter(Boolean) as Course[]
+        ));
     }, [activeUnitCode, normaliseCourseName, school]);
     const handleSaveSetupTestPersonnel = useCallback((payload: { instructors: any[]; trainees: any[] }) => {
         if (!isSetupTestMode()) return;
@@ -36552,6 +36554,9 @@ const App: React.FC = () => {
     const onDiscardRef = useRef<() => void>(() => {});
 
     const buildResources = useMemo(() => {
+        if (setupTestProfile && !hasInitialSetupWizardCompleted) {
+            return [];
+        }
         if (setupTestProfile && !activePlatformResourcePool) {
             return [];
         }
@@ -36663,6 +36668,7 @@ const App: React.FC = () => {
         publishedSchedules,
         scopedPublishedEventsForDate,
         nextDayBuildEvents,
+        hasInitialSetupWizardCompleted,
     ]);
 
     // Filter resources to only show those with events (for schedule views)
