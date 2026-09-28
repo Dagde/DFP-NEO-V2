@@ -31489,7 +31489,7 @@ const App: React.FC = () => {
         if (!platformConfigLoaded || selectableLocationCodes.length === 0) return;
         if (selectableLocationCodes.includes(school)) return;
         const hasInitialSetupWizardProgress = hasStoredInitialSetupWizardProgress();
-        const shouldSuppressAutoLocationSwitch = showInitialSetupBlankState || isInitialSetupWizardActive || (
+        const shouldSuppressAutoLocationSwitch = showInitialSetupBlankState || isInitialSetupWizardActive || hasIncompleteInitialSetupWizardProgress || (
             hasInitialSetupWizardProgress && !hasOperationalSetupReadyForDfp
         );
         if (shouldSuppressAutoLocationSwitch) {
@@ -31504,6 +31504,8 @@ const App: React.FC = () => {
                     ? 'setup-wizard-bootstrap-active'
                     : isInitialSetupWizardActive
                     ? 'setup-wizard-open'
+                    : hasIncompleteInitialSetupWizardProgress
+                    ? 'incomplete-setup-wizard-progress'
                     : 'stored-wizard-progress-and-operational-setup-not-ready',
             });
             return;
@@ -31529,7 +31531,7 @@ const App: React.FC = () => {
             changeSchool(selectableLocationCodes[0]);
             setShowInfoNotification(`Access context changed. Location switched to ${selectableLocationCodes[0]}.`);
         }
-    }, [activeUnitCode, getLocationSelectorAliases, getUnitOptionsForLocation, hasOperationalSetupReadyForDfp, hasStoredInitialSetupWizardProgress, isInitialSetupWizardActive, platformAccessContext.accessibleLocations, platformConfig, platformConfigLoaded, platformDataScopeQuery, selectableLocationCodes, school, showInitialSetupBlankState]);
+    }, [activeUnitCode, getLocationSelectorAliases, getUnitOptionsForLocation, hasIncompleteInitialSetupWizardProgress, hasOperationalSetupReadyForDfp, hasStoredInitialSetupWizardProgress, isInitialSetupWizardActive, platformAccessContext.accessibleLocations, platformConfig, platformConfigLoaded, platformDataScopeQuery, selectableLocationCodes, school, showInitialSetupBlankState]);
 //     useEffect(() => {
 //         const fetchCurrentUser = async () => {
 //            console.log('🔍 [SESSION DEBUG] useEffect hook running');
@@ -36554,7 +36556,12 @@ const App: React.FC = () => {
     const onDiscardRef = useRef<() => void>(() => {});
 
     const buildResources = useMemo(() => {
-        if (setupTestProfile && !hasInitialSetupWizardCompleted) {
+        if (!hasInitialSetupWizardCompleted && (
+            Boolean(setupTestProfile) ||
+            isInitialSetupWizardActive ||
+            showInitialSetupBlankState ||
+            hasIncompleteInitialSetupWizardProgress
+        )) {
             return [];
         }
         if (setupTestProfile && !activePlatformResourcePool) {
@@ -36669,6 +36676,9 @@ const App: React.FC = () => {
         scopedPublishedEventsForDate,
         nextDayBuildEvents,
         hasInitialSetupWizardCompleted,
+        isInitialSetupWizardActive,
+        showInitialSetupBlankState,
+        hasIncompleteInitialSetupWizardProgress,
     ]);
 
     // Filter resources to only show those with events (for schedule views)

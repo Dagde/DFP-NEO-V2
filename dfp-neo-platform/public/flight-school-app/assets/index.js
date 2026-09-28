@@ -138206,7 +138206,7 @@ const App = () => {
     if (!platformConfigLoaded || selectableLocationCodes.length === 0) return;
     if (selectableLocationCodes.includes(school)) return;
     const hasInitialSetupWizardProgress2 = hasStoredInitialSetupWizardProgress();
-    const shouldSuppressAutoLocationSwitch = showInitialSetupBlankState || isInitialSetupWizardActive || hasInitialSetupWizardProgress2 && !hasOperationalSetupReadyForDfp;
+    const shouldSuppressAutoLocationSwitch = showInitialSetupBlankState || isInitialSetupWizardActive || hasIncompleteInitialSetupWizardProgress || hasInitialSetupWizardProgress2 && !hasOperationalSetupReadyForDfp;
     if (shouldSuppressAutoLocationSwitch) {
       pushDfpDataDiag("context:auto-location-switch-suppressed-for-initial-setup", {
         school,
@@ -138215,7 +138215,7 @@ const App = () => {
         isInitialSetupWizardActive,
         hasInitialSetupWizardProgress: hasInitialSetupWizardProgress2,
         hasOperationalSetupReadyForDfp,
-        reason: showInitialSetupBlankState ? "setup-wizard-bootstrap-active" : isInitialSetupWizardActive ? "setup-wizard-open" : "stored-wizard-progress-and-operational-setup-not-ready"
+        reason: showInitialSetupBlankState ? "setup-wizard-bootstrap-active" : isInitialSetupWizardActive ? "setup-wizard-open" : hasIncompleteInitialSetupWizardProgress ? "incomplete-setup-wizard-progress" : "stored-wizard-progress-and-operational-setup-not-ready"
       });
       return;
     }
@@ -138236,7 +138236,7 @@ const App = () => {
       changeSchool(selectableLocationCodes[0]);
       setShowInfoNotification(`Access context changed. Location switched to ${selectableLocationCodes[0]}.`);
     }
-  }, [activeUnitCode, getLocationSelectorAliases, getUnitOptionsForLocation, hasOperationalSetupReadyForDfp, hasStoredInitialSetupWizardProgress, isInitialSetupWizardActive, platformAccessContext.accessibleLocations, platformConfig, platformConfigLoaded, platformDataScopeQuery, selectableLocationCodes, school, showInitialSetupBlankState]);
+  }, [activeUnitCode, getLocationSelectorAliases, getUnitOptionsForLocation, hasIncompleteInitialSetupWizardProgress, hasOperationalSetupReadyForDfp, hasStoredInitialSetupWizardProgress, isInitialSetupWizardActive, platformAccessContext.accessibleLocations, platformConfig, platformConfigLoaded, platformDataScopeQuery, selectableLocationCodes, school, showInitialSetupBlankState]);
   const [currentUserId, setCurrentUserId] = reactExports.useState(currentUser2?.idNumber || 1);
   reactExports.useEffect(() => {
     if (!authUser && currentUser2) {
@@ -142491,7 +142491,7 @@ ${"=".repeat(60)}`);
   const onDiscardRef = reactExports.useRef(() => {
   });
   const buildResources = reactExports.useMemo(() => {
-    if (setupTestProfile && !hasInitialSetupWizardCompleted) {
+    if (!hasInitialSetupWizardCompleted && (Boolean(setupTestProfile) || isInitialSetupWizardActive || showInitialSetupBlankState || hasIncompleteInitialSetupWizardProgress)) {
       return [];
     }
     if (setupTestProfile && !activePlatformResourcePool) {
@@ -142577,7 +142577,10 @@ ${"=".repeat(60)}`);
     publishedSchedules,
     scopedPublishedEventsForDate,
     nextDayBuildEvents,
-    hasInitialSetupWizardCompleted
+    hasInitialSetupWizardCompleted,
+    isInitialSetupWizardActive,
+    showInitialSetupBlankState,
+    hasIncompleteInitialSetupWizardProgress
   ]);
   reactExports.useCallback((events2, allResources) => {
     if (!events2 || events2.length === 0) {
