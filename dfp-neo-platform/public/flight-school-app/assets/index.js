@@ -20472,10 +20472,10 @@ const PlatformConfigurationSettings = ({
   const crewCompositionSettings = normaliseCrewCompositionSettings(
     primaryOrganisationSettings.crewCompositionSettings || null
   );
-  const staffQualificationCatalogue2 = normaliseStaffQualificationCatalogue(
+  const staffQualificationCatalogue = normaliseStaffQualificationCatalogue(
     primaryOrganisationSettings.staffQualificationCatalogue || null
   );
-  const linkedInstructorQualification = staffQualificationCatalogue2.qualifications.find((qualification) => {
+  const linkedInstructorQualification = staffQualificationCatalogue.qualifications.find((qualification) => {
     const tokens = [
       qualification.id,
       qualification.code,
@@ -21079,7 +21079,7 @@ This permanently removes the organisation record from platform configuration and
     updateCrewPositionTerminology(nextPositions, void 0, nextDeletedDefaultIds);
   };
   const defaultStaffQualificationIds = new Set(DEFAULT_STAFF_QUALIFICATIONS.qualifications.map((entry) => entry.id));
-  const updateStaffQualificationCatalogue = (qualifications, deletedDefaultIds = staffQualificationCatalogue2.deletedDefaultIds || []) => {
+  const updateStaffQualificationCatalogue = (qualifications, deletedDefaultIds = staffQualificationCatalogue.deletedDefaultIds || []) => {
     setRankTerminologyDirty(true);
     updatePrimaryOrganisationSettings((settings) => ({
       ...settings,
@@ -21099,13 +21099,13 @@ This permanently removes the organisation record from platform configuration and
     }, 350);
   };
   const updateStaffQualificationEntry = (entryId, changes) => {
-    const nextQualifications = staffQualificationCatalogue2.qualifications.map((entry) => entry.id === entryId ? { ...entry, ...changes } : entry);
+    const nextQualifications = staffQualificationCatalogue.qualifications.map((entry) => entry.id === entryId ? { ...entry, ...changes } : entry);
     updateStaffQualificationCatalogue(nextQualifications);
   };
   const addStaffQualificationEntry = () => {
-    const name = `Qualification ${staffQualificationCatalogue2.qualifications.length + 1}`;
+    const name = `Qualification ${staffQualificationCatalogue.qualifications.length + 1}`;
     updateStaffQualificationCatalogue([
-      ...staffQualificationCatalogue2.qualifications,
+      ...staffQualificationCatalogue.qualifications,
       {
         id: createClientRecordId("staff-qualification"),
         name,
@@ -21117,9 +21117,9 @@ This permanently removes the organisation record from platform configuration and
     ]);
   };
   const removeStaffQualificationEntry = (entryId) => {
-    const nextQualifications = staffQualificationCatalogue2.qualifications.filter((entry) => entry.id !== entryId);
-    if (nextQualifications.length === staffQualificationCatalogue2.qualifications.length) return;
-    const nextDeletedDefaultIds = defaultStaffQualificationIds.has(entryId) ? Array.from(/* @__PURE__ */ new Set([...staffQualificationCatalogue2.deletedDefaultIds || [], entryId])) : staffQualificationCatalogue2.deletedDefaultIds || [];
+    const nextQualifications = staffQualificationCatalogue.qualifications.filter((entry) => entry.id !== entryId);
+    if (nextQualifications.length === staffQualificationCatalogue.qualifications.length) return;
+    const nextDeletedDefaultIds = defaultStaffQualificationIds.has(entryId) ? Array.from(/* @__PURE__ */ new Set([...staffQualificationCatalogue.deletedDefaultIds || [], entryId])) : staffQualificationCatalogue.deletedDefaultIds || [];
     updateStaffQualificationCatalogue(nextQualifications, nextDeletedDefaultIds);
   };
   const updateUnitCallsignSettings = (entries, policies = unitCallsignSettings.policies) => {
@@ -29665,7 +29665,7 @@ This removes them from DFP Resource Rows. Press Save in this section to apply th
                   )
                 ] })
               ] }),
-              /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-4 space-y-3", children: [...staffQualificationCatalogue2.qualifications].sort((left, right) => (left.code || left.name).localeCompare(right.code || right.name, void 0, { sensitivity: "base" })).map((entry) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid gap-3 rounded border border-gray-700 bg-gray-950 p-3 xl:grid-cols-[minmax(150px,1fr)_minmax(130px,0.8fr)_minmax(180px,1fr)_minmax(220px,1.2fr)_auto]", children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-4 space-y-3", children: [...staffQualificationCatalogue.qualifications].sort((left, right) => (left.code || left.name).localeCompare(right.code || right.name, void 0, { sensitivity: "base" })).map((entry) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid gap-3 rounded border border-gray-700 bg-gray-950 p-3 xl:grid-cols-[minmax(150px,1fr)_minmax(130px,0.8fr)_minmax(180px,1fr)_minmax(220px,1.2fr)_auto]", children: [
                 /* @__PURE__ */ jsxRuntimeExports.jsx(
                   DraftField,
                   {
@@ -33341,7 +33341,7 @@ const OrganisationMyUnitSettings = ({ platformConfig, unitCode, formationCallsig
   const permissionProfiles = getPlatformPermissionProfiles(platformConfig || null);
   const permissionProfileNameMap = Object.fromEntries(permissionProfiles.map((profile) => [String(profile.id || "").trim(), profile.name || profile.id]));
   const platformUsers = platformConfig?.platformUsers || [];
-  const staffQualificationCatalogue2 = normaliseStaffQualificationCatalogue(organisationSettings.staffQualificationCatalogue || null);
+  const staffQualificationCatalogue = normaliseStaffQualificationCatalogue(organisationSettings.staffQualificationCatalogue || null);
   const unitCallsignSettings = normaliseUnitCallsignSettings(organisationSettings.unitCallsignSettings || null);
   const trainingReportTerminology = normaliseTrainingReportTerminology(unit?.settings?.trainingReportTerminology || organisationSettings.trainingReportTerminology || null);
   const trainingReportTemplate = normaliseTrainingReportTemplate(unit?.settings?.trainingReportTemplate || organisationSettings.trainingReportTemplate || null);
@@ -33419,7 +33419,7 @@ const OrganisationMyUnitSettings = ({ platformConfig, unitCode, formationCallsig
   const flightStaggerMinutes = getEffectiveDispatchStaggerMinutes(buildRules.dispatchStaggerSettings, "flight");
   const simStaggerMinutes = getEffectiveDispatchStaggerMinutes(buildRules.dispatchStaggerSettings, "ftd");
   const modelCrewPositions = crewPositionTerminology.positions.filter((position) => !position.operationalModels?.length || position.operationalModels.includes(operationalModel));
-  const modelQualifications = staffQualificationCatalogue2.qualifications.filter((qualification) => String(qualification.status || "ACTIVE").toUpperCase() !== "INACTIVE" && qualification.operationalModels.includes(operationalModel));
+  const modelQualifications = staffQualificationCatalogue.qualifications.filter((qualification) => String(qualification.status || "ACTIVE").toUpperCase() !== "INACTIVE" && qualification.operationalModels.includes(operationalModel));
   const categories = [
     { id: "identity", label: "Unit", count: 6 },
     { id: "resources", label: "Resources", count: resourcePools.length + resourceSharingForUnit.length + staffSharingForUnit.length },
@@ -39870,7 +39870,9 @@ const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, lo
     const effectiveTraineeRows = Array.isArray(overrides.traineeRows) && overrides.traineeRows.length > 0 ? overrides.traineeRows : uploadedTraineeProfileRows.length > 0 ? uploadedTraineeProfileRows : parseWizardTraineeRows(effectiveTraineeDraft);
     const firstUnitCode = unitRows[0]?.code || effectiveUnitDraft.code || unitCode || "";
     const firstLocationCode = parseWizardLocationRows(locationsTodayDraft)[0]?.icao || locationDraft.code || "";
-    const instructorQualificationDefinitions = getInstructorQualificationDefinitions(staffQualificationCatalogue);
+    const effectiveOrganisationSettings = organisationSettings || getActiveOrganisation(platformConfig)?.settings || {};
+    const setupStaffQualificationCatalogue = normaliseStaffQualificationCatalogue(effectiveOrganisationSettings.staffQualificationCatalogue || null);
+    const instructorQualificationDefinitions = getInstructorQualificationDefinitions(setupStaffQualificationCatalogue);
     const qualificationsToFlags = (qualifications) => {
       const tokens = qualifications.split(/[,\s/]+/).map((token) => token.trim().toUpperCase()).filter(Boolean);
       const hasLinkedInstructorQualification = tokens.some((token) => instructorQualificationDefinitions.some((qualification) => qualificationMatches(token, qualification)));
@@ -49109,7 +49111,7 @@ const TraineeLmpView = ({
   onUpdateLmpItem,
   trainingReportDisplayName = "Training Report",
   instructorLabel: instructorLabel2 = "Instructor",
-  staffQualificationCatalogue: staffQualificationCatalogue2,
+  staffQualificationCatalogue,
   operationalModel = "flight_school",
   currentUserRole: currentUserRole2 = "",
   currentUserName = ""
@@ -49120,8 +49122,8 @@ const TraineeLmpView = ({
   const [showInsertEventModal, setShowInsertEventModal] = reactExports.useState(false);
   const [itemBeingEdited, setItemBeingEdited] = reactExports.useState(null);
   const testingOfficerQualifications = reactExports.useMemo(
-    () => getQualificationsForOperationalModel(staffQualificationCatalogue2, operationalModel),
-    [staffQualificationCatalogue2, operationalModel]
+    () => getQualificationsForOperationalModel(staffQualificationCatalogue, operationalModel),
+    [staffQualificationCatalogue, operationalModel]
   );
   const hasAcademicSyllabus = !!(syllabusDetails && syllabusDetails.length > 0);
   const completedEventIds = reactExports.useMemo(() => {
@@ -51843,7 +51845,7 @@ const TraineeProfileFlyout = ({
   personnelDisplaySettings = DEFAULT_PERSONNEL_DISPLAY_SETTINGS,
   trainingReportTerminology = DEFAULT_TRAINING_REPORT_TERMINOLOGY,
   platformConfig = null,
-  staffQualificationCatalogue: staffQualificationCatalogue2,
+  staffQualificationCatalogue,
   operationalModel = "flight_school",
   crewPositionTerminology,
   sctTerminology = DEFAULT_SCT_TERMINOLOGY$1,
@@ -52516,8 +52518,8 @@ const TraineeProfileFlyout = ({
     return Array.from(byValue.values());
   }, [crewPositionTerminology, operationalModel, role]);
   const normalisedQualificationCatalogue = reactExports.useMemo(
-    () => normaliseStaffQualificationCatalogue(staffQualificationCatalogue2),
-    [staffQualificationCatalogue2]
+    () => normaliseStaffQualificationCatalogue(staffQualificationCatalogue),
+    [staffQualificationCatalogue]
   );
   const activeQualificationOptions = reactExports.useMemo(
     () => getQualificationsForOperationalModel(normalisedQualificationCatalogue, operationalModel),
@@ -53993,7 +53995,7 @@ ${errorText || `HTTP ${response.status}`}`, "Delete Failed", "error");
                     trainingReportDisplayName: activeTrainingReportTemplate.displayName || activeTrainingReportTemplate.genericName || DEFAULT_TRAINING_REPORT_TEMPLATE.displayName,
                     trainingReportStatusFieldLabel: activeTrainingReportTemplate.modules.overallAssessment.fields.result || "Mission Status",
                     instructorLabel: activeReportAssessorDisplayLabel,
-                    staffQualificationCatalogue: staffQualificationCatalogue2,
+                    staffQualificationCatalogue,
                     operationalModel,
                     currentUserRole: currentUserRole2,
                     currentUserName
@@ -56268,7 +56270,7 @@ const CourseRosterView = ({
   trainingReportTerminology,
   trainingReportTemplate,
   platformConfig = null,
-  staffQualificationCatalogue: staffQualificationCatalogue2,
+  staffQualificationCatalogue,
   operationalModel = "flight_school",
   crewPositionTerminology,
   sctTerminology,
@@ -56715,7 +56717,7 @@ const CourseRosterView = ({
         personnelDisplaySettings,
         trainingReportTerminology,
         platformConfig,
-        staffQualificationCatalogue: staffQualificationCatalogue2,
+        staffQualificationCatalogue,
         operationalModel,
         crewPositionTerminology,
         sctTerminology,
@@ -57756,7 +57758,7 @@ const convertTimeToDecimal = (timeStr) => {
   if (isNaN(hours) || isNaN(minutes)) return 0;
   return hours + minutes / 60;
 };
-const EventDetailModal = ({ event, onClose, onSave, onDeleteRequest, isEditingDefault = false, instructors, trainees, syllabus, syllabusDetails, highlightedField, school, traineesData, instructorsData, courseColors, onNavigateToHateSheet, onNavigateToSyllabus, onOpenTrainingReport, trainingReportDisplayName = "Training Report", onOpenStaffTrainingReport, onOpenAuth, flightAuthorisationRequired = true, onOpenPostFlight, onOpenPreFlightNotes, isConflict, onNeoClick, traineeLMPs, oracleContextForModal, sctRequests = [], sctEvents = [], eventsForDate = [], onScoresCreated, publishedSchedules = {}, nextDayBuildEvents = [], activeView = "", isAddingTile = false, formationCallsigns = [], currentLocation = "", onVisualAdjustStart, onVisualAdjustEnd, onSaveTrainingReportAssessment, cancellationCodes = [], onCancelEvent, onRestoreEvent, onSendAlert, canSendAlert = false, alertData = null, baselineEvent = null, onClearAlert, onEditFixedCrewTile, resourceDisplayNames: resourceDisplayNames2 = DEFAULT_RESOURCE_DISPLAY_NAMES, aircraftNumberSettings = DEFAULT_AIRCRAFT_NUMBER_SETTINGS, aircraftConfigurationDefinitions = [], aircraftCrewComposition, crewPositionTerminology, operationalModel, activeUnitCode = "", staffQualificationCatalogue: staffQualificationCatalogue2, unitCallsignSettings, personnelDisplaySettings, sctTerminology = DEFAULT_SCT_TERMINOLOGY$1, isReadOnly = false, openDeleteChoice = false }) => {
+const EventDetailModal = ({ event, onClose, onSave, onDeleteRequest, isEditingDefault = false, instructors, trainees, syllabus, syllabusDetails, highlightedField, school, traineesData, instructorsData, courseColors, onNavigateToHateSheet, onNavigateToSyllabus, onOpenTrainingReport, trainingReportDisplayName = "Training Report", onOpenStaffTrainingReport, onOpenAuth, flightAuthorisationRequired = true, onOpenPostFlight, onOpenPreFlightNotes, isConflict, onNeoClick, traineeLMPs, oracleContextForModal, sctRequests = [], sctEvents = [], eventsForDate = [], onScoresCreated, publishedSchedules = {}, nextDayBuildEvents = [], activeView = "", isAddingTile = false, formationCallsigns = [], currentLocation = "", onVisualAdjustStart, onVisualAdjustEnd, onSaveTrainingReportAssessment, cancellationCodes = [], onCancelEvent, onRestoreEvent, onSendAlert, canSendAlert = false, alertData = null, baselineEvent = null, onClearAlert, onEditFixedCrewTile, resourceDisplayNames: resourceDisplayNames2 = DEFAULT_RESOURCE_DISPLAY_NAMES, aircraftNumberSettings = DEFAULT_AIRCRAFT_NUMBER_SETTINGS, aircraftConfigurationDefinitions = [], aircraftCrewComposition, crewPositionTerminology, operationalModel, activeUnitCode = "", staffQualificationCatalogue, unitCallsignSettings, personnelDisplaySettings, sctTerminology = DEFAULT_SCT_TERMINOLOGY$1, isReadOnly = false, openDeleteChoice = false }) => {
   const { isFrozen, allowedActions: freezeAllowedActions } = useSystemFreeze();
   const [isEditing, setIsEditing] = reactExports.useState(isReadOnly ? false : isEditingDefault);
   const [localHighlight, setLocalHighlight] = reactExports.useState(highlightedField);
@@ -58001,8 +58003,8 @@ const EventDetailModal = ({ event, onClose, onSave, onDeleteRequest, isEditingDe
     return staffCrew && activeUnitMemberCodes.length > 1 && staffUnit ? `${staffUnit}::${staffCrew}` : staffCrew;
   }).filter(Boolean))).sort((a, b) => a.localeCompare(b, void 0, { numeric: true })), [activeUnitMemberCodes, instructorsData]);
   const fixedCrewMembers = reactExports.useMemo(() => fixedCrewGroup ? instructorsData.filter((staff) => staffMatchesActiveFixedCrewUnit(staff, fixedCrewGroup)).filter((staff) => String(staff.crew || "").trim().toUpperCase() === splitFixedCrewGroupKey(fixedCrewGroup).crew).filter((staff) => !staff.isAdminStaff).sort((a, b) => String(a.name || "").localeCompare(String(b.name || ""), void 0, { sensitivity: "base" })) : [], [activeUnitMemberCodes, fixedCrewGroup, instructorsData]);
-  const fixedCrewPicQualification = reactExports.useMemo(() => getQualificationsForOperationalModel(staffQualificationCatalogue2, "fixed_crew").find((qualification) => normaliseQualificationToken(qualification.id) === "pic" || normaliseQualificationToken(qualification.code) === "pic" || normaliseQualificationToken(qualification.name) === "pic"), [staffQualificationCatalogue2]);
-  const fixedCrewPicCandidates = reactExports.useMemo(() => fixedCrewPicQualification ? fixedCrewMembers.filter((staff) => normaliseAssignedQualificationIds(staff.preferences?.qualifications || [], staffQualificationCatalogue2, false).includes(fixedCrewPicQualification.id)) : [], [fixedCrewMembers, fixedCrewPicQualification, staffQualificationCatalogue2]);
+  const fixedCrewPicQualification = reactExports.useMemo(() => getQualificationsForOperationalModel(staffQualificationCatalogue, "fixed_crew").find((qualification) => normaliseQualificationToken(qualification.id) === "pic" || normaliseQualificationToken(qualification.code) === "pic" || normaliseQualificationToken(qualification.name) === "pic"), [staffQualificationCatalogue]);
+  const fixedCrewPicCandidates = reactExports.useMemo(() => fixedCrewPicQualification ? fixedCrewMembers.filter((staff) => normaliseAssignedQualificationIds(staff.preferences?.qualifications || [], staffQualificationCatalogue, false).includes(fixedCrewPicQualification.id)) : [], [fixedCrewMembers, fixedCrewPicQualification, staffQualificationCatalogue]);
   const getEventSyllabusDetail = (targetEvent) => syllabusDetails.find((item) => item.id === targetEvent.flightNumber || item.code === targetEvent.flightNumber);
   const getNonNegativeFiniteNumber2 = (value) => {
     if (value === void 0 || value === null || value === "") return null;
@@ -61791,7 +61793,7 @@ const AddFlightTileModal = ({
   activeUnitCode = "",
   activeUnitCodes = [],
   unitCallsignSettings,
-  staffQualificationCatalogue: staffQualificationCatalogue2,
+  staffQualificationCatalogue,
   personnelDisplaySettings,
   personnelData,
   sctTerminology,
@@ -61984,8 +61986,8 @@ const AddFlightTileModal = ({
     });
     return Array.from(groups.entries()).map(([label, members]) => ({ label, members }));
   }, [fixedCrewMembers]);
-  const fixedCrewPicQualification = reactExports.useMemo(() => getQualificationsForOperationalModel(staffQualificationCatalogue2, "fixed_crew").find((qualification) => normaliseQualificationToken(qualification.id) === "pic" || normaliseQualificationToken(qualification.code) === "pic" || normaliseQualificationToken(qualification.name) === "pic"), [staffQualificationCatalogue2]);
-  const fixedCrewPicCandidates = reactExports.useMemo(() => fixedCrewPicQualification ? fixedCrewMembers.filter((staff) => normaliseAssignedQualificationIds(staff.preferences?.qualifications || [], staffQualificationCatalogue2, false).includes(fixedCrewPicQualification.id)) : [], [fixedCrewMembers, fixedCrewPicQualification, staffQualificationCatalogue2]);
+  const fixedCrewPicQualification = reactExports.useMemo(() => getQualificationsForOperationalModel(staffQualificationCatalogue, "fixed_crew").find((qualification) => normaliseQualificationToken(qualification.id) === "pic" || normaliseQualificationToken(qualification.code) === "pic" || normaliseQualificationToken(qualification.name) === "pic"), [staffQualificationCatalogue]);
+  const fixedCrewPicCandidates = reactExports.useMemo(() => fixedCrewPicQualification ? fixedCrewMembers.filter((staff) => normaliseAssignedQualificationIds(staff.preferences?.qualifications || [], staffQualificationCatalogue, false).includes(fixedCrewPicQualification.id)) : [], [fixedCrewMembers, fixedCrewPicQualification, staffQualificationCatalogue]);
   const getFixedCrewMembersForGroup = (groupKey) => {
     const selectedGroup = parseFixedCrewGroupKey(groupKey);
     return selectedGroup.crew ? fixedCrewStaff.filter((staff) => {
@@ -61993,7 +61995,7 @@ const AddFlightTileModal = ({
       return staffGroup.crew === selectedGroup.crew && (!selectedGroup.unit || staffGroup.unit === selectedGroup.unit);
     }).sort(compareFixedCrewMemberDisplay) : [];
   };
-  const getFixedCrewPicCandidatesForGroup = (groupKey) => fixedCrewPicQualification ? getFixedCrewMembersForGroup(groupKey).filter((staff) => normaliseAssignedQualificationIds(staff.preferences?.qualifications || [], staffQualificationCatalogue2, false).includes(fixedCrewPicQualification.id)) : [];
+  const getFixedCrewPicCandidatesForGroup = (groupKey) => fixedCrewPicQualification ? getFixedCrewMembersForGroup(groupKey).filter((staff) => normaliseAssignedQualificationIds(staff.preferences?.qualifications || [], staffQualificationCatalogue, false).includes(fixedCrewPicQualification.id)) : [];
   const activeCallsignUnitCodes = reactExports.useMemo(() => isFixedCrewModel && activeFixedCrewUnitCodes.length > 0 ? activeFixedCrewUnitCodes : [normaliseFixedCrewUnitCode2(activeUnitCode)].filter(Boolean), [activeFixedCrewUnitCodes, activeUnitCode, isFixedCrewModel]);
   const activeFixedCrewCompositeCodes = reactExports.useMemo(() => new Set([
     String(activeUnitCode || "").trim().toUpperCase(),
@@ -67085,7 +67087,7 @@ const MyDashboard = ({
   messageContactTraineeOptions = [],
   messageContactUnitCodes = [],
   canCreateUnitMessageGroups = false,
-  staffQualificationCatalogue: staffQualificationCatalogue2,
+  staffQualificationCatalogue,
   onUnreadMessageCountChange,
   crewPositionTerminology,
   sctTerminology = DEFAULT_SCT_TERMINOLOGY$1,
@@ -67157,8 +67159,8 @@ const MyDashboard = ({
   };
   const formatStaffRole = (staff) => normaliseFixedCrewStaffRole(staff.role, staff.unit) || "Staff";
   const normalisedStaffQualificationCatalogue = reactExports.useMemo(
-    () => normaliseStaffQualificationCatalogue(staffQualificationCatalogue2),
-    [staffQualificationCatalogue2]
+    () => normaliseStaffQualificationCatalogue(staffQualificationCatalogue),
+    [staffQualificationCatalogue]
   );
   const qualificationLabelById = reactExports.useMemo(() => new Map(
     normalisedStaffQualificationCatalogue.qualifications.filter((qualification) => String(qualification.status || "ACTIVE").toUpperCase() !== "INACTIVE").map((qualification) => [qualification.id, qualification.code || qualification.name || qualification.id])
@@ -72472,7 +72474,7 @@ const PrioritiesView = ({
   onSaveStandardMissionProfile,
   unitCallsignSettings,
   formationCallsigns = [],
-  staffQualificationCatalogue: staffQualificationCatalogue2,
+  staffQualificationCatalogue,
   instructorLabel: instructorLabel2 = "Instructor",
   continuationShortLabel = "CT",
   currentUserRole: currentUserRole2 = "",
@@ -72505,8 +72507,8 @@ const PrioritiesView = ({
   });
   const locationDisplayName = String(school || "").trim() || "Selected location";
   const normalisedStaffQualificationCatalogue = reactExports.useMemo(
-    () => normaliseStaffQualificationCatalogue(staffQualificationCatalogue2 || null),
-    [staffQualificationCatalogue2]
+    () => normaliseStaffQualificationCatalogue(staffQualificationCatalogue || null),
+    [staffQualificationCatalogue]
   );
   const fixedCrewPicQualification = reactExports.useMemo(() => getQualificationsForOperationalModel(normalisedStaffQualificationCatalogue, "fixed_crew").find((qualification) => normaliseQualificationToken(qualification.id) === "pic" || normaliseQualificationToken(qualification.code) === "pic" || normaliseQualificationToken(qualification.name) === "pic"), [normalisedStaffQualificationCatalogue]);
   const aircraftConfigOptions = reactExports.useMemo(() => {
@@ -87058,7 +87060,7 @@ const InstructorProfileFlyout = ({
   operationalModel = "flight_school",
   platformConfig = null,
   crewPositionTerminology,
-  staffQualificationCatalogue: staffQualificationCatalogue2,
+  staffQualificationCatalogue,
   sctTerminology = DEFAULT_SCT_TERMINOLOGY$1,
   trainingReportDisplayName = "Training Report",
   trainingReportStatusFieldLabel: trainingReportStatusFieldLabel2 = "Mission Status",
@@ -87119,8 +87121,8 @@ const InstructorProfileFlyout = ({
     return Array.from(byValue.values());
   }, [crewPositionTerminology, instructorLabel2, operationalModel, role, simIpDisplayLabel]);
   const normalisedQualificationCatalogue = reactExports.useMemo(
-    () => normaliseStaffQualificationCatalogue(staffQualificationCatalogue2),
-    [staffQualificationCatalogue2]
+    () => normaliseStaffQualificationCatalogue(staffQualificationCatalogue),
+    [staffQualificationCatalogue]
   );
   const contractorQualificationId = reactExports.useMemo(() => normalisedQualificationCatalogue.qualifications.find((qualification) => normaliseQualificationToken(qualification.id) === "contractor" || normaliseQualificationToken(qualification.code) === "contractor" || normaliseQualificationToken(qualification.name) === "contractor")?.id || "contractor", [normalisedQualificationCatalogue]);
   const qfiQualificationIds = reactExports.useMemo(() => normalisedQualificationCatalogue.qualifications.filter((qualification) => normaliseQualificationToken(qualification.id) === "qfi" || normaliseQualificationToken(qualification.code) === "qfi" || normaliseQualificationToken(qualification.name) === "qfi").map((qualification) => qualification.id), [normalisedQualificationCatalogue]);
@@ -89339,12 +89341,12 @@ const normaliseImportedStaffRole = (value, crewPositionTerminology) => {
   if (["pilot", "aircrew pilot", "captain"].includes(cleanLower)) return "Pilot";
   return cleanValue;
 };
-const applyQualificationFlags = (parsedData, qualificationsValue, staffQualificationCatalogue2) => {
+const applyQualificationFlags = (parsedData, qualificationsValue, staffQualificationCatalogue) => {
   if (!qualificationsValue) return;
   const qualificationTokens = splitListValue(qualificationsValue);
   const qualificationsLower = qualificationTokens.join(" ").toLowerCase();
-  const instructorQualifications = getInstructorQualificationDefinitions(staffQualificationCatalogue2);
-  const matchedQualificationIds = normaliseAssignedQualificationIds(qualificationsValue, staffQualificationCatalogue2, false);
+  const instructorQualifications = getInstructorQualificationDefinitions(staffQualificationCatalogue);
+  const matchedQualificationIds = normaliseAssignedQualificationIds(qualificationsValue, staffQualificationCatalogue, false);
   const hasLinkedInstructorQualification = qualificationTokens.some((token) => instructorQualifications.some((qualification) => qualificationMatches(token, qualification)));
   const hasLegacyInstructorQualification = qualificationsLower.includes("qfi") || qualificationsLower.includes("instructor");
   const hasQualificationId = (id) => matchedQualificationIds.some((value) => normaliseQualificationToken(value) === id);
@@ -89396,7 +89398,7 @@ const BulkUpdateFlyout = ({
   isTraineeMode = false,
   onBulkUpdateTrainees,
   crewPositionTerminology,
-  staffQualificationCatalogue: staffQualificationCatalogue2,
+  staffQualificationCatalogue,
   unitCallsignSettings,
   defaultUnitCode = "",
   configuredLocations = []
@@ -89577,8 +89579,8 @@ const BulkUpdateFlyout = ({
         const hasDedicatedQualificationsColumn = hasAnyHeader(row, ["Qualifications", "Qualification"]);
         const qualificationSource = qualificationsStr || combinedQualificationsAndRolesStr || (!hasDedicatedQualificationsColumn ? rolesStr : "");
         applyRoleAssignments(parsedData, rolesStr || (!qualificationsStr ? combinedQualificationsAndRolesStr : ""), crewPositionTerminology);
-        applyQualificationFlags(parsedData, qualificationSource, staffQualificationCatalogue2);
-        const importedQualificationIds = normaliseAssignedQualificationIds(qualificationSource, staffQualificationCatalogue2, false);
+        applyQualificationFlags(parsedData, qualificationSource, staffQualificationCatalogue);
+        const importedQualificationIds = normaliseAssignedQualificationIds(qualificationSource, staffQualificationCatalogue, false);
         if (importedQualificationIds.length > 0) {
           parsedData.preferences = {
             ...existingInstructor?.preferences || {},
@@ -89882,8 +89884,8 @@ const getStaffArchiveIdentifier = (instructor) => {
   const dbId = String(instructor.id || "").trim();
   return dbId || instructor.idNumber || null;
 };
-const hasInstructorQualification = (instructor, staffQualificationCatalogue2) => personHasInstructorQualification(instructor, staffQualificationCatalogue2);
-const isContractorStaffRole = (instructor, staffQualificationCatalogue2) => getPersonAssignedQualificationIds(instructor, staffQualificationCatalogue2, false).includes("contractor");
+const hasInstructorQualification = (instructor, staffQualificationCatalogue) => personHasInstructorQualification(instructor, staffQualificationCatalogue);
+const isContractorStaffRole = (instructor, staffQualificationCatalogue) => getPersonAssignedQualificationIds(instructor, staffQualificationCatalogue, false).includes("contractor");
 const isOfiSupportRole = (instructor) => String(instructor.role || "").trim().toUpperCase() === "OFI" || instructor.isOFI === true;
 const getConfiguredQualificationLabel = (catalogue, qualificationId, fallback) => {
   const targetId = String(qualificationId).trim().toLowerCase();
@@ -89893,13 +89895,13 @@ const getConfiguredQualificationLabel = (catalogue, qualificationId, fallback) =
   return String(match?.name || match?.code || fallback).trim() || fallback;
 };
 const isConfiguredCrewPositionRole = (instructor, terminology) => Boolean(findCrewPositionEntry(instructor.role, terminology));
-const isSupportStaffRole = (instructor, staffQualificationCatalogue2) => {
-  return isContractorStaffRole(instructor, staffQualificationCatalogue2) || isOfiSupportRole(instructor);
+const isSupportStaffRole = (instructor, staffQualificationCatalogue) => {
+  return isContractorStaffRole(instructor, staffQualificationCatalogue) || isOfiSupportRole(instructor);
 };
-const isActiveStaffListRole = (instructor, terminology, isFixedCrewModel, staffQualificationCatalogue2) => {
-  if (instructor.isAdminStaff || isSupportStaffRole(instructor, staffQualificationCatalogue2)) return false;
+const isActiveStaffListRole = (instructor, terminology, isFixedCrewModel, staffQualificationCatalogue) => {
+  if (instructor.isAdminStaff || isSupportStaffRole(instructor, staffQualificationCatalogue)) return false;
   if (isFixedCrewModel) return true;
-  return hasInstructorQualification(instructor, staffQualificationCatalogue2) || isPilotRole(instructor) || isConfiguredCrewPositionRole(instructor, terminology);
+  return hasInstructorQualification(instructor, staffQualificationCatalogue) || isPilotRole(instructor) || isConfiguredCrewPositionRole(instructor, terminology);
 };
 const getInstructorCrewGroup = (instructor) => String(instructor.crew || instructor.preferences?.crew || "").trim();
 const getStaffRoleFilterOption = (role, terminology, instructorLabel2, simIpDisplayLabel) => {
@@ -89975,7 +89977,7 @@ const InstructorListView = ({
   operationalModel = "flight_school",
   platformConfig = null,
   crewPositionTerminology,
-  staffQualificationCatalogue: staffQualificationCatalogue2,
+  staffQualificationCatalogue,
   unitCallsignSettings = null,
   sctTerminology,
   trainingReportDisplayName = "Training Report",
@@ -90066,8 +90068,8 @@ const InstructorListView = ({
   const contractorStaffEnabled = personnelDisplaySettings.simIpDisplayEnabled !== false;
   const contractorStaffGroupLabel = simIpDisplayLabel.trim() || "Contractor Staff";
   const ofiGroupLabel = reactExports.useMemo(
-    () => getConfiguredQualificationLabel(staffQualificationCatalogue2, "ofi", "OFI"),
-    [staffQualificationCatalogue2]
+    () => getConfiguredQualificationLabel(staffQualificationCatalogue, "ofi", "OFI"),
+    [staffQualificationCatalogue]
   );
   const getPooledCrewFlightRoleOrder = (instructor) => {
     const roleDisplay = getStaffRoleDisplay(instructor.role, crewPositionTerminology, instructorLabel2, simIpDisplayLabel);
@@ -90086,8 +90088,8 @@ const InstructorListView = ({
     return collator.compare(aName.surname, bName.surname) || collator.compare(aName.given, bName.given) || collator.compare(aName.full, bName.full);
   };
   const qfis = reactExports.useMemo(() => {
-    return instructorsData.filter(isActiveStaffRecord).filter((i) => isActiveStaffListRole(i, crewPositionTerminology, isFixedCrewModel, staffQualificationCatalogue2)).sort((a, b) => comparePeopleByConfiguredRank(a, b, personnelDisplaySettings, "staff"));
-  }, [instructorsData, isFixedCrewModel, personnelDisplaySettings, crewPositionTerminology, staffQualificationCatalogue2]);
+    return instructorsData.filter(isActiveStaffRecord).filter((i) => isActiveStaffListRole(i, crewPositionTerminology, isFixedCrewModel, staffQualificationCatalogue)).sort((a, b) => comparePeopleByConfiguredRank(a, b, personnelDisplaySettings, "staff"));
+  }, [instructorsData, isFixedCrewModel, personnelDisplaySettings, crewPositionTerminology, staffQualificationCatalogue]);
   const staffRoleFilterOptions = reactExports.useMemo(() => {
     const optionMap = /* @__PURE__ */ new Map();
     qfis.forEach((instructor) => {
@@ -90152,7 +90154,7 @@ const InstructorListView = ({
     [qfisByFlight]
   );
   const simIps = reactExports.useMemo(() => {
-    const simIpCandidates = instructorsData.filter(isActiveStaffRecord).filter((i) => isContractorStaffRole(i, staffQualificationCatalogue2));
+    const simIpCandidates = instructorsData.filter(isActiveStaffRecord).filter((i) => isContractorStaffRole(i, staffQualificationCatalogue));
     return simIpCandidates.sort((a, b) => {
       const unitA = a.unit || "Unassigned";
       const unitB = b.unit || "Unassigned";
@@ -90161,7 +90163,7 @@ const InstructorListView = ({
       }
       return comparePeopleByConfiguredRank(a, b, personnelDisplaySettings, "staff");
     });
-  }, [instructorsData, personnelDisplaySettings, staffQualificationCatalogue2]);
+  }, [instructorsData, personnelDisplaySettings, staffQualificationCatalogue]);
   const ofis = reactExports.useMemo(() => {
     const ofiCandidates = instructorsData.filter(isActiveStaffRecord).filter((i) => {
       const isOfi = isOfiSupportRole(i);
@@ -90179,8 +90181,8 @@ const InstructorListView = ({
   }, [instructorsData, personnelDisplaySettings]);
   const otherStaff = reactExports.useMemo(() => {
     const otherStaffCandidates = instructorsData.filter(isActiveStaffRecord).filter((i) => {
-      const isMainStaff = isActiveStaffListRole(i, crewPositionTerminology, isFixedCrewModel, staffQualificationCatalogue2);
-      const isSimIp = isContractorStaffRole(i, staffQualificationCatalogue2);
+      const isMainStaff = isActiveStaffListRole(i, crewPositionTerminology, isFixedCrewModel, staffQualificationCatalogue);
+      const isSimIp = isContractorStaffRole(i, staffQualificationCatalogue);
       const isOfi = isOfiSupportRole(i);
       const isOther = !isMainStaff && !isSimIp && !isOfi;
       return isOther;
@@ -90193,7 +90195,7 @@ const InstructorListView = ({
       }
       return comparePeopleByConfiguredRank(a, b, personnelDisplaySettings, "staff");
     });
-  }, [instructorsData, isFixedCrewModel, personnelDisplaySettings, crewPositionTerminology, staffQualificationCatalogue2]);
+  }, [instructorsData, isFixedCrewModel, personnelDisplaySettings, crewPositionTerminology, staffQualificationCatalogue]);
   const fixedCrewGroups = reactExports.useMemo(() => {
     if (!isFixedCrewModel) return {};
     const groups = {};
@@ -90561,7 +90563,7 @@ const InstructorListView = ({
         operationalModel,
         platformConfig,
         crewPositionTerminology,
-        staffQualificationCatalogue: staffQualificationCatalogue2,
+        staffQualificationCatalogue,
         sctTerminology,
         trainingReportDisplayName,
         trainingReportStatusFieldLabel: trainingReportStatusFieldLabel2,
@@ -90593,7 +90595,7 @@ const InstructorListView = ({
         onBulkUpdateInstructors,
         instructorsData,
         crewPositionTerminology,
-        staffQualificationCatalogue: staffQualificationCatalogue2,
+        staffQualificationCatalogue,
         unitCallsignSettings,
         defaultUnitCode,
         configuredLocations: platformConfig?.locations || []
@@ -91982,7 +91984,7 @@ const formatMasterLmpHours = (value) => {
   const numericValue = Number(value);
   return Number.isFinite(numericValue) ? `${numericValue.toFixed(1)}h` : "0.0h";
 };
-const DetailView = ({ item, isEditing, isAddingEvent = false, editedItem, onItemChange, onDeleteEvent, onEdit, editDisabled = false, onSave, onCancel, saveDisabled = false, isSaving: isSaving2 = false, resourceDisplayNames: resourceDisplayNames2 = DEFAULT_RESOURCE_DISPLAY_NAMES, aircraftConfigurations = [], aircraftCrewComposition, crewPositionTerminology, instructorsData = [], activeUnitCode = "", isAirCombatModel = false, operationalModel = "flight_school", staffQualificationCatalogue: staffQualificationCatalogue2, scoringMatrixElements = DEFAULT_ASSESSED_ELEMENTS, onAddScoringMatrixElement, linkedEventOptions = [], linkedEventOverrides = {}, onLinkedEventChange, collectionTitle = "this Master LMP", codeExample = "", descriptionExample = "" }) => {
+const DetailView = ({ item, isEditing, isAddingEvent = false, editedItem, onItemChange, onDeleteEvent, onEdit, editDisabled = false, onSave, onCancel, saveDisabled = false, isSaving: isSaving2 = false, resourceDisplayNames: resourceDisplayNames2 = DEFAULT_RESOURCE_DISPLAY_NAMES, aircraftConfigurations = [], aircraftCrewComposition, crewPositionTerminology, instructorsData = [], activeUnitCode = "", isAirCombatModel = false, operationalModel = "flight_school", staffQualificationCatalogue, scoringMatrixElements = DEFAULT_ASSESSED_ELEMENTS, onAddScoringMatrixElement, linkedEventOptions = [], linkedEventOverrides = {}, onLinkedEventChange, collectionTitle = "this Master LMP", codeExample = "", descriptionExample = "" }) => {
   const getDisplayType2 = (syllabusItem) => {
     if (syllabusItem.type === "Flight") return "Flight";
     if (syllabusItem.type === "FTD") return "FTD";
@@ -92028,7 +92030,7 @@ const DetailView = ({ item, isEditing, isAddingEvent = false, editedItem, onItem
   const fixedCrewManifestReadiness = getFixedCrewManifestReadiness(currentItem, {
     operationalModel,
     aircraftCrewComposition,
-    staffQualificationCatalogue: staffQualificationCatalogue2
+    staffQualificationCatalogue
   });
   const currentLinkedEventCode = Object.prototype.hasOwnProperty.call(linkedEventOverrides, currentItemKey) ? linkedEventOverrides[currentItemKey] : getAirCombatLinkedEventCode$1(currentItem);
   const currentLinkedEventOptions = linkedEventOptions.filter((option) => (option.id || option.code) !== (currentItem.id || currentItem.code) && option.code !== currentItem.code);
@@ -92045,7 +92047,7 @@ const DetailView = ({ item, isEditing, isAddingEvent = false, editedItem, onItem
   const testEventType = currentItem.testEventType || "NONE";
   const isTestEvent = testEventType !== "NONE";
   const testingOfficerQualifications = getQualificationsForOperationalModel(
-    staffQualificationCatalogue2,
+    staffQualificationCatalogue,
     normaliseOperationalModel(operationalModel)
   );
   const selectedTestingOfficerQualification = testingOfficerQualifications.find((qualification) => qualification.id === currentItem.testingOfficerQualificationId);
@@ -92665,7 +92667,7 @@ const SyllabusView = ({
   operationalModel = "flight_school",
   sharedUnitTabs = [],
   masterLmpCatalogue = [],
-  staffQualificationCatalogue: staffQualificationCatalogue2,
+  staffQualificationCatalogue,
   traineesData = [],
   onUpdateTrainee,
   currentUserName,
@@ -94146,7 +94148,7 @@ const SyllabusView = ({
                       activeUnitCode: effectiveActiveUnitCode,
                       isAirCombatModel,
                       operationalModel,
-                      staffQualificationCatalogue: staffQualificationCatalogue2,
+                      staffQualificationCatalogue,
                       scoringMatrixElements,
                       onAddScoringMatrixElement,
                       linkedEventOptions: filteredSyllabusDetails,
@@ -113511,7 +113513,7 @@ const DfpSidePanelTimeline = ({
   operationalModel,
   activeUnitCode,
   activeAircraftType,
-  staffQualificationCatalogue: staffQualificationCatalogue2,
+  staffQualificationCatalogue,
   unitCallsignSettings,
   personnelDisplaySettings = DEFAULT_PERSONNEL_DISPLAY_SETTINGS,
   scheduleZoomLevel = 1,
@@ -114196,8 +114198,8 @@ const DfpSidePanelTimeline = ({
       return fixedCrewAssistUnitCodeSet.size === 0 || fixedCrewAssistUnitCodeSet.has(unitCode);
     }).filter((staff) => String(staff.crew || "").replace(/^CREW\s*/i, "").trim().toUpperCase() === selectedCrew).filter((staff) => !staff.isAdminStaff).sort(compareAssistStaffRecords);
   }, [compareAssistStaffRecords, fixedCrewAssistUnitCodeSet, instructors, selectedFixedCrewGroup]);
-  const fixedCrewPicQualification = reactExports.useMemo(() => getQualificationsForOperationalModel(staffQualificationCatalogue2, "fixed_crew").find((qualification) => normaliseQualificationToken(qualification.id) === "pic" || normaliseQualificationToken(qualification.code) === "pic" || normaliseQualificationToken(qualification.name) === "pic"), [staffQualificationCatalogue2]);
-  const fixedCrewPicCandidates = reactExports.useMemo(() => fixedCrewPicQualification ? fixedCrewAssistMembers.filter((staff) => normaliseAssignedQualificationIds(staff.preferences?.qualifications || [], staffQualificationCatalogue2, false).includes(fixedCrewPicQualification.id)) : [], [fixedCrewAssistMembers, fixedCrewPicQualification, staffQualificationCatalogue2]);
+  const fixedCrewPicQualification = reactExports.useMemo(() => getQualificationsForOperationalModel(staffQualificationCatalogue, "fixed_crew").find((qualification) => normaliseQualificationToken(qualification.id) === "pic" || normaliseQualificationToken(qualification.code) === "pic" || normaliseQualificationToken(qualification.name) === "pic"), [staffQualificationCatalogue]);
+  const fixedCrewPicCandidates = reactExports.useMemo(() => fixedCrewPicQualification ? fixedCrewAssistMembers.filter((staff) => normaliseAssignedQualificationIds(staff.preferences?.qualifications || [], staffQualificationCatalogue, false).includes(fixedCrewPicQualification.id)) : [], [fixedCrewAssistMembers, fixedCrewPicQualification, staffQualificationCatalogue]);
   const handleFixedCrewAssistGroupChange = (group) => {
     setSelectedFixedCrewGroup(group);
     setSelectedFixedCrewPic("");

@@ -10009,7 +10009,9 @@ const InitialSetupWizard: React.FC<{
                 : parseWizardTraineeRows(effectiveTraineeDraft);
         const firstUnitCode = unitRows[0]?.code || effectiveUnitDraft.code || unitCode || '';
         const firstLocationCode = parseWizardLocationRows(locationsTodayDraft)[0]?.icao || locationDraft.code || '';
-        const instructorQualificationDefinitions = getInstructorQualificationDefinitions(staffQualificationCatalogue);
+        const effectiveOrganisationSettings = organisationSettings || getActiveOrganisation(platformConfig)?.settings || {};
+        const setupStaffQualificationCatalogue = normaliseStaffQualificationCatalogue(effectiveOrganisationSettings.staffQualificationCatalogue || null);
+        const instructorQualificationDefinitions = getInstructorQualificationDefinitions(setupStaffQualificationCatalogue);
         const qualificationsToFlags = (qualifications: string) => {
             const tokens = qualifications
                 .split(/[,\s/]+/)
