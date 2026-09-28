@@ -7247,6 +7247,9 @@ const InitialSetupWizard: React.FC<{
         }
     };
     const isWizardStepComplete = (step: InitialSetupWizardStep) => {
+        if (step.category === 'mandatory' || step.id === 'review') {
+            return hasMeaningfulWizardStepData(step);
+        }
         return completedWizardStepIds.has(step.id) || hasMeaningfulWizardStepData(step);
     };
     const wizardStepTextClass = (step: InitialSetupWizardStep) => (

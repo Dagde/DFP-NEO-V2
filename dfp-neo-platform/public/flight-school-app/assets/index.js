@@ -37505,6 +37505,9 @@ const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, lo
     }
   };
   const isWizardStepComplete = (step) => {
+    if (step.category === "mandatory" || step.id === "review") {
+      return hasMeaningfulWizardStepData(step);
+    }
     return completedWizardStepIds.has(step.id) || hasMeaningfulWizardStepData(step);
   };
   const wizardStepTextClass = (step) => isWizardStepComplete(step) ? "text-slate-950" : wizardCategoryTextClass[step.category];
