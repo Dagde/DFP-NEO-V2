@@ -13277,6 +13277,7 @@ const ScheduleView: React.FC<ScheduleViewProps> = ({
     canEditTileAircraftNumber = true,
     onLinkedAvailabilityChange,
     onInitialSetupWizardActiveChange,
+    onInitialSetupWizardFinished,
     initialOrganisationSlideoutView = 'structure',
     serviceDefinitions = [],
     onUpdateServiceDefinitions,

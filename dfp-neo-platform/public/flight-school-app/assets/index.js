@@ -33944,7 +33944,7 @@ const WizardFlyingWindowTimeInput = React.memo(({
     }
   );
 });
-const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, locationCode, formationCallsigns = [], buildRuleSettings, flyingStartTime = 8, flyingEndTime = 17, ftdStartTime = 8, ftdEndTime = 17, cptStartTime = 8, cptEndTime = 17, allowNightFlying = true, commenceNightFlying = 18.5, ceaseNightFlying = 23.5, onUpdateFlyingStartTime, onUpdateFlyingEndTime, onUpdateFtdStartTime, onUpdateFtdEndTime, onUpdateCptStartTime, onUpdateCptEndTime, onUpdateAllowNightFlying, onUpdateCommenceNightFlying, onUpdateCeaseNightFlying, dispatchStaggerSettings = DEFAULT_DISPATCH_STAGGER_SETTINGS, onUpdateDispatchStaggerSettings, tileStatusSettings = DEFAULT_TILE_STATUS_SETTINGS, onUpdateTileStatusSettings, emergencyFreezeAuthority = DEFAULT_EMERGENCY_FREEZE_AUTHORITY, onUpdateEmergencyFreezeAuthority, emergencyFreezeAllowedActions = DEFAULT_EMERGENCY_FREEZE_ALLOWED_ACTIONS, onUpdateEmergencyFreezeAllowedActions, qualificationOptions = [], currentUserQualificationIds = [], onUpdatePlatformConfig, onNavigateToSettingsSection, currentUserPermission = "Staff", canUsePlatformPermission, isSetupTestMode: isSetupTestMode$1 = false, onSaveSetupTestPersonnel, serviceDefinitions = [], onUpdateServiceDefinitions, traineeServiceOptions = [], onInitialSetupWizardFinished: onInitialSetupWizardFinished2 }) => {
+const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, locationCode, formationCallsigns = [], buildRuleSettings, flyingStartTime = 8, flyingEndTime = 17, ftdStartTime = 8, ftdEndTime = 17, cptStartTime = 8, cptEndTime = 17, allowNightFlying = true, commenceNightFlying = 18.5, ceaseNightFlying = 23.5, onUpdateFlyingStartTime, onUpdateFlyingEndTime, onUpdateFtdStartTime, onUpdateFtdEndTime, onUpdateCptStartTime, onUpdateCptEndTime, onUpdateAllowNightFlying, onUpdateCommenceNightFlying, onUpdateCeaseNightFlying, dispatchStaggerSettings = DEFAULT_DISPATCH_STAGGER_SETTINGS, onUpdateDispatchStaggerSettings, tileStatusSettings = DEFAULT_TILE_STATUS_SETTINGS, onUpdateTileStatusSettings, emergencyFreezeAuthority = DEFAULT_EMERGENCY_FREEZE_AUTHORITY, onUpdateEmergencyFreezeAuthority, emergencyFreezeAllowedActions = DEFAULT_EMERGENCY_FREEZE_ALLOWED_ACTIONS, onUpdateEmergencyFreezeAllowedActions, qualificationOptions = [], currentUserQualificationIds = [], onUpdatePlatformConfig, onNavigateToSettingsSection, currentUserPermission = "Staff", canUsePlatformPermission, isSetupTestMode: isSetupTestMode$1 = false, onSaveSetupTestPersonnel, serviceDefinitions = [], onUpdateServiceDefinitions, traineeServiceOptions = [], onInitialSetupWizardFinished }) => {
   const [mode, setMode] = reactExports.useState(() => {
     if (typeof window === "undefined") return "detect";
     const storedStep = Number(window.localStorage.getItem(initialSetupWizardStorageKey));
@@ -34035,7 +34035,7 @@ const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, lo
   const [wizardFinishInProgress, setWizardFinishInProgress] = reactExports.useState(false);
   const [wizardReviewComplete, setWizardReviewComplete] = reactExports.useState(false);
   const wizardReviewAutoReturnScheduledRef = reactExports.useRef(false);
-  const onInitialSetupWizardFinishedRef = reactExports.useRef(onInitialSetupWizardFinished2);
+  const onInitialSetupWizardFinishedRef = reactExports.useRef(onInitialSetupWizardFinished);
   const wizardFinishTraceStorageKey = "dfp_setup_wizard_finish_trace";
   const [wizardFinishTrace, setWizardFinishTrace] = reactExports.useState(() => {
     if (typeof window === "undefined") return [];
@@ -34324,8 +34324,8 @@ const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, lo
     setSaveMessage("Step 41 finish trace downloaded.");
   };
   reactExports.useEffect(() => {
-    onInitialSetupWizardFinishedRef.current = onInitialSetupWizardFinished2;
-  }, [onInitialSetupWizardFinished2]);
+    onInitialSetupWizardFinishedRef.current = onInitialSetupWizardFinished;
+  }, [onInitialSetupWizardFinished]);
   reactExports.useEffect(() => {
     if (!wizardReviewComplete) {
       wizardReviewAutoReturnScheduledRef.current = false;
@@ -42661,7 +42661,7 @@ Classrooms: ${classroomNames.join(", ")}` : ""}`;
     ] })
   ] });
 };
-const OrganisationSlideoutDiagram = ({ platformConfig, organisationSettings, unitCode, locationCode, formationCallsigns = [], buildRuleSettings, flyingStartTime, flyingEndTime, ftdStartTime, ftdEndTime, cptStartTime, cptEndTime, allowNightFlying, commenceNightFlying, ceaseNightFlying, onUpdateFlyingStartTime, onUpdateFlyingEndTime, onUpdateFtdStartTime, onUpdateFtdEndTime, onUpdateCptStartTime, onUpdateCptEndTime, onUpdateAllowNightFlying, onUpdateCommenceNightFlying, onUpdateCeaseNightFlying, dispatchStaggerSettings, onUpdateDispatchStaggerSettings, tileStatusSettings, onUpdateTileStatusSettings, emergencyFreezeAuthority, onUpdateEmergencyFreezeAuthority, emergencyFreezeAllowedActions, onUpdateEmergencyFreezeAllowedActions, qualificationOptions, currentUserQualificationIds, onUpdatePlatformConfig, onNavigateToSettingsSection, currentUserPermission = "Staff", canUsePlatformPermission, isSetupTestMode: isSetupTestMode2 = false, onSaveSetupTestPersonnel, isOpen = false, onInitialSetupWizardActiveChange, onInitialSetupWizardFinished: onInitialSetupWizardFinished2, initialView = "structure", serviceDefinitions = [], onUpdateServiceDefinitions, traineeServiceOptions = [] }) => {
+const OrganisationSlideoutDiagram = ({ platformConfig, organisationSettings, unitCode, locationCode, formationCallsigns = [], buildRuleSettings, flyingStartTime, flyingEndTime, ftdStartTime, ftdEndTime, cptStartTime, cptEndTime, allowNightFlying, commenceNightFlying, ceaseNightFlying, onUpdateFlyingStartTime, onUpdateFlyingEndTime, onUpdateFtdStartTime, onUpdateFtdEndTime, onUpdateCptStartTime, onUpdateCptEndTime, onUpdateAllowNightFlying, onUpdateCommenceNightFlying, onUpdateCeaseNightFlying, dispatchStaggerSettings, onUpdateDispatchStaggerSettings, tileStatusSettings, onUpdateTileStatusSettings, emergencyFreezeAuthority, onUpdateEmergencyFreezeAuthority, emergencyFreezeAllowedActions, onUpdateEmergencyFreezeAllowedActions, qualificationOptions, currentUserQualificationIds, onUpdatePlatformConfig, onNavigateToSettingsSection, currentUserPermission = "Staff", canUsePlatformPermission, isSetupTestMode: isSetupTestMode2 = false, onSaveSetupTestPersonnel, isOpen = false, onInitialSetupWizardActiveChange, onInitialSetupWizardFinished, initialView = "structure", serviceDefinitions = [], onUpdateServiceDefinitions, traineeServiceOptions = [] }) => {
   const chart = reactExports.useMemo(() => buildOrganisationChart(platformConfig), [platformConfig]);
   const [selectedNodeId, setSelectedNodeId] = reactExports.useState(null);
   const [activeView, setActiveView] = reactExports.useState(initialView);
@@ -42855,7 +42855,7 @@ const OrganisationSlideoutDiagram = ({ platformConfig, organisationSettings, uni
         serviceDefinitions,
         onUpdateServiceDefinitions,
         traineeServiceOptions,
-        onInitialSetupWizardFinished: onInitialSetupWizardFinished2
+        onInitialSetupWizardFinished
       }
     ) })
   ] });
@@ -42946,6 +42946,7 @@ const ScheduleView = ({
   canEditTileAircraftNumber = true,
   onLinkedAvailabilityChange,
   onInitialSetupWizardActiveChange,
+  onInitialSetupWizardFinished,
   initialOrganisationSlideoutView = "structure",
   serviceDefinitions = [],
   onUpdateServiceDefinitions,
