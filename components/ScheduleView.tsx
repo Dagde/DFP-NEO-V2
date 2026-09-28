@@ -3083,6 +3083,9 @@ const InitialSetupWizard: React.FC<{
     const [uploadedStaffProfileRows, setUploadedStaffProfileRows] = useState<any[]>([]);
     const [uploadedTraineeProfileRows, setUploadedTraineeProfileRows] = useState<any[]>([]);
     const [uploadedCourseLmpItems, setUploadedCourseLmpItems] = useState<SyllabusItemDetail[]>([]);
+    const [lmpCommitInProgress, setLmpCommitInProgress] = useState(false);
+    const [lmpEventsCommitted, setLmpEventsCommitted] = useState(false);
+    const [lmpCommitSummary, setLmpCommitSummary] = useState('');
     const fileInputRef = useRef<HTMLInputElement | null>(null);
     const pendingWizardTemplateFilesRef = useRef<Record<string, File>>({});
     const lastSetupTestPersonnelSnapshotRef = useRef('');
@@ -7863,6 +7866,9 @@ const InitialSetupWizard: React.FC<{
                 lmpName: cleanLmpName,
             }));
             setUploadedCourseLmpItems(scopedItems);
+            setLmpCommitInProgress(false);
+            setLmpEventsCommitted(false);
+            setLmpCommitSummary('');
             pushWizardImportDiag('courses:loaded-for-commit', {
                 importedItems: scopedItems.length,
                 lmpCode: cleanLmpCode,
@@ -10627,6 +10633,12 @@ const InitialSetupWizard: React.FC<{
         }, 450);
     };
     const commitWizardCourseLmpEvents = () => {
+        if (lmpCommitInProgress) return;
+        setLmpCommitInProgress(true);
+        setLmpEventsCommitted(false);
+        setLmpCommitSummary('Committing LMP events...');
+        setSaveMessage('Committing LMP events...');
+        try {
         const uploadResult = uploadResults.courses;
         const fallbackItemsFromValidatedUpload = uploadedCourseLmpItems.length === 0 && uploadResult?.status === 'valid'
             ? buildWizardCourseUploadItems(uploadResult)
@@ -10662,6 +10674,8 @@ const InitialSetupWizard: React.FC<{
             if (uploadResult?.status === 'valid') {
                 importWizardTemplateRows(initialSetupTemplates.find((template) => template.id === 'courses')!, uploadResult);
                 setSaveMessage('The uploaded LMP was valid, but no importable event rows were available to commit. Review the parsed LMP rows before trying again.');
+                setLmpCommitInProgress(false);
+                setLmpCommitSummary('');
                 pushWizardLmpDiag('commit:blocked-valid-upload-no-items', {
                     reason: 'Validated upload existed, but neither React-staged items nor synchronous fallback parsing produced commit rows.',
                     uploadHeaders: uploadResult.headers || [],
@@ -10670,6 +10684,8 @@ const InitialSetupWizard: React.FC<{
                 });
             } else {
                 setSaveMessage('Upload and validate a Courses and LMP events template before committing it.');
+                setLmpCommitInProgress(false);
+                setLmpCommitSummary('');
                 pushWizardLmpDiag('commit:blocked-no-valid-upload', {
                     uploadResultStatus: uploadResult?.status || 'missing',
                     uploadResultIssues: uploadResult?.issues || [],
@@ -10964,8 +10980,22 @@ const InitialSetupWizard: React.FC<{
             });
         }
         const message = `Committed ${scopedItems.length} LMP event${scopedItems.length === 1 ? '' : 's'} for ${cleanLmpCode} to this setup.`;
-        setImportConfirmations((current) => ({ ...current, courses: message }));
-        setSaveMessage(message);
+        window.setTimeout(() => {
+            setImportConfirmations((current) => ({ ...current, courses: message }));
+            setLmpCommitInProgress(false);
+            setLmpEventsCommitted(true);
+            setLmpCommitSummary(message);
+            setSaveMessage(message);
+        }, 450);
+        } catch (error) {
+            const errorMessage = error instanceof Error ? error.message : String(error);
+            const message = `LMP commit failed before it could finish: ${errorMessage}`;
+            setImportConfirmations((current) => ({ ...current, courses: message }));
+            setLmpCommitInProgress(false);
+            setLmpEventsCommitted(false);
+            setLmpCommitSummary(message);
+            setSaveMessage(message);
+        }
     };
     const renderWizardDataEntry = () => {
         if (visibleStep.id === 'analysis') {
@@ -12024,13 +12054,18 @@ const InitialSetupWizard: React.FC<{
                                         <>
                                             <button
                                                 type="button"
-                                                className={`${wizardPrimaryButtonClass} mt-3`}
+                                                className={`${wizardPrimaryButtonClass} mt-3 ${template.id === 'courses' && lmpCommitInProgress ? 'bg-blue-600 hover:bg-blue-600' : template.id === 'courses' && lmpEventsCommitted ? 'bg-emerald-600 hover:bg-emerald-600' : ''}`}
                                                 onClick={() => template.id === 'courses'
                                                     ? commitWizardCourseLmpEvents()
                                                     : importWizardTemplateRows(template, result)
                                                 }
+                                                disabled={template.id === 'courses' && lmpCommitInProgress}
                                             >
-                                                {importConfirmation
+                                                {template.id === 'courses' && lmpCommitInProgress
+                                                    ? 'Committing...'
+                                                    : template.id === 'courses' && lmpEventsCommitted
+                                                        ? '✓ LMP Events Committed'
+                                                        : importConfirmation
                                                     ? template.id === 'staff'
                                                         ? 'Commit uploaded staff again'
                                                         : template.id === 'trainees'
@@ -12047,9 +12082,9 @@ const InitialSetupWizard: React.FC<{
                                                                 : `Import into ${template.id === 'scoring' ? 'scoring matrix' : 'wizard'}`
                                                 }
                                             </button>
-                                            {importConfirmation ? (
-                                                <div className="mt-3 rounded-md border border-emerald-300 bg-white px-3 py-2 text-xs font-bold leading-5 text-emerald-800">
-                                                    {importConfirmation}
+                                            {(template.id === 'courses' && lmpCommitInProgress) || importConfirmation ? (
+                                                <div className={`mt-3 rounded-md border px-3 py-2 text-xs font-bold leading-5 ${template.id === 'courses' && lmpCommitInProgress ? 'border-blue-300 bg-blue-50 text-blue-800' : 'border-emerald-300 bg-white text-emerald-800'}`}>
+                                                    {template.id === 'courses' && lmpCommitInProgress ? 'Committing LMP events...' : importConfirmation}
                                                 </div>
                                             ) : null}
                                         </>
