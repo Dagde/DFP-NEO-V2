@@ -137442,8 +137442,9 @@ const App = () => {
   const hasOperationalSetupReadyForDfp = hasActiveOperationalUnit && hasActiveOperationalResourcePool && hasActiveOperationalAircraftType;
   const hasInitialSetupWizardProgress = hasPersistedInitialSetupWizardProgress || hasStoredInitialSetupWizardProgress();
   const hasInitialSetupWizardCompleted = hasPersistedInitialSetupWizardCompleted || hasStoredInitialSetupWizardCompleted();
+  const hasStoredIncompleteInitialSetupWizardProgress = !hasStoredInitialSetupWizardCompleted() && hasStoredInitialSetupWizardProgress();
   const hasIncompleteInitialSetupWizardProgress = !hasInitialSetupWizardCompleted && (hasPersistedIncompleteInitialSetupWizardProgress || hasStoredInitialSetupWizardProgress());
-  const shouldResumeInitialSetupWizard = !hasOperationalSetupReadyForDfp && (hasIncompleteInitialSetupWizardProgress || hasInitialSetupWizardProgress);
+  const shouldResumeInitialSetupWizard = hasPersistedIncompleteInitialSetupWizardProgress || !hasOperationalSetupReadyForDfp && hasStoredIncompleteInitialSetupWizardProgress;
   const canBootstrapInitialSetupFromDfp = hasAuthenticatedAdminRole && platformConfigLoaded && (operationalContextOptions.length === 0 || shouldResumeInitialSetupWizard);
   const showInitialSetupBlankState = canBootstrapInitialSetupFromDfp;
   reactExports.useEffect(() => {
@@ -137461,6 +137462,7 @@ const App = () => {
       hasPersistedInitialSetupWizardCompleted,
       hasStoredInitialSetupWizardProgress: hasStoredInitialSetupWizardProgress(),
       hasStoredInitialSetupWizardCompleted: hasStoredInitialSetupWizardCompleted(),
+      hasStoredIncompleteInitialSetupWizardProgress,
       hasInitialSetupWizardProgress,
       hasInitialSetupWizardCompleted,
       hasIncompleteInitialSetupWizardProgress,
@@ -137495,6 +137497,7 @@ const App = () => {
     hasPersistedInitialSetupWizardProgress,
     hasStoredInitialSetupWizardCompleted,
     hasStoredInitialSetupWizardProgress,
+    hasStoredIncompleteInitialSetupWizardProgress,
     operationalContextOptions,
     platformConfig,
     platformConfigLoaded,

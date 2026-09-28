@@ -30720,12 +30720,13 @@ const App: React.FC = () => {
     const hasOperationalSetupReadyForDfp = hasActiveOperationalUnit && hasActiveOperationalResourcePool && hasActiveOperationalAircraftType;
     const hasInitialSetupWizardProgress = hasPersistedInitialSetupWizardProgress || hasStoredInitialSetupWizardProgress();
     const hasInitialSetupWizardCompleted = hasPersistedInitialSetupWizardCompleted || hasStoredInitialSetupWizardCompleted();
+    const hasStoredIncompleteInitialSetupWizardProgress = !hasStoredInitialSetupWizardCompleted() && hasStoredInitialSetupWizardProgress();
     const hasIncompleteInitialSetupWizardProgress = !hasInitialSetupWizardCompleted && (
         hasPersistedIncompleteInitialSetupWizardProgress || hasStoredInitialSetupWizardProgress()
     );
-    const shouldResumeInitialSetupWizard = !hasOperationalSetupReadyForDfp && (
-        hasIncompleteInitialSetupWizardProgress ||
-        hasInitialSetupWizardProgress
+    const shouldResumeInitialSetupWizard = (
+        hasPersistedIncompleteInitialSetupWizardProgress ||
+        (!hasOperationalSetupReadyForDfp && hasStoredIncompleteInitialSetupWizardProgress)
     );
     const canBootstrapInitialSetupFromDfp = hasAuthenticatedAdminRole
         && platformConfigLoaded
@@ -30750,6 +30751,7 @@ const App: React.FC = () => {
             hasPersistedInitialSetupWizardCompleted,
             hasStoredInitialSetupWizardProgress: hasStoredInitialSetupWizardProgress(),
             hasStoredInitialSetupWizardCompleted: hasStoredInitialSetupWizardCompleted(),
+            hasStoredIncompleteInitialSetupWizardProgress,
             hasInitialSetupWizardProgress,
             hasInitialSetupWizardCompleted,
             hasIncompleteInitialSetupWizardProgress,
@@ -30784,6 +30786,7 @@ const App: React.FC = () => {
         hasPersistedInitialSetupWizardProgress,
         hasStoredInitialSetupWizardCompleted,
         hasStoredInitialSetupWizardProgress,
+        hasStoredIncompleteInitialSetupWizardProgress,
         operationalContextOptions,
         platformConfig,
         platformConfigLoaded,
