@@ -10557,8 +10557,13 @@ const InitialSetupWizard: React.FC<{
         setSaveMessage(message);
     };
     const commitWizardTraineeProfiles = () => {
-        const traineeRows = uploadedTraineeProfileRows.length > 0 ? uploadedTraineeProfileRows : undefined;
-        const rowsToCommit = traineeRows || parseWizardTraineeRows(traineeDraft);
+        const displayedRows = parseWizardTraineeRows(traineeDraft);
+        const rowsToCommit = displayedRows.length > 0
+            ? displayedRows.map((row, index) => ({
+                ...(uploadedTraineeProfileRows[index] || {}),
+                ...row,
+            }))
+            : uploadedTraineeProfileRows;
         const validCourses = new Set(parseWizardLineItems(traineeCourseOptionsDraft).map((course) => course.toUpperCase()));
         const missingCourseCount = rowsToCommit.filter((row) => (
             row.surname || row.givenNames || row.unit || row.rank || row.personnelId || row.courseNumber || row.course || row.masterLmp || row.startDate
@@ -10578,8 +10583,11 @@ const InitialSetupWizard: React.FC<{
             row.surname || row.givenNames || row.unit || row.rank || row.personnelId || row.courseNumber || row.course || row.masterLmp || row.startDate
         )).length;
         const nextUnitDraft = { ...unitDraft, hasTrainees: true };
+        const nextTraineeDraft = formatWizardTraineeRows(rowsToCommit);
         setUnitDraft(nextUnitDraft);
-        saveSetupTestWizardDrafts(false, { traineeDraft, traineeRows, unitDraft: nextUnitDraft });
+        setTraineeDraft(nextTraineeDraft);
+        setUploadedTraineeProfileRows(rowsToCommit);
+        saveSetupTestWizardDrafts(false, { traineeDraft: nextTraineeDraft, traineeRows: rowsToCommit, unitDraft: nextUnitDraft });
         const message = `Committed ${traineeCount} trainee profile${traineeCount === 1 ? '' : 's'} to the trainee list in this setup.`;
         setImportConfirmations((current) => ({ ...current, trainees: message }));
         setTraineeAllocationCommitted(true);
