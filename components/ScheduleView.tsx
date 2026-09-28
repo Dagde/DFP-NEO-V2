@@ -1095,18 +1095,6 @@ const downloadWizardTemplate = (template: InitialSetupWizardTemplate) => {
     URL.revokeObjectURL(url);
 };
 
-const downloadWizardJson = (fileName: string, payload: any) => {
-    const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json;charset=utf-8;' });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.href = url;
-    link.download = fileName;
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    URL.revokeObjectURL(url);
-};
-
 const parseWizardCsvRows = (text: string): string[][] => {
     const rows: string[][] = [];
     let row: string[] = [];
@@ -3171,48 +3159,6 @@ const InitialSetupWizard: React.FC<{
         } catch (error) {
         }
     };
-    const pushWizardTraineeCommitTrace = (stage: string, details: Record<string, any> = {}) => {
-        if (typeof window === 'undefined') return;
-        const entry = {
-            ts: new Date().toISOString(),
-            stage,
-            unitCode,
-            details: compactWizardDiagDetails(details),
-        };
-        try {
-            const existing = JSON.parse(window.localStorage.getItem('dfp_setup_wizard_trainee_commit_trace') || '[]');
-            const next = [...(Array.isArray(existing) ? existing : []), entry].slice(-40);
-            safeSetWizardLocalStorage('dfp_setup_wizard_trainee_commit_trace', JSON.stringify(next));
-            (window as any).neoSetupWizardTraineeCommitTrace = next;
-        } catch {
-            // Diagnostic tracking is best-effort only.
-        }
-    };
-    const downloadWizardTraineeCommitTrace = () => {
-        if (typeof window === 'undefined') return;
-        let trace: any[] = [];
-        try {
-            const parsed = JSON.parse(window.localStorage.getItem('dfp_setup_wizard_trainee_commit_trace') || '[]');
-            trace = Array.isArray(parsed) ? parsed : [];
-        } catch {
-            trace = [];
-        }
-        downloadWizardJson(`dfp-trainee-commit-trace-${new Date().toISOString().replace(/[:.]/g, '-')}.json`, {
-            generatedAt: new Date().toISOString(),
-            unitCode,
-            locationCode,
-            visibleStepId: visibleStep.id,
-            currentStep,
-            traineeCommitInProgress,
-            traineeAllocationCommitted,
-            traineeCommitSummary,
-            saveMessage,
-            traineeCourseOptions: parseWizardLineItems(traineeCourseOptionsDraft),
-            traineeRows: parseWizardTraineeRows(traineeDraft),
-            uploadedTraineeProfileRows,
-            trace,
-        });
-    };
     const pushWizardLmpDiag = (stage: string, details: Record<string, any> = {}) => {
         if (!isSetupTestMode || typeof window === 'undefined') return;
         const setupTestKeys = Object.keys(window.localStorage || {})
@@ -3776,8 +3722,8 @@ const InitialSetupWizard: React.FC<{
     });
     const accessDraftDirtyRef = useRef(false);
     const [trainingDraft, setTrainingDraft] = useState({
-        lmpCode: String(primaryMasterLmp?.code || 'New Master LMP'),
-        lmpName: String(primaryMasterLmp?.name || primaryMasterLmp?.code || 'New Master LMP'),
+        lmpCode: '',
+        lmpName: '',
         description: String(primaryMasterLmp?.description || ''),
         status: String(primaryMasterLmp?.status || 'ACTIVE'),
         audience: resolveWizardLmpAudience(primaryMasterLmp?.audience),
@@ -4854,8 +4800,8 @@ const InitialSetupWizard: React.FC<{
         if (trainingDraftDirtyRef.current) return;
         const savedDraft = getSavedWizardObject('trainingDraft');
         setTrainingDraft({
-            lmpCode: String(savedDraft.lmpCode || primaryMasterLmp?.code || 'New Master LMP'),
-            lmpName: String(savedDraft.lmpName || primaryMasterLmp?.name || primaryMasterLmp?.code || 'New Master LMP'),
+            lmpCode: String(savedDraft.lmpCode || ''),
+            lmpName: String(savedDraft.lmpName || ''),
             description: String(savedDraft.description || primaryMasterLmp?.description || ''),
             status: String(savedDraft.status || primaryMasterLmp?.status || 'ACTIVE'),
             audience: resolveWizardLmpAudience(savedDraft.audience || primaryMasterLmp?.audience),
@@ -9327,28 +9273,11 @@ const InitialSetupWizard: React.FC<{
                 const course = String(row.course || '').trim();
                 return !course || !validCourses.has(course.toUpperCase());
             }).length;
-            pushWizardTraineeCommitTrace('next:trainee-allocation-gate', {
-                hasTraineesToCommit,
-                missingCourseCount,
-                traineeAllocationCommitted,
-                traineeCommitInProgress,
-                traineeRows,
-                courseOptions: parseWizardLineItems(traineeCourseOptionsDraft),
-            });
             if (hasTraineesToCommit && missingCourseCount > 0) {
-                pushWizardTraineeCommitTrace('next:blocked-missing-course', {
-                    missingCourseCount,
-                    traineeRows,
-                });
                 setSaveMessage(`Select one of the active courses for every trainee before continuing. ${missingCourseCount} trainee${missingCourseCount === 1 ? '' : 's'} still need a valid course.`);
                 return;
             }
             if (hasTraineesToCommit && !traineeAllocationCommitted) {
-                pushWizardTraineeCommitTrace('next:blocked-uncommitted', {
-                    traineeCommitInProgress,
-                    traineeCommitSummary,
-                    traineeRows,
-                });
                 setSaveMessage('Commit the allocated trainees to Trainee Profiles before continuing.');
                 return;
             }
@@ -10651,13 +10580,6 @@ const InitialSetupWizard: React.FC<{
             : uploadedTraineeProfileRows;
         const courseOptions = parseWizardLineItems(traineeCourseOptionsDraft);
         const validCourses = new Set(courseOptions.map((course) => course.toUpperCase()));
-        pushWizardTraineeCommitTrace('commit:clicked', {
-            displayedRows,
-            uploadedTraineeProfileRows,
-            rowsToCommit,
-            courseOptions,
-            traineeDraft,
-        });
         const missingCourseCount = rowsToCommit.filter((row) => (
             row.surname || row.givenNames || row.unit || row.rank || row.personnelId || row.courseNumber || row.course || row.masterLmp || row.startDate
         )).filter((row) => {
@@ -10666,11 +10588,6 @@ const InitialSetupWizard: React.FC<{
         }).length;
         if (missingCourseCount > 0) {
             const message = `Select one of the active courses for every trainee before committing. ${missingCourseCount} trainee${missingCourseCount === 1 ? '' : 's'} still need a valid course.`;
-            pushWizardTraineeCommitTrace('commit:blocked-missing-course', {
-                missingCourseCount,
-                rowsToCommit,
-                courseOptions,
-            });
             setImportConfirmations((current) => ({ ...current, trainees: message }));
             setTraineeAllocationCommitted(false);
             setTraineeCommitInProgress(false);
@@ -10694,14 +10611,6 @@ const InitialSetupWizard: React.FC<{
         } catch (error) {
             const errorMessage = error instanceof Error ? error.message : String(error);
             const message = `Trainee profile commit failed before it could finish: ${errorMessage}`;
-            pushWizardTraineeCommitTrace('commit:error', {
-                errorMessage,
-                errorStack: error instanceof Error ? error.stack : '',
-                traineeCount,
-                rowsToCommit,
-                nextTraineeDraft,
-                nextUnitDraft,
-            });
             setImportConfirmations((current) => ({ ...current, trainees: message }));
             setTraineeCommitInProgress(false);
             setTraineeAllocationCommitted(false);
@@ -10709,17 +10618,7 @@ const InitialSetupWizard: React.FC<{
             setSaveMessage(message);
             return;
         }
-        pushWizardTraineeCommitTrace('commit:save-queued', {
-            traineeCount,
-            rowsToCommit,
-            nextTraineeDraft,
-            nextUnitDraft,
-        });
         window.setTimeout(() => {
-            pushWizardTraineeCommitTrace('commit:confirmed-ui', {
-                traineeCount,
-                rowsToCommit,
-            });
             setImportConfirmations((current) => ({ ...current, trainees: message }));
             setTraineeCommitInProgress(false);
             setTraineeCommitSummary(message);
@@ -11621,13 +11520,6 @@ const InitialSetupWizard: React.FC<{
                                     disabled={traineeCommitInProgress}
                                 >
                                     {traineeCommitInProgress ? 'Committing...' : traineeAllocationCommitted ? '✓ Trainee Profiles Committed' : 'Commit to Trainee Profiles'}
-                                </button>
-                                <button
-                                    type="button"
-                                    className={`${wizardSmallButtonClass} mt-3 ml-2`}
-                                    onClick={downloadWizardTraineeCommitTrace}
-                                >
-                                    Download Trainee Commit Trace
                                 </button>
                             </div>
                             {showMoreTraineesPrompt ? (
