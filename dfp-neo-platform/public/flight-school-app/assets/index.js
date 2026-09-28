@@ -39957,6 +39957,8 @@ const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, lo
     const trainingReportPhraseBank = wizardScoringPhraseBank;
     const scoringDraftToSave = wizardPhraseBankToScoringDraft(trainingReportPhraseBank);
     const setupPersonnel = buildSetupTestPersonnel(cleanUnits, overrides);
+    const setupWizardUpdatedAt = (/* @__PURE__ */ new Date()).toISOString();
+    const setupWizardCompletionAt = markComplete ? setupWizardUpdatedAt : "";
     onUpdatePlatformConfig((baseConfig) => {
       const existingAircraftTypes = Array.isArray(baseConfig?.aircraftTypes) ? baseConfig.aircraftTypes : [];
       const existingResourcePools = Array.isArray(baseConfig?.resourcePools) ? baseConfig.resourcePools : [];
@@ -40066,13 +40068,56 @@ const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, lo
           status: "ACTIVE"
         };
       }));
+      const {
+        initialSetupWizardCompletedAt: _existingInitialSetupWizardCompletedAt,
+        ...existingOrganisationSettingsWithoutWizardCompletion
+      } = existingOrganisationSettings;
+      const existingWizardDraft = existingOrganisationSettings.initialSetupWizardDraft || {};
+      const existingWizardDrafts = existingOrganisationSettings.initialSetupWizardDrafts || {};
+      const setupWizardDraft = {
+        ...existingWizardDraft,
+        organisation: organisationDraft,
+        unitsToday: cleanUnits,
+        unitDraftsByCode: unitSetupDraftMap,
+        locationsToday: cleanLocations,
+        unitParents: unitParentDraft,
+        crewLabels: crewLabelsDraft,
+        alternateCrews: alternateCrewDraft,
+        buildRules: buildRulesDraftText,
+        staff: overrides.staffDraft ?? staffDraft,
+        traineesEnabled: (overrides.unitDraft ?? unitDraft).hasTrainees,
+        traineeCourses: traineeCourseOptionsDraft,
+        trainees: overrides.traineeDraft ?? traineeDraft,
+        trainingRecords: trainingRecordsDraft,
+        unitModules: unitModulesDraft,
+        ranksAndLabels: rankLabelsDraft,
+        rankSettings: rankSettingsDraft,
+        crewRoles: crewRolesDraft,
+        resourceSharing: resourceSharingDraft,
+        currencies: currencyDraft,
+        scoringMatrix: scoringDraftToSave,
+        staffCurrencyEvents: staffCurrencyEventsDraft,
+        activeStepId: visibleStep.id,
+        activeStepIndex: currentStep,
+        completedStepIds: Array.from(completedWizardStepIds),
+        updatedAt: setupWizardUpdatedAt,
+        ...setupWizardCompletionAt ? { completedAt: setupWizardCompletionAt } : {}
+      };
+      const setupWizardDrafts = {
+        ...existingWizardDrafts,
+        ...setupWizardDraft,
+        organisationDraft,
+        unitsTodayDraft,
+        locationsTodayDraft
+      };
       const organisation = {
         id: createSetupTestRecordId("organisation", organisationDraft.code || organisationDraft.name || "organisation"),
         code: organisationDraft.code || organisationDraft.name || "ORG",
         name: organisationDraft.name || organisationDraft.code || "Organisation",
         status: "ACTIVE",
         settings: {
-          ...existingOrganisationSettings,
+          ...existingOrganisationSettingsWithoutWizardCompletion,
+          ...setupWizardCompletionAt ? { initialSetupWizardCompletedAt: setupWizardCompletionAt } : {},
           organisationStructure: structure,
           masterLmpCatalogue: mergeByNormalisedCode(existingMasterLmpCatalogue, draftMasterLmpCatalogueEntry, "code"),
           masterLmpAccess: mergeByNormalisedCode(existingMasterLmpAccess, draftMasterLmpAccessRule, "lmpCode"),
@@ -40100,29 +40145,8 @@ const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, lo
             status: "ACTIVE",
             enabled: /^on$/i.test(row.enabled)
           })),
-          initialSetupWizardDraft: {
-            organisation: organisationDraft,
-            unitsToday: cleanUnits,
-            unitDraftsByCode: unitSetupDraftMap,
-            locationsToday: cleanLocations,
-            unitParents: unitParentDraft,
-            crewLabels: crewLabelsDraft,
-            alternateCrews: alternateCrewDraft,
-            buildRules: buildRulesDraftText,
-            staff: overrides.staffDraft ?? staffDraft,
-            traineesEnabled: (overrides.unitDraft ?? unitDraft).hasTrainees,
-            traineeCourses: traineeCourseOptionsDraft,
-            trainees: overrides.traineeDraft ?? traineeDraft,
-            trainingRecords: trainingRecordsDraft,
-            unitModules: unitModulesDraft,
-            ranksAndLabels: rankLabelsDraft,
-            rankSettings: rankSettingsDraft,
-            crewRoles: crewRolesDraft,
-            resourceSharing: resourceSharingDraft,
-            currencies: currencyDraft,
-            scoringMatrix: scoringDraftToSave,
-            staffCurrencyEvents: staffCurrencyEventsDraft
-          }
+          initialSetupWizardDraft: setupWizardDraft,
+          initialSetupWizardDrafts: setupWizardDrafts
         }
       };
       pushWizardOrgDiag("setup-sync:writing-organisation", {
@@ -137456,14 +137480,13 @@ const App = () => {
   }), [platformConfig]);
   const hasPersistedInitialSetupWizardCompleted = reactExports.useMemo(() => (platformConfig?.organisations || []).some((organisation) => {
     const settings = organisation?.settings || {};
-    const drafts = settings.initialSetupWizardDrafts || settings.initialSetupWizardDraft;
-    return Boolean(settings.initialSetupWizardCompletedAt || drafts?.completedAt);
+    return Boolean(settings.initialSetupWizardCompletedAt);
   }), [platformConfig]);
   const hasPersistedIncompleteInitialSetupWizardProgress = reactExports.useMemo(() => (platformConfig?.organisations || []).some((organisation) => {
     const settings = organisation?.settings || {};
     const draftCandidates = [settings.initialSetupWizardDrafts, settings.initialSetupWizardDraft].filter((drafts) => drafts && typeof drafts === "object");
     if (draftCandidates.length === 0) return false;
-    const completedAt = String(settings.initialSetupWizardCompletedAt || draftCandidates.find((drafts) => drafts.completedAt)?.completedAt || "").trim();
+    const completedAt = String(settings.initialSetupWizardCompletedAt || "").trim();
     if (completedAt) {
       const completedTime = Date.parse(completedAt);
       const newestUpdatedTime = draftCandidates.reduce((newest, drafts) => {

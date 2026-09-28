@@ -30693,8 +30693,7 @@ const App: React.FC = () => {
     const hasPersistedInitialSetupWizardCompleted = useMemo(() => (
         (platformConfig?.organisations || []).some((organisation: any) => {
             const settings = organisation?.settings || {};
-            const drafts = settings.initialSetupWizardDrafts || settings.initialSetupWizardDraft;
-            return Boolean(settings.initialSetupWizardCompletedAt || drafts?.completedAt);
+            return Boolean(settings.initialSetupWizardCompletedAt);
         })
     ), [platformConfig]);
     const hasPersistedIncompleteInitialSetupWizardProgress = useMemo(() => (
@@ -30703,7 +30702,7 @@ const App: React.FC = () => {
             const draftCandidates = [settings.initialSetupWizardDrafts, settings.initialSetupWizardDraft]
                 .filter((drafts) => drafts && typeof drafts === 'object');
             if (draftCandidates.length === 0) return false;
-            const completedAt = String(settings.initialSetupWizardCompletedAt || draftCandidates.find((drafts: any) => drafts.completedAt)?.completedAt || '').trim();
+            const completedAt = String(settings.initialSetupWizardCompletedAt || '').trim();
             if (completedAt) {
                 const completedTime = Date.parse(completedAt);
                 const newestUpdatedTime = draftCandidates.reduce((newest: number, drafts: any) => {
