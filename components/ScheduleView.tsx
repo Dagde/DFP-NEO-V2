@@ -174,6 +174,7 @@ interface ScheduleViewProps {
   isFlightLinePanelOpen?: boolean;
   onOrganisationSlideoutOpen?: () => void;
   showInitialSetupBlankState?: boolean;
+  resumeInitialSetupWizard?: boolean;
   onToggleFlightLinePanel?: () => void;
   canEditFlightLineInventory?: boolean;
   canEditFlightLineAvailability?: boolean;
@@ -12285,6 +12286,7 @@ const ScheduleView: React.FC<ScheduleViewProps> = ({
     isFlightLinePanelOpen = false,
     onOrganisationSlideoutOpen,
     showInitialSetupBlankState = false,
+    resumeInitialSetupWizard = false,
     onToggleFlightLinePanel,
     canEditFlightLineInventory = true,
     canEditFlightLineAvailability = true,
@@ -12375,30 +12377,37 @@ const ScheduleView: React.FC<ScheduleViewProps> = ({
     const hasPersistedInitialSetupWizardProgress = useCallback(() => (
         (platformConfig?.organisations || []).some((organisation: any) => {
             const settings = organisation?.settings || {};
-            const drafts = settings.initialSetupWizardDrafts || settings.initialSetupWizardDraft;
-            if (!drafts || typeof drafts !== 'object') return false;
-            return Boolean(
+            const draftCandidates = [settings.initialSetupWizardDrafts, settings.initialSetupWizardDraft]
+                .filter((drafts) => drafts && typeof drafts === 'object');
+            return draftCandidates.some((drafts: any) => Boolean(
                 drafts.updatedAt ||
+                drafts.activeStepId ||
+                Number(drafts.activeStepIndex) > 0 ||
+                (Array.isArray(drafts.completedStepIds) && drafts.completedStepIds.length > 0) ||
                 drafts.organisationDraft ||
+                drafts.organisation ||
                 drafts.locationsTodayDraft ||
+                drafts.locationsToday ||
                 drafts.locationDraft ||
                 drafts.unitsTodayDraft ||
+                drafts.unitsToday ||
                 drafts.unitDraft ||
                 drafts.resourceDraft ||
                 drafts.unitModulesDraft ||
+                drafts.unitModules ||
                 drafts.buildRules
-            );
+            ));
         })
     ), [platformConfig]);
     const hasInitialSetupWizardProgress = useCallback(() => (
         hasStoredInitialSetupWizardProgress() || hasPersistedInitialSetupWizardProgress()
     ), [hasPersistedInitialSetupWizardProgress, hasStoredInitialSetupWizardProgress]);
     useEffect(() => {
-        if (!showInitialSetupBlankState || showResourceUnderlayPanel || !hasInitialSetupWizardProgress()) return;
+        if (!showInitialSetupBlankState || showResourceUnderlayPanel || (!resumeInitialSetupWizard && !hasInitialSetupWizardProgress())) return;
         onOrganisationSlideoutOpen?.();
         setShowResourceUnderlayPanel(true);
-    }, [hasInitialSetupWizardProgress, onOrganisationSlideoutOpen, platformConfig, showInitialSetupBlankState, showResourceUnderlayPanel]);
-    const shouldShowInitialSetupPrompt = showInitialSetupBlankState && !showResourceUnderlayPanel && !hasInitialSetupWizardProgress();
+    }, [hasInitialSetupWizardProgress, onOrganisationSlideoutOpen, platformConfig, resumeInitialSetupWizard, showInitialSetupBlankState, showResourceUnderlayPanel]);
+    const shouldShowInitialSetupPrompt = showInitialSetupBlankState && !showResourceUnderlayPanel && !resumeInitialSetupWizard && !hasInitialSetupWizardProgress();
     const openInitialSetupWizard = useCallback(() => {
         onOrganisationSlideoutOpen?.();
         setShowResourceUnderlayPanel(true);

@@ -30668,19 +30668,26 @@ const App: React.FC = () => {
     const hasPersistedInitialSetupWizardProgress = useMemo(() => (
         (platformConfig?.organisations || []).some((organisation: any) => {
             const settings = organisation?.settings || {};
-            const drafts = settings.initialSetupWizardDrafts || settings.initialSetupWizardDraft;
-            if (!drafts || typeof drafts !== 'object') return false;
-            return Boolean(
+            const draftCandidates = [settings.initialSetupWizardDrafts, settings.initialSetupWizardDraft]
+                .filter((drafts) => drafts && typeof drafts === 'object');
+            return draftCandidates.some((drafts: any) => Boolean(
                 drafts.updatedAt ||
+                drafts.activeStepId ||
+                Number(drafts.activeStepIndex) > 0 ||
+                (Array.isArray(drafts.completedStepIds) && drafts.completedStepIds.length > 0) ||
                 drafts.organisationDraft ||
+                drafts.organisation ||
                 drafts.locationsTodayDraft ||
+                drafts.locationsToday ||
                 drafts.locationDraft ||
                 drafts.unitsTodayDraft ||
+                drafts.unitsToday ||
                 drafts.unitDraft ||
                 drafts.resourceDraft ||
                 drafts.unitModulesDraft ||
+                drafts.unitModules ||
                 drafts.buildRules
-            );
+            ));
         })
     ), [platformConfig]);
     const hasPersistedInitialSetupWizardCompleted = useMemo(() => (
@@ -30693,22 +30700,28 @@ const App: React.FC = () => {
     const hasPersistedIncompleteInitialSetupWizardProgress = useMemo(() => (
         (platformConfig?.organisations || []).some((organisation: any) => {
             const settings = organisation?.settings || {};
-            const drafts = settings.initialSetupWizardDrafts || settings.initialSetupWizardDraft;
-            if (!drafts || typeof drafts !== 'object') return false;
-            const completedAt = String(settings.initialSetupWizardCompletedAt || drafts.completedAt || '').trim();
+            const draftCandidates = [settings.initialSetupWizardDrafts, settings.initialSetupWizardDraft]
+                .filter((drafts) => drafts && typeof drafts === 'object');
+            if (draftCandidates.length === 0) return false;
+            const completedAt = String(settings.initialSetupWizardCompletedAt || draftCandidates.find((drafts: any) => drafts.completedAt)?.completedAt || '').trim();
             if (completedAt) {
                 const completedTime = Date.parse(completedAt);
-                const updatedTime = Date.parse(String(drafts.updatedAt || ''));
-                if (!Number.isFinite(updatedTime) || (Number.isFinite(completedTime) && updatedTime <= completedTime)) {
+                const newestUpdatedTime = draftCandidates.reduce((newest: number, drafts: any) => {
+                    const updatedTime = Date.parse(String(drafts.updatedAt || ''));
+                    return Number.isFinite(updatedTime) ? Math.max(newest, updatedTime) : newest;
+                }, Number.NEGATIVE_INFINITY);
+                if (!Number.isFinite(newestUpdatedTime) || (Number.isFinite(completedTime) && newestUpdatedTime <= completedTime)) {
                     return false;
                 }
             }
-            const activeStepIndex = Number(drafts.activeStepIndex);
-            return Boolean(
-                drafts.activeStepId ||
-                (Number.isFinite(activeStepIndex) && activeStepIndex > 0) ||
-                (Array.isArray(drafts.completedStepIds) && drafts.completedStepIds.length > 0)
-            );
+            return draftCandidates.some((drafts: any) => {
+                const activeStepIndex = Number(drafts.activeStepIndex);
+                return Boolean(
+                    drafts.activeStepId ||
+                    (Number.isFinite(activeStepIndex) && activeStepIndex > 0) ||
+                    (Array.isArray(drafts.completedStepIds) && drafts.completedStepIds.length > 0)
+                );
+            });
         })
     ), [platformConfig]);
     const hasActiveOperationalUnit = operationalContextOptions.some(option => option.units.length > 0);
@@ -54032,6 +54045,7 @@ appliedUpdates.forEach(update => {
                            isNeoAssistPanelOpen={showDfpSidePanel}
                            isFlightLinePanelOpen={showFlightLinePanel}
                            showInitialSetupBlankState={showInitialSetupBlankState}
+                           resumeInitialSetupWizard={shouldResumeInitialSetupWizard}
                            initialOrganisationSlideoutView={showInitialSetupBlankState ? 'setupWizard' : 'structure'}
                            onOrganisationSlideoutOpen={() => {
                                setShowDfpSidePanel(false);

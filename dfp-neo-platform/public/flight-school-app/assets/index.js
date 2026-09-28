@@ -41932,6 +41932,7 @@ const ScheduleView = ({
   isFlightLinePanelOpen = false,
   onOrganisationSlideoutOpen,
   showInitialSetupBlankState = false,
+  resumeInitialSetupWizard = false,
   onToggleFlightLinePanel,
   canEditFlightLineInventory = true,
   canEditFlightLineAvailability = true,
@@ -42014,19 +42015,18 @@ const ScheduleView = ({
   }, []);
   const hasPersistedInitialSetupWizardProgress = reactExports.useCallback(() => (platformConfig?.organisations || []).some((organisation) => {
     const settings = organisation?.settings || {};
-    const drafts = settings.initialSetupWizardDrafts || settings.initialSetupWizardDraft;
-    if (!drafts || typeof drafts !== "object") return false;
-    return Boolean(
-      drafts.updatedAt || drafts.organisationDraft || drafts.locationsTodayDraft || drafts.locationDraft || drafts.unitsTodayDraft || drafts.unitDraft || drafts.resourceDraft || drafts.unitModulesDraft || drafts.buildRules
-    );
+    const draftCandidates = [settings.initialSetupWizardDrafts, settings.initialSetupWizardDraft].filter((drafts) => drafts && typeof drafts === "object");
+    return draftCandidates.some((drafts) => Boolean(
+      drafts.updatedAt || drafts.activeStepId || Number(drafts.activeStepIndex) > 0 || Array.isArray(drafts.completedStepIds) && drafts.completedStepIds.length > 0 || drafts.organisationDraft || drafts.organisation || drafts.locationsTodayDraft || drafts.locationsToday || drafts.locationDraft || drafts.unitsTodayDraft || drafts.unitsToday || drafts.unitDraft || drafts.resourceDraft || drafts.unitModulesDraft || drafts.unitModules || drafts.buildRules
+    ));
   }), [platformConfig]);
   const hasInitialSetupWizardProgress = reactExports.useCallback(() => hasStoredInitialSetupWizardProgress() || hasPersistedInitialSetupWizardProgress(), [hasPersistedInitialSetupWizardProgress, hasStoredInitialSetupWizardProgress]);
   reactExports.useEffect(() => {
-    if (!showInitialSetupBlankState || showResourceUnderlayPanel || !hasInitialSetupWizardProgress()) return;
+    if (!showInitialSetupBlankState || showResourceUnderlayPanel || !resumeInitialSetupWizard && !hasInitialSetupWizardProgress()) return;
     onOrganisationSlideoutOpen?.();
     setShowResourceUnderlayPanel(true);
-  }, [hasInitialSetupWizardProgress, onOrganisationSlideoutOpen, platformConfig, showInitialSetupBlankState, showResourceUnderlayPanel]);
-  const shouldShowInitialSetupPrompt = showInitialSetupBlankState && !showResourceUnderlayPanel && !hasInitialSetupWizardProgress();
+  }, [hasInitialSetupWizardProgress, onOrganisationSlideoutOpen, platformConfig, resumeInitialSetupWizard, showInitialSetupBlankState, showResourceUnderlayPanel]);
+  const shouldShowInitialSetupPrompt = showInitialSetupBlankState && !showResourceUnderlayPanel && !resumeInitialSetupWizard && !hasInitialSetupWizardProgress();
   const openInitialSetupWizard = reactExports.useCallback(() => {
     onOrganisationSlideoutOpen?.();
     setShowResourceUnderlayPanel(true);
@@ -137424,11 +137424,10 @@ const App = () => {
   }, []);
   const hasPersistedInitialSetupWizardProgress = reactExports.useMemo(() => (platformConfig?.organisations || []).some((organisation) => {
     const settings = organisation?.settings || {};
-    const drafts = settings.initialSetupWizardDrafts || settings.initialSetupWizardDraft;
-    if (!drafts || typeof drafts !== "object") return false;
-    return Boolean(
-      drafts.updatedAt || drafts.organisationDraft || drafts.locationsTodayDraft || drafts.locationDraft || drafts.unitsTodayDraft || drafts.unitDraft || drafts.resourceDraft || drafts.unitModulesDraft || drafts.buildRules
-    );
+    const draftCandidates = [settings.initialSetupWizardDrafts, settings.initialSetupWizardDraft].filter((drafts) => drafts && typeof drafts === "object");
+    return draftCandidates.some((drafts) => Boolean(
+      drafts.updatedAt || drafts.activeStepId || Number(drafts.activeStepIndex) > 0 || Array.isArray(drafts.completedStepIds) && drafts.completedStepIds.length > 0 || drafts.organisationDraft || drafts.organisation || drafts.locationsTodayDraft || drafts.locationsToday || drafts.locationDraft || drafts.unitsTodayDraft || drafts.unitsToday || drafts.unitDraft || drafts.resourceDraft || drafts.unitModulesDraft || drafts.unitModules || drafts.buildRules
+    ));
   }), [platformConfig]);
   const hasPersistedInitialSetupWizardCompleted = reactExports.useMemo(() => (platformConfig?.organisations || []).some((organisation) => {
     const settings = organisation?.settings || {};
@@ -137437,20 +137436,25 @@ const App = () => {
   }), [platformConfig]);
   const hasPersistedIncompleteInitialSetupWizardProgress = reactExports.useMemo(() => (platformConfig?.organisations || []).some((organisation) => {
     const settings = organisation?.settings || {};
-    const drafts = settings.initialSetupWizardDrafts || settings.initialSetupWizardDraft;
-    if (!drafts || typeof drafts !== "object") return false;
-    const completedAt = String(settings.initialSetupWizardCompletedAt || drafts.completedAt || "").trim();
+    const draftCandidates = [settings.initialSetupWizardDrafts, settings.initialSetupWizardDraft].filter((drafts) => drafts && typeof drafts === "object");
+    if (draftCandidates.length === 0) return false;
+    const completedAt = String(settings.initialSetupWizardCompletedAt || draftCandidates.find((drafts) => drafts.completedAt)?.completedAt || "").trim();
     if (completedAt) {
       const completedTime = Date.parse(completedAt);
-      const updatedTime = Date.parse(String(drafts.updatedAt || ""));
-      if (!Number.isFinite(updatedTime) || Number.isFinite(completedTime) && updatedTime <= completedTime) {
+      const newestUpdatedTime = draftCandidates.reduce((newest, drafts) => {
+        const updatedTime = Date.parse(String(drafts.updatedAt || ""));
+        return Number.isFinite(updatedTime) ? Math.max(newest, updatedTime) : newest;
+      }, Number.NEGATIVE_INFINITY);
+      if (!Number.isFinite(newestUpdatedTime) || Number.isFinite(completedTime) && newestUpdatedTime <= completedTime) {
         return false;
       }
     }
-    const activeStepIndex = Number(drafts.activeStepIndex);
-    return Boolean(
-      drafts.activeStepId || Number.isFinite(activeStepIndex) && activeStepIndex > 0 || Array.isArray(drafts.completedStepIds) && drafts.completedStepIds.length > 0
-    );
+    return draftCandidates.some((drafts) => {
+      const activeStepIndex = Number(drafts.activeStepIndex);
+      return Boolean(
+        drafts.activeStepId || Number.isFinite(activeStepIndex) && activeStepIndex > 0 || Array.isArray(drafts.completedStepIds) && drafts.completedStepIds.length > 0
+      );
+    });
   }), [platformConfig]);
   const hasActiveOperationalUnit = operationalContextOptions.some((option) => option.units.length > 0);
   const hasActiveOperationalResourcePool = reactExports.useMemo(() => (platformConfig?.resourcePools || []).some((pool) => String(pool?.status || "ACTIVE").toUpperCase() !== "INACTIVE" && String(pool?.unitCode || "").trim()), [platformConfig]);
@@ -156441,6 +156445,7 @@ It will not clear the published DFP.`,
             isNeoAssistPanelOpen: showDfpSidePanel,
             isFlightLinePanelOpen: showFlightLinePanel,
             showInitialSetupBlankState,
+            resumeInitialSetupWizard: shouldResumeInitialSetupWizard,
             initialOrganisationSlideoutView: showInitialSetupBlankState ? "setupWizard" : "structure",
             onOrganisationSlideoutOpen: () => {
               setShowDfpSidePanel(false);
