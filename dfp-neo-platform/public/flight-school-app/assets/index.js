@@ -154326,7 +154326,7 @@ Do not hard refresh yet. Try Publish again, then confirm the save succeeds.`,
     window.addEventListener(SETUP_TEST_SYLLABUS_EVENT, applySetupTestSyllabus);
     return () => window.removeEventListener(SETUP_TEST_SYLLABUS_EVENT, applySetupTestSyllabus);
   }, [pushSetupTestLmpDiag, setupTestProfile]);
-  const handleDatabaseDataChanged = reactExports.useCallback(async () => {
+  const handleDatabaseDataChanged = reactExports.useCallback(async (scopeOverride) => {
     logRoutineAppDebug("🔄 Refreshing database data after database modification...");
     if (isSetupTestMode()) {
       const setupPersonnel = readSetupTestPersonnel();
@@ -154343,7 +154343,11 @@ Do not hard refresh yet. Try Publish again, then confirm the save succeeds.`,
       return;
     }
     try {
-      const personnelRes = await fetch(scopedApiPath("/api/personnel"), { credentials: "include" });
+      const scopeParams = scopeOverride?.location || scopeOverride?.unit ? {
+        location: scopeOverride.location,
+        units: scopeOverride.unit
+      } : void 0;
+      const personnelRes = await fetch(scopedApiPath("/api/personnel", scopeParams), { credentials: "include" });
       if (personnelRes.ok) {
         const personnelData2 = await personnelRes.json();
         const dbPersonnel = (personnelData2.personnel || []).map((p) => ({
@@ -154363,9 +154367,10 @@ Do not hard refresh yet. Try Publish again, then confirm the save succeeds.`,
           return [...retainedSessionStaff, ...dbPersonnel];
         });
         setArchivedInstructorsData(dbPersonnel.filter((person) => !isRecordActive(person)));
+        setIsStaffLoaded(true);
         logRoutineAppDebug(`✅ Refreshed ${dbPersonnel.length} personnel from database`);
       }
-      const traineesRes = await fetch(scopedApiPath("/api/trainees"), { credentials: "include" });
+      const traineesRes = await fetch(scopedApiPath("/api/trainees", scopeParams), { credentials: "include" });
       if (traineesRes.ok) {
         const traineesData2 = await traineesRes.json();
         const dbTrainees = (traineesData2.trainees || []).map((t) => ({
@@ -154421,6 +154426,7 @@ Do not hard refresh yet. Try Publish again, then confirm the save succeeds.`,
           return updated;
         });
         logRoutineAppDebug(`✅ Refreshed ${dbTrainees.length} trainees from database`);
+        setIsTraineeLoaded(true);
       }
     } catch (error) {
       console.error("❌ Error refreshing database data:", error);
@@ -157509,6 +157515,8 @@ It will not clear the published DFP.`,
               setIsInitialSetupWizardActive(false);
               setShowDfpSidePanel(false);
               setShowFlightLinePanel(false);
+              let nextLocation = "";
+              let nextUnit = "";
               try {
                 pushFinishTrace("before-refresh-platform-config");
                 const refreshedConfig = applyDefaultUnitTraineeAvailability(normalisePlatformConfig(await loadPlatformConfigFromDB()));
@@ -157529,8 +157537,6 @@ It will not clear the published DFP.`,
                   ...Array.isArray(location?.aliases) ? location.aliases : [],
                   ...Array.isArray(location?.settings?.aliases) ? location.settings.aliases : []
                 ].map(normaliseCode2).filter(Boolean));
-                let nextLocation = "";
-                let nextUnit = "";
                 for (const location of activeLocations) {
                   const aliases = locationAliasesFor(location);
                   const unitsAtLocation = activeUnits.filter((unit) => aliases.has(normaliseCode2(unit?.locationCode)));
@@ -157558,8 +157564,8 @@ It will not clear the published DFP.`,
                 });
               }
               pushFinishTrace("before-refresh-database");
-              await handleDatabaseDataChanged();
-              pushFinishTrace("after-refresh-database");
+              await handleDatabaseDataChanged({ location: nextLocation, unit: nextUnit });
+              pushFinishTrace("after-refresh-database", { location: nextLocation, unit: nextUnit });
               clearSyllabusCache();
               try {
                 pushFinishTrace("before-refresh-syllabus");

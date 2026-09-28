@@ -50198,7 +50198,7 @@ appliedUpdates.forEach(update => {
     }, [pushSetupTestLmpDiag, setupTestProfile]);
 
     // Refresh database data (personnel and trainees) - called when database is modified
-    const handleDatabaseDataChanged = useCallback(async () => {
+    const handleDatabaseDataChanged = useCallback(async (scopeOverride?: { location?: string; unit?: string }) => {
         logRoutineAppDebug('🔄 Refreshing database data after database modification...');
 
         if (isSetupTestMode()) {
@@ -50217,8 +50217,14 @@ appliedUpdates.forEach(update => {
         }
 
         try {
+            const scopeParams = scopeOverride?.location || scopeOverride?.unit
+                ? {
+                    location: scopeOverride.location,
+                    units: scopeOverride.unit,
+                }
+                : undefined;
             // Fetch fresh personnel data
-            const personnelRes = await fetch(scopedApiPath('/api/personnel'), { credentials: 'include' });
+            const personnelRes = await fetch(scopedApiPath('/api/personnel', scopeParams), { credentials: 'include' });
             if (personnelRes.ok) {
                 const personnelData = await personnelRes.json();
                 const dbPersonnel = (personnelData.personnel || []).map((p: any) => ({
@@ -50241,11 +50247,12 @@ appliedUpdates.forEach(update => {
                     return [...retainedSessionStaff, ...dbPersonnel];
                 });
                 setArchivedInstructorsData(dbPersonnel.filter((person: any) => !isRecordActive(person)));
+                setIsStaffLoaded(true);
                 logRoutineAppDebug(`✅ Refreshed ${dbPersonnel.length} personnel from database`);
             }
 
             // Fetch fresh trainees data
-            const traineesRes = await fetch(scopedApiPath('/api/trainees'), { credentials: 'include' });
+            const traineesRes = await fetch(scopedApiPath('/api/trainees', scopeParams), { credentials: 'include' });
             if (traineesRes.ok) {
                 const traineesData = await traineesRes.json();
                 const dbTrainees = (traineesData.trainees || []).map((t: any) => ({
@@ -50303,6 +50310,7 @@ appliedUpdates.forEach(update => {
                 });
 
                 logRoutineAppDebug(`✅ Refreshed ${dbTrainees.length} trainees from database`);
+                setIsTraineeLoaded(true);
             }
         } catch (error) {
             console.error('❌ Error refreshing database data:', error);
@@ -54110,6 +54118,8 @@ appliedUpdates.forEach(update => {
                                setIsInitialSetupWizardActive(false);
                                setShowDfpSidePanel(false);
                                setShowFlightLinePanel(false);
+                               let nextLocation = '';
+                               let nextUnit = '';
                                try {
                                    pushFinishTrace('before-refresh-platform-config');
                                    const refreshedConfig = applyDefaultUnitTraineeAvailability(normalisePlatformConfig(await loadPlatformConfigFromDB()));
@@ -54133,8 +54143,6 @@ appliedUpdates.forEach(update => {
                                        ...(Array.isArray(location?.aliases) ? location.aliases : []),
                                        ...(Array.isArray(location?.settings?.aliases) ? location.settings.aliases : []),
                                    ].map(normaliseCode).filter(Boolean));
-                                   let nextLocation = '';
-                                   let nextUnit = '';
                                    for (const location of activeLocations) {
                                        const aliases = locationAliasesFor(location);
                                        const unitsAtLocation = activeUnits.filter((unit: any) => aliases.has(normaliseCode(unit?.locationCode)));
@@ -54165,8 +54173,8 @@ appliedUpdates.forEach(update => {
                                    });
                                }
                                pushFinishTrace('before-refresh-database');
-                               await handleDatabaseDataChanged();
-                               pushFinishTrace('after-refresh-database');
+                               await handleDatabaseDataChanged({ location: nextLocation, unit: nextUnit });
+                               pushFinishTrace('after-refresh-database', { location: nextLocation, unit: nextUnit });
                                clearSyllabusCache();
                                try {
                                    pushFinishTrace('before-refresh-syllabus');
