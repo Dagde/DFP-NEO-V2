@@ -3768,7 +3768,10 @@ const InitialSetupWizard: React.FC<{
     const [traineeCourseOptionsDraft, setTraineeCourseOptionsDraft] = useState('Course 1');
     const [traineeCourseInputRows, setTraineeCourseInputRows] = useState<string[]>(() => ['Course 1']);
     const [traineeDraft, setTraineeDraft] = useState('');
+    const [staffProfilesCommitted, setStaffProfilesCommitted] = useState(false);
+    const [staffCommitSummary, setStaffCommitSummary] = useState('');
     const [traineeAllocationCommitted, setTraineeAllocationCommitted] = useState(false);
+    const [traineeCommitSummary, setTraineeCommitSummary] = useState('');
     const [showMoreTraineesPrompt, setShowMoreTraineesPrompt] = useState(false);
     const defaultWizardUnitModulesDraft = 'DFP | On\nNEO Build | On\nProgram Schedule | On\nTraining Records | On';
     const makeWizardModuleCode = (moduleName: string, index = 0) => (
@@ -7734,6 +7737,8 @@ const InitialSetupWizard: React.FC<{
             const nextStaffDraft = formatWizardStaffRows(importedRows);
             setStaffDraft(nextStaffDraft);
             setUploadedStaffProfileRows(importedRows);
+            setStaffProfilesCommitted(false);
+            setStaffCommitSummary('');
             pushWizardImportDiag('staff:imported-to-draft', {
                 importedRows: importedRows.length,
                 sample: importedRows.slice(0, 8),
@@ -7785,6 +7790,9 @@ const InitialSetupWizard: React.FC<{
             const nextTraineeDraft = formatWizardTraineeRows(nextImportedRows);
             setTraineeDraft(nextTraineeDraft);
             setUploadedTraineeProfileRows(nextImportedRows);
+            setTraineeAllocationCommitted(false);
+            setTraineeCommitSummary('');
+            setShowMoreTraineesPrompt(false);
             const importedCourseOptions = Array.from(new Set(nextImportedRows
                 .flatMap((row) => [row.course, row.courseNumber])
                 .map((value) => String(value || '').trim())
@@ -8504,6 +8512,8 @@ const InitialSetupWizard: React.FC<{
             const nextRows = [...editableRows];
             nextRows[index] = { ...nextRows[index], [field]: value };
             setStaffDraft(formatWizardStaffRows(nextRows));
+            setStaffProfilesCommitted(false);
+            setStaffCommitSummary('');
             setUploadedStaffProfileRows((current) => {
                 if (!current[index]) return current;
                 const next = [...current];
@@ -8524,6 +8534,8 @@ const InitialSetupWizard: React.FC<{
                             <span className={wizardLabelClass}>Staff member {index + 1}</span>
                             <button type="button" className={wizardSmallButtonClass} onClick={() => {
                                 setStaffDraft(formatWizardStaffRows(editableRows.filter((_, rowIndex) => rowIndex !== index)));
+                                setStaffProfilesCommitted(false);
+                                setStaffCommitSummary('');
                                 setUploadedStaffProfileRows((current) => current.filter((_, rowIndex) => rowIndex !== index));
                             }}>
                                 Delete
@@ -8544,6 +8556,8 @@ const InitialSetupWizard: React.FC<{
                     className={wizardSmallButtonClass}
                     onClick={() => {
                         setStaffDraft(formatWizardStaffRows([...editableRows, { surname: '', givenNames: '', unit: unitDraft.code || '', position: '', personnelId: '', qualifications: '' }]));
+                        setStaffProfilesCommitted(false);
+                        setStaffCommitSummary('');
                         setUploadedStaffProfileRows((current) => current.length > 0 ? [...current, { unit: unitDraft.code || '' }] : current);
                     }}
                 >
@@ -8560,6 +8574,7 @@ const InitialSetupWizard: React.FC<{
             nextRows[index] = { ...nextRows[index], [field]: value };
             setTraineeDraft(formatWizardTraineeRows(nextRows));
             setTraineeAllocationCommitted(false);
+            setTraineeCommitSummary('');
             setShowMoreTraineesPrompt(false);
             setUploadedTraineeProfileRows((current) => {
                 if (!current[index]) return current;
@@ -8584,6 +8599,7 @@ const InitialSetupWizard: React.FC<{
             nextCourses[index] = value;
             persistCourseRows(nextCourses);
             setTraineeAllocationCommitted(false);
+            setTraineeCommitSummary('');
             setShowMoreTraineesPrompt(false);
         };
         const removeCourseOption = (index: number) => {
@@ -8591,6 +8607,7 @@ const InitialSetupWizard: React.FC<{
             const nextCourses = traineeCourseRows.filter((_, rowIndex) => rowIndex !== index);
             persistCourseRows(nextCourses);
             setTraineeAllocationCommitted(false);
+            setTraineeCommitSummary('');
             setShowMoreTraineesPrompt(false);
             if (removedCourse) {
                 const nextRows = editableRows.map((row) => row.course === removedCourse ? { ...row, course: '' } : row);
@@ -8602,6 +8619,7 @@ const InitialSetupWizard: React.FC<{
             const nextRows = editableRows.map((row) => ({ ...row, course }));
             setTraineeDraft(formatWizardTraineeRows(nextRows));
             setTraineeAllocationCommitted(false);
+            setTraineeCommitSummary('');
             setShowMoreTraineesPrompt(false);
             setUploadedTraineeProfileRows((current) => (
                 current.length > 0 ? current.map((row) => ({ ...row, course })) : current
@@ -8643,6 +8661,7 @@ const InitialSetupWizard: React.FC<{
                             onClick={() => {
                                 persistCourseRows([...traineeCourseRows, '']);
                                 setTraineeAllocationCommitted(false);
+                                setTraineeCommitSummary('');
                                 setShowMoreTraineesPrompt(false);
                             }}
                         >
@@ -8749,6 +8768,7 @@ const InitialSetupWizard: React.FC<{
                     onClick={() => {
                         setTraineeDraft(formatWizardTraineeRows([...editableRows, { surname: '', givenNames: '', unit: unitDraft.code || '', rank: '', personnelId: '', courseNumber: '', course: '', masterLmp: '', startDate: '' }]));
                         setTraineeAllocationCommitted(false);
+                        setTraineeCommitSummary('');
                         setShowMoreTraineesPrompt(false);
                         setUploadedTraineeProfileRows((current) => current.length > 0 ? [...current, { unit: unitDraft.code || '' }] : current);
                     }}
@@ -10508,6 +10528,8 @@ const InitialSetupWizard: React.FC<{
         saveSetupTestWizardDrafts(false, { staffDraft, staffRows });
         const message = `Committed ${staffCount} staff profile${staffCount === 1 ? '' : 's'} to Staff Profiles in this setup.`;
         setImportConfirmations((current) => ({ ...current, staff: message }));
+        setStaffProfilesCommitted(true);
+        setStaffCommitSummary(message);
         setSaveMessage(message);
     };
     const commitWizardTraineeProfiles = () => {
@@ -10523,6 +10545,8 @@ const InitialSetupWizard: React.FC<{
         if (missingCourseCount > 0) {
             const message = `Select one of the active courses for every trainee before committing. ${missingCourseCount} trainee${missingCourseCount === 1 ? '' : 's'} still need a valid course.`;
             setImportConfirmations((current) => ({ ...current, trainees: message }));
+            setTraineeAllocationCommitted(false);
+            setTraineeCommitSummary('');
             setSaveMessage(message);
             return;
         }
@@ -10535,6 +10559,7 @@ const InitialSetupWizard: React.FC<{
         const message = `Committed ${traineeCount} trainee profile${traineeCount === 1 ? '' : 's'} to the trainee list in this setup.`;
         setImportConfirmations((current) => ({ ...current, trainees: message }));
         setTraineeAllocationCommitted(true);
+        setTraineeCommitSummary(message);
         setShowMoreTraineesPrompt(true);
         setSaveMessage(message);
     };
@@ -11373,16 +11398,16 @@ const InitialSetupWizard: React.FC<{
                 <p>Add the staff this unit needs for scheduling, permissions, and records. Put each person into their own row, then commit the list to Staff Profiles.</p>,
                 <div>
                     {renderStaffEditor()}
-                    <div className="mt-4 rounded-lg border border-emerald-200 bg-emerald-50 p-3">
+                    <div className={`mt-4 rounded-lg border p-3 ${staffProfilesCommitted ? 'border-emerald-400 bg-emerald-100 shadow-[0_0_0_1px_rgba(52,211,153,0.45)]' : 'border-emerald-200 bg-emerald-50'}`}>
                         <p className="text-xs font-semibold leading-5 text-emerald-900">
-                            This writes the staff shown above into Staff Profiles for this setup.
+                            {staffProfilesCommitted && staffCommitSummary ? `✓ ${staffCommitSummary}` : 'This writes the staff shown above into Staff Profiles for this setup.'}
                         </p>
                         <button
                             type="button"
-                            className={`${wizardPrimaryButtonClass} mt-3`}
+                            className={`${wizardPrimaryButtonClass} mt-3 ${staffProfilesCommitted ? 'bg-emerald-600 hover:bg-emerald-600' : ''}`}
                             onClick={commitWizardStaffProfiles}
                         >
-                            Commit to Staff Profiles
+                            {staffProfilesCommitted ? '✓ Staff Profiles Committed' : 'Commit to Staff Profiles'}
                         </button>
                     </div>
                 </div>,
@@ -11421,16 +11446,16 @@ const InitialSetupWizard: React.FC<{
                     {unitDraft.hasTrainees ? (
                         <>
                             {renderTraineeEditor('allocation')}
-                            <div className="mt-4 rounded-lg border border-emerald-200 bg-emerald-50 p-3">
+                            <div className={`mt-4 rounded-lg border p-3 ${traineeAllocationCommitted ? 'border-emerald-400 bg-emerald-100 shadow-[0_0_0_1px_rgba(52,211,153,0.45)]' : 'border-emerald-200 bg-emerald-50'}`}>
                                 <p className="text-xs font-semibold leading-5 text-emerald-900">
-                                    This writes the trainees shown above into the trainee list for this setup.
+                                    {traineeAllocationCommitted && traineeCommitSummary ? `✓ ${traineeCommitSummary}` : 'This writes the trainees shown above into the trainee list for this setup.'}
                                 </p>
                                 <button
                                     type="button"
-                                    className={`${wizardPrimaryButtonClass} mt-3`}
+                                    className={`${wizardPrimaryButtonClass} mt-3 ${traineeAllocationCommitted ? 'bg-emerald-600 hover:bg-emerald-600' : ''}`}
                                     onClick={commitWizardTraineeProfiles}
                                 >
-                                    Commit to Trainee Profiles
+                                    {traineeAllocationCommitted ? '✓ Trainee Profiles Committed' : 'Commit to Trainee Profiles'}
                                 </button>
                             </div>
                             {showMoreTraineesPrompt ? (

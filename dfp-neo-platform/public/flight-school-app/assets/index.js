@@ -34586,7 +34586,10 @@ const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, lo
   const [traineeCourseOptionsDraft, setTraineeCourseOptionsDraft] = reactExports.useState("Course 1");
   const [traineeCourseInputRows, setTraineeCourseInputRows] = reactExports.useState(() => ["Course 1"]);
   const [traineeDraft, setTraineeDraft] = reactExports.useState("");
+  const [staffProfilesCommitted, setStaffProfilesCommitted] = reactExports.useState(false);
+  const [staffCommitSummary, setStaffCommitSummary] = reactExports.useState("");
   const [traineeAllocationCommitted, setTraineeAllocationCommitted] = reactExports.useState(false);
+  const [traineeCommitSummary, setTraineeCommitSummary] = reactExports.useState("");
   const [showMoreTraineesPrompt, setShowMoreTraineesPrompt] = reactExports.useState(false);
   const defaultWizardUnitModulesDraft = "DFP | On\nNEO Build | On\nProgram Schedule | On\nTraining Records | On";
   const makeWizardModuleCode = (moduleName, index = 0) => (String(moduleName || "").trim() || `Module ${index + 1}`).toUpperCase().replace(/[^A-Z0-9]+/g, "_").replace(/^_|_$/g, "");
@@ -37961,6 +37964,8 @@ const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, lo
       const nextStaffDraft = formatWizardStaffRows(importedRows);
       setStaffDraft(nextStaffDraft);
       setUploadedStaffProfileRows(importedRows);
+      setStaffProfilesCommitted(false);
+      setStaffCommitSummary("");
       pushWizardImportDiag("staff:imported-to-draft", {
         importedRows: importedRows.length,
         sample: importedRows.slice(0, 8),
@@ -38006,6 +38011,9 @@ const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, lo
       const nextTraineeDraft = formatWizardTraineeRows(nextImportedRows);
       setTraineeDraft(nextTraineeDraft);
       setUploadedTraineeProfileRows(nextImportedRows);
+      setTraineeAllocationCommitted(false);
+      setTraineeCommitSummary("");
+      setShowMoreTraineesPrompt(false);
       const importedCourseOptions = Array.from(new Set(nextImportedRows.flatMap((row) => [row.course, row.courseNumber]).map((value) => String(value || "").trim()).filter(Boolean)));
       if (importedCourseOptions.length > 0) {
         setTraineeCourseOptionsDraft((current) => {
@@ -38566,6 +38574,8 @@ const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, lo
       const nextRows = [...editableRows];
       nextRows[index] = { ...nextRows[index], [field]: value };
       setStaffDraft(formatWizardStaffRows(nextRows));
+      setStaffProfilesCommitted(false);
+      setStaffCommitSummary("");
       setUploadedStaffProfileRows((current) => {
         if (!current[index]) return current;
         const next = [...current];
@@ -38587,6 +38597,8 @@ const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, lo
           ] }),
           /* @__PURE__ */ jsxRuntimeExports.jsx("button", { type: "button", className: wizardSmallButtonClass, onClick: () => {
             setStaffDraft(formatWizardStaffRows(editableRows.filter((_, rowIndex) => rowIndex !== index)));
+            setStaffProfilesCommitted(false);
+            setStaffCommitSummary("");
             setUploadedStaffProfileRows((current) => current.filter((_, rowIndex) => rowIndex !== index));
           }, children: "Delete" })
         ] }),
@@ -38606,6 +38618,8 @@ const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, lo
           className: wizardSmallButtonClass,
           onClick: () => {
             setStaffDraft(formatWizardStaffRows([...editableRows, { surname: "", givenNames: "", unit: unitDraft.code || "", position: "", personnelId: "", qualifications: "" }]));
+            setStaffProfilesCommitted(false);
+            setStaffCommitSummary("");
             setUploadedStaffProfileRows((current) => current.length > 0 ? [...current, { unit: unitDraft.code || "" }] : current);
           },
           children: "Add staff member"
@@ -38621,6 +38635,7 @@ const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, lo
       nextRows[index] = { ...nextRows[index], [field]: value };
       setTraineeDraft(formatWizardTraineeRows(nextRows));
       setTraineeAllocationCommitted(false);
+      setTraineeCommitSummary("");
       setShowMoreTraineesPrompt(false);
       setUploadedTraineeProfileRows((current) => {
         if (!current[index]) return current;
@@ -38645,6 +38660,7 @@ const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, lo
       nextCourses[index] = value;
       persistCourseRows(nextCourses);
       setTraineeAllocationCommitted(false);
+      setTraineeCommitSummary("");
       setShowMoreTraineesPrompt(false);
     };
     const removeCourseOption = (index) => {
@@ -38652,6 +38668,7 @@ const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, lo
       const nextCourses = traineeCourseRows.filter((_, rowIndex) => rowIndex !== index);
       persistCourseRows(nextCourses);
       setTraineeAllocationCommitted(false);
+      setTraineeCommitSummary("");
       setShowMoreTraineesPrompt(false);
       if (removedCourse) {
         const nextRows = editableRows.map((row) => row.course === removedCourse ? { ...row, course: "" } : row);
@@ -38663,6 +38680,7 @@ const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, lo
       const nextRows = editableRows.map((row) => ({ ...row, course }));
       setTraineeDraft(formatWizardTraineeRows(nextRows));
       setTraineeAllocationCommitted(false);
+      setTraineeCommitSummary("");
       setShowMoreTraineesPrompt(false);
       setUploadedTraineeProfileRows((current) => current.length > 0 ? current.map((row) => ({ ...row, course })) : current);
     };
@@ -38698,6 +38716,7 @@ const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, lo
             onClick: () => {
               persistCourseRows([...traineeCourseRows, ""]);
               setTraineeAllocationCommitted(false);
+              setTraineeCommitSummary("");
               setShowMoreTraineesPrompt(false);
             },
             children: "Add course"
@@ -38786,6 +38805,7 @@ const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, lo
           onClick: () => {
             setTraineeDraft(formatWizardTraineeRows([...editableRows, { surname: "", givenNames: "", unit: unitDraft.code || "", rank: "", personnelId: "", courseNumber: "", course: "", masterLmp: "", startDate: "" }]));
             setTraineeAllocationCommitted(false);
+            setTraineeCommitSummary("");
             setShowMoreTraineesPrompt(false);
             setUploadedTraineeProfileRows((current) => current.length > 0 ? [...current, { unit: unitDraft.code || "" }] : current);
           },
@@ -40235,6 +40255,8 @@ const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, lo
     saveSetupTestWizardDrafts(false, { staffDraft, staffRows });
     const message = `Committed ${staffCount} staff profile${staffCount === 1 ? "" : "s"} to Staff Profiles in this setup.`;
     setImportConfirmations((current) => ({ ...current, staff: message }));
+    setStaffProfilesCommitted(true);
+    setStaffCommitSummary(message);
     setSaveMessage(message);
   };
   const commitWizardTraineeProfiles = () => {
@@ -40248,6 +40270,8 @@ const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, lo
     if (missingCourseCount > 0) {
       const message2 = `Select one of the active courses for every trainee before committing. ${missingCourseCount} trainee${missingCourseCount === 1 ? "" : "s"} still need a valid course.`;
       setImportConfirmations((current) => ({ ...current, trainees: message2 }));
+      setTraineeAllocationCommitted(false);
+      setTraineeCommitSummary("");
       setSaveMessage(message2);
       return;
     }
@@ -40258,6 +40282,7 @@ const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, lo
     const message = `Committed ${traineeCount} trainee profile${traineeCount === 1 ? "" : "s"} to the trainee list in this setup.`;
     setImportConfirmations((current) => ({ ...current, trainees: message }));
     setTraineeAllocationCommitted(true);
+    setTraineeCommitSummary(message);
     setShowMoreTraineesPrompt(true);
     setSaveMessage(message);
   };
@@ -41072,15 +41097,15 @@ const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, lo
         /* @__PURE__ */ jsxRuntimeExports.jsx("p", { children: "Add the staff this unit needs for scheduling, permissions, and records. Put each person into their own row, then commit the list to Staff Profiles." }),
         /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
           renderStaffEditor(),
-          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mt-4 rounded-lg border border-emerald-200 bg-emerald-50 p-3", children: [
-            /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-xs font-semibold leading-5 text-emerald-900", children: "This writes the staff shown above into Staff Profiles for this setup." }),
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: `mt-4 rounded-lg border p-3 ${staffProfilesCommitted ? "border-emerald-400 bg-emerald-100 shadow-[0_0_0_1px_rgba(52,211,153,0.45)]" : "border-emerald-200 bg-emerald-50"}`, children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-xs font-semibold leading-5 text-emerald-900", children: staffProfilesCommitted && staffCommitSummary ? `✓ ${staffCommitSummary}` : "This writes the staff shown above into Staff Profiles for this setup." }),
             /* @__PURE__ */ jsxRuntimeExports.jsx(
               "button",
               {
                 type: "button",
-                className: `${wizardPrimaryButtonClass} mt-3`,
+                className: `${wizardPrimaryButtonClass} mt-3 ${staffProfilesCommitted ? "bg-emerald-600 hover:bg-emerald-600" : ""}`,
                 onClick: commitWizardStaffProfiles,
-                children: "Commit to Staff Profiles"
+                children: staffProfilesCommitted ? "✓ Staff Profiles Committed" : "Commit to Staff Profiles"
               }
             )
           ] })
@@ -41118,15 +41143,15 @@ const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, lo
         /* @__PURE__ */ jsxRuntimeExports.jsx("p", { children: unitDraft.hasTrainees ? "Allocate each trainee to one course. Every trainee must have a course selected before committing to Trainee Profiles." : "Trainees are switched off for this unit, so there is nothing to allocate." }),
         /* @__PURE__ */ jsxRuntimeExports.jsx("div", { children: unitDraft.hasTrainees ? /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
           renderTraineeEditor("allocation"),
-          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mt-4 rounded-lg border border-emerald-200 bg-emerald-50 p-3", children: [
-            /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-xs font-semibold leading-5 text-emerald-900", children: "This writes the trainees shown above into the trainee list for this setup." }),
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: `mt-4 rounded-lg border p-3 ${traineeAllocationCommitted ? "border-emerald-400 bg-emerald-100 shadow-[0_0_0_1px_rgba(52,211,153,0.45)]" : "border-emerald-200 bg-emerald-50"}`, children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-xs font-semibold leading-5 text-emerald-900", children: traineeAllocationCommitted && traineeCommitSummary ? `✓ ${traineeCommitSummary}` : "This writes the trainees shown above into the trainee list for this setup." }),
             /* @__PURE__ */ jsxRuntimeExports.jsx(
               "button",
               {
                 type: "button",
-                className: `${wizardPrimaryButtonClass} mt-3`,
+                className: `${wizardPrimaryButtonClass} mt-3 ${traineeAllocationCommitted ? "bg-emerald-600 hover:bg-emerald-600" : ""}`,
                 onClick: commitWizardTraineeProfiles,
-                children: "Commit to Trainee Profiles"
+                children: traineeAllocationCommitted ? "✓ Trainee Profiles Committed" : "Commit to Trainee Profiles"
               }
             )
           ] }),
