@@ -32915,6 +32915,37 @@ const getWizardRowName = (row) => String(row?.name || row?.fullName || [row?.sur
 const isDefaultWizardStaffPlaceholder = (row) => /^surname,\s*first$/i.test(getWizardRowName(row)) && /^unit-?01$/i.test(String(row?.unit || "").trim()) && /^pilot$/i.test(String(row?.position || row?.role || "").trim()) && /^qualification$/i.test(String(row?.qualifications || "").trim()) && !normaliseWizardPersonnelId(row);
 const isMeaningfulWizardStaffRow = (row) => !isDefaultWizardStaffPlaceholder(row) && Boolean(getWizardRowName(row) || row?.unit || row?.position || row?.role || row?.personnelId || row?.idNumber || row?.qualifications);
 const isMeaningfulWizardTraineeRow = (row) => Boolean(getWizardRowName(row) || row?.unit || row?.rank || row?.personnelId || row?.idNumber || row?.courseNumber || row?.course || row?.masterLmp || row?.startDate);
+const hashWizardSetupPersonnelSeed = (value) => {
+  let hash = 2166136261;
+  for (let index = 0; index < value.length; index += 1) {
+    hash ^= value.charCodeAt(index);
+    hash = Math.imul(hash, 16777619);
+  }
+  return Math.abs(hash >>> 0);
+};
+const getWizardGeneratedPersonnelId = (row, index, role, usedIds) => {
+  const existingId = normaliseWizardPersonnelId(row);
+  if (existingId > 0) {
+    usedIds.add(existingId);
+    return existingId;
+  }
+  const seed = [
+    role,
+    index + 1,
+    getWizardRowName(row),
+    row?.unit,
+    row?.rank,
+    row?.position,
+    row?.role,
+    row?.course,
+    row?.courseNumber,
+    row?.masterLmp
+  ].map((part) => String(part || "").trim().toUpperCase()).join("|");
+  let generatedId = 9e8 + hashWizardSetupPersonnelSeed(seed) % 99999999;
+  while (usedIds.has(generatedId)) generatedId += 1;
+  usedIds.add(generatedId);
+  return generatedId;
+};
 const parseWizardTraineeRows = (value) => String(value || "").split(/\n/).map((line) => {
   const parts = line.split("|").map((part, index) => index === 0 ? part : part.replace(/^\s/, ""));
   const namePart = parts[0] || "";
@@ -40557,19 +40588,45 @@ const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, lo
     const { instructors } = getWizardPersonnelForCommit(overrides);
     const sourceRows = Array.isArray(overrides.staffRows) && overrides.staffRows.length > 0 ? overrides.staffRows : parseWizardStaffRows(overrides.staffDraft ?? staffDraft);
     const meaningfulRows = sourceRows.filter(isMeaningfulWizardStaffRow);
-    const staffToPersist = instructors.filter((person) => String(person?.name || "").trim() && Number(person?.idNumber) > 0);
+    const existingPayload = await requestWizardApiJson("/api/personnel");
+    const existingTraineePayload = await requestWizardApiJson("/api/trainees");
+    const existingStaff = Array.isArray(existingPayload.personnel) ? existingPayload.personnel : [];
+    const makeExistingStaffKey = (person) => [
+      getWizardRowName(person),
+      person?.unit,
+      person?.role || person?.position
+    ].map((part) => String(part || "").trim().toUpperCase()).join("|");
+    const existingStaffIdByKey = new Map(
+      existingStaff.filter((person) => Number(person?.idNumber) > 0).map((person) => [makeExistingStaffKey(person), Number(person.idNumber)])
+    );
+    const usedIds = /* @__PURE__ */ new Set([
+      ...existingStaff.map((person) => Number(person?.idNumber)).filter((value) => Number.isFinite(value) && value > 0),
+      ...(Array.isArray(existingTraineePayload.trainees) ? existingTraineePayload.trainees : []).map((person) => Number(person?.idNumber)).filter((value) => Number.isFinite(value) && value > 0)
+    ]);
+    const staffCandidates = instructors.map((person, index) => {
+      const sourceRow = sourceRows[index] || person;
+      const suppliedId = normaliseWizardPersonnelId(sourceRow) || normaliseWizardPersonnelId(person);
+      const existingId = suppliedId > 0 ? 0 : existingStaffIdByKey.get(makeExistingStaffKey(person)) || 0;
+      const idNumber = suppliedId || existingId || getWizardGeneratedPersonnelId(sourceRow, index, "staff", usedIds);
+      if (suppliedId > 0 || existingId > 0) usedIds.add(idNumber);
+      return {
+        ...person,
+        idNumber,
+        generatedSetupPersonnelId: suppliedId <= 0 && existingId <= 0,
+        reusedSetupPersonnelId: suppliedId <= 0 && existingId > 0
+      };
+    });
+    const staffToPersist = staffCandidates.filter((person) => String(person?.name || "").trim() && Number(person?.idNumber) > 0);
     pushWizardPersistenceTrace("staff:persist:start", {
       candidates: instructors.length,
       sourceRows: sourceRows.length,
       meaningfulRows: meaningfulRows.length,
       persistedCandidates: staffToPersist.length,
+      generatedIds: staffToPersist.filter((person) => person.generatedSetupPersonnelId).length,
+      reusedIds: staffToPersist.filter((person) => person.reusedSetupPersonnelId).length,
       sample: staffToPersist.slice(0, 8).map((person) => ({ name: person.name, idNumber: person.idNumber, unit: person.unit, location: person.location }))
     });
-    if (meaningfulRows.length > 0 && staffToPersist.length < meaningfulRows.length) {
-      throw new Error(`${meaningfulRows.length - staffToPersist.length} staff row${meaningfulRows.length - staffToPersist.length === 1 ? "" : "s"} cannot be committed because Personnel ID is missing or invalid.`);
-    }
     if (staffToPersist.length === 0) return 0;
-    const existingPayload = await requestWizardApiJson("/api/personnel");
     const existingByPersonnelId = new Map(
       (Array.isArray(existingPayload.personnel) ? existingPayload.personnel : []).filter((person) => Number(person?.idNumber) > 0).map((person) => [String(Number(person.idNumber)), person])
     );
@@ -40629,17 +40686,45 @@ const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, lo
       unitDraft: effectiveUnitDraft
     });
     const meaningfulRows = traineeRows.filter(isMeaningfulWizardTraineeRow);
-    const traineesToPersist = trainees.filter((person) => String(person?.name || person?.fullName || "").trim() && Number(person?.idNumber) > 0);
+    const existingPersonnelPayload = await requestWizardApiJson("/api/personnel");
+    const existingTraineePayload = await requestWizardApiJson("/api/trainees");
+    const existingTrainees = Array.isArray(existingTraineePayload.trainees) ? existingTraineePayload.trainees : [];
+    const makeExistingTraineeKey = (person) => [
+      getWizardRowName(person),
+      person?.unit,
+      person?.course,
+      person?.lmpType
+    ].map((part) => String(part || "").trim().toUpperCase()).join("|");
+    const existingTraineeIdByKey = new Map(
+      existingTrainees.filter((person) => Number(person?.idNumber) > 0).map((person) => [makeExistingTraineeKey(person), Number(person.idNumber)])
+    );
+    const usedIds = /* @__PURE__ */ new Set([
+      ...(Array.isArray(existingPersonnelPayload.personnel) ? existingPersonnelPayload.personnel : []).map((person) => Number(person?.idNumber)).filter((value) => Number.isFinite(value) && value > 0),
+      ...existingTrainees.map((person) => Number(person?.idNumber)).filter((value) => Number.isFinite(value) && value > 0)
+    ]);
+    const traineeCandidates = trainees.map((person, index) => {
+      const sourceRow = traineeRows[index] || person;
+      const suppliedId = normaliseWizardPersonnelId(sourceRow) || normaliseWizardPersonnelId(person);
+      const existingId = suppliedId > 0 ? 0 : existingTraineeIdByKey.get(makeExistingTraineeKey(person)) || 0;
+      const idNumber = suppliedId || existingId || getWizardGeneratedPersonnelId(sourceRow, index, "trainee", usedIds);
+      if (suppliedId > 0 || existingId > 0) usedIds.add(idNumber);
+      return {
+        ...person,
+        idNumber,
+        generatedSetupPersonnelId: suppliedId <= 0 && existingId <= 0,
+        reusedSetupPersonnelId: suppliedId <= 0 && existingId > 0
+      };
+    });
+    const traineesToPersist = traineeCandidates.filter((person) => String(person?.name || person?.fullName || "").trim() && Number(person?.idNumber) > 0);
     pushWizardPersistenceTrace("trainees:persist:start", {
       sourceRows: traineeRows.length,
       meaningfulRows: meaningfulRows.length,
       candidates: trainees.length,
       persistedCandidates: traineesToPersist.length,
+      generatedIds: traineesToPersist.filter((person) => person.generatedSetupPersonnelId).length,
+      reusedIds: traineesToPersist.filter((person) => person.reusedSetupPersonnelId).length,
       sample: traineesToPersist.slice(0, 8).map((person) => ({ name: person.name || person.fullName, idNumber: person.idNumber, course: person.course, lmpType: person.lmpType, unit: person.unit }))
     });
-    if (meaningfulRows.length > 0 && traineesToPersist.length < meaningfulRows.length) {
-      throw new Error(`${meaningfulRows.length - traineesToPersist.length} trainee row${meaningfulRows.length - traineesToPersist.length === 1 ? "" : "s"} cannot be committed because Personnel ID is missing or invalid.`);
-    }
     if (traineesToPersist.length === 0) return 0;
     const payload = traineesToPersist.map((person) => ({
       idNumber: Number(person.idNumber),
@@ -40959,6 +41044,13 @@ const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, lo
   };
   const finishWizardReview = async () => {
     if (wizardFinishInProgress) return;
+    wizardFinishTraceRef.current = [];
+    setWizardFinishTrace([]);
+    try {
+      window.localStorage.removeItem(wizardFinishTraceStorageKey);
+      window.neoSetupWizardFinishTrace = [];
+    } catch {
+    }
     setWizardFinishInProgress(true);
     setWizardReviewComplete(false);
     setSaveMessage("Finishing setup review...");
