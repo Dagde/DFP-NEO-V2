@@ -3159,6 +3159,23 @@ const InitialSetupWizard: React.FC<{
         } catch (error) {
         }
     };
+    const pushWizardTraineeCommitTrace = (stage: string, details: Record<string, any> = {}) => {
+        if (typeof window === 'undefined') return;
+        const entry = {
+            ts: new Date().toISOString(),
+            stage,
+            unitCode,
+            details: compactWizardDiagDetails(details),
+        };
+        try {
+            const existing = JSON.parse(window.localStorage.getItem('dfp_setup_wizard_trainee_commit_trace') || '[]');
+            const next = [...(Array.isArray(existing) ? existing : []), entry].slice(-40);
+            safeSetWizardLocalStorage('dfp_setup_wizard_trainee_commit_trace', JSON.stringify(next));
+            (window as any).neoSetupWizardTraineeCommitTrace = next;
+        } catch {
+            // Diagnostic tracking is best-effort only.
+        }
+    };
     const pushWizardLmpDiag = (stage: string, details: Record<string, any> = {}) => {
         if (!isSetupTestMode || typeof window === 'undefined') return;
         const setupTestKeys = Object.keys(window.localStorage || {})
@@ -3771,6 +3788,7 @@ const InitialSetupWizard: React.FC<{
     const [staffProfilesCommitted, setStaffProfilesCommitted] = useState(false);
     const [staffCommitSummary, setStaffCommitSummary] = useState('');
     const [traineeAllocationCommitted, setTraineeAllocationCommitted] = useState(false);
+    const [traineeCommitInProgress, setTraineeCommitInProgress] = useState(false);
     const [traineeCommitSummary, setTraineeCommitSummary] = useState('');
     const [showMoreTraineesPrompt, setShowMoreTraineesPrompt] = useState(false);
     const defaultWizardUnitModulesDraft = 'DFP | On\nNEO Build | On\nProgram Schedule | On\nTraining Records | On';
@@ -8574,6 +8592,7 @@ const InitialSetupWizard: React.FC<{
             nextRows[index] = { ...nextRows[index], [field]: value };
             setTraineeDraft(formatWizardTraineeRows(nextRows));
             setTraineeAllocationCommitted(false);
+            setTraineeCommitInProgress(false);
             setTraineeCommitSummary('');
             setShowMoreTraineesPrompt(false);
             setUploadedTraineeProfileRows((current) => {
@@ -8599,6 +8618,7 @@ const InitialSetupWizard: React.FC<{
             nextCourses[index] = value;
             persistCourseRows(nextCourses);
             setTraineeAllocationCommitted(false);
+            setTraineeCommitInProgress(false);
             setTraineeCommitSummary('');
             setShowMoreTraineesPrompt(false);
         };
@@ -8607,6 +8627,7 @@ const InitialSetupWizard: React.FC<{
             const nextCourses = traineeCourseRows.filter((_, rowIndex) => rowIndex !== index);
             persistCourseRows(nextCourses);
             setTraineeAllocationCommitted(false);
+            setTraineeCommitInProgress(false);
             setTraineeCommitSummary('');
             setShowMoreTraineesPrompt(false);
             if (removedCourse) {
@@ -8619,6 +8640,7 @@ const InitialSetupWizard: React.FC<{
             const nextRows = editableRows.map((row) => ({ ...row, course }));
             setTraineeDraft(formatWizardTraineeRows(nextRows));
             setTraineeAllocationCommitted(false);
+            setTraineeCommitInProgress(false);
             setTraineeCommitSummary('');
             setShowMoreTraineesPrompt(false);
             setUploadedTraineeProfileRows((current) => (
@@ -8661,6 +8683,7 @@ const InitialSetupWizard: React.FC<{
                             onClick={() => {
                                 persistCourseRows([...traineeCourseRows, '']);
                                 setTraineeAllocationCommitted(false);
+                                setTraineeCommitInProgress(false);
                                 setTraineeCommitSummary('');
                                 setShowMoreTraineesPrompt(false);
                             }}
@@ -8768,6 +8791,7 @@ const InitialSetupWizard: React.FC<{
                     onClick={() => {
                         setTraineeDraft(formatWizardTraineeRows([...editableRows, { surname: '', givenNames: '', unit: unitDraft.code || '', rank: '', personnelId: '', courseNumber: '', course: '', masterLmp: '', startDate: '' }]));
                         setTraineeAllocationCommitted(false);
+                        setTraineeCommitInProgress(false);
                         setTraineeCommitSummary('');
                         setShowMoreTraineesPrompt(false);
                         setUploadedTraineeProfileRows((current) => current.length > 0 ? [...current, { unit: unitDraft.code || '' }] : current);
@@ -9266,11 +9290,28 @@ const InitialSetupWizard: React.FC<{
                 const course = String(row.course || '').trim();
                 return !course || !validCourses.has(course.toUpperCase());
             }).length;
+            pushWizardTraineeCommitTrace('next:trainee-allocation-gate', {
+                hasTraineesToCommit,
+                missingCourseCount,
+                traineeAllocationCommitted,
+                traineeCommitInProgress,
+                traineeRows,
+                courseOptions: parseWizardLineItems(traineeCourseOptionsDraft),
+            });
             if (hasTraineesToCommit && missingCourseCount > 0) {
+                pushWizardTraineeCommitTrace('next:blocked-missing-course', {
+                    missingCourseCount,
+                    traineeRows,
+                });
                 setSaveMessage(`Select one of the active courses for every trainee before continuing. ${missingCourseCount} trainee${missingCourseCount === 1 ? '' : 's'} still need a valid course.`);
                 return;
             }
             if (hasTraineesToCommit && !traineeAllocationCommitted) {
+                pushWizardTraineeCommitTrace('next:blocked-uncommitted', {
+                    traineeCommitInProgress,
+                    traineeCommitSummary,
+                    traineeRows,
+                });
                 setSaveMessage('Commit the allocated trainees to Trainee Profiles before continuing.');
                 return;
             }
@@ -10557,6 +10598,11 @@ const InitialSetupWizard: React.FC<{
         setSaveMessage(message);
     };
     const commitWizardTraineeProfiles = () => {
+        if (traineeCommitInProgress) return;
+        setTraineeCommitInProgress(true);
+        setTraineeAllocationCommitted(false);
+        setTraineeCommitSummary('Committing trainee profiles...');
+        setSaveMessage('Committing trainee profiles...');
         const displayedRows = parseWizardTraineeRows(traineeDraft);
         const rowsToCommit = displayedRows.length > 0
             ? displayedRows.map((row, index) => ({
@@ -10564,7 +10610,15 @@ const InitialSetupWizard: React.FC<{
                 ...row,
             }))
             : uploadedTraineeProfileRows;
-        const validCourses = new Set(parseWizardLineItems(traineeCourseOptionsDraft).map((course) => course.toUpperCase()));
+        const courseOptions = parseWizardLineItems(traineeCourseOptionsDraft);
+        const validCourses = new Set(courseOptions.map((course) => course.toUpperCase()));
+        pushWizardTraineeCommitTrace('commit:clicked', {
+            displayedRows,
+            uploadedTraineeProfileRows,
+            rowsToCommit,
+            courseOptions,
+            traineeDraft,
+        });
         const missingCourseCount = rowsToCommit.filter((row) => (
             row.surname || row.givenNames || row.unit || row.rank || row.personnelId || row.courseNumber || row.course || row.masterLmp || row.startDate
         )).filter((row) => {
@@ -10573,8 +10627,14 @@ const InitialSetupWizard: React.FC<{
         }).length;
         if (missingCourseCount > 0) {
             const message = `Select one of the active courses for every trainee before committing. ${missingCourseCount} trainee${missingCourseCount === 1 ? '' : 's'} still need a valid course.`;
+            pushWizardTraineeCommitTrace('commit:blocked-missing-course', {
+                missingCourseCount,
+                rowsToCommit,
+                courseOptions,
+            });
             setImportConfirmations((current) => ({ ...current, trainees: message }));
             setTraineeAllocationCommitted(false);
+            setTraineeCommitInProgress(false);
             setTraineeCommitSummary('');
             setSaveMessage(message);
             return;
@@ -10587,13 +10647,27 @@ const InitialSetupWizard: React.FC<{
         setUnitDraft(nextUnitDraft);
         setTraineeDraft(nextTraineeDraft);
         setUploadedTraineeProfileRows(rowsToCommit);
+        setTraineeAllocationCommitted(true);
+        setShowMoreTraineesPrompt(false);
         saveSetupTestWizardDrafts(false, { traineeDraft: nextTraineeDraft, traineeRows: rowsToCommit, unitDraft: nextUnitDraft });
         const message = `Committed ${traineeCount} trainee profile${traineeCount === 1 ? '' : 's'} to the trainee list in this setup.`;
-        setImportConfirmations((current) => ({ ...current, trainees: message }));
-        setTraineeAllocationCommitted(true);
-        setTraineeCommitSummary(message);
-        setShowMoreTraineesPrompt(true);
-        setSaveMessage(message);
+        pushWizardTraineeCommitTrace('commit:save-queued', {
+            traineeCount,
+            rowsToCommit,
+            nextTraineeDraft,
+            nextUnitDraft,
+        });
+        window.setTimeout(() => {
+            pushWizardTraineeCommitTrace('commit:confirmed-ui', {
+                traineeCount,
+                rowsToCommit,
+            });
+            setImportConfirmations((current) => ({ ...current, trainees: message }));
+            setTraineeCommitInProgress(false);
+            setTraineeCommitSummary(message);
+            setShowMoreTraineesPrompt(true);
+            setSaveMessage(message);
+        }, 450);
     };
     const commitWizardCourseLmpEvents = () => {
         const uploadResult = uploadResults.courses;
@@ -11478,16 +11552,17 @@ const InitialSetupWizard: React.FC<{
                     {unitDraft.hasTrainees ? (
                         <>
                             {renderTraineeEditor('allocation')}
-                            <div className={`mt-4 rounded-lg border p-3 ${traineeAllocationCommitted ? 'border-emerald-400 bg-emerald-100 shadow-[0_0_0_1px_rgba(52,211,153,0.45)]' : 'border-emerald-200 bg-emerald-50'}`}>
+                            <div className={`mt-4 rounded-lg border p-3 ${traineeCommitInProgress ? 'border-blue-300 bg-blue-50 shadow-[0_0_0_1px_rgba(96,165,250,0.35)]' : traineeAllocationCommitted ? 'border-emerald-400 bg-emerald-100 shadow-[0_0_0_1px_rgba(52,211,153,0.45)]' : 'border-emerald-200 bg-emerald-50'}`}>
                                 <p className="text-xs font-semibold leading-5 text-emerald-900">
-                                    {traineeAllocationCommitted && traineeCommitSummary ? `✓ ${traineeCommitSummary}` : 'This writes the trainees shown above into the trainee list for this setup.'}
+                                    {traineeCommitInProgress ? 'Committing trainee profiles...' : traineeAllocationCommitted && traineeCommitSummary ? `✓ ${traineeCommitSummary}` : 'This writes the trainees shown above into the trainee list for this setup.'}
                                 </p>
                                 <button
                                     type="button"
-                                    className={`${wizardPrimaryButtonClass} mt-3 ${traineeAllocationCommitted ? 'bg-emerald-600 hover:bg-emerald-600' : ''}`}
+                                    className={`${wizardPrimaryButtonClass} mt-3 ${traineeCommitInProgress ? 'bg-blue-600 hover:bg-blue-600' : traineeAllocationCommitted ? 'bg-emerald-600 hover:bg-emerald-600' : ''}`}
                                     onClick={commitWizardTraineeProfiles}
+                                    disabled={traineeCommitInProgress}
                                 >
-                                    {traineeAllocationCommitted ? '✓ Trainee Profiles Committed' : 'Commit to Trainee Profiles'}
+                                    {traineeCommitInProgress ? 'Committing...' : traineeAllocationCommitted ? '✓ Trainee Profiles Committed' : 'Commit to Trainee Profiles'}
                                 </button>
                             </div>
                             {showMoreTraineesPrompt ? (
