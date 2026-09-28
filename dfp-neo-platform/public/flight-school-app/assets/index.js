@@ -38271,13 +38271,12 @@ const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, lo
       setShowMoreTraineesPrompt(false);
       const importedCourseOptions = Array.from(new Set(nextImportedRows.flatMap((row) => [row.course, row.courseNumber]).map((value) => String(value || "").trim()).filter(Boolean)));
       if (importedCourseOptions.length > 0) {
-        setTraineeCourseOptionsDraft((current) => {
-          const merged = Array.from(new Set([
-            ...parseWizardLineItems(current),
-            ...importedCourseOptions
-          ].map((item) => String(item || "").trim()).filter(Boolean)));
-          return merged.join("\n");
-        });
+        const mergedCourseOptions = Array.from(new Set([
+          ...parseWizardLineItems(traineeCourseOptionsDraft),
+          ...importedCourseOptions
+        ].map((item) => String(item || "").trim()).filter(Boolean)));
+        setTraineeCourseOptionsDraft(mergedCourseOptions.join("\n"));
+        setTraineeCourseInputRows(mergedCourseOptions.length > 0 ? mergedCourseOptions : [""]);
       }
       setTraineeAllocationCommitted(false);
       setShowMoreTraineesPrompt(false);
@@ -41128,7 +41127,10 @@ const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, lo
     setTraineeCommitSummary("Committing trainee profiles...");
     setSaveMessage("Committing trainee profiles...");
     const rowsToCommit = getResolvedWizardTraineeRowsForCommit();
-    const courseOptions = parseWizardLineItems(traineeCourseOptionsDraft);
+    const courseOptions = Array.from(new Set([
+      ...parseWizardLineItems(traineeCourseOptionsDraft),
+      ...traineeCourseInputRows.map((course) => String(course || "").trim()).filter(Boolean)
+    ].map((course) => String(course || "").trim()).filter(Boolean)));
     const validCourses = new Set(courseOptions.map((course) => course.toUpperCase()));
     const missingCourseCount = rowsToCommit.filter((row) => row.surname || row.givenNames || row.unit || row.rank || row.personnelId || row.courseNumber || row.course || row.masterLmp || row.startDate).filter((row) => {
       const course = String(row.course || "").trim();
@@ -41139,7 +41141,7 @@ const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, lo
       setImportConfirmations((current) => ({ ...current, trainees: message2 }));
       setTraineeAllocationCommitted(false);
       setTraineeCommitInProgress(false);
-      setTraineeCommitSummary("");
+      setTraineeCommitSummary(message2);
       setSaveMessage(message2);
       return;
     }
@@ -42085,12 +42087,17 @@ const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, lo
       );
     }
     if (visibleStep.id === "trainee-allocation") {
+      const traineeCommitHasMessage = Boolean(traineeCommitSummary);
+      const traineeCommitProblem = traineeCommitHasMessage && !traineeCommitInProgress && !traineeAllocationCommitted;
+      const traineeCommitPanelClass = traineeCommitInProgress ? "border-blue-300 bg-blue-50 shadow-[0_0_0_1px_rgba(96,165,250,0.35)]" : traineeAllocationCommitted ? "border-emerald-400 bg-emerald-100 shadow-[0_0_0_1px_rgba(52,211,153,0.45)]" : traineeCommitProblem ? "border-amber-300 bg-amber-50 shadow-[0_0_0_1px_rgba(251,191,36,0.35)]" : "border-emerald-200 bg-emerald-50";
+      const traineeCommitTextClass = traineeCommitProblem ? "text-amber-900" : "text-emerald-900";
+      const traineeCommitStatusText = traineeCommitInProgress ? "Committing trainee profiles..." : traineeAllocationCommitted && traineeCommitSummary ? `✓ ${traineeCommitSummary}` : traineeCommitSummary || "This writes the trainees shown above into the trainee list for this setup.";
       return promptShell(
         /* @__PURE__ */ jsxRuntimeExports.jsx("p", { children: unitDraft.hasTrainees ? "Allocate each trainee to one course. Every trainee must have a course selected before committing to Trainee Profiles." : "Trainees are switched off for this unit, so there is nothing to allocate." }),
         /* @__PURE__ */ jsxRuntimeExports.jsx("div", { children: unitDraft.hasTrainees ? /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
           renderTraineeEditor("allocation"),
-          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: `mt-4 rounded-lg border p-3 ${traineeCommitInProgress ? "border-blue-300 bg-blue-50 shadow-[0_0_0_1px_rgba(96,165,250,0.35)]" : traineeAllocationCommitted ? "border-emerald-400 bg-emerald-100 shadow-[0_0_0_1px_rgba(52,211,153,0.45)]" : "border-emerald-200 bg-emerald-50"}`, children: [
-            /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-xs font-semibold leading-5 text-emerald-900", children: traineeCommitInProgress ? "Committing trainee profiles..." : traineeAllocationCommitted && traineeCommitSummary ? `✓ ${traineeCommitSummary}` : "This writes the trainees shown above into the trainee list for this setup." }),
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: `mt-4 rounded-lg border p-3 ${traineeCommitPanelClass}`, children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: `text-xs font-semibold leading-5 ${traineeCommitTextClass}`, children: traineeCommitStatusText }),
             /* @__PURE__ */ jsxRuntimeExports.jsx(
               "button",
               {
