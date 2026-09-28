@@ -37505,7 +37505,7 @@ const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, lo
     }
   };
   const isWizardStepComplete = (step) => {
-    return hasMeaningfulWizardStepData(step);
+    return completedWizardStepIds.has(step.id) || hasMeaningfulWizardStepData(step);
   };
   const wizardStepTextClass = (step) => isWizardStepComplete(step) ? "text-slate-950" : wizardCategoryTextClass[step.category];
   const wizardStepMenuItemClass = (step, index) => [

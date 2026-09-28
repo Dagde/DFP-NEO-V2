@@ -7247,7 +7247,7 @@ const InitialSetupWizard: React.FC<{
         }
     };
     const isWizardStepComplete = (step: InitialSetupWizardStep) => {
-        return hasMeaningfulWizardStepData(step);
+        return completedWizardStepIds.has(step.id) || hasMeaningfulWizardStepData(step);
     };
     const wizardStepTextClass = (step: InitialSetupWizardStep) => (
         isWizardStepComplete(step) ? 'text-slate-950' : wizardCategoryTextClass[step.category]
