@@ -29504,6 +29504,11 @@ const App: React.FC = () => {
                 setActiveUnitCode(preferredSharedContext.code);
                 return;
             }
+            const firstEnabledUnit = activeLocationUnitOptions.find((unit: any) => unit.disabled !== true) || activeLocationUnitOptions[0];
+            if (firstEnabledUnit?.code) {
+                setActiveUnitCode(firstEnabledUnit.code);
+                return;
+            }
             return;
         }
         if (!activeUnitOption || activeUnitOption.disabled) {
@@ -54105,6 +54110,60 @@ appliedUpdates.forEach(update => {
                                setIsInitialSetupWizardActive(false);
                                setShowDfpSidePanel(false);
                                setShowFlightLinePanel(false);
+                               try {
+                                   pushFinishTrace('before-refresh-platform-config');
+                                   const refreshedConfig = applyDefaultUnitTraineeAvailability(normalisePlatformConfig(await loadPlatformConfigFromDB()));
+                                   setPlatformConfig(refreshedConfig);
+                                   setPlatformConfigLoaded(true);
+                                   const activeLocations = (refreshedConfig?.locations || [])
+                                       .filter((location: any) => String(location?.status || 'ACTIVE').toUpperCase() !== 'INACTIVE');
+                                   const activeUnits = (refreshedConfig?.units || [])
+                                       .filter((unit: any) => String(unit?.status || 'ACTIVE').toUpperCase() !== 'INACTIVE');
+                                   const activePools = (refreshedConfig?.resourcePools || [])
+                                       .filter((pool: any) => String(pool?.status || 'ACTIVE').toUpperCase() !== 'INACTIVE');
+                                   const normaliseCode = (value: unknown) => String(value || '').trim().toUpperCase();
+                                   const locationAliasesFor = (location: any) => new Set([
+                                       location?.code,
+                                       location?.iataCode,
+                                       location?.icao,
+                                       location?.icaoCode,
+                                       location?.name,
+                                       location?.settings?.iataCode,
+                                       location?.settings?.icaoCode,
+                                       ...(Array.isArray(location?.aliases) ? location.aliases : []),
+                                       ...(Array.isArray(location?.settings?.aliases) ? location.settings.aliases : []),
+                                   ].map(normaliseCode).filter(Boolean));
+                                   let nextLocation = '';
+                                   let nextUnit = '';
+                                   for (const location of activeLocations) {
+                                       const aliases = locationAliasesFor(location);
+                                       const unitsAtLocation = activeUnits.filter((unit: any) => aliases.has(normaliseCode(unit?.locationCode)));
+                                       if (unitsAtLocation.length === 0) continue;
+                                       const unitWithPool = unitsAtLocation.find((unit: any) => activePools.some((pool: any) => (
+                                           normaliseCode(pool?.unitCode) === normaliseCode(unit?.code)
+                                           && aliases.has(normaliseCode(pool?.locationCode))
+                                       )));
+                                       nextLocation = normaliseCode(location?.code || unitsAtLocation[0]?.locationCode);
+                                       nextUnit = normaliseCode(unitWithPool?.code || unitsAtLocation[0]?.code);
+                                       break;
+                                   }
+                                   if (nextLocation && nextUnit) {
+                                       persistOperationalContextSelection(nextLocation, nextUnit, 'initial-setup-review-finished');
+                                       setSchool(nextLocation);
+                                       setActiveUnitCode(nextUnit);
+                                   }
+                                   pushFinishTrace('after-refresh-platform-config', {
+                                       locations: activeLocations.length,
+                                       units: activeUnits.length,
+                                       resourcePools: activePools.length,
+                                       nextLocation,
+                                       nextUnit,
+                                   });
+                               } catch (error) {
+                                   pushFinishTrace('refresh-platform-config-error', {
+                                       error: error instanceof Error ? error.message : String(error),
+                                   });
+                               }
                                pushFinishTrace('before-refresh-database');
                                await handleDatabaseDataChanged();
                                pushFinishTrace('after-refresh-database');

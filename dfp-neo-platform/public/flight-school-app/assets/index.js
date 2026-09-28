@@ -34035,6 +34035,7 @@ const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, lo
   const [wizardFinishInProgress, setWizardFinishInProgress] = reactExports.useState(false);
   const [wizardReviewComplete, setWizardReviewComplete] = reactExports.useState(false);
   const wizardReviewAutoReturnScheduledRef = reactExports.useRef(false);
+  const onInitialSetupWizardFinishedRef = reactExports.useRef(onInitialSetupWizardFinished);
   const wizardFinishTraceStorageKey = "dfp_setup_wizard_finish_trace";
   const [wizardFinishTrace, setWizardFinishTrace] = reactExports.useState(() => {
     if (typeof window === "undefined") return [];
@@ -34323,6 +34324,9 @@ const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, lo
     setSaveMessage("Step 41 finish trace downloaded.");
   };
   reactExports.useEffect(() => {
+    onInitialSetupWizardFinishedRef.current = onInitialSetupWizardFinished;
+  }, [onInitialSetupWizardFinished]);
+  reactExports.useEffect(() => {
     if (!wizardReviewComplete) {
       wizardReviewAutoReturnScheduledRef.current = false;
       return;
@@ -34334,7 +34338,7 @@ const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, lo
       const run = async () => {
         pushWizardPersistenceTrace("auto-return:started");
         try {
-          await onInitialSetupWizardFinished?.();
+          await onInitialSetupWizardFinishedRef.current?.();
           pushWizardPersistenceTrace("auto-return:completed");
         } catch (error) {
           const errorMessage = error instanceof Error ? error.message : String(error);
@@ -34345,7 +34349,7 @@ const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, lo
       void run();
     }, 5e3);
     return () => window.clearTimeout(timer);
-  }, [onInitialSetupWizardFinished, wizardReviewComplete]);
+  }, [wizardReviewComplete]);
   reactExports.useEffect(() => {
     pushWizardLmpDiag("wizard:staged-items-state", {
       stagedCount: uploadedCourseLmpItems.length,
@@ -137519,6 +137523,11 @@ const App = () => {
         setActiveUnitCode(preferredSharedContext.code);
         return;
       }
+      const firstEnabledUnit = activeLocationUnitOptions.find((unit) => unit.disabled !== true) || activeLocationUnitOptions[0];
+      if (firstEnabledUnit?.code) {
+        setActiveUnitCode(firstEnabledUnit.code);
+        return;
+      }
       return;
     }
     if (!activeUnitOption || activeUnitOption.disabled) {
@@ -157498,6 +157507,54 @@ It will not clear the published DFP.`,
               setIsInitialSetupWizardActive(false);
               setShowDfpSidePanel(false);
               setShowFlightLinePanel(false);
+              try {
+                pushFinishTrace("before-refresh-platform-config");
+                const refreshedConfig = applyDefaultUnitTraineeAvailability(normalisePlatformConfig(await loadPlatformConfigFromDB()));
+                setPlatformConfig(refreshedConfig);
+                setPlatformConfigLoaded(true);
+                const activeLocations = (refreshedConfig?.locations || []).filter((location) => String(location?.status || "ACTIVE").toUpperCase() !== "INACTIVE");
+                const activeUnits = (refreshedConfig?.units || []).filter((unit) => String(unit?.status || "ACTIVE").toUpperCase() !== "INACTIVE");
+                const activePools = (refreshedConfig?.resourcePools || []).filter((pool) => String(pool?.status || "ACTIVE").toUpperCase() !== "INACTIVE");
+                const normaliseCode2 = (value) => String(value || "").trim().toUpperCase();
+                const locationAliasesFor = (location) => new Set([
+                  location?.code,
+                  location?.iataCode,
+                  location?.icao,
+                  location?.icaoCode,
+                  location?.name,
+                  location?.settings?.iataCode,
+                  location?.settings?.icaoCode,
+                  ...Array.isArray(location?.aliases) ? location.aliases : [],
+                  ...Array.isArray(location?.settings?.aliases) ? location.settings.aliases : []
+                ].map(normaliseCode2).filter(Boolean));
+                let nextLocation = "";
+                let nextUnit = "";
+                for (const location of activeLocations) {
+                  const aliases = locationAliasesFor(location);
+                  const unitsAtLocation = activeUnits.filter((unit) => aliases.has(normaliseCode2(unit?.locationCode)));
+                  if (unitsAtLocation.length === 0) continue;
+                  const unitWithPool = unitsAtLocation.find((unit) => activePools.some((pool) => normaliseCode2(pool?.unitCode) === normaliseCode2(unit?.code) && aliases.has(normaliseCode2(pool?.locationCode))));
+                  nextLocation = normaliseCode2(location?.code || unitsAtLocation[0]?.locationCode);
+                  nextUnit = normaliseCode2(unitWithPool?.code || unitsAtLocation[0]?.code);
+                  break;
+                }
+                if (nextLocation && nextUnit) {
+                  persistOperationalContextSelection(nextLocation, nextUnit, "initial-setup-review-finished");
+                  setSchool(nextLocation);
+                  setActiveUnitCode(nextUnit);
+                }
+                pushFinishTrace("after-refresh-platform-config", {
+                  locations: activeLocations.length,
+                  units: activeUnits.length,
+                  resourcePools: activePools.length,
+                  nextLocation,
+                  nextUnit
+                });
+              } catch (error) {
+                pushFinishTrace("refresh-platform-config-error", {
+                  error: error instanceof Error ? error.message : String(error)
+                });
+              }
               pushFinishTrace("before-refresh-database");
               await handleDatabaseDataChanged();
               pushFinishTrace("after-refresh-database");

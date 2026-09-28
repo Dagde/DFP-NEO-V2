@@ -3161,6 +3161,7 @@ const InitialSetupWizard: React.FC<{
     const [wizardFinishInProgress, setWizardFinishInProgress] = useState(false);
     const [wizardReviewComplete, setWizardReviewComplete] = useState(false);
     const wizardReviewAutoReturnScheduledRef = useRef(false);
+    const onInitialSetupWizardFinishedRef = useRef(onInitialSetupWizardFinished);
     const wizardFinishTraceStorageKey = 'dfp_setup_wizard_finish_trace';
     const [wizardFinishTrace, setWizardFinishTrace] = useState<any[]>(() => {
         if (typeof window === 'undefined') return [];
@@ -3450,6 +3451,10 @@ const InitialSetupWizard: React.FC<{
     };
 
     useEffect(() => {
+        onInitialSetupWizardFinishedRef.current = onInitialSetupWizardFinished;
+    }, [onInitialSetupWizardFinished]);
+
+    useEffect(() => {
         if (!wizardReviewComplete) {
             wizardReviewAutoReturnScheduledRef.current = false;
             return;
@@ -3461,7 +3466,7 @@ const InitialSetupWizard: React.FC<{
             const run = async () => {
                 pushWizardPersistenceTrace('auto-return:started');
                 try {
-                    await onInitialSetupWizardFinished?.();
+                    await onInitialSetupWizardFinishedRef.current?.();
                     pushWizardPersistenceTrace('auto-return:completed');
                 } catch (error) {
                     const errorMessage = error instanceof Error ? error.message : String(error);
@@ -3472,7 +3477,7 @@ const InitialSetupWizard: React.FC<{
             void run();
         }, 5000);
         return () => window.clearTimeout(timer);
-    }, [onInitialSetupWizardFinished, wizardReviewComplete]);
+    }, [wizardReviewComplete]);
 
     useEffect(() => {
         pushWizardLmpDiag('wizard:staged-items-state', {
