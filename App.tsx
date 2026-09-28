@@ -54077,21 +54077,52 @@ appliedUpdates.forEach(update => {
                            onLinkedAvailabilityChange={handleLinkedAircraftAvailabilityChange}
                            onInitialSetupWizardActiveChange={setIsInitialSetupWizardActive}
                            onInitialSetupWizardFinished={async () => {
+                               const pushFinishTrace = (stage: string, details: Record<string, any> = {}) => {
+                                   try {
+                                       const key = 'dfp_setup_wizard_finish_trace';
+                                       const existing = JSON.parse(window.localStorage.getItem(key) || '[]');
+                                       const entry = {
+                                           ts: new Date().toISOString(),
+                                           stage: `app:${stage}`,
+                                           snapshot: {
+                                               activeView,
+                                               activeUnitCode,
+                                               activeLocationCode: school,
+                                               staffCount: instructorsData.length,
+                                               traineeCount: traineesData.length,
+                                               syllabusCount: syllabusDetails.length,
+                                           },
+                                           details,
+                                       };
+                                       const next = [...(Array.isArray(existing) ? existing : []), entry].slice(-120);
+                                       window.localStorage.setItem(key, JSON.stringify(next));
+                                       (window as any).neoSetupWizardFinishTrace = next;
+                                   } catch {
+                                       // Diagnostics must not block finishing setup.
+                                   }
+                               };
+                               pushFinishTrace('return-started');
                                setIsInitialSetupWizardActive(false);
                                setShowDfpSidePanel(false);
                                setShowFlightLinePanel(false);
+                               pushFinishTrace('before-refresh-database');
                                await handleDatabaseDataChanged();
+                               pushFinishTrace('after-refresh-database');
                                clearSyllabusCache();
                                try {
+                                   pushFinishTrace('before-refresh-syllabus');
                                    const result = await loadSyllabusFromDB();
                                    setSyllabusDetails(result.syllabus || []);
                                    setSyllabusError(result.error || null);
+                                   pushFinishTrace('after-refresh-syllabus', { count: result.syllabus?.length || 0, source: result.source, error: result.error || null });
                                } catch (error) {
                                    const message = error instanceof Error ? error.message : 'Failed to refresh syllabus after setup review';
                                    setSyllabusError(message);
+                                   pushFinishTrace('refresh-syllabus-error', { error: message });
                                }
                                setProgramScheduleViewKey(value => value + 1);
                                navigateToView('Program Schedule');
+                               pushFinishTrace('return-completed');
                            }}
                            serviceDefinitions={serviceDefinitions}
                            onUpdateServiceDefinitions={setServiceDefinitions}

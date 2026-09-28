@@ -33993,13 +33993,17 @@ const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, lo
   const [lmpCommitSummary, setLmpCommitSummary] = reactExports.useState("");
   const [wizardFinishInProgress, setWizardFinishInProgress] = reactExports.useState(false);
   const [wizardReviewComplete, setWizardReviewComplete] = reactExports.useState(false);
-  reactExports.useEffect(() => {
-    if (!wizardReviewComplete) return;
-    const timer = window.setTimeout(() => {
-      onInitialSetupWizardFinished?.();
-    }, 5e3);
-    return () => window.clearTimeout(timer);
-  }, [onInitialSetupWizardFinished, wizardReviewComplete]);
+  const wizardFinishTraceStorageKey = "dfp_setup_wizard_finish_trace";
+  const [wizardFinishTrace, setWizardFinishTrace] = reactExports.useState(() => {
+    if (typeof window === "undefined") return [];
+    try {
+      const parsed = JSON.parse(window.localStorage.getItem(wizardFinishTraceStorageKey) || "[]");
+      return Array.isArray(parsed) ? parsed.slice(-120) : [];
+    } catch {
+      return [];
+    }
+  });
+  const wizardFinishTraceRef = reactExports.useRef(wizardFinishTrace);
   const fileInputRef = reactExports.useRef(null);
   const pendingWizardTemplateFilesRef = reactExports.useRef({});
   const lastSetupTestPersonnelSnapshotRef = reactExports.useRef("");
@@ -34134,8 +34138,167 @@ const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, lo
     } catch (error) {
     }
   };
-  const pushWizardPersistenceTrace = (_stage, _details = {}) => {
+  const getWizardFinishTraceSnapshot = () => {
+    const staffRows = parseWizardStaffRows(staffDraft);
+    const traineeRows = parseWizardTraineeRows(traineeDraft);
+    const resourcePools = Array.isArray(platformConfig?.resourcePools) ? platformConfig.resourcePools : [];
+    const aircraftTypes = Array.isArray(platformConfig?.aircraftTypes) ? platformConfig.aircraftTypes : [];
+    const organisation = getActiveOrganisation(platformConfig);
+    return {
+      activeUnitCode: unitCode,
+      activeLocationCode: locationCode,
+      isSetupTestMode: isSetupTestMode$1,
+      visibleStepId: visibleStep.id,
+      currentStep,
+      saveMessage,
+      wizardFinishInProgress,
+      wizardReviewComplete,
+      staffProfilesCommitted,
+      traineeAllocationCommitted,
+      lmpEventsCommitted,
+      draftCounts: {
+        staffRows: staffRows.length,
+        uploadedStaffRows: uploadedStaffProfileRows.length,
+        traineeRows: traineeRows.length,
+        uploadedTraineeRows: uploadedTraineeProfileRows.length,
+        uploadedCourseLmpItems: uploadedCourseLmpItems.length
+      },
+      drafts: {
+        unit: {
+          code: unitDraft.code,
+          name: unitDraft.name,
+          locationCode: unitDraft.locationCode,
+          operationalModel: unitDraft.operationalModel,
+          hasTrainees: unitDraft.hasTrainees
+        },
+        resource: {
+          aircraftCode: resourceDraft.aircraftCode,
+          aircraftName: resourceDraft.aircraftName,
+          poolName: resourceDraft.poolName,
+          aircraft: resourceDraft.aircraft,
+          sim: resourceDraft.sim,
+          trainer: resourceDraft.trainer,
+          standby: resourceDraft.standby,
+          ground: resourceDraft.ground
+        },
+        training: {
+          lmpCode: trainingDraft.lmpCode,
+          lmpName: trainingDraft.lmpName,
+          accessLocationCode: trainingDraft.accessLocationCode,
+          accessUnitCode: trainingDraft.accessUnitCode,
+          accessLevel: trainingDraft.accessLevel,
+          status: trainingDraft.status
+        }
+      },
+      platformCounts: {
+        aircraftTypes: aircraftTypes.length,
+        resourcePools: resourcePools.length,
+        activeResourcePools: resourcePools.filter((pool) => String(pool?.status || "ACTIVE").toUpperCase() !== "INACTIVE").length
+      },
+      activeResourcePools: resourcePools.filter((pool) => String(pool?.status || "ACTIVE").toUpperCase() !== "INACTIVE").slice(0, 20).map((pool) => ({
+        id: pool?.id,
+        code: pool?.code,
+        name: pool?.name,
+        unitCode: pool?.unitCode,
+        locationCode: pool?.locationCode,
+        aircraftTypeCode: pool?.aircraftTypeCode,
+        settings: {
+          aircraft: pool?.settings?.aircraft,
+          ftd: pool?.settings?.ftd,
+          cpt: pool?.settings?.cpt,
+          standby: pool?.settings?.standby,
+          ground: pool?.settings?.ground
+        }
+      })),
+      completion: {
+        organisationCompletedAt: organisation?.settings?.initialSetupWizardCompletedAt || null,
+        localCompletedAt: (() => {
+          try {
+            return window.localStorage.getItem(initialSetupWizardCompletedAtStorageKey);
+          } catch {
+            return null;
+          }
+        })(),
+        localCompletedSteps: (() => {
+          try {
+            const parsed = JSON.parse(window.localStorage.getItem(initialSetupWizardCompletedStepsStorageKey) || "[]");
+            return Array.isArray(parsed) ? parsed.length : 0;
+          } catch {
+            return 0;
+          }
+        })()
+      }
+    };
   };
+  const pushWizardPersistenceTrace = (stage, details = {}) => {
+    if (typeof window === "undefined") return;
+    const entry = {
+      ts: (/* @__PURE__ */ new Date()).toISOString(),
+      stage,
+      snapshot: compactWizardDiagDetails(getWizardFinishTraceSnapshot()),
+      details: compactWizardDiagDetails(details)
+    };
+    try {
+      const existing = JSON.parse(window.localStorage.getItem(wizardFinishTraceStorageKey) || "[]");
+      const next = [...Array.isArray(existing) ? existing : [], entry].slice(-120);
+      wizardFinishTraceRef.current = next;
+      setWizardFinishTrace(next);
+      safeSetWizardLocalStorage(wizardFinishTraceStorageKey, JSON.stringify(next));
+      window.neoSetupWizardFinishTrace = next;
+    } catch {
+      const next = [...wizardFinishTraceRef.current, entry].slice(-120);
+      wizardFinishTraceRef.current = next;
+      setWizardFinishTrace(next);
+    }
+  };
+  const downloadWizardFinishTrace = () => {
+    if (typeof window === "undefined") return;
+    let storedTrace = [];
+    try {
+      const parsed = JSON.parse(window.localStorage.getItem(wizardFinishTraceStorageKey) || "[]");
+      storedTrace = Array.isArray(parsed) ? parsed : [];
+    } catch {
+      storedTrace = [];
+    }
+    const trace = wizardFinishTraceRef.current.length > 0 ? wizardFinishTraceRef.current : storedTrace;
+    const report = {
+      reportType: "dfp-setup-wizard-step-41-finish-trace",
+      generatedAt: (/* @__PURE__ */ new Date()).toISOString(),
+      url: window.location.href,
+      userAgent: window.navigator.userAgent,
+      currentSnapshot: getWizardFinishTraceSnapshot(),
+      trace
+    };
+    const blob = new Blob([JSON.stringify(report, null, 2)], { type: "application/json" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = `dfp-step-41-finish-trace-${(/* @__PURE__ */ new Date()).toISOString().replace(/[:.]/g, "-")}.json`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+    setSaveMessage("Step 41 finish trace downloaded.");
+  };
+  reactExports.useEffect(() => {
+    if (!wizardReviewComplete) return;
+    pushWizardPersistenceTrace("auto-return:scheduled", { delayMs: 5e3 });
+    const timer = window.setTimeout(() => {
+      const run = async () => {
+        pushWizardPersistenceTrace("auto-return:started");
+        try {
+          await onInitialSetupWizardFinished?.();
+          pushWizardPersistenceTrace("auto-return:completed");
+        } catch (error) {
+          const errorMessage = error instanceof Error ? error.message : String(error);
+          pushWizardPersistenceTrace("auto-return:failed", { error: errorMessage });
+          setSaveMessage(`Setup review finished, but DFP return failed: ${errorMessage}`);
+        }
+      };
+      void run();
+    }, 5e3);
+    return () => window.clearTimeout(timer);
+  }, [onInitialSetupWizardFinished, wizardReviewComplete]);
   reactExports.useEffect(() => {
     pushWizardLmpDiag("wizard:staged-items-state", {
       stagedCount: uploadedCourseLmpItems.length,
@@ -35280,6 +35443,13 @@ const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, lo
       if (!crewDraftDirtyRef.current) setCrewDraft(hydratedCrew);
       setUnitModulesDraft(buildHydratedUnitModulesDraft());
       hydrateSupplementaryWizardDrafts();
+      pushWizardPersistenceTrace("hydrate:dirty-organisation-restored-other-drafts", {
+        hydratedUnits,
+        liveUnitsBefore: unitsTodayDraft,
+        shouldRestoreUnits,
+        hydratedLocations,
+        shouldRestoreLocations
+      });
       pushWizardOrgDiag("hydrate:skipped-dirty-draft", {
         activeOrganisation: summariseActiveOrganisation(),
         draft: summariseOrganisationDraft(organisationDraft),
@@ -35546,10 +35716,12 @@ const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, lo
   const saveWizardDraftSnapshot = (message = "Wizard progress saved.", options = { silent: true }) => {
     if (isSetupTestMode$1) return;
     const snapshot = buildWizardDraftSnapshot();
+    let localSaved = false;
     if (typeof window !== "undefined") {
-      safeSetWizardLocalStorage(initialSetupWizardDraftSnapshotStorageKey, JSON.stringify(snapshot));
+      localSaved = safeSetWizardLocalStorage(initialSetupWizardDraftSnapshotStorageKey, JSON.stringify(snapshot));
     }
     pushWizardPersistenceTrace("draft-snapshot:local-write", {
+      localSaved,
       unitsTodayDraft: snapshot.unitsTodayDraft,
       parsedUnitsToday: parseWizardUnitRows(snapshot.unitsTodayDraft)
     });
@@ -37669,6 +37841,7 @@ const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, lo
       saveWizardDraftSnapshot("Wizard progress saved.", { silent: true });
     } else {
       pushWizardPersistenceTrace("wizard:step-rendered-before-autosave-ready", {
+        unitsTodayDraft,
         parsedUnitsToday: parseWizardUnitRows(unitsTodayDraft)
       });
     }
@@ -40324,6 +40497,8 @@ const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, lo
     if (options.body && !headers.has("Content-Type") && !(options.body instanceof FormData)) {
       headers.set("Content-Type", "application/json");
     }
+    const method = String(options.method || "GET").toUpperCase();
+    pushWizardPersistenceTrace("api:request", { method, path });
     const response = await fetch(path, {
       credentials: "include",
       ...options,
@@ -40340,13 +40515,20 @@ const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, lo
     }
     if (!response.ok) {
       const message = payload?.message || payload?.error || payload?.details || response.statusText || `HTTP ${response.status}`;
+      pushWizardPersistenceTrace("api:error", { method, path, status: response.status, message });
       throw new Error(String(message));
     }
+    pushWizardPersistenceTrace("api:success", { method, path, status: response.status, keys: Object.keys(payload || {}) });
     return payload || {};
   };
   const persistWizardStaffProfilesToDatabase = async (overrides = {}) => {
     const { instructors } = getWizardPersonnelForCommit(overrides);
     const staffToPersist = instructors.filter((person) => String(person?.name || "").trim() && Number(person?.idNumber) > 0);
+    pushWizardPersistenceTrace("staff:persist:start", {
+      candidates: instructors.length,
+      persistedCandidates: staffToPersist.length,
+      sample: staffToPersist.slice(0, 8).map((person) => ({ name: person.name, idNumber: person.idNumber, unit: person.unit, location: person.location }))
+    });
     if (staffToPersist.length === 0) return 0;
     const existingPayload = await requestWizardApiJson("/api/personnel");
     const existingByPersonnelId = new Map(
@@ -40399,6 +40581,7 @@ const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, lo
         });
       }
     }
+    pushWizardPersistenceTrace("staff:persist:done", { persisted: staffToPersist.length });
     return staffToPersist.length;
   };
   const persistWizardTraineeProfilesToDatabase = async (traineeRows = getResolvedWizardTraineeRowsForCommit(), effectiveUnitDraft = unitDraft) => {
@@ -40407,6 +40590,12 @@ const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, lo
       unitDraft: effectiveUnitDraft
     });
     const traineesToPersist = trainees.filter((person) => String(person?.name || person?.fullName || "").trim() && Number(person?.idNumber) > 0);
+    pushWizardPersistenceTrace("trainees:persist:start", {
+      sourceRows: traineeRows.length,
+      candidates: trainees.length,
+      persistedCandidates: traineesToPersist.length,
+      sample: traineesToPersist.slice(0, 8).map((person) => ({ name: person.name || person.fullName, idNumber: person.idNumber, course: person.course, lmpType: person.lmpType, unit: person.unit }))
+    });
     if (traineesToPersist.length === 0) return 0;
     const payload = traineesToPersist.map((person) => ({
       idNumber: Number(person.idNumber),
@@ -40438,9 +40627,20 @@ const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, lo
       const sample = skipped.slice(0, 3).map((row) => row.error || row.name || row.idNumber).filter(Boolean).join("; ");
       throw new Error(`${result.skipped} trainee profile${Number(result.skipped) === 1 ? "" : "s"} could not be committed${sample ? `: ${sample}` : ""}`);
     }
+    pushWizardPersistenceTrace("trainees:persist:done", {
+      persisted: traineesToPersist.length,
+      created: result.created,
+      updated: result.updated,
+      skipped: result.skipped
+    });
     return traineesToPersist.length;
   };
   const persistWizardLmpEventsToDatabase = async (items, lmpCode) => {
+    pushWizardPersistenceTrace("lmp:persist:start", {
+      lmpCode,
+      items: items.length,
+      sample: items.slice(0, 8).map((item) => ({ code: item.code, title: item.eventDescription, courses: item.courses, unit: item.unit, location: item.location }))
+    });
     if (items.length === 0) return 0;
     const existingPayload = await requestWizardApiJson(`/api/syllabus?course=${encodeURIComponent(lmpCode)}&includeInactive=true`);
     const existingByCode = new Map(
@@ -40465,12 +40665,15 @@ const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, lo
         });
       }
     }
+    pushWizardPersistenceTrace("lmp:persist:done", { lmpCode, persisted: items.length });
     return items.length;
   };
   const saveAllWizardDrafts = async () => {
+    pushWizardPersistenceTrace("finish:save-all:start");
     if (isSetupTestMode$1) {
       const completedAt2 = (/* @__PURE__ */ new Date()).toISOString();
       const shouldCommitStagedLmpEvents = !lmpEventsCommitted && (uploadedCourseLmpItems.length > 0 || uploadResults.courses?.status === "valid");
+      pushWizardPersistenceTrace("finish:setup-test:start", { completedAt: completedAt2, shouldCommitStagedLmpEvents });
       if (shouldCommitStagedLmpEvents) {
         await commitWizardCourseLmpEvents();
       }
@@ -40484,10 +40687,13 @@ const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, lo
         window.localStorage.removeItem(initialSetupWizardDraftSnapshotStorageKey);
       }
       setSaveMessage("Setup review complete. The Initial Setup Wizard is marked complete.");
+      pushWizardPersistenceTrace("finish:setup-test:done", { completedAt: completedAt2 });
       return;
     }
     const completedAt = (/* @__PURE__ */ new Date()).toISOString();
+    pushWizardPersistenceTrace("finish:normal:start", { completedAt });
     saveOrganisationDraft();
+    pushWizardPersistenceTrace("finish:normal:organisation-saved");
     const locationRows = parseWizardLocationRows(locationsTodayDraft);
     const unitRows = parseWizardUnitRows(unitsTodayDraft);
     if (onUpdatePlatformConfig && (locationRows.length > 0 || unitRows.length > 0)) {
@@ -40546,6 +40752,10 @@ const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, lo
         };
       });
     }
+    pushWizardPersistenceTrace("finish:normal:location-unit-config-saved", {
+      locations: locationRows.length,
+      units: unitRows.length
+    });
     saveLocationDraft();
     saveUnitDraft();
     saveResourceDraft();
@@ -40554,6 +40764,7 @@ const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, lo
     saveTrainingDraft();
     saveBuildRulesDraft();
     saveCurrencyProfilesDraft();
+    pushWizardPersistenceTrace("finish:normal:settings-drafts-saved");
     await persistWizardStaffProfilesToDatabase({
       staffRows: uploadedStaffProfileRows.length > 0 ? uploadedStaffProfileRows : void 0
     });
@@ -40561,6 +40772,11 @@ const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, lo
     await persistWizardTraineeProfilesToDatabase(rowsToCommit, { ...unitDraft, hasTrainees: true });
     if (uploadedCourseLmpItems.length > 0 || uploadResults.courses?.status === "valid") {
       await commitWizardCourseLmpEvents();
+    } else {
+      pushWizardPersistenceTrace("finish:normal:lmp-skipped", {
+        uploadedCourseLmpItems: uploadedCourseLmpItems.length,
+        uploadStatus: uploadResults.courses?.status || "missing"
+      });
     }
     saveWizardConfig("Setup saved into Settings.", (baseConfig) => updatePrimaryOrganisationWithSettings(baseConfig, (settings) => ({
       ...settings,
@@ -40599,24 +40815,29 @@ const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, lo
       window.localStorage.removeItem(initialSetupWizardDraftSnapshotStorageKey);
     }
     setSaveMessage("Setup saved into Settings.");
+    pushWizardPersistenceTrace("finish:normal:done", { completedAt });
   };
   const finishWizardReview = async () => {
     if (wizardFinishInProgress) return;
     setWizardFinishInProgress(true);
     setWizardReviewComplete(false);
     setSaveMessage("Finishing setup review...");
+    pushWizardPersistenceTrace("finish:clicked");
     try {
       await saveAllWizardDrafts();
+      pushWizardPersistenceTrace("finish:save-all:completed");
       window.setTimeout(() => {
         setWizardFinishInProgress(false);
         setWizardReviewComplete(true);
         setSaveMessage("Setup review complete. The Initial Setup Wizard is marked complete.");
+        pushWizardPersistenceTrace("finish:ui-marked-complete");
       }, 450);
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : String(error);
       setWizardFinishInProgress(false);
       setWizardReviewComplete(false);
       setSaveMessage(`Setup review could not be completed: ${errorMessage}`);
+      pushWizardPersistenceTrace("finish:failed", { error: errorMessage });
     }
   };
   const commitWizardStaffProfiles = async () => {
@@ -41805,174 +42026,195 @@ const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, lo
         /* @__PURE__ */ jsxRuntimeExports.jsx("strong", { children: "Next" }),
         ". Use this page to check the setup. If something is wrong, go back to that step and change it. No extra save is required on this review page."
       ] }),
-      /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "grid gap-2 text-sm", children: [
-        {
-          label: "Organisation name",
-          value: organisationDraft.name || organisationDraft.code || "Not set",
-          help: `This is the organisation the ${unitDraft.code || "unit"} belongs to.`
-        },
-        {
-          label: "Organisation levels",
-          value: `${fromLines(organisationDraft.level1Options).length} names at Level 1; ${fromLines(organisationDraft.level2Options).length} names at Level 2; ${fromLines(organisationDraft.level3Options).length} names at Level 3. ${organisationPreviewLinks.length} reporting links set.`,
-          help: "Check that the organisation tree matches how your real organisation is arranged."
-        },
-        {
-          label: "Operating location",
-          value: `${locationDraft.name || "Not named"}${locationDraft.code ? ` (${locationDraft.code})` : ""}`,
-          help: "This is the main airfield or base used by this unit."
-        },
-        {
-          label: "Locations to create",
-          value: parseWizardLocationRows(locationsTodayDraft).map((location) => `${location.name || "Unnamed location"} (${location.icao || "no ICAO"}${location.iata ? `, ${location.iata}` : ""})`).join("\n") || "Not set",
-          help: "These are the bases or airfields available to the organisation."
-        },
-        {
-          label: "Units to create",
-          value: parseWizardUnitRows(unitsTodayDraft).map((unit) => `${unit.name || unit.code || "Unnamed unit"}${unit.code ? ` (${unit.code})` : ""}`).join("\n") || "Not set",
-          help: "These are the squadrons, schools, departments or other units being added now."
-        },
-        {
-          label: "This unit",
-          value: `${unitDraft.name || unitDraft.code || "Not set"} uses the ${getWizardOperationalModelLabel(unitDraft.operationalModel)}.`,
-          help: "Check this is the unit you are configuring and that the operating model is correct."
-        },
-        {
-          label: "Aircraft and rows",
-          value: (() => {
-            const classroomNames = getClassroomNamesForRows(resourceDraft.classrooms, parseNumberDraft(resourceDraft.ground)).filter(Boolean);
-            return `${resourceDraft.aircraftCode || "No aircraft type set"}: ${resourceDraft.aircraft || "0"} aircraft rows, ${resourceDraft.sim || "0"} simulator rows, ${resourceDraft.trainer || "0"} trainer rows, ${resourceDraft.standby || "0"} standby rows, ${resourceDraft.ground || "0"} ground rows.${classroomNames.length ? `
+      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid gap-3 text-sm", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "rounded-lg border border-amber-300 bg-amber-50 px-3 py-3 text-amber-950", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex flex-wrap items-center justify-between gap-3", children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-[10px] font-black uppercase tracking-[0.16em] text-amber-800", children: "Step 41 data tracking" }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-1 text-xs font-semibold leading-5 text-amber-900", children: "Records Finish Review, staff/trainee/LMP commits, completion state, and the DFP return handoff." }),
+            /* @__PURE__ */ jsxRuntimeExports.jsxs("p", { className: "mt-1 text-[11px] font-bold text-amber-800", children: [
+              "Trace entries captured: ",
+              wizardFinishTrace.length
+            ] })
+          ] }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx(
+            "button",
+            {
+              type: "button",
+              className: "rounded-md border border-amber-500 bg-amber-600 px-3 py-2 text-xs font-black text-white shadow-sm transition hover:bg-amber-700",
+              onClick: downloadWizardFinishTrace,
+              children: "Download Step 41 Trace"
+            }
+          )
+        ] }) }),
+        [
+          {
+            label: "Organisation name",
+            value: organisationDraft.name || organisationDraft.code || "Not set",
+            help: `This is the organisation the ${unitDraft.code || "unit"} belongs to.`
+          },
+          {
+            label: "Organisation levels",
+            value: `${fromLines(organisationDraft.level1Options).length} names at Level 1; ${fromLines(organisationDraft.level2Options).length} names at Level 2; ${fromLines(organisationDraft.level3Options).length} names at Level 3. ${organisationPreviewLinks.length} reporting links set.`,
+            help: "Check that the organisation tree matches how your real organisation is arranged."
+          },
+          {
+            label: "Operating location",
+            value: `${locationDraft.name || "Not named"}${locationDraft.code ? ` (${locationDraft.code})` : ""}`,
+            help: "This is the main airfield or base used by this unit."
+          },
+          {
+            label: "Locations to create",
+            value: parseWizardLocationRows(locationsTodayDraft).map((location) => `${location.name || "Unnamed location"} (${location.icao || "no ICAO"}${location.iata ? `, ${location.iata}` : ""})`).join("\n") || "Not set",
+            help: "These are the bases or airfields available to the organisation."
+          },
+          {
+            label: "Units to create",
+            value: parseWizardUnitRows(unitsTodayDraft).map((unit) => `${unit.name || unit.code || "Unnamed unit"}${unit.code ? ` (${unit.code})` : ""}`).join("\n") || "Not set",
+            help: "These are the squadrons, schools, departments or other units being added now."
+          },
+          {
+            label: "This unit",
+            value: `${unitDraft.name || unitDraft.code || "Not set"} uses the ${getWizardOperationalModelLabel(unitDraft.operationalModel)}.`,
+            help: "Check this is the unit you are configuring and that the operating model is correct."
+          },
+          {
+            label: "Aircraft and rows",
+            value: (() => {
+              const classroomNames = getClassroomNamesForRows(resourceDraft.classrooms, parseNumberDraft(resourceDraft.ground)).filter(Boolean);
+              return `${resourceDraft.aircraftCode || "No aircraft type set"}: ${resourceDraft.aircraft || "0"} aircraft rows, ${resourceDraft.sim || "0"} simulator rows, ${resourceDraft.trainer || "0"} trainer rows, ${resourceDraft.standby || "0"} standby rows, ${resourceDraft.ground || "0"} ground rows.${classroomNames.length ? `
 Classrooms: ${classroomNames.join(", ")}` : ""}`;
-          })(),
-          help: "These numbers control what rows appear on the DFP schedule for this unit."
-        },
-        {
-          label: "Aircraft CONFIG",
-          value: (() => {
-            const configs = getWizardAircraftConfigDefinitions();
-            return configs.length > 0 ? configs.map((config) => `${config.code || config.name || "CONFIG"}${config.label || config.name ? ` - ${config.label || config.name}` : ""}`).join("\n") : "Not set";
-          })(),
-          help: "These are the aircraft configuration options users can choose when planning or building events."
-        },
-        {
-          label: "Crew roles",
-          value: parseWizardCrewRoleRows(crewRolesDraft).map((row) => `${row.label || row.role || "Crew role"}${row.models ? ` - used by ${row.models}` : ""}`).join("\n") || "Not set",
-          help: "These are the crew position names users can choose from when setting crew rules."
-        },
-        {
-          label: "Normal crew",
-          value: parseRoleRequirementsText(crewDraft.standardSeats).map((row) => `${row.count} x ${row.role}`).join("\n") || "Not set",
-          help: "This tells NEO what a normal crew looks like for the aircraft or resource."
-        },
-        {
-          label: "Callsign rules",
-          value: hasMeaningfulCallsignSettings() ? `${hasMeaningfulUnitCallsignSettings() ? "Unit callsign prefixes set." : "Unit callsign prefixes not set."} ${hasMeaningfulFormationCallsigns() ? "Formation callsigns set." : "Formation callsigns not set."}`.trim() : "Not set",
-          help: "These rules help DFP NEO suggest callsigns instead of making users type them from scratch."
-        },
-        {
-          label: "Scheduling limits",
-          value: buildRulesDraftText || "Not set",
-          help: "These limits help prevent the build from placing too much flying, too close together, or beyond duty limits."
-        },
-        {
-          label: "Advanced scheduling rules",
-          value: hasMeaningfulSchedulingRuleSettings() ? "Detailed timing or rule-set records are configured." : "Not set",
-          help: "These records control default event timings and detailed scheduling behaviour."
-        },
-        {
-          label: "Resource and staff sharing",
-          value: parseWizardSharingRows(resourceSharingDraft).map((row) => {
-            const sharingName = row.type || "Sharing";
-            const state = /^on$/i.test(row.enabled) ? "On" : "Off";
-            const sharedWith = row.units ? ` Shared with: ${row.units}.` : "";
-            return `${sharingName}: ${state}.${sharedWith} ${row.consequence || ""}`.trim();
-          }).join("\n") || "Not set",
-          help: "This shows whether the unit can share aircraft, resource rows or staff with other units."
-        },
-        {
-          label: "App areas",
-          value: parseWizardUnitModuleDraftRows().map((row) => `${row.module || "App area"}: ${/^on$/i.test(row.enabled) ? "On" : "Off"}`).join("\n") || "Not set",
-          help: "These choices decide which major parts of DFP NEO this unit can use."
-        },
-        {
-          label: "Rank display",
-          value: `Rank preset: ${RANK_EQUIVALENCY_PRESET_LABELS[rankSettingsDraft.preset] || "Australia"}. Lists sort by rank seniority, then name. Trainees use the staff rank order.`,
-          help: "This controls how names are ordered in staff, trainee and crew selection lists."
-        },
-        {
-          label: "Training report names",
-          value: (() => {
-            const row = parseWizardTrainingReportRows(trainingRecordsDraft)[0];
-            if (!row) return "Not set";
-            return `${row.organisationFormName || row.genericFormName || "Training report"} uses grades ${row.lowestGrade || "0"} to ${row.highestGrade || "5"}. Satisfactory is shown as "${row.satisfactoryLabel || "PASS"}" and unsatisfactory is shown as "${row.unsatisfactoryLabel || "FAIL"}".`;
-          })(),
-          help: "These names and grading labels are what users see when completing training reports."
-        },
-        {
-          label: "Scoring wording",
-          value: (() => {
-            const rows = parseWizardScoringRows(scoringDraft);
-            return rows.length > 0 ? `${rows.length} assessment area${rows.length === 1 ? "" : "s"} set: ${rows.map((row) => row.dimension).filter(Boolean).join(", ") || "names not set"}.` : "Not set";
-          })(),
-          help: "These are the phrases instructors use to describe performance at each grade level."
-        },
-        {
-          label: "Currencies and checks",
-          value: parseWizardCurrencyRows(currencyDraft).map((row) => `${row.name || row.code || "Currency"}${row.code ? ` (${row.code})` : ""}${row.currency ? ` tracks ${row.currency}` : ""}.`).join("\n") || "Not set",
-          help: "These are the currency or qualification records the unit will track."
-        },
-        {
-          label: "Staff currency presets",
-          value: parseWizardStandardCurrencyEventRows(staffCurrencyEventsDraft).map((row) => `${row.name || row.shortTitle || "Staff currency event"}${row.resourceType ? ` - ${row.resourceType}` : ""}${row.duration ? `, ${row.duration} minutes` : ""}.`).join("\n") || "Not set",
-          help: "These are reusable starting points for common staff currency events."
-        },
-        {
-          label: "User permissions",
-          value: activeUserAccess.length > 0 ? `${activeUserAccess.length} active user access record${activeUserAccess.length === 1 ? "" : "s"} set.` : "Not set",
-          help: "This controls who can open this unit and what they are allowed to do."
-        },
-        {
-          label: "Deployment readiness",
-          value: hasMeaningfulDeploymentProfile() ? "Deployment readiness details are set." : "Not set",
-          help: "These records describe how this installation is licensed, connected and prepared for operational use."
-        },
-        {
-          label: "Support and recovery",
-          value: hasMeaningfulOperationalRunbook() ? "Support and recovery details are set." : "Not set",
-          help: "These records identify support contacts, backup settings and recovery targets."
-        },
-        {
-          label: "Licensing",
-          value: hasMeaningfulLicenceSettings() ? "Licence records are set." : "Not set",
-          help: "These records are used when the deployment needs licence tracking."
-        },
-        {
-          label: "Staff list",
-          value: (() => {
-            const rows = parseWizardStaffRows(staffDraft).filter((row) => row.surname || row.givenNames);
-            return rows.length > 0 ? `${rows.length} staff member${rows.length === 1 ? "" : "s"} ready to add: ${rows.slice(0, 5).map((row) => `${row.givenNames} ${row.surname}`.trim()).join(", ")}${rows.length > 5 ? ", and others" : ""}.` : "Not set";
-          })(),
-          help: "These staff records can be added now or after the wizard is finished."
-        },
-        {
-          label: "Trainee list",
-          value: unitDraft.hasTrainees ? (() => {
-            const rows = parseWizardTraineeRows(traineeDraft).filter((row) => row.surname || row.givenNames);
-            return rows.length > 0 ? `${rows.length} trainee${rows.length === 1 ? "" : "s"} ready to add: ${rows.slice(0, 5).map((row) => `${row.givenNames} ${row.surname}`.trim()).join(", ")}${rows.length > 5 ? ", and others" : ""}.` : "Not set";
-          })() : "Trainees are switched off for this unit.",
-          help: "These trainee records can be added now or after the wizard is finished."
-        },
-        {
-          label: "Training event list",
-          value: `${trainingDraft.lmpName || trainingDraft.lmpCode || "Not set"}${trainingDraft.lmpCode ? ` (${trainingDraft.lmpCode})` : ""}`,
-          help: "This is the training event list the unit will use for syllabus or LMP events."
-        }
-      ].map(({ label, value, help }) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid min-w-0 gap-2 rounded-lg border border-slate-200 bg-white px-3 py-2 md:grid-cols-[170px_minmax(0,1fr)]", children: [
-        /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "font-black uppercase tracking-[0.12em] text-slate-500", children: label }),
-        /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "min-w-0", children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "block whitespace-pre-line font-bold text-slate-900", children: value }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "mt-1 block text-xs font-semibold leading-5 text-slate-500", children: help })
-        ] })
-      ] }, label)) }),
+            })(),
+            help: "These numbers control what rows appear on the DFP schedule for this unit."
+          },
+          {
+            label: "Aircraft CONFIG",
+            value: (() => {
+              const configs = getWizardAircraftConfigDefinitions();
+              return configs.length > 0 ? configs.map((config) => `${config.code || config.name || "CONFIG"}${config.label || config.name ? ` - ${config.label || config.name}` : ""}`).join("\n") : "Not set";
+            })(),
+            help: "These are the aircraft configuration options users can choose when planning or building events."
+          },
+          {
+            label: "Crew roles",
+            value: parseWizardCrewRoleRows(crewRolesDraft).map((row) => `${row.label || row.role || "Crew role"}${row.models ? ` - used by ${row.models}` : ""}`).join("\n") || "Not set",
+            help: "These are the crew position names users can choose from when setting crew rules."
+          },
+          {
+            label: "Normal crew",
+            value: parseRoleRequirementsText(crewDraft.standardSeats).map((row) => `${row.count} x ${row.role}`).join("\n") || "Not set",
+            help: "This tells NEO what a normal crew looks like for the aircraft or resource."
+          },
+          {
+            label: "Callsign rules",
+            value: hasMeaningfulCallsignSettings() ? `${hasMeaningfulUnitCallsignSettings() ? "Unit callsign prefixes set." : "Unit callsign prefixes not set."} ${hasMeaningfulFormationCallsigns() ? "Formation callsigns set." : "Formation callsigns not set."}`.trim() : "Not set",
+            help: "These rules help DFP NEO suggest callsigns instead of making users type them from scratch."
+          },
+          {
+            label: "Scheduling limits",
+            value: buildRulesDraftText || "Not set",
+            help: "These limits help prevent the build from placing too much flying, too close together, or beyond duty limits."
+          },
+          {
+            label: "Advanced scheduling rules",
+            value: hasMeaningfulSchedulingRuleSettings() ? "Detailed timing or rule-set records are configured." : "Not set",
+            help: "These records control default event timings and detailed scheduling behaviour."
+          },
+          {
+            label: "Resource and staff sharing",
+            value: parseWizardSharingRows(resourceSharingDraft).map((row) => {
+              const sharingName = row.type || "Sharing";
+              const state = /^on$/i.test(row.enabled) ? "On" : "Off";
+              const sharedWith = row.units ? ` Shared with: ${row.units}.` : "";
+              return `${sharingName}: ${state}.${sharedWith} ${row.consequence || ""}`.trim();
+            }).join("\n") || "Not set",
+            help: "This shows whether the unit can share aircraft, resource rows or staff with other units."
+          },
+          {
+            label: "App areas",
+            value: parseWizardUnitModuleDraftRows().map((row) => `${row.module || "App area"}: ${/^on$/i.test(row.enabled) ? "On" : "Off"}`).join("\n") || "Not set",
+            help: "These choices decide which major parts of DFP NEO this unit can use."
+          },
+          {
+            label: "Rank display",
+            value: `Rank preset: ${RANK_EQUIVALENCY_PRESET_LABELS[rankSettingsDraft.preset] || "Australia"}. Lists sort by rank seniority, then name. Trainees use the staff rank order.`,
+            help: "This controls how names are ordered in staff, trainee and crew selection lists."
+          },
+          {
+            label: "Training report names",
+            value: (() => {
+              const row = parseWizardTrainingReportRows(trainingRecordsDraft)[0];
+              if (!row) return "Not set";
+              return `${row.organisationFormName || row.genericFormName || "Training report"} uses grades ${row.lowestGrade || "0"} to ${row.highestGrade || "5"}. Satisfactory is shown as "${row.satisfactoryLabel || "PASS"}" and unsatisfactory is shown as "${row.unsatisfactoryLabel || "FAIL"}".`;
+            })(),
+            help: "These names and grading labels are what users see when completing training reports."
+          },
+          {
+            label: "Scoring wording",
+            value: (() => {
+              const rows = parseWizardScoringRows(scoringDraft);
+              return rows.length > 0 ? `${rows.length} assessment area${rows.length === 1 ? "" : "s"} set: ${rows.map((row) => row.dimension).filter(Boolean).join(", ") || "names not set"}.` : "Not set";
+            })(),
+            help: "These are the phrases instructors use to describe performance at each grade level."
+          },
+          {
+            label: "Currencies and checks",
+            value: parseWizardCurrencyRows(currencyDraft).map((row) => `${row.name || row.code || "Currency"}${row.code ? ` (${row.code})` : ""}${row.currency ? ` tracks ${row.currency}` : ""}.`).join("\n") || "Not set",
+            help: "These are the currency or qualification records the unit will track."
+          },
+          {
+            label: "Staff currency presets",
+            value: parseWizardStandardCurrencyEventRows(staffCurrencyEventsDraft).map((row) => `${row.name || row.shortTitle || "Staff currency event"}${row.resourceType ? ` - ${row.resourceType}` : ""}${row.duration ? `, ${row.duration} minutes` : ""}.`).join("\n") || "Not set",
+            help: "These are reusable starting points for common staff currency events."
+          },
+          {
+            label: "User permissions",
+            value: activeUserAccess.length > 0 ? `${activeUserAccess.length} active user access record${activeUserAccess.length === 1 ? "" : "s"} set.` : "Not set",
+            help: "This controls who can open this unit and what they are allowed to do."
+          },
+          {
+            label: "Deployment readiness",
+            value: hasMeaningfulDeploymentProfile() ? "Deployment readiness details are set." : "Not set",
+            help: "These records describe how this installation is licensed, connected and prepared for operational use."
+          },
+          {
+            label: "Support and recovery",
+            value: hasMeaningfulOperationalRunbook() ? "Support and recovery details are set." : "Not set",
+            help: "These records identify support contacts, backup settings and recovery targets."
+          },
+          {
+            label: "Licensing",
+            value: hasMeaningfulLicenceSettings() ? "Licence records are set." : "Not set",
+            help: "These records are used when the deployment needs licence tracking."
+          },
+          {
+            label: "Staff list",
+            value: (() => {
+              const rows = parseWizardStaffRows(staffDraft).filter((row) => row.surname || row.givenNames);
+              return rows.length > 0 ? `${rows.length} staff member${rows.length === 1 ? "" : "s"} ready to add: ${rows.slice(0, 5).map((row) => `${row.givenNames} ${row.surname}`.trim()).join(", ")}${rows.length > 5 ? ", and others" : ""}.` : "Not set";
+            })(),
+            help: "These staff records can be added now or after the wizard is finished."
+          },
+          {
+            label: "Trainee list",
+            value: unitDraft.hasTrainees ? (() => {
+              const rows = parseWizardTraineeRows(traineeDraft).filter((row) => row.surname || row.givenNames);
+              return rows.length > 0 ? `${rows.length} trainee${rows.length === 1 ? "" : "s"} ready to add: ${rows.slice(0, 5).map((row) => `${row.givenNames} ${row.surname}`.trim()).join(", ")}${rows.length > 5 ? ", and others" : ""}.` : "Not set";
+            })() : "Trainees are switched off for this unit.",
+            help: "These trainee records can be added now or after the wizard is finished."
+          },
+          {
+            label: "Training event list",
+            value: `${trainingDraft.lmpName || trainingDraft.lmpCode || "Not set"}${trainingDraft.lmpCode ? ` (${trainingDraft.lmpCode})` : ""}`,
+            help: "This is the training event list the unit will use for syllabus or LMP events."
+          }
+        ].map(({ label, value, help }) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid min-w-0 gap-2 rounded-lg border border-slate-200 bg-white px-3 py-2 md:grid-cols-[170px_minmax(0,1fr)]", children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "font-black uppercase tracking-[0.12em] text-slate-500", children: label }),
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "min-w-0", children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "block whitespace-pre-line font-bold text-slate-900", children: value }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "mt-1 block text-xs font-semibold leading-5 text-slate-500", children: help })
+          ] })
+        ] }, label))
+      ] }),
       wizardFinishInProgress ? "Finishing..." : wizardReviewComplete ? "✓ Review Finished" : "Finish review",
       finishWizardReview
     );
@@ -156943,21 +157185,51 @@ It will not clear the published DFP.`,
             onLinkedAvailabilityChange: handleLinkedAircraftAvailabilityChange,
             onInitialSetupWizardActiveChange: setIsInitialSetupWizardActive,
             onInitialSetupWizardFinished: async () => {
+              const pushFinishTrace = (stage, details = {}) => {
+                try {
+                  const key = "dfp_setup_wizard_finish_trace";
+                  const existing = JSON.parse(window.localStorage.getItem(key) || "[]");
+                  const entry = {
+                    ts: (/* @__PURE__ */ new Date()).toISOString(),
+                    stage: `app:${stage}`,
+                    snapshot: {
+                      activeView,
+                      activeUnitCode,
+                      activeLocationCode: school,
+                      staffCount: instructorsData.length,
+                      traineeCount: traineesData.length,
+                      syllabusCount: syllabusDetails.length
+                    },
+                    details
+                  };
+                  const next = [...Array.isArray(existing) ? existing : [], entry].slice(-120);
+                  window.localStorage.setItem(key, JSON.stringify(next));
+                  window.neoSetupWizardFinishTrace = next;
+                } catch {
+                }
+              };
+              pushFinishTrace("return-started");
               setIsInitialSetupWizardActive(false);
               setShowDfpSidePanel(false);
               setShowFlightLinePanel(false);
+              pushFinishTrace("before-refresh-database");
               await handleDatabaseDataChanged();
+              pushFinishTrace("after-refresh-database");
               clearSyllabusCache();
               try {
+                pushFinishTrace("before-refresh-syllabus");
                 const result = await loadSyllabusFromDB();
                 setSyllabusDetails(result.syllabus || []);
                 setSyllabusError(result.error || null);
+                pushFinishTrace("after-refresh-syllabus", { count: result.syllabus?.length || 0, source: result.source, error: result.error || null });
               } catch (error) {
                 const message = error instanceof Error ? error.message : "Failed to refresh syllabus after setup review";
                 setSyllabusError(message);
+                pushFinishTrace("refresh-syllabus-error", { error: message });
               }
               setProgramScheduleViewKey((value) => value + 1);
               navigateToView("Program Schedule");
+              pushFinishTrace("return-completed");
             },
             serviceDefinitions,
             onUpdateServiceDefinitions: setServiceDefinitions,

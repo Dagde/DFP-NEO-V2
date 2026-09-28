@@ -182,7 +182,7 @@ interface ScheduleViewProps {
   canEditTileAircraftNumber?: boolean;
   onLinkedAvailabilityChange?: (count: number) => void;
   onInitialSetupWizardActiveChange?: (active: boolean) => void;
-  onInitialSetupWizardFinished?: () => void;
+  onInitialSetupWizardFinished?: () => void | Promise<void>;
   initialOrganisationSlideoutView?: OrganisationSlideoutView;
   serviceDefinitions?: CourseStudentGroupDefinition[];
   onUpdateServiceDefinitions?: (defs: Array<{ longName: string; shortName: string }>) => void;
@@ -2996,7 +2996,7 @@ const InitialSetupWizard: React.FC<{
     serviceDefinitions?: CourseStudentGroupDefinition[];
     onUpdateServiceDefinitions?: (defs: Array<{ longName: string; shortName: string }>) => void;
     traineeServiceOptions?: string[];
-    onInitialSetupWizardFinished?: () => void;
+    onInitialSetupWizardFinished?: () => void | Promise<void>;
 }> = ({ platformConfig, organisationSettings, unitCode, locationCode, formationCallsigns = [], buildRuleSettings, flyingStartTime = 8, flyingEndTime = 17, ftdStartTime = 8, ftdEndTime = 17, cptStartTime = 8, cptEndTime = 17, allowNightFlying = true, commenceNightFlying = 18.5, ceaseNightFlying = 23.5, onUpdateFlyingStartTime, onUpdateFlyingEndTime, onUpdateFtdStartTime, onUpdateFtdEndTime, onUpdateCptStartTime, onUpdateCptEndTime, onUpdateAllowNightFlying, onUpdateCommenceNightFlying, onUpdateCeaseNightFlying, dispatchStaggerSettings = DEFAULT_DISPATCH_STAGGER_SETTINGS, onUpdateDispatchStaggerSettings, tileStatusSettings = DEFAULT_TILE_STATUS_SETTINGS, onUpdateTileStatusSettings, emergencyFreezeAuthority = DEFAULT_EMERGENCY_FREEZE_AUTHORITY, onUpdateEmergencyFreezeAuthority, emergencyFreezeAllowedActions = DEFAULT_EMERGENCY_FREEZE_ALLOWED_ACTIONS, onUpdateEmergencyFreezeAllowedActions, qualificationOptions = [], currentUserQualificationIds = [], onUpdatePlatformConfig, onNavigateToSettingsSection, currentUserPermission = 'Staff', canUsePlatformPermission, isSetupTestMode = false, onSaveSetupTestPersonnel, serviceDefinitions = [], onUpdateServiceDefinitions, traineeServiceOptions = [], onInitialSetupWizardFinished }) => {
     const [mode, setMode] = useState<InitialSetupWizardMode>(() => {
         if (typeof window === 'undefined') return 'detect';
@@ -3090,13 +3090,17 @@ const InitialSetupWizard: React.FC<{
     const [lmpCommitSummary, setLmpCommitSummary] = useState('');
     const [wizardFinishInProgress, setWizardFinishInProgress] = useState(false);
     const [wizardReviewComplete, setWizardReviewComplete] = useState(false);
-    useEffect(() => {
-        if (!wizardReviewComplete) return;
-        const timer = window.setTimeout(() => {
-            onInitialSetupWizardFinished?.();
-        }, 5000);
-        return () => window.clearTimeout(timer);
-    }, [onInitialSetupWizardFinished, wizardReviewComplete]);
+    const wizardFinishTraceStorageKey = 'dfp_setup_wizard_finish_trace';
+    const [wizardFinishTrace, setWizardFinishTrace] = useState<any[]>(() => {
+        if (typeof window === 'undefined') return [];
+        try {
+            const parsed = JSON.parse(window.localStorage.getItem(wizardFinishTraceStorageKey) || '[]');
+            return Array.isArray(parsed) ? parsed.slice(-120) : [];
+        } catch {
+            return [];
+        }
+    });
+    const wizardFinishTraceRef = useRef<any[]>(wizardFinishTrace);
     const fileInputRef = useRef<HTMLInputElement | null>(null);
     const pendingWizardTemplateFilesRef = useRef<Record<string, File>>({});
     const lastSetupTestPersonnelSnapshotRef = useRef('');
@@ -3230,7 +3234,169 @@ const InitialSetupWizard: React.FC<{
         } catch (error) {
         }
     };
-    const pushWizardPersistenceTrace = (_stage: string, _details: Record<string, any> = {}) => {};
+    const getWizardFinishTraceSnapshot = () => {
+        const staffRows = parseWizardStaffRows(staffDraft);
+        const traineeRows = parseWizardTraineeRows(traineeDraft);
+        const resourcePools = Array.isArray(platformConfig?.resourcePools) ? platformConfig.resourcePools : [];
+        const aircraftTypes = Array.isArray(platformConfig?.aircraftTypes) ? platformConfig.aircraftTypes : [];
+        const organisation = getActiveOrganisation(platformConfig);
+        return {
+            activeUnitCode: unitCode,
+            activeLocationCode: locationCode,
+            isSetupTestMode,
+            visibleStepId: visibleStep.id,
+            currentStep,
+            saveMessage,
+            wizardFinishInProgress,
+            wizardReviewComplete,
+            staffProfilesCommitted,
+            traineeAllocationCommitted,
+            lmpEventsCommitted,
+            draftCounts: {
+                staffRows: staffRows.length,
+                uploadedStaffRows: uploadedStaffProfileRows.length,
+                traineeRows: traineeRows.length,
+                uploadedTraineeRows: uploadedTraineeProfileRows.length,
+                uploadedCourseLmpItems: uploadedCourseLmpItems.length,
+            },
+            drafts: {
+                unit: {
+                    code: unitDraft.code,
+                    name: unitDraft.name,
+                    locationCode: unitDraft.locationCode,
+                    operationalModel: unitDraft.operationalModel,
+                    hasTrainees: unitDraft.hasTrainees,
+                },
+                resource: {
+                    aircraftCode: resourceDraft.aircraftCode,
+                    aircraftName: resourceDraft.aircraftName,
+                    poolName: resourceDraft.poolName,
+                    aircraft: resourceDraft.aircraft,
+                    sim: resourceDraft.sim,
+                    trainer: resourceDraft.trainer,
+                    standby: resourceDraft.standby,
+                    ground: resourceDraft.ground,
+                },
+                training: {
+                    lmpCode: trainingDraft.lmpCode,
+                    lmpName: trainingDraft.lmpName,
+                    accessLocationCode: trainingDraft.accessLocationCode,
+                    accessUnitCode: trainingDraft.accessUnitCode,
+                    accessLevel: trainingDraft.accessLevel,
+                    status: trainingDraft.status,
+                },
+            },
+            platformCounts: {
+                aircraftTypes: aircraftTypes.length,
+                resourcePools: resourcePools.length,
+                activeResourcePools: resourcePools.filter((pool: any) => String(pool?.status || 'ACTIVE').toUpperCase() !== 'INACTIVE').length,
+            },
+            activeResourcePools: resourcePools
+                .filter((pool: any) => String(pool?.status || 'ACTIVE').toUpperCase() !== 'INACTIVE')
+                .slice(0, 20)
+                .map((pool: any) => ({
+                    id: pool?.id,
+                    code: pool?.code,
+                    name: pool?.name,
+                    unitCode: pool?.unitCode,
+                    locationCode: pool?.locationCode,
+                    aircraftTypeCode: pool?.aircraftTypeCode,
+                    settings: {
+                        aircraft: pool?.settings?.aircraft,
+                        ftd: pool?.settings?.ftd,
+                        cpt: pool?.settings?.cpt,
+                        standby: pool?.settings?.standby,
+                        ground: pool?.settings?.ground,
+                    },
+                })),
+            completion: {
+                organisationCompletedAt: organisation?.settings?.initialSetupWizardCompletedAt || null,
+                localCompletedAt: (() => {
+                    try { return window.localStorage.getItem(initialSetupWizardCompletedAtStorageKey); } catch { return null; }
+                })(),
+                localCompletedSteps: (() => {
+                    try {
+                        const parsed = JSON.parse(window.localStorage.getItem(initialSetupWizardCompletedStepsStorageKey) || '[]');
+                        return Array.isArray(parsed) ? parsed.length : 0;
+                    } catch {
+                        return 0;
+                    }
+                })(),
+            },
+        };
+    };
+
+    const pushWizardPersistenceTrace = (stage: string, details: Record<string, any> = {}) => {
+        if (typeof window === 'undefined') return;
+        const entry = {
+            ts: new Date().toISOString(),
+            stage,
+            snapshot: compactWizardDiagDetails(getWizardFinishTraceSnapshot()),
+            details: compactWizardDiagDetails(details),
+        };
+        try {
+            const existing = JSON.parse(window.localStorage.getItem(wizardFinishTraceStorageKey) || '[]');
+            const next = [...(Array.isArray(existing) ? existing : []), entry].slice(-120);
+            wizardFinishTraceRef.current = next;
+            setWizardFinishTrace(next);
+            safeSetWizardLocalStorage(wizardFinishTraceStorageKey, JSON.stringify(next));
+            (window as any).neoSetupWizardFinishTrace = next;
+        } catch {
+            const next = [...wizardFinishTraceRef.current, entry].slice(-120);
+            wizardFinishTraceRef.current = next;
+            setWizardFinishTrace(next);
+        }
+    };
+
+    const downloadWizardFinishTrace = () => {
+        if (typeof window === 'undefined') return;
+        let storedTrace: any[] = [];
+        try {
+            const parsed = JSON.parse(window.localStorage.getItem(wizardFinishTraceStorageKey) || '[]');
+            storedTrace = Array.isArray(parsed) ? parsed : [];
+        } catch {
+            storedTrace = [];
+        }
+        const trace = wizardFinishTraceRef.current.length > 0 ? wizardFinishTraceRef.current : storedTrace;
+        const report = {
+            reportType: 'dfp-setup-wizard-step-41-finish-trace',
+            generatedAt: new Date().toISOString(),
+            url: window.location.href,
+            userAgent: window.navigator.userAgent,
+            currentSnapshot: getWizardFinishTraceSnapshot(),
+            trace,
+        };
+        const blob = new Blob([JSON.stringify(report, null, 2)], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = `dfp-step-41-finish-trace-${new Date().toISOString().replace(/[:.]/g, '-')}.json`;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        URL.revokeObjectURL(url);
+        setSaveMessage('Step 41 finish trace downloaded.');
+    };
+
+    useEffect(() => {
+        if (!wizardReviewComplete) return;
+        pushWizardPersistenceTrace('auto-return:scheduled', { delayMs: 5000 });
+        const timer = window.setTimeout(() => {
+            const run = async () => {
+                pushWizardPersistenceTrace('auto-return:started');
+                try {
+                    await onInitialSetupWizardFinished?.();
+                    pushWizardPersistenceTrace('auto-return:completed');
+                } catch (error) {
+                    const errorMessage = error instanceof Error ? error.message : String(error);
+                    pushWizardPersistenceTrace('auto-return:failed', { error: errorMessage });
+                    setSaveMessage(`Setup review finished, but DFP return failed: ${errorMessage}`);
+                }
+            };
+            void run();
+        }, 5000);
+        return () => window.clearTimeout(timer);
+    }, [onInitialSetupWizardFinished, wizardReviewComplete]);
 
     useEffect(() => {
         pushWizardLmpDiag('wizard:staged-items-state', {
@@ -10492,6 +10658,8 @@ const InitialSetupWizard: React.FC<{
         if (options.body && !headers.has('Content-Type') && !(options.body instanceof FormData)) {
             headers.set('Content-Type', 'application/json');
         }
+        const method = String(options.method || 'GET').toUpperCase();
+        pushWizardPersistenceTrace('api:request', { method, path });
         const response = await fetch(path, {
             credentials: 'include',
             ...options,
@@ -10508,8 +10676,10 @@ const InitialSetupWizard: React.FC<{
         }
         if (!response.ok) {
             const message = payload?.message || payload?.error || payload?.details || response.statusText || `HTTP ${response.status}`;
+            pushWizardPersistenceTrace('api:error', { method, path, status: response.status, message });
             throw new Error(String(message));
         }
+        pushWizardPersistenceTrace('api:success', { method, path, status: response.status, keys: Object.keys(payload || {}) });
         return payload || {};
     };
 
@@ -10521,6 +10691,11 @@ const InitialSetupWizard: React.FC<{
             String(person?.name || '').trim()
             && Number(person?.idNumber) > 0
         ));
+        pushWizardPersistenceTrace('staff:persist:start', {
+            candidates: instructors.length,
+            persistedCandidates: staffToPersist.length,
+            sample: staffToPersist.slice(0, 8).map((person: any) => ({ name: person.name, idNumber: person.idNumber, unit: person.unit, location: person.location })),
+        });
         if (staffToPersist.length === 0) return 0;
         const existingPayload = await requestWizardApiJson('/api/personnel');
         const existingByPersonnelId = new Map(
@@ -10575,6 +10750,7 @@ const InitialSetupWizard: React.FC<{
                 });
             }
         }
+        pushWizardPersistenceTrace('staff:persist:done', { persisted: staffToPersist.length });
         return staffToPersist.length;
     };
 
@@ -10590,6 +10766,12 @@ const InitialSetupWizard: React.FC<{
             String(person?.name || person?.fullName || '').trim()
             && Number(person?.idNumber) > 0
         ));
+        pushWizardPersistenceTrace('trainees:persist:start', {
+            sourceRows: traineeRows.length,
+            candidates: trainees.length,
+            persistedCandidates: traineesToPersist.length,
+            sample: traineesToPersist.slice(0, 8).map((person: any) => ({ name: person.name || person.fullName, idNumber: person.idNumber, course: person.course, lmpType: person.lmpType, unit: person.unit })),
+        });
         if (traineesToPersist.length === 0) return 0;
         const payload = traineesToPersist.map((person: any) => ({
             idNumber: Number(person.idNumber),
@@ -10623,10 +10805,21 @@ const InitialSetupWizard: React.FC<{
             const sample = skipped.slice(0, 3).map((row: any) => row.error || row.name || row.idNumber).filter(Boolean).join('; ');
             throw new Error(`${result.skipped} trainee profile${Number(result.skipped) === 1 ? '' : 's'} could not be committed${sample ? `: ${sample}` : ''}`);
         }
+        pushWizardPersistenceTrace('trainees:persist:done', {
+            persisted: traineesToPersist.length,
+            created: result.created,
+            updated: result.updated,
+            skipped: result.skipped,
+        });
         return traineesToPersist.length;
     };
 
     const persistWizardLmpEventsToDatabase = async (items: any[], lmpCode: string) => {
+        pushWizardPersistenceTrace('lmp:persist:start', {
+            lmpCode,
+            items: items.length,
+            sample: items.slice(0, 8).map((item: any) => ({ code: item.code, title: item.eventDescription, courses: item.courses, unit: item.unit, location: item.location })),
+        });
         if (items.length === 0) return 0;
         const existingPayload = await requestWizardApiJson(`/api/syllabus?course=${encodeURIComponent(lmpCode)}&includeInactive=true`);
         const existingByCode = new Map(
@@ -10652,15 +10845,18 @@ const InitialSetupWizard: React.FC<{
                 });
             }
         }
+        pushWizardPersistenceTrace('lmp:persist:done', { lmpCode, persisted: items.length });
         return items.length;
     };
 
     const saveAllWizardDrafts = async () => {
+        pushWizardPersistenceTrace('finish:save-all:start');
         if (isSetupTestMode) {
             const completedAt = new Date().toISOString();
             const shouldCommitStagedLmpEvents = !lmpEventsCommitted && (
                 uploadedCourseLmpItems.length > 0 || uploadResults.courses?.status === 'valid'
             );
+            pushWizardPersistenceTrace('finish:setup-test:start', { completedAt, shouldCommitStagedLmpEvents });
             if (shouldCommitStagedLmpEvents) {
                 await commitWizardCourseLmpEvents();
             }
@@ -10674,10 +10870,13 @@ const InitialSetupWizard: React.FC<{
                 window.localStorage.removeItem(initialSetupWizardDraftSnapshotStorageKey);
             }
             setSaveMessage('Setup review complete. The Initial Setup Wizard is marked complete.');
+            pushWizardPersistenceTrace('finish:setup-test:done', { completedAt });
             return;
         }
         const completedAt = new Date().toISOString();
+        pushWizardPersistenceTrace('finish:normal:start', { completedAt });
         saveOrganisationDraft();
+        pushWizardPersistenceTrace('finish:normal:organisation-saved');
         const locationRows = parseWizardLocationRows(locationsTodayDraft);
         const unitRows = parseWizardUnitRows(unitsTodayDraft);
         if (onUpdatePlatformConfig && (locationRows.length > 0 || unitRows.length > 0)) {
@@ -10736,6 +10935,10 @@ const InitialSetupWizard: React.FC<{
                 };
             });
         }
+        pushWizardPersistenceTrace('finish:normal:location-unit-config-saved', {
+            locations: locationRows.length,
+            units: unitRows.length,
+        });
         saveLocationDraft();
         saveUnitDraft();
         saveResourceDraft();
@@ -10744,6 +10947,7 @@ const InitialSetupWizard: React.FC<{
         saveTrainingDraft();
         saveBuildRulesDraft();
         saveCurrencyProfilesDraft();
+        pushWizardPersistenceTrace('finish:normal:settings-drafts-saved');
         await persistWizardStaffProfilesToDatabase({
             staffRows: uploadedStaffProfileRows.length > 0 ? uploadedStaffProfileRows : undefined,
         });
@@ -10751,6 +10955,11 @@ const InitialSetupWizard: React.FC<{
         await persistWizardTraineeProfilesToDatabase(rowsToCommit, { ...unitDraft, hasTrainees: true });
         if (uploadedCourseLmpItems.length > 0 || uploadResults.courses?.status === 'valid') {
             await commitWizardCourseLmpEvents();
+        } else {
+            pushWizardPersistenceTrace('finish:normal:lmp-skipped', {
+                uploadedCourseLmpItems: uploadedCourseLmpItems.length,
+                uploadStatus: uploadResults.courses?.status || 'missing',
+            });
         }
         saveWizardConfig('Setup saved into Settings.', (baseConfig) => updatePrimaryOrganisationWithSettings(baseConfig, (settings) => ({
             ...settings,
@@ -10789,24 +10998,29 @@ const InitialSetupWizard: React.FC<{
             window.localStorage.removeItem(initialSetupWizardDraftSnapshotStorageKey);
         }
         setSaveMessage('Setup saved into Settings.');
+        pushWizardPersistenceTrace('finish:normal:done', { completedAt });
     };
     const finishWizardReview = async () => {
         if (wizardFinishInProgress) return;
         setWizardFinishInProgress(true);
         setWizardReviewComplete(false);
         setSaveMessage('Finishing setup review...');
+        pushWizardPersistenceTrace('finish:clicked');
         try {
             await saveAllWizardDrafts();
+            pushWizardPersistenceTrace('finish:save-all:completed');
             window.setTimeout(() => {
                 setWizardFinishInProgress(false);
                 setWizardReviewComplete(true);
                 setSaveMessage('Setup review complete. The Initial Setup Wizard is marked complete.');
+                pushWizardPersistenceTrace('finish:ui-marked-complete');
             }, 450);
         } catch (error) {
             const errorMessage = error instanceof Error ? error.message : String(error);
             setWizardFinishInProgress(false);
             setWizardReviewComplete(false);
             setSaveMessage(`Setup review could not be completed: ${errorMessage}`);
+            pushWizardPersistenceTrace('finish:failed', { error: errorMessage });
         }
     };
     const commitWizardStaffProfiles = async () => {
@@ -12020,7 +12234,27 @@ const InitialSetupWizard: React.FC<{
             <p>
                 Each step is saved into Settings when you click <strong>Next</strong>. Use this page to check the setup. If something is wrong, go back to that step and change it. No extra save is required on this review page.
             </p>,
-            <div className="grid gap-2 text-sm">
+            <div className="grid gap-3 text-sm">
+                <div className="rounded-lg border border-amber-300 bg-amber-50 px-3 py-3 text-amber-950">
+                    <div className="flex flex-wrap items-center justify-between gap-3">
+                        <div>
+                            <p className="text-[10px] font-black uppercase tracking-[0.16em] text-amber-800">Step 41 data tracking</p>
+                            <p className="mt-1 text-xs font-semibold leading-5 text-amber-900">
+                                Records Finish Review, staff/trainee/LMP commits, completion state, and the DFP return handoff.
+                            </p>
+                            <p className="mt-1 text-[11px] font-bold text-amber-800">
+                                Trace entries captured: {wizardFinishTrace.length}
+                            </p>
+                        </div>
+                        <button
+                            type="button"
+                            className="rounded-md border border-amber-500 bg-amber-600 px-3 py-2 text-xs font-black text-white shadow-sm transition hover:bg-amber-700"
+                            onClick={downloadWizardFinishTrace}
+                        >
+                            Download Step 41 Trace
+                        </button>
+                    </div>
+                </div>
                 {[
                     {
                         label: 'Organisation name',
@@ -12445,7 +12679,7 @@ const OrganisationSlideoutDiagram: React.FC<{
     onSaveSetupTestPersonnel?: (payload: { instructors: any[]; trainees: any[] }) => void;
     isOpen?: boolean;
     onInitialSetupWizardActiveChange?: (active: boolean) => void;
-    onInitialSetupWizardFinished?: () => void;
+    onInitialSetupWizardFinished?: () => void | Promise<void>;
     initialView?: OrganisationSlideoutView;
     serviceDefinitions?: CourseStudentGroupDefinition[];
     onUpdateServiceDefinitions?: (defs: Array<{ longName: string; shortName: string }>) => void;
