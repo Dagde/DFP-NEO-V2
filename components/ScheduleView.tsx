@@ -1095,6 +1095,18 @@ const downloadWizardTemplate = (template: InitialSetupWizardTemplate) => {
     URL.revokeObjectURL(url);
 };
 
+const downloadWizardJson = (fileName: string, payload: any) => {
+    const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = fileName;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+};
+
 const parseWizardCsvRows = (text: string): string[][] => {
     const rows: string[][] = [];
     let row: string[] = [];
@@ -3175,6 +3187,31 @@ const InitialSetupWizard: React.FC<{
         } catch {
             // Diagnostic tracking is best-effort only.
         }
+    };
+    const downloadWizardTraineeCommitTrace = () => {
+        if (typeof window === 'undefined') return;
+        let trace: any[] = [];
+        try {
+            const parsed = JSON.parse(window.localStorage.getItem('dfp_setup_wizard_trainee_commit_trace') || '[]');
+            trace = Array.isArray(parsed) ? parsed : [];
+        } catch {
+            trace = [];
+        }
+        downloadWizardJson(`dfp-trainee-commit-trace-${new Date().toISOString().replace(/[:.]/g, '-')}.json`, {
+            generatedAt: new Date().toISOString(),
+            unitCode,
+            locationCode,
+            visibleStepId: visibleStep.id,
+            currentStep,
+            traineeCommitInProgress,
+            traineeAllocationCommitted,
+            traineeCommitSummary,
+            saveMessage,
+            traineeCourseOptions: parseWizardLineItems(traineeCourseOptionsDraft),
+            traineeRows: parseWizardTraineeRows(traineeDraft),
+            uploadedTraineeProfileRows,
+            trace,
+        });
     };
     const pushWizardLmpDiag = (stage: string, details: Record<string, any> = {}) => {
         if (!isSetupTestMode || typeof window === 'undefined') return;
@@ -10649,8 +10686,27 @@ const InitialSetupWizard: React.FC<{
         setUploadedTraineeProfileRows(rowsToCommit);
         setTraineeAllocationCommitted(true);
         setShowMoreTraineesPrompt(false);
-        saveSetupTestWizardDrafts(false, { traineeDraft: nextTraineeDraft, traineeRows: rowsToCommit, unitDraft: nextUnitDraft });
         const message = `Committed ${traineeCount} trainee profile${traineeCount === 1 ? '' : 's'} to the trainee list in this setup.`;
+        try {
+            saveSetupTestWizardDrafts(false, { traineeDraft: nextTraineeDraft, traineeRows: rowsToCommit, unitDraft: nextUnitDraft });
+        } catch (error) {
+            const errorMessage = error instanceof Error ? error.message : String(error);
+            const message = `Trainee profile commit failed before it could finish: ${errorMessage}`;
+            pushWizardTraineeCommitTrace('commit:error', {
+                errorMessage,
+                errorStack: error instanceof Error ? error.stack : '',
+                traineeCount,
+                rowsToCommit,
+                nextTraineeDraft,
+                nextUnitDraft,
+            });
+            setImportConfirmations((current) => ({ ...current, trainees: message }));
+            setTraineeCommitInProgress(false);
+            setTraineeAllocationCommitted(false);
+            setTraineeCommitSummary(message);
+            setSaveMessage(message);
+            return;
+        }
         pushWizardTraineeCommitTrace('commit:save-queued', {
             traineeCount,
             rowsToCommit,
@@ -11563,6 +11619,13 @@ const InitialSetupWizard: React.FC<{
                                     disabled={traineeCommitInProgress}
                                 >
                                     {traineeCommitInProgress ? 'Committing...' : traineeAllocationCommitted ? '✓ Trainee Profiles Committed' : 'Commit to Trainee Profiles'}
+                                </button>
+                                <button
+                                    type="button"
+                                    className={`${wizardSmallButtonClass} mt-3 ml-2`}
+                                    onClick={downloadWizardTraineeCommitTrace}
+                                >
+                                    Download Trainee Commit Trace
                                 </button>
                             </div>
                             {showMoreTraineesPrompt ? (
