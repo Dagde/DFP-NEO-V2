@@ -30693,9 +30693,16 @@ const App: React.FC = () => {
     const hasPersistedIncompleteInitialSetupWizardProgress = useMemo(() => (
         (platformConfig?.organisations || []).some((organisation: any) => {
             const settings = organisation?.settings || {};
-            if (settings.initialSetupWizardCompletedAt) return false;
             const drafts = settings.initialSetupWizardDrafts || settings.initialSetupWizardDraft;
-            if (!drafts || typeof drafts !== 'object' || drafts.completedAt) return false;
+            if (!drafts || typeof drafts !== 'object') return false;
+            const completedAt = String(settings.initialSetupWizardCompletedAt || drafts.completedAt || '').trim();
+            if (completedAt) {
+                const completedTime = Date.parse(completedAt);
+                const updatedTime = Date.parse(String(drafts.updatedAt || ''));
+                if (!Number.isFinite(updatedTime) || (Number.isFinite(completedTime) && updatedTime <= completedTime)) {
+                    return false;
+                }
+            }
             const activeStepIndex = Number(drafts.activeStepIndex);
             return Boolean(
                 drafts.activeStepId ||

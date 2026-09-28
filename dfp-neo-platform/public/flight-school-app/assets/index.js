@@ -35538,43 +35538,49 @@ const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, lo
       parsedUnitsToday: parseWizardUnitRows(snapshot.unitsTodayDraft)
     });
     if (!onUpdatePlatformConfig) return;
-    saveWizardConfig(message, (baseConfig) => updatePrimaryOrganisationWithSettings(baseConfig, (settings) => ({
-      ...settings,
-      initialSetupWizardDraft: {
-        ...settings.initialSetupWizardDraft || {},
-        organisation: snapshot.organisationDraft,
-        unitsToday: parseWizardUnitRows(snapshot.unitsTodayDraft),
-        locationsToday: parseWizardLocationRows(snapshot.locationsTodayDraft),
-        unitParents: snapshot.unitParentDraft,
-        locationDraft: snapshot.locationDraft,
-        unitDraft: snapshot.unitDraft,
-        unitDraftsByCode: snapshot.unitDraftsByCode,
-        resourceDraft: snapshot.resourceDraft,
-        crewDraft: snapshot.crewDraft,
-        accessDraft: snapshot.accessDraft,
-        trainingDraft: snapshot.trainingDraft,
-        crewLabels: snapshot.crewLabelsDraft,
-        alternateCrews: snapshot.alternateCrewDraft,
-        buildRules: snapshot.buildRulesDraftText,
-        trainingRecords: snapshot.trainingRecordsDraft,
-        unitModules: snapshot.unitModulesDraft,
-        ranksAndLabels: snapshot.rankLabelsDraft,
-        rankSettings: snapshot.rankSettingsDraft,
-        crewRoles: snapshot.crewRolesDraft,
-        resourceSharing: snapshot.resourceSharingDraft,
-        currencies: snapshot.currencyDraft,
-        scoringMatrix: snapshot.scoringDraft,
-        staffCurrencyEvents: snapshot.staffCurrencyEventsDraft,
-        activeStepId: snapshot.activeStepId,
-        activeStepIndex: snapshot.activeStepIndex,
-        completedStepIds: snapshot.completedStepIds,
-        updatedAt: snapshot.updatedAt
-      },
-      initialSetupWizardDrafts: {
-        ...settings.initialSetupWizardDrafts || {},
-        ...snapshot
-      }
-    })), options);
+    if (typeof window !== "undefined") window.localStorage.removeItem(initialSetupWizardCompletedAtStorageKey);
+    saveWizardConfig(message, (baseConfig) => updatePrimaryOrganisationWithSettings(baseConfig, (settings) => {
+      const { initialSetupWizardCompletedAt: _initialSetupWizardCompletedAt, ...settingsWithoutWizardCompletion } = settings;
+      const { completedAt: _legacyCompletedAt, ...existingLegacyDraft } = settings.initialSetupWizardDraft || {};
+      const { completedAt: _draftsCompletedAt, ...existingDrafts } = settings.initialSetupWizardDrafts || {};
+      return {
+        ...settingsWithoutWizardCompletion,
+        initialSetupWizardDraft: {
+          ...existingLegacyDraft,
+          organisation: snapshot.organisationDraft,
+          unitsToday: parseWizardUnitRows(snapshot.unitsTodayDraft),
+          locationsToday: parseWizardLocationRows(snapshot.locationsTodayDraft),
+          unitParents: snapshot.unitParentDraft,
+          locationDraft: snapshot.locationDraft,
+          unitDraft: snapshot.unitDraft,
+          unitDraftsByCode: snapshot.unitDraftsByCode,
+          resourceDraft: snapshot.resourceDraft,
+          crewDraft: snapshot.crewDraft,
+          accessDraft: snapshot.accessDraft,
+          trainingDraft: snapshot.trainingDraft,
+          crewLabels: snapshot.crewLabelsDraft,
+          alternateCrews: snapshot.alternateCrewDraft,
+          buildRules: snapshot.buildRulesDraftText,
+          trainingRecords: snapshot.trainingRecordsDraft,
+          unitModules: snapshot.unitModulesDraft,
+          ranksAndLabels: snapshot.rankLabelsDraft,
+          rankSettings: snapshot.rankSettingsDraft,
+          crewRoles: snapshot.crewRolesDraft,
+          resourceSharing: snapshot.resourceSharingDraft,
+          currencies: snapshot.currencyDraft,
+          scoringMatrix: snapshot.scoringDraft,
+          staffCurrencyEvents: snapshot.staffCurrencyEventsDraft,
+          activeStepId: snapshot.activeStepId,
+          activeStepIndex: snapshot.activeStepIndex,
+          completedStepIds: snapshot.completedStepIds,
+          updatedAt: snapshot.updatedAt
+        },
+        initialSetupWizardDrafts: {
+          ...existingDrafts,
+          ...snapshot
+        }
+      };
+    }), options);
     pushWizardPersistenceTrace("draft-snapshot:platform-save-queued", {
       unitsTodayDraft: snapshot.unitsTodayDraft,
       parsedUnitsToday: parseWizardUnitRows(snapshot.unitsTodayDraft)
@@ -137431,9 +137437,16 @@ const App = () => {
   }), [platformConfig]);
   const hasPersistedIncompleteInitialSetupWizardProgress = reactExports.useMemo(() => (platformConfig?.organisations || []).some((organisation) => {
     const settings = organisation?.settings || {};
-    if (settings.initialSetupWizardCompletedAt) return false;
     const drafts = settings.initialSetupWizardDrafts || settings.initialSetupWizardDraft;
-    if (!drafts || typeof drafts !== "object" || drafts.completedAt) return false;
+    if (!drafts || typeof drafts !== "object") return false;
+    const completedAt = String(settings.initialSetupWizardCompletedAt || drafts.completedAt || "").trim();
+    if (completedAt) {
+      const completedTime = Date.parse(completedAt);
+      const updatedTime = Date.parse(String(drafts.updatedAt || ""));
+      if (!Number.isFinite(updatedTime) || Number.isFinite(completedTime) && updatedTime <= completedTime) {
+        return false;
+      }
+    }
     const activeStepIndex = Number(drafts.activeStepIndex);
     return Boolean(
       drafts.activeStepId || Number.isFinite(activeStepIndex) && activeStepIndex > 0 || Array.isArray(drafts.completedStepIds) && drafts.completedStepIds.length > 0
