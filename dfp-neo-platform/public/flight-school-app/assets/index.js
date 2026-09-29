@@ -44918,9 +44918,9 @@ const ScheduleView = ({
       /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "relative mb-5 flex w-[min(850px,94%)] justify-center shadow-[0_0_18px_rgba(251,146,60,0.16)]", children: /* @__PURE__ */ jsxRuntimeExports.jsx(
         "img",
         {
-          src: "/dfp-neo-setup-logo.jpg",
+          src: "/dfp-neo-setup-logo.png",
           alt: "DFP NEO",
-          className: "max-h-32 w-full rounded-sm border border-orange-300/60 object-contain opacity-90 drop-shadow-[0_0_22px_rgba(251,146,60,0.2)]"
+          className: "max-h-32 w-full object-contain opacity-95 drop-shadow-[0_0_24px_rgba(255,115,0,0.82)]"
         }
       ) }),
       /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "relative text-[11px] font-black uppercase tracking-[0.22em] text-orange-300", children: "Initial Setup Required" }),
@@ -162153,9 +162153,9 @@ Do you want to replace the existing entry?`,
         /* @__PURE__ */ jsxRuntimeExports.jsx(
           "img",
           {
-            src: "/dfp-neo-setup-logo.jpg",
+            src: "/dfp-neo-setup-logo.png",
             alt: "DFP NEO",
-            className: "relative h-auto w-full object-contain drop-shadow-[0_0_22px_rgba(255,122,24,0.95)] [filter:sepia(0.55)_saturate(1.9)_hue-rotate(350deg)_brightness(1.15)_contrast(1.12)]"
+            className: "relative h-auto w-full object-contain drop-shadow-[0_0_24px_rgba(255,115,0,0.95)]"
           }
         )
       ] }),
@@ -162215,9 +162215,9 @@ Do you want to replace the existing entry?`,
           /* @__PURE__ */ jsxRuntimeExports.jsx(
             "img",
             {
-              src: "/dfp-neo-setup-logo.jpg",
+              src: "/dfp-neo-setup-logo.png",
               alt: "DFP NEO",
-              className: "relative h-auto w-full object-contain drop-shadow-[0_0_22px_rgba(255,122,24,0.95)] [filter:sepia(0.55)_saturate(1.9)_hue-rotate(350deg)_brightness(1.15)_contrast(1.12)]"
+              className: "relative h-auto w-full object-contain drop-shadow-[0_0_24px_rgba(255,115,0,0.95)]"
             }
           )
         ] }),

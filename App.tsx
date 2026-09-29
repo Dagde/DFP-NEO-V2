@@ -59099,9 +59099,9 @@ appliedUpdates.forEach(update => {
                         <div className="absolute inset-x-4 top-1/2 h-16 -translate-y-1/2 rounded-full bg-orange-500/35 blur-2xl"></div>
                         <div className="absolute inset-x-10 top-1/2 h-10 -translate-y-1/2 rounded-full bg-amber-300/25 blur-xl"></div>
                         <img
-                            src="/dfp-neo-setup-logo.jpg"
+                            src="/dfp-neo-setup-logo.png"
                             alt="DFP NEO"
-                            className="relative h-auto w-full object-contain drop-shadow-[0_0_22px_rgba(255,122,24,0.95)] [filter:sepia(0.55)_saturate(1.9)_hue-rotate(350deg)_brightness(1.15)_contrast(1.12)]"
+                            className="relative h-auto w-full object-contain drop-shadow-[0_0_24px_rgba(255,115,0,0.95)]"
                         />
                     </div>
                     <h2 className="text-2xl font-bold text-white">No saved DFP found for {formatDfpRetrievalDate(date)}</h2>
@@ -59154,9 +59154,9 @@ appliedUpdates.forEach(update => {
                             <div className="absolute inset-x-4 top-1/2 h-16 -translate-y-1/2 rounded-full bg-orange-500/35 blur-2xl"></div>
                             <div className="absolute inset-x-10 top-1/2 h-10 -translate-y-1/2 rounded-full bg-amber-300/25 blur-xl"></div>
                             <img
-                                src="/dfp-neo-setup-logo.jpg"
+                                src="/dfp-neo-setup-logo.png"
                                 alt="DFP NEO"
-                                className="relative h-auto w-full object-contain drop-shadow-[0_0_22px_rgba(255,122,24,0.95)] [filter:sepia(0.55)_saturate(1.9)_hue-rotate(350deg)_brightness(1.15)_contrast(1.12)]"
+                                className="relative h-auto w-full object-contain drop-shadow-[0_0_24px_rgba(255,115,0,0.95)]"
                             />
                         </div>
                         <div className="flex items-center justify-center gap-3">
