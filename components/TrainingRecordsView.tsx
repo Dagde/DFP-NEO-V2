@@ -30,7 +30,9 @@ interface TrainingRecordsViewProps {
     publishedSchedules: Record<string, ScheduleEvent[]>;
     syllabusDetails: SyllabusItemDetail[];
     pt051Assessments: Map<string, TrainingReportAssessment>;
-    onSaveTrainingReportAssessment: (assessment: TrainingReportAssessment) => void;
+    traineeLMPs?: Map<string, SyllabusItemDetail[]>;
+    onSaveTrainingReportAssessment: (assessment: TrainingReportAssessment) => void | Promise<void>;
+    onUpdateLmpItem?: (trainee: Trainee, originalItem: SyllabusItemDetail, updatedItem: SyllabusItemDetail) => Promise<boolean> | boolean;
     locations?: string[];
     units?: string[];
     activeLocationCode?: string;
@@ -68,7 +70,9 @@ const TrainingRecordsView: React.FC<TrainingRecordsViewProps> = ({
     publishedSchedules,
     syllabusDetails,
     pt051Assessments,
+    traineeLMPs,
     onSaveTrainingReportAssessment,
+    onUpdateLmpItem,
     locations = [],
     units = [],
     activeLocationCode = '',
@@ -189,7 +193,9 @@ const TrainingRecordsView: React.FC<TrainingRecordsViewProps> = ({
                         publishedSchedules={publishedSchedules}
                         syllabusDetails={syllabusDetails}
                         pt051Assessments={pt051Assessments}
+                        traineeLMPs={traineeLMPs}
                         onSaveTrainingReportAssessment={onSaveTrainingReportAssessment}
+                        onUpdateLmpItem={onUpdateLmpItem}
                         trainingReportTemplate={trainingReportTemplate}
                         phraseBank={phraseBank}
                     />

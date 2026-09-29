@@ -52558,6 +52558,19 @@ const AccountAccessPanel = ({
     error && /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "rounded border border-red-600/40 bg-red-950/30 px-3 py-2 text-xs text-red-200", children: error })
   ] });
 };
+const normaliseCourseContainerValue = (value) => String(value || "").trim().toUpperCase();
+const isTraineeCourseContainerLmpItem = (item, trainee) => {
+  if (isSyllabusCourseShell(item)) return true;
+  const traineeCourseCodes = new Set([
+    trainee.course,
+    trainee.lmpType,
+    trainee.academicLmpType
+  ].map(normaliseCourseContainerValue).filter(Boolean));
+  if (traineeCourseCodes.size === 0) return false;
+  const itemCode = normaliseCourseContainerValue(item.code || item.id);
+  const itemTitle = normaliseCourseContainerValue(item.eventDescription);
+  return traineeCourseCodes.has(itemCode) || traineeCourseCodes.has(itemTitle);
+};
 const normaliseAssignedInstructorDisplayList = (value) => {
   if (Array.isArray(value)) {
     return value.flatMap((item) => normaliseAssignedInstructorDisplayList(item));
@@ -52876,6 +52889,10 @@ const TraineeProfileFlyout = ({
     setPermissionNoticeRect(element.getBoundingClientRect());
   };
   const currentIndividualLMP = traineeLMPs?.get(trainee.fullName) || individualLmp;
+  const visibleIndividualLMP = reactExports.useMemo(
+    () => (currentIndividualLMP || []).filter((item) => !isTraineeCourseContainerLmpItem(item, trainee)),
+    [currentIndividualLMP, trainee]
+  );
   const activeTrainingReportUnitCode = trainee.unit || "";
   const activeTrainingReportTemplate = trainingReportTemplate || getUnitTrainingReportTemplate(platformConfig, activeTrainingReportUnitCode) || DEFAULT_TRAINING_REPORT_TEMPLATE;
   const activeTrainingReportDisplayName = activeTrainingReportTemplate.displayName || activeTrainingReportTemplate.genericName || DEFAULT_TRAINING_REPORT_TEMPLATE.displayName;
@@ -54860,7 +54877,7 @@ ${errorText || `HTTP ${response.status}`}`, "Delete Failed", "error");
                     lmpScores: scores.get(trainee.fullName) || [],
                     assessments: traineeAssessments,
                     pt051Events: traineeAssessments,
-                    traineeLmp: currentIndividualLMP || [],
+                    traineeLmp: visibleIndividualLMP,
                     userProfile: userProfile || {},
                     refreshEvents: () => {
                     },
@@ -54909,7 +54926,7 @@ ${errorText || `HTTP ${response.status}`}`, "Delete Failed", "error");
                     pt051Assessments: pt051Assessments || /* @__PURE__ */ new Map(),
                     events,
                     lmpScores: scores.get(trainee.fullName) || [],
-                    traineeLmp: currentIndividualLMP || [],
+                    traineeLmp: visibleIndividualLMP,
                     syllabusDetails,
                     registerDirtyCheck,
                     phraseBank: activeTrainingReportPhraseBank,
@@ -54926,7 +54943,7 @@ ${errorText || `HTTP ${response.status}`}`, "Delete Failed", "error");
                   TraineeLmpView,
                   {
                     trainee: traineeWithEffectiveAcademicLmp,
-                    traineeLmp: currentIndividualLMP || [],
+                    traineeLmp: visibleIndividualLMP,
                     scores: traineeScores,
                     onBack: () => setActiveTab(null),
                     onDeleteRemedialItem: isArchiveProfile ? void 0 : onDeleteRemedialItem,
@@ -110194,7 +110211,9 @@ const TrainingCompletionView = ({
   publishedSchedules,
   syllabusDetails,
   pt051Assessments,
+  traineeLMPs,
   onSaveTrainingReportAssessment,
+  onUpdateLmpItem,
   trainingReportTemplate
 }) => {
   const reportTemplate = reactExports.useMemo(
@@ -110252,6 +110271,23 @@ const TrainingCompletionView = ({
     ].filter(Boolean).map((person) => normaliseName(String(person)));
     return courseTrainees.filter((trainee) => eventPeople.includes(trainee.name) || eventPeople.includes(trainee.fullName));
   };
+  const findTraineeLmpItemForEvent = (trainee, event) => {
+    const traineeLmp = traineeLMPs?.get(trainee.fullName) || [];
+    if (traineeLmp.length === 0) return null;
+    const eventRef = normaliseCode(event.lmpItemId || event.id);
+    const eventCode2 = normaliseCode(event.lmpItemCode || event.flightNumber);
+    const eventTitle = normaliseCode(event.notes || event.flightNumber);
+    return traineeLmp.find((item) => {
+      if (!item || isSyllabusCourseShell(item)) return false;
+      const itemRefs = [
+        item.id,
+        item.code,
+        item.masterEventId,
+        item.eventDescription
+      ].map(normaliseCode).filter(Boolean);
+      return itemRefs.includes(eventRef) || itemRefs.includes(eventCode2) || itemRefs.includes(eventTitle);
+    }) || null;
+  };
   const candidateEvents = reactExports.useMemo(() => {
     if (selectedCourses.length === 0) return [];
     const lmpEvents = syllabusDetails.filter((item) => item && item.isActive !== false).filter((item) => item.lmpType !== "Staff CAT").filter((item) => !isSyllabusCourseShell(item)).filter((item) => {
@@ -110263,10 +110299,11 @@ const TrainingCompletionView = ({
       const rightOrder = Number.isFinite(Number(b.sortOrder)) ? Number(b.sortOrder) : Number.MAX_SAFE_INTEGER;
       return leftOrder - rightOrder || String(a.code || "").localeCompare(String(b.code || ""), void 0, { numeric: true, sensitivity: "base" }) || String(a.id || "").localeCompare(String(b.id || ""));
     }).map((item) => {
+      const eventId = item.id || item.code || item.eventDescription || `lmp-${item.sortOrder || "event"}`;
       const itemCourseCodes = new Set((item.courses || []).map(normaliseCode).filter(Boolean));
       const linkedTraineeIds = courseTrainees.filter((trainee) => itemCourseCodes.has(normaliseCode(trainee.course)) || itemCourseCodes.has(normaliseCode(trainee.lmpType)) || itemCourseCodes.has(normaliseCode(trainee.academicLmpType))).map((trainee) => trainee.idNumber);
       return {
-        id: `lmp:${item.id || item.code}`,
+        id: eventId,
         date: completionDate,
         type: getScheduledTypeFromLmpType(item.type),
         groupTraineeIds: linkedTraineeIds,
@@ -110280,7 +110317,9 @@ const TrainingCompletionView = ({
         origin: "",
         destination: "",
         notes: item.eventDescription,
-        eventCategory: "lmp_event"
+        eventCategory: "lmp_event",
+        lmpItemId: eventId,
+        lmpItemCode: item.code || item.eventDescription || ""
       };
     }).filter((event) => getEventTrainees(event).length > 0);
     const seen = /* @__PURE__ */ new Set();
@@ -110320,13 +110359,38 @@ const TrainingCompletionView = ({
     setIsCompleting(true);
     setCompletionMessage("Completing selected training records...");
     try {
-      selectedTrainees.forEach((traineeName) => {
+      const completedAt = (/* @__PURE__ */ new Date(`${selectedEvent.date || todayIso()}T00:00:00`)).toISOString();
+      const completed = [];
+      const failed = [];
+      for (const traineeName of selectedTrainees) {
         const trainee = allTrainees.find((item) => item.name === traineeName);
-        if (!trainee) return;
-        const assessmentId = `${trainee.name}_${selectedEvent.id}_TrainingReport`;
-        const existingAssessment = pt051Assessments.get(assessmentId);
+        if (!trainee) {
+          failed.push(traineeName);
+          continue;
+        }
+        const lmpItem = findTraineeLmpItemForEvent(trainee, selectedEvent);
+        if (!lmpItem || !onUpdateLmpItem) {
+          failed.push(trainee.name);
+          continue;
+        }
+        const updatedLmpItem = {
+          ...lmpItem,
+          completedAt,
+          isComplete: true,
+          completed: true
+        };
+        const lmpSaved = await Promise.resolve(onUpdateLmpItem(trainee, lmpItem, updatedLmpItem));
+        if (!lmpSaved) {
+          failed.push(trainee.name);
+          continue;
+        }
+        const assessmentId = `pt051-${selectedEvent.id}-${trainee.fullName}`;
+        const existingAssessment = pt051Assessments.get(assessmentId) || Array.from(pt051Assessments.values()).find((assessment2) => assessment2.traineeFullName === trainee.fullName && (assessment2.eventId === selectedEvent.id || normaliseCode(assessment2.flightNumber) === normaliseCode(selectedEvent.flightNumber)));
         const assessment = existingAssessment ? {
           ...existingAssessment,
+          eventId: selectedEvent.id,
+          flightNumber: selectedEvent.flightNumber,
+          date: selectedEvent.date,
           dcoResult: "DCO",
           overallGrade: "No Grade",
           overallResult: "P",
@@ -110346,9 +110410,14 @@ const TrainingCompletionView = ({
           isCompleted: true,
           groundSchoolAssessment: { isAssessment: false, result: void 0 }
         };
-        onSaveTrainingReportAssessment(assessment);
-      });
-      setCompletionMessage(`Marked ${selectedTrainees.length} trainee${selectedTrainees.length === 1 ? "" : "s"} as DCO for ${selectedEvent.flightNumber}.`);
+        await Promise.resolve(onSaveTrainingReportAssessment(assessment));
+        completed.push(trainee.name);
+      }
+      if (failed.length > 0) {
+        setCompletionMessage(`Completed ${completed.length} trainee${completed.length === 1 ? "" : "s"} for ${selectedEvent.flightNumber}. ${failed.length} could not be completed because their Individual LMP event was not found or did not save.`);
+      } else {
+        setCompletionMessage(`Completed ${completed.length} trainee${completed.length === 1 ? "" : "s"} for ${selectedEvent.flightNumber}.`);
+      }
     } catch (error) {
       console.error("Error during selected event completion:", error);
       setCompletionMessage("The records could not be completed. Please try again.");
@@ -110575,15 +110644,13 @@ const TrainingCompletionView = ({
               "."
             ] }),
             /* @__PURE__ */ jsxRuntimeExports.jsxs("p", { className: "text-sm text-gray-400 mt-1", children: [
-              "This will mark the selected trainee ",
+              "This will mark the selected trainee Individual LMP event complete and add a DCO ",
               reportName,
-              " record",
-              selectedTrainees.length === 1 ? "" : "s",
-              " as DCO for this event only."
+              " record for this event."
             ] })
           ] }),
           /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mt-5 flex items-center justify-between gap-4", children: [
-            /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: `text-sm ${completionMessage.includes("Marked") ? "text-green-300" : "text-gray-300"}`, children: completionMessage }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: `text-sm ${completionMessage.includes("Completed") ? "text-green-300" : "text-gray-300"}`, children: completionMessage }),
             /* @__PURE__ */ jsxRuntimeExports.jsx(
               "button",
               {
@@ -110620,7 +110687,9 @@ const TrainingRecordsView = ({
   publishedSchedules,
   syllabusDetails,
   pt051Assessments,
+  traineeLMPs,
   onSaveTrainingReportAssessment,
+  onUpdateLmpItem,
   locations = [],
   units = [],
   activeLocationCode = "",
@@ -110731,7 +110800,9 @@ const TrainingRecordsView = ({
           publishedSchedules,
           syllabusDetails,
           pt051Assessments,
+          traineeLMPs,
           onSaveTrainingReportAssessment,
+          onUpdateLmpItem,
           trainingReportTemplate,
           phraseBank
         }
@@ -146884,6 +146955,19 @@ ${error instanceof Error ? error.message : String(error)}`,
   const getLmpTypeForTrainee = (trainee) => {
     return getConfiguredLmpTypeForTrainee(trainee);
   };
+  const normaliseLmpContainerValue = (value) => String(value || "").trim().toUpperCase();
+  const isTraineeCourseContainerLmpItem2 = (item, trainee) => {
+    if (isSyllabusCourseShell(item)) return true;
+    const traineeCourseCodes = new Set([
+      trainee.course,
+      trainee.lmpType,
+      trainee.academicLmpType
+    ].map(normaliseLmpContainerValue).filter(Boolean));
+    if (traineeCourseCodes.size === 0) return false;
+    const itemCode = normaliseLmpContainerValue(item.code || item.id);
+    const itemTitle = normaliseLmpContainerValue(item.eventDescription);
+    return traineeCourseCodes.has(itemCode) || traineeCourseCodes.has(itemTitle);
+  };
   const persistTraineeLmp = async (trainee, lmp, excludedCompletedEvents = [], options = {}) => {
     const matchedTrainee = allTraineesData.find((candidate) => candidate.fullName === trainee.fullName);
     const traineeDbId = trainee.id || matchedTrainee?.id;
@@ -146895,7 +146979,8 @@ ${error instanceof Error ? error.message : String(error)}`,
       throw new Error(`Cannot save Individual LMP: trainee database record not found for ${trainee.fullName}`);
     }
     const excludedCompletedSet = new Set(excludedCompletedEvents.filter(Boolean));
-    const completedFromLmp = lmp.filter((item) => item.completedAt || item.rplGranted).flatMap((item) => [item.id, item.code, item.masterEventId]).filter((eventId) => Boolean(eventId) && !excludedCompletedSet.has(eventId));
+    const lmpToPersist = lmp.filter((item) => !isTraineeCourseContainerLmpItem2(item, trainee));
+    const completedFromLmp = lmpToPersist.filter((item) => item.completedAt || item.rplGranted).flatMap((item) => [item.id, item.code, item.masterEventId]).filter((eventId) => Boolean(eventId) && !excludedCompletedSet.has(eventId));
     const completedFromScores = (scores.get(trainee.fullName) || []).map((score) => score.event).filter((eventId) => Boolean(eventId) && !excludedCompletedSet.has(eventId));
     const completedEventIds = Array.from(/* @__PURE__ */ new Set([...completedFromLmp, ...completedFromScores]));
     const apiBase = getApiBaseUrl();
@@ -146907,7 +146992,8 @@ ${error instanceof Error ? error.message : String(error)}`,
       excludedCompletedEvents,
       source: options.source || "manual",
       skipReadBack: options.skipReadBack === true,
-      ...summariseTrainingReportLmpItems(lmp)
+      removedContainerEvents: lmp.length - lmpToPersist.length,
+      ...summariseTrainingReportLmpItems(lmpToPersist)
     });
     const response = await fetch(`${apiBase}/trainees/${encodeURIComponent(traineeDbId)}/lmp`, {
       method: "PUT",
@@ -146916,7 +147002,7 @@ ${error instanceof Error ? error.message : String(error)}`,
       body: JSON.stringify({
         traineeFullName: trainee.fullName,
         lmpType: getLmpTypeForTrainee(trainee),
-        events: lmp,
+        events: lmpToPersist,
         completedEventIds
       })
     });
@@ -158697,7 +158783,9 @@ It will not clear the published DFP.`,
             publishedSchedules,
             syllabusDetails,
             pt051Assessments,
+            traineeLMPs,
             onSaveTrainingReportAssessment,
+            onUpdateLmpItem: handleUpdateIndividualLmpItem,
             locations,
             units,
             activeLocationCode: school,

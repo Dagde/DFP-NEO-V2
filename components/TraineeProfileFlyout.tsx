@@ -71,8 +71,24 @@ import { areAllLmpPrerequisitesMet } from '../utils/lmpPrerequisites';
 import { DEFAULT_PHRASE_BANK } from '../config/phraseBankConfig';
 import { DEFAULT_SCT_TERMINOLOGY, normaliseSctTerminology, type SctTerminology } from '../utils/sctTerminology';
 import { getConfiguredServiceOptionsWithCurrent, resolveConfiguredServiceName } from '../utils/serviceAliases';
+import { isSyllabusCourseShell } from '../utils/syllabusCourseShell';
 
 // ACADEMIC_LMP_COURSES is derived dynamically from syllabusDetails (DB only, no hardcoded fallback)
+
+const normaliseCourseContainerValue = (value?: string | null): string => String(value || '').trim().toUpperCase();
+
+const isTraineeCourseContainerLmpItem = (item: SyllabusItemDetail, trainee: Trainee): boolean => {
+  if (isSyllabusCourseShell(item)) return true;
+  const traineeCourseCodes = new Set([
+    trainee.course,
+    trainee.lmpType,
+    trainee.academicLmpType,
+  ].map(normaliseCourseContainerValue).filter(Boolean));
+  if (traineeCourseCodes.size === 0) return false;
+  const itemCode = normaliseCourseContainerValue(item.code || item.id);
+  const itemTitle = normaliseCourseContainerValue(item.eventDescription);
+  return traineeCourseCodes.has(itemCode) || traineeCourseCodes.has(itemTitle);
+};
 
 const normaliseAssignedInstructorDisplayList = (value: unknown): string[] => {
   if (Array.isArray(value)) {
@@ -700,6 +716,10 @@ const TraineeProfileFlyout: React.FC<TraineeProfileFlyoutProps> = ({
         setPermissionNoticeRect(element.getBoundingClientRect());
     };
     const currentIndividualLMP = traineeLMPs?.get(trainee.fullName) || individualLmp;
+    const visibleIndividualLMP = useMemo(
+      () => (currentIndividualLMP || []).filter(item => !isTraineeCourseContainerLmpItem(item, trainee)),
+      [currentIndividualLMP, trainee]
+    );
     const activeTrainingReportUnitCode = trainee.unit || '';
     const activeTrainingReportTemplate = trainingReportTemplate
       || getUnitTrainingReportTemplate(platformConfig, activeTrainingReportUnitCode)
@@ -2986,7 +3006,7 @@ const TraineeProfileFlyout: React.FC<TraineeProfileFlyoutProps> = ({
                             lmpScores={scores.get(trainee.fullName) || []}
                             assessments={traineeAssessments}
                             pt051Events={traineeAssessments}
-                            traineeLmp={currentIndividualLMP || []}
+                            traineeLmp={visibleIndividualLMP}
                             userProfile={userProfile || {}}
                             refreshEvents={() => {}}
                             onSelectLmpScore={() => {}}
@@ -3044,7 +3064,7 @@ const TraineeProfileFlyout: React.FC<TraineeProfileFlyoutProps> = ({
                             pt051Assessments={pt051Assessments || new Map()}
                             events={events}
                             lmpScores={scores.get(trainee.fullName) || []}
-                            traineeLmp={currentIndividualLMP || []}
+                            traineeLmp={visibleIndividualLMP}
                             syllabusDetails={syllabusDetails}
                             registerDirtyCheck={registerDirtyCheck}
                             phraseBank={activeTrainingReportPhraseBank}
@@ -3063,7 +3083,7 @@ const TraineeProfileFlyout: React.FC<TraineeProfileFlyoutProps> = ({
                         <div className={card3d + " p-0 overflow-hidden h-full min-h-0 flex flex-col"} style={card3dStyle}>
                           <TraineeLmpView
                             trainee={traineeWithEffectiveAcademicLmp}
-                            traineeLmp={currentIndividualLMP || []}
+                            traineeLmp={visibleIndividualLMP}
                             scores={traineeScores}
                             onBack={() => setActiveTab(null)}
                             onDeleteRemedialItem={isArchiveProfile ? undefined : onDeleteRemedialItem}

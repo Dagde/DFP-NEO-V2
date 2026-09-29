@@ -41307,6 +41307,21 @@ const App: React.FC = () => {
         return getConfiguredLmpTypeForTrainee(trainee);
     };
 
+    const normaliseLmpContainerValue = (value?: string | null): string => String(value || '').trim().toUpperCase();
+
+    const isTraineeCourseContainerLmpItem = (item: SyllabusItemDetail, trainee: Trainee): boolean => {
+        if (isSyllabusCourseShell(item)) return true;
+        const traineeCourseCodes = new Set([
+            trainee.course,
+            (trainee as any).lmpType,
+            (trainee as any).academicLmpType,
+        ].map(normaliseLmpContainerValue).filter(Boolean));
+        if (traineeCourseCodes.size === 0) return false;
+        const itemCode = normaliseLmpContainerValue(item.code || item.id);
+        const itemTitle = normaliseLmpContainerValue(item.eventDescription);
+        return traineeCourseCodes.has(itemCode) || traineeCourseCodes.has(itemTitle);
+    };
+
     const persistTraineeLmp = async (
         trainee: Trainee,
         lmp: SyllabusItemDetail[],
@@ -41324,7 +41339,8 @@ const App: React.FC = () => {
         }
 
         const excludedCompletedSet = new Set(excludedCompletedEvents.filter(Boolean));
-        const completedFromLmp = lmp
+        const lmpToPersist = lmp.filter(item => !isTraineeCourseContainerLmpItem(item, trainee));
+        const completedFromLmp = lmpToPersist
             .filter(item => item.completedAt || (item as any).rplGranted)
             .flatMap(item => [item.id, item.code, item.masterEventId])
             .filter((eventId): eventId is string => Boolean(eventId) && !excludedCompletedSet.has(eventId));
@@ -41342,7 +41358,8 @@ const App: React.FC = () => {
             excludedCompletedEvents,
             source: options.source || 'manual',
             skipReadBack: options.skipReadBack === true,
-            ...summariseTrainingReportLmpItems(lmp),
+            removedContainerEvents: lmp.length - lmpToPersist.length,
+            ...summariseTrainingReportLmpItems(lmpToPersist),
         });
         const response = await fetch(`${apiBase}/trainees/${encodeURIComponent(traineeDbId)}/lmp`, {
             method: 'PUT',
@@ -41351,7 +41368,7 @@ const App: React.FC = () => {
             body: JSON.stringify({
                 traineeFullName: trainee.fullName,
                 lmpType: getLmpTypeForTrainee(trainee),
-                events: lmp,
+                events: lmpToPersist,
                 completedEventIds,
             }),
         });
@@ -55358,7 +55375,9 @@ appliedUpdates.forEach(update => {
                     publishedSchedules={publishedSchedules}
                     syllabusDetails={syllabusDetails}
                     pt051Assessments={pt051Assessments}
+                    traineeLMPs={traineeLMPs}
                     onSaveTrainingReportAssessment={onSaveTrainingReportAssessment}
+                    onUpdateLmpItem={handleUpdateIndividualLmpItem}
                     locations={locations}
                     units={units}
                     activeLocationCode={school}
