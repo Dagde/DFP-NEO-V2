@@ -121574,7 +121574,7 @@ const getIndividualLmpRplFields = (item, completedAt) => {
   };
 };
 const mergeIndividualLmpWithMaster = (existingLmp, masterLMP) => {
-  const stampedMaster = stampMasterLmpItems(masterLMP).filter((item) => !isSyllabusCourseShell(item));
+  const stampedMaster = stampMasterLmpItems(masterLMP);
   if (!existingLmp || existingLmp.length === 0) return stampedMaster;
   const masterIds = new Set(stampedMaster.map(getMasterEventId).filter(Boolean));
   const existingByMasterId = /* @__PURE__ */ new Map();
@@ -121818,7 +121818,7 @@ const getFallbackMasterLmpForTrainee = (trainee, masterSyllabus) => {
   const normaliseToken = (value) => String(value || "").trim().toUpperCase();
   const traineeCourse = normaliseToken(trainee.course);
   const configuredLmpType = normaliseToken(trainee.lmpType);
-  const masterItems = masterSyllabus.filter((item) => item?.isActive !== false && item?.lmpType !== "Staff CAT" && item?.type !== "Academics" && !isSyllabusCourseShell(item));
+  const masterItems = masterSyllabus.filter((item) => item?.isActive !== false && item?.lmpType !== "Staff CAT" && item?.type !== "Academics");
   const itemCourseTokens = (item) => Array.isArray(item.courses) ? item.courses.map(normaliseToken).filter(Boolean) : [];
   const matchesInferredLmp = (item) => {
     const courseTokens = itemCourseTokens(item);
@@ -121827,7 +121827,6 @@ const getFallbackMasterLmpForTrainee = (trainee, masterSyllabus) => {
   };
   return masterItems.filter(matchesInferredLmp);
 };
-const isSchedulableLmpBuildItem = (item) => Boolean(item) && !isSyllabusCourseShell(item);
 const computeNextEventsForTrainee = (trainee, traineeLMPs, scores, masterSyllabus, publishedSchedules, buildDate, dbElceMap) => {
   const verboseNeoBuild = isNeoBuildVerboseDiagnosticsEnabled();
   const hasIndividualLMP = traineeLMPs.has(trainee.fullName);
@@ -121840,7 +121839,6 @@ const computeNextEventsForTrainee = (trainee, traineeLMPs, scores, masterSyllabu
     completedAliasCount: 0,
     skippedCompleted: 0,
     skippedMassBrief: 0,
-    skippedCourseShell: 0,
     blockedByPrerequisites: 0,
     blockedPrerequisiteSamples: [],
     selectedNext: null,
@@ -121894,12 +121892,12 @@ const computeNextEventsForTrainee = (trainee, traineeLMPs, scores, masterSyllabu
   let nextEventIndex = -1;
   for (let i = 0; i < individualLMP.length; i++) {
     const item = individualLMP[i];
-    if (!isSchedulableLmpBuildItem(item)) {
-      diagnostic.skippedCourseShell += 1;
-      continue;
-    }
     if (isCompletedLmpItem(item, completedEventIds)) {
       diagnostic.skippedCompleted += 1;
+      continue;
+    }
+    if (item.code.includes(" MB")) {
+      diagnostic.skippedMassBrief += 1;
       continue;
     }
     const prerequisites = getAllLmpPrerequisiteKeys(item);
@@ -121928,7 +121926,7 @@ const computeNextEventsForTrainee = (trainee, traineeLMPs, scores, masterSyllabu
   if (nextEventIndex !== -1) {
     for (let i = nextEventIndex + 1; i < individualLMP.length; i++) {
       const item = individualLMP[i];
-      if (isSchedulableLmpBuildItem(item) && !isCompletedLmpItem(item, completedEventIds)) {
+      if (!item.code.includes(" MB") && !isCompletedLmpItem(item, completedEventIds)) {
         plusOneEvt = item;
         diagnostic.selectedPlusOne = item.code || item.id || null;
         break;
@@ -126726,7 +126724,6 @@ async function generateDfpInternal(config, setProgress, publishedSchedules) {
         completedAliasCount: eligibility.completedAliasCount,
         skippedCompleted: eligibility.skippedCompleted,
         skippedMassBrief: eligibility.skippedMassBrief,
-        skippedCourseShell: eligibility.skippedCourseShell,
         nextRaw: {
           id: nextEvents.next.id || null,
           code: nextEvents.next.code || null,
