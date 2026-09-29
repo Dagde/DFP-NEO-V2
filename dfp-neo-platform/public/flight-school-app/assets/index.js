@@ -34741,6 +34741,16 @@ const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, lo
   const getWizardDefaultLmpAudience = (model) => normaliseOperationalModel(model || "") === "flight_school" ? "trainee" : "staff";
   const defaultWizardLmpAudience = getWizardDefaultLmpAudience(unitDraft.operationalModel || getUnitOperationalModel(currentUnit || {}));
   const resolveWizardLmpAudience = (value) => normaliseLmpAudience(value) || defaultWizardLmpAudience;
+  const getWizardSetupAccessUnitCode = (fallback) => {
+    const setupUnitCode = String(unitDraft.code || currentUnit?.code || "").trim().toUpperCase();
+    const fallbackUnitCode = String(fallback || "").trim().toUpperCase();
+    return setupUnitCode || fallbackUnitCode;
+  };
+  const getWizardSetupAccessLocationCode = (fallback) => {
+    const setupLocationCode = String(unitDraft.locationCode || activeWizardLocationCode || currentLocation?.code || locationDraft.code || "").trim().toUpperCase();
+    const fallbackLocationCode = String(fallback || "").trim().toUpperCase();
+    return setupLocationCode || fallbackLocationCode;
+  };
   const initialWizardSetupCompleted = Boolean(activeOrganisation?.settings?.initialSetupWizardCompletedAt) || (() => {
     try {
       return typeof window !== "undefined" && Boolean(window.localStorage.getItem("dfp-initial-setup-wizard-completed-at"));
@@ -34782,8 +34792,8 @@ const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, lo
     description: String(primaryMasterLmp?.description || ""),
     status: String(primaryMasterLmp?.status || "ACTIVE"),
     audience: resolveWizardLmpAudience(primaryMasterLmp?.audience),
-    accessLocationCode: String(primaryMasterLmpRule?.locationCode || activeWizardLocationCode || currentLocation?.code || ""),
-    accessUnitCode: String(primaryMasterLmpRule?.unitCode || currentUnit?.code || ""),
+    accessLocationCode: getWizardSetupAccessLocationCode(primaryMasterLmpRule?.locationCode),
+    accessUnitCode: getWizardSetupAccessUnitCode(primaryMasterLmpRule?.unitCode),
     accessModel: String(primaryMasterLmpRule?.operationalModel || primaryMasterLmpRule?.model || "Any Model"),
     accessLevel: String(primaryMasterLmpRule?.access || primaryMasterLmpRule?.accessLevel || "View")
   });
@@ -35716,12 +35726,12 @@ const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, lo
       description: String(savedDraft.description || primaryMasterLmp?.description || ""),
       status: String(savedDraft.status || primaryMasterLmp?.status || "ACTIVE"),
       audience: resolveWizardLmpAudience(savedDraft.audience || primaryMasterLmp?.audience),
-      accessLocationCode: String(savedDraft.accessLocationCode || primaryMasterLmpRule?.locationCode || activeWizardLocationCode || currentLocation?.code || ""),
-      accessUnitCode: String(savedDraft.accessUnitCode || primaryMasterLmpRule?.unitCode || currentUnit?.code || ""),
+      accessLocationCode: getWizardSetupAccessLocationCode(savedDraft.accessLocationCode || primaryMasterLmpRule?.locationCode),
+      accessUnitCode: getWizardSetupAccessUnitCode(savedDraft.accessUnitCode || primaryMasterLmpRule?.unitCode),
       accessModel: String(savedDraft.accessModel || primaryMasterLmpRule?.operationalModel || primaryMasterLmpRule?.model || "Any Model"),
       accessLevel: String(savedDraft.accessLevel || primaryMasterLmpRule?.access || primaryMasterLmpRule?.accessLevel || "View")
     });
-  }, [activeOrganisation?.settings?.initialSetupWizardDrafts?.trainingDraft, activeOrganisation?.settings?.initialSetupWizardDraft?.trainingDraft, activeWizardLocationCode, primaryMasterLmp?.code, primaryMasterLmp?.name, primaryMasterLmp?.description, primaryMasterLmp?.status, primaryMasterLmp?.audience, primaryMasterLmpRule?.locationCode, primaryMasterLmpRule?.unitCode, primaryMasterLmpRule?.operationalModel, primaryMasterLmpRule?.model, primaryMasterLmpRule?.access, primaryMasterLmpRule?.accessLevel, currentLocation?.code, currentUnit?.code, defaultWizardLmpAudience]);
+  }, [activeOrganisation?.settings?.initialSetupWizardDrafts?.trainingDraft, activeOrganisation?.settings?.initialSetupWizardDraft?.trainingDraft, activeWizardLocationCode, primaryMasterLmp?.code, primaryMasterLmp?.name, primaryMasterLmp?.description, primaryMasterLmp?.status, primaryMasterLmp?.audience, primaryMasterLmpRule?.locationCode, primaryMasterLmpRule?.unitCode, primaryMasterLmpRule?.operationalModel, primaryMasterLmpRule?.model, primaryMasterLmpRule?.access, primaryMasterLmpRule?.accessLevel, currentLocation?.code, currentUnit?.code, unitDraft.code, unitDraft.locationCode, locationDraft.code, defaultWizardLmpAudience]);
   reactExports.useEffect(() => {
     if (crewRolesDraftDirtyRef.current) return;
     setCrewRolesDraft(formatWizardCrewRoleRows(
@@ -36873,6 +36883,8 @@ const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, lo
       const catalogueExists = catalogue.some((item) => normaliseUnitSettingsIdentifier(item?.code) === normaliseUnitSettingsIdentifier(lmpCode));
       const ruleKey = primaryMasterLmpRule?.id || "";
       const audience = resolveWizardLmpAudience(trainingDraft.audience);
+      const accessLocationCode = getWizardSetupAccessLocationCode(trainingDraft.accessLocationCode || primaryMasterLmpRule?.locationCode);
+      const accessUnitCode = getWizardSetupAccessUnitCode(trainingDraft.accessUnitCode || primaryMasterLmpRule?.unitCode);
       const nextCatalogueEntry = {
         id: primaryMasterLmp?.id || createWizardRecordId("master-lmp-catalogue"),
         code: lmpCode,
@@ -36884,8 +36896,8 @@ const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, lo
       const nextRule = {
         id: primaryMasterLmpRule?.id || createWizardRecordId("master-lmp-access"),
         lmpCode,
-        locationCode: trainingDraft.accessLocationCode,
-        unitCode: trainingDraft.accessUnitCode,
+        locationCode: accessLocationCode,
+        unitCode: accessUnitCode,
         operationalModel: trainingDraft.accessModel === "Any Model" ? null : trainingDraft.accessModel,
         accessLevel: trainingDraft.accessLevel,
         status: "ACTIVE"
@@ -40258,6 +40270,8 @@ const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, lo
       const stagedLmpCode = String(uploadedCourseLmpItems[0]?.courses?.[0] || "").trim();
       const draftLmpCode = String(trainingDraft.lmpCode || stagedLmpCode || "").trim();
       const shouldSyncDraftMasterLmp = Boolean(draftLmpCode && !/^new master lmp$/i.test(draftLmpCode));
+      const draftMasterLmpAccessUnitCode = getWizardSetupAccessUnitCode(trainingDraft.accessUnitCode || cleanUnits[0]?.code);
+      const draftMasterLmpAccessLocationCode = getWizardSetupAccessLocationCode(trainingDraft.accessLocationCode || primaryLocationCode);
       const draftMasterLmpCatalogueEntry = shouldSyncDraftMasterLmp ? {
         id: createSetupTestRecordId("master-lmp-catalogue", draftLmpCode || trainingDraft.lmpName || "master-lmp"),
         code: draftLmpCode,
@@ -40267,10 +40281,10 @@ const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, lo
         audience: resolveWizardLmpAudience(trainingDraft.audience)
       } : null;
       const draftMasterLmpAccessRule = shouldSyncDraftMasterLmp ? {
-        id: createSetupTestRecordId("master-lmp-access", `${draftLmpCode || "lmp"}-${trainingDraft.accessUnitCode || cleanUnits[0]?.code || "unit"}`),
+        id: createSetupTestRecordId("master-lmp-access", `${draftLmpCode || "lmp"}-${draftMasterLmpAccessUnitCode || "unit"}`),
         lmpCode: draftLmpCode,
-        locationCode: trainingDraft.accessLocationCode || primaryLocationCode,
-        unitCode: trainingDraft.accessUnitCode || cleanUnits[0]?.code || "",
+        locationCode: draftMasterLmpAccessLocationCode,
+        unitCode: draftMasterLmpAccessUnitCode,
         operationalModel: trainingDraft.accessModel === "Any Model" ? null : trainingDraft.accessModel,
         accessLevel: trainingDraft.accessLevel || "Manage",
         status: "ACTIVE"
@@ -40826,11 +40840,8 @@ const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, lo
   const buildWizardMasterLmpShellItem = (lmpCode, lmpName) => {
     const cleanLmpCode = String(lmpCode || "").trim();
     const cleanLmpName = String(lmpName || cleanLmpCode).trim();
-    const cleanAccessUnitCode = String(trainingDraft.accessUnitCode || unitDraft.code || "").trim().toUpperCase();
-    const cleanUnitHomeLocationCode = String(unitDraft.locationCode || "").trim().toUpperCase();
-    const cleanTrainingAccessLocationCode = String(trainingDraft.accessLocationCode || "").trim().toUpperCase();
-    const cleanLocationDraftCode = String(locationDraft.code || "").trim().toUpperCase();
-    const cleanAccessLocationCode = cleanAccessUnitCode && cleanAccessUnitCode === String(unitDraft.code || "").trim().toUpperCase() && cleanUnitHomeLocationCode ? cleanUnitHomeLocationCode : cleanTrainingAccessLocationCode || cleanUnitHomeLocationCode || cleanLocationDraftCode;
+    const cleanAccessUnitCode = getWizardSetupAccessUnitCode(trainingDraft.accessUnitCode);
+    const cleanAccessLocationCode = getWizardSetupAccessLocationCode(trainingDraft.accessLocationCode);
     return {
       id: `setup-lmp-shell-${normaliseUnitSettingsIdentifier(cleanLmpCode).replace(/[^A-Z0-9]+/g, "-") || Date.now()}`,
       code: cleanLmpCode,
@@ -40878,18 +40889,49 @@ const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, lo
       location: shellItem.location
     });
     const existingPayload = await requestWizardApiJson(`/api/syllabus?course=${encodeURIComponent(cleanLmpCode)}&includeInactive=true`);
-    const existingShell = (Array.isArray(existingPayload.syllabus) ? existingPayload.syllabus : []).find((item) => String(item?.notes || "").includes(WIZARD_SYLLABUS_COURSE_SHELL_NOTE) && (normaliseUnitSettingsIdentifier(item?.code) === normaliseUnitSettingsIdentifier(cleanLmpCode) || Array.isArray(item?.courses) && item.courses.some((course) => normaliseUnitSettingsIdentifier(course) === normaliseUnitSettingsIdentifier(cleanLmpCode))));
-    if (existingShell?.id || existingShell?.code) {
-      await requestWizardApiJson(`/api/syllabus/${encodeURIComponent(String(existingShell.id || existingShell.code))}`, {
+    const existingItems = Array.isArray(existingPayload.syllabus) ? existingPayload.syllabus : [];
+    const existingShell = existingItems.find((item) => String(item?.notes || "").includes(WIZARD_SYLLABUS_COURSE_SHELL_NOTE) && (normaliseUnitSettingsIdentifier(item?.code) === normaliseUnitSettingsIdentifier(cleanLmpCode) || Array.isArray(item?.courses) && item.courses.some((course) => normaliseUnitSettingsIdentifier(course) === normaliseUnitSettingsIdentifier(cleanLmpCode))));
+    const matchingItems = existingItems.filter((item) => normaliseUnitSettingsIdentifier(item?.code) === normaliseUnitSettingsIdentifier(cleanLmpCode) || Array.isArray(item?.courses) && item.courses.some((course) => normaliseUnitSettingsIdentifier(course) === normaliseUnitSettingsIdentifier(cleanLmpCode)));
+    const rescopeResults = [];
+    for (const item of matchingItems) {
+      if (!(item?.id || item?.code)) continue;
+      const isShell = existingShell && String(item.id || item.code) === String(existingShell.id || existingShell.code);
+      const payload = isShell ? { ...item, ...shellItem, id: item.id || shellItem.id } : {
+        ...item,
+        location: shellItem.location,
+        unit: shellItem.unit,
+        courses: Array.isArray(item?.courses) && item.courses.length > 0 ? item.courses : [cleanLmpCode],
+        lmpType: item?.lmpType || "Master LMP",
+        isActive: item?.isActive !== false
+      };
+      await requestWizardApiJson(`/api/syllabus/${encodeURIComponent(String(item.id || item.code))}`, {
         method: "PUT",
-        body: JSON.stringify(shellItem)
+        body: JSON.stringify(payload)
       });
-    } else {
+      rescopeResults.push({
+        id: item.id || item.code,
+        code: item.code,
+        fromUnit: item.unit,
+        fromLocation: item.location,
+        toUnit: payload.unit,
+        toLocation: payload.location,
+        shell: isShell
+      });
+    }
+    if (!existingShell) {
       await requestWizardApiJson("/api/syllabus", {
         method: "POST",
         body: JSON.stringify(shellItem)
       });
     }
+    pushWizardPersistenceTrace("lmp-shell:persist:rescope-existing", {
+      lmpCode: cleanLmpCode,
+      matched: matchingItems.length,
+      updated: rescopeResults.length,
+      targetUnit: shellItem.unit,
+      targetLocation: shellItem.location,
+      sample: rescopeResults.slice(0, 12)
+    });
     pushWizardPersistenceTrace("lmp-shell:persist:done", {
       lmpCode: cleanLmpCode,
       action: existingShell ? "updated" : "created"
@@ -40903,11 +40945,24 @@ const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, lo
     const existingItems = readSetupTestSyllabus();
     const existingIndex = existingItems.findIndex((item) => String(item?.notes || "").includes(WIZARD_SYLLABUS_COURSE_SHELL_NOTE) && (normaliseUnitSettingsIdentifier(item?.code) === normaliseUnitSettingsIdentifier(cleanLmpCode) || Array.isArray(item?.courses) && item.courses.some((course) => normaliseUnitSettingsIdentifier(course) === normaliseUnitSettingsIdentifier(cleanLmpCode))));
     const nextItems = existingIndex >= 0 ? existingItems.map((item, index) => index === existingIndex ? { ...item, ...shellItem, id: item.id || shellItem.id } : item) : [...existingItems, shellItem];
-    writeSetupTestSyllabus(nextItems);
+    const rescopedItems = nextItems.map((item) => {
+      const matchesLmp = normaliseUnitSettingsIdentifier(item?.code) === normaliseUnitSettingsIdentifier(cleanLmpCode) || Array.isArray(item?.courses) && item.courses.some((course) => normaliseUnitSettingsIdentifier(course) === normaliseUnitSettingsIdentifier(cleanLmpCode));
+      if (!matchesLmp) return item;
+      return {
+        ...item,
+        location: shellItem.location,
+        unit: shellItem.unit,
+        courses: Array.isArray(item?.courses) && item.courses.length > 0 ? item.courses : [cleanLmpCode],
+        lmpType: item?.lmpType || "Master LMP",
+        isActive: item?.isActive !== false
+      };
+    });
+    writeSetupTestSyllabus(rescopedItems);
     pushWizardPersistenceTrace("lmp-shell:setup-test:done", {
       lmpCode: cleanLmpCode,
       action: existingIndex >= 0 ? "updated" : "created",
-      totalSetupSyllabusItems: nextItems.length
+      totalSetupSyllabusItems: rescopedItems.length,
+      rescopedMatchingItems: rescopedItems.filter((item) => normaliseUnitSettingsIdentifier(item?.code) === normaliseUnitSettingsIdentifier(cleanLmpCode) || Array.isArray(item?.courses) && item.courses.some((course) => normaliseUnitSettingsIdentifier(course) === normaliseUnitSettingsIdentifier(cleanLmpCode))).length
     });
     return 1;
   };
@@ -41282,18 +41337,12 @@ const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, lo
       }
       const cleanLmpCode = String(trainingDraft.lmpCode || itemsForCommit[0]?.courses?.[0] || trainingDraft.lmpName || "Master LMP").trim();
       const cleanLmpName = String(trainingDraft.lmpName || cleanLmpCode).trim();
-      const cleanAccessUnitCode = String(trainingDraft.accessUnitCode || unitDraft.code || "").trim().toUpperCase();
-      const cleanUnitHomeLocationCode = String(unitDraft.locationCode || "").trim().toUpperCase();
-      const cleanTrainingAccessLocationCode = String(trainingDraft.accessLocationCode || "").trim().toUpperCase();
-      const cleanLocationDraftCode = String(locationDraft.code || "").trim().toUpperCase();
-      const cleanAccessLocationCode = cleanAccessUnitCode && cleanAccessUnitCode === String(unitDraft.code || "").trim().toUpperCase() && cleanUnitHomeLocationCode ? cleanUnitHomeLocationCode : cleanTrainingAccessLocationCode || cleanUnitHomeLocationCode || cleanLocationDraftCode;
+      const cleanAccessUnitCode = getWizardSetupAccessUnitCode(trainingDraft.accessUnitCode);
+      const cleanAccessLocationCode = getWizardSetupAccessLocationCode(trainingDraft.accessLocationCode);
       pushWizardLmpDiag("commit:resolved-scope", {
         cleanLmpCode,
         cleanLmpName,
         cleanAccessUnitCode,
-        cleanUnitHomeLocationCode,
-        cleanTrainingAccessLocationCode,
-        cleanLocationDraftCode,
         cleanAccessLocationCode,
         activeWizardLocationCode,
         activeWizardLocationRow,
@@ -41335,7 +41384,8 @@ const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, lo
         const accessRules = getOrganisationMasterLmpAccessRules(settings);
         const catalogueExists = catalogue.some((item) => normaliseUnitSettingsIdentifier(item?.code) === normaliseUnitSettingsIdentifier(cleanLmpCode));
         const accessUnitCode = cleanAccessUnitCode || unitDraft.code;
-        const accessExists = accessRules.some((rule) => normaliseUnitSettingsIdentifier(rule?.lmpCode) === normaliseUnitSettingsIdentifier(cleanLmpCode) && normaliseUnitSettingsIdentifier(rule?.unitCode) === normaliseUnitSettingsIdentifier(accessUnitCode));
+        const matchingAccessRule = accessRules.find((rule) => normaliseUnitSettingsIdentifier(rule?.lmpCode) === normaliseUnitSettingsIdentifier(cleanLmpCode) && normaliseUnitSettingsIdentifier(rule?.unitCode) === normaliseUnitSettingsIdentifier(accessUnitCode));
+        const accessExists = Boolean(matchingAccessRule);
         const nextCatalogueEntry = {
           id: primaryMasterLmp?.id || createWizardRecordId("master-lmp-catalogue"),
           code: cleanLmpCode,
@@ -41345,7 +41395,7 @@ const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, lo
           audience: resolveWizardLmpAudience(trainingDraft.audience)
         };
         const nextAccessRule = {
-          id: primaryMasterLmpRule?.id || createWizardRecordId("master-lmp-access"),
+          id: matchingAccessRule?.id || createWizardRecordId("master-lmp-access"),
           lmpCode: cleanLmpCode,
           locationCode: cleanAccessLocationCode,
           unitCode: accessUnitCode,
@@ -41400,7 +41450,8 @@ const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, lo
           const catalogueExists = catalogue.some((item) => normaliseUnitSettingsIdentifier(item?.code) === normaliseUnitSettingsIdentifier(cleanLmpCode));
           const accessUnitCode = cleanAccessUnitCode || unitDraft.code;
           const accessLocationCode = cleanAccessLocationCode;
-          const accessExists = accessRules.some((rule) => normaliseUnitSettingsIdentifier(rule?.lmpCode) === normaliseUnitSettingsIdentifier(cleanLmpCode) && normaliseUnitSettingsIdentifier(rule?.unitCode) === normaliseUnitSettingsIdentifier(accessUnitCode));
+          const matchingAccessRule = accessRules.find((rule) => normaliseUnitSettingsIdentifier(rule?.lmpCode) === normaliseUnitSettingsIdentifier(cleanLmpCode) && normaliseUnitSettingsIdentifier(rule?.unitCode) === normaliseUnitSettingsIdentifier(accessUnitCode));
+          const accessExists = Boolean(matchingAccessRule);
           const nextCatalogueEntry = {
             id: primaryMasterLmp?.id || createWizardRecordId("master-lmp-catalogue"),
             code: cleanLmpCode,
@@ -41410,7 +41461,7 @@ const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, lo
             audience: resolveWizardLmpAudience(trainingDraft.audience)
           };
           const nextAccessRule = {
-            id: primaryMasterLmpRule?.id || createWizardRecordId("master-lmp-access"),
+            id: matchingAccessRule?.id || createWizardRecordId("master-lmp-access"),
             lmpCode: cleanLmpCode,
             locationCode: accessLocationCode,
             unitCode: accessUnitCode,
