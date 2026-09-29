@@ -187,6 +187,7 @@ const TrainingRecordsView: React.FC<TrainingRecordsViewProps> = ({
                         courses={courses}
                         archivedCourses={archivedCourses}
                         publishedSchedules={publishedSchedules}
+                        syllabusDetails={syllabusDetails}
                         pt051Assessments={pt051Assessments}
                         onSaveTrainingReportAssessment={onSaveTrainingReportAssessment}
                         trainingReportTemplate={trainingReportTemplate}

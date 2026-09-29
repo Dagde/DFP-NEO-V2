@@ -110179,6 +110179,17 @@ const formatTime$1 = (time) => {
   const minutes = Math.round((time - hours) * 60);
   return `${String(hours).padStart(2, "0")}${String(minutes).padStart(2, "0")}`;
 };
+const getCompletionDateForMode = (dateMode, singleDate, startDate, endDate) => {
+  if (dateMode === "single-date" && singleDate) return singleDate;
+  if (dateMode === "date-range") return endDate || startDate || todayIso();
+  return todayIso();
+};
+const getScheduledTypeFromLmpType = (type) => {
+  if (type === "Flight") return "flight";
+  if (type === "FTD") return "ftd";
+  if (type === "Academics") return "cpt";
+  return "ground";
+};
 const normaliseName = (name) => name.replace(/\s+[–-]\s+.*$/, "").replace(/\s+/g, " ").trim();
 const displayPerson = (event) => {
   const people = [event.student, event.pilot, event.crew].filter(Boolean).map((person) => String(person)).filter((person, index, list) => list.indexOf(person) === index);
@@ -110190,6 +110201,7 @@ const TrainingCompletionView = ({
   courses,
   archivedCourses,
   publishedSchedules,
+  syllabusDetails,
   pt051Assessments,
   onSaveTrainingReportAssessment,
   trainingReportTemplate
@@ -110217,6 +110229,10 @@ const TrainingCompletionView = ({
   }, [courses, archivedCourses]);
   const filteredCourses = reactExports.useMemo(() => courseNames.filter((course) => course.toLowerCase().includes(courseSearch.toLowerCase())), [courseNames, courseSearch]);
   const courseTrainees = reactExports.useMemo(() => allTrainees.filter((trainee) => selectedCourses.includes(trainee.course)), [allTrainees, selectedCourses]);
+  const completionDate = reactExports.useMemo(
+    () => getCompletionDateForMode(dateMode, singleDate, startDate, endDate),
+    [dateMode, endDate, singleDate, startDate]
+  );
   const getEventTrainees = (event) => {
     if (event.groupTraineeIds && event.groupTraineeIds.length > 0) {
       return courseTrainees.filter((trainee) => event.groupTraineeIds?.includes(trainee.idNumber));
@@ -110237,8 +110253,35 @@ const TrainingCompletionView = ({
     } else if (dateMode === "date-range" && startDate && endDate) {
       events = events.filter((event) => event.date >= startDate && event.date <= endDate);
     }
-    return events.filter((event) => getEventTrainees(event).length > 0).sort((a, b) => `${a.date}-${a.startTime}`.localeCompare(`${b.date}-${b.startTime}`));
-  }, [allEvents, courseTrainees, dateMode, endDate, selectedCourses.length, singleDate, startDate]);
+    const scheduledEvents = events.filter((event) => getEventTrainees(event).length > 0).sort((a, b) => `${a.date}-${a.startTime}`.localeCompare(`${b.date}-${b.startTime}`));
+    const lmpEvents = syllabusDetails.filter((item) => item && item.isActive !== false).filter((item) => item.lmpType !== "Staff CAT").filter((item) => Array.isArray(item.courses) && item.courses.some((course) => selectedCourses.includes(course))).map((item) => {
+      const linkedTraineeIds = courseTrainees.filter((trainee) => item.courses.includes(trainee.course)).map((trainee) => trainee.idNumber);
+      return {
+        id: `lmp:${item.id || item.code}`,
+        date: completionDate,
+        type: getScheduledTypeFromLmpType(item.type),
+        groupTraineeIds: linkedTraineeIds,
+        flightNumber: item.code || item.eventDescription || "LMP Event",
+        duration: Number(item.duration || item.flightOrSimHours || item.totalEventHours || 1),
+        startTime: 0,
+        resourceId: "",
+        color: "#0284c7",
+        flightType: item.sortieType || "Dual",
+        locationType: "Local",
+        origin: "",
+        destination: "",
+        notes: item.eventDescription,
+        eventCategory: "lmp_event"
+      };
+    }).filter((event) => getEventTrainees(event).length > 0);
+    const seen = /* @__PURE__ */ new Set();
+    return [...scheduledEvents, ...lmpEvents].filter((event) => {
+      const key = `${event.date}|${event.flightNumber}|${event.id}`;
+      if (seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    }).sort((a, b) => `${a.date}-${a.startTime}-${a.flightNumber}`.localeCompare(`${b.date}-${b.startTime}-${b.flightNumber}`));
+  }, [allEvents, completionDate, courseTrainees, dateMode, endDate, selectedCourses, singleDate, startDate, syllabusDetails]);
   const selectedEvent = reactExports.useMemo(() => candidateEvents.find((event) => event.id === selectedEventId) || null, [candidateEvents, selectedEventId]);
   const traineesForSelectedEvent = reactExports.useMemo(() => selectedEvent ? getEventTrainees(selectedEvent).sort((a, b) => `${a.course}-${a.name}`.localeCompare(`${b.course}-${b.name}`)) : [], [courseTrainees, selectedEvent]);
   const resetEventSelection = () => {
@@ -110692,6 +110735,7 @@ const TrainingRecordsView = ({
           courses,
           archivedCourses,
           publishedSchedules,
+          syllabusDetails,
           pt051Assessments,
           onSaveTrainingReportAssessment,
           trainingReportTemplate,

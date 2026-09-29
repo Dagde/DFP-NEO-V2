@@ -1,5 +1,5 @@
 import React, { useMemo, useState } from 'react';
-import { Course, PhraseBank, TrainingReportAssessment, ScheduleEvent, Trainee } from '../types';
+import { Course, PhraseBank, TrainingReportAssessment, ScheduleEvent, SyllabusItemDetail, Trainee } from '../types';
 import {
     DEFAULT_TRAINING_REPORT_TEMPLATE,
     normaliseTrainingReportTemplate,
@@ -12,6 +12,7 @@ interface TrainingCompletionViewProps {
     courses: Course[];
     archivedCourses: { [key: string]: string };
     publishedSchedules: Record<string, ScheduleEvent[]>;
+    syllabusDetails: SyllabusItemDetail[];
     pt051Assessments: Map<string, TrainingReportAssessment>;
     onSaveTrainingReportAssessment: (assessment: TrainingReportAssessment) => void;
     trainingReportTemplate?: Partial<TrainingReportTemplate> | null;
@@ -39,6 +40,24 @@ const formatTime = (time: number | undefined): string => {
     return `${String(hours).padStart(2, '0')}${String(minutes).padStart(2, '0')}`;
 };
 
+const getCompletionDateForMode = (
+    dateMode: CompletionDateMode,
+    singleDate: string,
+    startDate: string,
+    endDate: string,
+): string => {
+    if (dateMode === 'single-date' && singleDate) return singleDate;
+    if (dateMode === 'date-range') return endDate || startDate || todayIso();
+    return todayIso();
+};
+
+const getScheduledTypeFromLmpType = (type: SyllabusItemDetail['type']): ScheduleEvent['type'] => {
+    if (type === 'Flight') return 'flight';
+    if (type === 'FTD') return 'ftd';
+    if (type === 'Academics') return 'cpt';
+    return 'ground';
+};
+
 const normaliseName = (name: string): string => (
     name
         .replace(/\s+[–-]\s+.*$/, '')
@@ -60,6 +79,7 @@ const TrainingCompletionView: React.FC<TrainingCompletionViewProps> = ({
     courses,
     archivedCourses,
     publishedSchedules,
+    syllabusDetails,
     pt051Assessments,
     onSaveTrainingReportAssessment,
     trainingReportTemplate,
@@ -96,6 +116,11 @@ const TrainingCompletionView: React.FC<TrainingCompletionViewProps> = ({
         allTrainees.filter(trainee => selectedCourses.includes(trainee.course))
     ), [allTrainees, selectedCourses]);
 
+    const completionDate = useMemo(
+        () => getCompletionDateForMode(dateMode, singleDate, startDate, endDate),
+        [dateMode, endDate, singleDate, startDate],
+    );
+
     const getEventTrainees = (event: ScheduleEvent): Trainee[] => {
         if (event.groupTraineeIds && event.groupTraineeIds.length > 0) {
             return courseTrainees.filter(trainee => event.groupTraineeIds?.includes(trainee.idNumber));
@@ -124,10 +149,48 @@ const TrainingCompletionView: React.FC<TrainingCompletionViewProps> = ({
             events = events.filter(event => event.date >= startDate && event.date <= endDate);
         }
 
-        return events
+        const scheduledEvents = events
             .filter(event => getEventTrainees(event).length > 0)
             .sort((a, b) => `${a.date}-${a.startTime}`.localeCompare(`${b.date}-${b.startTime}`));
-    }, [allEvents, courseTrainees, dateMode, endDate, selectedCourses.length, singleDate, startDate]);
+
+        const lmpEvents = syllabusDetails
+            .filter((item: any) => item && item.isActive !== false)
+            .filter(item => item.lmpType !== 'Staff CAT')
+            .filter(item => Array.isArray(item.courses) && item.courses.some(course => selectedCourses.includes(course)))
+            .map((item): ScheduleEvent => {
+                const linkedTraineeIds = courseTrainees
+                    .filter(trainee => item.courses.includes(trainee.course))
+                    .map(trainee => trainee.idNumber);
+                return {
+                    id: `lmp:${item.id || item.code}`,
+                    date: completionDate,
+                    type: getScheduledTypeFromLmpType(item.type),
+                    groupTraineeIds: linkedTraineeIds,
+                    flightNumber: item.code || item.eventDescription || 'LMP Event',
+                    duration: Number(item.duration || item.flightOrSimHours || item.totalEventHours || 1),
+                    startTime: 0,
+                    resourceId: '',
+                    color: '#0284c7',
+                    flightType: item.sortieType || 'Dual',
+                    locationType: 'Local',
+                    origin: '',
+                    destination: '',
+                    notes: item.eventDescription,
+                    eventCategory: 'lmp_event',
+                };
+            })
+            .filter(event => getEventTrainees(event).length > 0);
+
+        const seen = new Set<string>();
+        return [...scheduledEvents, ...lmpEvents]
+            .filter(event => {
+                const key = `${event.date}|${event.flightNumber}|${event.id}`;
+                if (seen.has(key)) return false;
+                seen.add(key);
+                return true;
+            })
+            .sort((a, b) => `${a.date}-${a.startTime}-${a.flightNumber}`.localeCompare(`${b.date}-${b.startTime}-${b.flightNumber}`));
+    }, [allEvents, completionDate, courseTrainees, dateMode, endDate, selectedCourses, singleDate, startDate, syllabusDetails]);
 
     const selectedEvent = useMemo(() => (
         candidateEvents.find(event => event.id === selectedEventId) || null
