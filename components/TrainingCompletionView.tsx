@@ -17,7 +17,12 @@ interface TrainingCompletionViewProps {
     pt051Assessments: Map<string, TrainingReportAssessment>;
     traineeLMPs?: Map<string, SyllabusItemDetail[]>;
     onSaveTrainingReportAssessment: (assessment: TrainingReportAssessment) => void | Promise<void>;
-    onUpdateLmpItem?: (trainee: Trainee, originalItem: SyllabusItemDetail, updatedItem: SyllabusItemDetail) => boolean | Promise<boolean>;
+    onUpdateLmpItem?: (
+        trainee: Trainee,
+        originalItem: SyllabusItemDetail,
+        updatedItem: SyllabusItemDetail,
+        options?: { suppressSuccessMessage?: boolean }
+    ) => boolean | Promise<boolean>;
     trainingReportTemplate?: Partial<TrainingReportTemplate> | null;
     phraseBank?: PhraseBank;
 }
@@ -313,7 +318,7 @@ const TrainingCompletionView: React.FC<TrainingCompletionViewProps> = ({
                     isComplete: true,
                     completed: true,
                 } as SyllabusItemDetail;
-                const lmpSaved = await Promise.resolve(onUpdateLmpItem(trainee, lmpItem, updatedLmpItem));
+                const lmpSaved = await Promise.resolve(onUpdateLmpItem(trainee, lmpItem, updatedLmpItem, { suppressSuccessMessage: true }));
                 if (!lmpSaved) {
                     failed.push(trainee.name);
                     continue;

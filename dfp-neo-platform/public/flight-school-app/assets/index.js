@@ -110379,7 +110379,7 @@ const TrainingCompletionView = ({
           isComplete: true,
           completed: true
         };
-        const lmpSaved = await Promise.resolve(onUpdateLmpItem(trainee, lmpItem, updatedLmpItem));
+        const lmpSaved = await Promise.resolve(onUpdateLmpItem(trainee, lmpItem, updatedLmpItem, { suppressSuccessMessage: true }));
         if (!lmpSaved) {
           failed.push(trainee.name);
           continue;
@@ -147334,7 +147334,7 @@ ${error instanceof Error ? error.message : String(error)}`,
       return false;
     }
   };
-  const handleUpdateIndividualLmpItem = async (trainee, originalItem, updatedItem) => {
+  const handleUpdateIndividualLmpItem = async (trainee, originalItem, updatedItem, options = {}) => {
     const originalTraineeLMP = traineeLMPs.get(trainee.fullName);
     if (!originalTraineeLMP || originalTraineeLMP.length === 0) {
       await showDarkAlert2(`Could not update ${originalItem.code}: Individual LMP not found for ${trainee.fullName}.`, "Individual LMP Save Failed", "error");
@@ -147444,9 +147444,11 @@ Remove or amend those downstream completions before undoing this RPL.`,
           `Trainee: ${trainee.rank ? `${trainee.rank} ` : ""}${trainee.name}`
         ].filter(Boolean).join("; ")
       );
-      setSuccessMessage(
-        isGrantingRpl ? `RPL granted for ${normalizedUpdatedItem.code}; ${configuredTrainingReportDisplayName} added to performance history.` : isRemovingRpl ? `RPL removed for ${normalizedUpdatedItem.code}; event reset to incomplete.` : `Updated ${normalizedUpdatedItem.code} in Individual LMP.`
-      );
+      if (!options.suppressSuccessMessage) {
+        setSuccessMessage(
+          isGrantingRpl ? `RPL granted for ${normalizedUpdatedItem.code}; ${configuredTrainingReportDisplayName} added to performance history.` : isRemovingRpl ? `RPL removed for ${normalizedUpdatedItem.code}; event reset to incomplete.` : `Updated ${normalizedUpdatedItem.code} in Individual LMP.`
+        );
+      }
       return true;
     } catch (error) {
       console.error("[Individual LMP] Failed to update event:", error);

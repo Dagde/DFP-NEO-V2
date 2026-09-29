@@ -32,7 +32,12 @@ interface TrainingRecordsViewProps {
     pt051Assessments: Map<string, TrainingReportAssessment>;
     traineeLMPs?: Map<string, SyllabusItemDetail[]>;
     onSaveTrainingReportAssessment: (assessment: TrainingReportAssessment) => void | Promise<void>;
-    onUpdateLmpItem?: (trainee: Trainee, originalItem: SyllabusItemDetail, updatedItem: SyllabusItemDetail) => Promise<boolean> | boolean;
+    onUpdateLmpItem?: (
+        trainee: Trainee,
+        originalItem: SyllabusItemDetail,
+        updatedItem: SyllabusItemDetail,
+        options?: { suppressSuccessMessage?: boolean }
+    ) => Promise<boolean> | boolean;
     locations?: string[];
     units?: string[];
     activeLocationCode?: string;

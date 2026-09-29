@@ -41749,7 +41749,8 @@ const App: React.FC = () => {
     const handleUpdateIndividualLmpItem = async (
         trainee: Trainee,
         originalItem: SyllabusItemDetail,
-        updatedItem: SyllabusItemDetail
+        updatedItem: SyllabusItemDetail,
+        options: { suppressSuccessMessage?: boolean } = {}
     ): Promise<boolean> => {
         const originalTraineeLMP = traineeLMPs.get(trainee.fullName);
         if (!originalTraineeLMP || originalTraineeLMP.length === 0) {
@@ -41873,12 +41874,14 @@ const App: React.FC = () => {
                     `Trainee: ${trainee.rank ? `${trainee.rank} ` : ''}${trainee.name}`,
                 ].filter(Boolean).join('; ')
             );
-            setSuccessMessage(isGrantingRpl
-                ? `RPL granted for ${normalizedUpdatedItem.code}; ${configuredTrainingReportDisplayName} added to performance history.`
-                : isRemovingRpl
-                    ? `RPL removed for ${normalizedUpdatedItem.code}; event reset to incomplete.`
-                    : `Updated ${normalizedUpdatedItem.code} in Individual LMP.`
-            );
+            if (!options.suppressSuccessMessage) {
+                setSuccessMessage(isGrantingRpl
+                    ? `RPL granted for ${normalizedUpdatedItem.code}; ${configuredTrainingReportDisplayName} added to performance history.`
+                    : isRemovingRpl
+                        ? `RPL removed for ${normalizedUpdatedItem.code}; event reset to incomplete.`
+                        : `Updated ${normalizedUpdatedItem.code} in Individual LMP.`
+                );
+            }
             return true;
         } catch (error) {
             console.error('[Individual LMP] Failed to update event:', error);
