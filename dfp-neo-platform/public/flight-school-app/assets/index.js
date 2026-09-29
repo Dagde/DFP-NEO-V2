@@ -158600,7 +158600,7 @@ It will not clear the published DFP.`,
         return /* @__PURE__ */ jsxRuntimeExports.jsx(
           TrainingRecordsView,
           {
-            courses: scopedCourses,
+            courses: scopedCourseProgressCourses,
             courseColors: scopedCourseColors,
             archivedCourses,
             onAddCourse: handleAddCourseFromTrainingRecords,

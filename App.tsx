@@ -55338,7 +55338,7 @@ appliedUpdates.forEach(update => {
                         />;
             case 'TrainingRecords':
                 return <TrainingRecordsView
-                    courses={scopedCourses}
+                    courses={scopedCourseProgressCourses}
                     courseColors={scopedCourseColors}
                     archivedCourses={archivedCourses}
                     onAddCourse={handleAddCourseFromTrainingRecords}
