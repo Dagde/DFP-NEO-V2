@@ -138849,184 +138849,6 @@ const App = () => {
       return false;
     }
   }
-  function readDfpDataDiagEntries() {
-    try {
-      const stored = JSON.parse(localStorage.getItem("neo_dfp_data_diag") || "[]");
-      return Array.isArray(stored) ? stored : [];
-    } catch {
-      return [];
-    }
-  }
-  function readStaffScheduleRenderDiagEntries() {
-    try {
-      const stored = JSON.parse(localStorage.getItem("neo_staff_schedule_render_diag") || "[]");
-      return Array.isArray(stored) ? stored : [];
-    } catch {
-      return [];
-    }
-  }
-  function buildDfpDataDiagReport() {
-    const entries = readDfpDataDiagEntries();
-    const staffScheduleRenderTrace = readStaffScheduleRenderDiagEntries();
-    const snapshotKey = getDailySnapshotKey(date);
-    const cacheSummaries = (() => {
-      try {
-        return Object.keys(localStorage).filter((key) => key.startsWith("dfp_snapshot_cache_")).sort().map((key) => {
-          const rawValue = localStorage.getItem(key) || "";
-          let parsed = null;
-          try {
-            parsed = JSON.parse(rawValue);
-          } catch {
-            parsed = null;
-          }
-          const scheduleEvents = Array.isArray(parsed?.scheduleEvents) ? parsed.scheduleEvents : [];
-          const baselineEvents = Array.isArray(parsed?.baselineEvents) ? parsed.baselineEvents : [];
-          return {
-            key,
-            byteLength: rawValue.length,
-            snapshotDate: getDailySnapshotDate(key.replace(/^dfp_snapshot_cache_/, "")),
-            payloadDate: parsed?.date || null,
-            scheduleEventCount: scheduleEvents.length,
-            baselineEventCount: baselineEvents.length,
-            sampleEvents: scheduleEvents.slice(0, 8).map((event) => ({
-              id: event?.id || null,
-              date: event?.date || null,
-              type: event?.type || null,
-              resourceId: event?.resourceId || null,
-              flightNumber: event?.flightNumber || null,
-              startTime: event?.startTime ?? null,
-              duration: event?.duration ?? null
-            }))
-          };
-        });
-      } catch (error) {
-        return [{ error: String(error) }];
-      }
-    })();
-    const enrichedEntries = entries.map((entry, index) => {
-      const previous = index > 0 ? entries[index - 1] : null;
-      const entryPerfMs = typeof entry?.perfMs === "number" ? entry.perfMs : null;
-      const previousPerfMs = typeof previous?.perfMs === "number" ? previous.perfMs : null;
-      return {
-        index,
-        sincePreviousMs: entryPerfMs !== null && previousPerfMs !== null ? entryPerfMs - previousPerfMs : null,
-        ...entry
-      };
-    });
-    const slowestGaps = enrichedEntries.filter((entry) => typeof entry.sincePreviousMs === "number").sort((left, right) => (right.sincePreviousMs || 0) - (left.sincePreviousMs || 0)).slice(0, 20).map((entry) => ({
-      index: entry.index,
-      stage: entry.stage,
-      sincePreviousMs: entry.sincePreviousMs,
-      perfMs: entry.perfMs,
-      ts: entry.ts,
-      date: entry.date,
-      school: entry.school,
-      unit: entry.unit,
-      details: entry.details
-    }));
-    const stages = enrichedEntries.reduce((acc, entry) => {
-      const stage = String(entry.stage || "unknown");
-      acc[stage] = (acc[stage] || 0) + 1;
-      return acc;
-    }, {});
-    return {
-      reportType: "DFP-NEO data diagnostics",
-      generatedAt: (/* @__PURE__ */ new Date()).toISOString(),
-      url: window.location.href,
-      userAgent: navigator.userAgent,
-      activeContext: {
-        date,
-        school,
-        unit: activeUnitCode,
-        activeView,
-        setupTestProfile: setupTestProfile || null,
-        isInitialSetupWizardActive,
-        isAuthenticated,
-        snapshotKey,
-        snapshotLoadState: dfpSnapshotLoadState
-      },
-      authenticatedUser: {
-        authUser: authUser ? {
-          id: authUser.id || null,
-          userId: authUser.userId || null,
-          username: authUser.username || null,
-          displayName: authUser.displayName || null,
-          firstName: authUser.firstName || null,
-          lastName: authUser.lastName || null,
-          role: authUser.role || null,
-          email: authUser.email || null
-        } : null,
-        sessionUser,
-        currentUserName,
-        currentUserPermission,
-        combinedPermissions,
-        matchedCurrentStaffUser: matchedCurrentStaffUser ? {
-          id: matchedCurrentStaffUser.id || null,
-          idNumber: matchedCurrentStaffUser.idNumber || null,
-          name: matchedCurrentStaffUser.name || null,
-          rank: matchedCurrentStaffUser.rank || null,
-          role: matchedCurrentStaffUser.role || null,
-          unit: matchedCurrentStaffUser.unit || null,
-          permissions: matchedCurrentStaffUser.permissions || []
-        } : null
-      },
-      dataScope: {
-        hasRuntimePlatformWideAccess,
-        platformAccessContext,
-        platformDataScopeQuery,
-        activeContextUnitCodes,
-        activeUnitContext
-      },
-      loadedDataCounts: {
-        allInstructors: allInstructorsData.length,
-        scopedInstructors: instructorsData.length,
-        archivedInstructors: archivedInstructorsData.length,
-        allTrainees: allTraineesData.length,
-        scopedTrainees: traineesData.length,
-        archivedTrainees: archivedTraineesData.length
-      },
-      currentScheduleState: {
-        activeDate: date,
-        activeSnapshotKey: snapshotKey,
-        rawPublishedEventCount: Array.isArray(publishedSchedules[date]) ? publishedSchedules[date].length : 0,
-        scopedPublishedEventCount: scopedPublishedEventsForDate.length,
-        renderedSegmentCount: eventSegmentsForDate.length,
-        baselineCount: Array.isArray(baselineSchedules[activeBaselineKey]) ? baselineSchedules[activeBaselineKey].length : 0,
-        publishedScheduleKeys: Object.keys(publishedSchedules).slice(0, 120),
-        snapshotDates: snapshotDates.slice(0, 120),
-        knownSnapshotKeysForDate: snapshotKeysByDateRef.current[date] || [],
-        loadedSnapshotKeys: Array.from(loadedSnapshotDates.current),
-        loadingSnapshotKeys: Array.from(loadingSnapshotDates.current)
-      },
-      localSnapshotCache: cacheSummaries,
-      summary: {
-        entryCount: enrichedEntries.length,
-        firstEntry: enrichedEntries[0] || null,
-        lastEntry: enrichedEntries[enrichedEntries.length - 1] || null,
-        slowestGaps,
-        stages,
-        staffScheduleRenderTraceCount: staffScheduleRenderTrace.length,
-        latestStaffScheduleStackedGroups: staffScheduleRenderTrace.at(-1)?.stackedGroups || []
-      },
-      entries: enrichedEntries,
-      staffScheduleRenderTrace
-    };
-  }
-  function downloadDfpDataDiagReport(label = "dfp-data-trace") {
-    const report = buildDfpDataDiagReport();
-    const blob = new Blob([JSON.stringify(report, null, 2)], { type: "application/json" });
-    const url = URL.createObjectURL(blob);
-    const safeUnit = String(activeUnitCode || "unit").replace(/[^A-Za-z0-9+-]+/g, "-").replace(/^-|-$/g, "") || "unit";
-    const safeDate = String(date || "no-date").replace(/[^0-9-]/g, "") || "no-date";
-    const link = document.createElement("a");
-    link.href = url;
-    link.download = `${label}-${safeUnit}-${safeDate}-${(/* @__PURE__ */ new Date()).toISOString().replace(/[:.]/g, "-")}.json`;
-    document.body.appendChild(link);
-    link.click();
-    link.remove();
-    URL.revokeObjectURL(url);
-    setShowInfoNotification("DFP data trace downloaded.");
-  }
   reactExports.useEffect(() => {
     pushDfpDataDiag("context:resolved", {
       platformLocations: (platformConfig?.locations || []).map((location) => ({
@@ -141248,6 +141070,7 @@ const App = () => {
   }, []);
   const [dfpSnapshotLoadState, setDfpSnapshotLoadState] = reactExports.useState({ status: "idle", date: "", message: "" });
   const [showDfpRetrievalNotice, setShowDfpRetrievalNotice] = reactExports.useState(false);
+  const [dismissedEmptyDfpNoticeKey, setDismissedEmptyDfpNoticeKey] = reactExports.useState("");
   reactExports.useEffect(() => {
     const isPendingSnapshotLoad = isAuthenticated && dfpSnapshotLoadState.date === date && ["loading", "retrying"].includes(dfpSnapshotLoadState.status);
     if (!isPendingSnapshotLoad) {
@@ -147822,11 +147645,13 @@ ${error instanceof Error ? error.message : String(error)}`,
     const currentDate = new Date(currentDateObj);
     currentDate.setUTCDate(currentDate.getUTCDate() + increment);
     const newDateStr = currentDate.toISOString().split("T")[0];
+    setDismissedEmptyDfpNoticeKey("");
     setDate(newDateStr);
     setBuildDfpDate(newDateStr);
     void loadSnapshotForDate(newDateStr, { useCache: true, allowAdminFallbackContext: false });
   };
   const handleDateSelect = (selectedDate) => {
+    setDismissedEmptyDfpNoticeKey("");
     setDate(selectedDate);
     setBuildDfpDate(selectedDate);
     void loadSnapshotForDate(selectedDate, { useCache: true, allowAdminFallbackContext: false });
@@ -160674,7 +160499,8 @@ Do you want to replace the existing entry?`,
   };
   const latestSavedDfpDate = snapshotDates.find((snapshotDate) => snapshotDate && snapshotDate !== date) || "";
   const isFutureSelectedDfpDate = date > getEffectiveDfpDateString();
-  const showEmptyDfpNotice = isAuthenticated && activeView === "Program Schedule" && dfpSnapshotLoadState.date === date && dfpSnapshotLoadState.status === "empty" && eventSegmentsForDate.length === 0 && !isFutureSelectedDfpDate && !isInitialSetupWizardActive && !showInitialSetupBlankState && !setupTestProfile;
+  const emptyDfpNoticeKey = getDailySnapshotKey(date, school, activeUnitCode);
+  const showEmptyDfpNotice = isAuthenticated && activeView === "Program Schedule" && dfpSnapshotLoadState.date === date && dfpSnapshotLoadState.status === "empty" && eventSegmentsForDate.length === 0 && dismissedEmptyDfpNoticeKey !== emptyDfpNoticeKey && !isFutureSelectedDfpDate && !isInitialSetupWizardActive && !showInitialSetupBlankState && !setupTestProfile;
   return /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
     setupTestProfile && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "fixed left-1/2 top-2 z-[500] -translate-x-1/2 rounded-md border border-amber-300/70 bg-amber-100 px-4 py-2 text-center text-[11px] font-black uppercase tracking-[0.16em] text-slate-950 shadow-2xl shadow-black/30", children: [
       "Setup Wizard Test Mode - Local Browser Data Only - ",
@@ -162154,7 +161980,14 @@ Do you want to replace the existing entry?`,
       /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-gray-400 text-sm", children: "Loading DFP-NEO..." })
     ] }) }),
     showEmptyDfpNotice && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "pointer-events-none fixed inset-0 z-[155] flex items-center justify-center px-6", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "pointer-events-auto w-[min(620px,calc(100vw-48px))] rounded-lg border border-amber-400/60 bg-gray-950/96 px-7 py-6 text-center shadow-2xl shadow-black/45 backdrop-blur-md", children: [
-      /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full border border-amber-300/50 bg-amber-500/15 text-2xl font-black text-amber-200", children: "!" }),
+      /* @__PURE__ */ jsxRuntimeExports.jsx(
+        "img",
+        {
+          src: "/dfp-neo-setup-logo.jpg",
+          alt: "DFP NEO",
+          className: "mx-auto mb-5 h-auto w-[min(320px,75vw)] object-contain"
+        }
+      ),
       /* @__PURE__ */ jsxRuntimeExports.jsxs("h2", { className: "text-2xl font-bold text-white", children: [
         "No saved DFP found for ",
         formatDfpRetrievalDate(date)
@@ -162175,7 +162008,10 @@ Do you want to replace the existing entry?`,
           "button",
           {
             type: "button",
-            onClick: () => void loadSnapshotForDate(date, { force: true, replace: true, useCache: true, allowAdminFallbackContext: false }),
+            onClick: () => {
+              setDismissedEmptyDfpNoticeKey("");
+              void loadSnapshotForDate(date, { force: true, replace: true, useCache: true, allowAdminFallbackContext: false });
+            },
             className: "rounded-md border border-gray-600 bg-gray-900 px-4 py-2 text-sm font-semibold text-gray-100 transition-colors hover:border-gray-400 hover:bg-gray-800",
             children: "Retry Load"
           }
@@ -162193,17 +162029,27 @@ Do you want to replace the existing entry?`,
           "button",
           {
             type: "button",
-            onClick: () => downloadDfpDataDiagReport("dfp-empty-schedule-trace"),
-            className: "rounded-md border border-amber-400/60 bg-amber-500/15 px-4 py-2 text-sm font-semibold text-amber-100 transition-colors hover:border-amber-200 hover:bg-amber-500/25",
-            children: "Download DFP Data Trace"
+            onClick: () => setDismissedEmptyDfpNoticeKey(emptyDfpNoticeKey),
+            className: "rounded-md border border-gray-600 bg-gray-900 px-4 py-2 text-sm font-semibold text-gray-100 transition-colors hover:border-gray-400 hover:bg-gray-800",
+            children: "Cancel"
           }
         )
       ] })
     ] }) }),
     showDfpRetrievalNotice && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "pointer-events-none fixed inset-0 z-[160] flex items-center justify-center px-6", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "w-[min(640px,calc(100vw-48px))] rounded-lg border border-sky-500/60 bg-gray-950/95 px-8 py-7 text-center shadow-2xl shadow-black/40 backdrop-blur-md", children: [
-      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mb-4 flex items-center justify-center gap-3", children: [
-        /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "h-5 w-5 rounded-full border-[3px] border-sky-400 border-t-transparent animate-spin" }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-2xl font-semibold text-white", children: "Retrieving DFP" })
+      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mb-5 flex flex-col items-center justify-center gap-4", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsx(
+          "img",
+          {
+            src: "/dfp-neo-setup-logo.jpg",
+            alt: "DFP NEO",
+            className: "h-auto w-[min(320px,75vw)] object-contain"
+          }
+        ),
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center justify-center gap-3", children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "h-5 w-5 rounded-full border-[3px] border-sky-400 border-t-transparent animate-spin" }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-2xl font-semibold text-white", children: "Retrieving DFP" })
+        ] })
       ] }),
       /* @__PURE__ */ jsxRuntimeExports.jsxs("p", { className: "text-base leading-7 text-gray-200", children: [
         "Please wait while we retrieve the DFP for the ",

@@ -34183,6 +34183,7 @@ const App: React.FC = () => {
         progress?: number;
     }>({ status: 'idle', date: '', message: '' });
     const [showDfpRetrievalNotice, setShowDfpRetrievalNotice] = useState(false);
+    const [dismissedEmptyDfpNoticeKey, setDismissedEmptyDfpNoticeKey] = useState('');
     useEffect(() => {
         const isPendingSnapshotLoad = isAuthenticated
             && dfpSnapshotLoadState.date === date
@@ -42309,6 +42310,7 @@ const App: React.FC = () => {
         const currentDate = new Date(currentDateObj);
         currentDate.setUTCDate(currentDate.getUTCDate() + increment);
         const newDateStr = currentDate.toISOString().split('T')[0];
+        setDismissedEmptyDfpNoticeKey('');
         setDate(newDateStr);
         setBuildDfpDate(newDateStr);
         void loadSnapshotForDate(newDateStr, { useCache: true, allowAdminFallbackContext: false });
@@ -42316,6 +42318,7 @@ const App: React.FC = () => {
 
     // Navigate directly to a specific date (used by calendar dropdown on date selector)
     const handleDateSelect = (selectedDate: string) => {
+        setDismissedEmptyDfpNoticeKey('');
         setDate(selectedDate);
         setBuildDfpDate(selectedDate);
         void loadSnapshotForDate(selectedDate, { useCache: true, allowAdminFallbackContext: false });
@@ -57512,11 +57515,13 @@ appliedUpdates.forEach(update => {
 
     const latestSavedDfpDate = snapshotDates.find(snapshotDate => snapshotDate && snapshotDate !== date) || '';
     const isFutureSelectedDfpDate = date > getEffectiveDfpDateString();
+    const emptyDfpNoticeKey = getDailySnapshotKey(date, school, activeUnitCode);
     const showEmptyDfpNotice = isAuthenticated
         && activeView === 'Program Schedule'
         && dfpSnapshotLoadState.date === date
         && dfpSnapshotLoadState.status === 'empty'
         && eventSegmentsForDate.length === 0
+        && dismissedEmptyDfpNoticeKey !== emptyDfpNoticeKey
         && !isFutureSelectedDfpDate
         && !isInitialSetupWizardActive
         && !showInitialSetupBlankState
@@ -59068,9 +59073,11 @@ appliedUpdates.forEach(update => {
         {showEmptyDfpNotice && (
             <div className="pointer-events-none fixed inset-0 z-[155] flex items-center justify-center px-6">
                 <div className="pointer-events-auto w-[min(620px,calc(100vw-48px))] rounded-lg border border-amber-400/60 bg-gray-950/96 px-7 py-6 text-center shadow-2xl shadow-black/45 backdrop-blur-md">
-                    <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full border border-amber-300/50 bg-amber-500/15 text-2xl font-black text-amber-200">
-                        !
-                    </div>
+                    <img
+                        src="/dfp-neo-setup-logo.jpg"
+                        alt="DFP NEO"
+                        className="mx-auto mb-5 h-auto w-[min(320px,75vw)] object-contain"
+                    />
                     <h2 className="text-2xl font-bold text-white">No saved DFP found for {formatDfpRetrievalDate(date)}</h2>
                     <p className="mt-3 text-sm leading-6 text-gray-200">
                         DFP NEO checked the published DFP database for {school} - {activeUnitCode || 'current unit'} and did not find saved schedule tiles for this date.
@@ -59084,7 +59091,10 @@ appliedUpdates.forEach(update => {
                     <div className="mt-5 flex flex-wrap justify-center gap-3">
                         <button
                             type="button"
-                            onClick={() => void loadSnapshotForDate(date, { force: true, replace: true, useCache: true, allowAdminFallbackContext: false })}
+                            onClick={() => {
+                                setDismissedEmptyDfpNoticeKey('');
+                                void loadSnapshotForDate(date, { force: true, replace: true, useCache: true, allowAdminFallbackContext: false });
+                            }}
                             className="rounded-md border border-gray-600 bg-gray-900 px-4 py-2 text-sm font-semibold text-gray-100 transition-colors hover:border-gray-400 hover:bg-gray-800"
                         >
                             Retry Load
@@ -59100,10 +59110,10 @@ appliedUpdates.forEach(update => {
                         )}
                         <button
                             type="button"
-                            onClick={() => downloadDfpDataDiagReport('dfp-empty-schedule-trace')}
-                            className="rounded-md border border-amber-400/60 bg-amber-500/15 px-4 py-2 text-sm font-semibold text-amber-100 transition-colors hover:border-amber-200 hover:bg-amber-500/25"
+                            onClick={() => setDismissedEmptyDfpNoticeKey(emptyDfpNoticeKey)}
+                            className="rounded-md border border-gray-600 bg-gray-900 px-4 py-2 text-sm font-semibold text-gray-100 transition-colors hover:border-gray-400 hover:bg-gray-800"
                         >
-                            Download DFP Data Trace
+                            Cancel
                         </button>
                     </div>
                 </div>
@@ -59113,9 +59123,16 @@ appliedUpdates.forEach(update => {
         {showDfpRetrievalNotice && (
             <div className="pointer-events-none fixed inset-0 z-[160] flex items-center justify-center px-6">
                 <div className="w-[min(640px,calc(100vw-48px))] rounded-lg border border-sky-500/60 bg-gray-950/95 px-8 py-7 text-center shadow-2xl shadow-black/40 backdrop-blur-md">
-                    <div className="mb-4 flex items-center justify-center gap-3">
-                        <span className="h-5 w-5 rounded-full border-[3px] border-sky-400 border-t-transparent animate-spin"></span>
-                        <span className="text-2xl font-semibold text-white">Retrieving DFP</span>
+                    <div className="mb-5 flex flex-col items-center justify-center gap-4">
+                        <img
+                            src="/dfp-neo-setup-logo.jpg"
+                            alt="DFP NEO"
+                            className="h-auto w-[min(320px,75vw)] object-contain"
+                        />
+                        <div className="flex items-center justify-center gap-3">
+                            <span className="h-5 w-5 rounded-full border-[3px] border-sky-400 border-t-transparent animate-spin"></span>
+                            <span className="text-2xl font-semibold text-white">Retrieving DFP</span>
+                        </div>
                     </div>
                     <p className="text-base leading-7 text-gray-200">
                         Please wait while we retrieve the DFP for the {formatDfpRetrievalDate(date)}.
