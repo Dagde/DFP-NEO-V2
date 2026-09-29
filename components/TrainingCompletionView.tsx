@@ -5,6 +5,7 @@ import {
     normaliseTrainingReportTemplate,
     type TrainingReportTemplate,
 } from '../utils/trainingReportTerminology';
+import { isSyllabusCourseShell } from '../utils/syllabusCourseShell';
 
 interface TrainingCompletionViewProps {
     traineesData: Trainee[];
@@ -166,6 +167,7 @@ const TrainingCompletionView: React.FC<TrainingCompletionViewProps> = ({
         const lmpEvents = syllabusDetails
             .filter((item: any) => item && item.isActive !== false)
             .filter(item => item.lmpType !== 'Staff CAT')
+            .filter(item => !isSyllabusCourseShell(item))
             .filter(item => Array.isArray(item.courses) && item.courses.some(course => selectedTrainingCodes.has(normaliseCode(course))))
             .sort((a, b) => {
                 const leftOrder = Number.isFinite(Number(a.sortOrder)) ? Number(a.sortOrder) : Number.MAX_SAFE_INTEGER;

@@ -110254,7 +110254,7 @@ const TrainingCompletionView = ({
   };
   const candidateEvents = reactExports.useMemo(() => {
     if (selectedCourses.length === 0) return [];
-    const lmpEvents = syllabusDetails.filter((item) => item && item.isActive !== false).filter((item) => item.lmpType !== "Staff CAT").filter((item) => Array.isArray(item.courses) && item.courses.some((course) => selectedTrainingCodes.has(normaliseCode(course)))).sort((a, b) => {
+    const lmpEvents = syllabusDetails.filter((item) => item && item.isActive !== false).filter((item) => item.lmpType !== "Staff CAT").filter((item) => !isSyllabusCourseShell(item)).filter((item) => Array.isArray(item.courses) && item.courses.some((course) => selectedTrainingCodes.has(normaliseCode(course)))).sort((a, b) => {
       const leftOrder = Number.isFinite(Number(a.sortOrder)) ? Number(a.sortOrder) : Number.MAX_SAFE_INTEGER;
       const rightOrder = Number.isFinite(Number(b.sortOrder)) ? Number(b.sortOrder) : Number.MAX_SAFE_INTEGER;
       return leftOrder - rightOrder || String(a.code || "").localeCompare(String(b.code || ""), void 0, { numeric: true, sensitivity: "base" }) || String(a.id || "").localeCompare(String(b.id || ""));
