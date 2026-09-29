@@ -9607,7 +9607,7 @@ const mergeIndividualLmpWithMaster = (
     existingLmp: SyllabusItemDetail[] | undefined,
     masterLMP: SyllabusItemDetail[]
 ): SyllabusItemDetail[] => {
-    const stampedMaster = stampMasterLmpItems(masterLMP);
+    const stampedMaster = stampMasterLmpItems(masterLMP).filter(item => !isSyllabusCourseShell(item));
     if (!existingLmp || existingLmp.length === 0) return stampedMaster;
 
     const masterIds = new Set(stampedMaster.map(getMasterEventId).filter(Boolean));
@@ -10279,11 +10279,6 @@ const computeNextEventsForTrainee = (
             diagnostic.skippedCompleted += 1;
             continue;
         }
-        if (String(item.code || '').includes(' MB')) {
-            diagnostic.skippedMassBrief += 1;
-            continue;
-        }
-
         const prerequisites = getAllLmpPrerequisiteKeys(item);
         const unmetPrerequisites = prerequisites.filter(prerequisite => !completedEventIds.has(prerequisite));
         if (unmetPrerequisites.length === 0) {
@@ -10315,7 +10310,7 @@ const computeNextEventsForTrainee = (
         for (let i = nextEventIndex + 1; i < individualLMP.length; i++) {
             const item = individualLMP[i];
             // Skip non-schedulable events
-            if (isSchedulableLmpBuildItem(item) && !String(item.code || '').includes(' MB') && !isCompletedLmpItem(item, completedEventIds)) {
+            if (isSchedulableLmpBuildItem(item) && !isCompletedLmpItem(item, completedEventIds)) {
                 plusOneEvt = item;
                 diagnostic.selectedPlusOne = item.code || item.id || null;
                 break;

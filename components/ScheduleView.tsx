@@ -7921,6 +7921,51 @@ const InitialSetupWizard: React.FC<{
         return clean.includes('procedural trainer') || clean.includes('procedural') || clean.includes('trainer');
     };
 
+    const normaliseWizardLmpShellToken = (value: unknown): string => (
+        normaliseUnitSettingsIdentifier(value).replace(/[^A-Z0-9]+/g, '')
+    );
+
+    const isWizardCourseUploadShellEvent = (item: SyllabusItemDetail, lmpCode: string, lmpName: string): boolean => {
+        if (String(item.notes || '').includes(WIZARD_SYLLABUS_COURSE_SHELL_NOTE)) return true;
+
+        const lmpTokens = new Set([
+            lmpCode,
+            lmpName,
+            ...(Array.isArray(item.courses) ? item.courses : []),
+        ].map(normaliseWizardLmpShellToken).filter(Boolean));
+        const codeToken = normaliseWizardLmpShellToken(item.code);
+        if (!codeToken || !lmpTokens.has(codeToken)) return false;
+
+        const titleTokens = [
+            item.eventDescription,
+            item.module,
+            item.phase,
+        ].map(normaliseWizardLmpShellToken).filter(Boolean);
+        const looksLikeCourseTitle = titleTokens.length === 0 || titleTokens.some(token => lmpTokens.has(token));
+        const hasTiming = [
+            item.totalEventHours,
+            item.flightOrSimHours,
+            item.duration,
+            item.preFlightTime,
+            item.postFlightTime,
+        ].some(value => Number(value || 0) > 0);
+        const hasPrerequisites = [
+            item.prerequisites,
+            item.prerequisitesGround,
+            item.prerequisitesFlying,
+        ].some(value => Array.isArray(value) && value.length > 0);
+        const hasResources = [
+            item.methodOfDelivery,
+            item.methodOfAssessment,
+            item.resourcesPhysical,
+            item.resourcesHuman,
+            item.eventDetailsCommon,
+            item.eventDetailsSortie,
+        ].some(value => Array.isArray(value) && value.length > 0) || Number(item.resourceNumber || 0) > 0;
+
+        return looksLikeCourseTitle && !hasTiming && !hasPrerequisites && !hasResources;
+    };
+
     const buildWizardCourseUploadItems = (result: InitialSetupWizardUploadResult): SyllabusItemDetail[] => {
         const headers = result.headers || [];
         const defaultMasterLmp = String(trainingDraft.lmpCode || trainingDraft.lmpName || '').trim();
@@ -7974,7 +8019,11 @@ const InitialSetupWizard: React.FC<{
                 sortOrder: index + 1,
                 notes: getWizardCellByHeader(headers, row, 'Notes'),
             };
-        }).filter((item) => item.code && item.eventDescription);
+        }).filter((item) => (
+            item.code &&
+            item.eventDescription &&
+            !isWizardCourseUploadShellEvent(item, defaultMasterLmp, trainingDraft.lmpName || defaultMasterLmp)
+        ));
     };
 
     const importWizardTemplateRows = (template: InitialSetupWizardTemplate, result?: InitialSetupWizardUploadResult) => {

@@ -7961,8 +7961,11 @@ const addPriorGroundCompletionsForSync = (scoreMap, lmpEvents) => {
   return backfilled;
 };
 
+const isSyllabusCourseShellForSync = (item) =>
+  String(item?.notes || '').includes('[DFP_COURSE_SHELL]');
+
 const mergeIndividualLmpWithMasterForSync = (existingEvents, masterSyllabus, scoreMap) => {
-  const stampedMaster = stampMasterLmpItemsForSync(masterSyllabus);
+  const stampedMaster = stampMasterLmpItemsForSync(masterSyllabus).filter(item => !isSyllabusCourseShellForSync(item));
   if (!existingEvents || existingEvents.length === 0) {
     return stampedMaster.map(item => {
       const completedAt = getLmpCompletionTimestampForSync(item, scoreMap);

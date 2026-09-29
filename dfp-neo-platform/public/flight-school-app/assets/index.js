@@ -38181,6 +38181,44 @@ const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, lo
     const clean = String(value || "").trim().toLowerCase();
     return clean.includes("procedural trainer") || clean.includes("procedural") || clean.includes("trainer");
   };
+  const normaliseWizardLmpShellToken = (value) => normaliseUnitSettingsIdentifier(value).replace(/[^A-Z0-9]+/g, "");
+  const isWizardCourseUploadShellEvent = (item, lmpCode, lmpName) => {
+    if (String(item.notes || "").includes(WIZARD_SYLLABUS_COURSE_SHELL_NOTE)) return true;
+    const lmpTokens = new Set([
+      lmpCode,
+      lmpName,
+      ...Array.isArray(item.courses) ? item.courses : []
+    ].map(normaliseWizardLmpShellToken).filter(Boolean));
+    const codeToken = normaliseWizardLmpShellToken(item.code);
+    if (!codeToken || !lmpTokens.has(codeToken)) return false;
+    const titleTokens = [
+      item.eventDescription,
+      item.module,
+      item.phase
+    ].map(normaliseWizardLmpShellToken).filter(Boolean);
+    const looksLikeCourseTitle = titleTokens.length === 0 || titleTokens.some((token) => lmpTokens.has(token));
+    const hasTiming = [
+      item.totalEventHours,
+      item.flightOrSimHours,
+      item.duration,
+      item.preFlightTime,
+      item.postFlightTime
+    ].some((value) => Number(value || 0) > 0);
+    const hasPrerequisites = [
+      item.prerequisites,
+      item.prerequisitesGround,
+      item.prerequisitesFlying
+    ].some((value) => Array.isArray(value) && value.length > 0);
+    const hasResources = [
+      item.methodOfDelivery,
+      item.methodOfAssessment,
+      item.resourcesPhysical,
+      item.resourcesHuman,
+      item.eventDetailsCommon,
+      item.eventDetailsSortie
+    ].some((value) => Array.isArray(value) && value.length > 0) || Number(item.resourceNumber || 0) > 0;
+    return looksLikeCourseTitle && !hasTiming && !hasPrerequisites && !hasResources;
+  };
   const buildWizardCourseUploadItems = (result) => {
     const headers = result.headers || [];
     const defaultMasterLmp = String(trainingDraft.lmpCode || trainingDraft.lmpName || "").trim();
@@ -38233,7 +38271,7 @@ const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, lo
         sortOrder: index + 1,
         notes: getWizardCellByHeader(headers, row, "Notes")
       };
-    }).filter((item) => item.code && item.eventDescription);
+    }).filter((item) => item.code && item.eventDescription && !isWizardCourseUploadShellEvent(item, defaultMasterLmp, trainingDraft.lmpName || defaultMasterLmp));
   };
   const importWizardTemplateRows = (template, result) => {
     if (!result || result.status !== "valid" || !result.headers || !result.dataRows) return;
@@ -121536,7 +121574,7 @@ const getIndividualLmpRplFields = (item, completedAt) => {
   };
 };
 const mergeIndividualLmpWithMaster = (existingLmp, masterLMP) => {
-  const stampedMaster = stampMasterLmpItems(masterLMP);
+  const stampedMaster = stampMasterLmpItems(masterLMP).filter((item) => !isSyllabusCourseShell(item));
   if (!existingLmp || existingLmp.length === 0) return stampedMaster;
   const masterIds = new Set(stampedMaster.map(getMasterEventId).filter(Boolean));
   const existingByMasterId = /* @__PURE__ */ new Map();
@@ -121864,10 +121902,6 @@ const computeNextEventsForTrainee = (trainee, traineeLMPs, scores, masterSyllabu
       diagnostic.skippedCompleted += 1;
       continue;
     }
-    if (String(item.code || "").includes(" MB")) {
-      diagnostic.skippedMassBrief += 1;
-      continue;
-    }
     const prerequisites = getAllLmpPrerequisiteKeys(item);
     const unmetPrerequisites = prerequisites.filter((prerequisite) => !completedEventIds.has(prerequisite));
     if (unmetPrerequisites.length === 0) {
@@ -121894,7 +121928,7 @@ const computeNextEventsForTrainee = (trainee, traineeLMPs, scores, masterSyllabu
   if (nextEventIndex !== -1) {
     for (let i = nextEventIndex + 1; i < individualLMP.length; i++) {
       const item = individualLMP[i];
-      if (isSchedulableLmpBuildItem(item) && !String(item.code || "").includes(" MB") && !isCompletedLmpItem(item, completedEventIds)) {
+      if (isSchedulableLmpBuildItem(item) && !isCompletedLmpItem(item, completedEventIds)) {
         plusOneEvt = item;
         diagnostic.selectedPlusOne = item.code || item.id || null;
         break;
