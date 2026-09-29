@@ -138481,7 +138481,7 @@ const App = () => {
   const hasIncompleteInitialSetupWizardProgress = !hasInitialSetupWizardCompleted && (hasPersistedIncompleteInitialSetupWizardProgress || hasStoredInitialSetupWizardProgress());
   const shouldResumeInitialSetupWizard = hasPersistedIncompleteInitialSetupWizardProgress || !hasOperationalSetupReadyForDfp && hasStoredIncompleteInitialSetupWizardProgress;
   const canBootstrapInitialSetupFromDfp = hasAuthenticatedAdminRole && platformConfigLoaded && (operationalContextOptions.length === 0 || shouldResumeInitialSetupWizard);
-  const showInitialSetupBlankState = canBootstrapInitialSetupFromDfp;
+  const showInitialSetupBlankState = canBootstrapInitialSetupFromDfp && !hasInitialSetupWizardCompleted;
   reactExports.useEffect(() => {
     if (!platformConfigLoaded) return;
     pushDfpDataDiag("startup:initial-setup-bootstrap-decision", {
@@ -138542,6 +138542,7 @@ const App = () => {
   ]);
   reactExports.useEffect(() => {
     if (!showInitialSetupBlankState) return;
+    if (hasInitialSetupWizardCompleted) return;
     if (school || activeUnitCode) {
       setSchool("");
       setActiveUnitCode("");
@@ -138550,7 +138551,7 @@ const App = () => {
       localStorage.removeItem(ACTIVE_OPERATIONAL_CONTEXT_STORAGE_KEY);
     } catch {
     }
-  }, [activeUnitCode, school, showInitialSetupBlankState]);
+  }, [activeUnitCode, hasInitialSetupWizardCompleted, school, showInitialSetupBlankState]);
   reactExports.useEffect(() => {
     if (!platformConfigLoaded || showInitialSetupBlankState || isInitialSetupWizardActive || !hasOperationalSetupReadyForDfp) return;
     if (!hasStoredInitialSetupWizardProgress() && !hasStoredInitialSetupWizardCompleted()) return;
@@ -143319,6 +143320,60 @@ ${"=".repeat(60)}`);
     isInitialSetupWizardActive,
     showInitialSetupBlankState,
     hasIncompleteInitialSetupWizardProgress
+  ]);
+  const setupFinishRuntimeSnapshotRef = reactExports.useRef({});
+  reactExports.useEffect(() => {
+    setupFinishRuntimeSnapshotRef.current = {
+      activeView,
+      activeLocationCode: school,
+      activeUnitCode,
+      staffCount: instructorsData.length,
+      traineeCount: traineesData.length,
+      syllabusCount: syllabusDetails.length,
+      showInitialSetupBlankState,
+      hasInitialSetupWizardCompleted,
+      hasIncompleteInitialSetupWizardProgress,
+      isInitialSetupWizardActive,
+      activeAircraftResourcePrefix,
+      configuredAirframeCount,
+      configuredFtdCount,
+      configuredCptCount,
+      configuredStandbyCount,
+      configuredGroundCount: configuredGroundCount2,
+      activePlatformResourcePool: activePlatformResourcePool ? {
+        id: activePlatformResourcePool.id || null,
+        code: activePlatformResourcePool.code || null,
+        name: activePlatformResourcePool.name || null,
+        locationCode: activePlatformResourcePool.locationCode || null,
+        unitCode: activePlatformResourcePool.unitCode || null,
+        aircraftTypeCode: activePlatformResourcePool.aircraftTypeCode || null,
+        settings: activePlatformResourcePool.settings || null
+      } : null,
+      resourceRows: {
+        count: buildResources.length,
+        firstRows: buildResources.slice(0, 36),
+        aircraftRows: buildResources.filter((resource) => String(resource || "").startsWith(`${activeAircraftResourcePrefix} `)).slice(0, 36)
+      }
+    };
+  }, [
+    activeAircraftResourcePrefix,
+    activePlatformResourcePool,
+    activeUnitCode,
+    activeView,
+    buildResources,
+    configuredAirframeCount,
+    configuredCptCount,
+    configuredFtdCount,
+    configuredGroundCount2,
+    configuredStandbyCount,
+    hasIncompleteInitialSetupWizardProgress,
+    hasInitialSetupWizardCompleted,
+    instructorsData.length,
+    isInitialSetupWizardActive,
+    school,
+    showInitialSetupBlankState,
+    syllabusDetails.length,
+    traineesData.length
   ]);
   reactExports.useCallback((events2, allResources) => {
     if (!events2 || events2.length === 0) {
@@ -157501,7 +157556,8 @@ It will not clear the published DFP.`,
                       activeLocationCode: school,
                       staffCount: instructorsData.length,
                       traineeCount: traineesData.length,
-                      syllabusCount: syllabusDetails.length
+                      syllabusCount: syllabusDetails.length,
+                      runtime: setupFinishRuntimeSnapshotRef.current
                     },
                     details
                   };
@@ -157510,6 +157566,17 @@ It will not clear the published DFP.`,
                   window.neoSetupWizardFinishTrace = next;
                 } catch {
                 }
+              };
+              const pushPostReturnResourceSnapshots = () => {
+                if (typeof window === "undefined") return;
+                [0, 2e3, 6e3, 1e4].forEach((delayMs) => {
+                  window.setTimeout(() => {
+                    pushFinishTrace("post-return-resource-snapshot", {
+                      delayMs,
+                      runtime: setupFinishRuntimeSnapshotRef.current
+                    });
+                  }, delayMs);
+                });
               };
               pushFinishTrace("return-started");
               setIsInitialSetupWizardActive(false);
@@ -157581,6 +157648,7 @@ It will not clear the published DFP.`,
               setProgramScheduleViewKey((value) => value + 1);
               navigateToView("Program Schedule");
               pushFinishTrace("return-completed");
+              pushPostReturnResourceSnapshots();
             },
             serviceDefinitions,
             onUpdateServiceDefinitions: setServiceDefinitions,

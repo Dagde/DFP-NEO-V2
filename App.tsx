@@ -30758,7 +30758,7 @@ const App: React.FC = () => {
             operationalContextOptions.length === 0 ||
             shouldResumeInitialSetupWizard
         );
-    const showInitialSetupBlankState = canBootstrapInitialSetupFromDfp;
+    const showInitialSetupBlankState = canBootstrapInitialSetupFromDfp && !hasInitialSetupWizardCompleted;
 
     useEffect(() => {
         if (!platformConfigLoaded) return;
@@ -30821,6 +30821,7 @@ const App: React.FC = () => {
 
     useEffect(() => {
         if (!showInitialSetupBlankState) return;
+        if (hasInitialSetupWizardCompleted) return;
         if (school || activeUnitCode) {
             setSchool('');
             setActiveUnitCode('');
@@ -30830,7 +30831,7 @@ const App: React.FC = () => {
         } catch {
             // Best-effort cleanup only; the UI is still masked while setup is incomplete.
         }
-    }, [activeUnitCode, school, showInitialSetupBlankState]);
+    }, [activeUnitCode, hasInitialSetupWizardCompleted, school, showInitialSetupBlankState]);
 
     useEffect(() => {
         if (!platformConfigLoaded || showInitialSetupBlankState || isInitialSetupWizardActive || !hasOperationalSetupReadyForDfp) return;
@@ -36684,6 +36685,61 @@ const App: React.FC = () => {
         isInitialSetupWizardActive,
         showInitialSetupBlankState,
         hasIncompleteInitialSetupWizardProgress,
+    ]);
+
+    const setupFinishRuntimeSnapshotRef = useRef<Record<string, any>>({});
+    useEffect(() => {
+        setupFinishRuntimeSnapshotRef.current = {
+            activeView,
+            activeLocationCode: school,
+            activeUnitCode,
+            staffCount: instructorsData.length,
+            traineeCount: traineesData.length,
+            syllabusCount: syllabusDetails.length,
+            showInitialSetupBlankState,
+            hasInitialSetupWizardCompleted,
+            hasIncompleteInitialSetupWizardProgress,
+            isInitialSetupWizardActive,
+            activeAircraftResourcePrefix,
+            configuredAirframeCount,
+            configuredFtdCount,
+            configuredCptCount,
+            configuredStandbyCount,
+            configuredGroundCount,
+            activePlatformResourcePool: activePlatformResourcePool ? {
+                id: activePlatformResourcePool.id || null,
+                code: activePlatformResourcePool.code || null,
+                name: activePlatformResourcePool.name || null,
+                locationCode: activePlatformResourcePool.locationCode || null,
+                unitCode: activePlatformResourcePool.unitCode || null,
+                aircraftTypeCode: activePlatformResourcePool.aircraftTypeCode || null,
+                settings: activePlatformResourcePool.settings || null,
+            } : null,
+            resourceRows: {
+                count: buildResources.length,
+                firstRows: buildResources.slice(0, 36),
+                aircraftRows: buildResources.filter(resource => String(resource || '').startsWith(`${activeAircraftResourcePrefix} `)).slice(0, 36),
+            },
+        };
+    }, [
+        activeAircraftResourcePrefix,
+        activePlatformResourcePool,
+        activeUnitCode,
+        activeView,
+        buildResources,
+        configuredAirframeCount,
+        configuredCptCount,
+        configuredFtdCount,
+        configuredGroundCount,
+        configuredStandbyCount,
+        hasIncompleteInitialSetupWizardProgress,
+        hasInitialSetupWizardCompleted,
+        instructorsData.length,
+        isInitialSetupWizardActive,
+        school,
+        showInitialSetupBlankState,
+        syllabusDetails.length,
+        traineesData.length,
     ]);
 
     // Filter resources to only show those with events (for schedule views)
@@ -54104,6 +54160,7 @@ appliedUpdates.forEach(update => {
                                                staffCount: instructorsData.length,
                                                traineeCount: traineesData.length,
                                                syllabusCount: syllabusDetails.length,
+                                               runtime: setupFinishRuntimeSnapshotRef.current,
                                            },
                                            details,
                                        };
@@ -54113,6 +54170,17 @@ appliedUpdates.forEach(update => {
                                    } catch {
                                        // Diagnostics must not block finishing setup.
                                    }
+                               };
+                               const pushPostReturnResourceSnapshots = () => {
+                                   if (typeof window === 'undefined') return;
+                                   [0, 2000, 6000, 10000].forEach((delayMs) => {
+                                       window.setTimeout(() => {
+                                           pushFinishTrace('post-return-resource-snapshot', {
+                                               delayMs,
+                                               runtime: setupFinishRuntimeSnapshotRef.current,
+                                           });
+                                       }, delayMs);
+                                   });
                                };
                                pushFinishTrace('return-started');
                                setIsInitialSetupWizardActive(false);
@@ -54190,6 +54258,7 @@ appliedUpdates.forEach(update => {
                                setProgramScheduleViewKey(value => value + 1);
                                navigateToView('Program Schedule');
                                pushFinishTrace('return-completed');
+                               pushPostReturnResourceSnapshots();
                            }}
                            serviceDefinitions={serviceDefinitions}
                            onUpdateServiceDefinitions={setServiceDefinitions}
