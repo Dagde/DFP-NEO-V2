@@ -46300,78 +46300,6 @@ const App: React.FC = () => {
                 .map(key => String(key || '').replace(/\*/g, '').trim())
                 .filter(Boolean)
         );
-        const normaliseFlightSchoolBuildDiagCode = (value: unknown): string => String(value || '').replace(/\*/g, '').trim().toUpperCase();
-        const isFlightSchoolCourseContainerBuildRow = (item: SyllabusItemDetail | any, lmpType?: string | null): boolean => {
-            if (!item) return false;
-            if (isSyllabusCourseShell(item)) return true;
-            const lmpTypeKey = normaliseFlightSchoolBuildDiagCode(lmpType);
-            if (!lmpTypeKey) return false;
-            const rowKeys = [
-                item.code,
-                item.id,
-                item.masterEventId,
-                item.eventDescription,
-                item.module,
-            ].map(normaliseFlightSchoolBuildDiagCode).filter(Boolean);
-            return rowKeys.includes(lmpTypeKey);
-        };
-        const summariseFlightSchoolLmpEventsForDiag = (events: SyllabusItemDetail[] = [], lmpType?: string | null) => {
-            const countBy = (getKey: (item: SyllabusItemDetail) => string | undefined | null): Record<string, number> => (
-                events.reduce((counts: Record<string, number>, item) => {
-                    const key = String(getKey(item) || 'Unspecified');
-                    counts[key] = (counts[key] || 0) + 1;
-                    return counts;
-                }, {})
-            );
-            const containerRows = events.filter(item => isFlightSchoolCourseContainerBuildRow(item, lmpType));
-            return {
-                total: events.length,
-                byType: countBy(item => item.type),
-                upcCodeRows: countBy(item => item.code).UPC || 0,
-                shellRows: events.filter(item => isSyllabusCourseShell(item)).length,
-                containerRows: containerRows.length,
-                firstEvents: events.slice(0, 12).map(item => ({
-                    id: item.id || null,
-                    code: item.code || null,
-                    eventDescription: item.eventDescription || null,
-                    module: item.module || null,
-                    type: item.type || null,
-                    lmpType: item.lmpType || null,
-                    courses: item.courses || [],
-                    isShell: isSyllabusCourseShell(item),
-                    isContainerForLmp: isFlightSchoolCourseContainerBuildRow(item, lmpType),
-                    sortOrder: item.sortOrder ?? null,
-                    prerequisites: getAllLmpPrerequisiteKeys(item),
-                })),
-                containerSamples: containerRows.slice(0, 8).map(item => ({
-                    id: item.id || null,
-                    code: item.code || null,
-                    eventDescription: item.eventDescription || null,
-                    module: item.module || null,
-                    type: item.type || null,
-                    courses: item.courses || [],
-                    notes: item.notes || null,
-                    sortOrder: item.sortOrder ?? null,
-                })),
-            };
-        };
-        if (activeOperationalModel === 'flight_school') {
-            const assignableSummary = summariseFlightSchoolLmpEventsForDiag(assignableFlightSchoolBuildSyllabus);
-            const courseGroups = groupSyllabusByConfiguredCourses(assignableFlightSchoolBuildSyllabus);
-            neoBuildDiag.flightSchoolLmpScopeDiagnostics.assignableMasterScope = {
-                ...assignableSummary,
-                masterEventKeyCount: assignableFlightSchoolEventKeys.size,
-                courseGroups: Object.fromEntries(Object.entries(courseGroups).map(([course, items]) => [
-                    course,
-                    summariseFlightSchoolLmpEventsForDiag(items as SyllabusItemDetail[], course),
-                ])),
-            };
-            if (assignableSummary.containerRows > 0 || assignableSummary.upcCodeRows > 0) {
-                neoBuildDiag.flightSchoolLmpScopeDiagnostics.conclusions.push(
-                    'Assignable Flight School Master LMP scope contains course/container rows. If these survive into Individual LMPs they can be selected as next events.'
-                );
-            }
-        }
         const filterFlightSchoolLmpEventsForBuildScope = (events?: SyllabusItemDetail[] | null): SyllabusItemDetail[] => {
             if (activeOperationalModel !== 'flight_school') return Array.isArray(events) ? events : [];
             if (!Array.isArray(events) || events.length === 0) return [];
@@ -46561,17 +46489,10 @@ const App: React.FC = () => {
                 const lmpData = await lmpRes.json();
                 const freshLMPs = new Map<string, SyllabusItemDetail[]>();
                 let freshEventCount = 0;
-                const fetchedLmps = Array.isArray(lmpData.lmps) ? lmpData.lmps : [];
-                const lmpScopeDiag = neoBuildDiag.flightSchoolLmpScopeDiagnostics.preBuildFetch;
-                lmpScopeDiag.fetchedLmps = fetchedLmps.length;
-                lmpScopeDiag.fetchedEvents = fetchedLmps.reduce((sum: number, lmp: any) => (
-                    sum + (Array.isArray(lmp?.events) ? lmp.events.length : 0)
-                ), 0);
-                fetchedLmps.forEach((lmp: any) => {
+                (lmpData.lmps || []).forEach((lmp: any) => {
                     if (lmp.traineeFullName && Array.isArray(lmp.events)) {
                         const traineeForLmp = traineesForBuildScope.find((candidate: any) => candidate.fullName === lmp.traineeFullName || candidate.name === lmp.traineeFullName);
                         if (activeOperationalModel === 'flight_school' && !traineeForLmp) {
-                            lmpScopeDiag.skippedOutsideScope += 1;
                             logNeoBuildUiDebug(`[NEO-Build] Skipped ${lmp.traineeFullName} ${lmp.lmpType} LMP outside active Flight School build scope`);
                             return;
                         }
@@ -46579,7 +46500,6 @@ const App: React.FC = () => {
                             ? resolveMasterLmpUnitForTrainee(traineeForLmp, lmp.lmpType, 'Assign')
                             : traineeForLmp?.unit || activeUnitCode;
                         if (!hasMasterLmpUnitAccess(lmp.lmpType, traineeUnitCode, 'Assign')) {
-                            lmpScopeDiag.skippedNoUnitAccess += 1;
                             logNeoBuildUiDebug(`[NEO-Build] Skipped ${lmp.traineeFullName} ${lmp.lmpType} LMP for unauthorised unit ${traineeUnitCode || 'unknown'}`);
                             return;
                         }
@@ -46597,50 +46517,12 @@ const App: React.FC = () => {
                         const lmpEventsForBuild = activeOperationalModel === 'flight_school'
                             ? filterFlightSchoolLmpEventsForBuildScope(inheritedLmpEvents)
                             : inheritedLmpEvents;
-                        if (activeOperationalModel === 'flight_school') {
-                            const rawSummary = summariseFlightSchoolLmpEventsForDiag(lmp.events, lmp.lmpType);
-                            const masterSummary = summariseFlightSchoolLmpEventsForDiag(masterLmpForBuild, lmp.lmpType);
-                            const inheritedSummary = summariseFlightSchoolLmpEventsForDiag(inheritedLmpEvents, lmp.lmpType);
-                            const scopedSummary = summariseFlightSchoolLmpEventsForDiag(lmpEventsForBuild, lmp.lmpType);
-                            if (lmpScopeDiag.masterMergeSamples.length < 40) {
-                                lmpScopeDiag.masterMergeSamples.push({
-                                    traineeFullName: lmp.traineeFullName,
-                                    lmpType: lmp.lmpType,
-                                    traineeUnitCode,
-                                    raw: rawSummary,
-                                    master: masterSummary,
-                                    inherited: inheritedSummary,
-                                    scoped: scopedSummary,
-                                });
-                            }
-                            if (scopedSummary.containerSamples.length > 0 && lmpScopeDiag.suspiciousContainerRows.length < 80) {
-                                lmpScopeDiag.suspiciousContainerRows.push({
-                                    traineeFullName: lmp.traineeFullName,
-                                    lmpType: lmp.lmpType,
-                                    traineeUnitCode,
-                                    rows: scopedSummary.containerSamples,
-                                });
-                            }
-                            if (lmpScopeDiag.lmpSamples.length < 40) {
-                                lmpScopeDiag.lmpSamples.push({
-                                    traineeFullName: lmp.traineeFullName,
-                                    lmpType: lmp.lmpType,
-                                    traineeUnitCode,
-                                    scoped: scopedSummary,
-                                });
-                            }
-                        }
                         if (activeOperationalModel === 'flight_school' && lmpEventsForBuild.length === 0) {
-                            lmpScopeDiag.skippedNoScopedEvents += 1;
                             logNeoBuildUiDebug(`[NEO-Build] Skipped ${lmp.traineeFullName} ${lmp.lmpType} LMP because it has no events in the active Flight School Master LMP scope`);
                             return;
                         }
                         freshLMPs.set(lmp.traineeFullName, lmpEventsForBuild);
                         freshEventCount += lmpEventsForBuild.length;
-                        if (activeOperationalModel === 'flight_school') {
-                            lmpScopeDiag.keptLmps += 1;
-                            lmpScopeDiag.keptEvents += lmpEventsForBuild.length;
-                        }
                     }
                 });
                 markNeoBuildTiming(timingReport, 'lmp-fetch:json-parsed', {
@@ -47282,45 +47164,12 @@ const App: React.FC = () => {
         }
         const traineesInBuild = traineesForBuildScope;
         if (activeOperationalModel === 'flight_school') {
-            const beforeFinalScopeLmps = buildTraineeLMPs.size;
             const scopedLmpEntries = Array.from(buildTraineeLMPs.entries())
                 .map(([traineeName, events]) => [traineeName, filterFlightSchoolLmpEventsForBuildScope(events)] as [string, SyllabusItemDetail[]])
                 .filter(([traineeName, events]) => (
                     traineeNamesForBuildScope.has(String(traineeName || '').trim()) &&
                     events.length > 0
                 ));
-            const finalScopeDiag = neoBuildDiag.flightSchoolLmpScopeDiagnostics.finalScope;
-            finalScopeDiag.beforeLmps = beforeFinalScopeLmps;
-            finalScopeDiag.afterLmps = scopedLmpEntries.length;
-            finalScopeDiag.removedLmps = Math.max(0, beforeFinalScopeLmps - scopedLmpEntries.length);
-            finalScopeDiag.keptEvents = scopedLmpEntries.reduce((sum, [, events]) => sum + events.length, 0);
-            scopedLmpEntries.slice(0, 40).forEach(([traineeName, events]) => {
-                const traineeForDiag = traineesForBuildScope.find((candidate: any) => (
-                    candidate.fullName === traineeName ||
-                    candidate.name === traineeName
-                ));
-                const lmpTypeForDiag = String((traineeForDiag as any)?.lmpType || (traineeForDiag as any)?.academicLmpType || (traineeForDiag as any)?.course || '');
-                const summary = summariseFlightSchoolLmpEventsForDiag(events, lmpTypeForDiag);
-                finalScopeDiag.samples.push({
-                    traineeName,
-                    course: (traineeForDiag as any)?.course || null,
-                    lmpType: lmpTypeForDiag || null,
-                    summary,
-                });
-                if (summary.containerSamples.length > 0 && finalScopeDiag.suspiciousContainerRows.length < 80) {
-                    finalScopeDiag.suspiciousContainerRows.push({
-                        traineeName,
-                        course: (traineeForDiag as any)?.course || null,
-                        lmpType: lmpTypeForDiag || null,
-                        rows: summary.containerSamples,
-                    });
-                }
-            });
-            if (finalScopeDiag.suspiciousContainerRows.length > 0) {
-                neoBuildDiag.flightSchoolLmpScopeDiagnostics.conclusions.push(
-                    'Final Flight School Individual LMP scope still contains course/container rows immediately before next-event selection.'
-                );
-            }
             if (scopedLmpEntries.length !== buildTraineeLMPs.size) {
                 logNeoBuildUiDebug('[NEO-Build] Scoped Flight School Individual LMPs to active build trainees:', {
                     before: buildTraineeLMPs.size,
