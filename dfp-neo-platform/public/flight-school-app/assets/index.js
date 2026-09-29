@@ -44914,13 +44914,13 @@ const ScheduleView = ({
                 }
             ` }),
     shouldShowInitialSetupPrompt && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "pointer-events-none fixed bottom-[8vh] left-[260px] right-[178px] top-[218px] z-[240] flex items-center justify-center px-8", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "pointer-events-auto relative flex w-full max-w-[1040px] flex-col items-center overflow-hidden rounded-xl border-2 border-orange-300/35 bg-slate-950/82 px-8 py-7 text-center shadow-[0_26px_70px_rgba(0,0,0,0.56)] backdrop-blur-md", children: [
-      /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "pointer-events-none absolute inset-x-[-18%] top-[-42%] h-[112%] rounded-full bg-[radial-gradient(ellipse_at_center,rgba(251,146,60,0.42)_0%,rgba(251,146,60,0.2)_24%,rgba(251,146,60,0.08)_46%,rgba(251,146,60,0)_72%)] blur-2xl", "aria-hidden": "true" }),
-      /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "relative mb-5 flex w-[min(850px,94%)] justify-center shadow-[0_0_18px_rgba(251,146,60,0.16)]", children: /* @__PURE__ */ jsxRuntimeExports.jsx(
+      /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "pointer-events-none absolute inset-x-[-18%] top-[-42%] h-[112%] rounded-full bg-[radial-gradient(ellipse_at_center,rgba(251,146,60,0.22)_0%,rgba(251,146,60,0.1)_28%,rgba(251,146,60,0.04)_48%,rgba(251,146,60,0)_72%)] blur-2xl", "aria-hidden": "true" }),
+      /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "relative mb-5 flex w-[min(850px,94%)] justify-center shadow-[0_0_12px_rgba(251,146,60,0.1)]", children: /* @__PURE__ */ jsxRuntimeExports.jsx(
         "img",
         {
           src: "/dfp-neo-setup-logo.png",
           alt: "DFP NEO",
-          className: "max-h-32 w-full object-contain opacity-95 drop-shadow-[0_0_24px_rgba(255,115,0,0.82)]"
+          className: "max-h-32 w-full object-contain opacity-95 drop-shadow-[0_0_14px_rgba(255,115,0,0.42)]"
         }
       ) }),
       /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "relative text-[11px] font-black uppercase tracking-[0.22em] text-orange-300", children: "Initial Setup Required" }),
@@ -162148,14 +162148,14 @@ Do you want to replace the existing entry?`,
     ] }) }),
     showEmptyDfpNotice && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "pointer-events-none fixed inset-0 z-[155] flex items-center justify-center px-6", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "pointer-events-auto w-[min(620px,calc(100vw-48px))] rounded-lg border border-amber-400/60 bg-gray-950/96 px-7 py-6 text-center shadow-2xl shadow-black/45 backdrop-blur-md", children: [
       /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "relative mx-auto mb-5 flex h-24 w-[min(380px,78vw)] items-center justify-center", children: [
-        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "absolute inset-x-4 top-1/2 h-16 -translate-y-1/2 rounded-full bg-orange-500/35 blur-2xl" }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "absolute inset-x-10 top-1/2 h-10 -translate-y-1/2 rounded-full bg-amber-300/25 blur-xl" }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "absolute inset-x-8 top-1/2 h-12 -translate-y-1/2 rounded-full bg-orange-500/18 blur-2xl" }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "absolute inset-x-16 top-1/2 h-8 -translate-y-1/2 rounded-full bg-amber-300/12 blur-xl" }),
         /* @__PURE__ */ jsxRuntimeExports.jsx(
           "img",
           {
             src: "/dfp-neo-setup-logo.png",
             alt: "DFP NEO",
-            className: "relative h-auto w-full object-contain drop-shadow-[0_0_24px_rgba(255,115,0,0.95)]"
+            className: "relative h-auto w-full object-contain drop-shadow-[0_0_14px_rgba(255,115,0,0.48)]"
           }
         )
       ] }),
@@ -162210,14 +162210,14 @@ Do you want to replace the existing entry?`,
     showDfpRetrievalNotice && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "pointer-events-none fixed inset-0 z-[160] flex items-center justify-center px-6", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "w-[min(640px,calc(100vw-48px))] rounded-lg border border-sky-500/60 bg-gray-950/95 px-8 py-7 text-center shadow-2xl shadow-black/40 backdrop-blur-md", children: [
       /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mb-5 flex flex-col items-center justify-center gap-4", children: [
         /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "relative flex h-24 w-[min(380px,78vw)] items-center justify-center", children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "absolute inset-x-4 top-1/2 h-16 -translate-y-1/2 rounded-full bg-orange-500/35 blur-2xl" }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "absolute inset-x-10 top-1/2 h-10 -translate-y-1/2 rounded-full bg-amber-300/25 blur-xl" }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "absolute inset-x-8 top-1/2 h-12 -translate-y-1/2 rounded-full bg-orange-500/18 blur-2xl" }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "absolute inset-x-16 top-1/2 h-8 -translate-y-1/2 rounded-full bg-amber-300/12 blur-xl" }),
           /* @__PURE__ */ jsxRuntimeExports.jsx(
             "img",
             {
               src: "/dfp-neo-setup-logo.png",
               alt: "DFP NEO",
-              className: "relative h-auto w-full object-contain drop-shadow-[0_0_24px_rgba(255,115,0,0.95)]"
+              className: "relative h-auto w-full object-contain drop-shadow-[0_0_14px_rgba(255,115,0,0.48)]"
             }
           )
         ] }),

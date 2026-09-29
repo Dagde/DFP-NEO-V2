@@ -15543,12 +15543,12 @@ const ScheduleView: React.FC<ScheduleViewProps> = ({
             {shouldShowInitialSetupPrompt && (
                 <div className="pointer-events-none fixed bottom-[8vh] left-[260px] right-[178px] top-[218px] z-[240] flex items-center justify-center px-8">
                     <div className="pointer-events-auto relative flex w-full max-w-[1040px] flex-col items-center overflow-hidden rounded-xl border-2 border-orange-300/35 bg-slate-950/82 px-8 py-7 text-center shadow-[0_26px_70px_rgba(0,0,0,0.56)] backdrop-blur-md">
-                        <span className="pointer-events-none absolute inset-x-[-18%] top-[-42%] h-[112%] rounded-full bg-[radial-gradient(ellipse_at_center,rgba(251,146,60,0.42)_0%,rgba(251,146,60,0.2)_24%,rgba(251,146,60,0.08)_46%,rgba(251,146,60,0)_72%)] blur-2xl" aria-hidden="true" />
-                        <div className="relative mb-5 flex w-[min(850px,94%)] justify-center shadow-[0_0_18px_rgba(251,146,60,0.16)]">
+                        <span className="pointer-events-none absolute inset-x-[-18%] top-[-42%] h-[112%] rounded-full bg-[radial-gradient(ellipse_at_center,rgba(251,146,60,0.22)_0%,rgba(251,146,60,0.1)_28%,rgba(251,146,60,0.04)_48%,rgba(251,146,60,0)_72%)] blur-2xl" aria-hidden="true" />
+                        <div className="relative mb-5 flex w-[min(850px,94%)] justify-center shadow-[0_0_12px_rgba(251,146,60,0.1)]">
                             <img
                                 src="/dfp-neo-setup-logo.png"
                                 alt="DFP NEO"
-                                className="max-h-32 w-full object-contain opacity-95 drop-shadow-[0_0_24px_rgba(255,115,0,0.82)]"
+                                className="max-h-32 w-full object-contain opacity-95 drop-shadow-[0_0_14px_rgba(255,115,0,0.42)]"
                             />
                         </div>
                         <p className="relative text-[11px] font-black uppercase tracking-[0.22em] text-orange-300">Initial Setup Required</p>

@@ -59096,12 +59096,12 @@ appliedUpdates.forEach(update => {
             <div className="pointer-events-none fixed inset-0 z-[155] flex items-center justify-center px-6">
                 <div className="pointer-events-auto w-[min(620px,calc(100vw-48px))] rounded-lg border border-amber-400/60 bg-gray-950/96 px-7 py-6 text-center shadow-2xl shadow-black/45 backdrop-blur-md">
                     <div className="relative mx-auto mb-5 flex h-24 w-[min(380px,78vw)] items-center justify-center">
-                        <div className="absolute inset-x-4 top-1/2 h-16 -translate-y-1/2 rounded-full bg-orange-500/35 blur-2xl"></div>
-                        <div className="absolute inset-x-10 top-1/2 h-10 -translate-y-1/2 rounded-full bg-amber-300/25 blur-xl"></div>
+                        <div className="absolute inset-x-8 top-1/2 h-12 -translate-y-1/2 rounded-full bg-orange-500/18 blur-2xl"></div>
+                        <div className="absolute inset-x-16 top-1/2 h-8 -translate-y-1/2 rounded-full bg-amber-300/12 blur-xl"></div>
                         <img
                             src="/dfp-neo-setup-logo.png"
                             alt="DFP NEO"
-                            className="relative h-auto w-full object-contain drop-shadow-[0_0_24px_rgba(255,115,0,0.95)]"
+                            className="relative h-auto w-full object-contain drop-shadow-[0_0_14px_rgba(255,115,0,0.48)]"
                         />
                     </div>
                     <h2 className="text-2xl font-bold text-white">No saved DFP found for {formatDfpRetrievalDate(date)}</h2>
@@ -59151,12 +59151,12 @@ appliedUpdates.forEach(update => {
                 <div className="w-[min(640px,calc(100vw-48px))] rounded-lg border border-sky-500/60 bg-gray-950/95 px-8 py-7 text-center shadow-2xl shadow-black/40 backdrop-blur-md">
                     <div className="mb-5 flex flex-col items-center justify-center gap-4">
                         <div className="relative flex h-24 w-[min(380px,78vw)] items-center justify-center">
-                            <div className="absolute inset-x-4 top-1/2 h-16 -translate-y-1/2 rounded-full bg-orange-500/35 blur-2xl"></div>
-                            <div className="absolute inset-x-10 top-1/2 h-10 -translate-y-1/2 rounded-full bg-amber-300/25 blur-xl"></div>
+                            <div className="absolute inset-x-8 top-1/2 h-12 -translate-y-1/2 rounded-full bg-orange-500/18 blur-2xl"></div>
+                            <div className="absolute inset-x-16 top-1/2 h-8 -translate-y-1/2 rounded-full bg-amber-300/12 blur-xl"></div>
                             <img
                                 src="/dfp-neo-setup-logo.png"
                                 alt="DFP NEO"
-                                className="relative h-auto w-full object-contain drop-shadow-[0_0_24px_rgba(255,115,0,0.95)]"
+                                className="relative h-auto w-full object-contain drop-shadow-[0_0_14px_rgba(255,115,0,0.48)]"
                             />
                         </div>
                         <div className="flex items-center justify-center gap-3">
