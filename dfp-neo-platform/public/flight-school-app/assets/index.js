@@ -10591,7 +10591,11 @@ const getCourseStudentGroupCounts = (course, definitions = [], trainees) => {
     return labels.slice(0, MAX_COURSE_STUDENT_GROUPS).map((label) => {
       return {
         label,
-        count: traineesForCourse.filter((trainee) => servicesMatchConfiguredName(trainee.service, label, configuredServices)).length
+        count: traineesForCourse.filter((trainee) => servicesMatchConfiguredName(
+          trainee.service || inferServiceFromRank(trainee.rank),
+          label,
+          configuredServices
+        )).length
       };
     });
   }
@@ -10605,6 +10609,40 @@ const getCourseStudentGroupCounts = (course, definitions = [], trainees) => {
     label,
     count: storedCounts[index] || 0
   }));
+};
+const inferServiceFromRank = (rank) => {
+  const key = String(rank || "").trim().toUpperCase();
+  if (!key) return "";
+  if ([
+    "ACM",
+    "AIRMSHL",
+    "AVM",
+    "AIRCDRE",
+    "GPCAPT",
+    "WGCDR",
+    "SQNLDR",
+    "FLTLT",
+    "FLGOFF",
+    "PLTOFF",
+    "OFFCDT"
+  ].includes(key)) return "Air Force";
+  if ([
+    "CDRE",
+    "CMDR",
+    "LCDR",
+    "LEUT",
+    "SBLT",
+    "ASLT",
+    "MIDN"
+  ].includes(key)) return "Navy";
+  if ([
+    "COL",
+    "LTCOL",
+    "MAJ",
+    "LT",
+    "2LT"
+  ].includes(key)) return "Army";
+  return "";
 };
 const getTraineeServiceOptions = (trainees = [], configuredServices = []) => Array.from(/* @__PURE__ */ new Set(
   [
@@ -108213,11 +108251,11 @@ const CourseCard = React.memo(({
   course,
   courseColor,
   studentGroupCounts,
+  totalStudents,
   onOpenCourseRoster,
   onEditCourse,
   onDeleteCourse
 }) => {
-  const totalStudents = studentGroupCounts.reduce((total, group) => total + group.count, 0);
   const openCourseRoster = () => onOpenCourseRoster(course.name);
   return /* @__PURE__ */ jsxRuntimeExports.jsxs(
     "div",
@@ -108470,6 +108508,7 @@ Only continue if permanent deletion is required, archiving is not sufficient, an
           course,
           courseColor: courseColors[course.name] || "",
           studentGroupCounts: getCourseStudentGroupCounts(course, serviceDefinitions, traineesData),
+          totalStudents: traineesData.filter((trainee) => String(trainee.course || "").trim().toUpperCase() === String(course.name || "").trim().toUpperCase()).length,
           onOpenCourseRoster: onNavigateToCourseRoster,
           onEditCourse: handleEditClick,
           onDeleteCourse: handleDeleteClick

@@ -50,6 +50,7 @@ interface CourseCardProps {
     course: Course;
     courseColor: string;
     studentGroupCounts: CourseStudentGroupCount[];
+    totalStudents: number;
     onOpenCourseRoster: (courseName: string) => void;
     onEditCourse: (course: Course) => void;
     onDeleteCourse: (courseName: string) => void;
@@ -59,11 +60,11 @@ const CourseCard = React.memo<CourseCardProps>(({
     course,
     courseColor,
     studentGroupCounts,
+    totalStudents,
     onOpenCourseRoster,
     onEditCourse,
     onDeleteCourse,
 }) => {
-    const totalStudents = studentGroupCounts.reduce((total, group) => total + group.count, 0);
     const openCourseRoster = () => onOpenCourseRoster(course.name);
 
     return (
@@ -333,6 +334,9 @@ const CoursesManagementView: React.FC<CoursesManagementViewProps> = ({
                                             course={course}
                                             courseColor={courseColors[course.name] || ''}
                                             studentGroupCounts={getCourseStudentGroupCounts(course, serviceDefinitions, traineesData)}
+                                            totalStudents={traineesData.filter((trainee) => (
+                                                String(trainee.course || '').trim().toUpperCase() === String(course.name || '').trim().toUpperCase()
+                                            )).length}
                                             onOpenCourseRoster={onNavigateToCourseRoster}
                                             onEditCourse={handleEditClick}
                                             onDeleteCourse={handleDeleteClick}

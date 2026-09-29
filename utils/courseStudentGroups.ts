@@ -50,7 +50,7 @@ export const getCourseStudentGroupLabels = (
 export const getCourseStudentGroupCounts = (
   course: Pick<Course, 'raafStart' | 'navyStart' | 'armyStart'>,
   definitions: CourseStudentGroupDefinition[] = [],
-  trainees?: Pick<Trainee, 'course' | 'service'>[],
+  trainees?: Pick<Trainee, 'course' | 'service' | 'rank'>[],
 ): CourseStudentGroupCount[] => {
   const labels = getCourseStudentGroupLabels(definitions);
   if (Array.isArray(trainees)) {
@@ -62,7 +62,11 @@ export const getCourseStudentGroupCounts = (
     return labels.slice(0, MAX_COURSE_STUDENT_GROUPS).map((label) => {
       return {
         label,
-        count: traineesForCourse.filter((trainee) => servicesMatchConfiguredName(trainee.service, label, configuredServices)).length,
+        count: traineesForCourse.filter((trainee) => servicesMatchConfiguredName(
+          trainee.service || inferServiceFromRank(trainee.rank),
+          label,
+          configuredServices
+        )).length,
       };
     });
   }
@@ -77,6 +81,41 @@ export const getCourseStudentGroupCounts = (
     label,
     count: storedCounts[index] || 0,
   }));
+};
+
+export const inferServiceFromRank = (rank?: string | null): string => {
+  const key = String(rank || '').trim().toUpperCase();
+  if (!key) return '';
+  if ([
+    'ACM',
+    'AIRMSHL',
+    'AVM',
+    'AIRCDRE',
+    'GPCAPT',
+    'WGCDR',
+    'SQNLDR',
+    'FLTLT',
+    'FLGOFF',
+    'PLTOFF',
+    'OFFCDT',
+  ].includes(key)) return 'Air Force';
+  if ([
+    'CDRE',
+    'CMDR',
+    'LCDR',
+    'LEUT',
+    'SBLT',
+    'ASLT',
+    'MIDN',
+  ].includes(key)) return 'Navy';
+  if ([
+    'COL',
+    'LTCOL',
+    'MAJ',
+    'LT',
+    '2LT',
+  ].includes(key)) return 'Army';
+  return '';
 };
 
 export const getTraineeServiceOptions = (
