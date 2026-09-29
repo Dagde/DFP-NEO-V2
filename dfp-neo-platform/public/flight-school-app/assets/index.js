@@ -110227,7 +110227,7 @@ const TrainingCompletionView = ({
   const [singleDate, setSingleDate] = reactExports.useState(todayIso());
   const [startDate, setStartDate] = reactExports.useState(todayIso());
   const [endDate, setEndDate] = reactExports.useState(todayIso());
-  const [selectedEventId, setSelectedEventId] = reactExports.useState("");
+  const [selectedEventIds, setSelectedEventIds] = reactExports.useState([]);
   const [selectedTrainees, setSelectedTrainees] = reactExports.useState([]);
   const [isCompleting, setIsCompleting] = reactExports.useState(false);
   const [completionMessage, setCompletionMessage] = reactExports.useState("");
@@ -110330,10 +110330,19 @@ const TrainingCompletionView = ({
       return true;
     });
   }, [completionDate, courseTrainees, selectedCourses.length, selectedTrainingCodes, syllabusDetails]);
-  const selectedEvent = reactExports.useMemo(() => candidateEvents.find((event) => event.id === selectedEventId) || null, [candidateEvents, selectedEventId]);
-  const traineesForSelectedEvent = reactExports.useMemo(() => selectedEvent ? getEventTrainees(selectedEvent).sort((a, b) => `${a.course}-${a.name}`.localeCompare(`${b.course}-${b.name}`)) : [], [courseTrainees, selectedEvent]);
+  const selectedEvents = reactExports.useMemo(() => candidateEvents.filter((event) => selectedEventIds.includes(event.id)), [candidateEvents, selectedEventIds]);
+  const traineesForSelectedEvents = reactExports.useMemo(() => {
+    if (selectedEvents.length === 0) return [];
+    const traineesByName = /* @__PURE__ */ new Map();
+    selectedEvents.forEach((event) => {
+      getEventTrainees(event).forEach((trainee) => {
+        traineesByName.set(trainee.name, trainee);
+      });
+    });
+    return Array.from(traineesByName.values()).sort((a, b) => `${a.course}-${a.name}`.localeCompare(`${b.course}-${b.name}`));
+  }, [courseTrainees, selectedEvents]);
   const resetEventSelection = () => {
-    setSelectedEventId("");
+    setSelectedEventIds([]);
     setSelectedTrainees([]);
     setCompletionMessage("");
   };
@@ -110341,82 +110350,91 @@ const TrainingCompletionView = ({
     setSelectedCourses(coursesSelected);
     resetEventSelection();
   };
-  const handleEventSelect = (eventId) => {
-    const event = candidateEvents.find((item) => item.id === eventId);
-    setSelectedEventId(eventId);
+  const handleEventToggle = (eventId) => {
+    const nextEventIds = selectedEventIds.includes(eventId) ? selectedEventIds.filter((id) => id !== eventId) : [...selectedEventIds, eventId];
+    const nextEvents = candidateEvents.filter((item) => nextEventIds.includes(item.id));
+    const traineeNames = /* @__PURE__ */ new Set();
+    nextEvents.forEach((event) => {
+      getEventTrainees(event).forEach((trainee) => traineeNames.add(trainee.name));
+    });
+    setSelectedEventIds(nextEventIds);
     setCompletionMessage("");
-    setSelectedTrainees(event ? getEventTrainees(event).map((trainee) => trainee.name) : []);
+    setSelectedTrainees(Array.from(traineeNames));
   };
   const processCompletion = async () => {
-    if (!selectedEvent) {
-      setCompletionMessage("Select the event that is to be marked complete.");
+    if (selectedEvents.length === 0) {
+      setCompletionMessage("Select at least one event to mark complete.");
       return;
     }
     if (selectedTrainees.length === 0) {
-      setCompletionMessage("Select at least one trainee for this event.");
+      setCompletionMessage("Select at least one trainee for the selected events.");
       return;
     }
     setIsCompleting(true);
     setCompletionMessage("Completing selected training records...");
     try {
-      const completedAt = (/* @__PURE__ */ new Date(`${selectedEvent.date || todayIso()}T00:00:00`)).toISOString();
+      const completedAt = (/* @__PURE__ */ new Date(`${completionDate || todayIso()}T00:00:00`)).toISOString();
       const completed = [];
       const failed = [];
-      for (const traineeName of selectedTrainees) {
-        const trainee = allTrainees.find((item) => item.name === traineeName);
-        if (!trainee) {
-          failed.push(traineeName);
-          continue;
+      for (const selectedEvent of selectedEvents) {
+        const eligibleTraineeNames = new Set(getEventTrainees(selectedEvent).map((trainee) => trainee.name));
+        for (const traineeName of selectedTrainees) {
+          if (!eligibleTraineeNames.has(traineeName)) continue;
+          const trainee = allTrainees.find((item) => item.name === traineeName);
+          if (!trainee) {
+            failed.push(`${traineeName} / ${selectedEvent.flightNumber}`);
+            continue;
+          }
+          const lmpItem = findTraineeLmpItemForEvent(trainee, selectedEvent);
+          if (!lmpItem || !onUpdateLmpItem) {
+            failed.push(`${trainee.name} / ${selectedEvent.flightNumber}`);
+            continue;
+          }
+          const updatedLmpItem = {
+            ...lmpItem,
+            completedAt,
+            isComplete: true,
+            completed: true
+          };
+          const lmpSaved = await Promise.resolve(onUpdateLmpItem(trainee, lmpItem, updatedLmpItem, { suppressSuccessMessage: true }));
+          if (!lmpSaved) {
+            failed.push(`${trainee.name} / ${selectedEvent.flightNumber}`);
+            continue;
+          }
+          const assessmentId = `pt051-${selectedEvent.id}-${trainee.fullName}`;
+          const existingAssessment = pt051Assessments.get(assessmentId) || Array.from(pt051Assessments.values()).find((assessment2) => assessment2.traineeFullName === trainee.fullName && (assessment2.eventId === selectedEvent.id || normaliseCode(assessment2.flightNumber) === normaliseCode(selectedEvent.flightNumber)));
+          const assessment = existingAssessment ? {
+            ...existingAssessment,
+            eventId: selectedEvent.id,
+            flightNumber: selectedEvent.flightNumber,
+            date: selectedEvent.date,
+            dcoResult: "DCO",
+            overallGrade: "No Grade",
+            overallResult: "P",
+            isCompleted: true
+          } : {
+            id: assessmentId,
+            traineeFullName: trainee.name,
+            eventId: selectedEvent.id,
+            flightNumber: selectedEvent.flightNumber,
+            date: selectedEvent.date,
+            instructorName: selectedEvent.instructor || "",
+            overallGrade: "No Grade",
+            overallResult: "P",
+            dcoResult: "DCO",
+            overallComments: "",
+            scores: [],
+            isCompleted: true,
+            groundSchoolAssessment: { isAssessment: false, result: void 0 }
+          };
+          await Promise.resolve(onSaveTrainingReportAssessment(assessment));
+          completed.push(`${trainee.name} / ${selectedEvent.flightNumber}`);
         }
-        const lmpItem = findTraineeLmpItemForEvent(trainee, selectedEvent);
-        if (!lmpItem || !onUpdateLmpItem) {
-          failed.push(trainee.name);
-          continue;
-        }
-        const updatedLmpItem = {
-          ...lmpItem,
-          completedAt,
-          isComplete: true,
-          completed: true
-        };
-        const lmpSaved = await Promise.resolve(onUpdateLmpItem(trainee, lmpItem, updatedLmpItem, { suppressSuccessMessage: true }));
-        if (!lmpSaved) {
-          failed.push(trainee.name);
-          continue;
-        }
-        const assessmentId = `pt051-${selectedEvent.id}-${trainee.fullName}`;
-        const existingAssessment = pt051Assessments.get(assessmentId) || Array.from(pt051Assessments.values()).find((assessment2) => assessment2.traineeFullName === trainee.fullName && (assessment2.eventId === selectedEvent.id || normaliseCode(assessment2.flightNumber) === normaliseCode(selectedEvent.flightNumber)));
-        const assessment = existingAssessment ? {
-          ...existingAssessment,
-          eventId: selectedEvent.id,
-          flightNumber: selectedEvent.flightNumber,
-          date: selectedEvent.date,
-          dcoResult: "DCO",
-          overallGrade: "No Grade",
-          overallResult: "P",
-          isCompleted: true
-        } : {
-          id: assessmentId,
-          traineeFullName: trainee.name,
-          eventId: selectedEvent.id,
-          flightNumber: selectedEvent.flightNumber,
-          date: selectedEvent.date,
-          instructorName: selectedEvent.instructor || "",
-          overallGrade: "No Grade",
-          overallResult: "P",
-          dcoResult: "DCO",
-          overallComments: "",
-          scores: [],
-          isCompleted: true,
-          groundSchoolAssessment: { isAssessment: false, result: void 0 }
-        };
-        await Promise.resolve(onSaveTrainingReportAssessment(assessment));
-        completed.push(trainee.name);
       }
       if (failed.length > 0) {
-        setCompletionMessage(`Completed ${completed.length} trainee${completed.length === 1 ? "" : "s"} for ${selectedEvent.flightNumber}. ${failed.length} could not be completed because their Individual LMP event was not found or did not save.`);
+        setCompletionMessage(`Completed ${completed.length} trainee-event record${completed.length === 1 ? "" : "s"} across ${selectedEvents.length} event${selectedEvents.length === 1 ? "" : "s"}. ${failed.length} could not be completed because the Individual LMP event was not found or did not save.`);
       } else {
-        setCompletionMessage(`Completed ${completed.length} trainee${completed.length === 1 ? "" : "s"} for ${selectedEvent.flightNumber}.`);
+        setCompletionMessage(`Completed ${completed.length} trainee-event record${completed.length === 1 ? "" : "s"} across ${selectedEvents.length} event${selectedEvents.length === 1 ? "" : "s"}.`);
       }
     } catch (error) {
       console.error("Error during selected event completion:", error);
@@ -110566,15 +110584,15 @@ const TrainingCompletionView = ({
           selectedCourses.length === 0 ? /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-yellow-300 text-sm", children: "Select a course to show its LMP events." }) : candidateEvents.length === 0 ? /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-yellow-300 text-sm", children: "No LMP events match the selected course." }) : /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "border border-gray-700 rounded bg-gray-900/40 max-h-[520px] overflow-y-auto", children: candidateEvents.map((event, index) => /* @__PURE__ */ jsxRuntimeExports.jsxs(
             "label",
             {
-              className: `flex items-center gap-3 border-b border-gray-700 px-4 py-3 last:border-b-0 cursor-pointer ${selectedEventId === event.id ? "bg-sky-900/45 text-white" : "text-gray-200 hover:bg-gray-700/45"}`,
+              className: `flex items-center gap-3 border-b border-gray-700 px-4 py-3 last:border-b-0 cursor-pointer ${selectedEventIds.includes(event.id) ? "bg-sky-900/45 text-white" : "text-gray-200 hover:bg-gray-700/45"}`,
               children: [
                 /* @__PURE__ */ jsxRuntimeExports.jsx(
                   "input",
                   {
-                    type: "radio",
-                    checked: selectedEventId === event.id,
-                    onChange: () => handleEventSelect(event.id),
-                    className: "h-4 w-4 text-sky-500"
+                    type: "checkbox",
+                    checked: selectedEventIds.includes(event.id),
+                    onChange: () => handleEventToggle(event.id),
+                    className: "h-4 w-4 accent-sky-500 bg-gray-700 border-gray-500 rounded"
                   }
                 ),
                 /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "w-8 shrink-0 text-xs font-semibold text-gray-500", children: index + 1 }),
@@ -110589,13 +110607,13 @@ const TrainingCompletionView = ({
           /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center justify-between mb-4", children: [
             /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
               /* @__PURE__ */ jsxRuntimeExports.jsx("h2", { className: "text-lg font-semibold text-white", children: "Select Trainees" }),
-              /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-sm text-gray-400", children: "Only trainees linked to the selected event are shown." })
+              /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-sm text-gray-400", children: "Only trainees linked to the selected event set are shown." })
             ] }),
-            selectedEvent && traineesForSelectedEvent.length > 0 && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex gap-2", children: [
+            selectedEvents.length > 0 && traineesForSelectedEvents.length > 0 && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex gap-2", children: [
               /* @__PURE__ */ jsxRuntimeExports.jsx(
                 "button",
                 {
-                  onClick: () => setSelectedTrainees(traineesForSelectedEvent.map((trainee) => trainee.name)),
+                  onClick: () => setSelectedTrainees(traineesForSelectedEvents.map((trainee) => trainee.name)),
                   className: "px-3 py-1 bg-sky-600 hover:bg-sky-700 text-white rounded text-sm",
                   children: "Select All"
                 }
@@ -110610,7 +110628,7 @@ const TrainingCompletionView = ({
               )
             ] })
           ] }),
-          !selectedEvent ? /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-yellow-300 text-sm", children: "Select an event first." }) : traineesForSelectedEvent.length === 0 ? /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-yellow-300 text-sm", children: "No trainees from the selected course are linked to this event." }) : /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "border border-gray-600 rounded p-2 bg-gray-700/50 max-h-72 overflow-y-auto", children: traineesForSelectedEvent.map((trainee) => /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "flex items-center gap-3 p-2 hover:bg-gray-600/30 rounded cursor-pointer", children: [
+          selectedEvents.length === 0 ? /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-yellow-300 text-sm", children: "Select at least one event first." }) : traineesForSelectedEvents.length === 0 ? /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-yellow-300 text-sm", children: "No trainees from the selected course are linked to these events." }) : /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "border border-gray-600 rounded p-2 bg-gray-700/50 max-h-72 overflow-y-auto", children: traineesForSelectedEvents.map((trainee) => /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "flex items-center gap-3 p-2 hover:bg-gray-600/30 rounded cursor-pointer", children: [
             /* @__PURE__ */ jsxRuntimeExports.jsx(
               "input",
               {
@@ -110635,18 +110653,20 @@ const TrainingCompletionView = ({
               ")"
             ] })
           ] }, trainee.name)) }),
-          selectedEvent && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mt-5 p-4 rounded border border-gray-700 bg-gray-900/60", children: [
+          selectedEvents.length > 0 && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mt-5 p-4 rounded border border-gray-700 bg-gray-900/60", children: [
             /* @__PURE__ */ jsxRuntimeExports.jsx("h3", { className: "text-sm uppercase tracking-wide text-gray-400 mb-2", children: "Completion Summary" }),
             /* @__PURE__ */ jsxRuntimeExports.jsxs("p", { className: "text-sm text-gray-200", children: [
-              selectedEvent.flightNumber,
+              selectedEvents.length,
+              " event",
+              selectedEvents.length === 1 ? "" : "s",
               " will be completed on ",
-              formatDate(selectedEvent.date),
+              formatDate(completionDate),
               "."
             ] }),
             /* @__PURE__ */ jsxRuntimeExports.jsxs("p", { className: "text-sm text-gray-400 mt-1", children: [
-              "This will mark the selected trainee Individual LMP event complete and add a DCO ",
+              "This will mark each selected trainee Individual LMP event complete and add DCO ",
               reportName,
-              " record for this event."
+              " records for the selected event set."
             ] })
           ] }),
           /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mt-5 flex items-center justify-between gap-4", children: [
@@ -110655,8 +110675,8 @@ const TrainingCompletionView = ({
               "button",
               {
                 onClick: processCompletion,
-                disabled: !selectedEvent || selectedTrainees.length === 0 || isCompleting,
-                className: `px-5 py-3 rounded font-semibold ${!selectedEvent || selectedTrainees.length === 0 || isCompleting ? "bg-gray-700 text-gray-500 cursor-not-allowed" : "bg-green-600 hover:bg-green-700 text-white"}`,
+                disabled: selectedEvents.length === 0 || selectedTrainees.length === 0 || isCompleting,
+                className: `px-5 py-3 rounded font-semibold ${selectedEvents.length === 0 || selectedTrainees.length === 0 || isCompleting ? "bg-gray-700 text-gray-500 cursor-not-allowed" : "bg-green-600 hover:bg-green-700 text-white"}`,
                 children: isCompleting ? "Completing..." : `Complete Selected (${selectedTrainees.length})`
               }
             )

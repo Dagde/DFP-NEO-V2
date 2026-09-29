@@ -108,7 +108,7 @@ const TrainingCompletionView: React.FC<TrainingCompletionViewProps> = ({
     const [singleDate, setSingleDate] = useState(todayIso());
     const [startDate, setStartDate] = useState(todayIso());
     const [endDate, setEndDate] = useState(todayIso());
-    const [selectedEventId, setSelectedEventId] = useState('');
+    const [selectedEventIds, setSelectedEventIds] = useState<string[]>([]);
     const [selectedTrainees, setSelectedTrainees] = useState<string[]>([]);
     const [isCompleting, setIsCompleting] = useState(false);
     const [completionMessage, setCompletionMessage] = useState('');
@@ -252,18 +252,23 @@ const TrainingCompletionView: React.FC<TrainingCompletionViewProps> = ({
             });
     }, [completionDate, courseTrainees, selectedCourses.length, selectedTrainingCodes, syllabusDetails]);
 
-    const selectedEvent = useMemo(() => (
-        candidateEvents.find(event => event.id === selectedEventId) || null
-    ), [candidateEvents, selectedEventId]);
+    const selectedEvents = useMemo(() => (
+        candidateEvents.filter(event => selectedEventIds.includes(event.id))
+    ), [candidateEvents, selectedEventIds]);
 
-    const traineesForSelectedEvent = useMemo(() => (
-        selectedEvent
-            ? getEventTrainees(selectedEvent).sort((a, b) => `${a.course}-${a.name}`.localeCompare(`${b.course}-${b.name}`))
-            : []
-    ), [courseTrainees, selectedEvent]);
+    const traineesForSelectedEvents = useMemo(() => {
+        if (selectedEvents.length === 0) return [];
+        const traineesByName = new Map<string, Trainee>();
+        selectedEvents.forEach(event => {
+            getEventTrainees(event).forEach(trainee => {
+                traineesByName.set(trainee.name, trainee);
+            });
+        });
+        return Array.from(traineesByName.values()).sort((a, b) => `${a.course}-${a.name}`.localeCompare(`${b.course}-${b.name}`));
+    }, [courseTrainees, selectedEvents]);
 
     const resetEventSelection = () => {
-        setSelectedEventId('');
+        setSelectedEventIds([]);
         setSelectedTrainees([]);
         setCompletionMessage('');
     };
@@ -273,21 +278,28 @@ const TrainingCompletionView: React.FC<TrainingCompletionViewProps> = ({
         resetEventSelection();
     };
 
-    const handleEventSelect = (eventId: string) => {
-        const event = candidateEvents.find(item => item.id === eventId);
-        setSelectedEventId(eventId);
+    const handleEventToggle = (eventId: string) => {
+        const nextEventIds = selectedEventIds.includes(eventId)
+            ? selectedEventIds.filter(id => id !== eventId)
+            : [...selectedEventIds, eventId];
+        const nextEvents = candidateEvents.filter(item => nextEventIds.includes(item.id));
+        const traineeNames = new Set<string>();
+        nextEvents.forEach(event => {
+            getEventTrainees(event).forEach(trainee => traineeNames.add(trainee.name));
+        });
+        setSelectedEventIds(nextEventIds);
         setCompletionMessage('');
-        setSelectedTrainees(event ? getEventTrainees(event).map(trainee => trainee.name) : []);
+        setSelectedTrainees(Array.from(traineeNames));
     };
 
     const processCompletion = async () => {
-        if (!selectedEvent) {
-            setCompletionMessage('Select the event that is to be marked complete.');
+        if (selectedEvents.length === 0) {
+            setCompletionMessage('Select at least one event to mark complete.');
             return;
         }
 
         if (selectedTrainees.length === 0) {
-            setCompletionMessage('Select at least one trainee for this event.');
+            setCompletionMessage('Select at least one trainee for the selected events.');
             return;
         }
 
@@ -295,79 +307,83 @@ const TrainingCompletionView: React.FC<TrainingCompletionViewProps> = ({
         setCompletionMessage('Completing selected training records...');
 
         try {
-            const completedAt = new Date(`${selectedEvent.date || todayIso()}T00:00:00`).toISOString();
+            const completedAt = new Date(`${completionDate || todayIso()}T00:00:00`).toISOString();
             const completed: string[] = [];
             const failed: string[] = [];
 
-            for (const traineeName of selectedTrainees) {
-                const trainee = allTrainees.find(item => item.name === traineeName);
-                if (!trainee) {
-                    failed.push(traineeName);
-                    continue;
-                }
-
-                const lmpItem = findTraineeLmpItemForEvent(trainee, selectedEvent);
-                if (!lmpItem || !onUpdateLmpItem) {
-                    failed.push(trainee.name);
-                    continue;
-                }
-
-                const updatedLmpItem = {
-                    ...lmpItem,
-                    completedAt,
-                    isComplete: true,
-                    completed: true,
-                } as SyllabusItemDetail;
-                const lmpSaved = await Promise.resolve(onUpdateLmpItem(trainee, lmpItem, updatedLmpItem, { suppressSuccessMessage: true }));
-                if (!lmpSaved) {
-                    failed.push(trainee.name);
-                    continue;
-                }
-
-                const assessmentId = `pt051-${selectedEvent.id}-${trainee.fullName}`;
-                const existingAssessment = pt051Assessments.get(assessmentId)
-                    || Array.from(pt051Assessments.values()).find(assessment => (
-                        assessment.traineeFullName === trainee.fullName
-                        && (
-                            assessment.eventId === selectedEvent.id
-                            || normaliseCode(assessment.flightNumber) === normaliseCode(selectedEvent.flightNumber)
-                        )
-                    ));
-                const assessment: TrainingReportAssessment = existingAssessment
-                    ? {
-                        ...existingAssessment,
-                        eventId: selectedEvent.id,
-                        flightNumber: selectedEvent.flightNumber,
-                        date: selectedEvent.date,
-                        dcoResult: 'DCO',
-                        overallGrade: 'No Grade',
-                        overallResult: 'P',
-                        isCompleted: true,
+            for (const selectedEvent of selectedEvents) {
+                const eligibleTraineeNames = new Set(getEventTrainees(selectedEvent).map(trainee => trainee.name));
+                for (const traineeName of selectedTrainees) {
+                    if (!eligibleTraineeNames.has(traineeName)) continue;
+                    const trainee = allTrainees.find(item => item.name === traineeName);
+                    if (!trainee) {
+                        failed.push(`${traineeName} / ${selectedEvent.flightNumber}`);
+                        continue;
                     }
-                    : {
-                        id: assessmentId,
-                        traineeFullName: trainee.name,
-                        eventId: selectedEvent.id,
-                        flightNumber: selectedEvent.flightNumber,
-                        date: selectedEvent.date,
-                        instructorName: selectedEvent.instructor || '',
-                        overallGrade: 'No Grade',
-                        overallResult: 'P',
-                        dcoResult: 'DCO',
-                        overallComments: '',
-                        scores: [],
-                        isCompleted: true,
-                        groundSchoolAssessment: { isAssessment: false, result: undefined },
-                    };
 
-                await Promise.resolve(onSaveTrainingReportAssessment(assessment));
-                completed.push(trainee.name);
+                    const lmpItem = findTraineeLmpItemForEvent(trainee, selectedEvent);
+                    if (!lmpItem || !onUpdateLmpItem) {
+                        failed.push(`${trainee.name} / ${selectedEvent.flightNumber}`);
+                        continue;
+                    }
+
+                    const updatedLmpItem = {
+                        ...lmpItem,
+                        completedAt,
+                        isComplete: true,
+                        completed: true,
+                    } as SyllabusItemDetail;
+                    const lmpSaved = await Promise.resolve(onUpdateLmpItem(trainee, lmpItem, updatedLmpItem, { suppressSuccessMessage: true }));
+                    if (!lmpSaved) {
+                        failed.push(`${trainee.name} / ${selectedEvent.flightNumber}`);
+                        continue;
+                    }
+
+                    const assessmentId = `pt051-${selectedEvent.id}-${trainee.fullName}`;
+                    const existingAssessment = pt051Assessments.get(assessmentId)
+                        || Array.from(pt051Assessments.values()).find(assessment => (
+                            assessment.traineeFullName === trainee.fullName
+                            && (
+                                assessment.eventId === selectedEvent.id
+                                || normaliseCode(assessment.flightNumber) === normaliseCode(selectedEvent.flightNumber)
+                            )
+                        ));
+                    const assessment: TrainingReportAssessment = existingAssessment
+                        ? {
+                            ...existingAssessment,
+                            eventId: selectedEvent.id,
+                            flightNumber: selectedEvent.flightNumber,
+                            date: selectedEvent.date,
+                            dcoResult: 'DCO',
+                            overallGrade: 'No Grade',
+                            overallResult: 'P',
+                            isCompleted: true,
+                        }
+                        : {
+                            id: assessmentId,
+                            traineeFullName: trainee.name,
+                            eventId: selectedEvent.id,
+                            flightNumber: selectedEvent.flightNumber,
+                            date: selectedEvent.date,
+                            instructorName: selectedEvent.instructor || '',
+                            overallGrade: 'No Grade',
+                            overallResult: 'P',
+                            dcoResult: 'DCO',
+                            overallComments: '',
+                            scores: [],
+                            isCompleted: true,
+                            groundSchoolAssessment: { isAssessment: false, result: undefined },
+                        };
+
+                    await Promise.resolve(onSaveTrainingReportAssessment(assessment));
+                    completed.push(`${trainee.name} / ${selectedEvent.flightNumber}`);
+                }
             }
 
             if (failed.length > 0) {
-                setCompletionMessage(`Completed ${completed.length} trainee${completed.length === 1 ? '' : 's'} for ${selectedEvent.flightNumber}. ${failed.length} could not be completed because their Individual LMP event was not found or did not save.`);
+                setCompletionMessage(`Completed ${completed.length} trainee-event record${completed.length === 1 ? '' : 's'} across ${selectedEvents.length} event${selectedEvents.length === 1 ? '' : 's'}. ${failed.length} could not be completed because the Individual LMP event was not found or did not save.`);
             } else {
-                setCompletionMessage(`Completed ${completed.length} trainee${completed.length === 1 ? '' : 's'} for ${selectedEvent.flightNumber}.`);
+                setCompletionMessage(`Completed ${completed.length} trainee-event record${completed.length === 1 ? '' : 's'} across ${selectedEvents.length} event${selectedEvents.length === 1 ? '' : 's'}.`);
             }
         } catch (error) {
             console.error('Error during selected event completion:', error);
@@ -512,14 +528,14 @@ const TrainingCompletionView: React.FC<TrainingCompletionViewProps> = ({
                                         <label
                                             key={event.id}
                                             className={`flex items-center gap-3 border-b border-gray-700 px-4 py-3 last:border-b-0 cursor-pointer ${
-                                                selectedEventId === event.id ? 'bg-sky-900/45 text-white' : 'text-gray-200 hover:bg-gray-700/45'
+                                                selectedEventIds.includes(event.id) ? 'bg-sky-900/45 text-white' : 'text-gray-200 hover:bg-gray-700/45'
                                             }`}
                                         >
                                             <input
-                                                type="radio"
-                                                checked={selectedEventId === event.id}
-                                                onChange={() => handleEventSelect(event.id)}
-                                                className="h-4 w-4 text-sky-500"
+                                                type="checkbox"
+                                                checked={selectedEventIds.includes(event.id)}
+                                                onChange={() => handleEventToggle(event.id)}
+                                                className="h-4 w-4 accent-sky-500 bg-gray-700 border-gray-500 rounded"
                                             />
                                             <span className="w-8 shrink-0 text-xs font-semibold text-gray-500">{index + 1}</span>
                                             <span className="font-semibold">{event.flightNumber || 'LMP Event'}</span>
@@ -536,12 +552,12 @@ const TrainingCompletionView: React.FC<TrainingCompletionViewProps> = ({
                             <div className="flex items-center justify-between mb-4">
                                 <div>
                                     <h2 className="text-lg font-semibold text-white">Select Trainees</h2>
-                                    <p className="text-sm text-gray-400">Only trainees linked to the selected event are shown.</p>
+                                    <p className="text-sm text-gray-400">Only trainees linked to the selected event set are shown.</p>
                                 </div>
-                                {selectedEvent && traineesForSelectedEvent.length > 0 && (
+                                {selectedEvents.length > 0 && traineesForSelectedEvents.length > 0 && (
                                     <div className="flex gap-2">
                                         <button
-                                            onClick={() => setSelectedTrainees(traineesForSelectedEvent.map(trainee => trainee.name))}
+                                            onClick={() => setSelectedTrainees(traineesForSelectedEvents.map(trainee => trainee.name))}
                                             className="px-3 py-1 bg-sky-600 hover:bg-sky-700 text-white rounded text-sm"
                                         >
                                             Select All
@@ -556,13 +572,13 @@ const TrainingCompletionView: React.FC<TrainingCompletionViewProps> = ({
                                 )}
                             </div>
 
-                            {!selectedEvent ? (
-                                <p className="text-yellow-300 text-sm">Select an event first.</p>
-                            ) : traineesForSelectedEvent.length === 0 ? (
-                                <p className="text-yellow-300 text-sm">No trainees from the selected course are linked to this event.</p>
+                            {selectedEvents.length === 0 ? (
+                                <p className="text-yellow-300 text-sm">Select at least one event first.</p>
+                            ) : traineesForSelectedEvents.length === 0 ? (
+                                <p className="text-yellow-300 text-sm">No trainees from the selected course are linked to these events.</p>
                             ) : (
                                 <div className="border border-gray-600 rounded p-2 bg-gray-700/50 max-h-72 overflow-y-auto">
-                                    {traineesForSelectedEvent.map(trainee => (
+                                    {traineesForSelectedEvents.map(trainee => (
                                         <label key={trainee.name} className="flex items-center gap-3 p-2 hover:bg-gray-600/30 rounded cursor-pointer">
                                             <input
                                                 type="checkbox"
@@ -584,14 +600,14 @@ const TrainingCompletionView: React.FC<TrainingCompletionViewProps> = ({
                                 </div>
                             )}
 
-                            {selectedEvent && (
+                            {selectedEvents.length > 0 && (
                                 <div className="mt-5 p-4 rounded border border-gray-700 bg-gray-900/60">
                                     <h3 className="text-sm uppercase tracking-wide text-gray-400 mb-2">Completion Summary</h3>
                                     <p className="text-sm text-gray-200">
-                                        {selectedEvent.flightNumber} will be completed on {formatDate(selectedEvent.date)}.
+                                        {selectedEvents.length} event{selectedEvents.length === 1 ? '' : 's'} will be completed on {formatDate(completionDate)}.
                                     </p>
                                     <p className="text-sm text-gray-400 mt-1">
-                                        This will mark the selected trainee Individual LMP event complete and add a DCO {reportName} record for this event.
+                                        This will mark each selected trainee Individual LMP event complete and add DCO {reportName} records for the selected event set.
                                     </p>
                                 </div>
                             )}
@@ -602,9 +618,9 @@ const TrainingCompletionView: React.FC<TrainingCompletionViewProps> = ({
                                 </p>
                                 <button
                                     onClick={processCompletion}
-                                    disabled={!selectedEvent || selectedTrainees.length === 0 || isCompleting}
+                                    disabled={selectedEvents.length === 0 || selectedTrainees.length === 0 || isCompleting}
                                     className={`px-5 py-3 rounded font-semibold ${
-                                        !selectedEvent || selectedTrainees.length === 0 || isCompleting
+                                        selectedEvents.length === 0 || selectedTrainees.length === 0 || isCompleting
                                             ? 'bg-gray-700 text-gray-500 cursor-not-allowed'
                                             : 'bg-green-600 hover:bg-green-700 text-white'
                                     }`}
