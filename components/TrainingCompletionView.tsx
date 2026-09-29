@@ -65,6 +65,8 @@ const normaliseName = (name: string): string => (
         .trim()
 );
 
+const normaliseCode = (value?: string | null): string => String(value || '').trim().toUpperCase();
+
 const displayPerson = (event: ScheduleEvent): string => {
     const people = [event.student, event.pilot, event.crew]
         .filter(Boolean)
@@ -116,6 +118,25 @@ const TrainingCompletionView: React.FC<TrainingCompletionViewProps> = ({
         allTrainees.filter(trainee => selectedCourses.includes(trainee.course))
     ), [allTrainees, selectedCourses]);
 
+    const selectedTrainingCodes = useMemo(() => {
+        const codes = new Set(selectedCourses.map(normaliseCode).filter(Boolean));
+        courses
+            .filter(course => selectedCourses.includes(course.name))
+            .forEach(course => {
+                [course.lmpType, course.academicLmpType, course.code].forEach(value => {
+                    const code = normaliseCode(value);
+                    if (code) codes.add(code);
+                });
+            });
+        courseTrainees.forEach(trainee => {
+            [trainee.lmpType, trainee.academicLmpType].forEach(value => {
+                const code = normaliseCode(value);
+                if (code) codes.add(code);
+            });
+        });
+        return codes;
+    }, [courseTrainees, courses, selectedCourses]);
+
     const completionDate = useMemo(
         () => getCompletionDateForMode(dateMode, singleDate, startDate, endDate),
         [dateMode, endDate, singleDate, startDate],
@@ -156,10 +177,15 @@ const TrainingCompletionView: React.FC<TrainingCompletionViewProps> = ({
         const lmpEvents = syllabusDetails
             .filter((item: any) => item && item.isActive !== false)
             .filter(item => item.lmpType !== 'Staff CAT')
-            .filter(item => Array.isArray(item.courses) && item.courses.some(course => selectedCourses.includes(course)))
+            .filter(item => Array.isArray(item.courses) && item.courses.some(course => selectedTrainingCodes.has(normaliseCode(course))))
             .map((item): ScheduleEvent => {
+                const itemCourseCodes = new Set((item.courses || []).map(normaliseCode).filter(Boolean));
                 const linkedTraineeIds = courseTrainees
-                    .filter(trainee => item.courses.includes(trainee.course))
+                    .filter(trainee => (
+                        itemCourseCodes.has(normaliseCode(trainee.course))
+                        || itemCourseCodes.has(normaliseCode(trainee.lmpType))
+                        || itemCourseCodes.has(normaliseCode(trainee.academicLmpType))
+                    ))
                     .map(trainee => trainee.idNumber);
                 return {
                     id: `lmp:${item.id || item.code}`,
@@ -190,7 +216,7 @@ const TrainingCompletionView: React.FC<TrainingCompletionViewProps> = ({
                 return true;
             })
             .sort((a, b) => `${a.date}-${a.startTime}-${a.flightNumber}`.localeCompare(`${b.date}-${b.startTime}-${b.flightNumber}`));
-    }, [allEvents, completionDate, courseTrainees, dateMode, endDate, selectedCourses, singleDate, startDate, syllabusDetails]);
+    }, [allEvents, completionDate, courseTrainees, dateMode, endDate, selectedCourses.length, selectedTrainingCodes, singleDate, startDate, syllabusDetails]);
 
     const selectedEvent = useMemo(() => (
         candidateEvents.find(event => event.id === selectedEventId) || null

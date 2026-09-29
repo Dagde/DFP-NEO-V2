@@ -7284,7 +7284,7 @@ const buildCompactPersonNameResolver = (people = []) => {
   return { formatCompact, formatCompactWithInitial, formatList, explainCompact };
 };
 const SUPPORTED_MODELS = ["flight_school", "air_combat", "fixed_crew", "pooled_crew"];
-const normaliseCode$5 = (value, fallback) => {
+const normaliseCode$6 = (value, fallback) => {
   const token = String(value || "").trim().toUpperCase().replace(/[^A-Z]+/g, "").slice(0, 3);
   return token || fallback.slice(0, 3);
 };
@@ -7344,7 +7344,7 @@ const normaliseCrewCompositionSettings = (value) => {
     const codeScope = unitCode || compositeUnitCode || "GLOBAL";
     const usedCodes = usedCodesByScope.get(codeScope) || /* @__PURE__ */ new Set();
     usedCodesByScope.set(codeScope, usedCodes);
-    let code = normaliseCode$5(row?.code || row?.name, fallbackCode);
+    let code = normaliseCode$6(row?.code || row?.name, fallbackCode);
     code = nextAvailableThreeLetterCode(code, usedCodes);
     usedCodes.add(code);
     const operationalModels = Array.isArray(row?.operationalModels) ? Array.from(new Set(row.operationalModels.map((model) => normaliseOperationalModel(model)).filter((model) => SUPPORTED_MODELS.includes(model)))) : SUPPORTED_MODELS;
@@ -7390,12 +7390,12 @@ const normaliseCrewCompositionSettings = (value) => {
 };
 const createAlternateCrewCompositionCode = (existingProfiles, name) => {
   const usedCodes = new Set(existingProfiles.map((profile) => profile.code.toUpperCase()));
-  const base = normaliseCode$5(name, `ALT-${existingProfiles.length + 1}`);
+  const base = normaliseCode$6(name, `ALT-${existingProfiles.length + 1}`);
   return nextAvailableThreeLetterCode(base, usedCodes);
 };
 const normaliseText = (value) => String(value || "").trim();
 const normaliseUnitCode$3 = (value) => normaliseText(value).toUpperCase();
-const normaliseCode$4 = (value, fallback) => {
+const normaliseCode$5 = (value, fallback) => {
   const token = normaliseText(value).toUpperCase().replace(/[^A-Z0-9]/g, "").slice(0, 8);
   if (token) return token;
   return normaliseText(fallback).toUpperCase().replace(/[^A-Z0-9]/g, "").slice(0, 8) || "CONT";
@@ -7423,7 +7423,7 @@ const normaliseContinuationEventSettings = (events) => {
       return {
         id: `continuation-event-${index + 1}`,
         name: name2,
-        code: normaliseCode$4("", name2),
+        code: normaliseCode$5("", name2),
         config: "ANY",
         acceptableAircraftConfigs: ["ANY"],
         dayNight: normaliseContinuationDayNight("", name2),
@@ -7440,7 +7440,7 @@ const normaliseContinuationEventSettings = (events) => {
     return {
       id: normaliseText(source.id) || `continuation-event-${index + 1}`,
       name,
-      code: normaliseCode$4(source.code, name),
+      code: normaliseCode$5(source.code, name),
       unitCode: normaliseUnitCode$3(source.unitCode),
       compositeUnitCode: normaliseUnitCode$3(source.compositeUnitCode),
       aircraftTypeCode: normaliseUnitCode$3(source.aircraftTypeCode),
@@ -7474,7 +7474,7 @@ const continuationEventToCurrencyProfile = (event) => ({
   compositeUnitCode: event.compositeUnitCode || "",
   aircraftTypeCode: event.aircraftTypeCode || "",
   name: event.name,
-  code: normaliseCode$4(event.code, event.name),
+  code: normaliseCode$5(event.code, event.name),
   crew: event.crew || "",
   config: event.config || event.acceptableAircraftConfigs?.[0] || "ANY",
   acceptableAircraftConfigs: event.acceptableAircraftConfigs?.length ? event.acceptableAircraftConfigs : [event.config || "ANY"],
@@ -7767,7 +7767,7 @@ const DEFAULT_AIR_COMBAT_SCHEDULING_WEIGHTS = {
   courses: 60,
   trainingPackages: 40
 };
-const normaliseCode$3 = (value) => String(value || "").trim().toUpperCase();
+const normaliseCode$4 = (value) => String(value || "").trim().toUpperCase();
 const AIR_COMBAT_ICO_PACKAGE_CODE = "ICO";
 const AIR_COMBAT_ICO_DEFAULT_FLIGHT_OR_SIM_HOURS = 1.2;
 const AIR_COMBAT_ICO_PREFLIGHT_HOURS = 1.5;
@@ -7783,7 +7783,7 @@ const getAuthoritativeSyllabusDuration = (item) => {
 const isIntegratedCombatOperationsTrainingPackageItem = (item) => {
   if (!item || item.lmpType !== "Staff CAT") return false;
   const courses = Array.isArray(item.courses) ? item.courses : [];
-  return courses.some((course) => normaliseCode$3(course) === AIR_COMBAT_ICO_PACKAGE_CODE);
+  return courses.some((course) => normaliseCode$4(course) === AIR_COMBAT_ICO_PACKAGE_CODE);
 };
 const normaliseIntegratedCombatOperationsTiming = (item) => {
   if (!isIntegratedCombatOperationsTrainingPackageItem(item)) return item;
@@ -7810,10 +7810,10 @@ const normaliseSyllabusRuntimeTimings = (items) => items.map(normaliseSyllabusRu
 const getAirCombatTrainingKindForLmpType = (lmpType) => lmpType === "Staff CAT" ? "training_package" : "course";
 const getAirCombatTrainingKey = (kind, code, locationCode, unitCode) => [
   "air_combat",
-  normaliseCode$3(locationCode) || "GLOBAL",
-  normaliseCode$3(unitCode) || "GLOBAL",
+  normaliseCode$4(locationCode) || "GLOBAL",
+  normaliseCode$4(unitCode) || "GLOBAL",
   kind,
-  normaliseCode$3(code)
+  normaliseCode$4(code)
 ].join(":");
 const getAirCombatTrainingCodeFromItem = (item) => (item.courses || []).find(Boolean) || item.code || "";
 const getAirCombatTrainingTitleFromItem = (item) => {
@@ -7823,8 +7823,8 @@ const getAirCombatTrainingTitleFromItem = (item) => {
 const getAirCombatAssignmentFromItem = (item, locationCode, unitCode, assignedBy) => {
   const kind = getAirCombatTrainingKindForLmpType(item.lmpType);
   const code = getAirCombatTrainingCodeFromItem(item);
-  const assignmentLocation = normaliseCode$3(locationCode || item.location);
-  const assignmentUnit = normaliseCode$3(unitCode || item.unit);
+  const assignmentLocation = normaliseCode$4(locationCode || item.location);
+  const assignmentUnit = normaliseCode$4(unitCode || item.unit);
   const trainingKey = getAirCombatTrainingKey(kind, code, assignmentLocation, assignmentUnit);
   return {
     assignmentId: trainingKey,
@@ -7845,8 +7845,8 @@ const normaliseAirCombatTrainingAssignments = (preferences) => {
   const normaliseList = (items, kind) => (Array.isArray(items) ? items : []).map((item) => {
     const code = String(item.code || "").trim();
     if (!code) return null;
-    const locationCode = normaliseCode$3(item.locationCode);
-    const unitCode = normaliseCode$3(item.unitCode);
+    const locationCode = normaliseCode$4(item.locationCode);
+    const unitCode = normaliseCode$4(item.unitCode);
     const trainingKey = String(item.trainingKey || getAirCombatTrainingKey(kind, code, locationCode, unitCode));
     return {
       assignmentId: String(item.assignmentId || trainingKey),
@@ -8005,8 +8005,8 @@ const normaliseAirCombatSchedulingWeights = (value) => {
     const kind = stream?.kind === "training_package" ? "training_package" : stream?.kind === "course" ? "course" : null;
     const code = String(stream?.code || "").trim();
     if (!kind || !code) return null;
-    const locationCode = normaliseCode$3(stream?.locationCode);
-    const unitCode = normaliseCode$3(stream?.unitCode);
+    const locationCode = normaliseCode$4(stream?.locationCode);
+    const unitCode = normaliseCode$4(stream?.unitCode);
     const key = String(stream?.key || getAirCombatTrainingKey(kind, code, locationCode, unitCode));
     const weight = Number(stream?.weight);
     return {
@@ -8048,7 +8048,7 @@ const normaliseAirCombatSchedulingWeights = (value) => {
 };
 const FIXED_CREW_COURSE_PACKAGE_PREFLIGHT_HOURS = 1.5;
 const FIXED_CREW_COURSE_PACKAGE_POSTFLIGHT_HOURS = 1;
-const normaliseCode$2 = (value) => String(value || "").trim().toUpperCase();
+const normaliseCode$3 = (value) => String(value || "").trim().toUpperCase();
 const getFixedCrewCoursePackageBriefingTimes = () => ({
   preFlightTime: FIXED_CREW_COURSE_PACKAGE_PREFLIGHT_HOURS,
   postFlightTime: FIXED_CREW_COURSE_PACKAGE_POSTFLIGHT_HOURS
@@ -8061,10 +8061,10 @@ const withFixedCrewCoursePackageBriefingTimes = (item) => ({
 const getFixedCrewTrainingKindForLmpType = (lmpType) => lmpType === "Staff CAT" ? "training_package" : "course";
 const getFixedCrewTrainingKey = (kind, code, locationCode, unitCode) => [
   "fixed_crew",
-  normaliseCode$2(locationCode) || "GLOBAL",
-  normaliseCode$2(unitCode) || "GLOBAL",
+  normaliseCode$3(locationCode) || "GLOBAL",
+  normaliseCode$3(unitCode) || "GLOBAL",
   kind,
-  normaliseCode$2(code)
+  normaliseCode$3(code)
 ].join(":");
 const getFixedCrewTrainingCodeFromItem = (item) => (item.courses || []).find(Boolean) || item.code || "";
 const getFixedCrewTrainingTitleFromItem = (item) => {
@@ -8077,8 +8077,8 @@ const normaliseFixedCrewTrainingPriorities = (streams) => {
     const kind = stream.kind === "training_package" ? "training_package" : "course";
     const code = String(stream.code || "").trim();
     if (!code) return null;
-    const locationCode = normaliseCode$2(stream.locationCode);
-    const unitCode = normaliseCode$2(stream.unitCode);
+    const locationCode = normaliseCode$3(stream.locationCode);
+    const unitCode = normaliseCode$3(stream.unitCode);
     const key = String(stream.key || getFixedCrewTrainingKey(kind, code, locationCode, unitCode));
     const weight = Math.max(0, Math.min(100, Math.round(Number(stream.weight) || 0)));
     return {
@@ -82806,17 +82806,17 @@ const TrainingIntelligenceTab = ({ trainingReportDisplayName = "Training Reports
     ] })
   ] }) });
 };
-const normaliseCode$1 = (value) => String(value || "").trim().toUpperCase();
+const normaliseCode$2 = (value) => String(value || "").trim().toUpperCase();
 const getTrainingCodeFromItem = (item) => (item.courses || []).find(Boolean) || item.code || "";
 const getTrainingTitleFromItem = (item, fallback) => item.module && item.module !== fallback ? item.module : item.eventDescription || fallback;
 const matchesTrainingAssignment = (item, kind, code, unitCode) => {
   const itemKind = item.lmpType === "Staff CAT" ? "training_package" : "course";
   if (itemKind !== kind) return false;
-  const itemCode = normaliseCode$1(getTrainingCodeFromItem(item));
-  const assignmentCode = normaliseCode$1(code);
-  if (itemCode !== assignmentCode && !normaliseCode$1(item.code).startsWith(assignmentCode)) return false;
-  const itemUnit = normaliseCode$1(item.unit);
-  const assignmentUnit = normaliseCode$1(unitCode);
+  const itemCode = normaliseCode$2(getTrainingCodeFromItem(item));
+  const assignmentCode = normaliseCode$2(code);
+  if (itemCode !== assignmentCode && !normaliseCode$2(item.code).startsWith(assignmentCode)) return false;
+  const itemUnit = normaliseCode$2(item.unit);
+  const assignmentUnit = normaliseCode$2(unitCode);
   return !assignmentUnit || !itemUnit || itemUnit === assignmentUnit;
 };
 const AirCombatTrainingAnalyticsTab = ({
@@ -82826,12 +82826,12 @@ const AirCombatTrainingAnalyticsTab = ({
 }) => {
   const activeUnitCodes = reactExports.useMemo(() => {
     const rawCodes = operationalContext?.unitCodes && operationalContext.unitCodes.length > 0 ? operationalContext.unitCodes : String(operationalContext?.unitCode || "").split("+");
-    return new Set(rawCodes.map(normaliseCode$1).filter(Boolean));
+    return new Set(rawCodes.map(normaliseCode$2).filter(Boolean));
   }, [operationalContext?.unitCode, operationalContext?.unitCodes]);
   const streams = reactExports.useMemo(() => {
     const streamMap = /* @__PURE__ */ new Map();
     const ensureStream = (kind, code, title) => {
-      const normalisedCode = normaliseCode$1(code);
+      const normalisedCode = normaliseCode$2(code);
       const key = `${kind}:${normalisedCode}`;
       if (!streamMap.has(key)) {
         streamMap.set(key, {
@@ -82847,11 +82847,11 @@ const AirCombatTrainingAnalyticsTab = ({
       return streamMap.get(key);
     };
     instructorsData.forEach((staff) => {
-      const staffUnit = normaliseCode$1(staff.unit);
+      const staffUnit = normaliseCode$2(staff.unit);
       if (activeUnitCodes.size > 0 && staffUnit && !activeUnitCodes.has(staffUnit)) return;
       const assignments = normaliseAirCombatTrainingAssignments(staff.preferences);
       [...assignments.courses, ...assignments.trainingPackages].forEach((assignment) => {
-        const assignmentUnit = normaliseCode$1(assignment.unitCode || staffUnit);
+        const assignmentUnit = normaliseCode$2(assignment.unitCode || staffUnit);
         if (activeUnitCodes.size > 0 && assignmentUnit && !activeUnitCodes.has(assignmentUnit)) return;
         const stream = ensureStream(assignment.kind, assignment.code, assignment.title);
         stream.assignedStaff.add(staff.name);
@@ -82859,7 +82859,7 @@ const AirCombatTrainingAnalyticsTab = ({
       normaliseAirCombatTrainingReports(staff.preferences).forEach((report) => {
         if (report.status && report.status !== "Complete") return;
         if (!report.trainingKind || !report.trainingCode) return;
-        const reportUnit = normaliseCode$1(report.unitCode || staffUnit);
+        const reportUnit = normaliseCode$2(report.unitCode || staffUnit);
         if (activeUnitCodes.size > 0 && reportUnit && !activeUnitCodes.has(reportUnit)) return;
         const stream = ensureStream(report.trainingKind, report.trainingCode, report.trainingTitle || report.trainingCode);
         stream.completedReports += 1;
@@ -87720,18 +87720,18 @@ const SuccessNotification = ({ message, onClose }) => {
     ) })
   ] }) });
 };
-const normaliseCode = (value) => String(value || "").trim().toUpperCase();
+const normaliseCode$1 = (value) => String(value || "").trim().toUpperCase();
 const getFlightSchoolStaffLmpKey = (lmpCode, locationCode, unitCode) => [
   "flight_school",
-  normaliseCode(locationCode) || "GLOBAL",
-  normaliseCode(unitCode) || "GLOBAL",
+  normaliseCode$1(locationCode) || "GLOBAL",
+  normaliseCode$1(unitCode) || "GLOBAL",
   "master_lmp",
-  normaliseCode(lmpCode)
+  normaliseCode$1(lmpCode)
 ].join(":");
 const getFlightSchoolStaffLmpAssignmentFromItem = (item, lmpCode, locationCode, unitCode, assignedBy) => {
   const code = String(lmpCode || (item.courses || []).find(Boolean) || item.code || "").trim();
-  const assignmentLocation = normaliseCode(locationCode || item.location);
-  const assignmentUnit = normaliseCode(unitCode || item.unit);
+  const assignmentLocation = normaliseCode$1(locationCode || item.location);
+  const assignmentUnit = normaliseCode$1(unitCode || item.unit);
   const assignmentId = getFlightSchoolStaffLmpKey(code, assignmentLocation, assignmentUnit);
   return {
     assignmentId,
@@ -87748,8 +87748,8 @@ const normaliseFlightSchoolStaffLmpAssignments = (preferences) => {
   return (Array.isArray(raw) ? raw : []).map((item) => {
     const lmpCode = String(item.lmpCode || item.code || "").trim();
     if (!lmpCode) return null;
-    const locationCode = normaliseCode(item.locationCode);
-    const unitCode = normaliseCode(item.unitCode);
+    const locationCode = normaliseCode$1(item.locationCode);
+    const unitCode = normaliseCode$1(item.unitCode);
     const assignmentId = String(item.assignmentId || getFlightSchoolStaffLmpKey(lmpCode, locationCode, unitCode));
     return {
       assignmentId,
@@ -110191,6 +110191,7 @@ const getScheduledTypeFromLmpType = (type) => {
   return "ground";
 };
 const normaliseName = (name) => name.replace(/\s+[–-]\s+.*$/, "").replace(/\s+/g, " ").trim();
+const normaliseCode = (value) => String(value || "").trim().toUpperCase();
 const displayPerson = (event) => {
   const people = [event.student, event.pilot, event.crew].filter(Boolean).map((person) => String(person)).filter((person, index, list) => list.indexOf(person) === index);
   return people.length > 0 ? people.join(" / ") : "-";
@@ -110229,6 +110230,22 @@ const TrainingCompletionView = ({
   }, [courses, archivedCourses]);
   const filteredCourses = reactExports.useMemo(() => courseNames.filter((course) => course.toLowerCase().includes(courseSearch.toLowerCase())), [courseNames, courseSearch]);
   const courseTrainees = reactExports.useMemo(() => allTrainees.filter((trainee) => selectedCourses.includes(trainee.course)), [allTrainees, selectedCourses]);
+  const selectedTrainingCodes = reactExports.useMemo(() => {
+    const codes = new Set(selectedCourses.map(normaliseCode).filter(Boolean));
+    courses.filter((course) => selectedCourses.includes(course.name)).forEach((course) => {
+      [course.lmpType, course.academicLmpType, course.code].forEach((value) => {
+        const code = normaliseCode(value);
+        if (code) codes.add(code);
+      });
+    });
+    courseTrainees.forEach((trainee) => {
+      [trainee.lmpType, trainee.academicLmpType].forEach((value) => {
+        const code = normaliseCode(value);
+        if (code) codes.add(code);
+      });
+    });
+    return codes;
+  }, [courseTrainees, courses, selectedCourses]);
   const completionDate = reactExports.useMemo(
     () => getCompletionDateForMode(dateMode, singleDate, startDate, endDate),
     [dateMode, endDate, singleDate, startDate]
@@ -110254,8 +110271,9 @@ const TrainingCompletionView = ({
       events = events.filter((event) => event.date >= startDate && event.date <= endDate);
     }
     const scheduledEvents = events.filter((event) => getEventTrainees(event).length > 0).sort((a, b) => `${a.date}-${a.startTime}`.localeCompare(`${b.date}-${b.startTime}`));
-    const lmpEvents = syllabusDetails.filter((item) => item && item.isActive !== false).filter((item) => item.lmpType !== "Staff CAT").filter((item) => Array.isArray(item.courses) && item.courses.some((course) => selectedCourses.includes(course))).map((item) => {
-      const linkedTraineeIds = courseTrainees.filter((trainee) => item.courses.includes(trainee.course)).map((trainee) => trainee.idNumber);
+    const lmpEvents = syllabusDetails.filter((item) => item && item.isActive !== false).filter((item) => item.lmpType !== "Staff CAT").filter((item) => Array.isArray(item.courses) && item.courses.some((course) => selectedTrainingCodes.has(normaliseCode(course)))).map((item) => {
+      const itemCourseCodes = new Set((item.courses || []).map(normaliseCode).filter(Boolean));
+      const linkedTraineeIds = courseTrainees.filter((trainee) => itemCourseCodes.has(normaliseCode(trainee.course)) || itemCourseCodes.has(normaliseCode(trainee.lmpType)) || itemCourseCodes.has(normaliseCode(trainee.academicLmpType))).map((trainee) => trainee.idNumber);
       return {
         id: `lmp:${item.id || item.code}`,
         date: completionDate,
@@ -110281,7 +110299,7 @@ const TrainingCompletionView = ({
       seen.add(key);
       return true;
     }).sort((a, b) => `${a.date}-${a.startTime}-${a.flightNumber}`.localeCompare(`${b.date}-${b.startTime}-${b.flightNumber}`));
-  }, [allEvents, completionDate, courseTrainees, dateMode, endDate, selectedCourses, singleDate, startDate, syllabusDetails]);
+  }, [allEvents, completionDate, courseTrainees, dateMode, endDate, selectedCourses.length, selectedTrainingCodes, singleDate, startDate, syllabusDetails]);
   const selectedEvent = reactExports.useMemo(() => candidateEvents.find((event) => event.id === selectedEventId) || null, [candidateEvents, selectedEventId]);
   const traineesForSelectedEvent = reactExports.useMemo(() => selectedEvent ? getEventTrainees(selectedEvent).sort((a, b) => `${a.course}-${a.name}`.localeCompare(`${b.course}-${b.name}`)) : [], [courseTrainees, selectedEvent]);
   const resetEventSelection = () => {
