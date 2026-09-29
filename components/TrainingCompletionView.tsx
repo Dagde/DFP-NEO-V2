@@ -163,21 +163,17 @@ const TrainingCompletionView: React.FC<TrainingCompletionViewProps> = ({
     const candidateEvents = useMemo(() => {
         if (selectedCourses.length === 0) return [];
 
-        let events = allEvents;
-        if (dateMode === 'single-date' && singleDate) {
-            events = events.filter(event => event.date === singleDate);
-        } else if (dateMode === 'date-range' && startDate && endDate) {
-            events = events.filter(event => event.date >= startDate && event.date <= endDate);
-        }
-
-        const scheduledEvents = events
-            .filter(event => getEventTrainees(event).length > 0)
-            .sort((a, b) => `${a.date}-${a.startTime}`.localeCompare(`${b.date}-${b.startTime}`));
-
         const lmpEvents = syllabusDetails
             .filter((item: any) => item && item.isActive !== false)
             .filter(item => item.lmpType !== 'Staff CAT')
             .filter(item => Array.isArray(item.courses) && item.courses.some(course => selectedTrainingCodes.has(normaliseCode(course))))
+            .sort((a, b) => {
+                const leftOrder = Number.isFinite(Number(a.sortOrder)) ? Number(a.sortOrder) : Number.MAX_SAFE_INTEGER;
+                const rightOrder = Number.isFinite(Number(b.sortOrder)) ? Number(b.sortOrder) : Number.MAX_SAFE_INTEGER;
+                return leftOrder - rightOrder
+                    || String(a.code || '').localeCompare(String(b.code || ''), undefined, { numeric: true, sensitivity: 'base' })
+                    || String(a.id || '').localeCompare(String(b.id || ''));
+            })
             .map((item): ScheduleEvent => {
                 const itemCourseCodes = new Set((item.courses || []).map(normaliseCode).filter(Boolean));
                 const linkedTraineeIds = courseTrainees
@@ -208,15 +204,14 @@ const TrainingCompletionView: React.FC<TrainingCompletionViewProps> = ({
             .filter(event => getEventTrainees(event).length > 0);
 
         const seen = new Set<string>();
-        return [...scheduledEvents, ...lmpEvents]
+        return lmpEvents
             .filter(event => {
-                const key = `${event.date}|${event.flightNumber}|${event.id}`;
+                const key = `${event.flightNumber}|${event.id}`;
                 if (seen.has(key)) return false;
                 seen.add(key);
                 return true;
-            })
-            .sort((a, b) => `${a.date}-${a.startTime}-${a.flightNumber}`.localeCompare(`${b.date}-${b.startTime}-${b.flightNumber}`));
-    }, [allEvents, completionDate, courseTrainees, dateMode, endDate, selectedCourses.length, selectedTrainingCodes, singleDate, startDate, syllabusDetails]);
+            });
+    }, [completionDate, courseTrainees, selectedCourses.length, selectedTrainingCodes, syllabusDetails]);
 
     const selectedEvent = useMemo(() => (
         candidateEvents.find(event => event.id === selectedEventId) || null
@@ -421,55 +416,39 @@ const TrainingCompletionView: React.FC<TrainingCompletionViewProps> = ({
                         </div>
                     </div>
 
-                    <div className="space-y-6">
+                    <div className="grid grid-cols-1 2xl:grid-cols-[minmax(360px,0.95fr)_minmax(420px,1.05fr)] gap-6">
                         <div className="bg-gray-800 rounded-lg p-6 border border-gray-700">
                             <div className="flex items-center justify-between mb-4">
                                 <h2 className="text-lg font-semibold text-white">Select Event</h2>
-                                <span className="text-sm text-gray-400">{candidateEvents.length} matching event{candidateEvents.length === 1 ? '' : 's'}</span>
+                                <span className="text-sm text-gray-400">{candidateEvents.length} LMP event{candidateEvents.length === 1 ? '' : 's'}</span>
                             </div>
 
                             {selectedCourses.length === 0 ? (
-                                <p className="text-yellow-300 text-sm">Select a course to show matching training events.</p>
+                                <p className="text-yellow-300 text-sm">Select a course to show its LMP events.</p>
                             ) : candidateEvents.length === 0 ? (
-                                <p className="text-yellow-300 text-sm">No training events match the selected course and date settings.</p>
+                                <p className="text-yellow-300 text-sm">No LMP events match the selected course.</p>
                             ) : (
-                                <div className="overflow-x-auto border border-gray-700 rounded">
-                                    <table className="w-full text-sm text-left">
-                                        <thead className="text-xs uppercase bg-gray-700 text-gray-300">
-                                            <tr>
-                                                <th className="px-3 py-2">Select</th>
-                                                <th className="px-3 py-2">Date</th>
-                                                <th className="px-3 py-2">Time</th>
-                                                <th className="px-3 py-2">Type</th>
-                                                <th className="px-3 py-2">Event</th>
-                                                <th className="px-3 py-2">Trainee / Crew</th>
-                                                <th className="px-3 py-2">Instructor</th>
-                                            </tr>
-                                        </thead>
-                                        <tbody>
-                                            {candidateEvents.map(event => (
-                                                <tr
-                                                    key={event.id}
-                                                    className={`border-b border-gray-700 ${selectedEventId === event.id ? 'bg-sky-900/40' : 'hover:bg-gray-700/40'}`}
-                                                >
-                                                    <td className="px-3 py-2">
-                                                        <input
-                                                            type="radio"
-                                                            checked={selectedEventId === event.id}
-                                                            onChange={() => handleEventSelect(event.id)}
-                                                            className="w-4 h-4 text-sky-500"
-                                                        />
-                                                    </td>
-                                                    <td className="px-3 py-2 text-gray-200 whitespace-nowrap">{formatDate(event.date)}</td>
-                                                    <td className="px-3 py-2 text-gray-200 whitespace-nowrap">{formatTime(event.startTime)}</td>
-                                                    <td className="px-3 py-2 text-gray-200 capitalize">{event.type}</td>
-                                                    <td className="px-3 py-2 text-white font-medium">{event.flightNumber || '-'}</td>
-                                                    <td className="px-3 py-2 text-gray-200">{displayPerson(event)}</td>
-                                                    <td className="px-3 py-2 text-gray-200">{event.instructor || '-'}</td>
-                                                </tr>
-                                            ))}
-                                        </tbody>
-                                    </table>
+                                <div className="border border-gray-700 rounded bg-gray-900/40 max-h-[520px] overflow-y-auto">
+                                    {candidateEvents.map((event, index) => (
+                                        <label
+                                            key={event.id}
+                                            className={`flex items-center gap-3 border-b border-gray-700 px-4 py-3 last:border-b-0 cursor-pointer ${
+                                                selectedEventId === event.id ? 'bg-sky-900/45 text-white' : 'text-gray-200 hover:bg-gray-700/45'
+                                            }`}
+                                        >
+                                            <input
+                                                type="radio"
+                                                checked={selectedEventId === event.id}
+                                                onChange={() => handleEventSelect(event.id)}
+                                                className="h-4 w-4 text-sky-500"
+                                            />
+                                            <span className="w-8 shrink-0 text-xs font-semibold text-gray-500">{index + 1}</span>
+                                            <span className="font-semibold">{event.flightNumber || 'LMP Event'}</span>
+                                            {event.notes && (
+                                                <span className="min-w-0 truncate text-sm text-gray-400">{event.notes}</span>
+                                            )}
+                                        </label>
+                                    ))}
                                 </div>
                             )}
                         </div>
@@ -530,7 +509,7 @@ const TrainingCompletionView: React.FC<TrainingCompletionViewProps> = ({
                                 <div className="mt-5 p-4 rounded border border-gray-700 bg-gray-900/60">
                                     <h3 className="text-sm uppercase tracking-wide text-gray-400 mb-2">Completion Summary</h3>
                                     <p className="text-sm text-gray-200">
-                                        {selectedEvent.flightNumber} on {formatDate(selectedEvent.date)} at {formatTime(selectedEvent.startTime)}
+                                        {selectedEvent.flightNumber} will be completed on {formatDate(selectedEvent.date)}.
                                     </p>
                                     <p className="text-sm text-gray-400 mt-1">
                                         This will mark the selected trainee {reportName} record{selectedTrainees.length === 1 ? '' : 's'} as DCO for this event only.

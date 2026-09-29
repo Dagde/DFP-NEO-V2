@@ -12186,14 +12186,14 @@ const resolveScheduleTileBackgroundColor = (color, mode = "dark") => {
   if (isCssColor(value)) return value.startsWith("#") ? hexToRgba(value, mode === "light" ? 0.92 : 0.57, mode === "light") : value;
   return resolveTailwindBgClassToRgba(value, mode === "light" ? "tile-light" : "tile-dark");
 };
-const formatTime$8 = (time) => {
+const formatTime$7 = (time) => {
   const hours = Math.floor(time);
   const minutes = Math.round(time % 1 * 60);
   return `${String(hours).padStart(2, "0")}:${String(minutes).padStart(2, "0")}`;
 };
 const formatDeploymentClock = (clock, fallbackHours) => {
   if (clock) return clock.replace(/:/g, "");
-  if (typeof fallbackHours === "number") return formatTime$8(fallbackHours).replace(/:/g, "");
+  if (typeof fallbackHours === "number") return formatTime$7(fallbackHours).replace(/:/g, "");
   return "";
 };
 const formatDeploymentDate = (dateString) => {
@@ -12780,9 +12780,9 @@ const FlightTile = ({ event, traineesData, instructorsData = [], onSelectEvent, 
                       desc && /* @__PURE__ */ jsxRuntimeExports.jsx("span", { style: { color: "#94a3b8", fontWeight: 400, marginLeft: 4 }, children: desc })
                     ] }),
                     /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { style: { fontSize: 10, color: "#64748b" }, children: [
-                      formatTime$8(t.startTime),
+                      formatTime$7(t.startTime),
                       " – ",
-                      formatTime$8(endTime),
+                      formatTime$7(endTime),
                       /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { style: { color: "#475569", marginLeft: 6 }, children: [
                         "(",
                         durationStr,
@@ -12795,9 +12795,9 @@ const FlightTile = ({ event, traineesData, instructorsData = [], onSelectEvent, 
               /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { style: { borderTop: "1px solid rgba(147,197,253,0.2)", marginTop: 4, paddingTop: 4, fontSize: 10, color: "#64748b", display: "flex", justifyContent: "space-between" }, children: [
                 /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { children: [
                   "Session: ",
-                  formatTime$8(dayStart),
+                  formatTime$7(dayStart),
                   " – ",
-                  formatTime$8(dayStart + dayDuration)
+                  formatTime$7(dayStart + dayDuration)
                 ] }),
                 /* @__PURE__ */ jsxRuntimeExports.jsx("span", { style: { color: "#475569" }, children: (() => {
                   const totalMins = Math.round(dayDuration * 60);
@@ -12942,7 +12942,7 @@ const FlightTile = ({ event, traineesData, instructorsData = [], onSelectEvent, 
       /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "h-6 w-px bg-gray-600" }),
       /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
         /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "font-mono font-semibold text-sky-400", children: displayFlightNumber }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "font-mono text-gray-400", children: formatTime$8(effectiveStartTime) })
+        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "font-mono text-gray-400", children: formatTime$7(effectiveStartTime) })
       ] }),
       callsign && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "font-mono text-gray-500 text-[10px]", children: callsign })
     ] }) });
@@ -13130,7 +13130,7 @@ const FlightTile = ({ event, traineesData, instructorsData = [], onSelectEvent, 
               {
                 className: "absolute top-1 left-1 font-mono text-white/60 pointer-events-none",
                 style: { fontSize: `${scaledFontSize * 0.825}px` },
-                children: formatTime$8(effectiveStartTime)
+                children: formatTime$7(effectiveStartTime)
               }
             ),
             /* @__PURE__ */ jsxRuntimeExports.jsx(
@@ -13138,7 +13138,7 @@ const FlightTile = ({ event, traineesData, instructorsData = [], onSelectEvent, 
               {
                 className: "absolute top-1 right-1 font-mono text-white/60 pointer-events-none",
                 style: { fontSize: `${scaledFontSize * 0.825}px` },
-                children: formatTime$8(effectiveStartTime + effectiveDuration)
+                children: formatTime$7(effectiveStartTime + effectiveDuration)
               }
             )
           ] }) : !isSmallTile && /* @__PURE__ */ jsxRuntimeExports.jsx(
@@ -13146,7 +13146,7 @@ const FlightTile = ({ event, traineesData, instructorsData = [], onSelectEvent, 
             {
               className: "absolute -top-px left-1 font-mono text-white/60 pointer-events-none",
               style: { fontSize: `${scaledFontSize * 0.75}px` },
-              children: formatTime$8(effectiveStartTime)
+              children: formatTime$7(effectiveStartTime)
             }
           ),
           renderContent(),
@@ -50607,7 +50607,7 @@ const buildAssessmentStructure = (elements, phraseBank) => {
   const categories = categoryOrder.map((category) => ({ category, elements: grouped.get(category) || [] })).filter((category) => category.elements.length > 0);
   return categories.length > 0 ? categories : [];
 };
-const formatTime$7 = (time) => {
+const formatTime$6 = (time) => {
   const hours = Math.floor(time);
   const minutes = Math.round(time % 1 * 60);
   return `${String(hours).padStart(2, "0")}:${String(minutes).padStart(2, "0")}`;
@@ -51447,7 +51447,7 @@ ${key === "Notes" ? buildTrainingReportNotes() : commentFields[key]}`).join("\n\
         ["Trainee", `${trainee.rank || ""} ${trainee.name || trainee.fullName || ""}`.trim()],
         ["Course", trainee.course || "N/A"],
         [printOverviewFields.date, displayReportDate || "N/A"],
-        [printOverviewFields.timing, `${formatTime$7(startTime)} - ${formatTime$7(endTime)}`],
+        [printOverviewFields.timing, `${formatTime$6(startTime)} - ${formatTime$6(endTime)}`],
         [printOverviewFields.assessor, formatTrainingReportInstructorDisplay(instructors, assessment.instructorName || event.instructor) || "N/A"],
         [printOverviewFields.resource, formatTrainingReportResource(currentEvent.resourceId || event.resourceId)],
         [printOverviewFields.callsign, currentEvent.callsign || event.callsign || "N/A"],
@@ -58190,7 +58190,7 @@ const MassBriefConfirmationFlyout = ({
     ) })
   ] }) });
 };
-const formatTime$6 = (time) => {
+const formatTime$5 = (time) => {
   const hours = Math.floor(time);
   const minutes = Math.round((time - hours) * 60);
   return `${hours.toString().padStart(2, "0")}:${minutes.toString().padStart(2, "0")}`;
@@ -58207,11 +58207,11 @@ const VisualAdjustModal = ({
     /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-3", children: [
       /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
         /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "block text-xs font-medium text-gray-300 mb-1", children: "Start Time" }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "px-2 py-1 bg-gray-700 text-white rounded text-sm", children: formatTime$6(startTime) })
+        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "px-2 py-1 bg-gray-700 text-white rounded text-sm", children: formatTime$5(startTime) })
       ] }),
       /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
         /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "block text-xs font-medium text-gray-300 mb-1", children: "End Time" }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "px-2 py-1 bg-gray-700 text-white rounded text-sm", children: formatTime$6(endTime) })
+        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "px-2 py-1 bg-gray-700 text-white rounded text-sm", children: formatTime$5(endTime) })
       ] })
     ] }),
     /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex justify-end space-x-2 mt-4", children: [
@@ -58656,7 +58656,7 @@ const getEventTypeFromSyllabus = (syllabusId, syllabusDetails) => {
   if (detail.type === "Ground School") return "ground";
   return "flight";
 };
-const formatTime$5 = (time) => {
+const formatTime$4 = (time) => {
   const hours = Math.floor(time);
   const minutes = Math.round(time % 1 * 60);
   return `${String(hours).padStart(2, "0")}:${String(minutes).padStart(2, "0")}`;
@@ -58673,13 +58673,13 @@ const formatUnavailabilityDate = (dateValue) => {
   });
 };
 const formatUnavailabilityClock = (rawTime, fallbackTime) => {
-  if (typeof rawTime === "number") return formatTime$5(rawTime);
+  if (typeof rawTime === "number") return formatTime$4(rawTime);
   if (typeof rawTime === "string" && rawTime.trim()) {
     if (rawTime.includes(":")) return rawTime;
     const cleaned = rawTime.replace(/\D/g, "").padStart(4, "0").slice(-4);
     return `${cleaned.slice(0, 2)}:${cleaned.slice(2, 4)}`;
   }
-  if (typeof fallbackTime === "number") return formatTime$5(fallbackTime);
+  if (typeof fallbackTime === "number") return formatTime$4(fallbackTime);
   return "-";
 };
 const getAllDayUnavailabilityEndDate = (dateValue) => {
@@ -58690,7 +58690,7 @@ const getAllDayUnavailabilityEndDate = (dateValue) => {
   return parsedDate.toISOString().slice(0, 10);
 };
 const normalizeStartTimeValue = (time) => {
-  if (typeof time === "number") return formatTime$5(time);
+  if (typeof time === "number") return formatTime$4(time);
   if (!time) return "00:00";
   if (time.includes(":")) return time;
   const cleaned = time.replace(/\D/g, "").padStart(4, "0").slice(-4);
@@ -59115,14 +59115,14 @@ const EventDetailModal = ({ event, onClose, onSave, onDeleteRequest, isEditingDe
         return unavailableStart < bookingWindow.end && bookingWindow.start < unavailableEnd;
       }).map((period) => ({
         type: "unavailability",
-        label: period.allDay ? `${[staff.rank, staff.name].filter(Boolean).join(" ")} is unavailable all day${period.reason ? ` because ${period.reason}` : ""}.` : `${[staff.rank, staff.name].filter(Boolean).join(" ")} is unavailable from ${formatTime$5(normaliseTimeFieldToHour(period.startTime, 0))} to ${formatTime$5(normaliseTimeFieldToHour(period.endTime, 24))}${period.reason ? ` because ${period.reason}` : ""}.`
+        label: period.allDay ? `${[staff.rank, staff.name].filter(Boolean).join(" ")} is unavailable all day${period.reason ? ` because ${period.reason}` : ""}.` : `${[staff.rank, staff.name].filter(Boolean).join(" ")} is unavailable from ${formatTime$4(normaliseTimeFieldToHour(period.startTime, 0))} to ${formatTime$4(normaliseTimeFieldToHour(period.endTime, 24))}${period.reason ? ` because ${period.reason}` : ""}.`
       }));
       const eventConflicts = (eventsForDate || []).filter((otherEvent) => !isSameDisplayedEvent(otherEvent)).filter((otherEvent) => getPersonnelForConflictCheck(otherEvent).includes(staff.name)).filter((otherEvent) => {
         const otherWindow = getEventBookingWindow2(otherEvent);
         return otherWindow.start < bookingWindow.end && bookingWindow.start < otherWindow.end;
       }).map((otherEvent) => ({
         type: "event",
-        label: `${[staff.rank, staff.name].filter(Boolean).join(" ")} is already assigned to ${otherEvent.flightNumber || "another event"} from ${formatTime$5(otherEvent.startTime)} to ${formatTime$5((otherEvent.startTime || 0) + (otherEvent.duration || 0))}.`
+        label: `${[staff.rank, staff.name].filter(Boolean).join(" ")} is already assigned to ${otherEvent.flightNumber || "another event"} from ${formatTime$4(otherEvent.startTime)} to ${formatTime$4((otherEvent.startTime || 0) + (otherEvent.duration || 0))}.`
       }));
       const conflicts = [...unavailabilityConflicts, ...eventConflicts];
       return {
@@ -59206,7 +59206,7 @@ Please select another substitute.`, "Substitution Not Available", "warning");
     ].map((name) => String(name || "").trim()).filter(Boolean))).map((name) => name === unavailableStaff.name ? substituteDisplayName : name);
     const nextPic = originalPic === unavailableStaff.name ? substituteDisplayName : originalPic;
     const existingNotes = String(event.fixedCrewManifestNotes || fixedCrewManifestNotes || "").trim();
-    const swapNote = `${formatTime$5(event.startTime)}: ${[unavailableStaff.rank, unavailableStaff.name].filter(Boolean).join(" ")} replaced by ${[substitute.rank, substitute.name].filter(Boolean).join(" ")}.`;
+    const swapNote = `${formatTime$4(event.startTime)}: ${[unavailableStaff.rank, unavailableStaff.name].filter(Boolean).join(" ")} replaced by ${[substitute.rank, substitute.name].filter(Boolean).join(" ")}.`;
     const updatedEvent = {
       ...event,
       attendees: updatedAttendees,
@@ -59231,9 +59231,9 @@ ${swapNote}` : swapNote
         !isPooledCrewModel && /* @__PURE__ */ jsxRuntimeExports.jsx("strong", { className: "rounded bg-emerald-500/15 px-2 py-1 text-sm font-bold text-emerald-200", children: formatFixedCrewDisplayGroup$2(fixedCrewGroup || event.fixedCrewGroup || "") || "Crew not assigned" }),
         /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "text-[11px] font-semibold uppercase tracking-wider text-gray-400", children: [
           "Availability window ",
-          formatTime$5(Math.max(0, bookingWindow.start)),
+          formatTime$4(Math.max(0, bookingWindow.start)),
           "-",
-          formatTime$5(Math.min(24, bookingWindow.end))
+          formatTime$4(Math.min(24, bookingWindow.end))
         ] })
       ] }),
       fixedCrewRosterByRole.length > 0 ? /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: `grid gap-3 ${activeCrewConflict ? "grid-cols-[minmax(0,1fr)_12rem]" : "grid-cols-1"}`, children: [
@@ -60153,7 +60153,7 @@ ${swapNote}` : swapNote
     if (onVisualAdjustEnd) {
       onVisualAdjustEnd(updatedEvent);
     }
-    setStartTime(formatTime$5(visualAdjustStartTime));
+    setStartTime(formatTime$4(visualAdjustStartTime));
     setDuration(visualAdjustEndTime - visualAdjustStartTime);
   };
   const handleSave = async () => {
@@ -60337,7 +60337,7 @@ ${swapNote}` : swapNote
       for (let m = 0; m < 60; m += 5) {
         const totalHours = h + m / 60;
         const label = `${String(h).padStart(2, "0")}${String(m).padStart(2, "0")}`;
-        options.push({ label, value: formatTime$5(totalHours) });
+        options.push({ label, value: formatTime$4(totalHours) });
       }
     }
     return options;
@@ -61491,7 +61491,7 @@ ${swapNote}` : swapNote
             ] }),
             /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded bg-gray-900/50 px-3 py-2", children: [
               /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "block text-xs uppercase tracking-wider text-gray-500", children: "Departure" }),
-              /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-gray-100", children: formatTime$5(event.startTime) })
+              /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-gray-100", children: formatTime$4(event.startTime) })
             ] })
           ] }) }),
           isFixedCrewCrewedEvent && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mt-3 rounded-lg border border-emerald-500/30 bg-emerald-950/20 p-3 space-y-2", children: [
@@ -61525,7 +61525,7 @@ ${swapNote}` : swapNote
               ] }),
               /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded bg-gray-900/50 px-3 py-2", children: [
                 /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "block text-xs uppercase tracking-wider text-gray-500", children: "Start Time" }),
-                /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-gray-100", children: formatTime$5(event.startTime) })
+                /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-gray-100", children: formatTime$4(event.startTime) })
               ] })
             ] }),
             renderFixedCrewRosterStatus()
@@ -62055,7 +62055,7 @@ ${swapNote}` : swapNote
   ] });
 };
 const CONTINUATION_COURSE_KEY = "__continuation_events__";
-const formatTime$4 = (time) => {
+const formatTime$3 = (time) => {
   const hours = Math.floor(time);
   const minutes = Math.round(time % 1 * 60);
   return `${String(hours).padStart(2, "0")}:${String(minutes).padStart(2, "0")}`;
@@ -63176,7 +63176,7 @@ const AddFlightTileModal = ({
     for (let h = 6; h <= 23; h++) {
       for (let m = 0; m < 60; m += 15) {
         const val = h + m / 60;
-        opts.push({ value: String(val), label: formatTime$4(val) });
+        opts.push({ value: String(val), label: formatTime$3(val) });
       }
     }
     return opts;
@@ -63791,9 +63791,9 @@ const AddFlightTileModal = ({
     setFixedCrewManifestStatus(initialEvent.fixedCrewManifestStatus || "pending");
     setFixedCrewManifestNotes(initialEvent.fixedCrewManifestNotes || "");
     setDeploymentStartDate(initialEvent.deploymentStartDate || initialEvent.date || date);
-    setDeploymentStartTime(initialEvent.deploymentStartTime || formatTime$4(Number(initialEvent.startTime) || 8));
+    setDeploymentStartTime(initialEvent.deploymentStartTime || formatTime$3(Number(initialEvent.startTime) || 8));
     setDeploymentEndDate(initialEvent.deploymentEndDate || initialEvent.date || date);
-    setDeploymentEndTime(initialEvent.deploymentEndTime || formatTime$4((Number(initialEvent.startTime) || 8) + (Number(initialEvent.duration) || 1)));
+    setDeploymentEndTime(initialEvent.deploymentEndTime || formatTime$3((Number(initialEvent.startTime) || 8) + (Number(initialEvent.duration) || 1)));
     setDeploymentAircraftCount(Math.max(1, Math.floor(Number(initialEvent.deploymentAircraftCount) || 1)));
     if (initialEvent.eventCategory === "sct") {
       const profile = fixedCrewCurrencyProfileOptions.find((candidate) => candidate.code === initialEvent.flightNumber || candidate.code === initialEvent.eventCode || candidate.name === initialEvent.flightNumber || candidate.currency === initialEvent.currency);
@@ -67560,7 +67560,7 @@ const DashboardIconTrash = ({ className = "h-5 w-5", strokeWidth = 2 }) => /* @_
   /* @__PURE__ */ jsxRuntimeExports.jsx("path", { d: "M10 11v6" }),
   /* @__PURE__ */ jsxRuntimeExports.jsx("path", { d: "M14 11v6" })
 ] });
-const formatTime$3 = (time) => {
+const formatTime$2 = (time) => {
   const hours = Math.floor(time);
   const minutes = Math.round(time % 1 * 60);
   return `${String(hours).padStart(2, "0")}:${String(minutes).padStart(2, "0")}`;
@@ -69729,9 +69729,9 @@ const MyDashboard = ({
       ] }),
       /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center space-x-4", children: [
         /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "font-mono text-gray-300", children: [
-          formatTime$3(event.startTime),
+          formatTime$2(event.startTime),
           " - ",
-          formatTime$3(event.startTime + event.duration)
+          formatTime$2(event.startTime + event.duration)
         ] }),
         /* @__PURE__ */ jsxRuntimeExports.jsx("button", { onClick: () => onSelectEvent(event), className: "px-3 py-1 bg-sky-600 text-white rounded-md hover:bg-sky-700 text-xs font-semibold", children: "Details" })
       ] })
@@ -70905,7 +70905,7 @@ const FlightTrackingWidget = ({ school, locationName, locationProfile }) => {
     ] }) })
   ] });
 };
-const formatTime$2 = (time) => {
+const formatTime$1 = (time) => {
   const hours = Math.floor(time);
   const minutes = Math.round(time % 1 * 60);
   return `${String(hours).padStart(2, "0")}:${String(minutes).padStart(2, "0")}`;
@@ -70967,7 +70967,7 @@ const SupervisorDashboard = ({ instructorsData, traineesData, date, events, scho
         /* @__PURE__ */ jsxRuntimeExports.jsx("h2", { className: "p-4 text-lg font-semibold text-gray-200 border-b border-gray-700 text-center", children: "AUTH" }),
         /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "p-4 space-y-3 flex-1", children: flightsNeedingAuth.length > 0 ? /* @__PURE__ */ jsxRuntimeExports.jsx("ul", { className: "space-y-3", children: flightsNeedingAuth.map((event) => /* @__PURE__ */ jsxRuntimeExports.jsxs("li", { className: "flex items-center justify-between p-3 bg-gray-700/50 rounded-md", children: [
           /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center space-x-3", children: [
-            /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "font-mono text-gray-300 text-sm", children: formatTime$2(event.startTime) }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "font-mono text-gray-300 text-sm", children: formatTime$1(event.startTime) }),
             /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
               /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "font-semibold text-white text-sm", children: event.flightNumber }),
               /* @__PURE__ */ jsxRuntimeExports.jsxs("p", { className: "text-xs text-gray-400", children: [
@@ -110173,12 +110173,6 @@ const formatDate = (dateStr) => {
   const year = String(date.getFullYear()).slice(-2);
   return `${day} ${month} ${year}`;
 };
-const formatTime$1 = (time) => {
-  if (typeof time !== "number" || Number.isNaN(time)) return "-";
-  const hours = Math.floor(time);
-  const minutes = Math.round((time - hours) * 60);
-  return `${String(hours).padStart(2, "0")}${String(minutes).padStart(2, "0")}`;
-};
 const getCompletionDateForMode = (dateMode, singleDate, startDate, endDate) => {
   if (dateMode === "single-date" && singleDate) return singleDate;
   if (dateMode === "date-range") return endDate || startDate || todayIso();
@@ -110192,10 +110186,6 @@ const getScheduledTypeFromLmpType = (type) => {
 };
 const normaliseName = (name) => name.replace(/\s+[–-]\s+.*$/, "").replace(/\s+/g, " ").trim();
 const normaliseCode = (value) => String(value || "").trim().toUpperCase();
-const displayPerson = (event) => {
-  const people = [event.student, event.pilot, event.crew].filter(Boolean).map((person) => String(person)).filter((person, index, list) => list.indexOf(person) === index);
-  return people.length > 0 ? people.join(" / ") : "-";
-};
 const TrainingCompletionView = ({
   traineesData,
   archivedTraineesData,
@@ -110222,7 +110212,7 @@ const TrainingCompletionView = ({
   const [selectedTrainees, setSelectedTrainees] = reactExports.useState([]);
   const [isCompleting, setIsCompleting] = reactExports.useState(false);
   const [completionMessage, setCompletionMessage] = reactExports.useState("");
-  const allEvents = reactExports.useMemo(() => Object.values(publishedSchedules).flat(), [publishedSchedules]);
+  reactExports.useMemo(() => Object.values(publishedSchedules).flat(), [publishedSchedules]);
   const allTrainees = reactExports.useMemo(() => [...traineesData, ...archivedTraineesData], [traineesData, archivedTraineesData]);
   const courseNames = reactExports.useMemo(() => {
     const activeCourses = courses.map((course) => course.name);
@@ -110264,14 +110254,11 @@ const TrainingCompletionView = ({
   };
   const candidateEvents = reactExports.useMemo(() => {
     if (selectedCourses.length === 0) return [];
-    let events = allEvents;
-    if (dateMode === "single-date" && singleDate) {
-      events = events.filter((event) => event.date === singleDate);
-    } else if (dateMode === "date-range" && startDate && endDate) {
-      events = events.filter((event) => event.date >= startDate && event.date <= endDate);
-    }
-    const scheduledEvents = events.filter((event) => getEventTrainees(event).length > 0).sort((a, b) => `${a.date}-${a.startTime}`.localeCompare(`${b.date}-${b.startTime}`));
-    const lmpEvents = syllabusDetails.filter((item) => item && item.isActive !== false).filter((item) => item.lmpType !== "Staff CAT").filter((item) => Array.isArray(item.courses) && item.courses.some((course) => selectedTrainingCodes.has(normaliseCode(course)))).map((item) => {
+    const lmpEvents = syllabusDetails.filter((item) => item && item.isActive !== false).filter((item) => item.lmpType !== "Staff CAT").filter((item) => Array.isArray(item.courses) && item.courses.some((course) => selectedTrainingCodes.has(normaliseCode(course)))).sort((a, b) => {
+      const leftOrder = Number.isFinite(Number(a.sortOrder)) ? Number(a.sortOrder) : Number.MAX_SAFE_INTEGER;
+      const rightOrder = Number.isFinite(Number(b.sortOrder)) ? Number(b.sortOrder) : Number.MAX_SAFE_INTEGER;
+      return leftOrder - rightOrder || String(a.code || "").localeCompare(String(b.code || ""), void 0, { numeric: true, sensitivity: "base" }) || String(a.id || "").localeCompare(String(b.id || ""));
+    }).map((item) => {
       const itemCourseCodes = new Set((item.courses || []).map(normaliseCode).filter(Boolean));
       const linkedTraineeIds = courseTrainees.filter((trainee) => itemCourseCodes.has(normaliseCode(trainee.course)) || itemCourseCodes.has(normaliseCode(trainee.lmpType)) || itemCourseCodes.has(normaliseCode(trainee.academicLmpType))).map((trainee) => trainee.idNumber);
       return {
@@ -110293,13 +110280,13 @@ const TrainingCompletionView = ({
       };
     }).filter((event) => getEventTrainees(event).length > 0);
     const seen = /* @__PURE__ */ new Set();
-    return [...scheduledEvents, ...lmpEvents].filter((event) => {
-      const key = `${event.date}|${event.flightNumber}|${event.id}`;
+    return lmpEvents.filter((event) => {
+      const key = `${event.flightNumber}|${event.id}`;
       if (seen.has(key)) return false;
       seen.add(key);
       return true;
-    }).sort((a, b) => `${a.date}-${a.startTime}-${a.flightNumber}`.localeCompare(`${b.date}-${b.startTime}-${b.flightNumber}`));
-  }, [allEvents, completionDate, courseTrainees, dateMode, endDate, selectedCourses.length, selectedTrainingCodes, singleDate, startDate, syllabusDetails]);
+    });
+  }, [completionDate, courseTrainees, selectedCourses.length, selectedTrainingCodes, syllabusDetails]);
   const selectedEvent = reactExports.useMemo(() => candidateEvents.find((event) => event.id === selectedEventId) || null, [candidateEvents, selectedEventId]);
   const traineesForSelectedEvent = reactExports.useMemo(() => selectedEvent ? getEventTrainees(selectedEvent).sort((a, b) => `${a.course}-${a.name}`.localeCompare(`${b.course}-${b.name}`)) : [], [courseTrainees, selectedEvent]);
   const resetEventSelection = () => {
@@ -110493,51 +110480,37 @@ const TrainingCompletionView = ({
           ] })
         ] })
       ] }),
-      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-6", children: [
+      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid grid-cols-1 2xl:grid-cols-[minmax(360px,0.95fr)_minmax(420px,1.05fr)] gap-6", children: [
         /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "bg-gray-800 rounded-lg p-6 border border-gray-700", children: [
           /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center justify-between mb-4", children: [
             /* @__PURE__ */ jsxRuntimeExports.jsx("h2", { className: "text-lg font-semibold text-white", children: "Select Event" }),
             /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "text-sm text-gray-400", children: [
               candidateEvents.length,
-              " matching event",
+              " LMP event",
               candidateEvents.length === 1 ? "" : "s"
             ] })
           ] }),
-          selectedCourses.length === 0 ? /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-yellow-300 text-sm", children: "Select a course to show matching training events." }) : candidateEvents.length === 0 ? /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-yellow-300 text-sm", children: "No training events match the selected course and date settings." }) : /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "overflow-x-auto border border-gray-700 rounded", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("table", { className: "w-full text-sm text-left", children: [
-            /* @__PURE__ */ jsxRuntimeExports.jsx("thead", { className: "text-xs uppercase bg-gray-700 text-gray-300", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("tr", { children: [
-              /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "px-3 py-2", children: "Select" }),
-              /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "px-3 py-2", children: "Date" }),
-              /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "px-3 py-2", children: "Time" }),
-              /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "px-3 py-2", children: "Type" }),
-              /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "px-3 py-2", children: "Event" }),
-              /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "px-3 py-2", children: "Trainee / Crew" }),
-              /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "px-3 py-2", children: "Instructor" })
-            ] }) }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx("tbody", { children: candidateEvents.map((event) => /* @__PURE__ */ jsxRuntimeExports.jsxs(
-              "tr",
-              {
-                className: `border-b border-gray-700 ${selectedEventId === event.id ? "bg-sky-900/40" : "hover:bg-gray-700/40"}`,
-                children: [
-                  /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "px-3 py-2", children: /* @__PURE__ */ jsxRuntimeExports.jsx(
-                    "input",
-                    {
-                      type: "radio",
-                      checked: selectedEventId === event.id,
-                      onChange: () => handleEventSelect(event.id),
-                      className: "w-4 h-4 text-sky-500"
-                    }
-                  ) }),
-                  /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "px-3 py-2 text-gray-200 whitespace-nowrap", children: formatDate(event.date) }),
-                  /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "px-3 py-2 text-gray-200 whitespace-nowrap", children: formatTime$1(event.startTime) }),
-                  /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "px-3 py-2 text-gray-200 capitalize", children: event.type }),
-                  /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "px-3 py-2 text-white font-medium", children: event.flightNumber || "-" }),
-                  /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "px-3 py-2 text-gray-200", children: displayPerson(event) }),
-                  /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "px-3 py-2 text-gray-200", children: event.instructor || "-" })
-                ]
-              },
-              event.id
-            )) })
-          ] }) })
+          selectedCourses.length === 0 ? /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-yellow-300 text-sm", children: "Select a course to show its LMP events." }) : candidateEvents.length === 0 ? /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-yellow-300 text-sm", children: "No LMP events match the selected course." }) : /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "border border-gray-700 rounded bg-gray-900/40 max-h-[520px] overflow-y-auto", children: candidateEvents.map((event, index) => /* @__PURE__ */ jsxRuntimeExports.jsxs(
+            "label",
+            {
+              className: `flex items-center gap-3 border-b border-gray-700 px-4 py-3 last:border-b-0 cursor-pointer ${selectedEventId === event.id ? "bg-sky-900/45 text-white" : "text-gray-200 hover:bg-gray-700/45"}`,
+              children: [
+                /* @__PURE__ */ jsxRuntimeExports.jsx(
+                  "input",
+                  {
+                    type: "radio",
+                    checked: selectedEventId === event.id,
+                    onChange: () => handleEventSelect(event.id),
+                    className: "h-4 w-4 text-sky-500"
+                  }
+                ),
+                /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "w-8 shrink-0 text-xs font-semibold text-gray-500", children: index + 1 }),
+                /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "font-semibold", children: event.flightNumber || "LMP Event" }),
+                event.notes && /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "min-w-0 truncate text-sm text-gray-400", children: event.notes })
+              ]
+            },
+            event.id
+          )) })
         ] }),
         /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "bg-gray-800 rounded-lg p-6 border border-gray-700", children: [
           /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center justify-between mb-4", children: [
@@ -110593,10 +110566,9 @@ const TrainingCompletionView = ({
             /* @__PURE__ */ jsxRuntimeExports.jsx("h3", { className: "text-sm uppercase tracking-wide text-gray-400 mb-2", children: "Completion Summary" }),
             /* @__PURE__ */ jsxRuntimeExports.jsxs("p", { className: "text-sm text-gray-200", children: [
               selectedEvent.flightNumber,
-              " on ",
+              " will be completed on ",
               formatDate(selectedEvent.date),
-              " at ",
-              formatTime$1(selectedEvent.startTime)
+              "."
             ] }),
             /* @__PURE__ */ jsxRuntimeExports.jsxs("p", { className: "text-sm text-gray-400 mt-1", children: [
               "This will mark the selected trainee ",
