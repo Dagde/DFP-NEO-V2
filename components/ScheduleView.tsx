@@ -11323,11 +11323,69 @@ const InitialSetupWizard: React.FC<{
                 uploadStatus: uploadResults.courses?.status || 'missing',
             });
         }
-        saveWizardConfig('Setup saved into Settings.', (baseConfig) => updatePrimaryOrganisationWithSettings(baseConfig, (settings) => ({
-            ...settings,
-            initialSetupWizardCompletedAt: completedAt,
-            personnelDisplaySettings: buildRankSettingsToSave(settings),
-            initialSetupWizardDraft: {
+        saveWizardConfig('Setup saved into Settings.', (baseConfig) => updatePrimaryOrganisationWithSettings(baseConfig, (settings) => {
+            const cleanLmpCode = String(trainingDraft.lmpCode || trainingDraft.lmpName || '').trim();
+            const cleanLmpName = String(trainingDraft.lmpName || cleanLmpCode).trim();
+            const cleanAccessUnitCode = getWizardSetupAccessUnitCode(trainingDraft.accessUnitCode);
+            const cleanAccessLocationCode = getWizardSetupAccessLocationCode(trainingDraft.accessLocationCode);
+            const catalogue = Array.isArray(settings.masterLmpCatalogue) ? settings.masterLmpCatalogue : [];
+            const accessRules = getOrganisationMasterLmpAccessRules(settings);
+            const catalogueExists = cleanLmpCode && catalogue.some((item: any) => (
+                normaliseUnitSettingsIdentifier(item?.code) === normaliseUnitSettingsIdentifier(cleanLmpCode)
+            ));
+            const accessExists = cleanLmpCode && accessRules.some((rule: any) => (
+                normaliseUnitSettingsIdentifier(rule?.lmpCode) === normaliseUnitSettingsIdentifier(cleanLmpCode)
+                && normaliseUnitSettingsIdentifier(rule?.unitCode) === normaliseUnitSettingsIdentifier(cleanAccessUnitCode)
+            ));
+            const nextCatalogueEntry = cleanLmpCode ? {
+                id: primaryMasterLmp?.id || createWizardRecordId('master-lmp-catalogue'),
+                code: cleanLmpCode,
+                name: cleanLmpName || cleanLmpCode,
+                description: trainingDraft.description,
+                status: trainingDraft.status || 'ACTIVE',
+                audience: resolveWizardLmpAudience(trainingDraft.audience),
+            } : null;
+            const nextAccessRule = cleanLmpCode ? {
+                id: createWizardRecordId('master-lmp-access'),
+                lmpCode: cleanLmpCode,
+                locationCode: cleanAccessLocationCode,
+                unitCode: cleanAccessUnitCode,
+                operationalModel: trainingDraft.accessModel === 'Any Model' ? null : (trainingDraft.accessModel || null),
+                accessLevel: trainingDraft.accessLevel || 'Manage',
+                status: 'ACTIVE',
+            } : null;
+            const correctedTrainingDraft = {
+                ...trainingDraft,
+                accessLocationCode: cleanAccessLocationCode,
+                accessUnitCode: cleanAccessUnitCode,
+            };
+            return {
+                ...settings,
+                masterLmpCatalogue: !nextCatalogueEntry
+                    ? catalogue
+                    : catalogueExists
+                        ? catalogue.map((item: any) => normaliseUnitSettingsIdentifier(item?.code) === normaliseUnitSettingsIdentifier(cleanLmpCode) ? { ...item, ...nextCatalogueEntry } : item)
+                        : [...catalogue, nextCatalogueEntry],
+                masterLmpAccess: !nextAccessRule
+                    ? accessRules
+                    : accessExists
+                        ? accessRules.map((rule: any) => (
+                            normaliseUnitSettingsIdentifier(rule?.lmpCode) === normaliseUnitSettingsIdentifier(cleanLmpCode)
+                            && normaliseUnitSettingsIdentifier(rule?.unitCode) === normaliseUnitSettingsIdentifier(cleanAccessUnitCode)
+                                ? { ...rule, ...nextAccessRule, id: rule.id || nextAccessRule.id }
+                                : rule
+                        ))
+                        : [
+                            ...accessRules.filter((rule: any) => !(
+                                normaliseUnitSettingsIdentifier(rule?.lmpCode) === normaliseUnitSettingsIdentifier(cleanLmpCode)
+                                && normaliseUnitSettingsIdentifier(rule?.unitCode) !== normaliseUnitSettingsIdentifier(cleanAccessUnitCode)
+                                && normaliseUnitSettingsIdentifier(rule?.locationCode) === normaliseUnitSettingsIdentifier(cleanAccessLocationCode)
+                            )),
+                            nextAccessRule,
+                        ],
+                initialSetupWizardCompletedAt: completedAt,
+                personnelDisplaySettings: buildRankSettingsToSave(settings),
+                initialSetupWizardDraft: {
                 unitsToday: parseWizardUnitRows(unitsTodayDraft),
                 locationsToday: parseWizardLocationRows(locationsTodayDraft),
                 unitParents: unitParentDraft,
@@ -11346,13 +11404,16 @@ const InitialSetupWizard: React.FC<{
                 currencies: currencyDraft,
                 scoringMatrix: wizardPhraseBankToScoringDraft(wizardScoringPhraseBank),
                 staffCurrencyEvents: staffCurrencyEventsDraft,
+                trainingDraft: correctedTrainingDraft,
                 completedAt,
             },
             initialSetupWizardDrafts: {
                 ...(settings.initialSetupWizardDrafts || {}),
+                trainingDraft: correctedTrainingDraft,
                 completedAt,
             },
-        })));
+            };
+        }));
         setCompletedWizardStepIds(new Set(steps.map((step) => step.id)));
         if (typeof window !== 'undefined') {
             safeSetWizardLocalStorage(initialSetupWizardCompletedStepsStorageKey, JSON.stringify(steps.map((step) => step.id)));

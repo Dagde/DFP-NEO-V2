@@ -29705,6 +29705,31 @@ const App: React.FC = () => {
         return [];
     }, []);
 
+    const completedWizardLmpScope = useMemo(() => {
+        if (!platformConfigLoaded) return null;
+        const normaliseContextCode = (value?: string | null) => String(value || '').trim().toUpperCase();
+        const organisation = (platformConfig?.organisations || [])[0] as any;
+        const settings = organisation?.settings || {};
+        const draftCandidates = [settings.initialSetupWizardDrafts, settings.initialSetupWizardDraft]
+            .filter((draft) => draft && typeof draft === 'object');
+        const completedAt = String(settings.initialSetupWizardCompletedAt || '').trim()
+            || draftCandidates.map((draft: any) => String(draft?.completedAt || '')).find(Boolean)
+            || '';
+        if (!completedAt) return null;
+        const draftWithTraining = draftCandidates.find((draft: any) => draft?.trainingDraft || draft?.unitDraft || draft?.locationDraft) as any;
+        const trainingDraft = draftWithTraining?.trainingDraft || {};
+        const unitDraft = draftWithTraining?.unitDraft || {};
+        const locationDraft = draftWithTraining?.locationDraft || {};
+        const lmpCode = normaliseContextCode(trainingDraft.lmpCode || trainingDraft.lmpName);
+        const unitCode = normaliseContextCode(unitDraft.code || trainingDraft.accessUnitCode);
+        const locationCode = normaliseContextCode(unitDraft.locationCode || locationDraft.code || trainingDraft.accessLocationCode);
+        const activeUnit = normaliseContextCode(activeUnitCode);
+        const activeLocation = normaliseContextCode(school);
+        if (!lmpCode || !unitCode || unitCode !== activeUnit) return null;
+        if (locationCode && activeLocation && locationCode !== activeLocation) return null;
+        return { lmpCode, unitCode, locationCode };
+    }, [activeUnitCode, platformConfig, platformConfigLoaded, school]);
+
     const hasMasterLmpUnitAccess = useCallback((
         lmpCode: string,
         unitCode?: string | null,
@@ -29712,8 +29737,15 @@ const App: React.FC = () => {
     ) => {
         if (!platformConfigLoaded) return false;
         const contextUnitCode = unitCode || activeUnitCode;
+        if (
+            completedWizardLmpScope
+            && String(lmpCode || '').trim().toUpperCase() === completedWizardLmpScope.lmpCode
+            && String(contextUnitCode || '').trim().toUpperCase() === completedWizardLmpScope.unitCode
+        ) {
+            return true;
+        }
         return hasMasterLmpAccess(platformConfig, lmpCode, getMasterLmpAccessContextForUnit(contextUnitCode), requiredAccess);
-    }, [activeUnitCode, getMasterLmpAccessContextForUnit, platformConfig, platformConfigLoaded]);
+    }, [activeUnitCode, completedWizardLmpScope, getMasterLmpAccessContextForUnit, platformConfig, platformConfigLoaded]);
 
     const filterSyllabusForMasterLmpAccess = useCallback((
         items: SyllabusItemDetail[],
@@ -29745,9 +29777,19 @@ const App: React.FC = () => {
             if (activeModel !== 'flight_school' && activeModel !== 'air_combat') {
                 return itemMatchesActiveUnitContext(item, { requireExplicitUnit: true });
             }
+            if (activeModel === 'flight_school' && completedWizardLmpScope && activeUnit === completedWizardLmpScope.unitCode) {
+                const itemLocation = normaliseContextCode((item as any).location);
+                const matchesCompletedWizardLmp = lmpCodes.some((lmpCode) => (
+                    normaliseContextCode(lmpCode) === completedWizardLmpScope.lmpCode
+                ));
+                const matchesCompletedWizardLocation = !completedWizardLmpScope.locationCode
+                    || !itemLocation
+                    || itemLocation === completedWizardLmpScope.locationCode;
+                if (matchesCompletedWizardLmp && matchesCompletedWizardLocation) return true;
+            }
             return lmpCodes.some((lmpCode) => hasMasterLmpUnitAccess(lmpCode, unitCode, requiredAccess));
         });
-    }, [activeUnitCode, getOperationalModelForUnitCode, getSyllabusMasterLmpCodes, hasMasterLmpUnitAccess, school]);
+    }, [activeUnitCode, completedWizardLmpScope, getOperationalModelForUnitCode, getSyllabusMasterLmpCodes, hasMasterLmpUnitAccess, school]);
 
     const getFlightSchoolAssignableSyllabusForActiveScope = useCallback((
         items: SyllabusItemDetail[],
@@ -31672,10 +31714,17 @@ const App: React.FC = () => {
                 const hasAccess = contextUnitCodes.some((unitCode) => (
                     hasMasterLmpAccess(platformConfig, code, getMasterLmpAccessContextForUnit(unitCode), 'View')
                 ));
+                const hasCompletedWizardAccess = completedWizardLmpScope
+                    && completedWizardLmpScope.lmpCode === key
+                    && contextUnitCodes.some((unitCode) => String(unitCode || '').trim().toUpperCase() === completedWizardLmpScope.unitCode);
+                if (hasCompletedWizardAccess) {
+                    seen.add(key);
+                    return true;
+                }
                 if (hasAccess) seen.add(key);
                 return hasAccess;
             });
-    }, [activeContextUnitCodes, activeOperationalModel, activeUnitCode, getMasterLmpAccessContextForUnit, platformConfig, platformConfigLoaded]);
+    }, [activeContextUnitCodes, activeOperationalModel, activeUnitCode, completedWizardLmpScope, getMasterLmpAccessContextForUnit, platformConfig, platformConfigLoaded]);
     useEffect(() => {
         if (!setupTestProfile) return;
         const activeOrganisation = (platformConfig?.organisations || [])[0] as any;

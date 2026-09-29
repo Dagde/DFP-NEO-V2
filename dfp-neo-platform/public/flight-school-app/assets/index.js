@@ -41084,36 +41084,75 @@ const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, lo
         uploadStatus: uploadResults.courses?.status || "missing"
       });
     }
-    saveWizardConfig("Setup saved into Settings.", (baseConfig) => updatePrimaryOrganisationWithSettings(baseConfig, (settings) => ({
-      ...settings,
-      initialSetupWizardCompletedAt: completedAt,
-      personnelDisplaySettings: buildRankSettingsToSave(settings),
-      initialSetupWizardDraft: {
-        unitsToday: parseWizardUnitRows(unitsTodayDraft),
-        locationsToday: parseWizardLocationRows(locationsTodayDraft),
-        unitParents: unitParentDraft,
-        crewLabels: crewLabelsDraft,
-        alternateCrews: alternateCrewDraft,
-        buildRules: buildRulesDraftText,
-        staff: staffDraft,
-        traineesEnabled: unitDraft.hasTrainees,
-        traineeCourses: traineeCourseOptionsDraft,
-        trainees: traineeDraft,
-        trainingRecords: trainingRecordsDraft,
-        unitModules: unitModulesDraft,
-        ranksAndLabels: rankLabelsDraft,
-        rankSettings: rankSettingsDraft,
-        resourceSharing: resourceSharingDraft,
-        currencies: currencyDraft,
-        scoringMatrix: wizardPhraseBankToScoringDraft(wizardScoringPhraseBank),
-        staffCurrencyEvents: staffCurrencyEventsDraft,
-        completedAt
-      },
-      initialSetupWizardDrafts: {
-        ...settings.initialSetupWizardDrafts || {},
-        completedAt
-      }
-    })));
+    saveWizardConfig("Setup saved into Settings.", (baseConfig) => updatePrimaryOrganisationWithSettings(baseConfig, (settings) => {
+      const cleanLmpCode = String(trainingDraft.lmpCode || trainingDraft.lmpName || "").trim();
+      const cleanLmpName = String(trainingDraft.lmpName || cleanLmpCode).trim();
+      const cleanAccessUnitCode = getWizardSetupAccessUnitCode(trainingDraft.accessUnitCode);
+      const cleanAccessLocationCode = getWizardSetupAccessLocationCode(trainingDraft.accessLocationCode);
+      const catalogue = Array.isArray(settings.masterLmpCatalogue) ? settings.masterLmpCatalogue : [];
+      const accessRules = getOrganisationMasterLmpAccessRules(settings);
+      const catalogueExists = cleanLmpCode && catalogue.some((item) => normaliseUnitSettingsIdentifier(item?.code) === normaliseUnitSettingsIdentifier(cleanLmpCode));
+      const accessExists = cleanLmpCode && accessRules.some((rule) => normaliseUnitSettingsIdentifier(rule?.lmpCode) === normaliseUnitSettingsIdentifier(cleanLmpCode) && normaliseUnitSettingsIdentifier(rule?.unitCode) === normaliseUnitSettingsIdentifier(cleanAccessUnitCode));
+      const nextCatalogueEntry = cleanLmpCode ? {
+        id: primaryMasterLmp?.id || createWizardRecordId("master-lmp-catalogue"),
+        code: cleanLmpCode,
+        name: cleanLmpName || cleanLmpCode,
+        description: trainingDraft.description,
+        status: trainingDraft.status || "ACTIVE",
+        audience: resolveWizardLmpAudience(trainingDraft.audience)
+      } : null;
+      const nextAccessRule = cleanLmpCode ? {
+        id: createWizardRecordId("master-lmp-access"),
+        lmpCode: cleanLmpCode,
+        locationCode: cleanAccessLocationCode,
+        unitCode: cleanAccessUnitCode,
+        operationalModel: trainingDraft.accessModel === "Any Model" ? null : trainingDraft.accessModel || null,
+        accessLevel: trainingDraft.accessLevel || "Manage",
+        status: "ACTIVE"
+      } : null;
+      const correctedTrainingDraft = {
+        ...trainingDraft,
+        accessLocationCode: cleanAccessLocationCode,
+        accessUnitCode: cleanAccessUnitCode
+      };
+      return {
+        ...settings,
+        masterLmpCatalogue: !nextCatalogueEntry ? catalogue : catalogueExists ? catalogue.map((item) => normaliseUnitSettingsIdentifier(item?.code) === normaliseUnitSettingsIdentifier(cleanLmpCode) ? { ...item, ...nextCatalogueEntry } : item) : [...catalogue, nextCatalogueEntry],
+        masterLmpAccess: !nextAccessRule ? accessRules : accessExists ? accessRules.map((rule) => normaliseUnitSettingsIdentifier(rule?.lmpCode) === normaliseUnitSettingsIdentifier(cleanLmpCode) && normaliseUnitSettingsIdentifier(rule?.unitCode) === normaliseUnitSettingsIdentifier(cleanAccessUnitCode) ? { ...rule, ...nextAccessRule, id: rule.id || nextAccessRule.id } : rule) : [
+          ...accessRules.filter((rule) => !(normaliseUnitSettingsIdentifier(rule?.lmpCode) === normaliseUnitSettingsIdentifier(cleanLmpCode) && normaliseUnitSettingsIdentifier(rule?.unitCode) !== normaliseUnitSettingsIdentifier(cleanAccessUnitCode) && normaliseUnitSettingsIdentifier(rule?.locationCode) === normaliseUnitSettingsIdentifier(cleanAccessLocationCode))),
+          nextAccessRule
+        ],
+        initialSetupWizardCompletedAt: completedAt,
+        personnelDisplaySettings: buildRankSettingsToSave(settings),
+        initialSetupWizardDraft: {
+          unitsToday: parseWizardUnitRows(unitsTodayDraft),
+          locationsToday: parseWizardLocationRows(locationsTodayDraft),
+          unitParents: unitParentDraft,
+          crewLabels: crewLabelsDraft,
+          alternateCrews: alternateCrewDraft,
+          buildRules: buildRulesDraftText,
+          staff: staffDraft,
+          traineesEnabled: unitDraft.hasTrainees,
+          traineeCourses: traineeCourseOptionsDraft,
+          trainees: traineeDraft,
+          trainingRecords: trainingRecordsDraft,
+          unitModules: unitModulesDraft,
+          ranksAndLabels: rankLabelsDraft,
+          rankSettings: rankSettingsDraft,
+          resourceSharing: resourceSharingDraft,
+          currencies: currencyDraft,
+          scoringMatrix: wizardPhraseBankToScoringDraft(wizardScoringPhraseBank),
+          staffCurrencyEvents: staffCurrencyEventsDraft,
+          trainingDraft: correctedTrainingDraft,
+          completedAt
+        },
+        initialSetupWizardDrafts: {
+          ...settings.initialSetupWizardDrafts || {},
+          trainingDraft: correctedTrainingDraft,
+          completedAt
+        }
+      };
+    }));
     setCompletedWizardStepIds(new Set(steps.map((step) => step.id)));
     if (typeof window !== "undefined") {
       safeSetWizardLocalStorage(initialSetupWizardCompletedStepsStorageKey, JSON.stringify(steps.map((step) => step.id)));
@@ -137728,11 +137767,35 @@ const App = () => {
     if (courses2.length > 0) return courses2;
     return [];
   }, []);
+  const completedWizardLmpScope = reactExports.useMemo(() => {
+    if (!platformConfigLoaded) return null;
+    const normaliseContextCode2 = (value) => String(value || "").trim().toUpperCase();
+    const organisation = (platformConfig?.organisations || [])[0];
+    const settings = organisation?.settings || {};
+    const draftCandidates = [settings.initialSetupWizardDrafts, settings.initialSetupWizardDraft].filter((draft) => draft && typeof draft === "object");
+    const completedAt = String(settings.initialSetupWizardCompletedAt || "").trim() || draftCandidates.map((draft) => String(draft?.completedAt || "")).find(Boolean) || "";
+    if (!completedAt) return null;
+    const draftWithTraining = draftCandidates.find((draft) => draft?.trainingDraft || draft?.unitDraft || draft?.locationDraft);
+    const trainingDraft = draftWithTraining?.trainingDraft || {};
+    const unitDraft = draftWithTraining?.unitDraft || {};
+    const locationDraft = draftWithTraining?.locationDraft || {};
+    const lmpCode = normaliseContextCode2(trainingDraft.lmpCode || trainingDraft.lmpName);
+    const unitCode = normaliseContextCode2(unitDraft.code || trainingDraft.accessUnitCode);
+    const locationCode = normaliseContextCode2(unitDraft.locationCode || locationDraft.code || trainingDraft.accessLocationCode);
+    const activeUnit = normaliseContextCode2(activeUnitCode);
+    const activeLocation = normaliseContextCode2(school);
+    if (!lmpCode || !unitCode || unitCode !== activeUnit) return null;
+    if (locationCode && activeLocation && locationCode !== activeLocation) return null;
+    return { lmpCode, unitCode, locationCode };
+  }, [activeUnitCode, platformConfig, platformConfigLoaded, school]);
   const hasMasterLmpUnitAccess = reactExports.useCallback((lmpCode, unitCode, requiredAccess = "View") => {
     if (!platformConfigLoaded) return false;
     const contextUnitCode = unitCode || activeUnitCode;
+    if (completedWizardLmpScope && String(lmpCode || "").trim().toUpperCase() === completedWizardLmpScope.lmpCode && String(contextUnitCode || "").trim().toUpperCase() === completedWizardLmpScope.unitCode) {
+      return true;
+    }
     return hasMasterLmpAccess(platformConfig, lmpCode, getMasterLmpAccessContextForUnit(contextUnitCode), requiredAccess);
-  }, [activeUnitCode, getMasterLmpAccessContextForUnit, platformConfig, platformConfigLoaded]);
+  }, [activeUnitCode, completedWizardLmpScope, getMasterLmpAccessContextForUnit, platformConfig, platformConfigLoaded]);
   const filterSyllabusForMasterLmpAccess = reactExports.useCallback((items, requiredAccess = "View", unitCode) => {
     const normaliseContextCode2 = (value) => String(value || "").trim().toUpperCase();
     const activeUnit = normaliseContextCode2(unitCode || activeUnitCode);
@@ -137758,9 +137821,15 @@ const App = () => {
       if (activeModel !== "flight_school" && activeModel !== "air_combat") {
         return itemMatchesActiveUnitContext(item, { requireExplicitUnit: true });
       }
+      if (activeModel === "flight_school" && completedWizardLmpScope && activeUnit === completedWizardLmpScope.unitCode) {
+        const itemLocation = normaliseContextCode2(item.location);
+        const matchesCompletedWizardLmp = lmpCodes.some((lmpCode) => normaliseContextCode2(lmpCode) === completedWizardLmpScope.lmpCode);
+        const matchesCompletedWizardLocation = !completedWizardLmpScope.locationCode || !itemLocation || itemLocation === completedWizardLmpScope.locationCode;
+        if (matchesCompletedWizardLmp && matchesCompletedWizardLocation) return true;
+      }
       return lmpCodes.some((lmpCode) => hasMasterLmpUnitAccess(lmpCode, unitCode, requiredAccess));
     });
-  }, [activeUnitCode, getOperationalModelForUnitCode, getSyllabusMasterLmpCodes, hasMasterLmpUnitAccess, school]);
+  }, [activeUnitCode, completedWizardLmpScope, getOperationalModelForUnitCode, getSyllabusMasterLmpCodes, hasMasterLmpUnitAccess, school]);
   const getFlightSchoolAssignableSyllabusForActiveScope = reactExports.useCallback((items, requiredAccess = "View") => {
     const unitCodes = activeContextUnitCodes.length > 0 ? activeContextUnitCodes : [activeUnitCode];
     const seen = /* @__PURE__ */ new Set();
@@ -139085,10 +139154,15 @@ const App = () => {
       const key = code.toUpperCase();
       if (seen.has(key)) return false;
       const hasAccess = contextUnitCodes.some((unitCode) => hasMasterLmpAccess(platformConfig, code, getMasterLmpAccessContextForUnit(unitCode), "View"));
+      const hasCompletedWizardAccess = completedWizardLmpScope && completedWizardLmpScope.lmpCode === key && contextUnitCodes.some((unitCode) => String(unitCode || "").trim().toUpperCase() === completedWizardLmpScope.unitCode);
+      if (hasCompletedWizardAccess) {
+        seen.add(key);
+        return true;
+      }
       if (hasAccess) seen.add(key);
       return hasAccess;
     });
-  }, [activeContextUnitCodes, activeOperationalModel, activeUnitCode, getMasterLmpAccessContextForUnit, platformConfig, platformConfigLoaded]);
+  }, [activeContextUnitCodes, activeOperationalModel, activeUnitCode, completedWizardLmpScope, getMasterLmpAccessContextForUnit, platformConfig, platformConfigLoaded]);
   reactExports.useEffect(() => {
     if (!setupTestProfile) return;
     const activeOrganisation = (platformConfig?.organisations || [])[0];
