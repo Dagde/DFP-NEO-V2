@@ -59073,11 +59073,15 @@ appliedUpdates.forEach(update => {
         {showEmptyDfpNotice && (
             <div className="pointer-events-none fixed inset-0 z-[155] flex items-center justify-center px-6">
                 <div className="pointer-events-auto w-[min(620px,calc(100vw-48px))] rounded-lg border border-amber-400/60 bg-gray-950/96 px-7 py-6 text-center shadow-2xl shadow-black/45 backdrop-blur-md">
-                    <img
-                        src="/dfp-neo-setup-logo.jpg"
-                        alt="DFP NEO"
-                        className="mx-auto mb-5 h-auto w-[min(320px,75vw)] object-contain"
-                    />
+                    <div className="relative mx-auto mb-5 flex h-28 w-28 items-center justify-center">
+                        <div className="absolute inset-0 rounded-full bg-orange-500/35 blur-2xl"></div>
+                        <div className="absolute inset-4 rounded-full bg-amber-300/25 blur-xl"></div>
+                        <img
+                            src="/dfp-neo-sidebar-icon.jpg"
+                            alt="DFP NEO"
+                            className="relative h-24 w-20 object-contain drop-shadow-[0_0_18px_rgba(255,122,24,0.95)] [filter:sepia(1)_saturate(2.4)_hue-rotate(346deg)_brightness(1.18)_contrast(1.12)]"
+                        />
+                    </div>
                     <h2 className="text-2xl font-bold text-white">No saved DFP found for {formatDfpRetrievalDate(date)}</h2>
                     <p className="mt-3 text-sm leading-6 text-gray-200">
                         DFP NEO checked the published DFP database for {school} - {activeUnitCode || 'current unit'} and did not find saved schedule tiles for this date.
@@ -59124,11 +59128,15 @@ appliedUpdates.forEach(update => {
             <div className="pointer-events-none fixed inset-0 z-[160] flex items-center justify-center px-6">
                 <div className="w-[min(640px,calc(100vw-48px))] rounded-lg border border-sky-500/60 bg-gray-950/95 px-8 py-7 text-center shadow-2xl shadow-black/40 backdrop-blur-md">
                     <div className="mb-5 flex flex-col items-center justify-center gap-4">
-                        <img
-                            src="/dfp-neo-setup-logo.jpg"
-                            alt="DFP NEO"
-                            className="h-auto w-[min(320px,75vw)] object-contain"
-                        />
+                        <div className="relative flex h-28 w-28 items-center justify-center">
+                            <div className="absolute inset-0 rounded-full bg-orange-500/35 blur-2xl"></div>
+                            <div className="absolute inset-4 rounded-full bg-amber-300/25 blur-xl"></div>
+                            <img
+                                src="/dfp-neo-sidebar-icon.jpg"
+                                alt="DFP NEO"
+                                className="relative h-24 w-20 object-contain drop-shadow-[0_0_18px_rgba(255,122,24,0.95)] [filter:sepia(1)_saturate(2.4)_hue-rotate(346deg)_brightness(1.18)_contrast(1.12)]"
+                            />
+                        </div>
                         <div className="flex items-center justify-center gap-3">
                             <span className="h-5 w-5 rounded-full border-[3px] border-sky-400 border-t-transparent animate-spin"></span>
                             <span className="text-2xl font-semibold text-white">Retrieving DFP</span>

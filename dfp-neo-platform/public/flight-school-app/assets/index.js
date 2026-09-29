@@ -161980,14 +161980,18 @@ Do you want to replace the existing entry?`,
       /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-gray-400 text-sm", children: "Loading DFP-NEO..." })
     ] }) }),
     showEmptyDfpNotice && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "pointer-events-none fixed inset-0 z-[155] flex items-center justify-center px-6", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "pointer-events-auto w-[min(620px,calc(100vw-48px))] rounded-lg border border-amber-400/60 bg-gray-950/96 px-7 py-6 text-center shadow-2xl shadow-black/45 backdrop-blur-md", children: [
-      /* @__PURE__ */ jsxRuntimeExports.jsx(
-        "img",
-        {
-          src: "/dfp-neo-setup-logo.jpg",
-          alt: "DFP NEO",
-          className: "mx-auto mb-5 h-auto w-[min(320px,75vw)] object-contain"
-        }
-      ),
+      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "relative mx-auto mb-5 flex h-28 w-28 items-center justify-center", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "absolute inset-0 rounded-full bg-orange-500/35 blur-2xl" }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "absolute inset-4 rounded-full bg-amber-300/25 blur-xl" }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx(
+          "img",
+          {
+            src: "/dfp-neo-sidebar-icon.jpg",
+            alt: "DFP NEO",
+            className: "relative h-24 w-20 object-contain drop-shadow-[0_0_18px_rgba(255,122,24,0.95)] [filter:sepia(1)_saturate(2.4)_hue-rotate(346deg)_brightness(1.18)_contrast(1.12)]"
+          }
+        )
+      ] }),
       /* @__PURE__ */ jsxRuntimeExports.jsxs("h2", { className: "text-2xl font-bold text-white", children: [
         "No saved DFP found for ",
         formatDfpRetrievalDate(date)
@@ -162038,14 +162042,18 @@ Do you want to replace the existing entry?`,
     ] }) }),
     showDfpRetrievalNotice && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "pointer-events-none fixed inset-0 z-[160] flex items-center justify-center px-6", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "w-[min(640px,calc(100vw-48px))] rounded-lg border border-sky-500/60 bg-gray-950/95 px-8 py-7 text-center shadow-2xl shadow-black/40 backdrop-blur-md", children: [
       /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mb-5 flex flex-col items-center justify-center gap-4", children: [
-        /* @__PURE__ */ jsxRuntimeExports.jsx(
-          "img",
-          {
-            src: "/dfp-neo-setup-logo.jpg",
-            alt: "DFP NEO",
-            className: "h-auto w-[min(320px,75vw)] object-contain"
-          }
-        ),
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "relative flex h-28 w-28 items-center justify-center", children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "absolute inset-0 rounded-full bg-orange-500/35 blur-2xl" }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "absolute inset-4 rounded-full bg-amber-300/25 blur-xl" }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx(
+            "img",
+            {
+              src: "/dfp-neo-sidebar-icon.jpg",
+              alt: "DFP NEO",
+              className: "relative h-24 w-20 object-contain drop-shadow-[0_0_18px_rgba(255,122,24,0.95)] [filter:sepia(1)_saturate(2.4)_hue-rotate(346deg)_brightness(1.18)_contrast(1.12)]"
+            }
+          )
+        ] }),
         /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center justify-center gap-3", children: [
           /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "h-5 w-5 rounded-full border-[3px] border-sky-400 border-t-transparent animate-spin" }),
           /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-2xl font-semibold text-white", children: "Retrieving DFP" })
