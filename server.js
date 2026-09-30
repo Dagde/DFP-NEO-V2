@@ -23540,6 +23540,59 @@ app.post('/api/trainee-performance', async (req, res) => {
 
     // Map Pt051Assessment shape → DB columns
     const row = mapAssessmentToRow(data);
+    const existingRows = await db.$queryRawUnsafe(
+      `SELECT "id", "eventId" FROM "TraineePerformance" WHERE "id" = $1::text OR "eventId" = $2::text LIMIT 1`,
+      row.id,
+      row.eventId
+    );
+
+    if (existingRows && existingRows.length > 0) {
+      const existing = existingRows[0];
+      await db.$executeRawUnsafe(`
+        UPDATE "TraineePerformance" SET
+          "traineeId"                = $1::text,
+          "traineeFullName"          = $2::text,
+          "eventId"                  = $3::text,
+          "eventCode"                = $4::text,
+          "flightNumber"             = $5::text,
+          "eventDescription"         = $6::text,
+          "date"                     = $7::text,
+          "instructorName"           = $8::text,
+          "instructorId"             = $9::text,
+          "overallGrade"             = $10::text,
+          "overallResult"            = $11::text,
+          "dcoResult"                = $12::text,
+          "startTime"                = $13,
+          "duration"                 = $14,
+          "endTime"                  = $15,
+          "comments"                 = $16::text,
+          "elementScores"            = $17::jsonb,
+          "isCompleted"              = $18::boolean,
+          "isGroundSchoolAssessment" = $19::boolean,
+          "groundSchoolResult"       = $20,
+          "course"                   = $21::text,
+          "syllabusPhase"            = $22::text,
+          "eventSequence"            = $23,
+          "updatedAt"                = NOW(),
+          "updatedBy"                = $24::text
+        WHERE "id" = $25::text
+      `,
+        row.traineeId, row.traineeFullName, row.eventId, row.eventCode, row.flightNumber,
+        row.eventDescription, row.date, row.instructorName, row.instructorId,
+        row.overallGrade, row.overallResult, row.dcoResult,
+        row.startTime, row.duration, row.endTime, row.comments,
+        JSON.stringify(row.elementScores), row.isCompleted, row.isGroundSchoolAssessment, row.groundSchoolResult,
+        row.course, row.syllabusPhase, row.eventSequence, row.createdBy, existing.id
+      );
+
+      const updated = await db.$queryRawUnsafe(
+        `SELECT * FROM "TraineePerformance" WHERE "id" = $1::text`,
+        existing.id
+      );
+      const updatedAssessment = mapRowToAssessment(updated[0]);
+      await saveTrainingReportVersionArchive(db, 'upsert', updatedAssessment, row.createdBy);
+      return res.status(200).json(updatedAssessment);
+    }
 
     await db.$executeRawUnsafe(`
       INSERT INTO "TraineePerformance" (
