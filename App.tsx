@@ -46322,6 +46322,7 @@ const App: React.FC = () => {
             storedReports: {
                 neoBuildDiagnostic: getLatestNeoBuildDiagnosticReport(),
                 neoBuildTiming: readJsonStorage('neo_build_timing_report'),
+                neoBuildPreflightLmpScope: readJsonStorage('neo_build_preflight_lmp_scope_trace'),
                 neoBuildRuntimeError: readJsonStorage('neo_build_runtime_error_report'),
                 neoBuildZeroTileTrace: readJsonStorage('neo_build_zero_tile_trace'),
                 neoBuildInputTrace: readJsonStorage('neo_build_input_trace'),
@@ -46620,6 +46621,60 @@ const App: React.FC = () => {
         markNeoBuildTiming(timingReport, 'elce:complete');
 
         let buildTraineeLMPs = traineeLMPs;
+        const neoBuildDiag: any = {
+            flightSchoolLmpScopeDiagnostics: {
+                purpose: 'Pre-build Flight School LMP scope trace captured before the NEO Build scheduler starts.',
+                context: {
+                    operationalModel: activeOperationalModel,
+                    activeUnitCode,
+                    activeLocationCode: school,
+                    buildDate: buildDfpDate,
+                },
+                assignableMasterScope: null as any,
+                preBuildFetch: {
+                    fetchedLmps: 0,
+                    fetchedEvents: 0,
+                    keptLmps: 0,
+                    keptEvents: 0,
+                    skippedOutsideScope: 0,
+                    skippedNoUnitAccess: 0,
+                    skippedNoScopedEvents: 0,
+                    masterMergeSamples: [] as any[],
+                    lmpSamples: [] as any[],
+                    rawLmpSamples: [] as any[],
+                    scopedLmpSamples: [] as any[],
+                    suspiciousContainerRows: [] as any[],
+                },
+                finalScope: {
+                    beforeLmps: 0,
+                    afterLmps: 0,
+                    keptEvents: 0,
+                    removedLmps: 0,
+                    suspiciousContainerRows: [] as any[],
+                    samples: [] as any[],
+                },
+                conclusions: [] as string[],
+            },
+        };
+        const saveNeoBuildPreflightLmpScopeTrace = (stage: string) => {
+            if (typeof window === 'undefined') return;
+            const report = {
+                reportType: 'NEO_BUILD_PREFLIGHT_LMP_SCOPE_TRACE',
+                stage,
+                updatedAt: new Date().toISOString(),
+                buildDate: buildDfpDate,
+                activeOperationalModel,
+                activeUnitCode,
+                activeLocationCode: school,
+                diagnostics: neoBuildDiag.flightSchoolLmpScopeDiagnostics,
+            };
+            try {
+                (window as any).__lastNeoBuildPreflightLmpScopeTrace = report;
+                localStorage.setItem('neo_build_preflight_lmp_scope_trace', JSON.stringify(report));
+            } catch (error) {
+                console.warn('[NEO-Build] Failed to save preflight LMP scope trace:', error);
+            }
+        };
         const shouldRefreshComposedLmpsBeforeBuild = activeOperationalModel !== 'air_combat';
         if (!shouldRefreshComposedLmpsBeforeBuild) {
             markNeoBuildTiming(timingReport, 'lmp-refresh:skipped', {
@@ -46642,6 +46697,7 @@ const App: React.FC = () => {
                         summary: summariseBuildLmpRows(rows as SyllabusItemDetail[], lmpType, 8),
                     })),
                 };
+                saveNeoBuildPreflightLmpScopeTrace('assignable-master-scope');
             }
 
             logNeoBuildUiDebug('[NEO-Build] Refreshing composed Individual LMPs before build...');
@@ -46813,6 +46869,7 @@ const App: React.FC = () => {
             markNeoBuildTiming(timingReport, 'lmp-refresh:error', { message: lmpRefreshErr instanceof Error ? lmpRefreshErr.message : String(lmpRefreshErr) });
             console.warn('[NEO-Build] Pre-build LMP refresh threw; using current in-memory LMPs:', lmpRefreshErr);
         }
+        saveNeoBuildPreflightLmpScopeTrace('lmp-refresh-complete');
         markNeoBuildTiming(timingReport, 'lmp-refresh:complete', { buildTraineeLMPs: buildTraineeLMPs.size });
 
         const reportFollowUpDiag: any = {
@@ -47477,6 +47534,7 @@ const App: React.FC = () => {
                 });
                 buildTraineeLMPs = new Map(scopedLmpEntries);
             }
+            saveNeoBuildPreflightLmpScopeTrace('final-scope-complete');
         }
         const storedRemedialRequestsForBuild = loadStoredRemedialRequests();
         const remedialRequestsForBuild = remedialRequests.length > 0 ? remedialRequests : storedRemedialRequestsForBuild;
