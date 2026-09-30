@@ -25685,6 +25685,17 @@ const applyCoursePriority = (rankedList: Trainee[], diagnosticLabel = 'unlabelle
                 const isSoloStby = next.sortieType === 'Solo' || ['BGF11', 'BGF18'].includes(next.id);
                 // Solo flights on STBY: no instructor (solo PIC), correct flightType
                 const stbyInstructor = isSoloStby ? null : findBestInstructorForStby(trainee, next, time, next.duration, 'flight', generatedEvents);
+                if (!isSoloStby && !stbyInstructor) {
+                    traceScheduleReject('STBY_NO_INSTRUCTOR_SELECTED', {
+                        listName: 'STBY flight recovery',
+                        trainee: trainee.fullName,
+                        event: next.code || next.id || null,
+                        startTime: time,
+                        duration: next.duration,
+                        message: 'Skipped STBY flight recovery tile because no eligible instructor was available.',
+                    });
+                    continue;
+                }
                 const stbyInstructorName = isSoloStby ? '' : (stbyInstructor?.name || 'TBA');
                 const stbyLine = findAvailableStbyLine(time, next.duration, generatedEvents, 'STBY');
 

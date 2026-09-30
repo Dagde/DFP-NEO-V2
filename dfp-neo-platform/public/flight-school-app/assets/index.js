@@ -128657,7 +128657,7 @@ async function generateDfpInternal(config, setProgress, publishedSchedules) {
     const isFormationTraceAttempt = !!options.formationGroupId || type === "flight" && isMultiResourceFlightItem(syllabusItem) && !isRemedialSyllabusItem(syllabusItem);
     const isTracedRemedialAttempt = isRemedialSyllabusItem(syllabusItem) || !!remedialInstructorOverride;
     const isDayFlightGapTraceAttempt = type === "flight" && !isNightPass && !isPlusOne && !isTracedRemedialAttempt;
-    const traceScheduleReject = (reason, details = {}) => {
+    const traceScheduleReject2 = (reason, details = {}) => {
       options.diagnosticTrace?.({
         phase: "schedule-event",
         outcome: "rejected",
@@ -128734,13 +128734,13 @@ async function generateDfpInternal(config, setProgress, publishedSchedules) {
       return null;
     };
     if (isRemedialSyllabusItem(syllabusItem) && startTime < REMEDIAL_EARLIEST_START) {
-      return traceScheduleReject("REMEDIAL_BEFORE_1000");
+      return traceScheduleReject2("REMEDIAL_BEFORE_1000");
     }
     if (type === "flight") {
       const exclusionViolation = getFlightWindowExclusionViolation(startTime, scheduledDuration);
       if (exclusionViolation) {
         if (_isFlight) _fbLogFailure(trainee, syllabusItem, _isNext, startTime, _fbEnd, exclusionViolation.reason);
-        return traceScheduleReject("FLYING_WINDOW_EXCLUSION", {
+        return traceScheduleReject2("FLYING_WINDOW_EXCLUSION", {
           exclusionReason: exclusionViolation.reason,
           restriction: exclusionViolation.period.restriction,
           exclusionStart: exclusionViolation.period.startTime,
@@ -128752,15 +128752,15 @@ async function generateDfpInternal(config, setProgress, publishedSchedules) {
       }
     }
     if (syllabusItem.dayNight === "Night" && getScheduledDayNightForStart(startTime) !== "Night") {
-      return traceScheduleReject("DAY_NIGHT_MISMATCH", { required: "Night", proposed: getScheduledDayNightForStart(startTime) });
+      return traceScheduleReject2("DAY_NIGHT_MISMATCH", { required: "Night", proposed: getScheduledDayNightForStart(startTime) });
     }
     if (syllabusItem.dayNight === "Day" && getScheduledDayNightForStart(startTime) !== "Day") {
-      return traceScheduleReject("DAY_NIGHT_MISMATCH", { required: "Day", proposed: getScheduledDayNightForStart(startTime) });
+      return traceScheduleReject2("DAY_NIGHT_MISMATCH", { required: "Day", proposed: getScheduledDayNightForStart(startTime) });
     }
     if (!canAssignTraineeForScheduledWindow(trainee, startTime)) {
       buildDebugLog(`DAY/NIGHT BLOCK: ${trainee.fullName} cannot be scheduled for ${getScheduledDayNightForStart(startTime)} event ${syllabusItem.code}`);
       if (_isFlight) _fbLogFailure(trainee, syllabusItem, _isNext, startTime, _fbEnd, "DAY_NIGHT_SEPARATION");
-      return traceScheduleReject("TRAINEE_DAY_NIGHT_SEPARATION", { proposed: getScheduledDayNightForStart(startTime) });
+      return traceScheduleReject2("TRAINEE_DAY_NIGHT_SEPARATION", { proposed: getScheduledDayNightForStart(startTime) });
     }
     const isBnfEvent = isNightPass && syllabusItem.code.startsWith("BNF") && syllabusItem.type === "Flight" && !isRemedialSyllabusItem(syllabusItem);
     const bnfFlightLimit = isBnfEvent ? 2 : eventLimits.trainee.maxFlightFtd;
@@ -128768,7 +128768,7 @@ async function generateDfpInternal(config, setProgress, publishedSchedules) {
     if (type === "flight" || type === "ftd") {
       if (traineeCounts.flightFtd >= traineeFlightFtdLimit) {
         if (_isFlight) _fbLogFailure(trainee, syllabusItem, _isNext, startTime, _fbEnd, "TRAINEE_EVENT_LIMIT_EXCEEDED");
-        return traceScheduleReject("TRAINEE_FLIGHT_FTD_LIMIT", {
+        return traceScheduleReject2("TRAINEE_FLIGHT_FTD_LIMIT", {
           count: traineeCounts.flightFtd,
           limit: traineeFlightFtdLimit,
           configuredLimit: bnfFlightLimit,
@@ -128776,13 +128776,13 @@ async function generateDfpInternal(config, setProgress, publishedSchedules) {
         });
       }
     } else {
-      if (traineeCounts.ground >= 2) return traceScheduleReject("TRAINEE_GROUND_LIMIT", { count: traineeCounts.ground, limit: 2 });
+      if (traineeCounts.ground >= 2) return traceScheduleReject2("TRAINEE_GROUND_LIMIT", { count: traineeCounts.ground, limit: 2 });
     }
     const bnfTotalLimit = isBnfEvent ? 4 : eventLimits.trainee.maxTotal;
     const traineeTotalLimit = options.traineeTotalLimitOverride ?? bnfTotalLimit;
     if (traineeCounts.flightFtd + traineeCounts.ground + traineeCounts.cpt >= traineeTotalLimit) {
       if (_isFlight) _fbLogFailure(trainee, syllabusItem, _isNext, startTime, _fbEnd, "TRAINEE_TOTAL_LIMIT_EXCEEDED");
-      return traceScheduleReject("TRAINEE_TOTAL_LIMIT", {
+      return traceScheduleReject2("TRAINEE_TOTAL_LIMIT", {
         flightFtd: traineeCounts.flightFtd,
         ground: traineeCounts.ground,
         cpt: traineeCounts.cpt,
@@ -128819,7 +128819,7 @@ async function generateDfpInternal(config, setProgress, publishedSchedules) {
     };
     if (isPersonStaticallyUnavailable(trainee, proposedBookingWindow.start, proposedBookingWindow.end, buildDate, type)) {
       if (_isFlight) _fbLogFailure(trainee, syllabusItem, _isNext, startTime, _fbEnd, "TRAINEE_STATICALLY_UNAVAILABLE");
-      return traceScheduleReject("TRAINEE_STATICALLY_UNAVAILABLE", { proposedBookingWindow });
+      return traceScheduleReject2("TRAINEE_STATICALLY_UNAVAILABLE", { proposedBookingWindow });
     }
     const traineeOverlapEvents = getGeneratedEventsForPersonRecord(trainee, "trainee").filter((e) => {
       const hasTraineeConflict = eventHasNeoBuildPersonIdentity(e, trainee, "trainee");
@@ -128829,7 +128829,7 @@ async function generateDfpInternal(config, setProgress, publishedSchedules) {
     });
     if (traineeOverlapEvents.length > 0) {
       if (_isFlight) _fbLogFailure(trainee, syllabusItem, _isNext, startTime, _fbEnd, "TRAINEE_TIME_OVERLAP");
-      return traceScheduleReject("TRAINEE_TIME_OVERLAP", {
+      return traceScheduleReject2("TRAINEE_TIME_OVERLAP", {
         proposedBookingWindow,
         traineeOverlapRole: options.traineeOverlapRole || "any",
         overlappingEvents: traineeOverlapEvents.slice(0, 8).map((existing) => ({
@@ -128857,7 +128857,7 @@ async function generateDfpInternal(config, setProgress, publishedSchedules) {
       };
       const traineeTurnaroundConflict = getPersonnelTurnaroundConflict(trainee, "trainee", proposedEventForTurnaround);
       if (traineeTurnaroundConflict) {
-        return traceScheduleReject("TRAINEE_TURNAROUND", {
+        return traceScheduleReject2("TRAINEE_TURNAROUND", {
           conflictingEvent: {
             id: traineeTurnaroundConflict.event.id,
             type: traineeTurnaroundConflict.event.type,
@@ -128939,7 +128939,7 @@ async function generateDfpInternal(config, setProgress, publishedSchedules) {
       };
     };
     if (type === "ftd" && !hasFtdResourceAvailableAtTime()) {
-      return traceScheduleReject("NO_RESOURCE_AVAILABLE", {
+      return traceScheduleReject2("NO_RESOURCE_AVAILABLE", {
         resourcePrefix: "FTD ",
         resourceCount: ftdCount,
         earlyResourceCheck: true
@@ -128950,7 +128950,7 @@ async function generateDfpInternal(config, setProgress, publishedSchedules) {
       if (!dayFlightResourceAvailability.available) {
         if (_isFlight) _fbLogFailure(trainee, syllabusItem, _isNext, startTime, _fbEnd, "NO_AIRCRAFT_AVAILABLE");
         if (dayFlightResourceAvailability.compatibleResourceCandidateCount === 0 && dayFlightResourceAvailability.aircraftConfigMismatchCount > 0) {
-          return traceScheduleReject("AIRCRAFT_CONFIG_MISMATCH", {
+          return traceScheduleReject2("AIRCRAFT_CONFIG_MISMATCH", {
             resourcePrefix: buildAircraftResourceIdPrefix,
             resourceCount: availableAircraftCount,
             preferredNightAircraft: null,
@@ -128961,7 +128961,7 @@ async function generateDfpInternal(config, setProgress, publishedSchedules) {
             earlyResourceCheck: true
           });
         }
-        return traceScheduleReject("NO_RESOURCE_AVAILABLE", {
+        return traceScheduleReject2("NO_RESOURCE_AVAILABLE", {
           resourcePrefix: buildAircraftResourceIdPrefix,
           resourceCount: availableAircraftCount,
           preferredNightAircraft: null,
@@ -129551,12 +129551,12 @@ async function generateDfpInternal(config, setProgress, publishedSchedules) {
           _fbLogFailure(trainee, syllabusItem, _isNext, startTime, _fbEnd, noInstrReason);
         }
         if (isTestEvent) {
-          return traceScheduleReject("NO_QUALIFIED_TESTING_OFFICER", {
+          return traceScheduleReject2("NO_QUALIFIED_TESTING_OFFICER", {
             testEventType,
             requiredQualificationId: syllabusItem.testingOfficerQualificationId || null
           });
         }
-        return traceScheduleReject("NO_INSTRUCTOR_SELECTED", {
+        return traceScheduleReject2("NO_INSTRUCTOR_SELECTED", {
           remedialInstructorOverride,
           requiredRemedialInstructor: isRemedialSyllabusItem(syllabusItem) ? (syllabusItem.resourcesHuman || []).find((name) => typeof name === "string" && name.trim().length > 0)?.trim() || "" : "",
           requiredRemedialInstructorMode: isRemedialSyllabusItem(syllabusItem) ? classifyRemedialInstructorRequirement((syllabusItem.resourcesHuman || []).find((name) => typeof name === "string" && name.trim().length > 0)?.trim()).mode : "none",
@@ -129652,7 +129652,7 @@ async function generateDfpInternal(config, setProgress, publishedSchedules) {
     if (!resourceId) {
       if (_isFlight) _fbLogFailure(trainee, syllabusItem, _isNext, startTime, _fbEnd, "NO_AIRCRAFT_AVAILABLE");
       if (type === "flight" && compatibleResourceCandidateCount === 0 && aircraftConfigMismatchCount > 0) {
-        return traceScheduleReject("AIRCRAFT_CONFIG_MISMATCH", {
+        return traceScheduleReject2("AIRCRAFT_CONFIG_MISMATCH", {
           resourcePrefix,
           resourceCount,
           preferredNightAircraft,
@@ -129662,7 +129662,7 @@ async function generateDfpInternal(config, setProgress, publishedSchedules) {
           mismatchSamples: aircraftConfigMismatchSamples
         });
       }
-      return traceScheduleReject("NO_RESOURCE_AVAILABLE", {
+      return traceScheduleReject2("NO_RESOURCE_AVAILABLE", {
         resourcePrefix,
         resourceCount,
         preferredNightAircraft,
@@ -129682,7 +129682,7 @@ async function generateDfpInternal(config, setProgress, publishedSchedules) {
       const violatesWindow = isBnf ? bookingStart < startTimeBoundary || bookingEnd > endTimeBoundary : startTime < startTimeBoundary || startTime + scheduledDuration > endTimeBoundary;
       if (violatesWindow) {
         _fbLogFailure(trainee, syllabusItem, _isNext, startTime, _fbEnd, "TIME_BOUNDARY_VIOLATION");
-        return traceScheduleReject("TIME_BOUNDARY_VIOLATION", {
+        return traceScheduleReject2("TIME_BOUNDARY_VIOLATION", {
           bookingStart,
           bookingEnd,
           startTimeBoundary,
@@ -129696,7 +129696,7 @@ async function generateDfpInternal(config, setProgress, publishedSchedules) {
       if (enforceTraineeSoloWindow) {
         if (startTime < SOLO_WINDOW_START - 1e-3 || startTime > SOLO_WINDOW_END + 1e-3) {
           _fbLogFailure(trainee, syllabusItem, _isNext, startTime, _fbEnd, "TIME_BOUNDARY_VIOLATION");
-          return traceScheduleReject("SOLO_WINDOW_VIOLATION", {
+          return traceScheduleReject2("SOLO_WINDOW_VIOLATION", {
             soloWindowStart: SOLO_WINDOW_START,
             soloWindowEnd: SOLO_WINDOW_END
           });
@@ -129708,7 +129708,7 @@ async function generateDfpInternal(config, setProgress, publishedSchedules) {
       area = existingFormationArea || findAvailableArea(startTime, scheduledDuration, generatedEvents);
       if (!area) {
         _fbLogFailure(trainee, syllabusItem, _isNext, startTime, _fbEnd, "NO_AREA_AVAILABLE");
-        return traceScheduleReject("NO_AREA_AVAILABLE");
+        return traceScheduleReject2("NO_AREA_AVAILABLE");
       }
       const nonStbyFlights = generatedEvents.filter(
         (e) => !e.resourceId.startsWith("STBY") && !e.resourceId.startsWith("BNF-STBY")
@@ -129718,7 +129718,7 @@ async function generateDfpInternal(config, setProgress, publishedSchedules) {
       ).length;
       if (takeoffsInLastHour >= hourlyDispatchLimit) {
         _fbLogFailure(trainee, syllabusItem, _isNext, startTime, _fbEnd, "HOURLY_DISPATCH_LIMIT");
-        return traceScheduleReject("HOURLY_DISPATCH_LIMIT", { takeoffsInLastHour, limit: hourlyDispatchLimit });
+        return traceScheduleReject2("HOURLY_DISPATCH_LIMIT", { takeoffsInLastHour, limit: hourlyDispatchLimit });
       }
       const takeoffConflict = hasDispatchStaggerConflict("flight", startTime, nonStbyFlights, {
         allowSameFormationTakeoff: options.allowSameFormationTakeoff,
@@ -129726,7 +129726,7 @@ async function generateDfpInternal(config, setProgress, publishedSchedules) {
       });
       if (takeoffConflict) {
         _fbLogFailure(trainee, syllabusItem, _isNext, startTime, _fbEnd, "TAKEOFF_SEPARATION_VIOLATION");
-        return traceScheduleReject("TAKEOFF_SEPARATION_VIOLATION", {
+        return traceScheduleReject2("TAKEOFF_SEPARATION_VIOLATION", {
           configuredStaggerMinutes: flightDispatchStaggerMinutes
         });
       }
@@ -129735,18 +129735,18 @@ async function generateDfpInternal(config, setProgress, publishedSchedules) {
       const bookingStart = startTime - (syllabusItem.preFlightTime || 0);
       const bookingEnd = startTime + scheduledDuration + (syllabusItem.postFlightTime || 0);
       if (bookingStart < flyingStartTime || bookingEnd > flyingEndTime) {
-        return traceScheduleReject("GROUND_OR_CPT_WINDOW_VIOLATION", { bookingStart, bookingEnd, flyingStartTime, flyingEndTime });
+        return traceScheduleReject2("GROUND_OR_CPT_WINDOW_VIOLATION", { bookingStart, bookingEnd, flyingStartTime, flyingEndTime });
       }
     } else if (type === "ftd") {
       if (startTime + scheduledDuration > ftdEndTime) {
-        return traceScheduleReject("FTD_WINDOW_VIOLATION", { eventEnd: startTime + scheduledDuration, ftdEndTime });
+        return traceScheduleReject2("FTD_WINDOW_VIOLATION", { eventEnd: startTime + scheduledDuration, ftdEndTime });
       }
     }
     if ((type === "ftd" || type === "cpt") && hasDispatchStaggerConflict(type, startTime, generatedEvents, {
       allowSameFormationTakeoff: options.allowSameFormationTakeoff,
       formationGroupId: options.formationGroupId
     })) {
-      return traceScheduleReject("SIMULATOR_STAGGER_VIOLATION", {
+      return traceScheduleReject2("SIMULATOR_STAGGER_VIOLATION", {
         configuredStaggerMinutes: simulatorDispatchStaggerMinutes
       });
     }
@@ -135002,6 +135002,17 @@ async function generateDfpInternal(config, setProgress, publishedSchedules) {
           if (wouldViolateHourlyDispatchRule(time, generatedEvents)) continue;
           const isSoloStby = next.sortieType === "Solo" || ["BGF11", "BGF18"].includes(next.id);
           const stbyInstructor = isSoloStby ? null : findBestInstructorForStby(trainee, next, time, next.duration, "flight", generatedEvents);
+          if (!isSoloStby && !stbyInstructor) {
+            traceScheduleReject("STBY_NO_INSTRUCTOR_SELECTED", {
+              listName: "STBY flight recovery",
+              trainee: trainee.fullName,
+              event: next.code || next.id || null,
+              startTime: time,
+              duration: next.duration,
+              message: "Skipped STBY flight recovery tile because no eligible instructor was available."
+            });
+            continue;
+          }
           const stbyInstructorName = isSoloStby ? "" : stbyInstructor?.name || "TBA";
           const stbyLine = findAvailableStbyLine(time, next.duration, generatedEvents, "STBY");
           pushGeneratedEvent({
