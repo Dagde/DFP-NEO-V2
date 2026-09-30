@@ -38209,6 +38209,10 @@ const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, lo
       item.prerequisitesGround,
       item.prerequisitesFlying
     ].some((value) => Array.isArray(value) && value.length > 0);
+    const hasMeaningfulListValues = (value) => Array.isArray(value) && value.some((entry) => {
+      const token = normaliseWizardLmpShellToken(entry);
+      return token && !lmpTokens.has(token);
+    });
     const hasResources = [
       item.methodOfDelivery,
       item.methodOfAssessment,
@@ -38216,7 +38220,7 @@ const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, lo
       item.resourcesHuman,
       item.eventDetailsCommon,
       item.eventDetailsSortie
-    ].some((value) => Array.isArray(value) && value.length > 0) || Number(item.resourceNumber || 0) > 0;
+    ].some(hasMeaningfulListValues) || Number(item.resourceNumber || 0) > 0;
     return looksLikeCourseTitle && !hasTiming && !hasPrerequisites && !hasResources;
   };
   const buildWizardCourseUploadItems = (result) => {
