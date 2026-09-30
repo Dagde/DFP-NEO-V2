@@ -87766,7 +87766,8 @@ const BuildDfpLoadingFlyout = ({ progress }) => {
     if (isComplete || isError) return void 0;
     const timer = window.setInterval(() => {
       const elapsedSeconds = Math.max(0, (Date.now() - startedAtRef.current) / 1e3);
-      const estimatedPreparationProgress = Math.min(92, 1 + elapsedSeconds * 5.5);
+      const earlyStageCap = highestActualPercentageRef.current < 10 ? 12 : 92;
+      const estimatedPreparationProgress = Math.min(earlyStageCap, 1 + elapsedSeconds * 2);
       const target = Math.max(highestActualPercentageRef.current, estimatedPreparationProgress);
       setVisiblePercentage((current) => {
         const safeCurrent = Math.max(current, highestActualPercentageRef.current);
@@ -121120,6 +121121,12 @@ const createNeoBuildTimingReport = (buildDate, counters = {}, options = {}) => {
 };
 const NEO_BUILD_GENERATION_START_DELAY_MS = 500;
 const NEO_BUILD_NAVIGATION_DELAY_MS = 4e3;
+const NEO_BUILD_PREBUILD_FETCH_TIMEOUT_MS = 15e3;
+const fetchNeoBuildPreflightWithTimeout = (url, init, timeoutMs = NEO_BUILD_PREBUILD_FETCH_TIMEOUT_MS) => {
+  const controller = new AbortController();
+  const timeout = window.setTimeout(() => controller.abort(), timeoutMs);
+  return fetch(url, { ...init, signal: controller.signal }).finally(() => window.clearTimeout(timeout));
+};
 const saveNeoBuildTimingReport = (report) => {
   if (!report) return;
   try {
@@ -151466,10 +151473,18 @@ The proposed event was not scheduled. Re-open the event and choose Accept Confli
         };
       }
       logNeoBuildUiDebug("[NEO-Build] Refreshing composed Individual LMPs before build...");
+      setDfpBuildProgress({
+        message: "Refreshing trainee LMP records...",
+        percentage: 3,
+        iterations: 0,
+        combinations: 0,
+        calculations: 0,
+        phase: "running"
+      });
       markNeoBuildTiming(timingReport, "lmp-sync:request-start", {
         syllabusGroups: Object.keys(syllabusData).length
       });
-      const syncRes = await fetch(`${apiBase}/trainees/lmp-sync`, {
+      const syncRes = await fetchNeoBuildPreflightWithTimeout(`${apiBase}/trainees/lmp-sync`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         credentials: "include",
@@ -151503,8 +151518,16 @@ The proposed event was not scheduled. Re-open the event and choose Accept Confli
           });
         }
       }
+      setDfpBuildProgress({
+        message: "Loading refreshed trainee LMPs...",
+        percentage: 6,
+        iterations: 0,
+        combinations: 0,
+        calculations: 0,
+        phase: "running"
+      });
       markNeoBuildTiming(timingReport, "lmp-fetch:request-start", { buildPayload: true });
-      const lmpRes = await fetch(`${apiBase}/trainees/lmp-sync?includeEvents=true&build=true`, {
+      const lmpRes = await fetchNeoBuildPreflightWithTimeout(`${apiBase}/trainees/lmp-sync?includeEvents=true&build=true`, {
         credentials: "include"
       });
       markNeoBuildTiming(timingReport, "lmp-fetch:response-received", { status: lmpRes.status });

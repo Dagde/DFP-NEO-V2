@@ -46,7 +46,8 @@ const BuildDfpLoadingFlyout: React.FC<BuildDfpLoadingFlyoutProps> = ({ progress 
         if (isComplete || isError) return undefined;
         const timer = window.setInterval(() => {
             const elapsedSeconds = Math.max(0, (Date.now() - startedAtRef.current) / 1000);
-            const estimatedPreparationProgress = Math.min(92, 1 + elapsedSeconds * 5.5);
+            const earlyStageCap = highestActualPercentageRef.current < 10 ? 12 : 92;
+            const estimatedPreparationProgress = Math.min(earlyStageCap, 1 + elapsedSeconds * 2);
             const target = Math.max(highestActualPercentageRef.current, estimatedPreparationProgress);
             setVisiblePercentage(current => {
                 const safeCurrent = Math.max(current, highestActualPercentageRef.current);

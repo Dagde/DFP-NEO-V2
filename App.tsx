@@ -8736,6 +8736,14 @@ const createNeoBuildTimingReport = (
 
 const NEO_BUILD_GENERATION_START_DELAY_MS = 500;
 const NEO_BUILD_NAVIGATION_DELAY_MS = 4000;
+const NEO_BUILD_PREBUILD_FETCH_TIMEOUT_MS = 15000;
+
+const fetchNeoBuildPreflightWithTimeout = (url: string, init: RequestInit, timeoutMs = NEO_BUILD_PREBUILD_FETCH_TIMEOUT_MS): Promise<Response> => {
+    const controller = new AbortController();
+    const timeout = window.setTimeout(() => controller.abort(), timeoutMs);
+    return fetch(url, { ...init, signal: controller.signal })
+        .finally(() => window.clearTimeout(timeout));
+};
 
 const saveNeoBuildTimingReport = (report?: NeoBuildTimingReport) => {
     if (!report) return;
@@ -46534,10 +46542,18 @@ const App: React.FC = () => {
             }
 
             logNeoBuildUiDebug('[NEO-Build] Refreshing composed Individual LMPs before build...');
+            setDfpBuildProgress({
+                message: 'Refreshing trainee LMP records...',
+                percentage: 3,
+                iterations: 0,
+                combinations: 0,
+                calculations: 0,
+                phase: 'running',
+            });
             markNeoBuildTiming(timingReport, 'lmp-sync:request-start', {
                 syllabusGroups: Object.keys(syllabusData).length,
             });
-            const syncRes = await fetch(`${apiBase}/trainees/lmp-sync`, {
+            const syncRes = await fetchNeoBuildPreflightWithTimeout(`${apiBase}/trainees/lmp-sync`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 credentials: 'include',
@@ -46572,8 +46588,16 @@ const App: React.FC = () => {
                 }
             }
 
+            setDfpBuildProgress({
+                message: 'Loading refreshed trainee LMPs...',
+                percentage: 6,
+                iterations: 0,
+                combinations: 0,
+                calculations: 0,
+                phase: 'running',
+            });
             markNeoBuildTiming(timingReport, 'lmp-fetch:request-start', { buildPayload: true });
-            const lmpRes = await fetch(`${apiBase}/trainees/lmp-sync?includeEvents=true&build=true`, {
+            const lmpRes = await fetchNeoBuildPreflightWithTimeout(`${apiBase}/trainees/lmp-sync?includeEvents=true&build=true`, {
                 credentials: 'include',
             });
             markNeoBuildTiming(timingReport, 'lmp-fetch:response-received', { status: lmpRes.status });
