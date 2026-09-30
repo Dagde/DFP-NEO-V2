@@ -7907,6 +7907,10 @@ const InitialSetupWizard: React.FC<{
         return Number.isFinite(parsed) ? parsed : fallback;
     };
 
+    const normaliseWizardLmpShellToken = (value: unknown): string => (
+        normaliseUnitSettingsIdentifier(value).replace(/[^A-Z0-9]+/g, '')
+    );
+
     const normaliseWizardTemplateEventType = (value: string): SyllabusItemDetail['type'] => {
         const clean = String(value || '').trim().toLowerCase();
         if (clean.includes('procedural trainer') || clean.includes('procedural') || clean.includes('trainer')) return 'FTD';
@@ -7919,6 +7923,46 @@ const InitialSetupWizard: React.FC<{
     const isWizardProceduralTrainerType = (value: string): boolean => {
         const clean = String(value || '').trim().toLowerCase();
         return clean.includes('procedural trainer') || clean.includes('procedural') || clean.includes('trainer');
+    };
+
+    const isWizardCourseUploadShellEvent = (item: SyllabusItemDetail, lmpCode: string, lmpName: string): boolean => {
+        if (String(item.notes || '').includes(WIZARD_SYLLABUS_COURSE_SHELL_NOTE)) return true;
+        const lmpTokens = new Set([
+            lmpCode,
+            lmpName,
+            ...(Array.isArray(item.courses) ? item.courses : []),
+        ].map(normaliseWizardLmpShellToken).filter(Boolean));
+        const codeToken = normaliseWizardLmpShellToken(item.code);
+        if (!codeToken || !lmpTokens.has(codeToken)) return false;
+
+        const titleTokens = [
+            item.eventDescription,
+            item.module,
+            item.phase,
+        ].map(normaliseWizardLmpShellToken).filter(Boolean);
+        const looksLikeCourseTitle = titleTokens.length === 0 || titleTokens.some(token => lmpTokens.has(token));
+        const hasTiming = [
+            item.totalEventHours,
+            item.flightOrSimHours,
+            item.duration,
+            item.preFlightTime,
+            item.postFlightTime,
+        ].some(value => Number(value || 0) > 0);
+        const hasPrerequisites = [
+            item.prerequisites,
+            item.prerequisitesGround,
+            item.prerequisitesFlying,
+        ].some(value => Array.isArray(value) && value.length > 0);
+        const hasResources = [
+            item.methodOfDelivery,
+            item.methodOfAssessment,
+            item.resourcesPhysical,
+            item.resourcesHuman,
+            item.eventDetailsCommon,
+            item.eventDetailsSortie,
+        ].some(value => Array.isArray(value) && value.length > 0) || Number(item.resourceNumber || 0) > 0;
+
+        return looksLikeCourseTitle && !hasTiming && !hasPrerequisites && !hasResources;
     };
 
     const buildWizardCourseUploadItems = (result: InitialSetupWizardUploadResult): SyllabusItemDetail[] => {
@@ -7974,7 +8018,11 @@ const InitialSetupWizard: React.FC<{
                 sortOrder: index + 1,
                 notes: getWizardCellByHeader(headers, row, 'Notes'),
             };
-        }).filter((item) => item.code && item.eventDescription);
+        }).filter((item) => (
+            item.code &&
+            item.eventDescription &&
+            !isWizardCourseUploadShellEvent(item, defaultMasterLmp, trainingDraft.lmpName || defaultMasterLmp)
+        ));
     };
 
     const importWizardTemplateRows = (template: InitialSetupWizardTemplate, result?: InitialSetupWizardUploadResult) => {
@@ -11020,6 +11068,24 @@ const InitialSetupWizard: React.FC<{
             sample: items.slice(0, 8).map((item: any) => ({ code: item.code, title: item.eventDescription, courses: item.courses, unit: item.unit, location: item.location })),
         });
         if (items.length === 0) return 0;
+        try {
+            const cleanupResult = await requestWizardApiJson('/api/admin/cleanup-lmp-course-shell', {
+                method: 'POST',
+                body: JSON.stringify({ lmpCode }),
+            });
+            pushWizardPersistenceTrace('lmp:persist:cleanup-shell:done', {
+                lmpCode,
+                removedSyllabusShellRows: cleanupResult.removedSyllabusShellRows,
+                removedIndividualLmpShellEvents: cleanupResult.removedIndividualLmpShellEvents,
+                updatedIndividualLmps: cleanupResult.updatedIndividualLmps,
+            });
+        } catch (error) {
+            pushWizardPersistenceTrace('lmp:persist:cleanup-shell:failed', {
+                lmpCode,
+                error: error instanceof Error ? error.message : String(error),
+            });
+            throw error;
+        }
         const existingPayload = await requestWizardApiJson(`/api/syllabus?course=${encodeURIComponent(lmpCode)}&includeInactive=true`);
         const existingByCode = new Map(
             (Array.isArray(existingPayload.syllabus) ? existingPayload.syllabus : [])
@@ -11048,159 +11114,44 @@ const InitialSetupWizard: React.FC<{
         return items.length;
     };
 
-    const buildWizardMasterLmpShellItem = (lmpCode: string, lmpName: string) => {
-        const cleanLmpCode = String(lmpCode || '').trim();
-        const cleanLmpName = String(lmpName || cleanLmpCode).trim();
-        const cleanAccessUnitCode = getWizardSetupAccessUnitCode(trainingDraft.accessUnitCode);
-        const cleanAccessLocationCode = getWizardSetupAccessLocationCode(trainingDraft.accessLocationCode);
-        return {
-            id: `setup-lmp-shell-${normaliseUnitSettingsIdentifier(cleanLmpCode).replace(/[^A-Z0-9]+/g, '-') || Date.now()}`,
-            code: cleanLmpCode,
-            phase: cleanLmpCode,
-            module: cleanLmpName,
-            dayNight: 'Day',
-            eventDescription: cleanLmpName,
-            prerequisites: [],
-            prerequisitesGround: [],
-            prerequisitesFlying: [],
-            eventDetailsCommon: [],
-            eventDetailsSortie: [],
-            totalEventHours: 0,
-            flightOrSimHours: 0,
-            duration: 0,
-            preFlightTime: 0,
-            postFlightTime: 0,
-            type: 'Ground School',
-            methodOfDelivery: [],
-            methodOfAssessment: [],
-            resourcesPhysical: [],
-            resourceNumber: 0,
-            acceptableAircraftConfigs: ['ANY'],
-            assessedElements: [],
-            assessmentRequired: false,
-            testEventType: 'NONE',
-            resourcesHuman: [],
-            location: cleanAccessLocationCode || '',
-            unit: cleanAccessUnitCode || unitDraft.code || '',
-            courses: [cleanLmpCode],
-            lmpType: 'Master LMP',
-            isActive: true,
-            sortOrder: 0,
-            notes: WIZARD_SYLLABUS_COURSE_SHELL_NOTE,
-        };
-    };
-
     const persistWizardMasterLmpShellToDatabase = async (lmpCode: string, lmpName: string) => {
         const cleanLmpCode = String(lmpCode || '').trim();
         if (!cleanLmpCode) return 0;
-        const shellItem = buildWizardMasterLmpShellItem(cleanLmpCode, lmpName);
         pushWizardPersistenceTrace('lmp-shell:persist:start', {
             lmpCode: cleanLmpCode,
-            name: shellItem.eventDescription,
-            unit: shellItem.unit,
-            location: shellItem.location,
+            name: String(lmpName || cleanLmpCode).trim(),
         });
-        const existingPayload = await requestWizardApiJson(`/api/syllabus?course=${encodeURIComponent(cleanLmpCode)}&includeInactive=true`);
-        const existingItems = Array.isArray(existingPayload.syllabus) ? existingPayload.syllabus : [];
-        const existingShell = existingItems.find((item: any) => (
-            String(item?.notes || '').includes(WIZARD_SYLLABUS_COURSE_SHELL_NOTE)
-            && (
-                normaliseUnitSettingsIdentifier(item?.code) === normaliseUnitSettingsIdentifier(cleanLmpCode)
-                || (Array.isArray(item?.courses) && item.courses.some((course: any) => normaliseUnitSettingsIdentifier(course) === normaliseUnitSettingsIdentifier(cleanLmpCode)))
-            )
-        ));
-        const matchingItems = existingItems.filter((item: any) => (
-            normaliseUnitSettingsIdentifier(item?.code) === normaliseUnitSettingsIdentifier(cleanLmpCode)
-            || (Array.isArray(item?.courses) && item.courses.some((course: any) => normaliseUnitSettingsIdentifier(course) === normaliseUnitSettingsIdentifier(cleanLmpCode)))
-        ));
-        const rescopeResults = [];
-        for (const item of matchingItems) {
-            if (!(item?.id || item?.code)) continue;
-            const isShell = existingShell && String(item.id || item.code) === String(existingShell.id || existingShell.code);
-            const payload = isShell
-                ? { ...item, ...shellItem, id: item.id || shellItem.id }
-                : {
-                    ...item,
-                    location: shellItem.location,
-                    unit: shellItem.unit,
-                    courses: Array.isArray(item?.courses) && item.courses.length > 0 ? item.courses : [cleanLmpCode],
-                    lmpType: item?.lmpType || 'Master LMP',
-                    isActive: item?.isActive !== false,
-                };
-            await requestWizardApiJson(`/api/syllabus/${encodeURIComponent(String(item.id || item.code))}`, {
-                method: 'PUT',
-                body: JSON.stringify(payload),
-            });
-            rescopeResults.push({
-                id: item.id || item.code,
-                code: item.code,
-                fromUnit: item.unit,
-                fromLocation: item.location,
-                toUnit: payload.unit,
-                toLocation: payload.location,
-                shell: isShell,
-            });
-        }
-        if (!existingShell) {
-            await requestWizardApiJson('/api/syllabus', {
-                method: 'POST',
-                body: JSON.stringify(shellItem),
-            });
-        }
-        pushWizardPersistenceTrace('lmp-shell:persist:rescope-existing', {
-            lmpCode: cleanLmpCode,
-            matched: matchingItems.length,
-            updated: rescopeResults.length,
-            targetUnit: shellItem.unit,
-            targetLocation: shellItem.location,
-            sample: rescopeResults.slice(0, 12),
+        const cleanupResult = await requestWizardApiJson('/api/admin/cleanup-lmp-course-shell', {
+            method: 'POST',
+            body: JSON.stringify({ lmpCode: cleanLmpCode }),
         });
         pushWizardPersistenceTrace('lmp-shell:persist:done', {
             lmpCode: cleanLmpCode,
-            action: existingShell ? 'updated' : 'created',
+            action: 'cleaned-existing-shell-only',
+            removedSyllabusShellRows: cleanupResult.removedSyllabusShellRows,
+            removedIndividualLmpShellEvents: cleanupResult.removedIndividualLmpShellEvents,
+            updatedIndividualLmps: cleanupResult.updatedIndividualLmps,
         });
-        return 1;
+        return 0;
     };
 
     const persistWizardMasterLmpShellToSetupTest = (lmpCode: string, lmpName: string) => {
         const cleanLmpCode = String(lmpCode || '').trim();
         if (!cleanLmpCode) return 0;
-        const shellItem = buildWizardMasterLmpShellItem(cleanLmpCode, lmpName);
         const existingItems = readSetupTestSyllabus();
-        const existingIndex = existingItems.findIndex((item: any) => (
-            String(item?.notes || '').includes(WIZARD_SYLLABUS_COURSE_SHELL_NOTE)
-            && (
-                normaliseUnitSettingsIdentifier(item?.code) === normaliseUnitSettingsIdentifier(cleanLmpCode)
-                || (Array.isArray(item?.courses) && item.courses.some((course: any) => normaliseUnitSettingsIdentifier(course) === normaliseUnitSettingsIdentifier(cleanLmpCode)))
-            )
-        ));
-        const nextItems = existingIndex >= 0
-            ? existingItems.map((item: any, index: number) => index === existingIndex ? { ...item, ...shellItem, id: item.id || shellItem.id } : item)
-            : [...existingItems, shellItem];
-        const rescopedItems = nextItems.map((item: any) => {
-            const matchesLmp = normaliseUnitSettingsIdentifier(item?.code) === normaliseUnitSettingsIdentifier(cleanLmpCode)
-                || (Array.isArray(item?.courses) && item.courses.some((course: any) => normaliseUnitSettingsIdentifier(course) === normaliseUnitSettingsIdentifier(cleanLmpCode)));
-            if (!matchesLmp) return item;
-            return {
-                ...item,
-                location: shellItem.location,
-                unit: shellItem.unit,
-                courses: Array.isArray(item?.courses) && item.courses.length > 0 ? item.courses : [cleanLmpCode],
-                lmpType: item?.lmpType || 'Master LMP',
-                isActive: item?.isActive !== false,
-            };
-        });
+        const rescopedItems = existingItems.filter((item: any) => !isWizardCourseUploadShellEvent(item, cleanLmpCode, lmpName || cleanLmpCode));
         writeSetupTestSyllabus(rescopedItems);
         pushWizardPersistenceTrace('lmp-shell:setup-test:done', {
             lmpCode: cleanLmpCode,
-            action: existingIndex >= 0 ? 'updated' : 'created',
+            action: 'removed-existing-shell-only',
+            removed: existingItems.length - rescopedItems.length,
             totalSetupSyllabusItems: rescopedItems.length,
             rescopedMatchingItems: rescopedItems.filter((item: any) => (
                 normaliseUnitSettingsIdentifier(item?.code) === normaliseUnitSettingsIdentifier(cleanLmpCode)
                 || (Array.isArray(item?.courses) && item.courses.some((course: any) => normaliseUnitSettingsIdentifier(course) === normaliseUnitSettingsIdentifier(cleanLmpCode)))
             )).length,
         });
-        return 1;
+        return 0;
     };
 
     const saveAllWizardDrafts = async () => {

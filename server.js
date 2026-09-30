@@ -9528,6 +9528,55 @@ function isUploadCourseShellRow(item) {
   return String(item?.notes || '').includes(SYLLABUS_COURSE_SHELL_NOTE);
 }
 
+function normaliseLmpShellToken(value) {
+  return String(value || '').trim().toUpperCase().replace(/[^A-Z0-9]+/g, '');
+}
+
+function arrayHasAnyContent(value) {
+  return Array.isArray(value) && value.some(item => String(item || '').trim());
+}
+
+function isLmpCourseShellLikeItem(item, lmpCode) {
+  if (!item) return false;
+  const lmpToken = normaliseLmpShellToken(lmpCode);
+  if (!lmpToken) return false;
+  if (isUploadCourseShellRow(item)) return true;
+
+  const courses = Array.isArray(item.courses) ? item.courses : [];
+  const itemTokens = [
+    item.code,
+    item.eventDescription,
+    item.module,
+    item.phase,
+    ...courses,
+  ].map(normaliseLmpShellToken).filter(Boolean);
+  const hasLmpToken = itemTokens.includes(lmpToken);
+  if (!hasLmpToken || normaliseLmpShellToken(item.code) !== lmpToken) return false;
+
+  const hasTiming = [
+    item.totalEventHours,
+    item.flightOrSimHours,
+    item.duration,
+    item.preFlightTime,
+    item.postFlightTime,
+  ].some(value => Number(value || 0) > 0);
+  const hasPrerequisites = [
+    item.prerequisites,
+    item.prerequisitesGround,
+    item.prerequisitesFlying,
+  ].some(arrayHasAnyContent);
+  const hasResources = [
+    item.methodOfDelivery,
+    item.methodOfAssessment,
+    item.resourcesPhysical,
+    item.resourcesHuman,
+    item.eventDetailsCommon,
+    item.eventDetailsSortie,
+  ].some(arrayHasAnyContent) || Number(item.resourceNumber || 0) > 0;
+
+  return !hasTiming && !hasPrerequisites && !hasResources;
+}
+
 function getUploadDuplicateSourceDetails(item) {
   const sourceCourses = Array.isArray(item?.courses) ? item.courses.filter(Boolean) : [];
   return {
@@ -9904,6 +9953,109 @@ app.post('/api/syllabus/bulk-upload', uploadRateLimit, handleSingleSpreadsheetUp
   } catch (error) {
     console.error('❌ POST /api/syllabus/bulk-upload error:', error);
     res.status(500).json({ error: error.message || 'Failed to bulk upload syllabus events', details: error.message });
+  }
+});
+
+// POST /api/admin/cleanup-lmp-course-shell - Remove placeholder LMP title rows from syllabus and trainee LMP copies
+app.post('/api/admin/cleanup-lmp-course-shell', async (req, res) => {
+  try {
+    const context = await requireDirectAdmin(req, res);
+    if (!context) return;
+    const db = context.db;
+    const lmpCode = String(req.body?.lmpCode || '').trim();
+    const dryRun = req.body?.dryRun === true;
+    if (!lmpCode) {
+      return res.status(400).json({ error: 'lmpCode is required' });
+    }
+
+    const candidateRows = await db.$queryRawUnsafe(
+      `SELECT * FROM "SyllabusItem"
+       WHERE "notes" ILIKE $1
+          OR UPPER("code") = $2
+          OR $3 = ANY("courses")`,
+      `%${SYLLABUS_COURSE_SHELL_NOTE}%`,
+      lmpCode.toUpperCase(),
+      lmpCode
+    );
+    const shellRows = (candidateRows || [])
+      .map(normaliseSyllabusItemForRuntime)
+      .filter(item => isLmpCourseShellLikeItem(item, lmpCode));
+    const shellIds = Array.from(new Set(shellRows.map(item => String(item.id || '').trim()).filter(Boolean)));
+    const shellCodes = Array.from(new Set(shellRows.map(item => String(item.code || '').trim()).filter(Boolean)));
+    const shellTokens = new Set([
+      lmpCode,
+      ...shellIds,
+      ...shellCodes,
+    ].map(normaliseLmpShellToken).filter(Boolean));
+
+    const lmpRows = await db.$queryRawUnsafe(`SELECT "id", "events", "completedEventIds" FROM "IndividualLMP"`);
+    const lmpUpdates = [];
+    for (const row of lmpRows || []) {
+      const events = Array.isArray(row.events) ? row.events : [];
+      const nextEvents = events.filter(event => {
+        const eventMatches = isLmpCourseShellLikeItem(event, lmpCode);
+        const eventTokens = [
+          event?.id,
+          event?.code,
+          event?.masterEventId,
+          event?.eventDescription,
+        ].map(normaliseLmpShellToken).filter(Boolean);
+        return !(eventMatches || eventTokens.some(token => shellTokens.has(token)));
+      });
+      const completedEventIds = Array.isArray(row.completedEventIds) ? row.completedEventIds : [];
+      const nextCompletedEventIds = completedEventIds.filter(id => !shellTokens.has(normaliseLmpShellToken(id)));
+      if (nextEvents.length !== events.length || nextCompletedEventIds.length !== completedEventIds.length) {
+        lmpUpdates.push({
+          id: row.id,
+          removedEvents: events.length - nextEvents.length,
+          removedCompletedIds: completedEventIds.length - nextCompletedEventIds.length,
+          nextEvents,
+          nextCompletedEventIds,
+        });
+      }
+    }
+
+    if (!dryRun) {
+      if (shellIds.length > 0 || shellCodes.length > 0) {
+        await db.$executeRawUnsafe(
+          `DELETE FROM "SyllabusItem" WHERE "id" = ANY($1::text[]) OR "code" = ANY($2::text[])`,
+          shellIds,
+          shellCodes
+        );
+      }
+      for (const update of lmpUpdates) {
+        await db.$executeRawUnsafe(
+          `UPDATE "IndividualLMP"
+           SET "events" = $2::jsonb, "completedEventIds" = $3::text[], "updatedAt" = NOW()
+           WHERE "id" = $1`,
+          update.id,
+          JSON.stringify(update.nextEvents),
+          update.nextCompletedEventIds
+        );
+      }
+    }
+
+    res.json({
+      success: true,
+      dryRun,
+      lmpCode,
+      removedSyllabusShellRows: shellRows.length,
+      removedIndividualLmpShellEvents: lmpUpdates.reduce((sum, update) => sum + update.removedEvents, 0),
+      updatedIndividualLmps: lmpUpdates.length,
+      shellRows: shellRows.map(item => ({
+        id: item.id,
+        code: item.code,
+        title: item.eventDescription,
+        courses: item.courses,
+        unit: item.unit,
+        location: item.location,
+        sortOrder: item.sortOrder,
+        notes: item.notes,
+      })),
+    });
+  } catch (error) {
+    console.error('❌ POST /api/admin/cleanup-lmp-course-shell error:', error);
+    res.status(500).json({ error: error.message || 'Failed to clean up LMP course shell', details: error.message });
   }
 });
 
