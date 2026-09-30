@@ -110323,6 +110323,15 @@ const getScheduledTypeFromLmpType = (type) => {
 const normaliseName = (name) => name.replace(/\s+[–-]\s+.*$/, "").replace(/\s+/g, " ").trim();
 const normaliseCode = (value) => String(value || "").trim().toUpperCase();
 const getTraineeSelectionKey = (trainee) => String(trainee.id || trainee.idNumber || trainee.fullName || trainee.name || "").trim();
+const getErrorMessage = (error) => {
+  if (error instanceof Error) return error.message;
+  if (typeof error === "string") return error;
+  try {
+    return JSON.stringify(error);
+  } catch {
+    return "Unknown error";
+  }
+};
 const buildBulkCompletionEventId = (trainee, item, fallbackEventId) => {
   const traineeKey = getTraineeSelectionKey(trainee).replace(/[^a-zA-Z0-9]+/g, "-").replace(/^-+|-+$/g, "");
   const eventKey = String(item.masterEventId || item.id || item.code || fallbackEventId || "event").replace(/[^a-zA-Z0-9]+/g, "-").replace(/^-+|-+$/g, "");
@@ -110357,6 +110366,7 @@ const TrainingCompletionView = ({
   const [selectedTrainees, setSelectedTrainees] = reactExports.useState([]);
   const [isCompleting, setIsCompleting] = reactExports.useState(false);
   const [completionMessage, setCompletionMessage] = reactExports.useState("");
+  const [completionTrace, setCompletionTrace] = reactExports.useState(null);
   reactExports.useMemo(() => Object.values(publishedSchedules).flat(), [publishedSchedules]);
   const allTrainees = reactExports.useMemo(() => [...traineesData, ...archivedTraineesData], [traineesData, archivedTraineesData]);
   const courseNames = reactExports.useMemo(() => {
@@ -110471,6 +110481,7 @@ const TrainingCompletionView = ({
     setSelectedEventIds([]);
     setSelectedTrainees([]);
     setCompletionMessage("");
+    setCompletionTrace(null);
   };
   const handleCourseChange = (coursesSelected) => {
     setSelectedCourses(coursesSelected);
@@ -110527,23 +110538,35 @@ const TrainingCompletionView = ({
     }
     setIsCompleting(true);
     setCompletionMessage("Completing selected training records...");
-    try {
-      const completedAt = (/* @__PURE__ */ new Date(`${completionDate || todayIso()}T00:00:00`)).toISOString();
-      const completed = [];
-      const failed = [];
-      for (const selectedEvent of selectedEvents) {
-        const eligibleTraineeKeys = new Set(getEventTrainees(selectedEvent).map(getTraineeSelectionKey));
-        for (const traineeKey of selectedTrainees) {
-          if (!eligibleTraineeKeys.has(traineeKey)) continue;
-          const trainee = allTrainees.find((item) => getTraineeSelectionKey(item) === traineeKey);
+    setCompletionTrace(null);
+    const completedAt = (/* @__PURE__ */ new Date(`${completionDate || todayIso()}T00:00:00`)).toISOString();
+    const completed = [];
+    const failed = [];
+    const traceRows = [];
+    for (const selectedEvent of selectedEvents) {
+      const eligibleTraineeKeys = new Set(getEventTrainees(selectedEvent).map(getTraineeSelectionKey));
+      for (const traineeKey of selectedTrainees) {
+        if (!eligibleTraineeKeys.has(traineeKey)) continue;
+        const trainee = allTrainees.find((item) => getTraineeSelectionKey(item) === traineeKey);
+        const traceBase = {
+          traineeKey,
+          traineeName: trainee?.name || traineeKey,
+          traineeFullName: trainee?.fullName || traineeKey,
+          course: trainee?.course || null,
+          eventId: selectedEvent.id,
+          eventCode: selectedEvent.flightNumber,
+          eventDate: selectedEvent.date
+        };
+        try {
           if (!trainee) {
-            failed.push(`${traineeKey} / ${selectedEvent.flightNumber}`);
-            continue;
+            throw new Error("Selected trainee was not found in the active or archived trainee list.");
           }
           const lmpItem = findTraineeLmpItemForEvent(trainee, selectedEvent);
-          if (!lmpItem || !onUpdateLmpItem) {
-            failed.push(`${trainee.name} / ${selectedEvent.flightNumber}`);
-            continue;
+          if (!lmpItem) {
+            throw new Error("Matching Individual LMP event was not found for this trainee.");
+          }
+          if (!onUpdateLmpItem) {
+            throw new Error("Individual LMP update handler is not available.");
           }
           const lmpEventCode = lmpItem.code || selectedEvent.flightNumber || lmpItem.id || "";
           const assessmentEventId = buildBulkCompletionEventId(trainee, lmpItem, selectedEvent.id);
@@ -110553,11 +110576,12 @@ const TrainingCompletionView = ({
             isComplete: true,
             completed: true
           };
+          traceRows.push({ ...traceBase, stage: "lmp:update:start", lmpItemId: lmpItem.id, lmpEventCode });
           const lmpSaved = await Promise.resolve(onUpdateLmpItem(trainee, lmpItem, updatedLmpItem, { suppressSuccessMessage: true }));
           if (!lmpSaved) {
-            failed.push(`${trainee.name} / ${selectedEvent.flightNumber}`);
-            continue;
+            throw new Error("Individual LMP save returned false.");
           }
+          traceRows.push({ ...traceBase, stage: "score:save:start", lmpItemId: lmpItem.id, lmpEventCode });
           await persistScoreCompletion(trainee, lmpItem, selectedEvent, completedAt);
           const assessmentId = `pt051-${assessmentEventId}-${trainee.fullName}`;
           const existingAssessment = pt051Assessments.get(assessmentId) || Array.from(pt051Assessments.values()).find((assessment2) => assessment2.traineeFullName === trainee.fullName && (assessment2.eventId === assessmentEventId || normaliseCode(assessment2.flightNumber) === normaliseCode(lmpEventCode)));
@@ -110586,27 +110610,71 @@ const TrainingCompletionView = ({
             isCompleted: true,
             groundSchoolAssessment: { isAssessment: false, result: void 0 }
           };
+          traceRows.push({ ...traceBase, stage: "report:local-save:start", lmpItemId: lmpItem.id, lmpEventCode, assessmentEventId });
           await Promise.resolve(onSaveTrainingReportAssessment(assessment));
           if (onPersistTrainingReportAssessment) {
+            traceRows.push({ ...traceBase, stage: "report:persist:start", lmpItemId: lmpItem.id, lmpEventCode, assessmentEventId });
             await onPersistTrainingReportAssessment({
               ...assessment,
               traineeFullName: trainee.fullName
             });
           }
           completed.push(`${trainee.name} / ${selectedEvent.flightNumber}`);
+          traceRows.push({ ...traceBase, stage: "complete", lmpItemId: lmpItem.id, lmpEventCode, assessmentEventId });
+        } catch (error) {
+          const reason = getErrorMessage(error);
+          console.error("Error during selected event completion item:", { ...traceBase, reason, error });
+          failed.push({
+            trainee: trainee?.name || traineeKey,
+            event: selectedEvent.flightNumber,
+            stage: String(traceRows[traceRows.length - 1]?.stage || "prepare"),
+            reason
+          });
+          traceRows.push({ ...traceBase, stage: "failed", reason });
         }
       }
-      if (failed.length > 0) {
-        setCompletionMessage(`Completed ${completed.length} trainee-event record${completed.length === 1 ? "" : "s"} across ${selectedEvents.length} event${selectedEvents.length === 1 ? "" : "s"}. ${failed.length} could not be completed because the Individual LMP event was not found or did not save.`);
-      } else {
-        setCompletionMessage(`Completed ${completed.length} trainee-event record${completed.length === 1 ? "" : "s"} across ${selectedEvents.length} event${selectedEvents.length === 1 ? "" : "s"}.`);
-      }
-    } catch (error) {
-      console.error("Error during selected event completion:", error);
-      setCompletionMessage("The records could not be completed. Please try again.");
-    } finally {
-      setIsCompleting(false);
     }
+    const trace = {
+      generatedAt: (/* @__PURE__ */ new Date()).toISOString(),
+      completionDate,
+      selectedCourses,
+      selectedEventIds,
+      selectedTraineeCount: selectedTrainees.length,
+      completedCount: completed.length,
+      failedCount: failed.length,
+      completed,
+      failed,
+      traceRows
+    };
+    setCompletionTrace(trace);
+    if (failed.length > 0) {
+      const firstFailure = failed[0];
+      setCompletionMessage(`Completed ${completed.length} trainee-event record${completed.length === 1 ? "" : "s"}. ${failed.length} failed. First failure: ${firstFailure.trainee} / ${firstFailure.event}: ${firstFailure.reason}`);
+    } else {
+      setCompletionMessage(`Completed ${completed.length} trainee-event record${completed.length === 1 ? "" : "s"} across ${selectedEvents.length} event${selectedEvents.length === 1 ? "" : "s"}.`);
+    }
+    if (failed.length > 0) {
+      console.warn("[Training Completion] Some records failed", trace);
+    }
+    try {
+      window.localStorage.setItem("dfp-training-completion-last-trace", JSON.stringify(trace));
+    } catch (error) {
+      console.warn("[Training Completion] Could not save completion trace to localStorage:", error);
+    }
+    setIsCompleting(false);
+  };
+  const downloadCompletionTrace = () => {
+    if (!completionTrace) return;
+    const blob = new Blob([JSON.stringify(completionTrace, null, 2)], { type: "application/json" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    const stamp = (/* @__PURE__ */ new Date()).toISOString().replace(/[:.]/g, "-");
+    link.href = url;
+    link.download = `training-completion-trace-${stamp}.json`;
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    URL.revokeObjectURL(url);
   };
   return /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "h-full overflow-auto bg-gray-900 p-6", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "max-w-6xl mx-auto space-y-6", children: [
     /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "bg-gray-800 rounded-lg p-6 border border-gray-700", children: [
@@ -110836,13 +110904,23 @@ const TrainingCompletionView = ({
             ] })
           ] }),
           /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mt-5 flex items-center justify-between gap-4", children: [
-            /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: `text-sm ${completionMessage.includes("Completed") ? "text-green-300" : "text-gray-300"}`, children: completionMessage }),
+            /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "min-w-0 space-y-2", children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: `text-sm ${completionMessage.includes("failed") ? "text-yellow-300" : completionMessage.includes("Completed") ? "text-green-300" : "text-gray-300"}`, children: completionMessage }),
+              completionTrace && Number(completionTrace.failedCount || 0) > 0 && /* @__PURE__ */ jsxRuntimeExports.jsx(
+                "button",
+                {
+                  onClick: downloadCompletionTrace,
+                  className: "px-3 py-2 rounded border border-yellow-500/50 bg-yellow-500/10 text-yellow-200 hover:bg-yellow-500/20 text-sm font-semibold",
+                  children: "Download Completion Trace"
+                }
+              )
+            ] }),
             /* @__PURE__ */ jsxRuntimeExports.jsx(
               "button",
               {
                 onClick: processCompletion,
                 disabled: selectedEvents.length === 0 || selectedTrainees.length === 0 || isCompleting,
-                className: `px-5 py-3 rounded font-semibold ${selectedEvents.length === 0 || selectedTrainees.length === 0 || isCompleting ? "bg-gray-700 text-gray-500 cursor-not-allowed" : "bg-green-600 hover:bg-green-700 text-white"}`,
+                className: `px-5 py-3 rounded font-semibold shrink-0 ${selectedEvents.length === 0 || selectedTrainees.length === 0 || isCompleting ? "bg-gray-700 text-gray-500 cursor-not-allowed" : "bg-green-600 hover:bg-green-700 text-white"}`,
                 children: isCompleting ? "Completing..." : `Complete Selected (${selectedTrainees.length})`
               }
             )
