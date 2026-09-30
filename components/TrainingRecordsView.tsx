@@ -32,6 +32,7 @@ interface TrainingRecordsViewProps {
     pt051Assessments: Map<string, TrainingReportAssessment>;
     traineeLMPs?: Map<string, SyllabusItemDetail[]>;
     onSaveTrainingReportAssessment: (assessment: TrainingReportAssessment) => void | Promise<void>;
+    onPersistTrainingReportAssessment?: (assessment: TrainingReportAssessment) => Promise<unknown>;
     onUpdateLmpItem?: (
         trainee: Trainee,
         originalItem: SyllabusItemDetail,
@@ -77,6 +78,7 @@ const TrainingRecordsView: React.FC<TrainingRecordsViewProps> = ({
     pt051Assessments,
     traineeLMPs,
     onSaveTrainingReportAssessment,
+    onPersistTrainingReportAssessment,
     onUpdateLmpItem,
     locations = [],
     units = [],
@@ -200,6 +202,7 @@ const TrainingRecordsView: React.FC<TrainingRecordsViewProps> = ({
                         pt051Assessments={pt051Assessments}
                         traineeLMPs={traineeLMPs}
                         onSaveTrainingReportAssessment={onSaveTrainingReportAssessment}
+                        onPersistTrainingReportAssessment={onPersistTrainingReportAssessment}
                         onUpdateLmpItem={onUpdateLmpItem}
                         trainingReportTemplate={trainingReportTemplate}
                         phraseBank={phraseBank}

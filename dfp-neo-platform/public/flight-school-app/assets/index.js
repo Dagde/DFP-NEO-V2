@@ -110203,6 +110203,12 @@ const getScheduledTypeFromLmpType = (type) => {
 };
 const normaliseName = (name) => name.replace(/\s+[–-]\s+.*$/, "").replace(/\s+/g, " ").trim();
 const normaliseCode = (value) => String(value || "").trim().toUpperCase();
+const getTraineeSelectionKey = (trainee) => String(trainee.id || trainee.idNumber || trainee.fullName || trainee.name || "").trim();
+const buildBulkCompletionEventId = (trainee, item, fallbackEventId) => {
+  const traineeKey = getTraineeSelectionKey(trainee).replace(/[^a-zA-Z0-9]+/g, "-").replace(/^-+|-+$/g, "");
+  const eventKey = String(item.masterEventId || item.id || item.code || fallbackEventId || "event").replace(/[^a-zA-Z0-9]+/g, "-").replace(/^-+|-+$/g, "");
+  return `bulk-training-${eventKey}-${traineeKey}`;
+};
 const TrainingCompletionView = ({
   traineesData,
   archivedTraineesData,
@@ -110213,6 +110219,7 @@ const TrainingCompletionView = ({
   pt051Assessments,
   traineeLMPs,
   onSaveTrainingReportAssessment,
+  onPersistTrainingReportAssessment,
   onUpdateLmpItem,
   trainingReportTemplate
 }) => {
@@ -110336,7 +110343,7 @@ const TrainingCompletionView = ({
     const traineesByName = /* @__PURE__ */ new Map();
     selectedEvents.forEach((event) => {
       getEventTrainees(event).forEach((trainee) => {
-        traineesByName.set(trainee.name, trainee);
+        traineesByName.set(getTraineeSelectionKey(trainee), trainee);
       });
     });
     return Array.from(traineesByName.values()).sort((a, b) => `${a.course}-${a.name}`.localeCompare(`${b.course}-${b.name}`));
@@ -110353,13 +110360,42 @@ const TrainingCompletionView = ({
   const handleEventToggle = (eventId) => {
     const nextEventIds = selectedEventIds.includes(eventId) ? selectedEventIds.filter((id) => id !== eventId) : [...selectedEventIds, eventId];
     const nextEvents = candidateEvents.filter((item) => nextEventIds.includes(item.id));
-    const traineeNames = /* @__PURE__ */ new Set();
+    const traineeKeys = /* @__PURE__ */ new Set();
     nextEvents.forEach((event) => {
-      getEventTrainees(event).forEach((trainee) => traineeNames.add(trainee.name));
+      getEventTrainees(event).forEach((trainee) => traineeKeys.add(getTraineeSelectionKey(trainee)));
     });
     setSelectedEventIds(nextEventIds);
     setCompletionMessage("");
-    setSelectedTrainees(Array.from(traineeNames));
+    setSelectedTrainees(Array.from(traineeKeys));
+  };
+  const persistScoreCompletion = async (trainee, item, event, completedAt) => {
+    const eventCode2 = item.code || event.flightNumber || item.id || "";
+    if (!eventCode2) throw new Error("Missing LMP event code for score completion");
+    const response = await fetch("/api/scores", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      credentials: "include",
+      body: JSON.stringify({
+        traineeId: trainee.id,
+        traineeFullName: trainee.fullName,
+        event: eventCode2,
+        score: 5,
+        date: completedAt.slice(0, 10),
+        instructor: event.instructor || "",
+        notes: `Completed via Training Records bulk completion on ${formatDate(completedAt.slice(0, 10))}.`,
+        details: {
+          source: "training-records-bulk-completion",
+          lmpItemId: item.id || null,
+          masterEventId: item.masterEventId || null,
+          eventDescription: item.eventDescription || null,
+          selectedEventId: event.id
+        }
+      })
+    });
+    if (!response.ok) {
+      const errorText = await response.text().catch(() => "");
+      throw new Error(errorText || `Score completion save failed (${response.status})`);
+    }
   };
   const processCompletion = async () => {
     if (selectedEvents.length === 0) {
@@ -110377,12 +110413,12 @@ const TrainingCompletionView = ({
       const completed = [];
       const failed = [];
       for (const selectedEvent of selectedEvents) {
-        const eligibleTraineeNames = new Set(getEventTrainees(selectedEvent).map((trainee) => trainee.name));
-        for (const traineeName of selectedTrainees) {
-          if (!eligibleTraineeNames.has(traineeName)) continue;
-          const trainee = allTrainees.find((item) => item.name === traineeName);
+        const eligibleTraineeKeys = new Set(getEventTrainees(selectedEvent).map(getTraineeSelectionKey));
+        for (const traineeKey of selectedTrainees) {
+          if (!eligibleTraineeKeys.has(traineeKey)) continue;
+          const trainee = allTrainees.find((item) => getTraineeSelectionKey(item) === traineeKey);
           if (!trainee) {
-            failed.push(`${traineeName} / ${selectedEvent.flightNumber}`);
+            failed.push(`${traineeKey} / ${selectedEvent.flightNumber}`);
             continue;
           }
           const lmpItem = findTraineeLmpItemForEvent(trainee, selectedEvent);
@@ -110390,6 +110426,8 @@ const TrainingCompletionView = ({
             failed.push(`${trainee.name} / ${selectedEvent.flightNumber}`);
             continue;
           }
+          const lmpEventCode = lmpItem.code || selectedEvent.flightNumber || lmpItem.id || "";
+          const assessmentEventId = buildBulkCompletionEventId(trainee, lmpItem, selectedEvent.id);
           const updatedLmpItem = {
             ...lmpItem,
             completedAt,
@@ -110401,12 +110439,14 @@ const TrainingCompletionView = ({
             failed.push(`${trainee.name} / ${selectedEvent.flightNumber}`);
             continue;
           }
-          const assessmentId = `pt051-${selectedEvent.id}-${trainee.fullName}`;
-          const existingAssessment = pt051Assessments.get(assessmentId) || Array.from(pt051Assessments.values()).find((assessment2) => assessment2.traineeFullName === trainee.fullName && (assessment2.eventId === selectedEvent.id || normaliseCode(assessment2.flightNumber) === normaliseCode(selectedEvent.flightNumber)));
+          await persistScoreCompletion(trainee, lmpItem, selectedEvent, completedAt);
+          const assessmentId = `pt051-${assessmentEventId}-${trainee.fullName}`;
+          const existingAssessment = pt051Assessments.get(assessmentId) || Array.from(pt051Assessments.values()).find((assessment2) => assessment2.traineeFullName === trainee.fullName && (assessment2.eventId === assessmentEventId || normaliseCode(assessment2.flightNumber) === normaliseCode(lmpEventCode)));
           const assessment = existingAssessment ? {
             ...existingAssessment,
-            eventId: selectedEvent.id,
-            flightNumber: selectedEvent.flightNumber,
+            id: assessmentId,
+            eventId: assessmentEventId,
+            flightNumber: lmpEventCode,
             date: selectedEvent.date,
             dcoResult: "DCO",
             overallGrade: "No Grade",
@@ -110414,9 +110454,9 @@ const TrainingCompletionView = ({
             isCompleted: true
           } : {
             id: assessmentId,
-            traineeFullName: trainee.name,
-            eventId: selectedEvent.id,
-            flightNumber: selectedEvent.flightNumber,
+            traineeFullName: trainee.fullName,
+            eventId: assessmentEventId,
+            flightNumber: lmpEventCode,
             date: selectedEvent.date,
             instructorName: selectedEvent.instructor || "",
             overallGrade: "No Grade",
@@ -110428,6 +110468,12 @@ const TrainingCompletionView = ({
             groundSchoolAssessment: { isAssessment: false, result: void 0 }
           };
           await Promise.resolve(onSaveTrainingReportAssessment(assessment));
+          if (onPersistTrainingReportAssessment) {
+            await onPersistTrainingReportAssessment({
+              ...assessment,
+              traineeFullName: trainee.fullName
+            });
+          }
           completed.push(`${trainee.name} / ${selectedEvent.flightNumber}`);
         }
       }
@@ -110613,7 +110659,7 @@ const TrainingCompletionView = ({
               /* @__PURE__ */ jsxRuntimeExports.jsx(
                 "button",
                 {
-                  onClick: () => setSelectedTrainees(traineesForSelectedEvents.map((trainee) => trainee.name)),
+                  onClick: () => setSelectedTrainees(traineesForSelectedEvents.map(getTraineeSelectionKey)),
                   className: "px-3 py-1 bg-sky-600 hover:bg-sky-700 text-white rounded text-sm",
                   children: "Select All"
                 }
@@ -110633,12 +110679,13 @@ const TrainingCompletionView = ({
               "input",
               {
                 type: "checkbox",
-                checked: selectedTrainees.includes(trainee.name),
+                checked: selectedTrainees.includes(getTraineeSelectionKey(trainee)),
                 onChange: (event) => {
+                  const traineeKey = getTraineeSelectionKey(trainee);
                   if (event.target.checked) {
-                    setSelectedTrainees([...selectedTrainees, trainee.name]);
+                    setSelectedTrainees([...selectedTrainees, traineeKey]);
                   } else {
-                    setSelectedTrainees(selectedTrainees.filter((name) => name !== trainee.name));
+                    setSelectedTrainees(selectedTrainees.filter((key) => key !== traineeKey));
                   }
                 },
                 className: "h-4 w-4 accent-green-500 bg-gray-600 border-gray-500 rounded"
@@ -110652,7 +110699,7 @@ const TrainingCompletionView = ({
               trainee.course,
               ")"
             ] })
-          ] }, trainee.name)) }),
+          ] }, getTraineeSelectionKey(trainee))) }),
           selectedEvents.length > 0 && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mt-5 p-4 rounded border border-gray-700 bg-gray-900/60", children: [
             /* @__PURE__ */ jsxRuntimeExports.jsx("h3", { className: "text-sm uppercase tracking-wide text-gray-400 mb-2", children: "Completion Summary" }),
             /* @__PURE__ */ jsxRuntimeExports.jsxs("p", { className: "text-sm text-gray-200", children: [
@@ -110709,6 +110756,7 @@ const TrainingRecordsView = ({
   pt051Assessments,
   traineeLMPs,
   onSaveTrainingReportAssessment,
+  onPersistTrainingReportAssessment,
   onUpdateLmpItem,
   locations = [],
   units = [],
@@ -110822,6 +110870,7 @@ const TrainingRecordsView = ({
           pt051Assessments,
           traineeLMPs,
           onSaveTrainingReportAssessment,
+          onPersistTrainingReportAssessment,
           onUpdateLmpItem,
           trainingReportTemplate,
           phraseBank
@@ -158871,6 +158920,7 @@ It will not clear the published DFP.`,
             pt051Assessments,
             traineeLMPs,
             onSaveTrainingReportAssessment,
+            onPersistTrainingReportAssessment: persistTrainingReportAssessmentRecord,
             onUpdateLmpItem: handleUpdateIndividualLmpItem,
             locations,
             units,

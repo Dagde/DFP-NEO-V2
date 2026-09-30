@@ -55451,6 +55451,7 @@ appliedUpdates.forEach(update => {
                     pt051Assessments={pt051Assessments}
                     traineeLMPs={traineeLMPs}
                     onSaveTrainingReportAssessment={onSaveTrainingReportAssessment}
+                    onPersistTrainingReportAssessment={persistTrainingReportAssessmentRecord}
                     onUpdateLmpItem={handleUpdateIndividualLmpItem}
                     locations={locations}
                     units={units}
