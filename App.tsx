@@ -25686,7 +25686,7 @@ const applyCoursePriority = (rankedList: Trainee[], diagnosticLabel = 'unlabelle
                 // Solo flights on STBY: no instructor (solo PIC), correct flightType
                 const stbyInstructor = isSoloStby ? null : findBestInstructorForStby(trainee, next, time, next.duration, 'flight', generatedEvents);
                 if (!isSoloStby && !stbyInstructor) {
-                    traceScheduleReject('STBY_NO_INSTRUCTOR_SELECTED', {
+                    buildDebugLog('STBY flight recovery skipped: no eligible instructor available', {
                         listName: 'STBY flight recovery',
                         trainee: trainee.fullName,
                         event: next.code || next.id || null,
