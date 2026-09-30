@@ -50027,11 +50027,131 @@ const TraineeLmpView = ({
   const [activeTab, setActiveTab] = reactExports.useState("neo");
   const [showInsertEventModal, setShowInsertEventModal] = reactExports.useState(false);
   const [itemBeingEdited, setItemBeingEdited] = reactExports.useState(null);
+  const [isDownloadingLmpTrace, setIsDownloadingLmpTrace] = reactExports.useState(false);
   const testingOfficerQualifications = reactExports.useMemo(
     () => getQualificationsForOperationalModel(staffQualificationCatalogue, operationalModel),
     [staffQualificationCatalogue, operationalModel]
   );
   const hasAcademicSyllabus = !!(syllabusDetails && syllabusDetails.length > 0);
+  const downloadIndividualLmpTrace = async () => {
+    if (isDownloadingLmpTrace) return;
+    setIsDownloadingLmpTrace(true);
+    const traineeId = String(trainee.id || trainee.fullName || trainee.name || "").trim();
+    const normalise2 = (value) => String(value || "").trim().toUpperCase();
+    const isUpcLike = (item) => normalise2(item.code) === "UPC" || normalise2(item.eventDescription) === "UPC";
+    const summarise = (items) => ({
+      count: items.length,
+      upcLikeCount: items.filter(isUpcLike).length,
+      byType: items.reduce((acc, item) => {
+        const key = String(item.type || "missing");
+        acc[key] = (acc[key] || 0) + 1;
+        return acc;
+      }, {}),
+      firstEvents: items.slice(0, 20).map((item) => ({
+        id: item.id,
+        code: item.code,
+        masterEventId: item.masterEventId,
+        eventDescription: item.eventDescription,
+        phase: item.phase,
+        module: item.module,
+        type: item.type,
+        duration: item.duration,
+        flightOrSimHours: item.flightOrSimHours,
+        totalEventHours: item.totalEventHours,
+        courses: item.courses,
+        notes: item.notes,
+        sortOrder: item.sortOrder,
+        lmpSource: item.lmpSource
+      })),
+      upcLikeEvents: items.filter(isUpcLike).slice(0, 20).map((item) => ({
+        id: item.id,
+        code: item.code,
+        masterEventId: item.masterEventId,
+        eventDescription: item.eventDescription,
+        phase: item.phase,
+        module: item.module,
+        type: item.type,
+        duration: item.duration,
+        courses: item.courses,
+        notes: item.notes,
+        sortOrder: item.sortOrder,
+        lmpSource: item.lmpSource
+      }))
+    });
+    let serverDiagnostic = null;
+    let serverDiagnosticError = null;
+    try {
+      if (traineeId) {
+        const response = await fetch(`/api/trainees/${encodeURIComponent(traineeId)}/lmp/diagnostic`, {
+          credentials: "include"
+        });
+        const text = await response.text();
+        try {
+          serverDiagnostic = text ? JSON.parse(text) : null;
+        } catch {
+          serverDiagnostic = text;
+        }
+        if (!response.ok) {
+          serverDiagnosticError = `HTTP ${response.status}: ${typeof serverDiagnostic === "string" ? serverDiagnostic : JSON.stringify(serverDiagnostic)}`;
+        }
+      } else {
+        serverDiagnosticError = "No trainee id or name was available for diagnostic lookup.";
+      }
+    } catch (error) {
+      serverDiagnosticError = error instanceof Error ? error.message : String(error);
+    }
+    const report = {
+      generatedAt: (/* @__PURE__ */ new Date()).toISOString(),
+      trainee: {
+        id: trainee.id || null,
+        idNumber: trainee.idNumber,
+        fullName: trainee.fullName,
+        name: trainee.name,
+        rank: trainee.rank,
+        course: trainee.course,
+        lmpType: trainee.lmpType,
+        academicLmpType: trainee.academicLmpType,
+        unit: trainee.unit,
+        location: trainee.location
+      },
+      browserVisibleLmp: summarise(traineeLmp || []),
+      browserScores: {
+        count: scores.length,
+        events: scores.slice(0, 40).map((score) => ({
+          event: score.event,
+          date: score.date,
+          instructor: score.instructor,
+          score: score.score
+        }))
+      },
+      selectedItem: selectedItem ? {
+        id: selectedItem.id,
+        code: selectedItem.code,
+        masterEventId: selectedItem.masterEventId,
+        eventDescription: selectedItem.eventDescription,
+        phase: selectedItem.phase,
+        module: selectedItem.module,
+        type: selectedItem.type,
+        courses: selectedItem.courses,
+        notes: selectedItem.notes,
+        sortOrder: selectedItem.sortOrder,
+        lmpSource: selectedItem.lmpSource
+      } : null,
+      serverDiagnostic,
+      serverDiagnosticError
+    };
+    const slug = String(trainee.fullName || trainee.name || "trainee").toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "") || "trainee";
+    const blob = new Blob([JSON.stringify(report, null, 2)], { type: "application/json" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = `individual-lmp-trace-${slug}-${(/* @__PURE__ */ new Date()).toISOString().replace(/[:.]/g, "-")}.json`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+    setIsDownloadingLmpTrace(false);
+  };
   const completedEventIds = reactExports.useMemo(() => {
     const ids = new Set(scores.map((s) => (s.event || "").replace("*", "")));
     traineeLmp.forEach((item) => {
@@ -50144,6 +50264,19 @@ This records RPL against this Individual LMP event.`,
             onClick: onBack,
             className: "w-[56px] h-[41px] flex items-center justify-center text-center px-1 py-1 text-[10px] font-semibold rounded-md btn-aluminium-brushed",
             children: "← Back"
+          }
+        ),
+        activeTab === "neo" && /* @__PURE__ */ jsxRuntimeExports.jsx(
+          "button",
+          {
+            onClick: downloadIndividualLmpTrace,
+            disabled: isDownloadingLmpTrace,
+            className: "w-[56px] h-[41px] flex items-center justify-center text-center px-1 py-1 text-[10px] leading-tight font-semibold rounded-md btn-aluminium-brushed disabled:opacity-40 disabled:cursor-not-allowed",
+            children: isDownloadingLmpTrace ? "Trace..." : /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
+              "LMP",
+              /* @__PURE__ */ jsxRuntimeExports.jsx("br", {}),
+              "Trace"
+            ] })
           }
         ),
         activeTab === "neo" && /* @__PURE__ */ jsxRuntimeExports.jsxs(

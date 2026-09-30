@@ -8385,6 +8385,147 @@ app.get('/api/trainees/:id/lmp', async (req, res) => {
   }
 });
 
+// GET /api/trainees/:id/lmp/diagnostic - Download source/composition details for Individual LMP troubleshooting
+app.get('/api/trainees/:id/lmp/diagnostic', async (req, res) => {
+  try {
+    const db = await getPrisma();
+    const { id } = req.params;
+    const decodedId = decodeURIComponent(id);
+    const lmp = await db.individualLMP.findFirst({
+      where: {
+        OR: [
+          { traineeId: id },
+          { traineeFullName: decodedId },
+        ],
+      },
+    });
+
+    if (!lmp) {
+      return res.json({
+        generatedAt: new Date().toISOString(),
+        lookup: { id, decodedId },
+        lmp: null,
+        message: 'No IndividualLMP row found for this trainee.',
+      });
+    }
+
+    const trainee = await db.trainee.findFirst({
+      where: {
+        OR: [
+          { id: lmp.traineeId },
+          { fullName: lmp.traineeFullName },
+        ],
+      },
+    });
+    const masterSyllabus = await loadMasterSyllabusForLmpType(db, lmp.lmpType);
+    const overlayEvents = await loadTraineeLmpOverlays(db, lmp.traineeId);
+    const storedEvents = Array.isArray(lmp.events) ? lmp.events : [];
+    const completedEventIds = Array.isArray(lmp.completedEventIds) ? lmp.completedEventIds : [];
+    const composedEvents = composeIndividualLmpEvents(storedEvents, masterSyllabus, overlayEvents, completedEventIds);
+    const token = value => String(value || '').trim().toUpperCase();
+    const isUpcLike = item => ['UPC'].includes(token(item?.code)) || ['UPC'].includes(token(item?.eventDescription)) || isLmpCourseShellLikeItem(item, 'UPC');
+    const summarise = items => {
+      const list = Array.isArray(items) ? items : [];
+      return {
+        count: list.length,
+        upcLikeCount: list.filter(isUpcLike).length,
+        shellLikeCount: list.filter(item => isLmpCourseShellLikeItem(item, lmp.lmpType) || String(item?.notes || '').includes(SYLLABUS_COURSE_SHELL_NOTE)).length,
+        byType: list.reduce((acc, item) => {
+          const key = String(item?.type || 'missing');
+          acc[key] = (acc[key] || 0) + 1;
+          return acc;
+        }, {}),
+        firstEvents: list.slice(0, 12).map(item => ({
+          id: item?.id,
+          code: item?.code,
+          masterEventId: item?.masterEventId,
+          eventDescription: item?.eventDescription,
+          phase: item?.phase,
+          module: item?.module,
+          type: item?.type,
+          duration: item?.duration,
+          flightOrSimHours: item?.flightOrSimHours,
+          totalEventHours: item?.totalEventHours,
+          courses: item?.courses,
+          notes: item?.notes,
+          sortOrder: item?.sortOrder,
+          lmpSource: item?.lmpSource,
+        })),
+        upcLikeEvents: list.filter(isUpcLike).slice(0, 20).map(item => ({
+          id: item?.id,
+          code: item?.code,
+          masterEventId: item?.masterEventId,
+          eventDescription: item?.eventDescription,
+          phase: item?.phase,
+          module: item?.module,
+          type: item?.type,
+          duration: item?.duration,
+          courses: item?.courses,
+          notes: item?.notes,
+          sortOrder: item?.sortOrder,
+          lmpSource: item?.lmpSource,
+        })),
+      };
+    };
+    const directSyllabusMatches = await db.$queryRawUnsafe(
+      `SELECT "id", "code", "eventDescription", "module", "phase", "type", "duration", "flightOrSimHours", "totalEventHours", "courses", "notes", "unit", "location", "sortOrder", "isActive"
+       FROM "SyllabusItem"
+       WHERE "code" = $1
+          OR "eventDescription" = $1
+          OR "notes" ILIKE $2
+          OR $1 = ANY("courses")
+       ORDER BY "sortOrder" ASC`,
+      lmp.lmpType,
+      `%${SYLLABUS_COURSE_SHELL_NOTE}%`,
+    );
+
+    res.json({
+      generatedAt: new Date().toISOString(),
+      lookup: { id, decodedId },
+      trainee: trainee ? {
+        id: trainee.id,
+        fullName: trainee.fullName,
+        course: trainee.course,
+        lmpType: trainee.lmpType,
+        unit: trainee.unit,
+        location: trainee.location,
+      } : null,
+      lmp: {
+        id: lmp.id,
+        traineeId: lmp.traineeId,
+        traineeFullName: lmp.traineeFullName,
+        lmpType: lmp.lmpType,
+        completedEventIdsCount: completedEventIds.length,
+      },
+      storedEvents: summarise(storedEvents),
+      masterSyllabus: summarise(masterSyllabus),
+      overlays: {
+        count: overlayEvents.length,
+        sample: overlayEvents.slice(0, 12).map(item => ({
+          id: item?.id,
+          code: item?.code,
+          masterEventId: item?.masterEventId,
+          eventDescription: item?.eventDescription,
+          type: item?.type,
+          lmpSource: item?.lmpSource,
+          anchorAfterMasterEventId: item?.anchorAfterMasterEventId,
+          anchorBeforeMasterEventId: item?.anchorBeforeMasterEventId,
+        })),
+      },
+      composedEvents: summarise(composedEvents),
+      directSyllabusMatches: {
+        count: directSyllabusMatches.length,
+        codeEqualsLmpType: directSyllabusMatches.filter(item => token(item.code) === token(lmp.lmpType)).length,
+        shellNoteRows: directSyllabusMatches.filter(item => String(item.notes || '').includes(SYLLABUS_COURSE_SHELL_NOTE)).length,
+        sample: directSyllabusMatches.slice(0, 20),
+      },
+    });
+  } catch (error) {
+    console.error('❌ GET /api/trainees/:id/lmp/diagnostic error:', error);
+    res.status(500).json({ error: 'Failed to fetch LMP diagnostic', details: error.message });
+  }
+});
+
 // PUT /api/trainees/:id/lmp - Upsert IndividualLMP for a specific trainee
 app.put('/api/trainees/:id/lmp', async (req, res) => {
   try {
