@@ -8770,7 +8770,7 @@ const markNeoBuildTiming = (
     report.lastMarkMs = now;
     report.completedAt = new Date().toISOString();
     report.totalElapsedMs = Math.round(now - report.startedAtMs);
-    if (report.autoSave) saveNeoBuildTimingReport(report);
+    saveNeoBuildTimingReport(report);
 };
 
 type PersonnelIdentityRole = 'staff' | 'trainee';
@@ -46188,6 +46188,37 @@ const App: React.FC = () => {
             }, {})
         );
         const visibleBuildEvents = nextDayBuildEvents || [];
+        const summariseLmpMap = () => {
+            const entries = Array.from(traineeLMPs.entries());
+            return {
+                traineeCount: entries.length,
+                totalEvents: entries.reduce((sum, [, events]) => sum + (Array.isArray(events) ? events.length : 0), 0),
+                byLmpType: entries.reduce((counts: Record<string, number>, [, events]) => {
+                    const firstEvent = Array.isArray(events) ? events.find(Boolean) : null;
+                    const key = String((firstEvent as any)?.lmpType || (firstEvent as any)?.course || 'Unspecified');
+                    counts[key] = (counts[key] || 0) + 1;
+                    return counts;
+                }, {}),
+                samples: entries.slice(0, 20).map(([traineeFullName, events]) => ({
+                    traineeFullName,
+                    eventCount: Array.isArray(events) ? events.length : 0,
+                    firstEvents: (Array.isArray(events) ? events : []).slice(0, 12).map(event => ({
+                        id: event.id,
+                        code: event.code,
+                        masterEventId: event.masterEventId,
+                        eventDescription: event.eventDescription,
+                        type: event.type,
+                        lmpType: (event as any).lmpType || null,
+                        phase: event.phase,
+                        module: event.module,
+                        duration: event.duration,
+                        flightOrSimHours: event.flightOrSimHours,
+                        totalEventHours: event.totalEventHours,
+                        isCompleted: event.isCompleted,
+                    })),
+                })),
+            };
+        };
         const report = {
             reportType: 'NEO_BUILD_COMPREHENSIVE_DIAGNOSTIC',
             generatedAt: new Date().toISOString(),
@@ -46197,6 +46228,78 @@ const App: React.FC = () => {
             activeUnitCode,
             activeLocationCode: school,
             currentUserName,
+            liveBuildState: {
+                isBuildingDfp,
+                progress: dfpBuildProgress,
+                pageDate: date,
+                generatedAtWhileBuildModalVisible: isBuildingDfp,
+            },
+            liveInputState: {
+                trainees: {
+                    count: traineesData.length,
+                    activeCount: traineesData.filter((trainee: any) => !trainee.isPaused).length,
+                    byCourse: countBy(traineesData, (trainee: any) => trainee.course),
+                    byUnit: countBy(traineesData, (trainee: any) => trainee.unit),
+                    samples: traineesData.slice(0, 40).map((trainee: any) => ({
+                        id: trainee.id,
+                        name: trainee.fullName || trainee.name,
+                        unit: trainee.unit,
+                        course: trainee.course,
+                        lmpType: trainee.lmpType,
+                        isPaused: trainee.isPaused,
+                    })),
+                },
+                instructors: {
+                    count: instructorsData.length,
+                    byUnit: countBy(instructorsData, (instructor: any) => instructor.unit),
+                    samples: instructorsData.slice(0, 30).map((instructor: any) => ({
+                        id: instructor.id,
+                        name: instructor.name || instructor.fullName,
+                        unit: instructor.unit,
+                        rank: instructor.rank,
+                        role: instructor.role,
+                    })),
+                },
+                syllabus: {
+                    count: syllabusDetails.length,
+                    byType: countBy(syllabusDetails, (item: any) => item.type),
+                    byLmpType: countBy(syllabusDetails, (item: any) => item.lmpType || (Array.isArray(item.courses) ? item.courses[0] : undefined)),
+                    samples: syllabusDetails.slice(0, 80).map((item: any) => ({
+                        id: item.id,
+                        code: item.code,
+                        masterEventId: item.masterEventId,
+                        eventDescription: item.eventDescription,
+                        type: item.type,
+                        lmpType: item.lmpType,
+                        courses: item.courses,
+                        duration: item.duration,
+                        flightOrSimHours: item.flightOrSimHours,
+                        totalEventHours: item.totalEventHours,
+                        phase: item.phase,
+                        module: item.module,
+                        sortOrder: item.sortOrder,
+                    })),
+                },
+                individualLmps: summariseLmpMap(),
+                scores: {
+                    traineeCount: scores.size,
+                    totalScores: Array.from(scores.values()).reduce((sum, scoreList) => sum + (Array.isArray(scoreList) ? scoreList.length : 0), 0),
+                },
+                priorities: {
+                    highestPriorityEvents: highestPriorityEvents.length,
+                    samples: highestPriorityEvents.slice(0, 30).map(event => ({
+                        id: event.id,
+                        type: event.type,
+                        flightNumber: event.flightNumber,
+                        startTime: event.startTime,
+                        duration: event.duration,
+                        resourceId: event.resourceId,
+                        pilot: event.pilot,
+                        student: event.student,
+                        pushToNeoBuild: event.pushToNeoBuild,
+                    })),
+                },
+            },
             visibleDraftSchedule: {
                 count: visibleBuildEvents.length,
                 byType: countBy(visibleBuildEvents, event => event.type),
@@ -46238,7 +46341,7 @@ const App: React.FC = () => {
         link.remove();
         URL.revokeObjectURL(url);
         setShowInfoNotification('NEO Build diagnostic JSON downloaded.');
-    }, [activeOperationalModel, activeUnitCode, activeView, buildDfpDate, currentUserName, nextDayBuildEvents, school]);
+    }, [activeOperationalModel, activeUnitCode, activeView, buildDfpDate, currentUserName, date, dfpBuildProgress, highestPriorityEvents, instructorsData, isBuildingDfp, nextDayBuildEvents, school, scores, syllabusDetails, traineeLMPs, traineesData]);
 
     const handleOpenArchiveReport = useCallback(async () => {
         setArchiveHealthReport({ status: 'loading' });
@@ -58925,7 +59028,12 @@ appliedUpdates.forEach(update => {
             )}
             {showInfoNotification && <InfoNotification message={showInfoNotification} onClose={() => setShowInfoNotification(null)} />}
             {showNightFlyingInfo && <NightFlyingInfoFlyout traineeCount={nightFlyingTraineeCount} />}
-            {isBuildingDfp && <BuildDfpLoadingFlyout progress={dfpBuildProgress} />}
+            {isBuildingDfp && (
+                <BuildDfpLoadingFlyout
+                    progress={dfpBuildProgress}
+                    onDownloadLiveTrace={handleDownloadNeoBuildReport}
+                />
+            )}
             {pausePanelPhase === 'building' && <PropellerLoadingOverlay message="Engine warming up — please wait…" />}
             {showDateWarning && <BuildDateWarningFlyout onConfirm={handleConfirmDateAndBuild} onCancel={() => setShowDateWarning(false)} date={buildDfpDate} />}
             {unavailabilityNotifications.length > 0 && <UnavailabilityConflictFlyout notifications={unavailabilityNotifications} onDismiss={() => setUnavailabilityNotifications([])} />}

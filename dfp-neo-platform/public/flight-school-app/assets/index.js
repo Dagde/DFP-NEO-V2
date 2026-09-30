@@ -87747,7 +87747,7 @@ const formatElapsed = (elapsedMs) => {
   if (typeof elapsedMs !== "number" || !Number.isFinite(elapsedMs) || elapsedMs < 1e3) return null;
   return `${(elapsedMs / 1e3).toFixed(1)}s`;
 };
-const BuildDfpLoadingFlyout = ({ progress }) => {
+const BuildDfpLoadingFlyout = ({ progress, onDownloadLiveTrace }) => {
   const actualPercentage = Math.max(0, Math.min(100, Math.round(progress?.percentage ?? 0)));
   const [visiblePercentage, setVisiblePercentage] = reactExports.useState(Math.max(1, actualPercentage));
   const startedAtRef = reactExports.useRef(Date.now());
@@ -87783,7 +87783,7 @@ const BuildDfpLoadingFlyout = ({ progress }) => {
   const dashOffset = circumference - percentage / 100 * circumference;
   const strokeColor = isError ? "#f87171" : isComplete ? "#34d399" : "#38bdf8";
   const elapsedLabel = formatElapsed(progress?.elapsedMs);
-  return /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "fixed inset-0 bg-black/60 z-[90] flex items-center justify-center animate-fade-in", children: /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "h-[472px] w-[420px] max-h-[calc(100vh-32px)] max-w-[calc(100vw-32px)] rounded-xl border border-sky-500/60 bg-gray-900 shadow-2xl", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex h-full flex-col items-center gap-5 p-8", children: [
+  return /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "fixed inset-0 bg-black/60 z-[90] flex items-center justify-center animate-fade-in", children: /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "h-[528px] w-[420px] max-h-[calc(100vh-32px)] max-w-[calc(100vw-32px)] rounded-xl border border-sky-500/60 bg-gray-900 shadow-2xl", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex h-full flex-col items-center gap-5 p-8", children: [
     /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "relative h-32 w-32", children: [
       /* @__PURE__ */ jsxRuntimeExports.jsxs("svg", { className: "h-32 w-32 -rotate-90", viewBox: "0 0 120 120", "aria-hidden": "true", children: [
         /* @__PURE__ */ jsxRuntimeExports.jsx(
@@ -87843,7 +87843,17 @@ const BuildDfpLoadingFlyout = ({ progress }) => {
       /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "mx-2 h-4 w-px bg-slate-700" }),
       /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "font-semibold text-slate-300", children: "Elapsed" }),
       /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "font-black tabular-nums text-white", children: elapsedLabel || "0.0s" })
-    ] })
+    ] }),
+    onDownloadLiveTrace && /* @__PURE__ */ jsxRuntimeExports.jsx(
+      "button",
+      {
+        type: "button",
+        onClick: onDownloadLiveTrace,
+        className: "h-10 rounded-md border border-amber-400/50 bg-amber-500/10 px-4 text-sm font-bold text-amber-100 shadow-[0_0_18px_rgba(245,158,11,0.16)] transition-colors hover:bg-amber-500/20",
+        title: "Download the current NEO Build trace without waiting for the build to finish",
+        children: "Download Live Trace"
+      }
+    )
   ] }) }) });
 };
 const buildDateWarningWeekdays = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
@@ -121257,7 +121267,7 @@ const markNeoBuildTiming = (report, name, details) => {
   report.lastMarkMs = now;
   report.completedAt = (/* @__PURE__ */ new Date()).toISOString();
   report.totalElapsedMs = Math.round(now - report.startedAtMs);
-  if (report.autoSave) saveNeoBuildTimingReport(report);
+  saveNeoBuildTimingReport(report);
 };
 const getNeoBuildIdentityValue = (value) => String(value ?? "").trim();
 const getNeoBuildPersonDisplayLabel = (person) => String(person.fullName || person.name || "").trim();
@@ -151285,6 +151295,37 @@ The proposed event was not scheduled. Re-open the event and choose Accept Confli
       return counts;
     }, {});
     const visibleBuildEvents = nextDayBuildEvents || [];
+    const summariseLmpMap = () => {
+      const entries = Array.from(traineeLMPs.entries());
+      return {
+        traineeCount: entries.length,
+        totalEvents: entries.reduce((sum, [, events2]) => sum + (Array.isArray(events2) ? events2.length : 0), 0),
+        byLmpType: entries.reduce((counts, [, events2]) => {
+          const firstEvent = Array.isArray(events2) ? events2.find(Boolean) : null;
+          const key = String(firstEvent?.lmpType || firstEvent?.course || "Unspecified");
+          counts[key] = (counts[key] || 0) + 1;
+          return counts;
+        }, {}),
+        samples: entries.slice(0, 20).map(([traineeFullName, events2]) => ({
+          traineeFullName,
+          eventCount: Array.isArray(events2) ? events2.length : 0,
+          firstEvents: (Array.isArray(events2) ? events2 : []).slice(0, 12).map((event) => ({
+            id: event.id,
+            code: event.code,
+            masterEventId: event.masterEventId,
+            eventDescription: event.eventDescription,
+            type: event.type,
+            lmpType: event.lmpType || null,
+            phase: event.phase,
+            module: event.module,
+            duration: event.duration,
+            flightOrSimHours: event.flightOrSimHours,
+            totalEventHours: event.totalEventHours,
+            isCompleted: event.isCompleted
+          }))
+        }))
+      };
+    };
     const report = {
       reportType: "NEO_BUILD_COMPREHENSIVE_DIAGNOSTIC",
       generatedAt: (/* @__PURE__ */ new Date()).toISOString(),
@@ -151294,6 +151335,78 @@ The proposed event was not scheduled. Re-open the event and choose Accept Confli
       activeUnitCode,
       activeLocationCode: school,
       currentUserName,
+      liveBuildState: {
+        isBuildingDfp,
+        progress: dfpBuildProgress,
+        pageDate: date,
+        generatedAtWhileBuildModalVisible: isBuildingDfp
+      },
+      liveInputState: {
+        trainees: {
+          count: traineesData.length,
+          activeCount: traineesData.filter((trainee) => !trainee.isPaused).length,
+          byCourse: countBy(traineesData, (trainee) => trainee.course),
+          byUnit: countBy(traineesData, (trainee) => trainee.unit),
+          samples: traineesData.slice(0, 40).map((trainee) => ({
+            id: trainee.id,
+            name: trainee.fullName || trainee.name,
+            unit: trainee.unit,
+            course: trainee.course,
+            lmpType: trainee.lmpType,
+            isPaused: trainee.isPaused
+          }))
+        },
+        instructors: {
+          count: instructorsData.length,
+          byUnit: countBy(instructorsData, (instructor) => instructor.unit),
+          samples: instructorsData.slice(0, 30).map((instructor) => ({
+            id: instructor.id,
+            name: instructor.name || instructor.fullName,
+            unit: instructor.unit,
+            rank: instructor.rank,
+            role: instructor.role
+          }))
+        },
+        syllabus: {
+          count: syllabusDetails.length,
+          byType: countBy(syllabusDetails, (item) => item.type),
+          byLmpType: countBy(syllabusDetails, (item) => item.lmpType || (Array.isArray(item.courses) ? item.courses[0] : void 0)),
+          samples: syllabusDetails.slice(0, 80).map((item) => ({
+            id: item.id,
+            code: item.code,
+            masterEventId: item.masterEventId,
+            eventDescription: item.eventDescription,
+            type: item.type,
+            lmpType: item.lmpType,
+            courses: item.courses,
+            duration: item.duration,
+            flightOrSimHours: item.flightOrSimHours,
+            totalEventHours: item.totalEventHours,
+            phase: item.phase,
+            module: item.module,
+            sortOrder: item.sortOrder
+          }))
+        },
+        individualLmps: summariseLmpMap(),
+        scores: {
+          traineeCount: scores.size,
+          totalScores: Array.from(scores.values()).reduce((sum, scoreList) => sum + (Array.isArray(scoreList) ? scoreList.length : 0), 0)
+        },
+        priorities: {
+          highestPriorityEvents: highestPriorityEvents.length,
+          samples: highestPriorityEvents.slice(0, 30).map((event) => ({
+            id: event.id,
+            type: event.type,
+            flightNumber: event.flightNumber,
+            startTime: event.startTime,
+            duration: event.duration,
+            resourceId: event.resourceId,
+            pilot: event.pilot,
+            student: event.student,
+            pushToNeoBuild: event.pushToNeoBuild
+          }))
+        }
+      },
       visibleDraftSchedule: {
         count: visibleBuildEvents.length,
         byType: countBy(visibleBuildEvents, (event) => event.type),
@@ -151335,7 +151448,7 @@ The proposed event was not scheduled. Re-open the event and choose Accept Confli
     link.remove();
     URL.revokeObjectURL(url);
     setShowInfoNotification("NEO Build diagnostic JSON downloaded.");
-  }, [activeOperationalModel, activeUnitCode, activeView, buildDfpDate, currentUserName, nextDayBuildEvents, school]);
+  }, [activeOperationalModel, activeUnitCode, activeView, buildDfpDate, currentUserName, date, dfpBuildProgress, highestPriorityEvents, instructorsData, isBuildingDfp, nextDayBuildEvents, school, scores, syllabusDetails, traineeLMPs, traineesData]);
   const handleOpenArchiveReport = reactExports.useCallback(async () => {
     setArchiveHealthReport({ status: "loading" });
     try {
@@ -162280,7 +162393,13 @@ Do you want to replace the existing entry?`,
       ] }) }),
       showInfoNotification && /* @__PURE__ */ jsxRuntimeExports.jsx(InfoNotification, { message: showInfoNotification, onClose: () => setShowInfoNotification(null) }),
       showNightFlyingInfo && /* @__PURE__ */ jsxRuntimeExports.jsx(NightFlyingInfoFlyout, { traineeCount: nightFlyingTraineeCount }),
-      isBuildingDfp && /* @__PURE__ */ jsxRuntimeExports.jsx(BuildDfpLoadingFlyout, { progress: dfpBuildProgress }),
+      isBuildingDfp && /* @__PURE__ */ jsxRuntimeExports.jsx(
+        BuildDfpLoadingFlyout,
+        {
+          progress: dfpBuildProgress,
+          onDownloadLiveTrace: handleDownloadNeoBuildReport
+        }
+      ),
       pausePanelPhase === "building" && /* @__PURE__ */ jsxRuntimeExports.jsx(PropellerLoadingOverlay, { message: "Engine warming up — please wait…" }),
       showDateWarning && /* @__PURE__ */ jsxRuntimeExports.jsx(BuildDateWarningFlyout, { onConfirm: handleConfirmDateAndBuild, onCancel: () => setShowDateWarning(false), date: buildDfpDate }),
       unavailabilityNotifications.length > 0 && /* @__PURE__ */ jsxRuntimeExports.jsx(UnavailabilityConflictFlyout, { notifications: unavailabilityNotifications, onDismiss: () => setUnavailabilityNotifications([]) }),
