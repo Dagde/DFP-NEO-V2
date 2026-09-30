@@ -88411,6 +88411,7 @@ const InstructorProfileFlyout = ({
   );
   const contractorQualificationId = reactExports.useMemo(() => normalisedQualificationCatalogue.qualifications.find((qualification) => normaliseQualificationToken(qualification.id) === "contractor" || normaliseQualificationToken(qualification.code) === "contractor" || normaliseQualificationToken(qualification.name) === "contractor")?.id || "contractor", [normalisedQualificationCatalogue]);
   const qfiQualificationIds = reactExports.useMemo(() => normalisedQualificationCatalogue.qualifications.filter((qualification) => normaliseQualificationToken(qualification.id) === "qfi" || normaliseQualificationToken(qualification.code) === "qfi" || normaliseQualificationToken(qualification.name) === "qfi").map((qualification) => qualification.id), [normalisedQualificationCatalogue]);
+  const ofiQualificationIds = reactExports.useMemo(() => normalisedQualificationCatalogue.qualifications.filter((qualification) => normaliseQualificationToken(qualification.id) === "ofi" || normaliseQualificationToken(qualification.code) === "ofi" || normaliseQualificationToken(qualification.name) === "ofi").map((qualification) => qualification.id), [normalisedQualificationCatalogue]);
   const ofiQualificationLabel = reactExports.useMemo(() => {
     const match = normalisedQualificationCatalogue.qualifications.find((qualification) => normaliseQualificationToken(qualification.id) === "ofi" || normaliseQualificationToken(qualification.code) === "ofi" || normaliseQualificationToken(qualification.name) === "ofi");
     return String(match?.code || match?.name || "OFI").trim() || "OFI";
@@ -88804,7 +88805,14 @@ const InstructorProfileFlyout = ({
     }
   };
   const handleQualificationChange = (qualificationId, isChecked) => {
-    setAssignedQualifications((prev) => isChecked ? Array.from(/* @__PURE__ */ new Set([...prev, qualificationId])) : prev.filter((id) => id !== qualificationId));
+    const isQfiQualification = qfiQualificationIds.includes(qualificationId);
+    const isSupportQualification = qualificationId === contractorQualificationId || ofiQualificationIds.includes(qualificationId);
+    setAssignedQualifications((prev) => isChecked && isQfiQualification ? Array.from(/* @__PURE__ */ new Set([...prev.filter((id) => id !== contractorQualificationId && !ofiQualificationIds.includes(id)), qualificationId])) : isChecked && isSupportQualification ? Array.from(/* @__PURE__ */ new Set([...prev.filter((id) => !qfiQualificationIds.includes(id)), qualificationId])) : isChecked ? Array.from(/* @__PURE__ */ new Set([...prev, qualificationId])) : prev.filter((id) => id !== qualificationId));
+    if (isChecked && isQfiQualification) {
+      setIsContractor(false);
+      setIsOFI(false);
+    }
+    if (isChecked && isSupportQualification) setIsQFI(false);
     const legacyField = LEGACY_QUALIFICATION_FIELD_BY_ID[qualificationId];
     if (legacyField === "isCommandingOfficer") setIsCommandingOfficer(isChecked);
     if (legacyField === "isCFI") setIsCFI(isChecked);
@@ -88855,11 +88863,13 @@ Confirm the Personnel ID, unit and role are correct before saving this separate 
     }
     const savedRole = role;
     const savedAsContractorStaff = isContractorStaffRoleValue(String(savedRole));
-    const savedQualifications = savedAsContractorStaff ? normaliseContractorStaffQualifications(assignedQualifications) : assignedQualifications;
+    const hasQfiQualificationBeforeSupportCleanup = qfiQualificationIds.some((id) => assignedQualifications.includes(id));
+    const savedQualifications = savedAsContractorStaff ? normaliseContractorStaffQualifications(assignedQualifications) : hasQfiQualificationBeforeSupportCleanup ? assignedQualifications.filter((id) => id !== contractorQualificationId && !ofiQualificationIds.includes(id)) : assignedQualifications;
     const savedCategory = savedAsContractorStaff ? "UnCat" : category;
     const savedHasQfiQualification = qfiQualificationIds.some((id) => savedQualifications.includes(id));
     const savedIsQFI = savedAsContractorStaff ? false : savedHasQfiQualification;
-    const savedIsContractor = savedAsContractorStaff ? true : isContractor;
+    const savedIsContractor = savedAsContractorStaff ? true : savedHasQfiQualification ? false : isContractor;
+    const savedIsOFI = savedHasQfiQualification ? false : isOFI;
     let finalPhotoUrl = photoUrl;
     const dbId = instructor.id;
     if (dbId) {
@@ -88950,7 +88960,7 @@ Confirm the Personnel ID, unit and role are correct before saving this separate 
       isContractor: savedIsContractor,
       isAdminStaff,
       isQFI: savedIsQFI,
-      isOFI,
+      isOFI: savedIsOFI,
       photoUrl: finalPhotoUrl
     };
     flushPendingAudits();

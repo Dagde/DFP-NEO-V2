@@ -473,6 +473,15 @@ export const InstructorProfileFlyout: React.FC<InstructorProfileFlyoutProps> = (
       ))
       .map(qualification => qualification.id)
   ), [normalisedQualificationCatalogue]);
+  const ofiQualificationIds = useMemo(() => (
+    normalisedQualificationCatalogue.qualifications
+      .filter(qualification => (
+        normaliseQualificationToken(qualification.id) === 'ofi'
+        || normaliseQualificationToken(qualification.code) === 'ofi'
+        || normaliseQualificationToken(qualification.name) === 'ofi'
+      ))
+      .map(qualification => qualification.id)
+  ), [normalisedQualificationCatalogue]);
   const ofiQualificationLabel = useMemo(() => {
     const match = normalisedQualificationCatalogue.qualifications.find(qualification => (
       normaliseQualificationToken(qualification.id) === 'ofi'
@@ -922,11 +931,22 @@ export const InstructorProfileFlyout: React.FC<InstructorProfileFlyoutProps> = (
   };
   const handleCancel = () => { if (isCreating) onClose(); else { resetState(); setIsEditing(false); } };
   const handleQualificationChange = (qualificationId: string, isChecked: boolean) => {
+    const isQfiQualification = qfiQualificationIds.includes(qualificationId);
+    const isSupportQualification = qualificationId === contractorQualificationId || ofiQualificationIds.includes(qualificationId);
     setAssignedQualifications(prev => (
-      isChecked
+      isChecked && isQfiQualification
+        ? Array.from(new Set([...prev.filter(id => id !== contractorQualificationId && !ofiQualificationIds.includes(id)), qualificationId]))
+        : isChecked && isSupportQualification
+          ? Array.from(new Set([...prev.filter(id => !qfiQualificationIds.includes(id)), qualificationId]))
+          : isChecked
         ? Array.from(new Set([...prev, qualificationId]))
         : prev.filter(id => id !== qualificationId)
     ));
+    if (isChecked && isQfiQualification) {
+      setIsContractor(false);
+      setIsOFI(false);
+    }
+    if (isChecked && isSupportQualification) setIsQFI(false);
     const legacyField = LEGACY_QUALIFICATION_FIELD_BY_ID[qualificationId];
     if (legacyField === 'isCommandingOfficer') setIsCommandingOfficer(isChecked);
     if (legacyField === 'isCFI') setIsCFI(isChecked);
@@ -974,13 +994,17 @@ export const InstructorProfileFlyout: React.FC<InstructorProfileFlyoutProps> = (
     }
     const savedRole = role;
     const savedAsContractorStaff = isContractorStaffRoleValue(String(savedRole));
+    const hasQfiQualificationBeforeSupportCleanup = qfiQualificationIds.some(id => assignedQualifications.includes(id));
     const savedQualifications = savedAsContractorStaff
       ? normaliseContractorStaffQualifications(assignedQualifications)
-      : assignedQualifications;
+      : hasQfiQualificationBeforeSupportCleanup
+        ? assignedQualifications.filter(id => id !== contractorQualificationId && !ofiQualificationIds.includes(id))
+        : assignedQualifications;
     const savedCategory = savedAsContractorStaff ? 'UnCat' : category;
     const savedHasQfiQualification = qfiQualificationIds.some(id => savedQualifications.includes(id));
     const savedIsQFI = savedAsContractorStaff ? false : savedHasQfiQualification;
-    const savedIsContractor = savedAsContractorStaff ? true : isContractor;
+    const savedIsContractor = savedAsContractorStaff ? true : (savedHasQfiQualification ? false : isContractor);
+    const savedIsOFI = savedHasQfiQualification ? false : isOFI;
 
     // ── Handle pending photo changes ──────────────────────────────────────────
     let finalPhotoUrl = photoUrl;
@@ -1061,7 +1085,7 @@ export const InstructorProfileFlyout: React.FC<InstructorProfileFlyoutProps> = (
       },
       unavailability: unavailabilityPeriods, location, unit, flight, phoneNumber, email, permissions,
       priorExperience, isTestingOfficer, isExecutive, isFlyingSupervisor, isIRE,
-      isCommandingOfficer, isCFI, isDeputyFlightCommander, isContractor: savedIsContractor, isAdminStaff, isQFI: savedIsQFI, isOFI,
+      isCommandingOfficer, isCFI, isDeputyFlightCommander, isContractor: savedIsContractor, isAdminStaff, isQFI: savedIsQFI, isOFI: savedIsOFI,
       photoUrl: finalPhotoUrl,
     };
     flushPendingAudits();
