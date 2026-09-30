@@ -13,7 +13,7 @@ const CACHE_TIMESTAMP_KEY = 'dfp-syllabus-cache-timestamp';
 const CACHE_TTL_MS = 30 * 60 * 1000; // 30 minutes
 // Increment this version when DB schema/data migrations change the syllabus structure.
 // Old caches with a different version are automatically invalidated on next load.
-const CACHE_VERSION = '14'; // v14: Flight School BPC+IPC/FIC assessment-required defaults
+const CACHE_VERSION = '15'; // v15: invalidate stale wizard LMP import caches
 const CACHE_VERSION_KEY = 'dfp-syllabus-cache-version';
 const FLIGHT_SCHOOL_ASSESSMENT_REQUIRED_LMP_KEYS = new Set(['BPC+IPC', 'FIC']);
 

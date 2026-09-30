@@ -31859,6 +31859,201 @@ const VisualAdjustGuide = ({
     }
   );
 };
+const API_BASE$1 = "/api";
+const CACHE_KEY = "dfp-syllabus-cache";
+const CACHE_TIMESTAMP_KEY = "dfp-syllabus-cache-timestamp";
+const CACHE_TTL_MS = 30 * 60 * 1e3;
+const CACHE_VERSION = "15";
+const CACHE_VERSION_KEY = "dfp-syllabus-cache-version";
+const FLIGHT_SCHOOL_ASSESSMENT_REQUIRED_LMP_KEYS = /* @__PURE__ */ new Set(["BPC+IPC", "FIC"]);
+function getSessionAuthHeaders() {
+  if (typeof window === "undefined") return {};
+  const sessionToken = window.localStorage.getItem("dfp_session_token") || "";
+  return sessionToken ? { Authorization: `Bearer ${sessionToken}` } : {};
+}
+async function getApiErrorMessage(response, fallback) {
+  try {
+    const err = await response.json();
+    return err.message || err.error || fallback;
+  } catch {
+    return fallback;
+  }
+}
+function normaliseCourseKey(value) {
+  return String(value || "").trim().toUpperCase();
+}
+function shouldDefaultAssessmentRequired(item) {
+  const courses = Array.isArray(item.courses) ? item.courses : typeof item.courses === "string" ? String(item.courses).split(",").map((course) => course.trim()).filter(Boolean) : [];
+  const keys = [
+    item.lmpType,
+    item.module,
+    ...courses
+  ].map(normaliseCourseKey).filter(Boolean);
+  return keys.some((key) => FLIGHT_SCHOOL_ASSESSMENT_REQUIRED_LMP_KEYS.has(key));
+}
+function getCachedSyllabus() {
+  try {
+    if (typeof window === "undefined") return null;
+    const raw = localStorage.getItem(CACHE_KEY);
+    const timestamp = localStorage.getItem(CACHE_TIMESTAMP_KEY);
+    const version = localStorage.getItem(CACHE_VERSION_KEY);
+    if (!raw || !timestamp) return null;
+    if (version !== CACHE_VERSION) {
+      console.log(`[Syllabus Cache] Version mismatch (cached: ${version}, current: ${CACHE_VERSION}) — invalidating cache`);
+      localStorage.removeItem(CACHE_KEY);
+      localStorage.removeItem(CACHE_TIMESTAMP_KEY);
+      localStorage.removeItem(CACHE_VERSION_KEY);
+      return null;
+    }
+    const data = normaliseSyllabusRuntimeTimings(JSON.parse(raw));
+    const age = Date.now() - parseInt(timestamp, 10);
+    const expired = age > CACHE_TTL_MS;
+    return { data, expired };
+  } catch {
+    return null;
+  }
+}
+function setCachedSyllabus(syllabus) {
+  try {
+    if (typeof window === "undefined") return;
+    localStorage.setItem(CACHE_KEY, JSON.stringify(syllabus));
+    localStorage.setItem(CACHE_TIMESTAMP_KEY, Date.now().toString());
+    localStorage.setItem(CACHE_VERSION_KEY, CACHE_VERSION);
+  } catch (e) {
+    console.warn("⚠️ Could not cache syllabus in localStorage:", e);
+  }
+}
+function clearSyllabusCache() {
+  try {
+    if (typeof window === "undefined") return;
+    localStorage.removeItem(CACHE_KEY);
+    localStorage.removeItem(CACHE_TIMESTAMP_KEY);
+    localStorage.removeItem(CACHE_VERSION_KEY);
+  } catch {
+  }
+}
+function populatePrerequisites(items) {
+  return items.map((item, index, arr) => {
+    const itemWithDefaults = {
+      ...item,
+      acceptableAircraftConfigs: Array.isArray(item.acceptableAircraftConfigs) && item.acceptableAircraftConfigs.length > 0 ? item.acceptableAircraftConfigs : ["ANY"],
+      assessedElements: Array.isArray(item.assessedElements) && item.assessedElements.length > 0 ? item.assessedElements : ["Airmanship", "Preparation", "Technique"],
+      assessmentRequired: item.assessmentRequired === true || shouldDefaultAssessmentRequired(item),
+      testEventType: item.testEventType === "FLIGHT_TEST" || item.testEventType === "SIMULATOR_TEST" ? item.testEventType : "NONE",
+      testingOfficerQualificationId: item.testEventType === "FLIGHT_TEST" || item.testEventType === "SIMULATOR_TEST" ? String(item.testingOfficerQualificationId || "").trim() || null : null,
+      useTestingOfficerSecondaryCallsign: item.testEventType === "FLIGHT_TEST" && item.useTestingOfficerSecondaryCallsign === true
+    };
+    const hasExplicitPrereqs = item.prerequisitesGround && item.prerequisitesGround.length > 0 || item.prerequisitesFlying && item.prerequisitesFlying.length > 0;
+    if (hasExplicitPrereqs || item.lmpType === "Master LMP") {
+      return itemWithDefaults;
+    }
+    const prerequisitesGround = [];
+    const prerequisitesFlying = [];
+    for (let i = index - 1; i >= 0; i--) {
+      const prereqCandidate = arr[i];
+      if (prereqCandidate.code.includes(" MB")) continue;
+      const sharedCourses = prereqCandidate.courses.some((c) => item.courses.includes(c));
+      if (!sharedCourses) break;
+      if (prereqCandidate.type === "Flight" || prereqCandidate.type === "FTD") {
+        prerequisitesFlying.push(prereqCandidate.code);
+      } else {
+        prerequisitesGround.push(prereqCandidate.code);
+      }
+      break;
+    }
+    return {
+      ...itemWithDefaults,
+      acceptableAircraftConfigs: itemWithDefaults.acceptableAircraftConfigs,
+      assessmentRequired: itemWithDefaults.assessmentRequired,
+      prerequisitesGround,
+      prerequisitesFlying,
+      prerequisites: [...prerequisitesGround, ...prerequisitesFlying]
+    };
+  });
+}
+async function loadSyllabusFromDB() {
+  const cached = getCachedSyllabus();
+  if (cached && !cached.expired) {
+    console.log(`📚 [Syllabus] Using fresh cache (${cached.data.length} items)`);
+    return { syllabus: cached.data, source: "cache" };
+  }
+  try {
+    console.log("📚 [Syllabus] Fetching from database...");
+    const response = await fetch(`${API_BASE$1}/syllabus`, {
+      credentials: "include",
+      headers: { "Content-Type": "application/json", ...getSessionAuthHeaders() }
+    });
+    if (!response.ok) {
+      throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+    }
+    const data = await response.json();
+    const rawItems = data.syllabus || data.syllabusItems || [];
+    if (rawItems.length === 0) {
+      throw new Error("No syllabus items returned from database");
+    }
+    const processed = normaliseSyllabusRuntimeTimings(populatePrerequisites(rawItems));
+    setCachedSyllabus(processed);
+    console.log(`📚 [Syllabus] Loaded ${processed.length} items from database`);
+    return { syllabus: processed, source: "database" };
+  } catch (error) {
+    const errMsg = error instanceof Error ? error.message : "Unknown error";
+    console.error(`❌ [Syllabus] Database fetch failed: ${errMsg}`);
+    if (cached && cached.expired) {
+      console.warn(`⚠️ [Syllabus] Using expired cache as fallback (${cached.data.length} items)`);
+      return {
+        syllabus: cached.data,
+        source: "expired-cache",
+        error: `Database unavailable - showing cached syllabus. Error: ${errMsg}`
+      };
+    }
+    console.error("❌ [Syllabus] No cache available - returning empty syllabus");
+    return {
+      syllabus: [],
+      source: "empty",
+      error: `Failed to load syllabus: ${errMsg}`
+    };
+  }
+}
+async function createSyllabusItem(item, changeReason) {
+  const response = await fetch(`${API_BASE$1}/syllabus`, {
+    method: "POST",
+    credentials: "include",
+    headers: { "Content-Type": "application/json", ...getSessionAuthHeaders() },
+    body: JSON.stringify({ ...item, changeReason })
+  });
+  if (!response.ok) {
+    throw new Error(await getApiErrorMessage(response, "Failed to create syllabus item"));
+  }
+  const data = await response.json();
+  clearSyllabusCache();
+  return data.syllabusItem;
+}
+async function updateSyllabusItem(id, updates, changeReason) {
+  const response = await fetch(`${API_BASE$1}/syllabus/${id}`, {
+    method: "PUT",
+    credentials: "include",
+    headers: { "Content-Type": "application/json", ...getSessionAuthHeaders() },
+    body: JSON.stringify({ ...updates, changeReason })
+  });
+  if (!response.ok) {
+    throw new Error(await getApiErrorMessage(response, "Failed to update syllabus item"));
+  }
+  const data = await response.json();
+  clearSyllabusCache();
+  return data.syllabusItem;
+}
+async function deleteSyllabusItem(id, changeReason) {
+  const response = await fetch(`${API_BASE$1}/syllabus/${id}`, {
+    method: "DELETE",
+    credentials: "include",
+    headers: { "Content-Type": "application/json", ...getSessionAuthHeaders() },
+    body: JSON.stringify({ changeReason })
+  });
+  if (!response.ok) {
+    throw new Error(await getApiErrorMessage(response, "Failed to delete syllabus item"));
+  }
+  clearSyllabusCache();
+}
 const REPORT_KEY = "__dfpDragDiagnostics";
 const STORAGE_KEY = "dfp_drag_diagnostics_report";
 const SAMPLE_LIMIT = 80;
@@ -40933,6 +41128,7 @@ const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, lo
       }
     }
     pushWizardPersistenceTrace("lmp:persist:done", { lmpCode, persisted: items.length });
+    clearSyllabusCache();
     return items.length;
   };
   const persistWizardMasterLmpShellToDatabase = async (lmpCode, lmpName) => {
@@ -92457,201 +92653,6 @@ const TraineeListView = ({ onClose, events, traineesData, onUpdateTrainee, perso
     )
   ] });
 };
-const API_BASE$1 = "/api";
-const CACHE_KEY = "dfp-syllabus-cache";
-const CACHE_TIMESTAMP_KEY = "dfp-syllabus-cache-timestamp";
-const CACHE_TTL_MS = 30 * 60 * 1e3;
-const CACHE_VERSION = "14";
-const CACHE_VERSION_KEY = "dfp-syllabus-cache-version";
-const FLIGHT_SCHOOL_ASSESSMENT_REQUIRED_LMP_KEYS = /* @__PURE__ */ new Set(["BPC+IPC", "FIC"]);
-function getSessionAuthHeaders() {
-  if (typeof window === "undefined") return {};
-  const sessionToken = window.localStorage.getItem("dfp_session_token") || "";
-  return sessionToken ? { Authorization: `Bearer ${sessionToken}` } : {};
-}
-async function getApiErrorMessage(response, fallback) {
-  try {
-    const err = await response.json();
-    return err.message || err.error || fallback;
-  } catch {
-    return fallback;
-  }
-}
-function normaliseCourseKey(value) {
-  return String(value || "").trim().toUpperCase();
-}
-function shouldDefaultAssessmentRequired(item) {
-  const courses = Array.isArray(item.courses) ? item.courses : typeof item.courses === "string" ? String(item.courses).split(",").map((course) => course.trim()).filter(Boolean) : [];
-  const keys = [
-    item.lmpType,
-    item.module,
-    ...courses
-  ].map(normaliseCourseKey).filter(Boolean);
-  return keys.some((key) => FLIGHT_SCHOOL_ASSESSMENT_REQUIRED_LMP_KEYS.has(key));
-}
-function getCachedSyllabus() {
-  try {
-    if (typeof window === "undefined") return null;
-    const raw = localStorage.getItem(CACHE_KEY);
-    const timestamp = localStorage.getItem(CACHE_TIMESTAMP_KEY);
-    const version = localStorage.getItem(CACHE_VERSION_KEY);
-    if (!raw || !timestamp) return null;
-    if (version !== CACHE_VERSION) {
-      console.log(`[Syllabus Cache] Version mismatch (cached: ${version}, current: ${CACHE_VERSION}) — invalidating cache`);
-      localStorage.removeItem(CACHE_KEY);
-      localStorage.removeItem(CACHE_TIMESTAMP_KEY);
-      localStorage.removeItem(CACHE_VERSION_KEY);
-      return null;
-    }
-    const data = normaliseSyllabusRuntimeTimings(JSON.parse(raw));
-    const age = Date.now() - parseInt(timestamp, 10);
-    const expired = age > CACHE_TTL_MS;
-    return { data, expired };
-  } catch {
-    return null;
-  }
-}
-function setCachedSyllabus(syllabus) {
-  try {
-    if (typeof window === "undefined") return;
-    localStorage.setItem(CACHE_KEY, JSON.stringify(syllabus));
-    localStorage.setItem(CACHE_TIMESTAMP_KEY, Date.now().toString());
-    localStorage.setItem(CACHE_VERSION_KEY, CACHE_VERSION);
-  } catch (e) {
-    console.warn("⚠️ Could not cache syllabus in localStorage:", e);
-  }
-}
-function clearSyllabusCache() {
-  try {
-    if (typeof window === "undefined") return;
-    localStorage.removeItem(CACHE_KEY);
-    localStorage.removeItem(CACHE_TIMESTAMP_KEY);
-    localStorage.removeItem(CACHE_VERSION_KEY);
-  } catch {
-  }
-}
-function populatePrerequisites(items) {
-  return items.map((item, index, arr) => {
-    const itemWithDefaults = {
-      ...item,
-      acceptableAircraftConfigs: Array.isArray(item.acceptableAircraftConfigs) && item.acceptableAircraftConfigs.length > 0 ? item.acceptableAircraftConfigs : ["ANY"],
-      assessedElements: Array.isArray(item.assessedElements) && item.assessedElements.length > 0 ? item.assessedElements : ["Airmanship", "Preparation", "Technique"],
-      assessmentRequired: item.assessmentRequired === true || shouldDefaultAssessmentRequired(item),
-      testEventType: item.testEventType === "FLIGHT_TEST" || item.testEventType === "SIMULATOR_TEST" ? item.testEventType : "NONE",
-      testingOfficerQualificationId: item.testEventType === "FLIGHT_TEST" || item.testEventType === "SIMULATOR_TEST" ? String(item.testingOfficerQualificationId || "").trim() || null : null,
-      useTestingOfficerSecondaryCallsign: item.testEventType === "FLIGHT_TEST" && item.useTestingOfficerSecondaryCallsign === true
-    };
-    const hasExplicitPrereqs = item.prerequisitesGround && item.prerequisitesGround.length > 0 || item.prerequisitesFlying && item.prerequisitesFlying.length > 0;
-    if (hasExplicitPrereqs || item.lmpType === "Master LMP") {
-      return itemWithDefaults;
-    }
-    const prerequisitesGround = [];
-    const prerequisitesFlying = [];
-    for (let i = index - 1; i >= 0; i--) {
-      const prereqCandidate = arr[i];
-      if (prereqCandidate.code.includes(" MB")) continue;
-      const sharedCourses = prereqCandidate.courses.some((c) => item.courses.includes(c));
-      if (!sharedCourses) break;
-      if (prereqCandidate.type === "Flight" || prereqCandidate.type === "FTD") {
-        prerequisitesFlying.push(prereqCandidate.code);
-      } else {
-        prerequisitesGround.push(prereqCandidate.code);
-      }
-      break;
-    }
-    return {
-      ...itemWithDefaults,
-      acceptableAircraftConfigs: itemWithDefaults.acceptableAircraftConfigs,
-      assessmentRequired: itemWithDefaults.assessmentRequired,
-      prerequisitesGround,
-      prerequisitesFlying,
-      prerequisites: [...prerequisitesGround, ...prerequisitesFlying]
-    };
-  });
-}
-async function loadSyllabusFromDB() {
-  const cached = getCachedSyllabus();
-  if (cached && !cached.expired) {
-    console.log(`📚 [Syllabus] Using fresh cache (${cached.data.length} items)`);
-    return { syllabus: cached.data, source: "cache" };
-  }
-  try {
-    console.log("📚 [Syllabus] Fetching from database...");
-    const response = await fetch(`${API_BASE$1}/syllabus`, {
-      credentials: "include",
-      headers: { "Content-Type": "application/json", ...getSessionAuthHeaders() }
-    });
-    if (!response.ok) {
-      throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-    }
-    const data = await response.json();
-    const rawItems = data.syllabus || data.syllabusItems || [];
-    if (rawItems.length === 0) {
-      throw new Error("No syllabus items returned from database");
-    }
-    const processed = normaliseSyllabusRuntimeTimings(populatePrerequisites(rawItems));
-    setCachedSyllabus(processed);
-    console.log(`📚 [Syllabus] Loaded ${processed.length} items from database`);
-    return { syllabus: processed, source: "database" };
-  } catch (error) {
-    const errMsg = error instanceof Error ? error.message : "Unknown error";
-    console.error(`❌ [Syllabus] Database fetch failed: ${errMsg}`);
-    if (cached && cached.expired) {
-      console.warn(`⚠️ [Syllabus] Using expired cache as fallback (${cached.data.length} items)`);
-      return {
-        syllabus: cached.data,
-        source: "expired-cache",
-        error: `Database unavailable - showing cached syllabus. Error: ${errMsg}`
-      };
-    }
-    console.error("❌ [Syllabus] No cache available - returning empty syllabus");
-    return {
-      syllabus: [],
-      source: "empty",
-      error: `Failed to load syllabus: ${errMsg}`
-    };
-  }
-}
-async function createSyllabusItem(item, changeReason) {
-  const response = await fetch(`${API_BASE$1}/syllabus`, {
-    method: "POST",
-    credentials: "include",
-    headers: { "Content-Type": "application/json", ...getSessionAuthHeaders() },
-    body: JSON.stringify({ ...item, changeReason })
-  });
-  if (!response.ok) {
-    throw new Error(await getApiErrorMessage(response, "Failed to create syllabus item"));
-  }
-  const data = await response.json();
-  clearSyllabusCache();
-  return data.syllabusItem;
-}
-async function updateSyllabusItem(id, updates, changeReason) {
-  const response = await fetch(`${API_BASE$1}/syllabus/${id}`, {
-    method: "PUT",
-    credentials: "include",
-    headers: { "Content-Type": "application/json", ...getSessionAuthHeaders() },
-    body: JSON.stringify({ ...updates, changeReason })
-  });
-  if (!response.ok) {
-    throw new Error(await getApiErrorMessage(response, "Failed to update syllabus item"));
-  }
-  const data = await response.json();
-  clearSyllabusCache();
-  return data.syllabusItem;
-}
-async function deleteSyllabusItem(id, changeReason) {
-  const response = await fetch(`${API_BASE$1}/syllabus/${id}`, {
-    method: "DELETE",
-    credentials: "include",
-    headers: { "Content-Type": "application/json", ...getSessionAuthHeaders() },
-    body: JSON.stringify({ changeReason })
-  });
-  if (!response.ok) {
-    throw new Error(await getApiErrorMessage(response, "Failed to delete syllabus item"));
-  }
-  clearSyllabusCache();
-}
 const FIXED_CREW_MANIFEST_NOTE_REGEX = /^\[Fixed Crew Manifest:\s*([A-Za-z0-9+/=]+)\]$/i;
 const stripFixedCrewManifestNote = (notes) => String(notes || "").split(/\r?\n/).filter((line) => !FIXED_CREW_MANIFEST_NOTE_REGEX.test(line.trim())).join("\n").trim();
 const isFixedCrewFlightOrSimEvent = (item) => item?.type === "Flight" || item?.type === "FTD";

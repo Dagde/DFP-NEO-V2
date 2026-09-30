@@ -34,6 +34,7 @@ import {
 } from '../utils/staffQualifications';
 import { normaliseTrainingReportTemplate, normaliseTrainingReportTerminology } from '../utils/trainingReportTerminology';
 import { getSctTerminology } from '../utils/sctTerminology';
+import { clearSyllabusCache } from '../lib/syllabusService';
 import {
     UNIT_CALLSIGN_ALLOCATION_METHOD_LABELS,
     getUnitCallsignPolicy,
@@ -11117,6 +11118,7 @@ const InitialSetupWizard: React.FC<{
             }
         }
         pushWizardPersistenceTrace('lmp:persist:done', { lmpCode, persisted: items.length });
+        clearSyllabusCache();
         return items.length;
     };
 
