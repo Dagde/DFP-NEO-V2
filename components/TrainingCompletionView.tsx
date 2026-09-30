@@ -90,6 +90,20 @@ const getErrorMessage = (error: unknown): string => {
     }
 };
 
+const withTimeout = async <T,>(promise: Promise<T>, label: string, timeoutMs = 30000): Promise<T> => {
+    let timeoutId: ReturnType<typeof setTimeout> | undefined;
+    try {
+        return await Promise.race([
+            promise,
+            new Promise<T>((_, reject) => {
+                timeoutId = setTimeout(() => reject(new Error(`${label} timed out after ${Math.round(timeoutMs / 1000)} seconds.`)), timeoutMs);
+            }),
+        ]);
+    } finally {
+        if (timeoutId) clearTimeout(timeoutId);
+    }
+};
+
 const buildBulkCompletionEventId = (trainee: Trainee, item: SyllabusItemDetail, fallbackEventId: string): string => {
     const traineeKey = getTraineeSelectionKey(trainee)
         .replace(/[^a-zA-Z0-9]+/g, '-')
@@ -374,11 +388,16 @@ const TrainingCompletionView: React.FC<TrainingCompletionViewProps> = ({
             reason: string;
         }> = [];
         const traceRows: Array<Record<string, unknown>> = [];
-
-        for (const selectedEvent of selectedEvents) {
+        const workItems = selectedEvents.flatMap(selectedEvent => {
             const eligibleTraineeKeys = new Set(getEventTrainees(selectedEvent).map(getTraineeSelectionKey));
-            for (const traineeKey of selectedTrainees) {
-                if (!eligibleTraineeKeys.has(traineeKey)) continue;
+            return selectedTrainees
+                .filter(traineeKey => eligibleTraineeKeys.has(traineeKey))
+                .map(traineeKey => ({ selectedEvent, traineeKey }));
+        });
+        let processed = 0;
+
+        try {
+            for (const { selectedEvent, traineeKey } of workItems) {
                 const trainee = allTrainees.find(item => getTraineeSelectionKey(item) === traineeKey);
                 const traceBase = {
                     traineeKey,
@@ -399,27 +418,15 @@ const TrainingCompletionView: React.FC<TrainingCompletionViewProps> = ({
                     if (!lmpItem) {
                         throw new Error('Matching Individual LMP event was not found for this trainee.');
                     }
-                    if (!onUpdateLmpItem) {
-                        throw new Error('Individual LMP update handler is not available.');
-                    }
 
                     const lmpEventCode = lmpItem.code || selectedEvent.flightNumber || lmpItem.id || '';
                     const assessmentEventId = buildBulkCompletionEventId(trainee, lmpItem, selectedEvent.id);
-                    const updatedLmpItem = {
-                        ...lmpItem,
-                        completedAt,
-                        isComplete: true,
-                        completed: true,
-                    } as SyllabusItemDetail;
-
-                    traceRows.push({ ...traceBase, stage: 'lmp:update:start', lmpItemId: lmpItem.id, lmpEventCode });
-                    const lmpSaved = await Promise.resolve(onUpdateLmpItem(trainee, lmpItem, updatedLmpItem, { suppressSuccessMessage: true }));
-                    if (!lmpSaved) {
-                        throw new Error('Individual LMP save returned false.');
-                    }
 
                     traceRows.push({ ...traceBase, stage: 'score:save:start', lmpItemId: lmpItem.id, lmpEventCode });
-                    await persistScoreCompletion(trainee, lmpItem, selectedEvent, completedAt);
+                    await withTimeout(
+                        persistScoreCompletion(trainee, lmpItem, selectedEvent, completedAt),
+                        `${trainee.name} / ${selectedEvent.flightNumber} score save`,
+                    );
 
                     const assessmentId = `pt051-${assessmentEventId}-${trainee.fullName}`;
                     const existingAssessment = pt051Assessments.get(assessmentId)
@@ -459,13 +466,19 @@ const TrainingCompletionView: React.FC<TrainingCompletionViewProps> = ({
                         };
 
                     traceRows.push({ ...traceBase, stage: 'report:local-save:start', lmpItemId: lmpItem.id, lmpEventCode, assessmentEventId });
-                    await Promise.resolve(onSaveTrainingReportAssessment(assessment));
+                    await withTimeout(
+                        Promise.resolve(onSaveTrainingReportAssessment(assessment)),
+                        `${trainee.name} / ${selectedEvent.flightNumber} local report save`,
+                    );
                     if (onPersistTrainingReportAssessment) {
                         traceRows.push({ ...traceBase, stage: 'report:persist:start', lmpItemId: lmpItem.id, lmpEventCode, assessmentEventId });
-                        await onPersistTrainingReportAssessment({
-                            ...assessment,
-                            traineeFullName: trainee.fullName,
-                        } as TrainingReportAssessment);
+                        await withTimeout(
+                            onPersistTrainingReportAssessment({
+                                ...assessment,
+                                traineeFullName: trainee.fullName,
+                            } as TrainingReportAssessment),
+                            `${trainee.name} / ${selectedEvent.flightNumber} report persistence`,
+                        );
                     }
                     completed.push(`${trainee.name} / ${selectedEvent.flightNumber}`);
                     traceRows.push({ ...traceBase, stage: 'complete', lmpItemId: lmpItem.id, lmpEventCode, assessmentEventId });
@@ -479,8 +492,31 @@ const TrainingCompletionView: React.FC<TrainingCompletionViewProps> = ({
                         reason,
                     });
                     traceRows.push({ ...traceBase, stage: 'failed', reason });
+                } finally {
+                    processed += 1;
+                    setCompletionMessage(`Completing selected training records... ${processed} of ${workItems.length} processed.`);
                 }
             }
+        } catch (error) {
+            failed.push({
+                trainee: 'Bulk completion',
+                event: 'Selected events',
+                stage: 'fatal',
+                reason: getErrorMessage(error),
+            });
+            traceRows.push({ stage: 'fatal', reason: getErrorMessage(error) });
+        } finally {
+            setIsCompleting(false);
+        }
+
+        if (workItems.length === 0) {
+            failed.push({
+                trainee: 'Selected trainees',
+                event: 'Selected events',
+                stage: 'prepare',
+                reason: 'No selected trainees were eligible for the selected events.',
+            });
+            traceRows.push({ stage: 'failed', reason: 'No selected trainees were eligible for the selected events.' });
         }
 
         const trace = {
@@ -513,8 +549,6 @@ const TrainingCompletionView: React.FC<TrainingCompletionViewProps> = ({
         } catch (error) {
             console.warn('[Training Completion] Could not save completion trace to localStorage:', error);
         }
-
-        setIsCompleting(false);
     };
 
     const downloadCompletionTrace = () => {
