@@ -8423,48 +8423,62 @@ app.get('/api/trainees/:id/lmp/diagnostic', async (req, res) => {
     const completedEventIds = Array.isArray(lmp.completedEventIds) ? lmp.completedEventIds : [];
     const composedEvents = composeIndividualLmpEvents(storedEvents, masterSyllabus, overlayEvents, completedEventIds);
     const token = value => String(value || '').trim().toUpperCase();
-    const isUpcLike = item => ['UPC'].includes(token(item?.code)) || ['UPC'].includes(token(item?.eventDescription)) || isLmpCourseShellLikeItem(item, 'UPC');
+    const lmpTokens = Array.from(new Set([
+      lmp.lmpType,
+      trainee?.course,
+      trainee?.lmpType,
+      trainee?.academicLmpType,
+    ].map(token).filter(Boolean)));
+    const itemTokens = item => [
+      item?.id,
+      item?.code,
+      item?.masterEventId,
+      item?.eventDescription,
+      item?.title,
+      item?.name,
+    ].map(token).filter(Boolean);
+    const isCourseContainerLike = item => {
+      const tokens = itemTokens(item);
+      if (!tokens.some(value => lmpTokens.includes(value))) return false;
+      const duration = Number(item?.duration || 0);
+      const flightOrSimHours = Number(item?.flightOrSimHours || 0);
+      const totalEventHours = Number(item?.totalEventHours || 0);
+      return duration <= 0 && flightOrSimHours <= 0 && totalEventHours <= 0;
+    };
+    const isUpcLike = item => itemTokens(item).includes('UPC') || isLmpCourseShellLikeItem(item, 'UPC');
+    const compactEvent = item => ({
+      id: item?.id,
+      code: item?.code,
+      masterEventId: item?.masterEventId,
+      eventDescription: item?.eventDescription,
+      phase: item?.phase,
+      module: item?.module,
+      type: item?.type,
+      duration: item?.duration,
+      flightOrSimHours: item?.flightOrSimHours,
+      totalEventHours: item?.totalEventHours,
+      courses: item?.courses,
+      notes: item?.notes,
+      sortOrder: item?.sortOrder,
+      lmpSource: item?.lmpSource,
+      isUpcLike: isUpcLike(item),
+      isCourseContainerLike: isCourseContainerLike(item),
+    });
     const summarise = items => {
       const list = Array.isArray(items) ? items : [];
       return {
         count: list.length,
         upcLikeCount: list.filter(isUpcLike).length,
+        courseContainerLikeCount: list.filter(isCourseContainerLike).length,
         shellLikeCount: list.filter(item => isLmpCourseShellLikeItem(item, lmp.lmpType) || String(item?.notes || '').includes(SYLLABUS_COURSE_SHELL_NOTE)).length,
         byType: list.reduce((acc, item) => {
           const key = String(item?.type || 'missing');
           acc[key] = (acc[key] || 0) + 1;
           return acc;
         }, {}),
-        firstEvents: list.slice(0, 12).map(item => ({
-          id: item?.id,
-          code: item?.code,
-          masterEventId: item?.masterEventId,
-          eventDescription: item?.eventDescription,
-          phase: item?.phase,
-          module: item?.module,
-          type: item?.type,
-          duration: item?.duration,
-          flightOrSimHours: item?.flightOrSimHours,
-          totalEventHours: item?.totalEventHours,
-          courses: item?.courses,
-          notes: item?.notes,
-          sortOrder: item?.sortOrder,
-          lmpSource: item?.lmpSource,
-        })),
-        upcLikeEvents: list.filter(isUpcLike).slice(0, 20).map(item => ({
-          id: item?.id,
-          code: item?.code,
-          masterEventId: item?.masterEventId,
-          eventDescription: item?.eventDescription,
-          phase: item?.phase,
-          module: item?.module,
-          type: item?.type,
-          duration: item?.duration,
-          courses: item?.courses,
-          notes: item?.notes,
-          sortOrder: item?.sortOrder,
-          lmpSource: item?.lmpSource,
-        })),
+        firstEvents: list.slice(0, 12).map(compactEvent),
+        upcLikeEvents: list.filter(isUpcLike).slice(0, 20).map(compactEvent),
+        courseContainerLikeEvents: list.filter(isCourseContainerLike).slice(0, 20).map(compactEvent),
       };
     };
     const directSyllabusMatches = await db.$queryRawUnsafe(
@@ -8497,6 +8511,7 @@ app.get('/api/trainees/:id/lmp/diagnostic', async (req, res) => {
         lmpType: lmp.lmpType,
         completedEventIdsCount: completedEventIds.length,
       },
+      lmpTokens,
       storedEvents: summarise(storedEvents),
       masterSyllabus: summarise(masterSyllabus),
       overlays: {

@@ -50038,45 +50038,58 @@ const TraineeLmpView = ({
     setIsDownloadingLmpTrace(true);
     const traineeId = String(trainee.id || trainee.fullName || trainee.name || "").trim();
     const normalise2 = (value) => String(value || "").trim().toUpperCase();
-    const isUpcLike = (item) => normalise2(item.code) === "UPC" || normalise2(item.eventDescription) === "UPC";
+    const traineeLmpTokens = Array.from(new Set([
+      trainee.course,
+      trainee.lmpType,
+      trainee.academicLmpType
+    ].map(normalise2).filter(Boolean)));
+    const eventTokensForItem = (item) => [
+      item.id,
+      item.code,
+      item.masterEventId,
+      item.eventDescription,
+      item.title,
+      item.name
+    ].map(normalise2).filter(Boolean);
+    const isUpcLike = (item) => eventTokensForItem(item).includes("UPC");
+    const isCourseContainerLike = (item) => {
+      const eventTokens = eventTokensForItem(item);
+      if (!eventTokens.some((token) => traineeLmpTokens.includes(token))) return false;
+      const duration = Number(item.duration || 0);
+      const flightOrSimHours = Number(item.flightOrSimHours || 0);
+      const totalEventHours = Number(item.totalEventHours || 0);
+      return duration <= 0 && flightOrSimHours <= 0 && totalEventHours <= 0;
+    };
+    const compactItem = (item) => ({
+      id: item.id,
+      code: item.code,
+      masterEventId: item.masterEventId,
+      eventDescription: item.eventDescription,
+      phase: item.phase,
+      module: item.module,
+      type: item.type,
+      duration: item.duration,
+      flightOrSimHours: item.flightOrSimHours,
+      totalEventHours: item.totalEventHours,
+      courses: item.courses,
+      notes: item.notes,
+      sortOrder: item.sortOrder,
+      lmpSource: item.lmpSource,
+      isUpcLike: isUpcLike(item),
+      isCourseContainerLike: isCourseContainerLike(item)
+    });
     const summarise = (items) => ({
       count: items.length,
       upcLikeCount: items.filter(isUpcLike).length,
+      courseContainerLikeCount: items.filter(isCourseContainerLike).length,
       byType: items.reduce((acc, item) => {
         const key = String(item.type || "missing");
         acc[key] = (acc[key] || 0) + 1;
         return acc;
       }, {}),
-      firstEvents: items.slice(0, 20).map((item) => ({
-        id: item.id,
-        code: item.code,
-        masterEventId: item.masterEventId,
-        eventDescription: item.eventDescription,
-        phase: item.phase,
-        module: item.module,
-        type: item.type,
-        duration: item.duration,
-        flightOrSimHours: item.flightOrSimHours,
-        totalEventHours: item.totalEventHours,
-        courses: item.courses,
-        notes: item.notes,
-        sortOrder: item.sortOrder,
-        lmpSource: item.lmpSource
-      })),
-      upcLikeEvents: items.filter(isUpcLike).slice(0, 20).map((item) => ({
-        id: item.id,
-        code: item.code,
-        masterEventId: item.masterEventId,
-        eventDescription: item.eventDescription,
-        phase: item.phase,
-        module: item.module,
-        type: item.type,
-        duration: item.duration,
-        courses: item.courses,
-        notes: item.notes,
-        sortOrder: item.sortOrder,
-        lmpSource: item.lmpSource
-      }))
+      firstEvents: items.slice(0, 20).map(compactItem),
+      upcLikeEvents: items.filter(isUpcLike).slice(0, 20).map(compactItem),
+      courseContainerLikeEvents: items.filter(isCourseContainerLike).slice(0, 20).map(compactItem)
     });
     let serverDiagnostic = null;
     let serverDiagnosticError = null;
@@ -50114,7 +50127,10 @@ const TraineeLmpView = ({
         unit: trainee.unit,
         location: trainee.location
       },
+      diagnosticPurpose: "Tracks why an LMP/course title row such as UPC is still visible as an Individual LMP event after the database shell row was removed.",
+      traineeLmpTokens,
       browserVisibleLmp: summarise(traineeLmp || []),
+      browserDisplayLmp: summarise(displayTraineeLmp || []),
       browserScores: {
         count: scores.length,
         events: scores.slice(0, 40).map((score) => ({
@@ -50135,7 +50151,9 @@ const TraineeLmpView = ({
         courses: selectedItem.courses,
         notes: selectedItem.notes,
         sortOrder: selectedItem.sortOrder,
-        lmpSource: selectedItem.lmpSource
+        lmpSource: selectedItem.lmpSource,
+        isUpcLike: isUpcLike(selectedItem),
+        isCourseContainerLike: isCourseContainerLike(selectedItem)
       } : null,
       serverDiagnostic,
       serverDiagnosticError
