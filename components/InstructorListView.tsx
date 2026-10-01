@@ -31,6 +31,12 @@ import {
     personHasInstructorQualification,
     type StaffQualificationCatalogue,
 } from '../utils/staffQualifications';
+import {
+    appendStaffProfileTrace,
+    clearStaffProfileTrace,
+    downloadStaffProfileTrace,
+    summariseStaffProfileForTrace,
+} from '../utils/staffProfileTrace';
 import type { UnitCallsignSettings } from '../utils/unitCallsigns';
 import type { SctTerminology } from '../utils/sctTerminology';
 import type { InsertLmpEventRequest } from './TraineeLmpView';
@@ -519,6 +525,86 @@ const InstructorListView: React.FC<InstructorListViewProps> = ({
         });
     }, [instructorsData, isFixedCrewModel, personnelDisplaySettings, crewPositionTerminology, staffQualificationCatalogue]);
 
+  const staffClassificationTrace = useMemo(() => {
+      return instructorsData.map(instructor => {
+          const activeRecord = isActiveStaffRecord(instructor);
+          const instructorQualification = hasInstructorQualification(instructor, staffQualificationCatalogue);
+          const pilotRole = isPilotRole(instructor);
+          const configuredCrewPositionRole = isConfiguredCrewPositionRole(instructor, crewPositionTerminology);
+          const contractorSupport = isContractorStaffRole(instructor, staffQualificationCatalogue);
+          const ofiSupport = isOfiSupportRole(instructor);
+          const supportStaff = contractorSupport || ofiSupport;
+          const mainStaff = isActiveStaffListRole(instructor, crewPositionTerminology, isFixedCrewModel, staffQualificationCatalogue);
+          const roleFilterOption = getStaffRoleFilterOption(instructor.role, crewPositionTerminology, instructorLabel, simIpDisplayLabel);
+          const passesRoleFilter = selectedStaffRoleFilter === 'ALL' || roleFilterOption.value === selectedStaffRoleFilter;
+          const visibleInMainList = activeRecord && mainStaff && passesRoleFilter;
+          const hiddenReasons: string[] = [];
+          if (!activeRecord) hiddenReasons.push('inactive-record');
+          if (instructor.isAdminStaff) hiddenReasons.push('admin-staff');
+          if (contractorSupport) hiddenReasons.push('contractor-support');
+          if (ofiSupport) hiddenReasons.push('ofi-support');
+          if (!isFixedCrewModel && !instructorQualification && !pilotRole && !configuredCrewPositionRole) {
+              hiddenReasons.push('no-instructor-pilot-or-configured-crew-role');
+          }
+          if (mainStaff && !passesRoleFilter) hiddenReasons.push('staff-role-filter');
+          const bucket = visibleInMainList
+              ? 'main-staff-list'
+              : activeRecord && contractorSupport
+                  ? 'contractor-support-list'
+                  : activeRecord && ofiSupport
+                      ? 'ofi-support-list'
+                      : activeRecord
+                          ? 'other-staff-list'
+                          : 'hidden';
+          return {
+              person: summariseStaffProfileForTrace(instructor, staffQualificationCatalogue),
+              classification: {
+                  activeRecord,
+                  instructorQualification,
+                  pilotRole,
+                  configuredCrewPositionRole,
+                  contractorSupport,
+                  ofiSupport,
+                  supportStaff,
+                  fixedCrewModel: isFixedCrewModel,
+                  mainStaff,
+                  selectedStaffRoleFilter,
+                  roleFilterOption,
+                  passesRoleFilter,
+                  visibleInMainList,
+                  bucket,
+                  hiddenReasons,
+              },
+          };
+      });
+  }, [instructorsData, staffQualificationCatalogue, crewPositionTerminology, isFixedCrewModel, instructorLabel, simIpDisplayLabel, selectedStaffRoleFilter]);
+
+  useEffect(() => {
+      appendStaffProfileTrace('staff-list:classification', {
+          counts: {
+              sourceRecords: instructorsData.length,
+              mainStaff: qfis.length,
+              filteredMainStaff: filteredQfis.length,
+              contractorSupport: simIps.length,
+              ofiSupport: ofis.length,
+              otherStaff: otherStaff.length,
+          },
+          selectedStaffRoleFilter,
+          staffRoleFilterOptions,
+          records: staffClassificationTrace,
+      });
+  }, [
+      instructorsData.length,
+      qfis.length,
+      filteredQfis.length,
+      simIps.length,
+      ofis.length,
+      otherStaff.length,
+      selectedStaffRoleFilter,
+      staffRoleFilterOptions,
+      staffClassificationTrace,
+  ]);
+
   const fixedCrewGroups = useMemo(() => {
       if (!isFixedCrewModel) return {};
       const groups: { [key: string]: Instructor[] } = {};
@@ -868,6 +954,23 @@ const InstructorListView: React.FC<InstructorListViewProps> = ({
                     className={`w-[56px] h-[41px] flex items-center justify-center text-center px-1 py-1 text-[10px] font-semibold rounded-md btn-aluminium-brushed text-green-500 ${canEditStaffDetails ? '' : 'cursor-not-allowed'}`}
                 >
                     Add Staff
+                </button>
+                <button
+                    onClick={() => downloadStaffProfileTrace('staff-page')}
+                    className="w-[56px] h-[41px] flex items-center justify-center text-center px-1 py-1 text-[10px] leading-tight font-semibold rounded-md btn-aluminium-brushed text-blue-700"
+                    title="Download staff profile trace"
+                >
+                    Staff Trace
+                </button>
+                <button
+                    onClick={() => {
+                        clearStaffProfileTrace();
+                        appendStaffProfileTrace('staff-trace:cleared', { clearedAt: new Date().toISOString() });
+                    }}
+                    className="w-[56px] h-[41px] flex items-center justify-center text-center px-1 py-1 text-[10px] leading-tight font-semibold rounded-md btn-aluminium-brushed"
+                    title="Clear staff profile trace"
+                >
+                    Clear Trace
                 </button>
                 <div className="w-[8px]"></div>
                 <AuditButton pageName="Staff" />

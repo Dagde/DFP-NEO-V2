@@ -52,6 +52,7 @@ import { getStaffRoleDisplay } from '../utils/staffRoleColours';
 import { DEFAULT_SCT_TERMINOLOGY, normaliseSctTerminology, type SctTerminology } from '../utils/sctTerminology';
 import { describeDuplicateNamePerson, normalisePersonName, samePersonRecord } from '../utils/personIdentity';
 import { getConfiguredServiceOptionsWithCurrent, resolveConfiguredServiceName } from '../utils/serviceAliases';
+import { appendStaffProfileTrace, summariseStaffProfileForTrace } from '../utils/staffProfileTrace';
 
 type LegacyQualificationField = 'isCommandingOfficer' | 'isCFI' | 'isExecutive' | 'isFlyingSupervisor' | 'isTestingOfficer' | 'isIRE' | 'isQFI' | 'isOFI' | 'isDeputyFlightCommander' | 'isContractor' | 'isAdminStaff';
 
@@ -933,15 +934,27 @@ export const InstructorProfileFlyout: React.FC<InstructorProfileFlyoutProps> = (
   const handleQualificationChange = (qualificationId: string, isChecked: boolean) => {
     const isQfiQualification = qfiQualificationIds.includes(qualificationId);
     const isSupportQualification = qualificationId === contractorQualificationId || ofiQualificationIds.includes(qualificationId);
-    setAssignedQualifications(prev => (
-      isChecked && isQfiQualification
+    setAssignedQualifications(prev => {
+      const next = isChecked && isQfiQualification
         ? Array.from(new Set([...prev.filter(id => id !== contractorQualificationId && !ofiQualificationIds.includes(id)), qualificationId]))
         : isChecked && isSupportQualification
           ? Array.from(new Set([...prev.filter(id => !qfiQualificationIds.includes(id)), qualificationId]))
           : isChecked
-        ? Array.from(new Set([...prev, qualificationId]))
-        : prev.filter(id => id !== qualificationId)
-    ));
+            ? Array.from(new Set([...prev, qualificationId]))
+            : prev.filter(id => id !== qualificationId);
+      appendStaffProfileTrace('staff-profile:qualification-change', {
+        qualificationId,
+        isChecked,
+        isQfiQualification,
+        isSupportQualification,
+        previousAssignedQualifications: prev,
+        nextAssignedQualifications: next,
+        currentFlags: { isQFI, isContractor, isOFI, isAdminStaff },
+        currentRole: role,
+        instructor: summariseStaffProfileForTrace(instructor, normalisedQualificationCatalogue),
+      });
+      return next;
+    });
     if (isChecked && isQfiQualification) {
       setIsContractor(false);
       setIsOFI(false);
@@ -1133,8 +1146,28 @@ export const InstructorProfileFlyout: React.FC<InstructorProfileFlyoutProps> = (
     }
 
     try {
+      appendStaffProfileTrace('staff-profile:save-submit', {
+        isCreating,
+        original: summariseStaffProfileForTrace(instructor, normalisedQualificationCatalogue),
+        payload: summariseStaffProfileForTrace(updatedInstructor, normalisedQualificationCatalogue),
+        payloadRawFlags: {
+          role: updatedInstructor.role,
+          isQFI: updatedInstructor.isQFI,
+          isContractor: updatedInstructor.isContractor,
+          isOFI: updatedInstructor.isOFI,
+          isAdminStaff: updatedInstructor.isAdminStaff,
+          preferencesQualifications: updatedInstructor.preferences?.qualifications || [],
+        },
+      });
       await Promise.resolve(onUpdateInstructor(updatedInstructor));
+      appendStaffProfileTrace('staff-profile:save-complete', {
+        payload: summariseStaffProfileForTrace(updatedInstructor, normalisedQualificationCatalogue),
+      });
     } catch (error) {
+      appendStaffProfileTrace('staff-profile:save-error', {
+        message: error instanceof Error ? error.message : String(error || ''),
+        payload: summariseStaffProfileForTrace(updatedInstructor, normalisedQualificationCatalogue),
+      });
       console.error('Failed to save staff profile:', error);
       const reason = error instanceof Error ? error.message : String(error || '').trim();
       await showDarkAlert(

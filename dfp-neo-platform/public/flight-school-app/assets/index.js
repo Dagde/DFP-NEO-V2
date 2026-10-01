@@ -360,7 +360,7 @@ const SystemFreezeContext = reactExports.createContext({
   isActionAllowed: () => true,
   checkAndWarn: () => true
 });
-const STORAGE_KEY$1 = "systemFreezeState";
+const STORAGE_KEY$2 = "systemFreezeState";
 const ORG_ID$1 = "default";
 const parseStoredFreezeState = (raw) => {
   if (!raw) return defaultFreezeState;
@@ -383,9 +383,9 @@ const parseStoredFreezeState = (raw) => {
 };
 const saveFreezeState = (nextState) => {
   if (nextState.isFrozen) {
-    localStorage.setItem(STORAGE_KEY$1, JSON.stringify(nextState));
+    localStorage.setItem(STORAGE_KEY$2, JSON.stringify(nextState));
   } else {
-    localStorage.removeItem(STORAGE_KEY$1);
+    localStorage.removeItem(STORAGE_KEY$2);
   }
 };
 const loadSharedFreezeState = async () => {
@@ -415,17 +415,17 @@ const saveSharedFreezeState = async (nextState) => {
 };
 const SystemFreezeProvider = ({ children }) => {
   const [freezeState, setFreezeState] = reactExports.useState(() => {
-    return parseStoredFreezeState(localStorage.getItem(STORAGE_KEY$1));
+    return parseStoredFreezeState(localStorage.getItem(STORAGE_KEY$2));
   });
   reactExports.useEffect(() => {
     saveFreezeState(freezeState);
   }, [freezeState]);
   reactExports.useEffect(() => {
     const syncFreezeState = () => {
-      setFreezeState(parseStoredFreezeState(localStorage.getItem(STORAGE_KEY$1)));
+      setFreezeState(parseStoredFreezeState(localStorage.getItem(STORAGE_KEY$2)));
     };
     const handleStorage = (event) => {
-      if (event.key === STORAGE_KEY$1) {
+      if (event.key === STORAGE_KEY$2) {
         setFreezeState(parseStoredFreezeState(event.newValue));
       }
     };
@@ -7485,6 +7485,92 @@ const continuationEventToCurrencyProfile = (event) => ({
   status: event.status || "ACTIVE"
 });
 const getContinuationEventCurrencyProfiles = (events) => normaliseContinuationEventSettings(events).filter((event) => event.status !== "INACTIVE").map(continuationEventToCurrencyProfile);
+const STORAGE_KEY$1 = "dfp_staff_profile_trace";
+const MAX_ENTRIES = 300;
+const hasWindow = () => typeof window !== "undefined";
+const safeClone = (value) => {
+  try {
+    return JSON.parse(JSON.stringify(value));
+  } catch {
+    return String(value);
+  }
+};
+const readStaffProfileTrace = () => {
+  if (!hasWindow()) return [];
+  try {
+    const raw = window.localStorage.getItem(STORAGE_KEY$1);
+    const parsed = raw ? JSON.parse(raw) : [];
+    return Array.isArray(parsed) ? parsed : [];
+  } catch {
+    return [];
+  }
+};
+const appendStaffProfileTrace = (stage, data) => {
+  if (!hasWindow()) return;
+  const nextEntry = {
+    timestamp: (/* @__PURE__ */ new Date()).toISOString(),
+    stage,
+    data: safeClone(data)
+  };
+  try {
+    const entries = [...readStaffProfileTrace(), nextEntry].slice(-MAX_ENTRIES);
+    window.localStorage.setItem(STORAGE_KEY$1, JSON.stringify(entries));
+  } catch {
+  }
+};
+const clearStaffProfileTrace = () => {
+  if (!hasWindow()) return;
+  try {
+    window.localStorage.removeItem(STORAGE_KEY$1);
+  } catch {
+  }
+};
+const traceSlug = (value) => String(value || "staff-profile").trim().toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "").slice(0, 80) || "staff-profile";
+const downloadStaffProfileTrace = (label = "staff-profile") => {
+  if (!hasWindow()) return;
+  const payload = {
+    generatedAt: (/* @__PURE__ */ new Date()).toISOString(),
+    href: window.location.href,
+    userAgent: window.navigator.userAgent,
+    entries: readStaffProfileTrace()
+  };
+  const blob = new Blob([JSON.stringify(payload, null, 2)], { type: "application/json" });
+  const url = URL.createObjectURL(blob);
+  const anchor = document.createElement("a");
+  anchor.href = url;
+  anchor.download = `staff-profile-trace-${traceSlug(label)}-${(/* @__PURE__ */ new Date()).toISOString().replace(/[:.]/g, "-")}.json`;
+  document.body.appendChild(anchor);
+  anchor.click();
+  anchor.remove();
+  URL.revokeObjectURL(url);
+};
+const summariseStaffProfileForTrace = (instructor, staffQualificationCatalogue) => {
+  if (!instructor) return null;
+  const anyInstructor = instructor;
+  const assignedQualificationIds = getPersonAssignedQualificationIds(
+    instructor,
+    staffQualificationCatalogue,
+    false
+  );
+  return {
+    dbId: String(anyInstructor.id || "").trim() || null,
+    idNumber: instructor.idNumber ?? null,
+    name: instructor.name || "",
+    rank: instructor.rank || "",
+    role: instructor.role || "",
+    unit: instructor.unit || "",
+    location: instructor.location || "",
+    flight: instructor.flight || "",
+    isActive: anyInstructor.isActive !== false,
+    isAdminStaff: instructor.isAdminStaff === true,
+    isContractor: instructor.isContractor === true,
+    isOFI: instructor.isOFI === true,
+    isQFI: instructor.isQFI === true,
+    preferencesQualifications: Array.isArray(instructor.preferences?.qualifications) ? instructor.preferences?.qualifications : [],
+    topLevelQualifications: Array.isArray(anyInstructor.qualifications) ? anyInstructor.qualifications : [],
+    assignedQualificationIds
+  };
+};
 const normaliseLmpTestEventType = (value) => {
   const candidate = String(value || "").trim().toUpperCase();
   if (candidate === "FLIGHT_TEST" || candidate === "SIMULATOR_TEST") return candidate;
@@ -88817,7 +88903,21 @@ const InstructorProfileFlyout = ({
   const handleQualificationChange = (qualificationId, isChecked) => {
     const isQfiQualification = qfiQualificationIds.includes(qualificationId);
     const isSupportQualification = qualificationId === contractorQualificationId || ofiQualificationIds.includes(qualificationId);
-    setAssignedQualifications((prev) => isChecked && isQfiQualification ? Array.from(/* @__PURE__ */ new Set([...prev.filter((id) => id !== contractorQualificationId && !ofiQualificationIds.includes(id)), qualificationId])) : isChecked && isSupportQualification ? Array.from(/* @__PURE__ */ new Set([...prev.filter((id) => !qfiQualificationIds.includes(id)), qualificationId])) : isChecked ? Array.from(/* @__PURE__ */ new Set([...prev, qualificationId])) : prev.filter((id) => id !== qualificationId));
+    setAssignedQualifications((prev) => {
+      const next = isChecked && isQfiQualification ? Array.from(/* @__PURE__ */ new Set([...prev.filter((id) => id !== contractorQualificationId && !ofiQualificationIds.includes(id)), qualificationId])) : isChecked && isSupportQualification ? Array.from(/* @__PURE__ */ new Set([...prev.filter((id) => !qfiQualificationIds.includes(id)), qualificationId])) : isChecked ? Array.from(/* @__PURE__ */ new Set([...prev, qualificationId])) : prev.filter((id) => id !== qualificationId);
+      appendStaffProfileTrace("staff-profile:qualification-change", {
+        qualificationId,
+        isChecked,
+        isQfiQualification,
+        isSupportQualification,
+        previousAssignedQualifications: prev,
+        nextAssignedQualifications: next,
+        currentFlags: { isQFI, isContractor, isOFI, isAdminStaff },
+        currentRole: role,
+        instructor: summariseStaffProfileForTrace(instructor, normalisedQualificationCatalogue)
+      });
+      return next;
+    });
     if (isChecked && isQfiQualification) {
       setIsContractor(false);
       setIsOFI(false);
@@ -89014,8 +89114,28 @@ Confirm the Personnel ID, unit and role are correct before saving this separate 
       logAudit({ action: "Edit", description: `Edited staff profile for ${rank} ${name}`, changes: changesStr, page: "Staff" });
     }
     try {
+      appendStaffProfileTrace("staff-profile:save-submit", {
+        isCreating,
+        original: summariseStaffProfileForTrace(instructor, normalisedQualificationCatalogue),
+        payload: summariseStaffProfileForTrace(updatedInstructor, normalisedQualificationCatalogue),
+        payloadRawFlags: {
+          role: updatedInstructor.role,
+          isQFI: updatedInstructor.isQFI,
+          isContractor: updatedInstructor.isContractor,
+          isOFI: updatedInstructor.isOFI,
+          isAdminStaff: updatedInstructor.isAdminStaff,
+          preferencesQualifications: updatedInstructor.preferences?.qualifications || []
+        }
+      });
       await Promise.resolve(onUpdateInstructor(updatedInstructor));
+      appendStaffProfileTrace("staff-profile:save-complete", {
+        payload: summariseStaffProfileForTrace(updatedInstructor, normalisedQualificationCatalogue)
+      });
     } catch (error) {
+      appendStaffProfileTrace("staff-profile:save-error", {
+        message: error instanceof Error ? error.message : String(error || ""),
+        payload: summariseStaffProfileForTrace(updatedInstructor, normalisedQualificationCatalogue)
+      });
       console.error("Failed to save staff profile:", error);
       const reason = error instanceof Error ? error.message : String(error || "").trim();
       await showDarkAlert(
@@ -91501,6 +91621,76 @@ const InstructorListView = ({
       return comparePeopleByConfiguredRank(a, b, personnelDisplaySettings, "staff");
     });
   }, [instructorsData, isFixedCrewModel, personnelDisplaySettings, crewPositionTerminology, staffQualificationCatalogue]);
+  const staffClassificationTrace = reactExports.useMemo(() => {
+    return instructorsData.map((instructor) => {
+      const activeRecord = isActiveStaffRecord(instructor);
+      const instructorQualification = hasInstructorQualification(instructor, staffQualificationCatalogue);
+      const pilotRole = isPilotRole(instructor);
+      const configuredCrewPositionRole = isConfiguredCrewPositionRole(instructor, crewPositionTerminology);
+      const contractorSupport = isContractorStaffRole(instructor, staffQualificationCatalogue);
+      const ofiSupport = isOfiSupportRole(instructor);
+      const supportStaff = contractorSupport || ofiSupport;
+      const mainStaff = isActiveStaffListRole(instructor, crewPositionTerminology, isFixedCrewModel, staffQualificationCatalogue);
+      const roleFilterOption = getStaffRoleFilterOption(instructor.role, crewPositionTerminology, instructorLabel2, simIpDisplayLabel);
+      const passesRoleFilter = selectedStaffRoleFilter === "ALL" || roleFilterOption.value === selectedStaffRoleFilter;
+      const visibleInMainList = activeRecord && mainStaff && passesRoleFilter;
+      const hiddenReasons = [];
+      if (!activeRecord) hiddenReasons.push("inactive-record");
+      if (instructor.isAdminStaff) hiddenReasons.push("admin-staff");
+      if (contractorSupport) hiddenReasons.push("contractor-support");
+      if (ofiSupport) hiddenReasons.push("ofi-support");
+      if (!isFixedCrewModel && !instructorQualification && !pilotRole && !configuredCrewPositionRole) {
+        hiddenReasons.push("no-instructor-pilot-or-configured-crew-role");
+      }
+      if (mainStaff && !passesRoleFilter) hiddenReasons.push("staff-role-filter");
+      const bucket = visibleInMainList ? "main-staff-list" : activeRecord && contractorSupport ? "contractor-support-list" : activeRecord && ofiSupport ? "ofi-support-list" : activeRecord ? "other-staff-list" : "hidden";
+      return {
+        person: summariseStaffProfileForTrace(instructor, staffQualificationCatalogue),
+        classification: {
+          activeRecord,
+          instructorQualification,
+          pilotRole,
+          configuredCrewPositionRole,
+          contractorSupport,
+          ofiSupport,
+          supportStaff,
+          fixedCrewModel: isFixedCrewModel,
+          mainStaff,
+          selectedStaffRoleFilter,
+          roleFilterOption,
+          passesRoleFilter,
+          visibleInMainList,
+          bucket,
+          hiddenReasons
+        }
+      };
+    });
+  }, [instructorsData, staffQualificationCatalogue, crewPositionTerminology, isFixedCrewModel, instructorLabel2, simIpDisplayLabel, selectedStaffRoleFilter]);
+  reactExports.useEffect(() => {
+    appendStaffProfileTrace("staff-list:classification", {
+      counts: {
+        sourceRecords: instructorsData.length,
+        mainStaff: qfis.length,
+        filteredMainStaff: filteredQfis.length,
+        contractorSupport: simIps.length,
+        ofiSupport: ofis.length,
+        otherStaff: otherStaff.length
+      },
+      selectedStaffRoleFilter,
+      staffRoleFilterOptions,
+      records: staffClassificationTrace
+    });
+  }, [
+    instructorsData.length,
+    qfis.length,
+    filteredQfis.length,
+    simIps.length,
+    ofis.length,
+    otherStaff.length,
+    selectedStaffRoleFilter,
+    staffRoleFilterOptions,
+    staffClassificationTrace
+  ]);
   const fixedCrewGroups = reactExports.useMemo(() => {
     if (!isFixedCrewModel) return {};
     const groups = {};
@@ -91796,6 +91986,27 @@ const InstructorListView = ({
               "aria-disabled": !canEditStaffDetails,
               className: `w-[56px] h-[41px] flex items-center justify-center text-center px-1 py-1 text-[10px] font-semibold rounded-md btn-aluminium-brushed text-green-500 ${canEditStaffDetails ? "" : "cursor-not-allowed"}`,
               children: "Add Staff"
+            }
+          ),
+          /* @__PURE__ */ jsxRuntimeExports.jsx(
+            "button",
+            {
+              onClick: () => downloadStaffProfileTrace("staff-page"),
+              className: "w-[56px] h-[41px] flex items-center justify-center text-center px-1 py-1 text-[10px] leading-tight font-semibold rounded-md btn-aluminium-brushed text-blue-700",
+              title: "Download staff profile trace",
+              children: "Staff Trace"
+            }
+          ),
+          /* @__PURE__ */ jsxRuntimeExports.jsx(
+            "button",
+            {
+              onClick: () => {
+                clearStaffProfileTrace();
+                appendStaffProfileTrace("staff-trace:cleared", { clearedAt: (/* @__PURE__ */ new Date()).toISOString() });
+              },
+              className: "w-[56px] h-[41px] flex items-center justify-center text-center px-1 py-1 text-[10px] leading-tight font-semibold rounded-md btn-aluminium-brushed",
+              title: "Clear staff profile trace",
+              children: "Clear Trace"
             }
           ),
           /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "w-[8px]" }),
@@ -159991,6 +160202,11 @@ It will not clear the published DFP.`,
               });
               const dbId = data.id;
               let savedInstructor = null;
+              appendStaffProfileTrace("staff-save:app-received", {
+                route: "Staff",
+                method: dbId ? "PATCH" : "POST",
+                payload: summariseStaffProfileForTrace(data, activeStaffQualificationCatalogue)
+              });
               try {
                 if (dbId) {
                   const response = await fetch(`/api/personnel/${dbId}`, {
@@ -160008,8 +160224,20 @@ It will not clear the published DFP.`,
                     const responseData = await response.json();
                     logRoutineAppDebug("📝 [APP] PATCH response data:", responseData);
                     savedInstructor = normalisePersonnelRecord(responseData.personnel || responseData.updatedPersonnel || data);
+                    appendStaffProfileTrace("staff-save:api-response", {
+                      route: "Staff",
+                      ok: true,
+                      status: response.status,
+                      saved: summariseStaffProfileForTrace(savedInstructor, activeStaffQualificationCatalogue)
+                    });
                   }
                   if (!response.ok) {
+                    appendStaffProfileTrace("staff-save:api-response", {
+                      route: "Staff",
+                      ok: false,
+                      status: response.status,
+                      target: summariseStaffProfileForTrace(data, activeStaffQualificationCatalogue)
+                    });
                     throw new Error(await readApiErrorMessage(response, `Failed to save staff ${data.name || data.idNumber}`));
                   }
                 } else {
@@ -160020,12 +160248,29 @@ It will not clear the published DFP.`,
                     body: JSON.stringify(data)
                   });
                   if (!response.ok) {
+                    appendStaffProfileTrace("staff-save:api-response", {
+                      route: "Staff",
+                      ok: false,
+                      status: response.status,
+                      target: summariseStaffProfileForTrace(data, activeStaffQualificationCatalogue)
+                    });
                     throw new Error(await readApiErrorMessage(response, `Failed to create staff ${data.name || data.idNumber}`));
                   }
                   const responseData = await response.json().catch(() => ({}));
                   savedInstructor = normalisePersonnelRecord(responseData.personnel || responseData.newPersonnel || data);
+                  appendStaffProfileTrace("staff-save:api-response", {
+                    route: "Staff",
+                    ok: true,
+                    status: response.status,
+                    saved: summariseStaffProfileForTrace(savedInstructor, activeStaffQualificationCatalogue)
+                  });
                 }
               } catch (error) {
+                appendStaffProfileTrace("staff-save:app-error", {
+                  route: "Staff",
+                  message: error instanceof Error ? error.message : String(error || ""),
+                  payload: summariseStaffProfileForTrace(data, activeStaffQualificationCatalogue)
+                });
                 console.error("❌ Error saving instructor to database:", error);
                 throw error;
               }
@@ -160033,14 +160278,34 @@ It will not clear the published DFP.`,
               const nextDbId = String(nextInstructor.id || dbId || "").trim();
               const nextIdNumber = Number(nextInstructor.idNumber);
               setInstructorsData((prev) => {
+                let next;
                 if (nextDbId) {
                   const exists = prev.some((i) => String(i.id || "").trim() === nextDbId);
                   if (exists) {
-                    return prev.map((i) => String(i.id || "").trim() === nextDbId ? nextInstructor : i);
+                    next = prev.map((i) => String(i.id || "").trim() === nextDbId ? nextInstructor : i);
+                    appendStaffProfileTrace("staff-save:state-updated", {
+                      route: "Staff",
+                      matchMode: "db-id",
+                      previousCount: prev.length,
+                      nextCount: next.length,
+                      replacedDbId: nextDbId,
+                      saved: summariseStaffProfileForTrace(nextInstructor, activeStaffQualificationCatalogue)
+                    });
+                    return next;
                   }
                 }
                 const withoutSameIdNumber = prev.filter((i) => Number(i.idNumber) !== nextIdNumber);
-                return [...withoutSameIdNumber, nextInstructor];
+                next = [...withoutSameIdNumber, nextInstructor];
+                appendStaffProfileTrace("staff-save:state-updated", {
+                  route: "Staff",
+                  matchMode: "id-number",
+                  previousCount: prev.length,
+                  nextCount: next.length,
+                  removedSameIdNumber: prev.length - withoutSameIdNumber.length,
+                  nextIdNumber,
+                  saved: summariseStaffProfileForTrace(nextInstructor, activeStaffQualificationCatalogue)
+                });
+                return next;
               });
             },
             onNavigateToCurrency: handleNavigateToCurrency,
@@ -160121,6 +160386,11 @@ It will not clear the published DFP.`,
               });
               const dbId = data.id;
               let savedInstructor = null;
+              appendStaffProfileTrace("staff-save:app-received", {
+                route: "Staff-instance-2",
+                method: dbId ? "PATCH" : "POST",
+                payload: summariseStaffProfileForTrace(data, activeStaffQualificationCatalogue)
+              });
               try {
                 if (dbId) {
                   const response = await fetch(`/api/personnel/${dbId}`, {
@@ -160138,8 +160408,20 @@ It will not clear the published DFP.`,
                     const responseData = await response.json();
                     logRoutineAppDebug("📝 [APP] PATCH response data:", responseData);
                     savedInstructor = normalisePersonnelRecord(responseData.personnel || responseData.updatedPersonnel || data);
+                    appendStaffProfileTrace("staff-save:api-response", {
+                      route: "Staff-instance-2",
+                      ok: true,
+                      status: response.status,
+                      saved: summariseStaffProfileForTrace(savedInstructor, activeStaffQualificationCatalogue)
+                    });
                   }
                   if (!response.ok) {
+                    appendStaffProfileTrace("staff-save:api-response", {
+                      route: "Staff-instance-2",
+                      ok: false,
+                      status: response.status,
+                      target: summariseStaffProfileForTrace(data, activeStaffQualificationCatalogue)
+                    });
                     throw new Error(await readApiErrorMessage(response, `Failed to save staff ${data.name || data.idNumber}`));
                   }
                 } else {
@@ -160150,12 +160432,29 @@ It will not clear the published DFP.`,
                     body: JSON.stringify(data)
                   });
                   if (!response.ok) {
+                    appendStaffProfileTrace("staff-save:api-response", {
+                      route: "Staff-instance-2",
+                      ok: false,
+                      status: response.status,
+                      target: summariseStaffProfileForTrace(data, activeStaffQualificationCatalogue)
+                    });
                     throw new Error(await readApiErrorMessage(response, `Failed to create staff ${data.name || data.idNumber}`));
                   }
                   const responseData = await response.json().catch(() => ({}));
                   savedInstructor = normalisePersonnelRecord(responseData.personnel || responseData.newPersonnel || data);
+                  appendStaffProfileTrace("staff-save:api-response", {
+                    route: "Staff-instance-2",
+                    ok: true,
+                    status: response.status,
+                    saved: summariseStaffProfileForTrace(savedInstructor, activeStaffQualificationCatalogue)
+                  });
                 }
               } catch (error) {
+                appendStaffProfileTrace("staff-save:app-error", {
+                  route: "Staff-instance-2",
+                  message: error instanceof Error ? error.message : String(error || ""),
+                  payload: summariseStaffProfileForTrace(data, activeStaffQualificationCatalogue)
+                });
                 console.error("❌ Error saving instructor to database:", error);
                 throw error;
               }
@@ -160163,14 +160462,34 @@ It will not clear the published DFP.`,
               const nextDbId = String(nextInstructor.id || dbId || "").trim();
               const nextIdNumber = Number(nextInstructor.idNumber);
               setInstructorsData((prev) => {
+                let next;
                 if (nextDbId) {
                   const exists = prev.some((i) => String(i.id || "").trim() === nextDbId);
                   if (exists) {
-                    return prev.map((i) => String(i.id || "").trim() === nextDbId ? nextInstructor : i);
+                    next = prev.map((i) => String(i.id || "").trim() === nextDbId ? nextInstructor : i);
+                    appendStaffProfileTrace("staff-save:state-updated", {
+                      route: "Staff-instance-2",
+                      matchMode: "db-id",
+                      previousCount: prev.length,
+                      nextCount: next.length,
+                      replacedDbId: nextDbId,
+                      saved: summariseStaffProfileForTrace(nextInstructor, activeStaffQualificationCatalogue)
+                    });
+                    return next;
                   }
                 }
                 const withoutSameIdNumber = prev.filter((i) => Number(i.idNumber) !== nextIdNumber);
-                return [...withoutSameIdNumber, nextInstructor];
+                next = [...withoutSameIdNumber, nextInstructor];
+                appendStaffProfileTrace("staff-save:state-updated", {
+                  route: "Staff-instance-2",
+                  matchMode: "id-number",
+                  previousCount: prev.length,
+                  nextCount: next.length,
+                  removedSameIdNumber: prev.length - withoutSameIdNumber.length,
+                  nextIdNumber,
+                  saved: summariseStaffProfileForTrace(nextInstructor, activeStaffQualificationCatalogue)
+                });
+                return next;
               });
             },
             onNavigateToCurrency: handleNavigateToCurrency,
@@ -160288,6 +160607,11 @@ It will not clear the published DFP.`,
             onUpdateInstructor: async (data) => {
               const normalisedData = normalisePersonnelRecord(data);
               const dbId = data.id;
+              appendStaffProfileTrace("staff-save:app-received", {
+                route: "LMP-staff-assignment",
+                method: dbId ? "PATCH" : "POST",
+                payload: summariseStaffProfileForTrace(normalisedData, activeStaffQualificationCatalogue)
+              });
               try {
                 const response = await fetch(dbId ? `/api/personnel/${dbId}` : "/api/personnel", {
                   method: dbId ? "PATCH" : "POST",
@@ -160296,12 +160620,30 @@ It will not clear the published DFP.`,
                   body: JSON.stringify(normalisedData)
                 });
                 if (!response.ok) {
+                  appendStaffProfileTrace("staff-save:api-response", {
+                    route: "LMP-staff-assignment",
+                    ok: false,
+                    status: response.status,
+                    target: summariseStaffProfileForTrace(normalisedData, activeStaffQualificationCatalogue)
+                  });
                   throw new Error(await readApiErrorMessage(response, `Failed to save staff ${data.name}`));
                 }
                 const responseData = await response.json().catch(() => ({}));
                 const saved = responseData.personnel || data;
-                setInstructorsData((prev) => prev.map((instructor) => instructor.idNumber === data.idNumber ? { ...normalisedData, ...normalisePersonnelRecord(saved), preferences: saved.preferences || normalisedData.preferences } : instructor));
+                const savedRecord = { ...normalisedData, ...normalisePersonnelRecord(saved), preferences: saved.preferences || normalisedData.preferences };
+                appendStaffProfileTrace("staff-save:api-response", {
+                  route: "LMP-staff-assignment",
+                  ok: true,
+                  status: response.status,
+                  saved: summariseStaffProfileForTrace(savedRecord, activeStaffQualificationCatalogue)
+                });
+                setInstructorsData((prev) => prev.map((instructor) => instructor.idNumber === data.idNumber ? savedRecord : instructor));
               } catch (error) {
+                appendStaffProfileTrace("staff-save:app-error", {
+                  route: "LMP-staff-assignment",
+                  message: error instanceof Error ? error.message : String(error || ""),
+                  payload: summariseStaffProfileForTrace(normalisedData, activeStaffQualificationCatalogue)
+                });
                 console.error("❌ Error saving Air Combat training assignment:", error);
                 throw error;
               }

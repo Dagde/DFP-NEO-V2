@@ -110,6 +110,7 @@ import {
     personHasInstructorQualification,
     type StaffQualificationCatalogue,
 } from './utils/staffQualifications';
+import { appendStaffProfileTrace, summariseStaffProfileForTrace } from './utils/staffProfileTrace';
 import {
     filterQualifiedTestingOfficers,
     isLmpTestEvent,
@@ -56386,6 +56387,11 @@ appliedUpdates.forEach(update => {
 
                                 const dbId = (data as any).id;
                                 let savedInstructor: Instructor | null = null;
+                                appendStaffProfileTrace('staff-save:app-received', {
+                                    route: 'Staff',
+                                    method: dbId ? 'PATCH' : 'POST',
+                                    payload: summariseStaffProfileForTrace(data, activeStaffQualificationCatalogue),
+                                });
                                 try {
 
                                     if (dbId) {
@@ -56408,9 +56414,21 @@ appliedUpdates.forEach(update => {
                                             const responseData = await response.json();
                                             logRoutineAppDebug('📝 [APP] PATCH response data:', responseData);
                                             savedInstructor = normalisePersonnelRecord(responseData.personnel || responseData.updatedPersonnel || data);
+                                            appendStaffProfileTrace('staff-save:api-response', {
+                                                route: 'Staff',
+                                                ok: true,
+                                                status: response.status,
+                                                saved: summariseStaffProfileForTrace(savedInstructor, activeStaffQualificationCatalogue),
+                                            });
                                         }
 
                                         if (!response.ok) {
+                                            appendStaffProfileTrace('staff-save:api-response', {
+                                                route: 'Staff',
+                                                ok: false,
+                                                status: response.status,
+                                                target: summariseStaffProfileForTrace(data, activeStaffQualificationCatalogue),
+                                            });
                                             throw new Error(await readApiErrorMessage(response, `Failed to save staff ${data.name || data.idNumber}`));
                                         }
                                     } else {
@@ -56422,12 +56440,29 @@ appliedUpdates.forEach(update => {
                                             body: JSON.stringify(data),
                                         });
                                         if (!response.ok) {
+                                            appendStaffProfileTrace('staff-save:api-response', {
+                                                route: 'Staff',
+                                                ok: false,
+                                                status: response.status,
+                                                target: summariseStaffProfileForTrace(data, activeStaffQualificationCatalogue),
+                                            });
                                             throw new Error(await readApiErrorMessage(response, `Failed to create staff ${data.name || data.idNumber}`));
                                         }
                                         const responseData = await response.json().catch(() => ({}));
                                         savedInstructor = normalisePersonnelRecord(responseData.personnel || responseData.newPersonnel || data);
+                                        appendStaffProfileTrace('staff-save:api-response', {
+                                            route: 'Staff',
+                                            ok: true,
+                                            status: response.status,
+                                            saved: summariseStaffProfileForTrace(savedInstructor, activeStaffQualificationCatalogue),
+                                        });
                                     }
                                 } catch (error) {
+                                    appendStaffProfileTrace('staff-save:app-error', {
+                                        route: 'Staff',
+                                        message: error instanceof Error ? error.message : String(error || ''),
+                                        payload: summariseStaffProfileForTrace(data, activeStaffQualificationCatalogue),
+                                    });
                                     console.error('❌ Error saving instructor to database:', error);
                                     throw error;
                                 }
@@ -56437,14 +56472,34 @@ appliedUpdates.forEach(update => {
                                 const nextDbId = String((nextInstructor as any).id || dbId || '').trim();
                                 const nextIdNumber = Number(nextInstructor.idNumber);
                                 setInstructorsData(prev => {
+                                    let next: Instructor[];
                                     if (nextDbId) {
                                         const exists = prev.some(i => String((i as any).id || '').trim() === nextDbId);
                                         if (exists) {
-                                            return prev.map(i => String((i as any).id || '').trim() === nextDbId ? nextInstructor : i);
+                                            next = prev.map(i => String((i as any).id || '').trim() === nextDbId ? nextInstructor : i);
+                                            appendStaffProfileTrace('staff-save:state-updated', {
+                                                route: 'Staff',
+                                                matchMode: 'db-id',
+                                                previousCount: prev.length,
+                                                nextCount: next.length,
+                                                replacedDbId: nextDbId,
+                                                saved: summariseStaffProfileForTrace(nextInstructor, activeStaffQualificationCatalogue),
+                                            });
+                                            return next;
                                         }
                                     }
                                     const withoutSameIdNumber = prev.filter(i => Number(i.idNumber) !== nextIdNumber);
-                                    return [...withoutSameIdNumber, nextInstructor];
+                                    next = [...withoutSameIdNumber, nextInstructor];
+                                    appendStaffProfileTrace('staff-save:state-updated', {
+                                        route: 'Staff',
+                                        matchMode: 'id-number',
+                                        previousCount: prev.length,
+                                        nextCount: next.length,
+                                        removedSameIdNumber: prev.length - withoutSameIdNumber.length,
+                                        nextIdNumber,
+                                        saved: summariseStaffProfileForTrace(nextInstructor, activeStaffQualificationCatalogue),
+                                    });
+                                    return next;
                                 });
                             }}
                             onNavigateToCurrency={handleNavigateToCurrency}
@@ -56522,6 +56577,11 @@ appliedUpdates.forEach(update => {
                                 });
                                 const dbId = (data as any).id;
                                 let savedInstructor: Instructor | null = null;
+                                appendStaffProfileTrace('staff-save:app-received', {
+                                    route: 'Staff-instance-2',
+                                    method: dbId ? 'PATCH' : 'POST',
+                                    payload: summariseStaffProfileForTrace(data, activeStaffQualificationCatalogue),
+                                });
 
                                 try {
                                     if (dbId) {
@@ -56544,9 +56604,21 @@ appliedUpdates.forEach(update => {
                                             const responseData = await response.json();
                                             logRoutineAppDebug('📝 [APP] PATCH response data:', responseData);
                                             savedInstructor = normalisePersonnelRecord(responseData.personnel || responseData.updatedPersonnel || data);
+                                            appendStaffProfileTrace('staff-save:api-response', {
+                                                route: 'Staff-instance-2',
+                                                ok: true,
+                                                status: response.status,
+                                                saved: summariseStaffProfileForTrace(savedInstructor, activeStaffQualificationCatalogue),
+                                            });
                                         }
 
                                         if (!response.ok) {
+                                            appendStaffProfileTrace('staff-save:api-response', {
+                                                route: 'Staff-instance-2',
+                                                ok: false,
+                                                status: response.status,
+                                                target: summariseStaffProfileForTrace(data, activeStaffQualificationCatalogue),
+                                            });
                                             throw new Error(await readApiErrorMessage(response, `Failed to save staff ${data.name || data.idNumber}`));
                                         }
                                     } else {
@@ -56558,12 +56630,29 @@ appliedUpdates.forEach(update => {
                                             body: JSON.stringify(data),
                                         });
                                         if (!response.ok) {
+                                            appendStaffProfileTrace('staff-save:api-response', {
+                                                route: 'Staff-instance-2',
+                                                ok: false,
+                                                status: response.status,
+                                                target: summariseStaffProfileForTrace(data, activeStaffQualificationCatalogue),
+                                            });
                                             throw new Error(await readApiErrorMessage(response, `Failed to create staff ${data.name || data.idNumber}`));
                                         }
                                         const responseData = await response.json().catch(() => ({}));
                                         savedInstructor = normalisePersonnelRecord(responseData.personnel || responseData.newPersonnel || data);
+                                        appendStaffProfileTrace('staff-save:api-response', {
+                                            route: 'Staff-instance-2',
+                                            ok: true,
+                                            status: response.status,
+                                            saved: summariseStaffProfileForTrace(savedInstructor, activeStaffQualificationCatalogue),
+                                        });
                                     }
                                 } catch (error) {
+                                    appendStaffProfileTrace('staff-save:app-error', {
+                                        route: 'Staff-instance-2',
+                                        message: error instanceof Error ? error.message : String(error || ''),
+                                        payload: summariseStaffProfileForTrace(data, activeStaffQualificationCatalogue),
+                                    });
                                     console.error('❌ Error saving instructor to database:', error);
                                     throw error;
                                 }
@@ -56573,14 +56662,34 @@ appliedUpdates.forEach(update => {
                                 const nextDbId = String((nextInstructor as any).id || dbId || '').trim();
                                 const nextIdNumber = Number(nextInstructor.idNumber);
                                 setInstructorsData(prev => {
+                                    let next: Instructor[];
                                     if (nextDbId) {
                                         const exists = prev.some(i => String((i as any).id || '').trim() === nextDbId);
                                         if (exists) {
-                                            return prev.map(i => String((i as any).id || '').trim() === nextDbId ? nextInstructor : i);
+                                            next = prev.map(i => String((i as any).id || '').trim() === nextDbId ? nextInstructor : i);
+                                            appendStaffProfileTrace('staff-save:state-updated', {
+                                                route: 'Staff-instance-2',
+                                                matchMode: 'db-id',
+                                                previousCount: prev.length,
+                                                nextCount: next.length,
+                                                replacedDbId: nextDbId,
+                                                saved: summariseStaffProfileForTrace(nextInstructor, activeStaffQualificationCatalogue),
+                                            });
+                                            return next;
                                         }
                                     }
                                     const withoutSameIdNumber = prev.filter(i => Number(i.idNumber) !== nextIdNumber);
-                                    return [...withoutSameIdNumber, nextInstructor];
+                                    next = [...withoutSameIdNumber, nextInstructor];
+                                    appendStaffProfileTrace('staff-save:state-updated', {
+                                        route: 'Staff-instance-2',
+                                        matchMode: 'id-number',
+                                        previousCount: prev.length,
+                                        nextCount: next.length,
+                                        removedSameIdNumber: prev.length - withoutSameIdNumber.length,
+                                        nextIdNumber,
+                                        saved: summariseStaffProfileForTrace(nextInstructor, activeStaffQualificationCatalogue),
+                                    });
+                                    return next;
                                 });
                             }}
                             onNavigateToCurrency={handleNavigateToCurrency}
@@ -56688,6 +56797,11 @@ appliedUpdates.forEach(update => {
                            onUpdateInstructor={async (data) => {
                                const normalisedData = normalisePersonnelRecord(data);
                                const dbId = (data as any).id;
+                               appendStaffProfileTrace('staff-save:app-received', {
+                                   route: 'LMP-staff-assignment',
+                                   method: dbId ? 'PATCH' : 'POST',
+                                   payload: summariseStaffProfileForTrace(normalisedData, activeStaffQualificationCatalogue),
+                               });
                                try {
                                    const response = await fetch(dbId ? `/api/personnel/${dbId}` : '/api/personnel', {
                                        method: dbId ? 'PATCH' : 'POST',
@@ -56696,16 +56810,34 @@ appliedUpdates.forEach(update => {
                                        body: JSON.stringify(normalisedData),
                                    });
                                    if (!response.ok) {
+                                       appendStaffProfileTrace('staff-save:api-response', {
+                                           route: 'LMP-staff-assignment',
+                                           ok: false,
+                                           status: response.status,
+                                           target: summariseStaffProfileForTrace(normalisedData, activeStaffQualificationCatalogue),
+                                       });
                                        throw new Error(await readApiErrorMessage(response, `Failed to save staff ${data.name}`));
                                    }
                                    const responseData = await response.json().catch(() => ({}));
                                    const saved = responseData.personnel || data;
+                                   const savedRecord = { ...normalisedData, ...normalisePersonnelRecord(saved), preferences: saved.preferences || normalisedData.preferences };
+                                   appendStaffProfileTrace('staff-save:api-response', {
+                                       route: 'LMP-staff-assignment',
+                                       ok: true,
+                                       status: response.status,
+                                       saved: summariseStaffProfileForTrace(savedRecord, activeStaffQualificationCatalogue),
+                                   });
                                    setInstructorsData(prev => prev.map(instructor => (
                                        instructor.idNumber === data.idNumber
-                                           ? { ...normalisedData, ...normalisePersonnelRecord(saved), preferences: saved.preferences || normalisedData.preferences }
+                                           ? savedRecord
                                            : instructor
                                    )));
                                } catch (error) {
+                                   appendStaffProfileTrace('staff-save:app-error', {
+                                       route: 'LMP-staff-assignment',
+                                       message: error instanceof Error ? error.message : String(error || ''),
+                                       payload: summariseStaffProfileForTrace(normalisedData, activeStaffQualificationCatalogue),
+                                   });
                                    console.error('❌ Error saving Air Combat training assignment:', error);
                                    throw error;
                                }
