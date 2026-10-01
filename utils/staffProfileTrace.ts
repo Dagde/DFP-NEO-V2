@@ -98,6 +98,7 @@ export const summariseStaffProfileForTrace = (
   );
   return {
     dbId: String(anyInstructor.id || '').trim() || null,
+    dataSource: String(anyInstructor._dataSource || '').trim() || null,
     idNumber: instructor.idNumber ?? null,
     name: instructor.name || '',
     rank: instructor.rank || '',

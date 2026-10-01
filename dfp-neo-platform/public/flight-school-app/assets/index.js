@@ -7554,6 +7554,7 @@ const summariseStaffProfileForTrace = (instructor, staffQualificationCatalogue) 
   );
   return {
     dbId: String(anyInstructor.id || "").trim() || null,
+    dataSource: String(anyInstructor._dataSource || "").trim() || null,
     idNumber: instructor.idNumber ?? null,
     name: instructor.name || "",
     rank: instructor.rank || "",
@@ -160271,7 +160272,11 @@ It will not clear the published DFP.`,
                   if (response.ok) {
                     const responseData = await response.json();
                     logRoutineAppDebug("📝 [APP] PATCH response data:", responseData);
-                    savedInstructor = normalisePersonnelRecord(responseData.personnel || responseData.updatedPersonnel || data);
+                    savedInstructor = normalisePersonnelRecord({
+                      ...data,
+                      ...responseData.personnel || responseData.updatedPersonnel || {},
+                      _dataSource: data._dataSource || "database"
+                    });
                     appendStaffProfileTrace("staff-save:api-response", {
                       route: "Staff",
                       ok: true,
@@ -160305,7 +160310,11 @@ It will not clear the published DFP.`,
                     throw new Error(await readApiErrorMessage(response, `Failed to create staff ${data.name || data.idNumber}`));
                   }
                   const responseData = await response.json().catch(() => ({}));
-                  savedInstructor = normalisePersonnelRecord(responseData.personnel || responseData.newPersonnel || data);
+                  savedInstructor = normalisePersonnelRecord({
+                    ...data,
+                    ...responseData.personnel || responseData.newPersonnel || {},
+                    _dataSource: data._dataSource || "database"
+                  });
                   appendStaffProfileTrace("staff-save:api-response", {
                     route: "Staff",
                     ok: true,
@@ -160455,7 +160464,11 @@ It will not clear the published DFP.`,
                   if (response.ok) {
                     const responseData = await response.json();
                     logRoutineAppDebug("📝 [APP] PATCH response data:", responseData);
-                    savedInstructor = normalisePersonnelRecord(responseData.personnel || responseData.updatedPersonnel || data);
+                    savedInstructor = normalisePersonnelRecord({
+                      ...data,
+                      ...responseData.personnel || responseData.updatedPersonnel || {},
+                      _dataSource: data._dataSource || "database"
+                    });
                     appendStaffProfileTrace("staff-save:api-response", {
                       route: "Staff-instance-2",
                       ok: true,
@@ -160489,7 +160502,11 @@ It will not clear the published DFP.`,
                     throw new Error(await readApiErrorMessage(response, `Failed to create staff ${data.name || data.idNumber}`));
                   }
                   const responseData = await response.json().catch(() => ({}));
-                  savedInstructor = normalisePersonnelRecord(responseData.personnel || responseData.newPersonnel || data);
+                  savedInstructor = normalisePersonnelRecord({
+                    ...data,
+                    ...responseData.personnel || responseData.newPersonnel || {},
+                    _dataSource: data._dataSource || "database"
+                  });
                   appendStaffProfileTrace("staff-save:api-response", {
                     route: "Staff-instance-2",
                     ok: true,
@@ -160678,7 +160695,11 @@ It will not clear the published DFP.`,
                 }
                 const responseData = await response.json().catch(() => ({}));
                 const saved = responseData.personnel || data;
-                const savedRecord = { ...normalisedData, ...normalisePersonnelRecord(saved), preferences: saved.preferences || normalisedData.preferences };
+                const savedRecord = {
+                  ...normalisedData,
+                  ...normalisePersonnelRecord({ ...normalisedData, ...saved, _dataSource: normalisedData._dataSource || "database" }),
+                  preferences: saved.preferences || normalisedData.preferences
+                };
                 appendStaffProfileTrace("staff-save:api-response", {
                   route: "LMP-staff-assignment",
                   ok: true,

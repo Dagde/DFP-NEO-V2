@@ -56413,7 +56413,11 @@ appliedUpdates.forEach(update => {
                                         if (response.ok) {
                                             const responseData = await response.json();
                                             logRoutineAppDebug('📝 [APP] PATCH response data:', responseData);
-                                            savedInstructor = normalisePersonnelRecord(responseData.personnel || responseData.updatedPersonnel || data);
+                                            savedInstructor = normalisePersonnelRecord({
+                                                ...data,
+                                                ...(responseData.personnel || responseData.updatedPersonnel || {}),
+                                                _dataSource: (data as any)._dataSource || 'database',
+                                            });
                                             appendStaffProfileTrace('staff-save:api-response', {
                                                 route: 'Staff',
                                                 ok: true,
@@ -56449,7 +56453,11 @@ appliedUpdates.forEach(update => {
                                             throw new Error(await readApiErrorMessage(response, `Failed to create staff ${data.name || data.idNumber}`));
                                         }
                                         const responseData = await response.json().catch(() => ({}));
-                                        savedInstructor = normalisePersonnelRecord(responseData.personnel || responseData.newPersonnel || data);
+                                        savedInstructor = normalisePersonnelRecord({
+                                            ...data,
+                                            ...(responseData.personnel || responseData.newPersonnel || {}),
+                                            _dataSource: (data as any)._dataSource || 'database',
+                                        });
                                         appendStaffProfileTrace('staff-save:api-response', {
                                             route: 'Staff',
                                             ok: true,
@@ -56603,7 +56611,11 @@ appliedUpdates.forEach(update => {
                                         if (response.ok) {
                                             const responseData = await response.json();
                                             logRoutineAppDebug('📝 [APP] PATCH response data:', responseData);
-                                            savedInstructor = normalisePersonnelRecord(responseData.personnel || responseData.updatedPersonnel || data);
+                                            savedInstructor = normalisePersonnelRecord({
+                                                ...data,
+                                                ...(responseData.personnel || responseData.updatedPersonnel || {}),
+                                                _dataSource: (data as any)._dataSource || 'database',
+                                            });
                                             appendStaffProfileTrace('staff-save:api-response', {
                                                 route: 'Staff-instance-2',
                                                 ok: true,
@@ -56639,7 +56651,11 @@ appliedUpdates.forEach(update => {
                                             throw new Error(await readApiErrorMessage(response, `Failed to create staff ${data.name || data.idNumber}`));
                                         }
                                         const responseData = await response.json().catch(() => ({}));
-                                        savedInstructor = normalisePersonnelRecord(responseData.personnel || responseData.newPersonnel || data);
+                                        savedInstructor = normalisePersonnelRecord({
+                                            ...data,
+                                            ...(responseData.personnel || responseData.newPersonnel || {}),
+                                            _dataSource: (data as any)._dataSource || 'database',
+                                        });
                                         appendStaffProfileTrace('staff-save:api-response', {
                                             route: 'Staff-instance-2',
                                             ok: true,
@@ -56820,7 +56836,11 @@ appliedUpdates.forEach(update => {
                                    }
                                    const responseData = await response.json().catch(() => ({}));
                                    const saved = responseData.personnel || data;
-                                   const savedRecord = { ...normalisedData, ...normalisePersonnelRecord(saved), preferences: saved.preferences || normalisedData.preferences };
+                                   const savedRecord = {
+                                       ...normalisedData,
+                                       ...normalisePersonnelRecord({ ...normalisedData, ...saved, _dataSource: (normalisedData as any)._dataSource || 'database' }),
+                                       preferences: saved.preferences || normalisedData.preferences,
+                                   };
                                    appendStaffProfileTrace('staff-save:api-response', {
                                        route: 'LMP-staff-assignment',
                                        ok: true,
