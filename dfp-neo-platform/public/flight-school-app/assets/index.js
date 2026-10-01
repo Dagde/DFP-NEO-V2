@@ -147349,17 +147349,25 @@ ${error instanceof Error ? error.message : String(error)}`,
       unavailability: data.unavailability,
       unavailabilityLength: data.unavailability?.length || 0
     });
+    const dbId = data.id;
+    const existingTrainee = allTraineesData.find((trainee) => {
+      const existingDbId = String(trainee?.id || "").trim();
+      if (dbId && existingDbId && existingDbId === String(dbId).trim()) return true;
+      return Number(trainee?.idNumber) === Number(data.idNumber);
+    });
     const traineeUnitCode = data.unit || activeUnitCode;
     const requestedLmpType = data.lmpType || "";
     const requestedAcademicLmpType = data.academicLmpType || "";
-    const lmpAccessContext = getMasterLmpAccessContextForUnit(traineeUnitCode);
-    if (requestedLmpType && !hasMasterLmpAccess(platformConfig, requestedLmpType, lmpAccessContext, "Assign")) {
-      throw new Error(`Cannot assign Master LMP "${requestedLmpType}" to ${traineeUnitCode || "this unit"}. Check Settings -> Organisation & Operations -> Master LMP Access.`);
+    const lmpAssignmentChanged = !existingTrainee || String(existingTrainee.lmpType || "") !== String(requestedLmpType || "") || String(existingTrainee.academicLmpType || "") !== String(requestedAcademicLmpType || "") || String(existingTrainee.unit || activeUnitCode || "") !== String(traineeUnitCode || "") || String(existingTrainee.course || "") !== String(data.course || "");
+    if (lmpAssignmentChanged) {
+      const lmpAccessContext = getMasterLmpAccessContextForUnit(traineeUnitCode);
+      if (requestedLmpType && !hasMasterLmpAccess(platformConfig, requestedLmpType, lmpAccessContext, "Assign")) {
+        throw new Error(`Cannot assign Master LMP "${requestedLmpType}" to ${traineeUnitCode || "this unit"}. Check Settings -> Organisation & Operations -> Master LMP Access.`);
+      }
+      if (requestedAcademicLmpType && !hasMasterLmpAccess(platformConfig, requestedAcademicLmpType, lmpAccessContext, "Assign")) {
+        throw new Error(`Cannot assign Academic LMP "${requestedAcademicLmpType}" to ${traineeUnitCode || "this unit"}. Check Settings -> Organisation & Operations -> Master LMP Access.`);
+      }
     }
-    if (requestedAcademicLmpType && !hasMasterLmpAccess(platformConfig, requestedAcademicLmpType, lmpAccessContext, "Assign")) {
-      throw new Error(`Cannot assign Academic LMP "${requestedAcademicLmpType}" to ${traineeUnitCode || "this unit"}. Check Settings -> Organisation & Operations -> Master LMP Access.`);
-    }
-    const dbId = data.id;
     logRoutineAppDebug("📝 [APP] DB ID:", dbId);
     logRoutineAppDebug("📝 [APP] Is DB trainee?", dbId && data._dataSource === "database");
     if (dbId && data._dataSource === "database") {
@@ -147432,7 +147440,8 @@ ${error instanceof Error ? error.message : String(error)}`,
           const responseData = await response.json();
           logRoutineAppDebug("📝 [APP] Response data:", responseData);
           const savedTrainee = {
-            ...responseData?.trainee || data,
+            ...data,
+            ...responseData?.trainee || {},
             preFlightNotesEnduring: getTraineeEnduringPreFlightNotes(responseData?.trainee || data),
             _dataSource: "database"
           };
@@ -147453,7 +147462,7 @@ ${error instanceof Error ? error.message : String(error)}`,
       logRoutineAppDebug("⚠️ [APP] Skipping DB update - not a DB trainee or no ID");
       setTraineesData((prev) => prev.map((t) => t.idNumber === data.idNumber ? data : t));
     }
-  }, [activeUnitCode, getMasterLmpAccessContextForUnit, platformConfig]);
+  }, [activeUnitCode, allTraineesData, getMasterLmpAccessContextForUnit, platformConfig]);
   const openPreFlightNotesEditor = reactExports.useCallback((candidate) => {
     const latestEvent = eventsForDate.find((event) => event.id === candidate.id) || nextDayBuildEvents.find((event) => event.id === candidate.id) || publishedSchedules[candidate.date || date]?.find((event) => event.id === candidate.id) || candidate;
     const trainee = findTraineeForScheduleEvent(latestEvent);
