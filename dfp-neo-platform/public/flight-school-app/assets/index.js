@@ -91667,12 +91667,12 @@ const InstructorListView = ({
       };
     });
   }, [instructorsData, staffQualificationCatalogue, crewPositionTerminology, isFixedCrewModel, instructorLabel2, simIpDisplayLabel, selectedStaffRoleFilter]);
-  const captureStaffTraceTarget = useCallback((instructor) => ({
+  const captureStaffTraceTarget = reactExports.useCallback((instructor) => ({
     dbId: String(instructor?.id || "").trim(),
     idNumber: Number.isFinite(Number(instructor.idNumber)) ? Number(instructor.idNumber) : null,
     name: String(instructor.name || "").trim()
   }), []);
-  const findStaffTraceRecord = useCallback((target) => {
+  const findStaffTraceRecord = reactExports.useCallback((target) => {
     if (!target) return null;
     return staffClassificationTrace.find((record) => {
       const person = record.person;
@@ -91682,7 +91682,7 @@ const InstructorListView = ({
       return target.idNumber !== null && Number.isFinite(idNumber) && idNumber === target.idNumber;
     }) || null;
   }, [staffClassificationTrace]);
-  const handleProfileUpdateForTrace = useCallback(async (data) => {
+  const handleProfileUpdateForTrace = reactExports.useCallback(async (data) => {
     const target = captureStaffTraceTarget(data);
     pendingStaffTraceTargetRef.current = target;
     appendStaffProfileTrace("staff-list:profile-update-start", {
