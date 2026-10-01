@@ -91425,6 +91425,7 @@ const InstructorListView = ({
   const [showArchivedFlyout, setShowArchivedFlyout] = reactExports.useState(false);
   const [selectedStaffRoleFilter, setSelectedStaffRoleFilter] = reactExports.useState("ALL");
   const [permissionNoticeRect, setPermissionNoticeRect] = reactExports.useState(null);
+  const pendingStaffTraceTargetRef = reactExports.useRef(null);
   const staffNameResolver = reactExports.useMemo(() => buildCompactPersonNameResolver(instructorsData), [instructorsData]);
   const canUsePermission = canUsePlatformPermission || (() => true);
   const normaliseIdentityValue = (value) => String(value ?? "").trim().toLowerCase().replace(/[^a-z0-9@.]/g, "");
@@ -91666,6 +91667,34 @@ const InstructorListView = ({
       };
     });
   }, [instructorsData, staffQualificationCatalogue, crewPositionTerminology, isFixedCrewModel, instructorLabel2, simIpDisplayLabel, selectedStaffRoleFilter]);
+  const captureStaffTraceTarget = useCallback((instructor) => ({
+    dbId: String(instructor?.id || "").trim(),
+    idNumber: Number.isFinite(Number(instructor.idNumber)) ? Number(instructor.idNumber) : null,
+    name: String(instructor.name || "").trim()
+  }), []);
+  const findStaffTraceRecord = useCallback((target) => {
+    if (!target) return null;
+    return staffClassificationTrace.find((record) => {
+      const person = record.person;
+      const dbId = String(person?.dbId || "").trim();
+      const idNumber = Number(person?.idNumber);
+      if (target.dbId && dbId === target.dbId) return true;
+      return target.idNumber !== null && Number.isFinite(idNumber) && idNumber === target.idNumber;
+    }) || null;
+  }, [staffClassificationTrace]);
+  const handleProfileUpdateForTrace = useCallback(async (data) => {
+    const target = captureStaffTraceTarget(data);
+    pendingStaffTraceTargetRef.current = target;
+    appendStaffProfileTrace("staff-list:profile-update-start", {
+      target,
+      beforeListRecord: findStaffTraceRecord(target)
+    });
+    await Promise.resolve(onUpdateInstructor(data));
+    appendStaffProfileTrace("staff-list:profile-update-returned", {
+      target,
+      note: "The app-level save promise has returned. The next staff-list:post-save-target-classification entry shows where the rendered Staff list placed this record after React state refreshed."
+    });
+  }, [captureStaffTraceTarget, findStaffTraceRecord, onUpdateInstructor]);
   reactExports.useEffect(() => {
     appendStaffProfileTrace("staff-list:classification", {
       counts: {
@@ -91680,6 +91709,24 @@ const InstructorListView = ({
       staffRoleFilterOptions,
       records: staffClassificationTrace
     });
+    const pendingTarget = pendingStaffTraceTargetRef.current;
+    if (pendingTarget) {
+      appendStaffProfileTrace("staff-list:post-save-target-classification", {
+        target: pendingTarget,
+        matchedRecord: findStaffTraceRecord(pendingTarget),
+        counts: {
+          sourceRecords: instructorsData.length,
+          mainStaff: qfis.length,
+          filteredMainStaff: filteredQfis.length,
+          contractorSupport: simIps.length,
+          ofiSupport: ofis.length,
+          otherStaff: otherStaff.length
+        },
+        selectedStaffRoleFilter,
+        staffRoleFilterOptions
+      });
+      pendingStaffTraceTargetRef.current = null;
+    }
   }, [
     instructorsData.length,
     qfis.length,
@@ -91689,7 +91736,8 @@ const InstructorListView = ({
     otherStaff.length,
     selectedStaffRoleFilter,
     staffRoleFilterOptions,
-    staffClassificationTrace
+    staffClassificationTrace,
+    findStaffTraceRecord
   ]);
   const fixedCrewGroups = reactExports.useMemo(() => {
     if (!isFixedCrewModel) return {};
@@ -92037,7 +92085,7 @@ const InstructorListView = ({
         onClose: handleCloseProfile,
         school,
         personnelData,
-        onUpdateInstructor,
+        onUpdateInstructor: handleProfileUpdateForTrace,
         onNavigateToCurrency,
         originRect,
         isClosing,

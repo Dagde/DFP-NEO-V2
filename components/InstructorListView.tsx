@@ -278,6 +278,7 @@ const InstructorListView: React.FC<InstructorListViewProps> = ({
   const [showArchivedFlyout, setShowArchivedFlyout] = useState(false);
   const [selectedStaffRoleFilter, setSelectedStaffRoleFilter] = useState('ALL');
   const [permissionNoticeRect, setPermissionNoticeRect] = useState<DOMRect | null>(null);
+  const pendingStaffTraceTargetRef = useRef<{ dbId: string; idNumber: number | null; name: string } | null>(null);
   const staffNameResolver = useMemo(() => buildCompactPersonNameResolver(instructorsData as any), [instructorsData]);
   const canUsePermission = canUsePlatformPermission || (() => true);
   const normaliseIdentityValue = (value?: string | number | null): string => (
@@ -579,6 +580,37 @@ const InstructorListView: React.FC<InstructorListViewProps> = ({
       });
   }, [instructorsData, staffQualificationCatalogue, crewPositionTerminology, isFixedCrewModel, instructorLabel, simIpDisplayLabel, selectedStaffRoleFilter]);
 
+  const captureStaffTraceTarget = useCallback((instructor: Instructor): { dbId: string; idNumber: number | null; name: string } => ({
+      dbId: String((instructor as any)?.id || '').trim(),
+      idNumber: Number.isFinite(Number(instructor.idNumber)) ? Number(instructor.idNumber) : null,
+      name: String(instructor.name || '').trim(),
+  }), []);
+
+  const findStaffTraceRecord = useCallback((target: { dbId: string; idNumber: number | null; name: string } | null) => {
+      if (!target) return null;
+      return staffClassificationTrace.find(record => {
+          const person = record.person as any;
+          const dbId = String(person?.dbId || '').trim();
+          const idNumber = Number(person?.idNumber);
+          if (target.dbId && dbId === target.dbId) return true;
+          return target.idNumber !== null && Number.isFinite(idNumber) && idNumber === target.idNumber;
+      }) || null;
+  }, [staffClassificationTrace]);
+
+  const handleProfileUpdateForTrace = useCallback(async (data: Instructor) => {
+      const target = captureStaffTraceTarget(data);
+      pendingStaffTraceTargetRef.current = target;
+      appendStaffProfileTrace('staff-list:profile-update-start', {
+          target,
+          beforeListRecord: findStaffTraceRecord(target),
+      });
+      await Promise.resolve(onUpdateInstructor(data));
+      appendStaffProfileTrace('staff-list:profile-update-returned', {
+          target,
+          note: 'The app-level save promise has returned. The next staff-list:post-save-target-classification entry shows where the rendered Staff list placed this record after React state refreshed.',
+      });
+  }, [captureStaffTraceTarget, findStaffTraceRecord, onUpdateInstructor]);
+
   useEffect(() => {
       appendStaffProfileTrace('staff-list:classification', {
           counts: {
@@ -593,6 +625,24 @@ const InstructorListView: React.FC<InstructorListViewProps> = ({
           staffRoleFilterOptions,
           records: staffClassificationTrace,
       });
+      const pendingTarget = pendingStaffTraceTargetRef.current;
+      if (pendingTarget) {
+          appendStaffProfileTrace('staff-list:post-save-target-classification', {
+              target: pendingTarget,
+              matchedRecord: findStaffTraceRecord(pendingTarget),
+              counts: {
+                  sourceRecords: instructorsData.length,
+                  mainStaff: qfis.length,
+                  filteredMainStaff: filteredQfis.length,
+                  contractorSupport: simIps.length,
+                  ofiSupport: ofis.length,
+                  otherStaff: otherStaff.length,
+              },
+              selectedStaffRoleFilter,
+              staffRoleFilterOptions,
+          });
+          pendingStaffTraceTargetRef.current = null;
+      }
   }, [
       instructorsData.length,
       qfis.length,
@@ -603,6 +653,7 @@ const InstructorListView: React.FC<InstructorListViewProps> = ({
       selectedStaffRoleFilter,
       staffRoleFilterOptions,
       staffClassificationTrace,
+      findStaffTraceRecord,
   ]);
 
   const fixedCrewGroups = useMemo(() => {
@@ -1029,7 +1080,7 @@ const InstructorListView: React.FC<InstructorListViewProps> = ({
                     onClose={handleCloseProfile}
                     school={school}
                     personnelData={personnelData}
-                    onUpdateInstructor={onUpdateInstructor}
+                    onUpdateInstructor={handleProfileUpdateForTrace}
                     onNavigateToCurrency={onNavigateToCurrency}
                     originRect={originRect}
                     isClosing={isClosing}
