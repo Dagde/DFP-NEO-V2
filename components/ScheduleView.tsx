@@ -1431,33 +1431,42 @@ const formatWizardBuildRulesDraft = (draft: {
     ].join('\n')
 );
 
-const parseWizardStaffRows = (value: string): Array<{ surname: string; givenNames: string; unit: string; position: string; personnelId: string; qualifications: string }> => (
+const parseWizardStaffRows = (value: string): Array<{ surname: string; givenNames: string; unit: string; rank: string; position: string; personnelId: string; qualifications: string }> => (
     String(value || '').split(/\n/).map((line) => {
         const parts = line.split('|').map((part, index) => (index === 0 ? part : part.replace(/^\s/, '')));
         const namePart = parts[0] || '';
         const [surnamePart, givenPart] = namePart.includes(',')
             ? namePart.split(',').map((part, index) => (index === 0 ? part : part.replace(/^\s/, '')))
             : ['', namePart];
+        const hasRankColumn = parts.length >= 6;
         const hasPersonnelIdColumn = parts.length >= 5;
         return {
             surname: surnamePart || '',
             givenNames: givenPart || '',
             unit: parts[1] || '',
-            position: parts[2] || '',
-            personnelId: hasPersonnelIdColumn ? parts[3] || '' : '',
-            qualifications: hasPersonnelIdColumn ? parts[4] || '' : parts[3] || '',
+            rank: hasRankColumn ? parts[2] || '' : '',
+            position: hasRankColumn ? parts[3] || '' : parts[2] || '',
+            personnelId: hasRankColumn ? parts[4] || '' : hasPersonnelIdColumn ? parts[3] || '' : '',
+            qualifications: hasRankColumn ? parts[5] || '' : hasPersonnelIdColumn ? parts[4] || '' : parts[3] || '',
         };
-    }).filter((row) => row.surname || row.givenNames || row.unit || row.position || row.personnelId || row.qualifications)
+    }).filter((row) => row.surname || row.givenNames || row.unit || row.rank || row.position || row.personnelId || row.qualifications)
 );
 
-const formatWizardStaffRows = (rows: Array<{ surname?: string; givenNames?: string; unit?: string; position?: string; personnelId?: string; qualifications?: string }>): string => (
+const formatWizardStaffRows = (rows: Array<{ surname?: string; givenNames?: string; unit?: string; rank?: string; position?: string; personnelId?: string; qualifications?: string }>): string => (
     rows
-        .filter((row) => row.surname || row.givenNames || row.unit || row.position || row.personnelId || row.qualifications)
+        .filter((row) => row.surname || row.givenNames || row.unit || row.rank || row.position || row.personnelId || row.qualifications)
         .map((row) => {
             const surname = String(row.surname || '');
             const givenNames = String(row.givenNames || '');
             const name = surname && givenNames ? `${surname}, ${givenNames}` : surname || givenNames;
-            return [name, String(row.unit || ''), String(row.position || ''), String(row.personnelId || ''), String(row.qualifications || '')].join('|');
+            return [
+                name,
+                String(row.unit || ''),
+                String(row.rank || ''),
+                String(row.position || ''),
+                String(row.personnelId || ''),
+                String(row.qualifications || ''),
+            ].join('|');
         })
         .join('\n')
 );
@@ -1484,6 +1493,7 @@ const getWizardRowName = (row: any): string => (
 const isDefaultWizardStaffPlaceholder = (row: any): boolean => (
     /^surname,\s*first$/i.test(getWizardRowName(row))
     && /^unit-?01$/i.test(String(row?.unit || '').trim())
+    && (!String(row?.rank || '').trim() || /^rank$/i.test(String(row?.rank || '').trim()))
     && /^pilot$/i.test(String(row?.position || row?.role || '').trim())
     && /^qualification$/i.test(String(row?.qualifications || '').trim())
     && !normaliseWizardPersonnelId(row)
@@ -1491,7 +1501,7 @@ const isDefaultWizardStaffPlaceholder = (row: any): boolean => (
 
 const isMeaningfulWizardStaffRow = (row: any): boolean => (
     !isDefaultWizardStaffPlaceholder(row)
-    && Boolean(getWizardRowName(row) || row?.unit || row?.position || row?.role || row?.personnelId || row?.idNumber || row?.qualifications)
+    && Boolean(getWizardRowName(row) || row?.unit || row?.rank || row?.position || row?.role || row?.personnelId || row?.idNumber || row?.qualifications)
 );
 
 const isMeaningfulWizardTraineeRow = (row: any): boolean => (
@@ -4039,7 +4049,7 @@ const InitialSetupWizard: React.FC<{
         ));
     };
     const buildRulesDraftText = formatWizardBuildRulesDraft(buildRulesDraft);
-    const [staffDraft, setStaffDraft] = useState('Surname, First | UNIT-01 | Pilot | Qualification');
+    const [staffDraft, setStaffDraft] = useState('Surname, First | UNIT-01 | Rank | Pilot | | Qualification');
     const [traineeCourseOptionsDraft, setTraineeCourseOptionsDraft] = useState('Course 1');
     const [traineeCourseInputRows, setTraineeCourseInputRows] = useState<string[]>(() => ['Course 1']);
     const [traineeDraft, setTraineeDraft] = useState('');
@@ -8065,7 +8075,7 @@ const InitialSetupWizard: React.FC<{
                     seatConfig: getWizardCellByAnyHeader(headers, row, ['Seat Config', 'Seat Configuration', 'Config']),
                     isAdminStaff: /^(yes|true|y|1)$/i.test(getWizardCellByAnyHeader(headers, row, ['Admin Staff', 'Administration Staff'])),
                 };
-            }).filter((row) => row.surname || row.givenNames || row.unit || row.position || row.personnelId || row.qualifications);
+            }).filter((row) => row.surname || row.givenNames || row.unit || row.rank || row.position || row.personnelId || row.qualifications);
             const nextStaffDraft = formatWizardStaffRows(importedRows);
             setStaffDraft(nextStaffDraft);
             setUploadedStaffProfileRows(importedRows);
@@ -8844,7 +8854,7 @@ const InitialSetupWizard: React.FC<{
     };
     const renderStaffEditor = () => {
         const rows = parseWizardStaffRows(staffDraft);
-        const editableRows = rows.length > 0 ? rows : [{ surname: '', givenNames: '', unit: unitDraft.code || '', position: '', personnelId: '', qualifications: '' }];
+        const editableRows = rows.length > 0 ? rows : [{ surname: '', givenNames: '', unit: unitDraft.code || '', rank: '', position: '', personnelId: '', qualifications: '' }];
         const updateStaffRow = (index: number, field: keyof typeof editableRows[number], value: string) => {
             const nextRows = [...editableRows];
             nextRows[index] = { ...nextRows[index], [field]: value };
@@ -8878,10 +8888,11 @@ const InitialSetupWizard: React.FC<{
                                 Delete
                             </button>
                         </div>
-                        <div className="grid gap-2 md:grid-cols-2 xl:grid-cols-6">
+                        <div className="grid gap-2 md:grid-cols-2 xl:grid-cols-7">
                             {wizardField('Surname', row.surname || '', (value) => updateStaffRow(index, 'surname', value), undefined, 'Surname')}
                             {wizardField('Given names', row.givenNames || '', (value) => updateStaffRow(index, 'givenNames', value), undefined, 'First')}
                             {wizardDataListField('Unit', row.unit || '', (value) => updateStaffRow(index, 'unit', value.toUpperCase()), unitOptions, unitDraft.code || 'UNIT-01', `staff-unit-${index}`)}
+                            {wizardField('Rank', row.rank || '', (value) => updateStaffRow(index, 'rank', value), undefined, 'Rank')}
                             {wizardField('Position', row.position || '', (value) => updateStaffRow(index, 'position', value), undefined, 'Pilot')}
                             {wizardField('Personnel ID', row.personnelId || '', (value) => updateStaffRow(index, 'personnelId', value), undefined, '4000001')}
                             {wizardField('Qualifications', row.qualifications || '', (value) => updateStaffRow(index, 'qualifications', value), undefined, 'Qualification')}
@@ -8892,7 +8903,7 @@ const InitialSetupWizard: React.FC<{
                     type="button"
                     className={wizardSmallButtonClass}
                     onClick={() => {
-                        setStaffDraft(formatWizardStaffRows([...editableRows, { surname: '', givenNames: '', unit: unitDraft.code || '', position: '', personnelId: '', qualifications: '' }]));
+                        setStaffDraft(formatWizardStaffRows([...editableRows, { surname: '', givenNames: '', unit: unitDraft.code || '', rank: '', position: '', personnelId: '', qualifications: '' }]));
                         setStaffProfilesCommitted(false);
                         setStaffCommitSummary('');
                         setUploadedStaffProfileRows((current) => current.length > 0 ? [...current, { unit: unitDraft.code || '' }] : current);
@@ -10910,7 +10921,7 @@ const InitialSetupWizard: React.FC<{
             persistedCandidates: staffToPersist.length,
             generatedIds: staffToPersist.filter((person: any) => person.generatedSetupPersonnelId).length,
             reusedIds: staffToPersist.filter((person: any) => person.reusedSetupPersonnelId).length,
-            sample: staffToPersist.slice(0, 8).map((person: any) => ({ name: person.name, idNumber: person.idNumber, unit: person.unit, location: person.location })),
+            sample: staffToPersist.slice(0, 8).map((person: any) => ({ name: person.name, rank: person.rank, idNumber: person.idNumber, unit: person.unit, location: person.location })),
         });
         if (staffToPersist.length === 0) return 0;
         const existingByPersonnelId = new Map(
@@ -11416,7 +11427,7 @@ const InitialSetupWizard: React.FC<{
     const commitWizardStaffProfiles = async () => {
         const staffRows = uploadedStaffProfileRows.length > 0 ? uploadedStaffProfileRows : undefined;
         const staffCount = (staffRows || parseWizardStaffRows(staffDraft)).filter((row) => (
-            row.surname || row.givenNames || row.unit || row.position || row.personnelId || row.qualifications
+            row.surname || row.givenNames || row.unit || row.rank || row.position || row.personnelId || row.qualifications
         )).length;
         setStaffProfilesCommitted(false);
         setStaffCommitSummary('Committing staff profiles...');
