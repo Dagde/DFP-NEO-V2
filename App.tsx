@@ -20094,12 +20094,19 @@ const applyCoursePriority = (rankedList: Trainee[], diagnosticLabel = 'unlabelle
         candidate: GroupGroundCandidate,
         startTime: number,
         duration: number
-    ): { attendees: Trainee[]; rejectionSamples: any[] } => {
+    ): {
+        attendees: Trainee[];
+        rejectionSamples: any[];
+        requiredAttendeeCount: number;
+        excludedUnavailableCount: number;
+    } => {
         const proposedBookingWindow = {
             start: startTime - (candidate.syllabusItem.preFlightTime || 0),
             end: startTime + duration + (candidate.syllabusItem.postFlightTime || 0),
         };
         const rejectionSamples: any[] = [];
+        let requiredAttendeeCount = 0;
+        let excludedUnavailableCount = 0;
         const available = candidate.attendeePool.filter(trainee => {
             const traineeKey = getBuildTraineeKey(trainee);
             const counts = getOrCreateEventCounts(traineeKey);
@@ -20114,23 +20121,28 @@ const applyCoursePriority = (rankedList: Trainee[], diagnosticLabel = 'unlabelle
                 }
                 return false;
             };
+            const rejectAsUnavailable = (reason: string, details?: Record<string, any>) => {
+                excludedUnavailableCount++;
+                return reject(reason, details);
+            };
             if (isPersonStaticallyUnavailable(trainee, proposedBookingWindow.start, proposedBookingWindow.end, buildDate, 'ground')) {
-                return reject('TRAINEE_STATICALLY_UNAVAILABLE');
+                return rejectAsUnavailable('TRAINEE_STATICALLY_UNAVAILABLE');
             }
             if (!canAssignTraineeForScheduledWindow(trainee, startTime)) {
-                return reject('TRAINEE_DAY_NIGHT_SEPARATION');
+                return rejectAsUnavailable('TRAINEE_DAY_NIGHT_SEPARATION');
             }
             if (counts.ground >= 2) {
-                return reject('TRAINEE_GROUND_LIMIT', { ground: counts.ground, limit: 2 });
+                return rejectAsUnavailable('TRAINEE_GROUND_LIMIT', { ground: counts.ground, limit: 2 });
             }
             if ((counts.flightFtd + counts.ground + counts.cpt) >= eventLimits.trainee.maxTotal) {
-                return reject('TRAINEE_TOTAL_LIMIT', {
+                return rejectAsUnavailable('TRAINEE_TOTAL_LIMIT', {
                     flightFtd: counts.flightFtd,
                     ground: counts.ground,
                     cpt: counts.cpt,
                     limit: eventLimits.trainee.maxTotal,
                 });
             }
+            requiredAttendeeCount++;
             const overlappingEvent = getGeneratedEventsForPersonRecord(trainee, 'trainee').find(existing => {
                 if (!eventHasNeoBuildPersonIdentity(existing, trainee, 'trainee')) return false;
                 const existingBookingWindow = getEventBookingWindowForAlgo(existing, syllabusDetails);
@@ -20149,7 +20161,12 @@ const applyCoursePriority = (rankedList: Trainee[], diagnosticLabel = 'unlabelle
 
         const attendeeLimit = candidate.entireCourse ? null : candidate.groupSizeMax;
         const capped = attendeeLimit ? available.slice(0, attendeeLimit) : available;
-        return { attendees: capped, rejectionSamples };
+        return {
+            attendees: capped,
+            rejectionSamples,
+            requiredAttendeeCount: candidate.entireCourse ? requiredAttendeeCount : candidate.groupSizeMin,
+            excludedUnavailableCount,
+        };
     };
 
     const confirmSuggestedGroupGroundCandidate = async (
@@ -20236,13 +20253,22 @@ const applyCoursePriority = (rankedList: Trainee[], diagnosticLabel = 'unlabelle
                         generatedEvents: generatedEvents.length,
                     }, 350);
                 }
-                const { attendees, rejectionSamples } = getAvailableGroupGroundAttendees(candidate, time, duration);
-                if (attendees.length < candidate.groupSizeMin) {
+                const {
+                    attendees,
+                    rejectionSamples,
+                    requiredAttendeeCount,
+                    excludedUnavailableCount,
+                } = getAvailableGroupGroundAttendees(candidate, time, duration);
+                const requiredForThisSlot = candidate.entireCourse ? requiredAttendeeCount : candidate.groupSizeMin;
+                if (attendees.length < requiredForThisSlot) {
                     firstRejection = firstRejection || {
-                        reason: 'GROUP_SIZE_MIN_NOT_MET',
+                        reason: candidate.entireCourse ? 'ENTIRE_COURSE_ATTENDANCE_NOT_MET' : 'GROUP_SIZE_MIN_NOT_MET',
                         displayTime: _fmtT(time),
                         availableCount: attendees.length,
+                        requiredForThisSlot,
                         groupSizeMin: candidate.groupSizeMin,
+                        attendeePoolCount: candidate.attendeePool.length,
+                        excludedUnavailableCount,
                         rejectionSamples,
                     };
                     continue;
@@ -20331,6 +20357,9 @@ const applyCoursePriority = (rankedList: Trainee[], diagnosticLabel = 'unlabelle
                         resourceId: result.resourceId,
                         instructor: result.instructor || null,
                         attendeeCount: attendees.length,
+                        attendeePoolCount: candidate.attendeePool.length,
+                        requiredAttendeeCount,
+                        excludedUnavailableCount,
                         readyCount: candidate.readyTrainees.length,
                         entireCourse: candidate.entireCourse,
                         preferredWindowIds: candidate.preferredWindowIds,
@@ -25814,6 +25843,11 @@ const applyCoursePriority = (rankedList: Trainee[], diagnosticLabel = 'unlabelle
          );
     }
 
+    await recordProgress({ message: 'Scheduling Group Ground Events...', percentage: 60 });
+    const groundNextAfterGroupScheduling = await scheduleGroupGroundNextEvents(
+        applyCoursePriority(filterOutBnfTrainees(nextEventLists.ground), 'ground-group-next')
+    );
+
     // 5. Schedule FTD Events: a) Highest Priority, b) Next Events
     await recordProgress({ message: `Scheduling ${ftdResourceLabel} Events (Priority)...`, percentage: 60 });
     // Highest Priority FTD Events are already added at the start
@@ -25846,11 +25880,6 @@ const applyCoursePriority = (rankedList: Trainee[], diagnosticLabel = 'unlabelle
 
     await recordProgress({ message: 'Scheduling Ground Events (Priority)...', percentage: 74 });
     // Highest Priority Ground Events are already added at the start
-
-    await recordProgress({ message: 'Scheduling Group Ground Events...', percentage: 75 });
-    const groundNextAfterGroupScheduling = await scheduleGroupGroundNextEvents(
-        applyCoursePriority(filterOutBnfTrainees(nextEventLists.ground), 'ground-group-next')
-    );
 
     await recordProgress({ message: 'Scheduling Ground Events (Next)...', percentage: 76 });
     await scheduleList(
