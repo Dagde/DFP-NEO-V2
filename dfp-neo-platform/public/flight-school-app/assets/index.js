@@ -9951,7 +9951,7 @@ const showDarkAlert = (message, title = "Notice", variant = "info") => {
     });
   });
 };
-const showDarkConfirm = (message, title = "Confirm Action", variant = "info") => {
+const showDarkConfirm$1 = (message, title = "Confirm Action", variant = "info") => {
   return new Promise((resolve) => {
     mountModal((cleanup) => {
       const Modal = () => {
@@ -10127,7 +10127,7 @@ const CurrencyBuilderView = ({
       await showDarkAlert("This currency cannot be deleted because it is used as a dependency in another composite currency.", "Currency In Use", "warning");
       return;
     }
-    if (await showDarkConfirm(`Are you sure you want to delete "${selectedCurrency?.name}"? This action cannot be undone.`, "Delete Currency", "warning")) {
+    if (await showDarkConfirm$1(`Are you sure you want to delete "${selectedCurrency?.name}"? This action cannot be undone.`, "Delete Currency", "warning")) {
       onDelete(selectedCurrencyId);
       setSelectedCurrencyId(null);
     }
@@ -10143,7 +10143,7 @@ const CurrencyBuilderView = ({
     if (!isEditUnlocked || !importSourceUnit || !onImportFromUnit) return;
     const sourceLabel = importUnitOptions.find((option) => option.unitCode === importSourceUnit)?.label || importSourceUnit;
     const targetLabel = activeUnitCode || "this unit";
-    if (!await showDarkConfirm(`Import currency and recency definitions from ${sourceLabel} into ${targetLabel}?
+    if (!await showDarkConfirm$1(`Import currency and recency definitions from ${sourceLabel} into ${targetLabel}?
 
 This replaces the current ${targetLabel} currency/recency list.`, "Import Currency Definitions", "warning")) return;
     onImportFromUnit(importSourceUnit);
@@ -21411,7 +21411,7 @@ const PlatformConfigurationSettings = ({
     if (!organisation) return;
     const organisationLabel = String(organisation.name || organisation.code || "this organisation").trim();
     const organisationCode = String(organisation.code || "").trim();
-    const confirmed = await showDarkConfirm(
+    const confirmed = await showDarkConfirm$1(
       `Delete "${organisationLabel}" and its organisation structure?
 
 This permanently removes the organisation record from platform configuration and clears unit, licence and access references to it.`,
@@ -21954,7 +21954,7 @@ This permanently removes the organisation record from platform configuration and
   };
   const deleteTrainingReportElement = async (element) => {
     if (!canEditTrainingReportModules) return;
-    const confirmed = await showDarkConfirm(
+    const confirmed = await showDarkConfirm$1(
       `Delete "${element}" from this unit's training report elements? Existing scoring phrases for this element will also be removed.`,
       "Delete Assessment Element",
       "Delete Element"
@@ -22907,7 +22907,7 @@ This permanently removes the organisation record from platform configuration and
       affectedRows ? `${affectedRows} DFP Resource Rows record${affectedRows === 1 ? "" : "s"}` : "",
       affectedUnits ? `${affectedUnits} unit aircraft assignment${affectedUnits === 1 ? "" : "s"}` : ""
     ].filter(Boolean).join(" and ");
-    const confirmed = await showDarkConfirm(
+    const confirmed = await showDarkConfirm$1(
       `Delete aircraft type "${selectedAircraftTypeDeleteOption.name}"?
 
 This removes the aircraft type from Settings${affectedText ? ` and clears it from ${affectedText}` : ""}. Historical schedule records are not deleted. Press Save in this section to apply the deletion.`,
@@ -23322,7 +23322,7 @@ This removes the aircraft type from Settings${affectedText ? ` and clears it fro
     if (!selectedPermissionProfile) return;
     const profileLabel = selectedPermissionProfile.name || selectedPermissionProfile.id;
     const profileId = selectedPermissionProfile.id;
-    const confirmed = await showDarkConfirm(
+    const confirmed = await showDarkConfirm$1(
       `Delete permission profile "${profileLabel}"?
 
 This removes it from the master list and from every user assignment that currently uses it. Users assigned only this profile may lose those permissions after you save.`,
@@ -24319,7 +24319,7 @@ This removes it from the master list and from every user assignment that current
       await showDarkAlert("Select DFP Resource Rows to delete.", "Delete DFP Resource Rows", "warning");
       return;
     }
-    const confirmed = await showDarkConfirm(
+    const confirmed = await showDarkConfirm$1(
       `Delete DFP Resource Rows "${selectedResourcePoolDeleteOption.name}"?
 
 This removes them from DFP Resource Rows. Press Save in this section to apply the deletion.`,
@@ -24397,7 +24397,7 @@ This removes them from DFP Resource Rows. Press Save in this section to apply th
     } catch {
     }
     if (hasRowChanges && rowSavePlan) {
-      const confirmed = await showDarkConfirm(
+      const confirmed = await showDarkConfirm$1(
         [
           "DFP Resource Rows have changed.",
           "",
@@ -24777,7 +24777,7 @@ This removes them from DFP Resource Rows. Press Save in this section to apply th
     }
     if (resourcePoolExitPromptOpenRef.current) return;
     resourcePoolExitPromptOpenRef.current = true;
-    const shouldSave = await showDarkConfirm(
+    const shouldSave = await showDarkConfirm$1(
       "You have unsaved Aircraft Setup or DFP Resource Rows changes.\n\nSelect OK to save and apply the changes now. Select Cancel to continue without saving and exit edit mode.",
       "Unsaved DFP Resource Row Changes",
       "warning"
@@ -49318,7 +49318,7 @@ const MySctRequestsPanel = ({
     }).sort((a, b) => String(b.dateRequested || "").localeCompare(String(a.dateRequested || "")));
   }, [currentUserId, profileName, requests]);
   const handleCancel = async (request) => {
-    const confirmed = await showDarkConfirm(
+    const confirmed = await showDarkConfirm$1(
       `Cancel this ${continuationShortLabel} / currency request?`,
       "Cancel Request",
       "warning"
@@ -51092,7 +51092,7 @@ const TraineeLmpView = ({
     if (!onUpdateLmpItem) return;
     const originalItem = selectedRawItem || item;
     if (checked && item.rplGranted !== true) {
-      const confirmed = await showDarkConfirm(
+      const confirmed = await showDarkConfirm$1(
         `Grant Recognition of Prior Learning (RPL) for ${trainee.rank} ${trainee.name} on ${item.code}?
 
 This records RPL against this Individual LMP event.`,
@@ -52492,7 +52492,7 @@ Date: ${formatTrainingReportDisplayDate(assessment.date) || "N/A"}
 Grade: ${assessment.overallGrade || "N/A"}
 
 This action cannot be undone.`;
-    if (await showDarkConfirm(confirmMessage)) {
+    if (await showDarkConfirm$1(confirmMessage)) {
       if (onDeleteAssessment && assessment.id) {
         await onDeleteAssessment(assessment.id);
         onBack();
@@ -54870,7 +54870,7 @@ const TraineeProfileFlyout = ({
     const proposedRecord = { ...trainee, idNumber };
     const duplicateNameMatches = [...traineesData, ...instructorsData].filter((person) => person.isActive !== false).filter((person) => normalisePersonName(person.name || person.fullName) === normalisePersonName(name)).filter((person) => !samePersonRecord(person, proposedRecord));
     if (duplicateNameMatches.length > 0) {
-      const confirmed = await showDarkConfirm(
+      const confirmed = await showDarkConfirm$1(
         `Another active person already has the name "${name}".
 
 ${duplicateNameMatches.map(describeDuplicateNamePerson).join("\n")}
@@ -63049,7 +63049,7 @@ ${swapNote}` : swapNote
           "button",
           {
             onClick: async () => {
-              const confirmed = await showDarkConfirm("This will allow a new alert to be sent for this event.", "Clear this alert?", "warning");
+              const confirmed = await showDarkConfirm$1("This will allow a new alert to be sent for this event.", "Clear this alert?", "warning");
               if (confirmed) {
                 logAudit("Alert:" + event.id, "Delete", `Alert cleared for event ${event.flightNumber || event.id}`, `Recipients: ${alertData?.recipients?.join(", ") || alertRecipients.join(", ")}`);
                 onClearAlert(event.id);
@@ -66661,7 +66661,7 @@ const AcademicsTab = ({
     if (st && st.status !== "available") {
       const statusLabel = st.status === "paused" ? "PAUSED" : "UNAVAILABLE";
       const reason = st.reason || (st.status === "paused" ? "This trainee is currently paused." : "This trainee has a scheduling conflict or unavailability.");
-      const confirmed = await showDarkConfirm(
+      const confirmed = await showDarkConfirm$1(
         `${stripCourse(name)} is ${statusLabel}
 
 ${reason}
@@ -66801,7 +66801,7 @@ Do you still want to include them in this academic session?`,
   };
   const handleEditPresavedSchedule = async (schedule) => {
     if (tiles.length > 0) {
-      const ok = await showDarkConfirm(
+      const ok = await showDarkConfirm$1(
         "Load this pre-saved academic schedule for editing? This will replace the current Academics timeline.",
         "Edit Pre-Saved Schedule",
         "warning"
@@ -66819,7 +66819,7 @@ Do you still want to include them in this academic session?`,
   };
   const handleInsertPresavedSchedule = async (schedule) => {
     if (tiles.length > 0) {
-      const ok = await showDarkConfirm(
+      const ok = await showDarkConfirm$1(
         "Insert this pre-saved academic schedule into the current timeline? Existing tiles will remain and overlaps may need adjustment.",
         "Insert Pre-Saved Schedule",
         "info"
@@ -66836,7 +66836,7 @@ Do you still want to include them in this academic session?`,
     await showDarkAlert("Pre-saved schedule inserted. Select the course, attendees, date, classroom and instructor as required, then publish when the academic event is ready.", "Pre-Saved Schedule Inserted", "info");
   };
   const handleDeletePresavedSchedule = async (schedule) => {
-    const ok = await showDarkConfirm(`Delete pre-saved academic schedule "${schedule.name}"?`, "Delete Pre-Saved Schedule", "warning");
+    const ok = await showDarkConfirm$1(`Delete pre-saved academic schedule "${schedule.name}"?`, "Delete Pre-Saved Schedule", "warning");
     if (!ok) return;
     persistPresavedSchedules(presavedSchedules.filter((item) => item.id !== schedule.id));
   };
@@ -67296,7 +67296,7 @@ Do you still want to include them in this academic session?`,
                         onClick: async (e) => {
                           e.stopPropagation();
                           if (onUpdateCourseAcademicProgress && selectedCourse) {
-                            const ok = await showDarkConfirm(
+                            const ok = await showDarkConfirm$1(
                               "This checkbox does not schedule the event. It marks the event as complete for the selected course.\n\nDo you want to proceed?",
                               "Course Completion",
                               "info"
@@ -70120,7 +70120,7 @@ const MyDashboard = ({
     setMessageView("compose");
   };
   const deleteDashboardMessage = async (message) => {
-    const confirmed = await showDarkConfirm(
+    const confirmed = await showDarkConfirm$1(
       "This message will be permanently deleted.",
       "Delete Message?",
       "warning"
@@ -70136,7 +70136,7 @@ const MyDashboard = ({
     }
   };
   const deleteDashboardConversation = async (contact, selectedConversationKey) => {
-    const confirmed = await showDarkConfirm(
+    const confirmed = await showDarkConfirm$1(
       "This will permanently delete this conversation and its messages from your Messenger.",
       "Delete Conversation?",
       "warning"
@@ -70687,7 +70687,7 @@ const MyDashboard = ({
     };
   };
   const confirmDeleteReportMessage = async (label, onDelete) => {
-    const confirmed = await showDarkConfirm(
+    const confirmed = await showDarkConfirm$1(
       `Delete ${label} from Reports to be completed? This removes the dashboard message and stops it returning.`,
       "Delete message?",
       "warning"
@@ -74211,7 +74211,7 @@ const TaskingRequestTable = ({
   };
   const confirmRemoveTaskingRequest = async (request) => {
     const label = request.tasking.trim() || "this directed task";
-    const confirmed = await showDarkConfirm(`Delete ${label} from Directed Tasks? This cannot be undone.`, "Delete Directed Task", "warning");
+    const confirmed = await showDarkConfirm$1(`Delete ${label} from Directed Tasks? This cannot be undone.`, "Delete Directed Task", "warning");
     if (!confirmed) return;
     onRemoveTaskingRequest(request.id);
   };
@@ -89808,7 +89808,7 @@ const InstructorProfileFlyout = ({
     const proposedRecord = { ...instructor, idNumber };
     const duplicateNameMatches = [...instructorsData, ...traineesData].filter((person) => person.isActive !== false).filter((person) => normalisePersonName(person.name || person.fullName) === normalisePersonName(name)).filter((person) => !samePersonRecord(person, proposedRecord));
     if (duplicateNameMatches.length > 0) {
-      const confirmed = await showDarkConfirm(
+      const confirmed = await showDarkConfirm$1(
         `Another active person already has the name "${name}".
 
 ${duplicateNameMatches.map(describeDuplicateNamePerson).join("\n")}
@@ -103640,7 +103640,7 @@ const TestingFunctionsSettings = ({
         await showDarkAlert("The password was not accepted. The database was not reset.", "Password Required", "warning");
         return;
       }
-      const finalConfirmation = await showDarkConfirm(
+      const finalConfirmation = await showDarkConfirm$1(
         "This will erase this test database and return it to first-delivery state.\n\nThis cannot be undone.",
         "Erase Test Database?",
         "warning"
@@ -103710,7 +103710,7 @@ const TestingFunctionsSettings = ({
       setError("Select at least one testing action.");
       return;
     }
-    const confirmed = await showDarkConfirm(
+    const confirmed = await showDarkConfirm$1(
       `This will write test data for ${effectiveUnit} on ${testDate}.
 
 Selected actions:
@@ -111082,7 +111082,7 @@ const CoursesManagementView = ({
   };
   const handleDeleteCoursePermanently = async () => {
     if (!courseToDelete) return;
-    const confirmed = await showDarkConfirm(
+    const confirmed = await showDarkConfirm$1(
       "Permanently Delete Course",
       `Deleting "${courseToDelete}" may be contrary to legal, regulatory, training-records, or audit-retention requirements.
 
@@ -113755,7 +113755,7 @@ const ArchivedCoursesView = ({
     return records;
   }, [courses]);
   const handleUnarchive = async (courseName) => {
-    const confirmed = await showDarkConfirm(
+    const confirmed = await showDarkConfirm$1(
       "Unarchive Course",
       `Are you sure you want to unarchive "${courseName}"? This will make it active again.`,
       "info"
@@ -113789,7 +113789,7 @@ const ArchivedCoursesView = ({
         setDeletePasswordError("The password was not accepted. Enter the password for the account you are currently logged in with.");
         return;
       }
-      const confirmed = await showDarkConfirm(
+      const confirmed = await showDarkConfirm$1(
         "Final Permanent Delete Warning",
         `Deleting "${coursePendingPermanentDelete}" may be contrary to legal, regulatory, training-records, or audit-retention requirements.
 
@@ -120134,7 +120134,7 @@ const DfpSidePanelTimeline = ({
     const requestId = String(event.sctRequestId || "").trim();
     const requestType = String(event.sctRequestType || getAssistCurrencyRequestType(requestId || event.id)) === "ftd" ? "ftd" : "flight";
     const label = String(row.label || event.flightNumber || event.currency || "this priority row").trim();
-    const confirmed = await showDarkConfirm(
+    const confirmed = await showDarkConfirm$1(
       `Delete ${label} from the Priority Table?
 
 This cannot be undone.`,
@@ -132777,23 +132777,28 @@ async function generateDfpInternal(config, setProgress, publishedSchedules) {
       attendeePoolCount: candidate.attendeePool.length,
       mode: candidate.mode
     });
-    if (typeof window === "undefined" || typeof window.confirm !== "function") return true;
     await recordProgress({
       message: `Ground event suggestion ${suggestionIndex}/${suggestionTotal}: ${eventLabel}`,
       percentage: 75,
       generatedEvents: generatedEvents.length
     });
-    return window.confirm(
-      `Ground event suggestion ${suggestionIndex} of ${suggestionTotal}
+    const preferredWindows = candidate.preferredWindowIds.length ? candidate.preferredWindowIds.join(", ") : "any valid time today";
+    const wholeCourseLine = candidate.entireCourse ? `It is marked for the entire course, so I will include everyone in ${candidate.course} who is available.` : `I will take up to ${candidate.groupSizeMax || "the allowed number of"} available trainees for this group.`;
+    return showDarkConfirm(
+      `I've found a group ground event that is ready to schedule.
 
-Schedule ${eventLabel} for ${candidate.course}?
-Ready trainees: ${candidate.readyTrainees.length}
-Available pool: ${candidate.attendeePool.length}${candidate.entireCourse ? " (entire course, unavailable trainees excluded)" : ""}
-Preferred windows: ${candidate.preferredWindowIds.length ? candidate.preferredWindowIds.join(", ") : "Any valid time"}
+${eventLabel} for ${candidate.course}
+${candidate.readyTrainees.length} trainee${candidate.readyTrainees.length === 1 ? "" : "s"} currently have this as their next event.
+${wholeCourseLine}
+Preferred window: ${preferredWindows}.
 ${details ? `
-Details: ${details}
+Event notes: ${details}
 ` : ""}
-Press OK to Accept or Cancel to Skip.`
+Would you like NEO Build to schedule this one?`,
+      `Group event ${suggestionIndex} of ${suggestionTotal}`,
+      "info",
+      "Schedule it",
+      "Skip this one"
     );
   };
   const tryPlaceGroupGroundCandidate = async (candidate, candidateIndex, candidateTotal) => {

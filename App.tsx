@@ -20186,20 +20186,30 @@ const applyCoursePriority = (rankedList: Trainee[], diagnosticLabel = 'unlabelle
             attendeePoolCount: candidate.attendeePool.length,
             mode: candidate.mode,
         });
-        if (typeof window === 'undefined' || typeof window.confirm !== 'function') return true;
         await recordProgress({
             message: `Ground event suggestion ${suggestionIndex}/${suggestionTotal}: ${eventLabel}`,
             percentage: 75,
             generatedEvents: generatedEvents.length,
         });
-        return window.confirm(
-            `Ground event suggestion ${suggestionIndex} of ${suggestionTotal}\n\n` +
-            `Schedule ${eventLabel} for ${candidate.course}?\n` +
-            `Ready trainees: ${candidate.readyTrainees.length}\n` +
-            `Available pool: ${candidate.attendeePool.length}${candidate.entireCourse ? ' (entire course, unavailable trainees excluded)' : ''}\n` +
-            `Preferred windows: ${candidate.preferredWindowIds.length ? candidate.preferredWindowIds.join(', ') : 'Any valid time'}\n` +
-            `${details ? `\nDetails: ${details}\n` : ''}\n` +
-            `Press OK to Accept or Cancel to Skip.`
+        const preferredWindows = candidate.preferredWindowIds.length
+            ? candidate.preferredWindowIds.join(', ')
+            : 'any valid time today';
+        const wholeCourseLine = candidate.entireCourse
+            ? `It is marked for the entire course, so I will include everyone in ${candidate.course} who is available.`
+            : `I will take up to ${candidate.groupSizeMax || 'the allowed number of'} available trainees for this group.`;
+
+        return showDarkConfirm(
+            `I've found a group ground event that is ready to schedule.\n\n` +
+            `${eventLabel} for ${candidate.course}\n` +
+            `${candidate.readyTrainees.length} trainee${candidate.readyTrainees.length === 1 ? '' : 's'} currently have this as their next event.\n` +
+            `${wholeCourseLine}\n` +
+            `Preferred window: ${preferredWindows}.\n` +
+            `${details ? `\nEvent notes: ${details}\n` : ''}\n` +
+            `Would you like NEO Build to schedule this one?`,
+            `Group event ${suggestionIndex} of ${suggestionTotal}`,
+            'info',
+            'Schedule it',
+            'Skip this one'
         );
     };
 
