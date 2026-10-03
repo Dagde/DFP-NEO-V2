@@ -19353,6 +19353,13 @@ async function ensureDailySnapshotTable(db) {
         "lmpCompletedIds" JSONB NOT NULL DEFAULT '{}',
         "staffCurrency" JSONB NOT NULL DEFAULT '{}',
         "staffLogbook" JSONB NOT NULL DEFAULT '{}',
+        "courseState" JSONB NOT NULL DEFAULT '[]',
+        "individualLmpState" JSONB NOT NULL DEFAULT '{}',
+        "masterLmpState" JSONB NOT NULL DEFAULT '[]',
+        "trainingReportState" JSONB NOT NULL DEFAULT '{}',
+        "eventCompletions" JSONB NOT NULL DEFAULT '[]',
+        "flightLogEntries" JSONB NOT NULL DEFAULT '[]',
+        "currencyState" JSONB NOT NULL DEFAULT '{}',
         "savedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
         "savedBy" TEXT,
         CONSTRAINT "DailySnapshot_pkey" PRIMARY KEY ("id")
@@ -19373,6 +19380,27 @@ async function ensureDailySnapshotTable(db) {
     // Add aircraft configuration capacity state used by the DFP resource column
     await db.$executeRawUnsafe(`
       ALTER TABLE "DailySnapshot" ADD COLUMN IF NOT EXISTS "aircraftConfigState" JSONB DEFAULT '{}';
+    `);
+    await db.$executeRawUnsafe(`
+      ALTER TABLE "DailySnapshot" ADD COLUMN IF NOT EXISTS "courseState" JSONB NOT NULL DEFAULT '[]';
+    `);
+    await db.$executeRawUnsafe(`
+      ALTER TABLE "DailySnapshot" ADD COLUMN IF NOT EXISTS "individualLmpState" JSONB NOT NULL DEFAULT '{}';
+    `);
+    await db.$executeRawUnsafe(`
+      ALTER TABLE "DailySnapshot" ADD COLUMN IF NOT EXISTS "masterLmpState" JSONB NOT NULL DEFAULT '[]';
+    `);
+    await db.$executeRawUnsafe(`
+      ALTER TABLE "DailySnapshot" ADD COLUMN IF NOT EXISTS "trainingReportState" JSONB NOT NULL DEFAULT '{}';
+    `);
+    await db.$executeRawUnsafe(`
+      ALTER TABLE "DailySnapshot" ADD COLUMN IF NOT EXISTS "eventCompletions" JSONB NOT NULL DEFAULT '[]';
+    `);
+    await db.$executeRawUnsafe(`
+      ALTER TABLE "DailySnapshot" ADD COLUMN IF NOT EXISTS "flightLogEntries" JSONB NOT NULL DEFAULT '[]';
+    `);
+    await db.$executeRawUnsafe(`
+      ALTER TABLE "DailySnapshot" ADD COLUMN IF NOT EXISTS "currencyState" JSONB NOT NULL DEFAULT '{}';
     `);
     // Add device tokens table for APNs push notifications
 	    await db.$executeRawUnsafe(`
@@ -19637,6 +19665,35 @@ function countArchiveProfileCurrencyRows(profiles) {
     const nestedRows = Array.isArray(profile?.qualifications?.currencyStatus) ? profile.qualifications.currencyStatus : null;
     return sum + (directRows || nestedRows || []).length;
   }, 0);
+}
+
+function isPlainObject(value) {
+  return Boolean(value && typeof value === 'object' && !Array.isArray(value));
+}
+
+function mergeArchiveRowsByKey(primaryRows = [], secondaryRows = [], getKey = (row) => row?.id) {
+  const merged = [];
+  const seen = new Set();
+  [...(Array.isArray(primaryRows) ? primaryRows : []), ...(Array.isArray(secondaryRows) ? secondaryRows : [])].forEach((row) => {
+    if (!row) return;
+    const key = String(getKey(row) || '').trim();
+    if (key && seen.has(key)) return;
+    if (key) seen.add(key);
+    merged.push(row);
+  });
+  return merged;
+}
+
+function buildArchiveReportMap(reports = []) {
+  return Object.fromEntries(
+    (Array.isArray(reports) ? reports : [])
+      .filter(Boolean)
+      .filter(report => (report.eventId || report.id) && (report.traineeFullName || report.trainedFullName))
+      .map(report => [
+        `pt051-${report.eventId || report.id || ''}-${report.traineeFullName || report.trainedFullName || ''}`,
+        report,
+      ])
+  );
 }
 
 function countArchiveRowsByKey(rows, getKey) {
@@ -19940,14 +19997,26 @@ async function saveCompactPublishedDfpArchive(db, payload) {
     .filter(Boolean);
 
   const configVersions = {};
-  const configPayloads = {
-    aircraftConfigState: payload.aircraftConfigState || {},
-    staffRosterState: compactStaffProfiles,
-    traineeRosterState: compactTraineeProfiles,
-    lmpCompletionState: payload.lmpCompletedIds || {},
-    staffCurrencyState: payload.staffCurrency || {},
-    currencyDefinitionState: archiveCurrencyDefinitions,
-  };
+	  const configPayloads = {
+	    aircraftConfigState: payload.aircraftConfigState || {},
+	    staffRosterState: compactStaffProfiles,
+	    traineeRosterState: compactTraineeProfiles,
+	    lmpCompletionState: payload.lmpCompletedIds || {},
+	    staffCurrencyState: payload.staffCurrency || {},
+	    currencyDefinitionState: archiveCurrencyDefinitions,
+	    currencyState: payload.currencyState || {
+	      staffCurrency: payload.staffCurrency || {},
+	      currencyDefinitions: archiveCurrencyDefinitions,
+	    },
+	    courseState: Array.isArray(payload.courseState) ? payload.courseState : [],
+	    individualLmpState: isPlainObject(payload.individualLmpState) ? payload.individualLmpState : {},
+	    masterLmpState: Array.isArray(payload.masterLmpState) ? payload.masterLmpState : [],
+	    trainingReportState: isPlainObject(payload.trainingReportState)
+	      ? payload.trainingReportState
+	      : (isPlainObject(payload.pt051Assessments) ? payload.pt051Assessments : {}),
+	    eventCompletionState: Array.isArray(payload.eventCompletions) ? payload.eventCompletions : [],
+	    flightLogState: Array.isArray(payload.flightLogEntries) ? payload.flightLogEntries : [],
+	  };
   for (const [configType, content] of Object.entries(configPayloads)) {
     configVersions[configType] = await saveArchiveConfigVersion(
       db,
@@ -19968,11 +20037,16 @@ async function saveCompactPublishedDfpArchive(db, payload) {
     eventCount: scheduleEvents.length,
     staffEventCount: staffEvents.length,
     traineeEventCount: traineeEvents.length,
-    trainingReportCount: payload.pt051Assessments && typeof payload.pt051Assessments === 'object'
-      ? Object.keys(payload.pt051Assessments).length
-      : 0,
-    configVersionIds: Object.fromEntries(Object.entries(configVersions).map(([key, value]) => [key, value?.id || null])),
-  };
+	    trainingReportCount: payload.pt051Assessments && typeof payload.pt051Assessments === 'object'
+	      ? Object.keys(payload.pt051Assessments).length
+	      : 0,
+	    courseCount: Array.isArray(payload.courseState) ? payload.courseState.length : 0,
+	    individualLmpCount: isPlainObject(payload.individualLmpState) ? Object.keys(payload.individualLmpState).length : 0,
+	    masterLmpCount: Array.isArray(payload.masterLmpState) ? payload.masterLmpState.length : 0,
+	    eventCompletionCount: Array.isArray(payload.eventCompletions) ? payload.eventCompletions.length : 0,
+	    flightLogEntryCount: Array.isArray(payload.flightLogEntries) ? payload.flightLogEntries.length : 0,
+	    configVersionIds: Object.fromEntries(Object.entries(configVersions).map(([key, value]) => [key, value?.id || null])),
+	  };
 
   const existing = await db.$queryRawUnsafe(
     `SELECT id FROM "PublishedDfpArchive" WHERE "snapshotKey" = $1::text LIMIT 1`,
@@ -20781,23 +20855,30 @@ app.post('/api/daily-snapshot/save', async (req, res) => {
     const db = await getPrisma();
     const {
       date,
-      scheduleEvents,
-      staffEvents,
-      traineeEvents,
-      pt051Assessments,
-      traineeProfiles,
-      staffProfiles,
-      lmpCompletedIds,
-      staffCurrency,
-      staffLogbook,
+	        scheduleEvents,
+	        staffEvents,
+	        traineeEvents,
+		        pt051Assessments,
+	        traineeProfiles,
+	        staffProfiles,
+	        lmpCompletedIds,
+	        staffCurrency,
+	        staffLogbook,
       savedBy,
       baselineEvents,
-      replaceBaselineEvents,
-      aircraftConfigState,
-      currencyDefinitions,
-      masterCurrencies,
-      currencyRequirements
-    } = req.body;
+	      replaceBaselineEvents,
+	      aircraftConfigState,
+	      currencyDefinitions,
+	      masterCurrencies,
+	      currencyRequirements,
+	      courseState,
+	      individualLmpState,
+	      masterLmpState,
+	      trainingReportState,
+	      eventCompletions,
+	      flightLogEntries,
+	      currencyState
+	    } = req.body;
 
     if (!date) {
       return res.status(400).json({ error: 'date is required' });
@@ -20806,10 +20887,125 @@ app.post('/api/daily-snapshot/save', async (req, res) => {
     // Guard: reject if any event has isHistoricalSeed = true (never save seed data)
     const allEvents = [...(scheduleEvents || []), ...(staffEvents || []), ...(traineeEvents || [])];
     const hasSeedData = allEvents.some(e => e.isHistoricalSeed === true);
-    if (hasSeedData) {
-      console.log(`⚠️ POST /api/daily-snapshot/save - Rejected seed data for date ${date}`);
-      return res.status(400).json({ error: 'Seed data cannot be saved as a real snapshot' });
-    }
+	    if (hasSeedData) {
+	      console.log(`⚠️ POST /api/daily-snapshot/save - Rejected seed data for date ${date}`);
+	      return res.status(400).json({ error: 'Seed data cannot be saved as a real snapshot' });
+	    }
+
+	    const parsedSnapshotDate = parseDailySnapshotDateKey(date);
+	    const baseSnapshotDate = parsedSnapshotDate.date || date;
+	    const scheduleEventIds = Array.from(new Set((Array.isArray(scheduleEvents) ? scheduleEvents : [])
+	      .map(event => String(event?.id || event?.eventId || '').trim())
+	      .filter(Boolean)));
+	    const snapshotTraineeNames = Array.from(new Set((Array.isArray(traineeProfiles) ? traineeProfiles : [])
+	      .flatMap(profile => [profile?.fullName, profile?.name, profile?.displayName])
+	      .map(value => String(value || '').trim())
+	      .filter(Boolean)));
+	    const snapshotStaffNames = Array.from(new Set((Array.isArray(staffProfiles) ? staffProfiles : [])
+	      .flatMap(profile => [profile?.name, profile?.fullName, profile?.displayName])
+	      .map(value => String(value || '').trim())
+	      .filter(Boolean)));
+	    const snapshotPersonNames = Array.from(new Set([...snapshotTraineeNames, ...snapshotStaffNames]));
+	    const snapshotCourseNames = Array.from(new Set((Array.isArray(courseState) ? courseState : [])
+	      .flatMap(course => [course?.name, course?.code])
+	      .map(value => String(value || '').trim())
+	      .filter(Boolean)));
+
+	    const payloadTrainingReportState = isPlainObject(trainingReportState) ? trainingReportState : {};
+	    const payloadPt051Assessments = isPlainObject(pt051Assessments) ? pt051Assessments : {};
+	    let enrichedTrainingReportState = Object.keys(payloadTrainingReportState).length > 0
+	      ? { ...payloadTrainingReportState }
+	      : { ...payloadPt051Assessments };
+	    if (snapshotTraineeNames.length > 0 || snapshotCourseNames.length > 0 || scheduleEventIds.length > 0) {
+	      const reportWhere = [`"date" <= $1::text`];
+	      const reportParams = [baseSnapshotDate];
+	      const reportSubWhere = [];
+	      let reportParamIdx = 2;
+	      if (snapshotTraineeNames.length > 0) {
+	        reportSubWhere.push(`"traineeFullName" = ANY($${reportParamIdx++}::text[])`);
+	        reportParams.push(snapshotTraineeNames);
+	      }
+	      if (snapshotCourseNames.length > 0) {
+	        reportSubWhere.push(`"course" = ANY($${reportParamIdx++}::text[])`);
+	        reportParams.push(snapshotCourseNames);
+	      }
+	      if (scheduleEventIds.length > 0) {
+	        reportSubWhere.push(`"eventId" = ANY($${reportParamIdx++}::text[])`);
+	        reportParams.push(scheduleEventIds);
+	      }
+	      if (reportSubWhere.length > 0) {
+	        reportWhere.push(`(${reportSubWhere.join(' OR ')})`);
+	        const reportRows = await db.$queryRawUnsafe(
+	          `SELECT * FROM "TraineePerformance"
+	           WHERE ${reportWhere.join(' AND ')}
+	           ORDER BY "date" ASC, "course" ASC NULLS LAST, "traineeFullName" ASC, "eventSequence" ASC NULLS LAST
+	           LIMIT 10000`,
+	          ...reportParams
+	        ).catch(() => []);
+	        enrichedTrainingReportState = {
+	          ...buildArchiveReportMap((reportRows || []).map(row => mapRowToAssessment(row))),
+	          ...enrichedTrainingReportState,
+	        };
+	      }
+	    }
+	    const enrichedPt051Assessments = {
+	      ...payloadPt051Assessments,
+	      ...enrichedTrainingReportState,
+	    };
+
+	    const tableEventCompletions = await db.$queryRawUnsafe(
+	      `SELECT * FROM "EventCompletion"
+	       WHERE "eventDate" = $1::text OR "scheduleEventId" = ANY($2::text[])
+	       ORDER BY "startTime" ASC, "traineeFullName" ASC
+	       LIMIT 5000`,
+	      baseSnapshotDate,
+	      scheduleEventIds
+	    ).catch(() => []);
+	    const enrichedEventCompletions = mergeArchiveRowsByKey(
+	      Array.isArray(eventCompletions) ? eventCompletions : [],
+	      tableEventCompletions || [],
+	      row => row?.id || row?.scheduleEventId || `${row?.eventDate || ''}:${row?.traineeFullName || ''}:${row?.eventCode || ''}`
+	    );
+
+	    const flightLogWhere = [`"eventDate" <= $1::text`];
+	    const flightLogParams = [baseSnapshotDate];
+	    const flightLogSubWhere = [];
+	    let flightLogParamIdx = 2;
+	    if (scheduleEventIds.length > 0) {
+	      flightLogSubWhere.push(`"scheduleEventId" = ANY($${flightLogParamIdx++}::text[])`);
+	      flightLogParams.push(scheduleEventIds);
+	    }
+	    if (snapshotPersonNames.length > 0) {
+	      flightLogSubWhere.push(`"personName" = ANY($${flightLogParamIdx++}::text[])`);
+	      flightLogParams.push(snapshotPersonNames);
+	    }
+	    const tableFlightLogEntries = flightLogSubWhere.length > 0
+	      ? await db.$queryRawUnsafe(
+	          `SELECT * FROM "FlightLogEntry"
+	           WHERE ${flightLogWhere.join(' AND ')} AND (${flightLogSubWhere.join(' OR ')})
+	           ORDER BY "personName" ASC, "eventDate" ASC, "createdAt" ASC
+	           LIMIT 10000`,
+	          ...flightLogParams
+	        ).catch(() => [])
+	      : [];
+	    const enrichedFlightLogEntries = mergeArchiveRowsByKey(
+	      Array.isArray(flightLogEntries) ? flightLogEntries : [],
+	      tableFlightLogEntries || [],
+	      row => row?.id || `${row?.scheduleEventId || ''}:${row?.personName || ''}:${row?.personRole || ''}:${row?.eventDate || ''}`
+	    );
+
+	    const enrichedCurrencyState = isPlainObject(currencyState)
+	      ? currencyState
+	      : {
+	          staffCurrency: staffCurrency || {},
+	          currencyDefinitions: currencyDefinitions || {
+	            masterCurrencies: masterCurrencies || [],
+	            currencyRequirements: currencyRequirements || [],
+	          },
+	          traineeCurrency: Object.fromEntries((Array.isArray(traineeProfiles) ? traineeProfiles : [])
+	            .filter(profile => Array.isArray(profile?.currencyStatus) && profile.currencyStatus.length > 0)
+	            .map(profile => [profile.fullName || profile.name, profile.currencyStatus])),
+	        };
 
     // Upsert: update if date exists, create if not
     const existing = await db.$queryRawUnsafe(
@@ -20841,27 +21037,41 @@ app.post('/api/daily-snapshot/save', async (req, res) => {
             "lmpCompletedIds" = $7::jsonb,
             "staffCurrency" = $8::jsonb,
             "staffLogbook" = $9::jsonb,
-            "savedAt" = NOW(),
-            "savedBy" = $10::text,
-            "baselineEvents" = $11::jsonb,
-            "aircraftConfigState" = $12::jsonb
-          WHERE date = $13::text
-        `,
-          JSON.stringify(scheduleEvents || []),
-          JSON.stringify(staffEvents || []),
-          JSON.stringify(traineeEvents || []),
-          JSON.stringify(pt051Assessments || {}),
-          JSON.stringify(traineeProfiles || []),
-          JSON.stringify(staffProfiles || []),
-          JSON.stringify(lmpCompletedIds || {}),
-          JSON.stringify(staffCurrency || {}),
-          JSON.stringify(staffLogbook || {}),
-          savedBy || null,
-          JSON.stringify(baselineEvents),
-          JSON.stringify(aircraftConfigState || {}),
-          date
-        );
-      } else {
+	            "savedAt" = NOW(),
+	            "savedBy" = $10::text,
+	            "baselineEvents" = $11::jsonb,
+	            "aircraftConfigState" = $12::jsonb,
+	            "courseState" = $13::jsonb,
+	            "individualLmpState" = $14::jsonb,
+	            "masterLmpState" = $15::jsonb,
+	            "trainingReportState" = $16::jsonb,
+	            "eventCompletions" = $17::jsonb,
+	            "flightLogEntries" = $18::jsonb,
+	            "currencyState" = $19::jsonb
+	          WHERE date = $20::text
+	        `,
+	          JSON.stringify(scheduleEvents || []),
+	          JSON.stringify(staffEvents || []),
+	          JSON.stringify(traineeEvents || []),
+	          JSON.stringify(enrichedPt051Assessments || {}),
+	          JSON.stringify(traineeProfiles || []),
+	          JSON.stringify(staffProfiles || []),
+	          JSON.stringify(lmpCompletedIds || {}),
+	          JSON.stringify(staffCurrency || {}),
+	          JSON.stringify(staffLogbook || {}),
+	          savedBy || null,
+	          JSON.stringify(baselineEvents),
+	          JSON.stringify(aircraftConfigState || {}),
+	          JSON.stringify(Array.isArray(courseState) ? courseState : []),
+	          JSON.stringify(isPlainObject(individualLmpState) ? individualLmpState : {}),
+	          JSON.stringify(Array.isArray(masterLmpState) ? masterLmpState : []),
+	          JSON.stringify(enrichedTrainingReportState || {}),
+	          JSON.stringify(enrichedEventCompletions || []),
+	          JSON.stringify(enrichedFlightLogEntries || []),
+	          JSON.stringify(enrichedCurrencyState || {}),
+	          date
+	        );
+	      } else {
         await db.$executeRawUnsafe(`
           UPDATE "DailySnapshot"
           SET
@@ -20873,49 +21083,72 @@ app.post('/api/daily-snapshot/save', async (req, res) => {
             "staffProfiles" = $6::jsonb,
             "lmpCompletedIds" = $7::jsonb,
             "staffCurrency" = $8::jsonb,
-            "staffLogbook" = $9::jsonb,
-            "savedAt" = NOW(),
-            "savedBy" = $10::text,
-            "aircraftConfigState" = $11::jsonb
-          WHERE date = $12::text
-        `,
-          JSON.stringify(scheduleEvents || []),
-          JSON.stringify(staffEvents || []),
-          JSON.stringify(traineeEvents || []),
-          JSON.stringify(pt051Assessments || {}),
-          JSON.stringify(traineeProfiles || []),
-          JSON.stringify(staffProfiles || []),
-          JSON.stringify(lmpCompletedIds || {}),
-          JSON.stringify(staffCurrency || {}),
-          JSON.stringify(staffLogbook || {}),
-          savedBy || null,
-          JSON.stringify(aircraftConfigState || {}),
-          date
-        );
-      }
+	            "staffLogbook" = $9::jsonb,
+	            "savedAt" = NOW(),
+	            "savedBy" = $10::text,
+	            "aircraftConfigState" = $11::jsonb,
+	            "courseState" = $12::jsonb,
+	            "individualLmpState" = $13::jsonb,
+	            "masterLmpState" = $14::jsonb,
+	            "trainingReportState" = $15::jsonb,
+	            "eventCompletions" = $16::jsonb,
+	            "flightLogEntries" = $17::jsonb,
+	            "currencyState" = $18::jsonb
+	          WHERE date = $19::text
+	        `,
+	          JSON.stringify(scheduleEvents || []),
+	          JSON.stringify(staffEvents || []),
+	          JSON.stringify(traineeEvents || []),
+	          JSON.stringify(enrichedPt051Assessments || {}),
+	          JSON.stringify(traineeProfiles || []),
+	          JSON.stringify(staffProfiles || []),
+	          JSON.stringify(lmpCompletedIds || {}),
+	          JSON.stringify(staffCurrency || {}),
+	          JSON.stringify(staffLogbook || {}),
+	          savedBy || null,
+	          JSON.stringify(aircraftConfigState || {}),
+	          JSON.stringify(Array.isArray(courseState) ? courseState : []),
+	          JSON.stringify(isPlainObject(individualLmpState) ? individualLmpState : {}),
+	          JSON.stringify(Array.isArray(masterLmpState) ? masterLmpState : []),
+	          JSON.stringify(enrichedTrainingReportState || {}),
+	          JSON.stringify(enrichedEventCompletions || []),
+	          JSON.stringify(enrichedFlightLogEntries || []),
+	          JSON.stringify(enrichedCurrencyState || {}),
+	          date
+	        );
+	      }
       console.log(`✅ POST /api/daily-snapshot/save - Updated snapshot for ${date}, ${(scheduleEvents||[]).length} events`);
     } else {
       await db.$executeRawUnsafe(`
         INSERT INTO "DailySnapshot"
-          ("id", "date", "scheduleEvents", "staffEvents", "traineeEvents",
-           "pt051Assessments", "traineeProfiles", "staffProfiles", "lmpCompletedIds",
-           "staffCurrency", "staffLogbook", "savedAt", "savedBy", "baselineEvents", "aircraftConfigState")
-        VALUES ($1::text, $2::text, $3::jsonb, $4::jsonb, $5::jsonb, $6::jsonb, $7::jsonb, $8::jsonb, $9::jsonb, $10::jsonb, $11::jsonb, NOW(), $12::text, $13::jsonb, $14::jsonb)
-      `,
-        id, date,
-        JSON.stringify(scheduleEvents || []),
-        JSON.stringify(staffEvents || []),
-        JSON.stringify(traineeEvents || []),
-        JSON.stringify(pt051Assessments || {}),
-        JSON.stringify(traineeProfiles || []),
-        JSON.stringify(staffProfiles || []),
-        JSON.stringify(lmpCompletedIds || {}),
-        JSON.stringify(staffCurrency || {}),
-        JSON.stringify(staffLogbook || {}),
-        savedBy || null,
-        JSON.stringify(baselineEvents !== undefined && baselineEvents !== null ? baselineEvents : (scheduleEvents || [])),
-        JSON.stringify(aircraftConfigState || {})
-      );
+	          ("id", "date", "scheduleEvents", "staffEvents", "traineeEvents",
+	           "pt051Assessments", "traineeProfiles", "staffProfiles", "lmpCompletedIds",
+	           "staffCurrency", "staffLogbook", "savedAt", "savedBy", "baselineEvents", "aircraftConfigState",
+	           "courseState", "individualLmpState", "masterLmpState", "trainingReportState",
+	           "eventCompletions", "flightLogEntries", "currencyState")
+	        VALUES ($1::text, $2::text, $3::jsonb, $4::jsonb, $5::jsonb, $6::jsonb, $7::jsonb, $8::jsonb, $9::jsonb, $10::jsonb, $11::jsonb, NOW(), $12::text, $13::jsonb, $14::jsonb, $15::jsonb, $16::jsonb, $17::jsonb, $18::jsonb, $19::jsonb, $20::jsonb, $21::jsonb)
+	      `,
+	        id, date,
+	        JSON.stringify(scheduleEvents || []),
+	        JSON.stringify(staffEvents || []),
+	        JSON.stringify(traineeEvents || []),
+	        JSON.stringify(enrichedPt051Assessments || {}),
+	        JSON.stringify(traineeProfiles || []),
+	        JSON.stringify(staffProfiles || []),
+	        JSON.stringify(lmpCompletedIds || {}),
+	        JSON.stringify(staffCurrency || {}),
+	        JSON.stringify(staffLogbook || {}),
+	        savedBy || null,
+	        JSON.stringify(baselineEvents !== undefined && baselineEvents !== null ? baselineEvents : (scheduleEvents || [])),
+	        JSON.stringify(aircraftConfigState || {}),
+	        JSON.stringify(Array.isArray(courseState) ? courseState : []),
+	        JSON.stringify(isPlainObject(individualLmpState) ? individualLmpState : {}),
+	        JSON.stringify(Array.isArray(masterLmpState) ? masterLmpState : []),
+	        JSON.stringify(enrichedTrainingReportState || {}),
+	        JSON.stringify(enrichedEventCompletions || []),
+	        JSON.stringify(enrichedFlightLogEntries || []),
+	        JSON.stringify(enrichedCurrencyState || {})
+	      );
       console.log(`✅ POST /api/daily-snapshot/save - Created snapshot for ${date}, ${(scheduleEvents||[]).length} events`);
     }
 
@@ -20926,7 +21159,7 @@ app.post('/api/daily-snapshot/save', async (req, res) => {
         scheduleEvents,
         staffEvents,
         traineeEvents,
-        pt051Assessments,
+	        pt051Assessments: enrichedPt051Assessments,
         traineeProfiles,
         staffProfiles,
         lmpCompletedIds,
@@ -20934,12 +21167,19 @@ app.post('/api/daily-snapshot/save', async (req, res) => {
         staffLogbook,
         savedBy,
         baselineEvents,
-        aircraftConfigState,
-        currencyDefinitions,
-        masterCurrencies,
-        currencyRequirements,
-        dailySnapshotId,
-      });
+	        aircraftConfigState,
+	        currencyDefinitions,
+	        masterCurrencies,
+	        currencyRequirements,
+	        courseState: Array.isArray(courseState) ? courseState : [],
+	        individualLmpState: isPlainObject(individualLmpState) ? individualLmpState : {},
+	        masterLmpState: Array.isArray(masterLmpState) ? masterLmpState : [],
+	        trainingReportState: enrichedTrainingReportState || {},
+	        eventCompletions: enrichedEventCompletions || [],
+	        flightLogEntries: enrichedFlightLogEntries || [],
+	        currencyState: enrichedCurrencyState || {},
+	        dailySnapshotId,
+	      });
     } catch (archiveError) {
       archive = { success: false, warning: archiveError.message };
       await writeArchiveDiagnostic(db, 'ARCHIVE_PUBLISHED_DFP_SAVE', date, parseDailySnapshotDateKey(date).date, 'error', {
@@ -21062,12 +21302,19 @@ app.get('/api/archive/dfp-date', async (req, res) => {
           snapshotKey: archive.snapshotKey,
         }
       );
-      const archivedCurrencyDefinitionsSource = hasArchiveCurrencyDefinitions(rawArchivedCurrencyDefinitions)
-        ? 'archived-config-version'
-        : hasArchiveCurrencyDefinitions(archivedCurrencyDefinitions)
-          ? 'saved-settings-fallback'
-          : 'missing';
-      const archivedProfileRefs = [...archivedStaffProfiles, ...archivedTraineeProfiles];
+	      const archivedCurrencyDefinitionsSource = hasArchiveCurrencyDefinitions(rawArchivedCurrencyDefinitions)
+	        ? 'archived-config-version'
+	        : hasArchiveCurrencyDefinitions(archivedCurrencyDefinitions)
+	          ? 'saved-settings-fallback'
+	          : 'missing';
+	      const archivedCourseState = Array.isArray(configContentByType.courseState) ? configContentByType.courseState : [];
+	      const archivedIndividualLmpState = isPlainObject(configContentByType.individualLmpState) ? configContentByType.individualLmpState : {};
+	      const archivedMasterLmpState = Array.isArray(configContentByType.masterLmpState) ? configContentByType.masterLmpState : [];
+	      const archivedTrainingReportState = isPlainObject(configContentByType.trainingReportState) ? configContentByType.trainingReportState : {};
+	      const archivedEventCompletionState = Array.isArray(configContentByType.eventCompletionState) ? configContentByType.eventCompletionState : [];
+	      const archivedFlightLogState = Array.isArray(configContentByType.flightLogState) ? configContentByType.flightLogState : [];
+	      const archivedCurrencyState = isPlainObject(configContentByType.currencyState) ? configContentByType.currencyState : {};
+	      const archivedProfileRefs = [...archivedStaffProfiles, ...archivedTraineeProfiles];
       const archivedPersonIds = Array.from(new Set(archivedProfileRefs.flatMap(profile => [
         profile?.id,
         profile?.idNumber,
@@ -21149,12 +21396,23 @@ app.get('/api/archive/dfp-date', async (req, res) => {
       const scheduleEvents = eventRows.map(row => row.eventData);
       const archivedStaffEvents = archiveEventsByType(eventRows, 'staff');
       const archivedTraineeEvents = archiveEventsByType(eventRows, 'trainee');
-      const trainingReports = (performanceRows || []).map(row => mapRowToAssessment(row));
-      const trainingReportMap = Object.fromEntries(trainingReports.map(report => [
-        `pt051-${report.eventId}-${report.traineeFullName}`,
-        report,
-      ]));
-      const archiveCompletenessDiagnostics = buildArchiveCompletenessDiagnostics({
+	      const tableTrainingReports = (performanceRows || []).map(row => mapRowToAssessment(row)).filter(Boolean);
+	      const trainingReportMap = {
+	        ...buildArchiveReportMap(tableTrainingReports),
+	        ...archivedTrainingReportState,
+	      };
+	      const trainingReports = Object.values(trainingReportMap);
+	      const mergedEventCompletions = mergeArchiveRowsByKey(
+	        archivedEventCompletionState,
+	        completionRows || [],
+	        row => row?.id || row?.scheduleEventId || `${row?.eventDate || ''}:${row?.traineeFullName || ''}:${row?.eventCode || ''}`
+	      );
+	      const mergedFlightLogEntries = mergeArchiveRowsByKey(
+	        archivedFlightLogState,
+	        flightLogRows || [],
+	        row => row?.id || `${row?.scheduleEventId || ''}:${row?.personName || ''}:${row?.personRole || ''}:${row?.eventDate || ''}`
+	      );
+	      const archiveCompletenessDiagnostics = buildArchiveCompletenessDiagnostics({
         source: 'compact-archive',
         date: archive.date,
         snapshotKey: archive.snapshotKey,
@@ -21167,28 +21425,33 @@ app.get('/api/archive/dfp-date', async (req, res) => {
         lmpCompletedIds: configContentByType.lmpCompletionState || {},
         staffCurrency: configContentByType.staffCurrencyState || {},
         staffLogbook: {},
-        aircraftConfigState: configContentByType.aircraftConfigState || {},
-        trainingReports,
-        trainingReportVersions: trainingReportVersions || [],
-        eventCompletions: completionRows || [],
-        flightLogEntries: flightLogRows || [],
-        configVersions: configVersions || [],
+	        aircraftConfigState: configContentByType.aircraftConfigState || {},
+	        trainingReports,
+	        trainingReportVersions: trainingReportVersions || [],
+	        eventCompletions: mergedEventCompletions,
+	        flightLogEntries: mergedFlightLogEntries,
+	        configVersions: configVersions || [],
         currencyDefinitions: archivedCurrencyDefinitions,
         currencyDefinitionsSource: archivedCurrencyDefinitionsSource,
       });
       const snapshot = {
         date: archive.snapshotKey,
         scheduleEvents,
-        staffEvents: archivedStaffEvents,
-        traineeEvents: archivedTraineeEvents,
-        pt051Assessments: trainingReportMap,
-        eventCompletions: completionRows || [],
-        flightLogEntries: flightLogRows || [],
-        traineeProfiles: archivedTraineeProfiles,
-        staffProfiles: archivedStaffProfiles,
-        lmpCompletedIds: configContentByType.lmpCompletionState || {},
-        staffCurrency: configContentByType.staffCurrencyState || {},
-        currencyDefinitions: archivedCurrencyDefinitions,
+	        staffEvents: archivedStaffEvents,
+	        traineeEvents: archivedTraineeEvents,
+	        pt051Assessments: trainingReportMap,
+	        trainingReportState: trainingReportMap,
+	        eventCompletions: mergedEventCompletions,
+	        flightLogEntries: mergedFlightLogEntries,
+	        traineeProfiles: archivedTraineeProfiles,
+	        staffProfiles: archivedStaffProfiles,
+	        lmpCompletedIds: configContentByType.lmpCompletionState || {},
+	        staffCurrency: configContentByType.staffCurrencyState || {},
+	        courseState: archivedCourseState,
+	        individualLmpState: archivedIndividualLmpState,
+	        masterLmpState: archivedMasterLmpState,
+	        currencyState: archivedCurrencyState,
+	        currencyDefinitions: archivedCurrencyDefinitions,
         masterCurrencies: Array.isArray(archivedCurrencyDefinitions.masterCurrencies) ? archivedCurrencyDefinitions.masterCurrencies : [],
         currencyRequirements: Array.isArray(archivedCurrencyDefinitions.currencyRequirements) ? archivedCurrencyDefinitions.currencyRequirements : [],
         staffLogbook: {},
@@ -21217,13 +21480,18 @@ app.get('/api/archive/dfp-date', async (req, res) => {
           publishedAt: archive.publishedAt,
           publishedBy: archive.publishedBy,
         },
-        scheduleEvents,
-        scheduleEventRows: eventRows,
-        trainingReports,
-        trainingReportVersions: trainingReportVersions || [],
-        eventCompletions: completionRows || [],
-        flightLogEntries: flightLogRows || [],
-        configVersions: configVersions || [],
+	        scheduleEvents,
+	        scheduleEventRows: eventRows,
+	        trainingReports,
+	        trainingReportVersions: trainingReportVersions || [],
+	        eventCompletions: mergedEventCompletions,
+	        flightLogEntries: mergedFlightLogEntries,
+	        courseState: archivedCourseState,
+	        individualLmpState: archivedIndividualLmpState,
+	        masterLmpState: archivedMasterLmpState,
+	        trainingReportState: trainingReportMap,
+	        currencyState: archivedCurrencyState,
+	        configVersions: configVersions || [],
         currencyDefinitions: archivedCurrencyDefinitions,
         masterCurrencies: Array.isArray(archivedCurrencyDefinitions.masterCurrencies) ? archivedCurrencyDefinitions.masterCurrencies : [],
         currencyRequirements: Array.isArray(archivedCurrencyDefinitions.currencyRequirements) ? archivedCurrencyDefinitions.currencyRequirements : [],
@@ -21332,9 +21600,17 @@ app.get('/api/archive/dfp-date', async (req, res) => {
         scheduleEventId: row.scheduleEventId,
       })),
     };
-    const fallbackTrainingReports = Object.values(snapshot.pt051Assessments || {});
-    const fallbackStaffEvents = Array.isArray(snapshot.staffEvents) ? snapshot.staffEvents : [];
-    const fallbackTraineeEvents = Array.isArray(snapshot.traineeEvents) ? snapshot.traineeEvents : [];
+	    const fallbackTrainingReportState = isPlainObject(snapshot.trainingReportState)
+	      ? snapshot.trainingReportState
+	      : (isPlainObject(snapshot.pt051Assessments) ? snapshot.pt051Assessments : {});
+	    const fallbackTrainingReports = Object.values(fallbackTrainingReportState);
+	    const fallbackStaffEvents = Array.isArray(snapshot.staffEvents) ? snapshot.staffEvents : [];
+	    const fallbackTraineeEvents = Array.isArray(snapshot.traineeEvents) ? snapshot.traineeEvents : [];
+	    const fallbackCourseState = Array.isArray(snapshot.courseState) ? snapshot.courseState : [];
+	    const fallbackIndividualLmpState = isPlainObject(snapshot.individualLmpState) ? snapshot.individualLmpState : {};
+	    const fallbackMasterLmpState = Array.isArray(snapshot.masterLmpState) ? snapshot.masterLmpState : [];
+	    const fallbackEventCompletions = Array.isArray(snapshot.eventCompletions) ? snapshot.eventCompletions : [];
+	    const fallbackCurrencyState = isPlainObject(snapshot.currencyState) ? snapshot.currencyState : {};
     const rawFallbackCurrencyDefinitions = snapshot.currencyDefinitions && typeof snapshot.currencyDefinitions === 'object'
       ? snapshot.currencyDefinitions
       : {
@@ -21376,16 +21652,23 @@ app.get('/api/archive/dfp-date', async (req, res) => {
       aircraftConfigState: snapshot.aircraftConfigState || {},
       trainingReports: fallbackTrainingReports,
       trainingReportVersions: [],
-      eventCompletions: snapshot.eventCompletions || [],
-      flightLogEntries: fallbackFlightLogEntries,
+	      eventCompletions: fallbackEventCompletions,
+	      flightLogEntries: fallbackFlightLogEntries,
       configVersions: [],
       currencyDefinitions: fallbackCurrencyDefinitions,
       currencyDefinitionsSource: fallbackCurrencyDefinitionsSource,
     });
     const snapshotWithArchiveLogbook = {
-      ...snapshot,
-      flightLogEntries: fallbackFlightLogEntries,
-      currencyDefinitions: fallbackCurrencyDefinitions,
+	      ...snapshot,
+	      pt051Assessments: fallbackTrainingReportState,
+	      trainingReportState: fallbackTrainingReportState,
+	      eventCompletions: fallbackEventCompletions,
+	      flightLogEntries: fallbackFlightLogEntries,
+	      courseState: fallbackCourseState,
+	      individualLmpState: fallbackIndividualLmpState,
+	      masterLmpState: fallbackMasterLmpState,
+	      currencyState: fallbackCurrencyState,
+	      currencyDefinitions: fallbackCurrencyDefinitions,
       masterCurrencies: Array.isArray(fallbackCurrencyDefinitions.masterCurrencies) ? fallbackCurrencyDefinitions.masterCurrencies : [],
       currencyRequirements: Array.isArray(fallbackCurrencyDefinitions.currencyRequirements) ? fallbackCurrencyDefinitions.currencyRequirements : [],
       archiveLogbookDiagnostics: fallbackLogbookDiagnostics,
@@ -21401,13 +21684,19 @@ app.get('/api/archive/dfp-date', async (req, res) => {
       scheduleEvents: fallbackScheduleEvents,
       staffEvents: fallbackStaffEvents,
       traineeEvents: fallbackTraineeEvents,
-      trainingReports: fallbackTrainingReports,
-      trainingReportVersions: [],
-      traineeProfiles: fallbackTraineeProfiles,
-      staffProfiles: fallbackStaffProfiles,
-      lmpCompletedIds: snapshot.lmpCompletedIds || {},
-      staffCurrency: snapshot.staffCurrency || {},
-      currencyDefinitions: fallbackCurrencyDefinitions,
+	      trainingReports: fallbackTrainingReports,
+	      trainingReportVersions: [],
+	      trainingReportState: fallbackTrainingReportState,
+	      traineeProfiles: fallbackTraineeProfiles,
+	      staffProfiles: fallbackStaffProfiles,
+	      lmpCompletedIds: snapshot.lmpCompletedIds || {},
+	      staffCurrency: snapshot.staffCurrency || {},
+	      courseState: fallbackCourseState,
+	      individualLmpState: fallbackIndividualLmpState,
+	      masterLmpState: fallbackMasterLmpState,
+	      eventCompletions: fallbackEventCompletions,
+	      currencyState: fallbackCurrencyState,
+	      currencyDefinitions: fallbackCurrencyDefinitions,
       masterCurrencies: Array.isArray(fallbackCurrencyDefinitions.masterCurrencies) ? fallbackCurrencyDefinitions.masterCurrencies : [],
       currencyRequirements: Array.isArray(fallbackCurrencyDefinitions.currencyRequirements) ? fallbackCurrencyDefinitions.currencyRequirements : [],
       staffLogbook: snapshot.staffLogbook || {},

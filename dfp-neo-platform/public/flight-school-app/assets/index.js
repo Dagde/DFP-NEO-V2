@@ -143987,11 +143987,17 @@ const App = () => {
     const snapshotStaffCurrency = snap2.staffCurrency && typeof snap2.staffCurrency === "object" ? snap2.staffCurrency : {};
     const snapshotLmpCompletedIds = snap2.lmpCompletedIds && typeof snap2.lmpCompletedIds === "object" ? snap2.lmpCompletedIds : {};
     const snapshotFlightLogEntries = Array.isArray(snap2.flightLogEntries) ? snap2.flightLogEntries : [];
+    const snapshotCourseState = Array.isArray(snap2.courseState) ? snap2.courseState : [];
+    const snapshotIndividualLmpState = snap2.individualLmpState && typeof snap2.individualLmpState === "object" && !Array.isArray(snap2.individualLmpState) ? snap2.individualLmpState : {};
+    const snapshotMasterLmpState = Array.isArray(snap2.masterLmpState) ? snap2.masterLmpState : [];
+    const snapshotTrainingReportState = snap2.trainingReportState && typeof snap2.trainingReportState === "object" && !Array.isArray(snap2.trainingReportState) ? snap2.trainingReportState : snap2.pt051Assessments && typeof snap2.pt051Assessments === "object" && !Array.isArray(snap2.pt051Assessments) ? snap2.pt051Assessments : {};
+    const snapshotEventCompletions = Array.isArray(snap2.eventCompletions) ? snap2.eventCompletions : [];
+    const snapshotCurrencyState = snap2.currencyState && typeof snap2.currencyState === "object" && !Array.isArray(snap2.currencyState) ? snap2.currencyState : {};
     const snapshotCurrencyDefinitions = snap2.currencyDefinitions && typeof snap2.currencyDefinitions === "object" ? snap2.currencyDefinitions : {
       masterCurrencies: Array.isArray(snap2.masterCurrencies) ? snap2.masterCurrencies : [],
       currencyRequirements: Array.isArray(snap2.currencyRequirements) ? snap2.currencyRequirements : []
     };
-    if (snapshotStaffProfiles.length > 0 || snapshotTraineeProfiles.length > 0 || Object.keys(snapshotStaffCurrency).length > 0 || Object.keys(snapshotLmpCompletedIds).length > 0 || snapshotFlightLogEntries.length > 0 || Array.isArray(snapshotCurrencyDefinitions.masterCurrencies) && snapshotCurrencyDefinitions.masterCurrencies.length > 0 || Array.isArray(snapshotCurrencyDefinitions.currencyRequirements) && snapshotCurrencyDefinitions.currencyRequirements.length > 0) {
+    if (snapshotStaffProfiles.length > 0 || snapshotTraineeProfiles.length > 0 || Object.keys(snapshotStaffCurrency).length > 0 || Object.keys(snapshotLmpCompletedIds).length > 0 || snapshotFlightLogEntries.length > 0 || snapshotCourseState.length > 0 || Object.keys(snapshotIndividualLmpState).length > 0 || snapshotMasterLmpState.length > 0 || Object.keys(snapshotTrainingReportState).length > 0 || snapshotEventCompletions.length > 0 || Object.keys(snapshotCurrencyState).length > 0 || Array.isArray(snapshotCurrencyDefinitions.masterCurrencies) && snapshotCurrencyDefinitions.masterCurrencies.length > 0 || Array.isArray(snapshotCurrencyDefinitions.currencyRequirements) && snapshotCurrencyDefinitions.currencyRequirements.length > 0) {
       setHistoricalDfpContextByDate((prev) => ({
         ...prev,
         [targetDate]: {
@@ -144000,6 +144006,12 @@ const App = () => {
           staffCurrency: snapshotStaffCurrency,
           lmpCompletedIds: snapshotLmpCompletedIds,
           flightLogEntries: snapshotFlightLogEntries,
+          courseState: snapshotCourseState,
+          individualLmpState: snapshotIndividualLmpState,
+          masterLmpState: snapshotMasterLmpState,
+          trainingReportState: snapshotTrainingReportState,
+          eventCompletions: snapshotEventCompletions,
+          currencyState: snapshotCurrencyState,
           currencyDefinitions: snapshotCurrencyDefinitions,
           snapshotSource: snap2.snapshotSource || source,
           snapshotKey: snap2.date || ""
@@ -144015,11 +144027,15 @@ const App = () => {
         staffCurrencyPeople: Object.keys(snapshotStaffCurrency).length,
         lmpPeople: Object.keys(snapshotLmpCompletedIds).length,
         flightLogEntries: snapshotFlightLogEntries.length,
+        courses: snapshotCourseState.length,
+        individualLmps: Object.keys(snapshotIndividualLmpState).length,
+        masterLmpEvents: snapshotMasterLmpState.length,
+        trainingReports: Object.keys(snapshotTrainingReportState).length,
+        eventCompletions: snapshotEventCompletions.length,
         masterCurrencyDefinitions: Array.isArray(snapshotCurrencyDefinitions.masterCurrencies) ? snapshotCurrencyDefinitions.masterCurrencies.length : 0,
         currencyRequirementDefinitions: Array.isArray(snapshotCurrencyDefinitions.currencyRequirements) ? snapshotCurrencyDefinitions.currencyRequirements.length : 0
       });
     }
-    const snapshotEventCompletions = Array.isArray(snap2.eventCompletions) ? snap2.eventCompletions : [];
     if (snapshotEventCompletions.length > 0 && targetDate === date) {
       setEventCompletionsForDate(snapshotEventCompletions);
       pushDfpDataDiag("snapshot:apply-event-completions", {
@@ -144037,7 +144053,7 @@ const App = () => {
         }))
       });
     }
-    const snapshotAssessments = snap2.pt051Assessments && typeof snap2.pt051Assessments === "object" ? Object.values(snap2.pt051Assessments) : [];
+    const snapshotAssessments = Object.keys(snapshotTrainingReportState).length > 0 ? Object.values(snapshotTrainingReportState) : snap2.pt051Assessments && typeof snap2.pt051Assessments === "object" ? Object.values(snap2.pt051Assessments) : [];
     if (snapshotAssessments.length > 0) {
       setTrainingReportAssessments((prev) => {
         const next = new Map(prev);
@@ -144679,6 +144695,71 @@ const App = () => {
     const entries = Object.entries(courseColors).filter(([courseName]) => scopedCourseNameSet.has(courseName));
     return Object.fromEntries(entries);
   }, [courseColors, scopedCourseNameSet]);
+  const historicalCourseStateForDate = reactExports.useMemo(() => {
+    const snapshotCourses = Array.isArray(activeHistoricalDfpContext?.courseState) ? activeHistoricalDfpContext.courseState : [];
+    return snapshotCourses.map((course) => ({
+      ...course,
+      name: String(course?.name || course?.code || "").trim(),
+      code: course?.code || course?.name || void 0,
+      color: course?.color || courseColors[String(course?.name || course?.code || "").trim()] || "bg-sky-400/80",
+      startDate: course?.startDate || "",
+      gradDate: course?.gradDate || course?.endDate || "",
+      raafStart: Number(course?.raafStart ?? course?.raafCount ?? 0) || 0,
+      navyStart: Number(course?.navyStart ?? course?.navyCount ?? 0) || 0,
+      armyStart: Number(course?.armyStart ?? course?.armyCount ?? 0) || 0,
+      status: course?.status || "ACTIVE"
+    })).filter((course) => course.name);
+  }, [activeHistoricalDfpContext, courseColors]);
+  const activeDateCourseProgressCourses = historicalCourseStateForDate.length > 0 ? historicalCourseStateForDate.filter((course) => isCourseActive(course)) : scopedCourseProgressCourses;
+  const activeDateCourseColors = reactExports.useMemo(() => {
+    if (historicalCourseStateForDate.length === 0) return scopedCourseColors;
+    return Object.fromEntries(historicalCourseStateForDate.map((course) => [
+      course.name,
+      course.color || scopedCourseColors[course.name] || "bg-sky-400/80"
+    ]));
+  }, [historicalCourseStateForDate, scopedCourseColors]);
+  const activeDateArchivedCourses = reactExports.useMemo(() => {
+    if (historicalCourseStateForDate.length === 0) return archivedCourses;
+    return Object.fromEntries(
+      historicalCourseStateForDate.filter((course) => isCourseArchived(course)).map((course) => [course.name, course.color || activeDateCourseColors[course.name] || "bg-slate-500/80"])
+    );
+  }, [activeDateCourseColors, archivedCourses, historicalCourseStateForDate]);
+  const historicalTraineeLMPsForDate = reactExports.useMemo(() => {
+    const snapshotLmps = activeHistoricalDfpContext?.individualLmpState;
+    if (!snapshotLmps || typeof snapshotLmps !== "object" || Array.isArray(snapshotLmps)) {
+      return /* @__PURE__ */ new Map();
+    }
+    const next = /* @__PURE__ */ new Map();
+    Object.entries(snapshotLmps).forEach(([traineeName, value]) => {
+      const events2 = Array.isArray(value) ? value : Array.isArray(value?.events) ? value.events : [];
+      const resolvedName = String(value?.traineeFullName || traineeName || "").trim();
+      if (resolvedName && events2.length > 0) {
+        next.set(resolvedName, events2);
+      }
+    });
+    return next;
+  }, [activeHistoricalDfpContext]);
+  const activeDateTraineeLMPs = historicalTraineeLMPsForDate.size > 0 ? historicalTraineeLMPsForDate : traineeLMPs;
+  const activeDateSyllabusDetails = reactExports.useMemo(() => {
+    const snapshotSyllabus = Array.isArray(activeHistoricalDfpContext?.masterLmpState) ? activeHistoricalDfpContext.masterLmpState : [];
+    return snapshotSyllabus.length > 0 ? snapshotSyllabus : syllabusDetails;
+  }, [activeHistoricalDfpContext, syllabusDetails]);
+  Array.isArray(activeHistoricalDfpContext?.masterLmpState) && activeHistoricalDfpContext.masterLmpState.length > 0 ? activeDateSyllabusDetails : visibleSyllabusDetails;
+  const historicalTrainingReportMapForDate = reactExports.useMemo(() => {
+    const snapshotReports = activeHistoricalDfpContext?.trainingReportState;
+    if (!snapshotReports || typeof snapshotReports !== "object" || Array.isArray(snapshotReports)) {
+      return /* @__PURE__ */ new Map();
+    }
+    const next = /* @__PURE__ */ new Map();
+    Object.entries(snapshotReports).forEach(([key, value]) => {
+      const eventId = value?.eventId || value?.id || "";
+      const traineeName = value?.traineeFullName || value?.trainedFullName || "";
+      const resolvedKey = eventId && traineeName ? `pt051-${eventId}-${traineeName}` : key;
+      if (resolvedKey && value) next.set(resolvedKey, value);
+    });
+    return next;
+  }, [activeHistoricalDfpContext]);
+  const activeDatePt051Assessments = historicalTrainingReportMapForDate.size > 0 ? historicalTrainingReportMapForDate : pt051Assessments;
   reactExports.useEffect(() => {
     const localityCourseNames = [...new Set(
       traineesData.map((t) => t.course).filter((c) => c && courseColors[c])
@@ -152926,31 +153007,57 @@ ${error instanceof Error ? error.message : String(error)}`,
     } catch {
     }
   };
-  const persistScheduleForDate = async (targetDate, allEventsForDate, baselineEventsForDate, options) => {
-    if (allEventsForDate.some((e) => e.isHistoricalSeed === true)) {
-      logScheduleDebug("[Persist] Skipped seed data for", targetDate);
-      return false;
+  const cloneForDailySnapshot = (value) => {
+    try {
+      return JSON.parse(JSON.stringify(value ?? null));
+    } catch {
+      return value;
     }
-    if (allEventsForDate.length === 0 && (!baselineEventsForDate || baselineEventsForDate.length === 0)) {
-      logScheduleDebug("[Persist] No events for", targetDate, "- nothing to persist");
-      return false;
-    }
-    const apiBase = getApiBaseUrl();
-    const savedBy = authUser?.userId ?? sessionUser?.userId ?? null;
-    const snapshotKey = getDailySnapshotKey(targetDate);
-    const staffEventsForDate = allEventsForDate.filter(
-      (e) => e.instructor && !e.student && e.type !== "logbook"
-    );
-    const traineeEventsForDate = allEventsForDate.filter(
-      (e) => !!e.student
-    );
-    const staffCurrencyMap = {};
-    instructorsData.forEach((inst) => {
-      if (inst.currencyStatus && inst.currencyStatus.length > 0) {
-        staffCurrencyMap[inst.name] = inst.currencyStatus;
+  };
+  const buildDailySnapshotContext = (targetDate, eventsForSnapshot, staffLogbookOverride) => {
+    const courseStateSnapshot = [...scopedCourseProgressCourses, ...courses.filter(isCourseArchived)].reduce((map, course) => {
+      const name = String(course?.name || course?.code || "").trim();
+      if (!name) return map;
+      map.set(name, {
+        ...cloneForDailySnapshot(course),
+        name,
+        code: course?.code || name,
+        color: course?.color || courseColors[name] || scopedCourseColors[name] || archivedCourses[name] || "bg-sky-400/80",
+        startDate: course?.startDate || "",
+        gradDate: course?.gradDate || course?.endDate || "",
+        status: course?.status || (archivedCourses[name] ? "ARCHIVED" : "ACTIVE"),
+        location: course?.location || school,
+        unit: course?.unit || activeUnitCode,
+        snapshotSchool: school,
+        snapshotUnit: activeUnitCode,
+        operationalModel: activeOperationalModel,
+        snapshotDate: targetDate
+      });
+      return map;
+    }, /* @__PURE__ */ new Map());
+    Object.entries(archivedCourses).forEach(([courseName, color]) => {
+      if (!courseStateSnapshot.has(courseName)) {
+        courseStateSnapshot.set(courseName, {
+          name: courseName,
+          code: courseName,
+          color,
+          startDate: "",
+          gradDate: "",
+          raafStart: 0,
+          navyStart: 0,
+          armyStart: 0,
+          status: "ARCHIVED",
+          location: school,
+          unit: activeUnitCode,
+          snapshotSchool: school,
+          snapshotUnit: activeUnitCode,
+          operationalModel: activeOperationalModel,
+          snapshotDate: targetDate
+        });
       }
     });
     const traineeProfilesSnapshot = traineesData.map((t) => ({
+      ...cloneForDailySnapshot(t),
       idNumber: t.idNumber,
       fullName: t.fullName,
       name: t.name,
@@ -152961,9 +153068,14 @@ ${error instanceof Error ? error.message : String(error)}`,
       unit: t.unit,
       primaryInstructor: t.primaryInstructor,
       currencyStatus: t.currencyStatus || [],
-      isPaused: t.isPaused || false
+      isPaused: t.isPaused || false,
+      snapshotSchool: school,
+      snapshotUnit: activeUnitCode,
+      operationalModel: activeOperationalModel,
+      snapshotDate: targetDate
     }));
     const staffProfilesSnapshot = instructorsData.map((inst) => ({
+      ...cloneForDailySnapshot(inst),
       id: inst.id,
       idNumber: inst.idNumber,
       name: inst.name,
@@ -152989,15 +153101,94 @@ ${error instanceof Error ? error.message : String(error)}`,
       snapshotDate: targetDate
     }));
     const lmpCompletedIdsMap = {};
+    const individualLmpState = {};
     traineesData.forEach((t) => {
       const individualLMP = traineeLMPs.get(t.fullName);
-      if (individualLMP) {
-        const completedIds = individualLMP.filter((item) => item.completedAt || item.isComplete || item.rplGranted).map((item) => (item.id || item.code || "").replace("*", ""));
-        if (completedIds.length > 0) {
-          lmpCompletedIdsMap[t.fullName] = completedIds;
-        }
+      if (!individualLMP) return;
+      const completedIds = individualLMP.filter((item) => item.completedAt || item.isComplete || item.rplGranted).map((item) => (item.id || item.code || "").replace("*", "")).filter(Boolean);
+      if (completedIds.length > 0) {
+        lmpCompletedIdsMap[t.fullName] = completedIds;
+      }
+      individualLmpState[t.fullName] = {
+        traineeId: t.id || t.idNumber || null,
+        traineeFullName: t.fullName,
+        course: t.course || "",
+        lmpType: t.lmpType || "",
+        completedEventIds: completedIds,
+        events: cloneForDailySnapshot(individualLMP),
+        snapshotDate: targetDate,
+        snapshotSchool: school,
+        snapshotUnit: activeUnitCode
+      };
+    });
+    const eventIds = new Set(eventsForSnapshot.map((event) => String(event?.id || event?.eventId || "").trim()).filter(Boolean));
+    const traineeNameSet = new Set(traineesData.map((trainee) => String(trainee.fullName || trainee.name || "").trim()).filter(Boolean));
+    const trainingReportState = Object.fromEntries(
+      Array.from(pt051Assessments.entries()).filter(([, assessment]) => {
+        const assessmentDate = String(assessment?.date || "").slice(0, 10);
+        const assessmentEventId = String(assessment?.eventId || assessment?.id || "").trim();
+        const assessmentTrainee = String(assessment?.traineeFullName || assessment?.trainedFullName || "").trim();
+        return assessmentDate && assessmentDate <= targetDate && traineeNameSet.has(assessmentTrainee) || assessmentEventId && eventIds.has(assessmentEventId);
+      }).map(([key, assessment]) => [key, cloneForDailySnapshot(assessment)])
+    );
+    const eventCompletionsSnapshot = eventCompletionsForDate.filter((completion) => {
+      const completionDate = String(completion?.eventDate || completion?.date || "").slice(0, 10);
+      const completionEventId = String(completion?.scheduleEventId || completion?.eventId || "").trim();
+      return completionDate === targetDate || completionEventId && eventIds.has(completionEventId);
+    }).map(cloneForDailySnapshot);
+    const staffCurrencyMap = {};
+    instructorsData.forEach((inst) => {
+      if (inst.currencyStatus && inst.currencyStatus.length > 0) {
+        staffCurrencyMap[inst.name] = cloneForDailySnapshot(inst.currencyStatus);
       }
     });
+    const traineeCurrencyMap = Object.fromEntries(
+      traineesData.filter((trainee) => Array.isArray(trainee.currencyStatus) && trainee.currencyStatus.length > 0).map((trainee) => [trainee.fullName || trainee.name, cloneForDailySnapshot(trainee.currencyStatus)])
+    );
+    return {
+      courseState: Array.from(courseStateSnapshot.values()),
+      traineeProfiles: traineeProfilesSnapshot,
+      staffProfiles: staffProfilesSnapshot,
+      lmpCompletedIds: lmpCompletedIdsMap,
+      individualLmpState,
+      masterLmpState: cloneForDailySnapshot(syllabusDetails),
+      trainingReportState,
+      eventCompletions: eventCompletionsSnapshot,
+      staffCurrency: staffCurrencyMap,
+      currencyState: {
+        staffCurrency: staffCurrencyMap,
+        traineeCurrency: traineeCurrencyMap,
+        currencyDefinitions: {
+          masterCurrencies: cloneForDailySnapshot(masterCurrencies),
+          currencyRequirements: cloneForDailySnapshot(currencyRequirements)
+        }
+      },
+      currencyDefinitions: {
+        masterCurrencies: cloneForDailySnapshot(masterCurrencies),
+        currencyRequirements: cloneForDailySnapshot(currencyRequirements)
+      },
+      staffLogbook: staffLogbookOverride || {}
+    };
+  };
+  const persistScheduleForDate = async (targetDate, allEventsForDate, baselineEventsForDate, options) => {
+    if (allEventsForDate.some((e) => e.isHistoricalSeed === true)) {
+      logScheduleDebug("[Persist] Skipped seed data for", targetDate);
+      return false;
+    }
+    if (allEventsForDate.length === 0 && (!baselineEventsForDate || baselineEventsForDate.length === 0)) {
+      logScheduleDebug("[Persist] No events for", targetDate, "- nothing to persist");
+      return false;
+    }
+    const apiBase = getApiBaseUrl();
+    const savedBy = authUser?.userId ?? sessionUser?.userId ?? null;
+    const snapshotKey = getDailySnapshotKey(targetDate);
+    const staffEventsForDate = allEventsForDate.filter(
+      (e) => e.instructor && !e.student && e.type !== "logbook"
+    );
+    const traineeEventsForDate = allEventsForDate.filter(
+      (e) => !!e.student
+    );
+    const snapshotContext = buildDailySnapshotContext(targetDate, allEventsForDate);
     const snapshotPayload = {
       date: snapshotKey,
       locationCode: school,
@@ -153006,15 +153197,18 @@ ${error instanceof Error ? error.message : String(error)}`,
       scheduleEvents: allEventsForDate,
       staffEvents: staffEventsForDate,
       traineeEvents: traineeEventsForDate,
-      traineeProfiles: traineeProfilesSnapshot,
-      staffProfiles: staffProfilesSnapshot,
-      lmpCompletedIds: lmpCompletedIdsMap,
-      staffCurrency: staffCurrencyMap,
-      currencyDefinitions: {
-        masterCurrencies,
-        currencyRequirements
-      },
-      staffLogbook: {},
+      traineeProfiles: snapshotContext.traineeProfiles,
+      staffProfiles: snapshotContext.staffProfiles,
+      lmpCompletedIds: snapshotContext.lmpCompletedIds,
+      staffCurrency: snapshotContext.staffCurrency,
+      currencyDefinitions: snapshotContext.currencyDefinitions,
+      staffLogbook: snapshotContext.staffLogbook,
+      courseState: snapshotContext.courseState,
+      individualLmpState: snapshotContext.individualLmpState,
+      masterLmpState: snapshotContext.masterLmpState,
+      trainingReportState: snapshotContext.trainingReportState,
+      eventCompletions: snapshotContext.eventCompletions,
+      currencyState: snapshotContext.currencyState,
       aircraftConfigState: currentAircraftConfigState,
       savedBy
     };
@@ -157787,60 +157981,7 @@ ${conflictLines.join("\n")}${moreText}`,
           }
         });
       });
-      const staffCurrencyMap = {};
-      instructorsData.forEach((inst) => {
-        if (inst.currencyStatus && inst.currencyStatus.length > 0) {
-          staffCurrencyMap[inst.name] = inst.currencyStatus;
-        }
-      });
-      const traineeProfilesSnapshot = traineesData.map((t) => ({
-        idNumber: t.idNumber,
-        fullName: t.fullName,
-        name: t.name,
-        rank: t.rank,
-        course: t.course,
-        lmpType: t.lmpType,
-        service: t.service,
-        unit: t.unit,
-        primaryInstructor: t.primaryInstructor,
-        currencyStatus: t.currencyStatus || [],
-        isPaused: t.isPaused || false
-      }));
-      const staffProfilesSnapshot = instructorsData.map((inst) => ({
-        id: inst.id,
-        idNumber: inst.idNumber,
-        name: inst.name,
-        rank: inst.rank,
-        role: inst.role,
-        unit: inst.unit,
-        location: inst.location,
-        flight: inst.flight,
-        service: inst.service,
-        category: inst.category,
-        isQFI: !!inst.isQFI,
-        isOFI: !!inst.isOFI,
-        isCFI: !!inst.isCFI,
-        isFlyingSupervisor: !!inst.isFlyingSupervisor,
-        isTestingOfficer: !!inst.isTestingOfficer,
-        isCommandingOfficer: !!inst.isCommandingOfficer,
-        isExecutive: !!inst.isExecutive,
-        isPaused: !!inst.isPaused,
-        currencyStatus: inst.currencyStatus || [],
-        snapshotSchool: school,
-        snapshotUnit: activeUnitCode,
-        operationalModel: activeOperationalModel,
-        snapshotDate: buildDfpDate
-      }));
-      const lmpCompletedIdsMap = {};
-      traineesData.forEach((t) => {
-        const individualLMP = traineeLMPs.get(t.fullName);
-        if (individualLMP) {
-          const completedIds = individualLMP.filter((item) => item.completedAt || item.isComplete || item.rplGranted).map((item) => (item.id || item.code || "").replace("*", ""));
-          if (completedIds.length > 0) {
-            lmpCompletedIdsMap[t.fullName] = completedIds;
-          }
-        }
-      });
+      const snapshotContext = buildDailySnapshotContext(buildDfpDate, newEventsForDate, staffLogbookMap);
       const snapshotKey = getDailySnapshotKey(buildDfpDate);
       const existingAlertsDataForDate = alertsDataByDate[buildDfpDate];
       const snapshotPayload = {
@@ -157851,15 +157992,18 @@ ${conflictLines.join("\n")}${moreText}`,
         scheduleEvents: newEventsForDate,
         staffEvents: staffEventsForDate,
         traineeEvents: traineeEventsForDate,
-        traineeProfiles: traineeProfilesSnapshot,
-        staffProfiles: staffProfilesSnapshot,
-        lmpCompletedIds: lmpCompletedIdsMap,
-        staffCurrency: staffCurrencyMap,
-        currencyDefinitions: {
-          masterCurrencies,
-          currencyRequirements
-        },
-        staffLogbook: staffLogbookMap,
+        traineeProfiles: snapshotContext.traineeProfiles,
+        staffProfiles: snapshotContext.staffProfiles,
+        lmpCompletedIds: snapshotContext.lmpCompletedIds,
+        staffCurrency: snapshotContext.staffCurrency,
+        currencyDefinitions: snapshotContext.currencyDefinitions,
+        staffLogbook: snapshotContext.staffLogbook,
+        courseState: snapshotContext.courseState,
+        individualLmpState: snapshotContext.individualLmpState,
+        masterLmpState: snapshotContext.masterLmpState,
+        trainingReportState: snapshotContext.trainingReportState,
+        eventCompletions: snapshotContext.eventCompletions,
+        currencyState: snapshotContext.currencyState,
         aircraftConfigState: currentAircraftConfigState,
         savedBy: authUser?.userId || authUser?.username || null,
         // Store the baseline (original published events) for change-bar detection after page reload
@@ -162564,9 +162708,9 @@ It will not clear the published DFP.`,
           {
             events: eventsForStaffTraineeSchedule,
             traineesData: activeDateTraineesData,
-            courseColors: scopedCourseColors,
-            courses,
-            archivedCourses,
+            courseColors: activeDateCourseColors,
+            courses: activeDateCourseProgressCourses,
+            archivedCourses: activeDateArchivedCourses,
             personnelData,
             onNavigateToHateSheet: (trainee) => {
               if (!canViewTraineeTrainingReport(trainee)) {
@@ -162584,7 +162728,7 @@ It will not clear the published DFP.`,
             onUpdateTraineeLMPs: setTraineeLMPs,
             school,
             scores,
-            syllabusDetails,
+            syllabusDetails: activeDateSyllabusDetails,
             onNavigateToSyllabus,
             onNavigateToCurrency: handleNavigateToCurrency,
             onAddRemedialPackage: handleOpenAddRemedialPackage,
@@ -162618,7 +162762,7 @@ It will not clear the published DFP.`,
             selectedProfileInitialTab: traineeProfileInitialTab,
             onProfileOpened: handleProfileOpened,
             onOpenCurrentProfile: handleOpenCurrentTraineeProfile,
-            traineeLMPs,
+            traineeLMPs: activeDateTraineeLMPs,
             onViewLogbook: handleViewLogbook,
             onRequestSct: (trainee) => {
               setInstructorForSct(null);
@@ -162714,7 +162858,7 @@ It will not clear the published DFP.`,
             staffQualificationCatalogue: activeStaffQualificationCatalogue,
             operationalModel: activeOperationalModel,
             crewPositionTerminology: activeCrewPositionTerminology,
-            pt051Assessments,
+            pt051Assessments: activeDatePt051Assessments,
             pt051PerformanceLoading,
             userProfile: currentUser2,
             platformConfig,
@@ -162727,9 +162871,9 @@ It will not clear the published DFP.`,
           {
             events: eventsForStaffTraineeSchedule,
             traineesData: activeDateTraineesData,
-            courseColors: scopedCourseColors,
-            courses,
-            archivedCourses,
+            courseColors: activeDateCourseColors,
+            courses: activeDateCourseProgressCourses,
+            archivedCourses: activeDateArchivedCourses,
             personnelData,
             onNavigateToHateSheet: (trainee) => {
               if (!canViewTraineeTrainingReport(trainee)) {
@@ -162747,7 +162891,7 @@ It will not clear the published DFP.`,
             onUpdateTraineeLMPs: setTraineeLMPs,
             school,
             scores,
-            syllabusDetails,
+            syllabusDetails: activeDateSyllabusDetails,
             onNavigateToSyllabus,
             onNavigateToCurrency: handleNavigateToCurrency,
             onAddRemedialPackage: handleOpenAddRemedialPackage,
@@ -162776,7 +162920,7 @@ It will not clear the published DFP.`,
             selectedProfileInitialTab: traineeProfileInitialTab,
             onProfileOpened: handleProfileOpened,
             onOpenCurrentProfile: handleOpenCurrentTraineeProfile,
-            traineeLMPs,
+            traineeLMPs: activeDateTraineeLMPs,
             onViewLogbook: handleViewLogbook,
             onDeleteTrainee: (trainee) => {
               void handleDeleteTraineeFromRoster(trainee);
@@ -162849,7 +162993,7 @@ It will not clear the published DFP.`,
             trainingReportTerminology,
             trainingReportTemplate,
             sctTerminology: getSctTerminology(platformConfig, activeUnitCode),
-            pt051Assessments,
+            pt051Assessments: activeDatePt051Assessments,
             pt051PerformanceLoading,
             userProfile: currentUser2,
             canUsePlatformPermission,
@@ -163286,12 +163430,12 @@ It will not clear the published DFP.`,
         return /* @__PURE__ */ jsxRuntimeExports.jsx(
           CourseProgressView,
           {
-            courses: scopedCourseProgressCourses,
-            traineesData,
-            courseColors: scopedCourseColors,
+            courses: activeDateCourseProgressCourses,
+            traineesData: activeDateTraineesData,
+            courseColors: activeDateCourseColors,
             scores,
-            pt051Assessments,
-            traineeLMPs,
+            pt051Assessments: activeDatePt051Assessments,
+            traineeLMPs: activeDateTraineeLMPs,
             onUpdateGradDate: handleUpdateGradDate,
             onUpdateStartDate: handleUpdateStartDate,
             trainingReportName: trainingReportTemplate.displayName || trainingReportTemplate.genericName,
@@ -163304,9 +163448,9 @@ It will not clear the published DFP.`,
         return /* @__PURE__ */ jsxRuntimeExports.jsx(
           TrainingRecordsView,
           {
-            courses: scopedCourseProgressCourses,
-            courseColors: scopedCourseColors,
-            archivedCourses,
+            courses: activeDateCourseProgressCourses,
+            courseColors: activeDateCourseColors,
+            archivedCourses: activeDateArchivedCourses,
             onAddCourse: handleAddCourseFromTrainingRecords,
             onDeleteCourse: handleDeleteCourseFromTrainingRecords,
             onNavigateToCourseRoster: handleNavigateToCourseRosterFromTrainingRecords,
@@ -163315,16 +163459,16 @@ It will not clear the published DFP.`,
             onUpdateCourse: handleUpdateCourseFromTrainingRecords,
             courseLmpPauses,
             onUpdateCourseLmpPause: handleUpdateCourseLmpPause,
-            traineesData,
-            instructorsData,
+            traineesData: activeDateTraineesData,
+            instructorsData: activeDateInstructorsData,
             archivedTraineesData,
             archivedInstructorsData,
             events,
             scores,
             publishedSchedules,
-            syllabusDetails,
-            pt051Assessments,
-            traineeLMPs,
+            syllabusDetails: activeDateSyllabusDetails,
+            pt051Assessments: activeDatePt051Assessments,
+            traineeLMPs: activeDateTraineeLMPs,
             onSaveTrainingReportAssessment,
             onPersistTrainingReportAssessment: persistTrainingReportAssessmentRecord,
             onUpdateLmpItem: handleUpdateIndividualLmpItem,
@@ -165396,7 +165540,7 @@ Do you want to replace the existing entry?`,
         {
           activeView,
           onNavigate: handleNavigation,
-          courseColors: scopedCourseColors,
+          courseColors: activeDateCourseColors,
           onAddCourse: (data) => setCourseColors((prev) => ({ ...prev, [data.number]: data.color })),
           onArchiveCourse: (courseNumber) => {
             const color = courseColors[courseNumber];
@@ -165424,7 +165568,7 @@ Do you want to replace the existing entry?`,
           })),
           onUserChange: handleUserChange,
           school,
-          allTraineesData: traineesData,
+          allTraineesData: activeDateTraineesData,
           canAccessView,
           canUsePlatformPermission,
           canOpenSelfScopedView,

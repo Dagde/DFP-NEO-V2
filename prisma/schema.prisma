@@ -379,6 +379,13 @@ model DailySnapshot {
   lmpCompletedIds  Json     // { traineeFullName: string[] } - completedEventIds per trainee
   staffCurrency    Json     // { personnelName: currencyStatus[] } per staff member
   staffLogbook     Json     // Logbook entries (flight times) from publishedSchedules for staff
+  courseState      Json     @default("[]") // Courses as shown for the snapshot date
+  individualLmpState Json   @default("{}") // Full Individual LMPs keyed by trainee as-of snapshot date
+  masterLmpState   Json     @default("[]") // Master LMP catalogue as-of snapshot date
+  trainingReportState Json  @default("{}") // Training report history available as-of snapshot date
+  eventCompletions Json     @default("[]") // Post-flight completion/timing records for the snapshot date
+  flightLogEntries Json     @default("[]") // Flight/logbook rows available as-of snapshot date
+  currencyState    Json     @default("{}") // Consolidated staff/trainee currency snapshot
   savedAt          DateTime @default(now())
   savedBy          String?  // userId who published
 
