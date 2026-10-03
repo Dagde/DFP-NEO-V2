@@ -124496,11 +124496,11 @@ const mergeIndividualLmpWithMaster = (existingLmp, masterLMP) => {
   });
   return [...result, ...appendOverlays.sort((a, b) => (a.orderKey || "").localeCompare(b.orderKey || ""))];
 };
-const getAssignableMasterLmpItemsForType = (syllabusItems, lmpType, unitCode, filterForAccess) => {
+const getAssignableMasterLmpItemsForType = (syllabusItems, lmpType, unitCode, filterForAccess, requiredAccess = "Assign") => {
   const requestedType = String(lmpType || "").trim();
   if (!requestedType) return [];
   const requestedTypeKey = requestedType.toUpperCase();
-  return filterForAccess(syllabusItems, "Assign", unitCode).filter((item) => {
+  return filterForAccess(syllabusItems, requiredAccess, unitCode).filter((item) => {
     return Array.isArray(item.courses) && item.courses.some((course) => String(course || "").trim().toUpperCase() === requestedTypeKey);
   });
 };
@@ -143167,8 +143167,8 @@ const App = () => {
                   lmps.forEach((lmp) => {
                     if (!lmp.traineeFullName || !Array.isArray(lmp.events) || lmp.events.length === 0) return;
                     const traineeForLmp = data.trainees.find((candidate) => candidate.fullName === lmp.traineeFullName || candidate.name === lmp.traineeFullName);
-                    const traineeUnitCode = resolveMasterLmpUnitForTrainee(traineeForLmp, lmp.lmpType, "Assign");
-                    if (!hasMasterLmpUnitAccess(lmp.lmpType, traineeUnitCode, "Assign")) {
+                    const traineeUnitCode = resolveMasterLmpUnitForTrainee(traineeForLmp, lmp.lmpType, "View");
+                    if (!hasMasterLmpUnitAccess(lmp.lmpType, traineeUnitCode, "View")) {
                       newLMPs.delete(lmp.traineeFullName);
                       skipped++;
                       return;
@@ -143184,7 +143184,7 @@ const App = () => {
                         completed: isCompleted || item.completed === true
                       };
                     });
-                    const masterLMP = getAssignableMasterLmpItemsForType(syllabusDetails, lmp.lmpType, traineeUnitCode, filterSyllabusForMasterLmpAccess);
+                    const masterLMP = getAssignableMasterLmpItemsForType(syllabusDetails, lmp.lmpType, traineeUnitCode, filterSyllabusForMasterLmpAccess, "View");
                     const scopedEvents = masterLMP.length > 0 ? mergeIndividualLmpWithMaster(hydratedEvents, masterLMP) : hydratedEvents;
                     newLMPs.set(lmp.traineeFullName, scopedEvents);
                     hydrated++;
@@ -143280,8 +143280,8 @@ const App = () => {
                     const newLMPs = new Map(prev);
                     lmps.forEach((lmp) => {
                       const traineeForLmp = data.trainees.find((candidate) => candidate.fullName === lmp.traineeFullName || candidate.name === lmp.traineeFullName);
-                      const traineeUnitCode = resolveMasterLmpUnitForTrainee(traineeForLmp, lmp.lmpType, "Assign");
-                      if (!hasMasterLmpUnitAccess(lmp.lmpType, traineeUnitCode, "Assign")) {
+                      const traineeUnitCode = resolveMasterLmpUnitForTrainee(traineeForLmp, lmp.lmpType, "View");
+                      if (!hasMasterLmpUnitAccess(lmp.lmpType, traineeUnitCode, "View")) {
                         newLMPs.delete(lmp.traineeFullName);
                         logLmpDebug(`[LMP Sync] Skipped ${lmp.traineeFullName} ${lmp.lmpType} LMP for unauthorised unit ${traineeUnitCode || "unknown"}`);
                         return;
@@ -143300,7 +143300,7 @@ const App = () => {
                           completed: isCompleted
                         };
                       });
-                      const masterLMP = getAssignableMasterLmpItemsForType(syllabusDetails, lmp.lmpType, traineeUnitCode, filterSyllabusForMasterLmpAccess);
+                      const masterLMP = getAssignableMasterLmpItemsForType(syllabusDetails, lmp.lmpType, traineeUnitCode, filterSyllabusForMasterLmpAccess, "View");
                       const scopedLMP = masterLMP.length > 0 ? mergeIndividualLmpWithMaster(updatedLMP, masterLMP) : updatedLMP;
                       newLMPs.set(lmp.traineeFullName, scopedLMP);
                       logLmpDebug(`[LMP Sync] Updated Individual LMP for ${lmp.traineeFullName} with ${lmp.completedEventIds.length} completed events`);
@@ -143371,15 +143371,15 @@ const App = () => {
                 logLmpDebug(`[LMP Init] Skipped ${trainee.fullName}: no Master LMP assigned on trainee or course`);
                 return;
               }
-              const traineeUnitCode = resolveMasterLmpUnitForTrainee(trainee, lmpType, "Assign");
-              if (!hasMasterLmpUnitAccess(lmpType, traineeUnitCode, "Assign")) {
+              const traineeUnitCode = resolveMasterLmpUnitForTrainee(trainee, lmpType, "View");
+              if (!hasMasterLmpUnitAccess(lmpType, traineeUnitCode, "View")) {
                 newLMPs.delete(trainee.fullName);
                 logLmpDebug(`[LMP Init] Skipped ${trainee.fullName} ${lmpType} LMP for unauthorised unit ${traineeUnitCode || "unknown"}`);
                 return;
               }
               const alreadySet = newLMPs.has(trainee.fullName);
               if (!alreadySet) {
-                const masterLMP = getAssignableMasterLmpItemsForType(syllabusDetails, lmpType, traineeUnitCode, filterSyllabusForMasterLmpAccess);
+                const masterLMP = getAssignableMasterLmpItemsForType(syllabusDetails, lmpType, traineeUnitCode, filterSyllabusForMasterLmpAccess, "View");
                 if (masterLMP.length > 0) {
                   newLMPs.set(trainee.fullName, mergeIndividualLmpWithMaster(newLMPs.get(trainee.fullName), masterLMP));
                   logLmpDebug(`[LMP Init] ${trainee.fullName} (${trainee.course}) → ${lmpType} LMP (${masterLMP.length} events)`);
@@ -143519,13 +143519,13 @@ const App = () => {
           return;
         }
         const alreadySet = newLMPs.has(trainee.fullName);
-        const traineeUnitCode = resolveMasterLmpUnitForTrainee(trainee, lmpType, "Assign");
-        if (!hasMasterLmpUnitAccess(lmpType, traineeUnitCode, "Assign")) {
+        const traineeUnitCode = resolveMasterLmpUnitForTrainee(trainee, lmpType, "View");
+        if (!hasMasterLmpUnitAccess(lmpType, traineeUnitCode, "View")) {
           newLMPs.delete(trainee.fullName);
           return;
         }
         if (!alreadySet) {
-          const masterLMP = getAssignableMasterLmpItemsForType(syllabusDetails, lmpType, traineeUnitCode, filterSyllabusForMasterLmpAccess);
+          const masterLMP = getAssignableMasterLmpItemsForType(syllabusDetails, lmpType, traineeUnitCode, filterSyllabusForMasterLmpAccess, "View");
           if (masterLMP.length > 0) {
             newLMPs.set(trainee.fullName, mergeIndividualLmpWithMaster(newLMPs.get(trainee.fullName), masterLMP));
           } else {
@@ -149384,7 +149384,7 @@ ${"=".repeat(60)}`);
           action: "display-persisted-individual-lmp-without-master-merge"
         });
       }
-      const masterLMP = canUseMasterLmpCatalogue ? getAssignableMasterLmpItemsForType(syllabusDetails, persistedLmpType, traineeUnitCode, filterSyllabusForMasterLmpAccess) : [];
+      const masterLMP = canUseMasterLmpCatalogue ? getAssignableMasterLmpItemsForType(syllabusDetails, persistedLmpType, traineeUnitCode, filterSyllabusForMasterLmpAccess, "View") : [];
       const scopedPersistedLmp = masterLMP.length > 0 ? mergeIndividualLmpWithMaster(persistedLmp, masterLMP) : persistedLmp;
       setTraineeLMPs((prev) => {
         const updated = new Map(prev);
@@ -155200,7 +155200,7 @@ The proposed event was not scheduled. Re-open the event and choose Accept Confli
     logNeoBuildUiDebug("🚀 [NEO-Build] highestPriorityEvents:", highestPriorityEvents.length);
     const buildPublishedSchedules = buildPublishedSchedulesOverride || publishedSchedules;
     const normaliseBuildUnitCode = (value) => String(value || "").split("/")[0].trim().toUpperCase();
-    const assignableFlightSchoolBuildSyllabus = activeOperationalModel === "flight_school" ? getFlightSchoolAssignableSyllabusForActiveScope(syllabusDetails, "Assign").filter((item) => item.type !== "Academics" && item.lmpType !== "Staff CAT").filter((item) => {
+    const isTraineeAudienceFlightSchoolMasterItem = (item) => {
       const courseCode = Array.isArray(item.courses) ? item.courses.find(Boolean) : "";
       if (!courseCode) return true;
       const catalogueEntry = normaliseMasterLmpCatalogue(platformConfig).find((entry) => String(entry.code || "").trim().toUpperCase() === String(courseCode || "").trim().toUpperCase());
@@ -155210,17 +155210,19 @@ The proposed event was not scheduled. Re-open the event and choose Accept Confli
         lmpType: item.lmpType,
         catalogueAudience: catalogueEntry?.audience
       }) === "trainee";
-    }) : [];
-    const assignableFlightSchoolEventKeys = new Set(
-      assignableFlightSchoolBuildSyllabus.flatMap((item) => [item.id, item.code, item.masterEventId]).map((key) => String(key || "").replace(/\*/g, "").trim()).filter(Boolean)
+    };
+    const assignableFlightSchoolBuildSyllabus = activeOperationalModel === "flight_school" ? getFlightSchoolAssignableSyllabusForActiveScope(syllabusDetails, "Assign").filter((item) => item.type !== "Academics" && item.lmpType !== "Staff CAT").filter(isTraineeAudienceFlightSchoolMasterItem) : [];
+    const viewableFlightSchoolBuildSyllabus = activeOperationalModel === "flight_school" ? getFlightSchoolAssignableSyllabusForActiveScope(syllabusDetails, "View").filter((item) => item.type !== "Academics" && item.lmpType !== "Staff CAT").filter(isTraineeAudienceFlightSchoolMasterItem) : [];
+    const viewableFlightSchoolEventKeys = new Set(
+      viewableFlightSchoolBuildSyllabus.flatMap((item) => [item.id, item.code, item.masterEventId]).map((key) => String(key || "").replace(/\*/g, "").trim()).filter(Boolean)
     );
     const isFlightSchoolLmpOverlayItem = (item) => item.lmpSource === "remedial" || item.lmpSource === "custom" || item.isRemedial === true || String(item.id || item.code || "").includes("REM") || String(item.id || item.code || "").endsWith("-RF") || String(item.id || item.code || "").endsWith("-CUR");
     const getFlightSchoolLmpEventKeys = (item) => [item.id, item.code, item.masterEventId].map((key) => String(key || "").replace(/\*/g, "").trim()).filter(Boolean);
     const filterFlightSchoolLmpEventsForBuildScope = (events2) => {
       if (activeOperationalModel !== "flight_school") return Array.isArray(events2) ? events2 : [];
       if (!Array.isArray(events2) || events2.length === 0) return [];
-      if (assignableFlightSchoolEventKeys.size === 0) return events2;
-      return events2.filter((item) => isFlightSchoolLmpOverlayItem(item) || getFlightSchoolLmpEventKeys(item).some((key) => assignableFlightSchoolEventKeys.has(key)));
+      if (viewableFlightSchoolEventKeys.size === 0) return events2;
+      return events2.filter((item) => isFlightSchoolLmpOverlayItem(item) || getFlightSchoolLmpEventKeys(item).some((key) => viewableFlightSchoolEventKeys.has(key)));
     };
     const normaliseBuildLmpToken = (value) => String(value || "").trim().toUpperCase();
     const isBuildCourseContainerLikeLmpRow = (item, lmpType) => {
@@ -155554,17 +155556,18 @@ The proposed event was not scheduled. Re-open the event and choose Accept Confli
               lmpScopeDiag.skippedOutsideScope += 1;
               return;
             }
-            const traineeUnitCode = activeOperationalModel === "flight_school" ? resolveMasterLmpUnitForTrainee(traineeForLmp, lmp.lmpType, "Assign") : traineeForLmp?.unit || activeUnitCode;
-            if (!hasMasterLmpUnitAccess(lmp.lmpType, traineeUnitCode, "Assign")) {
-              logNeoBuildUiDebug(`[NEO-Build] Skipped ${lmp.traineeFullName} ${lmp.lmpType} LMP for unauthorised unit ${traineeUnitCode || "unknown"}`);
+            const traineeUnitCode = activeOperationalModel === "flight_school" ? resolveMasterLmpUnitForTrainee(traineeForLmp, lmp.lmpType, "View") : traineeForLmp?.unit || activeUnitCode;
+            if (!hasMasterLmpUnitAccess(lmp.lmpType, traineeUnitCode, "View")) {
+              logNeoBuildUiDebug(`[NEO-Build] Skipped ${lmp.traineeFullName} ${lmp.lmpType} LMP for unreadable unit ${traineeUnitCode || "unknown"}`);
               lmpScopeDiag.skippedNoUnitAccess += 1;
               return;
             }
             const masterLmpForBuild = activeOperationalModel === "flight_school" ? getAssignableMasterLmpItemsForType(
-              assignableFlightSchoolBuildSyllabus,
+              viewableFlightSchoolBuildSyllabus,
               lmp.lmpType,
               traineeUnitCode,
-              filterSyllabusForMasterLmpAccess
+              filterSyllabusForMasterLmpAccess,
+              "View"
             ) : [];
             const inheritedLmpEvents = activeOperationalModel === "flight_school" && masterLmpForBuild.length > 0 ? mergeIndividualLmpWithMaster(lmp.events, masterLmpForBuild) : lmp.events;
             const lmpEventsForBuild = activeOperationalModel === "flight_school" ? filterFlightSchoolLmpEventsForBuildScope(inheritedLmpEvents) : inheritedLmpEvents;
@@ -156198,7 +156201,7 @@ The proposed event was not scheduled. Re-open the event and choose Accept Confli
           after: scopedLmpEntries.length,
           activeContextUnitCodes,
           activeCourses: Array.from(activeScopedCourseNames),
-          assignableMasterEvents: assignableFlightSchoolEventKeys.size
+          viewableMasterEvents: viewableFlightSchoolEventKeys.size
         });
         buildTraineeLMPs = new Map(scopedLmpEntries);
       }

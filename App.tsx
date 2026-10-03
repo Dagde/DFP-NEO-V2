@@ -9720,12 +9720,13 @@ const getAssignableMasterLmpItemsForType = (
     syllabusItems: SyllabusItemDetail[],
     lmpType: string,
     unitCode: string | undefined,
-    filterForAccess: (items: SyllabusItemDetail[], requiredAccess: 'View' | 'Assign' | 'Manage', unitCode?: string | null) => SyllabusItemDetail[]
+    filterForAccess: (items: SyllabusItemDetail[], requiredAccess: 'View' | 'Assign' | 'Manage', unitCode?: string | null) => SyllabusItemDetail[],
+    requiredAccess: 'View' | 'Assign' | 'Manage' = 'Assign',
 ): SyllabusItemDetail[] => {
     const requestedType = String(lmpType || '').trim();
     if (!requestedType) return [];
     const requestedTypeKey = requestedType.toUpperCase();
-    return filterForAccess(syllabusItems, 'Assign', unitCode).filter(item => {
+    return filterForAccess(syllabusItems, requiredAccess, unitCode).filter(item => {
         return Array.isArray(item.courses) && item.courses.some(course => String(course || '').trim().toUpperCase() === requestedTypeKey);
     });
 };
@@ -32827,8 +32828,8 @@ const App: React.FC = () => {
                                         const traineeForLmp = data.trainees.find((candidate: any) => (
                                             candidate.fullName === lmp.traineeFullName || candidate.name === lmp.traineeFullName
                                         ));
-                                        const traineeUnitCode = resolveMasterLmpUnitForTrainee(traineeForLmp, lmp.lmpType, 'Assign');
-                                        if (!hasMasterLmpUnitAccess(lmp.lmpType, traineeUnitCode, 'Assign')) {
+                                        const traineeUnitCode = resolveMasterLmpUnitForTrainee(traineeForLmp, lmp.lmpType, 'View');
+                                        if (!hasMasterLmpUnitAccess(lmp.lmpType, traineeUnitCode, 'View')) {
                                             newLMPs.delete(lmp.traineeFullName);
                                             skipped++;
                                             return;
@@ -32846,7 +32847,7 @@ const App: React.FC = () => {
                                                 completed: isCompleted || (item as any).completed === true,
                                             };
                                         });
-                                        const masterLMP = getAssignableMasterLmpItemsForType(syllabusDetails, lmp.lmpType, traineeUnitCode, filterSyllabusForMasterLmpAccess);
+                                        const masterLMP = getAssignableMasterLmpItemsForType(syllabusDetails, lmp.lmpType, traineeUnitCode, filterSyllabusForMasterLmpAccess, 'View');
                                         const scopedEvents = masterLMP.length > 0
                                             ? mergeIndividualLmpWithMaster(hydratedEvents, masterLMP)
                                             : hydratedEvents;
@@ -32971,8 +32972,8 @@ const App: React.FC = () => {
                                         const newLMPs = new Map(prev);
                                         lmps.forEach(lmp => {
                                             const traineeForLmp = data.trainees.find((candidate: any) => candidate.fullName === lmp.traineeFullName || candidate.name === lmp.traineeFullName);
-                                            const traineeUnitCode = resolveMasterLmpUnitForTrainee(traineeForLmp, lmp.lmpType, 'Assign');
-                                            if (!hasMasterLmpUnitAccess(lmp.lmpType, traineeUnitCode, 'Assign')) {
+                                            const traineeUnitCode = resolveMasterLmpUnitForTrainee(traineeForLmp, lmp.lmpType, 'View');
+                                            if (!hasMasterLmpUnitAccess(lmp.lmpType, traineeUnitCode, 'View')) {
                                                 newLMPs.delete(lmp.traineeFullName);
                                                 logLmpDebug(`[LMP Sync] Skipped ${lmp.traineeFullName} ${lmp.lmpType} LMP for unauthorised unit ${traineeUnitCode || 'unknown'}`);
                                                 return;
@@ -32998,7 +32999,7 @@ const App: React.FC = () => {
                                                 };
                                             });
 
-                                            const masterLMP = getAssignableMasterLmpItemsForType(syllabusDetails, lmp.lmpType, traineeUnitCode, filterSyllabusForMasterLmpAccess);
+                                            const masterLMP = getAssignableMasterLmpItemsForType(syllabusDetails, lmp.lmpType, traineeUnitCode, filterSyllabusForMasterLmpAccess, 'View');
                                             const scopedLMP = masterLMP.length > 0
                                                 ? mergeIndividualLmpWithMaster(updatedLMP, masterLMP)
                                                 : updatedLMP;
@@ -33081,8 +33082,8 @@ const App: React.FC = () => {
                                 logLmpDebug(`[LMP Init] Skipped ${trainee.fullName}: no Master LMP assigned on trainee or course`);
                                 return;
                             }
-                            const traineeUnitCode = resolveMasterLmpUnitForTrainee(trainee, lmpType, 'Assign');
-                            if (!hasMasterLmpUnitAccess(lmpType, traineeUnitCode, 'Assign')) {
+                            const traineeUnitCode = resolveMasterLmpUnitForTrainee(trainee, lmpType, 'View');
+                            if (!hasMasterLmpUnitAccess(lmpType, traineeUnitCode, 'View')) {
                                 newLMPs.delete(trainee.fullName);
                                 logLmpDebug(`[LMP Init] Skipped ${trainee.fullName} ${lmpType} LMP for unauthorised unit ${traineeUnitCode || 'unknown'}`);
                                 return;
@@ -33091,7 +33092,7 @@ const App: React.FC = () => {
                             const alreadySet = newLMPs.has(trainee.fullName);
 
                             if (!alreadySet) {
-                                const masterLMP = getAssignableMasterLmpItemsForType(syllabusDetails, lmpType, traineeUnitCode, filterSyllabusForMasterLmpAccess);
+                                const masterLMP = getAssignableMasterLmpItemsForType(syllabusDetails, lmpType, traineeUnitCode, filterSyllabusForMasterLmpAccess, 'View');
                                 if (masterLMP.length > 0) {
                                     newLMPs.set(trainee.fullName, mergeIndividualLmpWithMaster(newLMPs.get(trainee.fullName), masterLMP));
                                     logLmpDebug(`[LMP Init] ${trainee.fullName} (${trainee.course}) → ${lmpType} LMP (${masterLMP.length} events)`);
@@ -33248,13 +33249,13 @@ const App: React.FC = () => {
                     return;
                 }
                 const alreadySet = newLMPs.has(trainee.fullName);
-                const traineeUnitCode = resolveMasterLmpUnitForTrainee(trainee, lmpType, 'Assign');
-                if (!hasMasterLmpUnitAccess(lmpType, traineeUnitCode, 'Assign')) {
+                const traineeUnitCode = resolveMasterLmpUnitForTrainee(trainee, lmpType, 'View');
+                if (!hasMasterLmpUnitAccess(lmpType, traineeUnitCode, 'View')) {
                     newLMPs.delete(trainee.fullName);
                     return;
                 }
                 if (!alreadySet) {
-                    const masterLMP = getAssignableMasterLmpItemsForType(syllabusDetails, lmpType, traineeUnitCode, filterSyllabusForMasterLmpAccess);
+                    const masterLMP = getAssignableMasterLmpItemsForType(syllabusDetails, lmpType, traineeUnitCode, filterSyllabusForMasterLmpAccess, 'View');
                     if (masterLMP.length > 0) {
                         newLMPs.set(trainee.fullName, mergeIndividualLmpWithMaster(newLMPs.get(trainee.fullName), masterLMP));
                     } else {
@@ -40415,7 +40416,7 @@ const App: React.FC = () => {
             }
 
             const masterLMP = canUseMasterLmpCatalogue
-                ? getAssignableMasterLmpItemsForType(syllabusDetails, persistedLmpType, traineeUnitCode, filterSyllabusForMasterLmpAccess)
+                ? getAssignableMasterLmpItemsForType(syllabusDetails, persistedLmpType, traineeUnitCode, filterSyllabusForMasterLmpAccess, 'View')
                 : [];
             const scopedPersistedLmp = masterLMP.length > 0
                 ? mergeIndividualLmpWithMaster(persistedLmp, masterLMP)
@@ -47480,25 +47481,31 @@ const App: React.FC = () => {
         logNeoBuildUiDebug('🚀 [NEO-Build] highestPriorityEvents:', highestPriorityEvents.length);
         const buildPublishedSchedules = buildPublishedSchedulesOverride || publishedSchedules;
         const normaliseBuildUnitCode = (value: unknown): string => String(value || '').split('/')[0].trim().toUpperCase();
+        const isTraineeAudienceFlightSchoolMasterItem = (item: SyllabusItemDetail): boolean => {
+            const courseCode = Array.isArray(item.courses) ? item.courses.find(Boolean) : '';
+            if (!courseCode) return true;
+            const catalogueEntry = normaliseMasterLmpCatalogue(platformConfig).find((entry) => (
+                String(entry.code || '').trim().toUpperCase() === String(courseCode || '').trim().toUpperCase()
+            ));
+            return getLmpAudienceForCourse(syllabusDetails, String(courseCode), {
+                activeTab: 'master',
+                operationalModel: 'flight_school',
+                lmpType: item.lmpType,
+                catalogueAudience: catalogueEntry?.audience,
+            }) === 'trainee';
+        };
         const assignableFlightSchoolBuildSyllabus = activeOperationalModel === 'flight_school'
             ? getFlightSchoolAssignableSyllabusForActiveScope(syllabusDetails, 'Assign')
                 .filter((item: any) => item.type !== 'Academics' && item.lmpType !== 'Staff CAT')
-                .filter((item: any) => {
-                    const courseCode = Array.isArray(item.courses) ? item.courses.find(Boolean) : '';
-                    if (!courseCode) return true;
-                    const catalogueEntry = normaliseMasterLmpCatalogue(platformConfig).find((entry) => (
-                        String(entry.code || '').trim().toUpperCase() === String(courseCode || '').trim().toUpperCase()
-                    ));
-                    return getLmpAudienceForCourse(syllabusDetails, String(courseCode), {
-                        activeTab: 'master',
-                        operationalModel: 'flight_school',
-                        lmpType: item.lmpType,
-                        catalogueAudience: catalogueEntry?.audience,
-                    }) === 'trainee';
-                })
+                .filter(isTraineeAudienceFlightSchoolMasterItem)
             : [];
-        const assignableFlightSchoolEventKeys = new Set(
-            assignableFlightSchoolBuildSyllabus
+        const viewableFlightSchoolBuildSyllabus = activeOperationalModel === 'flight_school'
+            ? getFlightSchoolAssignableSyllabusForActiveScope(syllabusDetails, 'View')
+                .filter((item: any) => item.type !== 'Academics' && item.lmpType !== 'Staff CAT')
+                .filter(isTraineeAudienceFlightSchoolMasterItem)
+            : [];
+        const viewableFlightSchoolEventKeys = new Set(
+            viewableFlightSchoolBuildSyllabus
                 .flatMap((item: any) => [item.id, item.code, item.masterEventId])
                 .map(key => String(key || '').replace(/\*/g, '').trim())
                 .filter(Boolean)
@@ -47519,10 +47526,10 @@ const App: React.FC = () => {
         const filterFlightSchoolLmpEventsForBuildScope = (events?: SyllabusItemDetail[] | null): SyllabusItemDetail[] => {
             if (activeOperationalModel !== 'flight_school') return Array.isArray(events) ? events : [];
             if (!Array.isArray(events) || events.length === 0) return [];
-            if (assignableFlightSchoolEventKeys.size === 0) return events;
+            if (viewableFlightSchoolEventKeys.size === 0) return events;
             return events.filter(item => (
                 isFlightSchoolLmpOverlayItem(item) ||
-                getFlightSchoolLmpEventKeys(item).some(key => assignableFlightSchoolEventKeys.has(key))
+                getFlightSchoolLmpEventKeys(item).some(key => viewableFlightSchoolEventKeys.has(key))
             ));
         };
         const normaliseBuildLmpToken = (value: unknown): string => String(value || '').trim().toUpperCase();
@@ -47891,19 +47898,20 @@ const App: React.FC = () => {
                             return;
                         }
                         const traineeUnitCode = activeOperationalModel === 'flight_school'
-                            ? resolveMasterLmpUnitForTrainee(traineeForLmp, lmp.lmpType, 'Assign')
+                            ? resolveMasterLmpUnitForTrainee(traineeForLmp, lmp.lmpType, 'View')
                             : traineeForLmp?.unit || activeUnitCode;
-                        if (!hasMasterLmpUnitAccess(lmp.lmpType, traineeUnitCode, 'Assign')) {
-                            logNeoBuildUiDebug(`[NEO-Build] Skipped ${lmp.traineeFullName} ${lmp.lmpType} LMP for unauthorised unit ${traineeUnitCode || 'unknown'}`);
+                        if (!hasMasterLmpUnitAccess(lmp.lmpType, traineeUnitCode, 'View')) {
+                            logNeoBuildUiDebug(`[NEO-Build] Skipped ${lmp.traineeFullName} ${lmp.lmpType} LMP for unreadable unit ${traineeUnitCode || 'unknown'}`);
                             lmpScopeDiag.skippedNoUnitAccess += 1;
                             return;
                         }
                         const masterLmpForBuild = activeOperationalModel === 'flight_school'
                             ? getAssignableMasterLmpItemsForType(
-                                assignableFlightSchoolBuildSyllabus,
+                                viewableFlightSchoolBuildSyllabus,
                                 lmp.lmpType,
                                 traineeUnitCode,
-                                filterSyllabusForMasterLmpAccess
+                                filterSyllabusForMasterLmpAccess,
+                                'View'
                               )
                             : [];
                         const inheritedLmpEvents = activeOperationalModel === 'flight_school' && masterLmpForBuild.length > 0
@@ -48632,7 +48640,7 @@ const App: React.FC = () => {
                     after: scopedLmpEntries.length,
                     activeContextUnitCodes,
                     activeCourses: Array.from(activeScopedCourseNames),
-                    assignableMasterEvents: assignableFlightSchoolEventKeys.size,
+                    viewableMasterEvents: viewableFlightSchoolEventKeys.size,
                 });
                 buildTraineeLMPs = new Map(scopedLmpEntries);
             }
