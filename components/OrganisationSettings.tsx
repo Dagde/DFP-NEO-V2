@@ -76,7 +76,7 @@ interface OrganisationSettingsProps {
 
 const createEmptyResourceSharingGroup = (index: number): ResourceSharingGroup => ({
   id: `resource-sharing-${Date.now()}-${index}`,
-  name: `Sharing Arrangement ${index}`,
+  name: '',
   selectedUnits: [],
   allocationMode: 'combined',
   desiredAllocations: {},
@@ -106,7 +106,7 @@ const getNormalisedVisibilityPolicy = (policy?: SettingsVisibilityPolicy | null)
 
 const createEmptyStaffSharingGroup = (index: number): StaffSharingGroup => ({
   id: `staff-sharing-${Date.now()}-${index}`,
-  name: `Staff Sharing Arrangement ${index}`,
+  name: '',
   selectedUnits: [],
   enabled: true,
 });
@@ -119,7 +119,7 @@ const normaliseStaffSharingGroups = (savedSettings?: OrganisationSettingsSavedSt
   if (savedGroups.length > 0) {
     return savedGroups.map((group, index) => ({
       id: group.id || `staff-sharing-${index + 1}`,
-      name: group.name || `Staff Sharing Arrangement ${index + 1}`,
+      name: group.name || '',
       selectedUnits: Array.isArray(group.selectedUnits) ? group.selectedUnits : [],
       enabled: group.enabled !== false,
     }));
@@ -136,7 +136,7 @@ const normaliseStaffSharingGroups = (savedSettings?: OrganisationSettingsSavedSt
 
   return [{
     id: 'staff-sharing-1',
-    name: 'Staff Sharing Arrangement 1',
+    name: '',
     selectedUnits: [],
     enabled: true,
   }];
@@ -150,7 +150,7 @@ const normaliseResourceSharingGroups = (savedSettings?: OrganisationSettingsSave
   if (savedGroups.length > 0) {
     return savedGroups.map((group, index) => ({
       id: group.id || `resource-sharing-${index + 1}`,
-      name: group.name || `Sharing Arrangement ${index + 1}`,
+      name: group.name || '',
       selectedUnits: Array.isArray(group.selectedUnits) ? group.selectedUnits : [],
       allocationMode: group.allocationMode || 'combined',
       desiredAllocations: group.desiredAllocations || {},
@@ -173,13 +173,24 @@ const normaliseResourceSharingGroups = (savedSettings?: OrganisationSettingsSave
 
   return [{
     id: 'resource-sharing-1',
-    name: 'Sharing Arrangement 1',
+    name: '',
     selectedUnits: [],
     allocationMode: 'combined',
     desiredAllocations: {},
     remainderUnitIndex: -1,
     enabled: true,
   }];
+};
+
+const getSharingGroupDisplayLabel = (
+  group: { name?: string; selectedUnits?: string[] },
+  fallback: string,
+): string => {
+  const name = String(group?.name || '').trim();
+  if (name) return name;
+  const selectedUnits = Array.isArray(group?.selectedUnits) ? group.selectedUnits.filter(Boolean) : [];
+  if (selectedUnits.length > 0) return `${selectedUnits.join(' + ')} units`;
+  return fallback;
 };
 
 const OrganisationSettings: React.FC<OrganisationSettingsProps> = ({ 
@@ -622,7 +633,6 @@ const OrganisationSettings: React.FC<OrganisationSettingsProps> = ({
     ));
     const newGroup = {
       ...createEmptyResourceSharingGroup(nextIndex),
-      name: seedUnits.length > 0 ? `${seedUnits.join('+')} Resource Sharing` : `Sharing Arrangement ${nextIndex}`,
       selectedUnits: seedUnits,
       desiredAllocations: seedUnits.reduce((allocations, unitCode) => ({
         ...allocations,
@@ -633,7 +643,7 @@ const OrganisationSettings: React.FC<OrganisationSettingsProps> = ({
     const updatedGroups = [...persistedResourceSharingGroups, newGroup];
     setResourceSharingGroups(updatedGroups);
     loadResourceSharingGroup(newGroup);
-    logAudit('Settings - Organisation', 'Edit', `Aircraft resource sharing arrangement ${newGroup.name} added`);
+    logAudit('Settings - Organisation', 'Edit', `Aircraft resource sharing arrangement ${getSharingGroupDisplayLabel(newGroup, `Arrangement ${nextIndex}`)} added`);
   };
 
   const handleDeleteResourceSharingGroup = () => {
@@ -1051,37 +1061,34 @@ const OrganisationSettings: React.FC<OrganisationSettingsProps> = ({
         <>
             <div className="bg-sky-500/10 rounded-lg border border-sky-500/30 p-4 mb-4">
               <div className="flex flex-col gap-3 lg:flex-row lg:items-end">
-                <div className="flex-1">
+                {visibleResourceSharingGroups.length > 1 && (
+                  <div className="flex-1">
+                    <label className="block text-[11px] font-semibold uppercase tracking-widest text-sky-200 mb-1">
+                      Choose Arrangement
+                    </label>
+                    <select
+                      value={activeResourceSharingGroupIsVisible ? activeResourceSharingGroupId : ''}
+                      onChange={(event) => handleSelectResourceSharingGroup(event.target.value)}
+                      className="w-full bg-gray-950/80 border border-sky-500/40 rounded-md py-2 px-3 text-white text-sm focus:outline-none focus:ring-2 focus:ring-sky-500"
+                    >
+                      {visibleResourceSharingGroups.map((group, index) => (
+                        <option key={group.id} value={group.id}>
+                          {getSharingGroupDisplayLabel(group, `Arrangement ${index + 1}`)}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                )}
+                <div className={visibleResourceSharingGroups.length > 1 ? 'flex-1' : 'flex-[2]'}>
                   <label className="block text-[11px] font-semibold uppercase tracking-widest text-sky-200 mb-1">
-                    Aircraft Sharing Arrangement
-                  </label>
-                  <select
-                    value={activeResourceSharingGroupIsVisible ? activeResourceSharingGroupId : ''}
-                    onChange={(event) => handleSelectResourceSharingGroup(event.target.value)}
-                    className="w-full bg-gray-950/80 border border-sky-500/40 rounded-md py-2 px-3 text-white text-sm focus:outline-none focus:ring-2 focus:ring-sky-500"
-                  >
-                    {visibleResourceSharingGroups.length === 0 && (
-                      <option value="">
-                        No matching arrangement for this unit context
-                      </option>
-                    )}
-                    {visibleResourceSharingGroups.map(group => (
-                      <option key={group.id} value={group.id}>
-                        {group.name || 'Unnamed arrangement'}{group.selectedUnits.length > 1 ? ` (${group.selectedUnits.join('+')})` : ''}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-                <div className="flex-1">
-                  <label className="block text-[11px] font-semibold uppercase tracking-widest text-sky-200 mb-1">
-                    Arrangement Name
+                    Aircraft Sharing Arrangement Name
                   </label>
                   <input
                     type="text"
                     value={activeResourceSharingGroupIsVisible ? activeResourceSharingGroup.name || '' : ''}
                     onChange={(event) => handleRenameResourceSharingGroup(event.target.value)}
                     disabled={!activeResourceSharingGroupIsVisible}
-                    placeholder="e.g. Base shared aircraft pool"
+                    placeholder={activeResourceSharingGroupIsVisible ? 'Name this sharing arrangement' : 'No arrangement for this unit context'}
                     className={`w-full rounded-md border py-2 px-3 text-sm placeholder:text-gray-600 focus:outline-none focus:ring-2 focus:ring-sky-500 ${
                       activeResourceSharingGroupIsVisible
                         ? 'bg-gray-950/80 border-sky-500/40 text-white'
@@ -1116,7 +1123,7 @@ const OrganisationSettings: React.FC<OrganisationSettingsProps> = ({
               </p>
               {visibleResourceSharingGroups.length > 1 && (
                 <div className="mt-3 grid grid-cols-1 gap-2 md:grid-cols-2">
-                  {visibleResourceSharingGroups.map(group => (
+                  {visibleResourceSharingGroups.map((group, index) => (
                     <div
                       key={group.id}
                       className={`rounded border px-3 py-2 text-xs ${
@@ -1125,7 +1132,7 @@ const OrganisationSettings: React.FC<OrganisationSettingsProps> = ({
                           : 'border-gray-700 bg-gray-900/60 text-gray-400'
                       }`}
                     >
-                      <span className="font-semibold">{group.name || 'Unnamed arrangement'}:</span>{' '}
+                      <span className="font-semibold">{getSharingGroupDisplayLabel(group, `Arrangement ${index + 1}`)}:</span>{' '}
                       {group.selectedUnits.length > 0 ? group.selectedUnits.join(', ') : 'No units selected'}
                     </div>
                   ))}

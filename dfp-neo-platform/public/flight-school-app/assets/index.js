@@ -11852,7 +11852,6 @@ const Header = ({
   const headerButtonClass = "w-[75px] h-[55px] flex items-center justify-center text-[12px] font-semibold btn-aluminium-brushed rounded-md";
   const unavailableActionClass = disabledActionClass;
   const activeContextLabel = `${activeLocation}${activeUnit ? ` - ${activeUnit}` : ""}`;
-  const activeContextFontSize = activeContextLabel.length > 15 ? 9 : activeContextLabel.length > 12 ? 10 : 12;
   const hoveredContext = contextOptions.find((option) => option.location === hoveredContextLocation) || contextOptions[0];
   const showPermissionNotice = (anchor) => {
     setPermissionNoticeRect(anchor.getBoundingClientRect());
@@ -11894,10 +11893,9 @@ const Header = ({
   reactExports.useEffect(() => {
     pushSetupTestHeaderDiag("header:render-options", {
       showContextMenu,
-      activeContextLabel,
-      activeContextFontSize
+      activeContextLabel
     });
-  }, [activeContextFontSize, activeContextLabel, activeLocation, activeUnit, contextOptions, hoveredContextLocation, showContextMenu]);
+  }, [activeContextLabel, activeLocation, activeUnit, contextOptions, hoveredContextLocation, showContextMenu]);
   reactExports.useEffect(() => {
     const handleClickOutside = (event) => {
       if (userButtonRef.current && userButtonRef.current.contains(event.target)) {
@@ -11942,19 +11940,15 @@ const Header = ({
               setShowContextMenu((prev) => !prev);
               pushSetupTestHeaderDiag("header:toggle-menu", { nextShowContextMenu: !showContextMenu });
             },
-            className: "flex h-8 w-full items-center justify-between rounded-md border border-gray-600 bg-gray-700 px-3 text-sm font-semibold text-white shadow-inner hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-sky-500",
+            className: "flex h-8 w-full items-center justify-between rounded-md border border-gray-600 bg-gray-700 px-2.5 text-white shadow-inner hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-sky-500",
             title: `${activeContextLabel}${activeModelLabel ? ` | ${activeModelLabel}` : ""}`,
             "aria-haspopup": "menu",
             "aria-expanded": showContextMenu,
             children: [
-              /* @__PURE__ */ jsxRuntimeExports.jsx(
-                "span",
-                {
-                  className: "min-w-0 flex-1 whitespace-nowrap text-center leading-none",
-                  style: { fontSize: `${activeContextFontSize}px` },
-                  children: activeContextLabel
-                }
-              ),
+              /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "flex min-w-0 flex-1 flex-col items-center justify-center leading-none", children: [
+                /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "max-w-full truncate text-[10px] font-bold", children: activeLocation || "Location" }),
+                /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "mt-0.5 max-w-full truncate text-[10px] font-semibold text-gray-300", children: activeUnit || "Unit" })
+              ] }),
               /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "ml-2 text-[10px] text-gray-300", children: "v" })
             ]
           }
@@ -102163,7 +102157,7 @@ const TraineeDatabaseTable = ({ currentUserPermission, onShowSuccess, onDataChan
 };
 const createEmptyResourceSharingGroup = (index) => ({
   id: `resource-sharing-${Date.now()}-${index}`,
-  name: `Sharing Arrangement ${index}`,
+  name: "",
   selectedUnits: [],
   allocationMode: "combined",
   desiredAllocations: {},
@@ -102185,7 +102179,7 @@ const getNormalisedVisibilityPolicy = (policy) => {
 };
 const createEmptyStaffSharingGroup = (index) => ({
   id: `staff-sharing-${Date.now()}-${index}`,
-  name: `Staff Sharing Arrangement ${index}`,
+  name: "",
   selectedUnits: [],
   enabled: true
 });
@@ -102194,7 +102188,7 @@ const normaliseStaffSharingGroups = (savedSettings) => {
   if (savedGroups.length > 0) {
     return savedGroups.map((group, index) => ({
       id: group.id || `staff-sharing-${index + 1}`,
-      name: group.name || `Staff Sharing Arrangement ${index + 1}`,
+      name: group.name || "",
       selectedUnits: Array.isArray(group.selectedUnits) ? group.selectedUnits : [],
       enabled: group.enabled !== false
     }));
@@ -102209,7 +102203,7 @@ const normaliseStaffSharingGroups = (savedSettings) => {
   }
   return [{
     id: "staff-sharing-1",
-    name: "Staff Sharing Arrangement 1",
+    name: "",
     selectedUnits: [],
     enabled: true
   }];
@@ -102219,7 +102213,7 @@ const normaliseResourceSharingGroups = (savedSettings) => {
   if (savedGroups.length > 0) {
     return savedGroups.map((group, index) => ({
       id: group.id || `resource-sharing-${index + 1}`,
-      name: group.name || `Sharing Arrangement ${index + 1}`,
+      name: group.name || "",
       selectedUnits: Array.isArray(group.selectedUnits) ? group.selectedUnits : [],
       allocationMode: group.allocationMode || "combined",
       desiredAllocations: group.desiredAllocations || {},
@@ -102240,13 +102234,20 @@ const normaliseResourceSharingGroups = (savedSettings) => {
   }
   return [{
     id: "resource-sharing-1",
-    name: "Sharing Arrangement 1",
+    name: "",
     selectedUnits: [],
     allocationMode: "combined",
     desiredAllocations: {},
     remainderUnitIndex: -1,
     enabled: true
   }];
+};
+const getSharingGroupDisplayLabel = (group, fallback) => {
+  const name = String(group?.name || "").trim();
+  if (name) return name;
+  const selectedUnits = Array.isArray(group?.selectedUnits) ? group.selectedUnits.filter(Boolean) : [];
+  if (selectedUnits.length > 0) return `${selectedUnits.join(" + ")} units`;
+  return fallback;
 };
 const OrganisationSettings = ({
   units,
@@ -102574,7 +102575,6 @@ const OrganisationSettings = ({
     const seedUnits = activeContextUnitCodes.filter((unitCode) => visibleResourceSharingUnitSet.size === 0 || visibleResourceSharingUnitSet.has(unitCode));
     const newGroup = {
       ...createEmptyResourceSharingGroup(nextIndex),
-      name: seedUnits.length > 0 ? `${seedUnits.join("+")} Resource Sharing` : `Sharing Arrangement ${nextIndex}`,
       selectedUnits: seedUnits,
       desiredAllocations: seedUnits.reduce((allocations, unitCode) => ({
         ...allocations,
@@ -102585,7 +102585,7 @@ const OrganisationSettings = ({
     const updatedGroups = [...persistedResourceSharingGroups, newGroup];
     setResourceSharingGroups(updatedGroups);
     loadResourceSharingGroup(newGroup);
-    logAudit("Settings - Organisation", "Edit", `Aircraft resource sharing arrangement ${newGroup.name} added`);
+    logAudit("Settings - Organisation", "Edit", `Aircraft resource sharing arrangement ${getSharingGroupDisplayLabel(newGroup, `Arrangement ${nextIndex}`)} added`);
   };
   const handleDeleteResourceSharingGroup = () => {
     if (resourceSharingGroups.length <= 1) return;
@@ -102911,26 +102911,20 @@ const OrganisationSettings = ({
             /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
               /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "bg-sky-500/10 rounded-lg border border-sky-500/30 p-4 mb-4", children: [
                 /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex flex-col gap-3 lg:flex-row lg:items-end", children: [
-                  /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex-1", children: [
-                    /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "block text-[11px] font-semibold uppercase tracking-widest text-sky-200 mb-1", children: "Aircraft Sharing Arrangement" }),
-                    /* @__PURE__ */ jsxRuntimeExports.jsxs(
+                  visibleResourceSharingGroups.length > 1 && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex-1", children: [
+                    /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "block text-[11px] font-semibold uppercase tracking-widest text-sky-200 mb-1", children: "Choose Arrangement" }),
+                    /* @__PURE__ */ jsxRuntimeExports.jsx(
                       "select",
                       {
                         value: activeResourceSharingGroupIsVisible ? activeResourceSharingGroupId : "",
                         onChange: (event) => handleSelectResourceSharingGroup(event.target.value),
                         className: "w-full bg-gray-950/80 border border-sky-500/40 rounded-md py-2 px-3 text-white text-sm focus:outline-none focus:ring-2 focus:ring-sky-500",
-                        children: [
-                          visibleResourceSharingGroups.length === 0 && /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "", children: "No matching arrangement for this unit context" }),
-                          visibleResourceSharingGroups.map((group) => /* @__PURE__ */ jsxRuntimeExports.jsxs("option", { value: group.id, children: [
-                            group.name || "Unnamed arrangement",
-                            group.selectedUnits.length > 1 ? ` (${group.selectedUnits.join("+")})` : ""
-                          ] }, group.id))
-                        ]
+                        children: visibleResourceSharingGroups.map((group, index) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: group.id, children: getSharingGroupDisplayLabel(group, `Arrangement ${index + 1}`) }, group.id))
                       }
                     )
                   ] }),
-                  /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex-1", children: [
-                    /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "block text-[11px] font-semibold uppercase tracking-widest text-sky-200 mb-1", children: "Arrangement Name" }),
+                  /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: visibleResourceSharingGroups.length > 1 ? "flex-1" : "flex-[2]", children: [
+                    /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "block text-[11px] font-semibold uppercase tracking-widest text-sky-200 mb-1", children: "Aircraft Sharing Arrangement Name" }),
                     /* @__PURE__ */ jsxRuntimeExports.jsx(
                       "input",
                       {
@@ -102938,7 +102932,7 @@ const OrganisationSettings = ({
                         value: activeResourceSharingGroupIsVisible ? activeResourceSharingGroup.name || "" : "",
                         onChange: (event) => handleRenameResourceSharingGroup(event.target.value),
                         disabled: !activeResourceSharingGroupIsVisible,
-                        placeholder: "e.g. Base shared aircraft pool",
+                        placeholder: activeResourceSharingGroupIsVisible ? "Name this sharing arrangement" : "No arrangement for this unit context",
                         className: `w-full rounded-md border py-2 px-3 text-sm placeholder:text-gray-600 focus:outline-none focus:ring-2 focus:ring-sky-500 ${activeResourceSharingGroupIsVisible ? "bg-gray-950/80 border-sky-500/40 text-white" : "bg-gray-900/70 border-gray-700 text-gray-500 cursor-not-allowed"}`
                       }
                     )
@@ -102966,13 +102960,13 @@ const OrganisationSettings = ({
                   ] })
                 ] }),
                 /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-3 text-xs text-gray-300", children: "Create one arrangement for each shared DFP Resource Rows setup in the organisation. The top-left Location/Unit selector only shows an arrangement at locations where at least two selected units belong. This still does not share staff or trainees unless those settings are separately enabled." }),
-                visibleResourceSharingGroups.length > 1 && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-3 grid grid-cols-1 gap-2 md:grid-cols-2", children: visibleResourceSharingGroups.map((group) => /* @__PURE__ */ jsxRuntimeExports.jsxs(
+                visibleResourceSharingGroups.length > 1 && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-3 grid grid-cols-1 gap-2 md:grid-cols-2", children: visibleResourceSharingGroups.map((group, index) => /* @__PURE__ */ jsxRuntimeExports.jsxs(
                   "div",
                   {
                     className: `rounded border px-3 py-2 text-xs ${group.id === activeResourceSharingGroupId ? "border-sky-500/50 bg-sky-500/10 text-sky-100" : "border-gray-700 bg-gray-900/60 text-gray-400"}`,
                     children: [
                       /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "font-semibold", children: [
-                        group.name || "Unnamed arrangement",
+                        getSharingGroupDisplayLabel(group, `Arrangement ${index + 1}`),
                         ":"
                       ] }),
                       " ",

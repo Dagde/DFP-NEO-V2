@@ -129,7 +129,6 @@ const Header: React.FC<HeaderProps> = ({
     const headerButtonClass = 'w-[75px] h-[55px] flex items-center justify-center text-[12px] font-semibold btn-aluminium-brushed rounded-md';
     const unavailableActionClass = disabledActionClass;
     const activeContextLabel = `${activeLocation}${activeUnit ? ` - ${activeUnit}` : ''}`;
-    const activeContextFontSize = activeContextLabel.length > 15 ? 9 : activeContextLabel.length > 12 ? 10 : 12;
     const hoveredContext = contextOptions.find(option => option.location === hoveredContextLocation) || contextOptions[0];
     const showPermissionNotice = (anchor: HTMLElement) => {
         setPermissionNoticeRect(anchor.getBoundingClientRect());
@@ -175,9 +174,8 @@ const Header: React.FC<HeaderProps> = ({
         pushSetupTestHeaderDiag('header:render-options', {
             showContextMenu,
             activeContextLabel,
-            activeContextFontSize,
         });
-    }, [activeContextFontSize, activeContextLabel, activeLocation, activeUnit, contextOptions, hoveredContextLocation, showContextMenu]);
+    }, [activeContextLabel, activeLocation, activeUnit, contextOptions, hoveredContextLocation, showContextMenu]);
 
     // Close user menu when clicking outside - must check BOTH the trigger and the portal dropdown
     useEffect(() => {
@@ -245,16 +243,14 @@ const Header: React.FC<HeaderProps> = ({
                             setShowContextMenu(prev => !prev);
                             pushSetupTestHeaderDiag('header:toggle-menu', { nextShowContextMenu: !showContextMenu });
                         }}
-                        className="flex h-8 w-full items-center justify-between rounded-md border border-gray-600 bg-gray-700 px-3 text-sm font-semibold text-white shadow-inner hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-sky-500"
+                        className="flex h-8 w-full items-center justify-between rounded-md border border-gray-600 bg-gray-700 px-2.5 text-white shadow-inner hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-sky-500"
                         title={`${activeContextLabel}${activeModelLabel ? ` | ${activeModelLabel}` : ''}`}
                         aria-haspopup="menu"
                         aria-expanded={showContextMenu}
                     >
-                        <span
-                            className="min-w-0 flex-1 whitespace-nowrap text-center leading-none"
-                            style={{ fontSize: `${activeContextFontSize}px` }}
-                        >
-                            {activeContextLabel}
+                        <span className="flex min-w-0 flex-1 flex-col items-center justify-center leading-none">
+                            <span className="max-w-full truncate text-[10px] font-bold">{activeLocation || 'Location'}</span>
+                            <span className="mt-0.5 max-w-full truncate text-[10px] font-semibold text-gray-300">{activeUnit || 'Unit'}</span>
                         </span>
                         <span className="ml-2 text-[10px] text-gray-300">v</span>
                     </button>
