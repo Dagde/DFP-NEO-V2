@@ -794,7 +794,10 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
         syllabusDetails.forEach((item) => {
             const itemType = normaliseGroundEventTypeKey((item as any)?.type);
             const lowerType = itemType.toLowerCase();
-            if (lowerType.includes('ground')) {
+            const groupEventValue = (item as any)?.groupEvent;
+            const isGroupEvent = groupEventValue === true
+                || ['yes', 'true', 'y'].includes(String(groupEventValue || '').trim().toLowerCase());
+            if (lowerType.includes('ground') || isGroupEvent) {
                 typeSet.add(itemType);
             }
         });

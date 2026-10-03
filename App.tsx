@@ -16312,6 +16312,10 @@ async function generateDfpInternal(
         if (isBuildCptTrainingEvent(item)) return { bucket: 'cpt', reason: 'CPT_TYPE_CODE_OR_DELIVERY' };
         if (eventType === 'FTD') return { bucket: 'ftd', reason: 'TYPE_FTD' };
         if (eventType === 'Ground School' || eventType === 'Ground') return { bucket: 'ground', reason: 'TYPE_GROUND' };
+        const groupEventValue = (item as any)?.groupEvent;
+        const isGroupEvent = groupEventValue === true
+            || ['yes', 'true', 'y'].includes(String(groupEventValue || '').trim().toLowerCase());
+        if (isGroupEvent) return { bucket: 'ground', reason: 'GROUP_EVENT_TYPE' };
         return { bucket: 'none', reason: 'UNSUPPORTED_EVENT_TYPE' };
     };
     const describeBuildTrainingEventForDiag = (item?: Partial<SyllabusItemDetail> | null) => {

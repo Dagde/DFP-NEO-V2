@@ -16758,7 +16758,9 @@ const SettingsView = ({
     syllabusDetails.forEach((item) => {
       const itemType = normaliseGroundEventTypeKey(item?.type);
       const lowerType = itemType.toLowerCase();
-      if (lowerType.includes("ground")) {
+      const groupEventValue = item?.groupEvent;
+      const isGroupEvent = groupEventValue === true || ["yes", "true", "y"].includes(String(groupEventValue || "").trim().toLowerCase());
+      if (lowerType.includes("ground") || isGroupEvent) {
         typeSet.add(itemType);
       }
     });
@@ -129411,6 +129413,9 @@ async function generateDfpInternal(config, setProgress, publishedSchedules) {
     if (isBuildCptTrainingEvent(item)) return { bucket: "cpt", reason: "CPT_TYPE_CODE_OR_DELIVERY" };
     if (eventType === "FTD") return { bucket: "ftd", reason: "TYPE_FTD" };
     if (eventType === "Ground School" || eventType === "Ground") return { bucket: "ground", reason: "TYPE_GROUND" };
+    const groupEventValue = item?.groupEvent;
+    const isGroupEvent = groupEventValue === true || ["yes", "true", "y"].includes(String(groupEventValue || "").trim().toLowerCase());
+    if (isGroupEvent) return { bucket: "ground", reason: "GROUP_EVENT_TYPE" };
     return { bucket: "none", reason: "UNSUPPORTED_EVENT_TYPE" };
   };
   const describeBuildTrainingEventForDiag = (item) => {
