@@ -12,8 +12,16 @@ export interface GroundEventTypeSchedulingRule {
   preferredWindows: string[];
 }
 
+export interface GroundEventSchedulingGroup extends GroundEventTypeSchedulingRule {
+  id: string;
+  name: string;
+  eventCodes: string[];
+}
+
 export interface GroundEventSchedulingSettings {
   byEventType: Record<string, GroundEventTypeSchedulingRule>;
+  groups: GroundEventSchedulingGroup[];
+  ungroupedEventCodes: string[];
 }
 
 export const GROUND_EVENT_SCHEDULING_WINDOWS: GroundEventSchedulingWindow[] = [
@@ -31,6 +39,8 @@ export const DEFAULT_GROUND_EVENT_TYPE_SCHEDULING_RULE: GroundEventTypeSchedulin
 
 export const DEFAULT_GROUND_EVENT_SCHEDULING_SETTINGS: GroundEventSchedulingSettings = {
   byEventType: {},
+  groups: [],
+  ungroupedEventCodes: [],
 };
 
 const VALID_GROUND_EVENT_SCHEDULING_MODES = new Set<GroundEventSchedulingMode>(['automatic', 'suggest', 'manual']);
@@ -39,6 +49,35 @@ const VALID_WINDOW_IDS = new Set(GROUND_EVENT_SCHEDULING_WINDOWS.map(window => w
 export const normaliseGroundEventTypeKey = (value: unknown): string => (
   String(value || 'Ground School').trim() || 'Ground School'
 );
+
+export const normaliseGroundEventCode = (value: unknown): string => (
+  String(value || '').trim().replace(/\s+/g, ' ').toUpperCase()
+);
+
+export const getGroundEventSchedulingItemCode = (item: unknown): string => {
+  const source = item && typeof item === 'object'
+    ? item as Record<string, unknown>
+    : {};
+  return normaliseGroundEventCode(
+    source.code
+    || source.eventCode
+    || source.masterEventId
+    || source.id
+    || source.eventDescription
+    || source.name
+    || source.title
+  );
+};
+
+export const makeGroundEventSchedulingGroupId = (name: unknown, index = 0): string => {
+  const base = String(name || 'ground-group')
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '')
+    || 'ground-group';
+  return `${base}-${index}`;
+};
 
 const formatDerivedGroundEventCategory = (value: string): string => {
   const trimmed = value.replace(/\s+/g, ' ').trim();
@@ -109,6 +148,26 @@ export const normaliseGroundEventSchedulingRule = (value: unknown): GroundEventT
   return { mode, preferredWindows };
 };
 
+export const normaliseGroundEventSchedulingGroup = (value: unknown, index = 0): GroundEventSchedulingGroup => {
+  const source = value && typeof value === 'object' && !Array.isArray(value)
+    ? value as Partial<GroundEventSchedulingGroup>
+    : {};
+  const name = normaliseGroundEventTypeKey(source.name || `Ground Group ${index + 1}`);
+  const rule = normaliseGroundEventSchedulingRule(source);
+  const eventCodes = Array.isArray(source.eventCodes)
+    ? Array.from(new Set(source.eventCodes.map(normaliseGroundEventCode).filter(Boolean)))
+    : [];
+  const id = String(source.id || '').trim() || makeGroundEventSchedulingGroupId(name, index);
+
+  return {
+    id,
+    name,
+    eventCodes,
+    mode: rule.mode,
+    preferredWindows: rule.preferredWindows,
+  };
+};
+
 export const normaliseGroundEventSchedulingSettings = (value: unknown): GroundEventSchedulingSettings => {
   const source = value && typeof value === 'object' && !Array.isArray(value)
     ? value as Partial<GroundEventSchedulingSettings>
@@ -121,8 +180,14 @@ export const normaliseGroundEventSchedulingSettings = (value: unknown): GroundEv
       .map(([eventType, rule]) => [normaliseGroundEventTypeKey(eventType), normaliseGroundEventSchedulingRule(rule)])
       .filter(([eventType]) => Boolean(eventType))
   );
+  const groups = Array.isArray(source.groups)
+    ? source.groups.map(normaliseGroundEventSchedulingGroup)
+    : [];
+  const ungroupedEventCodes = Array.isArray(source.ungroupedEventCodes)
+    ? Array.from(new Set(source.ungroupedEventCodes.map(normaliseGroundEventCode).filter(Boolean)))
+    : [];
 
-  return { byEventType };
+  return { byEventType, groups, ungroupedEventCodes };
 };
 
 export const getGroundEventSchedulingRuleForType = (
@@ -135,4 +200,48 @@ export const getGroundEventSchedulingRuleForType = (
     || normalisedSettings.byEventType.Ground
     || normalisedSettings.byEventType['Ground School']
     || DEFAULT_GROUND_EVENT_TYPE_SCHEDULING_RULE;
+};
+
+export const getGroundEventSchedulingGroupForItem = (
+  settings: GroundEventSchedulingSettings | undefined | null,
+  item: unknown,
+): GroundEventSchedulingGroup | null => {
+  const normalisedSettings = normaliseGroundEventSchedulingSettings(settings);
+  const eventCode = getGroundEventSchedulingItemCode(item);
+  if (!eventCode) return null;
+  if (normalisedSettings.ungroupedEventCodes.includes(eventCode)) return null;
+  return normalisedSettings.groups.find(group => group.eventCodes.includes(eventCode)) || null;
+};
+
+export const getGroundEventSchedulingRuleForItem = (
+  settings: GroundEventSchedulingSettings | undefined | null,
+  item: unknown,
+): { groupName: string; rule: GroundEventTypeSchedulingRule; explicitGroup: GroundEventSchedulingGroup | null } => {
+  const normalisedSettings = normaliseGroundEventSchedulingSettings(settings);
+  const eventCode = getGroundEventSchedulingItemCode(item);
+  if (eventCode && normalisedSettings.ungroupedEventCodes.includes(eventCode)) {
+    return {
+      groupName: deriveGroundEventSchedulingCategory(item),
+      rule: DEFAULT_GROUND_EVENT_TYPE_SCHEDULING_RULE,
+      explicitGroup: null,
+    };
+  }
+  const explicitGroup = getGroundEventSchedulingGroupForItem(settings, item);
+  if (explicitGroup) {
+    return {
+      groupName: explicitGroup.name,
+      rule: {
+        mode: explicitGroup.mode,
+        preferredWindows: explicitGroup.preferredWindows,
+      },
+      explicitGroup,
+    };
+  }
+
+  const groupName = deriveGroundEventSchedulingCategory(item);
+  return {
+    groupName,
+    rule: getGroundEventSchedulingRuleForType(normalisedSettings, groupName),
+    explicitGroup: null,
+  };
 };

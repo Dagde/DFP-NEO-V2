@@ -37,10 +37,14 @@ import {
 import {
     DEFAULT_GROUND_EVENT_SCHEDULING_SETTINGS,
     deriveGroundEventSchedulingCategory,
+    getGroundEventSchedulingItemCode,
     getGroundEventSchedulingRuleForType,
     GROUND_EVENT_SCHEDULING_WINDOWS,
+    makeGroundEventSchedulingGroupId,
+    normaliseGroundEventSchedulingGroup,
     normaliseGroundEventSchedulingSettings,
     normaliseGroundEventTypeKey,
+    type GroundEventSchedulingGroup,
     type GroundEventSchedulingMode,
     type GroundEventSchedulingSettings,
 } from '../utils/groundEventSchedulingSettings';
@@ -790,9 +794,8 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
             .sort(safeNameSort);
     }, [masterCurrencies, currencyRequirements]);
 
-    const groundEventTypeOptions = useMemo(() => {
-        const typeSet = new Set<string>();
-        const lmpCategorySet = new Set<string>();
+    const availableGroundEventSchedulingEvents = useMemo(() => {
+        const eventMap = new Map<string, { code: string; label: string; category: string }>();
         syllabusDetails.forEach((item) => {
             const itemType = normaliseGroundEventTypeKey((item as any)?.type);
             const lowerType = itemType.toLowerCase();
@@ -800,20 +803,56 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
             const isGroupEvent = groupEventValue === true
                 || ['yes', 'true', 'y'].includes(String(groupEventValue || '').trim().toLowerCase());
             if (lowerType.includes('ground') || isGroupEvent) {
-                lmpCategorySet.add(deriveGroundEventSchedulingCategory(item));
+                const code = getGroundEventSchedulingItemCode(item);
+                if (!code) return;
+                eventMap.set(code, {
+                    code,
+                    label: String((item as any)?.code || (item as any)?.eventDescription || (item as any)?.id || code).trim() || code,
+                    category: deriveGroundEventSchedulingCategory(item),
+                });
             }
         });
-        lmpCategorySet.forEach((category) => typeSet.add(category));
-        Object.keys(resolvedGroundEventSchedulingSettings.byEventType || {}).forEach((eventType) => {
-            const savedKey = normaliseGroundEventTypeKey(eventType);
-            const isLegacyGenericGroundKey = ['Ground', 'Ground School'].includes(savedKey);
-            if (lmpCategorySet.size === 0 || !isLegacyGenericGroundKey) {
-                typeSet.add(savedKey);
+        return Array.from(eventMap.values()).sort((a, b) => (
+            a.category.localeCompare(b.category, undefined, { numeric: true, sensitivity: 'base' })
+            || a.label.localeCompare(b.label, undefined, { numeric: true, sensitivity: 'base' })
+        ));
+    }, [syllabusDetails]);
+
+    const materialiseGroundEventSchedulingSettings = (settings: GroundEventSchedulingSettings): GroundEventSchedulingSettings => {
+        const normalised = normaliseGroundEventSchedulingSettings(settings);
+        const groups: GroundEventSchedulingGroup[] = normalised.groups.map((group, index) => ({
+            ...normaliseGroundEventSchedulingGroup(group, index),
+            eventCodes: Array.from(new Set(group.eventCodes.filter(Boolean))),
+        }));
+        const assignedCodes = new Set(groups.flatMap(group => group.eventCodes));
+        const ungroupedCodes = new Set(normalised.ungroupedEventCodes);
+        const autoGroups = new Map<string, GroundEventSchedulingGroup>();
+
+        availableGroundEventSchedulingEvents.forEach((event) => {
+            if (assignedCodes.has(event.code) || ungroupedCodes.has(event.code)) return;
+            if (!autoGroups.has(event.category)) {
+                const legacyRule = getGroundEventSchedulingRuleForType(normalised, event.category);
+                autoGroups.set(event.category, {
+                    id: `auto-${makeGroundEventSchedulingGroupId(event.category, autoGroups.size)}`,
+                    name: event.category,
+                    eventCodes: [],
+                    mode: legacyRule.mode,
+                    preferredWindows: legacyRule.preferredWindows,
+                });
             }
+            autoGroups.get(event.category)!.eventCodes.push(event.code);
         });
-        if (typeSet.size === 0) typeSet.add('Ground');
-        return Array.from(typeSet).sort((a, b) => a.localeCompare(b, undefined, { numeric: true, sensitivity: 'base' }));
-    }, [resolvedGroundEventSchedulingSettings, syllabusDetails]);
+
+        return normaliseGroundEventSchedulingSettings({
+            ...normalised,
+            groups: [...groups, ...Array.from(autoGroups.values())],
+            ungroupedEventCodes: Array.from(ungroupedCodes),
+        });
+    };
+
+    const displayedGroundEventSchedulingGroups = useMemo(() => (
+        materialiseGroundEventSchedulingSettings(displayedGroundEventSchedulingSettings).groups
+    ), [displayedGroundEventSchedulingSettings, availableGroundEventSchedulingEvents]);
 
     // --- EFFECTS ---
     useEffect(() => {
@@ -987,44 +1026,109 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
     };
 
     const handleEditGroundEventScheduling = () => {
-        setTempGroundEventSchedulingSettings(resolvedGroundEventSchedulingSettings);
+        setTempGroundEventSchedulingSettings(materialiseGroundEventSchedulingSettings(resolvedGroundEventSchedulingSettings));
         setIsEditingGroundEventScheduling(true);
     };
 
-    const updateGroundEventSchedulingRule = (
-        eventType: string,
-        updates: Partial<{ mode: GroundEventSchedulingMode; preferredWindows: string[] }>
+    const updateGroundEventSchedulingGroup = (
+        groupId: string,
+        updates: Partial<GroundEventSchedulingGroup>
     ) => {
         if (!canEditGroundEventScheduling) return;
-        const key = normaliseGroundEventTypeKey(eventType);
         setTempGroundEventSchedulingSettings((current) => {
-            const normalised = normaliseGroundEventSchedulingSettings(current);
-            const existingRule = getGroundEventSchedulingRuleForType(normalised, key);
-            return normaliseGroundEventSchedulingSettings({
+            const normalised = materialiseGroundEventSchedulingSettings(current);
+            return materialiseGroundEventSchedulingSettings({
                 ...normalised,
-                byEventType: {
-                    ...normalised.byEventType,
-                    [key]: {
-                        ...existingRule,
-                        ...updates,
-                    },
-                },
+                groups: normalised.groups.map(group => (
+                    group.id === groupId
+                        ? {
+                            ...group,
+                            ...updates,
+                            name: updates.name !== undefined ? normaliseGroundEventTypeKey(updates.name) : group.name,
+                        }
+                        : group
+                )),
             });
         });
     };
 
-    const handleGroundEventWindowToggle = (eventType: string, windowId: string, checked: boolean) => {
-        const key = normaliseGroundEventTypeKey(eventType);
-        const existingRule = getGroundEventSchedulingRuleForType(tempGroundEventSchedulingSettings, key);
+    const handleGroundEventWindowToggle = (group: GroundEventSchedulingGroup, windowId: string, checked: boolean) => {
         const nextWindows = checked
-            ? Array.from(new Set([...existingRule.preferredWindows, windowId]))
-            : existingRule.preferredWindows.filter(id => id !== windowId);
-        updateGroundEventSchedulingRule(key, { preferredWindows: nextWindows });
+            ? Array.from(new Set([...group.preferredWindows, windowId]))
+            : group.preferredWindows.filter(id => id !== windowId);
+        updateGroundEventSchedulingGroup(group.id, { preferredWindows: nextWindows });
+    };
+
+    const handleGroundEventGroupEventToggle = (groupId: string, eventCode: string, checked: boolean) => {
+        if (!canEditGroundEventScheduling) return;
+        setTempGroundEventSchedulingSettings((current) => {
+            const normalised = materialiseGroundEventSchedulingSettings(current);
+            const nextUngrouped = new Set(normalised.ungroupedEventCodes);
+            const nextGroups = normalised.groups.map(group => {
+                const nextCodes = new Set(group.eventCodes);
+                if (group.id === groupId) {
+                    if (checked) {
+                        nextCodes.add(eventCode);
+                        nextUngrouped.delete(eventCode);
+                    } else {
+                        nextCodes.delete(eventCode);
+                        nextUngrouped.add(eventCode);
+                    }
+                } else if (checked) {
+                    nextCodes.delete(eventCode);
+                }
+                return {
+                    ...group,
+                    eventCodes: Array.from(nextCodes),
+                };
+            });
+            return materialiseGroundEventSchedulingSettings({
+                ...normalised,
+                groups: nextGroups,
+                ungroupedEventCodes: Array.from(nextUngrouped),
+            });
+        });
+    };
+
+    const handleAddGroundEventGroup = () => {
+        if (!canEditGroundEventScheduling) return;
+        setTempGroundEventSchedulingSettings((current) => {
+            const normalised = materialiseGroundEventSchedulingSettings(current);
+            const nextIndex = normalised.groups.length + 1;
+            return materialiseGroundEventSchedulingSettings({
+                ...normalised,
+                groups: [
+                    ...normalised.groups,
+                    {
+                        id: `custom-${makeGroundEventSchedulingGroupId(`Ground Group ${nextIndex}`, nextIndex)}`,
+                        name: `Ground Group ${nextIndex}`,
+                        eventCodes: [],
+                        mode: 'manual',
+                        preferredWindows: [],
+                    },
+                ],
+            });
+        });
+    };
+
+    const handleDeleteGroundEventGroup = (group: GroundEventSchedulingGroup) => {
+        if (!canEditGroundEventScheduling) return;
+        setTempGroundEventSchedulingSettings((current) => {
+            const normalised = materialiseGroundEventSchedulingSettings(current);
+            return materialiseGroundEventSchedulingSettings({
+                ...normalised,
+                groups: normalised.groups.filter(existing => existing.id !== group.id),
+                ungroupedEventCodes: Array.from(new Set([
+                    ...normalised.ungroupedEventCodes,
+                    ...group.eventCodes,
+                ])),
+            });
+        });
     };
 
     const handleSaveGroundEventScheduling = () => {
         if (!onUpdateGroundEventSchedulingSettings) return;
-        const savedSettings = normaliseGroundEventSchedulingSettings(tempGroundEventSchedulingSettings);
+        const savedSettings = materialiseGroundEventSchedulingSettings(tempGroundEventSchedulingSettings);
         onUpdateGroundEventSchedulingSettings(savedSettings);
         setIsEditingGroundEventScheduling(false);
         onShowSuccess('Ground event scheduling rules updated');
@@ -1032,15 +1136,14 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
             page: 'Settings - Ground Event Scheduling',
             action: 'update',
             description: 'Updated ground event scheduling settings',
-            changes: groundEventTypeOptions.map((eventType) => {
-                const rule = getGroundEventSchedulingRuleForType(savedSettings, eventType);
-                return `${eventType}: ${rule.mode}; windows: ${rule.preferredWindows.length ? rule.preferredWindows.join(', ') : 'any'}`;
+            changes: savedSettings.groups.map((group) => {
+                return `${group.name}: ${group.mode}; windows: ${group.preferredWindows.length ? group.preferredWindows.join(', ') : 'any'}; events: ${group.eventCodes.join(', ') || 'none'}`;
             }).join(' | '),
         });
     };
 
     const handleCancelGroundEventScheduling = () => {
-        setTempGroundEventSchedulingSettings(resolvedGroundEventSchedulingSettings);
+        setTempGroundEventSchedulingSettings(materialiseGroundEventSchedulingSettings(resolvedGroundEventSchedulingSettings));
         setIsEditingGroundEventScheduling(false);
     };
 
@@ -1575,29 +1678,44 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                         </div>
                         <div className="space-y-4 p-4">
                             <div className="rounded-md border border-sky-500/30 bg-sky-500/10 p-3 text-xs leading-relaxed text-sky-100">
-                                Categories are recognised from the LMP event code/name. Automatic schedules eligible group ground events before individual events. Alert/Suggest asks the scheduler to accept or skip each eligible group event during NEO Build. Preferred windows guide placement when a group event can be placed in more than one valid slot.
+                                Groups are auto-created from the LMP event code/name. Edit the groups below to rename them, move events between groups, or leave events unassigned.
                             </div>
-                            {groundEventTypeOptions.map((eventType) => {
-                                const rule = getGroundEventSchedulingRuleForType(displayedGroundEventSchedulingSettings, eventType);
+                            {isEditingGroundEventScheduling && (
+                                <div className="flex justify-end">
+                                    <button onClick={handleAddGroundEventGroup} className="rounded-md border border-sky-500/50 bg-sky-500/15 px-3 py-2 text-xs font-semibold text-sky-100 hover:border-sky-400">
+                                        Add Group
+                                    </button>
+                                </div>
+                            )}
+                            {displayedGroundEventSchedulingGroups.map((group) => {
+                                const assignedEvents = availableGroundEventSchedulingEvents.filter(event => group.eventCodes.includes(event.code));
                                 return (
-                                    <div key={eventType} className="rounded-lg border border-gray-700 bg-gray-900/50 p-4">
-                                        <div className="grid gap-4 lg:grid-cols-[220px_minmax(260px,1fr)]">
+                                    <div key={group.id} className="rounded-lg border border-gray-700 bg-gray-900/50 p-4">
+                                        <div className="grid gap-4 lg:grid-cols-[260px_minmax(260px,1fr)_auto]">
                                             <div>
                                                 <label className="mb-2 block text-[11px] font-bold uppercase tracking-widest text-sky-300">
-                                                    Ground Event Category
+                                                    Ground Event Group
                                                 </label>
-                                                <div className="rounded-md border border-gray-700 bg-gray-950/70 px-3 py-2 text-sm font-semibold text-white">
-                                                    {eventType}
-                                                </div>
+                                                {canEditGroundEventScheduling ? (
+                                                    <input
+                                                        value={group.name}
+                                                        onChange={(event) => updateGroundEventSchedulingGroup(group.id, { name: event.target.value })}
+                                                        className="w-full rounded-md border border-gray-600 bg-gray-950 px-3 py-2 text-sm font-semibold text-white focus:border-sky-500 focus:ring-1 focus:ring-sky-500"
+                                                    />
+                                                ) : (
+                                                    <div className="rounded-md border border-gray-700 bg-gray-950/70 px-3 py-2 text-sm font-semibold text-white">
+                                                        {group.name}
+                                                    </div>
+                                                )}
                                             </div>
                                             <div>
                                                 <label className="mb-2 block text-[11px] font-bold uppercase tracking-widest text-sky-300">
                                                     Scheduling Action
                                                 </label>
                                                 <select
-                                                    value={rule.mode}
+                                                    value={group.mode}
                                                     disabled={!canEditGroundEventScheduling}
-                                                    onChange={(event) => updateGroundEventSchedulingRule(eventType, { mode: event.target.value as GroundEventSchedulingMode })}
+                                                    onChange={(event) => updateGroundEventSchedulingGroup(group.id, { mode: event.target.value as GroundEventSchedulingMode })}
                                                     className={`w-full rounded-md border px-3 py-2 text-sm font-semibold focus:border-sky-500 focus:ring-1 focus:ring-sky-500 ${
                                                         canEditGroundEventScheduling
                                                             ? 'border-gray-600 bg-gray-950 text-white'
@@ -1608,6 +1726,16 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                                                     <option value="suggest">Alert / Suggest</option>
                                                     <option value="automatic">Automatic</option>
                                                 </select>
+                                            </div>
+                                            <div className="flex items-end justify-end">
+                                                {canEditGroundEventScheduling && (
+                                                    <button
+                                                        onClick={() => handleDeleteGroundEventGroup(group)}
+                                                        className="rounded-md border border-red-500/50 bg-red-500/10 px-3 py-2 text-xs font-semibold text-red-100 hover:border-red-400"
+                                                    >
+                                                        Delete
+                                                    </button>
+                                                )}
                                             </div>
                                         </div>
                                         <div className="mt-4">
@@ -1626,9 +1754,9 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                                                     >
                                                         <input
                                                             type="checkbox"
-                                                            checked={rule.preferredWindows.includes(windowOption.id)}
+                                                            checked={group.preferredWindows.includes(windowOption.id)}
                                                             disabled={!canEditGroundEventScheduling}
-                                                            onChange={(event) => handleGroundEventWindowToggle(eventType, windowOption.id, event.target.checked)}
+                                                            onChange={(event) => handleGroundEventWindowToggle(group, windowOption.id, event.target.checked)}
                                                             className="h-4 w-4 rounded border-gray-600 bg-gray-700 text-sky-500 focus:ring-sky-500 disabled:cursor-not-allowed disabled:opacity-60"
                                                         />
                                                         {windowOption.label}
@@ -1639,9 +1767,59 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                                                 Leave all windows unticked to allow any valid time inside the build day.
                                             </p>
                                         </div>
+                                        <div className="mt-4">
+                                            <label className="mb-2 block text-[11px] font-bold uppercase tracking-widest text-sky-300">
+                                                Assigned Ground Events
+                                            </label>
+                                            {canEditGroundEventScheduling ? (
+                                                <div className="max-h-44 overflow-y-auto rounded-md border border-gray-700 bg-gray-950/50 p-2">
+                                                    <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
+                                                        {availableGroundEventSchedulingEvents.map((eventOption) => {
+                                                            const checked = group.eventCodes.includes(eventOption.code);
+                                                            return (
+                                                                <label
+                                                                    key={eventOption.code}
+                                                                    className={`flex items-start gap-2 rounded-md border px-2 py-2 text-xs ${
+                                                                        checked
+                                                                            ? 'border-sky-500/60 bg-sky-500/10 text-sky-50'
+                                                                            : 'border-gray-700 bg-gray-900 text-gray-300'
+                                                                    }`}
+                                                                >
+                                                                    <input
+                                                                        type="checkbox"
+                                                                        checked={checked}
+                                                                        onChange={(event) => handleGroundEventGroupEventToggle(group.id, eventOption.code, event.target.checked)}
+                                                                        className="mt-0.5 h-4 w-4 rounded border-gray-600 bg-gray-700 text-sky-500 focus:ring-sky-500"
+                                                                    />
+                                                                    <span>
+                                                                        <span className="block font-semibold">{eventOption.label}</span>
+                                                                        <span className="block text-[10px] uppercase tracking-wide text-gray-500">{eventOption.category}</span>
+                                                                    </span>
+                                                                </label>
+                                                            );
+                                                        })}
+                                                    </div>
+                                                </div>
+                                            ) : (
+                                                <div className="flex flex-wrap gap-2 rounded-md border border-gray-700 bg-gray-950/50 p-2">
+                                                    {assignedEvents.length > 0 ? assignedEvents.map((eventOption) => (
+                                                        <span key={eventOption.code} className="rounded border border-gray-600 bg-gray-800 px-2 py-1 text-xs font-semibold text-gray-100">
+                                                            {eventOption.label}
+                                                        </span>
+                                                    )) : (
+                                                        <span className="text-xs italic text-gray-500">No events assigned</span>
+                                                    )}
+                                                </div>
+                                            )}
+                                        </div>
                                     </div>
                                 );
                             })}
+                            {displayedGroundEventSchedulingGroups.length === 0 && (
+                                <div className="rounded-md border border-gray-700 bg-gray-900/50 p-4 text-sm text-gray-400">
+                                    No ground events are available from the current LMP data.
+                                </div>
+                            )}
                         </div>
                     </div>
 

@@ -199,11 +199,9 @@ import {
 import { DEFAULT_DISPATCH_RATE_WINDOW_MINUTES, normaliseDispatchRateWindowMinutes } from './utils/dispatchRate';
 import {
     DEFAULT_GROUND_EVENT_SCHEDULING_SETTINGS,
-    deriveGroundEventSchedulingCategory,
-    getGroundEventSchedulingRuleForType,
+    getGroundEventSchedulingRuleForItem,
     GROUND_EVENT_SCHEDULING_WINDOWS,
     normaliseGroundEventSchedulingSettings,
-    normaliseGroundEventTypeKey,
     type GroundEventSchedulingSettings,
 } from './utils/groundEventSchedulingSettings';
 import { getStaffUnavailabilityStatus } from './utils/fixedCrewAvailability';
@@ -19953,8 +19951,9 @@ const applyCoursePriority = (rankedList: Trainee[], diagnosticLabel = 'unlabelle
             if (!next || classifyBuildTrainingEvent(next).bucket !== 'ground') continue;
             if (!isLmpGroupEventEnabled((next as any).groupEvent)) continue;
 
-            const eventType = deriveGroundEventSchedulingCategory(next);
-            const rule = getGroundEventSchedulingRuleForType(buildGroundEventSchedulingSettings, eventType);
+            const schedulingGroup = getGroundEventSchedulingRuleForItem(buildGroundEventSchedulingSettings, next);
+            const eventType = schedulingGroup.groupName;
+            const rule = schedulingGroup.rule;
             if (rule.mode === 'manual') {
                 if (neoBuildDiag.groupGroundScheduling.skips.length < 220) {
                     neoBuildDiag.groupGroundScheduling.skips.push({
@@ -19963,6 +19962,7 @@ const applyCoursePriority = (rankedList: Trainee[], diagnosticLabel = 'unlabelle
                         course: trainee.course,
                         event: next.code || next.id || null,
                         eventType,
+                        explicitGroup: Boolean(schedulingGroup.explicitGroup),
                     });
                 }
                 continue;

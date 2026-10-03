@@ -3190,11 +3190,24 @@ const DEFAULT_GROUND_EVENT_TYPE_SCHEDULING_RULE = {
   preferredWindows: []
 };
 const DEFAULT_GROUND_EVENT_SCHEDULING_SETTINGS = {
-  byEventType: {}
+  byEventType: {},
+  groups: [],
+  ungroupedEventCodes: []
 };
 const VALID_GROUND_EVENT_SCHEDULING_MODES = /* @__PURE__ */ new Set(["automatic", "suggest", "manual"]);
 const VALID_WINDOW_IDS = new Set(GROUND_EVENT_SCHEDULING_WINDOWS.map((window2) => window2.id));
 const normaliseGroundEventTypeKey = (value) => String(value || "Ground School").trim() || "Ground School";
+const normaliseGroundEventCode = (value) => String(value || "").trim().replace(/\s+/g, " ").toUpperCase();
+const getGroundEventSchedulingItemCode = (item) => {
+  const source = item && typeof item === "object" ? item : {};
+  return normaliseGroundEventCode(
+    source.code || source.eventCode || source.masterEventId || source.id || source.eventDescription || source.name || source.title
+  );
+};
+const makeGroundEventSchedulingGroupId = (name, index = 0) => {
+  const base = String(name || "ground-group").trim().toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "") || "ground-group";
+  return `${base}-${index}`;
+};
 const formatDerivedGroundEventCategory = (value) => {
   const trimmed = value.replace(/\s+/g, " ").trim();
   if (!trimmed) return "Ground";
@@ -3229,18 +3242,69 @@ const normaliseGroundEventSchedulingRule = (value) => {
   const preferredWindows = Array.isArray(source.preferredWindows) ? Array.from(new Set(source.preferredWindows.map((windowId) => String(windowId || "").trim()).filter((windowId) => VALID_WINDOW_IDS.has(windowId)))) : [];
   return { mode, preferredWindows };
 };
+const normaliseGroundEventSchedulingGroup = (value, index = 0) => {
+  const source = value && typeof value === "object" && !Array.isArray(value) ? value : {};
+  const name = normaliseGroundEventTypeKey(source.name || `Ground Group ${index + 1}`);
+  const rule = normaliseGroundEventSchedulingRule(source);
+  const eventCodes = Array.isArray(source.eventCodes) ? Array.from(new Set(source.eventCodes.map(normaliseGroundEventCode).filter(Boolean))) : [];
+  const id = String(source.id || "").trim() || makeGroundEventSchedulingGroupId(name, index);
+  return {
+    id,
+    name,
+    eventCodes,
+    mode: rule.mode,
+    preferredWindows: rule.preferredWindows
+  };
+};
 const normaliseGroundEventSchedulingSettings = (value) => {
   const source = value && typeof value === "object" && !Array.isArray(value) ? value : {};
   const byEventTypeSource = source.byEventType && typeof source.byEventType === "object" && !Array.isArray(source.byEventType) ? source.byEventType : {};
   const byEventType = Object.fromEntries(
     Object.entries(byEventTypeSource).map(([eventType, rule]) => [normaliseGroundEventTypeKey(eventType), normaliseGroundEventSchedulingRule(rule)]).filter(([eventType]) => Boolean(eventType))
   );
-  return { byEventType };
+  const groups = Array.isArray(source.groups) ? source.groups.map(normaliseGroundEventSchedulingGroup) : [];
+  const ungroupedEventCodes = Array.isArray(source.ungroupedEventCodes) ? Array.from(new Set(source.ungroupedEventCodes.map(normaliseGroundEventCode).filter(Boolean))) : [];
+  return { byEventType, groups, ungroupedEventCodes };
 };
 const getGroundEventSchedulingRuleForType = (settings, eventType) => {
   const normalisedSettings = normaliseGroundEventSchedulingSettings(settings);
   const eventTypeKey = normaliseGroundEventTypeKey(eventType);
   return normalisedSettings.byEventType[eventTypeKey] || normalisedSettings.byEventType.Ground || normalisedSettings.byEventType["Ground School"] || DEFAULT_GROUND_EVENT_TYPE_SCHEDULING_RULE;
+};
+const getGroundEventSchedulingGroupForItem = (settings, item) => {
+  const normalisedSettings = normaliseGroundEventSchedulingSettings(settings);
+  const eventCode2 = getGroundEventSchedulingItemCode(item);
+  if (!eventCode2) return null;
+  if (normalisedSettings.ungroupedEventCodes.includes(eventCode2)) return null;
+  return normalisedSettings.groups.find((group) => group.eventCodes.includes(eventCode2)) || null;
+};
+const getGroundEventSchedulingRuleForItem = (settings, item) => {
+  const normalisedSettings = normaliseGroundEventSchedulingSettings(settings);
+  const eventCode2 = getGroundEventSchedulingItemCode(item);
+  if (eventCode2 && normalisedSettings.ungroupedEventCodes.includes(eventCode2)) {
+    return {
+      groupName: deriveGroundEventSchedulingCategory(item),
+      rule: DEFAULT_GROUND_EVENT_TYPE_SCHEDULING_RULE,
+      explicitGroup: null
+    };
+  }
+  const explicitGroup = getGroundEventSchedulingGroupForItem(settings, item);
+  if (explicitGroup) {
+    return {
+      groupName: explicitGroup.name,
+      rule: {
+        mode: explicitGroup.mode,
+        preferredWindows: explicitGroup.preferredWindows
+      },
+      explicitGroup
+    };
+  }
+  const groupName = deriveGroundEventSchedulingCategory(item);
+  return {
+    groupName,
+    rule: getGroundEventSchedulingRuleForType(normalisedSettings, groupName),
+    explicitGroup: null
+  };
 };
 const DEG_TO_RAD = Math.PI / 180;
 const RAD_TO_DEG = 180 / Math.PI;
@@ -16781,29 +16845,55 @@ const SettingsView = ({
   const visibleCurrencies = reactExports.useMemo(() => {
     return [...masterCurrencies, ...currencyRequirements].filter((c) => c.isVisible).sort(safeNameSort);
   }, [masterCurrencies, currencyRequirements]);
-  const groundEventTypeOptions = reactExports.useMemo(() => {
-    const typeSet = /* @__PURE__ */ new Set();
-    const lmpCategorySet = /* @__PURE__ */ new Set();
+  const availableGroundEventSchedulingEvents = reactExports.useMemo(() => {
+    const eventMap = /* @__PURE__ */ new Map();
     syllabusDetails.forEach((item) => {
       const itemType = normaliseGroundEventTypeKey(item?.type);
       const lowerType = itemType.toLowerCase();
       const groupEventValue = item?.groupEvent;
       const isGroupEvent = groupEventValue === true || ["yes", "true", "y"].includes(String(groupEventValue || "").trim().toLowerCase());
       if (lowerType.includes("ground") || isGroupEvent) {
-        lmpCategorySet.add(deriveGroundEventSchedulingCategory(item));
+        const code = getGroundEventSchedulingItemCode(item);
+        if (!code) return;
+        eventMap.set(code, {
+          code,
+          label: String(item?.code || item?.eventDescription || item?.id || code).trim() || code,
+          category: deriveGroundEventSchedulingCategory(item)
+        });
       }
     });
-    lmpCategorySet.forEach((category) => typeSet.add(category));
-    Object.keys(resolvedGroundEventSchedulingSettings.byEventType || {}).forEach((eventType) => {
-      const savedKey = normaliseGroundEventTypeKey(eventType);
-      const isLegacyGenericGroundKey = ["Ground", "Ground School"].includes(savedKey);
-      if (lmpCategorySet.size === 0 || !isLegacyGenericGroundKey) {
-        typeSet.add(savedKey);
+    return Array.from(eventMap.values()).sort((a, b) => a.category.localeCompare(b.category, void 0, { numeric: true, sensitivity: "base" }) || a.label.localeCompare(b.label, void 0, { numeric: true, sensitivity: "base" }));
+  }, [syllabusDetails]);
+  const materialiseGroundEventSchedulingSettings = (settings) => {
+    const normalised = normaliseGroundEventSchedulingSettings(settings);
+    const groups = normalised.groups.map((group, index) => ({
+      ...normaliseGroundEventSchedulingGroup(group, index),
+      eventCodes: Array.from(new Set(group.eventCodes.filter(Boolean)))
+    }));
+    const assignedCodes = new Set(groups.flatMap((group) => group.eventCodes));
+    const ungroupedCodes = new Set(normalised.ungroupedEventCodes);
+    const autoGroups = /* @__PURE__ */ new Map();
+    availableGroundEventSchedulingEvents.forEach((event) => {
+      if (assignedCodes.has(event.code) || ungroupedCodes.has(event.code)) return;
+      if (!autoGroups.has(event.category)) {
+        const legacyRule = getGroundEventSchedulingRuleForType(normalised, event.category);
+        autoGroups.set(event.category, {
+          id: `auto-${makeGroundEventSchedulingGroupId(event.category, autoGroups.size)}`,
+          name: event.category,
+          eventCodes: [],
+          mode: legacyRule.mode,
+          preferredWindows: legacyRule.preferredWindows
+        });
       }
+      autoGroups.get(event.category).eventCodes.push(event.code);
     });
-    if (typeSet.size === 0) typeSet.add("Ground");
-    return Array.from(typeSet).sort((a, b) => a.localeCompare(b, void 0, { numeric: true, sensitivity: "base" }));
-  }, [resolvedGroundEventSchedulingSettings, syllabusDetails]);
+    return normaliseGroundEventSchedulingSettings({
+      ...normalised,
+      groups: [...groups, ...Array.from(autoGroups.values())],
+      ungroupedEventCodes: Array.from(ungroupedCodes)
+    });
+  };
+  const displayedGroundEventSchedulingGroups = reactExports.useMemo(() => materialiseGroundEventSchedulingSettings(displayedGroundEventSchedulingSettings).groups, [displayedGroundEventSchedulingSettings, availableGroundEventSchedulingEvents]);
   reactExports.useEffect(() => {
     if (activeSection && activeSection !== "data-loaders") return;
     const initAndFetch = async () => {
@@ -16948,36 +17038,94 @@ const SettingsView = ({
     setIsEditingBusinessRules(false);
   };
   const handleEditGroundEventScheduling = () => {
-    setTempGroundEventSchedulingSettings(resolvedGroundEventSchedulingSettings);
+    setTempGroundEventSchedulingSettings(materialiseGroundEventSchedulingSettings(resolvedGroundEventSchedulingSettings));
     setIsEditingGroundEventScheduling(true);
   };
-  const updateGroundEventSchedulingRule = (eventType, updates) => {
+  const updateGroundEventSchedulingGroup = (groupId, updates) => {
     if (!canEditGroundEventScheduling) return;
-    const key = normaliseGroundEventTypeKey(eventType);
     setTempGroundEventSchedulingSettings((current) => {
-      const normalised = normaliseGroundEventSchedulingSettings(current);
-      const existingRule = getGroundEventSchedulingRuleForType(normalised, key);
-      return normaliseGroundEventSchedulingSettings({
+      const normalised = materialiseGroundEventSchedulingSettings(current);
+      return materialiseGroundEventSchedulingSettings({
         ...normalised,
-        byEventType: {
-          ...normalised.byEventType,
-          [key]: {
-            ...existingRule,
-            ...updates
-          }
-        }
+        groups: normalised.groups.map((group) => group.id === groupId ? {
+          ...group,
+          ...updates,
+          name: updates.name !== void 0 ? normaliseGroundEventTypeKey(updates.name) : group.name
+        } : group)
       });
     });
   };
-  const handleGroundEventWindowToggle = (eventType, windowId, checked) => {
-    const key = normaliseGroundEventTypeKey(eventType);
-    const existingRule = getGroundEventSchedulingRuleForType(tempGroundEventSchedulingSettings, key);
-    const nextWindows = checked ? Array.from(/* @__PURE__ */ new Set([...existingRule.preferredWindows, windowId])) : existingRule.preferredWindows.filter((id) => id !== windowId);
-    updateGroundEventSchedulingRule(key, { preferredWindows: nextWindows });
+  const handleGroundEventWindowToggle = (group, windowId, checked) => {
+    const nextWindows = checked ? Array.from(/* @__PURE__ */ new Set([...group.preferredWindows, windowId])) : group.preferredWindows.filter((id) => id !== windowId);
+    updateGroundEventSchedulingGroup(group.id, { preferredWindows: nextWindows });
+  };
+  const handleGroundEventGroupEventToggle = (groupId, eventCode2, checked) => {
+    if (!canEditGroundEventScheduling) return;
+    setTempGroundEventSchedulingSettings((current) => {
+      const normalised = materialiseGroundEventSchedulingSettings(current);
+      const nextUngrouped = new Set(normalised.ungroupedEventCodes);
+      const nextGroups = normalised.groups.map((group) => {
+        const nextCodes = new Set(group.eventCodes);
+        if (group.id === groupId) {
+          if (checked) {
+            nextCodes.add(eventCode2);
+            nextUngrouped.delete(eventCode2);
+          } else {
+            nextCodes.delete(eventCode2);
+            nextUngrouped.add(eventCode2);
+          }
+        } else if (checked) {
+          nextCodes.delete(eventCode2);
+        }
+        return {
+          ...group,
+          eventCodes: Array.from(nextCodes)
+        };
+      });
+      return materialiseGroundEventSchedulingSettings({
+        ...normalised,
+        groups: nextGroups,
+        ungroupedEventCodes: Array.from(nextUngrouped)
+      });
+    });
+  };
+  const handleAddGroundEventGroup = () => {
+    if (!canEditGroundEventScheduling) return;
+    setTempGroundEventSchedulingSettings((current) => {
+      const normalised = materialiseGroundEventSchedulingSettings(current);
+      const nextIndex = normalised.groups.length + 1;
+      return materialiseGroundEventSchedulingSettings({
+        ...normalised,
+        groups: [
+          ...normalised.groups,
+          {
+            id: `custom-${makeGroundEventSchedulingGroupId(`Ground Group ${nextIndex}`, nextIndex)}`,
+            name: `Ground Group ${nextIndex}`,
+            eventCodes: [],
+            mode: "manual",
+            preferredWindows: []
+          }
+        ]
+      });
+    });
+  };
+  const handleDeleteGroundEventGroup = (group) => {
+    if (!canEditGroundEventScheduling) return;
+    setTempGroundEventSchedulingSettings((current) => {
+      const normalised = materialiseGroundEventSchedulingSettings(current);
+      return materialiseGroundEventSchedulingSettings({
+        ...normalised,
+        groups: normalised.groups.filter((existing) => existing.id !== group.id),
+        ungroupedEventCodes: Array.from(/* @__PURE__ */ new Set([
+          ...normalised.ungroupedEventCodes,
+          ...group.eventCodes
+        ]))
+      });
+    });
   };
   const handleSaveGroundEventScheduling = () => {
     if (!onUpdateGroundEventSchedulingSettings) return;
-    const savedSettings = normaliseGroundEventSchedulingSettings(tempGroundEventSchedulingSettings);
+    const savedSettings = materialiseGroundEventSchedulingSettings(tempGroundEventSchedulingSettings);
     onUpdateGroundEventSchedulingSettings(savedSettings);
     setIsEditingGroundEventScheduling(false);
     onShowSuccess("Ground event scheduling rules updated");
@@ -16985,14 +17133,13 @@ const SettingsView = ({
       page: "Settings - Ground Event Scheduling",
       action: "update",
       description: "Updated ground event scheduling settings",
-      changes: groundEventTypeOptions.map((eventType) => {
-        const rule = getGroundEventSchedulingRuleForType(savedSettings, eventType);
-        return `${eventType}: ${rule.mode}; windows: ${rule.preferredWindows.length ? rule.preferredWindows.join(", ") : "any"}`;
+      changes: savedSettings.groups.map((group) => {
+        return `${group.name}: ${group.mode}; windows: ${group.preferredWindows.length ? group.preferredWindows.join(", ") : "any"}; events: ${group.eventCodes.join(", ") || "none"}`;
       }).join(" | ")
     });
   };
   const handleCancelGroundEventScheduling = () => {
-    setTempGroundEventSchedulingSettings(resolvedGroundEventSchedulingSettings);
+    setTempGroundEventSchedulingSettings(materialiseGroundEventSchedulingSettings(resolvedGroundEventSchedulingSettings));
     setIsEditingGroundEventScheduling(false);
   };
   const handleEditLimits = () => {
@@ -17441,23 +17588,31 @@ const SettingsView = ({
           )
         ] }),
         /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-4 p-4", children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "rounded-md border border-sky-500/30 bg-sky-500/10 p-3 text-xs leading-relaxed text-sky-100", children: "Categories are recognised from the LMP event code/name. Automatic schedules eligible group ground events before individual events. Alert/Suggest asks the scheduler to accept or skip each eligible group event during NEO Build. Preferred windows guide placement when a group event can be placed in more than one valid slot." }),
-          groundEventTypeOptions.map((eventType) => {
-            const rule = getGroundEventSchedulingRuleForType(displayedGroundEventSchedulingSettings, eventType);
+          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "rounded-md border border-sky-500/30 bg-sky-500/10 p-3 text-xs leading-relaxed text-sky-100", children: "Groups are auto-created from the LMP event code/name. Edit the groups below to rename them, move events between groups, or leave events unassigned." }),
+          isEditingGroundEventScheduling && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex justify-end", children: /* @__PURE__ */ jsxRuntimeExports.jsx("button", { onClick: handleAddGroundEventGroup, className: "rounded-md border border-sky-500/50 bg-sky-500/15 px-3 py-2 text-xs font-semibold text-sky-100 hover:border-sky-400", children: "Add Group" }) }),
+          displayedGroundEventSchedulingGroups.map((group) => {
+            const assignedEvents = availableGroundEventSchedulingEvents.filter((event) => group.eventCodes.includes(event.code));
             return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded-lg border border-gray-700 bg-gray-900/50 p-4", children: [
-              /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid gap-4 lg:grid-cols-[220px_minmax(260px,1fr)]", children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid gap-4 lg:grid-cols-[260px_minmax(260px,1fr)_auto]", children: [
                 /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
-                  /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "mb-2 block text-[11px] font-bold uppercase tracking-widest text-sky-300", children: "Ground Event Category" }),
-                  /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "rounded-md border border-gray-700 bg-gray-950/70 px-3 py-2 text-sm font-semibold text-white", children: eventType })
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "mb-2 block text-[11px] font-bold uppercase tracking-widest text-sky-300", children: "Ground Event Group" }),
+                  canEditGroundEventScheduling ? /* @__PURE__ */ jsxRuntimeExports.jsx(
+                    "input",
+                    {
+                      value: group.name,
+                      onChange: (event) => updateGroundEventSchedulingGroup(group.id, { name: event.target.value }),
+                      className: "w-full rounded-md border border-gray-600 bg-gray-950 px-3 py-2 text-sm font-semibold text-white focus:border-sky-500 focus:ring-1 focus:ring-sky-500"
+                    }
+                  ) : /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "rounded-md border border-gray-700 bg-gray-950/70 px-3 py-2 text-sm font-semibold text-white", children: group.name })
                 ] }),
                 /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
                   /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "mb-2 block text-[11px] font-bold uppercase tracking-widest text-sky-300", children: "Scheduling Action" }),
                   /* @__PURE__ */ jsxRuntimeExports.jsxs(
                     "select",
                     {
-                      value: rule.mode,
+                      value: group.mode,
                       disabled: !canEditGroundEventScheduling,
-                      onChange: (event) => updateGroundEventSchedulingRule(eventType, { mode: event.target.value }),
+                      onChange: (event) => updateGroundEventSchedulingGroup(group.id, { mode: event.target.value }),
                       className: `w-full rounded-md border px-3 py-2 text-sm font-semibold focus:border-sky-500 focus:ring-1 focus:ring-sky-500 ${canEditGroundEventScheduling ? "border-gray-600 bg-gray-950 text-white" : "cursor-not-allowed border-gray-700 bg-gray-800 text-gray-300"}`,
                       children: [
                         /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "manual", children: "Manual" }),
@@ -17466,7 +17621,15 @@ const SettingsView = ({
                       ]
                     }
                   )
-                ] })
+                ] }),
+                /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex items-end justify-end", children: canEditGroundEventScheduling && /* @__PURE__ */ jsxRuntimeExports.jsx(
+                  "button",
+                  {
+                    onClick: () => handleDeleteGroundEventGroup(group),
+                    className: "rounded-md border border-red-500/50 bg-red-500/10 px-3 py-2 text-xs font-semibold text-red-100 hover:border-red-400",
+                    children: "Delete"
+                  }
+                ) })
               ] }),
               /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mt-4", children: [
                 /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "mb-2 block text-[11px] font-bold uppercase tracking-widest text-sky-300", children: "Preferred ground event windows" }),
@@ -17479,9 +17642,9 @@ const SettingsView = ({
                         "input",
                         {
                           type: "checkbox",
-                          checked: rule.preferredWindows.includes(windowOption.id),
+                          checked: group.preferredWindows.includes(windowOption.id),
                           disabled: !canEditGroundEventScheduling,
-                          onChange: (event) => handleGroundEventWindowToggle(eventType, windowOption.id, event.target.checked),
+                          onChange: (event) => handleGroundEventWindowToggle(group, windowOption.id, event.target.checked),
                           className: "h-4 w-4 rounded border-gray-600 bg-gray-700 text-sky-500 focus:ring-sky-500 disabled:cursor-not-allowed disabled:opacity-60"
                         }
                       ),
@@ -17491,9 +17654,38 @@ const SettingsView = ({
                   windowOption.id
                 )) }),
                 /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-2 text-xs text-gray-500", children: "Leave all windows unticked to allow any valid time inside the build day." })
+              ] }),
+              /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mt-4", children: [
+                /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "mb-2 block text-[11px] font-bold uppercase tracking-widest text-sky-300", children: "Assigned Ground Events" }),
+                canEditGroundEventScheduling ? /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "max-h-44 overflow-y-auto rounded-md border border-gray-700 bg-gray-950/50 p-2", children: /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "grid gap-2 sm:grid-cols-2 lg:grid-cols-3", children: availableGroundEventSchedulingEvents.map((eventOption) => {
+                  const checked = group.eventCodes.includes(eventOption.code);
+                  return /* @__PURE__ */ jsxRuntimeExports.jsxs(
+                    "label",
+                    {
+                      className: `flex items-start gap-2 rounded-md border px-2 py-2 text-xs ${checked ? "border-sky-500/60 bg-sky-500/10 text-sky-50" : "border-gray-700 bg-gray-900 text-gray-300"}`,
+                      children: [
+                        /* @__PURE__ */ jsxRuntimeExports.jsx(
+                          "input",
+                          {
+                            type: "checkbox",
+                            checked,
+                            onChange: (event) => handleGroundEventGroupEventToggle(group.id, eventOption.code, event.target.checked),
+                            className: "mt-0.5 h-4 w-4 rounded border-gray-600 bg-gray-700 text-sky-500 focus:ring-sky-500"
+                          }
+                        ),
+                        /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { children: [
+                          /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "block font-semibold", children: eventOption.label }),
+                          /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "block text-[10px] uppercase tracking-wide text-gray-500", children: eventOption.category })
+                        ] })
+                      ]
+                    },
+                    eventOption.code
+                  );
+                }) }) }) : /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex flex-wrap gap-2 rounded-md border border-gray-700 bg-gray-950/50 p-2", children: assignedEvents.length > 0 ? assignedEvents.map((eventOption) => /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "rounded border border-gray-600 bg-gray-800 px-2 py-1 text-xs font-semibold text-gray-100", children: eventOption.label }, eventOption.code)) : /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-xs italic text-gray-500", children: "No events assigned" }) })
               ] })
-            ] }, eventType);
-          })
+            ] }, group.id);
+          }),
+          displayedGroundEventSchedulingGroups.length === 0 && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "rounded-md border border-gray-700 bg-gray-900/50 p-4 text-sm text-gray-400", children: "No ground events are available from the current LMP data." })
         ] })
       ] }),
       shouldShowSection("data-loaders") && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "w-full max-w-5xl rounded-lg border border-gray-700 bg-gray-800 shadow-lg", children: [
@@ -132383,8 +132575,9 @@ async function generateDfpInternal(config, setProgress, publishedSchedules) {
       const next = traineeNextEventMap.get(getBuildTraineeKey(trainee))?.next;
       if (!next || classifyBuildTrainingEvent(next).bucket !== "ground") continue;
       if (!isLmpGroupEventEnabled(next.groupEvent)) continue;
-      const eventType = deriveGroundEventSchedulingCategory(next);
-      const rule = getGroundEventSchedulingRuleForType(buildGroundEventSchedulingSettings, eventType);
+      const schedulingGroup = getGroundEventSchedulingRuleForItem(buildGroundEventSchedulingSettings, next);
+      const eventType = schedulingGroup.groupName;
+      const rule = schedulingGroup.rule;
       if (rule.mode === "manual") {
         if (neoBuildDiag.groupGroundScheduling.skips.length < 220) {
           neoBuildDiag.groupGroundScheduling.skips.push({
@@ -132392,7 +132585,8 @@ async function generateDfpInternal(config, setProgress, publishedSchedules) {
             trainee: trainee.fullName,
             course: trainee.course,
             event: next.code || next.id || null,
-            eventType
+            eventType,
+            explicitGroup: Boolean(schedulingGroup.explicitGroup)
           });
         }
         continue;
