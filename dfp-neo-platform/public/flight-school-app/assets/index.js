@@ -124657,6 +124657,18 @@ const isCompletedLmpItem = (item, completedEventIds) => {
     item.completedAt || maybeCompleted.isComplete || maybeCompleted.completed || maybeCompleted.rplGranted || completedEventIds.has(normalizeLmpEventId(item.id)) || completedEventIds.has(normalizeLmpEventId(item.code)) || completedEventIds.has(normalizeLmpEventId(item.masterEventId))
   );
 };
+const isLmpGroupEventEnabledValue = (value) => {
+  if (value === true) return true;
+  const normalised = String(value || "").trim().toLowerCase();
+  return normalised === "yes" || normalised === "true" || normalised === "y";
+};
+const shouldSkipLegacyMassBriefInNextEventSelection = (item, groundEventSchedulingSettings) => {
+  if (!String(item.code || "").includes(" MB")) return false;
+  const schedulingMatch = getGroundEventSchedulingRuleForItem(groundEventSchedulingSettings, item);
+  const isConfiguredGroupEvent = isLmpGroupEventEnabledValue(item.groupEvent) || Boolean(schedulingMatch.explicitGroup);
+  if (!isConfiguredGroupEvent) return true;
+  return schedulingMatch.rule.mode === "manual";
+};
 const getFallbackMasterLmpForTrainee = (trainee, masterSyllabus) => {
   const normaliseToken = (value) => String(value || "").trim().toUpperCase();
   const traineeCourse = normaliseToken(trainee.course);
@@ -124670,7 +124682,7 @@ const getFallbackMasterLmpForTrainee = (trainee, masterSyllabus) => {
   };
   return masterItems.filter(matchesInferredLmp);
 };
-const computeNextEventsForTrainee = (trainee, traineeLMPs, scores, masterSyllabus, publishedSchedules, buildDate, dbElceMap) => {
+const computeNextEventsForTrainee = (trainee, traineeLMPs, scores, masterSyllabus, publishedSchedules, buildDate, dbElceMap, groundEventSchedulingSettings) => {
   const verboseNeoBuild = isNeoBuildVerboseDiagnosticsEnabled();
   const hasIndividualLMP = traineeLMPs.has(trainee.fullName);
   const individualLMP = traineeLMPs.get(trainee.fullName) || getFallbackMasterLmpForTrainee(trainee, masterSyllabus);
@@ -124739,7 +124751,7 @@ const computeNextEventsForTrainee = (trainee, traineeLMPs, scores, masterSyllabu
       diagnostic.skippedCompleted += 1;
       continue;
     }
-    if (item.code.includes(" MB")) {
+    if (shouldSkipLegacyMassBriefInNextEventSelection(item, groundEventSchedulingSettings)) {
       diagnostic.skippedMassBrief += 1;
       continue;
     }
@@ -124769,7 +124781,7 @@ const computeNextEventsForTrainee = (trainee, traineeLMPs, scores, masterSyllabu
   if (nextEventIndex !== -1) {
     for (let i = nextEventIndex + 1; i < individualLMP.length; i++) {
       const item = individualLMP[i];
-      if (!item.code.includes(" MB") && !isCompletedLmpItem(item, completedEventIds)) {
+      if (!shouldSkipLegacyMassBriefInNextEventSelection(item, groundEventSchedulingSettings) && !isCompletedLmpItem(item, completedEventIds)) {
         plusOneEvt = item;
         diagnostic.selectedPlusOne = item.code || item.id || null;
         break;
@@ -129554,7 +129566,16 @@ async function generateDfpInternal(config, setProgress, publishedSchedules) {
     return [item.code, item.id, item.masterEventId, item.eventDescription, item.module].map(normaliseNextEventDiagCode).filter(Boolean).includes(lmpTypeKey);
   };
   activeTrainees.forEach((trainee) => {
-    const nextEvents = computeNextEventsForTrainee(trainee, traineeLMPs, scores, syllabusDetails, publishedSchedules, buildDate, config.dbElceMap);
+    const nextEvents = computeNextEventsForTrainee(
+      trainee,
+      traineeLMPs,
+      scores,
+      syllabusDetails,
+      publishedSchedules,
+      buildDate,
+      config.dbElceMap,
+      buildGroundEventSchedulingSettings
+    );
     traineeNextEventMap.set(getBuildTraineeKey(trainee), nextEvents);
     const eligibility = nextEvents.diagnostic;
     const eligibilityDiag = neoBuildDiag.nextEventEligibility;
@@ -132575,8 +132596,8 @@ async function generateDfpInternal(config, setProgress, publishedSchedules) {
     for (const trainee of groundNextList) {
       const next = traineeNextEventMap.get(getBuildTraineeKey(trainee))?.next;
       if (!next || classifyBuildTrainingEvent(next).bucket !== "ground") continue;
-      if (!isLmpGroupEventEnabled(next.groupEvent)) continue;
       const schedulingGroup = getGroundEventSchedulingRuleForItem(buildGroundEventSchedulingSettings, next);
+      if (!isLmpGroupEventEnabled(next.groupEvent) && !schedulingGroup.explicitGroup) continue;
       const eventType = schedulingGroup.groupName;
       const rule = schedulingGroup.rule;
       if (rule.mode === "manual") {

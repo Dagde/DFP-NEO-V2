@@ -10130,6 +10130,28 @@ const isCompletedLmpItem = (item: SyllabusItemDetail, completedEventIds: Set<str
     );
 };
 
+const isLmpGroupEventEnabledValue = (value: unknown): boolean => {
+    if (value === true) return true;
+    const normalised = String(value || '').trim().toLowerCase();
+    return normalised === 'yes' || normalised === 'true' || normalised === 'y';
+};
+
+const shouldSkipLegacyMassBriefInNextEventSelection = (
+    item: SyllabusItemDetail,
+    groundEventSchedulingSettings?: GroundEventSchedulingSettings | null
+): boolean => {
+    if (!String(item.code || '').includes(' MB')) return false;
+
+    const schedulingMatch = getGroundEventSchedulingRuleForItem(groundEventSchedulingSettings, item);
+    const isConfiguredGroupEvent = (
+        isLmpGroupEventEnabledValue((item as any).groupEvent) ||
+        Boolean(schedulingMatch.explicitGroup)
+    );
+    if (!isConfiguredGroupEvent) return true;
+
+    return schedulingMatch.rule.mode === 'manual';
+};
+
 const getFallbackMasterLmpForTrainee = (
     trainee: Trainee,
     masterSyllabus: SyllabusItemDetail[]
@@ -10191,7 +10213,8 @@ const computeNextEventsForTrainee = (
     masterSyllabus: SyllabusItemDetail[], // Added fallback
     publishedSchedules?: Record<string, ScheduleEvent[]>, // NEW: Optional for ELCE
     buildDate?: string, // NEW: Optional for ELCE
-    dbElceMap?: Map<string, { eventCode: string; eventDate: string; dcoResult: 'DCO' | 'DPCO' | 'DNCO'; isCountedAsElce: boolean } | null> // NEW: DB-backed ELCE
+    dbElceMap?: Map<string, { eventCode: string; eventDate: string; dcoResult: 'DCO' | 'DPCO' | 'DNCO'; isCountedAsElce: boolean } | null>, // NEW: DB-backed ELCE
+    groundEventSchedulingSettings?: GroundEventSchedulingSettings | null
 ): { next: SyllabusItemDetail | null, plusOne: SyllabusItemDetail | null, diagnostic: NextEventEligibilityDiagnostic } => {
     const verboseNeoBuild = isNeoBuildVerboseDiagnosticsEnabled();
     // Check individual LMP first, then fallback only to the trainee's relevant Master LMP stream.
@@ -10285,7 +10308,7 @@ const computeNextEventsForTrainee = (
             diagnostic.skippedCompleted += 1;
             continue;
         }
-        if (item.code.includes(' MB')) {
+        if (shouldSkipLegacyMassBriefInNextEventSelection(item, groundEventSchedulingSettings)) {
             diagnostic.skippedMassBrief += 1;
             continue;
         }
@@ -10321,7 +10344,7 @@ const computeNextEventsForTrainee = (
         for (let i = nextEventIndex + 1; i < individualLMP.length; i++) {
             const item = individualLMP[i];
             // Skip non-schedulable events
-            if (!item.code.includes(' MB') && !isCompletedLmpItem(item, completedEventIds)) {
+            if (!shouldSkipLegacyMassBriefInNextEventSelection(item, groundEventSchedulingSettings) && !isCompletedLmpItem(item, completedEventIds)) {
                 plusOneEvt = item;
                 diagnostic.selectedPlusOne = item.code || item.id || null;
                 break;
@@ -16215,7 +16238,16 @@ async function generateDfpInternal(
     };
 
     activeTrainees.forEach(trainee => {
-        const nextEvents = computeNextEventsForTrainee(trainee, traineeLMPs, scores, syllabusDetails, publishedSchedules, buildDate, config.dbElceMap);
+        const nextEvents = computeNextEventsForTrainee(
+            trainee,
+            traineeLMPs,
+            scores,
+            syllabusDetails,
+            publishedSchedules,
+            buildDate,
+            config.dbElceMap,
+            buildGroundEventSchedulingSettings
+        );
         traineeNextEventMap.set(getBuildTraineeKey(trainee), nextEvents);
         const eligibility = nextEvents.diagnostic;
         const eligibilityDiag = neoBuildDiag.nextEventEligibility;
@@ -19950,9 +19982,9 @@ const applyCoursePriority = (rankedList: Trainee[], diagnosticLabel = 'unlabelle
         for (const trainee of groundNextList) {
             const next = traineeNextEventMap.get(getBuildTraineeKey(trainee))?.next;
             if (!next || classifyBuildTrainingEvent(next).bucket !== 'ground') continue;
-            if (!isLmpGroupEventEnabled((next as any).groupEvent)) continue;
 
             const schedulingGroup = getGroundEventSchedulingRuleForItem(buildGroundEventSchedulingSettings, next);
+            if (!isLmpGroupEventEnabled((next as any).groupEvent) && !schedulingGroup.explicitGroup) continue;
             const eventType = schedulingGroup.groupName;
             const rule = schedulingGroup.rule;
             if (rule.mode === 'manual') {
