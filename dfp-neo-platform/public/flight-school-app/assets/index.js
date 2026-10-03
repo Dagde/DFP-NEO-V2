@@ -55366,8 +55366,8 @@ ${errorText || `HTTP ${response.status}`}`, "Delete Failed", "error");
     className = "",
     valueClassName = "truncate"
   }) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: `min-w-0 ${className}`, children: [
-    /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mb-1 text-[10px] font-semibold leading-none text-white", children: label }),
-    /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex h-[46px] min-w-0 items-center rounded-md bg-slate-800/90 px-3 text-sm font-semibold leading-tight text-white shadow-inner shadow-black/20 ring-1 ring-white/5", children: /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: `min-w-0 ${valueClassName}`, children: value }) })
+    /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mb-1 text-[10px] font-bold leading-none text-cyan-300", children: label }),
+    /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex h-9 min-w-0 items-center rounded-md border border-sky-500/35 bg-slate-950/75 px-3 text-[13px] font-semibold leading-tight text-white shadow-inner shadow-black/30 ring-1 ring-white/10", children: /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: `min-w-0 ${valueClassName}`, children: value }) })
   ] });
   return /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
     /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "fixed inset-0 bg-black/70 z-[90] flex items-start justify-center overflow-hidden px-4 pb-4 pt-[7.25rem]", onClick: onClose, children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "bg-[#141e2e] rounded-lg shadow-2xl w-full md:w-[calc(100vw-12rem)] xl:w-[min(calc(100vw-18rem),88rem)] max-w-[88rem] max-h-[calc(100vh-8.25rem)] flex flex-col border border-gray-600 overflow-hidden", onClick: (e) => e.stopPropagation(), children: [
@@ -90150,8 +90150,8 @@ Confirm the Personnel ID, unit and role are correct before saving this separate 
     className = "",
     valueClassName = "truncate"
   }) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: `min-w-0 ${className}`, children: [
-    /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mb-1 text-[10px] font-semibold leading-none text-white", children: label }),
-    /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex h-[46px] min-w-0 items-center rounded-md bg-slate-800/90 px-3 text-sm font-semibold leading-tight text-white shadow-inner shadow-black/20 ring-1 ring-white/5", children: /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: `min-w-0 ${valueClassName}`, children: value }) })
+    /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mb-1 text-[10px] font-bold leading-none text-cyan-300", children: label }),
+    /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex h-9 min-w-0 items-center rounded-md border border-sky-500/35 bg-slate-950/75 px-3 text-[13px] font-semibold leading-tight text-white shadow-inner shadow-black/30 ring-1 ring-white/10", children: /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: `min-w-0 ${valueClassName}`, children: value }) })
   ] });
   return /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
     /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "fixed inset-0 bg-black/70 z-[90] flex items-start justify-center overflow-hidden px-4 pb-4 pt-[7.25rem]", onClick: onClose, children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "bg-[#141e2e] rounded-lg shadow-2xl w-full md:w-[calc(100vw-12rem)] xl:w-[min(calc(100vw-18rem),88rem)] max-w-[88rem] max-h-[calc(100vh-8.25rem)] flex flex-col border border-gray-600 overflow-hidden", onClick: (e) => e.stopPropagation(), children: [
