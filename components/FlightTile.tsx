@@ -449,6 +449,7 @@ const FlightTile: React.FC<FlightTileProps> = ({ event, traineesData, instructor
       || (event.type === 'flight' && !!event.pilot && !!event.crew && !event.student && !event.instructor);
   const isFixedCrewCrewEvent = !!(event as any).fixedCrewGroup;
   const isPooledCrewEvent = String(event.crew || event.group || '').trim() === 'Pooled Crew';
+  const isGroupGroundEvent = (event as any)._groupGroundEvent === true || (event as any)._source === 'generated-group-ground';
   const isStbyEvent = event.resourceId && (event.resourceId.startsWith('STBY') || event.resourceId.startsWith('BNF-STBY'));
   const aircraftNumberDisplay = event.aircraftNumber
     ? parseAircraftNumber(event.aircraftNumber, aircraftNumberSettings).number
@@ -529,6 +530,11 @@ const FlightTile: React.FC<FlightTileProps> = ({ event, traineesData, instructor
     displayStudentNameForRender = event.student || event.pilot || studentName || '';
   }
 
+  if (isGroupGroundEvent) {
+    displayPicNameForRender = 'GROUP';
+    displayStudentNameForRender = '';
+  }
+
   let picClasses = `font-semibold truncate`;
   let studentClasses = `truncate`;
 
@@ -577,6 +583,10 @@ const FlightTile: React.FC<FlightTileProps> = ({ event, traineesData, instructor
 
         if (isFixedCrewCrewEvent && fixedCrewDisplay) {
             return fixedCrewDisplay;
+        }
+
+        if (isGroupGroundEvent) {
+            return '';
         }
 
         if (isPooledCrewEvent) {

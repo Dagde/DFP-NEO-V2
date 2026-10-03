@@ -12662,6 +12662,7 @@ const FlightTile = ({ event, traineesData, instructorsData = [], onSelectEvent, 
   const isAirCombatCrewEvent = event._source === "air-combat-priority-formation" || event.type === "flight" && !!event.pilot && !!event.crew && !event.student && !event.instructor;
   const isFixedCrewCrewEvent = !!event.fixedCrewGroup;
   const isPooledCrewEvent = String(event.crew || event.group || "").trim() === "Pooled Crew";
+  const isGroupGroundEvent = event._groupGroundEvent === true || event._source === "generated-group-ground";
   const isStbyEvent = event.resourceId && (event.resourceId.startsWith("STBY") || event.resourceId.startsWith("BNF-STBY"));
   const aircraftNumberDisplay = event.aircraftNumber ? parseAircraftNumber(event.aircraftNumber, aircraftNumberSettings).number : "";
   const preFlightNotesForTile = getPreFlightNotesForTile(event);
@@ -12716,6 +12717,10 @@ const FlightTile = ({ event, traineesData, instructorsData = [], onSelectEvent, 
     displayPicNameForRender = picName && picName !== "" && picName !== "TBA" ? picName : "TBA";
     displayStudentNameForRender = event.student || event.pilot || studentName || "";
   }
+  if (isGroupGroundEvent) {
+    displayPicNameForRender = "GROUP";
+    displayStudentNameForRender = "";
+  }
   let picClasses = `font-semibold truncate`;
   let studentClasses = `truncate`;
   if (isPreview) {
@@ -12753,6 +12758,9 @@ const FlightTile = ({ event, traineesData, instructorsData = [], onSelectEvent, 
     }
     if (isFixedCrewCrewEvent && fixedCrewDisplay) {
       return fixedCrewDisplay;
+    }
+    if (isGroupGroundEvent) {
+      return "";
     }
     if (isPooledCrewEvent) {
       return pooledCrewSecondaryName || "Pooled Crew";
@@ -132874,7 +132882,7 @@ Press OK to Accept or Cancel to Skip.`
             _neoBuildTraineePersonnelRef: void 0,
             _source: "generated-group-ground",
             _isNext: true,
-            _traineeName: attendees.map((trainee) => trainee.fullName).join(", "),
+            _traineeName: "GROUP",
             _groupGroundEvent: true,
             _groupGroundCourse: candidate.course,
             _groupGroundReadyCount: candidate.readyTrainees.length,
@@ -132967,6 +132975,27 @@ Press OK to Accept or Cancel to Skip.`
     }
     saveNeoBuildDiag("group-ground-scheduling");
     return remaining;
+  };
+  const filterOutGroupedGroundPlusOneEvents = (groundPlusOneList) => {
+    return groundPlusOneList.filter((trainee) => {
+      const plusOne = traineeNextEventMap.get(getBuildTraineeKey(trainee))?.plusOne;
+      if (!plusOne || classifyBuildTrainingEvent(plusOne).bucket !== "ground") return true;
+      const schedulingGroup = getGroundEventSchedulingRuleForItem(buildGroundEventSchedulingSettings, plusOne);
+      const isGroupedGroundEvent = isLmpGroupEventEnabled(plusOne.groupEvent) || schedulingGroup.explicitGroup;
+      if (!isGroupedGroundEvent) return true;
+      if (neoBuildDiag.groupGroundScheduling.skips.length < 220) {
+        neoBuildDiag.groupGroundScheduling.skips.push({
+          reason: "GROUP_GROUND_NEXT_PLUS_ONE_NOT_AUTOSCHEDULED",
+          trainee: trainee.fullName,
+          course: trainee.course,
+          event: plusOne.code || plusOne.id || null,
+          eventType: schedulingGroup.groupName,
+          mode: schedulingGroup.rule.mode,
+          explanation: "Grouped ground events are only auto scheduled when the required number of trainees have the event as their current Next event."
+        });
+      }
+      return false;
+    });
   };
   let nightDutySup = null;
   let dutySupEligible = [];
@@ -137849,7 +137878,7 @@ Press OK to Accept or Cancel to Skip.`
     );
     await recordProgress({ message: "Scheduling Ground Events (Plus-One)...", percentage: 86 });
     await scheduleList(
-      applyCoursePriority(filterOutBnfTrainees(nextPlusOneLists.ground), "ground-plus-one"),
+      applyCoursePriority(filterOutGroupedGroundPlusOneEvents(filterOutBnfTrainees(nextPlusOneLists.ground)), "ground-plus-one"),
       "ground",
       true,
       flyingStartTime,

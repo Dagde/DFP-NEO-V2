@@ -20298,7 +20298,7 @@ const applyCoursePriority = (rankedList: Trainee[], diagnosticLabel = 'unlabelle
                         _neoBuildTraineePersonnelRef: undefined,
                         _source: 'generated-group-ground',
                         _isNext: true,
-                        _traineeName: attendees.map(trainee => trainee.fullName).join(', '),
+                        _traineeName: 'GROUP',
                         _groupGroundEvent: true,
                         _groupGroundCourse: candidate.course,
                         _groupGroundReadyCount: candidate.readyTrainees.length,
@@ -20396,6 +20396,30 @@ const applyCoursePriority = (rankedList: Trainee[], diagnosticLabel = 'unlabelle
         }
         saveNeoBuildDiag('group-ground-scheduling');
         return remaining;
+    };
+
+    const filterOutGroupedGroundPlusOneEvents = (groundPlusOneList: Trainee[]): Trainee[] => {
+        return groundPlusOneList.filter(trainee => {
+            const plusOne = traineeNextEventMap.get(getBuildTraineeKey(trainee))?.plusOne;
+            if (!plusOne || classifyBuildTrainingEvent(plusOne).bucket !== 'ground') return true;
+
+            const schedulingGroup = getGroundEventSchedulingRuleForItem(buildGroundEventSchedulingSettings, plusOne);
+            const isGroupedGroundEvent = isLmpGroupEventEnabled((plusOne as any).groupEvent) || schedulingGroup.explicitGroup;
+            if (!isGroupedGroundEvent) return true;
+
+            if (neoBuildDiag.groupGroundScheduling.skips.length < 220) {
+                neoBuildDiag.groupGroundScheduling.skips.push({
+                    reason: 'GROUP_GROUND_NEXT_PLUS_ONE_NOT_AUTOSCHEDULED',
+                    trainee: trainee.fullName,
+                    course: trainee.course,
+                    event: plusOne.code || plusOne.id || null,
+                    eventType: schedulingGroup.groupName,
+                    mode: schedulingGroup.rule.mode,
+                    explanation: 'Grouped ground events are only auto scheduled when the required number of trainees have the event as their current Next event.',
+                });
+            }
+            return false;
+        });
     };
 
     let nightDutySup: Instructor | null = null;
@@ -25889,7 +25913,7 @@ const applyCoursePriority = (rankedList: Trainee[], diagnosticLabel = 'unlabelle
 
     await recordProgress({ message: 'Scheduling Ground Events (Plus-One)...', percentage: 86 });
     await scheduleList(
-        applyCoursePriority(filterOutBnfTrainees(nextPlusOneLists.ground), 'ground-plus-one'),
+        applyCoursePriority(filterOutGroupedGroundPlusOneEvents(filterOutBnfTrainees(nextPlusOneLists.ground)), 'ground-plus-one'),
         'ground',
         true,
         flyingStartTime,
