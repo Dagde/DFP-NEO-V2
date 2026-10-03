@@ -507,6 +507,11 @@ export interface SyllabusItemDetail {
   prerequisitesFlying: string[];
   eventDetailsCommon: string[];
   eventDetailsSortie: string[];
+  groupEvent?: boolean | null;
+  minimumToSchedule?: number | null;
+  groupSizeMin?: number | null;
+  groupSizeMax?: number | null;
+  groupEntireCourse?: boolean | null;
   totalEventHours: number;
   flightOrSimHours: number;
   duration: number;

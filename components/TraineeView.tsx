@@ -51,6 +51,8 @@ interface TraineeViewProps {
   onDeleteRemedialItem?: (trainee: any, item: any) => Promise<boolean> | boolean;
   onGenerateTrainingReportForItem?: (trainee: any, item: any) => void;
   onUpdateLmpItem?: (trainee: any, originalItem: any, updatedItem: any) => Promise<boolean> | boolean;
+  onLoadTraineeLmp?: (trainee: any) => Promise<any[] | null>;
+  onRosterColourTrace?: (trace: Record<string, any>) => void;
   onOpenInstructorProfile?: (instructorName: string) => void;
   // Course edit callbacks
   onUpdateCourseNumber?: (oldCourseNumber: string, newCourseNumber: string) => void;
@@ -202,6 +204,8 @@ const TraineeView: React.FC<TraineeViewProps> = (props) => {
             onGenerateTrainingReportForItem={props.onGenerateTrainingReportForItem}
             onInsertCustomLmpEvent={props.onInsertCustomLmpEvent}
             onUpdateLmpItem={props.onUpdateLmpItem}
+            onLoadTraineeLmp={props.onLoadTraineeLmp}
+            onRosterColourTrace={props.onRosterColourTrace}
             insertEventTypes={props.insertEventTypes}
             aircraftConfigurations={props.aircraftConfigurations}
             aircraftCrewComposition={props.aircraftCrewComposition}

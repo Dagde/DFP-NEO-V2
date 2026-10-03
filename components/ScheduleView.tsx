@@ -1,6 +1,7 @@
 
 
 import React, { useState, useRef, useEffect, useCallback, useMemo, MouseEvent } from 'react';
+import { createPortal } from 'react-dom';
 import { ScheduleEvent, SyllabusItemDetail, Conflict, Trainee, Instructor, FlyingWindowExclusionPeriod, FormationCallsign, EventLimits, type PhraseBank } from '../types';
 import FlightTile from './FlightTile';
 import AirframeColumn from './AirframeColumn';
@@ -3093,6 +3094,7 @@ const InitialSetupWizard: React.FC<{
         const hasOrganisationDraft = Boolean(window.localStorage.getItem(initialSetupWizardOrganisationDraftStorageKey));
         return hasStoredStep || hasCompletedSteps || hasOrganisationDraft ? 'active' : 'detect';
     });
+    const [wizardLaunchRequested, setWizardLaunchRequested] = useState(false);
     const unitTypeOptions = useMemo(() => normaliseUnitTypeOptions(platformConfig), [platformConfig]);
     const configuredContinuationShortLabel = useMemo(
         () => getSctTerminology(platformConfig, unitCode).shortLabel || 'CT',
@@ -3157,7 +3159,62 @@ const InitialSetupWizard: React.FC<{
         }
     });
     const [wizardPageMenuOpen, setWizardPageMenuOpen] = useState(false);
+    const wizardPageMenuButtonRef = useRef<HTMLButtonElement | null>(null);
+    const wizardPageMenuRef = useRef<HTMLDivElement | null>(null);
     const wizardCurrentStepMenuItemRef = useRef<HTMLButtonElement | null>(null);
+    const [wizardPageMenuPosition, setWizardPageMenuPosition] = useState({
+        top: 0,
+        left: 0,
+        width: 420,
+        maxHeight: 440,
+    });
+    const updateWizardPageMenuPosition = useCallback(() => {
+        if (typeof window === 'undefined') return;
+        const button = wizardPageMenuButtonRef.current;
+        if (!button) return;
+
+        const viewportPadding = 16;
+        const rect = button.getBoundingClientRect();
+        const width = Math.min(460, Math.max(280, window.innerWidth - (viewportPadding * 2)));
+        const left = Math.min(
+            Math.max(viewportPadding, rect.right - width),
+            Math.max(viewportPadding, window.innerWidth - width - viewportPadding),
+        );
+        const spaceBelow = window.innerHeight - rect.bottom - viewportPadding;
+        const spaceAbove = rect.top - viewportPadding;
+        const openAbove = spaceBelow < 360 && spaceAbove > spaceBelow;
+        const availableHeight = Math.max(220, (openAbove ? spaceAbove : spaceBelow) - 6);
+        const maxHeight = Math.min(720, availableHeight);
+        const top = openAbove
+            ? Math.max(viewportPadding, rect.top - maxHeight - 6)
+            : Math.min(rect.bottom + 6, window.innerHeight - viewportPadding - maxHeight);
+
+        setWizardPageMenuPosition({ top, left, width, maxHeight });
+    }, []);
+    useEffect(() => {
+        if (!wizardPageMenuOpen || typeof window === 'undefined') return;
+        updateWizardPageMenuPosition();
+
+        const handlePointerDown = (event: PointerEvent) => {
+            const target = event.target as Node | null;
+            if (
+                target &&
+                (wizardPageMenuButtonRef.current?.contains(target) || wizardPageMenuRef.current?.contains(target))
+            ) {
+                return;
+            }
+            setWizardPageMenuOpen(false);
+        };
+
+        window.addEventListener('resize', updateWizardPageMenuPosition);
+        window.addEventListener('scroll', updateWizardPageMenuPosition, true);
+        document.addEventListener('pointerdown', handlePointerDown);
+        return () => {
+            window.removeEventListener('resize', updateWizardPageMenuPosition);
+            window.removeEventListener('scroll', updateWizardPageMenuPosition, true);
+            document.removeEventListener('pointerdown', handlePointerDown);
+        };
+    }, [updateWizardPageMenuPosition, wizardPageMenuOpen]);
     const [uploadResults, setUploadResults] = useState<Record<string, InitialSetupWizardUploadResult>>({});
     const [importConfirmations, setImportConfirmations] = useState<Record<string, string>>({});
     const [exampleRowSelections, setExampleRowSelections] = useState<Record<string, number>>({});
@@ -7931,6 +7988,35 @@ const InitialSetupWizard: React.FC<{
         return 'Flight';
     };
 
+    const normaliseWizardLmpTestEventType = (value: string): SyllabusItemDetail['testEventType'] => {
+        const clean = String(value || '').trim().toLowerCase().replace(/[^a-z0-9]+/g, ' ');
+        if (!clean || clean === 'none' || clean === 'not a test' || clean === 'not a test event') return 'NONE';
+        if (clean === 'flight test' || clean === 'flight' || clean === 'flt test') return 'FLIGHT_TEST';
+        if (clean === 'simulator test' || clean === 'sim test' || clean === 'sim' || clean === 'ftd test') return 'SIMULATOR_TEST';
+        return 'NONE';
+    };
+
+    const normaliseWizardTestingOfficerQualification = (value: string): string | null => {
+        const clean = String(value || '').trim().toLowerCase().replace(/[^a-z0-9]+/g, ' ');
+        if (!clean) return null;
+        if (
+            clean === 'testing officer'
+            || clean === 'test officer'
+            || clean === 'testing officer qualification'
+            || clean === 'testing officer qual'
+            || clean === 'testing officer qn'
+            || clean === 'testing officer q'
+        ) return 'testing-officer';
+        if (clean === 'qfi') return 'qfi';
+        if (clean === 'ire') return 'ire';
+        return null;
+    };
+
+    const parseWizardTemplateBoolean = (value: string): boolean => {
+        const clean = String(value || '').trim().toLowerCase();
+        return ['yes', 'y', 'true', '1', 'use', 'use secondary', 'secondary', 'secondary callsign'].includes(clean);
+    };
+
     const isWizardProceduralTrainerType = (value: string): boolean => {
         const clean = String(value || '').trim().toLowerCase();
         return clean.includes('procedural trainer') || clean.includes('procedural') || clean.includes('trainer');
@@ -7999,8 +8085,14 @@ const InitialSetupWizard: React.FC<{
                 methodOfDelivery.push('Procedural Trainer');
             }
             const flightOrSimHours = parseWizardTemplateNumber(getWizardCellByAnyHeader(headers, row, ['Flight or Sim Hours', 'Flight Or Sim Hours', 'Flight/Sim Hours', 'Flight Sim Hours']), 0);
-            const totalEventHours = parseWizardTemplateNumber(getWizardCellByAnyHeader(headers, row, ['Total Event Hours', 'Total Hours']), flightOrSimHours);
-            const duration = parseWizardTemplateNumber(getWizardCellByAnyHeader(headers, row, ['Duration Minutes', 'Duration', 'Total Event Hours', 'Flight or Sim Hours']), flightOrSimHours || totalEventHours || 0);
+            const totalEventHours = parseWizardTemplateNumber(getWizardCellByAnyHeader(headers, row, ['Total Event Hours', 'Total Event Hrs', 'Total Hours']), flightOrSimHours);
+            const duration = parseWizardTemplateNumber(getWizardCellByAnyHeader(headers, row, ['Duration Minutes', 'Duration', 'Total Event Hours', 'Total Event Hrs', 'Flight or Sim Hours']), flightOrSimHours || totalEventHours || 0);
+            const testEventType = normaliseWizardLmpTestEventType(getWizardCellByAnyHeader(headers, row, ['Test Event Type', 'Test Event', 'Test Type']));
+            const testingOfficerQualificationId = testEventType === 'NONE'
+                ? null
+                : normaliseWizardTestingOfficerQualification(getWizardCellByAnyHeader(headers, row, ['Testing Officer Qualification', 'Testing Officer Qual', 'Test Officer Qualification', 'Test Officer Qual']));
+            const useTestingOfficerSecondaryCallsign = testEventType === 'FLIGHT_TEST'
+                && parseWizardTemplateBoolean(getWizardCellByAnyHeader(headers, row, ['Secondary Callsign', 'Use Secondary Callsign', 'Use Testing Officer Secondary Callsign']));
             return {
                 id: `setup-lmp-${normaliseUnitSettingsIdentifier(masterLmp).replace(/[^A-Z0-9]+/g, '-')}-${normaliseUnitSettingsIdentifier(code).replace(/[^A-Z0-9]+/g, '-')}-${index + 1}`,
                 code,
@@ -8012,12 +8104,12 @@ const InitialSetupWizard: React.FC<{
                 prerequisitesGround: parseWizardTemplateList(getWizardCellByAnyHeader(headers, row, ['Pre-requisite Events (Ground School)', 'Prerequisites Ground', 'Ground Prerequisites'])),
                 prerequisitesFlying: parseWizardTemplateList(getWizardCellByAnyHeader(headers, row, ['Pre-requisite Events (Sim/Flying)', 'Prerequisites Flying', 'Flying Prerequisites'])),
                 eventDetailsCommon: parseWizardTemplateList(getWizardCellByAnyHeader(headers, row, ['Event Details - Common', 'Event Details Common', 'Common Details'])),
-                eventDetailsSortie: parseWizardTemplateList(getWizardCellByAnyHeader(headers, row, ['Event Details - Sortie', 'Event Details Sortie', 'Sortie Details', 'Event Title', 'Event description'])),
+                eventDetailsSortie: parseWizardTemplateList(getWizardCellByAnyHeader(headers, row, ['Event Details - Sortie', 'Event Details Sortie', 'Event Details (Sortie)', 'Sortie Details'])),
                 totalEventHours,
                 flightOrSimHours: flightOrSimHours || (eventType === 'Flight' || eventType === 'FTD' ? duration : 0),
                 duration,
-                preFlightTime: parseWizardTemplateNumber(getWizardCellByAnyHeader(headers, row, ['Preflight Time', 'Pre Flight Time', 'Pre Flight Minutes']), 0),
-                postFlightTime: parseWizardTemplateNumber(getWizardCellByAnyHeader(headers, row, ['Post Flight Time', 'Post-flight Time', 'Post Flight Minutes']), 0),
+                preFlightTime: parseWizardTemplateNumber(getWizardCellByAnyHeader(headers, row, ['Preflight Time', 'Pre Flight Time', 'Pre-Flight', 'Pre-flight', 'Pre Flight Minutes']), 0),
+                postFlightTime: parseWizardTemplateNumber(getWizardCellByAnyHeader(headers, row, ['Post Flight Time', 'Post-flight Time', 'Post-Flight', 'Post Flight Minutes']), 0),
                 type: eventType,
                 sortieType: (getWizardCellByAnyHeader(headers, row, ['Sortie Type', 'Dual/Solo']) || undefined) as SyllabusItemDetail['sortieType'],
                 twrDiReqd: (getWizardCellByAnyHeader(headers, row, ['Twr Di Reqd', 'TWR DI Required']) || 'NO') as SyllabusItemDetail['twrDiReqd'],
@@ -8032,6 +8124,9 @@ const InitialSetupWizard: React.FC<{
                 unit: getWizardCellByHeader(headers, row, 'Unit') || unitDraft.code || '',
                 courses: itemCourses,
                 lmpType: (getWizardCellByAnyHeader(headers, row, ['Lmp Type', 'LMP Type']) || 'Master LMP') as SyllabusItemDetail['lmpType'],
+                testEventType,
+                testingOfficerQualificationId,
+                useTestingOfficerSecondaryCallsign,
                 sortOrder: index + 1,
                 notes: getWizardCellByHeader(headers, row, 'Notes'),
             };
@@ -8263,6 +8358,8 @@ const InitialSetupWizard: React.FC<{
             draftBeforeReset: summariseOrganisationDraft(organisationDraft),
             activeOrganisation: summariseActiveOrganisation(),
         });
+        setWizardLaunchRequested(true);
+        setMode('active');
         organisationDraftDirtyRef.current = false;
         locationDraftDirtyRef.current = false;
         unitDraftDirtyRef.current = false;
@@ -8273,7 +8370,6 @@ const InitialSetupWizard: React.FC<{
         if (typeof window !== 'undefined') window.localStorage.removeItem(initialSetupWizardOrganisationDraftStorageKey);
         hydrateWizardDraftsFromSettings('start-again');
         setWizardStep(0);
-        setMode('active');
         setUploadResults({});
         safeSetWizardLocalStorage(initialSetupWizardStorageKey, '0');
         if (typeof window !== 'undefined') window.localStorage.removeItem(initialSetupWizardCompletedAtStorageKey);
@@ -8281,9 +8377,10 @@ const InitialSetupWizard: React.FC<{
     };
 
     const resumeWizard = () => {
-        hydrateWizardDraftsFromSettings('resume');
+        setWizardLaunchRequested(true);
         setMode('active');
         setWizardStep((step) => Math.min(Math.max(0, step), steps.length - 1));
+        hydrateWizardDraftsFromSettings('resume');
     };
 
     const wizardChoiceClass = 'rounded-lg border border-slate-300 bg-white px-4 py-3 text-left text-sm font-semibold text-slate-800 shadow-sm transition hover:border-orange-300 hover:bg-orange-50 hover:text-orange-900';
@@ -9936,17 +10033,16 @@ const InitialSetupWizard: React.FC<{
                 </div>
                 <div
                     className="relative block w-full shrink-0 lg:w-[240px]"
-                    onBlur={(event) => {
-                        if (!event.currentTarget.contains(event.relatedTarget as Node | null)) {
-                            setWizardPageMenuOpen(false);
-                        }
-                    }}
                 >
                     <span className={wizardLabelClass}>Go to wizard page</span>
                     <button
+                        ref={wizardPageMenuButtonRef}
                         type="button"
                         className={`${wizardInputClass} mt-1 flex items-center justify-between gap-2 bg-white text-left text-slate-950`}
-                        onClick={() => setWizardPageMenuOpen((open) => !open)}
+                        onClick={() => {
+                            updateWizardPageMenuPosition();
+                            setWizardPageMenuOpen((open) => !open);
+                        }}
                         onKeyDown={stopEditableKeyPropagation}
                         aria-expanded={wizardPageMenuOpen}
                         aria-haspopup="listbox"
@@ -9954,9 +10050,16 @@ const InitialSetupWizard: React.FC<{
                         <span className="min-w-0 truncate">{currentStep + 1}. {visibleStep.title}</span>
                         <span className="shrink-0 text-slate-400">v</span>
                     </button>
-                    {wizardPageMenuOpen ? (
+                    {wizardPageMenuOpen && typeof document !== 'undefined' ? createPortal(
                         <div
-                            className="absolute right-0 z-50 mt-1 max-h-[440px] w-[min(420px,calc(100vw-32px))] overflow-y-auto rounded-lg border border-slate-300 bg-white py-1 shadow-xl"
+                            ref={wizardPageMenuRef}
+                            className="fixed z-[9999] overflow-y-auto rounded-lg border border-slate-300 bg-white py-1 shadow-2xl"
+                            style={{
+                                top: wizardPageMenuPosition.top,
+                                left: wizardPageMenuPosition.left,
+                                width: wizardPageMenuPosition.width,
+                                maxHeight: wizardPageMenuPosition.maxHeight,
+                            }}
                             role="listbox"
                         >
                             {steps.map((step, index) => (
@@ -9974,7 +10077,8 @@ const InitialSetupWizard: React.FC<{
                                     <span className="min-w-0 flex-1">{step.title}</span>
                                 </button>
                             ))}
-                        </div>
+                        </div>,
+                        document.body,
                     ) : null}
                 </div>
             </div>
@@ -11542,6 +11646,10 @@ const InitialSetupWizard: React.FC<{
                 courses: item.courses,
                 unit: item.unit,
                 location: item.location,
+                testEventType: item.testEventType,
+                testingOfficerQualificationId: item.testingOfficerQualificationId,
+                useTestingOfficerSecondaryCallsign: item.useTestingOfficerSecondaryCallsign,
+                eventDetailsSortie: item.eventDetailsSortie,
             })),
             fallbackSample: fallbackItemsFromValidatedUpload.slice(0, 12).map((item) => ({
                 id: item.id,
@@ -11550,6 +11658,10 @@ const InitialSetupWizard: React.FC<{
                 courses: item.courses,
                 unit: item.unit,
                 location: item.location,
+                testEventType: item.testEventType,
+                testingOfficerQualificationId: item.testingOfficerQualificationId,
+                useTestingOfficerSecondaryCallsign: item.useTestingOfficerSecondaryCallsign,
+                eventDetailsSortie: item.eventDetailsSortie,
             })),
         });
         if (itemsForCommit.length === 0) {
@@ -11656,6 +11768,10 @@ const InitialSetupWizard: React.FC<{
                 unit: item.unit,
                 location: item.location,
                 sortOrder: item.sortOrder,
+                testEventType: item.testEventType,
+                testingOfficerQualificationId: item.testingOfficerQualificationId,
+                useTestingOfficerSecondaryCallsign: item.useTestingOfficerSecondaryCallsign,
+                eventDetailsSortie: item.eventDetailsSortie,
             })),
         });
         saveWizardConfig(`Committed ${scopedItems.length} LMP event${scopedItems.length === 1 ? '' : 's'} to this setup.`, (baseConfig) => updatePrimaryOrganisationWithSettings(baseConfig, (settings) => {
@@ -12877,7 +12993,7 @@ const InitialSetupWizard: React.FC<{
         );
     };
 
-    if (mode === 'detect' && isPartiallyConfigured) {
+    if (mode === 'detect' && isPartiallyConfigured && !wizardLaunchRequested) {
         return (
             <div data-neo-guide="initial-setup-wizard-panel" className="rounded-xl border border-slate-300 bg-slate-50 p-5 text-slate-900 shadow-sm">
                 <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-orange-600">Initial Setup Wizard</p>
@@ -13473,12 +13589,8 @@ const ScheduleView: React.FC<ScheduleViewProps> = ({
     const hasInitialSetupWizardProgress = useCallback(() => (
         hasStoredInitialSetupWizardProgress() || hasPersistedInitialSetupWizardProgress()
     ), [hasPersistedInitialSetupWizardProgress, hasStoredInitialSetupWizardProgress]);
-    useEffect(() => {
-        if (!showInitialSetupBlankState || showResourceUnderlayPanel || (!resumeInitialSetupWizard && !hasInitialSetupWizardProgress())) return;
-        onOrganisationSlideoutOpen?.();
-        setShowResourceUnderlayPanel(true);
-    }, [hasInitialSetupWizardProgress, onOrganisationSlideoutOpen, platformConfig, resumeInitialSetupWizard, showInitialSetupBlankState, showResourceUnderlayPanel]);
-    const shouldShowInitialSetupPrompt = showInitialSetupBlankState && !showResourceUnderlayPanel && !resumeInitialSetupWizard && !hasInitialSetupWizardProgress();
+    const initialSetupWizardHasProgress = hasInitialSetupWizardProgress();
+    const shouldShowInitialSetupPrompt = showInitialSetupBlankState && !showResourceUnderlayPanel && !resumeInitialSetupWizard;
     const openInitialSetupWizard = useCallback(() => {
         onOrganisationSlideoutOpen?.();
         setShowResourceUnderlayPanel(true);
@@ -15531,7 +15643,7 @@ const ScheduleView: React.FC<ScheduleViewProps> = ({
                             onClick={openInitialSetupWizard}
                             className="relative mt-6 rounded-md border border-orange-300 bg-orange-500 px-5 py-2.5 text-sm font-black text-slate-950 shadow-[0_0_22px_rgba(251,146,60,0.32)] transition hover:bg-orange-400"
                         >
-                            Start Initial Setup Wizard
+                            {initialSetupWizardHasProgress ? 'Continue Initial Setup Wizard' : 'Start Initial Setup Wizard'}
                         </button>
                     </div>
                 </div>

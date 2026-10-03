@@ -20,6 +20,8 @@ const UPLOAD_TYPE_LABELS = new Set([
   'ftd',
   'sim',
   'simulator',
+  'procedural trainer',
+  'procedural training',
   'academics',
   'academic',
   'ground',
@@ -122,10 +124,33 @@ const getList = (row: Record<string, any>, aliases: string[]): string[] => {
 const normaliseType = (value: string): string => {
   const cleanValue = value.trim().toLowerCase();
   if (cleanValue === 'flight' || cleanValue === 'flying') return 'Flight';
-  if (cleanValue === 'ftd' || cleanValue === 'sim' || cleanValue === 'simulator') return 'FTD';
+  if (cleanValue === 'ftd' || cleanValue === 'sim' || cleanValue === 'simulator' || cleanValue === 'procedural trainer' || cleanValue === 'procedural training') return 'FTD';
   if (cleanValue === 'academics' || cleanValue === 'academic') return 'Academics';
   if (cleanValue === 'ground' || cleanValue === 'ground school' || cleanValue === 'cpt' || cleanValue === 'tut' || cleanValue === 'tutorial' || cleanValue === 'brief' || cleanValue === 'mass brief') return 'Ground School';
   return value || 'Ground School';
+};
+
+const normaliseLmpTestEventType = (value: string): 'NONE' | 'FLIGHT_TEST' | 'SIMULATOR_TEST' => {
+  const cleanValue = value.trim().toLowerCase().replace(/[^a-z0-9]+/g, ' ');
+  if (!cleanValue || cleanValue === 'none' || cleanValue === 'not a test' || cleanValue === 'not a test event') return 'NONE';
+  if (cleanValue === 'flight test' || cleanValue === 'flight' || cleanValue === 'flt test') return 'FLIGHT_TEST';
+  if (cleanValue === 'simulator test' || cleanValue === 'sim test' || cleanValue === 'sim' || cleanValue === 'ftd test') return 'SIMULATOR_TEST';
+  return 'NONE';
+};
+
+const normaliseTestingOfficerQualification = (value: string): string | null => {
+  const cleanValue = value.trim().toLowerCase().replace(/[^a-z0-9]+/g, ' ');
+  if (!cleanValue) return null;
+  if (cleanValue === 'testing officer' || cleanValue === 'test officer' || cleanValue === 'testing officer qualification' || cleanValue === 'testing officer qual' || cleanValue === 'testing officer qn' || cleanValue === 'testing officer q') return 'testing-officer';
+  if (cleanValue === 'qfi') return 'qfi';
+  if (cleanValue === 'ire') return 'ire';
+  if (cleanValue === 'testing officer id' || cleanValue === 'testing officer id testing officer') return 'testing-officer';
+  return null;
+};
+
+const parseBooleanUploadValue = (value: string): boolean => {
+  const cleanValue = value.trim().toLowerCase();
+  return ['yes', 'y', 'true', '1', 'use', 'use secondary', 'secondary', 'secondary callsign'].includes(cleanValue);
 };
 
 const getRequiredUploadDataErrors = (row: Record<string, any>): string[] => {
@@ -139,11 +164,11 @@ const getRequiredUploadDataErrors = (row: Record<string, any>): string[] => {
 
   const typeValue = getString(row, ['Type']);
   if (typeValue && !UPLOAD_TYPE_LABELS.has(typeValue.trim().toLowerCase())) {
-    errors.push(`Type must be one of: Flight, FTD, Academics, Ground School, CPT`);
+    errors.push(`Type must be one of: Flight, Simulator, Procedural Trainer, Academics, Ground School, CPT`);
   }
 
   const flightOrSimHours = getNumber(row, ['Flight or Sim Hours', 'flightOrSimHours']);
-  const totalEventHours = getNumber(row, ['Total Event Hours', 'totalEventHours']);
+  const totalEventHours = getNumber(row, ['Total Event Hours', 'Total Event Hrs', 'totalEventHours']);
   const duration = flightOrSimHours ?? totalEventHours;
   if (!(Number.isFinite(duration) && Number(duration) > 0)) {
     errors.push('Missing required duration: enter a positive value in Flight or Sim Hours or Total Event Hours');
@@ -208,6 +233,16 @@ const getUnitScopedCollectionCode = (baseCode: string, unitCode: string): string
 
 const rowHasContent = (row: Record<string, any>): boolean =>
   Object.values(row).some(value => value !== undefined && value !== null && String(value).trim() !== '');
+
+const rowHasUploadEventContent = (row: Record<string, any>): boolean => {
+  if (!rowHasContent(row)) return false;
+  return Boolean(
+    getString(row, ['Event Code', 'Code', 'Event ID', 'Event Number'])
+    || getString(row, ['Event description', 'Event Description', 'Event Title', 'Title', 'Description', 'eventDescription'])
+    || getString(row, ['Type'])
+    || getString(row, ['Course', 'Package'])
+  );
+};
 
 const getWorksheetCellText = (cell: any): string => String(cell?.w ?? cell?.v ?? '').trim();
 
@@ -299,6 +334,221 @@ const isCourseShellRow = (item: any): boolean => (
   String(item?.notes || '').includes(SYLLABUS_COURSE_SHELL_NOTE)
 );
 
+const getIndividualMasterEventId = (item: any): string => String(item?.masterEventId || item?.id || item?.code || '').trim();
+
+const getEventIdentityKeys = (item: any): string[] => Array.from(new Set([
+  item?.masterEventId,
+  item?.id,
+  item?.code,
+].map(value => String(value || '').trim()).filter(Boolean)));
+
+const itemMatchesAnyKey = (item: any, keys: Set<string>): boolean =>
+  getEventIdentityKeys(item).some(key => keys.has(key));
+
+const isIndividualEventComplete = (item: any, completedIds: Set<string>): boolean => {
+  const identifiers = [
+    item?.id,
+    item?.code,
+    item?.masterEventId,
+  ].map(value => String(value || '').trim()).filter(Boolean);
+  return Boolean(item?.completedAt || item?.isComplete || item?.completed || item?.rplGranted || identifiers.some(id => completedIds.has(id)));
+};
+
+const stampMasterLmpItemsForIndividual = (masterSyllabus: any[]): any[] =>
+  masterSyllabus.map((item, index) => ({
+    ...item,
+    masterEventId: String(item?.id || item?.code || '').trim(),
+    lmpSource: 'master',
+    orderKey: item?.orderKey || String(index + 1).padStart(5, '0'),
+    placementNeedsReview: false,
+  }));
+
+const mergeUpdatedMasterIntoIndividualLmp = (
+  existingEvents: any[],
+  masterSyllabus: any[],
+  completedEventIds: string[],
+): { events: any[]; meta: Record<string, any> } => {
+  const completedIds = new Set((completedEventIds || []).map(value => String(value || '').trim()).filter(Boolean));
+  const existing = Array.isArray(existingEvents) ? existingEvents : [];
+  const existingByMasterId = new Map<string, any>();
+  const existingByCode = new Map<string, any>();
+
+  existing.forEach((item) => {
+    const masterId = getIndividualMasterEventId(item);
+    if (masterId) existingByMasterId.set(masterId, item);
+    const code = String(item?.code || '').trim();
+    if (code) existingByCode.set(code, item);
+  });
+
+  const stampedMaster = stampMasterLmpItemsForIndividual(masterSyllabus);
+  const existingCompletedByNewMasterIndex = stampedMaster.map((masterItem, index) => {
+    const masterId = getIndividualMasterEventId(masterItem);
+    const existingItem = existingByMasterId.get(masterId) || existingByCode.get(String(masterItem?.code || '').trim());
+    return {
+      index,
+      masterItem,
+      existingItem,
+      isComplete: existingItem ? isIndividualEventComplete(existingItem, completedIds) : isIndividualEventComplete(masterItem, completedIds),
+    };
+  });
+
+  const lastCompletedInNewMaster = existingCompletedByNewMasterIndex
+    .filter(item => item.isComplete)
+    .reduce((max, item) => Math.max(max, item.index), -1);
+
+  const lastCompletedMaster = lastCompletedInNewMaster >= 0 ? stampedMaster[lastCompletedInNewMaster] : null;
+  const lastCompletedKeys = new Set(getEventIdentityKeys(lastCompletedMaster || {}));
+  const lastCompletedExistingIndex = lastCompletedKeys.size > 0
+    ? existing.findIndex(item => itemMatchesAnyKey(item, lastCompletedKeys))
+    : existing.reduce((lastIndex, item, index) => isIndividualEventComplete(item, completedIds) ? index : lastIndex, -1);
+
+  const protectedPrefix = lastCompletedExistingIndex >= 0
+    ? existing.slice(0, lastCompletedExistingIndex + 1).map((item, index) => ({
+        ...item,
+        orderKey: String(index + 1).padStart(5, '0'),
+      }))
+    : [];
+  const protectedKeys = new Set(protectedPrefix.flatMap(getEventIdentityKeys));
+  const futureMaster = stampedMaster.slice(lastCompletedInNewMaster + 1);
+  const futureMasterKeys = new Set(futureMaster.flatMap(getEventIdentityKeys));
+
+  const rebuiltFuture = futureMaster
+    .filter(masterItem => !itemMatchesAnyKey(masterItem, protectedKeys))
+    .map((masterItem, index) => {
+      const masterId = getIndividualMasterEventId(masterItem);
+      const existingItem = existingByMasterId.get(masterId) || existingByCode.get(String(masterItem?.code || '').trim());
+      return {
+        ...masterItem,
+        completedAt: existingItem?.completedAt ?? null,
+        userLockedPosition: existingItem?.userLockedPosition,
+        orderKey: String(protectedPrefix.length + index + 1).padStart(5, '0'),
+      };
+    });
+
+  const overlaysAndRemovedCompleted = existing
+    .slice(Math.max(lastCompletedExistingIndex + 1, 0))
+    .filter((item) => {
+      const isOverlay = item?.lmpSource === 'remedial' || item?.lmpSource === 'custom' || item?.isRemedial === true;
+      if (isOverlay) return true;
+      if (itemMatchesAnyKey(item, futureMasterKeys)) return false;
+      return isIndividualEventComplete(item, completedIds);
+    })
+    .map((item, index) => ({
+      ...item,
+      orderKey: `${String(protectedPrefix.length + rebuiltFuture.length + index + 1).padStart(5, '0')}.900`,
+      placementNeedsReview: true,
+    }));
+
+  const events = [...protectedPrefix, ...rebuiltFuture, ...overlaysAndRemovedCompleted];
+  return {
+    events,
+    meta: {
+      lastCompletedEventCode: lastCompletedMaster?.code || protectedPrefix[protectedPrefix.length - 1]?.code || null,
+      lastCompletedNewMasterIndex: lastCompletedInNewMaster,
+      protectedPrefixEvents: protectedPrefix.length,
+      ignoredUploadedHistoricalEvents: Math.max(lastCompletedInNewMaster + 1, 0),
+      futureEventsFromUpdatedMaster: rebuiltFuture.length,
+      carriedForwardReviewEvents: overlaysAndRemovedCompleted.length,
+      beforeEvents: existing.length,
+      afterEvents: events.length,
+    },
+  };
+};
+
+const getAssignedTraineeWhere = (courseCode: string, locationCode = '', unitCode = '') => ({
+  isActive: true,
+  OR: [
+    { lmpType: courseCode },
+    { academicLmpType: courseCode },
+    { course: courseCode },
+  ],
+  ...(unitCode ? { unit: unitCode } : {}),
+  ...(locationCode ? { location: locationCode } : {}),
+});
+
+const summariseIndividualUpdateImpact = async (courseCode: string, locationCode = '', unitCode = '') => {
+  const trainees = await db.trainee.findMany({
+    where: getAssignedTraineeWhere(courseCode, locationCode, unitCode),
+    include: { individualLMP: true },
+  });
+  let protectedCompletedEvents = 0;
+  let ignoredUploadedHistoricalEvents = 0;
+  let futureEventsFromUpdatedMaster = 0;
+  trainees.forEach((trainee: any) => {
+    const completedIds = new Set<string>((trainee.individualLMP?.completedEventIds || []).map((value: any) => String(value || '').trim()).filter(Boolean));
+    const events = Array.isArray(trainee.individualLMP?.events) ? trainee.individualLMP.events : [];
+    protectedCompletedEvents += events.filter((item: any) => isIndividualEventComplete(item, completedIds)).length;
+  });
+  return {
+    assignedTrainees: trainees.length,
+    protectedCompletedEvents,
+  };
+};
+
+const refreshAssignedIndividualLmps = async (courseCode: string, masterSyllabus: any[], locationCode = '', unitCode = '') => {
+  const trainees = await db.trainee.findMany({
+    where: getAssignedTraineeWhere(courseCode, locationCode, unitCode),
+    include: { individualLMP: true },
+  });
+
+  let created = 0;
+  let updated = 0;
+  let protectedCompletedEvents = 0;
+  let ignoredUploadedHistoricalEvents = 0;
+  let futureEventsFromUpdatedMaster = 0;
+  const results: any[] = [];
+
+  for (const trainee of trainees) {
+    const existing = trainee.individualLMP;
+    const existingEvents = Array.isArray(existing?.events) ? existing.events : [];
+    const completedEventIds = Array.isArray(existing?.completedEventIds) ? existing.completedEventIds : [];
+    const completedIds = new Set<string>(completedEventIds.map((value: any) => String(value || '').trim()).filter(Boolean));
+    const protectedCount = existingEvents.filter((item: any) => isIndividualEventComplete(item, completedIds)).length;
+    const mergeResult = mergeUpdatedMasterIntoIndividualLmp(existingEvents, masterSyllabus, completedEventIds);
+    const mergedEvents = mergeResult.events;
+
+    await db.individualLMP.upsert({
+      where: { traineeId: trainee.id },
+      update: {
+        traineeFullName: trainee.fullName,
+        lmpType: courseCode,
+        events: mergedEvents,
+        completedEventIds,
+        updatedAt: new Date(),
+      },
+      create: {
+        traineeId: trainee.id,
+        traineeFullName: trainee.fullName,
+        lmpType: courseCode,
+        events: mergedEvents,
+        completedEventIds,
+      },
+    });
+
+    if (existing) updated += 1; else created += 1;
+    protectedCompletedEvents += protectedCount;
+    ignoredUploadedHistoricalEvents += Number(mergeResult.meta.ignoredUploadedHistoricalEvents || 0);
+    futureEventsFromUpdatedMaster += Number(mergeResult.meta.futureEventsFromUpdatedMaster || 0);
+    results.push({
+      traineeFullName: trainee.fullName,
+      beforeEvents: existingEvents.length,
+      afterEvents: mergedEvents.length,
+      protectedCompletedEvents: protectedCount,
+      ...mergeResult.meta,
+    });
+  }
+
+  return {
+    assignedTrainees: trainees.length,
+    created,
+    updated,
+    protectedCompletedEvents,
+    ignoredUploadedHistoricalEvents,
+    futureEventsFromUpdatedMaster,
+    results: results.slice(0, 50),
+  };
+};
+
 const getDuplicateSourceDetails = (item: any) => ({
   code: item?.code || '',
   sourceCourses: Array.isArray(item?.courses) ? item.courses.filter(Boolean) : [],
@@ -329,6 +579,10 @@ export async function POST(request: NextRequest) {
     let selectedCourseCode = String(formData.get('courseCode') || '').trim();
     const packageName = String(formData.get('packageName') || '').trim();
     const uploadMode = String(formData.get('uploadMode') || 'update').trim();
+    const uploadIntent = String(formData.get('uploadIntent') || '').trim();
+    const dryRun = String(formData.get('dryRun') || '').trim() === 'true';
+    const uploadedLmpVersion = String(formData.get('lmpVersion') || '').trim();
+    const updateReviewMode = String(formData.get('updateReviewMode') || 'automatic').trim() === 'one-by-one' ? 'one-by-one' : 'automatic';
     const requestedLmpType = String(formData.get('lmpType') || 'Master LMP').trim();
     const lmpType = requestedLmpType === 'Staff CAT' ? 'Staff CAT' : 'Master LMP';
     const operationalModel = String(formData.get('operationalModel') || '').trim();
@@ -383,6 +637,8 @@ export async function POST(request: NextRequest) {
     let skipped = 0;
     let generatedCodeSequence = 1;
     let generatedPlaceholderUsed = false;
+    const uploadedEventCodes: string[] = [];
+    let uploadedEventRows = 0;
 
     if (uploadMode === 'replace') {
       const preflightErrors: Array<{ row: number; error: string; duplicateSource?: any }> = [];
@@ -391,7 +647,7 @@ export async function POST(request: NextRequest) {
       for (let index = 0; index < rows.length; index++) {
         const row = rows[index];
         const rowNumber = index + (skipStyledExampleRow ? 3 : 2);
-        if (!rowHasContent(row)) continue;
+        if (!rowHasUploadEventContent(row)) continue;
         contentRows += 1;
 
         const requiredDataErrors = getRequiredUploadDataErrors(row);
@@ -437,6 +693,58 @@ export async function POST(request: NextRequest) {
       }
     }
 
+    for (let index = 0; index < rows.length; index++) {
+      const row = rows[index];
+      if (!rowHasUploadEventContent(row)) continue;
+      const requiredDataErrors = getRequiredUploadDataErrors(row);
+      if (requiredDataErrors.length > 0) continue;
+      uploadedEventRows += 1;
+      const explicitCode = getString(row, ['Event Code', 'Code', 'Event ID', 'Event Number']);
+      const code = explicitCode || getGeneratedEventCode(selectedCourseCode, uploadedEventRows);
+      if (code) uploadedEventCodes.push(code);
+    }
+
+    const existingDestinationRows = await db.syllabusItem.findMany({
+      where: {
+        lmpType,
+        courses: { has: selectedCourseCode },
+        ...(lmpType === 'Staff CAT' && normaliseContextCode(operationalModel) === 'FIXED_CREW' && unitCode ? { unit: unitCode } : {}),
+      },
+      select: { id: true, code: true, isActive: true, notes: true },
+    });
+    const updateImpact = lmpType === 'Master LMP'
+      ? await summariseIndividualUpdateImpact(selectedCourseCode, locationCode, unitCode)
+      : { assignedTrainees: 0, protectedCompletedEvents: 0 };
+
+    if (dryRun) {
+      return NextResponse.json(
+        {
+          dryRun: true,
+          created: 0,
+          updated: 0,
+          imported: 0,
+          skipped: 0,
+          errors: [],
+          message: `Ready to ${uploadIntent === 'new' || uploadMode === 'create' ? 'create' : 'update'} ${lmpType === 'Staff CAT' ? 'Training Package' : 'Master LMP'} ${packageName || selectedCourseCode}.`,
+          preview: {
+            uploadIntent,
+            uploadMode,
+            updateReviewMode,
+            destinationCode: selectedCourseCode,
+            destinationName: packageName || selectedCourseCode,
+            uploadedEventRows,
+            uploadedEventCodes: uploadedEventCodes.slice(0, 30),
+            existingMasterRows: existingDestinationRows.filter((item: any) => item.isActive !== false && !isCourseShellRow(item)).length,
+            assignedTrainees: updateImpact.assignedTrainees,
+            protectedCompletedEvents: updateImpact.protectedCompletedEvents,
+            fileName: file.name,
+            lmpVersion: uploadedLmpVersion || null,
+          },
+        },
+        { headers: getCorsHeaders(request) }
+      );
+    }
+
     if (lmpType === 'Staff CAT' && uploadMode === 'create') {
       const existingPackageCount = await db.syllabusItem.count({
         where: {
@@ -454,12 +762,31 @@ export async function POST(request: NextRequest) {
       }
     }
 
+    if (lmpType === 'Master LMP' && uploadMode === 'create') {
+      const existingMasterCount = existingDestinationRows.filter((item: any) => item.isActive !== false).length;
+      if (existingMasterCount > 0) {
+        return NextResponse.json(
+          { error: `Master LMP "${selectedCourseCode}" already exists. Select it and use Update existing LMP instead.` },
+          { status: 409, headers: getCorsHeaders(request) }
+        );
+      }
+    }
+
     if (lmpType === 'Staff CAT' && uploadMode === 'replace') {
       await db.syllabusItem.deleteMany({
         where: {
           lmpType,
           courses: { has: selectedCourseCode },
           ...(normaliseContextCode(operationalModel) === 'FIXED_CREW' && unitCode ? { unit: unitCode } : {}),
+        },
+      });
+    }
+
+    if (lmpType === 'Master LMP' && uploadMode === 'replace') {
+      await db.syllabusItem.deleteMany({
+        where: {
+          lmpType,
+          courses: { has: selectedCourseCode },
         },
       });
     }
@@ -482,7 +809,7 @@ export async function POST(request: NextRequest) {
     for (let index = 0; index < rows.length; index++) {
       const row = rows[index];
       const rowNumber = index + (skipStyledExampleRow ? 3 : 2);
-      if (!rowHasContent(row)) continue;
+      if (!rowHasUploadEventContent(row)) continue;
 
       const requiredDataErrors = getRequiredUploadDataErrors(row);
       if (requiredDataErrors.length > 0) {
@@ -505,7 +832,13 @@ export async function POST(request: NextRequest) {
       const type = normaliseType(getString(row, ['Type']));
       const sortieType = type === 'Flight' ? normaliseSortieType(getString(row, ['Dual/Solo', 'sortieType'])) : null;
       const flightOrSimHours = getNumber(row, ['Flight or Sim Hours', 'flightOrSimHours']);
-      const totalEventHours = getNumber(row, ['Total Event Hours', 'totalEventHours']) ?? 0;
+      const totalEventHours = getNumber(row, ['Total Event Hours', 'Total Event Hrs', 'totalEventHours']) ?? 0;
+      const testEventType = normaliseLmpTestEventType(getString(row, ['Test Event Type', 'Test Event', 'Test Type']));
+      const testingOfficerQualificationId = testEventType === 'NONE'
+        ? null
+        : normaliseTestingOfficerQualification(getString(row, ['Testing Officer Qualification', 'Testing Officer Qual', 'Test Officer Qualification', 'Test Officer Qual']));
+      const useTestingOfficerSecondaryCallsign = testEventType === 'FLIGHT_TEST'
+        && parseBooleanUploadValue(getString(row, ['Secondary Callsign', 'Use Secondary Callsign', 'Use Testing Officer Secondary Callsign']));
       const itemData = {
         code,
         eventDescription: getString(row, ['Event description', 'Event Description', 'Event Title', 'Title', 'Description', 'eventDescription']),
@@ -520,12 +853,12 @@ export async function POST(request: NextRequest) {
         resourcesPhysical: getList(row, ['Resources Required (physical)', 'resourcesPhysical']),
         resourcesHuman: getList(row, ['Resources Required (Human)', 'resourcesHuman']),
         eventDetailsCommon: getList(row, ['Event Details - Common', 'eventDetailsCommon']),
-        eventDetailsSortie: getList(row, ['Event Details - Sortie', 'eventDetailsSortie']),
+        eventDetailsSortie: getList(row, ['Event Details - Sortie', 'Event Details (Sortie)', 'Event Details Sortie', 'eventDetailsSortie']),
         flightOrSimHours: flightOrSimHours ?? 0,
         totalEventHours,
         duration: flightOrSimHours ?? totalEventHours,
-        preFlightTime: getNumber(row, ['Preflight Time', 'Pre Flight Time', 'Pre-flight', 'Pre Flight Minutes', 'preFlightTime']) ?? 0,
-        postFlightTime: getNumber(row, ['Post Flight Time', 'Post-flight Time', 'Post-flight', 'Post Flight Minutes', 'postFlightTime']) ?? 0,
+        preFlightTime: getNumber(row, ['Preflight Time', 'Pre Flight Time', 'Pre-Flight', 'Pre-flight', 'Pre Flight Minutes', 'preFlightTime']) ?? 0,
+        postFlightTime: getNumber(row, ['Post Flight Time', 'Post-flight Time', 'Post-Flight', 'Post-flight', 'Post Flight Minutes', 'postFlightTime']) ?? 0,
         prerequisites: getList(row, ['prerequisites', 'Prerequisites']),
         prerequisitesGround: getList(row, ['Pre-requisite Events (Ground School)', 'prerequisitesGround']),
         prerequisitesFlying: getList(row, ['Pre-requisite Events (Sim/Flying)', 'prerequisitesFlying']),
@@ -534,6 +867,10 @@ export async function POST(request: NextRequest) {
         location: locationCode,
         unit: unitCode,
         lmpType,
+        testEventType,
+        testingOfficerQualificationId,
+        useTestingOfficerSecondaryCallsign,
+        notes: uploadedLmpVersion ? `[DFP_LMP_VERSION:${uploadedLmpVersion}]` : undefined,
         isActive: true,
       };
 
@@ -551,7 +888,7 @@ export async function POST(request: NextRequest) {
 
         const updatedItem = await db.syllabusItem.update({
           where: { id: existing.id },
-          data: { ...itemData, notes: isCourseShellRow(existing) ? null : existing.notes, version: { increment: 1 }, updatedAt: new Date() },
+          data: { ...itemData, notes: uploadedLmpVersion ? itemData.notes : (isCourseShellRow(existing) ? null : existing.notes), version: { increment: 1 }, updatedAt: new Date() },
         });
 
         await db.syllabusHistory.create({
@@ -572,7 +909,7 @@ export async function POST(request: NextRequest) {
       if (!explicitCode && reusablePackagePlaceholder && !generatedPlaceholderUsed) {
         const updatedItem = await db.syllabusItem.update({
           where: { id: reusablePackagePlaceholder.id },
-          data: { ...itemData, notes: isCourseShellRow(reusablePackagePlaceholder) ? null : reusablePackagePlaceholder.notes, version: { increment: 1 }, updatedAt: new Date() },
+          data: { ...itemData, notes: uploadedLmpVersion ? itemData.notes : (isCourseShellRow(reusablePackagePlaceholder) ? null : reusablePackagePlaceholder.notes), version: { increment: 1 }, updatedAt: new Date() },
         });
 
         await db.syllabusHistory.create({
@@ -613,6 +950,39 @@ export async function POST(request: NextRequest) {
       created.push(newItem);
     }
 
+    let individualLmpSync: any = null;
+    if (lmpType === 'Master LMP' && (uploadMode === 'replace' || uploadIntent === 'update')) {
+      const masterSyllabus = await db.syllabusItem.findMany({
+        where: {
+          lmpType: 'Master LMP',
+          isActive: true,
+          courses: { has: selectedCourseCode },
+        },
+        orderBy: [{ sortOrder: 'asc' }, { code: 'asc' }],
+      });
+      individualLmpSync = await refreshAssignedIndividualLmps(selectedCourseCode, masterSyllabus, locationCode, unitCode);
+
+      const historyAnchorId = masterSyllabus[0]?.id || created[0]?.id || updated[0]?.id;
+      if (historyAnchorId) {
+        await db.syllabusHistory.create({
+          data: {
+            syllabusItemId: historyAnchorId,
+            changeType: 'UPDATE',
+            changeData: {
+              courseCode: selectedCourseCode,
+          uploadIntent,
+          uploadMode,
+          updateReviewMode,
+          uploadedEventRows,
+              individualLmpSync,
+            } as any,
+            changedBy: 'bulk-upload',
+            changeReason: `Bulk upload refreshed assigned Individual LMPs for Master LMP: ${selectedCourseCode}`,
+          },
+        });
+      }
+    }
+
     return NextResponse.json(
       {
         created: created.length,
@@ -620,6 +990,19 @@ export async function POST(request: NextRequest) {
         imported: created.length + updated.length,
         skipped,
         errors,
+        preview: {
+          uploadIntent,
+          uploadMode,
+          updateReviewMode,
+          destinationCode: selectedCourseCode,
+          destinationName: packageName || selectedCourseCode,
+          uploadedEventRows,
+          existingMasterRows: existingDestinationRows.filter((item: any) => item.isActive !== false && !isCourseShellRow(item)).length,
+          assignedTrainees: updateImpact.assignedTrainees,
+          protectedCompletedEvents: updateImpact.protectedCompletedEvents,
+          lmpVersion: uploadedLmpVersion || null,
+        },
+        individualLmpSync,
         message: `${created.length + updated.length} row${created.length + updated.length === 1 ? '' : 's'} imported into ${lmpType === 'Staff CAT' ? 'Training Package' : 'Master LMP'} ${packageName || selectedCourseCode || ''}`.trim(),
       },
       { headers: getCorsHeaders(request) }

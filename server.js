@@ -171,6 +171,20 @@ function normaliseSyllabusItemForRuntime(item) {
     ? Number(item.flightOrSimHours)
     : INTEGRATED_COMBAT_OPERATIONS_DEFAULT_FLIGHT_OR_SIM_HOURS;
   const duration = getAuthoritativeSyllabusDuration(item);
+  const normaliseOptionalWholeNumber = (value) => {
+    if (value === undefined || value === null || value === '') return null;
+    const numericValue = Number(value);
+    return Number.isFinite(numericValue) && numericValue > 0 ? Math.round(numericValue) : null;
+  };
+  const normaliseOptionalBoolean = (value) => {
+    if (value === undefined || value === null || value === '') return null;
+    const normalised = String(value).trim().toUpperCase();
+    if (value === true || ['YES', 'Y', 'TRUE', '1'].includes(normalised)) return true;
+    if (value === false || ['NO', 'N', 'FALSE', '0'].includes(normalised)) return false;
+    return null;
+  };
+  const groupEvent = normaliseOptionalBoolean(item.groupEvent);
+  const groupEntireCourse = normaliseOptionalBoolean(item.groupEntireCourse);
   if (
     item.lmpType === 'Staff CAT' &&
     courses.some(course => String(course || '').trim().toUpperCase() === INTEGRATED_COMBAT_OPERATIONS_PACKAGE_CODE)
@@ -182,6 +196,11 @@ function normaliseSyllabusItemForRuntime(item) {
       testEventType,
       testingOfficerQualificationId,
       useTestingOfficerSecondaryCallsign,
+      groupEvent,
+      minimumToSchedule: normaliseOptionalWholeNumber(item.minimumToSchedule),
+      groupSizeMin: normaliseOptionalWholeNumber(item.groupSizeMin),
+      groupSizeMax: normaliseOptionalWholeNumber(item.groupSizeMax),
+      groupEntireCourse,
       flightOrSimHours,
       duration: flightOrSimHours,
       preFlightTime: INTEGRATED_COMBAT_OPERATIONS_PREFLIGHT_HOURS,
@@ -196,8 +215,22 @@ function normaliseSyllabusItemForRuntime(item) {
     testEventType,
     testingOfficerQualificationId,
     useTestingOfficerSecondaryCallsign,
+    groupEvent,
+    minimumToSchedule: normaliseOptionalWholeNumber(item.minimumToSchedule),
+    groupSizeMin: normaliseOptionalWholeNumber(item.groupSizeMin),
+    groupSizeMax: normaliseOptionalWholeNumber(item.groupSizeMax),
+    groupEntireCourse,
     duration,
   };
+}
+
+function getUploadBoolean(row, aliases) {
+  const rawValue = getUploadValue(row, aliases);
+  if (rawValue === undefined || rawValue === null || rawValue === '') return null;
+  const normalised = String(rawValue || '').trim().toUpperCase();
+  if (['YES', 'Y', 'TRUE', '1'].includes(normalised)) return true;
+  if (['NO', 'N', 'FALSE', '0'].includes(normalised)) return false;
+  return null;
 }
 
 const KNOWN_AIRFIELD_IDENTITIES = Object.values(DEFAULT_AIRFIELD_SOLAR_PROFILES || {})
@@ -1710,6 +1743,11 @@ async function ensureSyllabusTablesExist(db) {
         "resourcesHuman"       TEXT[] NOT NULL DEFAULT '{}',
         "eventDetailsCommon"   TEXT[] NOT NULL DEFAULT '{}',
         "eventDetailsSortie"   TEXT[] NOT NULL DEFAULT '{}',
+        "groupEvent"           BOOLEAN,
+        "minimumToSchedule"    INTEGER,
+        "groupSizeMin"         INTEGER,
+        "groupSizeMax"         INTEGER,
+        "groupEntireCourse"    BOOLEAN,
         "flightOrSimHours"     DOUBLE PRECISION NOT NULL DEFAULT 0,
         "totalEventHours"      DOUBLE PRECISION NOT NULL DEFAULT 0,
         "duration"             DOUBLE PRECISION NOT NULL DEFAULT 0,
@@ -1742,6 +1780,21 @@ async function ensureSyllabusTablesExist(db) {
     await db.$executeRawUnsafe(`ALTER TABLE "SyllabusItem" ADD COLUMN IF NOT EXISTS "testEventType" TEXT NOT NULL DEFAULT 'NONE'`);
     await db.$executeRawUnsafe(`ALTER TABLE "SyllabusItem" ADD COLUMN IF NOT EXISTS "testingOfficerQualificationId" TEXT`);
     await db.$executeRawUnsafe(`ALTER TABLE "SyllabusItem" ADD COLUMN IF NOT EXISTS "useTestingOfficerSecondaryCallsign" BOOLEAN NOT NULL DEFAULT false`);
+    await db.$executeRawUnsafe(`ALTER TABLE "SyllabusItem" ADD COLUMN IF NOT EXISTS "groupEvent" BOOLEAN NOT NULL DEFAULT false`);
+    await db.$executeRawUnsafe(`ALTER TABLE "SyllabusItem" ADD COLUMN IF NOT EXISTS "minimumToSchedule" INTEGER NOT NULL DEFAULT 0`);
+    await db.$executeRawUnsafe(`ALTER TABLE "SyllabusItem" ADD COLUMN IF NOT EXISTS "groupSizeMin" INTEGER NOT NULL DEFAULT 0`);
+    await db.$executeRawUnsafe(`ALTER TABLE "SyllabusItem" ADD COLUMN IF NOT EXISTS "groupSizeMax" INTEGER NOT NULL DEFAULT 0`);
+    await db.$executeRawUnsafe(`ALTER TABLE "SyllabusItem" ADD COLUMN IF NOT EXISTS "groupEntireCourse" BOOLEAN NOT NULL DEFAULT false`);
+    await db.$executeRawUnsafe(`ALTER TABLE "SyllabusItem" ALTER COLUMN "groupEvent" DROP NOT NULL`);
+    await db.$executeRawUnsafe(`ALTER TABLE "SyllabusItem" ALTER COLUMN "groupEvent" DROP DEFAULT`);
+    await db.$executeRawUnsafe(`ALTER TABLE "SyllabusItem" ALTER COLUMN "minimumToSchedule" DROP NOT NULL`);
+    await db.$executeRawUnsafe(`ALTER TABLE "SyllabusItem" ALTER COLUMN "minimumToSchedule" DROP DEFAULT`);
+    await db.$executeRawUnsafe(`ALTER TABLE "SyllabusItem" ALTER COLUMN "groupSizeMin" DROP NOT NULL`);
+    await db.$executeRawUnsafe(`ALTER TABLE "SyllabusItem" ALTER COLUMN "groupSizeMin" DROP DEFAULT`);
+    await db.$executeRawUnsafe(`ALTER TABLE "SyllabusItem" ALTER COLUMN "groupSizeMax" DROP NOT NULL`);
+    await db.$executeRawUnsafe(`ALTER TABLE "SyllabusItem" ALTER COLUMN "groupSizeMax" DROP DEFAULT`);
+    await db.$executeRawUnsafe(`ALTER TABLE "SyllabusItem" ALTER COLUMN "groupEntireCourse" DROP NOT NULL`);
+    await db.$executeRawUnsafe(`ALTER TABLE "SyllabusItem" ALTER COLUMN "groupEntireCourse" DROP DEFAULT`);
     await db.$executeRawUnsafe(`ALTER TABLE "SyllabusItem" ADD COLUMN IF NOT EXISTS "unit" TEXT`);
     await db.$executeRawUnsafe(`CREATE UNIQUE INDEX IF NOT EXISTS "SyllabusItem_code_key" ON "SyllabusItem"("code")`);
     await db.$executeRawUnsafe(`CREATE INDEX IF NOT EXISTS "SyllabusItem_sortOrder_idx" ON "SyllabusItem"("sortOrder")`);
@@ -7554,6 +7607,11 @@ app.get('/api/trainees/lmp-sync', async (req, res) => {
 });
 
 const getLmpMasterEventId = (item) => item?.masterEventId || item?.id || item?.code || '';
+const getLmpIdentityKeysForSync = (item) => Array.from(new Set([
+  normalizeLmpCompletionKeyForSync(item?.masterEventId),
+  normalizeLmpCompletionKeyForSync(item?.id),
+  normalizeLmpCompletionKeyForSync(item?.code),
+].filter(Boolean)));
 const createLmpOrderKeyForSync = (index) => String(index + 1).padStart(5, '0');
 const REMEDIAL_EVENT_CODE_REGEX_FOR_SYNC = /-(?:REM-[A-Z]+\d+|RFTD\d+|RRF\d+|RT\d+|RF\d+|FTD\d+|F\d+|T\d+)$/i;
 const isRemedialEventCodeForSync = (value) =>
@@ -7595,6 +7653,11 @@ const INDIVIDUAL_LMP_EDITABLE_FIELDS_FOR_SYNC = [
   'resourcesHuman',
   'eventDetailsCommon',
   'eventDetailsSortie',
+  'groupEvent',
+  'minimumToSchedule',
+  'groupSizeMin',
+  'groupSizeMax',
+  'groupEntireCourse',
   'flightOrSimHours',
   'totalEventHours',
   'duration',
@@ -7887,6 +7950,14 @@ const getLmpCanonicalCompletionKeyForSync = (item) =>
   normalizeLmpCompletionKeyForSync(item?.masterEventId) ||
   normalizeLmpCompletionKeyForSync(item?.id);
 
+const isLmpEventCompleteForSync = (item, scoreMap = {}) => (
+  Boolean(getLmpCompletionTimestampForSync(item, scoreMap)) ||
+  Boolean(getLmpRplTimestampForSync(item)) ||
+  item?.isComplete === true ||
+  item?.completed === true ||
+  Boolean(item?.completedAt)
+);
+
 const getLmpPrerequisiteKeysForSync = (item) => {
   const prerequisiteValues = [
     ...(Array.isArray(item?.prerequisites) ? item.prerequisites : []),
@@ -7976,15 +8047,53 @@ const mergeIndividualLmpWithMasterForSync = (existingEvents, masterSyllabus, sco
   }
 
   const masterIds = new Set(stampedMaster.map(getLmpMasterEventId).filter(Boolean));
+  const masterIdentityKeys = new Set(stampedMaster.flatMap(getLmpIdentityKeysForSync));
   const existingByMasterId = new Map();
   existingEvents.forEach(item => {
     if (isLmpOverlayItemForSync(item)) return;
-    const masterId = getLmpMasterEventId(item);
-    if (masterId) existingByMasterId.set(masterId, item);
+    getLmpIdentityKeysForSync(item).forEach(key => existingByMasterId.set(key, item));
   });
 
+  const protectedRetiredMasterEvents = existingEvents
+    .map((item, existingIndex) => ({ item, existingIndex }))
+    .filter(({ item }) => !isLmpOverlayItemForSync(item))
+    .filter(({ item }) => {
+      const identityKeys = getLmpIdentityKeysForSync(item);
+      return identityKeys.length > 0 &&
+        identityKeys.every(key => !masterIdentityKeys.has(key)) &&
+        isLmpEventCompleteForSync(item, scoreMap);
+    })
+    .map(({ item, existingIndex }) => {
+      const completedAt = getLmpCompletionTimestampForSync(item, scoreMap) || getLmpRplTimestampForSync(item) || item.completedAt || new Date().toISOString();
+      const previousMaster = existingEvents
+        .slice(0, existingIndex)
+        .reverse()
+        .find(prev => !isLmpOverlayItemForSync(prev) && masterIds.has(getLmpMasterEventId(prev)));
+      const nextMaster = existingEvents
+        .slice(existingIndex + 1)
+        .find(next => !isLmpOverlayItemForSync(next) && masterIds.has(getLmpMasterEventId(next)));
+
+      return {
+        ...item,
+        masterEventId: getLmpMasterEventId(item),
+        lmpSource: item.lmpSource || 'master',
+        completedAt,
+        isComplete: true,
+        completed: true,
+        protectedHistoricalEvent: true,
+        retiredFromMasterLmp: true,
+        placementNeedsReview: false,
+        orderKey: item.orderKey || createLmpOrderKeyForSync(existingIndex),
+        anchorAfterMasterEventId: getLmpMasterEventId(previousMaster),
+        anchorBeforeMasterEventId: getLmpMasterEventId(nextMaster),
+        anchorPolicy: 'between',
+      };
+    });
+
   const mergedMaster = stampedMaster.map((masterItem, index) => {
-    const existingItem = existingByMasterId.get(getLmpMasterEventId(masterItem));
+    const existingItem = getLmpIdentityKeysForSync(masterItem)
+      .map(key => existingByMasterId.get(key))
+      .find(Boolean);
     const completedAt = getLmpCompletionTimestampForSync(masterItem, scoreMap) || getLmpRplTimestampForSync(existingItem);
     const mergedItem = {
       ...masterItem,
@@ -7997,7 +8106,7 @@ const mergeIndividualLmpWithMasterForSync = (existingEvents, masterSyllabus, sco
       completed: Boolean(completedAt),
       ...getLmpRplFieldsForSync(existingItem, completedAt),
       userLockedPosition: existingItem?.userLockedPosition,
-      orderKey: existingItem?.orderKey || masterItem.orderKey || createLmpOrderKeyForSync(index),
+      orderKey: masterItem.orderKey || createLmpOrderKeyForSync(index),
       placementNeedsReview: false,
     };
     return existingItem?.rplGranted === true
@@ -8011,7 +8120,10 @@ const mergeIndividualLmpWithMasterForSync = (existingEvents, masterSyllabus, sco
     if (masterId) masterIndexById.set(masterId, index);
   });
 
-  const overlays = existingEvents.filter(isLmpOverlayItemForSync).map((item, index) => {
+  const overlays = [
+    ...existingEvents.filter(isLmpOverlayItemForSync),
+    ...protectedRetiredMasterEvents,
+  ].map((item, index) => {
     const itemIndex = existingEvents.indexOf(item);
     const fallbackAfter = item.anchorAfterMasterEventId || getLmpMasterEventId(existingEvents.slice(0, itemIndex).reverse().find(prev => !isLmpOverlayItemForSync(prev)) || {});
     const fallbackBefore = item.anchorBeforeMasterEventId || getLmpMasterEventId(existingEvents.slice(itemIndex + 1).find(next => !isLmpOverlayItemForSync(next)) || {});
@@ -8065,6 +8177,141 @@ const mergeIndividualLmpWithMasterForSync = (existingEvents, masterSyllabus, sco
 
   return [...result, ...appendOverlays.sort((a, b) => (a.orderKey || '').localeCompare(b.orderKey || ''))];
 };
+
+const buildCompletionScoreMapFromIndividualLmpForSync = (existingEvents = [], completedEventIds = []) => {
+  const scoreMap = {};
+  (Array.isArray(completedEventIds) ? completedEventIds : []).forEach(id => {
+    const normalized = normalizeLmpCompletionKeyForSync(id);
+    if (normalized) scoreMap[normalized] = new Date().toISOString();
+  });
+
+  (Array.isArray(existingEvents) ? existingEvents : []).forEach(item => addRplCompletionToScoreMapForSync(scoreMap, item));
+  (Array.isArray(existingEvents) ? existingEvents : []).forEach(item => {
+    if (!isLmpEventCompleteForSync(item, scoreMap)) return;
+    const completedAt = getLmpCompletionTimestampForSync(item, scoreMap) ||
+      getLmpRplTimestampForSync(item) ||
+      item.completedAt ||
+      new Date().toISOString();
+    getLmpCompletionKeysForSync(item).forEach(key => {
+      if (key && !scoreMap[key]) scoreMap[key] = completedAt;
+    });
+  });
+
+  return scoreMap;
+};
+
+async function refreshAssignedIndividualLmpsForMasterUpdate(db, lmpCode, options = {}) {
+  const cleanLmpCode = String(lmpCode || '').trim();
+  if (!cleanLmpCode) {
+    return {
+      skipped: true,
+      reason: 'missing_lmp_code',
+      assignedTrainees: 0,
+      created: 0,
+      updated: 0,
+      unchanged: 0,
+      protectedCompletedEvents: 0,
+    };
+  }
+
+  const masterSyllabus = await loadMasterSyllabusForLmpType(db, cleanLmpCode);
+  const trainees = await db.$queryRawUnsafe(
+    `SELECT * FROM "Trainee"
+     WHERE "isActive" = true
+       AND UPPER(TRIM(COALESCE("lmpType", ''))) = UPPER(TRIM($1))
+     ORDER BY "fullName" ASC`,
+    cleanLmpCode
+  );
+  const total = trainees.length;
+  const summary = {
+    lmpCode: cleanLmpCode,
+    masterRows: masterSyllabus.length,
+    assignedTrainees: total,
+    created: 0,
+    updated: 0,
+    unchanged: 0,
+    protectedCompletedEvents: 0,
+    addedFutureEvents: 0,
+    samples: [],
+  };
+
+  if (masterSyllabus.length === 0 || total === 0) return summary;
+
+  const overlaysByTraineeId = await loadActiveTraineeLmpOverlaysByTraineeId(db);
+  const masterIds = new Set(masterSyllabus.map(item => getLmpMasterEventId(item)).filter(Boolean));
+
+  for (let index = 0; index < trainees.length; index += 1) {
+    const trainee = trainees[index];
+    const existing = await db.individualLMP.findUnique({ where: { traineeId: trainee.id } });
+    const existingEvents = Array.isArray(existing?.events) ? existing.events : [];
+    const existingCompletedIds = Array.isArray(existing?.completedEventIds) ? existing.completedEventIds : [];
+    const scoreMap = buildCompletionScoreMapFromIndividualLmpForSync(existingEvents, existingCompletedIds);
+    const overlayEvents = overlaysByTraineeId.get(trainee.id) || [];
+    const existingMasterEvents = existingEvents.filter(item => !isLmpOverlayItemForSync(item));
+    const lmpEvents = mergeIndividualLmpWithMasterForSync([...existingMasterEvents, ...overlayEvents], masterSyllabus, scoreMap);
+    const completedEventIds = Object.keys(scoreMap);
+    const lmpPayloadUnchanged = Boolean(existing) &&
+      sameStringSetForSync(existingCompletedIds, completedEventIds) &&
+      sameLmpEventsForSync(existingEvents, lmpEvents);
+
+    const existingMasterIds = new Set(existingMasterEvents.map(item => getLmpMasterEventId(item)).filter(Boolean));
+    const protectedHistoricalCount = lmpEvents.filter(item => item?.protectedHistoricalEvent === true && item?.retiredFromMasterLmp === true).length;
+    const addedFutureCount = lmpEvents.filter(item => {
+      const masterId = getLmpMasterEventId(item);
+      return masterId && masterIds.has(masterId) && !existingMasterIds.has(masterId);
+    }).length;
+    summary.protectedCompletedEvents += protectedHistoricalCount;
+    summary.addedFutureEvents += addedFutureCount;
+
+    if (lmpPayloadUnchanged) {
+      summary.unchanged += 1;
+    } else {
+      await db.individualLMP.upsert({
+        where: { traineeId: trainee.id },
+        update: {
+          traineeFullName: trainee.fullName,
+          lmpType: cleanLmpCode,
+          events: lmpEvents,
+          completedEventIds,
+          updatedAt: new Date(),
+        },
+        create: {
+          traineeId: trainee.id,
+          traineeFullName: trainee.fullName,
+          lmpType: cleanLmpCode,
+          events: lmpEvents,
+          completedEventIds,
+        },
+      });
+      if (existing) summary.updated += 1;
+      else summary.created += 1;
+    }
+
+    if (summary.samples.length < 8 && (!lmpPayloadUnchanged || protectedHistoricalCount > 0 || addedFutureCount > 0)) {
+      summary.samples.push({
+        traineeFullName: trainee.fullName,
+        previousEvents: existingEvents.length,
+        nextEvents: lmpEvents.length,
+        completedEvents: completedEventIds.length,
+        protectedHistoricalCount,
+        addedFutureCount,
+        status: !existing ? 'created' : lmpPayloadUnchanged ? 'unchanged' : 'updated',
+      });
+    }
+
+    if (options.operationId) {
+      updateSyllabusUploadProgress(options.operationId, {
+        phase: 'individual-lmps:refreshing',
+        message: `Refreshing Individual LMPs: ${index + 1} of ${total}`,
+        percent: Math.min(99, 94 + Math.round(((index + 1) / Math.max(total, 1)) * 5)),
+        current: index + 1,
+        total,
+      });
+    }
+  }
+
+  return summary;
+}
 
 // POST /api/trainees/lmp-sync - Sync all trainees' authoritative training report records → IndividualLMP
 // Body: { syllabusData?: Record<lmpType, SyllabusItemDetail[]> }
@@ -8193,6 +8440,16 @@ app.post('/api/trainees/lmp-sync', async (req, res) => {
         }
       });
       existingEvents.forEach(item => addRplCompletionToScoreMapForSync(scoreMap, item));
+      existingEvents.forEach(item => {
+        if (!isLmpEventCompleteForSync(item, scoreMap)) return;
+        const completedAt = getLmpCompletionTimestampForSync(item, scoreMap) ||
+          getLmpRplTimestampForSync(item) ||
+          item.completedAt ||
+          new Date().toISOString();
+        getLmpCompletionKeysForSync(item).forEach(key => {
+          if (key && !scoreMap[key]) scoreMap[key] = completedAt;
+        });
+      });
 
       let completedEventIds = Object.keys(scoreMap);
 
@@ -9527,6 +9784,8 @@ const BULK_UPLOAD_TYPE_LABELS = new Set([
   'ftd',
   'sim',
   'simulator',
+  'procedural trainer',
+  'procedural training',
   'academics',
   'academic',
   'ground',
@@ -9575,7 +9834,7 @@ function getUploadList(row, aliases) {
 function normaliseUploadType(value) {
   const cleanValue = String(value || '').trim().toLowerCase();
   if (cleanValue === 'flight' || cleanValue === 'flying') return 'Flight';
-  if (cleanValue === 'ftd' || cleanValue === 'sim' || cleanValue === 'simulator') return 'FTD';
+  if (cleanValue === 'ftd' || cleanValue === 'sim' || cleanValue === 'simulator' || cleanValue === 'procedural trainer' || cleanValue === 'procedural training') return 'FTD';
   if (cleanValue === 'academics' || cleanValue === 'academic') return 'Academics';
   if (cleanValue === 'ground' || cleanValue === 'ground school' || cleanValue === 'cpt' || cleanValue === 'tut' || cleanValue === 'tutorial' || cleanValue === 'brief' || cleanValue === 'mass brief') return 'Ground School';
   return value || 'Ground School';
@@ -9588,11 +9847,11 @@ function getRequiredUploadDataErrors(row) {
 
   const typeValue = getUploadString(row, ['Type']);
   if (typeValue && !BULK_UPLOAD_TYPE_LABELS.has(typeValue.trim().toLowerCase())) {
-    errors.push('Type must be one of: Flight, Simulator, Academics, Ground School, CPT');
+    errors.push('Type must be one of: Flight, Simulator, Procedural Trainer, Academics, Ground School, CPT');
   }
 
   const flightOrSimHours = getUploadNumber(row, ['Flight or Sim Hours', 'flightOrSimHours']);
-  const totalEventHours = getUploadNumber(row, ['Total Event Hours', 'totalEventHours']);
+  const totalEventHours = getUploadNumber(row, ['Total Event Hours', 'Total Event Hrs', 'totalEventHours']);
   const duration = flightOrSimHours ?? totalEventHours;
   if (!(Number.isFinite(duration) && Number(duration) > 0)) {
     errors.push('Missing required duration: enter a positive value in Flight or Sim Hours or Total Event Hours');
@@ -9651,6 +9910,89 @@ function getUnitScopedUploadCollectionCode(baseCode, unitCode) {
 
 function uploadRowHasContent(row) {
   return Object.values(row).some(value => value !== undefined && value !== null && String(value).trim() !== '');
+}
+
+function uploadRowHasEventContent(row) {
+  if (!uploadRowHasContent(row)) return false;
+  return Boolean(
+    getUploadString(row, ['Event Code', 'Code', 'Event ID', 'Event Number'])
+    || getUploadString(row, ['Event description', 'Event Description', 'Event Title', 'Title', 'Description', 'eventDescription'])
+    || getUploadString(row, ['Type'])
+    || getUploadString(row, ['Course', 'Package'])
+  );
+}
+
+function getUploadEventCode(row) {
+  return getUploadString(row, ['Event Code', 'Code', 'Event ID', 'Event Number']);
+}
+
+function getUploadEventDuplicateKey(value) {
+  return String(value || '').trim().toUpperCase().replace(/[^A-Z0-9]+/g, '');
+}
+
+function getUploadEventCodePreferenceRank(value) {
+  const cleanValue = String(value || '').trim().toUpperCase();
+  if (!cleanValue) return 0;
+  return cleanValue === getUploadEventDuplicateKey(cleanValue) ? 2 : 1;
+}
+
+function buildUploadDuplicateDecisionForRows(rows) {
+  const candidatesByKey = new Map();
+  rows.forEach((row, index) => {
+    if (!uploadRowHasEventContent(row)) return;
+    const eventCode = getUploadEventCode(row);
+    const duplicateKey = getUploadEventDuplicateKey(eventCode);
+    if (!eventCode || !duplicateKey) return;
+    const candidates = candidatesByKey.get(duplicateKey) || [];
+    candidates.push({
+      index,
+      row: index + 2,
+      eventCode: String(eventCode).trim(),
+      preferenceRank: getUploadEventCodePreferenceRank(eventCode),
+    });
+    candidatesByKey.set(duplicateKey, candidates);
+  });
+
+  const skipByIndex = new Map();
+  for (const [duplicateKey, candidates] of candidatesByKey.entries()) {
+    if (candidates.length < 2) continue;
+    const preferred = [...candidates].sort((a, b) =>
+      b.preferenceRank - a.preferenceRank || a.index - b.index
+    )[0];
+    candidates.forEach(candidate => {
+      if (candidate.index === preferred.index) return;
+      skipByIndex.set(candidate.index, {
+        row: candidate.row,
+        eventCode: candidate.eventCode,
+        duplicateKey,
+        preferredRow: preferred.row,
+        preferredEventCode: preferred.eventCode,
+        reason: `Duplicate event code variant "${candidate.eventCode}" skipped; using "${preferred.eventCode}".`,
+      });
+    });
+  }
+
+  return { skipByIndex };
+}
+
+function getUploadEventDescription(row) {
+  return getUploadString(row, ['Event description', 'Event Description', 'Event Title', 'Title', 'Description', 'eventDescription']);
+}
+
+function buildUploadRowTrace(row, rowNumber) {
+  const flightOrSimHours = getUploadNumber(row, ['Flight or Sim Hours', 'flightOrSimHours']);
+  const totalEventHours = getUploadNumber(row, ['Total Event Hours', 'Total Event Hrs', 'totalEventHours']);
+  return {
+    row: rowNumber,
+    eventCode: getUploadEventCode(row),
+    eventDescription: getUploadEventDescription(row),
+    course: getUploadString(row, ['Course', 'Package']),
+    type: getUploadString(row, ['Type']),
+    normalisedType: normaliseUploadType(getUploadString(row, ['Type'])),
+    flightOrSimHours: flightOrSimHours ?? null,
+    totalEventHours: totalEventHours ?? null,
+    durationUsed: flightOrSimHours ?? totalEventHours ?? null,
+  };
 }
 
 function normaliseUploadContextCode(value) {
@@ -9746,8 +10088,69 @@ function getUploadDuplicateSourceDetails(item) {
   };
 }
 
+const syllabusUploadProgress = new Map();
+
+function updateSyllabusUploadProgress(operationId, patch = {}) {
+  const cleanOperationId = String(operationId || '').trim();
+  if (!cleanOperationId) return null;
+  const now = new Date().toISOString();
+  const existing = syllabusUploadProgress.get(cleanOperationId) || {
+    operationId: cleanOperationId,
+    status: 'running',
+    phase: 'queued',
+    message: 'Preparing upload...',
+    percent: 0,
+    current: 0,
+    total: 0,
+    created: 0,
+    updated: 0,
+    skipped: 0,
+    deleted: 0,
+    startedAt: now,
+  };
+  const next = {
+    ...existing,
+    ...patch,
+    operationId: cleanOperationId,
+    updatedAt: now,
+  };
+  syllabusUploadProgress.set(cleanOperationId, next);
+
+  // Keep the in-memory progress cache small. It is only for live UI feedback.
+  const cutoff = Date.now() - (60 * 60 * 1000);
+  for (const [key, value] of syllabusUploadProgress.entries()) {
+    if (Date.parse(value?.updatedAt || value?.startedAt || '') < cutoff) {
+      syllabusUploadProgress.delete(key);
+    }
+  }
+  return next;
+}
+
+// GET /api/syllabus/bulk-upload/progress/:operationId - Live progress for a running upload
+app.get('/api/syllabus/bulk-upload/progress/:operationId', async (req, res) => {
+  try {
+    const context = await requireDirectAdmin(req, res);
+    if (!context) return;
+    const operationId = String(req.params?.operationId || '').trim();
+    const progress = syllabusUploadProgress.get(operationId);
+    if (!progress) {
+      return res.status(404).json({
+        operationId,
+        status: 'unknown',
+        message: 'No live upload progress found for this operation.',
+      });
+    }
+    res.json(progress);
+  } catch (error) {
+    console.error('❌ GET /api/syllabus/bulk-upload/progress error:', error);
+    res.status(500).json({ error: error.message || 'Failed to fetch upload progress' });
+  }
+});
+
 // POST /api/syllabus/bulk-upload - Import/update syllabus events from workbook
 app.post('/api/syllabus/bulk-upload', uploadRateLimit, handleSingleSpreadsheetUpload, async (req, res) => {
+  let uploadTrace = null;
+  let uploadOperationId = '';
   try {
     const context = await requireDirectAdmin(req, res);
     if (!context) return;
@@ -9756,10 +10159,20 @@ app.post('/api/syllabus/bulk-upload', uploadRateLimit, handleSingleSpreadsheetUp
     let selectedCourseCode = String(req.body?.courseCode || '').trim();
     const packageName = String(req.body?.packageName || '').trim();
     const uploadMode = String(req.body?.uploadMode || 'update').trim();
+    const uploadIntent = String(req.body?.uploadIntent || '').trim();
+    const dryRun = String(req.body?.dryRun || '').trim() === 'true';
+    const lmpVersion = String(req.body?.lmpVersion || '').trim();
+    const updateReviewMode = String(req.body?.updateReviewMode || 'automatic').trim();
     const lmpType = normaliseUploadLmpType(String(req.body?.lmpType || 'Master LMP').trim());
     const operationalModel = String(req.body?.operationalModel || '').trim();
     const locationCode = String(req.body?.locationCode || req.body?.location || '').trim();
     const unitCode = String(req.body?.unitCode || req.body?.unit || '').trim();
+    uploadOperationId = String(req.body?.uploadOperationId || '').trim();
+    updateSyllabusUploadProgress(uploadOperationId, {
+      phase: 'request:received',
+      message: dryRun ? 'Preparing upload review...' : 'Starting Master LMP update...',
+      percent: 2,
+    });
     if (!selectedCourseCode && lmpType === 'Staff CAT' && uploadMode === 'create') {
       selectedCourseCode = getUnitScopedUploadCollectionCode(getUploadPackageCodeFromTitle(packageName), unitCode);
     }
@@ -9826,6 +10239,121 @@ app.post('/api/syllabus/bulk-upload', uploadRateLimit, handleSingleSpreadsheetUp
 
     const worksheet = workbook.Sheets[worksheetName];
     const rows = XLSX.utils.sheet_to_json(worksheet, { defval: '' });
+    const uploadDuplicateDecision = lmpType === 'Staff CAT'
+      ? { skipByIndex: new Map() }
+      : buildUploadDuplicateDecisionForRows(rows);
+    updateSyllabusUploadProgress(uploadOperationId, {
+      phase: 'workbook:parsed',
+      message: `Workbook parsed. Scanning ${rows.length} row${rows.length === 1 ? '' : 's'}...`,
+      percent: 10,
+      current: 0,
+      total: rows.length,
+    });
+    uploadTrace = {
+      traceVersion: 1,
+      generatedAt: new Date().toISOString(),
+      source: 'server.js:/api/syllabus/bulk-upload',
+      request: {
+        selectedCourseCode,
+        packageName,
+        uploadMode,
+        uploadIntent,
+        dryRun,
+        lmpVersion,
+        updateReviewMode,
+        lmpType,
+        operationalModel,
+        locationCode,
+        unitCode,
+      },
+      workbook: {
+        fileName: req.file.originalname || '',
+        fileSize: req.file.size || req.file.buffer?.length || 0,
+        sheetNames: workbook.SheetNames,
+        worksheetName,
+        rawRows: rows.length,
+      },
+      rowScan: {
+        eventRows: 0,
+        ignoredRows: 0,
+        uploadedEventCodes: [],
+        uploadedEventRows: [],
+        firstEventRows: [],
+        ignoredRowSamples: [],
+        duplicateVariantRows: [],
+      },
+      validation: {
+        preflightErrors: [],
+        rowErrors: [],
+        duplicateErrors: [],
+      },
+      database: {
+        existingDestinationRowsBefore: 0,
+        existingDestinationActiveRowsBefore: 0,
+        deletedDestinationRows: 0,
+        deletedMissingDestinationRows: 0,
+        createdRows: 0,
+        updatedRows: 0,
+        skippedRows: 0,
+      },
+      stages: [],
+    };
+    uploadTrace.stages.push({ stage: 'workbook:parsed', at: new Date().toISOString() });
+    for (let index = 0; index < rows.length; index++) {
+      const row = rows[index];
+      const rowNumber = index + 2;
+      if (!uploadRowHasEventContent(row)) {
+        if (uploadRowHasContent(row)) {
+          uploadTrace.rowScan.ignoredRows += 1;
+          if (uploadTrace.rowScan.ignoredRowSamples.length < 20) {
+            uploadTrace.rowScan.ignoredRowSamples.push({ row: rowNumber, values: Object.values(row).filter(value => String(value || '').trim()).slice(0, 8) });
+          }
+        }
+        continue;
+      }
+      const duplicateSkip = uploadDuplicateDecision.skipByIndex.get(index);
+      if (duplicateSkip) {
+        uploadTrace.rowScan.ignoredRows += 1;
+        uploadTrace.rowScan.duplicateVariantRows.push(duplicateSkip);
+        if (uploadTrace.rowScan.ignoredRowSamples.length < 20) {
+          uploadTrace.rowScan.ignoredRowSamples.push({
+            row: rowNumber,
+            eventCode: duplicateSkip.eventCode,
+            reason: duplicateSkip.reason,
+          });
+        }
+        continue;
+      }
+      uploadTrace.rowScan.eventRows += 1;
+      const rowTrace = buildUploadRowTrace(row, rowNumber);
+      if (rowTrace.eventCode) uploadTrace.rowScan.uploadedEventCodes.push(rowTrace.eventCode);
+      uploadTrace.rowScan.uploadedEventRows.push(rowTrace);
+      if (uploadTrace.rowScan.firstEventRows.length < 30) uploadTrace.rowScan.firstEventRows.push(rowTrace);
+      if ((index + 1) % 10 === 0 || index === rows.length - 1) {
+        updateSyllabusUploadProgress(uploadOperationId, {
+          phase: 'rows:scanning',
+          message: `Scanning upload rows: ${index + 1} of ${rows.length}`,
+          percent: Math.min(24, 10 + Math.round(((index + 1) / Math.max(rows.length, 1)) * 14)),
+          current: index + 1,
+          total: rows.length,
+        });
+      }
+    }
+    const existingDestinationRowsForTrace = await db.$queryRawUnsafe(
+      `SELECT "id", "code", "isActive", "lmpType", "courses", "location", "unit" FROM "SyllabusItem" WHERE "lmpType" = $1 AND $2 = ANY("courses")`,
+      lmpType,
+      selectedCourseCode
+    );
+    uploadTrace.database.existingDestinationRowsBefore = existingDestinationRowsForTrace.length;
+    uploadTrace.database.existingDestinationActiveRowsBefore = existingDestinationRowsForTrace.filter(row => row.isActive !== false).length;
+    uploadTrace.stages.push({ stage: 'database:destination-counted', at: new Date().toISOString(), rows: uploadTrace.database.existingDestinationRowsBefore });
+    updateSyllabusUploadProgress(uploadOperationId, {
+      phase: 'database:destination-counted',
+      message: `Found ${uploadTrace.database.existingDestinationRowsBefore} existing database row${uploadTrace.database.existingDestinationRowsBefore === 1 ? '' : 's'} for ${selectedCourseCode}.`,
+      percent: 28,
+      current: uploadTrace.database.existingDestinationRowsBefore,
+      total: uploadTrace.database.existingDestinationRowsBefore,
+    });
     await writeSecurityAuditEvent(db, req, 'WORKBOOK_ACCEPTED', 'info', 'Syllabus workbook upload passed security checks', {
       fileName: req.file.originalname || '',
       fileSize: req.file.size || req.file.buffer?.length || 0,
@@ -9845,13 +10373,22 @@ app.post('/api/syllabus/bulk-upload', uploadRateLimit, handleSingleSpreadsheetUp
     let generatedPlaceholderUsed = false;
 
     if (uploadMode === 'replace') {
+      uploadTrace.stages.push({ stage: 'replace:preflight-start', at: new Date().toISOString() });
+      updateSyllabusUploadProgress(uploadOperationId, {
+        phase: 'replace:preflight-start',
+        message: 'Checking the upload before replacing the Master LMP...',
+        percent: 32,
+        current: 0,
+        total: uploadTrace.rowScan.eventRows,
+      });
       const preflightErrors = [];
       let preflightSequence = 1;
       let contentRows = 0;
       for (let index = 0; index < rows.length; index++) {
         const row = rows[index];
         const rowNumber = index + 2;
-        if (!uploadRowHasContent(row)) continue;
+        if (!uploadRowHasEventContent(row)) continue;
+        if (uploadDuplicateDecision.skipByIndex.has(index)) continue;
         contentRows += 1;
 
         const requiredDataErrors = getRequiredUploadDataErrors(row);
@@ -9867,7 +10404,7 @@ app.post('/api/syllabus/bulk-upload', uploadRateLimit, handleSingleSpreadsheetUp
           continue;
         }
 
-        const explicitCode = getUploadString(row, ['Code']);
+        const explicitCode = getUploadString(row, ['Event Code', 'Code', 'Event ID', 'Event Number']);
         const code = explicitCode || getGeneratedUploadCode(courseCode, preflightSequence++);
         const existing = (await db.$queryRawUnsafe(`SELECT * FROM "SyllabusItem" WHERE "code" = $1 LIMIT 1`, code))[0];
         if (existing && !uploadItemBelongsToDestination(existing, courseCode, lmpType, operationalModel, locationCode, unitCode)) {
@@ -9877,6 +10414,15 @@ app.post('/api/syllabus/bulk-upload', uploadRateLimit, handleSingleSpreadsheetUp
             duplicateSource: getUploadDuplicateSourceDetails(existing),
           });
         }
+        if (contentRows % 10 === 0) {
+          updateSyllabusUploadProgress(uploadOperationId, {
+            phase: 'replace:preflight',
+            message: `Checking event ${contentRows} of ${uploadTrace.rowScan.eventRows}`,
+            percent: Math.min(45, 32 + Math.round((contentRows / Math.max(uploadTrace.rowScan.eventRows, 1)) * 13)),
+            current: contentRows,
+            total: uploadTrace.rowScan.eventRows,
+          });
+        }
       }
 
       if (contentRows === 0) {
@@ -9884,14 +10430,70 @@ app.post('/api/syllabus/bulk-upload', uploadRateLimit, handleSingleSpreadsheetUp
       }
 
       if (preflightErrors.length > 0) {
+        uploadTrace.stages.push({ stage: 'replace:preflight-failed', at: new Date().toISOString(), errors: preflightErrors.length });
+        uploadTrace.validation.preflightErrors = preflightErrors.slice(0, 200);
+        uploadTrace.database.skippedRows = preflightErrors.length;
+        updateSyllabusUploadProgress(uploadOperationId, {
+          status: 'error',
+          phase: 'replace:preflight-failed',
+          message: `Preflight failed with ${preflightErrors.length} error${preflightErrors.length === 1 ? '' : 's'}.`,
+          percent: 100,
+          skipped: preflightErrors.length,
+        });
         return res.status(400).json({
           created: 0,
           updated: 0,
           skipped: preflightErrors.length,
           errors: preflightErrors,
           message: 'Replace cancelled. Fix the upload errors and try again.',
+          uploadTrace,
         });
       }
+      uploadTrace.stages.push({ stage: 'replace:preflight-complete', at: new Date().toISOString(), contentRows });
+      updateSyllabusUploadProgress(uploadOperationId, {
+        phase: 'replace:preflight-complete',
+        message: `Preflight complete. ${contentRows} event row${contentRows === 1 ? '' : 's'} ready to import.`,
+        percent: 45,
+        current: contentRows,
+        total: contentRows,
+      });
+    }
+
+    if (dryRun) {
+      uploadTrace.stages.push({ stage: 'dry-run:response', at: new Date().toISOString() });
+      updateSyllabusUploadProgress(uploadOperationId, {
+        status: 'complete',
+        phase: 'dry-run:response',
+        message: `Review ready: ${uploadTrace.rowScan.eventRows} event row${uploadTrace.rowScan.eventRows === 1 ? '' : 's'} found.`,
+        percent: 100,
+        current: uploadTrace.rowScan.eventRows,
+        total: uploadTrace.rowScan.eventRows,
+      });
+      return res.json({
+        dryRun: true,
+        created: 0,
+        updated: 0,
+        imported: 0,
+        skipped: 0,
+        errors: [],
+        message: `Ready to ${uploadIntent === 'new' || uploadMode === 'create' ? 'create' : 'update'} ${lmpType === 'Staff CAT' ? 'Training Package' : 'Master LMP'} ${packageName || selectedCourseCode}.`,
+        preview: {
+          uploadIntent,
+          uploadMode,
+          updateReviewMode,
+          destinationCode: selectedCourseCode,
+          destinationName: packageName || selectedCourseCode,
+          uploadedEventRows: uploadTrace.rowScan.eventRows,
+          uploadedEventCodes: uploadTrace.rowScan.uploadedEventCodes.slice(0, 30),
+          uploadedEvents: uploadTrace.rowScan.uploadedEventRows,
+          existingMasterRows: uploadTrace.database.existingDestinationActiveRowsBefore,
+          assignedTrainees: null,
+          protectedCompletedEvents: null,
+          fileName: req.file.originalname || '',
+          lmpVersion: lmpVersion || null,
+        },
+        uploadTrace,
+      });
     }
 
     if (lmpType === 'Staff CAT' && uploadMode === 'create') {
@@ -9921,10 +10523,12 @@ app.post('/api/syllabus/bulk-upload', uploadRateLimit, handleSingleSpreadsheetUp
         `DELETE FROM "SyllabusItem" WHERE "lmpType" = $1 AND $2 = ANY("courses")${fixedCrewUnitFilter}`,
         ...replaceParams
       );
+      uploadTrace.database.deletedDestinationRows = uploadTrace.database.existingDestinationRowsBefore;
     }
 
     const maxOrderRows = await db.$queryRawUnsafe(`SELECT COALESCE(MAX("sortOrder"), 0)::int AS "maxSortOrder" FROM "SyllabusItem"`);
     let nextSortOrder = Number(maxOrderRows?.[0]?.maxSortOrder || 0) + 1;
+    let uploadedEventSortOrder = 1;
 
     const reusablePackagePlaceholder = selectedCourseCode && lmpType === 'Staff CAT' && uploadMode !== 'replace'
       ? await (() => {
@@ -9944,11 +10548,13 @@ app.post('/api/syllabus/bulk-upload', uploadRateLimit, handleSingleSpreadsheetUp
     for (let index = 0; index < rows.length; index++) {
       const row = rows[index];
       const rowNumber = index + 2;
-      if (!uploadRowHasContent(row)) continue;
+      if (!uploadRowHasEventContent(row)) continue;
+      if (uploadDuplicateDecision.skipByIndex.has(index)) continue;
 
       const requiredDataErrors = getRequiredUploadDataErrors(row);
       if (requiredDataErrors.length > 0) {
         requiredDataErrors.forEach(error => errors.push({ row: rowNumber, error }));
+        requiredDataErrors.forEach(error => uploadTrace.validation.rowErrors.push({ row: rowNumber, error, rowTrace: buildUploadRowTrace(row, rowNumber) }));
         skipped += 1;
         continue;
       }
@@ -9961,15 +10567,16 @@ app.post('/api/syllabus/bulk-upload', uploadRateLimit, handleSingleSpreadsheetUp
         continue;
       }
 
-      const explicitCode = getUploadString(row, ['Code']);
+      const explicitCode = getUploadEventCode(row);
       const code = explicitCode || getGeneratedUploadCode(courseCode, generatedCodeSequence++);
       const type = normaliseUploadType(getUploadString(row, ['Type']));
       const sortieType = type === 'Flight' ? normaliseUploadSortieType(getUploadString(row, ['Dual/Solo', 'sortieType'])) : null;
       const flightOrSimHours = getUploadNumber(row, ['Flight or Sim Hours', 'flightOrSimHours']);
-      const totalEventHours = getUploadNumber(row, ['Total Event Hours', 'totalEventHours']) ?? 0;
+      const totalEventHours = getUploadNumber(row, ['Total Event Hours', 'Total Event Hrs', 'totalEventHours']) ?? 0;
+      const destinationSortOrder = uploadMode === 'replace' ? uploadedEventSortOrder++ : nextSortOrder++;
       const itemData = normaliseSyllabusItemForRuntime({
         code,
-        eventDescription: getUploadString(row, ['Event description', 'eventDescription']),
+        eventDescription: getUploadEventDescription(row),
         phase: getUploadString(row, ['Phase']) || courseCode,
         module: getUploadString(row, ['Module']) || packageName || courseCode,
         type,
@@ -9983,7 +10590,12 @@ app.post('/api/syllabus/bulk-upload', uploadRateLimit, handleSingleSpreadsheetUp
         acceptableAircraftConfigs: normaliseUploadAircraftConfigs(getUploadString(row, ['CONFIG', 'Config', 'Acceptable CONFIG', 'Acceptable Aircraft CONFIG', 'acceptableAircraftConfigs'])),
         resourcesHuman: getUploadList(row, ['Resources Required (Human)', 'resourcesHuman']),
         eventDetailsCommon: getUploadList(row, ['Event Details - Common', 'eventDetailsCommon']),
-        eventDetailsSortie: getUploadList(row, ['Event Details - Sortie', 'eventDetailsSortie']),
+        eventDetailsSortie: getUploadList(row, ['Event Details - Sortie', 'Event Details (Sortie)', 'Event Details Sortie', 'eventDetailsSortie']),
+        groupEvent: getUploadBoolean(row, ['Group Event', 'Group event', 'groupEvent']),
+        minimumToSchedule: getUploadNumber(row, ['Minimum to schedule', 'Minimum To Schedule', 'minimumToSchedule']),
+        groupSizeMin: getUploadNumber(row, ['Minimum Number Group', 'Minimum number group', 'Group size Min', 'Group Size Min', 'Group Size - Min', 'groupSizeMin']),
+        groupSizeMax: getUploadNumber(row, ['Maximum Number Group', 'Maximum number group', 'Group size Max', 'Group Size Max', 'Group Size - Max', 'groupSizeMax']),
+        groupEntireCourse: getUploadBoolean(row, ['Schedule entire Course', 'Schedule Entire Course', 'Schedule entire course', 'Entire course', 'Entire Course', 'Group entire course', 'Group Entire Course', 'groupEntireCourse']),
         flightOrSimHours: flightOrSimHours ?? 0,
         totalEventHours,
         duration: flightOrSimHours ?? totalEventHours,
@@ -10006,6 +10618,12 @@ app.post('/api/syllabus/bulk-upload', uploadRateLimit, handleSingleSpreadsheetUp
             error: `Event code "${code}" already exists outside selected ${lmpType === 'Staff CAT' ? 'training package' : 'Master LMP'}`,
             duplicateSource: getUploadDuplicateSourceDetails(existing),
           });
+          uploadTrace.validation.duplicateErrors.push({
+            row: rowNumber,
+            error: `Event code "${code}" already exists outside selected ${lmpType === 'Staff CAT' ? 'training package' : 'Master LMP'}`,
+            rowTrace: buildUploadRowTrace(row, rowNumber),
+            duplicateSource: getUploadDuplicateSourceDetails(existing),
+          });
           skipped += 1;
           continue;
         }
@@ -10018,23 +10636,38 @@ app.post('/api/syllabus/bulk-upload', uploadRateLimit, handleSingleSpreadsheetUp
               "resourcesPhysical" = $12::text[], "resourceNumber" = $13::integer,
               "acceptableAircraftConfigs" = $14::text[], "resourcesHuman" = $15::text[],
               "eventDetailsCommon" = $16::text[], "eventDetailsSortie" = $17::text[],
-              "flightOrSimHours" = $18, "totalEventHours" = $19, "duration" = $20,
-              "preFlightTime" = $21, "postFlightTime" = $22,
-              "prerequisites" = $23::text[], "prerequisitesGround" = $24::text[],
-              "prerequisitesFlying" = $25::text[], "location" = $26, "unit" = $27, "lmpType" = $28,
-              "isActive" = $29::boolean, "notes" = $30, "assessmentRequired" = $31::boolean,
-              "version" = "version" + 1, "updatedAt" = NOW()
+              "groupEvent" = $18::boolean, "minimumToSchedule" = $19::integer,
+              "groupSizeMin" = $20::integer, "groupSizeMax" = $21::integer,
+              "groupEntireCourse" = $22::boolean,
+              "flightOrSimHours" = $23, "totalEventHours" = $24, "duration" = $25,
+              "preFlightTime" = $26, "postFlightTime" = $27,
+              "prerequisites" = $28::text[], "prerequisitesGround" = $29::text[],
+              "prerequisitesFlying" = $30::text[], "location" = $31, "unit" = $32, "lmpType" = $33,
+              "isActive" = $34::boolean, "notes" = $35, "assessmentRequired" = $36::boolean,
+              "sortOrder" = $37::integer, "version" = "version" + 1, "updatedAt" = NOW()
           WHERE "id" = $1
         `,
           existing.id, itemData.code, itemData.eventDescription, itemData.phase, itemData.module, itemData.type,
           itemData.sortieType, itemData.dayNight, itemData.courses, itemData.methodOfDelivery, itemData.methodOfAssessment,
           itemData.resourcesPhysical, itemData.resourceNumber, itemData.acceptableAircraftConfigs, itemData.resourcesHuman,
-          itemData.eventDetailsCommon, itemData.eventDetailsSortie, itemData.flightOrSimHours, itemData.totalEventHours,
+          itemData.eventDetailsCommon, itemData.eventDetailsSortie, itemData.groupEvent, itemData.minimumToSchedule,
+          itemData.groupSizeMin, itemData.groupSizeMax, itemData.groupEntireCourse, itemData.flightOrSimHours, itemData.totalEventHours,
           itemData.duration, itemData.preFlightTime, itemData.postFlightTime, itemData.prerequisites,
           itemData.prerequisitesGround, itemData.prerequisitesFlying, itemData.location, itemData.unit, itemData.lmpType, itemData.isActive,
-          isUploadCourseShellRow(existing) ? null : existing.notes, itemData.assessmentRequired === true
+          isUploadCourseShellRow(existing) ? null : existing.notes, itemData.assessmentRequired === true, destinationSortOrder
         );
         updated.push({ code });
+        uploadTrace.database.updatedRows += 1;
+        updateSyllabusUploadProgress(uploadOperationId, {
+          phase: 'rows:upserting',
+          message: `Updating Master LMP rows: ${created.length + updated.length + skipped} of ${uploadTrace.rowScan.eventRows}`,
+          percent: Math.min(82, 45 + Math.round(((created.length + updated.length + skipped) / Math.max(uploadTrace.rowScan.eventRows, 1)) * 37)),
+          current: created.length + updated.length + skipped,
+          total: uploadTrace.rowScan.eventRows,
+          created: created.length,
+          updated: updated.length,
+          skipped,
+        });
         continue;
       }
 
@@ -10047,24 +10680,39 @@ app.post('/api/syllabus/bulk-upload', uploadRateLimit, handleSingleSpreadsheetUp
               "resourcesPhysical" = $12::text[], "resourceNumber" = $13::integer,
               "acceptableAircraftConfigs" = $14::text[], "resourcesHuman" = $15::text[],
               "eventDetailsCommon" = $16::text[], "eventDetailsSortie" = $17::text[],
-              "flightOrSimHours" = $18, "totalEventHours" = $19, "duration" = $20,
-              "preFlightTime" = $21, "postFlightTime" = $22,
-              "prerequisites" = $23::text[], "prerequisitesGround" = $24::text[],
-              "prerequisitesFlying" = $25::text[], "location" = $26, "unit" = $27, "lmpType" = $28,
-              "isActive" = $29::boolean, "notes" = $30, "assessmentRequired" = $31::boolean,
-              "version" = "version" + 1, "updatedAt" = NOW()
+              "groupEvent" = $18::boolean, "minimumToSchedule" = $19::integer,
+              "groupSizeMin" = $20::integer, "groupSizeMax" = $21::integer,
+              "groupEntireCourse" = $22::boolean,
+              "flightOrSimHours" = $23, "totalEventHours" = $24, "duration" = $25,
+              "preFlightTime" = $26, "postFlightTime" = $27,
+              "prerequisites" = $28::text[], "prerequisitesGround" = $29::text[],
+              "prerequisitesFlying" = $30::text[], "location" = $31, "unit" = $32, "lmpType" = $33,
+              "isActive" = $34::boolean, "notes" = $35, "assessmentRequired" = $36::boolean,
+              "sortOrder" = $37::integer, "version" = "version" + 1, "updatedAt" = NOW()
           WHERE "id" = $1
         `,
           reusablePackagePlaceholder.id, itemData.code, itemData.eventDescription, itemData.phase, itemData.module, itemData.type,
           itemData.sortieType, itemData.dayNight, itemData.courses, itemData.methodOfDelivery, itemData.methodOfAssessment,
           itemData.resourcesPhysical, itemData.resourceNumber, itemData.acceptableAircraftConfigs, itemData.resourcesHuman,
-          itemData.eventDetailsCommon, itemData.eventDetailsSortie, itemData.flightOrSimHours, itemData.totalEventHours,
+          itemData.eventDetailsCommon, itemData.eventDetailsSortie, itemData.groupEvent, itemData.minimumToSchedule,
+          itemData.groupSizeMin, itemData.groupSizeMax, itemData.groupEntireCourse, itemData.flightOrSimHours, itemData.totalEventHours,
           itemData.duration, itemData.preFlightTime, itemData.postFlightTime, itemData.prerequisites,
           itemData.prerequisitesGround, itemData.prerequisitesFlying, itemData.location, itemData.unit, itemData.lmpType, itemData.isActive,
-          isUploadCourseShellRow(reusablePackagePlaceholder) ? null : reusablePackagePlaceholder.notes, itemData.assessmentRequired === true
+          isUploadCourseShellRow(reusablePackagePlaceholder) ? null : reusablePackagePlaceholder.notes, itemData.assessmentRequired === true, destinationSortOrder
         );
         generatedPlaceholderUsed = true;
         updated.push({ code });
+        uploadTrace.database.updatedRows += 1;
+        updateSyllabusUploadProgress(uploadOperationId, {
+          phase: 'rows:upserting',
+          message: `Updating Master LMP rows: ${created.length + updated.length + skipped} of ${uploadTrace.rowScan.eventRows}`,
+          percent: Math.min(82, 45 + Math.round(((created.length + updated.length + skipped) / Math.max(uploadTrace.rowScan.eventRows, 1)) * 37)),
+          current: created.length + updated.length + skipped,
+          total: uploadTrace.rowScan.eventRows,
+          created: created.length,
+          updated: updated.length,
+          skipped,
+        });
         continue;
       }
 
@@ -10074,6 +10722,7 @@ app.post('/api/syllabus/bulk-upload', uploadRateLimit, handleSingleSpreadsheetUp
           "id","code","eventDescription","phase","module","type","sortieType","dayNight",
           "courses","methodOfDelivery","methodOfAssessment","resourcesPhysical","resourceNumber",
           "acceptableAircraftConfigs","resourcesHuman","eventDetailsCommon","eventDetailsSortie",
+          "groupEvent","minimumToSchedule","groupSizeMin","groupSizeMax","groupEntireCourse",
           "flightOrSimHours","totalEventHours","duration","preFlightTime","postFlightTime",
           "prerequisites","prerequisitesGround","prerequisitesFlying","location","unit","sortOrder","lmpType",
           "assessmentRequired","isActive","version","createdBy","createdAt","updatedAt"
@@ -10082,21 +10731,123 @@ app.post('/api/syllabus/bulk-upload', uploadRateLimit, handleSingleSpreadsheetUp
           $9,$10,$11,$12,$13,
           $14,$15,$16,$17,
           $18,$19,$20,$21,$22,
-          $23,$24,$25,$26,$27,$28,$29,
-          $30,$31,$32,$33,NOW(),NOW()
+          $23,$24,$25,$26,$27,
+          $28,$29,$30,$31,$32,$33,$34,
+          $35,$36,$37,$38,NOW(),NOW()
         )
       `,
         id, itemData.code, itemData.eventDescription, itemData.phase, itemData.module, itemData.type,
         itemData.sortieType, itemData.dayNight, itemData.courses, itemData.methodOfDelivery,
         itemData.methodOfAssessment, itemData.resourcesPhysical, itemData.resourceNumber,
         itemData.acceptableAircraftConfigs, itemData.resourcesHuman, itemData.eventDetailsCommon,
-        itemData.eventDetailsSortie, itemData.flightOrSimHours, itemData.totalEventHours,
+        itemData.eventDetailsSortie, itemData.groupEvent, itemData.minimumToSchedule,
+        itemData.groupSizeMin, itemData.groupSizeMax, itemData.groupEntireCourse,
+        itemData.flightOrSimHours, itemData.totalEventHours,
         itemData.duration, itemData.preFlightTime, itemData.postFlightTime, itemData.prerequisites,
-        itemData.prerequisitesGround, itemData.prerequisitesFlying, itemData.location, itemData.unit, nextSortOrder++,
+        itemData.prerequisitesGround, itemData.prerequisitesFlying, itemData.location, itemData.unit, destinationSortOrder,
         itemData.lmpType, itemData.assessmentRequired === true, itemData.isActive, 1, 'bulk-upload'
       );
       created.push({ code });
+      uploadTrace.database.createdRows += 1;
+      updateSyllabusUploadProgress(uploadOperationId, {
+        phase: 'rows:upserting',
+        message: `Updating Master LMP rows: ${created.length + updated.length + skipped} of ${uploadTrace.rowScan.eventRows}`,
+        percent: Math.min(82, 45 + Math.round(((created.length + updated.length + skipped) / Math.max(uploadTrace.rowScan.eventRows, 1)) * 37)),
+        current: created.length + updated.length + skipped,
+        total: uploadTrace.rowScan.eventRows,
+        created: created.length,
+        updated: updated.length,
+        skipped,
+      });
     }
+    uploadTrace.stages.push({ stage: 'rows:upsert-complete', at: new Date().toISOString(), created: created.length, updated: updated.length, skipped });
+    updateSyllabusUploadProgress(uploadOperationId, {
+      phase: 'rows:upsert-complete',
+      message: `Master LMP rows saved. Created ${created.length}, updated ${updated.length}, skipped ${skipped}.`,
+      percent: 84,
+      current: created.length + updated.length + skipped,
+      total: uploadTrace.rowScan.eventRows,
+      created: created.length,
+      updated: updated.length,
+      skipped,
+    });
+    if (lmpType !== 'Staff CAT' && uploadMode === 'replace') {
+      const uploadedCodes = Array.from(new Set(uploadTrace.rowScan.uploadedEventCodes.map(code => String(code || '').trim()).filter(Boolean)));
+      if (uploadedCodes.length > 0) {
+        updateSyllabusUploadProgress(uploadOperationId, {
+          phase: 'replace:delete-missing-start',
+          message: 'Removing old Master LMP rows that are not in the uploaded file...',
+          percent: 88,
+          created: created.length,
+          updated: updated.length,
+          skipped,
+        });
+        const placeholders = uploadedCodes.map((_, index) => `$${index + 3}`).join(', ');
+        const deleteMissingResult = await db.$executeRawUnsafe(
+          `DELETE FROM "SyllabusItem"
+           WHERE "lmpType" = $1
+             AND $2 = ANY("courses")
+             AND "code" NOT IN (${placeholders})
+             AND ("notes" IS NULL OR "notes" NOT LIKE $${uploadedCodes.length + 3})`,
+          lmpType,
+          selectedCourseCode,
+          ...uploadedCodes,
+          `%${SYLLABUS_COURSE_SHELL_NOTE}%`
+        );
+        uploadTrace.database.deletedMissingDestinationRows = Number(deleteMissingResult || 0);
+        uploadTrace.stages.push({ stage: 'replace:deleted-missing-master-rows', at: new Date().toISOString(), deleted: uploadTrace.database.deletedMissingDestinationRows });
+        updateSyllabusUploadProgress(uploadOperationId, {
+          phase: 'replace:deleted-missing-master-rows',
+          message: `Removed ${uploadTrace.database.deletedMissingDestinationRows} old Master LMP row${uploadTrace.database.deletedMissingDestinationRows === 1 ? '' : 's'} not in the upload.`,
+          percent: 94,
+          deleted: uploadTrace.database.deletedMissingDestinationRows,
+          created: created.length,
+          updated: updated.length,
+          skipped,
+        });
+      }
+
+      uploadTrace.stages.push({ stage: 'individual-lmps:refresh-start', at: new Date().toISOString(), lmpCode: selectedCourseCode });
+      updateSyllabusUploadProgress(uploadOperationId, {
+        phase: 'individual-lmps:refresh-start',
+        message: `Refreshing assigned Individual LMPs for ${selectedCourseCode}...`,
+        percent: 94,
+        created: created.length,
+        updated: updated.length,
+        skipped,
+        deleted: uploadTrace.database.deletedMissingDestinationRows,
+      });
+      const individualLmpSync = await refreshAssignedIndividualLmpsForMasterUpdate(db, selectedCourseCode, {
+        operationId: uploadOperationId,
+      });
+      uploadTrace.individualLmpSync = individualLmpSync;
+      uploadTrace.stages.push({ stage: 'individual-lmps:refresh-complete', at: new Date().toISOString(), summary: individualLmpSync });
+      updateSyllabusUploadProgress(uploadOperationId, {
+        phase: 'individual-lmps:refresh-complete',
+        message: `Individual LMP refresh complete: ${individualLmpSync.updated} updated, ${individualLmpSync.created} created, ${individualLmpSync.unchanged} unchanged.`,
+        percent: 99,
+        current: individualLmpSync.assignedTrainees,
+        total: individualLmpSync.assignedTrainees,
+        created: created.length,
+        updated: updated.length,
+        skipped,
+        deleted: uploadTrace.database.deletedMissingDestinationRows,
+      });
+    }
+    uploadTrace.database.skippedRows = skipped;
+    uploadTrace.stages.push({ stage: 'response:success', at: new Date().toISOString() });
+    updateSyllabusUploadProgress(uploadOperationId, {
+      status: 'complete',
+      phase: 'response:success',
+      message: `Upload complete. Imported ${created.length + updated.length} row${created.length + updated.length === 1 ? '' : 's'}.`,
+      percent: 100,
+      current: created.length + updated.length + skipped,
+      total: uploadTrace.rowScan.eventRows,
+      created: created.length,
+      updated: updated.length,
+      skipped,
+      deleted: uploadTrace.database.deletedMissingDestinationRows,
+    });
 
     res.json({
       created: created.length,
@@ -10104,11 +10855,32 @@ app.post('/api/syllabus/bulk-upload', uploadRateLimit, handleSingleSpreadsheetUp
       imported: created.length + updated.length,
       skipped,
       errors,
+      individualLmpSync: uploadTrace.individualLmpSync || null,
+      uploadTrace,
       message: `${created.length + updated.length} row${created.length + updated.length === 1 ? '' : 's'} imported into ${lmpType === 'Staff CAT' ? 'Training Package' : 'Master LMP'} ${packageName || selectedCourseCode || ''}`.trim(),
     });
   } catch (error) {
     console.error('❌ POST /api/syllabus/bulk-upload error:', error);
-    res.status(500).json({ error: error.message || 'Failed to bulk upload syllabus events', details: error.message });
+    if (uploadTrace) {
+      uploadTrace.stages = Array.isArray(uploadTrace.stages) ? uploadTrace.stages : [];
+      uploadTrace.stages.push({
+        stage: 'response:error',
+        at: new Date().toISOString(),
+        error: error.message || String(error),
+      });
+    }
+    updateSyllabusUploadProgress(uploadOperationId, {
+      status: 'error',
+      phase: 'response:error',
+      message: error.message || 'Upload failed.',
+      percent: 100,
+      error: error.message || String(error),
+    });
+    res.status(500).json({
+      error: error.message || 'Failed to bulk upload syllabus events',
+      details: error.message,
+      uploadTrace,
+    });
   }
 });
 
@@ -10333,17 +11105,17 @@ app.post('/api/syllabus', async (req, res) => {
       INSERT INTO "SyllabusItem" (
         "id","code","eventDescription","phase","module","type","sortieType","dayNight",
         "courses","methodOfDelivery","methodOfAssessment","resourcesPhysical","resourceNumber","acceptableAircraftConfigs","assessedElements","assessmentRequired","testEventType","testingOfficerQualificationId","useTestingOfficerSecondaryCallsign","resourcesHuman",
-        "eventDetailsCommon","eventDetailsSortie","flightOrSimHours","totalEventHours","duration",
+        "eventDetailsCommon","eventDetailsSortie","groupEvent","minimumToSchedule","groupSizeMin","groupSizeMax","groupEntireCourse","flightOrSimHours","totalEventHours","duration",
         "preFlightTime","postFlightTime","prerequisites","prerequisitesGround","prerequisitesFlying",
         "location","unit","sortOrder","lmpType","twrDiReqd","cctOnly","isRemedial","isActive","version",
         "notes","createdBy","createdAt","updatedAt"
       ) VALUES (
         $1,$2,$3,$4,$5,$6,$7,$8,
         $9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,
-        $21,$22,$23,$24,$25,
-        $26,$27,$28,$29,$30,
-        $31,$32,$33,$34,$35,$36,$37,$38,$39,
-        $40,$41,NOW(),NOW()
+        $21,$22,$23,$24,$25,$26,$27,$28,$29,$30,
+        $31,$32,$33,$34,$35,
+        $36,$37,$38,$39,$40,$41,$42,$43,$44,
+        $45,$46,NOW(),NOW()
       )`,
       id, finalCode, itemData.eventDescription, itemData.phase, itemData.module, itemData.type,
       itemData.sortieType || null, itemData.dayNight || 'Day',
@@ -10357,6 +11129,8 @@ app.post('/api/syllabus', async (req, res) => {
       itemData.useTestingOfficerSecondaryCallsign === true,
       itemData.resourcesHuman || [],
       itemData.eventDetailsCommon || [], itemData.eventDetailsSortie || [],
+      itemData.groupEvent, itemData.minimumToSchedule, itemData.groupSizeMin,
+      itemData.groupSizeMax, itemData.groupEntireCourse,
       itemData.flightOrSimHours || 0, itemData.totalEventHours || 1, itemData.duration || 1,
       itemData.preFlightTime || 0, itemData.postFlightTime || 0,
       itemData.prerequisites || [], itemData.prerequisitesGround || [], itemData.prerequisitesFlying || [],
@@ -10418,8 +11192,8 @@ app.put('/api/syllabus/:id', async (req, res) => {
     // Build SET clauses, casting array fields and boolean fields properly
     const ARRAY_FIELDS = ['courses','methodOfDelivery','methodOfAssessment','resourcesPhysical','acceptableAircraftConfigs','assessedElements','resourcesHuman',
                           'eventDetailsCommon','eventDetailsSortie','prerequisites','prerequisitesGround','prerequisitesFlying'];
-    const BOOL_FIELDS = ['isActive','isRemedial','assessmentRequired','useTestingOfficerSecondaryCallsign'];
-    const INT_FIELDS = ['resourceNumber', 'sortOrder'];
+    const BOOL_FIELDS = ['isActive','isRemedial','assessmentRequired','useTestingOfficerSecondaryCallsign','groupEvent','groupEntireCourse'];
+    const INT_FIELDS = ['resourceNumber', 'sortOrder', 'minimumToSchedule', 'groupSizeMin', 'groupSizeMax'];
 
     const setClauses = fields.map((f, i) => {
       if (ARRAY_FIELDS.includes(f)) return `"${f}" = $${i + 2}::text[]`;
@@ -10428,7 +11202,11 @@ app.put('/api/syllabus/:id', async (req, res) => {
       return `"${f}" = $${i + 2}`;
     }).join(', ');
     const values = fields.map(f => {
-      if (INT_FIELDS.includes(f)) return Math.max(0, Math.round(Number(body[f]) || 0));
+      if (INT_FIELDS.includes(f)) {
+        if (body[f] === undefined || body[f] === null || body[f] === '') return null;
+        const numericValue = Number(body[f]);
+        return Number.isFinite(numericValue) && numericValue > 0 ? Math.round(numericValue) : null;
+      }
       if (f === 'acceptableAircraftConfigs') {
         return Array.isArray(body[f]) && body[f].length ? body[f] : ['ANY'];
       }
@@ -10476,6 +11254,100 @@ app.delete('/api/syllabus/:id', async (req, res) => {
   }
 });
 
+// DELETE /api/master-lmp/:code - Permanently remove a Master LMP and its catalogue/access records.
+// This intentionally removes both layers in one operation so the UI does not require
+// one delete for event rows and a second delete for the remaining catalogue title.
+app.delete('/api/master-lmp/:code', async (req, res) => {
+  try {
+    const context = await requireDirectAdmin(req, res);
+    if (!context) return;
+    const db = context.db;
+    const targetCode = String(req.params.code || '').trim().toUpperCase();
+
+    if (!targetCode) {
+      return res.status(400).json({ error: 'Master LMP code is required' });
+    }
+
+    const result = await db.$transaction(async (tx) => {
+      const deletedRows = await tx.$queryRawUnsafe(
+        `DELETE FROM "SyllabusItem"
+         WHERE COALESCE("lmpType", 'Master LMP') <> 'Staff CAT'
+           AND EXISTS (
+             SELECT 1
+             FROM unnest("courses") AS course_code
+             WHERE UPPER(TRIM(course_code)) = $1
+           )
+         RETURNING "id", "code"`,
+        targetCode
+      );
+
+      const organisations = await tx.$queryRawUnsafe(
+        `SELECT "id", "code", "name", "settings" FROM "CommercialOrganisation"`
+      );
+
+      let removedCatalogueRows = 0;
+      let removedAccessRules = 0;
+      const updatedOrganisations = [];
+
+      for (const organisation of organisations || []) {
+        const settings = typeof organisation.settings === 'string'
+          ? JSON.parse(organisation.settings || '{}')
+          : (organisation.settings || {});
+        const catalogue = Array.isArray(settings.masterLmpCatalogue) ? settings.masterLmpCatalogue : [];
+        const access = Array.isArray(settings.masterLmpAccess) ? settings.masterLmpAccess : [];
+        const nextCatalogue = catalogue.filter((entry) => (
+          String(entry?.code || '').trim().toUpperCase() !== targetCode
+        ));
+        const nextAccess = access.filter((rule) => (
+          String(rule?.lmpCode || '').trim().toUpperCase() !== targetCode
+        ));
+
+        const catalogueRemoved = catalogue.length - nextCatalogue.length;
+        const accessRemoved = access.length - nextAccess.length;
+        if (catalogueRemoved === 0 && accessRemoved === 0) continue;
+
+        removedCatalogueRows += catalogueRemoved;
+        removedAccessRules += accessRemoved;
+        const nextSettings = {
+          ...settings,
+          masterLmpCatalogue: nextCatalogue,
+          masterLmpAccess: nextAccess,
+        };
+
+        await tx.$executeRawUnsafe(
+          `UPDATE "CommercialOrganisation"
+           SET "settings" = $1::jsonb, "updatedAt" = NOW()
+           WHERE "id" = $2`,
+          JSON.stringify(nextSettings),
+          organisation.id
+        );
+        updatedOrganisations.push({
+          id: organisation.id,
+          code: organisation.code,
+          name: organisation.name,
+          removedCatalogueRows: catalogueRemoved,
+          removedAccessRules: accessRemoved,
+        });
+      }
+
+      return {
+        deletedEventRows: Array.isArray(deletedRows) ? deletedRows.length : 0,
+        removedCatalogueRows,
+        removedAccessRules,
+        updatedOrganisations,
+      };
+    });
+
+    console.log(
+      `✅ DELETE /api/master-lmp/${targetCode} - events ${result.deletedEventRows}, catalogue ${result.removedCatalogueRows}, access ${result.removedAccessRules}`
+    );
+    res.json({ success: true, lmpCode: targetCode, ...result });
+  } catch (error) {
+    console.error('❌ DELETE /api/master-lmp/:code error:', error);
+    res.status(500).json({ error: 'Failed to delete Master LMP', details: error.message });
+  }
+});
+
 // POST /api/auth/verify-password - Verify current user's password for destructive action confirmations
 app.post('/api/auth/verify-password', authRateLimit, async (req, res) => {
   try {
@@ -10486,9 +11358,10 @@ app.post('/api/auth/verify-password', authRateLimit, async (req, res) => {
       return res.status(400).json({ valid: false, error: 'Password required' });
     }
 
-    // Get session token from Authorization header (Bearer token)
-    const authHeader = req.headers['authorization'] || req.headers['Authorization'] || '';
-    const sessionToken = authHeader.replace(/^Bearer\s+/i, '').trim();
+    // Get session token from the same direct-login source used by the browser app.
+    // Some UI calls send an empty "Bearer " header while the real session lives in
+    // the HttpOnly cookie, so use the shared helper that falls back correctly.
+    const sessionToken = getDirectSessionToken(req);
 
     if (!sessionToken) {
       return res.status(401).json({ valid: false, error: 'Not authenticated - no session token' });
@@ -10821,8 +11694,7 @@ app.post('/api/auth/direct-logout', async (req, res) => {
 });
 
 async function requireDirectAdmin(req, res) {
-  const authHeader = req.headers.authorization || '';
-  const sessionToken = authHeader.startsWith('Bearer ') ? authHeader.slice(7) : '';
+  const sessionToken = getDirectSessionToken(req);
   if (!sessionToken) {
     res.status(401).json({ error: 'Unauthorized', message: 'No token provided' });
     return null;

@@ -37,8 +37,9 @@ interface TrainingRecordsViewProps {
         trainee: Trainee,
         originalItem: SyllabusItemDetail,
         updatedItem: SyllabusItemDetail,
-        options?: { suppressSuccessMessage?: boolean }
+        options?: { suppressSuccessMessage?: boolean; sourceLmp?: SyllabusItemDetail[] }
     ) => Promise<boolean> | boolean;
+    onLoadTraineeLmp?: (trainee: Trainee) => Promise<SyllabusItemDetail[] | null>;
     locations?: string[];
     units?: string[];
     activeLocationCode?: string;
@@ -80,6 +81,7 @@ const TrainingRecordsView: React.FC<TrainingRecordsViewProps> = ({
     onSaveTrainingReportAssessment,
     onPersistTrainingReportAssessment,
     onUpdateLmpItem,
+    onLoadTraineeLmp,
     locations = [],
     units = [],
     activeLocationCode = '',
@@ -204,6 +206,7 @@ const TrainingRecordsView: React.FC<TrainingRecordsViewProps> = ({
                         onSaveTrainingReportAssessment={onSaveTrainingReportAssessment}
                         onPersistTrainingReportAssessment={onPersistTrainingReportAssessment}
                         onUpdateLmpItem={onUpdateLmpItem}
+                        onLoadTraineeLmp={onLoadTraineeLmp}
                         trainingReportTemplate={trainingReportTemplate}
                         phraseBank={phraseBank}
                     />

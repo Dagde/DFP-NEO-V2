@@ -39,6 +39,7 @@ import {
   saveAuditRecordingSettingsForPage,
 } from '../utils/auditLogger';
 import { verifyCurrentUserPassword } from '../utils/passwordVerification';
+import type { GroundEventSchedulingSettings } from '../utils/groundEventSchedulingSettings';
 
 interface SettingsViewWithMenuProps {
     locations: string[];
@@ -155,6 +156,8 @@ interface SettingsViewWithMenuProps {
     onUpdateFixedCrewTileColourMode?: (mode: FixedCrewTileColourMode) => void;
     dispatchStaggerSettings?: DispatchStaggerSettings;
     onUpdateDispatchStaggerSettings?: (settings: DispatchStaggerSettings) => void;
+    groundEventSchedulingSettings?: GroundEventSchedulingSettings;
+    onUpdateGroundEventSchedulingSettings?: (settings: GroundEventSchedulingSettings) => void;
     settingsLoaded?: boolean;
     organisationSettings?: {
         staffSharingEnabled: boolean;
@@ -232,6 +235,7 @@ type SettingsSection =
     | 'event-limits'
     | 'duty-turnaround'
     | 'business-rules'
+    | 'ground-event-scheduling'
     | 'data-loaders'
     | 'user-list'
     | 'staff-database'
@@ -305,6 +309,7 @@ const sectionLabels: Record<SettingsMenuSection, string> = {
     'event-limits': 'Daily Event Limits',
     'duty-turnaround': 'Duty & Turnaround',
     'business-rules': 'Business Rules',
+    'ground-event-scheduling': 'Ground Event Scheduling',
     'data-loaders': 'Template Downloads',
     'user-list': 'User List',
     'staff-database': 'Staff Database',
@@ -406,6 +411,15 @@ const sectionIcons: Record<SettingsMenuSection, React.ReactNode> = {
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="w-full h-full">
       <path d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/>
       <circle cx="12" cy="12" r="3"/>
+    </svg>
+  ),
+  'ground-event-scheduling': (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="w-full h-full">
+      <path d="M4 6h16M4 12h16M4 18h16"/>
+      <path d="M8 4v4M14 10v4M18 16v4"/>
+      <circle cx="8" cy="6" r="1.5"/>
+      <circle cx="14" cy="12" r="1.5"/>
+      <circle cx="18" cy="18" r="1.5"/>
     </svg>
   ),
   'data-loaders': (
@@ -515,6 +529,7 @@ const sectionDescriptions: Record<SettingsMenuSection, string> = {
   'event-limits': 'Set daily event limits and duty supervisor session limits',
   'duty-turnaround': 'Crew duty limits & rest times',
   'business-rules': 'Dispatch rate, stagger and flight tile warning rules',
+  'ground-event-scheduling': 'Ground event automation, alerting and preferred time windows',
   'data-loaders': 'Download blank upload templates',
   'user-list': 'View and manage user accounts',
   'staff-database': 'Staff records and details',
@@ -592,6 +607,11 @@ const sectionSearchKeywords: Partial<Record<SettingsMenuSection, string[]>> = {
   'business-rules': [
     'business rules', 'dispatch', 'dispatch rate', 'dispatch window', 'dispatch stagger', 'stagger',
     'warning colours', 'tile warnings', 'authorisation warning', 'departure density',
+  ],
+  'ground-event-scheduling': [
+    'ground event scheduling', 'ground events', 'group event', 'group scheduling', 'minimum to schedule',
+    'group size', 'entire course', 'automatic ground', 'suggest ground', 'alert ground',
+    'preferred windows', '0800', '1000', '1200', '1400', '1600', '1800',
   ],
   'data-loaders': [
     'template', 'templates', 'download', 'upload', 'bulk upload', 'csv', 'spreadsheet', 'blank template',
@@ -804,6 +824,7 @@ const sectionColors: Record<SettingsMenuSection, string> = {
   'event-limits':      'from-amber-500/20 to-amber-600/10 border-amber-500/30 text-amber-400',
   'duty-turnaround':   'from-amber-500/20 to-amber-600/10 border-amber-500/30 text-amber-400',
   'business-rules':    'from-amber-500/20 to-amber-600/10 border-amber-500/30 text-amber-400',
+  'ground-event-scheduling': 'from-amber-500/20 to-amber-600/10 border-amber-500/30 text-amber-400',
   // ACCESS & SECURITY - violet icons
   'user-list':         'from-violet-500/20 to-violet-600/10 border-violet-500/30 text-violet-400',
   'trainee-reallocation': 'from-violet-500/20 to-violet-600/10 border-violet-500/30 text-violet-400',
@@ -948,6 +969,7 @@ const sectionGroups: {
       'scheduling-rules',
       'event-limits',
       'business-rules',
+      'ground-event-scheduling',
       'platform-scheduling-rule-sets',
       'people-profile',
     ],
@@ -1718,7 +1740,7 @@ export const SettingsViewWithMenu: React.FC<SettingsViewWithMenuProps> = (props)
             'sct-events': collectSelectedSearchDataTerms(continuationTerms, currencyTerms),
             'currency-profiles': collectSelectedSearchDataTerms(continuationTerms, currencyTerms),
             'people-profile': collectSelectedSearchDataTerms(props.excludedCourses, props.courseColors, unitContextTerms),
-            'scheduling-rules': collectSelectedSearchDataTerms(props.eventLimits, props.dispatchStaggerSettings, schedulingRuleSetTerms, unitContextTerms),
+            'scheduling-rules': collectSelectedSearchDataTerms(props.eventLimits, props.dispatchStaggerSettings, props.groundEventSchedulingSettings, schedulingRuleSetTerms, unitContextTerms),
             'event-limits': collectSelectedSearchDataTerms(props.eventLimits, unitContextTerms),
             'duty-turnaround': collectSelectedSearchDataTerms(
                 props.preferredDutyPeriod,
@@ -1731,6 +1753,7 @@ export const SettingsViewWithMenu: React.FC<SettingsViewWithMenuProps> = (props)
                 props.dayFlyingEnd,
             ),
             'business-rules': collectSelectedSearchDataTerms(props.dispatchStaggerSettings, props.tileStatusSettings, props.maxDispatchPerHour, props.dispatchRateWindowMinutes, props.showDepartureDensityOverlay),
+            'ground-event-scheduling': collectSelectedSearchDataTerms(props.groundEventSchedulingSettings, props.syllabusDetails),
             'user-list': collectSelectedSearchDataTerms(peopleTerms, permissionTerms),
             'staff-database': collectSelectedSearchDataTerms(props.instructorsData, rankTerminologyTerms),
             'trainee-database': collectSelectedSearchDataTerms(props.traineesData, props.courseColors),
@@ -1784,6 +1807,7 @@ export const SettingsViewWithMenu: React.FC<SettingsViewWithMenuProps> = (props)
         props.courseColors,
         props.eventLimits,
         props.dispatchStaggerSettings,
+        props.groundEventSchedulingSettings,
         props.dispatchRateWindowMinutes,
         props.tileStatusSettings,
         props.maxDispatchPerHour,
@@ -2218,6 +2242,7 @@ export const SettingsViewWithMenu: React.FC<SettingsViewWithMenuProps> = (props)
                             <SettingsView {...props} currentUserPermission={currentSettingsPermission} activeSection="event-limits" />
                             <SettingsView {...props} currentUserPermission={currentSettingsPermission} activeSection="duty-turnaround" />
                             <SettingsView {...props} currentUserPermission={currentSettingsPermission} activeSection="business-rules" />
+                            <SettingsView {...props} currentUserPermission={currentSettingsPermission} activeSection="ground-event-scheduling" />
                             <PlatformConfigurationSettings
                                 currentUserPermission={currentSettingsPermission}
                                 onShowSuccess={props.onShowSuccess}

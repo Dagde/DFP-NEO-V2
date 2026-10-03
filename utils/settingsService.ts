@@ -17,6 +17,11 @@ import { normaliseFixedCrewTileColourModeByUnit, type FixedCrewTileColourMode } 
 import { DEFAULT_DISPATCH_STAGGER_SETTINGS, normaliseDispatchStaggerSettings, type DispatchStaggerSettings } from './dispatchStagger';
 import { DEFAULT_DISPATCH_RATE_WINDOW_MINUTES, normaliseDispatchRateWindowMinutes } from './dispatchRate';
 import {
+  DEFAULT_GROUND_EVENT_SCHEDULING_SETTINGS,
+  normaliseGroundEventSchedulingSettings,
+  type GroundEventSchedulingSettings,
+} from './groundEventSchedulingSettings';
+import {
   DEFAULT_EMERGENCY_FREEZE_AUTHORITY,
   normaliseEmergencyFreezeAuthoritySettings,
   type EmergencyFreezeAuthoritySettings,
@@ -58,6 +63,7 @@ export interface AppSettingsData {
   maxDispatchPerHour: number;
   dispatchRateWindowMinutes: number;
   dispatchStaggerSettings: DispatchStaggerSettings;
+  groundEventSchedulingSettings: GroundEventSchedulingSettings;
   flightTurnaround: number;
   ftdTurnaround: number;
   cptTurnaround: number;
@@ -332,6 +338,7 @@ export const buildSettingsSnapshot = (state: Partial<AppSettingsData>): AppSetti
     maxDispatchPerHour: state.maxDispatchPerHour ?? 8,
     dispatchRateWindowMinutes: normaliseDispatchRateWindowMinutes(state.dispatchRateWindowMinutes ?? DEFAULT_DISPATCH_RATE_WINDOW_MINUTES),
     dispatchStaggerSettings: normaliseDispatchStaggerSettings(state.dispatchStaggerSettings || DEFAULT_DISPATCH_STAGGER_SETTINGS),
+    groundEventSchedulingSettings: normaliseGroundEventSchedulingSettings(state.groundEventSchedulingSettings || DEFAULT_GROUND_EVENT_SCHEDULING_SETTINGS),
     flightTurnaround: state.flightTurnaround ?? 1.2,
     ftdTurnaround: state.ftdTurnaround ?? 0.5,
     cptTurnaround: state.cptTurnaround ?? 0.5,

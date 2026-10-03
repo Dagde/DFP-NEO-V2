@@ -3178,6 +3178,42 @@ const normaliseDispatchRateWindowMinutes = (value) => {
   );
   return Math.round(clamped / DISPATCH_RATE_WINDOW_STEP_MINUTES) * DISPATCH_RATE_WINDOW_STEP_MINUTES;
 };
+const GROUND_EVENT_SCHEDULING_WINDOWS = [
+  { id: "0800-1000", label: "0800-1000", start: 8, end: 10 },
+  { id: "1000-1200", label: "1000-1200", start: 10, end: 12 },
+  { id: "1200-1400", label: "1200-1400", start: 12, end: 14 },
+  { id: "1400-1600", label: "1400-1600", start: 14, end: 16 },
+  { id: "1600-1800", label: "1600-1800", start: 16, end: 18 }
+];
+const DEFAULT_GROUND_EVENT_TYPE_SCHEDULING_RULE = {
+  mode: "manual",
+  preferredWindows: []
+};
+const DEFAULT_GROUND_EVENT_SCHEDULING_SETTINGS = {
+  byEventType: {}
+};
+const VALID_GROUND_EVENT_SCHEDULING_MODES = /* @__PURE__ */ new Set(["automatic", "suggest", "manual"]);
+const VALID_WINDOW_IDS = new Set(GROUND_EVENT_SCHEDULING_WINDOWS.map((window2) => window2.id));
+const normaliseGroundEventTypeKey = (value) => String(value || "Ground School").trim() || "Ground School";
+const normaliseGroundEventSchedulingRule = (value) => {
+  const source = value && typeof value === "object" && !Array.isArray(value) ? value : {};
+  const mode = VALID_GROUND_EVENT_SCHEDULING_MODES.has(source.mode) ? source.mode : DEFAULT_GROUND_EVENT_TYPE_SCHEDULING_RULE.mode;
+  const preferredWindows = Array.isArray(source.preferredWindows) ? Array.from(new Set(source.preferredWindows.map((windowId) => String(windowId || "").trim()).filter((windowId) => VALID_WINDOW_IDS.has(windowId)))) : [];
+  return { mode, preferredWindows };
+};
+const normaliseGroundEventSchedulingSettings = (value) => {
+  const source = value && typeof value === "object" && !Array.isArray(value) ? value : {};
+  const byEventTypeSource = source.byEventType && typeof source.byEventType === "object" && !Array.isArray(source.byEventType) ? source.byEventType : {};
+  const byEventType = Object.fromEntries(
+    Object.entries(byEventTypeSource).map(([eventType, rule]) => [normaliseGroundEventTypeKey(eventType), normaliseGroundEventSchedulingRule(rule)]).filter(([eventType]) => Boolean(eventType))
+  );
+  return { byEventType };
+};
+const getGroundEventSchedulingRuleForType = (settings, eventType) => {
+  const normalisedSettings = normaliseGroundEventSchedulingSettings(settings);
+  const eventTypeKey = normaliseGroundEventTypeKey(eventType);
+  return normalisedSettings.byEventType[eventTypeKey] || DEFAULT_GROUND_EVENT_TYPE_SCHEDULING_RULE;
+};
 const DEG_TO_RAD = Math.PI / 180;
 const RAD_TO_DEG = 180 / Math.PI;
 const OFFICIAL_SUNRISE_ZENITH = 90.833;
@@ -4867,6 +4903,7 @@ const buildSettingsSnapshot = (state) => {
     maxDispatchPerHour: state.maxDispatchPerHour ?? 8,
     dispatchRateWindowMinutes: normaliseDispatchRateWindowMinutes(state.dispatchRateWindowMinutes ?? DEFAULT_DISPATCH_RATE_WINDOW_MINUTES),
     dispatchStaggerSettings: normaliseDispatchStaggerSettings(state.dispatchStaggerSettings || DEFAULT_DISPATCH_STAGGER_SETTINGS),
+    groundEventSchedulingSettings: normaliseGroundEventSchedulingSettings(state.groundEventSchedulingSettings || DEFAULT_GROUND_EVENT_SCHEDULING_SETTINGS),
     flightTurnaround: state.flightTurnaround ?? 1.2,
     ftdTurnaround: state.ftdTurnaround ?? 0.5,
     cptTurnaround: state.cptTurnaround ?? 0.5,
@@ -16629,6 +16666,8 @@ const SettingsView = ({
   onUpdateDispatchRateWindowMinutes,
   dispatchStaggerSettings = DEFAULT_DISPATCH_STAGGER_SETTINGS,
   onUpdateDispatchStaggerSettings,
+  groundEventSchedulingSettings = DEFAULT_GROUND_EVENT_SCHEDULING_SETTINGS,
+  onUpdateGroundEventSchedulingSettings,
   tileStatusSettings = DEFAULT_TILE_STATUS_SETTINGS,
   onUpdateTileStatusSettings,
   timezoneOffset,
@@ -16652,7 +16691,8 @@ const SettingsView = ({
   activeUnitCode = "",
   activeUnitCodes = [],
   activeCompositeUnitCode = "",
-  activeAircraftTypeCode = ""
+  activeAircraftTypeCode = "",
+  syllabusDetails = []
 }) => {
   const canEditSettings = ["Super Admin", "Admin", "Scheduler"].includes(currentUserPermission);
   const canEditEmergencyAuthority = ["Super Admin", "Admin"].includes(currentUserPermission);
@@ -16664,16 +16704,21 @@ const SettingsView = ({
   const contractorStaffLimitLabel = simIpDisplayLabel.trim() || DEFAULT_PERSONNEL_DISPLAY_SETTINGS.simIpDisplayLabel;
   const resolvedDispatchStaggerSettings = normaliseDispatchStaggerSettings(dispatchStaggerSettings);
   const resolvedTileStatusSettings = normaliseTileStatusSettings(tileStatusSettings);
+  const resolvedGroundEventSchedulingSettings = normaliseGroundEventSchedulingSettings(groundEventSchedulingSettings);
   const [isEditingBusinessRules, setIsEditingBusinessRules] = reactExports.useState(false);
+  const [isEditingGroundEventScheduling, setIsEditingGroundEventScheduling] = reactExports.useState(false);
   const [tempMaxDispatchPerHour, setTempMaxDispatchPerHour] = reactExports.useState(maxDispatchPerHour);
   const [tempDispatchRateWindowMinutes, setTempDispatchRateWindowMinutes] = reactExports.useState(normaliseDispatchRateWindowMinutes(dispatchRateWindowMinutes));
   const [tempDispatchStaggerSettings, setTempDispatchStaggerSettings] = reactExports.useState(resolvedDispatchStaggerSettings);
   const [tempTileStatusSettings, setTempTileStatusSettings] = reactExports.useState(resolvedTileStatusSettings);
+  const [tempGroundEventSchedulingSettings, setTempGroundEventSchedulingSettings] = reactExports.useState(resolvedGroundEventSchedulingSettings);
   const displayedDispatchStaggerSettings = isEditingBusinessRules ? tempDispatchStaggerSettings : resolvedDispatchStaggerSettings;
   const displayedTileStatusSettings = isEditingBusinessRules ? tempTileStatusSettings : resolvedTileStatusSettings;
+  const displayedGroundEventSchedulingSettings = isEditingGroundEventScheduling ? tempGroundEventSchedulingSettings : resolvedGroundEventSchedulingSettings;
   const displayedMaxDispatchPerHour = isEditingBusinessRules ? tempMaxDispatchPerHour : maxDispatchPerHour;
   const displayedDispatchRateWindowMinutes = isEditingBusinessRules ? tempDispatchRateWindowMinutes : normaliseDispatchRateWindowMinutes(dispatchRateWindowMinutes);
   const canEditBusinessRules = canEditSettings && isEditingBusinessRules;
+  const canEditGroundEventScheduling = canEditSettings && isEditingGroundEventScheduling && !!onUpdateGroundEventSchedulingSettings;
   const handleDispatchRateWindowChange = (value) => {
     setTempDispatchRateWindowMinutes(normaliseDispatchRateWindowMinutes(value));
   };
@@ -16708,6 +16753,21 @@ const SettingsView = ({
   const visibleCurrencies = reactExports.useMemo(() => {
     return [...masterCurrencies, ...currencyRequirements].filter((c) => c.isVisible).sort(safeNameSort);
   }, [masterCurrencies, currencyRequirements]);
+  const groundEventTypeOptions = reactExports.useMemo(() => {
+    const typeSet = /* @__PURE__ */ new Set();
+    syllabusDetails.forEach((item) => {
+      const itemType = normaliseGroundEventTypeKey(item?.type);
+      const lowerType = itemType.toLowerCase();
+      if (lowerType.includes("ground")) {
+        typeSet.add(itemType);
+      }
+    });
+    Object.keys(resolvedGroundEventSchedulingSettings.byEventType || {}).forEach((eventType) => {
+      typeSet.add(normaliseGroundEventTypeKey(eventType));
+    });
+    if (typeSet.size === 0) typeSet.add("Ground");
+    return Array.from(typeSet).sort((a, b) => a.localeCompare(b, void 0, { numeric: true, sensitivity: "base" }));
+  }, [resolvedGroundEventSchedulingSettings, syllabusDetails]);
   reactExports.useEffect(() => {
     if (activeSection && activeSection !== "data-loaders") return;
     const initAndFetch = async () => {
@@ -16850,6 +16910,54 @@ const SettingsView = ({
     setTempDispatchStaggerSettings(resolvedDispatchStaggerSettings);
     setTempTileStatusSettings(resolvedTileStatusSettings);
     setIsEditingBusinessRules(false);
+  };
+  const handleEditGroundEventScheduling = () => {
+    setTempGroundEventSchedulingSettings(resolvedGroundEventSchedulingSettings);
+    setIsEditingGroundEventScheduling(true);
+  };
+  const updateGroundEventSchedulingRule = (eventType, updates) => {
+    if (!canEditGroundEventScheduling) return;
+    const key = normaliseGroundEventTypeKey(eventType);
+    setTempGroundEventSchedulingSettings((current) => {
+      const normalised = normaliseGroundEventSchedulingSettings(current);
+      const existingRule = getGroundEventSchedulingRuleForType(normalised, key);
+      return normaliseGroundEventSchedulingSettings({
+        ...normalised,
+        byEventType: {
+          ...normalised.byEventType,
+          [key]: {
+            ...existingRule,
+            ...updates
+          }
+        }
+      });
+    });
+  };
+  const handleGroundEventWindowToggle = (eventType, windowId, checked) => {
+    const key = normaliseGroundEventTypeKey(eventType);
+    const existingRule = getGroundEventSchedulingRuleForType(tempGroundEventSchedulingSettings, key);
+    const nextWindows = checked ? Array.from(/* @__PURE__ */ new Set([...existingRule.preferredWindows, windowId])) : existingRule.preferredWindows.filter((id) => id !== windowId);
+    updateGroundEventSchedulingRule(key, { preferredWindows: nextWindows });
+  };
+  const handleSaveGroundEventScheduling = () => {
+    if (!onUpdateGroundEventSchedulingSettings) return;
+    const savedSettings = normaliseGroundEventSchedulingSettings(tempGroundEventSchedulingSettings);
+    onUpdateGroundEventSchedulingSettings(savedSettings);
+    setIsEditingGroundEventScheduling(false);
+    onShowSuccess("Ground event scheduling rules updated");
+    logAudit({
+      page: "Settings - Ground Event Scheduling",
+      action: "update",
+      description: "Updated ground event scheduling settings",
+      changes: groundEventTypeOptions.map((eventType) => {
+        const rule = getGroundEventSchedulingRuleForType(savedSettings, eventType);
+        return `${eventType}: ${rule.mode}; windows: ${rule.preferredWindows.length ? rule.preferredWindows.join(", ") : "any"}`;
+      }).join(" | ")
+    });
+  };
+  const handleCancelGroundEventScheduling = () => {
+    setTempGroundEventSchedulingSettings(resolvedGroundEventSchedulingSettings);
+    setIsEditingGroundEventScheduling(false);
   };
   const handleEditLimits = () => {
     setTempLimits(JSON.parse(JSON.stringify(eventLimits)));
@@ -17276,6 +17384,81 @@ const SettingsView = ({
             /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-2 text-xs text-gray-500", children: "Deployment tiles, Runway DI/TWR DI and Duty Supervisor events are exempt from these authorisation warning colours." })
           ] })
         ] }) })
+      ] }),
+      shouldShowSection("ground-event-scheduling") && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "w-full max-w-5xl rounded-lg border border-gray-700 bg-gray-800 shadow-lg", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-start justify-between gap-4 border-b border-gray-700 p-4", children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx("h2", { className: "text-lg font-semibold text-gray-200", children: "Ground Event Scheduling" }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-1 max-w-3xl text-xs text-gray-400", children: "Choose how NEO Build handles ground event types that are marked as group events in the LMP. Manual leaves the existing individual scheduler untouched." })
+          ] }),
+          isEditingGroundEventScheduling ? /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex gap-[1px]", children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx("button", { onClick: handleSaveGroundEventScheduling, className: standardSettingsButtonClass2, children: "Save" }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("button", { onClick: handleCancelGroundEventScheduling, className: standardSettingsButtonClass2, children: "Cancel" })
+          ] }) : /* @__PURE__ */ jsxRuntimeExports.jsx(
+            "button",
+            {
+              onClick: handleEditGroundEventScheduling,
+              disabled: !canEditSettings || !onUpdateGroundEventSchedulingSettings,
+              className: standardSettingsButtonClass2,
+              children: "Edit"
+            }
+          )
+        ] }),
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-4 p-4", children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "rounded-md border border-sky-500/30 bg-sky-500/10 p-3 text-xs leading-relaxed text-sky-100", children: "Automatic schedules eligible group ground events before individual events. Alert/Suggest asks the scheduler to accept or skip each eligible group event during NEO Build. Preferred windows guide placement when a group event can be placed in more than one valid slot." }),
+          groundEventTypeOptions.map((eventType) => {
+            const rule = getGroundEventSchedulingRuleForType(displayedGroundEventSchedulingSettings, eventType);
+            return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded-lg border border-gray-700 bg-gray-900/50 p-4", children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid gap-4 lg:grid-cols-[220px_minmax(260px,1fr)]", children: [
+                /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "mb-2 block text-[11px] font-bold uppercase tracking-widest text-sky-300", children: "Event Type" }),
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "rounded-md border border-gray-700 bg-gray-950/70 px-3 py-2 text-sm font-semibold text-white", children: eventType })
+                ] }),
+                /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "mb-2 block text-[11px] font-bold uppercase tracking-widest text-sky-300", children: "Scheduling Action" }),
+                  /* @__PURE__ */ jsxRuntimeExports.jsxs(
+                    "select",
+                    {
+                      value: rule.mode,
+                      disabled: !canEditGroundEventScheduling,
+                      onChange: (event) => updateGroundEventSchedulingRule(eventType, { mode: event.target.value }),
+                      className: `w-full rounded-md border px-3 py-2 text-sm font-semibold focus:border-sky-500 focus:ring-1 focus:ring-sky-500 ${canEditGroundEventScheduling ? "border-gray-600 bg-gray-950 text-white" : "cursor-not-allowed border-gray-700 bg-gray-800 text-gray-300"}`,
+                      children: [
+                        /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "manual", children: "Manual" }),
+                        /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "suggest", children: "Alert / Suggest" }),
+                        /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "automatic", children: "Automatic" })
+                      ]
+                    }
+                  )
+                ] })
+              ] }),
+              /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mt-4", children: [
+                /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "mb-2 block text-[11px] font-bold uppercase tracking-widest text-sky-300", children: "Preferred ground event windows" }),
+                /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "grid gap-2 sm:grid-cols-2 lg:grid-cols-5", children: GROUND_EVENT_SCHEDULING_WINDOWS.map((windowOption) => /* @__PURE__ */ jsxRuntimeExports.jsxs(
+                  "label",
+                  {
+                    className: `flex items-center gap-2 rounded-md border px-3 py-2 text-xs font-semibold ${canEditGroundEventScheduling ? "cursor-pointer border-gray-600 bg-gray-950/70 text-gray-100 hover:border-sky-500/70" : "cursor-not-allowed border-gray-700 bg-gray-800/80 text-gray-400"}`,
+                    children: [
+                      /* @__PURE__ */ jsxRuntimeExports.jsx(
+                        "input",
+                        {
+                          type: "checkbox",
+                          checked: rule.preferredWindows.includes(windowOption.id),
+                          disabled: !canEditGroundEventScheduling,
+                          onChange: (event) => handleGroundEventWindowToggle(eventType, windowOption.id, event.target.checked),
+                          className: "h-4 w-4 rounded border-gray-600 bg-gray-700 text-sky-500 focus:ring-sky-500 disabled:cursor-not-allowed disabled:opacity-60"
+                        }
+                      ),
+                      windowOption.label
+                    ]
+                  },
+                  windowOption.id
+                )) }),
+                /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-2 text-xs text-gray-500", children: "Leave all windows unticked to allow any valid time inside the build day." })
+              ] })
+            ] }, eventType);
+          })
+        ] })
       ] }),
       shouldShowSection("data-loaders") && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "w-full max-w-5xl rounded-lg border border-gray-700 bg-gray-800 shadow-lg", children: [
         /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "p-4 flex justify-between items-center border-b border-gray-700", children: /* @__PURE__ */ jsxRuntimeExports.jsx("h2", { className: "text-lg font-semibold text-gray-200", children: "Template Downloads" }) }),
@@ -34288,6 +34471,7 @@ const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, lo
     const hasOrganisationDraft = Boolean(window.localStorage.getItem(initialSetupWizardOrganisationDraftStorageKey));
     return hasStoredStep || hasCompletedSteps || hasOrganisationDraft ? "active" : "detect";
   });
+  const [wizardLaunchRequested, setWizardLaunchRequested] = reactExports.useState(false);
   const unitTypeOptions = reactExports.useMemo(() => normaliseUnitTypeOptions(platformConfig), [platformConfig]);
   const configuredContinuationShortLabel = reactExports.useMemo(
     () => getSctTerminology(platformConfig, unitCode).shortLabel || "CT",
@@ -34349,7 +34533,53 @@ const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, lo
     }
   });
   const [wizardPageMenuOpen, setWizardPageMenuOpen] = reactExports.useState(false);
+  const wizardPageMenuButtonRef = reactExports.useRef(null);
+  const wizardPageMenuRef = reactExports.useRef(null);
   const wizardCurrentStepMenuItemRef = reactExports.useRef(null);
+  const [wizardPageMenuPosition, setWizardPageMenuPosition] = reactExports.useState({
+    top: 0,
+    left: 0,
+    width: 420,
+    maxHeight: 440
+  });
+  const updateWizardPageMenuPosition = reactExports.useCallback(() => {
+    if (typeof window === "undefined") return;
+    const button = wizardPageMenuButtonRef.current;
+    if (!button) return;
+    const viewportPadding = 16;
+    const rect = button.getBoundingClientRect();
+    const width = Math.min(460, Math.max(280, window.innerWidth - viewportPadding * 2));
+    const left = Math.min(
+      Math.max(viewportPadding, rect.right - width),
+      Math.max(viewportPadding, window.innerWidth - width - viewportPadding)
+    );
+    const spaceBelow = window.innerHeight - rect.bottom - viewportPadding;
+    const spaceAbove = rect.top - viewportPadding;
+    const openAbove = spaceBelow < 360 && spaceAbove > spaceBelow;
+    const availableHeight = Math.max(220, (openAbove ? spaceAbove : spaceBelow) - 6);
+    const maxHeight = Math.min(720, availableHeight);
+    const top = openAbove ? Math.max(viewportPadding, rect.top - maxHeight - 6) : Math.min(rect.bottom + 6, window.innerHeight - viewportPadding - maxHeight);
+    setWizardPageMenuPosition({ top, left, width, maxHeight });
+  }, []);
+  reactExports.useEffect(() => {
+    if (!wizardPageMenuOpen || typeof window === "undefined") return;
+    updateWizardPageMenuPosition();
+    const handlePointerDown = (event) => {
+      const target = event.target;
+      if (target && (wizardPageMenuButtonRef.current?.contains(target) || wizardPageMenuRef.current?.contains(target))) {
+        return;
+      }
+      setWizardPageMenuOpen(false);
+    };
+    window.addEventListener("resize", updateWizardPageMenuPosition);
+    window.addEventListener("scroll", updateWizardPageMenuPosition, true);
+    document.addEventListener("pointerdown", handlePointerDown);
+    return () => {
+      window.removeEventListener("resize", updateWizardPageMenuPosition);
+      window.removeEventListener("scroll", updateWizardPageMenuPosition, true);
+      document.removeEventListener("pointerdown", handlePointerDown);
+    };
+  }, [updateWizardPageMenuPosition, wizardPageMenuOpen]);
   const [uploadResults, setUploadResults] = reactExports.useState({});
   const [importConfirmations, setImportConfirmations] = reactExports.useState({});
   const [exampleRowSelections, setExampleRowSelections] = reactExports.useState({});
@@ -38469,6 +38699,25 @@ const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, lo
     if (clean.includes("ground")) return "Ground School";
     return "Flight";
   };
+  const normaliseWizardLmpTestEventType = (value) => {
+    const clean = String(value || "").trim().toLowerCase().replace(/[^a-z0-9]+/g, " ");
+    if (!clean || clean === "none" || clean === "not a test" || clean === "not a test event") return "NONE";
+    if (clean === "flight test" || clean === "flight" || clean === "flt test") return "FLIGHT_TEST";
+    if (clean === "simulator test" || clean === "sim test" || clean === "sim" || clean === "ftd test") return "SIMULATOR_TEST";
+    return "NONE";
+  };
+  const normaliseWizardTestingOfficerQualification = (value) => {
+    const clean = String(value || "").trim().toLowerCase().replace(/[^a-z0-9]+/g, " ");
+    if (!clean) return null;
+    if (clean === "testing officer" || clean === "test officer" || clean === "testing officer qualification" || clean === "testing officer qual" || clean === "testing officer qn" || clean === "testing officer q") return "testing-officer";
+    if (clean === "qfi") return "qfi";
+    if (clean === "ire") return "ire";
+    return null;
+  };
+  const parseWizardTemplateBoolean = (value) => {
+    const clean = String(value || "").trim().toLowerCase();
+    return ["yes", "y", "true", "1", "use", "use secondary", "secondary", "secondary callsign"].includes(clean);
+  };
   const isWizardProceduralTrainerType = (value) => {
     const clean = String(value || "").trim().toLowerCase();
     return clean.includes("procedural trainer") || clean.includes("procedural") || clean.includes("trainer");
@@ -38530,8 +38779,11 @@ const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, lo
         methodOfDelivery.push("Procedural Trainer");
       }
       const flightOrSimHours = parseWizardTemplateNumber(getWizardCellByAnyHeader(headers, row, ["Flight or Sim Hours", "Flight Or Sim Hours", "Flight/Sim Hours", "Flight Sim Hours"]), 0);
-      const totalEventHours = parseWizardTemplateNumber(getWizardCellByAnyHeader(headers, row, ["Total Event Hours", "Total Hours"]), flightOrSimHours);
-      const duration = parseWizardTemplateNumber(getWizardCellByAnyHeader(headers, row, ["Duration Minutes", "Duration", "Total Event Hours", "Flight or Sim Hours"]), flightOrSimHours || totalEventHours || 0);
+      const totalEventHours = parseWizardTemplateNumber(getWizardCellByAnyHeader(headers, row, ["Total Event Hours", "Total Event Hrs", "Total Hours"]), flightOrSimHours);
+      const duration = parseWizardTemplateNumber(getWizardCellByAnyHeader(headers, row, ["Duration Minutes", "Duration", "Total Event Hours", "Total Event Hrs", "Flight or Sim Hours"]), flightOrSimHours || totalEventHours || 0);
+      const testEventType = normaliseWizardLmpTestEventType(getWizardCellByAnyHeader(headers, row, ["Test Event Type", "Test Event", "Test Type"]));
+      const testingOfficerQualificationId = testEventType === "NONE" ? null : normaliseWizardTestingOfficerQualification(getWizardCellByAnyHeader(headers, row, ["Testing Officer Qualification", "Testing Officer Qual", "Test Officer Qualification", "Test Officer Qual"]));
+      const useTestingOfficerSecondaryCallsign = testEventType === "FLIGHT_TEST" && parseWizardTemplateBoolean(getWizardCellByAnyHeader(headers, row, ["Secondary Callsign", "Use Secondary Callsign", "Use Testing Officer Secondary Callsign"]));
       return {
         id: `setup-lmp-${normaliseUnitSettingsIdentifier(masterLmp).replace(/[^A-Z0-9]+/g, "-")}-${normaliseUnitSettingsIdentifier(code).replace(/[^A-Z0-9]+/g, "-")}-${index + 1}`,
         code,
@@ -38543,12 +38795,12 @@ const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, lo
         prerequisitesGround: parseWizardTemplateList(getWizardCellByAnyHeader(headers, row, ["Pre-requisite Events (Ground School)", "Prerequisites Ground", "Ground Prerequisites"])),
         prerequisitesFlying: parseWizardTemplateList(getWizardCellByAnyHeader(headers, row, ["Pre-requisite Events (Sim/Flying)", "Prerequisites Flying", "Flying Prerequisites"])),
         eventDetailsCommon: parseWizardTemplateList(getWizardCellByAnyHeader(headers, row, ["Event Details - Common", "Event Details Common", "Common Details"])),
-        eventDetailsSortie: parseWizardTemplateList(getWizardCellByAnyHeader(headers, row, ["Event Details - Sortie", "Event Details Sortie", "Sortie Details", "Event Title", "Event description"])),
+        eventDetailsSortie: parseWizardTemplateList(getWizardCellByAnyHeader(headers, row, ["Event Details - Sortie", "Event Details Sortie", "Event Details (Sortie)", "Sortie Details"])),
         totalEventHours,
         flightOrSimHours: flightOrSimHours || (eventType === "Flight" || eventType === "FTD" ? duration : 0),
         duration,
-        preFlightTime: parseWizardTemplateNumber(getWizardCellByAnyHeader(headers, row, ["Preflight Time", "Pre Flight Time", "Pre Flight Minutes"]), 0),
-        postFlightTime: parseWizardTemplateNumber(getWizardCellByAnyHeader(headers, row, ["Post Flight Time", "Post-flight Time", "Post Flight Minutes"]), 0),
+        preFlightTime: parseWizardTemplateNumber(getWizardCellByAnyHeader(headers, row, ["Preflight Time", "Pre Flight Time", "Pre-Flight", "Pre-flight", "Pre Flight Minutes"]), 0),
+        postFlightTime: parseWizardTemplateNumber(getWizardCellByAnyHeader(headers, row, ["Post Flight Time", "Post-flight Time", "Post-Flight", "Post Flight Minutes"]), 0),
         type: eventType,
         sortieType: getWizardCellByAnyHeader(headers, row, ["Sortie Type", "Dual/Solo"]) || void 0,
         twrDiReqd: getWizardCellByAnyHeader(headers, row, ["Twr Di Reqd", "TWR DI Required"]) || "NO",
@@ -38563,6 +38815,9 @@ const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, lo
         unit: getWizardCellByHeader(headers, row, "Unit") || unitDraft.code || "",
         courses: itemCourses,
         lmpType: getWizardCellByAnyHeader(headers, row, ["Lmp Type", "LMP Type"]) || "Master LMP",
+        testEventType,
+        testingOfficerQualificationId,
+        useTestingOfficerSecondaryCallsign,
         sortOrder: index + 1,
         notes: getWizardCellByHeader(headers, row, "Notes")
       };
@@ -38777,6 +39032,8 @@ const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, lo
       draftBeforeReset: summariseOrganisationDraft(organisationDraft),
       activeOrganisation: summariseActiveOrganisation()
     });
+    setWizardLaunchRequested(true);
+    setMode("active");
     organisationDraftDirtyRef.current = false;
     locationDraftDirtyRef.current = false;
     unitDraftDirtyRef.current = false;
@@ -38787,16 +39044,16 @@ const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, lo
     if (typeof window !== "undefined") window.localStorage.removeItem(initialSetupWizardOrganisationDraftStorageKey);
     hydrateWizardDraftsFromSettings("start-again");
     setWizardStep(0);
-    setMode("active");
     setUploadResults({});
     safeSetWizardLocalStorage(initialSetupWizardStorageKey, "0");
     if (typeof window !== "undefined") window.localStorage.removeItem(initialSetupWizardCompletedAtStorageKey);
     clearWizardStepCompletions();
   };
   const resumeWizard = () => {
-    hydrateWizardDraftsFromSettings("resume");
+    setWizardLaunchRequested(true);
     setMode("active");
     setWizardStep((step) => Math.min(Math.max(0, step), steps.length - 1));
+    hydrateWizardDraftsFromSettings("resume");
   };
   const wizardChoiceClass = "rounded-lg border border-slate-300 bg-white px-4 py-3 text-left text-sm font-semibold text-slate-800 shadow-sm transition hover:border-orange-300 hover:bg-orange-50 hover:text-orange-900";
   const wizardSmallButtonClass = "rounded-md border border-slate-300 bg-white px-3 py-2 text-xs font-semibold text-slate-700 shadow-sm transition hover:border-orange-300 hover:bg-orange-50 hover:text-orange-900";
@@ -40173,19 +40430,18 @@ const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, lo
             "div",
             {
               className: "relative block w-full shrink-0 lg:w-[240px]",
-              onBlur: (event) => {
-                if (!event.currentTarget.contains(event.relatedTarget)) {
-                  setWizardPageMenuOpen(false);
-                }
-              },
               children: [
                 /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: wizardLabelClass, children: "Go to wizard page" }),
                 /* @__PURE__ */ jsxRuntimeExports.jsxs(
                   "button",
                   {
+                    ref: wizardPageMenuButtonRef,
                     type: "button",
                     className: `${wizardInputClass} mt-1 flex items-center justify-between gap-2 bg-white text-left text-slate-950`,
-                    onClick: () => setWizardPageMenuOpen((open) => !open),
+                    onClick: () => {
+                      updateWizardPageMenuPosition();
+                      setWizardPageMenuOpen((open) => !open);
+                    },
                     onKeyDown: stopEditableKeyPropagation,
                     "aria-expanded": wizardPageMenuOpen,
                     "aria-haspopup": "listbox",
@@ -40199,32 +40455,42 @@ const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, lo
                     ]
                   }
                 ),
-                wizardPageMenuOpen ? /* @__PURE__ */ jsxRuntimeExports.jsx(
-                  "div",
-                  {
-                    className: "absolute right-0 z-50 mt-1 max-h-[440px] w-[min(420px,calc(100vw-32px))] overflow-y-auto rounded-lg border border-slate-300 bg-white py-1 shadow-xl",
-                    role: "listbox",
-                    children: steps.map((step, index) => /* @__PURE__ */ jsxRuntimeExports.jsxs(
-                      "button",
-                      {
-                        type: "button",
-                        ref: index === currentStep ? wizardCurrentStepMenuItemRef : void 0,
-                        className: wizardStepMenuItemClass(step, index),
-                        onClick: () => goToWizardStep(index),
-                        role: "option",
-                        "aria-selected": index === currentStep,
-                        children: [
-                          /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-center", children: isWizardStepComplete(step) ? "✓" : "" }),
-                          /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "text-right", children: [
-                            index + 1,
-                            "."
-                          ] }),
-                          /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "min-w-0 flex-1", children: step.title })
-                        ]
+                wizardPageMenuOpen && typeof document !== "undefined" ? reactDomExports.createPortal(
+                  /* @__PURE__ */ jsxRuntimeExports.jsx(
+                    "div",
+                    {
+                      ref: wizardPageMenuRef,
+                      className: "fixed z-[9999] overflow-y-auto rounded-lg border border-slate-300 bg-white py-1 shadow-2xl",
+                      style: {
+                        top: wizardPageMenuPosition.top,
+                        left: wizardPageMenuPosition.left,
+                        width: wizardPageMenuPosition.width,
+                        maxHeight: wizardPageMenuPosition.maxHeight
                       },
-                      `wizard-page-${step.id}`
-                    ))
-                  }
+                      role: "listbox",
+                      children: steps.map((step, index) => /* @__PURE__ */ jsxRuntimeExports.jsxs(
+                        "button",
+                        {
+                          type: "button",
+                          ref: index === currentStep ? wizardCurrentStepMenuItemRef : void 0,
+                          className: wizardStepMenuItemClass(step, index),
+                          onClick: () => goToWizardStep(index),
+                          role: "option",
+                          "aria-selected": index === currentStep,
+                          children: [
+                            /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-center", children: isWizardStepComplete(step) ? "✓" : "" }),
+                            /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "text-right", children: [
+                              index + 1,
+                              "."
+                            ] }),
+                            /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "min-w-0 flex-1", children: step.title })
+                          ]
+                        },
+                        `wizard-page-${step.id}`
+                      ))
+                    }
+                  ),
+                  document.body
                 ) : null
               ]
             }
@@ -41598,7 +41864,11 @@ const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, lo
           title: item.eventDescription,
           courses: item.courses,
           unit: item.unit,
-          location: item.location
+          location: item.location,
+          testEventType: item.testEventType,
+          testingOfficerQualificationId: item.testingOfficerQualificationId,
+          useTestingOfficerSecondaryCallsign: item.useTestingOfficerSecondaryCallsign,
+          eventDetailsSortie: item.eventDetailsSortie
         })),
         fallbackSample: fallbackItemsFromValidatedUpload.slice(0, 12).map((item) => ({
           id: item.id,
@@ -41606,7 +41876,11 @@ const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, lo
           title: item.eventDescription,
           courses: item.courses,
           unit: item.unit,
-          location: item.location
+          location: item.location,
+          testEventType: item.testEventType,
+          testingOfficerQualificationId: item.testingOfficerQualificationId,
+          useTestingOfficerSecondaryCallsign: item.useTestingOfficerSecondaryCallsign,
+          eventDetailsSortie: item.eventDetailsSortie
         }))
       });
       if (itemsForCommit.length === 0) {
@@ -41712,7 +41986,11 @@ const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, lo
           type: item.type,
           unit: item.unit,
           location: item.location,
-          sortOrder: item.sortOrder
+          sortOrder: item.sortOrder,
+          testEventType: item.testEventType,
+          testingOfficerQualificationId: item.testingOfficerQualificationId,
+          useTestingOfficerSecondaryCallsign: item.useTestingOfficerSecondaryCallsign,
+          eventDetailsSortie: item.eventDetailsSortie
         }))
       });
       saveWizardConfig(`Committed ${scopedItems.length} LMP event${scopedItems.length === 1 ? "" : "s"} to this setup.`, (baseConfig) => updatePrimaryOrganisationWithSettings(baseConfig, (settings) => {
@@ -42896,7 +43174,7 @@ Classrooms: ${classroomNames.join(", ")}` : ""}`;
       finishWizardReview
     );
   };
-  if (mode === "detect" && isPartiallyConfigured) {
+  if (mode === "detect" && isPartiallyConfigured && !wizardLaunchRequested) {
     return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { "data-neo-guide": "initial-setup-wizard-panel", className: "rounded-xl border border-slate-300 bg-slate-50 p-5 text-slate-900 shadow-sm", children: [
       /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-[11px] font-bold uppercase tracking-[0.18em] text-orange-600", children: "Initial Setup Wizard" }),
       /* @__PURE__ */ jsxRuntimeExports.jsx("h3", { className: "mt-1 text-xl font-bold text-slate-950", children: "DFP-NEO is partly configured" }),
@@ -43415,12 +43693,8 @@ const ScheduleView = ({
     ));
   }), [platformConfig]);
   const hasInitialSetupWizardProgress = reactExports.useCallback(() => hasStoredInitialSetupWizardProgress() || hasPersistedInitialSetupWizardProgress(), [hasPersistedInitialSetupWizardProgress, hasStoredInitialSetupWizardProgress]);
-  reactExports.useEffect(() => {
-    if (!showInitialSetupBlankState || showResourceUnderlayPanel || !resumeInitialSetupWizard && !hasInitialSetupWizardProgress()) return;
-    onOrganisationSlideoutOpen?.();
-    setShowResourceUnderlayPanel(true);
-  }, [hasInitialSetupWizardProgress, onOrganisationSlideoutOpen, platformConfig, resumeInitialSetupWizard, showInitialSetupBlankState, showResourceUnderlayPanel]);
-  const shouldShowInitialSetupPrompt = showInitialSetupBlankState && !showResourceUnderlayPanel && !resumeInitialSetupWizard && !hasInitialSetupWizardProgress();
+  const initialSetupWizardHasProgress = hasInitialSetupWizardProgress();
+  const shouldShowInitialSetupPrompt = showInitialSetupBlankState && !showResourceUnderlayPanel && !resumeInitialSetupWizard;
   const openInitialSetupWizard = reactExports.useCallback(() => {
     onOrganisationSlideoutOpen?.();
     setShowResourceUnderlayPanel(true);
@@ -45191,7 +45465,7 @@ const ScheduleView = ({
           type: "button",
           onClick: openInitialSetupWizard,
           className: "relative mt-6 rounded-md border border-orange-300 bg-orange-500 px-5 py-2.5 text-sm font-black text-slate-950 shadow-[0_0_22px_rgba(251,146,60,0.32)] transition hover:bg-orange-400",
-          children: "Start Initial Setup Wizard"
+          children: initialSetupWizardHasProgress ? "Continue Initial Setup Wizard" : "Start Initial Setup Wizard"
         }
       )
     ] }) }),
@@ -49597,7 +49871,24 @@ const DetailCard$1 = ({ label, value, className = "" }) => /* @__PURE__ */ jsxRu
 ] });
 const DetailList$1 = ({ title, items }) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
   /* @__PURE__ */ jsxRuntimeExports.jsx("h3", { className: "text-md font-semibold text-sky-400 mb-2", children: title }),
-  /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "bg-gray-700/50 p-3 rounded-lg text-sm text-gray-300", children: items && items.length > 0 ? /* @__PURE__ */ jsxRuntimeExports.jsx("ul", { className: "space-y-1 list-disc list-inside", children: items.map((item, index) => /* @__PURE__ */ jsxRuntimeExports.jsx("li", { children: item }, index)) }) : /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "italic text-gray-500", children: "None" }) })
+  /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "min-h-[52px] bg-gray-700/50 p-3 rounded-lg text-sm text-gray-300", children: items && items.length > 0 ? /* @__PURE__ */ jsxRuntimeExports.jsx("ul", { className: "space-y-1 list-disc list-inside", children: items.map((item, index) => /* @__PURE__ */ jsxRuntimeExports.jsx("li", { children: item }, index)) }) : /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "italic text-gray-500", children: "None" }) })
+] });
+const formatWholeNumberField$1 = (value) => {
+  if (value === void 0 || value === null || value === "") return "";
+  const numericValue = Number(value);
+  return Number.isFinite(numericValue) && numericValue > 0 ? String(Math.round(numericValue)) : "";
+};
+const formatOptionalYesNo$1 = (value) => {
+  if (value === true) return "Yes";
+  if (value === false) return "No";
+  const normalised = String(value ?? "").trim().toUpperCase();
+  if (normalised === "YES") return "Yes";
+  if (normalised === "NO") return "No";
+  return "";
+};
+const GroupDataWindow$1 = ({ label, value, className = "", subHeading = false }) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className, children: [
+  /* @__PURE__ */ jsxRuntimeExports.jsx("h3", { className: subHeading ? "mb-2 text-xs font-semibold text-white" : "text-md font-semibold text-sky-400 mb-2", children: label }),
+  /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "min-h-[52px] rounded-lg bg-gray-700/50 p-3 text-sm text-gray-300", children: value })
 ] });
 const InsertEventModal = ({ traineeLmp, insertEventTypes, selectedAnchorItem, aircraftCrewComposition = DEFAULT_AIRCRAFT_CREW_COMPOSITION, description = "Create an Individual LMP event with the scheduling fields NEO Build needs.", onCancel, onSave }) => {
   const options = insertEventTypes;
@@ -49856,6 +50147,7 @@ const formatTestEventType = (value) => {
   if (value === "SIMULATOR_TEST") return "Simulator Test";
   return "Not a test event";
 };
+const formatSortieDetailsLine = (item) => Array.isArray(item.eventDetailsSortie) ? item.eventDetailsSortie.map((detail) => String(detail || "").trim()).filter(Boolean).join(" | ") : "";
 const getTestingOfficerQualificationLabel = (item, qualifications) => {
   if (!item.testingOfficerQualificationId) return "N/A";
   const qualification = qualifications.find((option) => option.id === item.testingOfficerQualificationId);
@@ -49886,7 +50178,7 @@ const DetailView$1 = ({ item, score, resourceDisplayNames: resourceDisplayNames2
   /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-start justify-between gap-4", children: [
     /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
       /* @__PURE__ */ jsxRuntimeExports.jsx("h2", { className: "text-3xl font-bold text-white", children: item.code }),
-      /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-lg text-gray-400 mt-1", children: item.eventDescription })
+      formatSortieDetailsLine(item) && /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-lg text-gray-400 mt-1", children: formatSortieDetailsLine(item) })
     ] }),
     /* @__PURE__ */ jsxRuntimeExports.jsxs(
       "label",
@@ -50008,7 +50300,35 @@ const DetailView$1 = ({ item, score, resourceDisplayNames: resourceDisplayNames2
     /* @__PURE__ */ jsxRuntimeExports.jsx("legend", { className: "px-2 text-sm font-semibold text-gray-300", children: "Event Breakdown" }),
     /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid grid-cols-1 md:grid-cols-2 gap-6 mt-2", children: [
       /* @__PURE__ */ jsxRuntimeExports.jsx(DetailList$1, { title: "Methods of Delivery", items: item.methodOfDelivery }),
-      /* @__PURE__ */ jsxRuntimeExports.jsx(DetailList$1, { title: "Methods of Assessment", items: item.methodOfAssessment })
+      /* @__PURE__ */ jsxRuntimeExports.jsx(DetailList$1, { title: "Methods of Assessment", items: item.methodOfAssessment }),
+      /* @__PURE__ */ jsxRuntimeExports.jsx(GroupDataWindow$1, { label: "Group Event", value: formatOptionalYesNo$1(item.groupEvent) }),
+      /* @__PURE__ */ jsxRuntimeExports.jsx(GroupDataWindow$1, { label: "Minimum to Schedule", value: formatWholeNumberField$1(item.minimumToSchedule) }),
+      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "md:col-span-2", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsx("h3", { className: "text-md font-semibold text-sky-400 mb-2", children: "Group Size" }),
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid grid-cols-1 sm:grid-cols-3 gap-3", children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsx(GroupDataWindow$1, { subHeading: true, label: "Minimum", value: formatWholeNumberField$1(item.groupSizeMin) }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx(GroupDataWindow$1, { subHeading: true, label: "Maximum", value: formatWholeNumberField$1(item.groupSizeMax) }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx(
+            GroupDataWindow$1,
+            {
+              subHeading: true,
+              label: "Entire course",
+              value: /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "inline-flex items-center gap-2", children: [
+                /* @__PURE__ */ jsxRuntimeExports.jsx(
+                  "input",
+                  {
+                    type: "checkbox",
+                    checked: item.groupEntireCourse === true,
+                    readOnly: true,
+                    className: "h-4 w-4 rounded border-gray-600 bg-gray-800 text-sky-500"
+                  }
+                ),
+                /* @__PURE__ */ jsxRuntimeExports.jsx("span", { children: formatOptionalYesNo$1(item.groupEntireCourse) })
+              ] })
+            }
+          )
+        ] })
+      ] })
     ] })
   ] }),
   /* @__PURE__ */ jsxRuntimeExports.jsxs("fieldset", { className: "p-4 border border-gray-700 rounded-lg", children: [
@@ -52472,11 +52792,39 @@ This action cannot be undone.`;
                   ] }),
                   /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mt-1 flex space-x-4", children: [
                     /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: `cursor-pointer rounded-lg p-4 w-1/2 text-center transition-all duration-200 ${overallResult === "P" ? "bg-green-600 text-white ring-2 ring-white scale-105 shadow-lg" : "bg-green-800/50 text-green-200 hover:bg-green-700/50"} ${overallResult === null ? "!bg-gray-700 !text-gray-500 hover:!bg-gray-600" : ""}`, children: [
-                      /* @__PURE__ */ jsxRuntimeExports.jsx("input", { type: "radio", name: "overall-result", value: "P", checked: overallResult === "P", onChange: () => setOverallResult("P"), className: "sr-only" }),
+                      /* @__PURE__ */ jsxRuntimeExports.jsx(
+                        "input",
+                        {
+                          type: "radio",
+                          name: "overall-result",
+                          value: "P",
+                          checked: overallResult === "P",
+                          onChange: () => {
+                            setOverallResult("P");
+                            setIsDirty(true);
+                            setSaveStatus("Unsaved");
+                          },
+                          className: "sr-only"
+                        }
+                      ),
                       /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-2xl font-bold", children: reportTemplate.overallResults.passLabel })
                     ] }),
                     /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: `cursor-pointer rounded-lg p-4 w-1/2 text-center transition-all duration-200 ${overallResult === "F" || showDoubleMarginalWarning ? "bg-red-600 text-white ring-2 ring-white scale-105 shadow-lg" : "bg-red-800/50 text-red-200 hover:bg-red-700/50"} ${overallResult === null && !showDoubleMarginalWarning ? "!bg-gray-700 !text-gray-500 hover:!bg-gray-600" : ""}`, children: [
-                      /* @__PURE__ */ jsxRuntimeExports.jsx("input", { type: "radio", name: "overall-result", value: "F", checked: overallResult === "F", onChange: () => setOverallResult("F"), className: "sr-only" }),
+                      /* @__PURE__ */ jsxRuntimeExports.jsx(
+                        "input",
+                        {
+                          type: "radio",
+                          name: "overall-result",
+                          value: "F",
+                          checked: overallResult === "F",
+                          onChange: () => {
+                            setOverallResult("F");
+                            setIsDirty(true);
+                            setSaveStatus("Unsaved");
+                          },
+                          className: "sr-only"
+                        }
+                      ),
                       /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-2xl font-bold", children: showDoubleMarginalWarning ? reportTemplate.overallResults.doubleRepeatLabel : reportTemplate.overallResults.failLabel })
                     ] })
                   ] })
@@ -53204,6 +53552,7 @@ const TraineeProfileFlyout = ({
   onGenerateTrainingReportForItem,
   onInsertCustomLmpEvent,
   onUpdateLmpItem,
+  onLoadTraineeLmp,
   insertEventTypes,
   aircraftConfigurations = [],
   aircraftCrewComposition,
@@ -53298,11 +53647,64 @@ const TraineeProfileFlyout = ({
   const showPermissionNoticeForElement = (element) => {
     setPermissionNoticeRect(element.getBoundingClientRect());
   };
-  const currentIndividualLMP = traineeLMPs?.get(trainee.fullName) || individualLmp;
+  const [loadedIndividualLmp, setLoadedIndividualLmp] = reactExports.useState(null);
+  const currentIndividualLMP = traineeLMPs?.get(trainee.fullName) || loadedIndividualLmp || individualLmp;
   const visibleIndividualLMP = reactExports.useMemo(
     () => (currentIndividualLMP || []).filter((item) => !isTraineeCourseContainerLmpItem(item, trainee)),
     [currentIndividualLMP, trainee]
   );
+  const [isLoadingIndividualLmp, setIsLoadingIndividualLmp] = reactExports.useState(false);
+  const [individualLmpLoadError, setIndividualLmpLoadError] = reactExports.useState("");
+  const lastIndividualLmpLoadKeyRef = reactExports.useRef("");
+  reactExports.useEffect(() => {
+    setLoadedIndividualLmp(null);
+    setIndividualLmpLoadError("");
+    setIsLoadingIndividualLmp(false);
+    lastIndividualLmpLoadKeyRef.current = "";
+  }, [trainee.fullName]);
+  reactExports.useEffect(() => {
+    if (activeTab !== "lmp") return;
+    if (!onLoadTraineeLmp) return;
+    if (visibleIndividualLMP.length > 0) return;
+    const loadKey = [
+      trainee.id || trainee.fullName,
+      trainee.fullName,
+      trainee.lmpType || "",
+      trainee.academicLmpType || "",
+      trainee.course || ""
+    ].join("|");
+    if (lastIndividualLmpLoadKeyRef.current === loadKey) return;
+    lastIndividualLmpLoadKeyRef.current = loadKey;
+    let cancelled = false;
+    let timeoutId = null;
+    const timeoutMs = 15e3;
+    setIsLoadingIndividualLmp(true);
+    setIndividualLmpLoadError("");
+    Promise.race([
+      onLoadTraineeLmp(trainee),
+      new Promise((_, reject) => {
+        timeoutId = window.setTimeout(() => reject(new Error("Individual LMP load timed out. Close and reopen the profile, then download the LMP trace if it is still empty.")), timeoutMs);
+      })
+    ]).then((loadedLmp) => {
+      if (cancelled) return;
+      if (!loadedLmp || loadedLmp.length === 0) {
+        setIndividualLmpLoadError("No Individual LMP was returned for this trainee.");
+        setLoadedIndividualLmp([]);
+        return;
+      }
+      setLoadedIndividualLmp(loadedLmp);
+    }).catch((error) => {
+      if (cancelled) return;
+      setIndividualLmpLoadError(error instanceof Error ? error.message : String(error));
+    }).finally(() => {
+      if (timeoutId !== null) window.clearTimeout(timeoutId);
+      if (!cancelled) setIsLoadingIndividualLmp(false);
+    });
+    return () => {
+      cancelled = true;
+      if (timeoutId !== null) window.clearTimeout(timeoutId);
+    };
+  }, [activeTab, onLoadTraineeLmp, trainee, visibleIndividualLMP.length]);
   const activeTrainingReportUnitCode = trainee.unit || "";
   const activeTrainingReportTemplate = trainingReportTemplate || getUnitTrainingReportTemplate(platformConfig, activeTrainingReportUnitCode) || DEFAULT_TRAINING_REPORT_TEMPLATE;
   const activeTrainingReportDisplayName = activeTrainingReportTemplate.displayName || activeTrainingReportTemplate.genericName || DEFAULT_TRAINING_REPORT_TEMPLATE.displayName;
@@ -55315,7 +55717,7 @@ ${errorText || `HTTP ${response.status}`}`, "Delete Failed", "error");
                 const currentAssessment = pt051Assessments?.get(assessmentKey) || Array.from(pt051Assessments?.values() || []).find(
                   (assessment) => assessment.traineeFullName === trainee.fullName && (assessment.eventId === inlineTrainingReportAssessment.eventId || assessment.flightNumber === inlineTrainingReportAssessment.flightNumber && (!inlineTrainingReportAssessment.date || !assessment.date || assessment.date === inlineTrainingReportAssessment.date))
                 ) || inlineTrainingReportAssessment;
-                return /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: card3d2 + " p-0 overflow-hidden h-full min-h-0 flex flex-col", style: card3dStyle2, children: /* @__PURE__ */ jsxRuntimeExports.jsx(
+                return /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: card3d2 + " relative p-0 overflow-hidden h-full min-h-0 flex flex-col", style: card3dStyle2, children: /* @__PURE__ */ jsxRuntimeExports.jsx(
                   TrainingReportView,
                   {
                     trainee,
@@ -55349,29 +55751,33 @@ ${errorText || `HTTP ${response.status}`}`, "Delete Failed", "error");
               })(),
               activeTab === "lmp" && (() => {
                 const traineeScores = scores.get(trainee.fullName) || [];
-                return /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: card3d2 + " p-0 overflow-hidden h-full min-h-0 flex flex-col", style: card3dStyle2, children: /* @__PURE__ */ jsxRuntimeExports.jsx(
-                  TraineeLmpView,
-                  {
-                    trainee: traineeWithEffectiveAcademicLmp,
-                    traineeLmp: visibleIndividualLMP,
-                    scores: traineeScores,
-                    onBack: () => setActiveTab(null),
-                    onDeleteRemedialItem: isArchiveProfile ? void 0 : onDeleteRemedialItem,
-                    onGenerateTrainingReportForItem: isArchiveProfile ? void 0 : onGenerateTrainingReportForItem,
-                    onInsertCustomEvent: isArchiveProfile ? void 0 : onInsertCustomLmpEvent,
-                    onUpdateLmpItem: isArchiveProfile ? void 0 : onUpdateLmpItem,
-                    insertEventTypes,
-                    aircraftConfigurations,
-                    aircraftCrewComposition,
-                    trainingReportDisplayName: activeTrainingReportTemplate.displayName || activeTrainingReportTemplate.genericName || DEFAULT_TRAINING_REPORT_TEMPLATE.displayName,
-                    trainingReportStatusFieldLabel: activeTrainingReportTemplate.modules.overallAssessment.fields.result || "Mission Status",
-                    instructorLabel: activeReportAssessorDisplayLabel,
-                    staffQualificationCatalogue,
-                    operationalModel,
-                    currentUserRole: currentUserRole2,
-                    currentUserName
-                  }
-                ) });
+                return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: card3d2 + " relative p-0 overflow-hidden h-full min-h-0 flex flex-col", style: card3dStyle2, children: [
+                  /* @__PURE__ */ jsxRuntimeExports.jsx(
+                    TraineeLmpView,
+                    {
+                      trainee: traineeWithEffectiveAcademicLmp,
+                      traineeLmp: visibleIndividualLMP,
+                      scores: traineeScores,
+                      onBack: () => setActiveTab(null),
+                      onDeleteRemedialItem: isArchiveProfile ? void 0 : onDeleteRemedialItem,
+                      onGenerateTrainingReportForItem: isArchiveProfile ? void 0 : onGenerateTrainingReportForItem,
+                      onInsertCustomEvent: isArchiveProfile ? void 0 : onInsertCustomLmpEvent,
+                      onUpdateLmpItem: isArchiveProfile ? void 0 : onUpdateLmpItem,
+                      insertEventTypes,
+                      aircraftConfigurations,
+                      aircraftCrewComposition,
+                      trainingReportDisplayName: activeTrainingReportTemplate.displayName || activeTrainingReportTemplate.genericName || DEFAULT_TRAINING_REPORT_TEMPLATE.displayName,
+                      trainingReportStatusFieldLabel: activeTrainingReportTemplate.modules.overallAssessment.fields.result || "Mission Status",
+                      instructorLabel: activeReportAssessorDisplayLabel,
+                      staffQualificationCatalogue,
+                      operationalModel,
+                      currentUserRole: currentUserRole2,
+                      currentUserName
+                    }
+                  ),
+                  isLoadingIndividualLmp && visibleIndividualLMP.length === 0 && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "absolute inset-x-6 bottom-6 rounded border border-sky-500/40 bg-gray-900/95 px-4 py-3 text-sm text-sky-200", children: "Loading Individual LMP..." }),
+                  !isLoadingIndividualLmp && individualLmpLoadError && visibleIndividualLMP.length === 0 && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "absolute inset-x-6 bottom-6 rounded border border-red-500/50 bg-red-950/80 px-4 py-3 text-sm text-red-100", children: individualLmpLoadError })
+                ] });
               })(),
               /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: card3d2 + ` p-3 ${activeTab === "lmp" || activeTab === "pt051" ? "hidden" : ""}`, style: card3dStyle2, children: [
                 /* @__PURE__ */ jsxRuntimeExports.jsx(
@@ -57632,6 +58038,8 @@ const CourseRosterView = ({
   onGenerateTrainingReportForItem,
   onInsertCustomLmpEvent,
   onUpdateLmpItem,
+  onLoadTraineeLmp,
+  onRosterColourTrace,
   insertEventTypes,
   aircraftConfigurations = [],
   aircraftCrewComposition,
@@ -57813,22 +58221,157 @@ const CourseRosterView = ({
     const parsed = Number(cleanedGrade);
     return Number.isFinite(parsed) ? parsed : null;
   };
-  const getLatestTrainingReportStatus = (trainee) => {
-    const reports = Array.from(pt051Assessments?.values() || []).filter((assessment) => assessment && assessment.isCompleted !== false && (assessment.traineeFullName === trainee.fullName || assessment.traineeFullName === trainee.name)).sort((a, b) => {
+  const getVisibleTrainingReportsForTrainee = (trainee) => {
+    const completedReports = Array.from(pt051Assessments?.values() || []).filter((assessment) => {
+      if (!assessment || assessment.isCompleted === false) return false;
+      if (assessment.traineeFullName !== trainee.fullName) return false;
+      const hasGrade = assessment.overallGrade !== null && assessment.overallGrade !== void 0;
+      const hasResult = assessment.overallResult !== null && assessment.overallResult !== void 0;
+      const hasScoredElements = Array.isArray(assessment.scores) && assessment.scores.some((score) => score?.grade !== null && score?.grade !== void 0);
+      const hasDateAndInstructor = String(assessment.date || "").trim() !== "" && String(assessment.instructorName || "").trim() !== "";
+      return hasGrade || hasResult || hasScoredElements || hasDateAndInstructor;
+    });
+    const canonicalReports = /* @__PURE__ */ new Map();
+    completedReports.forEach((assessment) => {
+      const key = `${assessment.traineeFullName}|||${assessment.flightNumber}|||${assessment.date || ""}`;
+      const existing = canonicalReports.get(key);
+      if (!existing) {
+        canonicalReports.set(key, assessment);
+        return;
+      }
+      const currentEventId = String(assessment.eventId || assessment.id || "");
+      const existingEventId = String(existing.eventId || existing.id || "");
+      const currentIsSynthetic = currentEventId.startsWith("mock-") || currentEventId.startsWith("mock-event-") || currentEventId.startsWith("score-");
+      const existingIsSynthetic = existingEventId.startsWith("mock-") || existingEventId.startsWith("mock-event-") || existingEventId.startsWith("score-");
+      const currentHasResult = assessment.overallGrade !== null && assessment.overallGrade !== void 0 && assessment.overallGrade !== "No Grade";
+      const existingHasResult = existing.overallGrade !== null && existing.overallGrade !== void 0 && existing.overallGrade !== "No Grade";
+      if (existingIsSynthetic && !currentIsSynthetic || !existingHasResult && currentHasResult || (assessment.date || "") > (existing.date || "") && currentIsSynthetic === existingIsSynthetic) {
+        canonicalReports.set(key, assessment);
+      }
+    });
+    const dedupedReports = Array.from(canonicalReports.values());
+    const latestUnassessedByEvent = /* @__PURE__ */ new Map();
+    dedupedReports.forEach((assessment) => {
+      const isUnassessed = assessment.overallResult === null || assessment.overallResult === void 0 || assessment.overallResult === "";
+      if (!isUnassessed) return;
+      const key = `${assessment.flightNumber}|||${assessment.traineeFullName}`;
+      const existing = latestUnassessedByEvent.get(key);
+      if (!existing || (assessment.date || "") > (existing.date || "")) {
+        latestUnassessedByEvent.set(key, assessment);
+      }
+    });
+    const mostRecentUnassessedIds = new Set(Array.from(latestUnassessedByEvent.values()).map((assessment) => assessment.id));
+    return dedupedReports.filter((assessment) => {
+      const isUnassessed = assessment.overallResult === null || assessment.overallResult === void 0 || assessment.overallResult === "";
+      return !isUnassessed || mostRecentUnassessedIds.has(assessment.id);
+    }).sort((a, b) => {
       const dateA = (/* @__PURE__ */ new Date(`${a.date || ""}T00:00:00`)).getTime() || 0;
       const dateB = (/* @__PURE__ */ new Date(`${b.date || ""}T00:00:00`)).getTime() || 0;
       if (dateA !== dateB) return dateB - dateA;
       return Number(b.startTime || 0) - Number(a.startTime || 0);
     });
+  };
+  const getLatestTrainingReportStatus = (trainee) => {
+    const reports = getVisibleTrainingReportsForTrainee(trainee);
     const latestReport = reports[0];
     if (!latestReport) return { status: null, hasReports: false };
-    if (latestReport.overallResult === "F") return { status: "failed", hasReports: true };
     const overallGrade = getNumericOverallGrade(latestReport.overallGrade);
-    if (overallGrade === 0) return { status: "failed", hasReports: true };
-    if (overallGrade === 1) return { status: "marginal", hasReports: true };
+    if (overallGrade !== null) {
+      if (overallGrade === 0) return { status: "failed", hasReports: true };
+      if (overallGrade === 1) return { status: "marginal", hasReports: true };
+      return { status: null, hasReports: true };
+    }
+    const overallResult = String(latestReport.overallResult || "").trim().toUpperCase();
+    if (overallResult === "F" || overallResult === "FAIL" || overallResult === "FAILED" || overallResult === "UNSATISFACTORY") {
+      return { status: "failed", hasReports: true };
+    }
     return { status: null, hasReports: true };
   };
+  const getRosterColourDecision = (trainee) => {
+    const rawReports = Array.from(pt051Assessments?.values() || []).filter((assessment) => assessment && (assessment.traineeFullName === trainee.fullName || assessment.traineeFullName === trainee.name));
+    const visibleReports = getVisibleTrainingReportsForTrainee(trainee);
+    const latestVisibleReport = visibleReports[0] || null;
+    const visibleStatus = getLatestTrainingReportStatus(trainee);
+    const traineeScores = scores.get(trainee.fullName) || [];
+    const nonRemedialFlightFtdScores = traineeScores.filter((score) => isNormalTrainingFlightOrSim(score.event)).sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+    const latestLegacyScore = nonRemedialFlightFtdScores[0] || null;
+    const summaryReport = (assessment) => assessment ? {
+      id: assessment.id || null,
+      eventId: assessment.eventId || null,
+      traineeFullName: assessment.traineeFullName || null,
+      flightNumber: assessment.flightNumber || null,
+      date: assessment.date || null,
+      startTime: assessment.startTime ?? null,
+      isCompleted: assessment.isCompleted ?? null,
+      overallResult: assessment.overallResult ?? null,
+      overallGrade: assessment.overallGrade ?? null,
+      instructorName: assessment.instructorName || null,
+      hasScores: Array.isArray(assessment.scores) ? assessment.scores.length : null
+    } : null;
+    const summaryScore = (score) => score ? {
+      event: score.event || null,
+      date: score.date || null,
+      score: score.score ?? null,
+      notes: score.notes || null
+    } : null;
+    if (isTraineeSuspended(trainee)) {
+      return { reason: "suspended", className: "text-red-400 hover:text-red-300", status: "red" };
+    }
+    if (visibleStatus.status === "failed") {
+      return {
+        reason: "visible-training-report-failed",
+        className: "text-red-400 hover:text-red-300",
+        status: "red",
+        latestVisibleReport: summaryReport(latestVisibleReport)
+      };
+    }
+    if (visibleStatus.status === "marginal") {
+      return {
+        reason: "visible-training-report-marginal",
+        className: "text-amber-400 hover:text-amber-300",
+        status: "amber",
+        latestVisibleReport: summaryReport(latestVisibleReport)
+      };
+    }
+    if (visibleStatus.hasReports) {
+      return {
+        reason: "visible-training-report-complete",
+        className: "text-green-400 hover:text-green-300",
+        status: "green",
+        latestVisibleReport: summaryReport(latestVisibleReport)
+      };
+    }
+    if (trainee.isPaused) {
+      return { reason: "paused-no-visible-training-report", className: "text-gray-300 hover:text-gray-200", status: "gray" };
+    }
+    if (latestLegacyScore?.score === 0) {
+      return {
+        reason: "legacy-score-failed",
+        className: "text-red-400 hover:text-red-300",
+        status: "red",
+        latestLegacyScore: summaryScore(latestLegacyScore)
+      };
+    }
+    if (latestLegacyScore?.score === 1) {
+      return {
+        reason: "legacy-score-marginal",
+        className: "text-amber-400 hover:text-amber-300",
+        status: "amber",
+        latestLegacyScore: summaryScore(latestLegacyScore)
+      };
+    }
+    return {
+      reason: "default",
+      className: "text-green-400 hover:text-green-300",
+      status: "green",
+      rawReportCount: rawReports.length,
+      visibleReportCount: visibleReports.length,
+      legacyScoreCount: traineeScores.length
+    };
+  };
   const getTraineeNameColorClass = (trainee) => {
+    const tracedDecision = getRosterColourDecision(trainee);
+    if (tracedDecision.className) return tracedDecision.className;
     if (isTraineeSuspended(trainee)) {
       return "text-red-400 hover:text-red-300";
     }
@@ -57860,6 +58403,72 @@ const CourseRosterView = ({
     }
     return "text-green-400 hover:text-green-300";
   };
+  reactExports.useEffect(() => {
+    if (!onRosterColourTrace) return;
+    const allTrainees = Object.values(groupedTrainees).flat();
+    const traceRows = allTrainees.map((trainee) => {
+      const decision = getRosterColourDecision(trainee);
+      const rawReports = Array.from(pt051Assessments?.values() || []).filter((assessment) => assessment && (assessment.traineeFullName === trainee.fullName || assessment.traineeFullName === trainee.name));
+      const visibleReports = getVisibleTrainingReportsForTrainee(trainee);
+      const traineeScores = scores.get(trainee.fullName) || [];
+      return {
+        trainee: {
+          id: trainee.id ?? null,
+          idNumber: trainee.idNumber ?? null,
+          name: trainee.name,
+          fullName: trainee.fullName,
+          rank: trainee.rank,
+          course: trainee.course,
+          unit: trainee.unit,
+          isPaused: trainee.isPaused === true,
+          suspended: isTraineeSuspended(trainee),
+          statusLabel: getTraineeStatusLabel(trainee)
+        },
+        decision,
+        rawReportCount: rawReports.length,
+        visibleReportCount: visibleReports.length,
+        legacyScoreCount: traineeScores.length,
+        rawReports: rawReports.slice(0, 12).map((assessment) => ({
+          id: assessment.id || null,
+          eventId: assessment.eventId || null,
+          traineeFullName: assessment.traineeFullName || null,
+          flightNumber: assessment.flightNumber || null,
+          date: assessment.date || null,
+          startTime: assessment.startTime ?? null,
+          isCompleted: assessment.isCompleted ?? null,
+          overallResult: assessment.overallResult ?? null,
+          overallGrade: assessment.overallGrade ?? null,
+          instructorName: assessment.instructorName || null,
+          hasScores: Array.isArray(assessment.scores) ? assessment.scores.length : null
+        })),
+        visibleReports: visibleReports.slice(0, 12).map((assessment) => ({
+          id: assessment.id || null,
+          eventId: assessment.eventId || null,
+          traineeFullName: assessment.traineeFullName || null,
+          flightNumber: assessment.flightNumber || null,
+          date: assessment.date || null,
+          startTime: assessment.startTime ?? null,
+          overallResult: assessment.overallResult ?? null,
+          overallGrade: assessment.overallGrade ?? null,
+          instructorName: assessment.instructorName || null
+        })),
+        legacyScores: traineeScores.slice(0, 12).map((score) => ({
+          event: score.event || null,
+          date: score.date || null,
+          score: score.score ?? null,
+          notes: score.notes || null
+        }))
+      };
+    });
+    onRosterColourTrace({
+      generatedAt: (/* @__PURE__ */ new Date()).toISOString(),
+      activeCourseCount: Object.keys(groupedTrainees).length,
+      traineeCount: allTrainees.length,
+      redRows: traceRows.filter((row) => row.decision.status === "red"),
+      amberRows: traceRows.filter((row) => row.decision.status === "amber"),
+      focusRows: traceRows.filter((row) => /dean/i.test(`${row.trainee.name} ${row.trainee.fullName}`))
+    });
+  }, [groupedTrainees, onRosterColourTrace, pt051Assessments, scores]);
   const ViewToggleButton = ({ label, value }) => /* @__PURE__ */ jsxRuntimeExports.jsx(
     "button",
     {
@@ -58105,6 +58714,7 @@ const CourseRosterView = ({
         onGenerateTrainingReportForItem,
         onInsertCustomLmpEvent,
         onUpdateLmpItem,
+        onLoadTraineeLmp,
         insertEventTypes,
         aircraftConfigurations,
         aircraftCrewComposition,
@@ -92815,6 +93425,8 @@ const TraineeView = (props) => {
           onGenerateTrainingReportForItem: props.onGenerateTrainingReportForItem,
           onInsertCustomLmpEvent: props.onInsertCustomLmpEvent,
           onUpdateLmpItem: props.onUpdateLmpItem,
+          onLoadTraineeLmp: props.onLoadTraineeLmp,
+          onRosterColourTrace: props.onRosterColourTrace,
           insertEventTypes: props.insertEventTypes,
           aircraftConfigurations: props.aircraftConfigurations,
           aircraftCrewComposition: props.aircraftCrewComposition,
@@ -92988,14 +93600,138 @@ const formatFixedCrewManifestStatus = (status) => {
       return "Requirements ready";
   }
 };
+const LMP_VERSION_NOTE_REGEX = /\[DFP_LMP_VERSION:([0-9]+(?:\.[0-9]+)?)\]/i;
+const DEFAULT_LMP_VERSION = "1.0";
+const getLmpVersionFromNotes = (notes) => {
+  const match = String(notes || "").match(LMP_VERSION_NOTE_REGEX);
+  return match?.[1] || null;
+};
+const withLmpVersionInNotes = (notes, version) => {
+  const withoutVersion = String(notes || "").replace(LMP_VERSION_NOTE_REGEX, "").replace(/\n{3,}/g, "\n\n").trim();
+  return [withoutVersion, `[DFP_LMP_VERSION:${version}]`].filter(Boolean).join("\n");
+};
 const DetailCard = ({ label, value, className = "" }) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: `bg-gray-700/50 p-1 rounded-lg ${className}`, children: [
   /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "block text-[9px] font-medium text-gray-400 uppercase tracking-wider", children: label }),
   /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-0.5 text-[10px] font-semibold text-white", children: value })
 ] });
 const DetailList = ({ title, items }) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
   /* @__PURE__ */ jsxRuntimeExports.jsx("h3", { className: "text-md font-semibold text-sky-400 mb-2", children: title }),
-  /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "bg-gray-700/50 p-3 rounded-lg text-sm text-gray-300", children: items && items.length > 0 ? /* @__PURE__ */ jsxRuntimeExports.jsx("ul", { className: "space-y-1 list-disc list-inside", children: items.map((item, index) => /* @__PURE__ */ jsxRuntimeExports.jsx("li", { children: item }, index)) }) : /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "italic text-gray-500", children: "None" }) })
+  /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "min-h-[52px] bg-gray-700/50 p-3 rounded-lg text-sm text-gray-300", children: items && items.length > 0 ? /* @__PURE__ */ jsxRuntimeExports.jsx("ul", { className: "space-y-1 list-disc list-inside", children: items.map((item, index) => /* @__PURE__ */ jsxRuntimeExports.jsx("li", { children: item }, index)) }) : /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "italic text-gray-500", children: "None" }) })
 ] });
+const formatWholeNumberField = (value) => {
+  if (value === void 0 || value === null || value === "") return "";
+  const numericValue = Number(value);
+  return Number.isFinite(numericValue) && numericValue > 0 ? String(Math.round(numericValue)) : "";
+};
+const formatOptionalYesNo = (value) => {
+  if (value === true) return "Yes";
+  if (value === false) return "No";
+  const normalised = String(value ?? "").trim().toUpperCase();
+  if (normalised === "YES") return "Yes";
+  if (normalised === "NO") return "No";
+  return "";
+};
+const GroupDataWindow = ({ label, value, className = "", subHeading = false }) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className, children: [
+  /* @__PURE__ */ jsxRuntimeExports.jsx("h3", { className: subHeading ? "mb-2 text-xs font-semibold text-white" : "text-md font-semibold text-sky-400 mb-2", children: label }),
+  /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "min-h-[52px] rounded-lg bg-gray-700/50 p-3 text-sm text-gray-300", children: value })
+] });
+const GroupEventSummary = ({ item }) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "md:col-span-2 grid grid-cols-1 md:grid-cols-2 gap-6", children: [
+  /* @__PURE__ */ jsxRuntimeExports.jsx(GroupDataWindow, { label: "Group Event", value: formatOptionalYesNo(item.groupEvent) }),
+  /* @__PURE__ */ jsxRuntimeExports.jsx(GroupDataWindow, { label: "Minimum to Schedule", value: formatWholeNumberField(item.minimumToSchedule) }),
+  /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "md:col-span-2", children: [
+    /* @__PURE__ */ jsxRuntimeExports.jsx("h3", { className: "text-md font-semibold text-sky-400 mb-2", children: "Group Size" }),
+    /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid grid-cols-1 sm:grid-cols-3 gap-3", children: [
+      /* @__PURE__ */ jsxRuntimeExports.jsx(GroupDataWindow, { subHeading: true, label: "Minimum", value: formatWholeNumberField(item.groupSizeMin) }),
+      /* @__PURE__ */ jsxRuntimeExports.jsx(GroupDataWindow, { subHeading: true, label: "Maximum", value: formatWholeNumberField(item.groupSizeMax) }),
+      /* @__PURE__ */ jsxRuntimeExports.jsx(
+        GroupDataWindow,
+        {
+          subHeading: true,
+          label: "Entire course",
+          value: /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "inline-flex items-center gap-2", children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx(
+              "input",
+              {
+                type: "checkbox",
+                checked: item.groupEntireCourse === true,
+                readOnly: true,
+                className: "h-4 w-4 rounded border-gray-600 bg-gray-800 text-sky-500"
+              }
+            ),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("span", { children: formatOptionalYesNo(item.groupEntireCourse) })
+          ] })
+        }
+      )
+    ] })
+  ] })
+] });
+const GroupEventEditor = ({ item, onChange }) => {
+  const groupEntireCourse = item.groupEntireCourse === true;
+  return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "md:col-span-2 rounded-lg border border-gray-700 bg-gray-800/40 p-3", children: [
+    /* @__PURE__ */ jsxRuntimeExports.jsx("h3", { className: "text-md font-semibold text-sky-400 mb-3", children: "Group Scheduling" }),
+    /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid grid-cols-1 md:grid-cols-2 gap-6", children: [
+      /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "bg-gray-700/50 p-3 rounded-lg", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "block text-xs font-medium text-gray-400 uppercase tracking-wider", children: "Group Event" }),
+        /* @__PURE__ */ jsxRuntimeExports.jsxs(
+          "select",
+          {
+            value: item.groupEvent ? "YES" : "NO",
+            onChange: (event) => onChange("groupEvent", event.target.value === "YES"),
+            className: "mt-1 block w-full bg-gray-800 border border-gray-600 rounded-md shadow-sm py-1 px-2 text-white focus:outline-none focus:ring-sky-500 focus:border-sky-500 sm:text-sm",
+            children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "NO", children: "No" }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "YES", children: "Yes" })
+            ]
+          }
+        )
+      ] }),
+      /* @__PURE__ */ jsxRuntimeExports.jsx(
+        EditableField,
+        {
+          label: "Minimum to Schedule",
+          type: "number",
+          value: item.minimumToSchedule ?? 0,
+          onChange: (value) => onChange("minimumToSchedule", value)
+        }
+      )
+    ] }),
+    /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mt-6", children: [
+      /* @__PURE__ */ jsxRuntimeExports.jsx("h4", { className: "text-md font-semibold text-sky-400 mb-2", children: "Group Size" }),
+      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid grid-cols-1 md:grid-cols-3 gap-3", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsx(
+          EditableField,
+          {
+            label: "Minimum",
+            type: "number",
+            value: item.groupSizeMin ?? 0,
+            onChange: (value) => onChange("groupSizeMin", value)
+          }
+        ),
+        /* @__PURE__ */ jsxRuntimeExports.jsx(
+          EditableField,
+          {
+            label: "Maximum",
+            type: "number",
+            value: item.groupSizeMax ?? 0,
+            onChange: (value) => onChange("groupSizeMax", value)
+          }
+        ),
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "min-h-[52px] flex items-center gap-2 rounded-lg bg-gray-700/50 px-3 py-2 text-sm text-gray-300", children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsx(
+            "input",
+            {
+              type: "checkbox",
+              checked: groupEntireCourse,
+              onChange: (event) => onChange("groupEntireCourse", event.target.checked),
+              className: "h-4 w-4 rounded border-gray-600 bg-gray-800 text-sky-500 focus:ring-sky-500"
+            }
+          ),
+          "Entire course"
+        ] })
+      ] })
+    ] })
+  ] });
+};
 const AIR_COMBAT_LINKED_EVENT_NOTE_REGEX$1 = /^\[Linked Event:\s*([^\]]+)\]$/i;
 const DEFAULT_ASSESSED_ELEMENTS = INITIAL_SCORING_MATRIX_ELEMENTS.filter((element) => element !== "Generic Flying Elements");
 const SCORING_MATRIX_NON_ASSESSABLE_KEYS = /* @__PURE__ */ new Set(["generic flying elements"]);
@@ -93213,19 +93949,31 @@ const AssignTrainingModal = ({
   showStaffAssignments = true,
   staff,
   trainees = [],
+  lmpOptions = [],
+  selectedLmpCode = "",
+  courseOptions = [],
+  selectedCourseKeys = /* @__PURE__ */ new Set(),
   selectedStaffIds,
   selectedTraineeIds = /* @__PURE__ */ new Set(),
   saving,
   onToggle,
   onToggleTrainee,
+  onLmpChange,
+  onToggleCourse,
   onSelectAll,
   onDeselectAll,
+  onSelectAllCourses,
+  onDeselectAllCourses,
   onSelectAllTrainees,
   onDeselectAllTrainees,
+  onDownloadTrace,
   onCancel,
   onSave
 }) => {
   const showTraineeAssignments = Boolean(onToggleTrainee);
+  const lmpSelectionVisible = showTraineeAssignments && Boolean(onLmpChange);
+  const lmpSelectionEnabled = lmpOptions.length > 1;
+  const courseSelectionEnabled = showTraineeAssignments && courseOptions.length > 1 && Boolean(onToggleCourse);
   const panelCount = (showStaffAssignments ? 1 : 0) + (showTraineeAssignments ? 1 : 0);
   const traineeGroups = trainees.reduce((groups, person) => {
     const course = String(person.course || "No course").trim() || "No course";
@@ -93238,6 +93986,9 @@ const AssignTrainingModal = ({
     return groups;
   }, []);
   const formatCourseHeading = (course) => course === "No course" ? "No course" : `Course ${course}`;
+  const selectedVisibleTraineeCount = trainees.filter((person) => selectedTraineeIds.has(person.idNumber)).length;
+  const savingMessage = showTraineeAssignments ? "Assigning LMP to course participants" : "Saving training assignments";
+  const savingDetail = showTraineeAssignments ? "Creating Individual LMPs. This may take a moment." : "Updating selected staff assignments. This may take a moment.";
   const staffPanel = /* @__PURE__ */ jsxRuntimeExports.jsxs("section", { className: "min-w-0 overflow-hidden rounded-lg border border-gray-700 bg-gray-950/40", children: [
     /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "border-b border-sky-800/70 bg-sky-950/50 px-4 py-3", children: [
       /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center justify-between gap-3", children: [
@@ -93281,9 +94032,50 @@ const AssignTrainingModal = ({
       /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center justify-between gap-3", children: [
         /* @__PURE__ */ jsxRuntimeExports.jsx("h3", { className: "text-sm font-extrabold uppercase tracking-[0.18em] text-teal-100", children: "Trainees" }),
         /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "rounded-full border border-teal-700/70 bg-teal-900/50 px-2.5 py-1 text-xs font-bold text-teal-100", children: [
-          selectedTraineeIds.size,
+          selectedVisibleTraineeCount,
           " selected"
         ] })
+      ] }),
+      lmpSelectionVisible && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mt-3 rounded border border-sky-800/60 bg-gray-950/35 p-3", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "block text-[11px] font-extrabold uppercase tracking-[0.18em] text-sky-200", children: "Master LMP to Assign" }),
+        /* @__PURE__ */ jsxRuntimeExports.jsxs(
+          "select",
+          {
+            value: selectedLmpCode,
+            onChange: (event) => onLmpChange?.(event.target.value),
+            disabled: !lmpSelectionEnabled,
+            className: "mt-2 w-full rounded border border-gray-600 bg-gray-900 px-3 py-2 text-sm font-semibold text-white focus:border-sky-500 focus:outline-none focus:ring-1 focus:ring-sky-500 disabled:cursor-not-allowed disabled:opacity-80",
+            children: [
+              lmpOptions.length === 0 && /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: selectedLmpCode, children: selectedLmpCode || "No Master LMP available" }),
+              lmpOptions.map((option) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: option.code, children: option.title && option.title !== option.code ? `${option.code} - ${option.title}` : option.code }, option.code))
+            ]
+          }
+        )
+      ] }),
+      courseSelectionEnabled && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mt-3 rounded border border-teal-800/60 bg-gray-950/35 p-3", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center justify-between gap-3", children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsx("h4", { className: "text-[11px] font-extrabold uppercase tracking-[0.18em] text-teal-200", children: "Courses" }),
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "text-xs font-semibold text-gray-300", children: [
+            selectedCourseKeys.size,
+            " selected"
+          ] })
+        ] }),
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mt-2 flex flex-wrap gap-2", children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsx("button", { type: "button", onClick: onSelectAllCourses, className: "rounded border border-gray-600 bg-gray-800 px-2.5 py-1 text-[11px] font-semibold text-gray-100 hover:bg-gray-700", children: "Select All Courses" }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx("button", { type: "button", onClick: onDeselectAllCourses, className: "rounded border border-gray-600 bg-gray-800 px-2.5 py-1 text-[11px] font-semibold text-gray-100 hover:bg-gray-700", children: "Deselect All Courses" })
+        ] }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-2 grid gap-2 sm:grid-cols-2", children: courseOptions.map((course) => /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "flex cursor-pointer items-center gap-2 rounded border border-gray-700 bg-gray-900/70 px-2.5 py-1.5 text-xs text-gray-100 hover:border-teal-600/70", children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsx(
+            "input",
+            {
+              type: "checkbox",
+              checked: selectedCourseKeys.has(course),
+              onChange: () => onToggleCourse?.(course),
+              className: "h-4 w-4 rounded border-gray-600 bg-gray-800 text-sky-500 focus:ring-sky-500"
+            }
+          ),
+          /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "font-semibold", children: formatCourseHeading(course) })
+        ] }, course)) })
       ] }),
       /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mt-3 flex flex-wrap gap-2", children: [
         /* @__PURE__ */ jsxRuntimeExports.jsx("button", { type: "button", onClick: onSelectAllTrainees, className: "rounded border border-gray-600 bg-gray-800 px-3 py-1.5 text-xs font-semibold text-gray-100 hover:bg-gray-700", children: "Select All" }),
@@ -93313,21 +94105,36 @@ const AssignTrainingModal = ({
       ] }, person.idNumber))
     ] }, group.course)) })
   ] }) : null;
-  return /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "fixed inset-0 z-[1000] flex items-center justify-center bg-black/70 p-4", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: `flex max-h-[90vh] w-full flex-col rounded-lg border border-sky-700/50 bg-gray-900 shadow-2xl ${panelCount > 1 ? "max-w-5xl" : "max-w-2xl"}`, children: [
+  return /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "fixed inset-0 z-[1000] flex items-center justify-center bg-black/70 p-4", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: `relative flex max-h-[90vh] w-full flex-col rounded-lg border border-sky-700/50 bg-gray-900 shadow-2xl ${panelCount > 1 ? "max-w-5xl" : "max-w-2xl"}`, children: [
+    saving && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "absolute inset-0 z-20 flex items-center justify-center rounded-lg bg-black/75 px-4", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "w-full max-w-md rounded-lg border border-sky-600/70 bg-gray-900 px-6 py-5 text-center shadow-2xl", children: [
+      /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mx-auto h-12 w-12 animate-spin rounded-full border-4 border-sky-900 border-t-sky-300" }),
+      /* @__PURE__ */ jsxRuntimeExports.jsx("h3", { className: "mt-4 text-lg font-extrabold text-white", children: savingMessage }),
+      /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-2 text-sm font-medium text-gray-300", children: savingDetail }),
+      showTraineeAssignments && /* @__PURE__ */ jsxRuntimeExports.jsxs("p", { className: "mt-3 rounded border border-teal-700/60 bg-teal-950/40 px-3 py-2 text-xs font-semibold text-teal-100", children: [
+        selectedVisibleTraineeCount,
+        " selected trainee",
+        selectedVisibleTraineeCount === 1 ? "" : "s",
+        " · ",
+        selectedLmpCode || "Selected LMP"
+      ] })
+    ] }) }),
     /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-start justify-between gap-4 border-b border-gray-700 px-4 py-3", children: [
       /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
         /* @__PURE__ */ jsxRuntimeExports.jsx("h2", { className: "text-lg font-bold text-white", children: heading }),
         /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-1 text-xs text-gray-400", children: title })
       ] }),
-      /* @__PURE__ */ jsxRuntimeExports.jsx("button", { type: "button", onClick: onCancel, className: "rounded px-2 py-1 text-sm text-gray-300 hover:bg-gray-800 hover:text-white", children: "Close" })
+      /* @__PURE__ */ jsxRuntimeExports.jsx("button", { type: "button", onClick: onCancel, disabled: saving, className: "rounded px-2 py-1 text-sm text-gray-300 hover:bg-gray-800 hover:text-white disabled:cursor-not-allowed disabled:opacity-50", children: "Close" })
     ] }),
     /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "overflow-y-auto p-4", children: panelCount > 1 ? /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid gap-4 lg:grid-cols-2", children: [
       showStaffAssignments && staffPanel,
       traineePanel
     ] }) : showStaffAssignments ? staffPanel : traineePanel }),
-    /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex justify-end gap-2 border-t border-gray-700 px-4 py-3", children: [
-      /* @__PURE__ */ jsxRuntimeExports.jsx("button", { type: "button", onClick: onCancel, className: "rounded border border-gray-600 bg-gray-800 px-4 py-2 text-sm font-semibold text-gray-100 hover:bg-gray-700", children: "Cancel" }),
-      /* @__PURE__ */ jsxRuntimeExports.jsx("button", { type: "button", onClick: onSave, disabled: saving, className: "rounded border border-sky-500 bg-sky-700 px-4 py-2 text-sm font-bold text-white hover:bg-sky-600 disabled:cursor-not-allowed disabled:opacity-60", children: saving ? "Saving..." : "Save Assignments" })
+    /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex flex-wrap items-center justify-between gap-2 border-t border-gray-700 px-4 py-3", children: [
+      /* @__PURE__ */ jsxRuntimeExports.jsx("div", { children: onDownloadTrace && /* @__PURE__ */ jsxRuntimeExports.jsx("button", { type: "button", onClick: onDownloadTrace, className: "rounded border border-amber-600/60 bg-amber-900/30 px-4 py-2 text-sm font-semibold text-amber-100 hover:bg-amber-800/40", children: "Download Assign LMP Trace" }) }),
+      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex justify-end gap-2", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsx("button", { type: "button", onClick: onCancel, disabled: saving, className: "rounded border border-gray-600 bg-gray-800 px-4 py-2 text-sm font-semibold text-gray-100 hover:bg-gray-700 disabled:cursor-not-allowed disabled:opacity-50", children: "Cancel" }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx("button", { type: "button", onClick: onSave, disabled: saving, className: "rounded border border-sky-500 bg-sky-700 px-4 py-2 text-sm font-bold text-white hover:bg-sky-600 disabled:cursor-not-allowed disabled:opacity-60", children: saving ? "Saving..." : "Save Assignments" })
+      ] })
     ] })
   ] }) });
 };
@@ -93426,6 +94233,7 @@ const DetailView = ({ item, isEditing, isAddingEvent = false, editedItem, onItem
   const addEventCodeHelp = cleanCodeExample ? `Code is the short event identifier used in scheduling, prerequisites and reports. Example already saved in ${collectionTitle}: ${cleanCodeExample}.` : `Code is the short event identifier used in scheduling, prerequisites and reports. Use the same style as the other events in ${collectionTitle}.`;
   const addEventDescriptionHelp = cleanDescriptionExample ? `Event Description is the plain English name of this one event. Example already saved in ${collectionTitle}: ${cleanDescriptionExample}.` : `Event Description is the plain English name of this one event. It should describe what the crew or trainee will do in this event.`;
   const AddEventHelp = ({ children }) => /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-2 rounded-md border border-cyan-500/35 bg-cyan-500/10 px-3 py-2 text-xs leading-relaxed text-cyan-100", children });
+  const sortieDetailsSummary = (currentItem.eventDetailsSortie || []).map((detail) => String(detail || "").trim()).filter(Boolean).join(", ");
   return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-6", children: [
     /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between", children: [
       /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "min-w-0 flex-1", children: [
@@ -93436,7 +94244,7 @@ const DetailView = ({ item, isEditing, isAddingEvent = false, editedItem, onItem
         isEditing ? /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mt-2", children: [
           /* @__PURE__ */ jsxRuntimeExports.jsx(EditableField, { label: "Event Description", value: currentItem.eventDescription, onChange: (val) => handleFieldChange("eventDescription", val) }),
           isAddingEvent && /* @__PURE__ */ jsxRuntimeExports.jsx(AddEventHelp, { children: addEventDescriptionHelp })
-        ] }) : /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-lg text-gray-400 mt-1", children: item.eventDescription })
+        ] }) : /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-lg text-gray-400 mt-1", children: sortieDetailsSummary || "No sortie details recorded" })
       ] }),
       /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex shrink-0 flex-wrap items-center justify-end gap-2", children: [
         isEditing && /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
@@ -93975,12 +94783,14 @@ const DetailView = ({ item, isEditing, isAddingEvent = false, editedItem, onItem
         /* @__PURE__ */ jsxRuntimeExports.jsx(EditableList, { title: "Methods of Delivery", items: currentItem.methodOfDelivery, onChange: (val) => handleFieldChange("methodOfDelivery", val) }),
         /* @__PURE__ */ jsxRuntimeExports.jsx(EditableList, { title: "Methods of Assessment", items: currentItem.methodOfAssessment, onChange: (val) => handleFieldChange("methodOfAssessment", val) }),
         /* @__PURE__ */ jsxRuntimeExports.jsx(EditableList, { title: "Event Details (Common)", items: currentItem.eventDetailsCommon, onChange: (val) => handleFieldChange("eventDetailsCommon", val) }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx(EditableList, { title: "Event Details (Sortie)", items: currentItem.eventDetailsSortie, onChange: (val) => handleFieldChange("eventDetailsSortie", val) })
+        /* @__PURE__ */ jsxRuntimeExports.jsx(EditableList, { title: "Event Details (Sortie)", items: currentItem.eventDetailsSortie, onChange: (val) => handleFieldChange("eventDetailsSortie", val) }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx(GroupEventEditor, { item: currentItem, onChange: handleFieldChange })
       ] }) : /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
         /* @__PURE__ */ jsxRuntimeExports.jsx(DetailList, { title: "Methods of Delivery", items: item.methodOfDelivery }),
         /* @__PURE__ */ jsxRuntimeExports.jsx(DetailList, { title: "Methods of Assessment", items: item.methodOfAssessment }),
         /* @__PURE__ */ jsxRuntimeExports.jsx(DetailList, { title: "Event Details (Common)", items: item.eventDetailsCommon }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx(DetailList, { title: "Event Details (Sortie)", items: item.eventDetailsSortie })
+        /* @__PURE__ */ jsxRuntimeExports.jsx(DetailList, { title: "Event Details (Sortie)", items: item.eventDetailsSortie }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx(GroupEventSummary, { item })
       ] }) })
     ] }),
     /* @__PURE__ */ jsxRuntimeExports.jsxs("fieldset", { className: "p-4 border border-gray-700 rounded-lg", children: [
@@ -94040,10 +94850,15 @@ const SyllabusView = ({
   staffQualificationCatalogue,
   traineesData = [],
   onUpdateTrainee,
+  onAssignTraineeLmp,
+  onTraceAssignLmp,
+  onDownloadAssignmentTrace,
   currentUserName,
   scoringMatrixPhraseBank,
   onAddScoringMatrixElement,
-  onNavigateToSettingsSection
+  onNavigateToSettingsSection,
+  onDeleteMasterLmpCatalogue,
+  onUpsertMasterLmpCatalogue
 }) => {
   const { isFrozen } = useSystemFreeze();
   const [selectedItem, setSelectedItem] = reactExports.useState(null);
@@ -94109,6 +94924,8 @@ const SyllabusView = ({
   const [showAssignTrainingModal, setShowAssignTrainingModal] = reactExports.useState(false);
   const [assignTrainingSelection, setAssignTrainingSelection] = reactExports.useState(/* @__PURE__ */ new Set());
   const [assignTraineeSelection, setAssignTraineeSelection] = reactExports.useState(/* @__PURE__ */ new Set());
+  const [assignLmpCode, setAssignLmpCode] = reactExports.useState("");
+  const [assignCourseSelection, setAssignCourseSelection] = reactExports.useState(/* @__PURE__ */ new Set());
   const [isSavingTrainingAssignments, setIsSavingTrainingAssignments] = reactExports.useState(false);
   const activeMasterLmpCatalogue = reactExports.useMemo(() => masterLmpCatalogue.filter((entry) => String(entry.status || "ACTIVE").toUpperCase() !== "INACTIVE").filter((entry) => String(entry.code || "").trim()), [masterLmpCatalogue]);
   const masterLmpTitleMap = reactExports.useMemo(() => {
@@ -94167,6 +94984,23 @@ const SyllabusView = ({
   const selectedCourseAllowsStaff = selectedCourseAudience === "staff";
   const selectedCourseAllowsTrainees = selectedCourseAudience === "trainee";
   const normaliseContextCode2 = (value) => String(value || "").trim().toUpperCase();
+  const selectedCollectionDeleteItems = reactExports.useMemo(() => unitScopedSyllabusDetails.filter(
+    (item) => item.isActive !== false && getItemLmpDetailsTab(item) === activeTab && (item.courses || []).includes(selectedCourseType)
+  ), [activeTab, selectedCourseType, unitScopedSyllabusDetails]);
+  const selectedCourseVersion = reactExports.useMemo(() => {
+    const shellVersion = selectedCollectionDeleteItems.filter(isSyllabusCourseShell).map((item) => getLmpVersionFromNotes(item.notes)).find(Boolean);
+    if (shellVersion) return shellVersion;
+    const itemVersion = selectedCollectionDeleteItems.map((item) => getLmpVersionFromNotes(item.notes)).find(Boolean);
+    return itemVersion || DEFAULT_LMP_VERSION;
+  }, [selectedCollectionDeleteItems]);
+  const selectedCollectionAssignedTrainees = reactExports.useMemo(() => {
+    const selectedKey = normaliseContextCode2(selectedCourseType);
+    if (!selectedKey) return [];
+    return traineesData.filter(
+      (trainee) => normaliseContextCode2(trainee.lmpType) === selectedKey || normaliseContextCode2(trainee.academicLmpType) === selectedKey
+    );
+  }, [selectedCourseType, traineesData]);
+  const deleteConfirmationPhrase = selectedCourseType ? `DELETE ${selectedCourseType}` : "";
   const activeUnitNormalised = normaliseContextCode2(effectiveActiveUnitCode);
   const activeLocationNormalised = normaliseContextCode2(activeLocationCode);
   const pushSetupTestLmpViewDiag = (stage, details = {}) => {
@@ -94230,15 +95064,60 @@ const SyllabusView = ({
   const [isCopyingPackage, setIsCopyingPackage] = reactExports.useState(false);
   const [showDeleteModal, setShowDeleteModal] = reactExports.useState(false);
   const [deletePassword, setDeletePassword] = reactExports.useState("");
+  const [deleteConfirmText, setDeleteConfirmText] = reactExports.useState("");
   const [deleteError, setDeleteError] = reactExports.useState("");
+  const [deletePasswordVerified, setDeletePasswordVerified] = reactExports.useState(false);
   const [showUploadModal, setShowUploadModal] = reactExports.useState(false);
   const [uploadFile, setUploadFile] = reactExports.useState(null);
   const [isUploadDragActive, setIsUploadDragActive] = reactExports.useState(false);
   const [isUploading, setIsUploading] = reactExports.useState(false);
   const [uploadMode, setUploadMode] = reactExports.useState("update");
+  const [masterUploadIntent, setMasterUploadIntent] = reactExports.useState(null);
+  const [uploadTargetLmpCode, setUploadTargetLmpCode] = reactExports.useState("");
+  const [uploadLmpVersion, setUploadLmpVersion] = reactExports.useState(DEFAULT_LMP_VERSION);
+  const [lmpUpdateReviewMode, setLmpUpdateReviewMode] = reactExports.useState("automatic");
+  const [uploadReview, setUploadReview] = reactExports.useState(null);
+  const [showUploadOneByOneReview, setShowUploadOneByOneReview] = reactExports.useState(false);
+  const [showUploadFinalWarning, setShowUploadFinalWarning] = reactExports.useState(false);
+  const [oneByOneSelectedTraineeKey, setOneByOneSelectedTraineeKey] = reactExports.useState("");
+  const [oneByOneCurrentLmp, setOneByOneCurrentLmp] = reactExports.useState(null);
+  const [oneByOneLmpLoading, setOneByOneLmpLoading] = reactExports.useState(false);
+  const [oneByOneLmpError, setOneByOneLmpError] = reactExports.useState("");
+  const oneByOneCurrentListRef = reactExports.useRef(null);
+  const oneByOneProposedListRef = reactExports.useRef(null);
   const [newUploadPackageName, setNewUploadPackageName] = reactExports.useState("");
   const [uploadResult, setUploadResult] = reactExports.useState(null);
+  const [uploadProgress, setUploadProgress] = reactExports.useState(null);
   const [isCrossLoadingDuplicateCourse, setIsCrossLoadingDuplicateCourse] = reactExports.useState(false);
+  reactExports.useEffect(() => {
+    const operationId = String(uploadProgress?.operationId || "").trim();
+    if (!isUploading || !operationId) return;
+    let cancelled = false;
+    let timer = null;
+    const pollProgress = async () => {
+      try {
+        const sessionToken = localStorage.getItem("dfp_session_token") || "";
+        const response = await fetch(`/api/syllabus/bulk-upload/progress/${encodeURIComponent(operationId)}`, {
+          credentials: "include",
+          headers: sessionToken ? { Authorization: `Bearer ${sessionToken}` } : void 0
+        });
+        const data = await response.json().catch(() => null);
+        if (!cancelled && response.ok && data) {
+          setUploadProgress(data);
+        }
+      } catch (_error) {
+      } finally {
+        if (!cancelled) {
+          timer = window.setTimeout(pollProgress, 1e3);
+        }
+      }
+    };
+    pollProgress();
+    return () => {
+      cancelled = true;
+      if (timer !== null) window.clearTimeout(timer);
+    };
+  }, [isUploading, uploadProgress?.operationId]);
   const duplicateUploadSource = reactExports.useMemo(() => {
     const sources = (uploadResult?.errors || []).map((error) => error?.duplicateSource).filter((source2) => source2?.sourceCourse && source2?.sourceLmpType);
     if (sources.length === 0) return null;
@@ -94424,6 +95303,54 @@ const SyllabusView = ({
   const isAssigningFlightSchoolLmp = Boolean(activeFlightSchoolLmpAssignment && !activeAirCombatTrainingAssignment);
   const showStaffInAssignTraining = !isAssigningFlightSchoolLmp || selectedCourseAllowsStaff;
   const showTraineesInAssignTraining = isAssigningFlightSchoolLmp && selectedCourseAllowsTrainees;
+  const assignLmpOptions = reactExports.useMemo(() => {
+    const options = /* @__PURE__ */ new Map();
+    courseLMPs.forEach((code) => {
+      const cleanCode = String(code || "").trim();
+      if (!cleanCode) return;
+      options.set(cleanCode.toUpperCase(), {
+        code: cleanCode,
+        title: getCourseTitle(cleanCode)
+      });
+    });
+    activeMasterLmpCatalogue.forEach((entry) => {
+      const cleanCode = String(entry.code || "").trim();
+      if (!cleanCode || options.has(cleanCode.toUpperCase())) return;
+      options.set(cleanCode.toUpperCase(), {
+        code: cleanCode,
+        title: String(entry.name || cleanCode).trim() || cleanCode
+      });
+    });
+    return Array.from(options.values()).sort((a, b) => a.code.localeCompare(b.code, void 0, { numeric: true, sensitivity: "base" }));
+  }, [activeMasterLmpCatalogue, courseLMPs, getCourseTitle]);
+  const assignFlightSchoolLmpAssignment = reactExports.useMemo(() => {
+    if (!isFlightSchoolModel || isTrainingPackagesTab || !activeTrainingAssignmentItem) return activeFlightSchoolLmpAssignment;
+    const code = String(assignLmpCode || activeFlightSchoolLmpAssignment?.lmpCode || selectedCourseType || "").trim();
+    if (!code) return activeFlightSchoolLmpAssignment;
+    const title = assignLmpOptions.find((option) => option.code.toUpperCase() === code.toUpperCase())?.title || getCourseTitle(code);
+    return {
+      ...getFlightSchoolStaffLmpAssignmentFromItem(
+        { ...activeTrainingAssignmentItem, courses: [code], module: title },
+        code,
+        activeLocationCode,
+        effectiveActiveUnitCode,
+        currentUserName
+      ),
+      title
+    };
+  }, [
+    activeFlightSchoolLmpAssignment,
+    activeLocationCode,
+    activeTrainingAssignmentItem,
+    assignLmpCode,
+    assignLmpOptions,
+    currentUserName,
+    effectiveActiveUnitCode,
+    getCourseTitle,
+    isFlightSchoolModel,
+    isTrainingPackagesTab,
+    selectedCourseType
+  ]);
   const assignableTrainingStaff = reactExports.useMemo(() => {
     if (!isAirCombatModel && !isFlightSchoolModel) return [];
     if (isFlightSchoolModel && !selectedCourseAllowsStaff) return [];
@@ -94445,13 +95372,173 @@ const SyllabusView = ({
       return traineeUnit === targetUnit || targetUnits.has(traineeUnit);
     }).sort((a, b) => a.name.localeCompare(b.name));
   }, [effectiveActiveUnitCode, isFlightSchoolModel, isTrainingPackagesTab, selectedCourseAllowsTrainees, traineesData]);
+  const assignableFlightSchoolTraineeCourses = reactExports.useMemo(() => {
+    const courses = /* @__PURE__ */ new Set();
+    assignableFlightSchoolTrainees.forEach((trainee) => {
+      courses.add(String(trainee.course || "No course").trim() || "No course");
+    });
+    return Array.from(courses).sort((a, b) => a.localeCompare(b, void 0, { numeric: true, sensitivity: "base" }));
+  }, [assignableFlightSchoolTrainees]);
+  const courseFilteredAssignableFlightSchoolTrainees = reactExports.useMemo(() => {
+    if (!showTraineesInAssignTraining) return [];
+    if (assignCourseSelection.size === 0) return [];
+    return assignableFlightSchoolTrainees.filter((trainee) => {
+      const course = String(trainee.course || "No course").trim() || "No course";
+      return assignCourseSelection.has(course);
+    });
+  }, [assignCourseSelection, assignableFlightSchoolTrainees, showTraineesInAssignTraining]);
+  const oneByOneUploadTrainees = reactExports.useMemo(() => {
+    const targetLmp = String(uploadTargetLmpCode || selectedCourseType || "").trim().toUpperCase();
+    if (!targetLmp) return [];
+    return assignableFlightSchoolTrainees.filter((trainee) => String(trainee.lmpType || "").trim().toUpperCase() === targetLmp).sort((a, b) => String(a.name || a.fullName || "").localeCompare(String(b.name || b.fullName || ""), void 0, { sensitivity: "base" }));
+  }, [assignableFlightSchoolTrainees, selectedCourseType, uploadTargetLmpCode]);
+  const oneByOneSelectedTrainee = reactExports.useMemo(() => {
+    return oneByOneUploadTrainees.find((trainee) => String(trainee.id || trainee.idNumber || trainee.fullName || trainee.name) === oneByOneSelectedTraineeKey) || oneByOneUploadTrainees[0] || null;
+  }, [oneByOneSelectedTraineeKey, oneByOneUploadTrainees]);
+  const oneByOneUploadEvents = reactExports.useMemo(() => {
+    const traceRows = uploadReview?.uploadTrace?.rowScan?.uploadedEventRows;
+    if (Array.isArray(traceRows) && traceRows.length > 0) return traceRows;
+    const previewRows = uploadReview?.preview?.uploadedEvents;
+    if (Array.isArray(previewRows) && previewRows.length > 0) return previewRows;
+    const firstRows = uploadReview?.uploadTrace?.rowScan?.firstEventRows;
+    if (Array.isArray(firstRows) && firstRows.length > 0) return firstRows;
+    const previewCodes = uploadReview?.preview?.uploadedEventCodes;
+    if (Array.isArray(previewCodes)) return previewCodes.map((code, index) => ({ row: index + 1, eventCode: String(code || "").trim() })).filter((row) => row.eventCode);
+    return [];
+  }, [uploadReview]);
+  const oneByOneCurrentEvents = reactExports.useMemo(() => {
+    return Array.isArray(oneByOneCurrentLmp?.events) ? oneByOneCurrentLmp.events : [];
+  }, [oneByOneCurrentLmp]);
+  const oneByOneCompletedTokens = reactExports.useMemo(() => {
+    return new Set((Array.isArray(oneByOneCurrentLmp?.completedEventIds) ? oneByOneCurrentLmp.completedEventIds : []).map((value) => String(value || "").replace("*", "").trim().toUpperCase()).filter(Boolean));
+  }, [oneByOneCurrentLmp]);
+  const oneByOneLastCompletedIndex = reactExports.useMemo(() => {
+    let lastIndex = -1;
+    oneByOneCurrentEvents.forEach((event, index) => {
+      const tokens = [event?.id, event?.code, event?.masterEventId, event?.eventDescription, event?.title].map((value) => String(value || "").replace("*", "").trim().toUpperCase()).filter(Boolean);
+      if (tokens.some((token) => oneByOneCompletedTokens.has(token))) lastIndex = index;
+    });
+    return lastIndex;
+  }, [oneByOneCompletedTokens, oneByOneCurrentEvents]);
+  const oneByOneLastCompletedCode = oneByOneLastCompletedIndex >= 0 ? String(oneByOneCurrentEvents[oneByOneLastCompletedIndex]?.code || oneByOneCurrentEvents[oneByOneLastCompletedIndex]?.eventDescription || "").trim() : "";
+  const oneByOneProtectedNewIndex = reactExports.useMemo(() => {
+    if (!oneByOneLastCompletedCode) return -1;
+    const token = oneByOneLastCompletedCode.toUpperCase();
+    const matchedIndex = oneByOneUploadEvents.findIndex((event) => String(event?.eventCode || event?.code || "").trim().toUpperCase() === token);
+    return matchedIndex >= 0 ? matchedIndex : Math.min(oneByOneLastCompletedIndex, oneByOneUploadEvents.length - 1);
+  }, [oneByOneLastCompletedCode, oneByOneLastCompletedIndex, oneByOneUploadEvents]);
+  const oneByOneProposalRows = reactExports.useMemo(() => {
+    const currentByCode = /* @__PURE__ */ new Map();
+    oneByOneCurrentEvents.forEach((event, index) => {
+      const code = String(event?.code || event?.eventCode || "").trim().toUpperCase();
+      if (code) currentByCode.set(code, { event, index });
+    });
+    const uploadedCodeSet = new Set(
+      oneByOneUploadEvents.map((event) => String(event?.eventCode || event?.code || "").trim().toUpperCase()).filter(Boolean)
+    );
+    const deletedCurrentRows = oneByOneCurrentEvents.map((event, index) => ({
+      event,
+      index,
+      code: String(event?.code || event?.eventCode || "").trim()
+    })).filter((row) => row.index > oneByOneLastCompletedIndex).filter((row) => row.code && !uploadedCodeSet.has(row.code.toUpperCase())).sort((left, right) => left.index - right.index);
+    const rows = [];
+    let deletedCursor = 0;
+    let lastMatchedCurrentIndex = oneByOneLastCompletedIndex;
+    const appendDeletedBefore = (currentIndexLimit) => {
+      while (deletedCursor < deletedCurrentRows.length && deletedCurrentRows[deletedCursor].index < currentIndexLimit) {
+        const deleted = deletedCurrentRows[deletedCursor];
+        rows.push({
+          eventCode: deleted.code,
+          code: deleted.code,
+          eventDescription: deleted.event.eventDescription || deleted.event.description || "",
+          proposalAction: "Delete",
+          proposalSource: "current-missing-from-upload",
+          currentIndex: deleted.index
+        });
+        lastMatchedCurrentIndex = Math.max(lastMatchedCurrentIndex, deleted.index);
+        deletedCursor += 1;
+      }
+    };
+    oneByOneUploadEvents.forEach((event, index) => {
+      const code = String(event?.eventCode || event?.code || "").trim();
+      const currentMatch = currentByCode.get(code.toUpperCase());
+      const current = currentMatch?.event;
+      let action = index <= oneByOneProtectedNewIndex ? "Skip - completed/protected" : "Add";
+      if (index > oneByOneProtectedNewIndex && currentMatch && currentMatch.index > lastMatchedCurrentIndex) {
+        appendDeletedBefore(currentMatch.index);
+        lastMatchedCurrentIndex = Math.max(lastMatchedCurrentIndex, currentMatch.index);
+      }
+      if (index > oneByOneProtectedNewIndex && current) {
+        const currentDescription = String(current.eventDescription || current.description || "").trim();
+        const nextDescription = String(event.eventDescription || event.description || "").trim();
+        action = currentDescription && nextDescription && currentDescription !== nextDescription ? "Amend" : "Replace/retain";
+      }
+      rows.push({
+        ...event,
+        eventCode: code,
+        proposalAction: action,
+        proposalSource: "uploaded",
+        currentIndex: currentMatch?.index
+      });
+    });
+    appendDeletedBefore(Number.POSITIVE_INFINITY);
+    return rows;
+  }, [oneByOneCurrentEvents, oneByOneLastCompletedIndex, oneByOneProtectedNewIndex, oneByOneUploadEvents]);
+  reactExports.useEffect(() => {
+    if (!showUploadOneByOneReview) return;
+    if (oneByOneSelectedTraineeKey && oneByOneUploadTrainees.some((trainee) => String(trainee.id || trainee.idNumber || trainee.fullName || trainee.name) === oneByOneSelectedTraineeKey)) return;
+    const firstTrainee = oneByOneUploadTrainees[0];
+    setOneByOneSelectedTraineeKey(firstTrainee ? String(firstTrainee.id || firstTrainee.idNumber || firstTrainee.fullName || firstTrainee.name) : "");
+  }, [oneByOneSelectedTraineeKey, oneByOneUploadTrainees, showUploadOneByOneReview]);
+  reactExports.useEffect(() => {
+    if (!showUploadOneByOneReview || !oneByOneSelectedTrainee) {
+      setOneByOneCurrentLmp(null);
+      return;
+    }
+    let cancelled = false;
+    const traineeLookup = String(oneByOneSelectedTrainee.id || oneByOneSelectedTrainee.fullName || oneByOneSelectedTrainee.name || oneByOneSelectedTrainee.idNumber || "").trim();
+    if (!traineeLookup) return;
+    setOneByOneLmpLoading(true);
+    setOneByOneLmpError("");
+    fetch(`/api/trainees/${encodeURIComponent(traineeLookup)}/lmp`, { credentials: "include" }).then(async (response) => {
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(data?.message || data?.error || `Could not load Individual LMP (${response.status})`);
+      if (!cancelled) setOneByOneCurrentLmp(data?.lmp || null);
+    }).catch((error) => {
+      if (!cancelled) {
+        setOneByOneCurrentLmp(null);
+        setOneByOneLmpError(error?.message || "Could not load this trainee Individual LMP.");
+      }
+    }).finally(() => {
+      if (!cancelled) setOneByOneLmpLoading(false);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [oneByOneSelectedTrainee, showUploadOneByOneReview]);
+  reactExports.useEffect(() => {
+    if (!showUploadOneByOneReview) return;
+    const targetIndex = Math.max(0, oneByOneLastCompletedIndex - 3);
+    const rowHeight = 42;
+    const scrollTop = targetIndex * rowHeight;
+    if (oneByOneCurrentListRef.current) oneByOneCurrentListRef.current.scrollTop = scrollTop;
+    if (oneByOneProposedListRef.current) oneByOneProposedListRef.current.scrollTop = Math.max(0, Math.max(0, oneByOneProtectedNewIndex - 3) * rowHeight);
+  }, [oneByOneCurrentEvents.length, oneByOneLastCompletedIndex, oneByOneProtectedNewIndex, oneByOneProposalRows.length, showUploadOneByOneReview]);
   const openAssignTraining = () => {
     if (!activeStaffTrainingAssignment) return;
+    const lmpCode = String(activeFlightSchoolLmpAssignment?.lmpCode || selectedCourseType || "").trim();
+    setAssignLmpCode(lmpCode);
+    const assignedTraineeCourses = new Set(
+      showTraineesInAssignTraining ? assignableFlightSchoolTrainees.filter((trainee) => String(trainee.lmpType || "").trim().toUpperCase() === lmpCode.toUpperCase()).map((trainee) => String(trainee.course || "No course").trim() || "No course") : []
+    );
+    setAssignCourseSelection(new Set(
+      assignedTraineeCourses.size > 0 ? Array.from(assignedTraineeCourses) : assignableFlightSchoolTraineeCourses
+    ));
     setAssignTrainingSelection(new Set(
       showStaffInAssignTraining ? assignableTrainingStaff.filter((staff) => activeAirCombatTrainingAssignment ? staffHasAirCombatAssignment(staff, activeAirCombatTrainingAssignment) : activeFlightSchoolLmpAssignment ? staffHasFlightSchoolStaffLmpAssignment(staff, activeFlightSchoolLmpAssignment) : false).map((staff) => staff.idNumber) : []
     ));
     setAssignTraineeSelection(new Set(
-      showTraineesInAssignTraining ? assignableFlightSchoolTrainees.filter((trainee) => String(trainee.lmpType || "").trim().toUpperCase() === String(activeFlightSchoolLmpAssignment?.lmpCode || selectedCourseType).trim().toUpperCase()).map((trainee) => trainee.idNumber) : []
+      showTraineesInAssignTraining ? assignableFlightSchoolTrainees.filter((trainee) => String(trainee.lmpType || "").trim().toUpperCase() === lmpCode.toUpperCase()).map((trainee) => trainee.idNumber) : []
     ));
     setShowAssignTrainingModal(true);
   };
@@ -94459,33 +95546,104 @@ const SyllabusView = ({
     if (!activeStaffTrainingAssignment) return;
     if (showStaffInAssignTraining && !onUpdateInstructor) return;
     if (showTraineesInAssignTraining && !onUpdateTrainee) return;
+    const traceAssignLmp = (stage, details = {}) => {
+      onTraceAssignLmp?.(stage, {
+        selectedLmpCode: assignLmpCode || activeFlightSchoolLmpAssignment?.lmpCode || selectedCourseType,
+        selectedCourseKeys: Array.from(assignCourseSelection),
+        selectedTraineeIds: Array.from(assignTraineeSelection),
+        visibleTraineeCount: courseFilteredAssignableFlightSchoolTrainees.length,
+        ...details
+      });
+    };
     setIsSavingTrainingAssignments(true);
     try {
       if (showStaffInAssignTraining && onUpdateInstructor) {
         for (const staff of assignableTrainingStaff) {
           const shouldAssign = assignTrainingSelection.has(staff.idNumber);
-          const currentlyAssigned = activeAirCombatTrainingAssignment ? staffHasAirCombatAssignment(staff, activeAirCombatTrainingAssignment) : activeFlightSchoolLmpAssignment ? staffHasFlightSchoolStaffLmpAssignment(staff, activeFlightSchoolLmpAssignment) : false;
+          const currentlyAssigned = activeAirCombatTrainingAssignment ? staffHasAirCombatAssignment(staff, activeAirCombatTrainingAssignment) : assignFlightSchoolLmpAssignment ? staffHasFlightSchoolStaffLmpAssignment(staff, assignFlightSchoolLmpAssignment) : false;
           if (shouldAssign === currentlyAssigned) continue;
-          const updatedStaff = activeAirCombatTrainingAssignment ? setAirCombatTrainingAssignment(staff, activeAirCombatTrainingAssignment, shouldAssign) : setFlightSchoolStaffLmpAssignment(staff, activeFlightSchoolLmpAssignment, shouldAssign);
+          const updatedStaff = activeAirCombatTrainingAssignment ? setAirCombatTrainingAssignment(staff, activeAirCombatTrainingAssignment, shouldAssign) : setFlightSchoolStaffLmpAssignment(staff, assignFlightSchoolLmpAssignment, shouldAssign);
           await onUpdateInstructor(updatedStaff);
         }
       }
       if (showTraineesInAssignTraining && onUpdateTrainee) {
-        const lmpCode = String(activeFlightSchoolLmpAssignment?.lmpCode || selectedCourseType || "").trim();
-        for (const trainee of assignableFlightSchoolTrainees) {
+        const lmpCode = String(assignLmpCode || activeFlightSchoolLmpAssignment?.lmpCode || selectedCourseType || "").trim();
+        traceAssignLmp("save:start", {
+          lmpCode,
+          hasUpdateTrainee: Boolean(onUpdateTrainee),
+          hasAssignIndividualLmp: Boolean(onAssignTraineeLmp)
+        });
+        for (const trainee of courseFilteredAssignableFlightSchoolTrainees) {
           const shouldAssign = assignTraineeSelection.has(trainee.idNumber);
           const currentlyAssigned = String(trainee.lmpType || "").trim().toUpperCase() === lmpCode.toUpperCase();
-          if (shouldAssign === currentlyAssigned) continue;
-          await onUpdateTrainee({
+          traceAssignLmp("trainee:evaluate", {
+            traineeName: trainee.fullName || trainee.name,
+            traineeIdNumber: trainee.idNumber,
+            traineeDbId: trainee.id || null,
+            traineeCourse: trainee.course || null,
+            currentLmpType: trainee.lmpType || "",
+            lmpCode,
+            shouldAssign,
+            currentlyAssigned
+          });
+          if (!shouldAssign && !currentlyAssigned) {
+            traceAssignLmp("trainee:skip-unassigned", {
+              traineeName: trainee.fullName || trainee.name,
+              traineeIdNumber: trainee.idNumber
+            });
+            continue;
+          }
+          const updatedTrainee = {
             ...trainee,
             lmpType: shouldAssign ? lmpCode : ""
-          });
+          };
+          if (shouldAssign && currentlyAssigned) {
+            traceAssignLmp("trainee:profile-already-assigned", {
+              traineeName: trainee.fullName || trainee.name,
+              traineeIdNumber: trainee.idNumber
+            });
+          } else {
+            traceAssignLmp("trainee:profile-update:start", {
+              traineeName: trainee.fullName || trainee.name,
+              traineeIdNumber: trainee.idNumber,
+              nextLmpType: updatedTrainee.lmpType
+            });
+            await onUpdateTrainee(updatedTrainee);
+            traceAssignLmp("trainee:profile-update:success", {
+              traineeName: trainee.fullName || trainee.name,
+              traineeIdNumber: trainee.idNumber,
+              nextLmpType: updatedTrainee.lmpType
+            });
+          }
+          if (shouldAssign && lmpCode) {
+            if (onAssignTraineeLmp) {
+              traceAssignLmp("trainee:individual-lmp:start", {
+                traineeName: updatedTrainee.fullName || updatedTrainee.name,
+                traineeIdNumber: updatedTrainee.idNumber,
+                traineeDbId: updatedTrainee.id || null,
+                lmpCode
+              });
+              await onAssignTraineeLmp(updatedTrainee, lmpCode);
+              traceAssignLmp("trainee:individual-lmp:success", {
+                traineeName: updatedTrainee.fullName || updatedTrainee.name,
+                traineeIdNumber: updatedTrainee.idNumber,
+                lmpCode
+              });
+            } else {
+              traceAssignLmp("trainee:individual-lmp:no-callback", {
+                traineeName: updatedTrainee.fullName || updatedTrainee.name,
+                traineeIdNumber: updatedTrainee.idNumber,
+                lmpCode
+              });
+            }
+          }
         }
+        traceAssignLmp("save:complete", { lmpCode });
       }
       logAudit({
         action: "Update",
-        description: isAssigningFlightSchoolLmp ? `Updated Flight School ${selectedCourseAudience === "staff" ? "staff" : "trainee"} LMP assignment for ${activeFlightSchoolLmpAssignment?.lmpCode || selectedCourseType}` : `Updated Air Combat training assignment for ${activeAirCombatTrainingAssignment?.code || selectedCourseType}`,
-        changes: `${assignTrainingSelection.size} staff selected, ${assignTraineeSelection.size} trainees selected`,
+        description: isAssigningFlightSchoolLmp ? `Updated Flight School ${selectedCourseAudience === "staff" ? "staff" : "trainee"} LMP assignment for ${assignLmpCode || activeFlightSchoolLmpAssignment?.lmpCode || selectedCourseType}` : `Updated Air Combat training assignment for ${activeAirCombatTrainingAssignment?.code || selectedCourseType}`,
+        changes: `${assignTrainingSelection.size} staff selected, ${assignTraineeSelection.size} trainees selected, ${assignCourseSelection.size} courses selected`,
         page: "LMP/Event Details"
       });
       setShowAssignTrainingModal(false);
@@ -94723,7 +95881,103 @@ const SyllabusView = ({
       focusSubsectionId: "platform-master-lmp-catalogue"
     });
   };
+  const openUploadModal = () => {
+    setUploadFile(null);
+    setUploadResult(null);
+    setUploadProgress(null);
+    setUploadReview(null);
+    setShowUploadOneByOneReview(false);
+    setShowUploadFinalWarning(false);
+    setNewUploadPackageName("");
+    if (isTrainingPackagesTab) {
+      setUploadMode(selectedCourseType ? "update" : "create");
+      setMasterUploadIntent(null);
+      setUploadTargetLmpCode("");
+    } else {
+      setUploadMode(selectedCourseType ? "replace" : "create");
+      setMasterUploadIntent(null);
+      setUploadTargetLmpCode(selectedCourseType || activeMasterLmpCatalogue[0]?.code || "");
+      setUploadLmpVersion(selectedCourseVersion || DEFAULT_LMP_VERSION);
+      setLmpUpdateReviewMode("automatic");
+    }
+    setShowUploadModal(true);
+  };
+  const downloadUploadTrace = (label = "lmp-upload-trace") => {
+    const payload = {
+      generatedAt: (/* @__PURE__ */ new Date()).toISOString(),
+      activeTab,
+      activeCollectionTitle,
+      selectedCourseType,
+      masterUploadIntent,
+      uploadMode,
+      uploadTargetLmpCode,
+      newUploadPackageName,
+      uploadLmpVersion,
+      lmpUpdateReviewMode,
+      uploadFile: uploadFile ? { name: uploadFile.name, size: uploadFile.size, type: uploadFile.type } : null,
+      review: uploadReview,
+      result: uploadResult
+    };
+    const blob = new Blob([JSON.stringify(payload, null, 2)], { type: "application/json" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    const safeCode = (uploadTargetLmpCode || selectedCourseType || newUploadPackageName || "lmp").replace(/[^a-z0-9-]+/gi, "-").replace(/^-+|-+$/g, "") || "lmp";
+    link.href = url;
+    link.download = `${label}-${safeCode}-${(/* @__PURE__ */ new Date()).toISOString().replace(/[:.]/g, "-")}.json`;
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    URL.revokeObjectURL(url);
+  };
+  const handleEditSelectedCourseVersion = async () => {
+    if (isFrozen || !selectedCourseType) return;
+    const currentVersion = selectedCourseVersion || DEFAULT_LMP_VERSION;
+    const value = await showDarkPrompt({
+      title: "Edit LMP Version",
+      message: `Enter the version number for ${getCourseTitle(selectedCourseType)}.`,
+      inputLabel: "Version",
+      inputPlaceholder: "1.0",
+      inputDefaultValue: currentVersion,
+      confirmText: "Save",
+      variant: "info"
+    });
+    if (value === null) return;
+    const version = String(value || "").trim();
+    if (!/^\d+(?:\.\d+)?$/.test(version)) {
+      await showDarkAlert("Enter a version number using digits only, with an optional decimal point. Example: 1 or 1.2", "Invalid Version", "warning");
+      return;
+    }
+    const targetItem = selectedCollectionDeleteItems.find(isSyllabusCourseShell) || selectedCollectionDeleteItems[0];
+    if (!targetItem) {
+      await showDarkAlert("No saved LMP record was found to store the version against.", "Version Not Saved", "warning");
+      return;
+    }
+    const updatedItem = {
+      ...targetItem,
+      notes: withLmpVersionInNotes(targetItem.notes, version)
+    };
+    const savedItem = await updateSyllabusItem(targetItem.id, updatedItem, `Updated ${activeCollectionTitle} version`);
+    onUpdateItem({ ...updatedItem, ...savedItem, id: targetItem.id });
+    logAudit({
+      action: "Edit",
+      description: `Updated ${activeCollectionNoun} version: ${selectedCourseType}`,
+      changes: `Version: ${currentVersion} to ${version}`,
+      page: "LMP/Event Details"
+    });
+  };
   const handleDeleteCourse = async () => {
+    if (!selectedCourseType) {
+      setDeleteError("Select an LMP before deleting.");
+      return;
+    }
+    if (selectedCollectionDeleteItems.length === 0 && (isTrainingPackagesTab || !selectedMasterLmpCatalogueEntry)) {
+      setDeleteError(`No database event rows were found for ${selectedCourseType}. Hard refresh and try again, or check the selected unit/location.`);
+      return;
+    }
+    if (deleteConfirmText.trim() !== deleteConfirmationPhrase) {
+      setDeleteError(`Type ${deleteConfirmationPhrase} to confirm permanent deletion.`);
+      return;
+    }
     if (!deletePassword) {
       setDeleteError("Please enter your password.");
       return;
@@ -94731,36 +95985,68 @@ const SyllabusView = ({
     setIsDeleting(true);
     setDeleteError("");
     try {
-      const sessionToken = localStorage.getItem("dfp_session_token") || "";
-      const verifyResp = await fetch("/api/auth/verify-password", {
-        method: "POST",
-        credentials: "include",
-        headers: {
-          "Content-Type": "application/json",
-          "Authorization": `Bearer ${sessionToken}`
-        },
-        body: JSON.stringify({ password: deletePassword })
-      });
-      const verifyData = await verifyResp.json();
-      if (!verifyData.valid) {
-        setDeleteError("Incorrect password. Please try again.");
+      if (!deletePasswordVerified) {
+        const sessionToken = localStorage.getItem("dfp_session_token") || "";
+        const verifyResp = await fetch("/api/auth/verify-password", {
+          method: "POST",
+          credentials: "include",
+          headers: {
+            "Content-Type": "application/json",
+            "Authorization": `Bearer ${sessionToken}`
+          },
+          body: JSON.stringify({ password: deletePassword })
+        });
+        const verifyData = await verifyResp.json();
+        if (!verifyData.valid) {
+          setDeleteError("Incorrect password. Please try again.");
+          setIsDeleting(false);
+          return;
+        }
+        setDeletePasswordVerified(true);
         setIsDeleting(false);
         return;
       }
-      const itemsToDelete = unitScopedSyllabusDetails.filter(
-        (item) => getItemLmpDetailsTab(item) === activeTab && (item.courses || []).includes(selectedCourseType)
-      );
-      if (itemsToDelete.length === 0) {
-        console.warn(`⚠️ No items found for ${activeCollectionNoun} ${selectedCourseType} in syllabusDetails (${syllabusDetails.length} total items)`);
+      const itemsToDelete = selectedCollectionDeleteItems;
+      let deletedCount = itemsToDelete.length;
+      if (!isTrainingPackagesTab) {
+        const sessionToken = localStorage.getItem("dfp_session_token") || "";
+        const deleteResp = await fetch(`/api/master-lmp/${encodeURIComponent(selectedCourseType)}`, {
+          method: "DELETE",
+          credentials: "include",
+          headers: {
+            "Content-Type": "application/json",
+            ...sessionToken ? { "Authorization": `Bearer ${sessionToken}` } : {}
+          },
+          body: JSON.stringify({
+            lmpCode: selectedCourseType,
+            unit: activeUnitNormalised,
+            location: activeLocationNormalised
+          })
+        });
+        const deleteData = await deleteResp.json().catch(() => ({}));
+        if (!deleteResp.ok || deleteData?.success === false) {
+          throw new Error(deleteData?.message || deleteData?.error || deleteData?.details || "Master LMP delete failed.");
+        }
+        deletedCount = Number(deleteData?.deletedEventRows ?? itemsToDelete.length) || 0;
+        if (onDeleteMasterLmpCatalogue) {
+          await onDeleteMasterLmpCatalogue(selectedCourseType);
+        }
       } else {
-        await Promise.all(itemsToDelete.map(
-          (item) => deleteSyllabusItem(item.id, `${activeCollectionTitle} deleted: ${selectedCourseType}`)
-        ));
+        if (itemsToDelete.length === 0) {
+          console.warn(`⚠️ No items found for ${activeCollectionNoun} ${selectedCourseType} in syllabusDetails (${syllabusDetails.length} total items)`);
+        } else {
+          await Promise.all(itemsToDelete.map(
+            (item) => deleteSyllabusItem(item.id, `${activeCollectionTitle} deleted: ${selectedCourseType}`)
+          ));
+        }
       }
-      logAudit({ action: "Delete", description: `Deleted ${activeCollectionNoun}: ${selectedCourseType}`, changes: `${itemsToDelete.length} database item(s) permanently deleted`, page: "LMP/Event Details" });
+      logAudit({ action: "Delete", description: `Deleted ${activeCollectionNoun}: ${selectedCourseType}`, changes: `${deletedCount} database item(s) permanently deleted`, page: "LMP/Event Details" });
       itemsToDelete.forEach((item) => onUpdateItem({ ...item, isActive: false }));
+      clearSyllabusCache();
       setShowDeleteModal(false);
       setDeletePassword("");
+      setDeleteConfirmText("");
+      setDeletePasswordVerified(false);
       setSelectedItem(null);
       const remaining = courseLMPs.filter((c) => c !== selectedCourseType);
       setSelectedCourseType(remaining[0] || getDefaultLmpSelection(activeTab));
@@ -94775,11 +96061,23 @@ const SyllabusView = ({
       await showDarkAlert("Please select a file first.", "No File Selected", "warning");
       return;
     }
+    const isMasterUpload = !isTrainingPackagesTab;
+    if (isMasterUpload && !masterUploadIntent) {
+      await showDarkAlert("Choose whether this is a new LMP or an update to an existing LMP first.", "Upload Type Required", "warning");
+      return;
+    }
     const packageName = newUploadPackageName.trim();
-    const destinationCode = isTrainingPackagesTab && uploadMode === "create" ? getUnitScopedCollectionCode(getPackageCodeFromTitle(packageName), activeUnitNormalised, shouldScopeCreatedItemsToActiveUnit) : selectedCourseType;
-    const destinationName = isTrainingPackagesTab && uploadMode === "create" ? packageName : getCourseTitle(selectedCourseType);
-    if (isTrainingPackagesTab && uploadMode === "create" && !packageName) {
-      await showDarkAlert("Please enter a new package name.", "Package Name Required", "warning");
+    const masterNewCode = getPackageCodeFromTitle(packageName);
+    const destinationCode = isMasterUpload ? masterUploadIntent === "new" ? masterNewCode : uploadTargetLmpCode.trim() : isTrainingPackagesTab && uploadMode === "create" ? getUnitScopedCollectionCode(getPackageCodeFromTitle(packageName), activeUnitNormalised, shouldScopeCreatedItemsToActiveUnit) : selectedCourseType;
+    const destinationName = isMasterUpload ? masterUploadIntent === "new" ? packageName : getCourseTitle(destinationCode) : isTrainingPackagesTab && uploadMode === "create" ? packageName : getCourseTitle(selectedCourseType);
+    if (isTrainingPackagesTab && uploadMode === "create" || isMasterUpload && masterUploadIntent === "new") {
+      if (!packageName) {
+        await showDarkAlert(`Please enter a new ${isMasterUpload ? "LMP" : "package"} name.`, `${isMasterUpload ? "LMP" : "Package"} Name Required`, "warning");
+        return;
+      }
+    }
+    if (isMasterUpload && !/^\d+(?:\.\d+)?$/.test(uploadLmpVersion.trim())) {
+      await showDarkAlert("Enter a version number using digits only, with an optional decimal point. Example: 1 or 1.2", "Invalid Version", "warning");
       return;
     }
     if (!destinationCode) {
@@ -94790,14 +96088,48 @@ const SyllabusView = ({
       await showDarkAlert(`A package with code ${destinationCode} already exists. Select it and use Replace Package or Update Package instead.`, "Package Already Exists", "warning");
       return;
     }
+    if (isMasterUpload && masterUploadIntent === "new" && (courseLMPs.some((code) => normaliseContextCode2(code) === normaliseContextCode2(destinationCode)) || activeMasterLmpCatalogue.some((entry) => normaliseContextCode2(entry.code) === normaliseContextCode2(destinationCode)))) {
+      await showDarkAlert(`Master LMP "${destinationCode}" already exists. Use Update existing LMP or choose a different name.`, "Master LMP Already Exists", "warning");
+      return;
+    }
+    const isReviewStep = !uploadReview;
+    if (!isReviewStep && isMasterUpload && masterUploadIntent === "update" && lmpUpdateReviewMode === "one-by-one" && !showUploadOneByOneReview) {
+      setShowUploadOneByOneReview(true);
+      return;
+    }
+    if (!isReviewStep && !showUploadFinalWarning) {
+      setShowUploadFinalWarning(true);
+      return;
+    }
     setIsUploading(true);
-    setUploadResult(null);
+    const uploadOperationId = typeof crypto !== "undefined" && typeof crypto.randomUUID === "function" ? crypto.randomUUID() : `${Date.now()}-${Math.random().toString(36).slice(2)}`;
+    setUploadProgress({
+      operationId: uploadOperationId,
+      status: "running",
+      phase: "client:starting",
+      message: isReviewStep ? "Starting upload review..." : "Starting Master LMP update...",
+      percent: 0,
+      current: 0,
+      total: 0,
+      created: 0,
+      updated: 0,
+      skipped: 0,
+      deleted: 0
+    });
+    if (isReviewStep) setUploadResult(null);
     try {
       const formData = new FormData();
       formData.append("file", uploadFile);
+      formData.append("uploadOperationId", uploadOperationId);
       formData.append("courseCode", destinationCode);
       formData.append("packageName", destinationName);
-      formData.append("uploadMode", isTrainingPackagesTab ? uploadMode : "update");
+      formData.append("uploadMode", isMasterUpload ? masterUploadIntent === "new" ? "create" : "replace" : uploadMode);
+      if (isMasterUpload) {
+        formData.append("uploadIntent", masterUploadIntent || "");
+        formData.append("lmpVersion", uploadLmpVersion.trim() || DEFAULT_LMP_VERSION);
+        formData.append("updateReviewMode", lmpUpdateReviewMode);
+      }
+      if (isReviewStep) formData.append("dryRun", "true");
       formData.append("lmpType", activeLmpType);
       formData.append("operationalModel", activeOperationalModel);
       const sessionToken = localStorage.getItem("dfp_session_token") || "";
@@ -94805,11 +96137,20 @@ const SyllabusView = ({
         formData.append("locationCode", activeLocationNormalised);
         formData.append("unitCode", activeUnitNormalised);
       }
-      const resp = await fetch("/api/syllabus/bulk-upload", {
-        method: "POST",
-        headers: sessionToken ? { Authorization: `Bearer ${sessionToken}` } : void 0,
-        body: formData
-      });
+      const abortController = new AbortController();
+      const timeoutMs = isReviewStep ? 6e4 : 18e4;
+      const timeoutId = window.setTimeout(() => abortController.abort(), timeoutMs);
+      let resp;
+      try {
+        resp = await fetch("/api/syllabus/bulk-upload", {
+          method: "POST",
+          headers: sessionToken ? { Authorization: `Bearer ${sessionToken}` } : void 0,
+          body: formData,
+          signal: abortController.signal
+        });
+      } finally {
+        window.clearTimeout(timeoutId);
+      }
       const responseText = await resp.text();
       let data = {};
       try {
@@ -94818,12 +96159,53 @@ const SyllabusView = ({
         const preview = responseText.replace(/\s+/g, " ").trim().slice(0, 180);
         throw new Error(`Upload endpoint returned a non-JSON response (${resp.status} ${resp.statusText})${preview ? `: ${preview}` : ""}`);
       }
-      if (!resp.ok && Array.isArray(data.errors)) {
-        setUploadResult(data);
+      if (!resp.ok && (Array.isArray(data.errors) || data.uploadTrace)) {
+        setUploadResult({
+          created: data.created || 0,
+          updated: data.updated || 0,
+          imported: data.imported || 0,
+          skipped: data.skipped || 0,
+          errors: Array.isArray(data.errors) && data.errors.length > 0 ? data.errors : [{ row: 0, error: data.message || data.error || data.details || `Upload failed (${resp.status} ${resp.statusText})` }],
+          message: data.message || data.error || `Upload failed (${resp.status} ${resp.statusText})`,
+          uploadTrace: data.uploadTrace
+        });
         return;
       }
       if (!resp.ok) throw new Error(data.error || data.message || `Upload failed (${resp.status} ${resp.statusText})`);
+      if (data.dryRun) {
+        setUploadReview(data);
+        setUploadResult(null);
+        setShowUploadOneByOneReview(false);
+        setShowUploadFinalWarning(false);
+        return;
+      }
+      if (isMasterUpload && masterUploadIntent === "new") {
+        await onUpsertMasterLmpCatalogue?.({
+          code: destinationCode,
+          name: destinationName || destinationCode,
+          version: uploadLmpVersion.trim() || DEFAULT_LMP_VERSION,
+          audience: "trainee"
+        });
+      }
       setUploadResult(data);
+      setUploadReview(null);
+      setShowUploadFinalWarning(false);
+      logAudit({
+        action: isMasterUpload && masterUploadIntent === "update" ? "Update" : "Create",
+        description: `${isMasterUpload ? "Master LMP" : activeCollectionTitle} upload: ${destinationCode}`,
+        changes: JSON.stringify({
+          uploadIntent: isMasterUpload ? masterUploadIntent : uploadMode,
+          version: isMasterUpload ? uploadLmpVersion : void 0,
+          imported: data.imported,
+          created: data.created,
+          updated: data.updated,
+          individualLmpSync: data.individualLmpSync ? {
+            assignedTrainees: data.individualLmpSync.assignedTrainees,
+            protectedCompletedEvents: data.individualLmpSync.protectedCompletedEvents
+          } : void 0
+        }),
+        page: "LMP/Event Details"
+      });
       if ((data.created || 0) > 0 || (data.updated || 0) > 0) {
         clearSyllabusCache();
         localStorage.setItem("neo_lmp_details_active_tab", activeTab);
@@ -94831,7 +96213,43 @@ const SyllabusView = ({
         setTimeout(() => window.location.reload(), 2e3);
       }
     } catch (err) {
-      await showDarkAlert(`Upload failed: ${err.message}`, "Upload Failed", "error");
+      const isTimeout = err?.name === "AbortError";
+      const errorMessage = isTimeout ? `The ${isReviewStep ? "review" : "apply"} request did not return within ${Math.round((isReviewStep ? 6e4 : 18e4) / 1e3)} seconds. Download the trace below; the server may still have continued processing.` : `Upload failed: ${err.message}`;
+      setUploadResult({
+        created: 0,
+        updated: 0,
+        imported: 0,
+        skipped: 0,
+        errors: [{ row: 0, error: errorMessage }],
+        message: errorMessage,
+        uploadTrace: {
+          generatedAt: (/* @__PURE__ */ new Date()).toISOString(),
+          source: "components/SyllabusView.tsx:handleBulkUpload",
+          liveProgress: uploadProgress,
+          finalWarningWasVisible: showUploadFinalWarning,
+          clientError: {
+            name: err?.name || "Error",
+            message: err?.message || String(err),
+            timedOut: isTimeout
+          },
+          request: {
+            destinationCode,
+            destinationName,
+            uploadMode: isMasterUpload ? masterUploadIntent === "new" ? "create" : "replace" : uploadMode,
+            masterUploadIntent,
+            dryRun: isReviewStep,
+            lmpUpdateReviewMode,
+            uploadLmpVersion,
+            activeLmpType,
+            activeOperationalModel,
+            activeLocationNormalised,
+            activeUnitNormalised,
+            file: uploadFile ? { name: uploadFile.name, size: uploadFile.size, type: uploadFile.type } : null
+          },
+          review: uploadReview
+        }
+      });
+      await showDarkAlert(errorMessage, isTimeout ? "Upload Still Running or Timed Out" : "Upload Failed", "error");
     } finally {
       setIsUploading(false);
     }
@@ -95257,21 +96675,22 @@ const SyllabusView = ({
             ) : /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-sky-400", children: getCourseTitle(selectedCourseType) })
           ] }),
           /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-sm text-gray-400", children: isAddingLmpEvent ? `This creates one event inside ${getCourseTitle(selectedCourseType)}. The ${activeCollectionTitle} title is fixed here; fill in the event code and event description below.` : isEditing ? `Editing ${activeCollectionNoun} title and enrolment audience - changes apply to this ${activeCollectionNoun}` : activeCollectionTitle }),
-          selectedCourseType && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-2 flex flex-wrap items-center gap-2", children: isEditing && !isAddingLmpEvent ? /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "inline-flex items-center gap-2 rounded-md border border-gray-700 bg-gray-950/70 px-3 py-1.5 text-[11px] font-semibold uppercase tracking-wide text-gray-300", children: [
-            "Audience",
-            /* @__PURE__ */ jsxRuntimeExports.jsxs(
-              "select",
+          selectedCourseType && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-2 flex flex-wrap items-center gap-2", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "inline-flex items-center gap-1.5 rounded border border-sky-500/35 bg-sky-500/10 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-sky-100", children: [
+            "Version: ",
+            selectedCourseVersion,
+            /* @__PURE__ */ jsxRuntimeExports.jsx(
+              "button",
               {
-                value: editingCourseAudience,
-                onChange: (event) => setEditingCourseAudience(event.target.value),
-                className: "rounded border border-gray-600 bg-gray-800 px-2 py-1 text-xs font-bold text-white focus:ring-sky-500",
-                children: [
-                  /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "trainee", children: "Trainees only" }),
-                  /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "staff", children: "Staff only" })
-                ]
+                type: "button",
+                onClick: handleEditSelectedCourseVersion,
+                disabled: isFrozen,
+                className: "ml-1 rounded p-0.5 text-sky-100 hover:bg-sky-400/20 disabled:cursor-not-allowed disabled:opacity-50",
+                title: "Edit LMP version",
+                "aria-label": "Edit LMP version",
+                children: /* @__PURE__ */ jsxRuntimeExports.jsx(ForwardRef$4, { className: "h-3 w-3" })
               }
             )
-          ] }) : /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: `rounded border px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide ${selectedCourseAudience === "staff" ? "border-emerald-500/40 bg-emerald-500/10 text-emerald-100" : "border-teal-500/40 bg-teal-500/10 text-teal-100"}`, children: selectedCourseAudience === "staff" ? "Staff only" : "Trainees only" }) }),
+          ] }) }),
           shouldShowUnitTabs && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-3 flex flex-wrap gap-2", children: fixedCrewUnitTabs.map((unitCode) => /* @__PURE__ */ jsxRuntimeExports.jsx(
             "button",
             {
@@ -95354,7 +96773,7 @@ const SyllabusView = ({
               "Add",
               /* @__PURE__ */ jsxRuntimeExports.jsx("br", {}),
               "Package"
-            ] }) }) : /* @__PURE__ */ jsxRuntimeExports.jsx("button", { onClick: handleManageMasterLmps, className: "w-[64px] h-[41px] flex items-center justify-center text-center px-1 py-1 text-[10px] leading-tight font-semibold rounded-md btn-aluminium-brushed", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { children: [
+            ] }) }) : /* @__PURE__ */ jsxRuntimeExports.jsx("button", { onClick: handleManageMasterLmps, className: "w-[56px] h-[41px] flex items-center justify-center text-center px-1 py-1 text-[10px] leading-tight font-semibold rounded-md btn-aluminium-brushed", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { children: [
               "Manage",
               /* @__PURE__ */ jsxRuntimeExports.jsx("br", {}),
               "LMPs"
@@ -95364,21 +96783,31 @@ const SyllabusView = ({
               /* @__PURE__ */ jsxRuntimeExports.jsx("br", {}),
               "Event"
             ] }) }),
-            isTrainingPackagesTab && /* @__PURE__ */ jsxRuntimeExports.jsx("button", { onClick: () => {
-              setDeletePassword("");
-              setDeleteError("");
-              setShowDeleteModal(true);
-            }, disabled: isFrozen, className: "w-[56px] h-[41px] flex items-center justify-center text-center px-1 py-1 text-[10px] leading-tight font-semibold rounded-md btn-aluminium-brushed text-red-500 disabled:opacity-50 disabled:cursor-not-allowed", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { children: [
-              "Del",
-              /* @__PURE__ */ jsxRuntimeExports.jsx("br", {}),
-              "Package"
-            ] }) }),
+            (isTrainingPackagesTab || !isTrainingPackagesTab && selectedCourseType) && /* @__PURE__ */ jsxRuntimeExports.jsx(
+              "button",
+              {
+                onClick: () => {
+                  setDeletePassword("");
+                  setDeleteConfirmText("");
+                  setDeleteError("");
+                  setDeletePasswordVerified(false);
+                  setShowDeleteModal(true);
+                },
+                disabled: isFrozen || !selectedCourseType,
+                className: "w-[56px] h-[41px] flex items-center justify-center text-center px-1 py-1 text-[10px] leading-tight font-semibold rounded-md btn-aluminium-brushed text-black disabled:opacity-50 disabled:cursor-not-allowed",
+                children: /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { children: [
+                  "Delete",
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("br", {}),
+                  isTrainingPackagesTab ? "Package" : "LMP"
+                ] })
+              }
+            ),
             (isAirCombatModel || isFlightSchoolModel && !isTrainingPackagesTab) && /* @__PURE__ */ jsxRuntimeExports.jsx(
               "button",
               {
                 onClick: openAssignTraining,
                 disabled: isFrozen || !activeStaffTrainingAssignment || showStaffInAssignTraining && !onUpdateInstructor || showTraineesInAssignTraining && !onUpdateTrainee,
-                className: "w-[68px] h-[41px] flex items-center justify-center text-center px-1 py-1 text-[10px] leading-tight font-semibold rounded-md btn-aluminium-brushed disabled:opacity-50 disabled:cursor-not-allowed",
+                className: "w-[56px] h-[41px] flex items-center justify-center text-center px-1 py-1 text-[10px] leading-tight font-semibold rounded-md btn-aluminium-brushed disabled:opacity-50 disabled:cursor-not-allowed",
                 children: /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { children: [
                   "Assign",
                   /* @__PURE__ */ jsxRuntimeExports.jsx("br", {}),
@@ -95386,14 +96815,7 @@ const SyllabusView = ({
                 ] })
               }
             ),
-            /* @__PURE__ */ jsxRuntimeExports.jsx("button", { onClick: () => {
-              setUploadFile(null);
-              setUploadResult(null);
-              setUploadMode(selectedCourseType ? "update" : "create");
-              setNewUploadPackageName("");
-              setShowUploadModal(true);
-            }, disabled: isFrozen, className: "w-[56px] h-[41px] flex items-center justify-center text-center px-1 py-1 text-[10px] font-semibold rounded-md btn-aluminium-brushed text-black disabled:opacity-50 disabled:cursor-not-allowed", children: "Upload" }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx("button", { onClick: handleEdit, disabled: isFrozen, className: "w-[56px] h-[41px] flex items-center justify-center text-center px-1 py-1 text-[10px] font-semibold rounded-md btn-aluminium-brushed disabled:opacity-50 disabled:cursor-not-allowed", children: "Edit" })
+            /* @__PURE__ */ jsxRuntimeExports.jsx("button", { onClick: openUploadModal, disabled: isFrozen, className: "w-[56px] h-[41px] flex items-center justify-center text-center px-1 py-1 text-[10px] font-semibold rounded-md btn-aluminium-brushed text-black disabled:opacity-50 disabled:cursor-not-allowed", children: "Upload" })
           ] })
         ] })
       ] }),
@@ -95778,7 +97200,11 @@ const SyllabusView = ({
           alignItems: "center",
           justifyContent: "center"
         },
-        onClick: () => setShowDeleteModal(false),
+        onClick: () => {
+          if (isDeleting) return;
+          setShowDeleteModal(false);
+          setDeletePasswordVerified(false);
+        },
         children: /* @__PURE__ */ jsxRuntimeExports.jsxs(
           "div",
           {
@@ -95787,25 +97213,84 @@ const SyllabusView = ({
               border: "1px solid #ef4444",
               borderRadius: 12,
               padding: 28,
-              width: 420,
+              width: 520,
               boxShadow: "0 25px 50px rgba(0,0,0,0.6)"
             },
             onClick: (e) => e.stopPropagation(),
             children: [
               /* @__PURE__ */ jsxRuntimeExports.jsxs("h2", { style: { fontSize: 16, fontWeight: 700, color: "#ef4444", marginBottom: 8 }, children: [
                 "Delete ",
-                isTrainingPackagesTab ? "Package" : "Course",
+                isTrainingPackagesTab ? "Package" : "Master LMP",
                 ": ",
                 getCourseTitle(selectedCourseType)
               ] }),
-              /* @__PURE__ */ jsxRuntimeExports.jsxs("p", { style: { fontSize: 12, color: "#9ca3af", marginBottom: 20, lineHeight: 1.6 }, children: [
-                "This will permanently remove ",
-                /* @__PURE__ */ jsxRuntimeExports.jsx("strong", { style: { color: "#f9fafb" }, children: "all events" }),
-                " in the ",
-                /* @__PURE__ */ jsxRuntimeExports.jsx("strong", { style: { color: "#f9fafb" }, children: getCourseTitle(selectedCourseType) }),
-                " ",
-                activeCollectionNoun,
-                " from the database. This action cannot be undone. Enter your password to confirm."
+              /* @__PURE__ */ jsxRuntimeExports.jsx("p", { style: { fontSize: 12, color: "#d1d5db", marginBottom: 12, lineHeight: 1.6 }, children: deletePasswordVerified ? `Final warning: this will permanently delete ${getCourseTitle(selectedCourseType)}. This removes the title, access records and database event rows. This cannot be undone.` : `This will permanently remove the selected ${isTrainingPackagesTab ? "training package" : "Master LMP"} from the database. It does not archive or hide rows.` }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx("div", { style: { border: "1px solid #7f1d1d", backgroundColor: "rgba(127, 29, 29, 0.20)", borderRadius: 8, padding: 12, marginBottom: 16 }, children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { style: { fontSize: 11, color: "#fecaca", lineHeight: 1.7 }, children: [
+                /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("strong", { style: { color: "#fff" }, children: "Scope:" }),
+                  " ",
+                  activeUnitNormalised || "Current unit",
+                  " / ",
+                  activeLocationNormalised || "Current location",
+                  " / ",
+                  selectedCourseType || "No LMP selected"
+                ] }),
+                /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("strong", { style: { color: "#fff" }, children: "Database event rows to delete:" }),
+                  " ",
+                  selectedCollectionDeleteItems.length
+                ] }),
+                /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("strong", { style: { color: "#fff" }, children: "Trainees currently assigned to this LMP:" }),
+                  " ",
+                  selectedCollectionAssignedTrainees.length
+                ] }),
+                /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("strong", { style: { color: "#fff" }, children: "Confirmation phrase:" }),
+                  " ",
+                  deleteConfirmationPhrase
+                ] }),
+                deletePasswordVerified && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("strong", { style: { color: "#fff" }, children: "Password:" }),
+                  " accepted. Click Delete once more to permanently delete."
+                ] })
+              ] }) }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx("p", { style: { fontSize: 12, color: "#9ca3af", marginBottom: 16, lineHeight: 1.6 }, children: "Precautions: confirm the selected LMP, type the confirmation phrase exactly, then enter your password. This action cannot be undone." }),
+              /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { style: { marginBottom: 16 }, children: [
+                /* @__PURE__ */ jsxRuntimeExports.jsx("label", { style: {
+                  display: "block",
+                  fontSize: 11,
+                  fontWeight: 600,
+                  color: "#9ca3af",
+                  textTransform: "uppercase",
+                  letterSpacing: "0.05em",
+                  marginBottom: 4
+                }, children: "Type Confirmation Phrase *" }),
+                /* @__PURE__ */ jsxRuntimeExports.jsx(
+                  "input",
+                  {
+                    type: "text",
+                    value: deleteConfirmText,
+                    onChange: (e) => {
+                      setDeleteConfirmText(e.target.value);
+                      setDeleteError("");
+                      setDeletePasswordVerified(false);
+                    },
+                    placeholder: deleteConfirmationPhrase,
+                    disabled: isDeleting,
+                    style: {
+                      width: "100%",
+                      backgroundColor: "#111827",
+                      border: `1px solid ${deleteError && deleteConfirmText.trim() !== deleteConfirmationPhrase ? "#ef4444" : "#4b5563"}`,
+                      borderRadius: 6,
+                      padding: "8px 10px",
+                      color: "#fff",
+                      fontSize: 13,
+                      outline: "none",
+                      boxSizing: "border-box"
+                    }
+                  }
+                )
               ] }),
               /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { style: { marginBottom: 16 }, children: [
                 /* @__PURE__ */ jsxRuntimeExports.jsx("label", { style: {
@@ -95825,9 +97310,11 @@ const SyllabusView = ({
                     onChange: (e) => {
                       setDeletePassword(e.target.value);
                       setDeleteError("");
+                      setDeletePasswordVerified(false);
                     },
                     onKeyDown: (e) => e.key === "Enter" && handleDeleteCourse(),
                     placeholder: "Enter your password to confirm",
+                    disabled: isDeleting,
                     autoFocus: true,
                     style: {
                       width: "100%",
@@ -95848,7 +97335,11 @@ const SyllabusView = ({
                 /* @__PURE__ */ jsxRuntimeExports.jsx(
                   "button",
                   {
-                    onClick: () => setShowDeleteModal(false),
+                    onClick: () => {
+                      setShowDeleteModal(false);
+                      setDeletePasswordVerified(false);
+                    },
+                    disabled: isDeleting,
                     className: "w-[56px] h-[41px] flex items-center justify-center text-center px-1 py-1 text-[10px] font-semibold rounded-md btn-aluminium-brushed",
                     children: "Cancel"
                   }
@@ -95859,7 +97350,7 @@ const SyllabusView = ({
                     onClick: handleDeleteCourse,
                     disabled: isDeleting,
                     className: "w-[72px] h-[41px] flex items-center justify-center text-center px-1 py-1 text-[10px] font-semibold rounded-md btn-aluminium-brushed text-red-500 disabled:opacity-60",
-                    children: isDeleting ? "Deleting…" : "Delete"
+                    children: isDeleting ? deletePasswordVerified ? "Deleting…" : "Checking…" : deletePasswordVerified ? "Delete" : "Confirm"
                   }
                 )
               ] })
@@ -96004,6 +97495,11 @@ const SyllabusView = ({
               borderRadius: 12,
               padding: 28,
               width: 480,
+              maxWidth: "calc(100vw - 32px)",
+              maxHeight: "calc(100vh - 40px)",
+              overflowY: "auto",
+              overscrollBehavior: "contain",
+              boxSizing: "border-box",
               boxShadow: "0 25px 50px rgba(0,0,0,0.6)"
             },
             onClick: (e) => e.stopPropagation(),
@@ -96013,223 +97509,55 @@ const SyllabusView = ({
                 isTrainingPackagesTab ? "Training Package" : "Master LMP",
                 " Events"
               ] }),
-              /* @__PURE__ */ jsxRuntimeExports.jsxs("p", { style: { fontSize: 12, color: "#9ca3af", marginBottom: 4, lineHeight: 1.6 }, children: [
-                "Upload an Excel (.xlsx) file to populate ",
-                /* @__PURE__ */ jsxRuntimeExports.jsx("strong", { style: { color: "#f9fafb" }, children: getCourseTitle(selectedCourseType) }),
-                " with ",
-                isTrainingPackagesTab ? `${packageFoundationLabel} training package` : "Master LMP",
-                " events.",
-                isTrainingPackagesTab ? " These rows will be saved to Training Packages, not Master LMP." : ""
-              ] }),
-              /* @__PURE__ */ jsxRuntimeExports.jsxs("p", { style: { fontSize: 11, color: "#6b7280", marginBottom: 20, lineHeight: 1.6 }, children: [
-                "Preferred sheet name: ",
-                /* @__PURE__ */ jsxRuntimeExports.jsx("strong", { style: { color: "#d1d5db" }, children: "Syllabus_LMP" }),
-                ". If that sheet is not present, the first worksheet is used. Mandatory data: Event description, Type, and a positive duration in either Flight or Sim Hours or Total Event Hours. Optional columns: Code, Course, Phase, Module, Day/Night, Dual/Solo, prerequisites, Event Details - Common, Event Details - Sortie, Method/s of Delivery, Method/s of Assessment, Resources Required (physical), Resources Required (Human), Resource Number, CONFIG. Blank Code cells are generated from the selected ",
-                activeCollectionNoun,
-                "."
-              ] }),
-              isTrainingPackagesTab && !uploadResult && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { style: { marginBottom: 16, padding: 12, border: "1px solid #374151", borderRadius: 8, backgroundColor: "#111827" }, children: [
-                /* @__PURE__ */ jsxRuntimeExports.jsx("label", { style: {
-                  display: "block",
-                  fontSize: 11,
-                  fontWeight: 700,
-                  color: "#9ca3af",
-                  textTransform: "uppercase",
-                  letterSpacing: "0.05em",
-                  marginBottom: 10
-                }, children: "Package Destination" }),
-                [
-                  { id: "update", label: "Update selected package", detail: `Add new rows and update matching event codes in ${getCourseTitle(selectedCourseType) || "the selected package"}.` },
-                  { id: "replace", label: "Replace selected package", detail: `Remove current rows in ${getCourseTitle(selectedCourseType) || "the selected package"} before importing this workbook.` },
-                  { id: "create", label: "Create new package", detail: "Enter a package name; the app will create the package code and import these rows into it." }
-                ].map((option) => /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { style: { display: "flex", gap: 10, alignItems: "flex-start", marginBottom: 8, cursor: "pointer" }, children: [
-                  /* @__PURE__ */ jsxRuntimeExports.jsx(
-                    "input",
-                    {
-                      type: "radio",
-                      name: "uploadMode",
-                      checked: uploadMode === option.id,
-                      onChange: () => setUploadMode(option.id),
-                      disabled: !selectedCourseType && option.id !== "create",
-                      style: { marginTop: 3 }
-                    }
-                  ),
-                  /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { children: [
-                    /* @__PURE__ */ jsxRuntimeExports.jsx("span", { style: { display: "block", fontSize: 12, fontWeight: 700, color: "#f9fafb" }, children: option.label }),
-                    /* @__PURE__ */ jsxRuntimeExports.jsx("span", { style: { display: "block", fontSize: 11, color: "#6b7280", lineHeight: 1.35 }, children: option.detail })
-                  ] })
-                ] }, option.id)),
-                uploadMode === "create" && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { style: { marginTop: 10 }, children: [
-                  /* @__PURE__ */ jsxRuntimeExports.jsx("label", { style: { display: "block", fontSize: 11, fontWeight: 600, color: "#9ca3af", marginBottom: 6 }, children: "New package name" }),
-                  /* @__PURE__ */ jsxRuntimeExports.jsx(
-                    "input",
-                    {
-                      type: "text",
-                      value: newUploadPackageName,
-                      onChange: (e) => setNewUploadPackageName(e.target.value),
-                      placeholder: isFixedCrewModel ? "e.g. Conversion Crew Package" : "e.g. Air Combat",
-                      style: {
-                        width: "100%",
-                        fontSize: 13,
-                        color: "#f9fafb",
-                        backgroundColor: "#0f172a",
-                        border: "1px solid #374151",
-                        borderRadius: 6,
-                        padding: "8px 10px"
-                      }
-                    }
-                  ),
-                  newUploadPackageName.trim() && /* @__PURE__ */ jsxRuntimeExports.jsxs("p", { style: { fontSize: 11, color: "#6b7280", marginTop: 6 }, children: [
-                    "Package code: ",
-                    /* @__PURE__ */ jsxRuntimeExports.jsx("strong", { style: { color: "#d1d5db" }, children: getUnitScopedCollectionCode(getPackageCodeFromTitle(newUploadPackageName), activeUnitNormalised, shouldScopeCreatedItemsToActiveUnit) })
-                  ] })
-                ] })
-              ] }),
-              /* @__PURE__ */ jsxRuntimeExports.jsxs(
-                "div",
-                {
-                  onDragEnter: (event) => {
-                    event.preventDefault();
-                    event.stopPropagation();
-                    setIsUploadDragActive(true);
-                  },
-                  onDragOver: (event) => {
-                    event.preventDefault();
-                    event.stopPropagation();
-                    event.dataTransfer.dropEffect = "copy";
-                    setIsUploadDragActive(true);
-                  },
-                  onDragLeave: (event) => {
-                    event.preventDefault();
-                    event.stopPropagation();
-                    setIsUploadDragActive(false);
-                  },
-                  onDrop: (event) => {
-                    event.preventDefault();
-                    event.stopPropagation();
-                    setIsUploadDragActive(false);
-                    setUploadFile(event.dataTransfer.files?.[0] || null);
-                    setUploadResult(null);
-                  },
-                  style: {
-                    marginBottom: 16,
-                    border: `1px dashed ${isUploadDragActive ? "#67e8f9" : "#374151"}`,
-                    borderRadius: 8,
-                    padding: 12,
-                    backgroundColor: isUploadDragActive ? "rgba(14, 116, 144, 0.22)" : "#0f172a"
-                  },
-                  children: [
-                    /* @__PURE__ */ jsxRuntimeExports.jsx("label", { style: {
-                      display: "block",
-                      fontSize: 11,
-                      fontWeight: 600,
-                      color: "#9ca3af",
-                      textTransform: "uppercase",
-                      letterSpacing: "0.05em",
-                      marginBottom: 8
-                    }, children: "Select or drop Excel File (.xlsx)" }),
-                    /* @__PURE__ */ jsxRuntimeExports.jsx(
-                      "input",
-                      {
-                        type: "file",
-                        accept: ".xlsx,.xls,.csv",
-                        onChange: (e) => {
-                          setUploadFile(e.target.files?.[0] || null);
-                          setUploadResult(null);
-                        },
-                        style: {
-                          display: "block",
-                          width: "100%",
-                          fontSize: 13,
-                          color: "#f9fafb",
-                          backgroundColor: "#111827",
-                          border: "1px solid #374151",
-                          borderRadius: 6,
-                          padding: "8px 12px"
-                        }
-                      }
-                    ),
-                    /* @__PURE__ */ jsxRuntimeExports.jsx("p", { style: { marginTop: 8, fontSize: 11, color: "#6b7280" }, children: "Drag and drop .xlsx, .xls or .csv here." })
-                  ]
-                }
-              ),
-              uploadFile && !uploadResult && /* @__PURE__ */ jsxRuntimeExports.jsxs("p", { style: { fontSize: 12, color: "#6b7280", marginBottom: 12 }, children: [
-                "Selected: ",
-                /* @__PURE__ */ jsxRuntimeExports.jsx("strong", { style: { color: "#d1d5db" }, children: uploadFile.name }),
-                " (",
-                (uploadFile.size / 1024).toFixed(1),
-                " KB)"
-              ] }),
-              uploadResult && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { style: {
-                marginBottom: 16,
-                padding: 12,
-                backgroundColor: uploadResult.errors.length > 0 ? "#1c1917" : "#052e16",
-                border: `1px solid ${uploadResult.errors.length > 0 ? "#78350f" : "#166534"}`,
-                borderRadius: 8
-              }, children: [
-                /* @__PURE__ */ jsxRuntimeExports.jsx("p", { style: { fontSize: 13, fontWeight: 600, color: uploadResult.errors.length > 0 ? "#fbbf24" : "#4ade80", marginBottom: 4 }, children: uploadResult.message }),
-                /* @__PURE__ */ jsxRuntimeExports.jsxs("p", { style: { fontSize: 11, color: "#9ca3af" }, children: [
-                  "Imported rows: ",
-                  uploadResult.imported ?? (uploadResult.created || 0) + (uploadResult.updated || 0),
-                  "  |  Created: ",
-                  uploadResult.created,
-                  "  |  Updated: ",
-                  uploadResult.updated || 0,
-                  "  |  Skipped: ",
-                  uploadResult.skipped,
-                  uploadResult.errors.length > 0 && /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { style: { color: "#f87171" }, children: [
-                    "  |  Errors: ",
-                    uploadResult.errors.length
-                  ] })
-                ] }),
-                duplicateUploadSource && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { style: { marginTop: 10, padding: 10, border: "1px solid #0e7490", borderRadius: 8, backgroundColor: "#082f49" }, children: [
-                  /* @__PURE__ */ jsxRuntimeExports.jsx("p", { style: { fontSize: 12, fontWeight: 700, color: "#bae6fd", marginBottom: 4 }, children: "This looks like a course already loaded for another unit." }),
-                  /* @__PURE__ */ jsxRuntimeExports.jsxs("p", { style: { fontSize: 11, color: "#d1d5db", lineHeight: 1.45, marginBottom: 8 }, children: [
-                    "The upload file contains event codes that already exist in ",
-                    duplicateUploadSource.sourceUnit || "another unit",
-                    duplicateUploadSource.sourceCourse ? ` under ${duplicateUploadSource.sourceCourse}` : "",
-                    ". Event codes must stay unique, so the app cannot import the same spreadsheet directly into ",
-                    activeUnitNormalised || "this unit",
-                    ". You can cross-load it instead; the app will copy the source events into ",
-                    getCourseTitle(selectedCourseType),
-                    " and prefix the copied event codes with ",
-                    activeUnitNormalised || "the importing unit",
-                    "."
-                  ] }),
-                  /* @__PURE__ */ jsxRuntimeExports.jsx(
+              !isTrainingPackagesTab && !masterUploadIntent ? /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
+                /* @__PURE__ */ jsxRuntimeExports.jsx("p", { style: { fontSize: 12, color: "#d1d5db", marginBottom: 18, lineHeight: 1.55 }, children: "Is this upload creating a new Master LMP, or updating an existing Master LMP?" }),
+                /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { style: { display: "grid", gap: 12 }, children: [
+                  /* @__PURE__ */ jsxRuntimeExports.jsxs(
                     "button",
                     {
                       type: "button",
-                      onClick: handleCrossLoadDuplicateCourse,
-                      disabled: !canCrossLoadDuplicateCourse || isCrossLoadingDuplicateCourse,
-                      style: {
-                        padding: "7px 12px",
-                        fontSize: 11,
-                        fontWeight: 700,
-                        borderRadius: 6,
-                        backgroundColor: canCrossLoadDuplicateCourse && !isCrossLoadingDuplicateCourse ? "#0284c7" : "#334155",
-                        color: "#fff",
-                        border: "none",
-                        cursor: canCrossLoadDuplicateCourse && !isCrossLoadingDuplicateCourse ? "pointer" : "not-allowed"
+                      onClick: () => {
+                        setMasterUploadIntent("new");
+                        setUploadMode("create");
+                        setUploadReview(null);
+                        setShowUploadOneByOneReview(false);
+                        setUploadResult(null);
+                        setNewUploadPackageName("");
+                        setUploadLmpVersion(DEFAULT_LMP_VERSION);
                       },
-                      children: isCrossLoadingDuplicateCourse ? "Cross-loading…" : `Cross-load from ${duplicateUploadSource.sourceUnit || "source unit"}`
+                      style: { textAlign: "left", padding: 14, borderRadius: 10, border: "1px solid #0e7490", backgroundColor: "#082f49", color: "#f9fafb", cursor: "pointer" },
+                      children: [
+                        /* @__PURE__ */ jsxRuntimeExports.jsx("span", { style: { display: "block", fontSize: 14, fontWeight: 800, color: "#7dd3fc" }, children: "New LMP" }),
+                        /* @__PURE__ */ jsxRuntimeExports.jsx("span", { style: { display: "block", marginTop: 4, fontSize: 12, color: "#cbd5e1", lineHeight: 1.45 }, children: "Create a new Master LMP record, give it a unique name, then import the workbook events into it." })
+                      ]
+                    }
+                  ),
+                  /* @__PURE__ */ jsxRuntimeExports.jsxs(
+                    "button",
+                    {
+                      type: "button",
+                      onClick: () => {
+                        setMasterUploadIntent("update");
+                        setUploadMode("replace");
+                        setUploadReview(null);
+                        setShowUploadOneByOneReview(false);
+                        setUploadResult(null);
+                        setUploadTargetLmpCode(selectedCourseType || activeMasterLmpCatalogue[0]?.code || "");
+                        setUploadLmpVersion(selectedCourseVersion || DEFAULT_LMP_VERSION);
+                      },
+                      disabled: activeMasterLmpCatalogue.length === 0 && courseLMPs.length === 0,
+                      style: { textAlign: "left", padding: 14, borderRadius: 10, border: "1px solid #92400e", backgroundColor: "#1c1917", color: "#f9fafb", cursor: activeMasterLmpCatalogue.length === 0 && courseLMPs.length === 0 ? "not-allowed" : "pointer", opacity: activeMasterLmpCatalogue.length === 0 && courseLMPs.length === 0 ? 0.55 : 1 },
+                      children: [
+                        /* @__PURE__ */ jsxRuntimeExports.jsx("span", { style: { display: "block", fontSize: 14, fontWeight: 800, color: "#fdba74" }, children: "Update Existing LMP" }),
+                        /* @__PURE__ */ jsxRuntimeExports.jsx("span", { style: { display: "block", marginTop: 4, fontSize: 12, color: "#cbd5e1", lineHeight: 1.45 }, children: "Replace the Master LMP template, then refresh assigned Individual LMPs while preserving completed events." })
+                      ]
                     }
                   )
                 ] }),
-                uploadResult.errors.length > 0 && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { style: { marginTop: 8, maxHeight: 100, overflowY: "auto" }, children: uploadResult.errors.map((e, i) => /* @__PURE__ */ jsxRuntimeExports.jsxs("p", { style: { fontSize: 10, color: "#f87171" }, children: [
-                  "Row ",
-                  e.row,
-                  ": ",
-                  e.error
-                ] }, i)) }),
-                (uploadResult.created > 0 || (uploadResult.updated || 0) > 0) && /* @__PURE__ */ jsxRuntimeExports.jsx("p", { style: { fontSize: 11, color: "#6b7280", marginTop: 6 }, children: "Page will reload automatically…" })
-              ] }),
-              /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { style: { display: "flex", justifyContent: "flex-end", gap: 8, marginTop: 8 }, children: [
-                /* @__PURE__ */ jsxRuntimeExports.jsx(
+                /* @__PURE__ */ jsxRuntimeExports.jsx("div", { style: { display: "flex", justifyContent: "flex-end", gap: 8, marginTop: 22 }, children: /* @__PURE__ */ jsxRuntimeExports.jsx(
                   "button",
                   {
                     onClick: () => setShowUploadModal(false),
-                    disabled: isUploading,
                     style: {
                       padding: "8px 16px",
                       fontSize: 12,
@@ -96240,27 +97568,629 @@ const SyllabusView = ({
                       border: "none",
                       cursor: "pointer"
                     },
-                    children: uploadResult && (uploadResult.created > 0 || (uploadResult.updated || 0) > 0) ? "Close" : "Cancel"
+                    children: "Cancel"
+                  }
+                ) })
+              ] }) : /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
+                /* @__PURE__ */ jsxRuntimeExports.jsxs("p", { style: { fontSize: 12, color: "#9ca3af", marginBottom: 4, lineHeight: 1.6 }, children: [
+                  "Upload an Excel (.xlsx) file to populate ",
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("strong", { style: { color: "#f9fafb" }, children: isTrainingPackagesTab ? getCourseTitle(selectedCourseType) : masterUploadIntent === "new" ? newUploadPackageName.trim() || "the new Master LMP" : getCourseTitle(uploadTargetLmpCode || selectedCourseType) }),
+                  " with ",
+                  isTrainingPackagesTab ? `${packageFoundationLabel} training package` : "Master LMP",
+                  " events.",
+                  isTrainingPackagesTab ? " These rows will be saved to Training Packages, not Master LMP." : ""
+                ] }),
+                /* @__PURE__ */ jsxRuntimeExports.jsxs("p", { style: { fontSize: 11, color: "#6b7280", marginBottom: 20, lineHeight: 1.6 }, children: [
+                  "Preferred sheet name: ",
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("strong", { style: { color: "#d1d5db" }, children: "Syllabus_LMP" }),
+                  ". If that sheet is not present, the first worksheet is used. Mandatory data: Event description, Type, and a positive duration in either Flight or Sim Hours or Total Event Hours. Optional columns: Code, Course, Phase, Module, Day/Night, Dual/Solo, prerequisites, Event Details - Common, Event Details - Sortie, Method/s of Delivery, Method/s of Assessment, Resources Required (physical), Resources Required (Human), Resource Number, CONFIG. Blank Code cells are generated from the selected ",
+                  activeCollectionNoun,
+                  "."
+                ] }),
+                !isTrainingPackagesTab && !uploadResult && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { style: { marginBottom: 16, padding: 12, border: "1px solid #374151", borderRadius: 8, backgroundColor: "#111827" }, children: [
+                  /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { style: { display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }, children: [
+                    /* @__PURE__ */ jsxRuntimeExports.jsx("label", { style: {
+                      display: "block",
+                      fontSize: 11,
+                      fontWeight: 700,
+                      color: "#9ca3af",
+                      textTransform: "uppercase",
+                      letterSpacing: "0.05em"
+                    }, children: masterUploadIntent === "new" ? "New Master LMP" : "Master LMP to update" }),
+                    /* @__PURE__ */ jsxRuntimeExports.jsx(
+                      "button",
+                      {
+                        type: "button",
+                        onClick: () => {
+                          setMasterUploadIntent(null);
+                          setUploadReview(null);
+                          setShowUploadOneByOneReview(false);
+                          setUploadResult(null);
+                          setUploadFile(null);
+                        },
+                        style: { fontSize: 11, color: "#7dd3fc", background: "none", border: "none", cursor: "pointer", fontWeight: 700 },
+                        children: "Change upload type"
+                      }
+                    )
+                  ] }),
+                  masterUploadIntent === "new" ? /* @__PURE__ */ jsxRuntimeExports.jsx("div", { style: { display: "grid", gap: 10 }, children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
+                    /* @__PURE__ */ jsxRuntimeExports.jsx("label", { style: { display: "block", fontSize: 11, fontWeight: 600, color: "#9ca3af", marginBottom: 6 }, children: "LMP name" }),
+                    /* @__PURE__ */ jsxRuntimeExports.jsx(
+                      "input",
+                      {
+                        type: "text",
+                        value: newUploadPackageName,
+                        onChange: (e) => {
+                          setNewUploadPackageName(e.target.value);
+                          setUploadReview(null);
+                          setShowUploadOneByOneReview(false);
+                        },
+                        placeholder: "e.g. UPT",
+                        style: {
+                          width: "100%",
+                          fontSize: 13,
+                          color: "#f9fafb",
+                          backgroundColor: "#0f172a",
+                          border: "1px solid #374151",
+                          borderRadius: 6,
+                          padding: "8px 10px"
+                        }
+                      }
+                    ),
+                    newUploadPackageName.trim() && /* @__PURE__ */ jsxRuntimeExports.jsxs("p", { style: { fontSize: 11, color: "#6b7280", marginTop: 6 }, children: [
+                      "LMP code: ",
+                      /* @__PURE__ */ jsxRuntimeExports.jsx("strong", { style: { color: "#d1d5db" }, children: getPackageCodeFromTitle(newUploadPackageName) })
+                    ] })
+                  ] }) }) : /* @__PURE__ */ jsxRuntimeExports.jsx(
+                    "select",
+                    {
+                      value: uploadTargetLmpCode,
+                      onChange: (event) => {
+                        setUploadTargetLmpCode(event.target.value);
+                        setUploadReview(null);
+                        setUploadResult(null);
+                        setShowUploadOneByOneReview(false);
+                      },
+                      style: {
+                        width: "100%",
+                        fontSize: 13,
+                        color: "#f9fafb",
+                        backgroundColor: "#0f172a",
+                        border: "1px solid #374151",
+                        borderRadius: 6,
+                        padding: "8px 10px"
+                      },
+                      children: Array.from(/* @__PURE__ */ new Set([...activeMasterLmpCatalogue.map((entry) => entry.code), ...courseLMPs])).filter(Boolean).map((code) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: code, children: getCourseTitle(code) }, code))
+                    }
+                  ),
+                  /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { style: { marginTop: 10 }, children: [
+                    /* @__PURE__ */ jsxRuntimeExports.jsx("label", { style: { display: "block", fontSize: 11, fontWeight: 600, color: "#9ca3af", marginBottom: 6 }, children: "Version" }),
+                    /* @__PURE__ */ jsxRuntimeExports.jsx(
+                      "input",
+                      {
+                        type: "text",
+                        value: uploadLmpVersion,
+                        onChange: (e) => {
+                          setUploadLmpVersion(e.target.value);
+                          setUploadReview(null);
+                          setShowUploadOneByOneReview(false);
+                        },
+                        placeholder: "1.0",
+                        style: {
+                          width: 120,
+                          fontSize: 13,
+                          color: "#f9fafb",
+                          backgroundColor: "#0f172a",
+                          border: "1px solid #374151",
+                          borderRadius: 6,
+                          padding: "8px 10px"
+                        }
+                      }
+                    )
+                  ] }),
+                  masterUploadIntent === "update" && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { style: { marginTop: 12, padding: 10, border: "1px solid #334155", borderRadius: 8, backgroundColor: "#0f172a" }, children: [
+                    /* @__PURE__ */ jsxRuntimeExports.jsx("label", { style: {
+                      display: "block",
+                      fontSize: 11,
+                      fontWeight: 700,
+                      color: "#9ca3af",
+                      textTransform: "uppercase",
+                      letterSpacing: "0.05em",
+                      marginBottom: 8
+                    }, children: "Individual LMP update method" }),
+                    [
+                      {
+                        id: "automatic",
+                        label: "Automatic update",
+                        detail: "Protect each trainee up to their last completed event, then update only future events using the new Master LMP order."
+                      },
+                      {
+                        id: "one-by-one",
+                        label: "One-by-one review",
+                        detail: "Review the affected trainees before applying. The automatic protected cut point is still used as the starting suggestion."
+                      }
+                    ].map((option) => /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { style: { display: "flex", gap: 10, alignItems: "flex-start", marginBottom: 8, cursor: "pointer" }, children: [
+                      /* @__PURE__ */ jsxRuntimeExports.jsx(
+                        "input",
+                        {
+                          type: "radio",
+                          name: "lmpUpdateReviewMode",
+                          checked: lmpUpdateReviewMode === option.id,
+                          onChange: () => {
+                            setLmpUpdateReviewMode(option.id);
+                            setUploadReview(null);
+                            setShowUploadOneByOneReview(false);
+                            setShowUploadFinalWarning(false);
+                          },
+                          style: { marginTop: 3 }
+                        }
+                      ),
+                      /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { children: [
+                        /* @__PURE__ */ jsxRuntimeExports.jsx("span", { style: { display: "block", fontSize: 12, fontWeight: 700, color: "#f9fafb" }, children: option.label }),
+                        /* @__PURE__ */ jsxRuntimeExports.jsx("span", { style: { display: "block", fontSize: 11, color: "#94a3b8", lineHeight: 1.35 }, children: option.detail })
+                      ] })
+                    ] }, option.id))
+                  ] })
+                ] }),
+                isTrainingPackagesTab && !uploadResult && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { style: { marginBottom: 16, padding: 12, border: "1px solid #374151", borderRadius: 8, backgroundColor: "#111827" }, children: [
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("label", { style: {
+                    display: "block",
+                    fontSize: 11,
+                    fontWeight: 700,
+                    color: "#9ca3af",
+                    textTransform: "uppercase",
+                    letterSpacing: "0.05em",
+                    marginBottom: 10
+                  }, children: "Package Destination" }),
+                  [
+                    { id: "update", label: "Update selected package", detail: `Add new rows and update matching event codes in ${getCourseTitle(selectedCourseType) || "the selected package"}.` },
+                    { id: "replace", label: "Replace selected package", detail: `Remove current rows in ${getCourseTitle(selectedCourseType) || "the selected package"} before importing this workbook.` },
+                    { id: "create", label: "Create new package", detail: "Enter a package name; the app will create the package code and import these rows into it." }
+                  ].map((option) => /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { style: { display: "flex", gap: 10, alignItems: "flex-start", marginBottom: 8, cursor: "pointer" }, children: [
+                    /* @__PURE__ */ jsxRuntimeExports.jsx(
+                      "input",
+                      {
+                        type: "radio",
+                        name: "uploadMode",
+                        checked: uploadMode === option.id,
+                        onChange: () => setUploadMode(option.id),
+                        disabled: !selectedCourseType && option.id !== "create",
+                        style: { marginTop: 3 }
+                      }
+                    ),
+                    /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { children: [
+                      /* @__PURE__ */ jsxRuntimeExports.jsx("span", { style: { display: "block", fontSize: 12, fontWeight: 700, color: "#f9fafb" }, children: option.label }),
+                      /* @__PURE__ */ jsxRuntimeExports.jsx("span", { style: { display: "block", fontSize: 11, color: "#6b7280", lineHeight: 1.35 }, children: option.detail })
+                    ] })
+                  ] }, option.id)),
+                  uploadMode === "create" && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { style: { marginTop: 10 }, children: [
+                    /* @__PURE__ */ jsxRuntimeExports.jsx("label", { style: { display: "block", fontSize: 11, fontWeight: 600, color: "#9ca3af", marginBottom: 6 }, children: "New package name" }),
+                    /* @__PURE__ */ jsxRuntimeExports.jsx(
+                      "input",
+                      {
+                        type: "text",
+                        value: newUploadPackageName,
+                        onChange: (e) => setNewUploadPackageName(e.target.value),
+                        placeholder: isFixedCrewModel ? "e.g. Conversion Crew Package" : "e.g. Air Combat",
+                        style: {
+                          width: "100%",
+                          fontSize: 13,
+                          color: "#f9fafb",
+                          backgroundColor: "#0f172a",
+                          border: "1px solid #374151",
+                          borderRadius: 6,
+                          padding: "8px 10px"
+                        }
+                      }
+                    ),
+                    newUploadPackageName.trim() && /* @__PURE__ */ jsxRuntimeExports.jsxs("p", { style: { fontSize: 11, color: "#6b7280", marginTop: 6 }, children: [
+                      "Package code: ",
+                      /* @__PURE__ */ jsxRuntimeExports.jsx("strong", { style: { color: "#d1d5db" }, children: getUnitScopedCollectionCode(getPackageCodeFromTitle(newUploadPackageName), activeUnitNormalised, shouldScopeCreatedItemsToActiveUnit) })
+                    ] })
+                  ] })
+                ] }),
+                /* @__PURE__ */ jsxRuntimeExports.jsxs(
+                  "div",
+                  {
+                    onDragEnter: (event) => {
+                      event.preventDefault();
+                      event.stopPropagation();
+                      setIsUploadDragActive(true);
+                    },
+                    onDragOver: (event) => {
+                      event.preventDefault();
+                      event.stopPropagation();
+                      event.dataTransfer.dropEffect = "copy";
+                      setIsUploadDragActive(true);
+                    },
+                    onDragLeave: (event) => {
+                      event.preventDefault();
+                      event.stopPropagation();
+                      setIsUploadDragActive(false);
+                    },
+                    onDrop: (event) => {
+                      event.preventDefault();
+                      event.stopPropagation();
+                      setIsUploadDragActive(false);
+                      setUploadFile(event.dataTransfer.files?.[0] || null);
+                      setUploadResult(null);
+                      setUploadProgress(null);
+                      setUploadReview(null);
+                      setShowUploadOneByOneReview(false);
+                      setShowUploadFinalWarning(false);
+                    },
+                    style: {
+                      marginBottom: 16,
+                      border: `1px dashed ${isUploadDragActive ? "#67e8f9" : "#374151"}`,
+                      borderRadius: 8,
+                      padding: 12,
+                      backgroundColor: isUploadDragActive ? "rgba(14, 116, 144, 0.22)" : "#0f172a"
+                    },
+                    children: [
+                      /* @__PURE__ */ jsxRuntimeExports.jsx("label", { style: {
+                        display: "block",
+                        fontSize: 11,
+                        fontWeight: 600,
+                        color: "#9ca3af",
+                        textTransform: "uppercase",
+                        letterSpacing: "0.05em",
+                        marginBottom: 8
+                      }, children: "Select or drop Excel File (.xlsx)" }),
+                      /* @__PURE__ */ jsxRuntimeExports.jsx(
+                        "input",
+                        {
+                          type: "file",
+                          accept: ".xlsx,.xls,.csv",
+                          onChange: (e) => {
+                            setUploadFile(e.target.files?.[0] || null);
+                            setUploadResult(null);
+                            setUploadProgress(null);
+                            setUploadReview(null);
+                            setShowUploadOneByOneReview(false);
+                            setShowUploadFinalWarning(false);
+                          },
+                          style: {
+                            display: "block",
+                            width: "100%",
+                            fontSize: 13,
+                            color: "#f9fafb",
+                            backgroundColor: "#111827",
+                            border: "1px solid #374151",
+                            borderRadius: 6,
+                            padding: "8px 12px"
+                          }
+                        }
+                      ),
+                      /* @__PURE__ */ jsxRuntimeExports.jsx("p", { style: { marginTop: 8, fontSize: 11, color: "#6b7280" }, children: "Drag and drop .xlsx, .xls or .csv here." })
+                    ]
                   }
                 ),
-                !uploadResult && /* @__PURE__ */ jsxRuntimeExports.jsx(
-                  "button",
-                  {
-                    onClick: handleBulkUpload,
-                    disabled: !uploadFile || isUploading || isTrainingPackagesTab && uploadMode === "create" && !newUploadPackageName.trim(),
-                    style: {
-                      padding: "8px 20px",
-                      fontSize: 12,
-                      fontWeight: 600,
-                      borderRadius: 6,
-                      backgroundColor: uploadFile && !isUploading && !(isTrainingPackagesTab && uploadMode === "create" && !newUploadPackageName.trim()) ? "#0284c7" : "#1e3a5f",
-                      color: "#fff",
-                      border: "none",
-                      cursor: uploadFile && !isUploading && !(isTrainingPackagesTab && uploadMode === "create" && !newUploadPackageName.trim()) ? "pointer" : "not-allowed"
-                    },
-                    children: isUploading ? "Uploading…" : "Upload & Import"
-                  }
-                )
+                uploadFile && !uploadResult && /* @__PURE__ */ jsxRuntimeExports.jsxs("p", { style: { fontSize: 12, color: "#6b7280", marginBottom: 12 }, children: [
+                  "Selected: ",
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("strong", { style: { color: "#d1d5db" }, children: uploadFile.name }),
+                  " (",
+                  (uploadFile.size / 1024).toFixed(1),
+                  " KB)"
+                ] }),
+                uploadReview?.preview && !uploadResult && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { style: { marginBottom: 16, padding: 12, backgroundColor: "#082f49", border: "1px solid #0e7490", borderRadius: 8 }, children: [
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("p", { style: { fontSize: 13, fontWeight: 700, color: "#bae6fd", marginBottom: 8 }, children: "Review before import" }),
+                  /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { style: { display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, fontSize: 11, color: "#d1d5db" }, children: [
+                    /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
+                      /* @__PURE__ */ jsxRuntimeExports.jsx("strong", { style: { color: "#fff" }, children: "Target:" }),
+                      " ",
+                      uploadReview.preview.destinationName || uploadReview.preview.destinationCode
+                    ] }),
+                    /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
+                      /* @__PURE__ */ jsxRuntimeExports.jsx("strong", { style: { color: "#fff" }, children: "Version:" }),
+                      " ",
+                      uploadReview.preview.lmpVersion || uploadLmpVersion || "N/A"
+                    ] }),
+                    /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
+                      /* @__PURE__ */ jsxRuntimeExports.jsx("strong", { style: { color: "#fff" }, children: "Uploaded events:" }),
+                      " ",
+                      uploadReview.preview.uploadedEventRows
+                    ] }),
+                    /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
+                      /* @__PURE__ */ jsxRuntimeExports.jsx("strong", { style: { color: "#fff" }, children: "Existing Master rows:" }),
+                      " ",
+                      uploadReview.preview.existingMasterRows
+                    ] }),
+                    /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
+                      /* @__PURE__ */ jsxRuntimeExports.jsx("strong", { style: { color: "#fff" }, children: "Assigned trainees:" }),
+                      " ",
+                      uploadReview.preview.assignedTrainees
+                    ] }),
+                    /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
+                      /* @__PURE__ */ jsxRuntimeExports.jsx("strong", { style: { color: "#fff" }, children: "Completed events protected:" }),
+                      " ",
+                      uploadReview.preview.protectedCompletedEvents
+                    ] })
+                  ] }),
+                  !isTrainingPackagesTab && masterUploadIntent === "update" && /* @__PURE__ */ jsxRuntimeExports.jsx("p", { style: { marginTop: 10, fontSize: 11, color: "#fde68a", lineHeight: 1.45 }, children: "Applying this update will replace the Master LMP event list. Assigned Individual LMPs will be refreshed from each trainee's last completed event onward; earlier uploaded events will be ignored for that trainee." })
+                ] }),
+                uploadReview?.preview && showUploadFinalWarning && !uploadResult && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { style: { marginBottom: 16, padding: 12, backgroundColor: "#1c1917", border: "1px solid #f97316", borderRadius: 8 }, children: [
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("p", { style: { fontSize: 13, fontWeight: 800, color: "#fdba74", marginBottom: 6 }, children: "Final warning before applying update" }),
+                  /* @__PURE__ */ jsxRuntimeExports.jsxs("p", { style: { fontSize: 11, color: "#fed7aa", lineHeight: 1.45 }, children: [
+                    "This will permanently update Master LMP ",
+                    uploadTargetLmpCode || selectedCourseType,
+                    ". The app will then refresh assigned Individual LMPs while protecting completed events and only changing future events."
+                  ] }),
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("p", { style: { marginTop: 8, fontSize: 11, color: "#fef3c7", fontWeight: 700 }, children: "Click Confirm and Apply Update to start the real database update." })
+                ] }),
+                uploadReview?.preview && showUploadOneByOneReview && !uploadResult && !isTrainingPackagesTab && masterUploadIntent === "update" && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { style: { marginBottom: 16, padding: 12, backgroundColor: "#111827", border: "1px solid #38bdf8", borderRadius: 8 }, children: [
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("p", { style: { fontSize: 13, fontWeight: 800, color: "#bae6fd", marginBottom: 6 }, children: "One-by-one Individual LMP review" }),
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("p", { style: { fontSize: 11, color: "#d1d5db", lineHeight: 1.45, marginBottom: 10 }, children: "Select a trainee, then compare their current Individual LMP with the proposed updated LMP. Completed events are protected." }),
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("label", { style: { display: "block", fontSize: 11, fontWeight: 700, color: "#67e8f9", textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: 6 }, children: "Trainee to review" }),
+                  /* @__PURE__ */ jsxRuntimeExports.jsx(
+                    "select",
+                    {
+                      value: oneByOneSelectedTraineeKey,
+                      onChange: (event) => setOneByOneSelectedTraineeKey(event.target.value),
+                      style: {
+                        width: "100%",
+                        marginBottom: 10,
+                        fontSize: 13,
+                        color: "#f9fafb",
+                        backgroundColor: "#0f172a",
+                        border: "1px solid #374151",
+                        borderRadius: 6,
+                        padding: "8px 10px"
+                      },
+                      children: oneByOneUploadTrainees.map((trainee) => {
+                        const key = String(trainee.id || trainee.idNumber || trainee.fullName || trainee.name);
+                        return /* @__PURE__ */ jsxRuntimeExports.jsxs("option", { value: key, children: [
+                          trainee.rank ? `${trainee.rank} ` : "",
+                          trainee.name || trainee.fullName,
+                          " - ",
+                          trainee.course || "No course"
+                        ] }, key);
+                      })
+                    }
+                  ),
+                  oneByOneLmpError && /* @__PURE__ */ jsxRuntimeExports.jsx("p", { style: { marginBottom: 8, fontSize: 11, color: "#fca5a5" }, children: oneByOneLmpError }),
+                  oneByOneLmpLoading && /* @__PURE__ */ jsxRuntimeExports.jsx("p", { style: { marginBottom: 8, fontSize: 11, color: "#93c5fd" }, children: "Loading Individual LMP for selected trainee..." }),
+                  /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { style: { display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }, children: [
+                    /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
+                      /* @__PURE__ */ jsxRuntimeExports.jsxs("p", { style: { fontSize: 11, fontWeight: 700, color: "#67e8f9", textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: 6 }, children: [
+                        "Current Individual LMP (",
+                        oneByOneCurrentEvents.length,
+                        ")"
+                      ] }),
+                      /* @__PURE__ */ jsxRuntimeExports.jsx("div", { ref: oneByOneCurrentListRef, style: { maxHeight: 240, overflowY: "auto", border: "1px solid #334155", borderRadius: 6, backgroundColor: "#0f172a" }, children: oneByOneCurrentEvents.length > 0 ? oneByOneCurrentEvents.map((event, index) => {
+                        const tokens = [event?.id, event?.code, event?.masterEventId, event?.eventDescription, event?.title].map((value) => String(value || "").replace("*", "").trim().toUpperCase()).filter(Boolean);
+                        const isCompleted = tokens.some((token) => oneByOneCompletedTokens.has(token));
+                        const isLastCompleted = index === oneByOneLastCompletedIndex;
+                        return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { style: {
+                          display: "grid",
+                          gridTemplateColumns: "22px 1fr",
+                          gap: 7,
+                          padding: "7px 9px",
+                          borderBottom: "1px solid #1f2937",
+                          backgroundColor: isLastCompleted ? "rgba(14, 116, 144, 0.25)" : "transparent"
+                        }, children: [
+                          /* @__PURE__ */ jsxRuntimeExports.jsx("span", { style: { color: isCompleted ? "#4ade80" : "#64748b", fontWeight: 900 }, children: isCompleted ? "✓" : "" }),
+                          /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { children: [
+                            /* @__PURE__ */ jsxRuntimeExports.jsx("span", { style: { display: "block", fontSize: 11, fontWeight: 800, color: "#f9fafb" }, children: event?.code || event?.eventDescription || `Event ${index + 1}` }),
+                            /* @__PURE__ */ jsxRuntimeExports.jsx("span", { style: { display: "block", fontSize: 10, color: "#94a3b8", lineHeight: 1.3 }, children: event?.eventDescription || event?.description || "" }),
+                            isLastCompleted && /* @__PURE__ */ jsxRuntimeExports.jsx("span", { style: { display: "block", marginTop: 2, fontSize: 10, color: "#67e8f9", fontWeight: 700 }, children: "Last completed event" })
+                          ] })
+                        ] }, `${event?.id || event?.code || index}-${index}`);
+                      }) : /* @__PURE__ */ jsxRuntimeExports.jsx("p", { style: { padding: 9, fontSize: 11, color: "#fca5a5" }, children: "No current Individual LMP loaded for this trainee." }) })
+                    ] }),
+                    /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
+                      /* @__PURE__ */ jsxRuntimeExports.jsxs("p", { style: { fontSize: 11, fontWeight: 700, color: "#67e8f9", textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: 6 }, children: [
+                        "Proposed Updated LMP (",
+                        oneByOneProposalRows.length,
+                        ")"
+                      ] }),
+                      /* @__PURE__ */ jsxRuntimeExports.jsx("div", { ref: oneByOneProposedListRef, style: { maxHeight: 240, overflowY: "auto", border: "1px solid #334155", borderRadius: 6, backgroundColor: "#0f172a" }, children: oneByOneProposalRows.length > 0 ? oneByOneProposalRows.map((event, index) => {
+                        const action = event.proposalAction || "";
+                        const isProtected = action.startsWith("Skip");
+                        const isDelete = action === "Delete";
+                        const actionColor = isProtected ? "#fbbf24" : isDelete ? "#f87171" : action === "Add" ? "#4ade80" : action === "Amend" ? "#38bdf8" : "#cbd5e1";
+                        return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { style: {
+                          display: "grid",
+                          gridTemplateColumns: "28px 1fr",
+                          gap: 7,
+                          padding: "7px 9px",
+                          borderBottom: "1px solid #1f2937",
+                          opacity: isProtected ? 0.72 : 1,
+                          backgroundColor: isDelete ? "rgba(127, 29, 29, 0.28)" : index === oneByOneProtectedNewIndex ? "rgba(14, 116, 144, 0.25)" : "transparent"
+                        }, children: [
+                          /* @__PURE__ */ jsxRuntimeExports.jsx("span", { style: { color: isDelete ? "#f87171" : "#64748b", fontSize: 10 }, children: isDelete ? "DEL" : index + 1 }),
+                          /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { children: [
+                            /* @__PURE__ */ jsxRuntimeExports.jsx("span", { style: { display: "block", fontSize: 11, fontWeight: 800, color: isDelete ? "#fecaca" : "#f9fafb", textDecoration: isDelete ? "line-through" : "none" }, children: event.eventCode || event.code || `Event ${index + 1}` }),
+                            /* @__PURE__ */ jsxRuntimeExports.jsx("span", { style: { display: "block", fontSize: 10, color: "#94a3b8", lineHeight: 1.3 }, children: event.eventDescription || event.description || "" }),
+                            /* @__PURE__ */ jsxRuntimeExports.jsx("span", { style: { display: "inline-block", marginTop: 3, fontSize: 9, color: actionColor, fontWeight: 800, textTransform: "uppercase", letterSpacing: "0.04em" }, children: action })
+                          ] })
+                        ] }, `${event.eventCode || event.code || index}-${index}`);
+                      }) : /* @__PURE__ */ jsxRuntimeExports.jsx("p", { style: { padding: 9, fontSize: 11, color: "#fca5a5" }, children: "No proposed LMP events were returned by the upload review." }) })
+                    ] })
+                  ] }),
+                  /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { style: { display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginTop: 8, fontSize: 10, color: "#94a3b8" }, children: [
+                    /* @__PURE__ */ jsxRuntimeExports.jsx("div", { children: oneByOneLastCompletedCode ? /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
+                      "Scrolled near last completed: ",
+                      /* @__PURE__ */ jsxRuntimeExports.jsx("strong", { style: { color: "#d1d5db" }, children: oneByOneLastCompletedCode })
+                    ] }) : "No completed event found for this trainee." }),
+                    /* @__PURE__ */ jsxRuntimeExports.jsx("div", { children: "Proposed events before and including the protected cut point are skipped for this trainee." })
+                  ] }),
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("p", { style: { marginTop: 10, fontSize: 11, color: "#fde68a", lineHeight: 1.45 }, children: "Next step: click Apply Reviewed Update to permanently update the Master LMP and refresh assigned Individual LMPs." })
+                ] }),
+                isUploading && uploadProgress && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { style: { marginBottom: 16, padding: 12, border: "1px solid #0e7490", borderRadius: 8, backgroundColor: "#082f49" }, children: [
+                  /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { style: { display: "flex", justifyContent: "space-between", gap: 12, alignItems: "center" }, children: [
+                    /* @__PURE__ */ jsxRuntimeExports.jsx("p", { style: { fontSize: 13, fontWeight: 700, color: "#bae6fd" }, children: uploadProgress.message || "Updating LMP..." }),
+                    /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { style: { fontSize: 12, fontWeight: 700, color: "#e0f2fe" }, children: [
+                      Math.max(0, Math.min(100, Number(uploadProgress.percent || 0))),
+                      "%"
+                    ] })
+                  ] }),
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("div", { style: { marginTop: 8, height: 8, borderRadius: 999, overflow: "hidden", backgroundColor: "#0f172a", border: "1px solid #075985" }, children: /* @__PURE__ */ jsxRuntimeExports.jsx(
+                    "div",
+                    {
+                      style: {
+                        height: "100%",
+                        width: `${Math.max(0, Math.min(100, Number(uploadProgress.percent || 0)))}%`,
+                        backgroundColor: uploadProgress.status === "error" ? "#ef4444" : "#38bdf8",
+                        transition: "width 180ms ease"
+                      }
+                    }
+                  ) }),
+                  /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { style: { marginTop: 8, display: "grid", gridTemplateColumns: "repeat(4, minmax(0, 1fr))", gap: 8 }, children: [
+                    /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { style: { fontSize: 10, color: "#94a3b8" }, children: [
+                      /* @__PURE__ */ jsxRuntimeExports.jsxs("strong", { style: { display: "block", color: "#e0f2fe", fontSize: 12 }, children: [
+                        uploadProgress.current || 0,
+                        "/",
+                        uploadProgress.total || 0
+                      ] }),
+                      "processed"
+                    ] }),
+                    /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { style: { fontSize: 10, color: "#94a3b8" }, children: [
+                      /* @__PURE__ */ jsxRuntimeExports.jsx("strong", { style: { display: "block", color: "#e0f2fe", fontSize: 12 }, children: uploadProgress.created || 0 }),
+                      "created"
+                    ] }),
+                    /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { style: { fontSize: 10, color: "#94a3b8" }, children: [
+                      /* @__PURE__ */ jsxRuntimeExports.jsx("strong", { style: { display: "block", color: "#e0f2fe", fontSize: 12 }, children: uploadProgress.updated || 0 }),
+                      "updated"
+                    ] }),
+                    /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { style: { fontSize: 10, color: "#94a3b8" }, children: [
+                      /* @__PURE__ */ jsxRuntimeExports.jsx("strong", { style: { display: "block", color: "#e0f2fe", fontSize: 12 }, children: uploadProgress.deleted || 0 }),
+                      "deleted"
+                    ] })
+                  ] }),
+                  /* @__PURE__ */ jsxRuntimeExports.jsxs("p", { style: { marginTop: 8, fontSize: 10, color: "#7dd3fc" }, children: [
+                    "Phase: ",
+                    uploadProgress.phase || "starting"
+                  ] })
+                ] }),
+                uploadResult && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { style: {
+                  marginBottom: 16,
+                  padding: 12,
+                  backgroundColor: uploadResult.errors.length > 0 ? "#1c1917" : "#052e16",
+                  border: `1px solid ${uploadResult.errors.length > 0 ? "#78350f" : "#166534"}`,
+                  borderRadius: 8
+                }, children: [
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("p", { style: { fontSize: 13, fontWeight: 600, color: uploadResult.errors.length > 0 ? "#fbbf24" : "#4ade80", marginBottom: 4 }, children: uploadResult.message }),
+                  /* @__PURE__ */ jsxRuntimeExports.jsxs("p", { style: { fontSize: 11, color: "#9ca3af" }, children: [
+                    "Imported rows: ",
+                    uploadResult.imported ?? (uploadResult.created || 0) + (uploadResult.updated || 0),
+                    "  |  Created: ",
+                    uploadResult.created,
+                    "  |  Updated: ",
+                    uploadResult.updated || 0,
+                    "  |  Skipped: ",
+                    uploadResult.skipped,
+                    uploadResult.errors.length > 0 && /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { style: { color: "#f87171" }, children: [
+                      "  |  Errors: ",
+                      uploadResult.errors.length
+                    ] })
+                  ] }),
+                  uploadResult.individualLmpSync && /* @__PURE__ */ jsxRuntimeExports.jsxs("p", { style: { fontSize: 11, color: "#9ca3af", marginTop: 4 }, children: [
+                    "Individual LMPs refreshed: ",
+                    uploadResult.individualLmpSync.assignedTrainees,
+                    " trainee",
+                    uploadResult.individualLmpSync.assignedTrainees === 1 ? "" : "s",
+                    "  |  Completed events protected: ",
+                    uploadResult.individualLmpSync.protectedCompletedEvents
+                  ] }),
+                  duplicateUploadSource && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { style: { marginTop: 10, padding: 10, border: "1px solid #0e7490", borderRadius: 8, backgroundColor: "#082f49" }, children: [
+                    /* @__PURE__ */ jsxRuntimeExports.jsx("p", { style: { fontSize: 12, fontWeight: 700, color: "#bae6fd", marginBottom: 4 }, children: "This looks like a course already loaded for another unit." }),
+                    /* @__PURE__ */ jsxRuntimeExports.jsxs("p", { style: { fontSize: 11, color: "#d1d5db", lineHeight: 1.45, marginBottom: 8 }, children: [
+                      "The upload file contains event codes that already exist in ",
+                      duplicateUploadSource.sourceUnit || "another unit",
+                      duplicateUploadSource.sourceCourse ? ` under ${duplicateUploadSource.sourceCourse}` : "",
+                      ". Event codes must stay unique, so the app cannot import the same spreadsheet directly into ",
+                      activeUnitNormalised || "this unit",
+                      ". You can cross-load it instead; the app will copy the source events into ",
+                      getCourseTitle(selectedCourseType),
+                      " and prefix the copied event codes with ",
+                      activeUnitNormalised || "the importing unit",
+                      "."
+                    ] }),
+                    /* @__PURE__ */ jsxRuntimeExports.jsx(
+                      "button",
+                      {
+                        type: "button",
+                        onClick: handleCrossLoadDuplicateCourse,
+                        disabled: !canCrossLoadDuplicateCourse || isCrossLoadingDuplicateCourse,
+                        style: {
+                          padding: "7px 12px",
+                          fontSize: 11,
+                          fontWeight: 700,
+                          borderRadius: 6,
+                          backgroundColor: canCrossLoadDuplicateCourse && !isCrossLoadingDuplicateCourse ? "#0284c7" : "#334155",
+                          color: "#fff",
+                          border: "none",
+                          cursor: canCrossLoadDuplicateCourse && !isCrossLoadingDuplicateCourse ? "pointer" : "not-allowed"
+                        },
+                        children: isCrossLoadingDuplicateCourse ? "Cross-loading…" : `Cross-load from ${duplicateUploadSource.sourceUnit || "source unit"}`
+                      }
+                    )
+                  ] }),
+                  uploadResult.errors.length > 0 && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { style: { marginTop: 8, maxHeight: 100, overflowY: "auto" }, children: uploadResult.errors.map((e, i) => /* @__PURE__ */ jsxRuntimeExports.jsxs("p", { style: { fontSize: 10, color: "#f87171" }, children: [
+                    "Row ",
+                    e.row,
+                    ": ",
+                    e.error
+                  ] }, i)) }),
+                  (uploadResult.created > 0 || (uploadResult.updated || 0) > 0) && /* @__PURE__ */ jsxRuntimeExports.jsx("p", { style: { fontSize: 11, color: "#6b7280", marginTop: 6 }, children: "Page will reload automatically…" })
+                ] }),
+                /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { style: { display: "flex", justifyContent: "flex-end", gap: 8, marginTop: 8 }, children: [
+                  (uploadReview || uploadResult) && /* @__PURE__ */ jsxRuntimeExports.jsx(
+                    "button",
+                    {
+                      type: "button",
+                      onClick: () => downloadUploadTrace(uploadResult ? "lmp-upload-result" : "lmp-upload-review"),
+                      style: {
+                        padding: "8px 12px",
+                        fontSize: 12,
+                        fontWeight: 700,
+                        borderRadius: 6,
+                        backgroundColor: "#111827",
+                        color: "#fdba74",
+                        border: "1px solid #92400e",
+                        cursor: "pointer",
+                        marginRight: "auto"
+                      },
+                      children: "Download Trace"
+                    }
+                  ),
+                  /* @__PURE__ */ jsxRuntimeExports.jsx(
+                    "button",
+                    {
+                      onClick: () => setShowUploadModal(false),
+                      disabled: isUploading,
+                      style: {
+                        padding: "8px 16px",
+                        fontSize: 12,
+                        fontWeight: 600,
+                        borderRadius: 6,
+                        backgroundColor: "#374151",
+                        color: "#d1d5db",
+                        border: "none",
+                        cursor: "pointer"
+                      },
+                      children: uploadResult && (uploadResult.created > 0 || (uploadResult.updated || 0) > 0) ? "Close" : "Cancel"
+                    }
+                  ),
+                  !uploadResult && /* @__PURE__ */ jsxRuntimeExports.jsx(
+                    "button",
+                    {
+                      onClick: handleBulkUpload,
+                      disabled: !uploadFile || isUploading || isTrainingPackagesTab && uploadMode === "create" && !newUploadPackageName.trim() || !isTrainingPackagesTab && masterUploadIntent === "new" && !newUploadPackageName.trim() || !isTrainingPackagesTab && masterUploadIntent === "update" && !uploadTargetLmpCode,
+                      style: {
+                        padding: "8px 20px",
+                        fontSize: 12,
+                        fontWeight: 600,
+                        borderRadius: 6,
+                        backgroundColor: uploadFile && !isUploading ? "#0284c7" : "#1e3a5f",
+                        color: "#fff",
+                        border: "none",
+                        cursor: uploadFile && !isUploading ? "pointer" : "not-allowed"
+                      },
+                      children: isUploading ? uploadReview ? "Applying…" : "Reviewing…" : uploadReview ? !isTrainingPackagesTab && masterUploadIntent === "update" ? lmpUpdateReviewMode === "one-by-one" ? showUploadOneByOneReview ? showUploadFinalWarning ? "Confirm and Apply Reviewed Update" : "Review Final Warning" : "Start One-by-one Review" : showUploadFinalWarning ? "Confirm and Apply Update" : "Review Final Warning" : "Create LMP" : "Review Upload"
+                    }
+                  )
+                ] })
               ] })
             ]
           }
@@ -96275,7 +98205,11 @@ const SyllabusView = ({
         emptyMessage: isAssigningFlightSchoolLmp ? "No active staff available for this unit." : "No active squadron staff available for this unit.",
         showStaffAssignments: showStaffInAssignTraining,
         staff: assignableTrainingStaff,
-        trainees: showTraineesInAssignTraining ? assignableFlightSchoolTrainees : [],
+        trainees: showTraineesInAssignTraining ? courseFilteredAssignableFlightSchoolTrainees : [],
+        lmpOptions: showTraineesInAssignTraining ? assignLmpOptions : [],
+        selectedLmpCode: assignLmpCode || activeFlightSchoolLmpAssignment?.lmpCode || selectedCourseType,
+        courseOptions: showTraineesInAssignTraining ? assignableFlightSchoolTraineeCourses : [],
+        selectedCourseKeys: assignCourseSelection,
         selectedStaffIds: assignTrainingSelection,
         selectedTraineeIds: assignTraineeSelection,
         saving: isSavingTrainingAssignments,
@@ -96295,10 +98229,36 @@ const SyllabusView = ({
             return next;
           });
         } : void 0,
+        onLmpChange: showTraineesInAssignTraining ? (code) => {
+          const cleanCode = String(code || "").trim();
+          setAssignLmpCode(cleanCode);
+          setAssignTraineeSelection(new Set(
+            assignableFlightSchoolTrainees.filter((trainee) => String(trainee.lmpType || "").trim().toUpperCase() === cleanCode.toUpperCase()).map((trainee) => trainee.idNumber)
+          ));
+        } : void 0,
+        onToggleCourse: showTraineesInAssignTraining ? (course) => {
+          setAssignCourseSelection((prev) => {
+            const next = new Set(prev);
+            if (next.has(course)) next.delete(course);
+            else next.add(course);
+            return next;
+          });
+        } : void 0,
         onSelectAll: () => setAssignTrainingSelection(new Set(assignableTrainingStaff.map((staff) => staff.idNumber))),
         onDeselectAll: () => setAssignTrainingSelection(/* @__PURE__ */ new Set()),
-        onSelectAllTrainees: () => setAssignTraineeSelection(new Set(assignableFlightSchoolTrainees.map((trainee) => trainee.idNumber))),
-        onDeselectAllTrainees: () => setAssignTraineeSelection(/* @__PURE__ */ new Set()),
+        onSelectAllCourses: () => setAssignCourseSelection(new Set(assignableFlightSchoolTraineeCourses)),
+        onDeselectAllCourses: () => setAssignCourseSelection(/* @__PURE__ */ new Set()),
+        onSelectAllTrainees: () => setAssignTraineeSelection((prev) => {
+          const next = new Set(prev);
+          courseFilteredAssignableFlightSchoolTrainees.forEach((trainee) => next.add(trainee.idNumber));
+          return next;
+        }),
+        onDeselectAllTrainees: () => setAssignTraineeSelection((prev) => {
+          const next = new Set(prev);
+          courseFilteredAssignableFlightSchoolTrainees.forEach((trainee) => next.delete(trainee.idNumber));
+          return next;
+        }),
+        onDownloadTrace: showTraineesInAssignTraining ? onDownloadAssignmentTrace : void 0,
         onCancel: () => setShowAssignTrainingModal(false),
         onSave: saveAssignTraining
       }
@@ -101955,6 +103915,7 @@ const sectionLabels = {
   "event-limits": "Daily Event Limits",
   "duty-turnaround": "Duty & Turnaround",
   "business-rules": "Business Rules",
+  "ground-event-scheduling": "Ground Event Scheduling",
   "data-loaders": "Template Downloads",
   "user-list": "User List",
   "staff-database": "Staff Database",
@@ -102030,6 +103991,13 @@ const sectionIcons = {
   "business-rules": /* @__PURE__ */ jsxRuntimeExports.jsxs("svg", { viewBox: "0 0 24 24", fill: "none", stroke: "currentColor", strokeWidth: "1.5", strokeLinecap: "round", strokeLinejoin: "round", className: "w-full h-full", children: [
     /* @__PURE__ */ jsxRuntimeExports.jsx("path", { d: "M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" }),
     /* @__PURE__ */ jsxRuntimeExports.jsx("circle", { cx: "12", cy: "12", r: "3" })
+  ] }),
+  "ground-event-scheduling": /* @__PURE__ */ jsxRuntimeExports.jsxs("svg", { viewBox: "0 0 24 24", fill: "none", stroke: "currentColor", strokeWidth: "1.5", strokeLinecap: "round", strokeLinejoin: "round", className: "w-full h-full", children: [
+    /* @__PURE__ */ jsxRuntimeExports.jsx("path", { d: "M4 6h16M4 12h16M4 18h16" }),
+    /* @__PURE__ */ jsxRuntimeExports.jsx("path", { d: "M8 4v4M14 10v4M18 16v4" }),
+    /* @__PURE__ */ jsxRuntimeExports.jsx("circle", { cx: "8", cy: "6", r: "1.5" }),
+    /* @__PURE__ */ jsxRuntimeExports.jsx("circle", { cx: "14", cy: "12", r: "1.5" }),
+    /* @__PURE__ */ jsxRuntimeExports.jsx("circle", { cx: "18", cy: "18", r: "1.5" })
   ] }),
   "data-loaders": /* @__PURE__ */ jsxRuntimeExports.jsxs("svg", { viewBox: "0 0 24 24", fill: "none", stroke: "currentColor", strokeWidth: "1.5", strokeLinecap: "round", strokeLinejoin: "round", className: "w-full h-full", children: [
     /* @__PURE__ */ jsxRuntimeExports.jsx("path", { d: "M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4" }),
@@ -102110,6 +104078,7 @@ const sectionDescriptions = {
   "event-limits": "Set daily event limits and duty supervisor session limits",
   "duty-turnaround": "Crew duty limits & rest times",
   "business-rules": "Dispatch rate, stagger and flight tile warning rules",
+  "ground-event-scheduling": "Ground event automation, alerting and preferred time windows",
   "data-loaders": "Download blank upload templates",
   "user-list": "View and manage user accounts",
   "staff-database": "Staff records and details",
@@ -102294,6 +104263,25 @@ const sectionSearchKeywords = {
     "tile warnings",
     "authorisation warning",
     "departure density"
+  ],
+  "ground-event-scheduling": [
+    "ground event scheduling",
+    "ground events",
+    "group event",
+    "group scheduling",
+    "minimum to schedule",
+    "group size",
+    "entire course",
+    "automatic ground",
+    "suggest ground",
+    "alert ground",
+    "preferred windows",
+    "0800",
+    "1000",
+    "1200",
+    "1400",
+    "1600",
+    "1800"
   ],
   "data-loaders": [
     "template",
@@ -102819,6 +104807,7 @@ const sectionColors = {
   "event-limits": "from-amber-500/20 to-amber-600/10 border-amber-500/30 text-amber-400",
   "duty-turnaround": "from-amber-500/20 to-amber-600/10 border-amber-500/30 text-amber-400",
   "business-rules": "from-amber-500/20 to-amber-600/10 border-amber-500/30 text-amber-400",
+  "ground-event-scheduling": "from-amber-500/20 to-amber-600/10 border-amber-500/30 text-amber-400",
   // ACCESS & SECURITY - violet icons
   "user-list": "from-violet-500/20 to-violet-600/10 border-violet-500/30 text-violet-400",
   "trainee-reallocation": "from-violet-500/20 to-violet-600/10 border-violet-500/30 text-violet-400",
@@ -102953,6 +104942,7 @@ const sectionGroups = [
       "scheduling-rules",
       "event-limits",
       "business-rules",
+      "ground-event-scheduling",
       "platform-scheduling-rule-sets",
       "people-profile"
     ]
@@ -103607,7 +105597,7 @@ const SettingsViewWithMenu = (props) => {
       "sct-events": collectSelectedSearchDataTerms(continuationTerms, currencyTerms),
       "currency-profiles": collectSelectedSearchDataTerms(continuationTerms, currencyTerms),
       "people-profile": collectSelectedSearchDataTerms(props.excludedCourses, props.courseColors, unitContextTerms),
-      "scheduling-rules": collectSelectedSearchDataTerms(props.eventLimits, props.dispatchStaggerSettings, schedulingRuleSetTerms, unitContextTerms),
+      "scheduling-rules": collectSelectedSearchDataTerms(props.eventLimits, props.dispatchStaggerSettings, props.groundEventSchedulingSettings, schedulingRuleSetTerms, unitContextTerms),
       "event-limits": collectSelectedSearchDataTerms(props.eventLimits, unitContextTerms),
       "duty-turnaround": collectSelectedSearchDataTerms(
         props.preferredDutyPeriod,
@@ -103620,6 +105610,7 @@ const SettingsViewWithMenu = (props) => {
         props.dayFlyingEnd
       ),
       "business-rules": collectSelectedSearchDataTerms(props.dispatchStaggerSettings, props.tileStatusSettings, props.maxDispatchPerHour, props.dispatchRateWindowMinutes, props.showDepartureDensityOverlay),
+      "ground-event-scheduling": collectSelectedSearchDataTerms(props.groundEventSchedulingSettings, props.syllabusDetails),
       "user-list": collectSelectedSearchDataTerms(peopleTerms, permissionTerms),
       "staff-database": collectSelectedSearchDataTerms(props.instructorsData, rankTerminologyTerms),
       "trainee-database": collectSelectedSearchDataTerms(props.traineesData, props.courseColors),
@@ -103673,6 +105664,7 @@ const SettingsViewWithMenu = (props) => {
     props.courseColors,
     props.eventLimits,
     props.dispatchStaggerSettings,
+    props.groundEventSchedulingSettings,
     props.dispatchRateWindowMinutes,
     props.tileStatusSettings,
     props.maxDispatchPerHour,
@@ -103982,6 +105974,7 @@ const SettingsViewWithMenu = (props) => {
           /* @__PURE__ */ jsxRuntimeExports.jsx(SettingsView, { ...props, currentUserPermission: currentSettingsPermission, activeSection: "event-limits" }),
           /* @__PURE__ */ jsxRuntimeExports.jsx(SettingsView, { ...props, currentUserPermission: currentSettingsPermission, activeSection: "duty-turnaround" }),
           /* @__PURE__ */ jsxRuntimeExports.jsx(SettingsView, { ...props, currentUserPermission: currentSettingsPermission, activeSection: "business-rules" }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx(SettingsView, { ...props, currentUserPermission: currentSettingsPermission, activeSection: "ground-event-scheduling" }),
           /* @__PURE__ */ jsxRuntimeExports.jsx(
             PlatformConfigurationSettings,
             {
@@ -110652,6 +112645,7 @@ const TrainingCompletionView = ({
   onSaveTrainingReportAssessment,
   onPersistTrainingReportAssessment,
   onUpdateLmpItem,
+  onLoadTraineeLmp,
   trainingReportTemplate
 }) => {
   const reportTemplate = reactExports.useMemo(
@@ -110669,6 +112663,7 @@ const TrainingCompletionView = ({
   const [selectedTrainees, setSelectedTrainees] = reactExports.useState([]);
   const [isCompleting, setIsCompleting] = reactExports.useState(false);
   const [completionMessage, setCompletionMessage] = reactExports.useState("");
+  const [completionDialogMessage, setCompletionDialogMessage] = reactExports.useState("");
   const [completionTrace, setCompletionTrace] = reactExports.useState(null);
   reactExports.useMemo(() => Object.values(publishedSchedules).flat(), [publishedSchedules]);
   const allTrainees = reactExports.useMemo(() => [...traineesData, ...archivedTraineesData], [traineesData, archivedTraineesData]);
@@ -110710,13 +112705,20 @@ const TrainingCompletionView = ({
     ].filter(Boolean).map((person) => normaliseName(String(person)));
     return courseTrainees.filter((trainee) => eventPeople.includes(trainee.name) || eventPeople.includes(trainee.fullName));
   };
-  const findTraineeLmpItemForEvent = (trainee, event) => {
-    const traineeLmp = traineeLMPs?.get(trainee.fullName) || [];
-    if (traineeLmp.length === 0) return null;
+  const getTraineeLmpForTrainee = (trainee, sourceLmp) => {
+    if (Array.isArray(sourceLmp)) return sourceLmp;
+    const exactLmp = traineeLMPs?.get(trainee.fullName);
+    if (exactLmp) return exactLmp;
+    const traineeNames = [trainee.fullName, trainee.name].map((name) => normaliseName(String(name || "")).toUpperCase()).filter(Boolean);
+    if (traineeNames.length === 0 || !traineeLMPs) return [];
+    const fuzzyEntry = Array.from(traineeLMPs.entries()).find(([lmpName]) => traineeNames.includes(normaliseName(lmpName).toUpperCase()));
+    return fuzzyEntry?.[1] || [];
+  };
+  const findMasterLmpItemForEvent = (event) => {
     const eventRef = normaliseCode(event.lmpItemId || event.id);
     const eventCode2 = normaliseCode(event.lmpItemCode || event.flightNumber);
     const eventTitle = normaliseCode(event.notes || event.flightNumber);
-    return traineeLmp.find((item) => {
+    return syllabusDetails.find((item) => {
       if (!item || isSyllabusCourseShell(item)) return false;
       const itemRefs = [
         item.id,
@@ -110726,6 +112728,28 @@ const TrainingCompletionView = ({
       ].map(normaliseCode).filter(Boolean);
       return itemRefs.includes(eventRef) || itemRefs.includes(eventCode2) || itemRefs.includes(eventTitle);
     }) || null;
+  };
+  const findTraineeLmpItemForEvent = (trainee, event, sourceLmp) => {
+    const traineeLmp = getTraineeLmpForTrainee(trainee, sourceLmp);
+    const masterItem = findMasterLmpItemForEvent(event);
+    if (traineeLmp.length === 0) {
+      return { item: masterItem, source: masterItem ? "master-fallback" : "none", traineeLmpLength: 0 };
+    }
+    const eventRef = normaliseCode(event.lmpItemId || event.id);
+    const eventCode2 = normaliseCode(event.lmpItemCode || event.flightNumber);
+    const eventTitle = normaliseCode(event.notes || event.flightNumber);
+    const individualItem = traineeLmp.find((item) => {
+      if (!item || isSyllabusCourseShell(item)) return false;
+      const itemRefs = [
+        item.id,
+        item.code,
+        item.masterEventId,
+        item.eventDescription
+      ].map(normaliseCode).filter(Boolean);
+      return itemRefs.includes(eventRef) || itemRefs.includes(eventCode2) || itemRefs.includes(eventTitle);
+    }) || null;
+    if (individualItem) return { item: individualItem, source: "individual", traineeLmpLength: traineeLmp.length };
+    return { item: masterItem, source: masterItem ? "master-fallback" : "none", traineeLmpLength: traineeLmp.length };
   };
   const candidateEvents = reactExports.useMemo(() => {
     if (selectedCourses.length === 0) return [];
@@ -110784,6 +112808,7 @@ const TrainingCompletionView = ({
     setSelectedEventIds([]);
     setSelectedTrainees([]);
     setCompletionMessage("");
+    setCompletionDialogMessage("");
     setCompletionTrace(null);
   };
   const handleCourseChange = (coursesSelected) => {
@@ -110841,6 +112866,7 @@ const TrainingCompletionView = ({
     }
     setIsCompleting(true);
     setCompletionMessage("Completing selected training records...");
+    setCompletionDialogMessage("");
     setCompletionTrace(null);
     const completedAt = (/* @__PURE__ */ new Date(`${completionDate || todayIso()}T00:00:00`)).toISOString();
     const completed = [];
@@ -110867,13 +112893,28 @@ const TrainingCompletionView = ({
           if (!trainee) {
             throw new Error("Selected trainee was not found in the active or archived trainee list.");
           }
-          const lmpItem = findTraineeLmpItemForEvent(trainee, selectedEvent);
-          if (!lmpItem) {
-            throw new Error("Matching Individual LMP event was not found for this trainee.");
+          const freshIndividualLmp = onLoadTraineeLmp ? await withTimeout(
+            onLoadTraineeLmp(trainee),
+            `${trainee.name} Individual LMP reload`
+          ) : null;
+          const lmpMatch = findTraineeLmpItemForEvent(trainee, selectedEvent, freshIndividualLmp);
+          const lmpItem = lmpMatch.item;
+          if (!lmpItem || lmpMatch.source !== "individual") {
+            throw new Error("Matching Individual LMP event was not found for this trainee. The record was not completed to avoid damaging the Individual LMP.");
+          }
+          if (lmpMatch.traineeLmpLength < 2) {
+            throw new Error(`Individual LMP reload returned only ${lmpMatch.traineeLmpLength} event${lmpMatch.traineeLmpLength === 1 ? "" : "s"}. The record was not completed to avoid overwriting the full Individual LMP.`);
           }
           const lmpEventCode = lmpItem.code || selectedEvent.flightNumber || lmpItem.id || "";
           const assessmentEventId = buildBulkCompletionEventId(trainee, lmpItem, selectedEvent.id);
-          traceRows.push({ ...traceBase, stage: "score:save:start", lmpItemId: lmpItem.id, lmpEventCode });
+          traceRows.push({
+            ...traceBase,
+            stage: "score:save:start",
+            lmpItemId: lmpItem.id,
+            lmpEventCode,
+            lmpMatchSource: lmpMatch.source,
+            traineeLmpLength: lmpMatch.traineeLmpLength
+          });
           await withTimeout(
             persistScoreCompletion(trainee, lmpItem, selectedEvent, completedAt),
             `${trainee.name} / ${selectedEvent.flightNumber} score save`
@@ -110905,13 +112946,13 @@ const TrainingCompletionView = ({
             isCompleted: true,
             groundSchoolAssessment: { isAssessment: false, result: void 0 }
           };
-          traceRows.push({ ...traceBase, stage: "report:local-save:start", lmpItemId: lmpItem.id, lmpEventCode, assessmentEventId });
+          traceRows.push({ ...traceBase, stage: "report:local-save:start", lmpItemId: lmpItem.id, lmpEventCode, assessmentEventId, lmpMatchSource: lmpMatch.source });
           await withTimeout(
             Promise.resolve(onSaveTrainingReportAssessment(assessment)),
             `${trainee.name} / ${selectedEvent.flightNumber} local report save`
           );
           if (onPersistTrainingReportAssessment) {
-            traceRows.push({ ...traceBase, stage: "report:persist:start", lmpItemId: lmpItem.id, lmpEventCode, assessmentEventId });
+            traceRows.push({ ...traceBase, stage: "report:persist:start", lmpItemId: lmpItem.id, lmpEventCode, assessmentEventId, lmpMatchSource: lmpMatch.source });
             await withTimeout(
               onPersistTrainingReportAssessment({
                 ...assessment,
@@ -110920,8 +112961,24 @@ const TrainingCompletionView = ({
               `${trainee.name} / ${selectedEvent.flightNumber} report persistence`
             );
           }
+          if (lmpMatch.source === "individual" && onUpdateLmpItem) {
+            const completedItem = {
+              ...lmpItem,
+              completedAt,
+              isComplete: true,
+              completed: true
+            };
+            traceRows.push({ ...traceBase, stage: "lmp:update:start", lmpItemId: lmpItem.id, lmpEventCode, assessmentEventId });
+            const updated = await withTimeout(
+              Promise.resolve(onUpdateLmpItem(trainee, lmpItem, completedItem, { suppressSuccessMessage: true, sourceLmp: freshIndividualLmp || void 0 })),
+              `${trainee.name} / ${selectedEvent.flightNumber} Individual LMP update`
+            );
+            if (updated === false) {
+              throw new Error("Individual LMP event could not be marked complete.");
+            }
+          }
           completed.push(`${trainee.name} / ${selectedEvent.flightNumber}`);
-          traceRows.push({ ...traceBase, stage: "complete", lmpItemId: lmpItem.id, lmpEventCode, assessmentEventId });
+          traceRows.push({ ...traceBase, stage: "complete", lmpItemId: lmpItem.id, lmpEventCode, assessmentEventId, lmpMatchSource: lmpMatch.source });
         } catch (error) {
           const reason = getErrorMessage(error);
           console.error("Error during selected event completion item:", { ...traceBase, reason, error });
@@ -110974,7 +113031,9 @@ const TrainingCompletionView = ({
       const firstFailure = failed[0];
       setCompletionMessage(`Completed ${completed.length} trainee-event record${completed.length === 1 ? "" : "s"}. ${failed.length} failed. First failure: ${firstFailure.trainee} / ${firstFailure.event}: ${firstFailure.reason}`);
     } else {
-      setCompletionMessage(`Completed ${completed.length} trainee-event record${completed.length === 1 ? "" : "s"} across ${selectedEvents.length} event${selectedEvents.length === 1 ? "" : "s"}.`);
+      const successMessage = `Completed ${completed.length} trainee-event record${completed.length === 1 ? "" : "s"} across ${selectedEvents.length} event${selectedEvents.length === 1 ? "" : "s"}.`;
+      setCompletionMessage(successMessage);
+      setCompletionDialogMessage(successMessage);
     }
     if (failed.length > 0) {
       console.warn("[Training Completion] Some records failed", trace);
@@ -110998,259 +113057,276 @@ const TrainingCompletionView = ({
     link.remove();
     URL.revokeObjectURL(url);
   };
-  return /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "h-full overflow-auto bg-gray-900 p-6", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "max-w-6xl mx-auto space-y-6", children: [
-    /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "bg-gray-800 rounded-lg p-6 border border-gray-700", children: [
-      /* @__PURE__ */ jsxRuntimeExports.jsx("h1", { className: "text-2xl font-bold text-white mb-2", children: "Complete Training" }),
-      /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-gray-400", children: "Select the course, choose the exact event, then select the trainees to mark as complete." })
-    ] }),
-    /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid grid-cols-1 xl:grid-cols-[360px_1fr] gap-6", children: [
-      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "bg-gray-800 rounded-lg p-6 border border-gray-700 space-y-5", children: [
-        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsx("h2", { className: "text-lg font-semibold text-white mb-3", children: "Course" }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx(
-            "input",
-            {
-              type: "text",
-              value: courseSearch,
-              onChange: (event) => setCourseSearch(event.target.value),
-              placeholder: "Search courses...",
-              className: "w-full px-3 py-2 mb-2 bg-gray-700 border border-gray-600 rounded text-white placeholder-gray-500"
-            }
-          ),
-          /* @__PURE__ */ jsxRuntimeExports.jsx(
-            "select",
-            {
-              multiple: true,
-              value: selectedCourses,
-              onChange: (event) => {
-                const options = Array.from(event.target.selectedOptions, (option) => option.value);
-                handleCourseChange(options);
-              },
-              className: "w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded text-white",
-              size: 8,
-              children: filteredCourses.map((courseName) => /* @__PURE__ */ jsxRuntimeExports.jsxs("option", { value: courseName, children: [
-                courseName,
-                " ",
-                archivedCourses[courseName] ? "(Archived)" : ""
-              ] }, courseName))
-            }
-          ),
-          /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-xs text-gray-500 mt-1", children: "Hold Ctrl/Cmd to select multiple courses." })
-        ] }),
-        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsx("h2", { className: "text-lg font-semibold text-white mb-3", children: "Date" }),
-          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-3 text-gray-200", children: [
-            /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "flex items-center gap-3 cursor-pointer", children: [
-              /* @__PURE__ */ jsxRuntimeExports.jsx(
-                "input",
-                {
-                  type: "radio",
-                  checked: dateMode === "single-date",
-                  onChange: () => {
-                    setDateMode("single-date");
-                    resetEventSelection();
-                  },
-                  className: "w-4 h-4 text-sky-500"
-                }
-              ),
-              /* @__PURE__ */ jsxRuntimeExports.jsx("span", { children: "Single date" })
-            ] }),
-            dateMode === "single-date" && /* @__PURE__ */ jsxRuntimeExports.jsx(
+  return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "h-full overflow-auto bg-gray-900 p-6", children: [
+    completionDialogMessage && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "fixed inset-0 z-[1000] flex items-center justify-center bg-black/70 px-4", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "w-full max-w-lg rounded-lg border border-green-500 bg-gray-800 shadow-2xl", children: [
+      /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "border-b border-green-500/40 px-6 py-4", children: /* @__PURE__ */ jsxRuntimeExports.jsx("h2", { className: "text-xl font-bold text-green-300", children: "Training Records Updated" }) }),
+      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "px-6 py-5", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-gray-100", children: completionDialogMessage }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-2 text-sm text-gray-400", children: "The selected Individual LMP events and training report records have finished updating." })
+      ] }),
+      /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex justify-end border-t border-gray-700 px-6 py-4", children: /* @__PURE__ */ jsxRuntimeExports.jsx(
+        "button",
+        {
+          onClick: () => setCompletionDialogMessage(""),
+          className: "rounded bg-green-600 px-5 py-2 font-semibold text-white hover:bg-green-700",
+          children: "Continue"
+        }
+      ) })
+    ] }) }),
+    /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "max-w-6xl mx-auto space-y-6", children: [
+      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "bg-gray-800 rounded-lg p-6 border border-gray-700", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsx("h1", { className: "text-2xl font-bold text-white mb-2", children: "Complete Training" }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-gray-400", children: "Select the course, choose the exact event, then select the trainees to mark as complete." })
+      ] }),
+      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid grid-cols-1 xl:grid-cols-[360px_1fr] gap-6", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "bg-gray-800 rounded-lg p-6 border border-gray-700 space-y-5", children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx("h2", { className: "text-lg font-semibold text-white mb-3", children: "Course" }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx(
               "input",
               {
-                type: "date",
-                value: singleDate,
-                onChange: (event) => {
-                  setSingleDate(event.target.value);
-                  resetEventSelection();
-                },
-                className: "ml-7 px-3 py-2 bg-gray-700 border border-gray-600 rounded text-white"
+                type: "text",
+                value: courseSearch,
+                onChange: (event) => setCourseSearch(event.target.value),
+                placeholder: "Search courses...",
+                className: "w-full px-3 py-2 mb-2 bg-gray-700 border border-gray-600 rounded text-white placeholder-gray-500"
               }
             ),
-            /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "flex items-center gap-3 cursor-pointer", children: [
-              /* @__PURE__ */ jsxRuntimeExports.jsx(
-                "input",
-                {
-                  type: "radio",
-                  checked: dateMode === "date-range",
-                  onChange: () => {
-                    setDateMode("date-range");
-                    resetEventSelection();
-                  },
-                  className: "w-4 h-4 text-sky-500"
-                }
-              ),
-              /* @__PURE__ */ jsxRuntimeExports.jsx("span", { children: "Date range" })
-            ] }),
-            dateMode === "date-range" && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "ml-7 space-y-2", children: [
-              /* @__PURE__ */ jsxRuntimeExports.jsx(
-                "input",
-                {
-                  type: "date",
-                  value: startDate,
-                  onChange: (event) => {
-                    setStartDate(event.target.value);
-                    resetEventSelection();
-                  },
-                  className: "w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded text-white"
-                }
-              ),
-              /* @__PURE__ */ jsxRuntimeExports.jsx(
-                "input",
-                {
-                  type: "date",
-                  value: endDate,
-                  onChange: (event) => {
-                    setEndDate(event.target.value);
-                    resetEventSelection();
-                  },
-                  className: "w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded text-white"
-                }
-              )
-            ] }),
-            /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "flex items-center gap-3 cursor-pointer", children: [
-              /* @__PURE__ */ jsxRuntimeExports.jsx(
-                "input",
-                {
-                  type: "radio",
-                  checked: dateMode === "all-time",
-                  onChange: () => {
-                    setDateMode("all-time");
-                    resetEventSelection();
-                  },
-                  className: "w-4 h-4 text-sky-500"
-                }
-              ),
-              /* @__PURE__ */ jsxRuntimeExports.jsx("span", { children: "All dates" })
-            ] })
-          ] })
-        ] })
-      ] }),
-      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid grid-cols-1 2xl:grid-cols-[minmax(360px,0.95fr)_minmax(420px,1.05fr)] gap-6", children: [
-        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "bg-gray-800 rounded-lg p-6 border border-gray-700", children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center justify-between mb-4", children: [
-            /* @__PURE__ */ jsxRuntimeExports.jsx("h2", { className: "text-lg font-semibold text-white", children: "Select Event" }),
-            /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "text-sm text-gray-400", children: [
-              candidateEvents.length,
-              " LMP event",
-              candidateEvents.length === 1 ? "" : "s"
-            ] })
+            /* @__PURE__ */ jsxRuntimeExports.jsx(
+              "select",
+              {
+                multiple: true,
+                value: selectedCourses,
+                onChange: (event) => {
+                  const options = Array.from(event.target.selectedOptions, (option) => option.value);
+                  handleCourseChange(options);
+                },
+                className: "w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded text-white",
+                size: 8,
+                children: filteredCourses.map((courseName) => /* @__PURE__ */ jsxRuntimeExports.jsxs("option", { value: courseName, children: [
+                  courseName,
+                  " ",
+                  archivedCourses[courseName] ? "(Archived)" : ""
+                ] }, courseName))
+              }
+            ),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-xs text-gray-500 mt-1", children: "Hold Ctrl/Cmd to select multiple courses." })
           ] }),
-          selectedCourses.length === 0 ? /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-yellow-300 text-sm", children: "Select a course to show its LMP events." }) : candidateEvents.length === 0 ? /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-yellow-300 text-sm", children: "No LMP events match the selected course." }) : /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "border border-gray-700 rounded bg-gray-900/40 max-h-[520px] overflow-y-auto", children: candidateEvents.map((event, index) => /* @__PURE__ */ jsxRuntimeExports.jsxs(
-            "label",
-            {
-              className: `flex items-center gap-3 border-b border-gray-700 px-4 py-3 last:border-b-0 cursor-pointer ${selectedEventIds.includes(event.id) ? "bg-sky-900/45 text-white" : "text-gray-200 hover:bg-gray-700/45"}`,
-              children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx("h2", { className: "text-lg font-semibold text-white mb-3", children: "Date" }),
+            /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-3 text-gray-200", children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "flex items-center gap-3 cursor-pointer", children: [
                 /* @__PURE__ */ jsxRuntimeExports.jsx(
                   "input",
                   {
-                    type: "checkbox",
-                    checked: selectedEventIds.includes(event.id),
-                    onChange: () => handleEventToggle(event.id),
-                    className: "h-4 w-4 accent-sky-500 bg-gray-700 border-gray-500 rounded"
+                    type: "radio",
+                    checked: dateMode === "single-date",
+                    onChange: () => {
+                      setDateMode("single-date");
+                      resetEventSelection();
+                    },
+                    className: "w-4 h-4 text-sky-500"
                   }
                 ),
-                /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "w-8 shrink-0 text-xs font-semibold text-gray-500", children: index + 1 }),
-                /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "font-semibold", children: event.flightNumber || "LMP Event" }),
-                event.notes && /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "min-w-0 truncate text-sm text-gray-400", children: event.notes })
-              ]
-            },
-            event.id
-          )) })
-        ] }),
-        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "bg-gray-800 rounded-lg p-6 border border-gray-700", children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center justify-between mb-4", children: [
-            /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
-              /* @__PURE__ */ jsxRuntimeExports.jsx("h2", { className: "text-lg font-semibold text-white", children: "Select Trainees" }),
-              /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-sm text-gray-400", children: "Only trainees linked to the selected event set are shown." })
-            ] }),
-            selectedEvents.length > 0 && traineesForSelectedEvents.length > 0 && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex gap-2", children: [
-              /* @__PURE__ */ jsxRuntimeExports.jsx(
-                "button",
+                /* @__PURE__ */ jsxRuntimeExports.jsx("span", { children: "Single date" })
+              ] }),
+              dateMode === "single-date" && /* @__PURE__ */ jsxRuntimeExports.jsx(
+                "input",
                 {
-                  onClick: () => setSelectedTrainees(traineesForSelectedEvents.map(getTraineeSelectionKey)),
-                  className: "px-3 py-1 bg-sky-600 hover:bg-sky-700 text-white rounded text-sm",
-                  children: "Select All"
+                  type: "date",
+                  value: singleDate,
+                  onChange: (event) => {
+                    setSingleDate(event.target.value);
+                    resetEventSelection();
+                  },
+                  className: "ml-7 px-3 py-2 bg-gray-700 border border-gray-600 rounded text-white"
                 }
               ),
+              /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "flex items-center gap-3 cursor-pointer", children: [
+                /* @__PURE__ */ jsxRuntimeExports.jsx(
+                  "input",
+                  {
+                    type: "radio",
+                    checked: dateMode === "date-range",
+                    onChange: () => {
+                      setDateMode("date-range");
+                      resetEventSelection();
+                    },
+                    className: "w-4 h-4 text-sky-500"
+                  }
+                ),
+                /* @__PURE__ */ jsxRuntimeExports.jsx("span", { children: "Date range" })
+              ] }),
+              dateMode === "date-range" && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "ml-7 space-y-2", children: [
+                /* @__PURE__ */ jsxRuntimeExports.jsx(
+                  "input",
+                  {
+                    type: "date",
+                    value: startDate,
+                    onChange: (event) => {
+                      setStartDate(event.target.value);
+                      resetEventSelection();
+                    },
+                    className: "w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded text-white"
+                  }
+                ),
+                /* @__PURE__ */ jsxRuntimeExports.jsx(
+                  "input",
+                  {
+                    type: "date",
+                    value: endDate,
+                    onChange: (event) => {
+                      setEndDate(event.target.value);
+                      resetEventSelection();
+                    },
+                    className: "w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded text-white"
+                  }
+                )
+              ] }),
+              /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "flex items-center gap-3 cursor-pointer", children: [
+                /* @__PURE__ */ jsxRuntimeExports.jsx(
+                  "input",
+                  {
+                    type: "radio",
+                    checked: dateMode === "all-time",
+                    onChange: () => {
+                      setDateMode("all-time");
+                      resetEventSelection();
+                    },
+                    className: "w-4 h-4 text-sky-500"
+                  }
+                ),
+                /* @__PURE__ */ jsxRuntimeExports.jsx("span", { children: "All dates" })
+              ] })
+            ] })
+          ] })
+        ] }),
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid grid-cols-1 2xl:grid-cols-[minmax(360px,0.95fr)_minmax(420px,1.05fr)] gap-6", children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "bg-gray-800 rounded-lg p-6 border border-gray-700", children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center justify-between mb-4", children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsx("h2", { className: "text-lg font-semibold text-white", children: "Select Event" }),
+              /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "text-sm text-gray-400", children: [
+                candidateEvents.length,
+                " LMP event",
+                candidateEvents.length === 1 ? "" : "s"
+              ] })
+            ] }),
+            selectedCourses.length === 0 ? /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-yellow-300 text-sm", children: "Select a course to show its LMP events." }) : candidateEvents.length === 0 ? /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-yellow-300 text-sm", children: "No LMP events match the selected course." }) : /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "border border-gray-700 rounded bg-gray-900/40 max-h-[520px] overflow-y-auto", children: candidateEvents.map((event, index) => /* @__PURE__ */ jsxRuntimeExports.jsxs(
+              "label",
+              {
+                className: `flex items-center gap-3 border-b border-gray-700 px-4 py-3 last:border-b-0 cursor-pointer ${selectedEventIds.includes(event.id) ? "bg-sky-900/45 text-white" : "text-gray-200 hover:bg-gray-700/45"}`,
+                children: [
+                  /* @__PURE__ */ jsxRuntimeExports.jsx(
+                    "input",
+                    {
+                      type: "checkbox",
+                      checked: selectedEventIds.includes(event.id),
+                      onChange: () => handleEventToggle(event.id),
+                      className: "h-4 w-4 accent-sky-500 bg-gray-700 border-gray-500 rounded"
+                    }
+                  ),
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "w-8 shrink-0 text-xs font-semibold text-gray-500", children: index + 1 }),
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "font-semibold", children: event.flightNumber || "LMP Event" }),
+                  event.notes && /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "min-w-0 truncate text-sm text-gray-400", children: event.notes })
+                ]
+              },
+              event.id
+            )) })
+          ] }),
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "bg-gray-800 rounded-lg p-6 border border-gray-700", children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center justify-between mb-4", children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
+                /* @__PURE__ */ jsxRuntimeExports.jsx("h2", { className: "text-lg font-semibold text-white", children: "Select Trainees" }),
+                /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-sm text-gray-400", children: "Only trainees linked to the selected event set are shown." })
+              ] }),
+              selectedEvents.length > 0 && traineesForSelectedEvents.length > 0 && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex gap-2", children: [
+                /* @__PURE__ */ jsxRuntimeExports.jsx(
+                  "button",
+                  {
+                    onClick: () => setSelectedTrainees(traineesForSelectedEvents.map(getTraineeSelectionKey)),
+                    className: "px-3 py-1 bg-sky-600 hover:bg-sky-700 text-white rounded text-sm",
+                    children: "Select All"
+                  }
+                ),
+                /* @__PURE__ */ jsxRuntimeExports.jsx(
+                  "button",
+                  {
+                    onClick: () => setSelectedTrainees([]),
+                    className: "px-3 py-1 bg-gray-600 hover:bg-gray-700 text-white rounded text-sm",
+                    children: "Deselect All"
+                  }
+                )
+              ] })
+            ] }),
+            selectedEvents.length === 0 ? /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-yellow-300 text-sm", children: "Select at least one event first." }) : traineesForSelectedEvents.length === 0 ? /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-yellow-300 text-sm", children: "No trainees from the selected course are linked to these events." }) : /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "border border-gray-600 rounded p-2 bg-gray-700/50 max-h-72 overflow-y-auto", children: traineesForSelectedEvents.map((trainee) => /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "flex items-center gap-3 p-2 hover:bg-gray-600/30 rounded cursor-pointer", children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsx(
+                "input",
+                {
+                  type: "checkbox",
+                  checked: selectedTrainees.includes(getTraineeSelectionKey(trainee)),
+                  onChange: (event) => {
+                    const traineeKey = getTraineeSelectionKey(trainee);
+                    if (event.target.checked) {
+                      setSelectedTrainees([...selectedTrainees, traineeKey]);
+                    } else {
+                      setSelectedTrainees(selectedTrainees.filter((key) => key !== traineeKey));
+                    }
+                  },
+                  className: "h-4 w-4 accent-green-500 bg-gray-600 border-gray-500 rounded"
+                }
+              ),
+              /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "text-sm text-gray-200", children: [
+                trainee.rank,
+                " ",
+                trainee.name,
+                " (",
+                trainee.course,
+                ")"
+              ] })
+            ] }, getTraineeSelectionKey(trainee))) }),
+            selectedEvents.length > 0 && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mt-5 p-4 rounded border border-gray-700 bg-gray-900/60", children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsx("h3", { className: "text-sm uppercase tracking-wide text-gray-400 mb-2", children: "Completion Summary" }),
+              /* @__PURE__ */ jsxRuntimeExports.jsxs("p", { className: "text-sm text-gray-200", children: [
+                selectedEvents.length,
+                " event",
+                selectedEvents.length === 1 ? "" : "s",
+                " will be completed on ",
+                formatDate(completionDate),
+                "."
+              ] }),
+              /* @__PURE__ */ jsxRuntimeExports.jsxs("p", { className: "text-sm text-gray-400 mt-1", children: [
+                "This will mark each selected trainee Individual LMP event complete and add DCO ",
+                reportName,
+                " records for the selected event set."
+              ] })
+            ] }),
+            /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mt-5 flex items-center justify-between gap-4", children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "min-w-0 space-y-2", children: [
+                /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: `text-sm ${completionMessage.includes("failed") ? "text-yellow-300" : completionMessage.includes("Completed") ? "text-green-300" : "text-gray-300"}`, children: completionMessage }),
+                completionTrace && Number(completionTrace.failedCount || 0) > 0 && /* @__PURE__ */ jsxRuntimeExports.jsx(
+                  "button",
+                  {
+                    onClick: downloadCompletionTrace,
+                    className: "px-3 py-2 rounded border border-yellow-500/50 bg-yellow-500/10 text-yellow-200 hover:bg-yellow-500/20 text-sm font-semibold",
+                    children: "Download Completion Trace"
+                  }
+                )
+              ] }),
               /* @__PURE__ */ jsxRuntimeExports.jsx(
                 "button",
                 {
-                  onClick: () => setSelectedTrainees([]),
-                  className: "px-3 py-1 bg-gray-600 hover:bg-gray-700 text-white rounded text-sm",
-                  children: "Deselect All"
+                  onClick: processCompletion,
+                  disabled: selectedEvents.length === 0 || selectedTrainees.length === 0 || isCompleting,
+                  className: `px-5 py-3 rounded font-semibold shrink-0 ${selectedEvents.length === 0 || selectedTrainees.length === 0 || isCompleting ? "bg-gray-700 text-gray-500 cursor-not-allowed" : "bg-green-600 hover:bg-green-700 text-white"}`,
+                  children: isCompleting ? "Completing..." : `Complete Selected (${selectedTrainees.length})`
                 }
               )
             ] })
-          ] }),
-          selectedEvents.length === 0 ? /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-yellow-300 text-sm", children: "Select at least one event first." }) : traineesForSelectedEvents.length === 0 ? /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-yellow-300 text-sm", children: "No trainees from the selected course are linked to these events." }) : /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "border border-gray-600 rounded p-2 bg-gray-700/50 max-h-72 overflow-y-auto", children: traineesForSelectedEvents.map((trainee) => /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "flex items-center gap-3 p-2 hover:bg-gray-600/30 rounded cursor-pointer", children: [
-            /* @__PURE__ */ jsxRuntimeExports.jsx(
-              "input",
-              {
-                type: "checkbox",
-                checked: selectedTrainees.includes(getTraineeSelectionKey(trainee)),
-                onChange: (event) => {
-                  const traineeKey = getTraineeSelectionKey(trainee);
-                  if (event.target.checked) {
-                    setSelectedTrainees([...selectedTrainees, traineeKey]);
-                  } else {
-                    setSelectedTrainees(selectedTrainees.filter((key) => key !== traineeKey));
-                  }
-                },
-                className: "h-4 w-4 accent-green-500 bg-gray-600 border-gray-500 rounded"
-              }
-            ),
-            /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "text-sm text-gray-200", children: [
-              trainee.rank,
-              " ",
-              trainee.name,
-              " (",
-              trainee.course,
-              ")"
-            ] })
-          ] }, getTraineeSelectionKey(trainee))) }),
-          selectedEvents.length > 0 && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mt-5 p-4 rounded border border-gray-700 bg-gray-900/60", children: [
-            /* @__PURE__ */ jsxRuntimeExports.jsx("h3", { className: "text-sm uppercase tracking-wide text-gray-400 mb-2", children: "Completion Summary" }),
-            /* @__PURE__ */ jsxRuntimeExports.jsxs("p", { className: "text-sm text-gray-200", children: [
-              selectedEvents.length,
-              " event",
-              selectedEvents.length === 1 ? "" : "s",
-              " will be completed on ",
-              formatDate(completionDate),
-              "."
-            ] }),
-            /* @__PURE__ */ jsxRuntimeExports.jsxs("p", { className: "text-sm text-gray-400 mt-1", children: [
-              "This will mark each selected trainee Individual LMP event complete and add DCO ",
-              reportName,
-              " records for the selected event set."
-            ] })
-          ] }),
-          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mt-5 flex items-center justify-between gap-4", children: [
-            /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "min-w-0 space-y-2", children: [
-              /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: `text-sm ${completionMessage.includes("failed") ? "text-yellow-300" : completionMessage.includes("Completed") ? "text-green-300" : "text-gray-300"}`, children: completionMessage }),
-              completionTrace && Number(completionTrace.failedCount || 0) > 0 && /* @__PURE__ */ jsxRuntimeExports.jsx(
-                "button",
-                {
-                  onClick: downloadCompletionTrace,
-                  className: "px-3 py-2 rounded border border-yellow-500/50 bg-yellow-500/10 text-yellow-200 hover:bg-yellow-500/20 text-sm font-semibold",
-                  children: "Download Completion Trace"
-                }
-              )
-            ] }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx(
-              "button",
-              {
-                onClick: processCompletion,
-                disabled: selectedEvents.length === 0 || selectedTrainees.length === 0 || isCompleting,
-                className: `px-5 py-3 rounded font-semibold shrink-0 ${selectedEvents.length === 0 || selectedTrainees.length === 0 || isCompleting ? "bg-gray-700 text-gray-500 cursor-not-allowed" : "bg-green-600 hover:bg-green-700 text-white"}`,
-                children: isCompleting ? "Completing..." : `Complete Selected (${selectedTrainees.length})`
-              }
-            )
           ] })
         ] })
       ] })
     ] })
-  ] }) });
+  ] });
 };
 const TrainingRecordsView = ({
   courses,
@@ -111277,6 +113353,7 @@ const TrainingRecordsView = ({
   onSaveTrainingReportAssessment,
   onPersistTrainingReportAssessment,
   onUpdateLmpItem,
+  onLoadTraineeLmp,
   locations = [],
   units = [],
   activeLocationCode = "",
@@ -111391,6 +113468,7 @@ const TrainingRecordsView = ({
           onSaveTrainingReportAssessment,
           onPersistTrainingReportAssessment,
           onUpdateLmpItem,
+          onLoadTraineeLmp,
           trainingReportTemplate,
           phraseBank
         }
@@ -122763,6 +124841,9 @@ async function generateDfpInternal(config, setProgress, publishedSchedules) {
   const buildActiveContextUnitCodes = Array.from(new Set(
     (Array.isArray(config.activeContextUnitCodes) && config.activeContextUnitCodes.length > 0 ? config.activeContextUnitCodes : String(config.activeUnitCode || "").split("+")).map((unitCode) => String(unitCode || "").trim().toUpperCase()).filter(Boolean)
   ));
+  const buildGroundEventSchedulingSettings = normaliseGroundEventSchedulingSettings(
+    config.groundEventSchedulingSettings || DEFAULT_GROUND_EVENT_SCHEDULING_SETTINGS
+  );
   const buildCrewPositionTerminology = normaliseCrewPositionTerminology(config.crewPositionTerminology || null);
   const buildAircraftCrewComposition = normaliseAircraftCrewComposition(config.aircraftCrewComposition || { crewCount: 1, seats: [{ id: "seat-1", role: "Pilot", eligibleRoles: ["Pilot"] }] });
   const getBuildAircraftCrewCompositionForEvent = (event) => getAircraftCrewCompositionForEvent(buildAircraftCrewComposition, event);
@@ -123727,6 +125808,15 @@ async function generateDfpInternal(config, setProgress, publishedSchedules) {
     noNextByCourse: {},
     scheduleLists: {},
     scheduleFlow: [],
+    groupGroundScheduling: {
+      settings: buildGroundEventSchedulingSettings,
+      candidates: [],
+      suggestions: [],
+      placements: [],
+      skips: [],
+      notes: [],
+      summary: null
+    },
     phaseTimeline: [],
     finalCleanup: null,
     remedialDataMovement: {
@@ -124049,6 +126139,14 @@ async function generateDfpInternal(config, setProgress, publishedSchedules) {
           }
         ])),
         scheduleFlow: (neoBuildDiag.scheduleFlow || []).slice(-80),
+        groupGroundScheduling: {
+          ...neoBuildDiag.groupGroundScheduling,
+          candidates: (neoBuildDiag.groupGroundScheduling?.candidates || []).slice(-220),
+          suggestions: (neoBuildDiag.groupGroundScheduling?.suggestions || []).slice(-220),
+          placements: (neoBuildDiag.groupGroundScheduling?.placements || []).slice(-220),
+          skips: (neoBuildDiag.groupGroundScheduling?.skips || []).slice(-220),
+          notes: (neoBuildDiag.groupGroundScheduling?.notes || []).slice(-80)
+        },
         phaseTimeline: (neoBuildDiag.phaseTimeline || []).slice(-220),
         dayFlightGapDiagnostics: {
           attempts: neoBuildDiag.dayFlightGapDiagnostics.attempts.slice(-500),
@@ -127312,7 +129410,7 @@ async function generateDfpInternal(config, setProgress, publishedSchedules) {
     if (eventType === "Flight") return { bucket: "flight", reason: "TYPE_FLIGHT" };
     if (isBuildCptTrainingEvent(item)) return { bucket: "cpt", reason: "CPT_TYPE_CODE_OR_DELIVERY" };
     if (eventType === "FTD") return { bucket: "ftd", reason: "TYPE_FTD" };
-    if (eventType === "Ground School") return { bucket: "ground", reason: "TYPE_GROUND_SCHOOL" };
+    if (eventType === "Ground School" || eventType === "Ground") return { bucket: "ground", reason: "TYPE_GROUND" };
     return { bucket: "none", reason: "UNSUPPORTED_EVENT_TYPE" };
   };
   const describeBuildTrainingEventForDiag = (item) => {
@@ -130216,6 +132314,404 @@ async function generateDfpInternal(config, setProgress, publishedSchedules) {
     });
     recordScheduleAttemptTiming("placed", "PLACED");
     return result;
+  };
+  const groupGroundCoveredNextKeys = /* @__PURE__ */ new Set();
+  const makeGroupGroundCoverageKey = (trainee, syllabusItem) => [
+    getBuildTraineeKey(trainee),
+    normalizeLmpEventId(syllabusItem?.code || syllabusItem?.id || syllabusItem?.masterEventId || "")
+  ].join("::");
+  const isGroupGroundCovered = (trainee, syllabusItem) => groupGroundCoveredNextKeys.has(makeGroupGroundCoverageKey(trainee, syllabusItem));
+  const parsePositiveGroupInteger = (value) => {
+    const numeric = Number(value);
+    if (!Number.isFinite(numeric) || numeric <= 0) return null;
+    return Math.max(1, Math.floor(numeric));
+  };
+  const isLmpGroupEventEnabled = (value) => {
+    if (value === true) return true;
+    const normalised = String(value || "").trim().toLowerCase();
+    return normalised === "yes" || normalised === "true" || normalised === "y";
+  };
+  const getGroupGroundEventKey = (item) => normalizeLmpEventId(item.code || item.id || item.masterEventId || item.eventDescription || "");
+  const getGroupGroundCandidateEventLabel = (item) => String(item.code || item.id || item.eventDescription || "Ground event").trim() || "Ground event";
+  const getGroupGroundEventDescription = (item) => {
+    const sortieDetails = Array.isArray(item.eventDetailsSortie) ? item.eventDetailsSortie : Array.isArray(item.eventDetails?.sortie) ? item.eventDetails.sortie : [];
+    const commonDetails = Array.isArray(item.eventDetailsCommon) ? item.eventDetailsCommon : Array.isArray(item.eventDetails?.common) ? item.eventDetails.common : [];
+    return [...sortieDetails, ...commonDetails].map((value) => String(value || "").trim()).filter(Boolean).slice(0, 5).join(", ");
+  };
+  const buildGroupGroundCandidates = (groundNextList) => {
+    const candidatesByKey = /* @__PURE__ */ new Map();
+    for (const trainee of groundNextList) {
+      const next = traineeNextEventMap.get(getBuildTraineeKey(trainee))?.next;
+      if (!next || classifyBuildTrainingEvent(next).bucket !== "ground") continue;
+      if (!isLmpGroupEventEnabled(next.groupEvent)) continue;
+      const eventType = normaliseGroundEventTypeKey(next.type);
+      const rule = getGroundEventSchedulingRuleForType(buildGroundEventSchedulingSettings, eventType);
+      if (rule.mode === "manual") {
+        if (neoBuildDiag.groupGroundScheduling.skips.length < 220) {
+          neoBuildDiag.groupGroundScheduling.skips.push({
+            reason: "SETTINGS_MANUAL",
+            trainee: trainee.fullName,
+            course: trainee.course,
+            event: next.code || next.id || null,
+            eventType
+          });
+        }
+        continue;
+      }
+      const eventKey = getGroupGroundEventKey(next);
+      if (!eventKey) continue;
+      const course = String(trainee.course || "Unassigned").trim() || "Unassigned";
+      const candidateKey = [course.toUpperCase(), eventType.toUpperCase(), eventKey].join("::");
+      if (!candidatesByKey.has(candidateKey)) {
+        const entireCourse = isLmpGroupEventEnabled(next.groupEntireCourse);
+        const attendeePool = entireCourse ? activeTrainees.filter((candidate2) => String(candidate2.course || "").trim() === course) : [];
+        candidatesByKey.set(candidateKey, {
+          key: candidateKey,
+          eventType,
+          mode: rule.mode,
+          course,
+          syllabusItem: next,
+          readyTrainees: [],
+          attendeePool,
+          minimumToSchedule: parsePositiveGroupInteger(next.minimumToSchedule) || 1,
+          groupSizeMin: parsePositiveGroupInteger(next.groupSizeMin) || 1,
+          groupSizeMax: parsePositiveGroupInteger(next.groupSizeMax),
+          entireCourse,
+          preferredWindowIds: rule.preferredWindows
+        });
+      }
+      const candidate = candidatesByKey.get(candidateKey);
+      candidate.readyTrainees.push(trainee);
+      if (!candidate.entireCourse) candidate.attendeePool.push(trainee);
+    }
+    const candidates = Array.from(candidatesByKey.values()).map((candidate) => ({
+      ...candidate,
+      readyTrainees: applyCoursePriority(candidate.readyTrainees, `ground-group-ready-${candidate.key}`),
+      attendeePool: applyCoursePriority(
+        Array.from(new Map(candidate.attendeePool.map((trainee) => [getBuildTraineeKey(trainee), trainee])).values()),
+        `ground-group-pool-${candidate.key}`
+      )
+    })).filter((candidate) => {
+      const readyCount = candidate.readyTrainees.length;
+      const meetsMinimum = readyCount >= candidate.minimumToSchedule;
+      if (!meetsMinimum) {
+        neoBuildDiag.groupGroundScheduling.skips.push({
+          reason: "BELOW_MINIMUM_TO_SCHEDULE",
+          event: getGroupGroundCandidateEventLabel(candidate.syllabusItem),
+          course: candidate.course,
+          eventType: candidate.eventType,
+          readyCount,
+          minimumToSchedule: candidate.minimumToSchedule
+        });
+      }
+      return meetsMinimum;
+    });
+    neoBuildDiag.groupGroundScheduling.candidates = candidates.slice(0, 220).map((candidate) => ({
+      key: candidate.key,
+      event: getGroupGroundCandidateEventLabel(candidate.syllabusItem),
+      eventType: candidate.eventType,
+      course: candidate.course,
+      mode: candidate.mode,
+      readyCount: candidate.readyTrainees.length,
+      attendeePoolCount: candidate.attendeePool.length,
+      minimumToSchedule: candidate.minimumToSchedule,
+      groupSizeMin: candidate.groupSizeMin,
+      groupSizeMax: candidate.groupSizeMax,
+      entireCourse: candidate.entireCourse,
+      preferredWindowIds: candidate.preferredWindowIds,
+      readySample: candidate.readyTrainees.slice(0, 12).map((trainee) => trainee.fullName)
+    }));
+    return candidates;
+  };
+  const getGroupGroundSearchWindows = (candidate) => {
+    const selected = candidate.preferredWindowIds.length > 0 ? GROUND_EVENT_SCHEDULING_WINDOWS.filter((windowOption) => candidate.preferredWindowIds.includes(windowOption.id)) : [];
+    const baseWindows = selected.length > 0 ? selected : [{ id: "any", label: "Any valid time", start: flyingStartTime, end: flyingEndTime }];
+    return baseWindows.map((windowOption) => ({
+      id: windowOption.id,
+      label: windowOption.label,
+      start: Math.max(flyingStartTime, windowOption.start),
+      end: Math.min(flyingEndTime, windowOption.end)
+    })).filter((windowOption) => windowOption.end > windowOption.start);
+  };
+  const getAvailableGroupGroundAttendees = (candidate, startTime, duration) => {
+    const proposedBookingWindow = {
+      start: startTime - (candidate.syllabusItem.preFlightTime || 0),
+      end: startTime + duration + (candidate.syllabusItem.postFlightTime || 0)
+    };
+    const rejectionSamples = [];
+    const available = candidate.attendeePool.filter((trainee) => {
+      const traineeKey = getBuildTraineeKey(trainee);
+      const counts = getOrCreateEventCounts(traineeKey);
+      const reject = (reason, details) => {
+        if (rejectionSamples.length < 10) {
+          rejectionSamples.push({
+            trainee: trainee.fullName,
+            traineeIdentityKey: traineeKey,
+            reason,
+            ...details || {}
+          });
+        }
+        return false;
+      };
+      if (isPersonStaticallyUnavailable(trainee, proposedBookingWindow.start, proposedBookingWindow.end, buildDate, "ground")) {
+        return reject("TRAINEE_STATICALLY_UNAVAILABLE");
+      }
+      if (!canAssignTraineeForScheduledWindow(trainee, startTime)) {
+        return reject("TRAINEE_DAY_NIGHT_SEPARATION");
+      }
+      if (counts.ground >= 2) {
+        return reject("TRAINEE_GROUND_LIMIT", { ground: counts.ground, limit: 2 });
+      }
+      if (counts.flightFtd + counts.ground + counts.cpt >= eventLimits.trainee.maxTotal) {
+        return reject("TRAINEE_TOTAL_LIMIT", {
+          flightFtd: counts.flightFtd,
+          ground: counts.ground,
+          cpt: counts.cpt,
+          limit: eventLimits.trainee.maxTotal
+        });
+      }
+      const overlappingEvent = getGeneratedEventsForPersonRecord(trainee, "trainee").find((existing) => {
+        if (!eventHasNeoBuildPersonIdentity(existing, trainee, "trainee")) return false;
+        const existingBookingWindow = getEventBookingWindowForAlgo(existing, syllabusDetails);
+        return proposedBookingWindow.start < existingBookingWindow.end && proposedBookingWindow.end > existingBookingWindow.start;
+      });
+      if (overlappingEvent) {
+        return reject("TRAINEE_TIME_OVERLAP", {
+          conflictingEvent: overlappingEvent.flightNumber,
+          conflictingStartTime: overlappingEvent.startTime,
+          conflictingDisplayTime: _fmtT(overlappingEvent.startTime),
+          conflictingResourceId: overlappingEvent.resourceId
+        });
+      }
+      return true;
+    });
+    const attendeeLimit = candidate.entireCourse ? null : candidate.groupSizeMax;
+    const capped = attendeeLimit ? available.slice(0, attendeeLimit) : available;
+    return { attendees: capped, rejectionSamples };
+  };
+  const confirmSuggestedGroupGroundCandidate = async (candidate, suggestionIndex, suggestionTotal) => {
+    const eventLabel = getGroupGroundCandidateEventLabel(candidate.syllabusItem);
+    const details = getGroupGroundEventDescription(candidate.syllabusItem);
+    neoBuildDiag.groupGroundScheduling.suggestions.push({
+      event: eventLabel,
+      course: candidate.course,
+      eventType: candidate.eventType,
+      suggestionIndex,
+      suggestionTotal,
+      readyCount: candidate.readyTrainees.length,
+      attendeePoolCount: candidate.attendeePool.length,
+      mode: candidate.mode
+    });
+    if (typeof window === "undefined" || typeof window.confirm !== "function") return true;
+    await recordProgress({
+      message: `Ground event suggestion ${suggestionIndex}/${suggestionTotal}: ${eventLabel}`,
+      percentage: 75,
+      generatedEvents: generatedEvents.length
+    });
+    return window.confirm(
+      `Ground event suggestion ${suggestionIndex} of ${suggestionTotal}
+
+Schedule ${eventLabel} for ${candidate.course}?
+Ready trainees: ${candidate.readyTrainees.length}
+Available pool: ${candidate.attendeePool.length}${candidate.entireCourse ? " (entire course, unavailable trainees excluded)" : ""}
+Preferred windows: ${candidate.preferredWindowIds.length ? candidate.preferredWindowIds.join(", ") : "Any valid time"}
+${details ? `
+Details: ${details}
+` : ""}
+Press OK to Accept or Cancel to Skip.`
+    );
+  };
+  const tryPlaceGroupGroundCandidate = async (candidate, candidateIndex, candidateTotal) => {
+    const eventLabel = getGroupGroundCandidateEventLabel(candidate.syllabusItem);
+    if (candidate.mode === "suggest") {
+      const accepted = await confirmSuggestedGroupGroundCandidate(candidate, candidateIndex, candidateTotal);
+      if (!accepted) {
+        const note2 = `Skipped suggested group ground event ${eventLabel} for ${candidate.course}.`;
+        neoBuildDiag.groupGroundScheduling.notes.push(note2);
+        neoBuildDiag.groupGroundScheduling.skips.push({
+          reason: "USER_SKIPPED_SUGGESTION",
+          event: eventLabel,
+          course: candidate.course,
+          eventType: candidate.eventType
+        });
+        return false;
+      }
+    }
+    const duration = getScheduledEventDuration(candidate.syllabusItem, "ground", candidate.readyTrainees[0] || candidate.attendeePool[0]);
+    const durationSource = getScheduledEventDurationSource(candidate.syllabusItem, "ground", candidate.readyTrainees[0] || candidate.attendeePool[0]);
+    const searchWindows = getGroupGroundSearchWindows(candidate);
+    const timeIncrement = getDispatchSearchStepHours("ground");
+    let firstRejection = null;
+    let attempts = 0;
+    for (const searchWindow of searchWindows) {
+      const earliestEventStart = searchWindow.start + (candidate.syllabusItem.preFlightTime || 0);
+      const latestEventStart = searchWindow.end - duration - (candidate.syllabusItem.postFlightTime || 0);
+      if (latestEventStart < earliestEventStart - 1e-3) {
+        firstRejection = firstRejection || {
+          reason: "NO_SEARCH_WINDOW",
+          searchWindow,
+          earliestEventStart,
+          latestEventStart
+        };
+        continue;
+      }
+      for (let time = earliestEventStart; time <= latestEventStart + 1e-3; time += timeIncrement) {
+        attempts++;
+        if (attempts % 60 === 0) {
+          await recordLiveBuildProgress({
+            message: `Trying group ground event ${candidateIndex}/${candidateTotal}: ${eventLabel}`,
+            percentage: 75,
+            generatedEvents: generatedEvents.length
+          }, 350);
+        }
+        const { attendees, rejectionSamples } = getAvailableGroupGroundAttendees(candidate, time, duration);
+        if (attendees.length < candidate.groupSizeMin) {
+          firstRejection = firstRejection || {
+            reason: "GROUP_SIZE_MIN_NOT_MET",
+            displayTime: _fmtT(time),
+            availableCount: attendees.length,
+            groupSizeMin: candidate.groupSizeMin,
+            rejectionSamples
+          };
+          continue;
+        }
+        const attendeeKeys = new Set(attendees.map(getBuildTraineeKey));
+        const leadCandidates = candidate.readyTrainees.filter((trainee) => attendeeKeys.has(getBuildTraineeKey(trainee)));
+        if (leadCandidates.length === 0) {
+          firstRejection = firstRejection || {
+            reason: "NO_READY_TRAINEE_AVAILABLE_AS_LEAD",
+            displayTime: _fmtT(time),
+            availableCount: attendees.length,
+            rejectionSamples
+          };
+          continue;
+        }
+        for (const leadTrainee of leadCandidates) {
+          let leadScheduleRejection = null;
+          const result = scheduleEvent(leadTrainee, candidate.syllabusItem, time, "ground", false, false, false, false, {
+            enforcePersonnelTurnaround: true,
+            diagnosticListName: "GROUP GROUND Next",
+            diagnosticTrace: (traceEntry) => {
+              if (traceEntry?.outcome === "rejected" && !leadScheduleRejection) {
+                leadScheduleRejection = traceEntry;
+              }
+            }
+          });
+          if (!(result && typeof result === "object" && "id" in result)) {
+            firstRejection = firstRejection || {
+              reason: leadScheduleRejection?.reason || "SCHEDULE_EVENT_REJECTED",
+              displayTime: _fmtT(time),
+              leadTrainee: leadTrainee.fullName,
+              details: leadScheduleRejection?.details || null
+            };
+            continue;
+          }
+          const attendeeRefs = attendees.map((trainee) => makeNeoBuildSchedulePersonnelRef(trainee, "attendee", "trainee")).filter(Boolean);
+          const staffRefs = getNeoBuildDiagnosticPersonnelRefs(result).filter((ref) => ref.personType === "staff");
+          const groupEvent = {
+            ...result,
+            student: "",
+            attendees: attendees.map((trainee) => trainee.fullName),
+            group: `${candidate.course} ${eventLabel}`,
+            groupTraineeIds: attendees.map((trainee) => trainee.idNumber).filter((idNumber) => typeof idNumber === "number"),
+            personnelRefs: [...staffRefs, ...attendeeRefs],
+            _neoBuildTraineeIdentity: void 0,
+            _neoBuildTraineePersonnelRef: void 0,
+            _source: "generated-group-ground",
+            _isNext: true,
+            _traineeName: attendees.map((trainee) => trainee.fullName).join(", "),
+            _groupGroundEvent: true,
+            _groupGroundCourse: candidate.course,
+            _groupGroundReadyCount: candidate.readyTrainees.length,
+            _groupGroundAttendeeCount: attendees.length
+          };
+          pushGeneratedEvent(groupEvent);
+          attendees.forEach((trainee) => {
+            const counts = getOrCreateEventCounts(getBuildTraineeKey(trainee));
+            counts.ground++;
+          });
+          if (result.instructor) {
+            const ipCounts = getOrCreateEventCounts(result.instructor);
+            ipCounts.ground++;
+          }
+          candidate.readyTrainees.forEach((trainee) => {
+            if (attendeeKeys.has(getBuildTraineeKey(trainee))) {
+              groupGroundCoveredNextKeys.add(makeGroupGroundCoverageKey(trainee, candidate.syllabusItem));
+            }
+          });
+          neoBuildDiag.groupGroundScheduling.placements.push({
+            event: eventLabel,
+            course: candidate.course,
+            eventType: candidate.eventType,
+            mode: candidate.mode,
+            startTime: result.startTime,
+            displayTime: _fmtT(result.startTime),
+            duration,
+            durationSource,
+            resourceId: result.resourceId,
+            instructor: result.instructor || null,
+            attendeeCount: attendees.length,
+            readyCount: candidate.readyTrainees.length,
+            entireCourse: candidate.entireCourse,
+            preferredWindowIds: candidate.preferredWindowIds,
+            attendees: attendees.slice(0, 40).map((trainee) => trainee.fullName)
+          });
+          return true;
+        }
+      }
+    }
+    const note = `Could not place group ground event ${eventLabel} for ${candidate.course}. ${firstRejection?.reason ? `Reason: ${firstRejection.reason}.` : "No valid slot was found."}`;
+    neoBuildDiag.groupGroundScheduling.notes.push(note);
+    neoBuildDiag.groupGroundScheduling.skips.push({
+      reason: "NO_VALID_GROUP_PLACEMENT",
+      event: eventLabel,
+      course: candidate.course,
+      eventType: candidate.eventType,
+      attempts,
+      firstRejection
+    });
+    return false;
+  };
+  const scheduleGroupGroundNextEvents = async (groundNextList) => {
+    const candidates = buildGroupGroundCandidates(groundNextList);
+    if (candidates.length === 0) {
+      neoBuildDiag.groupGroundScheduling.summary = {
+        candidates: 0,
+        placements: 0,
+        coveredNextEvents: 0,
+        notes: neoBuildDiag.groupGroundScheduling.notes.length
+      };
+      return groundNextList;
+    }
+    await recordProgress({
+      message: `Reviewing group ground events (0/${candidates.length})...`,
+      percentage: 75,
+      generatedEvents: generatedEvents.length
+    });
+    for (let index = 0; index < candidates.length; index++) {
+      await recordLiveBuildProgress({
+        message: `Reviewing group ground events (${index + 1}/${candidates.length})...`,
+        percentage: 75,
+        generatedEvents: generatedEvents.length
+      }, 250);
+      await tryPlaceGroupGroundCandidate(candidates[index], index + 1, candidates.length);
+    }
+    const remaining = groundNextList.filter((trainee) => {
+      const next = traineeNextEventMap.get(getBuildTraineeKey(trainee))?.next;
+      return !isGroupGroundCovered(trainee, next);
+    });
+    neoBuildDiag.groupGroundScheduling.summary = {
+      candidates: candidates.length,
+      placements: neoBuildDiag.groupGroundScheduling.placements.length,
+      coveredNextEvents: groupGroundCoveredNextKeys.size,
+      remainingIndividualGroundNext: remaining.length,
+      notes: neoBuildDiag.groupGroundScheduling.notes.length
+    };
+    if (typeof window !== "undefined") {
+      window.__lastNeoBuildGroupGroundNotes = neoBuildDiag.groupGroundScheduling.notes || [];
+    }
+    saveNeoBuildDiag("group-ground-scheduling");
+    return remaining;
   };
   let nightDutySup = null;
   let dutySupEligible = [];
@@ -135044,9 +137540,13 @@ async function generateDfpInternal(config, setProgress, publishedSchedules) {
       false
     );
     await recordProgress({ message: "Scheduling Ground Events (Priority)...", percentage: 74 });
+    await recordProgress({ message: "Scheduling Group Ground Events...", percentage: 75 });
+    const groundNextAfterGroupScheduling = await scheduleGroupGroundNextEvents(
+      applyCoursePriority(filterOutBnfTrainees(nextEventLists.ground), "ground-group-next")
+    );
     await recordProgress({ message: "Scheduling Ground Events (Next)...", percentage: 76 });
     await scheduleList(
-      applyCoursePriority(filterOutBnfTrainees(nextEventLists.ground), "ground-next"),
+      applyCoursePriority(groundNextAfterGroupScheduling, "ground-next"),
       "ground",
       false,
       flyingStartTime,
@@ -139420,7 +141920,7 @@ const App = () => {
   const hasIncompleteInitialSetupWizardProgress = !hasInitialSetupWizardCompleted && (hasPersistedIncompleteInitialSetupWizardProgress || hasStoredInitialSetupWizardProgress());
   const shouldResumeInitialSetupWizard = hasPersistedIncompleteInitialSetupWizardProgress || !hasOperationalSetupReadyForDfp && hasStoredIncompleteInitialSetupWizardProgress;
   const canBootstrapInitialSetupFromDfp = hasAuthenticatedAdminRole && platformConfigLoaded && (operationalContextOptions.length === 0 || shouldResumeInitialSetupWizard);
-  const showInitialSetupBlankState = canBootstrapInitialSetupFromDfp && !hasInitialSetupWizardCompleted;
+  const showInitialSetupBlankState = canBootstrapInitialSetupFromDfp && !hasInitialSetupWizardCompleted && !hasOperationalSetupReadyForDfp;
   reactExports.useEffect(() => {
     if (!platformConfigLoaded) return;
     pushDfpDataDiag("startup:initial-setup-bootstrap-decision", {
@@ -139668,6 +142168,229 @@ const App = () => {
       return false;
     }
   }
+  function readDfpDataDiagEntries() {
+    try {
+      const stored = JSON.parse(localStorage.getItem("neo_dfp_data_diag") || "[]");
+      return Array.isArray(stored) ? stored : [];
+    } catch {
+      return [];
+    }
+  }
+  function readStaffScheduleRenderDiagEntries() {
+    try {
+      const stored = JSON.parse(localStorage.getItem("neo_staff_schedule_render_diag") || "[]");
+      return Array.isArray(stored) ? stored : [];
+    } catch {
+      return [];
+    }
+  }
+  const rosterColourTraceRef = reactExports.useRef(null);
+  function buildDfpDataDiagReport() {
+    const entries = readDfpDataDiagEntries();
+    const staffScheduleRenderTrace = readStaffScheduleRenderDiagEntries();
+    const snapshotKey = getDailySnapshotKey(date);
+    const cacheSummaries = (() => {
+      try {
+        return Object.keys(localStorage).filter((key) => key.startsWith("dfp_snapshot_cache_")).sort().map((key) => {
+          const rawValue = localStorage.getItem(key) || "";
+          let parsed = null;
+          try {
+            parsed = JSON.parse(rawValue);
+          } catch {
+            parsed = null;
+          }
+          const scheduleEvents = Array.isArray(parsed?.scheduleEvents) ? parsed.scheduleEvents : [];
+          const baselineEvents = Array.isArray(parsed?.baselineEvents) ? parsed.baselineEvents : [];
+          return {
+            key,
+            byteLength: rawValue.length,
+            snapshotDate: getDailySnapshotDate(key.replace(/^dfp_snapshot_cache_/, "")),
+            payloadDate: parsed?.date || null,
+            scheduleEventCount: scheduleEvents.length,
+            baselineEventCount: baselineEvents.length,
+            sampleEvents: scheduleEvents.slice(0, 8).map((event) => ({
+              id: event?.id || null,
+              date: event?.date || null,
+              type: event?.type || null,
+              resourceId: event?.resourceId || null,
+              flightNumber: event?.flightNumber || null,
+              startTime: event?.startTime ?? null,
+              duration: event?.duration ?? null
+            }))
+          };
+        });
+      } catch (error) {
+        return [{ error: String(error) }];
+      }
+    })();
+    const enrichedEntries = entries.map((entry, index) => {
+      const previous = index > 0 ? entries[index - 1] : null;
+      const entryPerfMs = typeof entry?.perfMs === "number" ? entry.perfMs : null;
+      const previousPerfMs = typeof previous?.perfMs === "number" ? previous.perfMs : null;
+      return {
+        index,
+        sincePreviousMs: entryPerfMs !== null && previousPerfMs !== null ? entryPerfMs - previousPerfMs : null,
+        ...entry
+      };
+    });
+    const slowestGaps = enrichedEntries.filter((entry) => typeof entry.sincePreviousMs === "number").sort((left, right) => (right.sincePreviousMs || 0) - (left.sincePreviousMs || 0)).slice(0, 20).map((entry) => ({
+      index: entry.index,
+      stage: entry.stage,
+      sincePreviousMs: entry.sincePreviousMs,
+      perfMs: entry.perfMs,
+      ts: entry.ts,
+      date: entry.date,
+      school: entry.school,
+      unit: entry.unit,
+      details: entry.details
+    }));
+    const stages = enrichedEntries.reduce((acc, entry) => {
+      const stage = String(entry.stage || "unknown");
+      acc[stage] = (acc[stage] || 0) + 1;
+      return acc;
+    }, {});
+    return {
+      reportType: "DFP-NEO data diagnostics",
+      generatedAt: (/* @__PURE__ */ new Date()).toISOString(),
+      url: window.location.href,
+      userAgent: navigator.userAgent,
+      activeContext: {
+        date,
+        school,
+        unit: activeUnitCode,
+        activeView,
+        setupTestProfile: setupTestProfile || null,
+        isInitialSetupWizardActive,
+        isAuthenticated,
+        snapshotKey,
+        snapshotLoadState: dfpSnapshotLoadState
+      },
+      authenticatedUser: {
+        authUser: authUser ? {
+          id: authUser.id || null,
+          userId: authUser.userId || null,
+          username: authUser.username || null,
+          displayName: authUser.displayName || null,
+          firstName: authUser.firstName || null,
+          lastName: authUser.lastName || null,
+          role: authUser.role || null,
+          email: authUser.email || null
+        } : null,
+        sessionUser,
+        currentUserName,
+        currentUserPermission,
+        combinedPermissions,
+        matchedCurrentStaffUser: matchedCurrentStaffUser ? {
+          id: matchedCurrentStaffUser.id || null,
+          idNumber: matchedCurrentStaffUser.idNumber || null,
+          name: matchedCurrentStaffUser.name || null,
+          rank: matchedCurrentStaffUser.rank || null,
+          role: matchedCurrentStaffUser.role || null,
+          unit: matchedCurrentStaffUser.unit || null,
+          permissions: matchedCurrentStaffUser.permissions || []
+        } : null
+      },
+      dataScope: {
+        hasRuntimePlatformWideAccess,
+        platformAccessContext,
+        platformDataScopeQuery,
+        activeContextUnitCodes,
+        activeUnitContext,
+        baseSelectableLocationCodes,
+        selectableLocationCodes,
+        operationalContextOptions
+      },
+      loadedDataCounts: {
+        allInstructors: allInstructorsData.length,
+        scopedInstructors: instructorsData.length,
+        archivedInstructors: archivedInstructorsData.length,
+        allTrainees: allTraineesData.length,
+        scopedTrainees: traineesData.length,
+        archivedTrainees: archivedTraineesData.length
+      },
+      operationalVisibility: window.__dfpOperationalVisibilityTrace || null,
+      rosterColourTrace: rosterColourTraceRef.current,
+      platformConfigSummary: {
+        organisationCount: platformConfig?.organisations?.length || 0,
+        locationCount: platformConfig?.locations?.length || 0,
+        unitCount: platformConfig?.units?.length || 0,
+        resourcePoolCount: platformConfig?.resourcePools?.length || 0,
+        aircraftTypeCount: platformConfig?.aircraftTypes?.length || 0,
+        locations: (platformConfig?.locations || []).map((location) => ({
+          code: location?.code || null,
+          name: location?.name || null,
+          status: location?.status || null,
+          unitCodes: location?.settings?.unitCodes || location?.unitCodes || []
+        })).slice(0, 80),
+        units: (platformConfig?.units || []).map((unit) => ({
+          code: unit?.code || null,
+          name: unit?.name || null,
+          status: unit?.status || null,
+          locationCode: unit?.locationCode || null
+        })).slice(0, 120),
+        resourcePools: (platformConfig?.resourcePools || []).map((pool) => ({
+          code: pool?.code || null,
+          name: pool?.name || null,
+          status: pool?.status || null,
+          locationCode: pool?.locationCode || null,
+          unitCode: pool?.unitCode || null,
+          aircraftTypeCode: pool?.aircraftTypeCode || null,
+          settings: pool?.settings || null
+        })).slice(0, 80)
+      },
+      lmpSummary: {
+        count: syllabusDetails.length,
+        names: syllabusDetails.slice(0, 80).map((lmp) => ({
+          id: lmp?.id || null,
+          name: lmp?.name || lmp?.courseName || lmp?.title || null,
+          code: lmp?.code || lmp?.courseCode || null,
+          unit: lmp?.unit || lmp?.unitCode || null,
+          location: lmp?.location || lmp?.locationCode || null,
+          eventCount: Array.isArray(lmp?.events) ? lmp.events.length : Array.isArray(lmp?.syllabus) ? lmp.syllabus.length : null
+        }))
+      },
+      currentScheduleState: {
+        activeDate: date,
+        activeSnapshotKey: snapshotKey,
+        rawPublishedEventCount: Array.isArray(publishedSchedules[date]) ? publishedSchedules[date].length : 0,
+        scopedPublishedEventCount: scopedPublishedEventsForDate.length,
+        renderedSegmentCount: eventSegmentsForDate.length,
+        baselineCount: Array.isArray(baselineSchedules[activeBaselineKey]) ? baselineSchedules[activeBaselineKey].length : 0,
+        publishedScheduleKeys: Object.keys(publishedSchedules).slice(0, 120),
+        snapshotDates: snapshotDates.slice(0, 120),
+        knownSnapshotKeysForDate: snapshotKeysByDateRef.current[date] || [],
+        loadedSnapshotKeys: Array.from(loadedSnapshotDates.current),
+        loadingSnapshotKeys: Array.from(loadingSnapshotDates.current)
+      },
+      localSnapshotCache: cacheSummaries,
+      summary: {
+        entryCount: enrichedEntries.length,
+        firstEntry: enrichedEntries[0] || null,
+        lastEntry: enrichedEntries[enrichedEntries.length - 1] || null,
+        slowestGaps,
+        stages,
+        staffScheduleRenderTraceCount: staffScheduleRenderTrace.length,
+        latestStaffScheduleStackedGroups: staffScheduleRenderTrace.at(-1)?.stackedGroups || []
+      },
+      entries: enrichedEntries,
+      staffScheduleRenderTrace
+    };
+  }
+  function downloadDfpDataDiagReport(label = "dfp-data-trace") {
+    const report = buildDfpDataDiagReport();
+    const blob = new Blob([JSON.stringify(report, null, 2)], { type: "application/json" });
+    const url = URL.createObjectURL(blob);
+    const safeUnit = String(activeUnitCode || "unit").replace(/[^A-Za-z0-9+-]+/g, "-").replace(/^-|-$/g, "") || "unit";
+    const safeDate = String(date || "no-date").replace(/[^0-9-]/g, "") || "no-date";
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = `${label}-${safeUnit}-${safeDate}-${(/* @__PURE__ */ new Date()).toISOString().replace(/[:.]/g, "-")}.json`;
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    URL.revokeObjectURL(url);
+    setShowInfoNotification("DFP data trace downloaded.");
+  }
   reactExports.useEffect(() => {
     pushDfpDataDiag("context:resolved", {
       platformLocations: (platformConfig?.locations || []).map((location) => ({
@@ -139706,7 +142429,7 @@ const App = () => {
     if (!platformConfigLoaded || selectableLocationCodes.length === 0) return;
     if (selectableLocationCodes.includes(school)) return;
     const hasInitialSetupWizardProgress2 = hasStoredInitialSetupWizardProgress();
-    const shouldSuppressAutoLocationSwitch = showInitialSetupBlankState || isInitialSetupWizardActive || hasIncompleteInitialSetupWizardProgress || hasInitialSetupWizardProgress2 && !hasOperationalSetupReadyForDfp;
+    const shouldSuppressAutoLocationSwitch = showInitialSetupBlankState || isInitialSetupWizardActive || (hasIncompleteInitialSetupWizardProgress || hasInitialSetupWizardProgress2) && !hasOperationalSetupReadyForDfp;
     if (shouldSuppressAutoLocationSwitch) {
       pushDfpDataDiag("context:auto-location-switch-suppressed-for-initial-setup", {
         school,
@@ -139715,7 +142438,7 @@ const App = () => {
         isInitialSetupWizardActive,
         hasInitialSetupWizardProgress: hasInitialSetupWizardProgress2,
         hasOperationalSetupReadyForDfp,
-        reason: showInitialSetupBlankState ? "setup-wizard-bootstrap-active" : isInitialSetupWizardActive ? "setup-wizard-open" : hasIncompleteInitialSetupWizardProgress ? "incomplete-setup-wizard-progress" : "stored-wizard-progress-and-operational-setup-not-ready"
+        reason: showInitialSetupBlankState ? "setup-wizard-bootstrap-active" : isInitialSetupWizardActive ? "setup-wizard-open" : hasIncompleteInitialSetupWizardProgress && !hasOperationalSetupReadyForDfp ? "incomplete-setup-wizard-progress" : "stored-wizard-progress-and-operational-setup-not-ready"
       });
       return;
     }
@@ -142239,6 +144962,76 @@ const App = () => {
       void persistPlatformConfigNow(nextConfig, "debounced-platform-config");
     }, 900);
   }, [persistPlatformConfigNow]);
+  const handleDeleteMasterLmpCatalogueEntry = reactExports.useCallback(async (lmpCode) => {
+    const targetCode = String(lmpCode || "").trim().toUpperCase();
+    if (!targetCode || !platformConfig) return;
+    const nextConfig = {
+      ...platformConfig,
+      organisations: (platformConfig.organisations || []).map((organisation, index) => {
+        const isActiveOrganisation = String(organisation.status || "ACTIVE").toUpperCase() === "ACTIVE";
+        const isTargetOrganisation = isActiveOrganisation || index === 0;
+        if (!isTargetOrganisation) return organisation;
+        const settings = organisation.settings || {};
+        const currentCatalogue = Array.isArray(settings.masterLmpCatalogue) ? settings.masterLmpCatalogue : [];
+        const currentAccess = Array.isArray(settings.masterLmpAccess) ? settings.masterLmpAccess : [];
+        return {
+          ...organisation,
+          settings: {
+            ...settings,
+            masterLmpCatalogue: currentCatalogue.filter((entry) => String(entry?.code || "").trim().toUpperCase() !== targetCode),
+            masterLmpAccess: currentAccess.filter((rule) => String(rule?.lmpCode || "").trim().toUpperCase() !== targetCode)
+          }
+        };
+      })
+    };
+    setPlatformConfig(nextConfig);
+    window.dispatchEvent(new CustomEvent(PLATFORM_CONFIG_UPDATED_EVENT, { detail: { config: nextConfig } }));
+  }, [platformConfig]);
+  const handleUpsertMasterLmpCatalogueEntry = reactExports.useCallback(async (entry) => {
+    const targetCode = String(entry.code || "").trim().toUpperCase();
+    if (!targetCode || !platformConfig) return;
+    const nextConfig = {
+      ...platformConfig,
+      organisations: (platformConfig.organisations || []).map((organisation, index) => {
+        const isActiveOrganisation = String(organisation.status || "ACTIVE").toUpperCase() === "ACTIVE";
+        const isTargetOrganisation = isActiveOrganisation || index === 0;
+        if (!isTargetOrganisation) return organisation;
+        const settings = organisation.settings || {};
+        const currentCatalogue = Array.isArray(settings.masterLmpCatalogue) ? settings.masterLmpCatalogue : [];
+        const currentAccess = Array.isArray(settings.masterLmpAccess) ? settings.masterLmpAccess : [];
+        const nextCatalogueEntry = {
+          id: currentCatalogue.find((item) => String(item?.code || "").trim().toUpperCase() === targetCode)?.id || `master-lmp-catalogue-${targetCode.toLowerCase().replace(/[^a-z0-9]+/g, "-")}`,
+          code: targetCode,
+          name: String(entry.name || targetCode).trim() || targetCode,
+          description: currentCatalogue.find((item) => String(item?.code || "").trim().toUpperCase() === targetCode)?.description || "",
+          audience: entry.audience || "trainee",
+          status: "ACTIVE",
+          version: entry.version || currentCatalogue.find((item) => String(item?.code || "").trim().toUpperCase() === targetCode)?.version || "1.0"
+        };
+        const hasAccessRule = currentAccess.some((rule) => String(rule?.lmpCode || "").trim().toUpperCase() === targetCode && String(rule?.unitCode || "").trim().toUpperCase() === String(activeUnitCode || "").trim().toUpperCase() && String(rule?.locationCode || "").trim().toUpperCase() === String(school || "").trim().toUpperCase());
+        const accessRule = {
+          id: `master-lmp-access-${targetCode.toLowerCase().replace(/[^a-z0-9]+/g, "-")}-${String(activeUnitCode || "unit").toLowerCase().replace(/[^a-z0-9]+/g, "-")}`,
+          lmpCode: targetCode,
+          locationCode: school || null,
+          unitCode: activeUnitCode || null,
+          operationalModel: activeOperationalModel,
+          accessLevel: "Manage",
+          status: "ACTIVE"
+        };
+        return {
+          ...organisation,
+          settings: {
+            ...settings,
+            masterLmpCatalogue: currentCatalogue.some((item) => String(item?.code || "").trim().toUpperCase() === targetCode) ? currentCatalogue.map((item) => String(item?.code || "").trim().toUpperCase() === targetCode ? { ...item, ...nextCatalogueEntry } : item) : [...currentCatalogue, nextCatalogueEntry],
+            masterLmpAccess: hasAccessRule ? currentAccess : [...currentAccess, accessRule]
+          }
+        };
+      })
+    };
+    setPlatformConfig(nextConfig);
+    window.dispatchEvent(new CustomEvent(PLATFORM_CONFIG_UPDATED_EVENT, { detail: { config: nextConfig } }));
+    await persistPlatformConfigNow(nextConfig, "master-lmp-upload-catalogue-upsert");
+  }, [activeOperationalModel, activeUnitCode, persistPlatformConfigNow, platformConfig, school]);
   const handleUpdatePlatformConfigFromSchedule = reactExports.useCallback((updater) => {
     setPlatformConfig((prev) => {
       if (!prev) return prev;
@@ -142757,6 +145550,7 @@ const App = () => {
   const [maxDispatchPerHour, setMaxDispatchPerHour] = reactExports.useState(8);
   const [dispatchRateWindowMinutes, setDispatchRateWindowMinutes] = reactExports.useState(DEFAULT_DISPATCH_RATE_WINDOW_MINUTES);
   const [dispatchStaggerSettings, setDispatchStaggerSettings] = reactExports.useState(DEFAULT_DISPATCH_STAGGER_SETTINGS);
+  const [groundEventSchedulingSettings, setGroundEventSchedulingSettings] = reactExports.useState(DEFAULT_GROUND_EVENT_SCHEDULING_SETTINGS);
   const [flightTurnaround, setFlightTurnaround] = reactExports.useState(1.2);
   const [ftdTurnaround, setFtdTurnaround] = reactExports.useState(0.5);
   const [cptTurnaround, setCptTurnaround] = reactExports.useState(0.5);
@@ -143702,6 +146496,9 @@ ${"=".repeat(60)}`);
         if (saved.maxDispatchPerHour != null) setMaxDispatchPerHour(saved.maxDispatchPerHour);
         if (saved.dispatchRateWindowMinutes != null) setDispatchRateWindowMinutes(normaliseDispatchRateWindowMinutes(saved.dispatchRateWindowMinutes));
         if (saved.dispatchStaggerSettings) setDispatchStaggerSettings(normaliseDispatchStaggerSettings(saved.dispatchStaggerSettings));
+        if (saved.groundEventSchedulingSettings) {
+          setGroundEventSchedulingSettings(normaliseGroundEventSchedulingSettings(saved.groundEventSchedulingSettings));
+        }
         if (saved.flightTurnaround != null) setFlightTurnaround(saved.flightTurnaround);
         if (saved.ftdTurnaround != null) setFtdTurnaround(saved.ftdTurnaround);
         if (saved.cptTurnaround != null) setCptTurnaround(saved.cptTurnaround);
@@ -143891,6 +146688,7 @@ ${"=".repeat(60)}`);
       maxDispatchPerHour,
       dispatchRateWindowMinutes,
       dispatchStaggerSettings,
+      groundEventSchedulingSettings,
       flightTurnaround,
       ftdTurnaround,
       cptTurnaround,
@@ -143948,6 +146746,7 @@ ${"=".repeat(60)}`);
     maxDispatchPerHour,
     dispatchStaggerSettings,
     dispatchRateWindowMinutes,
+    groundEventSchedulingSettings,
     flightTurnaround,
     ftdTurnaround,
     cptTurnaround,
@@ -143997,7 +146796,7 @@ ${"=".repeat(60)}`);
   const onDiscardRef = reactExports.useRef(() => {
   });
   const buildResources = reactExports.useMemo(() => {
-    if (!hasInitialSetupWizardCompleted && (Boolean(setupTestProfile) || isInitialSetupWizardActive || showInitialSetupBlankState || hasIncompleteInitialSetupWizardProgress)) {
+    if (!hasInitialSetupWizardCompleted && !hasOperationalSetupReadyForDfp && (Boolean(setupTestProfile) || isInitialSetupWizardActive || showInitialSetupBlankState || hasIncompleteInitialSetupWizardProgress)) {
       return [];
     }
     if (setupTestProfile && !activePlatformResourcePool) {
@@ -144141,6 +146940,181 @@ ${"=".repeat(60)}`);
     showInitialSetupBlankState,
     syllabusDetails.length,
     traineesData.length
+  ]);
+  const lastOperationalVisibilityTraceKeyRef = reactExports.useRef("");
+  reactExports.useEffect(() => {
+    const activeStaffRecords = allInstructorsData.filter(isRecordActive);
+    const locationMatchedStaff = activeStaffRecords.filter(personMatchesActiveLocation);
+    const unitMatchedStaff = activeContextUnitCodeSet.size > 0 ? locationMatchedStaff.filter((staff) => {
+      const unitCode = normalisePersonnelUnitCode(staff?.unit);
+      return !unitCode || activeContextUnitCodeSet.has(unitCode);
+    }) : locationMatchedStaff;
+    const locationMatchedTrainees = allTraineesData.filter(personMatchesActiveLocation);
+    const unitMatchedTrainees = activeContextUnitCodeSet.size > 0 ? locationMatchedTrainees.filter((trainee) => {
+      const unitCode = normalisePersonnelUnitCode(trainee?.unit);
+      return !unitCode || activeContextUnitCodeSet.has(unitCode);
+    }) : locationMatchedTrainees;
+    const resourceSuppressedBySetup = !hasInitialSetupWizardCompleted && !hasOperationalSetupReadyForDfp && (Boolean(setupTestProfile) || isInitialSetupWizardActive || showInitialSetupBlankState || hasIncompleteInitialSetupWizardProgress);
+    const trace = {
+      generatedAt: (/* @__PURE__ */ new Date()).toISOString(),
+      activeContext: {
+        location: school,
+        unit: activeUnitCode,
+        activeView,
+        date
+      },
+      setupState: {
+        showInitialSetupBlankState,
+        hasInitialSetupWizardCompleted,
+        hasIncompleteInitialSetupWizardProgress,
+        isInitialSetupWizardActive,
+        shouldResumeInitialSetupWizard,
+        hasOperationalSetupReadyForDfp,
+        hasActiveOperationalUnit,
+        hasActiveOperationalResourcePool,
+        hasActiveOperationalAircraftType,
+        resourceSuppressedBySetup
+      },
+      contextOptions: {
+        baseSelectableLocationCodes,
+        selectableLocationCodes,
+        operationalContextOptions,
+        activeContextUnitCodes: Array.from(activeContextUnitCodeSet),
+        activeLocationAliases: Array.from(activeLocationAliasSet),
+        platformDataScopeQuery
+      },
+      dataSourceSettings,
+      people: {
+        staff: {
+          all: allInstructorsData.length,
+          active: activeStaffRecords.length,
+          locationMatched: locationMatchedStaff.length,
+          unitMatched: unitMatchedStaff.length,
+          visible: instructorsData.length,
+          sampleAll: allInstructorsData.slice(0, 10).map((staff) => ({
+            id: staff?.id || null,
+            name: staff?.name || null,
+            rank: staff?.rank || null,
+            unit: staff?.unit || null,
+            location: staff?.location || null,
+            source: staff?._dataSource || null,
+            active: isRecordActive(staff)
+          })),
+          sampleVisible: instructorsData.slice(0, 10).map((staff) => ({
+            id: staff?.id || null,
+            name: staff?.name || null,
+            rank: staff?.rank || null,
+            unit: staff?.unit || null,
+            location: staff?.location || null,
+            source: staff?._dataSource || null
+          }))
+        },
+        trainees: {
+          all: allTraineesData.length,
+          locationMatched: locationMatchedTrainees.length,
+          unitMatched: unitMatchedTrainees.length,
+          visible: traineesData.length,
+          sampleAll: allTraineesData.slice(0, 10).map((trainee) => ({
+            id: trainee?.id || null,
+            name: trainee?.name || trainee?.fullName || null,
+            rank: trainee?.rank || null,
+            course: trainee?.course || null,
+            unit: trainee?.unit || null,
+            location: trainee?.location || null,
+            source: trainee?._dataSource || null
+          })),
+          sampleVisible: traineesData.slice(0, 10).map((trainee) => ({
+            id: trainee?.id || null,
+            name: trainee?.name || trainee?.fullName || null,
+            rank: trainee?.rank || null,
+            course: trainee?.course || null,
+            unit: trainee?.unit || null,
+            location: trainee?.location || null,
+            source: trainee?._dataSource || null
+          }))
+        }
+      },
+      resources: {
+        count: buildResources.length,
+        firstRows: buildResources.slice(0, 48),
+        configuredAirframeCount,
+        configuredStandbyCount,
+        configuredFtdCount,
+        configuredCptCount,
+        configuredGroundCount: configuredGroundCount2,
+        activeAircraftResourcePrefix,
+        activePlatformResourcePool: activePlatformResourcePool ? {
+          id: activePlatformResourcePool.id || null,
+          code: activePlatformResourcePool.code || null,
+          name: activePlatformResourcePool.name || null,
+          locationCode: activePlatformResourcePool.locationCode || null,
+          unitCode: activePlatformResourcePool.unitCode || null,
+          aircraftTypeCode: activePlatformResourcePool.aircraftTypeCode || null,
+          settings: activePlatformResourcePool.settings || null
+        } : null
+      },
+      lmp: {
+        count: syllabusDetails.length,
+        first: syllabusDetails.slice(0, 20).map((lmp) => ({
+          id: lmp?.id || null,
+          name: lmp?.name || lmp?.courseName || lmp?.title || null,
+          code: lmp?.code || lmp?.courseCode || null,
+          unit: lmp?.unit || lmp?.unitCode || null,
+          location: lmp?.location || lmp?.locationCode || null,
+          eventCount: Array.isArray(lmp?.events) ? lmp.events.length : Array.isArray(lmp?.syllabus) ? lmp.syllabus.length : null
+        }))
+      }
+    };
+    window.__dfpOperationalVisibilityTrace = trace;
+    const traceKey = JSON.stringify({
+      location: trace.activeContext.location,
+      unit: trace.activeContext.unit,
+      setup: trace.setupState,
+      staff: trace.people.staff.visible,
+      trainees: trace.people.trainees.visible,
+      resources: trace.resources.count,
+      lmp: trace.lmp.count
+    });
+    if (traceKey !== lastOperationalVisibilityTraceKeyRef.current) {
+      lastOperationalVisibilityTraceKeyRef.current = traceKey;
+      pushDfpDataDiag("visibility:operational-data-scope", trace);
+    }
+  }, [
+    activeAircraftResourcePrefix,
+    activeContextUnitCodeSet,
+    activeLocationAliasSet,
+    activePlatformResourcePool,
+    activeUnitCode,
+    activeView,
+    allInstructorsData,
+    allTraineesData,
+    baseSelectableLocationCodes,
+    buildResources,
+    configuredAirframeCount,
+    configuredCptCount,
+    configuredFtdCount,
+    configuredGroundCount2,
+    configuredStandbyCount,
+    dataSourceSettings,
+    date,
+    hasActiveOperationalAircraftType,
+    hasActiveOperationalResourcePool,
+    hasActiveOperationalUnit,
+    hasIncompleteInitialSetupWizardProgress,
+    hasInitialSetupWizardCompleted,
+    hasOperationalSetupReadyForDfp,
+    instructorsData,
+    isInitialSetupWizardActive,
+    operationalContextOptions,
+    personMatchesActiveLocation,
+    platformDataScopeQuery,
+    school,
+    selectableLocationCodes,
+    setupTestProfile,
+    shouldResumeInitialSetupWizard,
+    showInitialSetupBlankState,
+    syllabusDetails,
+    traineesData
   ]);
   reactExports.useCallback((events2, allResources) => {
     if (!events2 || events2.length === 0) {
@@ -146131,7 +149105,9 @@ ${"=".repeat(60)}`);
         traineeDbId,
         apiBase
       });
+      const sessionToken = localStorage.getItem("dfp_session_token") || "";
       const response = await fetch(`${apiBase}/trainees/${encodeURIComponent(traineeDbId)}/lmp`, {
+        headers: sessionToken ? { Authorization: `Bearer ${sessionToken}` } : void 0,
         credentials: "include"
       });
       pushDfpDataDiag("report-lmp:load:response", {
@@ -146164,22 +149140,17 @@ ${"=".repeat(60)}`);
         return null;
       }
       const traineeUnitCode = trainee.unit || matchedTrainee?.unit || activeUnitCode;
-      if (!hasMasterLmpUnitAccess(persistedLmpType, traineeUnitCode, "Assign")) {
+      const canUseMasterLmpCatalogue = hasMasterLmpUnitAccess(persistedLmpType, traineeUnitCode, "View") || hasMasterLmpUnitAccess(persistedLmpType, traineeUnitCode, "Assign");
+      if (!canUseMasterLmpCatalogue) {
         pushDfpDataDiag("report-lmp:load:blocked-access", {
           traineeFullName: trainee.fullName,
           traineeDbId,
           persistedLmpType,
-          traineeUnitCode
+          traineeUnitCode,
+          action: "display-persisted-individual-lmp-without-master-merge"
         });
-        setTraineeLMPs((prev) => {
-          const updated = new Map(prev);
-          updated.delete(trainee.fullName);
-          return updated;
-        });
-        logRoutineAppDebug(`[Individual LMP] Blocked persisted ${persistedLmpType} LMP for ${trainee.fullName}; ${traineeUnitCode || "unit"} is not authorised to assign it`);
-        return null;
       }
-      const masterLMP = getAssignableMasterLmpItemsForType(syllabusDetails, persistedLmpType, traineeUnitCode, filterSyllabusForMasterLmpAccess);
+      const masterLMP = canUseMasterLmpCatalogue ? getAssignableMasterLmpItemsForType(syllabusDetails, persistedLmpType, traineeUnitCode, filterSyllabusForMasterLmpAccess) : [];
       const scopedPersistedLmp = masterLMP.length > 0 ? mergeIndividualLmpWithMaster(persistedLmp, masterLMP) : persistedLmp;
       setTraineeLMPs((prev) => {
         const updated = new Map(prev);
@@ -147747,6 +150718,203 @@ ${error instanceof Error ? error.message : String(error)}`,
     }
     return savedEvents;
   };
+  const getLmpCorrespondenceKey = (item) => {
+    const code = String(item?.code || "").trim();
+    const description = String(item?.eventDescription || "").trim();
+    const phase = String(item?.phase || "").trim();
+    const module = String(item?.module || "").trim();
+    const primary = code || description;
+    if (!primary) return "";
+    return [phase, module, primary].map((part) => part.toUpperCase().replace(/\s+/g, " ").trim()).filter(Boolean).join("|");
+  };
+  const isIndividualLmpItemCompleted = (item) => Boolean(item?.completedAt || item?.rplGranted === true || item?.completed === true || item?.isComplete === true);
+  const mergeAssignedMasterLmpForTrainee = (existingLmp, newMasterLmp) => {
+    const nextMaster = mergeIndividualLmpWithMaster(void 0, newMasterLmp);
+    if (!existingLmp || existingLmp.length === 0) return nextMaster;
+    const existingByKey = /* @__PURE__ */ new Map();
+    const completedByKey = /* @__PURE__ */ new Map();
+    existingLmp.forEach((item) => {
+      if (isLmpOverlayItem(item)) return;
+      const key = getLmpCorrespondenceKey(item);
+      if (!key) return;
+      if (!existingByKey.has(key)) existingByKey.set(key, item);
+      if (isIndividualLmpItemCompleted(item) && !completedByKey.has(key)) {
+        completedByKey.set(key, item);
+      }
+    });
+    const nextKeys = new Set(nextMaster.map(getLmpCorrespondenceKey).filter(Boolean));
+    const usedExistingIds = /* @__PURE__ */ new Set();
+    const mergedMaster = nextMaster.map((masterItem, index) => {
+      const key = getLmpCorrespondenceKey(masterItem);
+      const completedExisting = key ? completedByKey.get(key) : void 0;
+      if (completedExisting) {
+        usedExistingIds.add(completedExisting.id);
+        return {
+          ...completedExisting,
+          orderKey: completedExisting.orderKey || masterItem.orderKey || createLmpOrderKey(index),
+          placementNeedsReview: false
+        };
+      }
+      const existingItem = key ? existingByKey.get(key) : void 0;
+      if (!existingItem) return masterItem;
+      usedExistingIds.add(existingItem.id);
+      return {
+        ...masterItem,
+        ...getIndividualLmpMasterOverrides(existingItem, masterItem),
+        id: masterItem.id,
+        masterEventId: getMasterEventId(masterItem),
+        lmpSource: "master",
+        completedAt: null,
+        rplGranted: void 0,
+        rplGrantedAt: void 0,
+        rplGrantedBy: void 0,
+        userLockedPosition: existingItem.userLockedPosition,
+        orderKey: existingItem.orderKey || masterItem.orderKey || createLmpOrderKey(index),
+        placementNeedsReview: false
+      };
+    });
+    const retainedExisting = existingLmp.filter((item) => {
+      if (usedExistingIds.has(item.id)) return false;
+      if (isLmpOverlayItem(item)) return true;
+      const key = getLmpCorrespondenceKey(item);
+      return !key || !nextKeys.has(key) || isIndividualLmpItemCompleted(item);
+    });
+    return [
+      ...mergedMaster,
+      ...retainedExisting.map((item, index) => ({
+        ...item,
+        orderKey: item.orderKey || `${createLmpOrderKey(mergedMaster.length + index)}.900`,
+        placementNeedsReview: item.placementNeedsReview ?? !isLmpOverlayItem(item)
+      }))
+    ].sort((a, b) => (a.orderKey || "").localeCompare(b.orderKey || ""));
+  };
+  const handleAssignTraineeIndividualLmp = async (trainee, lmpCode) => {
+    const cleanLmpCode = String(lmpCode || "").trim();
+    const traceBase = {
+      traineeName: trainee.fullName || trainee.name,
+      traineeIdNumber: trainee.idNumber,
+      traineeDbId: trainee.id || null,
+      traineeCourse: trainee.course || null,
+      traineeUnit: trainee.unit || activeUnitCode || null,
+      lmpCode: cleanLmpCode
+    };
+    const summariseIndividualLmpForAssignTrace = (items) => {
+      const list = Array.isArray(items) ? items : [];
+      return {
+        count: list.length,
+        completedCount: list.filter((item) => isIndividualLmpItemCompleted(item)).length,
+        sample: list.slice(0, 12).map((item) => ({
+          id: item?.id || null,
+          code: item?.code || null,
+          type: item?.type || null,
+          lmpSource: item?.lmpSource || null,
+          masterEventId: item?.masterEventId || null,
+          completedAt: item?.completedAt || null,
+          eventDescription: item?.eventDescription || item?.description || null
+        }))
+      };
+    };
+    pushDfpDataDiag("assign-lmp:individual:start", traceBase);
+    if (!cleanLmpCode) {
+      pushDfpDataDiag("assign-lmp:individual:no-lmp-code", traceBase);
+      return;
+    }
+    try {
+      const traineeUnitCode = trainee.unit || activeUnitCode;
+      const hasAssignAccess = hasMasterLmpUnitAccess(cleanLmpCode, traineeUnitCode, "Assign");
+      const normaliseAssignScopeCode = (value) => String(value || "").trim().toUpperCase();
+      const requestedLmpKey = normaliseAssignScopeCode(cleanLmpCode);
+      const traineeUnitKey = normaliseAssignScopeCode(traineeUnitCode);
+      const activeLocationKey = normaliseAssignScopeCode(school);
+      const unitScopedMasterLmp = syllabusDetails.filter((item) => {
+        const itemCourses = Array.isArray(item.courses) ? item.courses : [];
+        const hasMatchingCourse = itemCourses.some((course) => normaliseAssignScopeCode(course) === requestedLmpKey);
+        if (!hasMatchingCourse) return false;
+        const itemUnitCodes = normaliseAssignScopeCode(item.unit).split("+").map((part) => part.trim()).filter(Boolean);
+        const itemLocationKey = normaliseAssignScopeCode(item.location);
+        if (itemUnitCodes.length > 0) return itemUnitCodes.includes(traineeUnitKey);
+        return Boolean(itemLocationKey && activeLocationKey && itemLocationKey === activeLocationKey);
+      });
+      const hasUnitScopedMasterLmp = unitScopedMasterLmp.length > 0;
+      pushDfpDataDiag("assign-lmp:individual:access-check", {
+        ...traceBase,
+        traineeUnitCode,
+        hasAssignAccess,
+        hasUnitScopedMasterLmp,
+        unitScopedMasterEventCount: unitScopedMasterLmp.length
+      });
+      if (!hasAssignAccess && !hasUnitScopedMasterLmp) {
+        throw new Error(`Cannot create Individual LMP "${cleanLmpCode}" for ${trainee.fullName}: ${traineeUnitCode || "this unit"} does not have Assign access.`);
+      }
+      const masterLmp = hasAssignAccess ? getAssignableMasterLmpItemsForType(syllabusDetails, cleanLmpCode, traineeUnitCode, filterSyllabusForMasterLmpAccess) : unitScopedMasterLmp;
+      pushDfpDataDiag("assign-lmp:individual:master-lmp", {
+        ...traceBase,
+        masterEventCount: masterLmp.length,
+        accessSource: hasAssignAccess ? "access-rule" : "unit-scoped-master-lmp",
+        sample: masterLmp.slice(0, 12).map((item) => ({
+          id: item.id,
+          code: item.code,
+          type: item.type,
+          lmpType: item.lmpType,
+          course: item.course,
+          unit: item.unit || null,
+          location: item.location || null,
+          eventDescription: item.eventDescription || item.description || null
+        }))
+      });
+      if (masterLmp.length === 0) {
+        throw new Error(`Cannot create Individual LMP "${cleanLmpCode}" for ${trainee.fullName}: no Master LMP events were found.`);
+      }
+      const traineeForLmp = { ...trainee, lmpType: cleanLmpCode };
+      const stateLmp = traineeLMPs.get(trainee.fullName);
+      const persistedLmp = stateLmp ? null : await loadPersistedTraineeLmp(traineeForLmp).catch((error) => {
+        pushDfpDataDiag("assign-lmp:individual:load-existing:error", {
+          ...traceBase,
+          message: error instanceof Error ? error.message : String(error || "")
+        });
+        return null;
+      });
+      const existingLmp = stateLmp || persistedLmp || [];
+      pushDfpDataDiag("assign-lmp:individual:existing-lmp", {
+        ...traceBase,
+        source: stateLmp ? "state" : persistedLmp ? "persisted" : "empty",
+        state: summariseIndividualLmpForAssignTrace(stateLmp),
+        persisted: summariseIndividualLmpForAssignTrace(persistedLmp),
+        selected: summariseIndividualLmpForAssignTrace(existingLmp)
+      });
+      const nextLmp = mergeAssignedMasterLmpForTrainee(existingLmp, masterLmp);
+      pushDfpDataDiag("assign-lmp:individual:merge-result", {
+        ...traceBase,
+        next: summariseIndividualLmpForAssignTrace(nextLmp),
+        reportItems: summariseTrainingReportLmpItems(nextLmp)
+      });
+      const savedEvents = await persistTraineeLmp(traineeForLmp, nextLmp, [], {
+        source: "assign-lmp",
+        skipReadBack: true
+      });
+      pushDfpDataDiag("assign-lmp:individual:persist-success", {
+        ...traceBase,
+        saved: summariseIndividualLmpForAssignTrace(savedEvents)
+      });
+      const composedSavedEvents = mergeIndividualLmpWithMaster(savedEvents, masterLmp);
+      setTraineeLMPs((prev) => {
+        const updated = new Map(prev);
+        updated.set(trainee.fullName, composedSavedEvents);
+        return updated;
+      });
+      pushDfpDataDiag("assign-lmp:individual:state-updated", {
+        ...traceBase,
+        composed: summariseIndividualLmpForAssignTrace(composedSavedEvents)
+      });
+      logRoutineAppDebug(`[Individual LMP] Assigned ${cleanLmpCode} to ${trainee.fullName}; ${composedSavedEvents.length} events available`);
+    } catch (error) {
+      pushDfpDataDiag("assign-lmp:individual:error", {
+        ...traceBase,
+        message: error instanceof Error ? error.message : String(error || "")
+      });
+      throw error;
+    }
+  };
   const deletePersistedIndividualLmpEventRecords = async (trainee, item) => {
     const matchedTrainee = allTraineesData.find((candidate) => candidate.fullName === trainee.fullName);
     const traineeDbId = trainee.id || matchedTrainee?.id;
@@ -148015,9 +151183,17 @@ ${error instanceof Error ? error.message : String(error)}`,
     }
   };
   const handleUpdateIndividualLmpItem = async (trainee, originalItem, updatedItem, options = {}) => {
-    const originalTraineeLMP = traineeLMPs.get(trainee.fullName);
+    const originalTraineeLMP = Array.isArray(options.sourceLmp) && options.sourceLmp.length > 0 ? options.sourceLmp : traineeLMPs.get(trainee.fullName);
     if (!originalTraineeLMP || originalTraineeLMP.length === 0) {
       await showDarkAlert2(`Could not update ${originalItem.code}: Individual LMP not found for ${trainee.fullName}.`, "Individual LMP Save Failed", "error");
+      return false;
+    }
+    if (originalTraineeLMP.length < 2) {
+      await showDarkAlert2(
+        `Could not update ${originalItem.code}: the loaded Individual LMP only contains ${originalTraineeLMP.length} event${originalTraineeLMP.length === 1 ? "" : "s"}. The save was stopped to avoid overwriting the full Individual LMP.`,
+        "Individual LMP Save Blocked",
+        "error"
+      );
       return false;
     }
     const originalId = originalItem.id || originalItem.code;
@@ -148078,6 +151254,14 @@ Remove or amend those downstream completions before undoing this RPL.`,
     });
     if (!updatedLmp.some((item) => (item.id || item.code) === (normalizedUpdatedItem.id || normalizedUpdatedItem.code))) {
       await showDarkAlert2(`Could not update ${originalItem.code}: selected event was not found in the Individual LMP.`, "Individual LMP Save Failed", "error");
+      return false;
+    }
+    if (updatedLmp.length < originalTraineeLMP.length) {
+      await showDarkAlert2(
+        `Could not update ${originalItem.code}: the update would reduce the Individual LMP from ${originalTraineeLMP.length} events to ${updatedLmp.length}. The save was stopped to protect the Individual LMP.`,
+        "Individual LMP Save Blocked",
+        "error"
+      );
       return false;
     }
     try {
@@ -152845,6 +156029,7 @@ The proposed event was not scheduled. Re-open the event and choose Accept Confli
       maxCrewDutyPeriod,
       maxDispatchPerHour,
       dispatchStaggerSettings,
+      groundEventSchedulingSettings,
       eventLimits,
       sctFtds,
       sctFlights,
@@ -152992,6 +156177,18 @@ The proposed event was not scheduled. Re-open the event and choose Accept Confli
             "NEO Build completed but did not add any tiles. Open the NEO Build page and click Download Build Report to export the diagnostic report for this run.",
             "No Tiles Added",
             "warning",
+            12e3
+          );
+        }
+        const groupGroundNotes = typeof window !== "undefined" ? window.__lastNeoBuildGroupGroundNotes || [] : [];
+        if (Array.isArray(groupGroundNotes) && groupGroundNotes.length > 0) {
+          const noteLines = groupGroundNotes.slice(0, 8).map((note) => `- ${String(note)}`);
+          const extraNoteCount = groupGroundNotes.length - noteLines.length;
+          void showDarkAlert2(
+            `${noteLines.join("\n")}${extraNoteCount > 0 ? `
++${extraNoteCount} more note${extraNoteCount === 1 ? "" : "s"}.` : ""}`,
+            "NEO Build Notes",
+            "info",
             12e3
           );
         }
@@ -159083,6 +162280,10 @@ It will not clear the published DFP.`,
             onGenerateTrainingReportForItem: handleGenerateTrainingReportFromLmpItem,
             onInsertCustomLmpEvent: handleInsertCustomLmpEvent,
             onUpdateLmpItem: handleUpdateIndividualLmpItem,
+            onLoadTraineeLmp: loadPersistedTraineeLmp,
+            onRosterColourTrace: (trace) => {
+              rosterColourTraceRef.current = trace;
+            },
             insertEventTypes,
             aircraftConfigurations,
             aircraftCrewComposition: activeAircraftCrewComposition,
@@ -159240,6 +162441,7 @@ It will not clear the published DFP.`,
             onGenerateTrainingReportForItem: handleGenerateTrainingReportFromLmpItem,
             onInsertCustomLmpEvent: handleInsertCustomLmpEvent,
             onUpdateLmpItem: handleUpdateIndividualLmpItem,
+            onLoadTraineeLmp: loadPersistedTraineeLmp,
             insertEventTypes,
             aircraftConfigurations,
             aircraftCrewComposition: activeAircraftCrewComposition,
@@ -159802,6 +163004,7 @@ It will not clear the published DFP.`,
             onSaveTrainingReportAssessment,
             onPersistTrainingReportAssessment: persistTrainingReportAssessmentRecord,
             onUpdateLmpItem: handleUpdateIndividualLmpItem,
+            onLoadTraineeLmp: loadPersistedTraineeLmp,
             locations,
             units,
             activeLocationCode: school,
@@ -160662,12 +163865,17 @@ It will not clear the published DFP.`,
             instructorsData,
             traineesData,
             onUpdateTrainee: handleUpdateTrainee,
+            onAssignTraineeLmp: handleAssignTraineeIndividualLmp,
+            onTraceAssignLmp: (stage, details = {}) => pushDfpDataDiag(`assign-lmp:${stage}`, details),
+            onDownloadAssignmentTrace: () => downloadDfpDataDiagReport("assign-lmp-trace"),
             operationalModel: activeOperationalModel,
             masterLmpCatalogue: accessibleMasterLmpCatalogueForSyllabus,
             staffQualificationCatalogue: activeStaffQualificationCatalogue,
             currentUserName,
             scoringMatrixPhraseBank: activeTrainingReportPhraseBank,
             onNavigateToSettingsSection: handleNavigateToSettingsSection,
+            onDeleteMasterLmpCatalogue: handleDeleteMasterLmpCatalogueEntry,
+            onUpsertMasterLmpCatalogue: handleUpsertMasterLmpCatalogueEntry,
             onAddScoringMatrixElement: () => {
               try {
                 sessionStorage.setItem("dfp_restore_settings_section_after_reload", "scoring-matrix");
@@ -160820,6 +164028,8 @@ It will not clear the published DFP.`,
             onUpdateDispatchRateWindowMinutes: (value) => setDispatchRateWindowMinutes(normaliseDispatchRateWindowMinutes(value)),
             dispatchStaggerSettings,
             onUpdateDispatchStaggerSettings: (settings) => setDispatchStaggerSettings(normaliseDispatchStaggerSettings(settings)),
+            groundEventSchedulingSettings,
+            onUpdateGroundEventSchedulingSettings: (settings) => setGroundEventSchedulingSettings(normaliseGroundEventSchedulingSettings(settings)),
             timezoneOffset,
             onUpdateTimezoneOffset: setTimezoneOffset,
             showDepartureDensityOverlay,
@@ -161847,6 +165057,15 @@ Do you want to replace the existing entry?`,
         isCoursesLoaded
       }
     ),
+    isAuthenticated && (hasAuthenticatedAdminRole || platformAccessContext.isSuperAdmin || platformAccessContext.isPlatformAdmin) && /* @__PURE__ */ jsxRuntimeExports.jsx(
+      "button",
+      {
+        type: "button",
+        onClick: () => downloadDfpDataDiagReport("dfp-operational-visibility-trace"),
+        className: "fixed bottom-4 left-1/2 z-[520] -translate-x-1/2 rounded-md border border-cyan-300/45 bg-slate-950/92 px-4 py-2 text-[11px] font-black uppercase tracking-[0.16em] text-cyan-100 shadow-[0_12px_28px_rgba(0,0,0,0.45)] transition hover:border-cyan-200 hover:bg-slate-900",
+        children: "Download DFP Data Trace"
+      }
+    ),
     /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { id: "app-content", "data-theme": theme, className: "flex h-screen bg-gray-900 text-white", children: [
       /* @__PURE__ */ jsxRuntimeExports.jsx(
         Sidebar,
@@ -161925,9 +165144,9 @@ Do you want to replace the existing entry?`,
               }
               setShowValidation(show);
             },
-            contextOptions: showInitialSetupBlankState ? [] : operationalContextOptions,
-            activeLocation: showInitialSetupBlankState ? "" : school,
-            activeUnit: showInitialSetupBlankState ? "" : activeUnitCode,
+            contextOptions: operationalContextOptions,
+            activeLocation: school,
+            activeUnit: activeUnitCode,
             onContextChange: (loc, unit) => changeOperationalContext(loc, unit),
             activeModelLabel: activeOperationalModelLabel,
             isMagnifierEnabled,

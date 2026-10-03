@@ -2054,7 +2054,18 @@ const TrainingReportView: React.FC<TrainingReportViewProps> = ({ trainee, event,
                                                 ? 'bg-green-600 text-white ring-2 ring-white scale-105 shadow-lg'
                                                 : 'bg-green-800/50 text-green-200 hover:bg-green-700/50'
                                         } ${overallResult === null ? '!bg-gray-700 !text-gray-500 hover:!bg-gray-600' : ''}`}>
-                                            <input type="radio" name="overall-result" value="P" checked={overallResult === 'P'} onChange={() => setOverallResult('P')} className="sr-only" />
+                                            <input
+                                                type="radio"
+                                                name="overall-result"
+                                                value="P"
+                                                checked={overallResult === 'P'}
+                                                onChange={() => {
+                                                    setOverallResult('P');
+                                                    setIsDirty(true);
+                                                    setSaveStatus('Unsaved');
+                                                }}
+                                                className="sr-only"
+                                            />
                                             <span className="text-2xl font-bold">{reportTemplate.overallResults.passLabel}</span>
                                         </label>
                                         <label className={`cursor-pointer rounded-lg p-4 w-1/2 text-center transition-all duration-200 ${
@@ -2062,7 +2073,18 @@ const TrainingReportView: React.FC<TrainingReportViewProps> = ({ trainee, event,
                                                 ? 'bg-red-600 text-white ring-2 ring-white scale-105 shadow-lg'
                                                 : 'bg-red-800/50 text-red-200 hover:bg-red-700/50'
                                         } ${overallResult === null && !showDoubleMarginalWarning ? '!bg-gray-700 !text-gray-500 hover:!bg-gray-600' : ''}`}>
-                                            <input type="radio" name="overall-result" value="F" checked={overallResult === 'F'} onChange={() => setOverallResult('F')} className="sr-only" />
+                                            <input
+                                                type="radio"
+                                                name="overall-result"
+                                                value="F"
+                                                checked={overallResult === 'F'}
+                                                onChange={() => {
+                                                    setOverallResult('F');
+                                                    setIsDirty(true);
+                                                    setSaveStatus('Unsaved');
+                                                }}
+                                                className="sr-only"
+                                            />
                                             <span className="text-2xl font-bold">{showDoubleMarginalWarning ? reportTemplate.overallResults.doubleRepeatLabel : reportTemplate.overallResults.failLabel}</span>
                                         </label>
                                     </div>

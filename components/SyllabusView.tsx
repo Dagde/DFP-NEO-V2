@@ -1,6 +1,7 @@
 import { useSystemFreeze } from '../hooks/useSystemFreeze';
 
 import React, { useState, useEffect, useMemo, useRef } from 'react';
+import { PencilIcon } from '@heroicons/react/24/outline';
 import { Instructor, PhraseBank, SyllabusItemDetail, Trainee } from '../types';
 import AuditButton from './AuditButton';
 import CrewRequirementEditor from './CrewRequirementEditor';
@@ -62,7 +63,7 @@ import {
     getConfiguredScoringMatrixElements,
 } from '../utils/scoringMatrixElements';
 import type { PlatformMasterLmpCatalogueEntry } from '../utils/platformConfigService';
-import { showDarkAlert } from './DarkMessageModal';
+import { showDarkAlert, showDarkPrompt } from './DarkMessageModal';
 
 interface SyllabusViewProps {
   syllabusDetails: SyllabusItemDetail[];
@@ -81,6 +82,9 @@ interface SyllabusViewProps {
   onUpdateInstructor?: (data: Instructor) => void | Promise<void>;
   traineesData?: Trainee[];
   onUpdateTrainee?: (data: Trainee) => void | Promise<void>;
+  onAssignTraineeLmp?: (trainee: Trainee, lmpCode: string) => void | Promise<void>;
+  onTraceAssignLmp?: (stage: string, details?: Record<string, any>) => void;
+  onDownloadAssignmentTrace?: () => void;
   operationalModel?: string;
   sharedUnitTabs?: string[];
   masterLmpCatalogue?: PlatformMasterLmpCatalogueEntry[];
@@ -89,7 +93,22 @@ interface SyllabusViewProps {
   scoringMatrixPhraseBank?: PhraseBank;
   onAddScoringMatrixElement?: () => void;
   onNavigateToSettingsSection?: (request: { sectionId: string; unitCode?: string; locationCode?: string; resourcePoolCode?: string; aircraftTypeCode?: string; focusSubsectionId?: string }) => void;
+  onDeleteMasterLmpCatalogue?: (lmpCode: string) => Promise<void> | void;
+  onUpsertMasterLmpCatalogue?: (entry: { code: string; name: string; version?: string; audience?: LmpAudience }) => Promise<void> | void;
 }
+
+const LMP_VERSION_NOTE_REGEX = /\[DFP_LMP_VERSION:([0-9]+(?:\.[0-9]+)?)\]/i;
+const DEFAULT_LMP_VERSION = '1.0';
+
+const getLmpVersionFromNotes = (notes?: string | null): string | null => {
+  const match = String(notes || '').match(LMP_VERSION_NOTE_REGEX);
+  return match?.[1] || null;
+};
+
+const withLmpVersionInNotes = (notes: string | undefined | null, version: string): string => {
+  const withoutVersion = String(notes || '').replace(LMP_VERSION_NOTE_REGEX, '').replace(/\n{3,}/g, '\n\n').trim();
+  return [withoutVersion, `[DFP_LMP_VERSION:${version}]`].filter(Boolean).join('\n');
+};
 
 // Reusable components for view mode
 const DetailCard: React.FC<{ label: React.ReactNode; value: React.ReactNode; className?: string }> = ({ label, value, className = '' }) => (
@@ -102,7 +121,7 @@ const DetailCard: React.FC<{ label: React.ReactNode; value: React.ReactNode; cla
 const DetailList: React.FC<{ title: string; items: string[] }> = ({ title, items }) => (
     <div>
         <h3 className="text-md font-semibold text-sky-400 mb-2">{title}</h3>
-        <div className="bg-gray-700/50 p-3 rounded-lg text-sm text-gray-300">
+        <div className="min-h-[52px] bg-gray-700/50 p-3 rounded-lg text-sm text-gray-300">
             {items && items.length > 0 ? (
                 <ul className="space-y-1 list-disc list-inside">
                     {items.map((item, index) => <li key={index}>{item}</li>)}
@@ -113,6 +132,114 @@ const DetailList: React.FC<{ title: string; items: string[] }> = ({ title, items
         </div>
     </div>
 );
+
+const formatWholeNumberField = (value: unknown): string => {
+    if (value === undefined || value === null || value === '') return '';
+    const numericValue = Number(value);
+    return Number.isFinite(numericValue) && numericValue > 0 ? String(Math.round(numericValue)) : '';
+};
+
+const formatOptionalYesNo = (value: unknown): string => {
+    if (value === true) return 'Yes';
+    if (value === false) return 'No';
+    const normalised = String(value ?? '').trim().toUpperCase();
+    if (normalised === 'YES') return 'Yes';
+    if (normalised === 'NO') return 'No';
+    return '';
+};
+
+const GroupDataWindow: React.FC<{ label: React.ReactNode; value: React.ReactNode; className?: string; subHeading?: boolean }> = ({ label, value, className = '', subHeading = false }) => (
+    <div className={className}>
+        <h3 className={subHeading ? 'mb-2 text-xs font-semibold text-white' : 'text-md font-semibold text-sky-400 mb-2'}>{label}</h3>
+        <div className="min-h-[52px] rounded-lg bg-gray-700/50 p-3 text-sm text-gray-300">{value}</div>
+    </div>
+);
+
+const GroupEventSummary: React.FC<{ item: SyllabusItemDetail }> = ({ item }) => (
+    <div className="md:col-span-2 grid grid-cols-1 md:grid-cols-2 gap-6">
+        <GroupDataWindow label="Group Event" value={formatOptionalYesNo(item.groupEvent)} />
+        <GroupDataWindow label="Minimum to Schedule" value={formatWholeNumberField(item.minimumToSchedule)} />
+        <div className="md:col-span-2">
+            <h3 className="text-md font-semibold text-sky-400 mb-2">Group Size</h3>
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                <GroupDataWindow subHeading label="Minimum" value={formatWholeNumberField(item.groupSizeMin)} />
+                <GroupDataWindow subHeading label="Maximum" value={formatWholeNumberField(item.groupSizeMax)} />
+                <GroupDataWindow
+                    subHeading
+                    label="Entire course"
+                    value={(
+                        <span className="inline-flex items-center gap-2">
+                            <input
+                                type="checkbox"
+                                checked={item.groupEntireCourse === true}
+                                readOnly
+                                className="h-4 w-4 rounded border-gray-600 bg-gray-800 text-sky-500"
+                            />
+                            <span>{formatOptionalYesNo(item.groupEntireCourse)}</span>
+                        </span>
+                    )}
+                />
+            </div>
+        </div>
+    </div>
+);
+
+const GroupEventEditor: React.FC<{
+    item: SyllabusItemDetail;
+    onChange: (field: keyof SyllabusItemDetail, value: any) => void;
+}> = ({ item, onChange }) => {
+    const groupEntireCourse = item.groupEntireCourse === true;
+    return (
+        <div className="md:col-span-2 rounded-lg border border-gray-700 bg-gray-800/40 p-3">
+            <h3 className="text-md font-semibold text-sky-400 mb-3">Group Scheduling</h3>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <label className="bg-gray-700/50 p-3 rounded-lg">
+                    <span className="block text-xs font-medium text-gray-400 uppercase tracking-wider">Group Event</span>
+                    <select
+                        value={item.groupEvent ? 'YES' : 'NO'}
+                        onChange={(event) => onChange('groupEvent', event.target.value === 'YES')}
+                        className="mt-1 block w-full bg-gray-800 border border-gray-600 rounded-md shadow-sm py-1 px-2 text-white focus:outline-none focus:ring-sky-500 focus:border-sky-500 sm:text-sm"
+                    >
+                        <option value="NO">No</option>
+                        <option value="YES">Yes</option>
+                    </select>
+                </label>
+                <EditableField
+                    label="Minimum to Schedule"
+                    type="number"
+                    value={item.minimumToSchedule ?? 0}
+                    onChange={(value) => onChange('minimumToSchedule', value)}
+                />
+            </div>
+            <div className="mt-6">
+                <h4 className="text-md font-semibold text-sky-400 mb-2">Group Size</h4>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                    <EditableField
+                        label="Minimum"
+                        type="number"
+                        value={item.groupSizeMin ?? 0}
+                        onChange={(value) => onChange('groupSizeMin', value)}
+                    />
+                    <EditableField
+                        label="Maximum"
+                        type="number"
+                        value={item.groupSizeMax ?? 0}
+                        onChange={(value) => onChange('groupSizeMax', value)}
+                    />
+                    <label className="min-h-[52px] flex items-center gap-2 rounded-lg bg-gray-700/50 px-3 py-2 text-sm text-gray-300">
+                        <input
+                            type="checkbox"
+                            checked={groupEntireCourse}
+                            onChange={(event) => onChange('groupEntireCourse', event.target.checked)}
+                            className="h-4 w-4 rounded border-gray-600 bg-gray-800 text-sky-500 focus:ring-sky-500"
+                        />
+                        Entire course
+                    </label>
+                </div>
+            </div>
+        </div>
+    );
+};
 
 const AIR_COMBAT_LINKED_EVENT_NOTE_REGEX = /^\[Linked Event:\s*([^\]]+)\]$/i;
 const DEFAULT_ASSESSED_ELEMENTS = INITIAL_SCORING_MATRIX_ELEMENTS.filter(element => element !== 'Generic Flying Elements');
@@ -405,15 +532,24 @@ const AssignTrainingModal: React.FC<{
     showStaffAssignments?: boolean;
     staff: Instructor[];
     trainees?: Trainee[];
+    lmpOptions?: Array<{ code: string; title: string }>;
+    selectedLmpCode?: string;
+    courseOptions?: string[];
+    selectedCourseKeys?: Set<string>;
     selectedStaffIds: Set<number>;
     selectedTraineeIds?: Set<number>;
     saving: boolean;
     onToggle: (idNumber: number) => void;
     onToggleTrainee?: (idNumber: number) => void;
+    onLmpChange?: (code: string) => void;
+    onToggleCourse?: (course: string) => void;
     onSelectAll: () => void;
     onDeselectAll: () => void;
+    onSelectAllCourses?: () => void;
+    onDeselectAllCourses?: () => void;
     onSelectAllTrainees?: () => void;
     onDeselectAllTrainees?: () => void;
+    onDownloadTrace?: () => void;
     onCancel: () => void;
     onSave: () => void;
 }> = ({
@@ -423,19 +559,31 @@ const AssignTrainingModal: React.FC<{
     showStaffAssignments = true,
     staff,
     trainees = [],
+    lmpOptions = [],
+    selectedLmpCode = '',
+    courseOptions = [],
+    selectedCourseKeys = new Set(),
     selectedStaffIds,
     selectedTraineeIds = new Set(),
     saving,
     onToggle,
     onToggleTrainee,
+    onLmpChange,
+    onToggleCourse,
     onSelectAll,
     onDeselectAll,
+    onSelectAllCourses,
+    onDeselectAllCourses,
     onSelectAllTrainees,
     onDeselectAllTrainees,
+    onDownloadTrace,
     onCancel,
     onSave,
 }) => {
     const showTraineeAssignments = Boolean(onToggleTrainee);
+    const lmpSelectionVisible = showTraineeAssignments && Boolean(onLmpChange);
+    const lmpSelectionEnabled = lmpOptions.length > 1;
+    const courseSelectionEnabled = showTraineeAssignments && courseOptions.length > 1 && Boolean(onToggleCourse);
     const panelCount = (showStaffAssignments ? 1 : 0) + (showTraineeAssignments ? 1 : 0);
     const traineeGroups = trainees.reduce<Array<{ course: string; people: Trainee[] }>>((groups, person) => {
         const course = String(person.course || 'No course').trim() || 'No course';
@@ -448,6 +596,13 @@ const AssignTrainingModal: React.FC<{
         return groups;
     }, []);
     const formatCourseHeading = (course: string): string => course === 'No course' ? 'No course' : `Course ${course}`;
+    const selectedVisibleTraineeCount = trainees.filter(person => selectedTraineeIds.has(person.idNumber)).length;
+    const savingMessage = showTraineeAssignments
+        ? 'Assigning LMP to course participants'
+        : 'Saving training assignments';
+    const savingDetail = showTraineeAssignments
+        ? 'Creating Individual LMPs. This may take a moment.'
+        : 'Updating selected staff assignments. This may take a moment.';
 
     const staffPanel = (
         <section className="min-w-0 overflow-hidden rounded-lg border border-gray-700 bg-gray-950/40">
@@ -487,8 +642,57 @@ const AssignTrainingModal: React.FC<{
             <div className="border-b border-teal-800/70 bg-teal-950/40 px-4 py-3">
                 <div className="flex items-center justify-between gap-3">
                     <h3 className="text-sm font-extrabold uppercase tracking-[0.18em] text-teal-100">Trainees</h3>
-                    <span className="rounded-full border border-teal-700/70 bg-teal-900/50 px-2.5 py-1 text-xs font-bold text-teal-100">{selectedTraineeIds.size} selected</span>
+                    <span className="rounded-full border border-teal-700/70 bg-teal-900/50 px-2.5 py-1 text-xs font-bold text-teal-100">{selectedVisibleTraineeCount} selected</span>
                 </div>
+                {lmpSelectionVisible && (
+                    <div className="mt-3 rounded border border-sky-800/60 bg-gray-950/35 p-3">
+                        <label className="block text-[11px] font-extrabold uppercase tracking-[0.18em] text-sky-200">
+                            Master LMP to Assign
+                        </label>
+                        <select
+                            value={selectedLmpCode}
+                            onChange={(event) => onLmpChange?.(event.target.value)}
+                            disabled={!lmpSelectionEnabled}
+                            className="mt-2 w-full rounded border border-gray-600 bg-gray-900 px-3 py-2 text-sm font-semibold text-white focus:border-sky-500 focus:outline-none focus:ring-1 focus:ring-sky-500 disabled:cursor-not-allowed disabled:opacity-80"
+                        >
+                            {lmpOptions.length === 0 && (
+                                <option value={selectedLmpCode}>
+                                    {selectedLmpCode || 'No Master LMP available'}
+                                </option>
+                            )}
+                            {lmpOptions.map(option => (
+                                <option key={option.code} value={option.code}>
+                                    {option.title && option.title !== option.code ? `${option.code} - ${option.title}` : option.code}
+                                </option>
+                            ))}
+                        </select>
+                    </div>
+                )}
+                {courseSelectionEnabled && (
+                    <div className="mt-3 rounded border border-teal-800/60 bg-gray-950/35 p-3">
+                        <div className="flex items-center justify-between gap-3">
+                            <h4 className="text-[11px] font-extrabold uppercase tracking-[0.18em] text-teal-200">Courses</h4>
+                            <span className="text-xs font-semibold text-gray-300">{selectedCourseKeys.size} selected</span>
+                        </div>
+                        <div className="mt-2 flex flex-wrap gap-2">
+                            <button type="button" onClick={onSelectAllCourses} className="rounded border border-gray-600 bg-gray-800 px-2.5 py-1 text-[11px] font-semibold text-gray-100 hover:bg-gray-700">Select All Courses</button>
+                            <button type="button" onClick={onDeselectAllCourses} className="rounded border border-gray-600 bg-gray-800 px-2.5 py-1 text-[11px] font-semibold text-gray-100 hover:bg-gray-700">Deselect All Courses</button>
+                        </div>
+                        <div className="mt-2 grid gap-2 sm:grid-cols-2">
+                            {courseOptions.map(course => (
+                                <label key={course} className="flex cursor-pointer items-center gap-2 rounded border border-gray-700 bg-gray-900/70 px-2.5 py-1.5 text-xs text-gray-100 hover:border-teal-600/70">
+                                    <input
+                                        type="checkbox"
+                                        checked={selectedCourseKeys.has(course)}
+                                        onChange={() => onToggleCourse?.(course)}
+                                        className="h-4 w-4 rounded border-gray-600 bg-gray-800 text-sky-500 focus:ring-sky-500"
+                                    />
+                                    <span className="font-semibold">{formatCourseHeading(course)}</span>
+                                </label>
+                            ))}
+                        </div>
+                    </div>
+                )}
                 <div className="mt-3 flex flex-wrap gap-2">
                     <button type="button" onClick={onSelectAllTrainees} className="rounded border border-gray-600 bg-gray-800 px-3 py-1.5 text-xs font-semibold text-gray-100 hover:bg-gray-700">Select All</button>
                     <button type="button" onClick={onDeselectAllTrainees} className="rounded border border-gray-600 bg-gray-800 px-3 py-1.5 text-xs font-semibold text-gray-100 hover:bg-gray-700">Deselect All</button>
@@ -524,13 +728,27 @@ const AssignTrainingModal: React.FC<{
 
     return (
         <div className="fixed inset-0 z-[1000] flex items-center justify-center bg-black/70 p-4">
-            <div className={`flex max-h-[90vh] w-full flex-col rounded-lg border border-sky-700/50 bg-gray-900 shadow-2xl ${panelCount > 1 ? 'max-w-5xl' : 'max-w-2xl'}`}>
+            <div className={`relative flex max-h-[90vh] w-full flex-col rounded-lg border border-sky-700/50 bg-gray-900 shadow-2xl ${panelCount > 1 ? 'max-w-5xl' : 'max-w-2xl'}`}>
+                {saving && (
+                    <div className="absolute inset-0 z-20 flex items-center justify-center rounded-lg bg-black/75 px-4">
+                        <div className="w-full max-w-md rounded-lg border border-sky-600/70 bg-gray-900 px-6 py-5 text-center shadow-2xl">
+                            <div className="mx-auto h-12 w-12 animate-spin rounded-full border-4 border-sky-900 border-t-sky-300" />
+                            <h3 className="mt-4 text-lg font-extrabold text-white">{savingMessage}</h3>
+                            <p className="mt-2 text-sm font-medium text-gray-300">{savingDetail}</p>
+                            {showTraineeAssignments && (
+                                <p className="mt-3 rounded border border-teal-700/60 bg-teal-950/40 px-3 py-2 text-xs font-semibold text-teal-100">
+                                    {selectedVisibleTraineeCount} selected trainee{selectedVisibleTraineeCount === 1 ? '' : 's'} · {selectedLmpCode || 'Selected LMP'}
+                                </p>
+                            )}
+                        </div>
+                    </div>
+                )}
                 <div className="flex items-start justify-between gap-4 border-b border-gray-700 px-4 py-3">
                     <div>
                         <h2 className="text-lg font-bold text-white">{heading}</h2>
                         <p className="mt-1 text-xs text-gray-400">{title}</p>
                     </div>
-                    <button type="button" onClick={onCancel} className="rounded px-2 py-1 text-sm text-gray-300 hover:bg-gray-800 hover:text-white">Close</button>
+                    <button type="button" onClick={onCancel} disabled={saving} className="rounded px-2 py-1 text-sm text-gray-300 hover:bg-gray-800 hover:text-white disabled:cursor-not-allowed disabled:opacity-50">Close</button>
                 </div>
                 <div className="overflow-y-auto p-4">
                     {panelCount > 1 ? (
@@ -540,11 +758,20 @@ const AssignTrainingModal: React.FC<{
                         </div>
                     ) : showStaffAssignments ? staffPanel : traineePanel}
                 </div>
-                <div className="flex justify-end gap-2 border-t border-gray-700 px-4 py-3">
-                    <button type="button" onClick={onCancel} className="rounded border border-gray-600 bg-gray-800 px-4 py-2 text-sm font-semibold text-gray-100 hover:bg-gray-700">Cancel</button>
-                    <button type="button" onClick={onSave} disabled={saving} className="rounded border border-sky-500 bg-sky-700 px-4 py-2 text-sm font-bold text-white hover:bg-sky-600 disabled:cursor-not-allowed disabled:opacity-60">
-                        {saving ? 'Saving...' : 'Save Assignments'}
-                    </button>
+                <div className="flex flex-wrap items-center justify-between gap-2 border-t border-gray-700 px-4 py-3">
+                    <div>
+                        {onDownloadTrace && (
+                            <button type="button" onClick={onDownloadTrace} className="rounded border border-amber-600/60 bg-amber-900/30 px-4 py-2 text-sm font-semibold text-amber-100 hover:bg-amber-800/40">
+                                Download Assign LMP Trace
+                            </button>
+                        )}
+                    </div>
+                    <div className="flex justify-end gap-2">
+                        <button type="button" onClick={onCancel} disabled={saving} className="rounded border border-gray-600 bg-gray-800 px-4 py-2 text-sm font-semibold text-gray-100 hover:bg-gray-700 disabled:cursor-not-allowed disabled:opacity-50">Cancel</button>
+                        <button type="button" onClick={onSave} disabled={saving} className="rounded border border-sky-500 bg-sky-700 px-4 py-2 text-sm font-bold text-white hover:bg-sky-600 disabled:cursor-not-allowed disabled:opacity-60">
+                            {saving ? 'Saving...' : 'Save Assignments'}
+                        </button>
+                    </div>
                 </div>
             </div>
         </div>
@@ -707,6 +934,10 @@ const DetailView: React.FC<{
             {children}
         </p>
     );
+    const sortieDetailsSummary = (currentItem.eventDetailsSortie || [])
+        .map(detail => String(detail || '').trim())
+        .filter(Boolean)
+        .join(', ');
 
     return (
     <div className="space-y-6">
@@ -726,7 +957,7 @@ const DetailView: React.FC<{
                         {isAddingEvent && <AddEventHelp>{addEventDescriptionHelp}</AddEventHelp>}
                     </div>
                 ) : (
-                    <p className="text-lg text-gray-400 mt-1">{item.eventDescription}</p>
+                    <p className="text-lg text-gray-400 mt-1">{sortieDetailsSummary || 'No sortie details recorded'}</p>
                 )}
             </div>
             <div className="flex shrink-0 flex-wrap items-center justify-end gap-2">
@@ -1191,6 +1422,7 @@ const DetailView: React.FC<{
                         <EditableList title="Methods of Assessment" items={currentItem.methodOfAssessment} onChange={(val) => handleFieldChange('methodOfAssessment', val)} />
                         <EditableList title="Event Details (Common)" items={currentItem.eventDetailsCommon} onChange={(val) => handleFieldChange('eventDetailsCommon', val)} />
                         <EditableList title="Event Details (Sortie)" items={currentItem.eventDetailsSortie} onChange={(val) => handleFieldChange('eventDetailsSortie', val)} />
+                        <GroupEventEditor item={currentItem} onChange={handleFieldChange} />
                     </>
                 ) : (
                     <>
@@ -1198,6 +1430,7 @@ const DetailView: React.FC<{
                         <DetailList title="Methods of Assessment" items={item.methodOfAssessment} />
                         <DetailList title="Event Details (Common)" items={item.eventDetailsCommon} />
                         <DetailList title="Event Details (Sortie)" items={item.eventDetailsSortie} />
+                        <GroupEventSummary item={item} />
                     </>
                  )}
             </div>
@@ -1285,10 +1518,15 @@ const SyllabusView: React.FC<SyllabusViewProps> = ({
     staffQualificationCatalogue,
     traineesData = [],
     onUpdateTrainee,
+    onAssignTraineeLmp,
+    onTraceAssignLmp,
+    onDownloadAssignmentTrace,
     currentUserName,
     scoringMatrixPhraseBank,
     onAddScoringMatrixElement,
     onNavigateToSettingsSection,
+    onDeleteMasterLmpCatalogue,
+    onUpsertMasterLmpCatalogue,
 }) => {
     const { isFrozen } = useSystemFreeze();
   const [selectedItem, setSelectedItem] = useState<SyllabusItemDetail | null>(null);
@@ -1358,6 +1596,8 @@ const SyllabusView: React.FC<SyllabusViewProps> = ({
 	  const [showAssignTrainingModal, setShowAssignTrainingModal] = useState(false);
   const [assignTrainingSelection, setAssignTrainingSelection] = useState<Set<number>>(new Set());
   const [assignTraineeSelection, setAssignTraineeSelection] = useState<Set<number>>(new Set());
+  const [assignLmpCode, setAssignLmpCode] = useState('');
+  const [assignCourseSelection, setAssignCourseSelection] = useState<Set<string>>(new Set());
   const [isSavingTrainingAssignments, setIsSavingTrainingAssignments] = useState(false);
 
   // Dynamic course list: only courses found in the currently visible syllabusDetails.
@@ -1437,6 +1677,34 @@ const SyllabusView: React.FC<SyllabusViewProps> = ({
   const selectedCourseAllowsStaff = selectedCourseAudience === 'staff';
   const selectedCourseAllowsTrainees = selectedCourseAudience === 'trainee';
   const normaliseContextCode = (value?: string | null): string => String(value || '').trim().toUpperCase();
+  const selectedCollectionDeleteItems = useMemo(() => (
+      unitScopedSyllabusDetails.filter(item =>
+          item.isActive !== false &&
+          getItemLmpDetailsTab(item) === activeTab &&
+          (item.courses || []).includes(selectedCourseType)
+      )
+  ), [activeTab, selectedCourseType, unitScopedSyllabusDetails]);
+  const selectedCourseVersion = useMemo(() => {
+      const shellVersion = selectedCollectionDeleteItems
+          .filter(isSyllabusCourseShell)
+          .map(item => getLmpVersionFromNotes(item.notes))
+          .find(Boolean);
+      if (shellVersion) return shellVersion;
+
+      const itemVersion = selectedCollectionDeleteItems
+          .map(item => getLmpVersionFromNotes(item.notes))
+          .find(Boolean);
+      return itemVersion || DEFAULT_LMP_VERSION;
+  }, [selectedCollectionDeleteItems]);
+  const selectedCollectionAssignedTrainees = useMemo(() => {
+      const selectedKey = normaliseContextCode(selectedCourseType);
+      if (!selectedKey) return [];
+      return traineesData.filter(trainee =>
+          normaliseContextCode(trainee.lmpType) === selectedKey ||
+          normaliseContextCode((trainee as any).academicLmpType) === selectedKey
+      );
+  }, [selectedCourseType, traineesData]);
+  const deleteConfirmationPhrase = selectedCourseType ? `DELETE ${selectedCourseType}` : '';
   const activeUnitNormalised = normaliseContextCode(effectiveActiveUnitCode);
   const activeLocationNormalised = normaliseContextCode(activeLocationCode);
   const pushSetupTestLmpViewDiag = (stage: string, details: Record<string, any> = {}) => {
@@ -1515,7 +1783,9 @@ const SyllabusView: React.FC<SyllabusViewProps> = ({
   // Delete Course modal state
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [deletePassword, setDeletePassword] = useState('');
+  const [deleteConfirmText, setDeleteConfirmText] = useState('');
   const [deleteError, setDeleteError] = useState('');
+  const [deletePasswordVerified, setDeletePasswordVerified] = useState(false);
 
   // Bulk Upload modal state
   const [showUploadModal, setShowUploadModal] = useState(false);
@@ -1523,9 +1793,56 @@ const SyllabusView: React.FC<SyllabusViewProps> = ({
   const [isUploadDragActive, setIsUploadDragActive] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
   const [uploadMode, setUploadMode] = useState<'update' | 'replace' | 'create'>('update');
+  const [masterUploadIntent, setMasterUploadIntent] = useState<'new' | 'update' | null>(null);
+  const [uploadTargetLmpCode, setUploadTargetLmpCode] = useState('');
+  const [uploadLmpVersion, setUploadLmpVersion] = useState(DEFAULT_LMP_VERSION);
+  const [lmpUpdateReviewMode, setLmpUpdateReviewMode] = useState<'automatic' | 'one-by-one'>('automatic');
+  const [uploadReview, setUploadReview] = useState<any | null>(null);
+  const [showUploadOneByOneReview, setShowUploadOneByOneReview] = useState(false);
+  const [showUploadFinalWarning, setShowUploadFinalWarning] = useState(false);
+  const [oneByOneSelectedTraineeKey, setOneByOneSelectedTraineeKey] = useState('');
+  const [oneByOneCurrentLmp, setOneByOneCurrentLmp] = useState<any | null>(null);
+  const [oneByOneLmpLoading, setOneByOneLmpLoading] = useState(false);
+  const [oneByOneLmpError, setOneByOneLmpError] = useState('');
+  const oneByOneCurrentListRef = useRef<HTMLDivElement | null>(null);
+  const oneByOneProposedListRef = useRef<HTMLDivElement | null>(null);
   const [newUploadPackageName, setNewUploadPackageName] = useState('');
-  const [uploadResult, setUploadResult] = useState<{ created: number; updated?: number; imported?: number; skipped: number; errors: any[]; message: string } | null>(null);
+  const [uploadResult, setUploadResult] = useState<{ created: number; updated?: number; imported?: number; skipped: number; errors: any[]; message: string; preview?: any; individualLmpSync?: any; dryRun?: boolean; uploadTrace?: any } | null>(null);
+  const [uploadProgress, setUploadProgress] = useState<any | null>(null);
   const [isCrossLoadingDuplicateCourse, setIsCrossLoadingDuplicateCourse] = useState(false);
+
+  useEffect(() => {
+      const operationId = String(uploadProgress?.operationId || '').trim();
+      if (!isUploading || !operationId) return;
+      let cancelled = false;
+      let timer: number | null = null;
+
+      const pollProgress = async () => {
+          try {
+              const sessionToken = localStorage.getItem('dfp_session_token') || '';
+              const response = await fetch(`/api/syllabus/bulk-upload/progress/${encodeURIComponent(operationId)}`, {
+                  credentials: 'include',
+                  headers: sessionToken ? { Authorization: `Bearer ${sessionToken}` } : undefined,
+              });
+              const data = await response.json().catch(() => null);
+              if (!cancelled && response.ok && data) {
+                  setUploadProgress(data);
+              }
+          } catch (_error) {
+              // Keep the upload running. A missed poll should not stop the actual import.
+          } finally {
+              if (!cancelled) {
+                  timer = window.setTimeout(pollProgress, 1000);
+              }
+          }
+      };
+
+      pollProgress();
+      return () => {
+          cancelled = true;
+          if (timer !== null) window.clearTimeout(timer);
+      };
+  }, [isUploading, uploadProgress?.operationId]);
 
   const duplicateUploadSource = useMemo(() => {
       const sources = (uploadResult?.errors || [])
@@ -1738,6 +2055,57 @@ const SyllabusView: React.FC<SyllabusViewProps> = ({
   const showStaffInAssignTraining = !isAssigningFlightSchoolLmp || selectedCourseAllowsStaff;
   const showTraineesInAssignTraining = isAssigningFlightSchoolLmp && selectedCourseAllowsTrainees;
 
+  const assignLmpOptions = useMemo(() => {
+      const options = new Map<string, { code: string; title: string }>();
+      courseLMPs.forEach(code => {
+          const cleanCode = String(code || '').trim();
+          if (!cleanCode) return;
+          options.set(cleanCode.toUpperCase(), {
+              code: cleanCode,
+              title: getCourseTitle(cleanCode),
+          });
+      });
+      activeMasterLmpCatalogue.forEach(entry => {
+          const cleanCode = String(entry.code || '').trim();
+          if (!cleanCode || options.has(cleanCode.toUpperCase())) return;
+          options.set(cleanCode.toUpperCase(), {
+              code: cleanCode,
+              title: String(entry.name || cleanCode).trim() || cleanCode,
+          });
+      });
+      return Array.from(options.values())
+          .sort((a, b) => a.code.localeCompare(b.code, undefined, { numeric: true, sensitivity: 'base' }));
+  }, [activeMasterLmpCatalogue, courseLMPs, getCourseTitle]);
+
+  const assignFlightSchoolLmpAssignment = useMemo(() => {
+      if (!isFlightSchoolModel || isTrainingPackagesTab || !activeTrainingAssignmentItem) return activeFlightSchoolLmpAssignment;
+      const code = String(assignLmpCode || activeFlightSchoolLmpAssignment?.lmpCode || selectedCourseType || '').trim();
+      if (!code) return activeFlightSchoolLmpAssignment;
+      const title = assignLmpOptions.find(option => option.code.toUpperCase() === code.toUpperCase())?.title || getCourseTitle(code);
+      return {
+          ...getFlightSchoolStaffLmpAssignmentFromItem(
+              { ...activeTrainingAssignmentItem, courses: [code], module: title },
+              code,
+              activeLocationCode,
+              effectiveActiveUnitCode,
+              currentUserName,
+          ),
+          title,
+      };
+  }, [
+      activeFlightSchoolLmpAssignment,
+      activeLocationCode,
+      activeTrainingAssignmentItem,
+      assignLmpCode,
+      assignLmpOptions,
+      currentUserName,
+      effectiveActiveUnitCode,
+      getCourseTitle,
+      isFlightSchoolModel,
+      isTrainingPackagesTab,
+      selectedCourseType,
+  ]);
+
   const assignableTrainingStaff = useMemo(() => {
       if (!isAirCombatModel && !isFlightSchoolModel) return [];
       if (isFlightSchoolModel && !selectedCourseAllowsStaff) return [];
@@ -1767,8 +2135,203 @@ const SyllabusView: React.FC<SyllabusViewProps> = ({
           .sort((a, b) => a.name.localeCompare(b.name));
   }, [effectiveActiveUnitCode, isFlightSchoolModel, isTrainingPackagesTab, selectedCourseAllowsTrainees, traineesData]);
 
+  const assignableFlightSchoolTraineeCourses = useMemo(() => {
+      const courses = new Set<string>();
+      assignableFlightSchoolTrainees.forEach(trainee => {
+          courses.add(String(trainee.course || 'No course').trim() || 'No course');
+      });
+      return Array.from(courses).sort((a, b) => a.localeCompare(b, undefined, { numeric: true, sensitivity: 'base' }));
+  }, [assignableFlightSchoolTrainees]);
+
+  const courseFilteredAssignableFlightSchoolTrainees = useMemo(() => {
+      if (!showTraineesInAssignTraining) return [];
+      if (assignCourseSelection.size === 0) return [];
+      return assignableFlightSchoolTrainees.filter(trainee => {
+          const course = String(trainee.course || 'No course').trim() || 'No course';
+          return assignCourseSelection.has(course);
+      });
+  }, [assignCourseSelection, assignableFlightSchoolTrainees, showTraineesInAssignTraining]);
+
+  const oneByOneUploadTrainees = useMemo(() => {
+      const targetLmp = String(uploadTargetLmpCode || selectedCourseType || '').trim().toUpperCase();
+      if (!targetLmp) return [];
+      return assignableFlightSchoolTrainees
+          .filter(trainee => String(trainee.lmpType || '').trim().toUpperCase() === targetLmp)
+          .sort((a, b) => String(a.name || a.fullName || '').localeCompare(String(b.name || b.fullName || ''), undefined, { sensitivity: 'base' }));
+  }, [assignableFlightSchoolTrainees, selectedCourseType, uploadTargetLmpCode]);
+
+  const oneByOneSelectedTrainee = useMemo(() => {
+      return oneByOneUploadTrainees.find(trainee => String((trainee as any).id || trainee.idNumber || trainee.fullName || trainee.name) === oneByOneSelectedTraineeKey) || oneByOneUploadTrainees[0] || null;
+  }, [oneByOneSelectedTraineeKey, oneByOneUploadTrainees]);
+
+  const oneByOneUploadEvents = useMemo(() => {
+      const traceRows = uploadReview?.uploadTrace?.rowScan?.uploadedEventRows;
+      if (Array.isArray(traceRows) && traceRows.length > 0) return traceRows;
+      const previewRows = uploadReview?.preview?.uploadedEvents;
+      if (Array.isArray(previewRows) && previewRows.length > 0) return previewRows;
+      const firstRows = uploadReview?.uploadTrace?.rowScan?.firstEventRows;
+      if (Array.isArray(firstRows) && firstRows.length > 0) return firstRows;
+      const previewCodes = uploadReview?.preview?.uploadedEventCodes;
+      if (Array.isArray(previewCodes)) return previewCodes.map((code, index) => ({ row: index + 1, eventCode: String(code || '').trim() })).filter(row => row.eventCode);
+      return [];
+  }, [uploadReview]);
+
+  const oneByOneCurrentEvents = useMemo(() => {
+      return Array.isArray(oneByOneCurrentLmp?.events) ? oneByOneCurrentLmp.events : [];
+  }, [oneByOneCurrentLmp]);
+
+  const oneByOneCompletedTokens = useMemo(() => {
+      return new Set((Array.isArray(oneByOneCurrentLmp?.completedEventIds) ? oneByOneCurrentLmp.completedEventIds : [])
+          .map(value => String(value || '').replace('*', '').trim().toUpperCase())
+          .filter(Boolean));
+  }, [oneByOneCurrentLmp]);
+
+  const oneByOneLastCompletedIndex = useMemo(() => {
+      let lastIndex = -1;
+      oneByOneCurrentEvents.forEach((event: any, index: number) => {
+          const tokens = [event?.id, event?.code, event?.masterEventId, event?.eventDescription, event?.title]
+              .map(value => String(value || '').replace('*', '').trim().toUpperCase())
+              .filter(Boolean);
+          if (tokens.some(token => oneByOneCompletedTokens.has(token))) lastIndex = index;
+      });
+      return lastIndex;
+  }, [oneByOneCompletedTokens, oneByOneCurrentEvents]);
+
+  const oneByOneLastCompletedCode = oneByOneLastCompletedIndex >= 0
+      ? String(oneByOneCurrentEvents[oneByOneLastCompletedIndex]?.code || oneByOneCurrentEvents[oneByOneLastCompletedIndex]?.eventDescription || '').trim()
+      : '';
+
+  const oneByOneProtectedNewIndex = useMemo(() => {
+      if (!oneByOneLastCompletedCode) return -1;
+      const token = oneByOneLastCompletedCode.toUpperCase();
+      const matchedIndex = oneByOneUploadEvents.findIndex((event: any) => String(event?.eventCode || event?.code || '').trim().toUpperCase() === token);
+      return matchedIndex >= 0 ? matchedIndex : Math.min(oneByOneLastCompletedIndex, oneByOneUploadEvents.length - 1);
+  }, [oneByOneLastCompletedCode, oneByOneLastCompletedIndex, oneByOneUploadEvents]);
+
+  const oneByOneProposalRows = useMemo(() => {
+      const currentByCode = new Map<string, { event: any; index: number }>();
+      oneByOneCurrentEvents.forEach((event: any, index: number) => {
+          const code = String(event?.code || event?.eventCode || '').trim().toUpperCase();
+          if (code) currentByCode.set(code, { event, index });
+      });
+      const uploadedCodeSet = new Set(
+          oneByOneUploadEvents
+              .map((event: any) => String(event?.eventCode || event?.code || '').trim().toUpperCase())
+              .filter(Boolean)
+      );
+      const deletedCurrentRows = oneByOneCurrentEvents
+          .map((event: any, index: number) => ({
+              event,
+              index,
+              code: String(event?.code || event?.eventCode || '').trim(),
+          }))
+          .filter(row => row.index > oneByOneLastCompletedIndex)
+          .filter(row => row.code && !uploadedCodeSet.has(row.code.toUpperCase()))
+          .sort((left, right) => left.index - right.index);
+      const rows: any[] = [];
+      let deletedCursor = 0;
+      let lastMatchedCurrentIndex = oneByOneLastCompletedIndex;
+      const appendDeletedBefore = (currentIndexLimit: number) => {
+          while (deletedCursor < deletedCurrentRows.length && deletedCurrentRows[deletedCursor].index < currentIndexLimit) {
+              const deleted = deletedCurrentRows[deletedCursor];
+              rows.push({
+                  eventCode: deleted.code,
+                  code: deleted.code,
+                  eventDescription: deleted.event.eventDescription || deleted.event.description || '',
+                  proposalAction: 'Delete',
+                  proposalSource: 'current-missing-from-upload',
+                  currentIndex: deleted.index,
+              });
+              lastMatchedCurrentIndex = Math.max(lastMatchedCurrentIndex, deleted.index);
+              deletedCursor += 1;
+          }
+      };
+      oneByOneUploadEvents.forEach((event: any, index: number) => {
+          const code = String(event?.eventCode || event?.code || '').trim();
+          const currentMatch = currentByCode.get(code.toUpperCase());
+          const current = currentMatch?.event;
+          let action = index <= oneByOneProtectedNewIndex ? 'Skip - completed/protected' : 'Add';
+          if (index > oneByOneProtectedNewIndex && currentMatch && currentMatch.index > lastMatchedCurrentIndex) {
+              appendDeletedBefore(currentMatch.index);
+              lastMatchedCurrentIndex = Math.max(lastMatchedCurrentIndex, currentMatch.index);
+          }
+          if (index > oneByOneProtectedNewIndex && current) {
+              const currentDescription = String(current.eventDescription || current.description || '').trim();
+              const nextDescription = String(event.eventDescription || event.description || '').trim();
+              action = currentDescription && nextDescription && currentDescription !== nextDescription ? 'Amend' : 'Replace/retain';
+          }
+          rows.push({
+              ...event,
+              eventCode: code,
+              proposalAction: action,
+              proposalSource: 'uploaded',
+              currentIndex: currentMatch?.index,
+          });
+      });
+      appendDeletedBefore(Number.POSITIVE_INFINITY);
+      return rows;
+  }, [oneByOneCurrentEvents, oneByOneLastCompletedIndex, oneByOneProtectedNewIndex, oneByOneUploadEvents]);
+
+  useEffect(() => {
+      if (!showUploadOneByOneReview) return;
+      if (oneByOneSelectedTraineeKey && oneByOneUploadTrainees.some(trainee => String((trainee as any).id || trainee.idNumber || trainee.fullName || trainee.name) === oneByOneSelectedTraineeKey)) return;
+      const firstTrainee = oneByOneUploadTrainees[0];
+      setOneByOneSelectedTraineeKey(firstTrainee ? String((firstTrainee as any).id || firstTrainee.idNumber || firstTrainee.fullName || firstTrainee.name) : '');
+  }, [oneByOneSelectedTraineeKey, oneByOneUploadTrainees, showUploadOneByOneReview]);
+
+  useEffect(() => {
+      if (!showUploadOneByOneReview || !oneByOneSelectedTrainee) {
+          setOneByOneCurrentLmp(null);
+          return;
+      }
+      let cancelled = false;
+      const traineeLookup = String((oneByOneSelectedTrainee as any).id || oneByOneSelectedTrainee.fullName || oneByOneSelectedTrainee.name || oneByOneSelectedTrainee.idNumber || '').trim();
+      if (!traineeLookup) return;
+      setOneByOneLmpLoading(true);
+      setOneByOneLmpError('');
+      fetch(`/api/trainees/${encodeURIComponent(traineeLookup)}/lmp`, { credentials: 'include' })
+          .then(async response => {
+              const data = await response.json().catch(() => ({}));
+              if (!response.ok) throw new Error(data?.message || data?.error || `Could not load Individual LMP (${response.status})`);
+              if (!cancelled) setOneByOneCurrentLmp(data?.lmp || null);
+          })
+          .catch(error => {
+              if (!cancelled) {
+                  setOneByOneCurrentLmp(null);
+                  setOneByOneLmpError(error?.message || 'Could not load this trainee Individual LMP.');
+              }
+          })
+          .finally(() => {
+              if (!cancelled) setOneByOneLmpLoading(false);
+          });
+      return () => { cancelled = true; };
+  }, [oneByOneSelectedTrainee, showUploadOneByOneReview]);
+
+  useEffect(() => {
+      if (!showUploadOneByOneReview) return;
+      const targetIndex = Math.max(0, oneByOneLastCompletedIndex - 3);
+      const rowHeight = 42;
+      const scrollTop = targetIndex * rowHeight;
+      if (oneByOneCurrentListRef.current) oneByOneCurrentListRef.current.scrollTop = scrollTop;
+      if (oneByOneProposedListRef.current) oneByOneProposedListRef.current.scrollTop = Math.max(0, Math.max(0, oneByOneProtectedNewIndex - 3) * rowHeight);
+  }, [oneByOneCurrentEvents.length, oneByOneLastCompletedIndex, oneByOneProtectedNewIndex, oneByOneProposalRows.length, showUploadOneByOneReview]);
+
   const openAssignTraining = () => {
       if (!activeStaffTrainingAssignment) return;
+      const lmpCode = String(activeFlightSchoolLmpAssignment?.lmpCode || selectedCourseType || '').trim();
+      setAssignLmpCode(lmpCode);
+      const assignedTraineeCourses = new Set(
+          showTraineesInAssignTraining
+              ? assignableFlightSchoolTrainees
+                  .filter(trainee => String(trainee.lmpType || '').trim().toUpperCase() === lmpCode.toUpperCase())
+                  .map(trainee => String(trainee.course || 'No course').trim() || 'No course')
+              : []
+      );
+      setAssignCourseSelection(new Set(
+          assignedTraineeCourses.size > 0
+              ? Array.from(assignedTraineeCourses)
+              : assignableFlightSchoolTraineeCourses
+      ));
       setAssignTrainingSelection(new Set(
           showStaffInAssignTraining
               ? assignableTrainingStaff
@@ -1785,7 +2348,7 @@ const SyllabusView: React.FC<SyllabusViewProps> = ({
       setAssignTraineeSelection(new Set(
           showTraineesInAssignTraining
               ? assignableFlightSchoolTrainees
-                  .filter(trainee => String(trainee.lmpType || '').trim().toUpperCase() === String(activeFlightSchoolLmpAssignment?.lmpCode || selectedCourseType).trim().toUpperCase())
+                  .filter(trainee => String(trainee.lmpType || '').trim().toUpperCase() === lmpCode.toUpperCase())
                   .map(trainee => trainee.idNumber)
               : []
       ));
@@ -1796,6 +2359,15 @@ const SyllabusView: React.FC<SyllabusViewProps> = ({
       if (!activeStaffTrainingAssignment) return;
       if (showStaffInAssignTraining && !onUpdateInstructor) return;
       if (showTraineesInAssignTraining && !onUpdateTrainee) return;
+      const traceAssignLmp = (stage: string, details: Record<string, any> = {}) => {
+          onTraceAssignLmp?.(stage, {
+              selectedLmpCode: assignLmpCode || activeFlightSchoolLmpAssignment?.lmpCode || selectedCourseType,
+              selectedCourseKeys: Array.from(assignCourseSelection),
+              selectedTraineeIds: Array.from(assignTraineeSelection),
+              visibleTraineeCount: courseFilteredAssignableFlightSchoolTrainees.length,
+              ...details,
+          });
+      };
       setIsSavingTrainingAssignments(true);
       try {
           if (showStaffInAssignTraining && onUpdateInstructor) {
@@ -1803,34 +2375,96 @@ const SyllabusView: React.FC<SyllabusViewProps> = ({
                   const shouldAssign = assignTrainingSelection.has(staff.idNumber);
                   const currentlyAssigned = activeAirCombatTrainingAssignment
                       ? staffHasAirCombatAssignment(staff, activeAirCombatTrainingAssignment)
-                      : activeFlightSchoolLmpAssignment
-                          ? staffHasFlightSchoolStaffLmpAssignment(staff, activeFlightSchoolLmpAssignment)
+                      : assignFlightSchoolLmpAssignment
+                          ? staffHasFlightSchoolStaffLmpAssignment(staff, assignFlightSchoolLmpAssignment)
                           : false;
                   if (shouldAssign === currentlyAssigned) continue;
                   const updatedStaff = activeAirCombatTrainingAssignment
                       ? setAirCombatTrainingAssignment(staff, activeAirCombatTrainingAssignment, shouldAssign)
-                      : setFlightSchoolStaffLmpAssignment(staff, activeFlightSchoolLmpAssignment!, shouldAssign);
+                      : setFlightSchoolStaffLmpAssignment(staff, assignFlightSchoolLmpAssignment!, shouldAssign);
                   await onUpdateInstructor(updatedStaff);
               }
           }
           if (showTraineesInAssignTraining && onUpdateTrainee) {
-              const lmpCode = String(activeFlightSchoolLmpAssignment?.lmpCode || selectedCourseType || '').trim();
-              for (const trainee of assignableFlightSchoolTrainees) {
+              const lmpCode = String(assignLmpCode || activeFlightSchoolLmpAssignment?.lmpCode || selectedCourseType || '').trim();
+              traceAssignLmp('save:start', {
+                  lmpCode,
+                  hasUpdateTrainee: Boolean(onUpdateTrainee),
+                  hasAssignIndividualLmp: Boolean(onAssignTraineeLmp),
+              });
+              for (const trainee of courseFilteredAssignableFlightSchoolTrainees) {
                   const shouldAssign = assignTraineeSelection.has(trainee.idNumber);
                   const currentlyAssigned = String(trainee.lmpType || '').trim().toUpperCase() === lmpCode.toUpperCase();
-                  if (shouldAssign === currentlyAssigned) continue;
-                  await onUpdateTrainee({
+                  traceAssignLmp('trainee:evaluate', {
+                      traineeName: trainee.fullName || trainee.name,
+                      traineeIdNumber: trainee.idNumber,
+                      traineeDbId: (trainee as any).id || null,
+                      traineeCourse: trainee.course || null,
+                      currentLmpType: trainee.lmpType || '',
+                      lmpCode,
+                      shouldAssign,
+                      currentlyAssigned,
+                  });
+                  if (!shouldAssign && !currentlyAssigned) {
+                      traceAssignLmp('trainee:skip-unassigned', {
+                          traineeName: trainee.fullName || trainee.name,
+                          traineeIdNumber: trainee.idNumber,
+                      });
+                      continue;
+                  }
+                  const updatedTrainee = {
                       ...trainee,
                       lmpType: shouldAssign ? lmpCode : '',
-                  });
+                  };
+                  if (shouldAssign && currentlyAssigned) {
+                      traceAssignLmp('trainee:profile-already-assigned', {
+                          traineeName: trainee.fullName || trainee.name,
+                          traineeIdNumber: trainee.idNumber,
+                      });
+                  } else {
+                      traceAssignLmp('trainee:profile-update:start', {
+                          traineeName: trainee.fullName || trainee.name,
+                          traineeIdNumber: trainee.idNumber,
+                          nextLmpType: updatedTrainee.lmpType,
+                      });
+                      await onUpdateTrainee(updatedTrainee);
+                      traceAssignLmp('trainee:profile-update:success', {
+                          traineeName: trainee.fullName || trainee.name,
+                          traineeIdNumber: trainee.idNumber,
+                          nextLmpType: updatedTrainee.lmpType,
+                      });
+                  }
+                  if (shouldAssign && lmpCode) {
+                      if (onAssignTraineeLmp) {
+                          traceAssignLmp('trainee:individual-lmp:start', {
+                              traineeName: updatedTrainee.fullName || updatedTrainee.name,
+                              traineeIdNumber: updatedTrainee.idNumber,
+                              traineeDbId: (updatedTrainee as any).id || null,
+                              lmpCode,
+                          });
+                          await onAssignTraineeLmp(updatedTrainee, lmpCode);
+                          traceAssignLmp('trainee:individual-lmp:success', {
+                              traineeName: updatedTrainee.fullName || updatedTrainee.name,
+                              traineeIdNumber: updatedTrainee.idNumber,
+                              lmpCode,
+                          });
+                      } else {
+                          traceAssignLmp('trainee:individual-lmp:no-callback', {
+                              traineeName: updatedTrainee.fullName || updatedTrainee.name,
+                              traineeIdNumber: updatedTrainee.idNumber,
+                              lmpCode,
+                          });
+                      }
+                  }
               }
+              traceAssignLmp('save:complete', { lmpCode });
           }
           logAudit({
               action: 'Update',
               description: isAssigningFlightSchoolLmp
-                  ? `Updated Flight School ${selectedCourseAudience === 'staff' ? 'staff' : 'trainee'} LMP assignment for ${activeFlightSchoolLmpAssignment?.lmpCode || selectedCourseType}`
+                  ? `Updated Flight School ${selectedCourseAudience === 'staff' ? 'staff' : 'trainee'} LMP assignment for ${assignLmpCode || activeFlightSchoolLmpAssignment?.lmpCode || selectedCourseType}`
                   : `Updated Air Combat training assignment for ${activeAirCombatTrainingAssignment?.code || selectedCourseType}`,
-              changes: `${assignTrainingSelection.size} staff selected, ${assignTraineeSelection.size} trainees selected`,
+              changes: `${assignTrainingSelection.size} staff selected, ${assignTraineeSelection.size} trainees selected, ${assignCourseSelection.size} courses selected`,
               page: 'LMP/Event Details',
           });
           setShowAssignTrainingModal(false);
@@ -2102,47 +2736,178 @@ const SyllabusView: React.FC<SyllabusViewProps> = ({
       });
   };
 
+  const openUploadModal = () => {
+      setUploadFile(null);
+      setUploadResult(null);
+      setUploadProgress(null);
+      setUploadReview(null);
+      setShowUploadOneByOneReview(false);
+      setShowUploadFinalWarning(false);
+      setNewUploadPackageName('');
+      if (isTrainingPackagesTab) {
+          setUploadMode(selectedCourseType ? 'update' : 'create');
+          setMasterUploadIntent(null);
+          setUploadTargetLmpCode('');
+      } else {
+          setUploadMode(selectedCourseType ? 'replace' : 'create');
+          setMasterUploadIntent(null);
+          setUploadTargetLmpCode(selectedCourseType || activeMasterLmpCatalogue[0]?.code || '');
+          setUploadLmpVersion(selectedCourseVersion || DEFAULT_LMP_VERSION);
+          setLmpUpdateReviewMode('automatic');
+      }
+      setShowUploadModal(true);
+  };
+
+  const downloadUploadTrace = (label = 'lmp-upload-trace') => {
+      const payload = {
+          generatedAt: new Date().toISOString(),
+          activeTab,
+          activeCollectionTitle,
+          selectedCourseType,
+          masterUploadIntent,
+          uploadMode,
+          uploadTargetLmpCode,
+          newUploadPackageName,
+          uploadLmpVersion,
+          lmpUpdateReviewMode,
+          uploadFile: uploadFile ? { name: uploadFile.name, size: uploadFile.size, type: uploadFile.type } : null,
+          review: uploadReview,
+          result: uploadResult,
+      };
+      const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      const safeCode = (uploadTargetLmpCode || selectedCourseType || newUploadPackageName || 'lmp').replace(/[^a-z0-9-]+/gi, '-').replace(/^-+|-+$/g, '') || 'lmp';
+      link.href = url;
+      link.download = `${label}-${safeCode}-${new Date().toISOString().replace(/[:.]/g, '-')}.json`;
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      URL.revokeObjectURL(url);
+  };
+
+  const handleEditSelectedCourseVersion = async () => {
+      if (isFrozen || !selectedCourseType) return;
+      const currentVersion = selectedCourseVersion || DEFAULT_LMP_VERSION;
+      const value = await showDarkPrompt({
+          title: 'Edit LMP Version',
+          message: `Enter the version number for ${getCourseTitle(selectedCourseType)}.`,
+          inputLabel: 'Version',
+          inputPlaceholder: '1.0',
+          inputDefaultValue: currentVersion,
+          confirmText: 'Save',
+          variant: 'info',
+      });
+      if (value === null) return;
+
+      const version = String(value || '').trim();
+      if (!/^\d+(?:\.\d+)?$/.test(version)) {
+          await showDarkAlert('Enter a version number using digits only, with an optional decimal point. Example: 1 or 1.2', 'Invalid Version', 'warning');
+          return;
+      }
+
+      const targetItem = selectedCollectionDeleteItems.find(isSyllabusCourseShell) || selectedCollectionDeleteItems[0];
+      if (!targetItem) {
+          await showDarkAlert('No saved LMP record was found to store the version against.', 'Version Not Saved', 'warning');
+          return;
+      }
+
+      const updatedItem = {
+          ...targetItem,
+          notes: withLmpVersionInNotes(targetItem.notes, version),
+      };
+      const savedItem = await updateSyllabusItem(targetItem.id, updatedItem, `Updated ${activeCollectionTitle} version`);
+      onUpdateItem({ ...updatedItem, ...savedItem, id: targetItem.id });
+      logAudit({
+          action: 'Edit',
+          description: `Updated ${activeCollectionNoun} version: ${selectedCourseType}`,
+          changes: `Version: ${currentVersion} to ${version}`,
+          page: 'LMP/Event Details',
+      });
+  };
+
   const handleDeleteCourse = async () => {
+      if (!selectedCourseType) { setDeleteError('Select an LMP before deleting.'); return; }
+      if (selectedCollectionDeleteItems.length === 0 && (isTrainingPackagesTab || !selectedMasterLmpCatalogueEntry)) {
+          setDeleteError(`No database event rows were found for ${selectedCourseType}. Hard refresh and try again, or check the selected unit/location.`);
+          return;
+      }
+      if (deleteConfirmText.trim() !== deleteConfirmationPhrase) {
+          setDeleteError(`Type ${deleteConfirmationPhrase} to confirm permanent deletion.`);
+          return;
+      }
       if (!deletePassword) { setDeleteError('Please enter your password.'); return; }
       setIsDeleting(true);
       setDeleteError('');
       try {
-          // Verify password first - get session token from localStorage
-          const sessionToken = localStorage.getItem('dfp_session_token') || '';
-          const verifyResp = await fetch('/api/auth/verify-password', {
-              method: 'POST',
-              credentials: 'include',
-              headers: { 
-                  'Content-Type': 'application/json',
-                  'Authorization': `Bearer ${sessionToken}`,
-              },
-              body: JSON.stringify({ password: deletePassword }),
-          });
-          const verifyData = await verifyResp.json();
-          if (!verifyData.valid) {
-              setDeleteError('Incorrect password. Please try again.');
+          if (!deletePasswordVerified) {
+              // Verify password first - get session token from localStorage
+              const sessionToken = localStorage.getItem('dfp_session_token') || '';
+              const verifyResp = await fetch('/api/auth/verify-password', {
+                  method: 'POST',
+                  credentials: 'include',
+                  headers: { 
+                      'Content-Type': 'application/json',
+                      'Authorization': `Bearer ${sessionToken}`,
+                  },
+                  body: JSON.stringify({ password: deletePassword }),
+              });
+              const verifyData = await verifyResp.json();
+              if (!verifyData.valid) {
+                  setDeleteError('Incorrect password. Please try again.');
+                  setIsDeleting(false);
+                  return;
+              }
+              setDeletePasswordVerified(true);
               setIsDeleting(false);
               return;
           }
-          // Permanently delete all items for this course/package.
-          // Include any item that belongs to this course (even if it also belongs to others)
-          const itemsToDelete = unitScopedSyllabusDetails.filter(item =>
-              getItemLmpDetailsTab(item) === activeTab &&
-              (item.courses || []).includes(selectedCourseType)
-          );
-          
-          if (itemsToDelete.length === 0) {
-              console.warn(`⚠️ No items found for ${activeCollectionNoun} ${selectedCourseType} in syllabusDetails (${syllabusDetails.length} total items)`);
+          // Permanently delete all database rows for this Master LMP/package.
+          // Master LMP deletion is a server-side whole-record operation so the
+          // catalogue title cannot survive after event rows have been removed.
+          const itemsToDelete = selectedCollectionDeleteItems;
+
+          let deletedCount = itemsToDelete.length;
+          if (!isTrainingPackagesTab) {
+              const sessionToken = localStorage.getItem('dfp_session_token') || '';
+              const deleteResp = await fetch(`/api/master-lmp/${encodeURIComponent(selectedCourseType)}`, {
+                  method: 'DELETE',
+                  credentials: 'include',
+                  headers: {
+                      'Content-Type': 'application/json',
+                      ...(sessionToken ? { 'Authorization': `Bearer ${sessionToken}` } : {}),
+                  },
+                  body: JSON.stringify({
+                      lmpCode: selectedCourseType,
+                      unit: activeUnitNormalised,
+                      location: activeLocationNormalised,
+                  }),
+              });
+              const deleteData = await deleteResp.json().catch(() => ({}));
+              if (!deleteResp.ok || deleteData?.success === false) {
+                  throw new Error(deleteData?.message || deleteData?.error || deleteData?.details || 'Master LMP delete failed.');
+              }
+              deletedCount = Number(deleteData?.deletedEventRows ?? itemsToDelete.length) || 0;
+              if (onDeleteMasterLmpCatalogue) {
+                  await onDeleteMasterLmpCatalogue(selectedCourseType);
+              }
           } else {
-              await Promise.all(itemsToDelete.map(item =>
-                  deleteSyllabusItem(item.id, `${activeCollectionTitle} deleted: ${selectedCourseType}`)
-              ));
+              if (itemsToDelete.length === 0) {
+                  console.warn(`⚠️ No items found for ${activeCollectionNoun} ${selectedCourseType} in syllabusDetails (${syllabusDetails.length} total items)`);
+              } else {
+                  await Promise.all(itemsToDelete.map(item =>
+                      deleteSyllabusItem(item.id, `${activeCollectionTitle} deleted: ${selectedCourseType}`)
+                  ));
+              }
           }
-          logAudit({ action: 'Delete', description: `Deleted ${activeCollectionNoun}: ${selectedCourseType}`, changes: `${itemsToDelete.length} database item(s) permanently deleted`, page: 'LMP/Event Details' });
-          // Remove from local state by marking isActive: false
+          logAudit({ action: 'Delete', description: `Deleted ${activeCollectionNoun}: ${selectedCourseType}`, changes: `${deletedCount} database item(s) permanently deleted`, page: 'LMP/Event Details' });
+          // Remove from local state immediately after the server hard-delete succeeds.
           itemsToDelete.forEach(item => onUpdateItem({ ...item, isActive: false } as any));
+          clearSyllabusCache();
           setShowDeleteModal(false);
           setDeletePassword('');
+          setDeleteConfirmText('');
+          setDeletePasswordVerified(false);
           setSelectedItem(null);
           // Switch to first available course (excluding the deleted one)
           const remaining = courseLMPs.filter(c => c !== selectedCourseType);
@@ -2156,15 +2921,31 @@ const SyllabusView: React.FC<SyllabusViewProps> = ({
 
   const handleBulkUpload = async () => {
       if (!uploadFile) { await showDarkAlert('Please select a file first.', 'No File Selected', 'warning'); return; }
+      const isMasterUpload = !isTrainingPackagesTab;
+      if (isMasterUpload && !masterUploadIntent) {
+          await showDarkAlert('Choose whether this is a new LMP or an update to an existing LMP first.', 'Upload Type Required', 'warning');
+          return;
+      }
       const packageName = newUploadPackageName.trim();
-      const destinationCode = isTrainingPackagesTab && uploadMode === 'create'
+      const masterNewCode = getPackageCodeFromTitle(packageName);
+      const destinationCode = isMasterUpload
+          ? (masterUploadIntent === 'new' ? masterNewCode : uploadTargetLmpCode.trim())
+          : isTrainingPackagesTab && uploadMode === 'create'
           ? getUnitScopedCollectionCode(getPackageCodeFromTitle(packageName), activeUnitNormalised, shouldScopeCreatedItemsToActiveUnit)
           : selectedCourseType;
-      const destinationName = isTrainingPackagesTab && uploadMode === 'create'
+      const destinationName = isMasterUpload
+          ? (masterUploadIntent === 'new' ? packageName : getCourseTitle(destinationCode))
+          : isTrainingPackagesTab && uploadMode === 'create'
           ? packageName
           : getCourseTitle(selectedCourseType);
-      if (isTrainingPackagesTab && uploadMode === 'create' && !packageName) {
-          await showDarkAlert('Please enter a new package name.', 'Package Name Required', 'warning');
+      if ((isTrainingPackagesTab && uploadMode === 'create') || (isMasterUpload && masterUploadIntent === 'new')) {
+          if (!packageName) {
+              await showDarkAlert(`Please enter a new ${isMasterUpload ? 'LMP' : 'package'} name.`, `${isMasterUpload ? 'LMP' : 'Package'} Name Required`, 'warning');
+              return;
+          }
+      }
+      if (isMasterUpload && !/^\d+(?:\.\d+)?$/.test(uploadLmpVersion.trim())) {
+          await showDarkAlert('Enter a version number using digits only, with an optional decimal point. Example: 1 or 1.2', 'Invalid Version', 'warning');
           return;
       }
       if (!destinationCode) { await showDarkAlert(`Please select or add a ${activeCollectionNoun} first.`, 'Selection Required', 'warning'); return; }
@@ -2172,14 +2953,53 @@ const SyllabusView: React.FC<SyllabusViewProps> = ({
           await showDarkAlert(`A package with code ${destinationCode} already exists. Select it and use Replace Package or Update Package instead.`, 'Package Already Exists', 'warning');
           return;
       }
+      if (isMasterUpload && masterUploadIntent === 'new' && (
+          courseLMPs.some(code => normaliseContextCode(code) === normaliseContextCode(destinationCode)) ||
+          activeMasterLmpCatalogue.some(entry => normaliseContextCode(entry.code) === normaliseContextCode(destinationCode))
+      )) {
+          await showDarkAlert(`Master LMP "${destinationCode}" already exists. Use Update existing LMP or choose a different name.`, 'Master LMP Already Exists', 'warning');
+          return;
+      }
+      const isReviewStep = !uploadReview;
+      if (!isReviewStep && isMasterUpload && masterUploadIntent === 'update' && lmpUpdateReviewMode === 'one-by-one' && !showUploadOneByOneReview) {
+          setShowUploadOneByOneReview(true);
+          return;
+      }
+      if (!isReviewStep && !showUploadFinalWarning) {
+          setShowUploadFinalWarning(true);
+          return;
+      }
       setIsUploading(true);
-      setUploadResult(null);
+      const uploadOperationId = (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function')
+          ? crypto.randomUUID()
+          : `${Date.now()}-${Math.random().toString(36).slice(2)}`;
+      setUploadProgress({
+          operationId: uploadOperationId,
+          status: 'running',
+          phase: 'client:starting',
+          message: isReviewStep ? 'Starting upload review...' : 'Starting Master LMP update...',
+          percent: 0,
+          current: 0,
+          total: 0,
+          created: 0,
+          updated: 0,
+          skipped: 0,
+          deleted: 0,
+      });
+      if (isReviewStep) setUploadResult(null);
       try {
           const formData = new FormData();
           formData.append('file', uploadFile);
+          formData.append('uploadOperationId', uploadOperationId);
           formData.append('courseCode', destinationCode);
           formData.append('packageName', destinationName);
-          formData.append('uploadMode', isTrainingPackagesTab ? uploadMode : 'update');
+          formData.append('uploadMode', isMasterUpload ? (masterUploadIntent === 'new' ? 'create' : 'replace') : uploadMode);
+          if (isMasterUpload) {
+              formData.append('uploadIntent', masterUploadIntent || '');
+              formData.append('lmpVersion', uploadLmpVersion.trim() || DEFAULT_LMP_VERSION);
+              formData.append('updateReviewMode', lmpUpdateReviewMode);
+          }
+          if (isReviewStep) formData.append('dryRun', 'true');
           formData.append('lmpType', activeLmpType);
           formData.append('operationalModel', activeOperationalModel);
           const sessionToken = localStorage.getItem('dfp_session_token') || '';
@@ -2187,11 +3007,20 @@ const SyllabusView: React.FC<SyllabusViewProps> = ({
               formData.append('locationCode', activeLocationNormalised);
               formData.append('unitCode', activeUnitNormalised);
           }
-          const resp = await fetch('/api/syllabus/bulk-upload', {
-              method: 'POST',
-              headers: sessionToken ? { Authorization: `Bearer ${sessionToken}` } : undefined,
-              body: formData,
-          });
+          const abortController = new AbortController();
+          const timeoutMs = isReviewStep ? 60000 : 180000;
+          const timeoutId = window.setTimeout(() => abortController.abort(), timeoutMs);
+          let resp: Response;
+          try {
+              resp = await fetch('/api/syllabus/bulk-upload', {
+                  method: 'POST',
+                  headers: sessionToken ? { Authorization: `Bearer ${sessionToken}` } : undefined,
+                  body: formData,
+                  signal: abortController.signal,
+              });
+          } finally {
+              window.clearTimeout(timeoutId);
+          }
           const responseText = await resp.text();
           let data: any = {};
           try {
@@ -2200,12 +3029,55 @@ const SyllabusView: React.FC<SyllabusViewProps> = ({
               const preview = responseText.replace(/\s+/g, ' ').trim().slice(0, 180);
               throw new Error(`Upload endpoint returned a non-JSON response (${resp.status} ${resp.statusText})${preview ? `: ${preview}` : ''}`);
           }
-          if (!resp.ok && Array.isArray(data.errors)) {
-              setUploadResult(data);
+          if (!resp.ok && (Array.isArray(data.errors) || data.uploadTrace)) {
+              setUploadResult({
+                  created: data.created || 0,
+                  updated: data.updated || 0,
+                  imported: data.imported || 0,
+                  skipped: data.skipped || 0,
+                  errors: Array.isArray(data.errors) && data.errors.length > 0
+                      ? data.errors
+                      : [{ row: 0, error: data.message || data.error || data.details || `Upload failed (${resp.status} ${resp.statusText})` }],
+                  message: data.message || data.error || `Upload failed (${resp.status} ${resp.statusText})`,
+                  uploadTrace: data.uploadTrace,
+              });
               return;
           }
           if (!resp.ok) throw new Error(data.error || data.message || `Upload failed (${resp.status} ${resp.statusText})`);
+          if (data.dryRun) {
+              setUploadReview(data);
+              setUploadResult(null);
+              setShowUploadOneByOneReview(false);
+              setShowUploadFinalWarning(false);
+              return;
+          }
+          if (isMasterUpload && masterUploadIntent === 'new') {
+              await onUpsertMasterLmpCatalogue?.({
+                  code: destinationCode,
+                  name: destinationName || destinationCode,
+                  version: uploadLmpVersion.trim() || DEFAULT_LMP_VERSION,
+                  audience: 'trainee',
+              });
+          }
           setUploadResult(data);
+          setUploadReview(null);
+          setShowUploadFinalWarning(false);
+          logAudit({
+              action: isMasterUpload && masterUploadIntent === 'update' ? 'Update' : 'Create',
+              description: `${isMasterUpload ? 'Master LMP' : activeCollectionTitle} upload: ${destinationCode}`,
+              changes: JSON.stringify({
+                  uploadIntent: isMasterUpload ? masterUploadIntent : uploadMode,
+                  version: isMasterUpload ? uploadLmpVersion : undefined,
+                  imported: data.imported,
+                  created: data.created,
+                  updated: data.updated,
+                  individualLmpSync: data.individualLmpSync ? {
+                      assignedTrainees: data.individualLmpSync.assignedTrainees,
+                      protectedCompletedEvents: data.individualLmpSync.protectedCompletedEvents,
+                  } : undefined,
+              }),
+              page: 'LMP/Event Details',
+          });
           // Reload syllabus data by triggering a page reload after short delay
           if ((data.created || 0) > 0 || (data.updated || 0) > 0) {
               clearSyllabusCache();
@@ -2214,7 +3086,45 @@ const SyllabusView: React.FC<SyllabusViewProps> = ({
               setTimeout(() => window.location.reload(), 2000);
           }
       } catch (err: any) {
-          await showDarkAlert(`Upload failed: ${err.message}`, 'Upload Failed', 'error');
+          const isTimeout = err?.name === 'AbortError';
+          const errorMessage = isTimeout
+              ? `The ${isReviewStep ? 'review' : 'apply'} request did not return within ${Math.round((isReviewStep ? 60000 : 180000) / 1000)} seconds. Download the trace below; the server may still have continued processing.`
+              : `Upload failed: ${err.message}`;
+          setUploadResult({
+              created: 0,
+              updated: 0,
+              imported: 0,
+              skipped: 0,
+              errors: [{ row: 0, error: errorMessage }],
+              message: errorMessage,
+              uploadTrace: {
+                  generatedAt: new Date().toISOString(),
+                  source: 'components/SyllabusView.tsx:handleBulkUpload',
+                  liveProgress: uploadProgress,
+                  finalWarningWasVisible: showUploadFinalWarning,
+                  clientError: {
+                      name: err?.name || 'Error',
+                      message: err?.message || String(err),
+                      timedOut: isTimeout,
+                  },
+                  request: {
+                      destinationCode,
+                      destinationName,
+                      uploadMode: isMasterUpload ? (masterUploadIntent === 'new' ? 'create' : 'replace') : uploadMode,
+                      masterUploadIntent,
+                      dryRun: isReviewStep,
+                      lmpUpdateReviewMode,
+                      uploadLmpVersion,
+                      activeLmpType,
+                      activeOperationalModel,
+                      activeLocationNormalised,
+                      activeUnitNormalised,
+                      file: uploadFile ? { name: uploadFile.name, size: uploadFile.size, type: uploadFile.type } : null,
+                  },
+                  review: uploadReview,
+              },
+          });
+          await showDarkAlert(errorMessage, isTimeout ? 'Upload Still Running or Timed Out' : 'Upload Failed', 'error');
       } finally {
           setIsUploading(false);
       }
@@ -2692,27 +3602,19 @@ const SyllabusView: React.FC<SyllabusViewProps> = ({
           </p>
           {selectedCourseType && (
               <div className="mt-2 flex flex-wrap items-center gap-2">
-                  {isEditing && !isAddingLmpEvent ? (
-                      <label className="inline-flex items-center gap-2 rounded-md border border-gray-700 bg-gray-950/70 px-3 py-1.5 text-[11px] font-semibold uppercase tracking-wide text-gray-300">
-                          Audience
-                          <select
-                              value={editingCourseAudience}
-                              onChange={event => setEditingCourseAudience(event.target.value as LmpAudience)}
-                              className="rounded border border-gray-600 bg-gray-800 px-2 py-1 text-xs font-bold text-white focus:ring-sky-500"
-                          >
-                              <option value="trainee">Trainees only</option>
-                              <option value="staff">Staff only</option>
-                          </select>
-                      </label>
-                  ) : (
-                      <span className={`rounded border px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide ${
-                          selectedCourseAudience === 'staff'
-                              ? 'border-emerald-500/40 bg-emerald-500/10 text-emerald-100'
-                              : 'border-teal-500/40 bg-teal-500/10 text-teal-100'
-                      }`}>
-                          {selectedCourseAudience === 'staff' ? 'Staff only' : 'Trainees only'}
-                      </span>
-                  )}
+                  <span className="inline-flex items-center gap-1.5 rounded border border-sky-500/35 bg-sky-500/10 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-sky-100">
+                      Version: {selectedCourseVersion}
+                      <button
+                          type="button"
+                          onClick={handleEditSelectedCourseVersion}
+                          disabled={isFrozen}
+                          className="ml-1 rounded p-0.5 text-sky-100 hover:bg-sky-400/20 disabled:cursor-not-allowed disabled:opacity-50"
+                          title="Edit LMP version"
+                          aria-label="Edit LMP version"
+                      >
+                          <PencilIcon className="h-3 w-3" />
+                      </button>
+                  </span>
               </div>
           )}
           {shouldShowUnitTabs && (
@@ -2816,16 +3718,20 @@ const SyllabusView: React.FC<SyllabusViewProps> = ({
                             <span>Add<br />Package</span>
                         </button>
                     ) : (
-                        <button onClick={handleManageMasterLmps} className="w-[64px] h-[41px] flex items-center justify-center text-center px-1 py-1 text-[10px] leading-tight font-semibold rounded-md btn-aluminium-brushed">
+                        <button onClick={handleManageMasterLmps} className="w-[56px] h-[41px] flex items-center justify-center text-center px-1 py-1 text-[10px] leading-tight font-semibold rounded-md btn-aluminium-brushed">
                             <span>Manage<br />LMPs</span>
                         </button>
                     )}
                     <button onClick={handleAddEvent} disabled={isFrozen || !selectedCourseType} className="w-[56px] h-[41px] flex items-center justify-center text-center px-1 py-1 text-[10px] leading-tight font-semibold rounded-md btn-aluminium-brushed disabled:opacity-50 disabled:cursor-not-allowed">
                         <span>Add<br />Event</span>
                     </button>
-                    {isTrainingPackagesTab && (
-                        <button onClick={() => { setDeletePassword(''); setDeleteError(''); setShowDeleteModal(true); }} disabled={isFrozen} className="w-[56px] h-[41px] flex items-center justify-center text-center px-1 py-1 text-[10px] leading-tight font-semibold rounded-md btn-aluminium-brushed text-red-500 disabled:opacity-50 disabled:cursor-not-allowed">
-                            <span>Del<br />Package</span>
+                    {(isTrainingPackagesTab || (!isTrainingPackagesTab && selectedCourseType)) && (
+                        <button
+                            onClick={() => { setDeletePassword(''); setDeleteConfirmText(''); setDeleteError(''); setDeletePasswordVerified(false); setShowDeleteModal(true); }}
+                            disabled={isFrozen || !selectedCourseType}
+                            className="w-[56px] h-[41px] flex items-center justify-center text-center px-1 py-1 text-[10px] leading-tight font-semibold rounded-md btn-aluminium-brushed text-black disabled:opacity-50 disabled:cursor-not-allowed"
+                        >
+                            <span>Delete<br />{isTrainingPackagesTab ? 'Package' : 'LMP'}</span>
                         </button>
                     )}
                     {(isAirCombatModel || (isFlightSchoolModel && !isTrainingPackagesTab)) && (
@@ -2837,13 +3743,12 @@ const SyllabusView: React.FC<SyllabusViewProps> = ({
                                 || (showStaffInAssignTraining && !onUpdateInstructor)
                                 || (showTraineesInAssignTraining && !onUpdateTrainee)
                             }
-                            className="w-[68px] h-[41px] flex items-center justify-center text-center px-1 py-1 text-[10px] leading-tight font-semibold rounded-md btn-aluminium-brushed disabled:opacity-50 disabled:cursor-not-allowed"
+                            className="w-[56px] h-[41px] flex items-center justify-center text-center px-1 py-1 text-[10px] leading-tight font-semibold rounded-md btn-aluminium-brushed disabled:opacity-50 disabled:cursor-not-allowed"
                         >
                             <span>Assign<br />{isAssigningFlightSchoolLmp ? 'LMP' : 'Training'}</span>
                         </button>
                     )}
-                    <button onClick={() => { setUploadFile(null); setUploadResult(null); setUploadMode(selectedCourseType ? 'update' : 'create'); setNewUploadPackageName(''); setShowUploadModal(true); }} disabled={isFrozen} className="w-[56px] h-[41px] flex items-center justify-center text-center px-1 py-1 text-[10px] font-semibold rounded-md btn-aluminium-brushed text-black disabled:opacity-50 disabled:cursor-not-allowed">Upload</button>
-                    <button onClick={handleEdit} disabled={isFrozen} className="w-[56px] h-[41px] flex items-center justify-center text-center px-1 py-1 text-[10px] font-semibold rounded-md btn-aluminium-brushed disabled:opacity-50 disabled:cursor-not-allowed">Edit</button>
+                    <button onClick={openUploadModal} disabled={isFrozen} className="w-[56px] h-[41px] flex items-center justify-center text-center px-1 py-1 text-[10px] font-semibold rounded-md btn-aluminium-brushed text-black disabled:opacity-50 disabled:cursor-not-allowed">Upload</button>
                 </div>
             )}
         </div>
@@ -3170,20 +4075,54 @@ const SyllabusView: React.FC<SyllabusViewProps> = ({
         <div
             style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(0,0,0,0.80)', zIndex: 10001,
                 display: 'flex', alignItems: 'center', justifyContent: 'center' }}
-            onClick={() => setShowDeleteModal(false)}
+            onClick={() => {
+                if (isDeleting) return;
+                setShowDeleteModal(false);
+                setDeletePasswordVerified(false);
+            }}
         >
             <div
                 style={{ backgroundColor: '#1f2937', border: '1px solid #ef4444', borderRadius: 12,
-                    padding: 28, width: 420, boxShadow: '0 25px 50px rgba(0,0,0,0.6)' }}
+                    padding: 28, width: 520, boxShadow: '0 25px 50px rgba(0,0,0,0.6)' }}
                 onClick={e => e.stopPropagation()}
             >
                 <h2 style={{ fontSize: 16, fontWeight: 700, color: '#ef4444', marginBottom: 8 }}>
-                    Delete {isTrainingPackagesTab ? 'Package' : 'Course'}: {getCourseTitle(selectedCourseType)}
+                    Delete {isTrainingPackagesTab ? 'Package' : 'Master LMP'}: {getCourseTitle(selectedCourseType)}
                 </h2>
-                <p style={{ fontSize: 12, color: '#9ca3af', marginBottom: 20, lineHeight: 1.6 }}>
-                    This will permanently remove <strong style={{ color: '#f9fafb' }}>all events</strong> in the <strong style={{ color: '#f9fafb' }}>{getCourseTitle(selectedCourseType)}</strong> {activeCollectionNoun} from the database.
-                    This action cannot be undone. Enter your password to confirm.
+                <p style={{ fontSize: 12, color: '#d1d5db', marginBottom: 12, lineHeight: 1.6 }}>
+                    {deletePasswordVerified
+                        ? `Final warning: this will permanently delete ${getCourseTitle(selectedCourseType)}. This removes the title, access records and database event rows. This cannot be undone.`
+                        : `This will permanently remove the selected ${isTrainingPackagesTab ? 'training package' : 'Master LMP'} from the database. It does not archive or hide rows.`}
                 </p>
+                <div style={{ border: '1px solid #7f1d1d', backgroundColor: 'rgba(127, 29, 29, 0.20)', borderRadius: 8, padding: 12, marginBottom: 16 }}>
+                    <div style={{ fontSize: 11, color: '#fecaca', lineHeight: 1.7 }}>
+                        <div><strong style={{ color: '#fff' }}>Scope:</strong> {activeUnitNormalised || 'Current unit'} / {activeLocationNormalised || 'Current location'} / {selectedCourseType || 'No LMP selected'}</div>
+                        <div><strong style={{ color: '#fff' }}>Database event rows to delete:</strong> {selectedCollectionDeleteItems.length}</div>
+                        <div><strong style={{ color: '#fff' }}>Trainees currently assigned to this LMP:</strong> {selectedCollectionAssignedTrainees.length}</div>
+                        <div><strong style={{ color: '#fff' }}>Confirmation phrase:</strong> {deleteConfirmationPhrase}</div>
+                        {deletePasswordVerified && <div><strong style={{ color: '#fff' }}>Password:</strong> accepted. Click Delete once more to permanently delete.</div>}
+                    </div>
+                </div>
+                <p style={{ fontSize: 12, color: '#9ca3af', marginBottom: 16, lineHeight: 1.6 }}>
+                    Precautions: confirm the selected LMP, type the confirmation phrase exactly, then enter your password. This action cannot be undone.
+                </p>
+
+                <div style={{ marginBottom: 16 }}>
+                    <label style={{ display: 'block', fontSize: 11, fontWeight: 600, color: '#9ca3af',
+                        textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 4 }}>
+                        Type Confirmation Phrase *
+                    </label>
+                    <input
+                        type="text"
+                        value={deleteConfirmText}
+                        onChange={e => { setDeleteConfirmText(e.target.value); setDeleteError(''); setDeletePasswordVerified(false); }}
+                        placeholder={deleteConfirmationPhrase}
+                        disabled={isDeleting}
+                        style={{ width: '100%', backgroundColor: '#111827', border: `1px solid ${deleteError && deleteConfirmText.trim() !== deleteConfirmationPhrase ? '#ef4444' : '#4b5563'}`,
+                            borderRadius: 6, padding: '8px 10px', color: '#fff', fontSize: 13,
+                            outline: 'none', boxSizing: 'border-box' as const }}
+                    />
+                </div>
 
                 <div style={{ marginBottom: 16 }}>
                     <label style={{ display: 'block', fontSize: 11, fontWeight: 600, color: '#9ca3af',
@@ -3193,9 +4132,10 @@ const SyllabusView: React.FC<SyllabusViewProps> = ({
                     <input
                         type="password"
                         value={deletePassword}
-                        onChange={e => { setDeletePassword(e.target.value); setDeleteError(''); }}
+                        onChange={e => { setDeletePassword(e.target.value); setDeleteError(''); setDeletePasswordVerified(false); }}
                         onKeyDown={e => e.key === 'Enter' && handleDeleteCourse()}
                         placeholder="Enter your password to confirm"
+                        disabled={isDeleting}
                         autoFocus
                         style={{ width: '100%', backgroundColor: '#111827', border: `1px solid ${deleteError ? '#ef4444' : '#4b5563'}`,
                             borderRadius: 6, padding: '8px 10px', color: '#fff', fontSize: 13,
@@ -3208,7 +4148,8 @@ const SyllabusView: React.FC<SyllabusViewProps> = ({
 
                 <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8 }}>
                     <button
-                        onClick={() => setShowDeleteModal(false)}
+                        onClick={() => { setShowDeleteModal(false); setDeletePasswordVerified(false); }}
+                        disabled={isDeleting}
                         className="w-[56px] h-[41px] flex items-center justify-center text-center px-1 py-1 text-[10px] font-semibold rounded-md btn-aluminium-brushed"
                     >
                         Cancel
@@ -3218,7 +4159,7 @@ const SyllabusView: React.FC<SyllabusViewProps> = ({
                         disabled={isDeleting}
                         className="w-[72px] h-[41px] flex items-center justify-center text-center px-1 py-1 text-[10px] font-semibold rounded-md btn-aluminium-brushed text-red-500 disabled:opacity-60"
                     >
-                        {isDeleting ? 'Deleting…' : 'Delete'}
+                        {isDeleting ? (deletePasswordVerified ? 'Deleting…' : 'Checking…') : deletePasswordVerified ? 'Delete' : 'Confirm'}
                     </button>
                 </div>
             </div>
@@ -3299,19 +4240,181 @@ const SyllabusView: React.FC<SyllabusViewProps> = ({
         >
             <div
                 style={{ backgroundColor: '#1f2937', border: '1px solid #38bdf8', borderRadius: 12,
-                    padding: 28, width: 480, boxShadow: '0 25px 50px rgba(0,0,0,0.6)' }}
+                    padding: 28, width: 480, maxWidth: 'calc(100vw - 32px)', maxHeight: 'calc(100vh - 40px)',
+                    overflowY: 'auto', overscrollBehavior: 'contain', boxSizing: 'border-box',
+                    boxShadow: '0 25px 50px rgba(0,0,0,0.6)' }}
                 onClick={e => e.stopPropagation()}
             >
                 <h2 style={{ fontSize: 16, fontWeight: 700, color: '#38bdf8', marginBottom: 8 }}>
                     Bulk Upload {isTrainingPackagesTab ? 'Training Package' : 'Master LMP'} Events
                 </h2>
+                {!isTrainingPackagesTab && !masterUploadIntent ? (
+                    <div>
+                        <p style={{ fontSize: 12, color: '#d1d5db', marginBottom: 18, lineHeight: 1.55 }}>
+                            Is this upload creating a new Master LMP, or updating an existing Master LMP?
+                        </p>
+                        <div style={{ display: 'grid', gap: 12 }}>
+                            <button
+                                type="button"
+                                onClick={() => {
+                                    setMasterUploadIntent('new');
+                                    setUploadMode('create');
+                                    setUploadReview(null);
+                                    setShowUploadOneByOneReview(false);
+                                    setUploadResult(null);
+                                    setNewUploadPackageName('');
+                                    setUploadLmpVersion(DEFAULT_LMP_VERSION);
+                                }}
+                                style={{ textAlign: 'left', padding: 14, borderRadius: 10, border: '1px solid #0e7490', backgroundColor: '#082f49', color: '#f9fafb', cursor: 'pointer' }}
+                            >
+                                <span style={{ display: 'block', fontSize: 14, fontWeight: 800, color: '#7dd3fc' }}>New LMP</span>
+                                <span style={{ display: 'block', marginTop: 4, fontSize: 12, color: '#cbd5e1', lineHeight: 1.45 }}>
+                                    Create a new Master LMP record, give it a unique name, then import the workbook events into it.
+                                </span>
+                            </button>
+                            <button
+                                type="button"
+                                onClick={() => {
+                                    setMasterUploadIntent('update');
+                                    setUploadMode('replace');
+                                    setUploadReview(null);
+                                    setShowUploadOneByOneReview(false);
+                                    setUploadResult(null);
+                                    setUploadTargetLmpCode(selectedCourseType || activeMasterLmpCatalogue[0]?.code || '');
+                                    setUploadLmpVersion(selectedCourseVersion || DEFAULT_LMP_VERSION);
+                                }}
+                                disabled={activeMasterLmpCatalogue.length === 0 && courseLMPs.length === 0}
+                                style={{ textAlign: 'left', padding: 14, borderRadius: 10, border: '1px solid #92400e', backgroundColor: '#1c1917', color: '#f9fafb', cursor: activeMasterLmpCatalogue.length === 0 && courseLMPs.length === 0 ? 'not-allowed' : 'pointer', opacity: activeMasterLmpCatalogue.length === 0 && courseLMPs.length === 0 ? 0.55 : 1 }}
+                            >
+                                <span style={{ display: 'block', fontSize: 14, fontWeight: 800, color: '#fdba74' }}>Update Existing LMP</span>
+                                <span style={{ display: 'block', marginTop: 4, fontSize: 12, color: '#cbd5e1', lineHeight: 1.45 }}>
+                                    Replace the Master LMP template, then refresh assigned Individual LMPs while preserving completed events.
+                                </span>
+                            </button>
+                        </div>
+                        <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, marginTop: 22 }}>
+                            <button
+                                onClick={() => setShowUploadModal(false)}
+                                style={{ padding: '8px 16px', fontSize: 12, fontWeight: 600, borderRadius: 6,
+                                    backgroundColor: '#374151', color: '#d1d5db', border: 'none', cursor: 'pointer' }}
+                            >
+                                Cancel
+                            </button>
+                        </div>
+                    </div>
+                ) : (
+                <>
                 <p style={{ fontSize: 12, color: '#9ca3af', marginBottom: 4, lineHeight: 1.6 }}>
-                    Upload an Excel (.xlsx) file to populate <strong style={{ color: '#f9fafb' }}>{getCourseTitle(selectedCourseType)}</strong> with {isTrainingPackagesTab ? `${packageFoundationLabel} training package` : 'Master LMP'} events.
+                    Upload an Excel (.xlsx) file to populate <strong style={{ color: '#f9fafb' }}>{isTrainingPackagesTab ? getCourseTitle(selectedCourseType) : masterUploadIntent === 'new' ? (newUploadPackageName.trim() || 'the new Master LMP') : getCourseTitle(uploadTargetLmpCode || selectedCourseType)}</strong> with {isTrainingPackagesTab ? `${packageFoundationLabel} training package` : 'Master LMP'} events.
                     {isTrainingPackagesTab ? ' These rows will be saved to Training Packages, not Master LMP.' : ''}
                 </p>
                 <p style={{ fontSize: 11, color: '#6b7280', marginBottom: 20, lineHeight: 1.6 }}>
                     Preferred sheet name: <strong style={{ color: '#d1d5db' }}>Syllabus_LMP</strong>. If that sheet is not present, the first worksheet is used. Mandatory data: Event description, Type, and a positive duration in either Flight or Sim Hours or Total Event Hours. Optional columns: Code, Course, Phase, Module, Day/Night, Dual/Solo, prerequisites, Event Details - Common, Event Details - Sortie, Method/s of Delivery, Method/s of Assessment, Resources Required (physical), Resources Required (Human), Resource Number, CONFIG. Blank Code cells are generated from the selected {activeCollectionNoun}.
                 </p>
+
+                {!isTrainingPackagesTab && !uploadResult && (
+                    <div style={{ marginBottom: 16, padding: 12, border: '1px solid #374151', borderRadius: 8, backgroundColor: '#111827' }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
+                            <label style={{ display: 'block', fontSize: 11, fontWeight: 700, color: '#9ca3af',
+                                textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                                {masterUploadIntent === 'new' ? 'New Master LMP' : 'Master LMP to update'}
+                            </label>
+                            <button
+                                type="button"
+                                onClick={() => {
+                                    setMasterUploadIntent(null);
+                                    setUploadReview(null);
+                                    setShowUploadOneByOneReview(false);
+                                    setUploadResult(null);
+                                    setUploadFile(null);
+                                }}
+                                style={{ fontSize: 11, color: '#7dd3fc', background: 'none', border: 'none', cursor: 'pointer', fontWeight: 700 }}
+                            >
+                                Change upload type
+                            </button>
+                        </div>
+                        {masterUploadIntent === 'new' ? (
+                            <div style={{ display: 'grid', gap: 10 }}>
+                                <div>
+                                    <label style={{ display: 'block', fontSize: 11, fontWeight: 600, color: '#9ca3af', marginBottom: 6 }}>
+                                        LMP name
+                                    </label>
+                                    <input
+                                        type="text"
+                                        value={newUploadPackageName}
+                                onChange={e => { setNewUploadPackageName(e.target.value); setUploadReview(null); setShowUploadOneByOneReview(false); }}
+                                        placeholder="e.g. UPT"
+                                        style={{ width: '100%', fontSize: 13, color: '#f9fafb', backgroundColor: '#0f172a',
+                                            border: '1px solid #374151', borderRadius: 6, padding: '8px 10px' }}
+                                    />
+                                    {newUploadPackageName.trim() && (
+                                        <p style={{ fontSize: 11, color: '#6b7280', marginTop: 6 }}>
+                                            LMP code: <strong style={{ color: '#d1d5db' }}>{getPackageCodeFromTitle(newUploadPackageName)}</strong>
+                                        </p>
+                                    )}
+                                </div>
+                            </div>
+                        ) : (
+                            <select
+                                value={uploadTargetLmpCode}
+                                onChange={event => { setUploadTargetLmpCode(event.target.value); setUploadReview(null); setUploadResult(null); setShowUploadOneByOneReview(false); }}
+                                style={{ width: '100%', fontSize: 13, color: '#f9fafb', backgroundColor: '#0f172a',
+                                    border: '1px solid #374151', borderRadius: 6, padding: '8px 10px' }}
+                            >
+                                {Array.from(new Set([...activeMasterLmpCatalogue.map(entry => entry.code), ...courseLMPs])).filter(Boolean).map(code => (
+                                    <option key={code} value={code}>{getCourseTitle(code)}</option>
+                                ))}
+                            </select>
+                        )}
+                        <div style={{ marginTop: 10 }}>
+                            <label style={{ display: 'block', fontSize: 11, fontWeight: 600, color: '#9ca3af', marginBottom: 6 }}>
+                                Version
+                            </label>
+                            <input
+                                type="text"
+                                value={uploadLmpVersion}
+                                onChange={e => { setUploadLmpVersion(e.target.value); setUploadReview(null); setShowUploadOneByOneReview(false); }}
+                                placeholder="1.0"
+                                style={{ width: 120, fontSize: 13, color: '#f9fafb', backgroundColor: '#0f172a',
+                                    border: '1px solid #374151', borderRadius: 6, padding: '8px 10px' }}
+                            />
+                        </div>
+                        {masterUploadIntent === 'update' && (
+                            <div style={{ marginTop: 12, padding: 10, border: '1px solid #334155', borderRadius: 8, backgroundColor: '#0f172a' }}>
+                                <label style={{ display: 'block', fontSize: 11, fontWeight: 700, color: '#9ca3af',
+                                    textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 8 }}>
+                                    Individual LMP update method
+                                </label>
+                                {[
+                                    {
+                                        id: 'automatic' as const,
+                                        label: 'Automatic update',
+                                        detail: 'Protect each trainee up to their last completed event, then update only future events using the new Master LMP order.',
+                                    },
+                                    {
+                                        id: 'one-by-one' as const,
+                                        label: 'One-by-one review',
+                                        detail: 'Review the affected trainees before applying. The automatic protected cut point is still used as the starting suggestion.',
+                                    },
+                                ].map(option => (
+                                    <label key={option.id} style={{ display: 'flex', gap: 10, alignItems: 'flex-start', marginBottom: 8, cursor: 'pointer' }}>
+                                        <input
+                                            type="radio"
+                                            name="lmpUpdateReviewMode"
+                                            checked={lmpUpdateReviewMode === option.id}
+                                            onChange={() => { setLmpUpdateReviewMode(option.id); setUploadReview(null); setShowUploadOneByOneReview(false); setShowUploadFinalWarning(false); }}
+                                            style={{ marginTop: 3 }}
+                                        />
+                                        <span>
+                                            <span style={{ display: 'block', fontSize: 12, fontWeight: 700, color: '#f9fafb' }}>{option.label}</span>
+                                            <span style={{ display: 'block', fontSize: 11, color: '#94a3b8', lineHeight: 1.35 }}>{option.detail}</span>
+                                        </span>
+                                    </label>
+                                ))}
+                            </div>
+                        )}
+                    </div>
+                )}
 
                 {isTrainingPackagesTab && !uploadResult && (
                     <div style={{ marginBottom: 16, padding: 12, border: '1px solid #374151', borderRadius: 8, backgroundColor: '#111827' }}>
@@ -3387,6 +4490,10 @@ const SyllabusView: React.FC<SyllabusViewProps> = ({
                         setIsUploadDragActive(false);
                         setUploadFile(event.dataTransfer.files?.[0] || null);
                         setUploadResult(null);
+                        setUploadProgress(null);
+                        setUploadReview(null);
+                        setShowUploadOneByOneReview(false);
+                        setShowUploadFinalWarning(false);
                     }}
                     style={{
                         marginBottom: 16,
@@ -3403,7 +4510,7 @@ const SyllabusView: React.FC<SyllabusViewProps> = ({
                     <input
                         type="file"
                         accept=".xlsx,.xls,.csv"
-                        onChange={e => { setUploadFile(e.target.files?.[0] || null); setUploadResult(null); }}
+                        onChange={e => { setUploadFile(e.target.files?.[0] || null); setUploadResult(null); setUploadProgress(null); setUploadReview(null); setShowUploadOneByOneReview(false); setShowUploadFinalWarning(false); }}
                         style={{ display: 'block', width: '100%', fontSize: 13, color: '#f9fafb',
                             backgroundColor: '#111827', border: '1px solid #374151', borderRadius: 6, padding: '8px 12px' }}
                     />
@@ -3416,6 +4523,203 @@ const SyllabusView: React.FC<SyllabusViewProps> = ({
                     </p>
                 )}
 
+                {uploadReview?.preview && !uploadResult && (
+                    <div style={{ marginBottom: 16, padding: 12, backgroundColor: '#082f49', border: '1px solid #0e7490', borderRadius: 8 }}>
+                        <p style={{ fontSize: 13, fontWeight: 700, color: '#bae6fd', marginBottom: 8 }}>
+                            Review before import
+                        </p>
+                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, fontSize: 11, color: '#d1d5db' }}>
+                            <div><strong style={{ color: '#fff' }}>Target:</strong> {uploadReview.preview.destinationName || uploadReview.preview.destinationCode}</div>
+                            <div><strong style={{ color: '#fff' }}>Version:</strong> {uploadReview.preview.lmpVersion || uploadLmpVersion || 'N/A'}</div>
+                            <div><strong style={{ color: '#fff' }}>Uploaded events:</strong> {uploadReview.preview.uploadedEventRows}</div>
+                            <div><strong style={{ color: '#fff' }}>Existing Master rows:</strong> {uploadReview.preview.existingMasterRows}</div>
+                            <div><strong style={{ color: '#fff' }}>Assigned trainees:</strong> {uploadReview.preview.assignedTrainees}</div>
+                            <div><strong style={{ color: '#fff' }}>Completed events protected:</strong> {uploadReview.preview.protectedCompletedEvents}</div>
+                        </div>
+                        {!isTrainingPackagesTab && masterUploadIntent === 'update' && (
+                            <p style={{ marginTop: 10, fontSize: 11, color: '#fde68a', lineHeight: 1.45 }}>
+                                Applying this update will replace the Master LMP event list. Assigned Individual LMPs will be refreshed from each trainee's last completed event onward; earlier uploaded events will be ignored for that trainee.
+                            </p>
+                        )}
+                    </div>
+                )}
+
+                {uploadReview?.preview && showUploadFinalWarning && !uploadResult && (
+                    <div style={{ marginBottom: 16, padding: 12, backgroundColor: '#1c1917', border: '1px solid #f97316', borderRadius: 8 }}>
+                        <p style={{ fontSize: 13, fontWeight: 800, color: '#fdba74', marginBottom: 6 }}>
+                            Final warning before applying update
+                        </p>
+                        <p style={{ fontSize: 11, color: '#fed7aa', lineHeight: 1.45 }}>
+                            This will permanently update Master LMP {uploadTargetLmpCode || selectedCourseType}. The app will then refresh assigned Individual LMPs while protecting completed events and only changing future events.
+                        </p>
+                        <p style={{ marginTop: 8, fontSize: 11, color: '#fef3c7', fontWeight: 700 }}>
+                            Click Confirm and Apply Update to start the real database update.
+                        </p>
+                    </div>
+                )}
+
+                {uploadReview?.preview && showUploadOneByOneReview && !uploadResult && !isTrainingPackagesTab && masterUploadIntent === 'update' && (
+                    <div style={{ marginBottom: 16, padding: 12, backgroundColor: '#111827', border: '1px solid #38bdf8', borderRadius: 8 }}>
+                        <p style={{ fontSize: 13, fontWeight: 800, color: '#bae6fd', marginBottom: 6 }}>
+                            One-by-one Individual LMP review
+                        </p>
+                        <p style={{ fontSize: 11, color: '#d1d5db', lineHeight: 1.45, marginBottom: 10 }}>
+                            Select a trainee, then compare their current Individual LMP with the proposed updated LMP. Completed events are protected.
+                        </p>
+                        <label style={{ display: 'block', fontSize: 11, fontWeight: 700, color: '#67e8f9', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 6 }}>
+                            Trainee to review
+                        </label>
+                        <select
+                            value={oneByOneSelectedTraineeKey}
+                            onChange={event => setOneByOneSelectedTraineeKey(event.target.value)}
+                            style={{ width: '100%', marginBottom: 10, fontSize: 13, color: '#f9fafb', backgroundColor: '#0f172a',
+                                border: '1px solid #374151', borderRadius: 6, padding: '8px 10px' }}
+                        >
+                            {oneByOneUploadTrainees.map(trainee => {
+                                const key = String((trainee as any).id || trainee.idNumber || trainee.fullName || trainee.name);
+                                return (
+                                    <option key={key} value={key}>
+                                        {trainee.rank ? `${trainee.rank} ` : ''}{trainee.name || trainee.fullName} - {trainee.course || 'No course'}
+                                    </option>
+                                );
+                            })}
+                        </select>
+                        {oneByOneLmpError && (
+                            <p style={{ marginBottom: 8, fontSize: 11, color: '#fca5a5' }}>{oneByOneLmpError}</p>
+                        )}
+                        {oneByOneLmpLoading && (
+                            <p style={{ marginBottom: 8, fontSize: 11, color: '#93c5fd' }}>Loading Individual LMP for selected trainee...</p>
+                        )}
+                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+                            <div>
+                                <p style={{ fontSize: 11, fontWeight: 700, color: '#67e8f9', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 6 }}>
+                                    Current Individual LMP ({oneByOneCurrentEvents.length})
+                                </p>
+                                <div ref={oneByOneCurrentListRef} style={{ maxHeight: 240, overflowY: 'auto', border: '1px solid #334155', borderRadius: 6, backgroundColor: '#0f172a' }}>
+                                    {oneByOneCurrentEvents.length > 0 ? oneByOneCurrentEvents.map((event: any, index: number) => {
+                                        const tokens = [event?.id, event?.code, event?.masterEventId, event?.eventDescription, event?.title]
+                                            .map(value => String(value || '').replace('*', '').trim().toUpperCase())
+                                            .filter(Boolean);
+                                        const isCompleted = tokens.some(token => oneByOneCompletedTokens.has(token));
+                                        const isLastCompleted = index === oneByOneLastCompletedIndex;
+                                        return (
+                                            <div key={`${event?.id || event?.code || index}-${index}`} style={{
+                                                display: 'grid',
+                                                gridTemplateColumns: '22px 1fr',
+                                                gap: 7,
+                                                padding: '7px 9px',
+                                                borderBottom: '1px solid #1f2937',
+                                                backgroundColor: isLastCompleted ? 'rgba(14, 116, 144, 0.25)' : 'transparent',
+                                            }}>
+                                                <span style={{ color: isCompleted ? '#4ade80' : '#64748b', fontWeight: 900 }}>{isCompleted ? '✓' : ''}</span>
+                                                <span>
+                                                    <span style={{ display: 'block', fontSize: 11, fontWeight: 800, color: '#f9fafb' }}>{event?.code || event?.eventDescription || `Event ${index + 1}`}</span>
+                                                    <span style={{ display: 'block', fontSize: 10, color: '#94a3b8', lineHeight: 1.3 }}>{event?.eventDescription || event?.description || ''}</span>
+                                                    {isLastCompleted && <span style={{ display: 'block', marginTop: 2, fontSize: 10, color: '#67e8f9', fontWeight: 700 }}>Last completed event</span>}
+                                                </span>
+                                            </div>
+                                        );
+                                    }) : (
+                                        <p style={{ padding: 9, fontSize: 11, color: '#fca5a5' }}>No current Individual LMP loaded for this trainee.</p>
+                                    )}
+                                </div>
+                            </div>
+                            <div>
+                                <p style={{ fontSize: 11, fontWeight: 700, color: '#67e8f9', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 6 }}>
+                                    Proposed Updated LMP ({oneByOneProposalRows.length})
+                                </p>
+                                <div ref={oneByOneProposedListRef} style={{ maxHeight: 240, overflowY: 'auto', border: '1px solid #334155', borderRadius: 6, backgroundColor: '#0f172a' }}>
+                                    {oneByOneProposalRows.length > 0 ? oneByOneProposalRows.map((event: any, index: number) => {
+                                        const action = event.proposalAction || '';
+                                        const isProtected = action.startsWith('Skip');
+                                        const isDelete = action === 'Delete';
+                                        const actionColor = isProtected ? '#fbbf24' : isDelete ? '#f87171' : action === 'Add' ? '#4ade80' : action === 'Amend' ? '#38bdf8' : '#cbd5e1';
+                                        return (
+                                            <div key={`${event.eventCode || event.code || index}-${index}`} style={{
+                                                display: 'grid',
+                                                gridTemplateColumns: '28px 1fr',
+                                                gap: 7,
+                                                padding: '7px 9px',
+                                                borderBottom: '1px solid #1f2937',
+                                                opacity: isProtected ? 0.72 : 1,
+                                                backgroundColor: isDelete ? 'rgba(127, 29, 29, 0.28)' : index === oneByOneProtectedNewIndex ? 'rgba(14, 116, 144, 0.25)' : 'transparent',
+                                            }}>
+                                                <span style={{ color: isDelete ? '#f87171' : '#64748b', fontSize: 10 }}>{isDelete ? 'DEL' : index + 1}</span>
+                                                <span>
+                                                    <span style={{ display: 'block', fontSize: 11, fontWeight: 800, color: isDelete ? '#fecaca' : '#f9fafb', textDecoration: isDelete ? 'line-through' : 'none' }}>{event.eventCode || event.code || `Event ${index + 1}`}</span>
+                                                    <span style={{ display: 'block', fontSize: 10, color: '#94a3b8', lineHeight: 1.3 }}>{event.eventDescription || event.description || ''}</span>
+                                                    <span style={{ display: 'inline-block', marginTop: 3, fontSize: 9, color: actionColor, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+                                                        {action}
+                                                    </span>
+                                                </span>
+                                            </div>
+                                        );
+                                    }) : (
+                                        <p style={{ padding: 9, fontSize: 11, color: '#fca5a5' }}>No proposed LMP events were returned by the upload review.</p>
+                                    )}
+                                </div>
+                            </div>
+                        </div>
+                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginTop: 8, fontSize: 10, color: '#94a3b8' }}>
+                            <div>
+                                {oneByOneLastCompletedCode
+                                    ? <>Scrolled near last completed: <strong style={{ color: '#d1d5db' }}>{oneByOneLastCompletedCode}</strong></>
+                                    : 'No completed event found for this trainee.'}
+                            </div>
+                            <div>
+                                Proposed events before and including the protected cut point are skipped for this trainee.
+                            </div>
+                        </div>
+                        <p style={{ marginTop: 10, fontSize: 11, color: '#fde68a', lineHeight: 1.45 }}>
+                            Next step: click Apply Reviewed Update to permanently update the Master LMP and refresh assigned Individual LMPs.
+                        </p>
+                    </div>
+                )}
+
+                {isUploading && uploadProgress && (
+                    <div style={{ marginBottom: 16, padding: 12, border: '1px solid #0e7490', borderRadius: 8, backgroundColor: '#082f49' }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12, alignItems: 'center' }}>
+                            <p style={{ fontSize: 13, fontWeight: 700, color: '#bae6fd' }}>
+                                {uploadProgress.message || 'Updating LMP...'}
+                            </p>
+                            <span style={{ fontSize: 12, fontWeight: 700, color: '#e0f2fe' }}>
+                                {Math.max(0, Math.min(100, Number(uploadProgress.percent || 0)))}%
+                            </span>
+                        </div>
+                        <div style={{ marginTop: 8, height: 8, borderRadius: 999, overflow: 'hidden', backgroundColor: '#0f172a', border: '1px solid #075985' }}>
+                            <div
+                                style={{
+                                    height: '100%',
+                                    width: `${Math.max(0, Math.min(100, Number(uploadProgress.percent || 0)))}%`,
+                                    backgroundColor: uploadProgress.status === 'error' ? '#ef4444' : '#38bdf8',
+                                    transition: 'width 180ms ease',
+                                }}
+                            />
+                        </div>
+                        <div style={{ marginTop: 8, display: 'grid', gridTemplateColumns: 'repeat(4, minmax(0, 1fr))', gap: 8 }}>
+                            <div style={{ fontSize: 10, color: '#94a3b8' }}>
+                                <strong style={{ display: 'block', color: '#e0f2fe', fontSize: 12 }}>{uploadProgress.current || 0}/{uploadProgress.total || 0}</strong>
+                                processed
+                            </div>
+                            <div style={{ fontSize: 10, color: '#94a3b8' }}>
+                                <strong style={{ display: 'block', color: '#e0f2fe', fontSize: 12 }}>{uploadProgress.created || 0}</strong>
+                                created
+                            </div>
+                            <div style={{ fontSize: 10, color: '#94a3b8' }}>
+                                <strong style={{ display: 'block', color: '#e0f2fe', fontSize: 12 }}>{uploadProgress.updated || 0}</strong>
+                                updated
+                            </div>
+                            <div style={{ fontSize: 10, color: '#94a3b8' }}>
+                                <strong style={{ display: 'block', color: '#e0f2fe', fontSize: 12 }}>{uploadProgress.deleted || 0}</strong>
+                                deleted
+                            </div>
+                        </div>
+                        <p style={{ marginTop: 8, fontSize: 10, color: '#7dd3fc' }}>
+                            Phase: {uploadProgress.phase || 'starting'}
+                        </p>
+                    </div>
+                )}
+
                 {uploadResult && (
                     <div style={{ marginBottom: 16, padding: 12, backgroundColor: uploadResult.errors.length > 0 ? '#1c1917' : '#052e16',
                         border: `1px solid ${uploadResult.errors.length > 0 ? '#78350f' : '#166534'}`, borderRadius: 8 }}>
@@ -3426,6 +4730,11 @@ const SyllabusView: React.FC<SyllabusViewProps> = ({
                             Imported rows: {uploadResult.imported ?? ((uploadResult.created || 0) + (uploadResult.updated || 0))} &nbsp;|&nbsp; Created: {uploadResult.created} &nbsp;|&nbsp; Updated: {uploadResult.updated || 0} &nbsp;|&nbsp; Skipped: {uploadResult.skipped}
                             {uploadResult.errors.length > 0 && <span style={{ color: '#f87171' }}> &nbsp;|&nbsp; Errors: {uploadResult.errors.length}</span>}
                         </p>
+                        {uploadResult.individualLmpSync && (
+                            <p style={{ fontSize: 11, color: '#9ca3af', marginTop: 4 }}>
+                                Individual LMPs refreshed: {uploadResult.individualLmpSync.assignedTrainees} trainee{uploadResult.individualLmpSync.assignedTrainees === 1 ? '' : 's'} &nbsp;|&nbsp; Completed events protected: {uploadResult.individualLmpSync.protectedCompletedEvents}
+                            </p>
+                        )}
                         {duplicateUploadSource && (
                             <div style={{ marginTop: 10, padding: 10, border: '1px solid #0e7490', borderRadius: 8, backgroundColor: '#082f49' }}>
                                 <p style={{ fontSize: 12, fontWeight: 700, color: '#bae6fd', marginBottom: 4 }}>
@@ -3471,6 +4780,16 @@ const SyllabusView: React.FC<SyllabusViewProps> = ({
                 )}
 
                 <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, marginTop: 8 }}>
+                    {(uploadReview || uploadResult) && (
+                        <button
+                            type="button"
+                            onClick={() => downloadUploadTrace(uploadResult ? 'lmp-upload-result' : 'lmp-upload-review')}
+                            style={{ padding: '8px 12px', fontSize: 12, fontWeight: 700, borderRadius: 6,
+                                backgroundColor: '#111827', color: '#fdba74', border: '1px solid #92400e', cursor: 'pointer', marginRight: 'auto' }}
+                        >
+                            Download Trace
+                        </button>
+                    )}
                     <button
                         onClick={() => setShowUploadModal(false)}
                         disabled={isUploading}
@@ -3482,15 +4801,33 @@ const SyllabusView: React.FC<SyllabusViewProps> = ({
                     {!uploadResult && (
                         <button
                             onClick={handleBulkUpload}
-                            disabled={!uploadFile || isUploading || (isTrainingPackagesTab && uploadMode === 'create' && !newUploadPackageName.trim())}
+                            disabled={
+                                !uploadFile
+                                || isUploading
+                                || (isTrainingPackagesTab && uploadMode === 'create' && !newUploadPackageName.trim())
+                                || (!isTrainingPackagesTab && masterUploadIntent === 'new' && !newUploadPackageName.trim())
+                                || (!isTrainingPackagesTab && masterUploadIntent === 'update' && !uploadTargetLmpCode)
+                            }
                             style={{ padding: '8px 20px', fontSize: 12, fontWeight: 600, borderRadius: 6,
-                                backgroundColor: uploadFile && !isUploading && !(isTrainingPackagesTab && uploadMode === 'create' && !newUploadPackageName.trim()) ? '#0284c7' : '#1e3a5f',
-                                color: '#fff', border: 'none', cursor: uploadFile && !isUploading && !(isTrainingPackagesTab && uploadMode === 'create' && !newUploadPackageName.trim()) ? 'pointer' : 'not-allowed' }}
+                                backgroundColor: uploadFile && !isUploading ? '#0284c7' : '#1e3a5f',
+                                color: '#fff', border: 'none', cursor: uploadFile && !isUploading ? 'pointer' : 'not-allowed' }}
                         >
-                            {isUploading ? 'Uploading…' : 'Upload & Import'}
+                            {isUploading
+                                ? (uploadReview ? 'Applying…' : 'Reviewing…')
+                                : uploadReview
+                                    ? (!isTrainingPackagesTab && masterUploadIntent === 'update'
+                                        ? (lmpUpdateReviewMode === 'one-by-one'
+                                            ? (showUploadOneByOneReview
+                                                ? (showUploadFinalWarning ? 'Confirm and Apply Reviewed Update' : 'Review Final Warning')
+                                                : 'Start One-by-one Review')
+                                            : (showUploadFinalWarning ? 'Confirm and Apply Update' : 'Review Final Warning'))
+                                        : 'Create LMP')
+                                    : 'Review Upload'}
                         </button>
                     )}
                 </div>
+                </>
+                )}
             </div>
         </div>
     )}
@@ -3503,7 +4840,11 @@ const SyllabusView: React.FC<SyllabusViewProps> = ({
             emptyMessage={isAssigningFlightSchoolLmp ? 'No active staff available for this unit.' : 'No active squadron staff available for this unit.'}
             showStaffAssignments={showStaffInAssignTraining}
             staff={assignableTrainingStaff}
-            trainees={showTraineesInAssignTraining ? assignableFlightSchoolTrainees : []}
+            trainees={showTraineesInAssignTraining ? courseFilteredAssignableFlightSchoolTrainees : []}
+            lmpOptions={showTraineesInAssignTraining ? assignLmpOptions : []}
+            selectedLmpCode={assignLmpCode || activeFlightSchoolLmpAssignment?.lmpCode || selectedCourseType}
+            courseOptions={showTraineesInAssignTraining ? assignableFlightSchoolTraineeCourses : []}
+            selectedCourseKeys={assignCourseSelection}
             selectedStaffIds={assignTrainingSelection}
             selectedTraineeIds={assignTraineeSelection}
             saving={isSavingTrainingAssignments}
@@ -3523,10 +4864,38 @@ const SyllabusView: React.FC<SyllabusViewProps> = ({
                     return next;
                 });
             } : undefined}
+            onLmpChange={showTraineesInAssignTraining ? (code) => {
+                const cleanCode = String(code || '').trim();
+                setAssignLmpCode(cleanCode);
+                setAssignTraineeSelection(new Set(
+                    assignableFlightSchoolTrainees
+                        .filter(trainee => String(trainee.lmpType || '').trim().toUpperCase() === cleanCode.toUpperCase())
+                        .map(trainee => trainee.idNumber)
+                ));
+            } : undefined}
+            onToggleCourse={showTraineesInAssignTraining ? (course) => {
+                setAssignCourseSelection(prev => {
+                    const next = new Set(prev);
+                    if (next.has(course)) next.delete(course);
+                    else next.add(course);
+                    return next;
+                });
+            } : undefined}
             onSelectAll={() => setAssignTrainingSelection(new Set(assignableTrainingStaff.map(staff => staff.idNumber)))}
             onDeselectAll={() => setAssignTrainingSelection(new Set())}
-            onSelectAllTrainees={() => setAssignTraineeSelection(new Set(assignableFlightSchoolTrainees.map(trainee => trainee.idNumber)))}
-            onDeselectAllTrainees={() => setAssignTraineeSelection(new Set())}
+            onSelectAllCourses={() => setAssignCourseSelection(new Set(assignableFlightSchoolTraineeCourses))}
+            onDeselectAllCourses={() => setAssignCourseSelection(new Set())}
+            onSelectAllTrainees={() => setAssignTraineeSelection(prev => {
+                const next = new Set(prev);
+                courseFilteredAssignableFlightSchoolTrainees.forEach(trainee => next.add(trainee.idNumber));
+                return next;
+            })}
+            onDeselectAllTrainees={() => setAssignTraineeSelection(prev => {
+                const next = new Set(prev);
+                courseFilteredAssignableFlightSchoolTrainees.forEach(trainee => next.delete(trainee.idNumber));
+                return next;
+            })}
+            onDownloadTrace={showTraineesInAssignTraining ? onDownloadAssignmentTrace : undefined}
             onCancel={() => setShowAssignTrainingModal(false)}
             onSave={saveAssignTraining}
         />

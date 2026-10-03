@@ -243,6 +243,7 @@ interface TraineeProfileFlyoutProps {
   onGenerateTrainingReportForItem?: (trainee: Trainee, item: SyllabusItemDetail) => void;
   onInsertCustomLmpEvent?: (trainee: Trainee, request: InsertLmpEventRequest) => Promise<boolean> | boolean;
   onUpdateLmpItem?: (trainee: Trainee, originalItem: SyllabusItemDetail, updatedItem: SyllabusItemDetail) => Promise<boolean> | boolean;
+  onLoadTraineeLmp?: (trainee: Trainee) => Promise<SyllabusItemDetail[] | null>;
   insertEventTypes?: InsertEventTypeConfig[];
   aircraftConfigurations?: AircraftConfigurationDefinition[];
   aircraftCrewComposition?: AircraftCrewComposition;
@@ -604,6 +605,7 @@ const TraineeProfileFlyout: React.FC<TraineeProfileFlyoutProps> = ({
   onGenerateTrainingReportForItem,
   onInsertCustomLmpEvent,
   onUpdateLmpItem,
+  onLoadTraineeLmp,
   insertEventTypes,
   aircraftConfigurations = [],
   aircraftCrewComposition,
@@ -715,11 +717,69 @@ const TraineeProfileFlyout: React.FC<TraineeProfileFlyoutProps> = ({
     const showPermissionNoticeForElement = (element: HTMLElement) => {
         setPermissionNoticeRect(element.getBoundingClientRect());
     };
-    const currentIndividualLMP = traineeLMPs?.get(trainee.fullName) || individualLmp;
+    const [loadedIndividualLmp, setLoadedIndividualLmp] = useState<SyllabusItemDetail[] | null>(null);
+    const currentIndividualLMP = traineeLMPs?.get(trainee.fullName) || loadedIndividualLmp || individualLmp;
     const visibleIndividualLMP = useMemo(
       () => (currentIndividualLMP || []).filter(item => !isTraineeCourseContainerLmpItem(item, trainee)),
       [currentIndividualLMP, trainee]
     );
+    const [isLoadingIndividualLmp, setIsLoadingIndividualLmp] = useState(false);
+    const [individualLmpLoadError, setIndividualLmpLoadError] = useState('');
+    const lastIndividualLmpLoadKeyRef = useRef('');
+
+    useEffect(() => {
+        setLoadedIndividualLmp(null);
+        setIndividualLmpLoadError('');
+        setIsLoadingIndividualLmp(false);
+        lastIndividualLmpLoadKeyRef.current = '';
+    }, [trainee.fullName]);
+
+    useEffect(() => {
+        if (activeTab !== 'lmp') return;
+        if (!onLoadTraineeLmp) return;
+        if (visibleIndividualLMP.length > 0) return;
+        const loadKey = [
+            (trainee as any).id || trainee.fullName,
+            trainee.fullName,
+            trainee.lmpType || '',
+            trainee.academicLmpType || '',
+            trainee.course || '',
+        ].join('|');
+        if (lastIndividualLmpLoadKeyRef.current === loadKey) return;
+        lastIndividualLmpLoadKeyRef.current = loadKey;
+        let cancelled = false;
+        let timeoutId: number | null = null;
+        const timeoutMs = 15000;
+        setIsLoadingIndividualLmp(true);
+        setIndividualLmpLoadError('');
+        Promise.race([
+            onLoadTraineeLmp(trainee),
+            new Promise<SyllabusItemDetail[] | null>((_, reject) => {
+                timeoutId = window.setTimeout(() => reject(new Error('Individual LMP load timed out. Close and reopen the profile, then download the LMP trace if it is still empty.')), timeoutMs);
+            }),
+        ])
+            .then(loadedLmp => {
+                if (cancelled) return;
+                if (!loadedLmp || loadedLmp.length === 0) {
+                    setIndividualLmpLoadError('No Individual LMP was returned for this trainee.');
+                    setLoadedIndividualLmp([]);
+                    return;
+                }
+                setLoadedIndividualLmp(loadedLmp);
+            })
+            .catch(error => {
+                if (cancelled) return;
+                setIndividualLmpLoadError(error instanceof Error ? error.message : String(error));
+            })
+            .finally(() => {
+                if (timeoutId !== null) window.clearTimeout(timeoutId);
+                if (!cancelled) setIsLoadingIndividualLmp(false);
+            });
+        return () => {
+            cancelled = true;
+            if (timeoutId !== null) window.clearTimeout(timeoutId);
+        };
+    }, [activeTab, onLoadTraineeLmp, trainee, visibleIndividualLMP.length]);
     const activeTrainingReportUnitCode = trainee.unit || '';
     const activeTrainingReportTemplate = trainingReportTemplate
       || getUnitTrainingReportTemplate(platformConfig, activeTrainingReportUnitCode)
@@ -3044,7 +3104,7 @@ const TraineeProfileFlyout: React.FC<TraineeProfileFlyoutProps> = ({
                         )
                         || inlineTrainingReportAssessment;
                       return (
-                        <div className={card3d + " p-0 overflow-hidden h-full min-h-0 flex flex-col"} style={card3dStyle}>
+                        <div className={card3d + " relative p-0 overflow-hidden h-full min-h-0 flex flex-col"} style={card3dStyle}>
                           <TrainingReportView
                             key={`embedded-${inlineTrainingReportEvent.id}-${trainee.fullName}-${currentAssessment?.overallGrade ?? 'none'}`}
                             trainee={trainee}
@@ -3080,7 +3140,7 @@ const TraineeProfileFlyout: React.FC<TraineeProfileFlyoutProps> = ({
                     {activeTab === 'lmp' && (() => {
                       const traineeScores = scores.get(trainee.fullName) || [];
                       return (
-                        <div className={card3d + " p-0 overflow-hidden h-full min-h-0 flex flex-col"} style={card3dStyle}>
+                        <div className={card3d + " relative p-0 overflow-hidden h-full min-h-0 flex flex-col"} style={card3dStyle}>
                           <TraineeLmpView
                             trainee={traineeWithEffectiveAcademicLmp}
                             traineeLmp={visibleIndividualLMP}
@@ -3101,6 +3161,16 @@ const TraineeProfileFlyout: React.FC<TraineeProfileFlyoutProps> = ({
                             currentUserRole={currentUserRole}
                             currentUserName={currentUserName}
                           />
+                          {isLoadingIndividualLmp && visibleIndividualLMP.length === 0 && (
+                            <div className="absolute inset-x-6 bottom-6 rounded border border-sky-500/40 bg-gray-900/95 px-4 py-3 text-sm text-sky-200">
+                              Loading Individual LMP...
+                            </div>
+                          )}
+                          {!isLoadingIndividualLmp && individualLmpLoadError && visibleIndividualLMP.length === 0 && (
+                            <div className="absolute inset-x-6 bottom-6 rounded border border-red-500/50 bg-red-950/80 px-4 py-3 text-sm text-red-100">
+                              {individualLmpLoadError}
+                            </div>
+                          )}
                         </div>
                       );
                     })()}

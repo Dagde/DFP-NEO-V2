@@ -197,6 +197,14 @@ import {
     type DispatchStaggerSettings,
 } from './utils/dispatchStagger';
 import { DEFAULT_DISPATCH_RATE_WINDOW_MINUTES, normaliseDispatchRateWindowMinutes } from './utils/dispatchRate';
+import {
+    DEFAULT_GROUND_EVENT_SCHEDULING_SETTINGS,
+    getGroundEventSchedulingRuleForType,
+    GROUND_EVENT_SCHEDULING_WINDOWS,
+    normaliseGroundEventSchedulingSettings,
+    normaliseGroundEventTypeKey,
+    type GroundEventSchedulingSettings,
+} from './utils/groundEventSchedulingSettings';
 import { getStaffUnavailabilityStatus } from './utils/fixedCrewAvailability';
 import { isSyllabusCourseShell } from './utils/syllabusCourseShell';
 import { getLmpAudienceForCourse } from './utils/lmpAudience';
@@ -726,7 +734,6 @@ import {
     FlyingWindowExclusionRestriction,
     AirCombatTrainingAssignment,
     AirCombatTrainingReport,
-    TrainingReportAssessment,
     ScheduleEventPersonnelRef,
     ScheduleEventPersonnelRole,
     StandardMissionProfile
@@ -9917,6 +9924,7 @@ interface DfpConfig {
   maxCrewDutyPeriod: number;
   maxDispatchPerHour?: number;
   dispatchStaggerSettings?: DispatchStaggerSettings;
+  groundEventSchedulingSettings?: GroundEventSchedulingSettings;
   eventLimits: EventLimits;
   sctFlights: SctRequest[];
   sctFtds: SctRequest[];
@@ -10843,6 +10851,9 @@ async function generateDfpInternal(
             .map(unitCode => String(unitCode || '').trim().toUpperCase())
             .filter(Boolean)
     ));
+    const buildGroundEventSchedulingSettings = normaliseGroundEventSchedulingSettings(
+        config.groundEventSchedulingSettings || DEFAULT_GROUND_EVENT_SCHEDULING_SETTINGS
+    );
     const buildCrewPositionTerminology = normaliseCrewPositionTerminology(config.crewPositionTerminology || null);
     const buildAircraftCrewComposition = normaliseAircraftCrewComposition(config.aircraftCrewComposition || { crewCount: 1, seats: [{ id: 'seat-1', role: 'Pilot', eligibleRoles: ['Pilot'] }] });
     const getBuildAircraftCrewCompositionForEvent = (event?: { type?: string; resourceId?: string } | null): AircraftCrewComposition => (
@@ -12119,6 +12130,15 @@ async function generateDfpInternal(
         noNextByCourse: {},
         scheduleLists: {},
         scheduleFlow: [] as any[],
+        groupGroundScheduling: {
+            settings: buildGroundEventSchedulingSettings,
+            candidates: [] as any[],
+            suggestions: [] as any[],
+            placements: [] as any[],
+            skips: [] as any[],
+            notes: [] as string[],
+            summary: null as any,
+        },
         phaseTimeline: [] as any[],
         finalCleanup: null,
         remedialDataMovement: {
@@ -12457,6 +12477,14 @@ async function generateDfpInternal(
                     }
                 ])),
                 scheduleFlow: (neoBuildDiag.scheduleFlow || []).slice(-80),
+                groupGroundScheduling: {
+                    ...neoBuildDiag.groupGroundScheduling,
+                    candidates: (neoBuildDiag.groupGroundScheduling?.candidates || []).slice(-220),
+                    suggestions: (neoBuildDiag.groupGroundScheduling?.suggestions || []).slice(-220),
+                    placements: (neoBuildDiag.groupGroundScheduling?.placements || []).slice(-220),
+                    skips: (neoBuildDiag.groupGroundScheduling?.skips || []).slice(-220),
+                    notes: (neoBuildDiag.groupGroundScheduling?.notes || []).slice(-80),
+                },
                 phaseTimeline: (neoBuildDiag.phaseTimeline || []).slice(-220),
                 dayFlightGapDiagnostics: {
                     attempts: neoBuildDiag.dayFlightGapDiagnostics.attempts.slice(-500),
@@ -16283,7 +16311,7 @@ async function generateDfpInternal(
         if (eventType === 'Flight') return { bucket: 'flight', reason: 'TYPE_FLIGHT' };
         if (isBuildCptTrainingEvent(item)) return { bucket: 'cpt', reason: 'CPT_TYPE_CODE_OR_DELIVERY' };
         if (eventType === 'FTD') return { bucket: 'ftd', reason: 'TYPE_FTD' };
-        if (eventType === 'Ground School') return { bucket: 'ground', reason: 'TYPE_GROUND_SCHOOL' };
+        if (eventType === 'Ground School' || eventType === 'Ground') return { bucket: 'ground', reason: 'TYPE_GROUND' };
         return { bucket: 'none', reason: 'UNSUPPORTED_EVENT_TYPE' };
     };
     const describeBuildTrainingEventForDiag = (item?: Partial<SyllabusItemDetail> | null) => {
@@ -19854,6 +19882,482 @@ const applyCoursePriority = (rankedList: Trainee[], diagnosticLabel = 'unlabelle
         });
         recordScheduleAttemptTiming('placed', 'PLACED');
         return result;
+    };
+
+    const groupGroundCoveredNextKeys = new Set<string>();
+    const makeGroupGroundCoverageKey = (trainee: Trainee, syllabusItem?: SyllabusItemDetail | null): string => [
+        getBuildTraineeKey(trainee),
+        normalizeLmpEventId(syllabusItem?.code || syllabusItem?.id || syllabusItem?.masterEventId || ''),
+    ].join('::');
+    const isGroupGroundCovered = (trainee: Trainee, syllabusItem?: SyllabusItemDetail | null): boolean => (
+        groupGroundCoveredNextKeys.has(makeGroupGroundCoverageKey(trainee, syllabusItem))
+    );
+    const parsePositiveGroupInteger = (value: unknown): number | null => {
+        const numeric = Number(value);
+        if (!Number.isFinite(numeric) || numeric <= 0) return null;
+        return Math.max(1, Math.floor(numeric));
+    };
+    const isLmpGroupEventEnabled = (value: unknown): boolean => {
+        if (value === true) return true;
+        const normalised = String(value || '').trim().toLowerCase();
+        return normalised === 'yes' || normalised === 'true' || normalised === 'y';
+    };
+    const getGroupGroundEventKey = (item: SyllabusItemDetail): string => (
+        normalizeLmpEventId(item.code || item.id || item.masterEventId || item.eventDescription || '')
+    );
+    const getGroupGroundCandidateEventLabel = (item: SyllabusItemDetail): string => (
+        String(item.code || item.id || item.eventDescription || 'Ground event').trim() || 'Ground event'
+    );
+    const getGroupGroundEventDescription = (item: SyllabusItemDetail): string => {
+        const sortieDetails = Array.isArray((item as any).eventDetailsSortie)
+            ? (item as any).eventDetailsSortie
+            : Array.isArray((item as any).eventDetails?.sortie)
+                ? (item as any).eventDetails.sortie
+                : [];
+        const commonDetails = Array.isArray((item as any).eventDetailsCommon)
+            ? (item as any).eventDetailsCommon
+            : Array.isArray((item as any).eventDetails?.common)
+                ? (item as any).eventDetails.common
+                : [];
+        return [...sortieDetails, ...commonDetails]
+            .map(value => String(value || '').trim())
+            .filter(Boolean)
+            .slice(0, 5)
+            .join(', ');
+    };
+
+    type GroupGroundCandidate = {
+        key: string;
+        eventType: string;
+        mode: 'automatic' | 'suggest' | 'manual';
+        course: string;
+        syllabusItem: SyllabusItemDetail;
+        readyTrainees: Trainee[];
+        attendeePool: Trainee[];
+        minimumToSchedule: number;
+        groupSizeMin: number;
+        groupSizeMax: number | null;
+        entireCourse: boolean;
+        preferredWindowIds: string[];
+    };
+
+    const buildGroupGroundCandidates = (groundNextList: Trainee[]): GroupGroundCandidate[] => {
+        const candidatesByKey = new Map<string, GroupGroundCandidate>();
+        for (const trainee of groundNextList) {
+            const next = traineeNextEventMap.get(getBuildTraineeKey(trainee))?.next;
+            if (!next || classifyBuildTrainingEvent(next).bucket !== 'ground') continue;
+            if (!isLmpGroupEventEnabled((next as any).groupEvent)) continue;
+
+            const eventType = normaliseGroundEventTypeKey(next.type);
+            const rule = getGroundEventSchedulingRuleForType(buildGroundEventSchedulingSettings, eventType);
+            if (rule.mode === 'manual') {
+                if (neoBuildDiag.groupGroundScheduling.skips.length < 220) {
+                    neoBuildDiag.groupGroundScheduling.skips.push({
+                        reason: 'SETTINGS_MANUAL',
+                        trainee: trainee.fullName,
+                        course: trainee.course,
+                        event: next.code || next.id || null,
+                        eventType,
+                    });
+                }
+                continue;
+            }
+
+            const eventKey = getGroupGroundEventKey(next);
+            if (!eventKey) continue;
+            const course = String(trainee.course || 'Unassigned').trim() || 'Unassigned';
+            const candidateKey = [course.toUpperCase(), eventType.toUpperCase(), eventKey].join('::');
+            if (!candidatesByKey.has(candidateKey)) {
+                const entireCourse = isLmpGroupEventEnabled((next as any).groupEntireCourse);
+                const attendeePool = entireCourse
+                    ? activeTrainees.filter(candidate => String(candidate.course || '').trim() === course)
+                    : [];
+                candidatesByKey.set(candidateKey, {
+                    key: candidateKey,
+                    eventType,
+                    mode: rule.mode,
+                    course,
+                    syllabusItem: next,
+                    readyTrainees: [],
+                    attendeePool,
+                    minimumToSchedule: parsePositiveGroupInteger((next as any).minimumToSchedule) || 1,
+                    groupSizeMin: parsePositiveGroupInteger((next as any).groupSizeMin) || 1,
+                    groupSizeMax: parsePositiveGroupInteger((next as any).groupSizeMax),
+                    entireCourse,
+                    preferredWindowIds: rule.preferredWindows,
+                });
+            }
+            const candidate = candidatesByKey.get(candidateKey)!;
+            candidate.readyTrainees.push(trainee);
+            if (!candidate.entireCourse) candidate.attendeePool.push(trainee);
+        }
+
+        const candidates = Array.from(candidatesByKey.values())
+            .map(candidate => ({
+                ...candidate,
+                readyTrainees: applyCoursePriority(candidate.readyTrainees, `ground-group-ready-${candidate.key}`),
+                attendeePool: applyCoursePriority(
+                    Array.from(new Map(candidate.attendeePool.map(trainee => [getBuildTraineeKey(trainee), trainee])).values()),
+                    `ground-group-pool-${candidate.key}`
+                ),
+            }))
+            .filter(candidate => {
+                const readyCount = candidate.readyTrainees.length;
+                const meetsMinimum = readyCount >= candidate.minimumToSchedule;
+                if (!meetsMinimum) {
+                    neoBuildDiag.groupGroundScheduling.skips.push({
+                        reason: 'BELOW_MINIMUM_TO_SCHEDULE',
+                        event: getGroupGroundCandidateEventLabel(candidate.syllabusItem),
+                        course: candidate.course,
+                        eventType: candidate.eventType,
+                        readyCount,
+                        minimumToSchedule: candidate.minimumToSchedule,
+                    });
+                }
+                return meetsMinimum;
+            });
+
+        neoBuildDiag.groupGroundScheduling.candidates = candidates.slice(0, 220).map(candidate => ({
+            key: candidate.key,
+            event: getGroupGroundCandidateEventLabel(candidate.syllabusItem),
+            eventType: candidate.eventType,
+            course: candidate.course,
+            mode: candidate.mode,
+            readyCount: candidate.readyTrainees.length,
+            attendeePoolCount: candidate.attendeePool.length,
+            minimumToSchedule: candidate.minimumToSchedule,
+            groupSizeMin: candidate.groupSizeMin,
+            groupSizeMax: candidate.groupSizeMax,
+            entireCourse: candidate.entireCourse,
+            preferredWindowIds: candidate.preferredWindowIds,
+            readySample: candidate.readyTrainees.slice(0, 12).map(trainee => trainee.fullName),
+        }));
+        return candidates;
+    };
+
+    const getGroupGroundSearchWindows = (candidate: GroupGroundCandidate): Array<{ id: string; label: string; start: number; end: number }> => {
+        const selected = candidate.preferredWindowIds.length > 0
+            ? GROUND_EVENT_SCHEDULING_WINDOWS.filter(windowOption => candidate.preferredWindowIds.includes(windowOption.id))
+            : [];
+        const baseWindows = selected.length > 0
+            ? selected
+            : [{ id: 'any', label: 'Any valid time', start: flyingStartTime, end: flyingEndTime }];
+        return baseWindows
+            .map(windowOption => ({
+                id: windowOption.id,
+                label: windowOption.label,
+                start: Math.max(flyingStartTime, windowOption.start),
+                end: Math.min(flyingEndTime, windowOption.end),
+            }))
+            .filter(windowOption => windowOption.end > windowOption.start);
+    };
+
+    const getAvailableGroupGroundAttendees = (
+        candidate: GroupGroundCandidate,
+        startTime: number,
+        duration: number
+    ): { attendees: Trainee[]; rejectionSamples: any[] } => {
+        const proposedBookingWindow = {
+            start: startTime - (candidate.syllabusItem.preFlightTime || 0),
+            end: startTime + duration + (candidate.syllabusItem.postFlightTime || 0),
+        };
+        const rejectionSamples: any[] = [];
+        const available = candidate.attendeePool.filter(trainee => {
+            const traineeKey = getBuildTraineeKey(trainee);
+            const counts = getOrCreateEventCounts(traineeKey);
+            const reject = (reason: string, details?: Record<string, any>) => {
+                if (rejectionSamples.length < 10) {
+                    rejectionSamples.push({
+                        trainee: trainee.fullName,
+                        traineeIdentityKey: traineeKey,
+                        reason,
+                        ...(details || {}),
+                    });
+                }
+                return false;
+            };
+            if (isPersonStaticallyUnavailable(trainee, proposedBookingWindow.start, proposedBookingWindow.end, buildDate, 'ground')) {
+                return reject('TRAINEE_STATICALLY_UNAVAILABLE');
+            }
+            if (!canAssignTraineeForScheduledWindow(trainee, startTime)) {
+                return reject('TRAINEE_DAY_NIGHT_SEPARATION');
+            }
+            if (counts.ground >= 2) {
+                return reject('TRAINEE_GROUND_LIMIT', { ground: counts.ground, limit: 2 });
+            }
+            if ((counts.flightFtd + counts.ground + counts.cpt) >= eventLimits.trainee.maxTotal) {
+                return reject('TRAINEE_TOTAL_LIMIT', {
+                    flightFtd: counts.flightFtd,
+                    ground: counts.ground,
+                    cpt: counts.cpt,
+                    limit: eventLimits.trainee.maxTotal,
+                });
+            }
+            const overlappingEvent = getGeneratedEventsForPersonRecord(trainee, 'trainee').find(existing => {
+                if (!eventHasNeoBuildPersonIdentity(existing, trainee, 'trainee')) return false;
+                const existingBookingWindow = getEventBookingWindowForAlgo(existing, syllabusDetails);
+                return proposedBookingWindow.start < existingBookingWindow.end && proposedBookingWindow.end > existingBookingWindow.start;
+            });
+            if (overlappingEvent) {
+                return reject('TRAINEE_TIME_OVERLAP', {
+                    conflictingEvent: overlappingEvent.flightNumber,
+                    conflictingStartTime: overlappingEvent.startTime,
+                    conflictingDisplayTime: _fmtT(overlappingEvent.startTime),
+                    conflictingResourceId: overlappingEvent.resourceId,
+                });
+            }
+            return true;
+        });
+
+        const attendeeLimit = candidate.entireCourse ? null : candidate.groupSizeMax;
+        const capped = attendeeLimit ? available.slice(0, attendeeLimit) : available;
+        return { attendees: capped, rejectionSamples };
+    };
+
+    const confirmSuggestedGroupGroundCandidate = async (
+        candidate: GroupGroundCandidate,
+        suggestionIndex: number,
+        suggestionTotal: number
+    ): Promise<boolean> => {
+        const eventLabel = getGroupGroundCandidateEventLabel(candidate.syllabusItem);
+        const details = getGroupGroundEventDescription(candidate.syllabusItem);
+        neoBuildDiag.groupGroundScheduling.suggestions.push({
+            event: eventLabel,
+            course: candidate.course,
+            eventType: candidate.eventType,
+            suggestionIndex,
+            suggestionTotal,
+            readyCount: candidate.readyTrainees.length,
+            attendeePoolCount: candidate.attendeePool.length,
+            mode: candidate.mode,
+        });
+        if (typeof window === 'undefined' || typeof window.confirm !== 'function') return true;
+        await recordProgress({
+            message: `Ground event suggestion ${suggestionIndex}/${suggestionTotal}: ${eventLabel}`,
+            percentage: 75,
+            generatedEvents: generatedEvents.length,
+        });
+        return window.confirm(
+            `Ground event suggestion ${suggestionIndex} of ${suggestionTotal}\n\n` +
+            `Schedule ${eventLabel} for ${candidate.course}?\n` +
+            `Ready trainees: ${candidate.readyTrainees.length}\n` +
+            `Available pool: ${candidate.attendeePool.length}${candidate.entireCourse ? ' (entire course, unavailable trainees excluded)' : ''}\n` +
+            `Preferred windows: ${candidate.preferredWindowIds.length ? candidate.preferredWindowIds.join(', ') : 'Any valid time'}\n` +
+            `${details ? `\nDetails: ${details}\n` : ''}\n` +
+            `Press OK to Accept or Cancel to Skip.`
+        );
+    };
+
+    const tryPlaceGroupGroundCandidate = async (
+        candidate: GroupGroundCandidate,
+        candidateIndex: number,
+        candidateTotal: number
+    ): Promise<boolean> => {
+        const eventLabel = getGroupGroundCandidateEventLabel(candidate.syllabusItem);
+        if (candidate.mode === 'suggest') {
+            const accepted = await confirmSuggestedGroupGroundCandidate(candidate, candidateIndex, candidateTotal);
+            if (!accepted) {
+                const note = `Skipped suggested group ground event ${eventLabel} for ${candidate.course}.`;
+                neoBuildDiag.groupGroundScheduling.notes.push(note);
+                neoBuildDiag.groupGroundScheduling.skips.push({
+                    reason: 'USER_SKIPPED_SUGGESTION',
+                    event: eventLabel,
+                    course: candidate.course,
+                    eventType: candidate.eventType,
+                });
+                return false;
+            }
+        }
+
+        const duration = getScheduledEventDuration(candidate.syllabusItem, 'ground', candidate.readyTrainees[0] || candidate.attendeePool[0]);
+        const durationSource = getScheduledEventDurationSource(candidate.syllabusItem, 'ground', candidate.readyTrainees[0] || candidate.attendeePool[0]);
+        const searchWindows = getGroupGroundSearchWindows(candidate);
+        const timeIncrement = getDispatchSearchStepHours('ground');
+        let firstRejection: any = null;
+        let attempts = 0;
+
+        for (const searchWindow of searchWindows) {
+            const earliestEventStart = searchWindow.start + (candidate.syllabusItem.preFlightTime || 0);
+            const latestEventStart = searchWindow.end - duration - (candidate.syllabusItem.postFlightTime || 0);
+            if (latestEventStart < earliestEventStart - 0.001) {
+                firstRejection = firstRejection || {
+                    reason: 'NO_SEARCH_WINDOW',
+                    searchWindow,
+                    earliestEventStart,
+                    latestEventStart,
+                };
+                continue;
+            }
+
+            for (let time = earliestEventStart; time <= latestEventStart + 0.001; time += timeIncrement) {
+                attempts++;
+                if (attempts % 60 === 0) {
+                    await recordLiveBuildProgress({
+                        message: `Trying group ground event ${candidateIndex}/${candidateTotal}: ${eventLabel}`,
+                        percentage: 75,
+                        generatedEvents: generatedEvents.length,
+                    }, 350);
+                }
+                const { attendees, rejectionSamples } = getAvailableGroupGroundAttendees(candidate, time, duration);
+                if (attendees.length < candidate.groupSizeMin) {
+                    firstRejection = firstRejection || {
+                        reason: 'GROUP_SIZE_MIN_NOT_MET',
+                        displayTime: _fmtT(time),
+                        availableCount: attendees.length,
+                        groupSizeMin: candidate.groupSizeMin,
+                        rejectionSamples,
+                    };
+                    continue;
+                }
+                const attendeeKeys = new Set(attendees.map(getBuildTraineeKey));
+                const leadCandidates = candidate.readyTrainees.filter(trainee => attendeeKeys.has(getBuildTraineeKey(trainee)));
+                if (leadCandidates.length === 0) {
+                    firstRejection = firstRejection || {
+                        reason: 'NO_READY_TRAINEE_AVAILABLE_AS_LEAD',
+                        displayTime: _fmtT(time),
+                        availableCount: attendees.length,
+                        rejectionSamples,
+                    };
+                    continue;
+                }
+
+                for (const leadTrainee of leadCandidates) {
+                    let leadScheduleRejection: any = null;
+                    const result = scheduleEvent(leadTrainee, candidate.syllabusItem, time, 'ground', false, false, false, false, {
+                        enforcePersonnelTurnaround: true,
+                        diagnosticListName: 'GROUP GROUND Next',
+                        diagnosticTrace: (traceEntry) => {
+                            if (traceEntry?.outcome === 'rejected' && !leadScheduleRejection) {
+                                leadScheduleRejection = traceEntry;
+                            }
+                        },
+                    });
+                    if (!(result && typeof result === 'object' && 'id' in result)) {
+                        firstRejection = firstRejection || {
+                            reason: leadScheduleRejection?.reason || 'SCHEDULE_EVENT_REJECTED',
+                            displayTime: _fmtT(time),
+                            leadTrainee: leadTrainee.fullName,
+                            details: leadScheduleRejection?.details || null,
+                        };
+                        continue;
+                    }
+
+                    const attendeeRefs = attendees
+                        .map(trainee => makeNeoBuildSchedulePersonnelRef(trainee, 'attendee', 'trainee'))
+                        .filter(Boolean) as ScheduleEventPersonnelRef[];
+                    const staffRefs = getNeoBuildDiagnosticPersonnelRefs(result)
+                        .filter(ref => ref.personType === 'staff');
+                    const groupEvent: any = {
+                        ...result,
+                        student: '',
+                        attendees: attendees.map(trainee => trainee.fullName),
+                        group: `${candidate.course} ${eventLabel}`,
+                        groupTraineeIds: attendees
+                            .map(trainee => trainee.idNumber)
+                            .filter((idNumber): idNumber is number => typeof idNumber === 'number'),
+                        personnelRefs: [...staffRefs, ...attendeeRefs],
+                        _neoBuildTraineeIdentity: undefined,
+                        _neoBuildTraineePersonnelRef: undefined,
+                        _source: 'generated-group-ground',
+                        _isNext: true,
+                        _traineeName: attendees.map(trainee => trainee.fullName).join(', '),
+                        _groupGroundEvent: true,
+                        _groupGroundCourse: candidate.course,
+                        _groupGroundReadyCount: candidate.readyTrainees.length,
+                        _groupGroundAttendeeCount: attendees.length,
+                    };
+                    pushGeneratedEvent(groupEvent);
+
+                    attendees.forEach(trainee => {
+                        const counts = getOrCreateEventCounts(getBuildTraineeKey(trainee));
+                        counts.ground++;
+                    });
+                    if (result.instructor) {
+                        const ipCounts = getOrCreateEventCounts(result.instructor);
+                        ipCounts.ground++;
+                    }
+                    candidate.readyTrainees.forEach(trainee => {
+                        if (attendeeKeys.has(getBuildTraineeKey(trainee))) {
+                            groupGroundCoveredNextKeys.add(makeGroupGroundCoverageKey(trainee, candidate.syllabusItem));
+                        }
+                    });
+                    neoBuildDiag.groupGroundScheduling.placements.push({
+                        event: eventLabel,
+                        course: candidate.course,
+                        eventType: candidate.eventType,
+                        mode: candidate.mode,
+                        startTime: result.startTime,
+                        displayTime: _fmtT(result.startTime),
+                        duration,
+                        durationSource,
+                        resourceId: result.resourceId,
+                        instructor: result.instructor || null,
+                        attendeeCount: attendees.length,
+                        readyCount: candidate.readyTrainees.length,
+                        entireCourse: candidate.entireCourse,
+                        preferredWindowIds: candidate.preferredWindowIds,
+                        attendees: attendees.slice(0, 40).map(trainee => trainee.fullName),
+                    });
+                    return true;
+                }
+            }
+        }
+
+        const note = `Could not place group ground event ${eventLabel} for ${candidate.course}. ${firstRejection?.reason ? `Reason: ${firstRejection.reason}.` : 'No valid slot was found.'}`;
+        neoBuildDiag.groupGroundScheduling.notes.push(note);
+        neoBuildDiag.groupGroundScheduling.skips.push({
+            reason: 'NO_VALID_GROUP_PLACEMENT',
+            event: eventLabel,
+            course: candidate.course,
+            eventType: candidate.eventType,
+            attempts,
+            firstRejection,
+        });
+        return false;
+    };
+
+    const scheduleGroupGroundNextEvents = async (groundNextList: Trainee[]): Promise<Trainee[]> => {
+        const candidates = buildGroupGroundCandidates(groundNextList);
+        if (candidates.length === 0) {
+            neoBuildDiag.groupGroundScheduling.summary = {
+                candidates: 0,
+                placements: 0,
+                coveredNextEvents: 0,
+                notes: neoBuildDiag.groupGroundScheduling.notes.length,
+            };
+            return groundNextList;
+        }
+
+        await recordProgress({
+            message: `Reviewing group ground events (0/${candidates.length})...`,
+            percentage: 75,
+            generatedEvents: generatedEvents.length,
+        });
+        for (let index = 0; index < candidates.length; index++) {
+            await recordLiveBuildProgress({
+                message: `Reviewing group ground events (${index + 1}/${candidates.length})...`,
+                percentage: 75,
+                generatedEvents: generatedEvents.length,
+            }, 250);
+            await tryPlaceGroupGroundCandidate(candidates[index], index + 1, candidates.length);
+        }
+
+        const remaining = groundNextList.filter(trainee => {
+            const next = traineeNextEventMap.get(getBuildTraineeKey(trainee))?.next;
+            return !isGroupGroundCovered(trainee, next);
+        });
+        neoBuildDiag.groupGroundScheduling.summary = {
+            candidates: candidates.length,
+            placements: neoBuildDiag.groupGroundScheduling.placements.length,
+            coveredNextEvents: groupGroundCoveredNextKeys.size,
+            remainingIndividualGroundNext: remaining.length,
+            notes: neoBuildDiag.groupGroundScheduling.notes.length,
+        };
+        if (typeof window !== 'undefined') {
+            (window as any).__lastNeoBuildGroupGroundNotes = neoBuildDiag.groupGroundScheduling.notes || [];
+        }
+        saveNeoBuildDiag('group-ground-scheduling');
+        return remaining;
     };
 
     let nightDutySup: Instructor | null = null;
@@ -25281,9 +25785,14 @@ const applyCoursePriority = (rankedList: Trainee[], diagnosticLabel = 'unlabelle
     await recordProgress({ message: 'Scheduling Ground Events (Priority)...', percentage: 74 });
     // Highest Priority Ground Events are already added at the start
 
+    await recordProgress({ message: 'Scheduling Group Ground Events...', percentage: 75 });
+    const groundNextAfterGroupScheduling = await scheduleGroupGroundNextEvents(
+        applyCoursePriority(filterOutBnfTrainees(nextEventLists.ground), 'ground-group-next')
+    );
+
     await recordProgress({ message: 'Scheduling Ground Events (Next)...', percentage: 76 });
     await scheduleList(
-        applyCoursePriority(filterOutBnfTrainees(nextEventLists.ground), 'ground-next'),
+        applyCoursePriority(groundNextAfterGroupScheduling, 'ground-next'),
         'ground',
         false,
         flyingStartTime,
@@ -30893,7 +31402,9 @@ const App: React.FC = () => {
             operationalContextOptions.length === 0 ||
             shouldResumeInitialSetupWizard
         );
-    const showInitialSetupBlankState = canBootstrapInitialSetupFromDfp && !hasInitialSetupWizardCompleted;
+    const showInitialSetupBlankState = canBootstrapInitialSetupFromDfp
+        && !hasInitialSetupWizardCompleted
+        && !hasOperationalSetupReadyForDfp;
 
     useEffect(() => {
         if (!platformConfigLoaded) return;
@@ -31188,6 +31699,8 @@ const App: React.FC = () => {
         }
     }
 
+    const rosterColourTraceRef = useRef<Record<string, any> | null>(null);
+
     function buildDfpDataDiagReport(): Record<string, any> {
         const entries = readDfpDataDiagEntries();
         const staffScheduleRenderTrace = readStaffScheduleRenderDiagEntries();
@@ -31309,6 +31822,9 @@ const App: React.FC = () => {
                 platformDataScopeQuery,
                 activeContextUnitCodes,
                 activeUnitContext,
+                baseSelectableLocationCodes,
+                selectableLocationCodes,
+                operationalContextOptions,
             },
             loadedDataCounts: {
                 allInstructors: allInstructorsData.length,
@@ -31317,6 +31833,47 @@ const App: React.FC = () => {
                 allTrainees: allTraineesData.length,
                 scopedTrainees: traineesData.length,
                 archivedTrainees: archivedTraineesData.length,
+            },
+            operationalVisibility: (window as any).__dfpOperationalVisibilityTrace || null,
+            rosterColourTrace: rosterColourTraceRef.current,
+            platformConfigSummary: {
+                organisationCount: platformConfig?.organisations?.length || 0,
+                locationCount: platformConfig?.locations?.length || 0,
+                unitCount: platformConfig?.units?.length || 0,
+                resourcePoolCount: platformConfig?.resourcePools?.length || 0,
+                aircraftTypeCount: platformConfig?.aircraftTypes?.length || 0,
+                locations: (platformConfig?.locations || []).map((location: any) => ({
+                    code: location?.code || null,
+                    name: location?.name || null,
+                    status: location?.status || null,
+                    unitCodes: location?.settings?.unitCodes || location?.unitCodes || [],
+                })).slice(0, 80),
+                units: (platformConfig?.units || []).map((unit: any) => ({
+                    code: unit?.code || null,
+                    name: unit?.name || null,
+                    status: unit?.status || null,
+                    locationCode: unit?.locationCode || null,
+                })).slice(0, 120),
+                resourcePools: (platformConfig?.resourcePools || []).map((pool: any) => ({
+                    code: pool?.code || null,
+                    name: pool?.name || null,
+                    status: pool?.status || null,
+                    locationCode: pool?.locationCode || null,
+                    unitCode: pool?.unitCode || null,
+                    aircraftTypeCode: pool?.aircraftTypeCode || null,
+                    settings: pool?.settings || null,
+                })).slice(0, 80),
+            },
+            lmpSummary: {
+                count: syllabusDetails.length,
+                names: syllabusDetails.slice(0, 80).map((lmp: any) => ({
+                    id: lmp?.id || null,
+                    name: lmp?.name || lmp?.courseName || lmp?.title || null,
+                    code: lmp?.code || lmp?.courseCode || null,
+                    unit: lmp?.unit || lmp?.unitCode || null,
+                    location: lmp?.location || lmp?.locationCode || null,
+                    eventCount: Array.isArray(lmp?.events) ? lmp.events.length : Array.isArray(lmp?.syllabus) ? lmp.syllabus.length : null,
+                })),
             },
             currentScheduleState: {
                 activeDate: date,
@@ -31630,9 +32187,9 @@ const App: React.FC = () => {
         if (!platformConfigLoaded || selectableLocationCodes.length === 0) return;
         if (selectableLocationCodes.includes(school)) return;
         const hasInitialSetupWizardProgress = hasStoredInitialSetupWizardProgress();
-        const shouldSuppressAutoLocationSwitch = showInitialSetupBlankState || isInitialSetupWizardActive || hasIncompleteInitialSetupWizardProgress || (
-            hasInitialSetupWizardProgress && !hasOperationalSetupReadyForDfp
-        );
+        const shouldSuppressAutoLocationSwitch = showInitialSetupBlankState
+            || isInitialSetupWizardActive
+            || ((hasIncompleteInitialSetupWizardProgress || hasInitialSetupWizardProgress) && !hasOperationalSetupReadyForDfp);
         if (shouldSuppressAutoLocationSwitch) {
             pushDfpDataDiag('context:auto-location-switch-suppressed-for-initial-setup', {
                 school,
@@ -31645,7 +32202,7 @@ const App: React.FC = () => {
                     ? 'setup-wizard-bootstrap-active'
                     : isInitialSetupWizardActive
                     ? 'setup-wizard-open'
-                    : hasIncompleteInitialSetupWizardProgress
+                    : hasIncompleteInitialSetupWizardProgress && !hasOperationalSetupReadyForDfp
                     ? 'incomplete-setup-wizard-progress'
                     : 'stored-wizard-progress-and-operational-setup-not-ready',
             });
@@ -34683,6 +35240,86 @@ const App: React.FC = () => {
             void persistPlatformConfigNow(nextConfig, 'debounced-platform-config');
         }, 900);
     }, [persistPlatformConfigNow]);
+    const handleDeleteMasterLmpCatalogueEntry = useCallback(async (lmpCode: string) => {
+        const targetCode = String(lmpCode || '').trim().toUpperCase();
+        if (!targetCode || !platformConfig) return;
+        const nextConfig = {
+            ...platformConfig,
+            organisations: (platformConfig.organisations || []).map((organisation: any, index: number) => {
+                const isActiveOrganisation = String(organisation.status || 'ACTIVE').toUpperCase() === 'ACTIVE';
+                const isTargetOrganisation = isActiveOrganisation || index === 0;
+                if (!isTargetOrganisation) return organisation;
+                const settings = organisation.settings || {};
+                const currentCatalogue = Array.isArray(settings.masterLmpCatalogue) ? settings.masterLmpCatalogue : [];
+                const currentAccess = Array.isArray(settings.masterLmpAccess) ? settings.masterLmpAccess : [];
+                return {
+                    ...organisation,
+                    settings: {
+                        ...settings,
+                        masterLmpCatalogue: currentCatalogue.filter((entry: any) => (
+                            String(entry?.code || '').trim().toUpperCase() !== targetCode
+                        )),
+                        masterLmpAccess: currentAccess.filter((rule: any) => (
+                            String(rule?.lmpCode || '').trim().toUpperCase() !== targetCode
+                        )),
+                    },
+                };
+            }),
+        };
+        setPlatformConfig(nextConfig);
+        window.dispatchEvent(new CustomEvent(PLATFORM_CONFIG_UPDATED_EVENT, { detail: { config: nextConfig } }));
+    }, [platformConfig]);
+    const handleUpsertMasterLmpCatalogueEntry = useCallback(async (entry: { code: string; name: string; version?: string; audience?: 'staff' | 'trainee' }) => {
+        const targetCode = String(entry.code || '').trim().toUpperCase();
+        if (!targetCode || !platformConfig) return;
+        const nextConfig = {
+            ...platformConfig,
+            organisations: (platformConfig.organisations || []).map((organisation: any, index: number) => {
+                const isActiveOrganisation = String(organisation.status || 'ACTIVE').toUpperCase() === 'ACTIVE';
+                const isTargetOrganisation = isActiveOrganisation || index === 0;
+                if (!isTargetOrganisation) return organisation;
+                const settings = organisation.settings || {};
+                const currentCatalogue = Array.isArray(settings.masterLmpCatalogue) ? settings.masterLmpCatalogue : [];
+                const currentAccess = Array.isArray(settings.masterLmpAccess) ? settings.masterLmpAccess : [];
+                const nextCatalogueEntry = {
+                    id: currentCatalogue.find((item: any) => String(item?.code || '').trim().toUpperCase() === targetCode)?.id || `master-lmp-catalogue-${targetCode.toLowerCase().replace(/[^a-z0-9]+/g, '-')}`,
+                    code: targetCode,
+                    name: String(entry.name || targetCode).trim() || targetCode,
+                    description: currentCatalogue.find((item: any) => String(item?.code || '').trim().toUpperCase() === targetCode)?.description || '',
+                    audience: entry.audience || 'trainee',
+                    status: 'ACTIVE',
+                    version: entry.version || currentCatalogue.find((item: any) => String(item?.code || '').trim().toUpperCase() === targetCode)?.version || '1.0',
+                };
+                const hasAccessRule = currentAccess.some((rule: any) => (
+                    String(rule?.lmpCode || '').trim().toUpperCase() === targetCode
+                    && String(rule?.unitCode || '').trim().toUpperCase() === String(activeUnitCode || '').trim().toUpperCase()
+                    && String(rule?.locationCode || '').trim().toUpperCase() === String(school || '').trim().toUpperCase()
+                ));
+                const accessRule = {
+                    id: `master-lmp-access-${targetCode.toLowerCase().replace(/[^a-z0-9]+/g, '-')}-${String(activeUnitCode || 'unit').toLowerCase().replace(/[^a-z0-9]+/g, '-')}`,
+                    lmpCode: targetCode,
+                    locationCode: school || null,
+                    unitCode: activeUnitCode || null,
+                    operationalModel: activeOperationalModel,
+                    accessLevel: 'Manage',
+                    status: 'ACTIVE',
+                };
+                return {
+                    ...organisation,
+                    settings: {
+                        ...settings,
+                        masterLmpCatalogue: currentCatalogue.some((item: any) => String(item?.code || '').trim().toUpperCase() === targetCode)
+                            ? currentCatalogue.map((item: any) => String(item?.code || '').trim().toUpperCase() === targetCode ? { ...item, ...nextCatalogueEntry } : item)
+                            : [...currentCatalogue, nextCatalogueEntry],
+                        masterLmpAccess: hasAccessRule ? currentAccess : [...currentAccess, accessRule],
+                    },
+                };
+            }),
+        };
+        setPlatformConfig(nextConfig);
+        window.dispatchEvent(new CustomEvent(PLATFORM_CONFIG_UPDATED_EVENT, { detail: { config: nextConfig } }));
+        await persistPlatformConfigNow(nextConfig, 'master-lmp-upload-catalogue-upsert');
+    }, [activeOperationalModel, activeUnitCode, persistPlatformConfigNow, platformConfig, school]);
     const handleUpdatePlatformConfigFromSchedule = useCallback((updater: (current: PlatformConfig) => PlatformConfig) => {
         setPlatformConfig((prev) => {
             if (!prev) return prev;
@@ -35272,6 +35909,7 @@ const App: React.FC = () => {
     const [maxDispatchPerHour, setMaxDispatchPerHour] = useState(8);
     const [dispatchRateWindowMinutes, setDispatchRateWindowMinutes] = useState(DEFAULT_DISPATCH_RATE_WINDOW_MINUTES);
     const [dispatchStaggerSettings, setDispatchStaggerSettings] = useState<DispatchStaggerSettings>(DEFAULT_DISPATCH_STAGGER_SETTINGS);
+    const [groundEventSchedulingSettings, setGroundEventSchedulingSettings] = useState<GroundEventSchedulingSettings>(DEFAULT_GROUND_EVENT_SCHEDULING_SETTINGS);
     const [flightTurnaround, setFlightTurnaround] = useState(1.2);
     const [ftdTurnaround, setFtdTurnaround] = useState(0.5);
     const [cptTurnaround, setCptTurnaround] = useState(0.5);
@@ -36406,6 +37044,9 @@ const App: React.FC = () => {
                 if (saved.maxDispatchPerHour != null) setMaxDispatchPerHour(saved.maxDispatchPerHour);
                 if ((saved as any).dispatchRateWindowMinutes != null) setDispatchRateWindowMinutes(normaliseDispatchRateWindowMinutes((saved as any).dispatchRateWindowMinutes));
                 if ((saved as any).dispatchStaggerSettings) setDispatchStaggerSettings(normaliseDispatchStaggerSettings((saved as any).dispatchStaggerSettings));
+                if ((saved as any).groundEventSchedulingSettings) {
+                    setGroundEventSchedulingSettings(normaliseGroundEventSchedulingSettings((saved as any).groundEventSchedulingSettings));
+                }
                 if (saved.flightTurnaround != null) setFlightTurnaround(saved.flightTurnaround);
                 if (saved.ftdTurnaround != null) setFtdTurnaround(saved.ftdTurnaround);
                 if (saved.cptTurnaround != null) setCptTurnaround(saved.cptTurnaround);
@@ -36631,6 +37272,7 @@ const App: React.FC = () => {
             maxDispatchPerHour,
             dispatchRateWindowMinutes,
             dispatchStaggerSettings,
+            groundEventSchedulingSettings,
             flightTurnaround,
             ftdTurnaround,
             cptTurnaround,
@@ -36682,7 +37324,7 @@ const App: React.FC = () => {
         locations, locationAbbreviations, serviceDefinitions, units, unitLocations, locationOpAreas,
         eventLimits,
         preferredDutyPeriod, maxCrewDutyPeriod, maxDispatchPerHour, dispatchStaggerSettings,
-        dispatchRateWindowMinutes,
+        dispatchRateWindowMinutes, groundEventSchedulingSettings,
         flightTurnaround, ftdTurnaround, cptTurnaround,
         taxiGroundTime,
         flyingStartTime, flyingEndTime, ftdStartTime, ftdEndTime, cptStartTime, cptEndTime,
@@ -36705,7 +37347,7 @@ const App: React.FC = () => {
     const onDiscardRef = useRef<() => void>(() => {});
 
     const buildResources = useMemo(() => {
-        if (!hasInitialSetupWizardCompleted && (
+        if (!hasInitialSetupWizardCompleted && !hasOperationalSetupReadyForDfp && (
             Boolean(setupTestProfile) ||
             isInitialSetupWizardActive ||
             showInitialSetupBlankState ||
@@ -36883,6 +37525,195 @@ const App: React.FC = () => {
         showInitialSetupBlankState,
         syllabusDetails.length,
         traineesData.length,
+    ]);
+
+    const lastOperationalVisibilityTraceKeyRef = useRef('');
+    useEffect(() => {
+        const activeStaffRecords = allInstructorsData.filter(isRecordActive);
+        const locationMatchedStaff = activeStaffRecords.filter(personMatchesActiveLocation);
+        const unitMatchedStaff = activeContextUnitCodeSet.size > 0
+            ? locationMatchedStaff.filter((staff: any) => {
+                const unitCode = normalisePersonnelUnitCode(staff?.unit);
+                return !unitCode || activeContextUnitCodeSet.has(unitCode);
+            })
+            : locationMatchedStaff;
+
+        const locationMatchedTrainees = allTraineesData.filter(personMatchesActiveLocation);
+        const unitMatchedTrainees = activeContextUnitCodeSet.size > 0
+            ? locationMatchedTrainees.filter((trainee: any) => {
+                const unitCode = normalisePersonnelUnitCode(trainee?.unit);
+                return !unitCode || activeContextUnitCodeSet.has(unitCode);
+            })
+            : locationMatchedTrainees;
+
+        const resourceSuppressedBySetup = !hasInitialSetupWizardCompleted && !hasOperationalSetupReadyForDfp && (
+            Boolean(setupTestProfile) ||
+            isInitialSetupWizardActive ||
+            showInitialSetupBlankState ||
+            hasIncompleteInitialSetupWizardProgress
+        );
+
+        const trace = {
+            generatedAt: new Date().toISOString(),
+            activeContext: {
+                location: school,
+                unit: activeUnitCode,
+                activeView,
+                date,
+            },
+            setupState: {
+                showInitialSetupBlankState,
+                hasInitialSetupWizardCompleted,
+                hasIncompleteInitialSetupWizardProgress,
+                isInitialSetupWizardActive,
+                shouldResumeInitialSetupWizard,
+                hasOperationalSetupReadyForDfp,
+                hasActiveOperationalUnit,
+                hasActiveOperationalResourcePool,
+                hasActiveOperationalAircraftType,
+                resourceSuppressedBySetup,
+            },
+            contextOptions: {
+                baseSelectableLocationCodes,
+                selectableLocationCodes,
+                operationalContextOptions,
+                activeContextUnitCodes: Array.from(activeContextUnitCodeSet),
+                activeLocationAliases: Array.from(activeLocationAliasSet),
+                platformDataScopeQuery,
+            },
+            dataSourceSettings,
+            people: {
+                staff: {
+                    all: allInstructorsData.length,
+                    active: activeStaffRecords.length,
+                    locationMatched: locationMatchedStaff.length,
+                    unitMatched: unitMatchedStaff.length,
+                    visible: instructorsData.length,
+                    sampleAll: allInstructorsData.slice(0, 10).map((staff: any) => ({
+                        id: staff?.id || null,
+                        name: staff?.name || null,
+                        rank: staff?.rank || null,
+                        unit: staff?.unit || null,
+                        location: staff?.location || null,
+                        source: staff?._dataSource || null,
+                        active: isRecordActive(staff),
+                    })),
+                    sampleVisible: instructorsData.slice(0, 10).map((staff: any) => ({
+                        id: staff?.id || null,
+                        name: staff?.name || null,
+                        rank: staff?.rank || null,
+                        unit: staff?.unit || null,
+                        location: staff?.location || null,
+                        source: staff?._dataSource || null,
+                    })),
+                },
+                trainees: {
+                    all: allTraineesData.length,
+                    locationMatched: locationMatchedTrainees.length,
+                    unitMatched: unitMatchedTrainees.length,
+                    visible: traineesData.length,
+                    sampleAll: allTraineesData.slice(0, 10).map((trainee: any) => ({
+                        id: trainee?.id || null,
+                        name: trainee?.name || trainee?.fullName || null,
+                        rank: trainee?.rank || null,
+                        course: trainee?.course || null,
+                        unit: trainee?.unit || null,
+                        location: trainee?.location || null,
+                        source: trainee?._dataSource || null,
+                    })),
+                    sampleVisible: traineesData.slice(0, 10).map((trainee: any) => ({
+                        id: trainee?.id || null,
+                        name: trainee?.name || trainee?.fullName || null,
+                        rank: trainee?.rank || null,
+                        course: trainee?.course || null,
+                        unit: trainee?.unit || null,
+                        location: trainee?.location || null,
+                        source: trainee?._dataSource || null,
+                    })),
+                },
+            },
+            resources: {
+                count: buildResources.length,
+                firstRows: buildResources.slice(0, 48),
+                configuredAirframeCount,
+                configuredStandbyCount,
+                configuredFtdCount,
+                configuredCptCount,
+                configuredGroundCount,
+                activeAircraftResourcePrefix,
+                activePlatformResourcePool: activePlatformResourcePool ? {
+                    id: activePlatformResourcePool.id || null,
+                    code: activePlatformResourcePool.code || null,
+                    name: activePlatformResourcePool.name || null,
+                    locationCode: activePlatformResourcePool.locationCode || null,
+                    unitCode: activePlatformResourcePool.unitCode || null,
+                    aircraftTypeCode: activePlatformResourcePool.aircraftTypeCode || null,
+                    settings: activePlatformResourcePool.settings || null,
+                } : null,
+            },
+            lmp: {
+                count: syllabusDetails.length,
+                first: syllabusDetails.slice(0, 20).map((lmp: any) => ({
+                    id: lmp?.id || null,
+                    name: lmp?.name || lmp?.courseName || lmp?.title || null,
+                    code: lmp?.code || lmp?.courseCode || null,
+                    unit: lmp?.unit || lmp?.unitCode || null,
+                    location: lmp?.location || lmp?.locationCode || null,
+                    eventCount: Array.isArray(lmp?.events) ? lmp.events.length : Array.isArray(lmp?.syllabus) ? lmp.syllabus.length : null,
+                })),
+            },
+        };
+
+        (window as any).__dfpOperationalVisibilityTrace = trace;
+        const traceKey = JSON.stringify({
+            location: trace.activeContext.location,
+            unit: trace.activeContext.unit,
+            setup: trace.setupState,
+            staff: trace.people.staff.visible,
+            trainees: trace.people.trainees.visible,
+            resources: trace.resources.count,
+            lmp: trace.lmp.count,
+        });
+        if (traceKey !== lastOperationalVisibilityTraceKeyRef.current) {
+            lastOperationalVisibilityTraceKeyRef.current = traceKey;
+            pushDfpDataDiag('visibility:operational-data-scope', trace);
+        }
+    }, [
+        activeAircraftResourcePrefix,
+        activeContextUnitCodeSet,
+        activeLocationAliasSet,
+        activePlatformResourcePool,
+        activeUnitCode,
+        activeView,
+        allInstructorsData,
+        allTraineesData,
+        baseSelectableLocationCodes,
+        buildResources,
+        configuredAirframeCount,
+        configuredCptCount,
+        configuredFtdCount,
+        configuredGroundCount,
+        configuredStandbyCount,
+        dataSourceSettings,
+        date,
+        hasActiveOperationalAircraftType,
+        hasActiveOperationalResourcePool,
+        hasActiveOperationalUnit,
+        hasIncompleteInitialSetupWizardProgress,
+        hasInitialSetupWizardCompleted,
+        hasOperationalSetupReadyForDfp,
+        instructorsData,
+        isInitialSetupWizardActive,
+        operationalContextOptions,
+        personMatchesActiveLocation,
+        platformDataScopeQuery,
+        school,
+        selectableLocationCodes,
+        setupTestProfile,
+        shouldResumeInitialSetupWizard,
+        showInitialSetupBlankState,
+        syllabusDetails,
+        traineesData,
     ]);
 
     // Filter resources to only show those with events (for schedule views)
@@ -39530,7 +40361,9 @@ const App: React.FC = () => {
                 traineeDbId,
                 apiBase,
             });
+            const sessionToken = localStorage.getItem('dfp_session_token') || '';
             const response = await fetch(`${apiBase}/trainees/${encodeURIComponent(traineeDbId)}/lmp`, {
+                headers: sessionToken ? { Authorization: `Bearer ${sessionToken}` } : undefined,
                 credentials: 'include',
             });
             pushDfpDataDiag('report-lmp:load:response', {
@@ -39564,23 +40397,21 @@ const App: React.FC = () => {
                 return null;
             }
             const traineeUnitCode = trainee.unit || matchedTrainee?.unit || activeUnitCode;
-            if (!hasMasterLmpUnitAccess(persistedLmpType, traineeUnitCode, 'Assign')) {
+            const canUseMasterLmpCatalogue = hasMasterLmpUnitAccess(persistedLmpType, traineeUnitCode, 'View')
+                || hasMasterLmpUnitAccess(persistedLmpType, traineeUnitCode, 'Assign');
+            if (!canUseMasterLmpCatalogue) {
                 pushDfpDataDiag('report-lmp:load:blocked-access', {
                     traineeFullName: trainee.fullName,
                     traineeDbId,
                     persistedLmpType,
                     traineeUnitCode,
+                    action: 'display-persisted-individual-lmp-without-master-merge',
                 });
-                setTraineeLMPs(prev => {
-                    const updated = new Map(prev);
-                    updated.delete(trainee.fullName);
-                    return updated;
-                });
-                logRoutineAppDebug(`[Individual LMP] Blocked persisted ${persistedLmpType} LMP for ${trainee.fullName}; ${traineeUnitCode || 'unit'} is not authorised to assign it`);
-                return null;
             }
 
-            const masterLMP = getAssignableMasterLmpItemsForType(syllabusDetails, persistedLmpType, traineeUnitCode, filterSyllabusForMasterLmpAccess);
+            const masterLMP = canUseMasterLmpCatalogue
+                ? getAssignableMasterLmpItemsForType(syllabusDetails, persistedLmpType, traineeUnitCode, filterSyllabusForMasterLmpAccess)
+                : [];
             const scopedPersistedLmp = masterLMP.length > 0
                 ? mergeIndividualLmpWithMaster(persistedLmp, masterLMP)
                 : persistedLmp;
@@ -41545,6 +42376,229 @@ const App: React.FC = () => {
         return savedEvents;
     };
 
+    const getLmpCorrespondenceKey = (item?: Partial<SyllabusItemDetail> | null): string => {
+        const code = String(item?.code || '').trim();
+        const description = String(item?.eventDescription || '').trim();
+        const phase = String(item?.phase || '').trim();
+        const module = String(item?.module || '').trim();
+        const primary = code || description;
+        if (!primary) return '';
+        return [phase, module, primary]
+            .map(part => part.toUpperCase().replace(/\s+/g, ' ').trim())
+            .filter(Boolean)
+            .join('|');
+    };
+
+    const isIndividualLmpItemCompleted = (item?: Partial<SyllabusItemDetail> | null): boolean => (
+        Boolean(item?.completedAt || (item as any)?.rplGranted === true || (item as any)?.completed === true || (item as any)?.isComplete === true)
+    );
+
+    const mergeAssignedMasterLmpForTrainee = (
+        existingLmp: SyllabusItemDetail[] | undefined,
+        newMasterLmp: SyllabusItemDetail[]
+    ): SyllabusItemDetail[] => {
+        const nextMaster = mergeIndividualLmpWithMaster(undefined, newMasterLmp);
+        if (!existingLmp || existingLmp.length === 0) return nextMaster;
+
+        const existingByKey = new Map<string, SyllabusItemDetail>();
+        const completedByKey = new Map<string, SyllabusItemDetail>();
+        existingLmp.forEach(item => {
+            if (isLmpOverlayItem(item)) return;
+            const key = getLmpCorrespondenceKey(item);
+            if (!key) return;
+            if (!existingByKey.has(key)) existingByKey.set(key, item);
+            if (isIndividualLmpItemCompleted(item) && !completedByKey.has(key)) {
+                completedByKey.set(key, item);
+            }
+        });
+
+        const nextKeys = new Set(nextMaster.map(getLmpCorrespondenceKey).filter(Boolean));
+        const usedExistingIds = new Set<string>();
+        const mergedMaster = nextMaster.map((masterItem, index) => {
+            const key = getLmpCorrespondenceKey(masterItem);
+            const completedExisting = key ? completedByKey.get(key) : undefined;
+            if (completedExisting) {
+                usedExistingIds.add(completedExisting.id);
+                return {
+                    ...completedExisting,
+                    orderKey: completedExisting.orderKey || masterItem.orderKey || createLmpOrderKey(index),
+                    placementNeedsReview: false,
+                };
+            }
+
+            const existingItem = key ? existingByKey.get(key) : undefined;
+            if (!existingItem) return masterItem;
+
+            usedExistingIds.add(existingItem.id);
+            return {
+                ...masterItem,
+                ...getIndividualLmpMasterOverrides(existingItem, masterItem),
+                id: masterItem.id,
+                masterEventId: getMasterEventId(masterItem),
+                lmpSource: 'master' as const,
+                completedAt: null,
+                rplGranted: undefined,
+                rplGrantedAt: undefined,
+                rplGrantedBy: undefined,
+                userLockedPosition: existingItem.userLockedPosition,
+                orderKey: existingItem.orderKey || masterItem.orderKey || createLmpOrderKey(index),
+                placementNeedsReview: false,
+            } as SyllabusItemDetail;
+        });
+
+        const retainedExisting = existingLmp.filter(item => {
+            if (usedExistingIds.has(item.id)) return false;
+            if (isLmpOverlayItem(item)) return true;
+            const key = getLmpCorrespondenceKey(item);
+            return !key || !nextKeys.has(key) || isIndividualLmpItemCompleted(item);
+        });
+
+        return [
+            ...mergedMaster,
+            ...retainedExisting.map((item, index) => ({
+                ...item,
+                orderKey: item.orderKey || `${createLmpOrderKey(mergedMaster.length + index)}.900`,
+                placementNeedsReview: item.placementNeedsReview ?? !isLmpOverlayItem(item),
+            })),
+        ].sort((a, b) => (a.orderKey || '').localeCompare(b.orderKey || ''));
+    };
+
+    const handleAssignTraineeIndividualLmp = async (trainee: Trainee, lmpCode: string): Promise<void> => {
+        const cleanLmpCode = String(lmpCode || '').trim();
+        const traceBase = {
+            traineeName: trainee.fullName || trainee.name,
+            traineeIdNumber: trainee.idNumber,
+            traineeDbId: (trainee as any).id || null,
+            traineeCourse: trainee.course || null,
+            traineeUnit: trainee.unit || activeUnitCode || null,
+            lmpCode: cleanLmpCode,
+        };
+        const summariseIndividualLmpForAssignTrace = (items: any[] | null | undefined) => {
+            const list = Array.isArray(items) ? items : [];
+            return {
+                count: list.length,
+                completedCount: list.filter(item => isIndividualLmpItemCompleted(item)).length,
+                sample: list.slice(0, 12).map(item => ({
+                    id: item?.id || null,
+                    code: item?.code || null,
+                    type: item?.type || null,
+                    lmpSource: item?.lmpSource || null,
+                    masterEventId: item?.masterEventId || null,
+                    completedAt: item?.completedAt || null,
+                    eventDescription: item?.eventDescription || item?.description || null,
+                })),
+            };
+        };
+        pushDfpDataDiag('assign-lmp:individual:start', traceBase);
+        if (!cleanLmpCode) {
+            pushDfpDataDiag('assign-lmp:individual:no-lmp-code', traceBase);
+            return;
+        }
+
+        try {
+            const traineeUnitCode = trainee.unit || activeUnitCode;
+            const hasAssignAccess = hasMasterLmpUnitAccess(cleanLmpCode, traineeUnitCode, 'Assign');
+            const normaliseAssignScopeCode = (value?: string | null) => String(value || '').trim().toUpperCase();
+            const requestedLmpKey = normaliseAssignScopeCode(cleanLmpCode);
+            const traineeUnitKey = normaliseAssignScopeCode(traineeUnitCode);
+            const activeLocationKey = normaliseAssignScopeCode(school);
+            const unitScopedMasterLmp = syllabusDetails.filter(item => {
+                const itemCourses = Array.isArray(item.courses) ? item.courses : [];
+                const hasMatchingCourse = itemCourses.some(course => normaliseAssignScopeCode(course) === requestedLmpKey);
+                if (!hasMatchingCourse) return false;
+                const itemUnitCodes = normaliseAssignScopeCode((item as any).unit)
+                    .split('+')
+                    .map(part => part.trim())
+                    .filter(Boolean);
+                const itemLocationKey = normaliseAssignScopeCode((item as any).location);
+                if (itemUnitCodes.length > 0) return itemUnitCodes.includes(traineeUnitKey);
+                return Boolean(itemLocationKey && activeLocationKey && itemLocationKey === activeLocationKey);
+            });
+            const hasUnitScopedMasterLmp = unitScopedMasterLmp.length > 0;
+            pushDfpDataDiag('assign-lmp:individual:access-check', {
+                ...traceBase,
+                traineeUnitCode,
+                hasAssignAccess,
+                hasUnitScopedMasterLmp,
+                unitScopedMasterEventCount: unitScopedMasterLmp.length,
+            });
+            if (!hasAssignAccess && !hasUnitScopedMasterLmp) {
+                throw new Error(`Cannot create Individual LMP "${cleanLmpCode}" for ${trainee.fullName}: ${traineeUnitCode || 'this unit'} does not have Assign access.`);
+            }
+
+            const masterLmp = hasAssignAccess
+                ? getAssignableMasterLmpItemsForType(syllabusDetails, cleanLmpCode, traineeUnitCode, filterSyllabusForMasterLmpAccess)
+                : unitScopedMasterLmp;
+            pushDfpDataDiag('assign-lmp:individual:master-lmp', {
+                ...traceBase,
+                masterEventCount: masterLmp.length,
+                accessSource: hasAssignAccess ? 'access-rule' : 'unit-scoped-master-lmp',
+                sample: masterLmp.slice(0, 12).map(item => ({
+                    id: item.id,
+                    code: item.code,
+                    type: item.type,
+                    lmpType: item.lmpType,
+                    course: item.course,
+                    unit: (item as any).unit || null,
+                    location: (item as any).location || null,
+                    eventDescription: item.eventDescription || item.description || null,
+                })),
+            });
+            if (masterLmp.length === 0) {
+                throw new Error(`Cannot create Individual LMP "${cleanLmpCode}" for ${trainee.fullName}: no Master LMP events were found.`);
+            }
+
+            const traineeForLmp = { ...trainee, lmpType: cleanLmpCode };
+            const stateLmp = traineeLMPs.get(trainee.fullName);
+            const persistedLmp = stateLmp ? null : await loadPersistedTraineeLmp(traineeForLmp).catch(error => {
+                pushDfpDataDiag('assign-lmp:individual:load-existing:error', {
+                    ...traceBase,
+                    message: error instanceof Error ? error.message : String(error || ''),
+                });
+                return null;
+            });
+            const existingLmp = stateLmp || persistedLmp || [];
+            pushDfpDataDiag('assign-lmp:individual:existing-lmp', {
+                ...traceBase,
+                source: stateLmp ? 'state' : persistedLmp ? 'persisted' : 'empty',
+                state: summariseIndividualLmpForAssignTrace(stateLmp),
+                persisted: summariseIndividualLmpForAssignTrace(persistedLmp),
+                selected: summariseIndividualLmpForAssignTrace(existingLmp),
+            });
+            const nextLmp = mergeAssignedMasterLmpForTrainee(existingLmp, masterLmp);
+            pushDfpDataDiag('assign-lmp:individual:merge-result', {
+                ...traceBase,
+                next: summariseIndividualLmpForAssignTrace(nextLmp),
+                reportItems: summariseTrainingReportLmpItems(nextLmp),
+            });
+            const savedEvents = await persistTraineeLmp(traineeForLmp, nextLmp, [], {
+                source: 'assign-lmp',
+                skipReadBack: true,
+            });
+            pushDfpDataDiag('assign-lmp:individual:persist-success', {
+                ...traceBase,
+                saved: summariseIndividualLmpForAssignTrace(savedEvents),
+            });
+            const composedSavedEvents = mergeIndividualLmpWithMaster(savedEvents, masterLmp);
+            setTraineeLMPs(prev => {
+                const updated = new Map(prev);
+                updated.set(trainee.fullName, composedSavedEvents);
+                return updated;
+            });
+            pushDfpDataDiag('assign-lmp:individual:state-updated', {
+                ...traceBase,
+                composed: summariseIndividualLmpForAssignTrace(composedSavedEvents),
+            });
+            logRoutineAppDebug(`[Individual LMP] Assigned ${cleanLmpCode} to ${trainee.fullName}; ${composedSavedEvents.length} events available`);
+        } catch (error) {
+            pushDfpDataDiag('assign-lmp:individual:error', {
+                ...traceBase,
+                message: error instanceof Error ? error.message : String(error || ''),
+            });
+            throw error;
+        }
+    };
+
     const deletePersistedIndividualLmpEventRecords = async (trainee: Trainee, item: SyllabusItemDetail): Promise<string[]> => {
         const matchedTrainee = allTraineesData.find((candidate: any) => candidate.fullName === trainee.fullName);
         const traineeDbId = (trainee as any).id || (matchedTrainee as any)?.id;
@@ -41856,11 +42910,21 @@ const App: React.FC = () => {
         trainee: Trainee,
         originalItem: SyllabusItemDetail,
         updatedItem: SyllabusItemDetail,
-        options: { suppressSuccessMessage?: boolean } = {}
+        options: { suppressSuccessMessage?: boolean; sourceLmp?: SyllabusItemDetail[] } = {}
     ): Promise<boolean> => {
-        const originalTraineeLMP = traineeLMPs.get(trainee.fullName);
+        const originalTraineeLMP = Array.isArray(options.sourceLmp) && options.sourceLmp.length > 0
+            ? options.sourceLmp
+            : traineeLMPs.get(trainee.fullName);
         if (!originalTraineeLMP || originalTraineeLMP.length === 0) {
             await showDarkAlert(`Could not update ${originalItem.code}: Individual LMP not found for ${trainee.fullName}.`, 'Individual LMP Save Failed', 'error');
+            return false;
+        }
+        if (originalTraineeLMP.length < 2) {
+            await showDarkAlert(
+                `Could not update ${originalItem.code}: the loaded Individual LMP only contains ${originalTraineeLMP.length} event${originalTraineeLMP.length === 1 ? '' : 's'}. The save was stopped to avoid overwriting the full Individual LMP.`,
+                'Individual LMP Save Blocked',
+                'error'
+            );
             return false;
         }
 
@@ -41930,6 +42994,14 @@ const App: React.FC = () => {
 
         if (!updatedLmp.some(item => (item.id || item.code) === (normalizedUpdatedItem.id || normalizedUpdatedItem.code))) {
             await showDarkAlert(`Could not update ${originalItem.code}: selected event was not found in the Individual LMP.`, 'Individual LMP Save Failed', 'error');
+            return false;
+        }
+        if (updatedLmp.length < originalTraineeLMP.length) {
+            await showDarkAlert(
+                `Could not update ${originalItem.code}: the update would reduce the Individual LMP from ${originalTraineeLMP.length} events to ${updatedLmp.length}. The save was stopped to protect the Individual LMP.`,
+                'Individual LMP Save Blocked',
+                'error'
+            );
             return false;
         }
 
@@ -47623,6 +48695,7 @@ const App: React.FC = () => {
             maxCrewDutyPeriod,
             maxDispatchPerHour,
             dispatchStaggerSettings,
+            groundEventSchedulingSettings,
             eventLimits,
             sctFtds: sctFtds,
             sctFlights: sctFlights,
@@ -47772,6 +48845,19 @@ const App: React.FC = () => {
                         'NEO Build completed but did not add any tiles. Open the NEO Build page and click Download Build Report to export the diagnostic report for this run.',
                         'No Tiles Added',
                         'warning',
+                        12000
+                    );
+                }
+                const groupGroundNotes = typeof window !== 'undefined'
+                    ? ((window as any).__lastNeoBuildGroupGroundNotes || [])
+                    : [];
+                if (Array.isArray(groupGroundNotes) && groupGroundNotes.length > 0) {
+                    const noteLines = groupGroundNotes.slice(0, 8).map(note => `- ${String(note)}`);
+                    const extraNoteCount = groupGroundNotes.length - noteLines.length;
+                    void showDarkAlert(
+                        `${noteLines.join('\n')}${extraNoteCount > 0 ? `\n+${extraNoteCount} more note${extraNoteCount === 1 ? '' : 's'}.` : ''}`,
+                        'NEO Build Notes',
+                        'info',
                         12000
                     );
                 }
@@ -55100,6 +56186,10 @@ appliedUpdates.forEach(update => {
                             onGenerateTrainingReportForItem={handleGenerateTrainingReportFromLmpItem}
                             onInsertCustomLmpEvent={handleInsertCustomLmpEvent}
                             onUpdateLmpItem={handleUpdateIndividualLmpItem}
+                            onLoadTraineeLmp={loadPersistedTraineeLmp}
+                            onRosterColourTrace={(trace) => {
+                                rosterColourTraceRef.current = trace;
+                            }}
                             insertEventTypes={insertEventTypes}
                             aircraftConfigurations={aircraftConfigurations}
                             aircraftCrewComposition={activeAircraftCrewComposition}
@@ -55260,6 +56350,7 @@ appliedUpdates.forEach(update => {
                             onGenerateTrainingReportForItem={handleGenerateTrainingReportFromLmpItem}
                             onInsertCustomLmpEvent={handleInsertCustomLmpEvent}
                             onUpdateLmpItem={handleUpdateIndividualLmpItem}
+                            onLoadTraineeLmp={loadPersistedTraineeLmp}
                             insertEventTypes={insertEventTypes}
                             aircraftConfigurations={aircraftConfigurations}
                             aircraftCrewComposition={activeAircraftCrewComposition}
@@ -55833,6 +56924,7 @@ appliedUpdates.forEach(update => {
                     onSaveTrainingReportAssessment={onSaveTrainingReportAssessment}
                     onPersistTrainingReportAssessment={persistTrainingReportAssessmentRecord}
                     onUpdateLmpItem={handleUpdateIndividualLmpItem}
+                    onLoadTraineeLmp={loadPersistedTraineeLmp}
                     locations={locations}
                     units={units}
                     activeLocationCode={school}
@@ -56807,12 +57899,17 @@ appliedUpdates.forEach(update => {
                            instructorsData={instructorsData}
                            traineesData={traineesData}
                            onUpdateTrainee={handleUpdateTrainee}
+                           onAssignTraineeLmp={handleAssignTraineeIndividualLmp}
+                           onTraceAssignLmp={(stage, details = {}) => pushDfpDataDiag(`assign-lmp:${stage}`, details)}
+                           onDownloadAssignmentTrace={() => downloadDfpDataDiagReport('assign-lmp-trace')}
                            operationalModel={activeOperationalModel}
                            masterLmpCatalogue={accessibleMasterLmpCatalogueForSyllabus}
                            staffQualificationCatalogue={activeStaffQualificationCatalogue}
                            currentUserName={currentUserName}
                            scoringMatrixPhraseBank={activeTrainingReportPhraseBank}
                            onNavigateToSettingsSection={handleNavigateToSettingsSection}
+                           onDeleteMasterLmpCatalogue={handleDeleteMasterLmpCatalogueEntry}
+                           onUpsertMasterLmpCatalogue={handleUpsertMasterLmpCatalogueEntry}
                            onAddScoringMatrixElement={() => {
                                try {
                                    sessionStorage.setItem('dfp_restore_settings_section_after_reload', 'scoring-matrix');
@@ -56963,6 +58060,8 @@ appliedUpdates.forEach(update => {
                     onUpdateDispatchRateWindowMinutes={(value) => setDispatchRateWindowMinutes(normaliseDispatchRateWindowMinutes(value))}
                     dispatchStaggerSettings={dispatchStaggerSettings}
                     onUpdateDispatchStaggerSettings={(settings) => setDispatchStaggerSettings(normaliseDispatchStaggerSettings(settings))}
+                    groundEventSchedulingSettings={groundEventSchedulingSettings}
+                    onUpdateGroundEventSchedulingSettings={(settings) => setGroundEventSchedulingSettings(normaliseGroundEventSchedulingSettings(settings))}
                     timezoneOffset={timezoneOffset}
                     onUpdateTimezoneOffset={setTimezoneOffset}
                     showDepartureDensityOverlay={showDepartureDensityOverlay}
@@ -58165,6 +59264,15 @@ appliedUpdates.forEach(update => {
             isTraineeLoaded={isTraineeLoaded}
             isCoursesLoaded={isCoursesLoaded}
         />
+        {isAuthenticated && (hasAuthenticatedAdminRole || platformAccessContext.isSuperAdmin || platformAccessContext.isPlatformAdmin) && (
+            <button
+                type="button"
+                onClick={() => downloadDfpDataDiagReport('dfp-operational-visibility-trace')}
+                className="fixed bottom-4 left-1/2 z-[520] -translate-x-1/2 rounded-md border border-cyan-300/45 bg-slate-950/92 px-4 py-2 text-[11px] font-black uppercase tracking-[0.16em] text-cyan-100 shadow-[0_12px_28px_rgba(0,0,0,0.45)] transition hover:border-cyan-200 hover:bg-slate-900"
+            >
+                Download DFP Data Trace
+            </button>
+        )}
         <div id="app-content" data-theme={theme} className="flex h-screen bg-gray-900 text-white">
             <Sidebar
                 activeView={activeView}
@@ -58239,9 +59347,9 @@ appliedUpdates.forEach(update => {
                         }
                         setShowValidation(show);
                     }}
-                    contextOptions={showInitialSetupBlankState ? [] : operationalContextOptions}
-                    activeLocation={showInitialSetupBlankState ? '' : school}
-                    activeUnit={showInitialSetupBlankState ? '' : activeUnitCode}
+                    contextOptions={operationalContextOptions}
+                    activeLocation={school}
+                    activeUnit={activeUnitCode}
                     onContextChange={(loc, unit) => changeOperationalContext(loc, unit)}
                     activeModelLabel={activeOperationalModelLabel}
                     isMagnifierEnabled={isMagnifierEnabled}

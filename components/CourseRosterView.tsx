@@ -91,6 +91,8 @@ interface CourseRosterViewProps {
     onGenerateTrainingReportForItem?: (trainee: Trainee, item: SyllabusItemDetail) => void;
     onInsertCustomLmpEvent?: (trainee: Trainee, request: InsertLmpEventRequest) => Promise<boolean> | boolean;
     onUpdateLmpItem?: (trainee: Trainee, originalItem: SyllabusItemDetail, updatedItem: SyllabusItemDetail) => Promise<boolean> | boolean;
+    onLoadTraineeLmp?: (trainee: Trainee) => Promise<SyllabusItemDetail[] | null>;
+    onRosterColourTrace?: (trace: Record<string, any>) => void;
     insertEventTypes?: InsertEventTypeConfig[];
     aircraftConfigurations?: AircraftConfigurationDefinition[];
     aircraftCrewComposition?: AircraftCrewComposition;
@@ -202,6 +204,8 @@ const CourseRosterView: React.FC<CourseRosterViewProps> = ({
     onGenerateTrainingReportForItem,
     onInsertCustomLmpEvent,
     onUpdateLmpItem,
+    onLoadTraineeLmp,
+    onRosterColourTrace,
     insertEventTypes,
     aircraftConfigurations = [],
     aircraftCrewComposition,
@@ -430,33 +434,180 @@ const CourseRosterView: React.FC<CourseRosterViewProps> = ({
         return Number.isFinite(parsed) ? parsed : null;
     };
 
-    const getLatestTrainingReportStatus = (trainee: Trainee): { status: 'failed' | 'marginal' | null; hasReports: boolean } => {
-        const reports = Array.from(pt051Assessments?.values() || [])
-            .filter((assessment: any) => (
-                assessment &&
-                assessment.isCompleted !== false &&
-                (
-                    assessment.traineeFullName === trainee.fullName ||
-                    assessment.traineeFullName === trainee.name
-                )
-            ))
+    const getVisibleTrainingReportsForTrainee = (trainee: Trainee): any[] => {
+        const completedReports = Array.from(pt051Assessments?.values() || [])
+            .filter((assessment: any) => {
+                if (!assessment || assessment.isCompleted === false) return false;
+                if (assessment.traineeFullName !== trainee.fullName) return false;
+                const hasGrade = assessment.overallGrade !== null && assessment.overallGrade !== undefined;
+                const hasResult = assessment.overallResult !== null && assessment.overallResult !== undefined;
+                const hasScoredElements = Array.isArray(assessment.scores) && assessment.scores.some((score: any) => score?.grade !== null && score?.grade !== undefined);
+                const hasDateAndInstructor = String(assessment.date || '').trim() !== '' && String(assessment.instructorName || '').trim() !== '';
+                return hasGrade || hasResult || hasScoredElements || hasDateAndInstructor;
+            });
+
+        const canonicalReports = new Map<string, any>();
+        completedReports.forEach((assessment: any) => {
+            const key = `${assessment.traineeFullName}|||${assessment.flightNumber}|||${assessment.date || ''}`;
+            const existing = canonicalReports.get(key);
+            if (!existing) {
+                canonicalReports.set(key, assessment);
+                return;
+            }
+
+            const currentEventId = String(assessment.eventId || assessment.id || '');
+            const existingEventId = String(existing.eventId || existing.id || '');
+            const currentIsSynthetic = currentEventId.startsWith('mock-') || currentEventId.startsWith('mock-event-') || currentEventId.startsWith('score-');
+            const existingIsSynthetic = existingEventId.startsWith('mock-') || existingEventId.startsWith('mock-event-') || existingEventId.startsWith('score-');
+            const currentHasResult = assessment.overallGrade !== null && assessment.overallGrade !== undefined && assessment.overallGrade !== 'No Grade';
+            const existingHasResult = existing.overallGrade !== null && existing.overallGrade !== undefined && existing.overallGrade !== 'No Grade';
+
+            if (
+                (existingIsSynthetic && !currentIsSynthetic) ||
+                (!existingHasResult && currentHasResult) ||
+                ((assessment.date || '') > (existing.date || '') && currentIsSynthetic === existingIsSynthetic)
+            ) {
+                canonicalReports.set(key, assessment);
+            }
+        });
+
+        const dedupedReports = Array.from(canonicalReports.values());
+        const latestUnassessedByEvent = new Map<string, any>();
+        dedupedReports.forEach((assessment: any) => {
+            const isUnassessed = assessment.overallResult === null || assessment.overallResult === undefined || assessment.overallResult === '';
+            if (!isUnassessed) return;
+            const key = `${assessment.flightNumber}|||${assessment.traineeFullName}`;
+            const existing = latestUnassessedByEvent.get(key);
+            if (!existing || (assessment.date || '') > (existing.date || '')) {
+                latestUnassessedByEvent.set(key, assessment);
+            }
+        });
+        const mostRecentUnassessedIds = new Set(Array.from(latestUnassessedByEvent.values()).map((assessment: any) => assessment.id));
+
+        return dedupedReports
+            .filter((assessment: any) => {
+                const isUnassessed = assessment.overallResult === null || assessment.overallResult === undefined || assessment.overallResult === '';
+                return !isUnassessed || mostRecentUnassessedIds.has(assessment.id);
+            })
             .sort((a: any, b: any) => {
                 const dateA = new Date(`${a.date || ''}T00:00:00`).getTime() || 0;
                 const dateB = new Date(`${b.date || ''}T00:00:00`).getTime() || 0;
                 if (dateA !== dateB) return dateB - dateA;
                 return Number(b.startTime || 0) - Number(a.startTime || 0);
             });
+    };
 
+    const getLatestTrainingReportStatus = (trainee: Trainee): { status: 'failed' | 'marginal' | null; hasReports: boolean } => {
+        const reports = getVisibleTrainingReportsForTrainee(trainee);
         const latestReport = reports[0];
         if (!latestReport) return { status: null, hasReports: false };
-        if (latestReport.overallResult === 'F') return { status: 'failed', hasReports: true };
         const overallGrade = getNumericOverallGrade(latestReport.overallGrade);
-        if (overallGrade === 0) return { status: 'failed', hasReports: true };
-        if (overallGrade === 1) return { status: 'marginal', hasReports: true };
+        if (overallGrade !== null) {
+            if (overallGrade === 0) return { status: 'failed', hasReports: true };
+            if (overallGrade === 1) return { status: 'marginal', hasReports: true };
+            return { status: null, hasReports: true };
+        }
+        const overallResult = String(latestReport.overallResult || '').trim().toUpperCase();
+        if (overallResult === 'F' || overallResult === 'FAIL' || overallResult === 'FAILED' || overallResult === 'UNSATISFACTORY') {
+            return { status: 'failed', hasReports: true };
+        }
         return { status: null, hasReports: true };
     };
 
+    const getRosterColourDecision = (trainee: Trainee): Record<string, any> => {
+        const rawReports = Array.from(pt051Assessments?.values() || [])
+            .filter((assessment: any) => assessment && (
+                assessment.traineeFullName === trainee.fullName ||
+                assessment.traineeFullName === trainee.name
+            ));
+        const visibleReports = getVisibleTrainingReportsForTrainee(trainee);
+        const latestVisibleReport = visibleReports[0] || null;
+        const visibleStatus = getLatestTrainingReportStatus(trainee);
+        const traineeScores = scores.get(trainee.fullName) || [];
+        const nonRemedialFlightFtdScores = traineeScores
+            .filter(score => isNormalTrainingFlightOrSim(score.event))
+            .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+        const latestLegacyScore = nonRemedialFlightFtdScores[0] || null;
+        const summaryReport = (assessment: any) => assessment ? {
+            id: assessment.id || null,
+            eventId: assessment.eventId || null,
+            traineeFullName: assessment.traineeFullName || null,
+            flightNumber: assessment.flightNumber || null,
+            date: assessment.date || null,
+            startTime: assessment.startTime ?? null,
+            isCompleted: assessment.isCompleted ?? null,
+            overallResult: assessment.overallResult ?? null,
+            overallGrade: assessment.overallGrade ?? null,
+            instructorName: assessment.instructorName || null,
+            hasScores: Array.isArray(assessment.scores) ? assessment.scores.length : null,
+        } : null;
+        const summaryScore = (score: Score | null) => score ? {
+            event: score.event || null,
+            date: score.date || null,
+            score: score.score ?? null,
+            notes: score.notes || null,
+        } : null;
+
+        if (isTraineeSuspended(trainee)) {
+            return { reason: 'suspended', className: 'text-red-400 hover:text-red-300', status: 'red' };
+        }
+        if (visibleStatus.status === 'failed') {
+            return {
+                reason: 'visible-training-report-failed',
+                className: 'text-red-400 hover:text-red-300',
+                status: 'red',
+                latestVisibleReport: summaryReport(latestVisibleReport),
+            };
+        }
+        if (visibleStatus.status === 'marginal') {
+            return {
+                reason: 'visible-training-report-marginal',
+                className: 'text-amber-400 hover:text-amber-300',
+                status: 'amber',
+                latestVisibleReport: summaryReport(latestVisibleReport),
+            };
+        }
+        if (visibleStatus.hasReports) {
+            return {
+                reason: 'visible-training-report-complete',
+                className: 'text-green-400 hover:text-green-300',
+                status: 'green',
+                latestVisibleReport: summaryReport(latestVisibleReport),
+            };
+        }
+        if (trainee.isPaused) {
+            return { reason: 'paused-no-visible-training-report', className: 'text-gray-300 hover:text-gray-200', status: 'gray' };
+        }
+        if (latestLegacyScore?.score === 0) {
+            return {
+                reason: 'legacy-score-failed',
+                className: 'text-red-400 hover:text-red-300',
+                status: 'red',
+                latestLegacyScore: summaryScore(latestLegacyScore),
+            };
+        }
+        if (latestLegacyScore?.score === 1) {
+            return {
+                reason: 'legacy-score-marginal',
+                className: 'text-amber-400 hover:text-amber-300',
+                status: 'amber',
+                latestLegacyScore: summaryScore(latestLegacyScore),
+            };
+        }
+        return {
+            reason: 'default',
+            className: 'text-green-400 hover:text-green-300',
+            status: 'green',
+            rawReportCount: rawReports.length,
+            visibleReportCount: visibleReports.length,
+            legacyScoreCount: traineeScores.length,
+        };
+    };
+
     const getTraineeNameColorClass = (trainee: Trainee): string => {
+        const tracedDecision = getRosterColourDecision(trainee);
+        if (tracedDecision.className) return tracedDecision.className;
+
         // RULE 1: RED + border for suspended trainees.
         if (isTraineeSuspended(trainee)) {
             return 'text-red-400 hover:text-red-300';
@@ -504,6 +655,77 @@ const CourseRosterView: React.FC<CourseRosterViewProps> = ({
         // RULE 5: GREEN for everyone else (default)
         return 'text-green-400 hover:text-green-300';
     };
+
+    useEffect(() => {
+        if (!onRosterColourTrace) return;
+        const allTrainees = Object.values(groupedTrainees).flat();
+        const traceRows = allTrainees.map(trainee => {
+            const decision = getRosterColourDecision(trainee);
+            const rawReports = Array.from(pt051Assessments?.values() || [])
+                .filter((assessment: any) => assessment && (
+                    assessment.traineeFullName === trainee.fullName ||
+                    assessment.traineeFullName === trainee.name
+                ));
+            const visibleReports = getVisibleTrainingReportsForTrainee(trainee);
+            const traineeScores = scores.get(trainee.fullName) || [];
+            return {
+                trainee: {
+                    id: trainee.id ?? null,
+                    idNumber: trainee.idNumber ?? null,
+                    name: trainee.name,
+                    fullName: trainee.fullName,
+                    rank: trainee.rank,
+                    course: trainee.course,
+                    unit: trainee.unit,
+                    isPaused: trainee.isPaused === true,
+                    suspended: isTraineeSuspended(trainee),
+                    statusLabel: getTraineeStatusLabel(trainee),
+                },
+                decision,
+                rawReportCount: rawReports.length,
+                visibleReportCount: visibleReports.length,
+                legacyScoreCount: traineeScores.length,
+                rawReports: rawReports.slice(0, 12).map((assessment: any) => ({
+                    id: assessment.id || null,
+                    eventId: assessment.eventId || null,
+                    traineeFullName: assessment.traineeFullName || null,
+                    flightNumber: assessment.flightNumber || null,
+                    date: assessment.date || null,
+                    startTime: assessment.startTime ?? null,
+                    isCompleted: assessment.isCompleted ?? null,
+                    overallResult: assessment.overallResult ?? null,
+                    overallGrade: assessment.overallGrade ?? null,
+                    instructorName: assessment.instructorName || null,
+                    hasScores: Array.isArray(assessment.scores) ? assessment.scores.length : null,
+                })),
+                visibleReports: visibleReports.slice(0, 12).map((assessment: any) => ({
+                    id: assessment.id || null,
+                    eventId: assessment.eventId || null,
+                    traineeFullName: assessment.traineeFullName || null,
+                    flightNumber: assessment.flightNumber || null,
+                    date: assessment.date || null,
+                    startTime: assessment.startTime ?? null,
+                    overallResult: assessment.overallResult ?? null,
+                    overallGrade: assessment.overallGrade ?? null,
+                    instructorName: assessment.instructorName || null,
+                })),
+                legacyScores: traineeScores.slice(0, 12).map(score => ({
+                    event: score.event || null,
+                    date: score.date || null,
+                    score: score.score ?? null,
+                    notes: score.notes || null,
+                })),
+            };
+        });
+        onRosterColourTrace({
+            generatedAt: new Date().toISOString(),
+            activeCourseCount: Object.keys(groupedTrainees).length,
+            traineeCount: allTrainees.length,
+            redRows: traceRows.filter(row => row.decision.status === 'red'),
+            amberRows: traceRows.filter(row => row.decision.status === 'amber'),
+            focusRows: traceRows.filter(row => /dean/i.test(`${row.trainee.name} ${row.trainee.fullName}`)),
+        });
+    }, [groupedTrainees, onRosterColourTrace, pt051Assessments, scores]);
 
     const ViewToggleButton: React.FC<{ label: string; value: 'active' | 'archived' }> = ({ label, value }) => (
         <button
@@ -761,6 +983,7 @@ const CourseRosterView: React.FC<CourseRosterViewProps> = ({
                     onGenerateTrainingReportForItem={onGenerateTrainingReportForItem}
                     onInsertCustomLmpEvent={onInsertCustomLmpEvent}
                     onUpdateLmpItem={onUpdateLmpItem}
+                    onLoadTraineeLmp={onLoadTraineeLmp}
                     insertEventTypes={insertEventTypes}
                     aircraftConfigurations={aircraftConfigurations}
                     aircraftCrewComposition={aircraftCrewComposition}

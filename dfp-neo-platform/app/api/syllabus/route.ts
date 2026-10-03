@@ -114,6 +114,12 @@ export async function POST(request: NextRequest) {
         lmpType: body.lmpType ?? null,
         twrDiReqd: body.twrDiReqd ?? null,
         cctOnly: body.cctOnly ?? null,
+        testEventType: body.testEventType || 'NONE',
+        testingOfficerQualificationId: body.testEventType && body.testEventType !== 'NONE'
+          ? body.testingOfficerQualificationId || null
+          : null,
+        useTestingOfficerSecondaryCallsign: body.testEventType === 'FLIGHT_TEST'
+          && body.useTestingOfficerSecondaryCallsign === true,
         isRemedial: body.isRemedial || false,
         isActive: true,
         version: 1,

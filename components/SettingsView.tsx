@@ -3,7 +3,7 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { initDB, getAllFiles, addFile, getFile, deleteFile } from '../utils/db';
 import ScoringMatrixFlyout from './ScoringMatrixFlyout';
-import { EventLimits, PhraseBank, MasterCurrency, CurrencyRequirement, CancellationRecord, CancellationCode, type ContinuationEventSetting } from '../types';
+import { EventLimits, PhraseBank, MasterCurrency, CurrencyRequirement, CancellationRecord, CancellationCode, type ContinuationEventSetting, type SyllabusItemDetail } from '../types';
 import ACHistoryPage from './ACHistoryPage';
 import { logAudit } from '../utils/auditLogger';
 import { debouncedAuditLog } from '../utils/auditDebounce';
@@ -34,6 +34,15 @@ import {
     MIN_DISPATCH_RATE_WINDOW_MINUTES,
     normaliseDispatchRateWindowMinutes,
 } from '../utils/dispatchRate';
+import {
+    DEFAULT_GROUND_EVENT_SCHEDULING_SETTINGS,
+    getGroundEventSchedulingRuleForType,
+    GROUND_EVENT_SCHEDULING_WINDOWS,
+    normaliseGroundEventSchedulingSettings,
+    normaliseGroundEventTypeKey,
+    type GroundEventSchedulingMode,
+    type GroundEventSchedulingSettings,
+} from '../utils/groundEventSchedulingSettings';
 import { isFixedCrewLikeOperationalModel } from '../utils/platformConfigService';
 import { verifyCurrentUserPassword } from '../utils/passwordVerification';
 import { showDarkAlert, showDarkPrompt } from './DarkMessageModal';
@@ -106,7 +115,7 @@ const renderCurrencyLogicNode = (
 };
 
 interface SettingsViewProps {
-    activeSection?: 'scoring-matrix' | 'duty-turnaround' | 'sct-events' | 'currencies' | 'business-rules' | 'data-loaders' | 'event-limits' | 'validation' | 'emergency';
+    activeSection?: 'scoring-matrix' | 'duty-turnaround' | 'sct-events' | 'currencies' | 'business-rules' | 'ground-event-scheduling' | 'data-loaders' | 'event-limits' | 'validation' | 'emergency';
     onShowSuccess: (message: string) => void;
     eventLimits: EventLimits;
     onUpdateEventLimits: (limits: EventLimits) => void;
@@ -145,6 +154,8 @@ interface SettingsViewProps {
     onUpdateDispatchRateWindowMinutes?: (value: number) => void;
     dispatchStaggerSettings?: DispatchStaggerSettings;
     onUpdateDispatchStaggerSettings?: (settings: DispatchStaggerSettings) => void;
+    groundEventSchedulingSettings?: GroundEventSchedulingSettings;
+    onUpdateGroundEventSchedulingSettings?: (settings: GroundEventSchedulingSettings) => void;
     tileStatusSettings?: TileStatusSettings;
     onUpdateTileStatusSettings?: (settings: TileStatusSettings) => void;
     cancellationRecords?: CancellationRecord[];
@@ -168,6 +179,7 @@ interface SettingsViewProps {
     activeUnitCodes?: string[];
     activeCompositeUnitCode?: string;
     activeAircraftTypeCode?: string | null;
+    syllabusDetails?: SyllabusItemDetail[];
 }
 
 interface ScoringMatrixInlineProps {
@@ -665,6 +677,8 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
     onUpdateDispatchRateWindowMinutes,
     dispatchStaggerSettings = DEFAULT_DISPATCH_STAGGER_SETTINGS,
     onUpdateDispatchStaggerSettings,
+    groundEventSchedulingSettings = DEFAULT_GROUND_EVENT_SCHEDULING_SETTINGS,
+    onUpdateGroundEventSchedulingSettings,
     tileStatusSettings = DEFAULT_TILE_STATUS_SETTINGS,
     onUpdateTileStatusSettings,
     timezoneOffset,
@@ -689,6 +703,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
     activeUnitCodes = [],
     activeCompositeUnitCode = '',
     activeAircraftTypeCode = '',
+    syllabusDetails = [],
 }) => {
     // --- STATE ---
     
@@ -703,18 +718,25 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
     const contractorStaffLimitLabel = simIpDisplayLabel.trim() || DEFAULT_PERSONNEL_DISPLAY_SETTINGS.simIpDisplayLabel;
     const resolvedDispatchStaggerSettings = normaliseDispatchStaggerSettings(dispatchStaggerSettings);
     const resolvedTileStatusSettings = normaliseTileStatusSettings(tileStatusSettings);
+    const resolvedGroundEventSchedulingSettings = normaliseGroundEventSchedulingSettings(groundEventSchedulingSettings);
     const [isEditingBusinessRules, setIsEditingBusinessRules] = useState(false);
+    const [isEditingGroundEventScheduling, setIsEditingGroundEventScheduling] = useState(false);
     const [tempMaxDispatchPerHour, setTempMaxDispatchPerHour] = useState(maxDispatchPerHour);
     const [tempDispatchRateWindowMinutes, setTempDispatchRateWindowMinutes] = useState(normaliseDispatchRateWindowMinutes(dispatchRateWindowMinutes));
     const [tempDispatchStaggerSettings, setTempDispatchStaggerSettings] = useState<DispatchStaggerSettings>(resolvedDispatchStaggerSettings);
     const [tempTileStatusSettings, setTempTileStatusSettings] = useState<TileStatusSettings>(resolvedTileStatusSettings);
+    const [tempGroundEventSchedulingSettings, setTempGroundEventSchedulingSettings] = useState<GroundEventSchedulingSettings>(resolvedGroundEventSchedulingSettings);
     const displayedDispatchStaggerSettings = isEditingBusinessRules ? tempDispatchStaggerSettings : resolvedDispatchStaggerSettings;
     const displayedTileStatusSettings = isEditingBusinessRules ? tempTileStatusSettings : resolvedTileStatusSettings;
+    const displayedGroundEventSchedulingSettings = isEditingGroundEventScheduling
+        ? tempGroundEventSchedulingSettings
+        : resolvedGroundEventSchedulingSettings;
     const displayedMaxDispatchPerHour = isEditingBusinessRules ? tempMaxDispatchPerHour : maxDispatchPerHour;
     const displayedDispatchRateWindowMinutes = isEditingBusinessRules
         ? tempDispatchRateWindowMinutes
         : normaliseDispatchRateWindowMinutes(dispatchRateWindowMinutes);
     const canEditBusinessRules = canEditSettings && isEditingBusinessRules;
+    const canEditGroundEventScheduling = canEditSettings && isEditingGroundEventScheduling && !!onUpdateGroundEventSchedulingSettings;
     const handleDispatchRateWindowChange = (value: number) => {
         setTempDispatchRateWindowMinutes(normaliseDispatchRateWindowMinutes(value));
     };
@@ -766,6 +788,22 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
             .filter(c => c.isVisible)
             .sort(safeNameSort);
     }, [masterCurrencies, currencyRequirements]);
+
+    const groundEventTypeOptions = useMemo(() => {
+        const typeSet = new Set<string>();
+        syllabusDetails.forEach((item) => {
+            const itemType = normaliseGroundEventTypeKey((item as any)?.type);
+            const lowerType = itemType.toLowerCase();
+            if (lowerType.includes('ground')) {
+                typeSet.add(itemType);
+            }
+        });
+        Object.keys(resolvedGroundEventSchedulingSettings.byEventType || {}).forEach((eventType) => {
+            typeSet.add(normaliseGroundEventTypeKey(eventType));
+        });
+        if (typeSet.size === 0) typeSet.add('Ground');
+        return Array.from(typeSet).sort((a, b) => a.localeCompare(b, undefined, { numeric: true, sensitivity: 'base' }));
+    }, [resolvedGroundEventSchedulingSettings, syllabusDetails]);
 
     // --- EFFECTS ---
     useEffect(() => {
@@ -936,6 +974,64 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
         setTempDispatchStaggerSettings(resolvedDispatchStaggerSettings);
         setTempTileStatusSettings(resolvedTileStatusSettings);
         setIsEditingBusinessRules(false);
+    };
+
+    const handleEditGroundEventScheduling = () => {
+        setTempGroundEventSchedulingSettings(resolvedGroundEventSchedulingSettings);
+        setIsEditingGroundEventScheduling(true);
+    };
+
+    const updateGroundEventSchedulingRule = (
+        eventType: string,
+        updates: Partial<{ mode: GroundEventSchedulingMode; preferredWindows: string[] }>
+    ) => {
+        if (!canEditGroundEventScheduling) return;
+        const key = normaliseGroundEventTypeKey(eventType);
+        setTempGroundEventSchedulingSettings((current) => {
+            const normalised = normaliseGroundEventSchedulingSettings(current);
+            const existingRule = getGroundEventSchedulingRuleForType(normalised, key);
+            return normaliseGroundEventSchedulingSettings({
+                ...normalised,
+                byEventType: {
+                    ...normalised.byEventType,
+                    [key]: {
+                        ...existingRule,
+                        ...updates,
+                    },
+                },
+            });
+        });
+    };
+
+    const handleGroundEventWindowToggle = (eventType: string, windowId: string, checked: boolean) => {
+        const key = normaliseGroundEventTypeKey(eventType);
+        const existingRule = getGroundEventSchedulingRuleForType(tempGroundEventSchedulingSettings, key);
+        const nextWindows = checked
+            ? Array.from(new Set([...existingRule.preferredWindows, windowId]))
+            : existingRule.preferredWindows.filter(id => id !== windowId);
+        updateGroundEventSchedulingRule(key, { preferredWindows: nextWindows });
+    };
+
+    const handleSaveGroundEventScheduling = () => {
+        if (!onUpdateGroundEventSchedulingSettings) return;
+        const savedSettings = normaliseGroundEventSchedulingSettings(tempGroundEventSchedulingSettings);
+        onUpdateGroundEventSchedulingSettings(savedSettings);
+        setIsEditingGroundEventScheduling(false);
+        onShowSuccess('Ground event scheduling rules updated');
+        logAudit({
+            page: 'Settings - Ground Event Scheduling',
+            action: 'update',
+            description: 'Updated ground event scheduling settings',
+            changes: groundEventTypeOptions.map((eventType) => {
+                const rule = getGroundEventSchedulingRuleForType(savedSettings, eventType);
+                return `${eventType}: ${rule.mode}; windows: ${rule.preferredWindows.length ? rule.preferredWindows.join(', ') : 'any'}`;
+            }).join(' | '),
+        });
+    };
+
+    const handleCancelGroundEventScheduling = () => {
+        setTempGroundEventSchedulingSettings(resolvedGroundEventSchedulingSettings);
+        setIsEditingGroundEventScheduling(false);
     };
 
     // Event Limits Handlers
@@ -1438,6 +1534,104 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                                     </p>
                                 </div>
                             </div>
+                        </div>
+                    </div>
+
+                   )}
+                    {/* Ground Event Scheduling Window */}
+                   {shouldShowSection('ground-event-scheduling') && (
+                    <div className="w-full max-w-5xl rounded-lg border border-gray-700 bg-gray-800 shadow-lg">
+                        <div className="flex items-start justify-between gap-4 border-b border-gray-700 p-4">
+                            <div>
+                                <h2 className="text-lg font-semibold text-gray-200">Ground Event Scheduling</h2>
+                                <p className="mt-1 max-w-3xl text-xs text-gray-400">
+                                    Choose how NEO Build handles ground event types that are marked as group events in the LMP. Manual leaves the existing individual scheduler untouched.
+                                </p>
+                            </div>
+                            {isEditingGroundEventScheduling ? (
+                                <div className="flex gap-[1px]">
+                                    <button onClick={handleSaveGroundEventScheduling} className={standardSettingsButtonClass}>Save</button>
+                                    <button onClick={handleCancelGroundEventScheduling} className={standardSettingsButtonClass}>Cancel</button>
+                                </div>
+                            ) : (
+                                <button
+                                    onClick={handleEditGroundEventScheduling}
+                                    disabled={!canEditSettings || !onUpdateGroundEventSchedulingSettings}
+                                    className={standardSettingsButtonClass}
+                                >
+                                    Edit
+                                </button>
+                            )}
+                        </div>
+                        <div className="space-y-4 p-4">
+                            <div className="rounded-md border border-sky-500/30 bg-sky-500/10 p-3 text-xs leading-relaxed text-sky-100">
+                                Automatic schedules eligible group ground events before individual events. Alert/Suggest asks the scheduler to accept or skip each eligible group event during NEO Build. Preferred windows guide placement when a group event can be placed in more than one valid slot.
+                            </div>
+                            {groundEventTypeOptions.map((eventType) => {
+                                const rule = getGroundEventSchedulingRuleForType(displayedGroundEventSchedulingSettings, eventType);
+                                return (
+                                    <div key={eventType} className="rounded-lg border border-gray-700 bg-gray-900/50 p-4">
+                                        <div className="grid gap-4 lg:grid-cols-[220px_minmax(260px,1fr)]">
+                                            <div>
+                                                <label className="mb-2 block text-[11px] font-bold uppercase tracking-widest text-sky-300">
+                                                    Event Type
+                                                </label>
+                                                <div className="rounded-md border border-gray-700 bg-gray-950/70 px-3 py-2 text-sm font-semibold text-white">
+                                                    {eventType}
+                                                </div>
+                                            </div>
+                                            <div>
+                                                <label className="mb-2 block text-[11px] font-bold uppercase tracking-widest text-sky-300">
+                                                    Scheduling Action
+                                                </label>
+                                                <select
+                                                    value={rule.mode}
+                                                    disabled={!canEditGroundEventScheduling}
+                                                    onChange={(event) => updateGroundEventSchedulingRule(eventType, { mode: event.target.value as GroundEventSchedulingMode })}
+                                                    className={`w-full rounded-md border px-3 py-2 text-sm font-semibold focus:border-sky-500 focus:ring-1 focus:ring-sky-500 ${
+                                                        canEditGroundEventScheduling
+                                                            ? 'border-gray-600 bg-gray-950 text-white'
+                                                            : 'cursor-not-allowed border-gray-700 bg-gray-800 text-gray-300'
+                                                    }`}
+                                                >
+                                                    <option value="manual">Manual</option>
+                                                    <option value="suggest">Alert / Suggest</option>
+                                                    <option value="automatic">Automatic</option>
+                                                </select>
+                                            </div>
+                                        </div>
+                                        <div className="mt-4">
+                                            <label className="mb-2 block text-[11px] font-bold uppercase tracking-widest text-sky-300">
+                                                Preferred ground event windows
+                                            </label>
+                                            <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-5">
+                                                {GROUND_EVENT_SCHEDULING_WINDOWS.map((windowOption) => (
+                                                    <label
+                                                        key={windowOption.id}
+                                                        className={`flex items-center gap-2 rounded-md border px-3 py-2 text-xs font-semibold ${
+                                                            canEditGroundEventScheduling
+                                                                ? 'cursor-pointer border-gray-600 bg-gray-950/70 text-gray-100 hover:border-sky-500/70'
+                                                                : 'cursor-not-allowed border-gray-700 bg-gray-800/80 text-gray-400'
+                                                        }`}
+                                                    >
+                                                        <input
+                                                            type="checkbox"
+                                                            checked={rule.preferredWindows.includes(windowOption.id)}
+                                                            disabled={!canEditGroundEventScheduling}
+                                                            onChange={(event) => handleGroundEventWindowToggle(eventType, windowOption.id, event.target.checked)}
+                                                            className="h-4 w-4 rounded border-gray-600 bg-gray-700 text-sky-500 focus:ring-sky-500 disabled:cursor-not-allowed disabled:opacity-60"
+                                                        />
+                                                        {windowOption.label}
+                                                    </label>
+                                                ))}
+                                            </div>
+                                            <p className="mt-2 text-xs text-gray-500">
+                                                Leave all windows unticked to allow any valid time inside the build day.
+                                            </p>
+                                        </div>
+                                    </div>
+                                );
+                            })}
                         </div>
                     </div>
 

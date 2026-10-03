@@ -3,6 +3,7 @@ import { getCorsHeaders } from '@/lib/cors';
 import { auth } from '@/lib/auth';
 import { PrismaClient } from '@prisma/client';
 import { comparePassword } from '@/lib/password';
+import { verifyToken } from '@/lib/mobile-auth';
 
 const prisma = new PrismaClient();
 
@@ -16,7 +17,22 @@ export async function OPTIONS(request: NextRequest) {
 export async function POST(request: NextRequest) {
   try {
     const session = await auth();
-    if (!session?.user?.userId) {
+    let userId = session?.user?.id || '';
+
+    if (!userId) {
+      const authHeader = request.headers.get('authorization') || '';
+      const bearerToken = authHeader.toLowerCase().startsWith('bearer ')
+        ? authHeader.slice(7).trim()
+        : '';
+      if (bearerToken) {
+        const tokenPayload = await verifyToken(bearerToken);
+        if (tokenPayload?.type === 'access') {
+          userId = tokenPayload.userId;
+        }
+      }
+    }
+
+    if (!userId) {
       return NextResponse.json({ valid: false, error: 'Not authenticated' }, { status: 401, headers: getCorsHeaders(request) });
     }
 
@@ -26,7 +42,7 @@ export async function POST(request: NextRequest) {
     }
 
     const user = await prisma.user.findUnique({
-      where: { id: session.user.userId },
+      where: { id: userId },
       select: { password: true },
     });
 

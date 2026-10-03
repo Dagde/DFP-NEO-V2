@@ -514,7 +514,7 @@ const DetailCard: React.FC<{ label: string; value: React.ReactNode; className?: 
 const DetailList: React.FC<{ title: string; items: string[] }> = ({ title, items }) => (
     <div>
         <h3 className="text-md font-semibold text-sky-400 mb-2">{title}</h3>
-        <div className="bg-gray-700/50 p-3 rounded-lg text-sm text-gray-300">
+        <div className="min-h-[52px] bg-gray-700/50 p-3 rounded-lg text-sm text-gray-300">
             {items && items.length > 0 ? (
                 <ul className="space-y-1 list-disc list-inside">
                     {items.map((item, index) => <li key={index}>{item}</li>)}
@@ -523,6 +523,28 @@ const DetailList: React.FC<{ title: string; items: string[] }> = ({ title, items
                 <p className="italic text-gray-500">None</p>
             )}
         </div>
+    </div>
+);
+
+const formatWholeNumberField = (value: unknown): string => {
+    if (value === undefined || value === null || value === '') return '';
+    const numericValue = Number(value);
+    return Number.isFinite(numericValue) && numericValue > 0 ? String(Math.round(numericValue)) : '';
+};
+
+const formatOptionalYesNo = (value: unknown): string => {
+    if (value === true) return 'Yes';
+    if (value === false) return 'No';
+    const normalised = String(value ?? '').trim().toUpperCase();
+    if (normalised === 'YES') return 'Yes';
+    if (normalised === 'NO') return 'No';
+    return '';
+};
+
+const GroupDataWindow: React.FC<{ label: React.ReactNode; value: React.ReactNode; className?: string; subHeading?: boolean }> = ({ label, value, className = '', subHeading = false }) => (
+    <div className={className}>
+        <h3 className={subHeading ? 'mb-2 text-xs font-semibold text-white' : 'text-md font-semibold text-sky-400 mb-2'}>{label}</h3>
+        <div className="min-h-[52px] rounded-lg bg-gray-700/50 p-3 text-sm text-gray-300">{value}</div>
     </div>
 );
 
@@ -857,6 +879,12 @@ const formatTestEventType = (value?: SyllabusItemDetail['testEventType']): strin
     return 'Not a test event';
 };
 
+const formatSortieDetailsLine = (item: SyllabusItemDetail): string => (
+    Array.isArray(item.eventDetailsSortie)
+        ? item.eventDetailsSortie.map(detail => String(detail || '').trim()).filter(Boolean).join(' | ')
+        : ''
+);
+
 const getTestingOfficerQualificationLabel = (
     item: SyllabusItemDetail,
     qualifications: StaffQualificationDefinition[],
@@ -909,7 +937,9 @@ const DetailView: React.FC<{
         <div className="flex items-start justify-between gap-4">
             <div>
                 <h2 className="text-3xl font-bold text-white">{item.code}</h2>
-                <p className="text-lg text-gray-400 mt-1">{item.eventDescription}</p>
+                {formatSortieDetailsLine(item) && (
+                    <p className="text-lg text-gray-400 mt-1">{formatSortieDetailsLine(item)}</p>
+                )}
             </div>
             <label
                 className={`mt-1 inline-flex shrink-0 items-center gap-2 rounded border px-2.5 py-1.5 text-[11px] font-semibold uppercase tracking-wide ${
@@ -1021,6 +1051,30 @@ const DetailView: React.FC<{
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-2">
                 <DetailList title="Methods of Delivery" items={item.methodOfDelivery} />
                 <DetailList title="Methods of Assessment" items={item.methodOfAssessment} />
+                <GroupDataWindow label="Group Event" value={formatOptionalYesNo(item.groupEvent)} />
+                <GroupDataWindow label="Minimum to Schedule" value={formatWholeNumberField(item.minimumToSchedule)} />
+                <div className="md:col-span-2">
+                    <h3 className="text-md font-semibold text-sky-400 mb-2">Group Size</h3>
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                        <GroupDataWindow subHeading label="Minimum" value={formatWholeNumberField(item.groupSizeMin)} />
+                        <GroupDataWindow subHeading label="Maximum" value={formatWholeNumberField(item.groupSizeMax)} />
+                        <GroupDataWindow
+                            subHeading
+                            label="Entire course"
+                            value={(
+                                <span className="inline-flex items-center gap-2">
+                                    <input
+                                        type="checkbox"
+                                        checked={item.groupEntireCourse === true}
+                                        readOnly
+                                        className="h-4 w-4 rounded border-gray-600 bg-gray-800 text-sky-500"
+                                    />
+                                    <span>{formatOptionalYesNo(item.groupEntireCourse)}</span>
+                                </span>
+                            )}
+                        />
+                    </div>
+                </div>
             </div>
         </fieldset>
 

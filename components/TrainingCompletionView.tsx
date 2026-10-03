@@ -22,8 +22,9 @@ interface TrainingCompletionViewProps {
         trainee: Trainee,
         originalItem: SyllabusItemDetail,
         updatedItem: SyllabusItemDetail,
-        options?: { suppressSuccessMessage?: boolean }
+        options?: { suppressSuccessMessage?: boolean; sourceLmp?: SyllabusItemDetail[] }
     ) => boolean | Promise<boolean>;
+    onLoadTraineeLmp?: (trainee: Trainee) => Promise<SyllabusItemDetail[] | null>;
     trainingReportTemplate?: Partial<TrainingReportTemplate> | null;
     phraseBank?: PhraseBank;
 }
@@ -134,6 +135,7 @@ const TrainingCompletionView: React.FC<TrainingCompletionViewProps> = ({
     onSaveTrainingReportAssessment,
     onPersistTrainingReportAssessment,
     onUpdateLmpItem,
+    onLoadTraineeLmp,
     trainingReportTemplate,
 }) => {
     const reportTemplate = useMemo(
@@ -152,6 +154,7 @@ const TrainingCompletionView: React.FC<TrainingCompletionViewProps> = ({
     const [selectedTrainees, setSelectedTrainees] = useState<string[]>([]);
     const [isCompleting, setIsCompleting] = useState(false);
     const [completionMessage, setCompletionMessage] = useState('');
+    const [completionDialogMessage, setCompletionDialogMessage] = useState('');
     const [completionTrace, setCompletionTrace] = useState<Record<string, unknown> | null>(null);
 
     const allEvents = useMemo(() => Object.values(publishedSchedules).flat(), [publishedSchedules]);
@@ -211,15 +214,28 @@ const TrainingCompletionView: React.FC<TrainingCompletionViewProps> = ({
         ));
     };
 
-    const findTraineeLmpItemForEvent = (trainee: Trainee, event: ScheduleEvent): SyllabusItemDetail | null => {
-        const traineeLmp = traineeLMPs?.get(trainee.fullName) || [];
-        if (traineeLmp.length === 0) return null;
+    const getTraineeLmpForTrainee = (trainee: Trainee, sourceLmp?: SyllabusItemDetail[] | null): SyllabusItemDetail[] => {
+        if (Array.isArray(sourceLmp)) return sourceLmp;
 
+        const exactLmp = traineeLMPs?.get(trainee.fullName);
+        if (exactLmp) return exactLmp;
+
+        const traineeNames = [trainee.fullName, trainee.name]
+            .map(name => normaliseName(String(name || '')).toUpperCase())
+            .filter(Boolean);
+        if (traineeNames.length === 0 || !traineeLMPs) return [];
+
+        const fuzzyEntry = Array.from(traineeLMPs.entries()).find(([lmpName]) => (
+            traineeNames.includes(normaliseName(lmpName).toUpperCase())
+        ));
+        return fuzzyEntry?.[1] || [];
+    };
+
+    const findMasterLmpItemForEvent = (event: ScheduleEvent): SyllabusItemDetail | null => {
         const eventRef = normaliseCode((event as any).lmpItemId || event.id);
         const eventCode = normaliseCode((event as any).lmpItemCode || event.flightNumber);
         const eventTitle = normaliseCode(event.notes || event.flightNumber);
-
-        return traineeLmp.find(item => {
+        return syllabusDetails.find(item => {
             if (!item || isSyllabusCourseShell(item)) return false;
             const itemRefs = [
                 item.id,
@@ -229,6 +245,32 @@ const TrainingCompletionView: React.FC<TrainingCompletionViewProps> = ({
             ].map(normaliseCode).filter(Boolean);
             return itemRefs.includes(eventRef) || itemRefs.includes(eventCode) || itemRefs.includes(eventTitle);
         }) || null;
+    };
+
+    const findTraineeLmpItemForEvent = (trainee: Trainee, event: ScheduleEvent, sourceLmp?: SyllabusItemDetail[] | null): { item: SyllabusItemDetail | null; source: 'individual' | 'master-fallback' | 'none'; traineeLmpLength: number } => {
+        const traineeLmp = getTraineeLmpForTrainee(trainee, sourceLmp);
+        const masterItem = findMasterLmpItemForEvent(event);
+        if (traineeLmp.length === 0) {
+            return { item: masterItem, source: masterItem ? 'master-fallback' : 'none', traineeLmpLength: 0 };
+        }
+
+        const eventRef = normaliseCode((event as any).lmpItemId || event.id);
+        const eventCode = normaliseCode((event as any).lmpItemCode || event.flightNumber);
+        const eventTitle = normaliseCode(event.notes || event.flightNumber);
+
+        const individualItem = traineeLmp.find(item => {
+            if (!item || isSyllabusCourseShell(item)) return false;
+            const itemRefs = [
+                item.id,
+                item.code,
+                item.masterEventId,
+                item.eventDescription,
+            ].map(normaliseCode).filter(Boolean);
+            return itemRefs.includes(eventRef) || itemRefs.includes(eventCode) || itemRefs.includes(eventTitle);
+        }) || null;
+
+        if (individualItem) return { item: individualItem, source: 'individual', traineeLmpLength: traineeLmp.length };
+        return { item: masterItem, source: masterItem ? 'master-fallback' : 'none', traineeLmpLength: traineeLmp.length };
     };
 
     const candidateEvents = useMemo(() => {
@@ -312,6 +354,7 @@ const TrainingCompletionView: React.FC<TrainingCompletionViewProps> = ({
         setSelectedEventIds([]);
         setSelectedTrainees([]);
         setCompletionMessage('');
+        setCompletionDialogMessage('');
         setCompletionTrace(null);
     };
 
@@ -377,6 +420,7 @@ const TrainingCompletionView: React.FC<TrainingCompletionViewProps> = ({
 
         setIsCompleting(true);
         setCompletionMessage('Completing selected training records...');
+        setCompletionDialogMessage('');
         setCompletionTrace(null);
 
         const completedAt = new Date(`${completionDate || todayIso()}T00:00:00`).toISOString();
@@ -414,15 +458,32 @@ const TrainingCompletionView: React.FC<TrainingCompletionViewProps> = ({
                         throw new Error('Selected trainee was not found in the active or archived trainee list.');
                     }
 
-                    const lmpItem = findTraineeLmpItemForEvent(trainee, selectedEvent);
-                    if (!lmpItem) {
-                        throw new Error('Matching Individual LMP event was not found for this trainee.');
+                    const freshIndividualLmp = onLoadTraineeLmp
+                        ? await withTimeout(
+                            onLoadTraineeLmp(trainee),
+                            `${trainee.name} Individual LMP reload`,
+                        )
+                        : null;
+                    const lmpMatch = findTraineeLmpItemForEvent(trainee, selectedEvent, freshIndividualLmp);
+                    const lmpItem = lmpMatch.item;
+                    if (!lmpItem || lmpMatch.source !== 'individual') {
+                        throw new Error('Matching Individual LMP event was not found for this trainee. The record was not completed to avoid damaging the Individual LMP.');
+                    }
+                    if (lmpMatch.traineeLmpLength < 2) {
+                        throw new Error(`Individual LMP reload returned only ${lmpMatch.traineeLmpLength} event${lmpMatch.traineeLmpLength === 1 ? '' : 's'}. The record was not completed to avoid overwriting the full Individual LMP.`);
                     }
 
                     const lmpEventCode = lmpItem.code || selectedEvent.flightNumber || lmpItem.id || '';
                     const assessmentEventId = buildBulkCompletionEventId(trainee, lmpItem, selectedEvent.id);
 
-                    traceRows.push({ ...traceBase, stage: 'score:save:start', lmpItemId: lmpItem.id, lmpEventCode });
+                    traceRows.push({
+                        ...traceBase,
+                        stage: 'score:save:start',
+                        lmpItemId: lmpItem.id,
+                        lmpEventCode,
+                        lmpMatchSource: lmpMatch.source,
+                        traineeLmpLength: lmpMatch.traineeLmpLength,
+                    });
                     await withTimeout(
                         persistScoreCompletion(trainee, lmpItem, selectedEvent, completedAt),
                         `${trainee.name} / ${selectedEvent.flightNumber} score save`,
@@ -465,13 +526,13 @@ const TrainingCompletionView: React.FC<TrainingCompletionViewProps> = ({
                             groundSchoolAssessment: { isAssessment: false, result: undefined },
                         };
 
-                    traceRows.push({ ...traceBase, stage: 'report:local-save:start', lmpItemId: lmpItem.id, lmpEventCode, assessmentEventId });
+                    traceRows.push({ ...traceBase, stage: 'report:local-save:start', lmpItemId: lmpItem.id, lmpEventCode, assessmentEventId, lmpMatchSource: lmpMatch.source });
                     await withTimeout(
                         Promise.resolve(onSaveTrainingReportAssessment(assessment)),
                         `${trainee.name} / ${selectedEvent.flightNumber} local report save`,
                     );
                     if (onPersistTrainingReportAssessment) {
-                        traceRows.push({ ...traceBase, stage: 'report:persist:start', lmpItemId: lmpItem.id, lmpEventCode, assessmentEventId });
+                        traceRows.push({ ...traceBase, stage: 'report:persist:start', lmpItemId: lmpItem.id, lmpEventCode, assessmentEventId, lmpMatchSource: lmpMatch.source });
                         await withTimeout(
                             onPersistTrainingReportAssessment({
                                 ...assessment,
@@ -480,8 +541,26 @@ const TrainingCompletionView: React.FC<TrainingCompletionViewProps> = ({
                             `${trainee.name} / ${selectedEvent.flightNumber} report persistence`,
                         );
                     }
+
+                    if (lmpMatch.source === 'individual' && onUpdateLmpItem) {
+                        const completedItem: SyllabusItemDetail = {
+                            ...lmpItem,
+                            completedAt,
+                            isComplete: true,
+                            completed: true,
+                        } as SyllabusItemDetail & { isComplete?: boolean; completed?: boolean };
+                        traceRows.push({ ...traceBase, stage: 'lmp:update:start', lmpItemId: lmpItem.id, lmpEventCode, assessmentEventId });
+                        const updated = await withTimeout(
+                            Promise.resolve(onUpdateLmpItem(trainee, lmpItem, completedItem, { suppressSuccessMessage: true, sourceLmp: freshIndividualLmp || undefined })),
+                            `${trainee.name} / ${selectedEvent.flightNumber} Individual LMP update`,
+                        );
+                        if (updated === false) {
+                            throw new Error('Individual LMP event could not be marked complete.');
+                        }
+                    }
+
                     completed.push(`${trainee.name} / ${selectedEvent.flightNumber}`);
-                    traceRows.push({ ...traceBase, stage: 'complete', lmpItemId: lmpItem.id, lmpEventCode, assessmentEventId });
+                    traceRows.push({ ...traceBase, stage: 'complete', lmpItemId: lmpItem.id, lmpEventCode, assessmentEventId, lmpMatchSource: lmpMatch.source });
                 } catch (error) {
                     const reason = getErrorMessage(error);
                     console.error('Error during selected event completion item:', { ...traceBase, reason, error });
@@ -537,7 +616,9 @@ const TrainingCompletionView: React.FC<TrainingCompletionViewProps> = ({
             const firstFailure = failed[0];
             setCompletionMessage(`Completed ${completed.length} trainee-event record${completed.length === 1 ? '' : 's'}. ${failed.length} failed. First failure: ${firstFailure.trainee} / ${firstFailure.event}: ${firstFailure.reason}`);
         } else {
-            setCompletionMessage(`Completed ${completed.length} trainee-event record${completed.length === 1 ? '' : 's'} across ${selectedEvents.length} event${selectedEvents.length === 1 ? '' : 's'}.`);
+            const successMessage = `Completed ${completed.length} trainee-event record${completed.length === 1 ? '' : 's'} across ${selectedEvents.length} event${selectedEvents.length === 1 ? '' : 's'}.`;
+            setCompletionMessage(successMessage);
+            setCompletionDialogMessage(successMessage);
         }
 
         if (failed.length > 0) {
@@ -567,6 +648,29 @@ const TrainingCompletionView: React.FC<TrainingCompletionViewProps> = ({
 
     return (
         <div className="h-full overflow-auto bg-gray-900 p-6">
+            {completionDialogMessage && (
+                <div className="fixed inset-0 z-[1000] flex items-center justify-center bg-black/70 px-4">
+                    <div className="w-full max-w-lg rounded-lg border border-green-500 bg-gray-800 shadow-2xl">
+                        <div className="border-b border-green-500/40 px-6 py-4">
+                            <h2 className="text-xl font-bold text-green-300">Training Records Updated</h2>
+                        </div>
+                        <div className="px-6 py-5">
+                            <p className="text-gray-100">{completionDialogMessage}</p>
+                            <p className="mt-2 text-sm text-gray-400">
+                                The selected Individual LMP events and training report records have finished updating.
+                            </p>
+                        </div>
+                        <div className="flex justify-end border-t border-gray-700 px-6 py-4">
+                            <button
+                                onClick={() => setCompletionDialogMessage('')}
+                                className="rounded bg-green-600 px-5 py-2 font-semibold text-white hover:bg-green-700"
+                            >
+                                Continue
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
             <div className="max-w-6xl mx-auto space-y-6">
                 <div className="bg-gray-800 rounded-lg p-6 border border-gray-700">
                     <h1 className="text-2xl font-bold text-white mb-2">Complete Training</h1>
