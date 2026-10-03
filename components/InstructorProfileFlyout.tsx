@@ -2305,41 +2305,52 @@ export const InstructorProfileFlyout: React.FC<InstructorProfileFlyoutProps> = (
                       )}
                     </div>
 
-                    {/* Name + data grid */}
+                    {/* Name + details */}
                     <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2 mb-2 flex-wrap">
-                        <h3 className="text-xl font-bold text-white">{instructor.name}</h3>
-                        <span className="px-2 py-0.5 rounded text-xs font-bold bg-green-500 text-white">Active</span>
+                      <div className="mb-3 flex flex-wrap items-center gap-2">
+                        <h3 className="text-xl font-bold leading-tight text-white">{instructor.name}</h3>
+                        <span className="rounded bg-green-500 px-2 py-0.5 text-xs font-bold text-white">Active</span>
                       </div>
-                      <div className="grid grid-cols-4 gap-x-4 gap-y-2 text-xs">
-                        {/* Row 1 */}
-                        <div><span className="text-gray-400 block text-[10px]">Personnel ID</span><span className="text-white font-medium">{instructor.idNumber || '-'}</span></div>
-                        <div><span className="text-gray-400 block text-[10px]">Role</span><span className="text-sky-300 font-medium">{profileRoleDisplay.label}</span></div>
-                        <div><span className="text-gray-400 block text-[10px]">Category</span><span className="text-white font-medium">{isContractorStaffRoleValue(instructor.role) ? simIpDisplayLabel : instructor.category}</span></div>
-                        <div><span className="text-gray-400 block text-[10px]">Callsign</span><span className="text-white font-medium">{displayCallsign || '[None]'}</span></div>
-                        {/* Row 2 */}
-                        <div><span className="text-gray-400 block text-[10px]">Secondary Callsign</span><span className="text-gray-300">{instructor.secondaryCallsign || '[None]'}</span></div>
-                        <div><span className="text-gray-400 block text-[10px]">Crew</span><span className="text-white font-medium">{instructor.crew || '[None]'}</span></div>
-                        <div><span className="text-gray-400 block text-[10px]">Rank</span><span className="text-white font-medium">{instructor.rank}</span></div>
-                        <div><span className="text-gray-400 block text-[10px]">Service</span><span className="text-white font-medium">{displayService || '[None]'}</span></div>
-                        {/* Row 3 */}
-                        <div><span className="text-gray-400 block text-[10px]">Unit</span><span className="text-white font-medium">{instructor.unit}</span></div>
-                        <div><span className="text-gray-400 block text-[10px]">Seat Config</span><span className="text-white font-medium">{instructor.seatConfig}</span></div>
-                        <div><span className="text-gray-400 block text-[10px]">Location</span><span className="text-white font-medium">{instructor.location}</span></div>
-                        <div><span className="text-gray-400 block text-[10px]">Flight</span><span className="text-white font-medium">{instructor.flight || 'N/A'}</span></div>
-                        {/* Row 4 */}
-                        <div><span className="text-gray-400 block text-[10px]">Phone Number</span><span className="text-white font-medium">{instructor.phoneNumber || 'N/A'}</span></div>
-                        <div className="col-span-3"><span className="text-gray-400 block text-[10px]">Email</span><span className="text-white font-medium">{instructor.email || 'N/A'}</span></div>
+                      <div className="grid grid-cols-[minmax(260px,1.15fr)_minmax(250px,1fr)_minmax(210px,0.9fr)] gap-3">
+                        <div className="rounded-md border border-slate-600/60 bg-slate-900/45 p-3 shadow-inner shadow-black/10">
+                          <div className="mb-2 text-[10px] font-bold uppercase tracking-[0.16em] text-sky-300">Identity</div>
+                          <div className="grid grid-cols-2 gap-x-3 gap-y-2 text-xs">
+                            <div><span className="block text-[10px] font-semibold uppercase tracking-wide text-slate-400">Personnel ID</span><span className="font-semibold text-white">{instructor.idNumber || '-'}</span></div>
+                            <div><span className="block text-[10px] font-semibold uppercase tracking-wide text-slate-400">Rank</span><span className="font-semibold text-white">{instructor.rank || '-'}</span></div>
+                            <div><span className="block text-[10px] font-semibold uppercase tracking-wide text-slate-400">Callsign</span><span className="font-semibold text-white">{displayCallsign || '[None]'}</span></div>
+                            <div><span className="block text-[10px] font-semibold uppercase tracking-wide text-slate-400">Secondary</span><span className="font-semibold text-gray-300">{instructor.secondaryCallsign || '[None]'}</span></div>
+                            <div><span className="block text-[10px] font-semibold uppercase tracking-wide text-slate-400">Role</span><span className="font-semibold text-sky-300">{profileRoleDisplay.label}</span></div>
+                            <div><span className="block text-[10px] font-semibold uppercase tracking-wide text-slate-400">Service</span><span className="font-semibold text-white">{displayService || '[None]'}</span></div>
+                          </div>
+                        </div>
+                        <div className="rounded-md border border-slate-600/60 bg-slate-900/45 p-3 shadow-inner shadow-black/10">
+                          <div className="mb-2 text-[10px] font-bold uppercase tracking-[0.16em] text-sky-300">Assignment</div>
+                          <div className="grid grid-cols-2 gap-x-3 gap-y-2 text-xs">
+                            <div><span className="block text-[10px] font-semibold uppercase tracking-wide text-slate-400">Category</span><span className="font-semibold text-white">{isContractorStaffRoleValue(instructor.role) ? simIpDisplayLabel : instructor.category}</span></div>
+                            <div><span className="block text-[10px] font-semibold uppercase tracking-wide text-slate-400">Seat Config</span><span className="font-semibold text-white">{instructor.seatConfig || '-'}</span></div>
+                            <div><span className="block text-[10px] font-semibold uppercase tracking-wide text-slate-400">Unit</span><span className="font-semibold text-white">{instructor.unit || '-'}</span></div>
+                            <div><span className="block text-[10px] font-semibold uppercase tracking-wide text-slate-400">Crew</span><span className="font-semibold text-white">{instructor.crew || '[None]'}</span></div>
+                            <div><span className="block text-[10px] font-semibold uppercase tracking-wide text-slate-400">Location</span><span className="font-semibold text-white">{instructor.location || '-'}</span></div>
+                            <div><span className="block text-[10px] font-semibold uppercase tracking-wide text-slate-400">Flight</span><span className="font-semibold text-white">{instructor.flight || 'N/A'}</span></div>
+                          </div>
+                        </div>
+                        <div className="rounded-md border border-slate-600/60 bg-slate-900/45 p-3 shadow-inner shadow-black/10">
+                          <div className="mb-2 text-[10px] font-bold uppercase tracking-[0.16em] text-sky-300">Contact</div>
+                          <div className="grid grid-cols-2 gap-x-3 gap-y-2 text-xs">
+                            <div className="col-span-2"><span className="block text-[10px] font-semibold uppercase tracking-wide text-slate-400">Phone</span><span className="font-semibold text-white">{instructor.phoneNumber || 'N/A'}</span></div>
+                            <div className="col-span-2"><span className="block text-[10px] font-semibold uppercase tracking-wide text-slate-400">Email</span><span className="break-words font-semibold text-white">{instructor.email || 'N/A'}</span></div>
+                          </div>
+                        </div>
                       </div>
                     </div>
 
-                    <div className="flex-shrink-0 flex gap-2">
-                      <div className={card3d + " w-36 p-2"} style={{...card3dStyle, background:'linear-gradient(180deg, #1e2d42 0%, #192538 100%)'}}>
-                        <div className="text-[10px] text-gray-400 font-semibold mb-2">Qualifications</div>
-                        <div className="space-y-1">
+                    <div className="grid w-[300px] flex-shrink-0 grid-cols-2 gap-2">
+                      <div className={card3d + " p-3"} style={{...card3dStyle, background:'linear-gradient(180deg, rgba(30,45,66,0.92) 0%, rgba(25,37,56,0.96) 100%)'}}>
+                        <div className="mb-2 text-[10px] font-bold uppercase tracking-[0.16em] text-emerald-300">Qualifications</div>
+                        <div className="space-y-1.5">
                           {assignedQualificationLabels.length > 0
                             ? assignedQualificationLabels.map(label => (
-                                <div key={label} className="rounded border border-emerald-500/20 bg-emerald-500/10 px-2 py-1 text-emerald-100 text-[10px] font-semibold break-words">
+                                <div key={label} className="rounded border border-emerald-500/20 bg-emerald-500/10 px-2 py-1 text-[10px] font-semibold leading-tight text-emerald-100 break-words">
                                   {label}
                                 </div>
                               ))
@@ -2347,12 +2358,12 @@ export const InstructorProfileFlyout: React.FC<InstructorProfileFlyoutProps> = (
                           }
                         </div>
                       </div>
-                      <div className={card3d + " w-36 p-2"} style={{...card3dStyle, background:'linear-gradient(180deg, #1e2d42 0%, #192538 100%)'}}>
-                        <div className="text-[10px] text-gray-400 font-semibold mb-2">Permissions</div>
-                        <div className="space-y-1">
+                      <div className={card3d + " p-3"} style={{...card3dStyle, background:'linear-gradient(180deg, rgba(30,45,66,0.92) 0%, rgba(25,37,56,0.96) 100%)'}}>
+                        <div className="mb-2 text-[10px] font-bold uppercase tracking-[0.16em] text-cyan-300">Permissions</div>
+                        <div className="space-y-1.5">
                           {assignedPermissionProfileLabels.length > 0
                             ? assignedPermissionProfileLabels.map(label => (
-                                <div key={label} className="rounded border border-cyan-500/20 bg-cyan-500/10 px-2 py-1 text-cyan-100 text-[10px] font-semibold break-words">
+                                <div key={label} className="rounded border border-cyan-500/20 bg-cyan-500/10 px-2 py-1 text-[10px] font-semibold leading-tight text-cyan-100 break-words">
                                   {label}{hasPermissionProfileExceptions ? ' *' : ''}
                                 </div>
                               ))

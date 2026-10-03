@@ -3430,60 +3430,71 @@ const TraineeProfileFlyout: React.FC<TraineeProfileFlyoutProps> = ({
                                 )}
 	                          </div>
 
-                          {/* Name + data grid */}
-                          <div className="flex-1 min-w-0">
-                            <div className="flex items-center gap-2 mb-2 flex-wrap">
-                              <h3 className="text-xl font-bold text-white">{trainee.name}</h3>
-                              <span className={`px-2 py-0.5 rounded text-xs font-bold ${isTraineeSuspended(trainee) ? 'bg-red-600 text-white' : trainee.isPaused ? 'bg-amber-500 text-white' : 'bg-green-500 text-white'}`}>
-                                {isTraineeSuspended(trainee) ? 'Suspended' : trainee.isPaused ? 'Paused' : 'Active'}
-                              </span>
-                            </div>
-                            <div className="grid grid-cols-4 gap-x-4 gap-y-2 text-xs">
-                              {/* Row 1 */}
-                              <div><span className="text-gray-400 block text-[10px]">Personnel ID</span><span className="text-white font-medium">{trainee.idNumber || '-'}</span></div>
-                              <div><span className="text-gray-400 block text-[10px]">Course</span><span
-                                data-course-color="true"
-                                className={`font-semibold px-1 rounded text-white text-[10px] ${(courseColors[trainee.course] || '').startsWith('#') ? '' : (courseColors[trainee.course] || 'bg-gray-500')}`}
-                                style={(courseColors[trainee.course] || '').startsWith('#') ? { backgroundColor: courseColors[trainee.course] } : {}}
-                              >{trainee.course}</span></div>
-                              <div><span className="text-gray-400 block text-[10px]">LMP</span><span className="text-sky-300 font-medium">{trainee.lmpType || <span className="text-gray-500 italic">None</span>}</span></div>
-                              <div><span className="text-gray-400 block text-[10px]">Academic LMP</span><span className="text-purple-300 font-medium">{effectiveAcademicLmpType || <span className="text-gray-500 italic">None</span>}</span></div>
-                              {/* Row 2 */}
-                              <div><span className="text-gray-400 block text-[10px]">Callsign</span><span className="text-white font-medium">{trainee.traineeCallsign || `${callsignData?.callsignPrefix || ''}${callsignData?.callsignNumber || ''}`}</span></div>
-                              <div><span className="text-gray-400 block text-[10px]">Secondary Callsign</span><span className="text-white font-medium">{trainee.secondaryCallsign || '-'}</span></div>
-                              <div><span className="text-gray-400 block text-[10px]">Seat Config</span><span className="text-white font-medium">{trainee.seatConfig}</span></div>
-                              <div><span className="text-gray-400 block text-[10px]">Rank</span><span className="text-white font-medium">{trainee.rank}</span></div>
-                              {/* Row 3 */}
-                              <div><span className="text-gray-400 block text-[10px]">Role</span><span className="text-sky-300 font-medium">{trainee.role || <span className="text-gray-500 italic">None</span>}</span></div>
-                              <div><span className="text-gray-400 block text-[10px]">Service</span><span className="text-white font-medium">{displayService || '[None]'}</span></div>
-                              <div><span className="text-gray-400 block text-[10px]">Unit</span><span className="text-white font-medium">{trainee.unit}</span></div>
-                              <div><span className="text-gray-400 block text-[10px]">Crew</span><span className="text-white font-medium">{trainee.crew || 'N/A'}</span></div>
-                              {/* Row 4 */}
-                              <div><span className="text-gray-400 block text-[10px]">Location</span><span className="text-white font-medium">{trainee.location}</span></div>
-                              <div><span className="text-gray-400 block text-[10px]">Flight</span><span className="text-white font-medium">{trainee.flight || 'N/A'}</span></div>
-                              <div><span className="text-gray-400 block text-[10px]">Phone Number</span><span className="text-white font-medium">{trainee.phoneNumber || 'N/A'}</span></div>
-                              <div><span className="text-gray-400 block text-[10px]">Email</span><span className="text-white font-medium">{trainee.email || 'N/A'}</span></div>
-                            </div>
-                          </div>
+	                          {/* Name + details */}
+	                          <div className="flex-1 min-w-0">
+	                            <div className="mb-3 flex flex-wrap items-center gap-2">
+	                              <h3 className="text-xl font-bold leading-tight text-white">{trainee.name}</h3>
+	                              <span className={`rounded px-2 py-0.5 text-xs font-bold ${isTraineeSuspended(trainee) ? 'bg-red-600 text-white' : trainee.isPaused ? 'bg-amber-500 text-white' : 'bg-green-500 text-white'}`}>
+	                                {isTraineeSuspended(trainee) ? 'Suspended' : trainee.isPaused ? 'Paused' : 'Active'}
+	                              </span>
+	                            </div>
+	                            <div className="grid grid-cols-[minmax(260px,1.15fr)_minmax(250px,1fr)_minmax(210px,0.9fr)] gap-3">
+	                              <div className="rounded-md border border-slate-600/60 bg-slate-900/45 p-3 shadow-inner shadow-black/10">
+	                                <div className="mb-2 text-[10px] font-bold uppercase tracking-[0.16em] text-sky-300">Identity</div>
+	                                <div className="grid grid-cols-2 gap-x-3 gap-y-2 text-xs">
+	                                  <div><span className="block text-[10px] font-semibold uppercase tracking-wide text-slate-400">Personnel ID</span><span className="font-semibold text-white">{trainee.idNumber || '-'}</span></div>
+	                                  <div><span className="block text-[10px] font-semibold uppercase tracking-wide text-slate-400">Rank</span><span className="font-semibold text-white">{trainee.rank}</span></div>
+	                                  <div><span className="block text-[10px] font-semibold uppercase tracking-wide text-slate-400">Callsign</span><span className="font-semibold text-white">{trainee.traineeCallsign || `${callsignData?.callsignPrefix || ''}${callsignData?.callsignNumber || ''}` || '-'}</span></div>
+	                                  <div><span className="block text-[10px] font-semibold uppercase tracking-wide text-slate-400">Secondary</span><span className="font-semibold text-white">{trainee.secondaryCallsign || '-'}</span></div>
+	                                  <div><span className="block text-[10px] font-semibold uppercase tracking-wide text-slate-400">Role</span><span className="font-semibold text-sky-300">{trainee.role || <span className="text-gray-500 italic">None</span>}</span></div>
+	                                  <div><span className="block text-[10px] font-semibold uppercase tracking-wide text-slate-400">Service</span><span className="font-semibold text-white">{displayService || '[None]'}</span></div>
+	                                </div>
+	                              </div>
+	                              <div className="rounded-md border border-slate-600/60 bg-slate-900/45 p-3 shadow-inner shadow-black/10">
+	                                <div className="mb-2 text-[10px] font-bold uppercase tracking-[0.16em] text-sky-300">Training</div>
+	                                <div className="grid grid-cols-2 gap-x-3 gap-y-2 text-xs">
+	                                  <div><span className="block text-[10px] font-semibold uppercase tracking-wide text-slate-400">Course</span><span
+	                                    data-course-color="true"
+	                                    className={`inline-flex rounded px-1.5 py-0.5 text-[10px] font-bold text-white ${(courseColors[trainee.course] || '').startsWith('#') ? '' : (courseColors[trainee.course] || 'bg-gray-500')}`}
+	                                    style={(courseColors[trainee.course] || '').startsWith('#') ? { backgroundColor: courseColors[trainee.course] } : {}}
+	                                  >{trainee.course || '-'}</span></div>
+	                                  <div><span className="block text-[10px] font-semibold uppercase tracking-wide text-slate-400">Seat Config</span><span className="font-semibold text-white">{trainee.seatConfig || '-'}</span></div>
+	                                  <div><span className="block text-[10px] font-semibold uppercase tracking-wide text-slate-400">LMP</span><span className="font-semibold text-sky-300">{trainee.lmpType || <span className="text-gray-500 italic">None</span>}</span></div>
+	                                  <div><span className="block text-[10px] font-semibold uppercase tracking-wide text-slate-400">Academic LMP</span><span className="font-semibold text-purple-300">{effectiveAcademicLmpType || <span className="text-gray-500 italic">None</span>}</span></div>
+	                                  <div><span className="block text-[10px] font-semibold uppercase tracking-wide text-slate-400">Unit</span><span className="font-semibold text-white">{trainee.unit || '-'}</span></div>
+	                                  <div><span className="block text-[10px] font-semibold uppercase tracking-wide text-slate-400">Crew</span><span className="font-semibold text-white">{trainee.crew || 'N/A'}</span></div>
+	                                </div>
+	                              </div>
+	                              <div className="rounded-md border border-slate-600/60 bg-slate-900/45 p-3 shadow-inner shadow-black/10">
+	                                <div className="mb-2 text-[10px] font-bold uppercase tracking-[0.16em] text-sky-300">Contact</div>
+	                                <div className="grid grid-cols-2 gap-x-3 gap-y-2 text-xs">
+	                                  <div><span className="block text-[10px] font-semibold uppercase tracking-wide text-slate-400">Location</span><span className="font-semibold text-white">{trainee.location || '-'}</span></div>
+	                                  <div><span className="block text-[10px] font-semibold uppercase tracking-wide text-slate-400">Flight</span><span className="font-semibold text-white">{trainee.flight || 'N/A'}</span></div>
+	                                  <div className="col-span-2"><span className="block text-[10px] font-semibold uppercase tracking-wide text-slate-400">Phone</span><span className="font-semibold text-white">{trainee.phoneNumber || 'N/A'}</span></div>
+	                                  <div className="col-span-2"><span className="block text-[10px] font-semibold uppercase tracking-wide text-slate-400">Email</span><span className="break-words font-semibold text-white">{trainee.email || 'N/A'}</span></div>
+	                                </div>
+	                              </div>
+	                            </div>
+	                          </div>
 
-                          <div className="flex-shrink-0 flex gap-2">
-                            <div className="w-36 bg-gray-700/30 rounded p-2">
-                              <div className="text-[10px] text-gray-400 mb-1 font-semibold">Qualifications</div>
-                              <div className="space-y-1">
-                                {assignedQualificationLabels.length > 0 ? assignedQualificationLabels.map(label => (
-                                  <div key={label} className="rounded border border-teal-500/20 bg-teal-900/80 px-2 py-1 text-teal-200 text-[9px] font-semibold break-words">{label}</div>
-                                )) : <div className="text-gray-500 text-[10px] italic">None</div>}
-                              </div>
-                            </div>
-                            <div className="w-36 bg-gray-700/30 rounded p-2">
-                              <div className="text-[10px] text-gray-400 mb-1 font-semibold">Permissions</div>
-                              <div className="space-y-1">
-                                {visiblePermissionLabels.length > 0 ? visiblePermissionLabels.map((p: string) => (
-                                  <div key={p} className="rounded border border-sky-500/20 bg-sky-800 px-2 py-1 text-sky-200 text-[9px] font-semibold break-words">{p}{hasPermissionProfileExceptions ? ' *' : ''}</div>
-                                )) : <div className="text-gray-500 text-[10px] italic">None</div>}
-                              </div>
-                            </div>
-                          </div>
+	                          <div className="grid w-[300px] flex-shrink-0 grid-cols-2 gap-2">
+	                            <div className="rounded-md border border-teal-500/20 bg-slate-900/55 p-3">
+	                              <div className="mb-2 text-[10px] font-bold uppercase tracking-[0.16em] text-teal-300">Qualifications</div>
+	                              <div className="space-y-1.5">
+	                                {assignedQualificationLabels.length > 0 ? assignedQualificationLabels.map(label => (
+	                                  <div key={label} className="rounded border border-teal-500/20 bg-teal-900/70 px-2 py-1 text-[10px] font-semibold leading-tight text-teal-100 break-words">{label}</div>
+	                                )) : <div className="text-gray-500 text-[10px] italic">None</div>}
+	                              </div>
+	                            </div>
+	                            <div className="rounded-md border border-sky-500/20 bg-slate-900/55 p-3">
+	                              <div className="mb-2 text-[10px] font-bold uppercase tracking-[0.16em] text-sky-300">Permissions</div>
+	                              <div className="space-y-1.5">
+	                                {visiblePermissionLabels.length > 0 ? visiblePermissionLabels.map((p: string) => (
+	                                  <div key={p} className="rounded border border-sky-500/20 bg-sky-800/80 px-2 py-1 text-[10px] font-semibold leading-tight text-sky-100 break-words">{p}{hasPermissionProfileExceptions ? ' *' : ''}</div>
+	                                )) : <div className="text-gray-500 text-[10px] italic">None</div>}
+	                              </div>
+	                            </div>
+	                          </div>
                         </div>
                       )}
 
