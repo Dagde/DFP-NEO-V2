@@ -224,7 +224,13 @@ export const showDarkAlert = (message: string, title: string = 'Notice', variant
   });
 };
 
-export const showDarkConfirm = (message: string, title: string = 'Confirm Action', variant: DarkMessageVariant = 'info'): Promise<boolean> => {
+export const showDarkConfirm = (
+  message: string,
+  title: string = 'Confirm Action',
+  variant: DarkMessageVariant = 'info',
+  confirmText: string = 'OK',
+  cancelText: string = 'Cancel'
+): Promise<boolean> => {
   return new Promise((resolve) => {
     mountModal((cleanup) => {
       const Modal = () => {
@@ -252,6 +258,8 @@ export const showDarkConfirm = (message: string, title: string = 'Confirm Action
           onConfirm={handleConfirm}
           onCancel={handleCancel}
           variant={variant}
+          confirmText={confirmText}
+          cancelText={cancelText}
         />
       );
     };

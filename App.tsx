@@ -20198,7 +20198,7 @@ const applyCoursePriority = (rankedList: Trainee[], diagnosticLabel = 'unlabelle
             ? `It is marked for the entire course, so I will include everyone in ${candidate.course} who is available.`
             : `I will take up to ${candidate.groupSizeMax || 'the allowed number of'} available trainees for this group.`;
 
-        return showDarkConfirm(
+        return showGlobalDarkConfirm(
             `I've found a group ground event that is ready to schedule.\n\n` +
             `${eventLabel} for ${candidate.course}\n` +
             `${candidate.readyTrainees.length} trainee${candidate.readyTrainees.length === 1 ? '' : 's'} currently have this as their next event.\n` +
