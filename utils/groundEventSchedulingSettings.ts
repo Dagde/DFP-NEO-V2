@@ -40,6 +40,59 @@ export const normaliseGroundEventTypeKey = (value: unknown): string => (
   String(value || 'Ground School').trim() || 'Ground School'
 );
 
+const formatDerivedGroundEventCategory = (value: string): string => {
+  const trimmed = value.replace(/\s+/g, ' ').trim();
+  if (!trimmed) return 'Ground';
+  const upper = trimmed.toUpperCase();
+  if (/^[A-Z]{1,5}$/.test(upper)) return upper;
+  return trimmed
+    .toLowerCase()
+    .replace(/\b[a-z]/g, char => char.toUpperCase());
+};
+
+export const deriveGroundEventSchedulingCategory = (item: unknown): string => {
+  const source = item && typeof item === 'object'
+    ? item as Record<string, unknown>
+    : {};
+  const explicitCategory = source.groundEventCategory || source.groundCategory || source.groundEventType;
+  if (String(explicitCategory || '').trim()) {
+    return normaliseGroundEventTypeKey(explicitCategory);
+  }
+
+  const rawCode = String(
+    source.code
+    || source.eventCode
+    || source.masterEventId
+    || source.id
+    || source.eventDescription
+    || source.name
+    || source.title
+    || source.type
+    || 'Ground'
+  ).trim();
+  const normalisedCode = rawCode
+    .replace(/[_/]+/g, ' ')
+    .replace(/\s*-\s*/g, '-')
+    .replace(/\s+/g, ' ')
+    .trim();
+  const upperCode = normalisedCode.toUpperCase();
+
+  if (upperCode.includes('PRE-SOLO') && upperCode.includes('QUIZ')) return 'Pre-Solo Quiz';
+  if (upperCode.includes('PRE SOLO') && upperCode.includes('QUIZ')) return 'Pre-Solo Quiz';
+
+  const withoutGenericPrefix = upperCode
+    .replace(/^GF[\s-]+/, '')
+    .trim();
+  const firstToken = withoutGenericPrefix.split(/\s+/)[0] || withoutGenericPrefix;
+  const alphaNumericPrefix = firstToken.match(/^([A-Z]+)\d+[A-Z]?$/);
+  if (alphaNumericPrefix?.[1]) return formatDerivedGroundEventCategory(alphaNumericPrefix[1]);
+
+  const spacedPrefix = withoutGenericPrefix.match(/^([A-Z]+)\s+\d+[A-Z]?$/);
+  if (spacedPrefix?.[1]) return formatDerivedGroundEventCategory(spacedPrefix[1]);
+
+  return formatDerivedGroundEventCategory(withoutGenericPrefix || normalisedCode || 'Ground');
+};
+
 export const normaliseGroundEventSchedulingRule = (value: unknown): GroundEventTypeSchedulingRule => {
   const source = value && typeof value === 'object' && !Array.isArray(value)
     ? value as Partial<GroundEventTypeSchedulingRule>
@@ -78,6 +131,8 @@ export const getGroundEventSchedulingRuleForType = (
 ): GroundEventTypeSchedulingRule => {
   const normalisedSettings = normaliseGroundEventSchedulingSettings(settings);
   const eventTypeKey = normaliseGroundEventTypeKey(eventType);
-  return normalisedSettings.byEventType[eventTypeKey] || DEFAULT_GROUND_EVENT_TYPE_SCHEDULING_RULE;
+  return normalisedSettings.byEventType[eventTypeKey]
+    || normalisedSettings.byEventType.Ground
+    || normalisedSettings.byEventType['Ground School']
+    || DEFAULT_GROUND_EVENT_TYPE_SCHEDULING_RULE;
 };
-

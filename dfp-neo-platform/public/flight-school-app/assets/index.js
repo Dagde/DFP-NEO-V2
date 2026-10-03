@@ -3195,6 +3195,34 @@ const DEFAULT_GROUND_EVENT_SCHEDULING_SETTINGS = {
 const VALID_GROUND_EVENT_SCHEDULING_MODES = /* @__PURE__ */ new Set(["automatic", "suggest", "manual"]);
 const VALID_WINDOW_IDS = new Set(GROUND_EVENT_SCHEDULING_WINDOWS.map((window2) => window2.id));
 const normaliseGroundEventTypeKey = (value) => String(value || "Ground School").trim() || "Ground School";
+const formatDerivedGroundEventCategory = (value) => {
+  const trimmed = value.replace(/\s+/g, " ").trim();
+  if (!trimmed) return "Ground";
+  const upper = trimmed.toUpperCase();
+  if (/^[A-Z]{1,5}$/.test(upper)) return upper;
+  return trimmed.toLowerCase().replace(/\b[a-z]/g, (char) => char.toUpperCase());
+};
+const deriveGroundEventSchedulingCategory = (item) => {
+  const source = item && typeof item === "object" ? item : {};
+  const explicitCategory = source.groundEventCategory || source.groundCategory || source.groundEventType;
+  if (String(explicitCategory || "").trim()) {
+    return normaliseGroundEventTypeKey(explicitCategory);
+  }
+  const rawCode = String(
+    source.code || source.eventCode || source.masterEventId || source.id || source.eventDescription || source.name || source.title || source.type || "Ground"
+  ).trim();
+  const normalisedCode = rawCode.replace(/[_/]+/g, " ").replace(/\s*-\s*/g, "-").replace(/\s+/g, " ").trim();
+  const upperCode = normalisedCode.toUpperCase();
+  if (upperCode.includes("PRE-SOLO") && upperCode.includes("QUIZ")) return "Pre-Solo Quiz";
+  if (upperCode.includes("PRE SOLO") && upperCode.includes("QUIZ")) return "Pre-Solo Quiz";
+  const withoutGenericPrefix = upperCode.replace(/^GF[\s-]+/, "").trim();
+  const firstToken = withoutGenericPrefix.split(/\s+/)[0] || withoutGenericPrefix;
+  const alphaNumericPrefix = firstToken.match(/^([A-Z]+)\d+[A-Z]?$/);
+  if (alphaNumericPrefix?.[1]) return formatDerivedGroundEventCategory(alphaNumericPrefix[1]);
+  const spacedPrefix = withoutGenericPrefix.match(/^([A-Z]+)\s+\d+[A-Z]?$/);
+  if (spacedPrefix?.[1]) return formatDerivedGroundEventCategory(spacedPrefix[1]);
+  return formatDerivedGroundEventCategory(withoutGenericPrefix || normalisedCode || "Ground");
+};
 const normaliseGroundEventSchedulingRule = (value) => {
   const source = value && typeof value === "object" && !Array.isArray(value) ? value : {};
   const mode = VALID_GROUND_EVENT_SCHEDULING_MODES.has(source.mode) ? source.mode : DEFAULT_GROUND_EVENT_TYPE_SCHEDULING_RULE.mode;
@@ -3212,7 +3240,7 @@ const normaliseGroundEventSchedulingSettings = (value) => {
 const getGroundEventSchedulingRuleForType = (settings, eventType) => {
   const normalisedSettings = normaliseGroundEventSchedulingSettings(settings);
   const eventTypeKey = normaliseGroundEventTypeKey(eventType);
-  return normalisedSettings.byEventType[eventTypeKey] || DEFAULT_GROUND_EVENT_TYPE_SCHEDULING_RULE;
+  return normalisedSettings.byEventType[eventTypeKey] || normalisedSettings.byEventType.Ground || normalisedSettings.byEventType["Ground School"] || DEFAULT_GROUND_EVENT_TYPE_SCHEDULING_RULE;
 };
 const DEG_TO_RAD = Math.PI / 180;
 const RAD_TO_DEG = 180 / Math.PI;
@@ -16755,17 +16783,23 @@ const SettingsView = ({
   }, [masterCurrencies, currencyRequirements]);
   const groundEventTypeOptions = reactExports.useMemo(() => {
     const typeSet = /* @__PURE__ */ new Set();
+    const lmpCategorySet = /* @__PURE__ */ new Set();
     syllabusDetails.forEach((item) => {
       const itemType = normaliseGroundEventTypeKey(item?.type);
       const lowerType = itemType.toLowerCase();
       const groupEventValue = item?.groupEvent;
       const isGroupEvent = groupEventValue === true || ["yes", "true", "y"].includes(String(groupEventValue || "").trim().toLowerCase());
       if (lowerType.includes("ground") || isGroupEvent) {
-        typeSet.add(itemType);
+        lmpCategorySet.add(deriveGroundEventSchedulingCategory(item));
       }
     });
+    lmpCategorySet.forEach((category) => typeSet.add(category));
     Object.keys(resolvedGroundEventSchedulingSettings.byEventType || {}).forEach((eventType) => {
-      typeSet.add(normaliseGroundEventTypeKey(eventType));
+      const savedKey = normaliseGroundEventTypeKey(eventType);
+      const isLegacyGenericGroundKey = ["Ground", "Ground School"].includes(savedKey);
+      if (lmpCategorySet.size === 0 || !isLegacyGenericGroundKey) {
+        typeSet.add(savedKey);
+      }
     });
     if (typeSet.size === 0) typeSet.add("Ground");
     return Array.from(typeSet).sort((a, b) => a.localeCompare(b, void 0, { numeric: true, sensitivity: "base" }));
@@ -17391,7 +17425,7 @@ const SettingsView = ({
         /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-start justify-between gap-4 border-b border-gray-700 p-4", children: [
           /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
             /* @__PURE__ */ jsxRuntimeExports.jsx("h2", { className: "text-lg font-semibold text-gray-200", children: "Ground Event Scheduling" }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-1 max-w-3xl text-xs text-gray-400", children: "Choose how NEO Build handles ground event types that are marked as group events in the LMP. Manual leaves the existing individual scheduler untouched." })
+            /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-1 max-w-3xl text-xs text-gray-400", children: "Choose how NEO Build handles LMP ground event categories such as MB, TUT, and Pre-Solo Quiz. Manual leaves the existing individual scheduler untouched." })
           ] }),
           isEditingGroundEventScheduling ? /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex gap-[1px]", children: [
             /* @__PURE__ */ jsxRuntimeExports.jsx("button", { onClick: handleSaveGroundEventScheduling, className: standardSettingsButtonClass2, children: "Save" }),
@@ -17407,13 +17441,13 @@ const SettingsView = ({
           )
         ] }),
         /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-4 p-4", children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "rounded-md border border-sky-500/30 bg-sky-500/10 p-3 text-xs leading-relaxed text-sky-100", children: "Automatic schedules eligible group ground events before individual events. Alert/Suggest asks the scheduler to accept or skip each eligible group event during NEO Build. Preferred windows guide placement when a group event can be placed in more than one valid slot." }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "rounded-md border border-sky-500/30 bg-sky-500/10 p-3 text-xs leading-relaxed text-sky-100", children: "Categories are recognised from the LMP event code/name. Automatic schedules eligible group ground events before individual events. Alert/Suggest asks the scheduler to accept or skip each eligible group event during NEO Build. Preferred windows guide placement when a group event can be placed in more than one valid slot." }),
           groundEventTypeOptions.map((eventType) => {
             const rule = getGroundEventSchedulingRuleForType(displayedGroundEventSchedulingSettings, eventType);
             return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded-lg border border-gray-700 bg-gray-900/50 p-4", children: [
               /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid gap-4 lg:grid-cols-[220px_minmax(260px,1fr)]", children: [
                 /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
-                  /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "mb-2 block text-[11px] font-bold uppercase tracking-widest text-sky-300", children: "Event Type" }),
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "mb-2 block text-[11px] font-bold uppercase tracking-widest text-sky-300", children: "Ground Event Category" }),
                   /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "rounded-md border border-gray-700 bg-gray-950/70 px-3 py-2 text-sm font-semibold text-white", children: eventType })
                 ] }),
                 /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
@@ -132349,7 +132383,7 @@ async function generateDfpInternal(config, setProgress, publishedSchedules) {
       const next = traineeNextEventMap.get(getBuildTraineeKey(trainee))?.next;
       if (!next || classifyBuildTrainingEvent(next).bucket !== "ground") continue;
       if (!isLmpGroupEventEnabled(next.groupEvent)) continue;
-      const eventType = normaliseGroundEventTypeKey(next.type);
+      const eventType = deriveGroundEventSchedulingCategory(next);
       const rule = getGroundEventSchedulingRuleForType(buildGroundEventSchedulingSettings, eventType);
       if (rule.mode === "manual") {
         if (neoBuildDiag.groupGroundScheduling.skips.length < 220) {

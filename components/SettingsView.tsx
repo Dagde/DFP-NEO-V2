@@ -36,6 +36,7 @@ import {
 } from '../utils/dispatchRate';
 import {
     DEFAULT_GROUND_EVENT_SCHEDULING_SETTINGS,
+    deriveGroundEventSchedulingCategory,
     getGroundEventSchedulingRuleForType,
     GROUND_EVENT_SCHEDULING_WINDOWS,
     normaliseGroundEventSchedulingSettings,
@@ -791,6 +792,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
 
     const groundEventTypeOptions = useMemo(() => {
         const typeSet = new Set<string>();
+        const lmpCategorySet = new Set<string>();
         syllabusDetails.forEach((item) => {
             const itemType = normaliseGroundEventTypeKey((item as any)?.type);
             const lowerType = itemType.toLowerCase();
@@ -798,11 +800,16 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
             const isGroupEvent = groupEventValue === true
                 || ['yes', 'true', 'y'].includes(String(groupEventValue || '').trim().toLowerCase());
             if (lowerType.includes('ground') || isGroupEvent) {
-                typeSet.add(itemType);
+                lmpCategorySet.add(deriveGroundEventSchedulingCategory(item));
             }
         });
+        lmpCategorySet.forEach((category) => typeSet.add(category));
         Object.keys(resolvedGroundEventSchedulingSettings.byEventType || {}).forEach((eventType) => {
-            typeSet.add(normaliseGroundEventTypeKey(eventType));
+            const savedKey = normaliseGroundEventTypeKey(eventType);
+            const isLegacyGenericGroundKey = ['Ground', 'Ground School'].includes(savedKey);
+            if (lmpCategorySet.size === 0 || !isLegacyGenericGroundKey) {
+                typeSet.add(savedKey);
+            }
         });
         if (typeSet.size === 0) typeSet.add('Ground');
         return Array.from(typeSet).sort((a, b) => a.localeCompare(b, undefined, { numeric: true, sensitivity: 'base' }));
@@ -1548,7 +1555,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                             <div>
                                 <h2 className="text-lg font-semibold text-gray-200">Ground Event Scheduling</h2>
                                 <p className="mt-1 max-w-3xl text-xs text-gray-400">
-                                    Choose how NEO Build handles ground event types that are marked as group events in the LMP. Manual leaves the existing individual scheduler untouched.
+                                    Choose how NEO Build handles LMP ground event categories such as MB, TUT, and Pre-Solo Quiz. Manual leaves the existing individual scheduler untouched.
                                 </p>
                             </div>
                             {isEditingGroundEventScheduling ? (
@@ -1568,7 +1575,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                         </div>
                         <div className="space-y-4 p-4">
                             <div className="rounded-md border border-sky-500/30 bg-sky-500/10 p-3 text-xs leading-relaxed text-sky-100">
-                                Automatic schedules eligible group ground events before individual events. Alert/Suggest asks the scheduler to accept or skip each eligible group event during NEO Build. Preferred windows guide placement when a group event can be placed in more than one valid slot.
+                                Categories are recognised from the LMP event code/name. Automatic schedules eligible group ground events before individual events. Alert/Suggest asks the scheduler to accept or skip each eligible group event during NEO Build. Preferred windows guide placement when a group event can be placed in more than one valid slot.
                             </div>
                             {groundEventTypeOptions.map((eventType) => {
                                 const rule = getGroundEventSchedulingRuleForType(displayedGroundEventSchedulingSettings, eventType);
@@ -1577,7 +1584,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                                         <div className="grid gap-4 lg:grid-cols-[220px_minmax(260px,1fr)]">
                                             <div>
                                                 <label className="mb-2 block text-[11px] font-bold uppercase tracking-widest text-sky-300">
-                                                    Event Type
+                                                    Ground Event Category
                                                 </label>
                                                 <div className="rounded-md border border-gray-700 bg-gray-950/70 px-3 py-2 text-sm font-semibold text-white">
                                                     {eventType}

@@ -199,6 +199,7 @@ import {
 import { DEFAULT_DISPATCH_RATE_WINDOW_MINUTES, normaliseDispatchRateWindowMinutes } from './utils/dispatchRate';
 import {
     DEFAULT_GROUND_EVENT_SCHEDULING_SETTINGS,
+    deriveGroundEventSchedulingCategory,
     getGroundEventSchedulingRuleForType,
     GROUND_EVENT_SCHEDULING_WINDOWS,
     normaliseGroundEventSchedulingSettings,
@@ -19952,7 +19953,7 @@ const applyCoursePriority = (rankedList: Trainee[], diagnosticLabel = 'unlabelle
             if (!next || classifyBuildTrainingEvent(next).bucket !== 'ground') continue;
             if (!isLmpGroupEventEnabled((next as any).groupEvent)) continue;
 
-            const eventType = normaliseGroundEventTypeKey(next.type);
+            const eventType = deriveGroundEventSchedulingCategory(next);
             const rule = getGroundEventSchedulingRuleForType(buildGroundEventSchedulingSettings, eventType);
             if (rule.mode === 'manual') {
                 if (neoBuildDiag.groupGroundScheduling.skips.length < 220) {
