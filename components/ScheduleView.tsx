@@ -1010,6 +1010,8 @@ const wizardRequiredHeaderAliases: Record<string, string[]> = {
     role: ['position', 'crewrole', 'primaryrole'],
     qualifications: ['qualification', 'qualificationsandroles', 'qualificationsroles', 'quals', 'roles'],
     personnelId: ['personnelid', 'personid', 'staffid', 'employeeid', 'serviceid', 'servicenumber', 'employeenumber', 'personnelnumber', 'idnumber', 'idno', 'id'],
+    callsign: ['primarycallsign', 'callsignnumber', 'callsignno', 'callsignnumberorprefixnumber', 'callsignprefixnumber', 'callsignnumberprefixnumber'],
+    secondarycallsign: ['altcallsign', 'alternatecallsign', 'alternativecallsign'],
     code: ['icao', 'locationcode', 'basecode'],
     aircrafttype: ['aircraft', 'resource'],
     course: ['courseallocation', 'allocatedcourse', 'courseassigned', 'trainingcourse', 'package', 'masterlmp', 'masterlmpname', 'lmp', 'lmpname'],
@@ -8162,7 +8164,7 @@ const InitialSetupWizard: React.FC<{
                     phoneNumber: getWizardCellByAnyHeader(headers, row, ['Phone', 'Phone Number', 'Mobile', 'Mobile Number']),
                     location: getWizardCellByAnyHeader(headers, row, ['Location', 'Base', 'Home Location', 'Airfield']),
                     category: getWizardCellByHeader(headers, row, 'Category'),
-                    callsign: getWizardCellByHeader(headers, row, 'Callsign'),
+                    callsign: getWizardCellByAnyHeader(headers, row, ['Callsign', 'Callsign Number or Prefix Number', 'Callsign Prefix Number', 'Primary Callsign']),
                     secondaryCallsign: getWizardCellByAnyHeader(headers, row, ['Secondary Callsign', 'Alt Callsign']),
                     callsignNumber: getWizardCellByAnyHeader(headers, row, ['Callsign Number', 'Callsign No', 'Callsign No.']),
                     crew: getWizardCellByHeader(headers, row, 'Crew'),
@@ -8219,6 +8221,7 @@ const InitialSetupWizard: React.FC<{
                     service: getWizardCellByHeader(headers, row, 'Service'),
                     role: getWizardCellByHeader(headers, row, 'Role'),
                     callsign: getWizardCellByHeader(headers, row, 'Callsign'),
+                    traineeCallsign: getWizardCellByHeader(headers, row, 'Callsign'),
                     permissions: parseWizardTemplateList(getWizardCellByHeader(headers, row, 'Permissions')),
                     seatConfig: getWizardCellByAnyHeader(headers, row, ['Seat Config', 'Seat Configuration', 'Config']),
                 };
@@ -10927,11 +10930,45 @@ const InitialSetupWizard: React.FC<{
                     service: displayedRow.service || uploadedRow.service || '',
                     role: displayedRow.role || uploadedRow.role || '',
                     callsign: displayedRow.callsign || uploadedRow.callsign || '',
+                    traineeCallsign: displayedRow.traineeCallsign || uploadedRow.traineeCallsign || uploadedRow.callsign || '',
                     permissions: displayedRow.permissions || uploadedRow.permissions || [],
                     sourceTemplateData: uploadedRow.sourceTemplateData || displayedRow.sourceTemplateData,
                 };
             })
             : uploadedTraineeProfileRows;
+    };
+
+    const getResolvedWizardStaffRowsForCommit = (
+        effectiveStaffDraft: string = staffDraft,
+        effectiveUploadedRows: any[] = uploadedStaffProfileRows,
+    ) => {
+        const displayedRows = parseWizardStaffRows(effectiveStaffDraft);
+        return displayedRows.length > 0
+            ? displayedRows.map((row, index) => {
+                const displayedRow = row as any;
+                const uploadedRow = (effectiveUploadedRows[index] || {}) as any;
+                return {
+                    ...uploadedRow,
+                    ...displayedRow,
+                    personnelId: displayedRow.personnelId || uploadedRow.personnelId || uploadedRow.idNumber || '',
+                    idNumber: displayedRow.personnelId || uploadedRow.idNumber || uploadedRow.personnelId || '',
+                    service: displayedRow.service || uploadedRow.service || '',
+                    category: displayedRow.category || uploadedRow.category || '',
+                    callsign: displayedRow.callsign || uploadedRow.callsign || '',
+                    secondaryCallsign: displayedRow.secondaryCallsign || uploadedRow.secondaryCallsign || '',
+                    callsignNumber: displayedRow.callsignNumber || uploadedRow.callsignNumber || '',
+                    email: displayedRow.email || uploadedRow.email || '',
+                    phoneNumber: displayedRow.phoneNumber || uploadedRow.phoneNumber || '',
+                    location: displayedRow.location || uploadedRow.location || '',
+                    crew: displayedRow.crew || uploadedRow.crew || '',
+                    flight: displayedRow.flight || uploadedRow.flight || '',
+                    seatConfig: displayedRow.seatConfig || uploadedRow.seatConfig || '',
+                    isAdminStaff: displayedRow.isAdminStaff === true || uploadedRow.isAdminStaff === true,
+                    permissions: displayedRow.permissions || uploadedRow.permissions || [],
+                    sourceTemplateData: uploadedRow.sourceTemplateData || displayedRow.sourceTemplateData,
+                };
+            })
+            : effectiveUploadedRows;
     };
 
     const getWizardPersonnelForCommit = (
@@ -10979,10 +11016,13 @@ const InitialSetupWizard: React.FC<{
     const persistWizardStaffProfilesToDatabase = async (
         overrides: { staffDraft?: string; staffRows?: any[] } = {},
     ) => {
-        const { instructors } = getWizardPersonnelForCommit(overrides);
         const sourceRows = Array.isArray(overrides.staffRows) && overrides.staffRows.length > 0
             ? overrides.staffRows
-            : parseWizardStaffRows(overrides.staffDraft ?? staffDraft);
+            : getResolvedWizardStaffRowsForCommit(overrides.staffDraft ?? staffDraft);
+        const { instructors } = getWizardPersonnelForCommit({
+            ...overrides,
+            staffRows: sourceRows,
+        });
         const meaningfulRows = sourceRows.filter(isMeaningfulWizardStaffRow);
         const existingPayload = await requestWizardApiJson('/api/personnel');
         const existingTraineePayload = await requestWizardApiJson('/api/trainees');
