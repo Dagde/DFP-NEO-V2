@@ -17659,10 +17659,11 @@ const SettingsView = ({
                 /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "mb-2 block text-[11px] font-bold uppercase tracking-widest text-sky-300", children: "Assigned Ground Events" }),
                 canEditGroundEventScheduling ? /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "max-h-44 overflow-y-auto rounded-md border border-gray-700 bg-gray-950/50 p-2", children: /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "grid gap-2 sm:grid-cols-2 lg:grid-cols-3", children: availableGroundEventSchedulingEvents.map((eventOption) => {
                   const checked = group.eventCodes.includes(eventOption.code);
+                  const assignedToAnyGroup = displayedGroundEventSchedulingGroups.some((existingGroup) => existingGroup.eventCodes.includes(eventOption.code));
                   return /* @__PURE__ */ jsxRuntimeExports.jsxs(
                     "label",
                     {
-                      className: `flex items-start gap-2 rounded-md border px-2 py-2 text-xs ${checked ? "border-sky-500/60 bg-sky-500/10 text-sky-50" : "border-gray-700 bg-gray-900 text-gray-300"}`,
+                      className: `flex items-start gap-2 rounded-md border px-2 py-2 text-xs ${checked ? "border-sky-500/60 bg-sky-500/10 text-sky-50" : assignedToAnyGroup ? "border-gray-700 bg-gray-900 text-gray-300" : "border-yellow-500/70 bg-yellow-500/15 text-yellow-100"}`,
                       children: [
                         /* @__PURE__ */ jsxRuntimeExports.jsx(
                           "input",

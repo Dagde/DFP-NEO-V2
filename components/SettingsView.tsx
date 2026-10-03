@@ -1776,13 +1776,18 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                                                     <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
                                                         {availableGroundEventSchedulingEvents.map((eventOption) => {
                                                             const checked = group.eventCodes.includes(eventOption.code);
+                                                            const assignedToAnyGroup = displayedGroundEventSchedulingGroups.some(existingGroup => (
+                                                                existingGroup.eventCodes.includes(eventOption.code)
+                                                            ));
                                                             return (
                                                                 <label
                                                                     key={eventOption.code}
                                                                     className={`flex items-start gap-2 rounded-md border px-2 py-2 text-xs ${
                                                                         checked
                                                                             ? 'border-sky-500/60 bg-sky-500/10 text-sky-50'
-                                                                            : 'border-gray-700 bg-gray-900 text-gray-300'
+                                                                            : assignedToAnyGroup
+                                                                                ? 'border-gray-700 bg-gray-900 text-gray-300'
+                                                                                : 'border-yellow-500/70 bg-yellow-500/15 text-yellow-100'
                                                                     }`}
                                                                 >
                                                                     <input
