@@ -1360,6 +1360,25 @@ export const InstructorProfileFlyout: React.FC<InstructorProfileFlyoutProps> = (
     </svg>
   );
 
+  const DetailDataWindow = ({
+    label,
+    value,
+    className = '',
+    valueClassName = 'truncate',
+  }: {
+    label: string;
+    value: React.ReactNode;
+    className?: string;
+    valueClassName?: string;
+  }) => (
+    <div className={`min-w-0 ${className}`}>
+      <div className="mb-1 text-[10px] font-semibold leading-none text-white">{label}</div>
+      <div className="flex h-[46px] min-w-0 items-center rounded-md bg-slate-800/90 px-3 text-sm font-semibold leading-tight text-white shadow-inner shadow-black/20 ring-1 ring-white/5">
+        <div className={`min-w-0 ${valueClassName}`}>{value}</div>
+      </div>
+    </div>
+  );
+
   return (
     <>
       <div className="fixed inset-0 bg-black/70 z-[90] flex items-start justify-center overflow-hidden px-4 pb-4 pt-[7.25rem]" onClick={onClose}>
@@ -2314,31 +2333,31 @@ export const InstructorProfileFlyout: React.FC<InstructorProfileFlyoutProps> = (
                       <div className="grid grid-cols-[minmax(260px,1.15fr)_minmax(250px,1fr)_minmax(210px,0.9fr)] gap-3">
                         <div className="rounded-md border border-slate-600/60 bg-slate-900/45 p-3 shadow-inner shadow-black/10">
                           <div className="mb-2 text-[10px] font-bold uppercase tracking-[0.16em] text-sky-300">Identity</div>
-                          <div className="grid grid-cols-2 gap-x-3 gap-y-2 text-xs">
-                            <div><span className="block text-[10px] font-semibold uppercase tracking-wide text-slate-400">Personnel ID</span><span className="font-semibold text-white">{instructor.idNumber || '-'}</span></div>
-                            <div><span className="block text-[10px] font-semibold uppercase tracking-wide text-slate-400">Rank</span><span className="font-semibold text-white">{instructor.rank || '-'}</span></div>
-                            <div><span className="block text-[10px] font-semibold uppercase tracking-wide text-slate-400">Callsign</span><span className="font-semibold text-white">{displayCallsign || '[None]'}</span></div>
-                            <div><span className="block text-[10px] font-semibold uppercase tracking-wide text-slate-400">Secondary</span><span className="font-semibold text-gray-300">{instructor.secondaryCallsign || '[None]'}</span></div>
-                            <div><span className="block text-[10px] font-semibold uppercase tracking-wide text-slate-400">Role</span><span className="font-semibold text-sky-300">{profileRoleDisplay.label}</span></div>
-                            <div><span className="block text-[10px] font-semibold uppercase tracking-wide text-slate-400">Service</span><span className="font-semibold text-white">{displayService || '[None]'}</span></div>
+                          <div className="grid grid-cols-2 gap-3">
+                            <DetailDataWindow label="Personnel ID" value={instructor.idNumber || '-'} />
+                            <DetailDataWindow label="Rank" value={instructor.rank || '-'} />
+                            <DetailDataWindow label="Callsign" value={displayCallsign || '[None]'} />
+                            <DetailDataWindow label="Secondary" value={<span className="text-gray-300">{instructor.secondaryCallsign || '[None]'}</span>} />
+                            <DetailDataWindow label="Role" value={<span className="text-sky-300">{profileRoleDisplay.label}</span>} />
+                            <DetailDataWindow label="Service" value={displayService || '[None]'} />
                           </div>
                         </div>
                         <div className="rounded-md border border-slate-600/60 bg-slate-900/45 p-3 shadow-inner shadow-black/10">
                           <div className="mb-2 text-[10px] font-bold uppercase tracking-[0.16em] text-sky-300">Assignment</div>
-                          <div className="grid grid-cols-2 gap-x-3 gap-y-2 text-xs">
-                            <div><span className="block text-[10px] font-semibold uppercase tracking-wide text-slate-400">Category</span><span className="font-semibold text-white">{isContractorStaffRoleValue(instructor.role) ? simIpDisplayLabel : instructor.category}</span></div>
-                            <div><span className="block text-[10px] font-semibold uppercase tracking-wide text-slate-400">Seat Config</span><span className="font-semibold text-white">{instructor.seatConfig || '-'}</span></div>
-                            <div><span className="block text-[10px] font-semibold uppercase tracking-wide text-slate-400">Unit</span><span className="font-semibold text-white">{instructor.unit || '-'}</span></div>
-                            <div><span className="block text-[10px] font-semibold uppercase tracking-wide text-slate-400">Crew</span><span className="font-semibold text-white">{instructor.crew || '[None]'}</span></div>
-                            <div><span className="block text-[10px] font-semibold uppercase tracking-wide text-slate-400">Location</span><span className="font-semibold text-white">{instructor.location || '-'}</span></div>
-                            <div><span className="block text-[10px] font-semibold uppercase tracking-wide text-slate-400">Flight</span><span className="font-semibold text-white">{instructor.flight || 'N/A'}</span></div>
+                          <div className="grid grid-cols-2 gap-3">
+                            <DetailDataWindow label="Category" value={isContractorStaffRoleValue(instructor.role) ? simIpDisplayLabel : instructor.category} />
+                            <DetailDataWindow label="Seat Config" value={instructor.seatConfig || '-'} />
+                            <DetailDataWindow label="Unit" value={instructor.unit || '-'} />
+                            <DetailDataWindow label="Crew" value={instructor.crew || '[None]'} />
+                            <DetailDataWindow label="Location" value={instructor.location || '-'} />
+                            <DetailDataWindow label="Flight" value={instructor.flight || 'N/A'} />
                           </div>
                         </div>
                         <div className="rounded-md border border-slate-600/60 bg-slate-900/45 p-3 shadow-inner shadow-black/10">
                           <div className="mb-2 text-[10px] font-bold uppercase tracking-[0.16em] text-sky-300">Contact</div>
-                          <div className="grid grid-cols-2 gap-x-3 gap-y-2 text-xs">
-                            <div className="col-span-2"><span className="block text-[10px] font-semibold uppercase tracking-wide text-slate-400">Phone</span><span className="font-semibold text-white">{instructor.phoneNumber || 'N/A'}</span></div>
-                            <div className="col-span-2"><span className="block text-[10px] font-semibold uppercase tracking-wide text-slate-400">Email</span><span className="break-words font-semibold text-white">{instructor.email || 'N/A'}</span></div>
+                          <div className="grid grid-cols-1 gap-3">
+                            <DetailDataWindow label="Phone" value={instructor.phoneNumber || 'N/A'} />
+                            <DetailDataWindow label="Email" value={instructor.email || 'N/A'} valueClassName="whitespace-normal break-words text-[12px] leading-tight" />
                           </div>
                         </div>
                       </div>

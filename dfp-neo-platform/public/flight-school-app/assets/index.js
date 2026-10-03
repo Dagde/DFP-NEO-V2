@@ -55360,6 +55360,15 @@ ${errorText || `HTTP ${response.status}`}`, "Delete Failed", "error");
       ] }, role2)) }) : /* @__PURE__ */ jsxRuntimeExports.jsx("ul", { className: "space-y-2 text-white list-disc list-inside", children: /* @__PURE__ */ jsxRuntimeExports.jsx("li", { className: "list-none italic text-gray-500", children: "No roles assigned." }) }) })
     ] })
   ] });
+  const DetailDataWindow = ({
+    label,
+    value,
+    className = "",
+    valueClassName = "truncate"
+  }) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: `min-w-0 ${className}`, children: [
+    /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mb-1 text-[10px] font-semibold leading-none text-white", children: label }),
+    /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex h-[46px] min-w-0 items-center rounded-md bg-slate-800/90 px-3 text-sm font-semibold leading-tight text-white shadow-inner shadow-black/20 ring-1 ring-white/5", children: /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: `min-w-0 ${valueClassName}`, children: value }) })
+  ] });
   return /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
     /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "fixed inset-0 bg-black/70 z-[90] flex items-start justify-center overflow-hidden px-4 pb-4 pt-[7.25rem]", onClick: onClose, children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "bg-[#141e2e] rounded-lg shadow-2xl w-full md:w-[calc(100vw-12rem)] xl:w-[min(calc(100vw-18rem),88rem)] max-w-[88rem] max-h-[calc(100vh-8.25rem)] flex flex-col border border-gray-600 overflow-hidden", onClick: (e) => e.stopPropagation(), children: [
       /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "px-5 py-3 border-b border-gray-600 flex justify-between items-center bg-[#0f1824] flex-shrink-0", children: [
@@ -56272,89 +56281,41 @@ ${errorText || `HTTP ${response.status}`}`, "Delete Failed", "error");
                       /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid grid-cols-[minmax(260px,1.15fr)_minmax(250px,1fr)_minmax(210px,0.9fr)] gap-3", children: [
                         /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded-md border border-slate-600/60 bg-slate-900/45 p-3 shadow-inner shadow-black/10", children: [
                           /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mb-2 text-[10px] font-bold uppercase tracking-[0.16em] text-sky-300", children: "Identity" }),
-                          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid grid-cols-2 gap-x-3 gap-y-2 text-xs", children: [
-                            /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
-                              /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "block text-[10px] font-semibold uppercase tracking-wide text-slate-400", children: "Personnel ID" }),
-                              /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "font-semibold text-white", children: trainee.idNumber || "-" })
-                            ] }),
-                            /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
-                              /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "block text-[10px] font-semibold uppercase tracking-wide text-slate-400", children: "Rank" }),
-                              /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "font-semibold text-white", children: trainee.rank })
-                            ] }),
-                            /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
-                              /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "block text-[10px] font-semibold uppercase tracking-wide text-slate-400", children: "Callsign" }),
-                              /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "font-semibold text-white", children: trainee.traineeCallsign || `${callsignData?.callsignPrefix || ""}${callsignData?.callsignNumber || ""}` || "-" })
-                            ] }),
-                            /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
-                              /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "block text-[10px] font-semibold uppercase tracking-wide text-slate-400", children: "Secondary" }),
-                              /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "font-semibold text-white", children: trainee.secondaryCallsign || "-" })
-                            ] }),
-                            /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
-                              /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "block text-[10px] font-semibold uppercase tracking-wide text-slate-400", children: "Role" }),
-                              /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "font-semibold text-sky-300", children: trainee.role || /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-gray-500 italic", children: "None" }) })
-                            ] }),
-                            /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
-                              /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "block text-[10px] font-semibold uppercase tracking-wide text-slate-400", children: "Service" }),
-                              /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "font-semibold text-white", children: displayService || "[None]" })
-                            ] })
+                          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid grid-cols-2 gap-3", children: [
+                            /* @__PURE__ */ jsxRuntimeExports.jsx(DetailDataWindow, { label: "Personnel ID", value: trainee.idNumber || "-" }),
+                            /* @__PURE__ */ jsxRuntimeExports.jsx(DetailDataWindow, { label: "Rank", value: trainee.rank }),
+                            /* @__PURE__ */ jsxRuntimeExports.jsx(DetailDataWindow, { label: "Callsign", value: trainee.traineeCallsign || `${callsignData?.callsignPrefix || ""}${callsignData?.callsignNumber || ""}` || "-" }),
+                            /* @__PURE__ */ jsxRuntimeExports.jsx(DetailDataWindow, { label: "Secondary", value: trainee.secondaryCallsign || "-" }),
+                            /* @__PURE__ */ jsxRuntimeExports.jsx(DetailDataWindow, { label: "Role", value: /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-sky-300", children: trainee.role || /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-gray-500 italic", children: "None" }) }) }),
+                            /* @__PURE__ */ jsxRuntimeExports.jsx(DetailDataWindow, { label: "Service", value: displayService || "[None]" })
                           ] })
                         ] }),
                         /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded-md border border-slate-600/60 bg-slate-900/45 p-3 shadow-inner shadow-black/10", children: [
                           /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mb-2 text-[10px] font-bold uppercase tracking-[0.16em] text-sky-300", children: "Training" }),
-                          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid grid-cols-2 gap-x-3 gap-y-2 text-xs", children: [
-                            /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
-                              /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "block text-[10px] font-semibold uppercase tracking-wide text-slate-400", children: "Course" }),
-                              /* @__PURE__ */ jsxRuntimeExports.jsx(
-                                "span",
-                                {
-                                  "data-course-color": "true",
-                                  className: `inline-flex rounded px-1.5 py-0.5 text-[10px] font-bold text-white ${(courseColors[trainee.course] || "").startsWith("#") ? "" : courseColors[trainee.course] || "bg-gray-500"}`,
-                                  style: (courseColors[trainee.course] || "").startsWith("#") ? { backgroundColor: courseColors[trainee.course] } : {},
-                                  children: trainee.course || "-"
-                                }
-                              )
-                            ] }),
-                            /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
-                              /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "block text-[10px] font-semibold uppercase tracking-wide text-slate-400", children: "Seat Config" }),
-                              /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "font-semibold text-white", children: trainee.seatConfig || "-" })
-                            ] }),
-                            /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
-                              /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "block text-[10px] font-semibold uppercase tracking-wide text-slate-400", children: "LMP" }),
-                              /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "font-semibold text-sky-300", children: trainee.lmpType || /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-gray-500 italic", children: "None" }) })
-                            ] }),
-                            /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
-                              /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "block text-[10px] font-semibold uppercase tracking-wide text-slate-400", children: "Academic LMP" }),
-                              /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "font-semibold text-purple-300", children: effectiveAcademicLmpType || /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-gray-500 italic", children: "None" }) })
-                            ] }),
-                            /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
-                              /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "block text-[10px] font-semibold uppercase tracking-wide text-slate-400", children: "Unit" }),
-                              /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "font-semibold text-white", children: trainee.unit || "-" })
-                            ] }),
-                            /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
-                              /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "block text-[10px] font-semibold uppercase tracking-wide text-slate-400", children: "Crew" }),
-                              /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "font-semibold text-white", children: trainee.crew || "N/A" })
-                            ] })
+                          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid grid-cols-2 gap-3", children: [
+                            /* @__PURE__ */ jsxRuntimeExports.jsx(DetailDataWindow, { label: "Course", value: /* @__PURE__ */ jsxRuntimeExports.jsx(
+                              "span",
+                              {
+                                "data-course-color": "true",
+                                className: `inline-flex rounded px-1.5 py-0.5 text-[10px] font-bold text-white ${(courseColors[trainee.course] || "").startsWith("#") ? "" : courseColors[trainee.course] || "bg-gray-500"}`,
+                                style: (courseColors[trainee.course] || "").startsWith("#") ? { backgroundColor: courseColors[trainee.course] } : {},
+                                children: trainee.course || "-"
+                              }
+                            ) }),
+                            /* @__PURE__ */ jsxRuntimeExports.jsx(DetailDataWindow, { label: "Seat Config", value: trainee.seatConfig || "-" }),
+                            /* @__PURE__ */ jsxRuntimeExports.jsx(DetailDataWindow, { label: "LMP", value: /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-sky-300", children: trainee.lmpType || /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-gray-500 italic", children: "None" }) }) }),
+                            /* @__PURE__ */ jsxRuntimeExports.jsx(DetailDataWindow, { label: "Academic LMP", value: /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-purple-300", children: effectiveAcademicLmpType || /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-gray-500 italic", children: "None" }) }) }),
+                            /* @__PURE__ */ jsxRuntimeExports.jsx(DetailDataWindow, { label: "Unit", value: trainee.unit || "-" }),
+                            /* @__PURE__ */ jsxRuntimeExports.jsx(DetailDataWindow, { label: "Crew", value: trainee.crew || "N/A" })
                           ] })
                         ] }),
                         /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded-md border border-slate-600/60 bg-slate-900/45 p-3 shadow-inner shadow-black/10", children: [
                           /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mb-2 text-[10px] font-bold uppercase tracking-[0.16em] text-sky-300", children: "Contact" }),
-                          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid grid-cols-2 gap-x-3 gap-y-2 text-xs", children: [
-                            /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
-                              /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "block text-[10px] font-semibold uppercase tracking-wide text-slate-400", children: "Location" }),
-                              /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "font-semibold text-white", children: trainee.location || "-" })
-                            ] }),
-                            /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
-                              /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "block text-[10px] font-semibold uppercase tracking-wide text-slate-400", children: "Flight" }),
-                              /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "font-semibold text-white", children: trainee.flight || "N/A" })
-                            ] }),
-                            /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "col-span-2", children: [
-                              /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "block text-[10px] font-semibold uppercase tracking-wide text-slate-400", children: "Phone" }),
-                              /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "font-semibold text-white", children: trainee.phoneNumber || "N/A" })
-                            ] }),
-                            /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "col-span-2", children: [
-                              /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "block text-[10px] font-semibold uppercase tracking-wide text-slate-400", children: "Email" }),
-                              /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "break-words font-semibold text-white", children: trainee.email || "N/A" })
-                            ] })
+                          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid grid-cols-2 gap-3", children: [
+                            /* @__PURE__ */ jsxRuntimeExports.jsx(DetailDataWindow, { label: "Location", value: trainee.location || "-" }),
+                            /* @__PURE__ */ jsxRuntimeExports.jsx(DetailDataWindow, { label: "Flight", value: trainee.flight || "N/A" }),
+                            /* @__PURE__ */ jsxRuntimeExports.jsx(DetailDataWindow, { label: "Phone", value: trainee.phoneNumber || "N/A", className: "col-span-2" }),
+                            /* @__PURE__ */ jsxRuntimeExports.jsx(DetailDataWindow, { label: "Email", value: trainee.email || "N/A", className: "col-span-2", valueClassName: "whitespace-normal break-words text-[12px] leading-tight" })
                           ] })
                         ] })
                       ] })
@@ -90183,6 +90144,15 @@ Confirm the Personnel ID, unit and role are correct before saving this separate 
   const assignedPermissionProfileLabels = assignedPermissionProfileSummary.labels;
   const hasPermissionProfileExceptions = assignedPermissionProfileSummary.hasPermissionOverrides;
   const TraineeIcon = () => /* @__PURE__ */ jsxRuntimeExports.jsx("svg", { className: "w-5 h-5 text-gray-400", fill: "currentColor", viewBox: "0 0 24 24", children: /* @__PURE__ */ jsxRuntimeExports.jsx("path", { d: "M12 12c2.7 0 4.8-2.1 4.8-4.8S14.7 2.4 12 2.4 7.2 4.5 7.2 7.2 9.3 12 12 12zm0 2.4c-3.2 0-9.6 1.6-9.6 4.8v2.4h19.2v-2.4c0-3.2-6.4-4.8-9.6-4.8z" }) });
+  const DetailDataWindow = ({
+    label,
+    value,
+    className = "",
+    valueClassName = "truncate"
+  }) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: `min-w-0 ${className}`, children: [
+    /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mb-1 text-[10px] font-semibold leading-none text-white", children: label }),
+    /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex h-[46px] min-w-0 items-center rounded-md bg-slate-800/90 px-3 text-sm font-semibold leading-tight text-white shadow-inner shadow-black/20 ring-1 ring-white/5", children: /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: `min-w-0 ${valueClassName}`, children: value }) })
+  ] });
   return /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
     /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "fixed inset-0 bg-black/70 z-[90] flex items-start justify-center overflow-hidden px-4 pb-4 pt-[7.25rem]", onClick: onClose, children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "bg-[#141e2e] rounded-lg shadow-2xl w-full md:w-[calc(100vw-12rem)] xl:w-[min(calc(100vw-18rem),88rem)] max-w-[88rem] max-h-[calc(100vh-8.25rem)] flex flex-col border border-gray-600 overflow-hidden", onClick: (e) => e.stopPropagation(), children: [
       /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "px-5 py-3 border-b border-gray-600 flex justify-between items-center bg-[#0f1824] flex-shrink-0", children: [
@@ -91111,73 +91081,31 @@ Confirm the Personnel ID, unit and role are correct before saving this separate 
                   /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid grid-cols-[minmax(260px,1.15fr)_minmax(250px,1fr)_minmax(210px,0.9fr)] gap-3", children: [
                     /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded-md border border-slate-600/60 bg-slate-900/45 p-3 shadow-inner shadow-black/10", children: [
                       /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mb-2 text-[10px] font-bold uppercase tracking-[0.16em] text-sky-300", children: "Identity" }),
-                      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid grid-cols-2 gap-x-3 gap-y-2 text-xs", children: [
-                        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
-                          /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "block text-[10px] font-semibold uppercase tracking-wide text-slate-400", children: "Personnel ID" }),
-                          /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "font-semibold text-white", children: instructor.idNumber || "-" })
-                        ] }),
-                        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
-                          /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "block text-[10px] font-semibold uppercase tracking-wide text-slate-400", children: "Rank" }),
-                          /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "font-semibold text-white", children: instructor.rank || "-" })
-                        ] }),
-                        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
-                          /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "block text-[10px] font-semibold uppercase tracking-wide text-slate-400", children: "Callsign" }),
-                          /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "font-semibold text-white", children: displayCallsign || "[None]" })
-                        ] }),
-                        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
-                          /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "block text-[10px] font-semibold uppercase tracking-wide text-slate-400", children: "Secondary" }),
-                          /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "font-semibold text-gray-300", children: instructor.secondaryCallsign || "[None]" })
-                        ] }),
-                        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
-                          /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "block text-[10px] font-semibold uppercase tracking-wide text-slate-400", children: "Role" }),
-                          /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "font-semibold text-sky-300", children: profileRoleDisplay.label })
-                        ] }),
-                        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
-                          /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "block text-[10px] font-semibold uppercase tracking-wide text-slate-400", children: "Service" }),
-                          /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "font-semibold text-white", children: displayService || "[None]" })
-                        ] })
+                      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid grid-cols-2 gap-3", children: [
+                        /* @__PURE__ */ jsxRuntimeExports.jsx(DetailDataWindow, { label: "Personnel ID", value: instructor.idNumber || "-" }),
+                        /* @__PURE__ */ jsxRuntimeExports.jsx(DetailDataWindow, { label: "Rank", value: instructor.rank || "-" }),
+                        /* @__PURE__ */ jsxRuntimeExports.jsx(DetailDataWindow, { label: "Callsign", value: displayCallsign || "[None]" }),
+                        /* @__PURE__ */ jsxRuntimeExports.jsx(DetailDataWindow, { label: "Secondary", value: /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-gray-300", children: instructor.secondaryCallsign || "[None]" }) }),
+                        /* @__PURE__ */ jsxRuntimeExports.jsx(DetailDataWindow, { label: "Role", value: /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-sky-300", children: profileRoleDisplay.label }) }),
+                        /* @__PURE__ */ jsxRuntimeExports.jsx(DetailDataWindow, { label: "Service", value: displayService || "[None]" })
                       ] })
                     ] }),
                     /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded-md border border-slate-600/60 bg-slate-900/45 p-3 shadow-inner shadow-black/10", children: [
                       /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mb-2 text-[10px] font-bold uppercase tracking-[0.16em] text-sky-300", children: "Assignment" }),
-                      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid grid-cols-2 gap-x-3 gap-y-2 text-xs", children: [
-                        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
-                          /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "block text-[10px] font-semibold uppercase tracking-wide text-slate-400", children: "Category" }),
-                          /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "font-semibold text-white", children: isContractorStaffRoleValue(instructor.role) ? simIpDisplayLabel : instructor.category })
-                        ] }),
-                        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
-                          /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "block text-[10px] font-semibold uppercase tracking-wide text-slate-400", children: "Seat Config" }),
-                          /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "font-semibold text-white", children: instructor.seatConfig || "-" })
-                        ] }),
-                        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
-                          /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "block text-[10px] font-semibold uppercase tracking-wide text-slate-400", children: "Unit" }),
-                          /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "font-semibold text-white", children: instructor.unit || "-" })
-                        ] }),
-                        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
-                          /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "block text-[10px] font-semibold uppercase tracking-wide text-slate-400", children: "Crew" }),
-                          /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "font-semibold text-white", children: instructor.crew || "[None]" })
-                        ] }),
-                        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
-                          /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "block text-[10px] font-semibold uppercase tracking-wide text-slate-400", children: "Location" }),
-                          /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "font-semibold text-white", children: instructor.location || "-" })
-                        ] }),
-                        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
-                          /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "block text-[10px] font-semibold uppercase tracking-wide text-slate-400", children: "Flight" }),
-                          /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "font-semibold text-white", children: instructor.flight || "N/A" })
-                        ] })
+                      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid grid-cols-2 gap-3", children: [
+                        /* @__PURE__ */ jsxRuntimeExports.jsx(DetailDataWindow, { label: "Category", value: isContractorStaffRoleValue(instructor.role) ? simIpDisplayLabel : instructor.category }),
+                        /* @__PURE__ */ jsxRuntimeExports.jsx(DetailDataWindow, { label: "Seat Config", value: instructor.seatConfig || "-" }),
+                        /* @__PURE__ */ jsxRuntimeExports.jsx(DetailDataWindow, { label: "Unit", value: instructor.unit || "-" }),
+                        /* @__PURE__ */ jsxRuntimeExports.jsx(DetailDataWindow, { label: "Crew", value: instructor.crew || "[None]" }),
+                        /* @__PURE__ */ jsxRuntimeExports.jsx(DetailDataWindow, { label: "Location", value: instructor.location || "-" }),
+                        /* @__PURE__ */ jsxRuntimeExports.jsx(DetailDataWindow, { label: "Flight", value: instructor.flight || "N/A" })
                       ] })
                     ] }),
                     /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded-md border border-slate-600/60 bg-slate-900/45 p-3 shadow-inner shadow-black/10", children: [
                       /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mb-2 text-[10px] font-bold uppercase tracking-[0.16em] text-sky-300", children: "Contact" }),
-                      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid grid-cols-2 gap-x-3 gap-y-2 text-xs", children: [
-                        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "col-span-2", children: [
-                          /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "block text-[10px] font-semibold uppercase tracking-wide text-slate-400", children: "Phone" }),
-                          /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "font-semibold text-white", children: instructor.phoneNumber || "N/A" })
-                        ] }),
-                        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "col-span-2", children: [
-                          /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "block text-[10px] font-semibold uppercase tracking-wide text-slate-400", children: "Email" }),
-                          /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "break-words font-semibold text-white", children: instructor.email || "N/A" })
-                        ] })
+                      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid grid-cols-1 gap-3", children: [
+                        /* @__PURE__ */ jsxRuntimeExports.jsx(DetailDataWindow, { label: "Phone", value: instructor.phoneNumber || "N/A" }),
+                        /* @__PURE__ */ jsxRuntimeExports.jsx(DetailDataWindow, { label: "Email", value: instructor.email || "N/A", valueClassName: "whitespace-normal break-words text-[12px] leading-tight" })
                       ] })
                     ] })
                   ] })

@@ -2454,6 +2454,25 @@ const TraineeProfileFlyout: React.FC<TraineeProfileFlyoutProps> = ({
         </div>
     );
 
+    const DetailDataWindow = ({
+        label,
+        value,
+        className = '',
+        valueClassName = 'truncate',
+    }: {
+        label: string;
+        value: React.ReactNode;
+        className?: string;
+        valueClassName?: string;
+    }) => (
+        <div className={`min-w-0 ${className}`}>
+            <div className="mb-1 text-[10px] font-semibold leading-none text-white">{label}</div>
+            <div className="flex h-[46px] min-w-0 items-center rounded-md bg-slate-800/90 px-3 text-sm font-semibold leading-tight text-white shadow-inner shadow-black/20 ring-1 ring-white/5">
+                <div className={`min-w-0 ${valueClassName}`}>{value}</div>
+            </div>
+        </div>
+    );
+
     return (
         <>
             <div className="fixed inset-0 bg-black/70 z-[90] flex items-start justify-center overflow-hidden px-4 pb-4 pt-[7.25rem]" onClick={onClose}>
@@ -3441,37 +3460,39 @@ const TraineeProfileFlyout: React.FC<TraineeProfileFlyoutProps> = ({
 	                            <div className="grid grid-cols-[minmax(260px,1.15fr)_minmax(250px,1fr)_minmax(210px,0.9fr)] gap-3">
 	                              <div className="rounded-md border border-slate-600/60 bg-slate-900/45 p-3 shadow-inner shadow-black/10">
 	                                <div className="mb-2 text-[10px] font-bold uppercase tracking-[0.16em] text-sky-300">Identity</div>
-	                                <div className="grid grid-cols-2 gap-x-3 gap-y-2 text-xs">
-	                                  <div><span className="block text-[10px] font-semibold uppercase tracking-wide text-slate-400">Personnel ID</span><span className="font-semibold text-white">{trainee.idNumber || '-'}</span></div>
-	                                  <div><span className="block text-[10px] font-semibold uppercase tracking-wide text-slate-400">Rank</span><span className="font-semibold text-white">{trainee.rank}</span></div>
-	                                  <div><span className="block text-[10px] font-semibold uppercase tracking-wide text-slate-400">Callsign</span><span className="font-semibold text-white">{trainee.traineeCallsign || `${callsignData?.callsignPrefix || ''}${callsignData?.callsignNumber || ''}` || '-'}</span></div>
-	                                  <div><span className="block text-[10px] font-semibold uppercase tracking-wide text-slate-400">Secondary</span><span className="font-semibold text-white">{trainee.secondaryCallsign || '-'}</span></div>
-	                                  <div><span className="block text-[10px] font-semibold uppercase tracking-wide text-slate-400">Role</span><span className="font-semibold text-sky-300">{trainee.role || <span className="text-gray-500 italic">None</span>}</span></div>
-	                                  <div><span className="block text-[10px] font-semibold uppercase tracking-wide text-slate-400">Service</span><span className="font-semibold text-white">{displayService || '[None]'}</span></div>
+	                                <div className="grid grid-cols-2 gap-3">
+	                                  <DetailDataWindow label="Personnel ID" value={trainee.idNumber || '-'} />
+	                                  <DetailDataWindow label="Rank" value={trainee.rank} />
+	                                  <DetailDataWindow label="Callsign" value={trainee.traineeCallsign || `${callsignData?.callsignPrefix || ''}${callsignData?.callsignNumber || ''}` || '-'} />
+	                                  <DetailDataWindow label="Secondary" value={trainee.secondaryCallsign || '-'} />
+	                                  <DetailDataWindow label="Role" value={<span className="text-sky-300">{trainee.role || <span className="text-gray-500 italic">None</span>}</span>} />
+	                                  <DetailDataWindow label="Service" value={displayService || '[None]'} />
 	                                </div>
 	                              </div>
 	                              <div className="rounded-md border border-slate-600/60 bg-slate-900/45 p-3 shadow-inner shadow-black/10">
 	                                <div className="mb-2 text-[10px] font-bold uppercase tracking-[0.16em] text-sky-300">Training</div>
-	                                <div className="grid grid-cols-2 gap-x-3 gap-y-2 text-xs">
-	                                  <div><span className="block text-[10px] font-semibold uppercase tracking-wide text-slate-400">Course</span><span
-	                                    data-course-color="true"
-	                                    className={`inline-flex rounded px-1.5 py-0.5 text-[10px] font-bold text-white ${(courseColors[trainee.course] || '').startsWith('#') ? '' : (courseColors[trainee.course] || 'bg-gray-500')}`}
-	                                    style={(courseColors[trainee.course] || '').startsWith('#') ? { backgroundColor: courseColors[trainee.course] } : {}}
-	                                  >{trainee.course || '-'}</span></div>
-	                                  <div><span className="block text-[10px] font-semibold uppercase tracking-wide text-slate-400">Seat Config</span><span className="font-semibold text-white">{trainee.seatConfig || '-'}</span></div>
-	                                  <div><span className="block text-[10px] font-semibold uppercase tracking-wide text-slate-400">LMP</span><span className="font-semibold text-sky-300">{trainee.lmpType || <span className="text-gray-500 italic">None</span>}</span></div>
-	                                  <div><span className="block text-[10px] font-semibold uppercase tracking-wide text-slate-400">Academic LMP</span><span className="font-semibold text-purple-300">{effectiveAcademicLmpType || <span className="text-gray-500 italic">None</span>}</span></div>
-	                                  <div><span className="block text-[10px] font-semibold uppercase tracking-wide text-slate-400">Unit</span><span className="font-semibold text-white">{trainee.unit || '-'}</span></div>
-	                                  <div><span className="block text-[10px] font-semibold uppercase tracking-wide text-slate-400">Crew</span><span className="font-semibold text-white">{trainee.crew || 'N/A'}</span></div>
+	                                <div className="grid grid-cols-2 gap-3">
+	                                  <DetailDataWindow label="Course" value={(
+	                                    <span
+	                                      data-course-color="true"
+	                                      className={`inline-flex rounded px-1.5 py-0.5 text-[10px] font-bold text-white ${(courseColors[trainee.course] || '').startsWith('#') ? '' : (courseColors[trainee.course] || 'bg-gray-500')}`}
+	                                      style={(courseColors[trainee.course] || '').startsWith('#') ? { backgroundColor: courseColors[trainee.course] } : {}}
+	                                    >{trainee.course || '-'}</span>
+	                                  )} />
+	                                  <DetailDataWindow label="Seat Config" value={trainee.seatConfig || '-'} />
+	                                  <DetailDataWindow label="LMP" value={<span className="text-sky-300">{trainee.lmpType || <span className="text-gray-500 italic">None</span>}</span>} />
+	                                  <DetailDataWindow label="Academic LMP" value={<span className="text-purple-300">{effectiveAcademicLmpType || <span className="text-gray-500 italic">None</span>}</span>} />
+	                                  <DetailDataWindow label="Unit" value={trainee.unit || '-'} />
+	                                  <DetailDataWindow label="Crew" value={trainee.crew || 'N/A'} />
 	                                </div>
 	                              </div>
 	                              <div className="rounded-md border border-slate-600/60 bg-slate-900/45 p-3 shadow-inner shadow-black/10">
 	                                <div className="mb-2 text-[10px] font-bold uppercase tracking-[0.16em] text-sky-300">Contact</div>
-	                                <div className="grid grid-cols-2 gap-x-3 gap-y-2 text-xs">
-	                                  <div><span className="block text-[10px] font-semibold uppercase tracking-wide text-slate-400">Location</span><span className="font-semibold text-white">{trainee.location || '-'}</span></div>
-	                                  <div><span className="block text-[10px] font-semibold uppercase tracking-wide text-slate-400">Flight</span><span className="font-semibold text-white">{trainee.flight || 'N/A'}</span></div>
-	                                  <div className="col-span-2"><span className="block text-[10px] font-semibold uppercase tracking-wide text-slate-400">Phone</span><span className="font-semibold text-white">{trainee.phoneNumber || 'N/A'}</span></div>
-	                                  <div className="col-span-2"><span className="block text-[10px] font-semibold uppercase tracking-wide text-slate-400">Email</span><span className="break-words font-semibold text-white">{trainee.email || 'N/A'}</span></div>
+	                                <div className="grid grid-cols-2 gap-3">
+	                                  <DetailDataWindow label="Location" value={trainee.location || '-'} />
+	                                  <DetailDataWindow label="Flight" value={trainee.flight || 'N/A'} />
+	                                  <DetailDataWindow label="Phone" value={trainee.phoneNumber || 'N/A'} className="col-span-2" />
+	                                  <DetailDataWindow label="Email" value={trainee.email || 'N/A'} className="col-span-2" valueClassName="whitespace-normal break-words text-[12px] leading-tight" />
 	                                </div>
 	                              </div>
 	                            </div>
