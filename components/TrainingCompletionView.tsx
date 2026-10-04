@@ -155,7 +155,6 @@ const TrainingCompletionView: React.FC<TrainingCompletionViewProps> = ({
     const [isCompleting, setIsCompleting] = useState(false);
     const [completionMessage, setCompletionMessage] = useState('');
     const [completionDialogMessage, setCompletionDialogMessage] = useState('');
-    const [completionTrace, setCompletionTrace] = useState<Record<string, unknown> | null>(null);
 
     const allEvents = useMemo(() => Object.values(publishedSchedules).flat(), [publishedSchedules]);
     const allTrainees = useMemo(() => [...traineesData, ...archivedTraineesData], [traineesData, archivedTraineesData]);
@@ -355,7 +354,6 @@ const TrainingCompletionView: React.FC<TrainingCompletionViewProps> = ({
         setSelectedTrainees([]);
         setCompletionMessage('');
         setCompletionDialogMessage('');
-        setCompletionTrace(null);
     };
 
     const handleCourseChange = (coursesSelected: string[]) => {
@@ -421,7 +419,6 @@ const TrainingCompletionView: React.FC<TrainingCompletionViewProps> = ({
         setIsCompleting(true);
         setCompletionMessage('Completing selected training records...');
         setCompletionDialogMessage('');
-        setCompletionTrace(null);
 
         const completedAt = new Date(`${completionDate || todayIso()}T00:00:00`).toISOString();
         const completed: string[] = [];
@@ -610,8 +607,6 @@ const TrainingCompletionView: React.FC<TrainingCompletionViewProps> = ({
             failed,
             traceRows,
         };
-        setCompletionTrace(trace);
-
         if (failed.length > 0) {
             const firstFailure = failed[0];
             setCompletionMessage(`Completed ${completed.length} trainee-event record${completed.length === 1 ? '' : 's'}. ${failed.length} failed. First failure: ${firstFailure.trainee} / ${firstFailure.event}: ${firstFailure.reason}`);
@@ -630,20 +625,6 @@ const TrainingCompletionView: React.FC<TrainingCompletionViewProps> = ({
         } catch (error) {
             console.warn('[Training Completion] Could not save completion trace to localStorage:', error);
         }
-    };
-
-    const downloadCompletionTrace = () => {
-        if (!completionTrace) return;
-        const blob = new Blob([JSON.stringify(completionTrace, null, 2)], { type: 'application/json' });
-        const url = URL.createObjectURL(blob);
-        const link = document.createElement('a');
-        const stamp = new Date().toISOString().replace(/[:.]/g, '-');
-        link.href = url;
-        link.download = `training-completion-trace-${stamp}.json`;
-        document.body.appendChild(link);
-        link.click();
-        link.remove();
-        URL.revokeObjectURL(url);
     };
 
     return (
@@ -894,14 +875,6 @@ const TrainingCompletionView: React.FC<TrainingCompletionViewProps> = ({
                                     <p className={`text-sm ${completionMessage.includes('failed') ? 'text-yellow-300' : completionMessage.includes('Completed') ? 'text-green-300' : 'text-gray-300'}`}>
                                         {completionMessage}
                                     </p>
-                                    {completionTrace && Number(completionTrace.failedCount || 0) > 0 && (
-                                        <button
-                                            onClick={downloadCompletionTrace}
-                                            className="px-3 py-2 rounded border border-yellow-500/50 bg-yellow-500/10 text-yellow-200 hover:bg-yellow-500/20 text-sm font-semibold"
-                                        >
-                                            Download Completion Trace
-                                        </button>
-                                    )}
                                 </div>
                                 <button
                                     onClick={processCompletion}

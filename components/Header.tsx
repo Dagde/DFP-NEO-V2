@@ -29,7 +29,6 @@ interface HeaderProps {
     isOracleMode: boolean;
     onToggleOracleMode: () => void;
     onQuickTile?: () => void;
-    onDownloadNeoTileReport?: () => void;
     showAircraftAvailability?: boolean;
     onToggleAircraftAvailability?: () => void;
     onPauseFlightOps?: () => void;
@@ -89,7 +88,6 @@ const Header: React.FC<HeaderProps> = ({
     isOracleMode, 
     onToggleOracleMode, 
     onQuickTile,
-    onDownloadNeoTileReport,
     showAircraftAvailability, 
     onToggleAircraftAvailability, 
     onPauseFlightOps,
@@ -494,17 +492,6 @@ const Header: React.FC<HeaderProps> = ({
                                 {isFixedCrewModel ? <>Quick<br />Tile</> : 'NEO - Tile'}
                             </span>
                         </button>
-
-                        {!isFixedCrewModel && isOracleMode && onDownloadNeoTileReport && (
-                            <button
-                                type="button"
-                                onClick={onDownloadNeoTileReport}
-                                className={headerButtonClass}
-                                title="Download top menu NEO Tile diagnostic report"
-                            >
-                                <span className="text-center leading-tight">NEO<br />Report</span>
-                            </button>
-                        )}
 
                         {/* 10. Flight Line Button */}
                         <button

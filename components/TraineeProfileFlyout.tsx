@@ -755,7 +755,7 @@ const TraineeProfileFlyout: React.FC<TraineeProfileFlyoutProps> = ({
         Promise.race([
             onLoadTraineeLmp(trainee),
             new Promise<SyllabusItemDetail[] | null>((_, reject) => {
-                timeoutId = window.setTimeout(() => reject(new Error('Individual LMP load timed out. Close and reopen the profile, then download the LMP trace if it is still empty.')), timeoutMs);
+                timeoutId = window.setTimeout(() => reject(new Error('Individual LMP load timed out. Close and reopen the profile, then try again if it is still empty.')), timeoutMs);
             }),
         ])
             .then(loadedLmp => {

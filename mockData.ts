@@ -11,7 +11,7 @@ const createSyllabusItem = (
     description: string,
     courses: string[] = ['BPC+IPC'] // Default to the standard pilot course
 ): SyllabusItemDetail => {
-    // Safety checks for undefined parameters with error tracking
+    // Safety checks for undefined parameters in development data.
     if (!code) {
         console.error('❌ ERROR: createSyllabusItem called with undefined/null code parameter');
         console.trace();

@@ -13,7 +13,6 @@ type BuildDfpProgress = {
 
 type BuildDfpLoadingFlyoutProps = {
     progress?: BuildDfpProgress;
-    onDownloadLiveTrace?: () => void;
 };
 
 const formatCount = (value?: number) => {
@@ -26,7 +25,7 @@ const formatElapsed = (elapsedMs?: number) => {
     return `${(elapsedMs / 1000).toFixed(1)}s`;
 };
 
-const BuildDfpLoadingFlyout: React.FC<BuildDfpLoadingFlyoutProps> = ({ progress, onDownloadLiveTrace }) => {
+const BuildDfpLoadingFlyout: React.FC<BuildDfpLoadingFlyoutProps> = ({ progress }) => {
     const actualPercentage = Math.max(0, Math.min(100, Math.round(progress?.percentage ?? 0)));
     const [visiblePercentage, setVisiblePercentage] = useState(Math.max(1, actualPercentage));
     const startedAtRef = useRef(Date.now());
@@ -128,16 +127,6 @@ const BuildDfpLoadingFlyout: React.FC<BuildDfpLoadingFlyoutProps> = ({ progress,
                             <span className="font-semibold text-slate-300">Elapsed</span>
                             <span className="font-black tabular-nums text-white">{elapsedLabel || '0.0s'}</span>
                     </div>
-                    {onDownloadLiveTrace && (
-                        <button
-                            type="button"
-                            onClick={onDownloadLiveTrace}
-                            className="h-10 rounded-md border border-amber-400/50 bg-amber-500/10 px-4 text-sm font-bold text-amber-100 shadow-[0_0_18px_rgba(245,158,11,0.16)] transition-colors hover:bg-amber-500/20"
-                            title="Download the current NEO Build trace without waiting for the build to finish"
-                        >
-                            Download Live Trace
-                        </button>
-                    )}
                 </div>
             </div>
         </div>

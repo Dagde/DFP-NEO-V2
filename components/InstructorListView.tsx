@@ -33,8 +33,6 @@ import {
 } from '../utils/staffQualifications';
 import {
     appendStaffProfileTrace,
-    clearStaffProfileTrace,
-    downloadStaffProfileTrace,
     summariseStaffProfileForTrace,
 } from '../utils/staffProfileTrace';
 import type { UnitCallsignSettings } from '../utils/unitCallsigns';
@@ -1005,23 +1003,6 @@ const InstructorListView: React.FC<InstructorListViewProps> = ({
                     className={`w-[56px] h-[41px] flex items-center justify-center text-center px-1 py-1 text-[10px] font-semibold rounded-md btn-aluminium-brushed text-green-500 ${canEditStaffDetails ? '' : 'cursor-not-allowed'}`}
                 >
                     Add Staff
-                </button>
-                <button
-                    onClick={() => downloadStaffProfileTrace('staff-page')}
-                    className="w-[56px] h-[41px] flex items-center justify-center text-center px-1 py-1 text-[10px] leading-tight font-semibold rounded-md btn-aluminium-brushed text-blue-700"
-                    title="Download staff profile trace"
-                >
-                    Staff Trace
-                </button>
-                <button
-                    onClick={() => {
-                        clearStaffProfileTrace();
-                        appendStaffProfileTrace('staff-trace:cleared', { clearedAt: new Date().toISOString() });
-                    }}
-                    className="w-[56px] h-[41px] flex items-center justify-center text-center px-1 py-1 text-[10px] leading-tight font-semibold rounded-md btn-aluminium-brushed"
-                    title="Clear staff profile trace"
-                >
-                    Clear Trace
                 </button>
                 <div className="w-[8px]"></div>
                 <AuditButton pageName="Staff" />

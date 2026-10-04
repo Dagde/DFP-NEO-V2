@@ -272,15 +272,7 @@ const getAuthorizationTextColorClass = (
 
 
 const FlightTile: React.FC<FlightTileProps> = ({ event, traineesData, instructorsData = [], onSelectEvent, onSelectAcademicTile, onMouseDown, onPointerDown, onMouseEnter, onMouseLeave, pixelsPerHour, rowHeight, startHour, row, isDragging, isConflicting, conflictedPersonnelName, personnelData, seatConfigs, isDraggable = true, currentTime, isUnavailabilityConflict, unavailablePersonnel, isSelected = false, isChanged = false, isPreview = false, isPauseCompleted = false, isDiagnosticHighlighted = false, alertStatus = null, aircraftNumberSettings = DEFAULT_AIRCRAFT_NUMBER_SETTINGS, disableLayoutTransition = false, suppressAuthorisationWarnings = false, instructorLabel = 'Instructor', homeLocationCode = '', locationDisplayCodes = {}, locationCanonicalCodes = {} }) => {
-  // ERROR TRACKING: Log props to identify missing seatConfigs
-
   // Removed unit color logic - colors are now handled in PersonnelColumn only
-  
-  try {
-    // Test access to seatConfigs to trigger the error
-    const testAccess = seatConfigs;
-  } catch (error) {
-  }
   // Determine if this is a segment and use effective start/duration
   const segment = event as EventSegment;
   const effectiveStartTime = segment.segmentStartTime !== undefined ? segment.segmentStartTime : event.startTime;

@@ -84,7 +84,6 @@ interface SyllabusViewProps {
   onUpdateTrainee?: (data: Trainee) => void | Promise<void>;
   onAssignTraineeLmp?: (trainee: Trainee, lmpCode: string) => void | Promise<void>;
   onTraceAssignLmp?: (stage: string, details?: Record<string, any>) => void;
-  onDownloadAssignmentTrace?: () => void;
   operationalModel?: string;
   sharedUnitTabs?: string[];
   masterLmpCatalogue?: PlatformMasterLmpCatalogueEntry[];
@@ -549,7 +548,6 @@ const AssignTrainingModal: React.FC<{
     onDeselectAllCourses?: () => void;
     onSelectAllTrainees?: () => void;
     onDeselectAllTrainees?: () => void;
-    onDownloadTrace?: () => void;
     onCancel: () => void;
     onSave: () => void;
 }> = ({
@@ -576,7 +574,6 @@ const AssignTrainingModal: React.FC<{
     onDeselectAllCourses,
     onSelectAllTrainees,
     onDeselectAllTrainees,
-    onDownloadTrace,
     onCancel,
     onSave,
 }) => {
@@ -759,13 +756,7 @@ const AssignTrainingModal: React.FC<{
                     ) : showStaffAssignments ? staffPanel : traineePanel}
                 </div>
                 <div className="flex flex-wrap items-center justify-between gap-2 border-t border-gray-700 px-4 py-3">
-                    <div>
-                        {onDownloadTrace && (
-                            <button type="button" onClick={onDownloadTrace} className="rounded border border-amber-600/60 bg-amber-900/30 px-4 py-2 text-sm font-semibold text-amber-100 hover:bg-amber-800/40">
-                                Download Assign LMP Trace
-                            </button>
-                        )}
-                    </div>
+                    <div />
                     <div className="flex justify-end gap-2">
                         <button type="button" onClick={onCancel} disabled={saving} className="rounded border border-gray-600 bg-gray-800 px-4 py-2 text-sm font-semibold text-gray-100 hover:bg-gray-700 disabled:cursor-not-allowed disabled:opacity-50">Cancel</button>
                         <button type="button" onClick={onSave} disabled={saving} className="rounded border border-sky-500 bg-sky-700 px-4 py-2 text-sm font-bold text-white hover:bg-sky-600 disabled:cursor-not-allowed disabled:opacity-60">
@@ -1520,7 +1511,6 @@ const SyllabusView: React.FC<SyllabusViewProps> = ({
     onUpdateTrainee,
     onAssignTraineeLmp,
     onTraceAssignLmp,
-    onDownloadAssignmentTrace,
     currentUserName,
     scoringMatrixPhraseBank,
     onAddScoringMatrixElement,
@@ -2758,34 +2748,6 @@ const SyllabusView: React.FC<SyllabusViewProps> = ({
       setShowUploadModal(true);
   };
 
-  const downloadUploadTrace = (label = 'lmp-upload-trace') => {
-      const payload = {
-          generatedAt: new Date().toISOString(),
-          activeTab,
-          activeCollectionTitle,
-          selectedCourseType,
-          masterUploadIntent,
-          uploadMode,
-          uploadTargetLmpCode,
-          newUploadPackageName,
-          uploadLmpVersion,
-          lmpUpdateReviewMode,
-          uploadFile: uploadFile ? { name: uploadFile.name, size: uploadFile.size, type: uploadFile.type } : null,
-          review: uploadReview,
-          result: uploadResult,
-      };
-      const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
-      const url = URL.createObjectURL(blob);
-      const link = document.createElement('a');
-      const safeCode = (uploadTargetLmpCode || selectedCourseType || newUploadPackageName || 'lmp').replace(/[^a-z0-9-]+/gi, '-').replace(/^-+|-+$/g, '') || 'lmp';
-      link.href = url;
-      link.download = `${label}-${safeCode}-${new Date().toISOString().replace(/[:.]/g, '-')}.json`;
-      document.body.appendChild(link);
-      link.click();
-      link.remove();
-      URL.revokeObjectURL(url);
-  };
-
   const handleEditSelectedCourseVersion = async () => {
       if (isFrozen || !selectedCourseType) return;
       const currentVersion = selectedCourseVersion || DEFAULT_LMP_VERSION;
@@ -3088,7 +3050,7 @@ const SyllabusView: React.FC<SyllabusViewProps> = ({
       } catch (err: any) {
           const isTimeout = err?.name === 'AbortError';
           const errorMessage = isTimeout
-              ? `The ${isReviewStep ? 'review' : 'apply'} request did not return within ${Math.round((isReviewStep ? 60000 : 180000) / 1000)} seconds. Download the trace below; the server may still have continued processing.`
+              ? `The ${isReviewStep ? 'review' : 'apply'} request did not return within ${Math.round((isReviewStep ? 60000 : 180000) / 1000)} seconds. The server may still have continued processing; wait a moment, then refresh or retry.`
               : `Upload failed: ${err.message}`;
           setUploadResult({
               created: 0,
@@ -4780,16 +4742,6 @@ const SyllabusView: React.FC<SyllabusViewProps> = ({
                 )}
 
                 <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, marginTop: 8 }}>
-                    {(uploadReview || uploadResult) && (
-                        <button
-                            type="button"
-                            onClick={() => downloadUploadTrace(uploadResult ? 'lmp-upload-result' : 'lmp-upload-review')}
-                            style={{ padding: '8px 12px', fontSize: 12, fontWeight: 700, borderRadius: 6,
-                                backgroundColor: '#111827', color: '#fdba74', border: '1px solid #92400e', cursor: 'pointer', marginRight: 'auto' }}
-                        >
-                            Download Trace
-                        </button>
-                    )}
                     <button
                         onClick={() => setShowUploadModal(false)}
                         disabled={isUploading}
@@ -4895,7 +4847,6 @@ const SyllabusView: React.FC<SyllabusViewProps> = ({
                 courseFilteredAssignableFlightSchoolTrainees.forEach(trainee => next.delete(trainee.idNumber));
                 return next;
             })}
-            onDownloadTrace={showTraineesInAssignTraining ? onDownloadAssignmentTrace : undefined}
             onCancel={() => setShowAssignTrainingModal(false)}
             onSave={saveAssignTraining}
         />

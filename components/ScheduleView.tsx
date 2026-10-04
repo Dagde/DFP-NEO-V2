@@ -3493,36 +3493,6 @@ const InitialSetupWizard: React.FC<{
         }
     };
 
-    const downloadWizardFinishTrace = () => {
-        if (typeof window === 'undefined') return;
-        let storedTrace: any[] = [];
-        try {
-            const parsed = JSON.parse(window.localStorage.getItem(wizardFinishTraceStorageKey) || '[]');
-            storedTrace = Array.isArray(parsed) ? parsed : [];
-        } catch {
-            storedTrace = [];
-        }
-        const trace = wizardFinishTraceRef.current.length > 0 ? wizardFinishTraceRef.current : storedTrace;
-        const report = {
-            reportType: 'dfp-setup-wizard-step-41-finish-trace',
-            generatedAt: new Date().toISOString(),
-            url: window.location.href,
-            userAgent: window.navigator.userAgent,
-            currentSnapshot: getWizardFinishTraceSnapshot(),
-            trace,
-        };
-        const blob = new Blob([JSON.stringify(report, null, 2)], { type: 'application/json' });
-        const url = URL.createObjectURL(blob);
-        const link = document.createElement('a');
-        link.href = url;
-        link.download = `dfp-step-41-finish-trace-${new Date().toISOString().replace(/[:.]/g, '-')}.json`;
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-        URL.revokeObjectURL(url);
-        setSaveMessage('Step 41 finish trace downloaded.');
-    };
-
     useEffect(() => {
         onInitialSetupWizardFinishedRef.current = onInitialSetupWizardFinished;
     }, [onInitialSetupWizardFinished]);
@@ -12838,26 +12808,6 @@ const InitialSetupWizard: React.FC<{
                 Each step is saved into Settings when you click <strong>Next</strong>. Use this page to check the setup. If something is wrong, go back to that step and change it. No extra save is required on this review page.
             </p>,
             <div className="grid gap-3 text-sm">
-                <div className="rounded-lg border border-amber-300 bg-amber-50 px-3 py-3 text-amber-950">
-                    <div className="flex flex-wrap items-center justify-between gap-3">
-                        <div>
-                            <p className="text-[10px] font-black uppercase tracking-[0.16em] text-amber-800">Step 41 data tracking</p>
-                            <p className="mt-1 text-xs font-semibold leading-5 text-amber-900">
-                                Records Finish Review, staff/trainee/LMP commits, completion state, and the DFP return handoff.
-                            </p>
-                            <p className="mt-1 text-[11px] font-bold text-amber-800">
-                                Trace entries captured: {wizardFinishTrace.length}
-                            </p>
-                        </div>
-                        <button
-                            type="button"
-                            className="rounded-md border border-amber-500 bg-amber-600 px-3 py-2 text-xs font-black text-white shadow-sm transition hover:bg-amber-700"
-                            onClick={downloadWizardFinishTrace}
-                        >
-                            Download Step 41 Trace
-                        </button>
-                    </div>
-                </div>
                 {[
                     {
                         label: 'Organisation name',

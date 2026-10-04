@@ -61,7 +61,6 @@ interface NextDayBuildViewProps {
   aircraftNumberSettings?: AircraftNumberSettings;
   onExternalEventDrop?: (event: ScheduleEvent, placement: { startTime: number; resourceId: string }) => void;
   diagnosticHighlightedEventIds?: Set<string>;
-  onDownloadBuildReport?: () => void;
 }
 
 const PIXELS_PER_HOUR = 200;
@@ -174,7 +173,6 @@ export const NextDayBuildView: React.FC<NextDayBuildViewProps> = ({
     aircraftNumberSettings,
     onExternalEventDrop,
     diagnosticHighlightedEventIds = new Set<string>(),
-    onDownloadBuildReport,
 }) => {
     const scrollContainerRef = useRef<HTMLDivElement>(null);
     const scheduleGridRef = useRef<HTMLDivElement>(null);
@@ -1387,16 +1385,6 @@ export const NextDayBuildView: React.FC<NextDayBuildViewProps> = ({
                 {/* Time Header (Top Row) */}
                 <div className="sticky top-0 z-20 bg-gray-800 border-b border-gray-700 relative">
                     {renderTimeHeaders()}
-                    {onDownloadBuildReport && (
-                        <button
-                            type="button"
-                            onClick={onDownloadBuildReport}
-                            className="absolute left-3 top-1/2 z-30 -translate-y-1/2 rounded border border-amber-400/65 bg-slate-950/90 px-3 py-1.5 text-[11px] font-bold uppercase tracking-[0.08em] text-amber-100 shadow-lg shadow-black/35 transition hover:border-amber-200 hover:bg-amber-500/20"
-                            title="Download the latest NEO Build diagnostic report"
-                        >
-                            Download Build Report
-                        </button>
-                    )}
                 </div>
 
                 {/* Resource Column (Left Col) */}

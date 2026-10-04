@@ -877,33 +877,6 @@ const appendNeoAssistCurrencyTrace = (stage: string, details: Record<string, unk
     }
 };
 
-const downloadNeoAssistCurrencyTrace = (context: Record<string, unknown> = {}) => {
-    try {
-        if (typeof window === 'undefined') return;
-        const entries = JSON.parse(localStorage.getItem(NEO_ASSIST_CURRENCY_TRACE_KEY) || '[]');
-        const report = {
-            reportType: 'NEO_ASSIST_CURRENCY_PERSISTENCE_TRACE',
-            generatedAt: new Date().toISOString(),
-            context,
-            entryCount: Array.isArray(entries) ? entries.length : 0,
-            entries: Array.isArray(entries) ? entries : [],
-        };
-        const blob = new Blob([JSON.stringify(report, null, 2)], { type: 'application/json' });
-        const url = URL.createObjectURL(blob);
-        const safeUser = String(context.currentUserName || 'user').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || 'user';
-        const safeDate = String(context.date || 'no-date').replace(/[^0-9-]/g, '') || 'no-date';
-        const link = document.createElement('a');
-        link.href = url;
-        link.download = `neo-assist-currency-trace-${safeUser}-${safeDate}-${new Date().toISOString().replace(/[:.]/g, '-')}.json`;
-        document.body.appendChild(link);
-        link.click();
-        link.remove();
-        URL.revokeObjectURL(url);
-    } catch (error) {
-        console.error('[NEO_ASSIST_CURRENCY_TRACE] Failed to download trace:', error);
-    }
-};
-
 type NeoAssistResourceKind = 'flight' | 'ftd' | 'cpt' | 'deployment';
 
 type NeoAssistDropPlacement = {
@@ -979,55 +952,6 @@ const recordNeoTileDiagnostic = (entry: Omit<NeoAssistDragDiagnosticEntry, 'at' 
     }
 };
 
-const downloadNeoTileDiagnosticReport = () => {
-    if (typeof window === 'undefined') return;
-    try {
-        recordNeoTileDiagnostic({
-            stage: 'top-neo-tile-report-download-requested',
-            details: {
-                existingEntryCount: Array.isArray((window as any).__neoTileDiagnostics)
-                    ? (window as any).__neoTileDiagnostics.length
-                    : 0,
-            },
-        });
-        const stored = window.localStorage?.getItem(NEO_TILE_DIAGNOSTIC_STORAGE_KEY);
-        const fallbackEntries = Array.isArray((window as any).__neoTileDiagnostics)
-            ? (window as any).__neoTileDiagnostics
-            : [];
-        const report = stored
-            ? JSON.parse(stored)
-            : {
-                generatedAt: new Date().toISOString(),
-                app: 'DFP-NEO',
-                reportType: 'neo-tile-diagnostic',
-                version: NEO_TILE_DIAGNOSTIC_VERSION,
-                entries: fallbackEntries,
-            };
-        report.downloadedAt = new Date().toISOString();
-        if (!Array.isArray(report.entries) || report.entries.length === 0) {
-            report.entries = [{
-                stage: 'report-empty',
-                at: new Date().toISOString(),
-                details: {
-                    reason: 'No top-toolbar NEO Tile activity was captured before this report was downloaded.',
-                    nextStep: 'Click the top toolbar NEO - Tile button, place a tile on the DFP, then download this report again.',
-                },
-            }];
-        }
-        const blob = new Blob([JSON.stringify(report, null, 2)], { type: 'application/json' });
-        const url = URL.createObjectURL(blob);
-        const link = document.createElement('a');
-        link.href = url;
-        link.download = `neo-tile-diagnostic-${new Date().toISOString().replace(/[:.]/g, '-')}.json`;
-        document.body.appendChild(link);
-        link.click();
-        link.remove();
-        URL.revokeObjectURL(url);
-    } catch (error) {
-        console.error('[NEO Tile Diagnostic] Failed to download report:', error);
-    }
-};
-
 const recordPauseFlightOpsDiagnostic = (entry: Omit<PauseFlightOpsDiagnosticEntry, 'at'>) => {
     if (typeof window === 'undefined') return;
     const fullEntry: PauseFlightOpsDiagnosticEntry = {
@@ -1057,58 +981,6 @@ const recordPauseFlightOpsDiagnostic = (entry: Omit<PauseFlightOpsDiagnosticEntr
         }));
     } catch (error) {
         console.warn('[Pause Flight Ops Diagnostic] Failed to record entry:', error);
-    }
-};
-
-const downloadPauseFlightOpsDiagnosticReport = (context: Record<string, unknown> = {}) => {
-    if (typeof window === 'undefined') return;
-    try {
-        recordPauseFlightOpsDiagnostic({
-            stage: 'report-download-requested',
-            details: {
-                context,
-                existingEntryCount: Array.isArray((window as any).__pauseFlightOpsDiagnostics)
-                    ? (window as any).__pauseFlightOpsDiagnostics.length
-                    : 0,
-            },
-        });
-        const stored = window.localStorage?.getItem(PAUSE_FLIGHT_OPS_DIAGNOSTIC_STORAGE_KEY);
-        const fallbackEntries = Array.isArray((window as any).__pauseFlightOpsDiagnostics)
-            ? (window as any).__pauseFlightOpsDiagnostics
-            : [];
-        const report = stored
-            ? JSON.parse(stored)
-            : {
-                generatedAt: new Date().toISOString(),
-                app: 'DFP-NEO',
-                reportType: 'pause-flight-ops-diagnostic',
-                version: PAUSE_FLIGHT_OPS_DIAGNOSTIC_VERSION,
-                entries: fallbackEntries,
-            };
-        report.downloadedAt = new Date().toISOString();
-        report.context = context;
-        if (!Array.isArray(report.entries) || report.entries.length === 0) {
-            report.entries = [{
-                stage: 'report-empty',
-                at: new Date().toISOString(),
-                details: {
-                    reason: 'No Pause Flight Ops activity was captured before this report was downloaded.',
-                    nextStep: 'Open Pause Flight Ops, select completed events if required, run NEO BUILD (Post-Pause), then download this report again.',
-                },
-            }];
-        }
-        const blob = new Blob([JSON.stringify(report, null, 2)], { type: 'application/json' });
-        const url = URL.createObjectURL(blob);
-        const safeDate = String(context.date || 'no-date').replace(/[^0-9-]/g, '') || 'no-date';
-        const link = document.createElement('a');
-        link.href = url;
-        link.download = `pause-flight-ops-diagnostic-${safeDate}-${new Date().toISOString().replace(/[:.]/g, '-')}.json`;
-        document.body.appendChild(link);
-        link.click();
-        link.remove();
-        URL.revokeObjectURL(url);
-    } catch (error) {
-        console.error('[Pause Flight Ops Diagnostic] Failed to download report:', error);
     }
 };
 
@@ -29397,95 +29269,6 @@ const App: React.FC = () => {
         document.title = appTitle || 'DFP NEO';
     }, []);
 
-    // Wrap String.prototype.split to catch errors
-    React.useEffect(() => {
-      const originalSplit = String.prototype.split;
-      String.prototype.split = function(...args) {
-        if (this === undefined || this === null) {
-          console.error("🔴 SPLIT CALLED ON UNDEFINED/NULL!");
-          console.trace("Stack trace:");
-          return [];
-        }
-        return originalSplit.apply(this, args);
-      };
-
-
-
-    const handleNavigateToProfile = (user: any) => {
-       // Use setSelectedPersonForProfile to directly open the profile
-       // This works the same way as clicking on a trainee name in CourseRoster
-       if (user.userType === 'STAFF') {
-          setSelectedPersonForProfile({
-             name: user.name,
-             idNumber: user.personnelId,
-             role: user.role || 'Pilot'
-          } as Instructor);
-          handleNavigation('Instructors');
-             setSuccessMessage(`Navigated to Staff Profile: ${user.name}`);
-       } else if (user.userType === 'TRAINEE') {
-          setSelectedPersonForProfile({
-             name: user.name,
-             idNumber: user.personnelId,
-             role: user.role || 'Trainee'
-          } as Trainee);
-          handleNavigation('CourseRoster');
-             setSuccessMessage(`Navigated to Trainee Profile: ${user.name}`);
-       }
-    };
-    return () => {
-        String.prototype.split = originalSplit;
-      };
-    }, []);
-
-
-    // Global error tracking for split errors
-    React.useEffect(() => {
-      const originalError = console.error;
-      console.error = function(...args) {
-        const errorMsg = args.join(" ");
-        if (errorMsg.includes("split") || errorMsg.includes("undefined")) {
-          console.trace("Stack trace:");
-        }
-        originalError.apply(console, args);
-      };
-
-      window.addEventListener("error", (event) => {
-        if (event.message.includes("split") || event.message.includes("undefined")) {
-          console.error("🔴 GLOBAL ERROR CAUGHT:", event.message);
-          console.error("🔴 Error at:", event.filename, "Line:", event.lineno, "Column:", event.colno);
-          console.error("🔴 Stack:", event.error?.stack);
-        }
-      });
-
-
-
-    const handleNavigateToProfile = (user: any) => {
-       // Use setSelectedPersonForProfile to directly open the profile
-       // This works the same way as clicking on a trainee name in CourseRoster
-       if (user.userType === 'STAFF') {
-          setSelectedPersonForProfile({
-             name: user.name,
-             idNumber: user.personnelId,
-             role: user.role || 'Pilot'
-          } as Instructor);
-          handleNavigation('Instructors');
-             setSuccessMessage(`Navigated to Staff Profile: ${user.name}`);
-       } else if (user.userType === 'TRAINEE') {
-          setSelectedPersonForProfile({
-             name: user.name,
-             idNumber: user.personnelId,
-             role: user.role || 'Trainee'
-          } as Trainee);
-          handleNavigation('CourseRoster');
-             setSuccessMessage(`Navigated to Trainee Profile: ${user.name}`);
-       }
-    };
-    return () => {
-        console.error = originalError;
-      };
-    }, []);
-
-
     // Helper function to convert decimal hours to HHMM format for audit logs
     const formatTimeForAudit = (hours: number): string => {
         const h = Math.floor(hours);
@@ -32002,22 +31785,6 @@ const App: React.FC = () => {
             entries: enrichedEntries,
             staffScheduleRenderTrace,
         };
-    }
-
-    function downloadDfpDataDiagReport(label = 'dfp-data-trace'): void {
-        const report = buildDfpDataDiagReport();
-        const blob = new Blob([JSON.stringify(report, null, 2)], { type: 'application/json' });
-        const url = URL.createObjectURL(blob);
-        const safeUnit = String(activeUnitCode || 'unit').replace(/[^A-Za-z0-9+-]+/g, '-').replace(/^-|-$/g, '') || 'unit';
-        const safeDate = String(date || 'no-date').replace(/[^0-9-]/g, '') || 'no-date';
-        const link = document.createElement('a');
-        link.href = url;
-        link.download = `${label}-${safeUnit}-${safeDate}-${new Date().toISOString().replace(/[:.]/g, '-')}.json`;
-        document.body.appendChild(link);
-        link.click();
-        link.remove();
-        URL.revokeObjectURL(url);
-        setShowInfoNotification('DFP data trace downloaded.');
     }
 
     function buildDfpTileNameDiagnosticReport(): Record<string, any> {
@@ -36895,11 +36662,6 @@ const App: React.FC = () => {
     const [neoProblemTileForFlyout, setNeoProblemTileForFlyout] = useState<NeoProblemTile | null>(null);
     const [neoRemediesForFlyout, setNeoRemediesForFlyout] = useState<NeoRemedy[]>([]);
     const [showInfoNotification, setShowInfoNotification] = useState<string | null>(null);
-    const [archiveHealthReport, setArchiveHealthReport] = useState<{
-        status: 'loading' | 'loaded' | 'error';
-        report?: any;
-        error?: string;
-    } | null>(null);
     const [dutyWarningRemedy, setDutyWarningRemedy] = useState<NeoRemedy | null>(null);
     const [showDutyWarning, setShowDutyWarning] = useState(false);
     const [timeOnlyRemedyForConfirmation, setTimeOnlyRemedyForConfirmation] = useState<NeoTimeShiftRemedy | null>(null);
@@ -47611,225 +47373,6 @@ const App: React.FC = () => {
         void startBuildProcess();
     };
 
-    const handleDownloadNeoBuildReport = useCallback(() => {
-        if (typeof window === 'undefined') return;
-        const readJsonStorage = (key: string): any => {
-            try {
-                const raw = window.localStorage.getItem(key);
-                return raw ? JSON.parse(raw) : null;
-            } catch (error) {
-                return {
-                    parseError: error instanceof Error ? error.message : String(error),
-                };
-            }
-        };
-        const getLatestNeoBuildDiagnosticReport = (): any => {
-            const liveReport = (window as any).__lastNeoBuildDiagnosticReport;
-            const storedReport = readJsonStorage('neo_build_diag_report');
-            const liveUpdatedAt = Date.parse(String(liveReport?.updatedAt || liveReport?.timestamp || ''));
-            const storedUpdatedAt = Date.parse(String(storedReport?.updatedAt || storedReport?.timestamp || ''));
-            if (liveReport && (!storedReport || !Number.isFinite(storedUpdatedAt) || liveUpdatedAt >= storedUpdatedAt)) {
-                return {
-                    ...liveReport,
-                    reportSource: 'window.__lastNeoBuildDiagnosticReport',
-                };
-            }
-            return storedReport ? {
-                ...storedReport,
-                reportSource: 'localStorage.neo_build_diag_report',
-            } : null;
-        };
-        const countBy = <T,>(items: T[], getKey: (item: T) => string | undefined | null): Record<string, number> => (
-            items.reduce((counts: Record<string, number>, item) => {
-                const key = String(getKey(item) || 'Unspecified');
-                counts[key] = (counts[key] || 0) + 1;
-                return counts;
-            }, {})
-        );
-        const visibleBuildEvents = nextDayBuildEvents || [];
-        const summariseLmpMap = () => {
-            const entries = Array.from(traineeLMPs.entries());
-            return {
-                traineeCount: entries.length,
-                totalEvents: entries.reduce((sum, [, events]) => sum + (Array.isArray(events) ? events.length : 0), 0),
-                byLmpType: entries.reduce((counts: Record<string, number>, [, events]) => {
-                    const firstEvent = Array.isArray(events) ? events.find(Boolean) : null;
-                    const key = String((firstEvent as any)?.lmpType || (firstEvent as any)?.course || 'Unspecified');
-                    counts[key] = (counts[key] || 0) + 1;
-                    return counts;
-                }, {}),
-                samples: entries.slice(0, 20).map(([traineeFullName, events]) => ({
-                    traineeFullName,
-                    eventCount: Array.isArray(events) ? events.length : 0,
-                    firstEvents: (Array.isArray(events) ? events : []).slice(0, 12).map(event => ({
-                        id: event.id,
-                        code: event.code,
-                        masterEventId: event.masterEventId,
-                        eventDescription: event.eventDescription,
-                        type: event.type,
-                        lmpType: (event as any).lmpType || null,
-                        phase: event.phase,
-                        module: event.module,
-                        duration: event.duration,
-                        flightOrSimHours: event.flightOrSimHours,
-                        totalEventHours: event.totalEventHours,
-                        isCompleted: event.isCompleted,
-                    })),
-                })),
-            };
-        };
-        const report = {
-            reportType: 'NEO_BUILD_COMPREHENSIVE_DIAGNOSTIC',
-            generatedAt: new Date().toISOString(),
-            buildDate: buildDfpDate,
-            activeView,
-            activeOperationalModel,
-            activeUnitCode,
-            activeLocationCode: school,
-            currentUserName,
-            liveBuildState: {
-                isBuildingDfp,
-                progress: dfpBuildProgress,
-                pageDate: date,
-                generatedAtWhileBuildModalVisible: isBuildingDfp,
-            },
-            liveInputState: {
-                trainees: {
-                    count: traineesData.length,
-                    activeCount: traineesData.filter((trainee: any) => !trainee.isPaused).length,
-                    byCourse: countBy(traineesData, (trainee: any) => trainee.course),
-                    byUnit: countBy(traineesData, (trainee: any) => trainee.unit),
-                    samples: traineesData.slice(0, 40).map((trainee: any) => ({
-                        id: trainee.id,
-                        name: trainee.fullName || trainee.name,
-                        unit: trainee.unit,
-                        course: trainee.course,
-                        lmpType: trainee.lmpType,
-                        isPaused: trainee.isPaused,
-                    })),
-                },
-                instructors: {
-                    count: instructorsData.length,
-                    byUnit: countBy(instructorsData, (instructor: any) => instructor.unit),
-                    samples: instructorsData.slice(0, 30).map((instructor: any) => ({
-                        id: instructor.id,
-                        name: instructor.name || instructor.fullName,
-                        unit: instructor.unit,
-                        rank: instructor.rank,
-                        role: instructor.role,
-                    })),
-                },
-                syllabus: {
-                    count: syllabusDetails.length,
-                    byType: countBy(syllabusDetails, (item: any) => item.type),
-                    byLmpType: countBy(syllabusDetails, (item: any) => item.lmpType || (Array.isArray(item.courses) ? item.courses[0] : undefined)),
-                    samples: syllabusDetails.slice(0, 80).map((item: any) => ({
-                        id: item.id,
-                        code: item.code,
-                        masterEventId: item.masterEventId,
-                        eventDescription: item.eventDescription,
-                        type: item.type,
-                        lmpType: item.lmpType,
-                        courses: item.courses,
-                        duration: item.duration,
-                        flightOrSimHours: item.flightOrSimHours,
-                        totalEventHours: item.totalEventHours,
-                        phase: item.phase,
-                        module: item.module,
-                        sortOrder: item.sortOrder,
-                    })),
-                },
-                individualLmps: summariseLmpMap(),
-                scores: {
-                    traineeCount: scores.size,
-                    totalScores: Array.from(scores.values()).reduce((sum, scoreList) => sum + (Array.isArray(scoreList) ? scoreList.length : 0), 0),
-                },
-                priorities: {
-                    highestPriorityEvents: highestPriorityEvents.length,
-                    samples: highestPriorityEvents.slice(0, 30).map(event => ({
-                        id: event.id,
-                        type: event.type,
-                        flightNumber: event.flightNumber,
-                        startTime: event.startTime,
-                        duration: event.duration,
-                        resourceId: event.resourceId,
-                        pilot: event.pilot,
-                        student: event.student,
-                        pushToNeoBuild: event.pushToNeoBuild,
-                    })),
-                },
-            },
-            visibleDraftSchedule: {
-                count: visibleBuildEvents.length,
-                byType: countBy(visibleBuildEvents, event => event.type),
-                byResource: countBy(visibleBuildEvents, event => event.resourceId),
-                bySource: countBy(visibleBuildEvents, event => (event as any)._source || (event as any).source),
-                sample: visibleBuildEvents.slice(0, 80).map(event => ({
-                    id: event.id,
-                    type: event.type,
-                    flightNumber: event.flightNumber,
-                    startTime: event.startTime,
-                    duration: event.duration,
-                    resourceId: event.resourceId,
-                    instructor: event.instructor || null,
-                    pilot: event.pilot || null,
-                    student: event.student || null,
-                    source: (event as any)._source || (event as any).source || null,
-                    currencyDraftId: event.currencyDraftId || null,
-                })),
-            },
-            storedReports: {
-                neoBuildDiagnostic: getLatestNeoBuildDiagnosticReport(),
-                neoBuildTiming: readJsonStorage('neo_build_timing_report'),
-                neoBuildPreflightLmpScope: readJsonStorage('neo_build_preflight_lmp_scope_trace'),
-                neoBuildRuntimeError: readJsonStorage('neo_build_runtime_error_report'),
-                neoBuildZeroTileTrace: readJsonStorage('neo_build_zero_tile_trace'),
-                neoBuildInputTrace: readJsonStorage('neo_build_input_trace'),
-                neoDfpDataTrace: readJsonStorage('neo_dfp_data_diag'),
-                flightSchoolPriority: readJsonStorage('flight_school_priority_diag_report'),
-            },
-        };
-        const blob = new Blob([JSON.stringify(report, null, 2)], { type: 'application/json' });
-        const url = URL.createObjectURL(blob);
-        const safeUser = String(currentUserName || 'user').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || 'user';
-        const safeDate = String(buildDfpDate || 'no-date').replace(/[^0-9-]/g, '');
-        const link = document.createElement('a');
-        link.href = url;
-        link.download = `neo-build-diagnostic-${safeUser}-${safeDate}-${new Date().toISOString().replace(/[:.]/g, '-')}.json`;
-        document.body.appendChild(link);
-        link.click();
-        link.remove();
-        URL.revokeObjectURL(url);
-        setShowInfoNotification('NEO Build diagnostic JSON downloaded.');
-    }, [activeOperationalModel, activeUnitCode, activeView, buildDfpDate, currentUserName, date, dfpBuildProgress, highestPriorityEvents, instructorsData, isBuildingDfp, nextDayBuildEvents, school, scores, syllabusDetails, traineeLMPs, traineesData]);
-
-    const handleOpenArchiveReport = useCallback(async () => {
-        setArchiveHealthReport({ status: 'loading' });
-        try {
-            const apiBase = getAppApiBase();
-            const sessionToken = localStorage.getItem('dfp_session_token') || '';
-            const response = await fetch(`${apiBase}/archive/dfp-date?date=${encodeURIComponent(date)}`, {
-                cache: 'no-store',
-                credentials: 'include',
-                headers: {
-                    ...(sessionToken ? { Authorization: `Bearer ${sessionToken}` } : {}),
-                },
-            });
-            const report = await response.json().catch(() => null);
-            if (!response.ok || !report) {
-                throw new Error(report?.message || report?.error || `Archive report failed with HTTP ${response.status}`);
-            }
-
-            setArchiveHealthReport({ status: 'loaded', report });
-        } catch (error) {
-            console.error('[Archive] Failed to download archive diagnostic report:', error);
-            setArchiveHealthReport({
-                status: 'error',
-                error: error instanceof Error ? error.message : String(error),
-            });
-        }
-    }, [date]);
-
     const runBuildAlgorithm = async (preservedEvents?: ScheduleEvent[], buildPublishedSchedulesOverride?: Record<string, ScheduleEvent[]>) => {
         logNeoBuildUiDebug('🚀 [NEO-Build] runBuildAlgorithm called');
         logNeoBuildUiDebug('🚀 [NEO-Build] buildDfpDate:', buildDfpDate);
@@ -49211,7 +48754,7 @@ const App: React.FC = () => {
                 logNeoBuildUiDebug('🚀 [NEO-Build] setNextDayBuildEvents called with', generated.length, 'events');
                 if (generated.length === 0) {
                     void showDarkAlert(
-                        'NEO Build completed but did not add any tiles. Open the NEO Build page and click Download Build Report to export the diagnostic report for this run.',
+                        'NEO Build completed but did not add any tiles. Review the build notes and input settings for this run.',
                         'No Tiles Added',
                         'warning',
                         12000
@@ -56855,7 +56398,6 @@ appliedUpdates.forEach(update => {
                             aircraftNumberSettings={aircraftNumberSettings}
                             onExternalEventDrop={handleNextDayExternalEventDrop}
                             diagnosticHighlightedEventIds={staffAvailabilityDiagnosticEventIds}
-                            onDownloadBuildReport={handleDownloadNeoBuildReport}
                        />;
             case 'Priorities':
                 return <PrioritiesViewWithMenu
@@ -58212,7 +57754,6 @@ appliedUpdates.forEach(update => {
                            onUpdateTrainee={handleUpdateTrainee}
                            onAssignTraineeLmp={handleAssignTraineeIndividualLmp}
                            onTraceAssignLmp={(stage, details = {}) => pushDfpDataDiag(`assign-lmp:${stage}`, details)}
-                           onDownloadAssignmentTrace={() => downloadDfpDataDiagReport('assign-lmp-trace')}
                            operationalModel={activeOperationalModel}
                            masterLmpCatalogue={accessibleMasterLmpCatalogueForSyllabus}
                            staffQualificationCatalogue={activeStaffQualificationCatalogue}
@@ -59575,15 +59116,6 @@ appliedUpdates.forEach(update => {
             isTraineeLoaded={isTraineeLoaded}
             isCoursesLoaded={isCoursesLoaded}
         />
-        {isAuthenticated && (hasAuthenticatedAdminRole || platformAccessContext.isSuperAdmin || platformAccessContext.isPlatformAdmin) && (
-            <button
-                type="button"
-                onClick={() => downloadDfpDataDiagReport('dfp-operational-visibility-trace')}
-                className="fixed bottom-4 left-1/2 z-[520] -translate-x-1/2 rounded-md border border-cyan-300/45 bg-slate-950/92 px-4 py-2 text-[11px] font-black uppercase tracking-[0.16em] text-cyan-100 shadow-[0_12px_28px_rgba(0,0,0,0.45)] transition hover:border-cyan-200 hover:bg-slate-900"
-            >
-                Download DFP Data Trace
-            </button>
-        )}
         <div id="app-content" data-theme={theme} className="flex h-screen bg-gray-900 text-white">
 	            <Sidebar
 	                activeView={activeView}
@@ -59676,7 +59208,6 @@ appliedUpdates.forEach(update => {
                     isOracleMode={isOracleMode}
                     onToggleOracleMode={handleToggleOracleMode}
                     onQuickTile={handleQuickTile}
-                    onDownloadNeoTileReport={downloadNeoTileDiagnosticReport}
                     showDepartureDensityOverlay={showDepartureDensityOverlay}
                     onToggleDepartureDensityOverlay={() => {
                         if (!canUseDispatchRate) {
@@ -60058,20 +59589,6 @@ appliedUpdates.forEach(update => {
                             onPhaseChange={setPausePanelPhase}
                             stagedEvents={pauseStagedEvents}
                             onStagedEventsChange={setPauseStagedEvents}
-                            onDownloadDiagnostic={() => downloadPauseFlightOpsDiagnosticReport({
-                                date,
-                                buildDfpDate,
-                                activeView,
-                                activeOperationalModel,
-                                activeUnitCode,
-                                activeLocationCode: school,
-                                currentUserName,
-                                phase: pausePanelPhase,
-                                stagedEvents: pauseStagedEvents.length,
-                                completedEventIds: Array.from(pauseCompletedEventIds),
-                                nextDayBuildEvents: nextDayBuildEvents.length,
-                                scopedPublishedEventsForDate: scopedPublishedEventsForDate.length,
-                            })}
                             onOverlayTimesChange={(start, end) => {
                                 setPauseOverlayStart(start);
                                 setPauseOverlayEnd(end);
@@ -60118,18 +59635,6 @@ appliedUpdates.forEach(update => {
                     }}
                     onClose={() => setShowNeoGuidePanel(false)}
                 />
-            )}
-            {isAuthenticated && isViewingPastDfp && (
-                <div className="fixed bottom-[168px] right-[18px] z-[100] flex w-[75px] justify-center">
-                    <button
-                        type="button"
-                        onClick={handleOpenArchiveReport}
-                        title="Open the archive health report for this DFP date"
-                        className="w-[75px] rounded-md border border-sky-200/55 bg-gray-900/15 px-1.5 py-1.5 text-center text-[10px] font-semibold leading-tight text-sky-100/85 shadow-none transition-colors hover:border-sky-100/75 hover:bg-sky-300/12 hover:text-white"
-                    >
-                        Archive<br/>Report
-                    </button>
-                </div>
             )}
             {floatingDashboardWindows.MyDashboard && (
                 <FloatingDashboardWindow
@@ -60542,149 +60047,11 @@ appliedUpdates.forEach(update => {
                     dutyHours={dutyWarningRemedy.type !== 'trainee' ? dutyWarningRemedy.instructor.dutyHours : 0}
                 />
             )}
-            {archiveHealthReport && (
-                <div className="fixed inset-0 z-[10000] flex items-center justify-center bg-black/70 px-4">
-                    <div className="w-full max-w-3xl overflow-hidden rounded-lg border border-gray-700 bg-gray-900 shadow-2xl">
-                        <div className="flex items-center justify-between border-b border-gray-700 bg-gray-950 px-5 py-4">
-                            <div>
-                                <h2 className="text-lg font-bold text-white">Archive Health Report</h2>
-                                <p className="mt-1 text-xs text-gray-400">Plain-English archive status for {date}.</p>
-                            </div>
-                            <button
-                                type="button"
-                                onClick={() => setArchiveHealthReport(null)}
-                                className="rounded-md border border-gray-700 px-3 py-1.5 text-sm font-semibold text-gray-200 hover:bg-gray-800"
-                            >
-                                Close
-                            </button>
-                        </div>
-                        <div className="max-h-[72vh] overflow-y-auto p-5">
-                            {archiveHealthReport.status === 'loading' && (
-                                <div className="rounded-md border border-sky-700/60 bg-sky-950/30 p-4 text-sm text-sky-100">
-                                    Loading archive report...
-                                </div>
-                            )}
-                            {archiveHealthReport.status === 'error' && (
-                                <div className="rounded-md border border-red-700/60 bg-red-950/30 p-4 text-sm text-red-100">
-                                    Could not load the archive report. {archiveHealthReport.error || 'Please try again.'}
-                                </div>
-                            )}
-                            {archiveHealthReport.status === 'loaded' && (() => {
-                                const report = archiveHealthReport.report || {};
-                                const diagnostics = report.archiveCompletenessDiagnostics || report.snapshot?.archiveCompletenessDiagnostics || {};
-                                const schedule = diagnostics.schedule || {};
-                                const profiles = diagnostics.profiles || {};
-                                const currency = diagnostics.currencyAndRecency || {};
-                                const training = diagnostics.training || {};
-                                const logbook = diagnostics.logbook || {};
-                                const config = diagnostics.config || {};
-                                const warnings = Array.isArray(diagnostics.warnings) ? diagnostics.warnings : [];
-                                const notices = Array.isArray(diagnostics.notices) ? diagnostics.notices : [];
-                                const currencyDefinitionsSource = String(currency.definitionsSource || 'unknown');
-                                const currencyDefinitionsSourceLabel = currencyDefinitionsSource === 'archived-config-version'
-                                    ? 'Captured in compact archive'
-                                    : currencyDefinitionsSource === 'daily-snapshot'
-                                        ? 'Stored in daily snapshot'
-                                        : currencyDefinitionsSource === 'saved-settings-fallback'
-                                            ? 'Recovered from saved Settings'
-                                            : currencyDefinitionsSource === 'missing'
-                                                ? 'Missing'
-                                                : 'Unknown';
-                                const healthRows = [
-                                    ['Archive source', report.source || diagnostics.source || 'Unknown'],
-                                    ['Snapshot key', report.snapshotKey || diagnostics.snapshotKey || 'Unknown'],
-                                    ['Schedule events', `${schedule.scheduleEvents ?? report.scheduleEvents?.length ?? 0}`],
-                                    ['Staff events', `${schedule.staffEvents ?? report.staffEvents?.length ?? 0}`],
-                                    ['Trainee events', `${schedule.traineeEvents ?? report.traineeEvents?.length ?? 0}`],
-                                    ['Staff profiles', `${profiles.staffProfiles ?? report.staffProfiles?.length ?? 0}`],
-                                    ['Trainee profiles', `${profiles.traineeProfiles ?? report.traineeProfiles?.length ?? 0}`],
-                                    ['Currency status rows', `${currency.profileCurrencyRows ?? 0} profile rows, ${currency.staffCurrencyRows ?? 0} staff map rows`],
-                                    ['Currency definitions', `${currency.masterCurrencyDefinitions ?? 0} master, ${currency.currencyRequirementDefinitions ?? 0} requirements`],
-                                    ['Currency catalogue source', currencyDefinitionsSourceLabel],
-                                    ['Recency definitions', `${currency.recencyDefinitionRows ?? 0}`],
-                                    ['Training reports', `${training.trainingReports ?? report.trainingReports?.length ?? 0}`],
-                                    ['Training report versions', `${training.trainingReportVersions ?? report.trainingReportVersions?.length ?? 0}`],
-                                    ['Event completions', `${training.eventCompletions ?? report.eventCompletions?.length ?? 0}`],
-                                    ['Flight log entries', `${logbook.flightLogEntries ?? report.flightLogEntries?.length ?? 0}`],
-                                    ['Config versions', `${config.configVersions ?? report.configVersions?.length ?? 0}`],
-                                ];
-                                return (
-                                    <div className="space-y-5">
-                                        <div className="rounded-md border border-gray-700 bg-gray-800/70 p-4">
-                                            <div className="flex items-center justify-between gap-3">
-                                                <div>
-                                                    <p className="text-sm font-semibold text-gray-200">Overall status</p>
-                                                    <p className="mt-1 text-sm text-gray-400">
-                                                        {warnings.length > 0
-                                                            ? 'The archive loaded, with items for admin review.'
-                                                            : 'The archive loaded and no health warnings were reported.'}
-                                                    </p>
-                                                </div>
-                                                <span className={`rounded-full px-3 py-1 text-xs font-bold uppercase ${warnings.length > 0 ? 'bg-amber-500/15 text-amber-200 ring-1 ring-amber-500/40' : 'bg-emerald-500/15 text-emerald-200 ring-1 ring-emerald-500/40'}`}>
-                                                    {warnings.length > 0 ? 'Review' : 'Healthy'}
-                                                </span>
-                                            </div>
-                                        </div>
-
-                                        {warnings.length > 0 && (
-                                            <div className="rounded-md border border-amber-700/60 bg-amber-950/25 p-4">
-                                                <h3 className="text-sm font-bold text-amber-100">Items for review</h3>
-                                                <div className="mt-3 space-y-2">
-                                                    {warnings.map((warning: any, index: number) => (
-                                                        <div key={`${warning?.code || 'warning'}-${index}`} className="rounded border border-amber-700/40 bg-gray-950/40 p-3">
-                                                            <p className="text-xs font-bold uppercase tracking-wide text-amber-300">{warning?.code || 'Archive warning'}</p>
-                                                            <p className="mt-1 text-sm text-amber-50">{warning?.message || String(warning)}</p>
-                                                        </div>
-                                                    ))}
-                                                </div>
-                                            </div>
-                                        )}
-
-                                        {notices.length > 0 && (
-                                            <div className="rounded-md border border-sky-800/50 bg-sky-950/20 p-4">
-                                                <h3 className="text-sm font-bold text-sky-100">Archive notes</h3>
-                                                <div className="mt-3 space-y-2">
-                                                    {notices.map((notice: any, index: number) => (
-                                                        <div key={`${notice?.code || 'notice'}-${index}`} className="rounded border border-sky-800/40 bg-gray-950/35 p-3">
-                                                            <p className="text-xs font-bold uppercase tracking-wide text-sky-300">{notice?.code || 'Archive note'}</p>
-                                                            <p className="mt-1 text-sm text-sky-50">{notice?.message || String(notice)}</p>
-                                                        </div>
-                                                    ))}
-                                                </div>
-                                            </div>
-                                        )}
-
-                                        <div className="grid gap-3 md:grid-cols-2">
-                                            {healthRows.map(([label, value]) => (
-                                                <div key={label} className="rounded-md border border-gray-700 bg-gray-800/50 p-3">
-                                                    <p className="text-[11px] font-bold uppercase tracking-wide text-gray-500">{label}</p>
-                                                    <p className="mt-1 text-sm font-semibold text-gray-100">{value}</p>
-                                                </div>
-                                            ))}
-                                        </div>
-
-                                        <div className="rounded-md border border-gray-700 bg-gray-800/50 p-4">
-                                            <h3 className="text-sm font-bold text-gray-100">What this means</h3>
-                                            <p className="mt-2 text-sm leading-6 text-gray-300">
-                                                This report checks whether the historical DFP can rebuild the operational picture for that date:
-                                                schedule tiles, people, currency and recency status, training evidence, completions, logbook rows,
-                                                and configuration versions. Older archives may not contain every newer archive field, but the
-                                                warning section explains that clearly when it happens.
-                                            </p>
-                                        </div>
-                                    </div>
-                                );
-                            })()}
-                        </div>
-                    </div>
-                </div>
-            )}
             {showInfoNotification && <InfoNotification message={showInfoNotification} onClose={() => setShowInfoNotification(null)} />}
             {showNightFlyingInfo && <NightFlyingInfoFlyout traineeCount={nightFlyingTraineeCount} />}
             {isBuildingDfp && (
                 <BuildDfpLoadingFlyout
                     progress={dfpBuildProgress}
-                    onDownloadLiveTrace={handleDownloadNeoBuildReport}
                 />
             )}
             {pausePanelPhase === 'building' && <PropellerLoadingOverlay message="Engine warming up — please wait…" />}

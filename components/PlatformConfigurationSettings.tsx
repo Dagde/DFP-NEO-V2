@@ -8393,85 +8393,6 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
       organisationCode: location.organisationCode,
     }))
     .filter(({ location }) => isLocationInActiveOrganisationScope(location));
-  const buildSettingsLocationScopeTrace = () => {
-    const summariseLocation = (location: any) => {
-      const locationCode = normaliseUnitCode(location?.code);
-      const scopedUnitCodes = locationUnitCodes(location);
-      return {
-        id: location?.id || '',
-        code: location?.code || '',
-        name: location?.name || '',
-        status: location?.status || '',
-        locationCode,
-        isVisibleForSettingsPolicy: isRecordVisibleForSettingsPolicy({
-          locationCode: location?.code,
-          organisationCode: location?.organisationCode,
-        }),
-        isLocationInActiveOrganisationScope: isLocationInActiveOrganisationScope(location),
-        includedBecause: {
-          noUnitScope: activeOrganisationLocationUnitSet.size === 0,
-          blankLocationCode: !locationCode,
-          activeOrganisationLocationCodes: activeOrganisationLocationCodes.has(locationCode),
-          matchingUnitCodeTag: scopedUnitCodes.some((unitCode) => activeOrganisationLocationUnitSet.has(unitCode)),
-        },
-        topLevelUnitCode: location?.unitCode || '',
-        topLevelUnit: location?.unit || '',
-        topLevelUnitCodes: Array.isArray(location?.unitCodes) ? location.unitCodes : null,
-        topLevelAssignedUnitCodes: Array.isArray(location?.assignedUnitCodes) ? location.assignedUnitCodes : null,
-        settingsUnitCode: location?.settings?.unitCode || '',
-        settingsUnitCodes: Array.isArray(location?.settings?.unitCodes) ? location.settings.unitCodes : null,
-        settingsAssignedUnitCodes: Array.isArray(location?.settings?.assignedUnitCodes) ? location.settings.assignedUnitCodes : null,
-        resolvedUnitCodes: scopedUnitCodes,
-      };
-    };
-    return {
-      exportedAt: new Date().toISOString(),
-      activeContext: {
-        scrollTarget,
-        sectionOnly,
-        visibleSectionTarget,
-        activeUnitCode,
-        activeUnitCodes,
-        activeCompositeUnitCode,
-        focusUnitCode,
-        focusLocationCode,
-        activePrimaryUnitCode,
-        activeHomeLocationCode,
-        activeOrganisationLocationUnitCodes,
-        activeOrganisationLocationCodes: Array.from(activeOrganisationLocationCodes),
-        settingsVisibilityPolicy,
-      },
-      units: config.units.map((unit: any) => ({
-        id: unit?.id || '',
-        code: unit?.code || '',
-        name: unit?.name || '',
-        status: unit?.status || '',
-        locationCode: unit?.locationCode || '',
-      })),
-      resourcePools: config.resourcePools.map((pool: any) => ({
-        id: pool?.id || '',
-        code: pool?.code || '',
-        unitCode: pool?.unitCode || '',
-        locationCode: pool?.locationCode || '',
-        status: pool?.status || '',
-      })),
-      locations: config.locations.map(summariseLocation),
-      visibleLocationCodes: visibleLocationRows.map(({ location }) => normaliseUnitCode(location?.code)),
-    };
-  };
-  const downloadSettingsLocationScopeTrace = () => {
-    if (typeof window === 'undefined') return;
-    const unitLabel = String(activeCompositeUnitCode || activeUnitCode || activePrimaryUnitCode || 'unit').replace(/[^A-Za-z0-9+_-]+/g, '-');
-    const blob = new Blob([JSON.stringify(buildSettingsLocationScopeTrace(), null, 2)], { type: 'application/json' });
-    const url = window.URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.href = url;
-    link.download = `dfp-neo-settings-location-scope-trace-${unitLabel}-${new Date().toISOString().replace(/[:.]/g, '-')}.json`;
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    window.URL.revokeObjectURL(url);
-  };
   const visibleUnitRows = configUnits
     .map((unit, index) => ({ unit, index }))
     .filter(({ unit, index }) => {
@@ -9030,80 +8951,6 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
     recordSettingsTraceEvent('pointerdown', event);
   };
 
-  const downloadSettingsPerformanceTrace = () => {
-    const navigationEntry = typeof performance !== 'undefined' && typeof performance.getEntriesByType === 'function'
-      ? performance.getEntriesByType('navigation')[0]
-      : null;
-    const report = {
-      generatedAt: new Date().toISOString(),
-      activeContext: {
-        scrollTarget: scrollTarget || null,
-        sectionOnly,
-        visibleSectionTarget,
-        selectedAccessUserId,
-        selectedAccessDisplayName,
-        activeUnitCode,
-        activeUnitCodes,
-        activeCompositeUnitCode,
-        activeOperationalModel,
-        currentUserPermission,
-      },
-      counts: {
-        organisations: configOrganisations.length,
-        locations: configLocations.length,
-        units: configUnits.length,
-        aircraftTypes: configAircraftTypes.length,
-        resourcePools: configResourcePools.length,
-        schedulingRuleSets: configSchedulingRuleSets.length,
-        platformUsers: configPlatformUsers.length,
-        userAccessRows: configUserAccess.length,
-        visibleUserAccessRows: visibleUserAccessRows.length,
-        visibleSelectedAccessRows: visibleSelectedAccessRows.length,
-        permissionProfiles: permissionProfiles.length,
-        selectedUserProfiles: selectedUserProfileIds.length,
-        selectedBasePermissions: selectedBasePermissionIds.length,
-        selectedAllowedExceptions: selectedUserPermissionAllowIds.length,
-        selectedDeniedExceptions: selectedUserPermissionDenyIds.length,
-        selectedEffectivePermissions: selectedEffectivePermissionIds.length,
-        instructors: instructorsData.length,
-        trainees: traineesData.length,
-        userOptions: userOptions.length,
-        bulkAccessUserOptions: bulkAccessUserOptions.length,
-        visibleBulkAccessUserOptions: visibleBulkAccessUserOptions.length,
-        renderedBulkAccessUserOptions: renderedBulkAccessUserOptions.length,
-        bulkAccessUserGroups: bulkAccessUserGroups.length,
-        selectedBulkUsers: bulkAccessUserIds.length,
-        selectedBulkProfiles: bulkAccessProfileIds.length,
-      },
-      searchState: {
-        topUserSearchLength: userSearch.length,
-        bulkPeopleSearchLength: bulkAccessPeopleSearch.length,
-        hiddenBulkAccessUserCount,
-      },
-      renderTrace: {
-        mountedAtIso: settingsTraceRef.current.mountedAtIso,
-        ageMs: Number((getTraceNow() - settingsTraceRef.current.mountedAtMs).toFixed(2)),
-        renderCount: settingsTraceRef.current.renderCount,
-        lastRenderAtMs: Number(settingsTraceRef.current.lastRenderAtMs.toFixed(2)),
-        maxRenderGapMs: settingsTraceRef.current.maxRenderGapMs,
-      },
-      timingTrace: settingsTraceRef.current.timings,
-      recentEvents: settingsTraceRef.current.events,
-      browser: {
-        userAgent: typeof navigator !== 'undefined' ? navigator.userAgent : '',
-        hardwareConcurrency: typeof navigator !== 'undefined' ? navigator.hardwareConcurrency : undefined,
-        deviceMemory: typeof navigator !== 'undefined' ? (navigator as any).deviceMemory : undefined,
-        navigation: navigationEntry ? JSON.parse(JSON.stringify(navigationEntry)) : null,
-      },
-    };
-    const dateStamp = new Date().toISOString().slice(0, 10);
-    downloadTextFile(
-      `settings-performance-trace-${dateStamp}.json`,
-      JSON.stringify(report, null, 2),
-      'application/json',
-    );
-  };
-
   const renderPlatformConfigError = () => {
     if (!error) return null;
     const canNavigate = Boolean(errorLink?.target && onNavigateToSettingsSection);
@@ -9420,9 +9267,6 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
           subtitle="Bases, airfields, timezone data and local training areas used by units and scheduling."
           action={canEdit ? (
             <div className="flex flex-wrap justify-end gap-[1px]">
-              <button type="button" onClick={downloadSettingsLocationScopeTrace} className={platformActionButtonClass}>
-                <span className="text-[9px] leading-tight">Download<br />Trace</span>
-              </button>
               {renderSectionEditSaveButton('platform-locations')}
               <button type="button" onClick={addLocation} disabled={!canEditSection('platform-locations')} className={platformActionButtonClass}>
                 <span className="text-[9px] leading-tight">Add<br />Location</span>

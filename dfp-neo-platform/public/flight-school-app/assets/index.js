@@ -7647,32 +7647,6 @@ const appendStaffProfileTrace = (stage, data) => {
   } catch {
   }
 };
-const clearStaffProfileTrace = () => {
-  if (!hasWindow()) return;
-  try {
-    window.localStorage.removeItem(STORAGE_KEY$1);
-  } catch {
-  }
-};
-const traceSlug = (value) => String(value || "staff-profile").trim().toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "").slice(0, 80) || "staff-profile";
-const downloadStaffProfileTrace = (label = "staff-profile") => {
-  if (!hasWindow()) return;
-  const payload = {
-    generatedAt: (/* @__PURE__ */ new Date()).toISOString(),
-    href: window.location.href,
-    userAgent: window.navigator.userAgent,
-    entries: readStaffProfileTrace()
-  };
-  const blob = new Blob([JSON.stringify(payload, null, 2)], { type: "application/json" });
-  const url = URL.createObjectURL(blob);
-  const anchor = document.createElement("a");
-  anchor.href = url;
-  anchor.download = `staff-profile-trace-${traceSlug(label)}-${(/* @__PURE__ */ new Date()).toISOString().replace(/[:.]/g, "-")}.json`;
-  document.body.appendChild(anchor);
-  anchor.click();
-  anchor.remove();
-  URL.revokeObjectURL(url);
-};
 const summariseStaffProfileForTrace = (instructor, staffQualificationCatalogue) => {
   if (!instructor) return null;
   const anyInstructor = instructor;
@@ -11812,7 +11786,6 @@ const Header = ({
   isOracleMode,
   onToggleOracleMode,
   onQuickTile,
-  onDownloadNeoTileReport,
   showAircraftAvailability,
   onToggleAircraftAvailability,
   onPauseFlightOps,
@@ -12199,20 +12172,6 @@ const Header = ({
             ] }) : "NEO - Tile" })
           }
         ),
-        !isFixedCrewModel && isOracleMode && onDownloadNeoTileReport && /* @__PURE__ */ jsxRuntimeExports.jsx(
-          "button",
-          {
-            type: "button",
-            onClick: onDownloadNeoTileReport,
-            className: headerButtonClass,
-            title: "Download top menu NEO Tile diagnostic report",
-            children: /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "text-center leading-tight", children: [
-              "NEO",
-              /* @__PURE__ */ jsxRuntimeExports.jsx("br", {}),
-              "Report"
-            ] })
-          }
-        ),
         /* @__PURE__ */ jsxRuntimeExports.jsx(
           "button",
           {
@@ -12540,10 +12499,6 @@ const getAuthorizationTextColorClass = (event, currentTime, settings) => {
   return "";
 };
 const FlightTile = ({ event, traineesData, instructorsData = [], onSelectEvent, onSelectAcademicTile, onMouseDown, onPointerDown, onMouseEnter, onMouseLeave, pixelsPerHour, rowHeight, startHour, row, isDragging, isConflicting, conflictedPersonnelName, personnelData, seatConfigs, isDraggable = true, currentTime, isUnavailabilityConflict, unavailablePersonnel, isSelected = false, isChanged = false, isPreview = false, isPauseCompleted = false, isDiagnosticHighlighted = false, alertStatus = null, aircraftNumberSettings = DEFAULT_AIRCRAFT_NUMBER_SETTINGS, disableLayoutTransition = false, suppressAuthorisationWarnings = false, instructorLabel: instructorLabel2 = "Instructor", homeLocationCode = "", locationDisplayCodes = {}, locationCanonicalCodes = {} }) => {
-  try {
-    const testAccess = seatConfigs;
-  } catch (error) {
-  }
   const segment = event;
   const effectiveStartTime = segment.segmentStartTime !== void 0 ? segment.segmentStartTime : event.startTime;
   const effectiveDuration = segment.segmentDuration !== void 0 ? segment.segmentDuration : event.duration;
@@ -25066,85 +25021,6 @@ This removes them from DFP Resource Rows. Press Save in this section to apply th
     locationCode: location.code,
     organisationCode: location.organisationCode
   })).filter(({ location }) => isLocationInActiveOrganisationScope(location));
-  const buildSettingsLocationScopeTrace = () => {
-    const summariseLocation = (location) => {
-      const locationCode = normaliseUnitCode2(location?.code);
-      const scopedUnitCodes = locationUnitCodes(location);
-      return {
-        id: location?.id || "",
-        code: location?.code || "",
-        name: location?.name || "",
-        status: location?.status || "",
-        locationCode,
-        isVisibleForSettingsPolicy: isRecordVisibleForSettingsPolicy({
-          locationCode: location?.code,
-          organisationCode: location?.organisationCode
-        }),
-        isLocationInActiveOrganisationScope: isLocationInActiveOrganisationScope(location),
-        includedBecause: {
-          noUnitScope: activeOrganisationLocationUnitSet.size === 0,
-          blankLocationCode: !locationCode,
-          activeOrganisationLocationCodes: activeOrganisationLocationCodes.has(locationCode),
-          matchingUnitCodeTag: scopedUnitCodes.some((unitCode) => activeOrganisationLocationUnitSet.has(unitCode))
-        },
-        topLevelUnitCode: location?.unitCode || "",
-        topLevelUnit: location?.unit || "",
-        topLevelUnitCodes: Array.isArray(location?.unitCodes) ? location.unitCodes : null,
-        topLevelAssignedUnitCodes: Array.isArray(location?.assignedUnitCodes) ? location.assignedUnitCodes : null,
-        settingsUnitCode: location?.settings?.unitCode || "",
-        settingsUnitCodes: Array.isArray(location?.settings?.unitCodes) ? location.settings.unitCodes : null,
-        settingsAssignedUnitCodes: Array.isArray(location?.settings?.assignedUnitCodes) ? location.settings.assignedUnitCodes : null,
-        resolvedUnitCodes: scopedUnitCodes
-      };
-    };
-    return {
-      exportedAt: (/* @__PURE__ */ new Date()).toISOString(),
-      activeContext: {
-        scrollTarget,
-        sectionOnly,
-        visibleSectionTarget,
-        activeUnitCode,
-        activeUnitCodes,
-        activeCompositeUnitCode,
-        focusUnitCode,
-        focusLocationCode,
-        activePrimaryUnitCode,
-        activeHomeLocationCode,
-        activeOrganisationLocationUnitCodes,
-        activeOrganisationLocationCodes: Array.from(activeOrganisationLocationCodes),
-        settingsVisibilityPolicy
-      },
-      units: config.units.map((unit) => ({
-        id: unit?.id || "",
-        code: unit?.code || "",
-        name: unit?.name || "",
-        status: unit?.status || "",
-        locationCode: unit?.locationCode || ""
-      })),
-      resourcePools: config.resourcePools.map((pool) => ({
-        id: pool?.id || "",
-        code: pool?.code || "",
-        unitCode: pool?.unitCode || "",
-        locationCode: pool?.locationCode || "",
-        status: pool?.status || ""
-      })),
-      locations: config.locations.map(summariseLocation),
-      visibleLocationCodes: visibleLocationRows.map(({ location }) => normaliseUnitCode2(location?.code))
-    };
-  };
-  const downloadSettingsLocationScopeTrace = () => {
-    if (typeof window === "undefined") return;
-    const unitLabel = String(activeCompositeUnitCode || activeUnitCode || activePrimaryUnitCode || "unit").replace(/[^A-Za-z0-9+_-]+/g, "-");
-    const blob = new Blob([JSON.stringify(buildSettingsLocationScopeTrace(), null, 2)], { type: "application/json" });
-    const url = window.URL.createObjectURL(blob);
-    const link = document.createElement("a");
-    link.href = url;
-    link.download = `dfp-neo-settings-location-scope-trace-${unitLabel}-${(/* @__PURE__ */ new Date()).toISOString().replace(/[:.]/g, "-")}.json`;
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    window.URL.revokeObjectURL(url);
-  };
   const visibleUnitRows = configUnits.map((unit, index) => ({ unit, index })).filter(({ unit, index }) => {
     if (index === editingUnitIndex) return true;
     return isRecordVisibleForSettingsPolicy({
@@ -25851,11 +25727,6 @@ This removes them from DFP Resource Rows. Press Save in this section to apply th
               title: "Locations",
               subtitle: "Bases, airfields, timezone data and local training areas used by units and scheduling.",
               action: canEdit ? /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex flex-wrap justify-end gap-[1px]", children: [
-                /* @__PURE__ */ jsxRuntimeExports.jsx("button", { type: "button", onClick: downloadSettingsLocationScopeTrace, className: platformActionButtonClass, children: /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "text-[9px] leading-tight", children: [
-                  "Download",
-                  /* @__PURE__ */ jsxRuntimeExports.jsx("br", {}),
-                  "Trace"
-                ] }) }),
                 renderSectionEditSaveButton("platform-locations"),
                 /* @__PURE__ */ jsxRuntimeExports.jsx("button", { type: "button", onClick: addLocation, disabled: !canEditSection("platform-locations"), className: platformActionButtonClass, children: /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "text-[9px] leading-tight", children: [
                   "Add",
@@ -35093,35 +34964,6 @@ const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, lo
       setWizardFinishTrace(next);
     }
   };
-  const downloadWizardFinishTrace = () => {
-    if (typeof window === "undefined") return;
-    let storedTrace = [];
-    try {
-      const parsed = JSON.parse(window.localStorage.getItem(wizardFinishTraceStorageKey) || "[]");
-      storedTrace = Array.isArray(parsed) ? parsed : [];
-    } catch {
-      storedTrace = [];
-    }
-    const trace = wizardFinishTraceRef.current.length > 0 ? wizardFinishTraceRef.current : storedTrace;
-    const report = {
-      reportType: "dfp-setup-wizard-step-41-finish-trace",
-      generatedAt: (/* @__PURE__ */ new Date()).toISOString(),
-      url: window.location.href,
-      userAgent: window.navigator.userAgent,
-      currentSnapshot: getWizardFinishTraceSnapshot(),
-      trace
-    };
-    const blob = new Blob([JSON.stringify(report, null, 2)], { type: "application/json" });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement("a");
-    link.href = url;
-    link.download = `dfp-step-41-finish-trace-${(/* @__PURE__ */ new Date()).toISOString().replace(/[:.]/g, "-")}.json`;
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    URL.revokeObjectURL(url);
-    setSaveMessage("Step 41 finish trace downloaded.");
-  };
   reactExports.useEffect(() => {
     onInitialSetupWizardFinishedRef.current = onInitialSetupWizardFinished;
   }, [onInitialSetupWizardFinished]);
@@ -43260,195 +43102,174 @@ const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, lo
         /* @__PURE__ */ jsxRuntimeExports.jsx("strong", { children: "Next" }),
         ". Use this page to check the setup. If something is wrong, go back to that step and change it. No extra save is required on this review page."
       ] }),
-      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid gap-3 text-sm", children: [
-        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "rounded-lg border border-amber-300 bg-amber-50 px-3 py-3 text-amber-950", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex flex-wrap items-center justify-between gap-3", children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
-            /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-[10px] font-black uppercase tracking-[0.16em] text-amber-800", children: "Step 41 data tracking" }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-1 text-xs font-semibold leading-5 text-amber-900", children: "Records Finish Review, staff/trainee/LMP commits, completion state, and the DFP return handoff." }),
-            /* @__PURE__ */ jsxRuntimeExports.jsxs("p", { className: "mt-1 text-[11px] font-bold text-amber-800", children: [
-              "Trace entries captured: ",
-              wizardFinishTrace.length
-            ] })
-          ] }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx(
-            "button",
-            {
-              type: "button",
-              className: "rounded-md border border-amber-500 bg-amber-600 px-3 py-2 text-xs font-black text-white shadow-sm transition hover:bg-amber-700",
-              onClick: downloadWizardFinishTrace,
-              children: "Download Step 41 Trace"
-            }
-          )
-        ] }) }),
-        [
-          {
-            label: "Organisation name",
-            value: organisationDraft.name || organisationDraft.code || "Not set",
-            help: `This is the organisation the ${unitDraft.code || "unit"} belongs to.`
-          },
-          {
-            label: "Organisation levels",
-            value: `${fromLines(organisationDraft.level1Options).length} names at Level 1; ${fromLines(organisationDraft.level2Options).length} names at Level 2; ${fromLines(organisationDraft.level3Options).length} names at Level 3. ${organisationPreviewLinks.length} reporting links set.`,
-            help: "Check that the organisation tree matches how your real organisation is arranged."
-          },
-          {
-            label: "Operating location",
-            value: `${locationDraft.name || "Not named"}${locationDraft.code ? ` (${locationDraft.code})` : ""}`,
-            help: "This is the main airfield or base used by this unit."
-          },
-          {
-            label: "Locations to create",
-            value: parseWizardLocationRows(locationsTodayDraft).map((location) => `${location.name || "Unnamed location"} (${location.icao || "no ICAO"}${location.iata ? `, ${location.iata}` : ""})`).join("\n") || "Not set",
-            help: "These are the bases or airfields available to the organisation."
-          },
-          {
-            label: "Units to create",
-            value: parseWizardUnitRows(unitsTodayDraft).map((unit) => `${unit.name || unit.code || "Unnamed unit"}${unit.code ? ` (${unit.code})` : ""}`).join("\n") || "Not set",
-            help: "These are the squadrons, schools, departments or other units being added now."
-          },
-          {
-            label: "This unit",
-            value: `${unitDraft.name || unitDraft.code || "Not set"} uses the ${getWizardOperationalModelLabel(unitDraft.operationalModel)}.`,
-            help: "Check this is the unit you are configuring and that the operating model is correct."
-          },
-          {
-            label: "Aircraft and rows",
-            value: (() => {
-              const classroomNames = getClassroomNamesForRows(resourceDraft.classrooms, parseNumberDraft(resourceDraft.ground)).filter(Boolean);
-              return `${resourceDraft.aircraftCode || "No aircraft type set"}: ${resourceDraft.aircraft || "0"} aircraft rows, ${resourceDraft.sim || "0"} simulator rows, ${resourceDraft.trainer || "0"} trainer rows, ${resourceDraft.standby || "0"} standby rows, ${resourceDraft.ground || "0"} ground rows.${classroomNames.length ? `
+      /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "grid gap-3 text-sm", children: [
+        {
+          label: "Organisation name",
+          value: organisationDraft.name || organisationDraft.code || "Not set",
+          help: `This is the organisation the ${unitDraft.code || "unit"} belongs to.`
+        },
+        {
+          label: "Organisation levels",
+          value: `${fromLines(organisationDraft.level1Options).length} names at Level 1; ${fromLines(organisationDraft.level2Options).length} names at Level 2; ${fromLines(organisationDraft.level3Options).length} names at Level 3. ${organisationPreviewLinks.length} reporting links set.`,
+          help: "Check that the organisation tree matches how your real organisation is arranged."
+        },
+        {
+          label: "Operating location",
+          value: `${locationDraft.name || "Not named"}${locationDraft.code ? ` (${locationDraft.code})` : ""}`,
+          help: "This is the main airfield or base used by this unit."
+        },
+        {
+          label: "Locations to create",
+          value: parseWizardLocationRows(locationsTodayDraft).map((location) => `${location.name || "Unnamed location"} (${location.icao || "no ICAO"}${location.iata ? `, ${location.iata}` : ""})`).join("\n") || "Not set",
+          help: "These are the bases or airfields available to the organisation."
+        },
+        {
+          label: "Units to create",
+          value: parseWizardUnitRows(unitsTodayDraft).map((unit) => `${unit.name || unit.code || "Unnamed unit"}${unit.code ? ` (${unit.code})` : ""}`).join("\n") || "Not set",
+          help: "These are the squadrons, schools, departments or other units being added now."
+        },
+        {
+          label: "This unit",
+          value: `${unitDraft.name || unitDraft.code || "Not set"} uses the ${getWizardOperationalModelLabel(unitDraft.operationalModel)}.`,
+          help: "Check this is the unit you are configuring and that the operating model is correct."
+        },
+        {
+          label: "Aircraft and rows",
+          value: (() => {
+            const classroomNames = getClassroomNamesForRows(resourceDraft.classrooms, parseNumberDraft(resourceDraft.ground)).filter(Boolean);
+            return `${resourceDraft.aircraftCode || "No aircraft type set"}: ${resourceDraft.aircraft || "0"} aircraft rows, ${resourceDraft.sim || "0"} simulator rows, ${resourceDraft.trainer || "0"} trainer rows, ${resourceDraft.standby || "0"} standby rows, ${resourceDraft.ground || "0"} ground rows.${classroomNames.length ? `
 Classrooms: ${classroomNames.join(", ")}` : ""}`;
-            })(),
-            help: "These numbers control what rows appear on the DFP schedule for this unit."
-          },
-          {
-            label: "Aircraft CONFIG",
-            value: (() => {
-              const configs = getWizardAircraftConfigDefinitions();
-              return configs.length > 0 ? configs.map((config) => `${config.code || config.name || "CONFIG"}${config.label || config.name ? ` - ${config.label || config.name}` : ""}`).join("\n") : "Not set";
-            })(),
-            help: "These are the aircraft configuration options users can choose when planning or building events."
-          },
-          {
-            label: "Crew roles",
-            value: parseWizardCrewRoleRows(crewRolesDraft).map((row) => `${row.label || row.role || "Crew role"}${row.models ? ` - used by ${row.models}` : ""}`).join("\n") || "Not set",
-            help: "These are the crew position names users can choose from when setting crew rules."
-          },
-          {
-            label: "Normal crew",
-            value: parseRoleRequirementsText(crewDraft.standardSeats).map((row) => `${row.count} x ${row.role}`).join("\n") || "Not set",
-            help: "This tells NEO what a normal crew looks like for the aircraft or resource."
-          },
-          {
-            label: "Callsign rules",
-            value: hasMeaningfulCallsignSettings() ? `${hasMeaningfulUnitCallsignSettings() ? "Unit callsign prefixes set." : "Unit callsign prefixes not set."} ${hasMeaningfulFormationCallsigns() ? "Formation callsigns set." : "Formation callsigns not set."}`.trim() : "Not set",
-            help: "These rules help DFP NEO suggest callsigns instead of making users type them from scratch."
-          },
-          {
-            label: "Scheduling limits",
-            value: buildRulesDraftText || "Not set",
-            help: "These limits help prevent the build from placing too much flying, too close together, or beyond duty limits."
-          },
-          {
-            label: "Advanced scheduling rules",
-            value: hasMeaningfulSchedulingRuleSettings() ? "Detailed timing or rule-set records are configured." : "Not set",
-            help: "These records control default event timings and detailed scheduling behaviour."
-          },
-          {
-            label: "Resource and staff sharing",
-            value: parseWizardSharingRows(resourceSharingDraft).map((row) => {
-              const sharingName = row.type || "Sharing";
-              const state = /^on$/i.test(row.enabled) ? "On" : "Off";
-              const sharedWith = row.units ? ` Shared with: ${row.units}.` : "";
-              return `${sharingName}: ${state}.${sharedWith} ${row.consequence || ""}`.trim();
-            }).join("\n") || "Not set",
-            help: "This shows whether the unit can share aircraft, resource rows or staff with other units."
-          },
-          {
-            label: "App areas",
-            value: parseWizardUnitModuleDraftRows().map((row) => `${row.module || "App area"}: ${/^on$/i.test(row.enabled) ? "On" : "Off"}`).join("\n") || "Not set",
-            help: "These choices decide which major parts of DFP NEO this unit can use."
-          },
-          {
-            label: "Rank display",
-            value: `Rank preset: ${RANK_EQUIVALENCY_PRESET_LABELS[rankSettingsDraft.preset] || "Australia"}. Lists sort by rank seniority, then name. Trainees use the staff rank order.`,
-            help: "This controls how names are ordered in staff, trainee and crew selection lists."
-          },
-          {
-            label: "Training report names",
-            value: (() => {
-              const row = parseWizardTrainingReportRows(trainingRecordsDraft)[0];
-              if (!row) return "Not set";
-              return `${row.organisationFormName || row.genericFormName || "Training report"} uses grades ${row.lowestGrade || "0"} to ${row.highestGrade || "5"}. Satisfactory is shown as "${row.satisfactoryLabel || "PASS"}" and unsatisfactory is shown as "${row.unsatisfactoryLabel || "FAIL"}".`;
-            })(),
-            help: "These names and grading labels are what users see when completing training reports."
-          },
-          {
-            label: "Scoring wording",
-            value: (() => {
-              const rows = parseWizardScoringRows(scoringDraft);
-              return rows.length > 0 ? `${rows.length} assessment area${rows.length === 1 ? "" : "s"} set: ${rows.map((row) => row.dimension).filter(Boolean).join(", ") || "names not set"}.` : "Not set";
-            })(),
-            help: "These are the phrases instructors use to describe performance at each grade level."
-          },
-          {
-            label: "Currencies and checks",
-            value: parseWizardCurrencyRows(currencyDraft).map((row) => `${row.name || row.code || "Currency"}${row.code ? ` (${row.code})` : ""}${row.currency ? ` tracks ${row.currency}` : ""}.`).join("\n") || "Not set",
-            help: "These are the currency or qualification records the unit will track."
-          },
-          {
-            label: "Staff currency presets",
-            value: parseWizardStandardCurrencyEventRows(staffCurrencyEventsDraft).map((row) => `${row.name || row.shortTitle || "Staff currency event"}${row.resourceType ? ` - ${row.resourceType}` : ""}${row.duration ? `, ${row.duration} minutes` : ""}.`).join("\n") || "Not set",
-            help: "These are reusable starting points for common staff currency events."
-          },
-          {
-            label: "User permissions",
-            value: activeUserAccess.length > 0 ? `${activeUserAccess.length} active user access record${activeUserAccess.length === 1 ? "" : "s"} set.` : "Not set",
-            help: "This controls who can open this unit and what they are allowed to do."
-          },
-          {
-            label: "Deployment readiness",
-            value: hasMeaningfulDeploymentProfile() ? "Deployment readiness details are set." : "Not set",
-            help: "These records describe how this installation is licensed, connected and prepared for operational use."
-          },
-          {
-            label: "Support and recovery",
-            value: hasMeaningfulOperationalRunbook() ? "Support and recovery details are set." : "Not set",
-            help: "These records identify support contacts, backup settings and recovery targets."
-          },
-          {
-            label: "Licensing",
-            value: hasMeaningfulLicenceSettings() ? "Licence records are set." : "Not set",
-            help: "These records are used when the deployment needs licence tracking."
-          },
-          {
-            label: "Staff list",
-            value: (() => {
-              const rows = parseWizardStaffRows(staffDraft).filter((row) => row.surname || row.givenNames);
-              return rows.length > 0 ? `${rows.length} staff member${rows.length === 1 ? "" : "s"} ready to add: ${rows.slice(0, 5).map((row) => `${row.givenNames} ${row.surname}`.trim()).join(", ")}${rows.length > 5 ? ", and others" : ""}.` : "Not set";
-            })(),
-            help: "These staff records can be added now or after the wizard is finished."
-          },
-          {
-            label: "Trainee list",
-            value: unitDraft.hasTrainees ? (() => {
-              const rows = parseWizardTraineeRows(traineeDraft).filter((row) => row.surname || row.givenNames);
-              return rows.length > 0 ? `${rows.length} trainee${rows.length === 1 ? "" : "s"} ready to add: ${rows.slice(0, 5).map((row) => `${row.givenNames} ${row.surname}`.trim()).join(", ")}${rows.length > 5 ? ", and others" : ""}.` : "Not set";
-            })() : "Trainees are switched off for this unit.",
-            help: "These trainee records can be added now or after the wizard is finished."
-          },
-          {
-            label: "Training event list",
-            value: `${trainingDraft.lmpName || trainingDraft.lmpCode || "Not set"}${trainingDraft.lmpCode ? ` (${trainingDraft.lmpCode})` : ""}`,
-            help: "This is the training event list the unit will use for syllabus or LMP events."
-          }
-        ].map(({ label, value, help }) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid min-w-0 gap-2 rounded-lg border border-slate-200 bg-white px-3 py-2 md:grid-cols-[170px_minmax(0,1fr)]", children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "font-black uppercase tracking-[0.12em] text-slate-500", children: label }),
-          /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "min-w-0", children: [
-            /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "block whitespace-pre-line font-bold text-slate-900", children: value }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "mt-1 block text-xs font-semibold leading-5 text-slate-500", children: help })
-          ] })
-        ] }, label))
-      ] }),
+          })(),
+          help: "These numbers control what rows appear on the DFP schedule for this unit."
+        },
+        {
+          label: "Aircraft CONFIG",
+          value: (() => {
+            const configs = getWizardAircraftConfigDefinitions();
+            return configs.length > 0 ? configs.map((config) => `${config.code || config.name || "CONFIG"}${config.label || config.name ? ` - ${config.label || config.name}` : ""}`).join("\n") : "Not set";
+          })(),
+          help: "These are the aircraft configuration options users can choose when planning or building events."
+        },
+        {
+          label: "Crew roles",
+          value: parseWizardCrewRoleRows(crewRolesDraft).map((row) => `${row.label || row.role || "Crew role"}${row.models ? ` - used by ${row.models}` : ""}`).join("\n") || "Not set",
+          help: "These are the crew position names users can choose from when setting crew rules."
+        },
+        {
+          label: "Normal crew",
+          value: parseRoleRequirementsText(crewDraft.standardSeats).map((row) => `${row.count} x ${row.role}`).join("\n") || "Not set",
+          help: "This tells NEO what a normal crew looks like for the aircraft or resource."
+        },
+        {
+          label: "Callsign rules",
+          value: hasMeaningfulCallsignSettings() ? `${hasMeaningfulUnitCallsignSettings() ? "Unit callsign prefixes set." : "Unit callsign prefixes not set."} ${hasMeaningfulFormationCallsigns() ? "Formation callsigns set." : "Formation callsigns not set."}`.trim() : "Not set",
+          help: "These rules help DFP NEO suggest callsigns instead of making users type them from scratch."
+        },
+        {
+          label: "Scheduling limits",
+          value: buildRulesDraftText || "Not set",
+          help: "These limits help prevent the build from placing too much flying, too close together, or beyond duty limits."
+        },
+        {
+          label: "Advanced scheduling rules",
+          value: hasMeaningfulSchedulingRuleSettings() ? "Detailed timing or rule-set records are configured." : "Not set",
+          help: "These records control default event timings and detailed scheduling behaviour."
+        },
+        {
+          label: "Resource and staff sharing",
+          value: parseWizardSharingRows(resourceSharingDraft).map((row) => {
+            const sharingName = row.type || "Sharing";
+            const state = /^on$/i.test(row.enabled) ? "On" : "Off";
+            const sharedWith = row.units ? ` Shared with: ${row.units}.` : "";
+            return `${sharingName}: ${state}.${sharedWith} ${row.consequence || ""}`.trim();
+          }).join("\n") || "Not set",
+          help: "This shows whether the unit can share aircraft, resource rows or staff with other units."
+        },
+        {
+          label: "App areas",
+          value: parseWizardUnitModuleDraftRows().map((row) => `${row.module || "App area"}: ${/^on$/i.test(row.enabled) ? "On" : "Off"}`).join("\n") || "Not set",
+          help: "These choices decide which major parts of DFP NEO this unit can use."
+        },
+        {
+          label: "Rank display",
+          value: `Rank preset: ${RANK_EQUIVALENCY_PRESET_LABELS[rankSettingsDraft.preset] || "Australia"}. Lists sort by rank seniority, then name. Trainees use the staff rank order.`,
+          help: "This controls how names are ordered in staff, trainee and crew selection lists."
+        },
+        {
+          label: "Training report names",
+          value: (() => {
+            const row = parseWizardTrainingReportRows(trainingRecordsDraft)[0];
+            if (!row) return "Not set";
+            return `${row.organisationFormName || row.genericFormName || "Training report"} uses grades ${row.lowestGrade || "0"} to ${row.highestGrade || "5"}. Satisfactory is shown as "${row.satisfactoryLabel || "PASS"}" and unsatisfactory is shown as "${row.unsatisfactoryLabel || "FAIL"}".`;
+          })(),
+          help: "These names and grading labels are what users see when completing training reports."
+        },
+        {
+          label: "Scoring wording",
+          value: (() => {
+            const rows = parseWizardScoringRows(scoringDraft);
+            return rows.length > 0 ? `${rows.length} assessment area${rows.length === 1 ? "" : "s"} set: ${rows.map((row) => row.dimension).filter(Boolean).join(", ") || "names not set"}.` : "Not set";
+          })(),
+          help: "These are the phrases instructors use to describe performance at each grade level."
+        },
+        {
+          label: "Currencies and checks",
+          value: parseWizardCurrencyRows(currencyDraft).map((row) => `${row.name || row.code || "Currency"}${row.code ? ` (${row.code})` : ""}${row.currency ? ` tracks ${row.currency}` : ""}.`).join("\n") || "Not set",
+          help: "These are the currency or qualification records the unit will track."
+        },
+        {
+          label: "Staff currency presets",
+          value: parseWizardStandardCurrencyEventRows(staffCurrencyEventsDraft).map((row) => `${row.name || row.shortTitle || "Staff currency event"}${row.resourceType ? ` - ${row.resourceType}` : ""}${row.duration ? `, ${row.duration} minutes` : ""}.`).join("\n") || "Not set",
+          help: "These are reusable starting points for common staff currency events."
+        },
+        {
+          label: "User permissions",
+          value: activeUserAccess.length > 0 ? `${activeUserAccess.length} active user access record${activeUserAccess.length === 1 ? "" : "s"} set.` : "Not set",
+          help: "This controls who can open this unit and what they are allowed to do."
+        },
+        {
+          label: "Deployment readiness",
+          value: hasMeaningfulDeploymentProfile() ? "Deployment readiness details are set." : "Not set",
+          help: "These records describe how this installation is licensed, connected and prepared for operational use."
+        },
+        {
+          label: "Support and recovery",
+          value: hasMeaningfulOperationalRunbook() ? "Support and recovery details are set." : "Not set",
+          help: "These records identify support contacts, backup settings and recovery targets."
+        },
+        {
+          label: "Licensing",
+          value: hasMeaningfulLicenceSettings() ? "Licence records are set." : "Not set",
+          help: "These records are used when the deployment needs licence tracking."
+        },
+        {
+          label: "Staff list",
+          value: (() => {
+            const rows = parseWizardStaffRows(staffDraft).filter((row) => row.surname || row.givenNames);
+            return rows.length > 0 ? `${rows.length} staff member${rows.length === 1 ? "" : "s"} ready to add: ${rows.slice(0, 5).map((row) => `${row.givenNames} ${row.surname}`.trim()).join(", ")}${rows.length > 5 ? ", and others" : ""}.` : "Not set";
+          })(),
+          help: "These staff records can be added now or after the wizard is finished."
+        },
+        {
+          label: "Trainee list",
+          value: unitDraft.hasTrainees ? (() => {
+            const rows = parseWizardTraineeRows(traineeDraft).filter((row) => row.surname || row.givenNames);
+            return rows.length > 0 ? `${rows.length} trainee${rows.length === 1 ? "" : "s"} ready to add: ${rows.slice(0, 5).map((row) => `${row.givenNames} ${row.surname}`.trim()).join(", ")}${rows.length > 5 ? ", and others" : ""}.` : "Not set";
+          })() : "Trainees are switched off for this unit.",
+          help: "These trainee records can be added now or after the wizard is finished."
+        },
+        {
+          label: "Training event list",
+          value: `${trainingDraft.lmpName || trainingDraft.lmpCode || "Not set"}${trainingDraft.lmpCode ? ` (${trainingDraft.lmpCode})` : ""}`,
+          help: "This is the training event list the unit will use for syllabus or LMP events."
+        }
+      ].map(({ label, value, help }) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid min-w-0 gap-2 rounded-lg border border-slate-200 bg-white px-3 py-2 md:grid-cols-[170px_minmax(0,1fr)]", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "font-black uppercase tracking-[0.12em] text-slate-500", children: label }),
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "min-w-0", children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "block whitespace-pre-line font-bold text-slate-900", children: value }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "mt-1 block text-xs font-semibold leading-5 text-slate-500", children: help })
+        ] })
+      ] }, label)) }),
       wizardFinishInProgress ? "Finishing..." : wizardReviewComplete ? "✓ Review Finished" : "Finish review",
       finishWizardReview
     );
@@ -50923,149 +50744,11 @@ const TraineeLmpView = ({
   const [activeTab, setActiveTab] = reactExports.useState("neo");
   const [showInsertEventModal, setShowInsertEventModal] = reactExports.useState(false);
   const [itemBeingEdited, setItemBeingEdited] = reactExports.useState(null);
-  const [isDownloadingLmpTrace, setIsDownloadingLmpTrace] = reactExports.useState(false);
   const testingOfficerQualifications = reactExports.useMemo(
     () => getQualificationsForOperationalModel(staffQualificationCatalogue, operationalModel),
     [staffQualificationCatalogue, operationalModel]
   );
   const hasAcademicSyllabus = !!(syllabusDetails && syllabusDetails.length > 0);
-  const downloadIndividualLmpTrace = async () => {
-    if (isDownloadingLmpTrace) return;
-    setIsDownloadingLmpTrace(true);
-    const traineeId = String(trainee.id || trainee.fullName || trainee.name || "").trim();
-    const normalise2 = (value) => String(value || "").trim().toUpperCase();
-    const traineeLmpTokens = Array.from(new Set([
-      trainee.course,
-      trainee.lmpType,
-      trainee.academicLmpType
-    ].map(normalise2).filter(Boolean)));
-    const eventTokensForItem = (item) => [
-      item.id,
-      item.code,
-      item.masterEventId,
-      item.eventDescription,
-      item.title,
-      item.name
-    ].map(normalise2).filter(Boolean);
-    const isUpcLike = (item) => eventTokensForItem(item).includes("UPC");
-    const isCourseContainerLike = (item) => {
-      const eventTokens = eventTokensForItem(item);
-      if (!eventTokens.some((token) => traineeLmpTokens.includes(token))) return false;
-      const duration = Number(item.duration || 0);
-      const flightOrSimHours = Number(item.flightOrSimHours || 0);
-      const totalEventHours = Number(item.totalEventHours || 0);
-      return duration <= 0 && flightOrSimHours <= 0 && totalEventHours <= 0;
-    };
-    const compactItem = (item) => ({
-      id: item.id,
-      code: item.code,
-      masterEventId: item.masterEventId,
-      eventDescription: item.eventDescription,
-      phase: item.phase,
-      module: item.module,
-      type: item.type,
-      duration: item.duration,
-      flightOrSimHours: item.flightOrSimHours,
-      totalEventHours: item.totalEventHours,
-      courses: item.courses,
-      notes: item.notes,
-      sortOrder: item.sortOrder,
-      lmpSource: item.lmpSource,
-      isUpcLike: isUpcLike(item),
-      isCourseContainerLike: isCourseContainerLike(item)
-    });
-    const summarise = (items) => ({
-      count: items.length,
-      upcLikeCount: items.filter(isUpcLike).length,
-      courseContainerLikeCount: items.filter(isCourseContainerLike).length,
-      byType: items.reduce((acc, item) => {
-        const key = String(item.type || "missing");
-        acc[key] = (acc[key] || 0) + 1;
-        return acc;
-      }, {}),
-      firstEvents: items.slice(0, 20).map(compactItem),
-      upcLikeEvents: items.filter(isUpcLike).slice(0, 20).map(compactItem),
-      courseContainerLikeEvents: items.filter(isCourseContainerLike).slice(0, 20).map(compactItem)
-    });
-    let serverDiagnostic = null;
-    let serverDiagnosticError = null;
-    try {
-      if (traineeId) {
-        const response = await fetch(`/api/trainees/${encodeURIComponent(traineeId)}/lmp/diagnostic`, {
-          credentials: "include"
-        });
-        const text = await response.text();
-        try {
-          serverDiagnostic = text ? JSON.parse(text) : null;
-        } catch {
-          serverDiagnostic = text;
-        }
-        if (!response.ok) {
-          serverDiagnosticError = `HTTP ${response.status}: ${typeof serverDiagnostic === "string" ? serverDiagnostic : JSON.stringify(serverDiagnostic)}`;
-        }
-      } else {
-        serverDiagnosticError = "No trainee id or name was available for diagnostic lookup.";
-      }
-    } catch (error) {
-      serverDiagnosticError = error instanceof Error ? error.message : String(error);
-    }
-    const report = {
-      generatedAt: (/* @__PURE__ */ new Date()).toISOString(),
-      trainee: {
-        id: trainee.id || null,
-        idNumber: trainee.idNumber,
-        fullName: trainee.fullName,
-        name: trainee.name,
-        rank: trainee.rank,
-        course: trainee.course,
-        lmpType: trainee.lmpType,
-        academicLmpType: trainee.academicLmpType,
-        unit: trainee.unit,
-        location: trainee.location
-      },
-      diagnosticPurpose: "Tracks why an LMP/course title row such as UPC is still visible as an Individual LMP event after the database shell row was removed.",
-      traineeLmpTokens,
-      browserVisibleLmp: summarise(traineeLmp || []),
-      browserDisplayLmp: summarise(displayTraineeLmp || []),
-      browserScores: {
-        count: scores.length,
-        events: scores.slice(0, 40).map((score) => ({
-          event: score.event,
-          date: score.date,
-          instructor: score.instructor,
-          score: score.score
-        }))
-      },
-      selectedItem: selectedItem ? {
-        id: selectedItem.id,
-        code: selectedItem.code,
-        masterEventId: selectedItem.masterEventId,
-        eventDescription: selectedItem.eventDescription,
-        phase: selectedItem.phase,
-        module: selectedItem.module,
-        type: selectedItem.type,
-        courses: selectedItem.courses,
-        notes: selectedItem.notes,
-        sortOrder: selectedItem.sortOrder,
-        lmpSource: selectedItem.lmpSource,
-        isUpcLike: isUpcLike(selectedItem),
-        isCourseContainerLike: isCourseContainerLike(selectedItem)
-      } : null,
-      serverDiagnostic,
-      serverDiagnosticError
-    };
-    const slug = String(trainee.fullName || trainee.name || "trainee").toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "") || "trainee";
-    const blob = new Blob([JSON.stringify(report, null, 2)], { type: "application/json" });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement("a");
-    link.href = url;
-    link.download = `individual-lmp-trace-${slug}-${(/* @__PURE__ */ new Date()).toISOString().replace(/[:.]/g, "-")}.json`;
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    URL.revokeObjectURL(url);
-    setIsDownloadingLmpTrace(false);
-  };
   const completedEventIds = reactExports.useMemo(() => {
     const ids = new Set(scores.map((s) => (s.event || "").replace("*", "")));
     traineeLmp.forEach((item) => {
@@ -51178,19 +50861,6 @@ This records RPL against this Individual LMP event.`,
             onClick: onBack,
             className: "w-[56px] h-[41px] flex items-center justify-center text-center px-1 py-1 text-[10px] font-semibold rounded-md btn-aluminium-brushed",
             children: "← Back"
-          }
-        ),
-        activeTab === "neo" && /* @__PURE__ */ jsxRuntimeExports.jsx(
-          "button",
-          {
-            onClick: downloadIndividualLmpTrace,
-            disabled: isDownloadingLmpTrace,
-            className: "w-[56px] h-[41px] flex items-center justify-center text-center px-1 py-1 text-[10px] leading-tight font-semibold rounded-md btn-aluminium-brushed disabled:opacity-40 disabled:cursor-not-allowed",
-            children: isDownloadingLmpTrace ? "Trace..." : /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
-              "LMP",
-              /* @__PURE__ */ jsxRuntimeExports.jsx("br", {}),
-              "Trace"
-            ] })
           }
         ),
         activeTab === "neo" && /* @__PURE__ */ jsxRuntimeExports.jsxs(
@@ -53962,7 +53632,7 @@ const TraineeProfileFlyout = ({
     Promise.race([
       onLoadTraineeLmp(trainee),
       new Promise((_, reject) => {
-        timeoutId = window.setTimeout(() => reject(new Error("Individual LMP load timed out. Close and reopen the profile, then download the LMP trace if it is still empty.")), timeoutMs);
+        timeoutId = window.setTimeout(() => reject(new Error("Individual LMP load timed out. Close and reopen the profile, then try again if it is still empty.")), timeoutMs);
       })
     ]).then((loadedLmp) => {
       if (cancelled) return;
@@ -72491,8 +72161,7 @@ const NextDayBuildView = ({
   aircraftConfigLabelsByResource,
   aircraftNumberSettings,
   onExternalEventDrop,
-  diagnosticHighlightedEventIds = /* @__PURE__ */ new Set(),
-  onDownloadBuildReport
+  diagnosticHighlightedEventIds = /* @__PURE__ */ new Set()
 }) => {
   const scrollContainerRef = reactExports.useRef(null);
   const scheduleGridRef = reactExports.useRef(null);
@@ -73569,19 +73238,7 @@ const NextDayBuildView = ({
               ] }),
               /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "neo-build-label", children: "NEO Build" })
             ] }) }),
-            /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "sticky top-0 z-20 bg-gray-800 border-b border-gray-700 relative", children: [
-              renderTimeHeaders(),
-              onDownloadBuildReport && /* @__PURE__ */ jsxRuntimeExports.jsx(
-                "button",
-                {
-                  type: "button",
-                  onClick: onDownloadBuildReport,
-                  className: "absolute left-3 top-1/2 z-30 -translate-y-1/2 rounded border border-amber-400/65 bg-slate-950/90 px-3 py-1.5 text-[11px] font-bold uppercase tracking-[0.08em] text-amber-100 shadow-lg shadow-black/35 transition hover:border-amber-200 hover:bg-amber-500/20",
-                  title: "Download the latest NEO Build diagnostic report",
-                  children: "Download Build Report"
-                }
-              )
-            ] }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "sticky top-0 z-20 bg-gray-800 border-b border-gray-700 relative", children: renderTimeHeaders() }),
             /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "sticky left-0 z-30 bg-gray-800 border-r border-gray-700", children: /* @__PURE__ */ jsxRuntimeExports.jsx(
               AirframeColumn,
               {
@@ -88709,7 +88366,7 @@ const formatElapsed = (elapsedMs) => {
   if (typeof elapsedMs !== "number" || !Number.isFinite(elapsedMs) || elapsedMs < 1e3) return null;
   return `${(elapsedMs / 1e3).toFixed(1)}s`;
 };
-const BuildDfpLoadingFlyout = ({ progress, onDownloadLiveTrace }) => {
+const BuildDfpLoadingFlyout = ({ progress }) => {
   const actualPercentage = Math.max(0, Math.min(100, Math.round(progress?.percentage ?? 0)));
   const [visiblePercentage, setVisiblePercentage] = reactExports.useState(Math.max(1, actualPercentage));
   const startedAtRef = reactExports.useRef(Date.now());
@@ -88805,17 +88462,7 @@ const BuildDfpLoadingFlyout = ({ progress, onDownloadLiveTrace }) => {
       /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "mx-2 h-4 w-px bg-slate-700" }),
       /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "font-semibold text-slate-300", children: "Elapsed" }),
       /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "font-black tabular-nums text-white", children: elapsedLabel || "0.0s" })
-    ] }),
-    onDownloadLiveTrace && /* @__PURE__ */ jsxRuntimeExports.jsx(
-      "button",
-      {
-        type: "button",
-        onClick: onDownloadLiveTrace,
-        className: "h-10 rounded-md border border-amber-400/50 bg-amber-500/10 px-4 text-sm font-bold text-amber-100 shadow-[0_0_18px_rgba(245,158,11,0.16)] transition-colors hover:bg-amber-500/20",
-        title: "Download the current NEO Build trace without waiting for the build to finish",
-        children: "Download Live Trace"
-      }
-    )
+    ] })
   ] }) }) });
 };
 const buildDateWarningWeekdays = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
@@ -92884,27 +92531,6 @@ const InstructorListView = ({
               children: "Add Staff"
             }
           ),
-          /* @__PURE__ */ jsxRuntimeExports.jsx(
-            "button",
-            {
-              onClick: () => downloadStaffProfileTrace("staff-page"),
-              className: "w-[56px] h-[41px] flex items-center justify-center text-center px-1 py-1 text-[10px] leading-tight font-semibold rounded-md btn-aluminium-brushed text-blue-700",
-              title: "Download staff profile trace",
-              children: "Staff Trace"
-            }
-          ),
-          /* @__PURE__ */ jsxRuntimeExports.jsx(
-            "button",
-            {
-              onClick: () => {
-                clearStaffProfileTrace();
-                appendStaffProfileTrace("staff-trace:cleared", { clearedAt: (/* @__PURE__ */ new Date()).toISOString() });
-              },
-              className: "w-[56px] h-[41px] flex items-center justify-center text-center px-1 py-1 text-[10px] leading-tight font-semibold rounded-md btn-aluminium-brushed",
-              title: "Clear staff profile trace",
-              children: "Clear Trace"
-            }
-          ),
           /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "w-[8px]" }),
           /* @__PURE__ */ jsxRuntimeExports.jsx(AuditButton, { pageName: "Staff" })
         ] })
@@ -94203,7 +93829,6 @@ const AssignTrainingModal = ({
   onDeselectAllCourses,
   onSelectAllTrainees,
   onDeselectAllTrainees,
-  onDownloadTrace,
   onCancel,
   onSave
 }) => {
@@ -94367,7 +93992,7 @@ const AssignTrainingModal = ({
       traineePanel
     ] }) : showStaffAssignments ? staffPanel : traineePanel }),
     /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex flex-wrap items-center justify-between gap-2 border-t border-gray-700 px-4 py-3", children: [
-      /* @__PURE__ */ jsxRuntimeExports.jsx("div", { children: onDownloadTrace && /* @__PURE__ */ jsxRuntimeExports.jsx("button", { type: "button", onClick: onDownloadTrace, className: "rounded border border-amber-600/60 bg-amber-900/30 px-4 py-2 text-sm font-semibold text-amber-100 hover:bg-amber-800/40", children: "Download Assign LMP Trace" }) }),
+      /* @__PURE__ */ jsxRuntimeExports.jsx("div", {}),
       /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex justify-end gap-2", children: [
         /* @__PURE__ */ jsxRuntimeExports.jsx("button", { type: "button", onClick: onCancel, disabled: saving, className: "rounded border border-gray-600 bg-gray-800 px-4 py-2 text-sm font-semibold text-gray-100 hover:bg-gray-700 disabled:cursor-not-allowed disabled:opacity-50", children: "Cancel" }),
         /* @__PURE__ */ jsxRuntimeExports.jsx("button", { type: "button", onClick: onSave, disabled: saving, className: "rounded border border-sky-500 bg-sky-700 px-4 py-2 text-sm font-bold text-white hover:bg-sky-600 disabled:cursor-not-allowed disabled:opacity-60", children: saving ? "Saving..." : "Save Assignments" })
@@ -95089,7 +94714,6 @@ const SyllabusView = ({
   onUpdateTrainee,
   onAssignTraineeLmp,
   onTraceAssignLmp,
-  onDownloadAssignmentTrace,
   currentUserName,
   scoringMatrixPhraseBank,
   onAddScoringMatrixElement,
@@ -96139,33 +95763,6 @@ const SyllabusView = ({
     }
     setShowUploadModal(true);
   };
-  const downloadUploadTrace = (label = "lmp-upload-trace") => {
-    const payload = {
-      generatedAt: (/* @__PURE__ */ new Date()).toISOString(),
-      activeTab,
-      activeCollectionTitle,
-      selectedCourseType,
-      masterUploadIntent,
-      uploadMode,
-      uploadTargetLmpCode,
-      newUploadPackageName,
-      uploadLmpVersion,
-      lmpUpdateReviewMode,
-      uploadFile: uploadFile ? { name: uploadFile.name, size: uploadFile.size, type: uploadFile.type } : null,
-      review: uploadReview,
-      result: uploadResult
-    };
-    const blob = new Blob([JSON.stringify(payload, null, 2)], { type: "application/json" });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement("a");
-    const safeCode = (uploadTargetLmpCode || selectedCourseType || newUploadPackageName || "lmp").replace(/[^a-z0-9-]+/gi, "-").replace(/^-+|-+$/g, "") || "lmp";
-    link.href = url;
-    link.download = `${label}-${safeCode}-${(/* @__PURE__ */ new Date()).toISOString().replace(/[:.]/g, "-")}.json`;
-    document.body.appendChild(link);
-    link.click();
-    link.remove();
-    URL.revokeObjectURL(url);
-  };
   const handleEditSelectedCourseVersion = async () => {
     if (isFrozen || !selectedCourseType) return;
     const currentVersion = selectedCourseVersion || DEFAULT_LMP_VERSION;
@@ -96451,7 +96048,7 @@ const SyllabusView = ({
       }
     } catch (err) {
       const isTimeout = err?.name === "AbortError";
-      const errorMessage = isTimeout ? `The ${isReviewStep ? "review" : "apply"} request did not return within ${Math.round((isReviewStep ? 6e4 : 18e4) / 1e3)} seconds. Download the trace below; the server may still have continued processing.` : `Upload failed: ${err.message}`;
+      const errorMessage = isTimeout ? `The ${isReviewStep ? "review" : "apply"} request did not return within ${Math.round((isReviewStep ? 6e4 : 18e4) / 1e3)} seconds. The server may still have continued processing; wait a moment, then refresh or retry.` : `Upload failed: ${err.message}`;
       setUploadResult({
         created: 0,
         updated: 0,
@@ -98372,25 +97969,6 @@ const SyllabusView = ({
                   (uploadResult.created > 0 || (uploadResult.updated || 0) > 0) && /* @__PURE__ */ jsxRuntimeExports.jsx("p", { style: { fontSize: 11, color: "#6b7280", marginTop: 6 }, children: "Page will reload automatically…" })
                 ] }),
                 /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { style: { display: "flex", justifyContent: "flex-end", gap: 8, marginTop: 8 }, children: [
-                  (uploadReview || uploadResult) && /* @__PURE__ */ jsxRuntimeExports.jsx(
-                    "button",
-                    {
-                      type: "button",
-                      onClick: () => downloadUploadTrace(uploadResult ? "lmp-upload-result" : "lmp-upload-review"),
-                      style: {
-                        padding: "8px 12px",
-                        fontSize: 12,
-                        fontWeight: 700,
-                        borderRadius: 6,
-                        backgroundColor: "#111827",
-                        color: "#fdba74",
-                        border: "1px solid #92400e",
-                        cursor: "pointer",
-                        marginRight: "auto"
-                      },
-                      children: "Download Trace"
-                    }
-                  ),
                   /* @__PURE__ */ jsxRuntimeExports.jsx(
                     "button",
                     {
@@ -98495,7 +98073,6 @@ const SyllabusView = ({
           courseFilteredAssignableFlightSchoolTrainees.forEach((trainee) => next.delete(trainee.idNumber));
           return next;
         }),
-        onDownloadTrace: showTraineesInAssignTraining ? onDownloadAssignmentTrace : void 0,
         onCancel: () => setShowAssignTrainingModal(false),
         onSave: saveAssignTraining
       }
@@ -112903,7 +112480,6 @@ const TrainingCompletionView = ({
   const [isCompleting, setIsCompleting] = reactExports.useState(false);
   const [completionMessage, setCompletionMessage] = reactExports.useState("");
   const [completionDialogMessage, setCompletionDialogMessage] = reactExports.useState("");
-  const [completionTrace, setCompletionTrace] = reactExports.useState(null);
   reactExports.useMemo(() => Object.values(publishedSchedules).flat(), [publishedSchedules]);
   const allTrainees = reactExports.useMemo(() => [...traineesData, ...archivedTraineesData], [traineesData, archivedTraineesData]);
   const courseNames = reactExports.useMemo(() => {
@@ -113048,7 +112624,6 @@ const TrainingCompletionView = ({
     setSelectedTrainees([]);
     setCompletionMessage("");
     setCompletionDialogMessage("");
-    setCompletionTrace(null);
   };
   const handleCourseChange = (coursesSelected) => {
     setSelectedCourses(coursesSelected);
@@ -113106,7 +112681,6 @@ const TrainingCompletionView = ({
     setIsCompleting(true);
     setCompletionMessage("Completing selected training records...");
     setCompletionDialogMessage("");
-    setCompletionTrace(null);
     const completedAt = (/* @__PURE__ */ new Date(`${completionDate || todayIso()}T00:00:00`)).toISOString();
     const completed = [];
     const failed = [];
@@ -113265,7 +112839,6 @@ const TrainingCompletionView = ({
       failed,
       traceRows
     };
-    setCompletionTrace(trace);
     if (failed.length > 0) {
       const firstFailure = failed[0];
       setCompletionMessage(`Completed ${completed.length} trainee-event record${completed.length === 1 ? "" : "s"}. ${failed.length} failed. First failure: ${firstFailure.trainee} / ${firstFailure.event}: ${firstFailure.reason}`);
@@ -113282,19 +112855,6 @@ const TrainingCompletionView = ({
     } catch (error) {
       console.warn("[Training Completion] Could not save completion trace to localStorage:", error);
     }
-  };
-  const downloadCompletionTrace = () => {
-    if (!completionTrace) return;
-    const blob = new Blob([JSON.stringify(completionTrace, null, 2)], { type: "application/json" });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement("a");
-    const stamp = (/* @__PURE__ */ new Date()).toISOString().replace(/[:.]/g, "-");
-    link.href = url;
-    link.download = `training-completion-trace-${stamp}.json`;
-    document.body.appendChild(link);
-    link.click();
-    link.remove();
-    URL.revokeObjectURL(url);
   };
   return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "h-full overflow-auto bg-gray-900 p-6", children: [
     completionDialogMessage && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "fixed inset-0 z-[1000] flex items-center justify-center bg-black/70 px-4", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "w-full max-w-lg rounded-lg border border-green-500 bg-gray-800 shadow-2xl", children: [
@@ -113540,17 +113100,7 @@ const TrainingCompletionView = ({
               ] })
             ] }),
             /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mt-5 flex items-center justify-between gap-4", children: [
-              /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "min-w-0 space-y-2", children: [
-                /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: `text-sm ${completionMessage.includes("failed") ? "text-yellow-300" : completionMessage.includes("Completed") ? "text-green-300" : "text-gray-300"}`, children: completionMessage }),
-                completionTrace && Number(completionTrace.failedCount || 0) > 0 && /* @__PURE__ */ jsxRuntimeExports.jsx(
-                  "button",
-                  {
-                    onClick: downloadCompletionTrace,
-                    className: "px-3 py-2 rounded border border-yellow-500/50 bg-yellow-500/10 text-yellow-200 hover:bg-yellow-500/20 text-sm font-semibold",
-                    children: "Download Completion Trace"
-                  }
-                )
-              ] }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "min-w-0 space-y-2", children: /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: `text-sm ${completionMessage.includes("failed") ? "text-yellow-300" : completionMessage.includes("Completed") ? "text-green-300" : "text-gray-300"}`, children: completionMessage }) }),
               /* @__PURE__ */ jsxRuntimeExports.jsx(
                 "button",
                 {
@@ -115744,7 +115294,6 @@ const PauseFlightOpsPanel = ({
   onPhaseChange,
   stagedEvents,
   onStagedEventsChange,
-  onDownloadDiagnostic,
   resourceDisplayNames: resourceDisplayNames2 = DEFAULT_RESOURCE_DISPLAY_NAMES
 }) => {
   const [pauseStart, setPauseStart] = reactExports.useState(decToHHMM(flyingStartTime + 2));
@@ -116222,14 +115771,6 @@ const PauseFlightOpsPanel = ({
                 /* @__PURE__ */ jsxRuntimeExports.jsx("svg", { className: "w-3 h-3 flex-shrink-0", fill: "none", viewBox: "0 0 24 24", stroke: "currentColor", strokeWidth: 2.5, children: /* @__PURE__ */ jsxRuntimeExports.jsx("path", { strokeLinecap: "round", strokeLinejoin: "round", d: "M9 15L3 9m0 0l6-6M3 9h12a6 6 0 010 12h-3" }) }),
                 "Revert to Original Daily Schedule"
               ]
-            }
-          ),
-          onDownloadDiagnostic && /* @__PURE__ */ jsxRuntimeExports.jsx(
-            "button",
-            {
-              onClick: onDownloadDiagnostic,
-              className: "w-full py-1.5 rounded text-xs text-amber-200 hover:text-amber-100 hover:bg-amber-900/25 transition-colors border border-amber-800/50 hover:border-amber-600",
-              children: "Download Pause Build Diagnostic"
             }
           ),
           /* @__PURE__ */ jsxRuntimeExports.jsx(
@@ -117250,48 +116791,6 @@ const recordNeoTileDiagnostic = (entry) => {
     console.warn("[NEO Tile Diagnostic] Failed to record entry:", error);
   }
 };
-const downloadNeoTileDiagnosticReport = () => {
-  if (typeof window === "undefined") return;
-  try {
-    recordNeoTileDiagnostic({
-      stage: "top-neo-tile-report-download-requested",
-      details: {
-        existingEntryCount: Array.isArray(window.__neoTileDiagnostics) ? window.__neoTileDiagnostics.length : 0
-      }
-    });
-    const stored = window.localStorage?.getItem(NEO_TILE_DIAGNOSTIC_STORAGE_KEY);
-    const fallbackEntries = Array.isArray(window.__neoTileDiagnostics) ? window.__neoTileDiagnostics : [];
-    const report = stored ? JSON.parse(stored) : {
-      generatedAt: (/* @__PURE__ */ new Date()).toISOString(),
-      app: "DFP-NEO",
-      reportType: "neo-tile-diagnostic",
-      version: NEO_TILE_DIAGNOSTIC_VERSION,
-      entries: fallbackEntries
-    };
-    report.downloadedAt = (/* @__PURE__ */ new Date()).toISOString();
-    if (!Array.isArray(report.entries) || report.entries.length === 0) {
-      report.entries = [{
-        stage: "report-empty",
-        at: (/* @__PURE__ */ new Date()).toISOString(),
-        details: {
-          reason: "No top-toolbar NEO Tile activity was captured before this report was downloaded.",
-          nextStep: "Click the top toolbar NEO - Tile button, place a tile on the DFP, then download this report again."
-        }
-      }];
-    }
-    const blob = new Blob([JSON.stringify(report, null, 2)], { type: "application/json" });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement("a");
-    link.href = url;
-    link.download = `neo-tile-diagnostic-${(/* @__PURE__ */ new Date()).toISOString().replace(/[:.]/g, "-")}.json`;
-    document.body.appendChild(link);
-    link.click();
-    link.remove();
-    URL.revokeObjectURL(url);
-  } catch (error) {
-    console.error("[NEO Tile Diagnostic] Failed to download report:", error);
-  }
-};
 const recordPauseFlightOpsDiagnostic = (entry) => {
   if (typeof window === "undefined") return;
   const fullEntry = {
@@ -117319,51 +116818,6 @@ const recordPauseFlightOpsDiagnostic = (entry) => {
     }));
   } catch (error) {
     console.warn("[Pause Flight Ops Diagnostic] Failed to record entry:", error);
-  }
-};
-const downloadPauseFlightOpsDiagnosticReport = (context = {}) => {
-  if (typeof window === "undefined") return;
-  try {
-    recordPauseFlightOpsDiagnostic({
-      stage: "report-download-requested",
-      details: {
-        context,
-        existingEntryCount: Array.isArray(window.__pauseFlightOpsDiagnostics) ? window.__pauseFlightOpsDiagnostics.length : 0
-      }
-    });
-    const stored = window.localStorage?.getItem(PAUSE_FLIGHT_OPS_DIAGNOSTIC_STORAGE_KEY);
-    const fallbackEntries = Array.isArray(window.__pauseFlightOpsDiagnostics) ? window.__pauseFlightOpsDiagnostics : [];
-    const report = stored ? JSON.parse(stored) : {
-      generatedAt: (/* @__PURE__ */ new Date()).toISOString(),
-      app: "DFP-NEO",
-      reportType: "pause-flight-ops-diagnostic",
-      version: PAUSE_FLIGHT_OPS_DIAGNOSTIC_VERSION,
-      entries: fallbackEntries
-    };
-    report.downloadedAt = (/* @__PURE__ */ new Date()).toISOString();
-    report.context = context;
-    if (!Array.isArray(report.entries) || report.entries.length === 0) {
-      report.entries = [{
-        stage: "report-empty",
-        at: (/* @__PURE__ */ new Date()).toISOString(),
-        details: {
-          reason: "No Pause Flight Ops activity was captured before this report was downloaded.",
-          nextStep: "Open Pause Flight Ops, select completed events if required, run NEO BUILD (Post-Pause), then download this report again."
-        }
-      }];
-    }
-    const blob = new Blob([JSON.stringify(report, null, 2)], { type: "application/json" });
-    const url = URL.createObjectURL(blob);
-    const safeDate = String(context.date || "no-date").replace(/[^0-9-]/g, "") || "no-date";
-    const link = document.createElement("a");
-    link.href = url;
-    link.download = `pause-flight-ops-diagnostic-${safeDate}-${(/* @__PURE__ */ new Date()).toISOString().replace(/[:.]/g, "-")}.json`;
-    document.body.appendChild(link);
-    link.click();
-    link.remove();
-    URL.revokeObjectURL(url);
-  } catch (error) {
-    console.error("[Pause Flight Ops Diagnostic] Failed to download report:", error);
   }
 };
 const recordNeoAssistDragDiagnostic = (entry) => {
@@ -140652,40 +140106,6 @@ const App = () => {
     const appTitle = localStorage.getItem("dfp_app_title");
     document.title = appTitle || "DFP NEO";
   }, []);
-  React.useEffect(() => {
-    const originalSplit = String.prototype.split;
-    String.prototype.split = function(...args) {
-      if (this === void 0 || this === null) {
-        console.error("🔴 SPLIT CALLED ON UNDEFINED/NULL!");
-        console.trace("Stack trace:");
-        return [];
-      }
-      return originalSplit.apply(this, args);
-    };
-    return () => {
-      String.prototype.split = originalSplit;
-    };
-  }, []);
-  React.useEffect(() => {
-    const originalError = console.error;
-    console.error = function(...args) {
-      const errorMsg = args.join(" ");
-      if (errorMsg.includes("split") || errorMsg.includes("undefined")) {
-        console.trace("Stack trace:");
-      }
-      originalError.apply(console, args);
-    };
-    window.addEventListener("error", (event) => {
-      if (event.message.includes("split") || event.message.includes("undefined")) {
-        console.error("🔴 GLOBAL ERROR CAUGHT:", event.message);
-        console.error("🔴 Error at:", event.filename, "Line:", event.lineno, "Column:", event.colno);
-        console.error("🔴 Stack:", event.error?.stack);
-      }
-    });
-    return () => {
-      console.error = originalError;
-    };
-  }, []);
   const formatTimeForAudit = (hours) => {
     const h = Math.floor(hours);
     const m = Math.round((hours - h) * 60);
@@ -142485,229 +141905,7 @@ const App = () => {
       return false;
     }
   }
-  function readDfpDataDiagEntries() {
-    try {
-      const stored = JSON.parse(localStorage.getItem("neo_dfp_data_diag") || "[]");
-      return Array.isArray(stored) ? stored : [];
-    } catch {
-      return [];
-    }
-  }
-  function readStaffScheduleRenderDiagEntries() {
-    try {
-      const stored = JSON.parse(localStorage.getItem("neo_staff_schedule_render_diag") || "[]");
-      return Array.isArray(stored) ? stored : [];
-    } catch {
-      return [];
-    }
-  }
   const rosterColourTraceRef = reactExports.useRef(null);
-  function buildDfpDataDiagReport() {
-    const entries = readDfpDataDiagEntries();
-    const staffScheduleRenderTrace = readStaffScheduleRenderDiagEntries();
-    const snapshotKey = getDailySnapshotKey(date);
-    const cacheSummaries = (() => {
-      try {
-        return Object.keys(localStorage).filter((key) => key.startsWith("dfp_snapshot_cache_")).sort().map((key) => {
-          const rawValue = localStorage.getItem(key) || "";
-          let parsed = null;
-          try {
-            parsed = JSON.parse(rawValue);
-          } catch {
-            parsed = null;
-          }
-          const scheduleEvents = Array.isArray(parsed?.scheduleEvents) ? parsed.scheduleEvents : [];
-          const baselineEvents = Array.isArray(parsed?.baselineEvents) ? parsed.baselineEvents : [];
-          return {
-            key,
-            byteLength: rawValue.length,
-            snapshotDate: getDailySnapshotDate(key.replace(/^dfp_snapshot_cache_/, "")),
-            payloadDate: parsed?.date || null,
-            scheduleEventCount: scheduleEvents.length,
-            baselineEventCount: baselineEvents.length,
-            sampleEvents: scheduleEvents.slice(0, 8).map((event) => ({
-              id: event?.id || null,
-              date: event?.date || null,
-              type: event?.type || null,
-              resourceId: event?.resourceId || null,
-              flightNumber: event?.flightNumber || null,
-              startTime: event?.startTime ?? null,
-              duration: event?.duration ?? null
-            }))
-          };
-        });
-      } catch (error) {
-        return [{ error: String(error) }];
-      }
-    })();
-    const enrichedEntries = entries.map((entry, index) => {
-      const previous = index > 0 ? entries[index - 1] : null;
-      const entryPerfMs = typeof entry?.perfMs === "number" ? entry.perfMs : null;
-      const previousPerfMs = typeof previous?.perfMs === "number" ? previous.perfMs : null;
-      return {
-        index,
-        sincePreviousMs: entryPerfMs !== null && previousPerfMs !== null ? entryPerfMs - previousPerfMs : null,
-        ...entry
-      };
-    });
-    const slowestGaps = enrichedEntries.filter((entry) => typeof entry.sincePreviousMs === "number").sort((left, right) => (right.sincePreviousMs || 0) - (left.sincePreviousMs || 0)).slice(0, 20).map((entry) => ({
-      index: entry.index,
-      stage: entry.stage,
-      sincePreviousMs: entry.sincePreviousMs,
-      perfMs: entry.perfMs,
-      ts: entry.ts,
-      date: entry.date,
-      school: entry.school,
-      unit: entry.unit,
-      details: entry.details
-    }));
-    const stages = enrichedEntries.reduce((acc, entry) => {
-      const stage = String(entry.stage || "unknown");
-      acc[stage] = (acc[stage] || 0) + 1;
-      return acc;
-    }, {});
-    return {
-      reportType: "DFP-NEO data diagnostics",
-      generatedAt: (/* @__PURE__ */ new Date()).toISOString(),
-      url: window.location.href,
-      userAgent: navigator.userAgent,
-      activeContext: {
-        date,
-        school,
-        unit: activeUnitCode,
-        activeView,
-        setupTestProfile: setupTestProfile || null,
-        isInitialSetupWizardActive,
-        isAuthenticated,
-        snapshotKey,
-        snapshotLoadState: dfpSnapshotLoadState
-      },
-      authenticatedUser: {
-        authUser: authUser ? {
-          id: authUser.id || null,
-          userId: authUser.userId || null,
-          username: authUser.username || null,
-          displayName: authUser.displayName || null,
-          firstName: authUser.firstName || null,
-          lastName: authUser.lastName || null,
-          role: authUser.role || null,
-          email: authUser.email || null
-        } : null,
-        sessionUser,
-        currentUserName,
-        currentUserPermission,
-        combinedPermissions,
-        matchedCurrentStaffUser: matchedCurrentStaffUser ? {
-          id: matchedCurrentStaffUser.id || null,
-          idNumber: matchedCurrentStaffUser.idNumber || null,
-          name: matchedCurrentStaffUser.name || null,
-          rank: matchedCurrentStaffUser.rank || null,
-          role: matchedCurrentStaffUser.role || null,
-          unit: matchedCurrentStaffUser.unit || null,
-          permissions: matchedCurrentStaffUser.permissions || []
-        } : null
-      },
-      dataScope: {
-        hasRuntimePlatformWideAccess,
-        platformAccessContext,
-        platformDataScopeQuery,
-        activeContextUnitCodes,
-        activeUnitContext,
-        baseSelectableLocationCodes,
-        selectableLocationCodes,
-        operationalContextOptions
-      },
-      loadedDataCounts: {
-        allInstructors: allInstructorsData.length,
-        scopedInstructors: instructorsData.length,
-        archivedInstructors: archivedInstructorsData.length,
-        allTrainees: allTraineesData.length,
-        scopedTrainees: traineesData.length,
-        archivedTrainees: archivedTraineesData.length
-      },
-      operationalVisibility: window.__dfpOperationalVisibilityTrace || null,
-      rosterColourTrace: rosterColourTraceRef.current,
-      platformConfigSummary: {
-        organisationCount: platformConfig?.organisations?.length || 0,
-        locationCount: platformConfig?.locations?.length || 0,
-        unitCount: platformConfig?.units?.length || 0,
-        resourcePoolCount: platformConfig?.resourcePools?.length || 0,
-        aircraftTypeCount: platformConfig?.aircraftTypes?.length || 0,
-        locations: (platformConfig?.locations || []).map((location) => ({
-          code: location?.code || null,
-          name: location?.name || null,
-          status: location?.status || null,
-          unitCodes: location?.settings?.unitCodes || location?.unitCodes || []
-        })).slice(0, 80),
-        units: (platformConfig?.units || []).map((unit) => ({
-          code: unit?.code || null,
-          name: unit?.name || null,
-          status: unit?.status || null,
-          locationCode: unit?.locationCode || null
-        })).slice(0, 120),
-        resourcePools: (platformConfig?.resourcePools || []).map((pool) => ({
-          code: pool?.code || null,
-          name: pool?.name || null,
-          status: pool?.status || null,
-          locationCode: pool?.locationCode || null,
-          unitCode: pool?.unitCode || null,
-          aircraftTypeCode: pool?.aircraftTypeCode || null,
-          settings: pool?.settings || null
-        })).slice(0, 80)
-      },
-      lmpSummary: {
-        count: syllabusDetails.length,
-        names: syllabusDetails.slice(0, 80).map((lmp) => ({
-          id: lmp?.id || null,
-          name: lmp?.name || lmp?.courseName || lmp?.title || null,
-          code: lmp?.code || lmp?.courseCode || null,
-          unit: lmp?.unit || lmp?.unitCode || null,
-          location: lmp?.location || lmp?.locationCode || null,
-          eventCount: Array.isArray(lmp?.events) ? lmp.events.length : Array.isArray(lmp?.syllabus) ? lmp.syllabus.length : null
-        }))
-      },
-      currentScheduleState: {
-        activeDate: date,
-        activeSnapshotKey: snapshotKey,
-        rawPublishedEventCount: Array.isArray(publishedSchedules[date]) ? publishedSchedules[date].length : 0,
-        scopedPublishedEventCount: scopedPublishedEventsForDate.length,
-        renderedSegmentCount: eventSegmentsForDate.length,
-        baselineCount: Array.isArray(baselineSchedules[activeBaselineKey]) ? baselineSchedules[activeBaselineKey].length : 0,
-        publishedScheduleKeys: Object.keys(publishedSchedules).slice(0, 120),
-        snapshotDates: snapshotDates.slice(0, 120),
-        knownSnapshotKeysForDate: snapshotKeysByDateRef.current[date] || [],
-        loadedSnapshotKeys: Array.from(loadedSnapshotDates.current),
-        loadingSnapshotKeys: Array.from(loadingSnapshotDates.current)
-      },
-      localSnapshotCache: cacheSummaries,
-      summary: {
-        entryCount: enrichedEntries.length,
-        firstEntry: enrichedEntries[0] || null,
-        lastEntry: enrichedEntries[enrichedEntries.length - 1] || null,
-        slowestGaps,
-        stages,
-        staffScheduleRenderTraceCount: staffScheduleRenderTrace.length,
-        latestStaffScheduleStackedGroups: staffScheduleRenderTrace.at(-1)?.stackedGroups || []
-      },
-      entries: enrichedEntries,
-      staffScheduleRenderTrace
-    };
-  }
-  function downloadDfpDataDiagReport(label = "dfp-data-trace") {
-    const report = buildDfpDataDiagReport();
-    const blob = new Blob([JSON.stringify(report, null, 2)], { type: "application/json" });
-    const url = URL.createObjectURL(blob);
-    const safeUnit = String(activeUnitCode || "unit").replace(/[^A-Za-z0-9+-]+/g, "-").replace(/^-|-$/g, "") || "unit";
-    const safeDate = String(date || "no-date").replace(/[^0-9-]/g, "") || "no-date";
-    const link = document.createElement("a");
-    link.href = url;
-    link.download = `${label}-${safeUnit}-${safeDate}-${(/* @__PURE__ */ new Date()).toISOString().replace(/[:.]/g, "-")}.json`;
-    document.body.appendChild(link);
-    link.click();
-    link.remove();
-    URL.revokeObjectURL(url);
-    setShowInfoNotification("DFP data trace downloaded.");
-  }
   reactExports.useEffect(() => {
     pushDfpDataDiag("context:resolved", {
       platformLocations: (platformConfig?.locations || []).map((location) => ({
@@ -146605,7 +145803,6 @@ ${"=".repeat(60)}`);
   const [neoProblemTileForFlyout, setNeoProblemTileForFlyout] = reactExports.useState(null);
   const [neoRemediesForFlyout, setNeoRemediesForFlyout] = reactExports.useState([]);
   const [showInfoNotification, setShowInfoNotification] = reactExports.useState(null);
-  const [archiveHealthReport, setArchiveHealthReport] = reactExports.useState(null);
   const [dutyWarningRemedy, setDutyWarningRemedy] = reactExports.useState(null);
   const [showDutyWarning, setShowDutyWarning] = reactExports.useState(false);
   const [timeOnlyRemedyForConfirmation, setTimeOnlyRemedyForConfirmation] = reactExports.useState(null);
@@ -155256,220 +154453,6 @@ The proposed event was not scheduled. Re-open the event and choose Accept Confli
     setShowDateWarning(false);
     void startBuildProcess();
   };
-  const handleDownloadNeoBuildReport = reactExports.useCallback(() => {
-    if (typeof window === "undefined") return;
-    const readJsonStorage = (key) => {
-      try {
-        const raw = window.localStorage.getItem(key);
-        return raw ? JSON.parse(raw) : null;
-      } catch (error) {
-        return {
-          parseError: error instanceof Error ? error.message : String(error)
-        };
-      }
-    };
-    const getLatestNeoBuildDiagnosticReport = () => {
-      const liveReport = window.__lastNeoBuildDiagnosticReport;
-      const storedReport = readJsonStorage("neo_build_diag_report");
-      const liveUpdatedAt = Date.parse(String(liveReport?.updatedAt || liveReport?.timestamp || ""));
-      const storedUpdatedAt = Date.parse(String(storedReport?.updatedAt || storedReport?.timestamp || ""));
-      if (liveReport && (!storedReport || !Number.isFinite(storedUpdatedAt) || liveUpdatedAt >= storedUpdatedAt)) {
-        return {
-          ...liveReport,
-          reportSource: "window.__lastNeoBuildDiagnosticReport"
-        };
-      }
-      return storedReport ? {
-        ...storedReport,
-        reportSource: "localStorage.neo_build_diag_report"
-      } : null;
-    };
-    const countBy = (items, getKey) => items.reduce((counts, item) => {
-      const key = String(getKey(item) || "Unspecified");
-      counts[key] = (counts[key] || 0) + 1;
-      return counts;
-    }, {});
-    const visibleBuildEvents = nextDayBuildEvents || [];
-    const summariseLmpMap = () => {
-      const entries = Array.from(traineeLMPs.entries());
-      return {
-        traineeCount: entries.length,
-        totalEvents: entries.reduce((sum, [, events2]) => sum + (Array.isArray(events2) ? events2.length : 0), 0),
-        byLmpType: entries.reduce((counts, [, events2]) => {
-          const firstEvent = Array.isArray(events2) ? events2.find(Boolean) : null;
-          const key = String(firstEvent?.lmpType || firstEvent?.course || "Unspecified");
-          counts[key] = (counts[key] || 0) + 1;
-          return counts;
-        }, {}),
-        samples: entries.slice(0, 20).map(([traineeFullName, events2]) => ({
-          traineeFullName,
-          eventCount: Array.isArray(events2) ? events2.length : 0,
-          firstEvents: (Array.isArray(events2) ? events2 : []).slice(0, 12).map((event) => ({
-            id: event.id,
-            code: event.code,
-            masterEventId: event.masterEventId,
-            eventDescription: event.eventDescription,
-            type: event.type,
-            lmpType: event.lmpType || null,
-            phase: event.phase,
-            module: event.module,
-            duration: event.duration,
-            flightOrSimHours: event.flightOrSimHours,
-            totalEventHours: event.totalEventHours,
-            isCompleted: event.isCompleted
-          }))
-        }))
-      };
-    };
-    const report = {
-      reportType: "NEO_BUILD_COMPREHENSIVE_DIAGNOSTIC",
-      generatedAt: (/* @__PURE__ */ new Date()).toISOString(),
-      buildDate: buildDfpDate,
-      activeView,
-      activeOperationalModel,
-      activeUnitCode,
-      activeLocationCode: school,
-      currentUserName,
-      liveBuildState: {
-        isBuildingDfp,
-        progress: dfpBuildProgress,
-        pageDate: date,
-        generatedAtWhileBuildModalVisible: isBuildingDfp
-      },
-      liveInputState: {
-        trainees: {
-          count: traineesData.length,
-          activeCount: traineesData.filter((trainee) => !trainee.isPaused).length,
-          byCourse: countBy(traineesData, (trainee) => trainee.course),
-          byUnit: countBy(traineesData, (trainee) => trainee.unit),
-          samples: traineesData.slice(0, 40).map((trainee) => ({
-            id: trainee.id,
-            name: trainee.fullName || trainee.name,
-            unit: trainee.unit,
-            course: trainee.course,
-            lmpType: trainee.lmpType,
-            isPaused: trainee.isPaused
-          }))
-        },
-        instructors: {
-          count: instructorsData.length,
-          byUnit: countBy(instructorsData, (instructor) => instructor.unit),
-          samples: instructorsData.slice(0, 30).map((instructor) => ({
-            id: instructor.id,
-            name: instructor.name || instructor.fullName,
-            unit: instructor.unit,
-            rank: instructor.rank,
-            role: instructor.role
-          }))
-        },
-        syllabus: {
-          count: syllabusDetails.length,
-          byType: countBy(syllabusDetails, (item) => item.type),
-          byLmpType: countBy(syllabusDetails, (item) => item.lmpType || (Array.isArray(item.courses) ? item.courses[0] : void 0)),
-          samples: syllabusDetails.slice(0, 80).map((item) => ({
-            id: item.id,
-            code: item.code,
-            masterEventId: item.masterEventId,
-            eventDescription: item.eventDescription,
-            type: item.type,
-            lmpType: item.lmpType,
-            courses: item.courses,
-            duration: item.duration,
-            flightOrSimHours: item.flightOrSimHours,
-            totalEventHours: item.totalEventHours,
-            phase: item.phase,
-            module: item.module,
-            sortOrder: item.sortOrder
-          }))
-        },
-        individualLmps: summariseLmpMap(),
-        scores: {
-          traineeCount: scores.size,
-          totalScores: Array.from(scores.values()).reduce((sum, scoreList) => sum + (Array.isArray(scoreList) ? scoreList.length : 0), 0)
-        },
-        priorities: {
-          highestPriorityEvents: highestPriorityEvents.length,
-          samples: highestPriorityEvents.slice(0, 30).map((event) => ({
-            id: event.id,
-            type: event.type,
-            flightNumber: event.flightNumber,
-            startTime: event.startTime,
-            duration: event.duration,
-            resourceId: event.resourceId,
-            pilot: event.pilot,
-            student: event.student,
-            pushToNeoBuild: event.pushToNeoBuild
-          }))
-        }
-      },
-      visibleDraftSchedule: {
-        count: visibleBuildEvents.length,
-        byType: countBy(visibleBuildEvents, (event) => event.type),
-        byResource: countBy(visibleBuildEvents, (event) => event.resourceId),
-        bySource: countBy(visibleBuildEvents, (event) => event._source || event.source),
-        sample: visibleBuildEvents.slice(0, 80).map((event) => ({
-          id: event.id,
-          type: event.type,
-          flightNumber: event.flightNumber,
-          startTime: event.startTime,
-          duration: event.duration,
-          resourceId: event.resourceId,
-          instructor: event.instructor || null,
-          pilot: event.pilot || null,
-          student: event.student || null,
-          source: event._source || event.source || null,
-          currencyDraftId: event.currencyDraftId || null
-        }))
-      },
-      storedReports: {
-        neoBuildDiagnostic: getLatestNeoBuildDiagnosticReport(),
-        neoBuildTiming: readJsonStorage("neo_build_timing_report"),
-        neoBuildPreflightLmpScope: readJsonStorage("neo_build_preflight_lmp_scope_trace"),
-        neoBuildRuntimeError: readJsonStorage("neo_build_runtime_error_report"),
-        neoBuildZeroTileTrace: readJsonStorage("neo_build_zero_tile_trace"),
-        neoBuildInputTrace: readJsonStorage("neo_build_input_trace"),
-        neoDfpDataTrace: readJsonStorage("neo_dfp_data_diag"),
-        flightSchoolPriority: readJsonStorage("flight_school_priority_diag_report")
-      }
-    };
-    const blob = new Blob([JSON.stringify(report, null, 2)], { type: "application/json" });
-    const url = URL.createObjectURL(blob);
-    const safeUser = String(currentUserName || "user").toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "") || "user";
-    const safeDate = String(buildDfpDate || "no-date").replace(/[^0-9-]/g, "");
-    const link = document.createElement("a");
-    link.href = url;
-    link.download = `neo-build-diagnostic-${safeUser}-${safeDate}-${(/* @__PURE__ */ new Date()).toISOString().replace(/[:.]/g, "-")}.json`;
-    document.body.appendChild(link);
-    link.click();
-    link.remove();
-    URL.revokeObjectURL(url);
-    setShowInfoNotification("NEO Build diagnostic JSON downloaded.");
-  }, [activeOperationalModel, activeUnitCode, activeView, buildDfpDate, currentUserName, date, dfpBuildProgress, highestPriorityEvents, instructorsData, isBuildingDfp, nextDayBuildEvents, school, scores, syllabusDetails, traineeLMPs, traineesData]);
-  const handleOpenArchiveReport = reactExports.useCallback(async () => {
-    setArchiveHealthReport({ status: "loading" });
-    try {
-      const apiBase = getAppApiBase();
-      const sessionToken = localStorage.getItem("dfp_session_token") || "";
-      const response = await fetch(`${apiBase}/archive/dfp-date?date=${encodeURIComponent(date)}`, {
-        cache: "no-store",
-        credentials: "include",
-        headers: {
-          ...sessionToken ? { Authorization: `Bearer ${sessionToken}` } : {}
-        }
-      });
-      const report = await response.json().catch(() => null);
-      if (!response.ok || !report) {
-        throw new Error(report?.message || report?.error || `Archive report failed with HTTP ${response.status}`);
-      }
-      setArchiveHealthReport({ status: "loaded", report });
-    } catch (error) {
-      console.error("[Archive] Failed to download archive diagnostic report:", error);
-      setArchiveHealthReport({
-        status: "error",
-        error: error instanceof Error ? error.message : String(error)
-      });
-    }
-  }, [date]);
   const runBuildAlgorithm = async (preservedEvents, buildPublishedSchedulesOverride) => {
     logNeoBuildUiDebug("🚀 [NEO-Build] runBuildAlgorithm called");
     logNeoBuildUiDebug("🚀 [NEO-Build] buildDfpDate:", buildDfpDate);
@@ -156688,7 +155671,7 @@ The proposed event was not scheduled. Re-open the event and choose Accept Confli
         logNeoBuildUiDebug("🚀 [NEO-Build] setNextDayBuildEvents called with", generated.length, "events");
         if (generated.length === 0) {
           void showDarkAlert2(
-            "NEO Build completed but did not add any tiles. Open the NEO Build page and click Download Build Report to export the diagnostic report for this run.",
+            "NEO Build completed but did not add any tiles. Review the build notes and input settings for this run.",
             "No Tiles Added",
             "warning",
             12e3
@@ -163087,8 +162070,7 @@ It will not clear the published DFP.`,
             aircraftConfigLabelsByResource: nextDayBuildAircraftConfigLabelsByResource,
             aircraftNumberSettings,
             onExternalEventDrop: handleNextDayExternalEventDrop,
-            diagnosticHighlightedEventIds: staffAvailabilityDiagnosticEventIds,
-            onDownloadBuildReport: handleDownloadNeoBuildReport
+            diagnosticHighlightedEventIds: staffAvailabilityDiagnosticEventIds
           }
         );
       case "Priorities":
@@ -164331,7 +163313,6 @@ It will not clear the published DFP.`,
             onUpdateTrainee: handleUpdateTrainee,
             onAssignTraineeLmp: handleAssignTraineeIndividualLmp,
             onTraceAssignLmp: (stage, details = {}) => pushDfpDataDiag(`assign-lmp:${stage}`, details),
-            onDownloadAssignmentTrace: () => downloadDfpDataDiagReport("assign-lmp-trace"),
             operationalModel: activeOperationalModel,
             masterLmpCatalogue: accessibleMasterLmpCatalogueForSyllabus,
             staffQualificationCatalogue: activeStaffQualificationCatalogue,
@@ -165521,15 +164502,6 @@ Do you want to replace the existing entry?`,
         isCoursesLoaded
       }
     ),
-    isAuthenticated && (hasAuthenticatedAdminRole || platformAccessContext.isSuperAdmin || platformAccessContext.isPlatformAdmin) && /* @__PURE__ */ jsxRuntimeExports.jsx(
-      "button",
-      {
-        type: "button",
-        onClick: () => downloadDfpDataDiagReport("dfp-operational-visibility-trace"),
-        className: "fixed bottom-4 left-1/2 z-[520] -translate-x-1/2 rounded-md border border-cyan-300/45 bg-slate-950/92 px-4 py-2 text-[11px] font-black uppercase tracking-[0.16em] text-cyan-100 shadow-[0_12px_28px_rgba(0,0,0,0.45)] transition hover:border-cyan-200 hover:bg-slate-900",
-        children: "Download DFP Data Trace"
-      }
-    ),
     /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { id: "app-content", "data-theme": theme, className: "flex h-screen bg-gray-900 text-white", children: [
       /* @__PURE__ */ jsxRuntimeExports.jsx(
         Sidebar,
@@ -165626,7 +164598,6 @@ Do you want to replace the existing entry?`,
             isOracleMode,
             onToggleOracleMode: handleToggleOracleMode,
             onQuickTile: handleQuickTile,
-            onDownloadNeoTileReport: downloadNeoTileDiagnosticReport,
             showDepartureDensityOverlay,
             onToggleDepartureDensityOverlay: () => {
               if (!canUseDispatchRate) {
@@ -166019,20 +164990,6 @@ Do you want to replace the existing entry?`,
                   onPhaseChange: setPausePanelPhase,
                   stagedEvents: pauseStagedEvents,
                   onStagedEventsChange: setPauseStagedEvents,
-                  onDownloadDiagnostic: () => downloadPauseFlightOpsDiagnosticReport({
-                    date,
-                    buildDfpDate,
-                    activeView,
-                    activeOperationalModel,
-                    activeUnitCode,
-                    activeLocationCode: school,
-                    currentUserName,
-                    phase: pausePanelPhase,
-                    stagedEvents: pauseStagedEvents.length,
-                    completedEventIds: Array.from(pauseCompletedEventIds),
-                    nextDayBuildEvents: nextDayBuildEvents.length,
-                    scopedPublishedEventsForDate: scopedPublishedEventsForDate.length
-                  }),
                   onOverlayTimesChange: (start, end) => {
                     setPauseOverlayStart(start);
                     setPauseOverlayEnd(end);
@@ -166086,20 +165043,6 @@ Do you want to replace the existing entry?`,
           onClose: () => setShowNeoGuidePanel(false)
         }
       ),
-      isAuthenticated && isViewingPastDfp && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "fixed bottom-[168px] right-[18px] z-[100] flex w-[75px] justify-center", children: /* @__PURE__ */ jsxRuntimeExports.jsxs(
-        "button",
-        {
-          type: "button",
-          onClick: handleOpenArchiveReport,
-          title: "Open the archive health report for this DFP date",
-          className: "w-[75px] rounded-md border border-sky-200/55 bg-gray-900/15 px-1.5 py-1.5 text-center text-[10px] font-semibold leading-tight text-sky-100/85 shadow-none transition-colors hover:border-sky-100/75 hover:bg-sky-300/12 hover:text-white",
-          children: [
-            "Archive",
-            /* @__PURE__ */ jsxRuntimeExports.jsx("br", {}),
-            "Report"
-          ]
-        }
-      ) }),
       floatingDashboardWindows.MyDashboard && /* @__PURE__ */ jsxRuntimeExports.jsx(
         FloatingDashboardWindow,
         {
@@ -166492,104 +165435,12 @@ Do you want to replace the existing entry?`,
           dutyHours: dutyWarningRemedy.type !== "trainee" ? dutyWarningRemedy.instructor.dutyHours : 0
         }
       ),
-      archiveHealthReport && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "fixed inset-0 z-[10000] flex items-center justify-center bg-black/70 px-4", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "w-full max-w-3xl overflow-hidden rounded-lg border border-gray-700 bg-gray-900 shadow-2xl", children: [
-        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center justify-between border-b border-gray-700 bg-gray-950 px-5 py-4", children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
-            /* @__PURE__ */ jsxRuntimeExports.jsx("h2", { className: "text-lg font-bold text-white", children: "Archive Health Report" }),
-            /* @__PURE__ */ jsxRuntimeExports.jsxs("p", { className: "mt-1 text-xs text-gray-400", children: [
-              "Plain-English archive status for ",
-              date,
-              "."
-            ] })
-          ] }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx(
-            "button",
-            {
-              type: "button",
-              onClick: () => setArchiveHealthReport(null),
-              className: "rounded-md border border-gray-700 px-3 py-1.5 text-sm font-semibold text-gray-200 hover:bg-gray-800",
-              children: "Close"
-            }
-          )
-        ] }),
-        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "max-h-[72vh] overflow-y-auto p-5", children: [
-          archiveHealthReport.status === "loading" && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "rounded-md border border-sky-700/60 bg-sky-950/30 p-4 text-sm text-sky-100", children: "Loading archive report..." }),
-          archiveHealthReport.status === "error" && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded-md border border-red-700/60 bg-red-950/30 p-4 text-sm text-red-100", children: [
-            "Could not load the archive report. ",
-            archiveHealthReport.error || "Please try again."
-          ] }),
-          archiveHealthReport.status === "loaded" && (() => {
-            const report = archiveHealthReport.report || {};
-            const diagnostics = report.archiveCompletenessDiagnostics || report.snapshot?.archiveCompletenessDiagnostics || {};
-            const schedule = diagnostics.schedule || {};
-            const profiles = diagnostics.profiles || {};
-            const currency = diagnostics.currencyAndRecency || {};
-            const training = diagnostics.training || {};
-            const logbook = diagnostics.logbook || {};
-            const config = diagnostics.config || {};
-            const warnings = Array.isArray(diagnostics.warnings) ? diagnostics.warnings : [];
-            const notices = Array.isArray(diagnostics.notices) ? diagnostics.notices : [];
-            const currencyDefinitionsSource = String(currency.definitionsSource || "unknown");
-            const currencyDefinitionsSourceLabel = currencyDefinitionsSource === "archived-config-version" ? "Captured in compact archive" : currencyDefinitionsSource === "daily-snapshot" ? "Stored in daily snapshot" : currencyDefinitionsSource === "saved-settings-fallback" ? "Recovered from saved Settings" : currencyDefinitionsSource === "missing" ? "Missing" : "Unknown";
-            const healthRows = [
-              ["Archive source", report.source || diagnostics.source || "Unknown"],
-              ["Snapshot key", report.snapshotKey || diagnostics.snapshotKey || "Unknown"],
-              ["Schedule events", `${schedule.scheduleEvents ?? report.scheduleEvents?.length ?? 0}`],
-              ["Staff events", `${schedule.staffEvents ?? report.staffEvents?.length ?? 0}`],
-              ["Trainee events", `${schedule.traineeEvents ?? report.traineeEvents?.length ?? 0}`],
-              ["Staff profiles", `${profiles.staffProfiles ?? report.staffProfiles?.length ?? 0}`],
-              ["Trainee profiles", `${profiles.traineeProfiles ?? report.traineeProfiles?.length ?? 0}`],
-              ["Currency status rows", `${currency.profileCurrencyRows ?? 0} profile rows, ${currency.staffCurrencyRows ?? 0} staff map rows`],
-              ["Currency definitions", `${currency.masterCurrencyDefinitions ?? 0} master, ${currency.currencyRequirementDefinitions ?? 0} requirements`],
-              ["Currency catalogue source", currencyDefinitionsSourceLabel],
-              ["Recency definitions", `${currency.recencyDefinitionRows ?? 0}`],
-              ["Training reports", `${training.trainingReports ?? report.trainingReports?.length ?? 0}`],
-              ["Training report versions", `${training.trainingReportVersions ?? report.trainingReportVersions?.length ?? 0}`],
-              ["Event completions", `${training.eventCompletions ?? report.eventCompletions?.length ?? 0}`],
-              ["Flight log entries", `${logbook.flightLogEntries ?? report.flightLogEntries?.length ?? 0}`],
-              ["Config versions", `${config.configVersions ?? report.configVersions?.length ?? 0}`]
-            ];
-            return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-5", children: [
-              /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "rounded-md border border-gray-700 bg-gray-800/70 p-4", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center justify-between gap-3", children: [
-                /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
-                  /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-sm font-semibold text-gray-200", children: "Overall status" }),
-                  /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-1 text-sm text-gray-400", children: warnings.length > 0 ? "The archive loaded, with items for admin review." : "The archive loaded and no health warnings were reported." })
-                ] }),
-                /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: `rounded-full px-3 py-1 text-xs font-bold uppercase ${warnings.length > 0 ? "bg-amber-500/15 text-amber-200 ring-1 ring-amber-500/40" : "bg-emerald-500/15 text-emerald-200 ring-1 ring-emerald-500/40"}`, children: warnings.length > 0 ? "Review" : "Healthy" })
-              ] }) }),
-              warnings.length > 0 && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded-md border border-amber-700/60 bg-amber-950/25 p-4", children: [
-                /* @__PURE__ */ jsxRuntimeExports.jsx("h3", { className: "text-sm font-bold text-amber-100", children: "Items for review" }),
-                /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-3 space-y-2", children: warnings.map((warning, index) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded border border-amber-700/40 bg-gray-950/40 p-3", children: [
-                  /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-xs font-bold uppercase tracking-wide text-amber-300", children: warning?.code || "Archive warning" }),
-                  /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-1 text-sm text-amber-50", children: warning?.message || String(warning) })
-                ] }, `${warning?.code || "warning"}-${index}`)) })
-              ] }),
-              notices.length > 0 && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded-md border border-sky-800/50 bg-sky-950/20 p-4", children: [
-                /* @__PURE__ */ jsxRuntimeExports.jsx("h3", { className: "text-sm font-bold text-sky-100", children: "Archive notes" }),
-                /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-3 space-y-2", children: notices.map((notice, index) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded border border-sky-800/40 bg-gray-950/35 p-3", children: [
-                  /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-xs font-bold uppercase tracking-wide text-sky-300", children: notice?.code || "Archive note" }),
-                  /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-1 text-sm text-sky-50", children: notice?.message || String(notice) })
-                ] }, `${notice?.code || "notice"}-${index}`)) })
-              ] }),
-              /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "grid gap-3 md:grid-cols-2", children: healthRows.map(([label, value]) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded-md border border-gray-700 bg-gray-800/50 p-3", children: [
-                /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-[11px] font-bold uppercase tracking-wide text-gray-500", children: label }),
-                /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-1 text-sm font-semibold text-gray-100", children: value })
-              ] }, label)) }),
-              /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded-md border border-gray-700 bg-gray-800/50 p-4", children: [
-                /* @__PURE__ */ jsxRuntimeExports.jsx("h3", { className: "text-sm font-bold text-gray-100", children: "What this means" }),
-                /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-2 text-sm leading-6 text-gray-300", children: "This report checks whether the historical DFP can rebuild the operational picture for that date: schedule tiles, people, currency and recency status, training evidence, completions, logbook rows, and configuration versions. Older archives may not contain every newer archive field, but the warning section explains that clearly when it happens." })
-              ] })
-            ] });
-          })()
-        ] })
-      ] }) }),
       showInfoNotification && /* @__PURE__ */ jsxRuntimeExports.jsx(InfoNotification, { message: showInfoNotification, onClose: () => setShowInfoNotification(null) }),
       showNightFlyingInfo && /* @__PURE__ */ jsxRuntimeExports.jsx(NightFlyingInfoFlyout, { traineeCount: nightFlyingTraineeCount }),
       isBuildingDfp && /* @__PURE__ */ jsxRuntimeExports.jsx(
         BuildDfpLoadingFlyout,
         {
-          progress: dfpBuildProgress,
-          onDownloadLiveTrace: handleDownloadNeoBuildReport
+          progress: dfpBuildProgress
         }
       ),
       pausePanelPhase === "building" && /* @__PURE__ */ jsxRuntimeExports.jsx(PropellerLoadingOverlay, { message: "Engine warming up — please wait…" }),

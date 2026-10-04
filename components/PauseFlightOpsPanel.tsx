@@ -47,7 +47,6 @@ interface PauseFlightOpsPanelProps {
     onPhaseChange: (phase: PausePhase) => void;
     stagedEvents: ScheduleEvent[];
     onStagedEventsChange: (events: ScheduleEvent[]) => void;
-    onDownloadDiagnostic?: () => void;
     onOverlayTimesChange?: (start: number | null, end: number | null) => void;
     resourceDisplayNames?: ResourceDisplayNames;
 }
@@ -106,7 +105,6 @@ const PauseFlightOpsPanel: React.FC<PauseFlightOpsPanelProps> = ({
     onPhaseChange,
     stagedEvents,
     onStagedEventsChange,
-    onDownloadDiagnostic,
     resourceDisplayNames = DEFAULT_RESOURCE_DISPLAY_NAMES,
 }) => {
     // ── Config state ──────────────────────────────────────────────────────────
@@ -647,15 +645,6 @@ const PauseFlightOpsPanel: React.FC<PauseFlightOpsPanelProps> = ({
                             <path strokeLinecap="round" strokeLinejoin="round" d="M9 15L3 9m0 0l6-6M3 9h12a6 6 0 010 12h-3" />
                         </svg>
                         Revert to Original Daily Schedule
-                    </button>
-                )}
-
-                {onDownloadDiagnostic && (
-                    <button
-                        onClick={onDownloadDiagnostic}
-                        className="w-full py-1.5 rounded text-xs text-amber-200 hover:text-amber-100 hover:bg-amber-900/25 transition-colors border border-amber-800/50 hover:border-amber-600"
-                    >
-                        Download Pause Build Diagnostic
                     </button>
                 )}
 

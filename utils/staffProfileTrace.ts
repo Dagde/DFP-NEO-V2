@@ -49,42 +49,6 @@ export const appendStaffProfileTrace = (stage: string, data: unknown): void => {
   }
 };
 
-export const clearStaffProfileTrace = (): void => {
-  if (!hasWindow()) return;
-  try {
-    window.localStorage.removeItem(STORAGE_KEY);
-  } catch {
-    // Ignore storage failures.
-  }
-};
-
-const traceSlug = (value: string): string =>
-  String(value || 'staff-profile')
-    .trim()
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, '-')
-    .replace(/^-+|-+$/g, '')
-    .slice(0, 80) || 'staff-profile';
-
-export const downloadStaffProfileTrace = (label = 'staff-profile'): void => {
-  if (!hasWindow()) return;
-  const payload = {
-    generatedAt: new Date().toISOString(),
-    href: window.location.href,
-    userAgent: window.navigator.userAgent,
-    entries: readStaffProfileTrace(),
-  };
-  const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
-  const url = URL.createObjectURL(blob);
-  const anchor = document.createElement('a');
-  anchor.href = url;
-  anchor.download = `staff-profile-trace-${traceSlug(label)}-${new Date().toISOString().replace(/[:.]/g, '-')}.json`;
-  document.body.appendChild(anchor);
-  anchor.click();
-  anchor.remove();
-  URL.revokeObjectURL(url);
-};
-
 export const summariseStaffProfileForTrace = (
   instructor: Partial<Instructor> | null | undefined,
   staffQualificationCatalogue?: StaffQualificationCatalogue,

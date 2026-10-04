@@ -1478,7 +1478,6 @@ const TraineeLmpView: React.FC<TraineeLmpViewProps> = ({
     const [activeTab, setActiveTab] = useState<'neo' | 'academic'>('neo');
     const [showInsertEventModal, setShowInsertEventModal] = useState(false);
     const [itemBeingEdited, setItemBeingEdited] = useState<SyllabusItemDetail | null>(null);
-    const [isDownloadingLmpTrace, setIsDownloadingLmpTrace] = useState(false);
     const testingOfficerQualifications = useMemo(
         () => getQualificationsForOperationalModel(staffQualificationCatalogue, operationalModel),
         [staffQualificationCatalogue, operationalModel],
@@ -1487,147 +1486,6 @@ const TraineeLmpView: React.FC<TraineeLmpViewProps> = ({
     // Always show Academic tab when syllabusDetails prop is provided
     // The tab itself will show a "configure" message if academicLmpType not set
     const hasAcademicSyllabus = !!(syllabusDetails && syllabusDetails.length > 0);
-
-    const downloadIndividualLmpTrace = async () => {
-        if (isDownloadingLmpTrace) return;
-        setIsDownloadingLmpTrace(true);
-        const traineeId = String((trainee as any).id || trainee.fullName || trainee.name || '').trim();
-        const normalise = (value: unknown) => String(value || '').trim().toUpperCase();
-        const traineeLmpTokens = Array.from(new Set([
-            trainee.course,
-            trainee.lmpType,
-            trainee.academicLmpType,
-        ].map(normalise).filter(Boolean)));
-        const eventTokensForItem = (item: Partial<SyllabusItemDetail>) => [
-            item.id,
-            item.code,
-            item.masterEventId,
-            item.eventDescription,
-            (item as any).title,
-            (item as any).name,
-        ].map(normalise).filter(Boolean);
-        const isUpcLike = (item: SyllabusItemDetail) => eventTokensForItem(item).includes('UPC');
-        const isCourseContainerLike = (item: SyllabusItemDetail) => {
-            const eventTokens = eventTokensForItem(item);
-            if (!eventTokens.some(token => traineeLmpTokens.includes(token))) return false;
-            const duration = Number(item.duration || 0);
-            const flightOrSimHours = Number(item.flightOrSimHours || 0);
-            const totalEventHours = Number(item.totalEventHours || 0);
-            return duration <= 0 && flightOrSimHours <= 0 && totalEventHours <= 0;
-        };
-        const compactItem = (item: SyllabusItemDetail) => ({
-            id: item.id,
-            code: item.code,
-            masterEventId: item.masterEventId,
-            eventDescription: item.eventDescription,
-            phase: item.phase,
-            module: item.module,
-            type: item.type,
-            duration: item.duration,
-            flightOrSimHours: item.flightOrSimHours,
-            totalEventHours: item.totalEventHours,
-            courses: item.courses,
-            notes: item.notes,
-            sortOrder: item.sortOrder,
-            lmpSource: item.lmpSource,
-            isUpcLike: isUpcLike(item),
-            isCourseContainerLike: isCourseContainerLike(item),
-        });
-        const summarise = (items: SyllabusItemDetail[]) => ({
-            count: items.length,
-            upcLikeCount: items.filter(isUpcLike).length,
-            courseContainerLikeCount: items.filter(isCourseContainerLike).length,
-            byType: items.reduce<Record<string, number>>((acc, item) => {
-                const key = String(item.type || 'missing');
-                acc[key] = (acc[key] || 0) + 1;
-                return acc;
-            }, {}),
-            firstEvents: items.slice(0, 20).map(compactItem),
-            upcLikeEvents: items.filter(isUpcLike).slice(0, 20).map(compactItem),
-            courseContainerLikeEvents: items.filter(isCourseContainerLike).slice(0, 20).map(compactItem),
-        });
-        let serverDiagnostic: unknown = null;
-        let serverDiagnosticError: string | null = null;
-        try {
-            if (traineeId) {
-                const response = await fetch(`/api/trainees/${encodeURIComponent(traineeId)}/lmp/diagnostic`, {
-                    credentials: 'include',
-                });
-                const text = await response.text();
-                try {
-                    serverDiagnostic = text ? JSON.parse(text) : null;
-                } catch {
-                    serverDiagnostic = text;
-                }
-                if (!response.ok) {
-                    serverDiagnosticError = `HTTP ${response.status}: ${typeof serverDiagnostic === 'string' ? serverDiagnostic : JSON.stringify(serverDiagnostic)}`;
-                }
-            } else {
-                serverDiagnosticError = 'No trainee id or name was available for diagnostic lookup.';
-            }
-        } catch (error) {
-            serverDiagnosticError = error instanceof Error ? error.message : String(error);
-        }
-        const report = {
-            generatedAt: new Date().toISOString(),
-            trainee: {
-                id: (trainee as any).id || null,
-                idNumber: trainee.idNumber,
-                fullName: trainee.fullName,
-                name: trainee.name,
-                rank: trainee.rank,
-                course: trainee.course,
-                lmpType: trainee.lmpType,
-                academicLmpType: trainee.academicLmpType,
-                unit: trainee.unit,
-                location: trainee.location,
-            },
-            diagnosticPurpose: 'Tracks why an LMP/course title row such as UPC is still visible as an Individual LMP event after the database shell row was removed.',
-            traineeLmpTokens,
-            browserVisibleLmp: summarise(traineeLmp || []),
-            browserDisplayLmp: summarise(displayTraineeLmp || []),
-            browserScores: {
-                count: scores.length,
-                events: scores.slice(0, 40).map(score => ({
-                    event: score.event,
-                    date: score.date,
-                    instructor: score.instructor,
-                    score: score.score,
-                })),
-            },
-            selectedItem: selectedItem ? {
-                id: selectedItem.id,
-                code: selectedItem.code,
-                masterEventId: selectedItem.masterEventId,
-                eventDescription: selectedItem.eventDescription,
-                phase: selectedItem.phase,
-                module: selectedItem.module,
-                type: selectedItem.type,
-                courses: selectedItem.courses,
-                notes: selectedItem.notes,
-                sortOrder: selectedItem.sortOrder,
-                lmpSource: selectedItem.lmpSource,
-                isUpcLike: isUpcLike(selectedItem),
-                isCourseContainerLike: isCourseContainerLike(selectedItem),
-            } : null,
-            serverDiagnostic,
-            serverDiagnosticError,
-        };
-        const slug = String(trainee.fullName || trainee.name || 'trainee')
-            .toLowerCase()
-            .replace(/[^a-z0-9]+/g, '-')
-            .replace(/^-+|-+$/g, '') || 'trainee';
-        const blob = new Blob([JSON.stringify(report, null, 2)], { type: 'application/json' });
-        const url = URL.createObjectURL(blob);
-        const link = document.createElement('a');
-        link.href = url;
-        link.download = `individual-lmp-trace-${slug}-${new Date().toISOString().replace(/[:.]/g, '-')}.json`;
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-        URL.revokeObjectURL(url);
-        setIsDownloadingLmpTrace(false);
-    };
 
     // ── NEO Build LMP: dual-source completion check ──
     const completedEventIds = useMemo(() => {
@@ -1775,15 +1633,6 @@ const TraineeLmpView: React.FC<TraineeLmpViewProps> = ({
                     >
                         ← Back
                     </button>
-                    {activeTab === 'neo' && (
-                        <button
-                            onClick={downloadIndividualLmpTrace}
-                            disabled={isDownloadingLmpTrace}
-                            className="w-[56px] h-[41px] flex items-center justify-center text-center px-1 py-1 text-[10px] leading-tight font-semibold rounded-md btn-aluminium-brushed disabled:opacity-40 disabled:cursor-not-allowed"
-                        >
-                            {isDownloadingLmpTrace ? 'Trace...' : <>LMP<br />Trace</>}
-                        </button>
-                    )}
                     {activeTab === 'neo' && (
                         <button
                             onClick={() => setShowInsertEventModal(true)}
