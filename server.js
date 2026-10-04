@@ -435,11 +435,27 @@ function getDirectSessionToken(req) {
   return bearerToken || String(req.cookies?.[DIRECT_SESSION_COOKIE_NAME] || '').trim();
 }
 
-// Parse JSON bodies - increased limit to handle large settings/syllabus payloads
+// Parse JSON bodies. Published DFP snapshots include the schedule plus the
+// historical course/LMP/report/currency context needed to reopen past days.
+const API_BODY_LIMIT = process.env.DFP_API_BODY_LIMIT || '50mb';
 app.use(setSecurityHeaders);
-app.use(express.json({ limit: '10mb' }));
-app.use(express.urlencoded({ limit: '10mb', extended: true }));
+app.use(express.json({ limit: API_BODY_LIMIT }));
+app.use(express.urlencoded({ limit: API_BODY_LIMIT, extended: true }));
 app.use(cookieParser());
+app.use((err, req, res, next) => {
+  if (err?.type === 'entity.too.large' || err?.status === 413) {
+    console.warn('⚠️ Request body too large', {
+      path: req.originalUrl || req.url,
+      limit: API_BODY_LIMIT,
+      contentLength: req.headers['content-length'] || null,
+    });
+    return res.status(413).json({
+      error: 'Request body too large',
+      message: `The save payload is larger than the current server limit (${API_BODY_LIMIT}).`,
+    });
+  }
+  return next(err);
+});
 app.use((req, res, next) => {
   if (!req.headers.authorization && req.cookies?.[DIRECT_SESSION_COOKIE_NAME]) {
     req.headers.authorization = `Bearer ${req.cookies[DIRECT_SESSION_COOKIE_NAME]}`;
