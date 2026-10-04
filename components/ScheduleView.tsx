@@ -15780,10 +15780,15 @@ const ScheduleView: React.FC<ScheduleViewProps> = ({
                 >
                     <div className="pointer-events-auto relative flex w-full max-w-[760px] flex-col items-center overflow-hidden rounded-xl border border-cyan-300/25 bg-slate-950/86 px-7 py-6 text-center shadow-[0_24px_64px_rgba(0,0,0,0.52)] backdrop-blur-md">
                         <div className="relative mb-5 flex w-[min(430px,86%)] justify-center">
+                            <span
+                                className="pointer-events-none absolute inset-x-[-10%] top-1/2 h-16 -translate-y-1/2 rounded-full bg-cyan-300/10 blur-2xl"
+                                aria-hidden="true"
+                            />
                             <img
-                                src="/dfp-neo-welcome-logo.jpg"
+                                src="/dfp-neo-welcome-logo.png"
                                 alt="DFP NEO"
-                                className="max-h-20 w-full object-contain opacity-95 drop-shadow-[0_0_12px_rgba(34,211,238,0.28)]"
+                                className="relative z-[1] max-h-20 w-full object-contain opacity-95"
+                                style={{ filter: 'drop-shadow(0 0 10px rgba(34, 211, 238, 0.28)) drop-shadow(0 0 22px rgba(245, 158, 11, 0.18))' }}
                             />
                         </div>
                         <p className="relative text-[11px] font-black uppercase tracking-[0.22em] text-cyan-300">

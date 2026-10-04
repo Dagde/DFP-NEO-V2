@@ -45722,14 +45722,24 @@ const ScheduleView = ({
         "data-empty-dfp-welcome-variant": emptyDfpWelcomeVariant,
         className: "pointer-events-none fixed bottom-[8vh] left-[260px] right-[178px] top-[218px] z-[220] flex items-center justify-center px-8",
         children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "pointer-events-auto relative flex w-full max-w-[760px] flex-col items-center overflow-hidden rounded-xl border border-cyan-300/25 bg-slate-950/86 px-7 py-6 text-center shadow-[0_24px_64px_rgba(0,0,0,0.52)] backdrop-blur-md", children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "relative mb-5 flex w-[min(430px,86%)] justify-center", children: /* @__PURE__ */ jsxRuntimeExports.jsx(
-            "img",
-            {
-              src: "/dfp-neo-welcome-logo.jpg",
-              alt: "DFP NEO",
-              className: "max-h-20 w-full object-contain opacity-95 drop-shadow-[0_0_12px_rgba(34,211,238,0.28)]"
-            }
-          ) }),
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "relative mb-5 flex w-[min(430px,86%)] justify-center", children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx(
+              "span",
+              {
+                className: "pointer-events-none absolute inset-x-[-10%] top-1/2 h-16 -translate-y-1/2 rounded-full bg-cyan-300/10 blur-2xl",
+                "aria-hidden": "true"
+              }
+            ),
+            /* @__PURE__ */ jsxRuntimeExports.jsx(
+              "img",
+              {
+                src: "/dfp-neo-welcome-logo.png",
+                alt: "DFP NEO",
+                className: "relative z-[1] max-h-20 w-full object-contain opacity-95",
+                style: { filter: "drop-shadow(0 0 10px rgba(34, 211, 238, 0.28)) drop-shadow(0 0 22px rgba(245, 158, 11, 0.18))" }
+              }
+            )
+          ] }),
           /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "relative text-[11px] font-black uppercase tracking-[0.22em] text-cyan-300", children: "Daily Flying Program" }),
           /* @__PURE__ */ jsxRuntimeExports.jsx("h2", { className: "relative mt-2 text-2xl font-black text-white", children: emptyDfpWelcomeVariant === "select-context" ? "Welcome to DFP-NEO" : emptyDfpWelcomeVariant === "empty-resources" ? "Set up DFP resource rows" : `No tiles scheduled for ${formattedDisplayDate}` }),
           /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "relative mt-3 max-w-xl text-sm font-medium leading-6 text-slate-300", children: emptyDfpWelcomeVariant === "select-context" ? "Click the highlighted tab on the left to start setting up your organisation with the Setup Wizard." : emptyDfpWelcomeVariant === "empty-resources" ? "This DFP has no aircraft, standby, simulator, CPT or ground rows yet. Add the resource rows first, then the schedule will appear here." : "This DFP is open and ready. When tiles are built or added for this date, they will appear here." })
