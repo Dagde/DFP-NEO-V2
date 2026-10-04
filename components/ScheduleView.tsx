@@ -15781,7 +15781,7 @@ const ScheduleView: React.FC<ScheduleViewProps> = ({
                     <div className="pointer-events-auto relative flex w-full max-w-[760px] flex-col items-center overflow-hidden rounded-xl border border-cyan-300/25 bg-slate-950/86 px-7 py-6 text-center shadow-[0_24px_64px_rgba(0,0,0,0.52)] backdrop-blur-md">
                         <div className="relative mb-5 flex w-[min(430px,86%)] justify-center">
                             <img
-                                src="/dfp-neo-setup-logo.png"
+                                src="/dfp-neo-welcome-logo.jpg"
                                 alt="DFP NEO"
                                 className="max-h-20 w-full object-contain opacity-95 drop-shadow-[0_0_12px_rgba(34,211,238,0.28)]"
                             />
@@ -15791,14 +15791,14 @@ const ScheduleView: React.FC<ScheduleViewProps> = ({
                         </p>
                         <h2 className="relative mt-2 text-2xl font-black text-white">
                             {emptyDfpWelcomeVariant === 'select-context'
-                                ? 'Select a location and unit'
+                                ? 'Welcome to DFP-NEO'
                                 : emptyDfpWelcomeVariant === 'empty-resources'
                                     ? 'Set up DFP resource rows'
                                 : `No tiles scheduled for ${formattedDisplayDate}`}
                         </h2>
                         <p className="relative mt-3 max-w-xl text-sm font-medium leading-6 text-slate-300">
                             {emptyDfpWelcomeVariant === 'select-context'
-                                ? 'Once a location and unit are selected, this screen will show the DFP for that operating context.'
+                                ? 'Click the highlighted tab on the left to start setting up your organisation with the Setup Wizard.'
                                 : emptyDfpWelcomeVariant === 'empty-resources'
                                     ? 'This DFP has no aircraft, standby, simulator, CPT or ground rows yet. Add the resource rows first, then the schedule will appear here.'
                                 : 'This DFP is open and ready. When tiles are built or added for this date, they will appear here.'}
