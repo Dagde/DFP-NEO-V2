@@ -11758,6 +11758,11 @@ async function findOrCreateSsoUser(db, websiteUser) {
            "firstName" = $3,
            "lastName" = $4,
            role = $5::"Role",
+           "mustChangePassword" = false,
+           "activationCodeHash" = NULL,
+           "activationCodeExpiresAt" = NULL,
+           "activationLockedUntil" = NULL,
+           "activationAttemptCount" = 0,
            "updatedAt" = NOW()
        WHERE id = $6`,
       ssoUsername,
@@ -11774,6 +11779,7 @@ async function findOrCreateSsoUser(db, websiteUser) {
       firstName,
       lastName,
       role: ssoRole,
+      mustChangePassword: false,
     };
   }
 
@@ -13707,8 +13713,7 @@ app.post('/api/admin/direct-reset-password', adminSensitiveRateLimit, async (req
 
 app.post('/api/auth/direct-change-password', adminSensitiveRateLimit, async (req, res) => {
   try {
-    const authHeader = req.headers.authorization || '';
-    const sessionToken = authHeader.startsWith('Bearer ') ? authHeader.slice(7) : '';
+    const sessionToken = getDirectSessionToken(req);
     if (!sessionToken) {
       return res.status(401).json({ error: 'Unauthorized', message: 'No token provided' });
     }
