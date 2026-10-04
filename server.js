@@ -19597,6 +19597,9 @@ async function ensureDailySnapshotTable(db) {
         "eventCompletions" JSONB NOT NULL DEFAULT '[]',
         "flightLogEntries" JSONB NOT NULL DEFAULT '[]',
         "currencyState" JSONB NOT NULL DEFAULT '{}',
+        "archivePrunedAt" TIMESTAMP(3),
+        "archivePruneStatus" TEXT NOT NULL DEFAULT 'full',
+        "archivePruneDetails" JSONB NOT NULL DEFAULT '{}',
         "savedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
         "savedBy" TEXT,
         CONSTRAINT "DailySnapshot_pkey" PRIMARY KEY ("id")
@@ -19638,6 +19641,15 @@ async function ensureDailySnapshotTable(db) {
     `);
     await db.$executeRawUnsafe(`
       ALTER TABLE "DailySnapshot" ADD COLUMN IF NOT EXISTS "currencyState" JSONB NOT NULL DEFAULT '{}';
+    `);
+    await db.$executeRawUnsafe(`
+      ALTER TABLE "DailySnapshot" ADD COLUMN IF NOT EXISTS "archivePrunedAt" TIMESTAMP(3);
+    `);
+    await db.$executeRawUnsafe(`
+      ALTER TABLE "DailySnapshot" ADD COLUMN IF NOT EXISTS "archivePruneStatus" TEXT NOT NULL DEFAULT 'full';
+    `);
+    await db.$executeRawUnsafe(`
+      ALTER TABLE "DailySnapshot" ADD COLUMN IF NOT EXISTS "archivePruneDetails" JSONB NOT NULL DEFAULT '{}';
     `);
     // Add device tokens table for APNs push notifications
 	    await db.$executeRawUnsafe(`
@@ -19726,6 +19738,14 @@ async function ensureDailySnapshotTable(db) {
     await db.$executeRawUnsafe(`
       CREATE INDEX IF NOT EXISTS "DailySnapshot_savedAt_idx"
       ON "DailySnapshot"("savedAt");
+    `);
+    await db.$executeRawUnsafe(`
+      CREATE INDEX IF NOT EXISTS "DailySnapshot_archivePrunedAt_idx"
+      ON "DailySnapshot"("archivePrunedAt");
+    `);
+    await db.$executeRawUnsafe(`
+      CREATE INDEX IF NOT EXISTS "DailySnapshot_archivePruneStatus_idx"
+      ON "DailySnapshot"("archivePruneStatus");
     `);
     console.log('✅ DailySnapshot table ready');
   } catch (err) {
@@ -20190,6 +20210,357 @@ async function writeArchiveDiagnostic(db, action, snapshotKey, date, status, det
   } catch (err) {
     console.warn('[Archive] diagnostic write failed:', err.message);
   }
+}
+
+const DAILY_SNAPSHOT_FULL_RETENTION_DAYS_DEFAULT = 90;
+const DAILY_SNAPSHOT_PRUNE_BATCH_DEFAULT = 5;
+const DAILY_SNAPSHOT_PRUNE_BATCH_MAX = 100;
+
+const DAILY_SNAPSHOT_PRUNABLE_JSON_COLUMNS = [
+  'scheduleEvents',
+  'staffEvents',
+  'traineeEvents',
+  'pt051Assessments',
+  'traineeProfiles',
+  'staffProfiles',
+  'lmpCompletedIds',
+  'staffCurrency',
+  'staffLogbook',
+  'baselineEvents',
+  'aircraftConfigState',
+  'courseState',
+  'individualLmpState',
+  'masterLmpState',
+  'trainingReportState',
+  'eventCompletions',
+  'flightLogEntries',
+  'currencyState',
+];
+
+const COMPACT_ARCHIVE_REQUIRED_CONFIG_TYPES = [
+  'aircraftConfigState',
+  'staffRosterState',
+  'traineeRosterState',
+  'lmpCompletionState',
+  'staffCurrencyState',
+  'currencyDefinitionState',
+  'currencyState',
+  'courseState',
+  'individualLmpState',
+  'masterLmpState',
+  'trainingReportState',
+  'eventCompletionState',
+  'flightLogState',
+];
+
+function parseIntegerSetting(value, fallback, { min = 0, max = Number.MAX_SAFE_INTEGER } = {}) {
+  const parsed = Number.parseInt(String(value ?? ''), 10);
+  if (!Number.isFinite(parsed)) return fallback;
+  return Math.min(max, Math.max(min, parsed));
+}
+
+function getDailySnapshotFullRetentionDays(value = process.env.DFP_FULL_SNAPSHOT_RETENTION_DAYS) {
+  if (String(value || '').trim().toLowerCase() === 'off') return -1;
+  return parseIntegerSetting(value, DAILY_SNAPSHOT_FULL_RETENTION_DAYS_DEFAULT, { min: -1, max: 3650 });
+}
+
+function getDailySnapshotPruneBatchLimit(value = process.env.DFP_FULL_SNAPSHOT_PRUNE_BATCH) {
+  return parseIntegerSetting(value, DAILY_SNAPSHOT_PRUNE_BATCH_DEFAULT, {
+    min: 1,
+    max: DAILY_SNAPSHOT_PRUNE_BATCH_MAX,
+  });
+}
+
+function isDailySnapshotPruningDisabled() {
+  return ['1', 'true', 'yes', 'on'].includes(String(process.env.DFP_DISABLE_DAILY_SNAPSHOT_PRUNING || '').trim().toLowerCase());
+}
+
+function estimateDailySnapshotPrunableBytes(snapshot) {
+  try {
+    const prunablePayload = Object.fromEntries(
+      DAILY_SNAPSHOT_PRUNABLE_JSON_COLUMNS.map(column => [column, snapshot?.[column]])
+    );
+    return Buffer.byteLength(JSON.stringify(prunablePayload), 'utf8');
+  } catch {
+    return 0;
+  }
+}
+
+function getArchiveConfigIdsByType(configRefs) {
+  if (!configRefs || typeof configRefs !== 'object' || Array.isArray(configRefs)) return {};
+  return Object.fromEntries(
+    Object.entries(configRefs)
+      .map(([type, ref]) => [type, ref?.id ? String(ref.id) : ''])
+      .filter(([, id]) => Boolean(id))
+  );
+}
+
+async function validateCompactArchiveForDailySnapshotPrune(db, snapshot) {
+  const snapshotKey = String(snapshot?.date || '').trim();
+  const parsed = parseDailySnapshotDateKey(snapshotKey);
+  const scheduleEvents = Array.isArray(snapshot?.scheduleEvents) ? snapshot.scheduleEvents : [];
+  if (!snapshotKey) {
+    return {
+      valid: false,
+      reason: 'Snapshot row does not have a date key.',
+      snapshotKey,
+      date: parsed.date || null,
+      snapshotEventCount: scheduleEvents.length,
+    };
+  }
+
+  const archiveRows = await db.$queryRawUnsafe(
+    `SELECT id, "snapshotKey", "date", "scheduleHash", "eventCount", "configRefs", "publishedAt", "updatedAt"
+     FROM "PublishedDfpArchive"
+     WHERE "snapshotKey" = $1::text
+     LIMIT 1`,
+    snapshotKey
+  ).catch(() => []);
+  const archive = archiveRows?.[0] || null;
+  if (!archive) {
+    return {
+      valid: false,
+      reason: 'No compact archive exists for this daily snapshot.',
+      snapshotKey,
+      date: parsed.date || null,
+      snapshotEventCount: scheduleEvents.length,
+    };
+  }
+
+  const eventCountRows = await db.$queryRawUnsafe(
+    `SELECT COUNT(*)::int AS count,
+            COALESCE(array_agg("eventId" ORDER BY "eventId"), ARRAY[]::text[]) AS "eventIds"
+     FROM "ScheduleEventArchive"
+     WHERE "archiveId" = $1::text`,
+    archive.id
+  ).catch(() => []);
+  const archivedEventCount = Number(eventCountRows?.[0]?.count || 0);
+  const snapshotEventCount = scheduleEvents.length;
+  const archiveEventIds = Array.isArray(eventCountRows?.[0]?.eventIds) ? eventCountRows[0].eventIds : [];
+  const snapshotEventIds = scheduleEvents
+    .map((event, index) => getArchiveEventStableId(event, parsed.date || snapshotKey, index))
+    .sort((a, b) => a.localeCompare(b));
+  const scheduleHash = hashArchiveContent(scheduleEvents);
+  const configIdsByType = getArchiveConfigIdsByType(archive.configRefs);
+  const missingConfigRefs = COMPACT_ARCHIVE_REQUIRED_CONFIG_TYPES.filter(type => !configIdsByType[type]);
+  const configIds = Object.values(configIdsByType);
+  const configRows = configIds.length > 0
+    ? await db.$queryRawUnsafe(
+        `SELECT id FROM "ConfigVersionArchive" WHERE id = ANY($1::text[])`,
+        configIds
+      ).catch(() => [])
+    : [];
+  const foundConfigIds = new Set((configRows || []).map(row => String(row.id || '')));
+  const missingConfigRows = COMPACT_ARCHIVE_REQUIRED_CONFIG_TYPES
+    .filter(type => configIdsByType[type] && !foundConfigIds.has(configIdsByType[type]));
+  const hashMatches = archive.scheduleHash === scheduleHash;
+  const eventCountMatches = archivedEventCount === snapshotEventCount && Number(archive.eventCount || 0) === snapshotEventCount;
+  const eventIdsMatch = archiveEventIds.length === snapshotEventIds.length
+    && archiveEventIds.every((eventId, index) => String(eventId) === String(snapshotEventIds[index]));
+  const snapshotSavedAtMs = snapshot?.savedAt ? new Date(snapshot.savedAt).getTime() : 0;
+  const archiveUpdatedAtMs = archive?.updatedAt ? new Date(archive.updatedAt).getTime() : 0;
+  const archiveFreshEnough = !snapshotSavedAtMs || !archiveUpdatedAtMs || archiveUpdatedAtMs + 1000 >= snapshotSavedAtMs;
+  const valid = eventCountMatches && eventIdsMatch && archiveFreshEnough && missingConfigRefs.length === 0 && missingConfigRows.length === 0;
+
+  return {
+    valid,
+    reason: valid
+      ? 'Compact archive can reconstruct this daily snapshot.'
+      : 'Compact archive did not pass validation.',
+    snapshotKey,
+    date: parsed.date || null,
+    archiveId: archive.id,
+    snapshotEventCount,
+    archivedEventCount,
+    archiveEventCount: Number(archive.eventCount || 0),
+    hashMatches,
+    eventCountMatches,
+    eventIdsMatch,
+    archiveFreshEnough,
+    missingConfigRefs,
+    missingConfigRows,
+    configVersionCount: configRows?.length || 0,
+    requiredConfigTypes: COMPACT_ARCHIVE_REQUIRED_CONFIG_TYPES.length,
+    publishedAt: archive.publishedAt,
+    updatedAt: archive.updatedAt,
+  };
+}
+
+async function pruneArchivedDailySnapshots(db, options = {}) {
+  const startedAt = Date.now();
+  const dryRun = options.dryRun === true;
+  const retentionDays = Number.isFinite(Number(options.retentionDays))
+    ? Number(options.retentionDays)
+    : getDailySnapshotFullRetentionDays();
+  const limit = parseIntegerSetting(options.limit, getDailySnapshotPruneBatchLimit(), {
+    min: 1,
+    max: DAILY_SNAPSHOT_PRUNE_BATCH_MAX,
+  });
+  const reason = String(options.reason || (dryRun ? 'manual-dry-run' : 'scheduled-prune')).slice(0, 80);
+
+  if (isDailySnapshotPruningDisabled()) {
+    return {
+      success: true,
+      skipped: true,
+      reason: 'Daily snapshot pruning is disabled by DFP_DISABLE_DAILY_SNAPSHOT_PRUNING.',
+      retentionDays,
+      limit,
+      dryRun,
+      durationMs: Date.now() - startedAt,
+    };
+  }
+  if (retentionDays < 0) {
+    return {
+      success: true,
+      skipped: true,
+      reason: 'Full snapshot retention is set to off.',
+      retentionDays,
+      limit,
+      dryRun,
+      durationMs: Date.now() - startedAt,
+    };
+  }
+
+  const selectColumns = [
+    '"id"',
+    '"date"',
+    '"savedAt"',
+    '"savedBy"',
+    ...DAILY_SNAPSHOT_PRUNABLE_JSON_COLUMNS.map(column => `"${column}"`),
+  ].join(', ');
+  const candidates = await db.$queryRawUnsafe(
+    `SELECT ${selectColumns}
+     FROM "DailySnapshot"
+     WHERE "archivePrunedAt" IS NULL
+       AND COALESCE("archivePruneStatus", 'full') <> 'pruned'
+       AND "savedAt" < NOW() - ($1::integer * INTERVAL '1 day')
+     ORDER BY "savedAt" ASC
+     LIMIT ${limit}`,
+    Math.max(0, Math.floor(retentionDays))
+  ).catch(error => {
+    throw new Error(`Could not load daily snapshot prune candidates: ${error.message}`);
+  });
+
+  const pruned = [];
+  const skipped = [];
+  let estimatedBytesReleased = 0;
+
+  for (const snapshot of candidates || []) {
+    const validation = await validateCompactArchiveForDailySnapshotPrune(db, snapshot);
+    const estimatedPrunableBytes = estimateDailySnapshotPrunableBytes(snapshot);
+    const item = {
+      id: snapshot.id,
+      snapshotKey: snapshot.date,
+      date: validation.date,
+      savedAt: snapshot.savedAt,
+      eventCount: validation.snapshotEventCount,
+      archiveId: validation.archiveId || null,
+      estimatedPrunableBytes,
+      validation,
+    };
+    if (!validation.valid) {
+      skipped.push(item);
+      continue;
+    }
+    if (dryRun) {
+      pruned.push({ ...item, dryRun: true });
+      estimatedBytesReleased += estimatedPrunableBytes;
+      continue;
+    }
+
+    const pruneDetails = {
+      prunedAt: new Date().toISOString(),
+      reason,
+      retentionDays,
+      estimatedPrunableBytes,
+      validation: {
+        archiveId: validation.archiveId,
+        snapshotEventCount: validation.snapshotEventCount,
+        archivedEventCount: validation.archivedEventCount,
+        archiveEventCount: validation.archiveEventCount,
+        hashMatches: validation.hashMatches,
+        eventCountMatches: validation.eventCountMatches,
+        eventIdsMatch: validation.eventIdsMatch,
+        archiveFreshEnough: validation.archiveFreshEnough,
+        configVersionCount: validation.configVersionCount,
+      },
+      preservedColumns: ['date', 'savedAt', 'savedBy', 'alertsData'],
+      prunedColumns: DAILY_SNAPSHOT_PRUNABLE_JSON_COLUMNS,
+    };
+    await db.$executeRawUnsafe(`
+      UPDATE "DailySnapshot"
+      SET
+        "scheduleEvents" = '[]'::jsonb,
+        "staffEvents" = '[]'::jsonb,
+        "traineeEvents" = '[]'::jsonb,
+        "pt051Assessments" = '{}'::jsonb,
+        "traineeProfiles" = '[]'::jsonb,
+        "staffProfiles" = '[]'::jsonb,
+        "lmpCompletedIds" = '{}'::jsonb,
+        "staffCurrency" = '{}'::jsonb,
+        "staffLogbook" = '{}'::jsonb,
+        "baselineEvents" = '[]'::jsonb,
+        "aircraftConfigState" = '{}'::jsonb,
+        "courseState" = '[]'::jsonb,
+        "individualLmpState" = '{}'::jsonb,
+        "masterLmpState" = '[]'::jsonb,
+        "trainingReportState" = '{}'::jsonb,
+        "eventCompletions" = '[]'::jsonb,
+        "flightLogEntries" = '[]'::jsonb,
+        "currencyState" = '{}'::jsonb,
+        "archivePrunedAt" = NOW(),
+        "archivePruneStatus" = 'pruned',
+        "archivePruneDetails" = $1::jsonb
+      WHERE "id" = $2::text
+        AND "archivePrunedAt" IS NULL
+    `, JSON.stringify(pruneDetails), snapshot.id);
+    pruned.push(item);
+    estimatedBytesReleased += estimatedPrunableBytes;
+  }
+
+  const result = {
+    success: true,
+    dryRun,
+    reason,
+    retentionDays,
+    limit,
+    candidates: candidates?.length || 0,
+    pruned: pruned.length,
+    skipped: skipped.length,
+    estimatedBytesReleased,
+    prunedSnapshots: pruned.map(item => ({
+      snapshotKey: item.snapshotKey,
+      date: item.date,
+      eventCount: item.eventCount,
+      archiveId: item.archiveId,
+      estimatedPrunableBytes: item.estimatedPrunableBytes,
+      dryRun: item.dryRun === true,
+    })),
+    skippedSnapshots: skipped.map(item => ({
+      snapshotKey: item.snapshotKey,
+      date: item.date,
+      reason: item.validation.reason,
+      eventCount: item.eventCount,
+      archivedEventCount: item.validation.archivedEventCount,
+      hashMatches: item.validation.hashMatches,
+      eventCountMatches: item.validation.eventCountMatches,
+      eventIdsMatch: item.validation.eventIdsMatch,
+      archiveFreshEnough: item.validation.archiveFreshEnough,
+      missingConfigRefs: item.validation.missingConfigRefs,
+      missingConfigRows: item.validation.missingConfigRows,
+    })),
+    durationMs: Date.now() - startedAt,
+  };
+  await writeArchiveDiagnostic(
+    db,
+    'ARCHIVE_DAILY_SNAPSHOT_PRUNE',
+    null,
+    null,
+    dryRun ? 'dry-run' : 'success',
+    result,
+    result.durationMs
+  );
+  return result;
 }
 
 async function saveArchiveConfigVersion(db, scopeKey, configType, effectiveFrom, content, createdBy) {
@@ -21284,7 +21655,10 @@ app.post('/api/daily-snapshot/save', async (req, res) => {
 	            "trainingReportState" = $16::jsonb,
 	            "eventCompletions" = $17::jsonb,
 	            "flightLogEntries" = $18::jsonb,
-	            "currencyState" = $19::jsonb
+	            "currencyState" = $19::jsonb,
+	            "archivePrunedAt" = NULL,
+	            "archivePruneStatus" = 'full',
+	            "archivePruneDetails" = '{}'::jsonb
 	          WHERE date = $20::text
 	        `,
 	          JSON.stringify(scheduleEvents || []),
@@ -21330,7 +21704,10 @@ app.post('/api/daily-snapshot/save', async (req, res) => {
 	            "trainingReportState" = $15::jsonb,
 	            "eventCompletions" = $16::jsonb,
 	            "flightLogEntries" = $17::jsonb,
-	            "currencyState" = $18::jsonb
+	            "currencyState" = $18::jsonb,
+	            "archivePrunedAt" = NULL,
+	            "archivePruneStatus" = 'full',
+	            "archivePruneDetails" = '{}'::jsonb
 	          WHERE date = $19::text
 	        `,
 	          JSON.stringify(scheduleEvents || []),
@@ -21390,6 +21767,7 @@ app.post('/api/daily-snapshot/save', async (req, res) => {
     }
 
     let archive = { success: false, warning: 'Archive write not attempted' };
+    let archivePrune = null;
     try {
       archive = await saveCompactPublishedDfpArchive(db, {
         date,
@@ -21426,7 +21804,23 @@ app.post('/api/daily-snapshot/save', async (req, res) => {
       console.warn(`⚠️ POST /api/daily-snapshot/save - Compact archive write failed for ${date}:`, archiveError.message);
     }
 
-    res.json({ success: true, date, eventCount: (scheduleEvents||[]).length, archive });
+    if (archive?.success) {
+      try {
+        archivePrune = await pruneArchivedDailySnapshots(db, {
+          reason: 'post-publish-retention',
+          limit: getDailySnapshotPruneBatchLimit(),
+        });
+      } catch (pruneError) {
+        archivePrune = { success: false, warning: pruneError.message };
+        await writeArchiveDiagnostic(db, 'ARCHIVE_DAILY_SNAPSHOT_PRUNE', date, parseDailySnapshotDateKey(date).date, 'error', {
+          error: pruneError.message,
+          trigger: 'post-publish-retention',
+        });
+        console.warn(`⚠️ POST /api/daily-snapshot/save - Archive prune check failed for ${date}:`, pruneError.message);
+      }
+    }
+
+    res.json({ success: true, date, eventCount: (scheduleEvents||[]).length, archive, archivePrune });
   } catch (error) {
     console.error('❌ POST /api/daily-snapshot/save error:', error);
     res.status(500).json({ error: 'Failed to save daily snapshot', details: error.message });
@@ -22000,11 +22394,19 @@ app.get('/api/archive/diagnostics', async (req, res) => {
         (SELECT COUNT(*) FROM "ScheduleEventArchive")::int AS "scheduleEventArchiveCount",
         (SELECT COUNT(*) FROM "ConfigVersionArchive")::int AS "configVersionCount",
         (SELECT COUNT(*) FROM "TrainingReportVersionArchive")::int AS "trainingReportVersionCount",
-        (SELECT COUNT(*) FROM "ArchiveDiagnosticLog")::int AS "diagnosticCount"
+        (SELECT COUNT(*) FROM "ArchiveDiagnosticLog")::int AS "diagnosticCount",
+        (SELECT COUNT(*) FROM "DailySnapshot")::int AS "dailySnapshotCount",
+        (SELECT COUNT(*) FROM "DailySnapshot" WHERE COALESCE("archivePruneStatus", 'full') = 'pruned')::int AS "prunedDailySnapshotCount",
+        (SELECT COUNT(*) FROM "DailySnapshot" WHERE COALESCE("archivePruneStatus", 'full') <> 'pruned')::int AS "fullDailySnapshotCount"
     `);
     res.json({
       success: true,
       counts: counts?.[0] || {},
+      retention: {
+        fullSnapshotRetentionDays: getDailySnapshotFullRetentionDays(),
+        pruneBatchLimit: getDailySnapshotPruneBatchLimit(),
+        pruningDisabled: isDailySnapshotPruningDisabled(),
+      },
       archives: archiveRows || [],
       diagnostics: diagnosticRows || [],
       generatedAt: new Date().toISOString(),
@@ -22012,6 +22414,29 @@ app.get('/api/archive/diagnostics', async (req, res) => {
   } catch (error) {
     console.error('❌ GET /api/archive/diagnostics error:', error);
     res.status(500).json({ error: 'Failed to load archive diagnostics', details: error.message });
+  }
+});
+
+// POST /api/archive/prune-daily-snapshots - Admin compact-archive retention control.
+app.post('/api/archive/prune-daily-snapshots', async (req, res) => {
+  try {
+    const context = await requireDirectAdmin(req, res);
+    if (!context) return;
+    const db = context.db;
+    const dryRunRaw = req.body?.dryRun ?? req.query.dryRun ?? true;
+    const dryRun = !['false', '0', 'no'].includes(String(dryRunRaw).trim().toLowerCase());
+    const retentionDaysRaw = req.body?.retentionDays ?? req.query.retentionDays;
+    const limitRaw = req.body?.limit ?? req.query.limit;
+    const result = await pruneArchivedDailySnapshots(db, {
+      dryRun,
+      retentionDays: retentionDaysRaw === undefined ? undefined : Number(retentionDaysRaw),
+      limit: limitRaw === undefined ? undefined : Number(limitRaw),
+      reason: dryRun ? 'admin-dry-run' : 'admin-manual-prune',
+    });
+    res.json(result);
+  } catch (error) {
+    console.error('❌ POST /api/archive/prune-daily-snapshots error:', error);
+    res.status(500).json({ error: 'Failed to prune daily snapshots', details: error.message });
   }
 });
 
