@@ -55592,6 +55592,8 @@ appliedUpdates.forEach(update => {
                            isNeoAssistPanelOpen={showDfpSidePanel}
                            isFlightLinePanelOpen={showFlightLinePanel}
                            showInitialSetupBlankState={showInitialSetupBlankState}
+                           showEmptyDfpWelcome={showEmptyDfpWelcome}
+                           emptyDfpWelcomeVariant={hasSelectedOperationalContext ? 'empty-date' : 'select-context'}
                            resumeInitialSetupWizard={shouldResumeInitialSetupWizard}
                            initialOrganisationSlideoutView={showInitialSetupBlankState ? 'setupWizard' : 'structure'}
                            onOrganisationSlideoutOpen={() => {
@@ -59092,6 +59094,8 @@ appliedUpdates.forEach(update => {
     const latestSavedDfpDate = snapshotDates.find(snapshotDate => snapshotDate && snapshotDate !== date) || '';
     const isFutureSelectedDfpDate = date > getEffectiveDfpDateString();
     const emptyDfpNoticeKey = getDailySnapshotKey(date, school, activeUnitCode);
+    const hasSelectedOperationalContext = Boolean(String(school || '').trim()) && Boolean(String(activeUnitCode || '').trim());
+    const isSnapshotLoadPendingForSelectedDate = dfpSnapshotLoadState.date === date && ['loading', 'retrying'].includes(dfpSnapshotLoadState.status);
     const showEmptyDfpNotice = isAuthenticated
         && activeView === 'Program Schedule'
         && dfpSnapshotLoadState.date === date
@@ -59102,6 +59106,16 @@ appliedUpdates.forEach(update => {
         && !isInitialSetupWizardActive
         && !showInitialSetupBlankState
         && !setupTestProfile;
+    const showEmptyDfpWelcome = isAuthenticated
+        && activeView === 'Program Schedule'
+        && eventSegmentsForDate.length === 0
+        && !showEmptyDfpNotice
+        && !showDfpRetrievalNotice
+        && !isSnapshotLoadPendingForSelectedDate
+        && !isInitialSetupWizardActive
+        && !showInitialSetupBlankState
+        && !setupTestProfile
+        && !authLoading;
 
     return (
     <>

@@ -176,6 +176,8 @@ interface ScheduleViewProps {
   isFlightLinePanelOpen?: boolean;
   onOrganisationSlideoutOpen?: () => void;
   showInitialSetupBlankState?: boolean;
+  showEmptyDfpWelcome?: boolean;
+  emptyDfpWelcomeVariant?: 'select-context' | 'empty-date';
   resumeInitialSetupWizard?: boolean;
   onToggleFlightLinePanel?: () => void;
   canEditFlightLineInventory?: boolean;
@@ -13472,6 +13474,8 @@ const ScheduleView: React.FC<ScheduleViewProps> = ({
     isFlightLinePanelOpen = false,
     onOrganisationSlideoutOpen,
     showInitialSetupBlankState = false,
+    showEmptyDfpWelcome = false,
+    emptyDfpWelcomeVariant = 'empty-date',
     resumeInitialSetupWizard = false,
     onToggleFlightLinePanel,
     canEditFlightLineInventory = true,
@@ -15645,6 +15649,32 @@ const ScheduleView: React.FC<ScheduleViewProps> = ({
                         >
                             {initialSetupWizardHasProgress ? 'Continue Initial Setup Wizard' : 'Start Initial Setup Wizard'}
                         </button>
+                    </div>
+                </div>
+            )}
+            {showEmptyDfpWelcome && !shouldShowInitialSetupPrompt && (
+                <div className="pointer-events-none fixed bottom-[8vh] left-[260px] right-[178px] top-[218px] z-[220] flex items-center justify-center px-8">
+                    <div className="pointer-events-auto relative flex w-full max-w-[760px] flex-col items-center overflow-hidden rounded-xl border border-cyan-300/25 bg-slate-950/86 px-7 py-6 text-center shadow-[0_24px_64px_rgba(0,0,0,0.52)] backdrop-blur-md">
+                        <div className="relative mb-5 flex w-[min(430px,86%)] justify-center">
+                            <img
+                                src="/dfp-neo-setup-logo.png"
+                                alt="DFP NEO"
+                                className="max-h-20 w-full object-contain opacity-95 drop-shadow-[0_0_12px_rgba(34,211,238,0.28)]"
+                            />
+                        </div>
+                        <p className="relative text-[11px] font-black uppercase tracking-[0.22em] text-cyan-300">
+                            Daily Flying Program
+                        </p>
+                        <h2 className="relative mt-2 text-2xl font-black text-white">
+                            {emptyDfpWelcomeVariant === 'select-context'
+                                ? 'Select a location and unit'
+                                : `No tiles scheduled for ${formattedDisplayDate}`}
+                        </h2>
+                        <p className="relative mt-3 max-w-xl text-sm font-medium leading-6 text-slate-300">
+                            {emptyDfpWelcomeVariant === 'select-context'
+                                ? 'Once a location and unit are selected, this screen will show the DFP for that operating context.'
+                                : 'This DFP is open and ready. When tiles are built or added for this date, they will appear here.'}
+                        </p>
                     </div>
                 </div>
             )}

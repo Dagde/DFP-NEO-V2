@@ -43703,6 +43703,8 @@ const ScheduleView = ({
   isFlightLinePanelOpen = false,
   onOrganisationSlideoutOpen,
   showInitialSetupBlankState = false,
+  showEmptyDfpWelcome = false,
+  emptyDfpWelcomeVariant = "empty-date",
   resumeInitialSetupWizard = false,
   onToggleFlightLinePanel,
   canEditFlightLineInventory = true,
@@ -45568,6 +45570,19 @@ const ScheduleView = ({
           children: initialSetupWizardHasProgress ? "Continue Initial Setup Wizard" : "Start Initial Setup Wizard"
         }
       )
+    ] }) }),
+    showEmptyDfpWelcome && !shouldShowInitialSetupPrompt && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "pointer-events-none fixed bottom-[8vh] left-[260px] right-[178px] top-[218px] z-[220] flex items-center justify-center px-8", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "pointer-events-auto relative flex w-full max-w-[760px] flex-col items-center overflow-hidden rounded-xl border border-cyan-300/25 bg-slate-950/86 px-7 py-6 text-center shadow-[0_24px_64px_rgba(0,0,0,0.52)] backdrop-blur-md", children: [
+      /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "relative mb-5 flex w-[min(430px,86%)] justify-center", children: /* @__PURE__ */ jsxRuntimeExports.jsx(
+        "img",
+        {
+          src: "/dfp-neo-setup-logo.png",
+          alt: "DFP NEO",
+          className: "max-h-20 w-full object-contain opacity-95 drop-shadow-[0_0_12px_rgba(34,211,238,0.28)]"
+        }
+      ) }),
+      /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "relative text-[11px] font-black uppercase tracking-[0.22em] text-cyan-300", children: "Daily Flying Program" }),
+      /* @__PURE__ */ jsxRuntimeExports.jsx("h2", { className: "relative mt-2 text-2xl font-black text-white", children: emptyDfpWelcomeVariant === "select-context" ? "Select a location and unit" : `No tiles scheduled for ${formattedDisplayDate}` }),
+      /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "relative mt-3 max-w-xl text-sm font-medium leading-6 text-slate-300", children: emptyDfpWelcomeVariant === "select-context" ? "Once a location and unit are selected, this screen will show the DFP for that operating context." : "This DFP is open and ready. When tiles are built or added for this date, they will appear here." })
     ] }) }),
     resourceSlideoutFrame && /* @__PURE__ */ jsxRuntimeExports.jsx(
       "div",
@@ -161298,6 +161313,8 @@ It will not clear the published DFP.`,
             isNeoAssistPanelOpen: showDfpSidePanel,
             isFlightLinePanelOpen: showFlightLinePanel,
             showInitialSetupBlankState,
+            showEmptyDfpWelcome,
+            emptyDfpWelcomeVariant: hasSelectedOperationalContext ? "empty-date" : "select-context",
             resumeInitialSetupWizard: shouldResumeInitialSetupWizard,
             initialOrganisationSlideoutView: showInitialSetupBlankState ? "setupWizard" : "structure",
             onOrganisationSlideoutOpen: () => {
@@ -164487,7 +164504,10 @@ Do you want to replace the existing entry?`,
   const latestSavedDfpDate = snapshotDates.find((snapshotDate) => snapshotDate && snapshotDate !== date) || "";
   const isFutureSelectedDfpDate = date > getEffectiveDfpDateString();
   const emptyDfpNoticeKey = getDailySnapshotKey(date, school, activeUnitCode);
+  const hasSelectedOperationalContext = Boolean(String(school || "").trim()) && Boolean(String(activeUnitCode || "").trim());
+  const isSnapshotLoadPendingForSelectedDate = dfpSnapshotLoadState.date === date && ["loading", "retrying"].includes(dfpSnapshotLoadState.status);
   const showEmptyDfpNotice = isAuthenticated && activeView === "Program Schedule" && dfpSnapshotLoadState.date === date && dfpSnapshotLoadState.status === "empty" && eventSegmentsForDate.length === 0 && dismissedEmptyDfpNoticeKey !== emptyDfpNoticeKey && !isFutureSelectedDfpDate && !isInitialSetupWizardActive && !showInitialSetupBlankState && !setupTestProfile;
+  const showEmptyDfpWelcome = isAuthenticated && activeView === "Program Schedule" && eventSegmentsForDate.length === 0 && !showEmptyDfpNotice && !showDfpRetrievalNotice && !isSnapshotLoadPendingForSelectedDate && !isInitialSetupWizardActive && !showInitialSetupBlankState && !setupTestProfile && !authLoading;
   return /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
     setupTestProfile && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "fixed left-1/2 top-2 z-[500] -translate-x-1/2 rounded-md border border-amber-300/70 bg-amber-100 px-4 py-2 text-center text-[11px] font-black uppercase tracking-[0.16em] text-slate-950 shadow-2xl shadow-black/30", children: [
       "Setup Wizard Test Mode - Local Browser Data Only - ",
