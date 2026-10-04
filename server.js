@@ -11677,6 +11677,222 @@ app.get('/api/auth/direct-session', async (req, res) => {
   }
 });
 
+const WEBSITE_SSO_VALIDATE_URL =
+  process.env.DFP_WEBSITE_SSO_VALIDATE_URL ||
+  `${(process.env.DFP_WEBSITE_URL || 'https://dfp-neo.com').replace(/\/+$/, '')}/api/auth/validate-token`;
+
+function normaliseSsoRole(role) {
+  const cleanRole = String(role || '').trim().toUpperCase();
+  return ['SUPER_ADMIN', 'ADMIN', 'PILOT', 'INSTRUCTOR', 'USER'].includes(cleanRole) ? cleanRole : 'USER';
+}
+
+function formatSsoDisplayName(user) {
+  return `${user.firstName || ''} ${user.lastName || ''}`.trim() || user.username || user.userId;
+}
+
+async function validateWebsiteSsoToken(authToken, userId) {
+  const validateUrl = new URL(WEBSITE_SSO_VALIDATE_URL);
+  validateUrl.searchParams.set('authToken', authToken);
+  validateUrl.searchParams.set('userId', userId);
+  const response = await fetch(validateUrl.toString(), {
+    headers: {
+      Accept: 'application/json',
+    },
+  });
+  const data = await response.json().catch(() => null);
+  if (!response.ok || !data?.valid || !data?.user) {
+    const reason = data?.message || data?.error || `SSO validation failed with status ${response.status}`;
+    const error = new Error(reason);
+    error.status = response.status || 401;
+    throw error;
+  }
+  return data.user;
+}
+
+async function findOrCreateSsoUser(db, websiteUser) {
+  const ssoUserId = String(websiteUser.userId || websiteUser.username || '').trim();
+  const ssoUsername = String(websiteUser.username || ssoUserId).trim() || ssoUserId;
+  const ssoEmail = websiteUser.email ? String(websiteUser.email).trim() : null;
+  const ssoRole = normaliseSsoRole(websiteUser.role);
+  const firstName = websiteUser.firstName ? String(websiteUser.firstName).trim() : null;
+  const lastName = websiteUser.lastName ? String(websiteUser.lastName).trim() : null;
+
+  if (!ssoUserId) {
+    const error = new Error('SSO user did not include a User ID');
+    error.status = 400;
+    throw error;
+  }
+
+  let users = await db.$queryRawUnsafe(
+    `SELECT id, "userId", username, email, "firstName", "lastName", role, "isActive", "mustChangePassword"
+     FROM "User"
+     WHERE "userId" = $1 OR username = $1
+     LIMIT 1`,
+    ssoUserId
+  );
+
+  if ((!users || users.length === 0) && ssoEmail) {
+    users = await db.$queryRawUnsafe(
+      `SELECT id, "userId", username, email, "firstName", "lastName", role, "isActive", "mustChangePassword"
+       FROM "User"
+       WHERE lower(email) = lower($1)
+       LIMIT 1`,
+      ssoEmail
+    );
+  }
+
+  if (users && users.length > 0) {
+    const user = users[0];
+    const emailConflict = ssoEmail
+      ? await db.$queryRawUnsafe(
+          `SELECT id FROM "User" WHERE lower(email) = lower($1) AND id <> $2 LIMIT 1`,
+          ssoEmail,
+          user.id
+        )
+      : [];
+    const safeEmail = emailConflict && emailConflict.length > 0 ? user.email : ssoEmail;
+    await db.$executeRawUnsafe(
+      `UPDATE "User"
+       SET username = $1,
+           email = $2,
+           "firstName" = $3,
+           "lastName" = $4,
+           role = $5::"Role",
+           "updatedAt" = NOW()
+       WHERE id = $6`,
+      ssoUsername,
+      safeEmail,
+      firstName,
+      lastName,
+      ssoRole,
+      user.id
+    );
+    return {
+      ...user,
+      username: ssoUsername,
+      email: safeEmail,
+      firstName,
+      lastName,
+      role: ssoRole,
+    };
+  }
+
+  const emailAlreadyUsed = ssoEmail
+    ? await db.$queryRawUnsafe(`SELECT id FROM "User" WHERE lower(email) = lower($1) LIMIT 1`, ssoEmail)
+    : [];
+  const safeEmail = emailAlreadyUsed && emailAlreadyUsed.length > 0 ? null : ssoEmail;
+  const bcrypt = require('bcryptjs');
+  const randomPasswordHash = await bcrypt.hash(crypto.randomBytes(32).toString('hex'), 12);
+  const createdUserId = crypto.randomUUID();
+
+  await db.$executeRawUnsafe(
+    `INSERT INTO "User" (
+       id, "userId", username, email, password, role, "firstName", "lastName",
+       "isActive", "mustChangePassword", "createdAt", "updatedAt"
+     )
+     VALUES ($1, $2, $3, $4, $5, $6::"Role", $7, $8, true, false, NOW(), NOW())`,
+    createdUserId,
+    ssoUserId,
+    ssoUsername,
+    safeEmail,
+    randomPasswordHash,
+    ssoRole,
+    firstName,
+    lastName
+  );
+
+  return {
+    id: createdUserId,
+    userId: ssoUserId,
+    username: ssoUsername,
+    email: safeEmail,
+    firstName,
+    lastName,
+    role: ssoRole,
+    isActive: true,
+    mustChangePassword: false,
+  };
+}
+
+// POST /api/auth/sso-login - exchange a website launch token for this app's session cookie
+app.post('/api/auth/sso-login', authRateLimit, async (req, res) => {
+  try {
+    const { token, userId } = req.body || {};
+    if (!token || !userId) {
+      return res.status(400).json({
+        error: 'Missing SSO details',
+        message: 'The launch link did not include a valid SSO token.',
+      });
+    }
+
+    const websiteUser = await validateWebsiteSsoToken(String(token), String(userId));
+    const db = await getPrisma();
+    const user = await findOrCreateSsoUser(db, websiteUser);
+
+    if (!user.isActive) {
+      return res.status(403).json({
+        error: 'Account inactive',
+        message: 'This app account is inactive.',
+      });
+    }
+
+    const sessionToken = crypto.randomBytes(32).toString('hex');
+    const expires = new Date(Date.now() + DIRECT_SESSION_COOKIE_MAX_AGE_MS);
+
+    await db.$executeRawUnsafe(
+      `INSERT INTO "Session" ("id", "sessionToken", "userId", "expires")
+       VALUES (gen_random_uuid()::text, $1, $2, $3::timestamp)`,
+      sessionToken,
+      user.id,
+      expires.toISOString()
+    );
+
+    await db.$executeRawUnsafe(
+      `UPDATE "User" SET "lastLogin" = $1::timestamp, "updatedAt" = $1::timestamp WHERE id = $2`,
+      new Date().toISOString(),
+      user.id
+    );
+
+    try {
+      await db.$executeRawUnsafe(
+        `INSERT INTO "AuditLog" ("id", "userId", action, "entityType", "entityId", "ipAddress", "userAgent", "createdAt")
+         VALUES (gen_random_uuid()::text, $1, 'SSO_LOGIN', 'User', $1, $2, $3, NOW())`,
+        user.id,
+        req.headers['x-forwarded-for'] || req.ip || 'unknown',
+        req.headers['user-agent'] || 'unknown'
+      );
+    } catch (auditError) {
+      console.warn('⚠️ SSO login audit log failed:', auditError.message);
+    }
+
+    setDirectSessionCookie(req, res, sessionToken, expires);
+
+    return res.json({
+      sessionToken,
+      expires: expires.toISOString(),
+      user: {
+        id: user.id,
+        userId: user.userId,
+        username: user.username,
+        firstName: user.firstName,
+        lastName: user.lastName,
+        email: user.email,
+        role: user.role,
+        isActive: user.isActive,
+        displayName: formatSsoDisplayName(user),
+        mustChangePassword: Boolean(user.mustChangePassword),
+        permissionsRoleId: '',
+      },
+    });
+  } catch (error) {
+    console.error('❌ POST /api/auth/sso-login error:', error);
+    res.status(error.status || 500).json({
+      error: error.status && error.status < 500 ? 'SSO failed' : 'Internal server error',
+      message: error.message || 'The website login could not be accepted by this app.',
+    });
+  }
+});
+
 // POST /api/auth/direct-logout - Browser app logout
 app.post('/api/auth/direct-logout', async (req, res) => {
   try {

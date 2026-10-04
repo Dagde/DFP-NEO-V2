@@ -70,33 +70,31 @@
 
       // Strategy 1: Use URL parameters passed from website
       if (userId && username) {
-        setStatus('Setting up session...');
+        setStatus('Setting up secure session...');
 
-        // Build user object matching AuthUser interface expected by App.tsx
-        const userData = {
-          id: userId,
-          userId: userId,
-          username: username,
-          firstName: firstName || '',
-          lastName: lastName || '',
-          displayName: (firstName && lastName) ? `${lastName}, ${firstName}` : username,
-          email: email || null,
-          role: role || 'USER',
-          isActive: isActive !== 'false',
-          mustChangePassword: false,
-          permissionsRoleId: ''
-        };
+        let data;
+        try {
+          const response = await fetch('/api/auth/sso-login', {
+            method: 'POST',
+            credentials: 'include',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ token, userId })
+          });
+          data = await response.json().catch(() => ({}));
+          if (!response.ok || !data.user) {
+            throw new Error(data.message || 'The website login could not be accepted by this app.');
+          }
+        } catch (error) {
+          setError(error.message || 'The website login could not be accepted by this app.');
+          redirectToLogin();
+          return;
+        }
 
-        // Store dfp_sso_user so App.tsx SSO check picks it up
-        localStorage.setItem('dfp_sso_user', JSON.stringify(userData));
-
-        // Also store authUser for any legacy checks
-        localStorage.setItem('authUser', JSON.stringify(userData));
-
-        // Store the session token from the website
-        if (token) {
-          localStorage.setItem('dfp_session_token', token);
-          localStorage.setItem('dfp_session_expires', new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString());
+        localStorage.removeItem('dfp_sso_user');
+        localStorage.removeItem('dfp_session_token');
+        localStorage.setItem('authUser', JSON.stringify(data.user));
+        if (data.expires) {
+          localStorage.setItem('dfp_session_expires', data.expires);
         }
 
         if (appEdition) {
