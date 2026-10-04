@@ -35597,6 +35597,45 @@ const App: React.FC = () => {
     const configuredGroundCount = getResourcePoolCount(activePlatformResourcePool, 'ground', 6, resourceRowTargetDate);
     const configuredDutySupervisorRowEnabled = getResourcePoolCount(activePlatformResourcePool, 'dutySupervisor', 0, resourceRowTargetDate) > 0;
     const configuredTowerDutyInstructorRowEnabled = getResourcePoolCount(activePlatformResourcePool, 'towerDutyInstructor', 0, resourceRowTargetDate) > 0;
+    const hasConfiguredDfpResourceRowsForSelectedDate = useMemo(() => {
+        const settings = activePlatformResourcePool?.settings || {};
+        const targetDate = String(resourceRowTargetDate || '').slice(0, 10);
+        const rowKeys = ['aircraft', 'ftd', 'cpt', 'ground', 'standby', 'dutySupervisor', 'towerDutyInstructor'];
+        const rowAliases = [
+            'aircraft', 'airframes',
+            'ftd', 'simulator', 'simulators',
+            'cpt', 'trainer', 'trainers', 'proceduralTrainer', 'proceduralTrainers',
+            'ground',
+            'standby', 'stby',
+            'dutySupervisor', 'dutySup', 'dutySupervisorRow',
+            'towerDutyInstructor', 'twrDi', 'twrDiRow',
+        ];
+        const hasPositiveRowCount = (rows: Record<string, any> | null | undefined, keys: string[]) => (
+            !!rows && keys.some((key) => {
+                if (!Object.prototype.hasOwnProperty.call(rows, key)) return false;
+                const value = Number(rows[key]);
+                return Number.isFinite(value) && value > 0;
+            })
+        );
+
+        if (hasPositiveRowCount(settings, rowAliases)) return true;
+
+        const history = Array.isArray(settings.dfpResourceRowsHistory) ? settings.dfpResourceRowsHistory : [];
+        if (!targetDate || !/^\d{4}-\d{2}-\d{2}$/.test(targetDate)) {
+            return history.some((entry: any) => hasPositiveRowCount(entry?.rows, rowKeys));
+        }
+
+        return history.some((entry: any) => {
+            const rows = entry?.rows;
+            if (!rows || typeof rows !== 'object') return false;
+            const from = String(entry?.effectiveFrom || '0000-01-01').slice(0, 10);
+            const to = String(entry?.effectiveTo || '9999-12-31').slice(0, 10);
+            const matchesDate = from === '0000-01-01' && to !== '9999-12-31'
+                ? targetDate === to
+                : targetDate >= from && targetDate <= to;
+            return matchesDate && hasPositiveRowCount(rows, rowKeys);
+        });
+    }, [activePlatformResourcePool, resourceRowTargetDate]);
 
     const getLocalIsoDateForResourceRows = useCallback((offsetDays = 0): string => {
         const dateValue = new Date();
@@ -55593,7 +55632,7 @@ appliedUpdates.forEach(update => {
                            isFlightLinePanelOpen={showFlightLinePanel}
                            showInitialSetupBlankState={showInitialSetupBlankState}
                            showEmptyDfpWelcome={showEmptyDfpWelcome}
-                           emptyDfpWelcomeVariant={hasSelectedOperationalContext ? 'empty-date' : 'select-context'}
+                           emptyDfpWelcomeVariant={emptyDfpWelcomeVariant}
                            resumeInitialSetupWizard={shouldResumeInitialSetupWizard}
                            initialOrganisationSlideoutView={showInitialSetupBlankState ? 'setupWizard' : 'structure'}
                            onOrganisationSlideoutOpen={() => {
@@ -59096,6 +59135,12 @@ appliedUpdates.forEach(update => {
     const emptyDfpNoticeKey = getDailySnapshotKey(date, school, activeUnitCode);
     const hasSelectedOperationalContext = Boolean(String(school || '').trim()) && Boolean(String(activeUnitCode || '').trim());
     const isSnapshotLoadPendingForSelectedDate = dfpSnapshotLoadState.date === date && ['loading', 'retrying'].includes(dfpSnapshotLoadState.status);
+    const emptyDfpWelcomeVariant = !hasSelectedOperationalContext
+        ? 'select-context'
+        : !hasConfiguredDfpResourceRowsForSelectedDate
+            ? 'empty-resources'
+            : 'empty-date';
+    const shouldShowEmptyDfpWelcomeForResourceColumn = hasSelectedOperationalContext && !hasConfiguredDfpResourceRowsForSelectedDate;
     const showEmptyDfpNotice = isAuthenticated
         && activeView === 'Program Schedule'
         && dfpSnapshotLoadState.date === date
@@ -59108,7 +59153,7 @@ appliedUpdates.forEach(update => {
         && !setupTestProfile;
     const showEmptyDfpWelcome = isAuthenticated
         && activeView === 'Program Schedule'
-        && eventSegmentsForDate.length === 0
+        && (eventSegmentsForDate.length === 0 || shouldShowEmptyDfpWelcomeForResourceColumn)
         && !showEmptyDfpNotice
         && !showDfpRetrievalNotice
         && !isSnapshotLoadPendingForSelectedDate

@@ -177,7 +177,7 @@ interface ScheduleViewProps {
   onOrganisationSlideoutOpen?: () => void;
   showInitialSetupBlankState?: boolean;
   showEmptyDfpWelcome?: boolean;
-  emptyDfpWelcomeVariant?: 'select-context' | 'empty-date';
+  emptyDfpWelcomeVariant?: 'select-context' | 'empty-resources' | 'empty-date';
   resumeInitialSetupWizard?: boolean;
   onToggleFlightLinePanel?: () => void;
   canEditFlightLineInventory?: boolean;
@@ -15668,11 +15668,15 @@ const ScheduleView: React.FC<ScheduleViewProps> = ({
                         <h2 className="relative mt-2 text-2xl font-black text-white">
                             {emptyDfpWelcomeVariant === 'select-context'
                                 ? 'Select a location and unit'
+                                : emptyDfpWelcomeVariant === 'empty-resources'
+                                    ? 'Set up DFP resource rows'
                                 : `No tiles scheduled for ${formattedDisplayDate}`}
                         </h2>
                         <p className="relative mt-3 max-w-xl text-sm font-medium leading-6 text-slate-300">
                             {emptyDfpWelcomeVariant === 'select-context'
                                 ? 'Once a location and unit are selected, this screen will show the DFP for that operating context.'
+                                : emptyDfpWelcomeVariant === 'empty-resources'
+                                    ? 'This DFP has no aircraft, standby, simulator, CPT or ground rows yet. Add the resource rows first, then the schedule will appear here.'
                                 : 'This DFP is open and ready. When tiles are built or added for this date, they will appear here.'}
                         </p>
                     </div>

@@ -45581,8 +45581,8 @@ const ScheduleView = ({
         }
       ) }),
       /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "relative text-[11px] font-black uppercase tracking-[0.22em] text-cyan-300", children: "Daily Flying Program" }),
-      /* @__PURE__ */ jsxRuntimeExports.jsx("h2", { className: "relative mt-2 text-2xl font-black text-white", children: emptyDfpWelcomeVariant === "select-context" ? "Select a location and unit" : `No tiles scheduled for ${formattedDisplayDate}` }),
-      /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "relative mt-3 max-w-xl text-sm font-medium leading-6 text-slate-300", children: emptyDfpWelcomeVariant === "select-context" ? "Once a location and unit are selected, this screen will show the DFP for that operating context." : "This DFP is open and ready. When tiles are built or added for this date, they will appear here." })
+      /* @__PURE__ */ jsxRuntimeExports.jsx("h2", { className: "relative mt-2 text-2xl font-black text-white", children: emptyDfpWelcomeVariant === "select-context" ? "Select a location and unit" : emptyDfpWelcomeVariant === "empty-resources" ? "Set up DFP resource rows" : `No tiles scheduled for ${formattedDisplayDate}` }),
+      /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "relative mt-3 max-w-xl text-sm font-medium leading-6 text-slate-300", children: emptyDfpWelcomeVariant === "select-context" ? "Once a location and unit are selected, this screen will show the DFP for that operating context." : emptyDfpWelcomeVariant === "empty-resources" ? "This DFP has no aircraft, standby, simulator, CPT or ground rows yet. Add the resource rows first, then the schedule will appear here." : "This DFP is open and ready. When tiles are built or added for this date, they will appear here." })
     ] }) }),
     resourceSlideoutFrame && /* @__PURE__ */ jsxRuntimeExports.jsx(
       "div",
@@ -144896,6 +144896,50 @@ const App = () => {
   const configuredGroundCount2 = getResourcePoolCount(activePlatformResourcePool, "ground", 6, resourceRowTargetDate);
   const configuredDutySupervisorRowEnabled = getResourcePoolCount(activePlatformResourcePool, "dutySupervisor", 0, resourceRowTargetDate) > 0;
   const configuredTowerDutyInstructorRowEnabled = getResourcePoolCount(activePlatformResourcePool, "towerDutyInstructor", 0, resourceRowTargetDate) > 0;
+  const hasConfiguredDfpResourceRowsForSelectedDate = reactExports.useMemo(() => {
+    const settings = activePlatformResourcePool?.settings || {};
+    const targetDate = String(resourceRowTargetDate || "").slice(0, 10);
+    const rowKeys = ["aircraft", "ftd", "cpt", "ground", "standby", "dutySupervisor", "towerDutyInstructor"];
+    const rowAliases = [
+      "aircraft",
+      "airframes",
+      "ftd",
+      "simulator",
+      "simulators",
+      "cpt",
+      "trainer",
+      "trainers",
+      "proceduralTrainer",
+      "proceduralTrainers",
+      "ground",
+      "standby",
+      "stby",
+      "dutySupervisor",
+      "dutySup",
+      "dutySupervisorRow",
+      "towerDutyInstructor",
+      "twrDi",
+      "twrDiRow"
+    ];
+    const hasPositiveRowCount = (rows, keys) => !!rows && keys.some((key) => {
+      if (!Object.prototype.hasOwnProperty.call(rows, key)) return false;
+      const value = Number(rows[key]);
+      return Number.isFinite(value) && value > 0;
+    });
+    if (hasPositiveRowCount(settings, rowAliases)) return true;
+    const history = Array.isArray(settings.dfpResourceRowsHistory) ? settings.dfpResourceRowsHistory : [];
+    if (!targetDate || !/^\d{4}-\d{2}-\d{2}$/.test(targetDate)) {
+      return history.some((entry) => hasPositiveRowCount(entry?.rows, rowKeys));
+    }
+    return history.some((entry) => {
+      const rows = entry?.rows;
+      if (!rows || typeof rows !== "object") return false;
+      const from = String(entry?.effectiveFrom || "0000-01-01").slice(0, 10);
+      const to = String(entry?.effectiveTo || "9999-12-31").slice(0, 10);
+      const matchesDate = from === "0000-01-01" && to !== "9999-12-31" ? targetDate === to : targetDate >= from && targetDate <= to;
+      return matchesDate && hasPositiveRowCount(rows, rowKeys);
+    });
+  }, [activePlatformResourcePool, resourceRowTargetDate]);
   const getLocalIsoDateForResourceRows = reactExports.useCallback((offsetDays = 0) => {
     const dateValue = /* @__PURE__ */ new Date();
     dateValue.setDate(dateValue.getDate() + offsetDays);
@@ -161314,7 +161358,7 @@ It will not clear the published DFP.`,
             isFlightLinePanelOpen: showFlightLinePanel,
             showInitialSetupBlankState,
             showEmptyDfpWelcome,
-            emptyDfpWelcomeVariant: hasSelectedOperationalContext ? "empty-date" : "select-context",
+            emptyDfpWelcomeVariant,
             resumeInitialSetupWizard: shouldResumeInitialSetupWizard,
             initialOrganisationSlideoutView: showInitialSetupBlankState ? "setupWizard" : "structure",
             onOrganisationSlideoutOpen: () => {
@@ -164506,8 +164550,10 @@ Do you want to replace the existing entry?`,
   const emptyDfpNoticeKey = getDailySnapshotKey(date, school, activeUnitCode);
   const hasSelectedOperationalContext = Boolean(String(school || "").trim()) && Boolean(String(activeUnitCode || "").trim());
   const isSnapshotLoadPendingForSelectedDate = dfpSnapshotLoadState.date === date && ["loading", "retrying"].includes(dfpSnapshotLoadState.status);
+  const emptyDfpWelcomeVariant = !hasSelectedOperationalContext ? "select-context" : !hasConfiguredDfpResourceRowsForSelectedDate ? "empty-resources" : "empty-date";
+  const shouldShowEmptyDfpWelcomeForResourceColumn = hasSelectedOperationalContext && !hasConfiguredDfpResourceRowsForSelectedDate;
   const showEmptyDfpNotice = isAuthenticated && activeView === "Program Schedule" && dfpSnapshotLoadState.date === date && dfpSnapshotLoadState.status === "empty" && eventSegmentsForDate.length === 0 && dismissedEmptyDfpNoticeKey !== emptyDfpNoticeKey && !isFutureSelectedDfpDate && !isInitialSetupWizardActive && !showInitialSetupBlankState && !setupTestProfile;
-  const showEmptyDfpWelcome = isAuthenticated && activeView === "Program Schedule" && eventSegmentsForDate.length === 0 && !showEmptyDfpNotice && !showDfpRetrievalNotice && !isSnapshotLoadPendingForSelectedDate && !isInitialSetupWizardActive && !showInitialSetupBlankState && !setupTestProfile && !authLoading;
+  const showEmptyDfpWelcome = isAuthenticated && activeView === "Program Schedule" && (eventSegmentsForDate.length === 0 || shouldShowEmptyDfpWelcomeForResourceColumn) && !showEmptyDfpNotice && !showDfpRetrievalNotice && !isSnapshotLoadPendingForSelectedDate && !isInitialSetupWizardActive && !showInitialSetupBlankState && !setupTestProfile && !authLoading;
   return /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
     setupTestProfile && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "fixed left-1/2 top-2 z-[500] -translate-x-1/2 rounded-md border border-amber-300/70 bg-amber-100 px-4 py-2 text-center text-[11px] font-black uppercase tracking-[0.16em] text-slate-950 shadow-2xl shadow-black/30", children: [
       "Setup Wizard Test Mode - Local Browser Data Only - ",
