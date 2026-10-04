@@ -36,6 +36,7 @@ import {
 import { normaliseTrainingReportTemplate, normaliseTrainingReportTerminology } from '../utils/trainingReportTerminology';
 import { getSctTerminology } from '../utils/sctTerminology';
 import { clearSyllabusCache } from '../lib/syllabusService';
+import { recordEmptyDfpWelcomeDiagnostic } from '../utils/emptyDfpWelcomeDiagnostics';
 import {
     UNIT_CALLSIGN_ALLOCATION_METHOD_LABELS,
     getUnitCallsignPolicy,
@@ -14685,6 +14686,125 @@ const ScheduleView: React.FC<ScheduleViewProps> = ({
             timeZone: 'UTC'
         });
     }, [date]);
+    const lastEmptyDfpWelcomeRenderSignatureRef = useRef('');
+
+    useEffect(() => {
+        if (typeof window === 'undefined') return;
+        const overlayShouldRender = showEmptyDfpWelcome && !shouldShowInitialSetupPrompt;
+        const frameId = window.requestAnimationFrame(() => {
+            const overlay = document.querySelector('[data-empty-dfp-welcome-overlay="true"]') as HTMLElement | null;
+            const scheduleSurface = scrollContainerRef.current;
+            const overlayRect = overlay ? overlay.getBoundingClientRect() : null;
+            const surfaceRect = scheduleSurface ? scheduleSurface.getBoundingClientRect() : null;
+            const overlayStyle = overlay ? window.getComputedStyle(overlay) : null;
+            const centerX = overlayRect
+                ? overlayRect.left + overlayRect.width / 2
+                : window.innerWidth / 2;
+            const centerY = overlayRect
+                ? overlayRect.top + overlayRect.height / 2
+                : window.innerHeight / 2;
+            const topElements = typeof document.elementsFromPoint === 'function'
+                ? document.elementsFromPoint(centerX, centerY).slice(0, 8).map((element) => ({
+                    tag: element.tagName,
+                    id: element.id || '',
+                    className: typeof element.className === 'string' ? element.className.slice(0, 180) : '',
+                    emptyWelcome: element.getAttribute('data-empty-dfp-welcome-overlay') || '',
+                    scheduleSurface: element.getAttribute('data-schedule-surface') || '',
+                }))
+                : [];
+
+            const details = {
+                date,
+                formattedDisplayDate,
+                showEmptyDfpWelcome,
+                emptyDfpWelcomeVariant,
+                shouldShowInitialSetupPrompt,
+                showInitialSetupBlankState,
+                resumeInitialSetupWizard,
+                showResourceUnderlayPanel,
+                overlayShouldRender,
+                overlayFound: Boolean(overlay),
+                overlayVisible: Boolean(
+                    overlayRect
+                    && overlayRect.width > 0
+                    && overlayRect.height > 0
+                    && overlayStyle?.display !== 'none'
+                    && overlayStyle?.visibility !== 'hidden'
+                    && overlayStyle?.opacity !== '0'
+                ),
+                overlayRect: overlayRect ? {
+                    left: Math.round(overlayRect.left),
+                    top: Math.round(overlayRect.top),
+                    width: Math.round(overlayRect.width),
+                    height: Math.round(overlayRect.height),
+                } : null,
+                overlayStyle: overlayStyle ? {
+                    display: overlayStyle.display,
+                    visibility: overlayStyle.visibility,
+                    opacity: overlayStyle.opacity,
+                    zIndex: overlayStyle.zIndex,
+                    pointerEvents: overlayStyle.pointerEvents,
+                } : null,
+                surfaceRect: surfaceRect ? {
+                    left: Math.round(surfaceRect.left),
+                    top: Math.round(surfaceRect.top),
+                    width: Math.round(surfaceRect.width),
+                    height: Math.round(surfaceRect.height),
+                } : null,
+                resourceCount: resources.length,
+                resourcePreview: resources.slice(0, 16),
+                eventCount: events.length,
+                eventPreview: events.slice(0, 8).map((event) => ({
+                    id: event.id,
+                    date: event.date,
+                    type: event.type,
+                    resourceId: event.resourceId,
+                    flightNumber: event.flightNumber,
+                })),
+                topElementsAtOverlayCenter: topElements,
+            };
+            const renderSignature = JSON.stringify({
+                date,
+                showEmptyDfpWelcome,
+                emptyDfpWelcomeVariant,
+                shouldShowInitialSetupPrompt,
+                showInitialSetupBlankState,
+                resumeInitialSetupWizard,
+                showResourceUnderlayPanel,
+                overlayShouldRender,
+                overlayFound: Boolean(overlay),
+                overlayVisible: details.overlayVisible,
+                resourceCount: resources.length,
+                eventCount: events.length,
+                topElement: topElements[0] || null,
+            });
+            if (lastEmptyDfpWelcomeRenderSignatureRef.current === renderSignature) return;
+            lastEmptyDfpWelcomeRenderSignatureRef.current = renderSignature;
+
+            recordEmptyDfpWelcomeDiagnostic({
+                stage: 'schedule-render-check',
+                details,
+            });
+            if (overlayShouldRender && !overlay) {
+                recordEmptyDfpWelcomeDiagnostic({
+                    stage: 'schedule-render-missing',
+                    details,
+                });
+            }
+        });
+        return () => window.cancelAnimationFrame(frameId);
+    }, [
+        date,
+        emptyDfpWelcomeVariant,
+        events,
+        formattedDisplayDate,
+        resources,
+        resumeInitialSetupWizard,
+        shouldShowInitialSetupPrompt,
+        showEmptyDfpWelcome,
+        showInitialSetupBlankState,
+        showResourceUnderlayPanel,
+    ]);
 
     const showLiveAvailabilityLine = useMemo(() => {
         // currentTime is already adjusted to the selected app timezone; use UTC
@@ -15653,7 +15773,11 @@ const ScheduleView: React.FC<ScheduleViewProps> = ({
                 </div>
             )}
             {showEmptyDfpWelcome && !shouldShowInitialSetupPrompt && (
-                <div className="pointer-events-none fixed bottom-[8vh] left-[260px] right-[178px] top-[218px] z-[220] flex items-center justify-center px-8">
+                <div
+                    data-empty-dfp-welcome-overlay="true"
+                    data-empty-dfp-welcome-variant={emptyDfpWelcomeVariant}
+                    className="pointer-events-none fixed bottom-[8vh] left-[260px] right-[178px] top-[218px] z-[220] flex items-center justify-center px-8"
+                >
                     <div className="pointer-events-auto relative flex w-full max-w-[760px] flex-col items-center overflow-hidden rounded-xl border border-cyan-300/25 bg-slate-950/86 px-7 py-6 text-center shadow-[0_24px_64px_rgba(0,0,0,0.52)] backdrop-blur-md">
                         <div className="relative mb-5 flex w-[min(430px,86%)] justify-center">
                             <img

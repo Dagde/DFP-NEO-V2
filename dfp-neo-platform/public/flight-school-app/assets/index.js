@@ -5087,6 +5087,45 @@ const saveCurrenciesToDB = async (masterCurrencies, currencyRequirements, userId
     return false;
   }
 };
+const EMPTY_DFP_WELCOME_DIAGNOSTIC_STORAGE_KEY = "empty_dfp_welcome_diagnostic_report";
+const EMPTY_DFP_WELCOME_DIAGNOSTIC_EVENT = "emptyDfpWelcomeDiagnostic";
+const EMPTY_DFP_WELCOME_DIAGNOSTIC_VERSION = 1;
+const recordEmptyDfpWelcomeDiagnostic = (entry) => {
+  if (typeof window === "undefined") return;
+  const fullEntry = {
+    ...entry,
+    at: (/* @__PURE__ */ new Date()).toISOString()
+  };
+  try {
+    const win = window;
+    const entries = Array.isArray(win.__emptyDfpWelcomeDiagnostics) ? win.__emptyDfpWelcomeDiagnostics : [];
+    entries.push(fullEntry);
+    const trimmed = entries.slice(-300);
+    win.__emptyDfpWelcomeDiagnostics = trimmed;
+    win.__lastEmptyDfpWelcomeDiagnostic = fullEntry;
+    const report = {
+      generatedAt: (/* @__PURE__ */ new Date()).toISOString(),
+      app: "DFP-NEO",
+      reportType: "empty-dfp-welcome-diagnostic",
+      version: EMPTY_DFP_WELCOME_DIAGNOSTIC_VERSION,
+      userAgent: window.navigator?.userAgent || "",
+      viewport: {
+        width: window.innerWidth,
+        height: window.innerHeight,
+        devicePixelRatio: window.devicePixelRatio
+      },
+      entries: trimmed
+    };
+    window.localStorage?.setItem(EMPTY_DFP_WELCOME_DIAGNOSTIC_STORAGE_KEY, JSON.stringify(report));
+    window.dispatchEvent(new CustomEvent(EMPTY_DFP_WELCOME_DIAGNOSTIC_EVENT, { detail: fullEntry }));
+    const shouldLog = entry.stage === "app-decision" && entry.details?.activeView === "Program Schedule" || entry.stage === "schedule-render-missing" || entry.details?.showEmptyDfpWelcome === true || entry.details?.overlayShouldRender === true;
+    if (shouldLog) {
+      console.info("[Empty DFP Welcome Diagnostic]", fullEntry);
+    }
+  } catch (error) {
+    console.warn("[Empty DFP Welcome Diagnostic] Failed to record entry:", error);
+  }
+};
 const isEditableElement = (target) => {
   const element = target;
   if (!element) return false;
@@ -44780,6 +44819,111 @@ const ScheduleView = ({
       timeZone: "UTC"
     });
   }, [date]);
+  const lastEmptyDfpWelcomeRenderSignatureRef = reactExports.useRef("");
+  reactExports.useEffect(() => {
+    if (typeof window === "undefined") return;
+    const overlayShouldRender = showEmptyDfpWelcome && !shouldShowInitialSetupPrompt;
+    const frameId = window.requestAnimationFrame(() => {
+      const overlay = document.querySelector('[data-empty-dfp-welcome-overlay="true"]');
+      const scheduleSurface = scrollContainerRef.current;
+      const overlayRect = overlay ? overlay.getBoundingClientRect() : null;
+      const surfaceRect = scheduleSurface ? scheduleSurface.getBoundingClientRect() : null;
+      const overlayStyle = overlay ? window.getComputedStyle(overlay) : null;
+      const centerX = overlayRect ? overlayRect.left + overlayRect.width / 2 : window.innerWidth / 2;
+      const centerY = overlayRect ? overlayRect.top + overlayRect.height / 2 : window.innerHeight / 2;
+      const topElements = typeof document.elementsFromPoint === "function" ? document.elementsFromPoint(centerX, centerY).slice(0, 8).map((element) => ({
+        tag: element.tagName,
+        id: element.id || "",
+        className: typeof element.className === "string" ? element.className.slice(0, 180) : "",
+        emptyWelcome: element.getAttribute("data-empty-dfp-welcome-overlay") || "",
+        scheduleSurface: element.getAttribute("data-schedule-surface") || ""
+      })) : [];
+      const details = {
+        date,
+        formattedDisplayDate,
+        showEmptyDfpWelcome,
+        emptyDfpWelcomeVariant,
+        shouldShowInitialSetupPrompt,
+        showInitialSetupBlankState,
+        resumeInitialSetupWizard,
+        showResourceUnderlayPanel,
+        overlayShouldRender,
+        overlayFound: Boolean(overlay),
+        overlayVisible: Boolean(
+          overlayRect && overlayRect.width > 0 && overlayRect.height > 0 && overlayStyle?.display !== "none" && overlayStyle?.visibility !== "hidden" && overlayStyle?.opacity !== "0"
+        ),
+        overlayRect: overlayRect ? {
+          left: Math.round(overlayRect.left),
+          top: Math.round(overlayRect.top),
+          width: Math.round(overlayRect.width),
+          height: Math.round(overlayRect.height)
+        } : null,
+        overlayStyle: overlayStyle ? {
+          display: overlayStyle.display,
+          visibility: overlayStyle.visibility,
+          opacity: overlayStyle.opacity,
+          zIndex: overlayStyle.zIndex,
+          pointerEvents: overlayStyle.pointerEvents
+        } : null,
+        surfaceRect: surfaceRect ? {
+          left: Math.round(surfaceRect.left),
+          top: Math.round(surfaceRect.top),
+          width: Math.round(surfaceRect.width),
+          height: Math.round(surfaceRect.height)
+        } : null,
+        resourceCount: resources.length,
+        resourcePreview: resources.slice(0, 16),
+        eventCount: events.length,
+        eventPreview: events.slice(0, 8).map((event) => ({
+          id: event.id,
+          date: event.date,
+          type: event.type,
+          resourceId: event.resourceId,
+          flightNumber: event.flightNumber
+        })),
+        topElementsAtOverlayCenter: topElements
+      };
+      const renderSignature = JSON.stringify({
+        date,
+        showEmptyDfpWelcome,
+        emptyDfpWelcomeVariant,
+        shouldShowInitialSetupPrompt,
+        showInitialSetupBlankState,
+        resumeInitialSetupWizard,
+        showResourceUnderlayPanel,
+        overlayShouldRender,
+        overlayFound: Boolean(overlay),
+        overlayVisible: details.overlayVisible,
+        resourceCount: resources.length,
+        eventCount: events.length,
+        topElement: topElements[0] || null
+      });
+      if (lastEmptyDfpWelcomeRenderSignatureRef.current === renderSignature) return;
+      lastEmptyDfpWelcomeRenderSignatureRef.current = renderSignature;
+      recordEmptyDfpWelcomeDiagnostic({
+        stage: "schedule-render-check",
+        details
+      });
+      if (overlayShouldRender && !overlay) {
+        recordEmptyDfpWelcomeDiagnostic({
+          stage: "schedule-render-missing",
+          details
+        });
+      }
+    });
+    return () => window.cancelAnimationFrame(frameId);
+  }, [
+    date,
+    emptyDfpWelcomeVariant,
+    events,
+    formattedDisplayDate,
+    resources,
+    resumeInitialSetupWizard,
+    shouldShowInitialSetupPrompt,
+    showEmptyDfpWelcome,
+    showInitialSetupBlankState,
+    showResourceUnderlayPanel
+  ]);
   const showLiveAvailabilityLine = reactExports.useMemo(() => {
     const appTodayStr = `${currentTime.getUTCFullYear()}-${String(currentTime.getUTCMonth() + 1).padStart(2, "0")}-${String(currentTime.getUTCDate()).padStart(2, "0")}`;
     return date === appTodayStr;
@@ -45571,19 +45715,27 @@ const ScheduleView = ({
         }
       )
     ] }) }),
-    showEmptyDfpWelcome && !shouldShowInitialSetupPrompt && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "pointer-events-none fixed bottom-[8vh] left-[260px] right-[178px] top-[218px] z-[220] flex items-center justify-center px-8", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "pointer-events-auto relative flex w-full max-w-[760px] flex-col items-center overflow-hidden rounded-xl border border-cyan-300/25 bg-slate-950/86 px-7 py-6 text-center shadow-[0_24px_64px_rgba(0,0,0,0.52)] backdrop-blur-md", children: [
-      /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "relative mb-5 flex w-[min(430px,86%)] justify-center", children: /* @__PURE__ */ jsxRuntimeExports.jsx(
-        "img",
-        {
-          src: "/dfp-neo-setup-logo.png",
-          alt: "DFP NEO",
-          className: "max-h-20 w-full object-contain opacity-95 drop-shadow-[0_0_12px_rgba(34,211,238,0.28)]"
-        }
-      ) }),
-      /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "relative text-[11px] font-black uppercase tracking-[0.22em] text-cyan-300", children: "Daily Flying Program" }),
-      /* @__PURE__ */ jsxRuntimeExports.jsx("h2", { className: "relative mt-2 text-2xl font-black text-white", children: emptyDfpWelcomeVariant === "select-context" ? "Select a location and unit" : emptyDfpWelcomeVariant === "empty-resources" ? "Set up DFP resource rows" : `No tiles scheduled for ${formattedDisplayDate}` }),
-      /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "relative mt-3 max-w-xl text-sm font-medium leading-6 text-slate-300", children: emptyDfpWelcomeVariant === "select-context" ? "Once a location and unit are selected, this screen will show the DFP for that operating context." : emptyDfpWelcomeVariant === "empty-resources" ? "This DFP has no aircraft, standby, simulator, CPT or ground rows yet. Add the resource rows first, then the schedule will appear here." : "This DFP is open and ready. When tiles are built or added for this date, they will appear here." })
-    ] }) }),
+    showEmptyDfpWelcome && !shouldShowInitialSetupPrompt && /* @__PURE__ */ jsxRuntimeExports.jsx(
+      "div",
+      {
+        "data-empty-dfp-welcome-overlay": "true",
+        "data-empty-dfp-welcome-variant": emptyDfpWelcomeVariant,
+        className: "pointer-events-none fixed bottom-[8vh] left-[260px] right-[178px] top-[218px] z-[220] flex items-center justify-center px-8",
+        children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "pointer-events-auto relative flex w-full max-w-[760px] flex-col items-center overflow-hidden rounded-xl border border-cyan-300/25 bg-slate-950/86 px-7 py-6 text-center shadow-[0_24px_64px_rgba(0,0,0,0.52)] backdrop-blur-md", children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "relative mb-5 flex w-[min(430px,86%)] justify-center", children: /* @__PURE__ */ jsxRuntimeExports.jsx(
+            "img",
+            {
+              src: "/dfp-neo-setup-logo.png",
+              alt: "DFP NEO",
+              className: "max-h-20 w-full object-contain opacity-95 drop-shadow-[0_0_12px_rgba(34,211,238,0.28)]"
+            }
+          ) }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "relative text-[11px] font-black uppercase tracking-[0.22em] text-cyan-300", children: "Daily Flying Program" }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx("h2", { className: "relative mt-2 text-2xl font-black text-white", children: emptyDfpWelcomeVariant === "select-context" ? "Select a location and unit" : emptyDfpWelcomeVariant === "empty-resources" ? "Set up DFP resource rows" : `No tiles scheduled for ${formattedDisplayDate}` }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "relative mt-3 max-w-xl text-sm font-medium leading-6 text-slate-300", children: emptyDfpWelcomeVariant === "select-context" ? "Once a location and unit are selected, this screen will show the DFP for that operating context." : emptyDfpWelcomeVariant === "empty-resources" ? "This DFP has no aircraft, standby, simulator, CPT or ground rows yet. Add the resource rows first, then the schedule will appear here." : "This DFP is open and ready. When tiles are built or added for this date, they will appear here." })
+        ] })
+      }
+    ),
     resourceSlideoutFrame && /* @__PURE__ */ jsxRuntimeExports.jsx(
       "div",
       {
@@ -164554,6 +164706,168 @@ Do you want to replace the existing entry?`,
   const shouldShowEmptyDfpWelcomeForResourceColumn = hasSelectedOperationalContext && !hasConfiguredDfpResourceRowsForSelectedDate;
   const showEmptyDfpNotice = isAuthenticated && activeView === "Program Schedule" && dfpSnapshotLoadState.date === date && dfpSnapshotLoadState.status === "empty" && eventSegmentsForDate.length === 0 && dismissedEmptyDfpNoticeKey !== emptyDfpNoticeKey && !isFutureSelectedDfpDate && !isInitialSetupWizardActive && !showInitialSetupBlankState && !setupTestProfile;
   const showEmptyDfpWelcome = isAuthenticated && activeView === "Program Schedule" && (eventSegmentsForDate.length === 0 || shouldShowEmptyDfpWelcomeForResourceColumn) && !showEmptyDfpNotice && !showDfpRetrievalNotice && !isSnapshotLoadPendingForSelectedDate && !isInitialSetupWizardActive && !showInitialSetupBlankState && !setupTestProfile && !authLoading;
+  const lastEmptyDfpWelcomeDiagnosticSignatureRef = reactExports.useRef("");
+  reactExports.useEffect(() => {
+    const settings = activePlatformResourcePool?.settings || {};
+    const rowSettingKeys = [
+      "aircraft",
+      "airframes",
+      "ftd",
+      "simulator",
+      "simulators",
+      "cpt",
+      "trainer",
+      "trainers",
+      "proceduralTrainer",
+      "proceduralTrainers",
+      "ground",
+      "standby",
+      "stby",
+      "dutySupervisor",
+      "dutySup",
+      "dutySupervisorRow",
+      "towerDutyInstructor",
+      "twrDi",
+      "twrDiRow"
+    ];
+    const blockers = [
+      !isAuthenticated ? "not-authenticated" : "",
+      authLoading ? "auth-loading" : "",
+      activeView !== "Program Schedule" ? `wrong-view:${activeView}` : "",
+      eventSegmentsForDate.length > 0 && !shouldShowEmptyDfpWelcomeForResourceColumn ? "events-present-and-resource-rows-configured" : "",
+      showEmptyDfpNotice ? "empty-dfp-recovery-notice-visible" : "",
+      showDfpRetrievalNotice ? "dfp-retrieval-notice-visible" : "",
+      isSnapshotLoadPendingForSelectedDate ? `snapshot-load-${dfpSnapshotLoadState.status}` : "",
+      isInitialSetupWizardActive ? "initial-setup-wizard-active" : "",
+      showInitialSetupBlankState ? "initial-setup-blank-state-active" : "",
+      setupTestProfile ? "setup-test-profile-active" : ""
+    ].filter(Boolean);
+    const diagnosticSignature = JSON.stringify({
+      date,
+      activeView,
+      school,
+      activeUnitCode,
+      resourceRowTargetDate,
+      emptyDfpWelcomeVariant,
+      showEmptyDfpWelcome,
+      blockers,
+      hasSelectedOperationalContext,
+      hasConfiguredDfpResourceRowsForSelectedDate,
+      shouldShowEmptyDfpWelcomeForResourceColumn,
+      eventSegmentCount: eventSegmentsForDate.length,
+      buildResourceCount: buildResources.length,
+      snapshotStatus: dfpSnapshotLoadState.status,
+      snapshotDate: dfpSnapshotLoadState.date,
+      showEmptyDfpNotice,
+      showDfpRetrievalNotice
+    });
+    if (lastEmptyDfpWelcomeDiagnosticSignatureRef.current === diagnosticSignature) return;
+    lastEmptyDfpWelcomeDiagnosticSignatureRef.current = diagnosticSignature;
+    recordEmptyDfpWelcomeDiagnostic({
+      stage: "app-decision",
+      details: {
+        date,
+        activeView,
+        school,
+        activeUnitCode,
+        hasSelectedOperationalContext,
+        resourceRowTargetDate,
+        emptyDfpWelcomeVariant,
+        showEmptyDfpWelcome,
+        shouldShowEmptyDfpWelcomeForResourceColumn,
+        hasConfiguredDfpResourceRowsForSelectedDate,
+        blockers,
+        isAuthenticated,
+        authLoading,
+        setupTestProfile: Boolean(setupTestProfile),
+        isInitialSetupWizardActive,
+        showInitialSetupBlankState,
+        showEmptyDfpNotice,
+        showDfpRetrievalNotice,
+        isSnapshotLoadPendingForSelectedDate,
+        dfpSnapshotLoadState: {
+          status: dfpSnapshotLoadState.status,
+          date: dfpSnapshotLoadState.date,
+          message: dfpSnapshotLoadState.message,
+          progress: dfpSnapshotLoadState.progress ?? null
+        },
+        latestSavedDfpDate,
+        isFutureSelectedDfpDate,
+        dismissedEmptyDfpNoticeKey,
+        eventSegmentCount: eventSegmentsForDate.length,
+        eventSegmentPreview: eventSegmentsForDate.slice(0, 10).map((event) => ({
+          id: event.id,
+          date: event.date,
+          type: event.type,
+          resourceId: event.resourceId,
+          flightNumber: event.flightNumber
+        })),
+        buildResourceCount: buildResources.length,
+        buildResourcePreview: buildResources.slice(0, 24),
+        configuredResourceCounts: {
+          aircraft: configuredAirframeCount,
+          ftd: configuredFtdCount,
+          cpt: configuredCptCount,
+          standby: configuredStandbyCount,
+          ground: configuredGroundCount2,
+          dutySupervisor: configuredDutySupervisorRowEnabled ? 1 : 0,
+          towerDutyInstructor: configuredTowerDutyInstructorRowEnabled ? 1 : 0
+        },
+        activeResourcePool: activePlatformResourcePool ? {
+          id: activePlatformResourcePool.id || null,
+          code: activePlatformResourcePool.code || null,
+          name: activePlatformResourcePool.name || null,
+          status: activePlatformResourcePool.status || null,
+          locationCode: activePlatformResourcePool.locationCode || null,
+          unitCode: activePlatformResourcePool.unitCode || null,
+          aircraftTypeCode: activePlatformResourcePool.aircraftTypeCode || null,
+          rawRowSettings: Object.fromEntries(rowSettingKeys.map((key) => [key, settings[key] ?? null])),
+          dfpResourceRowsHistoryCount: Array.isArray(settings.dfpResourceRowsHistory) ? settings.dfpResourceRowsHistory.length : 0,
+          dfpResourceRowsHistoryTail: Array.isArray(settings.dfpResourceRowsHistory) ? settings.dfpResourceRowsHistory.slice(-5).map((entry) => ({
+            effectiveFrom: entry?.effectiveFrom || null,
+            effectiveTo: entry?.effectiveTo || null,
+            rows: entry?.rows || null
+          })) : []
+        } : null
+      }
+    });
+  }, [
+    activePlatformResourcePool,
+    activeUnitCode,
+    activeView,
+    authLoading,
+    buildResources,
+    configuredAirframeCount,
+    configuredCptCount,
+    configuredDutySupervisorRowEnabled,
+    configuredFtdCount,
+    configuredGroundCount2,
+    configuredStandbyCount,
+    configuredTowerDutyInstructorRowEnabled,
+    date,
+    dfpSnapshotLoadState.date,
+    dfpSnapshotLoadState.message,
+    dfpSnapshotLoadState.progress,
+    dfpSnapshotLoadState.status,
+    dismissedEmptyDfpNoticeKey,
+    emptyDfpWelcomeVariant,
+    eventSegmentsForDate,
+    hasConfiguredDfpResourceRowsForSelectedDate,
+    hasSelectedOperationalContext,
+    isAuthenticated,
+    isFutureSelectedDfpDate,
+    isInitialSetupWizardActive,
+    isSnapshotLoadPendingForSelectedDate,
+    latestSavedDfpDate,
+    resourceRowTargetDate,
+    school,
+    setupTestProfile,
+    shouldShowEmptyDfpWelcomeForResourceColumn,
+    showDfpRetrievalNotice,
+    showEmptyDfpNotice,
+    showEmptyDfpWelcome,
+    showInitialSetupBlankState
+  ]);
   return /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
     setupTestProfile && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "fixed left-1/2 top-2 z-[500] -translate-x-1/2 rounded-md border border-amber-300/70 bg-amber-100 px-4 py-2 text-center text-[11px] font-black uppercase tracking-[0.16em] text-slate-950 shadow-2xl shadow-black/30", children: [
       "Setup Wizard Test Mode - Local Browser Data Only - ",

@@ -10,6 +10,7 @@ import { initDB } from './utils/db';
 import { setCurrentUser, setCurrentUserRole, logAudit } from './utils/auditLogger';
 import { loadSettingsFromDB, saveSettingsToDB, buildSettingsSnapshot, AppSettingsData, saveCurrenciesToDB, loadCurrenciesFromDB } from './utils/settingsService';
 import { initialiseLiveChangeBus, LIVE_CHANGE_EVENT } from './utils/liveChangeBus';
+import { recordEmptyDfpWelcomeDiagnostic } from './utils/emptyDfpWelcomeDiagnostics';
 import { isEditableElement } from './utils/editableKeyEvents';
 import { getAdaptiveContextMenuPosition } from './utils/contextMenuPosition';
 import {
@@ -59161,6 +59162,160 @@ appliedUpdates.forEach(update => {
         && !showInitialSetupBlankState
         && !setupTestProfile
         && !authLoading;
+    const lastEmptyDfpWelcomeDiagnosticSignatureRef = useRef('');
+
+    useEffect(() => {
+        const settings = activePlatformResourcePool?.settings || {};
+        const rowSettingKeys = [
+            'aircraft', 'airframes',
+            'ftd', 'simulator', 'simulators',
+            'cpt', 'trainer', 'trainers', 'proceduralTrainer', 'proceduralTrainers',
+            'ground',
+            'standby', 'stby',
+            'dutySupervisor', 'dutySup', 'dutySupervisorRow',
+            'towerDutyInstructor', 'twrDi', 'twrDiRow',
+        ];
+        const blockers = [
+            !isAuthenticated ? 'not-authenticated' : '',
+            authLoading ? 'auth-loading' : '',
+            activeView !== 'Program Schedule' ? `wrong-view:${activeView}` : '',
+            eventSegmentsForDate.length > 0 && !shouldShowEmptyDfpWelcomeForResourceColumn ? 'events-present-and-resource-rows-configured' : '',
+            showEmptyDfpNotice ? 'empty-dfp-recovery-notice-visible' : '',
+            showDfpRetrievalNotice ? 'dfp-retrieval-notice-visible' : '',
+            isSnapshotLoadPendingForSelectedDate ? `snapshot-load-${dfpSnapshotLoadState.status}` : '',
+            isInitialSetupWizardActive ? 'initial-setup-wizard-active' : '',
+            showInitialSetupBlankState ? 'initial-setup-blank-state-active' : '',
+            setupTestProfile ? 'setup-test-profile-active' : '',
+        ].filter(Boolean);
+        const diagnosticSignature = JSON.stringify({
+            date,
+            activeView,
+            school,
+            activeUnitCode,
+            resourceRowTargetDate,
+            emptyDfpWelcomeVariant,
+            showEmptyDfpWelcome,
+            blockers,
+            hasSelectedOperationalContext,
+            hasConfiguredDfpResourceRowsForSelectedDate,
+            shouldShowEmptyDfpWelcomeForResourceColumn,
+            eventSegmentCount: eventSegmentsForDate.length,
+            buildResourceCount: buildResources.length,
+            snapshotStatus: dfpSnapshotLoadState.status,
+            snapshotDate: dfpSnapshotLoadState.date,
+            showEmptyDfpNotice,
+            showDfpRetrievalNotice,
+        });
+        if (lastEmptyDfpWelcomeDiagnosticSignatureRef.current === diagnosticSignature) return;
+        lastEmptyDfpWelcomeDiagnosticSignatureRef.current = diagnosticSignature;
+
+        recordEmptyDfpWelcomeDiagnostic({
+            stage: 'app-decision',
+            details: {
+                date,
+                activeView,
+                school,
+                activeUnitCode,
+                hasSelectedOperationalContext,
+                resourceRowTargetDate,
+                emptyDfpWelcomeVariant,
+                showEmptyDfpWelcome,
+                shouldShowEmptyDfpWelcomeForResourceColumn,
+                hasConfiguredDfpResourceRowsForSelectedDate,
+                blockers,
+                isAuthenticated,
+                authLoading,
+                setupTestProfile: Boolean(setupTestProfile),
+                isInitialSetupWizardActive,
+                showInitialSetupBlankState,
+                showEmptyDfpNotice,
+                showDfpRetrievalNotice,
+                isSnapshotLoadPendingForSelectedDate,
+                dfpSnapshotLoadState: {
+                    status: dfpSnapshotLoadState.status,
+                    date: dfpSnapshotLoadState.date,
+                    message: dfpSnapshotLoadState.message,
+                    progress: dfpSnapshotLoadState.progress ?? null,
+                },
+                latestSavedDfpDate,
+                isFutureSelectedDfpDate,
+                dismissedEmptyDfpNoticeKey,
+                eventSegmentCount: eventSegmentsForDate.length,
+                eventSegmentPreview: eventSegmentsForDate.slice(0, 10).map((event) => ({
+                    id: event.id,
+                    date: event.date,
+                    type: event.type,
+                    resourceId: event.resourceId,
+                    flightNumber: event.flightNumber,
+                })),
+                buildResourceCount: buildResources.length,
+                buildResourcePreview: buildResources.slice(0, 24),
+                configuredResourceCounts: {
+                    aircraft: configuredAirframeCount,
+                    ftd: configuredFtdCount,
+                    cpt: configuredCptCount,
+                    standby: configuredStandbyCount,
+                    ground: configuredGroundCount,
+                    dutySupervisor: configuredDutySupervisorRowEnabled ? 1 : 0,
+                    towerDutyInstructor: configuredTowerDutyInstructorRowEnabled ? 1 : 0,
+                },
+                activeResourcePool: activePlatformResourcePool ? {
+                    id: (activePlatformResourcePool as any).id || null,
+                    code: activePlatformResourcePool.code || null,
+                    name: activePlatformResourcePool.name || null,
+                    status: activePlatformResourcePool.status || null,
+                    locationCode: activePlatformResourcePool.locationCode || null,
+                    unitCode: activePlatformResourcePool.unitCode || null,
+                    aircraftTypeCode: activePlatformResourcePool.aircraftTypeCode || null,
+                    rawRowSettings: Object.fromEntries(rowSettingKeys.map((key) => [key, (settings as Record<string, any>)[key] ?? null])),
+                    dfpResourceRowsHistoryCount: Array.isArray(settings.dfpResourceRowsHistory) ? settings.dfpResourceRowsHistory.length : 0,
+                    dfpResourceRowsHistoryTail: Array.isArray(settings.dfpResourceRowsHistory)
+                        ? settings.dfpResourceRowsHistory.slice(-5).map((entry: any) => ({
+                            effectiveFrom: entry?.effectiveFrom || null,
+                            effectiveTo: entry?.effectiveTo || null,
+                            rows: entry?.rows || null,
+                        }))
+                        : [],
+                } : null,
+            },
+        });
+    }, [
+        activePlatformResourcePool,
+        activeUnitCode,
+        activeView,
+        authLoading,
+        buildResources,
+        configuredAirframeCount,
+        configuredCptCount,
+        configuredDutySupervisorRowEnabled,
+        configuredFtdCount,
+        configuredGroundCount,
+        configuredStandbyCount,
+        configuredTowerDutyInstructorRowEnabled,
+        date,
+        dfpSnapshotLoadState.date,
+        dfpSnapshotLoadState.message,
+        dfpSnapshotLoadState.progress,
+        dfpSnapshotLoadState.status,
+        dismissedEmptyDfpNoticeKey,
+        emptyDfpWelcomeVariant,
+        eventSegmentsForDate,
+        hasConfiguredDfpResourceRowsForSelectedDate,
+        hasSelectedOperationalContext,
+        isAuthenticated,
+        isFutureSelectedDfpDate,
+        isInitialSetupWizardActive,
+        isSnapshotLoadPendingForSelectedDate,
+        latestSavedDfpDate,
+        resourceRowTargetDate,
+        school,
+        setupTestProfile,
+        shouldShowEmptyDfpWelcomeForResourceColumn,
+        showDfpRetrievalNotice,
+        showEmptyDfpNotice,
+        showEmptyDfpWelcome,
+        showInitialSetupBlankState,
+    ]);
 
     return (
     <>
