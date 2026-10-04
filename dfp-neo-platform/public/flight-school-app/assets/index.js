@@ -43835,7 +43835,7 @@ const ScheduleView = ({
   }), [platformConfig]);
   const hasInitialSetupWizardProgress = reactExports.useCallback(() => hasStoredInitialSetupWizardProgress() || hasPersistedInitialSetupWizardProgress(), [hasPersistedInitialSetupWizardProgress, hasStoredInitialSetupWizardProgress]);
   const initialSetupWizardHasProgress = hasInitialSetupWizardProgress();
-  const shouldShowInitialSetupPrompt = showInitialSetupBlankState && !showResourceUnderlayPanel && !resumeInitialSetupWizard;
+  const shouldShowInitialSetupPrompt = showInitialSetupBlankState && !showEmptyDfpWelcome && !showResourceUnderlayPanel && !resumeInitialSetupWizard;
   const openInitialSetupWizard = reactExports.useCallback(() => {
     onOrganisationSlideoutOpen?.();
     setShowResourceUnderlayPanel(true);
@@ -164705,7 +164705,7 @@ Do you want to replace the existing entry?`,
   const emptyDfpWelcomeVariant = !hasSelectedOperationalContext ? "select-context" : !hasConfiguredDfpResourceRowsForSelectedDate ? "empty-resources" : "empty-date";
   const shouldShowEmptyDfpWelcomeForResourceColumn = hasSelectedOperationalContext && !hasConfiguredDfpResourceRowsForSelectedDate;
   const showEmptyDfpNotice = isAuthenticated && activeView === "Program Schedule" && dfpSnapshotLoadState.date === date && dfpSnapshotLoadState.status === "empty" && eventSegmentsForDate.length === 0 && dismissedEmptyDfpNoticeKey !== emptyDfpNoticeKey && !isFutureSelectedDfpDate && !isInitialSetupWizardActive && !showInitialSetupBlankState && !setupTestProfile;
-  const showEmptyDfpWelcome = isAuthenticated && activeView === "Program Schedule" && (eventSegmentsForDate.length === 0 || shouldShowEmptyDfpWelcomeForResourceColumn) && !showEmptyDfpNotice && !showDfpRetrievalNotice && !isSnapshotLoadPendingForSelectedDate && !isInitialSetupWizardActive && !showInitialSetupBlankState && !setupTestProfile && !authLoading;
+  const showEmptyDfpWelcome = isAuthenticated && activeView === "Program Schedule" && (eventSegmentsForDate.length === 0 || shouldShowEmptyDfpWelcomeForResourceColumn) && !showEmptyDfpNotice && !showDfpRetrievalNotice && !isSnapshotLoadPendingForSelectedDate && !isInitialSetupWizardActive && !setupTestProfile && !authLoading;
   const lastEmptyDfpWelcomeDiagnosticSignatureRef = reactExports.useRef("");
   reactExports.useEffect(() => {
     const settings = activePlatformResourcePool?.settings || {};
@@ -164739,7 +164739,6 @@ Do you want to replace the existing entry?`,
       showDfpRetrievalNotice ? "dfp-retrieval-notice-visible" : "",
       isSnapshotLoadPendingForSelectedDate ? `snapshot-load-${dfpSnapshotLoadState.status}` : "",
       isInitialSetupWizardActive ? "initial-setup-wizard-active" : "",
-      showInitialSetupBlankState ? "initial-setup-blank-state-active" : "",
       setupTestProfile ? "setup-test-profile-active" : ""
     ].filter(Boolean);
     const diagnosticSignature = JSON.stringify({

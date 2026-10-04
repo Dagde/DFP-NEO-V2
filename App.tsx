@@ -59159,7 +59159,6 @@ appliedUpdates.forEach(update => {
         && !showDfpRetrievalNotice
         && !isSnapshotLoadPendingForSelectedDate
         && !isInitialSetupWizardActive
-        && !showInitialSetupBlankState
         && !setupTestProfile
         && !authLoading;
     const lastEmptyDfpWelcomeDiagnosticSignatureRef = useRef('');
@@ -59184,7 +59183,6 @@ appliedUpdates.forEach(update => {
             showDfpRetrievalNotice ? 'dfp-retrieval-notice-visible' : '',
             isSnapshotLoadPendingForSelectedDate ? `snapshot-load-${dfpSnapshotLoadState.status}` : '',
             isInitialSetupWizardActive ? 'initial-setup-wizard-active' : '',
-            showInitialSetupBlankState ? 'initial-setup-blank-state-active' : '',
             setupTestProfile ? 'setup-test-profile-active' : '',
         ].filter(Boolean);
         const diagnosticSignature = JSON.stringify({

@@ -13595,7 +13595,7 @@ const ScheduleView: React.FC<ScheduleViewProps> = ({
         hasStoredInitialSetupWizardProgress() || hasPersistedInitialSetupWizardProgress()
     ), [hasPersistedInitialSetupWizardProgress, hasStoredInitialSetupWizardProgress]);
     const initialSetupWizardHasProgress = hasInitialSetupWizardProgress();
-    const shouldShowInitialSetupPrompt = showInitialSetupBlankState && !showResourceUnderlayPanel && !resumeInitialSetupWizard;
+    const shouldShowInitialSetupPrompt = showInitialSetupBlankState && !showEmptyDfpWelcome && !showResourceUnderlayPanel && !resumeInitialSetupWizard;
     const openInitialSetupWizard = useCallback(() => {
         onOrganisationSlideoutOpen?.();
         setShowResourceUnderlayPanel(true);
