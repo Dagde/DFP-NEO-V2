@@ -31595,12 +31595,28 @@ const App: React.FC = () => {
         }
     }
 
+    function readLocalStorageJsonForDiag(key: string): any {
+        try {
+            const raw = localStorage.getItem(key);
+            return raw ? JSON.parse(raw) : null;
+        } catch (error) {
+            return {
+                readError: error instanceof Error ? error.message : String(error),
+            };
+        }
+    }
+
     const rosterColourTraceRef = useRef<Record<string, any> | null>(null);
 
     function buildDfpDataDiagReport(): Record<string, any> {
         const entries = readDfpDataDiagEntries();
         const staffScheduleRenderTrace = readStaffScheduleRenderDiagEntries();
         const snapshotKey = getDailySnapshotKey(date);
+        const latestNeoBuildReport = readLocalStorageJsonForDiag('neo_build_diag_report');
+        const latestNeoBuildZeroTileTrace = readLocalStorageJsonForDiag('neo_build_zero_tile_trace');
+        const latestNeoBuildInputTrace = readLocalStorageJsonForDiag('neo_build_input_trace');
+        const latestNeoBuildNoTilesUiTrace = readLocalStorageJsonForDiag('neo_build_no_tiles_ui_trace');
+        const latestNeoBuildRuntimeErrorReport = readLocalStorageJsonForDiag('neo_build_runtime_error_report');
         const cacheSummaries = (() => {
             try {
                 return Object.keys(localStorage)
@@ -31785,6 +31801,27 @@ const App: React.FC = () => {
                 loadingSnapshotKeys: Array.from(loadingSnapshotDates.current),
             },
             localSnapshotCache: cacheSummaries,
+            neoBuildDiagnostics: {
+                latestReportStage: latestNeoBuildReport?.stage || null,
+                latestReportUpdatedAt: latestNeoBuildReport?.updatedAt || null,
+                latestReportBuildDate: latestNeoBuildReport?.buildDate || null,
+                latestInputTrace: latestNeoBuildInputTrace,
+                latestNoTilesUiTrace: latestNeoBuildNoTilesUiTrace,
+                latestZeroTileTrace: latestNeoBuildZeroTileTrace,
+                latestRuntimeErrorReport: latestNeoBuildRuntimeErrorReport,
+                latestReportZeroTileInvestigation: latestNeoBuildReport?.zeroTileInvestigation || null,
+                latestReportInput: latestNeoBuildReport?.input || null,
+                latestReportActiveTrainees: latestNeoBuildReport?.activeTrainees || null,
+                latestReportNextEventLists: latestNeoBuildReport?.nextEventLists || null,
+                latestReportNextEventEligibility: latestNeoBuildReport?.nextEventEligibility || null,
+                latestReportScheduleLists: latestNeoBuildReport?.scheduleLists || null,
+                latestReportFinal: latestNeoBuildReport?.final || null,
+                latestReportFinalCleanup: latestNeoBuildReport?.finalCleanup || null,
+                latestReportPhaseTimeline: Array.isArray(latestNeoBuildReport?.phaseTimeline)
+                    ? latestNeoBuildReport.phaseTimeline.slice(-80)
+                    : [],
+                latestPreflightLmpScopeTrace: readLocalStorageJsonForDiag('neo_build_preflight_lmp_scope_trace'),
+            },
             summary: {
                 entryCount: enrichedEntries.length,
                 firstEntry: enrichedEntries[0] || null,
@@ -48816,6 +48853,66 @@ const App: React.FC = () => {
                 markNeoBuildTiming(timingReport, 'state:setNextDayBuildEvents', { generated: generated.length });
                 logNeoBuildUiDebug('🚀 [NEO-Build] setNextDayBuildEvents called with', generated.length, 'events');
                 if (generated.length === 0) {
+                    const readBuildStorageJson = (key: string): any => {
+                        try {
+                            const raw = localStorage.getItem(key);
+                            return raw ? JSON.parse(raw) : null;
+                        } catch (error) {
+                            return {
+                                readError: error instanceof Error ? error.message : String(error),
+                            };
+                        }
+                    };
+                    const latestBuildReport = readBuildStorageJson('neo_build_diag_report');
+                    const latestZeroTileTrace = readBuildStorageJson('neo_build_zero_tile_trace');
+                    const scheduleListSummary = latestBuildReport?.scheduleLists && typeof latestBuildReport.scheduleLists === 'object'
+                        ? Object.fromEntries(Object.entries(latestBuildReport.scheduleLists).map(([name, diag]: [string, any]) => [
+                            name,
+                            {
+                                input: diag?.input ?? null,
+                                attempts: diag?.attempts ?? null,
+                                successes: diag?.successes ?? null,
+                                generatedDelta: diag?.generatedDelta ?? null,
+                                unplacedCount: Array.isArray(diag?.unplaced) ? diag.unplaced.length : null,
+                                rejectionSummary: diag?.rejectionSummary || diag?.rejections || null,
+                                rejectionSamples: Array.isArray(diag?.rejectionSamples) ? diag.rejectionSamples.slice(0, 12) : [],
+                            },
+                        ]))
+                        : null;
+                    const noTilesUiTrace = {
+                        reportType: 'neo-build-no-tiles-ui-trace',
+                        generatedAt: new Date().toISOString(),
+                        buildDate: buildDfpDate,
+                        location: school,
+                        activeUnitCode,
+                        activeContextUnitCodes,
+                        operationalModel: activeOperationalModel,
+                        generatedEvents: generated.length,
+                        previousDraftEvents: nextDayBuildEvents.length,
+                        buildInputTrace,
+                        schedulerReport: {
+                            stage: latestBuildReport?.stage || null,
+                            updatedAt: latestBuildReport?.updatedAt || null,
+                            input: latestBuildReport?.input || null,
+                            activeTrainees: latestBuildReport?.activeTrainees || null,
+                            nextEventLists: latestBuildReport?.nextEventLists || null,
+                            nextEventEligibility: latestBuildReport?.nextEventEligibility || null,
+                            zeroTileInvestigation: latestBuildReport?.zeroTileInvestigation || latestZeroTileTrace || null,
+                            final: latestBuildReport?.final || null,
+                            finalCleanup: latestBuildReport?.finalCleanup || null,
+                            scheduleListSummary,
+                            phaseTimeline: Array.isArray(latestBuildReport?.phaseTimeline)
+                                ? latestBuildReport.phaseTimeline.slice(-80)
+                                : [],
+                        },
+                    };
+                    try {
+                        localStorage.setItem('neo_build_no_tiles_ui_trace', JSON.stringify(noTilesUiTrace));
+                        (window as any).__lastNeoBuildNoTilesUiTrace = noTilesUiTrace;
+                    } catch (error) {
+                        console.warn('[NEO-Build][NoTilesUiTrace] Failed to save no-tiles UI trace:', error);
+                    }
+                    pushDfpDataDiag('build:no-tiles-alert-shown', noTilesUiTrace);
                     void showDarkAlert(
                         'NEO Build completed but did not add any tiles. Review the build notes and input settings for this run.',
                         'No Tiles Added',

@@ -156220,6 +156220,62 @@ The proposed event was not scheduled. Re-open the event and choose Accept Confli
         markNeoBuildTiming(timingReport, "state:setNextDayBuildEvents", { generated: generated.length });
         logNeoBuildUiDebug("🚀 [NEO-Build] setNextDayBuildEvents called with", generated.length, "events");
         if (generated.length === 0) {
+          const readBuildStorageJson = (key) => {
+            try {
+              const raw = localStorage.getItem(key);
+              return raw ? JSON.parse(raw) : null;
+            } catch (error) {
+              return {
+                readError: error instanceof Error ? error.message : String(error)
+              };
+            }
+          };
+          const latestBuildReport = readBuildStorageJson("neo_build_diag_report");
+          const latestZeroTileTrace = readBuildStorageJson("neo_build_zero_tile_trace");
+          const scheduleListSummary = latestBuildReport?.scheduleLists && typeof latestBuildReport.scheduleLists === "object" ? Object.fromEntries(Object.entries(latestBuildReport.scheduleLists).map(([name, diag]) => [
+            name,
+            {
+              input: diag?.input ?? null,
+              attempts: diag?.attempts ?? null,
+              successes: diag?.successes ?? null,
+              generatedDelta: diag?.generatedDelta ?? null,
+              unplacedCount: Array.isArray(diag?.unplaced) ? diag.unplaced.length : null,
+              rejectionSummary: diag?.rejectionSummary || diag?.rejections || null,
+              rejectionSamples: Array.isArray(diag?.rejectionSamples) ? diag.rejectionSamples.slice(0, 12) : []
+            }
+          ])) : null;
+          const noTilesUiTrace = {
+            reportType: "neo-build-no-tiles-ui-trace",
+            generatedAt: (/* @__PURE__ */ new Date()).toISOString(),
+            buildDate: buildDfpDate,
+            location: school,
+            activeUnitCode,
+            activeContextUnitCodes,
+            operationalModel: activeOperationalModel,
+            generatedEvents: generated.length,
+            previousDraftEvents: nextDayBuildEvents.length,
+            buildInputTrace,
+            schedulerReport: {
+              stage: latestBuildReport?.stage || null,
+              updatedAt: latestBuildReport?.updatedAt || null,
+              input: latestBuildReport?.input || null,
+              activeTrainees: latestBuildReport?.activeTrainees || null,
+              nextEventLists: latestBuildReport?.nextEventLists || null,
+              nextEventEligibility: latestBuildReport?.nextEventEligibility || null,
+              zeroTileInvestigation: latestBuildReport?.zeroTileInvestigation || latestZeroTileTrace || null,
+              final: latestBuildReport?.final || null,
+              finalCleanup: latestBuildReport?.finalCleanup || null,
+              scheduleListSummary,
+              phaseTimeline: Array.isArray(latestBuildReport?.phaseTimeline) ? latestBuildReport.phaseTimeline.slice(-80) : []
+            }
+          };
+          try {
+            localStorage.setItem("neo_build_no_tiles_ui_trace", JSON.stringify(noTilesUiTrace));
+            window.__lastNeoBuildNoTilesUiTrace = noTilesUiTrace;
+          } catch (error) {
+            console.warn("[NEO-Build][NoTilesUiTrace] Failed to save no-tiles UI trace:", error);
+          }
+          pushDfpDataDiag("build:no-tiles-alert-shown", noTilesUiTrace);
           void showDarkAlert2(
             "NEO Build completed but did not add any tiles. Review the build notes and input settings for this run.",
             "No Tiles Added",
