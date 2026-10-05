@@ -16808,7 +16808,7 @@ const SettingsView = ({
   dayFlyingEnd = "17:00",
   resourceDisplayNames: resourceDisplayNames2 = DEFAULT_RESOURCE_DISPLAY_NAMES,
   sctTerminology = DEFAULT_SCT_TERMINOLOGY$1,
-  personnelDisplaySettings: personnelDisplaySettings2 = DEFAULT_PERSONNEL_DISPLAY_SETTINGS,
+  personnelDisplaySettings = DEFAULT_PERSONNEL_DISPLAY_SETTINGS,
   trainingReportDisplayName = "Training Report",
   emergencyFreezeAuthority,
   onUpdateEmergencyFreezeAuthority,
@@ -16828,8 +16828,8 @@ const SettingsView = ({
   const isFixedCrewModel = isFixedCrewLikeOperationalModel(activeOperationalModel);
   const sctShortLabel = sctTerminology.shortLabel;
   const sctLongLabel = sctTerminology.longLabel;
-  const simIpDisplayLabel = getSimIpDisplayLabel(personnelDisplaySettings2);
-  const contractorStaffEnabled = personnelDisplaySettings2.simIpDisplayEnabled !== false;
+  const simIpDisplayLabel = getSimIpDisplayLabel(personnelDisplaySettings);
+  const contractorStaffEnabled = personnelDisplaySettings.simIpDisplayEnabled !== false;
   const contractorStaffLimitLabel = simIpDisplayLabel.trim() || DEFAULT_PERSONNEL_DISPLAY_SETTINGS.simIpDisplayLabel;
   const resolvedDispatchStaggerSettings = normaliseDispatchStaggerSettings(dispatchStaggerSettings);
   const resolvedTileStatusSettings = normaliseTileStatusSettings(tileStatusSettings);
@@ -21028,11 +21028,11 @@ const PlatformConfigurationSettings = ({
   const settingsVisibilityPolicy = normaliseSettingsVisibilityPolicy(
     primaryOrganisationSettings.settingsVisibilityPolicy || null
   );
-  const personnelDisplaySettings2 = normalisePersonnelDisplaySettings(
+  const personnelDisplaySettings = normalisePersonnelDisplaySettings(
     primaryOrganisationSettings.personnelDisplaySettings || primaryOrganisationSettings.personnelSettings || null
   );
-  const contractorStaffDisplayLabel = personnelDisplaySettings2.simIpDisplayLabel?.trim() || "Contractor Staff";
-  const staffRankEquivalency = personnelDisplaySettings2.staffRankEquivalency;
+  const contractorStaffDisplayLabel = personnelDisplaySettings.simIpDisplayLabel?.trim() || "Contractor Staff";
+  const staffRankEquivalency = personnelDisplaySettings.staffRankEquivalency;
   const sctTerminology = normaliseSctTerminology(
     primaryOrganisationSettings.sctTerminology || null
   );
@@ -21096,13 +21096,13 @@ const PlatformConfigurationSettings = ({
   const canEditTrainingReportAutoNotify = canEditTrainingReportTemplateSection("auto-notify");
   const canEditTrainingReportConsecutiveRule = canEditTrainingReportTemplateSection("consecutive-repeat");
   const canEditTrainingReportRollingRule = canEditTrainingReportTemplateSection("rolling-repeat");
-  const courseCommanderLabel = personnelDisplaySettings2.courseCommanderLabel?.trim() || "Cse Commander";
-  const deputyCourseCommanderLabel = personnelDisplaySettings2.deputyCourseCommanderLabel?.trim() || "Deputy Cse Commander";
+  const courseCommanderLabel = personnelDisplaySettings.courseCommanderLabel?.trim() || "Cse Commander";
+  const deputyCourseCommanderLabel = personnelDisplaySettings.deputyCourseCommanderLabel?.trim() || "Deputy Cse Commander";
   const trainingReportAutoNotifyStaffOptions = [...instructorsData].filter((staff) => String(staff?.name || "").trim()).sort((a, b) => {
     const unitA = String(a.unit || "").trim();
     const unitB = String(b.unit || "").trim();
     if (unitA !== unitB) return unitA.localeCompare(unitB);
-    return comparePeopleByConfiguredRank(a, b, personnelDisplaySettings2, "staff");
+    return comparePeopleByConfiguredRank(a, b, personnelDisplaySettings, "staff");
   });
   const availableTrainingReportAutoNotifyStaffByUnit = (() => {
     const selectedNames = new Set(trainingReportTemplate.autoNotify.recipients.staffNames || []);
@@ -21530,34 +21530,34 @@ This permanently removes the organisation record from platform configuration and
   };
   const updateStaffRankEquivalency = (nextEquivalency) => {
     const staffRankEquivalency2 = normaliseRankEquivalencyConfig(nextEquivalency);
-    const staffRankOrder = getRankOrderFromEquivalency({ ...staffRankEquivalency2, civilianTitles: personnelDisplaySettings2.civilianTitles });
+    const staffRankOrder = getRankOrderFromEquivalency({ ...staffRankEquivalency2, civilianTitles: personnelDisplaySettings.civilianTitles });
     updatePersonnelDisplaySettings({
       staffRankEquivalency: staffRankEquivalency2,
       staffRankOrder,
-      ...personnelDisplaySettings2.useSeparateTraineeRankOrder ? {} : { traineeRankOrder: staffRankOrder }
+      ...personnelDisplaySettings.useSeparateTraineeRankOrder ? {} : { traineeRankOrder: staffRankOrder }
     });
   };
   const updateCivilianTitles = (value) => {
     const civilianTitles = value.split(/\r?\n/).filter((title) => title.trim());
-    const staffRankOrder = getRankOrderFromEquivalency({ ...personnelDisplaySettings2.staffRankEquivalency, civilianTitles });
+    const staffRankOrder = getRankOrderFromEquivalency({ ...personnelDisplaySettings.staffRankEquivalency, civilianTitles });
     updatePersonnelDisplaySettings({
       civilianTitles,
       staffRankOrder,
-      ...personnelDisplaySettings2.useSeparateTraineeRankOrder ? {} : { traineeRankOrder: staffRankOrder }
+      ...personnelDisplaySettings.useSeparateTraineeRankOrder ? {} : { traineeRankOrder: staffRankOrder }
     });
   };
   const applyStaffRankPreset = (preset) => {
-    const source = preset === "CUSTOM" ? { ...personnelDisplaySettings2.staffRankEquivalency, preset: "CUSTOM" } : RANK_EQUIVALENCY_PRESETS[preset];
+    const source = preset === "CUSTOM" ? { ...personnelDisplaySettings.staffRankEquivalency, preset: "CUSTOM" } : RANK_EQUIVALENCY_PRESETS[preset];
     updateStaffRankEquivalency(normaliseRankEquivalencyConfig(source));
   };
   const updateStaffRankServiceName = (serviceIndex, name) => {
-    const nextEquivalency = normaliseRankEquivalencyConfig(personnelDisplaySettings2.staffRankEquivalency);
+    const nextEquivalency = normaliseRankEquivalencyConfig(personnelDisplaySettings.staffRankEquivalency);
     nextEquivalency.preset = "CUSTOM";
     nextEquivalency.services = nextEquivalency.services.map((service, index) => index === serviceIndex ? { ...service, name } : service);
     updateStaffRankEquivalency(nextEquivalency);
   };
   const updateStaffRankCell = (rowIndex, serviceIndex, field, value) => {
-    const nextEquivalency = normaliseRankEquivalencyConfig(personnelDisplaySettings2.staffRankEquivalency);
+    const nextEquivalency = normaliseRankEquivalencyConfig(personnelDisplaySettings.staffRankEquivalency);
     nextEquivalency.preset = "CUSTOM";
     nextEquivalency.rows = nextEquivalency.rows.map((row, index) => {
       if (index !== rowIndex) return row;
@@ -23673,7 +23673,7 @@ This removes it from the master list and from every user assignment that current
       searchText: user.searchText || buildAccessUserSearchText([user.id, user.name, user.username, user.email])
     });
     const options = [];
-    const staffByDisplayOrder = [...instructorsData].filter((staff) => String(staff?.name || "").trim() && isActiveUnitPerson(staff.unit)).sort((a, b) => comparePeopleByConfiguredRank(a, b, personnelDisplaySettings2, "staff"));
+    const staffByDisplayOrder = [...instructorsData].filter((staff) => String(staff?.name || "").trim() && isActiveUnitPerson(staff.unit)).sort((a, b) => comparePeopleByConfiguredRank(a, b, personnelDisplaySettings, "staff"));
     staffByDisplayOrder.forEach((staff) => {
       const user = userOptions.find((candidate) => matchesBulkAccessPerson(candidate, staff, "staff"));
       if (!user || usedUserIds.has(user.id)) return;
@@ -23687,7 +23687,7 @@ This removes it from the master list and from every user assignment that current
       });
     });
     const traineesByDisplayOrder = [...traineesData].filter((trainee) => String(trainee?.name || trainee?.fullName || "").trim() && isActiveUnitPerson(trainee.unit)).sort((a, b) => {
-      const rankSort = comparePeopleByConfiguredRank(a, b, personnelDisplaySettings2, "trainee");
+      const rankSort = comparePeopleByConfiguredRank(a, b, personnelDisplaySettings, "trainee");
       if (rankSort !== 0) return rankSort;
       return String(a.name || a.fullName || "").localeCompare(String(b.name || b.fullName || ""));
     });
@@ -23738,7 +23738,7 @@ This removes it from the master list and from every user assignment that current
     });
     recordSettingsTraceTiming("bulkAccessUserOptions", traceStartedAt);
     return options;
-  }, [activeBulkUnitCodes, bulkAccessAssignmentOpen, instructorsData, personnelDisplaySettings2, traineesData, userOptions]);
+  }, [activeBulkUnitCodes, bulkAccessAssignmentOpen, instructorsData, personnelDisplaySettings, traineesData, userOptions]);
   const visibleBulkAccessUserOptions = reactExports.useMemo(() => {
     const traceStartedAt = getTraceNow();
     const queryTokens = buildAccessUserSearchText([bulkAccessPeopleSearch]).split(" ").filter(Boolean);
@@ -25309,7 +25309,7 @@ This removes them from DFP Resource Rows. Press Save in this section to apply th
     const visibleModelSet = new Set(visibleOperationalModelOptions.map((option) => option.value));
     const visibleCrewPositions = crewPositionTerminology.positions.filter((entry) => visibleModelSet.size === 0 || visibleOperationalModelOptions.length === OPERATIONAL_MODEL_OPTIONS.length || Array.from(visibleModelSet).some((model) => isCrewPositionAvailableForOperationalModel(entry, model)));
     const roleOptions = [
-      { value: "CONTRACTOR STAFF", label: personnelDisplaySettings2.simIpDisplayLabel || "Contractor Staff" },
+      { value: "CONTRACTOR STAFF", label: personnelDisplaySettings.simIpDisplayLabel || "Contractor Staff" },
       ...visibleCrewPositions.map((entry) => ({
         value: entry.genericName,
         label: crewPositionLabelMap[entry.genericName] || entry.label || entry.genericName
@@ -29558,7 +29558,7 @@ This removes them from DFP Resource Rows. Press Save in this section to apply th
                   DraftField,
                   {
                     label: "Instructor Display Term",
-                    value: personnelDisplaySettings2.instructorLabel,
+                    value: personnelDisplaySettings.instructorLabel,
                     disabled: !canEditRankTerminology,
                     onCommit: (value) => updatePersonnelDisplaySettings({ instructorLabel: value }),
                     info: "The word shown when a person is performing instructor duty. Example: Instructor, Training Captain, Coach."
@@ -29568,7 +29568,7 @@ This removes them from DFP Resource Rows. Press Save in this section to apply th
                   DraftField,
                   {
                     label: "Trainee / Student Label",
-                    value: personnelDisplaySettings2.traineeLabel,
+                    value: personnelDisplaySettings.traineeLabel,
                     disabled: !canEditRankTerminology,
                     onCommit: (value) => updatePersonnelDisplaySettings({ traineeLabel: value }),
                     info: "The customer-facing word for a person under training. Use one preferred label so the app is consistent."
@@ -29578,7 +29578,7 @@ This removes them from DFP Resource Rows. Press Save in this section to apply th
                   DraftField,
                   {
                     label: "Simulator Contractor Staff Label",
-                    value: personnelDisplaySettings2.simIpDisplayLabel,
+                    value: personnelDisplaySettings.simIpDisplayLabel,
                     disabled: !canEditRankTerminology,
                     onCommit: (value) => updatePersonnelDisplaySettings({ simIpDisplayLabel: value }),
                     info: "The label for civilian contractor staff who can perform instructional duties in simulator devices. Example: Simulator Contractor Staff, Contract Simulator Instructor."
@@ -29588,8 +29588,8 @@ This removes them from DFP Resource Rows. Press Save in this section to apply th
                   DraftField,
                   {
                     label: "Course Commander Label",
-                    value: personnelDisplaySettings2.courseCommanderLabel,
-                    disabled: !canEditRankTerminology || !personnelDisplaySettings2.courseLeadershipEnabled,
+                    value: personnelDisplaySettings.courseCommanderLabel,
+                    disabled: !canEditRankTerminology || !personnelDisplaySettings.courseLeadershipEnabled,
                     onCommit: (value) => updatePersonnelDisplaySettings({ courseCommanderLabel: value }),
                     info: "The label for the staff member who leads or manages a course. Your organisation may call this person the Course Commander, Course Lead or another local title."
                   }
@@ -29598,8 +29598,8 @@ This removes them from DFP Resource Rows. Press Save in this section to apply th
                   DraftField,
                   {
                     label: "Deputy Course Commander Label",
-                    value: personnelDisplaySettings2.deputyCourseCommanderLabel,
-                    disabled: !canEditRankTerminology || !personnelDisplaySettings2.courseLeadershipEnabled,
+                    value: personnelDisplaySettings.deputyCourseCommanderLabel,
+                    disabled: !canEditRankTerminology || !personnelDisplaySettings.courseLeadershipEnabled,
                     onCommit: (value) => updatePersonnelDisplaySettings({ deputyCourseCommanderLabel: value }),
                     info: "The label for the staff member who assists the course lead or acts as the deputy course lead. Your organisation may call this person the Deputy Course Commander, Deputy Course Lead or Course 2IC."
                   }
@@ -29830,10 +29830,10 @@ This removes them from DFP Resource Rows. Press Save in this section to apply th
                   DraftField,
                   {
                     label: "Instructor Display Term",
-                    value: personnelDisplaySettings2.instructorLabel,
+                    value: personnelDisplaySettings.instructorLabel,
                     disabled: !canEditRankTerminology,
                     onCommit: (value) => updatePersonnelDisplaySettings({ instructorLabel: value }),
-                    info: `The instructor display term is the duty label users see on schedules, reports and event details. The qualification label is what appears on a person's profile as something they hold. They are linked, but they are not automatically the same because one describes the duty being performed and the other describes the person's qualification. Example: a profile can show Qualification: ${linkedInstructorQualificationLabel}, while a report says ${personnelDisplaySettings2.instructorLabel || "Instructor"}: Surname, First. If your organisation wants both labels to match, also rename the linked qualification in Personnel Qualifications.`
+                    info: `The instructor display term is the duty label users see on schedules, reports and event details. The qualification label is what appears on a person's profile as something they hold. They are linked, but they are not automatically the same because one describes the duty being performed and the other describes the person's qualification. Example: a profile can show Qualification: ${linkedInstructorQualificationLabel}, while a report says ${personnelDisplaySettings.instructorLabel || "Instructor"}: Surname, First. If your organisation wants both labels to match, also rename the linked qualification in Personnel Qualifications.`
                   }
                 ),
                 /* @__PURE__ */ jsxRuntimeExports.jsxs("p", { className: "mt-1 text-xs leading-relaxed text-cyan-100/75", children: [
@@ -29858,14 +29858,14 @@ This removes them from DFP Resource Rows. Press Save in this section to apply th
                 SelectField,
                 {
                   label: "Trainee Rank Source",
-                  value: personnelDisplaySettings2.useSeparateTraineeRankOrder ? "Use separate trainee rank order" : "Use staff rank order",
+                  value: personnelDisplaySettings.useSeparateTraineeRankOrder ? "Use separate trainee rank order" : "Use staff rank order",
                   options: ["Use staff rank order", "Use separate trainee rank order"],
                   disabled: !canEditRankTerminology,
                   onChange: (value) => {
                     const useSeparateTraineeRankOrder = value === "Use separate trainee rank order";
                     updatePersonnelDisplaySettings({
                       useSeparateTraineeRankOrder,
-                      traineeRankOrder: useSeparateTraineeRankOrder ? personnelDisplaySettings2.traineeRankOrder : personnelDisplaySettings2.staffRankOrder
+                      traineeRankOrder: useSeparateTraineeRankOrder ? personnelDisplaySettings.traineeRankOrder : personnelDisplaySettings.staffRankOrder
                     });
                   },
                   info: "Choose Use staff rank order when staff and trainees share the same rank/title priority. Choose Use separate trainee rank order if trainees need their own ordering."
@@ -29884,7 +29884,7 @@ This removes them from DFP Resource Rows. Press Save in this section to apply th
                     "input",
                     {
                       type: "checkbox",
-                      checked: personnelDisplaySettings2.courseLeadershipEnabled,
+                      checked: personnelDisplaySettings.courseLeadershipEnabled,
                       disabled: !canEditRankTerminology,
                       onChange: (event) => updatePersonnelDisplaySettings({ courseLeadershipEnabled: event.target.checked }),
                       className: "peer sr-only"
@@ -29894,11 +29894,11 @@ This removes them from DFP Resource Rows. Press Save in this section to apply th
                     "span",
                     {
                       "aria-hidden": "true",
-                      className: `flex h-5 w-9 shrink-0 items-center rounded-full border px-0.5 transition ${personnelDisplaySettings2.courseLeadershipEnabled ? "border-cyan-400/60 bg-cyan-500/30" : "border-gray-600 bg-gray-800"} ${canEditRankTerminology ? "" : "opacity-50"}`,
+                      className: `flex h-5 w-9 shrink-0 items-center rounded-full border px-0.5 transition ${personnelDisplaySettings.courseLeadershipEnabled ? "border-cyan-400/60 bg-cyan-500/30" : "border-gray-600 bg-gray-800"} ${canEditRankTerminology ? "" : "opacity-50"}`,
                       children: /* @__PURE__ */ jsxRuntimeExports.jsx(
                         "span",
                         {
-                          className: `h-3.5 w-3.5 rounded-full bg-gray-100 shadow transition ${personnelDisplaySettings2.courseLeadershipEnabled ? "translate-x-4" : "translate-x-0"}`
+                          className: `h-3.5 w-3.5 rounded-full bg-gray-100 shadow transition ${personnelDisplaySettings.courseLeadershipEnabled ? "translate-x-4" : "translate-x-0"}`
                         }
                       )
                     }
@@ -29910,8 +29910,8 @@ This removes them from DFP Resource Rows. Press Save in this section to apply th
                   DraftField,
                   {
                     label: "Course Commander Label",
-                    value: personnelDisplaySettings2.courseCommanderLabel,
-                    disabled: !canEditRankTerminology || !personnelDisplaySettings2.courseLeadershipEnabled,
+                    value: personnelDisplaySettings.courseCommanderLabel,
+                    disabled: !canEditRankTerminology || !personnelDisplaySettings.courseLeadershipEnabled,
                     onCommit: (value) => updatePersonnelDisplaySettings({ courseCommanderLabel: value }),
                     info: "The label for the staff member who leads or manages a course. Your organisation may call this person the Course Commander, Course Lead or another local title."
                   }
@@ -29920,8 +29920,8 @@ This removes them from DFP Resource Rows. Press Save in this section to apply th
                   DraftField,
                   {
                     label: "Deputy Course Commander Label",
-                    value: personnelDisplaySettings2.deputyCourseCommanderLabel,
-                    disabled: !canEditRankTerminology || !personnelDisplaySettings2.courseLeadershipEnabled,
+                    value: personnelDisplaySettings.deputyCourseCommanderLabel,
+                    disabled: !canEditRankTerminology || !personnelDisplaySettings.courseLeadershipEnabled,
                     onCommit: (value) => updatePersonnelDisplaySettings({ deputyCourseCommanderLabel: value }),
                     info: "The label for the staff member who assists the course lead or acts as the deputy course lead. Your organisation may call this person the Deputy Course Commander, Deputy Course Lead or Course 2IC."
                   }
@@ -29940,7 +29940,7 @@ This removes them from DFP Resource Rows. Press Save in this section to apply th
                     "input",
                     {
                       type: "checkbox",
-                      checked: personnelDisplaySettings2.simIpDisplayEnabled,
+                      checked: personnelDisplaySettings.simIpDisplayEnabled,
                       disabled: !canEditRankTerminology,
                       onChange: (event) => updatePersonnelDisplaySettings({ simIpDisplayEnabled: event.target.checked }),
                       className: "peer sr-only"
@@ -29950,11 +29950,11 @@ This removes them from DFP Resource Rows. Press Save in this section to apply th
                     "span",
                     {
                       "aria-hidden": "true",
-                      className: `flex h-5 w-9 shrink-0 items-center rounded-full border px-0.5 transition ${personnelDisplaySettings2.simIpDisplayEnabled ? "border-cyan-400/60 bg-cyan-500/30" : "border-gray-600 bg-gray-800"} ${canEditRankTerminology ? "" : "opacity-50"}`,
+                      className: `flex h-5 w-9 shrink-0 items-center rounded-full border px-0.5 transition ${personnelDisplaySettings.simIpDisplayEnabled ? "border-cyan-400/60 bg-cyan-500/30" : "border-gray-600 bg-gray-800"} ${canEditRankTerminology ? "" : "opacity-50"}`,
                       children: /* @__PURE__ */ jsxRuntimeExports.jsx(
                         "span",
                         {
-                          className: `h-3.5 w-3.5 rounded-full bg-gray-100 shadow transition ${personnelDisplaySettings2.simIpDisplayEnabled ? "translate-x-4" : "translate-x-0"}`
+                          className: `h-3.5 w-3.5 rounded-full bg-gray-100 shadow transition ${personnelDisplaySettings.simIpDisplayEnabled ? "translate-x-4" : "translate-x-0"}`
                         }
                       )
                     }
@@ -29966,8 +29966,8 @@ This removes them from DFP Resource Rows. Press Save in this section to apply th
                   DraftField,
                   {
                     label: "Display Name",
-                    value: personnelDisplaySettings2.simIpDisplayLabel,
-                    disabled: !canEditRankTerminology || !personnelDisplaySettings2.simIpDisplayEnabled,
+                    value: personnelDisplaySettings.simIpDisplayLabel,
+                    disabled: !canEditRankTerminology || !personnelDisplaySettings.simIpDisplayEnabled,
                     onCommit: (value) => updatePersonnelDisplaySettings({ simIpDisplayLabel: value }),
                     info: "The staff type name users see in profiles, staff lists and scheduling views. Examples: Contractor Staff, Contract Instructor, Simulator Instructor."
                   }
@@ -29980,7 +29980,7 @@ This removes them from DFP Resource Rows. Press Save in this section to apply th
                     { key: "cpt", label: "Procedural Trainer" },
                     { key: "ground", label: "Ground / Academic" }
                   ].map((option) => {
-                    const checked = personnelDisplaySettings2.contractorStaffEventEligibility[option.key];
+                    const checked = personnelDisplaySettings.contractorStaffEventEligibility[option.key];
                     return /* @__PURE__ */ jsxRuntimeExports.jsxs(
                       "label",
                       {
@@ -29991,10 +29991,10 @@ This removes them from DFP Resource Rows. Press Save in this section to apply th
                             {
                               type: "checkbox",
                               checked,
-                              disabled: !canEditRankTerminology || !personnelDisplaySettings2.simIpDisplayEnabled,
+                              disabled: !canEditRankTerminology || !personnelDisplaySettings.simIpDisplayEnabled,
                               onChange: (event) => updatePersonnelDisplaySettings({
                                 contractorStaffEventEligibility: {
-                                  ...personnelDisplaySettings2.contractorStaffEventEligibility,
+                                  ...personnelDisplaySettings.contractorStaffEventEligibility,
                                   [option.key]: event.target.checked
                                 }
                               }),
@@ -30437,7 +30437,7 @@ This removes them from DFP Resource Rows. Press Save in this section to apply th
                 DraftTextAreaField,
                 {
                   label: "Civilian / Contractor Titles",
-                  value: personnelDisplaySettings2.civilianTitles.join("\n"),
+                  value: personnelDisplaySettings.civilianTitles.join("\n"),
                   disabled: !canEditRankTerminology,
                   onCommit: updateCivilianTitles,
                   info: "Enter one civilian or contractor title per line. These titles appear after the military rank groups and are treated as equal status for sorting.",
@@ -30446,18 +30446,18 @@ This removes them from DFP Resource Rows. Press Save in this section to apply th
                   fieldSizingClassName: "h-[150px]"
                 }
               ),
-              /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "grid gap-4 lg:grid-cols-2", children: personnelDisplaySettings2.useSeparateTraineeRankOrder ? /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-3", children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "grid gap-4 lg:grid-cols-2", children: personnelDisplaySettings.useSeparateTraineeRankOrder ? /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-3", children: [
                 /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: `flex items-center justify-between gap-3 rounded border px-3 py-2 text-sm ${canEditRankTerminology ? "border-cyan-500/40 bg-cyan-500/10 text-cyan-50" : "border-gray-700 bg-gray-900/60 text-gray-400"}`, children: [
                   /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "font-semibold", children: "Use separate trainee rank order" }),
                   /* @__PURE__ */ jsxRuntimeExports.jsx(
                     "input",
                     {
                       type: "checkbox",
-                      checked: personnelDisplaySettings2.useSeparateTraineeRankOrder,
+                      checked: personnelDisplaySettings.useSeparateTraineeRankOrder,
                       disabled: !canEditRankTerminology,
                       onChange: (event) => updatePersonnelDisplaySettings({
                         useSeparateTraineeRankOrder: event.target.checked,
-                        traineeRankOrder: event.target.checked ? personnelDisplaySettings2.traineeRankOrder : personnelDisplaySettings2.staffRankOrder
+                        traineeRankOrder: event.target.checked ? personnelDisplaySettings.traineeRankOrder : personnelDisplaySettings.staffRankOrder
                       }),
                       className: "h-4 w-4 rounded border-gray-500 accent-cyan-500 disabled:cursor-not-allowed"
                     }
@@ -30467,7 +30467,7 @@ This removes them from DFP Resource Rows. Press Save in this section to apply th
                   DraftTextAreaField,
                   {
                     label: "Trainee Rank Order",
-                    value: formatRankOrderText(personnelDisplaySettings2.traineeRankOrder),
+                    value: formatRankOrderText(personnelDisplaySettings.traineeRankOrder),
                     disabled: !canEditRankTerminology,
                     onCommit: (value) => updatePersonnelDisplaySettings({ traineeRankOrder: parseRankOrderText(value) }),
                     info: "Optional separate ordering for trainee ranks. Enter one display level per line, highest priority first. Use = on the same line to give ranks or titles equal status."
@@ -30480,11 +30480,11 @@ This removes them from DFP Resource Rows. Press Save in this section to apply th
                     "input",
                     {
                       type: "checkbox",
-                      checked: personnelDisplaySettings2.useSeparateTraineeRankOrder,
+                      checked: personnelDisplaySettings.useSeparateTraineeRankOrder,
                       disabled: !canEditRankTerminology,
                       onChange: (event) => updatePersonnelDisplaySettings({
                         useSeparateTraineeRankOrder: event.target.checked,
-                        traineeRankOrder: event.target.checked ? personnelDisplaySettings2.traineeRankOrder : personnelDisplaySettings2.staffRankOrder
+                        traineeRankOrder: event.target.checked ? personnelDisplaySettings.traineeRankOrder : personnelDisplaySettings.staffRankOrder
                       }),
                       className: "h-4 w-4 rounded border-gray-500 accent-cyan-500 disabled:cursor-not-allowed"
                     }
@@ -34069,7 +34069,7 @@ const OrganisationMyUnitSettings = ({ platformConfig, unitCode, formationCallsig
   const crewPositionTerminology = normaliseCrewPositionTerminology(organisationSettings.crewPositionTerminology || null);
   getCrewPositionLabelMap(crewPositionTerminology);
   const crewCompositionSettings = normaliseCrewCompositionSettings(organisationSettings.crewCompositionSettings || null);
-  const personnelDisplaySettings2 = normalisePersonnelDisplaySettings(organisationSettings.personnelDisplaySettings || organisationSettings.personnelSettings || null);
+  const personnelDisplaySettings = normalisePersonnelDisplaySettings(organisationSettings.personnelDisplaySettings || organisationSettings.personnelSettings || null);
   const permissionProfiles = getPlatformPermissionProfiles(platformConfig || null);
   const permissionProfileNameMap = Object.fromEntries(permissionProfiles.map((profile) => [String(profile.id || "").trim(), profile.name || profile.id]));
   const platformUsers = platformConfig?.platformUsers || [];
@@ -34198,7 +34198,7 @@ const OrganisationMyUnitSettings = ({ platformConfig, unitCode, formationCallsig
   const updatePersonnelDisplaySettings = (patch) => {
     updateOrganisationSettings({
       personnelDisplaySettings: {
-        ...personnelDisplaySettings2,
+        ...personnelDisplaySettings,
         ...patch
       }
     });
@@ -34458,9 +34458,9 @@ const OrganisationMyUnitSettings = ({ platformConfig, unitCode, formationCallsig
       return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-4", children: [
         /* @__PURE__ */ jsxRuntimeExports.jsxs(UnitSettingsGroup, { title: "Personnel Terminology", description: "How people, ranks and instructors are named for this organisation.", action: settingsLink("platform-rank-terminology", "Open Terminology", { focusSubsectionId: "platform-personnel-terminology" }), children: [
           /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsSelect, { label: "Personnel sort", value: "rank-then-name", options: ["rank-then-name"], optionLabels: { "rank-then-name": "Rank seniority, then name" }, onChange: () => updatePersonnelDisplaySettings({ sortMode: "rank-then-name" }), disabled: true }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsField, { label: "Instructor display term", value: personnelDisplaySettings2.instructorLabel || "", onChange: (value) => updatePersonnelDisplaySettings({ instructorLabel: value }), disabled: true }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsReadRow, { label: "Civilian titles", value: (personnelDisplaySettings2.civilianTitles || []).join(", ") || "Mr, Ms, Dr" }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsSelect, { label: "Trainee ranks", value: personnelDisplaySettings2.useSeparateTraineeRankOrder ? "separate" : "staff", options: ["staff", "separate"], optionLabels: { staff: "Uses staff rank order", separate: "Separate trainee rank order" }, onChange: (value) => updatePersonnelDisplaySettings({ useSeparateTraineeRankOrder: value === "separate" }), disabled: true })
+          /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsField, { label: "Instructor display term", value: personnelDisplaySettings.instructorLabel || "", onChange: (value) => updatePersonnelDisplaySettings({ instructorLabel: value }), disabled: true }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsReadRow, { label: "Civilian titles", value: (personnelDisplaySettings.civilianTitles || []).join(", ") || "Mr, Ms, Dr" }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsSelect, { label: "Trainee ranks", value: personnelDisplaySettings.useSeparateTraineeRankOrder ? "separate" : "staff", options: ["staff", "separate"], optionLabels: { staff: "Uses staff rank order", separate: "Separate trainee rank order" }, onChange: (value) => updatePersonnelDisplaySettings({ useSeparateTraineeRankOrder: value === "separate" }), disabled: true })
         ] }),
         /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsGroup, { title: "Crew Position Labels", description: "Generic scheduler roles mapped to customer-facing words.", action: settingsLink("platform-rank-terminology", "Open Crew Labels", { focusSubsectionId: "platform-crew-position-labels" }), children: crewPositionTerminology.positions.map((entry) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "border-t border-white/10 first:border-t-0", children: [
           /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsField, { label: "Generic role", value: entry.genericName || "", onChange: (value) => updateCrewPositionEntry(entry, { genericName: value }), disabled: true }),
@@ -34913,21 +34913,26 @@ const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, lo
     document.body.removeChild(link);
     URL.revokeObjectURL(url);
   };
-  const summariseWizardStaffQualificationCatalogue = () => ({
-    organisationSettingsHasCatalogue: Boolean(organisationSettings.staffQualificationCatalogue),
-    personnelInstructorLabel: personnelDisplaySettings.instructorLabel,
-    qualificationCount: wizardActiveStaffQualificationOptions.length,
-    qualifications: wizardActiveStaffQualificationOptions.map((qualification) => ({
-      id: qualification.id,
-      code: qualification.code,
-      name: qualification.name,
-      status: qualification.status || "ACTIVE",
-      displayLabel: getStaffQualificationDisplayLabel(qualification),
-      matchesInstructor: qualificationMatches("instructor", qualification),
-      matchesIp: qualificationMatches("IP", qualification),
-      matchesQfi: qualificationMatches("QFI", qualification)
-    }))
-  });
+  const summariseWizardStaffQualificationCatalogue = () => {
+    const wizardPersonnelDisplaySettings = normalisePersonnelDisplaySettings(
+      organisationSettings.personnelDisplaySettings || organisationSettings.personnelSettings || null
+    );
+    return {
+      organisationSettingsHasCatalogue: Boolean(organisationSettings.staffQualificationCatalogue),
+      personnelInstructorLabel: wizardPersonnelDisplaySettings.instructorLabel,
+      qualificationCount: wizardActiveStaffQualificationOptions.length,
+      qualifications: wizardActiveStaffQualificationOptions.map((qualification) => ({
+        id: qualification.id,
+        code: qualification.code,
+        name: qualification.name,
+        status: qualification.status || "ACTIVE",
+        displayLabel: getStaffQualificationDisplayLabel(qualification),
+        matchesInstructor: qualificationMatches("instructor", qualification),
+        matchesIp: qualificationMatches("IP", qualification),
+        matchesQfi: qualificationMatches("QFI", qualification)
+      }))
+    };
+  };
   const pushWizardLmpDiag = (stage, details = {}) => {
     if (!isSetupTestMode$1 || typeof window === "undefined") return;
     const setupTestKeys = Object.keys(window.localStorage || {}).filter((key) => key.includes("setup_test") || key.includes("neo_lmp_details")).sort();
@@ -54071,7 +54076,7 @@ const TraineeProfileFlyout = ({
   aircraftCrewComposition,
   onAccessDenied,
   resourceDisplayNames: resourceDisplayNames2 = DEFAULT_RESOURCE_DISPLAY_NAMES,
-  personnelDisplaySettings: personnelDisplaySettings2 = DEFAULT_PERSONNEL_DISPLAY_SETTINGS,
+  personnelDisplaySettings = DEFAULT_PERSONNEL_DISPLAY_SETTINGS,
   trainingReportTerminology = DEFAULT_TRAINING_REPORT_TERMINOLOGY,
   platformConfig = null,
   staffQualificationCatalogue,
@@ -54221,7 +54226,7 @@ const TraineeProfileFlyout = ({
   const activeTrainingReportUnitCode = trainee.unit || "";
   const activeTrainingReportTemplate = trainingReportTemplate || getUnitTrainingReportTemplate(platformConfig, activeTrainingReportUnitCode) || DEFAULT_TRAINING_REPORT_TEMPLATE;
   const activeTrainingReportDisplayName = activeTrainingReportTemplate.displayName || activeTrainingReportTemplate.genericName || DEFAULT_TRAINING_REPORT_TEMPLATE.displayName;
-  const activeInstructorDisplayLabel = normalisePersonnelDisplaySettings(personnelDisplaySettings2).instructorLabel || "Instructor";
+  const activeInstructorDisplayLabel = normalisePersonnelDisplaySettings(personnelDisplaySettings).instructorLabel || "Instructor";
   const activeReportAssessorDisplayLabel = resolveReportAssessorDisplayLabel(
     activeTrainingReportTemplate.modules.comments.fields.assessor,
     activeInstructorDisplayLabel
@@ -54688,17 +54693,17 @@ const TraineeProfileFlyout = ({
   const [idNumber, setIdNumber] = reactExports.useState(trainee.idNumber);
   const [rank, setRank] = reactExports.useState(trainee.rank);
   const traineeRankOptionGroups = reactExports.useMemo(() => {
-    const configuredGroups = getRankOptionGroupsForGroup(personnelDisplaySettings2 || void 0, "trainee");
+    const configuredGroups = getRankOptionGroupsForGroup(personnelDisplaySettings || void 0, "trainee");
     const configuredRanks = configuredGroups.flatMap((group) => group.options);
     const currentRank = String(rank || "").trim();
     const hasCurrentRank = Boolean(currentRank) && configuredRanks.some((option) => option.toLowerCase() === currentRank.toLowerCase());
     return currentRank && !hasCurrentRank ? [...configuredGroups, { label: "Current value", options: [currentRank] }] : configuredGroups;
-  }, [personnelDisplaySettings2, rank]);
+  }, [personnelDisplaySettings, rank]);
   const configuredServiceOptions = reactExports.useMemo(() => {
-    const normalised = normalisePersonnelDisplaySettings(personnelDisplaySettings2);
+    const normalised = normalisePersonnelDisplaySettings(personnelDisplaySettings);
     const configured = normalised.staffRankEquivalency.services.map((serviceOption) => String(serviceOption.name || "").trim()).filter(Boolean);
     return getConfiguredServiceOptionsWithCurrent(configured, trainee.service);
-  }, [personnelDisplaySettings2, trainee.service]);
+  }, [personnelDisplaySettings, trainee.service]);
   const displayService = reactExports.useMemo(
     () => resolveConfiguredServiceName(trainee.service, configuredServiceOptions),
     [configuredServiceOptions, trainee.service]
@@ -57115,7 +57120,7 @@ const CourseEditFlyout = ({
   courseColors,
   course,
   instructorsData = [],
-  personnelDisplaySettings: personnelDisplaySettings2
+  personnelDisplaySettings
 }) => {
   const [newCourseNumber, setNewCourseNumber] = reactExports.useState(courseName);
   const { isFrozen } = useSystemFreeze();
@@ -57135,16 +57140,16 @@ const CourseEditFlyout = ({
   const [showBackcourseConfirm, setShowBackcourseConfirm] = reactExports.useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = reactExports.useState(false);
   const [hasChanges, setHasChanges] = reactExports.useState(false);
-  const courseLeadershipEnabled = personnelDisplaySettings2?.courseLeadershipEnabled !== false;
-  const courseCommanderLabel = personnelDisplaySettings2?.courseCommanderLabel?.trim() || "Cse Commander";
-  const deputyCourseCommanderLabel = personnelDisplaySettings2?.deputyCourseCommanderLabel?.trim() || "Deputy Cse Commander";
+  const courseLeadershipEnabled = personnelDisplaySettings?.courseLeadershipEnabled !== false;
+  const courseCommanderLabel = personnelDisplaySettings?.courseCommanderLabel?.trim() || "Cse Commander";
+  const deputyCourseCommanderLabel = personnelDisplaySettings?.deputyCourseCommanderLabel?.trim() || "Deputy Cse Commander";
   const sortedStaff2 = reactExports.useMemo(() => {
     return [...instructorsData].filter((staff) => String(staff?.name || "").trim()).sort((a, b) => {
       const unitCompare = String(a.unit || "").localeCompare(String(b.unit || ""), void 0, { numeric: true, sensitivity: "base" });
       if (unitCompare !== 0) return unitCompare;
-      return comparePeopleByConfiguredRank(a, b, personnelDisplaySettings2, "staff");
+      return comparePeopleByConfiguredRank(a, b, personnelDisplaySettings, "staff");
     });
-  }, [instructorsData, personnelDisplaySettings2]);
+  }, [instructorsData, personnelDisplaySettings]);
   const staffByUnit = reactExports.useMemo(() => {
     const groups = /* @__PURE__ */ new Map();
     sortedStaff2.forEach((staff) => {
@@ -58537,7 +58542,7 @@ const CourseRosterView = ({
   aircraftCrewComposition,
   onAccessDenied,
   resourceDisplayNames: resourceDisplayNames2 = DEFAULT_RESOURCE_DISPLAY_NAMES,
-  personnelDisplaySettings: personnelDisplaySettings2,
+  personnelDisplaySettings,
   trainingReportTerminology,
   trainingReportTemplate,
   platformConfig = null,
@@ -58589,10 +58594,10 @@ const CourseRosterView = ({
       groups[courseKey].push(trainee);
     });
     for (const course in groups) {
-      groups[course].sort((a, b) => comparePeopleByConfiguredRank(a, b, personnelDisplaySettings2, "trainee"));
+      groups[course].sort((a, b) => comparePeopleByConfiguredRank(a, b, personnelDisplaySettings, "trainee"));
     }
     return groups;
-  }, [traineesData, personnelDisplaySettings2]);
+  }, [traineesData, personnelDisplaySettings]);
   const traineeNameResolver = reactExports.useMemo(() => buildCompactPersonNameResolver(traineesData), [traineesData]);
   reactExports.useEffect(() => {
     if (selectedTrainee && !isCreatingNew) {
@@ -58638,9 +58643,9 @@ const CourseRosterView = ({
     });
     return records;
   }, [courses]);
-  const courseLeadershipEnabled = personnelDisplaySettings2?.courseLeadershipEnabled !== false;
-  const courseCommanderLabel = personnelDisplaySettings2?.courseCommanderLabel?.trim() || "Cse Commander";
-  const deputyCourseCommanderLabel = personnelDisplaySettings2?.deputyCourseCommanderLabel?.trim() || "Deputy Cse Commander";
+  const courseLeadershipEnabled = personnelDisplaySettings?.courseLeadershipEnabled !== false;
+  const courseCommanderLabel = personnelDisplaySettings?.courseCommanderLabel?.trim() || "Cse Commander";
+  const deputyCourseCommanderLabel = personnelDisplaySettings?.deputyCourseCommanderLabel?.trim() || "Deputy Cse Commander";
   reactExports.useEffect(() => {
     if (!focusedCourseName) return;
     const targetCourse = coursesToDisplay.find((courseName) => courseName === focusedCourseName);
@@ -59186,7 +59191,7 @@ const CourseRosterView = ({
         currentUserName,
         currentUserRole: currentUserRole2,
         resourceDisplayNames: resourceDisplayNames2,
-        personnelDisplaySettings: personnelDisplaySettings2,
+        personnelDisplaySettings,
         trainingReportTerminology,
         platformConfig,
         staffQualificationCatalogue,
@@ -59271,7 +59276,7 @@ const CourseRosterView = ({
         },
         courseColors,
         instructorsData,
-        personnelDisplaySettings: personnelDisplaySettings2
+        personnelDisplaySettings
       }
     ),
     showBulkUpload && onBulkUpdateTrainees && onReplaceTrainees && /* @__PURE__ */ jsxRuntimeExports.jsx(
@@ -60231,7 +60236,7 @@ const convertTimeToDecimal = (timeStr) => {
   if (isNaN(hours) || isNaN(minutes)) return 0;
   return hours + minutes / 60;
 };
-const EventDetailModal = ({ event, onClose, onSave, onDeleteRequest, isEditingDefault = false, instructors, trainees, syllabus, syllabusDetails, highlightedField, school, traineesData, instructorsData, courseColors, onNavigateToHateSheet, onNavigateToSyllabus, onOpenTrainingReport, trainingReportDisplayName = "Training Report", onOpenStaffTrainingReport, onOpenAuth, flightAuthorisationRequired = true, onOpenPostFlight, onOpenPreFlightNotes, isConflict, onNeoClick, traineeLMPs, oracleContextForModal, sctRequests = [], sctEvents = [], eventsForDate = [], onScoresCreated, publishedSchedules = {}, nextDayBuildEvents = [], activeView = "", isAddingTile = false, formationCallsigns = [], currentLocation = "", onVisualAdjustStart, onVisualAdjustEnd, onSaveTrainingReportAssessment, cancellationCodes = [], onCancelEvent, onRestoreEvent, onSendAlert, canSendAlert = false, alertData = null, baselineEvent = null, onClearAlert, onEditFixedCrewTile, resourceDisplayNames: resourceDisplayNames2 = DEFAULT_RESOURCE_DISPLAY_NAMES, aircraftNumberSettings = DEFAULT_AIRCRAFT_NUMBER_SETTINGS, aircraftConfigurationDefinitions = [], aircraftCrewComposition, crewPositionTerminology, operationalModel, activeUnitCode = "", staffQualificationCatalogue, unitCallsignSettings, personnelDisplaySettings: personnelDisplaySettings2, sctTerminology = DEFAULT_SCT_TERMINOLOGY$1, isReadOnly = false, openDeleteChoice = false }) => {
+const EventDetailModal = ({ event, onClose, onSave, onDeleteRequest, isEditingDefault = false, instructors, trainees, syllabus, syllabusDetails, highlightedField, school, traineesData, instructorsData, courseColors, onNavigateToHateSheet, onNavigateToSyllabus, onOpenTrainingReport, trainingReportDisplayName = "Training Report", onOpenStaffTrainingReport, onOpenAuth, flightAuthorisationRequired = true, onOpenPostFlight, onOpenPreFlightNotes, isConflict, onNeoClick, traineeLMPs, oracleContextForModal, sctRequests = [], sctEvents = [], eventsForDate = [], onScoresCreated, publishedSchedules = {}, nextDayBuildEvents = [], activeView = "", isAddingTile = false, formationCallsigns = [], currentLocation = "", onVisualAdjustStart, onVisualAdjustEnd, onSaveTrainingReportAssessment, cancellationCodes = [], onCancelEvent, onRestoreEvent, onSendAlert, canSendAlert = false, alertData = null, baselineEvent = null, onClearAlert, onEditFixedCrewTile, resourceDisplayNames: resourceDisplayNames2 = DEFAULT_RESOURCE_DISPLAY_NAMES, aircraftNumberSettings = DEFAULT_AIRCRAFT_NUMBER_SETTINGS, aircraftConfigurationDefinitions = [], aircraftCrewComposition, crewPositionTerminology, operationalModel, activeUnitCode = "", staffQualificationCatalogue, unitCallsignSettings, personnelDisplaySettings, sctTerminology = DEFAULT_SCT_TERMINOLOGY$1, isReadOnly = false, openDeleteChoice = false }) => {
   const { isFrozen, allowedActions: freezeAllowedActions } = useSystemFreeze();
   const [isEditing, setIsEditing] = reactExports.useState(isReadOnly ? false : isEditingDefault);
   const [localHighlight, setLocalHighlight] = reactExports.useState(highlightedField);
@@ -60358,7 +60363,7 @@ const EventDetailModal = ({ event, onClose, onSave, onDeleteRequest, isEditingDe
   const resolvedSctTerminology = reactExports.useMemo(() => normaliseSctTerminology(sctTerminology), [sctTerminology]);
   const sctShortLabel = resolvedSctTerminology.shortLabel;
   const sctFormationLabel = `${sctShortLabel} FORM`;
-  const instructorDisplayLabel = String(personnelDisplaySettings2?.instructorLabel || "Instructor").trim() || "Instructor";
+  const instructorDisplayLabel = String(personnelDisplaySettings?.instructorLabel || "Instructor").trim() || "Instructor";
   const flightDetailPrimaryCrewLabel = isAirCombatModel ? "PIC" : instructorDisplayLabel;
   const flightDetailSecondaryCrewLabel = isAirCombatModel ? "Crew" : "Trainee";
   const staffNameResolver = reactExports.useMemo(
@@ -60579,11 +60584,11 @@ const EventDetailModal = ({ event, onClose, onSave, onDeleteRequest, isEditingDe
       return candidates.find((staff) => staffMatchesActiveFixedCrewUnit(staff, eventCrewKey) && (!crewParts.crew || String(staff.crew || "").trim().toUpperCase() === crewParts.crew)) || candidates.find((staff) => staffMatchesActiveFixedCrewUnit(staff, eventCrewKey)) || candidates[0];
     }).filter(Boolean);
     if (rosterFromAttendees.length > 0) {
-      return rosterFromAttendees.sort((a, b) => comparePeopleByConfiguredRank(a, b, personnelDisplaySettings2, "staff"));
+      return rosterFromAttendees.sort((a, b) => comparePeopleByConfiguredRank(a, b, personnelDisplaySettings, "staff"));
     }
     if (!eventCrewKey) return [];
-    return instructorsData.filter((staff) => staffMatchesActiveFixedCrewUnit(staff, eventCrewKey)).filter((staff) => String(staff.crew || "").trim().toUpperCase() === crewParts.crew).filter((staff) => !staff.isAdminStaff).sort((a, b) => comparePeopleByConfiguredRank(a, b, personnelDisplaySettings2, "staff"));
-  }, [event, fixedCrewGroup, instructorsData, isFixedCrewCrewedEvent, activeUnitMemberCodes, personnelDisplaySettings2]);
+    return instructorsData.filter((staff) => staffMatchesActiveFixedCrewUnit(staff, eventCrewKey)).filter((staff) => String(staff.crew || "").trim().toUpperCase() === crewParts.crew).filter((staff) => !staff.isAdminStaff).sort((a, b) => comparePeopleByConfiguredRank(a, b, personnelDisplaySettings, "staff"));
+  }, [event, fixedCrewGroup, instructorsData, isFixedCrewCrewedEvent, activeUnitMemberCodes, personnelDisplaySettings]);
   const staffHasAvailabilityConflict = (staff, bookingWindow, eventDate) => {
     if (!eventDate) return false;
     return (staff.unavailability || []).some((period) => {
@@ -60609,7 +60614,7 @@ const EventDetailModal = ({ event, onClose, onSave, onDeleteRequest, isEditingDe
       ...getPersonnelForConflictCheck(event),
       ...rosteredFixedCrewMembers.map((member) => member.name)
     ].map((name) => String(name || "").trim()).filter(Boolean));
-    return instructorsData.filter((candidate) => candidate.name !== staff.name).filter((candidate) => !assignedToCurrentEvent.has(candidate.name)).filter((candidate) => !candidate.isAdminStaff).filter((candidate) => normaliseFixedCrewUnitCode(candidate.unit) === crewUnit).filter((candidate) => fixedCrewStaffRolesMatch(candidate, staff)).filter((candidate) => !staffHasAvailabilityConflict(candidate, bookingWindow, eventDate)).filter((candidate) => !staffHasEventConflict(candidate, bookingWindow)).sort((a, b) => comparePeopleByConfiguredRank(a, b, personnelDisplaySettings2, "staff"));
+    return instructorsData.filter((candidate) => candidate.name !== staff.name).filter((candidate) => !assignedToCurrentEvent.has(candidate.name)).filter((candidate) => !candidate.isAdminStaff).filter((candidate) => normaliseFixedCrewUnitCode(candidate.unit) === crewUnit).filter((candidate) => fixedCrewStaffRolesMatch(candidate, staff)).filter((candidate) => !staffHasAvailabilityConflict(candidate, bookingWindow, eventDate)).filter((candidate) => !staffHasEventConflict(candidate, bookingWindow)).sort((a, b) => comparePeopleByConfiguredRank(a, b, personnelDisplaySettings, "staff"));
   };
   const getFixedCrewSubstituteRejectReasons = (staff, bookingWindow, eventDate) => {
     const eventCrewKey = fixedCrewGroup || event.fixedCrewGroup || "";
@@ -60627,7 +60632,7 @@ const EventDetailModal = ({ event, onClose, onSave, onDeleteRequest, isEditingDe
       if (staffHasAvailabilityConflict(candidate, bookingWindow, eventDate)) reasons.push("unavailable during this event window");
       if (staffHasEventConflict(candidate, bookingWindow)) reasons.push("already assigned to another event in this event window");
       return { candidate, reasons };
-    }).filter((entry) => normaliseFixedCrewUnitCode(entry.candidate.unit) === crewUnit).filter((entry) => fixedCrewStaffRolesMatch(entry.candidate, staff) || getFixedCrewStaffRoleLabel(entry.candidate) === getFixedCrewStaffRoleLabel(staff)).filter((entry) => entry.reasons.length > 0).sort((a, b) => comparePeopleByConfiguredRank(a.candidate, b.candidate, personnelDisplaySettings2, "staff")).slice(0, 8);
+    }).filter((entry) => normaliseFixedCrewUnitCode(entry.candidate.unit) === crewUnit).filter((entry) => fixedCrewStaffRolesMatch(entry.candidate, staff) || getFixedCrewStaffRoleLabel(entry.candidate) === getFixedCrewStaffRoleLabel(staff)).filter((entry) => entry.reasons.length > 0).sort((a, b) => comparePeopleByConfiguredRank(a.candidate, b.candidate, personnelDisplaySettings, "staff")).slice(0, 8);
   };
   const fixedCrewRosterStatus = reactExports.useMemo(() => {
     const bookingWindow = getEventBookingWindow2(event);
@@ -60672,7 +60677,7 @@ const EventDetailModal = ({ event, onClose, onSave, onDeleteRequest, isEditingDe
       if (aPic !== bPic) return aPic - bPic;
       const roleDiff = roleRank(getFixedCrewStaffRoleLabel(a.staff)) - roleRank(getFixedCrewStaffRoleLabel(b.staff));
       if (roleDiff !== 0) return roleDiff;
-      return comparePeopleByConfiguredRank(a.staff, b.staff, personnelDisplaySettings2, "staff");
+      return comparePeopleByConfiguredRank(a.staff, b.staff, personnelDisplaySettings, "staff");
     }).reduce((groups, status) => {
       const role = getFixedCrewStaffRoleLabel(status.staff);
       const existing = groups.find((group) => group.role === role);
@@ -60683,11 +60688,11 @@ const EventDetailModal = ({ event, onClose, onSave, onDeleteRequest, isEditingDe
       const aRank = String(a.role || "").trim().toLowerCase() === "pilot" ? 0 : 1;
       const bRank = String(b.role || "").trim().toLowerCase() === "pilot" ? 0 : 1;
       if (aRank !== bRank) return aRank - bRank;
-      const seniorityComparison = comparePeopleByConfiguredRank(a.members[0]?.staff, b.members[0]?.staff, personnelDisplaySettings2, "staff");
+      const seniorityComparison = comparePeopleByConfiguredRank(a.members[0]?.staff, b.members[0]?.staff, personnelDisplaySettings, "staff");
       if (seniorityComparison !== 0) return seniorityComparison;
       return a.role.localeCompare(b.role);
     });
-  }, [event.fixedCrewPic, event.pilot, fixedCrewPic, fixedCrewRosterStatus, personnelDisplaySettings2]);
+  }, [event.fixedCrewPic, event.pilot, fixedCrewPic, fixedCrewRosterStatus, personnelDisplaySettings]);
   const activeCrewConflict = reactExports.useMemo(() => fixedCrewRosterStatus.find((status) => status.staff.name === activeCrewConflictName && !status.isClear) || null, [activeCrewConflictName, fixedCrewRosterStatus]);
   const handleFixedCrewSubstituteSelect = async (unavailableStaff, substitute) => {
     if (isReadOnly) {
@@ -60947,7 +60952,7 @@ ${swapNote}` : swapNote
     }, {});
     Object.keys(grouped).forEach((unit) => {
       grouped[unit].sort(
-        (a, b) => comparePeopleByConfiguredRank(a.instructor || a, b.instructor || b, personnelDisplaySettings2, "staff")
+        (a, b) => comparePeopleByConfiguredRank(a.instructor || a, b.instructor || b, personnelDisplaySettings, "staff")
       );
     });
     const sortedUnits = Object.keys(grouped).sort((a, b) => {
@@ -60957,7 +60962,7 @@ ${swapNote}` : swapNote
         const rankComparison = comparePeopleByConfiguredRank(
           firstA.instructor || firstA,
           firstB.instructor || firstB,
-          personnelDisplaySettings2,
+          personnelDisplaySettings,
           "staff"
         );
         if (rankComparison !== 0) return rankComparison;
@@ -60965,7 +60970,7 @@ ${swapNote}` : swapNote
       return a.localeCompare(b);
     });
     return { grouped, sortedUnits };
-  }, [instructorList, traineesData, instructorsData, personnelDisplaySettings2]);
+  }, [instructorList, traineesData, instructorsData, personnelDisplaySettings]);
   const staffSelectOptions = reactExports.useMemo(
     () => staffInstructorsByUnit.sortedUnits.flatMap((unit) => staffInstructorsByUnit.grouped[unit]),
     [staffInstructorsByUnit]
@@ -60996,11 +61001,11 @@ ${swapNote}` : swapNote
     });
     Object.keys(grouped).forEach((unit) => {
       grouped[unit].sort(
-        (a, b) => comparePeopleByConfiguredRank(a.instructor || a, b.instructor || b, personnelDisplaySettings2, "staff")
+        (a, b) => comparePeopleByConfiguredRank(a.instructor || a, b.instructor || b, personnelDisplaySettings, "staff")
       );
     });
     return { grouped, sortedUnits: Object.keys(grouped).sort() };
-  }, [activeEventUnitCodes, crew, event.instructor, event.pilot, event.student, instructorsData, isAirCombatModel, personnelDisplaySettings2]);
+  }, [activeEventUnitCodes, crew, event.instructor, event.pilot, event.student, instructorsData, isAirCombatModel, personnelDisplaySettings]);
   const traineesByCourse = reactExports.useMemo(() => {
     const traineeNameSet = new Set(traineeList.map((name) => String(name || "").trim()).filter(Boolean));
     const traineeRecordOptions = traineesData.filter((trainee) => traineeNameSet.has(String(trainee.name || "").trim()) || traineeNameSet.has(String(trainee.fullName || "").trim())).map((trainee) => ({
@@ -64267,7 +64272,7 @@ const AddFlightTileModal = ({
   activeUnitCodes = [],
   unitCallsignSettings,
   staffQualificationCatalogue,
-  personnelDisplaySettings: personnelDisplaySettings2,
+  personnelDisplaySettings,
   personnelData,
   sctTerminology,
   sctEvents = [],
@@ -64442,7 +64447,7 @@ const AddFlightTileModal = ({
       const roleCompare = fixedCrewRoleGroupLabel(a).localeCompare(fixedCrewRoleGroupLabel(b), void 0, { numeric: true });
       if (roleCompare !== 0) return roleCompare;
     }
-    return comparePeopleByConfiguredRank(a, b, personnelDisplaySettings2, "staff");
+    return comparePeopleByConfiguredRank(a, b, personnelDisplaySettings, "staff");
   };
   const fixedCrewMembers = reactExports.useMemo(() => {
     const selectedGroup = parseFixedCrewGroupKey(fixedCrewGroup);
@@ -64450,7 +64455,7 @@ const AddFlightTileModal = ({
       const staffGroup = parseFixedCrewGroupKey(`${normaliseFixedCrewUnitCode2(staff.unit)}::${staff.crew || ""}`);
       return staffGroup.crew === selectedGroup.crew && (!selectedGroup.unit || staffGroup.unit === selectedGroup.unit);
     }).sort(compareFixedCrewMemberDisplay) : [];
-  }, [fixedCrewGroup, fixedCrewStaff, personnelDisplaySettings2]);
+  }, [fixedCrewGroup, fixedCrewStaff, personnelDisplaySettings]);
   const fixedCrewMemberDisplayGroups = reactExports.useMemo(() => {
     const groups = /* @__PURE__ */ new Map();
     fixedCrewMembers.forEach((staff) => {
@@ -64739,13 +64744,13 @@ const AddFlightTileModal = ({
   };
   const getNames = (unit, selection) => {
     if (selection === "STAFF") {
-      return instructorsData.filter((i) => (i.unit || "Unassigned") === unit).sort((a, b) => comparePeopleByConfiguredRank(a, b, personnelDisplaySettings2, "staff")).map((i) => ({
+      return instructorsData.filter((i) => (i.unit || "Unassigned") === unit).sort((a, b) => comparePeopleByConfiguredRank(a, b, personnelDisplaySettings, "staff")).map((i) => ({
         name: i.name,
         label: `${i.rank ? i.rank + " - " : ""}${staffNameResolver.formatList(i)}`,
         color: "#fff"
       }));
     }
-    return traineesData.filter((t) => (t.unit || "Unassigned") === unit && t.course === selection).sort((a, b) => comparePeopleByConfiguredRank(a, b, personnelDisplaySettings2, "trainee")).map((t) => {
+    return traineesData.filter((t) => (t.unit || "Unassigned") === unit && t.course === selection).sort((a, b) => comparePeopleByConfiguredRank(a, b, personnelDisplaySettings, "trainee")).map((t) => {
       const twClass = courseColors[t.course] || "";
       const colourMap = {
         "bg-sky-500": "#38bdf8",
@@ -64783,7 +64788,7 @@ const AddFlightTileModal = ({
   };
   const getPicNames = (unit, selection) => {
     if (!shouldRestrictContinuationPicToPilots || selection !== "STAFF") return getNames(unit, selection);
-    return instructorsData.filter((i) => (i.unit || "Unassigned") === unit).filter(isPilotStaff).sort((a, b) => comparePeopleByConfiguredRank(a, b, personnelDisplaySettings2, "staff")).map((i) => ({
+    return instructorsData.filter((i) => (i.unit || "Unassigned") === unit).filter(isPilotStaff).sort((a, b) => comparePeopleByConfiguredRank(a, b, personnelDisplaySettings, "staff")).map((i) => ({
       name: i.name,
       label: `${i.rank ? i.rank + " - " : ""}${staffNameResolver.formatList(i)}`,
       color: "#fff"
@@ -64792,14 +64797,14 @@ const AddFlightTileModal = ({
   const standardPersonOptions = reactExports.useMemo(() => {
     const unitLabel = (value) => String(value || "Unassigned").trim() || "Unassigned";
     const courseLabel = (value) => String(value || "Trainees").trim() || "Trainees";
-    const staff = instructorsData.filter((person) => !person.isAdminStaff).filter((person) => !shouldRestrictContinuationPicToPilots || isPilotStaff(person)).sort((a, b) => unitLabel(a.unit).localeCompare(unitLabel(b.unit), void 0, { numeric: true, sensitivity: "base" }) || comparePeopleByConfiguredRank(a, b, personnelDisplaySettings2, "staff")).map((person) => ({
+    const staff = instructorsData.filter((person) => !person.isAdminStaff).filter((person) => !shouldRestrictContinuationPicToPilots || isPilotStaff(person)).sort((a, b) => unitLabel(a.unit).localeCompare(unitLabel(b.unit), void 0, { numeric: true, sensitivity: "base" }) || comparePeopleByConfiguredRank(a, b, personnelDisplaySettings, "staff")).map((person) => ({
       value: `staff:${getPersonStableKey(person, "staff")}`,
       name: person.name,
       label: [person.rank, staffNameResolver.formatList(person)].filter(Boolean).join(" - "),
       group: `${unitLabel(person.unit)} - Staff`,
       ref: makeSchedulePersonRef(person, "staff", "pilot")
     }));
-    const trainees2 = traineesData.sort((a, b) => unitLabel(a.unit).localeCompare(unitLabel(b.unit), void 0, { numeric: true, sensitivity: "base" }) || courseLabel(a.course).localeCompare(courseLabel(b.course), void 0, { numeric: true, sensitivity: "base" }) || comparePeopleByConfiguredRank(a, b, personnelDisplaySettings2, "trainee")).map((person) => ({
+    const trainees2 = traineesData.sort((a, b) => unitLabel(a.unit).localeCompare(unitLabel(b.unit), void 0, { numeric: true, sensitivity: "base" }) || courseLabel(a.course).localeCompare(courseLabel(b.course), void 0, { numeric: true, sensitivity: "base" }) || comparePeopleByConfiguredRank(a, b, personnelDisplaySettings, "trainee")).map((person) => ({
       value: `trainee:${getPersonStableKey(person, "trainee")}`,
       name: person.fullName || person.name,
       label: [person.rank, traineeNameResolver.formatList(person)].filter(Boolean).join(" - "),
@@ -64807,7 +64812,7 @@ const AddFlightTileModal = ({
       ref: makeSchedulePersonRef(person, "trainee", "student")
     }));
     return [...staff, ...trainees2];
-  }, [instructorsData, isPilotStaff, makeSchedulePersonRef, personnelDisplaySettings2, shouldRestrictContinuationPicToPilots, staffNameResolver, traineeNameResolver, traineesData]);
+  }, [instructorsData, isPilotStaff, makeSchedulePersonRef, personnelDisplaySettings, shouldRestrictContinuationPicToPilots, staffNameResolver, traineeNameResolver, traineesData]);
   const personRefsMatch = (left, right) => {
     if (!left || !right) return false;
     const leftId = String(left.id || "").trim();
@@ -89517,7 +89522,7 @@ const InstructorProfileFlyout = ({
   currentUserRole: currentUserRole2 = "",
   resourceDisplayNames: resourceDisplayNames2 = DEFAULT_RESOURCE_DISPLAY_NAMES,
   instructorLabel: instructorLabel2 = "Instructor",
-  personnelDisplaySettings: personnelDisplaySettings2 = DEFAULT_PERSONNEL_DISPLAY_SETTINGS,
+  personnelDisplaySettings = DEFAULT_PERSONNEL_DISPLAY_SETTINGS,
   operationalModel = "flight_school",
   platformConfig = null,
   crewPositionTerminology,
@@ -89539,22 +89544,22 @@ const InstructorProfileFlyout = ({
   const [name, setName] = reactExports.useState(instructor.name);
   const [rank, setRank] = reactExports.useState(instructor.rank);
   const staffRankOptionGroups = reactExports.useMemo(() => {
-    const configuredGroups = getRankOptionGroupsForGroup(personnelDisplaySettings2 || void 0, "staff");
+    const configuredGroups = getRankOptionGroupsForGroup(personnelDisplaySettings || void 0, "staff");
     const configuredRanks = configuredGroups.flatMap((group) => group.options);
     const currentRank = String(rank || "").trim();
     const hasCurrentRank = Boolean(currentRank) && configuredRanks.some((option) => option.toLowerCase() === currentRank.toLowerCase());
     return currentRank && !hasCurrentRank ? [...configuredGroups, { label: "Current value", options: [currentRank] }] : configuredGroups;
-  }, [personnelDisplaySettings2, rank]);
+  }, [personnelDisplaySettings, rank]);
   const [role, setRole] = reactExports.useState(() => getEditableStaffRole(instructor.role, operationalModel, crewPositionTerminology));
   const simIpDisplayLabel = reactExports.useMemo(
-    () => getSimIpDisplayLabel(personnelDisplaySettings2),
-    [personnelDisplaySettings2]
+    () => getSimIpDisplayLabel(personnelDisplaySettings),
+    [personnelDisplaySettings]
   );
   const configuredServiceOptions = reactExports.useMemo(() => {
-    const normalised = normalisePersonnelDisplaySettings(personnelDisplaySettings2);
+    const normalised = normalisePersonnelDisplaySettings(personnelDisplaySettings);
     const configured = normalised.staffRankEquivalency.services.map((serviceOption) => String(serviceOption.name || "").trim()).filter(Boolean);
     return getConfiguredServiceOptionsWithCurrent(configured, instructor.service);
-  }, [instructor.service, personnelDisplaySettings2]);
+  }, [instructor.service, personnelDisplaySettings]);
   const displayService = reactExports.useMemo(
     () => resolveConfiguredServiceName(instructor.service, configuredServiceOptions),
     [configuredServiceOptions, instructor.service]
@@ -92462,7 +92467,7 @@ const InstructorListView = ({
   currentUserName,
   currentUserRole: currentUserRole2,
   resourceDisplayNames: resourceDisplayNames2 = DEFAULT_RESOURCE_DISPLAY_NAMES,
-  personnelDisplaySettings: personnelDisplaySettings2,
+  personnelDisplaySettings,
   instructorLabel: instructorLabel2 = "Instructor",
   operationalModel = "flight_school",
   platformConfig = null,
@@ -92553,10 +92558,10 @@ const InstructorListView = ({
   const useRoleColours = isAirCombatModel || isFixedCrewModel;
   const useOperationalStaffListBorder = isAirCombatModel || isFixedCrewModel;
   const simIpDisplayLabel = reactExports.useMemo(
-    () => getSimIpDisplayLabel(personnelDisplaySettings2),
-    [personnelDisplaySettings2]
+    () => getSimIpDisplayLabel(personnelDisplaySettings),
+    [personnelDisplaySettings]
   );
-  const contractorStaffEnabled = personnelDisplaySettings2.simIpDisplayEnabled !== false;
+  const contractorStaffEnabled = personnelDisplaySettings.simIpDisplayEnabled !== false;
   const contractorStaffGroupLabel = simIpDisplayLabel.trim() || "Contractor Staff";
   const ofiGroupLabel = reactExports.useMemo(
     () => getConfiguredQualificationLabel(staffQualificationCatalogue, "ofi", "OFI"),
@@ -92570,7 +92575,7 @@ const InstructorListView = ({
     return 2;
   };
   const comparePooledCrewFlightStaff = (a, b) => {
-    const rankCompare = getRankSortIndex(a.rank, personnelDisplaySettings2, "staff") - getRankSortIndex(b.rank, personnelDisplaySettings2, "staff");
+    const rankCompare = getRankSortIndex(a.rank, personnelDisplaySettings, "staff") - getRankSortIndex(b.rank, personnelDisplaySettings, "staff");
     if (rankCompare) return rankCompare;
     const roleCompare = getPooledCrewFlightRoleOrder(a) - getPooledCrewFlightRoleOrder(b);
     if (roleCompare) return roleCompare;
@@ -92579,8 +92584,8 @@ const InstructorListView = ({
     return collator.compare(aName.surname, bName.surname) || collator.compare(aName.given, bName.given) || collator.compare(aName.full, bName.full);
   };
   const qfis = reactExports.useMemo(() => {
-    return instructorsData.filter(isActiveStaffRecord).filter((i) => isActiveStaffListRole(i, crewPositionTerminology, isFixedCrewModel, staffQualificationCatalogue)).sort((a, b) => comparePeopleByConfiguredRank(a, b, personnelDisplaySettings2, "staff"));
-  }, [instructorsData, isFixedCrewModel, personnelDisplaySettings2, crewPositionTerminology, staffQualificationCatalogue]);
+    return instructorsData.filter(isActiveStaffRecord).filter((i) => isActiveStaffListRole(i, crewPositionTerminology, isFixedCrewModel, staffQualificationCatalogue)).sort((a, b) => comparePeopleByConfiguredRank(a, b, personnelDisplaySettings, "staff"));
+  }, [instructorsData, isFixedCrewModel, personnelDisplaySettings, crewPositionTerminology, staffQualificationCatalogue]);
   const staffRoleFilterOptions = reactExports.useMemo(() => {
     const optionMap = /* @__PURE__ */ new Map();
     qfis.forEach((instructor) => {
@@ -92633,7 +92638,7 @@ const InstructorListView = ({
       Object.values(groups).forEach((group) => group.sort(comparePooledCrewFlightStaff));
     }
     return groups;
-  }, [isAirCombatModel, isPooledCrewModel, filteredQfis, personnelDisplaySettings2, crewPositionTerminology, instructorLabel2]);
+  }, [isAirCombatModel, isPooledCrewModel, filteredQfis, personnelDisplaySettings, crewPositionTerminology, instructorLabel2]);
   const sortedFlightGroups = reactExports.useMemo(
     () => Object.keys(qfisByFlight).sort((a, b) => {
       const simpleFlightPattern = /^[A-Z]$/;
@@ -92652,9 +92657,9 @@ const InstructorListView = ({
       if (unitA !== unitB) {
         return unitA.localeCompare(unitB);
       }
-      return comparePeopleByConfiguredRank(a, b, personnelDisplaySettings2, "staff");
+      return comparePeopleByConfiguredRank(a, b, personnelDisplaySettings, "staff");
     });
-  }, [instructorsData, personnelDisplaySettings2, staffQualificationCatalogue]);
+  }, [instructorsData, personnelDisplaySettings, staffQualificationCatalogue]);
   const ofis = reactExports.useMemo(() => {
     const ofiCandidates = instructorsData.filter(isActiveStaffRecord).filter((i) => {
       const isOfi = isOfiSupportRole(i);
@@ -92666,10 +92671,10 @@ const InstructorListView = ({
       if (unitA !== unitB) {
         return unitA.localeCompare(unitB);
       }
-      return comparePeopleByConfiguredRank(a, b, personnelDisplaySettings2, "staff");
+      return comparePeopleByConfiguredRank(a, b, personnelDisplaySettings, "staff");
     });
     return sorted;
-  }, [instructorsData, personnelDisplaySettings2]);
+  }, [instructorsData, personnelDisplaySettings]);
   const otherStaff = reactExports.useMemo(() => {
     const otherStaffCandidates = instructorsData.filter(isActiveStaffRecord).filter((i) => {
       const isMainStaff = isActiveStaffListRole(i, crewPositionTerminology, isFixedCrewModel, staffQualificationCatalogue);
@@ -92684,9 +92689,9 @@ const InstructorListView = ({
       if (unitA !== unitB) {
         return unitA.localeCompare(unitB);
       }
-      return comparePeopleByConfiguredRank(a, b, personnelDisplaySettings2, "staff");
+      return comparePeopleByConfiguredRank(a, b, personnelDisplaySettings, "staff");
     });
-  }, [instructorsData, isFixedCrewModel, personnelDisplaySettings2, crewPositionTerminology, staffQualificationCatalogue]);
+  }, [instructorsData, isFixedCrewModel, personnelDisplaySettings, crewPositionTerminology, staffQualificationCatalogue]);
   const staffClassificationTrace = reactExports.useMemo(() => {
     return instructorsData.map((instructor) => {
       const activeRecord = isActiveStaffRecord(instructor);
@@ -93166,7 +93171,7 @@ const InstructorListView = ({
         currentUserName,
         currentUserRole: currentUserRole2,
         resourceDisplayNames: resourceDisplayNames2,
-        personnelDisplaySettings: personnelDisplaySettings2,
+        personnelDisplaySettings,
         instructorLabel: instructorLabel2,
         operationalModel,
         platformConfig,
@@ -93923,13 +93928,13 @@ const TraineeView = (props) => {
     )
   ] });
 };
-const TraineeListView = ({ onClose, events, traineesData, onUpdateTrainee, personnelDisplaySettings: personnelDisplaySettings2 }) => {
+const TraineeListView = ({ onClose, events, traineesData, onUpdateTrainee, personnelDisplaySettings }) => {
   const [hoveredTrainee, setHoveredTrainee] = reactExports.useState(null);
   const [flyoutPosition, setFlyoutPosition] = reactExports.useState(null);
   const [selectedTrainee, setSelectedTrainee] = reactExports.useState(null);
   const sortedTrainees = reactExports.useMemo(
-    () => [...traineesData].sort((a, b) => comparePeopleByConfiguredRank(a, b, personnelDisplaySettings2, "trainee")),
-    [traineesData, personnelDisplaySettings2]
+    () => [...traineesData].sort((a, b) => comparePeopleByConfiguredRank(a, b, personnelDisplaySettings, "trainee")),
+    [traineesData, personnelDisplaySettings]
   );
   const handleMouseEnter = (e, traineeFullName) => {
     const rect = e.currentTarget.getBoundingClientRect();
@@ -100347,7 +100352,7 @@ const StaffSearchDropdown = ({
   onSelect,
   placeholder = "Search staff...",
   disabled = false,
-  personnelDisplaySettings: personnelDisplaySettings2
+  personnelDisplaySettings
 }) => {
   const [isOpen, setIsOpen] = reactExports.useState(false);
   const [searchTerm, setSearchTerm] = reactExports.useState("");
@@ -100375,13 +100380,13 @@ const StaffSearchDropdown = ({
     }, {});
     const sortedUnits = Object.keys(grouped).sort((a, b) => a.localeCompare(b, void 0, { numeric: true, sensitivity: "base" }));
     Object.keys(grouped).forEach((unit) => {
-      grouped[unit].sort((a, b) => comparePeopleByConfiguredRank(a, b, personnelDisplaySettings2, "staff"));
+      grouped[unit].sort((a, b) => comparePeopleByConfiguredRank(a, b, personnelDisplaySettings, "staff"));
     });
     return sortedUnits.reduce((acc, unit) => {
       acc[unit] = grouped[unit];
       return acc;
     }, {});
-  }, [staff, personnelDisplaySettings2]);
+  }, [staff, personnelDisplaySettings]);
   const filteredStaffByUnit = reactExports.useMemo(() => {
     if (!searchTerm) return staffByUnit;
     const filtered = {};
@@ -106741,7 +106746,7 @@ const stripPostFlightDutyRoutePrefix = (value) => {
   const parts = text.split(/\s*:\s*/);
   return (parts.length > 1 ? parts.slice(1).join(" : ") : text).trim();
 };
-const PostFlightView = ({ event, onReturn, onSave, school, traineesData, instructorsData, masterCurrencies = [], currencyRequirements = [], resourceDisplayNames: resourceDisplayNames2 = DEFAULT_RESOURCE_DISPLAY_NAMES, aircraftNumberSettings = DEFAULT_AIRCRAFT_NUMBER_SETTINGS, personnelDisplaySettings: personnelDisplaySettings2, trainingReportTemplate, crewPositionTerminology, taxiGroundTime = 0.1 }) => {
+const PostFlightView = ({ event, onReturn, onSave, school, traineesData, instructorsData, masterCurrencies = [], currencyRequirements = [], resourceDisplayNames: resourceDisplayNames2 = DEFAULT_RESOURCE_DISPLAY_NAMES, aircraftNumberSettings = DEFAULT_AIRCRAFT_NUMBER_SETTINGS, personnelDisplaySettings, trainingReportTemplate, crewPositionTerminology, taxiGroundTime = 0.1 }) => {
   const { freezeState, checkAndWarn } = useSystemFreeze$1();
   reactExports.useMemo(() => {
     const personName = event.student || event.pilot;
@@ -106772,7 +106777,7 @@ const PostFlightView = ({ event, onReturn, onSave, school, traineesData, instruc
   );
   const missionStatusOptions = reactExports.useMemo(() => getTrainingReportCompletionResultOptions(trainingReportTemplate), [trainingReportTemplate]);
   const missionStatusFieldLabel = reactExports.useMemo(() => normaliseTrainingReportTemplate(trainingReportTemplate || null).modules.overallAssessment.fields.result, [trainingReportTemplate]);
-  const instructorDisplayLabel = reactExports.useMemo(() => String(personnelDisplaySettings2?.instructorLabel || "").trim() || "Instructor", [personnelDisplaySettings2?.instructorLabel]);
+  const instructorDisplayLabel = reactExports.useMemo(() => String(personnelDisplaySettings?.instructorLabel || "").trim() || "Instructor", [personnelDisplaySettings?.instructorLabel]);
   const getMissionStatusAuditLabel = (code) => {
     if (!code) return "Not selected";
     return missionStatusOptions.find((option) => option.code === code)?.label || code;
@@ -106888,8 +106893,8 @@ const PostFlightView = ({ event, onReturn, onSave, school, traineesData, instruc
       const roleCompare = getFixedCrewPreviewRole(a).localeCompare(getFixedCrewPreviewRole(b));
       if (roleCompare) return roleCompare;
     }
-    return comparePeopleByConfiguredRank(a, b, personnelDisplaySettings2 || void 0, "staff");
-  }), [fixedCrewPicName, fixedCrewRoster, personnelDisplaySettings2]);
+    return comparePeopleByConfiguredRank(a, b, personnelDisplaySettings || void 0, "staff");
+  }), [fixedCrewPicName, fixedCrewRoster, personnelDisplaySettings]);
   const pilotLogbookOptions = reactExports.useMemo(() => {
     const options = [];
     const addPilotOption = (name) => {
@@ -117496,7 +117501,7 @@ const DfpSidePanelTimeline = ({
   activeAircraftType,
   staffQualificationCatalogue,
   unitCallsignSettings,
-  personnelDisplaySettings: personnelDisplaySettings2 = DEFAULT_PERSONNEL_DISPLAY_SETTINGS,
+  personnelDisplaySettings = DEFAULT_PERSONNEL_DISPLAY_SETTINGS,
   scheduleZoomLevel = 1,
   isOpen = false,
   onRunNeoBuild,
@@ -118061,8 +118066,8 @@ const DfpSidePanelTimeline = ({
       sensitivity: "base"
     });
     if (unitCompare) return unitCompare;
-    return comparePeopleByConfiguredRank(left, right, personnelDisplaySettings2, "staff");
-  }, [getAssistStaffUnitLabel, personnelDisplaySettings2]);
+    return comparePeopleByConfiguredRank(left, right, personnelDisplaySettings, "staff");
+  }, [getAssistStaffUnitLabel, personnelDisplaySettings]);
   const compareAssistCrewNames = reactExports.useCallback((leftName, rightName) => {
     const leftStaff = staffByAssistName.get(leftName);
     const rightStaff = staffByAssistName.get(rightName);
@@ -120045,7 +120050,7 @@ const DfpSidePanelTimeline = ({
     });
     const groups = [];
     Array.from(staffByUnit.keys()).sort((a, b) => a.localeCompare(b)).forEach((unit) => {
-      const options = (staffByUnit.get(unit) || []).sort((left, right) => comparePeopleByConfiguredRank(left, right, personnelDisplaySettings2, "staff") || getName(left).localeCompare(getName(right))).map(getName).filter(Boolean);
+      const options = (staffByUnit.get(unit) || []).sort((left, right) => comparePeopleByConfiguredRank(left, right, personnelDisplaySettings, "staff") || getName(left).localeCompare(getName(right))).map(getName).filter(Boolean);
       if (options.length > 0) groups.push({ label: `${unit} Staff`, options: Array.from(new Set(options)) });
     });
     Array.from(traineeByUnit.keys()).sort((a, b) => a.localeCompare(b)).forEach((unit) => {
@@ -120066,7 +120071,7 @@ const DfpSidePanelTimeline = ({
     });
     if (groups.length > 0) return groups;
     return [{ label: "Staff", options: staffListNames }];
-  }, [personnelDisplaySettings2, staffListNames, staffRecords, traineeRecords]);
+  }, [personnelDisplaySettings, staffListNames, staffRecords, traineeRecords]);
   const assistPrioritySourceTabs = reactExports.useMemo(() => [
     { value: "all", label: "All Priority Sources", count: assistBuildQueueRows.length },
     { value: "tasking", label: "Directed Tasks", count: assistBuildQueueRows.filter((row) => row.group === "tasking").length },
@@ -144896,11 +144901,11 @@ const App = () => {
     BASE_AIRCRAFT_CONFIG,
     ...aircraftConfigurations.filter((definition) => definition.id !== "CONFIG-0")
   ], [aircraftConfigurations]);
-  const personnelDisplaySettings2 = reactExports.useMemo(
+  const personnelDisplaySettings = reactExports.useMemo(
     () => getPersonnelDisplaySettings(platformConfig),
     [platformConfig]
   );
-  const instructorLabel2 = personnelDisplaySettings2.instructorLabel;
+  const instructorLabel2 = personnelDisplaySettings.instructorLabel;
   const activeTrainingReportUnitCode = activeContextUnitCodes[0] || activeUnitCode;
   const trainingReportTerminology = reactExports.useMemo(
     () => getUnitTrainingReportTerminology(platformConfig, activeTrainingReportUnitCode),
@@ -145418,11 +145423,11 @@ const App = () => {
       return changed ? next : prev;
     });
   }, [applyInsertEventTimingDefaultsToCustomLmp]);
-  const simIpDisplayLabel = getSimIpDisplayLabel(personnelDisplaySettings2);
-  const contractorStaffEventEligibility = personnelDisplaySettings2.contractorStaffEventEligibility;
+  const simIpDisplayLabel = getSimIpDisplayLabel(personnelDisplaySettings);
+  const contractorStaffEventEligibility = personnelDisplaySettings.contractorStaffEventEligibility;
   const isContractorStaffRole2 = (instructor) => Boolean(instructor) && getPersonAssignedQualificationIds(instructor, activeStaffQualificationCatalogue, false).includes("contractor");
   const canContractorStaffWorkEventType = (eventType) => {
-    if (!personnelDisplaySettings2.simIpDisplayEnabled) return false;
+    if (!personnelDisplaySettings.simIpDisplayEnabled) return false;
     const key = String(eventType || "").trim().toLowerCase();
     if (key === "flight") return contractorStaffEventEligibility.flight;
     if (key === "ftd" || key === "sim" || key === "simulator") return contractorStaffEventEligibility.ftd;
@@ -146588,7 +146593,7 @@ ${"=".repeat(60)}`);
     }).map((callsign) => String(callsign.code || "").trim()).filter(Boolean);
     return Array.from(new Set(options)).sort((a, b) => a.localeCompare(b));
   }, [activeContextUnitCodeSet, formationCallsigns, knownDfpLocationAliases, school]);
-  const neoAssistStaffListNames = reactExports.useMemo(() => [...instructorsData].sort((a, b) => comparePeopleByConfiguredRank(a, b, personnelDisplaySettings2, "staff")).map((instructor) => instructor.name).filter(Boolean), [instructorsData, personnelDisplaySettings2]);
+  const neoAssistStaffListNames = reactExports.useMemo(() => [...instructorsData].sort((a, b) => comparePeopleByConfiguredRank(a, b, personnelDisplaySettings, "staff")).map((instructor) => instructor.name).filter(Boolean), [instructorsData, personnelDisplaySettings]);
   reactExports.useEffect(() => {
     const loadSettings = async () => {
       const startedAt = performance.now();
@@ -148208,8 +148213,8 @@ ${"=".repeat(60)}`);
     }
   }, [publishedSchedules, date, activeBaselineKey, baselineSchedules]);
   const staffCallsignAssignments = reactExports.useMemo(
-    () => getStaffCallsignAssignments(allInstructorsData.filter(isRecordActive), personnelDisplaySettings2, activeUnitCallsignSettings),
-    [activeUnitCallsignSettings, allInstructorsData, personnelDisplaySettings2]
+    () => getStaffCallsignAssignments(allInstructorsData.filter(isRecordActive), personnelDisplaySettings, activeUnitCallsignSettings),
+    [activeUnitCallsignSettings, allInstructorsData, personnelDisplaySettings]
   );
   const personnelData = reactExports.useMemo(() => {
     const data = /* @__PURE__ */ new Map();
@@ -151803,7 +151808,7 @@ ${error instanceof Error ? error.message : String(error)}`,
           page: "Trainee Roster",
           action: "edit",
           description: "Course leadership updated",
-          changes: `${courseName}: ${personnelDisplaySettings2.courseCommanderLabel || "Cse Commander"} ${trimmedCommander || "Not assigned"}, ${personnelDisplaySettings2.deputyCourseCommanderLabel || "Deputy Cse Commander"} ${trimmedDeputy || "Not assigned"}`
+          changes: `${courseName}: ${personnelDisplaySettings.courseCommanderLabel || "Cse Commander"} ${trimmedCommander || "Not assigned"}, ${personnelDisplaySettings.deputyCourseCommanderLabel || "Deputy Cse Commander"} ${trimmedDeputy || "Not assigned"}`
         });
         setSuccessMessage(`Course leadership updated for ${courseName}.`);
       } else {
@@ -156175,7 +156180,7 @@ The proposed event was not scheduled. Re-open the event and choose Accept Confli
       },
       crewPositionTerminology: activeCrewPositionTerminology,
       staffQualificationCatalogue: activeStaffQualificationCatalogue,
-      personnelDisplaySettings: personnelDisplaySettings2,
+      personnelDisplaySettings,
       remedialPrioritySyncTrace: window.__lastRemedialPrioritySyncTrace || [],
       remedialDataMovementTrace: window.__lastRemedialDataMovementTrace || [],
       taskProvenancePreBuild: window.__lastTaskingProvenancePreBuild || null,
@@ -161914,7 +161919,7 @@ It will not clear the published DFP.`,
             onNavigateToSettingsSection: handleNavigateToSettingsSection,
             currentUserPermission,
             canUsePlatformPermission,
-            personnelDisplaySettings: personnelDisplaySettings2,
+            personnelDisplaySettings,
             isSetupTestMode: Boolean(setupTestProfile),
             onSaveSetupTestPersonnel: handleSaveSetupTestPersonnel,
             isNeoAssistPanelOpen: showDfpSidePanel,
@@ -162199,7 +162204,7 @@ It will not clear the published DFP.`,
           if (unitA !== unitB) {
             return unitA.localeCompare(unitB);
           }
-          return comparePeopleByConfiguredRank(a, b, personnelDisplaySettings2, "staff");
+          return comparePeopleByConfiguredRank(a, b, personnelDisplaySettings, "staff");
         });
         logRoutineAppDebug("🔍 STAFF SCHEDULE - Location filtering and sorting applied");
         logRoutineAppDebug("🔍 School:", school);
@@ -162248,7 +162253,7 @@ It will not clear the published DFP.`,
           if (unitA !== unitB) {
             return unitA.localeCompare(unitB);
           }
-          return comparePeopleByConfiguredRank(a, b, personnelDisplaySettings2, "staff");
+          return comparePeopleByConfiguredRank(a, b, personnelDisplaySettings, "staff");
         });
         return /* @__PURE__ */ jsxRuntimeExports.jsx(
           NextDayInstructorScheduleView,
@@ -162455,7 +162460,7 @@ It will not clear the published DFP.`,
             currentUserName,
             currentUserRole: sessionUser?.role || authUser?.role || "",
             resourceDisplayNames: resourceDisplayNames2,
-            personnelDisplaySettings: personnelDisplaySettings2,
+            personnelDisplaySettings,
             trainingReportTerminology,
             trainingReportTemplate,
             staffQualificationCatalogue: activeStaffQualificationCatalogue,
@@ -162592,7 +162597,7 @@ It will not clear the published DFP.`,
             currentUserName,
             currentUserRole: sessionUser?.role || authUser?.role || "",
             resourceDisplayNames: resourceDisplayNames2,
-            personnelDisplaySettings: personnelDisplaySettings2,
+            personnelDisplaySettings,
             trainingReportTerminology,
             trainingReportTemplate,
             sctTerminology: getSctTerminology(platformConfig, activeUnitCode),
@@ -163682,7 +163687,7 @@ It will not clear the published DFP.`,
             currentUserName,
             currentUserRole: sessionUser?.role || authUser?.role || "",
             resourceDisplayNames: resourceDisplayNames2,
-            personnelDisplaySettings: personnelDisplaySettings2,
+            personnelDisplaySettings,
             instructorLabel: instructorLabel2,
             operationalModel: activeOperationalModel,
             platformConfig,
@@ -163871,7 +163876,7 @@ It will not clear the published DFP.`,
             currentUserName,
             currentUserRole: sessionUser?.role || authUser?.role || "",
             resourceDisplayNames: resourceDisplayNames2,
-            personnelDisplaySettings: personnelDisplaySettings2,
+            personnelDisplaySettings,
             instructorLabel: instructorLabel2,
             operationalModel: activeOperationalModel,
             crewPositionTerminology: activeCrewPositionTerminology,
@@ -163910,7 +163915,7 @@ It will not clear the published DFP.`,
               setTraineeForSct(trainee);
               setShowSctRequest(true);
             },
-            personnelDisplaySettings: personnelDisplaySettings2
+            personnelDisplaySettings
           }
         );
       case "Syllabus":
@@ -164124,7 +164129,7 @@ It will not clear the published DFP.`,
             excludedCourses,
             onUpdateExcludedCourses: handleUpdateExcludedCourses,
             resourceDisplayNames: resourceDisplayNames2,
-            personnelDisplaySettings: personnelDisplaySettings2,
+            personnelDisplaySettings,
             trainingReportDisplayName: trainingReportTemplate.displayName,
             emergencyFreezeAuthority,
             onUpdateEmergencyFreezeAuthority: (settings) => setEmergencyFreezeAuthority(normaliseEmergencyFreezeAuthoritySettings(settings, activeStaffQualificationCatalogue)),
@@ -164231,7 +164236,7 @@ It will not clear the published DFP.`,
               trainingReportUnitCode: selectedTraineeForHateSheet.unit || activeUnitCode,
               trainingReportContextUnitCode: activeUnitCode,
               formatResourceLabel: formatResourceDisplayLabel,
-              courseCommanderLabel: personnelDisplaySettings2.courseCommanderLabel || "Cse Commander",
+              courseCommanderLabel: personnelDisplaySettings.courseCommanderLabel || "Cse Commander",
               onBack: () => {
                 setEventForTrainingReport(null);
                 openTraineeProfileTab(selectedTraineeForHateSheet, "hatesheet");
@@ -165009,7 +165014,7 @@ Do you want to replace the existing entry?`,
               currencyRequirements,
               resourceDisplayNames: resourceDisplayNames2,
               aircraftNumberSettings,
-              personnelDisplaySettings: personnelDisplaySettings2,
+              personnelDisplaySettings,
               getSunTimesForAirfieldDate
             }
           );
@@ -165696,7 +165701,7 @@ Do you want to replace the existing entry?`,
                         activeAircraftType: activeRuntimeAircraftType,
                         staffQualificationCatalogue: activeStaffQualificationCatalogue,
                         unitCallsignSettings: activeUnitCallsignSettings,
-                        personnelDisplaySettings: personnelDisplaySettings2,
+                        personnelDisplaySettings,
                         scheduleZoomLevel: zoomLevel,
                         isOpen: showDfpSidePanel,
                         onRunNeoBuild: handleBuildDfp,
@@ -165892,7 +165897,7 @@ Do you want to replace the existing entry?`,
           activeUnitCodes: activeContextUnitCodes,
           staffQualificationCatalogue: activeStaffQualificationCatalogue,
           unitCallsignSettings: activeUnitCallsignSettings,
-          personnelDisplaySettings: personnelDisplaySettings2,
+          personnelDisplaySettings,
           personnelData,
           sctTerminology: getSctTerminology(platformConfig, activeUnitCode),
           sctEvents,
@@ -165925,7 +165930,7 @@ Do you want to replace the existing entry?`,
           school,
           traineesData,
           instructorsData,
-          personnelDisplaySettings: personnelDisplaySettings2,
+          personnelDisplaySettings,
           courseColors: scopedCourseColors,
           eventsForDate,
           onNavigateToHateSheet: (trainee) => {
@@ -166636,7 +166641,7 @@ Do you want to replace the existing entry?`,
         trainingReportTemplate: getUnitTrainingReportTemplate(platformConfig, airCombatTrainingReportDraft.staff.unit || activeUnitCode),
         phraseBank: getUnitTrainingReportPhraseBank(platformConfig, airCombatTrainingReportDraft.staff.unit || activeUnitCode, phraseBank),
         instructorLabel: instructorLabel2,
-        courseCommanderLabel: personnelDisplaySettings2.courseCommanderLabel || "Cse Commander",
+        courseCommanderLabel: personnelDisplaySettings.courseCommanderLabel || "Cse Commander",
         currentUserName,
         locationCode: school,
         unitCode: airCombatTrainingReportDraft.staff.unit || activeUnitCode,

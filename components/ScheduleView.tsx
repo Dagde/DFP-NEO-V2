@@ -3374,21 +3374,26 @@ const InitialSetupWizard: React.FC<{
         document.body.removeChild(link);
         URL.revokeObjectURL(url);
     };
-    const summariseWizardStaffQualificationCatalogue = () => ({
-        organisationSettingsHasCatalogue: Boolean(organisationSettings.staffQualificationCatalogue),
-        personnelInstructorLabel: personnelDisplaySettings.instructorLabel,
-        qualificationCount: wizardActiveStaffQualificationOptions.length,
-        qualifications: wizardActiveStaffQualificationOptions.map((qualification) => ({
-            id: qualification.id,
-            code: qualification.code,
-            name: qualification.name,
-            status: qualification.status || 'ACTIVE',
-            displayLabel: getStaffQualificationDisplayLabel(qualification),
-            matchesInstructor: qualificationMatches('instructor', qualification),
-            matchesIp: qualificationMatches('IP', qualification),
-            matchesQfi: qualificationMatches('QFI', qualification),
-        })),
-    });
+    const summariseWizardStaffQualificationCatalogue = () => {
+        const wizardPersonnelDisplaySettings = normalisePersonnelDisplaySettings(
+            organisationSettings.personnelDisplaySettings || organisationSettings.personnelSettings || null,
+        );
+        return {
+            organisationSettingsHasCatalogue: Boolean(organisationSettings.staffQualificationCatalogue),
+            personnelInstructorLabel: wizardPersonnelDisplaySettings.instructorLabel,
+            qualificationCount: wizardActiveStaffQualificationOptions.length,
+            qualifications: wizardActiveStaffQualificationOptions.map((qualification) => ({
+                id: qualification.id,
+                code: qualification.code,
+                name: qualification.name,
+                status: qualification.status || 'ACTIVE',
+                displayLabel: getStaffQualificationDisplayLabel(qualification),
+                matchesInstructor: qualificationMatches('instructor', qualification),
+                matchesIp: qualificationMatches('IP', qualification),
+                matchesQfi: qualificationMatches('QFI', qualification),
+            })),
+        };
+    };
     const pushWizardLmpDiag = (stage: string, details: Record<string, any> = {}) => {
         if (!isSetupTestMode || typeof window === 'undefined') return;
         const setupTestKeys = Object.keys(window.localStorage || {})
