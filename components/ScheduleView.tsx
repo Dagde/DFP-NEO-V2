@@ -13170,6 +13170,15 @@ const InitialSetupWizard: React.FC<{
             );
         }
         if (visibleStep.id === 'ground-event-scheduling') {
+            const wizardAssignedGroundEventCodes = new Set(
+                wizardGroundEventSchedulingGroups.flatMap(group => group.eventCodes)
+            );
+            const wizardUnassignedGroundEvents = wizardAvailableGroundEventSchedulingEvents.filter(event => (
+                !wizardAssignedGroundEventCodes.has(event.code)
+            ));
+            const getAssignedWizardGroundEventGroupName = (eventCode: string) => (
+                wizardGroundEventSchedulingGroups.find(group => group.eventCodes.includes(eventCode))?.name || ''
+            );
             return promptShell(
                 <p>Choose how NEO Build should handle group ground events from the LMP. Use this for items such as mass briefs, tutorials, quizzes, classroom briefs, or any other group event that should start a course before individual events can run.</p>,
                 <div className="space-y-4">
@@ -13182,7 +13191,27 @@ const InitialSetupWizard: React.FC<{
                         </div>
                     ) : (
                         <>
-                            <div className="flex justify-end">
+                            <div className="grid gap-3 md:grid-cols-[1fr_auto] md:items-start">
+                                <div className={`rounded-lg border p-3 text-xs font-semibold leading-5 ${
+                                    wizardUnassignedGroundEvents.length > 0
+                                        ? 'border-amber-300 bg-amber-50 text-amber-950'
+                                        : 'border-emerald-300 bg-emerald-50 text-emerald-950'
+                                }`}>
+                                    <p>
+                                        {wizardAssignedGroundEventCodes.size} of {wizardAvailableGroundEventSchedulingEvents.length} ground event{wizardAvailableGroundEventSchedulingEvents.length === 1 ? '' : 's'} assigned.
+                                    </p>
+                                    {wizardUnassignedGroundEvents.length > 0 ? (
+                                        <div className="mt-2 flex flex-wrap gap-1.5">
+                                            {wizardUnassignedGroundEvents.map(event => (
+                                                <span key={`unassigned-${event.code}`} className="rounded border border-amber-400 bg-white px-2 py-1 text-[11px] font-black text-amber-950">
+                                                    Missing: {event.label}
+                                                </span>
+                                            ))}
+                                        </div>
+                                    ) : (
+                                        <p className="mt-1">All detected ground events are assigned to a scheduling group.</p>
+                                    )}
+                                </div>
                                 <button type="button" className={wizardSmallButtonClass} onClick={handleAddWizardGroundEventGroup}>
                                     Add group
                                 </button>
@@ -13253,26 +13282,48 @@ const InitialSetupWizard: React.FC<{
                                                             const assignedToAnyGroup = wizardGroundEventSchedulingGroups.some(existingGroup => (
                                                                 existingGroup.eventCodes.includes(eventOption.code)
                                                             ));
+                                                            const assignedGroupName = getAssignedWizardGroundEventGroupName(eventOption.code);
                                                             return (
                                                                 <label
                                                                     key={`${group.id}-${eventOption.code}`}
-                                                                    className={`flex items-start gap-2 rounded-md border px-2 py-2 text-xs ${
+                                                                    className={`flex items-start gap-2 rounded-md border px-2 py-2 text-xs shadow-sm transition ${
                                                                         checked
-                                                                            ? 'border-blue-300 bg-blue-50 text-blue-950'
+                                                                            ? 'border-emerald-500 bg-emerald-100 text-emerald-950 ring-2 ring-emerald-300'
                                                                             : assignedToAnyGroup
-                                                                                ? 'border-slate-200 bg-white text-slate-500'
-                                                                                : 'border-amber-300 bg-amber-50 text-amber-950'
+                                                                                ? 'border-blue-300 bg-blue-50 text-blue-950'
+                                                                                : 'border-amber-400 bg-amber-50 text-amber-950 ring-1 ring-amber-200'
                                                                     }`}
                                                                 >
                                                                     <input
                                                                         type="checkbox"
-                                                                        className="mt-0.5 h-4 w-4 accent-orange-500"
+                                                                        className="mt-0.5 h-4 w-4 accent-emerald-600"
                                                                         checked={checked}
                                                                         onChange={(event) => handleWizardGroundEventGroupEventToggle(group.id, eventOption.code, event.target.checked)}
                                                                     />
-                                                                    <span>
-                                                                        <span className="block font-bold">{eventOption.label}</span>
-                                                                        <span className="block text-[10px] uppercase tracking-[0.12em] text-slate-500">{eventOption.category}</span>
+                                                                    <span className="min-w-0 flex-1">
+                                                                        <span className="flex flex-wrap items-center gap-1.5">
+                                                                            <span className="font-bold">{eventOption.label}</span>
+                                                                            {checked ? (
+                                                                                <span className="rounded-full border border-emerald-500 bg-white px-1.5 py-0.5 text-[9px] font-black uppercase tracking-[0.12em] text-emerald-800">
+                                                                                    Assigned
+                                                                                </span>
+                                                                            ) : assignedToAnyGroup ? (
+                                                                                <span className="rounded-full border border-blue-300 bg-white px-1.5 py-0.5 text-[9px] font-black uppercase tracking-[0.12em] text-blue-800">
+                                                                                    In {assignedGroupName}
+                                                                                </span>
+                                                                            ) : (
+                                                                                <span className="rounded-full border border-amber-400 bg-white px-1.5 py-0.5 text-[9px] font-black uppercase tracking-[0.12em] text-amber-900">
+                                                                                    Missing
+                                                                                </span>
+                                                                            )}
+                                                                        </span>
+                                                                        <span className={`mt-1 block text-[10px] uppercase tracking-[0.12em] ${
+                                                                            checked
+                                                                                ? 'text-emerald-800'
+                                                                                : assignedToAnyGroup
+                                                                                    ? 'text-blue-700'
+                                                                                    : 'text-amber-800'
+                                                                        }`}>{eventOption.category}</span>
                                                                     </span>
                                                                 </label>
                                                             );

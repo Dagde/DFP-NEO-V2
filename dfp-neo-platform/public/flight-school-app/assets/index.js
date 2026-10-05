@@ -43466,12 +43466,33 @@ const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, lo
       );
     }
     if (visibleStep.id === "ground-event-scheduling") {
+      const wizardAssignedGroundEventCodes = new Set(
+        wizardGroundEventSchedulingGroups.flatMap((group) => group.eventCodes)
+      );
+      const wizardUnassignedGroundEvents = wizardAvailableGroundEventSchedulingEvents.filter((event) => !wizardAssignedGroundEventCodes.has(event.code));
+      const getAssignedWizardGroundEventGroupName = (eventCode2) => wizardGroundEventSchedulingGroups.find((group) => group.eventCodes.includes(eventCode2))?.name || "";
       return promptShell(
         /* @__PURE__ */ jsxRuntimeExports.jsx("p", { children: "Choose how NEO Build should handle group ground events from the LMP. Use this for items such as mass briefs, tutorials, quizzes, classroom briefs, or any other group event that should start a course before individual events can run." }),
         /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-4", children: [
           /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "rounded-lg border border-blue-200 bg-blue-50 p-3 text-xs font-semibold leading-5 text-blue-950", children: "Manual means NEO Build will not place those events automatically. Suggest means NEO Build can alert the scheduler. Automatic means NEO Build may place the event during the selected windows." }),
           wizardAvailableGroundEventSchedulingEvents.length === 0 ? /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "rounded-lg border border-amber-200 bg-amber-50 p-3 text-xs font-semibold leading-5 text-amber-950", children: "I cannot see any LMP ground events yet. Upload or commit the LMP first, then return to this step." }) : /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
-            /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex justify-end", children: /* @__PURE__ */ jsxRuntimeExports.jsx("button", { type: "button", className: wizardSmallButtonClass, onClick: handleAddWizardGroundEventGroup, children: "Add group" }) }),
+            /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid gap-3 md:grid-cols-[1fr_auto] md:items-start", children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: `rounded-lg border p-3 text-xs font-semibold leading-5 ${wizardUnassignedGroundEvents.length > 0 ? "border-amber-300 bg-amber-50 text-amber-950" : "border-emerald-300 bg-emerald-50 text-emerald-950"}`, children: [
+                /* @__PURE__ */ jsxRuntimeExports.jsxs("p", { children: [
+                  wizardAssignedGroundEventCodes.size,
+                  " of ",
+                  wizardAvailableGroundEventSchedulingEvents.length,
+                  " ground event",
+                  wizardAvailableGroundEventSchedulingEvents.length === 1 ? "" : "s",
+                  " assigned."
+                ] }),
+                wizardUnassignedGroundEvents.length > 0 ? /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-2 flex flex-wrap gap-1.5", children: wizardUnassignedGroundEvents.map((event) => /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "rounded border border-amber-400 bg-white px-2 py-1 text-[11px] font-black text-amber-950", children: [
+                  "Missing: ",
+                  event.label
+                ] }, `unassigned-${event.code}`)) }) : /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-1", children: "All detected ground events are assigned to a scheduling group." })
+              ] }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx("button", { type: "button", className: wizardSmallButtonClass, onClick: handleAddWizardGroundEventGroup, children: "Add group" })
+            ] }),
             /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "space-y-3", children: wizardGroundEventSchedulingGroups.map((group) => {
               const assignedEvents = wizardAvailableGroundEventSchedulingEvents.filter((event) => group.eventCodes.includes(event.code));
               return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded-lg border border-slate-300 bg-white p-3 shadow-sm", children: [
@@ -43536,23 +43557,30 @@ const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, lo
                   /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-2 max-h-48 overflow-y-auto rounded-lg border border-slate-200 bg-slate-50 p-2", children: /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "grid gap-2 sm:grid-cols-2 xl:grid-cols-3", children: wizardAvailableGroundEventSchedulingEvents.map((eventOption) => {
                     const checked = group.eventCodes.includes(eventOption.code);
                     const assignedToAnyGroup = wizardGroundEventSchedulingGroups.some((existingGroup) => existingGroup.eventCodes.includes(eventOption.code));
+                    const assignedGroupName = getAssignedWizardGroundEventGroupName(eventOption.code);
                     return /* @__PURE__ */ jsxRuntimeExports.jsxs(
                       "label",
                       {
-                        className: `flex items-start gap-2 rounded-md border px-2 py-2 text-xs ${checked ? "border-blue-300 bg-blue-50 text-blue-950" : assignedToAnyGroup ? "border-slate-200 bg-white text-slate-500" : "border-amber-300 bg-amber-50 text-amber-950"}`,
+                        className: `flex items-start gap-2 rounded-md border px-2 py-2 text-xs shadow-sm transition ${checked ? "border-emerald-500 bg-emerald-100 text-emerald-950 ring-2 ring-emerald-300" : assignedToAnyGroup ? "border-blue-300 bg-blue-50 text-blue-950" : "border-amber-400 bg-amber-50 text-amber-950 ring-1 ring-amber-200"}`,
                         children: [
                           /* @__PURE__ */ jsxRuntimeExports.jsx(
                             "input",
                             {
                               type: "checkbox",
-                              className: "mt-0.5 h-4 w-4 accent-orange-500",
+                              className: "mt-0.5 h-4 w-4 accent-emerald-600",
                               checked,
                               onChange: (event) => handleWizardGroundEventGroupEventToggle(group.id, eventOption.code, event.target.checked)
                             }
                           ),
-                          /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { children: [
-                            /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "block font-bold", children: eventOption.label }),
-                            /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "block text-[10px] uppercase tracking-[0.12em] text-slate-500", children: eventOption.category })
+                          /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "min-w-0 flex-1", children: [
+                            /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "flex flex-wrap items-center gap-1.5", children: [
+                              /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "font-bold", children: eventOption.label }),
+                              checked ? /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "rounded-full border border-emerald-500 bg-white px-1.5 py-0.5 text-[9px] font-black uppercase tracking-[0.12em] text-emerald-800", children: "Assigned" }) : assignedToAnyGroup ? /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "rounded-full border border-blue-300 bg-white px-1.5 py-0.5 text-[9px] font-black uppercase tracking-[0.12em] text-blue-800", children: [
+                                "In ",
+                                assignedGroupName
+                              ] }) : /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "rounded-full border border-amber-400 bg-white px-1.5 py-0.5 text-[9px] font-black uppercase tracking-[0.12em] text-amber-900", children: "Missing" })
+                            ] }),
+                            /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: `mt-1 block text-[10px] uppercase tracking-[0.12em] ${checked ? "text-emerald-800" : assignedToAnyGroup ? "text-blue-700" : "text-amber-800"}`, children: eventOption.category })
                           ] })
                         ]
                       },
