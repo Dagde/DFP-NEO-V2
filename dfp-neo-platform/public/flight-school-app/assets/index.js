@@ -4761,7 +4761,17 @@ const normaliseStaffQualificationCatalogue = (source) => {
 };
 const normaliseQualificationToken = (value) => String(value || "").trim().toLowerCase().replace(/[^a-z0-9]+/g, "");
 const QUALIFICATION_ALIASES_BY_ID = {
-  qfi: ["QFI", "Instructor", "Flight Instructor", "Qualified Flying Instructor"]
+  qfi: [
+    "QFI",
+    "Instructor",
+    "Instructor Pilot",
+    "IP",
+    "FI",
+    "Flying Instructor",
+    "Flight Instructor",
+    "QFI Flying Instructor",
+    "Qualified Flying Instructor"
+  ]
 };
 const getStaffQualificationDisplayLabel = (definition) => {
   if (!definition) return "";

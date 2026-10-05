@@ -216,7 +216,17 @@ export const normaliseQualificationToken = (value: unknown): string => (
 );
 
 const QUALIFICATION_ALIASES_BY_ID: Record<string, string[]> = {
-  qfi: ['QFI', 'Instructor', 'Flight Instructor', 'Qualified Flying Instructor'],
+  qfi: [
+    'QFI',
+    'Instructor',
+    'Instructor Pilot',
+    'IP',
+    'FI',
+    'Flying Instructor',
+    'Flight Instructor',
+    'QFI Flying Instructor',
+    'Qualified Flying Instructor',
+  ],
 };
 
 export const getStaffQualificationDisplayLabel = (
