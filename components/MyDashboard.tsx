@@ -8,6 +8,7 @@ import {
 } from '../utils/crewPositionTerminology';
 import { DEFAULT_SCT_TERMINOLOGY, normaliseSctTerminology, type SctTerminology } from '../utils/sctTerminology';
 import {
+    getStaffQualificationDisplayLabel,
     getPersonAssignedQualificationIds,
     normaliseStaffQualificationCatalogue,
     type StaffQualificationCatalogue,
@@ -1018,7 +1019,7 @@ const MyDashboard: React.FC<MyDashboardProps> = ({
     const qualificationLabelById = useMemo(() => new Map(
         normalisedStaffQualificationCatalogue.qualifications
             .filter(qualification => String(qualification.status || 'ACTIVE').toUpperCase() !== 'INACTIVE')
-            .map(qualification => [qualification.id, qualification.code || qualification.name || qualification.id]),
+            .map(qualification => [qualification.id, getStaffQualificationDisplayLabel(qualification) || qualification.id]),
     ), [normalisedStaffQualificationCatalogue]);
     const formatQualificationLabels = (qualificationIds: string[]): string => (
         qualificationIds
@@ -1493,7 +1494,7 @@ const MyDashboard: React.FC<MyDashboardProps> = ({
             .filter(qualification => String(qualification.status || 'ACTIVE').toUpperCase() !== 'INACTIVE')
             .map(qualification => ({
                 id: qualification.id,
-                label: qualification.code || qualification.name || qualification.id,
+                label: getStaffQualificationDisplayLabel(qualification) || qualification.id,
             }))
             .sort((a, b) => a.label.localeCompare(b.label))
     ), [normalisedStaffQualificationCatalogue]);

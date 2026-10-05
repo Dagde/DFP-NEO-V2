@@ -13,7 +13,7 @@ export interface ResourceDisplayNames {
 export const DEFAULT_RESOURCE_DISPLAY_NAMES: ResourceDisplayNames = {
   aircraft: 'Aircraft',
   ftd: 'Simulator',
-  cpt: 'CPT',
+  cpt: 'Procedural Trainer',
   dutySupervisor: 'Duty Supervisor',
   dutySupervisorShort: 'Duty Sup',
   towerDutyInstructor: 'Tower Duty Instructor',

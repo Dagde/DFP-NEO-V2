@@ -50,6 +50,7 @@ import {
   type PlatformConfig,
 } from '../utils/platformConfigService';
 import {
+  getStaffQualificationDisplayLabel,
   getQualificationsForOperationalModel,
   normaliseAssignedQualificationIds,
   normaliseStaffQualificationCatalogue,
@@ -1474,7 +1475,7 @@ const TraineeProfileFlyout: React.FC<TraineeProfileFlyoutProps> = ({
         assignedQualifications
             .map(id => activeQualificationOptions.find(qualification => qualificationMatches(id, qualification)))
             .filter((qualification): qualification is StaffQualificationDefinition => Boolean(qualification))
-            .map(qualification => qualification.code || qualification.name)
+            .map(getStaffQualificationDisplayLabel)
     ), [activeQualificationOptions, assignedQualifications]);
     const assignedPermissionProfileSummary = useMemo(() => {
         const linkedPlatformUserIdentifiers = getPlatformUserIdentityValuesForPerson(platformConfig, trainee as any, 'trainee');
@@ -1973,7 +1974,7 @@ const TraineeProfileFlyout: React.FC<TraineeProfileFlyoutProps> = ({
             const previousQualifications = normaliseAssignedQualificationIds(trainee.preferences?.qualifications || [], normalisedQualificationCatalogue);
             if (JSON.stringify(previousQualifications) !== JSON.stringify(assignedQualifications)) {
                 const labelsFor = (ids: string[]) => ids
-                    .map(id => activeQualificationOptions.find(definition => qualificationMatches(id, definition))?.code || id)
+                    .map(id => getStaffQualificationDisplayLabel(activeQualificationOptions.find(definition => qualificationMatches(id, definition))) || id)
                     .join(', ') || 'None';
                 changes.push(`Qualifications: ${labelsFor(previousQualifications)} → ${labelsFor(assignedQualifications)}`);
             }
@@ -3372,7 +3373,7 @@ const TraineeProfileFlyout: React.FC<TraineeProfileFlyoutProps> = ({
                                       onChange={e => handleQualificationChange(qualification.id, e.target.checked)}
                                       className="h-3 w-3 accent-sky-500"
                                     />
-                                    <span className="truncate" title={qualification.name}>{qualification.code || qualification.name}</span>
+                                    <span className="truncate" title={getStaffQualificationDisplayLabel(qualification)}>{getStaffQualificationDisplayLabel(qualification)}</span>
                                   </label>
                                 ))}
                               </div>

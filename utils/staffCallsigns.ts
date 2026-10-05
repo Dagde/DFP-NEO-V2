@@ -45,6 +45,8 @@ const matchesPermanentCallsignRolePolicy = (person: Instructor, allowedRoles: st
   addToken(category);
   addToken(crew);
   if (person.isQFI) {
+    addToken('Instructor');
+    addToken('Flight Instructor');
     addToken('QFI');
     addToken('Qualified Flying Instructor');
   }

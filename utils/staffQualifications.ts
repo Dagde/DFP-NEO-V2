@@ -105,8 +105,8 @@ export const DEFAULT_STAFF_QUALIFICATIONS: StaffQualificationCatalogue = {
     },
     {
       id: 'qfi',
-      name: 'QFI',
-      code: 'QFI',
+      name: 'Instructor',
+      code: 'Instructor',
       operationalModels: ALL_OPERATIONAL_MODEL_CODES,
       roleRestrictions: [],
       status: 'ACTIVE',
@@ -214,16 +214,42 @@ export const normaliseQualificationToken = (value: unknown): string => (
     .replace(/[^a-z0-9]+/g, '')
 );
 
+const QUALIFICATION_ALIASES_BY_ID: Record<string, string[]> = {
+  qfi: ['QFI', 'Instructor', 'Flight Instructor', 'Qualified Flying Instructor'],
+};
+
+export const getStaffQualificationDisplayLabel = (
+  definition?: StaffQualificationDefinition | null,
+): string => {
+  if (!definition) return '';
+  const idToken = normaliseQualificationToken(definition.id);
+  const code = String(definition.code || '').trim();
+  const name = String(definition.name || '').trim();
+
+  if (idToken === 'qfi') {
+    if (code && normaliseQualificationToken(code) !== 'qfi') return code;
+    if (name && normaliseQualificationToken(name) !== 'qfi') return name;
+    return 'Instructor';
+  }
+
+  if (code && name && normaliseQualificationToken(code) !== normaliseQualificationToken(name)) {
+    return `${code} - ${name}`;
+  }
+  return code || name || definition.id;
+};
+
 export const qualificationMatches = (
   assignedValue: unknown,
   definition: StaffQualificationDefinition,
 ): boolean => {
   const token = normaliseQualificationToken(assignedValue);
   if (!token) return false;
+  const aliases = QUALIFICATION_ALIASES_BY_ID[normaliseQualificationToken(definition.id)] || [];
   return [
     definition.id,
     definition.code,
     definition.name,
+    ...aliases,
   ].some(value => normaliseQualificationToken(value) === token);
 };
 
@@ -232,12 +258,9 @@ export const getInstructorQualificationDefinitions = (
 ): StaffQualificationDefinition[] => (
   normaliseStaffQualificationCatalogue(catalogue).qualifications.filter(qualification => {
     if (String(qualification.status || 'ACTIVE').toUpperCase() === 'INACTIVE') return false;
-    const tokens = [
-      qualification.id,
-      qualification.code,
-      qualification.name,
-    ].map(normaliseQualificationToken);
-    return tokens.includes('qfi') || tokens.includes('instructor');
+    return qualificationMatches('qfi', qualification)
+      || qualificationMatches('instructor', qualification)
+      || qualificationMatches('flight instructor', qualification);
   })
 );
 

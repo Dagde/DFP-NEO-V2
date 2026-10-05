@@ -5,7 +5,10 @@ import {
     normaliseEmergencyFreezeAuthoritySettings,
     type EmergencyFreezeAuthoritySettings,
 } from '../utils/emergencyFreezeAuthority';
-import type { StaffQualificationDefinition } from '../utils/staffQualifications';
+import {
+    getStaffQualificationDisplayLabel,
+    type StaffQualificationDefinition,
+} from '../utils/staffQualifications';
 import { verifyCurrentUserPassword } from '../utils/passwordVerification';
 import { showDarkAlert, showDarkPrompt } from './DarkMessageModal';
 import {
@@ -241,7 +244,7 @@ const EmergencyPage: React.FC<EmergencyPageProps> = ({
 
     const getQualificationLabel = (qualificationId: string): string => {
         const match = qualificationOptions.find(qualification => qualification.id === qualificationId);
-        return match?.code || match?.name || qualificationId;
+        return getStaffQualificationDisplayLabel(match) || qualificationId;
     };
 
     const renderSelectedQualifications = (qualificationIds: string[]) => (
@@ -358,7 +361,7 @@ const EmergencyPage: React.FC<EmergencyPageProps> = ({
                                             onChange={event => handleAuthorityChange(qualification.id, event.target.checked)}
                                             className="h-4 w-4 rounded border-gray-500 bg-gray-800 text-sky-500 focus:ring-sky-500"
                                         />
-                                        <span>{qualification.code || qualification.name}</span>
+                                        <span>{getStaffQualificationDisplayLabel(qualification)}</span>
                                     </label>
                                 ))}
                             </div>

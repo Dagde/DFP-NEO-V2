@@ -28,6 +28,7 @@ import {
 } from '../utils/personnelDisplaySettings';
 import { formatPersonDisplayName } from '../utils/personIdentity';
 import {
+    getStaffQualificationDisplayLabel,
     getInstructorQualificationDefinitions,
     normaliseAssignedQualificationIds,
     normaliseQualificationToken,
@@ -8014,10 +8015,7 @@ const InitialSetupWizard: React.FC<{
     };
 
     const getWizardStaffQualificationOptionLabel = (qualification: StaffQualificationDefinition): string => {
-        const code = String(qualification.code || '').trim();
-        const name = String(qualification.name || '').trim();
-        if (code && name && normaliseQualificationToken(code) !== normaliseQualificationToken(name)) return `${code} - ${name}`;
-        return code || name || qualification.id;
+        return getStaffQualificationDisplayLabel(qualification);
     };
 
     const findWizardStaffQualification = (value: unknown): StaffQualificationDefinition | undefined => (
@@ -8078,7 +8076,7 @@ const InitialSetupWizard: React.FC<{
                 return;
             }
             if (!ids.includes(match.id)) ids.push(match.id);
-            const label = match.code || match.name || match.id;
+            const label = getStaffQualificationDisplayLabel(match) || match.id;
             if (label && !labels.includes(label)) labels.push(label);
         });
         return { labels, ids, skipped, unresolved, hasInput: tokens.length > 0 };
@@ -8123,7 +8121,7 @@ const InitialSetupWizard: React.FC<{
 
     const normaliseWizardTemplateEventType = (value: string): SyllabusItemDetail['type'] => {
         const clean = String(value || '').trim().toLowerCase();
-        if (clean.includes('procedural trainer') || clean.includes('procedural') || clean.includes('trainer')) return 'FTD';
+        if (clean.includes('procedural trainer') || clean.includes('procedural') || clean.includes('trainer')) return 'CPT';
         if (clean.includes('ftd') || clean.includes('sim')) return 'FTD';
         if (clean.includes('academic')) return 'Academics';
         if (clean.includes('ground')) return 'Ground School';
@@ -9773,7 +9771,12 @@ const InitialSetupWizard: React.FC<{
                         <div className="grid min-w-0 gap-2 md:grid-cols-2 xl:grid-cols-3 xl:items-end">
                             {wizardField('Event name', row.name || '', (value) => updateRow(index, 'name', value), undefined, 'Annual Instrument Check')}
                             {wizardField('Short title', row.shortTitle || '', (value) => updateRow(index, 'shortTitle', value.toUpperCase()), undefined, 'INST')}
-                            {wizardField('Resource type', row.resourceType === 'FTD' ? 'Simulator' : row.resourceType || 'Flight', (value) => updateRow(index, 'resourceType', value === 'Simulator' ? 'FTD' : value), ['Flight', 'Simulator', 'CPT', 'Ground'])}
+                            {wizardField(
+                                'Resource type',
+                                row.resourceType === 'FTD' ? 'Simulator' : row.resourceType === 'CPT' ? 'Procedural Trainer' : row.resourceType || 'Flight',
+                                (value) => updateRow(index, 'resourceType', value === 'Simulator' ? 'FTD' : value === 'Procedural Trainer' ? 'CPT' : value),
+                                ['Flight', 'Simulator', 'Procedural Trainer', 'Ground'],
+                            )}
                             {wizardField('Duration', row.duration || '90', (value) => updateRow(index, 'duration', value), undefined, '90')}
                             {wizardField('Pre-flight', row.preFlight || '90', (value) => updateRow(index, 'preFlight', value), undefined, '90')}
                             {wizardField('Post-flight', row.postFlight || '60', (value) => updateRow(index, 'postFlight', value), undefined, '60')}
@@ -16100,7 +16103,7 @@ const ScheduleView: React.FC<ScheduleViewProps> = ({
                             {emptyDfpWelcomeVariant === 'select-context'
                                 ? 'Click the highlighted tab on the left to start setting up your organisation with the Setup Wizard.'
                                 : emptyDfpWelcomeVariant === 'empty-resources'
-                                    ? 'This DFP has no aircraft, standby, simulator, CPT or ground rows yet. Add the resource rows first, then the schedule will appear here.'
+                                    ? 'This DFP has no aircraft, standby, simulator, procedural trainer or ground rows yet. Add the resource rows first, then the schedule will appear here.'
                                 : 'This DFP is open and ready. When tiles are built or added for this date, they will appear here.'}
                         </p>
                     </div>

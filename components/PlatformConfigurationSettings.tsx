@@ -82,6 +82,7 @@ import {
 } from '../utils/crewCompositionProfiles';
 import {
   DEFAULT_STAFF_QUALIFICATIONS,
+  getStaffQualificationDisplayLabel,
   normaliseStaffQualificationCatalogue,
   normaliseQualificationToken,
   type StaffQualificationDefinition,
@@ -3305,7 +3306,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
       && (tokens.includes('qfi') || tokens.includes('instructor'));
   });
   const linkedInstructorQualificationLabel = linkedInstructorQualification
-    ? (linkedInstructorQualification.code || linkedInstructorQualification.name)
+    ? getStaffQualificationDisplayLabel(linkedInstructorQualification)
     : 'No linked instructor qualification configured';
   const linkedInstructorQualificationInputId = linkedInstructorQualification
     ? `qualification-name-${String(linkedInstructorQualification.id || '').replace(/[^a-zA-Z0-9_-]/g, '-')}`
@@ -5917,7 +5918,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
               aircraftNumberPrefixes: [],
               aircraftNumberDefaultPrefix: '',
               ftdLabel: 'Simulator',
-              cptLabel: 'CPT',
+              cptLabel: 'Procedural Trainer',
               aircraft: 0,
               ftd: 0,
               cpt: 0,
@@ -11307,7 +11308,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
                       <div className="grid gap-3 md:grid-cols-3">
                         <DraftField label="Aircraft Row Label" value={pool.settings?.aircraftLabel || (displayedResourcePoolAircraftTypeCode ? getAircraftTypeDisplayLabel(displayedResourcePoolAircraftTypeCode) : '')} disabled={!canEditResourcePools} onCommit={(value) => updateResourcePoolSettings(index, { aircraftLabel: value })} />
                         <DraftField label="Simulator Row Label" value={String(pool.settings?.ftdLabel || '').trim().toUpperCase() === 'FTD' ? 'Simulator' : pool.settings?.ftdLabel || 'Simulator'} disabled={!canEditResourcePools} onCommit={(value) => updateResourcePoolSettings(index, { ftdLabel: value })} />
-                        <DraftField label="Procedural Trainer Row Label" value={pool.settings?.cptLabel || 'CPT'} disabled={!canEditResourcePools} onCommit={(value) => updateResourcePoolSettings(index, { cptLabel: value })} />
+                        <DraftField label="Procedural Trainer Row Label" value={pool.settings?.cptLabel || 'Procedural Trainer'} disabled={!canEditResourcePools} onCommit={(value) => updateResourcePoolSettings(index, { cptLabel: value })} />
                         <ClassroomNamesField
                           value={pool.settings?.classrooms ?? pool.settings?.classroomNames ?? pool.settings?.groundClassrooms}
                           rowCount={editableDfpRows.ground}
@@ -13299,7 +13300,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
                       <div className="grid gap-3 lg:grid-cols-2">
                         <DraftField label="Aircraft Row Label" value={pool.settings?.aircraftLabel || (aircraftCode ? getAircraftTypeDisplayLabel(aircraftCode) : '')} disabled={!canEditResourcePools} onCommit={(value) => updateResourcePoolSettings(index, { aircraftLabel: value })} info="The label shown for aircraft rows. Example: Aircraft, Jet, Helicopter." />
                         <DraftField label="Simulator Row Label" value={String(pool.settings?.ftdLabel || '').trim().toUpperCase() === 'FTD' ? 'Simulator' : pool.settings?.ftdLabel || 'Simulator'} disabled={!canEditResourcePools} onCommit={(value) => updateResourcePoolSettings(index, { ftdLabel: value })} info="The label shown for simulator rows. Example: Simulator." />
-                        <DraftField label="Procedural Trainer Row Label" value={pool.settings?.cptLabel || 'CPT'} disabled={!canEditResourcePools} onCommit={(value) => updateResourcePoolSettings(index, { cptLabel: value })} info="The label shown for procedural trainer rows. Example: Procedural Trainer, CPT." />
+                        <DraftField label="Procedural Trainer Row Label" value={pool.settings?.cptLabel || 'Procedural Trainer'} disabled={!canEditResourcePools} onCommit={(value) => updateResourcePoolSettings(index, { cptLabel: value })} info="The label shown for procedural trainer rows. Example: Procedural Trainer." />
                         <ClassroomNamesField
                           value={pool.settings?.classrooms ?? pool.settings?.classroomNames ?? pool.settings?.groundClassrooms}
                           rowCount={Number(pool.settings?.ground ?? pool.ground ?? 0)}

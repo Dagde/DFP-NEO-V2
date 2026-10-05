@@ -4668,8 +4668,8 @@ const DEFAULT_STAFF_QUALIFICATIONS = {
     },
     {
       id: "qfi",
-      name: "QFI",
-      code: "QFI",
+      name: "Instructor",
+      code: "Instructor",
       operationalModels: ALL_OPERATIONAL_MODEL_CODES$1,
       roleRestrictions: [],
       status: "ACTIVE"
@@ -4750,23 +4750,38 @@ const normaliseStaffQualificationCatalogue = (source) => {
   return { qualifications: Array.from(byKey.values()), deletedDefaultIds };
 };
 const normaliseQualificationToken = (value) => String(value || "").trim().toLowerCase().replace(/[^a-z0-9]+/g, "");
+const QUALIFICATION_ALIASES_BY_ID = {
+  qfi: ["QFI", "Instructor", "Flight Instructor", "Qualified Flying Instructor"]
+};
+const getStaffQualificationDisplayLabel = (definition) => {
+  if (!definition) return "";
+  const idToken = normaliseQualificationToken(definition.id);
+  const code = String(definition.code || "").trim();
+  const name = String(definition.name || "").trim();
+  if (idToken === "qfi") {
+    if (code && normaliseQualificationToken(code) !== "qfi") return code;
+    if (name && normaliseQualificationToken(name) !== "qfi") return name;
+    return "Instructor";
+  }
+  if (code && name && normaliseQualificationToken(code) !== normaliseQualificationToken(name)) {
+    return `${code} - ${name}`;
+  }
+  return code || name || definition.id;
+};
 const qualificationMatches = (assignedValue, definition) => {
   const token = normaliseQualificationToken(assignedValue);
   if (!token) return false;
+  const aliases = QUALIFICATION_ALIASES_BY_ID[normaliseQualificationToken(definition.id)] || [];
   return [
     definition.id,
     definition.code,
-    definition.name
+    definition.name,
+    ...aliases
   ].some((value) => normaliseQualificationToken(value) === token);
 };
 const getInstructorQualificationDefinitions = (catalogue) => normaliseStaffQualificationCatalogue(catalogue).qualifications.filter((qualification) => {
   if (String(qualification.status || "ACTIVE").toUpperCase() === "INACTIVE") return false;
-  const tokens = [
-    qualification.id,
-    qualification.code,
-    qualification.name
-  ].map(normaliseQualificationToken);
-  return tokens.includes("qfi") || tokens.includes("instructor");
+  return qualificationMatches("qfi", qualification) || qualificationMatches("instructor", qualification) || qualificationMatches("flight instructor", qualification);
 });
 const normaliseAssignedQualificationIds = (source, catalogue, preserveUnknown = true) => {
   const values = normaliseStringList$1(source);
@@ -5306,7 +5321,7 @@ const areAllLmpPrerequisitesMet = (item, completedEventIds) => getAllLmpPrerequi
 const DEFAULT_RESOURCE_DISPLAY_NAMES = {
   aircraft: "Aircraft",
   ftd: "Simulator",
-  cpt: "CPT",
+  cpt: "Procedural Trainer",
   dutySupervisor: "Duty Supervisor",
   dutySupervisorShort: "Duty Sup",
   towerDutyInstructor: "Tower Duty Instructor",
@@ -7925,6 +7940,8 @@ const matchesPermanentCallsignRolePolicy = (person, allowedRoles = []) => {
   addToken(category);
   addToken(crew);
   if (person.isQFI) {
+    addToken("Instructor");
+    addToken("Flight Instructor");
     addToken("QFI");
     addToken("Qualified Flying Instructor");
   }
@@ -15583,7 +15600,7 @@ const EmergencyPage = ({
   };
   const getQualificationLabel = (qualificationId) => {
     const match = qualificationOptions.find((qualification) => qualification.id === qualificationId);
-    return match?.code || match?.name || qualificationId;
+    return getStaffQualificationDisplayLabel(match) || qualificationId;
   };
   const renderSelectedQualifications = (qualificationIds) => qualificationIds.length > 0 ? /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex flex-wrap gap-2", children: qualificationIds.map((id) => /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "rounded-md border border-sky-500/50 bg-sky-100 px-2.5 py-1 text-xs font-bold text-sky-900", children: getQualificationLabel(id) }, id)) }) : /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-sm text-gray-500", children: "No qualifications selected." });
   return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "p-6 space-y-6", children: [
@@ -15654,7 +15671,7 @@ const EmergencyPage = ({
               className: "h-4 w-4 rounded border-gray-500 bg-gray-800 text-sky-500 focus:ring-sky-500"
             }
           ),
-          /* @__PURE__ */ jsxRuntimeExports.jsx("span", { children: qualification.code || qualification.name })
+          /* @__PURE__ */ jsxRuntimeExports.jsx("span", { children: getStaffQualificationDisplayLabel(qualification) })
         ] }, `emergency-authority-${qualification.id}`)) })
       ] }) : /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
         /* @__PURE__ */ jsxRuntimeExports.jsx("h4", { className: "mb-2 text-xs font-semibold uppercase tracking-widest text-gray-400", children: "Can Activate and Deactivate" }),
@@ -21018,7 +21035,7 @@ const PlatformConfigurationSettings = ({
     ].map(normaliseQualificationToken);
     return String(qualification.status || "ACTIVE").toUpperCase() !== "INACTIVE" && (tokens.includes("qfi") || tokens.includes("instructor"));
   });
-  const linkedInstructorQualificationLabel = linkedInstructorQualification ? linkedInstructorQualification.code || linkedInstructorQualification.name : "No linked instructor qualification configured";
+  const linkedInstructorQualificationLabel = linkedInstructorQualification ? getStaffQualificationDisplayLabel(linkedInstructorQualification) : "No linked instructor qualification configured";
   const linkedInstructorQualificationInputId = linkedInstructorQualification ? `qualification-name-${String(linkedInstructorQualification.id || "").replace(/[^a-zA-Z0-9_-]/g, "-")}` : "";
   const unitCallsignSettings = normaliseUnitCallsignSettings(
     primaryOrganisationSettings.unitCallsignSettings || null
@@ -23045,7 +23062,7 @@ This removes the aircraft type from Settings${affectedText ? ` and clears it fro
               aircraftNumberPrefixes: [],
               aircraftNumberDefaultPrefix: "",
               ftdLabel: "Simulator",
-              cptLabel: "CPT",
+              cptLabel: "Procedural Trainer",
               aircraft: 0,
               ftd: 0,
               cpt: 0,
@@ -27705,7 +27722,7 @@ This removes them from DFP Resource Rows. Press Save in this section to apply th
                         /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid gap-3 md:grid-cols-3", children: [
                           /* @__PURE__ */ jsxRuntimeExports.jsx(DraftField, { label: "Aircraft Row Label", value: pool.settings?.aircraftLabel || (displayedResourcePoolAircraftTypeCode ? getAircraftTypeDisplayLabel(displayedResourcePoolAircraftTypeCode) : ""), disabled: !canEditResourcePools, onCommit: (value) => updateResourcePoolSettings(index, { aircraftLabel: value }) }),
                           /* @__PURE__ */ jsxRuntimeExports.jsx(DraftField, { label: "Simulator Row Label", value: String(pool.settings?.ftdLabel || "").trim().toUpperCase() === "FTD" ? "Simulator" : pool.settings?.ftdLabel || "Simulator", disabled: !canEditResourcePools, onCommit: (value) => updateResourcePoolSettings(index, { ftdLabel: value }) }),
-                          /* @__PURE__ */ jsxRuntimeExports.jsx(DraftField, { label: "Procedural Trainer Row Label", value: pool.settings?.cptLabel || "CPT", disabled: !canEditResourcePools, onCommit: (value) => updateResourcePoolSettings(index, { cptLabel: value }) }),
+                          /* @__PURE__ */ jsxRuntimeExports.jsx(DraftField, { label: "Procedural Trainer Row Label", value: pool.settings?.cptLabel || "Procedural Trainer", disabled: !canEditResourcePools, onCommit: (value) => updateResourcePoolSettings(index, { cptLabel: value }) }),
                           /* @__PURE__ */ jsxRuntimeExports.jsx(
                             ClassroomNamesField,
                             {
@@ -29681,7 +29698,7 @@ This removes them from DFP Resource Rows. Press Save in this section to apply th
                     /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid gap-3 lg:grid-cols-2", children: [
                       /* @__PURE__ */ jsxRuntimeExports.jsx(DraftField, { label: "Aircraft Row Label", value: pool.settings?.aircraftLabel || (aircraftCode ? getAircraftTypeDisplayLabel(aircraftCode) : ""), disabled: !canEditResourcePools, onCommit: (value) => updateResourcePoolSettings(index, { aircraftLabel: value }), info: "The label shown for aircraft rows. Example: Aircraft, Jet, Helicopter." }),
                       /* @__PURE__ */ jsxRuntimeExports.jsx(DraftField, { label: "Simulator Row Label", value: String(pool.settings?.ftdLabel || "").trim().toUpperCase() === "FTD" ? "Simulator" : pool.settings?.ftdLabel || "Simulator", disabled: !canEditResourcePools, onCommit: (value) => updateResourcePoolSettings(index, { ftdLabel: value }), info: "The label shown for simulator rows. Example: Simulator." }),
-                      /* @__PURE__ */ jsxRuntimeExports.jsx(DraftField, { label: "Procedural Trainer Row Label", value: pool.settings?.cptLabel || "CPT", disabled: !canEditResourcePools, onCommit: (value) => updateResourcePoolSettings(index, { cptLabel: value }), info: "The label shown for procedural trainer rows. Example: Procedural Trainer, CPT." }),
+                      /* @__PURE__ */ jsxRuntimeExports.jsx(DraftField, { label: "Procedural Trainer Row Label", value: pool.settings?.cptLabel || "Procedural Trainer", disabled: !canEditResourcePools, onCommit: (value) => updateResourcePoolSettings(index, { cptLabel: value }), info: "The label shown for procedural trainer rows. Example: Procedural Trainer." }),
                       /* @__PURE__ */ jsxRuntimeExports.jsx(
                         ClassroomNamesField,
                         {
@@ -38856,10 +38873,7 @@ const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, lo
     });
   };
   const getWizardStaffQualificationOptionLabel = (qualification) => {
-    const code = String(qualification.code || "").trim();
-    const name = String(qualification.name || "").trim();
-    if (code && name && normaliseQualificationToken(code) !== normaliseQualificationToken(name)) return `${code} - ${name}`;
-    return code || name || qualification.id;
+    return getStaffQualificationDisplayLabel(qualification);
   };
   const findWizardStaffQualification = (value) => wizardActiveStaffQualificationOptions.find((qualification) => qualificationMatches(value, qualification));
   const suggestWizardStaffQualificationId = (token) => {
@@ -38912,7 +38926,7 @@ const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, lo
         return;
       }
       if (!ids.includes(match.id)) ids.push(match.id);
-      const label = match.code || match.name || match.id;
+      const label = getStaffQualificationDisplayLabel(match) || match.id;
       if (label && !labels.includes(label)) labels.push(label);
     });
     return { labels, ids, skipped, unresolved, hasInput: tokens.length > 0 };
@@ -38944,7 +38958,7 @@ const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, lo
   const normaliseWizardLmpShellToken = (value) => normaliseUnitSettingsIdentifier(value).replace(/[^A-Z0-9]+/g, "");
   const normaliseWizardTemplateEventType = (value) => {
     const clean = String(value || "").trim().toLowerCase();
-    if (clean.includes("procedural trainer") || clean.includes("procedural") || clean.includes("trainer")) return "FTD";
+    if (clean.includes("procedural trainer") || clean.includes("procedural") || clean.includes("trainer")) return "CPT";
     if (clean.includes("ftd") || clean.includes("sim")) return "FTD";
     if (clean.includes("academic")) return "Academics";
     if (clean.includes("ground")) return "Ground School";
@@ -40297,7 +40311,12 @@ const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, lo
         /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid min-w-0 gap-2 md:grid-cols-2 xl:grid-cols-3 xl:items-end", children: [
           wizardField("Event name", row.name || "", (value) => updateRow(index, "name", value), void 0, "Annual Instrument Check"),
           wizardField("Short title", row.shortTitle || "", (value) => updateRow(index, "shortTitle", value.toUpperCase()), void 0, "INST"),
-          wizardField("Resource type", row.resourceType === "FTD" ? "Simulator" : row.resourceType || "Flight", (value) => updateRow(index, "resourceType", value === "Simulator" ? "FTD" : value), ["Flight", "Simulator", "CPT", "Ground"]),
+          wizardField(
+            "Resource type",
+            row.resourceType === "FTD" ? "Simulator" : row.resourceType === "CPT" ? "Procedural Trainer" : row.resourceType || "Flight",
+            (value) => updateRow(index, "resourceType", value === "Simulator" ? "FTD" : value === "Procedural Trainer" ? "CPT" : value),
+            ["Flight", "Simulator", "Procedural Trainer", "Ground"]
+          ),
           wizardField("Duration", row.duration || "90", (value) => updateRow(index, "duration", value), void 0, "90"),
           wizardField("Pre-flight", row.preFlight || "90", (value) => updateRow(index, "preFlight", value), void 0, "90"),
           wizardField("Post-flight", row.postFlight || "60", (value) => updateRow(index, "postFlight", value), void 0, "60")
@@ -45966,7 +45985,7 @@ const ScheduleView = ({
           ] }),
           /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "relative text-[11px] font-black uppercase tracking-[0.22em] text-cyan-300", children: "Daily Flying Program" }),
           /* @__PURE__ */ jsxRuntimeExports.jsx("h2", { className: "relative mt-2 text-2xl font-black text-white", children: emptyDfpWelcomeVariant === "select-context" ? "Welcome to DFP-NEO" : emptyDfpWelcomeVariant === "empty-resources" ? "Set up DFP resource rows" : `No tiles scheduled for ${formattedDisplayDate}` }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "relative mt-3 max-w-xl text-sm font-medium leading-6 text-slate-300", children: emptyDfpWelcomeVariant === "select-context" ? "Click the highlighted tab on the left to start setting up your organisation with the Setup Wizard." : emptyDfpWelcomeVariant === "empty-resources" ? "This DFP has no aircraft, standby, simulator, CPT or ground rows yet. Add the resource rows first, then the schedule will appear here." : "This DFP is open and ready. When tiles are built or added for this date, they will appear here." })
+          /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "relative mt-3 max-w-xl text-sm font-medium leading-6 text-slate-300", children: emptyDfpWelcomeVariant === "select-context" ? "Click the highlighted tab on the left to start setting up your organisation with the Setup Wizard." : emptyDfpWelcomeVariant === "empty-resources" ? "This DFP has no aircraft, standby, simulator, procedural trainer or ground rows yet. Add the resource rows first, then the schedule will appear here." : "This DFP is open and ready. When tiles are built or added for this date, they will appear here." })
         ] })
       }
     ),
@@ -54651,7 +54670,7 @@ const TraineeProfileFlyout = ({
   const [assignedQualifications, setAssignedQualifications] = reactExports.useState(
     () => normaliseAssignedQualificationIds(trainee.preferences?.qualifications || [], normalisedQualificationCatalogue)
   );
-  const assignedQualificationLabels = reactExports.useMemo(() => assignedQualifications.map((id) => activeQualificationOptions.find((qualification) => qualificationMatches(id, qualification))).filter((qualification) => Boolean(qualification)).map((qualification) => qualification.code || qualification.name), [activeQualificationOptions, assignedQualifications]);
+  const assignedQualificationLabels = reactExports.useMemo(() => assignedQualifications.map((id) => activeQualificationOptions.find((qualification) => qualificationMatches(id, qualification))).filter((qualification) => Boolean(qualification)).map(getStaffQualificationDisplayLabel), [activeQualificationOptions, assignedQualifications]);
   const assignedPermissionProfileSummary = reactExports.useMemo(() => {
     const linkedPlatformUserIdentifiers = getPlatformUserIdentityValuesForPerson(platformConfig, trainee, "trainee");
     return getAssignedPlatformPermissionProfileSummary(platformConfig, [
@@ -55048,7 +55067,7 @@ Confirm the Personnel ID, unit and course are correct before saving this separat
       if (trainee.isPaused !== isPaused) changes.push(`Paused: ${trainee.isPaused} → ${isPaused}`);
       const previousQualifications = normaliseAssignedQualificationIds(trainee.preferences?.qualifications || [], normalisedQualificationCatalogue);
       if (JSON.stringify(previousQualifications) !== JSON.stringify(assignedQualifications)) {
-        const labelsFor = (ids) => ids.map((id) => activeQualificationOptions.find((definition) => qualificationMatches(id, definition))?.code || id).join(", ") || "None";
+        const labelsFor = (ids) => ids.map((id) => getStaffQualificationDisplayLabel(activeQualificationOptions.find((definition) => qualificationMatches(id, definition))) || id).join(", ") || "None";
         changes.push(`Qualifications: ${labelsFor(previousQualifications)} → ${labelsFor(assignedQualifications)}`);
       }
       if (changes.length > 0) {
@@ -56285,7 +56304,7 @@ ${errorText || `HTTP ${response.status}`}`, "Delete Failed", "error");
                           className: "h-3 w-3 accent-sky-500"
                         }
                       ),
-                      /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "truncate", title: qualification.name, children: qualification.code || qualification.name })
+                      /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "truncate", title: getStaffQualificationDisplayLabel(qualification), children: getStaffQualificationDisplayLabel(qualification) })
                     ] }, qualification.id)) }) : /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-xs text-gray-500", children: "No qualifications configured for this operational model." })
                   ] }),
                   /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
@@ -69470,7 +69489,7 @@ const MyDashboard = ({
     [staffQualificationCatalogue]
   );
   const qualificationLabelById = reactExports.useMemo(() => new Map(
-    normalisedStaffQualificationCatalogue.qualifications.filter((qualification) => String(qualification.status || "ACTIVE").toUpperCase() !== "INACTIVE").map((qualification) => [qualification.id, qualification.code || qualification.name || qualification.id])
+    normalisedStaffQualificationCatalogue.qualifications.filter((qualification) => String(qualification.status || "ACTIVE").toUpperCase() !== "INACTIVE").map((qualification) => [qualification.id, getStaffQualificationDisplayLabel(qualification) || qualification.id])
   ), [normalisedStaffQualificationCatalogue]);
   const formatQualificationLabels = (qualificationIds) => qualificationIds.map((id) => qualificationLabelById.get(id)).filter(Boolean).join(", ") || "None";
   const dashboardMessageUserName = userName;
@@ -69800,7 +69819,7 @@ const MyDashboard = ({
   const groupBuilderCourseOptions = reactExports.useMemo(() => Array.from(new Set(peopleMessageContacts.map((contact) => contact.course).filter(Boolean))).sort(), [peopleMessageContacts]);
   const groupBuilderQualificationOptions = reactExports.useMemo(() => normalisedStaffQualificationCatalogue.qualifications.filter((qualification) => String(qualification.status || "ACTIVE").toUpperCase() !== "INACTIVE").map((qualification) => ({
     id: qualification.id,
-    label: qualification.code || qualification.name || qualification.id
+    label: getStaffQualificationDisplayLabel(qualification) || qualification.id
   })).sort((a, b) => a.label.localeCompare(b.label)), [normalisedStaffQualificationCatalogue]);
   const filteredGroupBuilderContacts = reactExports.useMemo(() => {
     const query = normaliseDashboardContactName(groupBuilderSearch);
@@ -77218,7 +77237,7 @@ const PrioritiesView = ({
                     value: resourceType,
                     onChange: (event) => updateStandardMissionDraft(profile.id, { resourceType: event.target.value }),
                     className: "w-full rounded-md border border-slate-700 bg-slate-950 px-2 py-2 text-sm font-semibold text-slate-100 outline-none focus:border-cyan-400",
-                    children: ["Flight", "FTD", "CPT", "Ground"].map((option) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: option, children: option === "FTD" ? "Simulator" : option }, option))
+                    children: ["Flight", "FTD", "CPT", "Ground"].map((option) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: option, children: option === "FTD" ? "Simulator" : option === "CPT" ? "Procedural Trainer" : option }, option))
                   }
                 ),
                 /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "[&_select]:w-full [&_select]:rounded-md [&_select]:border-slate-700 [&_select]:bg-slate-950 [&_select]:px-2 [&_select]:py-2 [&_select]:text-sm [&_select]:font-semibold [&_select]:text-slate-100", children: /* @__PURE__ */ jsxRuntimeExports.jsx(
@@ -90003,7 +90022,7 @@ Confirm the Personnel ID, unit and role are correct before saving this separate 
       if (JSON.stringify(previousQualifications) !== JSON.stringify(savedQualifications)) {
         const labelsFor = (ids) => ids.map((id) => {
           const match = normalisedQualificationCatalogue.qualifications.find((definition) => qualificationMatches(id, definition));
-          return match?.code || match?.name || id;
+          return getStaffQualificationDisplayLabel(match) || id;
         }).join(", ") || "(none)";
         changes.push(`Qualifications: ${labelsFor(previousQualifications)} → ${labelsFor(savedQualifications)}`);
       }
@@ -90171,7 +90190,7 @@ Confirm the Personnel ID, unit and role are correct before saving this separate 
     });
   };
   const exp = priorExperience;
-  const assignedQualificationLabels = assignedQualifications.map((id) => activeQualificationOptions.find((qualification) => qualificationMatches(id, qualification))).filter((qualification) => Boolean(qualification)).map((qualification) => qualification.code || qualification.name);
+  const assignedQualificationLabels = assignedQualifications.map((id) => activeQualificationOptions.find((qualification) => qualificationMatches(id, qualification))).filter((qualification) => Boolean(qualification)).map(getStaffQualificationDisplayLabel);
   const profileRoleDisplay = getStaffRoleDisplay(
     instructor.role,
     crewPositionTerminology,
@@ -91069,7 +91088,7 @@ Confirm the Personnel ID, unit and role are correct before saving this separate 
                       className: "h-3 w-3 accent-emerald-500"
                     }
                   ),
-                  /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-white text-xs truncate", title: qualification.name, children: qualification.code || qualification.name })
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-white text-xs truncate", title: getStaffQualificationDisplayLabel(qualification), children: getStaffQualificationDisplayLabel(qualification) })
                 ] }, qualification.id)) }) : /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-xs text-gray-500", children: "No qualifications configured for this operational model." })
               ] })
             ] }) : (

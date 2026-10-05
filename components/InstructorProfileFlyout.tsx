@@ -40,6 +40,7 @@ import {
   type CrewPositionTerminology,
 } from '../utils/crewPositionTerminology';
 import {
+  getStaffQualificationDisplayLabel,
   getQualificationsForOperationalModel,
   normaliseQualificationToken,
   normaliseAssignedQualificationIds,
@@ -1119,7 +1120,7 @@ export const InstructorProfileFlyout: React.FC<InstructorProfileFlyoutProps> = (
       if (JSON.stringify(previousQualifications) !== JSON.stringify(savedQualifications)) {
         const labelsFor = (ids: string[]) => ids.map(id => {
           const match = normalisedQualificationCatalogue.qualifications.find(definition => qualificationMatches(id, definition));
-          return match?.code || match?.name || id;
+          return getStaffQualificationDisplayLabel(match) || id;
         }).join(', ') || '(none)';
         changes.push(`Qualifications: ${labelsFor(previousQualifications)} → ${labelsFor(savedQualifications)}`);
       }
@@ -1332,7 +1333,7 @@ export const InstructorProfileFlyout: React.FC<InstructorProfileFlyoutProps> = (
   const assignedQualificationLabels = assignedQualifications
     .map(id => activeQualificationOptions.find(qualification => qualificationMatches(id, qualification)))
     .filter((qualification): qualification is StaffQualificationDefinition => Boolean(qualification))
-    .map(qualification => qualification.code || qualification.name);
+    .map(getStaffQualificationDisplayLabel);
   const profileRoleDisplay = getStaffRoleDisplay(
     instructor.role,
     crewPositionTerminology,
@@ -2257,8 +2258,8 @@ export const InstructorProfileFlyout: React.FC<InstructorProfileFlyoutProps> = (
                                 onChange={e => handleQualificationChange(qualification.id, e.target.checked)}
                                 className="h-3 w-3 accent-emerald-500"
                               />
-                              <span className="text-white text-xs truncate" title={qualification.name}>
-                                {qualification.code || qualification.name}
+                              <span className="text-white text-xs truncate" title={getStaffQualificationDisplayLabel(qualification)}>
+                                {getStaffQualificationDisplayLabel(qualification)}
                               </span>
                             </label>
                           ))}
