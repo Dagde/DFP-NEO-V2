@@ -1,6 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { showDarkAlert, showDarkConfirm, showDarkPrompt } from './DarkMessageModal';
-import { verifyCurrentUserPassword } from '../utils/passwordVerification';
 import type { ScheduleEvent } from '../types';
 
 interface TestingFunctionsSettingsProps {
@@ -107,8 +106,8 @@ const TestingFunctionsSettings: React.FC<TestingFunctionsSettingsProps> = ({
 
     try {
       const password = await showDarkPrompt({
-        title: 'Testing Functions Password Required',
-        message: 'Enter your current password to continue with the test database reset.',
+        title: 'Reset Password Required',
+        message: 'Enter the configured first-admin/reset password for this test database.',
         inputLabel: 'Password',
         inputType: 'password',
         inputPlaceholder: 'Enter password',
@@ -117,12 +116,6 @@ const TestingFunctionsSettings: React.FC<TestingFunctionsSettingsProps> = ({
         variant: 'warning',
       });
       if (!password) return;
-
-      const passwordAccepted = await verifyCurrentUserPassword(password);
-      if (!passwordAccepted) {
-        await showDarkAlert('The password was not accepted. The database was not reset.', 'Password Required', 'warning');
-        return;
-      }
 
       const finalConfirmation = await showDarkConfirm(
         'This will erase this test database and return it to first-delivery state.\n\nThis cannot be undone.',

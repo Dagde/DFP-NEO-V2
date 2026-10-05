@@ -12626,20 +12626,24 @@ app.post('/api/testing-functions/reset-database', async (req, res) => {
       });
     }
 
-    const bcrypt = require('bcryptjs');
-    const validPassword = await bcrypt.compare(password, context.admin.password || '');
-    if (!validPassword) {
-      return res.status(403).json({
-        error: 'Password rejected',
-        message: 'The password was not accepted. The database was not reset.',
-      });
-    }
-
     const firstAdminPassword = getConfiguredSecret('DFP_FIRST_ADMIN_PASSWORD', ['INITIAL_ADMIN_PASSWORD']);
     if (!firstAdminPassword) {
       return res.status(503).json({
         error: 'First admin not configured',
         message: 'DFP_FIRST_ADMIN_PASSWORD must be configured before a test database can be reset.',
+      });
+    }
+
+    const bcrypt = require('bcryptjs');
+    const validCurrentPassword = context.admin.password
+      ? await bcrypt.compare(password, context.admin.password)
+      : false;
+    const validResetPassword = tokenEquals(password, firstAdminPassword);
+    const validPassword = validCurrentPassword || validResetPassword;
+    if (!validPassword) {
+      return res.status(403).json({
+        error: 'Password rejected',
+        message: 'The password was not accepted. Use the signed-in admin password or the configured first-admin/reset password.',
       });
     }
 
