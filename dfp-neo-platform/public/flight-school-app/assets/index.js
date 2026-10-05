@@ -34860,11 +34860,13 @@ const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, lo
     return compactValue(details);
   };
   const pushWizardImportDiag = (stage, details = {}) => {
-    if (!isSetupTestMode$1 || typeof window === "undefined") return;
+    if (typeof window === "undefined") return;
     const entry = {
       ts: (/* @__PURE__ */ new Date()).toISOString(),
       stage,
-      unitCode,
+      activeUnitCode: unitCode,
+      activeLocationCode: locationCode,
+      isSetupTestMode: isSetupTestMode$1,
       details: compactWizardDiagDetails(details)
     };
     try {

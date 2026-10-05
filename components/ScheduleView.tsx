@@ -3321,11 +3321,13 @@ const InitialSetupWizard: React.FC<{
         return compactValue(details);
     };
     const pushWizardImportDiag = (stage: string, details: Record<string, any> = {}) => {
-        if (!isSetupTestMode || typeof window === 'undefined') return;
+        if (typeof window === 'undefined') return;
         const entry = {
             ts: new Date().toISOString(),
             stage,
-            unitCode,
+            activeUnitCode: unitCode,
+            activeLocationCode: locationCode,
+            isSetupTestMode,
             details: compactWizardDiagDetails(details),
         };
         try {
