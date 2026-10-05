@@ -3336,6 +3336,44 @@ const InitialSetupWizard: React.FC<{
         } catch (error) {
         }
     };
+    const downloadWizardImportDiagnostic = () => {
+        if (typeof window === 'undefined') return;
+        const readStoredJson = (key: string) => {
+            try {
+                const value = window.localStorage.getItem(key);
+                return value ? JSON.parse(value) : [];
+            } catch (error: any) {
+                return { readError: error?.message || 'Could not read stored diagnostic data.' };
+            }
+        };
+        const payload = {
+            reportType: 'setup-wizard-import-diagnostic',
+            generatedAt: new Date().toISOString(),
+            context: {
+                locationCode,
+                unitCode,
+                activeOrganisationCode: activeOrganisation?.code || activeOrganisation?.id || '',
+                isSetupTestMode,
+            },
+            importDiagnostic: readStoredJson('dfp_setup_wizard_import_diag'),
+            organisationDiagnostic: readStoredJson('dfp_setup_wizard_org_diag'),
+            lmpDiagnostic: readStoredJson('dfp_setup_test_lmp_diag'),
+            finishTrace: readStoredJson(wizardFinishTraceStorageKey),
+        };
+        const hasImportDiagnostic = Array.isArray(payload.importDiagnostic) && payload.importDiagnostic.length > 0;
+        if (!hasImportDiagnostic) {
+            setSaveMessage('No setup wizard import diagnostic has been recorded yet. Import the staff template again, then download this JSON.');
+        }
+        const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json;charset=utf-8;' });
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = `setup-wizard-import-diagnostic-${new Date().toISOString().replace(/[:.]/g, '-')}.json`;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        URL.revokeObjectURL(url);
+    };
     const summariseWizardStaffQualificationCatalogue = () => ({
         organisationSettingsHasCatalogue: Boolean(organisationSettings.staffQualificationCatalogue),
         personnelInstructorLabel: personnelDisplaySettings.instructorLabel,
@@ -13332,10 +13370,17 @@ const InitialSetupWizard: React.FC<{
 
     const renderTemplatePanel = (className = 'h-fit') => (
         <aside className={`${className} min-w-0 rounded-xl border border-slate-300 bg-slate-50 p-3 text-slate-900 shadow-sm`}>
-            <h4 className="text-sm font-black text-slate-950">Templates and uploads</h4>
-            <p className="mt-1 text-xs leading-5 text-slate-600">
-                This step can use a template. Download it, fill it in, then upload it here. I will check the format and explain anything that needs fixing in plain English.
-            </p>
+            <div className="flex flex-wrap items-start justify-between gap-2">
+                <div className="min-w-0">
+                    <h4 className="text-sm font-black text-slate-950">Templates and uploads</h4>
+                    <p className="mt-1 text-xs leading-5 text-slate-600">
+                        This step can use a template. Download it, fill it in, then upload it here. I will check the format and explain anything that needs fixing in plain English.
+                    </p>
+                </div>
+                <button type="button" className={wizardSmallButtonClass} onClick={downloadWizardImportDiagnostic}>
+                    Download import diagnostic
+                </button>
+            </div>
             <div className="mt-4 space-y-3">
                 {visibleTemplates.map((template) => {
                     const result = uploadResults[template.id];

@@ -34875,6 +34875,44 @@ const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, lo
     } catch (error) {
     }
   };
+  const downloadWizardImportDiagnostic = () => {
+    if (typeof window === "undefined") return;
+    const readStoredJson = (key) => {
+      try {
+        const value = window.localStorage.getItem(key);
+        return value ? JSON.parse(value) : [];
+      } catch (error) {
+        return { readError: error?.message || "Could not read stored diagnostic data." };
+      }
+    };
+    const payload = {
+      reportType: "setup-wizard-import-diagnostic",
+      generatedAt: (/* @__PURE__ */ new Date()).toISOString(),
+      context: {
+        locationCode,
+        unitCode,
+        activeOrganisationCode: activeOrganisation?.code || activeOrganisation?.id || "",
+        isSetupTestMode: isSetupTestMode$1
+      },
+      importDiagnostic: readStoredJson("dfp_setup_wizard_import_diag"),
+      organisationDiagnostic: readStoredJson("dfp_setup_wizard_org_diag"),
+      lmpDiagnostic: readStoredJson("dfp_setup_test_lmp_diag"),
+      finishTrace: readStoredJson(wizardFinishTraceStorageKey)
+    };
+    const hasImportDiagnostic = Array.isArray(payload.importDiagnostic) && payload.importDiagnostic.length > 0;
+    if (!hasImportDiagnostic) {
+      setSaveMessage("No setup wizard import diagnostic has been recorded yet. Import the staff template again, then download this JSON.");
+    }
+    const blob = new Blob([JSON.stringify(payload, null, 2)], { type: "application/json;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = `setup-wizard-import-diagnostic-${(/* @__PURE__ */ new Date()).toISOString().replace(/[:.]/g, "-")}.json`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+  };
   const summariseWizardStaffQualificationCatalogue = () => ({
     organisationSettingsHasCatalogue: Boolean(organisationSettings.staffQualificationCatalogue),
     personnelInstructorLabel: personnelDisplaySettings.instructorLabel,
@@ -43631,8 +43669,13 @@ Classrooms: ${classroomNames.join(", ")}` : ""}`;
     ] });
   }
   const renderTemplatePanel = (className = "h-fit") => /* @__PURE__ */ jsxRuntimeExports.jsxs("aside", { className: `${className} min-w-0 rounded-xl border border-slate-300 bg-slate-50 p-3 text-slate-900 shadow-sm`, children: [
-    /* @__PURE__ */ jsxRuntimeExports.jsx("h4", { className: "text-sm font-black text-slate-950", children: "Templates and uploads" }),
-    /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-1 text-xs leading-5 text-slate-600", children: "This step can use a template. Download it, fill it in, then upload it here. I will check the format and explain anything that needs fixing in plain English." }),
+    /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex flex-wrap items-start justify-between gap-2", children: [
+      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "min-w-0", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsx("h4", { className: "text-sm font-black text-slate-950", children: "Templates and uploads" }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-1 text-xs leading-5 text-slate-600", children: "This step can use a template. Download it, fill it in, then upload it here. I will check the format and explain anything that needs fixing in plain English." })
+      ] }),
+      /* @__PURE__ */ jsxRuntimeExports.jsx("button", { type: "button", className: wizardSmallButtonClass, onClick: downloadWizardImportDiagnostic, children: "Download import diagnostic" })
+    ] }),
     /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-4 space-y-3", children: visibleTemplates.map((template) => {
       const result = uploadResults[template.id];
       const importConfirmation = importConfirmations[template.id];
