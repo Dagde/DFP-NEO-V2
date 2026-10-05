@@ -33134,6 +33134,7 @@ const initialSetupWizardDraftSnapshotStorageKey = "dfp-initial-setup-wizard-draf
 const initialSetupWizardCompletedStepsStorageKey = "dfp-initial-setup-wizard-completed-steps";
 const initialSetupWizardCompletedAtStorageKey = "dfp-initial-setup-wizard-completed-at";
 const WIZARD_SYLLABUS_COURSE_SHELL_NOTE = "[DFP_COURSE_SHELL]";
+const WIZARD_NONE_QUALIFICATION_MAPPING = "__none__";
 const MAX_INITIAL_SETUP_ORGANISATION_LEVELS = 12;
 const createWizardRecordId = (prefix) => `${prefix}-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
 const createSetupTestRecordId = (prefix, key = "") => {
@@ -35512,10 +35513,19 @@ const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, lo
   const [staffProfilesCommitted, setStaffProfilesCommitted] = reactExports.useState(false);
   const [staffCommitInProgress, setStaffCommitInProgress] = reactExports.useState(false);
   const [staffCommitSummary, setStaffCommitSummary] = reactExports.useState("");
+  const [staffQualificationMappings, setStaffQualificationMappings] = reactExports.useState({});
   const [traineeAllocationCommitted, setTraineeAllocationCommitted] = reactExports.useState(false);
   const [traineeCommitInProgress, setTraineeCommitInProgress] = reactExports.useState(false);
   const [traineeCommitSummary, setTraineeCommitSummary] = reactExports.useState("");
   const [showMoreTraineesPrompt, setShowMoreTraineesPrompt] = reactExports.useState(false);
+  const wizardStaffQualificationCatalogue = reactExports.useMemo(
+    () => normaliseStaffQualificationCatalogue(organisationSettings.staffQualificationCatalogue || null),
+    [organisationSettings.staffQualificationCatalogue]
+  );
+  const wizardActiveStaffQualificationOptions = reactExports.useMemo(
+    () => wizardStaffQualificationCatalogue.qualifications.filter((qualification) => String(qualification.status || "ACTIVE").toUpperCase() !== "INACTIVE").sort((left, right) => (left.code || left.name).localeCompare(right.code || right.name, void 0, { sensitivity: "base" })),
+    [wizardStaffQualificationCatalogue]
+  );
   const defaultWizardUnitModulesDraft = "DFP | On\nNEO Build | On\nProgram Schedule | On\nTraining Records | On";
   const makeWizardModuleCode = (moduleName, index = 0) => (String(moduleName || "").trim() || `Module ${index + 1}`).toUpperCase().replace(/[^A-Z0-9]+/g, "_").replace(/^_|_$/g, "");
   const buildHydratedUnitModulesDraft = () => {
@@ -38742,7 +38752,27 @@ const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, lo
       [templateId]: { status: "idle", fileName: file.name, message: `Checking ${file.name}...` }
     }));
     try {
-      const result = await validateWizardTemplateFile(template, file, skipConfirmedExampleRow, confirmedExampleRowNumber);
+      let result = await validateWizardTemplateFile(template, file, skipConfirmedExampleRow, confirmedExampleRowNumber);
+      if (template.id === "staff" && result.status === "valid") {
+        const qualificationIssues = getStaffUploadQualificationIssues(result);
+        if (qualificationIssues.length > 0) {
+          setStaffQualificationMappings((current) => {
+            const next = { ...current };
+            qualificationIssues.forEach((issue) => {
+              const key = normaliseQualificationToken(issue.token);
+              if (key && next[key] === void 0) next[key] = issue.suggestedQualificationId || "";
+            });
+            return next;
+          });
+          result = {
+            ...result,
+            status: "needs-qualification-mapping",
+            message: `I found ${qualificationIssues.length} qualification value${qualificationIssues.length === 1 ? "" : "s"} I do not recognise yet. Choose what each one means before I import the staff rows.`,
+            issues: qualificationIssues.map((issue) => `"${issue.token}" is not a configured qualification.`),
+            qualificationIssues
+          };
+        }
+      }
       setUploadResults((current) => ({ ...current, [templateId]: result }));
       if (result.status === "needs-confirmation") {
         setExampleRowSelections((current) => ({
@@ -38808,6 +38838,105 @@ const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, lo
     void handleTemplateFile(templateId, pendingFile, true, hasExampleRow && Number.isFinite(selectedRow) ? selectedRow : null);
   };
   const parseWizardTemplateList = (value) => String(value || "").split(/\r?\n|[;,]/).map((item) => item.trim()).filter(Boolean);
+  const splitWizardStaffQualificationTokens = (value) => {
+    const primaryTokens = String(value || "").split(/\r?\n|[;,/]/).map((item) => item.trim()).filter(Boolean);
+    const tokens = primaryTokens.flatMap((token) => {
+      const directMatch = wizardActiveStaffQualificationOptions.some((qualification) => qualificationMatches(token, qualification));
+      if (directMatch) return [token];
+      const spaceTokens = token.split(/\s+/).map((item) => item.trim()).filter(Boolean);
+      const splitTokensAreKnown = spaceTokens.length > 1 && spaceTokens.every((item) => wizardActiveStaffQualificationOptions.some((qualification) => qualificationMatches(item, qualification)));
+      return splitTokensAreKnown ? spaceTokens : [token];
+    });
+    const seen = /* @__PURE__ */ new Set();
+    return tokens.filter((token) => {
+      const key = normaliseQualificationToken(token);
+      if (!key || seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    });
+  };
+  const getWizardStaffQualificationOptionLabel = (qualification) => {
+    const code = String(qualification.code || "").trim();
+    const name = String(qualification.name || "").trim();
+    if (code && name && normaliseQualificationToken(code) !== normaliseQualificationToken(name)) return `${code} - ${name}`;
+    return code || name || qualification.id;
+  };
+  const findWizardStaffQualification = (value) => wizardActiveStaffQualificationOptions.find((qualification) => qualificationMatches(value, qualification));
+  const suggestWizardStaffQualificationId = (token) => {
+    const clean = normaliseQualificationToken(token);
+    if (!clean) return "";
+    const instructorQualification = getInstructorQualificationDefinitions(wizardStaffQualificationCatalogue)[0];
+    if ((clean === "instructor" || clean === "flightinstructor") && instructorQualification) {
+      return instructorQualification.id;
+    }
+    return "";
+  };
+  const getStaffUploadQualificationIssues = (result) => {
+    const headers = result.headers || [];
+    const issuesByToken = /* @__PURE__ */ new Map();
+    (result.dataRows || []).forEach((row, rowIndex) => {
+      const rawQualifications = getWizardCellByHeader(headers, row, "Qualifications");
+      splitWizardStaffQualificationTokens(rawQualifications).forEach((token) => {
+        const tokenKey = normaliseQualificationToken(token);
+        if (!tokenKey || findWizardStaffQualification(token)) return;
+        const existing = issuesByToken.get(tokenKey);
+        if (existing) {
+          existing.rows.push(rowIndex + 1);
+        } else {
+          issuesByToken.set(tokenKey, {
+            token,
+            rows: [rowIndex + 1],
+            suggestedQualificationId: suggestWizardStaffQualificationId(token)
+          });
+        }
+      });
+    });
+    return Array.from(issuesByToken.values());
+  };
+  const resolveWizardStaffQualifications = (value) => {
+    const labels = [];
+    const ids = [];
+    const skipped = [];
+    const unresolved = [];
+    const tokens = splitWizardStaffQualificationTokens(value);
+    tokens.forEach((token) => {
+      const tokenKey = normaliseQualificationToken(token);
+      const mappedValue = tokenKey ? staffQualificationMappings[tokenKey] : "";
+      if (mappedValue === WIZARD_NONE_QUALIFICATION_MAPPING) {
+        skipped.push(token);
+        return;
+      }
+      const match = mappedValue ? wizardActiveStaffQualificationOptions.find((qualification) => qualification.id === mappedValue) : findWizardStaffQualification(token);
+      if (!match) {
+        unresolved.push(token);
+        return;
+      }
+      if (!ids.includes(match.id)) ids.push(match.id);
+      const label = match.code || match.name || match.id;
+      if (label && !labels.includes(label)) labels.push(label);
+    });
+    return { labels, ids, skipped, unresolved, hasInput: tokens.length > 0 };
+  };
+  const applyStaffQualificationChoicesToUpload = (template, result) => {
+    const unresolved = (result.qualificationIssues || []).filter((issue) => {
+      const value = staffQualificationMappings[normaliseQualificationToken(issue.token)];
+      return !value;
+    });
+    if (unresolved.length > 0) {
+      setSaveMessage(`Choose a qualification option, or None of these, for ${unresolved.length} uploaded qualification value${unresolved.length === 1 ? "" : "s"} before importing staff.`);
+      return;
+    }
+    const skipped = (result.qualificationIssues || []).filter((issue) => staffQualificationMappings[normaliseQualificationToken(issue.token)] === WIZARD_NONE_QUALIFICATION_MAPPING);
+    const message = skipped.length > 0 ? `Qualification choices applied. ${skipped.map((issue) => `"${issue.token}"`).join(", ")} ${skipped.length === 1 ? "will not be assigned" : "will not be assigned"}; you can set ${skipped.length === 1 ? "it" : "them"} up after the wizard is complete.` : "Qualification choices applied.";
+    const resolvedResult = {
+      ...result,
+      status: "valid",
+      message
+    };
+    setUploadResults((current) => ({ ...current, [template.id]: resolvedResult }));
+    setSaveMessage(message);
+    importWizardTemplateRows(template, resolvedResult);
+  };
   const parseWizardTemplateNumber = (value, fallback = 0) => {
     const parsed = Number(String(value || "").replace(/[^0-9.-]/g, ""));
     return Number.isFinite(parsed) ? parsed : fallback;
@@ -38955,13 +39084,18 @@ const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, lo
         const surnameValue = getWizardCellByAnyHeader(headers, row, ["Surname", "Last Name", "Family Name"]);
         const givenValue = getWizardCellByAnyHeader(headers, row, ["Given Names", "Given Name", "First Name", "Forename"]);
         const [surnamePart, givenPart] = nameValue.includes(",") ? nameValue.split(",").map((part) => part.trim()) : ["", nameValue.trim()];
+        const rawQualifications = getWizardCellByHeader(headers, row, "Qualifications");
+        const qualificationResolution = resolveWizardStaffQualifications(rawQualifications);
         return {
           sourceTemplateData,
           surname: surnameValue || surnamePart || "",
           givenNames: givenValue || givenPart || "",
           unit: (getWizardCellByHeader(headers, row, "Unit") || unitDraft.code || "").toUpperCase(),
           position: getWizardCellByHeader(headers, row, "Role"),
-          qualifications: getWizardCellByHeader(headers, row, "Qualifications"),
+          qualifications: qualificationResolution.labels.join("; "),
+          qualificationIds: qualificationResolution.hasInput ? qualificationResolution.ids : void 0,
+          skippedQualificationLabels: qualificationResolution.skipped,
+          unresolvedQualificationLabels: qualificationResolution.unresolved,
           rank: getWizardCellByHeader(headers, row, "Rank"),
           service: getWizardCellByHeader(headers, row, "Service"),
           personnelId: getWizardCellByAnyHeader(headers, row, ["Personnel ID", "ID Number", "ID No", "Employee ID", "Service ID", "Service Number"]),
@@ -38983,15 +39117,22 @@ const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, lo
       setUploadedStaffProfileRows(importedRows);
       setStaffProfilesCommitted(false);
       setStaffCommitSummary("");
+      const skippedQualifications = Array.from(new Set(importedRows.flatMap((row) => row.skippedQualificationLabels || [])));
+      const unresolvedQualifications = Array.from(new Set(importedRows.flatMap((row) => row.unresolvedQualificationLabels || [])));
       pushWizardImportDiag("staff:imported-to-draft", {
         importedRows: importedRows.length,
         sample: importedRows.slice(0, 8),
-        draftLength: nextStaffDraft.length
+        draftLength: nextStaffDraft.length,
+        skippedQualifications,
+        unresolvedQualifications
       });
       if (isSetupTestMode$1) {
         saveSetupTestWizardDrafts(false, { staffDraft: nextStaffDraft, staffRows: importedRows });
       }
-      const message = isSetupTestMode$1 ? `Committed ${importedRows.length} uploaded staff profile${importedRows.length === 1 ? "" : "s"} to Staff Profiles in this setup.` : `Imported ${importedRows.length} staff row${importedRows.length === 1 ? "" : "s"} into the wizard staff list.`;
+      const baseMessage = isSetupTestMode$1 ? `Committed ${importedRows.length} uploaded staff profile${importedRows.length === 1 ? "" : "s"} to Staff Profiles in this setup.` : `Imported ${importedRows.length} staff row${importedRows.length === 1 ? "" : "s"} into the wizard staff list.`;
+      const skippedMessage = skippedQualifications.length > 0 ? ` ${skippedQualifications.map((item) => `"${item}"`).join(", ")} ${skippedQualifications.length === 1 ? "was" : "were"} not assigned; you can set ${skippedQualifications.length === 1 ? "it" : "them"} up after the wizard is complete.` : "";
+      const unresolvedMessage = unresolvedQualifications.length > 0 ? ` ${unresolvedQualifications.map((item) => `"${item}"`).join(", ")} still need a qualification choice before they can be assigned.` : "";
+      const message = `${baseMessage}${skippedMessage}${unresolvedMessage}`;
       setImportConfirmations((current) => ({ ...current, [template.id]: message }));
       setSaveMessage(message);
       return;
@@ -40838,20 +40979,31 @@ const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, lo
     const effectiveOrganisationSettings = organisationSettings || getActiveOrganisation(platformConfig)?.settings || {};
     const setupStaffQualificationCatalogue = normaliseStaffQualificationCatalogue(effectiveOrganisationSettings.staffQualificationCatalogue || null);
     const instructorQualificationDefinitions = getInstructorQualificationDefinitions(setupStaffQualificationCatalogue);
-    const qualificationsToFlags = (qualifications) => {
+    const getResolvedStaffQualificationIds = (row) => {
+      if (Array.isArray(row?.qualificationIds)) {
+        return Array.from(new Set(row.qualificationIds.map((id) => String(id || "").trim()).filter(Boolean)));
+      }
+      return normaliseAssignedQualificationIds(row?.qualifications || "", setupStaffQualificationCatalogue, false);
+    };
+    const rowHasExplicitQualificationAssignment = (row) => Array.isArray(row?.qualificationIds) || Boolean(String(row?.qualifications || "").trim());
+    const qualificationsToFlags = (qualifications, qualificationIds = []) => {
       const tokens = qualifications.split(/[,\s/]+/).map((token) => token.trim().toUpperCase()).filter(Boolean);
-      const hasLinkedInstructorQualification = tokens.some((token) => instructorQualificationDefinitions.some((qualification) => qualificationMatches(token, qualification)));
+      const searchableValues = [...tokens, ...qualificationIds];
+      const hasLinkedInstructorQualification = searchableValues.some((token) => instructorQualificationDefinitions.some((qualification) => qualificationMatches(token, qualification)));
+      const hasQualificationId = (id) => qualificationIds.some((value) => normaliseQualificationToken(value) === id);
       return {
         isQFI: hasLinkedInstructorQualification || tokens.includes("QFI") || tokens.includes("CFI") || tokens.includes("OFI"),
         isOFI: tokens.includes("OFI"),
         isCFI: tokens.includes("CFI"),
         isIRE: tokens.includes("IRE"),
-        isFlyingSupervisor: tokens.includes("FS") || tokens.includes("FLYINGSUPERVISOR") || qualifications.toLowerCase().includes("flying supervisor")
+        isFlyingSupervisor: tokens.includes("FS") || tokens.includes("FLYINGSUPERVISOR") || qualifications.toLowerCase().includes("flying supervisor") || hasQualificationId("flying-supervisor")
       };
     };
     const instructors = effectiveStaffRows.map((row, index) => {
       const fullName = getWizardRowName(row) || `Staff ${index + 1}`;
-      const flags = qualificationsToFlags(String(row.qualifications || ""));
+      const qualificationIds = getResolvedStaffQualificationIds(row);
+      const hasExplicitQualificationAssignment = rowHasExplicitQualificationAssignment(row);
+      const flags = qualificationsToFlags(String(row.qualifications || ""), qualificationIds);
       return {
         id: `setup-staff-${index + 1}`,
         idNumber: normaliseWizardPersonnelId(row),
@@ -40877,6 +41029,9 @@ const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, lo
         crew: row.crew || "",
         flight: row.flight || "",
         qualifications: row.qualifications,
+        qualificationIds,
+        _wizardHasQualificationAssignment: hasExplicitQualificationAssignment,
+        preferences: hasExplicitQualificationAssignment ? { qualifications: qualificationIds } : {},
         sourceTemplateData: row.sourceTemplateData || void 0,
         _dataSource: "setup-test",
         ...flags
@@ -41469,6 +41624,15 @@ const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, lo
     );
     for (const person of staffToPersist) {
       const existing = existingByPersonnelId.get(String(Number(person.idNumber)));
+      const qualificationIds = Array.isArray(person.qualificationIds) ? Array.from(new Set(person.qualificationIds.map((id) => String(id || "").trim()).filter(Boolean))) : [];
+      const preferences = {
+        callsign: person.callsign || null,
+        secondaryCallsign: person.secondaryCallsign || null,
+        crew: person.crew || null
+      };
+      if (person._wizardHasQualificationAssignment === true) {
+        preferences.qualifications = qualificationIds;
+      }
       const payload = {
         name: person.name,
         rank: person.rank,
@@ -41494,11 +41658,7 @@ const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, lo
         isCommandingOfficer: person.isCommandingOfficer === true,
         isContractor: person.isContractor === true,
         isAdminStaff: person.isAdminStaff === true,
-        preferences: {
-          callsign: person.callsign || null,
-          secondaryCallsign: person.secondaryCallsign || null,
-          crew: person.crew || null
-        },
+        preferences,
         permissions: Array.isArray(person.permissions) ? person.permissions : [],
         unavailability: Array.isArray(person.unavailability) ? person.unavailability : []
       };
@@ -43359,10 +43519,12 @@ Classrooms: ${classroomNames.join(", ")}` : ""}`;
       const isValid = result?.status === "valid";
       const isError = result?.status === "error";
       const needsConfirmation = result?.status === "needs-confirmation";
+      const needsQualificationMapping = result?.status === "needs-qualification-mapping";
+      const qualificationChoicesReady = !needsQualificationMapping || (result?.qualificationIssues || []).every((issue) => Boolean(staffQualificationMappings[normaliseQualificationToken(issue.token)]));
       return /* @__PURE__ */ jsxRuntimeExports.jsxs(
         "div",
         {
-          className: `rounded-lg border bg-white p-3 shadow-sm ${isValid ? "border-emerald-300" : isError ? "border-red-300" : needsConfirmation ? "border-amber-300" : "border-slate-300"}`,
+          className: `rounded-lg border bg-white p-3 shadow-sm ${isValid ? "border-emerald-300" : isError ? "border-red-300" : needsConfirmation || needsQualificationMapping ? "border-amber-300" : "border-slate-300"}`,
           onDragOver: (event) => {
             event.preventDefault();
             event.dataTransfer.dropEffect = "copy";
@@ -43391,7 +43553,7 @@ Classrooms: ${classroomNames.join(", ")}` : ""}`;
                 children: "Drop file here or click to upload"
               }
             ),
-            result ? /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: `mt-3 rounded-md px-3 py-2 text-xs leading-5 ${isValid ? "bg-emerald-50 text-emerald-800" : isError ? "bg-red-50 text-red-800" : needsConfirmation ? "bg-amber-50 text-amber-900" : "bg-slate-100 text-slate-600"}`, children: [
+            result ? /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: `mt-3 rounded-md px-3 py-2 text-xs leading-5 ${isValid ? "bg-emerald-50 text-emerald-800" : isError ? "bg-red-50 text-red-800" : needsConfirmation || needsQualificationMapping ? "bg-amber-50 text-amber-900" : "bg-slate-100 text-slate-600"}`, children: [
               /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "font-bold", children: result.message }),
               result.issues?.length ? /* @__PURE__ */ jsxRuntimeExports.jsx("ul", { className: "mt-1 list-disc space-y-1 pl-4", children: result.issues.map((issue) => /* @__PURE__ */ jsxRuntimeExports.jsx("li", { children: issue }, issue)) }) : null,
               needsConfirmation ? /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mt-3 rounded-md border border-amber-300 bg-white px-3 py-2", children: [
@@ -43433,6 +43595,54 @@ Classrooms: ${classroomNames.join(", ")}` : ""}`;
                     }
                   )
                 ] })
+              ] }) : null,
+              needsQualificationMapping ? /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mt-3 rounded-md border border-amber-300 bg-white px-3 py-3", children: [
+                /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "font-semibold text-amber-950", children: "I need a quick check before importing these staff. Choose what each uploaded qualification means in DFP-NEO." }),
+                /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-1 text-[11px] leading-4 text-amber-800", children: "If none of the options match, choose None of these. I will leave that qualification unassigned and you can set it up after the wizard is complete." }),
+                /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-3 space-y-3", children: (result.qualificationIssues || []).map((issue) => {
+                  const issueKey = normaliseQualificationToken(issue.token);
+                  const selectedValue = staffQualificationMappings[issueKey] ?? issue.suggestedQualificationId ?? "";
+                  return /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "block rounded-md border border-amber-200 bg-amber-50/70 px-3 py-2", children: [
+                    /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "block text-[11px] font-bold uppercase tracking-[0.12em] text-amber-800", children: "Uploaded value" }),
+                    /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "mt-1 block text-sm font-black text-slate-950", children: issue.token }),
+                    /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "mt-1 block text-[11px] font-semibold text-slate-600", children: [
+                      "Found in staff row",
+                      issue.rows.length === 1 ? "" : "s",
+                      " ",
+                      issue.rows.join(", ")
+                    ] }),
+                    /* @__PURE__ */ jsxRuntimeExports.jsxs(
+                      "select",
+                      {
+                        className: `${wizardInputClass} mt-2 bg-white text-slate-950`,
+                        value: selectedValue,
+                        onChange: (event) => {
+                          const nextValue = event.target.value;
+                          setStaffQualificationMappings((current) => ({
+                            ...current,
+                            [issueKey]: nextValue
+                          }));
+                        },
+                        children: [
+                          /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "", children: "Choose a qualification..." }),
+                          wizardActiveStaffQualificationOptions.map((qualification) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: qualification.id, children: getWizardStaffQualificationOptionLabel(qualification) }, qualification.id)),
+                          /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: WIZARD_NONE_QUALIFICATION_MAPPING, children: "None of these" })
+                        ]
+                      }
+                    ),
+                    selectedValue === WIZARD_NONE_QUALIFICATION_MAPPING ? /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "mt-2 block rounded-md border border-slate-200 bg-white px-2 py-1.5 text-[11px] font-semibold text-slate-700", children: "This uploaded qualification will not be assigned. You can add or rename qualifications in Settings after the wizard is complete." }) : null
+                  ] }, issueKey || issue.token);
+                }) }),
+                /* @__PURE__ */ jsxRuntimeExports.jsx(
+                  "button",
+                  {
+                    type: "button",
+                    className: `${wizardPrimaryButtonClass} mt-3 ${qualificationChoicesReady ? "" : "cursor-not-allowed opacity-60"}`,
+                    disabled: !qualificationChoicesReady,
+                    onClick: () => applyStaffQualificationChoicesToUpload(template, result),
+                    children: "Apply qualification choices"
+                  }
+                )
               ] }) : null,
               isValid ? /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
                 /* @__PURE__ */ jsxRuntimeExports.jsx(
