@@ -10021,7 +10021,7 @@ const shouldSkipLegacyMassBriefInNextEventSelection = (
         isLmpGroupEventEnabledValue((item as any).groupEvent) ||
         Boolean(schedulingMatch.explicitGroup)
     );
-    if (!isConfiguredGroupEvent) return false;
+    if (!isConfiguredGroupEvent) return true;
 
     return schedulingMatch.rule.mode === 'manual';
 };
@@ -55772,6 +55772,8 @@ appliedUpdates.forEach(update => {
                            organisationSettings={organisationSettings}
                            onUpdatePlatformConfig={handleUpdatePlatformConfigFromSchedule}
                            onNavigateToSettingsSection={handleNavigateToSettingsSection}
+                           groundEventSchedulingSettings={groundEventSchedulingSettings}
+                           onUpdateGroundEventSchedulingSettings={(settings) => setGroundEventSchedulingSettings(normaliseGroundEventSchedulingSettings(settings))}
                            currentUserPermission={currentUserPermission}
                            canUsePlatformPermission={canUsePlatformPermission}
                            personnelDisplaySettings={personnelDisplaySettings}

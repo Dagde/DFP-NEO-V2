@@ -34683,7 +34683,7 @@ const WizardFlyingWindowTimeInput = React.memo(({
     }
   );
 });
-const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, locationCode, formationCallsigns = [], buildRuleSettings, flyingStartTime = 8, flyingEndTime = 17, ftdStartTime = 8, ftdEndTime = 17, cptStartTime = 8, cptEndTime = 17, allowNightFlying = true, commenceNightFlying = 18.5, ceaseNightFlying = 23.5, onUpdateFlyingStartTime, onUpdateFlyingEndTime, onUpdateFtdStartTime, onUpdateFtdEndTime, onUpdateCptStartTime, onUpdateCptEndTime, onUpdateAllowNightFlying, onUpdateCommenceNightFlying, onUpdateCeaseNightFlying, dispatchStaggerSettings = DEFAULT_DISPATCH_STAGGER_SETTINGS, onUpdateDispatchStaggerSettings, tileStatusSettings = DEFAULT_TILE_STATUS_SETTINGS, onUpdateTileStatusSettings, emergencyFreezeAuthority = DEFAULT_EMERGENCY_FREEZE_AUTHORITY, onUpdateEmergencyFreezeAuthority, emergencyFreezeAllowedActions = DEFAULT_EMERGENCY_FREEZE_ALLOWED_ACTIONS, onUpdateEmergencyFreezeAllowedActions, qualificationOptions = [], currentUserQualificationIds = [], onUpdatePlatformConfig, onNavigateToSettingsSection, currentUserPermission = "Staff", canUsePlatformPermission, isSetupTestMode: isSetupTestMode$1 = false, onSaveSetupTestPersonnel, serviceDefinitions = [], onUpdateServiceDefinitions, traineeServiceOptions = [], onInitialSetupWizardFinished }) => {
+const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, locationCode, syllabusDetails = [], formationCallsigns = [], buildRuleSettings, flyingStartTime = 8, flyingEndTime = 17, ftdStartTime = 8, ftdEndTime = 17, cptStartTime = 8, cptEndTime = 17, allowNightFlying = true, commenceNightFlying = 18.5, ceaseNightFlying = 23.5, onUpdateFlyingStartTime, onUpdateFlyingEndTime, onUpdateFtdStartTime, onUpdateFtdEndTime, onUpdateCptStartTime, onUpdateCptEndTime, onUpdateAllowNightFlying, onUpdateCommenceNightFlying, onUpdateCeaseNightFlying, dispatchStaggerSettings = DEFAULT_DISPATCH_STAGGER_SETTINGS, onUpdateDispatchStaggerSettings, tileStatusSettings = DEFAULT_TILE_STATUS_SETTINGS, onUpdateTileStatusSettings, emergencyFreezeAuthority = DEFAULT_EMERGENCY_FREEZE_AUTHORITY, onUpdateEmergencyFreezeAuthority, emergencyFreezeAllowedActions = DEFAULT_EMERGENCY_FREEZE_ALLOWED_ACTIONS, onUpdateEmergencyFreezeAllowedActions, groundEventSchedulingSettings = DEFAULT_GROUND_EVENT_SCHEDULING_SETTINGS, onUpdateGroundEventSchedulingSettings, qualificationOptions = [], currentUserQualificationIds = [], onUpdatePlatformConfig, onNavigateToSettingsSection, currentUserPermission = "Staff", canUsePlatformPermission, isSetupTestMode: isSetupTestMode$1 = false, onSaveSetupTestPersonnel, serviceDefinitions = [], onUpdateServiceDefinitions, traineeServiceOptions = [], onInitialSetupWizardFinished }) => {
   const [mode, setMode] = reactExports.useState(() => {
     if (typeof window === "undefined") return "detect";
     const storedStep = Number(window.localStorage.getItem(initialSetupWizardStorageKey));
@@ -36555,6 +36555,7 @@ const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, lo
       crewRolesDraft,
       resourceSharingDraft,
       currencyDraft,
+      groundEventSchedulingSettings: wizardGroundEventSchedulingSettingsForDisplay,
       scoringDraft: scoringDraftToSave,
       staffCurrencyEventsDraft,
       activeStepId: visibleStep.id,
@@ -36609,6 +36610,7 @@ const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, lo
           crewRoles: snapshot.crewRolesDraft,
           resourceSharing: snapshot.resourceSharingDraft,
           currencies: snapshot.currencyDraft,
+          groundEventSchedulingSettings: snapshot.groundEventSchedulingSettings,
           scoringMatrix: snapshot.scoringDraft,
           staffCurrencyEvents: snapshot.staffCurrencyEventsDraft,
           activeStepId: snapshot.activeStepId,
@@ -36626,6 +36628,165 @@ const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, lo
       unitsTodayDraft: snapshot.unitsTodayDraft,
       parsedUnitsToday: parseWizardUnitRows(snapshot.unitsTodayDraft)
     });
+  };
+  const wizardGroundEventSourceItems = reactExports.useMemo(() => {
+    const sourceItems = [
+      ...Array.isArray(syllabusDetails) ? syllabusDetails : [],
+      ...uploadedCourseLmpItems
+    ];
+    const byCode = /* @__PURE__ */ new Map();
+    sourceItems.forEach((item) => {
+      const code = getGroundEventSchedulingItemCode(item);
+      if (!code) return;
+      byCode.set(code, item);
+    });
+    return Array.from(byCode.values());
+  }, [syllabusDetails, uploadedCourseLmpItems]);
+  const wizardAvailableGroundEventSchedulingEvents = reactExports.useMemo(() => {
+    const eventMap = /* @__PURE__ */ new Map();
+    wizardGroundEventSourceItems.forEach((item) => {
+      const itemType = normaliseGroundEventTypeKey(item?.type);
+      const lowerType = itemType.toLowerCase();
+      const groupEventValue = item?.groupEvent;
+      const isGroupEvent = groupEventValue === true || ["yes", "true", "y"].includes(String(groupEventValue || "").trim().toLowerCase());
+      if (lowerType.includes("ground") || isGroupEvent) {
+        const code = getGroundEventSchedulingItemCode(item);
+        if (!code) return;
+        eventMap.set(code, {
+          code,
+          label: String(item?.code || item?.eventDescription || item?.id || code).trim() || code,
+          category: deriveGroundEventSchedulingCategory(item)
+        });
+      }
+    });
+    return Array.from(eventMap.values()).sort((a, b) => a.category.localeCompare(b.category, void 0, { numeric: true, sensitivity: "base" }) || a.label.localeCompare(b.label, void 0, { numeric: true, sensitivity: "base" }));
+  }, [wizardGroundEventSourceItems]);
+  const materialiseWizardGroundEventSchedulingSettings = reactExports.useCallback((settings) => {
+    const normalised = normaliseGroundEventSchedulingSettings(settings);
+    const groups = normalised.groups.map((group, index) => ({
+      ...normaliseGroundEventSchedulingGroup(group, index),
+      eventCodes: Array.from(new Set(group.eventCodes.filter(Boolean)))
+    }));
+    const assignedCodes = new Set(groups.flatMap((group) => group.eventCodes));
+    const ungroupedCodes = new Set(normalised.ungroupedEventCodes);
+    const autoGroups = /* @__PURE__ */ new Map();
+    wizardAvailableGroundEventSchedulingEvents.forEach((event) => {
+      if (assignedCodes.has(event.code) || ungroupedCodes.has(event.code)) return;
+      if (!autoGroups.has(event.category)) {
+        const legacyRule = getGroundEventSchedulingRuleForType(normalised, event.category);
+        autoGroups.set(event.category, {
+          id: `auto-${makeGroundEventSchedulingGroupId(event.category, autoGroups.size)}`,
+          name: event.category,
+          eventCodes: [],
+          mode: legacyRule.mode,
+          preferredWindows: legacyRule.preferredWindows
+        });
+      }
+      autoGroups.get(event.category).eventCodes.push(event.code);
+    });
+    return normaliseGroundEventSchedulingSettings({
+      ...normalised,
+      groups: [...groups, ...Array.from(autoGroups.values())],
+      ungroupedEventCodes: Array.from(ungroupedCodes)
+    });
+  }, [wizardAvailableGroundEventSchedulingEvents]);
+  const wizardBaseGroundEventSchedulingSettings = reactExports.useMemo(() => normaliseGroundEventSchedulingSettings(
+    groundEventSchedulingSettings || activeOrganisation?.settings?.groundEventSchedulingSettings || DEFAULT_GROUND_EVENT_SCHEDULING_SETTINGS
+  ), [groundEventSchedulingSettings, activeOrganisation?.settings?.groundEventSchedulingSettings]);
+  const wizardGroundEventSchedulingSettingsForDisplay = reactExports.useMemo(() => materialiseWizardGroundEventSchedulingSettings(wizardBaseGroundEventSchedulingSettings), [materialiseWizardGroundEventSchedulingSettings, wizardBaseGroundEventSchedulingSettings]);
+  const wizardGroundEventSchedulingGroups = wizardGroundEventSchedulingSettingsForDisplay.groups;
+  const persistWizardGroundEventSchedulingSettings = reactExports.useCallback((settings, message = "Ground event scheduling saved into Settings.") => {
+    const savedSettings = materialiseWizardGroundEventSchedulingSettings(settings);
+    onUpdateGroundEventSchedulingSettings?.(savedSettings);
+    saveWizardConfig(message, (baseConfig) => updatePrimaryOrganisationWithSettings(baseConfig, (existingSettings) => ({
+      ...existingSettings,
+      groundEventSchedulingSettings: savedSettings,
+      initialSetupWizardDraft: {
+        ...existingSettings.initialSetupWizardDraft || {},
+        groundEventSchedulingSettings: savedSettings,
+        updatedAt: (/* @__PURE__ */ new Date()).toISOString()
+      },
+      initialSetupWizardDrafts: {
+        ...existingSettings.initialSetupWizardDrafts || {},
+        groundEventSchedulingSettings: savedSettings,
+        updatedAt: (/* @__PURE__ */ new Date()).toISOString()
+      }
+    })), { silent: message.length === 0 });
+    return savedSettings;
+  }, [materialiseWizardGroundEventSchedulingSettings, onUpdateGroundEventSchedulingSettings, saveWizardConfig]);
+  const updateWizardGroundEventSchedulingGroup = (groupId, updates) => {
+    const current = materialiseWizardGroundEventSchedulingSettings(wizardGroundEventSchedulingSettingsForDisplay);
+    persistWizardGroundEventSchedulingSettings({
+      ...current,
+      groups: current.groups.map((group) => group.id === groupId ? {
+        ...group,
+        ...updates,
+        name: updates.name !== void 0 ? normaliseGroundEventTypeKey(updates.name) : group.name
+      } : group)
+    });
+  };
+  const handleWizardGroundEventWindowToggle = (group, windowId, checked) => {
+    const nextWindows = checked ? Array.from(/* @__PURE__ */ new Set([...group.preferredWindows, windowId])) : group.preferredWindows.filter((id) => id !== windowId);
+    updateWizardGroundEventSchedulingGroup(group.id, { preferredWindows: nextWindows });
+  };
+  const handleWizardGroundEventGroupEventToggle = (groupId, eventCode2, checked) => {
+    const current = materialiseWizardGroundEventSchedulingSettings(wizardGroundEventSchedulingSettingsForDisplay);
+    const nextUngrouped = new Set(current.ungroupedEventCodes);
+    const nextGroups = current.groups.map((group) => {
+      const nextCodes = new Set(group.eventCodes);
+      if (group.id === groupId) {
+        if (checked) {
+          nextCodes.add(eventCode2);
+          nextUngrouped.delete(eventCode2);
+        } else {
+          nextCodes.delete(eventCode2);
+          nextUngrouped.add(eventCode2);
+        }
+      } else if (checked) {
+        nextCodes.delete(eventCode2);
+      }
+      return {
+        ...group,
+        eventCodes: Array.from(nextCodes)
+      };
+    });
+    persistWizardGroundEventSchedulingSettings({
+      ...current,
+      groups: nextGroups,
+      ungroupedEventCodes: Array.from(nextUngrouped)
+    });
+  };
+  const handleAddWizardGroundEventGroup = () => {
+    const current = materialiseWizardGroundEventSchedulingSettings(wizardGroundEventSchedulingSettingsForDisplay);
+    const nextIndex = current.groups.length + 1;
+    persistWizardGroundEventSchedulingSettings({
+      ...current,
+      groups: [
+        ...current.groups,
+        {
+          id: `custom-${makeGroundEventSchedulingGroupId(`Ground Group ${nextIndex}`, nextIndex)}`,
+          name: `Ground Group ${nextIndex}`,
+          eventCodes: [],
+          mode: "manual",
+          preferredWindows: []
+        }
+      ]
+    });
+  };
+  const handleDeleteWizardGroundEventGroup = (group) => {
+    const current = materialiseWizardGroundEventSchedulingSettings(wizardGroundEventSchedulingSettingsForDisplay);
+    persistWizardGroundEventSchedulingSettings({
+      ...current,
+      groups: current.groups.filter((existing) => existing.id !== group.id),
+      ungroupedEventCodes: Array.from(/* @__PURE__ */ new Set([
+        ...current.ungroupedEventCodes,
+        ...group.eventCodes
+      ]))
+    });
+  };
+  const saveWizardGroundEventSchedulingAndContinue = () => {
+    persistWizardGroundEventSchedulingSettings(wizardGroundEventSchedulingSettingsForDisplay);
+    void goToNextWizardStep();
   };
   const summariseWizardLocationScopeLocation = (location) => ({
     id: location?.id || "",
@@ -38233,6 +38394,14 @@ const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, lo
       optional: true
     },
     {
+      id: "ground-event-scheduling",
+      title: "Set group ground event scheduling",
+      label: "Ground events",
+      body: "Choose how NEO Build should handle group ground events from the LMP, such as mass briefs, tutorials, quizzes, and other classroom events.",
+      checkIds: ["training", "rules"],
+      category: "highly-desirable"
+    },
+    {
       id: "review",
       title: "Review the setup",
       label: "Review",
@@ -38547,6 +38716,8 @@ const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, lo
         return parseWizardTraineeRows(traineeDraft).some((row) => hasMeaningfulWizardText(row.surname, ["Surname"]) && hasMeaningfulWizardText(row.givenNames, ["First"]) && hasMeaningfulWizardText(row.course || row.courseNumber, ["Course 1"]));
       case "master-lmp":
         return hasMeaningfulWizardText(trainingDraft.lmpCode, ["New Master LMP", "Master LMP"]) && hasMeaningfulWizardText(trainingDraft.lmpName, ["New Master LMP", "Training Programme"]);
+      case "ground-event-scheduling":
+        return wizardGroundEventSchedulingGroups.some((group) => group.eventCodes.length > 0);
       case "review":
         return allMandatoryComplete;
       default:
@@ -38646,6 +38817,10 @@ const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, lo
     }
     if (stepId === "master-lmp") {
       saveTrainingDraft();
+      return;
+    }
+    if (stepId === "ground-event-scheduling") {
+      persistWizardGroundEventSchedulingSettings(wizardGroundEventSchedulingSettingsForDisplay);
       return;
     }
     if (stepId === "access") {
@@ -41255,6 +41430,7 @@ const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, lo
     const setupPersonnel = buildSetupTestPersonnel(cleanUnits, overrides);
     const setupWizardUpdatedAt = (/* @__PURE__ */ new Date()).toISOString();
     const setupWizardCompletionAt = markComplete ? setupWizardUpdatedAt : "";
+    const setupGroundEventSchedulingSettings = materialiseWizardGroundEventSchedulingSettings(wizardGroundEventSchedulingSettingsForDisplay);
     onUpdatePlatformConfig((baseConfig) => {
       const existingAircraftTypes = Array.isArray(baseConfig?.aircraftTypes) ? baseConfig.aircraftTypes : [];
       const existingResourcePools = Array.isArray(baseConfig?.resourcePools) ? baseConfig.resourcePools : [];
@@ -41396,6 +41572,7 @@ const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, lo
         crewRoles: crewRolesDraft,
         resourceSharing: resourceSharingDraft,
         currencies: currencyDraft,
+        groundEventSchedulingSettings: setupGroundEventSchedulingSettings,
         scoringMatrix: scoringDraftToSave,
         staffCurrencyEvents: staffCurrencyEventsDraft,
         activeStepId: visibleStep.id,
@@ -41446,6 +41623,7 @@ const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, lo
             status: "ACTIVE",
             enabled: /^on$/i.test(row.enabled)
           })),
+          groundEventSchedulingSettings: setupGroundEventSchedulingSettings,
           initialSetupWizardDraft: setupWizardDraft,
           initialSetupWizardDrafts: setupWizardDrafts
         }
@@ -42066,6 +42244,8 @@ const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, lo
         uploadStatus: uploadResults.courses?.status || "missing"
       });
     }
+    const finalGroundEventSchedulingSettings = materialiseWizardGroundEventSchedulingSettings(wizardGroundEventSchedulingSettingsForDisplay);
+    onUpdateGroundEventSchedulingSettings?.(finalGroundEventSchedulingSettings);
     saveWizardConfig("Setup saved into Settings.", (baseConfig) => updatePrimaryOrganisationWithSettings(baseConfig, (settings) => {
       const cleanLmpCode = String(trainingDraft.lmpCode || trainingDraft.lmpName || "").trim();
       const cleanLmpName = String(trainingDraft.lmpName || cleanLmpCode).trim();
@@ -42106,6 +42286,7 @@ const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, lo
         ],
         initialSetupWizardCompletedAt: completedAt,
         personnelDisplaySettings: buildRankSettingsToSave(settings),
+        groundEventSchedulingSettings: finalGroundEventSchedulingSettings,
         initialSetupWizardDraft: {
           unitsToday: parseWizardUnitRows(unitsTodayDraft),
           locationsToday: parseWizardLocationRows(locationsTodayDraft),
@@ -42123,6 +42304,7 @@ const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, lo
           rankSettings: rankSettingsDraft,
           resourceSharing: resourceSharingDraft,
           currencies: currencyDraft,
+          groundEventSchedulingSettings: finalGroundEventSchedulingSettings,
           scoringMatrix: wizardPhraseBankToScoringDraft(wizardScoringPhraseBank),
           staffCurrencyEvents: staffCurrencyEventsDraft,
           trainingDraft: correctedTrainingDraft,
@@ -42130,6 +42312,7 @@ const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, lo
         },
         initialSetupWizardDrafts: {
           ...settings.initialSetupWizardDrafts || {},
+          groundEventSchedulingSettings: finalGroundEventSchedulingSettings,
           trainingDraft: correctedTrainingDraft,
           completedAt
         }
@@ -43282,6 +43465,110 @@ const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, lo
         ] })
       );
     }
+    if (visibleStep.id === "ground-event-scheduling") {
+      return promptShell(
+        /* @__PURE__ */ jsxRuntimeExports.jsx("p", { children: "Choose how NEO Build should handle group ground events from the LMP. Use this for items such as mass briefs, tutorials, quizzes, classroom briefs, or any other group event that should start a course before individual events can run." }),
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-4", children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "rounded-lg border border-blue-200 bg-blue-50 p-3 text-xs font-semibold leading-5 text-blue-950", children: "Manual means NEO Build will not place those events automatically. Suggest means NEO Build can alert the scheduler. Automatic means NEO Build may place the event during the selected windows." }),
+          wizardAvailableGroundEventSchedulingEvents.length === 0 ? /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "rounded-lg border border-amber-200 bg-amber-50 p-3 text-xs font-semibold leading-5 text-amber-950", children: "I cannot see any LMP ground events yet. Upload or commit the LMP first, then return to this step." }) : /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex justify-end", children: /* @__PURE__ */ jsxRuntimeExports.jsx("button", { type: "button", className: wizardSmallButtonClass, onClick: handleAddWizardGroundEventGroup, children: "Add group" }) }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "space-y-3", children: wizardGroundEventSchedulingGroups.map((group) => {
+              const assignedEvents = wizardAvailableGroundEventSchedulingEvents.filter((event) => group.eventCodes.includes(event.code));
+              return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded-lg border border-slate-300 bg-white p-3 shadow-sm", children: [
+                /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid gap-3 lg:grid-cols-[minmax(180px,260px)_minmax(180px,1fr)_auto]", children: [
+                  /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "block", children: [
+                    /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: wizardLabelClass, children: "Group name" }),
+                    /* @__PURE__ */ jsxRuntimeExports.jsx(
+                      "input",
+                      {
+                        className: `${wizardInputClass} mt-1`,
+                        value: group.name,
+                        onKeyDown: stopEditableKeyPropagation,
+                        onChange: (event) => updateWizardGroundEventSchedulingGroup(group.id, { name: event.target.value })
+                      }
+                    )
+                  ] }),
+                  /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "block", children: [
+                    /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: wizardLabelClass, children: "Scheduling action" }),
+                    /* @__PURE__ */ jsxRuntimeExports.jsxs(
+                      "select",
+                      {
+                        className: `${wizardInputClass} mt-1`,
+                        value: group.mode,
+                        onKeyDown: stopEditableKeyPropagation,
+                        onChange: (event) => updateWizardGroundEventSchedulingGroup(group.id, { mode: event.target.value }),
+                        children: [
+                          /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "manual", children: "Manual" }),
+                          /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "suggest", children: "Alert / suggest" }),
+                          /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "automatic", children: "Automatic" })
+                        ]
+                      }
+                    )
+                  ] }),
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex items-end justify-end", children: /* @__PURE__ */ jsxRuntimeExports.jsx(
+                    "button",
+                    {
+                      type: "button",
+                      className: "rounded-md border border-red-200 bg-red-50 px-3 py-2 text-xs font-bold text-red-800 transition hover:border-red-300 hover:bg-red-100",
+                      onClick: () => handleDeleteWizardGroundEventGroup(group),
+                      children: "Delete"
+                    }
+                  ) })
+                ] }),
+                /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mt-4", children: [
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: wizardLabelClass, children: "Preferred windows" }),
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-2 grid gap-2 sm:grid-cols-2 lg:grid-cols-5", children: GROUND_EVENT_SCHEDULING_WINDOWS.map((windowOption) => /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "flex items-center gap-2 rounded-md border border-slate-200 bg-slate-50 px-3 py-2 text-xs font-semibold text-slate-800", children: [
+                    /* @__PURE__ */ jsxRuntimeExports.jsx(
+                      "input",
+                      {
+                        type: "checkbox",
+                        className: "h-4 w-4 accent-orange-500",
+                        checked: group.preferredWindows.includes(windowOption.id),
+                        onChange: (event) => handleWizardGroundEventWindowToggle(group, windowOption.id, event.target.checked)
+                      }
+                    ),
+                    windowOption.label
+                  ] }, windowOption.id)) }),
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-2 text-xs leading-5 text-slate-500", children: "Leave every window unticked to allow any valid time during the build day." })
+                ] }),
+                /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mt-4", children: [
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: wizardLabelClass, children: "Assigned events" }),
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-2 max-h-48 overflow-y-auto rounded-lg border border-slate-200 bg-slate-50 p-2", children: /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "grid gap-2 sm:grid-cols-2 xl:grid-cols-3", children: wizardAvailableGroundEventSchedulingEvents.map((eventOption) => {
+                    const checked = group.eventCodes.includes(eventOption.code);
+                    const assignedToAnyGroup = wizardGroundEventSchedulingGroups.some((existingGroup) => existingGroup.eventCodes.includes(eventOption.code));
+                    return /* @__PURE__ */ jsxRuntimeExports.jsxs(
+                      "label",
+                      {
+                        className: `flex items-start gap-2 rounded-md border px-2 py-2 text-xs ${checked ? "border-blue-300 bg-blue-50 text-blue-950" : assignedToAnyGroup ? "border-slate-200 bg-white text-slate-500" : "border-amber-300 bg-amber-50 text-amber-950"}`,
+                        children: [
+                          /* @__PURE__ */ jsxRuntimeExports.jsx(
+                            "input",
+                            {
+                              type: "checkbox",
+                              className: "mt-0.5 h-4 w-4 accent-orange-500",
+                              checked,
+                              onChange: (event) => handleWizardGroundEventGroupEventToggle(group.id, eventOption.code, event.target.checked)
+                            }
+                          ),
+                          /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { children: [
+                            /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "block font-bold", children: eventOption.label }),
+                            /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "block text-[10px] uppercase tracking-[0.12em] text-slate-500", children: eventOption.category })
+                          ] })
+                        ]
+                      },
+                      `${group.id}-${eventOption.code}`
+                    );
+                  }) }) }),
+                  assignedEvents.length === 0 ? /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-2 text-xs font-semibold text-amber-800", children: "No events are assigned to this group yet." }) : null
+                ] })
+              ] }, group.id);
+            }) })
+          ] })
+        ] }),
+        "Save and continue",
+        saveWizardGroundEventSchedulingAndContinue
+      );
+    }
     if (visibleStep.id === "training-records") {
       return promptShell(
         /* @__PURE__ */ jsxRuntimeExports.jsx("p", { children: "Set the training report names and grading labels for this unit. These choices control what the report is called and how pass/fail grading appears to users." }),
@@ -43787,7 +44074,7 @@ Classrooms: ${classroomNames.join(", ")}` : ""}`;
     ] })
   ] });
 };
-const OrganisationSlideoutDiagram = ({ platformConfig, organisationSettings, unitCode, locationCode, formationCallsigns = [], buildRuleSettings, flyingStartTime, flyingEndTime, ftdStartTime, ftdEndTime, cptStartTime, cptEndTime, allowNightFlying, commenceNightFlying, ceaseNightFlying, onUpdateFlyingStartTime, onUpdateFlyingEndTime, onUpdateFtdStartTime, onUpdateFtdEndTime, onUpdateCptStartTime, onUpdateCptEndTime, onUpdateAllowNightFlying, onUpdateCommenceNightFlying, onUpdateCeaseNightFlying, dispatchStaggerSettings, onUpdateDispatchStaggerSettings, tileStatusSettings, onUpdateTileStatusSettings, emergencyFreezeAuthority, onUpdateEmergencyFreezeAuthority, emergencyFreezeAllowedActions, onUpdateEmergencyFreezeAllowedActions, qualificationOptions, currentUserQualificationIds, onUpdatePlatformConfig, onNavigateToSettingsSection, currentUserPermission = "Staff", canUsePlatformPermission, isSetupTestMode: isSetupTestMode2 = false, onSaveSetupTestPersonnel, isOpen = false, onInitialSetupWizardActiveChange, onInitialSetupWizardFinished, initialView = "structure", serviceDefinitions = [], onUpdateServiceDefinitions, traineeServiceOptions = [] }) => {
+const OrganisationSlideoutDiagram = ({ platformConfig, organisationSettings, unitCode, locationCode, syllabusDetails = [], formationCallsigns = [], buildRuleSettings, flyingStartTime, flyingEndTime, ftdStartTime, ftdEndTime, cptStartTime, cptEndTime, allowNightFlying, commenceNightFlying, ceaseNightFlying, onUpdateFlyingStartTime, onUpdateFlyingEndTime, onUpdateFtdStartTime, onUpdateFtdEndTime, onUpdateCptStartTime, onUpdateCptEndTime, onUpdateAllowNightFlying, onUpdateCommenceNightFlying, onUpdateCeaseNightFlying, dispatchStaggerSettings, onUpdateDispatchStaggerSettings, tileStatusSettings, onUpdateTileStatusSettings, emergencyFreezeAuthority, onUpdateEmergencyFreezeAuthority, emergencyFreezeAllowedActions, onUpdateEmergencyFreezeAllowedActions, groundEventSchedulingSettings = DEFAULT_GROUND_EVENT_SCHEDULING_SETTINGS, onUpdateGroundEventSchedulingSettings, qualificationOptions, currentUserQualificationIds, onUpdatePlatformConfig, onNavigateToSettingsSection, currentUserPermission = "Staff", canUsePlatformPermission, isSetupTestMode: isSetupTestMode2 = false, onSaveSetupTestPersonnel, isOpen = false, onInitialSetupWizardActiveChange, onInitialSetupWizardFinished, initialView = "structure", serviceDefinitions = [], onUpdateServiceDefinitions, traineeServiceOptions = [] }) => {
   const chart = reactExports.useMemo(() => buildOrganisationChart(platformConfig), [platformConfig]);
   const [selectedNodeId, setSelectedNodeId] = reactExports.useState(null);
   const [activeView, setActiveView] = reactExports.useState(initialView);
@@ -43942,6 +44229,7 @@ const OrganisationSlideoutDiagram = ({ platformConfig, organisationSettings, uni
         organisationSettings,
         unitCode,
         locationCode,
+        syllabusDetails,
         formationCallsigns,
         buildRuleSettings,
         flyingStartTime,
@@ -43970,6 +44258,8 @@ const OrganisationSlideoutDiagram = ({ platformConfig, organisationSettings, uni
         onUpdateEmergencyFreezeAuthority,
         emergencyFreezeAllowedActions,
         onUpdateEmergencyFreezeAllowedActions,
+        groundEventSchedulingSettings,
+        onUpdateGroundEventSchedulingSettings,
         qualificationOptions,
         currentUserQualificationIds,
         onUpdatePlatformConfig,
@@ -44106,6 +44396,8 @@ const ScheduleView = ({
   onUpdateEmergencyFreezeAuthority,
   emergencyFreezeAllowedActions = DEFAULT_EMERGENCY_FREEZE_ALLOWED_ACTIONS,
   onUpdateEmergencyFreezeAllowedActions,
+  groundEventSchedulingSettings = DEFAULT_GROUND_EVENT_SCHEDULING_SETTINGS,
+  onUpdateGroundEventSchedulingSettings,
   qualificationOptions,
   currentUserQualificationIds,
   timezoneOffset = 10
@@ -46085,7 +46377,7 @@ const ScheduleView = ({
             className: `absolute left-0 top-0 h-full pointer-events-none border-r border-cyan-400/25 bg-slate-950 shadow-[18px_0_36px_rgba(0,0,0,0.38)] transition-transform duration-300 ease-out ${showResourceUnderlayPanel ? "" : "-translate-x-full"}`,
             style: { width: "min(calc(clamp(360px, 40vw, 680px) + 400px), calc(100vw - 420px))" },
             children: [
-              /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: `h-full overflow-hidden border-r border-white/5 bg-slate-950 ${showResourceUnderlayPanel ? "pointer-events-auto" : "pointer-events-none"}`, children: /* @__PURE__ */ jsxRuntimeExports.jsx(OrganisationSlideoutDiagram, { platformConfig, organisationSettings, unitCode, locationCode, formationCallsigns, buildRuleSettings, flyingStartTime, flyingEndTime, ftdStartTime, ftdEndTime, cptStartTime, cptEndTime, allowNightFlying, commenceNightFlying, ceaseNightFlying, onUpdateFlyingStartTime, onUpdateFlyingEndTime, onUpdateFtdStartTime, onUpdateFtdEndTime, onUpdateCptStartTime, onUpdateCptEndTime, onUpdateAllowNightFlying, onUpdateCommenceNightFlying, onUpdateCeaseNightFlying, dispatchStaggerSettings, onUpdateDispatchStaggerSettings, tileStatusSettings, onUpdateTileStatusSettings, emergencyFreezeAuthority, onUpdateEmergencyFreezeAuthority, emergencyFreezeAllowedActions, onUpdateEmergencyFreezeAllowedActions, qualificationOptions, currentUserQualificationIds, onUpdatePlatformConfig, onNavigateToSettingsSection, currentUserPermission, canUsePlatformPermission, isSetupTestMode: isSetupTestMode2, onSaveSetupTestPersonnel, isOpen: showResourceUnderlayPanel, onInitialSetupWizardActiveChange, onInitialSetupWizardFinished: async () => {
+              /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: `h-full overflow-hidden border-r border-white/5 bg-slate-950 ${showResourceUnderlayPanel ? "pointer-events-auto" : "pointer-events-none"}`, children: /* @__PURE__ */ jsxRuntimeExports.jsx(OrganisationSlideoutDiagram, { platformConfig, organisationSettings, unitCode, locationCode, syllabusDetails, formationCallsigns, buildRuleSettings, flyingStartTime, flyingEndTime, ftdStartTime, ftdEndTime, cptStartTime, cptEndTime, allowNightFlying, commenceNightFlying, ceaseNightFlying, onUpdateFlyingStartTime, onUpdateFlyingEndTime, onUpdateFtdStartTime, onUpdateFtdEndTime, onUpdateCptStartTime, onUpdateCptEndTime, onUpdateAllowNightFlying, onUpdateCommenceNightFlying, onUpdateCeaseNightFlying, dispatchStaggerSettings, onUpdateDispatchStaggerSettings, tileStatusSettings, onUpdateTileStatusSettings, emergencyFreezeAuthority, onUpdateEmergencyFreezeAuthority, emergencyFreezeAllowedActions, onUpdateEmergencyFreezeAllowedActions, groundEventSchedulingSettings, onUpdateGroundEventSchedulingSettings, qualificationOptions, currentUserQualificationIds, onUpdatePlatformConfig, onNavigateToSettingsSection, currentUserPermission, canUsePlatformPermission, isSetupTestMode: isSetupTestMode2, onSaveSetupTestPersonnel, isOpen: showResourceUnderlayPanel, onInitialSetupWizardActiveChange, onInitialSetupWizardFinished: async () => {
                 setShowResourceUnderlayPanel(false);
                 onInitialSetupWizardActiveChange?.(false);
                 await onInitialSetupWizardFinished?.();
@@ -124633,7 +124925,7 @@ const shouldSkipLegacyMassBriefInNextEventSelection = (item, groundEventScheduli
   if (!String(item.code || "").includes(" MB")) return false;
   const schedulingMatch = getGroundEventSchedulingRuleForItem(groundEventSchedulingSettings, item);
   const isConfiguredGroupEvent = isLmpGroupEventEnabledValue(item.groupEvent) || Boolean(schedulingMatch.explicitGroup);
-  if (!isConfiguredGroupEvent) return false;
+  if (!isConfiguredGroupEvent) return true;
   return schedulingMatch.rule.mode === "manual";
 };
 const getFallbackMasterLmpForTrainee = (trainee, masterSyllabus) => {
@@ -162174,6 +162466,8 @@ It will not clear the published DFP.`,
             organisationSettings,
             onUpdatePlatformConfig: handleUpdatePlatformConfigFromSchedule,
             onNavigateToSettingsSection: handleNavigateToSettingsSection,
+            groundEventSchedulingSettings,
+            onUpdateGroundEventSchedulingSettings: (settings) => setGroundEventSchedulingSettings(normaliseGroundEventSchedulingSettings(settings)),
             currentUserPermission,
             canUsePlatformPermission,
             personnelDisplaySettings,
