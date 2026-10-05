@@ -59171,6 +59171,8 @@ appliedUpdates.forEach(update => {
         && (eventSegmentsForDate.length === 0 || shouldShowEmptyDfpWelcomeForResourceColumn)
         && !showEmptyDfpNotice
         && !showDfpRetrievalNotice
+        && !showDateWarning
+        && !isBuildingDfp
         && !isSnapshotLoadPendingForSelectedDate
         && !isInitialSetupWizardActive
         && !setupTestProfile
@@ -59195,6 +59197,8 @@ appliedUpdates.forEach(update => {
             eventSegmentsForDate.length > 0 && !shouldShowEmptyDfpWelcomeForResourceColumn ? 'events-present-and-resource-rows-configured' : '',
             showEmptyDfpNotice ? 'empty-dfp-recovery-notice-visible' : '',
             showDfpRetrievalNotice ? 'dfp-retrieval-notice-visible' : '',
+            showDateWarning ? 'build-date-warning-visible' : '',
+            isBuildingDfp ? 'dfp-build-running' : '',
             isSnapshotLoadPendingForSelectedDate ? `snapshot-load-${dfpSnapshotLoadState.status}` : '',
             isInitialSetupWizardActive ? 'initial-setup-wizard-active' : '',
             setupTestProfile ? 'setup-test-profile-active' : '',
@@ -59217,6 +59221,8 @@ appliedUpdates.forEach(update => {
             snapshotDate: dfpSnapshotLoadState.date,
             showEmptyDfpNotice,
             showDfpRetrievalNotice,
+            showDateWarning,
+            isBuildingDfp,
         });
         if (lastEmptyDfpWelcomeDiagnosticSignatureRef.current === diagnosticSignature) return;
         lastEmptyDfpWelcomeDiagnosticSignatureRef.current = diagnosticSignature;
@@ -59315,6 +59321,7 @@ appliedUpdates.forEach(update => {
         hasConfiguredDfpResourceRowsForSelectedDate,
         hasSelectedOperationalContext,
         isAuthenticated,
+        isBuildingDfp,
         isFutureSelectedDfpDate,
         isInitialSetupWizardActive,
         isSnapshotLoadPendingForSelectedDate,
@@ -59323,6 +59330,7 @@ appliedUpdates.forEach(update => {
         school,
         setupTestProfile,
         shouldShowEmptyDfpWelcomeForResourceColumn,
+        showDateWarning,
         showDfpRetrievalNotice,
         showEmptyDfpNotice,
         showEmptyDfpWelcome,

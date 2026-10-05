@@ -164714,7 +164714,7 @@ Do you want to replace the existing entry?`,
   const emptyDfpWelcomeVariant = !hasSelectedOperationalContext ? "select-context" : !hasConfiguredDfpResourceRowsForSelectedDate ? "empty-resources" : "empty-date";
   const shouldShowEmptyDfpWelcomeForResourceColumn = hasSelectedOperationalContext && !hasConfiguredDfpResourceRowsForSelectedDate;
   const showEmptyDfpNotice = isAuthenticated && activeView === "Program Schedule" && dfpSnapshotLoadState.date === date && dfpSnapshotLoadState.status === "empty" && eventSegmentsForDate.length === 0 && dismissedEmptyDfpNoticeKey !== emptyDfpNoticeKey && !isFutureSelectedDfpDate && !isInitialSetupWizardActive && !showInitialSetupBlankState && !setupTestProfile;
-  const showEmptyDfpWelcome = isAuthenticated && activeView === "Program Schedule" && (eventSegmentsForDate.length === 0 || shouldShowEmptyDfpWelcomeForResourceColumn) && !showEmptyDfpNotice && !showDfpRetrievalNotice && !isSnapshotLoadPendingForSelectedDate && !isInitialSetupWizardActive && !setupTestProfile && !authLoading;
+  const showEmptyDfpWelcome = isAuthenticated && activeView === "Program Schedule" && (eventSegmentsForDate.length === 0 || shouldShowEmptyDfpWelcomeForResourceColumn) && !showEmptyDfpNotice && !showDfpRetrievalNotice && !showDateWarning && !isBuildingDfp && !isSnapshotLoadPendingForSelectedDate && !isInitialSetupWizardActive && !setupTestProfile && !authLoading;
   const lastEmptyDfpWelcomeDiagnosticSignatureRef = reactExports.useRef("");
   reactExports.useEffect(() => {
     const settings = activePlatformResourcePool?.settings || {};
@@ -164746,6 +164746,8 @@ Do you want to replace the existing entry?`,
       eventSegmentsForDate.length > 0 && !shouldShowEmptyDfpWelcomeForResourceColumn ? "events-present-and-resource-rows-configured" : "",
       showEmptyDfpNotice ? "empty-dfp-recovery-notice-visible" : "",
       showDfpRetrievalNotice ? "dfp-retrieval-notice-visible" : "",
+      showDateWarning ? "build-date-warning-visible" : "",
+      isBuildingDfp ? "dfp-build-running" : "",
       isSnapshotLoadPendingForSelectedDate ? `snapshot-load-${dfpSnapshotLoadState.status}` : "",
       isInitialSetupWizardActive ? "initial-setup-wizard-active" : "",
       setupTestProfile ? "setup-test-profile-active" : ""
@@ -164767,7 +164769,9 @@ Do you want to replace the existing entry?`,
       snapshotStatus: dfpSnapshotLoadState.status,
       snapshotDate: dfpSnapshotLoadState.date,
       showEmptyDfpNotice,
-      showDfpRetrievalNotice
+      showDfpRetrievalNotice,
+      showDateWarning,
+      isBuildingDfp
     });
     if (lastEmptyDfpWelcomeDiagnosticSignatureRef.current === diagnosticSignature) return;
     lastEmptyDfpWelcomeDiagnosticSignatureRef.current = diagnosticSignature;
@@ -164863,6 +164867,7 @@ Do you want to replace the existing entry?`,
     hasConfiguredDfpResourceRowsForSelectedDate,
     hasSelectedOperationalContext,
     isAuthenticated,
+    isBuildingDfp,
     isFutureSelectedDfpDate,
     isInitialSetupWizardActive,
     isSnapshotLoadPendingForSelectedDate,
@@ -164871,6 +164876,7 @@ Do you want to replace the existing entry?`,
     school,
     setupTestProfile,
     shouldShowEmptyDfpWelcomeForResourceColumn,
+    showDateWarning,
     showDfpRetrievalNotice,
     showEmptyDfpNotice,
     showEmptyDfpWelcome,
