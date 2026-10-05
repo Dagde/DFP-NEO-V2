@@ -3336,6 +3336,21 @@ const InitialSetupWizard: React.FC<{
         } catch (error) {
         }
     };
+    const summariseWizardStaffQualificationCatalogue = () => ({
+        organisationSettingsHasCatalogue: Boolean(organisationSettings.staffQualificationCatalogue),
+        personnelInstructorLabel: personnelDisplaySettings.instructorLabel,
+        qualificationCount: wizardActiveStaffQualificationOptions.length,
+        qualifications: wizardActiveStaffQualificationOptions.map((qualification) => ({
+            id: qualification.id,
+            code: qualification.code,
+            name: qualification.name,
+            status: qualification.status || 'ACTIVE',
+            displayLabel: getStaffQualificationDisplayLabel(qualification),
+            matchesInstructor: qualificationMatches('instructor', qualification),
+            matchesIp: qualificationMatches('IP', qualification),
+            matchesQfi: qualificationMatches('QFI', qualification),
+        })),
+    });
     const pushWizardLmpDiag = (stage: string, details: Record<string, any> = {}) => {
         if (!isSetupTestMode || typeof window === 'undefined') return;
         const setupTestKeys = Object.keys(window.localStorage || {})
@@ -7902,6 +7917,33 @@ const InitialSetupWizard: React.FC<{
             let result = await validateWizardTemplateFile(template, file, skipConfirmedExampleRow, confirmedExampleRowNumber);
             if (template.id === 'staff' && result.status === 'valid') {
                 const qualificationIssues = getStaffUploadQualificationIssues(result);
+                pushWizardImportDiag('staff:qualification-validation', {
+                    fileName: file.name,
+                    headers: result.headers || [],
+                    dataRows: result.dataRows?.length || 0,
+                    qualificationCatalogue: summariseWizardStaffQualificationCatalogue(),
+                    uploadedQualificationSamples: (result.dataRows || []).slice(0, 12).map((row, rowIndex) => {
+                        const headers = result.headers || [];
+                        const rawQualifications = getWizardCellByHeader(headers, row, 'Qualifications');
+                        const tokens = splitWizardStaffQualificationTokens(rawQualifications);
+                        return {
+                            row: rowIndex + 1,
+                            rawQualifications,
+                            tokens,
+                            matches: tokens.map((token) => {
+                                const match = findWizardStaffQualification(token);
+                                return {
+                                    token,
+                                    matchedId: match?.id || '',
+                                    matchedCode: match?.code || '',
+                                    matchedName: match?.name || '',
+                                    displayLabel: getStaffQualificationDisplayLabel(match),
+                                };
+                            }),
+                        };
+                    }),
+                    qualificationIssues,
+                });
                 if (qualificationIssues.length > 0) {
                     setStaffQualificationMappings((current) => {
                         const next = { ...current };
@@ -8055,17 +8097,24 @@ const InitialSetupWizard: React.FC<{
         return Array.from(issuesByToken.values());
     };
 
-    const resolveWizardStaffQualifications = (value: unknown): { labels: string[]; ids: string[]; skipped: string[]; unresolved: string[]; hasInput: boolean } => {
+    const resolveWizardStaffQualifications = (value: unknown): { labels: string[]; ids: string[]; skipped: string[]; unresolved: string[]; hasInput: boolean; debug: any[] } => {
         const labels: string[] = [];
         const ids: string[] = [];
         const skipped: string[] = [];
         const unresolved: string[] = [];
+        const debug: any[] = [];
         const tokens = splitWizardStaffQualificationTokens(value);
         tokens.forEach((token) => {
             const tokenKey = normaliseQualificationToken(token);
             const mappedValue = tokenKey ? staffQualificationMappings[tokenKey] : '';
             if (mappedValue === WIZARD_NONE_QUALIFICATION_MAPPING) {
                 skipped.push(token);
+                debug.push({
+                    token,
+                    tokenKey,
+                    mappedValue,
+                    action: 'skipped-none-of-these',
+                });
                 return;
             }
             const match = mappedValue
@@ -8073,13 +8122,29 @@ const InitialSetupWizard: React.FC<{
                 : findWizardStaffQualification(token);
             if (!match) {
                 unresolved.push(token);
+                debug.push({
+                    token,
+                    tokenKey,
+                    mappedValue,
+                    action: 'unresolved',
+                });
                 return;
             }
             if (!ids.includes(match.id)) ids.push(match.id);
             const label = getStaffQualificationDisplayLabel(match) || match.id;
             if (label && !labels.includes(label)) labels.push(label);
+            debug.push({
+                token,
+                tokenKey,
+                mappedValue,
+                action: mappedValue ? 'mapped' : 'direct-match',
+                matchedId: match.id,
+                matchedCode: match.code,
+                matchedName: match.name,
+                displayLabel: label,
+            });
         });
-        return { labels, ids, skipped, unresolved, hasInput: tokens.length > 0 };
+        return { labels, ids, skipped, unresolved, hasInput: tokens.length > 0, debug };
     };
 
     const applyStaffQualificationChoicesToUpload = (
@@ -8297,10 +8362,12 @@ const InitialSetupWizard: React.FC<{
                     givenNames: givenValue || givenPart || '',
                     unit: (getWizardCellByHeader(headers, row, 'Unit') || unitDraft.code || '').toUpperCase(),
                     position: getWizardCellByHeader(headers, row, 'Role'),
+                    rawQualificationFromTemplate: rawQualifications,
                     qualifications: qualificationResolution.labels.join('; '),
                     qualificationIds: qualificationResolution.hasInput
                         ? qualificationResolution.ids
                         : undefined,
+                    qualificationImportDebug: qualificationResolution.debug,
                     skippedQualificationLabels: qualificationResolution.skipped,
                     unresolvedQualificationLabels: qualificationResolution.unresolved,
                     rank: getWizardCellByHeader(headers, row, 'Rank'),
@@ -8328,7 +8395,15 @@ const InitialSetupWizard: React.FC<{
             const unresolvedQualifications = Array.from(new Set(importedRows.flatMap((row) => row.unresolvedQualificationLabels || [])));
             pushWizardImportDiag('staff:imported-to-draft', {
                 importedRows: importedRows.length,
-                sample: importedRows.slice(0, 8),
+                qualificationCatalogue: summariseWizardStaffQualificationCatalogue(),
+                sample: importedRows.slice(0, 8).map((row) => ({
+                    name: getWizardRowName(row),
+                    unit: row.unit,
+                    rawQualificationFromTemplate: row.rawQualificationFromTemplate,
+                    displayedQualificationText: row.qualifications,
+                    qualificationIds: row.qualificationIds,
+                    qualificationImportDebug: row.qualificationImportDebug,
+                })),
                 draftLength: nextStaffDraft.length,
                 skippedQualifications,
                 unresolvedQualifications,
@@ -11070,6 +11145,10 @@ const InitialSetupWizard: React.FC<{
                     unit: person.unit,
                     location: person.location,
                     role: person.role,
+                    qualifications: person.qualifications,
+                    qualificationIds: person.qualificationIds,
+                    preferenceQualifications: person.preferences?.qualifications || [],
+                    sourceTemplateQualification: person.sourceTemplateData?.Qualifications,
                     source: person._dataSource,
                 })),
                 traineeSample: setupPersonnel.trainees.slice(0, 8).map((person: any) => ({
