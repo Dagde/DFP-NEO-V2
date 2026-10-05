@@ -35958,6 +35958,7 @@ const App: React.FC = () => {
     const [cptTurnaround, setCptTurnaround] = useState(0.5);
     const [taxiGroundTime, setTaxiGroundTime] = useState(0.1);
     const [isBuildingDfp, setIsBuildingDfp] = useState(false);
+    const [isNeoBuildFlowPending, setIsNeoBuildFlowPending] = useState(false);
     const [isStaffLoaded, setIsStaffLoaded] = useState(false);
     const [isTraineeLoaded, setIsTraineeLoaded] = useState(false);
     const [isCoursesLoaded, setIsCoursesLoaded] = useState(false);
@@ -47346,6 +47347,7 @@ const App: React.FC = () => {
         const resolvedPicCrewPriorityEvents = await resolveFixedCrewPicPriorityEventsWithoutCrew(newHighestPriorityEvents);
         if (!resolvedPicCrewPriorityEvents) {
             logNeoBuildUiDebug('DEBUG NEO Build paused: fixed crew PIC priority event requires crew selection.');
+            setIsNeoBuildFlowPending(false);
             return;
         }
 
@@ -47396,6 +47398,7 @@ const App: React.FC = () => {
         }
         logNeoBuildUiDebug('🚀 [NEO-Build] handleBuildDfp called');
         logNeoBuildUiDebug('🚀 [NEO-Build] buildDfpDate:', buildDfpDate);
+        setIsNeoBuildFlowPending(true);
 
         // Note: Priority analysis is now integrated in the Build Analysis sidebar item
         // No need to open external tab
@@ -47419,7 +47422,13 @@ const App: React.FC = () => {
     const handleConfirmDateAndBuild = () => {
         setShowDateWarning(false);
         setDismissedEmptyDfpNoticeKey(emptyDfpNoticeKey);
+        setIsNeoBuildFlowPending(true);
         void startBuildProcess();
+    };
+
+    const handleCancelDateWarning = () => {
+        setShowDateWarning(false);
+        setIsNeoBuildFlowPending(false);
     };
 
     const runBuildAlgorithm = async (preservedEvents?: ScheduleEvent[], buildPublishedSchedulesOverride?: Record<string, ScheduleEvent[]>) => {
@@ -47600,6 +47609,7 @@ const App: React.FC = () => {
         });
         markNeoBuildTiming(timingReport, 'runBuildAlgorithm:start');
         setIsBuildingDfp(true);
+        setIsNeoBuildFlowPending(false);
         setDfpBuildProgress({
             message: 'Preparing NEO Build inputs...',
             percentage: 1,
@@ -59173,6 +59183,7 @@ appliedUpdates.forEach(update => {
         && !showDfpRetrievalNotice
         && !showDateWarning
         && !isBuildingDfp
+        && !isNeoBuildFlowPending
         && !isSnapshotLoadPendingForSelectedDate
         && !isInitialSetupWizardActive
         && !setupTestProfile
@@ -59199,6 +59210,7 @@ appliedUpdates.forEach(update => {
             showDfpRetrievalNotice ? 'dfp-retrieval-notice-visible' : '',
             showDateWarning ? 'build-date-warning-visible' : '',
             isBuildingDfp ? 'dfp-build-running' : '',
+            isNeoBuildFlowPending ? 'neo-build-flow-pending' : '',
             isSnapshotLoadPendingForSelectedDate ? `snapshot-load-${dfpSnapshotLoadState.status}` : '',
             isInitialSetupWizardActive ? 'initial-setup-wizard-active' : '',
             setupTestProfile ? 'setup-test-profile-active' : '',
@@ -59223,6 +59235,7 @@ appliedUpdates.forEach(update => {
             showDfpRetrievalNotice,
             showDateWarning,
             isBuildingDfp,
+            isNeoBuildFlowPending,
         });
         if (lastEmptyDfpWelcomeDiagnosticSignatureRef.current === diagnosticSignature) return;
         lastEmptyDfpWelcomeDiagnosticSignatureRef.current = diagnosticSignature;
@@ -59324,6 +59337,7 @@ appliedUpdates.forEach(update => {
         isBuildingDfp,
         isFutureSelectedDfpDate,
         isInitialSetupWizardActive,
+        isNeoBuildFlowPending,
         isSnapshotLoadPendingForSelectedDate,
         latestSavedDfpDate,
         resourceRowTargetDate,
@@ -60289,7 +60303,7 @@ appliedUpdates.forEach(update => {
                 />
             )}
             {pausePanelPhase === 'building' && <PropellerLoadingOverlay message="Engine warming up — please wait…" />}
-            {showDateWarning && <BuildDateWarningFlyout onConfirm={handleConfirmDateAndBuild} onCancel={() => setShowDateWarning(false)} date={buildDfpDate} />}
+            {showDateWarning && <BuildDateWarningFlyout onConfirm={handleConfirmDateAndBuild} onCancel={handleCancelDateWarning} date={buildDfpDate} />}
             {unavailabilityNotifications.length > 0 && <UnavailabilityConflictFlyout notifications={unavailabilityNotifications} onDismiss={() => setUnavailabilityNotifications([])} />}
             {showPublishConfirm && <PublishConfirmationFlyout date={buildDfpDate} onConfirm={handleConfirmPublish} onCancel={() => setShowPublishConfirm(false)} />}
             {isLocalityChangeVisible && <LocalityChangeFlyout locality={school} />}

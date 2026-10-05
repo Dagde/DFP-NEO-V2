@@ -145370,6 +145370,7 @@ const App = () => {
   const [cptTurnaround, setCptTurnaround] = reactExports.useState(0.5);
   const [taxiGroundTime, setTaxiGroundTime] = reactExports.useState(0.1);
   const [isBuildingDfp, setIsBuildingDfp] = reactExports.useState(false);
+  const [isNeoBuildFlowPending, setIsNeoBuildFlowPending] = reactExports.useState(false);
   const [isStaffLoaded, setIsStaffLoaded] = reactExports.useState(false);
   const [isTraineeLoaded, setIsTraineeLoaded] = reactExports.useState(false);
   const [isCoursesLoaded, setIsCoursesLoaded] = reactExports.useState(false);
@@ -154618,6 +154619,7 @@ The proposed event was not scheduled. Re-open the event and choose Accept Confli
     const resolvedPicCrewPriorityEvents = await resolveFixedCrewPicPriorityEventsWithoutCrew(newHighestPriorityEvents);
     if (!resolvedPicCrewPriorityEvents) {
       logNeoBuildUiDebug("DEBUG NEO Build paused: fixed crew PIC priority event requires crew selection.");
+      setIsNeoBuildFlowPending(false);
       return;
     }
     const finalPreservedEvents = resolvedPicCrewPriorityEvents;
@@ -154657,6 +154659,7 @@ The proposed event was not scheduled. Re-open the event and choose Accept Confli
     }
     logNeoBuildUiDebug("🚀 [NEO-Build] handleBuildDfp called");
     logNeoBuildUiDebug("🚀 [NEO-Build] buildDfpDate:", buildDfpDate);
+    setIsNeoBuildFlowPending(true);
     const todayStr = getEffectiveDfpDateString();
     logNeoBuildUiDebug("🚀 [NEO-Build] todayStr:", todayStr);
     logNeoBuildUiDebug("🚀 [NEO-Build] Date comparison:", buildDfpDate, "<=", todayStr, "=", buildDfpDate <= todayStr);
@@ -154671,7 +154674,12 @@ The proposed event was not scheduled. Re-open the event and choose Accept Confli
   const handleConfirmDateAndBuild = () => {
     setShowDateWarning(false);
     setDismissedEmptyDfpNoticeKey(emptyDfpNoticeKey);
+    setIsNeoBuildFlowPending(true);
     void startBuildProcess();
+  };
+  const handleCancelDateWarning = () => {
+    setShowDateWarning(false);
+    setIsNeoBuildFlowPending(false);
   };
   const runBuildAlgorithm = async (preservedEvents, buildPublishedSchedulesOverride) => {
     logNeoBuildUiDebug("🚀 [NEO-Build] runBuildAlgorithm called");
@@ -154813,6 +154821,7 @@ The proposed event was not scheduled. Re-open the event and choose Accept Confli
     });
     markNeoBuildTiming(timingReport, "runBuildAlgorithm:start");
     setIsBuildingDfp(true);
+    setIsNeoBuildFlowPending(false);
     setDfpBuildProgress({
       message: "Preparing NEO Build inputs...",
       percentage: 1,
@@ -164714,7 +164723,7 @@ Do you want to replace the existing entry?`,
   const emptyDfpWelcomeVariant = !hasSelectedOperationalContext ? "select-context" : !hasConfiguredDfpResourceRowsForSelectedDate ? "empty-resources" : "empty-date";
   const shouldShowEmptyDfpWelcomeForResourceColumn = hasSelectedOperationalContext && !hasConfiguredDfpResourceRowsForSelectedDate;
   const showEmptyDfpNotice = isAuthenticated && activeView === "Program Schedule" && dfpSnapshotLoadState.date === date && dfpSnapshotLoadState.status === "empty" && eventSegmentsForDate.length === 0 && dismissedEmptyDfpNoticeKey !== emptyDfpNoticeKey && !isFutureSelectedDfpDate && !isInitialSetupWizardActive && !showInitialSetupBlankState && !setupTestProfile;
-  const showEmptyDfpWelcome = isAuthenticated && activeView === "Program Schedule" && (eventSegmentsForDate.length === 0 || shouldShowEmptyDfpWelcomeForResourceColumn) && !showEmptyDfpNotice && !showDfpRetrievalNotice && !showDateWarning && !isBuildingDfp && !isSnapshotLoadPendingForSelectedDate && !isInitialSetupWizardActive && !setupTestProfile && !authLoading;
+  const showEmptyDfpWelcome = isAuthenticated && activeView === "Program Schedule" && (eventSegmentsForDate.length === 0 || shouldShowEmptyDfpWelcomeForResourceColumn) && !showEmptyDfpNotice && !showDfpRetrievalNotice && !showDateWarning && !isBuildingDfp && !isNeoBuildFlowPending && !isSnapshotLoadPendingForSelectedDate && !isInitialSetupWizardActive && !setupTestProfile && !authLoading;
   const lastEmptyDfpWelcomeDiagnosticSignatureRef = reactExports.useRef("");
   reactExports.useEffect(() => {
     const settings = activePlatformResourcePool?.settings || {};
@@ -164748,6 +164757,7 @@ Do you want to replace the existing entry?`,
       showDfpRetrievalNotice ? "dfp-retrieval-notice-visible" : "",
       showDateWarning ? "build-date-warning-visible" : "",
       isBuildingDfp ? "dfp-build-running" : "",
+      isNeoBuildFlowPending ? "neo-build-flow-pending" : "",
       isSnapshotLoadPendingForSelectedDate ? `snapshot-load-${dfpSnapshotLoadState.status}` : "",
       isInitialSetupWizardActive ? "initial-setup-wizard-active" : "",
       setupTestProfile ? "setup-test-profile-active" : ""
@@ -164771,7 +164781,8 @@ Do you want to replace the existing entry?`,
       showEmptyDfpNotice,
       showDfpRetrievalNotice,
       showDateWarning,
-      isBuildingDfp
+      isBuildingDfp,
+      isNeoBuildFlowPending
     });
     if (lastEmptyDfpWelcomeDiagnosticSignatureRef.current === diagnosticSignature) return;
     lastEmptyDfpWelcomeDiagnosticSignatureRef.current = diagnosticSignature;
@@ -164870,6 +164881,7 @@ Do you want to replace the existing entry?`,
     isBuildingDfp,
     isFutureSelectedDfpDate,
     isInitialSetupWizardActive,
+    isNeoBuildFlowPending,
     isSnapshotLoadPendingForSelectedDate,
     latestSavedDfpDate,
     resourceRowTargetDate,
@@ -165838,7 +165850,7 @@ Do you want to replace the existing entry?`,
         }
       ),
       pausePanelPhase === "building" && /* @__PURE__ */ jsxRuntimeExports.jsx(PropellerLoadingOverlay, { message: "Engine warming up — please wait…" }),
-      showDateWarning && /* @__PURE__ */ jsxRuntimeExports.jsx(BuildDateWarningFlyout, { onConfirm: handleConfirmDateAndBuild, onCancel: () => setShowDateWarning(false), date: buildDfpDate }),
+      showDateWarning && /* @__PURE__ */ jsxRuntimeExports.jsx(BuildDateWarningFlyout, { onConfirm: handleConfirmDateAndBuild, onCancel: handleCancelDateWarning, date: buildDfpDate }),
       unavailabilityNotifications.length > 0 && /* @__PURE__ */ jsxRuntimeExports.jsx(UnavailabilityConflictFlyout, { notifications: unavailabilityNotifications, onDismiss: () => setUnavailabilityNotifications([]) }),
       showPublishConfirm && /* @__PURE__ */ jsxRuntimeExports.jsx(PublishConfirmationFlyout, { date: buildDfpDate, onConfirm: handleConfirmPublish, onCancel: () => setShowPublishConfirm(false) }),
       isLocalityChangeVisible && /* @__PURE__ */ jsxRuntimeExports.jsx(LocalityChangeFlyout, { locality: school }),
