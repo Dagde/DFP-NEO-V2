@@ -9879,7 +9879,9 @@ const DarkMessageModal = ({
   inputLabel,
   inputType = "text",
   inputPlaceholder = "",
-  inputDefaultValue = ""
+  inputDefaultValue = "",
+  secondaryActionText,
+  onSecondaryAction
 }) => {
   const [inputValue, setInputValue] = reactExports.useState(inputDefaultValue);
   const getVariantStyles = () => {
@@ -9978,6 +9980,14 @@ const DarkMessageModal = ({
           onClick: handleCancel,
           className: "px-4 py-2 bg-gray-600 text-white rounded-md hover:bg-gray-700 transition-colors text-sm font-semibold",
           children: cancelText
+        }
+      ),
+      secondaryActionText && onSecondaryAction && /* @__PURE__ */ jsxRuntimeExports.jsx(
+        "button",
+        {
+          onClick: onSecondaryAction,
+          className: "px-4 py-2 bg-sky-600 text-white rounded-md hover:bg-sky-700 transition-colors text-sm font-semibold",
+          children: secondaryActionText
         }
       ),
       /* @__PURE__ */ jsxRuntimeExports.jsx(
@@ -142400,7 +142410,272 @@ const App = () => {
       return false;
     }
   }
+  function readDfpDataDiagEntries() {
+    try {
+      const stored = JSON.parse(localStorage.getItem("neo_dfp_data_diag") || "[]");
+      return Array.isArray(stored) ? stored : [];
+    } catch {
+      return [];
+    }
+  }
+  function readStaffScheduleRenderDiagEntries() {
+    try {
+      const stored = JSON.parse(localStorage.getItem("neo_staff_schedule_render_diag") || "[]");
+      return Array.isArray(stored) ? stored : [];
+    } catch {
+      return [];
+    }
+  }
+  function readLocalStorageJsonForDiag(key) {
+    try {
+      const raw = localStorage.getItem(key);
+      return raw ? JSON.parse(raw) : null;
+    } catch (error) {
+      return {
+        readError: error instanceof Error ? error.message : String(error)
+      };
+    }
+  }
   const rosterColourTraceRef = reactExports.useRef(null);
+  function buildDfpDataDiagReport() {
+    const entries = readDfpDataDiagEntries();
+    const staffScheduleRenderTrace = readStaffScheduleRenderDiagEntries();
+    const snapshotKey = getDailySnapshotKey(date);
+    const latestNeoBuildReport = readLocalStorageJsonForDiag("neo_build_diag_report");
+    const latestNeoBuildZeroTileTrace = readLocalStorageJsonForDiag("neo_build_zero_tile_trace");
+    const latestNeoBuildInputTrace = readLocalStorageJsonForDiag("neo_build_input_trace");
+    const latestNeoBuildNoTilesUiTrace = readLocalStorageJsonForDiag("neo_build_no_tiles_ui_trace");
+    const latestNeoBuildRuntimeErrorReport = readLocalStorageJsonForDiag("neo_build_runtime_error_report");
+    const cacheSummaries = (() => {
+      try {
+        return Object.keys(localStorage).filter((key) => key.startsWith("dfp_snapshot_cache_")).sort().map((key) => {
+          const rawValue = localStorage.getItem(key) || "";
+          let parsed = null;
+          try {
+            parsed = JSON.parse(rawValue);
+          } catch {
+            parsed = null;
+          }
+          const scheduleEvents = Array.isArray(parsed?.scheduleEvents) ? parsed.scheduleEvents : [];
+          const baselineEvents = Array.isArray(parsed?.baselineEvents) ? parsed.baselineEvents : [];
+          return {
+            key,
+            byteLength: rawValue.length,
+            snapshotDate: getDailySnapshotDate(key.replace(/^dfp_snapshot_cache_/, "")),
+            payloadDate: parsed?.date || null,
+            scheduleEventCount: scheduleEvents.length,
+            baselineEventCount: baselineEvents.length,
+            sampleEvents: scheduleEvents.slice(0, 8).map((event) => ({
+              id: event?.id || null,
+              date: event?.date || null,
+              type: event?.type || null,
+              resourceId: event?.resourceId || null,
+              flightNumber: event?.flightNumber || null,
+              startTime: event?.startTime ?? null,
+              duration: event?.duration ?? null
+            }))
+          };
+        });
+      } catch (error) {
+        return [{ error: String(error) }];
+      }
+    })();
+    const enrichedEntries = entries.map((entry, index) => {
+      const previous = index > 0 ? entries[index - 1] : null;
+      const entryPerfMs = typeof entry?.perfMs === "number" ? entry.perfMs : null;
+      const previousPerfMs = typeof previous?.perfMs === "number" ? previous.perfMs : null;
+      return {
+        index,
+        sincePreviousMs: entryPerfMs !== null && previousPerfMs !== null ? entryPerfMs - previousPerfMs : null,
+        ...entry
+      };
+    });
+    const slowestGaps = enrichedEntries.filter((entry) => typeof entry.sincePreviousMs === "number").sort((left, right) => (right.sincePreviousMs || 0) - (left.sincePreviousMs || 0)).slice(0, 20).map((entry) => ({
+      index: entry.index,
+      stage: entry.stage,
+      sincePreviousMs: entry.sincePreviousMs,
+      perfMs: entry.perfMs,
+      ts: entry.ts,
+      date: entry.date,
+      school: entry.school,
+      unit: entry.unit,
+      details: entry.details
+    }));
+    const stages = enrichedEntries.reduce((acc, entry) => {
+      const stage = String(entry.stage || "unknown");
+      acc[stage] = (acc[stage] || 0) + 1;
+      return acc;
+    }, {});
+    return {
+      reportType: "DFP-NEO data diagnostics",
+      generatedAt: (/* @__PURE__ */ new Date()).toISOString(),
+      url: window.location.href,
+      userAgent: navigator.userAgent,
+      activeContext: {
+        date,
+        school,
+        unit: activeUnitCode,
+        activeView,
+        setupTestProfile: setupTestProfile || null,
+        isInitialSetupWizardActive,
+        isAuthenticated,
+        snapshotKey,
+        snapshotLoadState: dfpSnapshotLoadState
+      },
+      authenticatedUser: {
+        authUser: authUser ? {
+          id: authUser.id || null,
+          userId: authUser.userId || null,
+          username: authUser.username || null,
+          displayName: authUser.displayName || null,
+          firstName: authUser.firstName || null,
+          lastName: authUser.lastName || null,
+          role: authUser.role || null,
+          email: authUser.email || null
+        } : null,
+        sessionUser,
+        currentUserName,
+        currentUserPermission,
+        combinedPermissions,
+        matchedCurrentStaffUser: matchedCurrentStaffUser ? {
+          id: matchedCurrentStaffUser.id || null,
+          idNumber: matchedCurrentStaffUser.idNumber || null,
+          name: matchedCurrentStaffUser.name || null,
+          rank: matchedCurrentStaffUser.rank || null,
+          role: matchedCurrentStaffUser.role || null,
+          unit: matchedCurrentStaffUser.unit || null,
+          permissions: matchedCurrentStaffUser.permissions || []
+        } : null
+      },
+      dataScope: {
+        hasRuntimePlatformWideAccess,
+        platformAccessContext,
+        platformDataScopeQuery,
+        activeContextUnitCodes,
+        activeUnitContext,
+        baseSelectableLocationCodes,
+        selectableLocationCodes,
+        operationalContextOptions
+      },
+      loadedDataCounts: {
+        allInstructors: allInstructorsData.length,
+        scopedInstructors: instructorsData.length,
+        archivedInstructors: archivedInstructorsData.length,
+        allTrainees: allTraineesData.length,
+        scopedTrainees: traineesData.length,
+        archivedTrainees: archivedTraineesData.length
+      },
+      operationalVisibility: window.__dfpOperationalVisibilityTrace || null,
+      rosterColourTrace: rosterColourTraceRef.current,
+      platformConfigSummary: {
+        organisationCount: platformConfig?.organisations?.length || 0,
+        locationCount: platformConfig?.locations?.length || 0,
+        unitCount: platformConfig?.units?.length || 0,
+        resourcePoolCount: platformConfig?.resourcePools?.length || 0,
+        aircraftTypeCount: platformConfig?.aircraftTypes?.length || 0,
+        locations: (platformConfig?.locations || []).map((location) => ({
+          code: location?.code || null,
+          name: location?.name || null,
+          status: location?.status || null,
+          unitCodes: location?.settings?.unitCodes || location?.unitCodes || []
+        })).slice(0, 80),
+        units: (platformConfig?.units || []).map((unit) => ({
+          code: unit?.code || null,
+          name: unit?.name || null,
+          status: unit?.status || null,
+          locationCode: unit?.locationCode || null
+        })).slice(0, 120),
+        resourcePools: (platformConfig?.resourcePools || []).map((pool) => ({
+          code: pool?.code || null,
+          name: pool?.name || null,
+          status: pool?.status || null,
+          locationCode: pool?.locationCode || null,
+          unitCode: pool?.unitCode || null,
+          aircraftTypeCode: pool?.aircraftTypeCode || null,
+          settings: pool?.settings || null
+        })).slice(0, 80)
+      },
+      lmpSummary: {
+        count: syllabusDetails.length,
+        names: syllabusDetails.slice(0, 80).map((lmp) => ({
+          id: lmp?.id || null,
+          name: lmp?.name || lmp?.courseName || lmp?.title || null,
+          code: lmp?.code || lmp?.courseCode || null,
+          unit: lmp?.unit || lmp?.unitCode || null,
+          location: lmp?.location || lmp?.locationCode || null,
+          eventCount: Array.isArray(lmp?.events) ? lmp.events.length : Array.isArray(lmp?.syllabus) ? lmp.syllabus.length : null
+        }))
+      },
+      currentScheduleState: {
+        activeDate: date,
+        activeSnapshotKey: snapshotKey,
+        rawPublishedEventCount: Array.isArray(publishedSchedules[date]) ? publishedSchedules[date].length : 0,
+        scopedPublishedEventCount: scopedPublishedEventsForDate.length,
+        renderedSegmentCount: eventSegmentsForDate.length,
+        baselineCount: Array.isArray(baselineSchedules[activeBaselineKey]) ? baselineSchedules[activeBaselineKey].length : 0,
+        publishedScheduleKeys: Object.keys(publishedSchedules).slice(0, 120),
+        snapshotDates: snapshotDates.slice(0, 120),
+        knownSnapshotKeysForDate: snapshotKeysByDateRef.current[date] || [],
+        loadedSnapshotKeys: Array.from(loadedSnapshotDates.current),
+        loadingSnapshotKeys: Array.from(loadingSnapshotDates.current)
+      },
+      localSnapshotCache: cacheSummaries,
+      neoBuildDiagnostics: {
+        latestReportStage: latestNeoBuildReport?.stage || null,
+        latestReportUpdatedAt: latestNeoBuildReport?.updatedAt || null,
+        latestReportBuildDate: latestNeoBuildReport?.buildDate || null,
+        latestInputTrace: latestNeoBuildInputTrace,
+        latestNoTilesUiTrace: latestNeoBuildNoTilesUiTrace,
+        latestZeroTileTrace: latestNeoBuildZeroTileTrace,
+        latestRuntimeErrorReport: latestNeoBuildRuntimeErrorReport,
+        latestReportZeroTileInvestigation: latestNeoBuildReport?.zeroTileInvestigation || null,
+        latestReportInput: latestNeoBuildReport?.input || null,
+        latestReportActiveTrainees: latestNeoBuildReport?.activeTrainees || null,
+        latestReportNextEventLists: latestNeoBuildReport?.nextEventLists || null,
+        latestReportNextEventEligibility: latestNeoBuildReport?.nextEventEligibility || null,
+        latestReportScheduleLists: latestNeoBuildReport?.scheduleLists || null,
+        latestReportFinal: latestNeoBuildReport?.final || null,
+        latestReportFinalCleanup: latestNeoBuildReport?.finalCleanup || null,
+        latestReportPhaseTimeline: Array.isArray(latestNeoBuildReport?.phaseTimeline) ? latestNeoBuildReport.phaseTimeline.slice(-80) : [],
+        latestPreflightLmpScopeTrace: readLocalStorageJsonForDiag("neo_build_preflight_lmp_scope_trace")
+      },
+      summary: {
+        entryCount: enrichedEntries.length,
+        firstEntry: enrichedEntries[0] || null,
+        lastEntry: enrichedEntries[enrichedEntries.length - 1] || null,
+        slowestGaps,
+        stages,
+        staffScheduleRenderTraceCount: staffScheduleRenderTrace.length,
+        latestStaffScheduleStackedGroups: staffScheduleRenderTrace.at(-1)?.stackedGroups || []
+      },
+      entries: enrichedEntries,
+      staffScheduleRenderTrace
+    };
+  }
+  function downloadDfpDataTrace(prefix = "dfp-data-trace") {
+    try {
+      const payload = buildDfpDataDiagReport();
+      const timestamp = (/* @__PURE__ */ new Date()).toISOString().replace(/[:.]/g, "-");
+      const blob = new Blob([JSON.stringify(payload, null, 2)], { type: "application/json;charset=utf-8;" });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = `${prefix}-${timestamp}.json`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+    } catch (error) {
+      console.warn("[DFP-DIAG] Failed to download DFP data trace:", error);
+      void showDarkAlert2(
+        `The trace could not be downloaded.
+
+${error instanceof Error ? error.message : String(error)}`,
+        "Trace Download Failed",
+        "error"
+      );
+    }
+  }
   reactExports.useEffect(() => {
     pushDfpDataDiag("context:resolved", {
       platformLocations: (platformConfig?.locations || []).map((location) => ({
@@ -156276,12 +156551,15 @@ The proposed event was not scheduled. Re-open the event and choose Accept Confli
             console.warn("[NEO-Build][NoTilesUiTrace] Failed to save no-tiles UI trace:", error);
           }
           pushDfpDataDiag("build:no-tiles-alert-shown", noTilesUiTrace);
-          void showDarkAlert2(
-            "NEO Build completed but did not add any tiles. Review the build notes and input settings for this run.",
-            "No Tiles Added",
-            "warning",
-            12e3
-          );
+          setDarkMessageModal({
+            type: "alert",
+            title: "No Tiles Added",
+            message: "NEO Build completed but did not add any tiles. Click Download Trace now so we can see exactly why this run produced zero tiles.",
+            variant: "warning",
+            secondaryActionText: "Download Trace",
+            onSecondaryAction: () => downloadDfpDataTrace("neo-build-no-tiles-trace"),
+            onConfirm: () => setDarkMessageModal(null)
+          });
         }
         const groupGroundNotes = typeof window !== "undefined" ? window.__lastNeoBuildGroupGroundNotes || [] : [];
         if (Array.isArray(groupGroundNotes) && groupGroundNotes.length > 0) {
@@ -166572,7 +166850,9 @@ Do you want to replace the existing entry?`,
           onCancel: darkMessageModal.onCancel,
           confirmText: darkMessageModal.confirmText,
           cancelText: darkMessageModal.cancelText,
-          autoCloseDelay: darkMessageModal.autoCloseDelay
+          autoCloseDelay: darkMessageModal.autoCloseDelay,
+          secondaryActionText: darkMessageModal.secondaryActionText,
+          onSecondaryAction: darkMessageModal.onSecondaryAction
         }
       ),
       showChangePassword && authUser && /* @__PURE__ */ jsxRuntimeExports.jsx(

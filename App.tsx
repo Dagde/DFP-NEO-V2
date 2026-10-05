@@ -29504,6 +29504,8 @@ const App: React.FC = () => {
         confirmText?: string;
         cancelText?: string;
         autoCloseDelay?: number;
+        secondaryActionText?: string;
+        onSecondaryAction?: () => void;
     } | null>(null);
     const [fixedCrewCrewChoiceModal, setFixedCrewCrewChoiceModal] = useState<{
         eventLabel: string;
@@ -31834,6 +31836,29 @@ const App: React.FC = () => {
             entries: enrichedEntries,
             staffScheduleRenderTrace,
         };
+    }
+
+    function downloadDfpDataTrace(prefix = 'dfp-data-trace'): void {
+        try {
+            const payload = buildDfpDataDiagReport();
+            const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+            const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json;charset=utf-8;' });
+            const url = URL.createObjectURL(blob);
+            const link = document.createElement('a');
+            link.href = url;
+            link.download = `${prefix}-${timestamp}.json`;
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            URL.revokeObjectURL(url);
+        } catch (error) {
+            console.warn('[DFP-DIAG] Failed to download DFP data trace:', error);
+            void showDarkAlert(
+                `The trace could not be downloaded.\n\n${error instanceof Error ? error.message : String(error)}`,
+                'Trace Download Failed',
+                'error'
+            );
+        }
     }
 
     function buildDfpTileNameDiagnosticReport(): Record<string, any> {
@@ -48913,12 +48938,15 @@ const App: React.FC = () => {
                         console.warn('[NEO-Build][NoTilesUiTrace] Failed to save no-tiles UI trace:', error);
                     }
                     pushDfpDataDiag('build:no-tiles-alert-shown', noTilesUiTrace);
-                    void showDarkAlert(
-                        'NEO Build completed but did not add any tiles. Review the build notes and input settings for this run.',
-                        'No Tiles Added',
-                        'warning',
-                        12000
-                    );
+                    setDarkMessageModal({
+                        type: 'alert',
+                        title: 'No Tiles Added',
+                        message: 'NEO Build completed but did not add any tiles. Click Download Trace now so we can see exactly why this run produced zero tiles.',
+                        variant: 'warning',
+                        secondaryActionText: 'Download Trace',
+                        onSecondaryAction: () => downloadDfpDataTrace('neo-build-no-tiles-trace'),
+                        onConfirm: () => setDarkMessageModal(null),
+                    });
                 }
                 const groupGroundNotes = typeof window !== 'undefined'
                     ? ((window as any).__lastNeoBuildGroupGroundNotes || [])
@@ -60758,7 +60786,9 @@ appliedUpdates.forEach(update => {
                     onCancel={darkMessageModal.onCancel}
                     confirmText={darkMessageModal.confirmText}
                     cancelText={darkMessageModal.cancelText}
-                      autoCloseDelay={darkMessageModal.autoCloseDelay}
+                    autoCloseDelay={darkMessageModal.autoCloseDelay}
+                    secondaryActionText={darkMessageModal.secondaryActionText}
+                    onSecondaryAction={darkMessageModal.onSecondaryAction}
                 />
             )}
 

@@ -18,6 +18,8 @@ export interface DarkMessageModalProps {
   inputType?: string;
   inputPlaceholder?: string;
   inputDefaultValue?: string;
+  secondaryActionText?: string;
+  onSecondaryAction?: () => void;
 }
 
 const DarkMessageModal: React.FC<DarkMessageModalProps> = ({
@@ -33,7 +35,9 @@ const DarkMessageModal: React.FC<DarkMessageModalProps> = ({
   inputLabel,
   inputType = 'text',
   inputPlaceholder = '',
-  inputDefaultValue = ''
+  inputDefaultValue = '',
+  secondaryActionText,
+  onSecondaryAction
 }) => {
   const [inputValue, setInputValue] = useState(inputDefaultValue);
 
@@ -166,6 +170,14 @@ const DarkMessageModal: React.FC<DarkMessageModalProps> = ({
               className="px-4 py-2 bg-gray-600 text-white rounded-md hover:bg-gray-700 transition-colors text-sm font-semibold"
             >
               {cancelText}
+            </button>
+          )}
+          {secondaryActionText && onSecondaryAction && (
+            <button
+              onClick={onSecondaryAction}
+              className="px-4 py-2 bg-sky-600 text-white rounded-md hover:bg-sky-700 transition-colors text-sm font-semibold"
+            >
+              {secondaryActionText}
             </button>
           )}
           <button 
