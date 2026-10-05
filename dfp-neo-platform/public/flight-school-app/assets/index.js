@@ -4788,6 +4788,33 @@ const getStaffQualificationDisplayLabel = (definition) => {
   }
   return sanitizeUserFacingTerminology(code || name || definition.id);
 };
+const DEFAULT_INSTRUCTOR_QUALIFICATION_TOKENS = /* @__PURE__ */ new Set([
+  "qfi",
+  "instructor",
+  "flightinstructor",
+  "flyinginstructor",
+  "qualifiedflyinginstructor"
+]);
+const applyInstructorQualificationDisplayLabel = (catalogue, instructorLabel2, options = {}) => {
+  const cleanLabel2 = String(instructorLabel2 || "").trim();
+  if (!cleanLabel2 || normaliseQualificationToken(cleanLabel2) === "instructor") return catalogue;
+  let changed = false;
+  const qualifications = catalogue.qualifications.map((qualification) => {
+    const isInstructorQualification = normaliseQualificationToken(qualification.id) === "qfi" || qualificationMatches("instructor", qualification) || qualificationMatches("qfi", qualification);
+    if (!isInstructorQualification) return qualification;
+    const codeToken = normaliseQualificationToken(qualification.code);
+    const nameToken = normaliseQualificationToken(qualification.name);
+    const currentlyDefault = DEFAULT_INSTRUCTOR_QUALIFICATION_TOKENS.has(codeToken) || DEFAULT_INSTRUCTOR_QUALIFICATION_TOKENS.has(nameToken);
+    if (options.onlyWhenDefault && !currentlyDefault) return qualification;
+    changed = true;
+    return {
+      ...qualification,
+      name: cleanLabel2,
+      code: cleanLabel2
+    };
+  });
+  return changed ? { ...catalogue, qualifications } : catalogue;
+};
 const qualificationMatches = (assignedValue, definition) => {
   const token = normaliseQualificationToken(assignedValue);
   if (!token) return false;
@@ -35617,14 +35644,6 @@ const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, lo
   const [traineeCommitInProgress, setTraineeCommitInProgress] = reactExports.useState(false);
   const [traineeCommitSummary, setTraineeCommitSummary] = reactExports.useState("");
   const [showMoreTraineesPrompt, setShowMoreTraineesPrompt] = reactExports.useState(false);
-  const wizardStaffQualificationCatalogue = reactExports.useMemo(
-    () => normaliseStaffQualificationCatalogue(organisationSettings.staffQualificationCatalogue || null),
-    [organisationSettings.staffQualificationCatalogue]
-  );
-  const wizardActiveStaffQualificationOptions = reactExports.useMemo(
-    () => wizardStaffQualificationCatalogue.qualifications.filter((qualification) => String(qualification.status || "ACTIVE").toUpperCase() !== "INACTIVE").sort((left, right) => (left.code || left.name).localeCompare(right.code || right.name, void 0, { sensitivity: "base" })),
-    [wizardStaffQualificationCatalogue]
-  );
   const defaultWizardUnitModulesDraft = "DFP | On\nNEO Build | On\nProgram Schedule | On\nTraining Records | On";
   const makeWizardModuleCode = (moduleName, index = 0) => (String(moduleName || "").trim() || `Module ${index + 1}`).toUpperCase().replace(/[^A-Z0-9]+/g, "_").replace(/^_|_$/g, "");
   const buildHydratedUnitModulesDraft = () => {
@@ -35669,6 +35688,23 @@ const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, lo
     instructorLabel: currentPersonnelDisplaySettings.instructorLabel || "Instructor"
   }));
   const rankSettingsDraftDirtyRef = reactExports.useRef(false);
+  const wizardStaffQualificationCatalogue = reactExports.useMemo(() => {
+    const baseCatalogue = normaliseStaffQualificationCatalogue(organisationSettings.staffQualificationCatalogue || null);
+    const savedPersonnelDisplaySettings = normalisePersonnelDisplaySettings(
+      organisationSettings.personnelDisplaySettings || organisationSettings.personnelSettings || null
+    );
+    const instructorLabel2 = rankSettingsDraft.instructorLabel || savedPersonnelDisplaySettings.instructorLabel;
+    return applyInstructorQualificationDisplayLabel(baseCatalogue, instructorLabel2, { onlyWhenDefault: true });
+  }, [
+    organisationSettings.personnelDisplaySettings,
+    organisationSettings.personnelSettings,
+    organisationSettings.staffQualificationCatalogue,
+    rankSettingsDraft.instructorLabel
+  ]);
+  const wizardActiveStaffQualificationOptions = reactExports.useMemo(
+    () => wizardStaffQualificationCatalogue.qualifications.filter((qualification) => String(qualification.status || "ACTIVE").toUpperCase() !== "INACTIVE").sort((left, right) => (left.code || left.name).localeCompare(right.code || right.name, void 0, { sensitivity: "base" })),
+    [wizardStaffQualificationCatalogue]
+  );
   const [crewRolesDraft, setCrewRolesDraft] = reactExports.useState(() => formatWizardCrewRoleRows(
     currentWizardCrewPositionTerminology.positions.map((position) => ({
       role: position.genericName,
@@ -41138,7 +41174,14 @@ const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, lo
     const firstUnitCode = unitRows[0]?.code || effectiveUnitDraft.code || unitCode || "";
     const firstLocationCode = parseWizardLocationRows(locationsTodayDraft)[0]?.icao || locationDraft.code || "";
     const effectiveOrganisationSettings = organisationSettings || getActiveOrganisation(platformConfig)?.settings || {};
-    const setupStaffQualificationCatalogue = normaliseStaffQualificationCatalogue(effectiveOrganisationSettings.staffQualificationCatalogue || null);
+    const setupPersonnelDisplaySettings = normalisePersonnelDisplaySettings(
+      effectiveOrganisationSettings.personnelDisplaySettings || effectiveOrganisationSettings.personnelSettings || null
+    );
+    const setupStaffQualificationCatalogue = applyInstructorQualificationDisplayLabel(
+      normaliseStaffQualificationCatalogue(effectiveOrganisationSettings.staffQualificationCatalogue || null),
+      rankSettingsDraft.instructorLabel || setupPersonnelDisplaySettings.instructorLabel,
+      { onlyWhenDefault: true }
+    );
     const instructorQualificationDefinitions = getInstructorQualificationDefinitions(setupStaffQualificationCatalogue);
     const getResolvedStaffQualificationIds = (row) => {
       if (Array.isArray(row?.qualificationIds)) {
@@ -141588,7 +141631,10 @@ const App = () => {
   }, [activeContextUnitCodes, activeUnitCode, platformConfig, school]);
   const activeStaffQualificationCatalogue = reactExports.useMemo(() => {
     const activeOrganisation = (platformConfig?.organisations || []).find((organisation) => String(organisation.status || "ACTIVE").toUpperCase() === "ACTIVE") || platformConfig?.organisations?.[0];
-    return normaliseStaffQualificationCatalogue(activeOrganisation?.settings?.staffQualificationCatalogue || null);
+    const settings = activeOrganisation?.settings || {};
+    const baseCatalogue = normaliseStaffQualificationCatalogue(settings.staffQualificationCatalogue || null);
+    const displaySettings = normalisePersonnelDisplaySettings(settings.personnelDisplaySettings || settings.personnelSettings || null);
+    return applyInstructorQualificationDisplayLabel(baseCatalogue, displaySettings.instructorLabel, { onlyWhenDefault: true });
   }, [platformConfig]);
   const activeUnitCallsignSettings = reactExports.useMemo(() => {
     const activeOrganisation = (platformConfig?.organisations || []).find((organisation) => String(organisation.status || "ACTIVE").toUpperCase() === "ACTIVE") || platformConfig?.organisations?.[0];

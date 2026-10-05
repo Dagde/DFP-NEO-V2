@@ -103,6 +103,7 @@ import {
     type ContinuationEventInput,
 } from './utils/continuationEvents';
 import {
+    applyInstructorQualificationDisplayLabel,
     getPersonAssignedQualificationIds,
     getQualificationsForOperationalModel,
     normaliseAssignedQualificationIds,
@@ -30467,7 +30468,10 @@ const App: React.FC = () => {
         const activeOrganisation = (platformConfig?.organisations || []).find((organisation: any) => (
             String(organisation.status || 'ACTIVE').toUpperCase() === 'ACTIVE'
         )) || platformConfig?.organisations?.[0];
-        return normaliseStaffQualificationCatalogue(activeOrganisation?.settings?.staffQualificationCatalogue || null);
+        const settings = activeOrganisation?.settings || {};
+        const baseCatalogue = normaliseStaffQualificationCatalogue(settings.staffQualificationCatalogue || null);
+        const displaySettings = normalisePersonnelDisplaySettings(settings.personnelDisplaySettings || settings.personnelSettings || null);
+        return applyInstructorQualificationDisplayLabel(baseCatalogue, displaySettings.instructorLabel, { onlyWhenDefault: true });
     }, [platformConfig]);
 
     const activeUnitCallsignSettings = useMemo(() => {

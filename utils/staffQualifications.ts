@@ -249,6 +249,42 @@ export const getStaffQualificationDisplayLabel = (
   return sanitizeUserFacingTerminology(code || name || definition.id);
 };
 
+const DEFAULT_INSTRUCTOR_QUALIFICATION_TOKENS = new Set([
+  'qfi',
+  'instructor',
+  'flightinstructor',
+  'flyinginstructor',
+  'qualifiedflyinginstructor',
+]);
+
+export const applyInstructorQualificationDisplayLabel = (
+  catalogue: StaffQualificationCatalogue,
+  instructorLabel?: unknown,
+  options: { onlyWhenDefault?: boolean } = {},
+): StaffQualificationCatalogue => {
+  const cleanLabel = String(instructorLabel || '').trim();
+  if (!cleanLabel || normaliseQualificationToken(cleanLabel) === 'instructor') return catalogue;
+  let changed = false;
+  const qualifications = catalogue.qualifications.map((qualification) => {
+    const isInstructorQualification = normaliseQualificationToken(qualification.id) === 'qfi'
+      || qualificationMatches('instructor', qualification)
+      || qualificationMatches('qfi', qualification);
+    if (!isInstructorQualification) return qualification;
+    const codeToken = normaliseQualificationToken(qualification.code);
+    const nameToken = normaliseQualificationToken(qualification.name);
+    const currentlyDefault = DEFAULT_INSTRUCTOR_QUALIFICATION_TOKENS.has(codeToken)
+      || DEFAULT_INSTRUCTOR_QUALIFICATION_TOKENS.has(nameToken);
+    if (options.onlyWhenDefault && !currentlyDefault) return qualification;
+    changed = true;
+    return {
+      ...qualification,
+      name: cleanLabel,
+      code: cleanLabel,
+    };
+  });
+  return changed ? { ...catalogue, qualifications } : catalogue;
+};
+
 export const qualificationMatches = (
   assignedValue: unknown,
   definition: StaffQualificationDefinition,
