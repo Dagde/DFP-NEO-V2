@@ -34887,13 +34887,11 @@ const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, lo
     return compactValue(details);
   };
   const pushWizardImportDiag = (stage, details = {}) => {
-    if (typeof window === "undefined") return;
+    if (!isSetupTestMode$1 || typeof window === "undefined") return;
     const entry = {
       ts: (/* @__PURE__ */ new Date()).toISOString(),
       stage,
-      activeUnitCode: unitCode,
-      activeLocationCode: locationCode,
-      isSetupTestMode: isSetupTestMode$1,
+      unitCode,
       details: compactWizardDiagDetails(details)
     };
     try {
@@ -34903,64 +34901,6 @@ const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, lo
       window.neoSetupWizardImportDiag = next;
     } catch (error) {
     }
-  };
-  const downloadWizardImportDiagnostic = () => {
-    if (typeof window === "undefined") return;
-    const readStoredJson = (key) => {
-      try {
-        const value = window.localStorage.getItem(key);
-        return value ? JSON.parse(value) : [];
-      } catch (error) {
-        return { readError: error?.message || "Could not read stored diagnostic data." };
-      }
-    };
-    const payload = {
-      reportType: "setup-wizard-import-diagnostic",
-      generatedAt: (/* @__PURE__ */ new Date()).toISOString(),
-      context: {
-        locationCode,
-        unitCode,
-        activeOrganisationCode: activeOrganisation?.code || activeOrganisation?.id || "",
-        isSetupTestMode: isSetupTestMode$1
-      },
-      importDiagnostic: readStoredJson("dfp_setup_wizard_import_diag"),
-      organisationDiagnostic: readStoredJson("dfp_setup_wizard_org_diag"),
-      lmpDiagnostic: readStoredJson("dfp_setup_test_lmp_diag"),
-      finishTrace: readStoredJson(wizardFinishTraceStorageKey)
-    };
-    const hasImportDiagnostic = Array.isArray(payload.importDiagnostic) && payload.importDiagnostic.length > 0;
-    if (!hasImportDiagnostic) {
-      setSaveMessage("No setup wizard import diagnostic has been recorded yet. Import the staff template again, then download this JSON.");
-    }
-    const blob = new Blob([JSON.stringify(payload, null, 2)], { type: "application/json;charset=utf-8;" });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement("a");
-    link.href = url;
-    link.download = `setup-wizard-import-diagnostic-${(/* @__PURE__ */ new Date()).toISOString().replace(/[:.]/g, "-")}.json`;
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    URL.revokeObjectURL(url);
-  };
-  const summariseWizardStaffQualificationCatalogue = () => {
-    const wizardPersonnelDisplaySettings = normalisePersonnelDisplaySettings(
-      organisationSettings.personnelDisplaySettings || organisationSettings.personnelSettings || null
-    );
-    return {
-      organisationSettingsHasCatalogue: Boolean(organisationSettings.staffQualificationCatalogue),
-      personnelInstructorLabel: wizardPersonnelDisplaySettings.instructorLabel,
-      qualificationCount: wizardActiveStaffQualificationOptions.length,
-      qualifications: wizardActiveStaffQualificationOptions.map((qualification) => ({
-        id: qualification.id,
-        code: qualification.code,
-        name: qualification.name,
-        status: qualification.status || "ACTIVE",
-        displayLabel: getStaffQualificationDisplayLabel(qualification),
-        matchesInstructor: qualificationMatches("instructor", qualification),
-        matchesIp: qualificationMatches("IP", qualification),
-        matchesQfi: qualificationMatches("QFI", qualification)
-      }))
-    };
   };
   const pushWizardLmpDiag = (stage, details = {}) => {
     if (!isSetupTestMode$1 || typeof window === "undefined") return;
@@ -38890,33 +38830,6 @@ const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, lo
       let result = await validateWizardTemplateFile(template, file, skipConfirmedExampleRow, confirmedExampleRowNumber);
       if (template.id === "staff" && result.status === "valid") {
         const qualificationIssues = getStaffUploadQualificationIssues(result);
-        pushWizardImportDiag("staff:qualification-validation", {
-          fileName: file.name,
-          headers: result.headers || [],
-          dataRows: result.dataRows?.length || 0,
-          qualificationCatalogue: summariseWizardStaffQualificationCatalogue(),
-          uploadedQualificationSamples: (result.dataRows || []).slice(0, 12).map((row, rowIndex) => {
-            const headers = result.headers || [];
-            const rawQualifications = getWizardCellByHeader(headers, row, "Qualifications");
-            const tokens = splitWizardStaffQualificationTokens(rawQualifications);
-            return {
-              row: rowIndex + 1,
-              rawQualifications,
-              tokens,
-              matches: tokens.map((token) => {
-                const match = findWizardStaffQualification(token);
-                return {
-                  token,
-                  matchedId: match?.id || "",
-                  matchedCode: match?.code || "",
-                  matchedName: match?.name || "",
-                  displayLabel: getStaffQualificationDisplayLabel(match)
-                };
-              })
-            };
-          }),
-          qualificationIssues
-        });
         if (qualificationIssues.length > 0) {
           setStaffQualificationMappings((current) => {
             const next = { ...current };
@@ -39057,47 +38970,24 @@ const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, lo
     const ids = [];
     const skipped = [];
     const unresolved = [];
-    const debug = [];
     const tokens = splitWizardStaffQualificationTokens(value);
     tokens.forEach((token) => {
       const tokenKey = normaliseQualificationToken(token);
       const mappedValue = tokenKey ? staffQualificationMappings[tokenKey] : "";
       if (mappedValue === WIZARD_NONE_QUALIFICATION_MAPPING) {
         skipped.push(token);
-        debug.push({
-          token,
-          tokenKey,
-          mappedValue,
-          action: "skipped-none-of-these"
-        });
         return;
       }
       const match = mappedValue ? wizardActiveStaffQualificationOptions.find((qualification) => qualification.id === mappedValue) : findWizardStaffQualification(token);
       if (!match) {
         unresolved.push(token);
-        debug.push({
-          token,
-          tokenKey,
-          mappedValue,
-          action: "unresolved"
-        });
         return;
       }
       if (!ids.includes(match.id)) ids.push(match.id);
       const label = getStaffQualificationDisplayLabel(match) || match.id;
       if (label && !labels.includes(label)) labels.push(label);
-      debug.push({
-        token,
-        tokenKey,
-        mappedValue,
-        action: mappedValue ? "mapped" : "direct-match",
-        matchedId: match.id,
-        matchedCode: match.code,
-        matchedName: match.name,
-        displayLabel: label
-      });
     });
-    return { labels, ids, skipped, unresolved, hasInput: tokens.length > 0, debug };
+    return { labels, ids, skipped, unresolved, hasInput: tokens.length > 0 };
   };
   const applyStaffQualificationChoicesToUpload = (template, result) => {
     const unresolved = (result.qualificationIssues || []).filter((issue) => {
@@ -39274,10 +39164,8 @@ const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, lo
           givenNames: givenValue || givenPart || "",
           unit: (getWizardCellByHeader(headers, row, "Unit") || unitDraft.code || "").toUpperCase(),
           position: getWizardCellByHeader(headers, row, "Role"),
-          rawQualificationFromTemplate: rawQualifications,
           qualifications: qualificationResolution.labels.join("; "),
           qualificationIds: qualificationResolution.hasInput ? qualificationResolution.ids : void 0,
-          qualificationImportDebug: qualificationResolution.debug,
           skippedQualificationLabels: qualificationResolution.skipped,
           unresolvedQualificationLabels: qualificationResolution.unresolved,
           rank: getWizardCellByHeader(headers, row, "Rank"),
@@ -39305,15 +39193,7 @@ const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, lo
       const unresolvedQualifications = Array.from(new Set(importedRows.flatMap((row) => row.unresolvedQualificationLabels || [])));
       pushWizardImportDiag("staff:imported-to-draft", {
         importedRows: importedRows.length,
-        qualificationCatalogue: summariseWizardStaffQualificationCatalogue(),
-        sample: importedRows.slice(0, 8).map((row) => ({
-          name: getWizardRowName(row),
-          unit: row.unit,
-          rawQualificationFromTemplate: row.rawQualificationFromTemplate,
-          displayedQualificationText: row.qualifications,
-          qualificationIds: row.qualificationIds,
-          qualificationImportDebug: row.qualificationImportDebug
-        })),
+        sample: importedRows.slice(0, 8),
         draftLength: nextStaffDraft.length,
         skippedQualifications,
         unresolvedQualifications
@@ -43719,13 +43599,8 @@ Classrooms: ${classroomNames.join(", ")}` : ""}`;
     ] });
   }
   const renderTemplatePanel = (className = "h-fit") => /* @__PURE__ */ jsxRuntimeExports.jsxs("aside", { className: `${className} min-w-0 rounded-xl border border-slate-300 bg-slate-50 p-3 text-slate-900 shadow-sm`, children: [
-    /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex flex-wrap items-start justify-between gap-2", children: [
-      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "min-w-0", children: [
-        /* @__PURE__ */ jsxRuntimeExports.jsx("h4", { className: "text-sm font-black text-slate-950", children: "Templates and uploads" }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-1 text-xs leading-5 text-slate-600", children: "This step can use a template. Download it, fill it in, then upload it here. I will check the format and explain anything that needs fixing in plain English." })
-      ] }),
-      /* @__PURE__ */ jsxRuntimeExports.jsx("button", { type: "button", className: wizardSmallButtonClass, onClick: downloadWizardImportDiagnostic, children: "Download import diagnostic" })
-    ] }),
+    /* @__PURE__ */ jsxRuntimeExports.jsx("h4", { className: "text-sm font-black text-slate-950", children: "Templates and uploads" }),
+    /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-1 text-xs leading-5 text-slate-600", children: "This step can use a template. Download it, fill it in, then upload it here. I will check the format and explain anything that needs fixing in plain English." }),
     /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-4 space-y-3", children: visibleTemplates.map((template) => {
       const result = uploadResults[template.id];
       const importConfirmation = importConfirmations[template.id];
