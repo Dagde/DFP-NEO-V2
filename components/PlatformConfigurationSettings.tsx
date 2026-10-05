@@ -2901,7 +2901,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
 
   const rankTerminologyButtonClass = 'rounded border border-gray-500 bg-gray-300 px-3 py-2 text-[10px] font-semibold uppercase tracking-wide text-gray-900 hover:bg-gray-200 disabled:cursor-not-allowed disabled:opacity-50';
   const rankTerminologySectionActionButtonClass = 'w-[56px] h-[41px] flex items-center justify-center text-center px-1 py-1 text-[10px] font-semibold btn-aluminium-brushed rounded-md disabled:cursor-not-allowed disabled:opacity-50';
-  const rankTerminologyDangerButtonClass = 'w-full rounded border border-red-500/40 bg-red-500/15 px-3 py-2 text-[10px] font-semibold uppercase tracking-wide text-red-100 hover:bg-red-500/25 disabled:cursor-not-allowed disabled:opacity-40';
+  const rankTerminologyDangerButtonClass = 'w-full rounded border border-red-500 bg-red-300 px-3 py-2 text-[10px] font-black uppercase tracking-wide text-slate-950 shadow-sm transition hover:border-red-600 hover:bg-red-200 disabled:cursor-not-allowed disabled:border-gray-400 disabled:bg-gray-200 disabled:text-gray-500 disabled:opacity-70';
 
   const renderRankTerminologySectionAction = () => {
     if (!canUnlockRankTerminology) return null;
@@ -13908,9 +13908,9 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
                         disabled={!canEditRankTerminology}
                         className={`w-full rounded border px-3 py-2 text-[10px] font-semibold uppercase tracking-wide ${
                           entry.isDefault
-                            ? 'border-green-400/50 bg-green-500/20 text-green-100'
-                            : 'border-gray-600 bg-gray-800 text-gray-300 hover:bg-gray-700'
-                        } disabled:cursor-not-allowed disabled:opacity-40`}
+                            ? 'border-green-600 bg-green-300 text-slate-950 shadow-sm'
+                            : 'border-green-500 bg-green-200 text-slate-950 shadow-sm hover:border-green-600 hover:bg-green-100'
+                        } transition disabled:cursor-not-allowed disabled:border-gray-400 disabled:bg-gray-200 disabled:text-gray-500 disabled:opacity-70`}
                       >
                         {entry.isDefault ? 'Default' : 'Set Default'}
                       </button>

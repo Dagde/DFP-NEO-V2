@@ -47384,6 +47384,7 @@ const App: React.FC = () => {
             setShowInfoNotification(`${activeOperationalModelLabel} is selected for ${school} - ${activeUnitCode}. NEO Build is not available for this operational model yet.`);
             return;
         }
+        setDismissedEmptyDfpNoticeKey(emptyDfpNoticeKey);
         // System freeze check - prevent NEO Build when frozen
         const _freezeRaw = localStorage.getItem('systemFreezeState');
         if (_freezeRaw) {
@@ -47417,6 +47418,7 @@ const App: React.FC = () => {
 
     const handleConfirmDateAndBuild = () => {
         setShowDateWarning(false);
+        setDismissedEmptyDfpNoticeKey(emptyDfpNoticeKey);
         void startBuildProcess();
     };
 

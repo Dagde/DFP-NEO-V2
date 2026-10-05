@@ -20659,7 +20659,7 @@ const PlatformConfigurationSettings = ({
   };
   const rankTerminologyButtonClass = "rounded border border-gray-500 bg-gray-300 px-3 py-2 text-[10px] font-semibold uppercase tracking-wide text-gray-900 hover:bg-gray-200 disabled:cursor-not-allowed disabled:opacity-50";
   const rankTerminologySectionActionButtonClass = "w-[56px] h-[41px] flex items-center justify-center text-center px-1 py-1 text-[10px] font-semibold btn-aluminium-brushed rounded-md disabled:cursor-not-allowed disabled:opacity-50";
-  const rankTerminologyDangerButtonClass = "w-full rounded border border-red-500/40 bg-red-500/15 px-3 py-2 text-[10px] font-semibold uppercase tracking-wide text-red-100 hover:bg-red-500/25 disabled:cursor-not-allowed disabled:opacity-40";
+  const rankTerminologyDangerButtonClass = "w-full rounded border border-red-500 bg-red-300 px-3 py-2 text-[10px] font-black uppercase tracking-wide text-slate-950 shadow-sm transition hover:border-red-600 hover:bg-red-200 disabled:cursor-not-allowed disabled:border-gray-400 disabled:bg-gray-200 disabled:text-gray-500 disabled:opacity-70";
   const renderRankTerminologySectionAction = () => {
     if (!canUnlockRankTerminology) return null;
     if (wizardEditMode) return null;
@@ -30294,7 +30294,7 @@ This removes them from DFP Resource Rows. Press Save in this section to apply th
                       type: "button",
                       onClick: () => setDefaultUnitCallsignEntry(entry.id),
                       disabled: !canEditRankTerminology,
-                      className: `w-full rounded border px-3 py-2 text-[10px] font-semibold uppercase tracking-wide ${entry.isDefault ? "border-green-400/50 bg-green-500/20 text-green-100" : "border-gray-600 bg-gray-800 text-gray-300 hover:bg-gray-700"} disabled:cursor-not-allowed disabled:opacity-40`,
+                      className: `w-full rounded border px-3 py-2 text-[10px] font-semibold uppercase tracking-wide ${entry.isDefault ? "border-green-600 bg-green-300 text-slate-950 shadow-sm" : "border-green-500 bg-green-200 text-slate-950 shadow-sm hover:border-green-600 hover:bg-green-100"} transition disabled:cursor-not-allowed disabled:border-gray-400 disabled:bg-gray-200 disabled:text-gray-500 disabled:opacity-70`,
                       children: entry.isDefault ? "Default" : "Set Default"
                     }
                   ) }),
@@ -154646,6 +154646,7 @@ The proposed event was not scheduled. Re-open the event and choose Accept Confli
       setShowInfoNotification(`${activeOperationalModelLabel} is selected for ${school} - ${activeUnitCode}. NEO Build is not available for this operational model yet.`);
       return;
     }
+    setDismissedEmptyDfpNoticeKey(emptyDfpNoticeKey);
     const _freezeRaw = localStorage.getItem("systemFreezeState");
     if (_freezeRaw) {
       const _freeze = JSON.parse(_freezeRaw);
@@ -154669,6 +154670,7 @@ The proposed event was not scheduled. Re-open the event and choose Accept Confli
   };
   const handleConfirmDateAndBuild = () => {
     setShowDateWarning(false);
+    setDismissedEmptyDfpNoticeKey(emptyDfpNoticeKey);
     void startBuildProcess();
   };
   const runBuildAlgorithm = async (preservedEvents, buildPublishedSchedulesOverride) => {
