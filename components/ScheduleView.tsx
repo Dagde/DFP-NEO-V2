@@ -4089,6 +4089,7 @@ const InitialSetupWizard: React.FC<{
     const [traineeCourseInputRows, setTraineeCourseInputRows] = useState<string[]>(() => ['Course 1']);
     const [traineeDraft, setTraineeDraft] = useState('');
     const [staffProfilesCommitted, setStaffProfilesCommitted] = useState(false);
+    const [staffCommitInProgress, setStaffCommitInProgress] = useState(false);
     const [staffCommitSummary, setStaffCommitSummary] = useState('');
     const [traineeAllocationCommitted, setTraineeAllocationCommitted] = useState(false);
     const [traineeCommitInProgress, setTraineeCommitInProgress] = useState(false);
@@ -11552,10 +11553,12 @@ const InitialSetupWizard: React.FC<{
         }
     };
     const commitWizardStaffProfiles = async () => {
+        if (staffCommitInProgress) return;
         const staffRows = uploadedStaffProfileRows.length > 0 ? uploadedStaffProfileRows : undefined;
         const staffCount = (staffRows || parseWizardStaffRows(staffDraft)).filter((row) => (
             row.surname || row.givenNames || row.unit || row.rank || row.position || row.personnelId || row.qualifications
         )).length;
+        setStaffCommitInProgress(true);
         setStaffProfilesCommitted(false);
         setStaffCommitSummary('Committing staff profiles...');
         setSaveMessage('Committing staff profiles...');
@@ -11577,6 +11580,8 @@ const InitialSetupWizard: React.FC<{
             setStaffProfilesCommitted(false);
             setStaffCommitSummary(message);
             setSaveMessage(message);
+        } finally {
+            setStaffCommitInProgress(false);
         }
     };
     const commitWizardTraineeProfiles = async () => {
@@ -12535,20 +12540,41 @@ const InitialSetupWizard: React.FC<{
             );
         }
         if (visibleStep.id === 'staff') {
+            const staffCommitHasMessage = Boolean(staffCommitSummary);
+            const staffCommitProblem = staffCommitHasMessage && !staffCommitInProgress && !staffProfilesCommitted;
+            const staffCommitPanelClass = staffCommitInProgress
+                ? 'border-blue-300 bg-blue-50 shadow-[0_0_0_1px_rgba(96,165,250,0.35)]'
+                : staffProfilesCommitted
+                    ? 'border-emerald-400 bg-emerald-100 shadow-[0_0_0_1px_rgba(52,211,153,0.45)]'
+                    : staffCommitProblem
+                        ? 'border-amber-300 bg-amber-50 shadow-[0_0_0_1px_rgba(251,191,36,0.35)]'
+                        : 'border-emerald-200 bg-emerald-50';
+            const staffCommitTextClass = staffCommitInProgress
+                ? 'text-blue-900'
+                : staffCommitProblem
+                    ? 'text-amber-900'
+                    : 'text-emerald-900';
+            const staffCommitStatusText = staffCommitInProgress
+                ? 'Committing staff profiles...'
+                : staffProfilesCommitted && staffCommitSummary
+                    ? `✓ ${staffCommitSummary}`
+                    : staffCommitSummary || 'This writes the staff shown above into Staff Profiles for this setup.';
             return promptShell(
                 <p>Add the staff this unit needs for scheduling, permissions, and records. Put each person into their own row, then commit the list to Staff Profiles.</p>,
                 <div>
                     {renderStaffEditor()}
-                    <div className={`mt-4 rounded-lg border p-3 ${staffProfilesCommitted ? 'border-emerald-400 bg-emerald-100 shadow-[0_0_0_1px_rgba(52,211,153,0.45)]' : 'border-emerald-200 bg-emerald-50'}`}>
-                        <p className="text-xs font-semibold leading-5 text-emerald-900">
-                            {staffProfilesCommitted && staffCommitSummary ? `✓ ${staffCommitSummary}` : 'This writes the staff shown above into Staff Profiles for this setup.'}
+                    <div className={`mt-4 rounded-lg border p-3 ${staffCommitPanelClass}`}>
+                        <p className={`flex items-center gap-2 text-xs font-semibold leading-5 ${staffCommitTextClass}`}>
+                            {staffCommitInProgress ? <span className="inline-block h-3 w-3 animate-spin rounded-full border-2 border-blue-300 border-t-blue-800" aria-hidden="true" /> : null}
+                            <span>{staffCommitStatusText}</span>
                         </p>
                         <button
                             type="button"
-                            className={`${wizardPrimaryButtonClass} mt-3 ${staffProfilesCommitted ? 'bg-emerald-600 hover:bg-emerald-600' : ''}`}
+                            className={`${wizardPrimaryButtonClass} mt-3 ${staffCommitInProgress ? 'bg-blue-600 hover:bg-blue-600' : staffProfilesCommitted ? 'bg-emerald-600 hover:bg-emerald-600' : ''}`}
                             onClick={commitWizardStaffProfiles}
+                            disabled={staffCommitInProgress}
                         >
-                            {staffProfilesCommitted ? '✓ Staff Profiles Committed' : 'Commit to Staff Profiles'}
+                            {staffCommitInProgress ? 'Committing...' : staffProfilesCommitted ? '✓ Staff Profiles Committed' : 'Commit to Staff Profiles'}
                         </button>
                     </div>
                 </div>,
