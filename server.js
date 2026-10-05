@@ -11832,6 +11832,13 @@ function isTestingFunctionsEnabled(req) {
   return host.includes('dfp-neo-v2-production') || host.includes('new-customer-test') || host.includes('localhost') || host.includes('127.0.0.1');
 }
 
+function getTestingDatabaseResetPassword() {
+  return getConfiguredSecret('DFP_TEST_RESET_PASSWORD', [
+    'DFP_FIRST_ADMIN_PASSWORD',
+    'INITIAL_ADMIN_PASSWORD',
+  ]);
+}
+
 function quotePostgresIdentifier(identifier) {
   return `"${String(identifier || '').replace(/"/g, '""')}"`;
 }
@@ -12622,28 +12629,34 @@ app.post('/api/testing-functions/reset-database', async (req, res) => {
     if (!password) {
       return res.status(400).json({
         error: 'Password required',
-        message: 'Enter your current password before resetting this test database.',
+        message: 'Enter the configured test reset password before resetting this test database.',
       });
     }
 
-    const firstAdminPassword = getConfiguredSecret('DFP_FIRST_ADMIN_PASSWORD', ['INITIAL_ADMIN_PASSWORD']);
-    if (!firstAdminPassword) {
+    const testingResetPassword = getTestingDatabaseResetPassword();
+    if (!testingResetPassword) {
       return res.status(503).json({
-        error: 'First admin not configured',
-        message: 'DFP_FIRST_ADMIN_PASSWORD must be configured before a test database can be reset.',
+        error: 'Test reset password not configured',
+        message: 'DFP_TEST_RESET_PASSWORD must be configured before a test database can be reset.',
       });
     }
 
-    const bcrypt = require('bcryptjs');
-    const validCurrentPassword = context.admin.password
-      ? await bcrypt.compare(password, context.admin.password)
-      : false;
-    const validResetPassword = tokenEquals(password, firstAdminPassword);
-    const validPassword = validCurrentPassword || validResetPassword;
-    if (!validPassword) {
+    const validResetPassword = tokenEquals(password, testingResetPassword);
+    if (!validResetPassword) {
+      await writeSecurityAuditEvent(
+        context.db,
+        req,
+        'TEST_DATABASE_RESET_REJECTED',
+        'warning',
+        'Test database reset rejected because the reset password was not accepted.',
+        {
+          adminUserId: context.admin.userId || context.admin.username || context.admin.id || null,
+          host: getRequestHostName(req),
+        }
+      );
       return res.status(403).json({
         error: 'Password rejected',
-        message: 'The password was not accepted. Use the signed-in admin password or the configured first-admin/reset password.',
+        message: 'The password was not accepted. Use the configured test reset password for this database.',
       });
     }
 
@@ -12658,6 +12671,25 @@ app.post('/api/testing-functions/reset-database', async (req, res) => {
     const tableNames = (tables || [])
       .map((row) => String(row.table_name || '').trim())
       .filter(Boolean);
+
+    await writeSecurityAuditEvent(
+      context.db,
+      req,
+      'TEST_DATABASE_RESET_APPROVED',
+      'critical',
+      'Test database reset approved. Database tables are about to be cleared.',
+      {
+        adminUserId: context.admin.userId || context.admin.username || context.admin.id || null,
+        host: getRequestHostName(req),
+        tablesReset: tableNames.length,
+      }
+    );
+    console.warn('⚠️ Test database reset approved', {
+      adminUserId: context.admin.userId || context.admin.username || context.admin.id || null,
+      host: getRequestHostName(req),
+      tablesReset: tableNames.length,
+      resetAt: new Date().toISOString(),
+    });
 
     if (tableNames.length > 0) {
       const quotedTables = tableNames.map(quotePostgresIdentifier).join(', ');

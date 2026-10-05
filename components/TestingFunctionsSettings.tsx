@@ -106,11 +106,11 @@ const TestingFunctionsSettings: React.FC<TestingFunctionsSettingsProps> = ({
 
     try {
       const password = await showDarkPrompt({
-        title: 'Reset Password Required',
-        message: 'Enter the configured first-admin/reset password for this test database.',
-        inputLabel: 'Password',
+        title: 'Test Reset Password Required',
+        message: 'Enter the test reset password for this database. This is not your normal login password.',
+        inputLabel: 'Test reset password',
         inputType: 'password',
-        inputPlaceholder: 'Enter password',
+        inputPlaceholder: 'Enter test reset password',
         confirmText: 'Continue',
         cancelText: 'Cancel',
         variant: 'warning',
@@ -407,6 +407,9 @@ const TestingFunctionsSettings: React.FC<TestingFunctionsSettingsProps> = ({
           <div className="rounded-md border border-red-700/50 bg-red-950/25 p-4">
             <p className="text-sm leading-6 text-gray-200">
               This removes configured organisations, units, people, schedules, settings, sessions and imported data, then recreates the initial Organisation Administrator account from deployment settings.
+            </p>
+            <p className="mt-2 text-sm leading-6 text-gray-200">
+              You must enter the configured test reset password. This is separate from your normal login password.
             </p>
             <p className="mt-2 text-sm font-semibold text-red-100">
               You will be signed out after the reset because saved sessions are removed with the database data.
