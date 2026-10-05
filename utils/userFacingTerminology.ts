@@ -9,10 +9,11 @@ export const sanitizeUserFacingTerminology = (value: unknown): string => {
 
   text = text
     .replace(/\bQFI\b/gi, 'Instructor')
-    .replace(/\bSPT\b/gi, 'Trainee')
     .replace(/\bFTD[\s-]*(?=\d)/gi, 'Simulator ')
     .replace(/\bFTD[\s-]*(?=STBY\b)/gi, 'Simulator ')
-    .replace(/\bFTD\b/gi, 'Simulator');
+    .replace(/\bFTD\b/gi, 'Simulator')
+    .replace(/\bCPT[\s-]*(?=\d)/gi, 'Procedural Trainer ')
+    .replace(/\bCPT\b/gi, 'Procedural Trainer');
 
   return `${leadingWhitespace}${text.replace(/[ \t]{2,}/g, ' ')}${trailingWhitespace}`;
 };

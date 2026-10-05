@@ -4590,7 +4590,7 @@ const sanitizeUserFacingTerminology = (value) => {
   const trailingWhitespace = original.match(/\s*$/)?.[0] || "";
   let text = original.trim();
   if (!text) return original;
-  text = text.replace(/\bQFI\b/gi, "Instructor").replace(/\bSPT\b/gi, "Trainee").replace(/\bFTD[\s-]*(?=\d)/gi, "Simulator ").replace(/\bFTD[\s-]*(?=STBY\b)/gi, "Simulator ").replace(/\bFTD\b/gi, "Simulator");
+  text = text.replace(/\bQFI\b/gi, "Instructor").replace(/\bFTD[\s-]*(?=\d)/gi, "Simulator ").replace(/\bFTD[\s-]*(?=STBY\b)/gi, "Simulator ").replace(/\bFTD\b/gi, "Simulator").replace(/\bCPT[\s-]*(?=\d)/gi, "Procedural Trainer ").replace(/\bCPT\b/gi, "Procedural Trainer");
   return `${leadingWhitespace}${text.replace(/[ \t]{2,}/g, " ")}${trailingWhitespace}`;
 };
 const ALL_OPERATIONAL_MODEL_CODES$1 = OPERATIONAL_MODEL_OPTIONS.map((option) => option.value);
@@ -5339,12 +5339,11 @@ const DEFAULT_RESOURCE_DISPLAY_NAMES = {
 };
 const cleanLabel$2 = (value, fallback) => {
   if (typeof value !== "string") return fallback;
-  const trimmed = sanitizeUserFacingTerminology(value).trim();
+  const trimmed = value.trim();
   return trimmed || fallback;
 };
 const cleanSimulatorLabel = (value) => {
-  const label = cleanLabel$2(value, DEFAULT_RESOURCE_DISPLAY_NAMES.ftd);
-  return label.toUpperCase() === "FTD" ? DEFAULT_RESOURCE_DISPLAY_NAMES.ftd : label;
+  return cleanLabel$2(value, DEFAULT_RESOURCE_DISPLAY_NAMES.ftd);
 };
 const isNonAircraftResourceId = (resourceId) => /^SIM(\s+\d+)?$/i.test(resourceId) || /^FTD(\s+\d+)?$/i.test(resourceId) || /^CPT(\s+\d+)?$/i.test(resourceId) || /^Ground(\s+\d+)?$/i.test(resourceId) || /^STBY(\s+\d+)?$/i.test(resourceId) || /^BNF-STBY(\s+\d+)?$/i.test(resourceId) || resourceId === "Duty Sup" || resourceId === "TWR DI";
 const getAircraftResourceMatch = (resourceId) => {
@@ -5418,9 +5417,11 @@ const formatResourceLabel = (resourceId, names = DEFAULT_RESOURCE_DISPLAY_NAMES)
   }
   const ftdMatch = resourceId.match(/^FTD(\s+\d+)$/);
   if (ftdMatch) return `${names.ftd}${ftdMatch[1]}`;
+  const ftdStbyMatch = resourceId.match(/^FTD-STBY(\s+\d+)?$/);
+  if (ftdStbyMatch) return `${names.ftd} STBY${ftdStbyMatch[1] || ""}`;
   const cptMatch = resourceId.match(/^CPT(\s+\d+)$/);
   if (cptMatch) return `${names.cpt}${cptMatch[1]}`;
-  return sanitizeUserFacingTerminology(resourceId);
+  return resourceId;
 };
 const parseClassroomNames = (value) => {
   const rawItems = Array.isArray(value) ? value : String(value || "").split(/[\n,]+/);
@@ -9844,12 +9845,6 @@ const DarkMessageModal = ({
   inputDefaultValue = ""
 }) => {
   const [inputValue, setInputValue] = reactExports.useState(inputDefaultValue);
-  const displayTitle = sanitizeUserFacingTerminology(title);
-  const displayMessage = sanitizeUserFacingTerminology(message);
-  const displayConfirmText = sanitizeUserFacingTerminology(confirmText);
-  const displayCancelText = sanitizeUserFacingTerminology(cancelText);
-  const displayInputLabel = sanitizeUserFacingTerminology(inputLabel || "");
-  const displayInputPlaceholder = sanitizeUserFacingTerminology(inputPlaceholder);
   const getVariantStyles = () => {
     switch (variant) {
       case "error":
@@ -9916,19 +9911,19 @@ const DarkMessageModal = ({
   return /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "fixed inset-0 bg-black/70 z-[10000] flex items-center justify-center animate-fade-in", onClick: handleCancel, children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: `bg-gray-800 rounded-lg shadow-xl w-full max-w-md border ${styles.borderColor}`, onClick: (e) => e.stopPropagation(), children: [
     /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: `p-4 border-b border-gray-700 ${styles.headerBg} flex items-center space-x-3`, children: [
       /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: styles.iconColor, children: getIcon() }),
-      /* @__PURE__ */ jsxRuntimeExports.jsx("h2", { className: `text-xl font-bold ${styles.titleColor}`, children: displayTitle })
+      /* @__PURE__ */ jsxRuntimeExports.jsx("h2", { className: `text-xl font-bold ${styles.titleColor}`, children: title })
     ] }),
     /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "p-6", children: [
-      /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-gray-300 whitespace-pre-line", children: displayMessage }),
+      /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-gray-300 whitespace-pre-line", children: message }),
       type === "prompt" && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mt-4", children: [
-        displayInputLabel && /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "mb-2 block text-xs font-semibold uppercase tracking-wide text-gray-400", children: displayInputLabel }),
+        inputLabel && /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "mb-2 block text-xs font-semibold uppercase tracking-wide text-gray-400", children: inputLabel }),
         /* @__PURE__ */ jsxRuntimeExports.jsx(
           "input",
           {
             autoFocus: true,
             type: inputType,
             value: inputValue,
-            placeholder: displayInputPlaceholder,
+            placeholder: inputPlaceholder,
             onChange: (event) => setInputValue(event.target.value),
             onKeyDown: (event) => {
               if (event.key === "Enter") handleConfirm();
@@ -9945,7 +9940,7 @@ const DarkMessageModal = ({
         {
           onClick: handleCancel,
           className: "px-4 py-2 bg-gray-600 text-white rounded-md hover:bg-gray-700 transition-colors text-sm font-semibold",
-          children: displayCancelText
+          children: cancelText
         }
       ),
       /* @__PURE__ */ jsxRuntimeExports.jsx(
@@ -9953,7 +9948,7 @@ const DarkMessageModal = ({
         {
           onClick: handleConfirm,
           className: `px-4 py-2 text-white rounded-md transition-colors text-sm font-semibold ${styles.confirmBg}`,
-          children: displayConfirmText
+          children: confirmText
         }
       )
     ] })
@@ -166678,59 +166673,6 @@ Do you want to replace the existing entry?`,
     ] })
   ] });
 };
-const IGNORED_PARENT_TAGS = /* @__PURE__ */ new Set(["SCRIPT", "STYLE", "TEXTAREA"]);
-const sanitizeTextNode = (node) => {
-  const parentTag = node.parentElement?.tagName;
-  if (parentTag && IGNORED_PARENT_TAGS.has(parentTag)) return;
-  const original = node.nodeValue || "";
-  const sanitized = sanitizeUserFacingTerminology(original);
-  if (sanitized !== original) {
-    node.nodeValue = sanitized;
-  }
-};
-const sanitizeElementText = (root2) => {
-  const walker = document.createTreeWalker(root2, NodeFilter.SHOW_TEXT);
-  let current = walker.nextNode();
-  while (current) {
-    sanitizeTextNode(current);
-    current = walker.nextNode();
-  }
-};
-const installUserFacingTerminologyGuard = (root2) => {
-  if (typeof window === "undefined" || typeof MutationObserver === "undefined") {
-    return () => void 0;
-  }
-  let frameId = 0;
-  const scheduleSanitize = () => {
-    if (frameId) return;
-    frameId = window.requestAnimationFrame(() => {
-      frameId = 0;
-      sanitizeElementText(root2);
-    });
-  };
-  sanitizeElementText(root2);
-  const observer = new MutationObserver((mutations) => {
-    for (const mutation of mutations) {
-      if (mutation.type === "characterData" && mutation.target.nodeType === Node.TEXT_NODE) {
-        sanitizeTextNode(mutation.target);
-        continue;
-      }
-      if (mutation.type === "childList" && mutation.addedNodes.length > 0) {
-        scheduleSanitize();
-        break;
-      }
-    }
-  });
-  observer.observe(root2, {
-    childList: true,
-    characterData: true,
-    subtree: true
-  });
-  return () => {
-    if (frameId) window.cancelAnimationFrame(frameId);
-    observer.disconnect();
-  };
-};
 console.log("Starting app initialization...");
 console.log("React imported");
 console.log("ReactDOM imported");
@@ -166745,7 +166687,6 @@ console.log("Root element:", rootElement);
 if (!rootElement) {
   throw new Error("Could not find root element to mount to");
 }
-installUserFacingTerminologyGuard(rootElement);
 const root = ReactDOM$1.createRoot(rootElement);
 class ErrorBoundary extends React.Component {
   constructor(props) {

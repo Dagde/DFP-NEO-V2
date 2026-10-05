@@ -1,5 +1,4 @@
 import type { PlatformResourcePool } from './platformConfigService';
-import { sanitizeUserFacingTerminology } from './userFacingTerminology';
 
 export interface ResourceDisplayNames {
   aircraft: string;
@@ -23,13 +22,12 @@ export const DEFAULT_RESOURCE_DISPLAY_NAMES: ResourceDisplayNames = {
 
 const cleanLabel = (value: unknown, fallback: string): string => {
   if (typeof value !== 'string') return fallback;
-  const trimmed = sanitizeUserFacingTerminology(value).trim();
+  const trimmed = value.trim();
   return trimmed || fallback;
 };
 
 const cleanSimulatorLabel = (value: unknown): string => {
-  const label = cleanLabel(value, DEFAULT_RESOURCE_DISPLAY_NAMES.ftd);
-  return label.toUpperCase() === 'FTD' ? DEFAULT_RESOURCE_DISPLAY_NAMES.ftd : label;
+  return cleanLabel(value, DEFAULT_RESOURCE_DISPLAY_NAMES.ftd);
 };
 
 const isNonAircraftResourceId = (resourceId: string): boolean => (
@@ -130,8 +128,11 @@ export const formatResourceLabel = (
   const ftdMatch = resourceId.match(/^FTD(\s+\d+)$/);
   if (ftdMatch) return `${names.ftd}${ftdMatch[1]}`;
 
+  const ftdStbyMatch = resourceId.match(/^FTD-STBY(\s+\d+)?$/);
+  if (ftdStbyMatch) return `${names.ftd} STBY${ftdStbyMatch[1] || ''}`;
+
   const cptMatch = resourceId.match(/^CPT(\s+\d+)$/);
   if (cptMatch) return `${names.cpt}${cptMatch[1]}`;
 
-  return sanitizeUserFacingTerminology(resourceId);
+  return resourceId;
 };

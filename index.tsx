@@ -15,7 +15,6 @@ import './theme.css';
 import { ThemeProvider } from './context/ThemeContext';
 import { SystemFreezeProvider } from './context/SystemFreezeContext';
 import { showDarkAlert } from './components/DarkMessageModal';
-import { installUserFacingTerminologyGuard } from './utils/userFacingTerminologyGuard';
 
 if (typeof window !== 'undefined') {
   window.alert = (message?: any) => {
@@ -29,8 +28,6 @@ console.log('Root element:', rootElement);
 if (!rootElement) {
   throw new Error("Could not find root element to mount to");
 }
-
-installUserFacingTerminologyGuard(rootElement);
 
 const root = ReactDOM.createRoot(rootElement);
 
