@@ -124633,7 +124633,7 @@ const shouldSkipLegacyMassBriefInNextEventSelection = (item, groundEventScheduli
   if (!String(item.code || "").includes(" MB")) return false;
   const schedulingMatch = getGroundEventSchedulingRuleForItem(groundEventSchedulingSettings, item);
   const isConfiguredGroupEvent = isLmpGroupEventEnabledValue(item.groupEvent) || Boolean(schedulingMatch.explicitGroup);
-  if (!isConfiguredGroupEvent) return true;
+  if (!isConfiguredGroupEvent) return false;
   return schedulingMatch.rule.mode === "manual";
 };
 const getFallbackMasterLmpForTrainee = (trainee, masterSyllabus) => {

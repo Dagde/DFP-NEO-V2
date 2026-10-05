@@ -10021,7 +10021,7 @@ const shouldSkipLegacyMassBriefInNextEventSelection = (
         isLmpGroupEventEnabledValue((item as any).groupEvent) ||
         Boolean(schedulingMatch.explicitGroup)
     );
-    if (!isConfiguredGroupEvent) return true;
+    if (!isConfiguredGroupEvent) return false;
 
     return schedulingMatch.rule.mode === 'manual';
 };
