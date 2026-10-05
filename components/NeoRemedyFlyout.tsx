@@ -2,6 +2,7 @@
 import React, { useMemo } from 'react';
 import { NeoProblemTile, NeoRemedy, NeoInstructorRemedy, NeoTimeShiftRemedy, NeoTraineeRemedy } from '../types';
 import { DEFAULT_RESOURCE_DISPLAY_NAMES, ResourceDisplayNames } from '../utils/resourceDisplayNames';
+import { sanitizeUserFacingTerminology } from '../utils/userFacingTerminology';
 
 interface NeoRemedyFlyoutProps {
   problemTile: NeoProblemTile;
@@ -43,7 +44,7 @@ const NeoRemedyFlyout: React.FC<NeoRemedyFlyoutProps> = ({ problemTile, remedies
                     <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 text-orange-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
                     </svg>
-                    <h2 className="text-xl font-bold text-orange-400">NEO - Suggestions for {event.flightNumber}</h2>
+                    <h2 className="text-xl font-bold text-orange-400">NEO - Suggestions for {sanitizeUserFacingTerminology(event.flightNumber)}</h2>
                 </div>
 
                 <div className="p-6 flex-1 overflow-y-auto space-y-6">

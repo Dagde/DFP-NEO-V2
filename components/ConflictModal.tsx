@@ -1,6 +1,7 @@
 import React from 'react';
 import { ScheduleEvent } from '../types';
 import { DEFAULT_RESOURCE_DISPLAY_NAMES, ResourceDisplayNames } from '../utils/resourceDisplayNames';
+import { sanitizeUserFacingTerminology } from '../utils/userFacingTerminology';
 
 interface Conflict {
   conflictingEvent: ScheduleEvent;
@@ -54,7 +55,7 @@ const ConflictModal: React.FC<ConflictModalProps> = ({
         <div className="p-6 text-gray-300" id="conflict-description">
           <p className="mb-2">
             <strong className="text-white">{conflict.personName}</strong> is already scheduled for a{' '}
-            <strong className="text-white">{existingEventTypeDisplay}</strong> ({conflict.conflictingEvent.flightNumber}) from{' '}
+            <strong className="text-white">{existingEventTypeDisplay}</strong> ({sanitizeUserFacingTerminology(conflict.conflictingEvent.flightNumber)}) from{' '}
             <strong className="text-white">{formatTime(conflict.conflictingEvent.startTime)}</strong> to{' '} 
             <strong className="text-white">{formatTime(conflictingEventEndTime)}</strong>.
           </p>

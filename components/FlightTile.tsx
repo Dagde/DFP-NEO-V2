@@ -15,6 +15,7 @@ import {
 import { resolveScheduleTileBackgroundColor } from '../utils/tileColorResolver';
 import { isContinuationScheduleEvent } from '../utils/continuationEvents';
 import { buildCompactPersonNameResolver } from '../utils/personIdentity';
+import { sanitizeUserFacingTerminology } from '../utils/userFacingTerminology';
 
 interface FlightTileProps {
   event: ScheduleEvent | EventSegment;
@@ -694,10 +695,14 @@ const FlightTile: React.FC<FlightTileProps> = ({ event, traineesData, instructor
     const displayStudentName = displayStudentNameForRender;
     
     const isUuidLikeFlightNumber = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-/i.test(String(event.flightNumber || '').trim());
-    const displayFlightNumber = isUuidLikeFlightNumber && (event as any).eventCode
+    const rawDisplayFlightNumber = isUuidLikeFlightNumber && (event as any).eventCode
       ? String((event as any).eventCode)
       : event.flightNumber;
-    const isGroundEventFromName = displayFlightNumber.includes('CPT') || displayFlightNumber.includes('MB') || displayFlightNumber.includes('TUT') || displayFlightNumber.includes('QUIZ');
+    const displayFlightNumber = sanitizeUserFacingTerminology(rawDisplayFlightNumber);
+    const isGroundEventFromName = String(rawDisplayFlightNumber || '').includes('CPT')
+      || String(rawDisplayFlightNumber || '').includes('MB')
+      || String(rawDisplayFlightNumber || '').includes('TUT')
+      || String(rawDisplayFlightNumber || '').includes('QUIZ');
     
     if (event.type === 'deployment') {
         // Render deployment tile with subtle styling

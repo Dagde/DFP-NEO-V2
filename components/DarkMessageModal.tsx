@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { createRoot } from 'react-dom/client';
+import { sanitizeUserFacingTerminology } from '../utils/userFacingTerminology';
 
 type DarkMessageVariant = 'error' | 'warning' | 'info' | 'success';
 type DarkMessageType = 'alert' | 'confirm' | 'prompt';
@@ -36,6 +37,12 @@ const DarkMessageModal: React.FC<DarkMessageModalProps> = ({
   inputDefaultValue = ''
 }) => {
   const [inputValue, setInputValue] = useState(inputDefaultValue);
+  const displayTitle = sanitizeUserFacingTerminology(title);
+  const displayMessage = sanitizeUserFacingTerminology(message);
+  const displayConfirmText = sanitizeUserFacingTerminology(confirmText);
+  const displayCancelText = sanitizeUserFacingTerminology(cancelText);
+  const displayInputLabel = sanitizeUserFacingTerminology(inputLabel || '');
+  const displayInputPlaceholder = sanitizeUserFacingTerminology(inputPlaceholder);
 
   const getVariantStyles = () => {
     switch (variant) {
@@ -131,24 +138,24 @@ const DarkMessageModal: React.FC<DarkMessageModalProps> = ({
           <span className={styles.iconColor}>
             {getIcon()}
           </span>
-          <h2 className={`text-xl font-bold ${styles.titleColor}`}>{title}</h2>
+          <h2 className={`text-xl font-bold ${styles.titleColor}`}>{displayTitle}</h2>
         </div>
         <div className="p-6">
           <p className="text-gray-300 whitespace-pre-line">
-            {message}
+            {displayMessage}
           </p>
           {type === 'prompt' && (
             <div className="mt-4">
-              {inputLabel && (
+              {displayInputLabel && (
                 <label className="mb-2 block text-xs font-semibold uppercase tracking-wide text-gray-400">
-                  {inputLabel}
+                  {displayInputLabel}
                 </label>
               )}
               <input
                 autoFocus
                 type={inputType}
                 value={inputValue}
-                placeholder={inputPlaceholder}
+                placeholder={displayInputPlaceholder}
                 onChange={(event) => setInputValue(event.target.value)}
                 onKeyDown={(event) => {
                   if (event.key === 'Enter') handleConfirm();
@@ -165,14 +172,14 @@ const DarkMessageModal: React.FC<DarkMessageModalProps> = ({
               onClick={handleCancel} 
               className="px-4 py-2 bg-gray-600 text-white rounded-md hover:bg-gray-700 transition-colors text-sm font-semibold"
             >
-              {cancelText}
+              {displayCancelText}
             </button>
           )}
           <button 
             onClick={handleConfirm} 
             className={`px-4 py-2 text-white rounded-md transition-colors text-sm font-semibold ${styles.confirmBg}`}
           >
-            {confirmText}
+            {displayConfirmText}
           </button>
         </div>
       </div>

@@ -13,6 +13,7 @@ import {
     type TrainingReportTemplate,
     type TrainingReportTerminology,
 } from '../utils/trainingReportTerminology';
+import { sanitizeUserFacingTerminology } from '../utils/userFacingTerminology';
 
 // Define ALL_ELEMENTS to match TrainingReportView
 const TRAINING_REPORT_STRUCTURE = [
@@ -463,7 +464,7 @@ const HateSheetView: React.FC<HateSheetViewProps> = ({ trainee, lmpScores, asses
                                             <td className="px-6 py-4 whitespace-nowrap">
                                                 <span className="font-semibold text-sky-400">
                                                     {/* FIX: Use discriminated union to safely access event/flightNumber. */}
-                                                    {item.type === 'LMP Score' ? item.event : item.flightNumber}
+                                                    {sanitizeUserFacingTerminology(item.type === 'LMP Score' ? item.event : item.flightNumber)}
                                                 </span>
                                             </td>
                                             <td className="px-6 py-4 whitespace-nowrap">

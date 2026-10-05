@@ -1,6 +1,7 @@
 import React from 'react';
 import { Conflict } from '../types';
 import { DEFAULT_RESOURCE_DISPLAY_NAMES, ResourceDisplayNames } from '../utils/resourceDisplayNames';
+import { sanitizeUserFacingTerminology } from '../utils/userFacingTerminology';
 
 interface CptConflictWarningFlyoutProps {
   conflict: Conflict;
@@ -27,11 +28,11 @@ const CptConflictWarningFlyout: React.FC<CptConflictWarningFlyoutProps> = ({ con
                 </div>
                 <div className="p-6">
                     <p className="text-gray-300">
-                        The {resourceDisplayNames.cpt} event <strong className="text-white">{conflict.newEvent.flightNumber}</strong> was scheduled, but conflicts with another event.
+                        The {resourceDisplayNames.cpt} event <strong className="text-white">{sanitizeUserFacingTerminology(conflict.newEvent.flightNumber)}</strong> was scheduled, but conflicts with another event.
                     </p>
                     <p className="text-gray-300 mt-2">
                         <strong className="text-white">{conflict.personName}</strong> is also scheduled for{' '}
-                        <strong className="text-white">{conflict.conflictingEvent.flightNumber}</strong> at{' '}
+                        <strong className="text-white">{sanitizeUserFacingTerminology(conflict.conflictingEvent.flightNumber)}</strong> at{' '}
                         <strong className="text-white">{formatTime(conflict.conflictingEvent.startTime)}</strong>.
                     </p>
                 </div>

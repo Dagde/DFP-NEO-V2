@@ -6,6 +6,7 @@ import ClearAuthConfirmation from './ClearAuthConfirmation';
 import StaffSearchDropdown from './StaffSearchDropdown';
 import { useSystemFreeze } from '../hooks/useSystemFreeze';
 import { handleEditableTextBeforeInput, handleEditableTextKeyDownCapture, stopEditableKeyPropagation } from '../utils/editableKeyEvents';
+import { sanitizeUserFacingTerminology } from '../utils/userFacingTerminology';
 
 // ─── Currency helpers (mirrors CurrencyPanel logic) ─────────────────────────
 
@@ -171,7 +172,7 @@ interface AuthorisationFlyoutProps {
 const InfoRow: React.FC<{ label: string; value: string | undefined }> = ({ label, value }) => (
     <div className="flex justify-between text-sm py-1 border-b border-gray-700/50">
         <span className="text-gray-400 font-medium">{label}:</span>
-        <span className="text-gray-200">{value || 'N/A'}</span>
+        <span className="text-gray-200">{sanitizeUserFacingTerminology(value || 'N/A')}</span>
     </div>
 );
 
@@ -635,7 +636,7 @@ const AuthorisationFlyout: React.FC<AuthorisationFlyoutProps> = ({
                     <div className="bg-gray-700/30 rounded-lg p-3 border border-gray-600">
                         <h3 className="text-sm font-semibold text-gray-300 mb-2">Flight Summary</h3>
                         <div className="space-y-1 text-sm">
-                            <div className="flex justify-between"><span className="text-gray-400">Event:</span><span className="text-white font-medium">{event.flightNumber}</span></div>
+                            <div className="flex justify-between"><span className="text-gray-400">Event:</span><span className="text-white font-medium">{sanitizeUserFacingTerminology(event.flightNumber)}</span></div>
                             <div className="flex justify-between"><span className="text-gray-400">Start Time:</span><span className="text-white font-medium">{Math.floor(event.startTime)}:{String(Math.round((event.startTime % 1) * 60)).padStart(2, '0')}</span></div>
                             <div className="flex justify-between"><span className="text-gray-400">{instructorLabel}:</span><span className="text-white font-medium">{event.instructor}</span></div>
                             <div className="flex justify-between"><span className="text-gray-400">Student:</span><span className="text-white font-medium">{getStudentName(event.student)}</span></div>

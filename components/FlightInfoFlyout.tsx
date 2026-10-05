@@ -3,6 +3,7 @@ import React from 'react';
 import { ScheduleEvent } from '../types';
 import { DEFAULT_RESOURCE_DISPLAY_NAMES, ResourceDisplayNames } from '../utils/resourceDisplayNames';
 import { getScheduleEventPersonnelNames, schedulePersonnelNamesMatch } from '../utils/scheduleEventPersonnel';
+import { sanitizeUserFacingTerminology } from '../utils/userFacingTerminology';
 
 interface FlightInfoFlyoutProps {
   events: ScheduleEvent[];
@@ -44,7 +45,7 @@ const FlightInfoFlyout: React.FC<FlightInfoFlyoutProps> = ({ events, position, p
             return (
               <li key={event.id} className={`p-2 rounded-md border-l-4 ${event.color.replace('bg-', 'border-')}`}>
                 <div className="flex justify-between items-center font-semibold text-sm">
-                  <span>{event.flightNumber}{event.type === 'ftd' && <span className="text-indigo-400 font-bold"> ({resourceDisplayNames.ftd})</span>}</span>
+                  <span>{sanitizeUserFacingTerminology(event.flightNumber)}{event.type === 'ftd' && <span className="text-indigo-400 font-bold"> ({resourceDisplayNames.ftd})</span>}</span>
                   <span>{formatTime(event.startTime)}</span>
                 </div>
                 {otherPersonnelText && (

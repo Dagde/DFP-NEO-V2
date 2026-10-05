@@ -47,6 +47,7 @@ import {
 } from '../utils/unitCallsigns';
 import { handleEditableTextBeforeInput, handleEditableTextKeyDownCapture, stopEditableKeyPropagation } from '../utils/editableKeyEvents';
 import { buildCompactPersonNameResolver, getPersonIdentityDedupeKey, type PersonIdentityRecord } from '../utils/personIdentity';
+import { sanitizeUserFacingTerminology } from '../utils/userFacingTerminology';
 
 // ── Trainee Scores Modal (Grade Progression Chart) ───────────────────────────
 
@@ -3001,9 +3002,9 @@ export const EventDetailModal: React.FC<EventDetailModalProps> = ({ event, onClo
             // For regular ground events, mark as complete and close
             // This would typically update the event status in the system
             if (traineeObject) {
-                void showDarkAlert(`Ground event "${event.flightNumber}" marked as complete for ${traineeObject.rank} ${traineeObject.name}.`, 'Ground Event Complete', 'success');
+                void showDarkAlert(`Ground event "${sanitizeUserFacingTerminology(event.flightNumber)}" marked as complete for ${traineeObject.rank} ${traineeObject.name}.`, 'Ground Event Complete', 'success');
             } else {
-                void showDarkAlert(`Ground event "${event.flightNumber}" marked as complete.`, 'Ground Event Complete', 'success');
+                void showDarkAlert(`Ground event "${sanitizeUserFacingTerminology(event.flightNumber)}" marked as complete.`, 'Ground Event Complete', 'success');
             }
             onClose();
         }
@@ -4190,7 +4191,7 @@ const renderCrewFields = (crewMember: CrewMember, index: number) => {
                                             )}
                                         </>
                                     )}
-                                    {!isFixedCrewCrewedEvent && <p><strong>Syllabus Item:</strong> {event.flightNumber}</p>}
+                                    {!isFixedCrewCrewedEvent && <p><strong>Syllabus Item:</strong> {sanitizeUserFacingTerminology(event.flightNumber)}</p>}
                                     {!isFixedCrewCrewedEvent && event.type === 'flight' && <p><strong>Route:</strong> {event.origin}-{event.destination}</p>}
                                     {!isFixedCrewCrewedEvent && event.type === 'flight' && event.area && <p><strong>Area:</strong> {event.area}</p>}
                                     {!isFixedCrewCrewedEvent && event.type === 'flight' && (
@@ -4225,7 +4226,7 @@ const renderCrewFields = (crewMember: CrewMember, index: number) => {
                                                 </div>
                                                 <div className="rounded bg-gray-900/50 px-3 py-2">
                                                     <span className="block text-xs uppercase tracking-wider text-gray-500">Syllabus Item</span>
-                                                    <span className="text-gray-100">{event.flightNumber || 'Not set'}</span>
+                                                    <span className="text-gray-100">{sanitizeUserFacingTerminology(event.flightNumber || 'Not set')}</span>
                                                 </div>
                                                 <div className="rounded bg-gray-900/50 px-3 py-2">
                                                     <span className="block text-xs uppercase tracking-wider text-gray-500">Route</span>
@@ -4470,7 +4471,7 @@ const renderCrewFields = (crewMember: CrewMember, index: number) => {
                                 /* Not yet sent: show recipient selection + description */
                                 <>
                                     <p className="text-gray-300 text-sm">
-                                        Select recipients to notify about <span className="font-bold text-white">{event.flightNumber}</span>:
+                                        Select recipients to notify about <span className="font-bold text-white">{sanitizeUserFacingTerminology(event.flightNumber)}</span>:
                                     </p>
                                     <div className="space-y-2">
                                         {(() => {

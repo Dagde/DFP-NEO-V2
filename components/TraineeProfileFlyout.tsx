@@ -73,6 +73,7 @@ import { DEFAULT_PHRASE_BANK } from '../config/phraseBankConfig';
 import { DEFAULT_SCT_TERMINOLOGY, normaliseSctTerminology, type SctTerminology } from '../utils/sctTerminology';
 import { getConfiguredServiceOptionsWithCurrent, resolveConfiguredServiceName } from '../utils/serviceAliases';
 import { isSyllabusCourseShell } from '../utils/syllabusCourseShell';
+import { sanitizeUserFacingTerminology } from '../utils/userFacingTerminology';
 
 // ACADEMIC_LMP_COURSES is derived dynamically from syllabusDetails (DB only, no hardcoded fallback)
 
@@ -2465,14 +2466,19 @@ const TraineeProfileFlyout: React.FC<TraineeProfileFlyoutProps> = ({
         value: React.ReactNode;
         className?: string;
         valueClassName?: string;
-    }) => (
-        <div className={`min-w-0 ${className}`}>
-            <div className="mb-1 text-[10px] font-bold leading-none text-cyan-300">{label}</div>
-            <div className="flex h-9 min-w-0 items-center rounded-md border border-sky-500/35 bg-slate-950/75 px-3 text-[13px] font-semibold leading-tight text-white shadow-inner shadow-black/30 ring-1 ring-white/10">
-                <div className={`min-w-0 ${valueClassName}`}>{value}</div>
+    }) => {
+        const displayValue = typeof value === 'string' || typeof value === 'number'
+            ? sanitizeUserFacingTerminology(value)
+            : value;
+        return (
+            <div className={`min-w-0 ${className}`}>
+                <div className="mb-1 text-[10px] font-bold leading-none text-cyan-300">{label}</div>
+                <div className="flex h-9 min-w-0 items-center rounded-md border border-sky-500/35 bg-slate-950/75 px-3 text-[13px] font-semibold leading-tight text-white shadow-inner shadow-black/30 ring-1 ring-white/10">
+                    <div className={`min-w-0 ${valueClassName}`}>{displayValue}</div>
+                </div>
             </div>
-        </div>
-    );
+        );
+    };
 
     return (
         <>

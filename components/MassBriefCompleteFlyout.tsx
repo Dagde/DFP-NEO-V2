@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { Trainee } from '../types';
+import { sanitizeUserFacingTerminology } from '../utils/userFacingTerminology';
 
 interface MassBriefCompleteFlyoutProps {
   isOpen: boolean;
@@ -64,7 +65,7 @@ const MassBriefCompleteFlyout: React.FC<MassBriefCompleteFlyoutProps> = ({
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
       <div className="bg-gray-800 rounded-lg p-6 max-w-md w-full mx-4 max-h-96 overflow-y-auto">
         <h2 className="text-xl font-bold text-white mb-4">
-          Complete Mass Brief: {event.flightNumber}
+          Complete Mass Brief: {sanitizeUserFacingTerminology(event.flightNumber)}
         </h2>
         
         <p className="text-gray-300 mb-4">
@@ -148,7 +149,7 @@ const MassBriefConfirmationFlyout: React.FC<MassBriefConfirmationFlyoutProps> = 
         
         <div className="mb-4">
           <p className="text-gray-300 mb-3">
-            <strong>{event.flightNumber}</strong> has been marked complete for:
+            <strong>{sanitizeUserFacingTerminology(event.flightNumber)}</strong> has been marked complete for:
           </p>
           
           <div className="space-y-2 mb-4">

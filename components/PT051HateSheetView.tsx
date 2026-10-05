@@ -11,6 +11,7 @@ import {
   type TrainingReportTemplate,
   type TrainingReportTerminology,
 } from '../utils/trainingReportTerminology';
+import { sanitizeUserFacingTerminology } from '../utils/userFacingTerminology';
 
 interface TrainingReportHateSheetViewProps {
   trainee: Trainee;
@@ -85,7 +86,7 @@ const TrainingReportHateSheetView: React.FC<TrainingReportHateSheetViewProps> = 
                 backgroundColor: '#f9f9f9'
               }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '10px' }}>
-                  <strong>{assessment.flightNumber}</strong>
+                  <strong>{sanitizeUserFacingTerminology(assessment.flightNumber)}</strong>
                   <span style={{ color: assessment.overallResult === 'P' ? 'green' : assessment.overallResult === 'F' ? 'red' : '#666' }}>
                     {assessment.overallResult || 'Pending'}
                   </span>

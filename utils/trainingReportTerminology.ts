@@ -1,5 +1,6 @@
 import type { PlatformConfig } from './platformConfigService';
 import { DEFAULT_PHRASE_BANK } from '../config/phraseBankConfig';
+import { sanitizeUserFacingTerminology } from './userFacingTerminology';
 
 export interface TrainingReportTerminology {
   name: string;
@@ -114,9 +115,9 @@ export const resolveReportAssessorDisplayLabel = (
   const configuredAssessor = cleanLabel(assessorFieldLabel, '', TRAINING_REPORT_FIELD_LABEL_MAX_LENGTH);
   if (!configuredAssessor) return configuredInstructor;
   if (configuredAssessor.toUpperCase() === 'QFI' && configuredInstructor.toUpperCase() !== 'QFI') {
-    return configuredInstructor;
+    return sanitizeUserFacingTerminology(configuredInstructor);
   }
-  return configuredAssessor;
+  return sanitizeUserFacingTerminology(configuredAssessor);
 };
 
 const DEFAULT_GRADE_LABELS: Record<number, string> = {
@@ -224,7 +225,7 @@ export const DEFAULT_TRAINING_REPORT_TEMPLATE: TrainingReportTemplate = {
 
 const cleanLabel = (value: unknown, fallback: string, maxLength: number): string => {
   if (typeof value !== 'string') return fallback;
-  const trimmed = value.trim();
+  const trimmed = sanitizeUserFacingTerminology(value);
   return trimmed.slice(0, maxLength);
 };
 

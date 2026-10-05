@@ -29,6 +29,7 @@ import {
     type TrainingReportCompletionCode,
     type TrainingReportTemplate,
 } from '../utils/trainingReportTerminology';
+import { sanitizeUserFacingTerminology } from '../utils/userFacingTerminology';
 
 interface PostFlightViewProps {
   event: ScheduleEvent;
@@ -1334,7 +1335,7 @@ export const PostFlightView: React.FC<PostFlightViewProps> = ({ event, onReturn,
             {/* Header */}
             <div className="flex-shrink-0 bg-gray-800 p-4 flex justify-between items-center border-b border-gray-700">
                 <div className="flex items-center gap-4 w-1/3">
-                    <span className="font-bold text-white text-lg">{event.flightNumber}</span>
+                    <span className="font-bold text-white text-lg">{sanitizeUserFacingTerminology(event.flightNumber)}</span>
                     <div className="flex items-center px-3 py-1 rounded-full bg-gray-900/50 border border-gray-700">
                         <div className={`w-2 h-2 rounded-full mr-2 ${saveStatus === 'Saved' ? 'bg-green-500' : saveStatus === 'Saving...' ? 'bg-amber-500 animate-pulse' : 'bg-red-500'}`}></div>
                         <span className="text-xs text-gray-300 font-mono uppercase">{saveStatus === 'Saved' ? 'Saved' : saveStatus}</span>

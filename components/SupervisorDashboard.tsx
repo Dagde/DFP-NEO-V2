@@ -3,6 +3,7 @@ import { Instructor, Trainee, ScheduleEvent } from '../types';
 import UnavailabilitiesWindow from './UnavailabilitiesWindow';
 import TafWeatherWidget from './TafWeatherWidget';
 import FlightTrackingWidget from './FlightTrackingWidget';
+import { sanitizeUserFacingTerminology } from '../utils/userFacingTerminology';
 
 interface SupervisorDashboardProps {
     instructorsData: Instructor[];
@@ -138,7 +139,7 @@ const SupervisorDashboard: React.FC<SupervisorDashboardProps> = ({ instructorsDa
                                             <div className="flex items-center space-x-3">
                                                 <span className="font-mono text-gray-300 text-sm">{formatTime(event.startTime)}</span>
                                                 <div>
-                                                    <p className="font-semibold text-white text-sm">{event.flightNumber}</p>
+                                                    <p className="font-semibold text-white text-sm">{sanitizeUserFacingTerminology(event.flightNumber)}</p>
                                                     <p className="text-xs text-gray-400">
                                                         {event.instructor?.split(',')[0]} / {event.student?.split(',')[0] || event.pilot?.split(',')[0]}
                                                     </p>

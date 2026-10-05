@@ -6,6 +6,7 @@ import {
     type TrainingReportTemplate,
 } from '../utils/trainingReportTerminology';
 import { isSyllabusCourseShell } from '../utils/syllabusCourseShell';
+import { sanitizeUserFacingTerminology } from '../utils/userFacingTerminology';
 
 interface TrainingCompletionViewProps {
     traineesData: Trainee[];
@@ -795,7 +796,7 @@ const TrainingCompletionView: React.FC<TrainingCompletionViewProps> = ({
                                                 className="h-4 w-4 accent-sky-500 bg-gray-700 border-gray-500 rounded"
                                             />
                                             <span className="w-8 shrink-0 text-xs font-semibold text-gray-500">{index + 1}</span>
-                                            <span className="font-semibold">{event.flightNumber || 'LMP Event'}</span>
+                                            <span className="font-semibold">{sanitizeUserFacingTerminology(event.flightNumber || 'LMP Event')}</span>
                                             {event.notes && (
                                                 <span className="min-w-0 truncate text-sm text-gray-400">{event.notes}</span>
                                             )}

@@ -1,5 +1,6 @@
 import React, { useMemo } from 'react';
 import { Instructor, Trainee, UnavailabilityPeriod, ScheduleEvent } from '../types';
+import { sanitizeUserFacingTerminology } from '../utils/userFacingTerminology';
 
 // Helper to format date string as ddMmmYY
 const formatDateForDisplay = (dateStr: string | undefined): string => {
@@ -87,7 +88,7 @@ const PersonEntry: React.FC<PersonEntryProps> = ({ person, status }) => {
                         {person.scheduledEvents.sort((a,b) => a.startTime - b.startTime).map(event => (
                             <li key={event.id} className="flex justify-between items-center text-xs p-1.5 bg-gray-900/40 rounded">
                                 <span className="font-mono text-gray-300">{formatEventTime(event.startTime)}</span>
-                                <span className="font-semibold text-sky-400">{event.flightNumber}</span>
+                                <span className="font-semibold text-sky-400">{sanitizeUserFacingTerminology(event.flightNumber)}</span>
                                 <span className="text-gray-400 w-24 text-right">{getRole(event, person.name)}</span>
                             </li>
                         ))}

@@ -1,4 +1,5 @@
 import type { PlatformResourcePool } from './platformConfigService';
+import { sanitizeUserFacingTerminology } from './userFacingTerminology';
 
 export interface ResourceDisplayNames {
   aircraft: string;
@@ -22,7 +23,7 @@ export const DEFAULT_RESOURCE_DISPLAY_NAMES: ResourceDisplayNames = {
 
 const cleanLabel = (value: unknown, fallback: string): string => {
   if (typeof value !== 'string') return fallback;
-  const trimmed = value.trim();
+  const trimmed = sanitizeUserFacingTerminology(value).trim();
   return trimmed || fallback;
 };
 
@@ -132,5 +133,5 @@ export const formatResourceLabel = (
   const cptMatch = resourceId.match(/^CPT(\s+\d+)$/);
   if (cptMatch) return `${names.cpt}${cptMatch[1]}`;
 
-  return resourceId;
+  return sanitizeUserFacingTerminology(resourceId);
 };

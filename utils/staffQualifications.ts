@@ -4,6 +4,7 @@ import {
   normaliseOperationalModel,
   type OperationalModelCode,
 } from './platformConfigService';
+import { sanitizeUserFacingTerminology } from './userFacingTerminology';
 
 export interface StaffQualificationDefinition {
   id: string;
@@ -227,15 +228,15 @@ export const getStaffQualificationDisplayLabel = (
   const name = String(definition.name || '').trim();
 
   if (idToken === 'qfi') {
-    if (code && normaliseQualificationToken(code) !== 'qfi') return code;
-    if (name && normaliseQualificationToken(name) !== 'qfi') return name;
+    if (code && normaliseQualificationToken(code) !== 'qfi') return sanitizeUserFacingTerminology(code);
+    if (name && normaliseQualificationToken(name) !== 'qfi') return sanitizeUserFacingTerminology(name);
     return 'Instructor';
   }
 
   if (code && name && normaliseQualificationToken(code) !== normaliseQualificationToken(name)) {
-    return `${code} - ${name}`;
+    return sanitizeUserFacingTerminology(`${code} - ${name}`);
   }
-  return code || name || definition.id;
+  return sanitizeUserFacingTerminology(code || name || definition.id);
 };
 
 export const qualificationMatches = (

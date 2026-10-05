@@ -13,6 +13,7 @@ import {
     type TrainingReportCompletionCode,
     type TrainingReportTemplate,
 } from '../utils/trainingReportTerminology';
+import { sanitizeUserFacingTerminology } from '../utils/userFacingTerminology';
 
 interface PostFlightModalProps {
   event: ScheduleEvent;
@@ -105,8 +106,8 @@ const PostFlightModal: React.FC<PostFlightModalProps> = ({ event, onClose, onSav
             <div className="bg-gray-800 rounded-lg shadow-xl w-full max-w-4xl border border-gray-700 transform transition-all animate-fade-in" onClick={e => e.stopPropagation()}>
                 {/* Header */}
                 <div className="p-4 border-b border-gray-700 flex justify-between items-center bg-gray-900/50">
-                    <span className="font-bold text-white text-lg">{event.flightNumber}</span>
-                    <h2 className="text-xl font-bold text-sky-400 text-center">{person?.rank} {person?.name}</h2>
+                    <span className="font-bold text-white text-lg">{sanitizeUserFacingTerminology(event.flightNumber)}</span>
+                    <h2 className="text-xl font-bold text-sky-400 text-center">{sanitizeUserFacingTerminology(person?.rank)} {person?.name}</h2>
                     <span className="font-mono text-gray-300 text-lg">{event.date}</span>
                 </div>
 

@@ -12,6 +12,7 @@ import {
 } from '../utils/trainingReportTerminology';
 import { getConfiguredScoringMatrixElements } from '../utils/scoringMatrixElements';
 import { showDarkAlert } from './DarkMessageModal';
+import { sanitizeUserFacingTerminology } from '../utils/userFacingTerminology';
 
 interface TrainingRecordsExportViewProps {
     traineesData: Trainee[];
@@ -720,7 +721,7 @@ const TrainingRecordsExportView: React.FC<TrainingRecordsExportViewProps> = ({
             csvContent += 'EVENTS\n';
             csvContent += `Date,Type,${exportAssessorLabel},Student,Event Number,Duration,Start Time,Resource\n`;
             filteredData.events.forEach(e => {
-                csvContent += `${e.date},${e.type},${e.instructor || ''},${e.student || e.pilot || ''},${e.flightNumber || ''},${e.duration || ''},${e.startTime || ''},${e.resourceId || ''}\n`;
+                csvContent += `${e.date},${sanitizeUserFacingTerminology(e.type)},${e.instructor || ''},${e.student || e.pilot || ''},${sanitizeUserFacingTerminology(e.flightNumber || '')},${e.duration || ''},${e.startTime || ''},${sanitizeUserFacingTerminology(e.resourceId || '')}\n`;
             });
             csvContent += '\n';
         }
@@ -760,13 +761,13 @@ const TrainingRecordsExportView: React.FC<TrainingRecordsExportViewProps> = ({
         if (recordType === 'all' || recordType === 'events') {
             const eventsData = filteredData.events.map(e => ({
                 'Date': e.date || '',
-                'Type': e.type || '',
+                'Type': sanitizeUserFacingTerminology(e.type || ''),
                 [exportAssessorLabel]: e.instructor || '',
                 'Student': e.student || e.pilot || '',
-                'Event Number': e.flightNumber || '',
+                'Event Number': sanitizeUserFacingTerminology(e.flightNumber || ''),
                 'Duration (hrs)': e.duration || 0,
                 'Start Time': e.startTime || '',
-                'Resource': e.resourceId || ''
+                'Resource': sanitizeUserFacingTerminology(e.resourceId || '')
             }));
             
             const wsEvents = XLSX.utils.json_to_sheet(eventsData);
@@ -1012,7 +1013,7 @@ const TrainingRecordsExportView: React.FC<TrainingRecordsExportViewProps> = ({
         const flightDesc = syllabusDetail?.eventDescription || syllabusDetail?.title || syllabusDetail?.description || '';
 
         const eventNumberRowHeight = Math.max(
-            drawLabelValue('Event Number', event.flightNumber || 'N/A', col1X, col1X + 34, y, 55),
+            drawLabelValue('Event Number', sanitizeUserFacingTerminology(event.flightNumber || 'N/A'), col1X, col1X + 34, y, 55),
             drawLabelValue('Duration', event.duration ? `${event.duration.toFixed(1)} hrs` : 'N/A', col2X, col2X + 26, y, 45),
         );
         y += eventNumberRowHeight;
@@ -1185,7 +1186,7 @@ const TrainingRecordsExportView: React.FC<TrainingRecordsExportViewProps> = ({
                     <div><strong>Course:</strong> ${trainee?.course || 'N/A'}</div>
                     <div><strong>${escapeHtml(exportAssessorLabel)}:</strong> ${instructor?.rank || ''} ${instructor?.name || event.instructor || 'N/A'}</div>
                     <div><strong>Date:</strong> ${formatDate(event.date) || 'N/A'}</div>
-                    <div><strong>Event:</strong> ${event.flightNumber || 'N/A'}</div>
+                    <div><strong>Event:</strong> ${escapeHtml(sanitizeUserFacingTerminology(event.flightNumber || 'N/A'))}</div>
                     <div><strong>Duration:</strong> ${event.duration ? event.duration.toFixed(1) + ' hrs' : 'N/A'}</div>
                 </div>
                 
@@ -1763,7 +1764,7 @@ const TrainingRecordsExportView: React.FC<TrainingRecordsExportViewProps> = ({
                                         <tr key={idx} className="border-b border-gray-700">
                                             <td className="px-4 py-2 text-gray-300">{formatDate(event.date)}</td>
                                             <td className="px-4 py-2 text-gray-300">{event.type}</td>
-                                            <td className="px-4 py-2 text-gray-300">{event.flightNumber}</td>
+                                            <td className="px-4 py-2 text-gray-300">{sanitizeUserFacingTerminology(event.flightNumber)}</td>
                                             <td className="px-4 py-2 text-gray-300">{event.student || event.pilot || '-'}</td>
                                             <td className="px-4 py-2 text-gray-300">{event.instructor || '-'}</td>
                                             <td className="px-4 py-2">

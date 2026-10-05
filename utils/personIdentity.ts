@@ -1,3 +1,5 @@
+import { sanitizeUserFacingTerminology } from './userFacingTerminology';
+
 export type PersonIdentityRecord = {
   id?: string | number | null;
   idNumber?: string | number | null;
@@ -173,7 +175,7 @@ export const formatPersonOptionLabel = (person: PersonIdentityRecord): string =>
     person.role || person.course,
     person.unit,
     person.idNumber ? `ID ${person.idNumber}` : '',
-  ].map(value => String(value || '').trim()).filter(Boolean);
+  ].map(value => sanitizeUserFacingTerminology(value)).filter(Boolean);
   return parts.join(' - ');
 };
 

@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { ScheduleEvent } from '../types';
 import { DEFAULT_RESOURCE_DISPLAY_NAMES, ResourceDisplayNames } from '../utils/resourceDisplayNames';
+import { sanitizeUserFacingTerminology } from '../utils/userFacingTerminology';
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -954,7 +955,7 @@ const EventPill: React.FC<EventPillProps> = ({ event, state, styleClass, onMouse
                     <svg className="w-2.5 h-2.5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}><path strokeLinecap="round" strokeLinejoin="round" d="M12 4v4m0 0l-2-2m2 2l2-2M4 12h4m0 0l-2 2m2-2l-2-2M20 12h-4m0 0l2 2m-2-2l2-2M12 20v-4m0 0l-2 2m2-2l2 2" /></svg>
                 </div>
             )}
-            <p className="font-semibold leading-tight">{event.flightNumber}</p>
+            <p className="font-semibold leading-tight">{sanitizeUserFacingTerminology(event.flightNumber)}</p>
             <p className="text-gray-300 truncate" style={{ maxWidth: 90 }}>{person}</p>
             <p className="text-gray-400">{decToHHMM(event.startTime)}</p>
         </div>

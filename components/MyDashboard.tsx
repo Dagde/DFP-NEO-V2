@@ -15,6 +15,7 @@ import {
 } from '../utils/staffQualifications';
 import { buildCompactPersonNameResolver, formatPersonDisplayName } from '../utils/personIdentity';
 import { showDarkConfirm } from './DarkMessageModal';
+import { sanitizeUserFacingTerminology } from '../utils/userFacingTerminology';
 
 interface MyDashboardProps {
     userName: string;
@@ -3028,7 +3029,7 @@ const MyDashboard: React.FC<MyDashboardProps> = ({
                     <span className={`w-3 h-3 rounded-full ${event.color}`}></span>
                     <div>
                         <div className="flex items-center space-x-2">
-                            <p className="font-semibold text-white">{event.flightNumber}</p>
+                            <p className="font-semibold text-white">{sanitizeUserFacingTerminology(event.flightNumber)}</p>
                             {isStby && (
                                 <span className="px-1.5 py-0.5 text-xs font-bold rounded bg-amber-500/20 text-amber-300 border border-amber-500/40 tracking-wide">
                                     STBY
@@ -3906,7 +3907,7 @@ const MyDashboard: React.FC<MyDashboardProps> = ({
                                                 onClick={() => onSelectTrainingReport(assessment)}
                                                 className="block text-left"
                                             >
-                                                <p className="font-semibold text-white">{assessment.flightNumber}</p>
+                                                <p className="font-semibold text-white">{sanitizeUserFacingTerminology(assessment.flightNumber)}</p>
                                             </button>
                                             {onDeleteTrainingReportMessage && (
                                                 <button

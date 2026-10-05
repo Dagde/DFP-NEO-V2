@@ -19,6 +19,7 @@ import { isContinuationScheduleEvent } from '../utils/continuationEvents';
 import { loadPlatformConfigFromDB } from '../utils/platformConfigService';
 import { handleEditableTextBeforeInput, handleEditableTextKeyDownCapture, stopEditableKeyPropagation } from '../utils/editableKeyEvents';
 import { getConfiguredScoringMatrixElements } from '../utils/scoringMatrixElements';
+import { sanitizeUserFacingTerminology } from '../utils/userFacingTerminology';
 
 interface TrainingReportViewProps {
     trainee: Trainee;
@@ -1080,11 +1081,11 @@ const TrainingReportView: React.FC<TrainingReportViewProps> = ({ trainee, event,
         if (dcoResult === 'DPCO' && dpcoFollowUp.action === 'extra-event') {
             const hours = formatFollowUpHours(dpcoFollowUp.extraEventHours);
             return hours
-                ? `${hours} hrs added to ${event.flightNumber || 're-fly event'}.`
-                : `Re-fly requested: ${event.flightNumber || 'event'}.`;
+                ? `${hours} hrs added to ${sanitizeUserFacingTerminology(event.flightNumber || 're-fly event')}.`
+                : `Re-fly requested: ${sanitizeUserFacingTerminology(event.flightNumber || 'event')}.`;
         }
         if (dcoResult === 'DNCO' && dncoFollowUp.requestExtraFlight) {
-            return `Re-fly requested: ${event.flightNumber || 'event'}.`;
+            return `Re-fly requested: ${sanitizeUserFacingTerminology(event.flightNumber || 'event')}.`;
         }
         return '';
     };
@@ -1425,12 +1426,12 @@ const TrainingReportView: React.FC<TrainingReportViewProps> = ({ trainee, event,
             doc.setFont('helvetica', 'normal');
             doc.setFontSize(10);
             doc.setTextColor(80);
-            doc.text(`${assessment.flightNumber || event.flightNumber || 'Event'} - ${trainee.rank || ''} ${trainee.name || trainee.fullName || ''} - ${displayReportDate}`, margin, y);
+            doc.text(`${sanitizeUserFacingTerminology(assessment.flightNumber || event.flightNumber || 'Event')} - ${trainee.rank || ''} ${trainee.name || trainee.fullName || ''} - ${displayReportDate}`, margin, y);
             y += 8;
 
             addSectionTitle(printReportTemplate.modules.overview.title || 'Event Details');
             addKeyValueRows([
-                [printOverviewFields.event, assessment.flightNumber || event.flightNumber || 'N/A'],
+                [printOverviewFields.event, sanitizeUserFacingTerminology(assessment.flightNumber || event.flightNumber || 'N/A')],
                 [printOverviewFields.type, getEventDescription()],
                 ['Trainee', `${trainee.rank || ''} ${trainee.name || trainee.fullName || ''}`.trim()],
                 ['Course', trainee.course || 'N/A'],
@@ -1494,7 +1495,7 @@ const TrainingReportView: React.FC<TrainingReportViewProps> = ({ trainee, event,
             addFooter();
             const safeName = [
                 printReportName,
-                assessment.flightNumber || event.flightNumber || 'Training-Report',
+                sanitizeUserFacingTerminology(assessment.flightNumber || event.flightNumber || 'Training-Report'),
                 trainee.name || trainee.fullName || 'Person',
                 displayReportDate || formatTrainingReportDisplayDate(new Date().toISOString().slice(0, 10)),
             ]
@@ -1659,7 +1660,7 @@ const TrainingReportView: React.FC<TrainingReportViewProps> = ({ trainee, event,
                     <dl className="lg:col-span-1 lg:w-[calc(100%-25px)] h-full space-y-2 p-4 bg-gray-800 border border-gray-700 rounded-lg">
                         <div>
                             <dt className="text-sm font-medium text-gray-400">{overviewFields.event}</dt>
-                            <dd className="mt-1 text-sm text-white font-semibold">{event.flightNumber || 'N/A'}</dd>
+                            <dd className="mt-1 text-sm text-white font-semibold">{sanitizeUserFacingTerminology(event.flightNumber || 'N/A')}</dd>
                         </div>
                         <div>
                             <dt className="text-sm font-medium text-gray-400">{overviewFields.type}</dt>
