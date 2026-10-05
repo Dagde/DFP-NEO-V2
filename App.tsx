@@ -31365,7 +31365,13 @@ const App: React.FC = () => {
     }, [activeUnitCode, hasInitialSetupWizardCompleted, school, showInitialSetupBlankState]);
 
     useEffect(() => {
-        if (!platformConfigLoaded || showInitialSetupBlankState || isInitialSetupWizardActive || !hasOperationalSetupReadyForDfp) return;
+        if (
+            !platformConfigLoaded ||
+            showInitialSetupBlankState ||
+            isInitialSetupWizardActive ||
+            hasIncompleteInitialSetupWizardProgress ||
+            !hasOperationalSetupReadyForDfp
+        ) return;
         if (!hasStoredInitialSetupWizardProgress() && !hasStoredInitialSetupWizardCompleted()) return;
         try {
             const removedKeys = INITIAL_SETUP_WIZARD_LOCAL_STORAGE_KEYS.filter((key) => {
@@ -31385,6 +31391,7 @@ const App: React.FC = () => {
         }
     }, [
         hasOperationalSetupReadyForDfp,
+        hasIncompleteInitialSetupWizardProgress,
         hasStoredInitialSetupWizardCompleted,
         hasStoredInitialSetupWizardProgress,
         isInitialSetupWizardActive,
@@ -55635,7 +55642,12 @@ appliedUpdates.forEach(update => {
                            showEmptyDfpWelcome={showEmptyDfpWelcome}
                            emptyDfpWelcomeVariant={emptyDfpWelcomeVariant}
                            resumeInitialSetupWizard={shouldResumeInitialSetupWizard}
-                           initialOrganisationSlideoutView={showInitialSetupBlankState ? 'setupWizard' : 'structure'}
+                           initialOrganisationSlideoutView={(
+                               showInitialSetupBlankState ||
+                               shouldResumeInitialSetupWizard ||
+                               isInitialSetupWizardActive ||
+                               hasIncompleteInitialSetupWizardProgress
+                           ) ? 'setupWizard' : 'structure'}
                            onOrganisationSlideoutOpen={() => {
                                setShowDfpSidePanel(false);
                                setShowFlightLinePanel(false);

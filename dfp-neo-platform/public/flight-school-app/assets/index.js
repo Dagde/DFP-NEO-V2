@@ -141906,7 +141906,7 @@ const App = () => {
     }
   }, [activeUnitCode, hasInitialSetupWizardCompleted, school, showInitialSetupBlankState]);
   reactExports.useEffect(() => {
-    if (!platformConfigLoaded || showInitialSetupBlankState || isInitialSetupWizardActive || !hasOperationalSetupReadyForDfp) return;
+    if (!platformConfigLoaded || showInitialSetupBlankState || isInitialSetupWizardActive || hasIncompleteInitialSetupWizardProgress || !hasOperationalSetupReadyForDfp) return;
     if (!hasStoredInitialSetupWizardProgress() && !hasStoredInitialSetupWizardCompleted()) return;
     try {
       const removedKeys = INITIAL_SETUP_WIZARD_LOCAL_STORAGE_KEYS.filter((key) => {
@@ -141925,6 +141925,7 @@ const App = () => {
     }
   }, [
     hasOperationalSetupReadyForDfp,
+    hasIncompleteInitialSetupWizardProgress,
     hasStoredInitialSetupWizardCompleted,
     hasStoredInitialSetupWizardProgress,
     isInitialSetupWizardActive,
@@ -161522,7 +161523,7 @@ It will not clear the published DFP.`,
             showEmptyDfpWelcome,
             emptyDfpWelcomeVariant,
             resumeInitialSetupWizard: shouldResumeInitialSetupWizard,
-            initialOrganisationSlideoutView: showInitialSetupBlankState ? "setupWizard" : "structure",
+            initialOrganisationSlideoutView: showInitialSetupBlankState || shouldResumeInitialSetupWizard || isInitialSetupWizardActive || hasIncompleteInitialSetupWizardProgress ? "setupWizard" : "structure",
             onOrganisationSlideoutOpen: () => {
               setShowDfpSidePanel(false);
               setShowFlightLinePanel(false);
