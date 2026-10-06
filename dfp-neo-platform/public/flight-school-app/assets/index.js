@@ -17685,8 +17685,7 @@ const SettingsView = ({
         ] }),
         /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-4 p-4", children: [
           /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "rounded-md border border-sky-500/30 bg-sky-500/10 p-3 text-xs leading-relaxed text-sky-100", children: "The first group starts blank. The grey text is only an example, so enter the group name your organisation uses, assign the events, then choose how NEO Build should schedule them." }),
-          isEditingGroundEventScheduling && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex justify-end", children: /* @__PURE__ */ jsxRuntimeExports.jsx("button", { onClick: handleAddGroundEventGroup, className: "rounded-md border border-sky-500/50 bg-sky-500/15 px-3 py-2 text-xs font-semibold text-sky-100 hover:border-sky-400", children: "Add Group" }) }),
-          displayedGroundEventSchedulingGroups.map((group) => {
+          displayedGroundEventSchedulingGroups.map((group, groupIndex) => {
             const assignedEvents = availableGroundEventSchedulingEvents.filter((event) => group.eventCodes.includes(event.code));
             return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded-lg border border-gray-700 bg-gray-900/50 p-4", children: [
               /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid gap-4 lg:grid-cols-[260px_minmax(260px,1fr)_auto]", children: [
@@ -17780,7 +17779,8 @@ const SettingsView = ({
                     eventOption.code
                   );
                 }) }) }) : /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex flex-wrap gap-2 rounded-md border border-gray-700 bg-gray-950/50 p-2", children: assignedEvents.length > 0 ? assignedEvents.map((eventOption) => /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "rounded border border-gray-600 bg-gray-800 px-2 py-1 text-xs font-semibold text-gray-100", children: eventOption.label }, eventOption.code)) : /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-xs italic text-gray-500", children: "No events assigned" }) })
-              ] })
+              ] }),
+              isEditingGroundEventScheduling && groupIndex === 0 ? /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-3 flex justify-end", children: /* @__PURE__ */ jsxRuntimeExports.jsx("button", { onClick: handleAddGroundEventGroup, className: "rounded-md border border-emerald-600 bg-emerald-600 px-3 py-2 text-xs font-bold text-white shadow-sm transition hover:border-emerald-500 hover:bg-emerald-500", children: "Add Group" }) }) : null
             ] }, group.id);
           }),
           displayedGroundEventSchedulingGroups.length === 0 && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "rounded-md border border-gray-700 bg-gray-900/50 p-4 text-sm text-gray-400", children: "No ground events are available from the current LMP data." })

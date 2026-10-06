@@ -1679,14 +1679,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                             <div className="rounded-md border border-sky-500/30 bg-sky-500/10 p-3 text-xs leading-relaxed text-sky-100">
                                 The first group starts blank. The grey text is only an example, so enter the group name your organisation uses, assign the events, then choose how NEO Build should schedule them.
                             </div>
-                            {isEditingGroundEventScheduling && (
-                                <div className="flex justify-end">
-                                    <button onClick={handleAddGroundEventGroup} className="rounded-md border border-sky-500/50 bg-sky-500/15 px-3 py-2 text-xs font-semibold text-sky-100 hover:border-sky-400">
-                                        Add Group
-                                    </button>
-                                </div>
-                            )}
-                            {displayedGroundEventSchedulingGroups.map((group) => {
+                            {displayedGroundEventSchedulingGroups.map((group, groupIndex) => {
                                 const assignedEvents = availableGroundEventSchedulingEvents.filter(event => group.eventCodes.includes(event.code));
                                 return (
                                     <div key={group.id} className="rounded-lg border border-gray-700 bg-gray-900/50 p-4">
@@ -1817,6 +1810,13 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                                                 </div>
                                             )}
                                         </div>
+                                        {isEditingGroundEventScheduling && groupIndex === 0 ? (
+                                            <div className="mt-3 flex justify-end">
+                                                <button onClick={handleAddGroundEventGroup} className="rounded-md border border-emerald-600 bg-emerald-600 px-3 py-2 text-xs font-bold text-white shadow-sm transition hover:border-emerald-500 hover:bg-emerald-500">
+                                                    Add Group
+                                                </button>
+                                            </div>
+                                        ) : null}
                                     </div>
                                 );
                             })}
