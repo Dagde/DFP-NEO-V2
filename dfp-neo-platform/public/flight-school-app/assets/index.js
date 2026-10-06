@@ -30951,7 +30951,21 @@ This removes them from DFP Resource Rows. Press Save in this section to apply th
               /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mb-3", children: [
                 /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: `mb-1 text-[10px] font-bold uppercase tracking-wide ${wizardEditMode ? "text-amber-950" : "text-amber-200"}`, children: "Main Rule Set Records" }),
                 /* @__PURE__ */ jsxRuntimeExports.jsx("h5", { className: `text-sm font-bold ${wizardEditMode ? "text-amber-950" : "text-white"}`, children: "Scheduling Rule Set Records" }),
-                /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: `mt-1 text-xs leading-relaxed ${wizardEditMode ? "text-amber-950/80" : "text-amber-50/70"}`, children: "Use these records to apply named scheduling rules to selected units, aircraft types or operating scopes." })
+                /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: `mt-1 text-xs leading-relaxed ${wizardEditMode ? "text-amber-950/80" : "text-amber-50/70"}`, children: "Use these records to apply named scheduling rules to selected units, aircraft types or operating scopes." }),
+                wizardEditMode ? /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mt-3 rounded-lg border border-amber-300 bg-amber-50 px-3 py-2 text-xs font-semibold leading-5 text-amber-950", children: [
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "font-black", children: "What should Scope be?" }),
+                  /* @__PURE__ */ jsxRuntimeExports.jsxs("p", { className: "mt-1", children: [
+                    "Scope tells DFP NEO how widely this rule set should apply. For a normal setup, choose ",
+                    /* @__PURE__ */ jsxRuntimeExports.jsx("strong", { children: "Unit" }),
+                    " so the rules apply only to this unit. Choose ",
+                    /* @__PURE__ */ jsxRuntimeExports.jsx("strong", { children: "Location" }),
+                    " only when every unit at the same base should use the same rule set. Choose ",
+                    /* @__PURE__ */ jsxRuntimeExports.jsx("strong", { children: "AircraftType" }),
+                    " only when the rule is specific to one aircraft, simulator, or trainer type. Choose ",
+                    /* @__PURE__ */ jsxRuntimeExports.jsx("strong", { children: "Organisation" }),
+                    " only when the same rule should apply everywhere in the organisation."
+                  ] })
+                ] }) : null
               ] }),
               /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "space-y-3", children: visibleSchedulingRuleSetRows.map(({ ruleSet, index }) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid gap-3 rounded border border-gray-700 bg-gray-950 p-3 md:grid-cols-5", children: [
                 /* @__PURE__ */ jsxRuntimeExports.jsx(DraftField, { label: "Name", value: ruleSet.name, disabled: !canEditSection("platform-scheduling-rule-sets"), onCommit: (value) => updateRow("schedulingRuleSets", index, { name: value }) }),

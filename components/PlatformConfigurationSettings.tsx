@@ -14613,6 +14613,14 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
               <p className={`mt-1 text-xs leading-relaxed ${wizardEditMode ? 'text-amber-950/80' : 'text-amber-50/70'}`}>
                 Use these records to apply named scheduling rules to selected units, aircraft types or operating scopes.
               </p>
+              {wizardEditMode ? (
+                <div className="mt-3 rounded-lg border border-amber-300 bg-amber-50 px-3 py-2 text-xs font-semibold leading-5 text-amber-950">
+                  <p className="font-black">What should Scope be?</p>
+                  <p className="mt-1">
+                    Scope tells DFP NEO how widely this rule set should apply. For a normal setup, choose <strong>Unit</strong> so the rules apply only to this unit. Choose <strong>Location</strong> only when every unit at the same base should use the same rule set. Choose <strong>AircraftType</strong> only when the rule is specific to one aircraft, simulator, or trainer type. Choose <strong>Organisation</strong> only when the same rule should apply everywhere in the organisation.
+                  </p>
+                </div>
+              ) : null}
             </div>
             <div className="space-y-3">
               {visibleSchedulingRuleSetRows.map(({ ruleSet, index }) => (
