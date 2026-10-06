@@ -22776,6 +22776,9 @@ This permanently removes the organisation record from platform configuration and
   const wizardHeaderActionTextStyle = wizardEditMode ? { color: "#ffffff" } : void 0;
   const wizardHeaderAddActionStyle = wizardEditMode ? { color: "#ffffff", backgroundColor: "#16a34a" } : void 0;
   const wizardHeaderDeleteActionStyle = wizardEditMode ? { color: "#ffffff", backgroundColor: "#dc2626" } : void 0;
+  const schedulingRuleScopeOptions = ["Unit", "CombinedUnit"];
+  const schedulingRuleScopeLabels = { CombinedUnit: "Combined Unit" };
+  const normaliseSchedulingRuleScope = (scope) => schedulingRuleScopeOptions.includes(String(scope || "").trim()) ? String(scope || "").trim() : "Unit";
   const rewriteUnitCodesInSettings = (settings = {}, oldCode, nextCode) => {
     const normalise2 = (value) => String(value || "").trim();
     const replaceUnitList = (units) => {
@@ -30955,15 +30958,11 @@ This removes them from DFP Resource Rows. Press Save in this section to apply th
                 wizardEditMode ? /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mt-3 rounded-lg border border-amber-300 bg-amber-50 px-3 py-2 text-xs font-semibold leading-5 text-amber-950", children: [
                   /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "font-black", children: "What should Scope be?" }),
                   /* @__PURE__ */ jsxRuntimeExports.jsxs("p", { className: "mt-1", children: [
-                    "Scope tells DFP NEO which part of this customer database the rule set belongs to. For normal setup, leave this as ",
+                    "For normal setup, leave this as ",
                     /* @__PURE__ */ jsxRuntimeExports.jsx("strong", { children: "Unit" }),
                     "; the rule set belongs to the unit shown in the Unit box. Choose ",
-                    /* @__PURE__ */ jsxRuntimeExports.jsx("strong", { children: "Location" }),
-                    " only when the rule set is shared by units at the same base. Choose ",
-                    /* @__PURE__ */ jsxRuntimeExports.jsx("strong", { children: "AircraftType" }),
-                    " only when the rule set is specific to one aircraft, simulator, or trainer type. ",
-                    /* @__PURE__ */ jsxRuntimeExports.jsx("strong", { children: "Organisation" }),
-                    " does not affect other customer databases; it only means this rule set is a general rule inside this organisation's own database."
+                    /* @__PURE__ */ jsxRuntimeExports.jsx("strong", { children: "Combined Unit" }),
+                    " only when the rule set is for a combined unit context, such as two units scheduled together. This setting does not apply outside the current customer database."
                   ] })
                 ] }) : null
               ] }),
@@ -30971,7 +30970,7 @@ This removes them from DFP Resource Rows. Press Save in this section to apply th
                 /* @__PURE__ */ jsxRuntimeExports.jsx(DraftField, { label: "Name", value: ruleSet.name, disabled: !canEditSection("platform-scheduling-rule-sets"), onCommit: (value) => updateRow("schedulingRuleSets", index, { name: value }) }),
                 /* @__PURE__ */ jsxRuntimeExports.jsx(SelectField, { label: "Unit", value: ruleSet.unitCode || "", disabled: !canEditSection("platform-scheduling-rule-sets"), options: ["", ...visibleUnitOptions.length > 0 ? visibleUnitOptions : configUnits.map((unit) => unit.code)], onChange: (value) => updateRow("schedulingRuleSets", index, { unitCode: value || null }) }),
                 /* @__PURE__ */ jsxRuntimeExports.jsx(SelectField, { label: "Aircraft Type", value: ruleSet.aircraftTypeCode || "", disabled: !canEditSection("platform-scheduling-rule-sets"), options: ["", ...visibleAircraftTypeOptions.length > 0 ? visibleAircraftTypeOptions : configAircraftTypes.map((aircraft) => aircraft.code)], onChange: (value) => updateRow("schedulingRuleSets", index, { aircraftTypeCode: value || null }) }),
-                /* @__PURE__ */ jsxRuntimeExports.jsx(SelectField, { label: "Scope", value: ruleSet.scope || "Unit", disabled: !canEditSection("platform-scheduling-rule-sets"), options: ["Organisation", "Location", "Unit", "AircraftType"], onChange: (value) => updateRow("schedulingRuleSets", index, { scope: value }) }),
+                /* @__PURE__ */ jsxRuntimeExports.jsx(SelectField, { label: "Scope", value: normaliseSchedulingRuleScope(ruleSet.scope), disabled: !canEditSection("platform-scheduling-rule-sets"), options: schedulingRuleScopeOptions, optionLabels: schedulingRuleScopeLabels, onChange: (value) => updateRow("schedulingRuleSets", index, { scope: value }) }),
                 /* @__PURE__ */ jsxRuntimeExports.jsx(SelectField, { label: "Active", value: ruleSet.isActive === false ? "No" : "Yes", disabled: !canEditSection("platform-scheduling-rule-sets"), options: ["Yes", "No"], onChange: (value) => updateRow("schedulingRuleSets", index, { isActive: value === "Yes" }) })
               ] }, ruleSet.id || index)) })
             ] })

@@ -5465,6 +5465,11 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
   const wizardHeaderActionTextStyle = wizardEditMode ? { color: '#ffffff' } : undefined;
   const wizardHeaderAddActionStyle = wizardEditMode ? { color: '#ffffff', backgroundColor: '#16a34a' } : undefined;
   const wizardHeaderDeleteActionStyle = wizardEditMode ? { color: '#ffffff', backgroundColor: '#dc2626' } : undefined;
+  const schedulingRuleScopeOptions = ['Unit', 'CombinedUnit'];
+  const schedulingRuleScopeLabels = { CombinedUnit: 'Combined Unit' };
+  const normaliseSchedulingRuleScope = (scope: unknown): string => (
+    schedulingRuleScopeOptions.includes(String(scope || '').trim()) ? String(scope || '').trim() : 'Unit'
+  );
 
   const rewriteUnitCodesInSettings = (settings: Record<string, any> = {}, oldCode: string, nextCode: string | null): Record<string, any> => {
     const normalise = (value: unknown) => String(value || '').trim();
@@ -14617,7 +14622,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
                 <div className="mt-3 rounded-lg border border-amber-300 bg-amber-50 px-3 py-2 text-xs font-semibold leading-5 text-amber-950">
                   <p className="font-black">What should Scope be?</p>
                   <p className="mt-1">
-                    Scope tells DFP NEO which part of this customer database the rule set belongs to. For normal setup, leave this as <strong>Unit</strong>; the rule set belongs to the unit shown in the Unit box. Choose <strong>Location</strong> only when the rule set is shared by units at the same base. Choose <strong>AircraftType</strong> only when the rule set is specific to one aircraft, simulator, or trainer type. <strong>Organisation</strong> does not affect other customer databases; it only means this rule set is a general rule inside this organisation's own database.
+                    For normal setup, leave this as <strong>Unit</strong>; the rule set belongs to the unit shown in the Unit box. Choose <strong>Combined Unit</strong> only when the rule set is for a combined unit context, such as two units scheduled together. This setting does not apply outside the current customer database.
                   </p>
                 </div>
               ) : null}
@@ -14628,7 +14633,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
                   <DraftField label="Name" value={ruleSet.name} disabled={!canEditSection('platform-scheduling-rule-sets')} onCommit={(value) => updateRow('schedulingRuleSets', index, { name: value })} />
                   <SelectField label="Unit" value={ruleSet.unitCode || ''} disabled={!canEditSection('platform-scheduling-rule-sets')} options={['', ...(visibleUnitOptions.length > 0 ? visibleUnitOptions : configUnits.map((unit) => unit.code))]} onChange={(value) => updateRow('schedulingRuleSets', index, { unitCode: value || null })} />
                   <SelectField label="Aircraft Type" value={ruleSet.aircraftTypeCode || ''} disabled={!canEditSection('platform-scheduling-rule-sets')} options={['', ...(visibleAircraftTypeOptions.length > 0 ? visibleAircraftTypeOptions : configAircraftTypes.map((aircraft) => aircraft.code))]} onChange={(value) => updateRow('schedulingRuleSets', index, { aircraftTypeCode: value || null })} />
-                  <SelectField label="Scope" value={ruleSet.scope || 'Unit'} disabled={!canEditSection('platform-scheduling-rule-sets')} options={['Organisation', 'Location', 'Unit', 'AircraftType']} onChange={(value) => updateRow('schedulingRuleSets', index, { scope: value })} />
+                  <SelectField label="Scope" value={normaliseSchedulingRuleScope(ruleSet.scope)} disabled={!canEditSection('platform-scheduling-rule-sets')} options={schedulingRuleScopeOptions} optionLabels={schedulingRuleScopeLabels} onChange={(value) => updateRow('schedulingRuleSets', index, { scope: value })} />
                   <SelectField label="Active" value={ruleSet.isActive === false ? 'No' : 'Yes'} disabled={!canEditSection('platform-scheduling-rule-sets')} options={['Yes', 'No']} onChange={(value) => updateRow('schedulingRuleSets', index, { isActive: value === 'Yes' })} />
                 </div>
               ))}
