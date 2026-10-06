@@ -5462,6 +5462,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
   const aircraftResourceMiniButtonClass = wizardEditMode
     ? 'h-[38px] min-w-[76px] rounded-lg bg-sky-500 px-3 text-xs font-black !text-white shadow-sm transition hover:bg-sky-600 disabled:cursor-not-allowed disabled:bg-slate-200 disabled:!text-slate-500'
     : 'h-[38px] min-w-[76px] rounded-md border border-gray-500 bg-gray-300 px-3 text-xs font-bold text-gray-900 hover:bg-gray-200 disabled:cursor-not-allowed disabled:opacity-50';
+  const wizardHeaderActionTextStyle = wizardEditMode ? { color: '#ffffff' } : undefined;
 
   const rewriteUnitCodesInSettings = (settings: Record<string, any> = {}, oldCode: string, nextCode: string | null): Record<string, any> => {
     const normalise = (value: unknown) => String(value || '').trim();
@@ -10822,9 +10823,10 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
                     type="button"
                     onClick={addAircraftType}
                     className={platformActionButtonClass}
+                    style={wizardHeaderActionTextStyle}
                     title="Add aircraft type"
                   >
-                    <span className="text-[8px] leading-[0.7rem]">Add<br />Aircraft<br />Type</span>
+                    <span className="text-[8px] leading-[0.7rem]" style={wizardHeaderActionTextStyle}>Add<br />Aircraft<br />Type</span>
                   </button>
                   {!wizardEditMode ? (
                     <button
@@ -11126,17 +11128,19 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
                     type="button"
                     onClick={() => setShowResourcePoolDeletePanel((current) => !current)}
                     className={platformActionButtonClass}
+                    style={wizardHeaderActionTextStyle}
                     title="Show or hide DFP Resource Rows deletion controls"
                   >
-                    <span className="text-[9px] leading-tight">Delete<br />Rows</span>
+                    <span className="text-[9px] leading-tight" style={wizardHeaderActionTextStyle}>Delete<br />Rows</span>
                   </button>
                   <button
                     type="button"
                     onClick={addResourcePool}
                     className={platformActionButtonClass}
+                    style={wizardHeaderActionTextStyle}
                     title="Add DFP Resource Rows"
                   >
-                    <span className="text-[9px] leading-tight">Add<br />Rows</span>
+                    <span className="text-[9px] leading-tight" style={wizardHeaderActionTextStyle}>Add<br />Rows</span>
                   </button>
                   {!wizardEditMode ? (
                     <button
