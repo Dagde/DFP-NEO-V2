@@ -38209,7 +38209,7 @@ const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, lo
       id: "analysis",
       title: "Let us check what is already set up",
       label: "Check",
-      body: "I will quickly read the current Settings data first, then guide you through the setup one question at a time.",
+      body: "Review the current setup status, then continue through each configuration step.",
       checkIds: checks.map((check) => check.id),
       category: "review"
     },
@@ -38225,7 +38225,7 @@ const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, lo
       id: "org-level1",
       title: "Build the next level down",
       label: "Level 1",
-      body: `Thanks. ${organisationDraft.name || organisationDraft.code || "Your organisation"} is the top of the tree. Now add the first layer below it.`,
+      body: `${organisationDraft.name || organisationDraft.code || "Your organisation"} is the top of the tree. Add the first layer below it.`,
       checkIds: ["organisation"],
       category: "mandatory"
     },
@@ -38426,7 +38426,7 @@ const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, lo
       id: "scoring",
       title: "Set up the scoring matrix",
       label: "Scoring",
-      body: "Set the plain-English grading standards used in training reports. You can also upload the scoring template.",
+      body: "Set the grading standards used in training reports. You can also upload the scoring template.",
       checkIds: ["training"],
       category: "highly-desirable"
     },
@@ -39180,7 +39180,7 @@ const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, lo
           result = {
             ...result,
             status: "needs-qualification-mapping",
-            message: `I found ${qualificationIssues.length} qualification value${qualificationIssues.length === 1 ? "" : "s"} I do not recognise yet. Choose what each one means before I import the staff rows.`,
+            message: `${qualificationIssues.length} qualification value${qualificationIssues.length === 1 ? "" : "s"} need review. Choose what each one means before importing the staff rows.`,
             issues: qualificationIssues.map((issue) => `"${issue.token}" is not a configured qualification.`),
             qualificationIssues
           };
@@ -40403,7 +40403,7 @@ const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, lo
       setTrainingRecordsDraft(formatWizardTrainingReportRows([{ ...row, [field]: value }]));
     };
     return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-3", children: [
-      /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "rounded-lg border border-blue-200 bg-blue-50 px-3 py-2 text-xs font-semibold leading-5 text-blue-900", children: "This mirrors the Training Reports settings in plain English. It names the report, sets the grade range, and decides what users see when they complete an assessment." }),
+      /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "rounded-lg border border-blue-200 bg-blue-50 px-3 py-2 text-xs font-semibold leading-5 text-blue-900", children: "This mirrors the Training Reports settings. It names the report, sets the grade range, and controls what users see when they complete an assessment." }),
       /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid gap-3 md:grid-cols-2", children: [
         wizardField("Generic form name", row.genericName, (value) => updateRow("genericName", value), void 0, "Training Report"),
         wizardField("Organisation form name", row.organisationName, (value) => updateRow("organisationName", value), void 0, "Assessment Form"),
@@ -40626,9 +40626,9 @@ const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, lo
         ] }),
         row.type?.toLowerCase().includes("resource") && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid min-w-0 gap-2 md:grid-cols-[220px_1fr]", children: [
           wizardField("Allocation mode", row.allocationMode || "combined", (value) => updateRow(index, "allocationMode", value), ["combined", "fixed"]),
-          wizardField("Consequence / plain English note", row.consequence || "", (value) => updateRow(index, "consequence", value), void 0, "Unit can use shared aircraft and DFP resource rows from the listed units.")
+          wizardField("Consequence / user note", row.consequence || "", (value) => updateRow(index, "consequence", value), void 0, "Unit can use shared aircraft and DFP resource rows from the listed units.")
         ] }),
-        !row.type?.toLowerCase().includes("resource") && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { children: wizardField("Consequence / plain English note", row.consequence || "", (value) => updateRow(index, "consequence", value), void 0, "Unit can schedule staff from the listed units.") }),
+        !row.type?.toLowerCase().includes("resource") && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { children: wizardField("Consequence / user note", row.consequence || "", (value) => updateRow(index, "consequence", value), void 0, "Unit can schedule staff from the listed units.") }),
         /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-[11px] font-semibold text-slate-500", children: row.type?.toLowerCase().includes("staff") ? "Matches Settings > Resources & Configuration > Resource Sharing > Staff Sharing." : "Matches Settings > Resources & Configuration > Resource Sharing > Aircraft & Resource Sharing." })
       ] }, `sharing-row-${index}`))
     ] });
@@ -42985,13 +42985,12 @@ const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, lo
     if (visibleStep.id === "analysis") {
       return promptShell(
         /* @__PURE__ */ jsxRuntimeExports.jsxs("p", { children: [
-          "I found ",
           /* @__PURE__ */ jsxRuntimeExports.jsxs("strong", { children: [
             completedMandatory,
             " of ",
             mandatoryChecks.length
           ] }),
-          " mandatory setup areas ready. We will now walk through the setup in plain English, one decision at a time."
+          " mandatory setup areas are ready. Continue through the remaining setup steps to prepare this organisation for DFP-NEO."
         ] }),
         /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid gap-3 sm:grid-cols-2", children: [
           /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded-lg border border-slate-200 bg-slate-50 p-3", children: [
@@ -43164,7 +43163,7 @@ const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, lo
       const locationRows = parseWizardLocationRows(locationsTodayDraft).filter((row) => !(shouldIgnoreLegacyWizardLocationSamples && isLegacyWizardLocationSampleRow(row)));
       const editableLocationRows = Array.from({ length: Math.max(locationDraftRowCount, locationRows.length, 1) }, (_, index) => locationRows[index] || { icao: "", iata: "", name: "" });
       return promptShell(
-        /* @__PURE__ */ jsxRuntimeExports.jsx("p", { children: "Add every locality, base, airfield, or operating location you want available. Use ICAO where known, IATA where available, and the plain English location name." }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx("p", { children: "Add every locality, base, airfield, or operating location you want available. Use ICAO where known, IATA where available, and the display name users should see." }),
         /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
           /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "space-y-3", children: editableLocationRows.map((row, rowIndex) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid min-w-0 gap-2 rounded-lg border border-slate-200 bg-slate-50 p-3 md:grid-cols-2 xl:grid-cols-3", children: [
             wizardDataListField("ICAO code", row.icao, (value) => updateWizardLocationRow(rowIndex, "icao", value), wizardLocationIcaoOptions, "ICAO code", `icao-${rowIndex}`),
@@ -43186,7 +43185,7 @@ const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, lo
     }
     if (visibleStep.id === "location-code") {
       return promptShell(
-        /* @__PURE__ */ jsxRuntimeExports.jsx("p", { children: "Next we will set up the first base or operating location. What is the location code?" }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx("p", { children: "Set up the first base or operating location. Enter the location code." }),
         wizardField("Location code", locationDraft.code, (value) => updateLocationDraft((draft) => ({ ...draft, code: value.toUpperCase() })), void 0, "LOC1")
       );
     }
@@ -43251,7 +43250,7 @@ const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, lo
     }
     if (visibleStep.id === "unit-code") {
       return promptShell(
-        /* @__PURE__ */ jsxRuntimeExports.jsx("p", { children: "Now we will set up the first unit using the app. What is the unit code and name?" }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx("p", { children: "Set up the first unit that will use the app. Enter the unit code and name." }),
         /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid gap-3 md:grid-cols-2", children: [
           wizardField("Unit code", unitDraft.code, (value) => updateUnitDraft((draft) => ({ ...draft, code: value.toUpperCase() })), void 0, "UNIT-01"),
           wizardField("Unit name", unitDraft.name, (value) => updateUnitDraft((draft) => ({ ...draft, name: value })), void 0, "Unit")
@@ -44062,11 +44061,10 @@ Classrooms: ${classroomNames.join(", ")}` : ""}`;
       /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-[11px] font-bold uppercase tracking-[0.18em] text-orange-600", children: "Initial Setup Wizard" }),
       /* @__PURE__ */ jsxRuntimeExports.jsx("h3", { className: "mt-1 text-xl font-bold text-slate-950", children: "DFP-NEO is partly configured" }),
       /* @__PURE__ */ jsxRuntimeExports.jsxs("p", { className: "mt-3 text-sm leading-6 text-slate-700", children: [
-        "I found ",
         completedMandatory,
         " of ",
         mandatoryChecks.length,
-        " mandatory setup areas already complete. You can continue from your last wizard page, or start the guide again from the beginning. Each step syncs into Settings when you click Next."
+        " mandatory setup areas are already complete. Continue from the last wizard page or restart from step one. Each step syncs into Settings when you click Next."
       ] }),
       /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mt-5 grid gap-3 sm:grid-cols-2", children: [
         /* @__PURE__ */ jsxRuntimeExports.jsxs("button", { type: "button", className: wizardChoiceClass, onClick: resumeWizard, children: [
@@ -44082,7 +44080,7 @@ Classrooms: ${classroomNames.join(", ")}` : ""}`;
   }
   const renderTemplatePanel = (className = "h-fit") => /* @__PURE__ */ jsxRuntimeExports.jsxs("aside", { className: `${className} min-w-0 rounded-xl border border-slate-300 bg-slate-50 p-3 text-slate-900 shadow-sm`, children: [
     /* @__PURE__ */ jsxRuntimeExports.jsx("h4", { className: "text-sm font-black text-slate-950", children: "Templates and uploads" }),
-    /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-1 text-xs leading-5 text-slate-600", children: "This step can use a template. Download it, fill it in, then upload it here. I will check the format and explain anything that needs fixing in plain English." }),
+    /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-1 text-xs leading-5 text-slate-600", children: "This step can use a template. Download it, fill it in, then upload it here. The wizard checks the format and highlights anything that needs attention." }),
     /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-4 space-y-3", children: visibleTemplates.map((template) => {
       const result = uploadResults[template.id];
       const importConfirmation = importConfirmations[template.id];
@@ -44167,8 +44165,8 @@ Classrooms: ${classroomNames.join(", ")}` : ""}`;
                 ] })
               ] }) : null,
               needsQualificationMapping ? /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mt-3 rounded-md border border-amber-300 bg-white px-3 py-3", children: [
-                /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "font-semibold text-amber-950", children: "I need a quick check before importing these staff. Choose what each uploaded qualification means in DFP-NEO." }),
-                /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-1 text-[11px] leading-4 text-amber-800", children: "If none of the options match, choose None of these. I will leave that qualification unassigned and you can set it up after the wizard is complete." }),
+                /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "font-semibold text-amber-950", children: "Choose what each uploaded qualification means in DFP-NEO before importing these staff." }),
+                /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-1 text-[11px] leading-4 text-amber-800", children: "If none of the options match, choose None of these. That qualification will be left unassigned and can be set up after the wizard is complete." }),
                 /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-3 space-y-3", children: (result.qualificationIssues || []).map((issue) => {
                   const issueKey = normaliseQualificationToken(issue.token);
                   const selectedValue = staffQualificationMappings[issueKey] ?? issue.suggestedQualificationId ?? "";

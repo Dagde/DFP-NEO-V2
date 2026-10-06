@@ -7209,7 +7209,7 @@ const InitialSetupWizard: React.FC<{
             id: 'analysis',
             title: 'Let us check what is already set up',
             label: 'Check',
-            body: 'I will quickly read the current Settings data first, then guide you through the setup one question at a time.',
+            body: 'Review the current setup status, then continue through each configuration step.',
             checkIds: checks.map((check) => check.id),
             category: 'review',
         },
@@ -7225,7 +7225,7 @@ const InitialSetupWizard: React.FC<{
             id: 'org-level1',
             title: 'Build the next level down',
             label: 'Level 1',
-            body: `Thanks. ${organisationDraft.name || organisationDraft.code || 'Your organisation'} is the top of the tree. Now add the first layer below it.`,
+            body: `${organisationDraft.name || organisationDraft.code || 'Your organisation'} is the top of the tree. Add the first layer below it.`,
             checkIds: ['organisation'],
             category: 'mandatory',
         },
@@ -7426,7 +7426,7 @@ const InitialSetupWizard: React.FC<{
             id: 'scoring',
             title: 'Set up the scoring matrix',
             label: 'Scoring',
-            body: 'Set the plain-English grading standards used in training reports. You can also upload the scoring template.',
+            body: 'Set the grading standards used in training reports. You can also upload the scoring template.',
             checkIds: ['training'],
             category: 'highly-desirable',
         },
@@ -8365,7 +8365,7 @@ const InitialSetupWizard: React.FC<{
                     result = {
                         ...result,
                         status: 'needs-qualification-mapping',
-                        message: `I found ${qualificationIssues.length} qualification value${qualificationIssues.length === 1 ? '' : 's'} I do not recognise yet. Choose what each one means before I import the staff rows.`,
+                        message: `${qualificationIssues.length} qualification value${qualificationIssues.length === 1 ? '' : 's'} need review. Choose what each one means before importing the staff rows.`,
                         issues: qualificationIssues.map((issue) => `"${issue.token}" is not a configured qualification.`),
                         qualificationIssues,
                     };
@@ -9849,7 +9849,7 @@ const InitialSetupWizard: React.FC<{
         return (
             <div className="space-y-3">
                 <div className="rounded-lg border border-blue-200 bg-blue-50 px-3 py-2 text-xs font-semibold leading-5 text-blue-900">
-                    This mirrors the Training Reports settings in plain English. It names the report, sets the grade range, and decides what users see when they complete an assessment.
+                    This mirrors the Training Reports settings. It names the report, sets the grade range, and controls what users see when they complete an assessment.
                 </div>
                 <div className="grid gap-3 md:grid-cols-2">
                     {wizardField('Generic form name', row.genericName, (value) => updateRow('genericName', value), undefined, 'Training Report')}
@@ -10116,12 +10116,12 @@ const InitialSetupWizard: React.FC<{
                         {row.type?.toLowerCase().includes('resource') && (
                             <div className="grid min-w-0 gap-2 md:grid-cols-[220px_1fr]">
                                 {wizardField('Allocation mode', row.allocationMode || 'combined', (value) => updateRow(index, 'allocationMode', value), ['combined', 'fixed'])}
-                                {wizardField('Consequence / plain English note', row.consequence || '', (value) => updateRow(index, 'consequence', value), undefined, 'Unit can use shared aircraft and DFP resource rows from the listed units.')}
+                                {wizardField('Consequence / user note', row.consequence || '', (value) => updateRow(index, 'consequence', value), undefined, 'Unit can use shared aircraft and DFP resource rows from the listed units.')}
                             </div>
                         )}
                         {!row.type?.toLowerCase().includes('resource') && (
                             <div>
-                                {wizardField('Consequence / plain English note', row.consequence || '', (value) => updateRow(index, 'consequence', value), undefined, 'Unit can schedule staff from the listed units.')}
+                                {wizardField('Consequence / user note', row.consequence || '', (value) => updateRow(index, 'consequence', value), undefined, 'Unit can schedule staff from the listed units.')}
                             </div>
                         )}
                         <div className="text-[11px] font-semibold text-slate-500">
@@ -12736,7 +12736,7 @@ const InitialSetupWizard: React.FC<{
     const renderWizardDataEntry = () => {
         if (visibleStep.id === 'analysis') {
             return promptShell(
-                <p>I found <strong>{completedMandatory} of {mandatoryChecks.length}</strong> mandatory setup areas ready. We will now walk through the setup in plain English, one decision at a time.</p>,
+                <p><strong>{completedMandatory} of {mandatoryChecks.length}</strong> mandatory setup areas are ready. Continue through the remaining setup steps to prepare this organisation for DFP-NEO.</p>,
                 <div className="grid gap-3 sm:grid-cols-2">
                     <div className="rounded-lg border border-slate-200 bg-slate-50 p-3">
                         <p className={wizardLabelClass}>Mandatory setup</p>
@@ -12900,7 +12900,7 @@ const InitialSetupWizard: React.FC<{
                 locationRows[index] || { icao: '', iata: '', name: '' }
             ));
             return promptShell(
-                <p>Add every locality, base, airfield, or operating location you want available. Use ICAO where known, IATA where available, and the plain English location name.</p>,
+                <p>Add every locality, base, airfield, or operating location you want available. Use ICAO where known, IATA where available, and the display name users should see.</p>,
                 <div>
                     <div className="space-y-3">
                         {editableLocationRows.map((row, rowIndex) => (
@@ -12926,7 +12926,7 @@ const InitialSetupWizard: React.FC<{
         }
         if (visibleStep.id === 'location-code') {
             return promptShell(
-                <p>Next we will set up the first base or operating location. What is the location code?</p>,
+                <p>Set up the first base or operating location. Enter the location code.</p>,
                 wizardField('Location code', locationDraft.code, (value) => updateLocationDraft((draft) => ({ ...draft, code: value.toUpperCase() })), undefined, 'LOC1'),
             );
         }
@@ -13001,7 +13001,7 @@ const InitialSetupWizard: React.FC<{
         }
         if (visibleStep.id === 'unit-code') {
             return promptShell(
-                <p>Now we will set up the first unit using the app. What is the unit code and name?</p>,
+                <p>Set up the first unit that will use the app. Enter the unit code and name.</p>,
                 <div className="grid gap-3 md:grid-cols-2">
                     {wizardField('Unit code', unitDraft.code, (value) => updateUnitDraft((draft) => ({ ...draft, code: value.toUpperCase() })), undefined, 'UNIT-01')}
                     {wizardField('Unit name', unitDraft.name, (value) => updateUnitDraft((draft) => ({ ...draft, name: value })), undefined, 'Unit')}
@@ -13890,7 +13890,7 @@ const InitialSetupWizard: React.FC<{
                 <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-orange-600">Initial Setup Wizard</p>
                 <h3 className="mt-1 text-xl font-bold text-slate-950">DFP-NEO is partly configured</h3>
                 <p className="mt-3 text-sm leading-6 text-slate-700">
-                    I found {completedMandatory} of {mandatoryChecks.length} mandatory setup areas already complete. You can continue from your last wizard page, or start the guide again from the beginning. Each step syncs into Settings when you click Next.
+                    {completedMandatory} of {mandatoryChecks.length} mandatory setup areas are already complete. Continue from the last wizard page or restart from step one. Each step syncs into Settings when you click Next.
                 </p>
                 <div className="mt-5 grid gap-3 sm:grid-cols-2">
                     <button type="button" className={wizardChoiceClass} onClick={resumeWizard}>
@@ -13910,7 +13910,7 @@ const InitialSetupWizard: React.FC<{
         <aside className={`${className} min-w-0 rounded-xl border border-slate-300 bg-slate-50 p-3 text-slate-900 shadow-sm`}>
             <h4 className="text-sm font-black text-slate-950">Templates and uploads</h4>
             <p className="mt-1 text-xs leading-5 text-slate-600">
-                This step can use a template. Download it, fill it in, then upload it here. I will check the format and explain anything that needs fixing in plain English.
+                This step can use a template. Download it, fill it in, then upload it here. The wizard checks the format and highlights anything that needs attention.
             </p>
             <div className="mt-4 space-y-3">
                 {visibleTemplates.map((template) => {
@@ -14008,10 +14008,10 @@ const InitialSetupWizard: React.FC<{
                                     {needsQualificationMapping ? (
                                         <div className="mt-3 rounded-md border border-amber-300 bg-white px-3 py-3">
                                             <p className="font-semibold text-amber-950">
-                                                I need a quick check before importing these staff. Choose what each uploaded qualification means in DFP-NEO.
+                                                Choose what each uploaded qualification means in DFP-NEO before importing these staff.
                                             </p>
                                             <p className="mt-1 text-[11px] leading-4 text-amber-800">
-                                                If none of the options match, choose None of these. I will leave that qualification unassigned and you can set it up after the wizard is complete.
+                                                If none of the options match, choose None of these. That qualification will be left unassigned and can be set up after the wizard is complete.
                                             </p>
                                             <div className="mt-3 space-y-3">
                                                 {(result.qualificationIssues || []).map((issue) => {
