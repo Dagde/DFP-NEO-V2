@@ -14617,7 +14617,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
                 <div className="mt-3 rounded-lg border border-amber-300 bg-amber-50 px-3 py-2 text-xs font-semibold leading-5 text-amber-950">
                   <p className="font-black">What should Scope be?</p>
                   <p className="mt-1">
-                    Scope tells DFP NEO how widely this rule set should apply. For a normal setup, choose <strong>Unit</strong> so the rules apply only to this unit. Choose <strong>Location</strong> only when every unit at the same base should use the same rule set. Choose <strong>AircraftType</strong> only when the rule is specific to one aircraft, simulator, or trainer type. Choose <strong>Organisation</strong> only when the same rule should apply everywhere in the organisation.
+                    Scope tells DFP NEO which part of this customer database the rule set belongs to. For normal setup, leave this as <strong>Unit</strong>; the rule set belongs to the unit shown in the Unit box. Choose <strong>Location</strong> only when the rule set is shared by units at the same base. Choose <strong>AircraftType</strong> only when the rule set is specific to one aircraft, simulator, or trainer type. <strong>Organisation</strong> does not affect other customer databases; it only means this rule set is a general rule inside this organisation's own database.
                   </p>
                 </div>
               ) : null}

@@ -30955,15 +30955,15 @@ This removes them from DFP Resource Rows. Press Save in this section to apply th
                 wizardEditMode ? /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mt-3 rounded-lg border border-amber-300 bg-amber-50 px-3 py-2 text-xs font-semibold leading-5 text-amber-950", children: [
                   /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "font-black", children: "What should Scope be?" }),
                   /* @__PURE__ */ jsxRuntimeExports.jsxs("p", { className: "mt-1", children: [
-                    "Scope tells DFP NEO how widely this rule set should apply. For a normal setup, choose ",
+                    "Scope tells DFP NEO which part of this customer database the rule set belongs to. For normal setup, leave this as ",
                     /* @__PURE__ */ jsxRuntimeExports.jsx("strong", { children: "Unit" }),
-                    " so the rules apply only to this unit. Choose ",
+                    "; the rule set belongs to the unit shown in the Unit box. Choose ",
                     /* @__PURE__ */ jsxRuntimeExports.jsx("strong", { children: "Location" }),
-                    " only when every unit at the same base should use the same rule set. Choose ",
+                    " only when the rule set is shared by units at the same base. Choose ",
                     /* @__PURE__ */ jsxRuntimeExports.jsx("strong", { children: "AircraftType" }),
-                    " only when the rule is specific to one aircraft, simulator, or trainer type. Choose ",
+                    " only when the rule set is specific to one aircraft, simulator, or trainer type. ",
                     /* @__PURE__ */ jsxRuntimeExports.jsx("strong", { children: "Organisation" }),
-                    " only when the same rule should apply everywhere in the organisation."
+                    " does not affect other customer databases; it only means this rule set is a general rule inside this organisation's own database."
                   ] })
                 ] }) : null
               ] }),
