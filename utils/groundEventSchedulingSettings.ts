@@ -24,6 +24,9 @@ export interface GroundEventSchedulingSettings {
   ungroupedEventCodes: string[];
 }
 
+export const DEFAULT_GROUND_EVENT_SCHEDULING_GROUP_NAME_PLACEHOLDER = 'Mass Brief';
+export const DEFAULT_GROUND_EVENT_SCHEDULING_GROUP_ID = 'default-ground-event-scheduling-group';
+
 export const GROUND_EVENT_SCHEDULING_WINDOWS: GroundEventSchedulingWindow[] = [
   { id: '0800-1000', label: '0800-1000', start: 8, end: 10 },
   { id: '1000-1200', label: '1000-1200', start: 10, end: 12 },
@@ -42,6 +45,14 @@ export const DEFAULT_GROUND_EVENT_SCHEDULING_SETTINGS: GroundEventSchedulingSett
   groups: [],
   ungroupedEventCodes: [],
 };
+
+export const createDefaultGroundEventSchedulingGroup = (): GroundEventSchedulingGroup => ({
+  id: DEFAULT_GROUND_EVENT_SCHEDULING_GROUP_ID,
+  name: '',
+  eventCodes: [],
+  mode: DEFAULT_GROUND_EVENT_TYPE_SCHEDULING_RULE.mode,
+  preferredWindows: [],
+});
 
 const VALID_GROUND_EVENT_SCHEDULING_MODES = new Set<GroundEventSchedulingMode>(['automatic', 'suggest', 'manual']);
 const VALID_WINDOW_IDS = new Set(GROUND_EVENT_SCHEDULING_WINDOWS.map(window => window.id));
@@ -152,7 +163,9 @@ export const normaliseGroundEventSchedulingGroup = (value: unknown, index = 0): 
   const source = value && typeof value === 'object' && !Array.isArray(value)
     ? value as Partial<GroundEventSchedulingGroup>
     : {};
-  const name = normaliseGroundEventTypeKey(source.name || `Ground Group ${index + 1}`);
+  const name = source.name === undefined || source.name === null
+    ? `Ground Group ${index + 1}`
+    : String(source.name).trim();
   const rule = normaliseGroundEventSchedulingRule(source);
   const eventCodes = Array.isArray(source.eventCodes)
     ? Array.from(new Set(source.eventCodes.map(normaliseGroundEventCode).filter(Boolean)))
@@ -229,7 +242,7 @@ export const getGroundEventSchedulingRuleForItem = (
   const explicitGroup = getGroundEventSchedulingGroupForItem(settings, item);
   if (explicitGroup) {
     return {
-      groupName: explicitGroup.name,
+      groupName: explicitGroup.name || deriveGroundEventSchedulingCategory(item),
       rule: {
         mode: explicitGroup.mode,
         preferredWindows: explicitGroup.preferredWindows,

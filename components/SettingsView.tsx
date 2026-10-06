@@ -35,10 +35,11 @@ import {
     normaliseDispatchRateWindowMinutes,
 } from '../utils/dispatchRate';
 import {
+    createDefaultGroundEventSchedulingGroup,
+    DEFAULT_GROUND_EVENT_SCHEDULING_GROUP_NAME_PLACEHOLDER,
     DEFAULT_GROUND_EVENT_SCHEDULING_SETTINGS,
     deriveGroundEventSchedulingCategory,
     getGroundEventSchedulingItemCode,
-    getGroundEventSchedulingRuleForType,
     GROUND_EVENT_SCHEDULING_WINDOWS,
     makeGroundEventSchedulingGroupId,
     normaliseGroundEventSchedulingGroup,
@@ -824,29 +825,27 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
             ...normaliseGroundEventSchedulingGroup(group, index),
             eventCodes: Array.from(new Set(group.eventCodes.filter(Boolean))),
         }));
-        const assignedCodes = new Set(groups.flatMap(group => group.eventCodes));
-        const ungroupedCodes = new Set(normalised.ungroupedEventCodes);
-        const autoGroups = new Map<string, GroundEventSchedulingGroup>();
-
-        availableGroundEventSchedulingEvents.forEach((event) => {
-            if (assignedCodes.has(event.code) || ungroupedCodes.has(event.code)) return;
-            if (!autoGroups.has(event.category)) {
-                const legacyRule = getGroundEventSchedulingRuleForType(normalised, event.category);
-                autoGroups.set(event.category, {
-                    id: `auto-${makeGroundEventSchedulingGroupId(event.category, autoGroups.size)}`,
-                    name: event.category,
-                    eventCodes: [],
-                    mode: legacyRule.mode,
-                    preferredWindows: legacyRule.preferredWindows,
-                });
-            }
-            autoGroups.get(event.category)!.eventCodes.push(event.code);
-        });
+        const displayGroups = groups.length > 0
+            ? groups
+            : [createDefaultGroundEventSchedulingGroup()];
 
         return normaliseGroundEventSchedulingSettings({
             ...normalised,
-            groups: [...groups, ...Array.from(autoGroups.values())],
-            ungroupedEventCodes: Array.from(ungroupedCodes),
+            groups: displayGroups,
+            ungroupedEventCodes: normalised.ungroupedEventCodes,
+        });
+    };
+
+    const compactGroundEventSchedulingSettingsForSave = (settings: GroundEventSchedulingSettings): GroundEventSchedulingSettings => {
+        const normalised = normaliseGroundEventSchedulingSettings(settings);
+        return normaliseGroundEventSchedulingSettings({
+            ...normalised,
+            groups: normalised.groups.filter(group => (
+                group.name.trim()
+                || group.eventCodes.length > 0
+                || group.mode !== 'manual'
+                || group.preferredWindows.length > 0
+            )),
         });
     };
 
@@ -1044,7 +1043,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                         ? {
                             ...group,
                             ...updates,
-                            name: updates.name !== undefined ? normaliseGroundEventTypeKey(updates.name) : group.name,
+                            name: updates.name !== undefined ? String(updates.name || '').trim() : group.name,
                         }
                         : group
                 )),
@@ -1101,7 +1100,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                     ...normalised.groups,
                     {
                         id: `custom-${makeGroundEventSchedulingGroupId(`Ground Group ${nextIndex}`, nextIndex)}`,
-                        name: `Ground Group ${nextIndex}`,
+                        name: '',
                         eventCodes: [],
                         mode: 'manual',
                         preferredWindows: [],
@@ -1128,7 +1127,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
 
     const handleSaveGroundEventScheduling = () => {
         if (!onUpdateGroundEventSchedulingSettings) return;
-        const savedSettings = materialiseGroundEventSchedulingSettings(tempGroundEventSchedulingSettings);
+        const savedSettings = compactGroundEventSchedulingSettingsForSave(tempGroundEventSchedulingSettings);
         onUpdateGroundEventSchedulingSettings(savedSettings);
         setIsEditingGroundEventScheduling(false);
         onShowSuccess('Ground event scheduling rules updated');
@@ -1658,7 +1657,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                             <div>
                                 <h2 className="text-lg font-semibold text-gray-200">Ground Event Scheduling</h2>
                                 <p className="mt-1 max-w-3xl text-xs text-gray-400">
-                                    Choose how NEO Build handles LMP ground event categories such as MB, TUT, and Pre-Solo Quiz. Manual leaves the existing individual scheduler untouched.
+                                    Choose how NEO Build handles group ground events from the LMP. Start with one group, then add more groups if your organisation schedules different event types differently.
                                 </p>
                             </div>
                             {isEditingGroundEventScheduling ? (
@@ -1678,7 +1677,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                         </div>
                         <div className="space-y-4 p-4">
                             <div className="rounded-md border border-sky-500/30 bg-sky-500/10 p-3 text-xs leading-relaxed text-sky-100">
-                                Groups are auto-created from the LMP event code/name. Edit the groups below to rename them, move events between groups, or leave events unassigned.
+                                The first group starts blank. The grey text is only an example, so enter the group name your organisation uses, assign the events, then choose how NEO Build should schedule them.
                             </div>
                             {isEditingGroundEventScheduling && (
                                 <div className="flex justify-end">
@@ -1699,12 +1698,13 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                                                 {canEditGroundEventScheduling ? (
                                                     <input
                                                         value={group.name}
+                                                        placeholder={DEFAULT_GROUND_EVENT_SCHEDULING_GROUP_NAME_PLACEHOLDER}
                                                         onChange={(event) => updateGroundEventSchedulingGroup(group.id, { name: event.target.value })}
                                                         className="w-full rounded-md border border-gray-600 bg-gray-950 px-3 py-2 text-sm font-semibold text-white focus:border-sky-500 focus:ring-1 focus:ring-sky-500"
                                                     />
                                                 ) : (
                                                     <div className="rounded-md border border-gray-700 bg-gray-950/70 px-3 py-2 text-sm font-semibold text-white">
-                                                        {group.name}
+                                                        {group.name || <span className="text-gray-500">{DEFAULT_GROUND_EVENT_SCHEDULING_GROUP_NAME_PLACEHOLDER}</span>}
                                                     </div>
                                                 )}
                                             </div>

@@ -86,11 +86,12 @@ import {
     type CourseStudentGroupDefinition,
 } from '../utils/courseStudentGroups';
 import {
+    createDefaultGroundEventSchedulingGroup,
+    DEFAULT_GROUND_EVENT_SCHEDULING_GROUP_NAME_PLACEHOLDER,
     DEFAULT_GROUND_EVENT_SCHEDULING_SETTINGS,
     GROUND_EVENT_SCHEDULING_WINDOWS,
     deriveGroundEventSchedulingCategory,
     getGroundEventSchedulingItemCode,
-    getGroundEventSchedulingRuleForType,
     makeGroundEventSchedulingGroupId,
     normaliseGroundEventSchedulingGroup,
     normaliseGroundEventSchedulingSettings,
@@ -5353,31 +5354,28 @@ const InitialSetupWizard: React.FC<{
             ...normaliseGroundEventSchedulingGroup(group, index),
             eventCodes: Array.from(new Set(group.eventCodes.filter(Boolean))),
         }));
-        const assignedCodes = new Set(groups.flatMap(group => group.eventCodes));
-        const ungroupedCodes = new Set(normalised.ungroupedEventCodes);
-        const autoGroups = new Map<string, GroundEventSchedulingGroup>();
-
-        wizardAvailableGroundEventSchedulingEvents.forEach((event) => {
-            if (assignedCodes.has(event.code) || ungroupedCodes.has(event.code)) return;
-            if (!autoGroups.has(event.category)) {
-                const legacyRule = getGroundEventSchedulingRuleForType(normalised, event.category);
-                autoGroups.set(event.category, {
-                    id: `auto-${makeGroundEventSchedulingGroupId(event.category, autoGroups.size)}`,
-                    name: event.category,
-                    eventCodes: [],
-                    mode: legacyRule.mode,
-                    preferredWindows: legacyRule.preferredWindows,
-                });
-            }
-            autoGroups.get(event.category)!.eventCodes.push(event.code);
-        });
+        const displayGroups = groups.length > 0
+            ? groups
+            : [createDefaultGroundEventSchedulingGroup()];
 
         return normaliseGroundEventSchedulingSettings({
             ...normalised,
-            groups: [...groups, ...Array.from(autoGroups.values())],
-            ungroupedEventCodes: Array.from(ungroupedCodes),
+            groups: displayGroups,
+            ungroupedEventCodes: normalised.ungroupedEventCodes,
         });
-    }, [wizardAvailableGroundEventSchedulingEvents]);
+    }, []);
+    const compactWizardGroundEventSchedulingSettingsForSave = useCallback((settings: GroundEventSchedulingSettings): GroundEventSchedulingSettings => {
+        const normalised = normaliseGroundEventSchedulingSettings(settings);
+        return normaliseGroundEventSchedulingSettings({
+            ...normalised,
+            groups: normalised.groups.filter(group => (
+                group.name.trim()
+                || group.eventCodes.length > 0
+                || group.mode !== 'manual'
+                || group.preferredWindows.length > 0
+            )),
+        });
+    }, []);
     const wizardBaseGroundEventSchedulingSettings = useMemo(() => (
         normaliseGroundEventSchedulingSettings(
             groundEventSchedulingSettings
@@ -5423,7 +5421,7 @@ const InitialSetupWizard: React.FC<{
                     ? {
                         ...group,
                         ...updates,
-                        name: updates.name !== undefined ? normaliseGroundEventTypeKey(updates.name) : group.name,
+                        name: updates.name !== undefined ? String(updates.name || '').trim() : group.name,
                     }
                     : group
             )),
@@ -5471,7 +5469,7 @@ const InitialSetupWizard: React.FC<{
                 ...current.groups,
                 {
                     id: `custom-${makeGroundEventSchedulingGroupId(`Ground Group ${nextIndex}`, nextIndex)}`,
-                    name: `Ground Group ${nextIndex}`,
+                    name: '',
                     eventCodes: [],
                     mode: 'manual',
                     preferredWindows: [],
@@ -5491,7 +5489,7 @@ const InitialSetupWizard: React.FC<{
         });
     };
     const saveWizardGroundEventSchedulingAndContinue = () => {
-        persistWizardGroundEventSchedulingSettings(wizardGroundEventSchedulingSettingsForDisplay);
+        persistWizardGroundEventSchedulingSettings(compactWizardGroundEventSchedulingSettingsForSave(wizardGroundEventSchedulingSettingsForDisplay));
         void goToNextWizardStep();
     };
     const summariseWizardLocationScopeLocation = (location: any) => ({
@@ -10990,7 +10988,7 @@ const InitialSetupWizard: React.FC<{
         const setupPersonnel = buildSetupTestPersonnel(cleanUnits, overrides);
         const setupWizardUpdatedAt = new Date().toISOString();
         const setupWizardCompletionAt = markComplete ? setupWizardUpdatedAt : '';
-        const setupGroundEventSchedulingSettings = materialiseWizardGroundEventSchedulingSettings(wizardGroundEventSchedulingSettingsForDisplay);
+        const setupGroundEventSchedulingSettings = compactWizardGroundEventSchedulingSettingsForSave(wizardGroundEventSchedulingSettingsForDisplay);
 
         onUpdatePlatformConfig((baseConfig: any) => {
             const existingAircraftTypes = Array.isArray(baseConfig?.aircraftTypes) ? baseConfig.aircraftTypes : [];
@@ -11870,7 +11868,7 @@ const InitialSetupWizard: React.FC<{
                 uploadStatus: uploadResults.courses?.status || 'missing',
             });
         }
-        const finalGroundEventSchedulingSettings = materialiseWizardGroundEventSchedulingSettings(wizardGroundEventSchedulingSettingsForDisplay);
+        const finalGroundEventSchedulingSettings = compactWizardGroundEventSchedulingSettingsForSave(wizardGroundEventSchedulingSettingsForDisplay);
         onUpdateGroundEventSchedulingSettings?.(finalGroundEventSchedulingSettings);
         saveWizardConfig('Setup saved into Settings.', (baseConfig) => updatePrimaryOrganisationWithSettings(baseConfig, (settings) => {
             const cleanLmpCode = String(trainingDraft.lmpCode || trainingDraft.lmpName || '').trim();
@@ -13177,13 +13175,14 @@ const InitialSetupWizard: React.FC<{
                 !wizardAssignedGroundEventCodes.has(event.code)
             ));
             const getAssignedWizardGroundEventGroupName = (eventCode: string) => (
-                wizardGroundEventSchedulingGroups.find(group => group.eventCodes.includes(eventCode))?.name || ''
+                wizardGroundEventSchedulingGroups.find(group => group.eventCodes.includes(eventCode))?.name
+                || DEFAULT_GROUND_EVENT_SCHEDULING_GROUP_NAME_PLACEHOLDER
             );
             return promptShell(
-                <p>Choose how NEO Build should handle group ground events from the LMP. Use this for items such as mass briefs, tutorials, quizzes, classroom briefs, or any other group event that should start a course before individual events can run.</p>,
+                <p>Choose how NEO Build should handle group ground events from the LMP. Start with one group, then add more groups if your organisation schedules different event types differently.</p>,
                 <div className="space-y-4">
                     <div className="rounded-lg border border-blue-200 bg-blue-50 p-3 text-xs font-semibold leading-5 text-blue-950">
-                        Manual means NEO Build will not place those events automatically. Suggest means NEO Build can alert the scheduler. Automatic means NEO Build may place the event during the selected windows.
+                        The group name field shows an example in grey. It is not saved until you enter a name or assign details. Manual means NEO Build will not place those events automatically. Suggest means NEO Build can alert the scheduler. Automatic means NEO Build may place the event during the selected windows.
                     </div>
                     {wizardAvailableGroundEventSchedulingEvents.length === 0 ? (
                         <div className="rounded-lg border border-amber-200 bg-amber-50 p-3 text-xs font-semibold leading-5 text-amber-950">
@@ -13227,6 +13226,7 @@ const InitialSetupWizard: React.FC<{
                                                     <input
                                                         className={`${wizardInputClass} mt-1`}
                                                         value={group.name}
+                                                        placeholder={DEFAULT_GROUND_EVENT_SCHEDULING_GROUP_NAME_PLACEHOLDER}
                                                         onKeyDown={stopEditableKeyPropagation}
                                                         onChange={(event) => updateWizardGroundEventSchedulingGroup(group.id, { name: event.target.value })}
                                                     />
