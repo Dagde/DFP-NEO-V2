@@ -13443,12 +13443,9 @@ const InitialSetupWizard: React.FC<{
                                         <p className="mt-1">All detected ground events are assigned to a scheduling group.</p>
                                     )}
                                 </div>
-                                <button type="button" className={wizardSmallButtonClass} onClick={handleAddWizardGroundEventGroup}>
-                                    Add group
-                                </button>
                             </div>
                             <div className="space-y-3">
-                                {wizardGroundEventSchedulingGroups.map((group) => {
+                                {wizardGroundEventSchedulingGroups.map((group, groupIndex) => {
                                     const assignedEvents = wizardAvailableGroundEventSchedulingEvents.filter(event => group.eventCodes.includes(event.code));
                                     return (
                                         <div key={group.id} className="rounded-lg border border-slate-300 bg-white p-3 shadow-sm">
@@ -13562,9 +13559,18 @@ const InitialSetupWizard: React.FC<{
                                                         })}
                                                     </div>
                                                 </div>
-                                                {assignedEvents.length === 0 ? (
-                                                    <p className="mt-2 text-xs font-semibold text-amber-800">No events are assigned to this group yet.</p>
-                                                ) : null}
+                                                <div className="mt-2 flex items-center justify-between gap-3">
+                                                    {assignedEvents.length === 0 ? (
+                                                        <p className="text-xs font-semibold text-amber-800">No events are assigned to this group yet.</p>
+                                                    ) : (
+                                                        <span />
+                                                    )}
+                                                    {groupIndex === 0 ? (
+                                                        <button type="button" className={wizardSmallButtonClass} onClick={handleAddWizardGroundEventGroup}>
+                                                            Add group
+                                                        </button>
+                                                    ) : null}
+                                                </div>
                                             </div>
                                         </div>
                                     );

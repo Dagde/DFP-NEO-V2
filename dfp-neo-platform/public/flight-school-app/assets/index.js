@@ -43730,24 +43730,21 @@ const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, lo
         /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-4", children: [
           /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "rounded-lg border border-blue-200 bg-blue-50 p-3 text-xs font-semibold leading-5 text-blue-950", children: "The group name field shows an example in grey. It is not saved until you enter a name or assign details. Manual means NEO Build will not place those events automatically. Suggest means NEO Build can alert the scheduler. Automatic means NEO Build may place the event during the selected windows." }),
           wizardAvailableGroundEventSchedulingEvents.length === 0 ? /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "rounded-lg border border-amber-200 bg-amber-50 p-3 text-xs font-semibold leading-5 text-amber-950", children: "No LMP ground events are available yet. Upload or commit the LMP first, then return to this step." }) : /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
-            /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid gap-3 md:grid-cols-[1fr_auto] md:items-start", children: [
-              /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: `rounded-lg border p-3 text-xs font-semibold leading-5 ${wizardUnassignedGroundEvents.length > 0 ? "border-amber-300 bg-amber-50 text-amber-950" : "border-emerald-300 bg-emerald-50 text-emerald-950"}`, children: [
-                /* @__PURE__ */ jsxRuntimeExports.jsxs("p", { children: [
-                  wizardAssignedGroundEventCodes.size,
-                  " of ",
-                  wizardAvailableGroundEventSchedulingEvents.length,
-                  " ground event",
-                  wizardAvailableGroundEventSchedulingEvents.length === 1 ? "" : "s",
-                  " assigned."
-                ] }),
-                wizardUnassignedGroundEvents.length > 0 ? /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-2 flex flex-wrap gap-1.5", children: wizardUnassignedGroundEvents.map((event) => /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "rounded border border-amber-400 bg-white px-2 py-1 text-[11px] font-black text-amber-950", children: [
-                  "Missing: ",
-                  event.label
-                ] }, `unassigned-${event.code}`)) }) : /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-1", children: "All detected ground events are assigned to a scheduling group." })
+            /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "grid gap-3 md:grid-cols-[1fr_auto] md:items-start", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: `rounded-lg border p-3 text-xs font-semibold leading-5 ${wizardUnassignedGroundEvents.length > 0 ? "border-amber-300 bg-amber-50 text-amber-950" : "border-emerald-300 bg-emerald-50 text-emerald-950"}`, children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsxs("p", { children: [
+                wizardAssignedGroundEventCodes.size,
+                " of ",
+                wizardAvailableGroundEventSchedulingEvents.length,
+                " ground event",
+                wizardAvailableGroundEventSchedulingEvents.length === 1 ? "" : "s",
+                " assigned."
               ] }),
-              /* @__PURE__ */ jsxRuntimeExports.jsx("button", { type: "button", className: wizardSmallButtonClass, onClick: handleAddWizardGroundEventGroup, children: "Add group" })
-            ] }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "space-y-3", children: wizardGroundEventSchedulingGroups.map((group) => {
+              wizardUnassignedGroundEvents.length > 0 ? /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-2 flex flex-wrap gap-1.5", children: wizardUnassignedGroundEvents.map((event) => /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "rounded border border-amber-400 bg-white px-2 py-1 text-[11px] font-black text-amber-950", children: [
+                "Missing: ",
+                event.label
+              ] }, `unassigned-${event.code}`)) }) : /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-1", children: "All detected ground events are assigned to a scheduling group." })
+            ] }) }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "space-y-3", children: wizardGroundEventSchedulingGroups.map((group, groupIndex) => {
               const assignedEvents = wizardAvailableGroundEventSchedulingEvents.filter((event) => group.eventCodes.includes(event.code));
               return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded-lg border border-slate-300 bg-white p-3 shadow-sm", children: [
                 /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid gap-3 lg:grid-cols-[minmax(180px,260px)_minmax(180px,1fr)_auto]", children: [
@@ -43842,7 +43839,10 @@ const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, lo
                       `${group.id}-${eventOption.code}`
                     );
                   }) }) }),
-                  assignedEvents.length === 0 ? /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-2 text-xs font-semibold text-amber-800", children: "No events are assigned to this group yet." }) : null
+                  /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mt-2 flex items-center justify-between gap-3", children: [
+                    assignedEvents.length === 0 ? /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-xs font-semibold text-amber-800", children: "No events are assigned to this group yet." }) : /* @__PURE__ */ jsxRuntimeExports.jsx("span", {}),
+                    groupIndex === 0 ? /* @__PURE__ */ jsxRuntimeExports.jsx("button", { type: "button", className: wizardSmallButtonClass, onClick: handleAddWizardGroundEventGroup, children: "Add group" }) : null
+                  ] })
                 ] })
               ] }, group.id);
             }) })
