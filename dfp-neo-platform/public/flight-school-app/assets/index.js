@@ -34814,20 +34814,9 @@ const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, lo
     if (!onUpdateServiceDefinitions) return;
     onUpdateServiceDefinitions(courseStudentGroups.filter((_, groupIndex) => groupIndex !== index));
   }, [courseStudentGroups, onUpdateServiceDefinitions]);
-  const [wizardStep, setWizardStep] = reactExports.useState(() => {
-    if (typeof window === "undefined") return 0;
-    const stored = Number(window.localStorage.getItem(initialSetupWizardStorageKey));
-    return Number.isFinite(stored) ? Math.max(0, stored) : 0;
-  });
-  const [completedWizardStepIds, setCompletedWizardStepIds] = reactExports.useState(() => {
-    if (typeof window === "undefined") return /* @__PURE__ */ new Set();
-    try {
-      const parsed = JSON.parse(window.localStorage.getItem(initialSetupWizardCompletedStepsStorageKey) || "[]");
-      return new Set(Array.isArray(parsed) ? parsed.map((item) => String(item || "")).filter(Boolean) : []);
-    } catch {
-      return /* @__PURE__ */ new Set();
-    }
-  });
+  const [wizardStep, setWizardStep] = reactExports.useState(0);
+  const [completedWizardStepIds, setCompletedWizardStepIds] = reactExports.useState(() => /* @__PURE__ */ new Set());
+  const [viewedWizardStepIds, setViewedWizardStepIds] = reactExports.useState(() => /* @__PURE__ */ new Set());
   const [wizardPageMenuOpen, setWizardPageMenuOpen] = reactExports.useState(false);
   const wizardPageMenuButtonRef = reactExports.useRef(null);
   const wizardPageMenuRef = reactExports.useRef(null);
@@ -35198,7 +35187,8 @@ const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, lo
       ...organisationSettings || {}
     }
   } : baseActiveOrganisation;
-  const initialWizardSetupCompleted = Boolean(activeOrganisation?.settings?.initialSetupWizardCompletedAt) || (() => {
+  const initialWizardSetupCompletedInSettings = Boolean(activeOrganisation?.settings?.initialSetupWizardCompletedAt);
+  const initialWizardSetupCompleted = initialWizardSetupCompletedInSettings || (() => {
     try {
       return typeof window !== "undefined" && Boolean(window.localStorage.getItem("dfp-initial-setup-wizard-completed-at"));
     } catch {
@@ -38563,6 +38553,15 @@ const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, lo
   const currentStep = Math.min(wizardStep, steps.length - 1);
   const visibleStep = steps[currentStep];
   reactExports.useEffect(() => {
+    if (!visibleStep?.id) return;
+    setViewedWizardStepIds((current) => {
+      if (current.has(visibleStep.id)) return current;
+      const next = new Set(current);
+      next.add(visibleStep.id);
+      return next;
+    });
+  }, [visibleStep?.id]);
+  reactExports.useEffect(() => {
     if (!["locations-today", "location-code", "location-details"].includes(visibleStep?.id || "")) return;
     pushWizardLocationScopeTrace("location-step-state", {
       visibleStepId: visibleStep?.id,
@@ -38878,6 +38877,9 @@ const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, lo
     }
   };
   const isWizardStepComplete = (step) => {
+    const finishedWizardForVisuals = initialWizardSetupCompletedInSettings || completedWizardStepIds.size >= steps.length;
+    const stepHasBeenSeen = finishedWizardForVisuals || viewedWizardStepIds.has(step.id) || completedWizardStepIds.has(step.id);
+    if (!stepHasBeenSeen) return false;
     if (step.category === "mandatory" || step.id === "review") {
       return hasMeaningfulWizardStepData(step);
     }
@@ -38901,6 +38903,7 @@ const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, lo
   };
   const clearWizardStepCompletions = () => {
     setCompletedWizardStepIds(/* @__PURE__ */ new Set());
+    setViewedWizardStepIds(/* @__PURE__ */ new Set());
     if (typeof window !== "undefined") window.localStorage.removeItem(initialSetupWizardCompletedStepsStorageKey);
   };
   const syncWizardStepToSettings = (stepId) => {
