@@ -141690,6 +141690,14 @@ const App = () => {
       ...matchingLocation ? getLocationSelectorAliases(matchingLocation) : []
     ].map((alias) => String(alias || "").trim().toUpperCase()).filter((alias, index, aliases) => Boolean(alias) && aliases.indexOf(alias) === index);
   }, [getLocationSelectorAliases, knownDfpLocationAliases, platformConfig]);
+  const [isAuthenticated, setIsAuthenticated] = reactExports.useState(false);
+  const [authUser, setAuthUser] = reactExports.useState(null);
+  const [authSessionToken, setAuthSessionToken] = reactExports.useState("");
+  const [authLoading, setAuthLoading] = reactExports.useState(true);
+  const [showChangePassword, setShowChangePassword] = reactExports.useState(false);
+  const [showAdminPanel, setShowAdminPanel] = reactExports.useState(false);
+  const [sessionUser, setSessionUser] = reactExports.useState(null);
+  const [currentUserName, setCurrentUserName] = reactExports.useState("Bloggs, Joe");
   const baseSelectableLocationCodes = reactExports.useMemo(() => {
     const activeLocations = (platformConfig?.locations || []).filter((location) => location.status !== "INACTIVE");
     const activeUnitLocationCodes = (platformConfig?.units || []).filter((unit) => unit.status !== "INACTIVE").map((unit) => String(unit.locationCode || "").trim()).filter(Boolean);
@@ -142370,12 +142378,6 @@ const App = () => {
     const mockTrainees = contextFilteredTrainees.filter((t) => t._dataSource === "mockdata" && !dbCourses.has(t.course));
     return [...mockTrainees, ...dbTrainees];
   }, [activeContextUnitCodeSet, allTraineesData, dataSourceSettings, personMatchesActiveLocation, pushSetupTestPersonnelDiag, setupTestProfile]);
-  const [isAuthenticated, setIsAuthenticated] = reactExports.useState(false);
-  const [authUser, setAuthUser] = reactExports.useState(null);
-  const [authSessionToken, setAuthSessionToken] = reactExports.useState("");
-  const [authLoading, setAuthLoading] = reactExports.useState(true);
-  const [showChangePassword, setShowChangePassword] = reactExports.useState(false);
-  const [showAdminPanel, setShowAdminPanel] = reactExports.useState(false);
   const fetchAndSetAuditUser = async (firstName, lastName, displayName, role) => {
     const startedAt = performance.now();
     const formattedName = lastName && firstName ? `${lastName}, ${firstName}` : displayName || lastName || firstName || "Unknown User";
@@ -142565,8 +142567,6 @@ const App = () => {
       window.location.assign("https://dfp-neo.com/");
     }
   };
-  const [sessionUser, setSessionUser] = reactExports.useState(null);
-  const [currentUserName, setCurrentUserName] = reactExports.useState("Bloggs, Joe");
   const [dashboardUnreadMessageCount, setDashboardUnreadMessageCount] = reactExports.useState(0);
   const signedInIdentityKeys = [
     authUser?.id,

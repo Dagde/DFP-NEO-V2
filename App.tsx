@@ -29804,6 +29804,18 @@ const App: React.FC = () => {
         ));
     }, [getLocationSelectorAliases, knownDfpLocationAliases, platformConfig]);
 
+    // ============================================================
+    // AUTHENTICATION STATE
+    // ============================================================
+    const [isAuthenticated, setIsAuthenticated] = useState<boolean>(false);
+    const [authUser, setAuthUser] = useState<AuthUser | null>(null);
+    const [authSessionToken, setAuthSessionToken] = useState<string>('');
+    const [authLoading, setAuthLoading] = useState<boolean>(true);
+    const [showChangePassword, setShowChangePassword] = useState<boolean>(false);
+    const [showAdminPanel, setShowAdminPanel] = useState<boolean>(false);
+    const [sessionUser, setSessionUser] = useState<{firstName: string | null, lastName: string | null, role: string, militaryRank: string, userId: string, username?: string} | null>(null);
+    const [currentUserName, setCurrentUserName] = useState<string>('Bloggs, Joe');
+
     const baseSelectableLocationCodes = useMemo(() => {
         const activeLocations = (platformConfig?.locations || [])
             .filter((location: any) => location.status !== 'INACTIVE');
@@ -30730,16 +30742,6 @@ const App: React.FC = () => {
         return [...mockTrainees, ...dbTrainees];
     }, [activeContextUnitCodeSet, allTraineesData, dataSourceSettings, personMatchesActiveLocation, pushSetupTestPersonnelDiag, setupTestProfile]);
 
-    // ============================================================
-    // AUTHENTICATION STATE
-    // ============================================================
-    const [isAuthenticated, setIsAuthenticated] = useState<boolean>(false);
-    const [authUser, setAuthUser] = useState<AuthUser | null>(null);
-    const [authSessionToken, setAuthSessionToken] = useState<string>('');
-    const [authLoading, setAuthLoading] = useState<boolean>(true);
-    const [showChangePassword, setShowChangePassword] = useState<boolean>(false);
-    const [showAdminPanel, setShowAdminPanel] = useState<boolean>(false);
-
     // Fetch the logged-in user's military rank from Personnel table and update audit logger
     const fetchAndSetAuditUser = async (firstName: string | null, lastName: string | null, displayName?: string, role?: string) => {
         const startedAt = performance.now();
@@ -30951,11 +30953,6 @@ const App: React.FC = () => {
         }
     };
 
-    // Session user info (populated from auth)
-    const [sessionUser, setSessionUser] = useState<{firstName: string | null, lastName: string | null, role: string, militaryRank: string, userId: string, username?: string} | null>(null);
-
-    // Current User State (for permission checking)
-    const [currentUserName, setCurrentUserName] = useState<string>('Bloggs, Joe');
     const [dashboardUnreadMessageCount, setDashboardUnreadMessageCount] = useState(0);
     const signedInIdentityKeys = [
         authUser?.id,
