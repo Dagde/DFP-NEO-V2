@@ -10070,7 +10070,7 @@ const InitialSetupWizard: React.FC<{
                     <div key={`sharing-row-${index}`} className="space-y-3 rounded-lg border border-slate-300 bg-white p-3">
                         <div className="grid min-w-0 gap-2 md:grid-cols-[160px_1fr_110px]">
                             {wizardField('Sharing type', row.type || '', (value) => updateRow(index, 'type', value), ['Resource sharing', 'Staff sharing'])}
-                            {wizardField('Arrangement name', row.name || '', (value) => updateRow(index, 'name', value), undefined, row.type?.toLowerCase().includes('staff') ? 'Staff sharing arrangement' : '1FTS+CFS')}
+                            {wizardField('Arrangement name', row.name || '', (value) => updateRow(index, 'name', value), undefined, row.type?.toLowerCase().includes('staff') ? 'Staff sharing arrangement' : 'Unit')}
                             {wizardField('Enabled', row.enabled || 'Off', (value) => {
                                 const isTurningOff = /^off$/i.test(value);
                                 updateRowValues(index, {

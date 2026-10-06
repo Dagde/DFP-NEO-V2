@@ -30566,6 +30566,7 @@ This removes them from DFP Resource Rows. Press Save in this section to apply th
                     disabled: false,
                     users: userOptions,
                     search: userSearch,
+                    placeholder: wizardEditMode ? "Smith, John" : void 0,
                     onSearchChange: setUserSearch,
                     onChange: (value) => {
                       setSelectedAccessUserId(value);
@@ -32173,6 +32174,7 @@ const UserSearchSelect = ({
   disabled,
   users,
   search,
+  placeholder,
   onSearchChange,
   onChange
 }) => {
@@ -32208,7 +32210,7 @@ const UserSearchSelect = ({
         className: fieldClass,
         value: draftSearch,
         disabled,
-        placeholder: "Search by name...",
+        placeholder: placeholder || "Search by name...",
         autoComplete: "off",
         onKeyDown: stopEditableKeyPropagation,
         onChange: (event) => updateSearchDraft(event.target.value),
@@ -40603,7 +40605,7 @@ const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, lo
       editableRows.map((row, index) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-3 rounded-lg border border-slate-300 bg-white p-3", children: [
         /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid min-w-0 gap-2 md:grid-cols-[160px_1fr_110px]", children: [
           wizardField("Sharing type", row.type || "", (value) => updateRow(index, "type", value), ["Resource sharing", "Staff sharing"]),
-          wizardField("Arrangement name", row.name || "", (value) => updateRow(index, "name", value), void 0, row.type?.toLowerCase().includes("staff") ? "Staff sharing arrangement" : "1FTS+CFS"),
+          wizardField("Arrangement name", row.name || "", (value) => updateRow(index, "name", value), void 0, row.type?.toLowerCase().includes("staff") ? "Staff sharing arrangement" : "Unit"),
           wizardField("Enabled", row.enabled || "Off", (value) => {
             const isTurningOff = /^off$/i.test(value);
             updateRowValues(index, {

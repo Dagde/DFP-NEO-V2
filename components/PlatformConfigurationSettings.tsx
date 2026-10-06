@@ -14150,6 +14150,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
                 disabled={false}
                 users={userOptions}
                 search={userSearch}
+                placeholder={wizardEditMode ? 'Smith, John' : undefined}
                 onSearchChange={setUserSearch}
                 onChange={(value) => {
                   setSelectedAccessUserId(value);
@@ -16099,6 +16100,7 @@ const UserSearchSelect = ({
   disabled,
   users,
   search,
+  placeholder,
   onSearchChange,
   onChange,
 }: {
@@ -16107,6 +16109,7 @@ const UserSearchSelect = ({
   disabled: boolean;
   users: Array<{ id: string; name: string; username: string; email: string; searchText?: string; personnelId?: string }>;
   search: string;
+  placeholder?: string;
   onSearchChange: (value: string) => void;
   onChange: (value: string) => void;
 }) => {
@@ -16148,7 +16151,7 @@ const UserSearchSelect = ({
         className={fieldClass}
         value={draftSearch}
         disabled={disabled}
-        placeholder="Search by name..."
+        placeholder={placeholder || 'Search by name...'}
         autoComplete="off"
         onKeyDown={stopEditableKeyPropagation}
         onChange={(event) => updateSearchDraft(event.target.value)}
