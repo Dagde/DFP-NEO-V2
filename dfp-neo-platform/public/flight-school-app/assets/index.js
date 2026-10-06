@@ -17696,6 +17696,9 @@ const SettingsView = ({
                     {
                       value: group.name,
                       placeholder: DEFAULT_GROUND_EVENT_SCHEDULING_GROUP_NAME_PLACEHOLDER,
+                      onBeforeInput: (event) => handleEditableTextBeforeInput(event, (value) => updateGroundEventSchedulingGroup(group.id, { name: value })),
+                      onKeyDownCapture: (event) => handleEditableTextKeyDownCapture(event, (value) => updateGroundEventSchedulingGroup(group.id, { name: value })),
+                      onKeyDown: stopEditableKeyPropagation,
                       onChange: (event) => updateGroundEventSchedulingGroup(group.id, { name: event.target.value }),
                       className: "w-full rounded-md border border-gray-600 bg-gray-950 px-3 py-2 text-sm font-semibold text-white focus:border-sky-500 focus:ring-1 focus:ring-sky-500"
                     }
