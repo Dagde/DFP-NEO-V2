@@ -1381,7 +1381,10 @@ const formatPlainList = (items: string[], fallback = 'Not set'): string => {
 };
 
 const formatRoleRequirementsText = (requirements: any[] = []): string => (
-    requirements.map((requirement) => `${requirement.role || 'Crew'} = ${requirement.count ?? 1}`).join('\n')
+    requirements
+        .filter((requirement) => String(requirement?.role || '').trim() || String(requirement?.count ?? '').trim())
+        .map((requirement) => `${String(requirement.role || '').trim()} = ${String(requirement.count ?? '').trim()}`)
+        .join('\n')
 );
 
 const parseRoleRequirementsText = (value: string): any[] => (
@@ -1391,18 +1394,21 @@ const parseRoleRequirementsText = (value: string): any[] => (
         .filter(Boolean)
         .map((line) => {
             const [rolePart, countPart] = line.includes('=') ? line.split('=') : line.split(':');
-            const role = String(rolePart || '').trim() || 'Crew';
-            const count = Math.max(1, Math.round(Number(String(countPart || '1').trim()) || 1));
+            const role = String(rolePart || '').trim();
+            const countText = String(countPart || '').trim();
+            if (!role && !countText) return null;
+            const count = countText ? Math.max(1, Math.round(Number(countText) || 1)) : '';
             return { role, count };
         })
+        .filter(Boolean)
 );
 
 const updateWizardRoleRequirementText = (value: string, index: number, field: 'role' | 'count', nextValue: string): string => {
     const rows = parseRoleRequirementsText(value);
-    while (rows.length <= index) rows.push({ role: 'Crew', count: 1 });
+    while (rows.length <= index) rows.push({ role: '', count: '' });
     rows[index] = {
         ...rows[index],
-        [field]: field === 'count' ? Math.max(1, Math.round(Number(nextValue) || 1)) : nextValue,
+        [field]: field === 'count' ? (String(nextValue || '').trim() ? Math.max(1, Math.round(Number(nextValue) || 1)) : '') : nextValue,
     };
     return formatRoleRequirementsText(rows);
 };
@@ -1449,23 +1455,23 @@ const formatWizardBuildRulesDraft = (draft: {
     authorizationUrgentMinutes?: string;
 }) => (
     [
-        `Business rules: ${draft.businessRules || 'Use configured rule set'}`,
-        `Maximum crew duty: ${draft.maxCrewDutyHours || '12'} hours`,
-        `Preferred duty period: ${draft.preferredDutyHours || '10'} hours`,
-        `Aircraft turnaround: ${draft.aircraftTurnaroundMinutes || '60'} minutes`,
-        `Simulator turnaround: ${draft.simTurnaroundMinutes || '30'} minutes`,
-        `Trainer turnaround: ${draft.trainerTurnaroundMinutes || '30'} minutes`,
-        `Maximum dispatch per hour: ${draft.maxDispatchPerHour || '2'}`,
+        `Business rules: ${draft.businessRules || ''}`,
+        `Maximum crew duty: ${draft.maxCrewDutyHours || ''}`,
+        `Preferred duty period: ${draft.preferredDutyHours || ''}`,
+        `Aircraft turnaround: ${draft.aircraftTurnaroundMinutes || ''}`,
+        `Simulator turnaround: ${draft.simTurnaroundMinutes || ''}`,
+        `Trainer turnaround: ${draft.trainerTurnaroundMinutes || ''}`,
+        `Maximum dispatch per hour: ${draft.maxDispatchPerHour || ''}`,
         `Maximum events per day: ${draft.maxEventsPerDay || 'Not set'}`,
         `Maximum flights per day: ${draft.maxFlightsPerDay || 'Not set'}`,
-        `Minimum gap between events: ${draft.minGapBetweenEventsMinutes || '0'} minutes`,
-        `Flight stagger minutes: ${draft.flightStaggerMinutes || DEFAULT_DISPATCH_STAGGER_SETTINGS.flightMinutes}`,
+        `Minimum gap between events: ${draft.minGapBetweenEventsMinutes || ''}`,
+        `Flight stagger minutes: ${draft.flightStaggerMinutes || ''}`,
         `Enforce minimum flight stagger: ${noMinimumToEnforceMinimum(draft.flightStaggerNoMinimum || '', DEFAULT_DISPATCH_STAGGER_SETTINGS.flightNoMinimum)}`,
-        `Simulator stagger minutes: ${draft.simulatorStaggerMinutes || DEFAULT_DISPATCH_STAGGER_SETTINGS.simulatorMinutes}`,
+        `Simulator stagger minutes: ${draft.simulatorStaggerMinutes || ''}`,
         `Enforce minimum simulator stagger: ${noMinimumToEnforceMinimum(draft.simulatorStaggerNoMinimum || '', DEFAULT_DISPATCH_STAGGER_SETTINGS.simulatorNoMinimum)}`,
         `Flight authorisation required: ${draft.flightAuthorisationRequired || (DEFAULT_TILE_STATUS_SETTINGS.flightAuthorisationRequired ? 'Yes' : 'No')}`,
-        `Authorisation warning minutes: ${draft.authorizationWarningMinutes || DEFAULT_TILE_STATUS_SETTINGS.authorizationWarningMinutes}`,
-        `Authorisation urgent minutes: ${draft.authorizationUrgentMinutes || DEFAULT_TILE_STATUS_SETTINGS.authorizationUrgentMinutes}`,
+        `Authorisation warning minutes: ${draft.authorizationWarningMinutes || ''}`,
+        `Authorisation urgent minutes: ${draft.authorizationUrgentMinutes || ''}`,
     ].join('\n')
 );
 
@@ -3018,6 +3024,7 @@ const WizardFlyingWindowTimeInput = React.memo(({
     className,
     value,
     enabled,
+    placeholderOnly = false,
     onCommit,
     onDraftChange,
 }: {
@@ -3025,20 +3032,30 @@ const WizardFlyingWindowTimeInput = React.memo(({
     className: string;
     value: number;
     enabled: boolean;
+    placeholderOnly?: boolean;
     onCommit?: (value: number) => void;
     onDraftChange?: (key: string, value: string | null) => void;
 }) => {
     const formattedValue = formatWizardTimeInputValue(value);
+    const [hasUserValue, setHasUserValue] = useState(false);
+    const displayedValue = placeholderOnly && !hasUserValue ? '' : formattedValue;
     const inputRef = useRef<HTMLInputElement | null>(null);
 
     useEffect(() => {
         if (document.activeElement !== inputRef.current && inputRef.current) {
-            inputRef.current.value = formattedValue;
+            inputRef.current.value = displayedValue;
         }
-    }, [formattedValue]);
+    }, [displayedValue]);
 
     const commitDraft = () => {
-        const nextValue = parseWizardTimeInputValue(inputRef.current?.value || formattedValue, value);
+        const rawValue = inputRef.current?.value || '';
+        if (placeholderOnly && !rawValue.trim()) {
+            setHasUserValue(false);
+            onDraftChange?.(draftKey, null);
+            return;
+        }
+        const nextValue = parseWizardTimeInputValue(rawValue || formattedValue, value);
+        setHasUserValue(true);
         if (inputRef.current) inputRef.current.value = formatWizardTimeInputValue(nextValue);
         onDraftChange?.(draftKey, null);
         onCommit?.(nextValue);
@@ -3048,8 +3065,8 @@ const WizardFlyingWindowTimeInput = React.memo(({
         <input
             ref={inputRef}
             className={className}
-            defaultValue={formattedValue}
-            placeholder="HH:MM"
+            defaultValue={displayedValue}
+            placeholder={placeholderOnly ? formattedValue : 'HH:MM'}
             inputMode="numeric"
             disabled={!enabled || !onCommit}
             onInput={(event) => {
@@ -3994,10 +4011,10 @@ const InitialSetupWizard: React.FC<{
             : 0,
     });
     const [locationDraft, setLocationDraft] = useState({
-        code: String(currentLocation?.code || activeWizardLocationCode || currentUnit?.locationCode || 'LOC1'),
-        iataCode: String(currentLocation?.iataCode || currentLocation?.settings?.iataCode || 'LOC'),
-        name: String(currentLocation?.name || 'Home Location'),
-        timezone: String(currentLocation?.timezone || 'UTC'),
+        code: String(currentLocation?.code || activeWizardLocationCode || currentUnit?.locationCode || ''),
+        iataCode: String(currentLocation?.iataCode || currentLocation?.settings?.iataCode || ''),
+        name: String(currentLocation?.name || ''),
+        timezone: String(currentLocation?.timezone || ''),
         latitude: String(currentLocation?.latitude ?? currentLocation?.settings?.latitude ?? activeWizardLocationProfile?.latitude ?? ''),
         longitude: String(currentLocation?.longitude ?? currentLocation?.settings?.longitude ?? activeWizardLocationProfile?.longitude ?? ''),
         trainingAreas: Array.isArray(currentLocation?.trainingAreas) ? currentLocation.trainingAreas.join(', ') : '',
@@ -4008,16 +4025,16 @@ const InitialSetupWizard: React.FC<{
     const [locationsTodayDraft, setLocationsTodayDraft] = useState(() => (
         scopedActiveLocations.length > 0
             ? scopedActiveLocations.map((location: any) => `${location.code || ''} | ${location.iataCode || location.settings?.iataCode || ''} | ${location.name || location.code || ''}`).join('\n')
-            : formatWizardLocationRows([activeWizardLocationRow]) || 'LOC1 | LOC | Home Location'
+            : formatWizardLocationRows([activeWizardLocationRow])
     ));
     const [locationDraftRowCount, setLocationDraftRowCount] = useState(() => Math.max(1, parseWizardLocationRows(
         scopedActiveLocations.length > 0
             ? scopedActiveLocations.map((location: any) => `${location.code || ''} | ${location.iataCode || location.settings?.iataCode || ''} | ${location.name || location.code || ''}`).join('\n')
-            : formatWizardLocationRows([activeWizardLocationRow]) || 'LOC1 | LOC | Home Location',
+            : formatWizardLocationRows([activeWizardLocationRow]),
     ).length));
     const [unitDraft, setUnitDraft] = useState<WizardUnitSetupDraft>({
-        code: String(currentUnit?.code || unitCode || 'UNIT-01'),
-        name: String(currentUnit?.name || currentUnit?.code || unitCode || 'Unit'),
+        code: String(currentUnit?.code || unitCode || ''),
+        name: String(currentUnit?.name || currentUnit?.code || unitCode || ''),
         locationCode: String(currentUnit?.locationCode || activeWizardLocationCode || currentLocation?.code || ''),
         unitType: String(currentUnit?.unitType || unitTypeOptions[0] || ''),
         operationalModel: String(getUnitOperationalModel(currentUnit || {}) || 'pooled-crew'),
@@ -4085,26 +4102,26 @@ const InitialSetupWizard: React.FC<{
         accessLevel: String(primaryMasterLmpRule?.access || primaryMasterLmpRule?.accessLevel || 'View'),
     });
     const trainingDraftDirtyRef = useRef(false);
-    const [crewLabelsDraft, setCrewLabelsDraft] = useState('Pilot = Pilot\nLoadmaster = Loadmaster');
-    const [alternateCrewDraft, setAlternateCrewDraft] = useState('Reduced crew = Pilot 1, Loadmaster 1');
+    const [crewLabelsDraft, setCrewLabelsDraft] = useState('');
+    const [alternateCrewDraft, setAlternateCrewDraft] = useState('');
     const [buildRulesDraft, setBuildRulesDraft] = useState({
-        businessRules: 'Use configured rule set',
-        maxCrewDutyHours: '12',
-        preferredDutyHours: '10',
-        aircraftTurnaroundMinutes: '60',
-        simTurnaroundMinutes: '30',
-        trainerTurnaroundMinutes: '30',
-        maxDispatchPerHour: '2',
+        businessRules: '',
+        maxCrewDutyHours: '',
+        preferredDutyHours: '',
+        aircraftTurnaroundMinutes: '',
+        simTurnaroundMinutes: '',
+        trainerTurnaroundMinutes: '',
+        maxDispatchPerHour: '',
         maxEventsPerDay: '',
         maxFlightsPerDay: '',
-        minGapBetweenEventsMinutes: '0',
-        flightStaggerMinutes: String(normaliseDispatchStaggerSettings(dispatchStaggerSettings).flightMinutes),
+        minGapBetweenEventsMinutes: '',
+        flightStaggerMinutes: '',
         flightStaggerNoMinimum: normaliseDispatchStaggerSettings(dispatchStaggerSettings).flightNoMinimum ? 'Yes' : 'No',
-        simulatorStaggerMinutes: String(normaliseDispatchStaggerSettings(dispatchStaggerSettings).simulatorMinutes),
+        simulatorStaggerMinutes: '',
         simulatorStaggerNoMinimum: normaliseDispatchStaggerSettings(dispatchStaggerSettings).simulatorNoMinimum ? 'Yes' : 'No',
         flightAuthorisationRequired: normaliseTileStatusSettings(tileStatusSettings).flightAuthorisationRequired ? 'Yes' : 'No',
-        authorizationWarningMinutes: String(normaliseTileStatusSettings(tileStatusSettings).authorizationWarningMinutes),
-        authorizationUrgentMinutes: String(normaliseTileStatusSettings(tileStatusSettings).authorizationUrgentMinutes),
+        authorizationWarningMinutes: '',
+        authorizationUrgentMinutes: '',
     });
     const buildRulesDraftDirtyRef = useRef(false);
     const updateBuildRulesDraft = (updater: typeof buildRulesDraft | ((current: typeof buildRulesDraft) => typeof buildRulesDraft)) => {
@@ -4116,9 +4133,9 @@ const InitialSetupWizard: React.FC<{
         ));
     };
     const buildRulesDraftText = formatWizardBuildRulesDraft(buildRulesDraft);
-    const [staffDraft, setStaffDraft] = useState('Surname, First | UNIT-01 | Rank | Pilot | | Qualification');
-    const [traineeCourseOptionsDraft, setTraineeCourseOptionsDraft] = useState('Course 1');
-    const [traineeCourseInputRows, setTraineeCourseInputRows] = useState<string[]>(() => ['Course 1']);
+    const [staffDraft, setStaffDraft] = useState('');
+    const [traineeCourseOptionsDraft, setTraineeCourseOptionsDraft] = useState('');
+    const [traineeCourseInputRows, setTraineeCourseInputRows] = useState<string[]>(() => ['']);
     const [traineeDraft, setTraineeDraft] = useState('');
     const [staffProfilesCommitted, setStaffProfilesCommitted] = useState(false);
     const [staffCommitInProgress, setStaffCommitInProgress] = useState(false);
@@ -4163,7 +4180,7 @@ const InitialSetupWizard: React.FC<{
         });
         return rows.length > 0 ? rows.join('\n') : defaultWizardUnitModulesDraft;
     };
-    const [trainingRecordsDraft, setTrainingRecordsDraft] = useState('Training Report | Assessment Form | 0 | 5 | Yes | No | Satisfactory | Unsatisfactory');
+    const [trainingRecordsDraft, setTrainingRecordsDraft] = useState('');
     const [unitModulesDraft, setUnitModulesDraft] = useState(() => buildHydratedUnitModulesDraft());
     const auditRecordingPageOptions = [
         'Program Schedule',
@@ -4176,12 +4193,14 @@ const InitialSetupWizard: React.FC<{
     ];
     const [auditRecordingPageDraft, setAuditRecordingPageDraft] = useState(auditRecordingPageOptions[0]);
     const unitModulesDraftDirtyRef = useRef(false);
-    const [rankLabelsDraft, setRankLabelsDraft] = useState('1 | Senior Rank 1 | Highest rank shown first\n2 | Senior Rank 2 | Next senior rank\n3 | Team Lead Rank | Operational supervisor level\n4 | Line Rank | Standard operational rank');
+    const [rankLabelsDraft, setRankLabelsDraft] = useState('');
     const [rankSettingsDraft, setRankSettingsDraft] = useState(() => ({
         preset: currentPersonnelDisplaySettings.staffRankEquivalency?.preset || 'AU',
         sortMode: currentPersonnelDisplaySettings.sortMode || 'rank-then-name',
         traineeRanks: 'staff',
-        instructorLabel: currentPersonnelDisplaySettings.instructorLabel || 'Instructor',
+        instructorLabel: activeOrganisation?.settings?.personnelDisplaySettings || activeOrganisation?.settings?.personnelSettings
+            ? currentPersonnelDisplaySettings.instructorLabel || 'Instructor'
+            : '',
     }));
     const rankSettingsDraftDirtyRef = useRef(false);
     const wizardStaffQualificationCatalogue = useMemo(() => {
@@ -4203,33 +4222,46 @@ const InitialSetupWizard: React.FC<{
             .sort((left, right) => (left.code || left.name).localeCompare(right.code || right.name, undefined, { sensitivity: 'base' })),
         [wizardStaffQualificationCatalogue],
     );
-    const [crewRolesDraft, setCrewRolesDraft] = useState(() => formatWizardCrewRoleRows(
+    const hasExplicitCrewPositionTerminologySettings = Boolean(
+        activeOrganisation?.settings?.crewPositionTerminology
+        && (
+            (Array.isArray(activeOrganisation.settings.crewPositionTerminology?.positions) && activeOrganisation.settings.crewPositionTerminology.positions.length > 0)
+            || (Array.isArray(activeOrganisation.settings.crewPositionTerminology) && activeOrganisation.settings.crewPositionTerminology.length > 0)
+            || (
+                typeof activeOrganisation.settings.crewPositionTerminology === 'object'
+                && !Array.isArray(activeOrganisation.settings.crewPositionTerminology)
+                && Object.keys(activeOrganisation.settings.crewPositionTerminology).some((key) => key !== 'deletedDefaultIds')
+            )
+        )
+    );
+    const [crewRolesDraft, setCrewRolesDraft] = useState(() => (hasExplicitCrewPositionTerminologySettings ? formatWizardCrewRoleRows(
         currentWizardCrewPositionTerminology.positions.map((position) => ({
             role: position.genericName,
             label: position.label || position.genericName,
             models: (position.operationalModels || []).join(', '),
         }))
-    ));
+    ) : ''));
     const crewRolesDraftDirtyRef = useRef(false);
     const updateCrewRolesDraft = (updater: string | ((current: string) => string)) => {
         crewRolesDraftDirtyRef.current = true;
         setCrewRolesDraft((current) => typeof updater === 'function' ? updater(current) : updater);
     };
-    const wizardCrewPositionTerminology = normaliseCrewPositionTerminology({
-        positions: parseWizardCrewRoleRows(crewRolesDraft).map((row, index) => ({
+    const wizardCrewRoleRows = parseWizardCrewRoleRows(crewRolesDraft);
+    const wizardCrewPositionTerminology = wizardCrewRoleRows.length > 0 ? normaliseCrewPositionTerminology({
+        positions: wizardCrewRoleRows.map((row, index) => ({
             id: row.role.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '') || `crew-role-${index + 1}`,
             genericName: row.role || row.label || `Crew Role ${index + 1}`,
             label: row.label || row.role || `Crew Role ${index + 1}`,
             operationalModels: row.models.split(',').map((model) => model.trim()).filter(Boolean).map((model) => normaliseOperationalModel(model)),
         })),
         deletedDefaultIds: currentWizardCrewPositionTerminology.deletedDefaultIds,
-    });
+    }) : currentWizardCrewPositionTerminology;
     const getWizardCrewRoleOptions = (value: string) => {
         const existingRoles = parseRoleRequirementsText(value).map((row) => String(row.role || '').trim()).filter(Boolean);
         return getCrewPositionOptions(wizardCrewPositionTerminology, existingRoles, unitDraft.operationalModel);
     };
     const [resourceSharingDraft, setResourceSharingDraft] = useState('Resource sharing | Off |  | Unit keeps its own aircraft and DFP resource row capacity.\nStaff sharing | Off |  | Unit only schedules its own staff unless changed later.');
-    const [currencyDraft, setCurrencyDraft] = useState('PIC Currency | PIC | Standard crew | ANY | PIC Currency | 1\nInstrument Currency | INST | Standard crew | ANY | Instrument Currency | 1');
+    const [currencyDraft, setCurrencyDraft] = useState('');
     const currencyDraftDirtyRef = useRef(false);
     const updateCurrencyDraft = (updater: string | ((current: string) => string)) => {
         currencyDraftDirtyRef.current = true;
@@ -4242,7 +4274,7 @@ const InitialSetupWizard: React.FC<{
     const [scoringDraft, setScoringDraft] = useState(defaultWizardScoringDraft);
     const [wizardScoringPhraseBank, setWizardScoringPhraseBank] = useState<PhraseBank>(() => wizardScoringRowsToPhraseBank(defaultWizardScoringDraft));
     const [wizardScoringTab, setWizardScoringTab] = useState<'Airmanship' | 'Preparation' | 'Technique' | 'Elements'>('Airmanship');
-    const [staffCurrencyEventsDraft, setStaffCurrencyEventsDraft] = useState('Annual Instrument Check | INST | Flight | 90 | 90 | 60 | Standard crew | Instrument Currency | ANY | 1');
+    const [staffCurrencyEventsDraft, setStaffCurrencyEventsDraft] = useState('');
 
     const formatWizardOrganisationPath = (path: string[]) => path.map((item) => String(item || '').trim()).filter(Boolean).join(' / ');
     const formatWizardImmediateParentLabel = (path: string[]) => {
@@ -4420,16 +4452,16 @@ const InitialSetupWizard: React.FC<{
         if (settingsLocationsDraft) return settingsLocationsDraft;
         const savedWizardLocations = String(getSavedInitialSetupWizardDrafts()?.locationsTodayDraft || '').trim();
         if (savedWizardLocations) return savedWizardLocations;
-        return formatWizardLocationRows([activeWizardLocationRow]) || 'LOC1 | LOC | Home Location';
+        return formatWizardLocationRows([activeWizardLocationRow]);
     };
     const buildHydratedLocationDraft = () => {
         const savedDraft = readPlainWizardObject(getSavedInitialSetupWizardDrafts()?.locationDraft);
         if (Object.keys(savedDraft).length > 0) {
             return {
-                code: String(savedDraft.code || currentLocation?.code || activeWizardLocationCode || currentUnit?.locationCode || 'LOC1').trim().toUpperCase(),
-                iataCode: String(savedDraft.iataCode || savedDraft.iata || currentLocation?.iataCode || currentLocation?.settings?.iataCode || 'LOC').trim().toUpperCase(),
-                name: String(savedDraft.name || currentLocation?.name || 'Home Location'),
-                timezone: String(savedDraft.timezone || currentLocation?.timezone || 'UTC'),
+                code: String(savedDraft.code || currentLocation?.code || activeWizardLocationCode || currentUnit?.locationCode || '').trim().toUpperCase(),
+                iataCode: String(savedDraft.iataCode || savedDraft.iata || currentLocation?.iataCode || currentLocation?.settings?.iataCode || '').trim().toUpperCase(),
+                name: String(savedDraft.name || currentLocation?.name || ''),
+                timezone: String(savedDraft.timezone || currentLocation?.timezone || ''),
                 latitude: String(savedDraft.latitude ?? currentLocation?.latitude ?? currentLocation?.settings?.latitude ?? activeWizardLocationProfile?.latitude ?? ''),
                 longitude: String(savedDraft.longitude ?? currentLocation?.longitude ?? currentLocation?.settings?.longitude ?? activeWizardLocationProfile?.longitude ?? ''),
                 trainingAreas: Array.isArray(savedDraft.trainingAreas)
@@ -4438,10 +4470,10 @@ const InitialSetupWizard: React.FC<{
             };
         }
         return {
-            code: String(currentLocation?.code || activeWizardLocationCode || currentUnit?.locationCode || 'LOC1'),
-            iataCode: String(currentLocation?.iataCode || currentLocation?.settings?.iataCode || 'LOC'),
-            name: String(currentLocation?.name || 'Home Location'),
-            timezone: String(currentLocation?.timezone || 'UTC'),
+            code: String(currentLocation?.code || activeWizardLocationCode || currentUnit?.locationCode || ''),
+            iataCode: String(currentLocation?.iataCode || currentLocation?.settings?.iataCode || ''),
+            name: String(currentLocation?.name || ''),
+            timezone: String(currentLocation?.timezone || ''),
             latitude: String(currentLocation?.latitude ?? currentLocation?.settings?.latitude ?? activeWizardLocationProfile?.latitude ?? ''),
             longitude: String(currentLocation?.longitude ?? currentLocation?.settings?.longitude ?? activeWizardLocationProfile?.longitude ?? ''),
             trainingAreas: Array.isArray(currentLocation?.trainingAreas) ? currentLocation.trainingAreas.join(', ') : '',
@@ -4469,29 +4501,29 @@ const InitialSetupWizard: React.FC<{
             return match ? match[1].replace(/\s*(hours|minutes)$/i, '').trim() : fallback;
         };
         return {
-            businessRules: readRule('Business rules', 'Use configured rule set'),
-            maxCrewDutyHours: readRule('Maximum crew duty', '12'),
-            preferredDutyHours: readRule('Preferred duty period', '10'),
-            aircraftTurnaroundMinutes: readRule('Aircraft turnaround', '60'),
-            simTurnaroundMinutes: readRule('Simulator turnaround', '30'),
-            trainerTurnaroundMinutes: readRule('Trainer turnaround', '30'),
-            maxDispatchPerHour: readRule('Maximum dispatch per hour', '2'),
+            businessRules: readRule('Business rules', ''),
+            maxCrewDutyHours: readRule('Maximum crew duty', ''),
+            preferredDutyHours: readRule('Preferred duty period', ''),
+            aircraftTurnaroundMinutes: readRule('Aircraft turnaround', ''),
+            simTurnaroundMinutes: readRule('Simulator turnaround', ''),
+            trainerTurnaroundMinutes: readRule('Trainer turnaround', ''),
+            maxDispatchPerHour: readRule('Maximum dispatch per hour', ''),
             maxEventsPerDay: readRule('Maximum events per day', '').replace(/^Not set$/i, ''),
             maxFlightsPerDay: readRule('Maximum flights per day', '').replace(/^Not set$/i, ''),
-            minGapBetweenEventsMinutes: readRule('Minimum gap between events', '0'),
-            flightStaggerMinutes: readRule('Flight stagger minutes', String(DEFAULT_DISPATCH_STAGGER_SETTINGS.flightMinutes)),
+            minGapBetweenEventsMinutes: readRule('Minimum gap between events', ''),
+            flightStaggerMinutes: readRule('Flight stagger minutes', ''),
             flightStaggerNoMinimum: enforceMinimumToNoMinimum(readRule(
                 'Enforce minimum flight stagger',
                 noMinimumToEnforceMinimum(readRule('Flight stagger no minimum', DEFAULT_DISPATCH_STAGGER_SETTINGS.flightNoMinimum ? 'Yes' : 'No')),
             )),
-            simulatorStaggerMinutes: readRule('Simulator stagger minutes', String(DEFAULT_DISPATCH_STAGGER_SETTINGS.simulatorMinutes)),
+            simulatorStaggerMinutes: readRule('Simulator stagger minutes', ''),
             simulatorStaggerNoMinimum: enforceMinimumToNoMinimum(readRule(
                 'Enforce minimum simulator stagger',
                 noMinimumToEnforceMinimum(readRule('Simulator stagger no minimum', DEFAULT_DISPATCH_STAGGER_SETTINGS.simulatorNoMinimum ? 'Yes' : 'No')),
             )),
             flightAuthorisationRequired: readRule('Flight authorisation required', DEFAULT_TILE_STATUS_SETTINGS.flightAuthorisationRequired ? 'Yes' : 'No'),
-            authorizationWarningMinutes: readRule('Authorisation warning minutes', String(DEFAULT_TILE_STATUS_SETTINGS.authorizationWarningMinutes)),
-            authorizationUrgentMinutes: readRule('Authorisation urgent minutes', String(DEFAULT_TILE_STATUS_SETTINGS.authorizationUrgentMinutes)),
+            authorizationWarningMinutes: readRule('Authorisation warning minutes', ''),
+            authorizationUrgentMinutes: readRule('Authorisation urgent minutes', ''),
         };
     };
     const readPlainWizardObject = (value: any): Record<string, any> => (
@@ -4562,7 +4594,7 @@ const InitialSetupWizard: React.FC<{
         const resolvedDispatchStagger = normaliseDispatchStaggerSettings(buildRuleSettings?.dispatchStaggerSettings || dispatchStaggerSettings);
         const resolvedTileStatus = normaliseTileStatusSettings(tileStatusSettings);
         return {
-            businessRules: String(ruleSet.businessRules || 'Use configured rule set'),
+            businessRules: String(ruleSet.businessRules || ''),
             maxCrewDutyHours: String(ruleSet.maxCrewDutyHours ?? '12'),
             preferredDutyHours: String(ruleSet.preferredDutyHours ?? '10'),
             aircraftTurnaroundMinutes: String(ruleSet.aircraftTurnaroundMinutes ?? '60'),
@@ -4589,7 +4621,7 @@ const InitialSetupWizard: React.FC<{
                 eventLimits.minGapBetweenEventsMinutes,
                 wizardEventLimits.minGapBetweenEventsMinutes,
                 dailyEventLimits.minGapBetweenEventsMinutes,
-            ], '0', true),
+            ], '', true),
             flightStaggerMinutes: String(resolvedDispatchStagger.flightMinutes),
             flightStaggerNoMinimum: resolvedDispatchStagger.flightNoMinimum ? 'Yes' : 'No',
             simulatorStaggerMinutes: String(resolvedDispatchStagger.simulatorMinutes),
@@ -4618,14 +4650,14 @@ const InitialSetupWizard: React.FC<{
                     : currentPersonnelDisplaySettings.staffRankEquivalency?.preset || 'AU',
                 sortMode: 'rank-then-name',
                 traineeRanks: 'staff',
-                instructorLabel: String(savedDraft.instructorLabel || currentPersonnelDisplaySettings.instructorLabel || 'Instructor'),
+                instructorLabel: String(savedDraft.instructorLabel || currentPersonnelDisplaySettings.instructorLabel || ''),
             };
         }
         return {
             preset: currentPersonnelDisplaySettings.staffRankEquivalency?.preset || 'AU',
             sortMode: 'rank-then-name',
             traineeRanks: 'staff',
-            instructorLabel: currentPersonnelDisplaySettings.instructorLabel || 'Instructor',
+            instructorLabel: hasLiveRankSettings ? currentPersonnelDisplaySettings.instructorLabel || 'Instructor' : '',
         };
     };
     const readSharingGroupUnits = (group: any): string[] => {
@@ -4808,7 +4840,7 @@ const InitialSetupWizard: React.FC<{
         if (savedStaff) setStaffDraft(savedStaff);
         if (savedTraineeCourses) {
             setTraineeCourseOptionsDraft(savedTraineeCourses);
-            setTraineeCourseInputRows(parseWizardLineItems(savedTraineeCourses).length > 0 ? parseWizardLineItems(savedTraineeCourses) : ['Course 1']);
+            setTraineeCourseInputRows(parseWizardLineItems(savedTraineeCourses).length > 0 ? parseWizardLineItems(savedTraineeCourses) : ['']);
         }
         if (savedTrainees) setTraineeDraft(savedTrainees);
         if (nextTrainingRecords) setTrainingRecordsDraft(nextTrainingRecords);
@@ -5069,8 +5101,8 @@ const InitialSetupWizard: React.FC<{
             };
         }, {} as Record<string, WizardUnitSetupDraft>);
         const nextUnitDraft = {
-            code: String(savedDraft.code || currentUnit?.code || unitCode || 'UNIT-01'),
-            name: String(savedDraft.name || currentUnit?.name || currentUnit?.code || unitCode || 'Unit'),
+            code: String(savedDraft.code || currentUnit?.code || unitCode || ''),
+            name: String(savedDraft.name || currentUnit?.name || currentUnit?.code || unitCode || ''),
             locationCode: String(savedDraft.locationCode || currentUnit?.locationCode || activeWizardLocationCode || currentLocation?.code || ''),
             unitType: String(savedDraft.unitType || currentUnit?.unitType || unitTypeOptions[0] || ''),
             operationalModel: String(savedDraft.operationalModel || getUnitOperationalModel(currentUnit || {}) || 'pooled-crew'),
@@ -5192,13 +5224,18 @@ const InitialSetupWizard: React.FC<{
 
     useEffect(() => {
         if (crewRolesDraftDirtyRef.current) return;
-        setCrewRolesDraft(formatWizardCrewRoleRows(
+        const savedCrewRoles = getSavedWizardString('crewRoles', 'crewRolesDraft');
+        if (savedCrewRoles) {
+            setCrewRolesDraft(savedCrewRoles);
+            return;
+        }
+        setCrewRolesDraft(hasExplicitCrewPositionTerminologySettings ? formatWizardCrewRoleRows(
             currentWizardCrewPositionTerminology.positions.map((position) => ({
                 role: position.genericName,
                 label: position.label || position.genericName,
                 models: (position.operationalModels || []).join(', '),
             }))
-        ));
+        ) : '');
     }, [JSON.stringify(activeOrganisation?.settings?.crewPositionTerminology || {})]);
 
     const saveWizardConfig = (message: string, updater: (baseConfig: any) => any, options: { silent?: boolean } = {}) => {
@@ -6190,10 +6227,19 @@ const InitialSetupWizard: React.FC<{
             setSaveMessage('Choose an aircraft type before saving crew composition.');
             return;
         }
+        const cleanRoleRequirements = (value: string) => parseRoleRequirementsText(value).filter((row) => (
+            String(row?.role || '').trim()
+            && Number(row?.count || 0) > 0
+        ));
+        const standardSeats = cleanRoleRequirements(standardSeatsText);
+        const alternateRoleRequirements = cleanRoleRequirements(alternateCrewText);
+        if (standardSeats.length === 0 && alternateRoleRequirements.length === 0) {
+            setSaveMessage('Crew composition left blank. Existing crew settings were kept.');
+            return;
+        }
         saveWizardConfig(message, (baseConfig) => {
             const aircraftTypes = Array.isArray(baseConfig.aircraftTypes) ? baseConfig.aircraftTypes : [];
             const existingAircraft = aircraftTypes.find((aircraft: any) => normaliseUnitSettingsIdentifier(aircraft?.code) === normaliseUnitSettingsIdentifier(aircraftCode));
-            const standardSeats = parseRoleRequirementsText(standardSeatsText);
             const nextAircraft = {
                 ...(existingAircraft || {
                     id: createWizardRecordId('aircraft-type'),
@@ -6215,7 +6261,6 @@ const InitialSetupWizard: React.FC<{
             };
             const targetUnitCode = getTargetWizardUnitCode();
             const targetModel = normaliseOperationalModel(unitDraft.operationalModel || getUnitOperationalModel(currentUnit || {}));
-            const alternateRoleRequirements = parseRoleRequirementsText(alternateCrewText);
             return updatePrimaryOrganisationWithSettings(nextConfig, (settings) => {
                 const compositionSettings = normaliseCrewCompositionSettings(settings.crewCompositionSettings || null);
                 const existingProfile = findWizardAlternateCrewProfile(settings);
@@ -6335,7 +6380,7 @@ const InitialSetupWizard: React.FC<{
         const rows = parseWizardCrewRoleRows(crewRolesDraft);
         const validRows = rows.filter((row) => String(row.role || '').trim());
         if (validRows.length === 0) {
-            setSaveMessage('Add at least one crew role before continuing.');
+            setSaveMessage('Crew roles left blank. Existing crew role settings were kept.');
             return;
         }
         saveWizardConfig('Crew roles saved into Settings.', (baseConfig) => updatePrimaryOrganisationWithSettings(baseConfig, (settings) => {
@@ -6462,6 +6507,33 @@ const InitialSetupWizard: React.FC<{
 
     const saveBuildRulesDraft = () => {
         const targetUnitCode = String(unitDraft.code || currentUnit?.code || unitCode || '').trim().toUpperCase();
+        const hasBuildRuleTextInput = [
+            buildRulesDraft.businessRules,
+            buildRulesDraft.maxCrewDutyHours,
+            buildRulesDraft.preferredDutyHours,
+            buildRulesDraft.aircraftTurnaroundMinutes,
+            buildRulesDraft.simTurnaroundMinutes,
+            buildRulesDraft.trainerTurnaroundMinutes,
+            buildRulesDraft.maxDispatchPerHour,
+            buildRulesDraft.maxEventsPerDay,
+            buildRulesDraft.maxFlightsPerDay,
+            buildRulesDraft.minGapBetweenEventsMinutes,
+            buildRulesDraft.flightStaggerMinutes,
+            buildRulesDraft.simulatorStaggerMinutes,
+            buildRulesDraft.authorizationWarningMinutes,
+            buildRulesDraft.authorizationUrgentMinutes,
+        ].some((value) => String(value || '').trim());
+        const existingRuleSets = Array.isArray(platformConfig?.schedulingRuleSets) ? platformConfig.schedulingRuleSets : [];
+        const hasExistingRuleSet = existingRuleSets.some((ruleSet: any) => (
+            targetUnitCode
+            && normaliseUnitSettingsIdentifier(ruleSet?.unitCode) === normaliseUnitSettingsIdentifier(targetUnitCode)
+            && String(ruleSet?.status || 'ACTIVE').toUpperCase() !== 'INACTIVE'
+            && ruleSet?.isActive !== false
+        ));
+        if (!hasBuildRuleTextInput) {
+            setSaveMessage(hasExistingRuleSet ? 'Build rule text boxes left blank. Existing build rules were kept.' : 'Build rules left blank. Default build behaviour was kept.');
+            return;
+        }
         const nextDispatchStaggerSettings = normaliseDispatchStaggerSettings({
             flightMinutes: parseNumberDraft(buildRulesDraft.flightStaggerMinutes, DEFAULT_DISPATCH_STAGGER_SETTINGS.flightMinutes),
             flightNoMinimum: /^yes$/i.test(String(buildRulesDraft.flightStaggerNoMinimum || '').trim()),
@@ -6556,7 +6628,19 @@ const InitialSetupWizard: React.FC<{
     const saveTrainingRecordsDraft = () => {
         const row = parseWizardTrainingReportRows(trainingRecordsDraft)[0];
         if (!row) {
-            setSaveMessage('Add the training report details before continuing.');
+            setSaveMessage('Training report settings left blank. Existing settings were kept.');
+            return;
+        }
+        const hasTrainingReportTextInput = [
+            row.genericName,
+            row.organisationName,
+            row.gradeMin,
+            row.gradeMax,
+            row.passLabel,
+            row.failLabel,
+        ].some((value) => String(value || '').trim());
+        if (!hasTrainingReportTextInput) {
+            setSaveMessage('Training report settings left blank. Existing settings were kept.');
             return;
         }
         const targetUnitCode = String(unitDraft.code || currentUnit?.code || unitCode || '').trim().toUpperCase();
@@ -6604,7 +6688,14 @@ const InitialSetupWizard: React.FC<{
         const targetAircraftTypeCode = String(resourceDraft.aircraftCode || crewDraft.aircraftCode || primaryAircraftType?.code || '').trim().toUpperCase();
         const targetUnitKey = normaliseUnitSettingsIdentifier(targetUnitCode);
         const targetAircraftKey = normaliseUnitSettingsIdentifier(targetAircraftTypeCode);
-        const currencyProfiles = parseWizardCurrencyRows(currencyDraft).map((row, index) => ({
+        const meaningfulCurrencyRows = parseWizardCurrencyRows(currencyDraft).filter((row) => (
+            String(row.name || row.code || row.crew || row.config || row.currency || row.aircraftCount || '').trim()
+        ));
+        if (meaningfulCurrencyRows.length === 0) {
+            setSaveMessage('Currency profiles left blank. Existing currency settings were kept.');
+            return;
+        }
+        const currencyProfiles = meaningfulCurrencyRows.map((row, index) => ({
             id: createWizardRecordId('currency-profile'),
             unitCode: targetUnitCode,
             aircraftTypeCode: targetAircraftTypeCode,
@@ -6684,7 +6775,14 @@ const InitialSetupWizard: React.FC<{
     const saveStaffCurrencyEventsDraft = () => {
         const targetUnitCode = String(unitDraft.code || currentUnit?.code || unitCode || '').trim().toUpperCase();
         const aircraftTypeCode = String(resourceDraft.aircraftCode || crewDraft.aircraftCode || primaryAircraftType?.code || '').trim().toUpperCase();
-        const standardMissionProfiles = parseWizardStandardCurrencyEventRows(staffCurrencyEventsDraft).map((row, index) => ({
+        const meaningfulEventRows = parseWizardStandardCurrencyEventRows(staffCurrencyEventsDraft).filter((row) => (
+            String(row.name || row.shortTitle || row.duration || row.preFlight || row.postFlight || row.crew || row.currency || row.config || row.aircraftCount || '').trim()
+        ));
+        if (meaningfulEventRows.length === 0) {
+            setSaveMessage('Staff currency event presets left blank. Existing presets were kept.');
+            return;
+        }
+        const standardMissionProfiles = meaningfulEventRows.map((row, index) => ({
             id: createWizardRecordId('standard-mission'),
             unitCode: targetUnitCode,
             name: row.name || row.shortTitle || `Standard event ${index + 1}`,
@@ -7697,23 +7795,23 @@ const InitialSetupWizard: React.FC<{
                 ].every((value) => Number.isFinite(Number(value)));
             case 'build-rules':
                 return hasChangedWizardObject(buildRulesDraft, {
-                    businessRules: 'Use configured rule set',
-                    maxCrewDutyHours: '12',
-                    preferredDutyHours: '10',
-                    aircraftTurnaroundMinutes: '60',
-                    simTurnaroundMinutes: '30',
-                    trainerTurnaroundMinutes: '30',
-                    maxDispatchPerHour: '2',
+                    businessRules: '',
+                    maxCrewDutyHours: '',
+                    preferredDutyHours: '',
+                    aircraftTurnaroundMinutes: '',
+                    simTurnaroundMinutes: '',
+                    trainerTurnaroundMinutes: '',
+                    maxDispatchPerHour: '',
                     maxEventsPerDay: '',
                     maxFlightsPerDay: '',
-                    minGapBetweenEventsMinutes: '0',
-                    flightStaggerMinutes: String(DEFAULT_DISPATCH_STAGGER_SETTINGS.flightMinutes),
+                    minGapBetweenEventsMinutes: '',
+                    flightStaggerMinutes: '',
                     flightStaggerNoMinimum: DEFAULT_DISPATCH_STAGGER_SETTINGS.flightNoMinimum ? 'Yes' : 'No',
-                    simulatorStaggerMinutes: String(DEFAULT_DISPATCH_STAGGER_SETTINGS.simulatorMinutes),
+                    simulatorStaggerMinutes: '',
                     simulatorStaggerNoMinimum: DEFAULT_DISPATCH_STAGGER_SETTINGS.simulatorNoMinimum ? 'Yes' : 'No',
                     flightAuthorisationRequired: DEFAULT_TILE_STATUS_SETTINGS.flightAuthorisationRequired ? 'Yes' : 'No',
-                    authorizationWarningMinutes: String(DEFAULT_TILE_STATUS_SETTINGS.authorizationWarningMinutes),
-                    authorizationUrgentMinutes: String(DEFAULT_TILE_STATUS_SETTINGS.authorizationUrgentMinutes),
+                    authorizationWarningMinutes: '',
+                    authorizationUrgentMinutes: '',
                 });
             case 'advanced-scheduling-rules':
                 return hasMeaningfulSchedulingRuleSettings();
@@ -9212,12 +9310,12 @@ const InitialSetupWizard: React.FC<{
         addLabel = 'Add crew role',
     ) => {
         const rows = parseRoleRequirementsText(value);
-        const editableRows = rows.length > 0 ? rows : [{ role: 'Pilot', count: 1 }];
+        const editableRows = rows.length > 0 ? rows : [{ role: '', count: '' }];
         return (
             <div className="rounded-lg border border-slate-300 bg-white p-3">
                 <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
                     <span className={wizardLabelClass}>{title}</span>
-                    <button type="button" className={wizardSmallButtonClass} onClick={() => onChange(formatRoleRequirementsText([...editableRows, { role: 'Crew', count: 1 }]))}>
+                    <button type="button" className={wizardSmallButtonClass} onClick={() => onChange(formatRoleRequirementsText([...editableRows, { role: '', count: '' }]))}>
                         {addLabel}
                     </button>
                 </div>
@@ -9237,12 +9335,12 @@ const InitialSetupWizard: React.FC<{
     };
     const renderCrewLabelsEditor = () => {
         const rows = parseWizardCrewLabelRows(crewLabelsDraft);
-        const editableRows = rows.length > 0 ? rows : [{ term: 'Pilot', label: 'Pilot' }];
+        const editableRows = rows.length > 0 ? rows : [{ term: '', label: '' }];
         return (
             <div className="rounded-lg border border-slate-300 bg-white p-3">
                 <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
                     <span className={wizardLabelClass}>Words shown to users</span>
-                    <button type="button" className={wizardSmallButtonClass} onClick={() => setCrewLabelsDraft(formatWizardCrewLabelRows([...editableRows, { term: 'Crew', label: 'Crew' }]))}>
+                    <button type="button" className={wizardSmallButtonClass} onClick={() => setCrewLabelsDraft(formatWizardCrewLabelRows([...editableRows, { term: '', label: '' }]))}>
                         Add label
                     </button>
                 </div>
@@ -9273,8 +9371,7 @@ const InitialSetupWizard: React.FC<{
         const editableRows = rows.length > 0
             ? rows
             : [
-                { role: 'Pilot', label: 'Pilot', models: OPERATIONAL_MODEL_OPTIONS.map((option) => option.value).join(', ') },
-                { role: 'Trainee', label: 'Trainee', models: OPERATIONAL_MODEL_OPTIONS.map((option) => option.value).join(', ') },
+                { role: '', label: '', models: OPERATIONAL_MODEL_OPTIONS.map((option) => option.value).join(', ') },
             ];
         const updateRow = (index: number, field: 'role' | 'label' | 'models', value: string) => {
             const nextRows = [...editableRows];
@@ -9302,7 +9399,7 @@ const InitialSetupWizard: React.FC<{
                         <div key={`crew-role-draft-${index}`} className="rounded-lg border border-slate-300 bg-white p-3">
                             <div className="grid gap-3 lg:grid-cols-[minmax(0,0.75fr)_minmax(0,0.75fr)_minmax(280px,1.1fr)_74px] lg:items-end">
                                 {wizardField('Crew role name', row.role || '', (value) => updateRow(index, 'role', value), undefined, 'Pilot')}
-                                {wizardField('Label users see', row.label || row.role || '', (value) => updateRow(index, 'label', value), undefined, row.role || 'Pilot')}
+                                {wizardField('Label users see', row.label || '', (value) => updateRow(index, 'label', value), undefined, row.role || 'Pilot')}
                                 <div>
                                     <span className={wizardLabelClass}>Use in models</span>
                                     <div className="mt-1 grid gap-1 rounded-lg border border-slate-300 bg-slate-50 p-2 sm:grid-cols-2">
@@ -9337,7 +9434,7 @@ const InitialSetupWizard: React.FC<{
     };
     const renderStaffEditor = () => {
         const rows = parseWizardStaffRows(staffDraft);
-        const editableRows = rows.length > 0 ? rows : [{ surname: '', givenNames: '', unit: unitDraft.code || '', rank: '', position: '', personnelId: '', qualifications: '' }];
+        const editableRows = rows.length > 0 ? rows : [{ surname: '', givenNames: '', unit: '', rank: '', position: '', personnelId: '', qualifications: '' }];
         const updateStaffRow = (index: number, field: keyof typeof editableRows[number], value: string) => {
             const nextRows = [...editableRows];
             nextRows[index] = { ...nextRows[index], [field]: value };
@@ -9386,10 +9483,10 @@ const InitialSetupWizard: React.FC<{
                     type="button"
                     className={wizardSmallButtonClass}
                     onClick={() => {
-                        setStaffDraft(formatWizardStaffRows([...editableRows, { surname: '', givenNames: '', unit: unitDraft.code || '', rank: '', position: '', personnelId: '', qualifications: '' }]));
+                        setStaffDraft(formatWizardStaffRows([...editableRows, { surname: '', givenNames: '', unit: '', rank: '', position: '', personnelId: '', qualifications: '' }]));
                         setStaffProfilesCommitted(false);
                         setStaffCommitSummary('');
-                        setUploadedStaffProfileRows((current) => current.length > 0 ? [...current, { unit: unitDraft.code || '' }] : current);
+                        setUploadedStaffProfileRows((current) => current.length > 0 ? [...current, { unit: '' }] : current);
                     }}
                 >
                     Add staff member
@@ -9617,7 +9714,7 @@ const InitialSetupWizard: React.FC<{
     };
     const renderTrainingRecordsEditor = () => {
         const rows = parseWizardTrainingReportRows(trainingRecordsDraft);
-        const row = rows[0] || { genericName: 'Training Report', organisationName: 'Assessment Form', gradeMin: '0', gradeMax: '5', showNumbers: 'Yes', noGradeOption: 'No', passLabel: 'Satisfactory', failLabel: 'Unsatisfactory' };
+        const row = rows[0] || { genericName: '', organisationName: '', gradeMin: '', gradeMax: '', showNumbers: 'Yes', noGradeOption: 'No', passLabel: '', failLabel: '' };
         const updateRow = (field: keyof typeof row, value: string) => {
             setTrainingRecordsDraft(formatWizardTrainingReportRows([{ ...row, [field]: value }]));
         };
@@ -9716,7 +9813,7 @@ const InitialSetupWizard: React.FC<{
                     )}
                     {wizardField(
                         'Instructor display term',
-                        rankSettingsDraft.instructorLabel || 'Instructor',
+                        rankSettingsDraft.instructorLabel || '',
                         (value) => updateRankSettingsDraft((current) => ({ ...current, instructorLabel: value })),
                         undefined,
                         'Instructor',
@@ -9911,7 +10008,7 @@ const InitialSetupWizard: React.FC<{
     };
     const renderCurrencyEditor = () => {
         const rows = parseWizardCurrencyRows(currencyDraft);
-        const editableRows = rows.length > 0 ? rows : [{ name: '', code: '', crew: '', config: 'ANY', currency: '', aircraftCount: '1' }];
+        const editableRows = rows.length > 0 ? rows : [{ name: '', code: '', crew: '', config: '', currency: '', aircraftCount: '' }];
         const updateRow = (index: number, field: keyof typeof editableRows[number], value: string) => {
             const nextRows = [...editableRows];
             nextRows[index] = { ...nextRows[index], [field]: value };
@@ -9927,15 +10024,15 @@ const InitialSetupWizard: React.FC<{
                         {wizardField('Event name', row.name || '', (value) => updateRow(index, 'name', value), undefined, 'PIC Currency')}
                         {wizardField('Code', row.code || '', (value) => updateRow(index, 'code', value.toUpperCase()), undefined, 'PIC')}
                         {wizardField('Crew', row.crew || '', (value) => updateRow(index, 'crew', value), undefined, 'Standard crew')}
-                        {wizardField('CONFIG', row.config || 'ANY', (value) => updateRow(index, 'config', value), undefined, 'ANY')}
+                        {wizardField('CONFIG', row.config || '', (value) => updateRow(index, 'config', value), undefined, 'ANY')}
                         {wizardField('Currency', row.currency || '', (value) => updateRow(index, 'currency', value), undefined, 'PIC Currency')}
-                        {wizardField('No. aircraft', row.aircraftCount || '1', (value) => updateRow(index, 'aircraftCount', value), undefined, '1')}
+                        {wizardField('No. aircraft', row.aircraftCount || '', (value) => updateRow(index, 'aircraftCount', value), undefined, '1')}
                         <button type="button" className={wizardSmallButtonClass} onClick={() => updateCurrencyDraft(formatWizardCurrencyRows(editableRows.filter((_, rowIndex) => rowIndex !== index)))}>
                             Delete
                         </button>
                     </div>
                 ))}
-                <button type="button" className={wizardSmallButtonClass} onClick={() => updateCurrencyDraft(formatWizardCurrencyRows([...editableRows, { name: '', code: '', crew: '', config: 'ANY', currency: '', aircraftCount: '1' }]))}>
+                <button type="button" className={wizardSmallButtonClass} onClick={() => updateCurrencyDraft(formatWizardCurrencyRows([...editableRows, { name: '', code: '', crew: '', config: '', currency: '', aircraftCount: '' }]))}>
                     Add currency
                 </button>
             </div>
@@ -9981,7 +10078,7 @@ const InitialSetupWizard: React.FC<{
     };
     const renderStandardCurrencyEventsEditor = () => {
         const rows = parseWizardStandardCurrencyEventRows(staffCurrencyEventsDraft);
-        const editableRows = rows.length > 0 ? rows : [{ name: '', shortTitle: '', resourceType: 'Flight', duration: '90', preFlight: '90', postFlight: '60', crew: 'Standard crew', currency: '', config: 'ANY', aircraftCount: '1' }];
+        const editableRows = rows.length > 0 ? rows : [{ name: '', shortTitle: '', resourceType: 'Flight', duration: '', preFlight: '', postFlight: '', crew: '', currency: '', config: '', aircraftCount: '' }];
         const updateRow = (index: number, field: keyof typeof editableRows[number], value: string) => {
             const nextRows = [...editableRows];
             nextRows[index] = { ...nextRows[index], [field]: value };
@@ -10003,22 +10100,22 @@ const InitialSetupWizard: React.FC<{
                                 (value) => updateRow(index, 'resourceType', value === 'Simulator' ? 'FTD' : value === 'Procedural Trainer' ? 'CPT' : value),
                                 ['Flight', 'Simulator', 'Procedural Trainer', 'Ground'],
                             )}
-                            {wizardField('Duration', row.duration || '90', (value) => updateRow(index, 'duration', value), undefined, '90')}
-                            {wizardField('Pre-flight', row.preFlight || '90', (value) => updateRow(index, 'preFlight', value), undefined, '90')}
-                            {wizardField('Post-flight', row.postFlight || '60', (value) => updateRow(index, 'postFlight', value), undefined, '60')}
+                            {wizardField('Duration', row.duration || '', (value) => updateRow(index, 'duration', value), undefined, '90')}
+                            {wizardField('Pre-flight', row.preFlight || '', (value) => updateRow(index, 'preFlight', value), undefined, '90')}
+                            {wizardField('Post-flight', row.postFlight || '', (value) => updateRow(index, 'postFlight', value), undefined, '60')}
                         </div>
                         <div className="grid min-w-0 gap-2 md:grid-cols-2 xl:grid-cols-3 xl:items-end">
-                            {wizardField('Crew', row.crew || 'Standard crew', (value) => updateRow(index, 'crew', value), undefined, 'Standard crew')}
+                            {wizardField('Crew', row.crew || '', (value) => updateRow(index, 'crew', value), undefined, 'Standard crew')}
                             {wizardField('Currency', row.currency || '', (value) => updateRow(index, 'currency', value), undefined, 'Instrument Currency')}
-                            {wizardField('CONFIG', row.config || 'ANY', (value) => updateRow(index, 'config', value), undefined, 'ANY')}
-                            {wizardField('No. aircraft', row.aircraftCount || '1', (value) => updateRow(index, 'aircraftCount', value), undefined, '1')}
+                            {wizardField('CONFIG', row.config || '', (value) => updateRow(index, 'config', value), undefined, 'ANY')}
+                            {wizardField('No. aircraft', row.aircraftCount || '', (value) => updateRow(index, 'aircraftCount', value), undefined, '1')}
                             <button type="button" className={wizardSmallButtonClass} onClick={() => setStaffCurrencyEventsDraft(formatWizardStandardCurrencyEventRows(editableRows.filter((_, rowIndex) => rowIndex !== index)))}>
                                 Delete
                             </button>
                         </div>
                     </div>
                 ))}
-                <button type="button" className={wizardSmallButtonClass} onClick={() => setStaffCurrencyEventsDraft(formatWizardStandardCurrencyEventRows([...editableRows, { name: '', shortTitle: '', resourceType: 'Flight', duration: '90', preFlight: '90', postFlight: '60', crew: 'Standard crew', currency: '', config: 'ANY', aircraftCount: '1' }]))}>
+                <button type="button" className={wizardSmallButtonClass} onClick={() => setStaffCurrencyEventsDraft(formatWizardStandardCurrencyEventRows([...editableRows, { name: '', shortTitle: '', resourceType: 'Flight', duration: '', preFlight: '', postFlight: '', crew: '', currency: '', config: '', aircraftCount: '' }]))}>
                     Add standard currency event
                 </button>
             </div>
@@ -10158,6 +10255,7 @@ const InitialSetupWizard: React.FC<{
         setWizardStep(boundedStep);
     };
     const renderFlyingWindowsEditor = () => {
+        const showTimePlaceholders = !initialWizardSetupCompleted;
         const rows = [
             { key: 'flight', label: 'Day flying', enabled: true, start: flyingStartTime, end: flyingEndTime, setStart: onUpdateFlyingStartTime, setEnd: onUpdateFlyingEndTime },
             { key: 'ftd', label: 'Simulator operating', enabled: true, start: ftdStartTime, end: ftdEndTime, setStart: onUpdateFtdStartTime, setEnd: onUpdateFtdEndTime },
@@ -10182,11 +10280,11 @@ const InitialSetupWizard: React.FC<{
                                         </select>
                                     ) : <span className="inline-flex rounded border border-emerald-200 bg-emerald-50 px-2 py-1 text-xs font-bold text-emerald-800">Yes</span>}
                                 </td>
-                                <td className="px-3 py-2"><WizardFlyingWindowTimeInput draftKey={`${row.key}-start`} className={wizardInputClass} value={row.start} enabled={row.enabled} onCommit={row.setStart} onDraftChange={(key, value) => {
+                                <td className="px-3 py-2"><WizardFlyingWindowTimeInput draftKey={`${row.key}-start`} className={wizardInputClass} value={row.start} enabled={row.enabled} placeholderOnly={showTimePlaceholders} onCommit={row.setStart} onDraftChange={(key, value) => {
                                     if (value === null) delete flyingWindowDraftRef.current[key];
                                     else flyingWindowDraftRef.current[key] = value;
                                 }} /></td>
-                                <td className="px-3 py-2"><WizardFlyingWindowTimeInput draftKey={`${row.key}-end`} className={wizardInputClass} value={row.end} enabled={row.enabled} onCommit={row.setEnd} onDraftChange={(key, value) => {
+                                <td className="px-3 py-2"><WizardFlyingWindowTimeInput draftKey={`${row.key}-end`} className={wizardInputClass} value={row.end} enabled={row.enabled} placeholderOnly={showTimePlaceholders} onCommit={row.setEnd} onDraftChange={(key, value) => {
                                     if (value === null) delete flyingWindowDraftRef.current[key];
                                     else flyingWindowDraftRef.current[key] = value;
                                 }} /></td>
@@ -12839,11 +12937,11 @@ const InitialSetupWizard: React.FC<{
                     </div>
                 </>,
                 <div className="grid gap-3 md:grid-cols-5">
-                    {wizardField('Aircraft', resourceDraft.aircraft, (value) => updateResourceDraft((draft) => ({ ...draft, aircraft: value })))}
-                    {wizardField('Sim', resourceDraft.sim, (value) => updateResourceDraft((draft) => ({ ...draft, sim: value })))}
-                    {wizardField('Trainer', resourceDraft.trainer, (value) => updateResourceDraft((draft) => ({ ...draft, trainer: value })))}
-                    {wizardField('Standby Lines', resourceDraft.standby, (value) => updateResourceDraft((draft) => ({ ...draft, standby: value })))}
-                    {wizardField('Ground Lines', resourceDraft.ground, (value) => updateResourceDraft((draft) => ({ ...draft, ground: value })))}
+                    {wizardField('Aircraft', resourceDraft.aircraft, (value) => updateResourceDraft((draft) => ({ ...draft, aircraft: value })), undefined, '12')}
+                    {wizardField('Sim', resourceDraft.sim, (value) => updateResourceDraft((draft) => ({ ...draft, sim: value })), undefined, '2')}
+                    {wizardField('Trainer', resourceDraft.trainer, (value) => updateResourceDraft((draft) => ({ ...draft, trainer: value })), undefined, '1')}
+                    {wizardField('Standby Lines', resourceDraft.standby, (value) => updateResourceDraft((draft) => ({ ...draft, standby: value })), undefined, '1')}
+                    {wizardField('Ground Lines', resourceDraft.ground, (value) => updateResourceDraft((draft) => ({ ...draft, ground: value })), undefined, '3')}
                     {wizardClassroomNamesField()}
                     {wizardAcademicStandardEventsField()}
                 </div>,
