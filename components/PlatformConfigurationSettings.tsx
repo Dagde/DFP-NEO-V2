@@ -5456,8 +5456,12 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
     });
   };
 
-  const platformActionButtonClass = 'w-[56px] h-[41px] flex items-center justify-center text-center px-1 py-1 text-[10px] font-semibold btn-aluminium-brushed rounded-md disabled:cursor-not-allowed disabled:opacity-50';
-  const aircraftResourceMiniButtonClass = 'h-[38px] min-w-[76px] rounded-md border border-gray-500 bg-gray-300 px-3 text-xs font-bold text-gray-900 hover:bg-gray-200 disabled:cursor-not-allowed disabled:opacity-50';
+  const platformActionButtonClass = wizardEditMode
+    ? 'min-h-[38px] min-w-[64px] rounded-lg border border-sky-500 bg-sky-500 px-3 py-2 text-center text-[10px] font-black leading-tight text-white shadow-sm transition hover:border-sky-600 hover:bg-sky-600 disabled:cursor-not-allowed disabled:border-slate-300 disabled:bg-slate-200 disabled:text-slate-500'
+    : 'w-[56px] h-[41px] flex items-center justify-center text-center px-1 py-1 text-[10px] font-semibold btn-aluminium-brushed rounded-md disabled:cursor-not-allowed disabled:opacity-50';
+  const aircraftResourceMiniButtonClass = wizardEditMode
+    ? 'h-[38px] min-w-[76px] rounded-lg border border-sky-500 bg-sky-500 px-3 text-xs font-black text-white shadow-sm transition hover:border-sky-600 hover:bg-sky-600 disabled:cursor-not-allowed disabled:border-slate-300 disabled:bg-slate-200 disabled:text-slate-500'
+    : 'h-[38px] min-w-[76px] rounded-md border border-gray-500 bg-gray-300 px-3 text-xs font-bold text-gray-900 hover:bg-gray-200 disabled:cursor-not-allowed disabled:opacity-50';
 
   const rewriteUnitCodesInSettings = (settings: Record<string, any> = {}, oldCode: string, nextCode: string | null): Record<string, any> => {
     const normalise = (value: unknown) => String(value || '').trim();
