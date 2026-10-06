@@ -1230,7 +1230,7 @@ const validateWizardTemplateFile = async (
             status: 'error',
             fileName: file.name,
             rowCount: dataRows.length,
-            message: `I checked ${file.name}, but it is not ready to import yet.`,
+            message: `${file.name} is not ready to import yet.`,
             issues: [
                 ...issues,
                 `Example: the ${template.label} template should include ${template.requiredHeaders.join(', ')}.`,
@@ -7207,7 +7207,7 @@ const InitialSetupWizard: React.FC<{
     const steps: InitialSetupWizardStep[] = [
         {
             id: 'analysis',
-            title: 'Let us check what is already set up',
+            title: 'Review current setup status',
             label: 'Check',
             body: 'Review the current setup status, then continue through each configuration step.',
             checkIds: checks.map((check) => check.id),
@@ -8420,7 +8420,7 @@ const InitialSetupWizard: React.FC<{
                 [templateId]: {
                     status: 'error',
                     fileName: file.name,
-                    message: `I could not read ${file.name}.`,
+                    message: `${file.name} could not be read.`,
                     issues: [error?.message || 'Try saving the file as CSV or XLSX and upload it again.'],
                 },
             }));
@@ -8430,7 +8430,7 @@ const InitialSetupWizard: React.FC<{
     const confirmWizardTemplateExampleRow = (templateId: string, hasExampleRow = true) => {
         const pendingFile = pendingWizardTemplateFilesRef.current[templateId];
         if (!pendingFile) {
-            setSaveMessage('Upload the file again so I can confirm the example row choice.');
+            setSaveMessage('Upload the file again to confirm the example row choice.');
             return;
         }
         const selectedRow = Number(exampleRowSelections[templateId] || 3);
@@ -8884,7 +8884,7 @@ const InitialSetupWizard: React.FC<{
                 firstRawRows: result.dataRows.slice(0, 5),
             });
             if (importedItems.length === 0) {
-                const message = 'The LMP file passed the column check, but I could not find any rows with both an event code and an event title/description.';
+                const message = 'The LMP file passed the column check, but no rows contained both an event code and an event title/description.';
                 setImportConfirmations((current) => ({ ...current, [template.id]: message }));
                 setSaveMessage(message);
                 pushWizardImportDiag('courses:no-importable-events', {
@@ -12751,7 +12751,7 @@ const InitialSetupWizard: React.FC<{
         }
         if (visibleStep.id === 'org-name') {
             return promptShell(
-                <p>First we are going to set up your organisation. What is the name of your organisation?</p>,
+                <p>Start by entering the organisation name.</p>,
                 <div className="grid gap-3 md:grid-cols-2">
                     {wizardField('Organisation name', organisationDraft.name, (value) => updateOrganisationDraft((draft: typeof organisationDraft) => ({
                         ...draft,
@@ -12888,7 +12888,7 @@ const InitialSetupWizard: React.FC<{
                         )}
                     </div>
                     <p className="mt-3 text-xs leading-5 text-slate-600">
-                        The wizard will use the first unit for the detailed setup questions, then apply the same structure to every other unit you listed.
+                        The first unit is used for the detailed setup questions, then the same structure is applied to every other unit listed.
                     </p>
                 </div>,
             );
@@ -13418,7 +13418,7 @@ const InitialSetupWizard: React.FC<{
                     </div>
                     {wizardAvailableGroundEventSchedulingEvents.length === 0 ? (
                         <div className="rounded-lg border border-amber-200 bg-amber-50 p-3 text-xs font-semibold leading-5 text-amber-950">
-                            I cannot see any LMP ground events yet. Upload or commit the LMP first, then return to this step.
+                            No LMP ground events are available yet. Upload or commit the LMP first, then return to this step.
                         </div>
                     ) : (
                         <>

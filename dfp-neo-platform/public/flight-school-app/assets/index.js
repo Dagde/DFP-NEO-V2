@@ -33468,7 +33468,7 @@ const validateWizardTemplateFile = async (template, file, skipConfirmedExampleRo
       status: "error",
       fileName: file.name,
       rowCount: dataRows.length,
-      message: `I checked ${file.name}, but it is not ready to import yet.`,
+      message: `${file.name} is not ready to import yet.`,
       issues: [
         ...issues,
         `Example: the ${template.label} template should include ${template.requiredHeaders.join(", ")}.`
@@ -38207,7 +38207,7 @@ const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, lo
   const steps = [
     {
       id: "analysis",
-      title: "Let us check what is already set up",
+      title: "Review current setup status",
       label: "Check",
       body: "Review the current setup status, then continue through each configuration step.",
       checkIds: checks.map((check) => check.id),
@@ -39235,7 +39235,7 @@ const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, lo
         [templateId]: {
           status: "error",
           fileName: file.name,
-          message: `I could not read ${file.name}.`,
+          message: `${file.name} could not be read.`,
           issues: [error?.message || "Try saving the file as CSV or XLSX and upload it again."]
         }
       }));
@@ -39244,7 +39244,7 @@ const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, lo
   const confirmWizardTemplateExampleRow = (templateId, hasExampleRow = true) => {
     const pendingFile = pendingWizardTemplateFilesRef.current[templateId];
     if (!pendingFile) {
-      setSaveMessage("Upload the file again so I can confirm the example row choice.");
+      setSaveMessage("Upload the file again to confirm the example row choice.");
       return;
     }
     const selectedRow = Number(exampleRowSelections[templateId] || 3);
@@ -39623,7 +39623,7 @@ const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, lo
         firstRawRows: result.dataRows.slice(0, 5)
       });
       if (importedItems.length === 0) {
-        const message2 = "The LMP file passed the column check, but I could not find any rows with both an event code and an event title/description.";
+        const message2 = "The LMP file passed the column check, but no rows contained both an event code and an event title/description.";
         setImportConfirmations((current) => ({ ...current, [template.id]: message2 }));
         setSaveMessage(message2);
         pushWizardImportDiag("courses:no-importable-events", {
@@ -43014,7 +43014,7 @@ const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, lo
     }
     if (visibleStep.id === "org-name") {
       return promptShell(
-        /* @__PURE__ */ jsxRuntimeExports.jsx("p", { children: "First we are going to set up your organisation. What is the name of your organisation?" }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx("p", { children: "Start by entering the organisation name." }),
         /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid gap-3 md:grid-cols-2", children: [
           wizardField("Organisation name", organisationDraft.name, (value) => updateOrganisationDraft((draft) => ({
             ...draft,
@@ -43155,7 +43155,7 @@ const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, lo
               ] }, `unit-parent-${row.code}`);
             }) }) : /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-3 rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-xs font-semibold leading-5 text-amber-900", children: "Add the organisation levels above first, then return here to choose each unit's parent." })
           ] }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-3 text-xs leading-5 text-slate-600", children: "The wizard will use the first unit for the detailed setup questions, then apply the same structure to every other unit you listed." })
+          /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-3 text-xs leading-5 text-slate-600", children: "The first unit is used for the detailed setup questions, then the same structure is applied to every other unit listed." })
         ] })
       );
     }
@@ -43630,7 +43630,7 @@ const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, lo
         /* @__PURE__ */ jsxRuntimeExports.jsx("p", { children: "Choose how NEO Build should handle group ground events from the LMP. Start with one group, then add more groups if your organisation schedules different event types differently." }),
         /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-4", children: [
           /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "rounded-lg border border-blue-200 bg-blue-50 p-3 text-xs font-semibold leading-5 text-blue-950", children: "The group name field shows an example in grey. It is not saved until you enter a name or assign details. Manual means NEO Build will not place those events automatically. Suggest means NEO Build can alert the scheduler. Automatic means NEO Build may place the event during the selected windows." }),
-          wizardAvailableGroundEventSchedulingEvents.length === 0 ? /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "rounded-lg border border-amber-200 bg-amber-50 p-3 text-xs font-semibold leading-5 text-amber-950", children: "I cannot see any LMP ground events yet. Upload or commit the LMP first, then return to this step." }) : /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
+          wizardAvailableGroundEventSchedulingEvents.length === 0 ? /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "rounded-lg border border-amber-200 bg-amber-50 p-3 text-xs font-semibold leading-5 text-amber-950", children: "No LMP ground events are available yet. Upload or commit the LMP first, then return to this step." }) : /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
             /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid gap-3 md:grid-cols-[1fr_auto] md:items-start", children: [
               /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: `rounded-lg border p-3 text-xs font-semibold leading-5 ${wizardUnassignedGroundEvents.length > 0 ? "border-amber-300 bg-amber-50 text-amber-950" : "border-emerald-300 bg-emerald-50 text-emerald-950"}`, children: [
                 /* @__PURE__ */ jsxRuntimeExports.jsxs("p", { children: [
