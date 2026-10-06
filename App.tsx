@@ -19802,6 +19802,17 @@ const applyCoursePriority = (rankedList: Trainee[], diagnosticLabel = 'unlabelle
     const isGroupGroundCovered = (trainee: Trainee, syllabusItem?: SyllabusItemDetail | null): boolean => (
         groupGroundCoveredNextKeys.has(makeGroupGroundCoverageKey(trainee, syllabusItem))
     );
+    const markGroupGroundCandidateAsSkippedForBuild = (candidate: GroupGroundCandidate): number => {
+        let coveredCount = 0;
+        candidate.readyTrainees.forEach(trainee => {
+            const key = makeGroupGroundCoverageKey(trainee, candidate.syllabusItem);
+            if (!groupGroundCoveredNextKeys.has(key)) {
+                groupGroundCoveredNextKeys.add(key);
+                coveredCount += 1;
+            }
+        });
+        return coveredCount;
+    };
     const parsePositiveGroupInteger = (value: unknown): number | null => {
         const numeric = Number(value);
         if (!Number.isFinite(numeric) || numeric <= 0) return null;
@@ -20096,6 +20107,7 @@ const applyCoursePriority = (rankedList: Trainee[], diagnosticLabel = 'unlabelle
         if (candidate.mode === 'suggest') {
             const accepted = await confirmSuggestedGroupGroundCandidate(candidate, candidateIndex, candidateTotal);
             if (!accepted) {
+                const skippedTraineeCount = markGroupGroundCandidateAsSkippedForBuild(candidate);
                 const note = `Skipped suggested group ground event ${eventLabel} for ${candidate.course}.`;
                 neoBuildDiag.groupGroundScheduling.notes.push(note);
                 neoBuildDiag.groupGroundScheduling.skips.push({
@@ -20103,6 +20115,8 @@ const applyCoursePriority = (rankedList: Trainee[], diagnosticLabel = 'unlabelle
                     event: eventLabel,
                     course: candidate.course,
                     eventType: candidate.eventType,
+                    skippedTraineeCount,
+                    explanation: 'The user chose Skip, so this event was also removed from the individual ground scheduling queue for this build.',
                 });
                 return false;
             }

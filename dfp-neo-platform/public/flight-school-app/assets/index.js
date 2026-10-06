@@ -133120,6 +133120,17 @@ async function generateDfpInternal(config, setProgress, publishedSchedules) {
     normalizeLmpEventId(syllabusItem?.code || syllabusItem?.id || syllabusItem?.masterEventId || "")
   ].join("::");
   const isGroupGroundCovered = (trainee, syllabusItem) => groupGroundCoveredNextKeys.has(makeGroupGroundCoverageKey(trainee, syllabusItem));
+  const markGroupGroundCandidateAsSkippedForBuild = (candidate) => {
+    let coveredCount = 0;
+    candidate.readyTrainees.forEach((trainee) => {
+      const key = makeGroupGroundCoverageKey(trainee, candidate.syllabusItem);
+      if (!groupGroundCoveredNextKeys.has(key)) {
+        groupGroundCoveredNextKeys.add(key);
+        coveredCount += 1;
+      }
+    });
+    return coveredCount;
+  };
   const parsePositiveGroupInteger = (value) => {
     const numeric = Number(value);
     if (!Number.isFinite(numeric) || numeric <= 0) return null;
@@ -133344,13 +133355,16 @@ Would you like NEO Build to schedule this one?`,
     if (candidate.mode === "suggest") {
       const accepted = await confirmSuggestedGroupGroundCandidate(candidate, candidateIndex, candidateTotal);
       if (!accepted) {
+        const skippedTraineeCount = markGroupGroundCandidateAsSkippedForBuild(candidate);
         const note2 = `Skipped suggested group ground event ${eventLabel} for ${candidate.course}.`;
         neoBuildDiag.groupGroundScheduling.notes.push(note2);
         neoBuildDiag.groupGroundScheduling.skips.push({
           reason: "USER_SKIPPED_SUGGESTION",
           event: eventLabel,
           course: candidate.course,
-          eventType: candidate.eventType
+          eventType: candidate.eventType,
+          skippedTraineeCount,
+          explanation: "The user chose Skip, so this event was also removed from the individual ground scheduling queue for this build."
         });
         return false;
       }
