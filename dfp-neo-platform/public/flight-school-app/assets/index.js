@@ -145279,6 +145279,15 @@ ${error instanceof Error ? error.message : String(error)}`,
     const entries = Object.entries(courseColors).filter(([courseName]) => scopedCourseNameSet.has(courseName));
     return Object.fromEntries(entries);
   }, [courseColors, scopedCourseNameSet]);
+  const settingsScopedTraineesData = reactExports.useMemo(() => {
+    if (activeContextUnitCodeSet.size === 0 && scopedCourseNameSet.size === 0) return traineesData;
+    return traineesData.filter((trainee) => {
+      const traineeUnitCode = normalisePersonnelUnitCode(trainee?.unit);
+      if (traineeUnitCode && activeContextUnitCodeSet.has(traineeUnitCode)) return true;
+      const traineeCourseName = normaliseCourseName(trainee?.course);
+      return Boolean(traineeCourseName && scopedCourseNameSet.has(traineeCourseName));
+    });
+  }, [activeContextUnitCodeSet, normaliseCourseName, scopedCourseNameSet, traineesData]);
   const historicalCourseStateForDate = reactExports.useMemo(() => {
     const snapshotCourses = Array.isArray(activeHistoricalDfpContext?.courseState) ? activeHistoricalDfpContext.courseState : [];
     return snapshotCourses.map((course) => ({
@@ -164925,9 +164934,9 @@ It will not clear the published DFP.`,
             locationOpAreas,
             onUpdateLocationOpAreas: setLocationOpAreas,
             instructorsData,
-            traineesData,
+            traineesData: settingsScopedTraineesData,
             onDatabaseDataChanged: handleDatabaseDataChanged,
-            syllabusDetails,
+            syllabusDetails: visibleSyllabusDetails,
             onShowSuccess: setSuccessMessage,
             eventLimits,
             onUpdateEventLimits: setEventLimits,
@@ -164995,7 +165004,7 @@ It will not clear the published DFP.`,
             },
             formationCallsigns,
             onUpdateFormationCallsigns: setFormationCallsigns,
-            courseColors,
+            courseColors: scopedCourseColors,
             cancellationRecords,
             cancellationCodes,
             dayFlyingStart: `${Math.floor(flyingStartTime).toString().padStart(2, "0")}:${Math.round(flyingStartTime % 1 * 60).toString().padStart(2, "0")}`,

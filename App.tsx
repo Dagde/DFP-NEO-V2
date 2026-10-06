@@ -34540,6 +34540,17 @@ const App: React.FC = () => {
 	        return Object.fromEntries(entries);
 	    }, [courseColors, scopedCourseNameSet]);
 
+    const settingsScopedTraineesData = useMemo(() => {
+        if (activeContextUnitCodeSet.size === 0 && scopedCourseNameSet.size === 0) return traineesData;
+        return traineesData.filter((trainee: any) => {
+            const traineeUnitCode = normalisePersonnelUnitCode(trainee?.unit);
+            if (traineeUnitCode && activeContextUnitCodeSet.has(traineeUnitCode)) return true;
+
+            const traineeCourseName = normaliseCourseName(trainee?.course);
+            return Boolean(traineeCourseName && scopedCourseNameSet.has(traineeCourseName));
+        });
+    }, [activeContextUnitCodeSet, normaliseCourseName, scopedCourseNameSet, traineesData]);
+
 	    const historicalCourseStateForDate = useMemo<Course[]>(() => {
 	        const snapshotCourses = Array.isArray(activeHistoricalDfpContext?.courseState)
 	            ? activeHistoricalDfpContext.courseState
@@ -58102,9 +58113,9 @@ appliedUpdates.forEach(update => {
                     locationOpAreas={locationOpAreas}
                     onUpdateLocationOpAreas={setLocationOpAreas}
                     instructorsData={instructorsData}
-                    traineesData={traineesData}
+                    traineesData={settingsScopedTraineesData}
                     onDatabaseDataChanged={handleDatabaseDataChanged}
-                    syllabusDetails={syllabusDetails}
+                    syllabusDetails={visibleSyllabusDetails}
                     onShowSuccess={setSuccessMessage}
                     eventLimits={eventLimits}
                     onUpdateEventLimits={setEventLimits}
@@ -58173,7 +58184,7 @@ appliedUpdates.forEach(update => {
 
                        formationCallsigns={formationCallsigns}
                           onUpdateFormationCallsigns={setFormationCallsigns}
-                          courseColors={courseColors}
+                          courseColors={scopedCourseColors}
                           cancellationRecords={cancellationRecords}
                           cancellationCodes={cancellationCodes}
                        dayFlyingStart={`${Math.floor(flyingStartTime).toString().padStart(2, "0")}:${Math.round((flyingStartTime % 1) * 60).toString().padStart(2, "0")}`}
