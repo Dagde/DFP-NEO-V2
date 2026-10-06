@@ -44732,6 +44732,7 @@ const ScheduleView = ({
   const hasInitialSetupWizardProgress = reactExports.useCallback(() => hasStoredInitialSetupWizardProgress() || hasPersistedInitialSetupWizardProgress(), [hasPersistedInitialSetupWizardProgress, hasStoredInitialSetupWizardProgress]);
   const initialSetupWizardHasProgress = hasInitialSetupWizardProgress();
   const shouldShowInitialSetupPrompt = showInitialSetupBlankState && !showEmptyDfpWelcome && !showResourceUnderlayPanel && !resumeInitialSetupWizard;
+  const shouldRenderEmptyDfpWelcome = showEmptyDfpWelcome && !shouldShowInitialSetupPrompt && !showResourceUnderlayPanel;
   const openInitialSetupWizard = reactExports.useCallback(() => {
     onOrganisationSlideoutOpen?.();
     setShowResourceUnderlayPanel(true);
@@ -45718,7 +45719,7 @@ const ScheduleView = ({
   const lastEmptyDfpWelcomeRenderSignatureRef = reactExports.useRef("");
   reactExports.useEffect(() => {
     if (typeof window === "undefined") return;
-    const overlayShouldRender = showEmptyDfpWelcome && !shouldShowInitialSetupPrompt;
+    const overlayShouldRender = shouldRenderEmptyDfpWelcome;
     const frameId = window.requestAnimationFrame(() => {
       const overlay = document.querySelector('[data-empty-dfp-welcome-overlay="true"]');
       const scheduleSurface = scrollContainerRef.current;
@@ -45815,6 +45816,7 @@ const ScheduleView = ({
     formattedDisplayDate,
     resources,
     resumeInitialSetupWizard,
+    shouldRenderEmptyDfpWelcome,
     shouldShowInitialSetupPrompt,
     showEmptyDfpWelcome,
     showInitialSetupBlankState,
@@ -46611,7 +46613,7 @@ const ScheduleView = ({
         }
       )
     ] }) }),
-    showEmptyDfpWelcome && !shouldShowInitialSetupPrompt && /* @__PURE__ */ jsxRuntimeExports.jsx(
+    shouldRenderEmptyDfpWelcome && /* @__PURE__ */ jsxRuntimeExports.jsx(
       "div",
       {
         "data-empty-dfp-welcome-overlay": "true",

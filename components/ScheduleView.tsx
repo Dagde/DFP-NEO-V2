@@ -14557,6 +14557,7 @@ const ScheduleView: React.FC<ScheduleViewProps> = ({
     ), [hasPersistedInitialSetupWizardProgress, hasStoredInitialSetupWizardProgress]);
     const initialSetupWizardHasProgress = hasInitialSetupWizardProgress();
     const shouldShowInitialSetupPrompt = showInitialSetupBlankState && !showEmptyDfpWelcome && !showResourceUnderlayPanel && !resumeInitialSetupWizard;
+    const shouldRenderEmptyDfpWelcome = showEmptyDfpWelcome && !shouldShowInitialSetupPrompt && !showResourceUnderlayPanel;
     const openInitialSetupWizard = useCallback(() => {
         onOrganisationSlideoutOpen?.();
         setShowResourceUnderlayPanel(true);
@@ -15651,7 +15652,7 @@ const ScheduleView: React.FC<ScheduleViewProps> = ({
 
     useEffect(() => {
         if (typeof window === 'undefined') return;
-        const overlayShouldRender = showEmptyDfpWelcome && !shouldShowInitialSetupPrompt;
+        const overlayShouldRender = shouldRenderEmptyDfpWelcome;
         const frameId = window.requestAnimationFrame(() => {
             const overlay = document.querySelector('[data-empty-dfp-welcome-overlay="true"]') as HTMLElement | null;
             const scheduleSurface = scrollContainerRef.current;
@@ -15761,6 +15762,7 @@ const ScheduleView: React.FC<ScheduleViewProps> = ({
         formattedDisplayDate,
         resources,
         resumeInitialSetupWizard,
+        shouldRenderEmptyDfpWelcome,
         shouldShowInitialSetupPrompt,
         showEmptyDfpWelcome,
         showInitialSetupBlankState,
@@ -16733,7 +16735,7 @@ const ScheduleView: React.FC<ScheduleViewProps> = ({
                     </div>
                 </div>
             )}
-            {showEmptyDfpWelcome && !shouldShowInitialSetupPrompt && (
+            {shouldRenderEmptyDfpWelcome && (
                 <div
                     data-empty-dfp-welcome-overlay="true"
                     data-empty-dfp-welcome-variant={emptyDfpWelcomeVariant}
