@@ -372,6 +372,8 @@ export interface PlatformAccessContext {
   isPlatformAdmin: boolean;
   isSuperAdmin: boolean;
   accessibleLocations: string[];
+  accessibleUnits: string[];
+  hasAllUnitAccess: boolean;
   permissionProfileIds: string[];
   permissions: PlatformPermissionId[];
 }
@@ -918,6 +920,13 @@ const normaliseAccessRow = (row: PlatformAccessRow): PlatformAccessRow => ({
   settings: parseSettingsObject(row.settings),
 });
 
+const getActiveUnitCodes = (config: PlatformConfig | null): string[] => (
+  uniqueValues((config?.units || [])
+    .filter((unit: any) => normaliseAccessValue(unit?.status) !== 'inactive')
+    .map((unit: any) => String(unit?.code || '').trim())
+    .filter(Boolean))
+);
+
 export const getPlatformUserIdentityValuesForPerson = (
   config: PlatformConfig | null,
   person: Record<string, any> | null | undefined,
@@ -983,29 +992,38 @@ export const getPlatformUserIdentityValuesForPerson = (
 export const getPlatformPermissionProfiles = (
   config: PlatformConfig | null,
 ): PlatformPermissionProfile[] => {
-  const profileConfig = parseSettingsObject(config?.organisations?.[0]?.settings)?.permissionProfiles;
-  const normalisedProfiles = Array.isArray(profileConfig)
-    ? profileConfig
-        .map((profile): PlatformPermissionProfile | null => {
-          const id = String(profile?.id || '').trim();
-          if (!id) return null;
-          const permissions = Array.isArray(profile?.permissions)
-            ? uniqueValues(profile.permissions.map((permission: unknown) => String(permission || '').trim()).filter(Boolean))
-            : [];
-          return {
-            id,
-            name: String(profile?.name || id).trim(),
-            description: String(profile?.description || '').trim(),
-            permissions,
-            settings: parseSettingsObject(profile?.settings),
-          };
-        })
-        .filter((profile): profile is PlatformPermissionProfile => Boolean(profile))
-    : [];
+  const profileConfigs = [
+    parseSettingsObject(config?.organisations?.[0]?.settings)?.permissionProfiles,
+    ...((config?.units || []).map((unit: any) => parseSettingsObject(unit?.settings)?.permissionProfiles)),
+  ].filter(Array.isArray);
 
-  return Array.isArray(profileConfig)
-    ? normalisedProfiles
-    : DEFAULT_PLATFORM_PERMISSION_PROFILES;
+  const normalisedProfiles = profileConfigs
+    .flatMap((profileConfig) => profileConfig as any[])
+    .map((profile): PlatformPermissionProfile | null => {
+      const id = String(profile?.id || '').trim();
+      if (!id) return null;
+      const permissions = Array.isArray(profile?.permissions)
+        ? uniqueValues(profile.permissions.map((permission: unknown) => String(permission || '').trim()).filter(Boolean))
+        : [];
+      return {
+        id,
+        name: String(profile?.name || id).trim(),
+        description: String(profile?.description || '').trim(),
+        permissions,
+        settings: parseSettingsObject(profile?.settings),
+      };
+    })
+    .filter((profile): profile is PlatformPermissionProfile => Boolean(profile));
+
+  if (normalisedProfiles.length === 0) return DEFAULT_PLATFORM_PERMISSION_PROFILES;
+
+  const profilesById = new Map<string, PlatformPermissionProfile>();
+  normalisedProfiles.forEach((profile) => {
+    const key = normaliseAccessValue(profile.id);
+    if (!key || profilesById.has(key)) return;
+    profilesById.set(key, profile);
+  });
+  return Array.from(profilesById.values());
 };
 
 const uniqueValues = <T,>(values: T[]): T[] => Array.from(new Set(values));
@@ -1148,7 +1166,7 @@ const resolvePermissionsForRows = (
 
 export const getPlatformAccessContext = (
   config: PlatformConfig | null,
-  userIdentifiers: Array<string | null | undefined>,
+  userIdentifiers: Array<string | number | null | undefined>,
   supportedCodes: string[] = [],
 ): PlatformAccessContext => {
   const activeRows = ((config?.userAccess || []) as PlatformAccessRow[])
@@ -1161,6 +1179,7 @@ export const getPlatformAccessContext = (
         : row.locationCode,
     }));
   const configuredLocations = getLocationCodesForCurrentRuntime(config, supportedCodes);
+  const configuredUnitCodes = getActiveUnitCodes(config);
 
   if (!config || activeRows.length === 0) {
     return {
@@ -1169,6 +1188,8 @@ export const getPlatformAccessContext = (
       isPlatformAdmin: true,
       isSuperAdmin: true,
       accessibleLocations: configuredLocations,
+      accessibleUnits: configuredUnitCodes,
+      hasAllUnitAccess: true,
       permissionProfileIds: DEFAULT_PLATFORM_PERMISSION_PROFILES.map((profile) => profile.id),
       permissions: ALL_PLATFORM_PERMISSION_IDS,
     };
@@ -1187,6 +1208,8 @@ export const getPlatformAccessContext = (
       isPlatformAdmin: false,
       isSuperAdmin: false,
       accessibleLocations: [],
+      accessibleUnits: [],
+      hasAllUnitAccess: false,
       permissionProfileIds: [],
       permissions: [],
     };
@@ -1201,6 +1224,14 @@ export const getPlatformAccessContext = (
   const accessibleLocations = rowLocations.length === 0
     ? configuredLocations
     : configuredLocations.filter((code) => rowLocationSet.has(normaliseAccessValue(code)));
+  const rowUnitCodes = rows
+    .map((row) => String(row.unitCode || '').trim())
+    .filter(Boolean);
+  const hasAllUnitAccess = rowUnitCodes.length === 0 || rows.some((row) => !String(row.unitCode || '').trim());
+  const rowUnitSet = new Set(rowUnitCodes.map(normaliseAccessValue));
+  const accessibleUnits = hasAllUnitAccess
+    ? configuredUnitCodes
+    : configuredUnitCodes.filter((code) => rowUnitSet.has(normaliseAccessValue(code)));
 
   return {
     rows,
@@ -1208,6 +1239,8 @@ export const getPlatformAccessContext = (
     isPlatformAdmin: permissionContext.isPlatformAdmin,
     isSuperAdmin: permissionContext.isSuperAdmin,
     accessibleLocations,
+    accessibleUnits,
+    hasAllUnitAccess,
     permissionProfileIds: permissionContext.profileIds,
     permissions: permissionContext.permissions,
   };

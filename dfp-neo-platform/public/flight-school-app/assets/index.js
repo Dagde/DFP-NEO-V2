@@ -4175,6 +4175,7 @@ const normaliseAccessRow = (row) => ({
   ...row,
   settings: parseSettingsObject(row.settings)
 });
+const getActiveUnitCodes = (config) => uniqueValues$1((config?.units || []).filter((unit) => normaliseAccessValue(unit?.status) !== "inactive").map((unit) => String(unit?.code || "").trim()).filter(Boolean));
 const getPlatformUserIdentityValuesForPerson = (config, person, personType) => {
   if (!config || !person || !Array.isArray(config.platformUsers)) return [];
   const personStableVariants = accessIdentityVariants(
@@ -4226,8 +4227,11 @@ const getPlatformUserIdentityValuesForPerson = (config, person, personType) => {
   return uniqueValues$1(linkedUsers.flatMap((user) => platformUserIdentityValues(user)));
 };
 const getPlatformPermissionProfiles = (config) => {
-  const profileConfig = parseSettingsObject(config?.organisations?.[0]?.settings)?.permissionProfiles;
-  const normalisedProfiles = Array.isArray(profileConfig) ? profileConfig.map((profile) => {
+  const profileConfigs = [
+    parseSettingsObject(config?.organisations?.[0]?.settings)?.permissionProfiles,
+    ...(config?.units || []).map((unit) => parseSettingsObject(unit?.settings)?.permissionProfiles)
+  ].filter(Array.isArray);
+  const normalisedProfiles = profileConfigs.flatMap((profileConfig) => profileConfig).map((profile) => {
     const id = String(profile?.id || "").trim();
     if (!id) return null;
     const permissions = Array.isArray(profile?.permissions) ? uniqueValues$1(profile.permissions.map((permission) => String(permission || "").trim()).filter(Boolean)) : [];
@@ -4238,8 +4242,15 @@ const getPlatformPermissionProfiles = (config) => {
       permissions,
       settings: parseSettingsObject(profile?.settings)
     };
-  }).filter((profile) => Boolean(profile)) : [];
-  return Array.isArray(profileConfig) ? normalisedProfiles : DEFAULT_PLATFORM_PERMISSION_PROFILES;
+  }).filter((profile) => Boolean(profile));
+  if (normalisedProfiles.length === 0) return DEFAULT_PLATFORM_PERMISSION_PROFILES;
+  const profilesById = /* @__PURE__ */ new Map();
+  normalisedProfiles.forEach((profile) => {
+    const key = normaliseAccessValue(profile.id);
+    if (!key || profilesById.has(key)) return;
+    profilesById.set(key, profile);
+  });
+  return Array.from(profilesById.values());
 };
 const uniqueValues$1 = (values) => Array.from(new Set(values));
 const addImpliedPlatformPermissionIds = (permissionIds) => {
@@ -4342,6 +4353,7 @@ const getPlatformAccessContext = (config, userIdentifiers, supportedCodes = []) 
     locationCode: row.locationCode ? resolveRuntimeLocationCode(config, row.locationCode, supportedCodes) : row.locationCode
   }));
   const configuredLocations = getLocationCodesForCurrentRuntime(config, supportedCodes);
+  const configuredUnitCodes = getActiveUnitCodes(config);
   if (!config || activeRows.length === 0) {
     return {
       rows: [],
@@ -4349,6 +4361,8 @@ const getPlatformAccessContext = (config, userIdentifiers, supportedCodes = []) 
       isPlatformAdmin: true,
       isSuperAdmin: true,
       accessibleLocations: configuredLocations,
+      accessibleUnits: configuredUnitCodes,
+      hasAllUnitAccess: true,
       permissionProfileIds: DEFAULT_PLATFORM_PERMISSION_PROFILES.map((profile) => profile.id),
       permissions: ALL_PLATFORM_PERMISSION_IDS
     };
@@ -4364,6 +4378,8 @@ const getPlatformAccessContext = (config, userIdentifiers, supportedCodes = []) 
       isPlatformAdmin: false,
       isSuperAdmin: false,
       accessibleLocations: [],
+      accessibleUnits: [],
+      hasAllUnitAccess: false,
       permissionProfileIds: [],
       permissions: []
     };
@@ -4372,12 +4388,18 @@ const getPlatformAccessContext = (config, userIdentifiers, supportedCodes = []) 
   const rowLocations = rows.map((row) => row.locationCode || "").filter(Boolean);
   const rowLocationSet = new Set(rowLocations.map(normaliseAccessValue));
   const accessibleLocations = rowLocations.length === 0 ? configuredLocations : configuredLocations.filter((code) => rowLocationSet.has(normaliseAccessValue(code)));
+  const rowUnitCodes = rows.map((row) => String(row.unitCode || "").trim()).filter(Boolean);
+  const hasAllUnitAccess = rowUnitCodes.length === 0 || rows.some((row) => !String(row.unitCode || "").trim());
+  const rowUnitSet = new Set(rowUnitCodes.map(normaliseAccessValue));
+  const accessibleUnits = hasAllUnitAccess ? configuredUnitCodes : configuredUnitCodes.filter((code) => rowUnitSet.has(normaliseAccessValue(code)));
   return {
     rows,
     isConfigured: true,
     isPlatformAdmin: permissionContext.isPlatformAdmin,
     isSuperAdmin: permissionContext.isSuperAdmin,
     accessibleLocations,
+    accessibleUnits,
+    hasAllUnitAccess,
     permissionProfileIds: permissionContext.profileIds,
     permissions: permissionContext.permissions
   };
@@ -20545,13 +20567,13 @@ const PlatformConfigurationSettings = ({
     return () => window.removeEventListener(PLATFORM_CONFIG_UPDATED_EVENT$1, handlePlatformConfigUpdated);
   }, []);
   const [selectedAccessUserId, setSelectedAccessUserId] = reactExports.useState("");
+  const [wizardAccessUserSelected, setWizardAccessUserSelected] = reactExports.useState(false);
   const [userSearch, setUserSearch] = reactExports.useState("");
   const [bulkAccessPeopleSearch, setBulkAccessPeopleSearch] = reactExports.useState("");
   const [bulkAccessUserIds, setBulkAccessUserIds] = reactExports.useState([]);
   const [bulkAccessProfileIds, setBulkAccessProfileIds] = reactExports.useState([]);
   const [bulkAccessAssignmentOpen, setBulkAccessAssignmentOpen] = reactExports.useState(false);
   const [selectedProfileId, setSelectedProfileId] = reactExports.useState(DEFAULT_PERMISSION_PROFILES[0].id);
-  const [showOrganisationPermissionTemplates, setShowOrganisationPermissionTemplates] = reactExports.useState(false);
   const [advancedFeatureAreaOpenByScope, setAdvancedFeatureAreaOpenByScope] = reactExports.useState({});
   const [rankTerminologyUnlocked, setRankTerminologyUnlocked] = reactExports.useState(false);
   const [, setRankTerminologyDirty] = reactExports.useState(false);
@@ -20591,6 +20613,7 @@ const PlatformConfigurationSettings = ({
   const locationRowRefs = reactExports.useRef({});
   const pendingLocationScrollIdRef = reactExports.useRef(null);
   const completedAutoScrollKeysRef = reactExports.useRef(/* @__PURE__ */ new Set());
+  const wizardUserAccessInitialClearRef = reactExports.useRef(false);
   const unitRowRefs = reactExports.useRef({});
   const pendingUnitScrollIdRef = reactExports.useRef(null);
   const resourcePoolRowRefs = reactExports.useRef({});
@@ -20667,6 +20690,12 @@ const PlatformConfigurationSettings = ({
   const configModules = Array.isArray(config.modules) ? config.modules : [];
   const configLicenses = Array.isArray(config.licenses) ? config.licenses : [];
   const configPlatformUsers = Array.isArray(config.platformUsers) ? config.platformUsers : [];
+  const activeSettingsUnitCode = String(
+    Array.isArray(activeUnitCodes) && activeUnitCodes[0] || (String(activeUnitCode || "").includes("+") ? String(activeUnitCode || "").split("+")[0] : activeUnitCode) || configUnits.find(isActiveRecord)?.code || configUnits[0]?.code || ""
+  ).trim().toUpperCase();
+  const activeSettingsUnitIndex = configUnits.findIndex((unit) => String(unit.code || "").trim().toUpperCase() === activeSettingsUnitCode);
+  const activeSettingsUnit = activeSettingsUnitIndex >= 0 ? configUnits[activeSettingsUnitIndex] : null;
+  const activeSettingsUnitSettings = activeSettingsUnit?.settings || {};
   const crewCompositionAircraftTypes = Array.isArray(config.aircraftTypes) ? config.aircraftTypes : [];
   const resourcePoolsDirty = reactExports.useMemo(() => {
     const baselineConfig = resourcePoolsUnlocked && resourcePoolEditBaselineRef.current ? resourcePoolEditBaselineRef.current : loadedConfigRef.current;
@@ -20771,8 +20800,10 @@ const PlatformConfigurationSettings = ({
             setConfig(nextConfig);
             loadedConfigRef.current = nextConfig;
             cachedPlatformConfig = nextConfig;
-            const firstUserId = nextConfig.platformUsers[0]?.userId || nextConfig.platformUsers[0]?.username || nextConfig.userAccess[0]?.userId || "";
-            setSelectedAccessUserId((current) => current || firstUserId);
+            if (!wizardEditMode) {
+              const firstUserId = nextConfig.platformUsers[0]?.userId || nextConfig.platformUsers[0]?.username || nextConfig.userAccess[0]?.userId || "";
+              setSelectedAccessUserId((current) => current || firstUserId);
+            }
           }
           return;
         }
@@ -20781,8 +20812,10 @@ const PlatformConfigurationSettings = ({
           setConfig(nextConfig);
           loadedConfigRef.current = nextConfig;
           if (cachedPlatformLicenseStatus) setLicenseStatus(cachedPlatformLicenseStatus);
-          const firstUserId = nextConfig.platformUsers[0]?.userId || nextConfig.platformUsers[0]?.username || nextConfig.userAccess[0]?.userId || "";
-          setSelectedAccessUserId((current) => current || firstUserId);
+          if (!wizardEditMode) {
+            const firstUserId = nextConfig.platformUsers[0]?.userId || nextConfig.platformUsers[0]?.username || nextConfig.userAccess[0]?.userId || "";
+            setSelectedAccessUserId((current) => current || firstUserId);
+          }
           setLoading(false);
           return;
         }
@@ -20803,8 +20836,10 @@ const PlatformConfigurationSettings = ({
             cachedPlatformLicenseStatus = nextLicenseStatus;
             setLicenseStatus(nextLicenseStatus);
           }
-          const firstUserId = nextConfig.platformUsers[0]?.userId || nextConfig.platformUsers[0]?.username || nextConfig.userAccess[0]?.userId || "";
-          setSelectedAccessUserId((current) => current || firstUserId);
+          if (!wizardEditMode) {
+            const firstUserId = nextConfig.platformUsers[0]?.userId || nextConfig.platformUsers[0]?.username || nextConfig.userAccess[0]?.userId || "";
+            setSelectedAccessUserId((current) => current || firstUserId);
+          }
         }
       } catch (err) {
         if (!cancelled) showPlatformConfigError(err?.message || "Failed to load platform configuration");
@@ -20816,7 +20851,7 @@ const PlatformConfigurationSettings = ({
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [wizardEditMode]);
   reactExports.useEffect(() => {
     if (config.units.length === 0) {
       setSelectedUnitIndex(0);
@@ -20969,6 +21004,7 @@ const PlatformConfigurationSettings = ({
     const cleanFocusUserId = String(focusUserId || "").trim();
     if (loading || scrollTarget !== "platform-user-access" || !cleanFocusUserId) return;
     const matchingUser = configPlatformUsers.find((user) => [user.userId, user.username].map((value) => String(value || "").trim()).some((value) => value === cleanFocusUserId));
+    if (wizardEditMode) setWizardAccessUserSelected(true);
     setSelectedAccessUserId(matchingUser?.userId || matchingUser?.username || cleanFocusUserId);
     const frame = window.requestAnimationFrame(() => {
       window.setTimeout(() => {
@@ -20980,6 +21016,7 @@ const PlatformConfigurationSettings = ({
   reactExports.useEffect(() => {
     const cleanLocationCode = String(focusLocationCode || "").trim().toUpperCase();
     if (loading || scrollTarget !== "platform-user-access" || !cleanLocationCode) return;
+    if (wizardEditMode && !focusUserId) return;
     const matchingAccess = configUserAccess.find((access) => {
       const accessLocationCode = String(access.locationCode || "").trim().toUpperCase();
       const accessUnitCode = String(access.unitCode || "").trim().toUpperCase();
@@ -20988,9 +21025,18 @@ const PlatformConfigurationSettings = ({
       return accessLocationCode === cleanLocationCode || unitHomeLocationCode === cleanLocationCode;
     });
     if (matchingAccess?.userId) {
+      if (wizardEditMode) setWizardAccessUserSelected(true);
       setSelectedAccessUserId(matchingAccess.userId);
     }
-  }, [configUnits, configUserAccess, focusLocationCode, loading, scrollTarget]);
+  }, [configUnits, configUserAccess, focusLocationCode, focusUserId, loading, scrollTarget, wizardEditMode]);
+  reactExports.useEffect(() => {
+    if (!wizardEditMode || loading || scrollTarget !== "platform-user-access" || focusUserId) return;
+    if (wizardUserAccessInitialClearRef.current) return;
+    wizardUserAccessInitialClearRef.current = true;
+    setWizardAccessUserSelected(false);
+    setSelectedAccessUserId("");
+    setUserSearch("");
+  }, [focusUserId, loading, scrollTarget, wizardEditMode]);
   reactExports.useEffect(() => {
     const cleanSubsectionId = String(focusSubsectionId || "").trim();
     if (loading || !cleanSubsectionId) return;
@@ -21067,25 +21113,25 @@ const PlatformConfigurationSettings = ({
     primaryOrganisationSettings.settingsVisibilityPolicy || null
   );
   const personnelDisplaySettings = normalisePersonnelDisplaySettings(
-    primaryOrganisationSettings.personnelDisplaySettings || primaryOrganisationSettings.personnelSettings || null
+    activeSettingsUnitSettings.personnelDisplaySettings || activeSettingsUnitSettings.personnelSettings || primaryOrganisationSettings.personnelDisplaySettings || primaryOrganisationSettings.personnelSettings || null
   );
   const contractorStaffDisplayLabel = personnelDisplaySettings.simIpDisplayLabel?.trim() || "Contractor Staff";
   const staffRankEquivalency = personnelDisplaySettings.staffRankEquivalency;
   const sctTerminology = normaliseSctTerminology(
-    primaryOrganisationSettings.sctTerminology || null
+    activeSettingsUnitSettings.sctTerminology || primaryOrganisationSettings.sctTerminology || null
   );
   const continuationCurrencyShortLabel = String(sctTerminology.shortLabel || DEFAULT_SCT_TERMINOLOGY.shortLabel || "CT").trim() || "CT";
   const trainingReportTerminology = normaliseTrainingReportTerminology(
-    primaryOrganisationSettings.trainingReportTerminology || null
+    activeSettingsUnitSettings.trainingReportTerminology || primaryOrganisationSettings.trainingReportTerminology || null
   );
   const crewPositionTerminology = normaliseCrewPositionTerminology(
-    primaryOrganisationSettings.crewPositionTerminology || null
+    activeSettingsUnitSettings.crewPositionTerminology || primaryOrganisationSettings.crewPositionTerminology || null
   );
   const crewCompositionSettings = normaliseCrewCompositionSettings(
     primaryOrganisationSettings.crewCompositionSettings || null
   );
   const staffQualificationCatalogue = normaliseStaffQualificationCatalogue(
-    primaryOrganisationSettings.staffQualificationCatalogue || null
+    activeSettingsUnitSettings.staffQualificationCatalogue || primaryOrganisationSettings.staffQualificationCatalogue || null
   );
   const linkedInstructorQualification = staffQualificationCatalogue.qualifications.find((qualification) => {
     const tokens = [
@@ -21098,7 +21144,7 @@ const PlatformConfigurationSettings = ({
   const linkedInstructorQualificationLabel = linkedInstructorQualification ? getStaffQualificationDisplayLabel(linkedInstructorQualification) : "No linked instructor qualification configured";
   const linkedInstructorQualificationInputId = linkedInstructorQualification ? `qualification-name-${String(linkedInstructorQualification.id || "").replace(/[^a-zA-Z0-9_-]/g, "-")}` : "";
   const unitCallsignSettings = normaliseUnitCallsignSettings(
-    primaryOrganisationSettings.unitCallsignSettings || null
+    activeSettingsUnitSettings.unitCallsignSettings || primaryOrganisationSettings.unitCallsignSettings || null
   );
   const crewPositionLabelMap = getCrewPositionLabelMap(crewPositionTerminology);
   const defaultCrewPositionIds = new Set(DEFAULT_CREW_POSITION_TERMINOLOGY.positions.map((entry) => entry.id));
@@ -21107,7 +21153,7 @@ const PlatformConfigurationSettings = ({
   const activeTrainingReportUnitIndex = activeTrainingReportUnit ? configUnits.findIndex((unit) => unit === activeTrainingReportUnit) : -1;
   const activeTrainingReportUnitLabel = activeTrainingReportUnit ? `${activeTrainingReportUnit.code}${activeTrainingReportUnit.name && activeTrainingReportUnit.name !== activeTrainingReportUnit.code ? ` - ${activeTrainingReportUnit.name}` : ""}` : "No unit selected";
   const trainingReportTemplate = normaliseTrainingReportTemplate(
-    activeTrainingReportUnit?.settings?.trainingReportTemplate || primaryOrganisationSettings.trainingReportTemplate || null,
+    activeTrainingReportUnit?.settings?.trainingReportTemplate || null,
     activeTrainingReportUnit?.settings?.trainingReportTerminology || primaryOrganisationSettings.trainingReportTerminology || null
   );
   const trainingReportPhraseBank = getUnitTrainingReportPhraseBank(
@@ -21247,6 +21293,22 @@ const PlatformConfigurationSettings = ({
   const updatePrimaryOrganisationSettings = (updater) => {
     setConfig((prev) => {
       const nextConfig = buildConfigWithPrimaryOrganisationSettings(prev, updater);
+      notifyPlatformConfigUpdatedSoon(nextConfig);
+      return nextConfig;
+    });
+  };
+  const updateActiveUnitSettings = (updater) => {
+    setConfig((prev) => {
+      const previousUnits = Array.isArray(prev.units) ? prev.units : [];
+      const targetIndex = previousUnits.findIndex((unit) => String(unit.code || "").trim().toUpperCase() === activeSettingsUnitCode);
+      if (targetIndex < 0) return prev;
+      const nextUnits = previousUnits.map((unit, index) => {
+        if (index !== targetIndex) return unit;
+        const currentSettings = unit.settings || {};
+        const nextSettings = typeof updater === "function" ? updater(currentSettings) : { ...currentSettings, ...updater };
+        return { ...unit, settings: nextSettings };
+      });
+      const nextConfig = { ...prev, units: nextUnits };
       notifyPlatformConfigUpdatedSoon(nextConfig);
       return nextConfig;
     });
@@ -21558,7 +21620,7 @@ This permanently removes the organisation record from platform configuration and
   };
   const updatePersonnelDisplaySettings = (changes) => {
     setRankTerminologyDirty(true);
-    updatePrimaryOrganisationSettings((settings) => ({
+    updateActiveUnitSettings((settings) => ({
       ...settings,
       personnelDisplaySettings: normalisePersonnelDisplaySettings({
         ...settings.personnelDisplaySettings || settings.personnelSettings || {},
@@ -21608,7 +21670,7 @@ This permanently removes the organisation record from platform configuration and
   };
   const updateTrainingReportTerminology = (changes) => {
     setRankTerminologyDirty(true);
-    updatePrimaryOrganisationSettings((settings) => ({
+    updateActiveUnitSettings((settings) => ({
       ...settings,
       trainingReportTerminology: normaliseTrainingReportTerminology({
         ...settings.trainingReportTerminology || {},
@@ -21618,7 +21680,7 @@ This permanently removes the organisation record from platform configuration and
   };
   const updateSctTerminology = (changes) => {
     setRankTerminologyDirty(true);
-    updatePrimaryOrganisationSettings((settings) => ({
+    updateActiveUnitSettings((settings) => ({
       ...settings,
       sctTerminology: normaliseSctTerminology({
         ...settings.sctTerminology || {},
@@ -21629,26 +21691,22 @@ This permanently removes the organisation record from platform configuration and
   const updateCrewPositionTerminology = (positions, renamedPosition, deletedDefaultIds = crewPositionTerminology.deletedDefaultIds || []) => {
     setRankTerminologyDirty(true);
     setConfig((prev) => {
-      const previousOrganisations = Array.isArray(prev.organisations) ? prev.organisations : [];
-      if (previousOrganisations.length === 0) return prev;
-      const organisations = [...previousOrganisations];
-      const activeIndex = organisations.findIndex((org) => String(org.status || "ACTIVE").toUpperCase() === "ACTIVE");
-      const orgIndex = activeIndex >= 0 ? activeIndex : 0;
-      const currentOrg = organisations[orgIndex] || organisations[0];
+      const previousUnits = Array.isArray(prev.units) ? prev.units : [];
+      const targetIndex = previousUnits.findIndex((unit) => String(unit.code || "").trim().toUpperCase() === activeSettingsUnitCode);
+      if (targetIndex < 0) return prev;
       const nextTerminology = normaliseCrewPositionTerminology({ positions, deletedDefaultIds });
-      organisations[orgIndex] = {
-        ...currentOrg,
-        settings: {
-          ...currentOrg.settings || {},
-          crewPositionTerminology: nextTerminology
-        }
-      };
       const from = String(renamedPosition?.from || "").trim();
       const to = String(renamedPosition?.to || "").trim();
       const shouldRenameSeats = Boolean(from && to && from.toUpperCase() !== to.toUpperCase());
       return {
         ...prev,
-        organisations,
+        units: previousUnits.map((unit, index) => index === targetIndex ? {
+          ...unit,
+          settings: {
+            ...unit.settings || {},
+            crewPositionTerminology: nextTerminology
+          }
+        } : unit),
         aircraftTypes: shouldRenameSeats ? (Array.isArray(prev.aircraftTypes) ? prev.aircraftTypes : []).map((aircraft) => {
           const crewComposition = normaliseAircraftCrewComposition(aircraft.crewComposition);
           const seats = crewComposition.seats.map((seat) => ({
@@ -21693,7 +21751,7 @@ This permanently removes the organisation record from platform configuration and
   const defaultStaffQualificationIds = new Set(DEFAULT_STAFF_QUALIFICATIONS.qualifications.map((entry) => entry.id));
   const updateStaffQualificationCatalogue = (qualifications, deletedDefaultIds = staffQualificationCatalogue.deletedDefaultIds || []) => {
     setRankTerminologyDirty(true);
-    updatePrimaryOrganisationSettings((settings) => ({
+    updateActiveUnitSettings((settings) => ({
       ...settings,
       staffQualificationCatalogue: normaliseStaffQualificationCatalogue({ qualifications, deletedDefaultIds })
     }));
@@ -21736,7 +21794,7 @@ This permanently removes the organisation record from platform configuration and
   };
   const updateUnitCallsignSettings = (entries, policies = unitCallsignSettings.policies) => {
     setRankTerminologyDirty(true);
-    updatePrimaryOrganisationSettings((settings) => ({
+    updateActiveUnitSettings((settings) => ({
       ...settings,
       unitCallsignSettings: normaliseUnitCallsignSettings({ entries, policies })
     }));
@@ -23186,9 +23244,9 @@ This removes the aircraft type from Settings${affectedText ? ` and clears it fro
     updateRow("licenses", licenseIndex, { moduleCodes });
   };
   const permissionProfiles = reactExports.useMemo(() => {
-    const profiles = configOrganisations[0]?.settings?.permissionProfiles;
+    const profiles = activeSettingsUnitSettings.permissionProfiles;
     return Array.isArray(profiles) ? profiles : DEFAULT_PERMISSION_PROFILES;
-  }, [configOrganisations]);
+  }, [activeSettingsUnitSettings.permissionProfiles]);
   const activePermissionTemplateUnitCode = reactExports.useMemo(() => {
     const fromActiveUnit = String(activeUnitCode || "").includes("+") ? String(activeUnitCode || "").split("+")[0] : activeUnitCode;
     const resolved = String(
@@ -23212,7 +23270,7 @@ This removes the aircraft type from Settings${affectedText ? ` and clears it fro
     const sourceUnitCode = String(profile?.settings?.copiedFromUnitCode || profile?.settings?.sourceUnitCode || "").trim().toUpperCase();
     if (unitCode) return unitCode === activePermissionTemplateUnitCode ? `This unit: ${unitCode}` : `Unit: ${unitCode}`;
     if (sourceUnitCode) return `Copied from ${sourceUnitCode}`;
-    return "Organisation-wide";
+    return activePermissionTemplateUnitCode ? `This unit: ${activePermissionTemplateUnitCode}` : "Unit";
   };
   const isPermissionProfileAvailableToActiveUnit = (profile) => {
     const unitCode = getPermissionProfileUnitCode(profile);
@@ -23222,7 +23280,7 @@ This removes the aircraft type from Settings${affectedText ? ` and clears it fro
     () => permissionProfiles.filter(isPermissionProfileAvailableToActiveUnit),
     [activePermissionTemplateUnitCode, permissionProfiles]
   );
-  const visiblePermissionProfiles = showOrganisationPermissionTemplates ? permissionProfiles : activeUnitPermissionProfiles;
+  const visiblePermissionProfiles = activeUnitPermissionProfiles;
   const assignablePermissionProfiles = activeUnitPermissionProfiles;
   const configurationHealthUnitCodes = reactExports.useMemo(
     () => parseConfigurationHealthUnitCodes(
@@ -23232,12 +23290,12 @@ This removes the aircraft type from Settings${affectedText ? ` and clears it fro
     ),
     [activeCompositeUnitCode, activeUnitCode, activeUnitCodes]
   );
-  const isOrganisationWideConfigurationHealth = currentUserPermission === "Super Admin";
+  const isOrganisationWideConfigurationHealth = false;
   const configurationHealthConfig = reactExports.useMemo(
-    () => !configurationHealthActive || isOrganisationWideConfigurationHealth ? config : buildScopedConfigurationHealthConfig(config, configurationHealthUnitCodes),
-    [config, configurationHealthActive, configurationHealthUnitCodes, isOrganisationWideConfigurationHealth]
+    () => !configurationHealthActive ? config : buildScopedConfigurationHealthConfig(config, configurationHealthUnitCodes),
+    [config, configurationHealthActive, configurationHealthUnitCodes]
   );
-  const configurationHealthScopeLabel = isOrganisationWideConfigurationHealth ? "Organisation-wide" : `Current unit: ${configurationHealthUnitCodes.join(" + ") || "active unit"}`;
+  const configurationHealthScopeLabel = `Current unit: ${configurationHealthUnitCodes.join(" + ") || "active unit"}`;
   const configurationHealth = reactExports.useMemo(
     () => configurationHealthActive ? buildConfigurationHealth(
       configurationHealthConfig,
@@ -23248,7 +23306,7 @@ This removes the aircraft type from Settings${affectedText ? ` and clears it fro
       traineesData,
       { includeOrganisationWideChecks: isOrganisationWideConfigurationHealth }
     ) : [],
-    [configurationHealthActive, configurationHealthConfig, instructorsData, isOrganisationWideConfigurationHealth, permissionProfiles, readinessPercent, operationalReadinessPercent, traineesData]
+    [configurationHealthActive, configurationHealthConfig, instructorsData, permissionProfiles, readinessPercent, operationalReadinessPercent, traineesData]
   );
   const configurationHealthSummary = reactExports.useMemo(() => configurationHealth.reduce((summary, item) => ({
     ...summary,
@@ -23295,11 +23353,12 @@ This removes the aircraft type from Settings${affectedText ? ` and clears it fro
   };
   const updatePermissionProfiles = (profiles) => {
     setConfig((prev) => {
-      const previousOrganisations = Array.isArray(prev.organisations) ? prev.organisations : [];
-      const organisations = previousOrganisations.length > 0 ? previousOrganisations : [{ code: "DEFAULT", name: "Organisation", status: "ACTIVE", settings: {} }];
+      const previousUnits = Array.isArray(prev.units) ? prev.units : [];
+      const targetIndex = previousUnits.findIndex((unit) => String(unit.code || "").trim().toUpperCase() === activePermissionTemplateUnitCode);
+      if (targetIndex < 0) return prev;
       return {
         ...prev,
-        organisations: organisations.map((org, index) => index === 0 ? { ...org, settings: { ...org.settings || {}, permissionProfiles: profiles } } : org)
+        units: previousUnits.map((unit, index) => index === targetIndex ? { ...unit, settings: { ...unit.settings || {}, permissionProfiles: profiles } } : unit)
       };
     });
   };
@@ -23315,8 +23374,8 @@ This removes the aircraft type from Settings${affectedText ? ` and clears it fro
         ...profile?.settings || {},
         organisationCode: String(unit?.organisationCode || configOrganisations[0]?.code || "DEFAULT").trim().toUpperCase(),
         locationCode: String(unit?.locationCode || "").trim().toUpperCase(),
-        unitCode: cleanUnitCode,
-        templateScope: cleanUnitCode ? "unit" : "organisation"
+        unitCode: cleanUnitCode || activePermissionTemplateUnitCode,
+        templateScope: "unit"
       }
     });
   };
@@ -23357,7 +23416,7 @@ This removes the aircraft type from Settings${affectedText ? ` and clears it fro
         permissions: profileType === "exception" ? [] : ["dfp.view"],
         settings: {
           profileType,
-          templateScope: activePermissionTemplateUnitCode ? "unit" : "organisation",
+          templateScope: "unit",
           organisationCode: activePermissionTemplateOrganisationCode,
           locationCode: activePermissionTemplateLocationCode,
           unitCode: activePermissionTemplateUnitCode
@@ -23896,7 +23955,10 @@ This removes it from the master list and from every user assignment that current
         ...createdRows
       ]
     }));
-    if (targetUserIds[0]) setSelectedAccessUserId(targetUserIds[0]);
+    if (targetUserIds[0]) {
+      setSelectedAccessUserId(targetUserIds[0]);
+      if (wizardEditMode) setWizardAccessUserSelected(true);
+    }
     onShowSuccess(`Prepared permission profile update for ${targetUserIds.length} user${targetUserIds.length === 1 ? "" : "s"}. Press Save to store the change.`);
   };
   const selectedAccessUser = reactExports.useMemo(
@@ -23907,11 +23969,86 @@ This removes it from the master list and from every user assignment that current
     () => userOptions.find((user) => user.id === selectedAccessUserId),
     [selectedAccessUserId, userOptions]
   );
+  const shouldShowSelectedAccessUser = Boolean(selectedAccessUserId) && (!wizardEditMode || scrollTarget !== "platform-user-access" || wizardAccessUserSelected);
+  const effectiveSelectedAccessUserId = shouldShowSelectedAccessUser ? selectedAccessUserId : "";
   const selectedAccessRows = reactExports.useMemo(
-    () => configUserAccess.map((access, index) => ({ access, index })).filter(({ access }) => [access.userId, access.username].map((value) => String(value || "").trim()).some((value) => value === selectedAccessUserId)),
-    [configUserAccess, selectedAccessUserId]
+    () => configUserAccess.map((access, index) => ({ access, index })).filter(({ access }) => [access.userId, access.username].map((value) => String(value || "").trim()).some((value) => value === effectiveSelectedAccessUserId)),
+    [configUserAccess, effectiveSelectedAccessUserId]
   );
   const selectedAccessDisplayName = selectedAccessUser ? getAccessPersonDisplayName(selectedAccessUser) || selectedAccessUser.username || selectedAccessUser.userId : selectedAccessUserOption ? selectedAccessUserOption.name : selectedAccessRows[0]?.access.displayName ? `${selectedAccessRows[0].access.displayName} (missing platform user record)` : selectedAccessUserId ? `${selectedAccessUserId} (missing platform user record)` : "No user selected";
+  const downloadUserPermissionsWizardDiagnostic = () => {
+    const generatedAt = (/* @__PURE__ */ new Date()).toISOString();
+    const readStorageValue = (key) => {
+      try {
+        return window.localStorage.getItem(key);
+      } catch {
+        return null;
+      }
+    };
+    const wizardStorageKeys = [
+      "dfp-initial-setup-wizard-step",
+      "dfp-initial-setup-wizard-organisation-draft",
+      "dfp-initial-setup-wizard-draft-snapshot",
+      "dfp-initial-setup-wizard-completed-steps",
+      "dfp-initial-setup-wizard-completed-at"
+    ];
+    const report = {
+      generatedAt,
+      page: typeof window !== "undefined" ? window.location.href : "",
+      purpose: "Diagnose why Step 29 User Permissions is showing a real selected user instead of sample text.",
+      wizardState: {
+        wizardEditMode,
+        scrollTarget,
+        focusUserId,
+        focusLocationCode,
+        focusSubsectionId,
+        loading,
+        sectionOnly,
+        wizardAccessUserSelected,
+        wizardInitialClearHasRun: wizardUserAccessInitialClearRef.current
+      },
+      selectedUserState: {
+        selectedAccessUserId,
+        effectiveSelectedAccessUserId,
+        shouldShowSelectedAccessUser,
+        selectedAccessDisplayName,
+        userSearch,
+        selectedAccessUser,
+        selectedAccessUserOption,
+        selectedAccessRows,
+        visibleSelectedAccessRows
+      },
+      renderedExpectations: {
+        userFieldValue: shouldShowSelectedAccessUser ? selectedAccessUserId : "",
+        userPlaceholder: wizardEditMode ? "Smith, John" : "Search by name...",
+        displayNameShown: shouldShowSelectedAccessUser ? selectedAccessDisplayName : "Smith, John",
+        accessScopeCountShown: visibleSelectedAccessRows.length
+      },
+      configSamples: {
+        activeSettingsUnitCode,
+        activePermissionTemplateLocationCode,
+        activePermissionTemplateUnitCode,
+        platformUserCount: configPlatformUsers.length,
+        firstPlatformUsers: configPlatformUsers.slice(0, 10).map((user) => ({
+          userId: user.userId,
+          username: user.username,
+          displayName: getAccessPersonDisplayName(user),
+          status: user.status,
+          role: user.role,
+          settings: user.settings
+        })),
+        userAccessCount: configUserAccess.length,
+        firstUserAccessRows: configUserAccess.slice(0, 20)
+      },
+      browserStorage: Object.fromEntries(wizardStorageKeys.map((key) => [key, readStorageValue(key)])),
+      note: "This file is intended for debugging the visible wizard state. It may include user names and permission rows, but it should not include passwords or database credentials."
+    };
+    downloadTextFile(
+      `setup-wizard-user-permissions-diagnostic-${generatedAt.replace(/[:.]/g, "-")}.json`,
+      JSON.stringify(report, null, 2),
+      "application/json"
+    );
+  };
   const selectedUserProfileIds = reactExports.useMemo(() => {
     const activeRows = selectedAccessRows.filter(({ access }) => String(access.status || "").toUpperCase() !== "INACTIVE");
     const sourceRows = activeRows.length > 0 ? activeRows : selectedAccessRows;
@@ -23987,7 +24124,7 @@ This removes it from the master list and from every user assignment that current
             displayName: selectedDisplayName || selectedUsername || selectedUserId,
             organisationCode: (Array.isArray(prev.organisations) ? prev.organisations : [])[0]?.code || "DEFAULT",
             locationCode: defaultLocationCode || null,
-            unitCode: defaultUnitCode || null,
+            unitCode: defaultUnitCode || activeSettingsUnitCode || null,
             moduleCode: null,
             role: "Viewer",
             accessLevel: "Read",
@@ -24046,7 +24183,7 @@ This removes it from the master list and from every user assignment that current
             displayName: selectedDisplayName || selectedUsername || selectedUserId,
             organisationCode: (Array.isArray(prev.organisations) ? prev.organisations : [])[0]?.code || "DEFAULT",
             locationCode: defaultLocationCode || null,
-            unitCode: defaultUnitCode || null,
+            unitCode: defaultUnitCode || activeSettingsUnitCode || null,
             moduleCode: null,
             role: "Viewer",
             accessLevel: "Read",
@@ -24070,8 +24207,8 @@ This removes it from the master list and from every user assignment that current
           username: defaultUser?.username || userId,
           displayName,
           organisationCode: (Array.isArray(prev.organisations) ? prev.organisations : [])[0]?.code || "DEFAULT",
-          locationCode: (Array.isArray(prev.locations) ? prev.locations : [])[0]?.code || "",
-          unitCode: "",
+          locationCode: activePermissionTemplateLocationCode || (Array.isArray(prev.locations) ? prev.locations : [])[0]?.code || "",
+          unitCode: activeSettingsUnitCode || activeUnitCode || "",
           moduleCode: "",
           role: "Viewer",
           accessLevel: "Read",
@@ -25345,6 +25482,7 @@ This removes them from DFP Resource Rows. Press Save in this section to apply th
   const visibleLocationOptions = visibleLocationRows.map(({ location }) => location.code).filter(Boolean);
   const allActiveLocationOptions = configLocations.filter((location) => isActiveRecord(location)).map((location) => String(location.code || "").trim()).filter(Boolean);
   const visibleUnitOptions = visibleUnitRows.map(({ unit }) => unit.code).filter(Boolean);
+  const permissionAccessUnitOptions = configUnits.filter((unit) => isActiveRecord(unit)).map((unit) => String(unit.code || "").trim()).filter(Boolean);
   const visibleOperationalModelValues = new Set(
     visibleUnitRows.map(({ unit }) => getUnitOperationalModel(unit)).map((model) => String(model || "").trim()).filter(Boolean)
   );
@@ -25400,11 +25538,18 @@ This removes them from DFP Resource Rows. Press Save in this section to apply th
   }));
   const visibleUserAccessRows = (() => {
     const traceStartedAt = getTraceNow();
-    const result = configUserAccess.map((access, index) => ({ access, index })).filter(({ access }) => isRecordVisibleForSettingsPolicy({
-      unitCode: access.unitCode,
-      locationCode: access.locationCode,
-      organisationCode: access.organisationCode
-    }));
+    const activeUnitSet = new Set((activeBulkUnitCodes.length > 0 ? activeBulkUnitCodes : [activeSettingsUnitCode]).filter(Boolean));
+    const result = configUserAccess.map((access, index) => ({ access, index })).filter(({ access }) => {
+      const unitCode = String(access.unitCode || "").trim().toUpperCase();
+      if (!unitCode) return false;
+      const isSelectedUserRow = [access.userId, access.username].map((value) => String(value || "").trim()).some((value) => value === selectedAccessUserId);
+      if (isSelectedUserRow) return true;
+      return activeUnitSet.has(unitCode) && isRecordVisibleForSettingsPolicy({
+        unitCode: access.unitCode,
+        locationCode: access.locationCode,
+        organisationCode: access.organisationCode
+      });
+    });
     recordSettingsTraceTiming("visibleUserAccessRows", traceStartedAt);
     return result;
   })();
@@ -28113,7 +28258,7 @@ This removes them from DFP Resource Rows. Press Save in this section to apply th
               /* @__PURE__ */ jsxRuntimeExports.jsx("h5", { className: "text-sm font-bold text-amber-100", children: "What This Filter Can Hide" }),
               /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mt-2 grid gap-2 text-xs leading-relaxed text-amber-50/75 md:grid-cols-2", children: [
                 /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "rounded border border-amber-400/20 bg-gray-950/50 p-3", children: "The filter can hide settings that clearly belong to another unit, location, aircraft type, or parent organisation." }),
-                /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "rounded border border-amber-400/20 bg-gray-950/50 p-3", children: "Shared organisation-wide settings stay visible because they may affect more than one unit or the wider platform." })
+                /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "rounded border border-amber-400/20 bg-gray-950/50 p-3", children: "Shared deployment records stay visible because licensing, deployment readiness and support records are not unit behaviour settings." })
               ] })
             ] })
           ] })
@@ -28561,7 +28706,7 @@ This removes them from DFP Resource Rows. Press Save in this section to apply th
             SectionHeader,
             {
               title: "Master Permission Profiles",
-              subtitle: "Build role and exception templates for the active unit. Browse organisation templates when you need to copy another unit's template into this unit.",
+              subtitle: "Build role and exception templates for the active unit.",
               action: canEdit ? /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex flex-wrap justify-end gap-[1px]", children: [
                 renderSectionEditSaveButton("platform-permission-profiles"),
                 /* @__PURE__ */ jsxRuntimeExports.jsx(
@@ -28601,18 +28746,7 @@ This removes them from DFP Resource Rows. Press Save in this section to apply th
                     "Active template unit: ",
                     activePermissionTemplateUnitCode || "No active unit"
                   ] }),
-                  /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "mt-2 flex items-center gap-2 text-cyan-50/90", children: [
-                    /* @__PURE__ */ jsxRuntimeExports.jsx(
-                      "input",
-                      {
-                        type: "checkbox",
-                        checked: showOrganisationPermissionTemplates,
-                        onChange: (event) => setShowOrganisationPermissionTemplates(event.target.checked),
-                        className: "h-4 w-4 rounded border-gray-500 accent-cyan-500"
-                      }
-                    ),
-                    /* @__PURE__ */ jsxRuntimeExports.jsx("span", { children: "Show templates from all units in this organisation" })
-                  ] })
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-2 text-cyan-100/70", children: "Only this unit's permission templates are shown and edited here." })
                 ] })
               ] }),
               visiblePermissionProfiles.length === 0 && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "rounded border border-dashed border-gray-700 bg-gray-950/70 px-4 py-5 text-sm text-gray-400", children: "No permission templates available for this filter." }),
@@ -28683,17 +28817,14 @@ This removes them from DFP Resource Rows. Press Save in this section to apply th
                 ] }),
                 /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
                   /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: labelClass, children: "Template Unit" }),
-                  /* @__PURE__ */ jsxRuntimeExports.jsxs(
+                  /* @__PURE__ */ jsxRuntimeExports.jsx(
                     "select",
                     {
                       className: fieldClass,
-                      value: getPermissionProfileUnitCode(selectedPermissionProfile),
+                      value: getPermissionProfileUnitCode(selectedPermissionProfile) || activePermissionTemplateUnitCode,
                       disabled: !canEditSection("platform-permission-profiles"),
                       onChange: (event) => updatePermissionProfileUnit(selectedPermissionProfile.id, event.target.value),
-                      children: [
-                        /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "", children: "Organisation-wide" }),
-                        permissionTemplateUnitOptions.map((unitCode) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: unitCode, children: unitCode }, unitCode))
-                      ]
+                      children: permissionTemplateUnitOptions.map((unitCode) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: unitCode, children: unitCode }, unitCode))
                     }
                   )
                 ] })
@@ -28756,7 +28887,7 @@ This removes them from DFP Resource Rows. Press Save in this section to apply th
             SectionHeader,
             {
               title: "Training Reports",
-              subtitle: "Configure the organisation training report name, field labels, grade display and repeat rules. The layout stays consistent across operational models.",
+              subtitle: "Configure this unit's training report name, field labels, grade display and repeat rules.",
               action: /* @__PURE__ */ jsxRuntimeExports.jsx(
                 "button",
                 {
@@ -28784,7 +28915,7 @@ This removes them from DFP Resource Rows. Press Save in this section to apply th
                     FieldLabel,
                     {
                       label: "Active Unit Training Report",
-                      info: "Training Report settings are saved against this unit. If the unit has no custom settings yet, it uses the organisation template."
+                      info: "Training Report settings are saved against this unit."
                     }
                   ),
                   /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "rounded border border-cyan-500/30 bg-cyan-500/10 px-3 py-2 text-sm font-bold text-cyan-50", children: activeTrainingReportUnitLabel })
@@ -30547,8 +30678,13 @@ This removes them from DFP Resource Rows. Press Save in this section to apply th
             SectionHeader,
             {
               title: "Assign User Permissions",
-              subtitle: "Search by user name, assign permission profiles, then define where those profiles apply.",
+              subtitle: "Search by user name, assign permission profiles, then add one unit access scope for each unit this user may open.",
               action: /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex flex-wrap justify-end gap-[1px]", children: canEdit ? /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
+                wizardEditMode ? /* @__PURE__ */ jsxRuntimeExports.jsx("button", { type: "button", onClick: downloadUserPermissionsWizardDiagnostic, className: platformActionButtonClass, children: /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "text-[9px] leading-tight", children: [
+                  "Download",
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("br", {}),
+                  "Trace"
+                ] }) }) : null,
                 renderSectionEditSaveButton("platform-user-access"),
                 /* @__PURE__ */ jsxRuntimeExports.jsx("button", { type: "button", onClick: addUserAccess, disabled: !canEditSection("platform-user-access"), className: platformActionButtonClass, children: /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "text-[9px] leading-tight", children: [
                   "Add",
@@ -30560,18 +30696,28 @@ This removes them from DFP Resource Rows. Press Save in this section to apply th
           ),
           /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { id: "platform-user-access-records", className: "space-y-3 p-4", children: [
             /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded-lg border border-cyan-500/30 bg-cyan-500/10 p-4", children: [
+              wizardEditMode ? /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mb-3 flex justify-end", children: /* @__PURE__ */ jsxRuntimeExports.jsx(
+                "button",
+                {
+                  type: "button",
+                  onClick: downloadUserPermissionsWizardDiagnostic,
+                  className: "rounded bg-sky-600 px-3 py-2 text-xs font-bold text-white shadow-sm hover:bg-sky-500",
+                  children: "Download user permissions trace"
+                }
+              ) }) : null,
               /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid gap-3 md:grid-cols-[minmax(260px,1fr)_minmax(220px,1fr)_minmax(120px,auto)_minmax(120px,auto)]", children: [
                 /* @__PURE__ */ jsxRuntimeExports.jsx(
                   UserSearchSelect,
                   {
                     label: "User",
-                    value: selectedAccessUserId,
+                    value: shouldShowSelectedAccessUser ? selectedAccessUserId : "",
                     disabled: false,
                     users: userOptions,
                     search: userSearch,
                     placeholder: wizardEditMode ? "Smith, John" : void 0,
                     onSearchChange: setUserSearch,
                     onChange: (value) => {
+                      if (wizardEditMode) setWizardAccessUserSelected(true);
                       setSelectedAccessUserId(value);
                       setUserSearch("");
                     }
@@ -30579,14 +30725,14 @@ This removes them from DFP Resource Rows. Press Save in this section to apply th
                 ),
                 /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
                   /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: labelClass, children: "Display Name" }),
-                  /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "rounded border border-cyan-500/20 bg-gray-950 px-3 py-2 text-sm font-semibold text-cyan-100", children: selectedAccessDisplayName })
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: `rounded border border-cyan-500/20 bg-gray-950 px-3 py-2 text-sm font-semibold ${shouldShowSelectedAccessUser ? "text-cyan-100" : "text-gray-500"}`, children: shouldShowSelectedAccessUser ? selectedAccessDisplayName : "Smith, John" })
                 ] }),
                 /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
                   /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: labelClass, children: "Access Scopes" }),
                   /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "rounded border border-cyan-500/20 bg-gray-950 px-3 py-2 text-sm font-semibold text-cyan-100", children: visibleSelectedAccessRows.length })
                 ] })
               ] }),
-              /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-3 text-xs text-cyan-100/70", children: "Profiles define what the user can do. Scope fields define where those profiles apply." })
+              /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-3 text-xs text-cyan-100/70", children: "Profiles define what the user can do. Each access scope defines one unit they can open in the DFP, Staff, schedules and related pages." })
             ] }),
             /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded-lg border border-gray-700 bg-gray-900 p-4", children: [
               /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mb-3", children: [
@@ -30605,7 +30751,7 @@ This removes them from DFP Resource Rows. Press Save in this section to apply th
                       type: "checkbox",
                       className: "mt-0.5 h-4 w-4 rounded border-gray-500 accent-cyan-500",
                       checked,
-                      disabled: !canEditSection("platform-user-access") || !selectedAccessUserId,
+                      disabled: !canEditSection("platform-user-access") || !shouldShowSelectedAccessUser,
                       onChange: (event) => {
                         const profileIds = event.target.checked ? Array.from(/* @__PURE__ */ new Set([...selectedUserProfileIds, profile.id])) : selectedUserProfileIds.filter((id) => id !== profile.id);
                         setSelectedUserProfileIds(profileIds);
@@ -30621,7 +30767,7 @@ This removes them from DFP Resource Rows. Press Save in this section to apply th
                   ] })
                 ] }, profile.id);
               }) }),
-              selectedAccessUserId ? /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mt-4 rounded-lg border border-cyan-500/25 bg-cyan-950/20 p-4", children: [
+              shouldShowSelectedAccessUser ? /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mt-4 rounded-lg border border-cyan-500/25 bg-cyan-950/20 p-4", children: [
                 /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mb-3 flex flex-wrap items-start justify-between gap-3", children: [
                   /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
                     /* @__PURE__ */ jsxRuntimeExports.jsx("h6", { className: "text-sm font-bold text-cyan-50", children: "User-Specific Permission Exceptions" }),
@@ -30632,7 +30778,7 @@ This removes them from DFP Resource Rows. Press Save in this section to apply th
                     {
                       type: "button",
                       onClick: () => setSelectedUserPermissionOverrides([], []),
-                      disabled: !canEditSection("platform-user-access") || !selectedAccessUserId || !selectedUserHasPermissionOverrides,
+                      disabled: !canEditSection("platform-user-access") || !shouldShowSelectedAccessUser || !selectedUserHasPermissionOverrides,
                       className: "rounded border border-cyan-500/40 bg-cyan-600/15 px-3 py-2 text-xs font-bold text-cyan-50 hover:bg-cyan-500/25 disabled:cursor-not-allowed disabled:opacity-50",
                       children: "Reset to Template"
                     }
@@ -30653,7 +30799,7 @@ This removes them from DFP Resource Rows. Press Save in this section to apply th
                           type: "checkbox",
                           className: "mt-0.5 h-4 w-4 rounded border-gray-500 accent-cyan-500",
                           checked,
-                          disabled: !canEditSection("platform-user-access") || !selectedAccessUserId || selectedUserProfileIds.length === 0,
+                          disabled: !canEditSection("platform-user-access") || !shouldShowSelectedAccessUser || selectedUserProfileIds.length === 0,
                           onChange: (event) => toggleSelectedUserPermission(permissionId, event.target.checked)
                         }
                       ),
@@ -30670,7 +30816,7 @@ This removes them from DFP Resource Rows. Press Save in this section to apply th
               /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mb-3 flex flex-wrap items-start justify-between gap-3", children: [
                 /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
                   /* @__PURE__ */ jsxRuntimeExports.jsx("h5", { className: "text-sm font-bold text-white", children: "Assign Master Profiles to Multiple People" }),
-                  /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-1 text-xs text-gray-400", children: "Select multiple people, choose their role profile and any exception profiles from the master list, then apply them together. Existing access scopes are updated; users without a scope receive one for the current unit." }),
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-1 text-xs text-gray-400", children: "Select multiple people, choose their role profile and any exception profiles from the master list, then apply them together. Existing access scopes are updated; users without a scope receive one for the current unit. Add extra unit scopes below when a person needs to open more than one unit." }),
                   /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-1 text-xs text-cyan-100/70", children: "Additions and deletions in the master list are reflected in this list automatically." })
                 ] }),
                 /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex flex-wrap gap-2", children: [
@@ -30776,7 +30922,7 @@ This removes them from DFP Resource Rows. Press Save in this section to apply th
                 ] })
               ] }) : /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "rounded border border-cyan-500/20 bg-gray-950/60 px-3 py-3 text-sm text-cyan-100/75", children: "Bulk assignment is closed. Open it only when assigning profiles to many people at once." })
             ] }),
-            visibleSelectedAccessRows.length === 0 && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "rounded border border-yellow-600/40 bg-yellow-900/20 px-3 py-3 text-sm text-yellow-100", children: "This user has no access scopes. Tick a master profile above to create a current-unit scope automatically, or use Add Scope to create one manually." }),
+            visibleSelectedAccessRows.length === 0 && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "rounded border border-yellow-600/40 bg-yellow-900/20 px-3 py-3 text-sm text-yellow-100", children: "This user has no unit access scopes. Tick a master profile above to create a current-unit scope automatically, or use Add Scope to choose the first unit manually." }),
             visibleSelectedAccessRows.map(({ access, index }) => {
               const appliesToAllFeatures = !access.moduleCode;
               const scopeKey = access.id || `${access.userId}-${index}`;
@@ -30796,11 +30942,11 @@ This removes them from DFP Resource Rows. Press Save in this section to apply th
                   children: [
                     /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mb-3 flex flex-wrap items-center gap-2", children: [
                       /* @__PURE__ */ jsxRuntimeExports.jsx("h5", { className: "text-sm font-bold text-white", children: "Access Scope" }),
-                      /* @__PURE__ */ jsxRuntimeExports.jsx(InfoHint, { text: "This section answers where the selected user's permission profiles apply. Example: a selected location + unit + all enabled features means the user's selected profiles apply to all enabled features for that unit at that location." }),
+                      /* @__PURE__ */ jsxRuntimeExports.jsx(InfoHint, { text: "Each scope gives this user access to one unit. Add another scope for the same user when they need to view another unit's DFP, staff profiles, staff schedules or related pages." }),
                       /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "ml-auto rounded bg-gray-950 px-2 py-1 text-xs font-semibold text-gray-300", children: [
-                        access.locationCode || "All locations",
+                        access.locationCode || "Unit location",
                         " / ",
-                        access.unitCode || "All units",
+                        access.unitCode || activeSettingsUnitCode || "Current unit",
                         " / ",
                         appliesToAllFeatures ? "All enabled features" : access.moduleCode
                       ] }),
@@ -30816,8 +30962,23 @@ This removes them from DFP Resource Rows. Press Save in this section to apply th
                     ] }),
                     /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid gap-3 md:grid-cols-3 xl:grid-cols-[1.1fr_1fr_1fr_1fr_0.75fr_0.85fr]", children: [
                       /* @__PURE__ */ jsxRuntimeExports.jsx(SelectField, { label: "Organisation", value: access.organisationCode || "DEFAULT", disabled: !canEditSection("platform-user-access"), options: configOrganisations.map((org) => org.code), onChange: (value) => updateRow("userAccess", index, { organisationCode: value }) }),
-                      /* @__PURE__ */ jsxRuntimeExports.jsx(SelectField, { label: "Location", value: access.locationCode || "", disabled: !canEditSection("platform-user-access"), options: ["", ...visibleLocationOptions.length > 0 ? visibleLocationOptions : configLocations.map((location) => location.code)], onChange: (value) => updateRow("userAccess", index, { locationCode: value || null }), emptyLabel: "All Locations" }),
-                      /* @__PURE__ */ jsxRuntimeExports.jsx(SelectField, { label: "Unit", value: access.unitCode || "", disabled: !canEditSection("platform-user-access"), options: ["", ...visibleUnitOptions.length > 0 ? visibleUnitOptions : configUnits.map((unit) => unit.code)], onChange: (value) => updateRow("userAccess", index, { unitCode: value || null }), emptyLabel: "All Units" }),
+                      /* @__PURE__ */ jsxRuntimeExports.jsx(SelectField, { label: "Location", value: access.locationCode || activePermissionTemplateLocationCode || "", disabled: !canEditSection("platform-user-access"), options: allActiveLocationOptions.length > 0 ? allActiveLocationOptions : configLocations.map((location) => location.code), onChange: (value) => updateRow("userAccess", index, { locationCode: value || activePermissionTemplateLocationCode || null }) }),
+                      /* @__PURE__ */ jsxRuntimeExports.jsx(
+                        SelectField,
+                        {
+                          label: "Unit",
+                          value: access.unitCode || activeSettingsUnitCode || "",
+                          disabled: !canEditSection("platform-user-access"),
+                          options: permissionAccessUnitOptions.length > 0 ? permissionAccessUnitOptions : configUnits.map((unit) => unit.code),
+                          onChange: (value) => {
+                            const selectedUnit = configUnits.find((unit) => String(unit.code || "").trim().toUpperCase() === String(value || "").trim().toUpperCase());
+                            updateRow("userAccess", index, {
+                              unitCode: value || activeSettingsUnitCode || null,
+                              locationCode: String(selectedUnit?.locationCode || access.locationCode || activePermissionTemplateLocationCode || "").trim() || null
+                            });
+                          }
+                        }
+                      ),
                       /* @__PURE__ */ jsxRuntimeExports.jsx(SelectField, { label: "Admin Level", value: access.role || "Viewer", disabled: !canEditSection("platform-user-access"), options: ["Viewer", "Scheduler", "Supervisor", "Unit Admin", "Platform Admin", "Super Admin"], onChange: (value) => updateRow("userAccess", index, { role: value }) }),
                       /* @__PURE__ */ jsxRuntimeExports.jsx(SelectField, { label: "Access", value: access.accessLevel || "Read", disabled: !canEditSection("platform-user-access"), options: ["Read", "Write", "Admin"], onChange: (value) => updateRow("userAccess", index, { accessLevel: value }) }),
                       /* @__PURE__ */ jsxRuntimeExports.jsx(SelectField, { label: "Status", value: access.status || "ACTIVE", disabled: !canEditSection("platform-user-access"), options: ["ACTIVE", "INACTIVE"], onChange: (value) => updateRow("userAccess", index, { status: value }) })
@@ -32208,9 +32369,13 @@ const UserSearchSelect = ({
       return query.split(/\s+/).filter(Boolean).every((token) => searchText.includes(token));
     }).slice(0, 30);
   }, [filterSearch, users]);
+  const selectedUserLabel = reactExports.useMemo(() => {
+    const selectedUser = users.find((user) => user.id === value);
+    return selectedUser?.name || selectedUser?.username || value || "";
+  }, [users, value]);
   reactExports.useEffect(() => {
-    if (!isOpen) setDraftSearch(search || "");
-  }, [isOpen, search]);
+    if (!isOpen) setDraftSearch(search || selectedUserLabel || "");
+  }, [isOpen, search, selectedUserLabel]);
   const updateSearchDraft = (nextSearch) => {
     setDraftSearch(nextSearch);
     setIsOpen(true);
@@ -32243,7 +32408,7 @@ const UserSearchSelect = ({
         onClick: () => {
           onChange(user.id);
           onSearchChange("");
-          setDraftSearch("");
+          setDraftSearch(user.name || user.username || user.id);
           setFilterSearch("");
           setIsOpen(false);
         },
@@ -141536,6 +141701,38 @@ const App = () => {
     const configuredSelectableLocations = configuredLocationsWithUnits.length > 0 ? configuredLocationsWithUnits : getLocationCodesForCurrentRuntime(platformConfig, []);
     return configuredSelectableLocations;
   }, [getLocationSelectorAliases, platformConfig]);
+  const platformAccessContext = reactExports.useMemo(() => getPlatformAccessContext(platformConfig, [
+    authUser?.id,
+    authUser?.userId,
+    authUser?.username,
+    authUser?.email,
+    authUser?.displayName,
+    authUser?.firstName && authUser.lastName ? `${stripCourseDetailsFromLoginName(authUser.lastName)}, ${stripCourseDetailsFromLoginName(authUser.firstName)}` : "",
+    authUser?.firstName && authUser.lastName ? `${stripCourseDetailsFromLoginName(authUser.firstName)} ${stripCourseDetailsFromLoginName(authUser.lastName)}` : "",
+    sessionUser?.userId,
+    sessionUser?.username,
+    sessionUser?.firstName && sessionUser.lastName ? `${stripCourseDetailsFromLoginName(sessionUser.lastName)}, ${stripCourseDetailsFromLoginName(sessionUser.firstName)}` : "",
+    sessionUser?.firstName && sessionUser.lastName ? `${stripCourseDetailsFromLoginName(sessionUser.firstName)} ${stripCourseDetailsFromLoginName(sessionUser.lastName)}` : "",
+    currentUserName
+  ], baseSelectableLocationCodes), [authUser, sessionUser, currentUserName, platformConfig, baseSelectableLocationCodes]);
+  const hasAuthenticatedAdminRole = ["ADMIN", "SUPER_ADMIN"].includes(String(authUser?.role || "").toUpperCase());
+  const hasRuntimePlatformWideAccess = hasAuthenticatedAdminRole || platformAccessContext.isSuperAdmin;
+  const accessibleUnitCodeSet = reactExports.useMemo(() => new Set(
+    (platformAccessContext.accessibleUnits || []).map((unitCode) => String(unitCode || "").trim().toUpperCase()).filter(Boolean)
+  ), [platformAccessContext]);
+  const filterUnitsForPlatformAccess = reactExports.useCallback((units2) => {
+    if (!platformAccessContext.isConfigured || hasRuntimePlatformWideAccess || platformAccessContext.hasAllUnitAccess) {
+      return units2;
+    }
+    if (accessibleUnitCodeSet.size === 0) return [];
+    return units2.filter((unit) => {
+      const optionCode = String(unit?.code || unit || "").trim().toUpperCase();
+      if (accessibleUnitCodeSet.has(optionCode)) return true;
+      const memberUnits = Array.isArray(unit?.memberUnits) ? unit.memberUnits : [];
+      if (memberUnits.length === 0) return false;
+      return memberUnits.map((memberUnit) => String(memberUnit || "").trim().toUpperCase()).filter(Boolean).every((memberUnit) => accessibleUnitCodeSet.has(memberUnit));
+    });
+  }, [accessibleUnitCodeSet, hasRuntimePlatformWideAccess, platformAccessContext.hasAllUnitAccess, platformAccessContext.isConfigured]);
   const getUnitOptionsForLocation = reactExports.useCallback((locationCode) => {
     const normalisedLocationCode = String(locationCode || "").trim().toUpperCase();
     const activeLocation = (platformConfig?.locations || []).filter((location) => location.status !== "INACTIVE").find((location) => getLocationSelectorAliases(location).includes(normalisedLocationCode));
@@ -141651,8 +141848,8 @@ const App = () => {
     knownDfpLocationAliases
   ]);
   const activeLocationUnitOptions = reactExports.useMemo(
-    () => getUnitOptionsForLocation(school),
-    [getUnitOptionsForLocation, school]
+    () => filterUnitsForPlatformAccess(getUnitOptionsForLocation(school)),
+    [filterUnitsForPlatformAccess, getUnitOptionsForLocation, school]
   );
   reactExports.useEffect(() => {
     if (!platformConfigLoaded) {
@@ -142565,22 +142762,6 @@ const App = () => {
       window.clearInterval(interval);
     };
   }, [authUser, currentUserName, dashboardNotificationContactId, dashboardNotificationUserName, isAuthenticated, signedInDisplayName]);
-  const platformAccessContext = reactExports.useMemo(() => getPlatformAccessContext(platformConfig, [
-    authUser?.id,
-    authUser?.userId,
-    authUser?.username,
-    authUser?.email,
-    authUser?.displayName,
-    authUser?.firstName && authUser.lastName ? `${stripCourseDetailsFromLoginName(authUser.lastName)}, ${stripCourseDetailsFromLoginName(authUser.firstName)}` : "",
-    authUser?.firstName && authUser.lastName ? `${stripCourseDetailsFromLoginName(authUser.firstName)} ${stripCourseDetailsFromLoginName(authUser.lastName)}` : "",
-    sessionUser?.userId,
-    sessionUser?.username,
-    sessionUser?.firstName && sessionUser.lastName ? `${stripCourseDetailsFromLoginName(sessionUser.lastName)}, ${stripCourseDetailsFromLoginName(sessionUser.firstName)}` : "",
-    sessionUser?.firstName && sessionUser.lastName ? `${stripCourseDetailsFromLoginName(sessionUser.firstName)} ${stripCourseDetailsFromLoginName(sessionUser.lastName)}` : "",
-    currentUserName
-  ], baseSelectableLocationCodes), [authUser, sessionUser, currentUserName, platformConfig, baseSelectableLocationCodes]);
-  const hasAuthenticatedAdminRole = ["ADMIN", "SUPER_ADMIN"].includes(String(authUser?.role || "").toUpperCase());
-  const hasRuntimePlatformWideAccess = hasAuthenticatedAdminRole || platformAccessContext.isSuperAdmin || platformAccessContext.isPlatformAdmin;
   const selectableLocationCodes = reactExports.useMemo(
     () => hasRuntimePlatformWideAccess ? baseSelectableLocationCodes : platformAccessContext.accessibleLocations,
     [baseSelectableLocationCodes, hasRuntimePlatformWideAccess, platformAccessContext]
@@ -142588,14 +142769,39 @@ const App = () => {
   const operationalContextOptions = reactExports.useMemo(
     () => selectableLocationCodes.map((location) => ({
       location,
-      units: getUnitOptionsForLocation(location).map((unit) => ({
+      units: filterUnitsForPlatformAccess(getUnitOptionsForLocation(location)).map((unit) => ({
         code: unit.code,
         disabled: unit.disabled === true,
         disabledReason: unit.disabledReason
       }))
     })).filter((option) => option.units.length > 0),
-    [getUnitOptionsForLocation, selectableLocationCodes]
+    [filterUnitsForPlatformAccess, getUnitOptionsForLocation, selectableLocationCodes]
   );
+  reactExports.useEffect(() => {
+    if (!platformConfigLoaded) return;
+    if (!platformAccessContext.isConfigured || hasRuntimePlatformWideAccess || platformAccessContext.hasAllUnitAccess) return;
+    if (operationalContextOptions.length === 0) {
+      if (activeUnitCode) setActiveUnitCode("");
+      return;
+    }
+    const currentLocationOption = operationalContextOptions.find((option) => String(option.location || "").trim().toUpperCase() === String(school || "").trim().toUpperCase());
+    const currentUnitAllowed = Boolean(currentLocationOption?.units?.some((unit) => String(unit?.code || "").trim().toUpperCase() === String(activeUnitCode || "").trim().toUpperCase()));
+    if (currentUnitAllowed) return;
+    const nextLocationOption = currentLocationOption || operationalContextOptions[0];
+    const nextUnit = nextLocationOption?.units?.find((unit) => unit.disabled !== true) || nextLocationOption?.units?.[0];
+    if (nextLocationOption?.location && String(nextLocationOption.location || "").trim().toUpperCase() !== String(school || "").trim().toUpperCase()) {
+      setSchool(nextLocationOption.location);
+    }
+    setActiveUnitCode(nextUnit?.code || "");
+  }, [
+    activeUnitCode,
+    hasRuntimePlatformWideAccess,
+    operationalContextOptions,
+    platformAccessContext.hasAllUnitAccess,
+    platformAccessContext.isConfigured,
+    platformConfigLoaded,
+    school
+  ]);
   const initialSetupWizardCompletedAtStorageKey2 = "dfp-initial-setup-wizard-completed-at";
   const hasStoredInitialSetupWizardProgress = reactExports.useCallback(() => {
     if (typeof window === "undefined") return false;

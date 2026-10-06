@@ -1,13 +1,36 @@
 {
   "schemaVersion": "neo-guide-db-vocabulary.v1",
-  "generatedAt": "2026-10-06T05:42:23.555Z",
+  "generatedAt": "2026-10-06T09:54:24.187Z",
   "source": {
     "type": "customer-database-safe-vocabulary",
-    "databaseConnected": false,
-    "message": "DATABASE_URL is not configured; database vocabulary was not scanned.",
+    "databaseConnected": true,
     "modelsScanned": 0,
     "recordsScanned": 0,
-    "fieldsScanned": 0
+    "fieldsScanned": 0,
+    "errors": [
+      "Aircraft: aircraftNumber: Can't reach database server at `postgres-mli9.railway.internal:5432`",
+      "CancellationHistory: eventType: Can't reach database server at `postgres-mli9.railway.internal:5432`",
+      "Course: name: Can't reach database server at `postgres-mli9.railway.internal:5432`",
+      "CourseAcademicProgress: courseCode: Can't reach database server at `postgres-mli9.railway.internal:5432`",
+      "CourseSettings: selectedAcademicLmp: Can't reach database server at `postgres-mli9.railway.internal:5432`",
+      "EventCompletion: eventCode: Can't reach database server at `postgres-mli9.railway.internal:5432`",
+      "FlightLogEntry: eventCode: Can't reach database server at `postgres-mli9.railway.internal:5432`",
+      "IndividualLMP: lmpType: Can't reach database server at `postgres-mli9.railway.internal:5432`",
+      "Personnel: rank: Can't reach database server at `postgres-mli9.railway.internal:5432`",
+      "ScheduleEventArchive: eventType: Can't reach database server at `postgres-mli9.railway.internal:5432`",
+      "SctRequest: requestType: Can't reach database server at `postgres-mli9.railway.internal:5432`",
+      "Trainee: rank: Can't reach database server at `postgres-mli9.railway.internal:5432`",
+      "CommercialOrganisation: code: Can't reach database server at `postgres-mli9.railway.internal:5432`",
+      "CommercialLocation: organisationCode: Can't reach database server at `postgres-mli9.railway.internal:5432`",
+      "CommercialUnit: organisationCode: Can't reach database server at `postgres-mli9.railway.internal:5432`",
+      "CommercialAircraftType: code: Can't reach database server at `postgres-mli9.railway.internal:5432`",
+      "CommercialResourcePool: organisationCode: Can't reach database server at `postgres-mli9.railway.internal:5432`",
+      "CommercialModule: code: Can't reach database server at `postgres-mli9.railway.internal:5432`",
+      "CommercialUnitModule: unitCode: Can't reach database server at `postgres-mli9.railway.internal:5432`",
+      "CommercialSchedulingRuleSet: organisationCode: Can't reach database server at `postgres-mli9.railway.internal:5432`",
+      "AppSettings: orgId: Can't reach database server at `postgres-mli9.railway.internal:5432`",
+      "UserSettings: settings: Can't reach database server at `postgres-mli9.railway.internal:5432`"
+    ]
   },
   "privacy": {
     "mode": "allowlisted-operational-terms-only",

@@ -29826,6 +29826,50 @@ const App: React.FC = () => {
         return configuredSelectableLocations;
     }, [getLocationSelectorAliases, platformConfig]);
 
+    const platformAccessContext = useMemo(() => getPlatformAccessContext(platformConfig, [
+        authUser?.id,
+        authUser?.userId,
+        authUser?.username,
+        (authUser as any)?.email,
+        authUser?.displayName,
+        authUser?.firstName && authUser.lastName ? `${stripCourseDetailsFromLoginName(authUser.lastName)}, ${stripCourseDetailsFromLoginName(authUser.firstName)}` : '',
+        authUser?.firstName && authUser.lastName ? `${stripCourseDetailsFromLoginName(authUser.firstName)} ${stripCourseDetailsFromLoginName(authUser.lastName)}` : '',
+        sessionUser?.userId,
+        sessionUser?.username,
+        sessionUser?.firstName && sessionUser.lastName ? `${stripCourseDetailsFromLoginName(sessionUser.lastName)}, ${stripCourseDetailsFromLoginName(sessionUser.firstName)}` : '',
+        sessionUser?.firstName && sessionUser.lastName ? `${stripCourseDetailsFromLoginName(sessionUser.firstName)} ${stripCourseDetailsFromLoginName(sessionUser.lastName)}` : '',
+        currentUserName,
+    ], baseSelectableLocationCodes), [authUser, sessionUser, currentUserName, platformConfig, baseSelectableLocationCodes]);
+
+    const hasAuthenticatedAdminRole = ['ADMIN', 'SUPER_ADMIN'].includes(String(authUser?.role || '').toUpperCase());
+    const hasRuntimePlatformWideAccess = (
+        hasAuthenticatedAdminRole
+        || platformAccessContext.isSuperAdmin
+    );
+
+    const accessibleUnitCodeSet = useMemo(() => new Set(
+        (platformAccessContext.accessibleUnits || [])
+            .map(unitCode => String(unitCode || '').trim().toUpperCase())
+            .filter(Boolean)
+    ), [platformAccessContext]);
+
+    const filterUnitsForPlatformAccess = useCallback((units: any[]) => {
+        if (!platformAccessContext.isConfigured || hasRuntimePlatformWideAccess || platformAccessContext.hasAllUnitAccess) {
+            return units;
+        }
+        if (accessibleUnitCodeSet.size === 0) return [];
+        return units.filter((unit: any) => {
+            const optionCode = String(unit?.code || unit || '').trim().toUpperCase();
+            if (accessibleUnitCodeSet.has(optionCode)) return true;
+            const memberUnits = Array.isArray(unit?.memberUnits) ? unit.memberUnits : [];
+            if (memberUnits.length === 0) return false;
+            return memberUnits
+                .map((memberUnit: unknown) => String(memberUnit || '').trim().toUpperCase())
+                .filter(Boolean)
+                .every((memberUnit: string) => accessibleUnitCodeSet.has(memberUnit));
+        });
+    }, [accessibleUnitCodeSet, hasRuntimePlatformWideAccess, platformAccessContext.hasAllUnitAccess, platformAccessContext.isConfigured]);
+
     const getUnitOptionsForLocation = useCallback((locationCode: string) => {
         const normalisedLocationCode = String(locationCode || '').trim().toUpperCase();
         const activeLocation = (platformConfig?.locations || [])
@@ -29974,8 +30018,8 @@ const App: React.FC = () => {
     ]);
 
     const activeLocationUnitOptions = useMemo(
-        () => getUnitOptionsForLocation(school),
-        [getUnitOptionsForLocation, school],
+        () => filterUnitsForPlatformAccess(getUnitOptionsForLocation(school)),
+        [filterUnitsForPlatformAccess, getUnitOptionsForLocation, school],
     );
 
     useEffect(() => {
@@ -31149,28 +31193,6 @@ const App: React.FC = () => {
             window.clearInterval(interval);
         };
     }, [authUser, currentUserName, dashboardNotificationContactId, dashboardNotificationUserName, isAuthenticated, signedInDisplayName]);
-    const platformAccessContext = useMemo(() => getPlatformAccessContext(platformConfig, [
-        authUser?.id,
-        authUser?.userId,
-        authUser?.username,
-        (authUser as any)?.email,
-        authUser?.displayName,
-        authUser?.firstName && authUser.lastName ? `${stripCourseDetailsFromLoginName(authUser.lastName)}, ${stripCourseDetailsFromLoginName(authUser.firstName)}` : '',
-        authUser?.firstName && authUser.lastName ? `${stripCourseDetailsFromLoginName(authUser.firstName)} ${stripCourseDetailsFromLoginName(authUser.lastName)}` : '',
-        sessionUser?.userId,
-        sessionUser?.username,
-        sessionUser?.firstName && sessionUser.lastName ? `${stripCourseDetailsFromLoginName(sessionUser.lastName)}, ${stripCourseDetailsFromLoginName(sessionUser.firstName)}` : '',
-        sessionUser?.firstName && sessionUser.lastName ? `${stripCourseDetailsFromLoginName(sessionUser.firstName)} ${stripCourseDetailsFromLoginName(sessionUser.lastName)}` : '',
-        currentUserName,
-    ], baseSelectableLocationCodes), [authUser, sessionUser, currentUserName, platformConfig, baseSelectableLocationCodes]);
-
-    const hasAuthenticatedAdminRole = ['ADMIN', 'SUPER_ADMIN'].includes(String(authUser?.role || '').toUpperCase());
-    const hasRuntimePlatformWideAccess = (
-        hasAuthenticatedAdminRole
-        || platformAccessContext.isSuperAdmin
-        || platformAccessContext.isPlatformAdmin
-    );
-
     const selectableLocationCodes = useMemo(
         () => hasRuntimePlatformWideAccess ? baseSelectableLocationCodes : platformAccessContext.accessibleLocations,
         [baseSelectableLocationCodes, hasRuntimePlatformWideAccess, platformAccessContext],
@@ -31179,14 +31201,44 @@ const App: React.FC = () => {
     const operationalContextOptions = useMemo(
         () => selectableLocationCodes.map(location => ({
             location,
-            units: getUnitOptionsForLocation(location).map(unit => ({
+            units: filterUnitsForPlatformAccess(getUnitOptionsForLocation(location)).map(unit => ({
                 code: unit.code,
                 disabled: unit.disabled === true,
                 disabledReason: unit.disabledReason,
             })),
         })).filter(option => option.units.length > 0),
-        [getUnitOptionsForLocation, selectableLocationCodes],
+        [filterUnitsForPlatformAccess, getUnitOptionsForLocation, selectableLocationCodes],
     );
+
+    useEffect(() => {
+        if (!platformConfigLoaded) return;
+        if (!platformAccessContext.isConfigured || hasRuntimePlatformWideAccess || platformAccessContext.hasAllUnitAccess) return;
+        if (operationalContextOptions.length === 0) {
+            if (activeUnitCode) setActiveUnitCode('');
+            return;
+        }
+        const currentLocationOption = operationalContextOptions.find((option) => (
+            String(option.location || '').trim().toUpperCase() === String(school || '').trim().toUpperCase()
+        ));
+        const currentUnitAllowed = Boolean(currentLocationOption?.units?.some((unit: any) => (
+            String(unit?.code || '').trim().toUpperCase() === String(activeUnitCode || '').trim().toUpperCase()
+        )));
+        if (currentUnitAllowed) return;
+        const nextLocationOption = currentLocationOption || operationalContextOptions[0];
+        const nextUnit = nextLocationOption?.units?.find((unit: any) => unit.disabled !== true) || nextLocationOption?.units?.[0];
+        if (nextLocationOption?.location && String(nextLocationOption.location || '').trim().toUpperCase() !== String(school || '').trim().toUpperCase()) {
+            setSchool(nextLocationOption.location);
+        }
+        setActiveUnitCode(nextUnit?.code || '');
+    }, [
+        activeUnitCode,
+        hasRuntimePlatformWideAccess,
+        operationalContextOptions,
+        platformAccessContext.hasAllUnitAccess,
+        platformAccessContext.isConfigured,
+        platformConfigLoaded,
+        school,
+    ]);
     const initialSetupWizardCompletedAtStorageKey = 'dfp-initial-setup-wizard-completed-at';
     const hasStoredInitialSetupWizardProgress = useCallback(() => {
         if (typeof window === 'undefined') return false;
