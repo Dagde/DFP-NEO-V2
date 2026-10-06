@@ -1813,7 +1813,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                                                 </div>
                                             )}
                                         </div>
-                                        {isEditingGroundEventScheduling && groupIndex === 0 ? (
+                                        {isEditingGroundEventScheduling && groupIndex === displayedGroundEventSchedulingGroups.length - 1 ? (
                                             <div className="mt-3 flex justify-end">
                                                 <button onClick={handleAddGroundEventGroup} className="rounded-md border border-emerald-600 bg-emerald-600 px-3 py-2 text-xs font-bold text-white shadow-sm transition hover:border-emerald-500 hover:bg-emerald-500">
                                                     Add Group

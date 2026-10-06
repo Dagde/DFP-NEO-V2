@@ -1,6 +1,6 @@
 {
   "schemaVersion": "neo-guide-db-vocabulary.v1",
-  "generatedAt": "2026-10-06T22:53:43.455Z",
+  "generatedAt": "2026-10-06T22:57:52.726Z",
   "source": {
     "type": "customer-database-safe-vocabulary",
     "databaseConnected": true,
