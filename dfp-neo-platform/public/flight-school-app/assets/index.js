@@ -43116,20 +43116,24 @@ const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, lo
       );
     }
     if (visibleStep.id === "org-name") {
-      const showOrganisationDraftValues = organisationDraftDirtyRef.current;
       const organisationNameSample = String(organisationDraft.name || "Organisation").trim() || "Organisation";
       const organisationCodeSample = String(organisationDraft.code || "ORG").trim() || "ORG";
+      const normaliseSampleValue = (value) => String(value || "").trim().toUpperCase();
+      const activeOrganisationNameSample = normaliseSampleValue(activeOrganisation?.name || activeOrganisation?.code || "Organisation");
+      const activeOrganisationCodeSample = normaliseSampleValue(activeOrganisation?.code || "ORG");
+      const showOrganisationNameValue = organisationDraftDirtyRef.current && normaliseSampleValue(organisationDraft.name) !== activeOrganisationNameSample && normaliseSampleValue(organisationDraft.name) !== "ORGANISATION";
+      const showOrganisationCodeValue = organisationDraftDirtyRef.current && normaliseSampleValue(organisationDraft.code) !== activeOrganisationCodeSample && normaliseSampleValue(organisationDraft.code) !== "ORG";
       return promptShell(
         /* @__PURE__ */ jsxRuntimeExports.jsx("p", { children: "Start by entering the organisation name." }),
         /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid gap-3 md:grid-cols-2", children: [
-          wizardField("Organisation name", showOrganisationDraftValues ? organisationDraft.name : "", (value) => updateOrganisationDraft((draft) => ({
+          wizardField("Organisation name", showOrganisationNameValue ? organisationDraft.name : "", (value) => updateOrganisationDraft((draft) => ({
             ...draft,
             name: value,
             code: draft.code || value,
             level0Name: value || draft.level0Name,
             level0Options: value || draft.level0Options
           }), "field-edit:organisation-name"), void 0, organisationNameSample),
-          wizardField("Short code", showOrganisationDraftValues ? organisationDraft.code : "", (value) => updateOrganisationDraft((draft) => ({ ...draft, code: value }), "field-edit:organisation-code"), void 0, organisationCodeSample),
+          wizardField("Short code", showOrganisationCodeValue ? organisationDraft.code : "", (value) => updateOrganisationDraft((draft) => ({ ...draft, code: value }), "field-edit:organisation-code"), void 0, organisationCodeSample),
           wizardField(
             "Organisation levels before units",
             String(normaliseOrganisationLevelCount(organisationDraft.organisationLevelCount, 3)),
