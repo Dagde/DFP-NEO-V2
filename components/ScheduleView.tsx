@@ -13566,7 +13566,7 @@ const InitialSetupWizard: React.FC<{
                                                         <span />
                                                     )}
                                                     {groupIndex === 0 ? (
-                                                        <button type="button" className={wizardSmallButtonClass} onClick={handleAddWizardGroundEventGroup}>
+                                                        <button type="button" className="rounded-md border border-emerald-600 bg-emerald-600 px-3 py-2 text-xs font-bold text-white shadow-sm transition hover:border-emerald-500 hover:bg-emerald-500" onClick={handleAddWizardGroundEventGroup}>
                                                             Add group
                                                         </button>
                                                     ) : null}
