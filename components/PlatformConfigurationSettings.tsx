@@ -5463,6 +5463,8 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
     ? 'h-[38px] min-w-[76px] rounded-lg bg-sky-500 px-3 text-xs font-black !text-white shadow-sm transition hover:bg-sky-600 disabled:cursor-not-allowed disabled:bg-slate-200 disabled:!text-slate-500'
     : 'h-[38px] min-w-[76px] rounded-md border border-gray-500 bg-gray-300 px-3 text-xs font-bold text-gray-900 hover:bg-gray-200 disabled:cursor-not-allowed disabled:opacity-50';
   const wizardHeaderActionTextStyle = wizardEditMode ? { color: '#ffffff' } : undefined;
+  const wizardHeaderAddActionStyle = wizardEditMode ? { color: '#ffffff', backgroundColor: '#16a34a' } : undefined;
+  const wizardHeaderDeleteActionStyle = wizardEditMode ? { color: '#ffffff', backgroundColor: '#dc2626' } : undefined;
 
   const rewriteUnitCodesInSettings = (settings: Record<string, any> = {}, oldCode: string, nextCode: string | null): Record<string, any> => {
     const normalise = (value: unknown) => String(value || '').trim();
@@ -10823,7 +10825,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
                     type="button"
                     onClick={addAircraftType}
                     className={platformActionButtonClass}
-                    style={wizardHeaderActionTextStyle}
+                    style={wizardHeaderAddActionStyle}
                     title="Add aircraft type"
                   >
                     <span className="text-[8px] leading-[0.7rem]" style={wizardHeaderActionTextStyle}>Add<br />Aircraft<br />Type</span>
@@ -11128,7 +11130,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
                     type="button"
                     onClick={() => setShowResourcePoolDeletePanel((current) => !current)}
                     className={platformActionButtonClass}
-                    style={wizardHeaderActionTextStyle}
+                    style={wizardHeaderDeleteActionStyle}
                     title="Show or hide DFP Resource Rows deletion controls"
                   >
                     <span className="text-[9px] leading-tight" style={wizardHeaderActionTextStyle}>Delete<br />Rows</span>
@@ -11137,7 +11139,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
                     type="button"
                     onClick={addResourcePool}
                     className={platformActionButtonClass}
-                    style={wizardHeaderActionTextStyle}
+                    style={wizardHeaderAddActionStyle}
                     title="Add DFP Resource Rows"
                   >
                     <span className="text-[9px] leading-tight" style={wizardHeaderActionTextStyle}>Add<br />Rows</span>
