@@ -23976,79 +23976,6 @@ This removes it from the master list and from every user assignment that current
     [configUserAccess, effectiveSelectedAccessUserId]
   );
   const selectedAccessDisplayName = selectedAccessUser ? getAccessPersonDisplayName(selectedAccessUser) || selectedAccessUser.username || selectedAccessUser.userId : selectedAccessUserOption ? selectedAccessUserOption.name : selectedAccessRows[0]?.access.displayName ? `${selectedAccessRows[0].access.displayName} (missing platform user record)` : selectedAccessUserId ? `${selectedAccessUserId} (missing platform user record)` : "No user selected";
-  const downloadUserPermissionsWizardDiagnostic = () => {
-    const generatedAt = (/* @__PURE__ */ new Date()).toISOString();
-    const readStorageValue = (key) => {
-      try {
-        return window.localStorage.getItem(key);
-      } catch {
-        return null;
-      }
-    };
-    const wizardStorageKeys = [
-      "dfp-initial-setup-wizard-step",
-      "dfp-initial-setup-wizard-organisation-draft",
-      "dfp-initial-setup-wizard-draft-snapshot",
-      "dfp-initial-setup-wizard-completed-steps",
-      "dfp-initial-setup-wizard-completed-at"
-    ];
-    const report = {
-      generatedAt,
-      page: typeof window !== "undefined" ? window.location.href : "",
-      purpose: "Diagnose why Step 29 User Permissions is showing a real selected user instead of sample text.",
-      wizardState: {
-        wizardEditMode,
-        scrollTarget,
-        focusUserId,
-        focusLocationCode,
-        focusSubsectionId,
-        loading,
-        sectionOnly,
-        wizardAccessUserSelected,
-        wizardInitialClearHasRun: wizardUserAccessInitialClearRef.current
-      },
-      selectedUserState: {
-        selectedAccessUserId,
-        effectiveSelectedAccessUserId,
-        shouldShowSelectedAccessUser,
-        selectedAccessDisplayName,
-        userSearch,
-        selectedAccessUser,
-        selectedAccessUserOption,
-        selectedAccessRows,
-        visibleSelectedAccessRows
-      },
-      renderedExpectations: {
-        userFieldValue: shouldShowSelectedAccessUser ? selectedAccessUserId : "",
-        userPlaceholder: wizardEditMode ? "Smith, John" : "Search by name...",
-        displayNameShown: shouldShowSelectedAccessUser ? selectedAccessDisplayName : "Smith, John",
-        accessScopeCountShown: visibleSelectedAccessRows.length
-      },
-      configSamples: {
-        activeSettingsUnitCode,
-        activePermissionTemplateLocationCode,
-        activePermissionTemplateUnitCode,
-        platformUserCount: configPlatformUsers.length,
-        firstPlatformUsers: configPlatformUsers.slice(0, 10).map((user) => ({
-          userId: user.userId,
-          username: user.username,
-          displayName: getAccessPersonDisplayName(user),
-          status: user.status,
-          role: user.role,
-          settings: user.settings
-        })),
-        userAccessCount: configUserAccess.length,
-        firstUserAccessRows: configUserAccess.slice(0, 20)
-      },
-      browserStorage: Object.fromEntries(wizardStorageKeys.map((key) => [key, readStorageValue(key)])),
-      note: "This file is intended for debugging the visible wizard state. It may include user names and permission rows, but it should not include passwords or database credentials."
-    };
-    downloadTextFile(
-      `setup-wizard-user-permissions-diagnostic-${generatedAt.replace(/[:.]/g, "-")}.json`,
-      JSON.stringify(report, null, 2),
-      "application/json"
-    );
-  };
   const selectedUserProfileIds = reactExports.useMemo(() => {
     const activeRows = selectedAccessRows.filter(({ access }) => String(access.status || "").toUpperCase() !== "INACTIVE");
     const sourceRows = activeRows.length > 0 ? activeRows : selectedAccessRows;
@@ -30680,11 +30607,6 @@ This removes them from DFP Resource Rows. Press Save in this section to apply th
               title: "Assign User Permissions",
               subtitle: "Search by user name, assign permission profiles, then add one unit access scope for each unit this user may open.",
               action: /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex flex-wrap justify-end gap-[1px]", children: canEdit ? /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
-                wizardEditMode ? /* @__PURE__ */ jsxRuntimeExports.jsx("button", { type: "button", onClick: downloadUserPermissionsWizardDiagnostic, className: platformActionButtonClass, children: /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "text-[9px] leading-tight", children: [
-                  "Download",
-                  /* @__PURE__ */ jsxRuntimeExports.jsx("br", {}),
-                  "Trace"
-                ] }) }) : null,
                 renderSectionEditSaveButton("platform-user-access"),
                 /* @__PURE__ */ jsxRuntimeExports.jsx("button", { type: "button", onClick: addUserAccess, disabled: !canEditSection("platform-user-access"), className: platformActionButtonClass, children: /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "text-[9px] leading-tight", children: [
                   "Add",
@@ -30696,15 +30618,6 @@ This removes them from DFP Resource Rows. Press Save in this section to apply th
           ),
           /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { id: "platform-user-access-records", className: "space-y-3 p-4", children: [
             /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded-lg border border-cyan-500/30 bg-cyan-500/10 p-4", children: [
-              wizardEditMode ? /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mb-3 flex justify-end", children: /* @__PURE__ */ jsxRuntimeExports.jsx(
-                "button",
-                {
-                  type: "button",
-                  onClick: downloadUserPermissionsWizardDiagnostic,
-                  className: "rounded bg-sky-600 px-3 py-2 text-xs font-bold text-white shadow-sm hover:bg-sky-500",
-                  children: "Download user permissions trace"
-                }
-              ) }) : null,
               /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid gap-3 md:grid-cols-[minmax(260px,1fr)_minmax(220px,1fr)_minmax(120px,auto)_minmax(120px,auto)]", children: [
                 /* @__PURE__ */ jsxRuntimeExports.jsx(
                   UserSearchSelect,

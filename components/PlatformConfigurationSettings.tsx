@@ -6955,80 +6955,6 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
         ? `${selectedAccessUserId} (missing platform user record)`
         : 'No user selected';
 
-  const downloadUserPermissionsWizardDiagnostic = () => {
-    const generatedAt = new Date().toISOString();
-    const readStorageValue = (key: string): string | null => {
-      try {
-        return window.localStorage.getItem(key);
-      } catch {
-        return null;
-      }
-    };
-    const wizardStorageKeys = [
-      'dfp-initial-setup-wizard-step',
-      'dfp-initial-setup-wizard-organisation-draft',
-      'dfp-initial-setup-wizard-draft-snapshot',
-      'dfp-initial-setup-wizard-completed-steps',
-      'dfp-initial-setup-wizard-completed-at',
-    ];
-    const report = {
-      generatedAt,
-      page: typeof window !== 'undefined' ? window.location.href : '',
-      purpose: 'Diagnose why Step 29 User Permissions is showing a real selected user instead of sample text.',
-      wizardState: {
-        wizardEditMode,
-        scrollTarget,
-        focusUserId,
-        focusLocationCode,
-        focusSubsectionId,
-        loading,
-        sectionOnly,
-        wizardAccessUserSelected,
-        wizardInitialClearHasRun: wizardUserAccessInitialClearRef.current,
-      },
-      selectedUserState: {
-        selectedAccessUserId,
-        effectiveSelectedAccessUserId,
-        shouldShowSelectedAccessUser,
-        selectedAccessDisplayName,
-        userSearch,
-        selectedAccessUser,
-        selectedAccessUserOption,
-        selectedAccessRows,
-        visibleSelectedAccessRows,
-      },
-      renderedExpectations: {
-        userFieldValue: shouldShowSelectedAccessUser ? selectedAccessUserId : '',
-        userPlaceholder: wizardEditMode ? 'Smith, John' : 'Search by name...',
-        displayNameShown: shouldShowSelectedAccessUser ? selectedAccessDisplayName : 'Smith, John',
-        accessScopeCountShown: visibleSelectedAccessRows.length,
-      },
-      configSamples: {
-        activeSettingsUnitCode,
-        activePermissionTemplateLocationCode,
-        activePermissionTemplateUnitCode,
-        platformUserCount: configPlatformUsers.length,
-        firstPlatformUsers: configPlatformUsers.slice(0, 10).map((user) => ({
-          userId: user.userId,
-          username: user.username,
-          displayName: getAccessPersonDisplayName(user),
-          status: user.status,
-          role: user.role,
-          settings: user.settings,
-        })),
-        userAccessCount: configUserAccess.length,
-        firstUserAccessRows: configUserAccess.slice(0, 20),
-      },
-      browserStorage: Object.fromEntries(wizardStorageKeys.map((key) => [key, readStorageValue(key)])),
-      note: 'This file is intended for debugging the visible wizard state. It may include user names and permission rows, but it should not include passwords or database credentials.',
-    };
-    downloadTextFile(
-      `setup-wizard-user-permissions-diagnostic-${generatedAt.replace(/[:.]/g, '-')}.json`,
-      JSON.stringify(report, null, 2),
-      'application/json',
-    );
-  };
-
   const selectedUserProfileIds = useMemo(() => {
     const activeRows = selectedAccessRows.filter(({ access }) => String(access.status || '').toUpperCase() !== 'INACTIVE');
     const sourceRows = activeRows.length > 0 ? activeRows : selectedAccessRows;
@@ -14278,11 +14204,6 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
             <div className="flex flex-wrap justify-end gap-[1px]">
               {canEdit ? (
                 <>
-                  {wizardEditMode ? (
-                    <button type="button" onClick={downloadUserPermissionsWizardDiagnostic} className={platformActionButtonClass}>
-                      <span className="text-[9px] leading-tight">Download<br />Trace</span>
-                    </button>
-                  ) : null}
                   {renderSectionEditSaveButton('platform-user-access')}
                   <button type="button" onClick={addUserAccess} disabled={!canEditSection('platform-user-access')} className={platformActionButtonClass}>
                     <span className="text-[9px] leading-tight">Add<br />Scope</span>
@@ -14294,17 +14215,6 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
         />
         <div id="platform-user-access-records" className="space-y-3 p-4">
           <div className="rounded-lg border border-cyan-500/30 bg-cyan-500/10 p-4">
-            {wizardEditMode ? (
-              <div className="mb-3 flex justify-end">
-                <button
-                  type="button"
-                  onClick={downloadUserPermissionsWizardDiagnostic}
-                  className="rounded bg-sky-600 px-3 py-2 text-xs font-bold text-white shadow-sm hover:bg-sky-500"
-                >
-                  Download user permissions trace
-                </button>
-              </div>
-            ) : null}
             <div className="grid gap-3 md:grid-cols-[minmax(260px,1fr)_minmax(220px,1fr)_minmax(120px,auto)_minmax(120px,auto)]">
               <UserSearchSelect
                 label="User"
