@@ -33803,6 +33803,62 @@ const normaliseWizardLocationProfile = (location) => ({
   latitude: location?.latitude ?? location?.lat ?? location?.a ?? null,
   longitude: location?.longitude ?? location?.lon ?? location?.lng ?? location?.o ?? null
 });
+const WIZARD_LEGACY_LOCATION_SAMPLE = {
+  code: "LOC1",
+  iata: "LOC",
+  name: "Home Location",
+  timezone: "UTC",
+  latitude: -27.3842,
+  longitude: 153.1175,
+  trainingAreas: ["Area A", "Area B"]
+};
+const normaliseWizardSampleKey = (value) => normaliseUnitSettingsIdentifier(value).replace(/\s+/g, " ");
+const isLegacyWizardSampleValue = (value, samples, allowBlank = true) => {
+  const key = normaliseWizardSampleKey(value);
+  if (!key) return allowBlank;
+  return samples.some((sample) => normaliseWizardSampleKey(sample) === key);
+};
+const isLegacyWizardSampleNumber = (value, sample) => {
+  const text = String(value ?? "").trim();
+  if (!text) return true;
+  const parsed = Number(text);
+  return Number.isFinite(parsed) ? Math.abs(parsed - sample) < 1e-5 : normaliseWizardSampleKey(text) === normaliseWizardSampleKey(String(sample));
+};
+const isLegacyWizardLocationTrainingAreas = (value) => {
+  const items = Array.isArray(value) ? value : String(value ?? "").split(/[,;\n]/).map((item) => item.trim());
+  const keys = items.map(normaliseWizardSampleKey).filter(Boolean);
+  if (keys.length === 0) return true;
+  const sampleKeys = WIZARD_LEGACY_LOCATION_SAMPLE.trainingAreas.map(normaliseWizardSampleKey);
+  return keys.every((key) => sampleKeys.includes(key));
+};
+const isLegacyWizardLocationSampleCode = (value) => normaliseWizardSampleKey(value) === normaliseWizardSampleKey(WIZARD_LEGACY_LOCATION_SAMPLE.code);
+const isLegacyWizardLocationSampleRow = (row) => {
+  const profile = normaliseWizardLocationProfile(row);
+  const code = row?.icao ?? row?.code ?? row?.icaoCode ?? profile.icao;
+  if (!isLegacyWizardLocationSampleCode(code)) return false;
+  const iata = row?.iata ?? row?.iataCode ?? row?.settings?.iataCode ?? profile.iata;
+  const name = row?.name ?? row?.label ?? profile.name;
+  return isLegacyWizardSampleValue(iata, [WIZARD_LEGACY_LOCATION_SAMPLE.iata]) && isLegacyWizardSampleValue(name, [
+    WIZARD_LEGACY_LOCATION_SAMPLE.name,
+    WIZARD_LEGACY_LOCATION_SAMPLE.code,
+    "Location"
+  ]);
+};
+const isLegacyWizardLocationSampleRecord = (record) => {
+  if (!record || typeof record !== "object") return false;
+  if (!isLegacyWizardLocationSampleRow(record)) return false;
+  const timezone = record?.timezone ?? record?.settings?.timezone ?? record?.t;
+  const latitude = record?.latitude ?? record?.settings?.latitude ?? record?.lat ?? record?.a;
+  const longitude = record?.longitude ?? record?.settings?.longitude ?? record?.lon ?? record?.lng ?? record?.o;
+  const trainingAreas = record?.trainingAreas ?? record?.settings?.trainingAreas;
+  return isLegacyWizardSampleValue(timezone, [WIZARD_LEGACY_LOCATION_SAMPLE.timezone]) && isLegacyWizardSampleNumber(latitude, WIZARD_LEGACY_LOCATION_SAMPLE.latitude) && isLegacyWizardSampleNumber(longitude, WIZARD_LEGACY_LOCATION_SAMPLE.longitude) && isLegacyWizardLocationTrainingAreas(trainingAreas);
+};
+const sanitiseLegacyWizardLocationCode = (value, shouldSanitise) => shouldSanitise && isLegacyWizardLocationSampleCode(value) ? "" : String(value || "").trim().toUpperCase();
+const filterLegacyWizardLocationRows = (value, shouldFilter) => {
+  const rows = parseWizardLocationRows(value);
+  const filteredRows = shouldFilter ? rows.filter((row) => !isLegacyWizardLocationSampleRow(row)) : rows;
+  return formatWizardLocationRows(filteredRows);
+};
 const parseWizardUnitRows = (value) => String(value || "").split(/\n/).map((line) => {
   const parts = line.split(/[|,]/).map((part, index) => index === 0 ? part : part.replace(/^\s/, ""));
   return {
@@ -35142,6 +35198,14 @@ const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, lo
       ...organisationSettings || {}
     }
   } : baseActiveOrganisation;
+  const initialWizardSetupCompleted = Boolean(activeOrganisation?.settings?.initialSetupWizardCompletedAt) || (() => {
+    try {
+      return typeof window !== "undefined" && Boolean(window.localStorage.getItem("dfp-initial-setup-wizard-completed-at"));
+    } catch {
+      return false;
+    }
+  })();
+  const shouldIgnoreLegacyWizardLocationSamples = !initialWizardSetupCompleted;
   const currentWizardUnitCode = normaliseUnitSettingsIdentifier(unitCode);
   const currentWizardUnitCodes = Array.from(new Set(
     currentWizardUnitCode.split("+").map((code) => normaliseUnitSettingsIdentifier(code)).filter(Boolean)
@@ -35150,9 +35214,9 @@ const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, lo
   const exactCurrentUnit = configuredWizardUnits.find((unit) => normaliseUnitSettingsIdentifier(unit?.code) === currentWizardUnitCode);
   const firstCurrentMemberUnit = !exactCurrentUnit && currentWizardUnitCodes.length > 0 ? configuredWizardUnits.find((unit) => currentWizardUnitCodes.includes(normaliseUnitSettingsIdentifier(unit?.code))) : null;
   const currentUnit = exactCurrentUnit || firstCurrentMemberUnit || (!currentWizardUnitCode ? configuredWizardUnits[0] : null);
-  const activeWizardLocationCode = String(currentUnit?.locationCode || locationCode || "").trim().toUpperCase();
-  const currentUnitLocationKey = normaliseUnitSettingsIdentifier(currentUnit?.locationCode || activeWizardLocationCode);
-  const currentLocation = (platformConfig?.locations || []).find((location) => [
+  const activeWizardLocationCode = sanitiseLegacyWizardLocationCode(currentUnit?.locationCode || "", shouldIgnoreLegacyWizardLocationSamples) || sanitiseLegacyWizardLocationCode(locationCode || "", shouldIgnoreLegacyWizardLocationSamples);
+  const currentUnitLocationKey = normaliseUnitSettingsIdentifier(activeWizardLocationCode);
+  const currentLocationCandidate = (currentUnitLocationKey ? (platformConfig?.locations || []).find((location) => [
     location?.code,
     location?.iataCode,
     location?.icao,
@@ -35162,9 +35226,11 @@ const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, lo
     location?.settings?.legacyCode,
     ...Array.isArray(location?.aliases) ? location.aliases : [],
     ...Array.isArray(location?.settings?.aliases) ? location.settings.aliases : []
-  ].some((value) => normaliseUnitSettingsIdentifier(value) === currentUnitLocationKey)) || (platformConfig?.locations || [])[0];
+  ].some((value) => normaliseUnitSettingsIdentifier(value) === currentUnitLocationKey)) : null) || (platformConfig?.locations || [])[0];
+  const currentLocation = shouldIgnoreLegacyWizardLocationSamples && isLegacyWizardLocationSampleRecord(currentLocationCandidate) ? null : currentLocationCandidate;
   const organisationStructureLevels = Array.isArray(activeOrganisation?.settings?.organisationStructure?.levels) ? activeOrganisation.settings.organisationStructure.levels : [];
   const activeLocations = (platformConfig?.locations || []).filter((location) => String(location?.status || "ACTIVE").toUpperCase() !== "INACTIVE");
+  const activeWizardLocations = shouldIgnoreLegacyWizardLocationSamples ? activeLocations.filter((location) => !isLegacyWizardLocationSampleRecord(location)) : activeLocations;
   const [wizardAirfieldCatalogueProfiles, setWizardAirfieldCatalogueProfiles] = reactExports.useState([]);
   reactExports.useEffect(() => {
     if (typeof window === "undefined") return;
@@ -35188,7 +35254,7 @@ const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, lo
     };
   }, []);
   const configuredWizardLocationProfiles = Array.from(new Map([
-    ...activeLocations.map(normaliseWizardLocationProfile)
+    ...activeWizardLocations.map(normaliseWizardLocationProfile)
   ].filter((profile) => profile.icao || profile.iata || profile.name).map((profile) => [
     normaliseUnitSettingsIdentifier(profile.icao || profile.iata || profile.name),
     profile
@@ -35239,8 +35305,8 @@ const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, lo
     ...Array.isArray(location?.settings?.assignedUnitCodes) ? location.settings.assignedUnitCodes : []
   ].map(normaliseUnitSettingsIdentifier).filter(Boolean)));
   const wizardScopedLocationCodes = new Set([
-    ...activeUnits.filter((unit) => wizardScopedUnitCodeSet.size === 0 || wizardScopedUnitCodeSet.has(normaliseUnitSettingsIdentifier(unit?.code))).map((unit) => normaliseUnitSettingsIdentifier(unit?.locationCode)),
-    ...activeResourcePools.filter((pool) => wizardScopedUnitCodeSet.size === 0 || wizardScopedUnitCodeSet.has(normaliseUnitSettingsIdentifier(pool?.unitCode))).map((pool) => normaliseUnitSettingsIdentifier(pool?.locationCode)),
+    ...activeUnits.filter((unit) => wizardScopedUnitCodeSet.size === 0 || wizardScopedUnitCodeSet.has(normaliseUnitSettingsIdentifier(unit?.code))).map((unit) => normaliseUnitSettingsIdentifier(sanitiseLegacyWizardLocationCode(unit?.locationCode, shouldIgnoreLegacyWizardLocationSamples))),
+    ...activeResourcePools.filter((pool) => wizardScopedUnitCodeSet.size === 0 || wizardScopedUnitCodeSet.has(normaliseUnitSettingsIdentifier(pool?.unitCode))).map((pool) => normaliseUnitSettingsIdentifier(sanitiseLegacyWizardLocationCode(pool?.locationCode, shouldIgnoreLegacyWizardLocationSamples))),
     normaliseUnitSettingsIdentifier(activeWizardLocationCode)
   ].filter(Boolean));
   const isWizardLocationScopedToCurrentContext = (location) => {
@@ -35250,7 +35316,7 @@ const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, lo
     if (wizardScopedLocationCodes.has(locationCode2)) return true;
     return getWizardLocationUnitCodes(location).some((unitCode2) => wizardScopedUnitCodeSet.has(unitCode2));
   };
-  const scopedActiveLocations = wizardScopedUnitCodeSet.size === 0 ? activeLocations : activeLocations.filter(isWizardLocationScopedToCurrentContext);
+  const scopedActiveLocations = wizardScopedUnitCodeSet.size === 0 ? activeWizardLocations : activeWizardLocations.filter(isWizardLocationScopedToCurrentContext);
   const activeUserAccess = (platformConfig?.userAccess || []).filter((access) => String(access?.status || "ACTIVE").toUpperCase() !== "INACTIVE");
   const activeMasterLmpCatalogue = Array.isArray(activeOrganisation?.settings?.masterLmpCatalogue) ? activeOrganisation.settings.masterLmpCatalogue.filter((item) => String(item?.status || "ACTIVE").toUpperCase() !== "INACTIVE") : [];
   const activeMasterLmpAccess = getOrganisationMasterLmpAccessRules(activeOrganisation?.settings).filter((item) => String(item?.status || "ACTIVE").toUpperCase() !== "INACTIVE");
@@ -35482,26 +35548,59 @@ const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, lo
     })),
     relationshipPathCount: Array.isArray(activeOrganisation?.settings?.organisationStructure?.relationshipPaths) ? activeOrganisation.settings.organisationStructure.relationshipPaths.length : 0
   });
-  const [locationDraft, setLocationDraft] = reactExports.useState({
-    code: String(currentLocation?.code || activeWizardLocationCode || currentUnit?.locationCode || ""),
-    iataCode: String(currentLocation?.iataCode || currentLocation?.settings?.iataCode || ""),
-    name: String(currentLocation?.name || ""),
-    timezone: String(currentLocation?.timezone || ""),
-    latitude: String(currentLocation?.latitude ?? currentLocation?.settings?.latitude ?? activeWizardLocationProfile?.latitude ?? ""),
-    longitude: String(currentLocation?.longitude ?? currentLocation?.settings?.longitude ?? activeWizardLocationProfile?.longitude ?? ""),
-    trainingAreas: Array.isArray(currentLocation?.trainingAreas) ? currentLocation.trainingAreas.join(", ") : ""
-  });
+  const buildWizardLocationDraftFromSources = (savedDraft = {}) => {
+    const cleanSavedDraft = savedDraft && typeof savedDraft === "object" && !Array.isArray(savedDraft) ? savedDraft : {};
+    const useSavedDraft = Object.keys(cleanSavedDraft).length > 0 && !(shouldIgnoreLegacyWizardLocationSamples && isLegacyWizardLocationSampleRecord(cleanSavedDraft));
+    const sourceDraft = useSavedDraft ? cleanSavedDraft : {};
+    const cleanCode = sanitiseLegacyWizardLocationCode(
+      sourceDraft.code || sourceDraft.icao || currentLocation?.code || activeWizardLocationCode || currentUnit?.locationCode || "",
+      shouldIgnoreLegacyWizardLocationSamples
+    );
+    const sourceIata = String(sourceDraft.iataCode || sourceDraft.iata || currentLocation?.iataCode || currentLocation?.settings?.iataCode || "").trim().toUpperCase();
+    const sourceName = String(sourceDraft.name || currentLocation?.name || "").trim();
+    const sourceTimezone = String(sourceDraft.timezone || currentLocation?.timezone || "").trim();
+    const sourceLatitude = sourceDraft.latitude ?? currentLocation?.latitude ?? currentLocation?.settings?.latitude ?? activeWizardLocationProfile?.latitude ?? "";
+    const sourceLongitude = sourceDraft.longitude ?? currentLocation?.longitude ?? currentLocation?.settings?.longitude ?? activeWizardLocationProfile?.longitude ?? "";
+    const sourceTrainingAreas = Array.isArray(sourceDraft.trainingAreas) ? sourceDraft.trainingAreas.join(", ") : String(sourceDraft.trainingAreas ?? (Array.isArray(currentLocation?.trainingAreas) ? currentLocation.trainingAreas.join(", ") : ""));
+    const looksLikeLegacySample = shouldIgnoreLegacyWizardLocationSamples && isLegacyWizardLocationSampleRecord({
+      code: cleanCode || sourceDraft.code || currentLocation?.code,
+      iataCode: sourceIata,
+      name: sourceName,
+      timezone: sourceTimezone,
+      latitude: sourceLatitude,
+      longitude: sourceLongitude,
+      trainingAreas: sourceTrainingAreas
+    });
+    return {
+      code: looksLikeLegacySample ? "" : cleanCode,
+      iataCode: looksLikeLegacySample ? "" : sourceIata,
+      name: looksLikeLegacySample ? "" : sourceName,
+      timezone: looksLikeLegacySample ? "" : sourceTimezone,
+      latitude: looksLikeLegacySample ? "" : String(sourceLatitude ?? ""),
+      longitude: looksLikeLegacySample ? "" : String(sourceLongitude ?? ""),
+      trainingAreas: looksLikeLegacySample ? "" : sourceTrainingAreas
+    };
+  };
+  const formatScopedWizardLocationsDraft = () => scopedActiveLocations.length > 0 ? formatWizardLocationRows(scopedActiveLocations.filter((location) => String(location?.status || "ACTIVE").toUpperCase() !== "INACTIVE").map((location) => {
+    const profile = normaliseWizardLocationProfile(location);
+    return {
+      icao: profile.icao,
+      iata: profile.iata,
+      name: profile.name || profile.icao || profile.iata
+    };
+  }).filter((location) => location.icao || location.iata || location.name)) : formatWizardLocationRows([activeWizardLocationRow]);
+  const [locationDraft, setLocationDraft] = reactExports.useState(() => buildWizardLocationDraftFromSources());
   const locationDraftDirtyRef = reactExports.useRef(false);
   const [unitsTodayDraft, setUnitsTodayDraft] = reactExports.useState("");
   const [unitParentDraft, setUnitParentDraft] = reactExports.useState("");
-  const [locationsTodayDraft, setLocationsTodayDraft] = reactExports.useState(() => scopedActiveLocations.length > 0 ? scopedActiveLocations.map((location) => `${location.code || ""} | ${location.iataCode || location.settings?.iataCode || ""} | ${location.name || location.code || ""}`).join("\n") : formatWizardLocationRows([activeWizardLocationRow]));
+  const [locationsTodayDraft, setLocationsTodayDraft] = reactExports.useState(() => formatScopedWizardLocationsDraft());
   const [locationDraftRowCount, setLocationDraftRowCount] = reactExports.useState(() => Math.max(1, parseWizardLocationRows(
-    scopedActiveLocations.length > 0 ? scopedActiveLocations.map((location) => `${location.code || ""} | ${location.iataCode || location.settings?.iataCode || ""} | ${location.name || location.code || ""}`).join("\n") : formatWizardLocationRows([activeWizardLocationRow])
+    formatScopedWizardLocationsDraft()
   ).length));
   const [unitDraft, setUnitDraft] = reactExports.useState({
     code: String(currentUnit?.code || unitCode || ""),
     name: String(currentUnit?.name || currentUnit?.code || unitCode || ""),
-    locationCode: String(currentUnit?.locationCode || activeWizardLocationCode || currentLocation?.code || ""),
+    locationCode: sanitiseLegacyWizardLocationCode(currentUnit?.locationCode || activeWizardLocationCode || currentLocation?.code || "", shouldIgnoreLegacyWizardLocationSamples),
     unitType: String(currentUnit?.unitType || unitTypeOptions[0] || ""),
     operationalModel: String(getUnitOperationalModel(currentUnit || {}) || "pooled-crew"),
     hasTrainees: currentUnit?.settings?.hasTrainees !== false
@@ -35517,23 +35616,16 @@ const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, lo
     return setupUnitCode || fallbackUnitCode;
   };
   const getWizardSetupAccessLocationCode = (fallback) => {
-    const setupLocationCode = String(unitDraft.locationCode || activeWizardLocationCode || currentLocation?.code || locationDraft.code || "").trim().toUpperCase();
-    const fallbackLocationCode = String(fallback || "").trim().toUpperCase();
+    const setupLocationCode = sanitiseLegacyWizardLocationCode(unitDraft.locationCode || activeWizardLocationCode || currentLocation?.code || locationDraft.code || "", shouldIgnoreLegacyWizardLocationSamples);
+    const fallbackLocationCode = sanitiseLegacyWizardLocationCode(fallback || "", shouldIgnoreLegacyWizardLocationSamples);
     return setupLocationCode || fallbackLocationCode;
   };
-  const initialWizardSetupCompleted = Boolean(activeOrganisation?.settings?.initialSetupWizardCompletedAt) || (() => {
-    try {
-      return typeof window !== "undefined" && Boolean(window.localStorage.getItem("dfp-initial-setup-wizard-completed-at"));
-    } catch {
-      return false;
-    }
-  })();
   const [resourceDraft, setResourceDraft] = reactExports.useState({
     aircraftCode: String(initialWizardSetupCompleted ? primaryAircraftType?.code || primaryResourcePool?.aircraftTypeCode || "" : ""),
     aircraftName: String(initialWizardSetupCompleted ? primaryAircraftType?.name || primaryAircraftType?.code || primaryResourcePool?.aircraftTypeCode || "" : ""),
     poolName: String(initialWizardSetupCompleted ? primaryResourcePool?.name || "" : ""),
     poolUnitCode: String((initialWizardSetupCompleted ? primaryResourcePool?.unitCode : "") || currentUnit?.code || ""),
-    poolLocationCode: String((initialWizardSetupCompleted ? primaryResourcePool?.locationCode : "") || currentUnit?.locationCode || currentLocation?.code || ""),
+    poolLocationCode: sanitiseLegacyWizardLocationCode((initialWizardSetupCompleted ? primaryResourcePool?.locationCode : "") || currentUnit?.locationCode || currentLocation?.code || "", shouldIgnoreLegacyWizardLocationSamples),
     aircraft: String(initialWizardSetupCompleted ? primaryResourcePool?.settings?.aircraft ?? primaryResourcePool?.aircraft ?? "" : ""),
     sim: String(initialWizardSetupCompleted ? primaryResourcePool?.settings?.ftd ?? primaryResourcePool?.settings?.sim ?? primaryResourcePool?.ftd ?? primaryResourcePool?.sim ?? "" : ""),
     trainer: String(initialWizardSetupCompleted ? primaryResourcePool?.settings?.cpt ?? primaryResourcePool?.settings?.trainer ?? primaryResourcePool?.cpt ?? primaryResourcePool?.trainer ?? "" : ""),
@@ -35550,7 +35642,7 @@ const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, lo
   const crewDraftDirtyRef = reactExports.useRef(false);
   const [accessDraft, setAccessDraft] = reactExports.useState({
     userName: String(primaryUserAccess?.userName || primaryUserAccess?.user || "New user"),
-    locationCode: String(primaryUserAccess?.locationCode || primaryUserAccess?.location || currentLocation?.code || ""),
+    locationCode: sanitiseLegacyWizardLocationCode(primaryUserAccess?.locationCode || primaryUserAccess?.location || currentLocation?.code || "", shouldIgnoreLegacyWizardLocationSamples),
     unitCode: String(primaryUserAccess?.unitCode || primaryUserAccess?.unit || currentUnit?.code || ""),
     moduleCode: String(primaryUserAccess?.moduleCode || primaryUserAccess?.module || "DFP"),
     accessLevel: String(primaryUserAccess?.accessLevel || primaryUserAccess?.access || "View")
@@ -35834,7 +35926,7 @@ const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, lo
     return "";
   };
   const buildWizardLocationsTodayDraftFromLocations = (locations = scopedActiveLocations) => formatWizardLocationRows(
-    (Array.isArray(locations) ? locations : []).filter((location) => String(location?.status || "ACTIVE").toUpperCase() !== "INACTIVE").map((location) => {
+    (Array.isArray(locations) ? locations : []).filter((location) => String(location?.status || "ACTIVE").toUpperCase() !== "INACTIVE").filter((location) => !(shouldIgnoreLegacyWizardLocationSamples && isLegacyWizardLocationSampleRecord(location))).map((location) => {
       const profile = normaliseWizardLocationProfile(location);
       return {
         icao: profile.icao,
@@ -35847,31 +35939,13 @@ const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, lo
     const settingsLocationsDraft = buildWizardLocationsTodayDraftFromLocations();
     if (settingsLocationsDraft) return settingsLocationsDraft;
     const savedWizardLocations = String(getSavedInitialSetupWizardDrafts()?.locationsTodayDraft || "").trim();
-    if (savedWizardLocations) return savedWizardLocations;
-    return formatWizardLocationRows([activeWizardLocationRow]);
+    const filteredSavedWizardLocations = filterLegacyWizardLocationRows(savedWizardLocations, shouldIgnoreLegacyWizardLocationSamples);
+    if (filteredSavedWizardLocations) return filteredSavedWizardLocations;
+    return filterLegacyWizardLocationRows(formatWizardLocationRows([activeWizardLocationRow]), shouldIgnoreLegacyWizardLocationSamples);
   };
   const buildHydratedLocationDraft = () => {
     const savedDraft = readPlainWizardObject(getSavedInitialSetupWizardDrafts()?.locationDraft);
-    if (Object.keys(savedDraft).length > 0) {
-      return {
-        code: String(savedDraft.code || currentLocation?.code || activeWizardLocationCode || currentUnit?.locationCode || "").trim().toUpperCase(),
-        iataCode: String(savedDraft.iataCode || savedDraft.iata || currentLocation?.iataCode || currentLocation?.settings?.iataCode || "").trim().toUpperCase(),
-        name: String(savedDraft.name || currentLocation?.name || ""),
-        timezone: String(savedDraft.timezone || currentLocation?.timezone || ""),
-        latitude: String(savedDraft.latitude ?? currentLocation?.latitude ?? currentLocation?.settings?.latitude ?? activeWizardLocationProfile?.latitude ?? ""),
-        longitude: String(savedDraft.longitude ?? currentLocation?.longitude ?? currentLocation?.settings?.longitude ?? activeWizardLocationProfile?.longitude ?? ""),
-        trainingAreas: Array.isArray(savedDraft.trainingAreas) ? savedDraft.trainingAreas.join(", ") : String(savedDraft.trainingAreas ?? (Array.isArray(currentLocation?.trainingAreas) ? currentLocation.trainingAreas.join(", ") : ""))
-      };
-    }
-    return {
-      code: String(currentLocation?.code || activeWizardLocationCode || currentUnit?.locationCode || ""),
-      iataCode: String(currentLocation?.iataCode || currentLocation?.settings?.iataCode || ""),
-      name: String(currentLocation?.name || ""),
-      timezone: String(currentLocation?.timezone || ""),
-      latitude: String(currentLocation?.latitude ?? currentLocation?.settings?.latitude ?? activeWizardLocationProfile?.latitude ?? ""),
-      longitude: String(currentLocation?.longitude ?? currentLocation?.settings?.longitude ?? activeWizardLocationProfile?.longitude ?? ""),
-      trainingAreas: Array.isArray(currentLocation?.trainingAreas) ? currentLocation.trainingAreas.join(", ") : ""
-    };
+    return buildWizardLocationDraftFromSources(savedDraft);
   };
   const getSavedWizardString = (...keys) => {
     const drafts = getSavedInitialSetupWizardDrafts();
@@ -36294,7 +36368,7 @@ const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, lo
       const hydratedLocationDraft = buildHydratedLocationDraft();
       const hydratedCrew = buildHydratedCrewDraft();
       const shouldRestoreUnits = Boolean(hydratedUnits.trim()) && (!unitsTodayDraft.trim() || unitsTodayDraft.trim() === "UNIT-01 | Unit Name");
-      const shouldRestoreLocations = Boolean(hydratedLocations.trim()) && (!locationsTodayDraft.trim() || locationsTodayDraft.includes("LOC1 | LOC | Home Location"));
+      const shouldRestoreLocations = Boolean(hydratedLocations.trim()) && (!locationsTodayDraft.trim() || filterLegacyWizardLocationRows(locationsTodayDraft, shouldIgnoreLegacyWizardLocationSamples) !== locationsTodayDraft);
       if (shouldRestoreUnits) setUnitsTodayDraft(hydratedUnits);
       if (hydratedUnitParents.trim() && !unitParentDraft.trim()) setUnitParentDraft(hydratedUnitParents);
       if (shouldRestoreLocations) setLocationsTodayDraft(hydratedLocations);
@@ -36373,7 +36447,7 @@ const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, lo
     setLocationDraft(buildHydratedLocationDraft());
   }, [activeWizardLocationCode, currentLocation?.code, currentLocation?.name, currentLocation?.timezone, currentLocation?.latitude, currentLocation?.longitude, currentLocation?.settings?.latitude, currentLocation?.settings?.longitude, activeWizardLocationProfile?.latitude, activeWizardLocationProfile?.longitude, JSON.stringify(currentLocation?.trainingAreas || [])]);
   reactExports.useEffect(() => {
-    const firstLocation = parseWizardLocationRows(locationsTodayDraft)[0];
+    const firstLocation = parseWizardLocationRows(locationsTodayDraft).find((row) => !(shouldIgnoreLegacyWizardLocationSamples && isLegacyWizardLocationSampleRow(row)));
     setLocationDraftRowCount((count) => Math.max(count, parseWizardLocationRows(locationsTodayDraft).length, 1));
     if (!firstLocation) return;
     if (locationDraftDirtyRef.current) return;
@@ -36402,7 +36476,7 @@ const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, lo
         [cleanKey]: {
           code: cleanCode,
           name: String(draft.name || cleanCode),
-          locationCode: String(draft.locationCode || "").trim().toUpperCase(),
+          locationCode: sanitiseLegacyWizardLocationCode(draft.locationCode || "", shouldIgnoreLegacyWizardLocationSamples),
           unitType: String(draft.unitType || ""),
           operationalModel: String(draft.operationalModel || "pooled-crew"),
           hasTrainees: typeof draft.hasTrainees === "boolean" ? draft.hasTrainees : true
@@ -36412,7 +36486,7 @@ const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, lo
     const nextUnitDraft = {
       code: String(savedDraft.code || currentUnit?.code || unitCode || ""),
       name: String(savedDraft.name || currentUnit?.name || currentUnit?.code || unitCode || ""),
-      locationCode: String(savedDraft.locationCode || currentUnit?.locationCode || activeWizardLocationCode || currentLocation?.code || ""),
+      locationCode: sanitiseLegacyWizardLocationCode(savedDraft.locationCode || currentUnit?.locationCode || activeWizardLocationCode || currentLocation?.code || "", shouldIgnoreLegacyWizardLocationSamples),
       unitType: String(savedDraft.unitType || currentUnit?.unitType || unitTypeOptions[0] || ""),
       operationalModel: String(savedDraft.operationalModel || getUnitOperationalModel(currentUnit || {}) || "pooled-crew"),
       hasTrainees: typeof savedDraft.hasTrainees === "boolean" ? savedDraft.hasTrainees : currentUnit?.settings?.hasTrainees !== false
@@ -36458,7 +36532,7 @@ const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, lo
     setResourceDraft((draft) => ({
       ...draft,
       poolUnitCode: unitDraft.code || draft.poolUnitCode,
-      poolLocationCode: unitDraft.locationCode || draft.poolLocationCode
+      poolLocationCode: sanitiseLegacyWizardLocationCode(unitDraft.locationCode || draft.poolLocationCode, shouldIgnoreLegacyWizardLocationSamples)
     }));
   }, [unitDraft.code, unitDraft.locationCode]);
   reactExports.useEffect(() => {
@@ -36479,7 +36553,7 @@ const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, lo
       aircraftName: String(savedResourceDraft.aircraftName || (useOperationalResourceFallback ? primaryAircraftType?.name || primaryAircraftType?.code || primaryResourcePool?.aircraftTypeCode : "") || ""),
       poolName: String(savedResourceDraft.poolName || (useOperationalResourceFallback ? primaryResourcePool?.name : "") || ""),
       poolUnitCode: String(savedResourceDraft.poolUnitCode || (useOperationalResourceFallback ? primaryResourcePool?.unitCode : "") || currentUnit?.code || ""),
-      poolLocationCode: String(savedResourceDraft.poolLocationCode || (useOperationalResourceFallback ? primaryResourcePool?.locationCode : "") || currentUnit?.locationCode || currentLocation?.code || ""),
+      poolLocationCode: sanitiseLegacyWizardLocationCode(savedResourceDraft.poolLocationCode || (useOperationalResourceFallback ? primaryResourcePool?.locationCode : "") || currentUnit?.locationCode || currentLocation?.code || "", shouldIgnoreLegacyWizardLocationSamples),
       aircraft: String(savedResourceDraft.aircraft ?? (useOperationalResourceFallback ? primaryResourcePool?.settings?.aircraft ?? primaryResourcePool?.aircraft : "") ?? ""),
       sim: String(savedResourceDraft.sim ?? (useOperationalResourceFallback ? primaryResourcePool?.settings?.ftd ?? primaryResourcePool?.settings?.sim ?? primaryResourcePool?.ftd ?? primaryResourcePool?.sim : "") ?? ""),
       trainer: String(savedResourceDraft.trainer ?? (useOperationalResourceFallback ? primaryResourcePool?.settings?.cpt ?? primaryResourcePool?.settings?.trainer ?? primaryResourcePool?.cpt ?? primaryResourcePool?.trainer : "") ?? ""),
@@ -36504,7 +36578,7 @@ const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, lo
     const savedDraft = getSavedWizardObject("accessDraft");
     setAccessDraft({
       userName: String(savedDraft.userName || primaryUserAccess?.userName || primaryUserAccess?.user || "New user"),
-      locationCode: String(savedDraft.locationCode || primaryUserAccess?.locationCode || primaryUserAccess?.location || currentLocation?.code || ""),
+      locationCode: sanitiseLegacyWizardLocationCode(savedDraft.locationCode || primaryUserAccess?.locationCode || primaryUserAccess?.location || currentLocation?.code || "", shouldIgnoreLegacyWizardLocationSamples),
       unitCode: String(savedDraft.unitCode || primaryUserAccess?.unitCode || primaryUserAccess?.unit || currentUnit?.code || ""),
       moduleCode: String(savedDraft.moduleCode || primaryUserAccess?.moduleCode || primaryUserAccess?.module || "DFP"),
       accessLevel: String(savedDraft.accessLevel || primaryUserAccess?.accessLevel || primaryUserAccess?.access || "View")
@@ -36954,6 +37028,10 @@ const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, lo
   };
   const saveLocationDraft = (draftOverride = locationDraft, message = "Location saved into Settings.") => {
     const effectiveLocationDraft = draftOverride;
+    if (shouldIgnoreLegacyWizardLocationSamples && isLegacyWizardLocationSampleRecord(effectiveLocationDraft)) {
+      setSaveMessage("Location details are still using the old sample values. Enter the real location before saving.");
+      return;
+    }
     const cleanCode = String(effectiveLocationDraft.code || "").trim().toUpperCase();
     if (!cleanCode) {
       setSaveMessage("Enter a location code before saving.");
@@ -36971,9 +37049,12 @@ const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, lo
       const hasLatitude = String(effectiveLocationDraft.latitude || "").trim() && Number.isFinite(parsedLatitude);
       const hasLongitude = String(effectiveLocationDraft.longitude || "").trim() && Number.isFinite(parsedLongitude);
       const previousLocationCodes = new Set(
-        units.filter((unit) => wizardScopedUnitCodeSet.has(normaliseUnitSettingsIdentifier(unit?.code))).map((unit) => normaliseUnitSettingsIdentifier(unit?.locationCode)).filter(Boolean)
+        units.filter((unit) => wizardScopedUnitCodeSet.has(normaliseUnitSettingsIdentifier(unit?.code))).map((unit) => normaliseUnitSettingsIdentifier(sanitiseLegacyWizardLocationCode(unit?.locationCode, shouldIgnoreLegacyWizardLocationSamples))).filter(Boolean)
       );
-      if (previousLocationCodes.size === 0) previousLocationCodes.add(normaliseUnitSettingsIdentifier(currentLocation?.code || activeWizardLocationCode));
+      if (previousLocationCodes.size === 0) {
+        const fallbackPreviousLocationCode = sanitiseLegacyWizardLocationCode(currentLocation?.code || activeWizardLocationCode, shouldIgnoreLegacyWizardLocationSamples);
+        if (fallbackPreviousLocationCode) previousLocationCodes.add(normaliseUnitSettingsIdentifier(fallbackPreviousLocationCode));
+      }
       const existingLocation = locations.find((location) => normaliseUnitSettingsIdentifier(location?.code) === normaliseUnitSettingsIdentifier(cleanCode));
       const mergedLocationUnitCodes = Array.from(new Set([
         ...getWizardLocationUnitCodes(existingLocation || currentLocation || {}),
@@ -37103,12 +37184,15 @@ const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, lo
     const key = normaliseUnitSettingsIdentifier(code);
     const mappedDraft = readPlainWizardObject(draftMap[key]);
     const existingUnit = activeUnits.find((unit) => normaliseUnitSettingsIdentifier(unit?.code) === key);
-    const defaultLocationCode = parseWizardLocationRows(locationsTodayDraft)[0]?.icao || locationDraft.code || activeWizardLocationCode || currentLocation?.code || "";
+    const defaultLocationCode = sanitiseLegacyWizardLocationCode(
+      parseWizardLocationRows(locationsTodayDraft).find((row2) => !(shouldIgnoreLegacyWizardLocationSamples && isLegacyWizardLocationSampleRow(row2)))?.icao || locationDraft.code || activeWizardLocationCode || currentLocation?.code || "",
+      shouldIgnoreLegacyWizardLocationSamples
+    );
     const sourceDraft = key === normaliseUnitSettingsIdentifier(fallbackDraft.code) ? { ...mappedDraft, ...fallbackDraft } : mappedDraft;
     return {
       code,
       name: String(sourceDraft.name || row?.name || existingUnit?.name || code),
-      locationCode: String(sourceDraft.locationCode || existingUnit?.locationCode || defaultLocationCode || "").trim().toUpperCase(),
+      locationCode: sanitiseLegacyWizardLocationCode(sourceDraft.locationCode || existingUnit?.locationCode || defaultLocationCode || "", shouldIgnoreLegacyWizardLocationSamples),
       unitType: String(sourceDraft.unitType || existingUnit?.unitType || unitTypeOptions[0] || ""),
       operationalModel: String(sourceDraft.operationalModel || existingUnit?.settings?.operationalModel || getUnitOperationalModel(existingUnit || {}) || fallbackDraft.operationalModel || "pooled-crew"),
       hasTrainees: typeof sourceDraft.hasTrainees === "boolean" ? sourceDraft.hasTrainees : existingUnit?.settings?.hasTrainees !== false
@@ -37159,7 +37243,8 @@ const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, lo
     });
   };
   const saveWizardLocationRowsDraft = (message = "Location list synced into Settings.", draftValue = locationsTodayDraft) => {
-    const locationRows = parseWizardLocationRows(draftValue);
+    const rawLocationRows = parseWizardLocationRows(draftValue);
+    const locationRows = shouldIgnoreLegacyWizardLocationSamples ? rawLocationRows.filter((row) => !isLegacyWizardLocationSampleRow(row)) : rawLocationRows;
     if (locationRows.length === 0) {
       setSaveMessage("Add at least one locality before continuing.");
       return;
@@ -37290,7 +37375,10 @@ const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, lo
       setSaveMessage("Add at least one unit before continuing.");
       return;
     }
-    const defaultLocationCode = parseWizardLocationRows(locationsTodayDraft)[0]?.icao || locationDraft.code;
+    const defaultLocationCode = sanitiseLegacyWizardLocationCode(
+      parseWizardLocationRows(locationsTodayDraft).find((row) => !(shouldIgnoreLegacyWizardLocationSamples && isLegacyWizardLocationSampleRow(row)))?.icao || locationDraft.code,
+      shouldIgnoreLegacyWizardLocationSamples
+    );
     saveWizardConfig(message, (baseConfig) => {
       const units = Array.isArray(baseConfig.units) ? baseConfig.units : [];
       const nextUnits = [...units];
@@ -37335,7 +37423,7 @@ const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, lo
       return;
     }
     const effectivePoolUnitCode = String(unitDraft.code || resourceDraft.poolUnitCode || currentUnit?.code || "").trim().toUpperCase();
-    const effectivePoolLocationCode = String(unitDraft.locationCode || resourceDraft.poolLocationCode || activeWizardLocationCode || currentLocation?.code || "").trim().toUpperCase();
+    const effectivePoolLocationCode = sanitiseLegacyWizardLocationCode(unitDraft.locationCode || resourceDraft.poolLocationCode || activeWizardLocationCode || currentLocation?.code || "", shouldIgnoreLegacyWizardLocationSamples);
     saveWizardConfig("Aircraft type and DFP resource rows saved into Settings.", (baseConfig) => {
       const aircraftTypes = Array.isArray(baseConfig.aircraftTypes) ? baseConfig.aircraftTypes : [];
       const resourcePools = Array.isArray(baseConfig.resourcePools) ? baseConfig.resourcePools : [];
@@ -39957,7 +40045,7 @@ const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, lo
     ] });
   };
   const updateWizardLocationRow = (rowIndex, field, value) => {
-    const rows = parseWizardLocationRows(locationsTodayDraft);
+    const rows = parseWizardLocationRows(locationsTodayDraft).filter((row) => !(shouldIgnoreLegacyWizardLocationSamples && isLegacyWizardLocationSampleRow(row)));
     const nextRows = rows.length > 0 ? [...rows] : [{ icao: "", iata: "", name: "" }];
     while (nextRows.length <= rowIndex) nextRows.push({ icao: "", iata: "", name: "" });
     const formattedValue = field === "name" ? value : value.toUpperCase();
@@ -41299,7 +41387,10 @@ const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, lo
     const effectiveStaffRows = Array.isArray(overrides.staffRows) && overrides.staffRows.length > 0 ? overrides.staffRows : uploadedStaffProfileRows.length > 0 ? uploadedStaffProfileRows : parseWizardStaffRows(effectiveStaffDraft);
     const effectiveTraineeRows = Array.isArray(overrides.traineeRows) && overrides.traineeRows.length > 0 ? overrides.traineeRows : uploadedTraineeProfileRows.length > 0 ? uploadedTraineeProfileRows : parseWizardTraineeRows(effectiveTraineeDraft);
     const firstUnitCode = unitRows[0]?.code || effectiveUnitDraft.code || unitCode || "";
-    const firstLocationCode = parseWizardLocationRows(locationsTodayDraft)[0]?.icao || locationDraft.code || "";
+    const firstLocationCode = sanitiseLegacyWizardLocationCode(
+      parseWizardLocationRows(locationsTodayDraft).find((row) => !(shouldIgnoreLegacyWizardLocationSamples && isLegacyWizardLocationSampleRow(row)))?.icao || locationDraft.code || "",
+      shouldIgnoreLegacyWizardLocationSamples
+    );
     const effectiveOrganisationSettings = organisationSettings || getActiveOrganisation(platformConfig)?.settings || {};
     const setupPersonnelDisplaySettings = normalisePersonnelDisplaySettings(
       effectiveOrganisationSettings.personnelDisplaySettings || effectiveOrganisationSettings.personnelSettings || null
@@ -41441,7 +41532,7 @@ const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, lo
     const primaryResourcePoolName = String(resourceDraft.poolName || "").trim();
     const hasDeliberateAircraftSetup = Boolean(primaryAircraftCode);
     const hasDeliberateResourceSetup = Boolean(primaryAircraftCode && primaryResourcePoolName);
-    const primaryResourceLocationCode = String(effectiveUnitDraft.locationCode || resourceDraft.poolLocationCode || primaryLocationCode || "").trim().toUpperCase();
+    const primaryResourceLocationCode = sanitiseLegacyWizardLocationCode(effectiveUnitDraft.locationCode || resourceDraft.poolLocationCode || primaryLocationCode || "", shouldIgnoreLegacyWizardLocationSamples);
     const primaryResourceUnitCode = String(effectiveUnitDraft.code || resourceDraft.poolUnitCode || cleanUnits[0]?.code || "").trim().toUpperCase();
     const crewSeats = parseRoleRequirementsText(crewDraft.standardSeats);
     const alternateCrewRequirements = parseRoleRequirementsText(alternateCrewDraft);
@@ -43067,7 +43158,7 @@ const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, lo
       );
     }
     if (visibleStep.id === "locations-today") {
-      const locationRows = parseWizardLocationRows(locationsTodayDraft);
+      const locationRows = parseWizardLocationRows(locationsTodayDraft).filter((row) => !(shouldIgnoreLegacyWizardLocationSamples && isLegacyWizardLocationSampleRow(row)));
       const editableLocationRows = Array.from({ length: Math.max(locationDraftRowCount, locationRows.length, 1) }, (_, index) => locationRows[index] || { icao: "", iata: "", name: "" });
       return promptShell(
         /* @__PURE__ */ jsxRuntimeExports.jsx("p", { children: "Add every locality, base, airfield, or operating location you want available. Use ICAO where known, IATA where available, and the plain English location name." }),
