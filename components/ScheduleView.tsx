@@ -7537,7 +7537,7 @@ const InitialSetupWizard: React.FC<{
             id: 'ground-event-scheduling',
             title: 'Set group ground event scheduling',
             label: 'Ground events',
-            body: 'Choose how NEO Build should handle group ground events from the LMP, such as mass briefs, tutorials, quizzes, and other classroom events.',
+            body: 'NEO has identified the Ground School events from your LMP, but it does not know how each event is delivered. Use this page to identify which events are group activities and which are completed individually. For group activities, create a group, assign the relevant events, and choose how and when NEO Build should schedule them.',
             checkIds: ['training', 'rules'],
             category: 'highly-desirable',
         },
@@ -13411,7 +13411,7 @@ const InitialSetupWizard: React.FC<{
                 || DEFAULT_GROUND_EVENT_SCHEDULING_GROUP_NAME_PLACEHOLDER
             );
             return promptShell(
-                <p>Choose how NEO Build should handle group ground events from the LMP. Start with one group, then add more groups if your organisation schedules different event types differently.</p>,
+                <p>NEO has identified the Ground School events from your LMP, but it does not know how each event is delivered. Use this page to identify which events are group activities and which are completed individually. For group activities, create a group, assign the relevant events, and choose how and when NEO Build should schedule them.</p>,
                 <div className="space-y-4">
                     <div className="rounded-lg border border-blue-200 bg-blue-50 p-3 text-xs font-semibold leading-5 text-blue-950">
                         The group name field shows an example in grey. It is not saved until you enter a name or assign details. Manual means NEO Build will not place those events automatically. Suggest means NEO Build can alert the scheduler. Automatic means NEO Build may place the event during the selected windows.

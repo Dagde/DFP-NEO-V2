@@ -38636,7 +38636,7 @@ const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, lo
       id: "ground-event-scheduling",
       title: "Set group ground event scheduling",
       label: "Ground events",
-      body: "Choose how NEO Build should handle group ground events from the LMP, such as mass briefs, tutorials, quizzes, and other classroom events.",
+      body: "NEO has identified the Ground School events from your LMP, but it does not know how each event is delivered. Use this page to identify which events are group activities and which are completed individually. For group activities, create a group, assign the relevant events, and choose how and when NEO Build should schedule them.",
       checkIds: ["training", "rules"],
       category: "highly-desirable"
     },
@@ -43726,7 +43726,7 @@ const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, lo
       const wizardUnassignedGroundEvents = wizardAvailableGroundEventSchedulingEvents.filter((event) => !wizardAssignedGroundEventCodes.has(event.code));
       const getAssignedWizardGroundEventGroupName = (eventCode2) => wizardGroundEventSchedulingGroups.find((group) => group.eventCodes.includes(eventCode2))?.name || DEFAULT_GROUND_EVENT_SCHEDULING_GROUP_NAME_PLACEHOLDER;
       return promptShell(
-        /* @__PURE__ */ jsxRuntimeExports.jsx("p", { children: "Choose how NEO Build should handle group ground events from the LMP. Start with one group, then add more groups if your organisation schedules different event types differently." }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx("p", { children: "NEO has identified the Ground School events from your LMP, but it does not know how each event is delivered. Use this page to identify which events are group activities and which are completed individually. For group activities, create a group, assign the relevant events, and choose how and when NEO Build should schedule them." }),
         /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-4", children: [
           /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "rounded-lg border border-blue-200 bg-blue-50 p-3 text-xs font-semibold leading-5 text-blue-950", children: "The group name field shows an example in grey. It is not saved until you enter a name or assign details. Manual means NEO Build will not place those events automatically. Suggest means NEO Build can alert the scheduler. Automatic means NEO Build may place the event during the selected windows." }),
           wizardAvailableGroundEventSchedulingEvents.length === 0 ? /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "rounded-lg border border-amber-200 bg-amber-50 p-3 text-xs font-semibold leading-5 text-amber-950", children: "No LMP ground events are available yet. Upload or commit the LMP first, then return to this step." }) : /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
