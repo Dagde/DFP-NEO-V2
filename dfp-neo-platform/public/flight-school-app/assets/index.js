@@ -37543,6 +37543,7 @@ const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, lo
         status: "ACTIVE",
         settings: {
           ...targetPool?.settings || {},
+          aircraftLabel: poolName,
           aircraft: parseNumberDraft(resourceDraft.aircraft),
           ftd: parseNumberDraft(resourceDraft.sim),
           cpt: parseNumberDraft(resourceDraft.trainer),
