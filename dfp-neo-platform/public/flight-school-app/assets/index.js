@@ -145271,7 +145271,7 @@ ${error instanceof Error ? error.message : String(error)}`,
             message: "Retrieving DFP data",
             progress: 66
           });
-          const archiveQuery = `snapshotKeys=${encodeURIComponent(JSON.stringify(candidateKeys))}`;
+          const archiveQuery = `snapshotKeys=${encodeURIComponent(JSON.stringify(candidateKeys))}&profile=grid`;
           const candidateUrl = `${apiBase}/archive/dfp-date?${archiveQuery}`;
           const candidateStartedAt = performance.now();
           const candidateRes = await fetch(candidateUrl, { cache: "no-store" });

@@ -21749,6 +21749,11 @@ app.get('/api/archive/dfp-date', async (req, res) => {
     const db = await timedArchiveRead('get-prisma', () => getPrisma());
     let requestedDate = String(req.query.date || '').slice(0, 10);
     let requestedSnapshotKey = String(req.query.snapshotKey || '').trim();
+    const archiveResponseProfile = String(req.query.profile || '').trim().toLowerCase();
+    const isGridArchiveResponse = archiveResponseProfile === 'grid' || String(req.query.light || '') === '1';
+    const gridExcludedConfigTypes = isGridArchiveResponse
+      ? ['trainingReportState', 'masterLmpState', 'individualLmpState', 'flightLogState']
+      : [];
     const rawSnapshotKeys = req.query.snapshotKeys;
     let requestedSnapshotKeyCandidates = [];
     if (rawSnapshotKeys) {
@@ -21825,42 +21830,52 @@ app.get('/api/archive/dfp-date', async (req, res) => {
     if (archiveRows?.length > 0) {
       let archive = archiveRows[0];
       const snapshotRowsForArchive = await timedArchiveRead(
-        'lookup-daily-snapshot-for-archive',
+        'lookup-daily-snapshot-metadata-for-archive',
         () => db.$queryRawUnsafe(
-          `SELECT * FROM "DailySnapshot" WHERE date = $1::text LIMIT 1`,
+          `SELECT date, "savedAt", "savedBy" FROM "DailySnapshot" WHERE date = $1::text LIMIT 1`,
           archive.snapshotKey
         ),
         { snapshotKey: archive.snapshotKey }
       ).catch(() => []);
-      const snapshotForArchive = snapshotRowsForArchive?.[0] || null;
-      const snapshotSavedAtMs = snapshotForArchive?.savedAt ? new Date(snapshotForArchive.savedAt).getTime() : 0;
+      const snapshotForArchiveMeta = snapshotRowsForArchive?.[0] || null;
+      const snapshotSavedAtMs = snapshotForArchiveMeta?.savedAt ? new Date(snapshotForArchiveMeta.savedAt).getTime() : 0;
       const archiveUpdatedAtMs = archive?.updatedAt ? new Date(archive.updatedAt).getTime() : 0;
       if (
-        snapshotForArchive
+        snapshotForArchiveMeta
         && Number.isFinite(snapshotSavedAtMs)
         && Number.isFinite(archiveUpdatedAtMs)
         && snapshotSavedAtMs > archiveUpdatedAtMs + 500
-        && Array.isArray(snapshotForArchive.scheduleEvents)
       ) {
-        const syncResult = await saveCompactPublishedDfpArchive(db, {
-          ...snapshotForArchive,
-          savedBy: snapshotForArchive.savedBy || 'daily-snapshot-self-heal',
-        });
-        const refreshedArchiveRows = await timedArchiveRead(
-          'lookup-refreshed-archive-after-self-heal',
+        const fullSnapshotRowsForArchive = await timedArchiveRead(
+          'lookup-daily-snapshot-full-for-self-heal',
           () => db.$queryRawUnsafe(
-            `SELECT * FROM "PublishedDfpArchive" WHERE id = $1::text LIMIT 1`,
-            syncResult.archiveId
+            `SELECT * FROM "DailySnapshot" WHERE date = $1::text LIMIT 1`,
+            archive.snapshotKey
           ),
-          { archiveId: syncResult.archiveId }
-        );
-        archive = refreshedArchiveRows?.[0] || archive;
-        await writeArchiveDiagnostic(db, 'ARCHIVE_DAILY_SNAPSHOT_SELF_HEAL', archive.snapshotKey, archive.date, 'success', {
-          archiveId: archive.id,
-          snapshotSavedAt: snapshotForArchive.savedAt,
-          archiveUpdatedAt: archive.updatedAt,
-          eventCount: syncResult.eventCount,
-        }, Date.now() - startedAt);
+          { snapshotKey: archive.snapshotKey }
+        ).catch(() => []);
+        const snapshotForArchive = fullSnapshotRowsForArchive?.[0] || null;
+        if (snapshotForArchive && Array.isArray(snapshotForArchive.scheduleEvents)) {
+          const syncResult = await saveCompactPublishedDfpArchive(db, {
+            ...snapshotForArchive,
+            savedBy: snapshotForArchive.savedBy || 'daily-snapshot-self-heal',
+          });
+          const refreshedArchiveRows = await timedArchiveRead(
+            'lookup-refreshed-archive-after-self-heal',
+            () => db.$queryRawUnsafe(
+              `SELECT * FROM "PublishedDfpArchive" WHERE id = $1::text LIMIT 1`,
+              syncResult.archiveId
+            ),
+            { archiveId: syncResult.archiveId }
+          );
+          archive = refreshedArchiveRows?.[0] || archive;
+          await writeArchiveDiagnostic(db, 'ARCHIVE_DAILY_SNAPSHOT_SELF_HEAL', archive.snapshotKey, archive.date, 'success', {
+            archiveId: archive.id,
+            snapshotSavedAt: snapshotForArchive.savedAt,
+            archiveUpdatedAt: archive.updatedAt,
+            eventCount: syncResult.eventCount,
+          }, Date.now() - startedAt);
+        }
       }
       const eventRows = await timedArchiveRead(
         'load-schedule-event-archive',
@@ -21882,13 +21897,21 @@ app.get('/api/archive/dfp-date', async (req, res) => {
       const configVersions = configIds.length > 0
         ? await timedArchiveRead(
             'load-config-version-archive',
-            () => db.$queryRawUnsafe(`
-              SELECT id, "scopeKey", "configType", "contentHash", "effectiveFrom", "effectiveTo", "content", "createdAt", "createdBy"
-              FROM "ConfigVersionArchive"
-              WHERE id = ANY($1::text[])
-              ORDER BY "configType"
-            `, configIds),
-            { configIds: configIds.length }
+            () => gridExcludedConfigTypes.length > 0
+              ? db.$queryRawUnsafe(`
+                SELECT id, "scopeKey", "configType", "contentHash", "effectiveFrom", "effectiveTo", "content", "createdAt", "createdBy"
+                FROM "ConfigVersionArchive"
+                WHERE id = ANY($1::text[])
+                  AND NOT ("configType" = ANY($2::text[]))
+                ORDER BY "configType"
+              `, configIds, gridExcludedConfigTypes)
+              : db.$queryRawUnsafe(`
+                SELECT id, "scopeKey", "configType", "contentHash", "effectiveFrom", "effectiveTo", "content", "createdAt", "createdBy"
+                FROM "ConfigVersionArchive"
+                WHERE id = ANY($1::text[])
+                ORDER BY "configType"
+              `, configIds),
+            { configIds: configIds.length, omittedConfigTypes: gridExcludedConfigTypes }
           )
         : [];
       const configContentByType = Object.fromEntries((configVersions || []).map(row => [row.configType, row.content]));
@@ -21943,18 +21966,20 @@ app.get('/api/archive/dfp-date', async (req, res) => {
       const archiveMonthStart = /^\d{4}-\d{2}-\d{2}$/.test(String(archive.date || ''))
         ? `${String(archive.date).slice(0, 7)}-01`
         : archive.date;
-      const performanceRows = await timedArchiveRead(
-        'load-trainee-performance',
-        () => db.$queryRawUnsafe(
-          `SELECT * FROM "TraineePerformance"
-           WHERE "date" = $1::text OR "eventId" = ANY($2::text[])
-           ORDER BY "course" ASC NULLS LAST, "traineeFullName" ASC, "eventSequence" ASC NULLS LAST
-           LIMIT 5000`,
-          archive.date,
-          archivedEventIds
-        ),
-        { eventIds: archivedEventIds.length }
-      ).catch(() => []);
+      const performanceRows = isGridArchiveResponse
+        ? []
+        : await timedArchiveRead(
+            'load-trainee-performance',
+            () => db.$queryRawUnsafe(
+              `SELECT * FROM "TraineePerformance"
+               WHERE "date" = $1::text OR "eventId" = ANY($2::text[])
+               ORDER BY "course" ASC NULLS LAST, "traineeFullName" ASC, "eventSequence" ASC NULLS LAST
+               LIMIT 5000`,
+              archive.date,
+              archivedEventIds
+            ),
+            { eventIds: archivedEventIds.length }
+          ).catch(() => []);
       const completionRows = await timedArchiveRead(
         'load-event-completions',
         () => db.$queryRawUnsafe(
@@ -21967,30 +21992,32 @@ app.get('/api/archive/dfp-date', async (req, res) => {
         ),
         { eventIds: archivedEventIds.length }
       ).catch(() => []);
-      const flightLogRows = await timedArchiveRead(
-        'load-flight-log-entries',
-        () => db.$queryRawUnsafe(
-          `SELECT * FROM "FlightLogEntry"
-           WHERE "scheduleEventId" = ANY($2::text[])
-              OR (
-                "eventDate" >= $5::text
-                AND "eventDate" <= $1::text
-                AND (
-                  "personnelId" = ANY($3::text[])
-                  OR "traineeId" = ANY($3::text[])
-                  OR LOWER(TRIM(COALESCE("personName", ''))) = ANY($4::text[])
-                )
-              )
-           ORDER BY "personName" ASC, "eventDate" ASC, "createdAt" ASC
-           LIMIT 5000`,
-          archive.date,
-          archivedEventIds,
-          archivedPersonIds,
-          archivedPersonNames,
-          archiveMonthStart
-        ),
-        { eventIds: archivedEventIds.length, personIds: archivedPersonIds.length, personNames: archivedPersonNames.length }
-      ).catch(() => []);
+      const flightLogRows = isGridArchiveResponse
+        ? []
+        : await timedArchiveRead(
+            'load-flight-log-entries',
+            () => db.$queryRawUnsafe(
+              `SELECT * FROM "FlightLogEntry"
+               WHERE "scheduleEventId" = ANY($2::text[])
+                  OR (
+                    "eventDate" >= $5::text
+                    AND "eventDate" <= $1::text
+                    AND (
+                      "personnelId" = ANY($3::text[])
+                      OR "traineeId" = ANY($3::text[])
+                      OR LOWER(TRIM(COALESCE("personName", ''))) = ANY($4::text[])
+                    )
+                  )
+               ORDER BY "personName" ASC, "eventDate" ASC, "createdAt" ASC
+               LIMIT 5000`,
+              archive.date,
+              archivedEventIds,
+              archivedPersonIds,
+              archivedPersonNames,
+              archiveMonthStart
+            ),
+            { eventIds: archivedEventIds.length, personIds: archivedPersonIds.length, personNames: archivedPersonNames.length }
+          ).catch(() => []);
       const archiveLogbookDiagnostics = {
         archiveDate: archive.date,
         monthStart: archiveMonthStart,
@@ -22008,28 +22035,34 @@ app.get('/api/archive/dfp-date', async (req, res) => {
           scheduleEventId: row.scheduleEventId,
         })),
       };
-      const trainingReportVersions = await timedArchiveRead(
-        'load-training-report-versions',
-        () => db.$queryRawUnsafe(
-          `SELECT "eventId", "traineeId", "traineeFullName", "reportDate", "action", "versionHash", "reportData", "changedBy", "changedAt"
-           FROM "TrainingReportVersionArchive"
-           WHERE "reportDate" = $1::text OR "eventId" = ANY($2::text[])
-           ORDER BY "changedAt" DESC
-           LIMIT 5000`,
-          archive.date,
-          archivedEventIds
-        ),
-        { eventIds: archivedEventIds.length }
-      ).catch(() => []);
+      const trainingReportVersions = isGridArchiveResponse
+        ? []
+        : await timedArchiveRead(
+            'load-training-report-versions',
+            () => db.$queryRawUnsafe(
+              `SELECT "eventId", "traineeId", "traineeFullName", "reportDate", "action", "versionHash", "reportData", "changedBy", "changedAt"
+               FROM "TrainingReportVersionArchive"
+               WHERE "reportDate" = $1::text OR "eventId" = ANY($2::text[])
+               ORDER BY "changedAt" DESC
+               LIMIT 5000`,
+              archive.date,
+              archivedEventIds
+            ),
+            { eventIds: archivedEventIds.length }
+          ).catch(() => []);
       const archiveAssemblyStartedAt = Date.now();
       const scheduleEvents = eventRows.map(row => row.eventData);
       const archivedStaffEvents = archiveEventsByType(eventRows, 'staff');
       const archivedTraineeEvents = archiveEventsByType(eventRows, 'trainee');
-	      const tableTrainingReports = (performanceRows || []).map(row => mapRowToAssessment(row)).filter(Boolean);
-	      const trainingReportMap = {
-	        ...buildArchiveReportMap(tableTrainingReports),
-	        ...archivedTrainingReportState,
-	      };
+	      const tableTrainingReports = isGridArchiveResponse
+	        ? []
+	        : (performanceRows || []).map(row => mapRowToAssessment(row)).filter(Boolean);
+	      const trainingReportMap = isGridArchiveResponse
+	        ? {}
+	        : {
+	            ...buildArchiveReportMap(tableTrainingReports),
+	            ...archivedTrainingReportState,
+	          };
 	      const trainingReports = Object.values(trainingReportMap);
 	      const mergedEventCompletions = mergeArchiveRowsByKey(
 	        archivedEventCompletionState,
@@ -22096,6 +22129,8 @@ app.get('/api/archive/dfp-date', async (req, res) => {
 	        archiveLogbookDiagnostics,
 	        archiveCompletenessDiagnostics,
         archiveReadTimings,
+        archiveResponseProfile: isGridArchiveResponse ? 'grid' : 'full',
+        omittedHeavyArchiveState: gridExcludedConfigTypes,
 	        snapshotSource: 'compact-archive',
 	      };
       const response = {
@@ -22136,9 +22171,24 @@ app.get('/api/archive/dfp-date', async (req, res) => {
 	        archiveLogbookDiagnostics,
 	        archiveCompletenessDiagnostics,
         archiveReadTimings,
+        archiveResponseProfile: isGridArchiveResponse ? 'grid' : 'full',
+        omittedHeavyArchiveState: gridExcludedConfigTypes,
 	        assembledAt: new Date().toISOString(),
 	        durationMs: Date.now() - startedAt,
 	      };
+      if (isGridArchiveResponse) {
+        delete response.scheduleEventRows;
+        delete response.trainingReports;
+        delete response.trainingReportVersions;
+        delete response.eventCompletions;
+        delete response.flightLogEntries;
+        delete response.courseState;
+        delete response.individualLmpState;
+        delete response.masterLmpState;
+        delete response.trainingReportState;
+        delete response.currencyState;
+        delete response.configVersions;
+      }
       console.log(`⏱️ GET /api/archive/dfp-date ${archive.snapshotKey} ${response.durationMs}ms`, archiveReadTimings.map(step => `${step.label}:${step.durationMs}ms`).join(', '));
 	      await writeArchiveDiagnostic(db, 'ARCHIVE_HISTORICAL_DFP_READ', archive.snapshotKey, archive.date, 'success', {
 	        source: response.source,
@@ -22146,10 +22196,12 @@ app.get('/api/archive/dfp-date', async (req, res) => {
         staffEvents: response.snapshot.staffEvents.length,
         traineeEvents: response.snapshot.traineeEvents.length,
         archivedEventIds: archivedEventIds.length,
-        trainingReports: response.trainingReports.length,
-        trainingReportVersions: response.trainingReportVersions.length,
-	        eventCompletions: response.eventCompletions.length,
-	        flightLogEntries: response.flightLogEntries.length,
+        trainingReports: trainingReports.length,
+        trainingReportVersions: (trainingReportVersions || []).length,
+	        eventCompletions: mergedEventCompletions.length,
+	        flightLogEntries: mergedFlightLogEntries.length,
+        archiveResponseProfile: isGridArchiveResponse ? 'grid' : 'full',
+        omittedHeavyArchiveState: gridExcludedConfigTypes,
         archiveReadTimings,
 	        archiveCompletenessDiagnostics,
 	      }, response.durationMs);
