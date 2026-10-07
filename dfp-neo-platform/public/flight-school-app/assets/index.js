@@ -41369,8 +41369,8 @@ const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, lo
           /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: wizardLabelClass, children: "Parents for this level" }),
           /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-2 overflow-hidden rounded-lg border border-slate-300 bg-white", children: fromLines(levelOptions).length > 0 && parentOptions.length > 0 ? /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "divide-y divide-slate-200", children: fromLines(levelOptions).map((child) => {
             const currentParent = buildWizardParentRowsForChildren([child], parentMappings, parentOptions)[0]?.parent || "";
-            return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid min-w-0 gap-2 px-3 py-2 md:grid-cols-[minmax(0,1fr)_minmax(110px,170px)] md:items-center", children: [
-              /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "block min-w-0 md:w-1/2", children: [
+            return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid min-w-0 gap-3 px-3 py-2 md:grid-cols-[minmax(240px,420px)_minmax(110px,220px)] md:items-center md:justify-start", children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "block min-w-0", children: [
                 /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-[10px] font-black uppercase tracking-[0.14em] text-slate-500", children: "Parent" }),
                 /* @__PURE__ */ jsxRuntimeExports.jsx(
                   "select",

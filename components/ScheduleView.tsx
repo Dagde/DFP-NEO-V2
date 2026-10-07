@@ -10845,8 +10845,8 @@ const InitialSetupWizard: React.FC<{
                                     {fromLines(levelOptions).map((child) => {
                                         const currentParent = buildWizardParentRowsForChildren([child], parentMappings, parentOptions)[0]?.parent || '';
                                         return (
-                                            <div key={`${levelNumber}-${child}`} className="grid min-w-0 gap-2 px-3 py-2 md:grid-cols-[minmax(0,1fr)_minmax(110px,170px)] md:items-center">
-                                                <label className="block min-w-0 md:w-1/2">
+                                            <div key={`${levelNumber}-${child}`} className="grid min-w-0 gap-3 px-3 py-2 md:grid-cols-[minmax(240px,420px)_minmax(110px,220px)] md:items-center md:justify-start">
+                                                <label className="block min-w-0">
                                                     <span className="text-[10px] font-black uppercase tracking-[0.14em] text-slate-500">Parent</span>
                                                     <select
                                                         className={`${wizardInputClass} mt-1`}
