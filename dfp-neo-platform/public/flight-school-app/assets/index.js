@@ -39917,6 +39917,7 @@ const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, lo
   const wizardChoiceClass = "rounded-lg border border-slate-300 bg-white px-4 py-3 text-left text-sm font-semibold text-slate-800 shadow-sm transition hover:border-orange-300 hover:bg-orange-50 hover:text-orange-900";
   const wizardSmallButtonClass = "rounded-md border border-slate-300 bg-white px-3 py-2 text-xs font-semibold text-slate-700 shadow-sm transition hover:border-orange-300 hover:bg-orange-50 hover:text-orange-900";
   const wizardGreenButtonClass = "rounded-md border border-emerald-600 bg-emerald-600 px-3 py-2 text-xs font-bold text-white shadow-sm transition hover:border-emerald-500 hover:bg-emerald-500 disabled:cursor-not-allowed disabled:border-slate-300 disabled:bg-slate-300 disabled:text-slate-600";
+  const wizardLightGreenButtonClass = "rounded-md border border-emerald-400 bg-emerald-500 px-3 py-2 text-xs font-bold text-white shadow-sm transition hover:border-emerald-300 hover:bg-emerald-400 disabled:cursor-not-allowed disabled:border-slate-300 disabled:bg-slate-300 disabled:text-slate-600";
   const wizardRedButtonClass = "rounded-md border border-red-600 bg-red-600 px-3 py-2 text-xs font-bold text-white shadow-sm transition hover:border-red-500 hover:bg-red-500 disabled:cursor-not-allowed disabled:border-slate-300 disabled:bg-slate-300 disabled:text-slate-600";
   const wizardDeleteButtonClass = "rounded-md border border-red-300 bg-red-50 px-3 py-2 text-xs font-black uppercase tracking-[0.12em] text-red-900 shadow-sm transition hover:border-red-400 hover:bg-red-100 disabled:cursor-not-allowed disabled:opacity-50";
   const wizardCompactDeleteButtonClass = "w-20 rounded-md border border-red-300 bg-red-50 px-2 py-2 text-xs font-black uppercase tracking-[0.08em] text-red-900 shadow-sm transition hover:border-red-400 hover:bg-red-100 disabled:cursor-not-allowed disabled:opacity-50";
@@ -40294,7 +40295,7 @@ const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, lo
         /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: wizardLabelClass, children: title }),
         /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex flex-wrap items-center gap-2", children: [
           extraHeaderAction,
-          /* @__PURE__ */ jsxRuntimeExports.jsx("button", { type: "button", className: wizardGreenButtonClass, onClick: addRow, children: addLabel })
+          /* @__PURE__ */ jsxRuntimeExports.jsx("button", { type: "button", className: wizardLightGreenButtonClass, onClick: addRow, children: addLabel })
         ] })
       ] }),
       /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "space-y-2", children: editableRows.map((row, index) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid gap-2 md:grid-cols-[minmax(0,1fr)_100px_74px] md:items-end", children: [
