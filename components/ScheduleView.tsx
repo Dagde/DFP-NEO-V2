@@ -1403,20 +1403,6 @@ const parseRoleRequirementsText = (value: string): any[] => (
         .filter(Boolean)
 );
 
-const updateWizardRoleRequirementText = (value: string, index: number, field: 'role' | 'count', nextValue: string): string => {
-    const rows = parseRoleRequirementsText(value);
-    while (rows.length <= index) rows.push({ role: '', count: '' });
-    rows[index] = {
-        ...rows[index],
-        [field]: field === 'count' ? (String(nextValue || '').trim() ? Math.max(1, Math.round(Number(nextValue) || 1)) : '') : nextValue,
-    };
-    return formatRoleRequirementsText(rows);
-};
-
-const removeWizardRoleRequirementText = (value: string, index: number): string => (
-    formatRoleRequirementsText(parseRoleRequirementsText(value).filter((_, rowIndex) => rowIndex !== index))
-);
-
 const parseWizardCrewLabelRows = (value: string): Array<{ term: string; label: string }> => (
     String(value || '').split(/\n/).map((line) => {
         const [termPart, labelPart] = line.includes('=') ? line.split('=') : line.split(':');
@@ -9454,20 +9440,38 @@ const InitialSetupWizard: React.FC<{
     ) => {
         const rows = parseRoleRequirementsText(value);
         const editableRows = rows.length > 0 ? rows : [{ role: '', count: '' }];
+        const commitRows = (nextRows: any[]) => onChange(formatRoleRequirementsText(nextRows));
+        const getNextCrewRole = () => {
+            const usedRoles = new Set(editableRows.map((row) => String(row.role || '').trim().toUpperCase()).filter(Boolean));
+            const options = getWizardCrewRoleOptions(value);
+            return options.find((option) => !usedRoles.has(option.toUpperCase())) || options[0] || '';
+        };
+        const updateRow = (index: number, field: 'role' | 'count', nextValue: string) => {
+            const nextRows = [...editableRows];
+            nextRows[index] = {
+                ...nextRows[index],
+                [field]: field === 'count' ? (String(nextValue || '').trim() ? Math.max(1, Math.round(Number(nextValue) || 1)) : '') : nextValue,
+            };
+            commitRows(nextRows);
+        };
+        const addRow = () => {
+            const baseRows = editableRows.filter((row) => String(row.role || '').trim() || String(row.count ?? '').trim());
+            commitRows([...baseRows, { role: getNextCrewRole(), count: 1 }]);
+        };
         return (
             <div className="rounded-lg border border-slate-300 bg-white p-3">
                 <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
                     <span className={wizardLabelClass}>{title}</span>
-                    <button type="button" className={wizardSmallButtonClass} onClick={() => onChange(formatRoleRequirementsText([...editableRows, { role: '', count: '' }]))}>
+                    <button type="button" className={wizardSmallButtonClass} onClick={addRow}>
                         {addLabel}
                     </button>
                 </div>
                 <div className="space-y-2">
                     {editableRows.map((row, index) => (
                         <div key={`${title}-${index}`} className="grid gap-2 md:grid-cols-[minmax(0,1fr)_100px_74px] md:items-end">
-                            {wizardField('Crew role', row.role || '', (nextValue) => onChange(updateWizardRoleRequirementText(value, index, 'role', nextValue)), getWizardCrewRoleOptions(value), 'Pilot')}
-                            {wizardField('How many', String(row.count ?? 1), (nextValue) => onChange(updateWizardRoleRequirementText(value, index, 'count', nextValue)), undefined, '1')}
-                            <button type="button" className={wizardSmallButtonClass} onClick={() => onChange(removeWizardRoleRequirementText(value, index))}>
+                            {wizardField('Crew role', row.role || '', (nextValue) => updateRow(index, 'role', nextValue), getWizardCrewRoleOptions(value), 'Pilot')}
+                            {wizardField('How many', String(row.count ?? 1), (nextValue) => updateRow(index, 'count', nextValue), undefined, '1')}
+                            <button type="button" className={wizardSmallButtonClass} onClick={() => commitRows(editableRows.filter((_, rowIndex) => rowIndex !== index))}>
                                 Delete
                             </button>
                         </div>
@@ -13129,7 +13133,16 @@ const InitialSetupWizard: React.FC<{
         }
         if (visibleStep.id === 'crew') {
             return promptShell(
-                <p>Tell NEO what normal crew looks like. This prevents the scheduler from creating unrealistic solo or under-crewed events.</p>,
+                <div className="space-y-2">
+                    <p>This step tells NEO how many people are needed for one aircraft or resource event.</p>
+                    <ol className="list-decimal space-y-1 pl-5">
+                        <li>Choose the aircraft or resource.</li>
+                        <li>In Normal crew required, enter the crew that must be there for a normal event.</li>
+                        <li>In Other approved crew composition, enter any other crew mix that is also allowed.</li>
+                        <li>Use Add crew role when the event needs more than one type of crew member.</li>
+                    </ol>
+                    <p>Example: if a normal event needs one instructor and one trainee, enter Instructor = 1 and Trainee = 1.</p>
+                </div>,
                 <div className="space-y-3">
                     <div className="grid gap-3 md:grid-cols-2">
                         {wizardDataListField('Aircraft / resource', crewDraft.aircraftCode || resourceDraft.aircraftCode, (value) => {

@@ -33696,16 +33696,6 @@ const parseRoleRequirementsText = (value) => String(value || "").split(/\n/).map
   const count = countText ? Math.max(1, Math.round(Number(countText) || 1)) : "";
   return { role, count };
 }).filter(Boolean);
-const updateWizardRoleRequirementText = (value, index, field, nextValue) => {
-  const rows = parseRoleRequirementsText(value);
-  while (rows.length <= index) rows.push({ role: "", count: "" });
-  rows[index] = {
-    ...rows[index],
-    [field]: field === "count" ? String(nextValue || "").trim() ? Math.max(1, Math.round(Number(nextValue) || 1)) : "" : nextValue
-  };
-  return formatRoleRequirementsText(rows);
-};
-const removeWizardRoleRequirementText = (value, index) => formatRoleRequirementsText(parseRoleRequirementsText(value).filter((_, rowIndex) => rowIndex !== index));
 const formatWizardBuildRulesDraft = (draft) => [
   `Business rules: ${draft.businessRules || ""}`,
   `Maximum crew duty: ${draft.maxCrewDutyHours || ""}`,
@@ -40201,15 +40191,33 @@ const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, lo
   const renderCrewCompositionEditor = (title, value, onChange, addLabel = "Add crew role") => {
     const rows = parseRoleRequirementsText(value);
     const editableRows = rows.length > 0 ? rows : [{ role: "", count: "" }];
+    const commitRows = (nextRows) => onChange(formatRoleRequirementsText(nextRows));
+    const getNextCrewRole = () => {
+      const usedRoles = new Set(editableRows.map((row) => String(row.role || "").trim().toUpperCase()).filter(Boolean));
+      const options = getWizardCrewRoleOptions(value);
+      return options.find((option) => !usedRoles.has(option.toUpperCase())) || options[0] || "";
+    };
+    const updateRow = (index, field, nextValue) => {
+      const nextRows = [...editableRows];
+      nextRows[index] = {
+        ...nextRows[index],
+        [field]: field === "count" ? String(nextValue || "").trim() ? Math.max(1, Math.round(Number(nextValue) || 1)) : "" : nextValue
+      };
+      commitRows(nextRows);
+    };
+    const addRow = () => {
+      const baseRows = editableRows.filter((row) => String(row.role || "").trim() || String(row.count ?? "").trim());
+      commitRows([...baseRows, { role: getNextCrewRole(), count: 1 }]);
+    };
     return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded-lg border border-slate-300 bg-white p-3", children: [
       /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mb-3 flex flex-wrap items-center justify-between gap-2", children: [
         /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: wizardLabelClass, children: title }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx("button", { type: "button", className: wizardSmallButtonClass, onClick: () => onChange(formatRoleRequirementsText([...editableRows, { role: "", count: "" }])), children: addLabel })
+        /* @__PURE__ */ jsxRuntimeExports.jsx("button", { type: "button", className: wizardSmallButtonClass, onClick: addRow, children: addLabel })
       ] }),
       /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "space-y-2", children: editableRows.map((row, index) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid gap-2 md:grid-cols-[minmax(0,1fr)_100px_74px] md:items-end", children: [
-        wizardField("Crew role", row.role || "", (nextValue) => onChange(updateWizardRoleRequirementText(value, index, "role", nextValue)), getWizardCrewRoleOptions(value), "Pilot"),
-        wizardField("How many", String(row.count ?? 1), (nextValue) => onChange(updateWizardRoleRequirementText(value, index, "count", nextValue)), void 0, "1"),
-        /* @__PURE__ */ jsxRuntimeExports.jsx("button", { type: "button", className: wizardSmallButtonClass, onClick: () => onChange(removeWizardRoleRequirementText(value, index)), children: "Delete" })
+        wizardField("Crew role", row.role || "", (nextValue) => updateRow(index, "role", nextValue), getWizardCrewRoleOptions(value), "Pilot"),
+        wizardField("How many", String(row.count ?? 1), (nextValue) => updateRow(index, "count", nextValue), void 0, "1"),
+        /* @__PURE__ */ jsxRuntimeExports.jsx("button", { type: "button", className: wizardSmallButtonClass, onClick: () => commitRows(editableRows.filter((_, rowIndex) => rowIndex !== index)), children: "Delete" })
       ] }, `${title}-${index}`)) })
     ] });
   };
@@ -43489,7 +43497,16 @@ const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, lo
     }
     if (visibleStep.id === "crew") {
       return promptShell(
-        /* @__PURE__ */ jsxRuntimeExports.jsx("p", { children: "Tell NEO what normal crew looks like. This prevents the scheduler from creating unrealistic solo or under-crewed events." }),
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-2", children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsx("p", { children: "This step tells NEO how many people are needed for one aircraft or resource event." }),
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("ol", { className: "list-decimal space-y-1 pl-5", children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx("li", { children: "Choose the aircraft or resource." }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("li", { children: "In Normal crew required, enter the crew that must be there for a normal event." }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("li", { children: "In Other approved crew composition, enter any other crew mix that is also allowed." }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("li", { children: "Use Add crew role when the event needs more than one type of crew member." })
+          ] }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx("p", { children: "Example: if a normal event needs one instructor and one trainee, enter Instructor = 1 and Trainee = 1." })
+        ] }),
         /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-3", children: [
           /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "grid gap-3 md:grid-cols-2", children: wizardDataListField("Aircraft / resource", crewDraft.aircraftCode || resourceDraft.aircraftCode, (value) => {
             const nextAircraftCode = value.toUpperCase();
