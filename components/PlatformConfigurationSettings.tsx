@@ -5521,7 +5521,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
   const aircraftResourceMiniButtonClass = wizardEditMode
     ? 'h-[38px] min-w-[76px] rounded-lg bg-sky-500 px-3 text-xs font-black !text-white shadow-sm transition hover:bg-sky-600 disabled:cursor-not-allowed disabled:bg-slate-200 disabled:!text-slate-500'
     : 'h-[38px] min-w-[76px] rounded-md border border-gray-500 bg-gray-300 px-3 text-xs font-bold text-gray-900 hover:bg-gray-200 disabled:cursor-not-allowed disabled:opacity-50';
-  const wizardHeaderActionTextStyle = wizardEditMode ? { color: '#ffffff' } : undefined;
+  const wizardHeaderActionTextStyle = wizardEditMode ? { color: '#ffffff', WebkitTextFillColor: '#ffffff' } : undefined;
   const wizardHeaderAddActionStyle = wizardEditMode ? { color: '#ffffff', backgroundColor: '#16a34a' } : undefined;
   const wizardHeaderDeleteActionStyle = wizardEditMode ? { color: '#ffffff', backgroundColor: '#dc2626' } : undefined;
   const schedulingRuleScopeOptions = ['Unit', 'CombinedUnit'];

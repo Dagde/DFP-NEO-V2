@@ -22834,7 +22834,7 @@ This permanently removes the organisation record from platform configuration and
   };
   const platformActionButtonClass = wizardEditMode ? "min-h-[38px] min-w-[64px] rounded-lg bg-sky-500 px-3 py-2 text-center text-[10px] font-black leading-tight !text-white shadow-sm transition hover:bg-sky-600 disabled:cursor-not-allowed disabled:bg-slate-200 disabled:!text-slate-500" : "w-[56px] h-[41px] flex items-center justify-center text-center px-1 py-1 text-[10px] font-semibold btn-aluminium-brushed rounded-md disabled:cursor-not-allowed disabled:opacity-50";
   const aircraftResourceMiniButtonClass = wizardEditMode ? "h-[38px] min-w-[76px] rounded-lg bg-sky-500 px-3 text-xs font-black !text-white shadow-sm transition hover:bg-sky-600 disabled:cursor-not-allowed disabled:bg-slate-200 disabled:!text-slate-500" : "h-[38px] min-w-[76px] rounded-md border border-gray-500 bg-gray-300 px-3 text-xs font-bold text-gray-900 hover:bg-gray-200 disabled:cursor-not-allowed disabled:opacity-50";
-  const wizardHeaderActionTextStyle = wizardEditMode ? { color: "#ffffff" } : void 0;
+  const wizardHeaderActionTextStyle = wizardEditMode ? { color: "#ffffff", WebkitTextFillColor: "#ffffff" } : void 0;
   const wizardHeaderAddActionStyle = wizardEditMode ? { color: "#ffffff", backgroundColor: "#16a34a" } : void 0;
   const wizardHeaderDeleteActionStyle = wizardEditMode ? { color: "#ffffff", backgroundColor: "#dc2626" } : void 0;
   const schedulingRuleScopeOptions = ["Unit", "CombinedUnit"];
