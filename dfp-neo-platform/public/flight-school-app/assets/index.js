@@ -39917,6 +39917,7 @@ const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, lo
   const wizardChoiceClass = "rounded-lg border border-slate-300 bg-white px-4 py-3 text-left text-sm font-semibold text-slate-800 shadow-sm transition hover:border-orange-300 hover:bg-orange-50 hover:text-orange-900";
   const wizardSmallButtonClass = "rounded-md border border-slate-300 bg-white px-3 py-2 text-xs font-semibold text-slate-700 shadow-sm transition hover:border-orange-300 hover:bg-orange-50 hover:text-orange-900";
   const wizardGreenButtonClass = "rounded-md border border-emerald-600 bg-emerald-600 px-3 py-2 text-xs font-bold text-white shadow-sm transition hover:border-emerald-500 hover:bg-emerald-500 disabled:cursor-not-allowed disabled:border-slate-300 disabled:bg-slate-300 disabled:text-slate-600";
+  const wizardRedButtonClass = "rounded-md border border-red-600 bg-red-600 px-3 py-2 text-xs font-bold text-white shadow-sm transition hover:border-red-500 hover:bg-red-500 disabled:cursor-not-allowed disabled:border-slate-300 disabled:bg-slate-300 disabled:text-slate-600";
   const wizardDeleteButtonClass = "rounded-md border border-red-300 bg-red-50 px-3 py-2 text-xs font-black uppercase tracking-[0.12em] text-red-900 shadow-sm transition hover:border-red-400 hover:bg-red-100 disabled:cursor-not-allowed disabled:opacity-50";
   const wizardCompactDeleteButtonClass = "w-20 rounded-md border border-red-300 bg-red-50 px-2 py-2 text-xs font-black uppercase tracking-[0.08em] text-red-900 shadow-sm transition hover:border-red-400 hover:bg-red-100 disabled:cursor-not-allowed disabled:opacity-50";
   const wizardPrimaryButtonClass = "rounded-md bg-orange-500 px-3 py-2 text-xs font-bold text-white shadow-sm transition hover:bg-orange-600";
@@ -40354,7 +40355,7 @@ const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, lo
         "button",
         {
           type: "button",
-          className: wizardDeleteButtonClass,
+          className: wizardRedButtonClass,
           onClick: () => commitAlternateCrewDraftRows(rows.filter((_, rowIndex) => rowIndex !== index), "Alternate crew composition removed from Settings."),
           children: "Delete crew"
         }
@@ -41227,7 +41228,7 @@ const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, lo
       }
     ) }, `wizard-settings-${visibleStep.id}-${scrollTarget}`);
   };
-  const promptShell = (question, answer, actionLabel = "Next", saveAction) => /* @__PURE__ */ jsxRuntimeExports.jsxs(
+  const promptShell = (question, answer, actionLabel = "Next", saveAction, answerPanelClass = "max-w-full overflow-visible rounded-xl border border-slate-300 bg-white/80 p-3 shadow-sm") => /* @__PURE__ */ jsxRuntimeExports.jsxs(
     "div",
     {
       ref: wizardShellRef,
@@ -41445,7 +41446,7 @@ const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, lo
           "div",
           {
             ref: wizardAnswerPanelRef,
-            className: "max-w-full overflow-visible rounded-xl border border-slate-300 bg-white/80 p-3 shadow-sm",
+            className: answerPanelClass,
             onKeyDownCapture: stopEditableKeyPropagation,
             onKeyDown: stopEditableKeyPropagation,
             children: answer
@@ -43660,7 +43661,10 @@ const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, lo
             }),
             renderAlternateCrewCompositionCards()
           ] })
-        ] })
+        ] }),
+        "Next",
+        void 0,
+        "max-w-full overflow-visible"
       );
     }
     if (visibleStep.id === "callsigns") {
