@@ -4145,6 +4145,7 @@ const InitialSetupWizard: React.FC<{
     const [unitsTodayDraft, setUnitsTodayDraft] = useState('');
     const [unitParentDraft, setUnitParentDraft] = useState('');
     const [locationsTodayDraft, setLocationsTodayDraft] = useState(() => formatScopedWizardLocationsDraft());
+    const [locationsTodayFieldTouched, setLocationsTodayFieldTouched] = useState(false);
     const [locationDraftRowCount, setLocationDraftRowCount] = useState(() => Math.max(1, parseWizardLocationRows(
         formatScopedWizardLocationsDraft(),
     ).length));
@@ -5026,6 +5027,7 @@ const InitialSetupWizard: React.FC<{
         setOrganisationNameFieldTouched(false);
         setOrganisationCodeFieldTouched(false);
         locationDraftDirtyRef.current = false;
+        setLocationsTodayFieldTouched(false);
         unitDraftDirtyRef.current = false;
         resourceDraftDirtyRef.current = false;
         crewDraftDirtyRef.current = false;
@@ -7821,6 +7823,7 @@ const InitialSetupWizard: React.FC<{
             case 'org-level3':
                 return hasMeaningfulOrganisationLevel(3);
             case 'locations-today': {
+                if (!locationsTodayFieldTouched) return false;
                 const rows = parseWizardLocationRows(locationsTodayDraft);
                 return rows.some((row) => (
                     hasMeaningfulWizardText(row.icao || row.iata, ['LOC1', 'LOC'])
@@ -8103,7 +8106,7 @@ const InitialSetupWizard: React.FC<{
             return;
         }
         if (stepId === 'locations-today') {
-            saveWizardLocationRowsDraft();
+            if (locationsTodayFieldTouched) saveWizardLocationRowsDraft();
             return;
         }
         if (stepId === 'location-details') {
@@ -9373,8 +9376,11 @@ const InitialSetupWizard: React.FC<{
         );
     };
     const updateWizardLocationRow = (rowIndex: number, field: 'icao' | 'iata' | 'name', value: string) => {
-        const rows = parseWizardLocationRows(locationsTodayDraft)
-            .filter((row) => !(shouldIgnoreLegacyWizardLocationSamples && isLegacyWizardLocationSampleRow(row)));
+        setLocationsTodayFieldTouched(true);
+        const rows = locationsTodayFieldTouched
+            ? parseWizardLocationRows(locationsTodayDraft)
+                .filter((row) => !(shouldIgnoreLegacyWizardLocationSamples && isLegacyWizardLocationSampleRow(row)))
+            : [];
         const nextRows = rows.length > 0 ? [...rows] : [{ icao: '', iata: '', name: '' }];
         while (nextRows.length <= rowIndex) nextRows.push({ icao: '', iata: '', name: '' });
         const formattedValue = field === 'name' ? value : value.toUpperCase();
@@ -12907,8 +12913,9 @@ const InitialSetupWizard: React.FC<{
             );
         }
         if (visibleStep.id === 'locations-today') {
-            const locationRows = parseWizardLocationRows(locationsTodayDraft)
+            const sampleLocationRows = parseWizardLocationRows(locationsTodayDraft)
                 .filter((row) => !(shouldIgnoreLegacyWizardLocationSamples && isLegacyWizardLocationSampleRow(row)));
+            const locationRows = locationsTodayFieldTouched ? sampleLocationRows : [];
             const editableLocationRows = Array.from({ length: Math.max(locationDraftRowCount, locationRows.length, 1) }, (_, index) => (
                 locationRows[index] || { icao: '', iata: '', name: '' }
             ));
@@ -12918,9 +12925,9 @@ const InitialSetupWizard: React.FC<{
                     <div className="space-y-3">
                         {editableLocationRows.map((row, rowIndex) => (
                             <div key={`wizard-location-row-${rowIndex}`} className="grid min-w-0 gap-2 rounded-lg border border-slate-200 bg-slate-50 p-3 md:grid-cols-2 xl:grid-cols-3">
-                                {wizardDataListField('ICAO code', row.icao, (value) => updateWizardLocationRow(rowIndex, 'icao', value), wizardLocationIcaoOptions, 'ICAO code', `icao-${rowIndex}`)}
-                                {wizardDataListField('IATA code', row.iata, (value) => updateWizardLocationRow(rowIndex, 'iata', value), wizardLocationIataOptions, 'IATA code', `iata-${rowIndex}`)}
-                                {wizardDataListField('Location name', row.name, (value) => updateWizardLocationRow(rowIndex, 'name', value), wizardLocationNameOptions, 'Location name', `location-name-${rowIndex}`)}
+                                {wizardDataListField('ICAO code', row.icao, (value) => updateWizardLocationRow(rowIndex, 'icao', value), wizardLocationIcaoOptions, sampleLocationRows[rowIndex]?.icao || 'ICAO code', `icao-${rowIndex}`)}
+                                {wizardDataListField('IATA code', row.iata, (value) => updateWizardLocationRow(rowIndex, 'iata', value), wizardLocationIataOptions, sampleLocationRows[rowIndex]?.iata || 'IATA code', `iata-${rowIndex}`)}
+                                {wizardDataListField('Location name', row.name, (value) => updateWizardLocationRow(rowIndex, 'name', value), wizardLocationNameOptions, sampleLocationRows[rowIndex]?.name || 'Location name', `location-name-${rowIndex}`)}
                             </div>
                         ))}
                     </div>
