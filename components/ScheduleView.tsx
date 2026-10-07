@@ -10032,7 +10032,7 @@ const InitialSetupWizard: React.FC<{
                     </span>
                     <button
                         type="button"
-                        className={wizardSmallButtonClass}
+                        className="rounded-md border border-emerald-600 bg-emerald-600 px-3 py-2 text-xs font-bold text-white shadow-sm transition hover:border-emerald-500 hover:bg-emerald-500 disabled:cursor-not-allowed disabled:border-slate-300 disabled:bg-slate-300 disabled:text-slate-600"
                         disabled={!onUpdateServiceDefinitions || courseStudentGroups.length >= MAX_COURSE_STUDENT_GROUPS}
                         onClick={addCourseStudentGroup}
                     >
