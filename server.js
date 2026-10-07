@@ -21719,8 +21719,34 @@ function parseDailySnapshotDateKey(rawDate) {
 // GET /api/archive/dfp-date - Reconstruct a historical DFP date from compact archive pieces.
 app.get('/api/archive/dfp-date', async (req, res) => {
   const startedAt = Date.now();
+  const archiveReadTimings = [];
+  const recordArchiveReadTiming = (label, started, details = {}) => {
+    archiveReadTimings.push({
+      label,
+      durationMs: Math.max(0, Date.now() - started),
+      elapsedMs: Math.max(0, Date.now() - startedAt),
+      ...details,
+    });
+  };
+  const timedArchiveRead = async (label, fn, details = {}) => {
+    const stepStartedAt = Date.now();
+    try {
+      const result = await fn();
+      recordArchiveReadTiming(label, stepStartedAt, {
+        ...details,
+        rows: Array.isArray(result) ? result.length : undefined,
+      });
+      return result;
+    } catch (error) {
+      recordArchiveReadTiming(label, stepStartedAt, {
+        ...details,
+        error: error?.message || String(error),
+      });
+      throw error;
+    }
+  };
   try {
-    const db = await getPrisma();
+    const db = await timedArchiveRead('get-prisma', () => getPrisma());
     let requestedDate = String(req.query.date || '').slice(0, 10);
     let requestedSnapshotKey = String(req.query.snapshotKey || '').trim();
     const rawSnapshotKeys = req.query.snapshotKeys;
@@ -21746,9 +21772,13 @@ app.get('/api/archive/dfp-date', async (req, res) => {
     if (requestedSnapshotKeyCandidates.length > 0) {
       for (const candidateKey of requestedSnapshotKeyCandidates) {
         if (/^\d{4}-\d{2}-\d{2}$/.test(candidateKey)) {
-          const rows = await db.$queryRawUnsafe(
-            `SELECT * FROM "PublishedDfpArchive" WHERE "date" = $1::text ORDER BY "publishedAt" DESC LIMIT 1`,
-            candidateKey
+          const rows = await timedArchiveRead(
+            'lookup-archive-date-candidate',
+            () => db.$queryRawUnsafe(
+              `SELECT * FROM "PublishedDfpArchive" WHERE "date" = $1::text ORDER BY "publishedAt" DESC LIMIT 1`,
+              candidateKey
+            ),
+            { candidateKey }
           );
           if (rows?.length > 0) {
             archiveRows = rows;
@@ -21758,9 +21788,13 @@ app.get('/api/archive/dfp-date', async (req, res) => {
           }
           continue;
         }
-        const rows = await db.$queryRawUnsafe(
-          `SELECT * FROM "PublishedDfpArchive" WHERE "snapshotKey" = $1::text LIMIT 1`,
-          candidateKey
+        const rows = await timedArchiveRead(
+          'lookup-archive-key-candidate',
+          () => db.$queryRawUnsafe(
+            `SELECT * FROM "PublishedDfpArchive" WHERE "snapshotKey" = $1::text LIMIT 1`,
+            candidateKey
+          ),
+          { candidateKey }
         );
         if (rows?.length > 0) {
           archiveRows = rows;
@@ -21769,22 +21803,34 @@ app.get('/api/archive/dfp-date', async (req, res) => {
         }
       }
     } else if (requestedSnapshotKey) {
-      archiveRows = await db.$queryRawUnsafe(
-        `SELECT * FROM "PublishedDfpArchive" WHERE "snapshotKey" = $1::text LIMIT 1`,
-        requestedSnapshotKey
+      archiveRows = await timedArchiveRead(
+        'lookup-archive-key',
+        () => db.$queryRawUnsafe(
+          `SELECT * FROM "PublishedDfpArchive" WHERE "snapshotKey" = $1::text LIMIT 1`,
+          requestedSnapshotKey
+        ),
+        { requestedSnapshotKey }
       );
     } else {
-      archiveRows = await db.$queryRawUnsafe(
-        `SELECT * FROM "PublishedDfpArchive" WHERE "date" = $1::text ORDER BY "publishedAt" DESC LIMIT 1`,
-        requestedDate
+      archiveRows = await timedArchiveRead(
+        'lookup-archive-date',
+        () => db.$queryRawUnsafe(
+          `SELECT * FROM "PublishedDfpArchive" WHERE "date" = $1::text ORDER BY "publishedAt" DESC LIMIT 1`,
+          requestedDate
+        ),
+        { requestedDate }
       );
     }
 
     if (archiveRows?.length > 0) {
       let archive = archiveRows[0];
-      const snapshotRowsForArchive = await db.$queryRawUnsafe(
-        `SELECT * FROM "DailySnapshot" WHERE date = $1::text LIMIT 1`,
-        archive.snapshotKey
+      const snapshotRowsForArchive = await timedArchiveRead(
+        'lookup-daily-snapshot-for-archive',
+        () => db.$queryRawUnsafe(
+          `SELECT * FROM "DailySnapshot" WHERE date = $1::text LIMIT 1`,
+          archive.snapshotKey
+        ),
+        { snapshotKey: archive.snapshotKey }
       ).catch(() => []);
       const snapshotForArchive = snapshotRowsForArchive?.[0] || null;
       const snapshotSavedAtMs = snapshotForArchive?.savedAt ? new Date(snapshotForArchive.savedAt).getTime() : 0;
@@ -21800,9 +21846,13 @@ app.get('/api/archive/dfp-date', async (req, res) => {
           ...snapshotForArchive,
           savedBy: snapshotForArchive.savedBy || 'daily-snapshot-self-heal',
         });
-        const refreshedArchiveRows = await db.$queryRawUnsafe(
-          `SELECT * FROM "PublishedDfpArchive" WHERE id = $1::text LIMIT 1`,
-          syncResult.archiveId
+        const refreshedArchiveRows = await timedArchiveRead(
+          'lookup-refreshed-archive-after-self-heal',
+          () => db.$queryRawUnsafe(
+            `SELECT * FROM "PublishedDfpArchive" WHERE id = $1::text LIMIT 1`,
+            syncResult.archiveId
+          ),
+          { archiveId: syncResult.archiveId }
         );
         archive = refreshedArchiveRows?.[0] || archive;
         await writeArchiveDiagnostic(db, 'ARCHIVE_DAILY_SNAPSHOT_SELF_HEAL', archive.snapshotKey, archive.date, 'success', {
@@ -21812,12 +21862,16 @@ app.get('/api/archive/dfp-date', async (req, res) => {
           eventCount: syncResult.eventCount,
         }, Date.now() - startedAt);
       }
-      const eventRows = await db.$queryRawUnsafe(`
-        SELECT "eventId", "date", "eventType", "eventCode", "resourceId", "startTime", "duration", "personnelRefs", "eventData", "createdAt"
-        FROM "ScheduleEventArchive"
-        WHERE "archiveId" = $1::text
-        ORDER BY COALESCE("resourceId", ''), COALESCE("startTime", 0), "eventId"
-      `, archive.id);
+      const eventRows = await timedArchiveRead(
+        'load-schedule-event-archive',
+        () => db.$queryRawUnsafe(`
+          SELECT "eventId", "date", "eventType", "eventCode", "resourceId", "startTime", "duration", "personnelRefs", "eventData", "createdAt"
+          FROM "ScheduleEventArchive"
+          WHERE "archiveId" = $1::text
+          ORDER BY COALESCE("resourceId", ''), COALESCE("startTime", 0), "eventId"
+        `, archive.id),
+        { archiveId: archive.id }
+      );
       const archivedEventIds = (eventRows || [])
         .map(row => row?.eventId)
         .filter(Boolean);
@@ -21826,12 +21880,16 @@ app.get('/api/archive/dfp-date', async (req, res) => {
         .map(ref => ref?.id)
         .filter(Boolean);
       const configVersions = configIds.length > 0
-        ? await db.$queryRawUnsafe(`
-            SELECT id, "scopeKey", "configType", "contentHash", "effectiveFrom", "effectiveTo", "content", "createdAt", "createdBy"
-            FROM "ConfigVersionArchive"
-            WHERE id = ANY($1::text[])
-            ORDER BY "configType"
-          `, configIds)
+        ? await timedArchiveRead(
+            'load-config-version-archive',
+            () => db.$queryRawUnsafe(`
+              SELECT id, "scopeKey", "configType", "contentHash", "effectiveFrom", "effectiveTo", "content", "createdAt", "createdBy"
+              FROM "ConfigVersionArchive"
+              WHERE id = ANY($1::text[])
+              ORDER BY "configType"
+            `, configIds),
+            { configIds: configIds.length }
+          )
         : [];
       const configContentByType = Object.fromEntries((configVersions || []).map(row => [row.configType, row.content]));
       const archivedStaffProfiles = Array.isArray(configContentByType.staffRosterState) ? configContentByType.staffRosterState : [];
@@ -21839,19 +21897,22 @@ app.get('/api/archive/dfp-date', async (req, res) => {
       const rawArchivedCurrencyDefinitions = configContentByType.currencyDefinitionState && typeof configContentByType.currencyDefinitionState === 'object'
         ? configContentByType.currencyDefinitionState
         : { masterCurrencies: [], currencyRequirements: [] };
-      const archivedCurrencyDefinitions = await resolveArchiveCurrencyDefinitions(
-        db,
-        {
-          date: archive.snapshotKey,
-          currencyDefinitions: rawArchivedCurrencyDefinitions,
-        },
-        {
-          ...buildArchiveScopeFromSnapshotPayload(archive.snapshotKey, {
-            scheduleEvents: eventRows.map(row => row.eventData).filter(Boolean),
-          }),
-          unitCode: archive.unitCode,
-          snapshotKey: archive.snapshotKey,
-        }
+      const archivedCurrencyDefinitions = await timedArchiveRead(
+        'resolve-currency-definitions',
+        () => resolveArchiveCurrencyDefinitions(
+          db,
+          {
+            date: archive.snapshotKey,
+            currencyDefinitions: rawArchivedCurrencyDefinitions,
+          },
+          {
+            ...buildArchiveScopeFromSnapshotPayload(archive.snapshotKey, {
+              scheduleEvents: eventRows.map(row => row.eventData).filter(Boolean),
+            }),
+            unitCode: archive.unitCode,
+            snapshotKey: archive.snapshotKey,
+          }
+        )
       );
 	      const archivedCurrencyDefinitionsSource = hasArchiveCurrencyDefinitions(rawArchivedCurrencyDefinitions)
 	        ? 'archived-config-version'
@@ -21882,41 +21943,53 @@ app.get('/api/archive/dfp-date', async (req, res) => {
       const archiveMonthStart = /^\d{4}-\d{2}-\d{2}$/.test(String(archive.date || ''))
         ? `${String(archive.date).slice(0, 7)}-01`
         : archive.date;
-      const performanceRows = await db.$queryRawUnsafe(
-        `SELECT * FROM "TraineePerformance"
-         WHERE "date" = $1::text OR "eventId" = ANY($2::text[])
-         ORDER BY "course" ASC NULLS LAST, "traineeFullName" ASC, "eventSequence" ASC NULLS LAST
-         LIMIT 5000`,
-        archive.date,
-        archivedEventIds
+      const performanceRows = await timedArchiveRead(
+        'load-trainee-performance',
+        () => db.$queryRawUnsafe(
+          `SELECT * FROM "TraineePerformance"
+           WHERE "date" = $1::text OR "eventId" = ANY($2::text[])
+           ORDER BY "course" ASC NULLS LAST, "traineeFullName" ASC, "eventSequence" ASC NULLS LAST
+           LIMIT 5000`,
+          archive.date,
+          archivedEventIds
+        ),
+        { eventIds: archivedEventIds.length }
       ).catch(() => []);
-      const completionRows = await db.$queryRawUnsafe(
-        `SELECT * FROM "EventCompletion"
-         WHERE "eventDate" = $1::text OR "scheduleEventId" = ANY($2::text[])
-         ORDER BY "startTime" ASC, "traineeFullName" ASC
-         LIMIT 5000`,
-        archive.date,
-        archivedEventIds
+      const completionRows = await timedArchiveRead(
+        'load-event-completions',
+        () => db.$queryRawUnsafe(
+          `SELECT * FROM "EventCompletion"
+           WHERE "eventDate" = $1::text OR "scheduleEventId" = ANY($2::text[])
+           ORDER BY "startTime" ASC, "traineeFullName" ASC
+           LIMIT 5000`,
+          archive.date,
+          archivedEventIds
+        ),
+        { eventIds: archivedEventIds.length }
       ).catch(() => []);
-      const flightLogRows = await db.$queryRawUnsafe(
-        `SELECT * FROM "FlightLogEntry"
-         WHERE "scheduleEventId" = ANY($2::text[])
-            OR (
-              "eventDate" >= $5::text
-              AND "eventDate" <= $1::text
-              AND (
-                "personnelId" = ANY($3::text[])
-                OR "traineeId" = ANY($3::text[])
-                OR LOWER(TRIM(COALESCE("personName", ''))) = ANY($4::text[])
+      const flightLogRows = await timedArchiveRead(
+        'load-flight-log-entries',
+        () => db.$queryRawUnsafe(
+          `SELECT * FROM "FlightLogEntry"
+           WHERE "scheduleEventId" = ANY($2::text[])
+              OR (
+                "eventDate" >= $5::text
+                AND "eventDate" <= $1::text
+                AND (
+                  "personnelId" = ANY($3::text[])
+                  OR "traineeId" = ANY($3::text[])
+                  OR LOWER(TRIM(COALESCE("personName", ''))) = ANY($4::text[])
+                )
               )
-            )
-         ORDER BY "personName" ASC, "eventDate" ASC, "createdAt" ASC
-         LIMIT 5000`,
-        archive.date,
-        archivedEventIds,
-        archivedPersonIds,
-        archivedPersonNames,
-        archiveMonthStart
+           ORDER BY "personName" ASC, "eventDate" ASC, "createdAt" ASC
+           LIMIT 5000`,
+          archive.date,
+          archivedEventIds,
+          archivedPersonIds,
+          archivedPersonNames,
+          archiveMonthStart
+        ),
+        { eventIds: archivedEventIds.length, personIds: archivedPersonIds.length, personNames: archivedPersonNames.length }
       ).catch(() => []);
       const archiveLogbookDiagnostics = {
         archiveDate: archive.date,
@@ -21935,15 +22008,20 @@ app.get('/api/archive/dfp-date', async (req, res) => {
           scheduleEventId: row.scheduleEventId,
         })),
       };
-      const trainingReportVersions = await db.$queryRawUnsafe(
-        `SELECT "eventId", "traineeId", "traineeFullName", "reportDate", "action", "versionHash", "reportData", "changedBy", "changedAt"
-         FROM "TrainingReportVersionArchive"
-         WHERE "reportDate" = $1::text OR "eventId" = ANY($2::text[])
-         ORDER BY "changedAt" DESC
-         LIMIT 5000`,
-        archive.date,
-        archivedEventIds
+      const trainingReportVersions = await timedArchiveRead(
+        'load-training-report-versions',
+        () => db.$queryRawUnsafe(
+          `SELECT "eventId", "traineeId", "traineeFullName", "reportDate", "action", "versionHash", "reportData", "changedBy", "changedAt"
+           FROM "TrainingReportVersionArchive"
+           WHERE "reportDate" = $1::text OR "eventId" = ANY($2::text[])
+           ORDER BY "changedAt" DESC
+           LIMIT 5000`,
+          archive.date,
+          archivedEventIds
+        ),
+        { eventIds: archivedEventIds.length }
       ).catch(() => []);
+      const archiveAssemblyStartedAt = Date.now();
       const scheduleEvents = eventRows.map(row => row.eventData);
       const archivedStaffEvents = archiveEventsByType(eventRows, 'staff');
       const archivedTraineeEvents = archiveEventsByType(eventRows, 'trainee');
@@ -21963,7 +22041,7 @@ app.get('/api/archive/dfp-date', async (req, res) => {
 	        flightLogRows || [],
 	        row => row?.id || `${row?.scheduleEventId || ''}:${row?.personName || ''}:${row?.personRole || ''}:${row?.eventDate || ''}`
 	      );
-	      const archiveCompletenessDiagnostics = buildArchiveCompletenessDiagnostics({
+		      const archiveCompletenessDiagnostics = buildArchiveCompletenessDiagnostics({
         source: 'compact-archive',
         date: archive.date,
         snapshotKey: archive.snapshotKey,
@@ -21982,8 +22060,16 @@ app.get('/api/archive/dfp-date', async (req, res) => {
 	        eventCompletions: mergedEventCompletions,
 	        flightLogEntries: mergedFlightLogEntries,
 	        configVersions: configVersions || [],
-        currencyDefinitions: archivedCurrencyDefinitions,
-        currencyDefinitionsSource: archivedCurrencyDefinitionsSource,
+	        currencyDefinitions: archivedCurrencyDefinitions,
+	        currencyDefinitionsSource: archivedCurrencyDefinitionsSource,
+	      });
+      recordArchiveReadTiming('assemble-response-data', archiveAssemblyStartedAt, {
+        scheduleEvents: scheduleEvents.length,
+        staffEvents: archivedStaffEvents.length,
+        traineeEvents: archivedTraineeEvents.length,
+        trainingReports: trainingReports.length,
+        eventCompletions: mergedEventCompletions.length,
+        flightLogEntries: mergedFlightLogEntries.length,
       });
       const snapshot = {
         date: archive.snapshotKey,
@@ -22007,10 +22093,11 @@ app.get('/api/archive/dfp-date', async (req, res) => {
         currencyRequirements: Array.isArray(archivedCurrencyDefinitions.currencyRequirements) ? archivedCurrencyDefinitions.currencyRequirements : [],
         staffLogbook: {},
         aircraftConfigState: configContentByType.aircraftConfigState || {},
-        archiveLogbookDiagnostics,
-        archiveCompletenessDiagnostics,
-        snapshotSource: 'compact-archive',
-      };
+	        archiveLogbookDiagnostics,
+	        archiveCompletenessDiagnostics,
+        archiveReadTimings,
+	        snapshotSource: 'compact-archive',
+	      };
       const response = {
         success: true,
         source: 'compact-archive',
@@ -22046,23 +22133,26 @@ app.get('/api/archive/dfp-date', async (req, res) => {
         currencyDefinitions: archivedCurrencyDefinitions,
         masterCurrencies: Array.isArray(archivedCurrencyDefinitions.masterCurrencies) ? archivedCurrencyDefinitions.masterCurrencies : [],
         currencyRequirements: Array.isArray(archivedCurrencyDefinitions.currencyRequirements) ? archivedCurrencyDefinitions.currencyRequirements : [],
-        archiveLogbookDiagnostics,
-        archiveCompletenessDiagnostics,
-        assembledAt: new Date().toISOString(),
-        durationMs: Date.now() - startedAt,
-      };
-      await writeArchiveDiagnostic(db, 'ARCHIVE_HISTORICAL_DFP_READ', archive.snapshotKey, archive.date, 'success', {
-        source: response.source,
+	        archiveLogbookDiagnostics,
+	        archiveCompletenessDiagnostics,
+        archiveReadTimings,
+	        assembledAt: new Date().toISOString(),
+	        durationMs: Date.now() - startedAt,
+	      };
+      console.log(`⏱️ GET /api/archive/dfp-date ${archive.snapshotKey} ${response.durationMs}ms`, archiveReadTimings.map(step => `${step.label}:${step.durationMs}ms`).join(', '));
+	      await writeArchiveDiagnostic(db, 'ARCHIVE_HISTORICAL_DFP_READ', archive.snapshotKey, archive.date, 'success', {
+	        source: response.source,
         scheduleEvents: response.scheduleEvents.length,
         staffEvents: response.snapshot.staffEvents.length,
         traineeEvents: response.snapshot.traineeEvents.length,
         archivedEventIds: archivedEventIds.length,
         trainingReports: response.trainingReports.length,
         trainingReportVersions: response.trainingReportVersions.length,
-        eventCompletions: response.eventCompletions.length,
-        flightLogEntries: response.flightLogEntries.length,
-        archiveCompletenessDiagnostics,
-      }, response.durationMs);
+	        eventCompletions: response.eventCompletions.length,
+	        flightLogEntries: response.flightLogEntries.length,
+        archiveReadTimings,
+	        archiveCompletenessDiagnostics,
+	      }, response.durationMs);
       return res.json(response);
     }
 

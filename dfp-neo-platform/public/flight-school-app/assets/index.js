@@ -145398,6 +145398,7 @@ ${error instanceof Error ? error.message : String(error)}`,
           const jsonParsedAt = performance.now();
           const snap2 = data.snapshot;
           resolvedSnapshotKey = data.snapshotKey || snap2?.date || resolvedSnapshotKey;
+          const archiveReadTimings = Array.isArray(data.archiveReadTimings) ? data.archiveReadTimings : Array.isArray(snap2?.archiveReadTimings) ? snap2.archiveReadTimings : [];
           pushDfpDataDiag("snapshot:network-json", {
             targetDate,
             snapshotKey,
@@ -145406,7 +145407,9 @@ ${error instanceof Error ? error.message : String(error)}`,
             elapsedMs: Math.round(performance.now() - loadStartedAt),
             snapKey: snap2?.date,
             eventCount: Array.isArray(snap2?.scheduleEvents) ? snap2.scheduleEvents.length : 0,
-            baselineCount: Array.isArray(snap2?.baselineEvents) ? snap2.baselineEvents.length : 0
+            baselineCount: Array.isArray(snap2?.baselineEvents) ? snap2.baselineEvents.length : 0,
+            serverDurationMs: data.durationMs ?? null,
+            archiveReadTimings
           });
           if (!snap2) {
             lastError = new Error("Snapshot response did not include snapshot data");

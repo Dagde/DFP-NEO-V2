@@ -34265,20 +34265,25 @@ const App: React.FC = () => {
                         progress: 88
                     });
                     const parseStartedAt = performance.now();
-                    const data = await res.json();
-                    const jsonParsedAt = performance.now();
-                    const snap = data.snapshot;
-                    resolvedSnapshotKey = data.snapshotKey || snap?.date || resolvedSnapshotKey;
-                    pushDfpDataDiag('snapshot:network-json', {
-                        targetDate,
-                        snapshotKey,
-                        resolvedSnapshotKey,
-                        parseDurationMs: Math.round(jsonParsedAt - parseStartedAt),
-                        elapsedMs: Math.round(performance.now() - loadStartedAt),
-                        snapKey: snap?.date,
-                        eventCount: Array.isArray(snap?.scheduleEvents) ? snap.scheduleEvents.length : 0,
-                        baselineCount: Array.isArray(snap?.baselineEvents) ? snap.baselineEvents.length : 0,
-                    });
+	                    const data = await res.json();
+	                    const jsonParsedAt = performance.now();
+	                    const snap = data.snapshot;
+	                    resolvedSnapshotKey = data.snapshotKey || snap?.date || resolvedSnapshotKey;
+                    const archiveReadTimings = Array.isArray(data.archiveReadTimings)
+                        ? data.archiveReadTimings
+                        : (Array.isArray(snap?.archiveReadTimings) ? snap.archiveReadTimings : []);
+	                    pushDfpDataDiag('snapshot:network-json', {
+	                        targetDate,
+	                        snapshotKey,
+	                        resolvedSnapshotKey,
+	                        parseDurationMs: Math.round(jsonParsedAt - parseStartedAt),
+	                        elapsedMs: Math.round(performance.now() - loadStartedAt),
+	                        snapKey: snap?.date,
+	                        eventCount: Array.isArray(snap?.scheduleEvents) ? snap.scheduleEvents.length : 0,
+	                        baselineCount: Array.isArray(snap?.baselineEvents) ? snap.baselineEvents.length : 0,
+                        serverDurationMs: data.durationMs ?? null,
+                        archiveReadTimings,
+	                    });
                     if (!snap) {
                         lastError = new Error('Snapshot response did not include snapshot data');
                         continue;
