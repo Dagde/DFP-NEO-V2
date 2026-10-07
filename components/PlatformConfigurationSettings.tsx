@@ -11148,6 +11148,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
                             disabled={!canEditResourcePools}
                             onClick={() => addAircraftConfiguration(index)}
                             className={aircraftResourceMiniButtonClass}
+                            style={wizardHeaderActionTextStyle}
                           >
                             Add Config
                           </button>

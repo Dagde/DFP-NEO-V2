@@ -27637,6 +27637,7 @@ This removes them from DFP Resource Rows. Press Save in this section to apply th
                         disabled: !canEditResourcePools,
                         onClick: () => addAircraftConfiguration(index),
                         className: aircraftResourceMiniButtonClass,
+                        style: wizardHeaderActionTextStyle,
                         children: "Add Config"
                       }
                     )
