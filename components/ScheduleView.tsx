@@ -9333,7 +9333,9 @@ const InitialSetupWizard: React.FC<{
     ) => {
         const listId = `wizard-${(listKey || label).toLowerCase().replace(/[^a-z0-9]+/g, '-')}`;
         const cleanValue = normaliseUnitSettingsIdentifier(value);
-        const uniqueOptions = Array.from(new Set(options.filter(Boolean)));
+        const uniqueOptions = Array.from(new Set(options.filter(Boolean))).filter((option) => (
+            !cleanValue || normaliseUnitSettingsIdentifier(option) !== cleanValue
+        ));
         const optionRank = (option: string) => {
             const cleanOption = normaliseUnitSettingsIdentifier(option);
             if (!cleanValue) return 0;
