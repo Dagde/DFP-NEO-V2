@@ -4256,7 +4256,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
     const aircraftProfiles = getVisibleAlternateCrewCompositions().filter((profile) => (
       String(profile.aircraftTypeCode || '').trim().toUpperCase() === aircraftTypeCode.trim().toUpperCase()
     ));
-    const name = `Alternate Crew ${aircraftProfiles.length + 1}`;
+    const name = `Alt${aircraftProfiles.length + 1}`;
     const baseId = createClientRecordId('alternate-crew');
     const targetUnitCodes = getActiveScopedUnitCodes();
     const combinedContext = targetUnitCodes.length > 1;

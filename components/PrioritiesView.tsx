@@ -29,7 +29,7 @@ import {
 import { isSyllabusCourseShell } from '../utils/syllabusCourseShell';
 import { getAircraftSeatEligibleRoles, type AircraftCrewComposition } from '../utils/aircraftCrewComposition';
 import { crewPositionValuesMatch, getCrewPositionDisplayLabel, type CrewPositionTerminology } from '../utils/crewPositionTerminology';
-import { formatCrewRequirementSummary, normaliseCrewRequirement } from '../utils/crewRequirements';
+import { formatCrewRequirementSummary, getCrewRequirementCount, normaliseCrewRequirement } from '../utils/crewRequirements';
 import {
   normaliseCrewCompositionSettings,
   type CrewCompositionSettings,
@@ -882,6 +882,55 @@ const TaskingRequestTable: React.FC<TaskingRequestTableProps> = ({
       onUpdateTaskingRequest(request.id, { saved: true, submitted: false, ignored: true });
     });
   };
+  const taskingCrewRequirementPresets = crewRequirementPresets && crewRequirementPresets.length > 0
+    ? crewRequirementPresets
+    : [{
+      id: 'standard-aircraft-crew',
+      label: 'Primary',
+      description: formatCrewRequirementSummary(null, aircraftCrewComposition, crewPositionTerminology),
+      kind: 'standard' as const,
+      groupLabel: 'Unit',
+    }];
+  const getTaskingCrewRequirementSignature = (requirement?: CrewRequirement | null): string => (
+    (normaliseCrewRequirement(requirement).roles || [])
+      .map((role) => [
+        String(role.role || '').trim().toUpperCase(),
+        Math.max(0, Math.min(20, Math.round(Number(role.count) || 0))),
+        (Array.isArray(role.eligibleRoles) ? role.eligibleRoles : [])
+          .map(value => String(value || '').trim().toUpperCase())
+          .filter(Boolean)
+          .sort()
+          .join('|'),
+      ].join(':'))
+      .sort()
+      .join(';')
+  );
+  const crewRequirementFromTaskingPreset = (preset: CrewRequirementPreset): CrewRequirement => (
+    preset.kind === 'standard'
+      ? { mode: 'aircraft_default' }
+      : { mode: 'custom', roles: preset.roles || [] }
+  );
+  const taskingCrewPresetIdFor = (requirement?: CrewRequirement | null): string => {
+    const normalised = normaliseCrewRequirement(requirement);
+    if (normalised.mode === 'aircraft_default') {
+      return taskingCrewRequirementPresets.find(preset => preset.kind === 'standard')?.id || 'standard-aircraft-crew';
+    }
+    const signature = getTaskingCrewRequirementSignature(requirement);
+    return taskingCrewRequirementPresets.find(preset => (
+      preset.kind === 'alternate'
+      && getTaskingCrewRequirementSignature({ mode: 'custom', roles: preset.roles || [] }) === signature
+    ))?.id || '';
+  };
+  const getTaskingCrewLabel = (requirement?: CrewRequirement | null): string => {
+    const presetId = taskingCrewPresetIdFor(requirement);
+    const preset = taskingCrewRequirementPresets.find(candidate => candidate.id === presetId);
+    return preset?.label || formatCrewRequirementSummary(requirement, aircraftCrewComposition, crewPositionTerminology);
+  };
+  const getTaskingCrewFlightType = (requirement?: CrewRequirement | null): 'Solo' | 'Dual' => (
+    isSingleSeatAircraft || getCrewRequirementCount(requirement || { mode: 'aircraft_default' }, aircraftCrewComposition) <= 1
+      ? 'Solo'
+      : 'Dual'
+  );
 
   return (
   <div className="space-y-3 pb-24">
@@ -903,7 +952,7 @@ const TaskingRequestTable: React.FC<TaskingRequestTableProps> = ({
             </span>
             <span className={taskingSummaryHeaderCellClass}>Type</span>
             <span className={taskingSummaryHeaderCellClass}>Kind</span>
-            <span className={taskingSummaryHeaderCellClass}>Solo/Dual</span>
+            <span className={taskingSummaryHeaderCellClass}>Crew</span>
             <span className={taskingSummaryHeaderCellClass}>Date</span>
             <span className={taskingSummaryHeaderCellClass}>Event</span>
             <span className={taskingSummaryHeaderCellClass}>Route</span>
@@ -932,6 +981,8 @@ const TaskingRequestTable: React.FC<TaskingRequestTableProps> = ({
       const taskingHeaderDate = request.date || '';
       const taskingHeaderTime = timeOptions.find(opt => opt.value === request.takeoff)?.label || '';
       const taskingStatus = request.ignored ? 'Ignored' : request.submitted ? 'Scheduled' : request.saved ? 'Saved' : 'Draft';
+      const crewPresetId = taskingCrewPresetIdFor(request.crewRequirement);
+      const crewLabel = getTaskingCrewLabel(request.crewRequirement);
       const directedTaskHint = taskProfiles.some(profile => String(profile || '').trim())
         ? <>Names come from {renderDirectedTaskSettingsLink()}; you can also type a task.</>
         : <>Add names in {renderDirectedTaskSettingsLink()}, or type a task.</>;
@@ -966,7 +1017,7 @@ const TaskingRequestTable: React.FC<TaskingRequestTableProps> = ({
               </div>
               <div className={`${taskingSummaryCellClass} font-semibold text-cyan-100`}>Directed Task</div>
               <div className={`${taskingSummaryCellClass} truncate text-slate-100`} title={resourceKindLabel}>{resourceKindLabel}</div>
-              <div className={`${taskingSummaryCellClass} text-slate-100`}>{request.flightType}</div>
+              <div className={`${taskingSummaryCellClass} truncate text-slate-100`} title={crewLabel}>{crewLabel}</div>
               <div className={`${taskingSummaryCellClass} font-mono text-slate-100`}>{formatTaskingSummaryDate(taskingHeaderDate || undefined)}</div>
               <div className={`${taskingSummaryCellClass} truncate font-semibold text-slate-100`} title={taskingHeaderTitle}>{taskingHeaderTitle}</div>
               <div className={`${taskingSummaryCellClass} truncate text-slate-100`} title={`${request.depPoint}-${request.arrivalPoint}`}>{request.depPoint || '-'}-{request.arrivalPoint || '-'}</div>
@@ -1198,17 +1249,35 @@ const TaskingRequestTable: React.FC<TaskingRequestTableProps> = ({
           </div>
 
           <div className="mt-3 grid gap-3 lg:grid-cols-2">
-            <div className="min-w-0 h-full [&>div]:h-full [&>div]:min-h-[8rem]">
-              <CrewRequirementEditor
-                value={request.crewRequirement}
-                aircraftCrewComposition={aircraftCrewComposition}
-                crewRequirementPresets={crewRequirementPresets}
-                crewPositionTerminology={crewPositionTerminology}
-                operationalModel={operationalModel}
-                compact
-                onChange={(crewRequirement) => onUpdateTaskingRequest(request.id, { crewRequirement, submitted: false, saved: false })}
-              />
-            </div>
+            <TaskingFieldPanel
+              label="Crew"
+              hint={crewLabel}
+              className="[&>div:first-child]:flex [&>div:first-child]:flex-1 [&>div:first-child]:flex-col"
+              contentClassName="flex flex-1 items-center"
+            >
+              <select
+                value={crewPresetId}
+                onChange={(event) => {
+                  const preset = taskingCrewRequirementPresets.find(candidate => candidate.id === event.target.value);
+                  if (!preset) return;
+                  const crewRequirement = crewRequirementFromTaskingPreset(preset);
+                  onUpdateTaskingRequest(request.id, {
+                    crewRequirement,
+                    flightType: getTaskingCrewFlightType(crewRequirement),
+                    submitted: false,
+                    saved: false,
+                  });
+                }}
+                className={taskingControlClass}
+              >
+                {!crewPresetId && <option value="">Custom crew</option>}
+                {taskingCrewRequirementPresets.map(preset => (
+                  <option key={preset.id} value={preset.id}>
+                    {preset.label}
+                  </option>
+                ))}
+              </select>
+            </TaskingFieldPanel>
             <TaskingFieldPanel
               label="Actions"
               hint={request.submitted && !request.ignored ? `${schedulerPriority} scheduler priority` : 'Select scheduler priority'}
@@ -1479,21 +1548,11 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
       .filter(profile => !profile.aircraftTypeCode || !activeAircraftTypeCode || profile.aircraftTypeCode === activeAircraftTypeCode)
       .filter(profile => !profile.operationalModels.length || profile.operationalModels.includes(profileModel as any))
       .filter(profile => appliesToActiveContext(profile.unitCode, profile.compositeUnitCode));
-    const labelCounts = applicableAlternateProfiles.reduce((counts, profile) => {
-      const label = `${profile.code} - ${profile.name}`;
-      counts.set(label, (counts.get(label) || 0) + 1);
-      return counts;
-    }, new Map<string, number>());
     const alternatePresets = applicableAlternateProfiles
-      .map((profile): CrewRequirementPreset => ({
+      .map((profile, index): CrewRequirementPreset => ({
         id: `alternate:${profile.id}`,
-        label: (() => {
-          const baseLabel = `${profile.code} - ${profile.name}`;
-          if ((labelCounts.get(baseLabel) || 0) <= 1) return baseLabel;
-          const sourceUnit = normaliseTaskingUnitCode(profile.unitCode) || normaliseTaskingUnitCode(profile.compositeUnitCode);
-          return sourceUnit ? `${baseLabel} - ${sourceUnit}` : baseLabel;
-        })(),
-        description: profile.description,
+        label: `Alt${index + 1}`,
+        description: profile.description || profile.name,
         kind: 'alternate',
         groupLabel: normaliseTaskingUnitCode(profile.unitCode)
           || normaliseTaskingUnitCode(profile.compositeUnitCode)
@@ -1507,13 +1566,13 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
       }));
 
     const standardPresets = activeAircraftTypeCode
-      ? activeGroupLabels.map((unitCode, index): CrewRequirementPreset => ({
-        id: index === 0 ? 'standard-aircraft-crew' : `standard-aircraft-crew:${unitCode}`,
-        label: `Standard ${activeAircraftTypeCode} Crew`,
+      ? [{
+        id: 'standard-aircraft-crew',
+        label: 'Primary',
         description: formatCrewRequirementSummary(null, aircraftCrewComposition, crewPositionTerminology),
-        kind: 'standard',
-        groupLabel: unitCode,
-      }))
+        kind: 'standard' as const,
+        groupLabel: activeGroupLabels[0] || 'Unit',
+      }]
       : [];
 
     return [
@@ -1521,6 +1580,37 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
       ...alternatePresets,
     ];
   }, [activeUnitCode, activeUnitCodeSet, aircraftCrewComposition, aircraftTypeCode, crewCompositionSettings, crewPositionTerminology, operationalModel, school]);
+
+  const getTaskingFlightTypeForCrewRequirement = (crewRequirement?: CrewRequirement | null): 'Solo' | 'Dual' => (
+    isSingleSeatAircraft || getCrewRequirementCount(crewRequirement || { mode: 'aircraft_default' }, aircraftCrewComposition) <= 1
+      ? 'Solo'
+      : 'Dual'
+  );
+  const getPriorityTaskingCrewRequirementSignature = (requirement?: CrewRequirement | null): string => (
+    (normaliseCrewRequirement(requirement).roles || [])
+      .map((role) => [
+        String(role.role || '').trim().toUpperCase(),
+        Math.max(0, Math.min(20, Math.round(Number(role.count) || 0))),
+        (Array.isArray(role.eligibleRoles) ? role.eligibleRoles : [])
+          .map(value => String(value || '').trim().toUpperCase())
+          .filter(Boolean)
+          .sort()
+          .join('|'),
+      ].join(':'))
+      .sort()
+      .join(';')
+  );
+  const getPriorityTaskingCrewLabel = (requirement?: CrewRequirement | null): string => {
+    const normalised = normaliseCrewRequirement(requirement);
+    if (normalised.mode === 'aircraft_default') {
+      return crewRequirementPresets.find(preset => preset.kind === 'standard')?.label || 'Primary';
+    }
+    const signature = getPriorityTaskingCrewRequirementSignature(normalised);
+    return crewRequirementPresets.find(preset => (
+      preset.kind === 'alternate'
+      && getPriorityTaskingCrewRequirementSignature({ mode: 'custom', roles: preset.roles || [] }) === signature
+    ))?.label || formatCrewRequirementSummary(normalised, aircraftCrewComposition, crewPositionTerminology);
+  };
 
   useEffect(() => {
     setTemporaryStandardMissionOverrides({});
@@ -2889,6 +2979,9 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
   );
 
   const addTaskingRequest = () => {
+    const crewRequirement: CrewRequirement = isSingleSeatAircraft
+      ? { mode: 'custom', roles: [{ role: 'Pilot', count: 1 }] }
+      : { mode: 'aircraft_default' };
     const nextRequest: TaskingRequest = {
       id: uuidv4(),
       unitCode: activeTaskingUnitCode,
@@ -2898,15 +2991,13 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
       takeoff: flyingStartTime,
       duration: defaultTaskingDuration,
       resourceType: 'Flight',
-      flightType: isSingleSeatAircraft ? 'Solo' : 'Dual',
+      flightType: getTaskingFlightTypeForCrewRequirement(crewRequirement),
       depPoint: school,
       arrivalPoint: school,
       aircraftCount: 1,
       isFormation: false,
       aircraftConfigId: BASE_AIRCRAFT_CONFIG.id,
-      crewRequirement: isSingleSeatAircraft
-        ? { mode: 'custom', roles: [{ role: 'Pilot', count: 1 }] }
-        : { mode: 'aircraft_default' },
+      crewRequirement,
       callsignBase: defaultUnitCallsign,
       callsignNumber: 0,
       callsign: defaultUnitCallsign ? buildUnitEventCallsign(defaultUnitCallsign, 0) : '',
@@ -2987,13 +3078,19 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
           ignored: false,
         }
       : updates;
-    const nextUpdates = isSingleSeatAircraft
+    const appliedUpdatesWithCrewFlight = 'crewRequirement' in appliedUpdates && !('flightType' in appliedUpdates)
       ? {
           ...appliedUpdates,
-          flightType: 'Solo' as const,
-          crewRequirement: appliedUpdates.crewRequirement || { mode: 'custom' as const, roles: [{ role: 'Pilot', count: 1 }] },
+          flightType: getTaskingFlightTypeForCrewRequirement(appliedUpdates.crewRequirement),
         }
       : appliedUpdates;
+    const nextUpdates = isSingleSeatAircraft
+      ? {
+          ...appliedUpdatesWithCrewFlight,
+          flightType: 'Solo' as const,
+          crewRequirement: appliedUpdatesWithCrewFlight.crewRequirement || { mode: 'custom' as const, roles: [{ role: 'Pilot', count: 1 }] },
+        }
+      : appliedUpdatesWithCrewFlight;
     setTaskingRequests(prev => prev.map(request => (
       request.id === id
         ? {
@@ -3034,7 +3131,8 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
     const eventCallsign = request.callsign || (callsignBase ? buildUnitEventCallsign(callsignBase, callsignNumber) : '');
     const startTime = Number.isFinite(Number(request.takeoff)) ? Number(request.takeoff) : flyingStartTime;
     const eventType = getTaskingScheduleEventType(request.resourceType);
-    const flightType = isSingleSeatAircraft || request.flightType === 'Solo' ? 'Solo' : 'Dual';
+    const crewRequirement = request.crewRequirement || { mode: 'aircraft_default' as const };
+    const flightType = getTaskingFlightTypeForCrewRequirement(crewRequirement);
     const schedulerPriority: TaskingSchedulerPriority = request.schedulerPriority || (request.isMandatory !== false ? 'High' : 'Medium');
     const notes = [
       `Directed task request: ${tasking || 'Directed Task'}`,
@@ -3047,7 +3145,7 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
       `Arrival Point: ${arrivalPoint}`,
       `Aircraft requested: ${aircraftCount}`,
       isFormation ? 'Formation: Yes' : 'Formation: No',
-      `Crew required: ${formatCrewRequirementSummary(request.crewRequirement, aircraftCrewComposition, crewPositionTerminology)}`,
+      `Crew required: ${formatCrewRequirementSummary(crewRequirement, aircraftCrewComposition, crewPositionTerminology)}`,
     ].join('\n');
 
     const priorityRowCount = isFormation ? 1 : aircraftCount;
@@ -3096,7 +3194,7 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
         priority: schedulerPriority,
         aircraftConfigId,
         acceptableAircraftConfigs: [aircraftConfigId],
-        crewRequirement: request.crewRequirement || { mode: 'aircraft_default' },
+        crewRequirement,
         pushToNeoBuild: request.pushToNeoBuild !== false,
       };
     });
@@ -4776,6 +4874,9 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
       const crew = getCrewDisplay(event);
       const status = getStatus(event);
       const flightType = event.flightType === 'Dual' || event.soloOrDual === 'Dual' ? 'Dual' : event.flightType === 'Solo' || event.soloOrDual === 'Solo' ? 'Solo' : '-';
+      const crewColumnValue = event.isTaskingRequest || event.taskingRequestId
+        ? getPriorityTaskingCrewLabel(event.crewRequirement)
+        : flightType;
       const pushEnabled = isPushEnabled(event);
       const priorityTextClass = event.priority === 'Medium' ? 'text-amber-300' : event.priority === 'Low' ? 'text-green-300' : 'text-red-300';
       return (
@@ -4785,7 +4886,7 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
               {group.label}
             </td>
           )}
-          <td className={`border border-slate-700/80 px-2 py-2 ${rowText}`}>{flightType}</td>
+          <td className={`border border-slate-700/80 px-2 py-2 ${rowText}`}>{crewColumnValue}</td>
           <td className={`border border-slate-700/80 px-2 py-2 font-mono font-black ${rowText}`} title={matchesBuildDate ? formatPriorityDate(event.date) : `${formatPriorityDate(event.date)} - not scheduled for this build date`}>
             {isEditing ? (
               <input type="date" value={event.date || buildDfpDate} onClick={e => e.stopPropagation()} onChange={e => updateEvent(event, { date: e.target.value })} style={{ colorScheme: 'dark' }} className="h-7 w-full rounded border border-slate-600 bg-slate-950 px-1 text-[11px] text-slate-100" />
@@ -4888,7 +4989,7 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
             <thead className="bg-slate-800/95 text-[9px] font-black uppercase tracking-[0.14em] text-slate-300">
                 <tr>
                     <th className="border border-slate-700/90 px-2 py-2 text-left">Type</th>
-                    <th className="border border-slate-700/90 px-2 py-2 text-left">Solo/Dual</th>
+                    <th className="border border-slate-700/90 px-2 py-2 text-left">Crew</th>
                     <th className="border border-slate-700/90 px-2 py-2 text-left">Date</th>
                     <th className="border border-slate-700/90 px-2 py-2 text-left">Event</th>
                     <th className="border border-slate-700/90 px-2 py-2 text-left">Crew</th>

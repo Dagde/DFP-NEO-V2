@@ -50,7 +50,7 @@ import { normaliseAcademicStandardEvents } from './utils/academicStandardEvents'
 import { normaliseAircraftNumberSettings, parseAircraftNumber } from './utils/aircraftNumberFormat';
 import { ANY_AIRCRAFT_CONFIG, BASE_AIRCRAFT_CONFIG, getAircraftConfigurationDefinitions, normaliseAircraftConfigurationDefinitions, type AircraftConfigurationDefinition } from './utils/aircraftConfigurationSettings';
 import { getAircraftCrewCompositionForEvent, getAircraftSeatEligibleRoles, getAircraftTypeCrewComposition, normaliseAircraftCrewComposition, type AircraftCrewComposition } from './utils/aircraftCrewComposition';
-import { getCrewRequirementCount, getCrewRequirementRoleOptions, getCrewRequirementRoles } from './utils/crewRequirements';
+import { formatCrewRequirementSummary, getCrewRequirementCount, getCrewRequirementRoleOptions, getCrewRequirementRoles, normaliseCrewRequirement } from './utils/crewRequirements';
 import {
     readTileStatusSettingsFromLocalStorage,
     normaliseTileStatusSettings,
@@ -95,7 +95,7 @@ import {
     normaliseCrewPositionTerminology,
     type CrewPositionTerminology,
 } from './utils/crewPositionTerminology';
-import { normaliseCrewCompositionSettings } from './utils/crewCompositionProfiles';
+import { normaliseCrewCompositionSettings, type CrewCompositionSettings } from './utils/crewCompositionProfiles';
 import {
     getContinuationEventNames,
     isContinuationScheduleEvent,
@@ -737,7 +737,8 @@ import {
     AirCombatTrainingReport,
     ScheduleEventPersonnelRef,
     ScheduleEventPersonnelRole,
-    StandardMissionProfile
+    StandardMissionProfile,
+    CrewRequirement
 } from './types';
 import { NewCourseData } from './components/AddCourseFlyout';
 
@@ -760,6 +761,14 @@ type PendingDashboardTrainingReportContext = {
     staffName: string;
     report: AirCombatTrainingReport;
     assessorName?: string;
+};
+
+type AssistCrewRequirementPreset = {
+    id: string;
+    label: string;
+    description?: string;
+    kind: 'standard' | 'alternate';
+    roles?: CrewRequirement['roles'];
 };
 
 type TrainingReportFlightLogEntry = {
@@ -1081,6 +1090,7 @@ const DfpSidePanelTimeline: React.FC<{
     aircraftConfigCapacities: Record<string, string>;
     aircraftConfigurationDefinitions: AircraftConfigurationDefinition[];
     aircraftCrewComposition: AircraftCrewComposition;
+    crewCompositionSettings?: CrewCompositionSettings;
     crewPositionTerminology: CrewPositionTerminology;
     onUpdateAircraftConfigCapacities: (capacities: Record<string, string>) => void;
     availableFtdCount: number;
@@ -1097,6 +1107,7 @@ const DfpSidePanelTimeline: React.FC<{
     operationalModel?: string;
     activeUnitCode?: string;
     activeAircraftType?: any;
+    aircraftTypeCode?: string | null;
     staffQualificationCatalogue?: StaffQualificationCatalogue;
     unitCallsignSettings?: UnitCallsignSettings;
     personnelDisplaySettings?: Partial<PersonnelDisplaySettings>;
@@ -1160,6 +1171,7 @@ const DfpSidePanelTimeline: React.FC<{
     aircraftConfigCapacities,
     aircraftConfigurationDefinitions,
     aircraftCrewComposition,
+    crewCompositionSettings,
     crewPositionTerminology,
     onUpdateAircraftConfigCapacities,
     availableFtdCount,
@@ -1176,6 +1188,7 @@ const DfpSidePanelTimeline: React.FC<{
     operationalModel,
     activeUnitCode,
     activeAircraftType,
+    aircraftTypeCode,
     staffQualificationCatalogue,
     unitCallsignSettings,
     personnelDisplaySettings = DEFAULT_PERSONNEL_DISPLAY_SETTINGS,
@@ -1273,6 +1286,7 @@ const DfpSidePanelTimeline: React.FC<{
     const [assistTaskTakeoff, setAssistTaskTakeoff] = useState(flyingStartTime);
     const [assistTaskDuration, setAssistTaskDuration] = useState(defaultAssistTaskDuration);
     const [assistTaskFlightType, setAssistTaskFlightType] = useState<'Solo' | 'Dual'>('Solo');
+    const [assistTaskCrewPresetId, setAssistTaskCrewPresetId] = useState('standard-aircraft-crew');
     const [assistTaskDepPoint, setAssistTaskDepPoint] = useState(locationCode);
     const [assistTaskArrivalPoint, setAssistTaskArrivalPoint] = useState(locationCode);
     const [assistTaskAircraftCount, setAssistTaskAircraftCount] = useState(1);
@@ -1312,6 +1326,7 @@ const DfpSidePanelTimeline: React.FC<{
         takeoff: Number.isFinite(Number(request.takeoff)) ? Number(request.takeoff) : flyingStartTime,
         duration: Number.isFinite(Number(request.duration)) && Number(request.duration) > 0 ? Number(request.duration) : defaultAssistTaskDuration,
         flightType: request.flightType === 'Solo' ? 'Solo' as const : 'Dual' as const,
+        crewRequirement: normaliseCrewRequirement(request.crewRequirement || { mode: 'aircraft_default' }),
         depPoint: request.depPoint || locationCode,
         arrivalPoint: request.arrivalPoint || locationCode,
         aircraftCount: Math.max(1, parseInt(String(request.aircraftCount || '1'), 10) || 1),
@@ -1338,6 +1353,7 @@ const DfpSidePanelTimeline: React.FC<{
         takeoff: number;
         duration: number;
         flightType: 'Solo' | 'Dual';
+        crewRequirement?: CrewRequirement;
         depPoint: string;
         arrivalPoint: string;
         aircraftCount: number;
@@ -1741,6 +1757,119 @@ const DfpSidePanelTimeline: React.FC<{
     const isNeoAssistWizardMode = usesNeoAssistModeHeader && airCombatAssistMode === 'wizard';
     const isAirCombatTileMode = isAirCombatNeoAssist && airCombatAssistMode === 'tile';
     const isSingleSeatFlightResource = selectedResourceKind === 'flight' && aircraftCrewComposition.crewCount === 1;
+    const normaliseAssistCrewCode = (value?: string | null): string => String(value || '').trim().toUpperCase();
+    const splitAssistCompositeCrewCode = (value?: string | null): string[] => (
+        normaliseAssistCrewCode(value)
+            .split(/[+/]/)
+            .map(code => code.trim())
+            .filter(Boolean)
+    );
+    const assistCrewRequirementPresets = useMemo<AssistCrewRequirementPreset[]>(() => {
+        const settings = normaliseCrewCompositionSettings(crewCompositionSettings || null);
+        const contextCodes = assistTaskingUnitCodes;
+        const activeAircraftTypeCode = normaliseAssistCrewCode(
+            aircraftTypeCode || activeAircraftType?.code || activeAircraftType?.name || activeAircraftType?.displayName
+        );
+        const compositeCodes = new Set<string>([
+            normaliseAssistCrewCode(activeUnitCode),
+            contextCodes.join('+'),
+            contextCodes.join('/'),
+        ].filter(Boolean));
+        const appliesToActiveContext = (unitCode?: string, compositeUnitCode?: string): boolean => {
+            const profileUnitCode = normaliseAssistCrewCode(unitCode);
+            if (profileUnitCode && contextCodes.length > 0) return contextCodes.includes(profileUnitCode);
+            const profileCompositeCode = normaliseAssistCrewCode(compositeUnitCode);
+            if (!profileCompositeCode) return !profileUnitCode;
+            if (compositeCodes.has(profileCompositeCode)) return true;
+            const profileCompositeParts = splitAssistCompositeCrewCode(profileCompositeCode);
+            return profileCompositeParts.length > 0 && profileCompositeParts.every(code => contextCodes.includes(code));
+        };
+        const applicableAlternateProfiles = settings.alternateCompositions
+            .filter(profile => profile.status !== 'INACTIVE')
+            .filter(profile => !profile.aircraftTypeCode || !activeAircraftTypeCode || profile.aircraftTypeCode === activeAircraftTypeCode)
+            .filter(profile => !profile.operationalModels.length || profile.operationalModels.includes(normalisedAssistOperationalModel as any))
+            .filter(profile => appliesToActiveContext(profile.unitCode, profile.compositeUnitCode));
+        return [
+            {
+                id: 'standard-aircraft-crew',
+                label: 'Primary',
+                description: formatCrewRequirementSummary(null, aircraftCrewComposition, crewPositionTerminology),
+                kind: 'standard' as const,
+            },
+            ...applicableAlternateProfiles.map((profile, index): AssistCrewRequirementPreset => ({
+                id: `alternate:${profile.id}`,
+                label: `Alt${index + 1}`,
+                description: profile.description || profile.name,
+                kind: 'alternate',
+                roles: profile.roleRequirements.map(role => ({
+                    role: role.role,
+                    count: role.count,
+                    eligibleRoles: [role.role],
+                })),
+            })),
+        ];
+    }, [
+        activeAircraftType?.code,
+        activeAircraftType?.displayName,
+        activeAircraftType?.name,
+        activeUnitCode,
+        aircraftCrewComposition,
+        aircraftTypeCode,
+        assistTaskingUnitCodes.join('|'),
+        crewCompositionSettings,
+        crewPositionTerminology,
+        normalisedAssistOperationalModel,
+    ]);
+    const getAssistCrewRequirementSignature = (requirement?: CrewRequirement | null): string => (
+        (normaliseCrewRequirement(requirement).roles || [])
+            .map((role) => [
+                String(role.role || '').trim().toUpperCase(),
+                Math.max(0, Math.min(20, Math.round(Number(role.count) || 0))),
+                (Array.isArray(role.eligibleRoles) ? role.eligibleRoles : [])
+                    .map(value => String(value || '').trim().toUpperCase())
+                    .filter(Boolean)
+                    .sort()
+                    .join('|'),
+            ].join(':'))
+            .sort()
+            .join(';')
+    );
+    const crewRequirementFromAssistPreset = (preset: AssistCrewRequirementPreset): CrewRequirement => (
+        preset.kind === 'standard'
+            ? { mode: 'aircraft_default' }
+            : { mode: 'custom', roles: preset.roles || [] }
+    );
+    const getAssistCrewPresetIdFor = (requirement?: CrewRequirement | null): string => {
+        const normalised = normaliseCrewRequirement(requirement);
+        if (normalised.mode === 'aircraft_default') {
+            return assistCrewRequirementPresets.find(preset => preset.kind === 'standard')?.id || 'standard-aircraft-crew';
+        }
+        const signature = getAssistCrewRequirementSignature(requirement);
+        return assistCrewRequirementPresets.find(preset => (
+            preset.kind === 'alternate'
+            && getAssistCrewRequirementSignature({ mode: 'custom', roles: preset.roles || [] }) === signature
+        ))?.id || '';
+    };
+    const getAssistCrewRequirementForPresetId = (presetId: string): CrewRequirement => {
+        const preset = assistCrewRequirementPresets.find(candidate => candidate.id === presetId)
+            || assistCrewRequirementPresets.find(candidate => candidate.kind === 'standard');
+        return preset ? crewRequirementFromAssistPreset(preset) : { mode: 'aircraft_default' };
+    };
+    const getAssistCrewLabel = (requirement?: CrewRequirement | null): string => {
+        const presetId = getAssistCrewPresetIdFor(requirement);
+        const preset = assistCrewRequirementPresets.find(candidate => candidate.id === presetId);
+        return preset?.label || formatCrewRequirementSummary(requirement, aircraftCrewComposition, crewPositionTerminology);
+    };
+    const getAssistFlightTypeForCrewRequirement = (requirement?: CrewRequirement | null): 'Solo' | 'Dual' => (
+        isSingleSeatFlightResource || getCrewRequirementCount(requirement || { mode: 'aircraft_default' }, aircraftCrewComposition) <= 1
+            ? 'Solo'
+            : 'Dual'
+    );
+    const selectedAssistTaskCrewRequirement = getAssistCrewRequirementForPresetId(assistTaskCrewPresetId);
+    useEffect(() => {
+        if (assistCrewRequirementPresets.some(preset => preset.id === assistTaskCrewPresetId)) return;
+        setAssistTaskCrewPresetId(assistCrewRequirementPresets.find(preset => preset.kind === 'standard')?.id || 'standard-aircraft-crew');
+    }, [assistCrewRequirementPresets, assistTaskCrewPresetId]);
     useEffect(() => {
         const wasOpen = previousAssistPanelOpenRef.current;
         previousAssistPanelOpenRef.current = isOpen;
@@ -2213,7 +2342,7 @@ const DfpSidePanelTimeline: React.FC<{
             Math.abs(Number(current) - previousDefault) < 0.001 ? defaultAssistManualDuration : current
         ));
     }, [defaultAssistManualDuration]);
-    const effectiveAssistTaskFlightType = isSingleSeatFlightResource ? 'Solo' : assistTaskFlightType;
+    const effectiveAssistTaskFlightType = getAssistFlightTypeForCrewRequirement(selectedAssistTaskCrewRequirement);
     const effectiveAssistCurrencyFlightType = isSingleSeatFlightResource ? 'Solo' : assistCurrencyFlightType;
     const effectiveAssistManualFlightType = isSingleSeatFlightResource ? 'Solo' : assistManualFlightType;
     const assistFlightType = activeAssistSection === 'taskings'
@@ -3479,6 +3608,8 @@ const DfpSidePanelTimeline: React.FC<{
         const depPoint = request.depPoint.trim().toUpperCase();
         const arrivalPoint = request.arrivalPoint.trim().toUpperCase();
         const aircraftCount = Math.max(1, Math.floor(Number(request.aircraftCount) || 1));
+        const crewRequirement = request.crewRequirement || { mode: 'aircraft_default' as const };
+        const flightType = getAssistFlightTypeForCrewRequirement(crewRequirement);
         return Array.from({ length: aircraftCount }, (_, index): ScheduleEvent => ({
             id: `tasking-${request.id}-${index + 1}`,
             date: request.date,
@@ -3492,8 +3623,8 @@ const DfpSidePanelTimeline: React.FC<{
             startTime: request.takeoff,
             resourceId: '',
             color: 'bg-cyan-500/80',
-            flightType: request.flightType,
-            soloOrDual: request.flightType,
+            flightType,
+            soloOrDual: flightType,
             locationType: depPoint !== arrivalPoint ? 'Land Away' : 'Local',
             origin: depPoint,
             destination: arrivalPoint,
@@ -3516,7 +3647,7 @@ const DfpSidePanelTimeline: React.FC<{
             priority: 'High',
             aircraftConfigId: request.aircraftConfigId,
             acceptableAircraftConfigs: [request.aircraftConfigId],
-            crewRequirement: { mode: 'aircraft_default' },
+            crewRequirement,
         }));
     };
     const buildCurrencyRequestEvent = (request: typeof assistCurrencyRequests[number]): ScheduleEvent => {
@@ -3611,6 +3742,13 @@ const DfpSidePanelTimeline: React.FC<{
         if ('flightType' in updates) {
             eventUpdates.flightType = updates.flightType;
             eventUpdates.soloOrDual = updates.flightType;
+        }
+        if ('crewRequirement' in updates) {
+            const crewRequirement = normaliseCrewRequirement(updates.crewRequirement || { mode: 'aircraft_default' });
+            const flightType = getAssistFlightTypeForCrewRequirement(crewRequirement);
+            eventUpdates.crewRequirement = crewRequirement;
+            eventUpdates.flightType = flightType;
+            eventUpdates.soloOrDual = flightType;
         }
         if ('depPoint' in updates) eventUpdates.origin = String(updates.depPoint || '').trim().toUpperCase();
         if ('arrivalPoint' in updates) eventUpdates.destination = String(updates.arrivalPoint || '').trim().toUpperCase();
@@ -3819,6 +3957,7 @@ const DfpSidePanelTimeline: React.FC<{
                 takeoff: first.startTime,
                 duration: first.duration,
                 flightType: first.flightType === 'Solo' ? 'Solo' as const : 'Dual' as const,
+                crewRequirement: first.crewRequirement || { mode: 'aircraft_default' as const },
                 depPoint: first.origin || locationCode,
                 arrivalPoint: first.destination || locationCode,
                 aircraftCount: Math.max(1, Math.floor(Number(first.formationSize || first.taskingAircraftCount || first.aircraftCount || events.length || 1) || 1)),
@@ -4541,6 +4680,15 @@ const DfpSidePanelTimeline: React.FC<{
         }
         onUpdatePriorityEvent(event.id, updates);
     };
+    const updateAssistBuildQueueCrewRequirement = (event: ScheduleEvent, crewRequirement: CrewRequirement) => {
+        if ((event as any).isStandardMissionSourceOnly) return;
+        const flightType = getAssistFlightTypeForCrewRequirement(crewRequirement);
+        onUpdatePriorityEvent(event.id, {
+            crewRequirement,
+            flightType,
+            soloOrDual: flightType,
+        });
+    };
     const selectAssistBuildQueueEvent = (event: ScheduleEvent) => {
         if ((event as any).isStandardMissionSourceOnly) {
             onOpenPrioritiesSection?.('.saved-special-events-card');
@@ -4555,6 +4703,7 @@ const DfpSidePanelTimeline: React.FC<{
                 takeoff: event.startTime,
                 duration: event.duration,
                 flightType: event.flightType === 'Dual' ? 'Dual' : 'Solo',
+                crewRequirement: event.crewRequirement || { mode: 'aircraft_default' },
                 depPoint: event.origin || locationCode,
                 arrivalPoint: event.destination || locationCode,
                 aircraftCount: Number((event as any).taskingAircraftCount) || 1,
@@ -4687,7 +4836,7 @@ const DfpSidePanelTimeline: React.FC<{
                             <tr>
                                 <th className="border-b border-slate-300 px-2 py-2 text-left">Order</th>
                                 <th className="border-b border-slate-300 px-2 py-2 text-left">Type</th>
-                                <th className="border-b border-slate-300 px-2 py-2 text-left">Solo/Dual</th>
+                                <th className="border-b border-slate-300 px-2 py-2 text-left">Crew</th>
                                 <th className="border-b border-slate-300 px-2 py-2 text-left">Date</th>
                                 <th className="border-b border-slate-300 px-2 py-2 text-left">Event</th>
                                 <th className="border-b border-slate-300 px-2 py-2 text-left">Person/Crew</th>
@@ -4730,8 +4879,12 @@ const DfpSidePanelTimeline: React.FC<{
                             )}
                             {filteredAssistBuildQueueRows.map(row => {
                                 const isEditing = editingAssistPriorityEventId === row.event.id;
-                                const showFlightType = normalisedAssistOperationalModel === 'flight_school' && row.group === 'currency';
+                                const showTaskCrew = row.group === 'tasking';
+                                const showFlightType = !showTaskCrew && normalisedAssistOperationalModel === 'flight_school' && row.group === 'currency';
                                 const flightTypeValue = row.event.flightType === 'Dual' || (row.event as any).soloOrDual === 'Dual' ? 'Dual' : 'Solo';
+                                const crewRequirement = row.event.crewRequirement || { mode: 'aircraft_default' as const };
+                                const crewPresetId = getAssistCrewPresetIdFor(crewRequirement);
+                                const crewLabel = getAssistCrewLabel(crewRequirement);
                                 const secondaryCrewValue = String(row.event.crew || row.event.student || '').trim();
                                 const requestedDate = getAssistPriorityRequestedDate(row);
                                 const requestedDateInputValue = normaliseAssistDateKey(requestedDate) || normaliseAssistDateKey(row.event.date) || date;
@@ -4757,7 +4910,27 @@ const DfpSidePanelTimeline: React.FC<{
                                             </span>
                                         </td>
                                         <td className="px-2 py-2 align-middle">
-                                            {showFlightType ? (
+                                            {showTaskCrew ? (
+                                                isEditing ? (
+                                                    <select
+                                                        value={crewPresetId}
+                                                        onChange={event => {
+                                                            const nextRequirement = getAssistCrewRequirementForPresetId(event.target.value);
+                                                            updateAssistBuildQueueCrewRequirement(row.event, nextRequirement);
+                                                        }}
+                                                        className="w-full rounded border border-slate-300 bg-white px-1 py-1 text-[12px] text-slate-900"
+                                                    >
+                                                        {!crewPresetId && <option value="">Custom crew</option>}
+                                                        {assistCrewRequirementPresets.map(preset => (
+                                                            <option key={preset.id} value={preset.id}>{preset.label}</option>
+                                                        ))}
+                                                    </select>
+                                                ) : (
+                                                    <span className="inline-flex rounded border border-slate-300 bg-white px-1.5 py-1 text-[10px] font-semibold uppercase text-slate-700">
+                                                        {crewLabel}
+                                                    </span>
+                                                )
+                                            ) : showFlightType ? (
                                                 isEditing ? (
                                                     <select
                                                         value={flightTypeValue}
@@ -5663,6 +5836,7 @@ const DfpSidePanelTimeline: React.FC<{
         takeoff?: number;
         duration?: number;
         flightType?: 'Solo' | 'Dual';
+        crewRequirement?: CrewRequirement;
         depPoint?: string;
         arrivalPoint?: string;
         aircraftCount?: number;
@@ -5674,7 +5848,12 @@ const DfpSidePanelTimeline: React.FC<{
         setAssistTaskDate(row.date || date);
         if (Number.isFinite(Number(row.takeoff))) setAssistTaskTakeoff(Number(row.takeoff));
         if (Number.isFinite(Number(row.duration)) && Number(row.duration) > 0) setAssistTaskDuration(Number(row.duration));
-        if (row.flightType) setAssistTaskFlightType(isSingleSeatFlightResource ? 'Solo' : row.flightType);
+        if (row.crewRequirement) {
+            setAssistTaskCrewPresetId(getAssistCrewPresetIdFor(row.crewRequirement));
+            setAssistTaskFlightType(getAssistFlightTypeForCrewRequirement(row.crewRequirement));
+        } else if (row.flightType) {
+            setAssistTaskFlightType(isSingleSeatFlightResource ? 'Solo' : row.flightType);
+        }
         if (row.depPoint) setAssistTaskDepPoint(row.depPoint);
         if (row.arrivalPoint) setAssistTaskArrivalPoint(row.arrivalPoint);
         if (Number.isFinite(Number(row.aircraftCount))) setAssistTaskAircraftCount(Math.max(1, Number(row.aircraftCount) || 1));
@@ -6679,6 +6858,7 @@ const DfpSidePanelTimeline: React.FC<{
                 arrivalPoint: request.arrivalPoint,
                 aircraftCount: request.aircraftCount,
                 aircraftConfigId: request.aircraftConfigId,
+                crewRequirement: request.crewRequirement || { mode: 'aircraft_default' as const },
                 priority: request.isMandatory === false ? 'Medium' : 'High',
                 saved: Boolean(request.saved),
                 scheduled: Boolean(request.submitted),
@@ -6711,7 +6891,7 @@ const DfpSidePanelTimeline: React.FC<{
                                     <tr>
                                         <th className="border-b border-slate-700 px-2 py-2 text-left">Schedule</th>
                                         <th className="border-b border-slate-700 px-2 py-2 text-left">Type</th>
-                                        <th className="border-b border-slate-700 px-2 py-2 text-left">Solo/Dual</th>
+                                        <th className="border-b border-slate-700 px-2 py-2 text-left">Crew</th>
                                         <th className="border-b border-slate-700 px-2 py-2 text-left">Date</th>
                                         <th className="border-b border-slate-700 px-2 py-2 text-left">Event</th>
                                         <th className="border-b border-slate-700 px-2 py-2 text-left">Route</th>
@@ -6727,11 +6907,19 @@ const DfpSidePanelTimeline: React.FC<{
                                     {rows.map(row => {
                                         const rowKey = `${row.source}-${row.id}`;
                                         const isEditingRow = editingAssistTaskRowId === rowKey;
+                                        const rowCrewRequirement = row.crewRequirement || { mode: 'aircraft_default' as const };
+                                        const rowCrewPresetId = getAssistCrewPresetIdFor(rowCrewRequirement);
+                                        const rowCrewLabel = getAssistCrewLabel(rowCrewRequirement);
                                         const updateLocal = (updates: any) => updateAssistTaskRequestRow(row.id, updates);
                                         const updateRemote = (updates: Partial<ScheduleEvent> & Record<string, any>) => updateAssistTaskPriorityRow(row.events, updates);
                                         const updateRow = (updates: any, eventUpdates?: Partial<ScheduleEvent> & Record<string, any>) => (
                                             row.source === 'local' ? updateLocal(updates) : updateRemote(eventUpdates || updates)
                                         );
+                                        const updateRowCrewPreset = (presetId: string) => {
+                                            const crewRequirement = getAssistCrewRequirementForPresetId(presetId);
+                                            const flightType = getAssistFlightTypeForCrewRequirement(crewRequirement);
+                                            updateRow({ crewRequirement, flightType }, { crewRequirement, flightType, soloOrDual: flightType });
+                                        };
                                         return (
                                             <tr key={rowKey} className={isEditingRow ? 'bg-cyan-950/60' : 'bg-slate-950/35'}>
                                                 <td className="px-2 py-2 align-top">
@@ -6792,11 +6980,13 @@ const DfpSidePanelTimeline: React.FC<{
                                                 <td className="px-2 py-2 font-semibold text-cyan-100">Directed Task</td>
                                                 <td className="px-2 py-2">
                                                     {isEditingRow ? (
-                                                        <select value={row.flightType} onChange={event => updateRow({ flightType: event.target.value }, { flightType: event.target.value, soloOrDual: event.target.value })} className={fieldClass}>
-                                                            <option value="Solo">Solo</option>
-                                                            <option value="Dual">Dual</option>
+                                                        <select value={rowCrewPresetId} onChange={event => updateRowCrewPreset(event.target.value)} className={fieldClass}>
+                                                            {!rowCrewPresetId && <option value="">Custom crew</option>}
+                                                            {assistCrewRequirementPresets.map(preset => (
+                                                                <option key={`assist-task-row-crew-${rowKey}-${preset.id}`} value={preset.id}>{preset.label}</option>
+                                                            ))}
                                                         </select>
-                                                    ) : row.flightType}
+                                                    ) : rowCrewLabel}
                                                 </td>
                                                 <td className="px-2 py-2 font-mono">
                                                     {isEditingRow ? (
@@ -6905,17 +7095,21 @@ const DfpSidePanelTimeline: React.FC<{
                             <label className="font-semibold uppercase tracking-[0.1em] text-slate-400">Duration
                                 <input type="number" min={0.1} step={0.1} value={assistTaskDuration} onChange={event => setAssistTaskDuration(Math.max(0.1, Number(event.target.value) || 0.1))} className={fieldClass} />
                             </label>
-                            <label className="font-semibold uppercase tracking-[0.1em] text-slate-400">Solo/Dual
-                                {isSingleSeatFlightResource ? (
-                                    <div className={`${fieldClass} border-amber-400/50 bg-amber-500/10 text-amber-100`}>
-                                        Solo - single-seat aircraft
-                                    </div>
-                                ) : (
-                                    <select value={assistTaskFlightType} onChange={event => setAssistTaskFlightType(event.target.value as 'Solo' | 'Dual')} className={fieldClass}>
-                                        <option value="Solo">Solo</option>
-                                        <option value="Dual">Dual</option>
-                                    </select>
-                                )}
+                            <label className="font-semibold uppercase tracking-[0.1em] text-slate-400">Crew
+                                <select
+                                    value={assistTaskCrewPresetId}
+                                    onChange={event => {
+                                        const nextPresetId = event.target.value;
+                                        const crewRequirement = getAssistCrewRequirementForPresetId(nextPresetId);
+                                        setAssistTaskCrewPresetId(nextPresetId);
+                                        setAssistTaskFlightType(getAssistFlightTypeForCrewRequirement(crewRequirement));
+                                    }}
+                                    className={fieldClass}
+                                >
+                                    {assistCrewRequirementPresets.map(preset => (
+                                        <option key={`assist-task-form-crew-${preset.id}`} value={preset.id}>{preset.label}</option>
+                                    ))}
+                                </select>
                             </label>
                             <label className="font-semibold uppercase tracking-[0.1em] text-slate-400">Dep Point
                                 <input value={assistTaskDepPoint} onChange={event => setAssistTaskDepPoint(event.target.value.toUpperCase())} className={fieldClass} />
@@ -6935,6 +7129,8 @@ const DfpSidePanelTimeline: React.FC<{
                                 type="button"
                                 onClick={() => {
                                     selectAssistTask(selectedTaskProfile);
+                                    const crewRequirement = getAssistCrewRequirementForPresetId(assistTaskCrewPresetId);
+                                    const flightType = getAssistFlightTypeForCrewRequirement(crewRequirement);
                                     setAssistTaskRequests(prev => [...prev, {
                                         id: uuidv4(),
                                         unitCode: assistTaskingUnitCode,
@@ -6943,7 +7139,8 @@ const DfpSidePanelTimeline: React.FC<{
                                         date: assistTaskDate,
                                         takeoff: assistTaskTakeoff,
                                         duration: assistTaskDuration,
-                                        flightType: effectiveAssistTaskFlightType,
+                                        flightType,
+                                        crewRequirement,
                                         depPoint: assistTaskDepPoint,
                                         arrivalPoint: assistTaskArrivalPoint,
                                         aircraftCount: assistTaskAircraftCount,
@@ -59934,6 +60131,7 @@ appliedUpdates.forEach(update => {
                                     aircraftConfigCapacities={neoAircraftConfigCapacities}
                                     aircraftConfigurationDefinitions={aircraftConfigCapacityDefinitions}
                                     aircraftCrewComposition={activeAircraftCrewComposition}
+                                    crewCompositionSettings={activeCrewCompositionSettings}
                                     crewPositionTerminology={activeCrewPositionTerminology}
                                     onUpdateAircraftConfigCapacities={handleUpdateNeoAircraftConfigCapacities}
                                     availableFtdCount={availableFtdCount}
@@ -59952,6 +60150,7 @@ appliedUpdates.forEach(update => {
                                     operationalModel={activeOperationalModel}
                                     activeUnitCode={activeUnitCode}
                                     activeAircraftType={activeRuntimeAircraftType}
+                                    aircraftTypeCode={activeRuntimeAircraftTypeCode}
                                     staffQualificationCatalogue={activeStaffQualificationCatalogue}
                                     unitCallsignSettings={activeUnitCallsignSettings}
                                     personnelDisplaySettings={personnelDisplaySettings}
