@@ -4850,6 +4850,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
     onChange: (nextValue: string) => updateTrainingReportTextDraft(draftKey, nextValue, maxLength),
     onFocus: () => beginTrainingReportTextDraft(draftKey, value),
     onBlur: (finalValue?: string) => commitTrainingReportTextDraft(draftKey, finalValue),
+    commitOnBlur: false,
   });
 
   const saveTrainingReportTemplateSettings = async (sectionId?: string) => {
@@ -5015,7 +5016,6 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
       <button
         type="button"
         disabled={saving || applyingChanges}
-        onMouseDown={(event) => event.preventDefault()}
         onClick={() => { void saveTrainingReportTemplateSettings(sectionId); }}
         className={platformActionButtonClass}
       >
@@ -12507,6 +12507,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
               onChange={(value) => updateTrainingReportNameDraft('genericName', value, TRAINING_REPORT_GENERIC_NAME_MAX_LENGTH)}
               onFocus={() => beginTrainingReportNameDraft('genericName')}
               onBlur={(finalValue?: string) => commitTrainingReportNameDraft('genericName', finalValue)}
+              commitOnBlur={false}
               info="Generic form name used across models. Example: Training Report."
             />
             <Field
@@ -12517,6 +12518,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
               onChange={(value) => updateTrainingReportNameDraft('displayName', value, TRAINING_REPORT_DISPLAY_NAME_MAX_LENGTH)}
               onFocus={() => beginTrainingReportNameDraft('displayName')}
               onBlur={(finalValue?: string) => commitTrainingReportNameDraft('displayName', finalValue)}
+              commitOnBlur={false}
               info="Customer-specific name. Example: Training Report, Grade Form or Assessment."
             />
             <div>

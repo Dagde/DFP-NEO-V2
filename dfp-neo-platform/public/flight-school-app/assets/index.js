@@ -22303,7 +22303,8 @@ This permanently removes the organisation record from platform configuration and
     value: trainingReportTextDrafts[draftKey] ?? value,
     onChange: (nextValue) => updateTrainingReportTextDraft(draftKey, nextValue, maxLength),
     onFocus: () => beginTrainingReportTextDraft(draftKey, value),
-    onBlur: (finalValue) => commitTrainingReportTextDraft(draftKey, finalValue)
+    onBlur: (finalValue) => commitTrainingReportTextDraft(draftKey, finalValue),
+    commitOnBlur: false
   });
   const saveTrainingReportTemplateSettings = async (sectionId) => {
     const configWithNameDrafts = applyTrainingReportNameDraftsToConfig(config, trainingReportNameDrafts);
@@ -22411,7 +22412,6 @@ This permanently removes the organisation record from platform configuration and
       {
         type: "button",
         disabled: saving || applyingChanges,
-        onMouseDown: (event) => event.preventDefault(),
         onClick: () => {
           void saveTrainingReportTemplateSettings(sectionId);
         },
@@ -28923,6 +28923,7 @@ This removes them from DFP Resource Rows. Press Save in this section to apply th
                   onChange: (value) => updateTrainingReportNameDraft("genericName", value, TRAINING_REPORT_GENERIC_NAME_MAX_LENGTH),
                   onFocus: () => beginTrainingReportNameDraft("genericName"),
                   onBlur: (finalValue) => commitTrainingReportNameDraft("genericName", finalValue),
+                  commitOnBlur: false,
                   info: "Generic form name used across models. Example: Training Report."
                 }
               ),
@@ -28936,6 +28937,7 @@ This removes them from DFP Resource Rows. Press Save in this section to apply th
                   onChange: (value) => updateTrainingReportNameDraft("displayName", value, TRAINING_REPORT_DISPLAY_NAME_MAX_LENGTH),
                   onFocus: () => beginTrainingReportNameDraft("displayName"),
                   onBlur: (finalValue) => commitTrainingReportNameDraft("displayName", finalValue),
+                  commitOnBlur: false,
                   info: "Customer-specific name. Example: Training Report, Grade Form or Assessment."
                 }
               ),
