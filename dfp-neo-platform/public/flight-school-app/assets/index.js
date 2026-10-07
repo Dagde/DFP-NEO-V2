@@ -19129,11 +19129,12 @@ const fillSingleAircraftTypeForResourceRows = (config) => {
   });
   return changed ? { ...config, resourcePools } : config;
 };
-const getPlatformConfigSaveBlocker = (config) => {
+const getPlatformConfigSaveBlocker = (config, options = {}) => {
   const hasActiveOrganisations = hasActivePlatformRecords(Array.isArray(config.organisations) ? config.organisations : []);
   const hasActiveLocations = hasActivePlatformRecords(Array.isArray(config.locations) ? config.locations : []);
   const hasActiveUnits = hasActivePlatformRecords(Array.isArray(config.units) ? config.units : []);
   const activeAircraftTypeCodes = getActiveAircraftTypeCodeSet(config);
+  const skipResourceRowValidation = options.skipResourceRowValidation === true;
   const incompleteAircraftType = (Array.isArray(config.aircraftTypes) ? config.aircraftTypes : []).find((aircraftType) => String(aircraftType?.status || "ACTIVE").toUpperCase() !== "INACTIVE" && (!String(aircraftType?.code || "").trim() || !String(aircraftType?.name || "").trim()));
   const incompleteResourcePool = (Array.isArray(config.resourcePools) ? config.resourcePools : []).find((pool) => String(pool?.status || "ACTIVE").toUpperCase() !== "INACTIVE" && !String(pool?.name || "").trim());
   const missingResourcePoolAircraftType = (Array.isArray(config.resourcePools) ? config.resourcePools : []).find((pool) => String(pool?.status || "ACTIVE").toUpperCase() !== "INACTIVE" && activeAircraftTypeCodes.size > 0 && !String(pool?.aircraftTypeCode || "").trim());
@@ -19199,7 +19200,7 @@ const getPlatformConfigSaveBlocker = (config) => {
       }
     };
   }
-  if (incompleteResourcePool) {
+  if (!skipResourceRowValidation && incompleteResourcePool) {
     return {
       message: `Save blocked: the DFP Resource Rows "${describeResourcePool(incompleteResourcePool)}" need a row name. Open`,
       link: getResourcePoolSettingsLink(
@@ -19208,7 +19209,7 @@ const getPlatformConfigSaveBlocker = (config) => {
       )
     };
   }
-  if (missingResourcePoolAircraftType) {
+  if (!skipResourceRowValidation && missingResourcePoolAircraftType) {
     return {
       message: `Save blocked: the DFP Resource Rows "${describeResourcePool(missingResourcePoolAircraftType)}" need an Aircraft Type. Open`,
       link: getResourcePoolSettingsLink(
@@ -19217,7 +19218,7 @@ const getPlatformConfigSaveBlocker = (config) => {
       )
     };
   }
-  if (invalidResourcePoolAircraftType) {
+  if (!skipResourceRowValidation && invalidResourcePoolAircraftType) {
     return {
       message: `Save blocked: the DFP Resource Rows "${describeResourcePool(invalidResourcePoolAircraftType)}" point to an Aircraft Type that is not active. Open`,
       link: getResourcePoolSettingsLink(
@@ -19226,7 +19227,7 @@ const getPlatformConfigSaveBlocker = (config) => {
       )
     };
   }
-  if (duplicateResourcePool) {
+  if (!skipResourceRowValidation && duplicateResourcePool) {
     return {
       message: `Save blocked: the DFP Resource Rows "${describeResourcePool(duplicateResourcePool)}" duplicates another active row for the same unit and aircraft type. Open`,
       link: getResourcePoolSettingsLink(
@@ -19235,7 +19236,7 @@ const getPlatformConfigSaveBlocker = (config) => {
       )
     };
   }
-  if (multiAircraftTypeResourcePool) {
+  if (!skipResourceRowValidation && multiAircraftTypeResourcePool) {
     return {
       message: `Save blocked: the DFP Resource Rows "${describeResourcePool(multiAircraftTypeResourcePool)}" gives one unit rows for more than one aircraft type. Open`,
       link: getResourcePoolSettingsLink(
@@ -22314,7 +22315,8 @@ This permanently removes the organisation record from platform configuration and
     setTrainingReportTextDrafts({});
     const saved = await save(configToSave, "platform-training-report-template", {
       reloadPage: false,
-      successMessage: "Training Report settings saved."
+      successMessage: "Training Report settings saved.",
+      skipResourceRowProtection: true
     });
     if (saved) {
       setTrainingReportTemplateUnlocked((current) => !sectionId || current === sectionId ? null : current);
@@ -22403,7 +22405,7 @@ This permanently removes the organisation record from platform configuration and
       description: `Synced Training Report settings into ${targetUnit.code}`,
       changes: `Copied report template and scoring matrix from ${sourceUnit.code} to ${targetUnit.code}`
     });
-    await save(nextConfig, "training-report-template");
+    await save(nextConfig, "training-report-template", { skipResourceRowProtection: true });
   };
   const renderTrainingReportTemplateAction = (sectionId) => {
     if (!canEdit) return null;
@@ -24613,7 +24615,9 @@ This removes them from DFP Resource Rows. Press Save in this section to apply th
     }
     const reloadPage = options?.reloadPage ?? false;
     if (!canEdit) return false;
-    const saveBlocker = getPlatformConfigSaveBlocker(getPlatformConfigSaveBlockerContext(configToSave));
+    const saveBlocker = getPlatformConfigSaveBlocker(getPlatformConfigSaveBlockerContext(configToSave), {
+      skipResourceRowValidation: options?.skipResourceRowProtection === true
+    });
     if (saveBlocker) {
       showPlatformConfigError(saveBlocker.message, saveBlocker.link || null);
       return false;

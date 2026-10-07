@@ -876,11 +876,15 @@ type PlatformConfigSaveBlocker = {
   };
 };
 
-const getPlatformConfigSaveBlocker = (config: PlatformConfig): PlatformConfigSaveBlocker | null => {
+const getPlatformConfigSaveBlocker = (
+  config: PlatformConfig,
+  options: { skipResourceRowValidation?: boolean } = {},
+): PlatformConfigSaveBlocker | null => {
   const hasActiveOrganisations = hasActivePlatformRecords(Array.isArray(config.organisations) ? config.organisations : []);
   const hasActiveLocations = hasActivePlatformRecords(Array.isArray(config.locations) ? config.locations : []);
   const hasActiveUnits = hasActivePlatformRecords(Array.isArray(config.units) ? config.units : []);
   const activeAircraftTypeCodes = getActiveAircraftTypeCodeSet(config);
+  const skipResourceRowValidation = options.skipResourceRowValidation === true;
   const incompleteAircraftType = (Array.isArray(config.aircraftTypes) ? config.aircraftTypes : []).find((aircraftType) => (
     String(aircraftType?.status || 'ACTIVE').toUpperCase() !== 'INACTIVE' &&
     (!String(aircraftType?.code || '').trim() || !String(aircraftType?.name || '').trim())
@@ -963,7 +967,7 @@ const getPlatformConfigSaveBlocker = (config: PlatformConfig): PlatformConfigSav
       },
     };
   }
-  if (incompleteResourcePool) {
+  if (!skipResourceRowValidation && incompleteResourcePool) {
     return {
       message: `Save blocked: the DFP Resource Rows "${describeResourcePool(incompleteResourcePool)}" need a row name. Open`,
       link: getResourcePoolSettingsLink(
@@ -972,7 +976,7 @@ const getPlatformConfigSaveBlocker = (config: PlatformConfig): PlatformConfigSav
       ),
     };
   }
-  if (missingResourcePoolAircraftType) {
+  if (!skipResourceRowValidation && missingResourcePoolAircraftType) {
     return {
       message: `Save blocked: the DFP Resource Rows "${describeResourcePool(missingResourcePoolAircraftType)}" need an Aircraft Type. Open`,
       link: getResourcePoolSettingsLink(
@@ -981,7 +985,7 @@ const getPlatformConfigSaveBlocker = (config: PlatformConfig): PlatformConfigSav
       ),
     };
   }
-  if (invalidResourcePoolAircraftType) {
+  if (!skipResourceRowValidation && invalidResourcePoolAircraftType) {
     return {
       message: `Save blocked: the DFP Resource Rows "${describeResourcePool(invalidResourcePoolAircraftType)}" point to an Aircraft Type that is not active. Open`,
       link: getResourcePoolSettingsLink(
@@ -990,7 +994,7 @@ const getPlatformConfigSaveBlocker = (config: PlatformConfig): PlatformConfigSav
       ),
     };
   }
-  if (duplicateResourcePool) {
+  if (!skipResourceRowValidation && duplicateResourcePool) {
     return {
       message: `Save blocked: the DFP Resource Rows "${describeResourcePool(duplicateResourcePool)}" duplicates another active row for the same unit and aircraft type. Open`,
       link: getResourcePoolSettingsLink(
@@ -999,7 +1003,7 @@ const getPlatformConfigSaveBlocker = (config: PlatformConfig): PlatformConfigSav
       ),
     };
   }
-  if (multiAircraftTypeResourcePool) {
+  if (!skipResourceRowValidation && multiAircraftTypeResourcePool) {
     return {
       message: `Save blocked: the DFP Resource Rows "${describeResourcePool(multiAircraftTypeResourcePool)}" gives one unit rows for more than one aircraft type. Open`,
       link: getResourcePoolSettingsLink(
@@ -4862,6 +4866,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
     const saved = await save(configToSave, 'platform-training-report-template', {
       reloadPage: false,
       successMessage: 'Training Report settings saved.',
+      skipResourceRowProtection: true,
     });
     if (saved) {
       setTrainingReportTemplateUnlocked((current) => (!sectionId || current === sectionId ? null : current));
@@ -5007,7 +5012,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
       description: `Synced Training Report settings into ${targetUnit.code}`,
       changes: `Copied report template and scoring matrix from ${sourceUnit.code} to ${targetUnit.code}`,
     });
-    await save(nextConfig, 'training-report-template');
+    await save(nextConfig, 'training-report-template', { skipResourceRowProtection: true });
   };
 
   const renderTrainingReportTemplateAction = (sectionId: string) => {
@@ -7751,7 +7756,9 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
     }
     const reloadPage = options?.reloadPage ?? false;
     if (!canEdit) return false;
-    const saveBlocker = getPlatformConfigSaveBlocker(getPlatformConfigSaveBlockerContext(configToSave));
+    const saveBlocker = getPlatformConfigSaveBlocker(getPlatformConfigSaveBlockerContext(configToSave), {
+      skipResourceRowValidation: options?.skipResourceRowProtection === true,
+    });
     if (saveBlocker) {
       showPlatformConfigError(saveBlocker.message, saveBlocker.link || null);
       return false;
