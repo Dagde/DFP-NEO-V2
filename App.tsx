@@ -34132,56 +34132,43 @@ const App: React.FC = () => {
                         adminFallbackSuppressed: adminFallbackSnapshotKeys.length > 0 && !allowAdminFallbackContext,
                         elapsedMs: Math.round(performance.now() - loadStartedAt),
                     });
-                    for (const [candidateIndex, candidateKey] of candidateKeys.entries()) {
-                        const progress = Math.min(82, 18 + Math.round((candidateIndex / Math.max(candidateKeys.length, 1)) * 56));
-                        updateDfpSnapshotLoadState({
-                            status: attempt > 0 ? 'retrying' : 'loading',
-                            date: targetDate,
-                            message: `Retrieving DFP data (${candidateIndex + 1}/${candidateKeys.length})`,
-                            progress
-                        });
-                        const archiveQuery = candidateKey === targetDate
-                            ? `date=${encodeURIComponent(targetDate)}`
-                            : `snapshotKey=${encodeURIComponent(candidateKey)}`;
-                        const candidateUrl = `${apiBase}/archive/dfp-date?${archiveQuery}`;
-                        const candidateStartedAt = performance.now();
-                        const candidateRes = await fetch(candidateUrl, { cache: 'no-store' });
-                        pushDfpDataDiag('snapshot:fetch-response', {
-                            kind: candidateKey === targetDate
-                                ? 'legacy-date'
-                                : candidateKey.includes(`__${snapshotUnit}`)
-                                    ? 'unit-scoped-or-alias'
-                                    : 'location-scoped-or-alias',
-                            url: candidateUrl,
-                            candidateKey,
-                            canonicalSnapshotKey: snapshotKey,
-                            attempt: attempt + 1,
-                            candidateIndex: candidateIndex + 1,
-                            durationMs: Math.round(performance.now() - candidateStartedAt),
-                            elapsedMs: Math.round(performance.now() - loadStartedAt),
+                    updateDfpSnapshotLoadState({
+                        status: attempt > 0 ? 'retrying' : 'loading',
+                        date: targetDate,
+                        message: 'Retrieving DFP data',
+                        progress: 66
+                    });
+                    const archiveQuery = `snapshotKeys=${encodeURIComponent(JSON.stringify(candidateKeys))}`;
+                    const candidateUrl = `${apiBase}/archive/dfp-date?${archiveQuery}`;
+                    const candidateStartedAt = performance.now();
+                    const candidateRes = await fetch(candidateUrl, { cache: 'no-store' });
+                    pushDfpDataDiag('snapshot:fetch-response', {
+                        kind: 'ordered-candidate-batch',
+                        url: candidateUrl,
+                        candidateKeys,
+                        canonicalSnapshotKey: snapshotKey,
+                        attempt: attempt + 1,
+                        candidateCount: candidateKeys.length,
+                        durationMs: Math.round(performance.now() - candidateStartedAt),
+                        elapsedMs: Math.round(performance.now() - loadStartedAt),
+                        status: candidateRes.status,
+                        ok: candidateRes.ok,
+                        contentType: candidateRes.headers.get('content-type') || '',
+                    });
+                    res = candidateRes;
+                    const contentType = String(candidateRes.headers.get('content-type') || '').toLowerCase();
+                    const isJsonResponse = contentType.includes('application/json') || contentType.includes('+json');
+                    if (candidateRes.ok && !isJsonResponse) {
+                        const responseTypeError = new Error(`Snapshot endpoint returned ${contentType || 'unknown content type'} instead of JSON`);
+                        (responseTypeError as Error & { nonRetryableSnapshotLoad?: boolean }).nonRetryableSnapshotLoad = true;
+                        pushDfpDataDiag('snapshot:non-json-response', {
+                            targetDate,
+                            snapshotKey,
+                            candidateKeys,
                             status: candidateRes.status,
-                            ok: candidateRes.ok,
-                            contentType: candidateRes.headers.get('content-type') || '',
+                            contentType,
                         });
-                        res = candidateRes;
-                        resolvedSnapshotKey = candidateKey;
-                        const contentType = String(candidateRes.headers.get('content-type') || '').toLowerCase();
-                        const isJsonResponse = contentType.includes('application/json') || contentType.includes('+json');
-                        if (candidateRes.ok && !isJsonResponse) {
-                            const responseTypeError = new Error(`Snapshot endpoint returned ${contentType || 'unknown content type'} instead of JSON`);
-                            (responseTypeError as Error & { nonRetryableSnapshotLoad?: boolean }).nonRetryableSnapshotLoad = true;
-                            pushDfpDataDiag('snapshot:non-json-response', {
-                                targetDate,
-                                snapshotKey,
-                                candidateKey,
-                                status: candidateRes.status,
-                                contentType,
-                            });
-                            throw responseTypeError;
-                        }
-                        if (candidateRes.ok || candidateRes.status !== 404) {
-                            break;
-                        }
+                        throw responseTypeError;
                     }
 
                     if (!res || res.status === 404) {
@@ -34281,6 +34268,7 @@ const App: React.FC = () => {
                     const data = await res.json();
                     const jsonParsedAt = performance.now();
                     const snap = data.snapshot;
+                    resolvedSnapshotKey = data.snapshotKey || snap?.date || resolvedSnapshotKey;
                     pushDfpDataDiag('snapshot:network-json', {
                         targetDate,
                         snapshotKey,

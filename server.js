@@ -21721,14 +21721,54 @@ app.get('/api/archive/dfp-date', async (req, res) => {
   const startedAt = Date.now();
   try {
     const db = await getPrisma();
-    const requestedDate = String(req.query.date || '').slice(0, 10);
-    const requestedSnapshotKey = String(req.query.snapshotKey || '').trim();
-    if (!requestedDate && !requestedSnapshotKey) {
-      return res.status(400).json({ error: 'date or snapshotKey is required' });
+    let requestedDate = String(req.query.date || '').slice(0, 10);
+    let requestedSnapshotKey = String(req.query.snapshotKey || '').trim();
+    const rawSnapshotKeys = req.query.snapshotKeys;
+    let requestedSnapshotKeyCandidates = [];
+    if (rawSnapshotKeys) {
+      const rawValue = Array.isArray(rawSnapshotKeys) ? rawSnapshotKeys[0] : rawSnapshotKeys;
+      try {
+        const parsed = JSON.parse(String(rawValue || '[]'));
+        requestedSnapshotKeyCandidates = Array.isArray(parsed) ? parsed : [];
+      } catch {
+        requestedSnapshotKeyCandidates = String(rawValue || '').split(',');
+      }
+      requestedSnapshotKeyCandidates = requestedSnapshotKeyCandidates
+        .map(key => String(key || '').trim())
+        .filter((key, index, keys) => key && keys.indexOf(key) === index)
+        .slice(0, 20);
+    }
+    if (!requestedDate && !requestedSnapshotKey && requestedSnapshotKeyCandidates.length === 0) {
+      return res.status(400).json({ error: 'date, snapshotKey, or snapshotKeys is required' });
     }
 
     let archiveRows;
-    if (requestedSnapshotKey) {
+    if (requestedSnapshotKeyCandidates.length > 0) {
+      for (const candidateKey of requestedSnapshotKeyCandidates) {
+        if (/^\d{4}-\d{2}-\d{2}$/.test(candidateKey)) {
+          const rows = await db.$queryRawUnsafe(
+            `SELECT * FROM "PublishedDfpArchive" WHERE "date" = $1::text ORDER BY "publishedAt" DESC LIMIT 1`,
+            candidateKey
+          );
+          if (rows?.length > 0) {
+            archiveRows = rows;
+            requestedDate = candidateKey;
+            requestedSnapshotKey = '';
+            break;
+          }
+          continue;
+        }
+        const rows = await db.$queryRawUnsafe(
+          `SELECT * FROM "PublishedDfpArchive" WHERE "snapshotKey" = $1::text LIMIT 1`,
+          candidateKey
+        );
+        if (rows?.length > 0) {
+          archiveRows = rows;
+          requestedSnapshotKey = candidateKey;
+          break;
+        }
+      }
+    } else if (requestedSnapshotKey) {
       archiveRows = await db.$queryRawUnsafe(
         `SELECT * FROM "PublishedDfpArchive" WHERE "snapshotKey" = $1::text LIMIT 1`,
         requestedSnapshotKey
@@ -22026,16 +22066,38 @@ app.get('/api/archive/dfp-date', async (req, res) => {
       return res.json(response);
     }
 
-    const snapshotRows = requestedSnapshotKey
-      ? await db.$queryRawUnsafe(`SELECT * FROM "DailySnapshot" WHERE date = $1::text LIMIT 1`, requestedSnapshotKey)
-      : await db.$queryRawUnsafe(
-          `SELECT * FROM "DailySnapshot"
-           WHERE date = $1::text OR date LIKE $2::text
-           ORDER BY "savedAt" DESC NULLS LAST
-           LIMIT 1`,
-          requestedDate,
-          `${requestedDate}__%`
-        );
+    let snapshotRows;
+    if (requestedSnapshotKeyCandidates.length > 0) {
+      for (const candidateKey of requestedSnapshotKeyCandidates) {
+        const rows = /^\d{4}-\d{2}-\d{2}$/.test(candidateKey)
+          ? await db.$queryRawUnsafe(
+              `SELECT * FROM "DailySnapshot"
+               WHERE date = $1::text OR date LIKE $2::text
+               ORDER BY "savedAt" DESC NULLS LAST
+               LIMIT 1`,
+              candidateKey,
+              `${candidateKey}__%`
+            )
+          : await db.$queryRawUnsafe(`SELECT * FROM "DailySnapshot" WHERE date = $1::text LIMIT 1`, candidateKey);
+        if (rows?.length > 0) {
+          snapshotRows = rows;
+          requestedSnapshotKey = candidateKey;
+          requestedDate = /^\d{4}-\d{2}-\d{2}$/.test(candidateKey) ? candidateKey : requestedDate;
+          break;
+        }
+      }
+    } else {
+      snapshotRows = requestedSnapshotKey
+        ? await db.$queryRawUnsafe(`SELECT * FROM "DailySnapshot" WHERE date = $1::text LIMIT 1`, requestedSnapshotKey)
+        : await db.$queryRawUnsafe(
+            `SELECT * FROM "DailySnapshot"
+             WHERE date = $1::text OR date LIKE $2::text
+             ORDER BY "savedAt" DESC NULLS LAST
+             LIMIT 1`,
+            requestedDate,
+            `${requestedDate}__%`
+          );
+    }
     if (!snapshotRows || snapshotRows.length === 0) {
       return res.status(404).json({ error: 'Historical DFP date not found' });
     }
