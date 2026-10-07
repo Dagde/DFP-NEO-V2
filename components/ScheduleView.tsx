@@ -12795,7 +12795,7 @@ const InitialSetupWizard: React.FC<{
                     (value) => updateOrganisationDraft((draft: typeof organisationDraft) => ({ ...draft, level1Name: value }), 'field-edit:level1-name'),
                     (value) => updateOrganisationDraft((draft: typeof organisationDraft) => ({ ...draft, level1Options: value }), 'field-edit:level1-options'),
                     (value) => updateOrganisationDraft((draft: typeof organisationDraft) => ({ ...draft, level1Parents: value }), 'field-edit:level1-parents'),
-                    'Organisation Level 1',
+                    'Organisation Level 2',
                     level1ParentOptions,
                 ),
             );
@@ -12811,7 +12811,7 @@ const InitialSetupWizard: React.FC<{
                     (value) => updateOrganisationDraft((draft: typeof organisationDraft) => ({ ...draft, level2Name: value }), 'field-edit:level2-name'),
                     (value) => updateOrganisationDraft((draft: typeof organisationDraft) => ({ ...draft, level2Options: value }), 'field-edit:level2-options'),
                     (value) => updateOrganisationDraft((draft: typeof organisationDraft) => ({ ...draft, level2Parents: value }), 'field-edit:level2-parents'),
-                    'Organisation Level 2\nOrganisation Level 2B',
+                    'Organisation Level 3\nOrganisation Level 3B',
                     level2ParentOptions,
                 ),
             );
@@ -12827,7 +12827,7 @@ const InitialSetupWizard: React.FC<{
                     (value) => updateOrganisationDraft((draft: typeof organisationDraft) => ({ ...draft, level3Name: value }), 'field-edit:level3-name'),
                     (value) => updateOrganisationDraft((draft: typeof organisationDraft) => ({ ...draft, level3Options: value }), 'field-edit:level3-options'),
                     (value) => updateOrganisationDraft((draft: typeof organisationDraft) => ({ ...draft, level3Parents: value }), 'field-edit:level3-parents'),
-                    'Organisation Level 3\nOrganisation Level 3B',
+                    'Organisation Level 4\nOrganisation Level 4B',
                     level3ParentOptions,
                 ),
             );
@@ -12848,7 +12848,7 @@ const InitialSetupWizard: React.FC<{
                     (value) => updateAdditionalOrganisationLevel(additionalOrganisationLevelIndex, { name: value }),
                     (value) => updateAdditionalOrganisationLevel(additionalOrganisationLevelIndex, { options: value }),
                     (value) => updateAdditionalOrganisationLevel(additionalOrganisationLevelIndex, { parents: value }),
-                    `${level.name || `Level ${additionalOrganisationLevelIndex}`} item`,
+                    `${level.name || `Level ${additionalOrganisationLevelIndex + 1}`} item`,
                     getParentOptionsForOrganisationLevel(additionalOrganisationLevelIndex),
                 ),
             );
