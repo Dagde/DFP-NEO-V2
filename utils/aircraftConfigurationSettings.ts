@@ -36,44 +36,28 @@ const formatConfigLabel = (id: string, fallbackIndex: number): string => {
   return `CONFIG ${configNumber}`;
 };
 
-const normaliseConfigDisplayLabel = (value: unknown, id: string, fallbackIndex: number): string => {
-  const label = String(value || '').trim();
-  return label || formatConfigLabel(id, fallbackIndex);
-};
-
 export const normaliseAircraftConfigurationDefinitions = (
   definitions?: unknown,
 ): AircraftConfigurationDefinition[] => {
   if (!Array.isArray(definitions)) return [BASE_AIRCRAFT_CONFIG];
 
-  const normalisedDefinitions = definitions
+  const userDefinitions = definitions
     .map((definition, index) => {
       const item = definition && typeof definition === 'object' ? definition as Record<string, any> : {};
       const fallbackId = `CONFIG-${index + 1}`;
       const id = normaliseConfigId(item.id || item.label || fallbackId, fallbackId);
       return {
         id,
-        label: normaliseConfigDisplayLabel(item.label || item.name, id, index),
-        definition: String(item.definition || item.description || '').trim(),
+        label: formatConfigLabel(id, index),
+        definition: String(item.definition || item.description || ''),
       };
-    });
-
-  const baseOverride = normalisedDefinitions.find((definition) => definition.id === BASE_AIRCRAFT_CONFIG.id);
-  const baseDefinition = baseOverride
-    ? {
-      ...BASE_AIRCRAFT_CONFIG,
-      label: normaliseConfigDisplayLabel(baseOverride.label, BASE_AIRCRAFT_CONFIG.id, 0),
-      definition: baseOverride.definition || BASE_AIRCRAFT_CONFIG.definition,
-    }
-    : BASE_AIRCRAFT_CONFIG;
-
-  const userDefinitions = normalisedDefinitions
+    })
     .filter((definition) => definition.id !== BASE_AIRCRAFT_CONFIG.id)
     .filter((definition, index, all) => (
       all.findIndex(candidate => candidate.id === definition.id) === index
     ));
 
-  return [baseDefinition, ...userDefinitions];
+  return [BASE_AIRCRAFT_CONFIG, ...userDefinitions];
 };
 
 export const getAircraftConfigurationDefinitions = (
