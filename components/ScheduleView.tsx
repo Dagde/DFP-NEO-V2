@@ -9566,7 +9566,7 @@ const InitialSetupWizard: React.FC<{
             commitRows([...baseRows, { role: getNextCrewRole(), count: 1 }]);
         };
         return (
-            <div className="rounded-lg border border-slate-300 bg-white p-3">
+            <div className="flex h-full flex-col rounded-lg border border-slate-300 bg-white p-3">
                 <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
                     <span className={wizardLabelClass}>{title}</span>
                     <div className="flex flex-wrap items-center gap-2">
@@ -9616,53 +9616,53 @@ const InitialSetupWizard: React.FC<{
             },
         ], 'Alternate crew composition added to Settings.');
     };
-    const renderAlternateCrewCompositionEditors = () => {
+    const renderAlternateCrewCompositionHeader = () => {
         const rows = getWizardAlternateCrewDraftRowsForSave();
         return (
             <div className="rounded-lg border border-slate-300 bg-white p-3">
-                <div className="mb-3 flex flex-wrap items-start justify-between gap-2">
+                <div className="flex flex-wrap items-start justify-between gap-3">
                     <div>
                         <span className={wizardLabelClass}>Other approved crew compositions</span>
                         <p className="mt-1 text-xs font-semibold leading-5 text-slate-600">
                             Add one card for each alternate crew that is allowed. These become Alt1, Alt2, Alt3 in Crew dropdowns.
                         </p>
+                        {rows.length === 0 ? (
+                            <p className="mt-1 text-xs font-semibold leading-5 text-slate-500">
+                                Leave this blank if Primary crew is the only approved crew mix.
+                            </p>
+                        ) : null}
                     </div>
                     <button type="button" className={wizardGreenButtonClass} onClick={addAlternateCrewCompositionDraft}>
                         Add approved crew
                     </button>
                 </div>
-                {rows.length === 0 ? (
-                    <div className="rounded-lg border border-dashed border-slate-300 bg-slate-50 p-3 text-sm font-semibold text-slate-600">
-                        No alternate crew compositions added. Use Add approved crew only if this aircraft can be flown with another approved crew mix.
-                    </div>
-                ) : (
-                    <div className="space-y-3">
-                        {rows.map((row, index) => (
-                            <React.Fragment key={row.id || `alternate-crew-${index}`}>
-                                {renderCrewCompositionEditor(
-                                    row.name || `Alt${index + 1}`,
-                                    row.roles,
-                                    (value) => {
-                                        const nextRows = rows.map((candidate, rowIndex) => (
-                                            rowIndex === index ? { ...candidate, roles: value } : candidate
-                                        ));
-                                        commitAlternateCrewDraftRows(nextRows);
-                                    },
-                                    'Add crew role',
-                                    <button
-                                        type="button"
-                                        className={wizardDeleteButtonClass}
-                                        onClick={() => commitAlternateCrewDraftRows(rows.filter((_, rowIndex) => rowIndex !== index), 'Alternate crew composition removed from Settings.')}
-                                    >
-                                        Delete crew
-                                    </button>,
-                                )}
-                            </React.Fragment>
-                        ))}
-                    </div>
-                )}
             </div>
         );
+    };
+    const renderAlternateCrewCompositionCards = () => {
+        const rows = getWizardAlternateCrewDraftRowsForSave();
+        return rows.map((row, index) => (
+            <React.Fragment key={row.id || `alternate-crew-${index}`}>
+                {renderCrewCompositionEditor(
+                    row.name || `Alt${index + 1}`,
+                    row.roles,
+                    (value) => {
+                        const nextRows = rows.map((candidate, rowIndex) => (
+                            rowIndex === index ? { ...candidate, roles: value } : candidate
+                        ));
+                        commitAlternateCrewDraftRows(nextRows);
+                    },
+                    'Add crew role',
+                    <button
+                        type="button"
+                        className={wizardDeleteButtonClass}
+                        onClick={() => commitAlternateCrewDraftRows(rows.filter((_, rowIndex) => rowIndex !== index), 'Alternate crew composition removed from Settings.')}
+                    >
+                        Delete crew
+                    </button>,
+                )}
+            </React.Fragment>
+        ));
     };
     const renderCrewLabelsEditor = () => {
         const rows = parseWizardCrewLabelRows(crewLabelsDraft);
@@ -13336,12 +13336,13 @@ const InitialSetupWizard: React.FC<{
                             saveCrewDraftValues(nextAircraftCode, crewDraft.standardSeats, alternateCrewDraft, 'Crew aircraft synced into Settings.', getWizardAlternateCrewDraftRowsForSave());
                         }, Array.from(new Set([resourceDraft.aircraftCode, ...activeAircraftTypes.map((aircraft: any) => aircraft.code)].filter(Boolean))), resourceDraft.aircraftCode || 'Enter aircraft code')}
                     </div>
-                    <div className="grid gap-3 xl:grid-cols-2">
+                    {renderAlternateCrewCompositionHeader()}
+                    <div className="grid items-stretch gap-3 xl:grid-cols-2">
                         {renderCrewCompositionEditor('Primary crew', crewDraft.standardSeats, (value) => {
                             updateCrewDraft((draft) => ({ ...draft, standardSeats: value }));
                             saveCrewDraftValues(crewDraft.aircraftCode || resourceDraft.aircraftCode, value, alternateCrewDraft, 'Primary crew synced into Settings.', getWizardAlternateCrewDraftRowsForSave());
                         })}
-                        {renderAlternateCrewCompositionEditors()}
+                        {renderAlternateCrewCompositionCards()}
                     </div>
                 </div>,
             );
