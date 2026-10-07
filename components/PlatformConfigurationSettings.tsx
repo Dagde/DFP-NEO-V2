@@ -3356,7 +3356,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
     const placeholder = String(sample || '').trim();
     const usePlaceholder = wizardEditMode
       && Boolean(placeholder)
-      && current.localeCompare(placeholder, undefined, { sensitivity: 'accent' }) === 0;
+      && (!current || current.localeCompare(placeholder, undefined, { sensitivity: 'accent' }) === 0);
     return {
       placeholder: usePlaceholder ? placeholder : undefined,
       placeholderOnly: usePlaceholder,

@@ -21149,7 +21149,7 @@ const PlatformConfigurationSettings = ({
   const getWizardSamplePlaceholderProps = (value, sample) => {
     const current = String(value || "").trim();
     const placeholder = String(sample || "").trim();
-    const usePlaceholder = wizardEditMode && Boolean(placeholder) && current.localeCompare(placeholder, void 0, { sensitivity: "accent" }) === 0;
+    const usePlaceholder = wizardEditMode && Boolean(placeholder) && (!current || current.localeCompare(placeholder, void 0, { sensitivity: "accent" }) === 0);
     return {
       placeholder: usePlaceholder ? placeholder : void 0,
       placeholderOnly: usePlaceholder
