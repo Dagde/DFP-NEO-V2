@@ -61214,13 +61214,20 @@ appliedUpdates.forEach(update => {
                             style={{ width: `${Math.max(8, Math.min(100, dfpSnapshotLoadState.progress ?? 18))}%` }}
                         ></div>
                     </div>
-                    <div className="mt-2 flex items-center justify-between text-[11px] uppercase tracking-wide text-gray-500">
-                        <span>{dfpSnapshotLoadState.message || 'Loading DFP'}</span>
-                        <span>{Math.round(Math.max(8, Math.min(100, dfpSnapshotLoadState.progress ?? 18)))}%</span>
-                    </div>
-                </div>
-            </div>
-        )}
+	                    <div className="mt-2 flex items-center justify-between text-[11px] uppercase tracking-wide text-gray-500">
+	                        <span>{dfpSnapshotLoadState.message || 'Loading DFP'}</span>
+	                        <span>{Math.round(Math.max(8, Math.min(100, dfpSnapshotLoadState.progress ?? 18)))}%</span>
+	                    </div>
+                        <button
+                            type="button"
+                            onClick={() => downloadDfpDataTrace('dfp-load-trace')}
+                            className="pointer-events-auto mt-5 rounded-md border border-sky-400/70 bg-sky-500/15 px-4 py-2 text-sm font-semibold text-sky-100 transition-colors hover:border-sky-300 hover:bg-sky-500/25"
+                        >
+                            Download Trace
+                        </button>
+	                </div>
+	            </div>
+	        )}
 
         {isAuthenticated &&
             ['Program Schedule', 'InstructorSchedule', 'TraineeSchedule', 'NextDayBuild', 'NextDayInstructorSchedule', 'NextDayTraineeSchedule'].includes(activeView) &&
@@ -61245,18 +61252,26 @@ appliedUpdates.forEach(update => {
                                     : 'DFP Load'}
                         </span>
                     </div>
-                    {dfpSnapshotLoadState.status === 'error' && (
-                        <button
-                            type="button"
+	                    {dfpSnapshotLoadState.status === 'error' && (
+	                        <button
+	                            type="button"
                             onClick={() => void loadSnapshotForDate(date, { force: true, replace: true, useCache: true, allowAdminFallbackContext: false })}
                             className="rounded border border-gray-600/50 px-1.5 py-0.5 text-gray-300 transition-colors hover:border-gray-500 hover:text-white"
                             title="Retry loading the DFP for this date"
                         >
-                            Retry
+	                            Retry
+	                        </button>
+	                    )}
+                        <button
+                            type="button"
+                            onClick={() => downloadDfpDataTrace('dfp-load-trace')}
+                            className="rounded border border-sky-500/50 px-1.5 py-0.5 text-sky-200 transition-colors hover:border-sky-400 hover:text-white"
+                            title="Download DFP load timing trace"
+                        >
+                            Trace
                         </button>
-                    )}
-                </div>
-            )}
+	                </div>
+	            )}
 
         {/* Live sync control - keeps mobile/iOS-originated changes visible without forcing it on low-data links */}
         {isAuthenticated && ['Program Schedule', 'InstructorSchedule', 'TraineeSchedule', 'NextDayBuild', 'NextDayInstructorSchedule', 'NextDayTraineeSchedule'].includes(activeView) && (

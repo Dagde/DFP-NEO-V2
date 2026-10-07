@@ -168117,7 +168117,16 @@ Do you want to replace the existing entry?`,
           Math.round(Math.max(8, Math.min(100, dfpSnapshotLoadState.progress ?? 18))),
           "%"
         ] })
-      ] })
+      ] }),
+      /* @__PURE__ */ jsxRuntimeExports.jsx(
+        "button",
+        {
+          type: "button",
+          onClick: () => downloadDfpDataTrace("dfp-load-trace"),
+          className: "pointer-events-auto mt-5 rounded-md border border-sky-400/70 bg-sky-500/15 px-4 py-2 text-sm font-semibold text-sky-100 transition-colors hover:border-sky-300 hover:bg-sky-500/25",
+          children: "Download Trace"
+        }
+      )
     ] }) }),
     isAuthenticated && ["Program Schedule", "InstructorSchedule", "TraineeSchedule", "NextDayBuild", "NextDayInstructorSchedule", "NextDayTraineeSchedule"].includes(activeView) && dfpSnapshotLoadState.date === date && ["loading", "cached", "retrying", "error"].includes(dfpSnapshotLoadState.status) && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "fixed bottom-[188px] right-[18px] z-[50] flex w-[75px] flex-col items-stretch gap-px rounded border border-gray-700/50 bg-gray-900/75 px-1 py-1 text-center text-[10px] text-gray-400 shadow-sm backdrop-blur-sm select-none", children: [
       /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center justify-center gap-1", title: dfpSnapshotLoadState.message, children: [
@@ -168137,6 +168146,16 @@ Do you want to replace the existing entry?`,
           className: "rounded border border-gray-600/50 px-1.5 py-0.5 text-gray-300 transition-colors hover:border-gray-500 hover:text-white",
           title: "Retry loading the DFP for this date",
           children: "Retry"
+        }
+      ),
+      /* @__PURE__ */ jsxRuntimeExports.jsx(
+        "button",
+        {
+          type: "button",
+          onClick: () => downloadDfpDataTrace("dfp-load-trace"),
+          className: "rounded border border-sky-500/50 px-1.5 py-0.5 text-sky-200 transition-colors hover:border-sky-400 hover:text-white",
+          title: "Download DFP load timing trace",
+          children: "Trace"
         }
       )
     ] }),
