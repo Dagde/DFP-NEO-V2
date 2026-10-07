@@ -57,7 +57,7 @@ import {
   type TrainingReportTemplate,
 } from '../utils/trainingReportTerminology';
 import { normaliseAircraftNumberSettings } from '../utils/aircraftNumberFormat';
-import { normaliseAircraftConfigurationDefinitions, type AircraftConfigurationDefinition } from '../utils/aircraftConfigurationSettings';
+import { BASE_AIRCRAFT_CONFIG, normaliseAircraftConfigurationDefinitions, type AircraftConfigurationDefinition } from '../utils/aircraftConfigurationSettings';
 import {
   AIRCRAFT_CREW_RESOURCE_KINDS,
   DEFAULT_AIRCRAFT_CREW_COMPOSITION,
@@ -7488,31 +7488,42 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
     legacyDefinitions: unknown[] = [],
   ): AircraftConfigurationDefinition[] => {
     const definitionTexts = new Set<string>();
-    const mergedDefinitions = normaliseAircraftConfigurationDefinitions(primaryDefinitions)
+    const primaryNormalisedDefinitions = normaliseAircraftConfigurationDefinitions(primaryDefinitions);
+    const legacyNormalisedDefinitions = legacyDefinitions.flatMap((definitions) => normaliseAircraftConfigurationDefinitions(definitions));
+    const baseDefinition = primaryNormalisedDefinitions.find((definition) => definition.id === BASE_AIRCRAFT_CONFIG.id)
+      || legacyNormalisedDefinitions.find((definition) => definition.id === BASE_AIRCRAFT_CONFIG.id)
+      || BASE_AIRCRAFT_CONFIG;
+    const getMergedConfigLabel = (definition: AircraftConfigurationDefinition, index: number) => {
+      const label = String(definition.label || '').trim();
+      return /^CONFIG[\s_-]*\d+$/i.test(label) ? `CONFIG ${index + 1}` : label || `CONFIG ${index + 1}`;
+    };
+    const mergedDefinitions = primaryNormalisedDefinitions
       .filter((definition) => definition.id !== 'CONFIG-0')
       .map((definition, index) => {
         const text = String(definition.definition || '').trim();
         if (text) definitionTexts.add(text.toUpperCase());
+        const id = `CONFIG-${index + 1}`;
         return {
-          id: `CONFIG-${index + 1}`,
-          label: `CONFIG ${index + 1}`,
+          id,
+          label: getMergedConfigLabel(definition, index),
           definition: text,
         };
       });
-    legacyDefinitions.flatMap((definitions) => normaliseAircraftConfigurationDefinitions(definitions)).forEach((definition) => {
+    legacyNormalisedDefinitions.forEach((definition) => {
       if (definition.id === 'CONFIG-0') return;
       const text = String(definition.definition || '').trim();
       const key = text.toUpperCase();
       if (!key || definitionTexts.has(key)) return;
       definitionTexts.add(key);
       const nextNumber = mergedDefinitions.length + 1;
+      const id = `CONFIG-${nextNumber}`;
       mergedDefinitions.push({
-        id: `CONFIG-${nextNumber}`,
-        label: `CONFIG ${nextNumber}`,
+        id,
+        label: getMergedConfigLabel(definition, nextNumber - 1),
         definition: text,
       });
     });
-    return normaliseAircraftConfigurationDefinitions(mergedDefinitions);
+    return normaliseAircraftConfigurationDefinitions([baseDefinition, ...mergedDefinitions]);
   };
 
   const getAircraftTypeConfigurationDefinitions = (aircraftType: any): AircraftConfigurationDefinition[] => {
@@ -7527,7 +7538,11 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
   };
 
   const updateAircraftTypeConfigurationDefinitions = (aircraftIndex: number, aircraftConfigurations: AircraftConfigurationDefinition[]) => {
-    const userDefinitions = aircraftConfigurations.filter((definition) => definition.id !== 'CONFIG-0');
+    const userDefinitions = aircraftConfigurations.filter((definition) => (
+      definition.id !== BASE_AIRCRAFT_CONFIG.id
+      || String(definition.label || '').trim() !== BASE_AIRCRAFT_CONFIG.label
+      || String(definition.definition || '').trim() !== BASE_AIRCRAFT_CONFIG.definition
+    ));
     const aircraftType = config.aircraftTypes[aircraftIndex] || {};
     updateRow('aircraftTypes', aircraftIndex, {
       settings: {
@@ -7537,10 +7552,20 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
     });
   };
 
+  const updateAircraftConfigurationLabel = (aircraftIndex: number, configIndex: number, label: string) => {
+    const aircraftConfigurations = getAircraftTypeConfigurationDefinitions(config.aircraftTypes[aircraftIndex]);
+    const targetId = aircraftConfigurations[configIndex]?.id;
+    if (!targetId) return;
+    const nextAircraftConfigurations = aircraftConfigurations.map((configDefinition) => (
+      configDefinition.id === targetId ? { ...configDefinition, label } : configDefinition
+    ));
+    updateAircraftTypeConfigurationDefinitions(aircraftIndex, nextAircraftConfigurations);
+  };
+
   const updateAircraftConfiguration = (aircraftIndex: number, configIndex: number, definition: string) => {
     const aircraftConfigurations = getAircraftTypeConfigurationDefinitions(config.aircraftTypes[aircraftIndex]);
     const targetId = aircraftConfigurations[configIndex]?.id;
-    if (!targetId || targetId === 'CONFIG-0') return;
+    if (!targetId) return;
     const nextAircraftConfigurations = aircraftConfigurations.map((configDefinition) => (
       configDefinition.id === targetId ? { ...configDefinition, definition } : configDefinition
     ));
@@ -11162,16 +11187,22 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
                             {aircraftConfigurations.map((aircraftConfig, configIndex) => {
                               const isBaseConfig = aircraftConfig.id === 'CONFIG-0';
                               return (
-                                <div key={aircraftConfig.id || configIndex} className="grid items-end gap-2 sm:grid-cols-[5.5rem_minmax(0,1fr)_auto]">
-                                  <div className="rounded-md border border-gray-700 bg-gray-900 px-3 py-2 text-xs font-black text-cyan-100">
-                                    {aircraftConfig.label}
-                                  </div>
+                                <div key={aircraftConfig.id || configIndex} className="grid items-end gap-2 sm:grid-cols-[9rem_minmax(0,1fr)_minmax(0,1.2fr)_auto]">
+                                  <DraftField
+                                    label="Display label"
+                                    value={aircraftConfig.label}
+                                    disabled={!canEditResourcePools}
+                                    onCommit={(value) => updateAircraftConfigurationLabel(index, configIndex, value)}
+                                  />
                                   <DraftField
                                     label="Definition"
                                     value={aircraftConfig.definition}
-                                    disabled={!canEditResourcePools || isBaseConfig}
+                                    disabled={!canEditResourcePools}
                                     onCommit={(value) => updateAircraftConfiguration(index, configIndex, value)}
                                   />
+                                  <div className="rounded-md border border-gray-700 bg-gray-900 px-3 py-2 text-xs font-black text-cyan-100">
+                                    Internal: {aircraftConfig.id.replace('-', ' ')}
+                                  </div>
                                   <button
                                     type="button"
                                     disabled={!canEditResourcePools || isBaseConfig}

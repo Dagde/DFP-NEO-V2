@@ -5616,19 +5616,30 @@ const formatConfigLabel = (id, fallbackIndex) => {
   const configNumber = Number(match[1]);
   return `CONFIG ${configNumber}`;
 };
+const normaliseConfigDisplayLabel = (value, id, fallbackIndex) => {
+  const label = String(value || "").trim();
+  return label || formatConfigLabel(id, fallbackIndex);
+};
 const normaliseAircraftConfigurationDefinitions = (definitions) => {
   if (!Array.isArray(definitions)) return [BASE_AIRCRAFT_CONFIG];
-  const userDefinitions = definitions.map((definition, index) => {
+  const normalisedDefinitions = definitions.map((definition, index) => {
     const item = definition && typeof definition === "object" ? definition : {};
     const fallbackId = `CONFIG-${index + 1}`;
     const id = normaliseConfigId(item.id || item.label || fallbackId, fallbackId);
     return {
       id,
-      label: formatConfigLabel(id, index),
-      definition: String(item.definition || item.description || "")
+      label: normaliseConfigDisplayLabel(item.label || item.name, id, index),
+      definition: String(item.definition || item.description || "").trim()
     };
-  }).filter((definition) => definition.id !== BASE_AIRCRAFT_CONFIG.id).filter((definition, index, all) => all.findIndex((candidate) => candidate.id === definition.id) === index);
-  return [BASE_AIRCRAFT_CONFIG, ...userDefinitions];
+  });
+  const baseOverride = normalisedDefinitions.find((definition) => definition.id === BASE_AIRCRAFT_CONFIG.id);
+  const baseDefinition = baseOverride ? {
+    ...BASE_AIRCRAFT_CONFIG,
+    label: normaliseConfigDisplayLabel(baseOverride.label, BASE_AIRCRAFT_CONFIG.id, 0),
+    definition: baseOverride.definition || BASE_AIRCRAFT_CONFIG.definition
+  } : BASE_AIRCRAFT_CONFIG;
+  const userDefinitions = normalisedDefinitions.filter((definition) => definition.id !== BASE_AIRCRAFT_CONFIG.id).filter((definition, index, all) => all.findIndex((candidate) => candidate.id === definition.id) === index);
+  return [baseDefinition, ...userDefinitions];
 };
 const getAircraftConfigurationDefinitions = (resourcePool, aircraftType) => Array.isArray(aircraftType?.settings?.aircraftConfigurations) ? normaliseAircraftConfigurationDefinitions(aircraftType.settings.aircraftConfigurations) : normaliseAircraftConfigurationDefinitions(resourcePool?.settings?.aircraftConfigurations);
 const normaliseSelectedAircraftConfigurations = (selected, definitions = []) => {
@@ -24389,29 +24400,38 @@ This removes it from the master list and from every user assignment that current
   };
   const mergeAircraftConfigurationDefinitions = (primaryDefinitions, legacyDefinitions = []) => {
     const definitionTexts = /* @__PURE__ */ new Set();
-    const mergedDefinitions = normaliseAircraftConfigurationDefinitions(primaryDefinitions).filter((definition) => definition.id !== "CONFIG-0").map((definition, index) => {
+    const primaryNormalisedDefinitions = normaliseAircraftConfigurationDefinitions(primaryDefinitions);
+    const legacyNormalisedDefinitions = legacyDefinitions.flatMap((definitions) => normaliseAircraftConfigurationDefinitions(definitions));
+    const baseDefinition = primaryNormalisedDefinitions.find((definition) => definition.id === BASE_AIRCRAFT_CONFIG.id) || legacyNormalisedDefinitions.find((definition) => definition.id === BASE_AIRCRAFT_CONFIG.id) || BASE_AIRCRAFT_CONFIG;
+    const getMergedConfigLabel = (definition, index) => {
+      const label = String(definition.label || "").trim();
+      return /^CONFIG[\s_-]*\d+$/i.test(label) ? `CONFIG ${index + 1}` : label || `CONFIG ${index + 1}`;
+    };
+    const mergedDefinitions = primaryNormalisedDefinitions.filter((definition) => definition.id !== "CONFIG-0").map((definition, index) => {
       const text = String(definition.definition || "").trim();
       if (text) definitionTexts.add(text.toUpperCase());
+      const id = `CONFIG-${index + 1}`;
       return {
-        id: `CONFIG-${index + 1}`,
-        label: `CONFIG ${index + 1}`,
+        id,
+        label: getMergedConfigLabel(definition, index),
         definition: text
       };
     });
-    legacyDefinitions.flatMap((definitions) => normaliseAircraftConfigurationDefinitions(definitions)).forEach((definition) => {
+    legacyNormalisedDefinitions.forEach((definition) => {
       if (definition.id === "CONFIG-0") return;
       const text = String(definition.definition || "").trim();
       const key = text.toUpperCase();
       if (!key || definitionTexts.has(key)) return;
       definitionTexts.add(key);
       const nextNumber = mergedDefinitions.length + 1;
+      const id = `CONFIG-${nextNumber}`;
       mergedDefinitions.push({
-        id: `CONFIG-${nextNumber}`,
-        label: `CONFIG ${nextNumber}`,
+        id,
+        label: getMergedConfigLabel(definition, nextNumber - 1),
         definition: text
       });
     });
-    return normaliseAircraftConfigurationDefinitions(mergedDefinitions);
+    return normaliseAircraftConfigurationDefinitions([baseDefinition, ...mergedDefinitions]);
   };
   const getAircraftTypeConfigurationDefinitions = (aircraftType) => {
     if (Array.isArray(aircraftType?.settings?.aircraftConfigurations)) {
@@ -24422,7 +24442,7 @@ This removes it from the master list and from every user assignment that current
     return mergeAircraftConfigurationDefinitions(void 0, legacyResourcePoolDefinitions);
   };
   const updateAircraftTypeConfigurationDefinitions = (aircraftIndex, aircraftConfigurations) => {
-    const userDefinitions = aircraftConfigurations.filter((definition) => definition.id !== "CONFIG-0");
+    const userDefinitions = aircraftConfigurations.filter((definition) => definition.id !== BASE_AIRCRAFT_CONFIG.id || String(definition.label || "").trim() !== BASE_AIRCRAFT_CONFIG.label || String(definition.definition || "").trim() !== BASE_AIRCRAFT_CONFIG.definition);
     const aircraftType = config.aircraftTypes[aircraftIndex] || {};
     updateRow("aircraftTypes", aircraftIndex, {
       settings: {
@@ -24431,10 +24451,17 @@ This removes it from the master list and from every user assignment that current
       }
     });
   };
+  const updateAircraftConfigurationLabel = (aircraftIndex, configIndex, label) => {
+    const aircraftConfigurations = getAircraftTypeConfigurationDefinitions(config.aircraftTypes[aircraftIndex]);
+    const targetId = aircraftConfigurations[configIndex]?.id;
+    if (!targetId) return;
+    const nextAircraftConfigurations = aircraftConfigurations.map((configDefinition) => configDefinition.id === targetId ? { ...configDefinition, label } : configDefinition);
+    updateAircraftTypeConfigurationDefinitions(aircraftIndex, nextAircraftConfigurations);
+  };
   const updateAircraftConfiguration = (aircraftIndex, configIndex, definition) => {
     const aircraftConfigurations = getAircraftTypeConfigurationDefinitions(config.aircraftTypes[aircraftIndex]);
     const targetId = aircraftConfigurations[configIndex]?.id;
-    if (!targetId || targetId === "CONFIG-0") return;
+    if (!targetId) return;
     const nextAircraftConfigurations = aircraftConfigurations.map((configDefinition) => configDefinition.id === targetId ? { ...configDefinition, definition } : configDefinition);
     updateAircraftTypeConfigurationDefinitions(aircraftIndex, nextAircraftConfigurations);
   };
@@ -27644,17 +27671,29 @@ This removes them from DFP Resource Rows. Press Save in this section to apply th
                   ] }),
                   aircraftConfigurations.length === 0 ? /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "rounded-md border border-gray-800 bg-gray-900/70 px-3 py-2 text-xs text-gray-400", children: "No configured aircraft states. LMP events will show ANY only." }) : /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "grid gap-2", children: aircraftConfigurations.map((aircraftConfig, configIndex) => {
                     const isBaseConfig = aircraftConfig.id === "CONFIG-0";
-                    return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid items-end gap-2 sm:grid-cols-[5.5rem_minmax(0,1fr)_auto]", children: [
-                      /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "rounded-md border border-gray-700 bg-gray-900 px-3 py-2 text-xs font-black text-cyan-100", children: aircraftConfig.label }),
+                    return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid items-end gap-2 sm:grid-cols-[9rem_minmax(0,1fr)_minmax(0,1.2fr)_auto]", children: [
+                      /* @__PURE__ */ jsxRuntimeExports.jsx(
+                        DraftField,
+                        {
+                          label: "Display label",
+                          value: aircraftConfig.label,
+                          disabled: !canEditResourcePools,
+                          onCommit: (value) => updateAircraftConfigurationLabel(index, configIndex, value)
+                        }
+                      ),
                       /* @__PURE__ */ jsxRuntimeExports.jsx(
                         DraftField,
                         {
                           label: "Definition",
                           value: aircraftConfig.definition,
-                          disabled: !canEditResourcePools || isBaseConfig,
+                          disabled: !canEditResourcePools,
                           onCommit: (value) => updateAircraftConfiguration(index, configIndex, value)
                         }
                       ),
+                      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded-md border border-gray-700 bg-gray-900 px-3 py-2 text-xs font-black text-cyan-100", children: [
+                        "Internal: ",
+                        aircraftConfig.id.replace("-", " ")
+                      ] }),
                       /* @__PURE__ */ jsxRuntimeExports.jsx(
                         "button",
                         {
