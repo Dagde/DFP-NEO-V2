@@ -4028,6 +4028,8 @@ const InitialSetupWizard: React.FC<{
     const [organisationDraft, setOrganisationDraft] = useState(() => (
         shouldUseStoredOrganisationDraft ? storedOrganisationDraft : buildHydratedOrganisationDraft()
     ));
+    const [organisationNameFieldTouched, setOrganisationNameFieldTouched] = useState(shouldUseStoredOrganisationDraft);
+    const [organisationCodeFieldTouched, setOrganisationCodeFieldTouched] = useState(shouldUseStoredOrganisationDraft);
     useEffect(() => {
         if (!storedOrganisationDraft || shouldUseStoredOrganisationDraft) return;
         if (typeof window !== 'undefined') {
@@ -5021,6 +5023,8 @@ const InitialSetupWizard: React.FC<{
         const hydratedLocationDraft = buildHydratedLocationDraft();
         const hydratedCrew = buildHydratedCrewDraft();
         organisationDraftDirtyRef.current = false;
+        setOrganisationNameFieldTouched(false);
+        setOrganisationCodeFieldTouched(false);
         locationDraftDirtyRef.current = false;
         unitDraftDirtyRef.current = false;
         resourceDraftDirtyRef.current = false;
@@ -7805,7 +7809,7 @@ const InitialSetupWizard: React.FC<{
             case 'analysis':
                 return checks.some((check) => check.complete);
             case 'org-name':
-                if (!organisationDraftDirtyRef.current) return false;
+                if (!organisationNameFieldTouched || !organisationCodeFieldTouched) return false;
                 return (
                     hasMeaningfulWizardText(organisationDraft.name, ['Organisation'])
                     && hasMeaningfulWizardText(organisationDraft.code, ['ORG', 'Organisation'])
@@ -12753,26 +12757,23 @@ const InitialSetupWizard: React.FC<{
         if (visibleStep.id === 'org-name') {
             const organisationNameSample = String(organisationDraft.name || 'Organisation').trim() || 'Organisation';
             const organisationCodeSample = String(organisationDraft.code || 'ORG').trim() || 'ORG';
-            const normaliseSampleValue = (value: unknown) => String(value || '').trim().toUpperCase();
-            const activeOrganisationNameSample = normaliseSampleValue(activeOrganisation?.name || activeOrganisation?.code || 'Organisation');
-            const activeOrganisationCodeSample = normaliseSampleValue(activeOrganisation?.code || 'ORG');
-            const showOrganisationNameValue = organisationDraftDirtyRef.current
-                && normaliseSampleValue(organisationDraft.name) !== activeOrganisationNameSample
-                && normaliseSampleValue(organisationDraft.name) !== 'ORGANISATION';
-            const showOrganisationCodeValue = organisationDraftDirtyRef.current
-                && normaliseSampleValue(organisationDraft.code) !== activeOrganisationCodeSample
-                && normaliseSampleValue(organisationDraft.code) !== 'ORG';
             return promptShell(
                 <p>Start by entering the organisation name.</p>,
                 <div className="grid gap-3 md:grid-cols-2">
-                    {wizardField('Organisation name', showOrganisationNameValue ? organisationDraft.name : '', (value) => updateOrganisationDraft((draft: typeof organisationDraft) => ({
-                        ...draft,
-                        name: value,
-                        code: draft.code || value,
-                        level0Name: value || draft.level0Name,
-                        level0Options: value || draft.level0Options,
-                    }), 'field-edit:organisation-name'), undefined, organisationNameSample)}
-                    {wizardField('Short code', showOrganisationCodeValue ? organisationDraft.code : '', (value) => updateOrganisationDraft((draft: typeof organisationDraft) => ({ ...draft, code: value }), 'field-edit:organisation-code'), undefined, organisationCodeSample)}
+                    {wizardField('Organisation name', organisationNameFieldTouched ? organisationDraft.name : '', (value) => {
+                        setOrganisationNameFieldTouched(true);
+                        updateOrganisationDraft((draft: typeof organisationDraft) => ({
+                            ...draft,
+                            name: value,
+                            code: organisationCodeFieldTouched ? draft.code : '',
+                            level0Name: value || draft.level0Name,
+                            level0Options: value || draft.level0Options,
+                        }), 'field-edit:organisation-name');
+                    }, undefined, organisationNameSample)}
+                    {wizardField('Short code', organisationCodeFieldTouched ? organisationDraft.code : '', (value) => {
+                        setOrganisationCodeFieldTouched(true);
+                        updateOrganisationDraft((draft: typeof organisationDraft) => ({ ...draft, code: value }), 'field-edit:organisation-code');
+                    }, undefined, organisationCodeSample)}
                     {wizardField(
                         'Organisation levels before units',
                         String(normaliseOrganisationLevelCount(organisationDraft.organisationLevelCount, 3)),
