@@ -34,6 +34,36 @@ const getSelectedTestingUnit = (activeCompositeUnitCode = '', activeUnitCode = '
   normaliseUnitInput(activeCompositeUnitCode) || normaliseUnitInput(activeUnitCode)
 );
 
+const clearClientStateAfterTestDatabaseReset = () => {
+  if (typeof window === 'undefined') return;
+  const shouldClearStorageKey = (key: string) => (
+    key.startsWith('dfp_')
+    || key.startsWith('dfp-')
+    || key.startsWith('neo_')
+    || key.startsWith('neo-')
+    || key.startsWith('aircraft-availability-')
+    || key === 'systemFreezeState'
+    || key === 'lastBuildAnalysis'
+    || key === 'neoTaskingRequests'
+  );
+
+  try {
+    Object.keys(window.localStorage)
+      .filter(shouldClearStorageKey)
+      .forEach((key) => window.localStorage.removeItem(key));
+  } catch {
+    // Best-effort cache cleanup only; the database reset has already completed.
+  }
+
+  try {
+    Object.keys(window.sessionStorage)
+      .filter(shouldClearStorageKey)
+      .forEach((key) => window.sessionStorage.removeItem(key));
+  } catch {
+    // Best-effort cache cleanup only; the database reset has already completed.
+  }
+};
+
 const TestingFunctionsSettings: React.FC<TestingFunctionsSettingsProps> = ({
   onShowSuccess,
   activeUnitCode = '',
@@ -135,8 +165,7 @@ const TestingFunctionsSettings: React.FC<TestingFunctionsSettingsProps> = ({
         throw new Error(payload.message || 'The test database could not be reset.');
       }
 
-      localStorage.removeItem('dfp_session_token');
-      localStorage.removeItem('dfp_current_user');
+      clearClientStateAfterTestDatabaseReset();
       const successMessage = payload.message || 'Test database reset. Sign in again with the initial Organisation Administrator account.';
       setMessage(successMessage);
       setConfirmation('');

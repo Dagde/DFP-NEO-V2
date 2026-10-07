@@ -104252,6 +104252,18 @@ const REQUIRED_CONFIRMATION = "RESET DATABASE";
 const todayIso$1 = () => (/* @__PURE__ */ new Date()).toISOString().slice(0, 10);
 const normaliseUnitInput = (value) => String(value || "").trim().toUpperCase();
 const getSelectedTestingUnit = (activeCompositeUnitCode = "", activeUnitCode = "") => normaliseUnitInput(activeCompositeUnitCode) || normaliseUnitInput(activeUnitCode);
+const clearClientStateAfterTestDatabaseReset = () => {
+  if (typeof window === "undefined") return;
+  const shouldClearStorageKey = (key) => key.startsWith("dfp_") || key.startsWith("dfp-") || key.startsWith("neo_") || key.startsWith("neo-") || key.startsWith("aircraft-availability-") || key === "systemFreezeState" || key === "lastBuildAnalysis" || key === "neoTaskingRequests";
+  try {
+    Object.keys(window.localStorage).filter(shouldClearStorageKey).forEach((key) => window.localStorage.removeItem(key));
+  } catch {
+  }
+  try {
+    Object.keys(window.sessionStorage).filter(shouldClearStorageKey).forEach((key) => window.sessionStorage.removeItem(key));
+  } catch {
+  }
+};
 const TestingFunctionsSettings = ({
   onShowSuccess,
   activeUnitCode = "",
@@ -104333,8 +104345,7 @@ const TestingFunctionsSettings = ({
       if (!response.ok) {
         throw new Error(payload.message || "The test database could not be reset.");
       }
-      localStorage.removeItem("dfp_session_token");
-      localStorage.removeItem("dfp_current_user");
+      clearClientStateAfterTestDatabaseReset();
       const successMessage = payload.message || "Test database reset. Sign in again with the initial Organisation Administrator account.";
       setMessage(successMessage);
       setConfirmation("");
