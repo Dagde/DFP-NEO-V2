@@ -40331,14 +40331,14 @@ const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, lo
   };
   const renderAlternateCrewCompositionHeader = () => {
     const rows = getWizardAlternateCrewDraftRowsForSave();
-    return /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "rounded-lg border border-slate-300 bg-white p-3", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex flex-wrap items-start justify-between gap-3", children: [
+    return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex flex-wrap items-start justify-between gap-3", children: [
       /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
         /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: wizardLabelClass, children: "Other approved crew compositions" }),
         /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-1 text-xs font-semibold leading-5 text-slate-600", children: "Add one card for each alternate crew that is allowed. These become Alt1, Alt2, Alt3 in Crew dropdowns." }),
         rows.length === 0 ? /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-1 text-xs font-semibold leading-5 text-slate-500", children: "Leave this blank if Primary crew is the only approved crew mix." }) : null
       ] }),
       /* @__PURE__ */ jsxRuntimeExports.jsx("button", { type: "button", className: wizardGreenButtonClass, onClick: addAlternateCrewCompositionDraft, children: "Add approved crew" })
-    ] }) });
+    ] });
   };
   const renderAlternateCrewCompositionCards = () => {
     const rows = getWizardAlternateCrewDraftRowsForSave();

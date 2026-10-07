@@ -9619,23 +9619,21 @@ const InitialSetupWizard: React.FC<{
     const renderAlternateCrewCompositionHeader = () => {
         const rows = getWizardAlternateCrewDraftRowsForSave();
         return (
-            <div className="rounded-lg border border-slate-300 bg-white p-3">
-                <div className="flex flex-wrap items-start justify-between gap-3">
-                    <div>
-                        <span className={wizardLabelClass}>Other approved crew compositions</span>
-                        <p className="mt-1 text-xs font-semibold leading-5 text-slate-600">
-                            Add one card for each alternate crew that is allowed. These become Alt1, Alt2, Alt3 in Crew dropdowns.
+            <div className="flex flex-wrap items-start justify-between gap-3">
+                <div>
+                    <span className={wizardLabelClass}>Other approved crew compositions</span>
+                    <p className="mt-1 text-xs font-semibold leading-5 text-slate-600">
+                        Add one card for each alternate crew that is allowed. These become Alt1, Alt2, Alt3 in Crew dropdowns.
+                    </p>
+                    {rows.length === 0 ? (
+                        <p className="mt-1 text-xs font-semibold leading-5 text-slate-500">
+                            Leave this blank if Primary crew is the only approved crew mix.
                         </p>
-                        {rows.length === 0 ? (
-                            <p className="mt-1 text-xs font-semibold leading-5 text-slate-500">
-                                Leave this blank if Primary crew is the only approved crew mix.
-                            </p>
-                        ) : null}
-                    </div>
-                    <button type="button" className={wizardGreenButtonClass} onClick={addAlternateCrewCompositionDraft}>
-                        Add approved crew
-                    </button>
+                    ) : null}
                 </div>
+                <button type="button" className={wizardGreenButtonClass} onClick={addAlternateCrewCompositionDraft}>
+                    Add approved crew
+                </button>
             </div>
         );
     };
