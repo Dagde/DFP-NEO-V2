@@ -15455,7 +15455,11 @@ const DraftField = ({ inputId, label, labelNoWrap = false, value, disabled, onCo
     const nextValue = limitValue(draft);
     setFocused(false);
     setDraft(nextValue);
-    if (placeholderOnly && !nextValue.trim()) return;
+    if (placeholderOnly) {
+      if (!nextValue.trim()) return;
+      onCommit(nextValue);
+      return;
+    }
     if (nextValue !== storedValue) onCommit(nextValue);
   };
 
