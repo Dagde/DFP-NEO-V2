@@ -31144,18 +31144,21 @@ const InfoHint = ({ text }) => {
       className: "relative inline-flex h-4 w-4 shrink-0 cursor-help items-center justify-center rounded-full border border-cyan-400/35 bg-gray-950/20 text-cyan-100/60 normal-case outline-none transition-colors hover:border-cyan-300/60 hover:text-cyan-50 focus-visible:border-cyan-200 focus-visible:text-cyan-50",
       children: [
         /* @__PURE__ */ jsxRuntimeExports.jsx("span", { "aria-hidden": "true", className: "font-serif text-[11px] font-bold italic leading-none normal-case", children: "i" }),
-        position ? /* @__PURE__ */ jsxRuntimeExports.jsx(
-          "span",
-          {
-            className: "pointer-events-none fixed z-[260] whitespace-pre-line rounded border border-cyan-500/30 bg-gray-950 p-3 text-left text-xs font-normal normal-case leading-relaxed tracking-normal text-gray-100 shadow-xl",
-            style: {
-              left: `${position.left}px`,
-              top: `${position.top}px`,
-              transform: position.placement === "above" ? "translateY(-100%)" : void 0,
-              width: "min(28rem, calc(100vw - 1.5rem))"
-            },
-            children: text
-          }
+        position && typeof document !== "undefined" ? reactDomExports.createPortal(
+          /* @__PURE__ */ jsxRuntimeExports.jsx(
+            "span",
+            {
+              className: "pointer-events-none fixed z-[260] whitespace-pre-line rounded border border-cyan-500/30 bg-gray-950 p-3 text-left text-xs font-normal normal-case leading-relaxed tracking-normal text-gray-100 shadow-xl",
+              style: {
+                left: `${position.left}px`,
+                top: `${position.top}px`,
+                transform: position.placement === "above" ? "translateY(-100%)" : void 0,
+                width: "min(28rem, calc(100vw - 1.5rem))"
+              },
+              children: text
+            }
+          ),
+          document.body
         ) : null
       ]
     }

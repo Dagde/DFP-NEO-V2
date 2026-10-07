@@ -1,4 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { TrashIcon } from '@heroicons/react/24/outline';
 import {
   DEFAULT_PLATFORM_PERMISSION_PROFILES,
@@ -14822,7 +14823,7 @@ const InfoHint = ({ text }: { text: string }) => {
       className="relative inline-flex h-4 w-4 shrink-0 cursor-help items-center justify-center rounded-full border border-cyan-400/35 bg-gray-950/20 text-cyan-100/60 normal-case outline-none transition-colors hover:border-cyan-300/60 hover:text-cyan-50 focus-visible:border-cyan-200 focus-visible:text-cyan-50"
     >
       <span aria-hidden="true" className="font-serif text-[11px] font-bold italic leading-none normal-case">i</span>
-      {position ? (
+      {position && typeof document !== 'undefined' ? createPortal(
         <span
           className="pointer-events-none fixed z-[260] whitespace-pre-line rounded border border-cyan-500/30 bg-gray-950 p-3 text-left text-xs font-normal normal-case leading-relaxed tracking-normal text-gray-100 shadow-xl"
           style={{
@@ -14833,7 +14834,8 @@ const InfoHint = ({ text }: { text: string }) => {
           }}
         >
           {text}
-        </span>
+        </span>,
+        document.body,
       ) : null}
     </span>
   );
