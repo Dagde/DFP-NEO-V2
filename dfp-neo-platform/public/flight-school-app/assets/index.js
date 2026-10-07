@@ -168128,15 +168128,15 @@ Do you want to replace the existing entry?`,
         }
       )
     ] }) }),
-    isAuthenticated && ["Program Schedule", "InstructorSchedule", "TraineeSchedule", "NextDayBuild", "NextDayInstructorSchedule", "NextDayTraineeSchedule"].includes(activeView) && dfpSnapshotLoadState.date === date && ["loading", "cached", "retrying", "error"].includes(dfpSnapshotLoadState.status) && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "fixed bottom-[188px] right-[18px] z-[50] flex w-[75px] flex-col items-stretch gap-px rounded border border-gray-700/50 bg-gray-900/75 px-1 py-1 text-center text-[10px] text-gray-400 shadow-sm backdrop-blur-sm select-none", children: [
+    isAuthenticated && ["Program Schedule", "InstructorSchedule", "TraineeSchedule", "NextDayBuild", "NextDayInstructorSchedule", "NextDayTraineeSchedule"].includes(activeView) && dfpSnapshotLoadState.date === date && ["loading", "loaded", "cached", "retrying", "error"].includes(dfpSnapshotLoadState.status) && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "fixed bottom-[188px] right-[18px] z-[50] flex w-[75px] flex-col items-stretch gap-px rounded border border-gray-700/50 bg-gray-900/75 px-1 py-1 text-center text-[10px] text-gray-400 shadow-sm backdrop-blur-sm select-none", children: [
       /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center justify-center gap-1", title: dfpSnapshotLoadState.message, children: [
         /* @__PURE__ */ jsxRuntimeExports.jsx(
           "span",
           {
-            className: `h-1.5 w-1.5 rounded-full ${dfpSnapshotLoadState.status === "error" ? "bg-red-400" : dfpSnapshotLoadState.status === "cached" ? "bg-amber-400" : "bg-blue-400 animate-pulse"}`
+            className: `h-1.5 w-1.5 rounded-full ${dfpSnapshotLoadState.status === "error" ? "bg-red-400" : dfpSnapshotLoadState.status === "cached" ? "bg-amber-400" : dfpSnapshotLoadState.status === "loaded" ? "bg-green-400" : "bg-blue-400 animate-pulse"}`
           }
         ),
-        /* @__PURE__ */ jsxRuntimeExports.jsx("span", { children: dfpSnapshotLoadState.status === "error" ? "DFP Error" : dfpSnapshotLoadState.status === "cached" ? "DFP Cache" : "DFP Load" })
+        /* @__PURE__ */ jsxRuntimeExports.jsx("span", { children: dfpSnapshotLoadState.status === "error" ? "DFP Error" : dfpSnapshotLoadState.status === "cached" ? "DFP Cache" : dfpSnapshotLoadState.status === "loaded" ? "DFP Done" : "DFP Load" })
       ] }),
       dfpSnapshotLoadState.status === "error" && /* @__PURE__ */ jsxRuntimeExports.jsx(
         "button",

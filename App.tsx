@@ -61230,28 +61230,32 @@ appliedUpdates.forEach(update => {
 	        )}
 
         {isAuthenticated &&
-            ['Program Schedule', 'InstructorSchedule', 'TraineeSchedule', 'NextDayBuild', 'NextDayInstructorSchedule', 'NextDayTraineeSchedule'].includes(activeView) &&
-            dfpSnapshotLoadState.date === date &&
-            ['loading', 'cached', 'retrying', 'error'].includes(dfpSnapshotLoadState.status) && (
-                <div className="fixed bottom-[188px] right-[18px] z-[50] flex w-[75px] flex-col items-stretch gap-px rounded border border-gray-700/50 bg-gray-900/75 px-1 py-1 text-center text-[10px] text-gray-400 shadow-sm backdrop-blur-sm select-none">
-                    <div className="flex items-center justify-center gap-1" title={dfpSnapshotLoadState.message}>
-                        <span
-                            className={`h-1.5 w-1.5 rounded-full ${
-                                dfpSnapshotLoadState.status === 'error'
-                                    ? 'bg-red-400'
-                                    : dfpSnapshotLoadState.status === 'cached'
-                                        ? 'bg-amber-400'
-                                        : 'bg-blue-400 animate-pulse'
-                            }`}
-                        ></span>
-                        <span>
-                            {dfpSnapshotLoadState.status === 'error'
-                                ? 'DFP Error'
-                                : dfpSnapshotLoadState.status === 'cached'
-                                    ? 'DFP Cache'
-                                    : 'DFP Load'}
-                        </span>
-                    </div>
+	            ['Program Schedule', 'InstructorSchedule', 'TraineeSchedule', 'NextDayBuild', 'NextDayInstructorSchedule', 'NextDayTraineeSchedule'].includes(activeView) &&
+	            dfpSnapshotLoadState.date === date &&
+	            ['loading', 'loaded', 'cached', 'retrying', 'error'].includes(dfpSnapshotLoadState.status) && (
+	                <div className="fixed bottom-[188px] right-[18px] z-[50] flex w-[75px] flex-col items-stretch gap-px rounded border border-gray-700/50 bg-gray-900/75 px-1 py-1 text-center text-[10px] text-gray-400 shadow-sm backdrop-blur-sm select-none">
+	                    <div className="flex items-center justify-center gap-1" title={dfpSnapshotLoadState.message}>
+	                        <span
+	                            className={`h-1.5 w-1.5 rounded-full ${
+	                                dfpSnapshotLoadState.status === 'error'
+	                                    ? 'bg-red-400'
+	                                    : dfpSnapshotLoadState.status === 'cached'
+	                                        ? 'bg-amber-400'
+                                            : dfpSnapshotLoadState.status === 'loaded'
+                                                ? 'bg-green-400'
+	                                            : 'bg-blue-400 animate-pulse'
+	                            }`}
+	                        ></span>
+	                        <span>
+	                            {dfpSnapshotLoadState.status === 'error'
+	                                ? 'DFP Error'
+	                                : dfpSnapshotLoadState.status === 'cached'
+	                                    ? 'DFP Cache'
+                                        : dfpSnapshotLoadState.status === 'loaded'
+                                            ? 'DFP Done'
+	                                        : 'DFP Load'}
+	                        </span>
+	                    </div>
 	                    {dfpSnapshotLoadState.status === 'error' && (
 	                        <button
 	                            type="button"
