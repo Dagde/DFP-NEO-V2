@@ -7240,7 +7240,7 @@ const forfeitTrainingReportFollowUpForRpl = (item) => {
     trainingReportBaseNotes: void 0
   };
 };
-const DEFAULT_SCT_TERMINOLOGY$1 = {
+const DEFAULT_SCT_TERMINOLOGY = {
   shortLabel: "CT",
   longLabel: "Continuation Training"
 };
@@ -7249,10 +7249,10 @@ const SCT_LONG_LABEL_MAX_LENGTH = 40;
 const hasOwn = (input, key) => Object.prototype.hasOwnProperty.call(input, key);
 const cleanTerminologyLabel = (value, maxLength) => String(value ?? "").trim().slice(0, maxLength);
 const normaliseSctTerminology = (input) => {
-  if (!input || typeof input !== "object") return DEFAULT_SCT_TERMINOLOGY$1;
+  if (!input || typeof input !== "object") return DEFAULT_SCT_TERMINOLOGY;
   return {
-    shortLabel: hasOwn(input, "shortLabel") ? cleanTerminologyLabel(input.shortLabel, SCT_SHORT_LABEL_MAX_LENGTH) : DEFAULT_SCT_TERMINOLOGY$1.shortLabel,
-    longLabel: hasOwn(input, "longLabel") ? cleanTerminologyLabel(input.longLabel, SCT_LONG_LABEL_MAX_LENGTH) : DEFAULT_SCT_TERMINOLOGY$1.longLabel
+    shortLabel: hasOwn(input, "shortLabel") ? cleanTerminologyLabel(input.shortLabel, SCT_SHORT_LABEL_MAX_LENGTH) : DEFAULT_SCT_TERMINOLOGY.shortLabel,
+    longLabel: hasOwn(input, "longLabel") ? cleanTerminologyLabel(input.longLabel, SCT_LONG_LABEL_MAX_LENGTH) : DEFAULT_SCT_TERMINOLOGY.longLabel
   };
 };
 const normaliseUnitCode$4 = (value) => String(value || "").trim().toUpperCase();
@@ -16875,7 +16875,7 @@ const SettingsView = ({
   dayFlyingStart = "08:00",
   dayFlyingEnd = "17:00",
   resourceDisplayNames: resourceDisplayNames2 = DEFAULT_RESOURCE_DISPLAY_NAMES,
-  sctTerminology = DEFAULT_SCT_TERMINOLOGY$1,
+  sctTerminology = DEFAULT_SCT_TERMINOLOGY,
   personnelDisplaySettings = DEFAULT_PERSONNEL_DISPLAY_SETTINGS,
   trainingReportDisplayName = "Training Report",
   emergencyFreezeAuthority,
@@ -21146,6 +21146,19 @@ const PlatformConfigurationSettings = ({
   });
   const linkedInstructorQualificationLabel = linkedInstructorQualification ? getStaffQualificationDisplayLabel(linkedInstructorQualification) : "No linked instructor qualification configured";
   const linkedInstructorQualificationInputId = linkedInstructorQualification ? `qualification-name-${String(linkedInstructorQualification.id || "").replace(/[^a-zA-Z0-9_-]/g, "-")}` : "";
+  const getWizardSamplePlaceholderProps = (value, sample) => {
+    const current = String(value || "").trim();
+    const placeholder = String(sample || "").trim();
+    const usePlaceholder = wizardEditMode && Boolean(placeholder) && current.localeCompare(placeholder, void 0, { sensitivity: "accent" }) === 0;
+    return {
+      placeholder: usePlaceholder ? placeholder : void 0,
+      placeholderOnly: usePlaceholder
+    };
+  };
+  const getQualificationSamplePlaceholderProps = (entry, field) => {
+    const defaultEntry = DEFAULT_STAFF_QUALIFICATIONS.qualifications.find((candidate) => candidate.id === entry.id);
+    return getWizardSamplePlaceholderProps(entry[field], defaultEntry?.[field] || "");
+  };
   const unitCallsignSettings = normaliseUnitCallsignSettings(
     activeSettingsUnitSettings.unitCallsignSettings || primaryOrganisationSettings.unitCallsignSettings || null
   );
@@ -29670,7 +29683,8 @@ This removes them from DFP Resource Rows. Press Save in this section to apply th
                     value: personnelDisplaySettings.instructorLabel,
                     disabled: !canEditRankTerminology,
                     onCommit: (value) => updatePersonnelDisplaySettings({ instructorLabel: value }),
-                    info: "The word shown when a person is performing instructor duty. Example: Instructor, Training Captain, Coach."
+                    info: "The word shown when a person is performing instructor duty. Example: Instructor, Training Captain, Coach.",
+                    ...getWizardSamplePlaceholderProps(personnelDisplaySettings.instructorLabel, DEFAULT_PERSONNEL_DISPLAY_SETTINGS.instructorLabel)
                   }
                 ),
                 /* @__PURE__ */ jsxRuntimeExports.jsx(
@@ -29690,7 +29704,8 @@ This removes them from DFP Resource Rows. Press Save in this section to apply th
                     value: personnelDisplaySettings.simIpDisplayLabel,
                     disabled: !canEditRankTerminology,
                     onCommit: (value) => updatePersonnelDisplaySettings({ simIpDisplayLabel: value }),
-                    info: "The label for civilian contractor staff who can perform instructional duties in simulator devices. Example: Simulator Contractor Staff, Contract Simulator Instructor."
+                    info: "The label for civilian contractor staff who can perform instructional duties in simulator devices. Example: Simulator Contractor Staff, Contract Simulator Instructor.",
+                    ...getWizardSamplePlaceholderProps(personnelDisplaySettings.simIpDisplayLabel, DEFAULT_PERSONNEL_DISPLAY_SETTINGS.simIpDisplayLabel)
                   }
                 ),
                 /* @__PURE__ */ jsxRuntimeExports.jsx(
@@ -29700,7 +29715,8 @@ This removes them from DFP Resource Rows. Press Save in this section to apply th
                     value: personnelDisplaySettings.courseCommanderLabel,
                     disabled: !canEditRankTerminology || !personnelDisplaySettings.courseLeadershipEnabled,
                     onCommit: (value) => updatePersonnelDisplaySettings({ courseCommanderLabel: value }),
-                    info: "The label for the staff member who leads or manages a course. Your organisation may call this person the Course Commander, Course Lead or another local title."
+                    info: "The label for the staff member who leads or manages a course. Your organisation may call this person the Course Commander, Course Lead or another local title.",
+                    ...getWizardSamplePlaceholderProps(personnelDisplaySettings.courseCommanderLabel, DEFAULT_PERSONNEL_DISPLAY_SETTINGS.courseCommanderLabel)
                   }
                 ),
                 /* @__PURE__ */ jsxRuntimeExports.jsx(
@@ -29710,7 +29726,8 @@ This removes them from DFP Resource Rows. Press Save in this section to apply th
                     value: personnelDisplaySettings.deputyCourseCommanderLabel,
                     disabled: !canEditRankTerminology || !personnelDisplaySettings.courseLeadershipEnabled,
                     onCommit: (value) => updatePersonnelDisplaySettings({ deputyCourseCommanderLabel: value }),
-                    info: "The label for the staff member who assists the course lead or acts as the deputy course lead. Your organisation may call this person the Deputy Course Commander, Deputy Course Lead or Course 2IC."
+                    info: "The label for the staff member who assists the course lead or acts as the deputy course lead. Your organisation may call this person the Deputy Course Commander, Deputy Course Lead or Course 2IC.",
+                    ...getWizardSamplePlaceholderProps(personnelDisplaySettings.deputyCourseCommanderLabel, DEFAULT_PERSONNEL_DISPLAY_SETTINGS.deputyCourseCommanderLabel)
                   }
                 )
               ] })
@@ -29876,7 +29893,8 @@ This removes them from DFP Resource Rows. Press Save in this section to apply th
                     disabled: !canEditRankTerminology,
                     maxLength: TRAINING_REPORT_NAME_MAX_LENGTH,
                     onCommit: (value) => updateTrainingReportTerminology({ name: value }),
-                    info: "The name users see for a completed assessment or training report. Example: Training Report, Grade Form, Assessment."
+                    info: "The name users see for a completed assessment or training report. Example: Training Report, Grade Form, Assessment.",
+                    ...getWizardSamplePlaceholderProps(trainingReportTerminology.name, DEFAULT_TRAINING_REPORT_TERMINOLOGY.name)
                   }
                 ),
                 /* @__PURE__ */ jsxRuntimeExports.jsx(
@@ -29887,7 +29905,8 @@ This removes them from DFP Resource Rows. Press Save in this section to apply th
                     disabled: !canEditRankTerminology,
                     maxLength: SCT_SHORT_LABEL_MAX_LENGTH,
                     onCommit: (value) => updateSctTerminology({ shortLabel: value }),
-                    info: "The short label for staff continuation training events. Example: CT, SCT."
+                    info: "The short label for staff continuation training events. Example: CT, SCT.",
+                    ...getWizardSamplePlaceholderProps(sctTerminology.shortLabel, DEFAULT_SCT_TERMINOLOGY.shortLabel)
                   }
                 ),
                 /* @__PURE__ */ jsxRuntimeExports.jsx(
@@ -29898,7 +29917,8 @@ This removes them from DFP Resource Rows. Press Save in this section to apply th
                     disabled: !canEditRankTerminology,
                     maxLength: SCT_LONG_LABEL_MAX_LENGTH,
                     onCommit: (value) => updateSctTerminology({ longLabel: value }),
-                    info: "The full name for staff continuation training events. Example: Continuation Training."
+                    info: "The full name for staff continuation training events. Example: Continuation Training.",
+                    ...getWizardSamplePlaceholderProps(sctTerminology.longLabel, DEFAULT_SCT_TERMINOLOGY.longLabel)
                   }
                 )
               ] })
@@ -29942,7 +29962,8 @@ This removes them from DFP Resource Rows. Press Save in this section to apply th
                     value: personnelDisplaySettings.instructorLabel,
                     disabled: !canEditRankTerminology,
                     onCommit: (value) => updatePersonnelDisplaySettings({ instructorLabel: value }),
-                    info: `The instructor display term is the duty label users see on schedules, reports and event details. The qualification label is what appears on a person's profile as something they hold. They are linked, but they are not automatically the same because one describes the duty being performed and the other describes the person's qualification. Example: a profile can show Qualification: ${linkedInstructorQualificationLabel}, while a report says ${personnelDisplaySettings.instructorLabel || "Instructor"}: Surname, First. If your organisation wants both labels to match, also rename the linked qualification in Personnel Qualifications.`
+                    info: `The instructor display term is the duty label users see on schedules, reports and event details. The qualification label is what appears on a person's profile as something they hold. They are linked, but they are not automatically the same because one describes the duty being performed and the other describes the person's qualification. Example: a profile can show Qualification: ${linkedInstructorQualificationLabel}, while a report says ${personnelDisplaySettings.instructorLabel || "Instructor"}: Surname, First. If your organisation wants both labels to match, also rename the linked qualification in Personnel Qualifications.`,
+                    ...getWizardSamplePlaceholderProps(personnelDisplaySettings.instructorLabel, DEFAULT_PERSONNEL_DISPLAY_SETTINGS.instructorLabel)
                   }
                 ),
                 /* @__PURE__ */ jsxRuntimeExports.jsxs("p", { className: "mt-1 text-xs leading-relaxed text-cyan-100/75", children: [
@@ -30022,7 +30043,8 @@ This removes them from DFP Resource Rows. Press Save in this section to apply th
                     value: personnelDisplaySettings.courseCommanderLabel,
                     disabled: !canEditRankTerminology || !personnelDisplaySettings.courseLeadershipEnabled,
                     onCommit: (value) => updatePersonnelDisplaySettings({ courseCommanderLabel: value }),
-                    info: "The label for the staff member who leads or manages a course. Your organisation may call this person the Course Commander, Course Lead or another local title."
+                    info: "The label for the staff member who leads or manages a course. Your organisation may call this person the Course Commander, Course Lead or another local title.",
+                    ...getWizardSamplePlaceholderProps(personnelDisplaySettings.courseCommanderLabel, DEFAULT_PERSONNEL_DISPLAY_SETTINGS.courseCommanderLabel)
                   }
                 ),
                 /* @__PURE__ */ jsxRuntimeExports.jsx(
@@ -30032,7 +30054,8 @@ This removes them from DFP Resource Rows. Press Save in this section to apply th
                     value: personnelDisplaySettings.deputyCourseCommanderLabel,
                     disabled: !canEditRankTerminology || !personnelDisplaySettings.courseLeadershipEnabled,
                     onCommit: (value) => updatePersonnelDisplaySettings({ deputyCourseCommanderLabel: value }),
-                    info: "The label for the staff member who assists the course lead or acts as the deputy course lead. Your organisation may call this person the Deputy Course Commander, Deputy Course Lead or Course 2IC."
+                    info: "The label for the staff member who assists the course lead or acts as the deputy course lead. Your organisation may call this person the Deputy Course Commander, Deputy Course Lead or Course 2IC.",
+                    ...getWizardSamplePlaceholderProps(personnelDisplaySettings.deputyCourseCommanderLabel, DEFAULT_PERSONNEL_DISPLAY_SETTINGS.deputyCourseCommanderLabel)
                   }
                 )
               ] })
@@ -30078,7 +30101,8 @@ This removes them from DFP Resource Rows. Press Save in this section to apply th
                     value: personnelDisplaySettings.simIpDisplayLabel,
                     disabled: !canEditRankTerminology || !personnelDisplaySettings.simIpDisplayEnabled,
                     onCommit: (value) => updatePersonnelDisplaySettings({ simIpDisplayLabel: value }),
-                    info: "The staff type name users see in profiles, staff lists and scheduling views. Examples: Contractor Staff, Contract Instructor, Simulator Instructor."
+                    info: "The staff type name users see in profiles, staff lists and scheduling views. Examples: Contractor Staff, Contract Instructor, Simulator Instructor.",
+                    ...getWizardSamplePlaceholderProps(personnelDisplaySettings.simIpDisplayLabel, DEFAULT_PERSONNEL_DISPLAY_SETTINGS.simIpDisplayLabel)
                   }
                 ),
                 /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded border border-gray-700 bg-gray-950/70 p-3", children: [
@@ -30133,7 +30157,8 @@ This removes them from DFP Resource Rows. Press Save in this section to apply th
                   disabled: !canEditRankTerminology,
                   maxLength: TRAINING_REPORT_NAME_MAX_LENGTH,
                   onCommit: (value) => updateTrainingReportTerminology({ name: value }),
-                  info: `The organisation-specific report name used in spaces such as Performance History type pills. Maximum ${TRAINING_REPORT_NAME_MAX_LENGTH} characters. Default: Training Report. Examples: Training Report, Grade Form, Assessment.`
+                  info: `The organisation-specific report name used in spaces such as Performance History type pills. Maximum ${TRAINING_REPORT_NAME_MAX_LENGTH} characters. Default: Training Report. Examples: Training Report, Grade Form, Assessment.`,
+                  ...getWizardSamplePlaceholderProps(trainingReportTerminology.name, DEFAULT_TRAINING_REPORT_TERMINOLOGY.name)
                 }
               ),
               /* @__PURE__ */ jsxRuntimeExports.jsx(
@@ -30144,7 +30169,8 @@ This removes them from DFP Resource Rows. Press Save in this section to apply th
                   disabled: !canEditRankTerminology,
                   maxLength: SCT_SHORT_LABEL_MAX_LENGTH,
                   onCommit: (value) => updateSctTerminology({ shortLabel: value }),
-                  info: "The display label for staff continuation training flights and simulator events. You may rename it to match your organisation's terminology. Changing this label only affects what users see; it does not change the underlying event type or saved event codes."
+                  info: "The display label for staff continuation training flights and simulator events. You may rename it to match your organisation's terminology. Changing this label only affects what users see; it does not change the underlying event type or saved event codes.",
+                  ...getWizardSamplePlaceholderProps(sctTerminology.shortLabel, DEFAULT_SCT_TERMINOLOGY.shortLabel)
                 }
               ),
               /* @__PURE__ */ jsxRuntimeExports.jsx(
@@ -30155,7 +30181,8 @@ This removes them from DFP Resource Rows. Press Save in this section to apply th
                   disabled: !canEditRankTerminology,
                   maxLength: SCT_LONG_LABEL_MAX_LENGTH,
                   onCommit: (value) => updateSctTerminology({ longLabel: value }),
-                  info: `The full display label for staff continuation training flights and simulator events. You may rename it to match your organisation's terminology. Changing this label only affects what users see; it does not change the underlying event type or saved event codes. Maximum ${SCT_LONG_LABEL_MAX_LENGTH} characters.`
+                  info: `The full display label for staff continuation training flights and simulator events. You may rename it to match your organisation's terminology. Changing this label only affects what users see; it does not change the underlying event type or saved event codes. Maximum ${SCT_LONG_LABEL_MAX_LENGTH} characters.`,
+                  ...getWizardSamplePlaceholderProps(sctTerminology.longLabel, DEFAULT_SCT_TERMINOLOGY.longLabel)
                 }
               )
             ] }),
@@ -30275,7 +30302,8 @@ This removes them from DFP Resource Rows. Press Save in this section to apply th
                     value: entry.name,
                     disabled: !canEditRankTerminology,
                     onCommit: (value) => updateStaffQualificationEntry(entry.id, { name: value }),
-                    info: "The full qualification name shown in personnel profiles."
+                    info: "The full qualification name shown in personnel profiles.",
+                    ...getQualificationSamplePlaceholderProps(entry, "name")
                   }
                 ),
                 /* @__PURE__ */ jsxRuntimeExports.jsx(
@@ -30285,7 +30313,8 @@ This removes them from DFP Resource Rows. Press Save in this section to apply th
                     value: entry.code,
                     disabled: !canEditRankTerminology,
                     onCommit: (value) => updateStaffQualificationEntry(entry.id, { code: value }),
-                    info: "Short code accepted by bulk upload. Examples: PIC, Crew Commander."
+                    info: "Short code accepted by bulk upload. Examples: PIC, Crew Commander.",
+                    ...getQualificationSamplePlaceholderProps(entry, "code")
                   }
                 ),
                 /* @__PURE__ */ jsxRuntimeExports.jsx(
@@ -54784,7 +54813,7 @@ const TraineeProfileFlyout = ({
   staffQualificationCatalogue,
   operationalModel = "flight_school",
   crewPositionTerminology,
-  sctTerminology = DEFAULT_SCT_TERMINOLOGY$1,
+  sctTerminology = DEFAULT_SCT_TERMINOLOGY,
   canUsePlatformPermission,
   onOpenCurrentProfile
 }) => {
@@ -60938,7 +60967,7 @@ const convertTimeToDecimal = (timeStr) => {
   if (isNaN(hours) || isNaN(minutes)) return 0;
   return hours + minutes / 60;
 };
-const EventDetailModal = ({ event, onClose, onSave, onDeleteRequest, isEditingDefault = false, instructors, trainees, syllabus, syllabusDetails, highlightedField, school, traineesData, instructorsData, courseColors, onNavigateToHateSheet, onNavigateToSyllabus, onOpenTrainingReport, trainingReportDisplayName = "Training Report", onOpenStaffTrainingReport, onOpenAuth, flightAuthorisationRequired = true, onOpenPostFlight, onOpenPreFlightNotes, isConflict, onNeoClick, traineeLMPs, oracleContextForModal, sctRequests = [], sctEvents = [], eventsForDate = [], onScoresCreated, publishedSchedules = {}, nextDayBuildEvents = [], activeView = "", isAddingTile = false, formationCallsigns = [], currentLocation = "", onVisualAdjustStart, onVisualAdjustEnd, onSaveTrainingReportAssessment, cancellationCodes = [], onCancelEvent, onRestoreEvent, onSendAlert, canSendAlert = false, alertData = null, baselineEvent = null, onClearAlert, onEditFixedCrewTile, resourceDisplayNames: resourceDisplayNames2 = DEFAULT_RESOURCE_DISPLAY_NAMES, aircraftNumberSettings = DEFAULT_AIRCRAFT_NUMBER_SETTINGS, aircraftConfigurationDefinitions = [], aircraftCrewComposition, crewPositionTerminology, operationalModel, activeUnitCode = "", staffQualificationCatalogue, unitCallsignSettings, personnelDisplaySettings, sctTerminology = DEFAULT_SCT_TERMINOLOGY$1, isReadOnly = false, openDeleteChoice = false }) => {
+const EventDetailModal = ({ event, onClose, onSave, onDeleteRequest, isEditingDefault = false, instructors, trainees, syllabus, syllabusDetails, highlightedField, school, traineesData, instructorsData, courseColors, onNavigateToHateSheet, onNavigateToSyllabus, onOpenTrainingReport, trainingReportDisplayName = "Training Report", onOpenStaffTrainingReport, onOpenAuth, flightAuthorisationRequired = true, onOpenPostFlight, onOpenPreFlightNotes, isConflict, onNeoClick, traineeLMPs, oracleContextForModal, sctRequests = [], sctEvents = [], eventsForDate = [], onScoresCreated, publishedSchedules = {}, nextDayBuildEvents = [], activeView = "", isAddingTile = false, formationCallsigns = [], currentLocation = "", onVisualAdjustStart, onVisualAdjustEnd, onSaveTrainingReportAssessment, cancellationCodes = [], onCancelEvent, onRestoreEvent, onSendAlert, canSendAlert = false, alertData = null, baselineEvent = null, onClearAlert, onEditFixedCrewTile, resourceDisplayNames: resourceDisplayNames2 = DEFAULT_RESOURCE_DISPLAY_NAMES, aircraftNumberSettings = DEFAULT_AIRCRAFT_NUMBER_SETTINGS, aircraftConfigurationDefinitions = [], aircraftCrewComposition, crewPositionTerminology, operationalModel, activeUnitCode = "", staffQualificationCatalogue, unitCallsignSettings, personnelDisplaySettings, sctTerminology = DEFAULT_SCT_TERMINOLOGY, isReadOnly = false, openDeleteChoice = false }) => {
   const { isFrozen, allowedActions: freezeAllowedActions } = useSystemFreeze();
   const [isEditing, setIsEditing] = reactExports.useState(isReadOnly ? false : isEditingDefault);
   const [localHighlight, setLocalHighlight] = reactExports.useState(highlightedField);
@@ -64985,7 +65014,7 @@ const AddFlightTileModal = ({
     personDropdownColumnState.clear();
   }, []);
   const resolvedSctTerminology = reactExports.useMemo(
-    () => normaliseSctTerminology(sctTerminology || DEFAULT_SCT_TERMINOLOGY$1),
+    () => normaliseSctTerminology(sctTerminology || DEFAULT_SCT_TERMINOLOGY),
     [sctTerminology]
   );
   const sctShortLabel = resolvedSctTerminology.shortLabel;
@@ -70270,7 +70299,7 @@ const MyDashboard = ({
   staffQualificationCatalogue,
   onUnreadMessageCountChange,
   crewPositionTerminology,
-  sctTerminology = DEFAULT_SCT_TERMINOLOGY$1,
+  sctTerminology = DEFAULT_SCT_TERMINOLOGY,
   currentLocationCode,
   onLogout,
   onShowChangePassword
@@ -90288,7 +90317,7 @@ const InstructorProfileFlyout = ({
   platformConfig = null,
   crewPositionTerminology,
   staffQualificationCatalogue,
-  sctTerminology = DEFAULT_SCT_TERMINOLOGY$1,
+  sctTerminology = DEFAULT_SCT_TERMINOLOGY,
   trainingReportDisplayName = "Training Report",
   trainingReportStatusFieldLabel: trainingReportStatusFieldLabel2 = "Mission Status",
   canUsePlatformPermission,
@@ -106471,8 +106500,8 @@ const SettingsViewWithMenu = (props) => {
   const [auditRecordingPage, setAuditRecordingPage] = reactExports.useState(auditRecordingPageOptions[0]);
   const [auditRecordingUnlocked, setAuditRecordingUnlocked] = reactExports.useState(false);
   const [, setAuditRecordingRefreshKey] = reactExports.useState(0);
-  const sctTerminology = props.sctTerminology || DEFAULT_SCT_TERMINOLOGY$1;
-  const continuationCurrencyLabel = `${String(sctTerminology.shortLabel || DEFAULT_SCT_TERMINOLOGY$1.shortLabel || "CT").trim() || "CT"} / Currency Events`;
+  const sctTerminology = props.sctTerminology || DEFAULT_SCT_TERMINOLOGY;
+  const continuationCurrencyLabel = `${String(sctTerminology.shortLabel || DEFAULT_SCT_TERMINOLOGY.shortLabel || "CT").trim() || "CT"} / Currency Events`;
   const isContinuationCurrencySection = (section) => section === "sct-events" || section === "currency-profiles";
   const currentSettingsPermission = normaliseSettingsPermissionLabel(props.currentUserPermission);
   const getSectionLabel = (section) => isContinuationCurrencySection(section) ? continuationCurrencyLabel : sectionLabels[section];
@@ -115245,7 +115274,7 @@ const DraftSchedulerNotesTextArea = ({
     }
   );
 };
-const SctRequestFlyout = ({ instructor, onClose, onSave, currencyNames, sctEvents: sctEventsProp, sctTerminology = DEFAULT_SCT_TERMINOLOGY$1, nightContinuationDefaultTime = "18:30", aircraftConfigurationDefinitions = [], activeUnitCode = "", activeUnitCodes = [], aircraftTypeCode = "" }) => {
+const SctRequestFlyout = ({ instructor, onClose, onSave, currencyNames, sctEvents: sctEventsProp, sctTerminology = DEFAULT_SCT_TERMINOLOGY, nightContinuationDefaultTime = "18:30", aircraftConfigurationDefinitions = [], activeUnitCode = "", activeUnitCodes = [], aircraftTypeCode = "" }) => {
   const resolvedSctTerminology = reactExports.useMemo(() => normaliseSctTerminology(sctTerminology), [sctTerminology]);
   const continuationShortLabel = resolvedSctTerminology.shortLabel;
   const continuationLongLabel = resolvedSctTerminology.longLabel;
