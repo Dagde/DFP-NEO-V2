@@ -9112,7 +9112,7 @@ const InitialSetupWizard: React.FC<{
         setRankSettingsDraft(updater);
     };
     const wizardField = (
-        label: string,
+        label: React.ReactNode,
         value: string,
         onChange: (value: string) => void,
         options?: string[],
@@ -12775,7 +12775,7 @@ const InitialSetupWizard: React.FC<{
                         updateOrganisationDraft((draft: typeof organisationDraft) => ({ ...draft, code: value }), 'field-edit:organisation-code');
                     }, undefined, organisationCodeSample)}
                     {wizardField(
-                        'Organisation levels before units',
+                        <>Organisation Levels Above Units <em className="font-semibold normal-case tracking-normal text-slate-500">(not including units)</em></>,
                         String(normaliseOrganisationLevelCount(organisationDraft.organisationLevelCount, 3)),
                         updateOrganisationLevelCount,
                         Array.from({ length: MAX_INITIAL_SETUP_ORGANISATION_LEVELS - 2 }, (_, index) => String(index + 3)),

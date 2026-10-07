@@ -43140,7 +43140,10 @@ const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, lo
             updateOrganisationDraft((draft) => ({ ...draft, code: value }), "field-edit:organisation-code");
           }, void 0, organisationCodeSample),
           wizardField(
-            "Organisation levels before units",
+            /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
+              "Organisation Levels Above Units ",
+              /* @__PURE__ */ jsxRuntimeExports.jsx("em", { className: "font-semibold normal-case tracking-normal text-slate-500", children: "(not including units)" })
+            ] }),
             String(normaliseOrganisationLevelCount(organisationDraft.organisationLevelCount, 3)),
             updateOrganisationLevelCount,
             Array.from({ length: MAX_INITIAL_SETUP_ORGANISATION_LEVELS - 2 }, (_, index) => String(index + 3))
