@@ -2612,6 +2612,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
   const [trainingReportElementGroupDrafts, setTrainingReportElementGroupDrafts] = useState<Record<string, string>>({});
   const [trainingReportNewElementDraft, setTrainingReportNewElementDraft] = useState('');
   const [trainingReportPreviewOpen, setTrainingReportPreviewOpen] = useState(false);
+  const [wizardEditedPlaceholderKeys, setWizardEditedPlaceholderKeys] = useState<Set<string>>(new Set());
   const courseStudentGroups = useMemo(
     () => normaliseCourseStudentGroups(serviceDefinitions, { useFallback: false }),
     [serviceDefinitions],
@@ -3351,10 +3352,23 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
   const linkedInstructorQualificationInputId = linkedInstructorQualification
     ? `qualification-name-${String(linkedInstructorQualification.id || '').replace(/[^a-zA-Z0-9_-]/g, '-')}`
     : '';
-  const getWizardSamplePlaceholderProps = (value: string, sample: string) => {
+  const markWizardPlaceholderEdited = (key: string) => {
+    if (!key) return;
+    setWizardEditedPlaceholderKeys((prev) => {
+      const next = new Set(prev);
+      next.add(key);
+      return next;
+    });
+  };
+  const commitWizardPlaceholderField = (key: string, commit: (value: string) => void) => (value: string) => {
+    if (String(value || '').trim()) markWizardPlaceholderEdited(key);
+    commit(value);
+  };
+  const getWizardSamplePlaceholderProps = (key: string, value: string, sample: string) => {
     const current = String(value || '').trim();
     const placeholder = String(sample || '').trim();
     const usePlaceholder = wizardEditMode
+      && !wizardEditedPlaceholderKeys.has(key)
       && Boolean(placeholder)
       && (!current || current.localeCompare(placeholder, undefined, { sensitivity: 'accent' }) === 0);
     return {
@@ -3364,7 +3378,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
   };
   const getQualificationSamplePlaceholderProps = (entry: StaffQualificationDefinition, field: 'name' | 'code') => {
     const defaultEntry = DEFAULT_STAFF_QUALIFICATIONS.qualifications.find((candidate) => candidate.id === entry.id);
-    return getWizardSamplePlaceholderProps(entry[field], defaultEntry?.[field] || '');
+    return getWizardSamplePlaceholderProps(`qualification-${entry.id}-${field}`, entry[field], defaultEntry?.[field] || '');
   };
   const unitCallsignSettings = normaliseUnitCallsignSettings(
     activeSettingsUnitSettings.unitCallsignSettings || primaryOrganisationSettings.unitCallsignSettings || null,
@@ -13250,9 +13264,9 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
                   label="Instructor Display Term"
                   value={personnelDisplaySettings.instructorLabel}
                   disabled={!canEditRankTerminology}
-                  onCommit={(value) => updatePersonnelDisplaySettings({ instructorLabel: value })}
+                  onCommit={commitWizardPlaceholderField('instructor-label', (value) => updatePersonnelDisplaySettings({ instructorLabel: value }))}
                   info="The word shown when a person is performing instructor duty. Example: Instructor, Training Captain, Coach."
-                  {...getWizardSamplePlaceholderProps(personnelDisplaySettings.instructorLabel, DEFAULT_PERSONNEL_DISPLAY_SETTINGS.instructorLabel)}
+                  {...getWizardSamplePlaceholderProps('instructor-label', personnelDisplaySettings.instructorLabel, DEFAULT_PERSONNEL_DISPLAY_SETTINGS.instructorLabel)}
                 />
                 <DraftField
                   label="Trainee / Student Label"
@@ -13265,25 +13279,25 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
                   label="Simulator Contractor Staff Label"
                   value={personnelDisplaySettings.simIpDisplayLabel}
                   disabled={!canEditRankTerminology}
-                  onCommit={(value) => updatePersonnelDisplaySettings({ simIpDisplayLabel: value })}
+                  onCommit={commitWizardPlaceholderField('contractor-staff-label', (value) => updatePersonnelDisplaySettings({ simIpDisplayLabel: value }))}
                   info="The label for civilian contractor staff who can perform instructional duties in simulator devices. Example: Simulator Contractor Staff, Contract Simulator Instructor."
-                  {...getWizardSamplePlaceholderProps(personnelDisplaySettings.simIpDisplayLabel, DEFAULT_PERSONNEL_DISPLAY_SETTINGS.simIpDisplayLabel)}
+                  {...getWizardSamplePlaceholderProps('contractor-staff-label', personnelDisplaySettings.simIpDisplayLabel, DEFAULT_PERSONNEL_DISPLAY_SETTINGS.simIpDisplayLabel)}
                 />
                 <DraftField
                   label="Course Commander Label"
                   value={personnelDisplaySettings.courseCommanderLabel}
                   disabled={!canEditRankTerminology || !personnelDisplaySettings.courseLeadershipEnabled}
-                  onCommit={(value) => updatePersonnelDisplaySettings({ courseCommanderLabel: value })}
+                  onCommit={commitWizardPlaceholderField('course-commander-label', (value) => updatePersonnelDisplaySettings({ courseCommanderLabel: value }))}
                   info="The label for the staff member who leads or manages a course. Your organisation may call this person the Course Commander, Course Lead or another local title."
-                  {...getWizardSamplePlaceholderProps(personnelDisplaySettings.courseCommanderLabel, DEFAULT_PERSONNEL_DISPLAY_SETTINGS.courseCommanderLabel)}
+                  {...getWizardSamplePlaceholderProps('course-commander-label', personnelDisplaySettings.courseCommanderLabel, DEFAULT_PERSONNEL_DISPLAY_SETTINGS.courseCommanderLabel)}
                 />
                 <DraftField
                   label="Deputy Course Commander Label"
                   value={personnelDisplaySettings.deputyCourseCommanderLabel}
                   disabled={!canEditRankTerminology || !personnelDisplaySettings.courseLeadershipEnabled}
-                  onCommit={(value) => updatePersonnelDisplaySettings({ deputyCourseCommanderLabel: value })}
+                  onCommit={commitWizardPlaceholderField('deputy-course-commander-label', (value) => updatePersonnelDisplaySettings({ deputyCourseCommanderLabel: value }))}
                   info="The label for the staff member who assists the course lead or acts as the deputy course lead. Your organisation may call this person the Deputy Course Commander, Deputy Course Lead or Course 2IC."
-                  {...getWizardSamplePlaceholderProps(personnelDisplaySettings.deputyCourseCommanderLabel, DEFAULT_PERSONNEL_DISPLAY_SETTINGS.deputyCourseCommanderLabel)}
+                  {...getWizardSamplePlaceholderProps('deputy-course-commander-label', personnelDisplaySettings.deputyCourseCommanderLabel, DEFAULT_PERSONNEL_DISPLAY_SETTINGS.deputyCourseCommanderLabel)}
                 />
               </div>
             </div>
@@ -13453,27 +13467,27 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
                   value={trainingReportTerminology.name}
                   disabled={!canEditRankTerminology}
                   maxLength={TRAINING_REPORT_NAME_MAX_LENGTH}
-                  onCommit={(value) => updateTrainingReportTerminology({ name: value })}
+                  onCommit={commitWizardPlaceholderField('training-report-name', (value) => updateTrainingReportTerminology({ name: value }))}
                   info="The name users see for a completed assessment or training report. Example: Training Report, Grade Form, Assessment."
-                  {...getWizardSamplePlaceholderProps(trainingReportTerminology.name, DEFAULT_TRAINING_REPORT_TERMINOLOGY.name)}
+                  {...getWizardSamplePlaceholderProps('training-report-name', trainingReportTerminology.name, DEFAULT_TRAINING_REPORT_TERMINOLOGY.name)}
                 />
                 <DraftField
                   label="Continuation Training Short Label"
                   value={sctTerminology.shortLabel}
                   disabled={!canEditRankTerminology}
                   maxLength={SCT_SHORT_LABEL_MAX_LENGTH}
-                  onCommit={(value) => updateSctTerminology({ shortLabel: value })}
+                  onCommit={commitWizardPlaceholderField('sct-short-label', (value) => updateSctTerminology({ shortLabel: value }))}
                   info="The short label for staff continuation training events. Example: CT, SCT."
-                  {...getWizardSamplePlaceholderProps(sctTerminology.shortLabel, DEFAULT_SCT_TERMINOLOGY.shortLabel)}
+                  {...getWizardSamplePlaceholderProps('sct-short-label', sctTerminology.shortLabel, DEFAULT_SCT_TERMINOLOGY.shortLabel)}
                 />
                 <DraftField
                   label="Continuation Training Full Name"
                   value={sctTerminology.longLabel}
                   disabled={!canEditRankTerminology}
                   maxLength={SCT_LONG_LABEL_MAX_LENGTH}
-                  onCommit={(value) => updateSctTerminology({ longLabel: value })}
+                  onCommit={commitWizardPlaceholderField('sct-long-label', (value) => updateSctTerminology({ longLabel: value }))}
                   info="The full name for staff continuation training events. Example: Continuation Training."
-                  {...getWizardSamplePlaceholderProps(sctTerminology.longLabel, DEFAULT_SCT_TERMINOLOGY.longLabel)}
+                  {...getWizardSamplePlaceholderProps('sct-long-label', sctTerminology.longLabel, DEFAULT_SCT_TERMINOLOGY.longLabel)}
                 />
               </div>
             </div>
@@ -13521,9 +13535,9 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
                 label="Instructor Display Term"
                 value={personnelDisplaySettings.instructorLabel}
                 disabled={!canEditRankTerminology}
-                onCommit={(value) => updatePersonnelDisplaySettings({ instructorLabel: value })}
+                onCommit={commitWizardPlaceholderField('instructor-label', (value) => updatePersonnelDisplaySettings({ instructorLabel: value }))}
                 info={`The instructor display term is the duty label users see on schedules, reports and event details. The qualification label is what appears on a person's profile as something they hold. They are linked, but they are not automatically the same because one describes the duty being performed and the other describes the person's qualification. Example: a profile can show Qualification: ${linkedInstructorQualificationLabel}, while a report says ${personnelDisplaySettings.instructorLabel || 'Instructor'}: Surname, First. If your organisation wants both labels to match, also rename the linked qualification in Personnel Qualifications.`}
-                {...getWizardSamplePlaceholderProps(personnelDisplaySettings.instructorLabel, DEFAULT_PERSONNEL_DISPLAY_SETTINGS.instructorLabel)}
+                {...getWizardSamplePlaceholderProps('instructor-label', personnelDisplaySettings.instructorLabel, DEFAULT_PERSONNEL_DISPLAY_SETTINGS.instructorLabel)}
               />
               <p className="mt-1 text-xs leading-relaxed text-cyan-100/75">
                 Linked qualification label: <span className="font-semibold text-cyan-50">{linkedInstructorQualificationLabel}</span>. Rename this in{' '}
@@ -13590,17 +13604,17 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
                 label="Course Commander Label"
                 value={personnelDisplaySettings.courseCommanderLabel}
                 disabled={!canEditRankTerminology || !personnelDisplaySettings.courseLeadershipEnabled}
-                onCommit={(value) => updatePersonnelDisplaySettings({ courseCommanderLabel: value })}
+                onCommit={commitWizardPlaceholderField('course-commander-label', (value) => updatePersonnelDisplaySettings({ courseCommanderLabel: value }))}
                 info="The label for the staff member who leads or manages a course. Your organisation may call this person the Course Commander, Course Lead or another local title."
-                {...getWizardSamplePlaceholderProps(personnelDisplaySettings.courseCommanderLabel, DEFAULT_PERSONNEL_DISPLAY_SETTINGS.courseCommanderLabel)}
+                {...getWizardSamplePlaceholderProps('course-commander-label', personnelDisplaySettings.courseCommanderLabel, DEFAULT_PERSONNEL_DISPLAY_SETTINGS.courseCommanderLabel)}
               />
               <DraftField
                 label="Deputy Course Commander Label"
                 value={personnelDisplaySettings.deputyCourseCommanderLabel}
                 disabled={!canEditRankTerminology || !personnelDisplaySettings.courseLeadershipEnabled}
-                onCommit={(value) => updatePersonnelDisplaySettings({ deputyCourseCommanderLabel: value })}
+                onCommit={commitWizardPlaceholderField('deputy-course-commander-label', (value) => updatePersonnelDisplaySettings({ deputyCourseCommanderLabel: value }))}
                 info="The label for the staff member who assists the course lead or acts as the deputy course lead. Your organisation may call this person the Deputy Course Commander, Deputy Course Lead or Course 2IC."
-                {...getWizardSamplePlaceholderProps(personnelDisplaySettings.deputyCourseCommanderLabel, DEFAULT_PERSONNEL_DISPLAY_SETTINGS.deputyCourseCommanderLabel)}
+                {...getWizardSamplePlaceholderProps('deputy-course-commander-label', personnelDisplaySettings.deputyCourseCommanderLabel, DEFAULT_PERSONNEL_DISPLAY_SETTINGS.deputyCourseCommanderLabel)}
               />
             </div>
           </div>
@@ -13642,9 +13656,9 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
                 label="Display Name"
                 value={personnelDisplaySettings.simIpDisplayLabel}
                 disabled={!canEditRankTerminology || !personnelDisplaySettings.simIpDisplayEnabled}
-                onCommit={(value) => updatePersonnelDisplaySettings({ simIpDisplayLabel: value })}
+                onCommit={commitWizardPlaceholderField('contractor-staff-label', (value) => updatePersonnelDisplaySettings({ simIpDisplayLabel: value }))}
                 info="The staff type name users see in profiles, staff lists and scheduling views. Examples: Contractor Staff, Contract Instructor, Simulator Instructor."
-                {...getWizardSamplePlaceholderProps(personnelDisplaySettings.simIpDisplayLabel, DEFAULT_PERSONNEL_DISPLAY_SETTINGS.simIpDisplayLabel)}
+                {...getWizardSamplePlaceholderProps('contractor-staff-label', personnelDisplaySettings.simIpDisplayLabel, DEFAULT_PERSONNEL_DISPLAY_SETTINGS.simIpDisplayLabel)}
               />
               <div className="rounded border border-gray-700 bg-gray-950/70 p-3">
                 <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">
@@ -13696,27 +13710,27 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
               value={trainingReportTerminology.name}
               disabled={!canEditRankTerminology}
               maxLength={TRAINING_REPORT_NAME_MAX_LENGTH}
-              onCommit={(value) => updateTrainingReportTerminology({ name: value })}
+              onCommit={commitWizardPlaceholderField('training-report-name', (value) => updateTrainingReportTerminology({ name: value }))}
               info={`The organisation-specific report name used in spaces such as Performance History type pills. Maximum ${TRAINING_REPORT_NAME_MAX_LENGTH} characters. Default: Training Report. Examples: Training Report, Grade Form, Assessment.`}
-              {...getWizardSamplePlaceholderProps(trainingReportTerminology.name, DEFAULT_TRAINING_REPORT_TERMINOLOGY.name)}
+              {...getWizardSamplePlaceholderProps('training-report-name', trainingReportTerminology.name, DEFAULT_TRAINING_REPORT_TERMINOLOGY.name)}
             />
             <DraftField
               label="Continuation Training Short Label"
               value={sctTerminology.shortLabel}
               disabled={!canEditRankTerminology}
               maxLength={SCT_SHORT_LABEL_MAX_LENGTH}
-              onCommit={(value) => updateSctTerminology({ shortLabel: value })}
+              onCommit={commitWizardPlaceholderField('sct-short-label', (value) => updateSctTerminology({ shortLabel: value }))}
               info="The display label for staff continuation training flights and simulator events. You may rename it to match your organisation's terminology. Changing this label only affects what users see; it does not change the underlying event type or saved event codes."
-              {...getWizardSamplePlaceholderProps(sctTerminology.shortLabel, DEFAULT_SCT_TERMINOLOGY.shortLabel)}
+              {...getWizardSamplePlaceholderProps('sct-short-label', sctTerminology.shortLabel, DEFAULT_SCT_TERMINOLOGY.shortLabel)}
             />
             <DraftField
               label="Continuation Training Full Name"
               value={sctTerminology.longLabel}
               disabled={!canEditRankTerminology}
               maxLength={SCT_LONG_LABEL_MAX_LENGTH}
-              onCommit={(value) => updateSctTerminology({ longLabel: value })}
+              onCommit={commitWizardPlaceholderField('sct-long-label', (value) => updateSctTerminology({ longLabel: value }))}
               info={`The full display label for staff continuation training flights and simulator events. You may rename it to match your organisation's terminology. Changing this label only affects what users see; it does not change the underlying event type or saved event codes. Maximum ${SCT_LONG_LABEL_MAX_LENGTH} characters.`}
-              {...getWizardSamplePlaceholderProps(sctTerminology.longLabel, DEFAULT_SCT_TERMINOLOGY.longLabel)}
+              {...getWizardSamplePlaceholderProps('sct-long-label', sctTerminology.longLabel, DEFAULT_SCT_TERMINOLOGY.longLabel)}
             />
           </div>
           <div id="platform-crew-position-labels" className="rounded-lg border border-orange-400/25 bg-orange-500/10 p-4">
@@ -13839,7 +13853,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
                     label="Qualification"
                     value={entry.name}
                     disabled={!canEditRankTerminology}
-                    onCommit={(value) => updateStaffQualificationEntry(entry.id, { name: value })}
+                    onCommit={commitWizardPlaceholderField(`qualification-${entry.id}-name`, (value) => updateStaffQualificationEntry(entry.id, { name: value }))}
                     info="The full qualification name shown in personnel profiles."
                     {...getQualificationSamplePlaceholderProps(entry, 'name')}
                   />
@@ -13847,7 +13861,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
                     label="Code"
                     value={entry.code}
                     disabled={!canEditRankTerminology}
-                    onCommit={(value) => updateStaffQualificationEntry(entry.id, { code: value })}
+                    onCommit={commitWizardPlaceholderField(`qualification-${entry.id}-code`, (value) => updateStaffQualificationEntry(entry.id, { code: value }))}
                     info="Short code accepted by bulk upload. Examples: PIC, Crew Commander."
                     {...getQualificationSamplePlaceholderProps(entry, 'code')}
                   />
