@@ -30415,48 +30415,53 @@ This removes them from DFP Resource Rows. Press Save in this section to apply th
                   ] })
                 ] }),
                 visibleUnitCallsignEntries.length === 0 && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "rounded border border-gray-700 bg-gray-950 px-3 py-4 text-sm text-gray-400", children: "No unit callsigns configured." }),
-                [...visibleUnitCallsignEntries].sort((left, right) => left.unitCode.localeCompare(right.unitCode, void 0, { sensitivity: "base" }) || left.callsign.localeCompare(right.callsign, void 0, { sensitivity: "base" })).map((entry) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid gap-3 rounded border border-gray-700 bg-gray-950 p-3 md:grid-cols-[minmax(140px,0.7fr)_minmax(180px,1fr)_auto_auto]", children: [
-                  /* @__PURE__ */ jsxRuntimeExports.jsx(
-                    SelectField,
-                    {
-                      label: "Unit",
-                      value: entry.unitCode,
-                      disabled: !canEditRankTerminology,
-                      options: visibleUnitOptions,
-                      onChange: (value) => updateUnitCallsignEntry(entry.id, { unitCode: value.toUpperCase(), isDefault: false })
-                    }
-                  ),
-                  /* @__PURE__ */ jsxRuntimeExports.jsx(
-                    DraftField,
-                    {
-                      label: "Callsign",
-                      value: entry.callsign,
-                      disabled: !canEditRankTerminology,
-                      onCommit: (value) => updateUnitCallsignEntry(entry.id, { callsign: value }),
-                      info: "Callsign base only. The sortie number is selected when creating or editing an event."
-                    }
-                  ),
-                  /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex items-end", children: /* @__PURE__ */ jsxRuntimeExports.jsx(
-                    "button",
-                    {
-                      type: "button",
-                      onClick: () => setDefaultUnitCallsignEntry(entry.id),
-                      disabled: !canEditRankTerminology,
-                      className: `w-full rounded border px-3 py-2 text-[10px] font-semibold uppercase tracking-wide ${entry.isDefault ? "border-green-600 bg-green-300 text-slate-950 shadow-sm" : "border-green-500 bg-green-200 text-slate-950 shadow-sm hover:border-green-600 hover:bg-green-100"} transition disabled:cursor-not-allowed disabled:border-gray-400 disabled:bg-gray-200 disabled:text-gray-500 disabled:opacity-70`,
-                      children: entry.isDefault ? "Default" : "Set Default"
-                    }
-                  ) }),
-                  /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex items-end", children: /* @__PURE__ */ jsxRuntimeExports.jsx(
-                    "button",
-                    {
-                      type: "button",
-                      onClick: () => removeUnitCallsignEntry(entry.id),
-                      disabled: !canEditRankTerminology,
-                      className: rankTerminologyDangerButtonClass,
-                      children: "Delete"
-                    }
-                  ) })
-                ] }, entry.id))
+                [...visibleUnitCallsignEntries].sort((left, right) => left.unitCode.localeCompare(right.unitCode, void 0, { sensitivity: "base" }) || left.callsign.localeCompare(right.callsign, void 0, { sensitivity: "base" })).map((entry) => {
+                  const isWizardSampleCallsign = wizardEditMode && isPlaceholderUnitCallsign(entry.callsign);
+                  return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid gap-3 rounded border border-gray-700 bg-gray-950 p-3 md:grid-cols-[minmax(140px,0.7fr)_minmax(180px,1fr)_auto_auto]", children: [
+                    /* @__PURE__ */ jsxRuntimeExports.jsx(
+                      SelectField,
+                      {
+                        label: "Unit",
+                        value: entry.unitCode,
+                        disabled: !canEditRankTerminology,
+                        options: visibleUnitOptions,
+                        onChange: (value) => updateUnitCallsignEntry(entry.id, { unitCode: value.toUpperCase(), isDefault: false })
+                      }
+                    ),
+                    /* @__PURE__ */ jsxRuntimeExports.jsx(
+                      DraftField,
+                      {
+                        label: "Callsign",
+                        value: entry.callsign,
+                        disabled: !canEditRankTerminology,
+                        onCommit: (value) => updateUnitCallsignEntry(entry.id, { callsign: value }),
+                        info: "Callsign base only. The sortie number is selected when creating or editing an event.",
+                        placeholder: isWizardSampleCallsign ? entry.callsign || "Callsign 1" : void 0,
+                        placeholderOnly: isWizardSampleCallsign
+                      }
+                    ),
+                    /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex items-end", children: /* @__PURE__ */ jsxRuntimeExports.jsx(
+                      "button",
+                      {
+                        type: "button",
+                        onClick: () => setDefaultUnitCallsignEntry(entry.id),
+                        disabled: !canEditRankTerminology,
+                        className: `w-full rounded border px-3 py-2 text-[10px] font-semibold uppercase tracking-wide ${entry.isDefault ? "border-green-600 bg-green-300 text-slate-950 shadow-sm" : "border-green-500 bg-green-200 text-slate-950 shadow-sm hover:border-green-600 hover:bg-green-100"} transition disabled:cursor-not-allowed disabled:border-gray-400 disabled:bg-gray-200 disabled:text-gray-500 disabled:opacity-70`,
+                        children: entry.isDefault ? "Default" : "Set Default"
+                      }
+                    ) }),
+                    /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex items-end", children: /* @__PURE__ */ jsxRuntimeExports.jsx(
+                      "button",
+                      {
+                        type: "button",
+                        onClick: () => removeUnitCallsignEntry(entry.id),
+                        disabled: !canEditRankTerminology,
+                        className: rankTerminologyDangerButtonClass,
+                        children: "Delete"
+                      }
+                    ) })
+                  ] }, entry.id);
+                })
               ] })
             ] }),
             onUpdateFormationCallsigns && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { id: "platform-formation-callsigns", className: "rounded-lg border border-cyan-400/25 bg-cyan-500/10 p-4", children: /* @__PURE__ */ jsxRuntimeExports.jsx(
@@ -31613,20 +31618,22 @@ const TextAreaField = ({
     )
   ] });
 };
-const DraftField = ({ inputId, label, labelNoWrap = false, value, disabled, onCommit, info, maxLength }) => {
+const DraftField = ({ inputId, label, labelNoWrap = false, value, disabled, onCommit, info, maxLength, placeholder, placeholderOnly = false }) => {
   const limitValue = (nextValue) => typeof maxLength === "number" ? nextValue.slice(0, maxLength) : nextValue;
-  const [draft, setDraft] = reactExports.useState(() => limitValue(value || ""));
+  const storedValue = limitValue(value || "");
+  const [draft, setDraft] = reactExports.useState(() => storedValue);
   const [focused, setFocused] = reactExports.useState(false);
-  const displayedValue = focused ? draft : limitValue(value || "");
+  const displayedValue = focused ? draft : placeholderOnly ? "" : storedValue;
   reactExports.useEffect(() => {
-    if (!focused) setDraft(limitValue(value || ""));
-  }, [focused, maxLength, value]);
+    if (!focused) setDraft(storedValue);
+  }, [focused, storedValue]);
   const updateDraft = (nextValue) => setDraft(limitValue(nextValue));
   const commitDraft = () => {
     const nextValue = limitValue(draft);
     setFocused(false);
     setDraft(nextValue);
-    if (nextValue !== limitValue(value || "")) onCommit(nextValue);
+    if (placeholderOnly && !nextValue.trim()) return;
+    if (nextValue !== storedValue) onCommit(nextValue);
   };
   return /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { children: [
     /* @__PURE__ */ jsxRuntimeExports.jsx(FieldLabel, { label, info, noWrap: labelNoWrap }),
@@ -31634,16 +31641,17 @@ const DraftField = ({ inputId, label, labelNoWrap = false, value, disabled, onCo
       "input",
       {
         id: inputId,
-        className: fieldClass,
+        className: `${fieldClass} ${placeholderOnly ? "placeholder:text-gray-500 placeholder:font-semibold" : ""}`,
         value: displayedValue,
         disabled,
         maxLength,
+        placeholder,
         onBeforeInput: (event) => handleEditableTextBeforeInput(event, updateDraft, maxLength),
         onKeyDownCapture: (event) => handleEditableTextKeyDownCapture(event, updateDraft, maxLength),
         onKeyDown: stopEditableKeyPropagation,
         onFocus: () => {
           setFocused(true);
-          setDraft(limitValue(value || ""));
+          setDraft(placeholderOnly ? "" : storedValue);
         },
         onBlur: commitDraft,
         onChange: (event) => updateDraft(event.target.value)

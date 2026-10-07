@@ -93,6 +93,7 @@ import {
   UNIT_CALLSIGN_ALLOCATION_METHODS,
   getDefaultUnitCallsign,
   getUnitCallsignPolicy,
+  isPlaceholderUnitCallsign,
   normaliseUnitCallsignSettings,
   type UnitCallsignEntry,
   type UnitCallsignPolicy,
@@ -13970,48 +13971,53 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
                   left.unitCode.localeCompare(right.unitCode, undefined, { sensitivity: 'base' })
                   || left.callsign.localeCompare(right.callsign, undefined, { sensitivity: 'base' })
                 ))
-                .map((entry) => (
-                  <div key={entry.id} className="grid gap-3 rounded border border-gray-700 bg-gray-950 p-3 md:grid-cols-[minmax(140px,0.7fr)_minmax(180px,1fr)_auto_auto]">
-                    <SelectField
-                      label="Unit"
-                      value={entry.unitCode}
-                      disabled={!canEditRankTerminology}
-                      options={visibleUnitOptions}
-                      onChange={(value) => updateUnitCallsignEntry(entry.id, { unitCode: value.toUpperCase(), isDefault: false })}
-                    />
-                    <DraftField
-                      label="Callsign"
-                      value={entry.callsign}
-                      disabled={!canEditRankTerminology}
-                      onCommit={(value) => updateUnitCallsignEntry(entry.id, { callsign: value })}
-                      info="Callsign base only. The sortie number is selected when creating or editing an event."
-                    />
-                    <div className="flex items-end">
-                      <button
-                        type="button"
-                        onClick={() => setDefaultUnitCallsignEntry(entry.id)}
+                .map((entry) => {
+                  const isWizardSampleCallsign = wizardEditMode && isPlaceholderUnitCallsign(entry.callsign);
+                  return (
+                    <div key={entry.id} className="grid gap-3 rounded border border-gray-700 bg-gray-950 p-3 md:grid-cols-[minmax(140px,0.7fr)_minmax(180px,1fr)_auto_auto]">
+                      <SelectField
+                        label="Unit"
+                        value={entry.unitCode}
                         disabled={!canEditRankTerminology}
-                        className={`w-full rounded border px-3 py-2 text-[10px] font-semibold uppercase tracking-wide ${
-                          entry.isDefault
-                            ? 'border-green-600 bg-green-300 text-slate-950 shadow-sm'
-                            : 'border-green-500 bg-green-200 text-slate-950 shadow-sm hover:border-green-600 hover:bg-green-100'
-                        } transition disabled:cursor-not-allowed disabled:border-gray-400 disabled:bg-gray-200 disabled:text-gray-500 disabled:opacity-70`}
-                      >
-                        {entry.isDefault ? 'Default' : 'Set Default'}
-                      </button>
-                    </div>
-                    <div className="flex items-end">
-                      <button
-                        type="button"
-                        onClick={() => removeUnitCallsignEntry(entry.id)}
+                        options={visibleUnitOptions}
+                        onChange={(value) => updateUnitCallsignEntry(entry.id, { unitCode: value.toUpperCase(), isDefault: false })}
+                      />
+                      <DraftField
+                        label="Callsign"
+                        value={entry.callsign}
                         disabled={!canEditRankTerminology}
-                        className={rankTerminologyDangerButtonClass}
-                      >
-                        Delete
-                      </button>
+                        onCommit={(value) => updateUnitCallsignEntry(entry.id, { callsign: value })}
+                        info="Callsign base only. The sortie number is selected when creating or editing an event."
+                        placeholder={isWizardSampleCallsign ? entry.callsign || 'Callsign 1' : undefined}
+                        placeholderOnly={isWizardSampleCallsign}
+                      />
+                      <div className="flex items-end">
+                        <button
+                          type="button"
+                          onClick={() => setDefaultUnitCallsignEntry(entry.id)}
+                          disabled={!canEditRankTerminology}
+                          className={`w-full rounded border px-3 py-2 text-[10px] font-semibold uppercase tracking-wide ${
+                            entry.isDefault
+                              ? 'border-green-600 bg-green-300 text-slate-950 shadow-sm'
+                              : 'border-green-500 bg-green-200 text-slate-950 shadow-sm hover:border-green-600 hover:bg-green-100'
+                          } transition disabled:cursor-not-allowed disabled:border-gray-400 disabled:bg-gray-200 disabled:text-gray-500 disabled:opacity-70`}
+                        >
+                          {entry.isDefault ? 'Default' : 'Set Default'}
+                        </button>
+                      </div>
+                      <div className="flex items-end">
+                        <button
+                          type="button"
+                          onClick={() => removeUnitCallsignEntry(entry.id)}
+                          disabled={!canEditRankTerminology}
+                          className={rankTerminologyDangerButtonClass}
+                        >
+                          Delete
+                        </button>
+                      </div>
                     </div>
-                  </div>
-                ))}
+                  );
+                })}
             </div>
           </div>
           {onUpdateFormationCallsigns && (
@@ -15384,15 +15390,16 @@ const TextAreaField = ({
   );
 };
 
-const DraftField = ({ inputId, label, labelNoWrap = false, value, disabled, onCommit, info, maxLength }: { inputId?: string; label: string; labelNoWrap?: boolean; value: string; disabled: boolean; onCommit: (value: string) => void; info?: string; maxLength?: number }) => {
+const DraftField = ({ inputId, label, labelNoWrap = false, value, disabled, onCommit, info, maxLength, placeholder, placeholderOnly = false }: { inputId?: string; label: string; labelNoWrap?: boolean; value: string; disabled: boolean; onCommit: (value: string) => void; info?: string; maxLength?: number; placeholder?: string; placeholderOnly?: boolean }) => {
   const limitValue = (nextValue: string) => (typeof maxLength === 'number' ? nextValue.slice(0, maxLength) : nextValue);
-  const [draft, setDraft] = useState(() => limitValue(value || ''));
+  const storedValue = limitValue(value || '');
+  const [draft, setDraft] = useState(() => storedValue);
   const [focused, setFocused] = useState(false);
-  const displayedValue = focused ? draft : limitValue(value || '');
+  const displayedValue = focused ? draft : (placeholderOnly ? '' : storedValue);
 
   useEffect(() => {
-    if (!focused) setDraft(limitValue(value || ''));
-  }, [focused, maxLength, value]);
+    if (!focused) setDraft(storedValue);
+  }, [focused, storedValue]);
 
   const updateDraft = (nextValue: string) => setDraft(limitValue(nextValue));
 
@@ -15400,7 +15407,8 @@ const DraftField = ({ inputId, label, labelNoWrap = false, value, disabled, onCo
     const nextValue = limitValue(draft);
     setFocused(false);
     setDraft(nextValue);
-    if (nextValue !== limitValue(value || '')) onCommit(nextValue);
+    if (placeholderOnly && !nextValue.trim()) return;
+    if (nextValue !== storedValue) onCommit(nextValue);
   };
 
   return (
@@ -15408,16 +15416,17 @@ const DraftField = ({ inputId, label, labelNoWrap = false, value, disabled, onCo
       <FieldLabel label={label} info={info} noWrap={labelNoWrap} />
       <input
         id={inputId}
-        className={fieldClass}
+        className={`${fieldClass} ${placeholderOnly ? 'placeholder:text-gray-500 placeholder:font-semibold' : ''}`}
         value={displayedValue}
         disabled={disabled}
         maxLength={maxLength}
+        placeholder={placeholder}
         onBeforeInput={(event) => handleEditableTextBeforeInput(event, updateDraft, maxLength)}
         onKeyDownCapture={(event) => handleEditableTextKeyDownCapture(event, updateDraft, maxLength)}
         onKeyDown={stopEditableKeyPropagation}
         onFocus={() => {
           setFocused(true);
-          setDraft(limitValue(value || ''));
+          setDraft(placeholderOnly ? '' : storedValue);
         }}
         onBlur={commitDraft}
         onChange={(event) => updateDraft(event.target.value)}

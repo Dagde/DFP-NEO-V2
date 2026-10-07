@@ -55,7 +55,7 @@ const normalisePermanentRoleValues = (source: unknown): string[] => {
   ));
 };
 
-const isPlaceholderUnitCallsign = (value: unknown): boolean => {
+export const isPlaceholderUnitCallsign = (value: unknown): boolean => {
   const token = String(value || '').trim();
   if (!token) return true;
   if (token.toLowerCase() === 'default') return true;
