@@ -14760,8 +14760,9 @@ const ScheduleView: React.FC<ScheduleViewProps> = ({
         const panelWidth = 272;
         const panelHeight = 360;
         const viewportMargin = 12;
+        const preferredLeft = rect.right + 8;
         const left = Math.min(
-            Math.max(rect.left, viewportMargin),
+            Math.max(preferredLeft, viewportMargin),
             Math.max(viewportMargin, window.innerWidth - panelWidth - viewportMargin),
         );
         const preferredTop = rect.bottom + 8;
@@ -17481,7 +17482,7 @@ const ScheduleView: React.FC<ScheduleViewProps> = ({
                                         top: `${datePickerPosition.top}px`,
                                         left: `${datePickerPosition.left}px`,
                                         width: '272px',
-                                        zIndex: 10000,
+                                        zIndex: 999999,
                                     }}
                                     onClick={(event) => event.stopPropagation()}
                                 >
