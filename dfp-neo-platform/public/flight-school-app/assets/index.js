@@ -145473,7 +145473,7 @@ ${error instanceof Error ? error.message : String(error)}`,
             ...knownContextSnapshotKeys,
             ...snapshotLocationAliases.map((locationAlias) => getDailySnapshotKey(targetDate, locationAlias, snapshotUnit)),
             ...snapshotLocationAliases.map((locationAlias) => getDailySnapshotKey(targetDate, locationAlias, "")),
-            targetDate,
+            ...allowAdminFallbackContext ? [targetDate] : [],
             ...permittedAdminFallbackSnapshotKeys
           ].filter((key, index, keys) => Boolean(key) && keys.indexOf(key) === index);
           let res = null;
@@ -145653,7 +145653,7 @@ ${error instanceof Error ? error.message : String(error)}`,
           const isAdminContextFallback = adminFallbackSnapshotKeySet.has(resolvedSnapshotKey);
           const resolvedUnitKey = normaliseDailySnapshotPart(resolvedUnit).toUpperCase();
           const resolvedUnitOption = resolvedUnitKey ? getUnitOptionsForLocation(resolvedSchool).find((unit) => normaliseDailySnapshotPart(unit?.code).toUpperCase() === resolvedUnitKey && unit?.disabled !== true) : null;
-          const canAdoptAdminFallbackContext = !isAdminContextFallback || !resolvedUnitKey || Boolean(resolvedUnitOption);
+          const canAdoptAdminFallbackContext = allowAdminFallbackContext && (!isAdminContextFallback || !resolvedUnitKey || Boolean(resolvedUnitOption));
           if (isAdminContextFallback && !canAdoptAdminFallbackContext) {
             pushDfpDataDiag("snapshot:admin-fallback-context-not-adopted", {
               targetDate,
@@ -145669,6 +145669,17 @@ ${error instanceof Error ? error.message : String(error)}`,
               })),
               reason: "Fallback snapshot unit is not a valid selectable context for the current settings."
             });
+            appendOperationalContextTrace("app:snapshot-admin-fallback-not-adopted", {
+              targetDate,
+              requestedSnapshotKey: snapshotKey,
+              resolvedSnapshotKey,
+              requestedSchool: snapshotSchool,
+              requestedUnit: snapshotUnit,
+              resolvedSchool,
+              resolvedUnit,
+              allowAdminFallbackContext,
+              reason: allowAdminFallbackContext ? "Fallback snapshot unit is not a valid selectable context for the current settings." : "Strict context load suppressed admin/generic snapshot fallback adoption."
+            });
           }
           const eventCount = applyDailySnapshot(
             targetDate,
@@ -145682,6 +145693,17 @@ ${error instanceof Error ? error.message : String(error)}`,
           loadedSnapshotDates.current.add(snapshotKey);
           if (isAdminContextFallback && canAdoptAdminFallbackContext && eventCount > 0) {
             const fallbackPayload = buildOperationalContextPayload(resolvedSchool, resolvedUnit, "snapshot-fallback");
+            appendOperationalContextTrace("app:snapshot-admin-fallback-adopted", {
+              targetDate,
+              requestedSnapshotKey: snapshotKey,
+              resolvedSnapshotKey,
+              previousSchool: school,
+              previousUnit: activeUnitCode,
+              nextSchool: resolvedSchool,
+              nextUnit: resolvedUnit,
+              allowAdminFallbackContext,
+              eventCount
+            });
             setSchool(resolvedSchool);
             setActiveUnitCode(resolvedUnit);
             try {
