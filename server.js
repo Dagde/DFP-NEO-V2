@@ -20092,6 +20092,41 @@ async function writeArchiveDiagnostic(db, action, snapshotKey, date, status, det
   }
 }
 
+function queueDailySnapshotPrune(db, options = {}) {
+  const queuedAt = Date.now();
+  const runner = typeof setImmediate === 'function'
+    ? setImmediate
+    : (callback) => setTimeout(callback, 0);
+  runner(async () => {
+    try {
+      const result = await pruneArchivedDailySnapshots(db, {
+        reason: options.reason || 'post-publish-retention-background',
+        limit: getDailySnapshotPruneBatchLimit(),
+      });
+      console.log(
+        `✅ POST /api/daily-snapshot/save - Background archive prune completed in ${Date.now() - queuedAt}ms`,
+        JSON.stringify({
+          candidates: result?.candidates || 0,
+          pruned: result?.pruned || 0,
+          skipped: result?.skipped || 0,
+          durationMs: result?.durationMs || 0,
+        })
+      );
+    } catch (pruneError) {
+      await writeArchiveDiagnostic(db, 'ARCHIVE_DAILY_SNAPSHOT_PRUNE', options.snapshotKey || null, options.date || null, 'error', {
+        error: pruneError.message,
+        trigger: options.reason || 'post-publish-retention-background',
+      });
+      console.warn(`⚠️ POST /api/daily-snapshot/save - Background archive prune failed for ${options.snapshotKey || options.date || 'unknown'}:`, pruneError.message);
+    }
+  });
+  return {
+    success: true,
+    queued: true,
+    reason: options.reason || 'post-publish-retention-background',
+  };
+}
+
 const DAILY_SNAPSHOT_FULL_RETENTION_DAYS_DEFAULT = 90;
 const DAILY_SNAPSHOT_PRUNE_BATCH_DEFAULT = 5;
 const DAILY_SNAPSHOT_PRUNE_BATCH_MAX = 100;
@@ -20598,28 +20633,58 @@ async function saveCompactPublishedDfpArchive(db, payload) {
     `DELETE FROM "ScheduleEventArchive" WHERE "archiveId" = $1::text`,
     archiveId
   );
-  for (let index = 0; index < scheduleEvents.length; index++) {
-    const event = scheduleEvents[index] || {};
-    const eventId = getArchiveEventStableId(event, context.date, index);
+  const archiveEventRows = scheduleEvents.map((event, index) => {
+    const safeEvent = event || {};
+    return {
+      id: crypto.randomUUID(),
+      archiveId,
+      snapshotKey: context.snapshotKey,
+      eventId: getArchiveEventStableId(safeEvent, context.date, index),
+      date: context.date,
+      eventType: String(safeEvent.type || 'event'),
+      eventCode: safeEvent.flightNumber || safeEvent.eventCode || null,
+      resourceId: safeEvent.resourceId || null,
+      startTime: Number.isFinite(Number(safeEvent.startTime)) ? Number(safeEvent.startTime) : null,
+      duration: Number.isFinite(Number(safeEvent.duration)) ? Number(safeEvent.duration) : null,
+      personnelRefs: getArchiveEventPersonnelRefs(safeEvent),
+      eventData: safeEvent,
+    };
+  });
+  if (archiveEventRows.length > 0) {
     await db.$executeRawUnsafe(`
       INSERT INTO "ScheduleEventArchive"
         ("id", "archiveId", "snapshotKey", "eventId", "date", "eventType", "eventCode",
          "resourceId", "startTime", "duration", "personnelRefs", "eventData", "createdAt")
-      VALUES ($1::text, $2::text, $3::text, $4::text, $5::text, $6::text, $7::text,
-              $8::text, $9, $10, $11::jsonb, $12::jsonb, NOW())
+      SELECT
+        "id",
+        "archiveId",
+        "snapshotKey",
+        "eventId",
+        "date",
+        "eventType",
+        "eventCode",
+        "resourceId",
+        "startTime",
+        "duration",
+        "personnelRefs",
+        "eventData",
+        NOW()
+      FROM jsonb_to_recordset($1::jsonb) AS rows(
+        "id" text,
+        "archiveId" text,
+        "snapshotKey" text,
+        "eventId" text,
+        "date" text,
+        "eventType" text,
+        "eventCode" text,
+        "resourceId" text,
+        "startTime" double precision,
+        "duration" double precision,
+        "personnelRefs" jsonb,
+        "eventData" jsonb
+      )
     `,
-      crypto.randomUUID(),
-      archiveId,
-      context.snapshotKey,
-      eventId,
-      context.date,
-      String(event.type || 'event'),
-      event.flightNumber || event.eventCode || null,
-      event.resourceId || null,
-      Number.isFinite(Number(event.startTime)) ? Number(event.startTime) : null,
-      Number.isFinite(Number(event.duration)) ? Number(event.duration) : null,
-      JSON.stringify(getArchiveEventPersonnelRefs(event)),
-      JSON.stringify(event)
+      JSON.stringify(archiveEventRows)
     );
   }
 
@@ -21685,19 +21750,11 @@ app.post('/api/daily-snapshot/save', async (req, res) => {
     }
 
     if (archive?.success) {
-      try {
-        archivePrune = await pruneArchivedDailySnapshots(db, {
-          reason: 'post-publish-retention',
-          limit: getDailySnapshotPruneBatchLimit(),
-        });
-      } catch (pruneError) {
-        archivePrune = { success: false, warning: pruneError.message };
-        await writeArchiveDiagnostic(db, 'ARCHIVE_DAILY_SNAPSHOT_PRUNE', date, parseDailySnapshotDateKey(date).date, 'error', {
-          error: pruneError.message,
-          trigger: 'post-publish-retention',
-        });
-        console.warn(`⚠️ POST /api/daily-snapshot/save - Archive prune check failed for ${date}:`, pruneError.message);
-      }
+      archivePrune = queueDailySnapshotPrune(db, {
+        date: parseDailySnapshotDateKey(date).date,
+        snapshotKey: date,
+        reason: 'post-publish-retention-background',
+      });
     }
 
     res.json({ success: true, date, eventCount: (scheduleEvents||[]).length, archive, archivePrune });
