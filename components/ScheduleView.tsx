@@ -14728,7 +14728,10 @@ const ScheduleView: React.FC<ScheduleViewProps> = ({
         [configuredPersonnelServices, traineesData]
     );
     const scrollContainerRef = useRef<HTMLDivElement>(null);
+    const dateSelectorRef = useRef<HTMLDivElement>(null);
+    const datePickerPanelRef = useRef<HTMLDivElement>(null);
     const [showDatePicker, setShowDatePicker] = useState(false);
+    const [datePickerPosition, setDatePickerPosition] = useState({ top: 0, left: 0 });
     const [showResourceUnderlayPanel, setShowResourceUnderlayPanel] = useState(false);
     const [flightLineDraggedAircraftNumber, setFlightLineDraggedAircraftNumber] = useState<string | null>(null);
     const [flightLineLocalUnavailableNumbers, setFlightLineLocalUnavailableNumbers] = useState<string[] | null>(null);
@@ -14749,6 +14752,50 @@ const ScheduleView: React.FC<ScheduleViewProps> = ({
     useEffect(() => {
         if (isNeoAssistPanelOpen) setShowResourceUnderlayPanel(false);
     }, [isNeoAssistPanelOpen]);
+    const updateDatePickerPosition = useCallback(() => {
+        if (typeof window === 'undefined') return;
+        const anchor = dateSelectorRef.current;
+        if (!anchor) return;
+        const rect = anchor.getBoundingClientRect();
+        const panelWidth = 272;
+        const panelHeight = 360;
+        const viewportMargin = 12;
+        const left = Math.min(
+            Math.max(rect.left, viewportMargin),
+            Math.max(viewportMargin, window.innerWidth - panelWidth - viewportMargin),
+        );
+        const preferredTop = rect.bottom + 8;
+        const top = preferredTop + panelHeight > window.innerHeight - viewportMargin
+            ? Math.max(viewportMargin, rect.top - panelHeight - 8)
+            : preferredTop;
+        setDatePickerPosition({ top, left });
+    }, []);
+
+    useEffect(() => {
+        if (!showDatePicker) return;
+        updateDatePickerPosition();
+        const handleWindowChange = () => updateDatePickerPosition();
+        const handlePointerDown = (event: PointerEvent) => {
+            const target = event.target as Node | null;
+            if (!target) return;
+            if (dateSelectorRef.current?.contains(target)) return;
+            if (datePickerPanelRef.current?.contains(target)) return;
+            setShowDatePicker(false);
+        };
+        const handleKeyDown = (event: KeyboardEvent) => {
+            if (event.key === 'Escape') setShowDatePicker(false);
+        };
+        window.addEventListener('resize', handleWindowChange);
+        window.addEventListener('scroll', handleWindowChange, true);
+        window.addEventListener('pointerdown', handlePointerDown);
+        window.addEventListener('keydown', handleKeyDown);
+        return () => {
+            window.removeEventListener('resize', handleWindowChange);
+            window.removeEventListener('scroll', handleWindowChange, true);
+            window.removeEventListener('pointerdown', handlePointerDown);
+            window.removeEventListener('keydown', handleKeyDown);
+        };
+    }, [showDatePicker, updateDatePickerPosition]);
     const hasStoredInitialSetupWizardProgress = useCallback(() => {
         if (typeof window === 'undefined') return false;
         const storedStep = Number(window.localStorage.getItem(initialSetupWizardStorageKey));
@@ -17394,10 +17441,14 @@ const ScheduleView: React.FC<ScheduleViewProps> = ({
                 <div data-schedule-corner="true" className="sticky top-0 left-0 z-40 bg-gray-800 border-r border-b border-gray-700 p-1 neo-build-header-cell">
                     <div className="flex items-center gap-1 h-full">
                         <div
+                            ref={dateSelectorRef}
                             data-schedule-date-selector="true"
                             className={`relative bg-gray-700 rounded-md flex items-center justify-center px-3 gap-2 cursor-pointer ${isNeoBuild ? 'neo-build-date-indicator' : ''}`}
                             style={{height: "100%", width: "100%"}}
-                            onClick={() => setShowDatePicker(prev => !prev)}
+                            onClick={() => {
+                                updateDatePickerPosition();
+                                setShowDatePicker(prev => !prev);
+                            }}
                             title="Open date picker"
                         >
                             <button
@@ -17421,9 +17472,17 @@ const ScheduleView: React.FC<ScheduleViewProps> = ({
                             >
                                 →
                             </button>
-                            {showDatePicker && (
+                            {showDatePicker && typeof document !== 'undefined' && createPortal((
                                 <div
-                                    className="absolute top-full left-0 mt-2 w-64 rounded-lg border border-gray-600 bg-gray-800 p-3 shadow-2xl"
+                                    ref={datePickerPanelRef}
+                                    className="rounded-lg border border-gray-600 bg-gray-800 p-3 shadow-2xl"
+                                    style={{
+                                        position: 'fixed',
+                                        top: `${datePickerPosition.top}px`,
+                                        left: `${datePickerPosition.left}px`,
+                                        width: '272px',
+                                        zIndex: 10000,
+                                    }}
                                     onClick={(event) => event.stopPropagation()}
                                 >
                                     <label className="block text-xs font-semibold uppercase tracking-wide text-gray-400 mb-2">
@@ -17476,7 +17535,7 @@ const ScheduleView: React.FC<ScheduleViewProps> = ({
                                         </div>
                                     )}
                                 </div>
-                            )}
+                            ), document.body)}
                         </div>
                         {isNeoBuild && (
                             <div className="neo-build-label">NEO Build</div>

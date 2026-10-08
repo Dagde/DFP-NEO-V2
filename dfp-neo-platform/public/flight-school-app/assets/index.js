@@ -44943,7 +44943,10 @@ const ScheduleView = ({
     [configuredPersonnelServices, traineesData]
   );
   const scrollContainerRef = reactExports.useRef(null);
+  const dateSelectorRef = reactExports.useRef(null);
+  const datePickerPanelRef = reactExports.useRef(null);
   const [showDatePicker, setShowDatePicker] = reactExports.useState(false);
+  const [datePickerPosition, setDatePickerPosition] = reactExports.useState({ top: 0, left: 0 });
   const [showResourceUnderlayPanel, setShowResourceUnderlayPanel] = reactExports.useState(false);
   const [flightLineDraggedAircraftNumber, setFlightLineDraggedAircraftNumber] = reactExports.useState(null);
   const [flightLineLocalUnavailableNumbers, setFlightLineLocalUnavailableNumbers] = reactExports.useState(null);
@@ -44958,6 +44961,47 @@ const ScheduleView = ({
   reactExports.useEffect(() => {
     if (isNeoAssistPanelOpen) setShowResourceUnderlayPanel(false);
   }, [isNeoAssistPanelOpen]);
+  const updateDatePickerPosition = reactExports.useCallback(() => {
+    if (typeof window === "undefined") return;
+    const anchor = dateSelectorRef.current;
+    if (!anchor) return;
+    const rect = anchor.getBoundingClientRect();
+    const panelWidth = 272;
+    const panelHeight = 360;
+    const viewportMargin = 12;
+    const left = Math.min(
+      Math.max(rect.left, viewportMargin),
+      Math.max(viewportMargin, window.innerWidth - panelWidth - viewportMargin)
+    );
+    const preferredTop = rect.bottom + 8;
+    const top = preferredTop + panelHeight > window.innerHeight - viewportMargin ? Math.max(viewportMargin, rect.top - panelHeight - 8) : preferredTop;
+    setDatePickerPosition({ top, left });
+  }, []);
+  reactExports.useEffect(() => {
+    if (!showDatePicker) return;
+    updateDatePickerPosition();
+    const handleWindowChange = () => updateDatePickerPosition();
+    const handlePointerDown = (event) => {
+      const target = event.target;
+      if (!target) return;
+      if (dateSelectorRef.current?.contains(target)) return;
+      if (datePickerPanelRef.current?.contains(target)) return;
+      setShowDatePicker(false);
+    };
+    const handleKeyDown = (event) => {
+      if (event.key === "Escape") setShowDatePicker(false);
+    };
+    window.addEventListener("resize", handleWindowChange);
+    window.addEventListener("scroll", handleWindowChange, true);
+    window.addEventListener("pointerdown", handlePointerDown);
+    window.addEventListener("keydown", handleKeyDown);
+    return () => {
+      window.removeEventListener("resize", handleWindowChange);
+      window.removeEventListener("scroll", handleWindowChange, true);
+      window.removeEventListener("pointerdown", handlePointerDown);
+      window.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [showDatePicker, updateDatePickerPosition]);
   const hasStoredInitialSetupWizardProgress = reactExports.useCallback(() => {
     if (typeof window === "undefined") return false;
     const storedStep = Number(window.localStorage.getItem(initialSetupWizardStorageKey));
@@ -47311,10 +47355,14 @@ const ScheduleView = ({
             /* @__PURE__ */ jsxRuntimeExports.jsxs(
               "div",
               {
+                ref: dateSelectorRef,
                 "data-schedule-date-selector": "true",
                 className: `relative bg-gray-700 rounded-md flex items-center justify-center px-3 gap-2 cursor-pointer ${isNeoBuild ? "neo-build-date-indicator" : ""}`,
                 style: { height: "100%", width: "100%" },
-                onClick: () => setShowDatePicker((prev) => !prev),
+                onClick: () => {
+                  updateDatePickerPosition();
+                  setShowDatePicker((prev) => !prev);
+                },
                 title: "Open date picker",
                 children: [
                   /* @__PURE__ */ jsxRuntimeExports.jsx(
@@ -47342,10 +47390,18 @@ const ScheduleView = ({
                       children: "→"
                     }
                   ),
-                  showDatePicker && /* @__PURE__ */ jsxRuntimeExports.jsxs(
+                  showDatePicker && typeof document !== "undefined" && reactDomExports.createPortal(/* @__PURE__ */ jsxRuntimeExports.jsxs(
                     "div",
                     {
-                      className: "absolute top-full left-0 mt-2 w-64 rounded-lg border border-gray-600 bg-gray-800 p-3 shadow-2xl",
+                      ref: datePickerPanelRef,
+                      className: "rounded-lg border border-gray-600 bg-gray-800 p-3 shadow-2xl",
+                      style: {
+                        position: "fixed",
+                        top: `${datePickerPosition.top}px`,
+                        left: `${datePickerPosition.left}px`,
+                        width: "272px",
+                        zIndex: 1e4
+                      },
                       onClick: (event) => event.stopPropagation(),
                       children: [
                         /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "block text-xs font-semibold uppercase tracking-wide text-gray-400 mb-2", children: "Select DFP Date" }),
@@ -47390,7 +47446,7 @@ const ScheduleView = ({
                         ] })
                       ]
                     }
-                  )
+                  ), document.body)
                 ]
               }
             ),
