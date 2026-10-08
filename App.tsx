@@ -55984,6 +55984,72 @@ appliedUpdates.forEach(update => {
         }
     }, [scopedApiPath]);
 
+    const handleRestoreTrainee = useCallback(async (identifier: string | number | null | undefined) => {
+        const identifierText = String(identifier ?? '').trim();
+        const matchesRestoreIdentifier = (trainee: Trainee): boolean => {
+            const dbId = String((trainee as any).id || '').trim();
+            if (identifierText && dbId === identifierText) return true;
+            if (identifierText && trainee.idNumber !== null && trainee.idNumber !== undefined) {
+                return String(trainee.idNumber) === identifierText;
+            }
+            return false;
+        };
+        const traineeToRestore = archivedTraineesData.find(matchesRestoreIdentifier)
+            || allTraineesDataRef.current.find(matchesRestoreIdentifier);
+        if (!traineeToRestore) return;
+        const dbId = String((traineeToRestore as any).id || '').trim();
+        const targetIdNumber = traineeToRestore.idNumber;
+        const matchesTargetTrainee = (trainee: Trainee): boolean => {
+            const candidateDbId = String((trainee as any).id || '').trim();
+            if (dbId && candidateDbId === dbId) return true;
+            if (targetIdNumber !== null && targetIdNumber !== undefined) {
+                return String(trainee.idNumber) === String(targetIdNumber);
+            }
+            return false;
+        };
+        const restoredTrainee = { ...(traineeToRestore as any), isActive: true } as Trainee;
+        const traineeName = traineeToRestore.fullName || traineeToRestore.name || 'trainee';
+
+        try {
+            if (dbId && (traineeToRestore as any)._dataSource === 'database') {
+                const sessionToken = localStorage.getItem('dfp_session_token') || '';
+                const response = await fetch(scopedApiPath(`/api/trainees/${encodeURIComponent(dbId)}`), {
+                    method: 'PATCH',
+                    credentials: 'include',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        ...(sessionToken ? { Authorization: `Bearer ${sessionToken}` } : {}),
+                    },
+                    body: JSON.stringify({ isActive: true }),
+                });
+                if (!response.ok) {
+                    const message = await readApiErrorMessage(response, `Could not restore ${traineeName}.`);
+                    throw new Error(message);
+                }
+            }
+            setArchivedTraineesData(prev => prev.filter(t => !matchesTargetTrainee(t)));
+            setTraineesData(prev => {
+                const exists = prev.some(matchesTargetTrainee);
+                if (exists) {
+                    return prev.map(t => (
+                        matchesTargetTrainee(t) ? restoredTrainee : t
+                    ));
+                }
+                return [...prev, restoredTrainee];
+            });
+            logAudit({
+                page: 'Trainee Roster',
+                action: 'restore',
+                description: 'Restored archived trainee',
+                changes: `Restored: ${traineeToRestore.rank || ''} ${traineeName}`.trim(),
+            });
+            setSuccessMessage(`${traineeName} restored.`);
+        } catch (error) {
+            console.error('[Trainee Restore] Failed:', error);
+            setShowInfoNotification(`Restore failed: ${error instanceof Error ? error.message : String(error)}`);
+        }
+    }, [archivedTraineesData, scopedApiPath]);
+
     const resolveCourseMovementDirection = useCallback((fromCourse: string, toCourse: string): 'back-course' | 'forward-course' | 'course-change' => {
         const normaliseCourse = (value: string) => String(value || '').trim().toUpperCase();
         const from = normaliseCourse(fromCourse);
@@ -57882,6 +57948,7 @@ appliedUpdates.forEach(update => {
                             traineesData={activeDateTraineesData}
                             instructorsData={activeDateInstructorsData}
                             archivedInstructorsData={archivedInstructorsData}
+                            archivedTraineesData={archivedTraineesData}
                             scheduleHistoryEvents={publishedScheduleHistoryEvents}
                             insertEventTypes={insertEventTypes}
                             aircraftConfigurations={aircraftConfigurations}
@@ -58029,6 +58096,7 @@ appliedUpdates.forEach(update => {
                             onBulkUpdateInstructors={handleBulkUpdateInstructors}
                             onArchiveInstructor={handleArchiveInstructor}
                             onRestoreInstructor={handleRestoreInstructor}
+                            onRestoreTrainee={handleRestoreTrainee}
                             date={date}
                             onDateChange={handleDateChange}
                             eventSegmentsForDate={eventSegmentsForDate}
@@ -58080,6 +58148,7 @@ appliedUpdates.forEach(update => {
                             traineesData={traineesData}
                             instructorsData={instructorsData}
                             archivedInstructorsData={archivedInstructorsData}
+                            archivedTraineesData={archivedTraineesData}
                             scheduleHistoryEvents={publishedScheduleHistoryEvents}
                             syllabusDetails={syllabusDetails}
                             insertEventTypes={insertEventTypes}
@@ -58227,6 +58296,7 @@ appliedUpdates.forEach(update => {
                             onBulkUpdateInstructors={handleBulkUpdateInstructors}
                             onArchiveInstructor={(id) => { void handleArchiveInstructor(id); }}
                             onRestoreInstructor={(id) => { void handleRestoreInstructor(id); }}
+                            onRestoreTrainee={(id) => { void handleRestoreTrainee(id); }}
                             locations={locations}
                             units={units}
                             selectedPersonForProfile={selectedPersonForProfile as Instructor | null}

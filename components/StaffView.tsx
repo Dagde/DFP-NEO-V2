@@ -19,6 +19,7 @@ interface StaffViewProps {
   traineesData: any[];
   instructorsData: any[];
   archivedInstructorsData: any[];
+  archivedTraineesData?: any[];
   scheduleHistoryEvents?: any[];
   insertEventTypes?: any[];
   aircraftConfigurations?: any[];
@@ -33,6 +34,7 @@ interface StaffViewProps {
   onBulkUpdateInstructors: (updates: any[]) => void;
   onArchiveInstructor: (id: string | number | null) => Promise<void> | void;
   onRestoreInstructor: (id: string | number | null) => Promise<void> | void;
+  onRestoreTrainee?: (id: string | number | null) => Promise<void> | void;
   onRequestSct?: (instructor: any) => void;
   locations?: string[];
   units?: string[];
@@ -126,12 +128,16 @@ const StaffView: React.FC<StaffViewProps> = (props) => {
   };
   const activeInstructorsData = isSelfOnly && props.selfOnlyProfile ? [props.selfOnlyProfile] : props.instructorsData;
   const activeArchivedInstructorsData = isSelfOnly ? [] : props.archivedInstructorsData;
+  const activeArchivedTraineesData = isSelfOnly ? [] : (props.archivedTraineesData || []);
   const scopedInstructorsData = shouldShowUnitTabs
     ? activeInstructorsData.filter(instructor => normaliseUnitCode(instructor.unit) === activeUnitTab)
     : activeInstructorsData;
   const scopedArchivedInstructorsData = shouldShowUnitTabs
     ? activeArchivedInstructorsData.filter(instructor => normaliseUnitCode(instructor.unit) === activeUnitTab)
     : activeArchivedInstructorsData;
+  const scopedArchivedTraineesData = shouldShowUnitTabs
+    ? activeArchivedTraineesData.filter(trainee => normaliseUnitCode(trainee.unit) === activeUnitTab)
+    : activeArchivedTraineesData;
 
   // App already provides the active location/unit scoped staff list.
   const shouldGroupCombinedUnitStaffSchedule = isFixedCrewModel && sharedUnitTabs.length > 1;
@@ -236,6 +242,7 @@ const StaffView: React.FC<StaffViewProps> = (props) => {
             traineesData={props.traineesData}
             instructorsData={scopedInstructorsData}
             archivedInstructorsData={scopedArchivedInstructorsData}
+            archivedTraineesData={scopedArchivedTraineesData}
             scheduleHistoryEvents={props.scheduleHistoryEvents}
             syllabusDetails={props.syllabusDetails}
             insertEventTypes={props.insertEventTypes}
@@ -251,6 +258,7 @@ const StaffView: React.FC<StaffViewProps> = (props) => {
             onBulkUpdateInstructors={props.onBulkUpdateInstructors}
             onArchiveInstructor={props.onArchiveInstructor}
             onRestoreInstructor={props.onRestoreInstructor}
+            onRestoreTrainee={props.onRestoreTrainee}
             onRequestSct={props.onRequestSct}
             locations={props.locations}
             units={props.units}

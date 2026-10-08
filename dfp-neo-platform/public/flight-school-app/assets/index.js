@@ -93182,29 +93182,56 @@ const RestoreConfirmationFlyout = ({ instructorName, onConfirm, onClose }) => {
 };
 const ArchivedInstructorsFlyout = ({
   archivedInstructors,
+  archivedTrainees = [],
   onClose,
   onRestore,
+  onRestoreTrainee,
   canRestore = false,
   onRequestRestorePassword
 }) => {
-  const [instructorToRestore, setInstructorToRestore] = reactExports.useState(null);
+  const [personToRestore, setPersonToRestore] = reactExports.useState(null);
   const [searchText, setSearchText] = reactExports.useState("");
-  const getArchiveIdentifier = (instructor) => {
-    const dbId = String(instructor.id || "").trim();
-    return dbId || instructor.idNumber || null;
+  const getArchiveIdentifier = (person) => {
+    const dbId = String(person.id || "").trim();
+    return dbId || person.idNumber || null;
   };
+  const archivedIndividuals = [
+    ...archivedInstructors.map((instructor) => ({
+      person: instructor,
+      kind: "Staff",
+      id: getArchiveIdentifier(instructor),
+      name: instructor.name || "",
+      rank: instructor.rank || "",
+      role: instructor.role || "Staff",
+      unit: instructor.unit || "",
+      course: ""
+    })),
+    ...archivedTrainees.map((trainee) => ({
+      person: trainee,
+      kind: "Trainee",
+      id: getArchiveIdentifier(trainee),
+      name: trainee.fullName || trainee.name || "",
+      rank: trainee.rank || "",
+      role: trainee.role || "Trainee",
+      unit: trainee.unit || "",
+      course: trainee.course || ""
+    }))
+  ].sort((a, b) => a.name.localeCompare(b.name, void 0, { sensitivity: "base" }));
   const normalisedSearchText = searchText.trim().toLowerCase();
-  const filteredArchivedInstructors = normalisedSearchText ? archivedInstructors.filter((instructor) => {
+  const filteredArchivedIndividuals = normalisedSearchText ? archivedIndividuals.filter((individual) => {
     const searchableText = [
-      instructor.name,
-      instructor.rank,
-      instructor.idNumber,
-      instructor.id,
-      instructor.personnelId,
-      instructor.personnelNumber
+      individual.name,
+      individual.rank,
+      individual.role,
+      individual.kind,
+      individual.unit,
+      individual.course,
+      individual.id,
+      individual.person.personnelId,
+      individual.person.personnelNumber
     ].map((value) => String(value || "").toLowerCase()).join(" ");
     return searchableText.includes(normalisedSearchText);
-  }) : archivedInstructors;
+  }) : archivedIndividuals;
   return /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
     /* @__PURE__ */ jsxRuntimeExports.jsx(
       "div",
@@ -93220,12 +93247,12 @@ const ArchivedInstructorsFlyout = ({
             onClick: (e) => e.stopPropagation(),
             children: [
               /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "p-4 border-b border-gray-700 flex justify-between items-center bg-gray-900/50 rounded-t-lg", children: [
-                /* @__PURE__ */ jsxRuntimeExports.jsx("h2", { id: "archived-list-title", className: "text-xl font-bold text-white", children: "Archived Staff" }),
-                /* @__PURE__ */ jsxRuntimeExports.jsx("button", { onClick: onClose, className: "text-white hover:text-gray-300", "aria-label": "Close archived staff list", children: /* @__PURE__ */ jsxRuntimeExports.jsx("svg", { xmlns: "http://www.w3.org/2000/svg", className: "h-6 w-6", fill: "none", viewBox: "0 0 24 24", stroke: "currentColor", children: /* @__PURE__ */ jsxRuntimeExports.jsx("path", { strokeLinecap: "round", strokeLinejoin: "round", strokeWidth: 2, d: "M6 18L18 6M6 6l12 12" }) }) })
+                /* @__PURE__ */ jsxRuntimeExports.jsx("h2", { id: "archived-list-title", className: "text-xl font-bold text-white", children: "Archived Individuals" }),
+                /* @__PURE__ */ jsxRuntimeExports.jsx("button", { onClick: onClose, className: "text-white hover:text-gray-300", "aria-label": "Close archived individuals list", children: /* @__PURE__ */ jsxRuntimeExports.jsx("svg", { xmlns: "http://www.w3.org/2000/svg", className: "h-6 w-6", fill: "none", viewBox: "0 0 24 24", stroke: "currentColor", children: /* @__PURE__ */ jsxRuntimeExports.jsx("path", { strokeLinecap: "round", strokeLinejoin: "round", strokeWidth: 2, d: "M6 18L18 6M6 6l12 12" }) }) })
               ] }),
               /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "p-6 flex-1 overflow-y-auto", "aria-labelledby": "archived-list-title", children: [
                 /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mb-4", children: [
-                  /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "sr-only", htmlFor: "archived-profile-search", children: "Search archived staff" }),
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "sr-only", htmlFor: "archived-profile-search", children: "Search archived individuals" }),
                   /* @__PURE__ */ jsxRuntimeExports.jsx(
                     "input",
                     {
@@ -93233,53 +93260,64 @@ const ArchivedInstructorsFlyout = ({
                       type: "text",
                       value: searchText,
                       onChange: (event) => setSearchText(event.target.value),
-                      placeholder: "Search by name or ID number...",
+                      placeholder: "Search by name, role, course, unit or ID number...",
                       className: "w-full rounded-md border border-gray-600 bg-gray-900 px-3 py-2 text-sm font-semibold text-gray-100 placeholder-gray-500 outline-none focus:border-sky-500 focus:ring-1 focus:ring-sky-500"
                     }
                   )
                 ] }),
-                filteredArchivedInstructors.length > 0 ? /* @__PURE__ */ jsxRuntimeExports.jsx("ul", { className: "space-y-2", children: filteredArchivedInstructors.map((instructor) => /* @__PURE__ */ jsxRuntimeExports.jsxs(
+                filteredArchivedIndividuals.length > 0 ? /* @__PURE__ */ jsxRuntimeExports.jsx("ul", { className: "space-y-2", children: filteredArchivedIndividuals.map((individual) => /* @__PURE__ */ jsxRuntimeExports.jsxs(
                   "li",
                   {
                     className: "p-3 bg-gray-700/50 rounded-md text-gray-300 flex items-center justify-between",
                     children: [
                       /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center space-x-4", children: [
-                        /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "font-mono text-gray-500 w-16 flex-shrink-0 text-right", children: instructor.rank }),
-                        /* @__PURE__ */ jsxRuntimeExports.jsx("span", { children: instructor.name })
+                        /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "font-mono text-gray-500 w-16 flex-shrink-0 text-right", children: individual.rank }),
+                        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
+                          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-gray-100", children: individual.name }),
+                          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "text-xs text-gray-500", children: [
+                            individual.kind,
+                            individual.course ? ` - ${individual.course}` : "",
+                            individual.unit ? ` - ${individual.unit}` : ""
+                          ] })
+                        ] })
                       ] }),
                       /* @__PURE__ */ jsxRuntimeExports.jsx(
                         "button",
                         {
                           onClick: () => {
                             if (!canRestore) return;
-                            setInstructorToRestore(instructor);
+                            setPersonToRestore(individual);
                           },
                           className: `p-1 rounded-full text-gray-400 hover:bg-green-500/20 hover:text-green-400 transition-colors ${canRestore ? "" : "cursor-not-allowed"}`,
-                          "aria-label": `Restore ${instructor.name}`,
+                          "aria-label": `Restore ${individual.name}`,
                           children: /* @__PURE__ */ jsxRuntimeExports.jsx("svg", { xmlns: "http://www.w3.org/2000/svg", className: "h-5 w-5", viewBox: "0 0 20 20", fill: "currentColor", children: /* @__PURE__ */ jsxRuntimeExports.jsx("path", { fillRule: "evenodd", d: "M10 5a1 1 0 011 1v3h3a1 1 0 110 2h-3v3a1 1 0 11-2 0v-3H6a1 1 0 110-2h3V6a1 1 0 011-1z", clipRule: "evenodd" }) })
                         }
                       )
                     ]
                   },
-                  String(getArchiveIdentifier(instructor) || instructor.name)
-                )) }) : /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-gray-500 text-center italic py-8", children: archivedInstructors.length > 0 ? "No archived staff match that search." : "No staff have been archived." })
+                  `${individual.kind}-${String(individual.id || individual.name)}`
+                )) }) : /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-gray-500 text-center italic py-8", children: archivedIndividuals.length > 0 ? "No archived individuals match that search." : "No individuals have been archived." })
               ] })
             ]
           }
         )
       }
     ),
-    instructorToRestore && /* @__PURE__ */ jsxRuntimeExports.jsx(
+    personToRestore && /* @__PURE__ */ jsxRuntimeExports.jsx(
       RestoreConfirmationFlyout,
       {
-        instructorName: instructorToRestore.name,
+        instructorName: personToRestore.name,
         onConfirm: async () => {
-          const passwordAccepted = onRequestRestorePassword ? await onRequestRestorePassword(instructorToRestore.name) : true;
+          const passwordAccepted = onRequestRestorePassword ? await onRequestRestorePassword(personToRestore.name) : true;
           if (!passwordAccepted) return;
-          await onRestore(getArchiveIdentifier(instructorToRestore));
-          setInstructorToRestore(null);
+          if (personToRestore.kind === "Trainee") {
+            await onRestoreTrainee?.(personToRestore.id);
+          } else {
+            await onRestore(personToRestore.id);
+          }
+          setPersonToRestore(null);
         },
-        onClose: () => setInstructorToRestore(null)
+        onClose: () => setPersonToRestore(null)
       }
     )
   ] });
@@ -93343,6 +93381,7 @@ const InstructorListView = ({
   traineesData,
   instructorsData,
   archivedInstructorsData,
+  archivedTraineesData = [],
   scheduleHistoryEvents = [],
   syllabusDetails = [],
   insertEventTypes = [],
@@ -93358,6 +93397,7 @@ const InstructorListView = ({
   onBulkUpdateInstructors,
   onArchiveInstructor,
   onRestoreInstructor,
+  onRestoreTrainee,
   locations,
   units,
   selectedPersonForProfile,
@@ -94146,8 +94186,10 @@ const InstructorListView = ({
       ArchivedInstructorsFlyout,
       {
         archivedInstructors: archivedInstructorsData,
+        archivedTrainees: archivedTraineesData,
         onClose: () => setShowArchivedFlyout(false),
         onRestore: onRestoreInstructor,
+        onRestoreTrainee,
         canRestore: canManageArchive,
         onRequestRestorePassword: (instructorName) => requestArchivePassword(
           `Enter your password to restore ${instructorName}.`,
@@ -94510,8 +94552,10 @@ const StaffView = (props) => {
   };
   const activeInstructorsData = isSelfOnly && props.selfOnlyProfile ? [props.selfOnlyProfile] : props.instructorsData;
   const activeArchivedInstructorsData = isSelfOnly ? [] : props.archivedInstructorsData;
+  const activeArchivedTraineesData = isSelfOnly ? [] : props.archivedTraineesData || [];
   const scopedInstructorsData = shouldShowUnitTabs ? activeInstructorsData.filter((instructor) => normaliseUnitCode2(instructor.unit) === activeUnitTab) : activeInstructorsData;
   const scopedArchivedInstructorsData = shouldShowUnitTabs ? activeArchivedInstructorsData.filter((instructor) => normaliseUnitCode2(instructor.unit) === activeUnitTab) : activeArchivedInstructorsData;
+  const scopedArchivedTraineesData = shouldShowUnitTabs ? activeArchivedTraineesData.filter((trainee) => normaliseUnitCode2(trainee.unit) === activeUnitTab) : activeArchivedTraineesData;
   const shouldGroupCombinedUnitStaffSchedule = isFixedCrewModel && sharedUnitTabs.length > 1;
   const scheduleInstructorsData = shouldGroupCombinedUnitStaffSchedule ? activeInstructorsData.filter((instructor) => sharedUnitTabs.includes(normaliseUnitCode2(instructor.unit))) : scopedInstructorsData;
   const isFlyingCrewRole = (person) => String(person?.role || "").trim().toLowerCase() === "pilot" || Boolean(findCrewPositionEntry(person?.role, props.crewPositionTerminology));
@@ -94583,6 +94627,7 @@ const StaffView = (props) => {
           traineesData: props.traineesData,
           instructorsData: scopedInstructorsData,
           archivedInstructorsData: scopedArchivedInstructorsData,
+          archivedTraineesData: scopedArchivedTraineesData,
           scheduleHistoryEvents: props.scheduleHistoryEvents,
           syllabusDetails: props.syllabusDetails,
           insertEventTypes: props.insertEventTypes,
@@ -94598,6 +94643,7 @@ const StaffView = (props) => {
           onBulkUpdateInstructors: props.onBulkUpdateInstructors,
           onArchiveInstructor: props.onArchiveInstructor,
           onRestoreInstructor: props.onRestoreInstructor,
+          onRestoreTrainee: props.onRestoreTrainee,
           onRequestSct: props.onRequestSct,
           locations: props.locations,
           units: props.units,
@@ -163329,6 +163375,67 @@ It will not clear the published DFP.`,
       setShowInfoNotification(`Archive failed: ${error instanceof Error ? error.message : String(error)}`);
     }
   }, [scopedApiPath]);
+  const handleRestoreTrainee = reactExports.useCallback(async (identifier) => {
+    const identifierText = String(identifier ?? "").trim();
+    const matchesRestoreIdentifier = (trainee) => {
+      const dbId2 = String(trainee.id || "").trim();
+      if (identifierText && dbId2 === identifierText) return true;
+      if (identifierText && trainee.idNumber !== null && trainee.idNumber !== void 0) {
+        return String(trainee.idNumber) === identifierText;
+      }
+      return false;
+    };
+    const traineeToRestore = archivedTraineesData.find(matchesRestoreIdentifier) || allTraineesDataRef.current.find(matchesRestoreIdentifier);
+    if (!traineeToRestore) return;
+    const dbId = String(traineeToRestore.id || "").trim();
+    const targetIdNumber = traineeToRestore.idNumber;
+    const matchesTargetTrainee = (trainee) => {
+      const candidateDbId = String(trainee.id || "").trim();
+      if (dbId && candidateDbId === dbId) return true;
+      if (targetIdNumber !== null && targetIdNumber !== void 0) {
+        return String(trainee.idNumber) === String(targetIdNumber);
+      }
+      return false;
+    };
+    const restoredTrainee = { ...traineeToRestore, isActive: true };
+    const traineeName = traineeToRestore.fullName || traineeToRestore.name || "trainee";
+    try {
+      if (dbId && traineeToRestore._dataSource === "database") {
+        const sessionToken = localStorage.getItem("dfp_session_token") || "";
+        const response = await fetch(scopedApiPath(`/api/trainees/${encodeURIComponent(dbId)}`), {
+          method: "PATCH",
+          credentials: "include",
+          headers: {
+            "Content-Type": "application/json",
+            ...sessionToken ? { Authorization: `Bearer ${sessionToken}` } : {}
+          },
+          body: JSON.stringify({ isActive: true })
+        });
+        if (!response.ok) {
+          const message = await readApiErrorMessage(response, `Could not restore ${traineeName}.`);
+          throw new Error(message);
+        }
+      }
+      setArchivedTraineesData((prev) => prev.filter((t) => !matchesTargetTrainee(t)));
+      setTraineesData((prev) => {
+        const exists = prev.some(matchesTargetTrainee);
+        if (exists) {
+          return prev.map((t) => matchesTargetTrainee(t) ? restoredTrainee : t);
+        }
+        return [...prev, restoredTrainee];
+      });
+      logAudit({
+        page: "Trainee Roster",
+        action: "restore",
+        description: "Restored archived trainee",
+        changes: `Restored: ${traineeToRestore.rank || ""} ${traineeName}`.trim()
+      });
+      setSuccessMessage(`${traineeName} restored.`);
+    } catch (error) {
+      console.error("[Trainee Restore] Failed:", error);
+      setShowInfoNotification(`Restore failed: ${error instanceof Error ? error.message : String(error)}`);
+    }
+  }, [archivedTraineesData, scopedApiPath]);
   const resolveCourseMovementDirection = reactExports.useCallback((fromCourse, toCourse) => {
     const normaliseCourse = (value) => String(value || "").trim().toUpperCase();
     const from = normaliseCourse(fromCourse);
@@ -165072,6 +165179,7 @@ It will not clear the published DFP.`,
             traineesData: activeDateTraineesData,
             instructorsData: activeDateInstructorsData,
             archivedInstructorsData,
+            archivedTraineesData,
             scheduleHistoryEvents: publishedScheduleHistoryEvents,
             insertEventTypes,
             aircraftConfigurations,
@@ -165209,6 +165317,7 @@ It will not clear the published DFP.`,
             onBulkUpdateInstructors: handleBulkUpdateInstructors,
             onArchiveInstructor: handleArchiveInstructor,
             onRestoreInstructor: handleRestoreInstructor,
+            onRestoreTrainee: handleRestoreTrainee,
             date,
             onDateChange: handleDateChange,
             eventSegmentsForDate,
@@ -165263,6 +165372,7 @@ It will not clear the published DFP.`,
             traineesData,
             instructorsData,
             archivedInstructorsData,
+            archivedTraineesData,
             scheduleHistoryEvents: publishedScheduleHistoryEvents,
             syllabusDetails,
             insertEventTypes,
@@ -165404,6 +165514,9 @@ It will not clear the published DFP.`,
             },
             onRestoreInstructor: (id) => {
               void handleRestoreInstructor(id);
+            },
+            onRestoreTrainee: (id) => {
+              void handleRestoreTrainee(id);
             },
             locations,
             units,

@@ -139,6 +139,7 @@ interface InstructorListViewProps {
   traineesData: Trainee[];
   instructorsData: Instructor[];
   archivedInstructorsData: Instructor[];
+  archivedTraineesData?: Trainee[];
   scheduleHistoryEvents?: ScheduleEvent[];
   syllabusDetails?: SyllabusItemDetail[];
   insertEventTypes?: InsertEventTypeConfig[];
@@ -168,6 +169,7 @@ interface InstructorListViewProps {
   onBulkUpdateInstructors: (instructors: Instructor[]) => void;
   onArchiveInstructor: (id: string | number | null) => Promise<void> | void;
   onRestoreInstructor: (id: string | number | null) => Promise<void> | void;
+  onRestoreTrainee?: (id: string | number | null) => Promise<void> | void;
   locations: string[];
   units: string[];
   selectedPersonForProfile?: Instructor | null;
@@ -209,6 +211,7 @@ const InstructorListView: React.FC<InstructorListViewProps> = ({
     traineesData,
     instructorsData,
     archivedInstructorsData,
+    archivedTraineesData = [],
     scheduleHistoryEvents = [],
     syllabusDetails = [],
     insertEventTypes = [],
@@ -224,6 +227,7 @@ const InstructorListView: React.FC<InstructorListViewProps> = ({
     onBulkUpdateInstructors,
     onArchiveInstructor,
     onRestoreInstructor,
+    onRestoreTrainee,
     locations,
     units,
     selectedPersonForProfile,
@@ -1159,8 +1163,10 @@ const InstructorListView: React.FC<InstructorListViewProps> = ({
       {showArchivedFlyout && (
         <ArchivedInstructorsFlyout
             archivedInstructors={archivedInstructorsData}
+            archivedTrainees={archivedTraineesData}
             onClose={() => setShowArchivedFlyout(false)}
             onRestore={onRestoreInstructor}
+            onRestoreTrainee={onRestoreTrainee}
             canRestore={canManageArchive}
             onRequestRestorePassword={(instructorName) => requestArchivePassword(
               `Enter your password to restore ${instructorName}.`,
