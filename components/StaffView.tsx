@@ -132,12 +132,8 @@ const StaffView: React.FC<StaffViewProps> = (props) => {
   const scopedInstructorsData = shouldShowUnitTabs
     ? activeInstructorsData.filter(instructor => normaliseUnitCode(instructor.unit) === activeUnitTab)
     : activeInstructorsData;
-  const scopedArchivedInstructorsData = shouldShowUnitTabs
-    ? activeArchivedInstructorsData.filter(instructor => normaliseUnitCode(instructor.unit) === activeUnitTab)
-    : activeArchivedInstructorsData;
-  const scopedArchivedTraineesData = shouldShowUnitTabs
-    ? activeArchivedTraineesData.filter(trainee => normaliseUnitCode(trainee.unit) === activeUnitTab)
-    : activeArchivedTraineesData;
+  const archivedIndividualsInstructorsData = activeArchivedInstructorsData;
+  const archivedIndividualsTraineesData = activeArchivedTraineesData;
 
   // App already provides the active location/unit scoped staff list.
   const shouldGroupCombinedUnitStaffSchedule = isFixedCrewModel && sharedUnitTabs.length > 1;
@@ -241,8 +237,8 @@ const StaffView: React.FC<StaffViewProps> = (props) => {
             events={props.events}
             traineesData={props.traineesData}
             instructorsData={scopedInstructorsData}
-            archivedInstructorsData={scopedArchivedInstructorsData}
-            archivedTraineesData={scopedArchivedTraineesData}
+            archivedInstructorsData={archivedIndividualsInstructorsData}
+            archivedTraineesData={archivedIndividualsTraineesData}
             scheduleHistoryEvents={props.scheduleHistoryEvents}
             syllabusDetails={props.syllabusDetails}
             insertEventTypes={props.insertEventTypes}

@@ -52265,7 +52265,11 @@ appliedUpdates.forEach(update => {
             }
 
             // Fetch fresh trainees data
-            const traineesRes = await fetch(scopedApiPath('/api/trainees', scopeParams), { credentials: 'include' });
+            const traineeScopeParams = {
+                ...(scopeParams || {}),
+                includeInactive: 'true',
+            };
+            const traineesRes = await fetch(scopedApiPath('/api/trainees', traineeScopeParams), { credentials: 'include' });
             if (traineesRes.ok) {
                 const traineesData = await traineesRes.json();
                 const dbTrainees = (traineesData.trainees || []).map((t: any) => ({
@@ -52653,7 +52657,7 @@ appliedUpdates.forEach(update => {
         if (isUserEditing()) return false;
         try {
             const personnelUrl = scopedApiPath('/api/personnel');
-            const traineesUrl = scopedApiPath('/api/trainees');
+            const traineesUrl = scopedApiPath('/api/trainees', { includeInactive: 'true' });
             const [personnelRes, traineesRes] = await Promise.all([
                 fetch(personnelUrl, { credentials: 'include' }),
                 fetch(traineesUrl,  { credentials: 'include' }),

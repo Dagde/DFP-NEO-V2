@@ -94554,8 +94554,8 @@ const StaffView = (props) => {
   const activeArchivedInstructorsData = isSelfOnly ? [] : props.archivedInstructorsData;
   const activeArchivedTraineesData = isSelfOnly ? [] : props.archivedTraineesData || [];
   const scopedInstructorsData = shouldShowUnitTabs ? activeInstructorsData.filter((instructor) => normaliseUnitCode2(instructor.unit) === activeUnitTab) : activeInstructorsData;
-  const scopedArchivedInstructorsData = shouldShowUnitTabs ? activeArchivedInstructorsData.filter((instructor) => normaliseUnitCode2(instructor.unit) === activeUnitTab) : activeArchivedInstructorsData;
-  const scopedArchivedTraineesData = shouldShowUnitTabs ? activeArchivedTraineesData.filter((trainee) => normaliseUnitCode2(trainee.unit) === activeUnitTab) : activeArchivedTraineesData;
+  const archivedIndividualsInstructorsData = activeArchivedInstructorsData;
+  const archivedIndividualsTraineesData = activeArchivedTraineesData;
   const shouldGroupCombinedUnitStaffSchedule = isFixedCrewModel && sharedUnitTabs.length > 1;
   const scheduleInstructorsData = shouldGroupCombinedUnitStaffSchedule ? activeInstructorsData.filter((instructor) => sharedUnitTabs.includes(normaliseUnitCode2(instructor.unit))) : scopedInstructorsData;
   const isFlyingCrewRole = (person) => String(person?.role || "").trim().toLowerCase() === "pilot" || Boolean(findCrewPositionEntry(person?.role, props.crewPositionTerminology));
@@ -94626,8 +94626,8 @@ const StaffView = (props) => {
           events: props.events,
           traineesData: props.traineesData,
           instructorsData: scopedInstructorsData,
-          archivedInstructorsData: scopedArchivedInstructorsData,
-          archivedTraineesData: scopedArchivedTraineesData,
+          archivedInstructorsData: archivedIndividualsInstructorsData,
+          archivedTraineesData: archivedIndividualsTraineesData,
           scheduleHistoryEvents: props.scheduleHistoryEvents,
           syllabusDetails: props.syllabusDetails,
           insertEventTypes: props.insertEventTypes,
@@ -160370,7 +160370,11 @@ Do not hard refresh yet. Try Publish again, then confirm the save succeeds.`,
         setIsStaffLoaded(true);
         logRoutineAppDebug(`✅ Refreshed ${dbPersonnel.length} personnel from database`);
       }
-      const traineesRes = await fetch(scopedApiPath("/api/trainees", scopeParams), { credentials: "include" });
+      const traineeScopeParams = {
+        ...scopeParams || {},
+        includeInactive: "true"
+      };
+      const traineesRes = await fetch(scopedApiPath("/api/trainees", traineeScopeParams), { credentials: "include" });
       if (traineesRes.ok) {
         const traineesData2 = await traineesRes.json();
         const dbTrainees = (traineesData2.trainees || []).map((t) => ({
@@ -160693,7 +160697,7 @@ Do not hard refresh yet. Try Publish again, then confirm the save succeeds.`,
     if (isUserEditing()) return false;
     try {
       const personnelUrl = scopedApiPath("/api/personnel");
-      const traineesUrl = scopedApiPath("/api/trainees");
+      const traineesUrl = scopedApiPath("/api/trainees", { includeInactive: "true" });
       const [personnelRes, traineesRes] = await Promise.all([
         fetch(personnelUrl, { credentials: "include" }),
         fetch(traineesUrl, { credentials: "include" })
