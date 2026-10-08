@@ -392,6 +392,13 @@ const CourseRosterView: React.FC<CourseRosterViewProps> = ({
         setSelectedTraineeForDeletion(null);
     };
 
+    const handleArchiveTrainee = async (trainee: Trainee) => {
+        if (!onArchiveTrainee) return;
+        await onArchiveTrainee(trainee);
+        setShowDeleteConfirmation(false);
+        setSelectedTraineeForDeletion(null);
+    };
+
     const handleMouseEnter = (e: React.MouseEvent<HTMLLIElement>, trainee: Trainee) => {
         const rect = e.currentTarget.getBoundingClientRect();
         const traineeEvents = events.filter(event => scheduleEventIncludesPersonRecord(event, trainee as any, {
@@ -910,7 +917,7 @@ const CourseRosterView: React.FC<CourseRosterViewProps> = ({
                         setSelectedTraineeForDeletion(null);
                     }}
                     onConfirm={handleDeleteTrainee}
-                    onArchive={onArchiveTrainee}
+                    onArchive={handleArchiveTrainee}
                     canManageTraineeRemoval={canManageTraineeRemoval}
                     initialTrainee={selectedTraineeForDeletion}
                     traineesData={traineesData}

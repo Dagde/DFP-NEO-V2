@@ -57742,6 +57742,35 @@ const DeleteTraineeConfirmation = ({
     setSelectedTrainee(trainee || null);
     setError("");
   };
+  const archiveTraineeDirectly = async (trainee) => {
+    const dbId = String(trainee.id || "").trim();
+    if (!dbId) {
+      throw new Error("This trainee cannot be archived because it does not have a database record.");
+    }
+    const sessionToken = localStorage.getItem("dfp_session_token") || "";
+    const response = await fetch(`/api/trainees/${encodeURIComponent(dbId)}`, {
+      method: "PATCH",
+      credentials: "include",
+      headers: {
+        "Content-Type": "application/json",
+        ...sessionToken ? { Authorization: `Bearer ${sessionToken}` } : {}
+      },
+      body: JSON.stringify({ isActive: false })
+    });
+    if (!response.ok) {
+      let message = "The app could not archive this trainee.";
+      try {
+        const data = await response.json();
+        message = data?.error || data?.message || message;
+      } catch {
+        try {
+          message = await response.text() || message;
+        } catch {
+        }
+      }
+      throw new Error(message);
+    }
+  };
   const handleConfirm = async () => {
     if (!canManageTraineeRemoval) return;
     if (!selectedCourse) {
@@ -57763,17 +57792,16 @@ const DeleteTraineeConfirmation = ({
         setError("The password was not accepted");
         return;
       }
-      if (action === "archive" && !onArchive) {
-        setError("Archive is not available for this trainee list.");
-        return;
-      }
       if (action === "archive" && onArchive) {
         await onArchive(selectedTrainee);
+      } else if (action === "archive") {
+        await archiveTraineeDirectly(selectedTrainee);
+        window.setTimeout(() => window.location.reload(), 250);
       } else {
         await onConfirm(selectedTrainee);
       }
     } catch (error2) {
-      setError("The app could not verify your password");
+      setError(error2 instanceof Error ? error2.message : "The app could not complete this action");
       return;
     } finally {
       setIsVerifying(false);
@@ -59504,6 +59532,12 @@ const CourseRosterView = ({
     setShowDeleteConfirmation(false);
     setSelectedTraineeForDeletion(null);
   };
+  const handleArchiveTrainee = async (trainee) => {
+    if (!onArchiveTrainee) return;
+    await onArchiveTrainee(trainee);
+    setShowDeleteConfirmation(false);
+    setSelectedTraineeForDeletion(null);
+  };
   const handleMouseEnter = (e, trainee) => {
     const rect = e.currentTarget.getBoundingClientRect();
     const traineeEvents = events.filter((event) => scheduleEventIncludesPersonRecord(event, trainee, {
@@ -59955,7 +59989,7 @@ const CourseRosterView = ({
           setSelectedTraineeForDeletion(null);
         },
         onConfirm: handleDeleteTrainee,
-        onArchive: onArchiveTrainee,
+        onArchive: handleArchiveTrainee,
         canManageTraineeRemoval,
         initialTrainee: selectedTraineeForDeletion,
         traineesData,
