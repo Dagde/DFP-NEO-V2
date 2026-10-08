@@ -37,6 +37,8 @@ interface CourseRosterViewProps {
     onNavigateToHateSheet: (trainee: Trainee) => void;
     onRestoreCourse: (courseNumber: string) => void;
     onUpdateTrainee: (data: Trainee) => void | Promise<void>;
+    onUpdateArchivedTrainee?: (data: Trainee) => void | Promise<void>;
+    onRestoreReviewedTrainee?: (data: Trainee) => void | Promise<void>;
     onAddTrainee: (data: Trainee) => void | Promise<void>;
     onBulkUpdateTrainees?: (trainees: Trainee[]) => void;
     onReplaceTrainees?: (trainees: Trainee[], replacedCourse?: string) => void;
@@ -151,6 +153,8 @@ const CourseRosterView: React.FC<CourseRosterViewProps> = ({
     onNavigateToHateSheet,
     onRestoreCourse,
     onUpdateTrainee,
+    onUpdateArchivedTrainee,
+    onRestoreReviewedTrainee,
     onAddTrainee,
     onBulkUpdateTrainees,
     onReplaceTrainees,
@@ -934,7 +938,8 @@ const CourseRosterView: React.FC<CourseRosterViewProps> = ({
                         setIsCreatingNew(false);
                         setNewTraineeTemplate(null);
                     }}
-                    onUpdateTrainee={isCreatingNew ? onAddTrainee : onUpdateTrainee}
+                    onUpdateTrainee={isCreatingNew ? onAddTrainee : ((selectedTrainee as any)?._restoreReviewMode && onUpdateArchivedTrainee ? onUpdateArchivedTrainee : onUpdateTrainee)}
+                    onRestoreReviewedTrainee={onRestoreReviewedTrainee}
                     onRequestDeleteTrainee={(trainee) => {
                         setSelectedTraineeForDeletion(trainee);
                         setShowDeleteConfirmation(true);

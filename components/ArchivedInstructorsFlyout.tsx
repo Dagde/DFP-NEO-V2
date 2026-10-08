@@ -8,6 +8,8 @@ interface ArchivedInstructorsFlyoutProps {
   onClose: () => void;
   onRestore: (id: string | number | null) => Promise<void> | void;
   onRestoreTrainee?: (id: string | number | null) => Promise<void> | void;
+  onBeginRestoreReview?: (person: Instructor) => void;
+  onBeginRestoreReviewTrainee?: (person: Trainee) => void;
   canRestore?: boolean;
   onRequestRestorePassword?: (personName: string) => Promise<boolean>;
 }
@@ -18,6 +20,8 @@ const ArchivedInstructorsFlyout: React.FC<ArchivedInstructorsFlyoutProps> = ({
   onClose,
   onRestore,
   onRestoreTrainee,
+  onBeginRestoreReview,
+  onBeginRestoreReviewTrainee,
   canRestore = false,
   onRequestRestorePassword,
 }) => {
@@ -153,15 +157,19 @@ const ArchivedInstructorsFlyout: React.FC<ArchivedInstructorsFlyoutProps> = ({
       {personToRestore && (
         <RestoreConfirmationFlyout
           instructorName={personToRestore.name}
-          onConfirm={async () => {
-            const passwordAccepted = onRequestRestorePassword
-              ? await onRequestRestorePassword(personToRestore.name)
-              : true;
-            if (!passwordAccepted) return;
+          onConfirm={() => {
             if (personToRestore.kind === 'Trainee') {
-              await onRestoreTrainee?.(personToRestore.id);
+              if (onBeginRestoreReviewTrainee) {
+                onBeginRestoreReviewTrainee(personToRestore.person as Trainee);
+              } else {
+                void onRestoreTrainee?.(personToRestore.id);
+              }
             } else {
-              await onRestore(personToRestore.id);
+              if (onBeginRestoreReview) {
+                onBeginRestoreReview(personToRestore.person as Instructor);
+              } else {
+                void onRestore(personToRestore.id);
+              }
             }
             setPersonToRestore(null);
           }}

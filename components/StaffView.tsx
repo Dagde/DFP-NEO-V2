@@ -35,6 +35,9 @@ interface StaffViewProps {
   onArchiveInstructor: (id: string | number | null) => Promise<void> | void;
   onRestoreInstructor: (id: string | number | null) => Promise<void> | void;
   onRestoreTrainee?: (id: string | number | null) => Promise<void> | void;
+  onBeginRestoreReview?: (person: any) => void;
+  onBeginRestoreReviewTrainee?: (person: any) => void;
+  onUpdateArchivedInstructor?: (data: any) => Promise<void> | void;
   onRequestSct?: (instructor: any) => void;
   locations?: string[];
   units?: string[];
@@ -255,6 +258,9 @@ const StaffView: React.FC<StaffViewProps> = (props) => {
             onArchiveInstructor={props.onArchiveInstructor}
             onRestoreInstructor={props.onRestoreInstructor}
             onRestoreTrainee={props.onRestoreTrainee}
+            onBeginRestoreReview={props.onBeginRestoreReview}
+            onBeginRestoreReviewTrainee={props.onBeginRestoreReviewTrainee}
+            onUpdateArchivedInstructor={props.onUpdateArchivedInstructor}
             onRequestSct={props.onRequestSct}
             locations={props.locations}
             units={props.units}
@@ -262,7 +268,7 @@ const StaffView: React.FC<StaffViewProps> = (props) => {
             onProfileOpened={props.onProfileOpened}
             onProfileClosed={(instructor) => {
               props.onProfileClosed?.(instructor);
-              if ((instructor as any)?._dataSource === 'archive' && canViewStaffSchedule) {
+              if ((instructor as any)?._dataSource === 'archive' && !(instructor as any)?._restoreReviewMode && canViewStaffSchedule) {
                 setActiveTab('schedule');
               }
             }}

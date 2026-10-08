@@ -196,6 +196,7 @@ interface TraineeProfileFlyoutProps {
   traineesData?: Trainee[];
   onClose: () => void;
   onUpdateTrainee: (data: Trainee) => void | Promise<void>;
+  onRestoreReviewedTrainee?: (data: Trainee) => void | Promise<void>;
   onRequestDeleteTrainee?: (trainee: Trainee) => void;
   canManageTraineeRemoval?: boolean;
   events: ScheduleEvent[];
@@ -558,6 +559,7 @@ const TraineeProfileFlyout: React.FC<TraineeProfileFlyoutProps> = ({
   traineesData = [],
   onClose,
   onUpdateTrainee,
+  onRestoreReviewedTrainee,
   onRequestDeleteTrainee,
   canManageTraineeRemoval = false,
   events,
@@ -794,6 +796,8 @@ const TraineeProfileFlyout: React.FC<TraineeProfileFlyoutProps> = ({
     );
     const activeTrainingReportPhraseBank = getUnitTrainingReportPhraseBank(platformConfig, activeTrainingReportUnitCode, phraseBank);
     const isArchiveProfile = (trainee as any)._dataSource === 'archive';
+    const isRestoreReviewMode = isArchiveProfile && (trainee as any)._restoreReviewMode === true;
+    const isReadOnlyArchiveProfile = isArchiveProfile && !isRestoreReviewMode;
     const archivedLogbookEntries = useMemo(() => (
         Array.isArray((trainee as any).archivedLogbookEntries)
             ? [...(trainee as any).archivedLogbookEntries]
@@ -1766,7 +1770,7 @@ const TraineeProfileFlyout: React.FC<TraineeProfileFlyoutProps> = ({
     };
 
     const handlePauseToggle = () => {
-        if (isArchiveProfile) return;
+        if (isReadOnlyArchiveProfile) return;
         if (!isPaused && traineeHasEventsToday) {
             setShowScheduleWarning(true);
         } else {
@@ -1795,7 +1799,7 @@ const TraineeProfileFlyout: React.FC<TraineeProfileFlyoutProps> = ({
     };
 
     const handleSuspendToggle = () => {
-        if (isArchiveProfile) return;
+        if (isReadOnlyArchiveProfile) return;
         const nextIsSuspended = !isSuspended;
         const nextPermissions = setTraineeSuspendedMarker(permissions, nextIsSuspended);
         const updatedTrainee: Trainee = {
@@ -2024,7 +2028,7 @@ const TraineeProfileFlyout: React.FC<TraineeProfileFlyoutProps> = ({
     };
 
     const handleDeleteFromProfile = () => {
-        if (isArchiveProfile) return;
+        if (isReadOnlyArchiveProfile) return;
         if (isCreating || !canManageTraineeRemoval || !onRequestDeleteTrainee) return;
         onRequestDeleteTrainee(trainee);
     };
@@ -2288,7 +2292,7 @@ const TraineeProfileFlyout: React.FC<TraineeProfileFlyoutProps> = ({
     };
 
     const handleAddTodayOnlyUnavailability = () => {
-        if (isArchiveProfile) return;
+        if (isReadOnlyArchiveProfile) return;
         const today = new Date();
         const formatForInput = (date: Date) => date.toISOString().split('T')[0];
         const todayStr = formatForInput(today);
@@ -2320,7 +2324,7 @@ const TraineeProfileFlyout: React.FC<TraineeProfileFlyoutProps> = ({
     };
 
     const handleSaveCustomUnavailability = (periodData: Omit<UnavailabilityPeriod, 'id'>) => {
-        if (isArchiveProfile) return;
+        if (isReadOnlyArchiveProfile) return;
         const newPeriod = {
             ...periodData,
             id: uuidv4(),
@@ -2349,7 +2353,7 @@ const TraineeProfileFlyout: React.FC<TraineeProfileFlyoutProps> = ({
     };
 
     const handleRemoveUnavailabilityFromFlyout = (idToRemove: string) => {
-        if (isArchiveProfile) return;
+        if (isReadOnlyArchiveProfile) return;
         if (isCreating) {
             setUnavailability(prev => prev.filter(p => p.id !== idToRemove));
         } else {
@@ -2373,7 +2377,7 @@ const TraineeProfileFlyout: React.FC<TraineeProfileFlyoutProps> = ({
     };
 
     const handleRemoveUnavailability = (idToRemove: string) => {
-        if (isArchiveProfile) return;
+        if (isReadOnlyArchiveProfile) return;
         const periodToRemove = unavailability?.find(p => p.id === idToRemove);
         if (periodToRemove) {
             const dateRange = periodToRemove.startDate === periodToRemove.endDate
@@ -2491,10 +2495,10 @@ const TraineeProfileFlyout: React.FC<TraineeProfileFlyoutProps> = ({
                     <h2 className="text-lg font-bold text-white">{isCreating ? 'New Trainee' : 'Trainee Profile'}</h2>
                     {isArchiveProfile && (
                       <span className="rounded border border-amber-400/30 bg-amber-500/10 px-2 py-0.5 text-[11px] font-semibold uppercase tracking-wide text-amber-200">
-                        Read-only archive
+                        {isRestoreReviewMode ? 'Restore review' : 'Read-only archive'}
                       </span>
                     )}
-                    {isArchiveProfile && onOpenCurrentProfile && (
+                    {isReadOnlyArchiveProfile && onOpenCurrentProfile && (
                       <button
                         type="button"
                         onClick={() => onOpenCurrentProfile(trainee)}
@@ -3753,9 +3757,26 @@ const TraineeProfileFlyout: React.FC<TraineeProfileFlyoutProps> = ({
                               showPermissionNoticeForElement(event.currentTarget);
                               return;
                             }
-                            if (isArchiveProfile) return;
+                            if (isReadOnlyArchiveProfile) return;
                             setIsEditing(true);
-                          }} disabled={isFrozen || isArchiveProfile} aria-disabled={isArchiveProfile || !canUseTraineeProfileAction('trainee.profile.edit')} className={`${btnClass} ${!isArchiveProfile && canUseTraineeProfileAction('trainee.profile.edit') ? '' : 'cursor-not-allowed'}`}>Edit</button>
+                          }} disabled={isFrozen || isReadOnlyArchiveProfile} aria-disabled={isReadOnlyArchiveProfile || !canUseTraineeProfileAction('trainee.profile.edit')} className={`${btnClass} ${!isReadOnlyArchiveProfile && canUseTraineeProfileAction('trainee.profile.edit') ? '' : 'cursor-not-allowed'}`}>Edit</button>
+                          {isRestoreReviewMode && onRestoreReviewedTrainee && (
+                            <button
+                              onClick={async () => {
+                                const confirmed = await showDarkConfirm(
+                                  `Restore ${name} to the active list now?\n\nConfirm the profile details are up to date and correct before restoring.`,
+                                  'Confirm Restore',
+                                  'warning'
+                                );
+                                if (!confirmed) return;
+                                await Promise.resolve(onRestoreReviewedTrainee(trainee));
+                              }}
+                              className={btnClass}
+                              style={{ color: '#16a34a' }}
+                            >
+                              Restore
+                            </button>
+                          )}
                           <button onClick={onClose} className={btnClass}>Close</button>
                         </>
                       )}
@@ -3774,7 +3795,7 @@ const TraineeProfileFlyout: React.FC<TraineeProfileFlyoutProps> = ({
                   </div>
                 </div>
               </div>
-            {!isArchiveProfile && showAddUnavailability && (<AddUnavailabilityFlyout onClose={() => setShowAddUnavailability(false)} onTodayOnly={handleAddTodayOnlyUnavailability} onSave={handleSaveCustomUnavailability} unavailabilityPeriods={unavailability} onRemove={handleRemoveUnavailabilityFromFlyout} />)}
+            {!isReadOnlyArchiveProfile && showAddUnavailability && (<AddUnavailabilityFlyout onClose={() => setShowAddUnavailability(false)} onTodayOnly={handleAddTodayOnlyUnavailability} onSave={handleSaveCustomUnavailability} unavailabilityPeriods={unavailability} onRemove={handleRemoveUnavailabilityFromFlyout} />)}
             {showScheduleWarning && <ScheduleWarningFlyout traineeName={trainee.name} onAcknowledge={() => {setShowScheduleWarning(false); setShowPauseConfirm(true); }} />}
             {showPauseConfirm && <PauseConfirmationFlyout isPaused={isPaused} onConfirm={confirmPause} onCancel={() => setShowPauseConfirm(false)} />}
             <PermissionNotice

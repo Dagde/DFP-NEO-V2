@@ -52025,6 +52025,39 @@ appliedUpdates.forEach(update => {
         handleNavigation(activeView === 'Trainee' ? 'Trainee' : 'CourseRoster');
     };
 
+    const handleBeginStaffRestoreReview = useCallback((archivedStaff: Instructor) => {
+        setSelectedPersonForProfile({ ...(archivedStaff as any), _dataSource: 'archive', _restoreReviewMode: true });
+        setProfileInitialTab(null);
+        handleNavigation('Staff');
+    }, []);
+
+    const handleBeginTraineeRestoreReview = useCallback((archivedTrainee: Trainee) => {
+        setSelectedPersonForProfile({ ...(archivedTrainee as any), _dataSource: 'archive', _restoreReviewMode: true });
+        setTraineeProfileInitialTab(null);
+        handleNavigation('Trainee');
+    }, []);
+
+    const handleUpdateArchivedInstructor = useCallback(async (data: Instructor) => {
+        const dbId = String((data as any).id || '').trim();
+        if (dbId && (data as any)._dataSource === 'archive') {
+            const response = await fetch(scopedApiPath(`/api/personnel/${encodeURIComponent(dbId)}`), {
+                method: 'PATCH',
+                credentials: 'include',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ ...data, isActive: false }),
+            });
+            if (!response.ok) {
+                throw new Error(await readApiErrorMessage(response, `Failed to save archived staff ${data.name || data.idNumber}`));
+            }
+        }
+        setArchivedInstructorsData(prev => prev.map(instructor => {
+            const candidateDbId = String((instructor as any).id || '').trim();
+            if (dbId && candidateDbId === dbId) return { ...data, isActive: false, _dataSource: 'archive' as const, _restoreReviewMode: true };
+            return Number(instructor.idNumber) === Number(data.idNumber) ? { ...data, isActive: false, _dataSource: 'archive' as const, _restoreReviewMode: true } : instructor;
+        }));
+        setSuccessMessage(`${data.name || 'Archived staff'} saved. Press Restore when the profile is ready.`);
+    }, [scopedApiPath]);
+
     const handleArchiveInstructor = useCallback(async (identifier: string | number | null | undefined) => {
         const identifierText = String(identifier ?? '').trim();
         const matchesArchiveIdentifier = (instructor: Instructor): boolean => {
@@ -52106,7 +52139,8 @@ appliedUpdates.forEach(update => {
             }
             return false;
         };
-        const restoredInstructor = { ...instructorToRestore, isActive: true };
+        const { _restoreReviewMode: _staffRestoreReviewMode, ...instructorRestoreFields } = instructorToRestore as any;
+        const restoredInstructor = { ...instructorRestoreFields, isActive: true, _dataSource: (instructorToRestore as any)._dataSource === 'archive' ? 'database' : (instructorToRestore as any)._dataSource };
 
         try {
             if (dbId && (instructorToRestore as any)._dataSource === 'database') {
@@ -56011,7 +56045,8 @@ appliedUpdates.forEach(update => {
             }
             return false;
         };
-        const restoredTrainee = { ...(traineeToRestore as any), isActive: true } as Trainee;
+        const { _restoreReviewMode: _traineeRestoreReviewMode, ...traineeRestoreFields } = traineeToRestore as any;
+        const restoredTrainee = { ...traineeRestoreFields, isActive: true, _dataSource: (traineeToRestore as any)._dataSource === 'archive' ? 'database' : (traineeToRestore as any)._dataSource } as Trainee;
         const traineeName = traineeToRestore.fullName || traineeToRestore.name || 'trainee';
 
         try {
@@ -56053,6 +56088,56 @@ appliedUpdates.forEach(update => {
             setShowInfoNotification(`Restore failed: ${error instanceof Error ? error.message : String(error)}`);
         }
     }, [archivedTraineesData, scopedApiPath]);
+
+    const handleUpdateArchivedTrainee = useCallback(async (data: Trainee) => {
+        const dbId = String((data as any).id || '').trim();
+        const traineeName = data.fullName || data.name || 'Archived trainee';
+        if (dbId && (data as any)._dataSource === 'archive') {
+            const response = await fetch(scopedApiPath(`/api/trainees/${encodeURIComponent(dbId)}`), {
+                method: 'PATCH',
+                credentials: 'include',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    idNumber: data.idNumber,
+                    name: data.name,
+                    fullName: data.fullName,
+                    rank: data.rank,
+                    role: data.role || '',
+                    course: data.course,
+                    lmpType: data.lmpType,
+                    academicLmpType: (data as any).academicLmpType || '',
+                    unit: data.unit,
+                    flight: data.flight,
+                    location: data.location,
+                    service: data.service,
+                    seatConfig: data.seatConfig,
+                    isPaused: data.isPaused,
+                    isActive: false,
+                    traineeCallsign: data.traineeCallsign,
+                    primaryInstructor: data.primaryInstructor,
+                    secondaryInstructor: data.secondaryInstructor,
+                    phoneNumber: data.phoneNumber,
+                    email: data.email,
+                    permissions: data.permissions || [],
+                    preferences: {
+                        ...(data.preferences || {}),
+                        preFlightNotesEnduring: getTraineeEnduringPreFlightNotes(data),
+                    },
+                    unavailability: data.unavailability || [],
+                }),
+            });
+            if (!response.ok) {
+                throw new Error(await readApiErrorMessage(response, `Could not save ${traineeName}.`));
+            }
+        }
+
+        setArchivedTraineesData(prev => prev.map(trainee => {
+            const candidateDbId = String((trainee as any).id || '').trim();
+            if (dbId && candidateDbId === dbId) return { ...data, isActive: false, _dataSource: 'archive' as const, _restoreReviewMode: true };
+            return String(trainee.idNumber) === String(data.idNumber) ? { ...data, isActive: false, _dataSource: 'archive' as const, _restoreReviewMode: true } : trainee;
+        }));
+        setSuccessMessage(`${traineeName} saved. Press Restore when the profile is ready.`);
+    }, [scopedApiPath]);
 
     const resolveCourseMovementDirection = useCallback((fromCourse: string, toCourse: string): 'back-course' | 'forward-course' | 'course-change' => {
         const normaliseCourse = (value: string) => String(value || '').trim().toUpperCase();
@@ -56639,6 +56724,8 @@ appliedUpdates.forEach(update => {
                             }}
                             onRestoreCourse={() => {}}
                             onUpdateTrainee={handleUpdateTrainee}
+                            onUpdateArchivedTrainee={handleUpdateArchivedTrainee}
+                            onRestoreReviewedTrainee={(trainee) => { void handleRestoreTrainee(String((trainee as any).id || '').trim() || trainee.idNumber || null); }}
                             onAddTrainee={handleAddTrainee}
                             onBulkUpdateTrainees={handleBulkUpdateTrainees}
                             onReplaceTrainees={handleReplaceTrainees}
@@ -56806,6 +56893,8 @@ appliedUpdates.forEach(update => {
                             }}
                             onRestoreCourse={() => {}}
                             onUpdateTrainee={handleUpdateTrainee}
+                            onUpdateArchivedTrainee={handleUpdateArchivedTrainee}
+                            onRestoreReviewedTrainee={(trainee) => { void handleRestoreTrainee(String((trainee as any).id || '').trim() || trainee.idNumber || null); }}
                             onAddTrainee={handleAddTrainee}
                             onBulkUpdateTrainees={handleBulkUpdateTrainees}
                             onReplaceTrainees={handleReplaceTrainees}
@@ -58101,6 +58190,9 @@ appliedUpdates.forEach(update => {
                             onArchiveInstructor={handleArchiveInstructor}
                             onRestoreInstructor={handleRestoreInstructor}
                             onRestoreTrainee={handleRestoreTrainee}
+                            onBeginRestoreReview={handleBeginStaffRestoreReview}
+                            onBeginRestoreReviewTrainee={handleBeginTraineeRestoreReview}
+                            onUpdateArchivedInstructor={handleUpdateArchivedInstructor}
                             date={date}
                             onDateChange={handleDateChange}
                             eventSegmentsForDate={eventSegmentsForDate}
@@ -58301,6 +58393,9 @@ appliedUpdates.forEach(update => {
                             onArchiveInstructor={(id) => { void handleArchiveInstructor(id); }}
                             onRestoreInstructor={(id) => { void handleRestoreInstructor(id); }}
                             onRestoreTrainee={(id) => { void handleRestoreTrainee(id); }}
+                            onBeginRestoreReview={handleBeginStaffRestoreReview}
+                            onBeginRestoreReviewTrainee={handleBeginTraineeRestoreReview}
+                            onUpdateArchivedInstructor={handleUpdateArchivedInstructor}
                             locations={locations}
                             units={units}
                             selectedPersonForProfile={selectedPersonForProfile as Instructor | null}

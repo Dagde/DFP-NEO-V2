@@ -23,6 +23,8 @@ interface TraineeViewProps {
   onNavigateToHateSheet: (trainee: any) => void;
   onRestoreCourse: () => void;
   onUpdateTrainee: (data: any) => void;
+  onUpdateArchivedTrainee?: (data: any) => void | Promise<void>;
+  onRestoreReviewedTrainee?: (data: any) => void | Promise<void>;
   onAddTrainee: (data: any) => void;
   onBulkUpdateTrainees?: (trainees: any[]) => void;
   onReplaceTrainees?: (trainees: any[], replacedCourse?: string) => void;
@@ -175,6 +177,8 @@ const TraineeView: React.FC<TraineeViewProps> = (props) => {
             onNavigateToHateSheet={props.onNavigateToHateSheet}
             onRestoreCourse={props.onRestoreCourse}
             onUpdateTrainee={props.onUpdateTrainee}
+            onUpdateArchivedTrainee={props.onUpdateArchivedTrainee}
+            onRestoreReviewedTrainee={props.onRestoreReviewedTrainee}
             onAddTrainee={props.onAddTrainee}
             onBulkUpdateTrainees={props.onBulkUpdateTrainees}
             onReplaceTrainees={props.onReplaceTrainees}

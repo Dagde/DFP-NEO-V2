@@ -170,6 +170,9 @@ interface InstructorListViewProps {
   onArchiveInstructor: (id: string | number | null) => Promise<void> | void;
   onRestoreInstructor: (id: string | number | null) => Promise<void> | void;
   onRestoreTrainee?: (id: string | number | null) => Promise<void> | void;
+  onBeginRestoreReview?: (person: Instructor) => void;
+  onBeginRestoreReviewTrainee?: (person: Trainee) => void;
+  onUpdateArchivedInstructor?: (data: Instructor) => void | Promise<void>;
   locations: string[];
   units: string[];
   selectedPersonForProfile?: Instructor | null;
@@ -228,6 +231,9 @@ const InstructorListView: React.FC<InstructorListViewProps> = ({
     onArchiveInstructor,
     onRestoreInstructor,
     onRestoreTrainee,
+    onBeginRestoreReview,
+    onBeginRestoreReviewTrainee,
+    onUpdateArchivedInstructor,
     locations,
     units,
     selectedPersonForProfile,
@@ -606,7 +612,8 @@ const InstructorListView: React.FC<InstructorListViewProps> = ({
           target,
           beforeListRecord: findStaffTraceRecord(target),
       });
-      await Promise.resolve(onUpdateInstructor(data));
+      const isRestoreReviewRecord = (data as any)._restoreReviewMode === true && (data as any)._dataSource === 'archive';
+      await Promise.resolve(isRestoreReviewRecord && onUpdateArchivedInstructor ? onUpdateArchivedInstructor(data) : onUpdateInstructor(data));
       appendStaffProfileTrace('staff-list:profile-update-returned', {
           target,
           note: 'The app-level save promise has returned. The next staff-list:post-save-target-classification entry shows where the rendered Staff list placed this record after React state refreshed.',
@@ -1066,6 +1073,11 @@ const InstructorListView: React.FC<InstructorListViewProps> = ({
                     school={school}
                     personnelData={personnelData}
                     onUpdateInstructor={handleProfileUpdateForTrace}
+                    onRestoreReviewedInstructor={(instructorToRestore) => {
+                        const identifier = String((instructorToRestore as any).id || '').trim() || instructorToRestore.idNumber || null;
+                        void onRestoreInstructor(identifier);
+                        handleCloseProfile();
+                    }}
                     onNavigateToCurrency={onNavigateToCurrency}
                     originRect={originRect}
                     isClosing={isClosing}
@@ -1167,6 +1179,14 @@ const InstructorListView: React.FC<InstructorListViewProps> = ({
             onClose={() => setShowArchivedFlyout(false)}
             onRestore={onRestoreInstructor}
             onRestoreTrainee={onRestoreTrainee}
+            onBeginRestoreReview={(person) => {
+              setShowArchivedFlyout(false);
+              onBeginRestoreReview?.({ ...(person as any), _dataSource: 'archive', _restoreReviewMode: true } as Instructor);
+            }}
+            onBeginRestoreReviewTrainee={(person) => {
+              setShowArchivedFlyout(false);
+              onBeginRestoreReviewTrainee?.({ ...(person as any), _dataSource: 'archive', _restoreReviewMode: true } as Trainee);
+            }}
             canRestore={canManageArchive}
             onRequestRestorePassword={(instructorName) => requestArchivePassword(
               `Enter your password to restore ${instructorName}.`,

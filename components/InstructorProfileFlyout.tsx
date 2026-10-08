@@ -96,6 +96,7 @@ interface InstructorProfileFlyoutProps {
   school: string;
   personnelData: Map<string, { callsignPrefix: string; callsignNumber: number; callsign?: string }>;
   onUpdateInstructor: (data: Instructor) => void | Promise<void>;
+  onRestoreReviewedInstructor?: (data: Instructor) => void | Promise<void>;
   onNavigateToCurrency: (person: Instructor) => void;
   originRect: DOMRect | null;
   isClosing: boolean;
@@ -377,6 +378,7 @@ const getLogbookEntryRoleLabel = (personRole?: string): string => {
 
 export const InstructorProfileFlyout: React.FC<InstructorProfileFlyoutProps> = ({
   instructor, onClose, school, personnelData, onUpdateInstructor,
+  onRestoreReviewedInstructor,
   onNavigateToCurrency, originRect, isClosing, isCreating = false,
   locations, units, instructorsData = [], traineesData, events = [], scheduleHistoryEvents = [], syllabusDetails = [],
   insertEventTypes = [], aircraftConfigurations = [],
@@ -929,7 +931,7 @@ export const InstructorProfileFlyout: React.FC<InstructorProfileFlyoutProps> = (
   }, []);
 
   const handleEdit = () => {
-    if (isArchiveProfile) return;
+    if (isReadOnlyArchiveProfile) return;
     setIsEditing(true);
   };
   const handleCancel = () => { if (isCreating) onClose(); else { resetState(); setIsEditing(false); } };
@@ -1194,7 +1196,7 @@ export const InstructorProfileFlyout: React.FC<InstructorProfileFlyoutProps> = (
   };
 
   const handleSaveUnavailability = (periodData: Omit<UnavailabilityPeriod, 'id'>) => {
-    if (isArchiveProfile) return;
+    if (isReadOnlyArchiveProfile) return;
     const newPeriod = { ...periodData, id: uuidv4(), startTime: periodData.allDay ? undefined : periodData.startTime, endTime: periodData.allDay ? undefined : periodData.endTime };
     const updated = [...unavailabilityPeriods, newPeriod];
     setUnavailabilityPeriods(updated);
@@ -1202,7 +1204,7 @@ export const InstructorProfileFlyout: React.FC<InstructorProfileFlyoutProps> = (
   };
 
   const handleRemoveUnavailability = (idToRemove: string) => {
-    if (isArchiveProfile) return;
+    if (isReadOnlyArchiveProfile) return;
     const updated = unavailabilityPeriods.filter(p => p.id !== idToRemove);
     setUnavailabilityPeriods(updated);
     onUpdateInstructor({ ...instructor, unavailability: updated });
@@ -1220,6 +1222,8 @@ export const InstructorProfileFlyout: React.FC<InstructorProfileFlyoutProps> = (
   // Month navigator: null = show all, 'YYYY-MM' for specific month
   const [logbookMonth, setLogbookMonth] = useState<string>(() => getProfileLogbookMonth(instructor));
   const isArchiveProfile = (instructor as any)._dataSource === 'archive';
+  const isRestoreReviewMode = isArchiveProfile && (instructor as any)._restoreReviewMode === true;
+  const isReadOnlyArchiveProfile = isArchiveProfile && !isRestoreReviewMode;
   const archivedLogbookEntries = useMemo(() => (
     Array.isArray((instructor as any).archivedLogbookEntries)
       ? [...(instructor as any).archivedLogbookEntries]
@@ -1397,10 +1401,10 @@ export const InstructorProfileFlyout: React.FC<InstructorProfileFlyoutProps> = (
               <h2 className="text-lg font-bold text-white">{isCreating ? 'New Staff' : 'Staff Profile'}</h2>
               {isArchiveProfile && (
                 <span className="rounded border border-amber-400/30 bg-amber-500/10 px-2 py-0.5 text-[11px] font-semibold uppercase tracking-wide text-amber-200">
-                  Read-only archive
+                  {isRestoreReviewMode ? 'Restore review' : 'Read-only archive'}
                 </span>
               )}
-              {isArchiveProfile && onOpenCurrentProfile && (
+              {isReadOnlyArchiveProfile && onOpenCurrentProfile && (
                 <button
                   type="button"
                   onClick={() => onOpenCurrentProfile(instructor)}
@@ -2667,10 +2671,27 @@ export const InstructorProfileFlyout: React.FC<InstructorProfileFlyoutProps> = (
                     showPermissionNoticeForElement(event.currentTarget);
                     return;
                   }
-                  if (isArchiveProfile) return;
+                  if (isReadOnlyArchiveProfile) return;
                   setActiveTab(null);
                   handleEdit();
-                }} disabled={isFrozen || isArchiveProfile} aria-disabled={isArchiveProfile || !canUseStaffProfileAction('staff.profile.edit')} className={`${btnClass} ${!isArchiveProfile && canUseStaffProfileAction('staff.profile.edit') ? '' : 'cursor-not-allowed'}`}>Edit</button>
+                }} disabled={isFrozen || isReadOnlyArchiveProfile} aria-disabled={isReadOnlyArchiveProfile || !canUseStaffProfileAction('staff.profile.edit')} className={`${btnClass} ${!isReadOnlyArchiveProfile && canUseStaffProfileAction('staff.profile.edit') ? '' : 'cursor-not-allowed'}`}>Edit</button>
+                {isRestoreReviewMode && onRestoreReviewedInstructor && (
+                  <button
+                    onClick={async () => {
+                      const confirmed = await showDarkConfirm(
+                        `Restore ${name} to the active list now?\n\nConfirm the profile details are up to date and correct before restoring.`,
+                        'Confirm Restore',
+                        'warning'
+                      );
+                      if (!confirmed) return;
+                      await Promise.resolve(onRestoreReviewedInstructor(instructor));
+                    }}
+                    className={btnClass}
+                    style={{ color: '#16a34a' }}
+                  >
+                    Restore
+                  </button>
+                )}
                 <button onClick={onClose} className={btnClass}>Close</button>
               </>)}
               {isEditing && (<>
@@ -2775,7 +2796,7 @@ export const InstructorProfileFlyout: React.FC<InstructorProfileFlyoutProps> = (
           </div>
         </div>
       )}
-      {!isArchiveProfile && showAddUnavailability && !isCreating && (
+      {!isReadOnlyArchiveProfile && showAddUnavailability && !isCreating && (
         <AddUnavailabilityFlyout onClose={() => setShowAddUnavailability(false)} onTodayOnly={handleAddTodayOnly} onSave={handleSaveUnavailability} unavailabilityPeriods={unavailabilityPeriods} onRemove={handleRemoveUnavailability} />
       )}
       <PermissionNotice

@@ -54838,6 +54838,7 @@ const TraineeProfileFlyout = ({
   traineesData = [],
   onClose,
   onUpdateTrainee,
+  onRestoreReviewedTrainee,
   onRequestDeleteTrainee,
   canManageTraineeRemoval = false,
   events,
@@ -55051,6 +55052,8 @@ const TraineeProfileFlyout = ({
   );
   const activeTrainingReportPhraseBank = getUnitTrainingReportPhraseBank(platformConfig, activeTrainingReportUnitCode, phraseBank);
   const isArchiveProfile = trainee._dataSource === "archive";
+  const isRestoreReviewMode = isArchiveProfile && trainee._restoreReviewMode === true;
+  const isReadOnlyArchiveProfile = isArchiveProfile && !isRestoreReviewMode;
   const archivedLogbookEntries = reactExports.useMemo(() => Array.isArray(trainee.archivedLogbookEntries) ? [...trainee.archivedLogbookEntries] : [], [trainee]);
   const logbookAsAtLabel = getProfileLogbookAsAtLabel$1(trainee, logbookMonth);
   reactExports.useEffect(() => {
@@ -55885,7 +55888,7 @@ const TraineeProfileFlyout = ({
     ] });
   };
   const handlePauseToggle = () => {
-    if (isArchiveProfile) return;
+    if (isReadOnlyArchiveProfile) return;
     if (!isPaused && traineeHasEventsToday) {
       setShowScheduleWarning(true);
     } else {
@@ -55912,7 +55915,7 @@ const TraineeProfileFlyout = ({
     setShowPauseConfirm(false);
   };
   const handleSuspendToggle = () => {
-    if (isArchiveProfile) return;
+    if (isReadOnlyArchiveProfile) return;
     const nextIsSuspended = !isSuspended;
     const nextPermissions = setTraineeSuspendedMarker(permissions, nextIsSuspended);
     const updatedTrainee = {
@@ -56077,7 +56080,7 @@ Confirm the Personnel ID, unit and course are correct before saving this separat
     }
   };
   const handleDeleteFromProfile = () => {
-    if (isArchiveProfile) return;
+    if (isReadOnlyArchiveProfile) return;
     if (isCreating || !canManageTraineeRemoval || !onRequestDeleteTrainee) return;
     onRequestDeleteTrainee(trainee);
   };
@@ -56292,7 +56295,7 @@ ${errorText || `HTTP ${response.status}`}`, "Delete Failed", "error");
     }, 50);
   };
   const handleAddTodayOnlyUnavailability = () => {
-    if (isArchiveProfile) return;
+    if (isReadOnlyArchiveProfile) return;
     const today = /* @__PURE__ */ new Date();
     const formatForInput = (date) => date.toISOString().split("T")[0];
     const todayStr = formatForInput(today);
@@ -56323,7 +56326,7 @@ ${errorText || `HTTP ${response.status}`}`, "Delete Failed", "error");
     }
   };
   const handleSaveCustomUnavailability = (periodData) => {
-    if (isArchiveProfile) return;
+    if (isReadOnlyArchiveProfile) return;
     const newPeriod = {
       ...periodData,
       id: v4(),
@@ -56347,7 +56350,7 @@ ${errorText || `HTTP ${response.status}`}`, "Delete Failed", "error");
     }
   };
   const handleRemoveUnavailabilityFromFlyout = (idToRemove) => {
-    if (isArchiveProfile) return;
+    if (isReadOnlyArchiveProfile) return;
     if (isCreating) {
       setUnavailability((prev) => prev.filter((p) => p.id !== idToRemove));
     } else {
@@ -56367,7 +56370,7 @@ ${errorText || `HTTP ${response.status}`}`, "Delete Failed", "error");
     }
   };
   const handleRemoveUnavailability = (idToRemove) => {
-    if (isArchiveProfile) return;
+    if (isReadOnlyArchiveProfile) return;
     const periodToRemove = unavailability?.find((p) => p.id === idToRemove);
     if (periodToRemove) {
       const dateRange = periodToRemove.startDate === periodToRemove.endDate ? periodToRemove.startDate : `${periodToRemove.startDate} to ${periodToRemove.endDate}`;
@@ -56434,8 +56437,8 @@ ${errorText || `HTTP ${response.status}`}`, "Delete Failed", "error");
       /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "px-5 py-3 border-b border-gray-600 flex justify-between items-center bg-[#0f1824] flex-shrink-0", children: [
         /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center gap-2", children: [
           /* @__PURE__ */ jsxRuntimeExports.jsx("h2", { className: "text-lg font-bold text-white", children: isCreating ? "New Trainee" : "Trainee Profile" }),
-          isArchiveProfile && /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "rounded border border-amber-400/30 bg-amber-500/10 px-2 py-0.5 text-[11px] font-semibold uppercase tracking-wide text-amber-200", children: "Read-only archive" }),
-          isArchiveProfile && onOpenCurrentProfile && /* @__PURE__ */ jsxRuntimeExports.jsx(
+          isArchiveProfile && /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "rounded border border-amber-400/30 bg-amber-500/10 px-2 py-0.5 text-[11px] font-semibold uppercase tracking-wide text-amber-200", children: isRestoreReviewMode ? "Restore review" : "Read-only archive" }),
+          isReadOnlyArchiveProfile && onOpenCurrentProfile && /* @__PURE__ */ jsxRuntimeExports.jsx(
             "button",
             {
               type: "button",
@@ -57617,9 +57620,28 @@ ${errorText || `HTTP ${response.status}`}`, "Delete Failed", "error");
                 showPermissionNoticeForElement(event.currentTarget);
                 return;
               }
-              if (isArchiveProfile) return;
+              if (isReadOnlyArchiveProfile) return;
               setIsEditing(true);
-            }, disabled: isFrozen || isArchiveProfile, "aria-disabled": isArchiveProfile || !canUseTraineeProfileAction("trainee.profile.edit"), className: `${btnClass} ${!isArchiveProfile && canUseTraineeProfileAction("trainee.profile.edit") ? "" : "cursor-not-allowed"}`, children: "Edit" }),
+            }, disabled: isFrozen || isReadOnlyArchiveProfile, "aria-disabled": isReadOnlyArchiveProfile || !canUseTraineeProfileAction("trainee.profile.edit"), className: `${btnClass} ${!isReadOnlyArchiveProfile && canUseTraineeProfileAction("trainee.profile.edit") ? "" : "cursor-not-allowed"}`, children: "Edit" }),
+            isRestoreReviewMode && onRestoreReviewedTrainee && /* @__PURE__ */ jsxRuntimeExports.jsx(
+              "button",
+              {
+                onClick: async () => {
+                  const confirmed = await showDarkConfirm(
+                    `Restore ${name} to the active list now?
+
+Confirm the profile details are up to date and correct before restoring.`,
+                    "Confirm Restore",
+                    "warning"
+                  );
+                  if (!confirmed) return;
+                  await Promise.resolve(onRestoreReviewedTrainee(trainee));
+                },
+                className: btnClass,
+                style: { color: "#16a34a" },
+                children: "Restore"
+              }
+            ),
             /* @__PURE__ */ jsxRuntimeExports.jsx("button", { onClick: onClose, className: btnClass, children: "Close" })
           ] }),
           isEditing && /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
@@ -57632,7 +57654,7 @@ ${errorText || `HTTP ${response.status}`}`, "Delete Failed", "error");
         ] })
       ] })
     ] }) }),
-    !isArchiveProfile && showAddUnavailability && /* @__PURE__ */ jsxRuntimeExports.jsx(AddUnavailabilityFlyout, { onClose: () => setShowAddUnavailability(false), onTodayOnly: handleAddTodayOnlyUnavailability, onSave: handleSaveCustomUnavailability, unavailabilityPeriods: unavailability, onRemove: handleRemoveUnavailabilityFromFlyout }),
+    !isReadOnlyArchiveProfile && showAddUnavailability && /* @__PURE__ */ jsxRuntimeExports.jsx(AddUnavailabilityFlyout, { onClose: () => setShowAddUnavailability(false), onTodayOnly: handleAddTodayOnlyUnavailability, onSave: handleSaveCustomUnavailability, unavailabilityPeriods: unavailability, onRemove: handleRemoveUnavailabilityFromFlyout }),
     showScheduleWarning && /* @__PURE__ */ jsxRuntimeExports.jsx(ScheduleWarningFlyout, { traineeName: trainee.name, onAcknowledge: () => {
       setShowScheduleWarning(false);
       setShowPauseConfirm(true);
@@ -59328,6 +59350,8 @@ const CourseRosterView = ({
   onNavigateToHateSheet,
   onRestoreCourse,
   onUpdateTrainee,
+  onUpdateArchivedTrainee,
+  onRestoreReviewedTrainee,
   onAddTrainee,
   onBulkUpdateTrainees,
   onReplaceTrainees,
@@ -60007,7 +60031,8 @@ const CourseRosterView = ({
           setIsCreatingNew(false);
           setNewTraineeTemplate(null);
         },
-        onUpdateTrainee: isCreatingNew ? onAddTrainee : onUpdateTrainee,
+        onUpdateTrainee: isCreatingNew ? onAddTrainee : selectedTrainee?._restoreReviewMode && onUpdateArchivedTrainee ? onUpdateArchivedTrainee : onUpdateTrainee,
+        onRestoreReviewedTrainee,
         onRequestDeleteTrainee: (trainee) => {
           setSelectedTraineeForDeletion(trainee);
           setShowDeleteConfirmation(true);
@@ -90401,6 +90426,7 @@ const InstructorProfileFlyout = ({
   school,
   personnelData,
   onUpdateInstructor,
+  onRestoreReviewedInstructor,
   onNavigateToCurrency,
   originRect,
   isClosing,
@@ -90886,7 +90912,7 @@ const InstructorProfileFlyout = ({
     }
   }, []);
   const handleEdit = () => {
-    if (isArchiveProfile) return;
+    if (isReadOnlyArchiveProfile) return;
     setIsEditing(true);
   };
   const handleCancel = () => {
@@ -91154,14 +91180,14 @@ Confirm the Personnel ID, unit and role are correct before saving this separate 
     setShowAddUnavailability(false);
   };
   const handleSaveUnavailability = (periodData) => {
-    if (isArchiveProfile) return;
+    if (isReadOnlyArchiveProfile) return;
     const newPeriod = { ...periodData, id: v4(), startTime: periodData.allDay ? void 0 : periodData.startTime, endTime: periodData.allDay ? void 0 : periodData.endTime };
     const updated = [...unavailabilityPeriods, newPeriod];
     setUnavailabilityPeriods(updated);
     onUpdateInstructor({ ...instructor, unavailability: updated });
   };
   const handleRemoveUnavailability = (idToRemove) => {
-    if (isArchiveProfile) return;
+    if (isReadOnlyArchiveProfile) return;
     const updated = unavailabilityPeriods.filter((p) => p.id !== idToRemove);
     setUnavailabilityPeriods(updated);
     onUpdateInstructor({ ...instructor, unavailability: updated });
@@ -91173,6 +91199,8 @@ Confirm the Personnel ID, unit and role are correct before saving this separate 
   const [logbookError, setLogbookError] = reactExports.useState(null);
   const [logbookMonth, setLogbookMonth] = reactExports.useState(() => getProfileLogbookMonth(instructor));
   const isArchiveProfile = instructor._dataSource === "archive";
+  const isRestoreReviewMode = isArchiveProfile && instructor._restoreReviewMode === true;
+  const isReadOnlyArchiveProfile = isArchiveProfile && !isRestoreReviewMode;
   const archivedLogbookEntries = reactExports.useMemo(() => Array.isArray(instructor.archivedLogbookEntries) ? [...instructor.archivedLogbookEntries] : [], [instructor]);
   const logbookAsAtLabel = getProfileLogbookAsAtLabel(instructor, logbookMonth);
   reactExports.useEffect(() => {
@@ -91291,8 +91319,8 @@ Confirm the Personnel ID, unit and role are correct before saving this separate 
       /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "px-5 py-3 border-b border-gray-600 flex justify-between items-center bg-[#0f1824] flex-shrink-0", children: [
         /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center gap-2", children: [
           /* @__PURE__ */ jsxRuntimeExports.jsx("h2", { className: "text-lg font-bold text-white", children: isCreating ? "New Staff" : "Staff Profile" }),
-          isArchiveProfile && /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "rounded border border-amber-400/30 bg-amber-500/10 px-2 py-0.5 text-[11px] font-semibold uppercase tracking-wide text-amber-200", children: "Read-only archive" }),
-          isArchiveProfile && onOpenCurrentProfile && /* @__PURE__ */ jsxRuntimeExports.jsx(
+          isArchiveProfile && /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "rounded border border-amber-400/30 bg-amber-500/10 px-2 py-0.5 text-[11px] font-semibold uppercase tracking-wide text-amber-200", children: isRestoreReviewMode ? "Restore review" : "Read-only archive" }),
+          isReadOnlyArchiveProfile && onOpenCurrentProfile && /* @__PURE__ */ jsxRuntimeExports.jsx(
             "button",
             {
               type: "button",
@@ -92521,10 +92549,29 @@ Confirm the Personnel ID, unit and role are correct before saving this separate 
                 showPermissionNoticeForElement(event.currentTarget);
                 return;
               }
-              if (isArchiveProfile) return;
+              if (isReadOnlyArchiveProfile) return;
               setActiveTab(null);
               handleEdit();
-            }, disabled: isFrozen || isArchiveProfile, "aria-disabled": isArchiveProfile || !canUseStaffProfileAction("staff.profile.edit"), className: `${btnClass} ${!isArchiveProfile && canUseStaffProfileAction("staff.profile.edit") ? "" : "cursor-not-allowed"}`, children: "Edit" }),
+            }, disabled: isFrozen || isReadOnlyArchiveProfile, "aria-disabled": isReadOnlyArchiveProfile || !canUseStaffProfileAction("staff.profile.edit"), className: `${btnClass} ${!isReadOnlyArchiveProfile && canUseStaffProfileAction("staff.profile.edit") ? "" : "cursor-not-allowed"}`, children: "Edit" }),
+            isRestoreReviewMode && onRestoreReviewedInstructor && /* @__PURE__ */ jsxRuntimeExports.jsx(
+              "button",
+              {
+                onClick: async () => {
+                  const confirmed = await showDarkConfirm(
+                    `Restore ${name} to the active list now?
+
+Confirm the profile details are up to date and correct before restoring.`,
+                    "Confirm Restore",
+                    "warning"
+                  );
+                  if (!confirmed) return;
+                  await Promise.resolve(onRestoreReviewedInstructor(instructor));
+                },
+                className: btnClass,
+                style: { color: "#16a34a" },
+                children: "Restore"
+              }
+            ),
             /* @__PURE__ */ jsxRuntimeExports.jsx("button", { onClick: onClose, className: btnClass, children: "Close" })
           ] }),
           isEditing && /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
@@ -92633,7 +92680,7 @@ Confirm the Personnel ID, unit and role are correct before saving this separate 
         )
       ] })
     ] }) }),
-    !isArchiveProfile && showAddUnavailability && !isCreating && /* @__PURE__ */ jsxRuntimeExports.jsx(AddUnavailabilityFlyout, { onClose: () => setShowAddUnavailability(false), onTodayOnly: handleAddTodayOnly, onSave: handleSaveUnavailability, unavailabilityPeriods, onRemove: handleRemoveUnavailability }),
+    !isReadOnlyArchiveProfile && showAddUnavailability && !isCreating && /* @__PURE__ */ jsxRuntimeExports.jsx(AddUnavailabilityFlyout, { onClose: () => setShowAddUnavailability(false), onTodayOnly: handleAddTodayOnly, onSave: handleSaveUnavailability, unavailabilityPeriods, onRemove: handleRemoveUnavailability }),
     /* @__PURE__ */ jsxRuntimeExports.jsx(
       PermissionNotice,
       {
@@ -93186,6 +93233,8 @@ const ArchivedInstructorsFlyout = ({
   onClose,
   onRestore,
   onRestoreTrainee,
+  onBeginRestoreReview,
+  onBeginRestoreReviewTrainee,
   canRestore = false,
   onRequestRestorePassword
 }) => {
@@ -93307,13 +93356,19 @@ const ArchivedInstructorsFlyout = ({
       RestoreConfirmationFlyout,
       {
         instructorName: personToRestore.name,
-        onConfirm: async () => {
-          const passwordAccepted = onRequestRestorePassword ? await onRequestRestorePassword(personToRestore.name) : true;
-          if (!passwordAccepted) return;
+        onConfirm: () => {
           if (personToRestore.kind === "Trainee") {
-            await onRestoreTrainee?.(personToRestore.id);
+            if (onBeginRestoreReviewTrainee) {
+              onBeginRestoreReviewTrainee(personToRestore.person);
+            } else {
+              void onRestoreTrainee?.(personToRestore.id);
+            }
           } else {
-            await onRestore(personToRestore.id);
+            if (onBeginRestoreReview) {
+              onBeginRestoreReview(personToRestore.person);
+            } else {
+              void onRestore(personToRestore.id);
+            }
           }
           setPersonToRestore(null);
         },
@@ -93398,6 +93453,9 @@ const InstructorListView = ({
   onArchiveInstructor,
   onRestoreInstructor,
   onRestoreTrainee,
+  onBeginRestoreReview,
+  onBeginRestoreReviewTrainee,
+  onUpdateArchivedInstructor,
   locations,
   units,
   selectedPersonForProfile,
@@ -93710,7 +93768,8 @@ const InstructorListView = ({
       target,
       beforeListRecord: findStaffTraceRecord(target)
     });
-    await Promise.resolve(onUpdateInstructor(data));
+    const isRestoreReviewRecord = data._restoreReviewMode === true && data._dataSource === "archive";
+    await Promise.resolve(isRestoreReviewRecord && onUpdateArchivedInstructor ? onUpdateArchivedInstructor(data) : onUpdateInstructor(data));
     appendStaffProfileTrace("staff-list:profile-update-returned", {
       target,
       note: "The app-level save promise has returned. The next staff-list:post-save-target-classification entry shows where the rendered Staff list placed this record after React state refreshed."
@@ -94086,6 +94145,11 @@ const InstructorListView = ({
         school,
         personnelData,
         onUpdateInstructor: handleProfileUpdateForTrace,
+        onRestoreReviewedInstructor: (instructorToRestore) => {
+          const identifier = String(instructorToRestore.id || "").trim() || instructorToRestore.idNumber || null;
+          void onRestoreInstructor(identifier);
+          handleCloseProfile();
+        },
         onNavigateToCurrency,
         originRect,
         isClosing,
@@ -94190,6 +94254,14 @@ const InstructorListView = ({
         onClose: () => setShowArchivedFlyout(false),
         onRestore: onRestoreInstructor,
         onRestoreTrainee,
+        onBeginRestoreReview: (person) => {
+          setShowArchivedFlyout(false);
+          onBeginRestoreReview?.({ ...person, _dataSource: "archive", _restoreReviewMode: true });
+        },
+        onBeginRestoreReviewTrainee: (person) => {
+          setShowArchivedFlyout(false);
+          onBeginRestoreReviewTrainee?.({ ...person, _dataSource: "archive", _restoreReviewMode: true });
+        },
         canRestore: canManageArchive,
         onRequestRestorePassword: (instructorName) => requestArchivePassword(
           `Enter your password to restore ${instructorName}.`,
@@ -94644,6 +94716,9 @@ const StaffView = (props) => {
           onArchiveInstructor: props.onArchiveInstructor,
           onRestoreInstructor: props.onRestoreInstructor,
           onRestoreTrainee: props.onRestoreTrainee,
+          onBeginRestoreReview: props.onBeginRestoreReview,
+          onBeginRestoreReviewTrainee: props.onBeginRestoreReviewTrainee,
+          onUpdateArchivedInstructor: props.onUpdateArchivedInstructor,
           onRequestSct: props.onRequestSct,
           locations: props.locations,
           units: props.units,
@@ -94651,7 +94726,7 @@ const StaffView = (props) => {
           onProfileOpened: props.onProfileOpened,
           onProfileClosed: (instructor) => {
             props.onProfileClosed?.(instructor);
-            if (instructor?._dataSource === "archive" && canViewStaffSchedule) {
+            if (instructor?._dataSource === "archive" && !instructor?._restoreReviewMode && canViewStaffSchedule) {
               setActiveTab("schedule");
             }
           },
@@ -94790,6 +94865,8 @@ const TraineeView = (props) => {
           onNavigateToHateSheet: props.onNavigateToHateSheet,
           onRestoreCourse: props.onRestoreCourse,
           onUpdateTrainee: props.onUpdateTrainee,
+          onUpdateArchivedTrainee: props.onUpdateArchivedTrainee,
+          onRestoreReviewedTrainee: props.onRestoreReviewedTrainee,
           onAddTrainee: props.onAddTrainee,
           onBulkUpdateTrainees: props.onBulkUpdateTrainees,
           onReplaceTrainees: props.onReplaceTrainees,
@@ -160147,6 +160224,36 @@ Do not hard refresh yet. Try Publish again, then confirm the save succeeds.`,
     setTraineeProfileInitialTab(null);
     handleNavigation(activeView === "Trainee" ? "Trainee" : "CourseRoster");
   };
+  const handleBeginStaffRestoreReview = reactExports.useCallback((archivedStaff) => {
+    setSelectedPersonForProfile({ ...archivedStaff, _dataSource: "archive", _restoreReviewMode: true });
+    setProfileInitialTab(null);
+    handleNavigation("Staff");
+  }, []);
+  const handleBeginTraineeRestoreReview = reactExports.useCallback((archivedTrainee) => {
+    setSelectedPersonForProfile({ ...archivedTrainee, _dataSource: "archive", _restoreReviewMode: true });
+    setTraineeProfileInitialTab(null);
+    handleNavigation("Trainee");
+  }, []);
+  const handleUpdateArchivedInstructor = reactExports.useCallback(async (data) => {
+    const dbId = String(data.id || "").trim();
+    if (dbId && data._dataSource === "archive") {
+      const response = await fetch(scopedApiPath(`/api/personnel/${encodeURIComponent(dbId)}`), {
+        method: "PATCH",
+        credentials: "include",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ ...data, isActive: false })
+      });
+      if (!response.ok) {
+        throw new Error(await readApiErrorMessage(response, `Failed to save archived staff ${data.name || data.idNumber}`));
+      }
+    }
+    setArchivedInstructorsData((prev) => prev.map((instructor) => {
+      const candidateDbId = String(instructor.id || "").trim();
+      if (dbId && candidateDbId === dbId) return { ...data, isActive: false, _dataSource: "archive", _restoreReviewMode: true };
+      return Number(instructor.idNumber) === Number(data.idNumber) ? { ...data, isActive: false, _dataSource: "archive", _restoreReviewMode: true } : instructor;
+    }));
+    setSuccessMessage(`${data.name || "Archived staff"} saved. Press Restore when the profile is ready.`);
+  }, [scopedApiPath]);
   const handleArchiveInstructor = reactExports.useCallback(async (identifier) => {
     const identifierText = String(identifier ?? "").trim();
     const matchesArchiveIdentifier = (instructor) => {
@@ -160225,7 +160332,8 @@ Do not hard refresh yet. Try Publish again, then confirm the save succeeds.`,
       }
       return false;
     };
-    const restoredInstructor = { ...instructorToRestore, isActive: true };
+    const { _restoreReviewMode: _staffRestoreReviewMode, ...instructorRestoreFields } = instructorToRestore;
+    const restoredInstructor = { ...instructorRestoreFields, isActive: true, _dataSource: instructorToRestore._dataSource === "archive" ? "database" : instructorToRestore._dataSource };
     try {
       if (dbId && instructorToRestore._dataSource === "database") {
         const response = await fetch(scopedApiPath(`/api/personnel/${encodeURIComponent(dbId)}`), {
@@ -163401,7 +163509,8 @@ It will not clear the published DFP.`,
       }
       return false;
     };
-    const restoredTrainee = { ...traineeToRestore, isActive: true };
+    const { _restoreReviewMode: _traineeRestoreReviewMode, ...traineeRestoreFields } = traineeToRestore;
+    const restoredTrainee = { ...traineeRestoreFields, isActive: true, _dataSource: traineeToRestore._dataSource === "archive" ? "database" : traineeToRestore._dataSource };
     const traineeName = traineeToRestore.fullName || traineeToRestore.name || "trainee";
     try {
       if (dbId && traineeToRestore._dataSource === "database") {
@@ -163440,6 +163549,54 @@ It will not clear the published DFP.`,
       setShowInfoNotification(`Restore failed: ${error instanceof Error ? error.message : String(error)}`);
     }
   }, [archivedTraineesData, scopedApiPath]);
+  const handleUpdateArchivedTrainee = reactExports.useCallback(async (data) => {
+    const dbId = String(data.id || "").trim();
+    const traineeName = data.fullName || data.name || "Archived trainee";
+    if (dbId && data._dataSource === "archive") {
+      const response = await fetch(scopedApiPath(`/api/trainees/${encodeURIComponent(dbId)}`), {
+        method: "PATCH",
+        credentials: "include",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          idNumber: data.idNumber,
+          name: data.name,
+          fullName: data.fullName,
+          rank: data.rank,
+          role: data.role || "",
+          course: data.course,
+          lmpType: data.lmpType,
+          academicLmpType: data.academicLmpType || "",
+          unit: data.unit,
+          flight: data.flight,
+          location: data.location,
+          service: data.service,
+          seatConfig: data.seatConfig,
+          isPaused: data.isPaused,
+          isActive: false,
+          traineeCallsign: data.traineeCallsign,
+          primaryInstructor: data.primaryInstructor,
+          secondaryInstructor: data.secondaryInstructor,
+          phoneNumber: data.phoneNumber,
+          email: data.email,
+          permissions: data.permissions || [],
+          preferences: {
+            ...data.preferences || {},
+            preFlightNotesEnduring: getTraineeEnduringPreFlightNotes(data)
+          },
+          unavailability: data.unavailability || []
+        })
+      });
+      if (!response.ok) {
+        throw new Error(await readApiErrorMessage(response, `Could not save ${traineeName}.`));
+      }
+    }
+    setArchivedTraineesData((prev) => prev.map((trainee) => {
+      const candidateDbId = String(trainee.id || "").trim();
+      if (dbId && candidateDbId === dbId) return { ...data, isActive: false, _dataSource: "archive", _restoreReviewMode: true };
+      return String(trainee.idNumber) === String(data.idNumber) ? { ...data, isActive: false, _dataSource: "archive", _restoreReviewMode: true } : trainee;
+    }));
+    setSuccessMessage(`${traineeName} saved. Press Restore when the profile is ready.`);
+  }, [scopedApiPath]);
   const resolveCourseMovementDirection = reactExports.useCallback((fromCourse, toCourse) => {
     const normaliseCourse = (value) => String(value || "").trim().toUpperCase();
     const from = normaliseCourse(fromCourse);
@@ -163988,6 +164145,10 @@ It will not clear the published DFP.`,
             onRestoreCourse: () => {
             },
             onUpdateTrainee: handleUpdateTrainee,
+            onUpdateArchivedTrainee: handleUpdateArchivedTrainee,
+            onRestoreReviewedTrainee: (trainee) => {
+              void handleRestoreTrainee(String(trainee.id || "").trim() || trainee.idNumber || null);
+            },
             onAddTrainee: handleAddTrainee,
             onBulkUpdateTrainees: handleBulkUpdateTrainees,
             onReplaceTrainees: handleReplaceTrainees,
@@ -164154,6 +164315,10 @@ It will not clear the published DFP.`,
             onRestoreCourse: () => {
             },
             onUpdateTrainee: handleUpdateTrainee,
+            onUpdateArchivedTrainee: handleUpdateArchivedTrainee,
+            onRestoreReviewedTrainee: (trainee) => {
+              void handleRestoreTrainee(String(trainee.id || "").trim() || trainee.idNumber || null);
+            },
             onAddTrainee: handleAddTrainee,
             onBulkUpdateTrainees: handleBulkUpdateTrainees,
             onReplaceTrainees: handleReplaceTrainees,
@@ -165322,6 +165487,9 @@ It will not clear the published DFP.`,
             onArchiveInstructor: handleArchiveInstructor,
             onRestoreInstructor: handleRestoreInstructor,
             onRestoreTrainee: handleRestoreTrainee,
+            onBeginRestoreReview: handleBeginStaffRestoreReview,
+            onBeginRestoreReviewTrainee: handleBeginTraineeRestoreReview,
+            onUpdateArchivedInstructor: handleUpdateArchivedInstructor,
             date,
             onDateChange: handleDateChange,
             eventSegmentsForDate,
@@ -165522,6 +165690,9 @@ It will not clear the published DFP.`,
             onRestoreTrainee: (id) => {
               void handleRestoreTrainee(id);
             },
+            onBeginRestoreReview: handleBeginStaffRestoreReview,
+            onBeginRestoreReviewTrainee: handleBeginTraineeRestoreReview,
+            onUpdateArchivedInstructor: handleUpdateArchivedInstructor,
             locations,
             units,
             selectedPersonForProfile,
