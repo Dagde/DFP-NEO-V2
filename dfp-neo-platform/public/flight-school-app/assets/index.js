@@ -143775,6 +143775,9 @@ const App = () => {
         latestReportNextEventLists: latestNeoBuildReport?.nextEventLists || null,
         latestReportNextEventEligibility: latestNeoBuildReport?.nextEventEligibility || null,
         latestReportScheduleLists: latestNeoBuildReport?.scheduleLists || null,
+        latestReportAirCombatPriority: latestNeoBuildReport?.airCombatPriority || null,
+        latestReportFixedCrewPriority: latestNeoBuildReport?.fixedCrewPriority || null,
+        latestReportFlightSchoolPriority: latestNeoBuildReport?.flightSchoolPriority || null,
         latestReportFinal: latestNeoBuildReport?.final || null,
         latestReportFinalCleanup: latestNeoBuildReport?.finalCleanup || null,
         latestReportPhaseTimeline: Array.isArray(latestNeoBuildReport?.phaseTimeline) ? latestNeoBuildReport.phaseTimeline.slice(-80) : [],
@@ -157689,6 +157692,9 @@ The proposed event was not scheduled. Re-open the event and choose Accept Confli
               zeroTileInvestigation: latestBuildReport?.zeroTileInvestigation || latestZeroTileTrace || null,
               final: latestBuildReport?.final || null,
               finalCleanup: latestBuildReport?.finalCleanup || null,
+              airCombatPriority: latestBuildReport?.airCombatPriority || null,
+              fixedCrewPriority: latestBuildReport?.fixedCrewPriority || null,
+              flightSchoolPriority: latestBuildReport?.flightSchoolPriority || null,
               scheduleListSummary,
               phaseTimeline: Array.isArray(latestBuildReport?.phaseTimeline) ? latestBuildReport.phaseTimeline.slice(-80) : []
             }
