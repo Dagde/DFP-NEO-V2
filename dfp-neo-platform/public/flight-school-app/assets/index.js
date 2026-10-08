@@ -143834,38 +143834,6 @@ ${error instanceof Error ? error.message : String(error)}`,
       );
     }
   }
-  function downloadDfpPublishTrace(prefix = "dfp-publish-trace") {
-    try {
-      const payload = lastDfpPublishTrace || JSON.parse(localStorage.getItem("dfp_publish_last_trace") || "null");
-      if (!payload) {
-        void showDarkAlert2(
-          "No publish trace has been recorded yet. Click Publish once, then download the trace.",
-          "No Publish Trace",
-          "info"
-        );
-        return;
-      }
-      const timestamp = (/* @__PURE__ */ new Date()).toISOString().replace(/[:.]/g, "-");
-      const blob = new Blob([JSON.stringify(payload, null, 2)], { type: "application/json;charset=utf-8;" });
-      const url = URL.createObjectURL(blob);
-      const link = document.createElement("a");
-      link.href = url;
-      link.download = `${prefix}-${timestamp}.json`;
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-      URL.revokeObjectURL(url);
-    } catch (error) {
-      console.warn("[DFP-DIAG] Failed to download DFP publish trace:", error);
-      void showDarkAlert2(
-        `The publish trace could not be downloaded.
-
-${error instanceof Error ? error.message : String(error)}`,
-        "Publish Trace Download Failed",
-        "error"
-      );
-    }
-  }
   reactExports.useEffect(() => {
     pushDfpDataDiag("context:resolved", {
       platformLocations: (platformConfig?.locations || []).map((location) => ({
@@ -147847,13 +147815,6 @@ ${"=".repeat(60)}`);
   const [cptConflict, setCptConflict] = reactExports.useState(null);
   const [isLocalityChangeVisible, setIsLocalityChangeVisible] = reactExports.useState(false);
   const [successMessage, setSuccessMessage] = reactExports.useState(null);
-  const [lastDfpPublishTrace, setLastDfpPublishTrace] = reactExports.useState(() => {
-    try {
-      return JSON.parse(localStorage.getItem("dfp_publish_last_trace") || "null");
-    } catch {
-      return null;
-    }
-  });
   const [initialSyllabusId, setInitialSyllabusId] = reactExports.useState(null);
   const [syllabusBackTarget, setSyllabusBackTarget] = reactExports.useState("Program Schedule");
   const [showAddRemedialPackage, setShowAddRemedialPackage] = reactExports.useState(false);
@@ -158948,45 +158909,6 @@ ${conflictLines.join("\n")}${moreText}`,
     );
   };
   const handleConfirmPublish = async () => {
-    const publishTraceStartedAt = performance.now();
-    let publishTraceStageStartedAt = publishTraceStartedAt;
-    const publishTrace = {
-      traceType: "dfp-publish",
-      startedAt: (/* @__PURE__ */ new Date()).toISOString(),
-      date: buildDfpDate,
-      locationCode: school,
-      unitCode: activeUnitCode,
-      operationalModel: activeOperationalModel,
-      sourceEventCount: nextDayBuildEvents.length,
-      stages: []
-    };
-    const markPublishTrace = (label, details = {}) => {
-      const now = performance.now();
-      publishTrace.stages.push({
-        label,
-        durationMs: Math.max(0, Math.round(now - publishTraceStageStartedAt)),
-        elapsedMs: Math.max(0, Math.round(now - publishTraceStartedAt)),
-        ...details
-      });
-      publishTraceStageStartedAt = now;
-    };
-    const finishPublishTrace = (status, details = {}) => {
-      const completedTrace = {
-        ...publishTrace,
-        status,
-        completedAt: (/* @__PURE__ */ new Date()).toISOString(),
-        totalDurationMs: Math.max(0, Math.round(performance.now() - publishTraceStartedAt)),
-        ...details
-      };
-      try {
-        localStorage.setItem("dfp_publish_last_trace", JSON.stringify(completedTrace));
-        window.__lastDfpPublishTrace = completedTrace;
-      } catch (error) {
-        console.warn("[DFP-PUBLISH-TRACE] Failed to persist publish trace:", error);
-      }
-      setLastDfpPublishTrace(completedTrace);
-      return completedTrace;
-    };
     setShowPublishConfirm(false);
     const seenPublishIds = /* @__PURE__ */ new Set();
     const dedupedBuildEvents = nextDayBuildEvents.filter((e) => {
@@ -158995,10 +158917,6 @@ ${conflictLines.join("\n")}${moreText}`,
       return true;
     });
     logRoutineAppDebug("[PUBLISH] nextDayBuildEvents:", nextDayBuildEvents.length, "→ after dedup:", dedupedBuildEvents.length);
-    markPublishTrace("dedupe-build-events", {
-      inputEventCount: nextDayBuildEvents.length,
-      dedupedEventCount: dedupedBuildEvents.length
-    });
     const newEventsForDate = dedupedBuildEvents.map((e) => ({ ...e, date: buildDfpDate }));
     const publishedPriorityEventIds = new Set(
       newEventsForDate.map((event) => String(event.id || "").trim()).filter(Boolean)
@@ -159023,12 +158941,6 @@ ${conflictLines.join("\n")}${moreText}`,
         })
       );
     }
-    markPublishTrace("consume-priority-source-events", {
-      priorityEventIds: publishedPriorityEventIds.size,
-      currencyDraftIds: publishedCurrencyDraftIds.size,
-      taskingRequestIds: publishedTaskingRequestIds.size,
-      sctRequestIds: publishedSctRequestIdsFromEvents.size
-    });
     const nextPublishedSchedulesForPublish = {
       ...publishedSchedulesRef.current,
       [buildDfpDate]: newEventsForDate
@@ -159040,10 +158952,6 @@ ${conflictLines.join("\n")}${moreText}`,
       ...prev,
       [publishedSnapshotKey]: currentAircraftConfigState
     }));
-    markPublishTrace("update-published-state", {
-      snapshotKey: publishedSnapshotKey,
-      publishEventCount: newEventsForDate.length
-    });
     logRoutineAppDebug("📋 Triggering training report sync after publish...");
     setTimeout(() => {
       logRoutineAppDebug("⏰ Executing delayed training report sync after publish...");
@@ -159069,12 +158977,6 @@ ${conflictLines.join("\n")}${moreText}`,
       `DFP published for ${buildDfpDate}`,
       `Published by: ${publishedBy}; Total events: ${newEventsForDate.length}; Flight: ${newEventsForDate.filter((e) => e.type === "flight").length}; ${resourceDisplayNames2.ftd}: ${newEventsForDate.filter((e) => e.type === "ftd").length}; Ground: ${newEventsForDate.filter((e) => e.type === "ground").length}`
     );
-    markPublishTrace("audit-log-and-baseline-prep", {
-      publishedBy,
-      flightCount: newEventsForDate.filter((e) => e.type === "flight").length,
-      ftdCount: newEventsForDate.filter((e) => e.type === "ftd").length,
-      groundCount: newEventsForDate.filter((e) => e.type === "ground").length
-    });
     const hasSeedData = newEventsForDate.some((e) => e.isHistoricalSeed === true);
     if (!hasSeedData && newEventsForDate.length > 0) {
       const staffEventsForDate = newEventsForDate.filter(
@@ -159107,21 +159009,8 @@ ${conflictLines.join("\n")}${moreText}`,
           }
         });
       });
-      markPublishTrace("build-staff-logbook-map", {
-        publishedDateCount: Object.keys(allPublishedForLogbook).length,
-        logbookInstructorCount: Object.keys(staffLogbookMap).length,
-        logbookEntryCount: Object.values(staffLogbookMap).reduce((total, entries) => total + (Array.isArray(entries) ? entries.length : 0), 0)
-      });
       const snapshotContext = buildDailySnapshotContext(buildDfpDate, newEventsForDate, staffLogbookMap, {
         includeTrainingReportState: false
-      });
-      markPublishTrace("build-daily-snapshot-context", {
-        traineeProfileCount: Array.isArray(snapshotContext.traineeProfiles) ? snapshotContext.traineeProfiles.length : 0,
-        staffProfileCount: Array.isArray(snapshotContext.staffProfiles) ? snapshotContext.staffProfiles.length : 0,
-        courseCount: Array.isArray(snapshotContext.courseState) ? snapshotContext.courseState.length : 0,
-        masterLmpCount: Array.isArray(snapshotContext.masterLmpState) ? snapshotContext.masterLmpState.length : 0,
-        eventCompletionCount: Array.isArray(snapshotContext.eventCompletions) ? snapshotContext.eventCompletions.length : 0,
-        trainingReportStateIncluded: false
       });
       const snapshotKey = getDailySnapshotKey(buildDfpDate);
       const existingAlertsDataForDate = alertsDataByDate[buildDfpDate];
@@ -159150,14 +159039,6 @@ ${conflictLines.join("\n")}${moreText}`,
         replaceBaselineEvents: true,
         ...existingAlertsDataForDate && Object.keys(existingAlertsDataForDate).length > 0 ? { alertsData: existingAlertsDataForDate } : {}
       };
-      markPublishTrace("assemble-snapshot-payload", {
-        snapshotKey,
-        scheduleEventCount: newEventsForDate.length,
-        staffEventCount: staffEventsForDate.length,
-        traineeEventCount: traineeEventsForDate.length,
-        leanPublishArchive: true,
-        hasAlertsData: !!(existingAlertsDataForDate && Object.keys(existingAlertsDataForDate).length > 0)
-      });
       const apiBase = getApiBaseUrl();
       loadedSnapshotDates.current.add(snapshotKey);
       loadingSnapshotDates.current.delete(snapshotKey);
@@ -159170,52 +159051,21 @@ ${conflictLines.join("\n")}${moreText}`,
         ].filter((key, index, keys) => key && keys.indexOf(key) === index)
       };
       cacheDailySnapshot(snapshotKey, snapshotPayload, buildDfpDate);
-      markPublishTrace("prime-local-snapshot-cache", {
-        snapshotKeysForDate: snapshotKeysByDateRef.current[buildDfpDate]?.length || 0
-      });
       try {
         const snapshotPayloadJson = JSON.stringify(snapshotPayload);
-        markPublishTrace("stringify-snapshot-payload", {
-          payloadBytes: new Blob([snapshotPayloadJson]).size,
-          payloadChars: snapshotPayloadJson.length
-        });
         const saveResponse = await fetch(`${apiBase}/daily-snapshot/save`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: snapshotPayloadJson
         });
-        markPublishTrace("post-daily-snapshot-save", {
-          httpStatus: saveResponse.status,
-          ok: saveResponse.ok
-        });
         const result = await saveResponse.json().catch(() => ({}));
-        markPublishTrace("parse-daily-snapshot-save-response", {
-          success: result?.success === true,
-          serverTotalDurationMs: result?.totalDurationMs ?? null,
-          serverTimingCount: Array.isArray(result?.publishTimings) ? result.publishTimings.length : 0,
-          archiveDurationMs: result?.archive?.durationMs ?? null,
-          archiveEventCount: result?.archive?.eventCount ?? null,
-          archivePruneQueued: result?.archivePrune?.queued === true
-        });
-        publishTrace.server = {
-          totalDurationMs: result?.totalDurationMs ?? null,
-          publishTimings: Array.isArray(result?.publishTimings) ? result.publishTimings : [],
-          archive: result?.archive || null,
-          archivePrune: result?.archivePrune || null
-        };
         if (!saveResponse.ok || !result.success) {
           throw new Error(result.error || result.details || `Snapshot save failed with HTTP ${saveResponse.status}`);
         }
         logRoutineAppDebug(`✅ [Snapshot] Saved daily snapshot for ${buildDfpDate} (${school} - ${activeUnitCode}), ${newEventsForDate.length} events`);
         loadedSnapshotDates.current.add(snapshotKey);
         cacheDailySnapshot(snapshotKey, snapshotPayload, buildDfpDate);
-        markPublishTrace("publish-save-complete-cache-refresh", {
-          snapshotKey
-        });
       } catch (err) {
-        finishPublishTrace("error", {
-          error: err instanceof Error ? err.message : String(err)
-        });
         console.warn(`⚠️ [Snapshot] Could not save daily snapshot for ${buildDfpDate}:`, err);
         await showDarkAlert2(
           `The DFP was built, but it was not saved to the published DFP database.
@@ -159229,9 +159079,6 @@ Do not hard refresh yet. Try Publish again, then confirm the save succeeds.`,
         return;
       }
     } else if (hasSeedData) {
-      finishPublishTrace("blocked-seed-data", {
-        eventCount: newEventsForDate.length
-      });
       logRoutineAppDebug(`⚠️ [Snapshot] Skipped saving seed data for ${buildDfpDate}`);
       await showDarkAlert2(
         "This DFP contains setup-only events, so it was not saved as a real published DFP.",
@@ -159244,10 +159091,6 @@ Do not hard refresh yet. Try Publish again, then confirm the save succeeds.`,
     setNextDayBuildEvents([]);
     setActiveView("Program Schedule");
     setSuccessMessage("DFP Successfully Published!");
-    finishPublishTrace("success", {
-      finalEventCount: newEventsForDate.length,
-      targetView: "Program Schedule"
-    });
   };
   const handleDeploymentUnavailability = async (updatedSchedule) => {
     const deploymentTiles = updatedSchedule.filter((e) => e.type === "deployment");
@@ -168377,22 +168220,6 @@ Do you want to replace the existing entry?`,
           onClick: () => downloadDfpDataTrace("dfp-load-trace"),
           className: "rounded border border-sky-500/50 px-1.5 py-0.5 text-sky-200 transition-colors hover:border-sky-400 hover:text-white",
           title: "Download DFP load timing trace",
-          children: "Trace"
-        }
-      )
-    ] }),
-    isAuthenticated && lastDfpPublishTrace && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "fixed bottom-[238px] right-[18px] z-[50] flex w-[75px] flex-col items-stretch gap-px rounded border border-emerald-700/50 bg-gray-900/75 px-1 py-1 text-center text-[10px] text-gray-300 shadow-sm backdrop-blur-sm select-none", children: [
-      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center justify-center gap-1", title: `Last publish trace: ${lastDfpPublishTrace?.status || "recorded"}`, children: [
-        /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: `h-1.5 w-1.5 rounded-full ${lastDfpPublishTrace?.status === "success" ? "bg-emerald-400" : "bg-amber-400"}` }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx("span", { children: "Publish" })
-      ] }),
-      /* @__PURE__ */ jsxRuntimeExports.jsx(
-        "button",
-        {
-          type: "button",
-          onClick: () => downloadDfpPublishTrace("dfp-publish-trace"),
-          className: "rounded border border-emerald-500/50 px-1.5 py-0.5 text-emerald-200 transition-colors hover:border-emerald-400 hover:text-white",
-          title: "Download DFP publish timing trace",
           children: "Trace"
         }
       )

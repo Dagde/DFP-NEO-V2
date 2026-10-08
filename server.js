@@ -21405,32 +21405,7 @@ app.post('/api/trainee-reallocation/apply', async (req, res) => {
 // POST /api/daily-snapshot/save - Save a full daily snapshot when schedule is published
 app.post('/api/daily-snapshot/save', async (req, res) => {
   const requestStartedAt = Date.now();
-  const publishTimings = [];
-  const recordPublishTiming = (label, startedAt, details = {}) => {
-    publishTimings.push({
-      label,
-      durationMs: Math.max(0, Date.now() - startedAt),
-      elapsedMs: Math.max(0, Date.now() - requestStartedAt),
-      ...details,
-    });
-  };
-  const timedPublishStep = async (label, fn, details = {}) => {
-    const stepStartedAt = Date.now();
-    try {
-      const result = await fn();
-      recordPublishTiming(label, stepStartedAt, {
-        ...details,
-        rows: Array.isArray(result) ? result.length : undefined,
-      });
-      return result;
-    } catch (error) {
-      recordPublishTiming(label, stepStartedAt, {
-        ...details,
-        error: error?.message || String(error),
-      });
-      throw error;
-    }
-  };
+  const timedPublishStep = async (_label, fn) => fn();
   try {
     const db = await timedPublishStep('get-prisma', () => getPrisma());
     const {
@@ -21461,19 +21436,6 @@ app.post('/api/daily-snapshot/save', async (req, res) => {
 	      leanPublishArchive
 	    } = req.body;
     const isLeanPublishArchive = leanPublishArchive === true;
-    recordPublishTiming('parse-route-body', requestStartedAt, {
-      contentLength: Number(req.get('content-length') || 0),
-      scheduleEventCount: Array.isArray(scheduleEvents) ? scheduleEvents.length : 0,
-      staffEventCount: Array.isArray(staffEvents) ? staffEvents.length : 0,
-      traineeEventCount: Array.isArray(traineeEvents) ? traineeEvents.length : 0,
-      traineeProfileCount: Array.isArray(traineeProfiles) ? traineeProfiles.length : 0,
-      staffProfileCount: Array.isArray(staffProfiles) ? staffProfiles.length : 0,
-      courseCount: Array.isArray(courseState) ? courseState.length : 0,
-      hasTrainingReportState: isPlainObject(trainingReportState),
-      hasCurrencyState: isPlainObject(currencyState),
-      leanPublishArchive: isLeanPublishArchive,
-    });
-
     if (!date) {
       return res.status(400).json({ error: 'date is required' });
     }
@@ -21815,28 +21777,24 @@ app.post('/api/daily-snapshot/save', async (req, res) => {
     }
 
     if (archive?.success) {
-      const pruneQueueStartedAt = Date.now();
       archivePrune = queueDailySnapshotPrune(db, {
         date: parseDailySnapshotDateKey(date).date,
         snapshotKey: date,
         reason: 'post-publish-retention-background',
       });
-      recordPublishTiming('queue-background-prune', pruneQueueStartedAt);
     }
 
     const totalDurationMs = Date.now() - requestStartedAt;
     console.log(`✅ POST /api/daily-snapshot/save - Completed publish save for ${date} in ${totalDurationMs}ms`, JSON.stringify({
       eventCount: (scheduleEvents || []).length,
       contentLength: Number(req.get('content-length') || 0),
-      timings: publishTimings,
     }));
-    res.json({ success: true, date, eventCount: (scheduleEvents||[]).length, archive, archivePrune, publishTimings, totalDurationMs });
+    res.json({ success: true, date, eventCount: (scheduleEvents||[]).length, archive, archivePrune, totalDurationMs });
   } catch (error) {
     console.error('❌ POST /api/daily-snapshot/save error:', error);
     res.status(500).json({
       error: 'Failed to save daily snapshot',
       details: error.message,
-      publishTimings,
       totalDurationMs: Date.now() - requestStartedAt,
     });
   }
