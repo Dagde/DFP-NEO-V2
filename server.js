@@ -7365,12 +7365,13 @@ app.get('/api/trainees', async (req, res) => {
   const requestStartedAt = Date.now();
   try {
     const db = await getPrisma();
-    const { course, isActive, search } = req.query;
+    const { course, includeInactive, isActive, search } = req.query;
 
     const where = {};
     if (course) where.course = course;
     if (isActive === 'true') where.isActive = true;
-    if (isActive === 'false') where.isActive = false;
+    else if (isActive === 'false') where.isActive = false;
+    else if (includeInactive !== 'true') where.isActive = true;
     if (search) {
       where.OR = [
         { name: { contains: search, mode: 'insensitive' } },

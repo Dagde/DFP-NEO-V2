@@ -117470,7 +117470,7 @@ async function fetchInstructors() {
   return [];
 }
 async function fetchTrainees() {
-  const result = await fetchAPI("/trainees");
+  const result = await fetchAPI("/trainees?includeInactive=true");
   if (result.success && result.data?.trainees) {
     return result.data.trainees.map((t) => {
       const preferences = t.preferences && typeof t.preferences === "object" && !Array.isArray(t.preferences) ? t.preferences : {};
@@ -142860,18 +142860,20 @@ const App = () => {
   }, [activeContextUnitCodeSet, allInstructorsData, dataSourceSettings, personMatchesActiveLocation, pushSetupTestPersonnelDiag, setupTestProfile]);
   const traineesData = reactExports.useMemo(() => {
     const { trainee: mockOn, traineeDb: dbOn } = dataSourceSettings;
-    const locationFilteredTrainees = allTraineesData.filter(personMatchesActiveLocation);
+    const activeTrainees = allTraineesData.filter(isRecordActive);
+    const locationFilteredTrainees = activeTrainees.filter(personMatchesActiveLocation);
     const contextFilteredTrainees = activeContextUnitCodeSet.size > 0 ? locationFilteredTrainees.filter((t) => {
       const unitCode = normalisePersonnelUnitCode(t.unit);
       return !unitCode || activeContextUnitCodeSet.has(unitCode);
     }) : locationFilteredTrainees;
     if (setupTestProfile) {
-      const setupTrainees = allTraineesData.filter((t) => t._dataSource === "setup-test");
+      const setupTrainees = activeTrainees.filter((t) => t._dataSource === "setup-test");
       const locationMatchedSetupTrainees = locationFilteredTrainees.filter((t) => t._dataSource === "setup-test");
       const contextMatchedSetupTrainees = contextFilteredTrainees.filter((t) => t._dataSource === "setup-test");
       const nextTrainees = setupTrainees.length > 0 ? setupTrainees : contextMatchedSetupTrainees;
       pushSetupTestPersonnelDiag("filter:trainees", {
         allTrainees: allTraineesData.length,
+        activeTrainees: activeTrainees.length,
         setupTrainees: setupTrainees.length,
         locationMatchedSetupTrainees: locationMatchedSetupTrainees.length,
         contextMatchedSetupTrainees: contextMatchedSetupTrainees.length,
@@ -144274,7 +144276,7 @@ ${error instanceof Error ? error.message : String(error)}`,
             ...normalisePersonnelRecord(person),
             _dataSource: "setup-test"
           }));
-          const normalisedTrainees = (setupPersonnel.trainees || []).map((trainee) => ({
+          const normalisedTrainees2 = (setupPersonnel.trainees || []).map((trainee) => ({
             ...trainee,
             _dataSource: "setup-test"
           }));
@@ -144282,7 +144284,7 @@ ${error instanceof Error ? error.message : String(error)}`,
             storedInstructors: setupPersonnel.instructors?.length || 0,
             storedTrainees: setupPersonnel.trainees?.length || 0,
             normalisedInstructors: normalisedInstructors2.length,
-            normalisedTrainees: normalisedTrainees.length,
+            normalisedTrainees: normalisedTrainees2.length,
             instructorSample: normalisedInstructors2.slice(0, 8).map((person) => ({
               name: person.name,
               unit: person.unit,
@@ -144294,12 +144296,13 @@ ${error instanceof Error ? error.message : String(error)}`,
           setInstructorsData(normalisedInstructors2);
           setArchivedInstructorsData(normalisedInstructors2.filter((person) => !isRecordActive(person)));
           setIsStaffLoaded(true);
-          setTraineesData(normalisedTrainees);
+          setTraineesData(normalisedTrainees2.filter((trainee) => isRecordActive(trainee)));
+          setArchivedTraineesData(normalisedTrainees2.filter((trainee) => !isRecordActive(trainee)));
           setIsTraineeLoaded(true);
           setEvents([]);
           setScores(/* @__PURE__ */ new Map());
           const setupCourseNames = Array.from(new Set(
-            normalisedTrainees.map((trainee) => String(trainee.course || "").trim()).filter(Boolean)
+            normalisedTrainees2.map((trainee) => String(trainee.course || "").trim()).filter(Boolean)
           ));
           setCourses(setupCourseNames.map((name, index) => ({
             id: `setup-course-${index + 1}`,
@@ -144318,7 +144321,7 @@ ${error instanceof Error ? error.message : String(error)}`,
             durationMs: Math.round(performance.now() - startedAt),
             source: "setup-test",
             instructors: normalisedInstructors2.length,
-            trainees: normalisedTrainees.length,
+            trainees: normalisedTrainees2.length,
             courses: setupCourseNames.length
           });
           return;
@@ -144357,7 +144360,12 @@ ${error instanceof Error ? error.message : String(error)}`,
         setInstructorsData(normalisedInstructors);
         setArchivedInstructorsData(normalisedInstructors.filter((person) => !isRecordActive(person)));
         setIsStaffLoaded(true);
-        setTraineesData(data.trainees);
+        const normalisedTrainees = (data.trainees || []).map((trainee) => ({
+          ...trainee,
+          _dataSource: trainee._dataSource || "database"
+        }));
+        setTraineesData(normalisedTrainees.filter((trainee) => isRecordActive(trainee)));
+        setArchivedTraineesData(normalisedTrainees.filter((trainee) => !isRecordActive(trainee)));
         setIsTraineeLoaded(true);
         setEvents(data.events);
         setScores(new Map(Object.entries(data.scores || {})));
@@ -160323,13 +160331,15 @@ Do not hard refresh yet. Try Publish again, then confirm the save succeeds.`,
           ...t,
           _dataSource: "database"
         }));
+        const activeDbTrainees = dbTrainees.filter((trainee) => isRecordActive(trainee));
+        setArchivedTraineesData(dbTrainees.filter((trainee) => !isRecordActive(trainee)));
         setSelectedPersonForProfile((prev) => {
           if (!prev) return prev;
           const previousAny = prev;
           const previousDbId = String(previousAny.id || "").trim();
           const previousIdNumber = String(previousAny.idNumber || "").trim();
           const previousName = normalisePersonName(previousAny.name || previousAny.fullName || "");
-          const refreshedTrainee = dbTrainees.find((candidate) => {
+          const refreshedTrainee = activeDbTrainees.find((candidate) => {
             const candidateDbId = String(candidate.id || "").trim();
             const candidateIdNumber = String(candidate.idNumber || "").trim();
             const candidateName = normalisePersonName(candidate.name || candidate.fullName || "");
@@ -160344,7 +160354,7 @@ Do not hard refresh yet. Try Publish again, then confirm the save succeeds.`,
             if (source === "mockdata") return dataSourceSettings.trainee === true;
             return source === "setup-test";
           });
-          return [...retainedSessionTrainees, ...dbTrainees];
+          return [...retainedSessionTrainees, ...activeDbTrainees];
         });
         const defaultColors = [
           "bg-sky-400/80",
@@ -160358,7 +160368,7 @@ Do not hard refresh yet. Try Publish again, then confirm the save succeeds.`,
           "bg-red-400/80",
           "bg-cyan-400/80"
         ];
-        const dbCourseNames = [...new Set(dbTrainees.map((t) => t.course).filter(Boolean))];
+        const dbCourseNames = [...new Set(activeDbTrainees.map((t) => t.course).filter(Boolean))];
         setCourseColors((prev) => {
           const updated = { ...prev };
           let colorIndex = Object.keys(updated).length;
@@ -160371,7 +160381,7 @@ Do not hard refresh yet. Try Publish again, then confirm the save succeeds.`,
           });
           return updated;
         });
-        logRoutineAppDebug(`✅ Refreshed ${dbTrainees.length} trainees from database`);
+        logRoutineAppDebug(`✅ Refreshed ${activeDbTrainees.length} active trainees from database (${dbTrainees.length - activeDbTrainees.length} archived)`);
         setIsTraineeLoaded(true);
       }
     } catch (error) {
@@ -160668,9 +160678,11 @@ Do not hard refresh yet. Try Publish again, then confirm the save succeeds.`,
           ...t,
           _dataSource: "database"
         }));
-        logRoutineAppDebug("[Poll] Fetched", dbTrainees.length, "trainees. Unavailability total:", dbTrainees.reduce((sum, t) => sum + (t.unavailability?.length || 0), 0));
+        const activeDbTrainees = dbTrainees.filter((trainee) => isRecordActive(trainee));
+        setArchivedTraineesData(dbTrainees.filter((trainee) => !isRecordActive(trainee)));
+        logRoutineAppDebug("[Poll] Fetched", activeDbTrainees.length, "active trainees. Unavailability total:", activeDbTrainees.reduce((sum, t) => sum + (t.unavailability?.length || 0), 0));
         setTraineesData((prev) => {
-          const nextTrainees = mergePolledDatabasePeople(prev, dbTrainees, dataSourceSettings.trainee === true);
+          const nextTrainees = mergePolledDatabasePeople(prev, activeDbTrainees, dataSourceSettings.trainee === true);
           const prevHash = buildPersonnelStatusHash(prev);
           const newHash = buildPersonnelStatusHash(nextTrainees);
           if (prevHash === newHash) return prev;

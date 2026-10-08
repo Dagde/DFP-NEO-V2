@@ -380,9 +380,12 @@ app.get('/api/personnel', async (req, res) => {
 app.get('/api/trainees', async (req, res) => {
   try {
     const db = await getPrisma();
-    const { search } = req.query;
+    const { includeInactive, isActive, search } = req.query;
 
     const where = {};
+    if (isActive === 'true') where.isActive = true;
+    else if (isActive === 'false') where.isActive = false;
+    else if (includeInactive !== 'true') where.isActive = true;
     if (search) {
       where.OR = [
         { name: { contains: search, mode: 'insensitive' } },

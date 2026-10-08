@@ -30929,7 +30929,8 @@ const App: React.FC = () => {
     const traineesData = useMemo(() => {
         const { trainee: mockOn, traineeDb: dbOn } = dataSourceSettings;
 
-        const locationFilteredTrainees = allTraineesData.filter(personMatchesActiveLocation);
+        const activeTrainees = allTraineesData.filter(isRecordActive);
+        const locationFilteredTrainees = activeTrainees.filter(personMatchesActiveLocation);
         const contextFilteredTrainees = activeContextUnitCodeSet.size > 0
             ? locationFilteredTrainees.filter((t: any) => {
                 const unitCode = normalisePersonnelUnitCode(t.unit);
@@ -30938,12 +30939,13 @@ const App: React.FC = () => {
             : locationFilteredTrainees;
 
         if (setupTestProfile) {
-            const setupTrainees = allTraineesData.filter((t: any) => (t as any)._dataSource === 'setup-test');
+            const setupTrainees = activeTrainees.filter((t: any) => (t as any)._dataSource === 'setup-test');
             const locationMatchedSetupTrainees = locationFilteredTrainees.filter((t: any) => (t as any)._dataSource === 'setup-test');
             const contextMatchedSetupTrainees = contextFilteredTrainees.filter((t: any) => (t as any)._dataSource === 'setup-test');
             const nextTrainees = setupTrainees.length > 0 ? setupTrainees : contextMatchedSetupTrainees;
             pushSetupTestPersonnelDiag('filter:trainees', {
                 allTrainees: allTraineesData.length,
+                activeTrainees: activeTrainees.length,
                 setupTrainees: setupTrainees.length,
                 locationMatchedSetupTrainees: locationMatchedSetupTrainees.length,
                 contextMatchedSetupTrainees: contextMatchedSetupTrainees.length,
@@ -32873,7 +32875,8 @@ const App: React.FC = () => {
                     setInstructorsData(normalisedInstructors);
                     setArchivedInstructorsData(normalisedInstructors.filter((person: any) => !isRecordActive(person)));
                     setIsStaffLoaded(true);
-                    setTraineesData(normalisedTrainees);
+                    setTraineesData(normalisedTrainees.filter((trainee: any) => isRecordActive(trainee)));
+                    setArchivedTraineesData(normalisedTrainees.filter((trainee: any) => !isRecordActive(trainee)));
                     setIsTraineeLoaded(true);
                     setEvents([]);
                     setScores(new Map());
@@ -32944,7 +32947,12 @@ const App: React.FC = () => {
                 setInstructorsData(normalisedInstructors);
                 setArchivedInstructorsData(normalisedInstructors.filter((person: any) => !isRecordActive(person)));
                 setIsStaffLoaded(true);
-                setTraineesData(data.trainees);
+                const normalisedTrainees = (data.trainees || []).map((trainee: any) => ({
+                    ...trainee,
+                    _dataSource: (trainee as any)._dataSource || 'database',
+                }));
+                setTraineesData(normalisedTrainees.filter((trainee: any) => isRecordActive(trainee)));
+                setArchivedTraineesData(normalisedTrainees.filter((trainee: any) => !isRecordActive(trainee)));
                 setIsTraineeLoaded(true);
                 setEvents(data.events);
                 setScores(new Map(Object.entries(data.scores || {}) as [string, Score[]][]));
@@ -52264,13 +52272,15 @@ appliedUpdates.forEach(update => {
                     ...t,
                     _dataSource: 'database' as const,
                 }));
+                const activeDbTrainees = dbTrainees.filter((trainee: any) => isRecordActive(trainee));
+                setArchivedTraineesData(dbTrainees.filter((trainee: any) => !isRecordActive(trainee)));
                 setSelectedPersonForProfile(prev => {
                     if (!prev) return prev;
                     const previousAny = prev as any;
                     const previousDbId = String(previousAny.id || '').trim();
                     const previousIdNumber = String(previousAny.idNumber || '').trim();
                     const previousName = normalisePersonName(previousAny.name || previousAny.fullName || '');
-                    const refreshedTrainee = dbTrainees.find((candidate: any) => {
+                    const refreshedTrainee = activeDbTrainees.find((candidate: any) => {
                         const candidateDbId = String(candidate.id || '').trim();
                         const candidateIdNumber = String(candidate.idNumber || '').trim();
                         const candidateName = normalisePersonName(candidate.name || candidate.fullName || '');
@@ -52291,7 +52301,7 @@ appliedUpdates.forEach(update => {
                         if (source === 'mockdata') return dataSourceSettings.trainee === true;
                         return source === 'setup-test';
                     });
-                    return [...retainedSessionTrainees, ...dbTrainees];
+                    return [...retainedSessionTrainees, ...activeDbTrainees];
                 });
 
                 // Register any DB trainee courses that aren't in courseColors yet
@@ -52300,7 +52310,7 @@ appliedUpdates.forEach(update => {
                     'bg-orange-400/80', 'bg-teal-400/80', 'bg-indigo-400/80', 'bg-green-400/80',
                     'bg-red-400/80', 'bg-cyan-400/80'
                 ];
-                const dbCourseNames = [...new Set(dbTrainees.map((t: any) => t.course).filter(Boolean))];
+                const dbCourseNames = [...new Set(activeDbTrainees.map((t: any) => t.course).filter(Boolean))];
                 setCourseColors(prev => {
                     const updated = { ...prev };
                     let colorIndex = Object.keys(updated).length;
@@ -52314,7 +52324,7 @@ appliedUpdates.forEach(update => {
                     return updated;
                 });
 
-                logRoutineAppDebug(`✅ Refreshed ${dbTrainees.length} trainees from database`);
+                logRoutineAppDebug(`✅ Refreshed ${activeDbTrainees.length} active trainees from database (${dbTrainees.length - activeDbTrainees.length} archived)`);
                 setIsTraineeLoaded(true);
             }
         } catch (error) {
@@ -52674,9 +52684,11 @@ appliedUpdates.forEach(update => {
                     ...t,
                     _dataSource: 'database' as const,
                 }));
-                logRoutineAppDebug('[Poll] Fetched', dbTrainees.length, 'trainees. Unavailability total:', dbTrainees.reduce((sum: number, t: any) => sum + (t.unavailability?.length || 0), 0));
+                const activeDbTrainees = dbTrainees.filter((trainee: any) => isRecordActive(trainee));
+                setArchivedTraineesData(dbTrainees.filter((trainee: any) => !isRecordActive(trainee)));
+                logRoutineAppDebug('[Poll] Fetched', activeDbTrainees.length, 'active trainees. Unavailability total:', activeDbTrainees.reduce((sum: number, t: any) => sum + (t.unavailability?.length || 0), 0));
                 setTraineesData(prev => {
-                    const nextTrainees = mergePolledDatabasePeople(prev, dbTrainees, dataSourceSettings.trainee === true);
+                    const nextTrainees = mergePolledDatabasePeople(prev, activeDbTrainees, dataSourceSettings.trainee === true);
                     const prevHash = buildPersonnelStatusHash(prev);
                     const newHash  = buildPersonnelStatusHash(nextTrainees);
                     if (prevHash === newHash) return prev;

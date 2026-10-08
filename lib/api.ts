@@ -67,7 +67,7 @@ export async function fetchInstructors(): Promise<any[]> {
 
 // Fetch trainees from API
 export async function fetchTrainees(): Promise<any[]> {
-  const result = await fetchAPI<{ trainees: any[] }>('/trainees');
+  const result = await fetchAPI<{ trainees: any[] }>('/trainees?includeInactive=true');
   if (result.success && result.data?.trainees) {
     return result.data.trainees.map((t: any) => {
       const preferences = t.preferences && typeof t.preferences === 'object' && !Array.isArray(t.preferences)
