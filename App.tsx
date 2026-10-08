@@ -31849,6 +31849,7 @@ const App: React.FC = () => {
         const latestNeoBuildInputTrace = readLocalStorageJsonForDiag('neo_build_input_trace');
         const latestNeoBuildNoTilesUiTrace = readLocalStorageJsonForDiag('neo_build_no_tiles_ui_trace');
         const latestNeoBuildRuntimeErrorReport = readLocalStorageJsonForDiag('neo_build_runtime_error_report');
+        const latestNeoBuildTimingReport = readLocalStorageJsonForDiag('neo_build_timing_report');
         const cacheSummaries = (() => {
             try {
                 return Object.keys(localStorage)
@@ -32052,6 +32053,7 @@ const App: React.FC = () => {
                 latestReportPhaseTimeline: Array.isArray(latestNeoBuildReport?.phaseTimeline)
                     ? latestNeoBuildReport.phaseTimeline.slice(-80)
                     : [],
+                latestTimingReport: latestNeoBuildTimingReport,
                 latestPreflightLmpScopeTrace: readLocalStorageJsonForDiag('neo_build_preflight_lmp_scope_trace'),
             },
             summary: {
@@ -61253,6 +61255,17 @@ appliedUpdates.forEach(update => {
                         </button>
 	                </div>
 	            )}
+
+        {isAuthenticated && activeView === 'NextDayBuild' && (
+            <button
+                type="button"
+                onClick={() => downloadDfpDataTrace('neo-build-trace')}
+                className="fixed bottom-[238px] right-[18px] z-[51] w-[112px] rounded-md border border-emerald-300/70 bg-emerald-500/18 px-3 py-2 text-center text-[11px] font-bold uppercase tracking-[0.08em] text-emerald-50 shadow-sm backdrop-blur-sm transition-colors hover:border-emerald-200 hover:bg-emerald-500/30"
+                title="Download the latest NEO Build diagnostic trace"
+            >
+                Download Build Trace
+            </button>
+        )}
 
         {/* Live sync control - keeps mobile/iOS-originated changes visible without forcing it on low-data links */}
         {isAuthenticated && ['Program Schedule', 'InstructorSchedule', 'TraineeSchedule', 'NextDayBuild', 'NextDayInstructorSchedule', 'NextDayTraineeSchedule'].includes(activeView) && (
