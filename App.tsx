@@ -45017,8 +45017,10 @@ const App: React.FC = () => {
 	    const buildDailySnapshotContext = (
 	        targetDate: string,
 	        eventsForSnapshot: ScheduleEvent[],
-	        staffLogbookOverride?: Record<string, any[]>
+	        staffLogbookOverride?: Record<string, any[]>,
+	        options?: { includeTrainingReportState?: boolean }
 	    ) => {
+	        const includeTrainingReportState = options?.includeTrainingReportState !== false;
 	        const courseStateSnapshot = [...scopedCourseProgressCourses, ...courses.filter(isCourseArchived)]
 	            .reduce((map, course: any) => {
 	                const name = String(course?.name || course?.code || '').trim();
@@ -45136,19 +45138,21 @@ const App: React.FC = () => {
 
 	        const eventIds = new Set(eventsForSnapshot.map((event: any) => String(event?.id || event?.eventId || '').trim()).filter(Boolean));
 	        const traineeNameSet = new Set(traineesData.map((trainee: any) => String(trainee.fullName || trainee.name || '').trim()).filter(Boolean));
-	        const trainingReportState = Object.fromEntries(
-	            Array.from(pt051Assessments.entries())
-	                .filter(([, assessment]: [string, any]) => {
-	                    const assessmentDate = String(assessment?.date || '').slice(0, 10);
-	                    const assessmentEventId = String(assessment?.eventId || assessment?.id || '').trim();
-	                    const assessmentTrainee = String(assessment?.traineeFullName || assessment?.trainedFullName || '').trim();
-	                    return (
-	                        (assessmentDate && assessmentDate <= targetDate && traineeNameSet.has(assessmentTrainee)) ||
-	                        (assessmentEventId && eventIds.has(assessmentEventId))
-	                    );
-	                })
-	                .map(([key, assessment]) => [key, cloneForDailySnapshot(assessment)])
-	        );
+	        const trainingReportState = includeTrainingReportState
+	            ? Object.fromEntries(
+	                Array.from(pt051Assessments.entries())
+	                    .filter(([, assessment]: [string, any]) => {
+	                        const assessmentDate = String(assessment?.date || '').slice(0, 10);
+	                        const assessmentEventId = String(assessment?.eventId || assessment?.id || '').trim();
+	                        const assessmentTrainee = String(assessment?.traineeFullName || assessment?.trainedFullName || '').trim();
+	                        return (
+	                            (assessmentDate && assessmentDate <= targetDate && traineeNameSet.has(assessmentTrainee)) ||
+	                            (assessmentEventId && eventIds.has(assessmentEventId))
+	                        );
+	                    })
+	                    .map(([key, assessment]) => [key, cloneForDailySnapshot(assessment)])
+	            )
+	            : undefined;
 
 	        const eventCompletionsSnapshot = eventCompletionsForDate
 	            .filter((completion: any) => {
@@ -45178,7 +45182,7 @@ const App: React.FC = () => {
 	            lmpCompletedIds: lmpCompletedIdsMap,
 	            individualLmpState,
 	            masterLmpState: cloneForDailySnapshot(syllabusDetails),
-	            trainingReportState,
+	            ...(includeTrainingReportState ? { trainingReportState } : {}),
 	            eventCompletions: eventCompletionsSnapshot,
 	            staffCurrency: staffCurrencyMap,
 	            currencyState: {
@@ -50875,16 +50879,16 @@ const App: React.FC = () => {
                 logbookEntryCount: Object.values(staffLogbookMap).reduce((total, entries) => total + (Array.isArray(entries) ? entries.length : 0), 0),
             });
 
-	            const snapshotContext = buildDailySnapshotContext(buildDfpDate, newEventsForDate, staffLogbookMap);
+	            const snapshotContext = buildDailySnapshotContext(buildDfpDate, newEventsForDate, staffLogbookMap, {
+	                includeTrainingReportState: false,
+	            });
             markPublishTrace('build-daily-snapshot-context', {
                 traineeProfileCount: Array.isArray(snapshotContext.traineeProfiles) ? snapshotContext.traineeProfiles.length : 0,
                 staffProfileCount: Array.isArray(snapshotContext.staffProfiles) ? snapshotContext.staffProfiles.length : 0,
                 courseCount: Array.isArray(snapshotContext.courseState) ? snapshotContext.courseState.length : 0,
                 masterLmpCount: Array.isArray(snapshotContext.masterLmpState) ? snapshotContext.masterLmpState.length : 0,
                 eventCompletionCount: Array.isArray(snapshotContext.eventCompletions) ? snapshotContext.eventCompletions.length : 0,
-                trainingReportKeys: snapshotContext.trainingReportState && typeof snapshotContext.trainingReportState === 'object'
-                    ? Object.keys(snapshotContext.trainingReportState).length
-                    : 0,
+                trainingReportStateIncluded: false,
             });
 
 	            const snapshotKey = getDailySnapshotKey(buildDfpDate);
@@ -50906,7 +50910,6 @@ const App: React.FC = () => {
 	                courseState: snapshotContext.courseState,
 	                individualLmpState: snapshotContext.individualLmpState,
 	                masterLmpState: snapshotContext.masterLmpState,
-	                trainingReportState: snapshotContext.trainingReportState,
 	                eventCompletions: snapshotContext.eventCompletions,
 	                currencyState: snapshotContext.currencyState,
 	                aircraftConfigState: currentAircraftConfigState,

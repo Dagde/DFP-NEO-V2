@@ -154225,7 +154225,8 @@ ${error instanceof Error ? error.message : String(error)}`,
       return value;
     }
   };
-  const buildDailySnapshotContext = (targetDate, eventsForSnapshot, staffLogbookOverride) => {
+  const buildDailySnapshotContext = (targetDate, eventsForSnapshot, staffLogbookOverride, options) => {
+    const includeTrainingReportState = options?.includeTrainingReportState !== false;
     const courseStateSnapshot = [...scopedCourseProgressCourses, ...courses.filter(isCourseArchived)].reduce((map, course) => {
       const name = String(course?.name || course?.code || "").trim();
       if (!name) return map;
@@ -154334,14 +154335,14 @@ ${error instanceof Error ? error.message : String(error)}`,
     });
     const eventIds = new Set(eventsForSnapshot.map((event) => String(event?.id || event?.eventId || "").trim()).filter(Boolean));
     const traineeNameSet = new Set(traineesData.map((trainee) => String(trainee.fullName || trainee.name || "").trim()).filter(Boolean));
-    const trainingReportState = Object.fromEntries(
+    const trainingReportState = includeTrainingReportState ? Object.fromEntries(
       Array.from(pt051Assessments.entries()).filter(([, assessment]) => {
         const assessmentDate = String(assessment?.date || "").slice(0, 10);
         const assessmentEventId = String(assessment?.eventId || assessment?.id || "").trim();
         const assessmentTrainee = String(assessment?.traineeFullName || assessment?.trainedFullName || "").trim();
         return assessmentDate && assessmentDate <= targetDate && traineeNameSet.has(assessmentTrainee) || assessmentEventId && eventIds.has(assessmentEventId);
       }).map(([key, assessment]) => [key, cloneForDailySnapshot(assessment)])
-    );
+    ) : void 0;
     const eventCompletionsSnapshot = eventCompletionsForDate.filter((completion) => {
       const completionDate = String(completion?.eventDate || completion?.date || "").slice(0, 10);
       const completionEventId = String(completion?.scheduleEventId || completion?.eventId || "").trim();
@@ -154363,7 +154364,7 @@ ${error instanceof Error ? error.message : String(error)}`,
       lmpCompletedIds: lmpCompletedIdsMap,
       individualLmpState,
       masterLmpState: cloneForDailySnapshot(syllabusDetails),
-      trainingReportState,
+      ...includeTrainingReportState ? { trainingReportState } : {},
       eventCompletions: eventCompletionsSnapshot,
       staffCurrency: staffCurrencyMap,
       currencyState: {
@@ -159111,14 +159112,16 @@ ${conflictLines.join("\n")}${moreText}`,
         logbookInstructorCount: Object.keys(staffLogbookMap).length,
         logbookEntryCount: Object.values(staffLogbookMap).reduce((total, entries) => total + (Array.isArray(entries) ? entries.length : 0), 0)
       });
-      const snapshotContext = buildDailySnapshotContext(buildDfpDate, newEventsForDate, staffLogbookMap);
+      const snapshotContext = buildDailySnapshotContext(buildDfpDate, newEventsForDate, staffLogbookMap, {
+        includeTrainingReportState: false
+      });
       markPublishTrace("build-daily-snapshot-context", {
         traineeProfileCount: Array.isArray(snapshotContext.traineeProfiles) ? snapshotContext.traineeProfiles.length : 0,
         staffProfileCount: Array.isArray(snapshotContext.staffProfiles) ? snapshotContext.staffProfiles.length : 0,
         courseCount: Array.isArray(snapshotContext.courseState) ? snapshotContext.courseState.length : 0,
         masterLmpCount: Array.isArray(snapshotContext.masterLmpState) ? snapshotContext.masterLmpState.length : 0,
         eventCompletionCount: Array.isArray(snapshotContext.eventCompletions) ? snapshotContext.eventCompletions.length : 0,
-        trainingReportKeys: snapshotContext.trainingReportState && typeof snapshotContext.trainingReportState === "object" ? Object.keys(snapshotContext.trainingReportState).length : 0
+        trainingReportStateIncluded: false
       });
       const snapshotKey = getDailySnapshotKey(buildDfpDate);
       const existingAlertsDataForDate = alertsDataByDate[buildDfpDate];
@@ -159139,7 +159142,6 @@ ${conflictLines.join("\n")}${moreText}`,
         courseState: snapshotContext.courseState,
         individualLmpState: snapshotContext.individualLmpState,
         masterLmpState: snapshotContext.masterLmpState,
-        trainingReportState: snapshotContext.trainingReportState,
         eventCompletions: snapshotContext.eventCompletions,
         currencyState: snapshotContext.currencyState,
         aircraftConfigState: currentAircraftConfigState,
