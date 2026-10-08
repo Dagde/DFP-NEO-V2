@@ -13324,7 +13324,11 @@ async function generateDfpInternal(
             const roleText = String(requiredRole || '').trim();
             const crewPosition = findCrewPositionEntry(roleText, buildCrewPositionTerminology);
             const genericName = String(crewPosition?.genericName || roleText).trim();
-            return genericName.toLowerCase() === 'crew';
+            const normalisedGenericName = genericName.toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim();
+            const compactGenericName = normalisedGenericName.replace(/\s+/g, '');
+            return normalisedGenericName === 'crew'
+                || /^crew\s*\d+$/.test(normalisedGenericName)
+                || /^crewmember\s*\d+$/.test(compactGenericName);
         };
         const roleMatchesStaff = (staff: Instructor, requiredRole: string): boolean => {
             if (isGenericFixedCrewRoleRequirement(requiredRole)) {
@@ -13572,8 +13576,9 @@ async function generateDfpInternal(
             if (event.type !== 'flight') return options;
             return options.filter(resourceId => eventAcceptsResourceConfig(event, getAircraftConfigIdForResource(resourceId)));
         };
-        const getFixedCrewRoleShortfalls = (members: Instructor[], event: Omit<ScheduleEvent, 'date'>): any[] => (
-            getCrewRequirementRoles(event.crewRequirement, getBuildAircraftCrewCompositionForEvent(event))
+        const getFixedCrewRoleShortfalls = (members: Instructor[], event: Omit<ScheduleEvent, 'date'>): any[] => {
+            const crewRequirementRoles = getCrewRequirementRoles(event.crewRequirement, getBuildAircraftCrewCompositionForEvent(event));
+            const roleShortfalls = crewRequirementRoles
                 .map(role => {
                     const eligibleRoles = getCrewRequirementRoleOptions(role);
                     const matchingMembers = members.filter(staff => eligibleRoles.some(requiredRole => roleMatchesStaff(staff, requiredRole)));
@@ -13585,8 +13590,18 @@ async function generateDfpInternal(
                         available: matchingMembers.length,
                     };
                 })
-                .filter(Boolean)
-        );
+                .filter(Boolean);
+            const requiredCrewCount = Math.max(0, getCrewRequirementCount(event.crewRequirement, getBuildAircraftCrewCompositionForEvent(event)));
+            if (members.length < requiredCrewCount) {
+                roleShortfalls.push({
+                    role: 'Minimum crew',
+                    eligibleRoles: ['Crew'],
+                    required: requiredCrewCount,
+                    available: members.length,
+                });
+            }
+            return roleShortfalls;
+        };
         const getFixedCrewSwapCandidates = (shortfalls: any[], crewMembers: Instructor[], window: { start: number; end: number }): Record<string, string[]> => {
             const crewNames = new Set(crewMembers.map(staff => staff.name));
             return shortfalls.reduce((acc: Record<string, string[]>, shortfall: any) => {
@@ -14254,6 +14269,37 @@ async function generateDfpInternal(
                     roleFillDiagnostics.push({ role: role.role, staff: filler.staff.name, explanation: filler.explanation });
                     currentCount += 1;
                 }
+            }
+            const requiredCrewCount = Math.max(
+                2,
+                getCrewRequirementCount(event.crewRequirement, getBuildAircraftCrewCompositionForEvent(event)),
+            );
+            while (selected.size < requiredCrewCount) {
+                const remainingPool = baseEligible
+                    .filter(staff => !selected.has(normalisePooledCrewPersonKey(staff.name)))
+                    .sort((left, right) => {
+                        const leftPilot = isPooledCrewPilot(left) ? 1 : 0;
+                        const rightPilot = isPooledCrewPilot(right) ? 1 : 0;
+                        return leftPilot - rightPilot || String(left.name || '').localeCompare(String(right.name || ''));
+                    });
+                fixedCrewPerf.counters.pooledCrewRoleFillEvaluations += remainingPool.length;
+                const filler = selectPooledCrewCandidate(remainingPool, event, 'role', `minimum-crew-${selected.size}`);
+                if (!filler) {
+                    diag.pooledCrewAllocation.rejections.push({
+                        event: event.flightNumber,
+                        reason: 'POOLED_CREW_MINIMUM_CREW_SHORTFALL',
+                        required: requiredCrewCount,
+                        available: selected.size,
+                    });
+                    incrementFixedCrewRejection('POOLED_CREW_MINIMUM_CREW_SHORTFALL');
+                    return null;
+                }
+                addSelected(filler.staff);
+                roleFillDiagnostics.push({
+                    role: 'Additional crew',
+                    staff: filler.staff.name,
+                    explanation: filler.explanation,
+                });
             }
             const members = Array.from(selected.values());
             const staffLimitViolations = getFixedCrewStaffLimitViolations(members, event);
