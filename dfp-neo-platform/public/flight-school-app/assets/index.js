@@ -11914,6 +11914,7 @@ const getHeaderDisplayName = (authUser) => {
   if (firstName && lastName) return `${lastName}, ${firstName}`;
   return stripCourseDetailsFromHeaderName(authUser.displayName || authUser.userId) || authUser.userId;
 };
+const normaliseContextLocation = (value) => String(value || "").trim().toUpperCase();
 const Header = ({
   onAddTile,
   onAddGroundEvent,
@@ -11970,7 +11971,8 @@ const Header = ({
   const headerButtonClass = "w-[75px] h-[55px] flex items-center justify-center text-[12px] font-semibold btn-aluminium-brushed rounded-md";
   const unavailableActionClass = disabledActionClass;
   const activeContextLabel = `${activeLocation}${activeUnit ? ` - ${activeUnit}` : ""}`;
-  const hoveredContext = contextOptions.find((option) => option.location === hoveredContextLocation) || contextOptions[0];
+  const activeContextOption = contextOptions.find((option) => normaliseContextLocation(option.location) === normaliseContextLocation(activeLocation)) || contextOptions[0];
+  const hoveredContext = contextOptions.find((option) => option.location === hoveredContextLocation) || activeContextOption || contextOptions[0];
   const showPermissionNotice = (anchor) => {
     setPermissionNoticeRect(anchor.getBoundingClientRect());
   };
@@ -12054,7 +12056,7 @@ const Header = ({
           {
             type: "button",
             onClick: () => {
-              setHoveredContextLocation(activeLocation);
+              setHoveredContextLocation(activeContextOption?.location || activeLocation);
               setShowContextMenu((prev) => !prev);
               pushSetupTestHeaderDiag("header:toggle-menu", { nextShowContextMenu: !showContextMenu });
             },
@@ -12082,7 +12084,7 @@ const Header = ({
                 setHoveredContextLocation(option.location);
                 pushSetupTestHeaderDiag("header:hover-location-click", { location: option.location });
               },
-              className: `flex h-8 w-full items-center justify-between px-3 text-left text-sm font-semibold ${option.location === hoveredContextLocation ? "bg-sky-700 text-white" : "text-gray-200 hover:bg-gray-700"}`,
+              className: `flex h-8 w-full items-center justify-between px-3 text-left text-sm font-semibold ${normaliseContextLocation(option.location) === normaliseContextLocation(hoveredContextLocation) ? "bg-sky-700 text-white" : "text-gray-200 hover:bg-gray-700"}`,
               children: [
                 /* @__PURE__ */ jsxRuntimeExports.jsx("span", { children: option.location }),
                 /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-[10px] text-gray-300", children: ">" })
@@ -12110,7 +12112,7 @@ const Header = ({
                   onContextChange(hoveredContext.location, unitCode);
                   setShowContextMenu(false);
                 },
-                className: `h-8 w-full px-3 text-left text-sm font-semibold ${hoveredContext?.location === activeLocation && unitCode === activeUnit ? "bg-sky-600 text-white" : isDisabledUnit ? "cursor-not-allowed text-gray-500 opacity-60" : "text-gray-200 hover:bg-gray-700"}`,
+                className: `h-8 w-full px-3 text-left text-sm font-semibold ${normaliseContextLocation(hoveredContext?.location) === normaliseContextLocation(activeLocation) && unitCode === activeUnit ? "bg-sky-600 text-white" : isDisabledUnit ? "cursor-not-allowed text-gray-500 opacity-60" : "text-gray-200 hover:bg-gray-700"}`,
                 children: unitCode
               },
               `${hoveredContext?.location}-${unitCode}`
@@ -142235,23 +142237,9 @@ const App = () => {
           isSharedFleetContext: true
         }];
       }) : [];
-      const sharedContextByMemberUnit = /* @__PURE__ */ new Map();
-      sharedContextOptions.forEach((sharedOption) => {
-        (sharedOption.memberUnits || []).forEach((unitCode) => {
-          sharedContextByMemberUnit.set(normaliseUnitCode2(unitCode), sharedOption);
-        });
-      });
-      const configuredUnitsWithSharedContextLock = configuredUnits.map((unit) => {
-        const sharedOption = sharedContextByMemberUnit.get(normaliseUnitCode2(unit.code));
-        return sharedOption ? {
-          ...unit,
-          disabled: true,
-          disabledReason: `Use ${sharedOption.code} for the shared aircraft/resource DFP context.`
-        } : unit;
-      });
-      const configuredCodeSet = new Set(configuredUnitsWithSharedContextLock.map((unit) => normaliseUnitCode2(unit.code)));
+      const configuredCodeSet = new Set(configuredUnits.map((unit) => normaliseUnitCode2(unit.code)));
       const setupTestFallbackUnits = getSetupTestFallbackUnitsForLocation().filter((unit) => !configuredCodeSet.has(normaliseUnitCode2(unit.code)));
-      return [...configuredUnitsWithSharedContextLock, ...setupTestFallbackUnits, ...sharedContextOptions];
+      return [...configuredUnits, ...setupTestFallbackUnits, ...sharedContextOptions];
     }
     const hasConfiguredPlatformUnits = (platformConfig?.units || []).some((unit) => unit.status !== "INACTIVE");
     if (hasConfiguredPlatformUnits) return getSetupTestFallbackUnitsForLocation();
@@ -142284,21 +142272,7 @@ const App = () => {
         isSharedFleetContext: true
       }];
     }) : [];
-    const sharedFallbackContextByMemberUnit = /* @__PURE__ */ new Map();
-    sharedFallbackContexts.forEach((sharedOption) => {
-      (sharedOption.memberUnits || []).forEach((unitCode) => {
-        sharedFallbackContextByMemberUnit.set(normaliseUnitCode2(unitCode), sharedOption);
-      });
-    });
-    const fallbackUnitsWithSharedContextLock = fallbackUnits.map((unit) => {
-      const sharedOption = sharedFallbackContextByMemberUnit.get(normaliseUnitCode2(unit.code));
-      return sharedOption ? {
-        ...unit,
-        disabled: true,
-        disabledReason: `Use ${sharedOption.code} for the shared aircraft/resource DFP context.`
-      } : unit;
-    });
-    return [...fallbackUnitsWithSharedContextLock, ...sharedFallbackContexts];
+    return [...fallbackUnits, ...sharedFallbackContexts];
   }, [
     getLocationSelectorAliases,
     organisationSettings.allocationMode,

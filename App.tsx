@@ -30148,26 +30148,10 @@ const App: React.FC = () => {
                     }];
                 })
                 : [];
-            const sharedContextByMemberUnit = new Map<string, any>();
-            sharedContextOptions.forEach((sharedOption: any) => {
-                (sharedOption.memberUnits || []).forEach((unitCode: string) => {
-                    sharedContextByMemberUnit.set(normaliseUnitCode(unitCode), sharedOption);
-                });
-            });
-            const configuredUnitsWithSharedContextLock = configuredUnits.map(unit => {
-                const sharedOption = sharedContextByMemberUnit.get(normaliseUnitCode(unit.code));
-                return sharedOption
-                    ? {
-                        ...unit,
-                        disabled: true,
-                        disabledReason: `Use ${sharedOption.code} for the shared aircraft/resource DFP context.`,
-                    }
-                    : unit;
-            });
-            const configuredCodeSet = new Set(configuredUnitsWithSharedContextLock.map(unit => normaliseUnitCode(unit.code)));
+            const configuredCodeSet = new Set(configuredUnits.map(unit => normaliseUnitCode(unit.code)));
             const setupTestFallbackUnits = getSetupTestFallbackUnitsForLocation()
                 .filter(unit => !configuredCodeSet.has(normaliseUnitCode(unit.code)));
-            return [...configuredUnitsWithSharedContextLock, ...setupTestFallbackUnits, ...sharedContextOptions];
+            return [...configuredUnits, ...setupTestFallbackUnits, ...sharedContextOptions];
         }
         const hasConfiguredPlatformUnits = (platformConfig?.units || [])
             .some((unit: any) => unit.status !== 'INACTIVE');
@@ -30210,23 +30194,7 @@ const App: React.FC = () => {
                 }];
             })
             : [];
-        const sharedFallbackContextByMemberUnit = new Map<string, any>();
-        sharedFallbackContexts.forEach((sharedOption: any) => {
-            (sharedOption.memberUnits || []).forEach((unitCode: string) => {
-                sharedFallbackContextByMemberUnit.set(normaliseUnitCode(unitCode), sharedOption);
-            });
-        });
-        const fallbackUnitsWithSharedContextLock = fallbackUnits.map(unit => {
-            const sharedOption = sharedFallbackContextByMemberUnit.get(normaliseUnitCode(unit.code));
-            return sharedOption
-                ? {
-                    ...unit,
-                    disabled: true,
-                    disabledReason: `Use ${sharedOption.code} for the shared aircraft/resource DFP context.`,
-                }
-                : unit;
-        });
-        return [...fallbackUnitsWithSharedContextLock, ...sharedFallbackContexts];
+        return [...fallbackUnits, ...sharedFallbackContexts];
     }, [
         getLocationSelectorAliases,
         organisationSettings.allocationMode,

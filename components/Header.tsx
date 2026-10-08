@@ -71,6 +71,8 @@ const getHeaderDisplayName = (authUser: HeaderProps['authUser']): string => {
     return stripCourseDetailsFromHeaderName(authUser.displayName || authUser.userId) || authUser.userId;
 };
 
+const normaliseContextLocation = (value?: string | null): string => String(value || '').trim().toUpperCase();
+
 const Header: React.FC<HeaderProps> = ({ 
     onAddTile, 
     onAddGroundEvent, 
@@ -127,7 +129,12 @@ const Header: React.FC<HeaderProps> = ({
     const headerButtonClass = 'w-[75px] h-[55px] flex items-center justify-center text-[12px] font-semibold btn-aluminium-brushed rounded-md';
     const unavailableActionClass = disabledActionClass;
     const activeContextLabel = `${activeLocation}${activeUnit ? ` - ${activeUnit}` : ''}`;
-    const hoveredContext = contextOptions.find(option => option.location === hoveredContextLocation) || contextOptions[0];
+    const activeContextOption = contextOptions.find(option => (
+        normaliseContextLocation(option.location) === normaliseContextLocation(activeLocation)
+    )) || contextOptions[0];
+    const hoveredContext = contextOptions.find(option => option.location === hoveredContextLocation)
+        || activeContextOption
+        || contextOptions[0];
     const showPermissionNotice = (anchor: HTMLElement) => {
         setPermissionNoticeRect(anchor.getBoundingClientRect());
     };
@@ -237,7 +244,7 @@ const Header: React.FC<HeaderProps> = ({
                     <button
                         type="button"
                         onClick={() => {
-                            setHoveredContextLocation(activeLocation);
+                            setHoveredContextLocation(activeContextOption?.location || activeLocation);
                             setShowContextMenu(prev => !prev);
                             pushSetupTestHeaderDiag('header:toggle-menu', { nextShowContextMenu: !showContextMenu });
                         }}
@@ -266,7 +273,7 @@ const Header: React.FC<HeaderProps> = ({
                                             pushSetupTestHeaderDiag('header:hover-location-click', { location: option.location });
                                         }}
                                         className={`flex h-8 w-full items-center justify-between px-3 text-left text-sm font-semibold ${
-                                            option.location === hoveredContextLocation ? 'bg-sky-700 text-white' : 'text-gray-200 hover:bg-gray-700'
+                                            normaliseContextLocation(option.location) === normaliseContextLocation(hoveredContextLocation) ? 'bg-sky-700 text-white' : 'text-gray-200 hover:bg-gray-700'
                                         }`}
                                     >
                                         <span>{option.location}</span>
@@ -296,7 +303,7 @@ const Header: React.FC<HeaderProps> = ({
                                                 setShowContextMenu(false);
                                             }}
                                             className={`h-8 w-full px-3 text-left text-sm font-semibold ${
-                                                hoveredContext?.location === activeLocation && unitCode === activeUnit
+                                                normaliseContextLocation(hoveredContext?.location) === normaliseContextLocation(activeLocation) && unitCode === activeUnit
                                                     ? 'bg-sky-600 text-white'
                                                     : isDisabledUnit
                                                         ? 'cursor-not-allowed text-gray-500 opacity-60'
