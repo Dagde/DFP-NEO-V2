@@ -94736,6 +94736,7 @@ const TraineeView = (props) => {
           traineeLMPs: props.traineeLMPs,
           onViewLogbook: props.onViewLogbook,
           onDeleteTrainee: props.onDeleteTrainee,
+          onArchiveTrainee: props.onArchiveTrainee,
           onDeleteRemedialItem: props.onDeleteRemedialItem,
           onGenerateTrainingReportForItem: props.onGenerateTrainingReportForItem,
           onInsertCustomLmpEvent: props.onInsertCustomLmpEvent,
@@ -163241,6 +163242,47 @@ It will not clear the published DFP.`,
       setShowInfoNotification(`Delete failed: ${error instanceof Error ? error.message : String(error)}`);
     }
   }, [scopedApiPath]);
+  const handleArchiveTraineeFromRoster = reactExports.useCallback(async (trainee) => {
+    const dbId = String(trainee.id || "").trim();
+    const traineeName = trainee.fullName || trainee.name || "trainee";
+    const archivedTrainee = { ...trainee, isActive: false };
+    const matchesTrainee = (candidate) => dbId && String(candidate.id || "") === dbId || candidate.idNumber === trainee.idNumber || candidate.fullName === trainee.fullName;
+    try {
+      if (dbId && trainee._dataSource === "database") {
+        const sessionToken = localStorage.getItem("dfp_session_token") || "";
+        const response = await fetch(scopedApiPath(`/api/trainees/${encodeURIComponent(dbId)}`), {
+          method: "PATCH",
+          credentials: "include",
+          headers: {
+            "Content-Type": "application/json",
+            ...sessionToken ? { Authorization: `Bearer ${sessionToken}` } : {}
+          },
+          body: JSON.stringify({ isActive: false })
+        });
+        if (!response.ok) {
+          const message = await readApiErrorMessage(response, `Could not archive ${traineeName}.`);
+          throw new Error(message);
+        }
+      } else {
+        console.warn(`[Trainee Archive] ${traineeName} has no database id; archiving in local roster only.`);
+      }
+      setTraineesData((prev) => prev.filter((t) => !matchesTrainee(t)));
+      setArchivedTraineesData((prev) => {
+        const remaining = prev.filter((t) => !matchesTrainee(t));
+        return [...remaining, archivedTrainee];
+      });
+      logAudit({
+        page: "Trainee Roster",
+        action: "archive",
+        description: "Archived trainee from roster",
+        changes: `Archived: ${trainee.rank} ${trainee.name} (${trainee.course}) - ID: ${trainee.idNumber}`
+      });
+      setSuccessMessage(`${traineeName} archived.`);
+    } catch (error) {
+      console.error("[Trainee Archive] Failed:", error);
+      setShowInfoNotification(`Archive failed: ${error instanceof Error ? error.message : String(error)}`);
+    }
+  }, [scopedApiPath]);
   const resolveCourseMovementDirection = reactExports.useCallback((fromCourse, toCourse) => {
     const normaliseCourse = (value) => String(value || "").trim().toUpperCase();
     const from = normaliseCourse(fromCourse);
@@ -163842,6 +163884,9 @@ It will not clear the published DFP.`,
             onDeleteTrainee: (trainee) => {
               void handleDeleteTraineeFromRoster(trainee);
             },
+            onArchiveTrainee: (trainee) => {
+              void handleArchiveTraineeFromRoster(trainee);
+            },
             onUpdateCourseNumber: (oldCourseNumber, newCourseNumber) => {
               logRoutineAppDebug(`[CourseEdit] 🔄 Updating course number "${oldCourseNumber}" → "${newCourseNumber}"`);
               setTraineesData((prev) => prev.map(
@@ -163991,6 +164036,9 @@ It will not clear the published DFP.`,
             onViewLogbook: handleViewLogbook,
             onDeleteTrainee: (trainee) => {
               void handleDeleteTraineeFromRoster(trainee);
+            },
+            onArchiveTrainee: (trainee) => {
+              void handleArchiveTraineeFromRoster(trainee);
             },
             onUpdateCourseNumber: (oldCourseNumber, newCourseNumber) => {
               setTraineesData((prev) => prev.map(

@@ -48,6 +48,7 @@ interface TraineeViewProps {
   traineeLMPs: Map<string, any[]>;
   onViewLogbook: (trainee: any) => void;
   onDeleteTrainee: (trainee: any) => void;
+  onArchiveTrainee?: (trainee: any) => Promise<void> | void;
   onDeleteRemedialItem?: (trainee: any, item: any) => Promise<boolean> | boolean;
   onGenerateTrainingReportForItem?: (trainee: any, item: any) => void;
   onUpdateLmpItem?: (trainee: any, originalItem: any, updatedItem: any) => Promise<boolean> | boolean;
@@ -200,6 +201,7 @@ const TraineeView: React.FC<TraineeViewProps> = (props) => {
             traineeLMPs={props.traineeLMPs}
             onViewLogbook={props.onViewLogbook}
             onDeleteTrainee={props.onDeleteTrainee}
+            onArchiveTrainee={props.onArchiveTrainee}
             onDeleteRemedialItem={props.onDeleteRemedialItem}
             onGenerateTrainingReportForItem={props.onGenerateTrainingReportForItem}
             onInsertCustomLmpEvent={props.onInsertCustomLmpEvent}
