@@ -29977,7 +29977,7 @@ const App: React.FC = () => {
         const rawProfile = getDefaultAirfieldSolarProfile(rawIdentifier);
         const rawAliasKeys = new Set([
             ...rawAliases,
-            ...(rawProfile ? [rawProfile.code, rawProfile.iataCode, rawProfile.icao, rawProfile.name].map(normaliseAlias) : []),
+            ...(rawProfile ? [rawProfile.code, rawProfile.iataCode, rawProfile.icao, rawProfile.name, ...(Array.isArray((rawProfile as any).aliases) ? (rawProfile as any).aliases : [])].map(normaliseAlias) : []),
         ].map(normaliseKey).filter(Boolean));
 
         const configuredAliases = (platformConfig?.locations || [])
@@ -30001,7 +30001,7 @@ const App: React.FC = () => {
                 if (!matchesConfiguredLocation) return [];
                 const profileAliases = directAliases.flatMap((alias) => {
                     const profile = getDefaultAirfieldSolarProfile(alias);
-                    return profile ? [profile.code, profile.iataCode, profile.icao, profile.name] : [];
+                    return profile ? [profile.code, profile.iataCode, profile.icao, profile.name, ...(Array.isArray((profile as any).aliases) ? (profile as any).aliases : [])] : [];
                 });
                 return [...directAliases, ...profileAliases].map(normaliseAlias).filter(Boolean);
             });

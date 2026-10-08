@@ -10,7 +10,7 @@ export const DEFAULT_AIRFIELD_SOLAR_PROFILES = {
   WLM: { code: 'WLM', iataCode: 'WLM', icao: 'YWLM', name: 'Williamtown', latitude: -32.794, longitude: 151.834, timezone: 'Australia/Sydney' },
   AMB: { code: 'AMB', iataCode: 'AMB', icao: 'YAMB', name: 'Amberley', latitude: -27.6406, longitude: 152.712, timezone: 'Australia/Brisbane' },
   TIN: { code: 'TIN', iataCode: 'TIN', icao: 'YPTN', name: 'Tindal', latitude: -14.521, longitude: 132.378, timezone: 'Australia/Darwin' },
-  EDI: { code: 'EDI', iataCode: 'EDI', icao: 'YPED', name: 'Edinburgh', latitude: -34.7025, longitude: 138.6208, timezone: 'Australia/Adelaide' },
+  EDI: { code: 'EDI', iataCode: 'EDI', icao: 'YPED', name: 'Edinburgh', aliases: ['EDN'], latitude: -34.7025, longitude: 138.6208, timezone: 'Australia/Adelaide' },
 };
 
 const DEFAULT_AIRFIELD_LOOKUP = Object.values(DEFAULT_AIRFIELD_SOLAR_PROFILES).reduce((acc, profile) => {
@@ -18,6 +18,9 @@ const DEFAULT_AIRFIELD_LOOKUP = Object.values(DEFAULT_AIRFIELD_SOLAR_PROFILES).r
   acc[normaliseKey(profile.iataCode)] = profile;
   acc[normaliseKey(profile.icao)] = profile;
   acc[normaliseKey(profile.name)] = profile;
+  (profile.aliases || []).forEach((alias) => {
+    acc[normaliseKey(alias)] = profile;
+  });
   return acc;
 }, {});
 

@@ -239,6 +239,9 @@ const KNOWN_AIRFIELD_IDENTITIES = Object.values(DEFAULT_AIRFIELD_SOLAR_PROFILES 
     legacyCode: String(profile.code || profile.iataCode || '').trim().toUpperCase(),
     iataCode: String(profile.iataCode || profile.code || '').trim().toUpperCase(),
     icaoCode: String(profile.icao || '').trim().toUpperCase(),
+    aliases: Array.isArray(profile.aliases)
+      ? profile.aliases.map((alias) => String(alias || '').trim().toUpperCase()).filter(Boolean)
+      : [],
     name: profile.name,
     latitude: profile.latitude,
     longitude: profile.longitude,
@@ -16717,13 +16720,20 @@ async function migrateKnownCommercialLocationCodes(db) {
         SET "locationCode" = $2, "updatedAt" = "updatedAt"
         WHERE "locationCode" = $1
       `, profile.legacyCode, profile.icaoCode);
+      for (const alias of profile.aliases || []) {
+        await db.$executeRawUnsafe(`
+          UPDATE "${tableName}"
+          SET "locationCode" = $2, "updatedAt" = "updatedAt"
+          WHERE "locationCode" = $1
+        `, alias, profile.icaoCode);
+      }
     }
   }
 
   await db.$executeRawUnsafe(`
     UPDATE "CommercialUserAccess"
     SET "scopeKey" = "userId" || '|' || "organisationCode" || '|' || COALESCE("locationCode", '') || '|' || COALESCE("unitCode", '') || '|' || COALESCE("moduleCode", '')
-    WHERE "scopeKey" IS NULL OR "scopeKey" = '' OR "scopeKey" LIKE '%|ESL|%' OR "scopeKey" LIKE '%|PEA|%' OR "scopeKey" LIKE '%|WLM|%' OR "scopeKey" LIKE '%|AMB|%' OR "scopeKey" LIKE '%|TIN|%' OR "scopeKey" LIKE '%|EDI|%'
+    WHERE "scopeKey" IS NULL OR "scopeKey" = '' OR "scopeKey" LIKE '%|ESL|%' OR "scopeKey" LIKE '%|PEA|%' OR "scopeKey" LIKE '%|WLM|%' OR "scopeKey" LIKE '%|AMB|%' OR "scopeKey" LIKE '%|TIN|%' OR "scopeKey" LIKE '%|EDI|%' OR "scopeKey" LIKE '%|EDN|%'
   `);
 }
 
