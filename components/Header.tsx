@@ -72,6 +72,56 @@ const getHeaderDisplayName = (authUser: HeaderProps['authUser']): string => {
 };
 
 const normaliseContextLocation = (value?: string | null): string => String(value || '').trim().toUpperCase();
+const OPERATIONAL_CONTEXT_TRACE_STORAGE_KEY = 'neo_operational_context_trace';
+
+const appendOperationalContextTrace = (stage: string, details: Record<string, any> = {}) => {
+    if (typeof window === 'undefined') return;
+    const entry = {
+        ts: new Date().toISOString(),
+        stage,
+        storageScope: String(window.location?.host || window.location?.hostname || 'local').trim().toLowerCase(),
+        details,
+    };
+    try {
+        const existing = JSON.parse(window.localStorage.getItem(OPERATIONAL_CONTEXT_TRACE_STORAGE_KEY) || '[]');
+        const next = [...(Array.isArray(existing) ? existing : []), entry].slice(-250);
+        window.localStorage.setItem(OPERATIONAL_CONTEXT_TRACE_STORAGE_KEY, JSON.stringify(next));
+        (window as any).neoOperationalContextTrace = next;
+    } catch {
+        try {
+            window.localStorage.setItem(OPERATIONAL_CONTEXT_TRACE_STORAGE_KEY, JSON.stringify([entry]));
+            (window as any).neoOperationalContextTrace = [entry];
+        } catch {
+            // Best-effort trace only.
+        }
+    }
+};
+
+const downloadOperationalContextTrace = () => {
+    if (typeof window === 'undefined' || typeof document === 'undefined') return;
+    const raw = window.localStorage.getItem(OPERATIONAL_CONTEXT_TRACE_STORAGE_KEY) || '[]';
+    let parsed: unknown = [];
+    try {
+        parsed = JSON.parse(raw);
+    } catch {
+        parsed = [{ parseError: true, raw }];
+    }
+    const payload = {
+        generatedAt: new Date().toISOString(),
+        url: window.location.href,
+        userAgent: window.navigator.userAgent,
+        trace: parsed,
+    };
+    const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const anchor = document.createElement('a');
+    anchor.href = url;
+    anchor.download = `operational-context-trace-${new Date().toISOString().replace(/[:.]/g, '-')}.json`;
+    document.body.appendChild(anchor);
+    anchor.click();
+    anchor.remove();
+    URL.revokeObjectURL(url);
+};
 
 const Header: React.FC<HeaderProps> = ({ 
     onAddTile, 
@@ -139,6 +189,27 @@ const Header: React.FC<HeaderProps> = ({
         setPermissionNoticeRect(anchor.getBoundingClientRect());
     };
     const pushSetupTestHeaderDiag = (stage: string, details: Record<string, any> = {}) => {
+        appendOperationalContextTrace(`header:${stage}`, {
+            activeLocation,
+            activeUnit,
+            hoveredContextLocation,
+            activeContextOption: activeContextOption ? {
+                location: activeContextOption.location,
+                units: activeContextOption.units.map(unit => typeof unit === 'string'
+                    ? { code: unit, disabled: false }
+                    : { code: unit.code, disabled: unit.disabled === true, disabledReason: unit.disabledReason || '' }
+                ),
+            } : null,
+            hoveredContext: hoveredContext ? {
+                location: hoveredContext.location,
+                units: hoveredContext.units.map(unit => typeof unit === 'string'
+                    ? { code: unit, disabled: false }
+                    : { code: unit.code, disabled: unit.disabled === true, disabledReason: unit.disabledReason || '' }
+                ),
+            } : null,
+            contextOptionCount: contextOptions.length,
+            details,
+        });
         if (typeof window === 'undefined') return;
         const isSetupTest = new URLSearchParams(window.location.search).has('setupTest');
         if (!isSetupTest) return;
@@ -260,60 +331,76 @@ const Header: React.FC<HeaderProps> = ({
                         <span className="ml-2 text-[10px] text-gray-300">v</span>
                     </button>
                     {showContextMenu && (
-                        <div className="absolute left-0 top-9 z-[130] flex overflow-visible rounded-md border border-gray-600 bg-gray-800 shadow-2xl" role="menu">
-                            <div className="w-[96px] border-r border-gray-700 py-1">
-                                {contextOptions.map(option => (
-                                    <button
-                                        key={option.location}
-                                        type="button"
-                                        onMouseEnter={() => setHoveredContextLocation(option.location)}
-                                        onFocus={() => setHoveredContextLocation(option.location)}
-                                        onClick={() => {
-                                            setHoveredContextLocation(option.location);
-                                            pushSetupTestHeaderDiag('header:hover-location-click', { location: option.location });
-                                        }}
-                                        className={`flex h-8 w-full items-center justify-between px-3 text-left text-sm font-semibold ${
-                                            normaliseContextLocation(option.location) === normaliseContextLocation(hoveredContextLocation) ? 'bg-sky-700 text-white' : 'text-gray-200 hover:bg-gray-700'
-                                        }`}
-                                    >
-                                        <span>{option.location}</span>
-                                        <span className="text-[10px] text-gray-300">&gt;</span>
-                                    </button>
-                                ))}
-                            </div>
-                            <div className="w-[136px] py-1">
-                                {(hoveredContext?.units || []).map(unit => {
-                                    const unitCode = typeof unit === 'string' ? unit : unit.code;
-                                    const isDisabledUnit = typeof unit === 'string' ? false : unit.disabled === true;
-                                    const disabledReason = typeof unit === 'string' ? '' : unit.disabledReason;
-                                    return (
+                        <div className="absolute left-0 top-9 z-[130] overflow-visible rounded-md border border-gray-600 bg-gray-800 shadow-2xl" role="menu">
+                            <div className="flex">
+                                <div className="w-[96px] border-r border-gray-700 py-1">
+                                    {contextOptions.map(option => (
                                         <button
-                                            key={`${hoveredContext?.location}-${unitCode}`}
+                                            key={option.location}
                                             type="button"
-                                            disabled={isDisabledUnit}
-                                            title={disabledReason || undefined}
+                                            onMouseEnter={() => setHoveredContextLocation(option.location)}
+                                            onFocus={() => setHoveredContextLocation(option.location)}
                                             onClick={() => {
-                                                if (isDisabledUnit) return;
-                                                if (!hoveredContext?.location) return;
-                                                pushSetupTestHeaderDiag('header:select-context', {
-                                                    selectedLocation: hoveredContext.location,
-                                                    selectedUnit: unitCode,
-                                                });
-                                                onContextChange(hoveredContext.location, unitCode);
-                                                setShowContextMenu(false);
+                                                setHoveredContextLocation(option.location);
+                                                pushSetupTestHeaderDiag('hover-location-click', { location: option.location });
                                             }}
-                                            className={`h-8 w-full px-3 text-left text-sm font-semibold ${
-                                                normaliseContextLocation(hoveredContext?.location) === normaliseContextLocation(activeLocation) && unitCode === activeUnit
-                                                    ? 'bg-sky-600 text-white'
-                                                    : isDisabledUnit
-                                                        ? 'cursor-not-allowed text-gray-500 opacity-60'
-                                                        : 'text-gray-200 hover:bg-gray-700'
+                                            className={`flex h-8 w-full items-center justify-between px-3 text-left text-sm font-semibold ${
+                                                normaliseContextLocation(option.location) === normaliseContextLocation(hoveredContextLocation) ? 'bg-sky-700 text-white' : 'text-gray-200 hover:bg-gray-700'
                                             }`}
                                         >
-                                            {unitCode}
+                                            <span>{option.location}</span>
+                                            <span className="text-[10px] text-gray-300">&gt;</span>
                                         </button>
-                                    );
-                                })}
+                                    ))}
+                                </div>
+                                <div className="w-[136px] py-1">
+                                    {(hoveredContext?.units || []).map(unit => {
+                                        const unitCode = typeof unit === 'string' ? unit : unit.code;
+                                        const isDisabledUnit = typeof unit === 'string' ? false : unit.disabled === true;
+                                        const disabledReason = typeof unit === 'string' ? '' : unit.disabledReason;
+                                        return (
+                                            <button
+                                                key={`${hoveredContext?.location}-${unitCode}`}
+                                                type="button"
+                                                aria-disabled={isDisabledUnit}
+                                                title={disabledReason || undefined}
+                                                onClick={() => {
+                                                    pushSetupTestHeaderDiag('select-context-click', {
+                                                        selectedLocation: hoveredContext?.location || '',
+                                                        selectedUnit: unitCode,
+                                                        isDisabledUnit,
+                                                        disabledReason,
+                                                    });
+                                                    if (isDisabledUnit) return;
+                                                    if (!hoveredContext?.location) return;
+                                                    onContextChange(hoveredContext.location, unitCode);
+                                                    setShowContextMenu(false);
+                                                }}
+                                                className={`h-8 w-full px-3 text-left text-sm font-semibold ${
+                                                    normaliseContextLocation(hoveredContext?.location) === normaliseContextLocation(activeLocation) && unitCode === activeUnit
+                                                        ? 'bg-sky-600 text-white'
+                                                        : isDisabledUnit
+                                                            ? 'cursor-not-allowed text-gray-500 opacity-60'
+                                                            : 'text-gray-200 hover:bg-gray-700'
+                                                }`}
+                                            >
+                                                {unitCode}
+                                            </button>
+                                        );
+                                    })}
+                                </div>
+                            </div>
+                            <div className="border-t border-gray-700 p-1">
+                                <button
+                                    type="button"
+                                    onClick={() => {
+                                        pushSetupTestHeaderDiag('download-trace-click', {});
+                                        downloadOperationalContextTrace();
+                                    }}
+                                    className="h-8 w-full rounded bg-sky-600 px-2 text-left text-[11px] font-bold text-white hover:bg-sky-500"
+                                >
+                                    Download Context Trace
+                                </button>
                             </div>
                         </div>
                     )}

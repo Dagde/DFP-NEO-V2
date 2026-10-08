@@ -9289,6 +9289,7 @@ const createLmpOrderKey = (index: number): string => String(index + 1).padStart(
 const REMEDIAL_EARLIEST_START = 10.0;
 const REMEDIAL_FORCE_SCHEDULE_STORAGE_KEY = 'neo_remedial_force_schedule_requests';
 const ACTIVE_OPERATIONAL_CONTEXT_STORAGE_KEY = 'dfp_active_operational_context';
+const OPERATIONAL_CONTEXT_TRACE_STORAGE_KEY = 'neo_operational_context_trace';
 const INITIAL_SETUP_WIZARD_LOCAL_STORAGE_KEYS = [
     'dfp-initial-setup-wizard-step',
     'dfp-initial-setup-wizard-organisation-draft',
@@ -9319,6 +9320,29 @@ const buildOperationalContextPayload = (location: string, unit: string, source: 
     storageScope: getBrowserDeploymentStorageScope(),
     updatedAt: new Date().toISOString(),
 });
+
+const appendOperationalContextTrace = (stage: string, details: Record<string, any> = {}) => {
+    if (typeof window === 'undefined') return;
+    const entry = {
+        ts: new Date().toISOString(),
+        stage,
+        storageScope: getBrowserDeploymentStorageScope(),
+        details,
+    };
+    try {
+        const existing = JSON.parse(window.localStorage.getItem(OPERATIONAL_CONTEXT_TRACE_STORAGE_KEY) || '[]');
+        const next = [...(Array.isArray(existing) ? existing : []), entry].slice(-250);
+        window.localStorage.setItem(OPERATIONAL_CONTEXT_TRACE_STORAGE_KEY, JSON.stringify(next));
+        (window as any).neoOperationalContextTrace = next;
+    } catch {
+        try {
+            window.localStorage.setItem(OPERATIONAL_CONTEXT_TRACE_STORAGE_KEY, JSON.stringify([entry]));
+            (window as any).neoOperationalContextTrace = [entry];
+        } catch {
+            // Best-effort trace only.
+        }
+    }
+};
 
 const buildHighestPriorityEventsStorageKey = (locationCode: string, unitCode: string): string => (
     `${HIGHEST_PRIORITY_EVENTS_STORAGE_PREFIX}:${String(locationCode || 'UNKNOWN').trim().toUpperCase()}:${String(unitCode || 'UNKNOWN').trim().toUpperCase()}`
@@ -30213,11 +30237,28 @@ const App: React.FC = () => {
         [filterUnitsForPlatformAccess, getUnitOptionsForLocation, school],
     );
 
+    const summariseContextUnitOption = useCallback((unit: any) => ({
+        code: String(unit?.code || unit || '').trim(),
+        disabled: typeof unit === 'string' ? false : unit?.disabled === true,
+        disabledReason: typeof unit === 'string' ? '' : String(unit?.disabledReason || ''),
+        memberUnits: Array.isArray(unit?.memberUnits) ? unit.memberUnits : [],
+        isSharedFleetContext: unit?.isSharedFleetContext === true,
+        model: unit?.model || null,
+    }), []);
+
     useEffect(() => {
         if (!platformConfigLoaded) {
+            appendOperationalContextTrace('app:active-unit-guard:skip-platform-not-loaded', {
+                school,
+                activeUnitCode,
+            });
             return;
         }
         if (activeLocationUnitOptions.length === 0) {
+            appendOperationalContextTrace('app:active-unit-guard:skip-no-options', {
+                school,
+                activeUnitCode,
+            });
             return;
         }
         const activeUnitOption = activeLocationUnitOptions.find(unit => unit.code === activeUnitCode);
@@ -30226,11 +30267,23 @@ const App: React.FC = () => {
                 unit?.isSharedFleetContext === true && unit.disabled !== true
             ));
             if (preferredSharedContext?.code) {
+                appendOperationalContextTrace('app:active-unit-guard:set-preferred-shared-context', {
+                    school,
+                    previousUnit: activeUnitCode,
+                    nextUnit: preferredSharedContext.code,
+                    options: activeLocationUnitOptions.map(summariseContextUnitOption),
+                });
                 setActiveUnitCode(preferredSharedContext.code);
                 return;
             }
             const firstEnabledUnit = activeLocationUnitOptions.find((unit: any) => unit.disabled !== true) || activeLocationUnitOptions[0];
             if (firstEnabledUnit?.code) {
+                appendOperationalContextTrace('app:active-unit-guard:set-first-enabled-unit', {
+                    school,
+                    previousUnit: activeUnitCode,
+                    nextUnit: firstEnabledUnit.code,
+                    options: activeLocationUnitOptions.map(summariseContextUnitOption),
+                });
                 setActiveUnitCode(firstEnabledUnit.code);
                 return;
             }
@@ -30244,10 +30297,21 @@ const App: React.FC = () => {
                 && unit.memberUnits.map((memberUnit: string) => String(memberUnit || '').trim().toUpperCase()).includes(String(activeUnitCode || '').trim().toUpperCase())
             ));
             if (matchingSharedContext?.code) {
+                appendOperationalContextTrace('app:active-unit-guard:replace-with-shared-context', {
+                    school,
+                    rejectedUnit: activeUnitCode,
+                    nextUnit: matchingSharedContext.code,
+                    activeUnitOption: activeUnitOption ? summariseContextUnitOption(activeUnitOption) : null,
+                    options: activeLocationUnitOptions.map(summariseContextUnitOption),
+                });
                 setActiveUnitCode(matchingSharedContext.code);
                 return;
             }
             if (String(activeUnitCode || '').includes('+') && !organisationSettings.fleetSharingEnabled) {
+                appendOperationalContextTrace('app:active-unit-guard:keep-combined-unit-while-sharing-disabled', {
+                    school,
+                    activeUnitCode,
+                });
                 return;
             }
             if (setupTestProfile && activeUnitCode) {
@@ -30258,19 +30322,33 @@ const App: React.FC = () => {
                     ))
                 ));
                 if (matchingLocationForActiveUnit) {
+                    appendOperationalContextTrace('app:active-unit-guard:switch-location-for-unit', {
+                        previousSchool: school,
+                        nextSchool: matchingLocationForActiveUnit,
+                        activeUnitCode,
+                    });
                     setSchool(matchingLocationForActiveUnit);
                     return;
                 }
             }
             const nextUnitCode = '';
+            appendOperationalContextTrace('app:active-unit-guard:clear-invalid-unit', {
+                school,
+                rejectedUnit: activeUnitCode,
+                activeUnitOption: activeUnitOption ? summariseContextUnitOption(activeUnitOption) : null,
+                options: activeLocationUnitOptions.map(summariseContextUnitOption),
+            });
             setActiveUnitCode(nextUnitCode);
         }
-    }, [activeLocationUnitOptions, activeUnitCode, baseSelectableLocationCodes, getUnitOptionsForLocation, organisationSettings.fleetSharingEnabled, platformConfigLoaded, school, setupTestProfile]);
+    }, [activeLocationUnitOptions, activeUnitCode, baseSelectableLocationCodes, getUnitOptionsForLocation, organisationSettings.fleetSharingEnabled, platformConfigLoaded, school, setupTestProfile, summariseContextUnitOption]);
 
     useEffect(() => {
         try {
             const payload = buildOperationalContextPayload(school, activeUnitCode, 'state-sync');
             localStorage.setItem(ACTIVE_OPERATIONAL_CONTEXT_STORAGE_KEY, JSON.stringify(payload));
+            appendOperationalContextTrace('app:state-sync', {
+                payload,
+            });
         } catch (error) {
             // Ignore persistence failures; the selector remains functional for the active session.
         }
@@ -31390,7 +31468,13 @@ const App: React.FC = () => {
         if (!platformConfigLoaded) return;
         if (!platformAccessContext.isConfigured || hasRuntimePlatformWideAccess || platformAccessContext.hasAllUnitAccess) return;
         if (operationalContextOptions.length === 0) {
-            if (activeUnitCode) setActiveUnitCode('');
+            if (activeUnitCode) {
+                appendOperationalContextTrace('app:access-guard:clear-no-context-options', {
+                    school,
+                    activeUnitCode,
+                });
+                setActiveUnitCode('');
+            }
             return;
         }
         const currentLocationOption = operationalContextOptions.find((option) => (
@@ -31402,6 +31486,25 @@ const App: React.FC = () => {
         if (currentUnitAllowed) return;
         const nextLocationOption = currentLocationOption || operationalContextOptions[0];
         const nextUnit = nextLocationOption?.units?.find((unit: any) => unit.disabled !== true) || nextLocationOption?.units?.[0];
+        appendOperationalContextTrace('app:access-guard:redirect-context', {
+            previousSchool: school,
+            previousUnit: activeUnitCode,
+            currentLocationOption: currentLocationOption ? {
+                location: currentLocationOption.location,
+                units: currentLocationOption.units.map(summariseContextUnitOption),
+            } : null,
+            nextSchool: nextLocationOption?.location || '',
+            nextUnit: nextUnit?.code || '',
+            operationalContextOptions: operationalContextOptions.map((option) => ({
+                location: option.location,
+                units: option.units.map(summariseContextUnitOption),
+            })),
+            accessContext: {
+                isConfigured: platformAccessContext.isConfigured,
+                hasAllUnitAccess: platformAccessContext.hasAllUnitAccess,
+                hasRuntimePlatformWideAccess,
+            },
+        });
         if (nextLocationOption?.location && String(nextLocationOption.location || '').trim().toUpperCase() !== String(school || '').trim().toUpperCase()) {
             setSchool(nextLocationOption.location);
         }
@@ -31414,6 +31517,7 @@ const App: React.FC = () => {
         platformAccessContext.isConfigured,
         platformConfigLoaded,
         school,
+        summariseContextUnitOption,
     ]);
     const initialSetupWizardCompletedAtStorageKey = 'dfp-initial-setup-wizard-completed-at';
     const hasStoredInitialSetupWizardProgress = useCallback(() => {
@@ -43443,7 +43547,22 @@ const App: React.FC = () => {
             const payload = buildOperationalContextPayload(location, unit, source);
             const previousStoredContext = localStorage.getItem(ACTIVE_OPERATIONAL_CONTEXT_STORAGE_KEY);
             localStorage.setItem(ACTIVE_OPERATIONAL_CONTEXT_STORAGE_KEY, JSON.stringify(payload));
+            appendOperationalContextTrace('app:persist-selection', {
+                source,
+                previousStoredContext,
+                payload,
+                currentStateBeforeSet: {
+                    school,
+                    activeUnitCode,
+                },
+            });
         } catch (error) {
+            appendOperationalContextTrace('app:persist-selection:error', {
+                source,
+                location,
+                unit,
+                error: error instanceof Error ? error.message : String(error),
+            });
         }
     };
 
@@ -43464,6 +43583,12 @@ const App: React.FC = () => {
     };
 
     const changeOperationalContext = (newSchool: string, newUnit: string) => {
+        appendOperationalContextTrace('app:change-operational-context:start', {
+            previousSchool: school,
+            previousUnit: activeUnitCode,
+            requestedSchool: newSchool,
+            requestedUnit: newUnit,
+        });
         persistOperationalContextSelection(newSchool, newUnit, 'changeOperationalContext');
         setSchool(newSchool);
         setActiveUnitCode(newUnit);
