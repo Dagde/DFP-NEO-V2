@@ -159140,11 +159140,10 @@ ${conflictLines.join("\n")}${moreText}`,
         currencyDefinitions: snapshotContext.currencyDefinitions,
         staffLogbook: snapshotContext.staffLogbook,
         courseState: snapshotContext.courseState,
-        individualLmpState: snapshotContext.individualLmpState,
-        masterLmpState: snapshotContext.masterLmpState,
         eventCompletions: snapshotContext.eventCompletions,
         currencyState: snapshotContext.currencyState,
         aircraftConfigState: currentAircraftConfigState,
+        leanPublishArchive: true,
         savedBy: authUser?.userId || authUser?.username || null,
         // Store the baseline (original published events) for change-bar detection after page reload
         baselineEvents: newEventsForDate,
@@ -159156,6 +159155,7 @@ ${conflictLines.join("\n")}${moreText}`,
         scheduleEventCount: newEventsForDate.length,
         staffEventCount: staffEventsForDate.length,
         traineeEventCount: traineeEventsForDate.length,
+        leanPublishArchive: true,
         hasAlertsData: !!(existingAlertsDataForDate && Object.keys(existingAlertsDataForDate).length > 0)
       });
       const apiBase = getApiBaseUrl();

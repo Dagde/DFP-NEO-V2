@@ -21457,8 +21457,10 @@ app.post('/api/daily-snapshot/save', async (req, res) => {
 	      trainingReportState,
 	      eventCompletions,
 	      flightLogEntries,
-	      currencyState
+	      currencyState,
+	      leanPublishArchive
 	    } = req.body;
+    const isLeanPublishArchive = leanPublishArchive === true;
     recordPublishTiming('parse-route-body', requestStartedAt, {
       contentLength: Number(req.get('content-length') || 0),
       scheduleEventCount: Array.isArray(scheduleEvents) ? scheduleEvents.length : 0,
@@ -21469,6 +21471,7 @@ app.post('/api/daily-snapshot/save', async (req, res) => {
       courseCount: Array.isArray(courseState) ? courseState.length : 0,
       hasTrainingReportState: isPlainObject(trainingReportState),
       hasCurrencyState: isPlainObject(currencyState),
+      leanPublishArchive: isLeanPublishArchive,
     });
 
     if (!date) {
@@ -21508,21 +21511,24 @@ app.post('/api/daily-snapshot/save', async (req, res) => {
 	      ? { ...payloadTrainingReportState }
 	      : { ...payloadPt051Assessments };
 	    if (snapshotTraineeNames.length > 0 || snapshotCourseNames.length > 0 || scheduleEventIds.length > 0) {
-	      const reportWhere = [`"date" <= $1::text`];
+	      const reportWhere = [isLeanPublishArchive ? `"date" = $1::text` : `"date" <= $1::text`];
 	      const reportParams = [baseSnapshotDate];
 	      const reportSubWhere = [];
 	      let reportParamIdx = 2;
-	      if (snapshotTraineeNames.length > 0) {
+	      if (!isLeanPublishArchive && snapshotTraineeNames.length > 0) {
 	        reportSubWhere.push(`"traineeFullName" = ANY($${reportParamIdx++}::text[])`);
 	        reportParams.push(snapshotTraineeNames);
 	      }
-	      if (snapshotCourseNames.length > 0) {
+	      if (!isLeanPublishArchive && snapshotCourseNames.length > 0) {
 	        reportSubWhere.push(`"course" = ANY($${reportParamIdx++}::text[])`);
 	        reportParams.push(snapshotCourseNames);
 	      }
 	      if (scheduleEventIds.length > 0) {
 	        reportSubWhere.push(`"eventId" = ANY($${reportParamIdx++}::text[])`);
 	        reportParams.push(scheduleEventIds);
+	      }
+	      if (isLeanPublishArchive) {
+	        reportSubWhere.push(`"date" = $1::text`);
 	      }
 	      if (reportSubWhere.length > 0) {
 	        reportWhere.push(`(${reportSubWhere.join(' OR ')})`);
@@ -21536,6 +21542,7 @@ app.post('/api/daily-snapshot/save', async (req, res) => {
 	          traineeNameCount: snapshotTraineeNames.length,
 	          courseNameCount: snapshotCourseNames.length,
 	          eventIdCount: scheduleEventIds.length,
+	          leanPublishArchive: isLeanPublishArchive,
 	        });
 	        enrichedTrainingReportState = {
 	          ...buildArchiveReportMap((reportRows || []).map(row => mapRowToAssessment(row))),
@@ -21562,7 +21569,7 @@ app.post('/api/daily-snapshot/save', async (req, res) => {
 	      row => row?.id || row?.scheduleEventId || `${row?.eventDate || ''}:${row?.traineeFullName || ''}:${row?.eventCode || ''}`
 	    );
 
-	    const flightLogWhere = [`"eventDate" <= $1::text`];
+	    const flightLogWhere = [isLeanPublishArchive ? `"eventDate" = $1::text` : `"eventDate" <= $1::text`];
 	    const flightLogParams = [baseSnapshotDate];
 	    const flightLogSubWhere = [];
 	    let flightLogParamIdx = 2;
@@ -21570,7 +21577,7 @@ app.post('/api/daily-snapshot/save', async (req, res) => {
 	      flightLogSubWhere.push(`"scheduleEventId" = ANY($${flightLogParamIdx++}::text[])`);
 	      flightLogParams.push(scheduleEventIds);
 	    }
-	    if (snapshotPersonNames.length > 0) {
+	    if (!isLeanPublishArchive && snapshotPersonNames.length > 0) {
 	      flightLogSubWhere.push(`"personName" = ANY($${flightLogParamIdx++}::text[])`);
 	      flightLogParams.push(snapshotPersonNames);
 	    }
@@ -21584,6 +21591,7 @@ app.post('/api/daily-snapshot/save', async (req, res) => {
 	        ).catch(() => []), {
 	          eventIdCount: scheduleEventIds.length,
 	          personNameCount: snapshotPersonNames.length,
+	          leanPublishArchive: isLeanPublishArchive,
 	        })
 	      : [];
 	    const enrichedFlightLogEntries = mergeArchiveRowsByKey(
@@ -21604,6 +21612,16 @@ app.post('/api/daily-snapshot/save', async (req, res) => {
 	            .filter(profile => Array.isArray(profile?.currencyStatus) && profile.currencyStatus.length > 0)
 	            .map(profile => [profile.fullName || profile.name, profile.currencyStatus])),
 	        };
+	    const snapshotPt051Assessments = isLeanPublishArchive ? {} : (enrichedPt051Assessments || {});
+	    const snapshotIndividualLmpState = isLeanPublishArchive
+	      ? {}
+	      : (isPlainObject(individualLmpState) ? individualLmpState : {});
+	    const snapshotMasterLmpState = isLeanPublishArchive
+	      ? []
+	      : (Array.isArray(masterLmpState) ? masterLmpState : []);
+	    const snapshotTrainingReportState = isLeanPublishArchive ? {} : (enrichedTrainingReportState || {});
+	    const archivePt051Assessments = enrichedPt051Assessments || {};
+	    const archiveTrainingReportState = enrichedTrainingReportState || {};
 
     // Upsert: update if date exists, create if not
     const existing = await timedPublishStep('lookup-existing-daily-snapshot', () => db.$queryRawUnsafe(
@@ -21654,7 +21672,7 @@ app.post('/api/daily-snapshot/save', async (req, res) => {
 	          JSON.stringify(scheduleEvents || []),
 	          JSON.stringify(staffEvents || []),
 	          JSON.stringify(traineeEvents || []),
-	          JSON.stringify(enrichedPt051Assessments || {}),
+	          JSON.stringify(snapshotPt051Assessments),
 	          JSON.stringify(traineeProfiles || []),
 	          JSON.stringify(staffProfiles || []),
 	          JSON.stringify(lmpCompletedIds || {}),
@@ -21664,9 +21682,9 @@ app.post('/api/daily-snapshot/save', async (req, res) => {
 	          JSON.stringify(baselineEvents),
 	          JSON.stringify(aircraftConfigState || {}),
 	          JSON.stringify(Array.isArray(courseState) ? courseState : []),
-	          JSON.stringify(isPlainObject(individualLmpState) ? individualLmpState : {}),
-	          JSON.stringify(Array.isArray(masterLmpState) ? masterLmpState : []),
-	          JSON.stringify(enrichedTrainingReportState || {}),
+	          JSON.stringify(snapshotIndividualLmpState),
+	          JSON.stringify(snapshotMasterLmpState),
+	          JSON.stringify(snapshotTrainingReportState),
 	          JSON.stringify(enrichedEventCompletions || []),
 	          JSON.stringify(enrichedFlightLogEntries || []),
 	          JSON.stringify(enrichedCurrencyState || {}),
@@ -21703,7 +21721,7 @@ app.post('/api/daily-snapshot/save', async (req, res) => {
 	          JSON.stringify(scheduleEvents || []),
 	          JSON.stringify(staffEvents || []),
 	          JSON.stringify(traineeEvents || []),
-	          JSON.stringify(enrichedPt051Assessments || {}),
+	          JSON.stringify(snapshotPt051Assessments),
 	          JSON.stringify(traineeProfiles || []),
 	          JSON.stringify(staffProfiles || []),
 	          JSON.stringify(lmpCompletedIds || {}),
@@ -21712,9 +21730,9 @@ app.post('/api/daily-snapshot/save', async (req, res) => {
 	          savedBy || null,
 	          JSON.stringify(aircraftConfigState || {}),
 	          JSON.stringify(Array.isArray(courseState) ? courseState : []),
-	          JSON.stringify(isPlainObject(individualLmpState) ? individualLmpState : {}),
-	          JSON.stringify(Array.isArray(masterLmpState) ? masterLmpState : []),
-	          JSON.stringify(enrichedTrainingReportState || {}),
+	          JSON.stringify(snapshotIndividualLmpState),
+	          JSON.stringify(snapshotMasterLmpState),
+	          JSON.stringify(snapshotTrainingReportState),
 	          JSON.stringify(enrichedEventCompletions || []),
 	          JSON.stringify(enrichedFlightLogEntries || []),
 	          JSON.stringify(enrichedCurrencyState || {}),
@@ -21736,7 +21754,7 @@ app.post('/api/daily-snapshot/save', async (req, res) => {
 	        JSON.stringify(scheduleEvents || []),
 	        JSON.stringify(staffEvents || []),
 	        JSON.stringify(traineeEvents || []),
-	        JSON.stringify(enrichedPt051Assessments || {}),
+	        JSON.stringify(snapshotPt051Assessments),
 	        JSON.stringify(traineeProfiles || []),
 	        JSON.stringify(staffProfiles || []),
 	        JSON.stringify(lmpCompletedIds || {}),
@@ -21746,9 +21764,9 @@ app.post('/api/daily-snapshot/save', async (req, res) => {
 	        JSON.stringify(baselineEvents !== undefined && baselineEvents !== null ? baselineEvents : (scheduleEvents || [])),
 	        JSON.stringify(aircraftConfigState || {}),
 	        JSON.stringify(Array.isArray(courseState) ? courseState : []),
-	        JSON.stringify(isPlainObject(individualLmpState) ? individualLmpState : {}),
-	        JSON.stringify(Array.isArray(masterLmpState) ? masterLmpState : []),
-	        JSON.stringify(enrichedTrainingReportState || {}),
+	        JSON.stringify(snapshotIndividualLmpState),
+	        JSON.stringify(snapshotMasterLmpState),
+	        JSON.stringify(snapshotTrainingReportState),
 	        JSON.stringify(enrichedEventCompletions || []),
 	        JSON.stringify(enrichedFlightLogEntries || []),
 	        JSON.stringify(enrichedCurrencyState || {})
@@ -21764,7 +21782,7 @@ app.post('/api/daily-snapshot/save', async (req, res) => {
         scheduleEvents,
         staffEvents,
         traineeEvents,
-	        pt051Assessments: enrichedPt051Assessments,
+	        pt051Assessments: archivePt051Assessments,
         traineeProfiles,
         staffProfiles,
         lmpCompletedIds,
@@ -21777,9 +21795,9 @@ app.post('/api/daily-snapshot/save', async (req, res) => {
 	        masterCurrencies,
 	        currencyRequirements,
 	        courseState: Array.isArray(courseState) ? courseState : [],
-	        individualLmpState: isPlainObject(individualLmpState) ? individualLmpState : {},
-	        masterLmpState: Array.isArray(masterLmpState) ? masterLmpState : [],
-	        trainingReportState: enrichedTrainingReportState || {},
+	        individualLmpState: snapshotIndividualLmpState,
+	        masterLmpState: snapshotMasterLmpState,
+	        trainingReportState: archiveTrainingReportState,
 	        eventCompletions: enrichedEventCompletions || [],
 	        flightLogEntries: enrichedFlightLogEntries || [],
 	        currencyState: enrichedCurrencyState || {},
