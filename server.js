@@ -21404,8 +21404,35 @@ app.post('/api/trainee-reallocation/apply', async (req, res) => {
 
 // POST /api/daily-snapshot/save - Save a full daily snapshot when schedule is published
 app.post('/api/daily-snapshot/save', async (req, res) => {
+  const requestStartedAt = Date.now();
+  const publishTimings = [];
+  const recordPublishTiming = (label, startedAt, details = {}) => {
+    publishTimings.push({
+      label,
+      durationMs: Math.max(0, Date.now() - startedAt),
+      elapsedMs: Math.max(0, Date.now() - requestStartedAt),
+      ...details,
+    });
+  };
+  const timedPublishStep = async (label, fn, details = {}) => {
+    const stepStartedAt = Date.now();
+    try {
+      const result = await fn();
+      recordPublishTiming(label, stepStartedAt, {
+        ...details,
+        rows: Array.isArray(result) ? result.length : undefined,
+      });
+      return result;
+    } catch (error) {
+      recordPublishTiming(label, stepStartedAt, {
+        ...details,
+        error: error?.message || String(error),
+      });
+      throw error;
+    }
+  };
   try {
-    const db = await getPrisma();
+    const db = await timedPublishStep('get-prisma', () => getPrisma());
     const {
       date,
 	        scheduleEvents,
@@ -21432,6 +21459,17 @@ app.post('/api/daily-snapshot/save', async (req, res) => {
 	      flightLogEntries,
 	      currencyState
 	    } = req.body;
+    recordPublishTiming('parse-route-body', requestStartedAt, {
+      contentLength: Number(req.get('content-length') || 0),
+      scheduleEventCount: Array.isArray(scheduleEvents) ? scheduleEvents.length : 0,
+      staffEventCount: Array.isArray(staffEvents) ? staffEvents.length : 0,
+      traineeEventCount: Array.isArray(traineeEvents) ? traineeEvents.length : 0,
+      traineeProfileCount: Array.isArray(traineeProfiles) ? traineeProfiles.length : 0,
+      staffProfileCount: Array.isArray(staffProfiles) ? staffProfiles.length : 0,
+      courseCount: Array.isArray(courseState) ? courseState.length : 0,
+      hasTrainingReportState: isPlainObject(trainingReportState),
+      hasCurrencyState: isPlainObject(currencyState),
+    });
 
     if (!date) {
       return res.status(400).json({ error: 'date is required' });
@@ -21488,13 +21526,17 @@ app.post('/api/daily-snapshot/save', async (req, res) => {
 	      }
 	      if (reportSubWhere.length > 0) {
 	        reportWhere.push(`(${reportSubWhere.join(' OR ')})`);
-	        const reportRows = await db.$queryRawUnsafe(
+	        const reportRows = await timedPublishStep('enrich-training-report-state-query', () => db.$queryRawUnsafe(
 	          `SELECT * FROM "TraineePerformance"
 	           WHERE ${reportWhere.join(' AND ')}
 	           ORDER BY "date" ASC, "course" ASC NULLS LAST, "traineeFullName" ASC, "eventSequence" ASC NULLS LAST
 	           LIMIT 10000`,
 	          ...reportParams
-	        ).catch(() => []);
+	        ).catch(() => []), {
+	          traineeNameCount: snapshotTraineeNames.length,
+	          courseNameCount: snapshotCourseNames.length,
+	          eventIdCount: scheduleEventIds.length,
+	        });
 	        enrichedTrainingReportState = {
 	          ...buildArchiveReportMap((reportRows || []).map(row => mapRowToAssessment(row))),
 	          ...enrichedTrainingReportState,
@@ -21506,14 +21548,14 @@ app.post('/api/daily-snapshot/save', async (req, res) => {
 	      ...enrichedTrainingReportState,
 	    };
 
-	    const tableEventCompletions = await db.$queryRawUnsafe(
+	    const tableEventCompletions = await timedPublishStep('enrich-event-completions-query', () => db.$queryRawUnsafe(
 	      `SELECT * FROM "EventCompletion"
 	       WHERE "eventDate" = $1::text OR "scheduleEventId" = ANY($2::text[])
 	       ORDER BY "startTime" ASC, "traineeFullName" ASC
 	       LIMIT 5000`,
 	      baseSnapshotDate,
 	      scheduleEventIds
-	    ).catch(() => []);
+	    ).catch(() => []), { eventIdCount: scheduleEventIds.length });
 	    const enrichedEventCompletions = mergeArchiveRowsByKey(
 	      Array.isArray(eventCompletions) ? eventCompletions : [],
 	      tableEventCompletions || [],
@@ -21533,13 +21575,16 @@ app.post('/api/daily-snapshot/save', async (req, res) => {
 	      flightLogParams.push(snapshotPersonNames);
 	    }
 	    const tableFlightLogEntries = flightLogSubWhere.length > 0
-	      ? await db.$queryRawUnsafe(
+	      ? await timedPublishStep('enrich-flight-log-query', () => db.$queryRawUnsafe(
 	          `SELECT * FROM "FlightLogEntry"
 	           WHERE ${flightLogWhere.join(' AND ')} AND (${flightLogSubWhere.join(' OR ')})
 	           ORDER BY "personName" ASC, "eventDate" ASC, "createdAt" ASC
 	           LIMIT 10000`,
 	          ...flightLogParams
-	        ).catch(() => [])
+	        ).catch(() => []), {
+	          eventIdCount: scheduleEventIds.length,
+	          personNameCount: snapshotPersonNames.length,
+	        })
 	      : [];
 	    const enrichedFlightLogEntries = mergeArchiveRowsByKey(
 	      Array.isArray(flightLogEntries) ? flightLogEntries : [],
@@ -21561,10 +21606,10 @@ app.post('/api/daily-snapshot/save', async (req, res) => {
 	        };
 
     // Upsert: update if date exists, create if not
-    const existing = await db.$queryRawUnsafe(
+    const existing = await timedPublishStep('lookup-existing-daily-snapshot', () => db.$queryRawUnsafe(
       `SELECT id, "baselineEvents" FROM "DailySnapshot" WHERE date = $1::text LIMIT 1`,
       date
-    );
+    ));
 
     const { cuid } = await import('@paralleldrive/cuid2').catch(() => ({ cuid: () => Math.random().toString(36).slice(2) }));
     const id = (existing && existing.length > 0) ? existing[0].id : (typeof cuid === 'function' ? cuid() : `snap_${Date.now()}`);
@@ -21578,7 +21623,7 @@ app.post('/api/daily-snapshot/save', async (req, res) => {
       // Only update baselineEvents for an explicit baseline reset, or when no baseline exists yet.
       // Routine edits and alert status updates must preserve the original published baseline.
       if (shouldReplaceBaselineEvents) {
-        await db.$executeRawUnsafe(`
+        await timedPublishStep('update-daily-snapshot-replace-baseline', () => db.$executeRawUnsafe(`
           UPDATE "DailySnapshot"
           SET
             "scheduleEvents" = $1::jsonb,
@@ -21626,9 +21671,9 @@ app.post('/api/daily-snapshot/save', async (req, res) => {
 	          JSON.stringify(enrichedFlightLogEntries || []),
 	          JSON.stringify(enrichedCurrencyState || {}),
 	          date
-	        );
+	        ));
 	      } else {
-        await db.$executeRawUnsafe(`
+        await timedPublishStep('update-daily-snapshot-preserve-baseline', () => db.$executeRawUnsafe(`
           UPDATE "DailySnapshot"
           SET
             "scheduleEvents" = $1::jsonb,
@@ -21674,11 +21719,11 @@ app.post('/api/daily-snapshot/save', async (req, res) => {
 	          JSON.stringify(enrichedFlightLogEntries || []),
 	          JSON.stringify(enrichedCurrencyState || {}),
 	          date
-	        );
+	        ));
 	      }
       console.log(`✅ POST /api/daily-snapshot/save - Updated snapshot for ${date}, ${(scheduleEvents||[]).length} events`);
     } else {
-      await db.$executeRawUnsafe(`
+      await timedPublishStep('insert-daily-snapshot', () => db.$executeRawUnsafe(`
         INSERT INTO "DailySnapshot"
 	          ("id", "date", "scheduleEvents", "staffEvents", "traineeEvents",
 	           "pt051Assessments", "traineeProfiles", "staffProfiles", "lmpCompletedIds",
@@ -21707,14 +21752,14 @@ app.post('/api/daily-snapshot/save', async (req, res) => {
 	        JSON.stringify(enrichedEventCompletions || []),
 	        JSON.stringify(enrichedFlightLogEntries || []),
 	        JSON.stringify(enrichedCurrencyState || {})
-	      );
+	      ));
       console.log(`✅ POST /api/daily-snapshot/save - Created snapshot for ${date}, ${(scheduleEvents||[]).length} events`);
     }
 
     let archive = { success: false, warning: 'Archive write not attempted' };
     let archivePrune = null;
     try {
-      archive = await saveCompactPublishedDfpArchive(db, {
+      archive = await timedPublishStep('save-compact-published-dfp-archive', () => saveCompactPublishedDfpArchive(db, {
         date,
         scheduleEvents,
         staffEvents,
@@ -21739,6 +21784,8 @@ app.post('/api/daily-snapshot/save', async (req, res) => {
 	        flightLogEntries: enrichedFlightLogEntries || [],
 	        currencyState: enrichedCurrencyState || {},
 	        dailySnapshotId,
+	      }), {
+	        eventCount: Array.isArray(scheduleEvents) ? scheduleEvents.length : 0,
 	      });
     } catch (archiveError) {
       archive = { success: false, warning: archiveError.message };
@@ -21750,17 +21797,30 @@ app.post('/api/daily-snapshot/save', async (req, res) => {
     }
 
     if (archive?.success) {
+      const pruneQueueStartedAt = Date.now();
       archivePrune = queueDailySnapshotPrune(db, {
         date: parseDailySnapshotDateKey(date).date,
         snapshotKey: date,
         reason: 'post-publish-retention-background',
       });
+      recordPublishTiming('queue-background-prune', pruneQueueStartedAt);
     }
 
-    res.json({ success: true, date, eventCount: (scheduleEvents||[]).length, archive, archivePrune });
+    const totalDurationMs = Date.now() - requestStartedAt;
+    console.log(`✅ POST /api/daily-snapshot/save - Completed publish save for ${date} in ${totalDurationMs}ms`, JSON.stringify({
+      eventCount: (scheduleEvents || []).length,
+      contentLength: Number(req.get('content-length') || 0),
+      timings: publishTimings,
+    }));
+    res.json({ success: true, date, eventCount: (scheduleEvents||[]).length, archive, archivePrune, publishTimings, totalDurationMs });
   } catch (error) {
     console.error('❌ POST /api/daily-snapshot/save error:', error);
-    res.status(500).json({ error: 'Failed to save daily snapshot', details: error.message });
+    res.status(500).json({
+      error: 'Failed to save daily snapshot',
+      details: error.message,
+      publishTimings,
+      totalDurationMs: Date.now() - requestStartedAt,
+    });
   }
 });
 

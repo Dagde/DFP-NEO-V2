@@ -32121,6 +32121,37 @@ const App: React.FC = () => {
         }
     }
 
+    function downloadDfpPublishTrace(prefix = 'dfp-publish-trace'): void {
+        try {
+            const payload = lastDfpPublishTrace || JSON.parse(localStorage.getItem('dfp_publish_last_trace') || 'null');
+            if (!payload) {
+                void showDarkAlert(
+                    'No publish trace has been recorded yet. Click Publish once, then download the trace.',
+                    'No Publish Trace',
+                    'info'
+                );
+                return;
+            }
+            const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+            const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json;charset=utf-8;' });
+            const url = URL.createObjectURL(blob);
+            const link = document.createElement('a');
+            link.href = url;
+            link.download = `${prefix}-${timestamp}.json`;
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            URL.revokeObjectURL(url);
+        } catch (error) {
+            console.warn('[DFP-DIAG] Failed to download DFP publish trace:', error);
+            void showDarkAlert(
+                `The publish trace could not be downloaded.\n\n${error instanceof Error ? error.message : String(error)}`,
+                'Publish Trace Download Failed',
+                'error'
+            );
+        }
+    }
+
     function buildDfpTileNameDiagnosticReport(): Record<string, any> {
         const activeEvents: ScheduleEvent[] = Array.isArray(publishedSchedules[date]) ? publishedSchedules[date] : [];
         const contextPeople: PersonIdentityRecord[] = [
@@ -37083,6 +37114,13 @@ const App: React.FC = () => {
     const [cptConflict, setCptConflict] = useState<Conflict | null>(null);
     const [isLocalityChangeVisible, setIsLocalityChangeVisible] = useState(false);
     const [successMessage, setSuccessMessage] = useState<string | null>(null);
+    const [lastDfpPublishTrace, setLastDfpPublishTrace] = useState<any>(() => {
+        try {
+            return JSON.parse(localStorage.getItem('dfp_publish_last_trace') || 'null');
+        } catch {
+            return null;
+        }
+    });
     const [initialSyllabusId, setInitialSyllabusId] = useState<string | null>(null);
     const [syllabusBackTarget, setSyllabusBackTarget] = useState('Program Schedule');
     const [showAddRemedialPackage, setShowAddRemedialPackage] = useState(false);
@@ -50625,6 +50663,45 @@ const App: React.FC = () => {
     };
 
     const handleConfirmPublish = async () => {
+        const publishTraceStartedAt = performance.now();
+        let publishTraceStageStartedAt = publishTraceStartedAt;
+        const publishTrace: Record<string, any> = {
+            traceType: 'dfp-publish',
+            startedAt: new Date().toISOString(),
+            date: buildDfpDate,
+            locationCode: school,
+            unitCode: activeUnitCode,
+            operationalModel: activeOperationalModel,
+            sourceEventCount: nextDayBuildEvents.length,
+            stages: [],
+        };
+        const markPublishTrace = (label: string, details: Record<string, any> = {}) => {
+            const now = performance.now();
+            publishTrace.stages.push({
+                label,
+                durationMs: Math.max(0, Math.round(now - publishTraceStageStartedAt)),
+                elapsedMs: Math.max(0, Math.round(now - publishTraceStartedAt)),
+                ...details,
+            });
+            publishTraceStageStartedAt = now;
+        };
+        const finishPublishTrace = (status: string, details: Record<string, any> = {}) => {
+            const completedTrace = {
+                ...publishTrace,
+                status,
+                completedAt: new Date().toISOString(),
+                totalDurationMs: Math.max(0, Math.round(performance.now() - publishTraceStartedAt)),
+                ...details,
+            };
+            try {
+                localStorage.setItem('dfp_publish_last_trace', JSON.stringify(completedTrace));
+                (window as any).__lastDfpPublishTrace = completedTrace;
+            } catch (error) {
+                console.warn('[DFP-PUBLISH-TRACE] Failed to persist publish trace:', error);
+            }
+            setLastDfpPublishTrace(completedTrace);
+            return completedTrace;
+        };
         // Close the confirmation flyout immediately
         setShowPublishConfirm(false);
 
@@ -50636,6 +50713,10 @@ const App: React.FC = () => {
             return true;
         });
         logRoutineAppDebug('[PUBLISH] nextDayBuildEvents:', nextDayBuildEvents.length, '→ after dedup:', dedupedBuildEvents.length);
+        markPublishTrace('dedupe-build-events', {
+            inputEventCount: nextDayBuildEvents.length,
+            dedupedEventCount: dedupedBuildEvents.length,
+        });
 
         const newEventsForDate = dedupedBuildEvents.map(e => ({ ...e, date: buildDfpDate }));
         const publishedPriorityEventIds = new Set(
@@ -50681,6 +50762,12 @@ const App: React.FC = () => {
                 })
             );
         }
+        markPublishTrace('consume-priority-source-events', {
+            priorityEventIds: publishedPriorityEventIds.size,
+            currencyDraftIds: publishedCurrencyDraftIds.size,
+            taskingRequestIds: publishedTaskingRequestIds.size,
+            sctRequestIds: publishedSctRequestIdsFromEvents.size,
+        });
 
         const nextPublishedSchedulesForPublish: Record<string, ScheduleEvent[]> = {
             ...publishedSchedulesRef.current,
@@ -50697,6 +50784,10 @@ const App: React.FC = () => {
             ...prev,
             [publishedSnapshotKey]: currentAircraftConfigState,
         }));
+        markPublishTrace('update-published-state', {
+            snapshotKey: publishedSnapshotKey,
+            publishEventCount: newEventsForDate.length,
+        });
 
         // NEW APPROACH: Sync training reports with Active DFP after publish
         logRoutineAppDebug('\u{1F4CB} Triggering training report sync after publish...');
@@ -50734,6 +50825,12 @@ const App: React.FC = () => {
             `DFP published for ${buildDfpDate}`,
             `Published by: ${publishedBy}; Total events: ${newEventsForDate.length}; Flight: ${newEventsForDate.filter(e => e.type === 'flight').length}; ${resourceDisplayNames.ftd}: ${newEventsForDate.filter(e => e.type === 'ftd').length}; Ground: ${newEventsForDate.filter(e => e.type === 'ground').length}`
         );
+        markPublishTrace('audit-log-and-baseline-prep', {
+            publishedBy,
+            flightCount: newEventsForDate.filter(e => e.type === 'flight').length,
+            ftdCount: newEventsForDate.filter(e => e.type === 'ftd').length,
+            groundCount: newEventsForDate.filter(e => e.type === 'ground').length,
+        });
 
         // ── SAVE DAILY SNAPSHOT TO DATABASE ──────────────────────────────────
         // Guard: skip if any event is seed data
@@ -50772,8 +50869,23 @@ const App: React.FC = () => {
                     }
                 });
             });
+            markPublishTrace('build-staff-logbook-map', {
+                publishedDateCount: Object.keys(allPublishedForLogbook).length,
+                logbookInstructorCount: Object.keys(staffLogbookMap).length,
+                logbookEntryCount: Object.values(staffLogbookMap).reduce((total, entries) => total + (Array.isArray(entries) ? entries.length : 0), 0),
+            });
 
 	            const snapshotContext = buildDailySnapshotContext(buildDfpDate, newEventsForDate, staffLogbookMap);
+            markPublishTrace('build-daily-snapshot-context', {
+                traineeProfileCount: Array.isArray(snapshotContext.traineeProfiles) ? snapshotContext.traineeProfiles.length : 0,
+                staffProfileCount: Array.isArray(snapshotContext.staffProfiles) ? snapshotContext.staffProfiles.length : 0,
+                courseCount: Array.isArray(snapshotContext.courseState) ? snapshotContext.courseState.length : 0,
+                masterLmpCount: Array.isArray(snapshotContext.masterLmpState) ? snapshotContext.masterLmpState.length : 0,
+                eventCompletionCount: Array.isArray(snapshotContext.eventCompletions) ? snapshotContext.eventCompletions.length : 0,
+                trainingReportKeys: snapshotContext.trainingReportState && typeof snapshotContext.trainingReportState === 'object'
+                    ? Object.keys(snapshotContext.trainingReportState).length
+                    : 0,
+            });
 
 	            const snapshotKey = getDailySnapshotKey(buildDfpDate);
 	            const existingAlertsDataForDate = alertsDataByDate[buildDfpDate];
@@ -50806,6 +50918,13 @@ const App: React.FC = () => {
                     ? { alertsData: existingAlertsDataForDate }
                     : {}),
             };
+            markPublishTrace('assemble-snapshot-payload', {
+                snapshotKey,
+                scheduleEventCount: newEventsForDate.length,
+                staffEventCount: staffEventsForDate.length,
+                traineeEventCount: traineeEventsForDate.length,
+                hasAlertsData: !!(existingAlertsDataForDate && Object.keys(existingAlertsDataForDate).length > 0),
+            });
 
             const apiBase = getApiBaseUrl();
             // Publish is authoritative for this date immediately. Mark the snapshot
@@ -50825,13 +50944,39 @@ const App: React.FC = () => {
                 ].filter((key, index, keys) => key && keys.indexOf(key) === index),
             };
             cacheDailySnapshot(snapshotKey, snapshotPayload, buildDfpDate);
+            markPublishTrace('prime-local-snapshot-cache', {
+                snapshotKeysForDate: snapshotKeysByDateRef.current[buildDfpDate]?.length || 0,
+            });
             try {
+                const snapshotPayloadJson = JSON.stringify(snapshotPayload);
+                markPublishTrace('stringify-snapshot-payload', {
+                    payloadBytes: new Blob([snapshotPayloadJson]).size,
+                    payloadChars: snapshotPayloadJson.length,
+                });
                 const saveResponse = await fetch(`${apiBase}/daily-snapshot/save`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(snapshotPayload),
+                    body: snapshotPayloadJson,
+                });
+                markPublishTrace('post-daily-snapshot-save', {
+                    httpStatus: saveResponse.status,
+                    ok: saveResponse.ok,
                 });
                 const result = await saveResponse.json().catch(() => ({}));
+                markPublishTrace('parse-daily-snapshot-save-response', {
+                    success: result?.success === true,
+                    serverTotalDurationMs: result?.totalDurationMs ?? null,
+                    serverTimingCount: Array.isArray(result?.publishTimings) ? result.publishTimings.length : 0,
+                    archiveDurationMs: result?.archive?.durationMs ?? null,
+                    archiveEventCount: result?.archive?.eventCount ?? null,
+                    archivePruneQueued: result?.archivePrune?.queued === true,
+                });
+                publishTrace.server = {
+                    totalDurationMs: result?.totalDurationMs ?? null,
+                    publishTimings: Array.isArray(result?.publishTimings) ? result.publishTimings : [],
+                    archive: result?.archive || null,
+                    archivePrune: result?.archivePrune || null,
+                };
                 if (!saveResponse.ok || !result.success) {
                     throw new Error(result.error || result.details || `Snapshot save failed with HTTP ${saveResponse.status}`);
                 }
@@ -50839,7 +50984,13 @@ const App: React.FC = () => {
                 // Mark this date as loaded so loadSnapshotForDate won't overwrite it on navigation
                 loadedSnapshotDates.current.add(snapshotKey);
                 cacheDailySnapshot(snapshotKey, snapshotPayload, buildDfpDate);
+                markPublishTrace('publish-save-complete-cache-refresh', {
+                    snapshotKey,
+                });
             } catch (err) {
+                finishPublishTrace('error', {
+                    error: err instanceof Error ? err.message : String(err),
+                });
                 console.warn(`\u26A0\uFE0F [Snapshot] Could not save daily snapshot for ${buildDfpDate}:`, err);
                 await showDarkAlert(
                     `The DFP was built, but it was not saved to the published DFP database.\n\n${err instanceof Error ? err.message : String(err)}\n\nDo not hard refresh yet. Try Publish again, then confirm the save succeeds.`,
@@ -50849,6 +51000,9 @@ const App: React.FC = () => {
                 return;
             }
         } else if (hasSeedData) {
+            finishPublishTrace('blocked-seed-data', {
+                eventCount: newEventsForDate.length,
+            });
             logRoutineAppDebug(`\u26A0\uFE0F [Snapshot] Skipped saving seed data for ${buildDfpDate}`);
             await showDarkAlert(
                 'This DFP contains setup-only events, so it was not saved as a real published DFP.',
@@ -50863,6 +51017,10 @@ const App: React.FC = () => {
         setNextDayBuildEvents([]);
         setActiveView('Program Schedule');
         setSuccessMessage('DFP Successfully Published!');
+        finishPublishTrace('success', {
+            finalEventCount: newEventsForDate.length,
+            targetView: 'Program Schedule',
+        });
     };
 
 
@@ -61276,6 +61434,23 @@ appliedUpdates.forEach(update => {
                         </button>
 	                </div>
 	            )}
+
+        {isAuthenticated && lastDfpPublishTrace && (
+            <div className="fixed bottom-[238px] right-[18px] z-[50] flex w-[75px] flex-col items-stretch gap-px rounded border border-emerald-700/50 bg-gray-900/75 px-1 py-1 text-center text-[10px] text-gray-300 shadow-sm backdrop-blur-sm select-none">
+                <div className="flex items-center justify-center gap-1" title={`Last publish trace: ${lastDfpPublishTrace?.status || 'recorded'}`}>
+                    <span className={`h-1.5 w-1.5 rounded-full ${lastDfpPublishTrace?.status === 'success' ? 'bg-emerald-400' : 'bg-amber-400'}`}></span>
+                    <span>Publish</span>
+                </div>
+                <button
+                    type="button"
+                    onClick={() => downloadDfpPublishTrace('dfp-publish-trace')}
+                    className="rounded border border-emerald-500/50 px-1.5 py-0.5 text-emerald-200 transition-colors hover:border-emerald-400 hover:text-white"
+                    title="Download DFP publish timing trace"
+                >
+                    Trace
+                </button>
+            </div>
+        )}
 
         {/* Live sync control - keeps mobile/iOS-originated changes visible without forcing it on low-data links */}
         {isAuthenticated && ['Program Schedule', 'InstructorSchedule', 'TraineeSchedule', 'NextDayBuild', 'NextDayInstructorSchedule', 'NextDayTraineeSchedule'].includes(activeView) && (
