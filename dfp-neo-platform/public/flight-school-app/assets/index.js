@@ -11918,53 +11918,6 @@ const getHeaderDisplayName = (authUser) => {
   return stripCourseDetailsFromHeaderName(authUser.displayName || authUser.userId) || authUser.userId;
 };
 const normaliseContextLocation = (value) => String(value || "").trim().toUpperCase();
-const OPERATIONAL_CONTEXT_TRACE_STORAGE_KEY$1 = "neo_operational_context_trace";
-const appendOperationalContextTrace$1 = (stage, details = {}) => {
-  if (typeof window === "undefined") return;
-  const entry = {
-    ts: (/* @__PURE__ */ new Date()).toISOString(),
-    stage,
-    storageScope: String(window.location?.host || window.location?.hostname || "local").trim().toLowerCase(),
-    details
-  };
-  try {
-    const existing = JSON.parse(window.localStorage.getItem(OPERATIONAL_CONTEXT_TRACE_STORAGE_KEY$1) || "[]");
-    const next = [...Array.isArray(existing) ? existing : [], entry].slice(-250);
-    window.localStorage.setItem(OPERATIONAL_CONTEXT_TRACE_STORAGE_KEY$1, JSON.stringify(next));
-    window.neoOperationalContextTrace = next;
-  } catch {
-    try {
-      window.localStorage.setItem(OPERATIONAL_CONTEXT_TRACE_STORAGE_KEY$1, JSON.stringify([entry]));
-      window.neoOperationalContextTrace = [entry];
-    } catch {
-    }
-  }
-};
-const downloadOperationalContextTrace = () => {
-  if (typeof window === "undefined" || typeof document === "undefined") return;
-  const raw = window.localStorage.getItem(OPERATIONAL_CONTEXT_TRACE_STORAGE_KEY$1) || "[]";
-  let parsed = [];
-  try {
-    parsed = JSON.parse(raw);
-  } catch {
-    parsed = [{ parseError: true, raw }];
-  }
-  const payload = {
-    generatedAt: (/* @__PURE__ */ new Date()).toISOString(),
-    url: window.location.href,
-    userAgent: window.navigator.userAgent,
-    trace: parsed
-  };
-  const blob = new Blob([JSON.stringify(payload, null, 2)], { type: "application/json" });
-  const url = URL.createObjectURL(blob);
-  const anchor = document.createElement("a");
-  anchor.href = url;
-  anchor.download = `operational-context-trace-${(/* @__PURE__ */ new Date()).toISOString().replace(/[:.]/g, "-")}.json`;
-  document.body.appendChild(anchor);
-  anchor.click();
-  anchor.remove();
-  URL.revokeObjectURL(url);
-};
 const Header = ({
   onAddTile,
   onAddGroundEvent,
@@ -12027,25 +11980,6 @@ const Header = ({
     setPermissionNoticeRect(anchor.getBoundingClientRect());
   };
   const pushSetupTestHeaderDiag = (stage, details = {}) => {
-    appendOperationalContextTrace$1(`header:${stage}`, {
-      activeLocation,
-      activeUnit,
-      hoveredContextLocation,
-      activeContextOption: activeContextOption ? {
-        location: activeContextOption.location,
-        units: activeContextOption.units.map(
-          (unit) => typeof unit === "string" ? { code: unit, disabled: false } : { code: unit.code, disabled: unit.disabled === true, disabledReason: unit.disabledReason || "" }
-        )
-      } : null,
-      hoveredContext: hoveredContext ? {
-        location: hoveredContext.location,
-        units: hoveredContext.units.map(
-          (unit) => typeof unit === "string" ? { code: unit, disabled: false } : { code: unit.code, disabled: unit.disabled === true, disabledReason: unit.disabledReason || "" }
-        )
-      } : null,
-      contextOptionCount: contextOptions.length,
-      details
-    });
     if (typeof window === "undefined") return;
     const isSetupTest = new URLSearchParams(window.location.search).has("setupTest");
     if (!isSetupTest) return;
@@ -12142,68 +12076,54 @@ const Header = ({
             ]
           }
         ),
-        showContextMenu && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "absolute left-0 top-9 z-[130] overflow-visible rounded-md border border-gray-600 bg-gray-800 shadow-2xl", role: "menu", children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex", children: [
-            /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "w-[96px] border-r border-gray-700 py-1", children: contextOptions.map((option) => /* @__PURE__ */ jsxRuntimeExports.jsxs(
-              "button",
-              {
-                type: "button",
-                onMouseEnter: () => setHoveredContextLocation(option.location),
-                onFocus: () => setHoveredContextLocation(option.location),
-                onClick: () => {
-                  setHoveredContextLocation(option.location);
-                  pushSetupTestHeaderDiag("hover-location-click", { location: option.location });
-                },
-                className: `flex h-8 w-full items-center justify-between px-3 text-left text-sm font-semibold ${normaliseContextLocation(option.location) === normaliseContextLocation(hoveredContextLocation) ? "bg-sky-700 text-white" : "text-gray-200 hover:bg-gray-700"}`,
-                children: [
-                  /* @__PURE__ */ jsxRuntimeExports.jsx("span", { children: option.location }),
-                  /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-[10px] text-gray-300", children: ">" })
-                ]
-              },
-              option.location
-            )) }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "w-[136px] py-1", children: (hoveredContext?.units || []).map((unit) => {
-              const unitCode = typeof unit === "string" ? unit : unit.code;
-              const isDisabledUnit = typeof unit === "string" ? false : unit.disabled === true;
-              const disabledReason = typeof unit === "string" ? "" : unit.disabledReason;
-              return /* @__PURE__ */ jsxRuntimeExports.jsx(
-                "button",
-                {
-                  type: "button",
-                  "aria-disabled": isDisabledUnit,
-                  title: disabledReason || void 0,
-                  onClick: () => {
-                    pushSetupTestHeaderDiag("select-context-click", {
-                      selectedLocation: hoveredContext?.location || "",
-                      selectedUnit: unitCode,
-                      isDisabledUnit,
-                      disabledReason
-                    });
-                    if (isDisabledUnit) return;
-                    if (!hoveredContext?.location) return;
-                    onContextChange(hoveredContext.location, unitCode);
-                    setShowContextMenu(false);
-                  },
-                  className: `h-8 w-full px-3 text-left text-sm font-semibold ${normaliseContextLocation(hoveredContext?.location) === normaliseContextLocation(activeLocation) && unitCode === activeUnit ? "bg-sky-600 text-white" : isDisabledUnit ? "cursor-not-allowed text-gray-500 opacity-60" : "text-gray-200 hover:bg-gray-700"}`,
-                  children: unitCode
-                },
-                `${hoveredContext?.location}-${unitCode}`
-              );
-            }) })
-          ] }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "border-t border-gray-700 p-1", children: /* @__PURE__ */ jsxRuntimeExports.jsx(
+        showContextMenu && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "absolute left-0 top-9 z-[130] overflow-visible rounded-md border border-gray-600 bg-gray-800 shadow-2xl", role: "menu", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex", children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "w-[96px] border-r border-gray-700 py-1", children: contextOptions.map((option) => /* @__PURE__ */ jsxRuntimeExports.jsxs(
             "button",
             {
               type: "button",
+              onMouseEnter: () => setHoveredContextLocation(option.location),
+              onFocus: () => setHoveredContextLocation(option.location),
               onClick: () => {
-                pushSetupTestHeaderDiag("download-trace-click", {});
-                downloadOperationalContextTrace();
+                setHoveredContextLocation(option.location);
+                pushSetupTestHeaderDiag("hover-location-click", { location: option.location });
               },
-              className: "h-8 w-full rounded bg-sky-600 px-2 text-left text-[11px] font-bold text-white hover:bg-sky-500",
-              children: "Download Context Trace"
-            }
-          ) })
-        ] })
+              className: `flex h-8 w-full items-center justify-between px-3 text-left text-sm font-semibold ${normaliseContextLocation(option.location) === normaliseContextLocation(hoveredContextLocation) ? "bg-sky-700 text-white" : "text-gray-200 hover:bg-gray-700"}`,
+              children: [
+                /* @__PURE__ */ jsxRuntimeExports.jsx("span", { children: option.location }),
+                /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-[10px] text-gray-300", children: ">" })
+              ]
+            },
+            option.location
+          )) }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "w-[136px] py-1", children: (hoveredContext?.units || []).map((unit) => {
+            const unitCode = typeof unit === "string" ? unit : unit.code;
+            const isDisabledUnit = typeof unit === "string" ? false : unit.disabled === true;
+            const disabledReason = typeof unit === "string" ? "" : unit.disabledReason;
+            return /* @__PURE__ */ jsxRuntimeExports.jsx(
+              "button",
+              {
+                type: "button",
+                "aria-disabled": isDisabledUnit,
+                title: disabledReason || void 0,
+                onClick: () => {
+                  pushSetupTestHeaderDiag("select-context-click", {
+                    selectedLocation: hoveredContext?.location || "",
+                    selectedUnit: unitCode,
+                    isDisabledUnit,
+                    disabledReason
+                  });
+                  if (isDisabledUnit) return;
+                  if (!hoveredContext?.location) return;
+                  onContextChange(hoveredContext.location, unitCode);
+                  setShowContextMenu(false);
+                },
+                className: `h-8 w-full px-3 text-left text-sm font-semibold ${normaliseContextLocation(hoveredContext?.location) === normaliseContextLocation(activeLocation) && unitCode === activeUnit ? "bg-sky-600 text-white" : isDisabledUnit ? "cursor-not-allowed text-gray-500 opacity-60" : "text-gray-200 hover:bg-gray-700"}`,
+                children: unitCode
+              },
+              `${hoveredContext?.location}-${unitCode}`
+            );
+          }) })
+        ] }) })
       ] }) }),
       /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex-1 flex items-center justify-center", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center", style: { gap: "1px" }, children: [
         /* @__PURE__ */ jsxRuntimeExports.jsx(
@@ -125289,7 +125209,6 @@ const createLmpOrderKey = (index) => String(index + 1).padStart(5, "0");
 const REMEDIAL_EARLIEST_START = 10;
 const REMEDIAL_FORCE_SCHEDULE_STORAGE_KEY = "neo_remedial_force_schedule_requests";
 const ACTIVE_OPERATIONAL_CONTEXT_STORAGE_KEY = "dfp_active_operational_context";
-const OPERATIONAL_CONTEXT_TRACE_STORAGE_KEY = "neo_operational_context_trace";
 const INITIAL_SETUP_WIZARD_LOCAL_STORAGE_KEYS = [
   "dfp-initial-setup-wizard-step",
   "dfp-initial-setup-wizard-organisation-draft",
@@ -125317,27 +125236,6 @@ const buildOperationalContextPayload = (location, unit, source) => ({
   storageScope: getBrowserDeploymentStorageScope(),
   updatedAt: (/* @__PURE__ */ new Date()).toISOString()
 });
-const appendOperationalContextTrace = (stage, details = {}) => {
-  if (typeof window === "undefined") return;
-  const entry = {
-    ts: (/* @__PURE__ */ new Date()).toISOString(),
-    stage,
-    storageScope: getBrowserDeploymentStorageScope(),
-    details
-  };
-  try {
-    const existing = JSON.parse(window.localStorage.getItem(OPERATIONAL_CONTEXT_TRACE_STORAGE_KEY) || "[]");
-    const next = [...Array.isArray(existing) ? existing : [], entry].slice(-250);
-    window.localStorage.setItem(OPERATIONAL_CONTEXT_TRACE_STORAGE_KEY, JSON.stringify(next));
-    window.neoOperationalContextTrace = next;
-  } catch {
-    try {
-      window.localStorage.setItem(OPERATIONAL_CONTEXT_TRACE_STORAGE_KEY, JSON.stringify([entry]));
-      window.neoOperationalContextTrace = [entry];
-    } catch {
-    }
-  }
-};
 const buildHighestPriorityEventsStorageKey = (locationCode, unitCode) => `${HIGHEST_PRIORITY_EVENTS_STORAGE_PREFIX}:${String(locationCode || "UNKNOWN").trim().toUpperCase()}:${String(unitCode || "UNKNOWN").trim().toUpperCase()}`;
 const loadHighestPriorityEventsFromStorage = (storageKey) => {
   try {
@@ -142396,50 +142294,22 @@ const App = () => {
     () => filterUnitsForPlatformAccess(getUnitOptionsForLocation(school)),
     [filterUnitsForPlatformAccess, getUnitOptionsForLocation, school]
   );
-  const summariseContextUnitOption = reactExports.useCallback((unit) => ({
-    code: String(unit?.code || unit || "").trim(),
-    disabled: typeof unit === "string" ? false : unit?.disabled === true,
-    disabledReason: typeof unit === "string" ? "" : String(unit?.disabledReason || ""),
-    memberUnits: Array.isArray(unit?.memberUnits) ? unit.memberUnits : [],
-    isSharedFleetContext: unit?.isSharedFleetContext === true,
-    model: unit?.model || null
-  }), []);
   reactExports.useEffect(() => {
     if (!platformConfigLoaded) {
-      appendOperationalContextTrace("app:active-unit-guard:skip-platform-not-loaded", {
-        school,
-        activeUnitCode
-      });
       return;
     }
     if (activeLocationUnitOptions.length === 0) {
-      appendOperationalContextTrace("app:active-unit-guard:skip-no-options", {
-        school,
-        activeUnitCode
-      });
       return;
     }
     const activeUnitOption = activeLocationUnitOptions.find((unit) => unit.code === activeUnitCode);
     if (!activeUnitCode) {
       const preferredSharedContext = activeLocationUnitOptions.find((unit) => unit?.isSharedFleetContext === true && unit.disabled !== true);
       if (preferredSharedContext?.code) {
-        appendOperationalContextTrace("app:active-unit-guard:set-preferred-shared-context", {
-          school,
-          previousUnit: activeUnitCode,
-          nextUnit: preferredSharedContext.code,
-          options: activeLocationUnitOptions.map(summariseContextUnitOption)
-        });
         setActiveUnitCode(preferredSharedContext.code);
         return;
       }
       const firstEnabledUnit = activeLocationUnitOptions.find((unit) => unit.disabled !== true) || activeLocationUnitOptions[0];
       if (firstEnabledUnit?.code) {
-        appendOperationalContextTrace("app:active-unit-guard:set-first-enabled-unit", {
-          school,
-          previousUnit: activeUnitCode,
-          nextUnit: firstEnabledUnit.code,
-          options: activeLocationUnitOptions.map(summariseContextUnitOption)
-        });
         setActiveUnitCode(firstEnabledUnit.code);
         return;
       }
@@ -142448,52 +142318,27 @@ const App = () => {
     if (!activeUnitOption || activeUnitOption.disabled) {
       const matchingSharedContext = activeLocationUnitOptions.find((unit) => unit?.isSharedFleetContext === true && unit.disabled !== true && Array.isArray(unit.memberUnits) && unit.memberUnits.map((memberUnit) => String(memberUnit || "").trim().toUpperCase()).includes(String(activeUnitCode || "").trim().toUpperCase()));
       if (matchingSharedContext?.code) {
-        appendOperationalContextTrace("app:active-unit-guard:replace-with-shared-context", {
-          school,
-          rejectedUnit: activeUnitCode,
-          nextUnit: matchingSharedContext.code,
-          activeUnitOption: activeUnitOption ? summariseContextUnitOption(activeUnitOption) : null,
-          options: activeLocationUnitOptions.map(summariseContextUnitOption)
-        });
         setActiveUnitCode(matchingSharedContext.code);
         return;
       }
       if (String(activeUnitCode || "").includes("+") && !organisationSettings.fleetSharingEnabled) {
-        appendOperationalContextTrace("app:active-unit-guard:keep-combined-unit-while-sharing-disabled", {
-          school,
-          activeUnitCode
-        });
         return;
       }
       if (setupTestProfile && activeUnitCode) {
         const matchingLocationForActiveUnit = baseSelectableLocationCodes.find((locationCode) => String(locationCode || "").trim().toUpperCase() !== String(school || "").trim().toUpperCase() && getUnitOptionsForLocation(locationCode).some((unit) => unit.code === activeUnitCode && unit.disabled !== true));
         if (matchingLocationForActiveUnit) {
-          appendOperationalContextTrace("app:active-unit-guard:switch-location-for-unit", {
-            previousSchool: school,
-            nextSchool: matchingLocationForActiveUnit,
-            activeUnitCode
-          });
           setSchool(matchingLocationForActiveUnit);
           return;
         }
       }
       const nextUnitCode = "";
-      appendOperationalContextTrace("app:active-unit-guard:clear-invalid-unit", {
-        school,
-        rejectedUnit: activeUnitCode,
-        activeUnitOption: activeUnitOption ? summariseContextUnitOption(activeUnitOption) : null,
-        options: activeLocationUnitOptions.map(summariseContextUnitOption)
-      });
       setActiveUnitCode(nextUnitCode);
     }
-  }, [activeLocationUnitOptions, activeUnitCode, baseSelectableLocationCodes, getUnitOptionsForLocation, organisationSettings.fleetSharingEnabled, platformConfigLoaded, school, setupTestProfile, summariseContextUnitOption]);
+  }, [activeLocationUnitOptions, activeUnitCode, baseSelectableLocationCodes, getUnitOptionsForLocation, organisationSettings.fleetSharingEnabled, platformConfigLoaded, school, setupTestProfile]);
   reactExports.useEffect(() => {
     try {
       const payload = buildOperationalContextPayload(school, activeUnitCode, "state-sync");
       localStorage.setItem(ACTIVE_OPERATIONAL_CONTEXT_STORAGE_KEY, JSON.stringify(payload));
-      appendOperationalContextTrace("app:state-sync", {
-        payload
-      });
     } catch (error) {
     }
   }, [school, activeUnitCode]);
@@ -143372,10 +143217,6 @@ const App = () => {
     if (!platformAccessContext.isConfigured || hasRuntimePlatformWideAccess || platformAccessContext.hasAllUnitAccess) return;
     if (operationalContextOptions.length === 0) {
       if (activeUnitCode) {
-        appendOperationalContextTrace("app:access-guard:clear-no-context-options", {
-          school,
-          activeUnitCode
-        });
         setActiveUnitCode("");
       }
       return;
@@ -143385,25 +143226,6 @@ const App = () => {
     if (currentUnitAllowed) return;
     const nextLocationOption = currentLocationOption || operationalContextOptions[0];
     const nextUnit = nextLocationOption?.units?.find((unit) => unit.disabled !== true) || nextLocationOption?.units?.[0];
-    appendOperationalContextTrace("app:access-guard:redirect-context", {
-      previousSchool: school,
-      previousUnit: activeUnitCode,
-      currentLocationOption: currentLocationOption ? {
-        location: currentLocationOption.location,
-        units: currentLocationOption.units.map(summariseContextUnitOption)
-      } : null,
-      nextSchool: nextLocationOption?.location || "",
-      nextUnit: nextUnit?.code || "",
-      operationalContextOptions: operationalContextOptions.map((option) => ({
-        location: option.location,
-        units: option.units.map(summariseContextUnitOption)
-      })),
-      accessContext: {
-        isConfigured: platformAccessContext.isConfigured,
-        hasAllUnitAccess: platformAccessContext.hasAllUnitAccess,
-        hasRuntimePlatformWideAccess
-      }
-    });
     if (nextLocationOption?.location && String(nextLocationOption.location || "").trim().toUpperCase() !== String(school || "").trim().toUpperCase()) {
       setSchool(nextLocationOption.location);
     }
@@ -143415,8 +143237,7 @@ const App = () => {
     platformAccessContext.hasAllUnitAccess,
     platformAccessContext.isConfigured,
     platformConfigLoaded,
-    school,
-    summariseContextUnitOption
+    school
   ]);
   const initialSetupWizardCompletedAtStorageKey2 = "dfp-initial-setup-wizard-completed-at";
   const hasStoredInitialSetupWizardProgress = reactExports.useCallback(() => {
@@ -145669,17 +145490,6 @@ ${error instanceof Error ? error.message : String(error)}`,
               })),
               reason: "Fallback snapshot unit is not a valid selectable context for the current settings."
             });
-            appendOperationalContextTrace("app:snapshot-admin-fallback-not-adopted", {
-              targetDate,
-              requestedSnapshotKey: snapshotKey,
-              resolvedSnapshotKey,
-              requestedSchool: snapshotSchool,
-              requestedUnit: snapshotUnit,
-              resolvedSchool,
-              resolvedUnit,
-              allowAdminFallbackContext,
-              reason: allowAdminFallbackContext ? "Fallback snapshot unit is not a valid selectable context for the current settings." : "Strict context load suppressed admin/generic snapshot fallback adoption."
-            });
           }
           const eventCount = applyDailySnapshot(
             targetDate,
@@ -145693,17 +145503,6 @@ ${error instanceof Error ? error.message : String(error)}`,
           loadedSnapshotDates.current.add(snapshotKey);
           if (isAdminContextFallback && canAdoptAdminFallbackContext && eventCount > 0) {
             const fallbackPayload = buildOperationalContextPayload(resolvedSchool, resolvedUnit, "snapshot-fallback");
-            appendOperationalContextTrace("app:snapshot-admin-fallback-adopted", {
-              targetDate,
-              requestedSnapshotKey: snapshotKey,
-              resolvedSnapshotKey,
-              previousSchool: school,
-              previousUnit: activeUnitCode,
-              nextSchool: resolvedSchool,
-              nextUnit: resolvedUnit,
-              allowAdminFallbackContext,
-              eventCount
-            });
             setSchool(resolvedSchool);
             setActiveUnitCode(resolvedUnit);
             try {
@@ -153105,24 +152904,8 @@ ${error instanceof Error ? error.message : String(error)}`,
   const persistOperationalContextSelection = (location, unit, source) => {
     try {
       const payload = buildOperationalContextPayload(location, unit, source);
-      const previousStoredContext = localStorage.getItem(ACTIVE_OPERATIONAL_CONTEXT_STORAGE_KEY);
       localStorage.setItem(ACTIVE_OPERATIONAL_CONTEXT_STORAGE_KEY, JSON.stringify(payload));
-      appendOperationalContextTrace("app:persist-selection", {
-        source,
-        previousStoredContext,
-        payload,
-        currentStateBeforeSet: {
-          school,
-          activeUnitCode
-        }
-      });
     } catch (error) {
-      appendOperationalContextTrace("app:persist-selection:error", {
-        source,
-        location,
-        unit,
-        error: error instanceof Error ? error.message : String(error)
-      });
     }
   };
   const changeSchool = (newSchool) => {
@@ -153137,12 +152920,6 @@ ${error instanceof Error ? error.message : String(error)}`,
     void loadSnapshotForDate(date, { force: true, replace: true, schoolOverride: newSchool, unitOverride: nextUnit, allowAdminFallbackContext: false });
   };
   const changeOperationalContext = (newSchool, newUnit) => {
-    appendOperationalContextTrace("app:change-operational-context:start", {
-      previousSchool: school,
-      previousUnit: activeUnitCode,
-      requestedSchool: newSchool,
-      requestedUnit: newUnit
-    });
     persistOperationalContextSelection(newSchool, newUnit, "changeOperationalContext");
     setSchool(newSchool);
     setActiveUnitCode(newUnit);
