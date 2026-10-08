@@ -9973,6 +9973,7 @@ interface DfpConfig {
   availableAircraftCount: number;
   ftdCount: number;
   cptCount: number;
+  groundCount?: number;
   showDutySupervisorRow?: boolean;
   showTowerDutyInstructorRow?: boolean;
   courseColors: { [key: string]: string };
@@ -10948,6 +10949,7 @@ async function generateDfpInternal(
     const buildGroundEventSchedulingSettings = normaliseGroundEventSchedulingSettings(
         config.groundEventSchedulingSettings || DEFAULT_GROUND_EVENT_SCHEDULING_SETTINGS
     );
+    const buildGroundCount = Math.max(0, Math.floor(Number(config.groundCount ?? 6) || 6));
     const buildCrewPositionTerminology = normaliseCrewPositionTerminology(config.crewPositionTerminology || null);
     const buildAircraftCrewComposition = normaliseAircraftCrewComposition(config.aircraftCrewComposition || { crewCount: 1, seats: [{ id: 'seat-1', role: 'Pilot', eligibleRoles: ['Pilot'] }] });
     const getBuildAircraftCrewCompositionForEvent = (event?: { type?: string; resourceId?: string } | null): AircraftCrewComposition => (
@@ -12162,7 +12164,7 @@ async function generateDfpInternal(
                 aircraft: availableAircraftCount,
                 ftd: ftdCount,
                 cpt: cptCount,
-                ground: 6,
+                ground: buildGroundCount,
                 aircraftConfigCapacities: config.aircraftConfigCapacities || null,
                 aircraftConfigIdsByResource,
                 aircraftConfigurationDefinitions: aircraftConfigDefinitionsForBuild,
@@ -12184,7 +12186,7 @@ async function generateDfpInternal(
                     aircraft: availableAircraftCount,
                     ftd: ftdCount,
                     cpt: cptCount,
-                    ground: 6,
+                    ground: buildGroundCount,
                 },
                 runtimeResourceContext: config.runtimeResourceContext || null,
                 staffSharing: {
@@ -13640,7 +13642,7 @@ async function generateDfpInternal(
                             : eventType === 'cpt'
                                 ? Array.from({ length: cptCount }, (_, index) => `CPT ${index + 1}`)
                                 : eventType === 'ground'
-                                    ? Array.from({ length: configuredGroundCount }, (_, index) => `Ground ${index + 1}`)
+                                    ? Array.from({ length: buildGroundCount }, (_, index) => `Ground ${index + 1}`)
                                     : [];
                 const busyResources = new Set(generatedEvents
                     .filter(event => event.type === eventType && eventActiveAtMinute(event, minuteTime))
@@ -48951,6 +48953,7 @@ const App: React.FC = () => {
             availableAircraftCount: neoAvailableAircraftCount,
             ftdCount: configuredFtdCount,
             cptCount: configuredCptCount,
+            groundCount: configuredGroundCount,
             showDutySupervisorRow: configuredDutySupervisorRowEnabled,
             showTowerDutyInstructorRow: configuredTowerDutyInstructorRowEnabled,
             courseColors,

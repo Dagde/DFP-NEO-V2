@@ -126162,6 +126162,7 @@ async function generateDfpInternal(config, setProgress, publishedSchedules) {
   const buildGroundEventSchedulingSettings = normaliseGroundEventSchedulingSettings(
     config.groundEventSchedulingSettings || DEFAULT_GROUND_EVENT_SCHEDULING_SETTINGS
   );
+  const buildGroundCount = Math.max(0, Math.floor(Number(config.groundCount ?? 6) || 6));
   const buildCrewPositionTerminology = normaliseCrewPositionTerminology(config.crewPositionTerminology || null);
   const buildAircraftCrewComposition = normaliseAircraftCrewComposition(config.aircraftCrewComposition || { crewCount: 1, seats: [{ id: "seat-1", role: "Pilot", eligibleRoles: ["Pilot"] }] });
   const getBuildAircraftCrewCompositionForEvent = (event) => getAircraftCrewCompositionForEvent(buildAircraftCrewComposition, event);
@@ -127064,7 +127065,7 @@ async function generateDfpInternal(config, setProgress, publishedSchedules) {
         aircraft: availableAircraftCount,
         ftd: ftdCount,
         cpt: cptCount,
-        ground: 6,
+        ground: buildGroundCount,
         aircraftConfigCapacities: config.aircraftConfigCapacities || null,
         aircraftConfigIdsByResource,
         aircraftConfigurationDefinitions: aircraftConfigDefinitionsForBuild,
@@ -127086,7 +127087,7 @@ async function generateDfpInternal(config, setProgress, publishedSchedules) {
           aircraft: availableAircraftCount,
           ftd: ftdCount,
           cpt: cptCount,
-          ground: 6
+          ground: buildGroundCount
         },
         runtimeResourceContext: config.runtimeResourceContext || null,
         staffSharing: {
@@ -128330,7 +128331,7 @@ async function generateDfpInternal(config, setProgress, publishedSchedules) {
       });
       const resourceAvailabilityAtMinute = (minuteTime, eventType) => {
         const sampleEvent = fixedCrewQueue2.find((item) => item.event.type === eventType)?.event;
-        const resourceOptions = sampleEvent ? getFixedCrewResourceOptions(sampleEvent) : eventType === "flight" ? Array.from({ length: availableAircraftCount }, (_, index) => `${buildAircraftResourcePrefix} ${index + 1}`) : eventType === "ftd" ? Array.from({ length: ftdCount }, (_, index) => `FTD ${index + 1}`) : eventType === "cpt" ? Array.from({ length: cptCount }, (_, index) => `CPT ${index + 1}`) : eventType === "ground" ? Array.from({ length: configuredGroundCount }, (_, index) => `Ground ${index + 1}`) : [];
+        const resourceOptions = sampleEvent ? getFixedCrewResourceOptions(sampleEvent) : eventType === "flight" ? Array.from({ length: availableAircraftCount }, (_, index) => `${buildAircraftResourcePrefix} ${index + 1}`) : eventType === "ftd" ? Array.from({ length: ftdCount }, (_, index) => `FTD ${index + 1}`) : eventType === "cpt" ? Array.from({ length: cptCount }, (_, index) => `CPT ${index + 1}`) : eventType === "ground" ? Array.from({ length: buildGroundCount }, (_, index) => `Ground ${index + 1}`) : [];
         const busyResources = new Set(generatedEvents.filter((event) => event.type === eventType && eventActiveAtMinute(event, minuteTime)).map((event) => event.resourceId).filter(Boolean));
         const freeResources = resourceOptions.filter((resourceId) => !busyResources.has(resourceId));
         return {
@@ -146795,7 +146796,7 @@ ${error instanceof Error ? error.message : String(error)}`,
   const configuredFtdCount = getResourcePoolCount(activePlatformResourcePool, "ftd", availableFtdCount, resourceRowTargetDate);
   const configuredCptCount = getResourcePoolCount(activePlatformResourcePool, "cpt", availableCptCount, resourceRowTargetDate);
   const configuredStandbyCount = getResourcePoolCount(activePlatformResourcePool, "standby", 4, resourceRowTargetDate);
-  const configuredGroundCount2 = getResourcePoolCount(activePlatformResourcePool, "ground", 6, resourceRowTargetDate);
+  const configuredGroundCount = getResourcePoolCount(activePlatformResourcePool, "ground", 6, resourceRowTargetDate);
   const configuredDutySupervisorRowEnabled = getResourcePoolCount(activePlatformResourcePool, "dutySupervisor", 0, resourceRowTargetDate) > 0;
   const configuredTowerDutyInstructorRowEnabled = getResourcePoolCount(activePlatformResourcePool, "towerDutyInstructor", 0, resourceRowTargetDate) > 0;
   const hasConfiguredDfpResourceRowsForSelectedDate = reactExports.useMemo(() => {
@@ -146934,7 +146935,7 @@ ${error instanceof Error ? error.message : String(error)}`,
         ftd: configuredFtdCount,
         cpt: configuredCptCount,
         standby: configuredStandbyCount,
-        ground: configuredGroundCount2,
+        ground: configuredGroundCount,
         dutySupervisor: configuredDutySupervisorRowEnabled ? 1 : 0,
         towerDutyInstructor: configuredTowerDutyInstructorRowEnabled ? 1 : 0,
         targetDate: resourceRowTargetDate
@@ -146979,7 +146980,7 @@ ${error instanceof Error ? error.message : String(error)}`,
     configuredAirframeCount,
     configuredCptCount,
     configuredFtdCount,
-    configuredGroundCount2,
+    configuredGroundCount,
     configuredStandbyCount,
     configuredDutySupervisorRowEnabled,
     configuredTowerDutyInstructorRowEnabled,
@@ -148420,7 +148421,7 @@ ${"=".repeat(60)}`);
       ...Array.from({ length: stbyLineCount }, (_, i) => `STBY ${i + 1}`),
       ...Array.from({ length: configuredFtdCount }, (_, i) => `FTD ${i + 1}`),
       ...Array.from({ length: configuredCptCount }, (_, i) => `CPT ${i + 1}`),
-      ...Array.from({ length: configuredGroundCount2 }, (_, i) => `Ground ${i + 1}`)
+      ...Array.from({ length: configuredGroundCount }, (_, i) => `Ground ${i + 1}`)
     ];
     return allResources;
   }, [
@@ -148428,7 +148429,7 @@ ${"=".repeat(60)}`);
     configuredFtdCount,
     configuredCptCount,
     configuredStandbyCount,
-    configuredGroundCount2,
+    configuredGroundCount,
     configuredDutySupervisorRowEnabled,
     configuredTowerDutyInstructorRowEnabled,
     activeAircraftResourcePrefix,
@@ -148462,7 +148463,7 @@ ${"=".repeat(60)}`);
       configuredFtdCount,
       configuredCptCount,
       configuredStandbyCount,
-      configuredGroundCount: configuredGroundCount2,
+      configuredGroundCount,
       activePlatformResourcePool: activePlatformResourcePool ? {
         id: activePlatformResourcePool.id || null,
         code: activePlatformResourcePool.code || null,
@@ -148487,7 +148488,7 @@ ${"=".repeat(60)}`);
     configuredAirframeCount,
     configuredCptCount,
     configuredFtdCount,
-    configuredGroundCount2,
+    configuredGroundCount,
     configuredStandbyCount,
     hasIncompleteInitialSetupWizardProgress,
     hasInitialSetupWizardCompleted,
@@ -148598,7 +148599,7 @@ ${"=".repeat(60)}`);
         configuredStandbyCount,
         configuredFtdCount,
         configuredCptCount,
-        configuredGroundCount: configuredGroundCount2,
+        configuredGroundCount,
         activeAircraftResourcePrefix,
         activePlatformResourcePool: activePlatformResourcePool ? {
           id: activePlatformResourcePool.id || null,
@@ -148650,7 +148651,7 @@ ${"=".repeat(60)}`);
     configuredAirframeCount,
     configuredCptCount,
     configuredFtdCount,
-    configuredGroundCount2,
+    configuredGroundCount,
     configuredStandbyCount,
     dataSourceSettings,
     date,
@@ -157475,6 +157476,7 @@ The proposed event was not scheduled. Re-open the event and choose Accept Confli
       availableAircraftCount: neoAvailableAircraftCount,
       ftdCount: configuredFtdCount,
       cptCount: configuredCptCount,
+      groundCount: configuredGroundCount,
       showDutySupervisorRow: configuredDutySupervisorRowEnabled,
       showTowerDutyInstructorRow: configuredTowerDutyInstructorRowEnabled,
       courseColors,
@@ -160957,7 +160959,7 @@ ${error instanceof Error ? error.message : String(error)}`,
     return Object.fromEntries(entries);
   }, [addGroundTileTraineesByCourse, courseColors, scopedCourseColors]);
   const addGroundTileGroundResources = reactExports.useMemo(() => buildResources.filter((resourceId) => /^Ground\s+\d+$/i.test(String(resourceId || "").trim())), [buildResources]);
-  const addGroundTileClassroomOptions = reactExports.useMemo(() => buildClassroomResourceOptions(activePlatformResourcePool?.settings || {}, addGroundTileGroundResources.length || configuredGroundCount2), [activePlatformResourcePool?.settings, addGroundTileGroundResources.length, configuredGroundCount2]);
+  const addGroundTileClassroomOptions = reactExports.useMemo(() => buildClassroomResourceOptions(activePlatformResourcePool?.settings || {}, addGroundTileGroundResources.length || configuredGroundCount), [activePlatformResourcePool?.settings, addGroundTileGroundResources.length, configuredGroundCount]);
   const addGroundTileAcademicStandardEvents = reactExports.useMemo(() => normaliseAcademicStandardEvents(activePlatformResourcePool?.settings?.academicStandardEvents), [activePlatformResourcePool?.settings?.academicStandardEvents]);
   const getSettingsFocusAnchor = (value) => String(value).trim().toUpperCase().replace(/[^A-Z0-9_-]/g, "-");
   const handleNavigateToAcademicStandardEventsSettings = reactExports.useCallback(() => {
@@ -166637,7 +166639,7 @@ Do you want to replace the existing entry?`,
           ftd: configuredFtdCount,
           cpt: configuredCptCount,
           standby: configuredStandbyCount,
-          ground: configuredGroundCount2,
+          ground: configuredGroundCount,
           dutySupervisor: configuredDutySupervisorRowEnabled ? 1 : 0,
           towerDutyInstructor: configuredTowerDutyInstructorRowEnabled ? 1 : 0
         },
@@ -166669,7 +166671,7 @@ Do you want to replace the existing entry?`,
     configuredCptCount,
     configuredDutySupervisorRowEnabled,
     configuredFtdCount,
-    configuredGroundCount2,
+    configuredGroundCount,
     configuredStandbyCount,
     configuredTowerDutyInstructorRowEnabled,
     date,
