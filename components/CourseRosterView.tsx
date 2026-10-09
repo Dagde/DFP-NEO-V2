@@ -938,7 +938,7 @@ const CourseRosterView: React.FC<CourseRosterViewProps> = ({
                         setIsCreatingNew(false);
                         setNewTraineeTemplate(null);
                     }}
-                    onUpdateTrainee={isCreatingNew ? onAddTrainee : ((selectedTrainee as any)?._restoreReviewMode && onUpdateArchivedTrainee ? onUpdateArchivedTrainee : onUpdateTrainee)}
+                    onUpdateTrainee={isCreatingNew || (selectedTrainee as any)?._restoreCreatesNewRecord ? onAddTrainee : ((selectedTrainee as any)?._restoreReviewMode && (selectedTrainee as any)?._dataSource === 'archive' && onUpdateArchivedTrainee ? onUpdateArchivedTrainee : onUpdateTrainee)}
                     onRestoreReviewedTrainee={onRestoreReviewedTrainee}
                     onRequestDeleteTrainee={(trainee) => {
                         setSelectedTraineeForDeletion(trainee);

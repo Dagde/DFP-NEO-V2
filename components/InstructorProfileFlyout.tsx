@@ -400,10 +400,12 @@ export const InstructorProfileFlyout: React.FC<InstructorProfileFlyoutProps> = (
   canUsePlatformPermission,
   onOpenCurrentProfile,
 }) => {
+  const restoreReviewInitial = (instructor as any)._restoreReviewMode === true;
+  const restoreCreatesNewRecordInitial = restoreReviewInitial && (instructor as any)._restoreCreatesNewRecord === true;
   const continuationTerminology = useMemo(() => normaliseSctTerminology(sctTerminology), [sctTerminology]);
   const continuationShortLabel = continuationTerminology.shortLabel;
   const continuationLongLabel = continuationTerminology.longLabel;
-  const [isEditing, setIsEditing] = useState(isCreating);
+  const [isEditing, setIsEditing] = useState(isCreating || restoreReviewInitial);
     const { isFrozen } = useSystemFreeze();
   const [showAddUnavailability, setShowAddUnavailability] = useState(false);
   const canManageAccountAccess = ['ADMIN', 'SUPER_ADMIN'].includes(String(currentUserRole || '').trim().toUpperCase());
@@ -991,6 +993,14 @@ export const InstructorProfileFlyout: React.FC<InstructorProfileFlyoutProps> = (
   };
 
   const handleSave = async () => {
+    if (restoreCreatesNewRecordInitial) {
+      const confirmed = await showDarkConfirm(
+        `Restore ${name || 'this person'} as staff now?\n\nConfirm the profile details are up to date and correct before restoring.`,
+        'Confirm Restore',
+        'warning'
+      );
+      if (!confirmed) return;
+    }
     if (!name) { await showDarkAlert('Name is required.', 'Missing Staff Name', 'warning'); return; }
     if (!Number.isInteger(Number(idNumber)) || Number(idNumber) <= 0) {
       await showDarkAlert('Personnel ID is required before this staff record can be saved.', 'Missing Personnel ID', 'warning');
@@ -1182,7 +1192,7 @@ export const InstructorProfileFlyout: React.FC<InstructorProfileFlyoutProps> = (
       return;
     }
     setIsEditing(false);
-    if (isCreating) onClose();
+    if (isCreating || restoreCreatesNewRecordInitial) onClose();
   };
 
   const handleAddTodayOnly = () => {
@@ -1222,7 +1232,8 @@ export const InstructorProfileFlyout: React.FC<InstructorProfileFlyoutProps> = (
   // Month navigator: null = show all, 'YYYY-MM' for specific month
   const [logbookMonth, setLogbookMonth] = useState<string>(() => getProfileLogbookMonth(instructor));
   const isArchiveProfile = (instructor as any)._dataSource === 'archive';
-  const isRestoreReviewMode = isArchiveProfile && (instructor as any)._restoreReviewMode === true;
+  const isRestoreReviewMode = (instructor as any)._restoreReviewMode === true;
+  const restoreCreatesNewRecord = isRestoreReviewMode && (instructor as any)._restoreCreatesNewRecord === true;
   const isReadOnlyArchiveProfile = isArchiveProfile && !isRestoreReviewMode;
   const archivedLogbookEntries = useMemo(() => (
     Array.isArray((instructor as any).archivedLogbookEntries)
@@ -2675,7 +2686,7 @@ export const InstructorProfileFlyout: React.FC<InstructorProfileFlyoutProps> = (
                   setActiveTab(null);
                   handleEdit();
                 }} disabled={isFrozen || isReadOnlyArchiveProfile} aria-disabled={isReadOnlyArchiveProfile || !canUseStaffProfileAction('staff.profile.edit')} className={`${btnClass} ${!isReadOnlyArchiveProfile && canUseStaffProfileAction('staff.profile.edit') ? '' : 'cursor-not-allowed'}`}>Edit</button>
-                {isRestoreReviewMode && onRestoreReviewedInstructor && (
+                {isRestoreReviewMode && !restoreCreatesNewRecord && onRestoreReviewedInstructor && (
                   <button
                     onClick={async () => {
                       const confirmed = await showDarkConfirm(
@@ -2695,7 +2706,7 @@ export const InstructorProfileFlyout: React.FC<InstructorProfileFlyoutProps> = (
                 <button onClick={onClose} className={btnClass}>Close</button>
               </>)}
               {isEditing && (<>
-                <button onClick={handleSave} className={btnClass}>Save</button>
+                <button onClick={handleSave} className={btnClass}>{restoreCreatesNewRecord ? 'Restore' : 'Save'}</button>
                 <button onClick={handleCancel} className={btnClass}>Cancel</button>
               </>)}
             </div>

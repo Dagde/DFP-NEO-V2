@@ -54905,7 +54905,9 @@ const TraineeProfileFlyout = ({
   canUsePlatformPermission,
   onOpenCurrentProfile
 }) => {
-  const [isEditing, setIsEditing] = reactExports.useState(isCreating);
+  const restoreReviewInitial = trainee._restoreReviewMode === true;
+  const restoreCreatesNewRecordInitial = restoreReviewInitial && trainee._restoreCreatesNewRecord === true;
+  const [isEditing, setIsEditing] = reactExports.useState(isCreating || restoreReviewInitial);
   const { isFrozen } = useSystemFreeze();
   const [permissionNoticeRect, setPermissionNoticeRect] = reactExports.useState(null);
   const [showAddUnavailability, setShowAddUnavailability] = reactExports.useState(false);
@@ -55052,7 +55054,8 @@ const TraineeProfileFlyout = ({
   );
   const activeTrainingReportPhraseBank = getUnitTrainingReportPhraseBank(platformConfig, activeTrainingReportUnitCode, phraseBank);
   const isArchiveProfile = trainee._dataSource === "archive";
-  const isRestoreReviewMode = isArchiveProfile && trainee._restoreReviewMode === true;
+  const isRestoreReviewMode = trainee._restoreReviewMode === true;
+  const restoreCreatesNewRecord = isRestoreReviewMode && trainee._restoreCreatesNewRecord === true;
   const isReadOnlyArchiveProfile = isArchiveProfile && !isRestoreReviewMode;
   const archivedLogbookEntries = reactExports.useMemo(() => Array.isArray(trainee.archivedLogbookEntries) ? [...trainee.archivedLogbookEntries] : [], [trainee]);
   const logbookAsAtLabel = getProfileLogbookAsAtLabel$1(trainee, logbookMonth);
@@ -55961,6 +55964,16 @@ const TraineeProfileFlyout = ({
     }
   };
   const handleSave = async () => {
+    if (restoreCreatesNewRecordInitial) {
+      const confirmed = await showDarkConfirm(
+        `Restore ${name || "this person"} as a trainee now?
+
+Confirm the profile details are up to date and correct before restoring.`,
+        "Confirm Restore",
+        "warning"
+      );
+      if (!confirmed) return;
+    }
     if (!name || !course) {
       await showDarkAlert("Name and Course are required.", "Missing Trainee Details", "warning");
       return;
@@ -56067,7 +56080,7 @@ Confirm the Personnel ID, unit and course are correct before saving this separat
     setPhotoError(null);
     setPhotoLoadFailed(false);
     setIsEditing(false);
-    if (isCreating) {
+    if (isCreating || restoreCreatesNewRecordInitial) {
       onClose();
     }
   };
@@ -57623,7 +57636,7 @@ ${errorText || `HTTP ${response.status}`}`, "Delete Failed", "error");
               if (isReadOnlyArchiveProfile) return;
               setIsEditing(true);
             }, disabled: isFrozen || isReadOnlyArchiveProfile, "aria-disabled": isReadOnlyArchiveProfile || !canUseTraineeProfileAction("trainee.profile.edit"), className: `${btnClass} ${!isReadOnlyArchiveProfile && canUseTraineeProfileAction("trainee.profile.edit") ? "" : "cursor-not-allowed"}`, children: "Edit" }),
-            isRestoreReviewMode && onRestoreReviewedTrainee && /* @__PURE__ */ jsxRuntimeExports.jsx(
+            isRestoreReviewMode && !restoreCreatesNewRecord && onRestoreReviewedTrainee && /* @__PURE__ */ jsxRuntimeExports.jsx(
               "button",
               {
                 onClick: async () => {
@@ -57648,7 +57661,7 @@ Confirm the profile details are up to date and correct before restoring.`,
             /* @__PURE__ */ jsxRuntimeExports.jsx("button", { onClick: handlePauseToggle, disabled: isFrozen, className: btnClass, style: { color: isPaused ? "#16a34a" : "#dc2626" }, children: isPaused ? "UNPAUSE" : "PAUSE" }),
             /* @__PURE__ */ jsxRuntimeExports.jsx("button", { onClick: handleSuspendToggle, disabled: isFrozen, className: btnClass, style: { color: isSuspended ? "#16a34a" : "#dc2626" }, children: isSuspended ? "UNSUSPEND" : "SUSPEND" }),
             !isCreating && canManageTraineeRemoval && onRequestDeleteTrainee && /* @__PURE__ */ jsxRuntimeExports.jsx("button", { onClick: handleDeleteFromProfile, disabled: isFrozen, className: btnClass, style: { color: "#dc2626" }, children: "DELETE" }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx("button", { onClick: handleSave, className: btnClass, children: "Save" }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("button", { onClick: handleSave, className: btnClass, children: restoreCreatesNewRecord ? "Restore" : "Save" }),
             /* @__PURE__ */ jsxRuntimeExports.jsx("button", { onClick: handleCancel, className: btnClass, children: "Cancel" })
           ] })
         ] })
@@ -60031,7 +60044,7 @@ const CourseRosterView = ({
           setIsCreatingNew(false);
           setNewTraineeTemplate(null);
         },
-        onUpdateTrainee: isCreatingNew ? onAddTrainee : selectedTrainee?._restoreReviewMode && onUpdateArchivedTrainee ? onUpdateArchivedTrainee : onUpdateTrainee,
+        onUpdateTrainee: isCreatingNew || selectedTrainee?._restoreCreatesNewRecord ? onAddTrainee : selectedTrainee?._restoreReviewMode && selectedTrainee?._dataSource === "archive" && onUpdateArchivedTrainee ? onUpdateArchivedTrainee : onUpdateTrainee,
         onRestoreReviewedTrainee,
         onRequestDeleteTrainee: (trainee) => {
           setSelectedTraineeForDeletion(trainee);
@@ -90470,10 +90483,12 @@ const InstructorProfileFlyout = ({
   canUsePlatformPermission,
   onOpenCurrentProfile
 }) => {
+  const restoreReviewInitial = instructor._restoreReviewMode === true;
+  const restoreCreatesNewRecordInitial = restoreReviewInitial && instructor._restoreCreatesNewRecord === true;
   const continuationTerminology = reactExports.useMemo(() => normaliseSctTerminology(sctTerminology), [sctTerminology]);
   const continuationShortLabel = continuationTerminology.shortLabel;
   const continuationLongLabel = continuationTerminology.longLabel;
-  const [isEditing, setIsEditing] = reactExports.useState(isCreating);
+  const [isEditing, setIsEditing] = reactExports.useState(isCreating || restoreReviewInitial);
   const { isFrozen } = useSystemFreeze();
   const [showAddUnavailability, setShowAddUnavailability] = reactExports.useState(false);
   const canManageAccountAccess = ["ADMIN", "SUPER_ADMIN"].includes(String(currentUserRole2 || "").trim().toUpperCase());
@@ -90971,6 +90986,16 @@ const InstructorProfileFlyout = ({
     setPriorExperience((prev) => field ? { ...prev, [section]: { ...prev[section], [field]: value } } : { ...prev, [section]: value });
   };
   const handleSave = async () => {
+    if (restoreCreatesNewRecordInitial) {
+      const confirmed = await showDarkConfirm(
+        `Restore ${name || "this person"} as staff now?
+
+Confirm the profile details are up to date and correct before restoring.`,
+        "Confirm Restore",
+        "warning"
+      );
+      if (!confirmed) return;
+    }
     if (!name) {
       await showDarkAlert("Name is required.", "Missing Staff Name", "warning");
       return;
@@ -91168,7 +91193,7 @@ Confirm the Personnel ID, unit and role are correct before saving this separate 
       return;
     }
     setIsEditing(false);
-    if (isCreating) onClose();
+    if (isCreating || restoreCreatesNewRecordInitial) onClose();
   };
   const handleAddTodayOnly = () => {
     const todayStr = (/* @__PURE__ */ new Date()).toISOString().split("T")[0];
@@ -91199,7 +91224,8 @@ Confirm the Personnel ID, unit and role are correct before saving this separate 
   const [logbookError, setLogbookError] = reactExports.useState(null);
   const [logbookMonth, setLogbookMonth] = reactExports.useState(() => getProfileLogbookMonth(instructor));
   const isArchiveProfile = instructor._dataSource === "archive";
-  const isRestoreReviewMode = isArchiveProfile && instructor._restoreReviewMode === true;
+  const isRestoreReviewMode = instructor._restoreReviewMode === true;
+  const restoreCreatesNewRecord = isRestoreReviewMode && instructor._restoreCreatesNewRecord === true;
   const isReadOnlyArchiveProfile = isArchiveProfile && !isRestoreReviewMode;
   const archivedLogbookEntries = reactExports.useMemo(() => Array.isArray(instructor.archivedLogbookEntries) ? [...instructor.archivedLogbookEntries] : [], [instructor]);
   const logbookAsAtLabel = getProfileLogbookAsAtLabel(instructor, logbookMonth);
@@ -92553,7 +92579,7 @@ Confirm the Personnel ID, unit and role are correct before saving this separate 
               setActiveTab(null);
               handleEdit();
             }, disabled: isFrozen || isReadOnlyArchiveProfile, "aria-disabled": isReadOnlyArchiveProfile || !canUseStaffProfileAction("staff.profile.edit"), className: `${btnClass} ${!isReadOnlyArchiveProfile && canUseStaffProfileAction("staff.profile.edit") ? "" : "cursor-not-allowed"}`, children: "Edit" }),
-            isRestoreReviewMode && onRestoreReviewedInstructor && /* @__PURE__ */ jsxRuntimeExports.jsx(
+            isRestoreReviewMode && !restoreCreatesNewRecord && onRestoreReviewedInstructor && /* @__PURE__ */ jsxRuntimeExports.jsx(
               "button",
               {
                 onClick: async () => {
@@ -92575,7 +92601,7 @@ Confirm the profile details are up to date and correct before restoring.`,
             /* @__PURE__ */ jsxRuntimeExports.jsx("button", { onClick: onClose, className: btnClass, children: "Close" })
           ] }),
           isEditing && /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
-            /* @__PURE__ */ jsxRuntimeExports.jsx("button", { onClick: handleSave, className: btnClass, children: "Save" }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("button", { onClick: handleSave, className: btnClass, children: restoreCreatesNewRecord ? "Restore" : "Save" }),
             /* @__PURE__ */ jsxRuntimeExports.jsx("button", { onClick: handleCancel, className: btnClass, children: "Cancel" })
           ] })
         ] })
@@ -93213,20 +93239,6 @@ const ArchiveConfirmationFlyout = ({ instructorName, onConfirm, onClose }) => {
     ] })
   ] }) });
 };
-const RestoreConfirmationFlyout = ({ instructorName, onConfirm, onClose }) => {
-  return /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "fixed inset-0 bg-black/70 z-[80] flex items-center justify-center animate-fade-in", onClick: onClose, children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "bg-gray-800 rounded-lg shadow-xl w-full max-w-md border border-sky-500/50", onClick: (e) => e.stopPropagation(), children: [
-    /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "p-4 border-b border-gray-700 bg-sky-900/20 flex items-center space-x-3", children: /* @__PURE__ */ jsxRuntimeExports.jsx("h2", { className: "text-xl font-bold text-sky-400", children: "Confirm Restore" }) }),
-    /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "p-6", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("p", { className: "text-gray-300", children: [
-      "Are you sure you want to restore ",
-      /* @__PURE__ */ jsxRuntimeExports.jsx("strong", { className: "text-white", children: instructorName }),
-      " to the active list?"
-    ] }) }),
-    /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "px-6 py-4 bg-gray-900/50 border-t border-gray-700 flex justify-end space-x-3", children: [
-      /* @__PURE__ */ jsxRuntimeExports.jsx("button", { onClick: onClose, className: "px-4 py-2 bg-gray-600 text-white rounded-md hover:bg-gray-700 transition-colors text-sm font-semibold", children: "Cancel" }),
-      /* @__PURE__ */ jsxRuntimeExports.jsx("button", { onClick: onConfirm, className: "px-4 py-2 bg-sky-600 text-white rounded-md hover:bg-sky-700 transition-colors text-sm font-semibold", children: "Yes, Restore" })
-    ] })
-  ] }) });
-};
 const ArchivedInstructorsFlyout = ({
   archivedInstructors,
   archivedTrainees = [],
@@ -93240,6 +93252,69 @@ const ArchivedInstructorsFlyout = ({
 }) => {
   const [personToRestore, setPersonToRestore] = reactExports.useState(null);
   const [searchText, setSearchText] = reactExports.useState("");
+  const mapTraineeToStaffRestoreDraft = (trainee) => ({
+    idNumber: Number(trainee.idNumber) || 0,
+    name: trainee.name || trainee.fullName || "",
+    rank: trainee.rank || "",
+    role: "Pilot",
+    callsignNumber: Number(trainee.callsignNumber || 0),
+    category: "UnCat",
+    isTestingOfficer: false,
+    seatConfig: trainee.seatConfig || "Normal",
+    isExecutive: false,
+    isFlyingSupervisor: false,
+    isIRE: false,
+    isQFI: false,
+    location: trainee.location || "",
+    unit: trainee.unit || "",
+    phoneNumber: trainee.phoneNumber || "",
+    email: trainee.email || "",
+    unavailability: trainee.unavailability || [],
+    permissions: ["Staff"],
+    preferences: { ...trainee.preferences || {} },
+    _dataSource: "restore-draft",
+    _restoreReviewMode: true,
+    _restoreCreatesNewRecord: true,
+    _restoreSourceKind: "Trainee",
+    _restoreSourceId: getArchiveIdentifier(trainee)
+  });
+  const mapStaffToTraineeRestoreDraft = (instructor) => ({
+    idNumber: Number(instructor.idNumber) || 0,
+    name: instructor.name || "",
+    fullName: instructor.name || "",
+    rank: instructor.rank || "",
+    course: "",
+    lmpType: "",
+    academicLmpType: "",
+    role: "Trainee",
+    seatConfig: instructor.seatConfig || "Normal",
+    isPaused: false,
+    unit: instructor.unit || "",
+    service: instructor.service || "",
+    unavailability: instructor.unavailability || [],
+    permissions: ["Trainee"],
+    preferences: { ...instructor.preferences || {} },
+    traineeCallsign: "",
+    location: instructor.location || "",
+    secondaryCallsign: instructor.secondaryCallsign || "",
+    crew: instructor.crew || "N/A",
+    phoneNumber: instructor.phoneNumber || "",
+    email: instructor.email || "",
+    priorExperience: instructor.priorExperience || {
+      day: { p1: 0, p2: 0, dual: 0 },
+      night: { p1: 0, p2: 0, dual: 0 },
+      total: 0,
+      captain: 0,
+      instructor: 0,
+      instrument: { sim: 0, actual: 0 },
+      simulator: { p1: 0, p2: 0, dual: 0, total: 0 }
+    },
+    _dataSource: "restore-draft",
+    _restoreReviewMode: true,
+    _restoreCreatesNewRecord: true,
+    _restoreSourceKind: "Staff",
+    _restoreSourceId: getArchiveIdentifier(instructor)
+  });
   const getArchiveIdentifier = (person) => {
     const dbId = String(person.id || "").trim();
     return dbId || person.idNumber || null;
@@ -93352,29 +93427,55 @@ const ArchivedInstructorsFlyout = ({
         )
       }
     ),
-    personToRestore && /* @__PURE__ */ jsxRuntimeExports.jsx(
-      RestoreConfirmationFlyout,
-      {
-        instructorName: personToRestore.name,
-        onConfirm: () => {
-          if (personToRestore.kind === "Trainee") {
-            if (onBeginRestoreReviewTrainee) {
-              onBeginRestoreReviewTrainee(personToRestore.person);
-            } else {
-              void onRestoreTrainee?.(personToRestore.id);
+    personToRestore && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "fixed inset-0 bg-black/70 z-[80] flex items-center justify-center animate-fade-in", onClick: () => setPersonToRestore(null), children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "bg-gray-800 rounded-lg shadow-xl w-full max-w-md border border-sky-500/50", onClick: (e) => e.stopPropagation(), children: [
+      /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "p-4 border-b border-gray-700 bg-sky-900/20 flex items-center space-x-3", children: /* @__PURE__ */ jsxRuntimeExports.jsx("h2", { className: "text-xl font-bold text-sky-400", children: "Restore Profile As" }) }),
+      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "p-6 space-y-4", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("p", { className: "text-gray-300", children: [
+          "Choose how to restore ",
+          /* @__PURE__ */ jsxRuntimeExports.jsx("strong", { className: "text-white", children: personToRestore.name }),
+          "."
+        ] }),
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid grid-cols-1 gap-3 sm:grid-cols-2", children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsxs(
+            "button",
+            {
+              type: "button",
+              onClick: async () => {
+                const passwordAccepted = onRequestRestorePassword ? await onRequestRestorePassword(personToRestore.name) : true;
+                if (!passwordAccepted) return;
+                const staffProfile = personToRestore.kind === "Staff" ? { ...personToRestore.person, _dataSource: "archive", _restoreReviewMode: true } : mapTraineeToStaffRestoreDraft(personToRestore.person);
+                onBeginRestoreReview?.(staffProfile);
+                setPersonToRestore(null);
+              },
+              className: "rounded-md border border-emerald-400/40 bg-emerald-500/15 px-4 py-3 text-left text-sm font-semibold text-emerald-100 hover:bg-emerald-500/25",
+              children: [
+                /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "block text-base text-white", children: "Restore as Staff" }),
+                /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "mt-1 block text-xs text-emerald-100/75", children: "Use when the person is returning as staff." })
+              ]
             }
-          } else {
-            if (onBeginRestoreReview) {
-              onBeginRestoreReview(personToRestore.person);
-            } else {
-              void onRestore(personToRestore.id);
+          ),
+          /* @__PURE__ */ jsxRuntimeExports.jsxs(
+            "button",
+            {
+              type: "button",
+              onClick: async () => {
+                const passwordAccepted = onRequestRestorePassword ? await onRequestRestorePassword(personToRestore.name) : true;
+                if (!passwordAccepted) return;
+                const traineeProfile = personToRestore.kind === "Trainee" ? { ...personToRestore.person, _dataSource: "archive", _restoreReviewMode: true } : mapStaffToTraineeRestoreDraft(personToRestore.person);
+                onBeginRestoreReviewTrainee?.(traineeProfile);
+                setPersonToRestore(null);
+              },
+              className: "rounded-md border border-sky-400/40 bg-sky-500/15 px-4 py-3 text-left text-sm font-semibold text-sky-100 hover:bg-sky-500/25",
+              children: [
+                /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "block text-base text-white", children: "Restore as Trainee" }),
+                /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "mt-1 block text-xs text-sky-100/75", children: "Use when the person is returning to a course." })
+              ]
             }
-          }
-          setPersonToRestore(null);
-        },
-        onClose: () => setPersonToRestore(null)
-      }
-    )
+          )
+        ] })
+      ] }),
+      /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "px-6 py-4 bg-gray-900/50 border-t border-gray-700 flex justify-end", children: /* @__PURE__ */ jsxRuntimeExports.jsx("button", { onClick: () => setPersonToRestore(null), className: "px-4 py-2 bg-gray-600 text-white rounded-md hover:bg-gray-700 transition-colors text-sm font-semibold", children: "Cancel" }) })
+    ] }) })
   ] });
 };
 const isPilotRole = (instructor) => String(instructor.role || "").trim().toLowerCase() === "pilot";
@@ -93768,7 +93869,7 @@ const InstructorListView = ({
       target,
       beforeListRecord: findStaffTraceRecord(target)
     });
-    const isRestoreReviewRecord = data._restoreReviewMode === true && data._dataSource === "archive";
+    const isRestoreReviewRecord = data._restoreReviewMode === true && data._dataSource === "archive" && data._restoreCreatesNewRecord !== true;
     await Promise.resolve(isRestoreReviewRecord && onUpdateArchivedInstructor ? onUpdateArchivedInstructor(data) : onUpdateInstructor(data));
     appendStaffProfileTrace("staff-list:profile-update-returned", {
       target,

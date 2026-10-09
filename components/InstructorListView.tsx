@@ -612,7 +612,7 @@ const InstructorListView: React.FC<InstructorListViewProps> = ({
           target,
           beforeListRecord: findStaffTraceRecord(target),
       });
-      const isRestoreReviewRecord = (data as any)._restoreReviewMode === true && (data as any)._dataSource === 'archive';
+      const isRestoreReviewRecord = (data as any)._restoreReviewMode === true && (data as any)._dataSource === 'archive' && (data as any)._restoreCreatesNewRecord !== true;
       await Promise.resolve(isRestoreReviewRecord && onUpdateArchivedInstructor ? onUpdateArchivedInstructor(data) : onUpdateInstructor(data));
       appendStaffProfileTrace('staff-list:profile-update-returned', {
           target,

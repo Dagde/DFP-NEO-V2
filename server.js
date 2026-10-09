@@ -1424,10 +1424,10 @@ async function findPersonnelIdNumberConflict(db, idNumber, options = {}) {
       select: { id: true, idNumber: true, name: true, fullName: true, rank: true, course: true, unit: true, isActive: true },
     }),
   ]);
-  if (personnel) {
+  if (personnel && !(options.allowInactiveStaffConflict && personnel.isActive === false)) {
     return { type: 'staff', record: personnel };
   }
-  if (trainee) {
+  if (trainee && !(options.allowInactiveTraineeConflict && trainee.isActive === false)) {
     return { type: 'trainee', record: trainee };
   }
   return null;
@@ -6201,7 +6201,9 @@ app.post('/api/personnel', async (req, res) => {
       return res.status(400).json({ error: 'Personnel ID is required' });
     }
     const idNumber = Number(body.idNumber);
-    const idConflict = await findPersonnelIdNumberConflict(db, idNumber);
+    const idConflict = await findPersonnelIdNumberConflict(db, idNumber, {
+      allowInactiveTraineeConflict: req.body?._restoreCreatesNewRecord === true && req.body?._restoreSourceKind === 'Trainee',
+    });
     if (idConflict) {
       return sendPersonnelIdConflict(res, idConflict);
     }
@@ -8749,7 +8751,9 @@ app.post('/api/trainees', async (req, res) => {
       return res.status(400).json({ error: 'Personnel ID is required' });
     }
     const traineeIdNumber = Number(idNumber);
-    const idConflict = await findPersonnelIdNumberConflict(db, traineeIdNumber);
+    const idConflict = await findPersonnelIdNumberConflict(db, traineeIdNumber, {
+      allowInactiveStaffConflict: req.body?._restoreCreatesNewRecord === true && req.body?._restoreSourceKind === 'Staff',
+    });
     if (idConflict) {
       return sendPersonnelIdConflict(res, idConflict);
     }

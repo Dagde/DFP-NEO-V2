@@ -625,7 +625,9 @@ const TraineeProfileFlyout: React.FC<TraineeProfileFlyoutProps> = ({
   canUsePlatformPermission,
   onOpenCurrentProfile,
 }) => {
-    const [isEditing, setIsEditing] = useState(isCreating);
+    const restoreReviewInitial = (trainee as any)._restoreReviewMode === true;
+    const restoreCreatesNewRecordInitial = restoreReviewInitial && (trainee as any)._restoreCreatesNewRecord === true;
+    const [isEditing, setIsEditing] = useState(isCreating || restoreReviewInitial);
     const { isFrozen } = useSystemFreeze();
     const [permissionNoticeRect, setPermissionNoticeRect] = useState<DOMRect | null>(null);
     const [showAddUnavailability, setShowAddUnavailability] = useState(false);
@@ -796,7 +798,8 @@ const TraineeProfileFlyout: React.FC<TraineeProfileFlyoutProps> = ({
     );
     const activeTrainingReportPhraseBank = getUnitTrainingReportPhraseBank(platformConfig, activeTrainingReportUnitCode, phraseBank);
     const isArchiveProfile = (trainee as any)._dataSource === 'archive';
-    const isRestoreReviewMode = isArchiveProfile && (trainee as any)._restoreReviewMode === true;
+    const isRestoreReviewMode = (trainee as any)._restoreReviewMode === true;
+    const restoreCreatesNewRecord = isRestoreReviewMode && (trainee as any)._restoreCreatesNewRecord === true;
     const isReadOnlyArchiveProfile = isArchiveProfile && !isRestoreReviewMode;
     const archivedLogbookEntries = useMemo(() => (
         Array.isArray((trainee as any).archivedLogbookEntries)
@@ -1898,6 +1901,14 @@ const TraineeProfileFlyout: React.FC<TraineeProfileFlyoutProps> = ({
     };
 
     const handleSave = async () => {
+        if (restoreCreatesNewRecordInitial) {
+            const confirmed = await showDarkConfirm(
+                `Restore ${name || 'this person'} as a trainee now?\n\nConfirm the profile details are up to date and correct before restoring.`,
+                'Confirm Restore',
+                'warning'
+            );
+            if (!confirmed) return;
+        }
         if (!name || !course) {
             await showDarkAlert('Name and Course are required.', 'Missing Trainee Details', 'warning');
             return;
@@ -2013,7 +2024,7 @@ const TraineeProfileFlyout: React.FC<TraineeProfileFlyoutProps> = ({
         setPhotoError(null);
         setPhotoLoadFailed(false);
         setIsEditing(false);
-        if (isCreating) {
+        if (isCreating || restoreCreatesNewRecordInitial) {
             onClose();
         }
     };
@@ -3760,7 +3771,7 @@ const TraineeProfileFlyout: React.FC<TraineeProfileFlyoutProps> = ({
                             if (isReadOnlyArchiveProfile) return;
                             setIsEditing(true);
                           }} disabled={isFrozen || isReadOnlyArchiveProfile} aria-disabled={isReadOnlyArchiveProfile || !canUseTraineeProfileAction('trainee.profile.edit')} className={`${btnClass} ${!isReadOnlyArchiveProfile && canUseTraineeProfileAction('trainee.profile.edit') ? '' : 'cursor-not-allowed'}`}>Edit</button>
-                          {isRestoreReviewMode && onRestoreReviewedTrainee && (
+                          {isRestoreReviewMode && !restoreCreatesNewRecord && onRestoreReviewedTrainee && (
                             <button
                               onClick={async () => {
                                 const confirmed = await showDarkConfirm(
@@ -3787,7 +3798,7 @@ const TraineeProfileFlyout: React.FC<TraineeProfileFlyoutProps> = ({
                           {!isCreating && canManageTraineeRemoval && onRequestDeleteTrainee && (
                             <button onClick={handleDeleteFromProfile} disabled={isFrozen} className={btnClass} style={{ color: '#dc2626' }}>DELETE</button>
                           )}
-                          <button onClick={handleSave} className={btnClass}>Save</button>
+                          <button onClick={handleSave} className={btnClass}>{restoreCreatesNewRecord ? 'Restore' : 'Save'}</button>
                           <button onClick={handleCancel} className={btnClass}>Cancel</button>
                         </>
                       )}

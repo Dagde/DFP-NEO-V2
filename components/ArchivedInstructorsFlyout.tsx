@@ -1,6 +1,5 @@
 import React, { useState } from 'react';
 import { Instructor, Trainee } from '../types';
-import RestoreConfirmationFlyout from './RestoreConfirmationFlyout';
 
 interface ArchivedInstructorsFlyoutProps {
   archivedInstructors: Instructor[];
@@ -38,6 +37,69 @@ const ArchivedInstructorsFlyout: React.FC<ArchivedInstructorsFlyoutProps> = ({
 
   const [personToRestore, setPersonToRestore] = useState<ArchivedIndividual | null>(null);
   const [searchText, setSearchText] = useState('');
+  const mapTraineeToStaffRestoreDraft = (trainee: Trainee): Instructor => ({
+    idNumber: Number(trainee.idNumber) || 0,
+    name: trainee.name || trainee.fullName || '',
+    rank: trainee.rank || '',
+    role: 'Pilot',
+    callsignNumber: Number((trainee as any).callsignNumber || 0),
+    category: 'UnCat',
+    isTestingOfficer: false,
+    seatConfig: trainee.seatConfig || 'Normal',
+    isExecutive: false,
+    isFlyingSupervisor: false,
+    isIRE: false,
+    isQFI: false,
+    location: trainee.location || '',
+    unit: trainee.unit || '',
+    phoneNumber: trainee.phoneNumber || '',
+    email: trainee.email || '',
+    unavailability: trainee.unavailability || [],
+    permissions: ['Staff'],
+    preferences: { ...((trainee as any).preferences || {}) },
+    _dataSource: 'restore-draft',
+    _restoreReviewMode: true,
+    _restoreCreatesNewRecord: true,
+    _restoreSourceKind: 'Trainee',
+    _restoreSourceId: getArchiveIdentifier(trainee),
+  } as Instructor);
+  const mapStaffToTraineeRestoreDraft = (instructor: Instructor): Trainee => ({
+    idNumber: Number(instructor.idNumber) || 0,
+    name: instructor.name || '',
+    fullName: instructor.name || '',
+    rank: instructor.rank || '',
+    course: '',
+    lmpType: '',
+    academicLmpType: '',
+    role: 'Trainee',
+    seatConfig: instructor.seatConfig || 'Normal',
+    isPaused: false,
+    unit: instructor.unit || '',
+    service: (instructor as any).service || '',
+    unavailability: instructor.unavailability || [],
+    permissions: ['Trainee'],
+    preferences: { ...((instructor as any).preferences || {}) },
+    traineeCallsign: '',
+    location: instructor.location || '',
+    secondaryCallsign: instructor.secondaryCallsign || '',
+    crew: instructor.crew || 'N/A',
+    phoneNumber: instructor.phoneNumber || '',
+    email: instructor.email || '',
+    priorExperience: (instructor as any).priorExperience || {
+      day: { p1: 0, p2: 0, dual: 0 },
+      night: { p1: 0, p2: 0, dual: 0 },
+      total: 0,
+      captain: 0,
+      instructor: 0,
+      instrument: { sim: 0, actual: 0 },
+      simulator: { p1: 0, p2: 0, dual: 0, total: 0 },
+    },
+    _dataSource: 'restore-draft',
+    _restoreReviewMode: true,
+    _restoreCreatesNewRecord: true,
+    _restoreSourceKind: 'Staff',
+    _restoreSourceId: getArchiveIdentifier(instructor),
+  } as Trainee);
   const getArchiveIdentifier = (person: Instructor | Trainee): string | number | null => {
     const dbId = String((person as any).id || '').trim();
     return dbId || person.idNumber || null;
@@ -155,26 +217,61 @@ const ArchivedInstructorsFlyout: React.FC<ArchivedInstructorsFlyoutProps> = ({
       </div>
 
       {personToRestore && (
-        <RestoreConfirmationFlyout
-          instructorName={personToRestore.name}
-          onConfirm={() => {
-            if (personToRestore.kind === 'Trainee') {
-              if (onBeginRestoreReviewTrainee) {
-                onBeginRestoreReviewTrainee(personToRestore.person as Trainee);
-              } else {
-                void onRestoreTrainee?.(personToRestore.id);
-              }
-            } else {
-              if (onBeginRestoreReview) {
-                onBeginRestoreReview(personToRestore.person as Instructor);
-              } else {
-                void onRestore(personToRestore.id);
-              }
-            }
-            setPersonToRestore(null);
-          }}
-          onClose={() => setPersonToRestore(null)}
-        />
+        <div className="fixed inset-0 bg-black/70 z-[80] flex items-center justify-center animate-fade-in" onClick={() => setPersonToRestore(null)}>
+          <div className="bg-gray-800 rounded-lg shadow-xl w-full max-w-md border border-sky-500/50" onClick={e => e.stopPropagation()}>
+            <div className="p-4 border-b border-gray-700 bg-sky-900/20 flex items-center space-x-3">
+              <h2 className="text-xl font-bold text-sky-400">Restore Profile As</h2>
+            </div>
+            <div className="p-6 space-y-4">
+              <p className="text-gray-300">
+                Choose how to restore <strong className="text-white">{personToRestore.name}</strong>.
+              </p>
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                <button
+                  type="button"
+                  onClick={async () => {
+                    const passwordAccepted = onRequestRestorePassword
+                      ? await onRequestRestorePassword(personToRestore.name)
+                      : true;
+                    if (!passwordAccepted) return;
+                    const staffProfile = personToRestore.kind === 'Staff'
+                      ? { ...(personToRestore.person as Instructor), _dataSource: 'archive', _restoreReviewMode: true }
+                      : mapTraineeToStaffRestoreDraft(personToRestore.person as Trainee);
+                    onBeginRestoreReview?.(staffProfile as Instructor);
+                    setPersonToRestore(null);
+                  }}
+                  className="rounded-md border border-emerald-400/40 bg-emerald-500/15 px-4 py-3 text-left text-sm font-semibold text-emerald-100 hover:bg-emerald-500/25"
+                >
+                  <span className="block text-base text-white">Restore as Staff</span>
+                  <span className="mt-1 block text-xs text-emerald-100/75">Use when the person is returning as staff.</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={async () => {
+                    const passwordAccepted = onRequestRestorePassword
+                      ? await onRequestRestorePassword(personToRestore.name)
+                      : true;
+                    if (!passwordAccepted) return;
+                    const traineeProfile = personToRestore.kind === 'Trainee'
+                      ? { ...(personToRestore.person as Trainee), _dataSource: 'archive', _restoreReviewMode: true }
+                      : mapStaffToTraineeRestoreDraft(personToRestore.person as Instructor);
+                    onBeginRestoreReviewTrainee?.(traineeProfile as Trainee);
+                    setPersonToRestore(null);
+                  }}
+                  className="rounded-md border border-sky-400/40 bg-sky-500/15 px-4 py-3 text-left text-sm font-semibold text-sky-100 hover:bg-sky-500/25"
+                >
+                  <span className="block text-base text-white">Restore as Trainee</span>
+                  <span className="mt-1 block text-xs text-sky-100/75">Use when the person is returning to a course.</span>
+                </button>
+              </div>
+            </div>
+            <div className="px-6 py-4 bg-gray-900/50 border-t border-gray-700 flex justify-end">
+              <button onClick={() => setPersonToRestore(null)} className="px-4 py-2 bg-gray-600 text-white rounded-md hover:bg-gray-700 transition-colors text-sm font-semibold">
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </>
   );
