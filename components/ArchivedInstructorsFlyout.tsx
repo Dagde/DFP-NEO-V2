@@ -186,7 +186,18 @@ const ArchivedInstructorsFlyout: React.FC<ArchivedInstructorsFlyoutProps> = ({
                     <div className="flex items-center space-x-4">
                         <span className="font-mono text-gray-500 w-16 flex-shrink-0 text-right">{individual.rank}</span>
                         <div>
-                          <div className="text-gray-100">{individual.name}</div>
+                          <div className="flex flex-wrap items-center gap-2">
+                            <span className="text-gray-100">{individual.name}</span>
+                            <span
+                              className={`rounded-full border px-2 py-0.5 text-[10px] font-semibold leading-none ${
+                                individual.kind === 'Staff'
+                                  ? 'border-emerald-400/40 bg-emerald-500/15 text-emerald-100'
+                                  : 'border-sky-400/40 bg-sky-500/15 text-sky-100'
+                              }`}
+                            >
+                              {individual.kind} Profile
+                            </span>
+                          </div>
                           <div className="text-xs text-gray-500">
                             {individual.kind}{individual.course ? ` - ${individual.course}` : ''}{individual.unit ? ` - ${individual.unit}` : ''}
                           </div>

@@ -93397,7 +93397,19 @@ const ArchivedInstructorsFlyout = ({
                       /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center space-x-4", children: [
                         /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "font-mono text-gray-500 w-16 flex-shrink-0 text-right", children: individual.rank }),
                         /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
-                          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-gray-100", children: individual.name }),
+                          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex flex-wrap items-center gap-2", children: [
+                            /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-gray-100", children: individual.name }),
+                            /* @__PURE__ */ jsxRuntimeExports.jsxs(
+                              "span",
+                              {
+                                className: `rounded-full border px-2 py-0.5 text-[10px] font-semibold leading-none ${individual.kind === "Staff" ? "border-emerald-400/40 bg-emerald-500/15 text-emerald-100" : "border-sky-400/40 bg-sky-500/15 text-sky-100"}`,
+                                children: [
+                                  individual.kind,
+                                  " Profile"
+                                ]
+                              }
+                            )
+                          ] }),
                           /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "text-xs text-gray-500", children: [
                             individual.kind,
                             individual.course ? ` - ${individual.course}` : "",
