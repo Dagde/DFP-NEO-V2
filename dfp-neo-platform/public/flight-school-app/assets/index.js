@@ -160642,7 +160642,7 @@ Do not hard refresh yet. Try Publish again, then confirm the save succeeds.`,
     };
     const archivedInstructor = { ...instructorToArchive, isActive: false };
     try {
-      if (dbId && instructorToArchive._dataSource === "database") {
+      if (dbId) {
         const response = await fetch(scopedApiPath(`/api/personnel/${encodeURIComponent(dbId)}`), {
           method: "PATCH",
           credentials: "include",
@@ -160653,6 +160653,8 @@ Do not hard refresh yet. Try Publish again, then confirm the save succeeds.`,
           const errorData = await response.json().catch(() => ({}));
           throw new Error(errorData.error || errorData.details || `Archive failed (${response.status})`);
         }
+      } else {
+        console.warn(`[Staff Archive] ${instructorToArchive.name || instructorToArchive.idNumber || "Staff member"} has no database id; archiving in local roster only.`);
       }
       setInstructorsData((prev) => {
         return prev.filter((i) => !matchesTargetInstructor(i));
@@ -163821,7 +163823,7 @@ It will not clear the published DFP.`,
     const archivedTrainee = { ...trainee, isActive: false };
     const matchesTrainee = (candidate) => dbId && String(candidate.id || "") === dbId || candidate.idNumber === trainee.idNumber || candidate.fullName === trainee.fullName;
     try {
-      if (dbId && trainee._dataSource === "database") {
+      if (dbId) {
         const sessionToken = localStorage.getItem("dfp_session_token") || "";
         const response = await fetch(scopedApiPath(`/api/trainees/${encodeURIComponent(dbId)}`), {
           method: "PATCH",

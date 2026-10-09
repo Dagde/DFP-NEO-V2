@@ -52237,7 +52237,7 @@ appliedUpdates.forEach(update => {
         const archivedInstructor = { ...instructorToArchive, isActive: false };
 
         try {
-            if (dbId && (instructorToArchive as any)._dataSource === 'database') {
+            if (dbId) {
                 const response = await fetch(scopedApiPath(`/api/personnel/${encodeURIComponent(dbId)}`), {
                     method: 'PATCH',
                     credentials: 'include',
@@ -52248,6 +52248,8 @@ appliedUpdates.forEach(update => {
                     const errorData = await response.json().catch(() => ({}));
                     throw new Error(errorData.error || errorData.details || `Archive failed (${response.status})`);
                 }
+            } else {
+                console.warn(`[Staff Archive] ${instructorToArchive.name || instructorToArchive.idNumber || 'Staff member'} has no database id; archiving in local roster only.`);
             }
             setInstructorsData(prev => {
                 return prev.filter(i => !matchesTargetInstructor(i));
@@ -56144,7 +56146,7 @@ appliedUpdates.forEach(update => {
         );
 
         try {
-            if (dbId && (trainee as any)._dataSource === 'database') {
+            if (dbId) {
                 const sessionToken = localStorage.getItem('dfp_session_token') || '';
                 const response = await fetch(scopedApiPath(`/api/trainees/${encodeURIComponent(dbId)}`), {
                     method: 'PATCH',
