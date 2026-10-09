@@ -91005,23 +91005,6 @@ const InstructorProfileFlyout = ({
     item: summary.sequenceItems.find((item) => normaliseTrainingCode(item.code) === normaliseTrainingCode(event.flightNumber)) || null
   }))).sort((left, right) => getEventDateValue(right.event) - getEventDateValue(left.event) || Number(right.event.startTime || 0) - Number(left.event.startTime || 0)), [airCombatTrainingSummaries]);
   const airCombatStoredTrainingReports = reactExports.useMemo(() => normaliseAirCombatTrainingReports(instructor.preferences).sort((left, right) => String(right.date || "").localeCompare(String(left.date || "")) || String(right.createdAt || "").localeCompare(String(left.createdAt || ""))), [instructor.preferences]);
-  reactExports.useEffect(() => {
-    if (activeTab !== "trainingReports") return;
-    appendTrainingReportFollowUpDiag("profile:training-reports-render", {
-      staffName: instructor.name,
-      staffIdNumber: instructor.idNumber,
-      dbId: instructor.id || null,
-      dataSource: instructor._dataSource || null,
-      reportCount: airCombatStoredTrainingReports.length,
-      reportIds: airCombatStoredTrainingReports.map((report) => report.id).slice(0, 20),
-      reportEvents: airCombatStoredTrainingReports.map((report) => ({
-        id: report.id,
-        eventCode: report.eventCode,
-        date: report.date,
-        updatedAt: report.updatedAt
-      })).slice(0, 10)
-    });
-  }, [activeTab, airCombatStoredTrainingReports, instructor]);
   const handleDeleteTrainingReport = reactExports.useCallback(async (report) => {
     const password = await showDarkPrompt({
       title: "Delete Training Report",
@@ -91438,6 +91421,23 @@ Confirm the Personnel ID, unit and role are correct before saving this separate 
   };
   const formatMilitaryTime2 = (t) => t ? t.replace(":", "") : "";
   const [activeTab, setActiveTab] = reactExports.useState(null);
+  reactExports.useEffect(() => {
+    if (activeTab !== "trainingReports") return;
+    appendTrainingReportFollowUpDiag("profile:training-reports-render", {
+      staffName: instructor.name,
+      staffIdNumber: instructor.idNumber,
+      dbId: instructor.id || null,
+      dataSource: instructor._dataSource || null,
+      reportCount: airCombatStoredTrainingReports.length,
+      reportIds: airCombatStoredTrainingReports.map((report) => report.id).slice(0, 20),
+      reportEvents: airCombatStoredTrainingReports.map((report) => ({
+        id: report.id,
+        eventCode: report.eventCode,
+        date: report.date,
+        updatedAt: report.updatedAt
+      })).slice(0, 10)
+    });
+  }, [activeTab, airCombatStoredTrainingReports, instructor]);
   const [logbookEntries, setLogbookEntries] = reactExports.useState([]);
   const [logbookLoading, setLogbookLoading] = reactExports.useState(false);
   const [logbookError, setLogbookError] = reactExports.useState(null);
