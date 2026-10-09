@@ -992,8 +992,9 @@ export const InstructorProfileFlyout: React.FC<InstructorProfileFlyoutProps> = (
     setPriorExperience(prev => field ? { ...prev, [section]: { ...(prev[section] as any), [field]: value } } : { ...prev, [section]: value });
   };
 
-  const handleSave = async () => {
-    if (restoreCreatesNewRecordInitial) {
+  const handleSave = async (options: { restoreAfterSave?: boolean } = {}) => {
+    const restoreAfterSave = Boolean(options.restoreAfterSave && onRestoreReviewedInstructor);
+    if (restoreCreatesNewRecordInitial || restoreAfterSave) {
       const confirmed = await showDarkConfirm(
         `Restore ${name || 'this person'} as staff now?\n\nConfirm the profile details are up to date and correct before restoring.`,
         'Confirm Restore',
@@ -1189,6 +1190,20 @@ export const InstructorProfileFlyout: React.FC<InstructorProfileFlyoutProps> = (
         'Save Failed',
         'error'
       );
+      return;
+    }
+    if (restoreAfterSave && onRestoreReviewedInstructor) {
+      try {
+        await Promise.resolve(onRestoreReviewedInstructor(updatedInstructor));
+      } catch (error) {
+        console.error('Failed to restore staff profile:', error);
+        const reason = error instanceof Error ? error.message : String(error || '').trim();
+        await showDarkAlert(
+          reason || 'The staff profile was saved, but the restore could not be completed.',
+          'Restore Failed',
+          'error'
+        );
+      }
       return;
     }
     setIsEditing(false);
@@ -2735,7 +2750,22 @@ export const InstructorProfileFlyout: React.FC<InstructorProfileFlyoutProps> = (
                 <button onClick={() => { void handleRequestClose(); }} className={btnClass}>Close</button>
               </>)}
               {isEditing && (<>
-                <button onClick={handleSave} className={btnClass}>{restoreCreatesNewRecord ? 'Restore' : 'Save'}</button>
+                <button
+                  onClick={() => {
+                    void handleSave({
+                      restoreAfterSave: isRestoreReviewMode && !restoreCreatesNewRecordInitial && Boolean(onRestoreReviewedInstructor),
+                    });
+                  }}
+                  className={`${btnClass} ${isRestoreReviewMode ? 'animate-pulse' : ''}`}
+                  style={isRestoreReviewMode ? {
+                    color: '#f0fdf4',
+                    background: 'linear-gradient(180deg, rgba(22,163,74,0.95), rgba(5,150,105,0.95))',
+                    borderColor: 'rgba(187,247,208,0.9)',
+                    boxShadow: '0 0 0 1px rgba(187,247,208,0.55), 0 0 18px rgba(34,197,94,0.95), 0 0 34px rgba(34,197,94,0.45)',
+                  } : undefined}
+                >
+                  {isRestoreReviewMode ? 'Restore' : 'Save'}
+                </button>
                 <button onClick={handleCancel} className={btnClass}>Cancel</button>
               </>)}
             </div>

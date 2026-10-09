@@ -91150,8 +91150,9 @@ const InstructorProfileFlyout = ({
   const handleExperienceChange = (section, field, value) => {
     setPriorExperience((prev) => field ? { ...prev, [section]: { ...prev[section], [field]: value } } : { ...prev, [section]: value });
   };
-  const handleSave = async () => {
-    if (restoreCreatesNewRecordInitial) {
+  const handleSave = async (options = {}) => {
+    const restoreAfterSave = Boolean(options.restoreAfterSave && onRestoreReviewedInstructor);
+    if (restoreCreatesNewRecordInitial || restoreAfterSave) {
       const confirmed = await showDarkConfirm(
         `Restore ${name || "this person"} as staff now?
 
@@ -91355,6 +91356,20 @@ Confirm the Personnel ID, unit and role are correct before saving this separate 
         "Save Failed",
         "error"
       );
+      return;
+    }
+    if (restoreAfterSave && onRestoreReviewedInstructor) {
+      try {
+        await Promise.resolve(onRestoreReviewedInstructor(updatedInstructor));
+      } catch (error) {
+        console.error("Failed to restore staff profile:", error);
+        const reason = error instanceof Error ? error.message : String(error || "").trim();
+        await showDarkAlert(
+          reason || "The staff profile was saved, but the restore could not be completed.",
+          "Restore Failed",
+          "error"
+        );
+      }
       return;
     }
     setIsEditing(false);
@@ -92810,7 +92825,24 @@ Confirm the profile details are up to date and correct before restoring.`,
             }, className: btnClass, children: "Close" })
           ] }),
           isEditing && /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
-            /* @__PURE__ */ jsxRuntimeExports.jsx("button", { onClick: handleSave, className: btnClass, children: restoreCreatesNewRecord ? "Restore" : "Save" }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx(
+              "button",
+              {
+                onClick: () => {
+                  void handleSave({
+                    restoreAfterSave: isRestoreReviewMode && !restoreCreatesNewRecordInitial && Boolean(onRestoreReviewedInstructor)
+                  });
+                },
+                className: `${btnClass} ${isRestoreReviewMode ? "animate-pulse" : ""}`,
+                style: isRestoreReviewMode ? {
+                  color: "#f0fdf4",
+                  background: "linear-gradient(180deg, rgba(22,163,74,0.95), rgba(5,150,105,0.95))",
+                  borderColor: "rgba(187,247,208,0.9)",
+                  boxShadow: "0 0 0 1px rgba(187,247,208,0.55), 0 0 18px rgba(34,197,94,0.95), 0 0 34px rgba(34,197,94,0.45)"
+                } : void 0,
+                children: isRestoreReviewMode ? "Restore" : "Save"
+              }
+            ),
             /* @__PURE__ */ jsxRuntimeExports.jsx("button", { onClick: handleCancel, className: btnClass, children: "Cancel" })
           ] })
         ] })
