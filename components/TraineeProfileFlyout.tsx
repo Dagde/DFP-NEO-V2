@@ -73,6 +73,7 @@ import { DEFAULT_PHRASE_BANK } from '../config/phraseBankConfig';
 import { DEFAULT_SCT_TERMINOLOGY, normaliseSctTerminology, type SctTerminology } from '../utils/sctTerminology';
 import { getConfiguredServiceOptionsWithCurrent, resolveConfiguredServiceName } from '../utils/serviceAliases';
 import { isSyllabusCourseShell } from '../utils/syllabusCourseShell';
+import { appendStaffProfileTrace, downloadStaffProfileTrace } from '../utils/staffProfileTrace';
 import { sanitizeUserFacingTerminology } from '../utils/userFacingTerminology';
 
 // ACADEMIC_LMP_COURSES is derived dynamically from syllabusDetails (DB only, no hardcoded fallback)
@@ -553,6 +554,33 @@ const reviewItemBelongsToLmpType = (item: SyllabusItemDetail, lmpType: string): 
 };
 
 const reviewFormatHours = (value: number): string => reviewNumber(value).toFixed(1);
+
+const summariseTraineeRestoreTraceProfile = (person: Partial<Trainee> | Partial<Instructor> | null | undefined): Record<string, unknown> | null => {
+    if (!person) return null;
+    const anyPerson = person as any;
+    return {
+        dbId: String(anyPerson.id || '').trim() || null,
+        dataSource: String(anyPerson._dataSource || '').trim() || null,
+        restoreReviewMode: anyPerson._restoreReviewMode === true,
+        restoreCreatesNewRecord: anyPerson._restoreCreatesNewRecord === true,
+        restoreSourceKind: anyPerson._restoreSourceKind || null,
+        restoreSourceId: anyPerson._restoreSourceId || null,
+        idNumber: anyPerson.idNumber ?? null,
+        name: anyPerson.fullName || anyPerson.name || '',
+        rank: anyPerson.rank || '',
+        role: anyPerson.role || '',
+        course: anyPerson.course || '',
+        lmpType: anyPerson.lmpType || '',
+        academicLmpType: anyPerson.academicLmpType || '',
+        unit: anyPerson.unit || '',
+        location: anyPerson.location || '',
+        flight: anyPerson.flight || '',
+        service: anyPerson.service || '',
+        email: anyPerson.email || '',
+        isActive: anyPerson.isActive !== false,
+        permissions: Array.isArray(anyPerson.permissions) ? anyPerson.permissions : [],
+    };
+};
 
 const TraineeProfileFlyout: React.FC<TraineeProfileFlyoutProps> = ({
   trainee,
@@ -1963,6 +1991,25 @@ const TraineeProfileFlyout: React.FC<TraineeProfileFlyoutProps> = ({
             },
             priorExperience
         };
+        const sameIdNumberStaff = instructorsData.filter(instructor =>
+            instructor.idNumber !== null &&
+            instructor.idNumber !== undefined &&
+            String(instructor.idNumber) === String(idNumber)
+        );
+        const sameIdNumberTrainees = traineesData.filter(candidate =>
+            candidate.idNumber !== null &&
+            candidate.idNumber !== undefined &&
+            String(candidate.idNumber) === String(idNumber)
+        );
+        if (isRestoreReviewMode) {
+            appendStaffProfileTrace('trainee-restore:save-clicked', {
+                restoreCreatesNewRecord: restoreCreatesNewRecordInitial,
+                original: summariseTraineeRestoreTraceProfile(trainee),
+                payload: summariseTraineeRestoreTraceProfile(updatedTrainee),
+                sameIdNumberStaff: sameIdNumberStaff.map(summariseTraineeRestoreTraceProfile),
+                sameIdNumberTrainees: sameIdNumberTrainees.map(summariseTraineeRestoreTraceProfile),
+            });
+        }
 
         // Flush any pending debounced logs before saving
         flushPendingAudits();
@@ -2007,7 +2054,23 @@ const TraineeProfileFlyout: React.FC<TraineeProfileFlyoutProps> = ({
 
         try {
             await Promise.resolve(onUpdateTrainee(updatedTrainee));
+            if (isRestoreReviewMode) {
+                appendStaffProfileTrace('trainee-restore:save-complete', {
+                    restoreCreatesNewRecord: restoreCreatesNewRecordInitial,
+                    payload: summariseTraineeRestoreTraceProfile(updatedTrainee),
+                });
+            }
         } catch (error) {
+            if (isRestoreReviewMode) {
+                appendStaffProfileTrace('trainee-restore:save-error', {
+                    restoreCreatesNewRecord: restoreCreatesNewRecordInitial,
+                    message: error instanceof Error ? error.message : String(error || ''),
+                    original: summariseTraineeRestoreTraceProfile(trainee),
+                    payload: summariseTraineeRestoreTraceProfile(updatedTrainee),
+                    sameIdNumberStaff: sameIdNumberStaff.map(summariseTraineeRestoreTraceProfile),
+                    sameIdNumberTrainees: sameIdNumberTrainees.map(summariseTraineeRestoreTraceProfile),
+                });
+            }
             console.error('Failed to save trainee profile:', error);
             const reason = error instanceof Error ? error.message : String(error || '').trim();
             await showDarkAlert(
@@ -3797,6 +3860,50 @@ const TraineeProfileFlyout: React.FC<TraineeProfileFlyoutProps> = ({
                           <button onClick={handleSuspendToggle} disabled={isFrozen} className={btnClass} style={{ color: isSuspended ? '#16a34a' : '#dc2626' }}>{isSuspended ? 'UNSUSPEND' : 'SUSPEND'}</button>
                           {!isCreating && canManageTraineeRemoval && onRequestDeleteTrainee && (
                             <button onClick={handleDeleteFromProfile} disabled={isFrozen} className={btnClass} style={{ color: '#dc2626' }}>DELETE</button>
+                          )}
+                          {isRestoreReviewMode && (
+                            <button
+                              type="button"
+                              onClick={() => {
+                                const sameIdNumberStaff = instructorsData.filter(instructor =>
+                                  instructor.idNumber !== null &&
+                                  instructor.idNumber !== undefined &&
+                                  String(instructor.idNumber) === String(idNumber)
+                                );
+                                const sameIdNumberTrainees = traineesData.filter(candidate =>
+                                  candidate.idNumber !== null &&
+                                  candidate.idNumber !== undefined &&
+                                  String(candidate.idNumber) === String(idNumber)
+                                );
+                                appendStaffProfileTrace('trainee-restore:manual-download-clicked', {
+                                  restoreCreatesNewRecord: restoreCreatesNewRecordInitial,
+                                  profile: summariseTraineeRestoreTraceProfile(trainee),
+                                  currentForm: summariseTraineeRestoreTraceProfile({
+                                    ...trainee,
+                                    idNumber,
+                                    name,
+                                    fullName: name,
+                                    rank,
+                                    role,
+                                    course,
+                                    lmpType,
+                                    academicLmpType,
+                                    unit,
+                                    location,
+                                    flight,
+                                    service,
+                                    email,
+                                  } as Trainee),
+                                  sameIdNumberStaff: sameIdNumberStaff.map(summariseTraineeRestoreTraceProfile),
+                                  sameIdNumberTrainees: sameIdNumberTrainees.map(summariseTraineeRestoreTraceProfile),
+                                });
+                                downloadStaffProfileTrace('trainee-restore-trace');
+                              }}
+                              className={btnClass}
+                              style={{ color: '#f59e0b' }}
+                            >
+                              Trace
+                            </button>
                           )}
                           <button onClick={handleSave} className={btnClass}>{restoreCreatesNewRecord ? 'Restore' : 'Save'}</button>
                           <button onClick={handleCancel} className={btnClass}>Cancel</button>

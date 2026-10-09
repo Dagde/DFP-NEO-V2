@@ -7783,6 +7783,23 @@ const appendStaffProfileTrace = (stage, data) => {
   } catch {
   }
 };
+const downloadStaffProfileTrace = (prefix = "staff-profile-trace") => {
+  if (!hasWindow()) return;
+  const payload = {
+    exportedAt: (/* @__PURE__ */ new Date()).toISOString(),
+    userAgent: window.navigator?.userAgent || "",
+    entries: readStaffProfileTrace()
+  };
+  const blob = new Blob([JSON.stringify(payload, null, 2)], { type: "application/json" });
+  const url = window.URL.createObjectURL(blob);
+  const anchor = window.document.createElement("a");
+  anchor.href = url;
+  anchor.download = `${prefix}-${(/* @__PURE__ */ new Date()).toISOString().replace(/[:.]/g, "-")}.json`;
+  window.document.body.appendChild(anchor);
+  anchor.click();
+  anchor.remove();
+  window.URL.revokeObjectURL(url);
+};
 const summariseStaffProfileForTrace = (instructor, staffQualificationCatalogue) => {
   if (!instructor) return null;
   const anyInstructor = instructor;
@@ -54833,6 +54850,32 @@ const reviewItemBelongsToLmpType = (item, lmpType) => {
   return courses.includes(normalisedLmpType);
 };
 const reviewFormatHours = (value) => reviewNumber(value).toFixed(1);
+const summariseTraineeRestoreTraceProfile = (person) => {
+  if (!person) return null;
+  const anyPerson = person;
+  return {
+    dbId: String(anyPerson.id || "").trim() || null,
+    dataSource: String(anyPerson._dataSource || "").trim() || null,
+    restoreReviewMode: anyPerson._restoreReviewMode === true,
+    restoreCreatesNewRecord: anyPerson._restoreCreatesNewRecord === true,
+    restoreSourceKind: anyPerson._restoreSourceKind || null,
+    restoreSourceId: anyPerson._restoreSourceId || null,
+    idNumber: anyPerson.idNumber ?? null,
+    name: anyPerson.fullName || anyPerson.name || "",
+    rank: anyPerson.rank || "",
+    role: anyPerson.role || "",
+    course: anyPerson.course || "",
+    lmpType: anyPerson.lmpType || "",
+    academicLmpType: anyPerson.academicLmpType || "",
+    unit: anyPerson.unit || "",
+    location: anyPerson.location || "",
+    flight: anyPerson.flight || "",
+    service: anyPerson.service || "",
+    email: anyPerson.email || "",
+    isActive: anyPerson.isActive !== false,
+    permissions: Array.isArray(anyPerson.permissions) ? anyPerson.permissions : []
+  };
+};
 const TraineeProfileFlyout = ({
   trainee,
   traineesData = [],
@@ -56029,6 +56072,21 @@ Confirm the Personnel ID, unit and course are correct before saving this separat
       },
       priorExperience
     };
+    const sameIdNumberStaff = instructorsData.filter(
+      (instructor) => instructor.idNumber !== null && instructor.idNumber !== void 0 && String(instructor.idNumber) === String(idNumber)
+    );
+    const sameIdNumberTrainees = traineesData.filter(
+      (candidate) => candidate.idNumber !== null && candidate.idNumber !== void 0 && String(candidate.idNumber) === String(idNumber)
+    );
+    if (isRestoreReviewMode) {
+      appendStaffProfileTrace("trainee-restore:save-clicked", {
+        restoreCreatesNewRecord: restoreCreatesNewRecordInitial,
+        original: summariseTraineeRestoreTraceProfile(trainee),
+        payload: summariseTraineeRestoreTraceProfile(updatedTrainee),
+        sameIdNumberStaff: sameIdNumberStaff.map(summariseTraineeRestoreTraceProfile),
+        sameIdNumberTrainees: sameIdNumberTrainees.map(summariseTraineeRestoreTraceProfile)
+      });
+    }
     flushPendingAudits();
     if (isCreating) {
       logAudit({
@@ -56064,7 +56122,23 @@ Confirm the Personnel ID, unit and course are correct before saving this separat
     }
     try {
       await Promise.resolve(onUpdateTrainee(updatedTrainee));
+      if (isRestoreReviewMode) {
+        appendStaffProfileTrace("trainee-restore:save-complete", {
+          restoreCreatesNewRecord: restoreCreatesNewRecordInitial,
+          payload: summariseTraineeRestoreTraceProfile(updatedTrainee)
+        });
+      }
     } catch (error) {
+      if (isRestoreReviewMode) {
+        appendStaffProfileTrace("trainee-restore:save-error", {
+          restoreCreatesNewRecord: restoreCreatesNewRecordInitial,
+          message: error instanceof Error ? error.message : String(error || ""),
+          original: summariseTraineeRestoreTraceProfile(trainee),
+          payload: summariseTraineeRestoreTraceProfile(updatedTrainee),
+          sameIdNumberStaff: sameIdNumberStaff.map(summariseTraineeRestoreTraceProfile),
+          sameIdNumberTrainees: sameIdNumberTrainees.map(summariseTraineeRestoreTraceProfile)
+        });
+      }
       console.error("Failed to save trainee profile:", error);
       const reason = error instanceof Error ? error.message : String(error || "").trim();
       await showDarkAlert(
@@ -57661,6 +57735,46 @@ Confirm the profile details are up to date and correct before restoring.`,
             /* @__PURE__ */ jsxRuntimeExports.jsx("button", { onClick: handlePauseToggle, disabled: isFrozen, className: btnClass, style: { color: isPaused ? "#16a34a" : "#dc2626" }, children: isPaused ? "UNPAUSE" : "PAUSE" }),
             /* @__PURE__ */ jsxRuntimeExports.jsx("button", { onClick: handleSuspendToggle, disabled: isFrozen, className: btnClass, style: { color: isSuspended ? "#16a34a" : "#dc2626" }, children: isSuspended ? "UNSUSPEND" : "SUSPEND" }),
             !isCreating && canManageTraineeRemoval && onRequestDeleteTrainee && /* @__PURE__ */ jsxRuntimeExports.jsx("button", { onClick: handleDeleteFromProfile, disabled: isFrozen, className: btnClass, style: { color: "#dc2626" }, children: "DELETE" }),
+            isRestoreReviewMode && /* @__PURE__ */ jsxRuntimeExports.jsx(
+              "button",
+              {
+                type: "button",
+                onClick: () => {
+                  const sameIdNumberStaff = instructorsData.filter(
+                    (instructor) => instructor.idNumber !== null && instructor.idNumber !== void 0 && String(instructor.idNumber) === String(idNumber)
+                  );
+                  const sameIdNumberTrainees = traineesData.filter(
+                    (candidate) => candidate.idNumber !== null && candidate.idNumber !== void 0 && String(candidate.idNumber) === String(idNumber)
+                  );
+                  appendStaffProfileTrace("trainee-restore:manual-download-clicked", {
+                    restoreCreatesNewRecord: restoreCreatesNewRecordInitial,
+                    profile: summariseTraineeRestoreTraceProfile(trainee),
+                    currentForm: summariseTraineeRestoreTraceProfile({
+                      ...trainee,
+                      idNumber,
+                      name,
+                      fullName: name,
+                      rank,
+                      role,
+                      course,
+                      lmpType,
+                      academicLmpType,
+                      unit,
+                      location,
+                      flight,
+                      service,
+                      email
+                    }),
+                    sameIdNumberStaff: sameIdNumberStaff.map(summariseTraineeRestoreTraceProfile),
+                    sameIdNumberTrainees: sameIdNumberTrainees.map(summariseTraineeRestoreTraceProfile)
+                  });
+                  downloadStaffProfileTrace("trainee-restore-trace");
+                },
+                className: btnClass,
+                style: { color: "#f59e0b" },
+                children: "Trace"
+              }
+            ),
             /* @__PURE__ */ jsxRuntimeExports.jsx("button", { onClick: handleSave, className: btnClass, children: restoreCreatesNewRecord ? "Restore" : "Save" }),
             /* @__PURE__ */ jsxRuntimeExports.jsx("button", { onClick: handleCancel, className: btnClass, children: "Cancel" })
           ] })
@@ -152151,6 +152265,35 @@ ${error instanceof Error ? error.message : String(error)}`,
       role: newTrainee.role || "Trainee"
     };
     let savedTrainee = traineeToCreate;
+    const isRestoreCreate = newTrainee._restoreReviewMode === true && newTrainee._restoreCreatesNewRecord === true;
+    if (isRestoreCreate) {
+      appendStaffProfileTrace("trainee-restore:add-start", {
+        payload: {
+          dbId: String(traineeToCreate.id || "").trim() || null,
+          sourceKind: traineeToCreate._restoreSourceKind || null,
+          sourceId: traineeToCreate._restoreSourceId || null,
+          idNumber: traineeToCreate.idNumber ?? null,
+          name: traineeToCreate.fullName || traineeToCreate.name || "",
+          course: traineeToCreate.course || "",
+          lmpType: traineeToCreate.lmpType || "",
+          academicLmpType: traineeToCreate.academicLmpType || "",
+          unit: traineeToCreate.unit || "",
+          location: traineeToCreate.location || "",
+          isActive: traineeToCreate.isActive !== false
+        },
+        sameIdNumberStaff: instructorsData.filter((instructor) => String(instructor.idNumber ?? "") === String(traineeToCreate.idNumber ?? "")).map((instructor) => summariseStaffProfileForTrace(instructor, activeStaffQualificationCatalogue)),
+        sameIdNumberTrainees: allTraineesData.filter((trainee) => String(trainee.idNumber ?? "") === String(traineeToCreate.idNumber ?? "")).map((trainee) => ({
+          dbId: String(trainee.id || "").trim() || null,
+          dataSource: trainee._dataSource || null,
+          idNumber: trainee.idNumber ?? null,
+          name: trainee.fullName || trainee.name || "",
+          course: trainee.course || "",
+          unit: trainee.unit || "",
+          location: trainee.location || "",
+          isActive: trainee.isActive !== false
+        }))
+      });
+    }
     try {
       const response = await fetch(scopedApiPath("/api/trainees"), {
         method: "POST",
@@ -152159,7 +152302,18 @@ ${error instanceof Error ? error.message : String(error)}`,
         body: JSON.stringify(traineeToCreate)
       });
       if (!response.ok) {
-        const message = await readApiErrorMessage(response, `Could not save ${newTrainee.fullName || newTrainee.name || "new trainee"} to the database.`);
+        const errorPayload = await response.json().catch(() => ({}));
+        if (isRestoreCreate) {
+          appendStaffProfileTrace("trainee-restore:add-api-error", {
+            status: response.status,
+            errorPayload
+          });
+        }
+        const message = formatApiErrorMessage(
+          `Could not save ${newTrainee.fullName || newTrainee.name || "new trainee"} to the database.`,
+          response.status,
+          errorPayload
+        );
         throw new Error(message);
       }
       const json = await response.json();
@@ -152167,7 +152321,26 @@ ${error instanceof Error ? error.message : String(error)}`,
         ...json?.trainee || traineeToCreate,
         _dataSource: "database"
       };
+      if (isRestoreCreate) {
+        appendStaffProfileTrace("trainee-restore:add-api-success", {
+          status: response.status,
+          saved: {
+            dbId: String(savedTrainee.id || "").trim() || null,
+            idNumber: savedTrainee.idNumber ?? null,
+            name: savedTrainee.fullName || savedTrainee.name || "",
+            course: savedTrainee.course || "",
+            unit: savedTrainee.unit || "",
+            location: savedTrainee.location || "",
+            isActive: savedTrainee.isActive !== false
+          }
+        });
+      }
     } catch (error) {
+      if (isRestoreCreate) {
+        appendStaffProfileTrace("trainee-restore:add-error", {
+          message: error instanceof Error ? error.message : String(error || "")
+        });
+      }
       console.error("❌ Failed to create trainee:", error);
       throw error;
     }
@@ -152193,7 +152366,7 @@ ${error instanceof Error ? error.message : String(error)}`,
       });
     }
     setSuccessMessage("New Trainee Added!");
-  }, [activeUnitCode, filterSyllabusForMasterLmpAccess, getConfiguredLmpTypeForTrainee, hasMasterLmpUnitAccess, school, scopedApiPath, syllabusDetails]);
+  }, [activeStaffQualificationCatalogue, activeUnitCode, allTraineesData, filterSyllabusForMasterLmpAccess, getConfiguredLmpTypeForTrainee, hasMasterLmpUnitAccess, instructorsData, school, scopedApiPath, syllabusDetails]);
   const handleUpdateTrainee = reactExports.useCallback(async (data) => {
     logRoutineAppDebug("📝 [APP] handleUpdateTrainee called");
     logRoutineAppDebug("📝 [APP] Trainee data received:", {
@@ -160388,7 +160561,7 @@ Do not hard refresh yet. Try Publish again, then confirm the save succeeds.`,
       return Number(instructor.idNumber) === Number(data.idNumber) ? { ...data, isActive: false, _dataSource: "archive", _restoreReviewMode: true } : instructor;
     }));
     setSuccessMessage(`${data.name || "Archived staff"} saved. Press Restore when the profile is ready.`);
-  }, [scopedApiPath]);
+  }, [activeStaffQualificationCatalogue, allTraineesData, instructorsData, scopedApiPath]);
   const handleArchiveInstructor = reactExports.useCallback(async (identifier) => {
     const identifierText = String(identifier ?? "").trim();
     const matchesArchiveIdentifier = (instructor) => {
@@ -163731,7 +163904,38 @@ It will not clear the published DFP.`,
   const handleUpdateArchivedTrainee = reactExports.useCallback(async (data) => {
     const dbId = String(data.id || "").trim();
     const traineeName = data.fullName || data.name || "Archived trainee";
+    const traceArchivedTrainee = (stage, extra = {}) => {
+      appendStaffProfileTrace(`trainee-restore:archived-save-${stage}`, {
+        target: {
+          dbId,
+          dataSource: data._dataSource || null,
+          restoreReviewMode: data._restoreReviewMode === true,
+          restoreCreatesNewRecord: data._restoreCreatesNewRecord === true,
+          idNumber: data.idNumber ?? null,
+          name: traineeName,
+          course: data.course || "",
+          lmpType: data.lmpType || "",
+          academicLmpType: data.academicLmpType || "",
+          unit: data.unit || "",
+          location: data.location || "",
+          isActive: data.isActive !== false
+        },
+        sameIdNumberStaff: instructorsData.filter((instructor) => String(instructor.idNumber ?? "") === String(data.idNumber ?? "")).map((instructor) => summariseStaffProfileForTrace(instructor, activeStaffQualificationCatalogue)),
+        sameIdNumberTrainees: allTraineesData.filter((trainee) => String(trainee.idNumber ?? "") === String(data.idNumber ?? "")).map((trainee) => ({
+          dbId: String(trainee.id || "").trim() || null,
+          dataSource: trainee._dataSource || null,
+          idNumber: trainee.idNumber ?? null,
+          name: trainee.fullName || trainee.name || "",
+          course: trainee.course || "",
+          unit: trainee.unit || "",
+          location: trainee.location || "",
+          isActive: trainee.isActive !== false
+        })),
+        ...extra
+      });
+    };
     if (dbId && data._dataSource === "archive") {
+      traceArchivedTrainee("start");
       const response = await fetch(scopedApiPath(`/api/trainees/${encodeURIComponent(dbId)}`), {
         method: "PATCH",
         credentials: "include",
@@ -163766,8 +163970,26 @@ It will not clear the published DFP.`,
         })
       });
       if (!response.ok) {
-        throw new Error(await readApiErrorMessage(response, `Could not save ${traineeName}.`));
+        const errorPayload = await response.json().catch(() => ({}));
+        traceArchivedTrainee("api-error", {
+          status: response.status,
+          errorPayload
+        });
+        throw new Error(formatApiErrorMessage(`Could not save ${traineeName}.`, response.status, errorPayload));
       }
+      const responseData = await response.json().catch(() => ({}));
+      traceArchivedTrainee("api-success", {
+        status: response.status,
+        saved: {
+          dbId: String(responseData?.trainee?.id || "").trim() || dbId,
+          idNumber: responseData?.trainee?.idNumber ?? data.idNumber ?? null,
+          name: responseData?.trainee?.fullName || responseData?.trainee?.name || traineeName,
+          course: responseData?.trainee?.course || data.course || "",
+          unit: responseData?.trainee?.unit || data.unit || "",
+          location: responseData?.trainee?.location || data.location || "",
+          isActive: responseData?.trainee?.isActive !== false
+        }
+      });
     }
     setArchivedTraineesData((prev) => prev.map((trainee) => {
       const candidateDbId = String(trainee.id || "").trim();

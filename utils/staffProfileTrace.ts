@@ -49,6 +49,24 @@ export const appendStaffProfileTrace = (stage: string, data: unknown): void => {
   }
 };
 
+export const downloadStaffProfileTrace = (prefix = 'staff-profile-trace'): void => {
+  if (!hasWindow()) return;
+  const payload = {
+    exportedAt: new Date().toISOString(),
+    userAgent: window.navigator?.userAgent || '',
+    entries: readStaffProfileTrace(),
+  };
+  const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
+  const url = window.URL.createObjectURL(blob);
+  const anchor = window.document.createElement('a');
+  anchor.href = url;
+  anchor.download = `${prefix}-${new Date().toISOString().replace(/[:.]/g, '-')}.json`;
+  window.document.body.appendChild(anchor);
+  anchor.click();
+  anchor.remove();
+  window.URL.revokeObjectURL(url);
+};
+
 export const summariseStaffProfileForTrace = (
   instructor: Partial<Instructor> | null | undefined,
   staffQualificationCatalogue?: StaffQualificationCatalogue,
