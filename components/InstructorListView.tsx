@@ -1180,28 +1180,10 @@ const InstructorListView: React.FC<InstructorListViewProps> = ({
             onRestore={onRestoreInstructor}
             onRestoreTrainee={onRestoreTrainee}
             onBeginRestoreReview={(person) => {
-              appendStaffProfileTrace('archive-restore:staff-review-forwarded-from-list', {
-                incoming: summariseStaffProfileForTrace(person),
-              });
               setShowArchivedFlyout(false);
               onBeginRestoreReview?.({ ...(person as any), _dataSource: 'archive', _restoreReviewMode: true } as Instructor);
             }}
             onBeginRestoreReviewTrainee={(person) => {
-              appendStaffProfileTrace('archive-restore:trainee-review-forwarded-from-list', {
-                incoming: {
-                  dbId: String((person as any).id || '').trim() || null,
-                  dataSource: String((person as any)._dataSource || '').trim() || null,
-                  restoreReviewMode: (person as any)._restoreReviewMode === true,
-                  restoreCreatesNewRecord: (person as any)._restoreCreatesNewRecord === true,
-                  restoreSourceKind: String((person as any)._restoreSourceKind || '').trim() || null,
-                  restoreSourceId: String((person as any)._restoreSourceId || '').trim() || null,
-                  idNumber: person.idNumber ?? null,
-                  name: person.fullName || person.name || '',
-                  course: person.course || '',
-                  unit: person.unit || '',
-                  location: person.location || '',
-                },
-              });
               setShowArchivedFlyout(false);
               onBeginRestoreReviewTrainee?.({ ...(person as any), _dataSource: 'archive', _restoreReviewMode: true } as Trainee);
             }}

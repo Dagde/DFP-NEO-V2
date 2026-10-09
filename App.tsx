@@ -52038,79 +52038,24 @@ appliedUpdates.forEach(update => {
     };
 
     const removeCrossRestoredArchiveSource = useCallback((restoredPerson: any) => {
-        appendStaffProfileTrace('archive-restore:cross-source-cleanup-check', {
-            restored: summariseStaffProfileForTrace(restoredPerson, activeStaffQualificationCatalogue),
-            archivedStaffCount: archivedInstructorsData.length,
-            archivedTraineeCount: archivedTraineesData.length,
-            activeStaffCount: allInstructorsDataRef.current.length,
-            activeTraineeCount: allTraineesDataRef.current.length,
-        });
-        if (restoredPerson?._restoreCreatesNewRecord !== true) {
-            appendStaffProfileTrace('archive-restore:cross-source-cleanup-skipped', {
-                reason: 'restoreCreatesNewRecord flag was not true',
-                restored: summariseStaffProfileForTrace(restoredPerson, activeStaffQualificationCatalogue),
-            });
-            return;
-        }
+        if (restoredPerson?._restoreCreatesNewRecord !== true) return;
         if (restoredPerson?._restoreSourceKind === 'Trainee') {
-            const matchingArchived = archivedTraineesData.filter(trainee => matchesRestoreSourcePerson(trainee, restoredPerson));
-            const matchingActive = allTraineesDataRef.current.filter(trainee => matchesRestoreSourcePerson(trainee, restoredPerson));
-            appendStaffProfileTrace('archive-restore:cross-source-cleanup-trainee-source', {
-                restored: summariseStaffProfileForTrace(restoredPerson, activeStaffQualificationCatalogue),
-                matchingArchived: matchingArchived.map(trainee => ({
-                    dbId: String((trainee as any).id || '').trim() || null,
-                    idNumber: trainee.idNumber,
-                    name: trainee.fullName || trainee.name,
-                    course: trainee.course,
-                })),
-                matchingActive: matchingActive.map(trainee => ({
-                    dbId: String((trainee as any).id || '').trim() || null,
-                    idNumber: trainee.idNumber,
-                    name: trainee.fullName || trainee.name,
-                    course: trainee.course,
-                })),
-            });
             setArchivedTraineesData(prev => prev.filter(trainee => !matchesRestoreSourcePerson(trainee, restoredPerson)));
             setTraineesData(prev => prev.filter(trainee => !matchesRestoreSourcePerson(trainee, restoredPerson)));
         }
         if (restoredPerson?._restoreSourceKind === 'Staff') {
-            const matchingArchived = archivedInstructorsData.filter(instructor => matchesRestoreSourcePerson(instructor, restoredPerson));
-            const matchingActive = allInstructorsDataRef.current.filter(instructor => matchesRestoreSourcePerson(instructor, restoredPerson));
-            appendStaffProfileTrace('archive-restore:cross-source-cleanup-staff-source', {
-                restored: summariseStaffProfileForTrace(restoredPerson, activeStaffQualificationCatalogue),
-                matchingArchived: matchingArchived.map(instructor => summariseStaffProfileForTrace(instructor, activeStaffQualificationCatalogue)),
-                matchingActive: matchingActive.map(instructor => summariseStaffProfileForTrace(instructor, activeStaffQualificationCatalogue)),
-            });
             setArchivedInstructorsData(prev => prev.filter(instructor => !matchesRestoreSourcePerson(instructor, restoredPerson)));
             setInstructorsData(prev => prev.filter(instructor => !matchesRestoreSourcePerson(instructor, restoredPerson)));
         }
-    }, [activeStaffQualificationCatalogue, archivedInstructorsData, archivedTraineesData]);
+    }, []);
 
     const handleBeginStaffRestoreReview = useCallback((archivedStaff: Instructor) => {
-        appendStaffProfileTrace('archive-restore:app-begin-staff-review', {
-            incoming: summariseStaffProfileForTrace(archivedStaff, activeStaffQualificationCatalogue),
-        });
         setSelectedPersonForProfile({ ...(archivedStaff as any), _dataSource: 'archive', _restoreReviewMode: true });
         setProfileInitialTab(null);
         handleNavigation('Staff');
-    }, [activeStaffQualificationCatalogue]);
+    }, []);
 
     const handleBeginTraineeRestoreReview = useCallback((archivedTrainee: Trainee) => {
-        appendStaffProfileTrace('archive-restore:app-begin-trainee-review', {
-            incoming: {
-                dbId: String((archivedTrainee as any).id || '').trim() || null,
-                dataSource: String((archivedTrainee as any)._dataSource || '').trim() || null,
-                restoreReviewMode: (archivedTrainee as any)._restoreReviewMode === true,
-                restoreCreatesNewRecord: (archivedTrainee as any)._restoreCreatesNewRecord === true,
-                restoreSourceKind: String((archivedTrainee as any)._restoreSourceKind || '').trim() || null,
-                restoreSourceId: String((archivedTrainee as any)._restoreSourceId || '').trim() || null,
-                idNumber: archivedTrainee.idNumber ?? null,
-                name: archivedTrainee.fullName || archivedTrainee.name || '',
-                course: archivedTrainee.course || '',
-                unit: archivedTrainee.unit || '',
-                location: archivedTrainee.location || '',
-            },
-        });
         setSelectedPersonForProfile({ ...(archivedTrainee as any), _dataSource: 'archive', _restoreReviewMode: true });
         setTraineeProfileInitialTab(null);
         handleNavigation('Trainee');

@@ -1,6 +1,5 @@
 import React, { useState } from 'react';
 import { Instructor, Trainee } from '../types';
-import { appendStaffProfileTrace, downloadStaffProfileTrace, summariseStaffProfileForTrace } from '../utils/staffProfileTrace';
 
 interface ArchivedInstructorsFlyoutProps {
   archivedInstructors: Instructor[];
@@ -38,23 +37,6 @@ const ArchivedInstructorsFlyout: React.FC<ArchivedInstructorsFlyoutProps> = ({
 
   const [personToRestore, setPersonToRestore] = useState<ArchivedIndividual | null>(null);
   const [searchText, setSearchText] = useState('');
-  const summariseArchivedPersonForTrace = (individual: ArchivedIndividual | null) => {
-    if (!individual) return null;
-    const person = individual.person as any;
-    return {
-      kind: individual.kind,
-      id: individual.id,
-      dbId: String(person.id || '').trim() || null,
-      idNumber: person.idNumber ?? null,
-      name: individual.name,
-      rank: individual.rank,
-      role: individual.role,
-      unit: individual.unit,
-      course: individual.course,
-      isActive: person.isActive !== false,
-      dataSource: String(person._dataSource || '').trim() || null,
-    };
-  };
   const mapTraineeToStaffRestoreDraft = (trainee: Trainee): Instructor => ({
     idNumber: Number(trainee.idNumber) || 0,
     name: trainee.name || trainee.fullName || '',
@@ -224,11 +206,6 @@ const ArchivedInstructorsFlyout: React.FC<ArchivedInstructorsFlyoutProps> = ({
                     <button
                         onClick={() => {
                           if (!canRestore) return;
-                          appendStaffProfileTrace('archive-restore:open-type-choice', {
-                            selected: summariseArchivedPersonForTrace(individual),
-                            archivedStaffCount: archivedInstructors.length,
-                            archivedTraineeCount: archivedTrainees.length,
-                          });
                           setPersonToRestore(individual);
                         }}
                         className={`p-1 rounded-full text-gray-400 hover:bg-green-500/20 hover:text-green-400 transition-colors ${canRestore ? '' : 'cursor-not-allowed'}`}
@@ -260,35 +237,17 @@ const ArchivedInstructorsFlyout: React.FC<ArchivedInstructorsFlyoutProps> = ({
               <p className="text-gray-300">
                 Choose how to restore <strong className="text-white">{personToRestore.name}</strong>.
               </p>
-              <button
-                type="button"
-                onClick={() => downloadStaffProfileTrace('archive-restore-trace')}
-                className="rounded border border-amber-400/50 bg-amber-500/10 px-3 py-1.5 text-xs font-semibold text-amber-100 transition-colors hover:border-amber-300 hover:bg-amber-500/20"
-              >
-                Download Restore Trace
-              </button>
               <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                 <button
                   type="button"
                   onClick={async () => {
-                    appendStaffProfileTrace('archive-restore:staff-choice-clicked', {
-                      selected: summariseArchivedPersonForTrace(personToRestore),
-                    });
                     const passwordAccepted = onRequestRestorePassword
                       ? await onRequestRestorePassword(personToRestore.name)
                       : true;
-                    appendStaffProfileTrace('archive-restore:staff-password-result', {
-                      accepted: passwordAccepted,
-                      selected: summariseArchivedPersonForTrace(personToRestore),
-                    });
                     if (!passwordAccepted) return;
                     const staffProfile = personToRestore.kind === 'Staff'
                       ? { ...(personToRestore.person as Instructor), _dataSource: 'archive', _restoreReviewMode: true }
                       : mapTraineeToStaffRestoreDraft(personToRestore.person as Trainee);
-                    appendStaffProfileTrace('archive-restore:staff-review-open', {
-                      selected: summariseArchivedPersonForTrace(personToRestore),
-                      staffProfile: summariseStaffProfileForTrace(staffProfile),
-                    });
                     onBeginRestoreReview?.(staffProfile as Instructor);
                     setPersonToRestore(null);
                   }}
@@ -300,33 +259,13 @@ const ArchivedInstructorsFlyout: React.FC<ArchivedInstructorsFlyoutProps> = ({
                 <button
                   type="button"
                   onClick={async () => {
-                    appendStaffProfileTrace('archive-restore:trainee-choice-clicked', {
-                      selected: summariseArchivedPersonForTrace(personToRestore),
-                    });
                     const passwordAccepted = onRequestRestorePassword
                       ? await onRequestRestorePassword(personToRestore.name)
                       : true;
-                    appendStaffProfileTrace('archive-restore:trainee-password-result', {
-                      accepted: passwordAccepted,
-                      selected: summariseArchivedPersonForTrace(personToRestore),
-                    });
                     if (!passwordAccepted) return;
                     const traineeProfile = personToRestore.kind === 'Trainee'
                       ? { ...(personToRestore.person as Trainee), _dataSource: 'archive', _restoreReviewMode: true }
                       : mapStaffToTraineeRestoreDraft(personToRestore.person as Instructor);
-                    appendStaffProfileTrace('archive-restore:trainee-review-open', {
-                      selected: summariseArchivedPersonForTrace(personToRestore),
-                      traineeProfile: summariseArchivedPersonForTrace({
-                        person: traineeProfile,
-                        kind: 'Trainee',
-                        id: getArchiveIdentifier(traineeProfile),
-                        name: traineeProfile.fullName || traineeProfile.name || '',
-                        rank: traineeProfile.rank || '',
-                        role: traineeProfile.role || 'Trainee',
-                        unit: traineeProfile.unit || '',
-                        course: traineeProfile.course || '',
-                      }),
-                    });
                     onBeginRestoreReviewTrainee?.(traineeProfile as Trainee);
                     setPersonToRestore(null);
                   }}

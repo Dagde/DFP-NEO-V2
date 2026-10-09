@@ -7783,25 +7783,6 @@ const appendStaffProfileTrace = (stage, data) => {
   } catch {
   }
 };
-const downloadStaffProfileTrace = (prefix = "staff-profile-trace") => {
-  if (!hasWindow()) return;
-  const payload = {
-    generatedAt: (/* @__PURE__ */ new Date()).toISOString(),
-    userAgent: window.navigator?.userAgent || null,
-    url: window.location?.href || null,
-    entries: readStaffProfileTrace()
-  };
-  const timestamp = (/* @__PURE__ */ new Date()).toISOString().replace(/[:.]/g, "-");
-  const blob = new Blob([JSON.stringify(payload, null, 2)], { type: "application/json;charset=utf-8;" });
-  const url = URL.createObjectURL(blob);
-  const link = document.createElement("a");
-  link.href = url;
-  link.download = `${prefix}-${timestamp}.json`;
-  document.body.appendChild(link);
-  link.click();
-  document.body.removeChild(link);
-  URL.revokeObjectURL(url);
-};
 const summariseStaffProfileForTrace = (instructor, staffQualificationCatalogue) => {
   if (!instructor) return null;
   const anyInstructor = instructor;
@@ -7813,10 +7794,6 @@ const summariseStaffProfileForTrace = (instructor, staffQualificationCatalogue) 
   return {
     dbId: String(anyInstructor.id || "").trim() || null,
     dataSource: String(anyInstructor._dataSource || "").trim() || null,
-    restoreReviewMode: anyInstructor._restoreReviewMode === true,
-    restoreCreatesNewRecord: anyInstructor._restoreCreatesNewRecord === true,
-    restoreSourceKind: String(anyInstructor._restoreSourceKind || "").trim() || null,
-    restoreSourceId: String(anyInstructor._restoreSourceId || "").trim() || null,
     idNumber: instructor.idNumber ?? null,
     name: instructor.name || "",
     rank: instructor.rank || "",
@@ -91010,10 +90987,6 @@ const InstructorProfileFlyout = ({
   };
   const handleSave = async () => {
     if (restoreCreatesNewRecordInitial) {
-      appendStaffProfileTrace("archive-restore:staff-final-restore-clicked", {
-        profile: summariseStaffProfileForTrace(instructor, normalisedQualificationCatalogue),
-        formValues: { idNumber, name, rank, role, unit, location }
-      });
       const confirmed = await showDarkConfirm(
         `Restore ${name || "this person"} as staff now?
 
@@ -91021,26 +90994,13 @@ Confirm the profile details are up to date and correct before restoring.`,
         "Confirm Restore",
         "warning"
       );
-      appendStaffProfileTrace("archive-restore:staff-final-restore-confirm-result", {
-        confirmed,
-        profile: summariseStaffProfileForTrace(instructor, normalisedQualificationCatalogue)
-      });
       if (!confirmed) return;
     }
     if (!name) {
-      appendStaffProfileTrace("archive-restore:staff-final-restore-validation-failed", {
-        reason: "missing name",
-        profile: summariseStaffProfileForTrace(instructor, normalisedQualificationCatalogue)
-      });
       await showDarkAlert("Name is required.", "Missing Staff Name", "warning");
       return;
     }
     if (!Number.isInteger(Number(idNumber)) || Number(idNumber) <= 0) {
-      appendStaffProfileTrace("archive-restore:staff-final-restore-validation-failed", {
-        reason: "missing personnel id",
-        profile: summariseStaffProfileForTrace(instructor, normalisedQualificationCatalogue),
-        idNumber
-      });
       await showDarkAlert("Personnel ID is required before this staff record can be saved.", "Missing Personnel ID", "warning");
       return;
     }
@@ -93292,23 +93252,6 @@ const ArchivedInstructorsFlyout = ({
 }) => {
   const [personToRestore, setPersonToRestore] = reactExports.useState(null);
   const [searchText, setSearchText] = reactExports.useState("");
-  const summariseArchivedPersonForTrace = (individual) => {
-    if (!individual) return null;
-    const person = individual.person;
-    return {
-      kind: individual.kind,
-      id: individual.id,
-      dbId: String(person.id || "").trim() || null,
-      idNumber: person.idNumber ?? null,
-      name: individual.name,
-      rank: individual.rank,
-      role: individual.role,
-      unit: individual.unit,
-      course: individual.course,
-      isActive: person.isActive !== false,
-      dataSource: String(person._dataSource || "").trim() || null
-    };
-  };
   const mapTraineeToStaffRestoreDraft = (trainee) => ({
     idNumber: Number(trainee.idNumber) || 0,
     name: trainee.name || trainee.fullName || "",
@@ -93479,11 +93422,6 @@ const ArchivedInstructorsFlyout = ({
                         {
                           onClick: () => {
                             if (!canRestore) return;
-                            appendStaffProfileTrace("archive-restore:open-type-choice", {
-                              selected: summariseArchivedPersonForTrace(individual),
-                              archivedStaffCount: archivedInstructors.length,
-                              archivedTraineeCount: archivedTrainees.length
-                            });
                             setPersonToRestore(individual);
                           },
                           className: `p-1 rounded-full text-gray-400 hover:bg-green-500/20 hover:text-green-400 transition-colors ${canRestore ? "" : "cursor-not-allowed"}`,
@@ -93509,35 +93447,15 @@ const ArchivedInstructorsFlyout = ({
           /* @__PURE__ */ jsxRuntimeExports.jsx("strong", { className: "text-white", children: personToRestore.name }),
           "."
         ] }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx(
-          "button",
-          {
-            type: "button",
-            onClick: () => downloadStaffProfileTrace("archive-restore-trace"),
-            className: "rounded border border-amber-400/50 bg-amber-500/10 px-3 py-1.5 text-xs font-semibold text-amber-100 transition-colors hover:border-amber-300 hover:bg-amber-500/20",
-            children: "Download Restore Trace"
-          }
-        ),
         /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid grid-cols-1 gap-3 sm:grid-cols-2", children: [
           /* @__PURE__ */ jsxRuntimeExports.jsxs(
             "button",
             {
               type: "button",
               onClick: async () => {
-                appendStaffProfileTrace("archive-restore:staff-choice-clicked", {
-                  selected: summariseArchivedPersonForTrace(personToRestore)
-                });
                 const passwordAccepted = onRequestRestorePassword ? await onRequestRestorePassword(personToRestore.name) : true;
-                appendStaffProfileTrace("archive-restore:staff-password-result", {
-                  accepted: passwordAccepted,
-                  selected: summariseArchivedPersonForTrace(personToRestore)
-                });
                 if (!passwordAccepted) return;
                 const staffProfile = personToRestore.kind === "Staff" ? { ...personToRestore.person, _dataSource: "archive", _restoreReviewMode: true } : mapTraineeToStaffRestoreDraft(personToRestore.person);
-                appendStaffProfileTrace("archive-restore:staff-review-open", {
-                  selected: summariseArchivedPersonForTrace(personToRestore),
-                  staffProfile: summariseStaffProfileForTrace(staffProfile)
-                });
                 onBeginRestoreReview?.(staffProfile);
                 setPersonToRestore(null);
               },
@@ -93553,29 +93471,9 @@ const ArchivedInstructorsFlyout = ({
             {
               type: "button",
               onClick: async () => {
-                appendStaffProfileTrace("archive-restore:trainee-choice-clicked", {
-                  selected: summariseArchivedPersonForTrace(personToRestore)
-                });
                 const passwordAccepted = onRequestRestorePassword ? await onRequestRestorePassword(personToRestore.name) : true;
-                appendStaffProfileTrace("archive-restore:trainee-password-result", {
-                  accepted: passwordAccepted,
-                  selected: summariseArchivedPersonForTrace(personToRestore)
-                });
                 if (!passwordAccepted) return;
                 const traineeProfile = personToRestore.kind === "Trainee" ? { ...personToRestore.person, _dataSource: "archive", _restoreReviewMode: true } : mapStaffToTraineeRestoreDraft(personToRestore.person);
-                appendStaffProfileTrace("archive-restore:trainee-review-open", {
-                  selected: summariseArchivedPersonForTrace(personToRestore),
-                  traineeProfile: summariseArchivedPersonForTrace({
-                    person: traineeProfile,
-                    kind: "Trainee",
-                    id: getArchiveIdentifier(traineeProfile),
-                    name: traineeProfile.fullName || traineeProfile.name || "",
-                    rank: traineeProfile.rank || "",
-                    role: traineeProfile.role || "Trainee",
-                    unit: traineeProfile.unit || "",
-                    course: traineeProfile.course || ""
-                  })
-                });
                 onBeginRestoreReviewTrainee?.(traineeProfile);
                 setPersonToRestore(null);
               },
@@ -94470,28 +94368,10 @@ const InstructorListView = ({
         onRestore: onRestoreInstructor,
         onRestoreTrainee,
         onBeginRestoreReview: (person) => {
-          appendStaffProfileTrace("archive-restore:staff-review-forwarded-from-list", {
-            incoming: summariseStaffProfileForTrace(person)
-          });
           setShowArchivedFlyout(false);
           onBeginRestoreReview?.({ ...person, _dataSource: "archive", _restoreReviewMode: true });
         },
         onBeginRestoreReviewTrainee: (person) => {
-          appendStaffProfileTrace("archive-restore:trainee-review-forwarded-from-list", {
-            incoming: {
-              dbId: String(person.id || "").trim() || null,
-              dataSource: String(person._dataSource || "").trim() || null,
-              restoreReviewMode: person._restoreReviewMode === true,
-              restoreCreatesNewRecord: person._restoreCreatesNewRecord === true,
-              restoreSourceKind: String(person._restoreSourceKind || "").trim() || null,
-              restoreSourceId: String(person._restoreSourceId || "").trim() || null,
-              idNumber: person.idNumber ?? null,
-              name: person.fullName || person.name || "",
-              course: person.course || "",
-              unit: person.unit || "",
-              location: person.location || ""
-            }
-          });
           setShowArchivedFlyout(false);
           onBeginRestoreReviewTrainee?.({ ...person, _dataSource: "archive", _restoreReviewMode: true });
         },
@@ -160469,77 +160349,22 @@ Do not hard refresh yet. Try Publish again, then confirm the save succeeds.`,
     return Boolean(sourceName && getProfileNameValues(candidate).includes(sourceName));
   };
   const removeCrossRestoredArchiveSource = reactExports.useCallback((restoredPerson) => {
-    appendStaffProfileTrace("archive-restore:cross-source-cleanup-check", {
-      restored: summariseStaffProfileForTrace(restoredPerson, activeStaffQualificationCatalogue),
-      archivedStaffCount: archivedInstructorsData.length,
-      archivedTraineeCount: archivedTraineesData.length,
-      activeStaffCount: allInstructorsDataRef.current.length,
-      activeTraineeCount: allTraineesDataRef.current.length
-    });
-    if (restoredPerson?._restoreCreatesNewRecord !== true) {
-      appendStaffProfileTrace("archive-restore:cross-source-cleanup-skipped", {
-        reason: "restoreCreatesNewRecord flag was not true",
-        restored: summariseStaffProfileForTrace(restoredPerson, activeStaffQualificationCatalogue)
-      });
-      return;
-    }
+    if (restoredPerson?._restoreCreatesNewRecord !== true) return;
     if (restoredPerson?._restoreSourceKind === "Trainee") {
-      const matchingArchived = archivedTraineesData.filter((trainee) => matchesRestoreSourcePerson(trainee, restoredPerson));
-      const matchingActive = allTraineesDataRef.current.filter((trainee) => matchesRestoreSourcePerson(trainee, restoredPerson));
-      appendStaffProfileTrace("archive-restore:cross-source-cleanup-trainee-source", {
-        restored: summariseStaffProfileForTrace(restoredPerson, activeStaffQualificationCatalogue),
-        matchingArchived: matchingArchived.map((trainee) => ({
-          dbId: String(trainee.id || "").trim() || null,
-          idNumber: trainee.idNumber,
-          name: trainee.fullName || trainee.name,
-          course: trainee.course
-        })),
-        matchingActive: matchingActive.map((trainee) => ({
-          dbId: String(trainee.id || "").trim() || null,
-          idNumber: trainee.idNumber,
-          name: trainee.fullName || trainee.name,
-          course: trainee.course
-        }))
-      });
       setArchivedTraineesData((prev) => prev.filter((trainee) => !matchesRestoreSourcePerson(trainee, restoredPerson)));
       setTraineesData((prev) => prev.filter((trainee) => !matchesRestoreSourcePerson(trainee, restoredPerson)));
     }
     if (restoredPerson?._restoreSourceKind === "Staff") {
-      const matchingArchived = archivedInstructorsData.filter((instructor) => matchesRestoreSourcePerson(instructor, restoredPerson));
-      const matchingActive = allInstructorsDataRef.current.filter((instructor) => matchesRestoreSourcePerson(instructor, restoredPerson));
-      appendStaffProfileTrace("archive-restore:cross-source-cleanup-staff-source", {
-        restored: summariseStaffProfileForTrace(restoredPerson, activeStaffQualificationCatalogue),
-        matchingArchived: matchingArchived.map((instructor) => summariseStaffProfileForTrace(instructor, activeStaffQualificationCatalogue)),
-        matchingActive: matchingActive.map((instructor) => summariseStaffProfileForTrace(instructor, activeStaffQualificationCatalogue))
-      });
       setArchivedInstructorsData((prev) => prev.filter((instructor) => !matchesRestoreSourcePerson(instructor, restoredPerson)));
       setInstructorsData((prev) => prev.filter((instructor) => !matchesRestoreSourcePerson(instructor, restoredPerson)));
     }
-  }, [activeStaffQualificationCatalogue, archivedInstructorsData, archivedTraineesData]);
+  }, []);
   const handleBeginStaffRestoreReview = reactExports.useCallback((archivedStaff) => {
-    appendStaffProfileTrace("archive-restore:app-begin-staff-review", {
-      incoming: summariseStaffProfileForTrace(archivedStaff, activeStaffQualificationCatalogue)
-    });
     setSelectedPersonForProfile({ ...archivedStaff, _dataSource: "archive", _restoreReviewMode: true });
     setProfileInitialTab(null);
     handleNavigation("Staff");
-  }, [activeStaffQualificationCatalogue]);
+  }, []);
   const handleBeginTraineeRestoreReview = reactExports.useCallback((archivedTrainee) => {
-    appendStaffProfileTrace("archive-restore:app-begin-trainee-review", {
-      incoming: {
-        dbId: String(archivedTrainee.id || "").trim() || null,
-        dataSource: String(archivedTrainee._dataSource || "").trim() || null,
-        restoreReviewMode: archivedTrainee._restoreReviewMode === true,
-        restoreCreatesNewRecord: archivedTrainee._restoreCreatesNewRecord === true,
-        restoreSourceKind: String(archivedTrainee._restoreSourceKind || "").trim() || null,
-        restoreSourceId: String(archivedTrainee._restoreSourceId || "").trim() || null,
-        idNumber: archivedTrainee.idNumber ?? null,
-        name: archivedTrainee.fullName || archivedTrainee.name || "",
-        course: archivedTrainee.course || "",
-        unit: archivedTrainee.unit || "",
-        location: archivedTrainee.location || ""
-      }
-    });
     setSelectedPersonForProfile({ ...archivedTrainee, _dataSource: "archive", _restoreReviewMode: true });
     setTraineeProfileInitialTab(null);
     handleNavigation("Trainee");
