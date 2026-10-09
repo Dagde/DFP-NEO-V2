@@ -52167,17 +52167,24 @@ appliedUpdates.forEach(update => {
         const restoredInstructor = { ...instructorRestoreFields, isActive: true, _dataSource: (instructorToRestore as any)._dataSource === 'archive' ? 'database' : (instructorToRestore as any)._dataSource };
 
         try {
-            if (dbId && (instructorToRestore as any)._dataSource === 'database') {
+            if (dbId) {
                 const response = await fetch(scopedApiPath(`/api/personnel/${encodeURIComponent(dbId)}`), {
                     method: 'PATCH',
                     credentials: 'include',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ isActive: true }),
+                    body: JSON.stringify({ ...instructorRestoreFields, isActive: true }),
                 });
                 if (!response.ok) {
                     const errorData = await response.json().catch(() => ({}));
                     throw new Error(errorData.error || errorData.details || `Restore failed (${response.status})`);
                 }
+                const responseData = await response.json().catch(() => ({}));
+                Object.assign(restoredInstructor, normalisePersonnelRecord({
+                    ...restoredInstructor,
+                    ...(responseData.personnel || responseData.updatedPersonnel || {}),
+                    isActive: true,
+                    _dataSource: 'database',
+                }));
             }
             setArchivedInstructorsData(prev => prev.filter(i => !matchesTargetInstructor(i)));
             setInstructorsData(prev => {
@@ -56074,7 +56081,7 @@ appliedUpdates.forEach(update => {
         const traineeName = traineeToRestore.fullName || traineeToRestore.name || 'trainee';
 
         try {
-            if (dbId && (traineeToRestore as any)._dataSource === 'database') {
+            if (dbId) {
                 const sessionToken = localStorage.getItem('dfp_session_token') || '';
                 const response = await fetch(scopedApiPath(`/api/trainees/${encodeURIComponent(dbId)}`), {
                     method: 'PATCH',
@@ -56083,12 +56090,49 @@ appliedUpdates.forEach(update => {
                         'Content-Type': 'application/json',
                         ...(sessionToken ? { Authorization: `Bearer ${sessionToken}` } : {}),
                     },
-                    body: JSON.stringify({ isActive: true }),
+                    body: JSON.stringify({
+                        idNumber: traineeToRestore.idNumber,
+                        name: traineeToRestore.name,
+                        fullName: traineeToRestore.fullName,
+                        rank: traineeToRestore.rank,
+                        role: traineeToRestore.role || '',
+                        course: traineeToRestore.course,
+                        lmpType: traineeToRestore.lmpType,
+                        academicLmpType: (traineeToRestore as any).academicLmpType || '',
+                        unit: traineeToRestore.unit,
+                        flight: traineeToRestore.flight,
+                        location: traineeToRestore.location,
+                        service: traineeToRestore.service,
+                        seatConfig: traineeToRestore.seatConfig,
+                        isPaused: traineeToRestore.isPaused,
+                        isActive: true,
+                        traineeCallsign: traineeToRestore.traineeCallsign,
+                        primaryInstructor: traineeToRestore.primaryInstructor,
+                        secondaryInstructor: traineeToRestore.secondaryInstructor,
+                        phoneNumber: traineeToRestore.phoneNumber,
+                        email: traineeToRestore.email,
+                        permissions: traineeToRestore.permissions || [],
+                        preferences: {
+                            ...(traineeToRestore.preferences || {}),
+                            preFlightNotesEnduring: getTraineeEnduringPreFlightNotes(traineeToRestore),
+                        },
+                        unavailability: traineeToRestore.unavailability || [],
+                        priorExperience: (traineeToRestore as any).priorExperience,
+                        photoUrl: (traineeToRestore as any).photoUrl,
+                    }),
                 });
                 if (!response.ok) {
                     const message = await readApiErrorMessage(response, `Could not restore ${traineeName}.`);
                     throw new Error(message);
                 }
+                const responseData = await response.json().catch(() => ({}));
+                Object.assign(restoredTrainee, {
+                    ...restoredTrainee,
+                    ...(responseData?.trainee || {}),
+                    preFlightNotesEnduring: getTraineeEnduringPreFlightNotes(responseData?.trainee || restoredTrainee),
+                    isActive: true,
+                    _dataSource: 'database',
+                });
             }
             setArchivedTraineesData(prev => prev.filter(t => !matchesTargetTrainee(t)));
             setTraineesData(prev => {
