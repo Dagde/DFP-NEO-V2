@@ -59545,6 +59545,7 @@ const CourseRosterView = ({
   selectedPersonForProfile,
   selectedProfileInitialTab = null,
   onProfileOpened,
+  onProfileClosed,
   onOpenCurrentProfile,
   traineeLMPs,
   onViewLogbook,
@@ -60202,6 +60203,7 @@ const CourseRosterView = ({
           setProfileInitialTab(null);
           setIsCreatingNew(false);
           setNewTraineeTemplate(null);
+          onProfileClosed?.();
         },
         onUpdateTrainee: isCreatingNew || selectedTrainee?._restoreCreatesNewRecord ? onAddTrainee : selectedTrainee?._restoreReviewMode && selectedTrainee?._dataSource === "archive" && onUpdateArchivedTrainee ? onUpdateArchivedTrainee : onUpdateTrainee,
         onRestoreReviewedTrainee,
@@ -95256,6 +95258,7 @@ const TraineeView = (props) => {
           selectedPersonForProfile: props.selfOnlyProfile || props.selectedPersonForProfile,
           selectedProfileInitialTab: props.selectedProfileInitialTab,
           onProfileOpened: props.onProfileOpened,
+          onProfileClosed: props.onProfileClosed,
           onOpenCurrentProfile: props.onOpenCurrentProfile,
           traineeLMPs: props.traineeLMPs,
           onViewLogbook: props.onViewLogbook,
@@ -148372,6 +148375,7 @@ ${"=".repeat(60)}`);
     }
   }, [activeView, showDfpSidePanel]);
   const [selectedPersonForProfile, setSelectedPersonForProfile] = reactExports.useState(null);
+  const [profileReturnView, setProfileReturnView] = reactExports.useState(null);
   const [profileInitialTab, setProfileInitialTab] = reactExports.useState(null);
   const [traineeProfileInitialTab, setTraineeProfileInitialTab] = reactExports.useState(null);
   const [showPublishConfirm, setShowPublishConfirm] = reactExports.useState(false);
@@ -160597,6 +160601,12 @@ Do not hard refresh yet. Try Publish again, then confirm the save succeeds.`,
     setSelectedPersonForProfile(null);
     setTraineeProfileInitialTab(null);
   }, []);
+  const handleProfileClosed = reactExports.useCallback(() => {
+    if (!profileReturnView) return;
+    const returnView = profileReturnView;
+    setProfileReturnView(null);
+    handleNavigation(returnView);
+  }, [profileReturnView]);
   const handleProfileTabConsumed = reactExports.useCallback(() => {
     setProfileInitialTab(null);
   }, []);
@@ -160728,16 +160738,18 @@ Do not hard refresh yet. Try Publish again, then confirm the save succeeds.`,
   }, []);
   const handleBeginStaffRestoreReview = reactExports.useCallback((archivedStaff) => {
     const restoreReviewMode = archivedStaff._restoreReviewMode === false ? false : true;
+    setProfileReturnView(null);
     setSelectedPersonForProfile({ ...archivedStaff, _dataSource: "archive", _restoreReviewMode: restoreReviewMode });
     setProfileInitialTab(null);
     handleNavigation("Staff");
   }, []);
   const handleBeginTraineeRestoreReview = reactExports.useCallback((archivedTrainee) => {
     const restoreReviewMode = archivedTrainee._restoreReviewMode === false ? false : true;
+    setProfileReturnView(!restoreReviewMode && activeView === "Staff" ? "Staff" : null);
     setSelectedPersonForProfile({ ...archivedTrainee, _dataSource: "archive", _restoreReviewMode: restoreReviewMode });
     setTraineeProfileInitialTab(null);
     handleNavigation("Trainee");
-  }, []);
+  }, [activeView]);
   const handleUpdateArchivedInstructor = reactExports.useCallback(async (data) => {
     const dbId = String(data.id || "").trim();
     if (dbId && data._dataSource === "archive") {
@@ -164815,6 +164827,7 @@ It will not clear the published DFP.`,
             selectedPersonForProfile,
             selectedProfileInitialTab: traineeProfileInitialTab,
             onProfileOpened: handleProfileOpened,
+            onProfileClosed: handleProfileClosed,
             onOpenCurrentProfile: handleOpenCurrentTraineeProfile,
             traineeLMPs: activeDateTraineeLMPs,
             onViewLogbook: handleViewLogbook,
@@ -164980,6 +164993,7 @@ It will not clear the published DFP.`,
             selectedPersonForProfile,
             selectedProfileInitialTab: traineeProfileInitialTab,
             onProfileOpened: handleProfileOpened,
+            onProfileClosed: handleProfileClosed,
             onOpenCurrentProfile: handleOpenCurrentTraineeProfile,
             traineeLMPs: activeDateTraineeLMPs,
             onViewLogbook: handleViewLogbook,

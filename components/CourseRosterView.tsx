@@ -60,6 +60,7 @@ interface CourseRosterViewProps {
     selectedPersonForProfile?: Trainee | null;
     selectedProfileInitialTab?: 'unavailable' | 'currency' | 'logbook' | 'hatesheet' | 'lmp' | 'sct' | null;
     onProfileOpened?: () => void;
+    onProfileClosed?: () => void;
     onOpenCurrentProfile?: (person: Trainee) => void;
     traineeLMPs: Map<string, SyllabusItemDetail[]>;
     onViewLogbook?: (person: Trainee) => void;
@@ -176,6 +177,7 @@ const CourseRosterView: React.FC<CourseRosterViewProps> = ({
     selectedPersonForProfile,
     selectedProfileInitialTab = null,
     onProfileOpened,
+    onProfileClosed,
     onOpenCurrentProfile,
     traineeLMPs,
     onViewLogbook,
@@ -937,6 +939,7 @@ const CourseRosterView: React.FC<CourseRosterViewProps> = ({
                         setProfileInitialTab(null);
                         setIsCreatingNew(false);
                         setNewTraineeTemplate(null);
+                        onProfileClosed?.();
                     }}
                     onUpdateTrainee={isCreatingNew || (selectedTrainee as any)?._restoreCreatesNewRecord ? onAddTrainee : ((selectedTrainee as any)?._restoreReviewMode && (selectedTrainee as any)?._dataSource === 'archive' && onUpdateArchivedTrainee ? onUpdateArchivedTrainee : onUpdateTrainee)}
                     onRestoreReviewedTrainee={onRestoreReviewedTrainee}

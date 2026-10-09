@@ -37109,6 +37109,7 @@ const App: React.FC = () => {
 
     // Navigation and Modals state
     const [selectedPersonForProfile, setSelectedPersonForProfile] = useState<Instructor | Trainee | null>(null);
+    const [profileReturnView, setProfileReturnView] = useState<string | null>(null);
     const [profileInitialTab, setProfileInitialTab] = useState<'currency' | 'trainingReports' | null>(null);
     const [traineeProfileInitialTab, setTraineeProfileInitialTab] = useState<'unavailable' | 'currency' | 'logbook' | 'hatesheet' | 'lmp' | null>(null);
     const [showPublishConfirm, setShowPublishConfirm] = useState(false);
@@ -52025,6 +52026,13 @@ appliedUpdates.forEach(update => {
         setTraineeProfileInitialTab(null);
     }, []);
 
+    const handleProfileClosed = useCallback(() => {
+        if (!profileReturnView) return;
+        const returnView = profileReturnView;
+        setProfileReturnView(null);
+        handleNavigation(returnView);
+    }, [profileReturnView]);
+
     const handleProfileTabConsumed = useCallback(() => {
         setProfileInitialTab(null);
     }, []);
@@ -52179,6 +52187,7 @@ appliedUpdates.forEach(update => {
 
     const handleBeginStaffRestoreReview = useCallback((archivedStaff: Instructor) => {
         const restoreReviewMode = (archivedStaff as any)._restoreReviewMode === false ? false : true;
+        setProfileReturnView(null);
         setSelectedPersonForProfile({ ...(archivedStaff as any), _dataSource: 'archive', _restoreReviewMode: restoreReviewMode });
         setProfileInitialTab(null);
         handleNavigation('Staff');
@@ -52186,10 +52195,11 @@ appliedUpdates.forEach(update => {
 
     const handleBeginTraineeRestoreReview = useCallback((archivedTrainee: Trainee) => {
         const restoreReviewMode = (archivedTrainee as any)._restoreReviewMode === false ? false : true;
+        setProfileReturnView(!restoreReviewMode && activeView === 'Staff' ? 'Staff' : null);
         setSelectedPersonForProfile({ ...(archivedTrainee as any), _dataSource: 'archive', _restoreReviewMode: restoreReviewMode });
         setTraineeProfileInitialTab(null);
         handleNavigation('Trainee');
-    }, []);
+    }, [activeView]);
 
     const handleUpdateArchivedInstructor = useCallback(async (data: Instructor) => {
         const dbId = String((data as any).id || '').trim();
@@ -57050,6 +57060,7 @@ appliedUpdates.forEach(update => {
                             selectedPersonForProfile={selectedPersonForProfile as any}
                             selectedProfileInitialTab={traineeProfileInitialTab}
                             onProfileOpened={handleProfileOpened}
+                            onProfileClosed={handleProfileClosed}
                             onOpenCurrentProfile={handleOpenCurrentTraineeProfile}
 	                            traineeLMPs={activeDateTraineeLMPs}
                             onViewLogbook={handleViewLogbook}
@@ -57214,6 +57225,7 @@ appliedUpdates.forEach(update => {
                             selectedPersonForProfile={selectedPersonForProfile as Trainee | null}
                             selectedProfileInitialTab={traineeProfileInitialTab}
                             onProfileOpened={handleProfileOpened}
+                            onProfileClosed={handleProfileClosed}
                             onOpenCurrentProfile={handleOpenCurrentTraineeProfile}
 	                            traineeLMPs={activeDateTraineeLMPs}
                             onViewLogbook={handleViewLogbook}

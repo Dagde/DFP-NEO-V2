@@ -46,6 +46,7 @@ interface TraineeViewProps {
   selectedPersonForProfile: any;
   selectedProfileInitialTab?: 'unavailable' | 'currency' | 'logbook' | 'hatesheet' | 'lmp' | null;
   onProfileOpened: () => void;
+  onProfileClosed?: () => void;
   onOpenCurrentProfile?: (person: any) => void;
   traineeLMPs: Map<string, any[]>;
   onViewLogbook: (trainee: any) => void;
@@ -201,6 +202,7 @@ const TraineeView: React.FC<TraineeViewProps> = (props) => {
             selectedPersonForProfile={props.selfOnlyProfile || props.selectedPersonForProfile}
             selectedProfileInitialTab={props.selectedProfileInitialTab}
             onProfileOpened={props.onProfileOpened}
+            onProfileClosed={props.onProfileClosed}
             onOpenCurrentProfile={props.onOpenCurrentProfile}
             traineeLMPs={props.traineeLMPs}
             onViewLogbook={props.onViewLogbook}
