@@ -49,6 +49,26 @@ export const appendStaffProfileTrace = (stage: string, data: unknown): void => {
   }
 };
 
+export const downloadStaffProfileTrace = (prefix = 'staff-profile-trace'): void => {
+  if (!hasWindow()) return;
+  const payload = {
+    generatedAt: new Date().toISOString(),
+    userAgent: window.navigator?.userAgent || null,
+    url: window.location?.href || null,
+    entries: readStaffProfileTrace(),
+  };
+  const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+  const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json;charset=utf-8;' });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = `${prefix}-${timestamp}.json`;
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+  URL.revokeObjectURL(url);
+};
+
 export const summariseStaffProfileForTrace = (
   instructor: Partial<Instructor> | null | undefined,
   staffQualificationCatalogue?: StaffQualificationCatalogue,
@@ -63,6 +83,10 @@ export const summariseStaffProfileForTrace = (
   return {
     dbId: String(anyInstructor.id || '').trim() || null,
     dataSource: String(anyInstructor._dataSource || '').trim() || null,
+    restoreReviewMode: anyInstructor._restoreReviewMode === true,
+    restoreCreatesNewRecord: anyInstructor._restoreCreatesNewRecord === true,
+    restoreSourceKind: String(anyInstructor._restoreSourceKind || '').trim() || null,
+    restoreSourceId: String(anyInstructor._restoreSourceId || '').trim() || null,
     idNumber: instructor.idNumber ?? null,
     name: instructor.name || '',
     rank: instructor.rank || '',

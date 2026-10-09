@@ -994,15 +994,35 @@ export const InstructorProfileFlyout: React.FC<InstructorProfileFlyoutProps> = (
 
   const handleSave = async () => {
     if (restoreCreatesNewRecordInitial) {
+      appendStaffProfileTrace('archive-restore:staff-final-restore-clicked', {
+        profile: summariseStaffProfileForTrace(instructor, normalisedQualificationCatalogue),
+        formValues: { idNumber, name, rank, role, unit, location },
+      });
       const confirmed = await showDarkConfirm(
         `Restore ${name || 'this person'} as staff now?\n\nConfirm the profile details are up to date and correct before restoring.`,
         'Confirm Restore',
         'warning'
       );
+      appendStaffProfileTrace('archive-restore:staff-final-restore-confirm-result', {
+        confirmed,
+        profile: summariseStaffProfileForTrace(instructor, normalisedQualificationCatalogue),
+      });
       if (!confirmed) return;
     }
-    if (!name) { await showDarkAlert('Name is required.', 'Missing Staff Name', 'warning'); return; }
+    if (!name) {
+      appendStaffProfileTrace('archive-restore:staff-final-restore-validation-failed', {
+        reason: 'missing name',
+        profile: summariseStaffProfileForTrace(instructor, normalisedQualificationCatalogue),
+      });
+      await showDarkAlert('Name is required.', 'Missing Staff Name', 'warning');
+      return;
+    }
     if (!Number.isInteger(Number(idNumber)) || Number(idNumber) <= 0) {
+      appendStaffProfileTrace('archive-restore:staff-final-restore-validation-failed', {
+        reason: 'missing personnel id',
+        profile: summariseStaffProfileForTrace(instructor, normalisedQualificationCatalogue),
+        idNumber,
+      });
       await showDarkAlert('Personnel ID is required before this staff record can be saved.', 'Missing Personnel ID', 'warning');
       return;
     }
