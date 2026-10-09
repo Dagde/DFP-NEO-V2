@@ -736,11 +736,20 @@ export const AirCombatTrainingReportModal: React.FC<AirCombatTrainingReportModal
     }
   };
 
+  const requestClose = () => {
+    if (isSaving) return;
+    if (saveStatus === 'Unsaved') {
+      const shouldLeave = window.confirm('This training report has unsaved changes. Leave without saving?');
+      if (!shouldLeave) return;
+    }
+    onCancel();
+  };
+
   return (
     <div className="fixed inset-0 z-[95] flex items-center justify-center bg-black/75 p-4" onKeyDownCapture={stopEditableKeyPropagation}>
       <div className="flex max-h-[92vh] w-full max-w-[1500px] flex-col overflow-hidden rounded-lg border border-gray-600 bg-gray-900 shadow-2xl">
         <div className="flex justify-end bg-gray-800 px-5 pt-4">
-          <button type="button" onClick={onCancel} className="text-3xl leading-none text-gray-400 hover:text-white">x</button>
+          <button type="button" onClick={requestClose} className="text-3xl leading-none text-gray-400 hover:text-white">x</button>
         </div>
 
         <div className="flex-1 overflow-y-auto">
@@ -825,7 +834,7 @@ export const AirCombatTrainingReportModal: React.FC<AirCombatTrainingReportModal
               </button>
               <button type="button" onClick={saveReport} disabled={isSaving || !eventCode} className="flex h-[41px] w-[56px] items-center justify-center rounded-md btn-aluminium-brushed px-1 py-1 text-center text-[10px] font-semibold disabled:cursor-not-allowed disabled:opacity-40">Save</button>
               <button type="button" className="flex h-[41px] w-[56px] items-center justify-center rounded-md btn-aluminium-brushed px-1 py-1 text-center text-[10px] font-semibold">Delete</button>
-              <button type="button" onClick={onCancel} className="flex h-[41px] w-[56px] items-center justify-center rounded-md btn-aluminium-brushed px-1 py-1 text-center text-[10px] font-semibold">Back</button>
+              <button type="button" onClick={requestClose} className="flex h-[41px] w-[56px] items-center justify-center rounded-md btn-aluminium-brushed px-1 py-1 text-center text-[10px] font-semibold">Back</button>
               <AuditButton pageName={`${reportTemplate.displayName} Assessment`} />
             </div>
           </div>

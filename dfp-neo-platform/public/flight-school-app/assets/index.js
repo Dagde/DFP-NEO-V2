@@ -101084,8 +101084,16 @@ const AirCombatTrainingReportModal = ({
       setIsSaving(false);
     }
   };
+  const requestClose = () => {
+    if (isSaving2) return;
+    if (saveStatus === "Unsaved") {
+      const shouldLeave = window.confirm("This training report has unsaved changes. Leave without saving?");
+      if (!shouldLeave) return;
+    }
+    onCancel();
+  };
   return /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "fixed inset-0 z-[95] flex items-center justify-center bg-black/75 p-4", onKeyDownCapture: stopEditableKeyPropagation, children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex max-h-[92vh] w-full max-w-[1500px] flex-col overflow-hidden rounded-lg border border-gray-600 bg-gray-900 shadow-2xl", children: [
-    /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex justify-end bg-gray-800 px-5 pt-4", children: /* @__PURE__ */ jsxRuntimeExports.jsx("button", { type: "button", onClick: onCancel, className: "text-3xl leading-none text-gray-400 hover:text-white", children: "x" }) }),
+    /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex justify-end bg-gray-800 px-5 pt-4", children: /* @__PURE__ */ jsxRuntimeExports.jsx("button", { type: "button", onClick: requestClose, className: "text-3xl leading-none text-gray-400 hover:text-white", children: "x" }) }),
     /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex-1 overflow-y-auto", children: [
       /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center justify-between border-b border-gray-700 bg-gray-800 px-5 pb-4 pt-2", children: [
         /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center gap-4", children: [
@@ -101182,7 +101190,7 @@ const AirCombatTrainingReportModal = ({
           ),
           /* @__PURE__ */ jsxRuntimeExports.jsx("button", { type: "button", onClick: saveReport, disabled: isSaving2 || !eventCode2, className: "flex h-[41px] w-[56px] items-center justify-center rounded-md btn-aluminium-brushed px-1 py-1 text-center text-[10px] font-semibold disabled:cursor-not-allowed disabled:opacity-40", children: "Save" }),
           /* @__PURE__ */ jsxRuntimeExports.jsx("button", { type: "button", className: "flex h-[41px] w-[56px] items-center justify-center rounded-md btn-aluminium-brushed px-1 py-1 text-center text-[10px] font-semibold", children: "Delete" }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx("button", { type: "button", onClick: onCancel, className: "flex h-[41px] w-[56px] items-center justify-center rounded-md btn-aluminium-brushed px-1 py-1 text-center text-[10px] font-semibold", children: "Back" }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx("button", { type: "button", onClick: requestClose, className: "flex h-[41px] w-[56px] items-center justify-center rounded-md btn-aluminium-brushed px-1 py-1 text-center text-[10px] font-semibold", children: "Back" }),
           /* @__PURE__ */ jsxRuntimeExports.jsx(AuditButton, { pageName: `${reportTemplate.displayName} Assessment` })
         ] })
       ] }),
@@ -151820,6 +151828,30 @@ ${error instanceof Error ? error.message : String(error)}`,
         });
         throw new Error(errorText || `Failed to save Air Combat training report (${response.status})`);
       }
+      const responseData = await response.json().catch(() => ({}));
+      const savedPersonnel = responseData.personnel ? normalisePersonnelRecord({
+        ...updatedStaff,
+        ...responseData.personnel,
+        _dataSource: updatedStaff._dataSource || "database"
+      }) : updatedStaff;
+      const savedReportMatch = normaliseAirCombatTrainingReports(savedPersonnel.preferences).find((existing) => existing.id === reportForSave.id);
+      appendTrainingReportFollowUpDiag("app:save-verified", {
+        reportId: reportForSave.id,
+        dbId,
+        savedReportMatch: savedReportMatch || null,
+        savedReportCount: normaliseAirCombatTrainingReports(savedPersonnel.preferences).length
+      });
+      if (!savedReportMatch) {
+        throw new Error("The database accepted the save but did not return the new training report. The report was not closed so it can be saved again.");
+      }
+      Object.assign(updatedStaff, savedPersonnel);
+    } else {
+      appendTrainingReportFollowUpDiag("app:save-no-db-id", {
+        reportId: reportForSave.id,
+        staffName: updatedStaff.name,
+        staffIdNumber: updatedStaff.idNumber,
+        dataSource: updatedStaff._dataSource || null
+      });
     }
     setInstructorsData((prev) => prev.map((person) => dbId ? person.id === dbId ? updatedStaff : person : person.idNumber === updatedStaff.idNumber ? updatedStaff : person));
     setAirCombatTrainingReportDraft(null);

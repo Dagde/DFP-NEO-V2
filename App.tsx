@@ -41456,6 +41456,33 @@ const App: React.FC = () => {
                 });
                 throw new Error(errorText || `Failed to save Air Combat training report (${response.status})`);
             }
+            const responseData = await response.json().catch(() => ({}));
+            const savedPersonnel = responseData.personnel
+                ? normalisePersonnelRecord({
+                    ...updatedStaff,
+                    ...responseData.personnel,
+                    _dataSource: (updatedStaff as any)._dataSource || 'database',
+                })
+                : updatedStaff;
+            const savedReportMatch = normaliseAirCombatTrainingReports(savedPersonnel.preferences)
+                .find(existing => existing.id === reportForSave.id);
+            appendTrainingReportFollowUpDiag('app:save-verified', {
+                reportId: reportForSave.id,
+                dbId,
+                savedReportMatch: savedReportMatch || null,
+                savedReportCount: normaliseAirCombatTrainingReports(savedPersonnel.preferences).length,
+            });
+            if (!savedReportMatch) {
+                throw new Error('The database accepted the save but did not return the new training report. The report was not closed so it can be saved again.');
+            }
+            Object.assign(updatedStaff, savedPersonnel);
+        } else {
+            appendTrainingReportFollowUpDiag('app:save-no-db-id', {
+                reportId: reportForSave.id,
+                staffName: updatedStaff.name,
+                staffIdNumber: updatedStaff.idNumber,
+                dataSource: (updatedStaff as any)._dataSource || null,
+            });
         }
 
         setInstructorsData(prev => prev.map(person => (
