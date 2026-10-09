@@ -1866,6 +1866,26 @@ html[data-theme="light"] body {
     animation: neo-build-pulse 1.5s ease-in-out infinite;
 }
 
+@keyframes restore-action-backlight-pulse {
+    0%, 100% {
+        box-shadow: 0 0 0 0 rgba(34, 197, 94, 0.7),
+                    0 0 0 0 rgba(34, 197, 94, 0.4);
+        border-color: rgb(34, 197, 94);
+    }
+    50% {
+        box-shadow: 0 0 0 4px rgba(34, 197, 94, 0.4),
+                    0 0 0 8px rgba(34, 197, 94, 0.2);
+        border-color: rgb(74, 222, 128);
+    }
+}
+
+.restore-action-backlight {
+    color: #047857 !important;
+    position: relative;
+    overflow: visible;
+    animation: restore-action-backlight-pulse 1.5s ease-in-out infinite;
+}
+
 .neo-build-label {
     background: linear-gradient(135deg, rgb(251, 146, 60), rgb(255, 165, 0));
     color: white;

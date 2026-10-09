@@ -2736,12 +2736,7 @@ export const InstructorProfileFlyout: React.FC<InstructorProfileFlyoutProps> = (
                       if (!confirmed) return;
                       await Promise.resolve(onRestoreReviewedInstructor(instructor));
                     }}
-                    className={`${btnClass} animate-pulse`}
-                    style={{
-                      color: '#047857',
-                      textShadow: '0 0 7px rgba(187,247,208,0.95)',
-                      boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.55), 0 0 0 2px rgba(34,197,94,0.28), 0 0 18px 5px rgba(34,197,94,0.7), 0 0 34px 10px rgba(34,197,94,0.32)',
-                    }}
+                    className={`${btnClass} restore-action-backlight`}
                   >
                     Restore
                   </button>
@@ -2755,12 +2750,7 @@ export const InstructorProfileFlyout: React.FC<InstructorProfileFlyoutProps> = (
                       restoreAfterSave: isRestoreReviewMode && !restoreCreatesNewRecordInitial && Boolean(onRestoreReviewedInstructor),
                     });
                   }}
-                  className={`${btnClass} ${isRestoreReviewMode ? 'animate-pulse' : ''}`}
-                  style={isRestoreReviewMode ? {
-                    color: '#047857',
-                    textShadow: '0 0 7px rgba(187,247,208,0.95)',
-                    boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.55), 0 0 0 2px rgba(34,197,94,0.28), 0 0 18px 5px rgba(34,197,94,0.7), 0 0 34px 10px rgba(34,197,94,0.32)',
-                  } : undefined}
+                  className={`${btnClass} ${isRestoreReviewMode ? 'restore-action-backlight' : ''}`}
                 >
                   {isRestoreReviewMode ? 'Restore' : 'Save'}
                 </button>
