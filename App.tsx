@@ -52100,6 +52100,71 @@ appliedUpdates.forEach(update => {
         return Boolean(sourceName && getProfileNameValues(candidate).includes(sourceName));
     };
 
+    const getRestoreConflictDisplayName = (person: any): string => (
+        String(person?.name || person?.fullName || person?.displayName || '')
+            .replace(/\s+[–-]\s+[A-Z0-9][A-Z0-9\s-]*$/i, '')
+            .trim()
+    );
+
+    const findActiveStaffConflictForTraineeRestore = useCallback((trainee: Trainee): Instructor | null => {
+        const traineeIdNumber = String(trainee.idNumber ?? '').trim();
+        if (!traineeIdNumber) return null;
+        const traineeName = normaliseCurrentProfileIdentity(getRestoreConflictDisplayName(trainee));
+        const candidates = [
+            ...allInstructorsDataRef.current,
+            ...instructorsData,
+        ];
+        return candidates.find(instructor => {
+            if ((instructor as any).isActive === false) return false;
+            if (String(instructor.idNumber ?? '').trim() !== traineeIdNumber) return false;
+            const instructorName = normaliseCurrentProfileIdentity(getRestoreConflictDisplayName(instructor));
+            return Boolean(traineeName && instructorName && traineeName === instructorName);
+        }) || null;
+    }, [instructorsData]);
+
+    const archiveStaffConflictForTraineeRestore = useCallback(async (
+        trainee: Trainee,
+        trace?: (stage: string, extra?: Record<string, unknown>) => void
+    ): Promise<boolean> => {
+        const conflictingStaff = findActiveStaffConflictForTraineeRestore(trainee);
+        if (!conflictingStaff) return false;
+        const dbId = String((conflictingStaff as any).id || '').trim();
+        if (!dbId) return false;
+        trace?.('staff-conflict-resolution-start', {
+            staffConflict: summariseStaffProfileForTrace(conflictingStaff, activeStaffQualificationCatalogue),
+        });
+        const response = await fetch(scopedApiPath(`/api/personnel/${encodeURIComponent(dbId)}`), {
+            method: 'PATCH',
+            credentials: 'include',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ isActive: false }),
+        });
+        if (!response.ok) {
+            const errorPayload = await response.json().catch(() => ({}));
+            trace?.('staff-conflict-resolution-error', {
+                status: response.status,
+                errorPayload,
+            });
+            return false;
+        }
+        const archivedStaff = { ...conflictingStaff, isActive: false, _dataSource: 'archive' as const };
+        const matchesConflict = (candidate: Instructor): boolean => {
+            const candidateDbId = String((candidate as any).id || '').trim();
+            if (candidateDbId && candidateDbId === dbId) return true;
+            return String(candidate.idNumber ?? '').trim() === String(conflictingStaff.idNumber ?? '').trim()
+                && normaliseCurrentProfileIdentity(getRestoreConflictDisplayName(candidate)) === normaliseCurrentProfileIdentity(getRestoreConflictDisplayName(conflictingStaff));
+        };
+        setInstructorsData(prev => prev.filter(instructor => !matchesConflict(instructor)));
+        setArchivedInstructorsData(prev => {
+            const remaining = prev.filter(instructor => !matchesConflict(instructor));
+            return [...remaining, archivedStaff];
+        });
+        trace?.('staff-conflict-resolution-success', {
+            archivedStaff: summariseStaffProfileForTrace(archivedStaff, activeStaffQualificationCatalogue),
+        });
+        return true;
+    }, [activeStaffQualificationCatalogue, findActiveStaffConflictForTraineeRestore, scopedApiPath]);
+
     const removeCrossRestoredArchiveSource = useCallback((restoredPerson: any) => {
         if (restoredPerson?._restoreCreatesNewRecord !== true) return;
         if (restoredPerson?._restoreSourceKind === 'Trainee') {
@@ -56146,14 +56211,7 @@ appliedUpdates.forEach(update => {
         try {
             if (dbId) {
                 const sessionToken = localStorage.getItem('dfp_session_token') || '';
-                const response = await fetch(scopedApiPath(`/api/trainees/${encodeURIComponent(dbId)}`), {
-                    method: 'PATCH',
-                    credentials: 'include',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        ...(sessionToken ? { Authorization: `Bearer ${sessionToken}` } : {}),
-                    },
-                    body: JSON.stringify({
+                const traineeRestorePayload = {
                         idNumber: traineeToRestore.idNumber,
                         name: traineeToRestore.name,
                         fullName: traineeToRestore.fullName,
@@ -56182,11 +56240,29 @@ appliedUpdates.forEach(update => {
                         unavailability: traineeToRestore.unavailability || [],
                         priorExperience: (traineeToRestore as any).priorExperience,
                         photoUrl: (traineeToRestore as any).photoUrl,
-                    }),
+                    };
+                const patchTraineeRestore = () => fetch(scopedApiPath(`/api/trainees/${encodeURIComponent(dbId)}`), {
+                    method: 'PATCH',
+                    credentials: 'include',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        ...(sessionToken ? { Authorization: `Bearer ${sessionToken}` } : {}),
+                    },
+                    body: JSON.stringify(traineeRestorePayload),
                 });
+                let response = await patchTraineeRestore();
                 if (!response.ok) {
-                    const message = await readApiErrorMessage(response, `Could not restore ${traineeName}.`);
-                    throw new Error(message);
+                    const errorPayload = await response.json().catch(() => ({}));
+                    const resolvedStaffConflict = response.status === 409
+                        && (traineeToRestore as any)._restoreReviewMode === true
+                        && await archiveStaffConflictForTraineeRestore(traineeToRestore);
+                    if (resolvedStaffConflict) {
+                        response = await patchTraineeRestore();
+                    }
+                    if (!resolvedStaffConflict || !response.ok) {
+                        const retryPayload = resolvedStaffConflict ? await response.json().catch(() => ({})) : errorPayload;
+                        throw new Error(formatApiErrorMessage(`Could not restore ${traineeName}.`, response.status, retryPayload));
+                    }
                 }
                 const responseData = await response.json().catch(() => ({}));
                 Object.assign(restoredTrainee, {
@@ -56218,7 +56294,7 @@ appliedUpdates.forEach(update => {
             console.error('[Trainee Restore] Failed:', error);
             setShowInfoNotification(`Restore failed: ${error instanceof Error ? error.message : String(error)}`);
         }
-    }, [archivedTraineesData, scopedApiPath]);
+    }, [archiveStaffConflictForTraineeRestore, archivedTraineesData, scopedApiPath]);
 
     const handleUpdateArchivedTrainee = useCallback(async (data: Trainee) => {
         const dbId = String((data as any).id || '').trim();
@@ -56259,11 +56335,7 @@ appliedUpdates.forEach(update => {
         };
         if (dbId && (data as any)._dataSource === 'archive') {
             traceArchivedTrainee('start');
-            const response = await fetch(scopedApiPath(`/api/trainees/${encodeURIComponent(dbId)}`), {
-                method: 'PATCH',
-                credentials: 'include',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
+            const traineeArchiveSavePayload = {
                     idNumber: data.idNumber,
                     name: data.name,
                     fullName: data.fullName,
@@ -56290,15 +56362,40 @@ appliedUpdates.forEach(update => {
                         preFlightNotesEnduring: getTraineeEnduringPreFlightNotes(data),
                     },
                     unavailability: data.unavailability || [],
-                }),
+                };
+            const patchArchivedTrainee = () => fetch(scopedApiPath(`/api/trainees/${encodeURIComponent(dbId)}`), {
+                method: 'PATCH',
+                credentials: 'include',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(traineeArchiveSavePayload),
             });
+            let response = await patchArchivedTrainee();
             if (!response.ok) {
                 const errorPayload = await response.json().catch(() => ({}));
                 traceArchivedTrainee('api-error', {
                     status: response.status,
                     errorPayload,
                 });
-                throw new Error(formatApiErrorMessage(`Could not save ${traineeName}.`, response.status, errorPayload));
+                const resolvedStaffConflict = response.status === 409
+                    && (data as any)._restoreReviewMode === true
+                    && await archiveStaffConflictForTraineeRestore(data, traceArchivedTrainee);
+                if (resolvedStaffConflict) {
+                    response = await patchArchivedTrainee();
+                    if (response.ok) {
+                        traceArchivedTrainee('retry-after-staff-conflict-success', {
+                            status: response.status,
+                        });
+                    } else {
+                        traceArchivedTrainee('retry-after-staff-conflict-error', {
+                            status: response.status,
+                            errorPayload: await response.clone().json().catch(() => ({})),
+                        });
+                    }
+                }
+                if (!resolvedStaffConflict || !response.ok) {
+                    const retryPayload = resolvedStaffConflict ? await response.json().catch(() => ({})) : errorPayload;
+                    throw new Error(formatApiErrorMessage(`Could not save ${traineeName}.`, response.status, retryPayload));
+                }
             }
             const responseData = await response.json().catch(() => ({}));
             traceArchivedTrainee('api-success', {
@@ -56321,7 +56418,7 @@ appliedUpdates.forEach(update => {
             return String(trainee.idNumber) === String(data.idNumber) ? { ...data, isActive: false, _dataSource: 'archive' as const, _restoreReviewMode: true } : trainee;
         }));
         setSuccessMessage(`${traineeName} saved. Press Restore when the profile is ready.`);
-    }, [scopedApiPath]);
+    }, [activeStaffQualificationCatalogue, allTraineesData, archiveStaffConflictForTraineeRestore, instructorsData, scopedApiPath]);
 
     const resolveCourseMovementDirection = useCallback((fromCourse: string, toCourse: string): 'back-course' | 'forward-course' | 'course-change' => {
         const normaliseCourse = (value: string) => String(value || '').trim().toUpperCase();
