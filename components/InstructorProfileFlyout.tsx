@@ -921,7 +921,7 @@ export const InstructorProfileFlyout: React.FC<InstructorProfileFlyoutProps> = (
     setPhotoLoadFailed(false);
   };
 
-  useEffect(() => { resetState(); setIsEditing(isCreating); }, [instructor, isCreating]);
+  useEffect(() => { resetState(); setIsEditing(isCreating || restoreReviewInitial); }, [instructor, isCreating, restoreReviewInitial]);
 
   // Use ref to prevent double-logging in React StrictMode
   const hasLoggedViewRef = useRef(false);

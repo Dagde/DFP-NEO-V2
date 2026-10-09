@@ -52025,6 +52025,30 @@ appliedUpdates.forEach(update => {
         handleNavigation(activeView === 'Trainee' ? 'Trainee' : 'CourseRoster');
     };
 
+    const matchesRestoreSourcePerson = (candidate: any, source: any): boolean => {
+        const sourceId = String(source?._restoreSourceId || '').trim();
+        const candidateDbId = String(candidate?.id || '').trim();
+        if (sourceId && candidateDbId === sourceId) return true;
+        if (sourceId && candidate?.idNumber !== null && candidate?.idNumber !== undefined && String(candidate.idNumber) === sourceId) return true;
+        if (source?.idNumber !== null && source?.idNumber !== undefined && candidate?.idNumber !== null && candidate?.idNumber !== undefined) {
+            return String(candidate.idNumber) === String(source.idNumber);
+        }
+        const sourceName = normaliseCurrentProfileIdentity(source?.name || source?.fullName);
+        return Boolean(sourceName && getProfileNameValues(candidate).includes(sourceName));
+    };
+
+    const removeCrossRestoredArchiveSource = useCallback((restoredPerson: any) => {
+        if (restoredPerson?._restoreCreatesNewRecord !== true) return;
+        if (restoredPerson?._restoreSourceKind === 'Trainee') {
+            setArchivedTraineesData(prev => prev.filter(trainee => !matchesRestoreSourcePerson(trainee, restoredPerson)));
+            setTraineesData(prev => prev.filter(trainee => !matchesRestoreSourcePerson(trainee, restoredPerson)));
+        }
+        if (restoredPerson?._restoreSourceKind === 'Staff') {
+            setArchivedInstructorsData(prev => prev.filter(instructor => !matchesRestoreSourcePerson(instructor, restoredPerson)));
+            setInstructorsData(prev => prev.filter(instructor => !matchesRestoreSourcePerson(instructor, restoredPerson)));
+        }
+    }, []);
+
     const handleBeginStaffRestoreReview = useCallback((archivedStaff: Instructor) => {
         setSelectedPersonForProfile({ ...(archivedStaff as any), _dataSource: 'archive', _restoreReviewMode: true });
         setProfileInitialTab(null);
@@ -58184,6 +58208,7 @@ appliedUpdates.forEach(update => {
                                     });
                                     return next;
                                 });
+                                removeCrossRestoredArchiveSource(data);
                             }}
                             onNavigateToCurrency={handleNavigateToCurrency}
                             onBulkUpdateInstructors={handleBulkUpdateInstructors}
@@ -58387,6 +58412,7 @@ appliedUpdates.forEach(update => {
                                     });
                                     return next;
                                 });
+                                removeCrossRestoredArchiveSource(data);
                             }}
                             onNavigateToCurrency={handleNavigateToCurrency}
                             onBulkUpdateInstructors={handleBulkUpdateInstructors}

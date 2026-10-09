@@ -55775,8 +55775,8 @@ const TraineeProfileFlyout = ({
   };
   reactExports.useEffect(() => {
     resetState();
-    setIsEditing(isCreating);
-  }, [trainee, isCreating, effectiveAcademicLmpType]);
+    setIsEditing(isCreating || restoreReviewInitial);
+  }, [trainee, isCreating, restoreReviewInitial, effectiveAcademicLmpType]);
   reactExports.useEffect(() => {
     if (initialActiveTab) {
       setActiveTab(initialActiveTab);
@@ -90917,8 +90917,8 @@ const InstructorProfileFlyout = ({
   };
   reactExports.useEffect(() => {
     resetState();
-    setIsEditing(isCreating);
-  }, [instructor, isCreating]);
+    setIsEditing(isCreating || restoreReviewInitial);
+  }, [instructor, isCreating, restoreReviewInitial]);
   const hasLoggedViewRef = reactExports.useRef(false);
   reactExports.useEffect(() => {
     if (!isCreating && !hasLoggedViewRef.current) {
@@ -160337,6 +160337,28 @@ Do not hard refresh yet. Try Publish again, then confirm the save succeeds.`,
     setTraineeProfileInitialTab(null);
     handleNavigation(activeView === "Trainee" ? "Trainee" : "CourseRoster");
   };
+  const matchesRestoreSourcePerson = (candidate, source) => {
+    const sourceId = String(source?._restoreSourceId || "").trim();
+    const candidateDbId = String(candidate?.id || "").trim();
+    if (sourceId && candidateDbId === sourceId) return true;
+    if (sourceId && candidate?.idNumber !== null && candidate?.idNumber !== void 0 && String(candidate.idNumber) === sourceId) return true;
+    if (source?.idNumber !== null && source?.idNumber !== void 0 && candidate?.idNumber !== null && candidate?.idNumber !== void 0) {
+      return String(candidate.idNumber) === String(source.idNumber);
+    }
+    const sourceName = normaliseCurrentProfileIdentity(source?.name || source?.fullName);
+    return Boolean(sourceName && getProfileNameValues(candidate).includes(sourceName));
+  };
+  const removeCrossRestoredArchiveSource = reactExports.useCallback((restoredPerson) => {
+    if (restoredPerson?._restoreCreatesNewRecord !== true) return;
+    if (restoredPerson?._restoreSourceKind === "Trainee") {
+      setArchivedTraineesData((prev) => prev.filter((trainee) => !matchesRestoreSourcePerson(trainee, restoredPerson)));
+      setTraineesData((prev) => prev.filter((trainee) => !matchesRestoreSourcePerson(trainee, restoredPerson)));
+    }
+    if (restoredPerson?._restoreSourceKind === "Staff") {
+      setArchivedInstructorsData((prev) => prev.filter((instructor) => !matchesRestoreSourcePerson(instructor, restoredPerson)));
+      setInstructorsData((prev) => prev.filter((instructor) => !matchesRestoreSourcePerson(instructor, restoredPerson)));
+    }
+  }, []);
   const handleBeginStaffRestoreReview = reactExports.useCallback((archivedStaff) => {
     setSelectedPersonForProfile({ ...archivedStaff, _dataSource: "archive", _restoreReviewMode: true });
     setProfileInitialTab(null);
@@ -165594,6 +165616,7 @@ It will not clear the published DFP.`,
                 });
                 return next;
               });
+              removeCrossRestoredArchiveSource(data);
             },
             onNavigateToCurrency: handleNavigateToCurrency,
             onBulkUpdateInstructors: handleBulkUpdateInstructors,
@@ -165791,6 +165814,7 @@ It will not clear the published DFP.`,
                 });
                 return next;
               });
+              removeCrossRestoredArchiveSource(data);
             },
             onNavigateToCurrency: handleNavigateToCurrency,
             onBulkUpdateInstructors: handleBulkUpdateInstructors,

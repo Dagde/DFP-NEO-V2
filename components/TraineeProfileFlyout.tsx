@@ -1639,8 +1639,8 @@ const TraineeProfileFlyout: React.FC<TraineeProfileFlyoutProps> = ({
 
     useEffect(() => {
         resetState();
-        setIsEditing(isCreating);
-    }, [trainee, isCreating, effectiveAcademicLmpType]);
+        setIsEditing(isCreating || restoreReviewInitial);
+    }, [trainee, isCreating, restoreReviewInitial, effectiveAcademicLmpType]);
 
     useEffect(() => {
         if (initialActiveTab) {
