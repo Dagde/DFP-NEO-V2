@@ -1234,6 +1234,7 @@ export const InstructorProfileFlyout: React.FC<InstructorProfileFlyoutProps> = (
   const isArchiveProfile = (instructor as any)._dataSource === 'archive';
   const isRestoreReviewMode = (instructor as any)._restoreReviewMode === true;
   const restoreCreatesNewRecord = isRestoreReviewMode && (instructor as any)._restoreCreatesNewRecord === true;
+  const restoreNeedsFinalConfirmation = isRestoreReviewMode && !restoreCreatesNewRecord && !isEditing && Boolean(onRestoreReviewedInstructor);
   const isReadOnlyArchiveProfile = isArchiveProfile && !isRestoreReviewMode;
   const archivedLogbookEntries = useMemo(() => (
     Array.isArray((instructor as any).archivedLogbookEntries)
@@ -1344,6 +1345,26 @@ export const InstructorProfileFlyout: React.FC<InstructorProfileFlyoutProps> = (
       return next;
     });
   };
+
+  const confirmContinueWithoutRestoring = async (): Promise<boolean> => {
+    if (!restoreNeedsFinalConfirmation) return true;
+    return showDarkConfirm(
+      'This staff profile has been saved, but it has not been restored to the active list yet.\n\nPress Restore to finish the restore. Continue without restoring this profile now?',
+      'Restore Not Complete',
+      'warning'
+    );
+  };
+
+  const handleRequestClose = async () => {
+    if (await confirmContinueWithoutRestoring()) {
+      onClose();
+    }
+  };
+
+  const handleGuardedTabClick = async (tab: typeof activeTab, anchor?: HTMLElement) => {
+    if (!(await confirmContinueWithoutRestoring())) return;
+    handleTabClick(tab, anchor);
+  };
   const exp = priorExperience;
 
   const assignedQualificationLabels = assignedQualifications
@@ -1403,7 +1424,7 @@ export const InstructorProfileFlyout: React.FC<InstructorProfileFlyoutProps> = (
 
   return (
     <>
-      <div className="fixed inset-0 bg-black/70 z-[90] flex items-start justify-center overflow-hidden px-4 pb-4 pt-[7.25rem]" onClick={onClose}>
+      <div className="fixed inset-0 bg-black/70 z-[90] flex items-start justify-center overflow-hidden px-4 pb-4 pt-[7.25rem]" onClick={() => { void handleRequestClose(); }}>
         <div className="bg-[#141e2e] rounded-lg shadow-2xl w-full md:w-[calc(100vw-12rem)] xl:w-[min(calc(100vw-18rem),88rem)] max-w-[88rem] max-h-[calc(100vh-8.25rem)] flex flex-col border border-gray-600 overflow-hidden" onClick={e => e.stopPropagation()}>
 
           {/* Header */}
@@ -1425,7 +1446,7 @@ export const InstructorProfileFlyout: React.FC<InstructorProfileFlyoutProps> = (
                 </button>
               )}
             </div>
-            <button onClick={onClose} className="text-gray-400 hover:text-white text-xl font-bold leading-none">✕</button>
+            <button onClick={() => { void handleRequestClose(); }} className="text-gray-400 hover:text-white text-xl font-bold leading-none">✕</button>
           </div>
 
           <div className="flex flex-1 overflow-hidden">
@@ -2671,20 +2692,23 @@ export const InstructorProfileFlyout: React.FC<InstructorProfileFlyoutProps> = (
             {/* RIGHT BUTTON PANEL */}
             <div className="w-[95px] flex-shrink-0 border-l border-gray-600 bg-[#0f1824] pt-2 pb-2 px-[10px] flex flex-col space-y-[1px]">
               {!isEditing && !isCreating && (<>
-                <button data-neo-guide="staff-availability-tab" onClick={(event) => handleTabClick('unavailable', event.currentTarget)} aria-disabled={!canOpenStaffProfileTab('unavailable')} className={tabBtnClass('unavailable', canOpenStaffProfileTab('unavailable'))}>Unavailable</button>
-                <button onClick={(event) => handleTabClick('currency', event.currentTarget)} aria-disabled={!canOpenStaffProfileTab('currency')} className={tabBtnClass('currency', canOpenStaffProfileTab('currency'))}>Currency</button>
-                <button onClick={(event) => handleTabClick('logbook', event.currentTarget)} aria-disabled={!canOpenStaffProfileTab('logbook')} className={tabBtnClass('logbook', canOpenStaffProfileTab('logbook'))}>Logbook</button>
-                <button onClick={(event) => handleTabClick('sct', event.currentTarget)} aria-disabled={!canOpenStaffProfileTab('sct')} className={tabBtnClass('sct', canOpenStaffProfileTab('sct'))}>Request {continuationShortLabel}</button>
-                <button onClick={(event) => handleTabClick('trainingReports', event.currentTarget)} aria-disabled={!canOpenStaffProfileTab('trainingReports')} className={tabBtnClass('trainingReports', canOpenStaffProfileTab('trainingReports'))}>Training Reports</button>
-                <button onClick={(event) => handleTabClick('trainingProgress', event.currentTarget)} aria-disabled={!canOpenStaffProfileTab('trainingProgress')} className={tabBtnClass('trainingProgress', canOpenStaffProfileTab('trainingProgress'))}>Training Progress</button>
+                <button data-neo-guide="staff-availability-tab" onClick={(event) => { void handleGuardedTabClick('unavailable', event.currentTarget); }} aria-disabled={!canOpenStaffProfileTab('unavailable')} className={tabBtnClass('unavailable', canOpenStaffProfileTab('unavailable'))}>Unavailable</button>
+                <button onClick={(event) => { void handleGuardedTabClick('currency', event.currentTarget); }} aria-disabled={!canOpenStaffProfileTab('currency')} className={tabBtnClass('currency', canOpenStaffProfileTab('currency'))}>Currency</button>
+                <button onClick={(event) => { void handleGuardedTabClick('logbook', event.currentTarget); }} aria-disabled={!canOpenStaffProfileTab('logbook')} className={tabBtnClass('logbook', canOpenStaffProfileTab('logbook'))}>Logbook</button>
+                <button onClick={(event) => { void handleGuardedTabClick('sct', event.currentTarget); }} aria-disabled={!canOpenStaffProfileTab('sct')} className={tabBtnClass('sct', canOpenStaffProfileTab('sct'))}>Request {continuationShortLabel}</button>
+                <button onClick={(event) => { void handleGuardedTabClick('trainingReports', event.currentTarget); }} aria-disabled={!canOpenStaffProfileTab('trainingReports')} className={tabBtnClass('trainingReports', canOpenStaffProfileTab('trainingReports'))}>Training Reports</button>
+                <button onClick={(event) => { void handleGuardedTabClick('trainingProgress', event.currentTarget); }} aria-disabled={!canOpenStaffProfileTab('trainingProgress')} className={tabBtnClass('trainingProgress', canOpenStaffProfileTab('trainingProgress'))}>Training Progress</button>
                 <button onClick={(event) => {
                   if (!canUseStaffProfileAction('staff.profile.edit')) {
                     showPermissionNoticeForElement(event.currentTarget);
                     return;
                   }
                   if (isReadOnlyArchiveProfile) return;
-                  setActiveTab(null);
-                  handleEdit();
+                  void (async () => {
+                    if (!(await confirmContinueWithoutRestoring())) return;
+                    setActiveTab(null);
+                    handleEdit();
+                  })();
                 }} disabled={isFrozen || isReadOnlyArchiveProfile} aria-disabled={isReadOnlyArchiveProfile || !canUseStaffProfileAction('staff.profile.edit')} className={`${btnClass} ${!isReadOnlyArchiveProfile && canUseStaffProfileAction('staff.profile.edit') ? '' : 'cursor-not-allowed'}`}>Edit</button>
                 {isRestoreReviewMode && !restoreCreatesNewRecord && onRestoreReviewedInstructor && (
                   <button
@@ -2697,13 +2721,18 @@ export const InstructorProfileFlyout: React.FC<InstructorProfileFlyoutProps> = (
                       if (!confirmed) return;
                       await Promise.resolve(onRestoreReviewedInstructor(instructor));
                     }}
-                    className={btnClass}
-                    style={{ color: '#16a34a' }}
+                    className={`${btnClass} animate-pulse`}
+                    style={{
+                      color: '#f0fdf4',
+                      background: 'linear-gradient(180deg, rgba(22,163,74,0.95), rgba(5,150,105,0.95))',
+                      borderColor: 'rgba(187,247,208,0.9)',
+                      boxShadow: '0 0 0 1px rgba(187,247,208,0.55), 0 0 18px rgba(34,197,94,0.95), 0 0 34px rgba(34,197,94,0.45)',
+                    }}
                   >
                     Restore
                   </button>
                 )}
-                <button onClick={onClose} className={btnClass}>Close</button>
+                <button onClick={() => { void handleRequestClose(); }} className={btnClass}>Close</button>
               </>)}
               {isEditing && (<>
                 <button onClick={handleSave} className={btnClass}>{restoreCreatesNewRecord ? 'Restore' : 'Save'}</button>
