@@ -6312,7 +6312,10 @@ app.patch('/api/personnel/:id', async (req, res) => {
         return res.status(400).json({ error: 'Personnel ID is required' });
       }
       sanitizedUpdates.idNumber = Number(sanitizedUpdates.idNumber);
-      const idConflict = await findPersonnelIdNumberConflict(db, sanitizedUpdates.idNumber, { excludePersonnelId: existing.id });
+      const idConflict = await findPersonnelIdNumberConflict(db, sanitizedUpdates.idNumber, {
+        excludePersonnelId: existing.id,
+        allowInactiveTraineeConflict: true,
+      });
       if (idConflict) {
         return sendPersonnelIdConflict(res, idConflict);
       }
@@ -8995,7 +8998,10 @@ app.patch('/api/trainees/:id', async (req, res) => {
         return res.status(400).json({ error: 'Personnel ID is required' });
       }
       sanitizedUpdates.idNumber = Number(sanitizedUpdates.idNumber);
-      const idConflict = await findPersonnelIdNumberConflict(db, sanitizedUpdates.idNumber, { excludeTraineeId: existing.id });
+      const idConflict = await findPersonnelIdNumberConflict(db, sanitizedUpdates.idNumber, {
+        excludeTraineeId: existing.id,
+        allowInactiveStaffConflict: true,
+      });
       if (idConflict) {
         return sendPersonnelIdConflict(res, idConflict);
       }

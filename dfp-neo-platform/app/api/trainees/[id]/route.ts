@@ -10,7 +10,7 @@ const isUsablePersonnelIdNumber = (value: any): boolean => {
   return Number.isInteger(number) && number > 0;
 };
 
-const findPersonnelIdNumberConflict = async (idNumber: number, options: { excludePersonnelId?: string; excludeTraineeId?: string } = {}) => {
+const findPersonnelIdNumberConflict = async (idNumber: number, options: { excludePersonnelId?: string; excludeTraineeId?: string; allowInactiveStaffConflict?: boolean; allowInactiveTraineeConflict?: boolean } = {}) => {
   const personnelWhere: any = { idNumber };
   if (options.excludePersonnelId) personnelWhere.id = { not: options.excludePersonnelId };
   const traineeWhere: any = { idNumber };
@@ -25,8 +25,8 @@ const findPersonnelIdNumberConflict = async (idNumber: number, options: { exclud
       select: { id: true, idNumber: true, name: true, fullName: true, rank: true, course: true, unit: true, isActive: true },
     }),
   ]);
-  if (personnel) return { type: 'staff', record: personnel };
-  if (trainee) return { type: 'trainee', record: trainee };
+  if (personnel && !(options.allowInactiveStaffConflict && personnel.isActive === false)) return { type: 'staff', record: personnel };
+  if (trainee && !(options.allowInactiveTraineeConflict && trainee.isActive === false)) return { type: 'trainee', record: trainee };
   return null;
 };
 
@@ -130,7 +130,10 @@ export async function PATCH(
         return NextResponse.json({ error: 'Personnel ID is required' }, { status: 400 });
       }
       updateData.idNumber = Number(updateData.idNumber);
-      const idConflict = await findPersonnelIdNumberConflict(updateData.idNumber, { excludeTraineeId: existingTrainee.id });
+      const idConflict = await findPersonnelIdNumberConflict(updateData.idNumber, {
+        excludeTraineeId: existingTrainee.id,
+        allowInactiveStaffConflict: true,
+      });
       if (idConflict) {
         return personnelIdConflictResponse(idConflict);
       }

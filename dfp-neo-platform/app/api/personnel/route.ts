@@ -49,7 +49,7 @@ const isUsablePersonnelIdNumber = (value: any): boolean => {
   return Number.isInteger(number) && number > 0;
 };
 
-const findPersonnelIdNumberConflict = async (idNumber: number, options: { excludePersonnelId?: string; excludeTraineeId?: string } = {}) => {
+const findPersonnelIdNumberConflict = async (idNumber: number, options: { excludePersonnelId?: string; excludeTraineeId?: string; allowInactiveStaffConflict?: boolean; allowInactiveTraineeConflict?: boolean } = {}) => {
   const personnelWhere: any = { idNumber };
   if (options.excludePersonnelId) personnelWhere.id = { not: options.excludePersonnelId };
   const traineeWhere: any = { idNumber };
@@ -64,8 +64,8 @@ const findPersonnelIdNumberConflict = async (idNumber: number, options: { exclud
       select: { id: true, idNumber: true, name: true, fullName: true, rank: true, course: true, unit: true, isActive: true },
     }),
   ]);
-  if (personnel) return { type: 'staff', record: personnel };
-  if (trainee) return { type: 'trainee', record: trainee };
+  if (personnel && !(options.allowInactiveStaffConflict && personnel.isActive === false)) return { type: 'staff', record: personnel };
+  if (trainee && !(options.allowInactiveTraineeConflict && trainee.isActive === false)) return { type: 'trainee', record: trainee };
   return null;
 };
 
@@ -170,7 +170,9 @@ export async function POST(request: NextRequest) {
       );
     }
     const idNumber = Number(body.idNumber);
-    const idConflict = await findPersonnelIdNumberConflict(idNumber);
+    const idConflict = await findPersonnelIdNumberConflict(idNumber, {
+      allowInactiveTraineeConflict: true,
+    });
     if (idConflict) {
       return personnelIdConflictResponse(request, idConflict);
     }
