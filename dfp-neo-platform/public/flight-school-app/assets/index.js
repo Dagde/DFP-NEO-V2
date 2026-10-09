@@ -57770,10 +57770,9 @@ Confirm the profile details are up to date and correct before restoring.`,
                 },
                 className: `${btnClass} animate-pulse`,
                 style: {
-                  color: "#f0fdf4",
-                  background: "linear-gradient(180deg, rgba(22,163,74,0.95), rgba(5,150,105,0.95))",
-                  borderColor: "rgba(187,247,208,0.9)",
-                  boxShadow: "0 0 0 1px rgba(187,247,208,0.55), 0 0 18px rgba(34,197,94,0.95), 0 0 34px rgba(34,197,94,0.45)"
+                  color: "#047857",
+                  textShadow: "0 0 7px rgba(187,247,208,0.95)",
+                  boxShadow: "inset 0 1px 0 rgba(255,255,255,0.55), 0 0 0 2px rgba(34,197,94,0.28), 0 0 18px 5px rgba(34,197,94,0.7), 0 0 34px 10px rgba(34,197,94,0.32)"
                 },
                 children: "Restore"
               }
@@ -92812,10 +92811,9 @@ Confirm the profile details are up to date and correct before restoring.`,
                 },
                 className: `${btnClass} animate-pulse`,
                 style: {
-                  color: "#f0fdf4",
-                  background: "linear-gradient(180deg, rgba(22,163,74,0.95), rgba(5,150,105,0.95))",
-                  borderColor: "rgba(187,247,208,0.9)",
-                  boxShadow: "0 0 0 1px rgba(187,247,208,0.55), 0 0 18px rgba(34,197,94,0.95), 0 0 34px rgba(34,197,94,0.45)"
+                  color: "#047857",
+                  textShadow: "0 0 7px rgba(187,247,208,0.95)",
+                  boxShadow: "inset 0 1px 0 rgba(255,255,255,0.55), 0 0 0 2px rgba(34,197,94,0.28), 0 0 18px 5px rgba(34,197,94,0.7), 0 0 34px 10px rgba(34,197,94,0.32)"
                 },
                 children: "Restore"
               }
@@ -92835,10 +92833,9 @@ Confirm the profile details are up to date and correct before restoring.`,
                 },
                 className: `${btnClass} ${isRestoreReviewMode ? "animate-pulse" : ""}`,
                 style: isRestoreReviewMode ? {
-                  color: "#f0fdf4",
-                  background: "linear-gradient(180deg, rgba(22,163,74,0.95), rgba(5,150,105,0.95))",
-                  borderColor: "rgba(187,247,208,0.9)",
-                  boxShadow: "0 0 0 1px rgba(187,247,208,0.55), 0 0 18px rgba(34,197,94,0.95), 0 0 34px rgba(34,197,94,0.45)"
+                  color: "#047857",
+                  textShadow: "0 0 7px rgba(187,247,208,0.95)",
+                  boxShadow: "inset 0 1px 0 rgba(255,255,255,0.55), 0 0 0 2px rgba(34,197,94,0.28), 0 0 18px 5px rgba(34,197,94,0.7), 0 0 34px 10px rgba(34,197,94,0.32)"
                 } : void 0,
                 children: isRestoreReviewMode ? "Restore" : "Save"
               }
