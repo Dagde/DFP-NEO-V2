@@ -828,6 +828,7 @@ const TraineeProfileFlyout: React.FC<TraineeProfileFlyoutProps> = ({
     const isArchiveProfile = (trainee as any)._dataSource === 'archive';
     const isRestoreReviewMode = (trainee as any)._restoreReviewMode === true;
     const restoreCreatesNewRecord = isRestoreReviewMode && (trainee as any)._restoreCreatesNewRecord === true;
+    const restoreNeedsFinalConfirmation = isRestoreReviewMode && !restoreCreatesNewRecord && !isEditing && Boolean(onRestoreReviewedTrainee);
     const isReadOnlyArchiveProfile = isArchiveProfile && !isRestoreReviewMode;
     const archivedLogbookEntries = useMemo(() => (
         Array.isArray((trainee as any).archivedLogbookEntries)
@@ -1351,6 +1352,21 @@ const TraineeProfileFlyout: React.FC<TraineeProfileFlyoutProps> = ({
         doc.save(`Trainee_Review_${trainee.name.replace(/[^A-Za-z0-9]+/g, '_')}.pdf`);
     };
 
+    const confirmContinueWithoutRestoring = async (): Promise<boolean> => {
+      if (!restoreNeedsFinalConfirmation) return true;
+      return showDarkConfirm(
+        'This profile has been saved, but it has not been restored to the active list yet.\n\nPress Restore to finish the restore. Continue without restoring this profile now?',
+        'Restore Not Complete',
+        'warning'
+      );
+    };
+
+    const handleRequestClose = async () => {
+      if (await confirmContinueWithoutRestoring()) {
+        onClose();
+      }
+    };
+
     const handleTabClick = (tab: typeof activeTab, anchor?: HTMLElement) => {
       if (tab && !canOpenTraineeProfileTab(tab)) {
         if (anchor) showPermissionNoticeForElement(anchor);
@@ -1363,6 +1379,11 @@ const TraineeProfileFlyout: React.FC<TraineeProfileFlyoutProps> = ({
         }
         return next;
       });
+    };
+
+    const handleGuardedTabClick = async (tab: typeof activeTab, anchor?: HTMLElement) => {
+      if (!(await confirmContinueWithoutRestoring())) return;
+      handleTabClick(tab, anchor);
     };
     const [showPauseConfirm, setShowPauseConfirm] = useState(false);
     const [showScheduleWarning, setShowScheduleWarning] = useState(false);
@@ -2560,7 +2581,7 @@ const TraineeProfileFlyout: React.FC<TraineeProfileFlyoutProps> = ({
 
     return (
         <>
-            <div className="fixed inset-0 bg-black/70 z-[90] flex items-start justify-center overflow-hidden px-4 pb-4 pt-[7.25rem]" onClick={onClose}>
+            <div className="fixed inset-0 bg-black/70 z-[90] flex items-start justify-center overflow-hidden px-4 pb-4 pt-[7.25rem]" onClick={() => { void handleRequestClose(); }}>
               <div className="bg-[#141e2e] rounded-lg shadow-2xl w-full md:w-[calc(100vw-12rem)] xl:w-[min(calc(100vw-18rem),88rem)] max-w-[88rem] max-h-[calc(100vh-8.25rem)] flex flex-col border border-gray-600 overflow-hidden" onClick={e => e.stopPropagation()}>
 
                 {/* Header */}
@@ -2582,7 +2603,7 @@ const TraineeProfileFlyout: React.FC<TraineeProfileFlyoutProps> = ({
                       </button>
                     )}
                   </div>
-                  <button onClick={onClose} className="text-gray-400 hover:text-white text-xl font-bold leading-none">✕</button>
+                  <button onClick={() => { void handleRequestClose(); }} className="text-gray-400 hover:text-white text-xl font-bold leading-none">✕</button>
                 </div>
 
                 <div className="flex flex-1 overflow-hidden">
@@ -3791,16 +3812,19 @@ const TraineeProfileFlyout: React.FC<TraineeProfileFlyoutProps> = ({
                     <div className="w-[95px] flex-shrink-0 border-l border-gray-700 bg-[#0f1824] px-[10px] py-3 flex flex-col gap-px">
                       {!isEditing && (
                         <>
-                          <button data-neo-guide="trainee-availability-tab" onClick={(event) => handleTabClick('unavailable', event.currentTarget)} aria-disabled={!canOpenTraineeProfileTab('unavailable')} className={tabBtnClass('unavailable', canOpenTraineeProfileTab('unavailable'))}>Unavail&shy;able</button>
-                          <button onClick={(event) => handleTabClick('currency', event.currentTarget)} aria-disabled={!canOpenTraineeProfileTab('currency')} className={tabBtnClass('currency', canOpenTraineeProfileTab('currency'))}>Currency</button>
-                          <button onClick={(event) => handleTabClick('sct', event.currentTarget)} aria-disabled={!canOpenTraineeProfileTab('sct')} className={tabBtnClass('sct', canOpenTraineeProfileTab('sct'))}>Request<br />{continuationShortLabel}</button>
+                          <button data-neo-guide="trainee-availability-tab" onClick={(event) => { void handleGuardedTabClick('unavailable', event.currentTarget); }} aria-disabled={!canOpenTraineeProfileTab('unavailable')} className={tabBtnClass('unavailable', canOpenTraineeProfileTab('unavailable'))}>Unavail&shy;able</button>
+                          <button onClick={(event) => { void handleGuardedTabClick('currency', event.currentTarget); }} aria-disabled={!canOpenTraineeProfileTab('currency')} className={tabBtnClass('currency', canOpenTraineeProfileTab('currency'))}>Currency</button>
+                          <button onClick={(event) => { void handleGuardedTabClick('sct', event.currentTarget); }} aria-disabled={!canOpenTraineeProfileTab('sct')} className={tabBtnClass('sct', canOpenTraineeProfileTab('sct'))}>Request<br />{continuationShortLabel}</button>
                           <button
                             onClick={(event) => {
                               if (!canOpenTraineeProfileTab('hatesheet')) {
                                 showPermissionNoticeForElement(event.currentTarget);
                                 return;
                               }
-                              handleHateSheetClick();
+                              void (async () => {
+                                if (!(await confirmContinueWithoutRestoring())) return;
+                                handleHateSheetClick();
+                              })();
                             }}
                             aria-disabled={!canOpenTraineeProfileTab('hatesheet')}
                             className={tabBtnClass('hatesheet', canOpenTraineeProfileTab('hatesheet'))}
@@ -3813,26 +3837,35 @@ const TraineeProfileFlyout: React.FC<TraineeProfileFlyoutProps> = ({
                               showPermissionNoticeForElement(event.currentTarget);
                               return;
                             }
-                            handleIndividualLMPClick();
+                            void (async () => {
+                              if (!(await confirmContinueWithoutRestoring())) return;
+                              handleIndividualLMPClick();
+                            })();
                           }} aria-disabled={!canOpenTraineeProfileTab('lmp')} className={tabBtnClass('lmp', canOpenTraineeProfileTab('lmp'))}>View Individual LMP</button>
                           <button onClick={(event) => {
                             if (!canAddRemedialPackage) {
                               showPermissionNoticeForElement(event.currentTarget);
                               return;
                             }
-                            onAddRemedialPackage(trainee);
+                            void (async () => {
+                              if (!(await confirmContinueWithoutRestoring())) return;
+                              onAddRemedialPackage(trainee);
+                            })();
                           }} aria-disabled={!canAddRemedialPackage} className={`${btnClass} ${canAddRemedialPackage ? '' : 'cursor-not-allowed'}`}>Add Remedial Package</button>
-                          <button onClick={(event) => handleTabClick('review', event.currentTarget)} aria-disabled={!canOpenTraineeProfileTab('review')} className={tabBtnClass('review', canOpenTraineeProfileTab('review'))}>
+                          <button onClick={(event) => { void handleGuardedTabClick('review', event.currentTarget); }} aria-disabled={!canOpenTraineeProfileTab('review')} className={tabBtnClass('review', canOpenTraineeProfileTab('review'))}>
                             <span className="leading-tight">Trainee<br />Review</span>
                           </button>
-                          <button onClick={(event) => handleTabClick('logbook', event.currentTarget)} aria-disabled={!canOpenTraineeProfileTab('logbook')} className={tabBtnClass('logbook', canOpenTraineeProfileTab('logbook'))}>Logbook</button>
+                          <button onClick={(event) => { void handleGuardedTabClick('logbook', event.currentTarget); }} aria-disabled={!canOpenTraineeProfileTab('logbook')} className={tabBtnClass('logbook', canOpenTraineeProfileTab('logbook'))}>Logbook</button>
                           <button onClick={(event) => {
                             if (!canUseTraineeProfileAction('trainee.profile.edit')) {
                               showPermissionNoticeForElement(event.currentTarget);
                               return;
                             }
                             if (isReadOnlyArchiveProfile) return;
-                            setIsEditing(true);
+                            void (async () => {
+                              if (!(await confirmContinueWithoutRestoring())) return;
+                              setIsEditing(true);
+                            })();
                           }} disabled={isFrozen || isReadOnlyArchiveProfile} aria-disabled={isReadOnlyArchiveProfile || !canUseTraineeProfileAction('trainee.profile.edit')} className={`${btnClass} ${!isReadOnlyArchiveProfile && canUseTraineeProfileAction('trainee.profile.edit') ? '' : 'cursor-not-allowed'}`}>Edit</button>
                           {isRestoreReviewMode && !restoreCreatesNewRecord && onRestoreReviewedTrainee && (
                             <button
@@ -3845,13 +3878,18 @@ const TraineeProfileFlyout: React.FC<TraineeProfileFlyoutProps> = ({
                                 if (!confirmed) return;
                                 await Promise.resolve(onRestoreReviewedTrainee(trainee));
                               }}
-                              className={btnClass}
-                              style={{ color: '#16a34a' }}
+                              className={`${btnClass} animate-pulse`}
+                              style={{
+                                color: '#f0fdf4',
+                                background: 'linear-gradient(180deg, rgba(22,163,74,0.95), rgba(5,150,105,0.95))',
+                                borderColor: 'rgba(187,247,208,0.9)',
+                                boxShadow: '0 0 0 1px rgba(187,247,208,0.55), 0 0 18px rgba(34,197,94,0.95), 0 0 34px rgba(34,197,94,0.45)',
+                              }}
                             >
                               Restore
                             </button>
                           )}
-                          <button onClick={onClose} className={btnClass}>Close</button>
+                          <button onClick={() => { void handleRequestClose(); }} className={btnClass}>Close</button>
                         </>
                       )}
                       {isEditing && (

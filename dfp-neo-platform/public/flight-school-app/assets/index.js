@@ -55099,6 +55099,7 @@ const TraineeProfileFlyout = ({
   const isArchiveProfile = trainee._dataSource === "archive";
   const isRestoreReviewMode = trainee._restoreReviewMode === true;
   const restoreCreatesNewRecord = isRestoreReviewMode && trainee._restoreCreatesNewRecord === true;
+  const restoreNeedsFinalConfirmation = isRestoreReviewMode && !restoreCreatesNewRecord && !isEditing && Boolean(onRestoreReviewedTrainee);
   const isReadOnlyArchiveProfile = isArchiveProfile && !isRestoreReviewMode;
   const archivedLogbookEntries = reactExports.useMemo(() => Array.isArray(trainee.archivedLogbookEntries) ? [...trainee.archivedLogbookEntries] : [], [trainee]);
   const logbookAsAtLabel = getProfileLogbookAsAtLabel$1(trainee, logbookMonth);
@@ -55541,6 +55542,19 @@ const TraineeProfileFlyout = ({
     addText(`Totals: Logbook ${reviewFormatHours(reviewData.hourTotals.logbook)} | Syllabus ${reviewFormatHours(reviewData.hourTotals.syllabus)} | Effective ${reviewFormatHours(reviewData.hourTotals.effective)}`, margin, y, 8, "bold");
     doc.save(`Trainee_Review_${trainee.name.replace(/[^A-Za-z0-9]+/g, "_")}.pdf`);
   };
+  const confirmContinueWithoutRestoring = async () => {
+    if (!restoreNeedsFinalConfirmation) return true;
+    return showDarkConfirm(
+      "This profile has been saved, but it has not been restored to the active list yet.\n\nPress Restore to finish the restore. Continue without restoring this profile now?",
+      "Restore Not Complete",
+      "warning"
+    );
+  };
+  const handleRequestClose = async () => {
+    if (await confirmContinueWithoutRestoring()) {
+      onClose();
+    }
+  };
   const handleTabClick = (tab, anchor) => {
     if (tab && !canOpenTraineeProfileTab(tab)) {
       if (anchor) showPermissionNoticeForElement(anchor);
@@ -55553,6 +55567,10 @@ const TraineeProfileFlyout = ({
       }
       return next;
     });
+  };
+  const handleGuardedTabClick = async (tab, anchor) => {
+    if (!await confirmContinueWithoutRestoring()) return;
+    handleTabClick(tab, anchor);
   };
   const [showPauseConfirm, setShowPauseConfirm] = reactExports.useState(false);
   const [showScheduleWarning, setShowScheduleWarning] = reactExports.useState(false);
@@ -56520,7 +56538,9 @@ ${errorText || `HTTP ${response.status}`}`, "Delete Failed", "error");
     ] });
   };
   return /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
-    /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "fixed inset-0 bg-black/70 z-[90] flex items-start justify-center overflow-hidden px-4 pb-4 pt-[7.25rem]", onClick: onClose, children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "bg-[#141e2e] rounded-lg shadow-2xl w-full md:w-[calc(100vw-12rem)] xl:w-[min(calc(100vw-18rem),88rem)] max-w-[88rem] max-h-[calc(100vh-8.25rem)] flex flex-col border border-gray-600 overflow-hidden", onClick: (e) => e.stopPropagation(), children: [
+    /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "fixed inset-0 bg-black/70 z-[90] flex items-start justify-center overflow-hidden px-4 pb-4 pt-[7.25rem]", onClick: () => {
+      void handleRequestClose();
+    }, children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "bg-[#141e2e] rounded-lg shadow-2xl w-full md:w-[calc(100vw-12rem)] xl:w-[min(calc(100vw-18rem),88rem)] max-w-[88rem] max-h-[calc(100vh-8.25rem)] flex flex-col border border-gray-600 overflow-hidden", onClick: (e) => e.stopPropagation(), children: [
       /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "px-5 py-3 border-b border-gray-600 flex justify-between items-center bg-[#0f1824] flex-shrink-0", children: [
         /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center gap-2", children: [
           /* @__PURE__ */ jsxRuntimeExports.jsx("h2", { className: "text-lg font-bold text-white", children: isCreating ? "New Trainee" : "Trainee Profile" }),
@@ -56535,7 +56555,9 @@ ${errorText || `HTTP ${response.status}`}`, "Delete Failed", "error");
             }
           )
         ] }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx("button", { onClick: onClose, className: "text-gray-400 hover:text-white text-xl font-bold leading-none", children: "✕" })
+        /* @__PURE__ */ jsxRuntimeExports.jsx("button", { onClick: () => {
+          void handleRequestClose();
+        }, className: "text-gray-400 hover:text-white text-xl font-bold leading-none", children: "✕" })
       ] }),
       /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex flex-1 overflow-hidden", children: [
         /* @__PURE__ */ jsxRuntimeExports.jsxs(
@@ -57655,9 +57677,15 @@ ${errorText || `HTTP ${response.status}`}`, "Delete Failed", "error");
         ),
         /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "w-[95px] flex-shrink-0 border-l border-gray-700 bg-[#0f1824] px-[10px] py-3 flex flex-col gap-px", children: [
           !isEditing && /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
-            /* @__PURE__ */ jsxRuntimeExports.jsx("button", { "data-neo-guide": "trainee-availability-tab", onClick: (event) => handleTabClick("unavailable", event.currentTarget), "aria-disabled": !canOpenTraineeProfileTab("unavailable"), className: tabBtnClass("unavailable", canOpenTraineeProfileTab("unavailable")), children: "Unavail­able" }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx("button", { onClick: (event) => handleTabClick("currency", event.currentTarget), "aria-disabled": !canOpenTraineeProfileTab("currency"), className: tabBtnClass("currency", canOpenTraineeProfileTab("currency")), children: "Currency" }),
-            /* @__PURE__ */ jsxRuntimeExports.jsxs("button", { onClick: (event) => handleTabClick("sct", event.currentTarget), "aria-disabled": !canOpenTraineeProfileTab("sct"), className: tabBtnClass("sct", canOpenTraineeProfileTab("sct")), children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx("button", { "data-neo-guide": "trainee-availability-tab", onClick: (event) => {
+              void handleGuardedTabClick("unavailable", event.currentTarget);
+            }, "aria-disabled": !canOpenTraineeProfileTab("unavailable"), className: tabBtnClass("unavailable", canOpenTraineeProfileTab("unavailable")), children: "Unavail­able" }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("button", { onClick: (event) => {
+              void handleGuardedTabClick("currency", event.currentTarget);
+            }, "aria-disabled": !canOpenTraineeProfileTab("currency"), className: tabBtnClass("currency", canOpenTraineeProfileTab("currency")), children: "Currency" }),
+            /* @__PURE__ */ jsxRuntimeExports.jsxs("button", { onClick: (event) => {
+              void handleGuardedTabClick("sct", event.currentTarget);
+            }, "aria-disabled": !canOpenTraineeProfileTab("sct"), className: tabBtnClass("sct", canOpenTraineeProfileTab("sct")), children: [
               "Request",
               /* @__PURE__ */ jsxRuntimeExports.jsx("br", {}),
               continuationShortLabel
@@ -57670,7 +57698,10 @@ ${errorText || `HTTP ${response.status}`}`, "Delete Failed", "error");
                     showPermissionNoticeForElement(event.currentTarget);
                     return;
                   }
-                  handleHateSheetClick();
+                  void (async () => {
+                    if (!await confirmContinueWithoutRestoring()) return;
+                    handleHateSheetClick();
+                  })();
                 },
                 "aria-disabled": !canOpenTraineeProfileTab("hatesheet"),
                 className: tabBtnClass("hatesheet", canOpenTraineeProfileTab("hatesheet")),
@@ -57687,28 +57718,41 @@ ${errorText || `HTTP ${response.status}`}`, "Delete Failed", "error");
                 showPermissionNoticeForElement(event.currentTarget);
                 return;
               }
-              handleIndividualLMPClick();
+              void (async () => {
+                if (!await confirmContinueWithoutRestoring()) return;
+                handleIndividualLMPClick();
+              })();
             }, "aria-disabled": !canOpenTraineeProfileTab("lmp"), className: tabBtnClass("lmp", canOpenTraineeProfileTab("lmp")), children: "View Individual LMP" }),
             /* @__PURE__ */ jsxRuntimeExports.jsx("button", { onClick: (event) => {
               if (!canAddRemedialPackage) {
                 showPermissionNoticeForElement(event.currentTarget);
                 return;
               }
-              onAddRemedialPackage(trainee);
+              void (async () => {
+                if (!await confirmContinueWithoutRestoring()) return;
+                onAddRemedialPackage(trainee);
+              })();
             }, "aria-disabled": !canAddRemedialPackage, className: `${btnClass} ${canAddRemedialPackage ? "" : "cursor-not-allowed"}`, children: "Add Remedial Package" }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx("button", { onClick: (event) => handleTabClick("review", event.currentTarget), "aria-disabled": !canOpenTraineeProfileTab("review"), className: tabBtnClass("review", canOpenTraineeProfileTab("review")), children: /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "leading-tight", children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx("button", { onClick: (event) => {
+              void handleGuardedTabClick("review", event.currentTarget);
+            }, "aria-disabled": !canOpenTraineeProfileTab("review"), className: tabBtnClass("review", canOpenTraineeProfileTab("review")), children: /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "leading-tight", children: [
               "Trainee",
               /* @__PURE__ */ jsxRuntimeExports.jsx("br", {}),
               "Review"
             ] }) }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx("button", { onClick: (event) => handleTabClick("logbook", event.currentTarget), "aria-disabled": !canOpenTraineeProfileTab("logbook"), className: tabBtnClass("logbook", canOpenTraineeProfileTab("logbook")), children: "Logbook" }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("button", { onClick: (event) => {
+              void handleGuardedTabClick("logbook", event.currentTarget);
+            }, "aria-disabled": !canOpenTraineeProfileTab("logbook"), className: tabBtnClass("logbook", canOpenTraineeProfileTab("logbook")), children: "Logbook" }),
             /* @__PURE__ */ jsxRuntimeExports.jsx("button", { onClick: (event) => {
               if (!canUseTraineeProfileAction("trainee.profile.edit")) {
                 showPermissionNoticeForElement(event.currentTarget);
                 return;
               }
               if (isReadOnlyArchiveProfile) return;
-              setIsEditing(true);
+              void (async () => {
+                if (!await confirmContinueWithoutRestoring()) return;
+                setIsEditing(true);
+              })();
             }, disabled: isFrozen || isReadOnlyArchiveProfile, "aria-disabled": isReadOnlyArchiveProfile || !canUseTraineeProfileAction("trainee.profile.edit"), className: `${btnClass} ${!isReadOnlyArchiveProfile && canUseTraineeProfileAction("trainee.profile.edit") ? "" : "cursor-not-allowed"}`, children: "Edit" }),
             isRestoreReviewMode && !restoreCreatesNewRecord && onRestoreReviewedTrainee && /* @__PURE__ */ jsxRuntimeExports.jsx(
               "button",
@@ -57724,12 +57768,19 @@ Confirm the profile details are up to date and correct before restoring.`,
                   if (!confirmed) return;
                   await Promise.resolve(onRestoreReviewedTrainee(trainee));
                 },
-                className: btnClass,
-                style: { color: "#16a34a" },
+                className: `${btnClass} animate-pulse`,
+                style: {
+                  color: "#f0fdf4",
+                  background: "linear-gradient(180deg, rgba(22,163,74,0.95), rgba(5,150,105,0.95))",
+                  borderColor: "rgba(187,247,208,0.9)",
+                  boxShadow: "0 0 0 1px rgba(187,247,208,0.55), 0 0 18px rgba(34,197,94,0.95), 0 0 34px rgba(34,197,94,0.45)"
+                },
                 children: "Restore"
               }
             ),
-            /* @__PURE__ */ jsxRuntimeExports.jsx("button", { onClick: onClose, className: btnClass, children: "Close" })
+            /* @__PURE__ */ jsxRuntimeExports.jsx("button", { onClick: () => {
+              void handleRequestClose();
+            }, className: btnClass, children: "Close" })
           ] }),
           isEditing && /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
             /* @__PURE__ */ jsxRuntimeExports.jsx("button", { onClick: handlePauseToggle, disabled: isFrozen, className: btnClass, style: { color: isPaused ? "#16a34a" : "#dc2626" }, children: isPaused ? "UNPAUSE" : "PAUSE" }),
