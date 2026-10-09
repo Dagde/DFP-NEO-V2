@@ -2708,7 +2708,9 @@ export const InstructorProfileFlyout: React.FC<InstructorProfileFlyoutProps> = (
             <div className="w-[95px] flex-shrink-0 border-l border-gray-600 bg-[#0f1824] pt-2 pb-2 px-[10px] flex flex-col space-y-[1px]">
               {!isEditing && !isCreating && (<>
                 <button data-neo-guide="staff-availability-tab" onClick={(event) => { void handleGuardedTabClick('unavailable', event.currentTarget); }} aria-disabled={!canOpenStaffProfileTab('unavailable')} className={tabBtnClass('unavailable', canOpenStaffProfileTab('unavailable'))}>Unavailable</button>
-                <button onClick={(event) => { void handleGuardedTabClick('currency', event.currentTarget); }} aria-disabled={!canOpenStaffProfileTab('currency')} className={tabBtnClass('currency', canOpenStaffProfileTab('currency'))}>Currency</button>
+                {!isReadOnlyArchiveProfile && (
+                  <button onClick={(event) => { void handleGuardedTabClick('currency', event.currentTarget); }} aria-disabled={!canOpenStaffProfileTab('currency')} className={tabBtnClass('currency', canOpenStaffProfileTab('currency'))}>Currency</button>
+                )}
                 <button onClick={(event) => { void handleGuardedTabClick('logbook', event.currentTarget); }} aria-disabled={!canOpenStaffProfileTab('logbook')} className={tabBtnClass('logbook', canOpenStaffProfileTab('logbook'))}>Logbook</button>
                 <button onClick={(event) => { void handleGuardedTabClick('sct', event.currentTarget); }} aria-disabled={!canOpenStaffProfileTab('sct')} className={tabBtnClass('sct', canOpenStaffProfileTab('sct'))}>Request {continuationShortLabel}</button>
                 <button onClick={(event) => { void handleGuardedTabClick('trainingReports', event.currentTarget); }} aria-disabled={!canOpenStaffProfileTab('trainingReports')} className={tabBtnClass('trainingReports', canOpenStaffProfileTab('trainingReports'))}>Training Reports</button>

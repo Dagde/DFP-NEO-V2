@@ -9,6 +9,8 @@ interface ArchivedInstructorsFlyoutProps {
   onRestoreTrainee?: (id: string | number | null) => Promise<void> | void;
   onBeginRestoreReview?: (person: Instructor) => void;
   onBeginRestoreReviewTrainee?: (person: Trainee) => void;
+  onViewProfile?: (person: Instructor) => void;
+  onViewTraineeProfile?: (person: Trainee) => void;
   canRestore?: boolean;
   onRequestRestorePassword?: (personName: string) => Promise<boolean>;
 }
@@ -21,6 +23,8 @@ const ArchivedInstructorsFlyout: React.FC<ArchivedInstructorsFlyoutProps> = ({
   onRestoreTrainee,
   onBeginRestoreReview,
   onBeginRestoreReviewTrainee,
+  onViewProfile,
+  onViewTraineeProfile,
   canRestore = false,
   onRequestRestorePassword,
 }) => {
@@ -153,7 +157,7 @@ const ArchivedInstructorsFlyout: React.FC<ArchivedInstructorsFlyoutProps> = ({
         onClick={onClose}
       >
         <div
-          className="bg-gray-800 rounded-lg shadow-xl w-full max-w-lg h-3/4 flex flex-col border border-gray-700 transform transition-all animate-fade-in"
+          className="bg-gray-800 rounded-lg shadow-xl w-full max-w-xl h-3/4 flex flex-col border border-gray-700 transform transition-all animate-fade-in"
           onClick={e => e.stopPropagation()}
         >
           <div className="p-4 border-b border-gray-700 flex justify-between items-center bg-gray-900/50 rounded-t-lg">
@@ -203,18 +207,39 @@ const ArchivedInstructorsFlyout: React.FC<ArchivedInstructorsFlyoutProps> = ({
                           </div>
                         </div>
                     </div>
-                    <button
+                    <div className="ml-3 flex flex-shrink-0 items-center gap-1">
+                      <button
+                        type="button"
+                        title="View Profile"
                         onClick={() => {
-                          if (!canRestore) return;
-                          setPersonToRestore(individual);
+                          if (individual.kind === 'Staff') {
+                            onViewProfile?.({ ...(individual.person as Instructor), _dataSource: 'archive', _restoreReviewMode: false } as Instructor);
+                          } else {
+                            onViewTraineeProfile?.({ ...(individual.person as Trainee), _dataSource: 'archive', _restoreReviewMode: false } as Trainee);
+                          }
                         }}
-                        className={`p-1 rounded-full text-gray-400 hover:bg-green-500/20 hover:text-green-400 transition-colors ${canRestore ? '' : 'cursor-not-allowed'}`}
-                        aria-label={`Restore ${individual.name}`}
-                    >
+                        className="rounded-full p-1 text-gray-400 transition-colors hover:bg-sky-500/20 hover:text-sky-300"
+                        aria-label={`View Profile for ${individual.name}`}
+                      >
                         <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
-                            <path fillRule="evenodd" d="M10 5a1 1 0 011 1v3h3a1 1 0 110 2h-3v3a1 1 0 11-2 0v-3H6a1 1 0 110-2h3V6a1 1 0 011-1z" clipRule="evenodd" />
+                          <path d="M10 3.5c4.2 0 7.16 3.05 8.38 5.71a1.92 1.92 0 010 1.58C17.16 13.45 14.2 16.5 10 16.5s-7.16-3.05-8.38-5.71a1.92 1.92 0 010-1.58C2.84 6.55 5.8 3.5 10 3.5zm0 3a3.5 3.5 0 100 7 3.5 3.5 0 000-7zm0 1.4a2.1 2.1 0 110 4.2 2.1 2.1 0 010-4.2z" />
                         </svg>
-                    </button>
+                      </button>
+                      <button
+                          type="button"
+                          title="Restore to active"
+                          onClick={() => {
+                            if (!canRestore) return;
+                            setPersonToRestore(individual);
+                          }}
+                          className={`p-1 rounded-full text-gray-400 hover:bg-green-500/20 hover:text-green-400 transition-colors ${canRestore ? '' : 'cursor-not-allowed'}`}
+                          aria-label={`Restore to active ${individual.name}`}
+                      >
+                          <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                              <path fillRule="evenodd" d="M10 5a1 1 0 011 1v3h3a1 1 0 110 2h-3v3a1 1 0 11-2 0v-3H6a1 1 0 110-2h3V6a1 1 0 011-1z" clipRule="evenodd" />
+                          </svg>
+                      </button>
+                    </div>
                     </li>
                 ))}
                 </ul>

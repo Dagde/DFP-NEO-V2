@@ -3813,7 +3813,9 @@ const TraineeProfileFlyout: React.FC<TraineeProfileFlyoutProps> = ({
                       {!isEditing && (
                         <>
                           <button data-neo-guide="trainee-availability-tab" onClick={(event) => { void handleGuardedTabClick('unavailable', event.currentTarget); }} aria-disabled={!canOpenTraineeProfileTab('unavailable')} className={tabBtnClass('unavailable', canOpenTraineeProfileTab('unavailable'))}>Unavail&shy;able</button>
-                          <button onClick={(event) => { void handleGuardedTabClick('currency', event.currentTarget); }} aria-disabled={!canOpenTraineeProfileTab('currency')} className={tabBtnClass('currency', canOpenTraineeProfileTab('currency'))}>Currency</button>
+                          {!isReadOnlyArchiveProfile && (
+                            <button onClick={(event) => { void handleGuardedTabClick('currency', event.currentTarget); }} aria-disabled={!canOpenTraineeProfileTab('currency')} className={tabBtnClass('currency', canOpenTraineeProfileTab('currency'))}>Currency</button>
+                          )}
                           <button onClick={(event) => { void handleGuardedTabClick('sct', event.currentTarget); }} aria-disabled={!canOpenTraineeProfileTab('sct')} className={tabBtnClass('sct', canOpenTraineeProfileTab('sct'))}>Request<br />{continuationShortLabel}</button>
                           <button
                             onClick={(event) => {

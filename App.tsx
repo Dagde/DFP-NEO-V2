@@ -52178,13 +52178,15 @@ appliedUpdates.forEach(update => {
     }, []);
 
     const handleBeginStaffRestoreReview = useCallback((archivedStaff: Instructor) => {
-        setSelectedPersonForProfile({ ...(archivedStaff as any), _dataSource: 'archive', _restoreReviewMode: true });
+        const restoreReviewMode = (archivedStaff as any)._restoreReviewMode === false ? false : true;
+        setSelectedPersonForProfile({ ...(archivedStaff as any), _dataSource: 'archive', _restoreReviewMode: restoreReviewMode });
         setProfileInitialTab(null);
         handleNavigation('Staff');
     }, []);
 
     const handleBeginTraineeRestoreReview = useCallback((archivedTrainee: Trainee) => {
-        setSelectedPersonForProfile({ ...(archivedTrainee as any), _dataSource: 'archive', _restoreReviewMode: true });
+        const restoreReviewMode = (archivedTrainee as any)._restoreReviewMode === false ? false : true;
+        setSelectedPersonForProfile({ ...(archivedTrainee as any), _dataSource: 'archive', _restoreReviewMode: restoreReviewMode });
         setTraineeProfileInitialTab(null);
         handleNavigation('Trainee');
     }, []);

@@ -1187,6 +1187,14 @@ const InstructorListView: React.FC<InstructorListViewProps> = ({
               setShowArchivedFlyout(false);
               onBeginRestoreReviewTrainee?.({ ...(person as any), _dataSource: 'archive', _restoreReviewMode: true } as Trainee);
             }}
+            onViewProfile={(person) => {
+              setShowArchivedFlyout(false);
+              onBeginRestoreReview?.({ ...(person as any), _dataSource: 'archive', _restoreReviewMode: false } as Instructor);
+            }}
+            onViewTraineeProfile={(person) => {
+              setShowArchivedFlyout(false);
+              onBeginRestoreReviewTrainee?.({ ...(person as any), _dataSource: 'archive', _restoreReviewMode: false } as Trainee);
+            }}
             canRestore={canManageArchive}
             onRequestRestorePassword={(instructorName) => requestArchivePassword(
               `Enter your password to restore ${instructorName}.`,

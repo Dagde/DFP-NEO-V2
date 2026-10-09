@@ -57680,7 +57680,7 @@ ${errorText || `HTTP ${response.status}`}`, "Delete Failed", "error");
             /* @__PURE__ */ jsxRuntimeExports.jsx("button", { "data-neo-guide": "trainee-availability-tab", onClick: (event) => {
               void handleGuardedTabClick("unavailable", event.currentTarget);
             }, "aria-disabled": !canOpenTraineeProfileTab("unavailable"), className: tabBtnClass("unavailable", canOpenTraineeProfileTab("unavailable")), children: "Unavail­able" }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx("button", { onClick: (event) => {
+            !isReadOnlyArchiveProfile && /* @__PURE__ */ jsxRuntimeExports.jsx("button", { onClick: (event) => {
               void handleGuardedTabClick("currency", event.currentTarget);
             }, "aria-disabled": !canOpenTraineeProfileTab("currency"), className: tabBtnClass("currency", canOpenTraineeProfileTab("currency")), children: "Currency" }),
             /* @__PURE__ */ jsxRuntimeExports.jsxs("button", { onClick: (event) => {
@@ -92760,7 +92760,7 @@ Confirm the Personnel ID, unit and role are correct before saving this separate 
             /* @__PURE__ */ jsxRuntimeExports.jsx("button", { "data-neo-guide": "staff-availability-tab", onClick: (event) => {
               void handleGuardedTabClick("unavailable", event.currentTarget);
             }, "aria-disabled": !canOpenStaffProfileTab("unavailable"), className: tabBtnClass("unavailable", canOpenStaffProfileTab("unavailable")), children: "Unavailable" }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx("button", { onClick: (event) => {
+            !isReadOnlyArchiveProfile && /* @__PURE__ */ jsxRuntimeExports.jsx("button", { onClick: (event) => {
               void handleGuardedTabClick("currency", event.currentTarget);
             }, "aria-disabled": !canOpenStaffProfileTab("currency"), className: tabBtnClass("currency", canOpenStaffProfileTab("currency")), children: "Currency" }),
             /* @__PURE__ */ jsxRuntimeExports.jsx("button", { onClick: (event) => {
@@ -93470,6 +93470,8 @@ const ArchivedInstructorsFlyout = ({
   onRestoreTrainee,
   onBeginRestoreReview,
   onBeginRestoreReviewTrainee,
+  onViewProfile,
+  onViewTraineeProfile,
   canRestore = false,
   onRequestRestorePassword
 }) => {
@@ -93590,7 +93592,7 @@ const ArchivedInstructorsFlyout = ({
         children: /* @__PURE__ */ jsxRuntimeExports.jsxs(
           "div",
           {
-            className: "bg-gray-800 rounded-lg shadow-xl w-full max-w-lg h-3/4 flex flex-col border border-gray-700 transform transition-all animate-fade-in",
+            className: "bg-gray-800 rounded-lg shadow-xl w-full max-w-xl h-3/4 flex flex-col border border-gray-700 transform transition-all animate-fade-in",
             onClick: (e) => e.stopPropagation(),
             children: [
               /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "p-4 border-b border-gray-700 flex justify-between items-center bg-gray-900/50 rounded-t-lg", children: [
@@ -93640,18 +93642,39 @@ const ArchivedInstructorsFlyout = ({
                           ] })
                         ] })
                       ] }),
-                      /* @__PURE__ */ jsxRuntimeExports.jsx(
-                        "button",
-                        {
-                          onClick: () => {
-                            if (!canRestore) return;
-                            setPersonToRestore(individual);
-                          },
-                          className: `p-1 rounded-full text-gray-400 hover:bg-green-500/20 hover:text-green-400 transition-colors ${canRestore ? "" : "cursor-not-allowed"}`,
-                          "aria-label": `Restore ${individual.name}`,
-                          children: /* @__PURE__ */ jsxRuntimeExports.jsx("svg", { xmlns: "http://www.w3.org/2000/svg", className: "h-5 w-5", viewBox: "0 0 20 20", fill: "currentColor", children: /* @__PURE__ */ jsxRuntimeExports.jsx("path", { fillRule: "evenodd", d: "M10 5a1 1 0 011 1v3h3a1 1 0 110 2h-3v3a1 1 0 11-2 0v-3H6a1 1 0 110-2h3V6a1 1 0 011-1z", clipRule: "evenodd" }) })
-                        }
-                      )
+                      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "ml-3 flex flex-shrink-0 items-center gap-1", children: [
+                        /* @__PURE__ */ jsxRuntimeExports.jsx(
+                          "button",
+                          {
+                            type: "button",
+                            title: "View Profile",
+                            onClick: () => {
+                              if (individual.kind === "Staff") {
+                                onViewProfile?.({ ...individual.person, _dataSource: "archive", _restoreReviewMode: false });
+                              } else {
+                                onViewTraineeProfile?.({ ...individual.person, _dataSource: "archive", _restoreReviewMode: false });
+                              }
+                            },
+                            className: "rounded-full p-1 text-gray-400 transition-colors hover:bg-sky-500/20 hover:text-sky-300",
+                            "aria-label": `View Profile for ${individual.name}`,
+                            children: /* @__PURE__ */ jsxRuntimeExports.jsx("svg", { xmlns: "http://www.w3.org/2000/svg", className: "h-5 w-5", viewBox: "0 0 20 20", fill: "currentColor", children: /* @__PURE__ */ jsxRuntimeExports.jsx("path", { d: "M10 3.5c4.2 0 7.16 3.05 8.38 5.71a1.92 1.92 0 010 1.58C17.16 13.45 14.2 16.5 10 16.5s-7.16-3.05-8.38-5.71a1.92 1.92 0 010-1.58C2.84 6.55 5.8 3.5 10 3.5zm0 3a3.5 3.5 0 100 7 3.5 3.5 0 000-7zm0 1.4a2.1 2.1 0 110 4.2 2.1 2.1 0 010-4.2z" }) })
+                          }
+                        ),
+                        /* @__PURE__ */ jsxRuntimeExports.jsx(
+                          "button",
+                          {
+                            type: "button",
+                            title: "Restore to active",
+                            onClick: () => {
+                              if (!canRestore) return;
+                              setPersonToRestore(individual);
+                            },
+                            className: `p-1 rounded-full text-gray-400 hover:bg-green-500/20 hover:text-green-400 transition-colors ${canRestore ? "" : "cursor-not-allowed"}`,
+                            "aria-label": `Restore to active ${individual.name}`,
+                            children: /* @__PURE__ */ jsxRuntimeExports.jsx("svg", { xmlns: "http://www.w3.org/2000/svg", className: "h-5 w-5", viewBox: "0 0 20 20", fill: "currentColor", children: /* @__PURE__ */ jsxRuntimeExports.jsx("path", { fillRule: "evenodd", d: "M10 5a1 1 0 011 1v3h3a1 1 0 110 2h-3v3a1 1 0 11-2 0v-3H6a1 1 0 110-2h3V6a1 1 0 011-1z", clipRule: "evenodd" }) })
+                          }
+                        )
+                      ] })
                     ]
                   },
                   `${individual.kind}-${String(individual.id || individual.name)}`
@@ -94597,6 +94620,14 @@ const InstructorListView = ({
         onBeginRestoreReviewTrainee: (person) => {
           setShowArchivedFlyout(false);
           onBeginRestoreReviewTrainee?.({ ...person, _dataSource: "archive", _restoreReviewMode: true });
+        },
+        onViewProfile: (person) => {
+          setShowArchivedFlyout(false);
+          onBeginRestoreReview?.({ ...person, _dataSource: "archive", _restoreReviewMode: false });
+        },
+        onViewTraineeProfile: (person) => {
+          setShowArchivedFlyout(false);
+          onBeginRestoreReviewTrainee?.({ ...person, _dataSource: "archive", _restoreReviewMode: false });
         },
         canRestore: canManageArchive,
         onRequestRestorePassword: (instructorName) => requestArchivePassword(
@@ -160696,12 +160727,14 @@ Do not hard refresh yet. Try Publish again, then confirm the save succeeds.`,
     }
   }, []);
   const handleBeginStaffRestoreReview = reactExports.useCallback((archivedStaff) => {
-    setSelectedPersonForProfile({ ...archivedStaff, _dataSource: "archive", _restoreReviewMode: true });
+    const restoreReviewMode = archivedStaff._restoreReviewMode === false ? false : true;
+    setSelectedPersonForProfile({ ...archivedStaff, _dataSource: "archive", _restoreReviewMode: restoreReviewMode });
     setProfileInitialTab(null);
     handleNavigation("Staff");
   }, []);
   const handleBeginTraineeRestoreReview = reactExports.useCallback((archivedTrainee) => {
-    setSelectedPersonForProfile({ ...archivedTrainee, _dataSource: "archive", _restoreReviewMode: true });
+    const restoreReviewMode = archivedTrainee._restoreReviewMode === false ? false : true;
+    setSelectedPersonForProfile({ ...archivedTrainee, _dataSource: "archive", _restoreReviewMode: restoreReviewMode });
     setTraineeProfileInitialTab(null);
     handleNavigation("Trainee");
   }, []);
