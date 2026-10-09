@@ -7,7 +7,7 @@ import {
   resolveReportAssessorDisplayLabel,
   type TrainingReportTemplate,
 } from '../utils/trainingReportTerminology';
-import { appendTrainingReportFollowUpDiag, getAirCombatAssignmentFromItem } from '../utils/airCombatTraining';
+import { appendTrainingReportFollowUpDiag, downloadTrainingReportFollowUpDiag, getAirCombatAssignmentFromItem } from '../utils/airCombatTraining';
 import { handleEditableTextBeforeInput, handleEditableTextKeyDownCapture, stopEditableKeyPropagation } from '../utils/editableKeyEvents';
 import { getConfiguredScoringMatrixElements } from '../utils/scoringMatrixElements';
 
@@ -745,6 +745,18 @@ export const AirCombatTrainingReportModal: React.FC<AirCombatTrainingReportModal
     onCancel();
   };
 
+  const downloadTrace = () => {
+    appendTrainingReportFollowUpDiag('modal:trace-download-clicked', {
+      reportId,
+      staffName: staff.name,
+      staffIdNumber: staff.idNumber,
+      eventCode,
+      saveStatus,
+      isEditMode,
+    });
+    downloadTrainingReportFollowUpDiag();
+  };
+
   return (
     <div className="fixed inset-0 z-[95] flex items-center justify-center bg-black/75 p-4" onKeyDownCapture={stopEditableKeyPropagation}>
       <div className="flex max-h-[92vh] w-full max-w-[1500px] flex-col overflow-hidden rounded-lg border border-gray-600 bg-gray-900 shadow-2xl">
@@ -834,6 +846,7 @@ export const AirCombatTrainingReportModal: React.FC<AirCombatTrainingReportModal
               </button>
               <button type="button" onClick={saveReport} disabled={isSaving || !eventCode} className="flex h-[41px] w-[56px] items-center justify-center rounded-md btn-aluminium-brushed px-1 py-1 text-center text-[10px] font-semibold disabled:cursor-not-allowed disabled:opacity-40">Save</button>
               <button type="button" className="flex h-[41px] w-[56px] items-center justify-center rounded-md btn-aluminium-brushed px-1 py-1 text-center text-[10px] font-semibold">Delete</button>
+              <button type="button" onClick={downloadTrace} className="flex h-[41px] w-[56px] items-center justify-center rounded-md btn-aluminium-brushed px-1 py-1 text-center text-[10px] font-semibold">Trace</button>
               <button type="button" onClick={requestClose} className="flex h-[41px] w-[56px] items-center justify-center rounded-md btn-aluminium-brushed px-1 py-1 text-center text-[10px] font-semibold">Back</button>
               <AuditButton pageName={`${reportTemplate.displayName} Assessment`} />
             </div>

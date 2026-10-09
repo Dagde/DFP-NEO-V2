@@ -193,6 +193,34 @@ export const appendTrainingReportFollowUpDiag = (stage: string, payload: Record<
   }
 };
 
+export const readTrainingReportFollowUpDiag = (): any[] => {
+  if (typeof window === 'undefined' || !window.localStorage) return [];
+  try {
+    const parsed = JSON.parse(window.localStorage.getItem('dfp_training_report_followup_diag') || '[]');
+    return Array.isArray(parsed) ? parsed : [];
+  } catch {
+    return [];
+  }
+};
+
+export const downloadTrainingReportFollowUpDiag = (prefix = 'training-report-save-trace'): void => {
+  if (typeof window === 'undefined') return;
+  const payload = {
+    exportedAt: new Date().toISOString(),
+    userAgent: window.navigator?.userAgent || '',
+    entries: readTrainingReportFollowUpDiag(),
+  };
+  const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json;charset=utf-8' });
+  const url = window.URL.createObjectURL(blob);
+  const anchor = window.document.createElement('a');
+  anchor.href = url;
+  anchor.download = `${prefix}-${new Date().toISOString().replace(/[:.]/g, '-')}.json`;
+  window.document.body.appendChild(anchor);
+  anchor.click();
+  anchor.remove();
+  window.URL.revokeObjectURL(url);
+};
+
 export const normaliseAirCombatTrainingReports = (preferences?: PersonnelPreferences | null): AirCombatTrainingReport[] => {
   const raw = preferences?.airCombat?.trainingReports;
   if (!Array.isArray(raw)) return [];

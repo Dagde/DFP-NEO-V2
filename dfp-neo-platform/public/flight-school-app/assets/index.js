@@ -8228,6 +8228,32 @@ const appendTrainingReportFollowUpDiag = (stage, payload = {}) => {
   } catch {
   }
 };
+const readTrainingReportFollowUpDiag = () => {
+  if (typeof window === "undefined" || !window.localStorage) return [];
+  try {
+    const parsed = JSON.parse(window.localStorage.getItem("dfp_training_report_followup_diag") || "[]");
+    return Array.isArray(parsed) ? parsed : [];
+  } catch {
+    return [];
+  }
+};
+const downloadTrainingReportFollowUpDiag = (prefix = "training-report-save-trace") => {
+  if (typeof window === "undefined") return;
+  const payload = {
+    exportedAt: (/* @__PURE__ */ new Date()).toISOString(),
+    userAgent: window.navigator?.userAgent || "",
+    entries: readTrainingReportFollowUpDiag()
+  };
+  const blob = new Blob([JSON.stringify(payload, null, 2)], { type: "application/json;charset=utf-8" });
+  const url = window.URL.createObjectURL(blob);
+  const anchor = window.document.createElement("a");
+  anchor.href = url;
+  anchor.download = `${prefix}-${(/* @__PURE__ */ new Date()).toISOString().replace(/[:.]/g, "-")}.json`;
+  window.document.body.appendChild(anchor);
+  anchor.click();
+  anchor.remove();
+  window.URL.revokeObjectURL(url);
+};
 const normaliseAirCombatTrainingReports = (preferences) => {
   const raw = preferences?.airCombat?.trainingReports;
   if (!Array.isArray(raw)) return [];
@@ -90979,6 +91005,23 @@ const InstructorProfileFlyout = ({
     item: summary.sequenceItems.find((item) => normaliseTrainingCode(item.code) === normaliseTrainingCode(event.flightNumber)) || null
   }))).sort((left, right) => getEventDateValue(right.event) - getEventDateValue(left.event) || Number(right.event.startTime || 0) - Number(left.event.startTime || 0)), [airCombatTrainingSummaries]);
   const airCombatStoredTrainingReports = reactExports.useMemo(() => normaliseAirCombatTrainingReports(instructor.preferences).sort((left, right) => String(right.date || "").localeCompare(String(left.date || "")) || String(right.createdAt || "").localeCompare(String(left.createdAt || ""))), [instructor.preferences]);
+  reactExports.useEffect(() => {
+    if (activeTab !== "trainingReports") return;
+    appendTrainingReportFollowUpDiag("profile:training-reports-render", {
+      staffName: instructor.name,
+      staffIdNumber: instructor.idNumber,
+      dbId: instructor.id || null,
+      dataSource: instructor._dataSource || null,
+      reportCount: airCombatStoredTrainingReports.length,
+      reportIds: airCombatStoredTrainingReports.map((report) => report.id).slice(0, 20),
+      reportEvents: airCombatStoredTrainingReports.map((report) => ({
+        id: report.id,
+        eventCode: report.eventCode,
+        date: report.date,
+        updatedAt: report.updatedAt
+      })).slice(0, 10)
+    });
+  }, [activeTab, airCombatStoredTrainingReports, instructor]);
   const handleDeleteTrainingReport = reactExports.useCallback(async (report) => {
     const password = await showDarkPrompt({
       title: "Delete Training Report",
@@ -101092,6 +101135,17 @@ const AirCombatTrainingReportModal = ({
     }
     onCancel();
   };
+  const downloadTrace = () => {
+    appendTrainingReportFollowUpDiag("modal:trace-download-clicked", {
+      reportId,
+      staffName: staff.name,
+      staffIdNumber: staff.idNumber,
+      eventCode: eventCode2,
+      saveStatus,
+      isEditMode
+    });
+    downloadTrainingReportFollowUpDiag();
+  };
   return /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "fixed inset-0 z-[95] flex items-center justify-center bg-black/75 p-4", onKeyDownCapture: stopEditableKeyPropagation, children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex max-h-[92vh] w-full max-w-[1500px] flex-col overflow-hidden rounded-lg border border-gray-600 bg-gray-900 shadow-2xl", children: [
     /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex justify-end bg-gray-800 px-5 pt-4", children: /* @__PURE__ */ jsxRuntimeExports.jsx("button", { type: "button", onClick: requestClose, className: "text-3xl leading-none text-gray-400 hover:text-white", children: "x" }) }),
     /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex-1 overflow-y-auto", children: [
@@ -101190,6 +101244,7 @@ const AirCombatTrainingReportModal = ({
           ),
           /* @__PURE__ */ jsxRuntimeExports.jsx("button", { type: "button", onClick: saveReport, disabled: isSaving2 || !eventCode2, className: "flex h-[41px] w-[56px] items-center justify-center rounded-md btn-aluminium-brushed px-1 py-1 text-center text-[10px] font-semibold disabled:cursor-not-allowed disabled:opacity-40", children: "Save" }),
           /* @__PURE__ */ jsxRuntimeExports.jsx("button", { type: "button", className: "flex h-[41px] w-[56px] items-center justify-center rounded-md btn-aluminium-brushed px-1 py-1 text-center text-[10px] font-semibold", children: "Delete" }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx("button", { type: "button", onClick: downloadTrace, className: "flex h-[41px] w-[56px] items-center justify-center rounded-md btn-aluminium-brushed px-1 py-1 text-center text-[10px] font-semibold", children: "Trace" }),
           /* @__PURE__ */ jsxRuntimeExports.jsx("button", { type: "button", onClick: requestClose, className: "flex h-[41px] w-[56px] items-center justify-center rounded-md btn-aluminium-brushed px-1 py-1 text-center text-[10px] font-semibold", children: "Back" }),
           /* @__PURE__ */ jsxRuntimeExports.jsx(AuditButton, { pageName: `${reportTemplate.displayName} Assessment` })
         ] })
@@ -151829,6 +151884,16 @@ ${error instanceof Error ? error.message : String(error)}`,
         throw new Error(errorText || `Failed to save Air Combat training report (${response.status})`);
       }
       const responseData = await response.json().catch(() => ({}));
+      appendTrainingReportFollowUpDiag("app:save-api-json", {
+        reportId: reportForSave.id,
+        dbId,
+        hasPersonnel: !!responseData.personnel,
+        personnelId: responseData.personnel?.id || null,
+        personnelName: responseData.personnel?.name || null,
+        preferenceKeys: responseData.personnel?.preferences && typeof responseData.personnel.preferences === "object" ? Object.keys(responseData.personnel.preferences) : [],
+        rawTrainingReportCount: Array.isArray(responseData.personnel?.preferences?.airCombat?.trainingReports) ? responseData.personnel.preferences.airCombat.trainingReports.length : null,
+        rawTrainingReportIds: Array.isArray(responseData.personnel?.preferences?.airCombat?.trainingReports) ? responseData.personnel.preferences.airCombat.trainingReports.map((item) => item?.id || null).slice(0, 20) : []
+      });
       const savedPersonnel = responseData.personnel ? normalisePersonnelRecord({
         ...updatedStaff,
         ...responseData.personnel,
@@ -151853,14 +151918,31 @@ ${error instanceof Error ? error.message : String(error)}`,
         dataSource: updatedStaff._dataSource || null
       });
     }
-    setInstructorsData((prev) => prev.map((person) => dbId ? person.id === dbId ? updatedStaff : person : person.idNumber === updatedStaff.idNumber ? updatedStaff : person));
+    setInstructorsData((prev) => {
+      const beforeMatch = prev.find((person) => dbId ? person.id === dbId : person.idNumber === updatedStaff.idNumber);
+      const next = prev.map((person) => dbId ? person.id === dbId ? updatedStaff : person : person.idNumber === updatedStaff.idNumber ? updatedStaff : person);
+      const afterMatch = next.find((person) => dbId ? person.id === dbId : person.idNumber === updatedStaff.idNumber);
+      appendTrainingReportFollowUpDiag("app:set-instructors-data", {
+        reportId: reportForSave.id,
+        dbId,
+        beforeStaffName: beforeMatch?.name || null,
+        beforeCount: normaliseAirCombatTrainingReports(beforeMatch?.preferences).length,
+        beforeHasReport: normaliseAirCombatTrainingReports(beforeMatch?.preferences).some((existing) => existing.id === reportForSave.id),
+        afterStaffName: afterMatch?.name || null,
+        afterCount: normaliseAirCombatTrainingReports(afterMatch?.preferences).length,
+        afterHasReport: normaliseAirCombatTrainingReports(afterMatch?.preferences).some((existing) => existing.id === reportForSave.id)
+      });
+      return next;
+    });
     setAirCombatTrainingReportDraft(null);
     setSelectedPersonForProfile(updatedStaff);
     appendTrainingReportFollowUpDiag("app:save-state-updated", {
       reportId: reportForSave.id,
       staffName: updatedStaff.name,
       staffIdNumber: updatedStaff.idNumber,
-      savedReport: updatedReports.find((existing) => existing.id === reportForSave.id) || null
+      savedReport: updatedReports.find((existing) => existing.id === reportForSave.id) || null,
+      selectedProfileReportCount: normaliseAirCombatTrainingReports(updatedStaff.preferences).length,
+      selectedProfileHasReport: normaliseAirCombatTrainingReports(updatedStaff.preferences).some((existing) => existing.id === reportForSave.id)
     });
     logAudit(
       "Air Combat Training Reports",

@@ -41457,6 +41457,22 @@ const App: React.FC = () => {
                 throw new Error(errorText || `Failed to save Air Combat training report (${response.status})`);
             }
             const responseData = await response.json().catch(() => ({}));
+            appendTrainingReportFollowUpDiag('app:save-api-json', {
+                reportId: reportForSave.id,
+                dbId,
+                hasPersonnel: !!responseData.personnel,
+                personnelId: responseData.personnel?.id || null,
+                personnelName: responseData.personnel?.name || null,
+                preferenceKeys: responseData.personnel?.preferences && typeof responseData.personnel.preferences === 'object'
+                    ? Object.keys(responseData.personnel.preferences)
+                    : [],
+                rawTrainingReportCount: Array.isArray(responseData.personnel?.preferences?.airCombat?.trainingReports)
+                    ? responseData.personnel.preferences.airCombat.trainingReports.length
+                    : null,
+                rawTrainingReportIds: Array.isArray(responseData.personnel?.preferences?.airCombat?.trainingReports)
+                    ? responseData.personnel.preferences.airCombat.trainingReports.map((item: any) => item?.id || null).slice(0, 20)
+                    : [],
+            });
             const savedPersonnel = responseData.personnel
                 ? normalisePersonnelRecord({
                     ...updatedStaff,
@@ -41485,11 +41501,34 @@ const App: React.FC = () => {
             });
         }
 
-        setInstructorsData(prev => prev.map(person => (
-            dbId
-                ? ((person as any).id === dbId ? updatedStaff : person)
-                : (person.idNumber === updatedStaff.idNumber ? updatedStaff : person)
-        )));
+        setInstructorsData(prev => {
+            const beforeMatch = prev.find(person => (
+                dbId
+                    ? (person as any).id === dbId
+                    : person.idNumber === updatedStaff.idNumber
+            ));
+            const next = prev.map(person => (
+                dbId
+                    ? ((person as any).id === dbId ? updatedStaff : person)
+                    : (person.idNumber === updatedStaff.idNumber ? updatedStaff : person)
+            ));
+            const afterMatch = next.find(person => (
+                dbId
+                    ? (person as any).id === dbId
+                    : person.idNumber === updatedStaff.idNumber
+            ));
+            appendTrainingReportFollowUpDiag('app:set-instructors-data', {
+                reportId: reportForSave.id,
+                dbId,
+                beforeStaffName: beforeMatch?.name || null,
+                beforeCount: normaliseAirCombatTrainingReports(beforeMatch?.preferences).length,
+                beforeHasReport: normaliseAirCombatTrainingReports(beforeMatch?.preferences).some(existing => existing.id === reportForSave.id),
+                afterStaffName: afterMatch?.name || null,
+                afterCount: normaliseAirCombatTrainingReports(afterMatch?.preferences).length,
+                afterHasReport: normaliseAirCombatTrainingReports(afterMatch?.preferences).some(existing => existing.id === reportForSave.id),
+            });
+            return next;
+        });
         setAirCombatTrainingReportDraft(null);
         setSelectedPersonForProfile(updatedStaff);
         appendTrainingReportFollowUpDiag('app:save-state-updated', {
@@ -41497,6 +41536,8 @@ const App: React.FC = () => {
             staffName: updatedStaff.name,
             staffIdNumber: updatedStaff.idNumber,
             savedReport: updatedReports.find(existing => existing.id === reportForSave.id) || null,
+            selectedProfileReportCount: normaliseAirCombatTrainingReports(updatedStaff.preferences).length,
+            selectedProfileHasReport: normaliseAirCombatTrainingReports(updatedStaff.preferences).some(existing => existing.id === reportForSave.id),
         });
         logAudit(
             'Air Combat Training Reports',

@@ -29,7 +29,7 @@ import {
   normaliseOperationalModel,
   type PlatformConfig,
 } from '../utils/platformConfigService';
-import { normaliseAirCombatTrainingAssignments, normaliseAirCombatTrainingReports } from '../utils/airCombatTraining';
+import { appendTrainingReportFollowUpDiag, normaliseAirCombatTrainingAssignments, normaliseAirCombatTrainingReports } from '../utils/airCombatTraining';
 import { normaliseFlightSchoolStaffLmpAssignments } from '../utils/flightSchoolStaffLmpAssignments';
 import { type InsertEventTypeConfig } from '../utils/insertEventTypes';
 import { type AircraftConfigurationDefinition } from '../utils/aircraftConfigurationSettings';
@@ -832,6 +832,23 @@ export const InstructorProfileFlyout: React.FC<InstructorProfileFlyoutProps> = (
     normaliseAirCombatTrainingReports(instructor.preferences)
       .sort((left, right) => String(right.date || '').localeCompare(String(left.date || '')) || String(right.createdAt || '').localeCompare(String(left.createdAt || '')))
   ), [instructor.preferences]);
+  useEffect(() => {
+    if (activeTab !== 'trainingReports') return;
+    appendTrainingReportFollowUpDiag('profile:training-reports-render', {
+      staffName: instructor.name,
+      staffIdNumber: instructor.idNumber,
+      dbId: (instructor as any).id || null,
+      dataSource: (instructor as any)._dataSource || null,
+      reportCount: airCombatStoredTrainingReports.length,
+      reportIds: airCombatStoredTrainingReports.map(report => report.id).slice(0, 20),
+      reportEvents: airCombatStoredTrainingReports.map(report => ({
+        id: report.id,
+        eventCode: report.eventCode,
+        date: report.date,
+        updatedAt: report.updatedAt,
+      })).slice(0, 10),
+    });
+  }, [activeTab, airCombatStoredTrainingReports, instructor]);
   const handleDeleteTrainingReport = useCallback(async (report: AirCombatTrainingReport) => {
     const password = await showDarkPrompt({
       title: 'Delete Training Report',
