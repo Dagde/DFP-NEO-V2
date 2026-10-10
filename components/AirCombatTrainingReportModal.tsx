@@ -665,6 +665,10 @@ export const AirCombatTrainingReportModal: React.FC<AirCombatTrainingReportModal
       : configuredReportElements;
     return Array.from(new Set(source.map(element => String(element || '').trim()).filter(Boolean)));
   }, [matchedItem?.assessedElements, phraseBank]);
+  const configuredAssessmentElements = useMemo(
+    () => getConfiguredReportElements(phraseBank) || [],
+    [phraseBank]
+  );
   const selectRecentEvent = (event: ScheduleEvent) => {
     const nextDuration = Number(event.duration || matchedItem?.duration || 1);
     const nextEventCode = String(event.flightNumber || event.eventCode || '').trim();
@@ -689,7 +693,7 @@ export const AirCombatTrainingReportModal: React.FC<AirCombatTrainingReportModal
   };
   const [elementScores, setElementScores] = useState<Array<{ element: string; grade: string; comment: string }>>(() => {
     const existingScores = Array.isArray(initialReport?.assessedElementScores) ? initialReport.assessedElementScores : [];
-    return assessmentElements.map((element) => {
+    const assignedScores = assessmentElements.map((element) => {
       const match = existingScores.find(score => String(score.element || '').trim().toLowerCase() === element.toLowerCase());
       return {
         element,
@@ -697,7 +701,17 @@ export const AirCombatTrainingReportModal: React.FC<AirCombatTrainingReportModal
         comment: String(match?.comment || ''),
       };
     });
+    const assignedKeys = new Set(assessmentElements.map(element => element.toLowerCase()));
+    const extraScores = existingScores
+      .map(score => ({
+        element: String(score.element || '').trim(),
+        grade: String(score.grade || ''),
+        comment: String(score.comment || ''),
+      }))
+      .filter(score => score.element && !assignedKeys.has(score.element.toLowerCase()));
+    return [...assignedScores, ...extraScores];
   });
+  const [elementToAdd, setElementToAdd] = useState('');
   const [groundSchoolAssessment, setGroundSchoolAssessment] = useState<{ isAssessment: boolean; result: string }>(() => ({
     isAssessment: initialReport?.groundSchoolAssessment?.isAssessment === true,
     result: String(initialReport?.groundSchoolAssessment?.result || ''),
@@ -753,6 +767,44 @@ export const AirCombatTrainingReportModal: React.FC<AirCombatTrainingReportModal
   const getElementScore = (element: string) => (
     elementScores.find(score => score.element === element) || { element, grade: '', comment: '' }
   );
+  const additionalAssessmentElements = useMemo(() => {
+    const assignedElements = new Set(assessmentElements.map(element => element.toLowerCase()));
+    const seen = new Set<string>();
+    return elementScores
+      .map(score => String(score.element || '').trim())
+      .filter(element => {
+        if (!element) return false;
+        const key = element.toLowerCase();
+        if (assignedElements.has(key) || seen.has(key)) return false;
+        seen.add(key);
+        return true;
+      });
+  }, [assessmentElements, elementScores]);
+  const displayedAssessmentElements = useMemo(
+    () => [...assessmentElements, ...additionalAssessmentElements],
+    [additionalAssessmentElements, assessmentElements]
+  );
+  const availableAdditionalElements = useMemo(() => {
+    const usedElements = new Set(displayedAssessmentElements.map(element => element.toLowerCase()));
+    return configuredAssessmentElements.filter(element => !usedElements.has(element.toLowerCase()));
+  }, [configuredAssessmentElements, displayedAssessmentElements]);
+  useEffect(() => {
+    if (!elementToAdd) return;
+    if (availableAdditionalElements.some(element => element === elementToAdd)) return;
+    setElementToAdd(availableAdditionalElements[0] || '');
+  }, [availableAdditionalElements, elementToAdd]);
+  const addAdditionalElement = () => {
+    const element = (elementToAdd || availableAdditionalElements[0] || '').trim();
+    if (!element) return;
+    setElementScores(prev => {
+      if (prev.some(score => String(score.element || '').trim().toLowerCase() === element.toLowerCase())) {
+        return prev;
+      }
+      return [...prev, { element, grade: '', comment: '' }];
+    });
+    setElementToAdd('');
+    setSaveStatus('Unsaved');
+  };
   const gradeOptions = enabledGradeOptions.map(option => String(option.value));
   const overallGradeOptions = ['', ...gradeOptions];
   const assessmentGradeOptions = [
@@ -1317,7 +1369,34 @@ export const AirCombatTrainingReportModal: React.FC<AirCombatTrainingReportModal
 
             <div className="space-y-4">
           <fieldset className="rounded-lg border border-gray-700 p-4">
-            <legend className="px-2 text-sm font-semibold text-gray-300">Core Dimensions</legend>
+            <legend className="px-2 text-sm font-semibold text-gray-300">Assessment Elements</legend>
+            <div className="mb-3 flex flex-wrap items-center justify-between gap-3 rounded border border-gray-700 bg-gray-900/50 p-3">
+              <div>
+                <div className="text-sm font-semibold text-gray-200">Add element to this report only</div>
+                <div className="text-xs text-gray-500">Choose from the scoring matrix when extra tasks were assessed outside the assigned LMP event.</div>
+              </div>
+              <div className="flex min-w-[280px] flex-1 items-center justify-end gap-2">
+                <select
+                  value={elementToAdd}
+                  onChange={(event) => setElementToAdd(event.target.value)}
+                  disabled={availableAdditionalElements.length === 0}
+                  className="min-w-[220px] rounded border border-gray-600 bg-gray-800 px-3 py-2 text-sm text-white disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  <option value="">{availableAdditionalElements.length > 0 ? 'Select element...' : 'All scoring matrix elements are already shown'}</option>
+                  {availableAdditionalElements.map(element => (
+                    <option key={element} value={element}>{element}</option>
+                  ))}
+                </select>
+                <button
+                  type="button"
+                  onClick={addAdditionalElement}
+                  disabled={availableAdditionalElements.length === 0 || !elementToAdd}
+                  className="rounded border border-emerald-400/60 bg-emerald-500/15 px-3 py-2 text-sm font-semibold text-emerald-100 hover:bg-emerald-500/25 disabled:cursor-not-allowed disabled:border-gray-700 disabled:bg-gray-800 disabled:text-gray-500"
+                >
+                  Add Element
+                </button>
+              </div>
+            </div>
             <div className="mt-2 overflow-x-auto rounded-md border border-gray-800/80">
               <table className="min-w-[1200px] w-full table-fixed border-collapse">
                 <colgroup>
@@ -1339,7 +1418,7 @@ export const AirCombatTrainingReportModal: React.FC<AirCombatTrainingReportModal
                   </tr>
                 </thead>
                 <tbody>
-                  {assessmentElements.map(element => (
+                  {displayedAssessmentElements.map(element => (
                     <tr key={element} className="border-t border-gray-700">
                       <td className="py-3 pr-3 align-middle font-semibold text-white">{element}</td>
                       {assessmentGradeOptions.map(grade => (

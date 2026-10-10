@@ -789,6 +789,10 @@ const TrainingReportView: React.FC<TrainingReportViewProps> = ({ trainee, event,
         () => assessmentStructure.flatMap(category => category.elements),
         [assessmentStructure]
     );
+    const configuredAssessmentElements = useMemo(
+        () => getConfiguredReportElements(phraseBank) || [],
+        [phraseBank]
+    );
     const isSimEvent = useMemo(() => {
         const values = [
             currentEvent?.type,
@@ -825,6 +829,7 @@ const TrainingReportView: React.FC<TrainingReportViewProps> = ({ trainee, event,
             groundSchoolAssessment: { isAssessment: false, result: undefined },
         } as TrainingReportAssessment;
     });
+    const [elementToAdd, setElementToAdd] = useState('');
 
     useEffect(() => {
         setAssessment(prev => {
@@ -836,6 +841,57 @@ const TrainingReportView: React.FC<TrainingReportViewProps> = ({ trainee, event,
             return { ...prev, scores: [...prev.scores, ...missingScores] };
         });
     }, [assessmentElements]);
+
+    const additionalAssessmentElements = useMemo(() => {
+        const assignedElements = new Set(assessmentElements.map(element => element.toLowerCase()));
+        const seen = new Set<string>();
+        return assessment.scores
+            .map(score => String(score.element || '').trim())
+            .filter(element => {
+                if (!element) return false;
+                const key = element.toLowerCase();
+                if (assignedElements.has(key) || seen.has(key)) return false;
+                seen.add(key);
+                return true;
+            });
+    }, [assessment.scores, assessmentElements]);
+
+    const displayedAssessmentStructure = useMemo(() => (
+        additionalAssessmentElements.length > 0
+            ? [...assessmentStructure, { category: 'Additional Elements', elements: additionalAssessmentElements }]
+            : assessmentStructure
+    ), [additionalAssessmentElements, assessmentStructure]);
+
+    const availableAdditionalElements = useMemo(() => {
+        const usedElements = new Set([
+            ...assessmentElements,
+            ...additionalAssessmentElements,
+        ].map(element => element.toLowerCase()));
+        return configuredAssessmentElements.filter(element => !usedElements.has(element.toLowerCase()));
+    }, [additionalAssessmentElements, assessmentElements, configuredAssessmentElements]);
+
+    useEffect(() => {
+        if (!elementToAdd) return;
+        if (availableAdditionalElements.some(element => element === elementToAdd)) return;
+        setElementToAdd(availableAdditionalElements[0] || '');
+    }, [availableAdditionalElements, elementToAdd]);
+
+    const handleAddAssessmentElement = () => {
+        const element = (elementToAdd || availableAdditionalElements[0] || '').trim();
+        if (!element) return;
+        setAssessment(prev => {
+            if (prev.scores.some(score => String(score.element || '').trim().toLowerCase() === element.toLowerCase())) {
+                return prev;
+            }
+            return {
+                ...prev,
+                scores: [...prev.scores, { element, grade: null, comment: '' }],
+            };
+        });
+        setElementToAdd('');
+        setIsDirty(true);
+        setSaveStatus('Unsaved');
+    };
 
     useEffect(() => {
         if (instructors.length === 0) return;
@@ -1460,7 +1516,7 @@ const TrainingReportView: React.FC<TrainingReportViewProps> = ({ trainee, event,
             addWrappedText(printCommentFieldsConfig.nest, commentFields.NEST || 'N/A');
 
             addSectionTitle('Assessment Matrix');
-            assessmentStructure.forEach(category => {
+            displayedAssessmentStructure.forEach(category => {
                 ensureSpace(12);
                 doc.setFillColor(235, 240, 245);
                 doc.rect(margin, y - 4, contentWidth, 7, 'F');
@@ -2215,7 +2271,34 @@ const TrainingReportView: React.FC<TrainingReportViewProps> = ({ trainee, event,
                 
                 {/* BOTTOM SECTION - GRADING */}
                 <div className="space-y-4">
-                    {assessmentStructure.map(category => {
+                    <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-gray-700 bg-gray-900/50 p-3">
+                        <div>
+                            <div className="text-sm font-semibold text-gray-200">Add element to this report only</div>
+                            <div className="text-xs text-gray-500">Choose from the scoring matrix when extra tasks were assessed outside the assigned LMP event.</div>
+                        </div>
+                        <div className="flex min-w-[280px] flex-1 items-center justify-end gap-2">
+                            <select
+                                value={elementToAdd}
+                                onChange={(event) => setElementToAdd(event.target.value)}
+                                disabled={availableAdditionalElements.length === 0}
+                                className="min-w-[220px] rounded border border-gray-600 bg-gray-800 px-3 py-2 text-sm text-white disabled:cursor-not-allowed disabled:opacity-50"
+                            >
+                                <option value="">{availableAdditionalElements.length > 0 ? 'Select element...' : 'All scoring matrix elements are already shown'}</option>
+                                {availableAdditionalElements.map(element => (
+                                    <option key={element} value={element}>{element}</option>
+                                ))}
+                            </select>
+                            <button
+                                type="button"
+                                onClick={handleAddAssessmentElement}
+                                disabled={availableAdditionalElements.length === 0 || !elementToAdd}
+                                className="rounded border border-emerald-400/60 bg-emerald-500/15 px-3 py-2 text-sm font-semibold text-emerald-100 hover:bg-emerald-500/25 disabled:cursor-not-allowed disabled:border-gray-700 disabled:bg-gray-800 disabled:text-gray-500"
+                            >
+                                Add Element
+                            </button>
+                        </div>
+                    </div>
+                    {displayedAssessmentStructure.map(category => {
                         const isGroundEvent = event.type === 'ground';
                         return (
                         <fieldset key={category.category} className={`p-4 border rounded-lg ${isGroundEvent ? 'border-gray-800 bg-gray-800/30 opacity-50' : 'border-gray-700'}`}>

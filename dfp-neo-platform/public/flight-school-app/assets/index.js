@@ -53022,6 +53022,10 @@ const TrainingReportView = ({ trainee, event, onBack, onSave, onDeleteAssessment
     () => assessmentStructure.flatMap((category) => category.elements),
     [assessmentStructure]
   );
+  const configuredAssessmentElements = reactExports.useMemo(
+    () => getConfiguredReportElements$1(phraseBank) || [],
+    [phraseBank]
+  );
   const isSimEvent = reactExports.useMemo(() => {
     const values = [
       currentEvent?.type,
@@ -53058,6 +53062,7 @@ const TrainingReportView = ({ trainee, event, onBack, onSave, onDeleteAssessment
       groundSchoolAssessment: { isAssessment: false, result: void 0 }
     };
   });
+  const [elementToAdd, setElementToAdd] = reactExports.useState("");
   reactExports.useEffect(() => {
     setAssessment((prev) => {
       const existingElements = new Set(prev.scores.map((score) => score.element));
@@ -53066,6 +53071,46 @@ const TrainingReportView = ({ trainee, event, onBack, onSave, onDeleteAssessment
       return { ...prev, scores: [...prev.scores, ...missingScores] };
     });
   }, [assessmentElements]);
+  const additionalAssessmentElements = reactExports.useMemo(() => {
+    const assignedElements = new Set(assessmentElements.map((element) => element.toLowerCase()));
+    const seen = /* @__PURE__ */ new Set();
+    return assessment.scores.map((score) => String(score.element || "").trim()).filter((element) => {
+      if (!element) return false;
+      const key = element.toLowerCase();
+      if (assignedElements.has(key) || seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    });
+  }, [assessment.scores, assessmentElements]);
+  const displayedAssessmentStructure = reactExports.useMemo(() => additionalAssessmentElements.length > 0 ? [...assessmentStructure, { category: "Additional Elements", elements: additionalAssessmentElements }] : assessmentStructure, [additionalAssessmentElements, assessmentStructure]);
+  const availableAdditionalElements = reactExports.useMemo(() => {
+    const usedElements = new Set([
+      ...assessmentElements,
+      ...additionalAssessmentElements
+    ].map((element) => element.toLowerCase()));
+    return configuredAssessmentElements.filter((element) => !usedElements.has(element.toLowerCase()));
+  }, [additionalAssessmentElements, assessmentElements, configuredAssessmentElements]);
+  reactExports.useEffect(() => {
+    if (!elementToAdd) return;
+    if (availableAdditionalElements.some((element) => element === elementToAdd)) return;
+    setElementToAdd(availableAdditionalElements[0] || "");
+  }, [availableAdditionalElements, elementToAdd]);
+  const handleAddAssessmentElement = () => {
+    const element = (elementToAdd || availableAdditionalElements[0] || "").trim();
+    if (!element) return;
+    setAssessment((prev) => {
+      if (prev.scores.some((score) => String(score.element || "").trim().toLowerCase() === element.toLowerCase())) {
+        return prev;
+      }
+      return {
+        ...prev,
+        scores: [...prev.scores, { element, grade: null, comment: "" }]
+      };
+    });
+    setElementToAdd("");
+    setIsDirty(true);
+    setSaveStatus("Unsaved");
+  };
   reactExports.useEffect(() => {
     if (instructors.length === 0) return;
     setAssessment((prev) => {
@@ -53577,7 +53622,7 @@ ${key === "Notes" ? buildTrainingReportNotes() : commentFields[key]}`).join("\n\
       addWrappedText(printCommentFieldsConfig.overall, commentFields.Overall || "N/A");
       addWrappedText(printCommentFieldsConfig.nest, commentFields.NEST || "N/A");
       addSectionTitle("Assessment Matrix");
-      assessmentStructure.forEach((category) => {
+      displayedAssessmentStructure.forEach((category) => {
         ensureSpace(12);
         doc.setFillColor(235, 240, 245);
         doc.rect(margin, y - 4, contentWidth, 7, "F");
@@ -54338,7 +54383,38 @@ This action cannot be undone.`;
             ] })
           ] }),
           /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-4", children: [
-            assessmentStructure.map((category) => {
+            /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex flex-wrap items-center justify-between gap-3 rounded-lg border border-gray-700 bg-gray-900/50 p-3", children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
+                /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-sm font-semibold text-gray-200", children: "Add element to this report only" }),
+                /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-xs text-gray-500", children: "Choose from the scoring matrix when extra tasks were assessed outside the assigned LMP event." })
+              ] }),
+              /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex min-w-[280px] flex-1 items-center justify-end gap-2", children: [
+                /* @__PURE__ */ jsxRuntimeExports.jsxs(
+                  "select",
+                  {
+                    value: elementToAdd,
+                    onChange: (event2) => setElementToAdd(event2.target.value),
+                    disabled: availableAdditionalElements.length === 0,
+                    className: "min-w-[220px] rounded border border-gray-600 bg-gray-800 px-3 py-2 text-sm text-white disabled:cursor-not-allowed disabled:opacity-50",
+                    children: [
+                      /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "", children: availableAdditionalElements.length > 0 ? "Select element..." : "All scoring matrix elements are already shown" }),
+                      availableAdditionalElements.map((element) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: element, children: element }, element))
+                    ]
+                  }
+                ),
+                /* @__PURE__ */ jsxRuntimeExports.jsx(
+                  "button",
+                  {
+                    type: "button",
+                    onClick: handleAddAssessmentElement,
+                    disabled: availableAdditionalElements.length === 0 || !elementToAdd,
+                    className: "rounded border border-emerald-400/60 bg-emerald-500/15 px-3 py-2 text-sm font-semibold text-emerald-100 hover:bg-emerald-500/25 disabled:cursor-not-allowed disabled:border-gray-700 disabled:bg-gray-800 disabled:text-gray-500",
+                    children: "Add Element"
+                  }
+                )
+              ] })
+            ] }),
+            displayedAssessmentStructure.map((category) => {
               const isGroundEvent = event.type === "ground";
               return /* @__PURE__ */ jsxRuntimeExports.jsxs("fieldset", { className: `p-4 border rounded-lg ${isGroundEvent ? "border-gray-800 bg-gray-800/30 opacity-50" : "border-gray-700"}`, children: [
                 /* @__PURE__ */ jsxRuntimeExports.jsx("legend", { className: `px-2 text-sm font-semibold ${isGroundEvent ? "text-gray-500" : "text-gray-300"}`, children: category.category }),
@@ -101067,9 +101143,13 @@ const AirCombatTrainingReportModal = ({
     const source = Array.isArray(matchedItem?.assessedElements) ? matchedItem.assessedElements : configuredReportElements;
     return Array.from(new Set(source.map((element) => String(element || "").trim()).filter(Boolean)));
   }, [matchedItem?.assessedElements, phraseBank]);
+  const configuredAssessmentElements = reactExports.useMemo(
+    () => getConfiguredReportElements(phraseBank) || [],
+    [phraseBank]
+  );
   const [elementScores, setElementScores] = reactExports.useState(() => {
     const existingScores = Array.isArray(initialReport?.assessedElementScores) ? initialReport.assessedElementScores : [];
-    return assessmentElements.map((element) => {
+    const assignedScores = assessmentElements.map((element) => {
       const match = existingScores.find((score) => String(score.element || "").trim().toLowerCase() === element.toLowerCase());
       return {
         element,
@@ -101077,7 +101157,15 @@ const AirCombatTrainingReportModal = ({
         comment: String(match?.comment || "")
       };
     });
+    const assignedKeys = new Set(assessmentElements.map((element) => element.toLowerCase()));
+    const extraScores = existingScores.map((score) => ({
+      element: String(score.element || "").trim(),
+      grade: String(score.grade || ""),
+      comment: String(score.comment || "")
+    })).filter((score) => score.element && !assignedKeys.has(score.element.toLowerCase()));
+    return [...assignedScores, ...extraScores];
   });
+  const [elementToAdd, setElementToAdd] = reactExports.useState("");
   const [groundSchoolAssessment, setGroundSchoolAssessment] = reactExports.useState(() => ({
     isAssessment: initialReport?.groundSchoolAssessment?.isAssessment === true,
     result: String(initialReport?.groundSchoolAssessment?.result || "")
@@ -101123,6 +101211,42 @@ const AirCombatTrainingReportModal = ({
     });
   };
   const getElementScore = (element) => elementScores.find((score) => score.element === element) || { element, grade: "", comment: "" };
+  const additionalAssessmentElements = reactExports.useMemo(() => {
+    const assignedElements = new Set(assessmentElements.map((element) => element.toLowerCase()));
+    const seen = /* @__PURE__ */ new Set();
+    return elementScores.map((score) => String(score.element || "").trim()).filter((element) => {
+      if (!element) return false;
+      const key = element.toLowerCase();
+      if (assignedElements.has(key) || seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    });
+  }, [assessmentElements, elementScores]);
+  const displayedAssessmentElements = reactExports.useMemo(
+    () => [...assessmentElements, ...additionalAssessmentElements],
+    [additionalAssessmentElements, assessmentElements]
+  );
+  const availableAdditionalElements = reactExports.useMemo(() => {
+    const usedElements = new Set(displayedAssessmentElements.map((element) => element.toLowerCase()));
+    return configuredAssessmentElements.filter((element) => !usedElements.has(element.toLowerCase()));
+  }, [configuredAssessmentElements, displayedAssessmentElements]);
+  reactExports.useEffect(() => {
+    if (!elementToAdd) return;
+    if (availableAdditionalElements.some((element) => element === elementToAdd)) return;
+    setElementToAdd(availableAdditionalElements[0] || "");
+  }, [availableAdditionalElements, elementToAdd]);
+  const addAdditionalElement = () => {
+    const element = (elementToAdd || availableAdditionalElements[0] || "").trim();
+    if (!element) return;
+    setElementScores((prev) => {
+      if (prev.some((score) => String(score.element || "").trim().toLowerCase() === element.toLowerCase())) {
+        return prev;
+      }
+      return [...prev, { element, grade: "", comment: "" }];
+    });
+    setElementToAdd("");
+    setSaveStatus("Unsaved");
+  };
   const gradeOptions = enabledGradeOptions.map((option) => String(option.value));
   const overallGradeOptions = ["", ...gradeOptions];
   const assessmentGradeOptions = [
@@ -101769,7 +101893,38 @@ const AirCombatTrainingReportModal = ({
         ] }),
         /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-4", children: [
           /* @__PURE__ */ jsxRuntimeExports.jsxs("fieldset", { className: "rounded-lg border border-gray-700 p-4", children: [
-            /* @__PURE__ */ jsxRuntimeExports.jsx("legend", { className: "px-2 text-sm font-semibold text-gray-300", children: "Core Dimensions" }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("legend", { className: "px-2 text-sm font-semibold text-gray-300", children: "Assessment Elements" }),
+            /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mb-3 flex flex-wrap items-center justify-between gap-3 rounded border border-gray-700 bg-gray-900/50 p-3", children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
+                /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-sm font-semibold text-gray-200", children: "Add element to this report only" }),
+                /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-xs text-gray-500", children: "Choose from the scoring matrix when extra tasks were assessed outside the assigned LMP event." })
+              ] }),
+              /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex min-w-[280px] flex-1 items-center justify-end gap-2", children: [
+                /* @__PURE__ */ jsxRuntimeExports.jsxs(
+                  "select",
+                  {
+                    value: elementToAdd,
+                    onChange: (event) => setElementToAdd(event.target.value),
+                    disabled: availableAdditionalElements.length === 0,
+                    className: "min-w-[220px] rounded border border-gray-600 bg-gray-800 px-3 py-2 text-sm text-white disabled:cursor-not-allowed disabled:opacity-50",
+                    children: [
+                      /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "", children: availableAdditionalElements.length > 0 ? "Select element..." : "All scoring matrix elements are already shown" }),
+                      availableAdditionalElements.map((element) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: element, children: element }, element))
+                    ]
+                  }
+                ),
+                /* @__PURE__ */ jsxRuntimeExports.jsx(
+                  "button",
+                  {
+                    type: "button",
+                    onClick: addAdditionalElement,
+                    disabled: availableAdditionalElements.length === 0 || !elementToAdd,
+                    className: "rounded border border-emerald-400/60 bg-emerald-500/15 px-3 py-2 text-sm font-semibold text-emerald-100 hover:bg-emerald-500/25 disabled:cursor-not-allowed disabled:border-gray-700 disabled:bg-gray-800 disabled:text-gray-500",
+                    children: "Add Element"
+                  }
+                )
+              ] })
+            ] }),
             /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-2 overflow-x-auto rounded-md border border-gray-800/80", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("table", { className: "min-w-[1200px] w-full table-fixed border-collapse", children: [
               /* @__PURE__ */ jsxRuntimeExports.jsxs("colgroup", { children: [
                 /* @__PURE__ */ jsxRuntimeExports.jsx("col", { className: "w-[190px]" }),
@@ -101781,7 +101936,7 @@ const AirCombatTrainingReportModal = ({
                 assessmentGradeOptions.map((grade) => /* @__PURE__ */ jsxRuntimeExports.jsx("th", { title: formatGradeOption(grade), className: "relative h-[98px] px-0 pb-2 text-center align-bottom text-[9px] font-black uppercase leading-[0.95] text-gray-400", children: /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "absolute bottom-2 left-1/2 flex w-[76px] origin-bottom-left -rotate-90 flex-row items-center justify-start gap-1 whitespace-nowrap", children: formatGradeHeaderText(grade).split(/\s+/).map((word, index) => /* @__PURE__ */ jsxRuntimeExports.jsx("span", { children: word }, `${word}-${index}`)) }) }, grade)),
                 /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "h-[98px] px-2 pb-2 text-left align-bottom text-[10px] font-bold uppercase tracking-wide text-gray-500", children: "Comments" })
               ] }) }),
-              /* @__PURE__ */ jsxRuntimeExports.jsx("tbody", { children: assessmentElements.map((element) => /* @__PURE__ */ jsxRuntimeExports.jsxs("tr", { className: "border-t border-gray-700", children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsx("tbody", { children: displayedAssessmentElements.map((element) => /* @__PURE__ */ jsxRuntimeExports.jsxs("tr", { className: "border-t border-gray-700", children: [
                 /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "py-3 pr-3 align-middle font-semibold text-white", children: element }),
                 assessmentGradeOptions.map((grade) => /* @__PURE__ */ jsxRuntimeExports.jsx("td", { title: formatGradeOption(grade), className: `border-l border-gray-800 px-0.5 py-3 text-center align-middle ${gradeHeaderColors[grade] || "border-gray-800"}`, children: /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "flex min-h-[36px] cursor-pointer items-center justify-center rounded hover:bg-white/5", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "flex flex-col items-center justify-center gap-1", children: [
                   /* @__PURE__ */ jsxRuntimeExports.jsx("input", { type: "radio", name: `training-report-element-${element}`, value: grade, checked: getElementScore(element).grade === grade, onChange: () => {
