@@ -10446,9 +10446,9 @@ const InitialSetupWizard: React.FC<{
                                 (value) => updateRow(index, 'resourceType', value === 'Simulator' ? 'FTD' : value === 'Procedural Trainer' ? 'CPT' : value),
                                 ['Flight', 'Simulator', 'Procedural Trainer', 'Ground'],
                             )}
-                            {wizardField('Duration', row.duration || '', (value) => updateRow(index, 'duration', value), undefined, '90')}
-                            {wizardField('Pre-flight', row.preFlight || '', (value) => updateRow(index, 'preFlight', value), undefined, '90')}
-                            {wizardField('Post-flight', row.postFlight || '', (value) => updateRow(index, 'postFlight', value), undefined, '60')}
+                            {wizardField('Duration (mins)', row.duration || '', (value) => updateRow(index, 'duration', value), undefined, '90')}
+                            {wizardField('Pre-flight (mins)', row.preFlight || '', (value) => updateRow(index, 'preFlight', value), undefined, '90')}
+                            {wizardField('Post-flight (mins)', row.postFlight || '', (value) => updateRow(index, 'postFlight', value), undefined, '60')}
                         </div>
                         <div className="grid min-w-0 gap-2 md:grid-cols-2 xl:grid-cols-3 xl:items-end">
                             {wizardField('Crew', normaliseWizardCrewDisplayLabel(row.crew), (value) => updateRow(index, 'crew', value), crewOptions, 'Primary')}

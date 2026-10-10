@@ -41071,9 +41071,9 @@ const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, lo
             (value) => updateRow(index, "resourceType", value === "Simulator" ? "FTD" : value === "Procedural Trainer" ? "CPT" : value),
             ["Flight", "Simulator", "Procedural Trainer", "Ground"]
           ),
-          wizardField("Duration", row.duration || "", (value) => updateRow(index, "duration", value), void 0, "90"),
-          wizardField("Pre-flight", row.preFlight || "", (value) => updateRow(index, "preFlight", value), void 0, "90"),
-          wizardField("Post-flight", row.postFlight || "", (value) => updateRow(index, "postFlight", value), void 0, "60")
+          wizardField("Duration (mins)", row.duration || "", (value) => updateRow(index, "duration", value), void 0, "90"),
+          wizardField("Pre-flight (mins)", row.preFlight || "", (value) => updateRow(index, "preFlight", value), void 0, "90"),
+          wizardField("Post-flight (mins)", row.postFlight || "", (value) => updateRow(index, "postFlight", value), void 0, "60")
         ] }),
         /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid min-w-0 gap-2 md:grid-cols-2 xl:grid-cols-3 xl:items-end", children: [
           wizardField("Crew", normaliseWizardCrewDisplayLabel(row.crew), (value) => updateRow(index, "crew", value), crewOptions, "Primary"),
