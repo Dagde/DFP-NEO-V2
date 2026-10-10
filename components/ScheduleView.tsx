@@ -1686,6 +1686,11 @@ const formatWizardSharingRows = (rows: ReturnType<typeof parseWizardSharingRows>
 
 const parseWizardCurrencyRows = (value: string) => parseWizardPipeRows<{ name: string; code: string; crew: string; config: string; currency: string; aircraftCount: string }>(value, ['name', 'code', 'crew', 'config', 'currency', 'aircraftCount']);
 const formatWizardCurrencyRows = (rows: ReturnType<typeof parseWizardCurrencyRows>) => formatWizardPipeRows(rows, ['name', 'code', 'crew', 'config', 'currency', 'aircraftCount']);
+const normaliseWizardCrewDisplayLabel = (value: any) => {
+    const text = String(value || '').trim();
+    if (!text || /^standard\s+crew$/i.test(text)) return 'Primary';
+    return text;
+};
 
 const parseWizardScoringRows = (value: string) => parseWizardPipeRows<{ dimension: string; passStandard: string; failStandard: string; grade0: string; grade1: string; grade2: string; grade3: string; grade4: string; grade5: string }>(value, ['dimension', 'passStandard', 'failStandard', 'grade0', 'grade1', 'grade2', 'grade3', 'grade4', 'grade5']);
 const formatWizardScoringRows = (rows: ReturnType<typeof parseWizardScoringRows>) => formatWizardPipeRows(rows, ['dimension', 'passStandard', 'failStandard', 'grade0', 'grade1', 'grade2', 'grade3', 'grade4', 'grade5']);
@@ -4904,7 +4909,7 @@ const InitialSetupWizard: React.FC<{
             ? formatWizardCurrencyRows(matchingProfiles.map((profile: any) => ({
                 name: String(profile.name || profile.currency || profile.code || ''),
                 code: String(profile.code || profile.name || ''),
-                crew: String(profile.crew || 'Standard crew'),
+                crew: normaliseWizardCrewDisplayLabel(profile.crew),
                 config: String(profile.config || 'ANY'),
                 currency: String(profile.currency || profile.name || ''),
                 aircraftCount: String(profile.aircraftCount ?? 1),
@@ -6918,7 +6923,7 @@ const InitialSetupWizard: React.FC<{
             aircraftTypeCode: targetAircraftTypeCode,
             name: row.name || row.currency || row.code || `Currency ${index + 1}`,
             code: (row.code || row.name || `CUR${index + 1}`).toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 8) || `CUR${index + 1}`,
-            crew: row.crew || 'Standard crew',
+            crew: normaliseWizardCrewDisplayLabel(row.crew),
             config: row.config || 'ANY',
             currency: row.currency || row.name || `Currency ${index + 1}`,
             aircraftCount: Math.max(1, Math.round(Number(row.aircraftCount) || 1)),
@@ -10379,9 +10384,20 @@ const InitialSetupWizard: React.FC<{
             </div>
         );
     };
+    const getWizardConfiguredCrewOptions = () => {
+        const profileOptions = findWizardAlternateCrewProfiles().map((profile, index) => (
+            normaliseWizardCrewDisplayLabel(profile.name || profile.code || `Alt${index + 1}`)
+        ));
+        const draftOptions = getWizardAlternateCrewDraftRowsForSave().map((row, index) => (
+            normaliseWizardCrewDisplayLabel(row.name || `Alt${index + 1}`)
+        ));
+        return Array.from(new Set(['Primary', ...profileOptions, ...draftOptions].filter(Boolean)));
+    };
+
     const renderCurrencyEditor = () => {
         const rows = parseWizardCurrencyRows(currencyDraft);
         const editableRows = rows.length > 0 ? rows : [{ name: '', code: '', crew: '', config: '', currency: '', aircraftCount: '' }];
+        const crewOptions = getWizardConfiguredCrewOptions();
         const updateRow = (index: number, field: keyof typeof editableRows[number], value: string) => {
             const nextRows = [...editableRows];
             nextRows[index] = { ...nextRows[index], [field]: value };
@@ -10396,7 +10412,7 @@ const InitialSetupWizard: React.FC<{
                     <div key={`currency-row-${index}`} className="grid min-w-0 gap-2 rounded-lg border border-slate-300 bg-white p-3 md:grid-cols-2 xl:grid-cols-3 xl:items-end">
                         {wizardField('Event name', row.name || '', (value) => updateRow(index, 'name', value), undefined, 'PIC Currency')}
                         {wizardField('Code', row.code || '', (value) => updateRow(index, 'code', value.toUpperCase()), undefined, 'PIC')}
-                        {wizardField('Crew', row.crew || '', (value) => updateRow(index, 'crew', value), undefined, 'Standard crew')}
+                        {wizardField('Crew', normaliseWizardCrewDisplayLabel(row.crew), (value) => updateRow(index, 'crew', value), crewOptions, 'Primary')}
                         {wizardField('CONFIG', row.config || '', (value) => updateRow(index, 'config', value), undefined, 'ANY')}
                         {wizardField('Currency', row.currency || '', (value) => updateRow(index, 'currency', value), undefined, 'PIC Currency')}
                         {wizardField('No. aircraft', row.aircraftCount || '', (value) => updateRow(index, 'aircraftCount', value), undefined, '1')}
@@ -11447,7 +11463,7 @@ const InitialSetupWizard: React.FC<{
             aircraftTypeCode: primaryAircraftCode,
             name: row.name || `Currency ${index + 1}`,
             code: (row.code || row.name || `CUR${index + 1}`).toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 8) || `CUR${index + 1}`,
-            crew: row.crew || 'Standard crew',
+            crew: normaliseWizardCrewDisplayLabel(row.crew),
             config: row.config || 'ANY',
             currency: row.currency || row.name || `Currency ${index + 1}`,
             aircraftCount: Math.max(1, Math.round(Number(row.aircraftCount) || 1)),
