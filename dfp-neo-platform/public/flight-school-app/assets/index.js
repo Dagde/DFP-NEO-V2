@@ -24953,21 +24953,23 @@ This removes them from DFP Resource Rows. Press Save in this section to apply th
     });
   };
   const updateStandardMissionCrewSelection = (profile, optionId, selected) => {
+    if (!selected) return;
     updateStandardMissionProfile(profile.id, {
       crewCompositionMode: optionId.startsWith("alternate:") ? "ALTERNATE" : "STANDARD",
       selectedCrewCompositionId: optionId,
       acceptableCrewCompositionIds: [optionId]
     });
   };
-  const updateStandardMissionCrewMode = (profile, mode) => {
-    const aircraftTypeCode = profile.aircraftTypeCode || getUnitAircraftTypeCode(profile.unitCode || activePrimaryUnitCode);
-    const crewOptions = getStandardMissionCrewOptions(aircraftTypeCode);
-    const selectedCrewCompositionId = mode === "CUSTOM" ? "" : crewOptions.find((option) => option.mode === mode)?.id || "";
-    updateStandardMissionProfile(profile.id, {
-      crewCompositionMode: mode,
-      selectedCrewCompositionId,
-      acceptableCrewCompositionIds: selectedCrewCompositionId ? [selectedCrewCompositionId] : []
-    });
+  const updateStandardMissionCrewDropdown = (profile, optionId) => {
+    if (optionId === "custom") {
+      updateStandardMissionProfile(profile.id, {
+        crewCompositionMode: "CUSTOM",
+        selectedCrewCompositionId: "",
+        acceptableCrewCompositionIds: []
+      });
+      return;
+    }
+    updateStandardMissionCrewSelection(profile, optionId, Boolean(optionId));
   };
   const addStandardMissionRoleRequirement = (profile) => {
     const usedRoles = new Set(profile.roleRequirements.map((requirement) => requirement.role.toUpperCase()));
@@ -25634,10 +25636,10 @@ This removes them from DFP Resource Rows. Press Save in this section to apply th
       crewCompositionSettings.alternateCompositions.filter((profile) => String(profile.aircraftTypeCode || "").trim().toUpperCase() === aircraftCode && isProfileInActiveUnitContext(profile))
     );
     return [
-      { id: `standard:${aircraftCode}`, label: `Standard ${aircraftCode} Crew`, mode: "STANDARD" },
-      ...alternateCompositions.map((profile) => ({
+      { id: `standard:${aircraftCode}`, label: "Primary", mode: "STANDARD" },
+      ...alternateCompositions.map((profile, index) => ({
         id: `alternate:${profile.id}`,
-        label: profile.name || profile.code,
+        label: profile.name || profile.code || `Alt${index + 1}`,
         mode: "ALTERNATE"
       }))
     ];
@@ -27093,45 +27095,23 @@ This removes them from DFP Resource Rows. Press Save in this section to apply th
                       ] }) }),
                       /* @__PURE__ */ jsxRuntimeExports.jsx(DraftField, { label: "Planned Callsign Prefix", value: profile.defaultCallsignPrefix || defaultMissionCallsign, disabled: !canEditSection("platform-standard-missions"), onCommit: (value) => updateStandardMissionProfile(profile.id, { defaultCallsignPrefix: value }), info: "Uses the unit callsign settings where available. This is the prefix only; sortie number selection comes later when scheduled." }),
                       /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mt-3 rounded border border-gray-800 bg-gray-950/70 p-3", children: [
-                        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mb-2 text-xs font-black uppercase tracking-wide text-cyan-100", children: "Crew Composition" }),
-                        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "grid gap-2 sm:grid-cols-3", children: ["STANDARD", "ALTERNATE", "CUSTOM"].map((mode) => {
-                          const selected = crewMode === mode;
-                          const modeLabel = mode === "STANDARD" ? "Standard Crew" : mode === "ALTERNATE" ? "Alternate Crew" : "Custom Crew";
-                          const modeHint = mode === "STANDARD" ? "Use the aircraft standard crew." : mode === "ALTERNATE" ? "Use one alternate crew setup." : "Use the manual role list below.";
-                          return /* @__PURE__ */ jsxRuntimeExports.jsxs(
-                            "button",
-                            {
-                              type: "button",
-                              disabled: !canEditSection("platform-standard-missions"),
-                              onClick: () => updateStandardMissionCrewMode(profile, mode),
-                              className: `rounded border px-3 py-2 text-left transition-colors ${selected ? "border-cyan-300/60 bg-cyan-500/15 text-cyan-50 shadow-[inset_0_3px_0_rgba(34,211,238,0.85)]" : "border-gray-800 bg-gray-900 text-gray-400 hover:border-gray-600 hover:text-gray-200"}`,
-                              children: [
-                                /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "block text-xs font-black uppercase tracking-wide", children: modeLabel }),
-                                /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "mt-1 block text-[11px] leading-relaxed opacity-75", children: modeHint })
-                              ]
+                        /* @__PURE__ */ jsxRuntimeExports.jsx(
+                          SelectField,
+                          {
+                            label: "Crew",
+                            value: crewMode === "CUSTOM" ? "custom" : selectedCrewCompositionId,
+                            disabled: !canEditSection("platform-standard-missions") || missionCrewOptions.length === 0,
+                            options: [...missionCrewOptions.map((option) => option.id), "custom"],
+                            optionLabels: {
+                              ...Object.fromEntries(missionCrewOptions.map((option) => [option.id, option.label])),
+                              custom: "Custom crew"
                             },
-                            `${profile.id}-${mode}`
-                          );
-                        }) }),
-                        crewMode === "STANDARD" ? /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-3 rounded border border-cyan-400/25 bg-cyan-500/10 px-3 py-2 text-xs font-semibold text-cyan-100", children: selectedCrewOption?.label || (missionAircraftTypeCode ? `Standard ${missionAircraftTypeCode} Crew` : "No aircraft type selected") }) : crewMode === "ALTERNATE" ? /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mt-3", children: [
-                          /* @__PURE__ */ jsxRuntimeExports.jsx(
-                            SelectField,
-                            {
-                              label: "Alternate Crew",
-                              value: selectedCrewCompositionId,
-                              disabled: !canEditSection("platform-standard-missions"),
-                              options: ["", ...missionCrewOptions.filter((option) => option.mode === "ALTERNATE").map((option) => option.id)],
-                              optionLabels: Object.fromEntries(missionCrewOptions.filter((option) => option.mode === "ALTERNATE").map((option) => [option.id, option.label])),
-                              onChange: (value) => updateStandardMissionCrewSelection(profile, value),
-                              emptyLabel: "Select alternate crew"
-                            }
-                          ),
-                          missionCrewOptions.filter((option) => option.mode === "ALTERNATE").length === 0 ? /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mt-2 rounded border border-amber-500/30 bg-amber-500/10 px-3 py-2 text-xs text-amber-100", children: [
-                            "No alternate crew setups exist for ",
-                            missionAircraftTypeCode || "this aircraft",
-                            "."
-                          ] }) : null
-                        ] }) : /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-3 rounded border border-orange-400/25 bg-orange-500/10 px-3 py-2 text-xs font-semibold text-orange-100", children: "Custom crew uses the manual required roles below." })
+                            onChange: (value) => updateStandardMissionCrewDropdown(profile, value),
+                            emptyLabel: "Select crew",
+                            info: "Primary is the normal crew from the Crew Rules page. Alt1, Alt2 and so on are the other approved crew compositions configured for this aircraft."
+                          }
+                        ),
+                        crewMode === "CUSTOM" ? /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-3 rounded border border-orange-400/25 bg-orange-500/10 px-3 py-2 text-xs font-semibold text-orange-100", children: "Custom crew uses the manual required roles below." }) : /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-3 rounded border border-cyan-400/25 bg-cyan-500/10 px-3 py-2 text-xs font-semibold text-cyan-100", children: selectedCrewOption?.label || "Select the crew to schedule for this directed task." })
                       ] })
                     ] }),
                     /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: `${resourceSectionPanelClass} ${crewMode === "CUSTOM" ? "" : "opacity-65"}`, children: [
