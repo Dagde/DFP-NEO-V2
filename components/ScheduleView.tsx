@@ -7505,7 +7505,7 @@ const InitialSetupWizard: React.FC<{
             id: 'currencies',
             title: 'Set the currencies this unit uses',
             label: 'Currencies',
-            body: 'Add the currency and recency definitions the unit needs for planning and checks.',
+            body: 'Create the currency events used by your unit, such as general flying, instrument flying or other currency requirements. These settings will be used when requesting and scheduling currency events and can be modified later in Settings.',
             checkIds: ['training'],
             category: 'highly-desirable',
         },
@@ -10406,6 +10406,7 @@ const InitialSetupWizard: React.FC<{
         const editableRows = rows.length > 0 ? rows : [{ name: '', code: '', crew: '', config: '', currency: '', aircraftCount: '' }];
         const crewOptions = getWizardConfiguredCrewOptions();
         const configOptions = getWizardConfigOptions();
+        const createBlankCurrencyRow = () => ({ name: '', code: '', crew: 'Primary', config: 'ANY', currency: '', aircraftCount: '1' });
         const updateRow = (index: number, field: keyof typeof editableRows[number], value: string) => {
             const nextRows = [...editableRows];
             nextRows[index] = { ...nextRows[index], [field]: value };
@@ -10414,7 +10415,7 @@ const InitialSetupWizard: React.FC<{
         return (
             <div className="space-y-3">
                 <div className="rounded-lg border border-blue-200 bg-blue-50 px-3 py-2 text-xs font-semibold leading-5 text-blue-900">
-                    A {configuredContinuationCurrencyEventsLabel} record is a reusable request preset. It fills in the crew, aircraft configuration, currency type and aircraft count when someone requests that event.
+                    Currency events are reusable templates that automatically populate the required crew, aircraft configuration, currency type and number of aircraft when an event is requested.
                 </div>
                 {editableRows.map((row, index) => (
                     <div key={`currency-row-${index}`} className="grid min-w-0 gap-2 rounded-lg border border-slate-300 bg-white p-3 md:grid-cols-2 xl:grid-cols-3 xl:items-end">
@@ -10429,7 +10430,7 @@ const InitialSetupWizard: React.FC<{
                         </button>
                     </div>
                 ))}
-                <button type="button" className={wizardSmallButtonClass} onClick={() => updateCurrencyDraft(formatWizardCurrencyRows([...editableRows, { name: '', code: '', crew: '', config: '', currency: '', aircraftCount: '' }]))}>
+                <button type="button" className={wizardSmallButtonClass} onClick={() => updateCurrencyDraft(formatWizardCurrencyRows([...editableRows, createBlankCurrencyRow()]))}>
                     Add currency
                 </button>
             </div>

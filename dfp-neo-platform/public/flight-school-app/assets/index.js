@@ -38669,7 +38669,7 @@ const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, lo
       id: "currencies",
       title: "Set the currencies this unit uses",
       label: "Currencies",
-      body: "Add the currency and recency definitions the unit needs for planning and checks.",
+      body: "Create the currency events used by your unit, such as general flying, instrument flying or other currency requirements. These settings will be used when requesting and scheduling currency events and can be modified later in Settings.",
       checkIds: ["training"],
       category: "highly-desirable"
     },
@@ -41034,17 +41034,14 @@ const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, lo
     const editableRows = rows.length > 0 ? rows : [{ name: "", code: "", crew: "", config: "", currency: "", aircraftCount: "" }];
     const crewOptions = getWizardConfiguredCrewOptions();
     const configOptions = getWizardConfigOptions();
+    const createBlankCurrencyRow = () => ({ name: "", code: "", crew: "Primary", config: "ANY", currency: "", aircraftCount: "1" });
     const updateRow = (index, field, value) => {
       const nextRows = [...editableRows];
       nextRows[index] = { ...nextRows[index], [field]: value };
       updateCurrencyDraft(formatWizardCurrencyRows(nextRows));
     };
     return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-3", children: [
-      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded-lg border border-blue-200 bg-blue-50 px-3 py-2 text-xs font-semibold leading-5 text-blue-900", children: [
-        "A ",
-        configuredContinuationCurrencyEventsLabel,
-        " record is a reusable request preset. It fills in the crew, aircraft configuration, currency type and aircraft count when someone requests that event."
-      ] }),
+      /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "rounded-lg border border-blue-200 bg-blue-50 px-3 py-2 text-xs font-semibold leading-5 text-blue-900", children: "Currency events are reusable templates that automatically populate the required crew, aircraft configuration, currency type and number of aircraft when an event is requested." }),
       editableRows.map((row, index) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid min-w-0 gap-2 rounded-lg border border-slate-300 bg-white p-3 md:grid-cols-2 xl:grid-cols-3 xl:items-end", children: [
         wizardField("Event name", row.name || "", (value) => updateRow(index, "name", value), void 0, "PIC Currency"),
         wizardField("Code", row.code || "", (value) => updateRow(index, "code", value.toUpperCase()), void 0, "PIC"),
@@ -41054,7 +41051,7 @@ const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, lo
         wizardField("No. aircraft", row.aircraftCount || "", (value) => updateRow(index, "aircraftCount", value), void 0, "1"),
         /* @__PURE__ */ jsxRuntimeExports.jsx("button", { type: "button", className: "w-16 justify-self-end rounded-md border border-red-400/50 bg-red-500/10 px-3 py-2 text-xs font-bold text-red-700 shadow-sm transition hover:border-red-500 hover:bg-red-500/15 hover:text-red-800 md:col-start-2 xl:col-start-3", onClick: () => updateCurrencyDraft(formatWizardCurrencyRows(editableRows.filter((_, rowIndex) => rowIndex !== index))), children: "Delete" })
       ] }, `currency-row-${index}`)),
-      /* @__PURE__ */ jsxRuntimeExports.jsx("button", { type: "button", className: wizardSmallButtonClass, onClick: () => updateCurrencyDraft(formatWizardCurrencyRows([...editableRows, { name: "", code: "", crew: "", config: "", currency: "", aircraftCount: "" }])), children: "Add currency" })
+      /* @__PURE__ */ jsxRuntimeExports.jsx("button", { type: "button", className: wizardSmallButtonClass, onClick: () => updateCurrencyDraft(formatWizardCurrencyRows([...editableRows, createBlankCurrencyRow()])), children: "Add currency" })
     ] });
   };
   const renderScoringEditor = () => {
