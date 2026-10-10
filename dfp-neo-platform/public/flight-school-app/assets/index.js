@@ -39057,7 +39057,6 @@ const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, lo
       case "analysis":
         return checks.some((check) => check.complete);
       case "org-name":
-        if (!organisationNameFieldTouched || !organisationCodeFieldTouched) return false;
         return hasMeaningfulWizardText(organisationDraft.name, ["Organisation"]) && hasMeaningfulWizardText(organisationDraft.code, ["ORG", "Organisation"]);
       case "org-level1":
         return hasMeaningfulOrganisationLevel(1);
@@ -39066,7 +39065,6 @@ const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, lo
       case "org-level3":
         return hasMeaningfulOrganisationLevel(3);
       case "locations-today": {
-        if (!locationsTodayFieldTouched) return false;
         const rows = parseWizardLocationRows(locationsTodayDraft);
         return rows.some((row) => hasMeaningfulWizardText(row.icao || row.iata, ["LOC1", "LOC"]) && hasMeaningfulWizardText(row.name || row.icao || row.iata, ["Home Location", "Location"]));
       }
@@ -39198,13 +39196,11 @@ const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, lo
     }
   };
   const isWizardStepComplete = (step) => {
-    const finishedWizardForVisuals = initialWizardSetupCompletedInSettings || completedWizardStepIds.size >= steps.length;
-    const stepHasBeenSeen = finishedWizardForVisuals || viewedWizardStepIds.has(step.id) || completedWizardStepIds.has(step.id);
-    if (!stepHasBeenSeen) return false;
+    const hasCompleteData = hasMeaningfulWizardStepData(step);
     if (step.category === "mandatory" || step.id === "review") {
-      return hasMeaningfulWizardStepData(step);
+      return hasCompleteData;
     }
-    return completedWizardStepIds.has(step.id) || hasMeaningfulWizardStepData(step);
+    return completedWizardStepIds.has(step.id) || hasCompleteData;
   };
   const wizardStepTextClass = (step) => isWizardStepComplete(step) ? "text-slate-950" : wizardCategoryTextClass[step.category];
   const wizardStepMenuItemClass = (step, index) => [

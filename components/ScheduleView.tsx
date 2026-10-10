@@ -7948,7 +7948,6 @@ const InitialSetupWizard: React.FC<{
             case 'analysis':
                 return checks.some((check) => check.complete);
             case 'org-name':
-                if (!organisationNameFieldTouched || !organisationCodeFieldTouched) return false;
                 return (
                     hasMeaningfulWizardText(organisationDraft.name, ['Organisation'])
                     && hasMeaningfulWizardText(organisationDraft.code, ['ORG', 'Organisation'])
@@ -7960,7 +7959,6 @@ const InitialSetupWizard: React.FC<{
             case 'org-level3':
                 return hasMeaningfulOrganisationLevel(3);
             case 'locations-today': {
-                if (!locationsTodayFieldTouched) return false;
                 const rows = parseWizardLocationRows(locationsTodayDraft);
                 return rows.some((row) => (
                     hasMeaningfulWizardText(row.icao || row.iata, ['LOC1', 'LOC'])
@@ -8191,13 +8189,11 @@ const InitialSetupWizard: React.FC<{
         }
     };
     const isWizardStepComplete = (step: InitialSetupWizardStep) => {
-        const finishedWizardForVisuals = initialWizardSetupCompletedInSettings || completedWizardStepIds.size >= steps.length;
-        const stepHasBeenSeen = finishedWizardForVisuals || viewedWizardStepIds.has(step.id) || completedWizardStepIds.has(step.id);
-        if (!stepHasBeenSeen) return false;
+        const hasCompleteData = hasMeaningfulWizardStepData(step);
         if (step.category === 'mandatory' || step.id === 'review') {
-            return hasMeaningfulWizardStepData(step);
+            return hasCompleteData;
         }
-        return completedWizardStepIds.has(step.id) || hasMeaningfulWizardStepData(step);
+        return completedWizardStepIds.has(step.id) || hasCompleteData;
     };
     const wizardStepTextClass = (step: InitialSetupWizardStep) => (
         isWizardStepComplete(step) ? 'text-slate-950' : wizardCategoryTextClass[step.category]
