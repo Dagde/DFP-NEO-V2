@@ -7518,9 +7518,9 @@ const InitialSetupWizard: React.FC<{
         },
         {
             id: 'staff-currency-events',
-            title: `Set ${configuredContinuationShortLabel} and currency event presets`,
-            label: `${configuredContinuationShortLabel}/currency events`,
-            body: 'Create common reusable event presets now, or refine them later if the unit is not ready.',
+            title: 'Set Currency Training and currency event presets',
+            label: 'Currency Training/currency events',
+            body: 'Create common reusable Currency Training and currency event presets now, or refine them later if the unit is not ready.',
             checkIds: ['training'],
             category: 'highly-desirable',
         },
@@ -10490,7 +10490,7 @@ const InitialSetupWizard: React.FC<{
         return (
             <div className="space-y-3">
                 <div className="rounded-lg border border-blue-200 bg-blue-50 px-3 py-2 text-xs font-semibold leading-5 text-blue-900">
-                    Continuation and currency events are reusable records for this unit. They pre-fill duration, resource type, crew, currency and aircraft configuration for recurring staff checks.
+                    Currency Training and currency events are reusable records for this unit. They pre-fill duration, resource type, crew, currency and aircraft configuration for recurring staff checks.
                 </div>
                 {editableRows.map((row, index) => (
                     <div key={`standard-currency-event-${index}`} className="space-y-3 rounded-lg border border-slate-300 bg-white p-3">
@@ -13979,7 +13979,7 @@ const InitialSetupWizard: React.FC<{
         }
         if (visibleStep.id === 'staff-currency-events') {
             return promptShell(
-                <p>Set up common {configuredContinuationShortLabel} and currency event settings for this unit. These become reusable starting points for staff checks and currency events.</p>,
+                <p>Set up common Currency Training and currency event settings for this unit. These become reusable starting points for staff checks and currency events.</p>,
                 renderStandardCurrencyEventsEditor(),
             );
         }

@@ -38682,9 +38682,9 @@ const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, lo
     },
     {
       id: "staff-currency-events",
-      title: `Set ${configuredContinuationShortLabel} and currency event presets`,
-      label: `${configuredContinuationShortLabel}/currency events`,
-      body: "Create common reusable event presets now, or refine them later if the unit is not ready.",
+      title: "Set Currency Training and currency event presets",
+      label: "Currency Training/currency events",
+      body: "Create common reusable Currency Training and currency event presets now, or refine them later if the unit is not ready.",
       checkIds: ["training"],
       category: "highly-desirable"
     },
@@ -41100,7 +41100,7 @@ const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, lo
       setStaffCurrencyEventsDraft(formatWizardStandardCurrencyEventRows(nextRows));
     };
     return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-3", children: [
-      /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "rounded-lg border border-blue-200 bg-blue-50 px-3 py-2 text-xs font-semibold leading-5 text-blue-900", children: "Continuation and currency events are reusable records for this unit. They pre-fill duration, resource type, crew, currency and aircraft configuration for recurring staff checks." }),
+      /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "rounded-lg border border-blue-200 bg-blue-50 px-3 py-2 text-xs font-semibold leading-5 text-blue-900", children: "Currency Training and currency events are reusable records for this unit. They pre-fill duration, resource type, crew, currency and aircraft configuration for recurring staff checks." }),
       editableRows.map((row, index) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-3 rounded-lg border border-slate-300 bg-white p-3", children: [
         /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid min-w-0 gap-2 md:grid-cols-2 xl:grid-cols-3 xl:items-end", children: [
           wizardField("Event name", row.name || "", (value) => updateRow(index, "name", value), void 0, "Annual Instrument Check"),
@@ -44272,11 +44272,7 @@ const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, lo
     }
     if (visibleStep.id === "staff-currency-events") {
       return promptShell(
-        /* @__PURE__ */ jsxRuntimeExports.jsxs("p", { children: [
-          "Set up common ",
-          configuredContinuationShortLabel,
-          " and currency event settings for this unit. These become reusable starting points for staff checks and currency events."
-        ] }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx("p", { children: "Set up common Currency Training and currency event settings for this unit. These become reusable starting points for staff checks and currency events." }),
         renderStandardCurrencyEventsEditor()
       );
     }
