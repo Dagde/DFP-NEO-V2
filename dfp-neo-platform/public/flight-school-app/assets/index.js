@@ -100930,7 +100930,7 @@ const AirCombatTrainingReportModal = ({
       className: "group relative inline-flex h-4 w-4 cursor-help items-center justify-center rounded-full border border-cyan-400/50 bg-gray-950/40 font-serif text-[11px] font-bold italic leading-none text-cyan-100",
       children: [
         "i",
-        /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "pointer-events-none absolute left-1/2 top-full z-[260] mt-1 hidden w-64 -translate-x-1/2 rounded border border-cyan-500/35 bg-gray-950 p-2 font-sans text-xs font-normal not-italic leading-snug text-gray-100 shadow-xl group-hover:block group-focus:block", children: text })
+        /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "pointer-events-none absolute left-full top-1/2 z-[260] ml-2 hidden w-64 -translate-y-1/2 rounded border border-cyan-500/35 bg-gray-950 p-2 font-sans text-xs font-normal not-italic leading-snug text-gray-100 shadow-xl group-hover:block group-focus:block", children: text })
       ]
     }
   );
