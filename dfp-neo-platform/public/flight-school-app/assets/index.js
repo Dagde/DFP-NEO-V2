@@ -38991,7 +38991,7 @@ const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, lo
     const aircraftConfigs = aircraft?.settings?.aircraftConfigurations || aircraft?.aircraftConfigurations || aircraft?.configurations;
     const poolConfigs = pool?.settings?.aircraftConfigurations || pool?.aircraftConfigurations || pool?.configurations;
     const configs = Array.isArray(aircraftConfigs) && aircraftConfigs.length > 0 ? aircraftConfigs : poolConfigs;
-    return Array.isArray(configs) ? configs : [];
+    return normaliseAircraftConfigurationDefinitions(configs);
   };
   const hasMeaningfulAircraftConfigDefinitions = () => getWizardAircraftConfigDefinitions().some((config) => hasMeaningfulWizardText(config?.label || config?.name || config?.code || config?.definition, ["CONFIG 0", "CONFIG0", "Config 0"]) || hasPositiveWizardNumber(config?.capacity ?? config?.count ?? config?.aircraftCount));
   const hasMeaningfulUnitCallsignSettings = () => {

@@ -16,6 +16,7 @@ import { getOperationalModelLabel, getPlatformPermissionProfiles, getUnitOperati
 import { getTaskProfileAbbreviationsForUnit, getTaskProfilesForModel } from '../utils/taskProfiles';
 import { handleEditableTextBeforeInput, handleEditableTextKeyDownCapture, stopEditableKeyPropagation } from '../utils/editableKeyEvents';
 import { AIRCRAFT_CREW_RESOURCE_KINDS, normaliseAircraftCrewComposition } from '../utils/aircraftCrewComposition';
+import { normaliseAircraftConfigurationDefinitions } from '../utils/aircraftConfigurationSettings';
 import { normaliseCrewCompositionSettings } from '../utils/crewCompositionProfiles';
 import { getCrewPositionLabelMap, getCrewPositionOptions, normaliseCrewPositionTerminology } from '../utils/crewPositionTerminology';
 import {
@@ -7861,7 +7862,7 @@ const InitialSetupWizard: React.FC<{
         const aircraftConfigs = aircraft?.settings?.aircraftConfigurations || aircraft?.aircraftConfigurations || aircraft?.configurations;
         const poolConfigs = pool?.settings?.aircraftConfigurations || pool?.aircraftConfigurations || pool?.configurations;
         const configs = Array.isArray(aircraftConfigs) && aircraftConfigs.length > 0 ? aircraftConfigs : poolConfigs;
-        return Array.isArray(configs) ? configs : [];
+        return normaliseAircraftConfigurationDefinitions(configs);
     };
     const hasMeaningfulAircraftConfigDefinitions = () => getWizardAircraftConfigDefinitions().some((config: any) => (
         hasMeaningfulWizardText(config?.label || config?.name || config?.code || config?.definition, ['CONFIG 0', 'CONFIG0', 'Config 0'])
