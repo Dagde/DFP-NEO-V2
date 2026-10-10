@@ -1749,6 +1749,8 @@ const wizardPhraseBankToScoringDraft = (phraseBank: PhraseBank): string => {
 
 const parseWizardStandardCurrencyEventRows = (value: string) => parseWizardEditablePipeRows<{ name: string; shortTitle: string; resourceType: string; duration: string; preFlight: string; postFlight: string; crew: string; currency: string; config: string; aircraftCount: string }>(value, ['name', 'shortTitle', 'resourceType', 'duration', 'preFlight', 'postFlight', 'crew', 'currency', 'config', 'aircraftCount']);
 const formatWizardStandardCurrencyEventRows = (rows: ReturnType<typeof parseWizardStandardCurrencyEventRows>) => formatWizardEditablePipeRows(rows, ['name', 'shortTitle', 'resourceType', 'duration', 'preFlight', 'postFlight', 'crew', 'currency', 'config', 'aircraftCount']);
+const parseWizardDirectedTaskSetupRows = (value: string) => parseWizardEditablePipeRows<{ name: string; shortTitle: string; status: string; resourceType: string; aircraftTypeCode: string; config: string; departure: string; arrival: string; duration: string; preFlight: string; postFlight: string; crew: string; aircraftCount: string; callsignPrefix: string; description: string }>(value, ['name', 'shortTitle', 'status', 'resourceType', 'aircraftTypeCode', 'config', 'departure', 'arrival', 'duration', 'preFlight', 'postFlight', 'crew', 'aircraftCount', 'callsignPrefix', 'description']);
+const formatWizardDirectedTaskSetupRows = (rows: ReturnType<typeof parseWizardDirectedTaskSetupRows>) => formatWizardEditablePipeRows(rows, ['name', 'shortTitle', 'status', 'resourceType', 'aircraftTypeCode', 'config', 'departure', 'arrival', 'duration', 'preFlight', 'postFlight', 'crew', 'aircraftCount', 'callsignPrefix', 'description']);
 
 const getWizardOperationalModelLabel = (value: unknown): string => (
     OPERATIONAL_MODEL_OPTIONS.find((option) => option.value === normaliseOperationalModel(value))?.label || getOperationalModelLabel(value)
@@ -4388,6 +4390,7 @@ const InitialSetupWizard: React.FC<{
     const [wizardScoringPhraseBank, setWizardScoringPhraseBank] = useState<PhraseBank>(() => wizardScoringRowsToPhraseBank(defaultWizardScoringDraft));
     const [wizardScoringTab, setWizardScoringTab] = useState<'Airmanship' | 'Preparation' | 'Technique' | 'Elements'>('Airmanship');
     const [staffCurrencyEventsDraft, setStaffCurrencyEventsDraft] = useState('');
+    const [directedTaskSetupsDraft, setDirectedTaskSetupsDraft] = useState('');
 
     const formatWizardOrganisationPath = (path: string[]) => path.map((item) => String(item || '').trim()).filter(Boolean).join(' / ');
     const formatWizardImmediateParentLabel = (path: string[]) => {
@@ -4937,20 +4940,62 @@ const InitialSetupWizard: React.FC<{
             : Array.isArray(activeOrganisation?.settings?.standardMissionProfiles)
                 ? activeOrganisation.settings.standardMissionProfiles
                 : [];
-        return profiles.length > 0
-            ? formatWizardStandardCurrencyEventRows(profiles.map((profile: any) => ({
+        const currencyProfiles = profiles.filter((profile: any) => (
+            Boolean(String(profile?.currency || '').trim()) || /^currency:/i.test(String(profile?.description || '').trim())
+        ));
+        return currencyProfiles.length > 0
+            ? formatWizardStandardCurrencyEventRows(currencyProfiles.map((profile: any) => ({
                 name: String(profile.name || profile.shortTitle || ''),
                 shortTitle: String(profile.shortTitle || profile.name || ''),
                 resourceType: String(profile.resourceType || 'Flight'),
-                duration: String(profile.duration ?? 90),
-                preFlight: String(profile.preFlight ?? 90),
-                postFlight: String(profile.postFlight ?? 60),
+                duration: String(profile.durationMinutes ?? profile.duration ?? 90),
+                preFlight: String(profile.preFlightMinutes ?? profile.preFlight ?? 90),
+                postFlight: String(profile.postFlightMinutes ?? profile.postFlight ?? 60),
                 crew: String(profile.crew || 'Standard crew'),
                 currency: String(profile.currency || ''),
                 config: String(profile.config || 'ANY'),
                 aircraftCount: String(profile.aircraftCount ?? 1),
             })))
             : getSavedWizardString('staffCurrencyEvents', 'staffCurrencyEventsDraft');
+    };
+    const buildHydratedDirectedTaskSetupsDraft = () => {
+        const savedDraft = getSavedWizardString('directedTaskSetups', 'directedTaskSetupsDraft');
+        const profiles = Array.isArray(activeOrganisation?.settings?.standardMissionProfiles?.profiles)
+            ? activeOrganisation.settings.standardMissionProfiles.profiles
+            : Array.isArray(activeOrganisation?.settings?.standardMissionProfiles)
+                ? activeOrganisation.settings.standardMissionProfiles
+                : [];
+        const targetUnitKey = normaliseUnitSettingsIdentifier(getTargetWizardUnitCode());
+        const targetAircraftKey = normaliseUnitSettingsIdentifier(getTargetWizardAircraftCode());
+        const directedProfiles = profiles.filter((profile: any) => {
+            const profileUnitKey = normaliseUnitSettingsIdentifier(profile?.unitCode || profile?.unit || '');
+            const profileAircraftKey = normaliseUnitSettingsIdentifier(profile?.aircraftTypeCode || profile?.aircraftCode || profile?.aircraft || '');
+            const unitMatches = targetUnitKey ? (!profileUnitKey || profileUnitKey === targetUnitKey) : true;
+            const aircraftMatches = targetAircraftKey ? (!profileAircraftKey || profileAircraftKey === targetAircraftKey) : true;
+            return unitMatches
+                && aircraftMatches
+                && String(profile?.status || 'ACTIVE').toUpperCase() !== 'INACTIVE'
+                && !String(profile?.currency || '').trim()
+                && !/^currency:/i.test(String(profile?.description || '').trim());
+        });
+        if (directedProfiles.length === 0) return savedDraft;
+        return formatWizardDirectedTaskSetupRows(directedProfiles.map((profile: any, index: number) => ({
+            name: String(profile?.missionName || profile?.name || `Directed task ${index + 1}`),
+            shortTitle: String(profile?.shortTitle || profile?.code || ''),
+            status: String(profile?.status || 'ACTIVE').toUpperCase(),
+            resourceType: String(profile?.resourceType || 'Flight'),
+            aircraftTypeCode: String(profile?.aircraftTypeCode || profile?.aircraftCode || getTargetWizardAircraftCode()),
+            config: String(profile?.config || 'ANY'),
+            departure: String(profile?.departureLocationCode || profile?.departure || locationDraft.code || currentLocation?.code || ''),
+            arrival: String(profile?.arrivalLocationCode || profile?.arrival || locationDraft.code || currentLocation?.code || ''),
+            duration: String(profile?.durationMinutes ?? profile?.duration ?? 90),
+            preFlight: String(profile?.preFlightMinutes ?? profile?.preFlight ?? 90),
+            postFlight: String(profile?.postFlightMinutes ?? profile?.postFlight ?? 60),
+            crew: normaliseWizardCrewDisplayLabel(profile?.crew || profile?.selectedCrewCompositionId || ''),
+            aircraftCount: String(profile?.formationAircraft ?? profile?.aircraftCount ?? 1),
+            callsignPrefix: String(profile?.defaultCallsignPrefix || profile?.callsignPrefix || ''),
+            description: String(profile?.description || ''),
+        })));
     };
     const buildHydratedScoringPhraseBankDraft = () => {
         const unitPhraseBank = currentUnit?.settings?.trainingReportPhraseBank;
@@ -4975,6 +5020,7 @@ const InitialSetupWizard: React.FC<{
         const nextCurrencies = buildHydratedCurrencyDraft();
         const nextScoringPhraseBank = buildHydratedScoringPhraseBankDraft();
         const nextStaffCurrencyEvents = buildHydratedStaffCurrencyEventsDraft();
+        const nextDirectedTaskSetups = buildHydratedDirectedTaskSetupsDraft();
         if (nextCrewLabels) setCrewLabelsDraft(nextCrewLabels);
         if (!crewDraftDirtyRef.current) {
             setAlternateCrewDrafts(nextAlternateCrewRows);
@@ -4995,6 +5041,7 @@ const InitialSetupWizard: React.FC<{
         setWizardScoringPhraseBank(nextScoringPhraseBank);
         setScoringDraft(wizardPhraseBankToScoringDraft(nextScoringPhraseBank));
         if (nextStaffCurrencyEvents) setStaffCurrencyEventsDraft(nextStaffCurrencyEvents);
+        if (nextDirectedTaskSetups) setDirectedTaskSetupsDraft(nextDirectedTaskSetups);
     };
     const buildHydratedUnitParentDraft = (unitsDraftValue: string, draft: typeof organisationDraft) => {
         const savedWizardUnitParents = String(getSavedInitialSetupWizardDrafts()?.unitParentDraft || '').trim();
@@ -5430,6 +5477,7 @@ const InitialSetupWizard: React.FC<{
             groundEventSchedulingSettings: wizardGroundEventSchedulingSettingsForDisplay,
             scoringDraft: scoringDraftToSave,
             staffCurrencyEventsDraft,
+            directedTaskSetupsDraft,
             activeStepId: overrides.activeStepId ?? visibleStep.id,
             activeStepIndex: overrides.activeStepIndex ?? currentStep,
             completedStepIds: overrides.completedStepIds ?? Array.from(completedWizardStepIds),
@@ -5489,6 +5537,7 @@ const InitialSetupWizard: React.FC<{
                     groundEventSchedulingSettings: snapshot.groundEventSchedulingSettings,
                     scoringMatrix: snapshot.scoringDraft,
                     staffCurrencyEvents: snapshot.staffCurrencyEventsDraft,
+                    directedTaskSetups: snapshot.directedTaskSetupsDraft,
                     activeStepId: snapshot.activeStepId,
                     activeStepIndex: snapshot.activeStepIndex,
                     completedStepIds: snapshot.completedStepIds,
@@ -7007,6 +7056,128 @@ const InitialSetupWizard: React.FC<{
         }));
     };
 
+    const saveDirectedTaskSetupsDraft = () => {
+        const targetUnitCode = getTargetWizardUnitCode();
+        const targetAircraftTypeCode = getTargetWizardAircraftCode();
+        const targetUnitKey = normaliseUnitSettingsIdentifier(targetUnitCode);
+        const targetAircraftKey = normaliseUnitSettingsIdentifier(targetAircraftTypeCode);
+        const meaningfulRows = parseWizardDirectedTaskSetupRows(directedTaskSetupsDraft).filter((row) => (
+            String([
+                row.name,
+                row.shortTitle,
+                row.resourceType,
+                row.aircraftTypeCode,
+                row.config,
+                row.departure,
+                row.arrival,
+                row.duration,
+                row.preFlight,
+                row.postFlight,
+                row.crew,
+                row.aircraftCount,
+                row.callsignPrefix,
+                row.description,
+            ].join('')).trim()
+        ));
+        if (meaningfulRows.length === 0) {
+            setSaveMessage('Directed task setups left blank. Existing Settings were kept.');
+            return;
+        }
+        const directedTaskSetupsDraftToSave = formatWizardDirectedTaskSetupRows(meaningfulRows);
+        setDirectedTaskSetupsDraft(directedTaskSetupsDraftToSave);
+        const crewProfiles = findWizardAlternateCrewProfiles();
+        const resolveCrewComposition = (crewLabel: string, aircraftCode: string) => {
+            const cleanLabel = normaliseWizardCrewDisplayLabel(crewLabel);
+            const cleanAircraftCode = String(aircraftCode || targetAircraftTypeCode || '').trim().toUpperCase();
+            if (!cleanLabel || /^primary$/i.test(cleanLabel)) {
+                return {
+                    crew: 'Primary',
+                    crewCompositionMode: 'STANDARD',
+                    selectedCrewCompositionId: cleanAircraftCode ? `standard:${cleanAircraftCode}` : 'standard',
+                    acceptableCrewCompositionIds: cleanAircraftCode ? [`standard:${cleanAircraftCode}`] : ['standard'],
+                };
+            }
+            const matchedAlt = crewProfiles.find((profile, index) => {
+                const names = [
+                    profile.name,
+                    profile.code,
+                    `Alt${index + 1}`,
+                    `Alt ${index + 1}`,
+                ].map((value) => normaliseWizardCrewDisplayLabel(value).toLowerCase());
+                return names.includes(cleanLabel.toLowerCase());
+            });
+            const altId = matchedAlt?.id ? `alternate:${matchedAlt.id}` : cleanLabel;
+            return {
+                crew: cleanLabel,
+                crewCompositionMode: 'ALTERNATE',
+                selectedCrewCompositionId: altId,
+                acceptableCrewCompositionIds: [altId],
+            };
+        };
+        const directedTaskProfiles = meaningfulRows.map((row, index) => {
+            const aircraftCode = String(row.aircraftTypeCode || targetAircraftTypeCode || '').trim().toUpperCase();
+            const name = row.name || row.shortTitle || `Directed task ${index + 1}`;
+            const shortTitle = (row.shortTitle || row.name || `DT${index + 1}`).toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 10) || `DT${index + 1}`;
+            const crewComposition = resolveCrewComposition(row.crew, aircraftCode);
+            return {
+                id: createWizardRecordId('standard-mission'),
+                unitCode: targetUnitCode,
+                aircraftTypeCode: aircraftCode,
+                missionName: name,
+                name,
+                shortTitle,
+                description: row.description || '',
+                resourceType: row.resourceType || 'Flight',
+                departureLocationCode: String(row.departure || locationDraft.code || currentLocation?.code || '').trim().toUpperCase(),
+                arrivalLocationCode: String(row.arrival || row.departure || locationDraft.code || currentLocation?.code || '').trim().toUpperCase(),
+                durationMinutes: Math.max(1, Math.round(Number(row.duration) || 90)),
+                preFlightMinutes: Math.max(0, Math.round(Number(row.preFlight) || 0)),
+                postFlightMinutes: Math.max(0, Math.round(Number(row.postFlight) || 0)),
+                config: row.config || 'ANY',
+                aircraftCount: Math.max(1, Math.round(Number(row.aircraftCount) || 1)),
+                formationAircraft: Math.max(1, Math.round(Number(row.aircraftCount) || 1)),
+                defaultCallsignPrefix: row.callsignPrefix || shortTitle,
+                status: row.status || 'ACTIVE',
+                ...crewComposition,
+            };
+        }).filter((profile) => profile.missionName || profile.shortTitle);
+        saveWizardConfig('Directed task setups saved into Settings.', (baseConfig) => updatePrimaryOrganisationWithSettings(baseConfig, (settings) => {
+            const existingStandardMissionProfiles = Array.isArray(settings.standardMissionProfiles?.profiles)
+                ? settings.standardMissionProfiles.profiles
+                : Array.isArray(settings.standardMissionProfiles)
+                    ? settings.standardMissionProfiles
+                    : [];
+            const shouldReplaceDirectedTaskProfile = (profile: any) => {
+                const profileUnitKey = normaliseUnitSettingsIdentifier(profile?.unitCode || profile?.unit || '');
+                const profileAircraftKey = normaliseUnitSettingsIdentifier(profile?.aircraftTypeCode || profile?.aircraftCode || profile?.aircraft || '');
+                const unitMatches = targetUnitKey ? (!profileUnitKey || profileUnitKey === targetUnitKey) : !profileUnitKey;
+                const aircraftMatches = targetAircraftKey ? (!profileAircraftKey || profileAircraftKey === targetAircraftKey) : true;
+                const hasCurrencyMarker = Boolean(String(profile?.currency || '').trim()) || /^currency:/i.test(String(profile?.description || '').trim());
+                return unitMatches && aircraftMatches && !hasCurrencyMarker;
+            };
+            return {
+                ...settings,
+                standardMissionProfiles: {
+                    ...(settings.standardMissionProfiles && typeof settings.standardMissionProfiles === 'object' && !Array.isArray(settings.standardMissionProfiles) ? settings.standardMissionProfiles : {}),
+                    profiles: [
+                        ...existingStandardMissionProfiles.filter((profile: any) => !shouldReplaceDirectedTaskProfile(profile)),
+                        ...directedTaskProfiles,
+                    ],
+                },
+                initialSetupWizardDraft: {
+                    ...(settings.initialSetupWizardDraft || {}),
+                    directedTaskSetups: directedTaskSetupsDraftToSave,
+                    updatedAt: new Date().toISOString(),
+                },
+                initialSetupWizardDrafts: {
+                    ...(settings.initialSetupWizardDrafts || {}),
+                    directedTaskSetupsDraft: directedTaskSetupsDraftToSave,
+                    updatedAt: new Date().toISOString(),
+                },
+            };
+        }));
+    };
+
     const saveScoringMatrixDraft = () => {
         const trainingReportPhraseBank = wizardScoringPhraseBank;
         const nextScoringDraft = wizardPhraseBankToScoringDraft(trainingReportPhraseBank);
@@ -7105,6 +7276,7 @@ const InitialSetupWizard: React.FC<{
                 currencies: currencyDraft,
                 scoringMatrix: scoringDraftToSave,
                 staffCurrencyEvents: staffCurrencyEventsDraft,
+                directedTaskSetups: directedTaskSetupsDraft,
                 updatedAt: new Date().toISOString(),
             },
             initialSetupWizardDrafts: {
@@ -7130,6 +7302,7 @@ const InitialSetupWizard: React.FC<{
                 currencyDraft,
                 scoringDraft: scoringDraftToSave,
                 staffCurrencyEventsDraft,
+                directedTaskSetupsDraft,
                 updatedAt: new Date().toISOString(),
             },
         })));
@@ -8109,6 +8282,15 @@ const InitialSetupWizard: React.FC<{
                     );
                 });
             case 'directed-task-setups': {
+                const draftRows = parseWizardDirectedTaskSetupRows(directedTaskSetupsDraft);
+                if (draftRows.some((row) => (
+                    hasMeaningfulWizardText(row.name)
+                    && hasMeaningfulWizardText(row.shortTitle)
+                    && hasPositiveWizardNumber(row.duration)
+                    && hasPositiveWizardNumber(row.aircraftCount)
+                ))) {
+                    return true;
+                }
                 const profiles = Array.isArray(activeOrganisation?.settings?.standardMissionProfiles?.profiles)
                     ? activeOrganisation.settings.standardMissionProfiles.profiles
                     : Array.isArray(activeOrganisation?.settings?.standardMissionProfiles)
@@ -8310,6 +8492,10 @@ const InitialSetupWizard: React.FC<{
             saveCurrencyProfilesDraft();
             return;
         }
+        if (stepId === 'directed-task-setups') {
+            saveDirectedTaskSetupsDraft();
+            return;
+        }
         if (stepId === 'scoring') {
             saveScoringMatrixDraft();
             return;
@@ -8397,6 +8583,7 @@ const InitialSetupWizard: React.FC<{
         currencyDraft,
         JSON.stringify(wizardScoringPhraseBank),
         staffCurrencyEventsDraft,
+        directedTaskSetupsDraft,
     ]);
 
     useEffect(() => {
@@ -8444,6 +8631,7 @@ const InitialSetupWizard: React.FC<{
         currencyDraft,
         JSON.stringify(wizardScoringPhraseBank),
         staffCurrencyEventsDraft,
+        directedTaskSetupsDraft,
     ]);
 
     useEffect(() => {
@@ -10521,6 +10709,129 @@ const InitialSetupWizard: React.FC<{
             />
         </label>
     );
+    const getWizardDirectedTaskRows = () => {
+        const rows = parseWizardDirectedTaskSetupRows(directedTaskSetupsDraft);
+        return rows.length > 0 ? rows : [{
+            name: '',
+            shortTitle: '',
+            status: 'ACTIVE',
+            resourceType: 'Flight',
+            aircraftTypeCode: getTargetWizardAircraftCode(),
+            config: 'ANY',
+            departure: String(locationDraft.code || currentLocation?.code || '').trim().toUpperCase(),
+            arrival: String(locationDraft.code || currentLocation?.code || '').trim().toUpperCase(),
+            duration: '',
+            preFlight: '',
+            postFlight: '',
+            crew: 'Primary',
+            aircraftCount: '1',
+            callsignPrefix: '',
+            description: '',
+        }];
+    };
+    const updateWizardDirectedTaskRows = (rows: ReturnType<typeof parseWizardDirectedTaskSetupRows>) => {
+        setDirectedTaskSetupsDraft(formatWizardDirectedTaskSetupRows(rows));
+    };
+    const renderDirectedTaskSetupsEditor = () => {
+        const rows = getWizardDirectedTaskRows();
+        const aircraftOptions = Array.from(new Set([
+            getTargetWizardAircraftCode(),
+            ...activeAircraftTypes.map((aircraft: any) => String(aircraft?.code || '').trim().toUpperCase()),
+        ].filter(Boolean)));
+        const locationOptions = Array.from(new Set([
+            String(locationDraft.code || currentLocation?.code || '').trim().toUpperCase(),
+            ...scopedActiveLocations.map((location: any) => String(location?.code || location?.icao || location?.iataCode || '').trim().toUpperCase()),
+        ].filter(Boolean)));
+        const crewOptions = getWizardConfiguredCrewOptions();
+        const configOptions = getWizardConfigOptions();
+        const resourceTypeOptions = ['Flight', 'Simulator', 'Procedural Trainer', 'Ground'];
+        const createBlankDirectedTaskRow = () => ({
+            name: '',
+            shortTitle: '',
+            status: 'ACTIVE',
+            resourceType: 'Flight',
+            aircraftTypeCode: getTargetWizardAircraftCode(),
+            config: 'ANY',
+            departure: locationOptions[0] || '',
+            arrival: locationOptions[0] || '',
+            duration: '',
+            preFlight: '',
+            postFlight: '',
+            crew: 'Primary',
+            aircraftCount: '1',
+            callsignPrefix: '',
+            description: '',
+        });
+        const updateRow = (index: number, field: keyof typeof rows[number], value: string) => {
+            const nextRows = [...rows];
+            nextRows[index] = { ...nextRows[index], [field]: value };
+            updateWizardDirectedTaskRows(nextRows);
+        };
+        const deleteRow = (index: number) => {
+            const nextRows = rows.filter((_, rowIndex) => rowIndex !== index);
+            updateWizardDirectedTaskRows(nextRows.length > 0 ? nextRows : [createBlankDirectedTaskRow()]);
+        };
+        return (
+            <div className="space-y-3">
+                <div className="flex items-start justify-between gap-3 rounded-lg border border-blue-200 bg-blue-50 px-4 py-3">
+                    <div>
+                        <div className="text-sm font-extrabold text-slate-900">Directed task setups</div>
+                        <p className="mt-1 text-xs font-semibold leading-5 text-blue-900">
+                            Build each directed task in the same order the request is made: task name, resource, timing, then crew and callsign details.
+                        </p>
+                    </div>
+                    <button
+                        type="button"
+                        className="min-w-[120px] rounded-lg border border-sky-400 bg-sky-500 px-4 py-3 text-sm font-extrabold leading-4 text-white shadow-sm transition hover:bg-sky-600"
+                        onClick={() => updateWizardDirectedTaskRows([...rows, createBlankDirectedTaskRow()])}
+                    >
+                        Add directed task<br />setup
+                    </button>
+                </div>
+                {rows.map((row, index) => (
+                    <div key={`directed-task-row-${index}`} className="space-y-3 rounded-lg border border-slate-300 bg-white p-3">
+                        <div className="flex items-center justify-between gap-3">
+                            <div className="text-sm font-extrabold text-slate-800">Directed task {index + 1}</div>
+                            <button
+                                type="button"
+                                className="w-16 rounded-md border border-red-400/50 bg-red-500/10 px-3 py-2 text-xs font-bold text-red-700 shadow-sm transition hover:border-red-500 hover:bg-red-500/15 hover:text-red-800"
+                                onClick={() => deleteRow(index)}
+                            >
+                                Delete
+                            </button>
+                        </div>
+                        <div className="grid min-w-0 gap-2 md:grid-cols-2 xl:grid-cols-3">
+                            {wizardField('Directed task name', row.name || '', (value) => updateRow(index, 'name', value), undefined, 'General Flying')}
+                            {wizardField('Short title', row.shortTitle || '', (value) => updateRow(index, 'shortTitle', value.toUpperCase()), undefined, 'GF')}
+                            {wizardField('Status', row.status || 'ACTIVE', (value) => updateRow(index, 'status', value), ['ACTIVE', 'INACTIVE'])}
+                        </div>
+                        <div className="grid min-w-0 gap-2 md:grid-cols-2 xl:grid-cols-3">
+                            {wizardField('Resource type', row.resourceType || 'Flight', (value) => updateRow(index, 'resourceType', value), resourceTypeOptions)}
+                            {wizardField('Aircraft / resource', row.aircraftTypeCode || getTargetWizardAircraftCode(), (value) => updateRow(index, 'aircraftTypeCode', value.toUpperCase()), aircraftOptions, getTargetWizardAircraftCode() || 'PC-21')}
+                            {wizardField('CONFIG', row.config || 'ANY', (value) => updateRow(index, 'config', value), configOptions, 'ANY')}
+                        </div>
+                        <div className="grid min-w-0 gap-2 md:grid-cols-2 xl:grid-cols-3">
+                            {wizardField('Departure point', row.departure || '', (value) => updateRow(index, 'departure', value.toUpperCase()), locationOptions, locationOptions[0] || 'YMES')}
+                            {wizardField('Arrival point', row.arrival || '', (value) => updateRow(index, 'arrival', value.toUpperCase()), locationOptions, locationOptions[0] || 'YMES')}
+                            {wizardField('Duration (mins)', row.duration || '', (value) => updateRow(index, 'duration', value), undefined, '90')}
+                        </div>
+                        <div className="grid min-w-0 gap-2 md:grid-cols-2 xl:grid-cols-3">
+                            {wizardField('Pre-flight (mins)', row.preFlight || '', (value) => updateRow(index, 'preFlight', value), undefined, '90')}
+                            {wizardField('Post-flight (mins)', row.postFlight || '', (value) => updateRow(index, 'postFlight', value), undefined, '60')}
+                            {wizardField('No. aircraft', row.aircraftCount || '1', (value) => updateRow(index, 'aircraftCount', value), undefined, '1')}
+                        </div>
+                        <div className="grid min-w-0 gap-2 md:grid-cols-2 xl:grid-cols-3">
+                            {wizardField('Crew', normaliseWizardCrewDisplayLabel(row.crew), (value) => updateRow(index, 'crew', value), crewOptions, 'Primary')}
+                            {wizardField('Callsign prefix', row.callsignPrefix || '', (value) => updateRow(index, 'callsignPrefix', value.toUpperCase()), undefined, row.shortTitle || 'GF')}
+                            <div className="xl:col-span-1">
+                                {wizardTextArea('Notes / description', row.description || '', (value) => updateRow(index, 'description', value), 'Optional notes for this directed task setup.')}
+                            </div>
+                        </div>
+                    </div>
+                ))}
+            </div>
+        );
+    };
     const commitFlyingWindowDrafts = () => {
         const draftEntries = Object.entries(flyingWindowDraftRef.current);
         if (draftEntries.length === 0) return;
@@ -10560,7 +10871,6 @@ const InitialSetupWizard: React.FC<{
             'deployment-readiness': 'Deployment readiness',
             'operational-runbook': 'Support and recovery details',
             licensing: 'Licence details',
-            'directed-task-setups': 'Directed task setup',
         };
         const settingsSaveLabel = wizardSettingsSaveSteps[visibleStep.id];
         if (settingsSaveLabel) {
@@ -11456,6 +11766,9 @@ const InitialSetupWizard: React.FC<{
             }))
             .filter((row) => row.roleRequirements.length > 0);
         const currencyEventRows = getWizardCurrencyEventRows();
+        const directedTaskRows = parseWizardDirectedTaskSetupRows(directedTaskSetupsDraft).filter((row) => (
+            String(row.name || row.shortTitle || row.resourceType || row.aircraftTypeCode || row.duration || row.crew || row.aircraftCount || '').trim()
+        ));
         const currencyProfiles = currencyEventRows.map((row, index) => ({
             id: createSetupTestRecordId('currency-profile', row.shortTitle || row.name || index + 1),
             unitCode: cleanUnits[0]?.code || '',
@@ -11468,13 +11781,14 @@ const InitialSetupWizard: React.FC<{
             aircraftCount: Math.max(1, Math.round(Number(row.aircraftCount) || 1)),
             status: 'ACTIVE',
         }));
-        const standardMissionProfiles = currencyEventRows.map((row, index) => ({
+        const currencyStandardMissionProfiles = currencyEventRows.map((row, index) => ({
             id: createSetupTestRecordId('standard-mission', row.shortTitle || row.name || index + 1),
             unitCode: cleanUnits[0]?.code || '',
             aircraftTypeCode: primaryAircraftCode,
             missionName: row.name || `Currency event ${index + 1}`,
             name: row.name || `Currency event ${index + 1}`,
             shortTitle: row.shortTitle || row.name || `EVT${index + 1}`,
+            description: row.currency ? `Currency: ${row.currency}` : '',
             resourceType: row.resourceType || 'Flight',
             durationMinutes: Math.max(1, Math.round(Number(row.duration) || 90)),
             preFlightMinutes: Math.max(0, Math.round(Number(row.preFlight) || 0)),
@@ -11485,6 +11799,35 @@ const InitialSetupWizard: React.FC<{
             aircraftCount: Math.max(1, Math.round(Number(row.aircraftCount) || 1)),
             status: 'ACTIVE',
         }));
+        const directedTaskStandardMissionProfiles = directedTaskRows.map((row, index) => {
+            const aircraftCode = String(row.aircraftTypeCode || primaryAircraftCode || '').trim().toUpperCase();
+            const shortTitle = (row.shortTitle || row.name || `DT${index + 1}`).toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 10) || `DT${index + 1}`;
+            return {
+                id: createSetupTestRecordId('standard-mission', shortTitle || index + 1),
+                unitCode: cleanUnits[0]?.code || '',
+                aircraftTypeCode: aircraftCode,
+                missionName: row.name || `Directed task ${index + 1}`,
+                name: row.name || `Directed task ${index + 1}`,
+                shortTitle,
+                description: row.description || '',
+                resourceType: row.resourceType || 'Flight',
+                departureLocationCode: row.departure || primaryLocationCode,
+                arrivalLocationCode: row.arrival || row.departure || primaryLocationCode,
+                durationMinutes: Math.max(1, Math.round(Number(row.duration) || 90)),
+                preFlightMinutes: Math.max(0, Math.round(Number(row.preFlight) || 0)),
+                postFlightMinutes: Math.max(0, Math.round(Number(row.postFlight) || 0)),
+                crew: normaliseWizardCrewDisplayLabel(row.crew),
+                config: row.config || 'ANY',
+                aircraftCount: Math.max(1, Math.round(Number(row.aircraftCount) || 1)),
+                formationAircraft: Math.max(1, Math.round(Number(row.aircraftCount) || 1)),
+                defaultCallsignPrefix: row.callsignPrefix || shortTitle,
+                status: row.status || 'ACTIVE',
+            };
+        });
+        const standardMissionProfiles = [
+            ...currencyStandardMissionProfiles,
+            ...directedTaskStandardMissionProfiles,
+        ];
         const sharingRows = parseWizardSharingRows(resourceSharingDraft);
         const resourceSharingRows = sharingRows.filter((row) => row.type.toLowerCase().includes('resource'));
         const staffSharingRows = sharingRows.filter((row) => row.type.toLowerCase().includes('staff'));
@@ -11650,6 +11993,7 @@ const InitialSetupWizard: React.FC<{
                 groundEventSchedulingSettings: setupGroundEventSchedulingSettings,
                 scoringMatrix: scoringDraftToSave,
                 staffCurrencyEvents: staffCurrencyEventsDraft,
+                directedTaskSetups: directedTaskSetupsDraft,
                 activeStepId: visibleStep.id,
                 activeStepIndex: currentStep,
                 completedStepIds: Array.from(completedWizardStepIds),
@@ -12356,6 +12700,7 @@ const InitialSetupWizard: React.FC<{
         saveTrainingDraft();
         saveBuildRulesDraft();
         saveCurrencyProfilesDraft();
+        saveDirectedTaskSetupsDraft();
         pushWizardPersistenceTrace('finish:normal:settings-drafts-saved');
         await persistWizardStaffProfilesToDatabase({
             staffRows: uploadedStaffProfileRows.length > 0 ? uploadedStaffProfileRows : undefined,
@@ -13966,13 +14311,8 @@ const InitialSetupWizard: React.FC<{
         }
         if (visibleStep.id === 'directed-task-setups') {
             return promptShell(
-                <p>Create full reusable directed task setups. This is the same Directed Task Setups editor used in Settings.</p>,
-                renderWizardPlatformSettingsEmbed(
-                    'platform-standard-missions',
-                    'platform-standard-mission-records',
-                    'Directed task setups saved into Settings.',
-                    { focusAircraftTypeCode: resourceDraft.aircraftCode || crewDraft.aircraftCode || primaryAircraftType?.code || '' },
-                ),
+                <p>Create the directed task setups this unit can request or schedule. Each setup saves back into Settings for later use.</p>,
+                renderDirectedTaskSetupsEditor(),
             );
         }
         if (visibleStep.id === 'audit-recording') {
