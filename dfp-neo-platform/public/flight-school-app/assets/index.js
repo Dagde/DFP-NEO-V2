@@ -34960,11 +34960,10 @@ const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, lo
   });
   const [wizardLaunchRequested, setWizardLaunchRequested] = reactExports.useState(false);
   const unitTypeOptions = reactExports.useMemo(() => normaliseUnitTypeOptions(platformConfig), [platformConfig]);
-  const configuredContinuationShortLabel = reactExports.useMemo(
+  reactExports.useMemo(
     () => getSctTerminology(platformConfig, unitCode).shortLabel || "CT",
     [platformConfig, unitCode]
   );
-  const configuredContinuationCurrencyEventsLabel = `${configuredContinuationShortLabel} / Currency Events`;
   const courseStudentGroups = reactExports.useMemo(
     () => normaliseCourseStudentGroups(serviceDefinitions, { useFallback: false }).filter((group) => {
       const label = String(group.shortName || group.longName || "").trim();
@@ -38107,31 +38106,62 @@ const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, lo
     const targetAircraftTypeCode = String(resourceDraft.aircraftCode || crewDraft.aircraftCode || primaryAircraftType?.code || "").trim().toUpperCase();
     const targetUnitKey = normaliseUnitSettingsIdentifier(targetUnitCode);
     const targetAircraftKey = normaliseUnitSettingsIdentifier(targetAircraftTypeCode);
-    const meaningfulCurrencyRows = parseWizardCurrencyRows(currencyDraft).filter((row) => String(row.name || row.code || row.crew || row.config || row.currency || row.aircraftCount || "").trim());
-    if (meaningfulCurrencyRows.length === 0) {
-      setSaveMessage("Currency profiles left blank. Existing currency settings were kept.");
+    const meaningfulEventRows = getWizardCurrencyEventRows().filter((row) => String(row.name || row.shortTitle || row.resourceType || row.duration || row.preFlight || row.postFlight || row.crew || row.currency || row.config || row.aircraftCount || "").trim());
+    if (meaningfulEventRows.length === 0) {
+      setSaveMessage("Currency events left blank. Existing currency settings were kept.");
       return;
     }
-    const currencyProfiles = meaningfulCurrencyRows.map((row, index) => ({
+    const currencyDraftToSave = formatWizardCurrencyRows(mapCurrencyEventRowsToCurrencyProfileRows(meaningfulEventRows));
+    const staffCurrencyEventsDraftToSave = formatWizardStandardCurrencyEventRows(meaningfulEventRows);
+    setCurrencyDraft(currencyDraftToSave);
+    setStaffCurrencyEventsDraft(staffCurrencyEventsDraftToSave);
+    const currencyProfiles = meaningfulEventRows.map((row, index) => ({
       id: createWizardRecordId("currency-profile"),
       unitCode: targetUnitCode,
       aircraftTypeCode: targetAircraftTypeCode,
-      name: row.name || row.currency || row.code || `Currency ${index + 1}`,
-      code: (row.code || row.name || `CUR${index + 1}`).toUpperCase().replace(/[^A-Z0-9]/g, "").slice(0, 8) || `CUR${index + 1}`,
+      name: row.name || row.currency || row.shortTitle || `Currency ${index + 1}`,
+      code: (row.shortTitle || row.name || `CUR${index + 1}`).toUpperCase().replace(/[^A-Z0-9]/g, "").slice(0, 8) || `CUR${index + 1}`,
       crew: normaliseWizardCrewDisplayLabel(row.crew),
       config: row.config || "ANY",
       currency: row.currency || row.name || `Currency ${index + 1}`,
       aircraftCount: Math.max(1, Math.round(Number(row.aircraftCount) || 1)),
       status: "ACTIVE"
     })).filter((profile) => profile.name || profile.code);
-    saveWizardConfig("Currency profiles saved into Settings.", (baseConfig) => updatePrimaryOrganisationWithSettings(baseConfig, (settings) => {
+    const standardMissionProfiles = meaningfulEventRows.map((row, index) => ({
+      id: createWizardRecordId("standard-mission"),
+      unitCode: targetUnitCode,
+      aircraftTypeCode: targetAircraftTypeCode,
+      missionName: row.name || row.shortTitle || `Currency event ${index + 1}`,
+      name: row.name || row.shortTitle || `Currency event ${index + 1}`,
+      shortTitle: (row.shortTitle || row.name || `CUR${index + 1}`).toUpperCase().replace(/[^A-Z0-9]/g, "").slice(0, 8) || `CUR${index + 1}`,
+      description: row.currency ? `Currency: ${row.currency}` : "",
+      resourceType: row.resourceType || "Flight",
+      durationMinutes: Math.max(1, Math.round(Number(row.duration) || 90)),
+      preFlightMinutes: Math.max(0, Math.round(Number(row.preFlight) || 0)),
+      postFlightMinutes: Math.max(0, Math.round(Number(row.postFlight) || 0)),
+      config: row.config || "ANY",
+      crew: normaliseWizardCrewDisplayLabel(row.crew),
+      currency: row.currency || "",
+      aircraftCount: Math.max(1, Math.round(Number(row.aircraftCount) || 1)),
+      status: "ACTIVE"
+    })).filter((profile) => profile.missionName || profile.shortTitle);
+    saveWizardConfig("Currency events saved into Settings.", (baseConfig) => updatePrimaryOrganisationWithSettings(baseConfig, (settings) => {
       const existingProfiles = Array.isArray(settings.crewCompositionSettings?.currencyProfiles) ? settings.crewCompositionSettings.currencyProfiles : [];
+      const existingStandardMissionProfiles = Array.isArray(settings.standardMissionProfiles?.profiles) ? settings.standardMissionProfiles.profiles : Array.isArray(settings.standardMissionProfiles) ? settings.standardMissionProfiles : [];
       const shouldReplaceProfile = (profile) => {
         const profileUnitKey = normaliseUnitSettingsIdentifier(profile?.unitCode || profile?.unit || "");
         const profileAircraftKey = normaliseUnitSettingsIdentifier(profile?.aircraftTypeCode || profile?.aircraftCode || profile?.aircraft || "");
         const unitMatches = targetUnitKey ? !profileUnitKey || profileUnitKey === targetUnitKey : !profileUnitKey;
         const aircraftMatches = targetAircraftKey ? !profileAircraftKey || profileAircraftKey === targetAircraftKey : !profileAircraftKey;
         return unitMatches && aircraftMatches;
+      };
+      const shouldReplaceStandardMissionProfile = (profile) => {
+        const profileUnitKey = normaliseUnitSettingsIdentifier(profile?.unitCode || profile?.unit || "");
+        const profileAircraftKey = normaliseUnitSettingsIdentifier(profile?.aircraftTypeCode || profile?.aircraftCode || profile?.aircraft || "");
+        const unitMatches = targetUnitKey ? !profileUnitKey || profileUnitKey === targetUnitKey : !profileUnitKey;
+        const aircraftMatches = targetAircraftKey ? !profileAircraftKey || profileAircraftKey === targetAircraftKey : !profileAircraftKey;
+        const hasCurrencyMarker = Boolean(String(profile?.currency || "").trim()) || /^currency:/i.test(String(profile?.description || "").trim());
+        return unitMatches && aircraftMatches && hasCurrencyMarker;
       };
       return {
         ...settings,
@@ -38142,14 +38172,23 @@ const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, lo
             ...currencyProfiles
           ]
         }),
+        standardMissionProfiles: {
+          ...settings.standardMissionProfiles && typeof settings.standardMissionProfiles === "object" && !Array.isArray(settings.standardMissionProfiles) ? settings.standardMissionProfiles : {},
+          profiles: [
+            ...existingStandardMissionProfiles.filter((profile) => !shouldReplaceStandardMissionProfile(profile)),
+            ...standardMissionProfiles
+          ]
+        },
         initialSetupWizardDraft: {
           ...settings.initialSetupWizardDraft || {},
-          currencies: currencyDraft,
+          currencies: currencyDraftToSave,
+          staffCurrencyEvents: staffCurrencyEventsDraftToSave,
           updatedAt: (/* @__PURE__ */ new Date()).toISOString()
         },
         initialSetupWizardDrafts: {
           ...settings.initialSetupWizardDrafts || {},
-          currencyDraft,
+          currencyDraft: currencyDraftToSave,
+          staffCurrencyEventsDraft: staffCurrencyEventsDraftToSave,
           updatedAt: (/* @__PURE__ */ new Date()).toISOString()
         }
       };
@@ -38180,45 +38219,6 @@ const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, lo
       }));
     });
     setScoringDraft(nextScoringDraft);
-  };
-  const saveStaffCurrencyEventsDraft = () => {
-    const targetUnitCode = String(unitDraft.code || currentUnit?.code || unitCode || "").trim().toUpperCase();
-    const aircraftTypeCode = String(resourceDraft.aircraftCode || crewDraft.aircraftCode || primaryAircraftType?.code || "").trim().toUpperCase();
-    const meaningfulEventRows = parseWizardStandardCurrencyEventRows(staffCurrencyEventsDraft).filter((row) => String(row.name || row.shortTitle || row.duration || row.preFlight || row.postFlight || row.crew || row.currency || row.config || row.aircraftCount || "").trim());
-    if (meaningfulEventRows.length === 0) {
-      setSaveMessage("Staff currency event presets left blank. Existing presets were kept.");
-      return;
-    }
-    const standardMissionProfiles = meaningfulEventRows.map((row, index) => ({
-      id: createWizardRecordId("standard-mission"),
-      unitCode: targetUnitCode,
-      name: row.name || row.shortTitle || `Standard event ${index + 1}`,
-      shortTitle: row.shortTitle || row.name || `EVT${index + 1}`,
-      resourceType: row.resourceType || "Flight",
-      aircraftTypeCode,
-      duration: Math.max(0, Number(row.duration) || 0),
-      preFlight: Math.max(0, Number(row.preFlight) || 0),
-      postFlight: Math.max(0, Number(row.postFlight) || 0),
-      crew: row.crew || "Standard crew",
-      currency: row.currency || "",
-      config: row.config || "ANY",
-      aircraftCount: Math.max(1, Math.round(Number(row.aircraftCount) || 1)),
-      status: "ACTIVE"
-    })).filter((profile) => profile.name || profile.shortTitle);
-    saveWizardConfig("Staff currency event presets saved into Settings.", (baseConfig) => updatePrimaryOrganisationWithSettings(baseConfig, (settings) => ({
-      ...settings,
-      standardMissionProfiles: { profiles: standardMissionProfiles },
-      initialSetupWizardDraft: {
-        ...settings.initialSetupWizardDraft || {},
-        staffCurrencyEvents: staffCurrencyEventsDraft,
-        updatedAt: (/* @__PURE__ */ new Date()).toISOString()
-      },
-      initialSetupWizardDrafts: {
-        ...settings.initialSetupWizardDrafts || {},
-        staffCurrencyEventsDraft,
-        updatedAt: (/* @__PURE__ */ new Date()).toISOString()
-      }
-    })));
   };
   const saveTrainingDraft = () => {
     const lmpCode = String(trainingDraft.lmpCode || "").trim();
@@ -38681,14 +38681,6 @@ const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, lo
       category: "highly-desirable"
     },
     {
-      id: "staff-currency-events",
-      title: "Set Currency Training and currency event presets",
-      label: "Currency Training/currency events",
-      body: "Create common reusable Currency Training and currency event presets now, or refine them later if the unit is not ready.",
-      checkIds: ["training"],
-      category: "highly-desirable"
-    },
-    {
       id: "directed-task-setups",
       title: "Set directed task setups",
       label: "Directed tasks",
@@ -39130,15 +39122,13 @@ const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, lo
       case "resource-sharing":
         return parseWizardSharingRows(resourceSharingDraft).some((row) => /^on$/i.test(row.enabled) && hasMeaningfulWizardText(row.units));
       case "currencies":
-        return parseWizardCurrencyRows(currencyDraft).some((row) => hasMeaningfulWizardText(row.name, ["PIC Currency", "Instrument Currency"]) && hasMeaningfulWizardText(row.code, ["PIC", "INST"]) && hasMeaningfulWizardText(row.currency, ["PIC Currency", "Instrument Currency"]) && hasPositiveWizardNumber(row.aircraftCount));
+        return getWizardCurrencyEventRows().some((row) => hasMeaningfulWizardText(row.name, ["PIC Currency", "Instrument Currency"]) && hasMeaningfulWizardText(row.shortTitle, ["PIC", "INST"]) && hasMeaningfulWizardText(row.currency, ["PIC Currency", "Instrument Currency"]) && hasPositiveWizardNumber(row.duration) && hasPositiveWizardNumber(row.aircraftCount));
       case "training-records":
         return parseWizardTrainingReportRows(trainingRecordsDraft).some((row) => {
           const lowestGrade = Number(row.gradeMin);
           const highestGrade = Number(row.gradeMax);
           return hasMeaningfulWizardText(row.organisationName) && Number.isFinite(lowestGrade) && Number.isFinite(highestGrade) && highestGrade > lowestGrade && hasMeaningfulWizardText(row.showNumbers) && hasMeaningfulWizardText(row.noGradeOption) && hasMeaningfulWizardText(row.passLabel) && hasMeaningfulWizardText(row.failLabel);
         });
-      case "staff-currency-events":
-        return parseWizardStandardCurrencyEventRows(staffCurrencyEventsDraft).some((row) => hasMeaningfulWizardText(row.name, ["Annual Instrument Check"]) && hasMeaningfulWizardText(row.shortTitle, ["INST"]) && hasPositiveWizardNumber(row.duration) && hasPositiveWizardNumber(row.aircraftCount));
       case "directed-task-setups": {
         const profiles = Array.isArray(activeOrganisation?.settings?.standardMissionProfiles?.profiles) ? activeOrganisation.settings.standardMissionProfiles.profiles : Array.isArray(activeOrganisation?.settings?.standardMissionProfiles) ? activeOrganisation.settings.standardMissionProfiles : [];
         return profiles.some((profile) => String(profile?.status || "ACTIVE").toUpperCase() !== "INACTIVE");
@@ -39306,10 +39296,6 @@ const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, lo
     }
     if (stepId === "scoring") {
       saveScoringMatrixDraft();
-      return;
-    }
-    if (stepId === "staff-currency-events") {
-      saveStaffCurrencyEventsDraft();
       return;
     }
     if (stepId !== "analysis" && stepId !== "review") {
@@ -41033,29 +41019,71 @@ const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, lo
     "ANY",
     ...getWizardAircraftConfigDefinitions().map((config) => String(config?.label || config?.name || config?.code || config?.definition || "").trim()).filter(Boolean)
   ]));
+  const mapCurrencyRowsToCurrencyEventRows = (rows) => rows.map((row, index) => ({
+    name: row.name || row.currency || row.code || "",
+    shortTitle: row.code || row.name || (index === 0 ? "CUR" : `CUR${index + 1}`),
+    resourceType: "Flight",
+    duration: "",
+    preFlight: "",
+    postFlight: "",
+    crew: normaliseWizardCrewDisplayLabel(row.crew),
+    currency: row.currency || row.name || "",
+    config: row.config || "ANY",
+    aircraftCount: row.aircraftCount || "1"
+  }));
+  const mapCurrencyEventRowsToCurrencyProfileRows = (rows) => rows.map((row, index) => ({
+    name: row.name || row.currency || row.shortTitle || "",
+    code: row.shortTitle || row.name || (index === 0 ? "CUR" : `CUR${index + 1}`),
+    crew: normaliseWizardCrewDisplayLabel(row.crew),
+    config: row.config || "ANY",
+    currency: row.currency || row.name || "",
+    aircraftCount: row.aircraftCount || "1"
+  }));
+  const getWizardCurrencyEventRows = () => {
+    const eventRows = parseWizardStandardCurrencyEventRows(staffCurrencyEventsDraft);
+    if (eventRows.length > 0) return eventRows;
+    return mapCurrencyRowsToCurrencyEventRows(parseWizardCurrencyRows(currencyDraft));
+  };
+  const updateWizardCurrencyEventRows = (rows) => {
+    setStaffCurrencyEventsDraft(formatWizardStandardCurrencyEventRows(rows));
+    updateCurrencyDraft(formatWizardCurrencyRows(mapCurrencyEventRowsToCurrencyProfileRows(rows)));
+  };
   const renderCurrencyEditor = () => {
-    const rows = parseWizardCurrencyRows(currencyDraft);
-    const editableRows = rows.length > 0 ? rows : [{ name: "", code: "", crew: "", config: "", currency: "", aircraftCount: "" }];
+    const rows = getWizardCurrencyEventRows();
+    const editableRows = rows.length > 0 ? rows : [{ name: "", shortTitle: "", resourceType: "Flight", duration: "", preFlight: "", postFlight: "", crew: "", currency: "", config: "", aircraftCount: "" }];
     const crewOptions = getWizardConfiguredCrewOptions();
     const configOptions = getWizardConfigOptions();
-    const createBlankCurrencyRow = () => ({ name: "", code: "", crew: "Primary", config: "ANY", currency: "", aircraftCount: "1" });
+    const createBlankCurrencyRow = () => ({ name: "", shortTitle: "", resourceType: "Flight", duration: "", preFlight: "", postFlight: "", crew: "Primary", currency: "", config: "ANY", aircraftCount: "1" });
     const updateRow = (index, field, value) => {
       const nextRows = [...editableRows];
       nextRows[index] = { ...nextRows[index], [field]: value };
-      updateCurrencyDraft(formatWizardCurrencyRows(nextRows));
+      updateWizardCurrencyEventRows(nextRows);
     };
     return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-3", children: [
-      /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "rounded-lg border border-blue-200 bg-blue-50 px-3 py-2 text-xs font-semibold leading-5 text-blue-900", children: "Currency events are reusable templates that automatically populate the required crew, aircraft configuration, currency type and number of aircraft when an event is requested." }),
-      editableRows.map((row, index) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid min-w-0 gap-2 rounded-lg border border-slate-300 bg-white p-3 md:grid-cols-2 xl:grid-cols-3 xl:items-end", children: [
-        wizardField("Event name", row.name || "", (value) => updateRow(index, "name", value), void 0, "PIC Currency"),
-        wizardField("Code", row.code || "", (value) => updateRow(index, "code", value.toUpperCase()), void 0, "PIC"),
-        wizardField("Crew", normaliseWizardCrewDisplayLabel(row.crew), (value) => updateRow(index, "crew", value), crewOptions, "Primary"),
-        wizardField("CONFIG", row.config || "ANY", (value) => updateRow(index, "config", value), configOptions, "ANY"),
-        wizardField("Currency", row.currency || "", (value) => updateRow(index, "currency", value), void 0, "PIC Currency"),
-        wizardField("No. aircraft", row.aircraftCount || "", (value) => updateRow(index, "aircraftCount", value), void 0, "1"),
-        /* @__PURE__ */ jsxRuntimeExports.jsx("button", { type: "button", className: "w-16 justify-self-end rounded-md border border-red-400/50 bg-red-500/10 px-3 py-2 text-xs font-bold text-red-700 shadow-sm transition hover:border-red-500 hover:bg-red-500/15 hover:text-red-800 md:col-start-2 xl:col-start-3", onClick: () => updateCurrencyDraft(formatWizardCurrencyRows(editableRows.filter((_, rowIndex) => rowIndex !== index))), children: "Delete" })
+      /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "rounded-lg border border-blue-200 bg-blue-50 px-3 py-2 text-xs font-semibold leading-5 text-blue-900", children: "Currency events are reusable templates. Set the name, timing, resource, crew, aircraft configuration, currency type and number of aircraft once, and DFP NEO will use those details when the event is requested or scheduled." }),
+      editableRows.map((row, index) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-3 rounded-lg border border-slate-300 bg-white p-3", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid min-w-0 gap-2 md:grid-cols-2 xl:grid-cols-3 xl:items-end", children: [
+          wizardField("Event name", row.name || "", (value) => updateRow(index, "name", value), void 0, "General Flying Currency"),
+          wizardField("Short title", row.shortTitle || "", (value) => updateRow(index, "shortTitle", value.toUpperCase()), void 0, "GF CT"),
+          wizardField(
+            "Resource type",
+            row.resourceType === "FTD" ? "Simulator" : row.resourceType === "CPT" ? "Procedural Trainer" : row.resourceType || "Flight",
+            (value) => updateRow(index, "resourceType", value === "Simulator" ? "FTD" : value === "Procedural Trainer" ? "CPT" : value),
+            ["Flight", "Simulator", "Procedural Trainer", "Ground"]
+          ),
+          wizardField("Duration", row.duration || "", (value) => updateRow(index, "duration", value), void 0, "90"),
+          wizardField("Pre-flight", row.preFlight || "", (value) => updateRow(index, "preFlight", value), void 0, "90"),
+          wizardField("Post-flight", row.postFlight || "", (value) => updateRow(index, "postFlight", value), void 0, "60")
+        ] }),
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid min-w-0 gap-2 md:grid-cols-2 xl:grid-cols-3 xl:items-end", children: [
+          wizardField("Crew", normaliseWizardCrewDisplayLabel(row.crew), (value) => updateRow(index, "crew", value), crewOptions, "Primary"),
+          wizardField("CONFIG", row.config || "ANY", (value) => updateRow(index, "config", value), configOptions, "ANY"),
+          wizardField("Currency", row.currency || "", (value) => updateRow(index, "currency", value), void 0, "PIC Currency"),
+          wizardField("No. aircraft", row.aircraftCount || "", (value) => updateRow(index, "aircraftCount", value), void 0, "1"),
+          /* @__PURE__ */ jsxRuntimeExports.jsx("button", { type: "button", className: "w-16 justify-self-end rounded-md border border-red-400/50 bg-red-500/10 px-3 py-2 text-xs font-bold text-red-700 shadow-sm transition hover:border-red-500 hover:bg-red-500/15 hover:text-red-800 md:col-start-2 xl:col-start-3", onClick: () => updateWizardCurrencyEventRows(editableRows.filter((_, rowIndex) => rowIndex !== index)), children: "Delete" })
+        ] })
       ] }, `currency-row-${index}`)),
-      /* @__PURE__ */ jsxRuntimeExports.jsx("button", { type: "button", className: wizardSmallButtonClass, onClick: () => updateCurrencyDraft(formatWizardCurrencyRows([...editableRows, createBlankCurrencyRow()])), children: "Add currency" })
+      /* @__PURE__ */ jsxRuntimeExports.jsx("button", { type: "button", className: wizardSmallButtonClass, onClick: () => updateWizardCurrencyEventRows([...editableRows, createBlankCurrencyRow()]), children: "Add currency event" })
     ] });
   };
   const renderScoringEditor = () => {
@@ -41089,41 +41117,6 @@ const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, lo
           theme: "wizard"
         }
       ) })
-    ] });
-  };
-  const renderStandardCurrencyEventsEditor = () => {
-    const rows = parseWizardStandardCurrencyEventRows(staffCurrencyEventsDraft);
-    const editableRows = rows.length > 0 ? rows : [{ name: "", shortTitle: "", resourceType: "Flight", duration: "", preFlight: "", postFlight: "", crew: "", currency: "", config: "", aircraftCount: "" }];
-    const updateRow = (index, field, value) => {
-      const nextRows = [...editableRows];
-      nextRows[index] = { ...nextRows[index], [field]: value };
-      setStaffCurrencyEventsDraft(formatWizardStandardCurrencyEventRows(nextRows));
-    };
-    return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-3", children: [
-      /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "rounded-lg border border-blue-200 bg-blue-50 px-3 py-2 text-xs font-semibold leading-5 text-blue-900", children: "Currency Training and currency events are reusable records for this unit. They pre-fill duration, resource type, crew, currency and aircraft configuration for recurring staff checks." }),
-      editableRows.map((row, index) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-3 rounded-lg border border-slate-300 bg-white p-3", children: [
-        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid min-w-0 gap-2 md:grid-cols-2 xl:grid-cols-3 xl:items-end", children: [
-          wizardField("Event name", row.name || "", (value) => updateRow(index, "name", value), void 0, "Annual Instrument Check"),
-          wizardField("Short title", row.shortTitle || "", (value) => updateRow(index, "shortTitle", value.toUpperCase()), void 0, "INST"),
-          wizardField(
-            "Resource type",
-            row.resourceType === "FTD" ? "Simulator" : row.resourceType === "CPT" ? "Procedural Trainer" : row.resourceType || "Flight",
-            (value) => updateRow(index, "resourceType", value === "Simulator" ? "FTD" : value === "Procedural Trainer" ? "CPT" : value),
-            ["Flight", "Simulator", "Procedural Trainer", "Ground"]
-          ),
-          wizardField("Duration", row.duration || "", (value) => updateRow(index, "duration", value), void 0, "90"),
-          wizardField("Pre-flight", row.preFlight || "", (value) => updateRow(index, "preFlight", value), void 0, "90"),
-          wizardField("Post-flight", row.postFlight || "", (value) => updateRow(index, "postFlight", value), void 0, "60")
-        ] }),
-        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid min-w-0 gap-2 md:grid-cols-2 xl:grid-cols-3 xl:items-end", children: [
-          wizardField("Crew", row.crew || "", (value) => updateRow(index, "crew", value), void 0, "Standard crew"),
-          wizardField("Currency", row.currency || "", (value) => updateRow(index, "currency", value), void 0, "Instrument Currency"),
-          wizardField("CONFIG", row.config || "", (value) => updateRow(index, "config", value), void 0, "ANY"),
-          wizardField("No. aircraft", row.aircraftCount || "", (value) => updateRow(index, "aircraftCount", value), void 0, "1"),
-          /* @__PURE__ */ jsxRuntimeExports.jsx("button", { type: "button", className: wizardSmallButtonClass, onClick: () => setStaffCurrencyEventsDraft(formatWizardStandardCurrencyEventRows(editableRows.filter((_, rowIndex) => rowIndex !== index))), children: "Delete" })
-        ] })
-      ] }, `standard-currency-event-${index}`)),
-      /* @__PURE__ */ jsxRuntimeExports.jsx("button", { type: "button", className: wizardSmallButtonClass, onClick: () => setStaffCurrencyEventsDraft(formatWizardStandardCurrencyEventRows([...editableRows, { name: "", shortTitle: "", resourceType: "Flight", duration: "", preFlight: "", postFlight: "", crew: "", currency: "", config: "", aircraftCount: "" }])), children: "Add standard currency event" })
     ] });
   };
   const wizardTextArea = (label, value, onChange, placeholder, autoFocus = false) => /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "block", children: [
@@ -41954,27 +41947,30 @@ const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, lo
       roleRequirements: parseRoleRequirementsText(row.roles),
       status: "ACTIVE"
     })).filter((row) => row.roleRequirements.length > 0);
-    const currencyProfiles = parseWizardCurrencyRows(currencyDraft).map((row, index) => ({
-      id: createSetupTestRecordId("currency-profile", row.code || row.name || index + 1),
+    const currencyEventRows = getWizardCurrencyEventRows();
+    const currencyProfiles = currencyEventRows.map((row, index) => ({
+      id: createSetupTestRecordId("currency-profile", row.shortTitle || row.name || index + 1),
       unitCode: cleanUnits[0]?.code || "",
       aircraftTypeCode: primaryAircraftCode,
       name: row.name || `Currency ${index + 1}`,
-      code: (row.code || row.name || `CUR${index + 1}`).toUpperCase().replace(/[^A-Z0-9]/g, "").slice(0, 8) || `CUR${index + 1}`,
+      code: (row.shortTitle || row.name || `CUR${index + 1}`).toUpperCase().replace(/[^A-Z0-9]/g, "").slice(0, 8) || `CUR${index + 1}`,
       crew: normaliseWizardCrewDisplayLabel(row.crew),
       config: row.config || "ANY",
       currency: row.currency || row.name || `Currency ${index + 1}`,
       aircraftCount: Math.max(1, Math.round(Number(row.aircraftCount) || 1)),
       status: "ACTIVE"
     }));
-    const standardMissionProfiles = parseWizardStandardCurrencyEventRows(staffCurrencyEventsDraft).map((row, index) => ({
+    const standardMissionProfiles = currencyEventRows.map((row, index) => ({
       id: createSetupTestRecordId("standard-mission", row.shortTitle || row.name || index + 1),
       unitCode: cleanUnits[0]?.code || "",
-      name: row.name || `Standard event ${index + 1}`,
+      aircraftTypeCode: primaryAircraftCode,
+      missionName: row.name || `Currency event ${index + 1}`,
+      name: row.name || `Currency event ${index + 1}`,
       shortTitle: row.shortTitle || row.name || `EVT${index + 1}`,
       resourceType: row.resourceType || "Flight",
-      duration: Math.max(0, Number(row.duration) || 0),
-      preFlight: Math.max(0, Number(row.preFlight) || 0),
-      postFlight: Math.max(0, Number(row.postFlight) || 0),
+      durationMinutes: Math.max(1, Math.round(Number(row.duration) || 90)),
+      preFlightMinutes: Math.max(0, Math.round(Number(row.preFlight) || 0)),
+      postFlightMinutes: Math.max(0, Math.round(Number(row.postFlight) || 0)),
       crew: row.crew || "Standard crew",
       currency: row.currency || "",
       config: row.config || "ANY",
@@ -44216,11 +44212,7 @@ const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, lo
     }
     if (visibleStep.id === "currencies") {
       return promptShell(
-        /* @__PURE__ */ jsxRuntimeExports.jsxs("p", { children: [
-          "Create the ",
-          configuredContinuationCurrencyEventsLabel,
-          " records this unit will use. The full event setup can still be refined after setup, but these records give the unit useful request and build settings immediately."
-        ] }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx("p", { children: "Create the currency events used by your unit, such as general flying, instrument flying or other currency requirements. Set the full event details here once so they can be used when requesting and scheduling currency events." }),
         renderCurrencyEditor()
       );
     }
@@ -44268,12 +44260,6 @@ const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, lo
       return promptShell(
         /* @__PURE__ */ jsxRuntimeExports.jsx("p", { children: "Set up the wording instructors will use when grading training report assessment areas." }),
         renderScoringEditor()
-      );
-    }
-    if (visibleStep.id === "staff-currency-events") {
-      return promptShell(
-        /* @__PURE__ */ jsxRuntimeExports.jsx("p", { children: "Set up common Currency Training and currency event settings for this unit. These become reusable starting points for staff checks and currency events." }),
-        renderStandardCurrencyEventsEditor()
       );
     }
     if (visibleStep.id === "directed-task-setups") {
