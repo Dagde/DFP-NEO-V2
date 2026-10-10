@@ -833,6 +833,84 @@ export const InstructorProfileFlyout: React.FC<InstructorProfileFlyoutProps> = (
     normaliseAirCombatTrainingReports(instructor.preferences)
       .sort((left, right) => String(right.date || '').localeCompare(String(left.date || '')) || String(right.createdAt || '').localeCompare(String(left.createdAt || '')))
   ), [instructor.preferences]);
+  const [trainingReportCourseFilter, setTrainingReportCourseFilter] = useState('__current__');
+  const [trainingReportDateFrom, setTrainingReportDateFrom] = useState('');
+  const [trainingReportDateTo, setTrainingReportDateTo] = useState('');
+  const currentIncompleteTrainingSummary = useMemo(() => (
+    airCombatTrainingSummaries.find(summary => summary.totalCount > 0 && summary.completedCount < summary.totalCount)
+    || airCombatTrainingSummaries.find(summary => summary.totalCount === 0)
+    || null
+  ), [airCombatTrainingSummaries]);
+  const trainingReportFilterOptions = useMemo(() => {
+    const options = airCombatTrainingSummaries.map(summary => {
+      const reportDates = airCombatStoredTrainingReports
+        .filter(report => report.trainingKey === summary.assignment.trainingKey || normaliseTrainingCode(report.trainingCode) === normaliseTrainingCode(summary.assignment.code))
+        .map(report => String(report.date || '').trim())
+        .filter(Boolean)
+        .sort();
+      const dateLabel = reportDates.length > 0
+        ? `${reportDates[0]} to ${reportDates[reportDates.length - 1]}`
+        : summary.assignment.assignedAt
+          ? `assigned ${String(summary.assignment.assignedAt).slice(0, 10)}`
+          : 'no dates yet';
+      const statusLabel = summary.totalCount > 0 && summary.completedCount >= summary.totalCount ? 'complete' : 'current';
+      return {
+        key: `assignment:${summary.assignment.trainingKey}`,
+        code: summary.assignment.code,
+        title: summary.assignment.title,
+        label: `${summary.assignment.code} - ${summary.assignment.title} (${dateLabel}, ${statusLabel})`,
+        summary,
+      };
+    });
+    const assignedCodes = new Set(options.map(option => normaliseTrainingCode(option.code)));
+    const historicalGroups = new Map<string, AirCombatTrainingReport[]>();
+    airCombatStoredTrainingReports.forEach(report => {
+      const code = String(report.trainingCode || '').trim();
+      if (!code || assignedCodes.has(normaliseTrainingCode(code))) return;
+      const key = normaliseTrainingCode(code);
+      historicalGroups.set(key, [...(historicalGroups.get(key) || []), report]);
+    });
+    historicalGroups.forEach((reports, key) => {
+      const dates = reports.map(report => String(report.date || '').trim()).filter(Boolean).sort();
+      const first = reports[0];
+      const dateLabel = dates.length > 0 ? `${dates[0]} to ${dates[dates.length - 1]}` : 'no dates';
+      options.push({
+        key: `report:${key}`,
+        code: first.trainingCode || key,
+        title: first.trainingTitle || first.trainingCode || key,
+        label: `${first.trainingCode || key} - ${first.trainingTitle || 'Historical training'} (${dateLabel})`,
+        summary: null as any,
+      });
+    });
+    return options;
+  }, [airCombatStoredTrainingReports, airCombatTrainingSummaries]);
+  const activeTrainingReportCourseFilter = trainingReportCourseFilter === '__current__'
+    ? (currentIncompleteTrainingSummary ? `assignment:${currentIncompleteTrainingSummary.assignment.trainingKey}` : '__all__')
+    : trainingReportCourseFilter;
+  const filteredAirCombatStoredTrainingReports = useMemo(() => (
+    airCombatStoredTrainingReports.filter(report => {
+      if (activeTrainingReportCourseFilter.startsWith('assignment:')) {
+        const key = activeTrainingReportCourseFilter.replace('assignment:', '');
+        const summary = airCombatTrainingSummaries.find(item => item.assignment.trainingKey === key);
+        if (summary) {
+          const sequenceCodes = new Set(summary.sequenceItems.map(item => normaliseTrainingCode(item.code)));
+          const matchesAssignment = (
+            report.trainingKey === summary.assignment.trainingKey ||
+            normaliseTrainingCode(report.trainingCode) === normaliseTrainingCode(summary.assignment.code) ||
+            sequenceCodes.has(normaliseTrainingCode(report.eventCode))
+          );
+          if (!matchesAssignment) return false;
+        }
+      } else if (activeTrainingReportCourseFilter.startsWith('report:')) {
+        const code = activeTrainingReportCourseFilter.replace('report:', '');
+        if (normaliseTrainingCode(report.trainingCode) !== code) return false;
+      }
+      const reportDate = String(report.date || '').trim();
+      if (trainingReportDateFrom && (!reportDate || reportDate < trainingReportDateFrom)) return false;
+      if (trainingReportDateTo && (!reportDate || reportDate > trainingReportDateTo)) return false;
+      return true;
+    })
+  ), [activeTrainingReportCourseFilter, airCombatStoredTrainingReports, airCombatTrainingSummaries, trainingReportDateFrom, trainingReportDateTo]);
   const canShowStaffTrainingReports = isStaffTrainingReportModel || airCombatStoredTrainingReports.length > 0;
   const handleEditTrainingReport = useCallback((report: AirCombatTrainingReport) => {
     onEditTrainingReport?.(instructor, report);
@@ -1819,6 +1897,60 @@ export const InstructorProfileFlyout: React.FC<InstructorProfileFlyoutProps> = (
                   </div>
                   {canShowStaffTrainingReports ? (
                     <div className="space-y-3">
+                      <div className="rounded-lg border border-gray-700 bg-gray-900/55 p-3">
+                        <div className="grid gap-3 md:grid-cols-[minmax(260px,1fr)_150px_150px_auto]">
+                          <label className="text-[10px] font-bold uppercase tracking-wide text-gray-500">
+                            Course / Package
+                            <select
+                              value={trainingReportCourseFilter}
+                              onChange={(event) => setTrainingReportCourseFilter(event.target.value)}
+                              className="mt-1 block w-full rounded border border-gray-600 bg-gray-800 px-3 py-2 text-sm normal-case tracking-normal text-white focus:border-sky-500 focus:outline-none focus:ring-1 focus:ring-sky-500"
+                            >
+                              <option value="__current__">
+                                Current incomplete course/package{currentIncompleteTrainingSummary ? ` - ${currentIncompleteTrainingSummary.assignment.code}` : ' - none found'}
+                              </option>
+                              <option value="__all__">All report history</option>
+                              {trainingReportFilterOptions.map(option => (
+                                <option key={option.key} value={option.key}>{option.label}</option>
+                              ))}
+                            </select>
+                          </label>
+                          <label className="text-[10px] font-bold uppercase tracking-wide text-gray-500">
+                            From Date
+                            <input
+                              type="date"
+                              value={trainingReportDateFrom}
+                              onChange={(event) => setTrainingReportDateFrom(event.target.value)}
+                              className="mt-1 block w-full rounded border border-gray-600 bg-gray-800 px-3 py-2 text-sm normal-case tracking-normal text-white focus:border-sky-500 focus:outline-none focus:ring-1 focus:ring-sky-500"
+                            />
+                          </label>
+                          <label className="text-[10px] font-bold uppercase tracking-wide text-gray-500">
+                            To Date
+                            <input
+                              type="date"
+                              value={trainingReportDateTo}
+                              onChange={(event) => setTrainingReportDateTo(event.target.value)}
+                              className="mt-1 block w-full rounded border border-gray-600 bg-gray-800 px-3 py-2 text-sm normal-case tracking-normal text-white focus:border-sky-500 focus:outline-none focus:ring-1 focus:ring-sky-500"
+                            />
+                          </label>
+                          <div className="flex items-end">
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setTrainingReportCourseFilter('__current__');
+                                setTrainingReportDateFrom('');
+                                setTrainingReportDateTo('');
+                              }}
+                              className="h-[38px] w-full rounded-md btn-aluminium-brushed px-3 text-[10px] font-semibold text-gray-800"
+                            >
+                              Reset
+                            </button>
+                          </div>
+                        </div>
+                        <div className="mt-2 text-xs text-gray-500">
+                          Showing {filteredAirCombatStoredTrainingReports.length} of {airCombatStoredTrainingReports.length} reports.
+                        </div>
+                      </div>
                       <div className="grid grid-cols-3 gap-2">
                         <div className="rounded border border-gray-700 bg-gray-950/70 p-3">
                           <div className="text-[9px] font-bold uppercase tracking-wide text-gray-500">Assigned Training</div>
@@ -1826,7 +1958,7 @@ export const InstructorProfileFlyout: React.FC<InstructorProfileFlyoutProps> = (
                         </div>
                         <div className="rounded border border-gray-700 bg-gray-950/70 p-3">
                           <div className="text-[9px] font-bold uppercase tracking-wide text-gray-500">Report Records</div>
-                          <div className="mt-1 text-lg font-bold text-emerald-300">{airCombatStoredTrainingReports.length}</div>
+                          <div className="mt-1 text-lg font-bold text-emerald-300">{filteredAirCombatStoredTrainingReports.length}</div>
                         </div>
                         <div className="rounded border border-gray-700 bg-gray-950/70 p-3">
                           <div className="text-[9px] font-bold uppercase tracking-wide text-gray-500">Sequence Progress</div>
@@ -1849,7 +1981,7 @@ export const InstructorProfileFlyout: React.FC<InstructorProfileFlyoutProps> = (
                             </tr>
                           </thead>
                           <tbody className="divide-y divide-gray-700 bg-gray-800">
-                            {airCombatStoredTrainingReports.length > 0 ? airCombatStoredTrainingReports.map((report) => {
+                            {filteredAirCombatStoredTrainingReports.length > 0 ? filteredAirCombatStoredTrainingReports.map((report) => {
                               const isComplete = report.status === 'Complete';
                               return (
                                 <tr
@@ -1905,7 +2037,7 @@ export const InstructorProfileFlyout: React.FC<InstructorProfileFlyoutProps> = (
                             }) : (
                               <tr>
                                 <td colSpan={9} className="px-4 py-10 text-center text-sm text-gray-500">
-                                  No training reports saved for this staff member.
+                                  No training reports match the selected filters.
                                 </td>
                               </tr>
                             )}

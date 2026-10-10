@@ -50754,6 +50754,9 @@ const ALL_ELEMENTS$1 = TRAINING_REPORT_STRUCTURE$2.flatMap((cat) => cat.elements
 const HateSheetView = ({ trainee, lmpScores, assessments, pt051Events, traineeLmp = [], userProfile, refreshEvents, onSelectLmpScore, onSelectTrainingReport, onBackToRoster, onInsertTrainingReport, canEditTrainingReport = true, onAccessDenied, isLoading = false, trainingReportTerminology = DEFAULT_TRAINING_REPORT_TERMINOLOGY, trainingReportTemplate = null, instructorLabel: instructorLabel2 = "Instructor" }) => {
   const { isFrozen } = useSystemFreeze();
   const [localTrainingReportEvents, setLocalTrainingReportEvents] = reactExports.useState(pt051Events);
+  const [historyScopeFilter, setHistoryScopeFilter] = reactExports.useState("current");
+  const [historyDateFrom, setHistoryDateFrom] = reactExports.useState("");
+  const [historyDateTo, setHistoryDateTo] = reactExports.useState("");
   const reportTerminology = normaliseTrainingReportTerminology(trainingReportTerminology);
   const trainingReportName = reportTerminology.name;
   const reportTemplate = React.useMemo(
@@ -50766,7 +50769,7 @@ const HateSheetView = ({ trainee, lmpScores, assessments, pt051Events, traineeLm
     return new Map(options.map((option) => [option.code, option.label]));
   }, [reportTemplate]);
   const getMissionStatusDisplayLabel = (statusCode) => missionStatusLabelMap.get(statusCode) || statusCode;
-  const combinedHistory = React.useMemo(() => {
+  const unfilteredCombinedHistory = React.useMemo(() => {
     const completedAssessments = assessments.filter((assessment) => {
       const hasGrade = assessment.overallGrade !== null && assessment.overallGrade !== void 0;
       const hasResult = assessment.overallResult !== null && assessment.overallResult !== void 0;
@@ -50856,6 +50859,17 @@ const HateSheetView = ({ trainee, lmpScores, assessments, pt051Events, traineeLm
     });
     return combined;
   }, [lmpScores, assessments, traineeLmp]);
+  const currentCourseEventCodes = React.useMemo(() => new Set(traineeLmp.map((item) => String(item.code || "").replace(/\s+/g, "").toUpperCase()).filter(Boolean)), [traineeLmp]);
+  const combinedHistory = React.useMemo(() => unfilteredCombinedHistory.filter((item) => {
+    if (historyScopeFilter === "current" && currentCourseEventCodes.size > 0) {
+      const code = String(item.type === "LMP Score" ? item.event : item.flightNumber || "").replace(/\s+/g, "").toUpperCase();
+      if (!currentCourseEventCodes.has(code)) return false;
+    }
+    const itemDate = String(item.date || "").trim();
+    if (historyDateFrom && (!itemDate || itemDate < historyDateFrom)) return false;
+    if (historyDateTo && (!itemDate || itemDate > historyDateTo)) return false;
+    return true;
+  }), [currentCourseEventCodes, historyDateFrom, historyDateTo, historyScopeFilter, unfilteredCombinedHistory]);
   const getTypeDisplayLabel = (type) => type === "Training Report" ? trainingReportName : type;
   const getTypeDisplayTitle = (type) => type === "Training Report" ? trainingReportName : type;
   const getScoreDisplay = (item) => {
@@ -50966,57 +50980,125 @@ const HateSheetView = ({ trainee, lmpScores, assessments, pt051Events, traineeLm
     ] }),
     /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex-1 overflow-y-auto relative", children: [
       isFrozen && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "absolute inset-0 z-50 bg-transparent cursor-not-allowed", style: { pointerEvents: "all" } }),
-      /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "p-4 md:p-6 max-w-7xl mx-auto", children: /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "bg-gray-800 rounded-lg shadow-lg overflow-hidden border border-gray-700", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("table", { className: "min-w-full divide-y divide-gray-700", children: [
-        /* @__PURE__ */ jsxRuntimeExports.jsx("thead", { className: "bg-gray-700/50", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("tr", { children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsx("th", { scope: "col", className: "px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider", children: "Date" }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx("th", { scope: "col", className: "px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider", children: "Event" }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx("th", { scope: "col", className: "px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider", children: "Type" }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx("th", { scope: "col", className: "px-6 py-3 text-center text-xs font-medium text-gray-300 uppercase tracking-wider", children: "Status" }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx("th", { scope: "col", className: "px-6 py-3 text-center text-xs font-medium text-gray-300 uppercase tracking-wider", children: "Overall Score" }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx("th", { scope: "col", className: "px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider", children: reportAssessorLabel })
-        ] }) }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx("tbody", { className: "bg-gray-800 divide-y divide-gray-700", children: isLoading ? /* @__PURE__ */ jsxRuntimeExports.jsx("tr", { children: /* @__PURE__ */ jsxRuntimeExports.jsx("td", { colSpan: 6, className: "text-center py-14 text-gray-300", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex flex-col items-center justify-center gap-4", children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "h-10 w-10 rounded-full border-4 border-sky-500/25 border-t-sky-400 animate-spin" }),
-          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
-            /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-sm font-semibold text-white", children: "Loading performance history" }),
-            /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mt-1 text-xs text-gray-400", children: [
-              "Retrieving ",
-              trainingReportName,
-              " and LMP records..."
-            ] })
-          ] }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "h-1.5 w-56 overflow-hidden rounded-full bg-gray-700", children: /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "h-full w-1/2 rounded-full bg-sky-400 animate-pulse" }) })
-        ] }) }) }) : combinedHistory.length > 0 ? combinedHistory.map((item, index) => /* @__PURE__ */ jsxRuntimeExports.jsxs(
-          "tr",
-          {
-            onClick: () => handleRowClick(item),
-            className: "hover:bg-gray-700/50 transition-all duration-200 cursor-pointer",
-            children: [
-              /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "px-6 py-4 whitespace-nowrap text-sm text-gray-400", children: item.date }),
-              /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "px-6 py-4 whitespace-nowrap", children: /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "font-semibold text-sky-400", children: sanitizeUserFacingTerminology(item.type === "LMP Score" ? item.event : item.flightNumber) }) }),
-              /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "px-6 py-4 whitespace-nowrap", children: /* @__PURE__ */ jsxRuntimeExports.jsx(
-                "span",
+      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "p-4 md:p-6 max-w-7xl mx-auto", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mb-4 rounded-lg border border-gray-700 bg-gray-800/70 p-3", children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid gap-3 md:grid-cols-[minmax(260px,1fr)_150px_150px_auto]", children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "text-[10px] font-bold uppercase tracking-wide text-gray-500", children: [
+              "Course / Package",
+              /* @__PURE__ */ jsxRuntimeExports.jsxs(
+                "select",
                 {
-                  className: `max-w-32 truncate px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${item.type === "LMP Score" ? "bg-blue-500/20 text-blue-300" : "bg-green-500/20 text-green-300"}`,
-                  title: getTypeDisplayTitle(item.type),
-                  children: getTypeDisplayLabel(item.type)
+                  value: historyScopeFilter,
+                  onChange: (event) => setHistoryScopeFilter(event.target.value),
+                  className: "mt-1 block w-full rounded border border-gray-600 bg-gray-900 px-3 py-2 text-sm normal-case tracking-normal text-white focus:border-sky-500 focus:outline-none focus:ring-1 focus:ring-sky-500",
+                  children: [
+                    /* @__PURE__ */ jsxRuntimeExports.jsxs("option", { value: "current", children: [
+                      "Current course/package - ",
+                      trainee.course || trainee.lmpType || "current Individual LMP"
+                    ] }),
+                    /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "all", children: "All report history" })
+                  ]
                 }
-              ) }),
-              /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "px-6 py-4 whitespace-nowrap text-center", children: getStatusDisplay(item) }),
-              /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "px-6 py-4 whitespace-nowrap text-center", children: getScoreDisplay(item) }),
-              /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "px-6 py-4 whitespace-nowrap text-sm text-gray-300", children: item.type === "LMP Score" ? item.instructor : item.instructorName })
-            ]
-          },
-          index
-        )) : /* @__PURE__ */ jsxRuntimeExports.jsx("tr", { children: /* @__PURE__ */ jsxRuntimeExports.jsx(
-          "td",
-          {
-            colSpan: 6,
-            className: "text-center py-10 text-gray-500",
-            children: "No performance records for this trainee."
-          }
-        ) }) })
-      ] }) }) })
+              )
+            ] }),
+            /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "text-[10px] font-bold uppercase tracking-wide text-gray-500", children: [
+              "From Date",
+              /* @__PURE__ */ jsxRuntimeExports.jsx(
+                "input",
+                {
+                  type: "date",
+                  value: historyDateFrom,
+                  onChange: (event) => setHistoryDateFrom(event.target.value),
+                  className: "mt-1 block w-full rounded border border-gray-600 bg-gray-900 px-3 py-2 text-sm normal-case tracking-normal text-white focus:border-sky-500 focus:outline-none focus:ring-1 focus:ring-sky-500"
+                }
+              )
+            ] }),
+            /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "text-[10px] font-bold uppercase tracking-wide text-gray-500", children: [
+              "To Date",
+              /* @__PURE__ */ jsxRuntimeExports.jsx(
+                "input",
+                {
+                  type: "date",
+                  value: historyDateTo,
+                  onChange: (event) => setHistoryDateTo(event.target.value),
+                  className: "mt-1 block w-full rounded border border-gray-600 bg-gray-900 px-3 py-2 text-sm normal-case tracking-normal text-white focus:border-sky-500 focus:outline-none focus:ring-1 focus:ring-sky-500"
+                }
+              )
+            ] }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex items-end", children: /* @__PURE__ */ jsxRuntimeExports.jsx(
+              "button",
+              {
+                type: "button",
+                onClick: () => {
+                  setHistoryScopeFilter("current");
+                  setHistoryDateFrom("");
+                  setHistoryDateTo("");
+                },
+                className: "h-[38px] w-full rounded-md btn-aluminium-brushed px-3 text-[10px] font-semibold text-gray-800",
+                children: "Reset"
+              }
+            ) })
+          ] }),
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mt-2 text-xs text-gray-500", children: [
+            "Showing ",
+            combinedHistory.length,
+            " of ",
+            unfilteredCombinedHistory.length,
+            " records."
+          ] })
+        ] }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "bg-gray-800 rounded-lg shadow-lg overflow-hidden border border-gray-700", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("table", { className: "min-w-full divide-y divide-gray-700", children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsx("thead", { className: "bg-gray-700/50", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("tr", { children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx("th", { scope: "col", className: "px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider", children: "Date" }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("th", { scope: "col", className: "px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider", children: "Event" }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("th", { scope: "col", className: "px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider", children: "Type" }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("th", { scope: "col", className: "px-6 py-3 text-center text-xs font-medium text-gray-300 uppercase tracking-wider", children: "Status" }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("th", { scope: "col", className: "px-6 py-3 text-center text-xs font-medium text-gray-300 uppercase tracking-wider", children: "Overall Score" }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("th", { scope: "col", className: "px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider", children: reportAssessorLabel })
+          ] }) }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx("tbody", { className: "bg-gray-800 divide-y divide-gray-700", children: isLoading ? /* @__PURE__ */ jsxRuntimeExports.jsx("tr", { children: /* @__PURE__ */ jsxRuntimeExports.jsx("td", { colSpan: 6, className: "text-center py-14 text-gray-300", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex flex-col items-center justify-center gap-4", children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "h-10 w-10 rounded-full border-4 border-sky-500/25 border-t-sky-400 animate-spin" }),
+            /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-sm font-semibold text-white", children: "Loading performance history" }),
+              /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mt-1 text-xs text-gray-400", children: [
+                "Retrieving ",
+                trainingReportName,
+                " and LMP records..."
+              ] })
+            ] }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "h-1.5 w-56 overflow-hidden rounded-full bg-gray-700", children: /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "h-full w-1/2 rounded-full bg-sky-400 animate-pulse" }) })
+          ] }) }) }) : combinedHistory.length > 0 ? combinedHistory.map((item, index) => /* @__PURE__ */ jsxRuntimeExports.jsxs(
+            "tr",
+            {
+              onClick: () => handleRowClick(item),
+              className: "hover:bg-gray-700/50 transition-all duration-200 cursor-pointer",
+              children: [
+                /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "px-6 py-4 whitespace-nowrap text-sm text-gray-400", children: item.date }),
+                /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "px-6 py-4 whitespace-nowrap", children: /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "font-semibold text-sky-400", children: sanitizeUserFacingTerminology(item.type === "LMP Score" ? item.event : item.flightNumber) }) }),
+                /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "px-6 py-4 whitespace-nowrap", children: /* @__PURE__ */ jsxRuntimeExports.jsx(
+                  "span",
+                  {
+                    className: `max-w-32 truncate px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${item.type === "LMP Score" ? "bg-blue-500/20 text-blue-300" : "bg-green-500/20 text-green-300"}`,
+                    title: getTypeDisplayTitle(item.type),
+                    children: getTypeDisplayLabel(item.type)
+                  }
+                ) }),
+                /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "px-6 py-4 whitespace-nowrap text-center", children: getStatusDisplay(item) }),
+                /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "px-6 py-4 whitespace-nowrap text-center", children: getScoreDisplay(item) }),
+                /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "px-6 py-4 whitespace-nowrap text-sm text-gray-300", children: item.type === "LMP Score" ? item.instructor : item.instructorName })
+              ]
+            },
+            index
+          )) : /* @__PURE__ */ jsxRuntimeExports.jsx("tr", { children: /* @__PURE__ */ jsxRuntimeExports.jsx(
+            "td",
+            {
+              colSpan: 6,
+              className: "text-center py-10 text-gray-500",
+              children: "No performance records for this trainee."
+            }
+          ) }) })
+        ] }) })
+      ] })
     ] })
   ] });
 };
@@ -91082,6 +91164,64 @@ const InstructorProfileFlyout = ({
     item: summary.sequenceItems.find((item) => normaliseTrainingCode(item.code) === normaliseTrainingCode(event.flightNumber)) || null
   }))).sort((left, right) => getEventDateValue(right.event) - getEventDateValue(left.event) || Number(right.event.startTime || 0) - Number(left.event.startTime || 0)), [airCombatTrainingSummaries]);
   const airCombatStoredTrainingReports = reactExports.useMemo(() => normaliseAirCombatTrainingReports(instructor.preferences).sort((left, right) => String(right.date || "").localeCompare(String(left.date || "")) || String(right.createdAt || "").localeCompare(String(left.createdAt || ""))), [instructor.preferences]);
+  const [trainingReportCourseFilter, setTrainingReportCourseFilter] = reactExports.useState("__current__");
+  const [trainingReportDateFrom, setTrainingReportDateFrom] = reactExports.useState("");
+  const [trainingReportDateTo, setTrainingReportDateTo] = reactExports.useState("");
+  const currentIncompleteTrainingSummary = reactExports.useMemo(() => airCombatTrainingSummaries.find((summary) => summary.totalCount > 0 && summary.completedCount < summary.totalCount) || airCombatTrainingSummaries.find((summary) => summary.totalCount === 0) || null, [airCombatTrainingSummaries]);
+  const trainingReportFilterOptions = reactExports.useMemo(() => {
+    const options = airCombatTrainingSummaries.map((summary) => {
+      const reportDates = airCombatStoredTrainingReports.filter((report) => report.trainingKey === summary.assignment.trainingKey || normaliseTrainingCode(report.trainingCode) === normaliseTrainingCode(summary.assignment.code)).map((report) => String(report.date || "").trim()).filter(Boolean).sort();
+      const dateLabel2 = reportDates.length > 0 ? `${reportDates[0]} to ${reportDates[reportDates.length - 1]}` : summary.assignment.assignedAt ? `assigned ${String(summary.assignment.assignedAt).slice(0, 10)}` : "no dates yet";
+      const statusLabel = summary.totalCount > 0 && summary.completedCount >= summary.totalCount ? "complete" : "current";
+      return {
+        key: `assignment:${summary.assignment.trainingKey}`,
+        code: summary.assignment.code,
+        title: summary.assignment.title,
+        label: `${summary.assignment.code} - ${summary.assignment.title} (${dateLabel2}, ${statusLabel})`,
+        summary
+      };
+    });
+    const assignedCodes = new Set(options.map((option) => normaliseTrainingCode(option.code)));
+    const historicalGroups = /* @__PURE__ */ new Map();
+    airCombatStoredTrainingReports.forEach((report) => {
+      const code = String(report.trainingCode || "").trim();
+      if (!code || assignedCodes.has(normaliseTrainingCode(code))) return;
+      const key = normaliseTrainingCode(code);
+      historicalGroups.set(key, [...historicalGroups.get(key) || [], report]);
+    });
+    historicalGroups.forEach((reports, key) => {
+      const dates = reports.map((report) => String(report.date || "").trim()).filter(Boolean).sort();
+      const first2 = reports[0];
+      const dateLabel2 = dates.length > 0 ? `${dates[0]} to ${dates[dates.length - 1]}` : "no dates";
+      options.push({
+        key: `report:${key}`,
+        code: first2.trainingCode || key,
+        title: first2.trainingTitle || first2.trainingCode || key,
+        label: `${first2.trainingCode || key} - ${first2.trainingTitle || "Historical training"} (${dateLabel2})`,
+        summary: null
+      });
+    });
+    return options;
+  }, [airCombatStoredTrainingReports, airCombatTrainingSummaries]);
+  const activeTrainingReportCourseFilter = trainingReportCourseFilter === "__current__" ? currentIncompleteTrainingSummary ? `assignment:${currentIncompleteTrainingSummary.assignment.trainingKey}` : "__all__" : trainingReportCourseFilter;
+  const filteredAirCombatStoredTrainingReports = reactExports.useMemo(() => airCombatStoredTrainingReports.filter((report) => {
+    if (activeTrainingReportCourseFilter.startsWith("assignment:")) {
+      const key = activeTrainingReportCourseFilter.replace("assignment:", "");
+      const summary = airCombatTrainingSummaries.find((item) => item.assignment.trainingKey === key);
+      if (summary) {
+        const sequenceCodes = new Set(summary.sequenceItems.map((item) => normaliseTrainingCode(item.code)));
+        const matchesAssignment = report.trainingKey === summary.assignment.trainingKey || normaliseTrainingCode(report.trainingCode) === normaliseTrainingCode(summary.assignment.code) || sequenceCodes.has(normaliseTrainingCode(report.eventCode));
+        if (!matchesAssignment) return false;
+      }
+    } else if (activeTrainingReportCourseFilter.startsWith("report:")) {
+      const code = activeTrainingReportCourseFilter.replace("report:", "");
+      if (normaliseTrainingCode(report.trainingCode) !== code) return false;
+    }
+    const reportDate = String(report.date || "").trim();
+    if (trainingReportDateFrom && (!reportDate || reportDate < trainingReportDateFrom)) return false;
+    if (trainingReportDateTo && (!reportDate || reportDate > trainingReportDateTo)) return false;
+    return true;
+  }), [activeTrainingReportCourseFilter, airCombatStoredTrainingReports, airCombatTrainingSummaries, trainingReportDateFrom, trainingReportDateTo]);
   const canShowStaffTrainingReports = isStaffTrainingReportModel || airCombatStoredTrainingReports.length > 0;
   const handleEditTrainingReport = reactExports.useCallback((report) => {
     onEditTrainingReport?.(instructor, report);
@@ -92056,6 +92196,73 @@ Confirm the Personnel ID, unit and role are correct before saving this separate 
               ] })
             ] }),
             canShowStaffTrainingReports ? /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-3", children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded-lg border border-gray-700 bg-gray-900/55 p-3", children: [
+                /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid gap-3 md:grid-cols-[minmax(260px,1fr)_150px_150px_auto]", children: [
+                  /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "text-[10px] font-bold uppercase tracking-wide text-gray-500", children: [
+                    "Course / Package",
+                    /* @__PURE__ */ jsxRuntimeExports.jsxs(
+                      "select",
+                      {
+                        value: trainingReportCourseFilter,
+                        onChange: (event) => setTrainingReportCourseFilter(event.target.value),
+                        className: "mt-1 block w-full rounded border border-gray-600 bg-gray-800 px-3 py-2 text-sm normal-case tracking-normal text-white focus:border-sky-500 focus:outline-none focus:ring-1 focus:ring-sky-500",
+                        children: [
+                          /* @__PURE__ */ jsxRuntimeExports.jsxs("option", { value: "__current__", children: [
+                            "Current incomplete course/package",
+                            currentIncompleteTrainingSummary ? ` - ${currentIncompleteTrainingSummary.assignment.code}` : " - none found"
+                          ] }),
+                          /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "__all__", children: "All report history" }),
+                          trainingReportFilterOptions.map((option) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: option.key, children: option.label }, option.key))
+                        ]
+                      }
+                    )
+                  ] }),
+                  /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "text-[10px] font-bold uppercase tracking-wide text-gray-500", children: [
+                    "From Date",
+                    /* @__PURE__ */ jsxRuntimeExports.jsx(
+                      "input",
+                      {
+                        type: "date",
+                        value: trainingReportDateFrom,
+                        onChange: (event) => setTrainingReportDateFrom(event.target.value),
+                        className: "mt-1 block w-full rounded border border-gray-600 bg-gray-800 px-3 py-2 text-sm normal-case tracking-normal text-white focus:border-sky-500 focus:outline-none focus:ring-1 focus:ring-sky-500"
+                      }
+                    )
+                  ] }),
+                  /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "text-[10px] font-bold uppercase tracking-wide text-gray-500", children: [
+                    "To Date",
+                    /* @__PURE__ */ jsxRuntimeExports.jsx(
+                      "input",
+                      {
+                        type: "date",
+                        value: trainingReportDateTo,
+                        onChange: (event) => setTrainingReportDateTo(event.target.value),
+                        className: "mt-1 block w-full rounded border border-gray-600 bg-gray-800 px-3 py-2 text-sm normal-case tracking-normal text-white focus:border-sky-500 focus:outline-none focus:ring-1 focus:ring-sky-500"
+                      }
+                    )
+                  ] }),
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex items-end", children: /* @__PURE__ */ jsxRuntimeExports.jsx(
+                    "button",
+                    {
+                      type: "button",
+                      onClick: () => {
+                        setTrainingReportCourseFilter("__current__");
+                        setTrainingReportDateFrom("");
+                        setTrainingReportDateTo("");
+                      },
+                      className: "h-[38px] w-full rounded-md btn-aluminium-brushed px-3 text-[10px] font-semibold text-gray-800",
+                      children: "Reset"
+                    }
+                  ) })
+                ] }),
+                /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mt-2 text-xs text-gray-500", children: [
+                  "Showing ",
+                  filteredAirCombatStoredTrainingReports.length,
+                  " of ",
+                  airCombatStoredTrainingReports.length,
+                  " reports."
+                ] })
+              ] }),
               /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid grid-cols-3 gap-2", children: [
                 /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded border border-gray-700 bg-gray-950/70 p-3", children: [
                   /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-[9px] font-bold uppercase tracking-wide text-gray-500", children: "Assigned Training" }),
@@ -92063,7 +92270,7 @@ Confirm the Personnel ID, unit and role are correct before saving this separate 
                 ] }),
                 /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded border border-gray-700 bg-gray-950/70 p-3", children: [
                   /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-[9px] font-bold uppercase tracking-wide text-gray-500", children: "Report Records" }),
-                  /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-1 text-lg font-bold text-emerald-300", children: airCombatStoredTrainingReports.length })
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-1 text-lg font-bold text-emerald-300", children: filteredAirCombatStoredTrainingReports.length })
                 ] }),
                 /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded border border-gray-700 bg-gray-950/70 p-3", children: [
                   /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-[9px] font-bold uppercase tracking-wide text-gray-500", children: "Sequence Progress" }),
@@ -92086,7 +92293,7 @@ Confirm the Personnel ID, unit and role are correct before saving this separate 
                   /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "px-4 py-2 text-right text-[10px] font-bold uppercase tracking-wide text-gray-300", children: "Edit" }),
                   /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "px-4 py-2 text-right text-[10px] font-bold uppercase tracking-wide text-gray-300", children: "Delete" })
                 ] }) }),
-                /* @__PURE__ */ jsxRuntimeExports.jsx("tbody", { className: "divide-y divide-gray-700 bg-gray-800", children: airCombatStoredTrainingReports.length > 0 ? airCombatStoredTrainingReports.map((report) => {
+                /* @__PURE__ */ jsxRuntimeExports.jsx("tbody", { className: "divide-y divide-gray-700 bg-gray-800", children: filteredAirCombatStoredTrainingReports.length > 0 ? filteredAirCombatStoredTrainingReports.map((report) => {
                   const isComplete = report.status === "Complete";
                   return /* @__PURE__ */ jsxRuntimeExports.jsxs(
                     "tr",
@@ -92137,7 +92344,7 @@ Confirm the Personnel ID, unit and role are correct before saving this separate 
                     },
                     report.id
                   );
-                }) : /* @__PURE__ */ jsxRuntimeExports.jsx("tr", { children: /* @__PURE__ */ jsxRuntimeExports.jsx("td", { colSpan: 9, className: "px-4 py-10 text-center text-sm text-gray-500", children: "No training reports saved for this staff member." }) }) })
+                }) : /* @__PURE__ */ jsxRuntimeExports.jsx("tr", { children: /* @__PURE__ */ jsxRuntimeExports.jsx("td", { colSpan: 9, className: "px-4 py-10 text-center text-sm text-gray-500", children: "No training reports match the selected filters." }) }) })
               ] }) })
             ] }) : /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "rounded border border-gray-700 bg-gray-900/50 p-3 text-xs text-gray-400", children: "Staff training reports are not configured for this operational model." })
           ] }),

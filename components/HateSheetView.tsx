@@ -53,6 +53,9 @@ interface HateSheetViewProps {
 const HateSheetView: React.FC<HateSheetViewProps> = ({ trainee, lmpScores, assessments, pt051Events, traineeLmp = [], userProfile, refreshEvents, onSelectLmpScore, onSelectTrainingReport, onBackToRoster, onInsertTrainingReport, canEditTrainingReport = true, onAccessDenied, isLoading = false, trainingReportTerminology = DEFAULT_TRAINING_REPORT_TERMINOLOGY, trainingReportTemplate = null, instructorLabel = 'Instructor' }) => {
     const { isFrozen } = useSystemFreeze();
     const [localTrainingReportEvents, setLocalTrainingReportEvents] = useState(pt051Events);
+    const [historyScopeFilter, setHistoryScopeFilter] = useState<'current' | 'all'>('current');
+    const [historyDateFrom, setHistoryDateFrom] = useState('');
+    const [historyDateTo, setHistoryDateTo] = useState('');
     const reportTerminology = normaliseTrainingReportTerminology(trainingReportTerminology);
     const trainingReportName = reportTerminology.name;
     const reportTemplate = React.useMemo(
@@ -76,7 +79,7 @@ const HateSheetView: React.FC<HateSheetViewProps> = ({ trainee, lmpScores, asses
         const day = String(date.getDate()).padStart(2, '0');
         return `${year}-${month}-${day}`;
     };
-       const combinedHistory = React.useMemo(() => {
+       const unfilteredCombinedHistory = React.useMemo(() => {
            // FIX: Add 'as const' to create a discriminated union for type-safe property access.
            // Filter out placeholder/empty report records - only show records with actual assessment data OR date+instructor
               // NOTE: isCompleted alone is NOT sufficient - historical seed records have isCompleted=true with no actual data
@@ -203,6 +206,25 @@ const HateSheetView: React.FC<HateSheetViewProps> = ({ trainee, lmpScores, asses
            
            return combined;
        }, [lmpScores, assessments, traineeLmp]);
+
+    const currentCourseEventCodes = React.useMemo(() => (
+        new Set(traineeLmp.map(item => String(item.code || '').replace(/\s+/g, '').toUpperCase()).filter(Boolean))
+    ), [traineeLmp]);
+
+    const combinedHistory = React.useMemo(() => (
+        unfilteredCombinedHistory.filter(item => {
+            if (historyScopeFilter === 'current' && currentCourseEventCodes.size > 0) {
+                const code = String(item.type === 'LMP Score' ? item.event : item.flightNumber || '')
+                    .replace(/\s+/g, '')
+                    .toUpperCase();
+                if (!currentCourseEventCodes.has(code)) return false;
+            }
+            const itemDate = String(item.date || '').trim();
+            if (historyDateFrom && (!itemDate || itemDate < historyDateFrom)) return false;
+            if (historyDateTo && (!itemDate || itemDate > historyDateTo)) return false;
+            return true;
+        })
+    ), [currentCourseEventCodes, historyDateFrom, historyDateTo, historyScopeFilter, unfilteredCombinedHistory]);
 
     const getTypeDisplayLabel = (type: 'LMP Score' | 'Training Report') => (
         type === 'Training Report' ? trainingReportName : type
@@ -424,6 +446,57 @@ const HateSheetView: React.FC<HateSheetViewProps> = ({ trainee, lmpScores, asses
                     <div className="absolute inset-0 z-50 bg-transparent cursor-not-allowed" style={{pointerEvents: 'all'}} />
                 )}
                 <div className="p-4 md:p-6 max-w-7xl mx-auto">
+                    <div className="mb-4 rounded-lg border border-gray-700 bg-gray-800/70 p-3">
+                        <div className="grid gap-3 md:grid-cols-[minmax(260px,1fr)_150px_150px_auto]">
+                            <label className="text-[10px] font-bold uppercase tracking-wide text-gray-500">
+                                Course / Package
+                                <select
+                                    value={historyScopeFilter}
+                                    onChange={(event) => setHistoryScopeFilter(event.target.value as 'current' | 'all')}
+                                    className="mt-1 block w-full rounded border border-gray-600 bg-gray-900 px-3 py-2 text-sm normal-case tracking-normal text-white focus:border-sky-500 focus:outline-none focus:ring-1 focus:ring-sky-500"
+                                >
+                                    <option value="current">
+                                        Current course/package - {trainee.course || trainee.lmpType || 'current Individual LMP'}
+                                    </option>
+                                    <option value="all">All report history</option>
+                                </select>
+                            </label>
+                            <label className="text-[10px] font-bold uppercase tracking-wide text-gray-500">
+                                From Date
+                                <input
+                                    type="date"
+                                    value={historyDateFrom}
+                                    onChange={(event) => setHistoryDateFrom(event.target.value)}
+                                    className="mt-1 block w-full rounded border border-gray-600 bg-gray-900 px-3 py-2 text-sm normal-case tracking-normal text-white focus:border-sky-500 focus:outline-none focus:ring-1 focus:ring-sky-500"
+                                />
+                            </label>
+                            <label className="text-[10px] font-bold uppercase tracking-wide text-gray-500">
+                                To Date
+                                <input
+                                    type="date"
+                                    value={historyDateTo}
+                                    onChange={(event) => setHistoryDateTo(event.target.value)}
+                                    className="mt-1 block w-full rounded border border-gray-600 bg-gray-900 px-3 py-2 text-sm normal-case tracking-normal text-white focus:border-sky-500 focus:outline-none focus:ring-1 focus:ring-sky-500"
+                                />
+                            </label>
+                            <div className="flex items-end">
+                                <button
+                                    type="button"
+                                    onClick={() => {
+                                        setHistoryScopeFilter('current');
+                                        setHistoryDateFrom('');
+                                        setHistoryDateTo('');
+                                    }}
+                                    className="h-[38px] w-full rounded-md btn-aluminium-brushed px-3 text-[10px] font-semibold text-gray-800"
+                                >
+                                    Reset
+                                </button>
+                            </div>
+                        </div>
+                        <div className="mt-2 text-xs text-gray-500">
+                            Showing {combinedHistory.length} of {unfilteredCombinedHistory.length} records.
+                        </div>
+                    </div>
                     <div className="bg-gray-800 rounded-lg shadow-lg overflow-hidden border border-gray-700">
                         <table className="min-w-full divide-y divide-gray-700">
                             <thead className="bg-gray-700/50">
