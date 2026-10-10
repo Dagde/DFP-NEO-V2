@@ -832,6 +832,7 @@ export const InstructorProfileFlyout: React.FC<InstructorProfileFlyoutProps> = (
     normaliseAirCombatTrainingReports(instructor.preferences)
       .sort((left, right) => String(right.date || '').localeCompare(String(left.date || '')) || String(right.createdAt || '').localeCompare(String(left.createdAt || '')))
   ), [instructor.preferences]);
+  const canShowStaffTrainingReports = isStaffTrainingReportModel || airCombatStoredTrainingReports.length > 0;
   const handleDeleteTrainingReport = useCallback(async (report: AirCombatTrainingReport) => {
     const password = await showDarkPrompt({
       title: 'Delete Training Report',
@@ -1812,7 +1813,7 @@ export const InstructorProfileFlyout: React.FC<InstructorProfileFlyoutProps> = (
                       <button onClick={() => setActiveTab(null)} className={airCombatPanelButtonClass}>Close</button>
                     </div>
                   </div>
-                  {isStaffTrainingReportModel ? (
+                  {canShowStaffTrainingReports ? (
                     <div className="space-y-3">
                       <div className="grid grid-cols-3 gap-2">
                         <div className="rounded border border-gray-700 bg-gray-950/70 p-3">
