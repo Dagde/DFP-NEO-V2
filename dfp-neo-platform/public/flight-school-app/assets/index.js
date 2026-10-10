@@ -151953,6 +151953,7 @@ ${error instanceof Error ? error.message : String(error)}`,
       return next;
     });
     setAirCombatTrainingReportDraft(null);
+    setProfileInitialTab("trainingReports");
     setSelectedPersonForProfile(updatedStaff);
     appendTrainingReportFollowUpDiag("app:save-state-updated", {
       reportId: reportForSave.id,
@@ -151960,7 +151961,8 @@ ${error instanceof Error ? error.message : String(error)}`,
       staffIdNumber: updatedStaff.idNumber,
       savedReport: updatedReports.find((existing) => existing.id === reportForSave.id) || null,
       selectedProfileReportCount: normaliseAirCombatTrainingReports(updatedStaff.preferences).length,
-      selectedProfileHasReport: normaliseAirCombatTrainingReports(updatedStaff.preferences).some((existing) => existing.id === reportForSave.id)
+      selectedProfileHasReport: normaliseAirCombatTrainingReports(updatedStaff.preferences).some((existing) => existing.id === reportForSave.id),
+      requestedProfileInitialTab: "trainingReports"
     });
     logAudit(
       "Air Combat Training Reports",

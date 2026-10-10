@@ -41530,6 +41530,7 @@ const App: React.FC = () => {
             return next;
         });
         setAirCombatTrainingReportDraft(null);
+        setProfileInitialTab('trainingReports');
         setSelectedPersonForProfile(updatedStaff);
         appendTrainingReportFollowUpDiag('app:save-state-updated', {
             reportId: reportForSave.id,
@@ -41538,6 +41539,7 @@ const App: React.FC = () => {
             savedReport: updatedReports.find(existing => existing.id === reportForSave.id) || null,
             selectedProfileReportCount: normaliseAirCombatTrainingReports(updatedStaff.preferences).length,
             selectedProfileHasReport: normaliseAirCombatTrainingReports(updatedStaff.preferences).some(existing => existing.id === reportForSave.id),
+            requestedProfileInitialTab: 'trainingReports',
         });
         logAudit(
             'Air Combat Training Reports',
