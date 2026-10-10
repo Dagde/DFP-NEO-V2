@@ -41052,7 +41052,7 @@ const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, lo
         wizardField("CONFIG", row.config || "ANY", (value) => updateRow(index, "config", value), configOptions, "ANY"),
         wizardField("Currency", row.currency || "", (value) => updateRow(index, "currency", value), void 0, "PIC Currency"),
         wizardField("No. aircraft", row.aircraftCount || "", (value) => updateRow(index, "aircraftCount", value), void 0, "1"),
-        /* @__PURE__ */ jsxRuntimeExports.jsx("button", { type: "button", className: "rounded-md border border-red-400/50 bg-red-500/10 px-3 py-2 text-xs font-bold text-red-700 shadow-sm transition hover:border-red-500 hover:bg-red-500/15 hover:text-red-800", onClick: () => updateCurrencyDraft(formatWizardCurrencyRows(editableRows.filter((_, rowIndex) => rowIndex !== index))), children: "Delete" })
+        /* @__PURE__ */ jsxRuntimeExports.jsx("button", { type: "button", className: "w-16 justify-self-end rounded-md border border-red-400/50 bg-red-500/10 px-3 py-2 text-xs font-bold text-red-700 shadow-sm transition hover:border-red-500 hover:bg-red-500/15 hover:text-red-800 md:col-start-2 xl:col-start-3", onClick: () => updateCurrencyDraft(formatWizardCurrencyRows(editableRows.filter((_, rowIndex) => rowIndex !== index))), children: "Delete" })
       ] }, `currency-row-${index}`)),
       /* @__PURE__ */ jsxRuntimeExports.jsx("button", { type: "button", className: wizardSmallButtonClass, onClick: () => updateCurrencyDraft(formatWizardCurrencyRows([...editableRows, { name: "", code: "", crew: "", config: "", currency: "", aircraftCount: "" }])), children: "Add currency" })
     ] });
