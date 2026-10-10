@@ -29,7 +29,7 @@ import {
   normaliseOperationalModel,
   type PlatformConfig,
 } from '../utils/platformConfigService';
-import { appendTrainingReportFollowUpDiag, normaliseAirCombatTrainingAssignments, normaliseAirCombatTrainingReports } from '../utils/airCombatTraining';
+import { appendTrainingReportFollowUpDiag, downloadTrainingReportFollowUpDiag, normaliseAirCombatTrainingAssignments, normaliseAirCombatTrainingReports } from '../utils/airCombatTraining';
 import { normaliseFlightSchoolStaffLmpAssignments } from '../utils/flightSchoolStaffLmpAssignments';
 import { type InsertEventTypeConfig } from '../utils/insertEventTypes';
 import { type AircraftConfigurationDefinition } from '../utils/aircraftConfigurationSettings';
@@ -1792,6 +1792,22 @@ export const InstructorProfileFlyout: React.FC<InstructorProfileFlyoutProps> = (
                     </div>
                     <div className="flex items-center gap-px">
                       <button type="button" onClick={() => onAddTrainingReport?.(instructor)} className={airCombatPanelButtonClass}>Add<br />Training<br />Report</button>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          appendTrainingReportFollowUpDiag('profile:trace-download-clicked', {
+                            staffName: instructor.name,
+                            staffIdNumber: instructor.idNumber,
+                            dbId: (instructor as any).id || null,
+                            reportCount: airCombatStoredTrainingReports.length,
+                            reportIds: airCombatStoredTrainingReports.map(report => report.id).slice(0, 20),
+                          });
+                          downloadTrainingReportFollowUpDiag();
+                        }}
+                        className={airCombatPanelButtonClass}
+                      >
+                        Trace
+                      </button>
                       <AuditButton pageName="Air Combat Training Reports" />
                       <button onClick={() => setActiveTab(null)} className={airCombatPanelButtonClass}>Close</button>
                     </div>

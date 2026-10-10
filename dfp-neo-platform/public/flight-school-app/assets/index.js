@@ -91952,6 +91952,24 @@ Confirm the Personnel ID, unit and role are correct before saving this separate 
                   /* @__PURE__ */ jsxRuntimeExports.jsx("br", {}),
                   "Report"
                 ] }),
+                /* @__PURE__ */ jsxRuntimeExports.jsx(
+                  "button",
+                  {
+                    type: "button",
+                    onClick: () => {
+                      appendTrainingReportFollowUpDiag("profile:trace-download-clicked", {
+                        staffName: instructor.name,
+                        staffIdNumber: instructor.idNumber,
+                        dbId: instructor.id || null,
+                        reportCount: airCombatStoredTrainingReports.length,
+                        reportIds: airCombatStoredTrainingReports.map((report) => report.id).slice(0, 20)
+                      });
+                      downloadTrainingReportFollowUpDiag();
+                    },
+                    className: airCombatPanelButtonClass,
+                    children: "Trace"
+                  }
+                ),
                 /* @__PURE__ */ jsxRuntimeExports.jsx(AuditButton, { pageName: "Air Combat Training Reports" }),
                 /* @__PURE__ */ jsxRuntimeExports.jsx("button", { onClick: () => setActiveTab(null), className: airCombatPanelButtonClass, children: "Close" })
               ] })
