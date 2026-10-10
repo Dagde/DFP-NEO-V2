@@ -101214,10 +101214,16 @@ const AirCombatTrainingReportModal = ({
       setIsSaving(false);
     }
   };
-  const requestClose = () => {
+  const requestClose = async () => {
     if (isSaving2) return;
     if (saveStatus === "Unsaved") {
-      const shouldLeave = window.confirm("This training report has unsaved changes. Leave without saving?");
+      const shouldLeave = await showDarkConfirm(
+        "This training report has unsaved changes. Leave without saving?",
+        "Unsaved Training Report",
+        "warning",
+        "Leave",
+        "Stay"
+      );
       if (!shouldLeave) return;
     }
     onCancel();

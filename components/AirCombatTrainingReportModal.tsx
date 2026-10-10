@@ -10,6 +10,7 @@ import {
 import { appendTrainingReportFollowUpDiag, downloadTrainingReportFollowUpDiag, getAirCombatAssignmentFromItem } from '../utils/airCombatTraining';
 import { handleEditableTextBeforeInput, handleEditableTextKeyDownCapture, stopEditableKeyPropagation } from '../utils/editableKeyEvents';
 import { getConfiguredScoringMatrixElements } from '../utils/scoringMatrixElements';
+import { showDarkConfirm } from './DarkMessageModal';
 
 interface AirCombatTrainingReportModalProps {
   staff: Instructor;
@@ -846,10 +847,16 @@ export const AirCombatTrainingReportModal: React.FC<AirCombatTrainingReportModal
     }
   };
 
-  const requestClose = () => {
+  const requestClose = async () => {
     if (isSaving) return;
     if (saveStatus === 'Unsaved') {
-      const shouldLeave = window.confirm('This training report has unsaved changes. Leave without saving?');
+      const shouldLeave = await showDarkConfirm(
+        'This training report has unsaved changes. Leave without saving?',
+        'Unsaved Training Report',
+        'warning',
+        'Leave',
+        'Stay',
+      );
       if (!shouldLeave) return;
     }
     onCancel();
