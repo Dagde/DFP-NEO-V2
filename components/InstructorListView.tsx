@@ -1,6 +1,6 @@
 
 import React, { useState, useMemo, useEffect, useRef, useCallback } from 'react';
-import { ScheduleEvent, Instructor, Trainee, MasterCurrency, CurrencyRequirement, SyllabusItemDetail, AirCombatTrainingAssignment, SctRequest } from '../types';
+import { ScheduleEvent, Instructor, Trainee, MasterCurrency, CurrencyRequirement, SyllabusItemDetail, AirCombatTrainingAssignment, AirCombatTrainingReport, SctRequest } from '../types';
 import FlightInfoFlyout from './FlightInfoFlyout';
 // FIX: Corrected import path for the InstructorProfileFlyout component.
 import { InstructorProfileFlyout } from './InstructorProfileFlyout';
@@ -162,6 +162,7 @@ interface InstructorListViewProps {
     item: SyllabusItemDetail,
   ) => Promise<void> | void;
   onAddTrainingReport?: (staff: Instructor) => void;
+  onEditTrainingReport?: (staff: Instructor, report: AirCombatTrainingReport) => void;
   school: string;
   personnelData: Map<string, { callsignPrefix: string; callsignNumber: number; callsign?: string }>;
   onUpdateInstructor: (data: Instructor) => void | Promise<void>;
@@ -223,6 +224,7 @@ const InstructorListView: React.FC<InstructorListViewProps> = ({
     onUpdateAirCombatTrainingEvent,
     onGenerateAirCombatTrainingReport,
     onAddTrainingReport,
+    onEditTrainingReport,
     school,
     personnelData,
     onUpdateInstructor,
@@ -1095,6 +1097,7 @@ const InstructorListView: React.FC<InstructorListViewProps> = ({
                     onUpdateAirCombatTrainingEvent={onUpdateAirCombatTrainingEvent}
                     onGenerateAirCombatTrainingReport={onGenerateAirCombatTrainingReport}
                     onAddTrainingReport={onAddTrainingReport}
+                    onEditTrainingReport={onEditTrainingReport}
                     onViewLogbook={onViewLogbook}
                     onRequestSct={() => {
                         if (onRequestSct) {

@@ -128,6 +128,7 @@ interface InstructorProfileFlyoutProps {
     item: SyllabusItemDetail,
   ) => Promise<void> | void;
   onAddTrainingReport?: (staff: Instructor) => void;
+  onEditTrainingReport?: (staff: Instructor, report: AirCombatTrainingReport) => void;
   onViewLogbook?: (person: Instructor) => void;
   onRequestSct: (instructor: Instructor) => void;
   sctRequests?: SctRequest[];
@@ -382,7 +383,7 @@ export const InstructorProfileFlyout: React.FC<InstructorProfileFlyoutProps> = (
   onNavigateToCurrency, originRect, isClosing, isCreating = false,
   locations, units, instructorsData = [], traineesData, events = [], scheduleHistoryEvents = [], syllabusDetails = [],
   insertEventTypes = [], aircraftConfigurations = [],
-  onInsertAirCombatTrainingEvent, onUpdateAirCombatTrainingEvent, onGenerateAirCombatTrainingReport, onAddTrainingReport,
+  onInsertAirCombatTrainingEvent, onUpdateAirCombatTrainingEvent, onGenerateAirCombatTrainingReport, onAddTrainingReport, onEditTrainingReport,
   onViewLogbook, onRequestSct, sctRequests = [], onPatchSctRequest, onCancelSctRequest, onNavigateToTrainee,
   masterCurrencies = [], currencyRequirements = [],
   profileInitialTab, onProfileTabConsumed,
@@ -833,6 +834,9 @@ export const InstructorProfileFlyout: React.FC<InstructorProfileFlyoutProps> = (
       .sort((left, right) => String(right.date || '').localeCompare(String(left.date || '')) || String(right.createdAt || '').localeCompare(String(left.createdAt || '')))
   ), [instructor.preferences]);
   const canShowStaffTrainingReports = isStaffTrainingReportModel || airCombatStoredTrainingReports.length > 0;
+  const handleEditTrainingReport = useCallback((report: AirCombatTrainingReport) => {
+    onEditTrainingReport?.(instructor, report);
+  }, [instructor, onEditTrainingReport]);
   const handleDeleteTrainingReport = useCallback(async (report: AirCombatTrainingReport) => {
     const password = await showDarkPrompt({
       title: 'Delete Training Report',
@@ -1840,6 +1844,7 @@ export const InstructorProfileFlyout: React.FC<InstructorProfileFlyoutProps> = (
                               <th className="px-4 py-2 text-center text-[10px] font-bold uppercase tracking-wide text-gray-300">{trainingReportStatusFieldLabel}</th>
                               <th className="px-4 py-2 text-left text-[10px] font-bold uppercase tracking-wide text-gray-300">{instructorLabel}</th>
                               <th className="px-4 py-2 text-left text-[10px] font-bold uppercase tracking-wide text-gray-300">Unit</th>
+                              <th className="px-4 py-2 text-right text-[10px] font-bold uppercase tracking-wide text-gray-300">Edit</th>
                               <th className="px-4 py-2 text-right text-[10px] font-bold uppercase tracking-wide text-gray-300">Delete</th>
                             </tr>
                           </thead>
@@ -1847,7 +1852,15 @@ export const InstructorProfileFlyout: React.FC<InstructorProfileFlyoutProps> = (
                             {airCombatStoredTrainingReports.length > 0 ? airCombatStoredTrainingReports.map((report) => {
                               const isComplete = report.status === 'Complete';
                               return (
-                                <tr key={report.id} className="hover:bg-gray-700/50">
+                                <tr
+                                  key={report.id}
+                                  onContextMenu={(event) => {
+                                    event.preventDefault();
+                                    handleEditTrainingReport(report);
+                                  }}
+                                  title="Right-click to edit this training report"
+                                  className="cursor-context-menu hover:bg-gray-700/50"
+                                >
                                   <td className="whitespace-nowrap px-4 py-2 text-xs text-gray-400">{report.date || '-'}</td>
                                   <td className="whitespace-nowrap px-4 py-2">
                                     <div className="text-xs font-bold text-sky-300">{report.eventCode}</div>
@@ -1872,6 +1885,15 @@ export const InstructorProfileFlyout: React.FC<InstructorProfileFlyoutProps> = (
                                   <td className="whitespace-nowrap px-4 py-2 text-right">
                                     <button
                                       type="button"
+                                      onClick={() => handleEditTrainingReport(report)}
+                                      className="h-7 min-w-[54px] rounded-md btn-aluminium-brushed px-2 text-[10px] font-semibold text-sky-700"
+                                    >
+                                      Edit
+                                    </button>
+                                  </td>
+                                  <td className="whitespace-nowrap px-4 py-2 text-right">
+                                    <button
+                                      type="button"
                                       onClick={() => handleDeleteTrainingReport(report)}
                                       className="h-7 min-w-[54px] rounded-md btn-aluminium-brushed px-2 text-[10px] font-semibold text-red-700"
                                     >
@@ -1882,7 +1904,7 @@ export const InstructorProfileFlyout: React.FC<InstructorProfileFlyoutProps> = (
                               );
                             }) : (
                               <tr>
-                                <td colSpan={8} className="px-4 py-10 text-center text-sm text-gray-500">
+                                <td colSpan={9} className="px-4 py-10 text-center text-sm text-gray-500">
                                   No training reports saved for this staff member.
                                 </td>
                               </tr>

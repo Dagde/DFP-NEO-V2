@@ -41355,6 +41355,33 @@ const App: React.FC = () => {
         setAirCombatTrainingReportDraft({ staff, startInEditMode: true });
     };
 
+    const handleEditTrainingReportForStaff = (staff: Instructor, report: AirCombatTrainingReport) => {
+        const eventCode = String(report.eventCode || '').trim().toUpperCase();
+        const matchingItem = syllabusDetails.find(item => String(item.code || '').trim().toUpperCase() === eventCode);
+        let assignment: AirCombatTrainingAssignment | undefined;
+        if (matchingItem) {
+            const staffAssignments = normaliseAirCombatTrainingAssignments(staff.preferences);
+            const allAssignments = [...staffAssignments.courses, ...staffAssignments.trainingPackages];
+            const trainingCodes = new Set([
+                ...(matchingItem.courses || []),
+                matchingItem.phase,
+                matchingItem.module,
+                report.trainingCode,
+            ].map(value => String(value || '').trim()).filter(Boolean));
+            assignment = allAssignments.find(candidate => trainingCodes.has(candidate.code));
+            if (!assignment) {
+                assignment = getAirCombatAssignmentFromItem(matchingItem, school, staff.unit || activeUnitCode, currentUserName);
+            }
+        }
+        setAirCombatTrainingReportDraft({
+            staff,
+            assignment,
+            item: matchingItem,
+            initialReport: report,
+            startInEditMode: true,
+        });
+    };
+
     const handleOpenAirCombatTrainingReportFromFlightDetails = async (
         staff: Instructor,
         sourceEvent: ScheduleEvent,
@@ -58416,6 +58443,7 @@ appliedUpdates.forEach(update => {
                             onUpdateAirCombatTrainingEvent={handleUpdateAirCombatTrainingEvent}
                             onGenerateAirCombatTrainingReport={handleGenerateAirCombatTrainingReportForStaff}
                             onAddTrainingReport={handleAddTrainingReportForStaff}
+                            onEditTrainingReport={handleEditTrainingReportForStaff}
                             school={school}
                             personnelData={personnelData}
                             onUpdateInstructor={async (data) => {
@@ -58621,6 +58649,7 @@ appliedUpdates.forEach(update => {
                             onUpdateAirCombatTrainingEvent={handleUpdateAirCombatTrainingEvent}
                             onGenerateAirCombatTrainingReport={handleGenerateAirCombatTrainingReportForStaff}
                             onAddTrainingReport={handleAddTrainingReportForStaff}
+                            onEditTrainingReport={handleEditTrainingReportForStaff}
                             school={school}
                             personnelData={personnelData}
                             onUpdateInstructor={async (data) => {
