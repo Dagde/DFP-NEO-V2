@@ -10393,11 +10393,18 @@ const InitialSetupWizard: React.FC<{
         ));
         return Array.from(new Set(['Primary', ...profileOptions, ...draftOptions].filter(Boolean)));
     };
+    const getWizardConfigOptions = () => Array.from(new Set([
+        'ANY',
+        ...getWizardAircraftConfigDefinitions()
+            .map((config: any) => String(config?.label || config?.name || config?.code || config?.definition || '').trim())
+            .filter(Boolean),
+    ]));
 
     const renderCurrencyEditor = () => {
         const rows = parseWizardCurrencyRows(currencyDraft);
         const editableRows = rows.length > 0 ? rows : [{ name: '', code: '', crew: '', config: '', currency: '', aircraftCount: '' }];
         const crewOptions = getWizardConfiguredCrewOptions();
+        const configOptions = getWizardConfigOptions();
         const updateRow = (index: number, field: keyof typeof editableRows[number], value: string) => {
             const nextRows = [...editableRows];
             nextRows[index] = { ...nextRows[index], [field]: value };
@@ -10413,10 +10420,10 @@ const InitialSetupWizard: React.FC<{
                         {wizardField('Event name', row.name || '', (value) => updateRow(index, 'name', value), undefined, 'PIC Currency')}
                         {wizardField('Code', row.code || '', (value) => updateRow(index, 'code', value.toUpperCase()), undefined, 'PIC')}
                         {wizardField('Crew', normaliseWizardCrewDisplayLabel(row.crew), (value) => updateRow(index, 'crew', value), crewOptions, 'Primary')}
-                        {wizardField('CONFIG', row.config || '', (value) => updateRow(index, 'config', value), undefined, 'ANY')}
+                        {wizardField('CONFIG', row.config || 'ANY', (value) => updateRow(index, 'config', value), configOptions, 'ANY')}
                         {wizardField('Currency', row.currency || '', (value) => updateRow(index, 'currency', value), undefined, 'PIC Currency')}
                         {wizardField('No. aircraft', row.aircraftCount || '', (value) => updateRow(index, 'aircraftCount', value), undefined, '1')}
-                        <button type="button" className={wizardSmallButtonClass} onClick={() => updateCurrencyDraft(formatWizardCurrencyRows(editableRows.filter((_, rowIndex) => rowIndex !== index)))}>
+                        <button type="button" className="rounded-md border border-red-400/50 bg-red-500/10 px-3 py-2 text-xs font-bold text-red-700 shadow-sm transition hover:border-red-500 hover:bg-red-500/15 hover:text-red-800" onClick={() => updateCurrencyDraft(formatWizardCurrencyRows(editableRows.filter((_, rowIndex) => rowIndex !== index)))}>
                             Delete
                         </button>
                     </div>
