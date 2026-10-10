@@ -836,6 +836,15 @@ export const InstructorProfileFlyout: React.FC<InstructorProfileFlyoutProps> = (
   const [trainingReportCourseFilter, setTrainingReportCourseFilter] = useState('__current__');
   const [trainingReportDateFrom, setTrainingReportDateFrom] = useState('');
   const [trainingReportDateTo, setTrainingReportDateTo] = useState('');
+  const formatTrainingReportFilterDate = useCallback((value?: string | null): string => {
+    const raw = String(value || '').trim();
+    if (!/^\d{4}-\d{2}-\d{2}/.test(raw)) return '';
+    const [year, month, day] = raw.slice(0, 10).split('-');
+    const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+    const monthIndex = Number(month) - 1;
+    if (monthIndex < 0 || monthIndex > 11) return raw.slice(0, 10);
+    return `${day} ${monthNames[monthIndex]} ${year.slice(2)}`;
+  }, []);
   const currentIncompleteTrainingSummary = useMemo(() => (
     airCombatTrainingSummaries.find(summary => summary.totalCount > 0 && summary.completedCount < summary.totalCount)
     || airCombatTrainingSummaries.find(summary => summary.totalCount === 0)
@@ -849,9 +858,9 @@ export const InstructorProfileFlyout: React.FC<InstructorProfileFlyoutProps> = (
         .filter(Boolean)
         .sort();
       const dateLabel = reportDates.length > 0
-        ? `${reportDates[0]} to ${reportDates[reportDates.length - 1]}`
+        ? `${formatTrainingReportFilterDate(reportDates[0])} to ${formatTrainingReportFilterDate(reportDates[reportDates.length - 1])}`
         : summary.assignment.assignedAt
-          ? `assigned ${String(summary.assignment.assignedAt).slice(0, 10)}`
+          ? `assigned ${formatTrainingReportFilterDate(String(summary.assignment.assignedAt).slice(0, 10))}`
           : 'no dates yet';
       const statusLabel = summary.totalCount > 0 && summary.completedCount >= summary.totalCount ? 'complete' : 'current';
       return {
@@ -873,7 +882,7 @@ export const InstructorProfileFlyout: React.FC<InstructorProfileFlyoutProps> = (
     historicalGroups.forEach((reports, key) => {
       const dates = reports.map(report => String(report.date || '').trim()).filter(Boolean).sort();
       const first = reports[0];
-      const dateLabel = dates.length > 0 ? `${dates[0]} to ${dates[dates.length - 1]}` : 'no dates';
+      const dateLabel = dates.length > 0 ? `${formatTrainingReportFilterDate(dates[0])} to ${formatTrainingReportFilterDate(dates[dates.length - 1])}` : 'no dates';
       options.push({
         key: `report:${key}`,
         code: first.trainingCode || key,
@@ -883,12 +892,13 @@ export const InstructorProfileFlyout: React.FC<InstructorProfileFlyoutProps> = (
       });
     });
     return options;
-  }, [airCombatStoredTrainingReports, airCombatTrainingSummaries]);
+  }, [airCombatStoredTrainingReports, airCombatTrainingSummaries, formatTrainingReportFilterDate]);
   const activeTrainingReportCourseFilter = trainingReportCourseFilter === '__current__'
-    ? (currentIncompleteTrainingSummary ? `assignment:${currentIncompleteTrainingSummary.assignment.trainingKey}` : '__all__')
+    ? (currentIncompleteTrainingSummary ? `assignment:${currentIncompleteTrainingSummary.assignment.trainingKey}` : '__none__')
     : trainingReportCourseFilter;
   const filteredAirCombatStoredTrainingReports = useMemo(() => (
     airCombatStoredTrainingReports.filter(report => {
+      if (activeTrainingReportCourseFilter === '__none__') return false;
       if (activeTrainingReportCourseFilter.startsWith('assignment:')) {
         const key = activeTrainingReportCourseFilter.replace('assignment:', '');
         const summary = airCombatTrainingSummaries.find(item => item.assignment.trainingKey === key);
@@ -1907,7 +1917,7 @@ export const InstructorProfileFlyout: React.FC<InstructorProfileFlyoutProps> = (
                               className="mt-1 block w-full rounded border border-gray-600 bg-gray-800 px-3 py-2 text-sm normal-case tracking-normal text-white focus:border-sky-500 focus:outline-none focus:ring-1 focus:ring-sky-500"
                             >
                               <option value="__current__">
-                                Current incomplete course/package{currentIncompleteTrainingSummary ? ` - ${currentIncompleteTrainingSummary.assignment.code}` : ' - none found'}
+                                Current Enrolled Course/Package{currentIncompleteTrainingSummary ? ` - ${currentIncompleteTrainingSummary.assignment.code}` : ''}
                               </option>
                               <option value="__all__">All report history</option>
                               {trainingReportFilterOptions.map(option => (

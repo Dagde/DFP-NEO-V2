@@ -91167,11 +91167,20 @@ const InstructorProfileFlyout = ({
   const [trainingReportCourseFilter, setTrainingReportCourseFilter] = reactExports.useState("__current__");
   const [trainingReportDateFrom, setTrainingReportDateFrom] = reactExports.useState("");
   const [trainingReportDateTo, setTrainingReportDateTo] = reactExports.useState("");
+  const formatTrainingReportFilterDate = reactExports.useCallback((value) => {
+    const raw = String(value || "").trim();
+    if (!/^\d{4}-\d{2}-\d{2}/.test(raw)) return "";
+    const [year, month, day] = raw.slice(0, 10).split("-");
+    const monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+    const monthIndex = Number(month) - 1;
+    if (monthIndex < 0 || monthIndex > 11) return raw.slice(0, 10);
+    return `${day} ${monthNames[monthIndex]} ${year.slice(2)}`;
+  }, []);
   const currentIncompleteTrainingSummary = reactExports.useMemo(() => airCombatTrainingSummaries.find((summary) => summary.totalCount > 0 && summary.completedCount < summary.totalCount) || airCombatTrainingSummaries.find((summary) => summary.totalCount === 0) || null, [airCombatTrainingSummaries]);
   const trainingReportFilterOptions = reactExports.useMemo(() => {
     const options = airCombatTrainingSummaries.map((summary) => {
       const reportDates = airCombatStoredTrainingReports.filter((report) => report.trainingKey === summary.assignment.trainingKey || normaliseTrainingCode(report.trainingCode) === normaliseTrainingCode(summary.assignment.code)).map((report) => String(report.date || "").trim()).filter(Boolean).sort();
-      const dateLabel2 = reportDates.length > 0 ? `${reportDates[0]} to ${reportDates[reportDates.length - 1]}` : summary.assignment.assignedAt ? `assigned ${String(summary.assignment.assignedAt).slice(0, 10)}` : "no dates yet";
+      const dateLabel2 = reportDates.length > 0 ? `${formatTrainingReportFilterDate(reportDates[0])} to ${formatTrainingReportFilterDate(reportDates[reportDates.length - 1])}` : summary.assignment.assignedAt ? `assigned ${formatTrainingReportFilterDate(String(summary.assignment.assignedAt).slice(0, 10))}` : "no dates yet";
       const statusLabel = summary.totalCount > 0 && summary.completedCount >= summary.totalCount ? "complete" : "current";
       return {
         key: `assignment:${summary.assignment.trainingKey}`,
@@ -91192,7 +91201,7 @@ const InstructorProfileFlyout = ({
     historicalGroups.forEach((reports, key) => {
       const dates = reports.map((report) => String(report.date || "").trim()).filter(Boolean).sort();
       const first2 = reports[0];
-      const dateLabel2 = dates.length > 0 ? `${dates[0]} to ${dates[dates.length - 1]}` : "no dates";
+      const dateLabel2 = dates.length > 0 ? `${formatTrainingReportFilterDate(dates[0])} to ${formatTrainingReportFilterDate(dates[dates.length - 1])}` : "no dates";
       options.push({
         key: `report:${key}`,
         code: first2.trainingCode || key,
@@ -91202,9 +91211,10 @@ const InstructorProfileFlyout = ({
       });
     });
     return options;
-  }, [airCombatStoredTrainingReports, airCombatTrainingSummaries]);
-  const activeTrainingReportCourseFilter = trainingReportCourseFilter === "__current__" ? currentIncompleteTrainingSummary ? `assignment:${currentIncompleteTrainingSummary.assignment.trainingKey}` : "__all__" : trainingReportCourseFilter;
+  }, [airCombatStoredTrainingReports, airCombatTrainingSummaries, formatTrainingReportFilterDate]);
+  const activeTrainingReportCourseFilter = trainingReportCourseFilter === "__current__" ? currentIncompleteTrainingSummary ? `assignment:${currentIncompleteTrainingSummary.assignment.trainingKey}` : "__none__" : trainingReportCourseFilter;
   const filteredAirCombatStoredTrainingReports = reactExports.useMemo(() => airCombatStoredTrainingReports.filter((report) => {
+    if (activeTrainingReportCourseFilter === "__none__") return false;
     if (activeTrainingReportCourseFilter.startsWith("assignment:")) {
       const key = activeTrainingReportCourseFilter.replace("assignment:", "");
       const summary = airCombatTrainingSummaries.find((item) => item.assignment.trainingKey === key);
@@ -92208,8 +92218,8 @@ Confirm the Personnel ID, unit and role are correct before saving this separate 
                         className: "mt-1 block w-full rounded border border-gray-600 bg-gray-800 px-3 py-2 text-sm normal-case tracking-normal text-white focus:border-sky-500 focus:outline-none focus:ring-1 focus:ring-sky-500",
                         children: [
                           /* @__PURE__ */ jsxRuntimeExports.jsxs("option", { value: "__current__", children: [
-                            "Current incomplete course/package",
-                            currentIncompleteTrainingSummary ? ` - ${currentIncompleteTrainingSummary.assignment.code}` : " - none found"
+                            "Current Enrolled Course/Package",
+                            currentIncompleteTrainingSummary ? ` - ${currentIncompleteTrainingSummary.assignment.code}` : ""
                           ] }),
                           /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "__all__", children: "All report history" }),
                           trainingReportFilterOptions.map((option) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: option.key, children: option.label }, option.key))
