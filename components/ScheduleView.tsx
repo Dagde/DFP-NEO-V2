@@ -6855,7 +6855,6 @@ const InitialSetupWizard: React.FC<{
             return;
         }
         const hasTrainingReportTextInput = [
-            row.genericName,
             row.organisationName,
             row.gradeMin,
             row.gradeMax,
@@ -6868,7 +6867,7 @@ const InitialSetupWizard: React.FC<{
         }
         const targetUnitCode = String(unitDraft.code || currentUnit?.code || unitCode || '').trim().toUpperCase();
         const nextTemplate = {
-            displayName: row.organisationName || row.genericName || 'Training Report',
+            displayName: row.organisationName || 'Training Report',
             grades: {
                 scaleMin: Number(row.gradeMin) || 0,
                 scaleMax: Number(row.gradeMax) || 5,
@@ -8104,8 +8103,7 @@ const InitialSetupWizard: React.FC<{
                     const lowestGrade = Number(row.gradeMin);
                     const highestGrade = Number(row.gradeMax);
                     return (
-                        hasMeaningfulWizardText(row.genericName)
-                        && hasMeaningfulWizardText(row.organisationName)
+                        hasMeaningfulWizardText(row.organisationName)
                         && Number.isFinite(lowestGrade)
                         && Number.isFinite(highestGrade)
                         && highestGrade > lowestGrade
@@ -10095,16 +10093,15 @@ const InitialSetupWizard: React.FC<{
         const rows = parseWizardTrainingReportRows(trainingRecordsDraft);
         const row = rows[0] || { genericName: '', organisationName: '', gradeMin: '', gradeMax: '', showNumbers: 'Yes', noGradeOption: 'No', passLabel: '', failLabel: '' };
         const updateRow = (field: keyof typeof row, value: string) => {
-            setTrainingRecordsDraft(formatWizardTrainingReportRows([{ ...row, [field]: value }]));
+            setTrainingRecordsDraft(formatWizardTrainingReportRows([{ ...row, genericName: 'Training Report', [field]: value }]));
         };
         return (
             <div className="space-y-3">
                 <div className="rounded-lg border border-blue-200 bg-blue-50 px-3 py-2 text-xs font-semibold leading-5 text-blue-900">
-                    This mirrors the Training Reports settings. It names the report, sets the grade range, and controls what users see when they complete an assessment.
+                    DFP NEO calls this a Training Report. Tell us what your unit calls it, then set the grade range and pass/fail wording users will see.
                 </div>
                 <div className="grid gap-3 md:grid-cols-2">
-                    {wizardField('Generic form name', row.genericName, (value) => updateRow('genericName', value), undefined, 'Training Report')}
-                    {wizardField('Organisation form name', row.organisationName, (value) => updateRow('organisationName', value), undefined, 'Assessment Form')}
+                    {wizardField('What does your unit call this report?', row.organisationName, (value) => updateRow('organisationName', value), undefined, 'Assessment Form')}
                     {wizardField('Lowest grade', row.gradeMin, (value) => updateRow('gradeMin', value), undefined, '0')}
                     {wizardField('Highest grade', row.gradeMax, (value) => updateRow('gradeMax', value), undefined, '5')}
                     {wizardField('Show grade numbers', row.showNumbers, (value) => updateRow('showNumbers', value), ['Yes', 'No'])}
@@ -11597,7 +11594,7 @@ const InitialSetupWizard: React.FC<{
                         hasTrainees: draft.hasTrainees,
                         parentOrganisationPath: unitParentPaths[normaliseUnitSettingsIdentifier(row.code)] || fallbackUnitParentPath,
                         trainingReportTemplate: trainingReportRow ? {
-                            displayName: trainingReportRow.organisationName || trainingReportRow.genericName || 'Training Report',
+                            displayName: trainingReportRow.organisationName || 'Training Report',
                             grades: {
                                 scaleMin: Number(trainingReportRow.gradeMin) || 0,
                                 scaleMax: Number(trainingReportRow.gradeMax) || 5,

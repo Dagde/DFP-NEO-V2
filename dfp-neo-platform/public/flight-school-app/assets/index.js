@@ -38057,7 +38057,6 @@ const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, lo
       return;
     }
     const hasTrainingReportTextInput = [
-      row.genericName,
       row.organisationName,
       row.gradeMin,
       row.gradeMax,
@@ -38070,7 +38069,7 @@ const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, lo
     }
     const targetUnitCode = String(unitDraft.code || currentUnit?.code || unitCode || "").trim().toUpperCase();
     const nextTemplate = {
-      displayName: row.organisationName || row.genericName || "Training Report",
+      displayName: row.organisationName || "Training Report",
       grades: {
         scaleMin: Number(row.gradeMin) || 0,
         scaleMax: Number(row.gradeMax) || 5,
@@ -39136,7 +39135,7 @@ const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, lo
         return parseWizardTrainingReportRows(trainingRecordsDraft).some((row) => {
           const lowestGrade = Number(row.gradeMin);
           const highestGrade = Number(row.gradeMax);
-          return hasMeaningfulWizardText(row.genericName) && hasMeaningfulWizardText(row.organisationName) && Number.isFinite(lowestGrade) && Number.isFinite(highestGrade) && highestGrade > lowestGrade && hasMeaningfulWizardText(row.showNumbers) && hasMeaningfulWizardText(row.noGradeOption) && hasMeaningfulWizardText(row.passLabel) && hasMeaningfulWizardText(row.failLabel);
+          return hasMeaningfulWizardText(row.organisationName) && Number.isFinite(lowestGrade) && Number.isFinite(highestGrade) && highestGrade > lowestGrade && hasMeaningfulWizardText(row.showNumbers) && hasMeaningfulWizardText(row.noGradeOption) && hasMeaningfulWizardText(row.passLabel) && hasMeaningfulWizardText(row.failLabel);
         });
       case "staff-currency-events":
         return parseWizardStandardCurrencyEventRows(staffCurrencyEventsDraft).some((row) => hasMeaningfulWizardText(row.name, ["Annual Instrument Check"]) && hasMeaningfulWizardText(row.shortTitle, ["INST"]) && hasPositiveWizardNumber(row.duration) && hasPositiveWizardNumber(row.aircraftCount));
@@ -40787,13 +40786,12 @@ const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, lo
     const rows = parseWizardTrainingReportRows(trainingRecordsDraft);
     const row = rows[0] || { genericName: "", organisationName: "", gradeMin: "", gradeMax: "", showNumbers: "Yes", noGradeOption: "No", passLabel: "", failLabel: "" };
     const updateRow = (field, value) => {
-      setTrainingRecordsDraft(formatWizardTrainingReportRows([{ ...row, [field]: value }]));
+      setTrainingRecordsDraft(formatWizardTrainingReportRows([{ ...row, genericName: "Training Report", [field]: value }]));
     };
     return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-3", children: [
-      /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "rounded-lg border border-blue-200 bg-blue-50 px-3 py-2 text-xs font-semibold leading-5 text-blue-900", children: "This mirrors the Training Reports settings. It names the report, sets the grade range, and controls what users see when they complete an assessment." }),
+      /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "rounded-lg border border-blue-200 bg-blue-50 px-3 py-2 text-xs font-semibold leading-5 text-blue-900", children: "DFP NEO calls this a Training Report. Tell us what your unit calls it, then set the grade range and pass/fail wording users will see." }),
       /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid gap-3 md:grid-cols-2", children: [
-        wizardField("Generic form name", row.genericName, (value) => updateRow("genericName", value), void 0, "Training Report"),
-        wizardField("Organisation form name", row.organisationName, (value) => updateRow("organisationName", value), void 0, "Assessment Form"),
+        wizardField("What does your unit call this report?", row.organisationName, (value) => updateRow("organisationName", value), void 0, "Assessment Form"),
         wizardField("Lowest grade", row.gradeMin, (value) => updateRow("gradeMin", value), void 0, "0"),
         wizardField("Highest grade", row.gradeMax, (value) => updateRow("gradeMax", value), void 0, "5"),
         wizardField("Show grade numbers", row.showNumbers, (value) => updateRow("showNumbers", value), ["Yes", "No"]),
@@ -42070,7 +42068,7 @@ const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, lo
             hasTrainees: draft.hasTrainees,
             parentOrganisationPath: unitParentPaths[normaliseUnitSettingsIdentifier(row.code)] || fallbackUnitParentPath,
             trainingReportTemplate: trainingReportRow ? {
-              displayName: trainingReportRow.organisationName || trainingReportRow.genericName || "Training Report",
+              displayName: trainingReportRow.organisationName || "Training Report",
               grades: {
                 scaleMin: Number(trainingReportRow.gradeMin) || 0,
                 scaleMax: Number(trainingReportRow.gradeMax) || 5,
