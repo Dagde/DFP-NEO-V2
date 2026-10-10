@@ -100861,7 +100861,7 @@ const AirCombatTrainingReportModal = ({
   const effectiveAssignment = reactExports.useMemo(() => assignment || (matchedItem ? getAirCombatAssignmentFromItem(matchedItem, locationCode, unitCode || staff.unit, currentUserName) : void 0), [assignment, currentUserName, locationCode, matchedItem, staff.unit, unitCode]);
   const [eventDescriptionField, setEventDescriptionField] = reactExports.useState(initialReport?.eventDescription || item?.eventDescription || sourceEvent?.notes || item?.module || "");
   const [eventTypeField, setEventTypeField] = reactExports.useState(initialReport?.eventType || item?.type || sourceEvent?.type || "");
-  const [trainingCodeField, setTrainingCodeField] = reactExports.useState(initialReport?.trainingCode || assignment?.code || item?.phase || "");
+  const [trainingCodeField, setTrainingCodeField] = reactExports.useState(initialReport?.trainingCode || "");
   const [resourceIdField, setResourceIdField] = reactExports.useState(initialReport?.resourceId || sourceEvent?.resourceId || "");
   const [callsignField, setCallsignField] = reactExports.useState(initialReport?.callsign || sourceEvent?.callsign || staff.callsign || "");
   const eventCode2 = eventCodeField || matchedItem?.code || selectedEventCode || "";
@@ -100871,7 +100871,7 @@ const AirCombatTrainingReportModal = ({
     const values = [eventType, eventTypeField, matchedItem?.type, activeSourceEvent?.type, initialReport?.eventType];
     return values.some((value) => /sim/i.test(String(value || "")));
   }, [activeSourceEvent?.type, eventType, eventTypeField, initialReport?.eventType, matchedItem?.type]);
-  const trainingCode = trainingCodeField || effectiveAssignment?.code || matchedItem?.phase || "";
+  const trainingCode = trainingCodeField;
   const defaultDate = activeSourceEvent?.date || initialReport?.date || (/* @__PURE__ */ new Date()).toISOString().slice(0, 10);
   const defaultStart = Number(activeSourceEvent?.startTime ?? initialReport?.startTime ?? 8);
   const defaultDuration = Number(activeSourceEvent?.duration ?? initialReport?.duration ?? matchedItem?.totalEventHours ?? matchedItem?.duration ?? matchedItem?.flightOrSimHours ?? 1);
@@ -100920,15 +100920,18 @@ const AirCombatTrainingReportModal = ({
   const [isSaving2, setIsSaving] = reactExports.useState(false);
   const [saveError, setSaveError] = reactExports.useState("");
   const [saveStatus, setSaveStatus] = reactExports.useState("Saved");
+  const [showResourceOptions, setShowResourceOptions] = reactExports.useState(false);
   const reportId = reactExports.useMemo(() => initialReport?.id || `air-combat-report-${staff.idNumber}-${sourceEvent?.id || item?.id || eventCode2}-${Date.now()}`, [eventCode2, initialReport?.id, item?.id, sourceEvent?.id, staff.idNumber]);
   const editInputClass = "mt-1 w-full rounded border border-gray-600 bg-gray-700 px-2 py-1 text-sm font-semibold text-white focus:border-sky-400 focus:outline-none focus:ring-1 focus:ring-sky-500";
-  const InfoHint2 = ({ text }) => /* @__PURE__ */ jsxRuntimeExports.jsx(
+  const InfoHint2 = ({ text }) => /* @__PURE__ */ jsxRuntimeExports.jsxs(
     "span",
     {
-      title: text,
       "aria-label": text,
-      className: "inline-flex h-4 w-4 cursor-help items-center justify-center rounded-full border border-cyan-400/50 bg-gray-950/40 font-serif text-[11px] font-bold italic leading-none text-cyan-100",
-      children: "i"
+      className: "group relative inline-flex h-4 w-4 cursor-help items-center justify-center rounded-full border border-cyan-400/50 bg-gray-950/40 font-serif text-[11px] font-bold italic leading-none text-cyan-100",
+      children: [
+        "i",
+        /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "pointer-events-none absolute left-1/2 top-full z-[260] mt-1 hidden w-64 -translate-x-1/2 rounded border border-cyan-500/35 bg-gray-950 p-2 font-sans text-xs font-normal not-italic leading-snug text-gray-100 shadow-xl group-hover:block group-focus:block", children: text })
+      ]
     }
   );
   const renderEventDataField = (label, value, onChange, fallback = "-", infoText = "") => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
@@ -100984,8 +100987,7 @@ const AirCombatTrainingReportModal = ({
     });
     return Array.from(values).filter(Boolean);
   }, [displayResourceId, formatResourceLabel2, rawResourceId, recentEvents, resourceSuggestions]);
-  const resourceDatalistId = `staff-training-report-resource-${reportId.replace(/[^a-zA-Z0-9_-]/g, "-")}`;
-  const renderResourceField = () => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
+  const renderResourceField = () => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "relative", children: [
     /* @__PURE__ */ jsxRuntimeExports.jsx("dt", { className: "text-sm font-medium text-gray-400", children: overviewFields.resource }),
     /* @__PURE__ */ jsxRuntimeExports.jsx("dd", { className: "mt-1 text-sm font-semibold text-white", children: isEditMode ? /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
       /* @__PURE__ */ jsxRuntimeExports.jsx(
@@ -100995,13 +100997,30 @@ const AirCombatTrainingReportModal = ({
           onCommit: setResourceIdField,
           onDraftChange: () => {
             setSaveStatus("Unsaved");
+            setShowResourceOptions(true);
           },
           className: editInputClass,
           placeholder: "Type or choose a resource",
-          list: resourceDatalistId
+          onFocus: () => setShowResourceOptions(true),
+          onClick: () => setShowResourceOptions(true),
+          onBlur: () => window.setTimeout(() => setShowResourceOptions(false), 120)
         }
       ),
-      /* @__PURE__ */ jsxRuntimeExports.jsx("datalist", { id: resourceDatalistId, children: resourceSuggestionOptions.map((option) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: option }, option)) })
+      showResourceOptions && resourceSuggestionOptions.length > 0 && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "absolute left-0 right-0 top-full z-30 mt-1 max-h-44 overflow-y-auto rounded-md border border-sky-500/40 bg-gray-950 shadow-xl", children: resourceSuggestionOptions.map((option) => /* @__PURE__ */ jsxRuntimeExports.jsx(
+        "button",
+        {
+          type: "button",
+          onMouseDown: (event) => {
+            event.preventDefault();
+            setResourceIdField(option);
+            setSaveStatus("Unsaved");
+            setShowResourceOptions(false);
+          },
+          className: "block w-full border-b border-gray-800 px-3 py-2 text-left text-xs font-semibold text-white last:border-b-0 hover:bg-sky-950/50",
+          children: option
+        },
+        option
+      )) })
     ] }) : displayResourceId })
   ] });
   const timeInputClass = "w-20 rounded border border-gray-600 bg-gray-700 px-2 py-1 text-center font-mono text-sm font-semibold text-white focus:border-sky-400 focus:outline-none focus:ring-1 focus:ring-sky-500";

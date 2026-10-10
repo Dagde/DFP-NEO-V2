@@ -407,7 +407,7 @@ export const AirCombatTrainingReportModal: React.FC<AirCombatTrainingReportModal
   ), [assignment, currentUserName, locationCode, matchedItem, staff.unit, unitCode]);
   const [eventDescriptionField, setEventDescriptionField] = useState(initialReport?.eventDescription || item?.eventDescription || sourceEvent?.notes || item?.module || '');
   const [eventTypeField, setEventTypeField] = useState(initialReport?.eventType || item?.type || sourceEvent?.type || '');
-  const [trainingCodeField, setTrainingCodeField] = useState(initialReport?.trainingCode || assignment?.code || item?.phase || '');
+  const [trainingCodeField, setTrainingCodeField] = useState(initialReport?.trainingCode || '');
   const [resourceIdField, setResourceIdField] = useState(initialReport?.resourceId || sourceEvent?.resourceId || '');
   const [callsignField, setCallsignField] = useState(initialReport?.callsign || sourceEvent?.callsign || staff.callsign || '');
   const eventCode = eventCodeField || matchedItem?.code || selectedEventCode || '';
@@ -417,7 +417,7 @@ export const AirCombatTrainingReportModal: React.FC<AirCombatTrainingReportModal
     const values = [eventType, eventTypeField, matchedItem?.type, activeSourceEvent?.type, initialReport?.eventType];
     return values.some(value => /sim/i.test(String(value || '')));
   }, [activeSourceEvent?.type, eventType, eventTypeField, initialReport?.eventType, matchedItem?.type]);
-  const trainingCode = trainingCodeField || effectiveAssignment?.code || matchedItem?.phase || '';
+  const trainingCode = trainingCodeField;
   const defaultDate = activeSourceEvent?.date || initialReport?.date || new Date().toISOString().slice(0, 10);
   const defaultStart = Number(activeSourceEvent?.startTime ?? initialReport?.startTime ?? 8);
   const defaultDuration = Number(activeSourceEvent?.duration ?? initialReport?.duration ?? matchedItem?.totalEventHours ?? matchedItem?.duration ?? matchedItem?.flightOrSimHours ?? 1);
@@ -469,6 +469,7 @@ export const AirCombatTrainingReportModal: React.FC<AirCombatTrainingReportModal
   const [isSaving, setIsSaving] = useState(false);
   const [saveError, setSaveError] = useState('');
   const [saveStatus, setSaveStatus] = useState<'Saved' | 'Saving...' | 'Unsaved'>('Saved');
+  const [showResourceOptions, setShowResourceOptions] = useState(false);
 
   const reportId = useMemo(() => (
     initialReport?.id || `air-combat-report-${staff.idNumber}-${sourceEvent?.id || item?.id || eventCode}-${Date.now()}`
@@ -483,11 +484,13 @@ export const AirCombatTrainingReportModal: React.FC<AirCombatTrainingReportModal
   const editInputClass = 'mt-1 w-full rounded border border-gray-600 bg-gray-700 px-2 py-1 text-sm font-semibold text-white focus:border-sky-400 focus:outline-none focus:ring-1 focus:ring-sky-500';
   const InfoHint = ({ text }: { text: string }) => (
     <span
-      title={text}
       aria-label={text}
-      className="inline-flex h-4 w-4 cursor-help items-center justify-center rounded-full border border-cyan-400/50 bg-gray-950/40 font-serif text-[11px] font-bold italic leading-none text-cyan-100"
+      className="group relative inline-flex h-4 w-4 cursor-help items-center justify-center rounded-full border border-cyan-400/50 bg-gray-950/40 font-serif text-[11px] font-bold italic leading-none text-cyan-100"
     >
       i
+      <span className="pointer-events-none absolute left-1/2 top-full z-[260] mt-1 hidden w-64 -translate-x-1/2 rounded border border-cyan-500/35 bg-gray-950 p-2 font-sans text-xs font-normal not-italic leading-snug text-gray-100 shadow-xl group-hover:block group-focus:block">
+        {text}
+      </span>
     </span>
   );
   const getRecentEventPic = (event: ScheduleEvent): string => (
@@ -568,9 +571,8 @@ export const AirCombatTrainingReportModal: React.FC<AirCombatTrainingReportModal
     });
     return Array.from(values).filter(Boolean);
   }, [displayResourceId, formatResourceLabel, rawResourceId, recentEvents, resourceSuggestions]);
-  const resourceDatalistId = `staff-training-report-resource-${reportId.replace(/[^a-zA-Z0-9_-]/g, '-')}`;
   const renderResourceField = () => (
-    <div>
+    <div className="relative">
       <dt className="text-sm font-medium text-gray-400">{overviewFields.resource}</dt>
       <dd className="mt-1 text-sm font-semibold text-white">
         {isEditMode ? (
@@ -580,16 +582,33 @@ export const AirCombatTrainingReportModal: React.FC<AirCombatTrainingReportModal
               onCommit={setResourceIdField}
               onDraftChange={() => {
                 setSaveStatus('Unsaved');
+                setShowResourceOptions(true);
               }}
               className={editInputClass}
               placeholder="Type or choose a resource"
-              list={resourceDatalistId}
+              onFocus={() => setShowResourceOptions(true)}
+              onClick={() => setShowResourceOptions(true)}
+              onBlur={() => window.setTimeout(() => setShowResourceOptions(false), 120)}
             />
-            <datalist id={resourceDatalistId}>
-              {resourceSuggestionOptions.map(option => (
-                <option key={option} value={option} />
-              ))}
-            </datalist>
+            {showResourceOptions && resourceSuggestionOptions.length > 0 && (
+              <div className="absolute left-0 right-0 top-full z-30 mt-1 max-h-44 overflow-y-auto rounded-md border border-sky-500/40 bg-gray-950 shadow-xl">
+                {resourceSuggestionOptions.map(option => (
+                  <button
+                    key={option}
+                    type="button"
+                    onMouseDown={(event) => {
+                      event.preventDefault();
+                      setResourceIdField(option);
+                      setSaveStatus('Unsaved');
+                      setShowResourceOptions(false);
+                    }}
+                    className="block w-full border-b border-gray-800 px-3 py-2 text-left text-xs font-semibold text-white last:border-b-0 hover:bg-sky-950/50"
+                  >
+                    {option}
+                  </button>
+                ))}
+              </div>
+            )}
           </>
         ) : (
           displayResourceId
@@ -655,7 +674,7 @@ export const AirCombatTrainingReportModal: React.FC<AirCombatTrainingReportModal
     setEventCodeField(nextEventCode);
     setEventDescriptionField(nextItem?.eventDescription || event.notes || nextItem?.module || '');
     setEventTypeField(nextItem?.type || event.type || '');
-    setTrainingCodeField(nextItem?.phase || nextItem?.courses?.find(Boolean) || '');
+    setTrainingCodeField(initialReport?.trainingCode || '');
     setResourceIdField(event.resourceId || '');
     setCallsignField(event.callsign || '');
     setDate(event.date || new Date().toISOString().slice(0, 10));
