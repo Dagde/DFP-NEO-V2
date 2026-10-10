@@ -5388,7 +5388,11 @@ const InitialSetupWizard: React.FC<{
         onUpdatePlatformConfig((current) => updater(current || platformConfig || {}));
         if (!options.silent) setSaveMessage(message);
     };
-    const buildWizardDraftSnapshot = () => {
+    const buildWizardDraftSnapshot = (overrides: {
+        activeStepId?: string;
+        activeStepIndex?: number;
+        completedStepIds?: string[];
+    } = {}) => {
         const scoringDraftToSave = wizardPhraseBankToScoringDraft(wizardScoringPhraseBank);
         return {
             organisationDraft,
@@ -5420,18 +5424,22 @@ const InitialSetupWizard: React.FC<{
             groundEventSchedulingSettings: wizardGroundEventSchedulingSettingsForDisplay,
             scoringDraft: scoringDraftToSave,
             staffCurrencyEventsDraft,
-            activeStepId: visibleStep.id,
-            activeStepIndex: currentStep,
-            completedStepIds: Array.from(completedWizardStepIds),
+            activeStepId: overrides.activeStepId ?? visibleStep.id,
+            activeStepIndex: overrides.activeStepIndex ?? currentStep,
+            completedStepIds: overrides.completedStepIds ?? Array.from(completedWizardStepIds),
             organisationKey: String(activeOrganisation?.id || activeOrganisation?.code || ''),
             unitContext: unitCode,
             locationContext: locationCode,
             updatedAt: new Date().toISOString(),
         };
     };
-    const saveWizardDraftSnapshot = (message = 'Wizard progress saved.', options: { silent?: boolean } = { silent: true }) => {
+    const saveWizardDraftSnapshot = (
+        message = 'Wizard progress saved.',
+        options: { silent?: boolean } = { silent: true },
+        overrides: Parameters<typeof buildWizardDraftSnapshot>[0] = {},
+    ) => {
         if (isSetupTestMode) return;
-        const snapshot = buildWizardDraftSnapshot();
+        const snapshot = buildWizardDraftSnapshot(overrides);
         let localSaved = false;
         if (typeof window !== 'undefined') {
             localSaved = safeSetWizardLocalStorage(initialSetupWizardDraftSnapshotStorageKey, JSON.stringify(snapshot));
@@ -7651,6 +7659,44 @@ const InitialSetupWizard: React.FC<{
     ];
     const currentStep = Math.min(wizardStep, steps.length - 1);
     const visibleStep = steps[currentStep];
+    const wizardStepIdSignature = steps.map((step) => step.id).join('|');
+    useEffect(() => {
+        const validStepIds = new Set(wizardStepIdSignature.split('|').filter(Boolean));
+        if (validStepIds.size === 0) return;
+
+        const readCompletedIds = (value: any) => (
+            Array.isArray(value)
+                ? value.map((id) => String(id || '').trim()).filter((id) => id && validStepIds.has(id))
+                : []
+        );
+        const restoredIds = new Set<string>([
+            ...readCompletedIds(getSavedInitialSetupWizardDrafts()?.completedStepIds),
+        ]);
+
+        if (typeof window !== 'undefined') {
+            try {
+                readCompletedIds(JSON.parse(window.localStorage.getItem(initialSetupWizardCompletedStepsStorageKey) || '[]'))
+                    .forEach((id) => restoredIds.add(id));
+            } catch {
+                // Ignore corrupt local wizard progress and keep any server/settings progress.
+            }
+        }
+
+        if (restoredIds.size === 0) return;
+        setCompletedWizardStepIds((current) => {
+            const next = new Set(current);
+            restoredIds.forEach((id) => next.add(id));
+            if (next.size === current.size && Array.from(next).every((id) => current.has(id))) return current;
+            if (typeof window !== 'undefined') {
+                safeSetWizardLocalStorage(initialSetupWizardCompletedStepsStorageKey, JSON.stringify(Array.from(next)));
+            }
+            return next;
+        });
+    }, [
+        wizardStepIdSignature,
+        activeOrganisation?.settings?.initialSetupWizardDrafts?.completedStepIds,
+        activeOrganisation?.settings?.initialSetupWizardDraft?.completedStepIds,
+    ]);
     useEffect(() => {
         if (!visibleStep?.id) return;
         setViewedWizardStepIds((current) => {
@@ -10563,8 +10609,14 @@ const InitialSetupWizard: React.FC<{
             draft: summariseOrganisationDraft(organisationDraft),
             activeOrganisation: summariseActiveOrganisation(),
         });
-        saveWizardDraftSnapshot('Wizard progress saved.', { silent: true });
         const stepIdToSync = visibleStep.id;
+        const nextCompletedStepIds = Array.from(new Set([
+            ...Array.from(completedWizardStepIds),
+            stepIdToSync,
+        ]));
+        saveWizardDraftSnapshot('Wizard progress saved.', { silent: true }, {
+            completedStepIds: nextCompletedStepIds,
+        });
         const syncStep = () => syncWizardStepToSettings(stepIdToSync);
         markWizardStepComplete(stepIdToSync);
         setWizardPageMenuOpen(false);
