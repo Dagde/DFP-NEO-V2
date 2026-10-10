@@ -61747,6 +61747,19 @@ appliedUpdates.forEach(update => {
                 locationCode={school}
                 unitCode={airCombatTrainingReportDraft.staff.unit || activeUnitCode}
                 formatResourceLabel={formatResourceDisplayLabel}
+                resourceSuggestions={[
+                    activeAircraftResourcePrefix,
+                    activeRuntimeAircraftTypeCode,
+                    resourceDisplayNames.aircraft,
+                    resourceDisplayNames.ftd,
+                    'SIM',
+                    'FBT',
+                    resourceDisplayNames.cpt,
+                    'Ground School',
+                ].filter((value, index, allValues) => (
+                    Boolean(String(value || '').trim()) &&
+                    allValues.findIndex(candidate => String(candidate || '').trim().toLowerCase() === String(value || '').trim().toLowerCase()) === index
+                ))}
                 onCancel={() => setAirCombatTrainingReportDraft(null)}
                 onSave={handleSaveAirCombatTrainingReport}
             />

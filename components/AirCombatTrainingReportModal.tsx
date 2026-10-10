@@ -29,6 +29,7 @@ interface AirCombatTrainingReportModalProps {
   locationCode?: string;
   unitCode?: string;
   formatResourceLabel?: (resourceId: string) => string;
+  resourceSuggestions?: string[];
   onCancel: () => void;
   onSave: (report: AirCombatTrainingReport) => Promise<void> | void;
 }
@@ -45,6 +46,16 @@ const formatTimeToHHMM = (time?: number): string => {
   const hours = Math.floor(Number(time));
   const minutes = Math.round((Number(time) - hours) * 60);
   return `${String(hours).padStart(2, '0')}${String(minutes).padStart(2, '0')}`;
+};
+
+const parseHHMMTime = (value: string): number | null => {
+  const raw = String(value || '').replace(/\D/g, '').slice(0, 4);
+  if (raw.length < 3) return null;
+  const padded = raw.length === 3 ? `0${raw}` : raw;
+  const hours = Number(padded.slice(0, 2));
+  const minutes = Number(padded.slice(2, 4));
+  if (hours < 0 || hours > 23 || minutes < 0 || minutes > 59) return null;
+  return hours + minutes / 60;
 };
 
 const stripResourceLineNumber = (resourceLabel: string): string => (
@@ -169,6 +180,7 @@ const DraftTextInput = ({
   className,
   maxLength,
   placeholder,
+  list,
   disabled = false,
   onFocus,
   onClick,
@@ -180,6 +192,7 @@ const DraftTextInput = ({
   className: string;
   maxLength?: number;
   placeholder?: string;
+  list?: string;
   disabled?: boolean;
   onFocus?: () => void;
   onClick?: () => void;
@@ -212,6 +225,7 @@ const DraftTextInput = ({
       disabled={disabled}
       maxLength={maxLength}
       placeholder={placeholder}
+      list={list}
       onBeforeInput={(event) => handleEditableTextBeforeInput(event, updateDraftValue, maxLength)}
       onKeyDownCapture={(event) => handleEditableTextKeyDownCapture(event, updateDraftValue, maxLength)}
       onKeyDown={stopEditableKeyPropagation}
@@ -307,6 +321,7 @@ export const AirCombatTrainingReportModal: React.FC<AirCombatTrainingReportModal
   locationCode = '',
   unitCode = '',
   formatResourceLabel,
+  resourceSuggestions = [],
   onCancel,
   onSave,
 }) => {
@@ -466,6 +481,15 @@ export const AirCombatTrainingReportModal: React.FC<AirCombatTrainingReportModal
     </div>
   );
   const editInputClass = 'mt-1 w-full rounded border border-gray-600 bg-gray-700 px-2 py-1 text-sm font-semibold text-white focus:border-sky-400 focus:outline-none focus:ring-1 focus:ring-sky-500';
+  const InfoHint = ({ text }: { text: string }) => (
+    <span
+      title={text}
+      aria-label={text}
+      className="inline-flex h-4 w-4 cursor-help items-center justify-center rounded-full border border-cyan-400/50 bg-gray-950/40 font-serif text-[11px] font-bold italic leading-none text-cyan-100"
+    >
+      i
+    </span>
+  );
   const getRecentEventPic = (event: ScheduleEvent): string => (
     String((event as any).fixedCrewPic || event.pilot || event.instructor || '').trim() || '-'
   );
@@ -480,9 +504,13 @@ export const AirCombatTrainingReportModal: React.FC<AirCombatTrainingReportModal
     value: string,
     onChange: (value: string) => void,
     fallback = '-',
+    infoText = '',
   ) => (
     <div>
-      <dt className="text-sm font-medium text-gray-400">{label}</dt>
+      <dt className="flex items-center gap-1.5 text-sm font-medium text-gray-400">
+        <span>{label}</span>
+        {infoText ? <InfoHint text={infoText} /> : null}
+      </dt>
       <dd className="mt-1 text-sm font-semibold text-white">
         {isEditMode ? (
           <DraftTextInput
@@ -500,49 +528,112 @@ export const AirCombatTrainingReportModal: React.FC<AirCombatTrainingReportModal
     </div>
   );
   const renderEventSelectorField = () => (
-    <div className="relative">
-      <dt className="text-sm font-medium text-gray-400">{overviewFields.event}</dt>
+    <div>
+      <dt className="flex items-center gap-1.5 text-sm font-medium text-gray-400">
+        <span>{overviewFields.event}</span>
+        <InfoHint text="What the report is for. Examples: Currency, CAT Upgrade, Recency." />
+      </dt>
+      <dd className="mt-1 text-sm font-semibold text-white">
+        {isEditMode ? (
+          <DraftTextInput
+            value={eventCode}
+            onCommit={setEventCodeField}
+            onDraftChange={() => {
+              setSaveStatus('Unsaved');
+            }}
+            className={editInputClass}
+          />
+        ) : (
+          eventCode || 'N/A'
+        )}
+      </dd>
+    </div>
+  );
+  const resourceSuggestionOptions = useMemo(() => {
+    const values = new Set<string>();
+    resourceSuggestions.forEach(value => {
+      const clean = String(value || '').trim();
+      if (clean) values.add(clean);
+    });
+    recentEvents.forEach(event => {
+      const raw = String(event.resourceId || '').trim();
+      if (raw) {
+        values.add(raw);
+        values.add(stripResourceLineNumber(formatResourceLabel?.(raw) || raw));
+      }
+    });
+    [rawResourceId, displayResourceId, 'Ground School'].forEach(value => {
+      const clean = String(value || '').trim();
+      if (clean && clean !== '-') values.add(clean);
+    });
+    return Array.from(values).filter(Boolean);
+  }, [displayResourceId, formatResourceLabel, rawResourceId, recentEvents, resourceSuggestions]);
+  const resourceDatalistId = `staff-training-report-resource-${reportId.replace(/[^a-zA-Z0-9_-]/g, '-')}`;
+  const renderResourceField = () => (
+    <div>
+      <dt className="text-sm font-medium text-gray-400">{overviewFields.resource}</dt>
       <dd className="mt-1 text-sm font-semibold text-white">
         {isEditMode ? (
           <>
             <DraftTextInput
-              value={eventCode}
-              onFocus={() => setShowRecentEventPicker(true)}
-              onClick={() => setShowRecentEventPicker(true)}
-              onBlur={() => window.setTimeout(() => setShowRecentEventPicker(false), 120)}
-              onCommit={setEventCodeField}
+              value={resourceIdField}
+              onCommit={setResourceIdField}
               onDraftChange={() => {
                 setSaveStatus('Unsaved');
               }}
               className={editInputClass}
+              placeholder="Type or choose a resource"
+              list={resourceDatalistId}
             />
-            {showRecentEventPicker && (
-              <div className="absolute left-0 right-0 top-full z-20 mt-1 overflow-hidden rounded-md border border-sky-500/40 bg-gray-950 shadow-xl">
-                {recentEvents.length > 0 ? (
-                  recentEvents.slice(0, 5).map(event => (
-                    <button
-                      key={event.id}
-                      type="button"
-                      onMouseDown={(clickEvent) => {
-                        clickEvent.preventDefault();
-                        selectRecentEvent(event);
-                      }}
-                      className="grid w-full grid-cols-[74px_minmax(0,1fr)_minmax(0,1fr)_64px] gap-x-1 border-b border-gray-800 px-2 py-2 text-left text-[11px] last:border-b-0 hover:bg-sky-950/40"
-                    >
-                      <span className="font-mono text-gray-300">{formatTrainingReportDate(event.date)}</span>
-                      <span className="truncate text-white">{getRecentEventPic(event)}</span>
-                      <span className="truncate text-gray-300">{getRecentEventCoPilot(event)}</span>
-                      <span className="truncate font-semibold text-sky-200">{getRecentEventShortCode(event)}</span>
-                    </button>
-                  ))
-                ) : (
-                  <div className="px-2 py-3 text-xs text-gray-400">No recent flown events found for this staff member.</div>
-                )}
-              </div>
-            )}
+            <datalist id={resourceDatalistId}>
+              {resourceSuggestionOptions.map(option => (
+                <option key={option} value={option} />
+              ))}
+            </datalist>
           </>
         ) : (
-          eventCode || 'N/A'
+          displayResourceId
+        )}
+      </dd>
+    </div>
+  );
+  const timeInputClass = 'w-20 rounded border border-gray-600 bg-gray-700 px-2 py-1 text-center font-mono text-sm font-semibold text-white focus:border-sky-400 focus:outline-none focus:ring-1 focus:ring-sky-500';
+  const renderTimingField = () => (
+    <div>
+      <dt className="text-sm font-medium text-gray-400">{overviewFields.timing}</dt>
+      <dd className="mt-1 text-sm font-semibold text-white">
+        {isEditMode ? (
+          <div className="flex items-center gap-2">
+            <input
+              type="text"
+              value={formatTimeToHHMM(startTime)}
+              onChange={(event) => {
+                const parsed = parseHHMMTime(event.target.value);
+                if (parsed === null) return;
+                setStartTime(parsed);
+                setSaveStatus('Unsaved');
+              }}
+              className={timeInputClass}
+              maxLength={4}
+              aria-label="Start time"
+            />
+            <span className="text-gray-500">-</span>
+            <input
+              type="text"
+              value={formatTimeToHHMM(endTime)}
+              onChange={(event) => {
+                const parsed = parseHHMMTime(event.target.value);
+                if (parsed === null) return;
+                setEndTime(parsed);
+                setSaveStatus('Unsaved');
+              }}
+              className={timeInputClass}
+              maxLength={4}
+              aria-label="Finish time"
+            />
+          </div>
+        ) : (
+          `${formatDecimalTime(startTime)} - ${formatDecimalTime(endTime)}`
         )}
       </dd>
     </div>
@@ -792,16 +883,12 @@ export const AirCombatTrainingReportModal: React.FC<AirCombatTrainingReportModal
                   <input
                     type="text"
                     value={formatTimeToHHMM(startTime)}
-                    onChange={(event) => {
-                      const raw = event.target.value.replace(/\D/g, '').slice(0, 4);
-                      if (raw.length < 3) return;
-                      const hours = Number(raw.slice(0, 2));
-                      const minutes = Number(raw.slice(2, 4));
-                      if (hours >= 0 && hours <= 23 && minutes >= 0 && minutes <= 59) {
-                        setStartTime(hours + minutes / 60);
-                        setSaveStatus('Unsaved');
-                      }
-                    }}
+              onChange={(event) => {
+                    const parsed = parseHHMMTime(event.target.value);
+                    if (parsed === null) return;
+                    setStartTime(parsed);
+                    setSaveStatus('Unsaved');
+                  }}
                     className="w-20 rounded border border-gray-600 bg-gray-700 px-2 py-1 text-center font-mono text-white focus:ring-1 focus:ring-sky-500"
                     maxLength={4}
                   />
@@ -809,15 +896,11 @@ export const AirCombatTrainingReportModal: React.FC<AirCombatTrainingReportModal
                   <input
                     type="text"
                     value={formatTimeToHHMM(endTime)}
-                    onChange={(event) => {
-                      const raw = event.target.value.replace(/\D/g, '').slice(0, 4);
-                      if (raw.length < 3) return;
-                      const hours = Number(raw.slice(0, 2));
-                      const minutes = Number(raw.slice(2, 4));
-                      if (hours >= 0 && hours <= 23 && minutes >= 0 && minutes <= 59) {
-                        setEndTime(hours + minutes / 60);
-                        setSaveStatus('Unsaved');
-                      }
+                  onChange={(event) => {
+                      const parsed = parseHHMMTime(event.target.value);
+                      if (parsed === null) return;
+                      setEndTime(parsed);
+                      setSaveStatus('Unsaved');
                     }}
                     className="w-20 rounded border border-gray-600 bg-gray-700 px-2 py-1 text-center font-mono text-white focus:ring-1 focus:ring-sky-500"
                     maxLength={4}
@@ -859,15 +942,15 @@ export const AirCombatTrainingReportModal: React.FC<AirCombatTrainingReportModal
                 className={`space-y-2 rounded-lg border bg-gray-800 p-4 lg:col-span-1 lg:w-[calc(100%-25px)] ${isEditMode ? 'border-sky-500/60' : 'border-gray-700'}`}
               >
                 {renderEventSelectorField()}
-                {renderEventDataField(overviewFields.type, eventDescription, setEventDescriptionField, eventType || 'N/A')}
+                {renderEventDataField(overviewFields.type, eventType, setEventTypeField, 'N/A', 'The broad kind of event. Examples: IF, GF, Form.')}
                 <div><dt className="text-sm font-medium text-gray-400">Staff</dt><dd className="mt-1 text-sm font-semibold text-white">{staff.rank} {staff.name}</dd></div>
-                {renderEventDataField(overviewFields.training, trainingCode, setTrainingCodeField)}
+                {renderEventDataField('Course/Package (if applicable)', trainingCode, setTrainingCodeField)}
                 <div><dt className="text-sm font-medium text-gray-400">{overviewFields.date}</dt><dd className="mt-1"><input type="date" value={date} onChange={(event) => { setDate(event.target.value); setSaveStatus('Unsaved'); }} className="rounded border border-gray-600 bg-gray-700 px-2 py-1 text-sm font-semibold text-white focus:ring-1 focus:ring-sky-500" /></dd></div>
-                <div><dt className="text-sm font-medium text-gray-400">{overviewFields.timing}</dt><dd className="mt-1 text-sm font-semibold text-white">{formatDecimalTime(startTime)} - {formatDecimalTime(endTime)}</dd></div>
-                {renderEventDataField(overviewFields.resource, isEditMode ? resourceIdField : displayResourceId, setResourceIdField)}
+                {renderTimingField()}
+                {renderResourceField()}
                 {renderEventDataField(overviewFields.callsign, callsignField || activeSourceEvent?.callsign || staff.callsign || '', setCallsignField)}
                 <div>
-                  <dt className="text-sm font-medium text-gray-400">{overviewFields.assessor}</dt>
+                  <dt className="text-sm font-medium text-gray-400">Assessor</dt>
                   <dd className="mt-1">
                     <DraftTextInput
                       value={instructorName}
