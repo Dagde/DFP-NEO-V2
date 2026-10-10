@@ -8353,6 +8353,9 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
       return true;
     });
   };
+  const isCurrencyEventPresetProfile = (profile: { description?: string }) => (
+    /^currency:/i.test(String(profile.description || '').trim())
+  );
   const getVisibleAlternateCrewCompositions = () => uniqueProfilesByCompositeGroup(
     crewCompositionSettings.alternateCompositions.filter((profile) => (
       String(profile.aircraftTypeCode || '').trim().toUpperCase() === activeCrewCompositionAircraftCode
@@ -8938,7 +8941,10 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
     }));
   const standardMissionProfiles = normaliseStandardMissionProfiles(primaryOrganisationSettings.standardMissionProfiles || null);
   const standardMissionProfilesForContext = uniqueProfilesByCompositeGroup(
-    standardMissionProfiles.filter(isProfileInActiveUnitContext),
+    standardMissionProfiles.filter((profile) => (
+      isProfileInActiveUnitContext(profile)
+      && !isCurrencyEventPresetProfile(profile)
+    )),
   );
   const defaultMissionCallsign = getDefaultUnitCallsign(unitCallsignSettings, activePrimaryUnitCode);
   const trainingReportPreviewCallsign = getDefaultUnitCallsign(
@@ -10348,7 +10354,10 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
           action={canEdit ? (
             <div className="flex flex-wrap justify-end gap-[1px]">
               {renderSectionEditSaveButton('platform-standard-missions')}
-              <button type="button" onClick={addStandardMissionProfile} disabled={!canEditSection('platform-standard-missions') || crewCompositionRoleOptions.length === 0 || !activeMissionAircraftTypeCode} className={`${platformActionButtonClass} text-[8px] leading-[9px]`}>Add Directed Task Setup</button>
+              <button type="button" onClick={addStandardMissionProfile} disabled={!canEditSection('platform-standard-missions') || crewCompositionRoleOptions.length === 0 || !activeMissionAircraftTypeCode} className={`${platformActionButtonClass} min-w-[120px] text-[10px] leading-[11px]`}>
+                <span className="block">Add Directed</span>
+                <span className="block">Task Setup</span>
+              </button>
             </div>
           ) : null}
         />

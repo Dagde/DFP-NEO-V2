@@ -8114,7 +8114,10 @@ const InitialSetupWizard: React.FC<{
                     : Array.isArray(activeOrganisation?.settings?.standardMissionProfiles)
                         ? activeOrganisation.settings.standardMissionProfiles
                         : [];
-                return profiles.some((profile: any) => String(profile?.status || 'ACTIVE').toUpperCase() !== 'INACTIVE');
+                return profiles.some((profile: any) => (
+                    String(profile?.status || 'ACTIVE').toUpperCase() !== 'INACTIVE'
+                    && !/^currency:/i.test(String(profile?.description || '').trim())
+                ));
             }
             case 'scoring':
                 return Object.entries(wizardScoringPhraseBank || {}).some(([dimension, phrases]) => (

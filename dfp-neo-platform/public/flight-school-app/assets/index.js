@@ -25177,6 +25177,7 @@ This removes them from DFP Resource Rows. Press Save in this section to apply th
       return true;
     });
   };
+  const isCurrencyEventPresetProfile = (profile) => /^currency:/i.test(String(profile.description || "").trim());
   const getVisibleAlternateCrewCompositions = () => uniqueProfilesByCompositeGroup(
     crewCompositionSettings.alternateCompositions.filter((profile) => String(profile.aircraftTypeCode || "").trim().toUpperCase() === activeCrewCompositionAircraftCode && isProfileInActiveUnitContext(profile))
   );
@@ -25621,7 +25622,7 @@ This removes them from DFP Resource Rows. Press Save in this section to apply th
   }));
   const standardMissionProfiles = normaliseStandardMissionProfiles(primaryOrganisationSettings.standardMissionProfiles || null);
   const standardMissionProfilesForContext = uniqueProfilesByCompositeGroup(
-    standardMissionProfiles.filter(isProfileInActiveUnitContext)
+    standardMissionProfiles.filter((profile) => isProfileInActiveUnitContext(profile) && !isCurrencyEventPresetProfile(profile))
   );
   const defaultMissionCallsign = getDefaultUnitCallsign(unitCallsignSettings, activePrimaryUnitCode);
   const trainingReportPreviewCallsign = getDefaultUnitCallsign(
@@ -26959,7 +26960,10 @@ This removes them from DFP Resource Rows. Press Save in this section to apply th
               subtitle: "Full reusable directed tasks with aircraft, crew, timing, callsign and formation settings.",
               action: canEdit ? /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex flex-wrap justify-end gap-[1px]", children: [
                 renderSectionEditSaveButton("platform-standard-missions"),
-                /* @__PURE__ */ jsxRuntimeExports.jsx("button", { type: "button", onClick: addStandardMissionProfile, disabled: !canEditSection("platform-standard-missions") || crewCompositionRoleOptions.length === 0 || !activeMissionAircraftTypeCode, className: `${platformActionButtonClass} text-[8px] leading-[9px]`, children: "Add Directed Task Setup" })
+                /* @__PURE__ */ jsxRuntimeExports.jsxs("button", { type: "button", onClick: addStandardMissionProfile, disabled: !canEditSection("platform-standard-missions") || crewCompositionRoleOptions.length === 0 || !activeMissionAircraftTypeCode, className: `${platformActionButtonClass} min-w-[120px] text-[10px] leading-[11px]`, children: [
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "block", children: "Add Directed" }),
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "block", children: "Task Setup" })
+                ] })
               ] }) : null
             }
           ),
@@ -39131,7 +39135,7 @@ const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, lo
         });
       case "directed-task-setups": {
         const profiles = Array.isArray(activeOrganisation?.settings?.standardMissionProfiles?.profiles) ? activeOrganisation.settings.standardMissionProfiles.profiles : Array.isArray(activeOrganisation?.settings?.standardMissionProfiles) ? activeOrganisation.settings.standardMissionProfiles : [];
-        return profiles.some((profile) => String(profile?.status || "ACTIVE").toUpperCase() !== "INACTIVE");
+        return profiles.some((profile) => String(profile?.status || "ACTIVE").toUpperCase() !== "INACTIVE" && !/^currency:/i.test(String(profile?.description || "").trim()));
       }
       case "scoring":
         return Object.entries(wizardScoringPhraseBank || {}).some(([dimension, phrases]) => hasMeaningfulWizardText(dimension, ["Preparation", "Airmanship"]) && Boolean(phrases) && typeof phrases === "object" && !Array.isArray(phrases) && Object.values(phrases).some((gradePhrases) => Array.isArray(gradePhrases) && gradePhrases.some((phrase) => hasMeaningfulWizardText(phrase))));
