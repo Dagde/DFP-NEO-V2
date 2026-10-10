@@ -10100,14 +10100,22 @@ const InitialSetupWizard: React.FC<{
                 <div className="rounded-lg border border-blue-200 bg-blue-50 px-3 py-2 text-xs font-semibold leading-5 text-blue-900">
                     DFP NEO calls this a Training Report. Tell us what your unit calls it, then set the grade range and pass/fail wording users will see.
                 </div>
-                <div className="grid gap-3 md:grid-cols-2">
-                    {wizardField('What does your unit call this report?', row.organisationName, (value) => updateRow('organisationName', value), undefined, 'Assessment Form')}
-                    {wizardField('Lowest grade', row.gradeMin, (value) => updateRow('gradeMin', value), undefined, '0')}
-                    {wizardField('Highest grade', row.gradeMax, (value) => updateRow('gradeMax', value), undefined, '5')}
-                    {wizardField('Show grade numbers', row.showNumbers, (value) => updateRow('showNumbers', value), ['Yes', 'No'])}
-                    {wizardField('Include No Grade option', row.noGradeOption, (value) => updateRow('noGradeOption', value), ['No', 'Yes'])}
-                    {wizardField('Satisfactory label', row.passLabel, (value) => updateRow('passLabel', value), undefined, 'Satisfactory')}
-                    {wizardField('Unsatisfactory label', row.failLabel, (value) => updateRow('failLabel', value), undefined, 'Unsatisfactory')}
+                <div className="space-y-3">
+                    <div className="grid gap-3 md:grid-cols-2">
+                        {wizardField('What does your unit call this report?', row.organisationName, (value) => updateRow('organisationName', value), undefined, 'Assessment Form')}
+                    </div>
+                    <div className="grid gap-3 md:grid-cols-2">
+                        {wizardField('Show grade numbers', row.showNumbers, (value) => updateRow('showNumbers', value), ['Yes', 'No'])}
+                        {wizardField('Include No Grade option', row.noGradeOption, (value) => updateRow('noGradeOption', value), ['No', 'Yes'])}
+                    </div>
+                    <div className="grid gap-3 md:grid-cols-2">
+                        {wizardField('Lowest grade', row.gradeMin, (value) => updateRow('gradeMin', value), undefined, '0')}
+                        {wizardField('Highest grade', row.gradeMax, (value) => updateRow('gradeMax', value), undefined, '5')}
+                    </div>
+                    <div className="grid gap-3 md:grid-cols-2">
+                        {wizardField('Satisfactory label', row.passLabel, (value) => updateRow('passLabel', value), undefined, 'Satisfactory')}
+                        {wizardField('Unsatisfactory label', row.failLabel, (value) => updateRow('failLabel', value), undefined, 'Unsatisfactory')}
+                    </div>
                 </div>
             </div>
         );

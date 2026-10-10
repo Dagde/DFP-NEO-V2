@@ -40790,14 +40790,20 @@ const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, lo
     };
     return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-3", children: [
       /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "rounded-lg border border-blue-200 bg-blue-50 px-3 py-2 text-xs font-semibold leading-5 text-blue-900", children: "DFP NEO calls this a Training Report. Tell us what your unit calls it, then set the grade range and pass/fail wording users will see." }),
-      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid gap-3 md:grid-cols-2", children: [
-        wizardField("What does your unit call this report?", row.organisationName, (value) => updateRow("organisationName", value), void 0, "Assessment Form"),
-        wizardField("Lowest grade", row.gradeMin, (value) => updateRow("gradeMin", value), void 0, "0"),
-        wizardField("Highest grade", row.gradeMax, (value) => updateRow("gradeMax", value), void 0, "5"),
-        wizardField("Show grade numbers", row.showNumbers, (value) => updateRow("showNumbers", value), ["Yes", "No"]),
-        wizardField("Include No Grade option", row.noGradeOption, (value) => updateRow("noGradeOption", value), ["No", "Yes"]),
-        wizardField("Satisfactory label", row.passLabel, (value) => updateRow("passLabel", value), void 0, "Satisfactory"),
-        wizardField("Unsatisfactory label", row.failLabel, (value) => updateRow("failLabel", value), void 0, "Unsatisfactory")
+      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-3", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "grid gap-3 md:grid-cols-2", children: wizardField("What does your unit call this report?", row.organisationName, (value) => updateRow("organisationName", value), void 0, "Assessment Form") }),
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid gap-3 md:grid-cols-2", children: [
+          wizardField("Show grade numbers", row.showNumbers, (value) => updateRow("showNumbers", value), ["Yes", "No"]),
+          wizardField("Include No Grade option", row.noGradeOption, (value) => updateRow("noGradeOption", value), ["No", "Yes"])
+        ] }),
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid gap-3 md:grid-cols-2", children: [
+          wizardField("Lowest grade", row.gradeMin, (value) => updateRow("gradeMin", value), void 0, "0"),
+          wizardField("Highest grade", row.gradeMax, (value) => updateRow("gradeMax", value), void 0, "5")
+        ] }),
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid gap-3 md:grid-cols-2", children: [
+          wizardField("Satisfactory label", row.passLabel, (value) => updateRow("passLabel", value), void 0, "Satisfactory"),
+          wizardField("Unsatisfactory label", row.failLabel, (value) => updateRow("failLabel", value), void 0, "Unsatisfactory")
+        ] })
       ] })
     ] });
   };
