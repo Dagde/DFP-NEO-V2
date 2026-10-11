@@ -9,6 +9,11 @@ import AircraftAvailabilityOverlay from './AircraftAvailabilityOverlay';
 import { ScoringMatrixInline } from './SettingsView';
 import PlatformConfigurationSettings from './PlatformConfigurationSettings';
 import EmergencyPage from './EmergencyPage';
+import {
+    SCORING_MATRIX_ELEMENT_GROUPS_KEY,
+    SCORING_MATRIX_ELEMENT_LIST_KEY,
+    SCORING_MATRIX_ELEMENT_SELECTION_VERSION_KEY,
+} from '../utils/scoringMatrixElements';
 import { DailyAvailabilityRecord } from '../types/AircraftAvailability';
 import { VisualAdjustGuide } from './VisualAdjustGuide';
 import { AircraftNumberSettings, normaliseAircraftNumberSettings } from '../utils/aircraftNumberFormat';
@@ -1698,6 +1703,36 @@ const normaliseWizardCrewDisplayLabel = (value: any) => {
 const parseWizardScoringRows = (value: string) => parseWizardPipeRows<{ dimension: string; passStandard: string; failStandard: string; grade0: string; grade1: string; grade2: string; grade3: string; grade4: string; grade5: string }>(value, ['dimension', 'passStandard', 'failStandard', 'grade0', 'grade1', 'grade2', 'grade3', 'grade4', 'grade5']);
 const formatWizardScoringRows = (rows: ReturnType<typeof parseWizardScoringRows>) => formatWizardPipeRows(rows, ['dimension', 'passStandard', 'failStandard', 'grade0', 'grade1', 'grade2', 'grade3', 'grade4', 'grade5']);
 const defaultWizardScoringDraft = 'Preparation | Prepared, safe and ready to train. | Not prepared or unsafe to continue. | Unsafe | Major help required | Help required | Meets standard | Above standard | Excellent\nAirmanship | Makes safe decisions and prioritises correctly. | Poor judgement or unsafe prioritisation. | Unsafe | Weak | Developing | Meets standard | Strong | Excellent';
+const WIZARD_SCORING_METADATA_DIMENSION = '__scoringMatrixMetadata';
+const WIZARD_SCORING_METADATA_KEYS = [
+    SCORING_MATRIX_ELEMENT_LIST_KEY,
+    SCORING_MATRIX_ELEMENT_GROUPS_KEY,
+    SCORING_MATRIX_ELEMENT_SELECTION_VERSION_KEY,
+] as const;
+const encodeWizardScoringMetadata = (phraseBank: PhraseBank): string => {
+    const metadata = WIZARD_SCORING_METADATA_KEYS.reduce((acc, key) => {
+        const value = (phraseBank as any)?.[key];
+        if (value !== undefined) acc[key] = value;
+        return acc;
+    }, {} as Record<string, unknown>);
+    if (Object.keys(metadata).length === 0) return '';
+    return encodeURIComponent(JSON.stringify(metadata));
+};
+const decodeWizardScoringMetadata = (value: string): Partial<PhraseBank> => {
+    const encoded = String(value || '').trim();
+    if (!encoded) return {};
+    try {
+        const parsed = JSON.parse(decodeURIComponent(encoded));
+        if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) return {};
+        return WIZARD_SCORING_METADATA_KEYS.reduce((acc, key) => {
+            const metadataValue = (parsed as Record<string, unknown>)[key];
+            if (metadataValue !== undefined) (acc as any)[key] = metadataValue;
+            return acc;
+        }, {} as Partial<PhraseBank>);
+    } catch {
+        return {};
+    }
+};
 const isScoringPhraseBank = (value: unknown): value is PhraseBank => (
     Boolean(value)
     && typeof value === 'object'
@@ -1711,7 +1746,10 @@ const isScoringPhraseBank = (value: unknown): value is PhraseBank => (
 );
 const wizardScoringRowsToPhraseBank = (value: string): PhraseBank => {
     const rows = parseWizardScoringRows(value || defaultWizardScoringDraft);
-    return rows.reduce((bank, row) => ({
+    const metadataRow = rows.find((row) => row.dimension === WIZARD_SCORING_METADATA_DIMENSION);
+    const metadata = decodeWizardScoringMetadata(metadataRow?.grade0 || metadataRow?.passStandard || '');
+    const phraseRows = rows.filter((row) => row.dimension !== WIZARD_SCORING_METADATA_DIMENSION);
+    return phraseRows.reduce((bank, row) => ({
         ...bank,
         [row.dimension || 'Assessment']: {
             0: [row.grade0 || row.failStandard].filter(Boolean),
@@ -1721,7 +1759,7 @@ const wizardScoringRowsToPhraseBank = (value: string): PhraseBank => {
             4: [row.grade4].filter(Boolean),
             5: [row.grade5].filter(Boolean),
         },
-    }), {} as PhraseBank);
+    }), { ...metadata } as PhraseBank);
 };
 const wizardPhraseBankToScoringDraft = (phraseBank: PhraseBank): string => {
     const rows = Object.entries(phraseBank || {})
@@ -1746,7 +1784,22 @@ const wizardPhraseBankToScoringDraft = (phraseBank: PhraseBank): string => {
                 grade5: gradePhrases[5]?.[0] || '',
             };
         });
-    return formatWizardScoringRows(rows.length > 0 ? rows : parseWizardScoringRows(defaultWizardScoringDraft));
+    const rowsToSave = rows.length > 0 ? rows : parseWizardScoringRows(defaultWizardScoringDraft);
+    const metadata = encodeWizardScoringMetadata(phraseBank);
+    if (metadata) {
+        rowsToSave.push({
+            dimension: WIZARD_SCORING_METADATA_DIMENSION,
+            passStandard: '',
+            failStandard: '',
+            grade0: metadata,
+            grade1: '',
+            grade2: '',
+            grade3: '',
+            grade4: '',
+            grade5: '',
+        });
+    }
+    return formatWizardScoringRows(rowsToSave);
 };
 
 const parseWizardStandardCurrencyEventRows = (value: string) => parseWizardEditablePipeRows<{ name: string; shortTitle: string; resourceType: string; duration: string; preFlight: string; postFlight: string; crew: string; currency: string; config: string; aircraftCount: string }>(value, ['name', 'shortTitle', 'resourceType', 'duration', 'preFlight', 'postFlight', 'crew', 'currency', 'config', 'aircraftCount']);

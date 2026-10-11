@@ -33957,10 +33957,43 @@ const normaliseWizardCrewDisplayLabel = (value) => {
 const parseWizardScoringRows = (value) => parseWizardPipeRows(value, ["dimension", "passStandard", "failStandard", "grade0", "grade1", "grade2", "grade3", "grade4", "grade5"]);
 const formatWizardScoringRows = (rows) => formatWizardPipeRows(rows, ["dimension", "passStandard", "failStandard", "grade0", "grade1", "grade2", "grade3", "grade4", "grade5"]);
 const defaultWizardScoringDraft = "Preparation | Prepared, safe and ready to train. | Not prepared or unsafe to continue. | Unsafe | Major help required | Help required | Meets standard | Above standard | Excellent\nAirmanship | Makes safe decisions and prioritises correctly. | Poor judgement or unsafe prioritisation. | Unsafe | Weak | Developing | Meets standard | Strong | Excellent";
+const WIZARD_SCORING_METADATA_DIMENSION = "__scoringMatrixMetadata";
+const WIZARD_SCORING_METADATA_KEYS = [
+  SCORING_MATRIX_ELEMENT_LIST_KEY$3,
+  SCORING_MATRIX_ELEMENT_GROUPS_KEY$2,
+  SCORING_MATRIX_ELEMENT_SELECTION_VERSION_KEY
+];
+const encodeWizardScoringMetadata = (phraseBank) => {
+  const metadata = WIZARD_SCORING_METADATA_KEYS.reduce((acc, key) => {
+    const value = phraseBank?.[key];
+    if (value !== void 0) acc[key] = value;
+    return acc;
+  }, {});
+  if (Object.keys(metadata).length === 0) return "";
+  return encodeURIComponent(JSON.stringify(metadata));
+};
+const decodeWizardScoringMetadata = (value) => {
+  const encoded = String(value || "").trim();
+  if (!encoded) return {};
+  try {
+    const parsed = JSON.parse(decodeURIComponent(encoded));
+    if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) return {};
+    return WIZARD_SCORING_METADATA_KEYS.reduce((acc, key) => {
+      const metadataValue = parsed[key];
+      if (metadataValue !== void 0) acc[key] = metadataValue;
+      return acc;
+    }, {});
+  } catch {
+    return {};
+  }
+};
 const isScoringPhraseBank = (value) => Boolean(value) && typeof value === "object" && !Array.isArray(value) && Object.values(value).some((dimension) => Boolean(dimension) && typeof dimension === "object" && !Array.isArray(dimension) && Object.values(dimension).some(Array.isArray));
 const wizardScoringRowsToPhraseBank = (value) => {
   const rows = parseWizardScoringRows(value || defaultWizardScoringDraft);
-  return rows.reduce((bank, row) => ({
+  const metadataRow = rows.find((row) => row.dimension === WIZARD_SCORING_METADATA_DIMENSION);
+  const metadata = decodeWizardScoringMetadata(metadataRow?.grade0 || metadataRow?.passStandard || "");
+  const phraseRows = rows.filter((row) => row.dimension !== WIZARD_SCORING_METADATA_DIMENSION);
+  return phraseRows.reduce((bank, row) => ({
     ...bank,
     [row.dimension || "Assessment"]: {
       0: [row.grade0 || row.failStandard].filter(Boolean),
@@ -33970,7 +34003,7 @@ const wizardScoringRowsToPhraseBank = (value) => {
       4: [row.grade4].filter(Boolean),
       5: [row.grade5].filter(Boolean)
     }
-  }), {});
+  }), { ...metadata });
 };
 const wizardPhraseBankToScoringDraft = (phraseBank) => {
   const rows = Object.entries(phraseBank || {}).filter(([dimension, phrases]) => !dimension.startsWith("__") && Boolean(phrases) && typeof phrases === "object" && !Array.isArray(phrases) && Object.values(phrases).some(Array.isArray)).map(([dimension, phrases]) => {
@@ -33987,7 +34020,22 @@ const wizardPhraseBankToScoringDraft = (phraseBank) => {
       grade5: gradePhrases[5]?.[0] || ""
     };
   });
-  return formatWizardScoringRows(rows.length > 0 ? rows : parseWizardScoringRows(defaultWizardScoringDraft));
+  const rowsToSave = rows.length > 0 ? rows : parseWizardScoringRows(defaultWizardScoringDraft);
+  const metadata = encodeWizardScoringMetadata(phraseBank);
+  if (metadata) {
+    rowsToSave.push({
+      dimension: WIZARD_SCORING_METADATA_DIMENSION,
+      passStandard: "",
+      failStandard: "",
+      grade0: metadata,
+      grade1: "",
+      grade2: "",
+      grade3: "",
+      grade4: "",
+      grade5: ""
+    });
+  }
+  return formatWizardScoringRows(rowsToSave);
 };
 const parseWizardStandardCurrencyEventRows = (value) => parseWizardEditablePipeRows(value, ["name", "shortTitle", "resourceType", "duration", "preFlight", "postFlight", "crew", "currency", "config", "aircraftCount"]);
 const formatWizardStandardCurrencyEventRows = (rows) => formatWizardEditablePipeRows(rows, ["name", "shortTitle", "resourceType", "duration", "preFlight", "postFlight", "crew", "currency", "config", "aircraftCount"]);
