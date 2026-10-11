@@ -44573,7 +44573,7 @@ const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, lo
     }
     if (visibleStep.id === "trainee-courses") {
       return promptShell(
-        /* @__PURE__ */ jsxRuntimeExports.jsx("p", { children: unitDraft.hasTrainees ? "Add the course numbers or course names that this unit will use for trainees. These are the choices used in the allocation step." : "Trainees are switched off for this unit, so course setup is optional." }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx("p", { children: unitDraft.hasTrainees ? "Enter the unique course number or name used to identify each group of trainees (e.g. CSE101, CSE102). These identifiers distinguish individual trainee intakes and are used when allocating trainees to their courses. Do not enter the name of the training program or phase that leads to the award of wings." : "Trainees are switched off for this unit, so course setup is optional." }),
         unitDraft.hasTrainees ? renderTraineeEditor("courses") : /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-xs font-semibold text-slate-600", children: "Trainees are off for this unit." })
       );
     }
