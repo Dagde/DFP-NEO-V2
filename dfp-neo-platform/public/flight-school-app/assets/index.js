@@ -21151,6 +21151,21 @@ const PlatformConfigurationSettings = ({
     () => configModules.filter((module) => String(module.status || "ACTIVE").toUpperCase() === "ACTIVE"),
     [configModules]
   );
+  const assignedAccessFeatureAreaOptions = reactExports.useMemo(() => {
+    const configuredOptions = activeModules.map((module) => String(module.code || "").trim()).filter(Boolean);
+    return configuredOptions.length > 0 ? configuredOptions : ["dfp", "neo_build", "training", "reporting", "settings"];
+  }, [activeModules]);
+  const assignedAccessFeatureAreaLabels = reactExports.useMemo(() => ({
+    dfp: "DFP",
+    neo_build: "NEO Build",
+    training: "Training",
+    reporting: "Reporting",
+    settings: "Settings",
+    ...Object.fromEntries(activeModules.map((module) => [
+      String(module.code || "").trim(),
+      String(module.name || module.label || module.code || "").trim()
+    ]).filter(([code, label]) => code && label))
+  }), [activeModules]);
   const primaryOrganisationIndex = reactExports.useMemo(() => {
     const activeIndex = configOrganisations.findIndex((org) => String(org.status || "ACTIVE").toUpperCase() === "ACTIVE");
     return activeIndex >= 0 ? activeIndex : 0;
@@ -25952,7 +25967,7 @@ This removes them from DFP Resource Rows. Press Save in this section to apply th
                           className: "mt-0.5 h-4 w-4 rounded border-gray-500 accent-cyan-500",
                           checked: appliesToAllFeatures,
                           disabled: !canEditSection("platform-user-access"),
-                          onChange: (event) => updateRow("userAccess", index, { moduleCode: event.target.checked ? null : configModules[0]?.code || "" })
+                          onChange: (event) => updateRow("userAccess", index, { moduleCode: event.target.checked ? null : assignedAccessFeatureAreaOptions[0] })
                         }
                       ),
                       /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { children: [
@@ -25978,7 +25993,7 @@ This removes them from DFP Resource Rows. Press Save in this section to apply th
                       /* @__PURE__ */ jsxRuntimeExports.jsx("h6", { className: "text-xs font-bold uppercase tracking-wide text-gray-300", children: "Limit This Assigned Access To One Feature Area" }),
                       /* @__PURE__ */ jsxRuntimeExports.jsx(InfoHint, { text: "Use this only when a user should administer one area but not another. Example: location + unit + NEO Build lets the user work with NEO Build for that unit, but not training records or reporting.", theme: wizardEditMode ? "light" : "dark" })
                     ] }),
-                    /* @__PURE__ */ jsxRuntimeExports.jsx(SelectField, { label: "Feature Area", value: access.moduleCode || "", disabled: !canEditSection("platform-user-access") || appliesToAllFeatures, options: ["", ...configModules.map((module) => module.code)], onChange: (value) => updateRow("userAccess", index, { moduleCode: value || null }), emptyLabel: "All Enabled Features" }),
+                    /* @__PURE__ */ jsxRuntimeExports.jsx(SelectField, { label: "Feature Area", value: access.moduleCode || "", disabled: !canEditSection("platform-user-access") || appliesToAllFeatures, options: ["", ...assignedAccessFeatureAreaOptions], optionLabels: assignedAccessFeatureAreaLabels, onChange: (value) => updateRow("userAccess", index, { moduleCode: value || null }), emptyLabel: "All Enabled Features" }),
                     /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-2 text-xs text-gray-400", children: "Leave this as all enabled features unless you deliberately want to restrict this Assigned Access to a single app area such as DFP, NEO Build, Training, or Reporting." })
                   ] })
                 ]
