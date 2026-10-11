@@ -18821,7 +18821,7 @@ const ACCESS_SCOPE_TONE = {
   fill: "rgba(8, 145, 178, 0.24)",
   applyBorder: "rgba(103, 232, 249, 0.62)"
 };
-const ACCESS_SCOPE_HELP_TEXT = "An access scope controls what this user can see and do in a specific part of DFP NEO.\n\nIt combines where they have access, such as a location, unit, or feature area; what they can view; what they can edit; and which functions they can use.\n\nFor example, a user may be able to view and edit schedules for KCBM / 285FTS, but have no access to another unit. Their assigned permission profile controls the level of access inside that scope.";
+const ACCESS_SCOPE_HELP_TEXT = "Assigned Access controls what this user can see and do in a specific part of DFP NEO.\n\nIt combines where they have access, such as a location, unit, or feature area; what they can view; what they can edit; and which functions they can use.\n\nFor example, a user may be able to view and edit schedules for KCBM / 285FTS, but have no access to another unit. Their assigned permission profile controls the level of access inside that assigned access.";
 const platformLocationRowTone = {
   border: "rgba(103, 232, 249, 0.72)",
   accent: "rgba(103, 232, 249, 0.8)"
@@ -19935,7 +19935,7 @@ const getDefaultConfigurationHealthRemediation = (area, title) => {
     if (lowerTitle.includes("unknown permission profile")) {
       return "Open Settings → People & Permissions → Master Permission Profiles and recreate the missing profile, or remove the unknown profile from Manage User Permissions.";
     }
-    return "Open Settings → People & Permissions → Manage User Permissions, search for the user, then correct the active access scope so the user, location, unit and feature area match active records.";
+    return "Open Settings → People & Permissions → Manage User Permissions, search for the user, then correct the active Assigned Access so the user, location, unit and feature area match active records.";
   }
   if (area === "Permission Profiles") {
     return "Open Settings → People & Permissions → Master Permission Profiles and tick the capabilities this profile should grant, or remove the profile if it is no longer used.";
@@ -20352,30 +20352,30 @@ const buildConfigurationHealth = (config, permissionProfiles, readinessPercent, 
           "CRITICAL",
           "User Access",
           `${userLabel} is a role, not a user`,
-          "This access scope has a permission role saved where a person or login account should be. Assign the role to a real administrator user instead.",
+          "This Assigned Access has a permission role saved where a person or login account should be. Assign the role to a real administrator user instead.",
           `access-${userId || userLabel}-role-user`,
-          "Open Settings → People & Permissions → Manage User Permissions, remove this access scope, then select the real user and assign the correct permission profile.",
+          "Open Settings → People & Permissions → Manage User Permissions, remove this Assigned Access, then select the real user and assign the correct permission profile.",
           { focusUserId: userId, focusSubsectionId: "platform-user-access-records" }
         );
       } else {
-        add("CRITICAL", "User Access", `${userLabel} has invalid user record`, "The access scope points to a person or login account that is not present in the active user, staff or trainee records.", `access-${userId || userLabel}-user`, void 0, { focusUserId: userId, focusSubsectionId: "platform-user-access-records" });
+        add("CRITICAL", "User Access", `${userLabel} has invalid user record`, "The Assigned Access points to a person or login account that is not present in the active user, staff or trainee records.", `access-${userId || userLabel}-user`, void 0, { focusUserId: userId, focusSubsectionId: "platform-user-access-records" });
       }
     }
     if (locationCode && !activeLocationCodes.has(locationCode)) {
-      add("CRITICAL", "User Access", `${userLabel} has invalid location scope`, `${locationCode} is not an active location.`, `access-${userId}-${locationCode}`, void 0, { focusUserId: userId, focusLocationCode: locationCode, focusSubsectionId: `platform-user-access-location-${getConfigurationHealthFocusAnchor(locationCode)}` });
+      add("CRITICAL", "User Access", `${userLabel} has invalid Assigned Access location`, `${locationCode} is not an active location.`, `access-${userId}-${locationCode}`, void 0, { focusUserId: userId, focusLocationCode: locationCode, focusSubsectionId: `platform-user-access-location-${getConfigurationHealthFocusAnchor(locationCode)}` });
     }
     if (unitCode && !activeUnitCodes.has(unitCode)) {
-      add("CRITICAL", "User Access", `${userLabel} has invalid unit scope`, `${unitCode} is not an active unit.`, `access-${userId}-${unitCode}`, void 0, { focusUserId: userId, focusSubsectionId: "platform-user-access-records" });
+      add("CRITICAL", "User Access", `${userLabel} has invalid Assigned Access unit`, `${unitCode} is not an active unit.`, `access-${userId}-${unitCode}`, void 0, { focusUserId: userId, focusSubsectionId: "platform-user-access-records" });
     }
     const unit = unitCode ? units.find((item) => toIdentifier(item.code) === unitCode) : null;
     if (unit && locationCode && toIdentifier(unit.locationCode) !== locationCode) {
-      add("CRITICAL", "User Access", `${userLabel} has mismatched scope`, `${unitCode} belongs to ${toIdentifier(unit.locationCode)}, but the access scope is set to ${locationCode}.`, `access-${userId}-${unitCode}-mismatch`, void 0, { focusUserId: userId, focusLocationCode: locationCode, focusSubsectionId: `platform-user-access-location-${getConfigurationHealthFocusAnchor(locationCode)}` });
+      add("CRITICAL", "User Access", `${userLabel} has mismatched Assigned Access`, `${unitCode} belongs to ${toIdentifier(unit.locationCode)}, but the Assigned Access location is set to ${locationCode}.`, `access-${userId}-${unitCode}-mismatch`, void 0, { focusUserId: userId, focusLocationCode: locationCode, focusSubsectionId: `platform-user-access-location-${getConfigurationHealthFocusAnchor(locationCode)}` });
     }
     if (moduleCode && !activeModuleCodes.has(moduleCode)) {
-      add("WARNING", "User Access", `${userLabel} has inactive feature-area scope`, `${moduleCode} is not an active module. Use "All Enabled Features" unless a deliberate one-area restriction is required.`, `access-${userId}-${moduleCode}`, void 0, { focusUserId: userId, focusSubsectionId: "platform-user-access-records" });
+      add("WARNING", "User Access", `${userLabel} has inactive Assigned Access feature area`, `${moduleCode} is not an active module. Use "All Enabled Features" unless a deliberate one-area restriction is required.`, `access-${userId}-${moduleCode}`, void 0, { focusUserId: userId, focusSubsectionId: "platform-user-access-records" });
     }
     if (assignedProfiles.length === 0) {
-      add("WARNING", "User Access", `${userLabel} has no permission profile`, "The scope defines where the user can work, but no profile defines what they can do there.", `access-${userId}-profiles-none`, void 0, { focusUserId: userId, focusSubsectionId: "platform-user-access-records" });
+      add("WARNING", "User Access", `${userLabel} has no permission profile`, "Assigned Access defines where the user can work, but no profile defines what they can do there.", `access-${userId}-profiles-none`, void 0, { focusUserId: userId, focusSubsectionId: "platform-user-access-records" });
     }
     assignedProfiles.forEach((profileId) => {
       if (!profileIds.has(profileId)) {
@@ -20385,9 +20385,9 @@ const buildConfigurationHealth = (config, permissionProfiles, readinessPercent, 
   });
   const activeUsersWithAccess = uniqueValues(activeUserAccess.map((access) => toIdentifier(access.userId)));
   if (activeUsersWithAccess.length === 0) {
-    add("CRITICAL", "User Access", "No users have active access", "No active user access scopes exist. Administrators may be locked out after enforcement is tightened.", "access-none", void 0, { focusSubsectionId: "platform-user-access-records" });
+    add("CRITICAL", "User Access", "No users have active access", "No active Assigned Access records exist. Administrators may be locked out after enforcement is tightened.", "access-none", void 0, { focusSubsectionId: "platform-user-access-records" });
   } else if (!items.some((item) => item.area === "User Access" && item.severity === "CRITICAL")) {
-    add("OK", "User Access", "User scopes are structurally valid", `${activeUsersWithAccess.length} user${activeUsersWithAccess.length === 1 ? "" : "s"} have active access scopes without invalid location or unit references.`, "access-valid");
+    add("OK", "User Access", "Assigned Access records are structurally valid", `${activeUsersWithAccess.length} user${activeUsersWithAccess.length === 1 ? "" : "s"} have active Assigned Access records without invalid location or unit references.`, "access-valid");
   }
   permissionProfiles.forEach((profile) => {
     if (!Array.isArray(profile.permissions) || profile.permissions.length === 0) {
@@ -23752,7 +23752,7 @@ This removes it from the master list and from every user assignment that current
         ].map((value) => toIdentifier(value).toLowerCase())).some((value) => roleLikeAccessLabels.has(value));
         return withSearchText({
           id: access.userId || access.username,
-          name: looksLikeRole ? `${orphanLabel} (role saved as user)` : `${formattedOrphanLabel} (access scope has no login account)`,
+          name: looksLikeRole ? `${orphanLabel} (role saved as user)` : `${formattedOrphanLabel} (Assigned Access has no login account)`,
           username: access.username || access.userId || "",
           email: "",
           personnelId: toIdentifier(access.personnelId || access.staffPersonnelId || access.traineePersonnelId)
@@ -30708,13 +30708,15 @@ This removes them from DFP Resource Rows. Press Save in this section to apply th
             SectionHeader,
             {
               title: "Assign User Permissions",
-              subtitle: "Search by user name, assign permission profiles, then add one unit access scope for each unit this user may open.",
+              subtitle: "Search by user name, assign permission profiles, then add Assigned Access for each unit this user may open.",
               action: /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex flex-wrap justify-end gap-[1px]", children: canEdit ? /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
                 renderSectionEditSaveButton("platform-user-access"),
-                /* @__PURE__ */ jsxRuntimeExports.jsx("button", { type: "button", onClick: addUserAccess, disabled: !canEditSection("platform-user-access"), className: platformActionButtonClass, children: /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "text-[9px] leading-tight", children: [
+                /* @__PURE__ */ jsxRuntimeExports.jsx("button", { type: "button", onClick: addUserAccess, disabled: !canEditSection("platform-user-access"), className: `${platformActionButtonClass} ${wizardEditMode ? "min-w-[104px]" : "!w-[86px]"}`, children: /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "text-[9px] leading-tight", children: [
                   "Add",
                   /* @__PURE__ */ jsxRuntimeExports.jsx("br", {}),
-                  "Scope"
+                  "Assigned",
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("br", {}),
+                  "Access"
                 ] }) })
               ] }) : null })
             }
@@ -30746,13 +30748,13 @@ This removes them from DFP Resource Rows. Press Save in this section to apply th
                 ] }),
                 /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
                   /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: `${labelClass} inline-flex items-center gap-1.5`, children: [
-                    "Access Scopes",
+                    "Assigned Access",
                     /* @__PURE__ */ jsxRuntimeExports.jsx(InfoHint, { text: ACCESS_SCOPE_HELP_TEXT, theme: wizardEditMode ? "light" : "dark" })
                   ] }),
                   /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "rounded border border-cyan-500/20 bg-gray-950 px-3 py-2 text-sm font-semibold text-cyan-100", children: visibleSelectedAccessRows.length })
                 ] })
               ] }),
-              /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-3 text-xs text-cyan-100/70", children: "Profiles define what the user can do. Each access scope defines one unit they can open in the DFP, Staff, schedules and related pages." })
+              /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-3 text-xs text-cyan-100/70", children: "Profiles define what the user can do. Assigned Access defines where they can do it, including the unit and feature area." })
             ] }),
             /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded-lg border border-gray-700 bg-gray-900 p-4", children: [
               /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mb-3", children: [
@@ -30836,7 +30838,7 @@ This removes them from DFP Resource Rows. Press Save in this section to apply th
               /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mb-3 flex flex-wrap items-start justify-between gap-3", children: [
                 /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
                   /* @__PURE__ */ jsxRuntimeExports.jsx("h5", { className: "text-sm font-bold text-white", children: "Assign Master Profiles to Multiple People" }),
-                  /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-1 text-xs text-gray-400", children: "Select multiple people, choose their role profile and any exception profiles from the master list, then apply them together. Existing access scopes are updated; users without a scope receive one for the current unit. Add extra unit scopes below when a person needs to open more than one unit." }),
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-1 text-xs text-gray-400", children: "Select multiple people, choose their role profile and any exception profiles from the master list, then apply them together. Existing Assigned Access records are updated; users without Assigned Access receive one for the current unit. Add extra Assigned Access records below when a person needs to open more than one unit." }),
                   /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-1 text-xs text-cyan-100/70", children: "Additions and deletions in the master list are reflected in this list automatically." })
                 ] }),
                 /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex flex-wrap gap-2", children: [
@@ -30942,7 +30944,7 @@ This removes them from DFP Resource Rows. Press Save in this section to apply th
                 ] })
               ] }) : /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "rounded border border-cyan-500/20 bg-gray-950/60 px-3 py-3 text-sm text-cyan-100/75", children: "Bulk assignment is closed. Open it only when assigning profiles to many people at once." })
             ] }),
-            visibleSelectedAccessRows.length === 0 && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: `rounded border px-3 py-3 text-sm font-semibold ${wizardEditMode ? "border-amber-300 bg-amber-50 text-amber-950 shadow-sm" : "border-yellow-600/40 bg-yellow-900/20 text-yellow-100"}`, children: "This user has no unit access scopes. Tick a master profile above to create a current-unit scope automatically, or use Add Scope to choose the first unit manually." }),
+            visibleSelectedAccessRows.length === 0 && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: `rounded border px-3 py-3 text-sm font-semibold ${wizardEditMode ? "border-amber-300 bg-amber-50 text-amber-950 shadow-sm" : "border-yellow-600/40 bg-yellow-900/20 text-yellow-100"}`, children: "This user has no Assigned Access. Tick a master profile above to create Assigned Access for the current unit automatically, or use Add Assigned Access to choose the first unit manually." }),
             visibleSelectedAccessRows.map(({ access, index }) => {
               const appliesToAllFeatures = !access.moduleCode;
               const scopeKey = access.id || `${access.userId}-${index}`;
@@ -30961,7 +30963,7 @@ This removes them from DFP Resource Rows. Press Save in this section to apply th
                   },
                   children: [
                     /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mb-3 flex flex-wrap items-center gap-2", children: [
-                      /* @__PURE__ */ jsxRuntimeExports.jsx("h5", { className: "text-sm font-bold text-white", children: "Access Scope" }),
+                      /* @__PURE__ */ jsxRuntimeExports.jsx("h5", { className: "text-sm font-bold text-white", children: "Assigned Access" }),
                       /* @__PURE__ */ jsxRuntimeExports.jsx(InfoHint, { text: ACCESS_SCOPE_HELP_TEXT, theme: wizardEditMode ? "light" : "dark" }),
                       /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "ml-auto rounded bg-gray-950 px-2 py-1 text-xs font-semibold text-gray-300", children: [
                         access.locationCode || "Unit location",
@@ -30976,7 +30978,7 @@ This removes them from DFP Resource Rows. Press Save in this section to apply th
                           type: "button",
                           onClick: () => removeUserAccessScope(index),
                           className: "rounded border border-red-700/50 bg-red-950/40 px-2 py-1 text-xs font-bold text-red-200 hover:bg-red-900/60",
-                          children: "Delete Scope"
+                          children: "Delete Assigned Access"
                         }
                       )
                     ] }),
@@ -31023,7 +31025,7 @@ This removes them from DFP Resource Rows. Press Save in this section to apply th
                               ),
                               /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { children: [
                                 /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "block font-bold", children: "Apply to all enabled features for this unit" }),
-                                /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "mt-1 block text-xs text-cyan-100/70", children: "Recommended for normal administration. Platform Admin and Super Admin scopes can open all feature areas for this location/unit." })
+                                /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "mt-1 block text-xs text-cyan-100/70", children: "Recommended for normal administration. Platform Admin and Super Admin access can open all feature areas for this location/unit." })
                               ] })
                             ] }),
                             /* @__PURE__ */ jsxRuntimeExports.jsx(
@@ -31041,11 +31043,11 @@ This removes them from DFP Resource Rows. Press Save in this section to apply th
                           ] }),
                           showAdvancedFeatureArea && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mt-3 rounded border border-gray-700 bg-gray-950 p-3", children: [
                             /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mb-2 flex items-center gap-2", children: [
-                              /* @__PURE__ */ jsxRuntimeExports.jsx("h6", { className: "text-xs font-bold uppercase tracking-wide text-gray-300", children: "Limit This Scope To One Feature Area" }),
+                              /* @__PURE__ */ jsxRuntimeExports.jsx("h6", { className: "text-xs font-bold uppercase tracking-wide text-gray-300", children: "Limit This Assigned Access To One Feature Area" }),
                               /* @__PURE__ */ jsxRuntimeExports.jsx(InfoHint, { text: "Use this only when a user should administer one area but not another. Example: location + unit + NEO Build lets the user work with NEO Build for that unit, but not training records or reporting." })
                             ] }),
                             /* @__PURE__ */ jsxRuntimeExports.jsx(SelectField, { label: "Feature Area", value: access.moduleCode || "", disabled: !canEditSection("platform-user-access") || appliesToAllFeatures, options: ["", ...configModules.map((module) => module.code)], onChange: (value) => updateRow("userAccess", index, { moduleCode: value || null }), emptyLabel: "All Enabled Features" }),
-                            /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-2 text-xs text-gray-400", children: "Leave this as all enabled features unless you deliberately want to restrict this scope to a single app area such as DFP, NEO Build, Training, or Reporting." })
+                            /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-2 text-xs text-gray-400", children: "Leave this as all enabled features unless you deliberately want to restrict this Assigned Access to a single app area such as DFP, NEO Build, Training, or Reporting." })
                           ] })
                         ]
                       }
