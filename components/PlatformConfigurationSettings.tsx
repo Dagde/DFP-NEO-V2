@@ -14547,7 +14547,11 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
           </div>
 
           {visibleSelectedAccessRows.length === 0 && (
-            <div className="rounded border border-yellow-600/40 bg-yellow-900/20 px-3 py-3 text-sm text-yellow-100">
+            <div className={`rounded border px-3 py-3 text-sm font-semibold ${
+              wizardEditMode
+                ? 'border-amber-300 bg-amber-50 text-amber-950 shadow-sm'
+                : 'border-yellow-600/40 bg-yellow-900/20 text-yellow-100'
+            }`}>
               This user has no unit access scopes. Tick a master profile above to create a current-unit scope automatically, or use Add Scope to choose the first unit manually.
             </div>
           )}

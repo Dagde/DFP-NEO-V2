@@ -30942,7 +30942,7 @@ This removes them from DFP Resource Rows. Press Save in this section to apply th
                 ] })
               ] }) : /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "rounded border border-cyan-500/20 bg-gray-950/60 px-3 py-3 text-sm text-cyan-100/75", children: "Bulk assignment is closed. Open it only when assigning profiles to many people at once." })
             ] }),
-            visibleSelectedAccessRows.length === 0 && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "rounded border border-yellow-600/40 bg-yellow-900/20 px-3 py-3 text-sm text-yellow-100", children: "This user has no unit access scopes. Tick a master profile above to create a current-unit scope automatically, or use Add Scope to choose the first unit manually." }),
+            visibleSelectedAccessRows.length === 0 && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: `rounded border px-3 py-3 text-sm font-semibold ${wizardEditMode ? "border-amber-300 bg-amber-50 text-amber-950 shadow-sm" : "border-yellow-600/40 bg-yellow-900/20 text-yellow-100"}`, children: "This user has no unit access scopes. Tick a master profile above to create a current-unit scope automatically, or use Add Scope to choose the first unit manually." }),
             visibleSelectedAccessRows.map(({ access, index }) => {
               const appliesToAllFeatures = !access.moduleCode;
               const scopeKey = access.id || `${access.userId}-${index}`;
