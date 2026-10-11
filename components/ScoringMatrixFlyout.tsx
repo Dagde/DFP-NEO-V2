@@ -201,6 +201,7 @@ const ScoringMatrixFlyout: React.FC<ScoringMatrixFlyoutProps> = ({ onClose, phra
 
     const [selectedElement, setSelectedElement] = useState<string>(flightElements[0]);
     const [elementGroupDrafts, setElementGroupDrafts] = useState<Record<string, string>>({});
+    const [showSectionHelp, setShowSectionHelp] = useState(false);
 
     const currentDimension = activeTab === 'Elements' ? selectedElement : activeTab;
     const { groups: configuredElementGroups, hasExplicitGroups: hasExplicitElementGroups } = getConfiguredScoringMatrixElementGroups(phraseBank);
@@ -457,16 +458,20 @@ const ScoringMatrixFlyout: React.FC<ScoringMatrixFlyoutProps> = ({ onClose, phra
 
                 {activeTab === 'Elements' && (
                     <div className="border border-gray-700 rounded-lg bg-gray-800/70 p-4">
-                        <div className="group mb-2">
+                        <div className="mb-2">
                             <div className="flex items-center gap-2">
                                 <label className="block text-xs font-bold uppercase tracking-wider text-gray-400">
                                     Training report section
                                 </label>
-                                <span className="inline-flex h-4 w-4 items-center justify-center rounded-full border border-sky-500/60 bg-sky-500/10 text-[10px] font-bold text-sky-300">
+                                <span
+                                    className="inline-flex h-4 w-4 items-center justify-center rounded-full border border-sky-500/60 bg-sky-500/10 text-[10px] font-bold text-sky-300"
+                                    onMouseEnter={() => setShowSectionHelp(true)}
+                                    onMouseLeave={() => setShowSectionHelp(false)}
+                                >
                                     i
                                 </span>
                             </div>
-                            <div className="mt-2 hidden max-w-2xl rounded-md border border-sky-200 bg-white px-3 py-2 text-xs normal-case leading-relaxed tracking-normal text-slate-700 shadow-sm group-hover:block">
+                            <div className={`mt-2 max-w-2xl rounded-md border border-sky-200 bg-white px-3 py-2 text-xs normal-case leading-relaxed tracking-normal text-slate-700 shadow-sm ${showSectionHelp ? 'block' : 'hidden'}`}>
                                 {SCORING_MATRIX_SECTION_HELP}
                             </div>
                         </div>

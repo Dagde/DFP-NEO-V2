@@ -14375,6 +14375,7 @@ const ScoringMatrixFlyout = ({ onClose, phraseBank, onUpdatePhraseBank, initialT
   });
   const [selectedElement, setSelectedElement] = reactExports.useState(flightElements[0]);
   const [elementGroupDrafts, setElementGroupDrafts] = reactExports.useState({});
+  const [showSectionHelp, setShowSectionHelp] = reactExports.useState(false);
   const currentDimension = activeTab === "Elements" ? selectedElement : activeTab;
   const { groups: configuredElementGroups, hasExplicitGroups: hasExplicitElementGroups } = getConfiguredScoringMatrixElementGroups(phraseBank);
   const savedElementGroup = getScoringMatrixElementGroup(selectedElement, configuredElementGroups, hasExplicitElementGroups);
@@ -14579,12 +14580,20 @@ const ScoringMatrixFlyout = ({ onClose, phraseBank, onUpdatePhraseBank, initialT
           /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-gray-400 text-sm", children: "Define standardized phrases for each grade level." })
         ] }),
         activeTab === "Elements" && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "border border-gray-700 rounded-lg bg-gray-800/70 p-4", children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "group mb-2", children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mb-2", children: [
             /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center gap-2", children: [
               /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "block text-xs font-bold uppercase tracking-wider text-gray-400", children: "Training report section" }),
-              /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "inline-flex h-4 w-4 items-center justify-center rounded-full border border-sky-500/60 bg-sky-500/10 text-[10px] font-bold text-sky-300", children: "i" })
+              /* @__PURE__ */ jsxRuntimeExports.jsx(
+                "span",
+                {
+                  className: "inline-flex h-4 w-4 items-center justify-center rounded-full border border-sky-500/60 bg-sky-500/10 text-[10px] font-bold text-sky-300",
+                  onMouseEnter: () => setShowSectionHelp(true),
+                  onMouseLeave: () => setShowSectionHelp(false),
+                  children: "i"
+                }
+              )
             ] }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-2 hidden max-w-2xl rounded-md border border-sky-200 bg-white px-3 py-2 text-xs normal-case leading-relaxed tracking-normal text-slate-700 shadow-sm group-hover:block", children: SCORING_MATRIX_SECTION_HELP })
+            /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: `mt-2 max-w-2xl rounded-md border border-sky-200 bg-white px-3 py-2 text-xs normal-case leading-relaxed tracking-normal text-slate-700 shadow-sm ${showSectionHelp ? "block" : "hidden"}`, children: SCORING_MATRIX_SECTION_HELP })
           ] }),
           /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "w-full max-w-full overflow-x-auto pb-1", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid min-w-[460px] grid-cols-[minmax(220px,1fr)_minmax(220px,1fr)] gap-3", children: [
             /* @__PURE__ */ jsxRuntimeExports.jsx(
@@ -16552,6 +16561,7 @@ const ScoringMatrixInline = ({ activeTab, phraseBank, onUpdatePhraseBank, readOn
   });
   const [selectedElement, setSelectedElement] = reactExports.useState(flightElements[0]);
   const [elementGroupDrafts, setElementGroupDrafts] = reactExports.useState({});
+  const [showSectionHelp, setShowSectionHelp] = reactExports.useState(false);
   const currentDimension = activeTab === "Elements" ? selectedElement : activeTab;
   const { groups: configuredElementGroups, hasExplicitGroups: hasExplicitElementGroups } = getConfiguredScoringMatrixElementGroups(phraseBank);
   const savedElementGroup = getScoringMatrixElementGroup(selectedElement, configuredElementGroups, hasExplicitElementGroups);
@@ -16719,12 +16729,20 @@ const ScoringMatrixInline = ({ activeTab, phraseBank, onUpdatePhraseBank, readOn
         /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-gray-400 text-sm", children: "Define standardized phrases for each grade level." })
       ] }),
       activeTab === "Elements" && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "border border-gray-700 rounded-lg bg-gray-800/70 p-4", children: [
-        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "group mb-2", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mb-2", children: [
           /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center gap-2", children: [
             /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "block text-xs font-bold uppercase tracking-wider text-gray-400", children: "Training report section" }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "inline-flex h-4 w-4 items-center justify-center rounded-full border border-sky-500/60 bg-sky-500/10 text-[10px] font-bold text-sky-300", children: "i" })
+            /* @__PURE__ */ jsxRuntimeExports.jsx(
+              "span",
+              {
+                className: "inline-flex h-4 w-4 items-center justify-center rounded-full border border-sky-500/60 bg-sky-500/10 text-[10px] font-bold text-sky-300",
+                onMouseEnter: () => setShowSectionHelp(true),
+                onMouseLeave: () => setShowSectionHelp(false),
+                children: "i"
+              }
+            )
           ] }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-2 hidden max-w-2xl rounded-md border border-sky-200 bg-white px-3 py-2 text-xs normal-case leading-relaxed tracking-normal text-slate-700 shadow-sm group-hover:block", children: SCORING_MATRIX_SECTION_HELP })
+          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: `mt-2 max-w-2xl rounded-md border border-sky-200 bg-white px-3 py-2 text-xs normal-case leading-relaxed tracking-normal text-slate-700 shadow-sm ${showSectionHelp ? "block" : "hidden"}`, children: SCORING_MATRIX_SECTION_HELP })
         ] }),
         /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "w-full max-w-full overflow-x-auto pb-1", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid min-w-[460px] grid-cols-[minmax(220px,1fr)_minmax(220px,1fr)] gap-3", children: [
           /* @__PURE__ */ jsxRuntimeExports.jsx(
