@@ -33939,7 +33939,9 @@ const parseWizardCurrencyRows = (value) => parseWizardPipeRows(value, ["name", "
 const formatWizardCurrencyRows = (rows) => formatWizardPipeRows(rows, ["name", "code", "crew", "config", "currency", "aircraftCount"]);
 const normaliseWizardCrewDisplayLabel = (value) => {
   const text = String(value || "").trim();
-  if (!text || /^standard\s+crew$/i.test(text)) return "Primary";
+  if (!text || /^standard\s+crew$/i.test(text) || /^standard(?::|$)/i.test(text)) return "Primary";
+  const alternateMatch = text.match(/^alternate:(?:.*?)(\d+)$/i);
+  if (alternateMatch) return `Alt${alternateMatch[1]}`;
   return text;
 };
 const parseWizardScoringRows = (value) => parseWizardPipeRows(value, ["dimension", "passStandard", "failStandard", "grade0", "grade1", "grade2", "grade3", "grade4", "grade5"]);

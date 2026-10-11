@@ -1689,7 +1689,9 @@ const parseWizardCurrencyRows = (value: string) => parseWizardPipeRows<{ name: s
 const formatWizardCurrencyRows = (rows: ReturnType<typeof parseWizardCurrencyRows>) => formatWizardPipeRows(rows, ['name', 'code', 'crew', 'config', 'currency', 'aircraftCount']);
 const normaliseWizardCrewDisplayLabel = (value: any) => {
     const text = String(value || '').trim();
-    if (!text || /^standard\s+crew$/i.test(text)) return 'Primary';
+    if (!text || /^standard\s+crew$/i.test(text) || /^standard(?::|$)/i.test(text)) return 'Primary';
+    const alternateMatch = text.match(/^alternate:(?:.*?)(\d+)$/i);
+    if (alternateMatch) return `Alt${alternateMatch[1]}`;
     return text;
 };
 
