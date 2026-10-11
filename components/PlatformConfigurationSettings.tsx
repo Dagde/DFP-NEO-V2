@@ -12298,7 +12298,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
             <div className="flex flex-wrap justify-end gap-[1px]">
               {renderSectionEditSaveButton('platform-licensing')}
               <button type="button" onClick={addLicense} disabled={!canEditSection('platform-licensing')} className={platformActionButtonClass}>
-                <span className="text-[9px] leading-tight">Add<br />Licence</span>
+                <span className={wizardEditMode ? 'text-[11px] leading-tight' : 'text-[9px] leading-tight'}>Add<br />Licence</span>
               </button>
             </div>
           ) : null}
@@ -12374,7 +12374,11 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
           </div>
 
           {configLicenses.length === 0 && (
-            <div className="rounded border border-yellow-600/40 bg-yellow-900/20 px-3 py-3 text-sm text-yellow-100">
+            <div className={`rounded border px-3 py-3 text-sm font-semibold ${
+              wizardEditMode
+                ? 'border-sky-200 bg-sky-50 text-sky-950 shadow-sm'
+                : 'border-yellow-600/40 bg-yellow-900/20 text-yellow-100'
+            }`}>
               No licence records exist yet. Add one before introducing licence enforcement.
             </div>
           )}

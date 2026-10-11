@@ -28808,7 +28808,7 @@ This removes them from DFP Resource Rows. Press Save in this section to apply th
               subtitle: "Manage licence records, deployment limits and signed licence files.",
               action: canEdit ? /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex flex-wrap justify-end gap-[1px]", children: [
                 renderSectionEditSaveButton("platform-licensing"),
-                /* @__PURE__ */ jsxRuntimeExports.jsx("button", { type: "button", onClick: addLicense, disabled: !canEditSection("platform-licensing"), className: platformActionButtonClass, children: /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "text-[9px] leading-tight", children: [
+                /* @__PURE__ */ jsxRuntimeExports.jsx("button", { type: "button", onClick: addLicense, disabled: !canEditSection("platform-licensing"), className: platformActionButtonClass, children: /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: wizardEditMode ? "text-[11px] leading-tight" : "text-[9px] leading-tight", children: [
                   "Add",
                   /* @__PURE__ */ jsxRuntimeExports.jsx("br", {}),
                   "Licence"
@@ -28882,7 +28882,7 @@ This removes them from DFP Resource Rows. Press Save in this section to apply th
               licenseImportMessage && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-3 rounded border border-green-500/40 bg-green-500/10 px-3 py-2 text-sm text-green-100", children: licenseImportMessage }),
               licenseImportError && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-3 rounded border border-red-500/40 bg-red-500/10 px-3 py-2 text-sm text-red-100", children: licenseImportError })
             ] }),
-            configLicenses.length === 0 && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "rounded border border-yellow-600/40 bg-yellow-900/20 px-3 py-3 text-sm text-yellow-100", children: "No licence records exist yet. Add one before introducing licence enforcement." }),
+            configLicenses.length === 0 && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: `rounded border px-3 py-3 text-sm font-semibold ${wizardEditMode ? "border-sky-200 bg-sky-50 text-sky-950 shadow-sm" : "border-yellow-600/40 bg-yellow-900/20 text-yellow-100"}`, children: "No licence records exist yet. Add one before introducing licence enforcement." }),
             /* @__PURE__ */ jsxRuntimeExports.jsx("div", { id: "platform-license-records", className: "space-y-4", children: configLicenses.map((license, index) => {
               const moduleCodes = Array.isArray(license.moduleCodes) ? license.moduleCodes : [];
               const licenceFeatures = license.features || {};
