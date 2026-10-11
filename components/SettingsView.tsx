@@ -465,11 +465,10 @@ export const ScoringMatrixInline: React.FC<ScoringMatrixInlineProps> = ({ active
                             <span className="group relative inline-flex">
                                 <span
                                     className="inline-flex h-4 w-4 items-center justify-center rounded-full border border-sky-500/60 bg-sky-500/10 text-[10px] font-bold text-sky-300"
-                                    title={SCORING_MATRIX_SECTION_HELP}
                                 >
                                     i
                                 </span>
-                                <span className="pointer-events-none absolute left-1/2 top-6 z-30 hidden w-72 -translate-x-1/2 rounded-md border border-sky-500/40 bg-gray-950 px-3 py-2 text-xs normal-case leading-relaxed tracking-normal text-gray-200 shadow-xl group-hover:block">
+                                <span className="pointer-events-none absolute left-0 top-6 z-30 hidden w-72 rounded-md border border-sky-200 bg-white px-3 py-2 text-xs normal-case leading-relaxed tracking-normal text-slate-700 shadow-xl group-hover:block">
                                     {SCORING_MATRIX_SECTION_HELP}
                                 </span>
                             </span>
