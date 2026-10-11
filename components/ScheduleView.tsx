@@ -9180,6 +9180,18 @@ const InitialSetupWizard: React.FC<{
             return;
         }
         if (template.id === 'trainees') {
+            const configuredCourseOptions = Array.from(new Set([
+                ...parseWizardLineItems(traineeCourseOptionsDraft),
+                ...traineeCourseInputRows.map((course) => String(course || '').trim()).filter(Boolean),
+            ].map((course) => String(course || '').trim()).filter(Boolean)));
+            const resolveUploadedTraineeCourse = (...values: string[]) => {
+                const candidates = values.map((value) => String(value || '').trim()).filter(Boolean);
+                for (const candidate of candidates) {
+                    const matchedCourse = configuredCourseOptions.find((course) => course.toUpperCase() === candidate.toUpperCase());
+                    if (matchedCourse) return matchedCourse;
+                }
+                return '';
+            };
             const importedRows = result.dataRows.map((row) => {
                 const headers = result.headers || [];
                 const sourceTemplateData = getWizardSourceRowObject(headers, row);
@@ -9189,6 +9201,9 @@ const InitialSetupWizard: React.FC<{
                 const [surnamePart, givenPart] = nameValue.includes(',')
                     ? nameValue.split(',').map((part) => part.trim())
                     : ['', nameValue.trim()];
+                const uploadedCourseNumber = getWizardCellByHeader(headers, row, 'Course Number');
+                const uploadedCourse = getWizardCellByHeader(headers, row, 'Course');
+                const matchedCourse = resolveUploadedTraineeCourse(uploadedCourse, uploadedCourseNumber);
                 return {
                     sourceTemplateData,
                     surname: surnameValue || surnamePart || '',
@@ -9196,8 +9211,8 @@ const InitialSetupWizard: React.FC<{
                     unit: (getWizardCellByHeader(headers, row, 'Unit') || unitDraft.code || '').toUpperCase(),
                     rank: getWizardCellByHeader(headers, row, 'Rank'),
                     personnelId: getWizardCellByAnyHeader(headers, row, ['Personnel ID', 'ID Number', 'ID No', 'Employee ID', 'Service ID', 'Service Number']),
-                    courseNumber: getWizardCellByHeader(headers, row, 'Course Number'),
-                    course: getWizardCellByHeader(headers, row, 'Course'),
+                    courseNumber: uploadedCourseNumber,
+                    course: matchedCourse,
                     masterLmp: getWizardCellByHeader(headers, row, 'Master LMP'),
                     startDate: getWizardCellByHeader(headers, row, 'Start Date'),
                     email: getWizardCellByHeader(headers, row, 'Email'),
@@ -9211,7 +9226,7 @@ const InitialSetupWizard: React.FC<{
                     permissions: parseWizardTemplateList(getWizardCellByHeader(headers, row, 'Permissions')),
                     seatConfig: getWizardCellByAnyHeader(headers, row, ['Seat Config', 'Seat Configuration', 'Config']),
                 };
-            }).filter((row) => row.surname || row.givenNames || row.unit || row.rank || row.personnelId || row.courseNumber || row.masterLmp || row.startDate);
+            }).filter((row) => row.surname || row.givenNames || row.unit || row.rank || row.personnelId || row.courseNumber || row.course || row.masterLmp || row.startDate);
             const baseRows = traineeAllocationCommitted
                 ? (uploadedTraineeProfileRows.length > 0 ? uploadedTraineeProfileRows : parseWizardTraineeRows(traineeDraft))
                 : [];
@@ -9222,22 +9237,15 @@ const InitialSetupWizard: React.FC<{
             setTraineeAllocationCommitted(false);
             setTraineeCommitSummary('');
             setShowMoreTraineesPrompt(false);
-            const importedCourseOptions = Array.from(new Set(nextImportedRows
-                .flatMap((row) => [row.course, row.courseNumber])
-                .map((value) => String(value || '').trim())
-                .filter(Boolean)));
-            if (importedCourseOptions.length > 0) {
-                const mergedCourseOptions = Array.from(new Set([
-                    ...parseWizardLineItems(traineeCourseOptionsDraft),
-                    ...importedCourseOptions,
-                ].map((item) => String(item || '').trim()).filter(Boolean)));
-                setTraineeCourseOptionsDraft(mergedCourseOptions.join('\n'));
-                setTraineeCourseInputRows(mergedCourseOptions.length > 0 ? mergedCourseOptions : ['']);
-            }
             setTraineeAllocationCommitted(false);
             setShowMoreTraineesPrompt(false);
             setUnitDraft((draft) => ({ ...draft, hasTrainees: true }));
-            const message = `Loaded ${importedRows.length} trainee row${importedRows.length === 1 ? '' : 's'} for course allocation. Select a course for every trainee, then commit them to Trainee Profiles.`;
+            const preselectedCount = importedRows.filter((row) => String(row.course || '').trim()).length;
+            const unmatchedCourseCount = importedRows.filter((row) => (
+                !String(row.course || '').trim()
+                && String(row.courseNumber || '').trim()
+            )).length;
+            const message = `Loaded ${importedRows.length} trainee row${importedRows.length === 1 ? '' : 's'} for course allocation. ${preselectedCount} course allocation${preselectedCount === 1 ? '' : 's'} matched the active course setup and ${preselectedCount === 1 ? 'was' : 'were'} preselected.${unmatchedCourseCount > 0 ? ` ${unmatchedCourseCount} uploaded course value${unmatchedCourseCount === 1 ? '' : 's'} did not match the active course setup and still need manual selection.` : ''} Review the selections, then commit them to Trainee Profiles.`;
             setImportConfirmations((current) => ({ ...current, [template.id]: message }));
             setSaveMessage(message);
             return;
