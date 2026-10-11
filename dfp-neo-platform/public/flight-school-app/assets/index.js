@@ -30731,6 +30731,7 @@ This removes them from DFP Resource Rows. Press Save in this section to apply th
                     users: userOptions,
                     search: userSearch,
                     placeholder: wizardEditMode ? "Smith, John" : void 0,
+                    theme: wizardEditMode ? "light" : "dark",
                     onSearchChange: setUserSearch,
                     onChange: (value) => {
                       if (wizardEditMode) setWizardAccessUserSelected(true);
@@ -32380,6 +32381,7 @@ const UserSearchSelect = ({
   users,
   search,
   placeholder,
+  theme = "dark",
   onSearchChange,
   onChange
 }) => {
@@ -32428,11 +32430,15 @@ const UserSearchSelect = ({
     setIsOpen(true);
     updateDropdownRect();
   };
+  const dropdownClass = theme === "light" ? "fixed z-[10000] overflow-y-auto rounded border border-slate-300 bg-white text-slate-900 shadow-xl" : "fixed z-[10000] overflow-y-auto rounded border border-cyan-500/30 bg-gray-950 text-gray-100 shadow-xl";
+  const optionClass = (isSelected) => theme === "light" ? `block w-full px-3 py-2 text-left text-sm hover:bg-sky-50 ${isSelected ? "bg-sky-100 text-sky-950" : "text-slate-900"}` : `block w-full px-3 py-2 text-left text-sm hover:bg-cyan-500/20 ${isSelected ? "bg-cyan-500/15 text-cyan-100" : "text-gray-100"}`;
+  const subTextClass = theme === "light" ? "block text-xs text-slate-500" : "block text-xs text-gray-400";
+  const emptyClass = theme === "light" ? "px-3 py-2 text-xs text-amber-700" : "px-3 py-2 text-xs text-yellow-100";
   const dropdown = isOpen && !disabled && dropdownRect && typeof document !== "undefined" ? reactDomExports.createPortal(
     /* @__PURE__ */ jsxRuntimeExports.jsx(
       "div",
       {
-        className: "fixed z-[10000] overflow-y-auto rounded border border-cyan-500/30 bg-gray-950 shadow-xl",
+        className: dropdownClass,
         style: {
           left: dropdownRect.left,
           top: dropdownRect.bottom + 4,
@@ -32444,7 +32450,7 @@ const UserSearchSelect = ({
           "button",
           {
             type: "button",
-            className: `block w-full px-3 py-2 text-left text-sm hover:bg-cyan-500/20 ${user.id === value ? "bg-cyan-500/15 text-cyan-100" : "text-gray-100"}`,
+            className: optionClass(user.id === value),
             onClick: () => {
               onChange(user.id);
               onSearchChange("");
@@ -32454,11 +32460,11 @@ const UserSearchSelect = ({
             },
             children: [
               /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "block font-semibold", children: user.name }),
-              user.username && /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "block text-xs text-gray-400", children: user.username })
+              user.username && /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: subTextClass, children: user.username })
             ]
           },
           user.id
-        )) : /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "px-3 py-2 text-xs text-yellow-100", children: "No users match that name." })
+        )) : /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: emptyClass, children: "No users match that name." })
       }
     ),
     document.body

@@ -14266,6 +14266,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
                 users={userOptions}
                 search={userSearch}
                 placeholder={wizardEditMode ? 'Smith, John' : undefined}
+                theme={wizardEditMode ? 'light' : 'dark'}
                 onSearchChange={setUserSearch}
                 onChange={(value) => {
                   if (wizardEditMode) setWizardAccessUserSelected(true);
@@ -16258,6 +16259,7 @@ const UserSearchSelect = ({
   users,
   search,
   placeholder,
+  theme = 'dark',
   onSearchChange,
   onChange,
 }: {
@@ -16267,6 +16269,7 @@ const UserSearchSelect = ({
   users: Array<{ id: string; name: string; username: string; email: string; searchText?: string; personnelId?: string }>;
   search: string;
   placeholder?: string;
+  theme?: 'dark' | 'light';
   onSearchChange: (value: string) => void;
   onChange: (value: string) => void;
 }) => {
@@ -16323,11 +16326,19 @@ const UserSearchSelect = ({
     setIsOpen(true);
     updateDropdownRect();
   };
+  const dropdownClass = theme === 'light'
+    ? 'fixed z-[10000] overflow-y-auto rounded border border-slate-300 bg-white text-slate-900 shadow-xl'
+    : 'fixed z-[10000] overflow-y-auto rounded border border-cyan-500/30 bg-gray-950 text-gray-100 shadow-xl';
+  const optionClass = (isSelected: boolean) => theme === 'light'
+    ? `block w-full px-3 py-2 text-left text-sm hover:bg-sky-50 ${isSelected ? 'bg-sky-100 text-sky-950' : 'text-slate-900'}`
+    : `block w-full px-3 py-2 text-left text-sm hover:bg-cyan-500/20 ${isSelected ? 'bg-cyan-500/15 text-cyan-100' : 'text-gray-100'}`;
+  const subTextClass = theme === 'light' ? 'block text-xs text-slate-500' : 'block text-xs text-gray-400';
+  const emptyClass = theme === 'light' ? 'px-3 py-2 text-xs text-amber-700' : 'px-3 py-2 text-xs text-yellow-100';
 
   const dropdown = isOpen && !disabled && dropdownRect && typeof document !== 'undefined'
     ? createPortal(
       <div
-        className="fixed z-[10000] overflow-y-auto rounded border border-cyan-500/30 bg-gray-950 shadow-xl"
+        className={dropdownClass}
         style={{
           left: dropdownRect.left,
           top: dropdownRect.bottom + 4,
@@ -16341,9 +16352,7 @@ const UserSearchSelect = ({
             <button
               key={user.id}
               type="button"
-              className={`block w-full px-3 py-2 text-left text-sm hover:bg-cyan-500/20 ${
-                user.id === value ? 'bg-cyan-500/15 text-cyan-100' : 'text-gray-100'
-              }`}
+              className={optionClass(user.id === value)}
               onClick={() => {
                 onChange(user.id);
                 onSearchChange('');
@@ -16353,11 +16362,11 @@ const UserSearchSelect = ({
               }}
             >
               <span className="block font-semibold">{user.name}</span>
-              {user.username && <span className="block text-xs text-gray-400">{user.username}</span>}
+              {user.username && <span className={subTextClass}>{user.username}</span>}
             </button>
           ))
         ) : (
-          <div className="px-3 py-2 text-xs text-yellow-100">
+          <div className={emptyClass}>
             No users match that name.
           </div>
         )}
