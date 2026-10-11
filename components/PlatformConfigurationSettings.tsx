@@ -14485,8 +14485,6 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
             </p>
           </div>
 
-          {renderAssignedAccessEditor()}
-
           <div className="rounded-lg border border-gray-700 bg-gray-900 p-4">
             <div className="mb-3">
               <h5 className="text-sm font-bold text-white">Assign Master Profiles to This User</h5>
@@ -14534,6 +14532,9 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
                   </label>
                 );
               })}
+            </div>
+            <div className="mt-4">
+              {renderAssignedAccessEditor()}
             </div>
             {shouldShowSelectedAccessUser ? (
             <div className="mt-4 rounded-lg border border-cyan-500/25 bg-cyan-950/20 p-4">

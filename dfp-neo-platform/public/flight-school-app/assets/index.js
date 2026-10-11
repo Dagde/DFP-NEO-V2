@@ -30921,7 +30921,6 @@ This removes them from DFP Resource Rows. Press Save in this section to apply th
               ] }),
               /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-3 text-xs text-cyan-100/70", children: "Profiles define what the user can do. Assigned Access defines where they can do it, including the unit and feature area." })
             ] }),
-            renderAssignedAccessEditor(),
             /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded-lg border border-gray-700 bg-gray-900 p-4", children: [
               /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mb-3", children: [
                 /* @__PURE__ */ jsxRuntimeExports.jsx("h5", { className: "text-sm font-bold text-white", children: "Assign Master Profiles to This User" }),
@@ -30955,6 +30954,7 @@ This removes them from DFP Resource Rows. Press Save in this section to apply th
                   ] })
                 ] }, profile.id);
               }) }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-4", children: renderAssignedAccessEditor() }),
               shouldShowSelectedAccessUser ? /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mt-4 rounded-lg border border-cyan-500/25 bg-cyan-950/20 p-4", children: [
                 /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mb-3 flex flex-wrap items-start justify-between gap-3", children: [
                   /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
