@@ -3280,6 +3280,13 @@ const InitialSetupWizard: React.FC<{
         return hasStoredStep || hasCompletedSteps || hasOrganisationDraft ? 'active' : 'detect';
     });
     const [wizardLaunchRequested, setWizardLaunchRequested] = useState(false);
+    useEffect(() => {
+        if (typeof document === 'undefined') return undefined;
+        document.body.classList.add('initial-setup-wizard-light-theme');
+        return () => {
+            document.body.classList.remove('initial-setup-wizard-light-theme');
+        };
+    }, []);
     const unitTypeOptions = useMemo(() => normaliseUnitTypeOptions(platformConfig), [platformConfig]);
     const configuredContinuationShortLabel = useMemo(
         () => getSctTerminology(platformConfig, unitCode).shortLabel || 'CT',

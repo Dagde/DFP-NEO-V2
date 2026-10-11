@@ -15015,10 +15015,12 @@ const SectionHeader = ({ title, subtitle, action }: { title: string; subtitle: s
 
 const InfoHint = ({ text, theme = 'dark' }: { text: string; theme?: 'dark' | 'light' }) => {
   const [position, setPosition] = useState<{ left: number; top: number; placement: 'above' | 'below' } | null>(null);
-  const iconClass = theme === 'light'
+  const isWizardLightTheme = typeof document !== 'undefined' && document.body.classList.contains('initial-setup-wizard-light-theme');
+  const effectiveTheme = isWizardLightTheme ? 'light' : theme;
+  const iconClass = effectiveTheme === 'light'
     ? 'border-sky-500/45 bg-white text-sky-700 hover:border-sky-600 hover:text-sky-900 focus-visible:border-sky-700 focus-visible:text-sky-900'
     : 'border-cyan-400/35 bg-gray-950/20 text-cyan-100/60 hover:border-cyan-300/60 hover:text-cyan-50 focus-visible:border-cyan-200 focus-visible:text-cyan-50';
-  const flyoutClass = theme === 'light'
+  const flyoutClass = effectiveTheme === 'light'
     ? 'border-sky-300 bg-white text-slate-800 shadow-xl'
     : 'border-cyan-500/30 bg-gray-950 text-gray-100 shadow-xl';
 
