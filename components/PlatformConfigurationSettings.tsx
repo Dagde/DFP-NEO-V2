@@ -14284,7 +14284,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
               <div>
                 <span className={`${labelClass} inline-flex items-center gap-1.5`}>
                   Access Scopes
-                  <InfoHint text={ACCESS_SCOPE_HELP_TEXT} />
+                  <InfoHint text={ACCESS_SCOPE_HELP_TEXT} theme={wizardEditMode ? 'light' : 'dark'} />
                 </span>
                 <div className="rounded border border-cyan-500/20 bg-gray-950 px-3 py-2 text-sm font-semibold text-cyan-100">
                   {visibleSelectedAccessRows.length}
@@ -14572,7 +14572,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
               >
                 <div className="mb-3 flex flex-wrap items-center gap-2">
                   <h5 className="text-sm font-bold text-white">Access Scope</h5>
-                  <InfoHint text={ACCESS_SCOPE_HELP_TEXT} />
+                  <InfoHint text={ACCESS_SCOPE_HELP_TEXT} theme={wizardEditMode ? 'light' : 'dark'} />
                   <span className="ml-auto rounded bg-gray-950 px-2 py-1 text-xs font-semibold text-gray-300">
                     {access.locationCode || 'Unit location'} / {access.unitCode || activeSettingsUnitCode || 'Current unit'} / {appliesToAllFeatures ? 'All enabled features' : access.moduleCode}
                   </span>
@@ -14837,8 +14837,14 @@ const SectionHeader = ({ title, subtitle, action }: { title: string; subtitle: s
   );
 };
 
-const InfoHint = ({ text }: { text: string }) => {
+const InfoHint = ({ text, theme = 'dark' }: { text: string; theme?: 'dark' | 'light' }) => {
   const [position, setPosition] = useState<{ left: number; top: number; placement: 'above' | 'below' } | null>(null);
+  const iconClass = theme === 'light'
+    ? 'border-sky-500/45 bg-white text-sky-700 hover:border-sky-600 hover:text-sky-900 focus-visible:border-sky-700 focus-visible:text-sky-900'
+    : 'border-cyan-400/35 bg-gray-950/20 text-cyan-100/60 hover:border-cyan-300/60 hover:text-cyan-50 focus-visible:border-cyan-200 focus-visible:text-cyan-50';
+  const flyoutClass = theme === 'light'
+    ? 'border-sky-300 bg-white text-slate-800 shadow-xl'
+    : 'border-cyan-500/30 bg-gray-950 text-gray-100 shadow-xl';
 
   const showHint = (target: HTMLElement) => {
     const rect = target.getBoundingClientRect();
@@ -14865,12 +14871,12 @@ const InfoHint = ({ text }: { text: string }) => {
       onMouseLeave={() => setPosition(null)}
       onFocus={(event) => showHint(event.currentTarget)}
       onBlur={() => setPosition(null)}
-      className="relative inline-flex h-4 w-4 shrink-0 cursor-help items-center justify-center rounded-full border border-cyan-400/35 bg-gray-950/20 text-cyan-100/60 normal-case outline-none transition-colors hover:border-cyan-300/60 hover:text-cyan-50 focus-visible:border-cyan-200 focus-visible:text-cyan-50"
+      className={`relative inline-flex h-4 w-4 shrink-0 cursor-help items-center justify-center rounded-full border normal-case outline-none transition-colors ${iconClass}`}
     >
       <span aria-hidden="true" className="font-serif text-[11px] font-bold italic leading-none normal-case">i</span>
       {position && typeof document !== 'undefined' ? createPortal(
         <span
-          className="pointer-events-none fixed z-[260] whitespace-pre-line rounded border border-cyan-500/30 bg-gray-950 p-3 text-left text-xs font-normal normal-case leading-relaxed tracking-normal text-gray-100 shadow-xl"
+          className={`pointer-events-none fixed z-[260] whitespace-pre-line rounded border p-3 text-left text-xs font-normal normal-case leading-relaxed tracking-normal ${flyoutClass}`}
           style={{
             left: `${position.left}px`,
             top: `${position.top}px`,
