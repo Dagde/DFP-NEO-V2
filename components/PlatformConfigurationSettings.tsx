@@ -7274,6 +7274,19 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
     if (userId) setSelectedAccessUserId(userId);
   };
 
+  const updateUserAccessProfileIds = (index: number, access: any, profileIds: string[]) => {
+    const cleanProfileIds = Array.from(new Set(profileIds.map((id) => String(id || '').trim()).filter(Boolean)));
+    const derivedAccess = deriveAssignedAccessFromProfileIds(cleanProfileIds);
+    updateRow('userAccess', index, {
+      role: derivedAccess.role,
+      accessLevel: derivedAccess.accessLevel,
+      settings: {
+        ...(access.settings || {}),
+        permissionProfileIds: cleanProfileIds,
+      },
+    });
+  };
+
   const updateResourcePoolSettings = (index: number, changes: Record<string, any>) => {
     const currentSettings = config.resourcePools[index]?.settings || {};
     updateRow('resourcePools', index, {
@@ -9187,7 +9200,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
             ? 'border-amber-300 bg-amber-50 text-amber-950 shadow-sm'
             : 'border-yellow-600/40 bg-yellow-900/20 text-yellow-100'
         }`}>
-          This user has no Assigned Access. Tick a master profile below to create Assigned Access for the current unit automatically, or use Add Assigned Access to choose the first unit manually.
+          This user has no Assigned Access. Tick a master profile above to create Assigned Access for the current unit automatically, or use Add Assigned Access to choose the first unit manually.
         </div>
       )}
 
@@ -9199,6 +9212,10 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
           ? config.units.find((unit) => String(unit.code || '').trim().toUpperCase() === String(access.unitCode || '').trim().toUpperCase())
           : null;
         const accessHomeLocationCode = String(access.locationCode || accessUnit?.locationCode || '').trim().toUpperCase();
+        const accessProfileIds = Array.isArray(access.settings?.permissionProfileIds)
+          ? access.settings.permissionProfileIds.map((id: unknown) => String(id || '').trim()).filter(Boolean)
+          : [];
+        const accessProfileIdSet = new Set(accessProfileIds);
         return (
           <div
             id={accessHomeLocationCode ? `platform-user-access-location-${getSettingsFocusAnchor(accessHomeLocationCode)}` : undefined}
@@ -9248,6 +9265,70 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
               <SelectField label="Status" value={access.status || 'ACTIVE'} disabled={!canEditSection('platform-user-access')} options={['ACTIVE', 'INACTIVE']} onChange={(value) => updateRow('userAccess', index, { status: value })} />
             </div>
 
+            <div className={`mt-3 rounded border p-3 ${
+              wizardEditMode
+                ? 'border-cyan-200 bg-white text-gray-950'
+                : 'border-gray-700 bg-gray-950/70 text-gray-100'
+            }`}>
+              <div className="mb-2 flex flex-wrap items-center gap-2">
+                <h6 className={`text-xs font-bold uppercase tracking-wide ${wizardEditMode ? 'text-cyan-800' : 'text-cyan-200'}`}>Permission Profiles For This Assigned Access</h6>
+                <span className={`ml-auto rounded px-2 py-1 text-[11px] font-semibold ${
+                  wizardEditMode ? 'bg-cyan-50 text-cyan-900' : 'bg-gray-800 text-gray-200'
+                }`}>
+                  {accessProfileIds.length} selected
+                </span>
+              </div>
+              <p className={`mb-3 text-xs leading-relaxed ${wizardEditMode ? 'text-gray-700' : 'text-gray-400'}`}>
+                These profiles apply only to this Assigned Access record. Add another Assigned Access record when the same user needs a different unit, location, or access level.
+              </p>
+              <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-3">
+                {assignablePermissionProfiles.map((profile) => {
+                  const profileType = getPermissionProfileType(profile);
+                  const checked = accessProfileIdSet.has(profile.id);
+                  return (
+                    <label
+                      key={`${scopeKey}-${profile.id}`}
+                      className={`flex items-start gap-2 rounded border px-2 py-2 text-xs ${
+                        wizardEditMode
+                          ? checked
+                            ? 'border-cyan-300 bg-cyan-50 text-cyan-950'
+                            : 'border-gray-200 bg-gray-50 text-gray-700'
+                          : checked
+                            ? 'border-cyan-500/35 bg-cyan-500/10 text-cyan-50'
+                            : 'border-gray-800 bg-gray-950 text-gray-400'
+                      }`}
+                    >
+                      <input
+                        type="checkbox"
+                        className="mt-0.5 h-4 w-4 rounded border-gray-500 accent-cyan-500"
+                        checked={checked}
+                        disabled={!canEditSection('platform-user-access')}
+                        onChange={(event) => {
+                          const nextProfileIds = event.target.checked
+                            ? Array.from(new Set([...accessProfileIds, profile.id]))
+                            : accessProfileIds.filter((id) => id !== profile.id);
+                          updateUserAccessProfileIds(index, access, nextProfileIds);
+                        }}
+                      />
+                      <span className="min-w-0">
+                        <span className="flex flex-wrap items-center gap-1.5 font-bold">
+                          {profile.name}
+                          <span className={`rounded px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wide ${
+                            profileType === 'exception'
+                              ? wizardEditMode ? 'bg-amber-100 text-amber-900' : 'bg-amber-500/20 text-amber-200'
+                              : wizardEditMode ? 'bg-cyan-100 text-cyan-900' : 'bg-cyan-500/20 text-cyan-200'
+                          }`}>
+                            {profileType}
+                          </span>
+                        </span>
+                        <span className={`mt-1 block ${wizardEditMode ? 'text-gray-600' : 'text-gray-500'}`}>{profile.description}</span>
+                      </span>
+                    </label>
+                  );
+                })}
+              </div>
+            </div>
+
             <div
               className="mt-3 rounded border p-3"
               style={{ backgroundColor: ACCESS_SCOPE_TONE.fill, borderColor: ACCESS_SCOPE_TONE.applyBorder }}
@@ -9284,7 +9365,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
                 <div className="mt-3 rounded border border-gray-700 bg-gray-950 p-3">
                   <div className="mb-2 flex items-center gap-2">
                     <h6 className="text-xs font-bold uppercase tracking-wide text-gray-300">Limit This Assigned Access To One Feature Area</h6>
-                    <InfoHint text="Use this only when a user should administer one area but not another. Example: location + unit + NEO Build lets the user work with NEO Build for that unit, but not training records or reporting." />
+                    <InfoHint text="Use this only when a user should administer one area but not another. Example: location + unit + NEO Build lets the user work with NEO Build for that unit, but not training records or reporting." theme={wizardEditMode ? 'light' : 'dark'} />
                   </div>
                   <SelectField label="Feature Area" value={access.moduleCode || ''} disabled={!canEditSection('platform-user-access') || appliesToAllFeatures} options={['', ...configModules.map((module) => module.code)]} onChange={(value) => updateRow('userAccess', index, { moduleCode: value || null })} emptyLabel="All Enabled Features" />
                   <p className="mt-2 text-xs text-gray-400">
@@ -14489,10 +14570,10 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
             <div className="mb-3">
               <h5 className="text-sm font-bold text-white">Assign Master Profiles to This User</h5>
               <p className="mt-1 text-xs text-gray-400">
-                Tick the user's normal role profile. The permissions below show that template, then let you add or remove user-specific exceptions without changing the master profile.
+                Tick the user's normal role profile. This applies the profile to every Assigned Access record for this user.
               </p>
               <p className="mt-1 text-xs text-cyan-100/70">
-                Changes made in Master Permission Profiles appear here automatically because this is not a separate role list.
+                To give the same user different access in different units, choose the profile inside each Assigned Access record below. Changes made in Master Permission Profiles appear here automatically.
               </p>
               {selectedUserHasPermissionOverrides && (
                 <p className="mt-2 inline-flex rounded border border-amber-400/40 bg-amber-500/10 px-2 py-1 text-[11px] font-bold text-amber-100">

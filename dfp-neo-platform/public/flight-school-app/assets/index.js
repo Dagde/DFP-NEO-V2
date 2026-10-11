@@ -24290,6 +24290,18 @@ This removes it from the master list and from every user assignment that current
     }));
     if (userId) setSelectedAccessUserId(userId);
   };
+  const updateUserAccessProfileIds = (index, access, profileIds) => {
+    const cleanProfileIds = Array.from(new Set(profileIds.map((id) => String(id || "").trim()).filter(Boolean)));
+    const derivedAccess = deriveAssignedAccessFromProfileIds(cleanProfileIds);
+    updateRow("userAccess", index, {
+      role: derivedAccess.role,
+      accessLevel: derivedAccess.accessLevel,
+      settings: {
+        ...access.settings || {},
+        permissionProfileIds: cleanProfileIds
+      }
+    });
+  };
   const updateResourcePoolSettings = (index, changes) => {
     const currentSettings = config.resourcePools[index]?.settings || {};
     updateRow("resourcePools", index, {
@@ -25821,13 +25833,15 @@ This removes them from DFP Resource Rows. Press Save in this section to apply th
     ] });
   };
   const renderAssignedAccessEditor = () => /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
-    visibleSelectedAccessRows.length === 0 && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: `rounded border px-3 py-3 text-sm font-semibold ${wizardEditMode ? "border-amber-300 bg-amber-50 text-amber-950 shadow-sm" : "border-yellow-600/40 bg-yellow-900/20 text-yellow-100"}`, children: "This user has no Assigned Access. Tick a master profile below to create Assigned Access for the current unit automatically, or use Add Assigned Access to choose the first unit manually." }),
+    visibleSelectedAccessRows.length === 0 && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: `rounded border px-3 py-3 text-sm font-semibold ${wizardEditMode ? "border-amber-300 bg-amber-50 text-amber-950 shadow-sm" : "border-yellow-600/40 bg-yellow-900/20 text-yellow-100"}`, children: "This user has no Assigned Access. Tick a master profile above to create Assigned Access for the current unit automatically, or use Add Assigned Access to choose the first unit manually." }),
     visibleSelectedAccessRows.map(({ access, index }) => {
       const appliesToAllFeatures = !access.moduleCode;
       const scopeKey = access.id || `${access.userId}-${index}`;
       const showAdvancedFeatureArea = advancedFeatureAreaOpenByScope[scopeKey] === true;
       const accessUnit = access.unitCode ? config.units.find((unit) => String(unit.code || "").trim().toUpperCase() === String(access.unitCode || "").trim().toUpperCase()) : null;
       const accessHomeLocationCode = String(access.locationCode || accessUnit?.locationCode || "").trim().toUpperCase();
+      const accessProfileIds = Array.isArray(access.settings?.permissionProfileIds) ? access.settings.permissionProfileIds.map((id) => String(id || "").trim()).filter(Boolean) : [];
+      const accessProfileIdSet = new Set(accessProfileIds);
       return /* @__PURE__ */ jsxRuntimeExports.jsxs(
         "div",
         {
@@ -25880,6 +25894,49 @@ This removes them from DFP Resource Rows. Press Save in this section to apply th
               ),
               /* @__PURE__ */ jsxRuntimeExports.jsx(SelectField, { label: "Status", value: access.status || "ACTIVE", disabled: !canEditSection("platform-user-access"), options: ["ACTIVE", "INACTIVE"], onChange: (value) => updateRow("userAccess", index, { status: value }) })
             ] }),
+            /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: `mt-3 rounded border p-3 ${wizardEditMode ? "border-cyan-200 bg-white text-gray-950" : "border-gray-700 bg-gray-950/70 text-gray-100"}`, children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mb-2 flex flex-wrap items-center gap-2", children: [
+                /* @__PURE__ */ jsxRuntimeExports.jsx("h6", { className: `text-xs font-bold uppercase tracking-wide ${wizardEditMode ? "text-cyan-800" : "text-cyan-200"}`, children: "Permission Profiles For This Assigned Access" }),
+                /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: `ml-auto rounded px-2 py-1 text-[11px] font-semibold ${wizardEditMode ? "bg-cyan-50 text-cyan-900" : "bg-gray-800 text-gray-200"}`, children: [
+                  accessProfileIds.length,
+                  " selected"
+                ] })
+              ] }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: `mb-3 text-xs leading-relaxed ${wizardEditMode ? "text-gray-700" : "text-gray-400"}`, children: "These profiles apply only to this Assigned Access record. Add another Assigned Access record when the same user needs a different unit, location, or access level." }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "grid gap-2 sm:grid-cols-2 xl:grid-cols-3", children: assignablePermissionProfiles.map((profile) => {
+                const profileType = getPermissionProfileType(profile);
+                const checked = accessProfileIdSet.has(profile.id);
+                return /* @__PURE__ */ jsxRuntimeExports.jsxs(
+                  "label",
+                  {
+                    className: `flex items-start gap-2 rounded border px-2 py-2 text-xs ${wizardEditMode ? checked ? "border-cyan-300 bg-cyan-50 text-cyan-950" : "border-gray-200 bg-gray-50 text-gray-700" : checked ? "border-cyan-500/35 bg-cyan-500/10 text-cyan-50" : "border-gray-800 bg-gray-950 text-gray-400"}`,
+                    children: [
+                      /* @__PURE__ */ jsxRuntimeExports.jsx(
+                        "input",
+                        {
+                          type: "checkbox",
+                          className: "mt-0.5 h-4 w-4 rounded border-gray-500 accent-cyan-500",
+                          checked,
+                          disabled: !canEditSection("platform-user-access"),
+                          onChange: (event) => {
+                            const nextProfileIds = event.target.checked ? Array.from(/* @__PURE__ */ new Set([...accessProfileIds, profile.id])) : accessProfileIds.filter((id) => id !== profile.id);
+                            updateUserAccessProfileIds(index, access, nextProfileIds);
+                          }
+                        }
+                      ),
+                      /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "min-w-0", children: [
+                        /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "flex flex-wrap items-center gap-1.5 font-bold", children: [
+                          profile.name,
+                          /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: `rounded px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wide ${profileType === "exception" ? wizardEditMode ? "bg-amber-100 text-amber-900" : "bg-amber-500/20 text-amber-200" : wizardEditMode ? "bg-cyan-100 text-cyan-900" : "bg-cyan-500/20 text-cyan-200"}`, children: profileType })
+                        ] }),
+                        /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: `mt-1 block ${wizardEditMode ? "text-gray-600" : "text-gray-500"}`, children: profile.description })
+                      ] })
+                    ]
+                  },
+                  `${scopeKey}-${profile.id}`
+                );
+              }) })
+            ] }),
             /* @__PURE__ */ jsxRuntimeExports.jsxs(
               "div",
               {
@@ -25919,7 +25976,7 @@ This removes them from DFP Resource Rows. Press Save in this section to apply th
                   showAdvancedFeatureArea && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mt-3 rounded border border-gray-700 bg-gray-950 p-3", children: [
                     /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mb-2 flex items-center gap-2", children: [
                       /* @__PURE__ */ jsxRuntimeExports.jsx("h6", { className: "text-xs font-bold uppercase tracking-wide text-gray-300", children: "Limit This Assigned Access To One Feature Area" }),
-                      /* @__PURE__ */ jsxRuntimeExports.jsx(InfoHint, { text: "Use this only when a user should administer one area but not another. Example: location + unit + NEO Build lets the user work with NEO Build for that unit, but not training records or reporting." })
+                      /* @__PURE__ */ jsxRuntimeExports.jsx(InfoHint, { text: "Use this only when a user should administer one area but not another. Example: location + unit + NEO Build lets the user work with NEO Build for that unit, but not training records or reporting.", theme: wizardEditMode ? "light" : "dark" })
                     ] }),
                     /* @__PURE__ */ jsxRuntimeExports.jsx(SelectField, { label: "Feature Area", value: access.moduleCode || "", disabled: !canEditSection("platform-user-access") || appliesToAllFeatures, options: ["", ...configModules.map((module) => module.code)], onChange: (value) => updateRow("userAccess", index, { moduleCode: value || null }), emptyLabel: "All Enabled Features" }),
                     /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-2 text-xs text-gray-400", children: "Leave this as all enabled features unless you deliberately want to restrict this Assigned Access to a single app area such as DFP, NEO Build, Training, or Reporting." })
@@ -30924,8 +30981,8 @@ This removes them from DFP Resource Rows. Press Save in this section to apply th
             /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded-lg border border-gray-700 bg-gray-900 p-4", children: [
               /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mb-3", children: [
                 /* @__PURE__ */ jsxRuntimeExports.jsx("h5", { className: "text-sm font-bold text-white", children: "Assign Master Profiles to This User" }),
-                /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-1 text-xs text-gray-400", children: "Tick the user's normal role profile. The permissions below show that template, then let you add or remove user-specific exceptions without changing the master profile." }),
-                /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-1 text-xs text-cyan-100/70", children: "Changes made in Master Permission Profiles appear here automatically because this is not a separate role list." }),
+                /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-1 text-xs text-gray-400", children: "Tick the user's normal role profile. This applies the profile to every Assigned Access record for this user." }),
+                /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-1 text-xs text-cyan-100/70", children: "To give the same user different access in different units, choose the profile inside each Assigned Access record below. Changes made in Master Permission Profiles appear here automatically." }),
                 selectedUserHasPermissionOverrides && /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-2 inline-flex rounded border border-amber-400/40 bg-amber-500/10 px-2 py-1 text-[11px] font-bold text-amber-100", children: "Custom exceptions are active for this user." })
               ] }),
               /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "grid gap-2 sm:grid-cols-2 lg:grid-cols-3", children: assignablePermissionProfiles.map((profile) => {
