@@ -288,7 +288,7 @@ export const ScoringMatrixInline: React.FC<ScoringMatrixInlineProps> = ({ active
     const savedElementGroup = getScoringMatrixElementGroup(selectedElement, configuredElementGroups, hasExplicitElementGroups);
     const currentElementGroup = elementGroupDrafts[selectedElement] ?? savedElementGroup;
     const sectionOptions = Array.from(new Set([
-        ...(hasExplicitElementGroups ? [] : DEFAULT_SCORING_MATRIX_SECTIONS),
+        ...DEFAULT_SCORING_MATRIX_SECTIONS,
         ...Object.values(configuredElementGroups).map(value => String(value || '').trim()).filter(Boolean),
         savedElementGroup,
         String(currentElementGroup || '').trim(),

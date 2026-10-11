@@ -14240,8 +14240,12 @@ const getConfiguredScoringMatrixElements = (phraseBank) => {
 const getConfiguredScoringMatrixElementGroups = (phraseBank) => {
   const savedGroups = phraseBank?.[SCORING_MATRIX_ELEMENT_GROUPS_KEY$2];
   const hasExplicitGroups = !!savedGroups && typeof savedGroups === "object" && !Array.isArray(savedGroups);
+  const explicitGroups = hasExplicitGroups ? savedGroups : {};
   return {
-    groups: hasExplicitGroups ? savedGroups : {},
+    groups: {
+      ...DEFAULT_SCORING_MATRIX_ELEMENT_GROUPS,
+      ...explicitGroups
+    },
     hasExplicitGroups
   };
 };
@@ -14381,7 +14385,7 @@ const ScoringMatrixFlyout = ({ onClose, phraseBank, onUpdatePhraseBank, initialT
   const savedElementGroup = getScoringMatrixElementGroup(selectedElement, configuredElementGroups, hasExplicitElementGroups);
   const currentElementGroup = elementGroupDrafts[selectedElement] ?? savedElementGroup;
   const sectionOptions = Array.from(new Set([
-    ...hasExplicitElementGroups ? [] : DEFAULT_SCORING_MATRIX_SECTIONS,
+    ...DEFAULT_SCORING_MATRIX_SECTIONS,
     ...Object.values(configuredElementGroups).map((value) => String(value || "").trim()).filter(Boolean),
     savedElementGroup,
     String(currentElementGroup || "").trim()
@@ -16567,7 +16571,7 @@ const ScoringMatrixInline = ({ activeTab, phraseBank, onUpdatePhraseBank, readOn
   const savedElementGroup = getScoringMatrixElementGroup(selectedElement, configuredElementGroups, hasExplicitElementGroups);
   const currentElementGroup = elementGroupDrafts[selectedElement] ?? savedElementGroup;
   const sectionOptions = Array.from(new Set([
-    ...hasExplicitElementGroups ? [] : DEFAULT_SCORING_MATRIX_SECTIONS,
+    ...DEFAULT_SCORING_MATRIX_SECTIONS,
     ...Object.values(configuredElementGroups).map((value) => String(value || "").trim()).filter(Boolean),
     savedElementGroup,
     String(currentElementGroup || "").trim()

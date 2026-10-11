@@ -106,8 +106,12 @@ export const getConfiguredScoringMatrixElementGroups = (phraseBank: PhraseBank |
 } => {
   const savedGroups = (phraseBank as any)?.[SCORING_MATRIX_ELEMENT_GROUPS_KEY];
   const hasExplicitGroups = !!savedGroups && typeof savedGroups === 'object' && !Array.isArray(savedGroups);
+  const explicitGroups = hasExplicitGroups ? savedGroups as Record<string, string> : {};
   return {
-    groups: hasExplicitGroups ? savedGroups as Record<string, string> : {},
+    groups: {
+      ...DEFAULT_SCORING_MATRIX_ELEMENT_GROUPS,
+      ...explicitGroups,
+    },
     hasExplicitGroups,
   };
 };
