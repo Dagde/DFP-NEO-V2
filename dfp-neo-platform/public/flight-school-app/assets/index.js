@@ -32380,6 +32380,12 @@ const UserSearchSelect = ({
   const [isOpen, setIsOpen] = reactExports.useState(false);
   const [draftSearch, setDraftSearch] = reactExports.useState(search || "");
   const [filterSearch, setFilterSearch] = reactExports.useState(search || "");
+  const [dropdownRect, setDropdownRect] = reactExports.useState(null);
+  const anchorRef = reactExports.useRef(null);
+  const updateDropdownRect = reactExports.useCallback(() => {
+    const rect = anchorRef.current?.getBoundingClientRect();
+    if (rect) setDropdownRect(rect);
+  }, []);
   reactExports.useEffect(() => {
     const timeoutId = window.setTimeout(() => {
       setFilterSearch(draftSearch);
@@ -32401,11 +32407,57 @@ const UserSearchSelect = ({
   reactExports.useEffect(() => {
     if (!isOpen) setDraftSearch(search || selectedUserLabel || "");
   }, [isOpen, search, selectedUserLabel]);
+  reactExports.useEffect(() => {
+    if (!isOpen) return;
+    updateDropdownRect();
+    window.addEventListener("resize", updateDropdownRect);
+    window.addEventListener("scroll", updateDropdownRect, true);
+    return () => {
+      window.removeEventListener("resize", updateDropdownRect);
+      window.removeEventListener("scroll", updateDropdownRect, true);
+    };
+  }, [isOpen, updateDropdownRect]);
   const updateSearchDraft = (nextSearch) => {
     setDraftSearch(nextSearch);
     setIsOpen(true);
+    updateDropdownRect();
   };
-  return /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "relative z-50 block overflow-visible", children: [
+  const dropdown = isOpen && !disabled && dropdownRect && typeof document !== "undefined" ? reactDomExports.createPortal(
+    /* @__PURE__ */ jsxRuntimeExports.jsx(
+      "div",
+      {
+        className: "fixed z-[10000] overflow-y-auto rounded border border-cyan-500/30 bg-gray-950 shadow-xl",
+        style: {
+          left: dropdownRect.left,
+          top: dropdownRect.bottom + 4,
+          width: dropdownRect.width,
+          maxHeight: Math.max(96, Math.min(256, window.innerHeight - dropdownRect.bottom - 16))
+        },
+        onMouseDown: (event) => event.preventDefault(),
+        children: filteredUsers.length > 0 ? filteredUsers.map((user) => /* @__PURE__ */ jsxRuntimeExports.jsxs(
+          "button",
+          {
+            type: "button",
+            className: `block w-full px-3 py-2 text-left text-sm hover:bg-cyan-500/20 ${user.id === value ? "bg-cyan-500/15 text-cyan-100" : "text-gray-100"}`,
+            onClick: () => {
+              onChange(user.id);
+              onSearchChange("");
+              setDraftSearch(user.name || user.username || user.id);
+              setFilterSearch("");
+              setIsOpen(false);
+            },
+            children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "block font-semibold", children: user.name }),
+              user.username && /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "block text-xs text-gray-400", children: user.username })
+            ]
+          },
+          user.id
+        )) : /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "px-3 py-2 text-xs text-yellow-100", children: "No users match that name." })
+      }
+    ),
+    document.body
+  ) : null;
+  return /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { ref: anchorRef, className: "relative z-50 block overflow-visible", children: [
     /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: labelClass, children: label }),
     /* @__PURE__ */ jsxRuntimeExports.jsx(
       "input",
@@ -32420,30 +32472,12 @@ const UserSearchSelect = ({
         onFocus: () => {
           setDraftSearch(search || "");
           setIsOpen(true);
+          updateDropdownRect();
         },
         onBlur: () => window.setTimeout(() => setIsOpen(false), 120)
       }
     ),
-    isOpen && !disabled && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "absolute z-[999] mt-1 max-h-64 w-full overflow-y-auto rounded border border-cyan-500/30 bg-gray-950 shadow-xl", children: filteredUsers.length > 0 ? filteredUsers.map((user) => /* @__PURE__ */ jsxRuntimeExports.jsxs(
-      "button",
-      {
-        type: "button",
-        className: `block w-full px-3 py-2 text-left text-sm hover:bg-cyan-500/20 ${user.id === value ? "bg-cyan-500/15 text-cyan-100" : "text-gray-100"}`,
-        onMouseDown: (event) => event.preventDefault(),
-        onClick: () => {
-          onChange(user.id);
-          onSearchChange("");
-          setDraftSearch(user.name || user.username || user.id);
-          setFilterSearch("");
-          setIsOpen(false);
-        },
-        children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "block font-semibold", children: user.name }),
-          user.username && /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "block text-xs text-gray-400", children: user.username })
-        ]
-      },
-      user.id
-    )) : /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "px-3 py-2 text-xs text-yellow-100", children: "No users match that name." }) })
+    dropdown
   ] });
 };
 const VisualAdjustGuide = ({

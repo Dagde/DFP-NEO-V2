@@ -16263,6 +16263,13 @@ const UserSearchSelect = ({
   const [isOpen, setIsOpen] = useState(false);
   const [draftSearch, setDraftSearch] = useState(search || '');
   const [filterSearch, setFilterSearch] = useState(search || '');
+  const [dropdownRect, setDropdownRect] = useState<DOMRect | null>(null);
+  const anchorRef = useRef<HTMLLabelElement | null>(null);
+
+  const updateDropdownRect = useCallback(() => {
+    const rect = anchorRef.current?.getBoundingClientRect();
+    if (rect) setDropdownRect(rect);
+  }, []);
 
   useEffect(() => {
     const timeoutId = window.setTimeout(() => {
@@ -16290,13 +16297,67 @@ const UserSearchSelect = ({
     if (!isOpen) setDraftSearch(search || selectedUserLabel || '');
   }, [isOpen, search, selectedUserLabel]);
 
+  useEffect(() => {
+    if (!isOpen) return;
+    updateDropdownRect();
+    window.addEventListener('resize', updateDropdownRect);
+    window.addEventListener('scroll', updateDropdownRect, true);
+    return () => {
+      window.removeEventListener('resize', updateDropdownRect);
+      window.removeEventListener('scroll', updateDropdownRect, true);
+    };
+  }, [isOpen, updateDropdownRect]);
+
   const updateSearchDraft = (nextSearch: string) => {
     setDraftSearch(nextSearch);
     setIsOpen(true);
+    updateDropdownRect();
   };
 
+  const dropdown = isOpen && !disabled && dropdownRect && typeof document !== 'undefined'
+    ? createPortal(
+      <div
+        className="fixed z-[10000] overflow-y-auto rounded border border-cyan-500/30 bg-gray-950 shadow-xl"
+        style={{
+          left: dropdownRect.left,
+          top: dropdownRect.bottom + 4,
+          width: dropdownRect.width,
+          maxHeight: Math.max(96, Math.min(256, window.innerHeight - dropdownRect.bottom - 16)),
+        }}
+        onMouseDown={(event) => event.preventDefault()}
+      >
+        {filteredUsers.length > 0 ? (
+          filteredUsers.map((user) => (
+            <button
+              key={user.id}
+              type="button"
+              className={`block w-full px-3 py-2 text-left text-sm hover:bg-cyan-500/20 ${
+                user.id === value ? 'bg-cyan-500/15 text-cyan-100' : 'text-gray-100'
+              }`}
+              onClick={() => {
+                onChange(user.id);
+                onSearchChange('');
+                setDraftSearch(user.name || user.username || user.id);
+                setFilterSearch('');
+                setIsOpen(false);
+              }}
+            >
+              <span className="block font-semibold">{user.name}</span>
+              {user.username && <span className="block text-xs text-gray-400">{user.username}</span>}
+            </button>
+          ))
+        ) : (
+          <div className="px-3 py-2 text-xs text-yellow-100">
+            No users match that name.
+          </div>
+        )}
+      </div>,
+      document.body,
+    )
+    : null;
+
   return (
-    <label className="relative z-50 block overflow-visible">
+    <label ref={anchorRef} className="relative z-50 block overflow-visible">
       <span className={labelClass}>{label}</span>
       <input
         className={fieldClass}
@@ -16309,39 +16370,11 @@ const UserSearchSelect = ({
         onFocus={() => {
           setDraftSearch(search || '');
           setIsOpen(true);
+          updateDropdownRect();
         }}
         onBlur={() => window.setTimeout(() => setIsOpen(false), 120)}
       />
-      {isOpen && !disabled && (
-        <div className="absolute z-[999] mt-1 max-h-64 w-full overflow-y-auto rounded border border-cyan-500/30 bg-gray-950 shadow-xl">
-          {filteredUsers.length > 0 ? (
-            filteredUsers.map((user) => (
-              <button
-                key={user.id}
-                type="button"
-                className={`block w-full px-3 py-2 text-left text-sm hover:bg-cyan-500/20 ${
-                  user.id === value ? 'bg-cyan-500/15 text-cyan-100' : 'text-gray-100'
-                }`}
-                onMouseDown={(event) => event.preventDefault()}
-                onClick={() => {
-                  onChange(user.id);
-                  onSearchChange('');
-                  setDraftSearch(user.name || user.username || user.id);
-                  setFilterSearch('');
-                  setIsOpen(false);
-                }}
-              >
-                <span className="block font-semibold">{user.name}</span>
-                {user.username && <span className="block text-xs text-gray-400">{user.username}</span>}
-              </button>
-            ))
-          ) : (
-            <div className="px-3 py-2 text-xs text-yellow-100">
-              No users match that name.
-            </div>
-          )}
-        </div>
-      )}
+      {dropdown}
     </label>
   );
 };
