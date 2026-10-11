@@ -4355,6 +4355,7 @@ const InitialSetupWizard: React.FC<{
     const [unitModulesDraft, setUnitModulesDraft] = useState(() => buildHydratedUnitModulesDraft());
     const auditRecordingPageOptions = [...AUDIT_RECORDING_PAGE_OPTIONS];
     const [auditRecordingPageDraft, setAuditRecordingPageDraft] = useState(auditRecordingPageOptions[0]);
+    const [, setAuditRecordingRefreshKey] = useState(0);
     const unitModulesDraftDirtyRef = useRef(false);
     const [rankLabelsDraft, setRankLabelsDraft] = useState('');
     const [rankSettingsDraft, setRankSettingsDraft] = useState(() => ({
@@ -11050,6 +11051,7 @@ const InitialSetupWizard: React.FC<{
         const settings = getAuditRecordingSettingsForPage(auditRecordingPageDraft);
         const updateAuditSetting = (action: any, checked: boolean) => {
             saveAuditRecordingSettingsForPage(auditRecordingPageDraft, { ...settings, [action]: checked });
+            setAuditRecordingRefreshKey((current) => current + 1);
             setSaveMessage('Audit recording settings saved.');
         };
         return (
@@ -11066,10 +11068,12 @@ const InitialSetupWizard: React.FC<{
                 <div className="flex flex-wrap gap-2">
                     <button type="button" className={wizardSmallButtonClass} onClick={() => {
                         saveAuditRecordingSettingsForPage(auditRecordingPageDraft, Object.fromEntries(AUDIT_RECORDING_ACTIONS.map((action) => [action, true])) as any);
+                        setAuditRecordingRefreshKey((current) => current + 1);
                         setSaveMessage('Audit recording enabled for all actions on this page.');
                     }}>Select all</button>
                     <button type="button" className={wizardSmallButtonClass} onClick={() => {
                         saveAuditRecordingSettingsForPage(auditRecordingPageDraft, Object.fromEntries(AUDIT_RECORDING_ACTIONS.map((action) => [action, false])) as any);
+                        setAuditRecordingRefreshKey((current) => current + 1);
                         setSaveMessage('Audit recording disabled for all actions on this page.');
                     }}>Deselect all</button>
                 </div>

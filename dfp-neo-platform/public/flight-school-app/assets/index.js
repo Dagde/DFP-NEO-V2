@@ -36218,6 +36218,7 @@ const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, lo
   const [unitModulesDraft, setUnitModulesDraft] = reactExports.useState(() => buildHydratedUnitModulesDraft());
   const auditRecordingPageOptions = [...AUDIT_RECORDING_PAGE_OPTIONS];
   const [auditRecordingPageDraft, setAuditRecordingPageDraft] = reactExports.useState(auditRecordingPageOptions[0]);
+  const [, setAuditRecordingRefreshKey] = reactExports.useState(0);
   const unitModulesDraftDirtyRef = reactExports.useRef(false);
   const [rankLabelsDraft, setRankLabelsDraft] = reactExports.useState("");
   const [rankSettingsDraft, setRankSettingsDraft] = reactExports.useState(() => ({
@@ -41882,6 +41883,7 @@ const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, lo
     const settings = getAuditRecordingSettingsForPage(auditRecordingPageDraft);
     const updateAuditSetting = (action, checked) => {
       saveAuditRecordingSettingsForPage(auditRecordingPageDraft, { ...settings, [action]: checked });
+      setAuditRecordingRefreshKey((current) => current + 1);
       setSaveMessage("Audit recording settings saved.");
     };
     return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-3 rounded-lg border border-slate-300 bg-white p-3", children: [
@@ -41893,10 +41895,12 @@ const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, lo
       /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex flex-wrap gap-2", children: [
         /* @__PURE__ */ jsxRuntimeExports.jsx("button", { type: "button", className: wizardSmallButtonClass, onClick: () => {
           saveAuditRecordingSettingsForPage(auditRecordingPageDraft, Object.fromEntries(AUDIT_RECORDING_ACTIONS.map((action) => [action, true])));
+          setAuditRecordingRefreshKey((current) => current + 1);
           setSaveMessage("Audit recording enabled for all actions on this page.");
         }, children: "Select all" }),
         /* @__PURE__ */ jsxRuntimeExports.jsx("button", { type: "button", className: wizardSmallButtonClass, onClick: () => {
           saveAuditRecordingSettingsForPage(auditRecordingPageDraft, Object.fromEntries(AUDIT_RECORDING_ACTIONS.map((action) => [action, false])));
+          setAuditRecordingRefreshKey((current) => current + 1);
           setSaveMessage("Audit recording disabled for all actions on this page.");
         }, children: "Deselect all" })
       ] })
