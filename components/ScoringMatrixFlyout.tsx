@@ -457,20 +457,18 @@ const ScoringMatrixFlyout: React.FC<ScoringMatrixFlyoutProps> = ({ onClose, phra
 
                 {activeTab === 'Elements' && (
                     <div className="border border-gray-700 rounded-lg bg-gray-800/70 p-4">
-                        <div className="relative z-50 mb-2 flex items-center gap-2">
-                            <label className="block text-xs font-bold uppercase tracking-wider text-gray-400">
-                                Training report section
-                            </label>
-                            <span className="group relative inline-flex">
-                                <span
-                                    className="inline-flex h-4 w-4 items-center justify-center rounded-full border border-sky-500/60 bg-sky-500/10 text-[10px] font-bold text-sky-300"
-                                >
+                        <div className="group mb-2">
+                            <div className="flex items-center gap-2">
+                                <label className="block text-xs font-bold uppercase tracking-wider text-gray-400">
+                                    Training report section
+                                </label>
+                                <span className="inline-flex h-4 w-4 items-center justify-center rounded-full border border-sky-500/60 bg-sky-500/10 text-[10px] font-bold text-sky-300">
                                     i
                                 </span>
-                                <span className="pointer-events-none absolute bottom-full left-0 z-[100] mb-2 hidden w-80 rounded-md border border-sky-200 bg-white px-3 py-2 text-xs normal-case leading-relaxed tracking-normal text-slate-700 shadow-xl group-hover:block">
-                                    {SCORING_MATRIX_SECTION_HELP}
-                                </span>
-                            </span>
+                            </div>
+                            <div className="mt-2 hidden max-w-2xl rounded-md border border-sky-200 bg-white px-3 py-2 text-xs normal-case leading-relaxed tracking-normal text-slate-700 shadow-sm group-hover:block">
+                                {SCORING_MATRIX_SECTION_HELP}
+                            </div>
                         </div>
                         <div className="w-full max-w-full overflow-x-auto pb-1">
                             <div className="grid min-w-[460px] grid-cols-[minmax(220px,1fr)_minmax(220px,1fr)] gap-3">
