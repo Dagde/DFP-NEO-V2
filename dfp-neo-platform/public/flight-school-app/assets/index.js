@@ -25139,7 +25139,8 @@ This removes them from DFP Resource Rows. Press Save in this section to apply th
   };
   const getSectionClass = (sectionId) => {
     const visibleWithLegacyTarget = visibleSectionTarget === "platform-organisation-locations" && (sectionId === "platform-organisation" || sectionId === "platform-locations");
-    return `${sectionClass}${visibleSectionTarget && visibleSectionTarget !== sectionId && !visibleWithLegacyTarget ? " hidden" : ""}`;
+    const overflowClass = sectionId === "platform-user-access" ? " overflow-visible" : "";
+    return `${sectionClass}${overflowClass}${visibleSectionTarget && visibleSectionTarget !== sectionId && !visibleWithLegacyTarget ? " hidden" : ""}`;
   };
   const resourceSectionPanelClass = "rounded-lg border border-gray-700 bg-gray-950/55 p-3";
   const resourceSectionPanelHeaderClass = "mb-3 flex flex-wrap items-center justify-between gap-2 border-b border-gray-800 pb-2";
@@ -30718,8 +30719,8 @@ This removes them from DFP Resource Rows. Press Save in this section to apply th
             }
           ),
           /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { id: "platform-user-access-records", className: "space-y-3 p-4", children: [
-            /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded-lg border border-cyan-500/30 bg-cyan-500/10 p-4", children: [
-              /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid gap-3 md:grid-cols-[minmax(260px,1fr)_minmax(220px,1fr)_minmax(120px,auto)_minmax(120px,auto)]", children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "relative z-20 overflow-visible rounded-lg border border-cyan-500/30 bg-cyan-500/10 p-4", children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "relative z-20 grid overflow-visible gap-3 md:grid-cols-[minmax(260px,1fr)_minmax(220px,1fr)_minmax(120px,auto)_minmax(120px,auto)]", children: [
                 /* @__PURE__ */ jsxRuntimeExports.jsx(
                   UserSearchSelect,
                   {
@@ -32404,7 +32405,7 @@ const UserSearchSelect = ({
     setDraftSearch(nextSearch);
     setIsOpen(true);
   };
-  return /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "relative block", children: [
+  return /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "relative z-50 block overflow-visible", children: [
     /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: labelClass, children: label }),
     /* @__PURE__ */ jsxRuntimeExports.jsx(
       "input",
@@ -32423,7 +32424,7 @@ const UserSearchSelect = ({
         onBlur: () => window.setTimeout(() => setIsOpen(false), 120)
       }
     ),
-    isOpen && !disabled && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "absolute z-30 mt-1 max-h-64 w-full overflow-y-auto rounded border border-cyan-500/30 bg-gray-950 shadow-xl", children: filteredUsers.length > 0 ? filteredUsers.map((user) => /* @__PURE__ */ jsxRuntimeExports.jsxs(
+    isOpen && !disabled && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "absolute z-[999] mt-1 max-h-64 w-full overflow-y-auto rounded border border-cyan-500/30 bg-gray-950 shadow-xl", children: filteredUsers.length > 0 ? filteredUsers.map((user) => /* @__PURE__ */ jsxRuntimeExports.jsxs(
       "button",
       {
         type: "button",

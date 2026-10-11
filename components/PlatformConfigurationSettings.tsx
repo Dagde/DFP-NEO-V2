@@ -8283,7 +8283,8 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
   const getSectionClass = (sectionId: string) => {
     const visibleWithLegacyTarget = visibleSectionTarget === 'platform-organisation-locations'
       && (sectionId === 'platform-organisation' || sectionId === 'platform-locations');
-    return `${sectionClass}${visibleSectionTarget && visibleSectionTarget !== sectionId && !visibleWithLegacyTarget ? ' hidden' : ''}`;
+    const overflowClass = sectionId === 'platform-user-access' ? ' overflow-visible' : '';
+    return `${sectionClass}${overflowClass}${visibleSectionTarget && visibleSectionTarget !== sectionId && !visibleWithLegacyTarget ? ' hidden' : ''}`;
   };
   const resourceSectionPanelClass = 'rounded-lg border border-gray-700 bg-gray-950/55 p-3';
   const resourceSectionPanelHeaderClass = 'mb-3 flex flex-wrap items-center justify-between gap-2 border-b border-gray-800 pb-2';
@@ -14255,8 +14256,8 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
           )}
         />
         <div id="platform-user-access-records" className="space-y-3 p-4">
-          <div className="rounded-lg border border-cyan-500/30 bg-cyan-500/10 p-4">
-            <div className="grid gap-3 md:grid-cols-[minmax(260px,1fr)_minmax(220px,1fr)_minmax(120px,auto)_minmax(120px,auto)]">
+          <div className="relative z-20 overflow-visible rounded-lg border border-cyan-500/30 bg-cyan-500/10 p-4">
+            <div className="relative z-20 grid overflow-visible gap-3 md:grid-cols-[minmax(260px,1fr)_minmax(220px,1fr)_minmax(120px,auto)_minmax(120px,auto)]">
               <UserSearchSelect
                 label="User"
                 value={shouldShowSelectedAccessUser ? selectedAccessUserId : ''}
@@ -16295,7 +16296,7 @@ const UserSearchSelect = ({
   };
 
   return (
-    <label className="relative block">
+    <label className="relative z-50 block overflow-visible">
       <span className={labelClass}>{label}</span>
       <input
         className={fieldClass}
@@ -16312,7 +16313,7 @@ const UserSearchSelect = ({
         onBlur={() => window.setTimeout(() => setIsOpen(false), 120)}
       />
       {isOpen && !disabled && (
-        <div className="absolute z-30 mt-1 max-h-64 w-full overflow-y-auto rounded border border-cyan-500/30 bg-gray-950 shadow-xl">
+        <div className="absolute z-[999] mt-1 max-h-64 w-full overflow-y-auto rounded border border-cyan-500/30 bg-gray-950 shadow-xl">
           {filteredUsers.length > 0 ? (
             filteredUsers.map((user) => (
               <button
