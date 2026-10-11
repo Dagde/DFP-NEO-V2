@@ -64,6 +64,7 @@ import {
 import type { AllowedActions } from '../context/SystemFreezeContext';
 import {
     AUDIT_RECORDING_ACTIONS,
+    AUDIT_RECORDING_PAGE_OPTIONS,
     getAuditRecordingSettingsForPage,
     saveAuditRecordingSettingsForPage,
 } from '../utils/auditLogger';
@@ -4352,15 +4353,7 @@ const InitialSetupWizard: React.FC<{
     };
     const [trainingRecordsDraft, setTrainingRecordsDraft] = useState('');
     const [unitModulesDraft, setUnitModulesDraft] = useState(() => buildHydratedUnitModulesDraft());
-    const auditRecordingPageOptions = [
-        'Program Schedule',
-        'Priorities',
-        'Settings - Business Rules',
-        'Settings - Platform Configuration',
-        'Settings - Emergency',
-        'Training Records',
-        'NEO Build',
-    ];
+    const auditRecordingPageOptions = [...AUDIT_RECORDING_PAGE_OPTIONS];
     const [auditRecordingPageDraft, setAuditRecordingPageDraft] = useState(auditRecordingPageOptions[0]);
     const unitModulesDraftDirtyRef = useRef(false);
     const [rankLabelsDraft, setRankLabelsDraft] = useState('');

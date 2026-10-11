@@ -45943,7 +45943,7 @@ const App: React.FC = () => {
            // Log the action to audit trail with detailed field-level changes
            const saveToNextDayBuild = mainEvent.date === buildDfpDate && ['NextDayBuild', 'Priorities', 'ProgramData', 'NextDayInstructorSchedule', 'NextDayTraineeSchedule'].includes(activeView);
            eventsToSave.forEach(event => {
-               const pageName = saveToNextDayBuild ? 'Next Day Build' : 'Program Schedule';
+               const pageName = saveToNextDayBuild ? 'NEO Build' : 'Program Schedule';
                const eventType = event.type || 'event';
                const personName = event.student || event.pilot || event.instructor || 'Unknown';
 
@@ -46143,7 +46143,7 @@ const App: React.FC = () => {
         // Previously used setDate('') which caused RangeError: invalid date in AircraftAvailabilityOverlay.
 
         // Log the cancellation to audit trail
-        const pageName = isNextDay ? 'Next Day Build' : 'Program Schedule';
+        const pageName = isNextDay ? 'NEO Build' : 'Program Schedule';
         const eventType = selectedEvent.type || 'event';
         const personName = selectedEvent.student || selectedEvent.pilot || selectedEvent.instructor || 'Unknown';
         const codeDisplay = cancellationCode === 'OTHER' && manualCodeEntry ? manualCodeEntry : cancellationCode;
@@ -46285,7 +46285,7 @@ const App: React.FC = () => {
         }
 
            // Log the deletion to audit trail
-           const pageName = isNextDay ? 'Next Day Build' : 'Program Schedule';
+           const pageName = isNextDay ? 'NEO Build' : 'Program Schedule';
            const eventType = selectedEvent.type || 'event';
            const personName = selectedEvent.student || selectedEvent.pilot || selectedEvent.instructor || 'Unknown';
            const description = isDeploymentDelete && deletedEventIds.size > 1
@@ -46360,7 +46360,7 @@ const App: React.FC = () => {
         }
 
         // Log to audit trail
-        const pageName = isNextDay ? 'Next Day Build' : 'Program Schedule';
+        const pageName = isNextDay ? 'NEO Build' : 'Program Schedule';
         const eventType = selectedEvent.type || 'event';
         const personName = selectedEvent.student || selectedEvent.pilot || selectedEvent.instructor || 'Unknown';
         const description = `Restored ${eventType} event for ${personName} (was cancelled with code: ${(selectedEvent as any).cancellationCode || 'N/A'})`;
@@ -49504,7 +49504,7 @@ const App: React.FC = () => {
 
                    // Log the build action to audit trail
                    logAudit(
-                       "Next Day Build",
+                       "NEO Build",
                        "Add",
                        `NEO-Build completed for ${buildDfpDate}`,
                        `Generated ${generated.length} events, Flight: ${generated.filter(e => e.type === 'flight').length}, ${resourceDisplayNames.ftd}: ${generated.filter(e => e.type === 'ftd').length}, Ground: ${generated.filter(e => e.type === 'ground').length}`
@@ -51492,7 +51492,7 @@ appliedUpdates.forEach(update => {
                       debouncedAuditLog(
                           `ndb-move-${update.eventId}`,
                           {
-                              page: "Next Day Build",
+                              page: "NEO Build",
                               action: "Edit",
                               description: `Moved ${eventType} event for ${personName}`,
                               originalValues: {
@@ -51810,7 +51810,7 @@ appliedUpdates.forEach(update => {
                 buildDfpDate,
             },
         });
-        logAudit('Next Day Build', 'Create', 'Added NEO Assist tile', `${droppedEvents.length} x ${draft.flightNumber} at ${placement.resourceId}`);
+        logAudit('NEO Build', 'Create', 'Added NEO Assist tile', `${droppedEvents.length} x ${draft.flightNumber} at ${placement.resourceId}`);
     }, [activeOperationalModel, activeUnitCode, buildDroppedNeoAssistEvents, buildDfpDate, buildResources, nextDayBuildEvents.length, school]);
 
     const syllabusForModal = useMemo(() => {
@@ -57607,7 +57607,7 @@ appliedUpdates.forEach(update => {
                             !incomingIds.has(event.id)
                         )));
                         setNextDayBuildEvents(prev => prev.filter(event => !incomingIds.has(event.id)));
-                        logAudit('Next Day Build', 'Create', 'Added Build Planner deployment tiles', `${directDeploymentEvents.length} x DEPLOYMENT`);
+                        logAudit('NEO Build', 'Create', 'Added Build Planner deployment tiles', `${directDeploymentEvents.length} x DEPLOYMENT`);
                     }}
                     onRemoveBuildDeploymentEvents={(eventIds) => {
                         const idsToRemove = new Set(eventIds);
@@ -57622,7 +57622,7 @@ appliedUpdates.forEach(update => {
                             return acc;
                         }, {});
                         setPublishedSchedules(nextPublishedSchedules);
-                        logAudit('Next Day Build', 'Delete', 'Removed Build Planner deployment', `${eventIds.length} deployment segment(s)`);
+                        logAudit('NEO Build', 'Delete', 'Removed Build Planner deployment', `${eventIds.length} deployment segment(s)`);
                     }}
                     onUpdatePriorityEvent={handleUpdatePriorityEvent}
                     onDeletePriorityEvent={handleDeletePriorityEvent}

@@ -35,6 +35,7 @@ import type { AllowedActions } from '../context/SystemFreezeContext';
 import type { PlatformConfig } from '../utils/platformConfigService';
 import {
   AUDIT_RECORDING_ACTIONS,
+  AUDIT_RECORDING_PAGE_OPTIONS,
   getAuditRecordingSettingsForPage,
   saveAuditRecordingSettingsForPage,
 } from '../utils/auditLogger';
@@ -1412,15 +1413,7 @@ export const SettingsViewWithMenu: React.FC<SettingsViewWithMenuProps> = (props)
         requestId: number;
     } | null>(null);
     const [embeddedCurrencyBuilderOpen, setEmbeddedCurrencyBuilderOpen] = useState(false);
-    const auditRecordingPageOptions = [
-        'Program Schedule',
-        'Priorities',
-        'Settings - Business Rules',
-        'Settings - Platform Configuration',
-        'Settings - Emergency',
-        'Training Records',
-        'NEO Build',
-    ];
+    const auditRecordingPageOptions = [...AUDIT_RECORDING_PAGE_OPTIONS];
     const [auditRecordingPage, setAuditRecordingPage] = useState(auditRecordingPageOptions[0]);
     const [auditRecordingUnlocked, setAuditRecordingUnlocked] = useState(false);
     const [, setAuditRecordingRefreshKey] = useState(0);

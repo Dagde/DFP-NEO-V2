@@ -2856,6 +2856,75 @@ const AUDIT_RECORDING_ACTIONS = [
   "Ignore",
   "Override"
 ];
+const AUDIT_RECORDING_PAGE_OPTIONS = [
+  "Program Schedule",
+  "NEO Build",
+  "Priorities",
+  "Build Intelligence",
+  "Staff",
+  "Trainee Roster",
+  "Trainee Profile",
+  "Staff Schedule",
+  "Trainee Schedule",
+  "Training Records",
+  "Course Progress",
+  "LMP/Event Details",
+  "Individual LMP",
+  "Performance History",
+  "Training Report Assessment",
+  "PT-051 Assessment",
+  "Air Combat Training Reports",
+  "Air Combat Training Progress",
+  "Post-Flight",
+  "Flight Detail",
+  "Flight Line",
+  "Aircraft Availability",
+  "Currency Status",
+  "Currency Builder",
+  "Mass Completion",
+  "Settings",
+  "Settings - Business Rules",
+  "Settings - Platform Configuration",
+  "Settings - Emergency",
+  "Settings - Training Reports",
+  "Settings - Scoring Matrix",
+  "Settings - Template Downloads",
+  "Settings - Ground Event Scheduling",
+  "Settings - Daily Event Limits",
+  "Settings - Organisation",
+  "Settings - Location - Formation Callsigns",
+  "Settings - Platform Locations",
+  "Settings - Configuration Health",
+  "Settings - Organisation, Bases & Areas",
+  "Settings - Units & Ownership",
+  "Settings - Aircraft Setup",
+  "Settings - DFP Resource Rows",
+  "Settings - Unit Features & Modules",
+  "Settings - Settings Visibility",
+  "Settings - Deployment Readiness",
+  "Settings - Operational Runbook",
+  "Settings - Audit Recording",
+  "Settings - Licensing & Deployment",
+  "Settings - User List",
+  "Settings - Master Permission Profiles",
+  "Settings - Manage User Permissions",
+  "Settings - Rank, Terminology & Labels",
+  "Settings - Labels & Terminology",
+  "Settings - App Appearance",
+  "Settings - Email & Account Activation",
+  "Settings - Testing Functions",
+  "Settings - Currency Requirements",
+  "Settings - CT / Currency Events",
+  "Settings - Directed Task Setups",
+  "Settings - Directed Task Lists",
+  "Settings - Scheduling Rules",
+  "Settings - Scheduling Rule Sets",
+  "Settings - Cancellation Codes",
+  "Settings - Staff Database",
+  "Settings - Trainee Database",
+  "Settings - Trainee Reallocation",
+  "Settings - Master LMP Access"
+];
 let currentUser = "Unknown User";
 let currentUserRole = "";
 const setCurrentUser = (user) => {
@@ -36147,15 +36216,7 @@ const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, lo
   };
   const [trainingRecordsDraft, setTrainingRecordsDraft] = reactExports.useState("");
   const [unitModulesDraft, setUnitModulesDraft] = reactExports.useState(() => buildHydratedUnitModulesDraft());
-  const auditRecordingPageOptions = [
-    "Program Schedule",
-    "Priorities",
-    "Settings - Business Rules",
-    "Settings - Platform Configuration",
-    "Settings - Emergency",
-    "Training Records",
-    "NEO Build"
-  ];
+  const auditRecordingPageOptions = [...AUDIT_RECORDING_PAGE_OPTIONS];
   const [auditRecordingPageDraft, setAuditRecordingPageDraft] = reactExports.useState(auditRecordingPageOptions[0]);
   const unitModulesDraftDirtyRef = reactExports.useRef(false);
   const [rankLabelsDraft, setRankLabelsDraft] = reactExports.useState("");
@@ -108211,15 +108272,7 @@ const SettingsViewWithMenu = (props) => {
   const [settingsFocusTarget, setSettingsFocusTarget] = reactExports.useState(null);
   const [settingsSearchFocus, setSettingsSearchFocus] = reactExports.useState(null);
   const [embeddedCurrencyBuilderOpen, setEmbeddedCurrencyBuilderOpen] = reactExports.useState(false);
-  const auditRecordingPageOptions = [
-    "Program Schedule",
-    "Priorities",
-    "Settings - Business Rules",
-    "Settings - Platform Configuration",
-    "Settings - Emergency",
-    "Training Records",
-    "NEO Build"
-  ];
+  const auditRecordingPageOptions = [...AUDIT_RECORDING_PAGE_OPTIONS];
   const [auditRecordingPage, setAuditRecordingPage] = reactExports.useState(auditRecordingPageOptions[0]);
   const [auditRecordingUnlocked, setAuditRecordingUnlocked] = reactExports.useState(false);
   const [, setAuditRecordingRefreshKey] = reactExports.useState(0);
@@ -156615,7 +156668,7 @@ The proposed event was not scheduled. Re-open the event and choose Accept Confli
     });
     const saveToNextDayBuild = mainEvent.date === buildDfpDate && ["NextDayBuild", "Priorities", "ProgramData", "NextDayInstructorSchedule", "NextDayTraineeSchedule"].includes(activeView);
     eventsToSave.forEach((event) => {
-      const pageName = saveToNextDayBuild ? "Next Day Build" : "Program Schedule";
+      const pageName = saveToNextDayBuild ? "NEO Build" : "Program Schedule";
       const eventType = event.type || "event";
       const personName = event.student || event.pilot || event.instructor || "Unknown";
       if (isNewEvent) {
@@ -156766,7 +156819,7 @@ The proposed event was not scheduled. Re-open the event and choose Accept Confli
       });
     }
     setHighestPriorityEvents((prev) => prev.filter((e) => e.id !== selectedEvent.id));
-    const pageName = isNextDay ? "Next Day Build" : "Program Schedule";
+    const pageName = isNextDay ? "NEO Build" : "Program Schedule";
     const eventType = selectedEvent.type || "event";
     const personName = selectedEvent.student || selectedEvent.pilot || selectedEvent.instructor || "Unknown";
     const codeDisplay = cancellationCode === "OTHER" && manualCodeEntry ? manualCodeEntry : cancellationCode;
@@ -156882,7 +156935,7 @@ The proposed event was not scheduled. Re-open the event and choose Accept Confli
         });
       }, 500);
     }
-    const pageName = isNextDay ? "Next Day Build" : "Program Schedule";
+    const pageName = isNextDay ? "NEO Build" : "Program Schedule";
     const eventType = selectedEvent.type || "event";
     const personName = selectedEvent.student || selectedEvent.pilot || selectedEvent.instructor || "Unknown";
     const description = isDeploymentDelete && deletedEventIds.size > 1 ? `Deleted deployment period (${deletedEventIds.size} segments)` : `Deleted ${eventType} event for ${personName}`;
@@ -156937,7 +156990,7 @@ The proposed event was not scheduled. Re-open the event and choose Accept Confli
         return prev;
       });
     }
-    const pageName = isNextDay ? "Next Day Build" : "Program Schedule";
+    const pageName = isNextDay ? "NEO Build" : "Program Schedule";
     const eventType = selectedEvent.type || "event";
     const personName = selectedEvent.student || selectedEvent.pilot || selectedEvent.instructor || "Unknown";
     const description = `Restored ${eventType} event for ${personName} (was cancelled with code: ${selectedEvent.cancellationCode || "N/A"})`;
@@ -159619,7 +159672,7 @@ ${conflictLines.join("\n")}${moreText}`,
             if (person && isPersonStaticallyUnavailable(person, event.startTime, event.startTime + event.duration, buildDfpDate, event.type)) {
               notifications.push(`${personName} in event ${event.flightNumber} at ${event.startTime.toFixed(2)} conflicts with a static unavailability period.`);
               logAudit(
-                "Next Day Build",
+                "NEO Build",
                 "Add",
                 `NEO-Build completed for ${buildDfpDate}`,
                 `Generated ${generated.length} events, Flight: ${generated.filter((e) => e.type === "flight").length}, ${resourceDisplayNames2.ftd}: ${generated.filter((e) => e.type === "ftd").length}, Ground: ${generated.filter((e) => e.type === "ground").length}`
@@ -161260,7 +161313,7 @@ Do not hard refresh yet. Try Publish again, then confirm the save succeeds.`,
         debouncedAuditLog(
           `ndb-move-${update.eventId}`,
           {
-            page: "Next Day Build",
+            page: "NEO Build",
             action: "Edit",
             description: `Moved ${eventType} event for ${personName}`,
             originalValues: {
@@ -161533,7 +161586,7 @@ Do not hard refresh yet. Try Publish again, then confirm the save succeeds.`,
         buildDfpDate
       }
     });
-    logAudit("Next Day Build", "Create", "Added NEO Assist tile", `${droppedEvents.length} x ${draft.flightNumber} at ${placement.resourceId}`);
+    logAudit("NEO Build", "Create", "Added NEO Assist tile", `${droppedEvents.length} x ${draft.flightNumber} at ${placement.resourceId}`);
   }, [activeOperationalModel, activeUnitCode, buildDroppedNeoAssistEvents, buildDfpDate, buildResources, nextDayBuildEvents.length, school]);
   const syllabusForModal = reactExports.useMemo(() => {
     return syllabusDetails.map((item) => item.id);
@@ -166456,7 +166509,7 @@ It will not clear the published DFP.`,
               setPublishedSchedules(nextPublishedSchedules);
               setHighestPriorityEvents((prev) => prev.filter((event) => event.type !== "deployment" && !incomingIds.has(event.id)));
               setNextDayBuildEvents((prev) => prev.filter((event) => !incomingIds.has(event.id)));
-              logAudit("Next Day Build", "Create", "Added Build Planner deployment tiles", `${directDeploymentEvents.length} x DEPLOYMENT`);
+              logAudit("NEO Build", "Create", "Added Build Planner deployment tiles", `${directDeploymentEvents.length} x DEPLOYMENT`);
             },
             onRemoveBuildDeploymentEvents: (eventIds) => {
               const idsToRemove = new Set(eventIds);
@@ -166471,7 +166524,7 @@ It will not clear the published DFP.`,
                 return acc;
               }, {});
               setPublishedSchedules(nextPublishedSchedules);
-              logAudit("Next Day Build", "Delete", "Removed Build Planner deployment", `${eventIds.length} deployment segment(s)`);
+              logAudit("NEO Build", "Delete", "Removed Build Planner deployment", `${eventIds.length} deployment segment(s)`);
             },
             onUpdatePriorityEvent: handleUpdatePriorityEvent,
             onDeletePriorityEvent: handleDeletePriorityEvent,
