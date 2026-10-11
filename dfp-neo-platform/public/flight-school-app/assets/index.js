@@ -18821,7 +18821,7 @@ const ACCESS_SCOPE_TONE = {
   fill: "rgba(8, 145, 178, 0.24)",
   applyBorder: "rgba(103, 232, 249, 0.62)"
 };
-const ACCESS_SCOPE_HELP_TEXT = "Assigned Access controls what this user can see and do in a specific part of DFP NEO.\n\nIt combines where they have access, such as a location, unit, or feature area; what they can view; what they can edit; and which functions they can use.\n\nFor example, a user may be able to view and edit schedules for KCBM / 285FTS, but have no access to another unit. Their assigned permission profile controls the level of access inside that assigned access.";
+const ACCESS_SCOPE_HELP_TEXT = "Assigned Access controls where the selected permission profile applies.\n\nUse it to choose the organisation, location, unit, and whether access applies to all enabled feature areas or only one feature area.\n\nThe master profile and permission boxes decide what the user can view, edit, and use. Assigned Access decides where those permissions work.";
 const platformLocationRowTone = {
   border: "rgba(103, 232, 249, 0.72)",
   accent: "rgba(103, 232, 249, 0.8)"
@@ -24012,6 +24012,7 @@ This removes it from the master list and from every user assignment that current
     const defaultLocationCode = String(configUnits.find((unit) => String(unit.code || "").trim().toUpperCase() === String(defaultUnitCode || "").trim().toUpperCase())?.locationCode || configLocations[0]?.code || "").trim();
     const targetIdSet = new Set(targetUserIds);
     const selectedUsersById = new Map(selectedUsers.map((user) => [user.id, user]));
+    const derivedAccess = deriveAssignedAccessFromProfileIds(profileIds);
     const createdRows = targetUserIds.filter((userId) => !(Array.isArray(config.userAccess) ? config.userAccess : []).some((access) => String(access.userId || "").trim() === userId || String(access.username || "").trim() === userId)).map((userId) => {
       const user = selectedUsersById.get(userId);
       return {
@@ -24023,8 +24024,8 @@ This removes it from the master list and from every user assignment that current
         locationCode: defaultLocationCode || null,
         unitCode: defaultUnitCode || null,
         moduleCode: null,
-        role: "Viewer",
-        accessLevel: "Read",
+        role: derivedAccess.role,
+        accessLevel: derivedAccess.accessLevel,
         status: "ACTIVE",
         settings: { permissionProfileIds: profileIds }
       };
@@ -24038,6 +24039,8 @@ This removes it from the master list and from every user assignment that current
           if (!targetIdSet.has(accessUserId) && !targetIdSet.has(accessUsername)) return access;
           return {
             ...access,
+            role: derivedAccess.role,
+            accessLevel: derivedAccess.accessLevel,
             settings: {
               ...access.settings || {},
               permissionProfileIds: profileIds
@@ -24103,6 +24106,50 @@ This removes it from the master list and from every user assignment that current
   const selectedUserPermissionDenyIdSet = reactExports.useMemo(() => new Set(selectedUserPermissionDenyIds), [selectedUserPermissionDenyIds]);
   const selectedUserHasPermissionOverrides = selectedUserPermissionAllowIds.length > 0 || selectedUserPermissionDenyIds.length > 0;
   const applyPermissionDependencies = (permissionIds) => uniqueValues(addImpliedPlatformPermissionIds(permissionIds).map((id) => String(id || "").trim()).filter(Boolean));
+  const deriveAssignedAccessFromProfileIds = (profileIds) => {
+    const profileIdSet = new Set(profileIds.map((id) => String(id || "").trim()).filter(Boolean));
+    const selectedProfiles = permissionProfiles.filter((profile) => profileIdSet.has(profile.id));
+    const profileText = selectedProfiles.map((profile) => `${profile.id} ${profile.name}`).join(" ").toLowerCase();
+    const permissionIds = applyPermissionDependencies(selectedProfiles.flatMap((profile) => profile.permissions || []));
+    const permissionSet = new Set(permissionIds);
+    const hasPermission = (...ids) => ids.some((id) => permissionSet.has(id));
+    const hasWritePermission = permissionIds.some((permissionId) => permissionId.includes(".edit") || permissionId.includes(".use") || permissionId.includes(".publish") || permissionId.includes(".export") || permissionId.includes(".create") || permissionId.includes(".add") || permissionId.includes(".override"));
+    if (hasPermission("settings.superAdmin") || profileText.includes("super admin")) {
+      return { role: "Super Admin", accessLevel: "Admin" };
+    }
+    if (hasPermission("settings.platform.edit") || profileText.includes("platform admin")) {
+      return { role: "Platform Admin", accessLevel: "Admin" };
+    }
+    if (hasPermission("settings.edit", "settings.userAccess.edit", "settings.schedulingRules.edit", "settings.rankTerminology.edit") || profileText.includes("unit admin")) {
+      return { role: "Unit Admin", accessLevel: "Admin" };
+    }
+    if (hasPermission("dfp.publish", "dfp.validation") || profileText.includes("supervisor")) {
+      return { role: "Supervisor", accessLevel: "Write" };
+    }
+    if (hasPermission("neo.run", "neo.override") || profileText.includes("scheduler")) {
+      return { role: "Scheduler", accessLevel: "Write" };
+    }
+    return { role: "Viewer", accessLevel: hasWritePermission ? "Write" : "Read" };
+  };
+  reactExports.useEffect(() => {
+    setConfig((prev) => {
+      const rows = Array.isArray(prev.userAccess) ? prev.userAccess : [];
+      let changed = false;
+      const nextRows = rows.map((access) => {
+        const profileIds = Array.isArray(access.settings?.permissionProfileIds) ? access.settings.permissionProfileIds.map((id) => String(id || "").trim()).filter(Boolean) : [];
+        if (profileIds.length === 0) return access;
+        const derivedAccess = deriveAssignedAccessFromProfileIds(profileIds);
+        if (access.role === derivedAccess.role && access.accessLevel === derivedAccess.accessLevel) return access;
+        changed = true;
+        return {
+          ...access,
+          role: derivedAccess.role,
+          accessLevel: derivedAccess.accessLevel
+        };
+      });
+      return changed ? { ...prev, userAccess: nextRows } : prev;
+    });
+  }, [configUserAccess, permissionProfiles]);
   const setSelectedUserPermissionOverrides = (allowIds, denyIds) => {
     const cleanAllowIds = uniqueValues(allowIds);
     const cleanDenyIds = uniqueValues(denyIds).filter((id) => !cleanAllowIds.includes(id));
@@ -24135,6 +24182,7 @@ This removes it from the master list and from every user assignment that current
         const defaultLocationCode = String(
           (Array.isArray(prev.units) ? prev.units : []).find((unit) => String(unit.code || "").trim().toUpperCase() === String(defaultUnitCode || "").trim().toUpperCase())?.locationCode || (Array.isArray(prev.locations) ? prev.locations : [])[0]?.code || ""
         ).trim();
+        const derivedAccess = deriveAssignedAccessFromProfileIds(selectedUserProfileIds);
         return [
           ...nextRows,
           {
@@ -24145,8 +24193,8 @@ This removes it from the master list and from every user assignment that current
             locationCode: defaultLocationCode || null,
             unitCode: defaultUnitCode || activeSettingsUnitCode || null,
             moduleCode: null,
-            role: "Viewer",
-            accessLevel: "Read",
+            role: derivedAccess.role,
+            accessLevel: derivedAccess.accessLevel,
             status: "ACTIVE",
             settings: {
               permissionProfileIds: selectedUserProfileIds,
@@ -24169,6 +24217,7 @@ This removes it from the master list and from every user assignment that current
   };
   const setSelectedUserProfileIds = (profileIds) => {
     const cleanProfileIds = Array.from(new Set(profileIds.filter(Boolean)));
+    const derivedAccess = deriveAssignedAccessFromProfileIds(cleanProfileIds);
     const selectedUser = selectedAccessUserOption || selectedAccessUser;
     const selectedUserId = String(selectedAccessUserId || selectedUser?.id || selectedUser?.userId || selectedUser?.username || "").trim();
     if (!selectedUserId) return;
@@ -24186,6 +24235,8 @@ This removes it from the master list and from every user assignment that current
           matched = true;
           return {
             ...access,
+            role: derivedAccess.role,
+            accessLevel: derivedAccess.accessLevel,
             settings: { ...access.settings || {}, permissionProfileIds: cleanProfileIds }
           };
         });
@@ -24204,8 +24255,8 @@ This removes it from the master list and from every user assignment that current
             locationCode: defaultLocationCode || null,
             unitCode: defaultUnitCode || activeSettingsUnitCode || null,
             moduleCode: null,
-            role: "Viewer",
-            accessLevel: "Read",
+            role: derivedAccess.role,
+            accessLevel: derivedAccess.accessLevel,
             status: "ACTIVE",
             settings: { permissionProfileIds: cleanProfileIds }
           }
@@ -24217,6 +24268,7 @@ This removes it from the master list and from every user assignment that current
     const defaultUser = selectedAccessUserOption || selectedAccessUser || userOptions[0] || configPlatformUsers[0];
     const userId = selectedAccessUserId || defaultUser?.id || defaultUser?.userId || defaultUser?.username || "";
     const displayName = selectedAccessUserOption?.name || (defaultUser ? getAccessPersonDisplayName(defaultUser) || defaultUser.username || userId : "");
+    const derivedAccess = deriveAssignedAccessFromProfileIds(selectedUserProfileIds);
     setConfig((prev) => ({
       ...prev,
       userAccess: [
@@ -24229,8 +24281,8 @@ This removes it from the master list and from every user assignment that current
           locationCode: activePermissionTemplateLocationCode || (Array.isArray(prev.locations) ? prev.locations : [])[0]?.code || "",
           unitCode: activeSettingsUnitCode || activeUnitCode || "",
           moduleCode: "",
-          role: "Viewer",
-          accessLevel: "Read",
+          role: derivedAccess.role,
+          accessLevel: derivedAccess.accessLevel,
           status: "ACTIVE",
           settings: { permissionProfileIds: selectedUserProfileIds }
         }
@@ -25768,6 +25820,119 @@ This removes them from DFP Resource Rows. Press Save in this section to apply th
       ] }) : null
     ] });
   };
+  const renderAssignedAccessEditor = () => /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
+    visibleSelectedAccessRows.length === 0 && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: `rounded border px-3 py-3 text-sm font-semibold ${wizardEditMode ? "border-amber-300 bg-amber-50 text-amber-950 shadow-sm" : "border-yellow-600/40 bg-yellow-900/20 text-yellow-100"}`, children: "This user has no Assigned Access. Tick a master profile below to create Assigned Access for the current unit automatically, or use Add Assigned Access to choose the first unit manually." }),
+    visibleSelectedAccessRows.map(({ access, index }) => {
+      const appliesToAllFeatures = !access.moduleCode;
+      const scopeKey = access.id || `${access.userId}-${index}`;
+      const showAdvancedFeatureArea = advancedFeatureAreaOpenByScope[scopeKey] === true;
+      const accessUnit = access.unitCode ? config.units.find((unit) => String(unit.code || "").trim().toUpperCase() === String(access.unitCode || "").trim().toUpperCase()) : null;
+      const accessHomeLocationCode = String(access.locationCode || accessUnit?.locationCode || "").trim().toUpperCase();
+      return /* @__PURE__ */ jsxRuntimeExports.jsxs(
+        "div",
+        {
+          id: accessHomeLocationCode ? `platform-user-access-location-${getSettingsFocusAnchor(accessHomeLocationCode)}` : void 0,
+          className: "rounded border p-3",
+          style: {
+            backgroundColor: ACCESS_SCOPE_TONE.fill,
+            borderColor: ACCESS_SCOPE_TONE.border,
+            boxShadow: `0 0 0 1px ${ACCESS_SCOPE_TONE.fill}`
+          },
+          children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mb-3 flex flex-wrap items-center gap-2", children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsx("h5", { className: "text-sm font-bold text-white", children: "Assigned Access" }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx(InfoHint, { text: ACCESS_SCOPE_HELP_TEXT, theme: wizardEditMode ? "light" : "dark" }),
+              /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "ml-auto rounded bg-gray-950 px-2 py-1 text-xs font-semibold text-gray-300", children: [
+                access.locationCode || "Unit location",
+                " / ",
+                access.unitCode || activeSettingsUnitCode || "Current unit",
+                " / ",
+                appliesToAllFeatures ? "All enabled features" : access.moduleCode
+              ] }),
+              canEditSection("platform-user-access") && /* @__PURE__ */ jsxRuntimeExports.jsx(
+                "button",
+                {
+                  type: "button",
+                  onClick: () => removeUserAccessScope(index),
+                  className: "rounded border border-red-700/50 bg-red-950/40 px-2 py-1 text-xs font-bold text-red-200 hover:bg-red-900/60",
+                  children: "Delete Assigned Access"
+                }
+              )
+            ] }),
+            /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid gap-3 md:grid-cols-2 xl:grid-cols-[1.1fr_1fr_1fr_0.85fr]", children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsx(SelectField, { label: "Organisation", value: access.organisationCode || "DEFAULT", disabled: !canEditSection("platform-user-access"), options: configOrganisations.map((org) => org.code), onChange: (value) => updateRow("userAccess", index, { organisationCode: value }) }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx(SelectField, { label: "Location", value: access.locationCode || activePermissionTemplateLocationCode || "", disabled: !canEditSection("platform-user-access"), options: allActiveLocationOptions.length > 0 ? allActiveLocationOptions : configLocations.map((location) => location.code), onChange: (value) => updateRow("userAccess", index, { locationCode: value || activePermissionTemplateLocationCode || null }) }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx(
+                SelectField,
+                {
+                  label: "Unit",
+                  value: access.unitCode || activeSettingsUnitCode || "",
+                  disabled: !canEditSection("platform-user-access"),
+                  options: permissionAccessUnitOptions.length > 0 ? permissionAccessUnitOptions : configUnits.map((unit) => unit.code),
+                  onChange: (value) => {
+                    const selectedUnit = configUnits.find((unit) => String(unit.code || "").trim().toUpperCase() === String(value || "").trim().toUpperCase());
+                    updateRow("userAccess", index, {
+                      unitCode: value || activeSettingsUnitCode || null,
+                      locationCode: String(selectedUnit?.locationCode || access.locationCode || activePermissionTemplateLocationCode || "").trim() || null
+                    });
+                  }
+                }
+              ),
+              /* @__PURE__ */ jsxRuntimeExports.jsx(SelectField, { label: "Status", value: access.status || "ACTIVE", disabled: !canEditSection("platform-user-access"), options: ["ACTIVE", "INACTIVE"], onChange: (value) => updateRow("userAccess", index, { status: value }) })
+            ] }),
+            /* @__PURE__ */ jsxRuntimeExports.jsxs(
+              "div",
+              {
+                className: "mt-3 rounded border p-3",
+                style: { backgroundColor: ACCESS_SCOPE_TONE.fill, borderColor: ACCESS_SCOPE_TONE.applyBorder },
+                children: [
+                  /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex flex-wrap items-start gap-3", children: [
+                    /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "flex items-start gap-2 text-sm text-cyan-50", children: [
+                      /* @__PURE__ */ jsxRuntimeExports.jsx(
+                        "input",
+                        {
+                          type: "checkbox",
+                          className: "mt-0.5 h-4 w-4 rounded border-gray-500 accent-cyan-500",
+                          checked: appliesToAllFeatures,
+                          disabled: !canEditSection("platform-user-access"),
+                          onChange: (event) => updateRow("userAccess", index, { moduleCode: event.target.checked ? null : configModules[0]?.code || "" })
+                        }
+                      ),
+                      /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { children: [
+                        /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "block font-bold", children: "Apply to all enabled features for this unit" }),
+                        /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "mt-1 block text-xs text-cyan-100/70", children: "Recommended for normal administration. Platform Admin and Super Admin access can open all feature areas for this location/unit." })
+                      ] })
+                    ] }),
+                    /* @__PURE__ */ jsxRuntimeExports.jsx(
+                      "button",
+                      {
+                        type: "button",
+                        onClick: () => setAdvancedFeatureAreaOpenByScope((prev) => ({
+                          ...prev,
+                          [scopeKey]: !showAdvancedFeatureArea
+                        })),
+                        className: "ml-auto rounded border border-gray-600 bg-gray-800 px-3 py-2 text-xs font-bold text-gray-100 hover:bg-gray-700",
+                        children: showAdvancedFeatureArea ? "Hide Advanced Feature Area" : "Advanced Feature Area"
+                      }
+                    )
+                  ] }),
+                  showAdvancedFeatureArea && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mt-3 rounded border border-gray-700 bg-gray-950 p-3", children: [
+                    /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mb-2 flex items-center gap-2", children: [
+                      /* @__PURE__ */ jsxRuntimeExports.jsx("h6", { className: "text-xs font-bold uppercase tracking-wide text-gray-300", children: "Limit This Assigned Access To One Feature Area" }),
+                      /* @__PURE__ */ jsxRuntimeExports.jsx(InfoHint, { text: "Use this only when a user should administer one area but not another. Example: location + unit + NEO Build lets the user work with NEO Build for that unit, but not training records or reporting." })
+                    ] }),
+                    /* @__PURE__ */ jsxRuntimeExports.jsx(SelectField, { label: "Feature Area", value: access.moduleCode || "", disabled: !canEditSection("platform-user-access") || appliesToAllFeatures, options: ["", ...configModules.map((module) => module.code)], onChange: (value) => updateRow("userAccess", index, { moduleCode: value || null }), emptyLabel: "All Enabled Features" }),
+                    /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-2 text-xs text-gray-400", children: "Leave this as all enabled features unless you deliberately want to restrict this Assigned Access to a single app area such as DFP, NEO Build, Training, or Reporting." })
+                  ] })
+                ]
+              }
+            )
+          ]
+        },
+        scopeKey
+      );
+    })
+  ] });
   return /* @__PURE__ */ jsxRuntimeExports.jsxs(
     "div",
     {
@@ -30708,7 +30873,7 @@ This removes them from DFP Resource Rows. Press Save in this section to apply th
             SectionHeader,
             {
               title: "Assign User Permissions",
-              subtitle: "Search by user name, assign permission profiles, then add Assigned Access for each unit this user may open.",
+              subtitle: "Search by user name, set where their access applies, then assign the permission profiles that decide what they can do.",
               action: /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex flex-wrap justify-end gap-[1px]", children: canEdit ? /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
                 renderSectionEditSaveButton("platform-user-access"),
                 /* @__PURE__ */ jsxRuntimeExports.jsx("button", { type: "button", onClick: addUserAccess, disabled: !canEditSection("platform-user-access"), className: `${platformActionButtonClass} ${wizardEditMode ? "min-w-[104px]" : "!w-[86px]"}`, children: /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "text-[9px] leading-tight", children: [
@@ -30756,6 +30921,7 @@ This removes them from DFP Resource Rows. Press Save in this section to apply th
               ] }),
               /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-3 text-xs text-cyan-100/70", children: "Profiles define what the user can do. Assigned Access defines where they can do it, including the unit and feature area." })
             ] }),
+            renderAssignedAccessEditor(),
             /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded-lg border border-gray-700 bg-gray-900 p-4", children: [
               /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mb-3", children: [
                 /* @__PURE__ */ jsxRuntimeExports.jsx("h5", { className: "text-sm font-bold text-white", children: "Assign Master Profiles to This User" }),
@@ -30943,120 +31109,7 @@ This removes them from DFP Resource Rows. Press Save in this section to apply th
                   ] }, `bulk-${profile.id}`)) })
                 ] })
               ] }) : /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "rounded border border-cyan-500/20 bg-gray-950/60 px-3 py-3 text-sm text-cyan-100/75", children: "Bulk assignment is closed. Open it only when assigning profiles to many people at once." })
-            ] }),
-            visibleSelectedAccessRows.length === 0 && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: `rounded border px-3 py-3 text-sm font-semibold ${wizardEditMode ? "border-amber-300 bg-amber-50 text-amber-950 shadow-sm" : "border-yellow-600/40 bg-yellow-900/20 text-yellow-100"}`, children: "This user has no Assigned Access. Tick a master profile above to create Assigned Access for the current unit automatically, or use Add Assigned Access to choose the first unit manually." }),
-            visibleSelectedAccessRows.map(({ access, index }) => {
-              const appliesToAllFeatures = !access.moduleCode;
-              const scopeKey = access.id || `${access.userId}-${index}`;
-              const showAdvancedFeatureArea = advancedFeatureAreaOpenByScope[scopeKey] === true;
-              const accessUnit = access.unitCode ? config.units.find((unit) => String(unit.code || "").trim().toUpperCase() === String(access.unitCode || "").trim().toUpperCase()) : null;
-              const accessHomeLocationCode = String(access.locationCode || accessUnit?.locationCode || "").trim().toUpperCase();
-              return /* @__PURE__ */ jsxRuntimeExports.jsxs(
-                "div",
-                {
-                  id: accessHomeLocationCode ? `platform-user-access-location-${getSettingsFocusAnchor(accessHomeLocationCode)}` : void 0,
-                  className: "rounded border p-3",
-                  style: {
-                    backgroundColor: ACCESS_SCOPE_TONE.fill,
-                    borderColor: ACCESS_SCOPE_TONE.border,
-                    boxShadow: `0 0 0 1px ${ACCESS_SCOPE_TONE.fill}`
-                  },
-                  children: [
-                    /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mb-3 flex flex-wrap items-center gap-2", children: [
-                      /* @__PURE__ */ jsxRuntimeExports.jsx("h5", { className: "text-sm font-bold text-white", children: "Assigned Access" }),
-                      /* @__PURE__ */ jsxRuntimeExports.jsx(InfoHint, { text: ACCESS_SCOPE_HELP_TEXT, theme: wizardEditMode ? "light" : "dark" }),
-                      /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "ml-auto rounded bg-gray-950 px-2 py-1 text-xs font-semibold text-gray-300", children: [
-                        access.locationCode || "Unit location",
-                        " / ",
-                        access.unitCode || activeSettingsUnitCode || "Current unit",
-                        " / ",
-                        appliesToAllFeatures ? "All enabled features" : access.moduleCode
-                      ] }),
-                      canEditSection("platform-user-access") && /* @__PURE__ */ jsxRuntimeExports.jsx(
-                        "button",
-                        {
-                          type: "button",
-                          onClick: () => removeUserAccessScope(index),
-                          className: "rounded border border-red-700/50 bg-red-950/40 px-2 py-1 text-xs font-bold text-red-200 hover:bg-red-900/60",
-                          children: "Delete Assigned Access"
-                        }
-                      )
-                    ] }),
-                    /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid gap-3 md:grid-cols-3 xl:grid-cols-[1.1fr_1fr_1fr_1fr_0.75fr_0.85fr]", children: [
-                      /* @__PURE__ */ jsxRuntimeExports.jsx(SelectField, { label: "Organisation", value: access.organisationCode || "DEFAULT", disabled: !canEditSection("platform-user-access"), options: configOrganisations.map((org) => org.code), onChange: (value) => updateRow("userAccess", index, { organisationCode: value }) }),
-                      /* @__PURE__ */ jsxRuntimeExports.jsx(SelectField, { label: "Location", value: access.locationCode || activePermissionTemplateLocationCode || "", disabled: !canEditSection("platform-user-access"), options: allActiveLocationOptions.length > 0 ? allActiveLocationOptions : configLocations.map((location) => location.code), onChange: (value) => updateRow("userAccess", index, { locationCode: value || activePermissionTemplateLocationCode || null }) }),
-                      /* @__PURE__ */ jsxRuntimeExports.jsx(
-                        SelectField,
-                        {
-                          label: "Unit",
-                          value: access.unitCode || activeSettingsUnitCode || "",
-                          disabled: !canEditSection("platform-user-access"),
-                          options: permissionAccessUnitOptions.length > 0 ? permissionAccessUnitOptions : configUnits.map((unit) => unit.code),
-                          onChange: (value) => {
-                            const selectedUnit = configUnits.find((unit) => String(unit.code || "").trim().toUpperCase() === String(value || "").trim().toUpperCase());
-                            updateRow("userAccess", index, {
-                              unitCode: value || activeSettingsUnitCode || null,
-                              locationCode: String(selectedUnit?.locationCode || access.locationCode || activePermissionTemplateLocationCode || "").trim() || null
-                            });
-                          }
-                        }
-                      ),
-                      /* @__PURE__ */ jsxRuntimeExports.jsx(SelectField, { label: "Admin Level", value: access.role || "Viewer", disabled: !canEditSection("platform-user-access"), options: ["Viewer", "Scheduler", "Supervisor", "Unit Admin", "Platform Admin", "Super Admin"], onChange: (value) => updateRow("userAccess", index, { role: value }) }),
-                      /* @__PURE__ */ jsxRuntimeExports.jsx(SelectField, { label: "Access", value: access.accessLevel || "Read", disabled: !canEditSection("platform-user-access"), options: ["Read", "Write", "Admin"], onChange: (value) => updateRow("userAccess", index, { accessLevel: value }) }),
-                      /* @__PURE__ */ jsxRuntimeExports.jsx(SelectField, { label: "Status", value: access.status || "ACTIVE", disabled: !canEditSection("platform-user-access"), options: ["ACTIVE", "INACTIVE"], onChange: (value) => updateRow("userAccess", index, { status: value }) })
-                    ] }),
-                    /* @__PURE__ */ jsxRuntimeExports.jsxs(
-                      "div",
-                      {
-                        className: "mt-3 rounded border p-3",
-                        style: { backgroundColor: ACCESS_SCOPE_TONE.fill, borderColor: ACCESS_SCOPE_TONE.applyBorder },
-                        children: [
-                          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex flex-wrap items-start gap-3", children: [
-                            /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "flex items-start gap-2 text-sm text-cyan-50", children: [
-                              /* @__PURE__ */ jsxRuntimeExports.jsx(
-                                "input",
-                                {
-                                  type: "checkbox",
-                                  className: "mt-0.5 h-4 w-4 rounded border-gray-500 accent-cyan-500",
-                                  checked: appliesToAllFeatures,
-                                  disabled: !canEditSection("platform-user-access"),
-                                  onChange: (event) => updateRow("userAccess", index, { moduleCode: event.target.checked ? null : configModules[0]?.code || "" })
-                                }
-                              ),
-                              /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { children: [
-                                /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "block font-bold", children: "Apply to all enabled features for this unit" }),
-                                /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "mt-1 block text-xs text-cyan-100/70", children: "Recommended for normal administration. Platform Admin and Super Admin access can open all feature areas for this location/unit." })
-                              ] })
-                            ] }),
-                            /* @__PURE__ */ jsxRuntimeExports.jsx(
-                              "button",
-                              {
-                                type: "button",
-                                onClick: () => setAdvancedFeatureAreaOpenByScope((prev) => ({
-                                  ...prev,
-                                  [scopeKey]: !showAdvancedFeatureArea
-                                })),
-                                className: "ml-auto rounded border border-gray-600 bg-gray-800 px-3 py-2 text-xs font-bold text-gray-100 hover:bg-gray-700",
-                                children: showAdvancedFeatureArea ? "Hide Advanced Feature Area" : "Advanced Feature Area"
-                              }
-                            )
-                          ] }),
-                          showAdvancedFeatureArea && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mt-3 rounded border border-gray-700 bg-gray-950 p-3", children: [
-                            /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mb-2 flex items-center gap-2", children: [
-                              /* @__PURE__ */ jsxRuntimeExports.jsx("h6", { className: "text-xs font-bold uppercase tracking-wide text-gray-300", children: "Limit This Assigned Access To One Feature Area" }),
-                              /* @__PURE__ */ jsxRuntimeExports.jsx(InfoHint, { text: "Use this only when a user should administer one area but not another. Example: location + unit + NEO Build lets the user work with NEO Build for that unit, but not training records or reporting." })
-                            ] }),
-                            /* @__PURE__ */ jsxRuntimeExports.jsx(SelectField, { label: "Feature Area", value: access.moduleCode || "", disabled: !canEditSection("platform-user-access") || appliesToAllFeatures, options: ["", ...configModules.map((module) => module.code)], onChange: (value) => updateRow("userAccess", index, { moduleCode: value || null }), emptyLabel: "All Enabled Features" }),
-                            /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-2 text-xs text-gray-400", children: "Leave this as all enabled features unless you deliberately want to restrict this Assigned Access to a single app area such as DFP, NEO Build, Training, or Reporting." })
-                          ] })
-                        ]
-                      }
-                    )
-                  ]
-                },
-                scopeKey
-              );
-            })
+            ] })
           ] })
         ] }),
         shouldRenderSection("platform-scheduling-rule-sets") && /* @__PURE__ */ jsxRuntimeExports.jsxs("section", { id: "platform-scheduling-rule-sets", className: getSectionClass("platform-scheduling-rule-sets"), children: [
