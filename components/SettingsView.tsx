@@ -458,7 +458,7 @@ export const ScoringMatrixInline: React.FC<ScoringMatrixInlineProps> = ({ active
 
                 {activeTab === 'Elements' && (
                     <div className="border border-gray-700 rounded-lg bg-gray-800/70 p-4">
-                        <div className="mb-2 flex items-center gap-2">
+                        <div className="relative z-50 mb-2 flex items-center gap-2">
                             <label className="block text-xs font-bold uppercase tracking-wider text-gray-400">
                                 Training report section
                             </label>
@@ -468,7 +468,7 @@ export const ScoringMatrixInline: React.FC<ScoringMatrixInlineProps> = ({ active
                                 >
                                     i
                                 </span>
-                                <span className="pointer-events-none absolute left-0 top-6 z-30 hidden w-72 rounded-md border border-sky-200 bg-white px-3 py-2 text-xs normal-case leading-relaxed tracking-normal text-slate-700 shadow-xl group-hover:block">
+                                <span className="pointer-events-none absolute bottom-full left-0 z-[100] mb-2 hidden w-80 rounded-md border border-sky-200 bg-white px-3 py-2 text-xs normal-case leading-relaxed tracking-normal text-slate-700 shadow-xl group-hover:block">
                                     {SCORING_MATRIX_SECTION_HELP}
                                 </span>
                             </span>
@@ -484,6 +484,7 @@ export const ScoringMatrixInline: React.FC<ScoringMatrixInlineProps> = ({ active
                                     onKeyDownCapture={stopEditableKeyPropagation}
                                     onKeyDown={stopEditableKeyPropagation}
                                     readOnly={readOnly}
+                                    placeholder="Type a new section name"
                                     className="w-full min-w-0 bg-gray-900 border border-gray-600 rounded p-2 text-sm text-white focus:ring-1 focus:ring-sky-500 focus:border-sky-500 read-only:text-gray-400"
                                 />
                                 <select
@@ -506,7 +507,7 @@ export const ScoringMatrixInline: React.FC<ScoringMatrixInlineProps> = ({ active
                             </div>
                         </div>
                         <p className="mt-2 text-xs text-gray-500">
-                            This controls which heading this element appears under on the training report.
+                            Type a new section name in the left box, or choose an existing section from the dropdown.
                         </p>
                     </div>
                 )}
