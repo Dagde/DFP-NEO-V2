@@ -322,6 +322,7 @@ const ACCESS_SCOPE_TONE = {
   fill: 'rgba(8, 145, 178, 0.24)',
   applyBorder: 'rgba(103, 232, 249, 0.62)',
 };
+const ACCESS_SCOPE_HELP_TEXT = 'An access scope controls what this user can see and do in a specific part of DFP NEO.\n\nIt combines where they have access, such as a location, unit, or feature area; what they can view; what they can edit; and which functions they can use.\n\nFor example, a user may be able to view and edit schedules for KCBM / 285FTS, but have no access to another unit. Their assigned permission profile controls the level of access inside that scope.';
 const platformLocationRowTone = {
   border: 'rgba(103, 232, 249, 0.72)',
   accent: 'rgba(103, 232, 249, 0.8)',
@@ -14281,7 +14282,10 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
                 </div>
               </div>
               <div>
-                <span className={labelClass}>Access Scopes</span>
+                <span className={`${labelClass} inline-flex items-center gap-1.5`}>
+                  Access Scopes
+                  <InfoHint text={ACCESS_SCOPE_HELP_TEXT} />
+                </span>
                 <div className="rounded border border-cyan-500/20 bg-gray-950 px-3 py-2 text-sm font-semibold text-cyan-100">
                   {visibleSelectedAccessRows.length}
                 </div>
@@ -14568,7 +14572,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
               >
                 <div className="mb-3 flex flex-wrap items-center gap-2">
                   <h5 className="text-sm font-bold text-white">Access Scope</h5>
-                  <InfoHint text="Each scope gives this user access to one unit. Add another scope for the same user when they need to view another unit's DFP, staff profiles, staff schedules or related pages." />
+                  <InfoHint text={ACCESS_SCOPE_HELP_TEXT} />
                   <span className="ml-auto rounded bg-gray-950 px-2 py-1 text-xs font-semibold text-gray-300">
                     {access.locationCode || 'Unit location'} / {access.unitCode || activeSettingsUnitCode || 'Current unit'} / {appliesToAllFeatures ? 'All enabled features' : access.moduleCode}
                   </span>

@@ -18821,6 +18821,7 @@ const ACCESS_SCOPE_TONE = {
   fill: "rgba(8, 145, 178, 0.24)",
   applyBorder: "rgba(103, 232, 249, 0.62)"
 };
+const ACCESS_SCOPE_HELP_TEXT = "An access scope controls what this user can see and do in a specific part of DFP NEO.\n\nIt combines where they have access, such as a location, unit, or feature area; what they can view; what they can edit; and which functions they can use.\n\nFor example, a user may be able to view and edit schedules for KCBM / 285FTS, but have no access to another unit. Their assigned permission profile controls the level of access inside that scope.";
 const platformLocationRowTone = {
   border: "rgba(103, 232, 249, 0.72)",
   accent: "rgba(103, 232, 249, 0.8)"
@@ -30743,7 +30744,10 @@ This removes them from DFP Resource Rows. Press Save in this section to apply th
                   /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: `rounded border border-cyan-500/20 bg-gray-950 px-3 py-2 text-sm font-semibold ${shouldShowSelectedAccessUser ? "text-cyan-100" : "text-gray-500"}`, children: shouldShowSelectedAccessUser ? selectedAccessDisplayName : "Smith, John" })
                 ] }),
                 /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
-                  /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: labelClass, children: "Access Scopes" }),
+                  /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: `${labelClass} inline-flex items-center gap-1.5`, children: [
+                    "Access Scopes",
+                    /* @__PURE__ */ jsxRuntimeExports.jsx(InfoHint, { text: ACCESS_SCOPE_HELP_TEXT })
+                  ] }),
                   /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "rounded border border-cyan-500/20 bg-gray-950 px-3 py-2 text-sm font-semibold text-cyan-100", children: visibleSelectedAccessRows.length })
                 ] })
               ] }),
@@ -30957,7 +30961,7 @@ This removes them from DFP Resource Rows. Press Save in this section to apply th
                   children: [
                     /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mb-3 flex flex-wrap items-center gap-2", children: [
                       /* @__PURE__ */ jsxRuntimeExports.jsx("h5", { className: "text-sm font-bold text-white", children: "Access Scope" }),
-                      /* @__PURE__ */ jsxRuntimeExports.jsx(InfoHint, { text: "Each scope gives this user access to one unit. Add another scope for the same user when they need to view another unit's DFP, staff profiles, staff schedules or related pages." }),
+                      /* @__PURE__ */ jsxRuntimeExports.jsx(InfoHint, { text: ACCESS_SCOPE_HELP_TEXT }),
                       /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "ml-auto rounded bg-gray-950 px-2 py-1 text-xs font-semibold text-gray-300", children: [
                         access.locationCode || "Unit location",
                         " / ",
