@@ -14529,8 +14529,8 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
 
       <section id="platform-user-access" className={getSectionClass('platform-user-access')}>
         <SectionHeader
-          title="Assign User Permissions"
-          subtitle="Search by user name, set where their access applies, then assign the permission profiles that decide what they can do."
+          title="Manage User Permissions"
+          subtitle="Control what each user can see, access and do within DFP-NEO. Assign standard permission profiles and customise individual permissions where required. Changes made here are also reflected in Settings."
           action={(
             <div className="flex flex-wrap justify-end gap-[1px]">
               {canEdit ? (
@@ -14589,10 +14589,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
             <div className="mb-3">
               <h5 className="text-sm font-bold text-white">Assign Master Profiles to This User</h5>
               <p className="mt-1 text-xs text-gray-400">
-                Tick the user's normal role profile. This applies the profile to every Assigned Access record for this user.
-              </p>
-              <p className="mt-1 text-xs text-cyan-100/70">
-                To give the same user different access in different units, choose the profile inside each Assigned Access record below. Changes made in Master Permission Profiles appear here automatically.
+                Select one or more permission profiles that match this user's responsibilities. Each profile provides a predefined set of permissions, which can be customised for this user below without affecting other users assigned to the same profile.
               </p>
               {selectedUserHasPermissionOverrides && (
                 <p className="mt-2 inline-flex rounded border border-amber-400/40 bg-amber-500/10 px-2 py-1 text-[11px] font-bold text-amber-100">
@@ -14642,7 +14639,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
                 <div>
                   <h6 className="text-sm font-bold text-cyan-50">User-Specific Permission Exceptions</h6>
                   <p className="mt-1 text-xs text-cyan-100/70">
-                    Checked boxes are this user's effective permissions. Changing a checkbox here saves only this user's exception, not the master template.
+                    Fine-tune this user's access by enabling or disabling individual permissions. These changes apply only to this user and do not modify the Master Permission Profiles or other users' permissions.
                   </p>
                 </div>
                 <button

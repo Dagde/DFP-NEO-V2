@@ -30944,8 +30944,8 @@ This removes them from DFP Resource Rows. Press Save in this section to apply th
           /* @__PURE__ */ jsxRuntimeExports.jsx(
             SectionHeader,
             {
-              title: "Assign User Permissions",
-              subtitle: "Search by user name, set where their access applies, then assign the permission profiles that decide what they can do.",
+              title: "Manage User Permissions",
+              subtitle: "Control what each user can see, access and do within DFP-NEO. Assign standard permission profiles and customise individual permissions where required. Changes made here are also reflected in Settings.",
               action: /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex flex-wrap justify-end gap-[1px]", children: canEdit ? /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
                 renderSectionEditSaveButton("platform-user-access"),
                 /* @__PURE__ */ jsxRuntimeExports.jsx("button", { type: "button", onClick: addUserAccess, disabled: !canEditSection("platform-user-access"), className: `${platformActionButtonClass} ${wizardEditMode ? "min-w-[104px]" : "!w-[86px]"}`, children: /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "text-[9px] leading-tight", children: [
@@ -30996,8 +30996,7 @@ This removes them from DFP Resource Rows. Press Save in this section to apply th
             /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded-lg border border-gray-700 bg-gray-900 p-4", children: [
               /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mb-3", children: [
                 /* @__PURE__ */ jsxRuntimeExports.jsx("h5", { className: "text-sm font-bold text-white", children: "Assign Master Profiles to This User" }),
-                /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-1 text-xs text-gray-400", children: "Tick the user's normal role profile. This applies the profile to every Assigned Access record for this user." }),
-                /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-1 text-xs text-cyan-100/70", children: "To give the same user different access in different units, choose the profile inside each Assigned Access record below. Changes made in Master Permission Profiles appear here automatically." }),
+                /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-1 text-xs text-gray-400", children: "Select one or more permission profiles that match this user's responsibilities. Each profile provides a predefined set of permissions, which can be customised for this user below without affecting other users assigned to the same profile." }),
                 selectedUserHasPermissionOverrides && /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-2 inline-flex rounded border border-amber-400/40 bg-amber-500/10 px-2 py-1 text-[11px] font-bold text-amber-100", children: "Custom exceptions are active for this user." })
               ] }),
               /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "grid gap-2 sm:grid-cols-2 lg:grid-cols-3", children: assignablePermissionProfiles.map((profile) => {
@@ -31031,7 +31030,7 @@ This removes them from DFP Resource Rows. Press Save in this section to apply th
                 /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mb-3 flex flex-wrap items-start justify-between gap-3", children: [
                   /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
                     /* @__PURE__ */ jsxRuntimeExports.jsx("h6", { className: "text-sm font-bold text-cyan-50", children: "User-Specific Permission Exceptions" }),
-                    /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-1 text-xs text-cyan-100/70", children: "Checked boxes are this user's effective permissions. Changing a checkbox here saves only this user's exception, not the master template." })
+                    /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-1 text-xs text-cyan-100/70", children: "Fine-tune this user's access by enabling or disabling individual permissions. These changes apply only to this user and do not modify the Master Permission Profiles or other users' permissions." })
                   ] }),
                   /* @__PURE__ */ jsxRuntimeExports.jsx(
                     "button",
