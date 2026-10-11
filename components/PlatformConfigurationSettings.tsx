@@ -8394,6 +8394,16 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
   const resourceRowsDeleteButtonClass = wizardEditMode
     ? 'rounded border border-red-300 bg-red-50 px-3 py-2 text-xs font-black uppercase tracking-[0.12em] text-red-900 shadow-sm hover:border-red-400 hover:bg-red-100 disabled:cursor-not-allowed disabled:opacity-50'
     : 'rounded border border-red-500/35 bg-red-500/10 px-3 py-2 text-xs font-black uppercase tracking-[0.12em] text-red-100 hover:bg-red-500/20 disabled:cursor-not-allowed disabled:opacity-50';
+  const operationalCheckTileClass = (complete: boolean) => wizardEditMode
+    ? complete
+      ? 'border-emerald-200 bg-emerald-50 text-slate-900 shadow-sm'
+      : 'border-sky-200 bg-white text-slate-900 shadow-sm'
+    : complete
+      ? 'border-emerald-500/40 bg-emerald-500/10'
+      : 'border-yellow-600/40 bg-yellow-900/20';
+  const operationalCheckDotClass = (complete: boolean) => wizardEditMode
+    ? complete ? 'bg-emerald-500' : 'bg-sky-500'
+    : complete ? 'bg-emerald-400' : 'bg-yellow-400';
   const getSettingsFocusAnchor = (value: any) => String(value || '').trim().toUpperCase().replace(/[^A-Z0-9_-]/g, '-');
   const crewCompositionRoleOptions = getCrewPositionOptions(crewPositionTerminology);
   const activeCrewCompositionAircraftIndex = Math.max(
@@ -12256,12 +12266,12 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
             </div>
             <div className="grid gap-2 md:grid-cols-2">
               {operationalSignals.map((signal) => (
-                <div key={signal.label} className={`rounded border p-3 ${signal.complete ? 'border-emerald-500/40 bg-emerald-500/10' : 'border-yellow-600/40 bg-yellow-900/20'}`}>
+                <div key={signal.label} className={`rounded border p-3 ${operationalCheckTileClass(signal.complete)}`}>
                   <div className="flex items-center gap-2">
-                    <span className={`h-2.5 w-2.5 rounded-full ${signal.complete ? 'bg-emerald-400' : 'bg-yellow-400'}`} />
-                    <span className="text-sm font-bold text-white">{signal.label}</span>
+                    <span className={`h-2.5 w-2.5 rounded-full ${operationalCheckDotClass(signal.complete)}`} />
+                    <span className={`text-sm font-bold ${wizardEditMode ? 'text-slate-950' : 'text-white'}`}>{signal.label}</span>
                   </div>
-                  <div className="mt-1 text-xs text-gray-400">{signal.detail}</div>
+                  <div className={`mt-1 text-xs ${wizardEditMode ? 'text-slate-600' : 'text-gray-400'}`}>{signal.detail}</div>
                 </div>
               ))}
             </div>
