@@ -36475,11 +36475,23 @@ const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, lo
     const parentRowsByLevel = levels.map((level, levelIndex) => levelIndex === 0 ? [] : buildWizardParentRowsForChildren(level.options, level.parents, levels[levelIndex - 1]?.options || []));
     return buildWizardRelationshipPathsFromLevelRows(rootLabel, parentRowsByLevel);
   };
+  const getSavedWizardUnitParentPathOptions = () => {
+    const relationshipPaths = Array.isArray(activeOrganisation?.settings?.organisationStructure?.relationshipPaths) ? activeOrganisation.settings.organisationStructure.relationshipPaths : [];
+    const organisationParentDepth = Math.max(1, getOrganisationLevelCountBeforeUnits(organisationStructureLevels, 3) + 1);
+    const seen = /* @__PURE__ */ new Set();
+    return relationshipPaths.map((rawPath) => Array.isArray(rawPath) ? rawPath.map((part) => String(part || "").trim()).filter(Boolean) : []).map((path) => path.slice(0, Math.min(path.length, organisationParentDepth))).filter((path) => path.length === organisationParentDepth).filter((path) => {
+      const value = formatWizardOrganisationPath(path);
+      if (!value || seen.has(value)) return false;
+      seen.add(value);
+      return true;
+    });
+  };
   const getWizardUnitParentPathOptionsForDraft = (draft) => {
     const levels = getOrganisationDraftLevels(draft);
     const rootLabel = levels[0]?.options?.[0] || draft.name || draft.code || "Organisation";
     const relationshipPaths = getWizardOrganisationRelationshipPathsForDraft(draft);
-    const candidatePaths = relationshipPaths.length > 0 ? relationshipPaths : [[rootLabel]];
+    const savedParentPaths = getSavedWizardUnitParentPathOptions();
+    const candidatePaths = savedParentPaths.length > 0 ? savedParentPaths : relationshipPaths.length > 0 ? relationshipPaths : [[rootLabel]];
     const deepestLength = Math.max(...candidatePaths.map((path) => path.length));
     return candidatePaths.filter((path) => path.length === deepestLength).map((path) => path.filter(Boolean));
   };
