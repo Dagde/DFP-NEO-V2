@@ -36668,10 +36668,11 @@ const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, lo
     }).filter((location) => location.icao || location.iata || location.name)
   );
   const buildHydratedLocationsTodayDraft = () => {
-    const settingsLocationsDraft = buildWizardLocationsTodayDraftFromLocations();
-    if (settingsLocationsDraft) return settingsLocationsDraft;
     const savedWizardLocations = String(getSavedInitialSetupWizardDrafts()?.locationsTodayDraft || "").trim();
     const filteredSavedWizardLocations = filterLegacyWizardLocationRows(savedWizardLocations, shouldIgnoreLegacyWizardLocationSamples);
+    if (isSavedWizardFreshUnitSetup() && filteredSavedWizardLocations) return filteredSavedWizardLocations;
+    const settingsLocationsDraft = buildWizardLocationsTodayDraftFromLocations();
+    if (settingsLocationsDraft) return settingsLocationsDraft;
     if (filteredSavedWizardLocations) return filteredSavedWizardLocations;
     return filterLegacyWizardLocationRows(formatWizardLocationRows([activeWizardLocationRow]), shouldIgnoreLegacyWizardLocationSamples);
   };
@@ -36695,6 +36696,7 @@ const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, lo
     }
     return {};
   };
+  const isSavedWizardFreshUnitSetup = () => wizardFreshUnitSetupActive || String(getSavedInitialSetupWizardDrafts()?.setupMode || "").trim() === "new-unit";
   const parseHydratedBuildRulesDraft = (value) => {
     const readRule = (label, fallback) => {
       const match = String(value || "").match(new RegExp(`${label}:\\s*([^\\n]+)`, "i"));
@@ -37134,7 +37136,7 @@ const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, lo
     setOrganisationNameFieldTouched(false);
     setOrganisationCodeFieldTouched(false);
     locationDraftDirtyRef.current = false;
-    setLocationsTodayFieldTouched(false);
+    setLocationsTodayFieldTouched(isSavedWizardFreshUnitSetup() && Boolean(hydratedLocations.trim()));
     unitDraftDirtyRef.current = false;
     resourceDraftDirtyRef.current = false;
     crewDraftDirtyRef.current = false;
@@ -37274,6 +37276,7 @@ const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, lo
     if (unitDraftDirtyRef.current) return;
     const savedDraft = getSavedWizardObject("unitDraft");
     const savedDraftMap = readPlainWizardObject(getSavedInitialSetupWizardDrafts()?.unitDraftsByCode);
+    const freshUnitSetup = isSavedWizardFreshUnitSetup();
     const normalisedDraftMap = Object.entries(savedDraftMap).reduce((map, [key, value]) => {
       const draft = readPlainWizardObject(value);
       const cleanCode = String(draft.code || key || "").trim().toUpperCase();
@@ -37292,12 +37295,12 @@ const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, lo
       };
     }, {});
     const nextUnitDraft = {
-      code: String(savedDraft.code || currentUnit?.code || unitCode || ""),
-      name: String(savedDraft.name || currentUnit?.name || currentUnit?.code || unitCode || ""),
-      locationCode: sanitiseLegacyWizardLocationCode(savedDraft.locationCode || currentUnit?.locationCode || activeWizardLocationCode || currentLocation?.code || "", shouldIgnoreLegacyWizardLocationSamples),
-      unitType: String(savedDraft.unitType || currentUnit?.unitType || unitTypeOptions[0] || ""),
-      operationalModel: String(savedDraft.operationalModel || getUnitOperationalModel(currentUnit || {}) || "pooled-crew"),
-      hasTrainees: typeof savedDraft.hasTrainees === "boolean" ? savedDraft.hasTrainees : currentUnit?.settings?.hasTrainees !== false
+      code: String(savedDraft.code || (freshUnitSetup ? "" : currentUnit?.code || unitCode || "")),
+      name: String(savedDraft.name || (freshUnitSetup ? "" : currentUnit?.name || currentUnit?.code || unitCode || "")),
+      locationCode: sanitiseLegacyWizardLocationCode(savedDraft.locationCode || (freshUnitSetup ? "" : currentUnit?.locationCode || activeWizardLocationCode || currentLocation?.code || ""), shouldIgnoreLegacyWizardLocationSamples),
+      unitType: String(savedDraft.unitType || (freshUnitSetup ? unitTypeOptions[0] || "" : currentUnit?.unitType || unitTypeOptions[0] || "")),
+      operationalModel: String(savedDraft.operationalModel || (freshUnitSetup ? "pooled-crew" : getUnitOperationalModel(currentUnit || {}) || "pooled-crew")),
+      hasTrainees: typeof savedDraft.hasTrainees === "boolean" ? savedDraft.hasTrainees : freshUnitSetup ? true : currentUnit?.settings?.hasTrainees !== false
     };
     setUnitDraftsByCode(normaliseUnitSettingsIdentifier(nextUnitDraft.code) ? { ...normalisedDraftMap, [normaliseUnitSettingsIdentifier(nextUnitDraft.code)]: nextUnitDraft } : normalisedDraftMap);
     setUnitDraft(nextUnitDraft);
@@ -37466,6 +37469,7 @@ const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, lo
       activeStepId: overrides.activeStepId ?? visibleStep.id,
       activeStepIndex: overrides.activeStepIndex ?? currentStep,
       completedStepIds: overrides.completedStepIds ?? Array.from(completedWizardStepIds),
+      setupMode: wizardFreshUnitSetupActive ? "new-unit" : "existing-unit",
       organisationKey: String(activeOrganisation?.id || activeOrganisation?.code || ""),
       unitContext: unitCode,
       locationContext: locationCode,
@@ -37522,6 +37526,7 @@ const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, lo
           activeStepId: snapshot.activeStepId,
           activeStepIndex: snapshot.activeStepIndex,
           completedStepIds: snapshot.completedStepIds,
+          setupMode: snapshot.setupMode,
           updatedAt: snapshot.updatedAt
         },
         initialSetupWizardDrafts: {
@@ -38006,6 +38011,7 @@ const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, lo
                 iata: String(effectiveLocationDraft.iataCode || "").trim().toUpperCase(),
                 name: effectiveLocationDraft.name || cleanCode
               }]),
+              setupMode: wizardFreshUnitSetupActive ? "new-unit" : "existing-unit",
               updatedAt: (/* @__PURE__ */ new Date()).toISOString()
             }
           }
@@ -38016,6 +38022,7 @@ const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, lo
   const getWizardUnitRowsForSetup = () => {
     const parsedRows = parseWizardUnitRows(unitsTodayDraft).filter((row) => row.code);
     if (parsedRows.length > 0) return parsedRows;
+    if (isSavedWizardFreshUnitSetup()) return [];
     const fallbackCode = String(unitDraft.code || currentUnit?.code || unitCode || "").trim().toUpperCase();
     return fallbackCode ? [{ code: fallbackCode, name: unitDraft.name || currentUnit?.name || fallbackCode }] : [];
   };
@@ -38024,12 +38031,13 @@ const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, lo
     return currentKey ? { ...unitDraftsByCode, [currentKey]: currentDraft } : { ...unitDraftsByCode };
   };
   const resolveWizardUnitSetupDraft = (row, index = 0, draftMap = getWizardUnitDraftMapWithCurrent(), fallbackDraft = unitDraft) => {
-    const code = String(row?.code || fallbackDraft.code || currentUnit?.code || unitCode || `UNIT${index + 1}`).trim().toUpperCase();
+    const freshUnitSetup = isSavedWizardFreshUnitSetup();
+    const code = String(row?.code || fallbackDraft.code || (freshUnitSetup ? "" : currentUnit?.code || unitCode) || `UNIT${index + 1}`).trim().toUpperCase();
     const key = normaliseUnitSettingsIdentifier(code);
     const mappedDraft = readPlainWizardObject(draftMap[key]);
-    const existingUnit = activeUnits.find((unit) => normaliseUnitSettingsIdentifier(unit?.code) === key);
+    const existingUnit = freshUnitSetup ? null : activeUnits.find((unit) => normaliseUnitSettingsIdentifier(unit?.code) === key);
     const defaultLocationCode = sanitiseLegacyWizardLocationCode(
-      parseWizardLocationRows(locationsTodayDraft).find((row2) => !(shouldIgnoreLegacyWizardLocationSamples && isLegacyWizardLocationSampleRow(row2)))?.icao || locationDraft.code || activeWizardLocationCode || currentLocation?.code || "",
+      parseWizardLocationRows(locationsTodayDraft).find((row2) => !(shouldIgnoreLegacyWizardLocationSamples && isLegacyWizardLocationSampleRow(row2)))?.icao || locationDraft.code || (freshUnitSetup ? "" : activeWizardLocationCode || currentLocation?.code) || "",
       shouldIgnoreLegacyWizardLocationSamples
     );
     const sourceDraft = key === normaliseUnitSettingsIdentifier(fallbackDraft.code) ? { ...mappedDraft, ...fallbackDraft } : mappedDraft;
@@ -39557,7 +39565,17 @@ const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, lo
   const visibleStep = steps[currentStep];
   const wizardStepIdSignature = steps.map((step) => step.id).join("|");
   reactExports.useEffect(() => {
-    if (wizardFreshUnitSetupActive) return;
+    if (!isSavedWizardFreshUnitSetup()) return;
+    setWizardFreshUnitSetupActive(true);
+    setWizardUnitSetupChoiceMade(true);
+    setCompletedWizardStepIds(/* @__PURE__ */ new Set());
+    setWizardReviewComplete(false);
+  }, [
+    activeOrganisation?.settings?.initialSetupWizardDrafts?.setupMode,
+    activeOrganisation?.settings?.initialSetupWizardDraft?.setupMode
+  ]);
+  reactExports.useEffect(() => {
+    if (isSavedWizardFreshUnitSetup()) return;
     const validStepIds = new Set(wizardStepIdSignature.split("|").filter(Boolean));
     if (validStepIds.size === 0) return;
     const readCompletedIds = (value) => Array.isArray(value) ? value.map((id) => String(id || "").trim()).filter((id) => id && validStepIds.has(id)) : [];
@@ -40914,6 +40932,7 @@ const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, lo
         completedStepIds: [],
         activeStepId: steps[0]?.id || "review-status",
         activeStepIndex: 0,
+        setupMode: "new-unit",
         updatedAt: (/* @__PURE__ */ new Date()).toISOString()
       };
       const {
@@ -40956,6 +40975,7 @@ const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, lo
           activeStepId: unitSpecificDraftPatch.activeStepId,
           activeStepIndex: 0,
           completedStepIds: [],
+          setupMode: "new-unit",
           updatedAt: unitSpecificDraftPatch.updatedAt
         },
         initialSetupWizardDrafts: {
@@ -40967,6 +40987,38 @@ const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, lo
   };
   const startAdditionalUnitSetup = () => {
     pushWizardPersistenceTrace("wizard:new-unit:start");
+    clearPersistedWizardUnitSpecificDrafts();
+    if (typeof window !== "undefined") {
+      safeSetWizardLocalStorage(initialSetupWizardDraftSnapshotStorageKey, JSON.stringify({
+        ...getSavedInitialSetupWizardDrafts(),
+        setupMode: "new-unit",
+        unitsTodayDraft: "",
+        unitParentDraft: "",
+        locationsTodayDraft: "",
+        locationDraft: {
+          code: "",
+          iataCode: "",
+          name: "",
+          timezone: "",
+          latitude: "",
+          longitude: "",
+          trainingAreas: ""
+        },
+        unitDraft: {
+          code: "",
+          name: "",
+          locationCode: "",
+          unitType: unitTypeOptions[0] || "",
+          operationalModel: "pooled-crew",
+          hasTrainees: true
+        },
+        unitDraftsByCode: {},
+        completedStepIds: [],
+        activeStepId: "analysis",
+        activeStepIndex: 0,
+        updatedAt: (/* @__PURE__ */ new Date()).toISOString()
+      }));
+    }
     setWizardUnitSetupChoiceMade(true);
     setWizardExistingUnitPickerOpen(false);
     setWizardFreshUnitSetupActive(true);
@@ -41087,7 +41139,6 @@ const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, lo
     setDirectedTaskSetupsDraft("");
     setWizardStep(0);
     safeSetWizardLocalStorage(initialSetupWizardStorageKey, "0");
-    clearPersistedWizardUnitSpecificDrafts();
     setSaveMessage("New unit setup started. Shared organisation settings have been retained for review.");
   };
   const wizardChoiceClass = "rounded-lg border border-slate-300 bg-white px-4 py-3 text-left text-sm font-semibold text-slate-800 shadow-sm transition hover:border-orange-300 hover:bg-orange-50 hover:text-orange-900";
@@ -44119,12 +44170,14 @@ const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, lo
             scoringMatrix: wizardPhraseBankToScoringDraft(wizardScoringPhraseBank),
             staffCurrencyEvents: staffCurrencyEventsDraft,
             trainingDraft: correctedTrainingDraft,
+            setupMode: "existing-unit",
             completedAt
           },
           initialSetupWizardDrafts: {
             ...settings.initialSetupWizardDrafts || {},
             groundEventSchedulingSettings: finalGroundEventSchedulingSettings,
             trainingDraft: correctedTrainingDraft,
+            setupMode: "existing-unit",
             completedAt
           }
         };
@@ -44940,7 +44993,10 @@ const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, lo
           wizardUnitRows.length === 0 ? /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "rounded-lg border border-amber-300 bg-amber-50 px-3 py-2 text-sm font-semibold text-amber-900", children: "Add at least one unit in step 8 before setting unit details here." }) : null
         ] }),
         /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid gap-3 md:grid-cols-2", children: [
-          wizardField("Unit code", unitDraft.code, (value) => selectWizardUnitSetupDraft(value), wizardUnitOptions),
+          wizardField("Unit code", unitDraft.code, (value) => {
+            if (wizardUnitOptions.length > 0) selectWizardUnitSetupDraft(value);
+            else updateUnitDraft((draft) => ({ ...draft, code: value.toUpperCase() }));
+          }, wizardUnitOptions.length > 0 ? wizardUnitOptions : void 0, "UNIT-01"),
           wizardField("Unit name", unitDraft.name, (value) => updateUnitDraft((draft) => ({ ...draft, name: value })), void 0, "Unit"),
           wizardDataListField("Home location", unitDraft.locationCode, (value) => updateUnitDraft((draft) => ({ ...draft, locationCode: value.toUpperCase() })), wizardLocationIcaoOptions, "LOC1"),
           wizardField("Unit type", unitDraft.unitType, (value) => updateUnitDraft((draft) => ({ ...draft, unitType: value })), unitTypeOptions),
