@@ -40984,6 +40984,18 @@ const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, lo
     currencyDraftDirtyRef.current = true;
     setUnitsTodayDraft("");
     setUnitParentDraft("");
+    setLocationsTodayFieldTouched(true);
+    setLocationsTodayDraft("");
+    setLocationDraftRowCount(1);
+    setLocationDraft({
+      code: "",
+      iataCode: "",
+      name: "",
+      timezone: "",
+      latitude: "",
+      longitude: "",
+      trainingAreas: ""
+    });
     setUnitDraft({
       code: "",
       name: "",
@@ -41409,6 +41421,17 @@ const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, lo
     };
     const nextDraft = formatWizardLocationRows(nextRows);
     setLocationsTodayDraft(nextDraft);
+    if (rowIndex === 0) {
+      setLocationDraft((draft) => ({
+        ...draft,
+        code: nextRows[0].icao || draft.code,
+        iataCode: nextRows[0].iata || draft.iataCode,
+        name: nextRows[0].name || draft.name,
+        timezone: matchedProfile?.timezone || draft.timezone,
+        latitude: matchedProfile?.latitude != null ? String(matchedProfile.latitude) : draft.latitude,
+        longitude: matchedProfile?.longitude != null ? String(matchedProfile.longitude) : draft.longitude
+      }));
+    }
     if (matchedProfile) {
       pushWizardLocationScopeTrace("locations-today-matched-save", {
         matchedProfile: summariseWizardLocationProfile(matchedProfile)
