@@ -33565,14 +33565,16 @@ const buildOrganisationChart = (platformConfig) => {
     const unitCode = normaliseOrgChartValue(unit?.code || unit?.name);
     if (!unitCode) return;
     const unitOrganisationCode = normaliseOrgChartValue(unit?.organisationCode).toLowerCase();
-    if (activeOrganisationCode && unitOrganisationCode && unitOrganisationCode !== activeOrganisationCode) return;
     const configuredPath = parseOrganisationChartPath(unit?.settings?.parentOrganisationPath || unit?.settings?.parentOrganisation);
     const draftPath = draftUnitParentPaths.get(unitCode.toUpperCase()) || [];
+    const unitSetupComplete = isOrganisationChartUnitSetupComplete(unit, platformConfig, activeOrganisation);
+    const hasActiveOrganisationAnchor = !activeOrganisationCode || !unitOrganisationCode || unitOrganisationCode === activeOrganisationCode || configuredPath.length > 0 || draftPath.length > 0 || unitSetupComplete;
+    if (!hasActiveOrganisationAnchor) return;
     const path = configuredPath.length > 0 ? configuredPath : draftPath;
     const startsAtRoot = normaliseOrgChartKey(path[0]) === rootKey;
     const parentPath = path.map((part, pathIndex) => getCanonicalOrganisationLabel(levels, repairMaps, startsAtRoot ? pathIndex : pathIndex + 1, part)).filter(Boolean);
     const displayPath = cleanOrganisationChartDisplayPath(parentPath[0]?.toLowerCase() === rootKey ? parentPath.slice(1) : parentPath, rootLabel);
-    addOrganisationChartPath(root2, displayPath, levelNames, unitCode, isOrganisationChartUnitSetupComplete(unit, platformConfig, activeOrganisation));
+    addOrganisationChartPath(root2, displayPath, levelNames, unitCode, unitSetupComplete);
   });
   if (root2.children.length === 0) {
     levels.slice(1).forEach((level) => {
