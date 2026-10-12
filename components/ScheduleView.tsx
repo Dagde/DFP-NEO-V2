@@ -484,6 +484,7 @@ type OrganisationChartNode = {
     levelName: string;
     levelIndex: number;
     unitCode?: string;
+    unitSetupComplete?: boolean;
     children: OrganisationChartNode[];
 };
 
@@ -603,11 +604,52 @@ const cleanOrganisationChartDisplayPath = (path: string[], rootLabel: string): s
     return cleanPath;
 };
 
+const getOrganisationWizardDraftUnitCodes = (settings: any): Set<string> => {
+    const unitCodes = new Set<string>();
+    const addCode = (value: unknown) => {
+        const code = normaliseOrgChartValue(value).toUpperCase();
+        if (code) unitCodes.add(code);
+    };
+    const addRows = (rows: unknown) => {
+        if (!Array.isArray(rows)) return;
+        rows.forEach((row: any) => addCode(row?.code || row?.unitCode || row?.name));
+    };
+    addRows(settings?.initialSetupWizardDraft?.unitsToday);
+    addRows(settings?.initialSetupWizardDrafts?.unitsToday);
+    addRows(settings?.initialSetupWizardDrafts?.unitsTodayDraft);
+    const unitDraftsByCode = settings?.initialSetupWizardDraft?.unitDraftsByCode || settings?.initialSetupWizardDrafts?.unitDraftsByCode;
+    if (unitDraftsByCode && typeof unitDraftsByCode === 'object' && !Array.isArray(unitDraftsByCode)) {
+        Object.keys(unitDraftsByCode).forEach(addCode);
+    }
+    return unitCodes;
+};
+
+const isOrganisationChartUnitSetupComplete = (unit: any, platformConfig: any, activeOrganisation: any): boolean => {
+    const unitSettings = unit?.settings || {};
+    if (
+        unitSettings.initialSetupWizardCompletedAt ||
+        unitSettings.initialSetupCompletedAt ||
+        unitSettings.setupWizardCompletedAt ||
+        unitSettings.setupCompletedAt
+    ) {
+        return true;
+    }
+    const organisationSettings = activeOrganisation?.settings || {};
+    if (!organisationSettings.initialSetupWizardCompletedAt) return false;
+    const activeUnits = (platformConfig?.units || []).filter((candidate: any) => (
+        String(candidate?.status || 'ACTIVE').toUpperCase() !== 'INACTIVE'
+    ));
+    if (activeUnits.length === 1) return true;
+    const unitCodesFromWizard = getOrganisationWizardDraftUnitCodes(organisationSettings);
+    return unitCodesFromWizard.has(normaliseOrgChartValue(unit?.code || unit?.name).toUpperCase());
+};
+
 const addOrganisationChartPath = (
     root: OrganisationChartNode,
     path: string[],
     levelNames: string[],
     unitCode?: string,
+    unitSetupComplete?: boolean,
 ) => {
     let cursor = root;
     path.forEach((rawPart, pathIndex) => {
@@ -639,6 +681,7 @@ const addOrganisationChartPath = (
                 levelName: 'Unit',
                 levelIndex: cursor.levelIndex + 1,
                 unitCode: label,
+                unitSetupComplete: Boolean(unitSetupComplete),
                 children: [],
             });
         }
@@ -692,7 +735,7 @@ const buildOrganisationChart = (platformConfig: any): OrganisationChartNode | nu
                 .filter(Boolean);
             const displayPath = cleanOrganisationChartDisplayPath(parentPath[0]?.toLowerCase() === rootKey ? parentPath.slice(1) : parentPath, rootLabel);
             if (displayPath.length === 0) return;
-            addOrganisationChartPath(root, displayPath, levelNames, unitCode);
+            addOrganisationChartPath(root, displayPath, levelNames, unitCode, isOrganisationChartUnitSetupComplete(unit, platformConfig, activeOrganisation));
         });
     if (root.children.length === 0) {
         levels.slice(1).forEach((level: any) => {
@@ -830,16 +873,18 @@ const OrganisationChartBranch: React.FC<{
     levelHeights: Map<number, number>;
     selectedNodeId: string | null;
     selectedPathIds: Set<string>;
+    highlightedPathIds: Set<string>;
+    highlightedChainStatus: 'complete' | 'incomplete' | null;
     focusedPath: OrganisationChartNode[] | null;
     onSelectNode: (node: OrganisationChartNode) => void;
-}> = ({ node, isRoot = false, levelHeights, selectedNodeId, selectedPathIds, focusedPath, onSelectNode }) => (
+}> = ({ node, isRoot = false, levelHeights, selectedNodeId, selectedPathIds, highlightedPathIds, highlightedChainStatus, focusedPath, onSelectNode }) => (
     <li className={`${node.levelIndex >= 2 ? 'org-chart-compact-node ' : ''}org-chart-node-level-${node.levelIndex}`}>
         <button
             type="button"
-            className={`org-chart-box org-chart-box-level-${node.levelIndex} ${isRoot ? 'org-chart-box-root' : ''} ${node.levelIndex >= 2 ? 'org-chart-box-compact' : ''} ${node.unitCode ? 'org-chart-box-unit' : ''} ${selectedPathIds.has(node.id) ? 'org-chart-box-active-chain' : ''} ${selectedNodeId === node.id ? 'org-chart-box-selected' : ''}`}
+            className={`org-chart-box org-chart-box-level-${node.levelIndex} ${isRoot ? 'org-chart-box-root' : ''} ${node.levelIndex >= 2 ? 'org-chart-box-compact' : ''} ${node.unitCode ? 'org-chart-box-unit' : ''} ${highlightedPathIds.has(node.id) ? (highlightedChainStatus === 'complete' ? 'org-chart-box-active-chain-complete' : 'org-chart-box-active-chain-incomplete') : ''} ${selectedNodeId === node.id && node.unitCode ? (node.unitSetupComplete ? 'org-chart-box-selected-complete' : 'org-chart-box-selected-incomplete') : ''}`}
             style={{ height: `${levelHeights.get(node.levelIndex) || estimateOrganisationChartBoxHeight(node, isRoot)}px` }}
             data-org-node-id={node.id}
-            title={isRoot ? node.label : `${node.levelName}: ${node.label}`}
+            title={node.unitCode ? `${node.levelName}: ${node.label} - ${node.unitSetupComplete ? 'setup complete' : 'setup not complete'}` : isRoot ? node.label : `${node.levelName}: ${node.label}`}
             onClick={() => onSelectNode(node)}
         >
             {!isRoot && <span className="org-chart-level">{node.levelName}</span>}
@@ -858,6 +903,8 @@ const OrganisationChartBranch: React.FC<{
                             levelHeights={levelHeights}
                             selectedNodeId={selectedNodeId}
                             selectedPathIds={selectedPathIds}
+                            highlightedPathIds={highlightedPathIds}
+                            highlightedChainStatus={highlightedChainStatus}
                             focusedPath={focusedPath}
                             onSelectNode={onSelectNode}
                         />
@@ -11997,6 +12044,7 @@ const InitialSetupWizard: React.FC<{
                     settings: {
                         operationalModel: draft.operationalModel,
                         hasTrainees: draft.hasTrainees,
+                        ...(setupWizardCompletionAt ? { initialSetupWizardCompletedAt: setupWizardCompletionAt } : {}),
                         parentOrganisationPath: unitParentPaths[normaliseUnitSettingsIdentifier(row.code)] || fallbackUnitParentPath,
                         trainingReportTemplate: trainingReportRow ? {
                             displayName: trainingReportRow.organisationName || 'Training Report',
@@ -12743,6 +12791,7 @@ const InitialSetupWizard: React.FC<{
                             ...(existingIndex >= 0 ? nextUnits[existingIndex].settings || {} : {}),
                             operationalModel: draft.operationalModel || (existingIndex >= 0 ? nextUnits[existingIndex].settings?.operationalModel || unitDraft.operationalModel : unitDraft.operationalModel),
                             hasTrainees: typeof draft.hasTrainees === 'boolean' ? draft.hasTrainees : existingIndex >= 0 ? nextUnits[existingIndex].settings?.hasTrainees ?? unitDraft.hasTrainees : unitDraft.hasTrainees,
+                            initialSetupWizardCompletedAt: completedAt,
                         },
                     };
                     if (existingIndex >= 0) nextUnits[existingIndex] = nextUnit;
@@ -14919,6 +14968,14 @@ const OrganisationSlideoutDiagram: React.FC<{
     }, [chart, selectedNodeId]);
     const selectedPathIds = useMemo(() => selectedPath ? new Set(selectedPath.map((node) => node.id)) : EmptyOrganisationChartSet, [selectedPath]);
     const selectedNode = selectedPath?.[selectedPath.length - 1] || null;
+    const highlightedPathIds = useMemo(() => (
+        selectedNode?.unitCode && selectedPath
+            ? new Set(selectedPath.map((node) => node.id))
+            : EmptyOrganisationChartSet
+    ), [selectedNode, selectedPath]);
+    const highlightedChainStatus = selectedNode?.unitCode
+        ? selectedNode.unitSetupComplete ? 'complete' : 'incomplete'
+        : null;
     const focusedPath = selectedNode && selectedNode.levelIndex >= 3 ? selectedPath : null;
     const handleSelectNode = useCallback((node: OrganisationChartNode) => {
         setSelectedNodeId((current) => current === node.id ? null : node.id);
@@ -14948,8 +15005,10 @@ const OrganisationSlideoutDiagram: React.FC<{
                 .org-chart ul ul > li > .org-chart-box::before { content: ''; position: absolute; top: -18px; left: 50%; z-index: -1; height: 18px; width: 0; border-left: 1px solid rgba(103, 232, 249, 0.42); }
                 .org-chart > ul > li > .org-chart-box::before { display: none; }
                 .org-chart-box:hover { border-color: rgba(165, 243, 252, 0.9); background: linear-gradient(180deg, rgb(8, 47, 73), rgb(8, 13, 28)); transform: translateY(-1px); }
-                .org-chart-box-active-chain { border-color: rgba(74, 222, 128, 0.95); box-shadow: 0 0 0 1px rgba(74, 222, 128, 0.42), 0 12px 22px rgba(0,0,0,0.26); }
-                .org-chart-box-selected { background: linear-gradient(180deg, rgb(20, 83, 45), rgb(6, 78, 59)); }
+                .org-chart-box-active-chain-complete { border-color: rgba(74, 222, 128, 0.95); box-shadow: 0 0 0 1px rgba(74, 222, 128, 0.42), 0 12px 22px rgba(0,0,0,0.26); }
+                .org-chart-box-active-chain-incomplete { border-color: rgba(245, 158, 11, 0.98); box-shadow: 0 0 0 1px rgba(245, 158, 11, 0.48), 0 12px 22px rgba(0,0,0,0.26); }
+                .org-chart-box-selected-complete { background: linear-gradient(180deg, rgb(20, 83, 45), rgb(6, 78, 59)); }
+                .org-chart-box-selected-incomplete { background: linear-gradient(180deg, rgb(120, 53, 15), rgb(69, 26, 3)); }
                 .org-chart-box-root { min-width: 190px; border-color: rgba(34, 211, 238, 0.82); background: linear-gradient(180deg, rgb(15, 82, 105), rgb(15, 23, 42)); }
                 .org-chart-box-compact { min-width: 66px; max-width: 84px; min-height: 54px; padding: 7px 6px; }
                 .org-chart-node-level-2 { min-width: 84px; }
@@ -14958,7 +15017,7 @@ const OrganisationSlideoutDiagram: React.FC<{
                 .org-chart-box-level-3 { width: 66px; min-width: 66px; max-width: 66px; height: 54px; min-height: 54px; }
                 .org-chart-node-level-4 { min-width: 66px; }
                 .org-chart-box-level-4 { width: 66px; min-width: 66px; max-width: 66px; height: 54px; min-height: 54px; }
-                .org-chart-box-unit { border-color: rgba(74, 222, 128, 0.52); }
+                .org-chart-box-unit { border-color: rgba(125, 211, 252, 0.56); }
                 .org-chart-level { display: block; margin-bottom: 3px; font-size: 9px; font-weight: 900; letter-spacing: 0.12em; text-transform: uppercase; color: rgba(125, 211, 252, 0.78); }
                 .org-chart-label { display: block; font-size: 12px; font-weight: 800; line-height: 1.2; overflow-wrap: anywhere; }
                 .org-chart-box-compact .org-chart-level { font-size: 7px; letter-spacing: 0.08em; }
@@ -15024,6 +15083,8 @@ const OrganisationSlideoutDiagram: React.FC<{
                                     levelHeights={levelHeights}
                                     selectedNodeId={selectedNodeId}
                                     selectedPathIds={selectedPathIds}
+                                    highlightedPathIds={highlightedPathIds}
+                                    highlightedChainStatus={highlightedChainStatus}
                                     focusedPath={focusedPath}
                                     onSelectNode={handleSelectNode}
                                 />

@@ -33438,7 +33438,38 @@ const cleanOrganisationChartDisplayPath = (path, rootLabel) => {
   });
   return cleanPath;
 };
-const addOrganisationChartPath = (root2, path, levelNames, unitCode) => {
+const getOrganisationWizardDraftUnitCodes = (settings) => {
+  const unitCodes = /* @__PURE__ */ new Set();
+  const addCode = (value) => {
+    const code = normaliseOrgChartValue(value).toUpperCase();
+    if (code) unitCodes.add(code);
+  };
+  const addRows = (rows) => {
+    if (!Array.isArray(rows)) return;
+    rows.forEach((row) => addCode(row?.code || row?.unitCode || row?.name));
+  };
+  addRows(settings?.initialSetupWizardDraft?.unitsToday);
+  addRows(settings?.initialSetupWizardDrafts?.unitsToday);
+  addRows(settings?.initialSetupWizardDrafts?.unitsTodayDraft);
+  const unitDraftsByCode = settings?.initialSetupWizardDraft?.unitDraftsByCode || settings?.initialSetupWizardDrafts?.unitDraftsByCode;
+  if (unitDraftsByCode && typeof unitDraftsByCode === "object" && !Array.isArray(unitDraftsByCode)) {
+    Object.keys(unitDraftsByCode).forEach(addCode);
+  }
+  return unitCodes;
+};
+const isOrganisationChartUnitSetupComplete = (unit, platformConfig, activeOrganisation) => {
+  const unitSettings = unit?.settings || {};
+  if (unitSettings.initialSetupWizardCompletedAt || unitSettings.initialSetupCompletedAt || unitSettings.setupWizardCompletedAt || unitSettings.setupCompletedAt) {
+    return true;
+  }
+  const organisationSettings = activeOrganisation?.settings || {};
+  if (!organisationSettings.initialSetupWizardCompletedAt) return false;
+  const activeUnits = (platformConfig?.units || []).filter((candidate) => String(candidate?.status || "ACTIVE").toUpperCase() !== "INACTIVE");
+  if (activeUnits.length === 1) return true;
+  const unitCodesFromWizard = getOrganisationWizardDraftUnitCodes(organisationSettings);
+  return unitCodesFromWizard.has(normaliseOrgChartValue(unit?.code || unit?.name).toUpperCase());
+};
+const addOrganisationChartPath = (root2, path, levelNames, unitCode, unitSetupComplete) => {
   let cursor = root2;
   path.forEach((rawPart, pathIndex) => {
     const label = normaliseOrgChartValue(rawPart);
@@ -33469,6 +33500,7 @@ const addOrganisationChartPath = (root2, path, levelNames, unitCode) => {
         levelName: "Unit",
         levelIndex: cursor.levelIndex + 1,
         unitCode: label,
+        unitSetupComplete: Boolean(unitSetupComplete),
         children: []
       });
     }
@@ -33508,7 +33540,7 @@ const buildOrganisationChart = (platformConfig) => {
     const parentPath = path.map((part, pathIndex) => getCanonicalOrganisationLabel(levels, repairMaps, startsAtRoot ? pathIndex : pathIndex + 1, part)).filter(Boolean);
     const displayPath = cleanOrganisationChartDisplayPath(parentPath[0]?.toLowerCase() === rootKey ? parentPath.slice(1) : parentPath, rootLabel);
     if (displayPath.length === 0) return;
-    addOrganisationChartPath(root2, displayPath, levelNames, unitCode);
+    addOrganisationChartPath(root2, displayPath, levelNames, unitCode, isOrganisationChartUnitSetupComplete(unit, platformConfig, activeOrganisation));
   });
   if (root2.children.length === 0) {
     levels.slice(1).forEach((level) => {
@@ -33618,15 +33650,15 @@ const getOrganisationChartVisibleMetrics = (root2, levelHeights, focusedPath, se
     height: Math.max(320, Math.ceil(height + 36))
   };
 };
-const OrganisationChartBranch = ({ node, isRoot = false, levelHeights, selectedNodeId, selectedPathIds, focusedPath, onSelectNode }) => /* @__PURE__ */ jsxRuntimeExports.jsxs("li", { className: `${node.levelIndex >= 2 ? "org-chart-compact-node " : ""}org-chart-node-level-${node.levelIndex}`, children: [
+const OrganisationChartBranch = ({ node, isRoot = false, levelHeights, selectedNodeId, selectedPathIds, highlightedPathIds, highlightedChainStatus, focusedPath, onSelectNode }) => /* @__PURE__ */ jsxRuntimeExports.jsxs("li", { className: `${node.levelIndex >= 2 ? "org-chart-compact-node " : ""}org-chart-node-level-${node.levelIndex}`, children: [
   /* @__PURE__ */ jsxRuntimeExports.jsxs(
     "button",
     {
       type: "button",
-      className: `org-chart-box org-chart-box-level-${node.levelIndex} ${isRoot ? "org-chart-box-root" : ""} ${node.levelIndex >= 2 ? "org-chart-box-compact" : ""} ${node.unitCode ? "org-chart-box-unit" : ""} ${selectedPathIds.has(node.id) ? "org-chart-box-active-chain" : ""} ${selectedNodeId === node.id ? "org-chart-box-selected" : ""}`,
+      className: `org-chart-box org-chart-box-level-${node.levelIndex} ${isRoot ? "org-chart-box-root" : ""} ${node.levelIndex >= 2 ? "org-chart-box-compact" : ""} ${node.unitCode ? "org-chart-box-unit" : ""} ${highlightedPathIds.has(node.id) ? highlightedChainStatus === "complete" ? "org-chart-box-active-chain-complete" : "org-chart-box-active-chain-incomplete" : ""} ${selectedNodeId === node.id && node.unitCode ? node.unitSetupComplete ? "org-chart-box-selected-complete" : "org-chart-box-selected-incomplete" : ""}`,
       style: { height: `${levelHeights.get(node.levelIndex) || estimateOrganisationChartBoxHeight(node, isRoot)}px` },
       "data-org-node-id": node.id,
-      title: isRoot ? node.label : `${node.levelName}: ${node.label}`,
+      title: node.unitCode ? `${node.levelName}: ${node.label} - ${node.unitSetupComplete ? "setup complete" : "setup not complete"}` : isRoot ? node.label : `${node.levelName}: ${node.label}`,
       onClick: () => onSelectNode(node),
       children: [
         !isRoot && /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "org-chart-level", children: node.levelName }),
@@ -33645,6 +33677,8 @@ const OrganisationChartBranch = ({ node, isRoot = false, levelHeights, selectedN
         levelHeights,
         selectedNodeId,
         selectedPathIds,
+        highlightedPathIds,
+        highlightedChainStatus,
         focusedPath,
         onSelectNode
       },
@@ -42711,6 +42745,7 @@ const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, lo
           settings: {
             operationalModel: draft.operationalModel,
             hasTrainees: draft.hasTrainees,
+            ...setupWizardCompletionAt ? { initialSetupWizardCompletedAt: setupWizardCompletionAt } : {},
             parentOrganisationPath: unitParentPaths[normaliseUnitSettingsIdentifier(row.code)] || fallbackUnitParentPath,
             trainingReportTemplate: trainingReportRow ? {
               displayName: trainingReportRow.organisationName || "Training Report",
@@ -43401,7 +43436,8 @@ const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, lo
             settings: {
               ...existingIndex >= 0 ? nextUnits[existingIndex].settings || {} : {},
               operationalModel: draft.operationalModel || (existingIndex >= 0 ? nextUnits[existingIndex].settings?.operationalModel || unitDraft.operationalModel : unitDraft.operationalModel),
-              hasTrainees: typeof draft.hasTrainees === "boolean" ? draft.hasTrainees : existingIndex >= 0 ? nextUnits[existingIndex].settings?.hasTrainees ?? unitDraft.hasTrainees : unitDraft.hasTrainees
+              hasTrainees: typeof draft.hasTrainees === "boolean" ? draft.hasTrainees : existingIndex >= 0 ? nextUnits[existingIndex].settings?.hasTrainees ?? unitDraft.hasTrainees : unitDraft.hasTrainees,
+              initialSetupWizardCompletedAt: completedAt
             }
           };
           if (existingIndex >= 0) nextUnits[existingIndex] = nextUnit;
@@ -45327,6 +45363,8 @@ const OrganisationSlideoutDiagram = ({ platformConfig, organisationSettings, uni
   }, [chart, selectedNodeId]);
   const selectedPathIds = reactExports.useMemo(() => selectedPath ? new Set(selectedPath.map((node) => node.id)) : EmptyOrganisationChartSet, [selectedPath]);
   const selectedNode = selectedPath?.[selectedPath.length - 1] || null;
+  const highlightedPathIds = reactExports.useMemo(() => selectedNode?.unitCode && selectedPath ? new Set(selectedPath.map((node) => node.id)) : EmptyOrganisationChartSet, [selectedNode, selectedPath]);
+  const highlightedChainStatus = selectedNode?.unitCode ? selectedNode.unitSetupComplete ? "complete" : "incomplete" : null;
   const focusedPath = selectedNode && selectedNode.levelIndex >= 3 ? selectedPath : null;
   const handleSelectNode = reactExports.useCallback((node) => {
     setSelectedNodeId((current) => current === node.id ? null : node.id);
@@ -45355,8 +45393,10 @@ const OrganisationSlideoutDiagram = ({ platformConfig, organisationSettings, uni
                 .org-chart ul ul > li > .org-chart-box::before { content: ''; position: absolute; top: -18px; left: 50%; z-index: -1; height: 18px; width: 0; border-left: 1px solid rgba(103, 232, 249, 0.42); }
                 .org-chart > ul > li > .org-chart-box::before { display: none; }
                 .org-chart-box:hover { border-color: rgba(165, 243, 252, 0.9); background: linear-gradient(180deg, rgb(8, 47, 73), rgb(8, 13, 28)); transform: translateY(-1px); }
-                .org-chart-box-active-chain { border-color: rgba(74, 222, 128, 0.95); box-shadow: 0 0 0 1px rgba(74, 222, 128, 0.42), 0 12px 22px rgba(0,0,0,0.26); }
-                .org-chart-box-selected { background: linear-gradient(180deg, rgb(20, 83, 45), rgb(6, 78, 59)); }
+                .org-chart-box-active-chain-complete { border-color: rgba(74, 222, 128, 0.95); box-shadow: 0 0 0 1px rgba(74, 222, 128, 0.42), 0 12px 22px rgba(0,0,0,0.26); }
+                .org-chart-box-active-chain-incomplete { border-color: rgba(245, 158, 11, 0.98); box-shadow: 0 0 0 1px rgba(245, 158, 11, 0.48), 0 12px 22px rgba(0,0,0,0.26); }
+                .org-chart-box-selected-complete { background: linear-gradient(180deg, rgb(20, 83, 45), rgb(6, 78, 59)); }
+                .org-chart-box-selected-incomplete { background: linear-gradient(180deg, rgb(120, 53, 15), rgb(69, 26, 3)); }
                 .org-chart-box-root { min-width: 190px; border-color: rgba(34, 211, 238, 0.82); background: linear-gradient(180deg, rgb(15, 82, 105), rgb(15, 23, 42)); }
                 .org-chart-box-compact { min-width: 66px; max-width: 84px; min-height: 54px; padding: 7px 6px; }
                 .org-chart-node-level-2 { min-width: 84px; }
@@ -45365,7 +45405,7 @@ const OrganisationSlideoutDiagram = ({ platformConfig, organisationSettings, uni
                 .org-chart-box-level-3 { width: 66px; min-width: 66px; max-width: 66px; height: 54px; min-height: 54px; }
                 .org-chart-node-level-4 { min-width: 66px; }
                 .org-chart-box-level-4 { width: 66px; min-width: 66px; max-width: 66px; height: 54px; min-height: 54px; }
-                .org-chart-box-unit { border-color: rgba(74, 222, 128, 0.52); }
+                .org-chart-box-unit { border-color: rgba(125, 211, 252, 0.56); }
                 .org-chart-level { display: block; margin-bottom: 3px; font-size: 9px; font-weight: 900; letter-spacing: 0.12em; text-transform: uppercase; color: rgba(125, 211, 252, 0.78); }
                 .org-chart-label { display: block; font-size: 12px; font-weight: 800; line-height: 1.2; overflow-wrap: anywhere; }
                 .org-chart-box-compact .org-chart-level { font-size: 7px; letter-spacing: 0.08em; }
@@ -45437,6 +45477,8 @@ const OrganisationSlideoutDiagram = ({ platformConfig, organisationSettings, uni
             levelHeights,
             selectedNodeId,
             selectedPathIds,
+            highlightedPathIds,
+            highlightedChainStatus,
             focusedPath,
             onSelectNode: handleSelectNode
           }
