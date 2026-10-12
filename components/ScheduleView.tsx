@@ -669,7 +669,16 @@ const isOrganisationChartUnitSetupComplete = (unit: any, platformConfig: any, ac
         return true;
     }
     const organisationSettings = activeOrganisation?.settings || {};
-    if (!organisationSettings.initialSetupWizardCompletedAt) return false;
+    const organisationSetupCompleted = Boolean(
+        organisationSettings.initialSetupWizardCompletedAt
+        || organisationSettings.initialSetupWizardDraft?.completedAt
+        || organisationSettings.initialSetupWizardDrafts?.completedAt
+        || (() => {
+            if (typeof window === 'undefined') return false;
+            try { return window.localStorage.getItem('dfp-initial-setup-wizard-completed-at'); } catch { return false; }
+        })()
+    );
+    if (!organisationSetupCompleted) return false;
     const activeUnits = (platformConfig?.units || []).filter((candidate: any) => (
         String(candidate?.status || 'ACTIVE').toUpperCase() !== 'INACTIVE'
     ));
@@ -6484,7 +6493,7 @@ const InitialSetupWizard: React.FC<{
     };
 
     const saveWizardUnitRowsDraft = (message = 'Unit list synced into Settings.') => {
-        const unitRows = parseWizardUnitRows(unitsTodayDraft);
+        const unitRows = getWizardUnitRowsForSetup();
         if (unitRows.length === 0) {
             setSaveMessage('Add at least one unit before continuing.');
             return;
@@ -12793,7 +12802,7 @@ const InitialSetupWizard: React.FC<{
         saveOrganisationDraft();
         pushWizardPersistenceTrace('finish:normal:organisation-saved');
         const locationRows = parseWizardLocationRows(locationsTodayDraft);
-        const unitRows = parseWizardUnitRows(unitsTodayDraft);
+        const unitRows = getWizardUnitRowsForSetup();
         if (onUpdatePlatformConfig && (locationRows.length > 0 || unitRows.length > 0)) {
             onUpdatePlatformConfig((current) => {
                 const baseConfig = current || platformConfig || {};
