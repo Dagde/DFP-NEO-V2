@@ -745,17 +745,22 @@ const addOrganisationChartPath = (
         const label = normaliseOrgChartValue(unitCode);
         if (!label) return;
         const key = label.toLowerCase();
-        if (!cursor.children.some((node) => node.unitCode?.toLowerCase() === key || node.label.toLowerCase() === key)) {
-            cursor.children.push({
-                id: `${cursor.id}-unit-${key.replace(/[^a-z0-9]+/g, '-') || 'unit'}`,
-                label,
-                levelName: 'Unit',
-                levelIndex: cursor.levelIndex + 1,
-                unitCode: label,
-                unitSetupComplete: Boolean(unitSetupComplete),
-                children: [],
-            });
+        const existingChild = cursor.children.find((node) => node.unitCode?.toLowerCase() === key || node.label.toLowerCase() === key);
+        if (existingChild) {
+            existingChild.levelName = 'Unit';
+            existingChild.unitCode = label;
+            existingChild.unitSetupComplete = Boolean(unitSetupComplete);
+            return;
         }
+        cursor.children.push({
+            id: `${cursor.id}-unit-${key.replace(/[^a-z0-9]+/g, '-') || 'unit'}`,
+            label,
+            levelName: 'Unit',
+            levelIndex: cursor.levelIndex + 1,
+            unitCode: label,
+            unitSetupComplete: Boolean(unitSetupComplete),
+            children: [],
+        });
     }
 };
 
