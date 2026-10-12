@@ -658,6 +658,99 @@ const getOrganisationWizardDraftUnitCodes = (settings: any): Set<string> => {
     return unitCodes;
 };
 
+const hasOrganisationChartResourceCapacity = (pool: any): boolean => {
+    const settings = pool?.settings || {};
+    return [
+        settings.aircraft ?? pool?.aircraft,
+        settings.ftd ?? settings.sim ?? pool?.ftd ?? pool?.sim,
+        settings.cpt ?? settings.trainer ?? pool?.cpt ?? pool?.trainer,
+        settings.standby ?? pool?.standby,
+        settings.ground ?? pool?.ground,
+    ].some((value) => Number(value || 0) > 0);
+};
+
+const isOrganisationChartUnitReadyFromSettings = (unit: any, platformConfig: any, activeOrganisation: any): boolean => {
+    const unitCode = normaliseUnitSettingsIdentifier(unit?.code);
+    const unitLocationCode = normaliseUnitSettingsIdentifier(unit?.locationCode);
+    if (!unitCode || !unitLocationCode || !getUnitOperationalModel(unit)) return false;
+
+    const organisationSettings = activeOrganisation?.settings || {};
+    const structure = organisationSettings.organisationStructure || {};
+    const levels = Array.isArray(structure.levels) ? structure.levels : [];
+    const organisationStructureConfigured = levels.length > 0 && levels.some((level: any) => (
+        String(level?.name || '').trim() && Array.isArray(level?.options) && level.options.length > 0
+    ));
+    if (!activeOrganisation?.code || !activeOrganisation?.name || !organisationStructureConfigured) return false;
+
+    const configuredPath = parseOrganisationChartPath(unit?.settings?.parentOrganisationPath || unit?.settings?.parentOrganisation);
+    const draftPath = getOrganisationChartDraftUnitParentPaths(organisationSettings).get(unitCode) || [];
+    if (configuredPath.length === 0 && draftPath.length === 0) return false;
+
+    const activeLocations = (platformConfig?.locations || []).filter((location: any) => (
+        String(location?.status || 'ACTIVE').toUpperCase() !== 'INACTIVE'
+    ));
+    const locationConfigured = activeLocations.some((location: any) => (
+        normaliseUnitSettingsIdentifier(location?.code) === unitLocationCode
+        || normaliseUnitSettingsIdentifier(location?.iataCode) === unitLocationCode
+    ));
+    if (!locationConfigured) return false;
+
+    const activeUnitModules = (platformConfig?.unitModules || []).filter((item: any) => (
+        String(item?.status || 'ACTIVE').toUpperCase() !== 'INACTIVE'
+        && item?.isEnabled !== false
+        && normaliseUnitSettingsIdentifier(item?.unitCode) === unitCode
+    ));
+    if (activeUnitModules.length === 0) return false;
+
+    const activeResourcePools = (platformConfig?.resourcePools || []).filter((pool: any) => (
+        String(pool?.status || 'ACTIVE').toUpperCase() !== 'INACTIVE'
+        && (
+            normaliseUnitSettingsIdentifier(pool?.unitCode) === unitCode
+            || (!normaliseUnitSettingsIdentifier(pool?.unitCode) && normaliseUnitSettingsIdentifier(pool?.locationCode) === unitLocationCode)
+        )
+    ));
+    const activeAircraftTypes = (platformConfig?.aircraftTypes || []).filter((aircraft: any) => (
+        String(aircraft?.status || 'ACTIVE').toUpperCase() !== 'INACTIVE'
+    ));
+    const resourceConfigured = activeResourcePools.some((pool: any) => {
+        const aircraftCode = normaliseUnitSettingsIdentifier(pool?.aircraftTypeCode);
+        const aircraftExists = !aircraftCode || activeAircraftTypes.some((aircraft: any) => normaliseUnitSettingsIdentifier(aircraft?.code) === aircraftCode);
+        return aircraftExists && hasOrganisationChartResourceCapacity(pool);
+    });
+    if (!resourceConfigured) return false;
+
+    const crewCompositionSettings = normaliseCrewCompositionSettings(organisationSettings.crewCompositionSettings || null);
+    const crewConfigured = activeAircraftTypes.some((aircraft: any) => {
+        const crewComposition = aircraft?.crewComposition && typeof aircraft.crewComposition === 'object'
+            ? aircraft.crewComposition
+            : null;
+        return Array.isArray(crewComposition?.standardSeats) && crewComposition.standardSeats.length > 0;
+    }) || crewCompositionSettings.alternateCompositions.length > 0;
+    if (!crewConfigured) return false;
+
+    const activeMasterLmpCatalogue = Array.isArray(organisationSettings.masterLmpCatalogue)
+        ? organisationSettings.masterLmpCatalogue.filter((item: any) => String(item?.status || 'ACTIVE').toUpperCase() !== 'INACTIVE')
+        : [];
+    const activeMasterLmpAccess = getOrganisationMasterLmpAccessRules(organisationSettings)
+        .filter((item: any) => String(item?.status || 'ACTIVE').toUpperCase() !== 'INACTIVE');
+    const trainingConfigured = activeMasterLmpCatalogue.length > 0 && activeMasterLmpAccess.some((rule: any) => {
+        const ruleUnit = normaliseUnitSettingsIdentifier(rule?.unitCode || rule?.unit);
+        const ruleLocation = normaliseUnitSettingsIdentifier(rule?.locationCode || rule?.location);
+        return (!ruleUnit || ruleUnit === unitCode) && (!ruleLocation || ruleLocation === unitLocationCode);
+    });
+    if (!trainingConfigured) return false;
+
+    const activeUserAccess = (platformConfig?.userAccess || []).filter((access: any) => (
+        String(access?.status || 'ACTIVE').toUpperCase() !== 'INACTIVE'
+    ));
+    const assignedAccessConfigured = activeUserAccess.some((access: any) => {
+        const accessUnit = normaliseUnitSettingsIdentifier(access?.unitCode || access?.unit);
+        const accessLocation = normaliseUnitSettingsIdentifier(access?.locationCode || access?.location);
+        return accessUnit === unitCode || (!accessUnit && accessLocation === unitLocationCode);
+    });
+    return assignedAccessConfigured;
+};
+
 const isOrganisationChartUnitSetupComplete = (unit: any, platformConfig: any, activeOrganisation: any): boolean => {
     const unitSettings = unit?.settings || {};
     if (
@@ -668,6 +761,7 @@ const isOrganisationChartUnitSetupComplete = (unit: any, platformConfig: any, ac
     ) {
         return true;
     }
+    if (isOrganisationChartUnitReadyFromSettings(unit, platformConfig, activeOrganisation)) return true;
     const organisationSettings = activeOrganisation?.settings || {};
     const organisationSetupCompleted = Boolean(
         organisationSettings.initialSetupWizardCompletedAt
@@ -862,6 +956,7 @@ const collectOrganisationChartTrace = (platformConfig: any, chart: OrganisationC
             .map((unit: any) => {
                 const isActiveContext = normaliseUnitSettingsIdentifier(unit?.code) === activeUnitKey;
                 const unitSetupComplete = isOrganisationChartUnitSetupComplete(unit, platformConfig, activeOrganisation);
+                const settingsReady = isOrganisationChartUnitReadyFromSettings(unit, platformConfig, activeOrganisation);
                 return {
                     id: unit?.id,
                     code: unit?.code,
@@ -871,6 +966,7 @@ const collectOrganisationChartTrace = (platformConfig: any, chart: OrganisationC
                     status: unit?.status || 'ACTIVE',
                     isActiveContext,
                     chartWouldMarkComplete: unitSetupComplete,
+                    settingsReady,
                     initialSetupWizardCompletedAt: unit?.settings?.initialSetupWizardCompletedAt || null,
                     initialSetupCompletedAt: unit?.settings?.initialSetupCompletedAt || null,
                     setupWizardCompletedAt: unit?.settings?.setupWizardCompletedAt || null,

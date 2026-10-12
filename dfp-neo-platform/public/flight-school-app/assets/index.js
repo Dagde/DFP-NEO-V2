@@ -33486,11 +33486,69 @@ const getOrganisationWizardDraftUnitCodes = (settings) => {
   }
   return unitCodes;
 };
+const hasOrganisationChartResourceCapacity = (pool) => {
+  const settings = pool?.settings || {};
+  return [
+    settings.aircraft ?? pool?.aircraft,
+    settings.ftd ?? settings.sim ?? pool?.ftd ?? pool?.sim,
+    settings.cpt ?? settings.trainer ?? pool?.cpt ?? pool?.trainer,
+    settings.standby ?? pool?.standby,
+    settings.ground ?? pool?.ground
+  ].some((value) => Number(value || 0) > 0);
+};
+const isOrganisationChartUnitReadyFromSettings = (unit, platformConfig, activeOrganisation) => {
+  const unitCode = normaliseUnitSettingsIdentifier(unit?.code);
+  const unitLocationCode = normaliseUnitSettingsIdentifier(unit?.locationCode);
+  if (!unitCode || !unitLocationCode || !getUnitOperationalModel(unit)) return false;
+  const organisationSettings = activeOrganisation?.settings || {};
+  const structure = organisationSettings.organisationStructure || {};
+  const levels = Array.isArray(structure.levels) ? structure.levels : [];
+  const organisationStructureConfigured = levels.length > 0 && levels.some((level) => String(level?.name || "").trim() && Array.isArray(level?.options) && level.options.length > 0);
+  if (!activeOrganisation?.code || !activeOrganisation?.name || !organisationStructureConfigured) return false;
+  const configuredPath = parseOrganisationChartPath(unit?.settings?.parentOrganisationPath || unit?.settings?.parentOrganisation);
+  const draftPath = getOrganisationChartDraftUnitParentPaths(organisationSettings).get(unitCode) || [];
+  if (configuredPath.length === 0 && draftPath.length === 0) return false;
+  const activeLocations = (platformConfig?.locations || []).filter((location) => String(location?.status || "ACTIVE").toUpperCase() !== "INACTIVE");
+  const locationConfigured = activeLocations.some((location) => normaliseUnitSettingsIdentifier(location?.code) === unitLocationCode || normaliseUnitSettingsIdentifier(location?.iataCode) === unitLocationCode);
+  if (!locationConfigured) return false;
+  const activeUnitModules = (platformConfig?.unitModules || []).filter((item) => String(item?.status || "ACTIVE").toUpperCase() !== "INACTIVE" && item?.isEnabled !== false && normaliseUnitSettingsIdentifier(item?.unitCode) === unitCode);
+  if (activeUnitModules.length === 0) return false;
+  const activeResourcePools = (platformConfig?.resourcePools || []).filter((pool) => String(pool?.status || "ACTIVE").toUpperCase() !== "INACTIVE" && (normaliseUnitSettingsIdentifier(pool?.unitCode) === unitCode || !normaliseUnitSettingsIdentifier(pool?.unitCode) && normaliseUnitSettingsIdentifier(pool?.locationCode) === unitLocationCode));
+  const activeAircraftTypes = (platformConfig?.aircraftTypes || []).filter((aircraft) => String(aircraft?.status || "ACTIVE").toUpperCase() !== "INACTIVE");
+  const resourceConfigured = activeResourcePools.some((pool) => {
+    const aircraftCode = normaliseUnitSettingsIdentifier(pool?.aircraftTypeCode);
+    const aircraftExists = !aircraftCode || activeAircraftTypes.some((aircraft) => normaliseUnitSettingsIdentifier(aircraft?.code) === aircraftCode);
+    return aircraftExists && hasOrganisationChartResourceCapacity(pool);
+  });
+  if (!resourceConfigured) return false;
+  const crewCompositionSettings = normaliseCrewCompositionSettings(organisationSettings.crewCompositionSettings || null);
+  const crewConfigured = activeAircraftTypes.some((aircraft) => {
+    const crewComposition = aircraft?.crewComposition && typeof aircraft.crewComposition === "object" ? aircraft.crewComposition : null;
+    return Array.isArray(crewComposition?.standardSeats) && crewComposition.standardSeats.length > 0;
+  }) || crewCompositionSettings.alternateCompositions.length > 0;
+  if (!crewConfigured) return false;
+  const activeMasterLmpCatalogue = Array.isArray(organisationSettings.masterLmpCatalogue) ? organisationSettings.masterLmpCatalogue.filter((item) => String(item?.status || "ACTIVE").toUpperCase() !== "INACTIVE") : [];
+  const activeMasterLmpAccess = getOrganisationMasterLmpAccessRules(organisationSettings).filter((item) => String(item?.status || "ACTIVE").toUpperCase() !== "INACTIVE");
+  const trainingConfigured = activeMasterLmpCatalogue.length > 0 && activeMasterLmpAccess.some((rule) => {
+    const ruleUnit = normaliseUnitSettingsIdentifier(rule?.unitCode || rule?.unit);
+    const ruleLocation = normaliseUnitSettingsIdentifier(rule?.locationCode || rule?.location);
+    return (!ruleUnit || ruleUnit === unitCode) && (!ruleLocation || ruleLocation === unitLocationCode);
+  });
+  if (!trainingConfigured) return false;
+  const activeUserAccess = (platformConfig?.userAccess || []).filter((access) => String(access?.status || "ACTIVE").toUpperCase() !== "INACTIVE");
+  const assignedAccessConfigured = activeUserAccess.some((access) => {
+    const accessUnit = normaliseUnitSettingsIdentifier(access?.unitCode || access?.unit);
+    const accessLocation = normaliseUnitSettingsIdentifier(access?.locationCode || access?.location);
+    return accessUnit === unitCode || !accessUnit && accessLocation === unitLocationCode;
+  });
+  return assignedAccessConfigured;
+};
 const isOrganisationChartUnitSetupComplete = (unit, platformConfig, activeOrganisation) => {
   const unitSettings = unit?.settings || {};
   if (unitSettings.initialSetupWizardCompletedAt || unitSettings.initialSetupCompletedAt || unitSettings.setupWizardCompletedAt || unitSettings.setupCompletedAt) {
     return true;
   }
+  if (isOrganisationChartUnitReadyFromSettings(unit, platformConfig, activeOrganisation)) return true;
   const organisationSettings = activeOrganisation?.settings || {};
   const organisationSetupCompleted = Boolean(
     organisationSettings.initialSetupWizardCompletedAt || organisationSettings.initialSetupWizardDraft?.completedAt || organisationSettings.initialSetupWizardDrafts?.completedAt || (() => {
@@ -33647,6 +33705,7 @@ const collectOrganisationChartTrace = (platformConfig, chart, selectedNodeId, un
     activeUnits: units.filter((unit) => String(unit?.status || "ACTIVE").toUpperCase() !== "INACTIVE").map((unit) => {
       const isActiveContext = normaliseUnitSettingsIdentifier(unit?.code) === activeUnitKey;
       const unitSetupComplete = isOrganisationChartUnitSetupComplete(unit, platformConfig, activeOrganisation);
+      const settingsReady = isOrganisationChartUnitReadyFromSettings(unit, platformConfig, activeOrganisation);
       return {
         id: unit?.id,
         code: unit?.code,
@@ -33656,6 +33715,7 @@ const collectOrganisationChartTrace = (platformConfig, chart, selectedNodeId, un
         status: unit?.status || "ACTIVE",
         isActiveContext,
         chartWouldMarkComplete: unitSetupComplete,
+        settingsReady,
         initialSetupWizardCompletedAt: unit?.settings?.initialSetupWizardCompletedAt || null,
         initialSetupCompletedAt: unit?.settings?.initialSetupCompletedAt || null,
         setupWizardCompletedAt: unit?.settings?.setupWizardCompletedAt || null,
