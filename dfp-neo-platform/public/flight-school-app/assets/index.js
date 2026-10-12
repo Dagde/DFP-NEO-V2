@@ -33438,6 +33438,35 @@ const cleanOrganisationChartDisplayPath = (path, rootLabel) => {
   });
   return cleanPath;
 };
+const parseOrganisationChartPath = (value) => {
+  if (Array.isArray(value)) {
+    return value.map(normaliseOrgChartValue).filter(Boolean);
+  }
+  return String(value || "").split(/\s*(?:\/|>|-)\s*/).map(normaliseOrgChartValue).filter(Boolean);
+};
+const getOrganisationChartDraftUnitParentPaths = (settings) => {
+  const map = /* @__PURE__ */ new Map();
+  const addParent = (unitCode, parentPath) => {
+    const key = normaliseOrgChartValue(unitCode).toUpperCase();
+    const path = parseOrganisationChartPath(parentPath);
+    if (key && path.length > 0) map.set(key, path);
+  };
+  const addRows = (rows) => {
+    if (Array.isArray(rows)) {
+      rows.forEach((row) => addParent(row?.code || row?.unitCode || row?.child, row?.parentOrganisationPath || row?.parentPath || row?.parent));
+      return;
+    }
+    String(rows || "").split(/\n/).forEach((line) => {
+      const separator = line.includes("=") ? "=" : line.includes("|") ? "|" : ">";
+      const [unitCode, parentPath] = line.split(separator).map((part) => part.trim());
+      addParent(unitCode, parentPath);
+    });
+  };
+  addRows(settings?.initialSetupWizardDraft?.unitParents);
+  addRows(settings?.initialSetupWizardDrafts?.unitParents);
+  addRows(settings?.initialSetupWizardDrafts?.unitParentDraft);
+  return map;
+};
 const getOrganisationWizardDraftUnitCodes = (settings) => {
   const unitCodes = /* @__PURE__ */ new Set();
   const addCode = (value) => {
@@ -33523,6 +33552,7 @@ const buildOrganisationChart = (platformConfig) => {
   const rootKey = root2.label.toLowerCase();
   const repairMaps = getOrganisationRepairMaps(platformConfig, levels);
   const relationshipPaths = Array.isArray(structure.relationshipPaths) ? structure.relationshipPaths : [];
+  const draftUnitParentPaths = getOrganisationChartDraftUnitParentPaths(activeOrganisation?.settings || {});
   relationshipPaths.forEach((rawPath) => {
     const path = (Array.isArray(rawPath) ? rawPath : String(rawPath || "").split(">")).map(normaliseOrgChartValue).filter(Boolean);
     const startsAtRoot = path[0]?.toLowerCase() === rootKey;
@@ -33531,15 +33561,17 @@ const buildOrganisationChart = (platformConfig) => {
     addOrganisationChartPath(root2, displayPath, levelNames);
   });
   const activeOrganisationCode = normaliseOrgChartValue(activeOrganisation.code).toLowerCase();
-  (platformConfig?.units || []).filter((unit) => String(unit?.status || "ACTIVE").toUpperCase() !== "INACTIVE" && (!activeOrganisationCode || normaliseOrgChartValue(unit?.organisationCode).toLowerCase() === activeOrganisationCode)).forEach((unit) => {
+  (platformConfig?.units || []).filter((unit) => String(unit?.status || "ACTIVE").toUpperCase() !== "INACTIVE").forEach((unit) => {
     const unitCode = normaliseOrgChartValue(unit?.code || unit?.name);
     if (!unitCode) return;
-    const rawPath = Array.isArray(unit?.settings?.parentOrganisationPath) ? unit.settings.parentOrganisationPath : String(unit?.settings?.parentOrganisationPath || unit?.settings?.parentOrganisation || "").split("-");
-    const path = rawPath.map(normaliseOrgChartValue).filter(Boolean);
+    const unitOrganisationCode = normaliseOrgChartValue(unit?.organisationCode).toLowerCase();
+    if (activeOrganisationCode && unitOrganisationCode && unitOrganisationCode !== activeOrganisationCode) return;
+    const configuredPath = parseOrganisationChartPath(unit?.settings?.parentOrganisationPath || unit?.settings?.parentOrganisation);
+    const draftPath = draftUnitParentPaths.get(unitCode.toUpperCase()) || [];
+    const path = configuredPath.length > 0 ? configuredPath : draftPath;
     const startsAtRoot = normaliseOrgChartKey(path[0]) === rootKey;
     const parentPath = path.map((part, pathIndex) => getCanonicalOrganisationLabel(levels, repairMaps, startsAtRoot ? pathIndex : pathIndex + 1, part)).filter(Boolean);
     const displayPath = cleanOrganisationChartDisplayPath(parentPath[0]?.toLowerCase() === rootKey ? parentPath.slice(1) : parentPath, rootLabel);
-    if (displayPath.length === 0) return;
     addOrganisationChartPath(root2, displayPath, levelNames, unitCode, isOrganisationChartUnitSetupComplete(unit, platformConfig, activeOrganisation));
   });
   if (root2.children.length === 0) {
@@ -43421,11 +43453,18 @@ const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, lo
         const defaultLocationCode = locationRows[0]?.icao || locationDraft.code;
         const nextUnits = [...existingUnits];
         const draftMap = getWizardUnitDraftMapWithCurrent();
+        const unitParentPathByCode = getWizardUnitParentPathMap();
+        const unitParentOptions = getWizardUnitParentPathOptions();
+        const validUnitParentValues = new Set(unitParentOptions.map(formatWizardOrganisationPath));
+        const fallbackUnitParentPath = unitParentOptions[0] || [];
         unitRows.forEach((row) => {
           const code = row.code;
           if (!code) return;
           const draft = resolveWizardUnitSetupDraft(row, unitRows.findIndex((unitRow) => normaliseUnitSettingsIdentifier(unitRow.code) === normaliseUnitSettingsIdentifier(code)), draftMap);
           const existingIndex = nextUnits.findIndex((unit) => normaliseUnitSettingsIdentifier(unit?.code) === normaliseUnitSettingsIdentifier(code));
+          const configuredParentPath = unitParentPathByCode.get(normaliseUnitSettingsIdentifier(code)) || [];
+          const existingParentPath = existingIndex >= 0 ? parseOrganisationChartPath(nextUnits[existingIndex].settings?.parentOrganisationPath || nextUnits[existingIndex].settings?.parentOrganisation) : [];
+          const parentOrganisationPath = configuredParentPath.length > 0 && validUnitParentValues.has(formatWizardOrganisationPath(configuredParentPath)) ? configuredParentPath : existingParentPath.length > 0 ? existingParentPath : fallbackUnitParentPath;
           const nextUnit = {
             ...existingIndex >= 0 ? nextUnits[existingIndex] : { id: createWizardRecordId("unit") },
             code,
@@ -43437,7 +43476,8 @@ const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, lo
               ...existingIndex >= 0 ? nextUnits[existingIndex].settings || {} : {},
               operationalModel: draft.operationalModel || (existingIndex >= 0 ? nextUnits[existingIndex].settings?.operationalModel || unitDraft.operationalModel : unitDraft.operationalModel),
               hasTrainees: typeof draft.hasTrainees === "boolean" ? draft.hasTrainees : existingIndex >= 0 ? nextUnits[existingIndex].settings?.hasTrainees ?? unitDraft.hasTrainees : unitDraft.hasTrainees,
-              initialSetupWizardCompletedAt: completedAt
+              initialSetupWizardCompletedAt: completedAt,
+              ...parentOrganisationPath.length > 0 ? { parentOrganisationPath } : {}
             }
           };
           if (existingIndex >= 0) nextUnits[existingIndex] = nextUnit;
