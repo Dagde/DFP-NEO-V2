@@ -992,6 +992,8 @@ const collectOrganisationChartTrace = (platformConfig: any, chart: OrganisationC
                 completedAt: window.localStorage.getItem('dfp-initial-setup-wizard-completed-at'),
                 completedSteps: readJson('dfp-initial-setup-wizard-completed-steps'),
                 finishTrace: readJson('dfp_setup_wizard_finish_trace'),
+                step6Trace: readJson('dfp_setup_wizard_step6_trace'),
+                locationScopeTrace: readJson('dfp_setup_wizard_location_scope_trace'),
                 draftSnapshot: readJson('dfp-initial-setup-wizard-draft-snapshot'),
             };
         })(),
@@ -3720,6 +3722,8 @@ const InitialSetupWizard: React.FC<{
         }
     });
     const wizardFinishTraceRef = useRef<any[]>(wizardFinishTrace);
+    const wizardStep6TraceStorageKey = 'dfp_setup_wizard_step6_trace';
+    const wizardLocationScopeTraceStorageKey = 'dfp_setup_wizard_location_scope_trace';
     const fileInputRef = useRef<HTMLInputElement | null>(null);
     const pendingWizardTemplateFilesRef = useRef<Record<string, File>>({});
     const lastSetupTestPersonnelSnapshotRef = useRef('');
@@ -3732,6 +3736,8 @@ const InitialSetupWizard: React.FC<{
         'dfp_setup_wizard_import_diag',
         'dfp_setup_test_lmp_diag',
         'dfp_setup_wizard_org_diag',
+        wizardStep6TraceStorageKey,
+        wizardLocationScopeTraceStorageKey,
     ];
     const safeSetWizardLocalStorage = (key: string, value: string) => {
         if (typeof window === 'undefined') return false;
@@ -3885,6 +3891,14 @@ const InitialSetupWizard: React.FC<{
                     locationCode: unitDraft.locationCode,
                     operationalModel: unitDraft.operationalModel,
                     hasTrainees: unitDraft.hasTrainees,
+                },
+                location: {
+                    locationsTodayDraft,
+                    parsedLocationsToday: parseWizardLocationRows(locationsTodayDraft),
+                    locationsTodayFieldTouched,
+                    locationDraft,
+                    locationDraftDirty: locationDraftDirtyRef.current,
+                    setupMode: wizardFreshUnitSetupActive ? 'new-unit' : 'existing-unit',
                 },
                 resource: {
                     aircraftCode: resourceDraft.aircraftCode,
@@ -4927,11 +4941,48 @@ const InitialSetupWizard: React.FC<{
     const buildHydratedLocationsTodayDraft = () => {
         const savedWizardLocations = String(getSavedInitialSetupWizardDrafts()?.locationsTodayDraft || '').trim();
         const filteredSavedWizardLocations = filterLegacyWizardLocationRows(savedWizardLocations, shouldIgnoreLegacyWizardLocationSamples);
-        if (isSavedWizardFreshUnitSetup() && filteredSavedWizardLocations) return filteredSavedWizardLocations;
+        const savedFreshUnitSetup = isSavedWizardFreshUnitSetup();
+        if (savedFreshUnitSetup && filteredSavedWizardLocations) {
+            pushWizardStep6Trace('hydrate:locations-today-source-decision', {
+                source: 'saved-new-unit-draft',
+                savedFreshUnitSetup,
+                savedWizardLocations,
+                filteredSavedWizardLocations,
+                settingsLocationsDraft: buildWizardLocationsTodayDraftFromLocations(),
+            });
+            return filteredSavedWizardLocations;
+        }
         const settingsLocationsDraft = buildWizardLocationsTodayDraftFromLocations();
-        if (settingsLocationsDraft) return settingsLocationsDraft;
-        if (filteredSavedWizardLocations) return filteredSavedWizardLocations;
-        return filterLegacyWizardLocationRows(formatWizardLocationRows([activeWizardLocationRow]), shouldIgnoreLegacyWizardLocationSamples);
+        if (settingsLocationsDraft) {
+            pushWizardStep6Trace('hydrate:locations-today-source-decision', {
+                source: 'settings-locations',
+                savedFreshUnitSetup,
+                savedWizardLocations,
+                filteredSavedWizardLocations,
+                settingsLocationsDraft,
+            });
+            return settingsLocationsDraft;
+        }
+        if (filteredSavedWizardLocations) {
+            pushWizardStep6Trace('hydrate:locations-today-source-decision', {
+                source: 'saved-draft',
+                savedFreshUnitSetup,
+                savedWizardLocations,
+                filteredSavedWizardLocations,
+                settingsLocationsDraft,
+            });
+            return filteredSavedWizardLocations;
+        }
+        const activeLocationFallback = filterLegacyWizardLocationRows(formatWizardLocationRows([activeWizardLocationRow]), shouldIgnoreLegacyWizardLocationSamples);
+        pushWizardStep6Trace('hydrate:locations-today-source-decision', {
+            source: 'active-location-fallback',
+            savedFreshUnitSetup,
+            savedWizardLocations,
+            filteredSavedWizardLocations,
+            settingsLocationsDraft,
+            activeLocationFallback,
+        });
+        return activeLocationFallback;
     };
     const buildHydratedLocationDraft = () => {
         const savedDraft = readPlainWizardObject(getSavedInitialSetupWizardDrafts()?.locationDraft);
@@ -5871,6 +5922,10 @@ const InitialSetupWizard: React.FC<{
             localSaved,
             unitsTodayDraft: snapshot.unitsTodayDraft,
             parsedUnitsToday: parseWizardUnitRows(snapshot.unitsTodayDraft),
+            setupMode: snapshot.setupMode,
+            locationsTodayDraft: snapshot.locationsTodayDraft,
+            parsedLocationsToday: parseWizardLocationRows(snapshot.locationsTodayDraft),
+            locationDraft: snapshot.locationDraft,
         });
         if (!onUpdatePlatformConfig) return;
         if (typeof window !== 'undefined') window.localStorage.removeItem(initialSetupWizardCompletedAtStorageKey);
@@ -5922,6 +5977,10 @@ const InitialSetupWizard: React.FC<{
         pushWizardPersistenceTrace('draft-snapshot:platform-save-queued', {
             unitsTodayDraft: snapshot.unitsTodayDraft,
             parsedUnitsToday: parseWizardUnitRows(snapshot.unitsTodayDraft),
+            setupMode: snapshot.setupMode,
+            locationsTodayDraft: snapshot.locationsTodayDraft,
+            parsedLocationsToday: parseWizardLocationRows(snapshot.locationsTodayDraft),
+            locationDraft: snapshot.locationDraft,
         });
     };
     const wizardGroundEventSourceItems = useMemo(() => {
@@ -6135,8 +6194,56 @@ const InitialSetupWizard: React.FC<{
         latitude: profile.latitude ?? null,
         longitude: profile.longitude ?? null,
     }) : null;
-    const pushWizardLocationScopeTrace = (_eventType: string, _details: Record<string, any> = {}) => {};
-    const pushWizardStep6Trace = (_eventType: string, _details: Record<string, any> = {}) => {};
+    const getWizardStep6TraceSnapshot = () => {
+        const savedDrafts = getSavedInitialSetupWizardDrafts();
+        return compactWizardDiagDetails({
+            activeUnitCode: unitCode,
+            activeLocationCode: locationCode,
+            mode,
+            currentStep,
+            visibleStepId: visibleStep?.id || '',
+            wizardFreshUnitSetupActive,
+            savedSetupMode: savedDrafts?.setupMode || '',
+            locationsTodayDraft,
+            parsedLocationsToday: parseWizardLocationRows(locationsTodayDraft),
+            locationsTodayFieldTouched,
+            locationDraft,
+            locationDraftDirty: locationDraftDirtyRef.current,
+            savedLocationsTodayDraft: savedDrafts?.locationsTodayDraft || '',
+            savedLocationDraft: readPlainWizardObject(savedDrafts?.locationDraft),
+            localDraftSnapshot: (() => {
+                if (typeof window === 'undefined') return null;
+                try {
+                    return JSON.parse(window.localStorage.getItem(initialSetupWizardDraftSnapshotStorageKey) || 'null');
+                } catch {
+                    return window.localStorage.getItem(initialSetupWizardDraftSnapshotStorageKey);
+                }
+            })(),
+        });
+    };
+    const pushWizardTraceEntry = (storageKey: string, windowKey: string, eventType: string, details: Record<string, any> = {}) => {
+        if (typeof window === 'undefined') return;
+        const entry = {
+            ts: new Date().toISOString(),
+            eventType,
+            snapshot: getWizardStep6TraceSnapshot(),
+            details: compactWizardDiagDetails(details),
+        };
+        try {
+            const existing = JSON.parse(window.localStorage.getItem(storageKey) || '[]');
+            const next = [...(Array.isArray(existing) ? existing : []), entry].slice(-160);
+            safeSetWizardLocalStorage(storageKey, JSON.stringify(next));
+            (window as any)[windowKey] = next;
+        } catch {
+            (window as any)[windowKey] = [entry];
+        }
+    };
+    const pushWizardLocationScopeTrace = (eventType: string, details: Record<string, any> = {}) => {
+        pushWizardTraceEntry(wizardLocationScopeTraceStorageKey, 'neoSetupWizardLocationScopeTrace', eventType, details);
+    };
+    const pushWizardStep6Trace = (eventType: string, details: Record<string, any> = {}) => {
+        pushWizardTraceEntry(wizardStep6TraceStorageKey, 'neoSetupWizardStep6Trace', eventType, details);
+    };
     const updatePrimaryOrganisationWithSettings = (baseConfig: any, settingsUpdater: (settings: any, organisation: any) => any) => {
         const organisations = Array.isArray(baseConfig.organisations) ? baseConfig.organisations : [];
         const fallbackOrganisation = {
@@ -8314,8 +8421,18 @@ const InitialSetupWizard: React.FC<{
         pushWizardStep6Trace('step-6-location-state', {
             isStep6Number: currentStep + 1 === 6,
             isLocationSetupStep: ['locations-today', 'location-code', 'location-details'].includes(visibleStep?.id || ''),
+            setupMode: wizardFreshUnitSetupActive ? 'new-unit' : 'existing-unit',
+            locationsTodayDraft,
+            parsedLocationsToday: parseWizardLocationRows(locationsTodayDraft),
+            locationsTodayFieldTouched,
+            locationDraft,
+            savedDrafts: {
+                setupMode: getSavedInitialSetupWizardDrafts()?.setupMode || '',
+                locationsTodayDraft: getSavedInitialSetupWizardDrafts()?.locationsTodayDraft || '',
+                locationDraft: readPlainWizardObject(getSavedInitialSetupWizardDrafts()?.locationDraft),
+            },
         });
-    }, [mode, currentStep, visibleStep?.id, wizardAirfieldCatalogueProfiles.length]);
+    }, [mode, currentStep, visibleStep?.id, wizardAirfieldCatalogueProfiles.length, locationsTodayDraft, locationsTodayFieldTouched, JSON.stringify(locationDraft), wizardFreshUnitSetupActive]);
     const getWizardOuterScrollElement = () => (
         wizardShellRef.current?.closest('.organisation-slideout-scroll-stable') as HTMLElement | null
     );
