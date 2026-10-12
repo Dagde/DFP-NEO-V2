@@ -813,6 +813,95 @@ const buildOrganisationChart = (platformConfig: any): OrganisationChartNode | nu
     return root;
 };
 
+const flattenOrganisationChartNodes = (node: OrganisationChartNode | null): Array<{
+    id: string;
+    label: string;
+    levelName: string;
+    levelIndex: number;
+    unitCode?: string;
+    unitSetupComplete?: boolean;
+}> => {
+    if (!node) return [];
+    return [
+        {
+            id: node.id,
+            label: node.label,
+            levelName: node.levelName,
+            levelIndex: node.levelIndex,
+            unitCode: node.unitCode,
+            unitSetupComplete: node.unitSetupComplete,
+        },
+        ...node.children.flatMap(flattenOrganisationChartNodes),
+    ];
+};
+
+const collectOrganisationChartTrace = (platformConfig: any, chart: OrganisationChartNode | null, selectedNodeId: string | null, unitCode: string, locationCode: string) => {
+    const activeOrganisation = getActiveOrganisation(platformConfig);
+    const organisationSettings = activeOrganisation?.settings || {};
+    const units = Array.isArray(platformConfig?.units) ? platformConfig.units : [];
+    const chartNodes = flattenOrganisationChartNodes(chart);
+    const activeUnitKey = normaliseUnitSettingsIdentifier(unitCode);
+    return {
+        generatedAt: new Date().toISOString(),
+        activeUnitCode: unitCode,
+        activeLocationCode: locationCode,
+        selectedNodeId,
+        activeOrganisation: activeOrganisation ? {
+            id: activeOrganisation.id,
+            code: activeOrganisation.code,
+            name: activeOrganisation.name,
+            initialSetupWizardCompletedAt: organisationSettings.initialSetupWizardCompletedAt || null,
+            initialSetupWizardDraftCompletedAt: organisationSettings.initialSetupWizardDraft?.completedAt || null,
+            initialSetupWizardDraftsCompletedAt: organisationSettings.initialSetupWizardDrafts?.completedAt || null,
+            wizardDraftUnitsToday: organisationSettings.initialSetupWizardDraft?.unitsToday || null,
+            wizardDraftsUnitsToday: organisationSettings.initialSetupWizardDrafts?.unitsToday || null,
+            wizardDraftsUnitsTodayDraft: organisationSettings.initialSetupWizardDrafts?.unitsTodayDraft || null,
+        } : null,
+        activeUnits: units
+            .filter((unit: any) => String(unit?.status || 'ACTIVE').toUpperCase() !== 'INACTIVE')
+            .map((unit: any) => {
+                const isActiveContext = normaliseUnitSettingsIdentifier(unit?.code) === activeUnitKey;
+                const unitSetupComplete = isOrganisationChartUnitSetupComplete(unit, platformConfig, activeOrganisation);
+                return {
+                    id: unit?.id,
+                    code: unit?.code,
+                    name: unit?.name,
+                    locationCode: unit?.locationCode,
+                    organisationCode: unit?.organisationCode,
+                    status: unit?.status || 'ACTIVE',
+                    isActiveContext,
+                    chartWouldMarkComplete: unitSetupComplete,
+                    initialSetupWizardCompletedAt: unit?.settings?.initialSetupWizardCompletedAt || null,
+                    initialSetupCompletedAt: unit?.settings?.initialSetupCompletedAt || null,
+                    setupWizardCompletedAt: unit?.settings?.setupWizardCompletedAt || null,
+                    setupCompletedAt: unit?.settings?.setupCompletedAt || null,
+                    parentOrganisationPath: unit?.settings?.parentOrganisationPath || null,
+                    parentOrganisation: unit?.settings?.parentOrganisation || null,
+                    hasTrainees: unit?.settings?.hasTrainees ?? null,
+                    operationalModel: unit?.settings?.operationalModel || null,
+                };
+            }),
+        chartNodes,
+        activeUnitChartNodes: chartNodes.filter((node) => normaliseUnitSettingsIdentifier(node.unitCode) === activeUnitKey),
+        localStorage: (() => {
+            if (typeof window === 'undefined') return {};
+            const readJson = (key: string) => {
+                try {
+                    return JSON.parse(window.localStorage.getItem(key) || 'null');
+                } catch {
+                    return window.localStorage.getItem(key);
+                }
+            };
+            return {
+                completedAt: window.localStorage.getItem('dfp-initial-setup-wizard-completed-at'),
+                completedSteps: readJson('dfp-initial-setup-wizard-completed-steps'),
+                finishTrace: readJson('dfp_setup_wizard_finish_trace'),
+                draftSnapshot: readJson('dfp-initial-setup-wizard-draft-snapshot'),
+            };
+        })(),
+    };
+};
+
 const findOrganisationChartPath = (node: OrganisationChartNode, nodeId: string, path: OrganisationChartNode[] = []): OrganisationChartNode[] | null => {
     const nextPath = [...path, node];
     if (node.id === nodeId) return nextPath;
@@ -15090,6 +15179,19 @@ const OrganisationSlideoutDiagram: React.FC<{
     const handleSelectNode = useCallback((node: OrganisationChartNode) => {
         setSelectedNodeId((current) => current === node.id ? null : node.id);
     }, []);
+    const handleExportOrganisationTrace = useCallback(() => {
+        if (typeof window === 'undefined') return;
+        const trace = collectOrganisationChartTrace(platformConfig, chart, selectedNodeId, unitCode, locationCode);
+        const blob = new Blob([JSON.stringify(trace, null, 2)], { type: 'application/json' });
+        const url = window.URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = `organisation-chart-trace-${new Date().toISOString().replace(/[:.]/g, '-')}.json`;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        window.URL.revokeObjectURL(url);
+    }, [chart, locationCode, platformConfig, selectedNodeId, unitCode]);
     const unitCount = (platformConfig?.units || []).filter((unit: any) => String(unit?.status || 'ACTIVE').toUpperCase() !== 'INACTIVE').length;
     const levelHeights = chart ? getOrganisationChartLevelHeights(chart) : new Map<number, number>();
     const chartMetrics = chart ? getOrganisationChartVisibleMetrics(chart, levelHeights, focusedPath, selectedPathIds) : { width: 560, height: 320 };
@@ -15169,6 +15271,13 @@ const OrganisationSlideoutDiagram: React.FC<{
                         onClick={() => setActiveView('setupWizard')}
                     >
                         Initial Setup Wizard
+                    </button>
+                    <button
+                        type="button"
+                        className={organisationSlideoutInactiveButtonClass}
+                        onClick={handleExportOrganisationTrace}
+                    >
+                        Trace
                     </button>
                 </div>
                 <div>

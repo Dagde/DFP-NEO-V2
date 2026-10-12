@@ -33608,6 +33608,84 @@ const buildOrganisationChart = (platformConfig) => {
   sortNodes(root2);
   return root2;
 };
+const flattenOrganisationChartNodes = (node) => {
+  if (!node) return [];
+  return [
+    {
+      id: node.id,
+      label: node.label,
+      levelName: node.levelName,
+      levelIndex: node.levelIndex,
+      unitCode: node.unitCode,
+      unitSetupComplete: node.unitSetupComplete
+    },
+    ...node.children.flatMap(flattenOrganisationChartNodes)
+  ];
+};
+const collectOrganisationChartTrace = (platformConfig, chart, selectedNodeId, unitCode, locationCode) => {
+  const activeOrganisation = getActiveOrganisation(platformConfig);
+  const organisationSettings = activeOrganisation?.settings || {};
+  const units = Array.isArray(platformConfig?.units) ? platformConfig.units : [];
+  const chartNodes = flattenOrganisationChartNodes(chart);
+  const activeUnitKey = normaliseUnitSettingsIdentifier(unitCode);
+  return {
+    generatedAt: (/* @__PURE__ */ new Date()).toISOString(),
+    activeUnitCode: unitCode,
+    activeLocationCode: locationCode,
+    selectedNodeId,
+    activeOrganisation: activeOrganisation ? {
+      id: activeOrganisation.id,
+      code: activeOrganisation.code,
+      name: activeOrganisation.name,
+      initialSetupWizardCompletedAt: organisationSettings.initialSetupWizardCompletedAt || null,
+      initialSetupWizardDraftCompletedAt: organisationSettings.initialSetupWizardDraft?.completedAt || null,
+      initialSetupWizardDraftsCompletedAt: organisationSettings.initialSetupWizardDrafts?.completedAt || null,
+      wizardDraftUnitsToday: organisationSettings.initialSetupWizardDraft?.unitsToday || null,
+      wizardDraftsUnitsToday: organisationSettings.initialSetupWizardDrafts?.unitsToday || null,
+      wizardDraftsUnitsTodayDraft: organisationSettings.initialSetupWizardDrafts?.unitsTodayDraft || null
+    } : null,
+    activeUnits: units.filter((unit) => String(unit?.status || "ACTIVE").toUpperCase() !== "INACTIVE").map((unit) => {
+      const isActiveContext = normaliseUnitSettingsIdentifier(unit?.code) === activeUnitKey;
+      const unitSetupComplete = isOrganisationChartUnitSetupComplete(unit, platformConfig, activeOrganisation);
+      return {
+        id: unit?.id,
+        code: unit?.code,
+        name: unit?.name,
+        locationCode: unit?.locationCode,
+        organisationCode: unit?.organisationCode,
+        status: unit?.status || "ACTIVE",
+        isActiveContext,
+        chartWouldMarkComplete: unitSetupComplete,
+        initialSetupWizardCompletedAt: unit?.settings?.initialSetupWizardCompletedAt || null,
+        initialSetupCompletedAt: unit?.settings?.initialSetupCompletedAt || null,
+        setupWizardCompletedAt: unit?.settings?.setupWizardCompletedAt || null,
+        setupCompletedAt: unit?.settings?.setupCompletedAt || null,
+        parentOrganisationPath: unit?.settings?.parentOrganisationPath || null,
+        parentOrganisation: unit?.settings?.parentOrganisation || null,
+        hasTrainees: unit?.settings?.hasTrainees ?? null,
+        operationalModel: unit?.settings?.operationalModel || null
+      };
+    }),
+    chartNodes,
+    activeUnitChartNodes: chartNodes.filter((node) => normaliseUnitSettingsIdentifier(node.unitCode) === activeUnitKey),
+    localStorage: (() => {
+      if (typeof window === "undefined") return {};
+      const readJson = (key) => {
+        try {
+          return JSON.parse(window.localStorage.getItem(key) || "null");
+        } catch {
+          return window.localStorage.getItem(key);
+        }
+      };
+      return {
+        completedAt: window.localStorage.getItem("dfp-initial-setup-wizard-completed-at"),
+        completedSteps: readJson("dfp-initial-setup-wizard-completed-steps"),
+        finishTrace: readJson("dfp_setup_wizard_finish_trace"),
+        draftSnapshot: readJson("dfp-initial-setup-wizard-draft-snapshot")
+      };
+    })()
+  };
+};
 const findOrganisationChartPath = (node, nodeId, path = []) => {
   const nextPath = [...path, node];
   if (node.id === nodeId) return nextPath;
@@ -45464,6 +45542,19 @@ const OrganisationSlideoutDiagram = ({ platformConfig, organisationSettings, uni
   const handleSelectNode = reactExports.useCallback((node) => {
     setSelectedNodeId((current) => current === node.id ? null : node.id);
   }, []);
+  const handleExportOrganisationTrace = reactExports.useCallback(() => {
+    if (typeof window === "undefined") return;
+    const trace = collectOrganisationChartTrace(platformConfig, chart, selectedNodeId, unitCode, locationCode);
+    const blob = new Blob([JSON.stringify(trace, null, 2)], { type: "application/json" });
+    const url = window.URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = `organisation-chart-trace-${(/* @__PURE__ */ new Date()).toISOString().replace(/[:.]/g, "-")}.json`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    window.URL.revokeObjectURL(url);
+  }, [chart, locationCode, platformConfig, selectedNodeId, unitCode]);
   const unitCount = (platformConfig?.units || []).filter((unit) => String(unit?.status || "ACTIVE").toUpperCase() !== "INACTIVE").length;
   const levelHeights = chart ? getOrganisationChartLevelHeights(chart) : /* @__PURE__ */ new Map();
   const chartMetrics = chart ? getOrganisationChartVisibleMetrics(chart, levelHeights, focusedPath, selectedPathIds) : { width: 560, height: 320 };
@@ -45547,6 +45638,15 @@ const OrganisationSlideoutDiagram = ({ platformConfig, organisationSettings, uni
             className: activeView === "setupWizard" ? organisationSlideoutActiveButtonClass : organisationSlideoutInactiveButtonClass,
             onClick: () => setActiveView("setupWizard"),
             children: "Initial Setup Wizard"
+          }
+        ),
+        /* @__PURE__ */ jsxRuntimeExports.jsx(
+          "button",
+          {
+            type: "button",
+            className: organisationSlideoutInactiveButtonClass,
+            onClick: handleExportOrganisationTrace,
+            children: "Trace"
           }
         )
       ] }),
