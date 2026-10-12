@@ -35610,6 +35610,8 @@ const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, lo
   const [wizardFinishInProgress, setWizardFinishInProgress] = reactExports.useState(false);
   const [wizardReviewComplete, setWizardReviewComplete] = reactExports.useState(false);
   const [wizardUnitSetupChoiceMade, setWizardUnitSetupChoiceMade] = reactExports.useState(false);
+  const [wizardExistingUnitPickerOpen, setWizardExistingUnitPickerOpen] = reactExports.useState(false);
+  const [wizardFreshUnitSetupActive, setWizardFreshUnitSetupActive] = reactExports.useState(false);
   const wizardReviewAutoReturnScheduledRef = reactExports.useRef(false);
   const onInitialSetupWizardFinishedRef = reactExports.useRef(onInitialSetupWizardFinished);
   const wizardFinishTraceStorageKey = "dfp_setup_wizard_finish_trace";
@@ -39900,6 +39902,7 @@ const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, lo
     }
   };
   const isWizardStepComplete = (step) => {
+    if (wizardFreshUnitSetupActive) return completedWizardStepIds.has(step.id);
     const hasCompleteData = hasMeaningfulWizardStepData(step);
     if (step.category === "mandatory" || step.id === "review") {
       return hasCompleteData;
@@ -39912,6 +39915,11 @@ const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, lo
     wizardStepTextClass(step),
     index === currentStep ? "bg-slate-100" : "bg-white"
   ].join(" ");
+  const reviewedSetupCheckIds = new Set(
+    steps.filter((step) => completedWizardStepIds.has(step.id)).flatMap((step) => step.checkIds || [])
+  );
+  const displayedCompletedMandatory = wizardFreshUnitSetupActive ? mandatoryChecks.filter((check) => reviewedSetupCheckIds.has(check.id)).length : completedMandatory;
+  const displayedCompletedChecks = wizardFreshUnitSetupActive ? checks.filter((check) => reviewedSetupCheckIds.has(check.id)).length : completedChecks;
   const markWizardStepComplete = (stepId) => {
     setCompletedWizardStepIds((current) => {
       const next = new Set(current);
@@ -40741,6 +40749,8 @@ const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, lo
       activeOrganisation: summariseActiveOrganisation()
     });
     setWizardUnitSetupChoiceMade(true);
+    setWizardExistingUnitPickerOpen(false);
+    setWizardFreshUnitSetupActive(false);
     setWizardLaunchRequested(true);
     setMode("active");
     organisationDraftDirtyRef.current = false;
@@ -40760,10 +40770,53 @@ const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, lo
   };
   const resumeWizard = () => {
     setWizardUnitSetupChoiceMade(true);
+    setWizardExistingUnitPickerOpen(false);
+    setWizardFreshUnitSetupActive(false);
     setWizardLaunchRequested(true);
     setMode("active");
     setWizardStep((step) => Math.min(Math.max(0, step), steps.length - 1));
     hydrateWizardDraftsFromSettings("resume");
+  };
+  const resumeWizardForExistingUnit = (selectedCode) => {
+    const cleanCode = normaliseUnitSettingsIdentifier(selectedCode);
+    const selectedUnit = activeUnits.find((unit) => normaliseUnitSettingsIdentifier(unit?.code) === cleanCode);
+    const hydratedOrganisation = buildHydratedOrganisationDraft();
+    const hydratedUnits = buildHydratedUnitsTodayDraft();
+    const hydratedUnitParents = buildHydratedUnitParentDraft(hydratedUnits, hydratedOrganisation);
+    const hydratedLocations = buildHydratedLocationsTodayDraft();
+    const hydratedLocationDraft = buildHydratedLocationDraft();
+    const selectedRow = parseWizardUnitRows(hydratedUnits).find((row) => normaliseUnitSettingsIdentifier(row.code) === cleanCode) || {
+      code: String(selectedUnit?.code || selectedCode || "").trim().toUpperCase(),
+      name: String(selectedUnit?.name || selectedUnit?.code || selectedCode || "").trim()
+    };
+    const selectedDraft = resolveWizardUnitSetupDraft(selectedRow, 0, getWizardUnitDraftMapWithCurrent(), {
+      code: selectedRow.code,
+      name: selectedRow.name || selectedRow.code,
+      locationCode: sanitiseLegacyWizardLocationCode(selectedUnit?.locationCode || "", shouldIgnoreLegacyWizardLocationSamples),
+      unitType: String(selectedUnit?.unitType || unitTypeOptions[0] || ""),
+      operationalModel: String(getUnitOperationalModel(selectedUnit || {}) || "pooled-crew"),
+      hasTrainees: selectedUnit?.settings?.hasTrainees !== false
+    });
+    setWizardUnitSetupChoiceMade(true);
+    setWizardExistingUnitPickerOpen(false);
+    setWizardFreshUnitSetupActive(false);
+    setWizardLaunchRequested(true);
+    setMode("active");
+    organisationDraftDirtyRef.current = false;
+    locationDraftDirtyRef.current = false;
+    unitDraftDirtyRef.current = true;
+    setOrganisationDraft(hydratedOrganisation);
+    setUnitsTodayDraft(hydratedUnits || (selectedRow.code ? `${selectedRow.code} | ${selectedRow.name || selectedRow.code}` : ""));
+    setUnitParentDraft(hydratedUnitParents);
+    setLocationsTodayDraft(hydratedLocations);
+    setLocationDraft(hydratedLocationDraft);
+    setUnitDraftsByCode((drafts) => ({
+      ...drafts,
+      ...cleanCode ? { [cleanCode]: selectedDraft } : {}
+    }));
+    setUnitDraft(selectedDraft);
+    setWizardStep((step) => Math.min(Math.max(0, step), steps.length - 1));
+    setSaveMessage(`${selectedDraft.code || "Unit"} setup loaded for review.`);
   };
   const clearPersistedWizardUnitSpecificDrafts = () => {
     if (typeof window !== "undefined") {
@@ -40900,6 +40953,8 @@ const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, lo
   const startAdditionalUnitSetup = () => {
     pushWizardPersistenceTrace("wizard:new-unit:start");
     setWizardUnitSetupChoiceMade(true);
+    setWizardExistingUnitPickerOpen(false);
+    setWizardFreshUnitSetupActive(true);
     setWizardLaunchRequested(true);
     setMode("active");
     clearWizardStepCompletions();
@@ -44548,17 +44603,17 @@ const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, lo
       return promptShell(
         /* @__PURE__ */ jsxRuntimeExports.jsxs("p", { children: [
           /* @__PURE__ */ jsxRuntimeExports.jsxs("strong", { children: [
-            completedMandatory,
+            displayedCompletedMandatory,
             " of ",
             mandatoryChecks.length
           ] }),
-          " mandatory setup areas are ready. Continue through the remaining setup steps to prepare this organisation for DFP-NEO."
+          " mandatory setup areas have been reviewed in this wizard run. Continue through the remaining setup steps to prepare this organisation for DFP-NEO."
         ] }),
         /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid gap-3 sm:grid-cols-2", children: [
           /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded-lg border border-slate-200 bg-slate-50 p-3", children: [
             /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: wizardLabelClass, children: "Mandatory setup" }),
             /* @__PURE__ */ jsxRuntimeExports.jsxs("p", { className: "mt-1 text-2xl font-black text-slate-950", children: [
-              completedMandatory,
+              displayedCompletedMandatory,
               "/",
               mandatoryChecks.length
             ] })
@@ -44566,7 +44621,7 @@ const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, lo
           /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded-lg border border-slate-200 bg-slate-50 p-3", children: [
             /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: wizardLabelClass, children: "Overall setup" }),
             /* @__PURE__ */ jsxRuntimeExports.jsxs("p", { className: "mt-1 text-2xl font-black text-slate-950", children: [
-              completedChecks,
+              displayedCompletedChecks,
               "/",
               checks.length
             ] })
@@ -45622,15 +45677,61 @@ Classrooms: ${classroomNames.join(", ")}` : ""}`;
   };
   const hasExistingWizardUnitSetupDetails = activeUnits.some((unit) => normaliseUnitSettingsIdentifier(unit?.code) || String(unit?.name || "").trim() || String(unit?.locationCode || "").trim() || Boolean(unit?.settings?.initialSetupWizardCompletedAt) || Boolean(unit?.settings?.parentOrganisationPath));
   const shouldShowWizardUnitSetupChoice = !isSetupTestMode$1 && !wizardLaunchRequested && !wizardUnitSetupChoiceMade && hasExistingWizardUnitSetupDetails;
+  const existingWizardUnitSetupRows = activeUnits.filter((unit) => normaliseUnitSettingsIdentifier(unit?.code) || String(unit?.name || "").trim() || String(unit?.locationCode || "").trim() || Boolean(unit?.settings?.initialSetupWizardCompletedAt) || Boolean(unit?.settings?.parentOrganisationPath)).map((unit) => {
+    const unitCodeLabel = String(unit?.code || "").trim().toUpperCase();
+    const unitNameLabel = String(unit?.name || unitCodeLabel || "Unnamed unit").trim();
+    const setupComplete = Boolean(
+      unit?.settings?.initialSetupWizardCompletedAt || unit?.settings?.initialSetupCompletedAt || unit?.settings?.setupWizardCompletedAt || unit?.settings?.setupCompletedAt
+    ) || isOrganisationChartUnitSetupComplete(unit, platformConfig, activeOrganisation);
+    return {
+      code: unitCodeLabel,
+      name: unitNameLabel,
+      locationCode: sanitiseLegacyWizardLocationCode(unit?.locationCode || "", shouldIgnoreLegacyWizardLocationSamples),
+      setupComplete
+    };
+  });
   if (shouldShowWizardUnitSetupChoice) {
     return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { "data-neo-guide": "initial-setup-wizard-panel", className: "rounded-xl border border-slate-300 bg-slate-50 p-5 text-slate-900 shadow-sm", children: [
       /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-[11px] font-bold uppercase tracking-[0.18em] text-orange-600", children: "Initial Setup Wizard" }),
       /* @__PURE__ */ jsxRuntimeExports.jsx("h3", { className: "mt-1 text-xl font-bold text-slate-950", children: "Choose what you want to set up" }),
       /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-3 text-sm leading-6 text-slate-700", children: "This organisation already has unit setup data. You can review or change an existing unit, or start a new unit setup using the same wizard with the shared organisation settings retained." }),
       /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mt-5 grid gap-3 sm:grid-cols-2", children: [
-        /* @__PURE__ */ jsxRuntimeExports.jsxs("button", { type: "button", className: wizardChoiceClass, onClick: resumeWizard, children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "block text-base font-bold", children: "Edit existing unit setup" }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "mt-1 block text-xs font-medium text-slate-600", children: "Open the wizard with the saved unit data already loaded." })
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "min-w-0", children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsxs(
+            "button",
+            {
+              type: "button",
+              className: `${wizardChoiceClass} w-full`,
+              onClick: () => setWizardExistingUnitPickerOpen((open) => !open),
+              "aria-expanded": wizardExistingUnitPickerOpen,
+              children: [
+                /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "block text-base font-bold", children: "Edit existing unit setup" }),
+                /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "mt-1 block text-xs font-medium text-slate-600", children: "Choose which saved unit setup to open." })
+              ]
+            }
+          ),
+          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: `grid overflow-hidden transition-all duration-300 ease-out ${wizardExistingUnitPickerOpen ? "mt-3 max-h-[420px] opacity-100" : "max-h-0 opacity-0"}`, children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded-lg border border-slate-300 bg-white p-2 shadow-sm", children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "px-2 py-1 text-[10px] font-black uppercase tracking-[0.14em] text-slate-500", children: "Configured units" }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-1 space-y-2", children: existingWizardUnitSetupRows.map((unit) => /* @__PURE__ */ jsxRuntimeExports.jsxs(
+              "button",
+              {
+                type: "button",
+                className: "grid w-full grid-cols-[minmax(0,1fr)_auto] items-center gap-2 rounded-md border border-slate-200 bg-slate-50 px-3 py-2 text-left transition hover:border-orange-300 hover:bg-orange-50",
+                onClick: () => resumeWizardForExistingUnit(unit.code),
+                children: [
+                  /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "min-w-0", children: [
+                    /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "block truncate text-sm font-black text-slate-950", children: unit.code || unit.name }),
+                    /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "mt-0.5 block truncate text-xs font-semibold text-slate-600", children: [
+                      unit.name,
+                      unit.locationCode ? ` - ${unit.locationCode}` : ""
+                    ] })
+                  ] }),
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: `rounded-full px-2 py-1 text-[10px] font-black uppercase tracking-[0.08em] ${unit.setupComplete ? "bg-emerald-50 text-emerald-800 ring-1 ring-emerald-200" : "bg-amber-50 text-amber-800 ring-1 ring-amber-200"}`, children: unit.setupComplete ? "Complete" : "Partial" })
+                ]
+              },
+              unit.code || unit.name
+            )) })
+          ] }) })
         ] }),
         /* @__PURE__ */ jsxRuntimeExports.jsxs("button", { type: "button", className: wizardChoiceClass, onClick: startAdditionalUnitSetup, children: [
           /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "block text-base font-bold", children: "Set up another unit" }),

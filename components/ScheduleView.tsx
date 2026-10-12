@@ -3698,6 +3698,8 @@ const InitialSetupWizard: React.FC<{
     const [wizardFinishInProgress, setWizardFinishInProgress] = useState(false);
     const [wizardReviewComplete, setWizardReviewComplete] = useState(false);
     const [wizardUnitSetupChoiceMade, setWizardUnitSetupChoiceMade] = useState(false);
+    const [wizardExistingUnitPickerOpen, setWizardExistingUnitPickerOpen] = useState(false);
+    const [wizardFreshUnitSetupActive, setWizardFreshUnitSetupActive] = useState(false);
     const wizardReviewAutoReturnScheduledRef = useRef(false);
     const onInitialSetupWizardFinishedRef = useRef(onInitialSetupWizardFinished);
     const wizardFinishTraceStorageKey = 'dfp_setup_wizard_finish_trace';
@@ -8755,6 +8757,7 @@ const InitialSetupWizard: React.FC<{
         }
     };
     const isWizardStepComplete = (step: InitialSetupWizardStep) => {
+        if (wizardFreshUnitSetupActive) return completedWizardStepIds.has(step.id);
         const hasCompleteData = hasMeaningfulWizardStepData(step);
         if (step.category === 'mandatory' || step.id === 'review') {
             return hasCompleteData;
@@ -8769,6 +8772,17 @@ const InitialSetupWizard: React.FC<{
         wizardStepTextClass(step),
         index === currentStep ? 'bg-slate-100' : 'bg-white',
     ].join(' ');
+    const reviewedSetupCheckIds = new Set(
+        steps
+            .filter((step) => completedWizardStepIds.has(step.id))
+            .flatMap((step) => step.checkIds || []),
+    );
+    const displayedCompletedMandatory = wizardFreshUnitSetupActive
+        ? mandatoryChecks.filter((check) => reviewedSetupCheckIds.has(check.id)).length
+        : completedMandatory;
+    const displayedCompletedChecks = wizardFreshUnitSetupActive
+        ? checks.filter((check) => reviewedSetupCheckIds.has(check.id)).length
+        : completedChecks;
     const markWizardStepComplete = (stepId: string) => {
         setCompletedWizardStepIds((current) => {
             const next = new Set(current);
@@ -9689,6 +9703,8 @@ const InitialSetupWizard: React.FC<{
             activeOrganisation: summariseActiveOrganisation(),
         });
         setWizardUnitSetupChoiceMade(true);
+        setWizardExistingUnitPickerOpen(false);
+        setWizardFreshUnitSetupActive(false);
         setWizardLaunchRequested(true);
         setMode('active');
         organisationDraftDirtyRef.current = false;
@@ -9709,10 +9725,55 @@ const InitialSetupWizard: React.FC<{
 
     const resumeWizard = () => {
         setWizardUnitSetupChoiceMade(true);
+        setWizardExistingUnitPickerOpen(false);
+        setWizardFreshUnitSetupActive(false);
         setWizardLaunchRequested(true);
         setMode('active');
         setWizardStep((step) => Math.min(Math.max(0, step), steps.length - 1));
         hydrateWizardDraftsFromSettings('resume');
+    };
+
+    const resumeWizardForExistingUnit = (selectedCode: string) => {
+        const cleanCode = normaliseUnitSettingsIdentifier(selectedCode);
+        const selectedUnit = activeUnits.find((unit: any) => normaliseUnitSettingsIdentifier(unit?.code) === cleanCode);
+        const hydratedOrganisation = buildHydratedOrganisationDraft();
+        const hydratedUnits = buildHydratedUnitsTodayDraft();
+        const hydratedUnitParents = buildHydratedUnitParentDraft(hydratedUnits, hydratedOrganisation);
+        const hydratedLocations = buildHydratedLocationsTodayDraft();
+        const hydratedLocationDraft = buildHydratedLocationDraft();
+        const selectedRow = parseWizardUnitRows(hydratedUnits).find((row) => normaliseUnitSettingsIdentifier(row.code) === cleanCode)
+            || {
+                code: String(selectedUnit?.code || selectedCode || '').trim().toUpperCase(),
+                name: String(selectedUnit?.name || selectedUnit?.code || selectedCode || '').trim(),
+            };
+        const selectedDraft = resolveWizardUnitSetupDraft(selectedRow, 0, getWizardUnitDraftMapWithCurrent(), {
+            code: selectedRow.code,
+            name: selectedRow.name || selectedRow.code,
+            locationCode: sanitiseLegacyWizardLocationCode(selectedUnit?.locationCode || '', shouldIgnoreLegacyWizardLocationSamples),
+            unitType: String(selectedUnit?.unitType || unitTypeOptions[0] || ''),
+            operationalModel: String(getUnitOperationalModel(selectedUnit || {}) || 'pooled-crew'),
+            hasTrainees: selectedUnit?.settings?.hasTrainees !== false,
+        });
+        setWizardUnitSetupChoiceMade(true);
+        setWizardExistingUnitPickerOpen(false);
+        setWizardFreshUnitSetupActive(false);
+        setWizardLaunchRequested(true);
+        setMode('active');
+        organisationDraftDirtyRef.current = false;
+        locationDraftDirtyRef.current = false;
+        unitDraftDirtyRef.current = true;
+        setOrganisationDraft(hydratedOrganisation);
+        setUnitsTodayDraft(hydratedUnits || (selectedRow.code ? `${selectedRow.code} | ${selectedRow.name || selectedRow.code}` : ''));
+        setUnitParentDraft(hydratedUnitParents);
+        setLocationsTodayDraft(hydratedLocations);
+        setLocationDraft(hydratedLocationDraft);
+        setUnitDraftsByCode((drafts) => ({
+            ...drafts,
+            ...(cleanCode ? { [cleanCode]: selectedDraft } : {}),
+        }));
+        setUnitDraft(selectedDraft);
+        setWizardStep((step) => Math.min(Math.max(0, step), steps.length - 1));
+        setSaveMessage(`${selectedDraft.code || 'Unit'} setup loaded for review.`);
     };
 
     const clearPersistedWizardUnitSpecificDrafts = () => {
@@ -9851,6 +9912,8 @@ const InitialSetupWizard: React.FC<{
     const startAdditionalUnitSetup = () => {
         pushWizardPersistenceTrace('wizard:new-unit:start');
         setWizardUnitSetupChoiceMade(true);
+        setWizardExistingUnitPickerOpen(false);
+        setWizardFreshUnitSetupActive(true);
         setWizardLaunchRequested(true);
         setMode('active');
         clearWizardStepCompletions();
@@ -14020,15 +14083,15 @@ const InitialSetupWizard: React.FC<{
     const renderWizardDataEntry = () => {
         if (visibleStep.id === 'analysis') {
             return promptShell(
-                <p><strong>{completedMandatory} of {mandatoryChecks.length}</strong> mandatory setup areas are ready. Continue through the remaining setup steps to prepare this organisation for DFP-NEO.</p>,
+                <p><strong>{displayedCompletedMandatory} of {mandatoryChecks.length}</strong> mandatory setup areas have been reviewed in this wizard run. Continue through the remaining setup steps to prepare this organisation for DFP-NEO.</p>,
                 <div className="grid gap-3 sm:grid-cols-2">
                     <div className="rounded-lg border border-slate-200 bg-slate-50 p-3">
                         <p className={wizardLabelClass}>Mandatory setup</p>
-                        <p className="mt-1 text-2xl font-black text-slate-950">{completedMandatory}/{mandatoryChecks.length}</p>
+                        <p className="mt-1 text-2xl font-black text-slate-950">{displayedCompletedMandatory}/{mandatoryChecks.length}</p>
                     </div>
                     <div className="rounded-lg border border-slate-200 bg-slate-50 p-3">
                         <p className={wizardLabelClass}>Overall setup</p>
-                        <p className="mt-1 text-2xl font-black text-slate-950">{completedChecks}/{checks.length}</p>
+                        <p className="mt-1 text-2xl font-black text-slate-950">{displayedCompletedChecks}/{checks.length}</p>
                     </div>
                 </div>,
             );
@@ -15194,6 +15257,30 @@ const InitialSetupWizard: React.FC<{
         && !wizardUnitSetupChoiceMade
         && hasExistingWizardUnitSetupDetails
     );
+    const existingWizardUnitSetupRows = activeUnits
+        .filter((unit: any) => (
+            normaliseUnitSettingsIdentifier(unit?.code)
+            || String(unit?.name || '').trim()
+            || String(unit?.locationCode || '').trim()
+            || Boolean(unit?.settings?.initialSetupWizardCompletedAt)
+            || Boolean(unit?.settings?.parentOrganisationPath)
+        ))
+        .map((unit: any) => {
+            const unitCodeLabel = String(unit?.code || '').trim().toUpperCase();
+            const unitNameLabel = String(unit?.name || unitCodeLabel || 'Unnamed unit').trim();
+            const setupComplete = Boolean(
+                unit?.settings?.initialSetupWizardCompletedAt
+                || unit?.settings?.initialSetupCompletedAt
+                || unit?.settings?.setupWizardCompletedAt
+                || unit?.settings?.setupCompletedAt
+            ) || isOrganisationChartUnitSetupComplete(unit, platformConfig, activeOrganisation);
+            return {
+                code: unitCodeLabel,
+                name: unitNameLabel,
+                locationCode: sanitiseLegacyWizardLocationCode(unit?.locationCode || '', shouldIgnoreLegacyWizardLocationSamples),
+                setupComplete,
+            };
+        });
 
     if (shouldShowWizardUnitSetupChoice) {
         return (
@@ -15204,10 +15291,42 @@ const InitialSetupWizard: React.FC<{
                     This organisation already has unit setup data. You can review or change an existing unit, or start a new unit setup using the same wizard with the shared organisation settings retained.
                 </p>
                 <div className="mt-5 grid gap-3 sm:grid-cols-2">
-                    <button type="button" className={wizardChoiceClass} onClick={resumeWizard}>
-                        <span className="block text-base font-bold">Edit existing unit setup</span>
-                        <span className="mt-1 block text-xs font-medium text-slate-600">Open the wizard with the saved unit data already loaded.</span>
-                    </button>
+                    <div className="min-w-0">
+                        <button
+                            type="button"
+                            className={`${wizardChoiceClass} w-full`}
+                            onClick={() => setWizardExistingUnitPickerOpen((open) => !open)}
+                            aria-expanded={wizardExistingUnitPickerOpen}
+                        >
+                            <span className="block text-base font-bold">Edit existing unit setup</span>
+                            <span className="mt-1 block text-xs font-medium text-slate-600">Choose which saved unit setup to open.</span>
+                        </button>
+                        <div className={`grid overflow-hidden transition-all duration-300 ease-out ${wizardExistingUnitPickerOpen ? 'mt-3 max-h-[420px] opacity-100' : 'max-h-0 opacity-0'}`}>
+                            <div className="rounded-lg border border-slate-300 bg-white p-2 shadow-sm">
+                                <p className="px-2 py-1 text-[10px] font-black uppercase tracking-[0.14em] text-slate-500">Configured units</p>
+                                <div className="mt-1 space-y-2">
+                                    {existingWizardUnitSetupRows.map((unit) => (
+                                        <button
+                                            key={unit.code || unit.name}
+                                            type="button"
+                                            className="grid w-full grid-cols-[minmax(0,1fr)_auto] items-center gap-2 rounded-md border border-slate-200 bg-slate-50 px-3 py-2 text-left transition hover:border-orange-300 hover:bg-orange-50"
+                                            onClick={() => resumeWizardForExistingUnit(unit.code)}
+                                        >
+                                            <span className="min-w-0">
+                                                <span className="block truncate text-sm font-black text-slate-950">{unit.code || unit.name}</span>
+                                                <span className="mt-0.5 block truncate text-xs font-semibold text-slate-600">
+                                                    {unit.name}{unit.locationCode ? ` - ${unit.locationCode}` : ''}
+                                                </span>
+                                            </span>
+                                            <span className={`rounded-full px-2 py-1 text-[10px] font-black uppercase tracking-[0.08em] ${unit.setupComplete ? 'bg-emerald-50 text-emerald-800 ring-1 ring-emerald-200' : 'bg-amber-50 text-amber-800 ring-1 ring-amber-200'}`}>
+                                                {unit.setupComplete ? 'Complete' : 'Partial'}
+                                            </span>
+                                        </button>
+                                    ))}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
                     <button type="button" className={wizardChoiceClass} onClick={startAdditionalUnitSetup}>
                         <span className="block text-base font-bold">Set up another unit</span>
                         <span className="mt-1 block text-xs font-medium text-slate-600">Clear unit-specific entries and keep shared settings for review.</span>
