@@ -39548,6 +39548,7 @@ const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, lo
   const visibleStep = steps[currentStep];
   const wizardStepIdSignature = steps.map((step) => step.id).join("|");
   reactExports.useEffect(() => {
+    if (wizardFreshUnitSetupActive) return;
     const validStepIds = new Set(wizardStepIdSignature.split("|").filter(Boolean));
     if (validStepIds.size === 0) return;
     const readCompletedIds = (value) => Array.isArray(value) ? value.map((id) => String(id || "").trim()).filter((id) => id && validStepIds.has(id)) : [];
@@ -39573,7 +39574,8 @@ const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, lo
   }, [
     wizardStepIdSignature,
     activeOrganisation?.settings?.initialSetupWizardDrafts?.completedStepIds,
-    activeOrganisation?.settings?.initialSetupWizardDraft?.completedStepIds
+    activeOrganisation?.settings?.initialSetupWizardDraft?.completedStepIds,
+    wizardFreshUnitSetupActive
   ]);
   reactExports.useEffect(() => {
     if (!visibleStep?.id) return;
@@ -40799,9 +40801,10 @@ const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, lo
     });
     setWizardUnitSetupChoiceMade(true);
     setWizardExistingUnitPickerOpen(false);
-    setWizardFreshUnitSetupActive(false);
+    setWizardFreshUnitSetupActive(true);
     setWizardLaunchRequested(true);
     setMode("active");
+    clearWizardStepCompletions();
     organisationDraftDirtyRef.current = false;
     locationDraftDirtyRef.current = false;
     unitDraftDirtyRef.current = true;
@@ -40815,7 +40818,8 @@ const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, lo
       ...cleanCode ? { [cleanCode]: selectedDraft } : {}
     }));
     setUnitDraft(selectedDraft);
-    setWizardStep((step) => Math.min(Math.max(0, step), steps.length - 1));
+    setWizardStep(0);
+    safeSetWizardLocalStorage(initialSetupWizardStorageKey, "0");
     setSaveMessage(`${selectedDraft.code || "Unit"} setup loaded for review.`);
   };
   const clearPersistedWizardUnitSpecificDrafts = () => {
