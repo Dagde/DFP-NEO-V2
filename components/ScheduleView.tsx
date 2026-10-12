@@ -5959,6 +5959,44 @@ const InitialSetupWizard: React.FC<{
             organisations: nextOrganisations,
         };
     };
+    const stampWizardCompletedUnitsInConfig = (
+        baseConfig: any,
+        rows: Array<{ code: string; name: string }>,
+        completedAt: string,
+    ) => {
+        const unitCodes = rows.map((row) => normaliseUnitSettingsIdentifier(row.code)).filter(Boolean);
+        if (unitCodes.length === 0) return baseConfig;
+        const units = Array.isArray(baseConfig?.units) ? baseConfig.units : [];
+        const targetCodes = new Set(unitCodes);
+        const nextUnits = units.map((unit: any) => {
+            const codeKey = normaliseUnitSettingsIdentifier(unit?.code);
+            if (!targetCodes.has(codeKey)) return unit;
+            return {
+                ...unit,
+                settings: {
+                    ...(unit?.settings || {}),
+                    initialSetupWizardCompletedAt: completedAt,
+                },
+            };
+        });
+        rows.forEach((row) => {
+            const codeKey = normaliseUnitSettingsIdentifier(row.code);
+            if (!codeKey || nextUnits.some((unit: any) => normaliseUnitSettingsIdentifier(unit?.code) === codeKey)) return;
+            nextUnits.push({
+                id: createWizardRecordId('unit'),
+                code: String(row.code || '').trim().toUpperCase(),
+                name: row.name || row.code,
+                status: 'ACTIVE',
+                settings: {
+                    initialSetupWizardCompletedAt: completedAt,
+                },
+            });
+        });
+        return {
+            ...baseConfig,
+            units: nextUnits,
+        };
+    };
 
     const isOrganisationWizardStep = (stepId?: string) => (
         String(stepId || '') === 'org-name'
@@ -12907,7 +12945,9 @@ const InitialSetupWizard: React.FC<{
         }
         const finalGroundEventSchedulingSettings = compactWizardGroundEventSchedulingSettingsForSave(wizardGroundEventSchedulingSettingsForDisplay);
         onUpdateGroundEventSchedulingSettings?.(finalGroundEventSchedulingSettings);
-        saveWizardConfig('Setup saved into Settings.', (baseConfig) => updatePrimaryOrganisationWithSettings(baseConfig, (settings) => {
+        saveWizardConfig('Setup saved into Settings.', (baseConfig) => updatePrimaryOrganisationWithSettings(
+            stampWizardCompletedUnitsInConfig(baseConfig, unitRows, completedAt),
+            (settings) => {
             const cleanLmpCode = String(trainingDraft.lmpCode || trainingDraft.lmpName || '').trim();
             const cleanLmpName = String(trainingDraft.lmpName || cleanLmpCode).trim();
             const cleanAccessUnitCode = getWizardSetupAccessUnitCode(trainingDraft.accessUnitCode);

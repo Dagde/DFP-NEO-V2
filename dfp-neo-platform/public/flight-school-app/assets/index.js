@@ -37596,6 +37596,40 @@ const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, lo
       organisations: nextOrganisations
     };
   };
+  const stampWizardCompletedUnitsInConfig = (baseConfig, rows, completedAt) => {
+    const unitCodes = rows.map((row) => normaliseUnitSettingsIdentifier(row.code)).filter(Boolean);
+    if (unitCodes.length === 0) return baseConfig;
+    const units = Array.isArray(baseConfig?.units) ? baseConfig.units : [];
+    const targetCodes = new Set(unitCodes);
+    const nextUnits = units.map((unit) => {
+      const codeKey = normaliseUnitSettingsIdentifier(unit?.code);
+      if (!targetCodes.has(codeKey)) return unit;
+      return {
+        ...unit,
+        settings: {
+          ...unit?.settings || {},
+          initialSetupWizardCompletedAt: completedAt
+        }
+      };
+    });
+    rows.forEach((row) => {
+      const codeKey = normaliseUnitSettingsIdentifier(row.code);
+      if (!codeKey || nextUnits.some((unit) => normaliseUnitSettingsIdentifier(unit?.code) === codeKey)) return;
+      nextUnits.push({
+        id: createWizardRecordId("unit"),
+        code: String(row.code || "").trim().toUpperCase(),
+        name: row.name || row.code,
+        status: "ACTIVE",
+        settings: {
+          initialSetupWizardCompletedAt: completedAt
+        }
+      });
+    });
+    return {
+      ...baseConfig,
+      units: nextUnits
+    };
+  };
   const isOrganisationWizardStep = (stepId) => String(stepId || "") === "org-name" || String(stepId || "") === "units-today" || /^org-level\d+$/.test(String(stepId || ""));
   const saveOrganisationDraft = (options = {}) => {
     const organisationLevels = cleanOrganisationDraftLevels(
@@ -43541,78 +43575,81 @@ const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, lo
     }
     const finalGroundEventSchedulingSettings = compactWizardGroundEventSchedulingSettingsForSave(wizardGroundEventSchedulingSettingsForDisplay);
     onUpdateGroundEventSchedulingSettings?.(finalGroundEventSchedulingSettings);
-    saveWizardConfig("Setup saved into Settings.", (baseConfig) => updatePrimaryOrganisationWithSettings(baseConfig, (settings) => {
-      const cleanLmpCode = String(trainingDraft.lmpCode || trainingDraft.lmpName || "").trim();
-      const cleanLmpName = String(trainingDraft.lmpName || cleanLmpCode).trim();
-      const cleanAccessUnitCode = getWizardSetupAccessUnitCode(trainingDraft.accessUnitCode);
-      const cleanAccessLocationCode = getWizardSetupAccessLocationCode(trainingDraft.accessLocationCode);
-      const catalogue = Array.isArray(settings.masterLmpCatalogue) ? settings.masterLmpCatalogue : [];
-      const accessRules = getOrganisationMasterLmpAccessRules(settings);
-      const catalogueExists = cleanLmpCode && catalogue.some((item) => normaliseUnitSettingsIdentifier(item?.code) === normaliseUnitSettingsIdentifier(cleanLmpCode));
-      const accessExists = cleanLmpCode && accessRules.some((rule) => normaliseUnitSettingsIdentifier(rule?.lmpCode) === normaliseUnitSettingsIdentifier(cleanLmpCode) && normaliseUnitSettingsIdentifier(rule?.unitCode) === normaliseUnitSettingsIdentifier(cleanAccessUnitCode));
-      const nextCatalogueEntry = cleanLmpCode ? {
-        id: primaryMasterLmp?.id || createWizardRecordId("master-lmp-catalogue"),
-        code: cleanLmpCode,
-        name: cleanLmpName || cleanLmpCode,
-        description: trainingDraft.description,
-        status: trainingDraft.status || "ACTIVE",
-        audience: resolveWizardLmpAudience(trainingDraft.audience)
-      } : null;
-      const nextAccessRule = cleanLmpCode ? {
-        id: createWizardRecordId("master-lmp-access"),
-        lmpCode: cleanLmpCode,
-        locationCode: cleanAccessLocationCode,
-        unitCode: cleanAccessUnitCode,
-        operationalModel: trainingDraft.accessModel === "Any Model" ? null : trainingDraft.accessModel || null,
-        accessLevel: trainingDraft.accessLevel || "Manage",
-        status: "ACTIVE"
-      } : null;
-      const correctedTrainingDraft = {
-        ...trainingDraft,
-        accessLocationCode: cleanAccessLocationCode,
-        accessUnitCode: cleanAccessUnitCode
-      };
-      return {
-        ...settings,
-        masterLmpCatalogue: !nextCatalogueEntry ? catalogue : catalogueExists ? catalogue.map((item) => normaliseUnitSettingsIdentifier(item?.code) === normaliseUnitSettingsIdentifier(cleanLmpCode) ? { ...item, ...nextCatalogueEntry } : item) : [...catalogue, nextCatalogueEntry],
-        masterLmpAccess: !nextAccessRule ? accessRules : accessExists ? accessRules.map((rule) => normaliseUnitSettingsIdentifier(rule?.lmpCode) === normaliseUnitSettingsIdentifier(cleanLmpCode) && normaliseUnitSettingsIdentifier(rule?.unitCode) === normaliseUnitSettingsIdentifier(cleanAccessUnitCode) ? { ...rule, ...nextAccessRule, id: rule.id || nextAccessRule.id } : rule) : [
-          ...accessRules.filter((rule) => !(normaliseUnitSettingsIdentifier(rule?.lmpCode) === normaliseUnitSettingsIdentifier(cleanLmpCode) && normaliseUnitSettingsIdentifier(rule?.unitCode) !== normaliseUnitSettingsIdentifier(cleanAccessUnitCode) && normaliseUnitSettingsIdentifier(rule?.locationCode) === normaliseUnitSettingsIdentifier(cleanAccessLocationCode))),
-          nextAccessRule
-        ],
-        initialSetupWizardCompletedAt: completedAt,
-        personnelDisplaySettings: buildRankSettingsToSave(settings),
-        groundEventSchedulingSettings: finalGroundEventSchedulingSettings,
-        initialSetupWizardDraft: {
-          unitsToday: parseWizardUnitRows(unitsTodayDraft),
-          locationsToday: parseWizardLocationRows(locationsTodayDraft),
-          unitParents: unitParentDraft,
-          crewLabels: crewLabelsDraft,
-          alternateCrews: alternateCrewDraft,
-          buildRules: buildRulesDraftText,
-          staff: staffDraft,
-          traineesEnabled: unitDraft.hasTrainees,
-          traineeCourses: traineeCourseOptionsDraft,
-          trainees: traineeDraft,
-          trainingRecords: trainingRecordsDraft,
-          unitModules: unitModulesDraft,
-          ranksAndLabels: rankLabelsDraft,
-          rankSettings: rankSettingsDraft,
-          resourceSharing: resourceSharingDraft,
-          currencies: currencyDraft,
+    saveWizardConfig("Setup saved into Settings.", (baseConfig) => updatePrimaryOrganisationWithSettings(
+      stampWizardCompletedUnitsInConfig(baseConfig, unitRows, completedAt),
+      (settings) => {
+        const cleanLmpCode = String(trainingDraft.lmpCode || trainingDraft.lmpName || "").trim();
+        const cleanLmpName = String(trainingDraft.lmpName || cleanLmpCode).trim();
+        const cleanAccessUnitCode = getWizardSetupAccessUnitCode(trainingDraft.accessUnitCode);
+        const cleanAccessLocationCode = getWizardSetupAccessLocationCode(trainingDraft.accessLocationCode);
+        const catalogue = Array.isArray(settings.masterLmpCatalogue) ? settings.masterLmpCatalogue : [];
+        const accessRules = getOrganisationMasterLmpAccessRules(settings);
+        const catalogueExists = cleanLmpCode && catalogue.some((item) => normaliseUnitSettingsIdentifier(item?.code) === normaliseUnitSettingsIdentifier(cleanLmpCode));
+        const accessExists = cleanLmpCode && accessRules.some((rule) => normaliseUnitSettingsIdentifier(rule?.lmpCode) === normaliseUnitSettingsIdentifier(cleanLmpCode) && normaliseUnitSettingsIdentifier(rule?.unitCode) === normaliseUnitSettingsIdentifier(cleanAccessUnitCode));
+        const nextCatalogueEntry = cleanLmpCode ? {
+          id: primaryMasterLmp?.id || createWizardRecordId("master-lmp-catalogue"),
+          code: cleanLmpCode,
+          name: cleanLmpName || cleanLmpCode,
+          description: trainingDraft.description,
+          status: trainingDraft.status || "ACTIVE",
+          audience: resolveWizardLmpAudience(trainingDraft.audience)
+        } : null;
+        const nextAccessRule = cleanLmpCode ? {
+          id: createWizardRecordId("master-lmp-access"),
+          lmpCode: cleanLmpCode,
+          locationCode: cleanAccessLocationCode,
+          unitCode: cleanAccessUnitCode,
+          operationalModel: trainingDraft.accessModel === "Any Model" ? null : trainingDraft.accessModel || null,
+          accessLevel: trainingDraft.accessLevel || "Manage",
+          status: "ACTIVE"
+        } : null;
+        const correctedTrainingDraft = {
+          ...trainingDraft,
+          accessLocationCode: cleanAccessLocationCode,
+          accessUnitCode: cleanAccessUnitCode
+        };
+        return {
+          ...settings,
+          masterLmpCatalogue: !nextCatalogueEntry ? catalogue : catalogueExists ? catalogue.map((item) => normaliseUnitSettingsIdentifier(item?.code) === normaliseUnitSettingsIdentifier(cleanLmpCode) ? { ...item, ...nextCatalogueEntry } : item) : [...catalogue, nextCatalogueEntry],
+          masterLmpAccess: !nextAccessRule ? accessRules : accessExists ? accessRules.map((rule) => normaliseUnitSettingsIdentifier(rule?.lmpCode) === normaliseUnitSettingsIdentifier(cleanLmpCode) && normaliseUnitSettingsIdentifier(rule?.unitCode) === normaliseUnitSettingsIdentifier(cleanAccessUnitCode) ? { ...rule, ...nextAccessRule, id: rule.id || nextAccessRule.id } : rule) : [
+            ...accessRules.filter((rule) => !(normaliseUnitSettingsIdentifier(rule?.lmpCode) === normaliseUnitSettingsIdentifier(cleanLmpCode) && normaliseUnitSettingsIdentifier(rule?.unitCode) !== normaliseUnitSettingsIdentifier(cleanAccessUnitCode) && normaliseUnitSettingsIdentifier(rule?.locationCode) === normaliseUnitSettingsIdentifier(cleanAccessLocationCode))),
+            nextAccessRule
+          ],
+          initialSetupWizardCompletedAt: completedAt,
+          personnelDisplaySettings: buildRankSettingsToSave(settings),
           groundEventSchedulingSettings: finalGroundEventSchedulingSettings,
-          scoringMatrix: wizardPhraseBankToScoringDraft(wizardScoringPhraseBank),
-          staffCurrencyEvents: staffCurrencyEventsDraft,
-          trainingDraft: correctedTrainingDraft,
-          completedAt
-        },
-        initialSetupWizardDrafts: {
-          ...settings.initialSetupWizardDrafts || {},
-          groundEventSchedulingSettings: finalGroundEventSchedulingSettings,
-          trainingDraft: correctedTrainingDraft,
-          completedAt
-        }
-      };
-    }));
+          initialSetupWizardDraft: {
+            unitsToday: parseWizardUnitRows(unitsTodayDraft),
+            locationsToday: parseWizardLocationRows(locationsTodayDraft),
+            unitParents: unitParentDraft,
+            crewLabels: crewLabelsDraft,
+            alternateCrews: alternateCrewDraft,
+            buildRules: buildRulesDraftText,
+            staff: staffDraft,
+            traineesEnabled: unitDraft.hasTrainees,
+            traineeCourses: traineeCourseOptionsDraft,
+            trainees: traineeDraft,
+            trainingRecords: trainingRecordsDraft,
+            unitModules: unitModulesDraft,
+            ranksAndLabels: rankLabelsDraft,
+            rankSettings: rankSettingsDraft,
+            resourceSharing: resourceSharingDraft,
+            currencies: currencyDraft,
+            groundEventSchedulingSettings: finalGroundEventSchedulingSettings,
+            scoringMatrix: wizardPhraseBankToScoringDraft(wizardScoringPhraseBank),
+            staffCurrencyEvents: staffCurrencyEventsDraft,
+            trainingDraft: correctedTrainingDraft,
+            completedAt
+          },
+          initialSetupWizardDrafts: {
+            ...settings.initialSetupWizardDrafts || {},
+            groundEventSchedulingSettings: finalGroundEventSchedulingSettings,
+            trainingDraft: correctedTrainingDraft,
+            completedAt
+          }
+        };
+      }
+    ));
     setCompletedWizardStepIds(new Set(steps.map((step) => step.id)));
     if (typeof window !== "undefined") {
       safeSetWizardLocalStorage(initialSetupWizardCompletedStepsStorageKey, JSON.stringify(steps.map((step) => step.id)));
