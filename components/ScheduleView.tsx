@@ -8358,7 +8358,6 @@ const InitialSetupWizard: React.FC<{
     }, [currentStep, wizardPageMenuOpen]);
     const templateIdsByStep: Record<string, string[]> = {
         'units-today': ['units'],
-        'locations-today': ['locations'],
         'staff': ['staff'],
         'trainee-upload': unitDraft.hasTrainees ? ['trainees'] : [],
         'master-lmp': ['courses'],

@@ -39664,7 +39664,6 @@ const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, lo
   }, [currentStep, wizardPageMenuOpen]);
   const templateIdsByStep = {
     "units-today": ["units"],
-    "locations-today": ["locations"],
     "staff": ["staff"],
     "trainee-upload": unitDraft.hasTrainees ? ["trainees"] : [],
     "master-lmp": ["courses"]
