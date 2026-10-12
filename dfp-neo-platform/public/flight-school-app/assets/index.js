@@ -35551,6 +35551,7 @@ const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, lo
   const [wizardReviewComplete, setWizardReviewComplete] = reactExports.useState(false);
   const wizardReviewAutoReturnScheduledRef = reactExports.useRef(false);
   const onInitialSetupWizardFinishedRef = reactExports.useRef(onInitialSetupWizardFinished);
+  const wizardCompletionRepairAttemptedRef = reactExports.useRef(false);
   const wizardFinishTraceStorageKey = "dfp_setup_wizard_finish_trace";
   const [wizardFinishTrace, setWizardFinishTrace] = reactExports.useState(() => {
     if (typeof window === "undefined") return [];
@@ -35875,6 +35876,9 @@ const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, lo
   const exactCurrentUnit = configuredWizardUnits.find((unit) => normaliseUnitSettingsIdentifier(unit?.code) === currentWizardUnitCode);
   const firstCurrentMemberUnit = !exactCurrentUnit && currentWizardUnitCodes.length > 0 ? configuredWizardUnits.find((unit) => currentWizardUnitCodes.includes(normaliseUnitSettingsIdentifier(unit?.code))) : null;
   const currentUnit = exactCurrentUnit || firstCurrentMemberUnit || (!currentWizardUnitCode ? configuredWizardUnits[0] : null);
+  const currentUnitSetupCompleted = Boolean(
+    currentUnit?.settings?.initialSetupWizardCompletedAt || currentUnit?.settings?.initialSetupCompletedAt || currentUnit?.settings?.setupWizardCompletedAt || currentUnit?.settings?.setupCompletedAt
+  );
   const activeWizardLocationCode = sanitiseLegacyWizardLocationCode(currentUnit?.locationCode || "", shouldIgnoreLegacyWizardLocationSamples) || sanitiseLegacyWizardLocationCode(locationCode || "", shouldIgnoreLegacyWizardLocationSamples);
   const currentUnitLocationKey = normaliseUnitSettingsIdentifier(activeWizardLocationCode);
   const currentLocationCandidate = (currentUnitLocationKey ? (platformConfig?.locations || []).find((location) => [
@@ -39510,6 +39514,63 @@ const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, lo
     activeOrganisation?.settings?.initialSetupWizardDraft?.completedStepIds
   ]);
   reactExports.useEffect(() => {
+    if (isSetupTestMode$1 || !onUpdatePlatformConfig || wizardCompletionRepairAttemptedRef.current) return;
+    const allStepIds = steps.map((step) => step.id).filter(Boolean);
+    if (allStepIds.length === 0) return;
+    const allStepsWereMarkedComplete = allStepIds.every((stepId) => completedWizardStepIds.has(stepId));
+    if (!allStepsWereMarkedComplete) return;
+    const organisationCompleted = Boolean(
+      activeOrganisation?.settings?.initialSetupWizardCompletedAt || activeOrganisation?.settings?.initialSetupWizardDraft?.completedAt || activeOrganisation?.settings?.initialSetupWizardDrafts?.completedAt
+    );
+    const unitRows = getWizardUnitRowsForSetup();
+    if (unitRows.length === 0) return;
+    const targetCodes = new Set(unitRows.map((row) => normaliseUnitSettingsIdentifier(row.code)).filter(Boolean));
+    const activeUnits2 = (platformConfig?.units || []).filter((unit) => String(unit?.status || "ACTIVE").toUpperCase() !== "INACTIVE" && targetCodes.has(normaliseUnitSettingsIdentifier(unit?.code)));
+    const allTargetUnitsCompleted = activeUnits2.length > 0 && activeUnits2.every((unit) => unit?.settings?.initialSetupWizardCompletedAt || unit?.settings?.initialSetupCompletedAt || unit?.settings?.setupWizardCompletedAt || unit?.settings?.setupCompletedAt);
+    if (organisationCompleted && allTargetUnitsCompleted) return;
+    const completedAt = (/* @__PURE__ */ new Date()).toISOString();
+    wizardCompletionRepairAttemptedRef.current = true;
+    pushWizardPersistenceTrace("finish:repair-missing-completion-stamp", {
+      completedAt,
+      unitRows,
+      organisationCompleted,
+      targetUnitCount: activeUnits2.length,
+      allTargetUnitsCompleted
+    });
+    onUpdatePlatformConfig((current) => updatePrimaryOrganisationWithSettings(
+      stampWizardCompletedUnitsInConfig(current || platformConfig || {}, unitRows, completedAt),
+      (settings) => ({
+        ...settings,
+        initialSetupWizardCompletedAt: settings.initialSetupWizardCompletedAt || completedAt,
+        initialSetupWizardDraft: {
+          ...settings.initialSetupWizardDraft || {},
+          unitsToday: unitRows,
+          completedAt: settings.initialSetupWizardDraft?.completedAt || completedAt
+        },
+        initialSetupWizardDrafts: {
+          ...settings.initialSetupWizardDrafts || {},
+          unitsToday: settings.initialSetupWizardDrafts?.unitsToday || unitRows,
+          unitsTodayDraft: settings.initialSetupWizardDrafts?.unitsTodayDraft || unitRows.map((row) => row.code).join("\n"),
+          completedAt: settings.initialSetupWizardDrafts?.completedAt || completedAt
+        }
+      })
+    ));
+    if (typeof window !== "undefined") {
+      safeSetWizardLocalStorage(initialSetupWizardCompletedAtStorageKey, completedAt);
+    }
+    setWizardReviewComplete(true);
+    setSaveMessage("Setup completion stamp repaired from completed wizard steps.");
+  }, [
+    completedWizardStepIds,
+    isSetupTestMode$1,
+    onUpdatePlatformConfig,
+    platformConfig,
+    wizardStepIdSignature,
+    activeOrganisation?.settings?.initialSetupWizardCompletedAt,
+    activeOrganisation?.settings?.initialSetupWizardDraft?.completedAt,
+    activeOrganisation?.settings?.initialSetupWizardDrafts?.completedAt
+  ]);
+  reactExports.useEffect(() => {
     if (!visibleStep?.id) return;
     setViewedWizardStepIds((current) => {
       if (current.has(visibleStep.id)) return current;
@@ -39827,7 +39888,7 @@ const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, lo
       case "ground-event-scheduling":
         return wizardGroundEventSchedulingGroups.some((group) => group.eventCodes.length > 0);
       case "review":
-        return allMandatoryComplete;
+        return wizardReviewComplete || initialWizardSetupCompleted || currentUnitSetupCompleted;
       default:
         if (/^org-level\d+$/.test(step.id)) {
           return hasMeaningfulOrganisationLevel(Number(step.id.replace("org-level", "")));
