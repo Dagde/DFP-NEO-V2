@@ -3603,7 +3603,6 @@ const InitialSetupWizard: React.FC<{
     const [wizardReviewComplete, setWizardReviewComplete] = useState(false);
     const wizardReviewAutoReturnScheduledRef = useRef(false);
     const onInitialSetupWizardFinishedRef = useRef(onInitialSetupWizardFinished);
-    const wizardCompletionRepairAttemptedRef = useRef(false);
     const wizardFinishTraceStorageKey = 'dfp_setup_wizard_finish_trace';
     const [wizardFinishTrace, setWizardFinishTrace] = useState<any[]>(() => {
         if (typeof window === 'undefined') return [];
@@ -8161,73 +8160,6 @@ const InitialSetupWizard: React.FC<{
         wizardStepIdSignature,
         activeOrganisation?.settings?.initialSetupWizardDrafts?.completedStepIds,
         activeOrganisation?.settings?.initialSetupWizardDraft?.completedStepIds,
-    ]);
-    useEffect(() => {
-        if (isSetupTestMode || !onUpdatePlatformConfig || wizardCompletionRepairAttemptedRef.current) return;
-        const allStepIds = steps.map((step) => step.id).filter(Boolean);
-        if (allStepIds.length === 0) return;
-        const allStepsWereMarkedComplete = allStepIds.every((stepId) => completedWizardStepIds.has(stepId));
-        if (!allStepsWereMarkedComplete) return;
-        const organisationCompleted = Boolean(
-            activeOrganisation?.settings?.initialSetupWizardCompletedAt
-            || activeOrganisation?.settings?.initialSetupWizardDraft?.completedAt
-            || activeOrganisation?.settings?.initialSetupWizardDrafts?.completedAt
-        );
-        const unitRows = getWizardUnitRowsForSetup();
-        if (unitRows.length === 0) return;
-        const targetCodes = new Set(unitRows.map((row) => normaliseUnitSettingsIdentifier(row.code)).filter(Boolean));
-        const activeUnits = (platformConfig?.units || []).filter((unit: any) => (
-            String(unit?.status || 'ACTIVE').toUpperCase() !== 'INACTIVE'
-            && targetCodes.has(normaliseUnitSettingsIdentifier(unit?.code))
-        ));
-        const allTargetUnitsCompleted = activeUnits.length > 0 && activeUnits.every((unit: any) => (
-            unit?.settings?.initialSetupWizardCompletedAt
-            || unit?.settings?.initialSetupCompletedAt
-            || unit?.settings?.setupWizardCompletedAt
-            || unit?.settings?.setupCompletedAt
-        ));
-        if (organisationCompleted && allTargetUnitsCompleted) return;
-        const completedAt = new Date().toISOString();
-        wizardCompletionRepairAttemptedRef.current = true;
-        pushWizardPersistenceTrace('finish:repair-missing-completion-stamp', {
-            completedAt,
-            unitRows,
-            organisationCompleted,
-            targetUnitCount: activeUnits.length,
-            allTargetUnitsCompleted,
-        });
-        onUpdatePlatformConfig((current) => updatePrimaryOrganisationWithSettings(
-            stampWizardCompletedUnitsInConfig(current || platformConfig || {}, unitRows, completedAt),
-            (settings) => ({
-                ...settings,
-                initialSetupWizardCompletedAt: settings.initialSetupWizardCompletedAt || completedAt,
-                initialSetupWizardDraft: {
-                    ...(settings.initialSetupWizardDraft || {}),
-                    unitsToday: unitRows,
-                    completedAt: settings.initialSetupWizardDraft?.completedAt || completedAt,
-                },
-                initialSetupWizardDrafts: {
-                    ...(settings.initialSetupWizardDrafts || {}),
-                    unitsToday: settings.initialSetupWizardDrafts?.unitsToday || unitRows,
-                    unitsTodayDraft: settings.initialSetupWizardDrafts?.unitsTodayDraft || unitRows.map((row) => row.code).join('\n'),
-                    completedAt: settings.initialSetupWizardDrafts?.completedAt || completedAt,
-                },
-            }),
-        ));
-        if (typeof window !== 'undefined') {
-            safeSetWizardLocalStorage(initialSetupWizardCompletedAtStorageKey, completedAt);
-        }
-        setWizardReviewComplete(true);
-        setSaveMessage('Setup completion stamp repaired from completed wizard steps.');
-    }, [
-        completedWizardStepIds,
-        isSetupTestMode,
-        onUpdatePlatformConfig,
-        platformConfig,
-        wizardStepIdSignature,
-        activeOrganisation?.settings?.initialSetupWizardCompletedAt,
-        activeOrganisation?.settings?.initialSetupWizardDraft?.completedAt,
-        activeOrganisation?.settings?.initialSetupWizardDrafts?.completedAt,
     ]);
     useEffect(() => {
         if (!visibleStep?.id) return;
