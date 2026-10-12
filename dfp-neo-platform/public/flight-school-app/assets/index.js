@@ -35609,6 +35609,7 @@ const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, lo
   const [lmpCommitSummary, setLmpCommitSummary] = reactExports.useState("");
   const [wizardFinishInProgress, setWizardFinishInProgress] = reactExports.useState(false);
   const [wizardReviewComplete, setWizardReviewComplete] = reactExports.useState(false);
+  const [wizardUnitSetupChoiceMade, setWizardUnitSetupChoiceMade] = reactExports.useState(false);
   const wizardReviewAutoReturnScheduledRef = reactExports.useRef(false);
   const onInitialSetupWizardFinishedRef = reactExports.useRef(onInitialSetupWizardFinished);
   const wizardFinishTraceStorageKey = "dfp_setup_wizard_finish_trace";
@@ -40739,6 +40740,7 @@ const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, lo
       draftBeforeReset: summariseOrganisationDraft(organisationDraft),
       activeOrganisation: summariseActiveOrganisation()
     });
+    setWizardUnitSetupChoiceMade(true);
     setWizardLaunchRequested(true);
     setMode("active");
     organisationDraftDirtyRef.current = false;
@@ -40757,10 +40759,253 @@ const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, lo
     clearWizardStepCompletions();
   };
   const resumeWizard = () => {
+    setWizardUnitSetupChoiceMade(true);
     setWizardLaunchRequested(true);
     setMode("active");
     setWizardStep((step) => Math.min(Math.max(0, step), steps.length - 1));
     hydrateWizardDraftsFromSettings("resume");
+  };
+  const clearPersistedWizardUnitSpecificDrafts = () => {
+    if (typeof window !== "undefined") {
+      window.localStorage.removeItem(initialSetupWizardDraftSnapshotStorageKey);
+      window.localStorage.removeItem(initialSetupWizardCompletedAtStorageKey);
+    }
+    saveWizardConfig("New unit setup started.", (baseConfig) => updatePrimaryOrganisationWithSettings(baseConfig, (settings) => {
+      const existingLegacyDraft = settings.initialSetupWizardDraft || {};
+      const existingDrafts = settings.initialSetupWizardDrafts || {};
+      const unitSpecificDraftPatch = {
+        unitsTodayDraft: "",
+        unitParentDraft: "",
+        unitDraft: {
+          code: "",
+          name: "",
+          locationCode: "",
+          unitType: unitTypeOptions[0] || "",
+          operationalModel: "pooled-crew",
+          hasTrainees: true
+        },
+        unitDraftsByCode: {},
+        resourceDraft: {
+          aircraftCode: "",
+          aircraftName: "",
+          poolName: "",
+          poolUnitCode: "",
+          poolLocationCode: "",
+          aircraft: "",
+          sim: "",
+          trainer: "",
+          standby: "",
+          ground: "",
+          classrooms: "",
+          academicStandardEvents: ""
+        },
+        crewDraft: {
+          aircraftCode: "",
+          standardSeats: ""
+        },
+        accessDraft: {
+          userName: "",
+          locationCode: "",
+          unitCode: "",
+          moduleCode: "DFP",
+          accessLevel: "View"
+        },
+        trainingDraft: {
+          lmpCode: "",
+          lmpName: "",
+          description: "",
+          status: "ACTIVE",
+          audience: getWizardDefaultLmpAudience("pooled-crew"),
+          accessLocationCode: "",
+          accessUnitCode: "",
+          accessModel: "Any Model",
+          accessLevel: "View"
+        },
+        alternateCrewDraft: "",
+        alternateCrewDrafts: [],
+        alternateCrews: "",
+        buildRulesDraft: "",
+        buildRules: "",
+        staffDraft: "",
+        staff: "",
+        traineeCourseOptionsDraft: "",
+        traineeCourses: "",
+        traineeDraft: "",
+        trainees: "",
+        unitModulesDraft: defaultWizardUnitModulesDraft,
+        unitModules: defaultWizardUnitModulesDraft,
+        resourceSharingDraft: "Resource sharing | Off |  | Unit keeps its own aircraft and DFP resource row capacity.\nStaff sharing | Off |  | Unit only schedules its own staff unless changed later.",
+        resourceSharing: "Resource sharing | Off |  | Unit keeps its own aircraft and DFP resource row capacity.\nStaff sharing | Off |  | Unit only schedules its own staff unless changed later.",
+        currencyDraft: "",
+        currencies: "",
+        staffCurrencyEventsDraft: "",
+        staffCurrencyEvents: "",
+        directedTaskSetupsDraft: "",
+        directedTaskSetups: "",
+        completedAt: void 0,
+        completedStepIds: [],
+        activeStepId: steps[0]?.id || "review-status",
+        activeStepIndex: 0,
+        updatedAt: (/* @__PURE__ */ new Date()).toISOString()
+      };
+      const {
+        initialSetupWizardCompletedAt: _initialSetupWizardCompletedAt,
+        ...settingsWithoutWizardCompletion
+      } = settings;
+      const {
+        completedAt: _legacyCompletedAt,
+        initialSetupWizardCompletedAt: _legacyInitialSetupWizardCompletedAt,
+        ...legacyDraftWithoutCompletion
+      } = existingLegacyDraft;
+      const {
+        completedAt: _draftsCompletedAt,
+        initialSetupWizardCompletedAt: _draftsInitialSetupWizardCompletedAt,
+        ...draftsWithoutCompletion
+      } = existingDrafts;
+      return {
+        ...settingsWithoutWizardCompletion,
+        initialSetupWizardDraft: {
+          ...legacyDraftWithoutCompletion,
+          unitsToday: [],
+          unitParents: "",
+          unitDraft: unitSpecificDraftPatch.unitDraft,
+          unitDraftsByCode: {},
+          resourceDraft: unitSpecificDraftPatch.resourceDraft,
+          crewDraft: unitSpecificDraftPatch.crewDraft,
+          accessDraft: unitSpecificDraftPatch.accessDraft,
+          trainingDraft: unitSpecificDraftPatch.trainingDraft,
+          alternateCrews: "",
+          alternateCrewDrafts: [],
+          buildRules: "",
+          staff: "",
+          traineeCourses: "",
+          trainees: "",
+          unitModules: defaultWizardUnitModulesDraft,
+          resourceSharing: unitSpecificDraftPatch.resourceSharing,
+          currencies: "",
+          staffCurrencyEvents: "",
+          directedTaskSetups: "",
+          activeStepId: unitSpecificDraftPatch.activeStepId,
+          activeStepIndex: 0,
+          completedStepIds: [],
+          updatedAt: unitSpecificDraftPatch.updatedAt
+        },
+        initialSetupWizardDrafts: {
+          ...draftsWithoutCompletion,
+          ...unitSpecificDraftPatch
+        }
+      };
+    }), { silent: true });
+  };
+  const startAdditionalUnitSetup = () => {
+    pushWizardPersistenceTrace("wizard:new-unit:start");
+    setWizardUnitSetupChoiceMade(true);
+    setWizardLaunchRequested(true);
+    setMode("active");
+    clearWizardStepCompletions();
+    setWizardReviewComplete(false);
+    setWizardFinishInProgress(false);
+    setUploadResults({});
+    setImportConfirmations({});
+    setUploadedStaffProfileRows([]);
+    setUploadedTraineeProfileRows([]);
+    setUploadedCourseLmpItems([]);
+    setLmpEventsCommitted(false);
+    setLmpCommitSummary("");
+    setStaffProfilesCommitted(false);
+    setStaffCommitSummary("");
+    setTraineeAllocationCommitted(false);
+    setTraineeCommitSummary("");
+    setShowMoreTraineesPrompt(false);
+    unitDraftDirtyRef.current = true;
+    resourceDraftDirtyRef.current = true;
+    crewDraftDirtyRef.current = true;
+    accessDraftDirtyRef.current = true;
+    trainingDraftDirtyRef.current = true;
+    unitModulesDraftDirtyRef.current = true;
+    buildRulesDraftDirtyRef.current = true;
+    currencyDraftDirtyRef.current = true;
+    setUnitsTodayDraft("");
+    setUnitParentDraft("");
+    setUnitDraft({
+      code: "",
+      name: "",
+      locationCode: "",
+      unitType: unitTypeOptions[0] || "",
+      operationalModel: "pooled-crew",
+      hasTrainees: true
+    });
+    setUnitDraftsByCode({});
+    setResourceDraft({
+      aircraftCode: "",
+      aircraftName: "",
+      poolName: "",
+      poolUnitCode: "",
+      poolLocationCode: "",
+      aircraft: "",
+      sim: "",
+      trainer: "",
+      standby: "",
+      ground: "",
+      classrooms: "",
+      academicStandardEvents: ""
+    });
+    setCrewDraft({
+      aircraftCode: "",
+      standardSeats: ""
+    });
+    setAccessDraft({
+      userName: "",
+      locationCode: "",
+      unitCode: "",
+      moduleCode: "DFP",
+      accessLevel: "View"
+    });
+    setTrainingDraft({
+      lmpCode: "",
+      lmpName: "",
+      description: "",
+      status: "ACTIVE",
+      audience: getWizardDefaultLmpAudience("pooled-crew"),
+      accessLocationCode: "",
+      accessUnitCode: "",
+      accessModel: "Any Model",
+      accessLevel: "View"
+    });
+    setAlternateCrewDraft("");
+    setAlternateCrewDrafts([]);
+    setBuildRulesDraft({
+      businessRules: "",
+      maxCrewDutyHours: "",
+      preferredDutyHours: "",
+      aircraftTurnaroundMinutes: "",
+      simTurnaroundMinutes: "",
+      trainerTurnaroundMinutes: "",
+      maxDispatchPerHour: "",
+      maxEventsPerDay: "",
+      maxFlightsPerDay: "",
+      minGapBetweenEventsMinutes: "",
+      flightStaggerMinutes: "",
+      flightStaggerNoMinimum: "No",
+      simulatorStaggerMinutes: "",
+      simulatorStaggerNoMinimum: "No",
+      flightAuthorisationRequired: "Yes",
+      authorizationWarningMinutes: "",
+      authorizationUrgentMinutes: ""
+    });
+    setStaffDraft("");
+    setTraineeCourseOptionsDraft("");
+    setTraineeCourseInputRows([""]);
+    setTraineeDraft("");
+    setUnitModulesDraft(defaultWizardUnitModulesDraft);
+    setResourceSharingDraft("Resource sharing | Off |  | Unit keeps its own aircraft and DFP resource row capacity.\nStaff sharing | Off |  | Unit only schedules its own staff unless changed later.");
+    setCurrencyDraft("");
+    setStaffCurrencyEventsDraft("");
+    setDirectedTaskSetupsDraft("");
+    setWizardStep(0);
+    safeSetWizardLocalStorage(initialSetupWizardStorageKey, "0");
+    clearPersistedWizardUnitSpecificDrafts();
+    setSaveMessage("New unit setup started. Shared organisation settings have been retained for review.");
   };
   const wizardChoiceClass = "rounded-lg border border-slate-300 bg-white px-4 py-3 text-left text-sm font-semibold text-slate-800 shadow-sm transition hover:border-orange-300 hover:bg-orange-50 hover:text-orange-900";
   const wizardSmallButtonClass = "rounded-md border border-slate-300 bg-white px-3 py-2 text-xs font-semibold text-slate-700 shadow-sm transition hover:border-orange-300 hover:bg-orange-50 hover:text-orange-900";
@@ -45375,6 +45620,25 @@ Classrooms: ${classroomNames.join(", ")}` : ""}`;
       finishWizardReview
     );
   };
+  const hasExistingWizardUnitSetupDetails = activeUnits.some((unit) => normaliseUnitSettingsIdentifier(unit?.code) || String(unit?.name || "").trim() || String(unit?.locationCode || "").trim() || Boolean(unit?.settings?.initialSetupWizardCompletedAt) || Boolean(unit?.settings?.parentOrganisationPath));
+  const shouldShowWizardUnitSetupChoice = !isSetupTestMode$1 && !wizardLaunchRequested && !wizardUnitSetupChoiceMade && hasExistingWizardUnitSetupDetails;
+  if (shouldShowWizardUnitSetupChoice) {
+    return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { "data-neo-guide": "initial-setup-wizard-panel", className: "rounded-xl border border-slate-300 bg-slate-50 p-5 text-slate-900 shadow-sm", children: [
+      /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-[11px] font-bold uppercase tracking-[0.18em] text-orange-600", children: "Initial Setup Wizard" }),
+      /* @__PURE__ */ jsxRuntimeExports.jsx("h3", { className: "mt-1 text-xl font-bold text-slate-950", children: "Choose what you want to set up" }),
+      /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-3 text-sm leading-6 text-slate-700", children: "This organisation already has unit setup data. You can review or change an existing unit, or start a new unit setup using the same wizard with the shared organisation settings retained." }),
+      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mt-5 grid gap-3 sm:grid-cols-2", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("button", { type: "button", className: wizardChoiceClass, onClick: resumeWizard, children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "block text-base font-bold", children: "Edit existing unit setup" }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "mt-1 block text-xs font-medium text-slate-600", children: "Open the wizard with the saved unit data already loaded." })
+        ] }),
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("button", { type: "button", className: wizardChoiceClass, onClick: startAdditionalUnitSetup, children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "block text-base font-bold", children: "Set up another unit" }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "mt-1 block text-xs font-medium text-slate-600", children: "Clear unit-specific entries and keep shared settings for review." })
+        ] })
+      ] })
+    ] });
+  }
   if (mode === "detect" && isPartiallyConfigured && !wizardLaunchRequested) {
     return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { "data-neo-guide": "initial-setup-wizard-panel", className: "rounded-xl border border-slate-300 bg-slate-50 p-5 text-slate-900 shadow-sm", children: [
       /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-[11px] font-bold uppercase tracking-[0.18em] text-orange-600", children: "Initial Setup Wizard" }),
