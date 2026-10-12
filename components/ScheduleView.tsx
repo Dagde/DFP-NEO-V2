@@ -5512,6 +5512,7 @@ const InitialSetupWizard: React.FC<{
     };
 
     useEffect(() => {
+        if (wizardFreshUnitSetupActive) return;
         if (organisationDraftDirtyRef.current) {
             const hydratedUnits = buildHydratedUnitsTodayDraft();
             const hydratedUnitParents = buildHydratedUnitParentDraft(hydratedUnits, organisationDraft);
@@ -5560,6 +5561,7 @@ const InitialSetupWizard: React.FC<{
         activeOrganisation?.settings?.initialSetupWizardDraft?.unitsTodayDraft,
         activeOrganisation?.settings?.initialSetupWizardDrafts?.locationsTodayDraft,
         activeOrganisation?.settings?.initialSetupWizardDraft?.locationsTodayDraft,
+        wizardFreshUnitSetupActive,
     ]);
 
     useEffect(() => {
@@ -9941,6 +9943,7 @@ const InitialSetupWizard: React.FC<{
         unitModulesDraftDirtyRef.current = true;
         buildRulesDraftDirtyRef.current = true;
         currencyDraftDirtyRef.current = true;
+        locationDraftDirtyRef.current = true;
         setUnitsTodayDraft('');
         setUnitParentDraft('');
         setLocationsTodayFieldTouched(true);
