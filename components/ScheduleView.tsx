@@ -488,6 +488,8 @@ type OrganisationChartNode = {
     children: OrganisationChartNode[];
 };
 
+const ORGANISATION_CHART_TRACE_STORAGE_KEY = 'dfp_organisation_chart_trace';
+
 const normaliseOrgChartValue = (value: unknown): string =>
     String(value || '').trim().replace(/\s+/g, ' ');
 
@@ -602,6 +604,41 @@ const cleanOrganisationChartDisplayPath = (path: string[], rootLabel: string): s
         seenKeys.add(key);
     });
     return cleanPath;
+};
+
+const flattenOrganisationChartTraceNodes = (node: OrganisationChartNode): any[] => {
+    const rows: any[] = [];
+    const visit = (current: OrganisationChartNode, parentId = '') => {
+        rows.push({
+            id: current.id,
+            parentId,
+            label: current.label,
+            levelName: current.levelName,
+            levelIndex: current.levelIndex,
+            unitCode: current.unitCode || '',
+            unitSetupComplete: Boolean(current.unitSetupComplete),
+            childCount: current.children.length,
+        });
+        current.children.forEach((child) => visit(child, current.id));
+    };
+    visit(node);
+    return rows;
+};
+
+const pushOrganisationChartTrace = (details: Record<string, any>) => {
+    if (typeof window === 'undefined') return;
+    try {
+        const entry = {
+            ts: new Date().toISOString(),
+            details,
+        };
+        const existing = JSON.parse(window.localStorage.getItem(ORGANISATION_CHART_TRACE_STORAGE_KEY) || '[]');
+        const next = [...(Array.isArray(existing) ? existing : []), entry].slice(-20);
+        window.localStorage.setItem(ORGANISATION_CHART_TRACE_STORAGE_KEY, JSON.stringify(next));
+        (window as any).neoOrganisationChartTrace = next;
+    } catch {
+        // Trace collection must never affect the chart.
+    }
 };
 
 const parseOrganisationChartPath = (value: unknown): string[] => {
@@ -740,6 +777,7 @@ const buildOrganisationChart = (platformConfig: any): OrganisationChartNode | nu
     const repairMaps = getOrganisationRepairMaps(platformConfig, levels);
     const relationshipPaths = Array.isArray(structure.relationshipPaths) ? structure.relationshipPaths : [];
     const draftUnitParentPaths = getOrganisationChartDraftUnitParentPaths(activeOrganisation?.settings || {});
+    const traceUnitDecisions: any[] = [];
     relationshipPaths.forEach((rawPath: unknown) => {
         const path = (Array.isArray(rawPath) ? rawPath : String(rawPath || '').split('>'))
             .map(normaliseOrgChartValue)
@@ -769,7 +807,20 @@ const buildOrganisationChart = (platformConfig: any): OrganisationChartNode | nu
                 || configuredPath.length > 0
                 || draftPath.length > 0
                 || unitSetupComplete;
-            if (!hasActiveOrganisationAnchor) return;
+            if (!hasActiveOrganisationAnchor) {
+                traceUnitDecisions.push({
+                    code: unitCode,
+                    status: unit?.status || 'ACTIVE',
+                    organisationCode: unit?.organisationCode || '',
+                    activeOrganisationCode,
+                    configuredPath,
+                    draftPath,
+                    unitSetupComplete,
+                    rendered: false,
+                    reason: 'excluded-no-active-organisation-anchor',
+                });
+                return;
+            }
             const path = configuredPath.length > 0 ? configuredPath : draftPath;
             const startsAtRoot = normaliseOrgChartKey(path[0]) === rootKey;
             const parentPath = path
@@ -777,6 +828,20 @@ const buildOrganisationChart = (platformConfig: any): OrganisationChartNode | nu
                 .filter(Boolean);
             const displayPath = cleanOrganisationChartDisplayPath(parentPath[0]?.toLowerCase() === rootKey ? parentPath.slice(1) : parentPath, rootLabel);
             addOrganisationChartPath(root, displayPath, levelNames, unitCode, unitSetupComplete);
+            traceUnitDecisions.push({
+                code: unitCode,
+                status: unit?.status || 'ACTIVE',
+                organisationCode: unit?.organisationCode || '',
+                activeOrganisationCode,
+                configuredPath,
+                draftPath,
+                selectedPathSource: configuredPath.length > 0 ? 'unit.settings.parentOrganisationPath' : draftPath.length > 0 ? 'wizard-draft-unitParents' : 'none',
+                canonicalParentPath: parentPath,
+                displayPath,
+                unitSetupComplete,
+                rendered: true,
+                reason: displayPath.length > 0 ? 'rendered-under-parent-path' : 'rendered-under-root-no-parent-path',
+            });
         });
     if (root.children.length === 0) {
         levels.slice(1).forEach((level: any) => {
@@ -796,6 +861,34 @@ const buildOrganisationChart = (platformConfig: any): OrganisationChartNode | nu
         node.children.forEach(sortNodes);
     };
     sortNodes(root);
+    pushOrganisationChartTrace({
+        activeOrganisation: {
+            id: activeOrganisation?.id || '',
+            code: activeOrganisation?.code || '',
+            name: activeOrganisation?.name || '',
+        },
+        rootLabel,
+        levelCount: levels.length,
+        levels: levels.map((level: any, index: number) => ({
+            index,
+            name: level?.name || '',
+            options: Array.isArray(level?.options) ? level.options : [],
+        })),
+        relationshipPathCount: relationshipPaths.length,
+        relationshipPaths,
+        unitCount: Array.isArray(platformConfig?.units) ? platformConfig.units.length : 0,
+        units: (Array.isArray(platformConfig?.units) ? platformConfig.units : []).map((unit: any) => ({
+            code: unit?.code || '',
+            name: unit?.name || '',
+            status: unit?.status || 'ACTIVE',
+            organisationCode: unit?.organisationCode || '',
+            parentOrganisationPath: unit?.settings?.parentOrganisationPath || unit?.settings?.parentOrganisation || '',
+            completedAt: unit?.settings?.initialSetupWizardCompletedAt || unit?.settings?.initialSetupCompletedAt || unit?.settings?.setupWizardCompletedAt || unit?.settings?.setupCompletedAt || '',
+        })),
+        draftUnitParentPaths: Array.from(draftUnitParentPaths.entries()),
+        unitDecisions: traceUnitDecisions,
+        renderedNodes: flattenOrganisationChartTraceNodes(root),
+    });
     return root;
 };
 
@@ -15035,6 +15128,32 @@ const OrganisationSlideoutDiagram: React.FC<{
     const handleSelectNode = useCallback((node: OrganisationChartNode) => {
         setSelectedNodeId((current) => current === node.id ? null : node.id);
     }, []);
+    const handleDownloadOrganisationChartTrace = useCallback(() => {
+        if (typeof window === 'undefined') return;
+        let trace: any[] = [];
+        try {
+            const parsed = JSON.parse(window.localStorage.getItem(ORGANISATION_CHART_TRACE_STORAGE_KEY) || '[]');
+            trace = Array.isArray(parsed) ? parsed : [];
+        } catch {
+            trace = [];
+        }
+        const payload = {
+            exportedAt: new Date().toISOString(),
+            activeUnitCode: unitCode || '',
+            activeLocationCode: locationCode || '',
+            selectedNodeId,
+            trace,
+        };
+        const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
+        const url = window.URL.createObjectURL(blob);
+        const anchor = document.createElement('a');
+        anchor.href = url;
+        anchor.download = `organisation-chart-trace-${new Date().toISOString().replace(/[:.]/g, '-')}.json`;
+        document.body.appendChild(anchor);
+        anchor.click();
+        anchor.remove();
+        window.URL.revokeObjectURL(url);
+    }, [locationCode, selectedNodeId, unitCode]);
     const unitCount = (platformConfig?.units || []).filter((unit: any) => String(unit?.status || 'ACTIVE').toUpperCase() !== 'INACTIVE').length;
     const levelHeights = chart ? getOrganisationChartLevelHeights(chart) : new Map<number, number>();
     const chartMetrics = chart ? getOrganisationChartVisibleMetrics(chart, levelHeights, focusedPath, selectedPathIds) : { width: 560, height: 320 };
@@ -15114,6 +15233,13 @@ const OrganisationSlideoutDiagram: React.FC<{
                         onClick={() => setActiveView('setupWizard')}
                     >
                         Initial Setup Wizard
+                    </button>
+                    <button
+                        type="button"
+                        className={organisationSlideoutInactiveButtonClass}
+                        onClick={handleDownloadOrganisationChartTrace}
+                    >
+                        Trace
                     </button>
                 </div>
                 <div>

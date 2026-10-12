@@ -33353,6 +33353,7 @@ const formatSnapshotDate = (dateStr) => {
     timeZone: "UTC"
   }).replace(/ /g, "-");
 };
+const ORGANISATION_CHART_TRACE_STORAGE_KEY = "dfp_organisation_chart_trace";
 const normaliseOrgChartValue = (value) => String(value || "").trim().replace(/\s+/g, " ");
 const normaliseOrgChartKey = (value) => normaliseOrgChartValue(value).toLowerCase();
 const ORGANISATION_LABEL_ALIASES = {};
@@ -33437,6 +33438,38 @@ const cleanOrganisationChartDisplayPath = (path, rootLabel) => {
     seenKeys.add(key);
   });
   return cleanPath;
+};
+const flattenOrganisationChartTraceNodes = (node) => {
+  const rows = [];
+  const visit = (current, parentId = "") => {
+    rows.push({
+      id: current.id,
+      parentId,
+      label: current.label,
+      levelName: current.levelName,
+      levelIndex: current.levelIndex,
+      unitCode: current.unitCode || "",
+      unitSetupComplete: Boolean(current.unitSetupComplete),
+      childCount: current.children.length
+    });
+    current.children.forEach((child) => visit(child, current.id));
+  };
+  visit(node);
+  return rows;
+};
+const pushOrganisationChartTrace = (details) => {
+  if (typeof window === "undefined") return;
+  try {
+    const entry = {
+      ts: (/* @__PURE__ */ new Date()).toISOString(),
+      details
+    };
+    const existing = JSON.parse(window.localStorage.getItem(ORGANISATION_CHART_TRACE_STORAGE_KEY) || "[]");
+    const next = [...Array.isArray(existing) ? existing : [], entry].slice(-20);
+    window.localStorage.setItem(ORGANISATION_CHART_TRACE_STORAGE_KEY, JSON.stringify(next));
+    window.neoOrganisationChartTrace = next;
+  } catch {
+  }
 };
 const parseOrganisationChartPath = (value) => {
   if (Array.isArray(value)) {
@@ -33553,6 +33586,7 @@ const buildOrganisationChart = (platformConfig) => {
   const repairMaps = getOrganisationRepairMaps(platformConfig, levels);
   const relationshipPaths = Array.isArray(structure.relationshipPaths) ? structure.relationshipPaths : [];
   const draftUnitParentPaths = getOrganisationChartDraftUnitParentPaths(activeOrganisation?.settings || {});
+  const traceUnitDecisions = [];
   relationshipPaths.forEach((rawPath) => {
     const path = (Array.isArray(rawPath) ? rawPath : String(rawPath || "").split(">")).map(normaliseOrgChartValue).filter(Boolean);
     const startsAtRoot = path[0]?.toLowerCase() === rootKey;
@@ -33569,12 +33603,39 @@ const buildOrganisationChart = (platformConfig) => {
     const draftPath = draftUnitParentPaths.get(unitCode.toUpperCase()) || [];
     const unitSetupComplete = isOrganisationChartUnitSetupComplete(unit, platformConfig, activeOrganisation);
     const hasActiveOrganisationAnchor = !activeOrganisationCode || !unitOrganisationCode || unitOrganisationCode === activeOrganisationCode || configuredPath.length > 0 || draftPath.length > 0 || unitSetupComplete;
-    if (!hasActiveOrganisationAnchor) return;
+    if (!hasActiveOrganisationAnchor) {
+      traceUnitDecisions.push({
+        code: unitCode,
+        status: unit?.status || "ACTIVE",
+        organisationCode: unit?.organisationCode || "",
+        activeOrganisationCode,
+        configuredPath,
+        draftPath,
+        unitSetupComplete,
+        rendered: false,
+        reason: "excluded-no-active-organisation-anchor"
+      });
+      return;
+    }
     const path = configuredPath.length > 0 ? configuredPath : draftPath;
     const startsAtRoot = normaliseOrgChartKey(path[0]) === rootKey;
     const parentPath = path.map((part, pathIndex) => getCanonicalOrganisationLabel(levels, repairMaps, startsAtRoot ? pathIndex : pathIndex + 1, part)).filter(Boolean);
     const displayPath = cleanOrganisationChartDisplayPath(parentPath[0]?.toLowerCase() === rootKey ? parentPath.slice(1) : parentPath, rootLabel);
     addOrganisationChartPath(root2, displayPath, levelNames, unitCode, unitSetupComplete);
+    traceUnitDecisions.push({
+      code: unitCode,
+      status: unit?.status || "ACTIVE",
+      organisationCode: unit?.organisationCode || "",
+      activeOrganisationCode,
+      configuredPath,
+      draftPath,
+      selectedPathSource: configuredPath.length > 0 ? "unit.settings.parentOrganisationPath" : draftPath.length > 0 ? "wizard-draft-unitParents" : "none",
+      canonicalParentPath: parentPath,
+      displayPath,
+      unitSetupComplete,
+      rendered: true,
+      reason: displayPath.length > 0 ? "rendered-under-parent-path" : "rendered-under-root-no-parent-path"
+    });
   });
   if (root2.children.length === 0) {
     levels.slice(1).forEach((level) => {
@@ -33591,6 +33652,34 @@ const buildOrganisationChart = (platformConfig) => {
     node.children.forEach(sortNodes);
   };
   sortNodes(root2);
+  pushOrganisationChartTrace({
+    activeOrganisation: {
+      id: activeOrganisation?.id || "",
+      code: activeOrganisation?.code || "",
+      name: activeOrganisation?.name || ""
+    },
+    rootLabel,
+    levelCount: levels.length,
+    levels: levels.map((level, index) => ({
+      index,
+      name: level?.name || "",
+      options: Array.isArray(level?.options) ? level.options : []
+    })),
+    relationshipPathCount: relationshipPaths.length,
+    relationshipPaths,
+    unitCount: Array.isArray(platformConfig?.units) ? platformConfig.units.length : 0,
+    units: (Array.isArray(platformConfig?.units) ? platformConfig.units : []).map((unit) => ({
+      code: unit?.code || "",
+      name: unit?.name || "",
+      status: unit?.status || "ACTIVE",
+      organisationCode: unit?.organisationCode || "",
+      parentOrganisationPath: unit?.settings?.parentOrganisationPath || unit?.settings?.parentOrganisation || "",
+      completedAt: unit?.settings?.initialSetupWizardCompletedAt || unit?.settings?.initialSetupCompletedAt || unit?.settings?.setupWizardCompletedAt || unit?.settings?.setupCompletedAt || ""
+    })),
+    draftUnitParentPaths: Array.from(draftUnitParentPaths.entries()),
+    unitDecisions: traceUnitDecisions,
+    renderedNodes: flattenOrganisationChartTraceNodes(root2)
+  });
   return root2;
 };
 const findOrganisationChartPath = (node, nodeId, path = []) => {
@@ -45411,6 +45500,32 @@ const OrganisationSlideoutDiagram = ({ platformConfig, organisationSettings, uni
   const handleSelectNode = reactExports.useCallback((node) => {
     setSelectedNodeId((current) => current === node.id ? null : node.id);
   }, []);
+  const handleDownloadOrganisationChartTrace = reactExports.useCallback(() => {
+    if (typeof window === "undefined") return;
+    let trace = [];
+    try {
+      const parsed = JSON.parse(window.localStorage.getItem(ORGANISATION_CHART_TRACE_STORAGE_KEY) || "[]");
+      trace = Array.isArray(parsed) ? parsed : [];
+    } catch {
+      trace = [];
+    }
+    const payload = {
+      exportedAt: (/* @__PURE__ */ new Date()).toISOString(),
+      activeUnitCode: unitCode || "",
+      activeLocationCode: locationCode || "",
+      selectedNodeId,
+      trace
+    };
+    const blob = new Blob([JSON.stringify(payload, null, 2)], { type: "application/json" });
+    const url = window.URL.createObjectURL(blob);
+    const anchor = document.createElement("a");
+    anchor.href = url;
+    anchor.download = `organisation-chart-trace-${(/* @__PURE__ */ new Date()).toISOString().replace(/[:.]/g, "-")}.json`;
+    document.body.appendChild(anchor);
+    anchor.click();
+    anchor.remove();
+    window.URL.revokeObjectURL(url);
+  }, [locationCode, selectedNodeId, unitCode]);
   const unitCount = (platformConfig?.units || []).filter((unit) => String(unit?.status || "ACTIVE").toUpperCase() !== "INACTIVE").length;
   const levelHeights = chart ? getOrganisationChartLevelHeights(chart) : /* @__PURE__ */ new Map();
   const chartMetrics = chart ? getOrganisationChartVisibleMetrics(chart, levelHeights, focusedPath, selectedPathIds) : { width: 560, height: 320 };
@@ -45494,6 +45609,15 @@ const OrganisationSlideoutDiagram = ({ platformConfig, organisationSettings, uni
             className: activeView === "setupWizard" ? organisationSlideoutActiveButtonClass : organisationSlideoutInactiveButtonClass,
             onClick: () => setActiveView("setupWizard"),
             children: "Initial Setup Wizard"
+          }
+        ),
+        /* @__PURE__ */ jsxRuntimeExports.jsx(
+          "button",
+          {
+            type: "button",
+            className: organisationSlideoutInactiveButtonClass,
+            onClick: handleDownloadOrganisationChartTrace,
+            children: "Trace"
           }
         )
       ] }),
