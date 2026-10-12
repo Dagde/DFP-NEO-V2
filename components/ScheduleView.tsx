@@ -9758,10 +9758,9 @@ const InitialSetupWizard: React.FC<{
         });
         setWizardUnitSetupChoiceMade(true);
         setWizardExistingUnitPickerOpen(false);
-        setWizardFreshUnitSetupActive(true);
+        setWizardFreshUnitSetupActive(false);
         setWizardLaunchRequested(true);
         setMode('active');
-        clearWizardStepCompletions();
         organisationDraftDirtyRef.current = false;
         locationDraftDirtyRef.current = false;
         unitDraftDirtyRef.current = true;
@@ -9775,8 +9774,7 @@ const InitialSetupWizard: React.FC<{
             ...(cleanCode ? { [cleanCode]: selectedDraft } : {}),
         }));
         setUnitDraft(selectedDraft);
-        setWizardStep(0);
-        safeSetWizardLocalStorage(initialSetupWizardStorageKey, '0');
+        setWizardStep((step) => Math.min(Math.max(0, step), steps.length - 1));
         setSaveMessage(`${selectedDraft.code || 'Unit'} setup loaded for review.`);
     };
 
