@@ -33747,6 +33747,7 @@ const getOrganisationChartLevelHeights = (root2) => {
   return heights;
 };
 const getVisibleOrganisationChartChildren = (node, focusedPath, selectedPathIds) => node.children.filter((child) => {
+  if (child.unitCode) return true;
   if (!focusedPath || node.levelIndex < 3) return child.levelIndex <= 3;
   return selectedPathIds.has(node.id);
 });

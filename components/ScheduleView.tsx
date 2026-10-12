@@ -966,6 +966,7 @@ const getVisibleOrganisationChartChildren = (
     selectedPathIds: Set<string>,
 ): OrganisationChartNode[] => (
     node.children.filter((child) => {
+        if (child.unitCode) return true;
         if (!focusedPath || node.levelIndex < 3) return child.levelIndex <= 3;
         return selectedPathIds.has(node.id);
     })
