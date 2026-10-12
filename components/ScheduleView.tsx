@@ -2215,6 +2215,13 @@ const parseWizardUnitRows = (value: string): Array<{ code: string; name: string 
         };
     }).filter((row) => row.code || row.name)
 );
+const formatWizardUnitRow = (row: { code?: string; name?: string }) => {
+    const code = String(row.code || '').trim().toUpperCase();
+    const name = String(row.name || '').trim();
+    if (!code && !name) return '';
+    if (!name || normaliseUnitSettingsIdentifier(name) === normaliseUnitSettingsIdentifier(code)) return code;
+    return `${code} | ${name}`;
+};
 
 type WizardUnitSetupDraft = {
     code: string;
@@ -7942,9 +7949,9 @@ const InitialSetupWizard: React.FC<{
         },
         {
             id: 'units-today',
-            title: 'Which units do you want to set up today?',
+            title: 'What Unit do you want to setup today?',
             label: 'Units',
-            body: 'List the units you want this wizard to prepare. You can add more units later in Settings.',
+            body: 'Enter the single unit you want this wizard to prepare. You can set up another unit after this wizard run is complete.',
             checkIds: ['units'],
             category: 'mandatory',
         },
@@ -8357,7 +8364,6 @@ const InitialSetupWizard: React.FC<{
         return () => window.cancelAnimationFrame(animationFrameId);
     }, [currentStep, wizardPageMenuOpen]);
     const templateIdsByStep: Record<string, string[]> = {
-        'units-today': ['units'],
         'staff': ['staff'],
         'trainee-upload': unitDraft.hasTrainees ? ['trainees'] : [],
         'master-lmp': ['courses'],
@@ -8366,6 +8372,12 @@ const InitialSetupWizard: React.FC<{
     const visibleTemplates = initialSetupTemplates.filter((template) => (
         visibleStepTemplateIds.includes(template.id)
     ));
+    useEffect(() => {
+        if (visibleStep.id !== 'units-today') return;
+        const unitRows = parseWizardUnitRows(unitsTodayDraft);
+        if (unitRows.length <= 1) return;
+        setUnitsTodayDraft(formatWizardUnitRow(unitRows[0]));
+    }, [unitsTodayDraft, visibleStep.id]);
     const wizardCategoryTextClass: Record<InitialSetupWizardCategory, string> = {
         mandatory: 'text-red-600',
         'highly-desirable': 'text-blue-600',
@@ -14223,54 +14235,64 @@ const InitialSetupWizard: React.FC<{
             );
         }
         if (visibleStep.id === 'units-today') {
-            const unitRows = parseWizardUnitRows(unitsTodayDraft);
+            const unitRow = parseWizardUnitRows(unitsTodayDraft)[0] || { code: '', name: '' };
             const unitParentOptions = getWizardUnitParentPathOptions();
             const unitParentMap = getWizardUnitParentPathMap();
+            const updateSingleUnitRow = (patch: Partial<{ code: string; name: string }>) => {
+                const nextRow = {
+                    ...unitRow,
+                    ...patch,
+                };
+                setUnitsTodayDraft(formatWizardUnitRow(nextRow));
+            };
             return promptShell(
-                <p>List each unit you want to configure in this setup run. Use one line per unit. Format: <strong>Unit code | Unit name</strong>.</p>,
+                <p>Enter the one unit you want to configure in this setup run. Additional units can be set up by running the wizard again for another unit.</p>,
                 <div>
-                    {wizardTextArea('Units to set up today', unitsTodayDraft, setUnitsTodayDraft, 'UNIT-01 | Unit Name\nUNIT-02 | Training Unit Name', true)}
+                    <div className="grid min-w-0 gap-3 md:grid-cols-2">
+                        {wizardField('Unit code', unitRow.code || '', (value) => updateSingleUnitRow({ code: value.toUpperCase() }), undefined, 'UNIT-01')}
+                        {wizardField('Unit name', unitRow.name || '', (value) => updateSingleUnitRow({ name: value }), undefined, 'Unit Name')}
+                    </div>
                     <div className="mt-4 rounded-lg border border-slate-200 bg-slate-50 p-3">
-                        <p className={wizardLabelClass}>Parent organisation for each unit</p>
+                        <p className={wizardLabelClass}>Parent organisation for this unit</p>
                         <p className="mt-1 text-xs leading-5 text-slate-600">
-                            Choose the immediate parent each unit sits under in the organisation tree.
+                            Choose the immediate parent this unit sits under in the organisation tree.
                         </p>
-                        {unitRows.length > 0 && unitParentOptions.length > 0 ? (
+                        {unitRow.code && unitParentOptions.length > 0 ? (
                             <div className="mt-3 space-y-2">
-                                {unitRows.map((row) => {
-                                    const currentParentPath = unitParentMap.get(normaliseUnitSettingsIdentifier(row.code)) || unitParentOptions[0];
+                                {(() => {
+                                    const currentParentPath = unitParentMap.get(normaliseUnitSettingsIdentifier(unitRow.code)) || unitParentOptions[0];
                                     const currentParentValue = formatWizardOrganisationPath(currentParentPath);
                                     return (
-                                        <div key={`unit-parent-${row.code}`} className="grid min-w-0 gap-2 rounded-md border border-slate-200 bg-white p-3 md:grid-cols-[120px_minmax(0,1fr)] md:items-center">
+                                        <div key={`unit-parent-${unitRow.code}`} className="grid min-w-0 gap-2 rounded-md border border-slate-200 bg-white p-3 md:grid-cols-[120px_minmax(0,1fr)] md:items-center">
                                             <div>
-                                                <p className="text-sm font-bold text-slate-900">{row.code}</p>
-                                                <p className="text-xs text-slate-500">{row.name || row.code}</p>
+                                                <p className="text-sm font-bold text-slate-900">{unitRow.code}</p>
+                                                <p className="text-xs text-slate-500">{unitRow.name || unitRow.code}</p>
                                             </div>
                                             <label className="block">
                                                 <span className={wizardLabelClass}>Parent</span>
                                                 <select
                                                     className={`${wizardInputClass} mt-1`}
                                                     value={currentParentValue}
-                                                    onChange={(event) => updateWizardUnitParentPath(row.code, event.target.value)}
+                                                    onChange={(event) => updateWizardUnitParentPath(unitRow.code, event.target.value)}
                                                 >
                                                     {unitParentOptions.map((path) => {
                                                         const value = formatWizardOrganisationPath(path);
-                                                        return <option key={`${row.code}-${value}`} value={value}>{formatWizardImmediateParentLabel(path)}</option>;
+                                                        return <option key={`${unitRow.code}-${value}`} value={value}>{formatWizardImmediateParentLabel(path)}</option>;
                                                     })}
                                                 </select>
                                             </label>
                                         </div>
                                     );
-                                })}
+                                })()}
                             </div>
                         ) : (
                             <p className="mt-3 rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-xs font-semibold leading-5 text-amber-900">
-                                Add the organisation levels above first, then return here to choose each unit's parent.
+                                Enter the unit code and add the organisation levels above first, then return here to choose this unit's parent.
                             </p>
                         )}
                     </div>
                     <p className="mt-3 text-xs leading-5 text-slate-600">
-                        The first unit is used for the detailed setup questions, then the same structure is applied to every other unit listed.
+                        This wizard run prepares one unit. Use Set up another unit after finishing when you need to add the next unit.
                     </p>
                 </div>,
             );

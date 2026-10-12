@@ -34591,6 +34591,13 @@ const parseWizardUnitRows = (value) => String(value || "").split(/\n/).map((line
     name: parts[1] || parts[0] || ""
   };
 }).filter((row) => row.code || row.name);
+const formatWizardUnitRow = (row) => {
+  const code = String(row.code || "").trim().toUpperCase();
+  const name = String(row.name || "").trim();
+  if (!code && !name) return "";
+  if (!name || normaliseUnitSettingsIdentifier(name) === normaliseUnitSettingsIdentifier(code)) return code;
+  return `${code} | ${name}`;
+};
 const parseWizardParentRows = (value) => parseWizardLineItems(value).map((line) => {
   const separator = line.includes("=") ? "=" : line.includes("|") ? "|" : ">";
   const [childPart, parentPart] = line.split(separator).map((part) => part.trim());
@@ -39268,9 +39275,9 @@ const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, lo
     },
     {
       id: "units-today",
-      title: "Which units do you want to set up today?",
+      title: "What Unit do you want to setup today?",
       label: "Units",
-      body: "List the units you want this wizard to prepare. You can add more units later in Settings.",
+      body: "Enter the single unit you want this wizard to prepare. You can set up another unit after this wizard run is complete.",
       checkIds: ["units"],
       category: "mandatory"
     },
@@ -39663,13 +39670,18 @@ const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, lo
     return () => window.cancelAnimationFrame(animationFrameId);
   }, [currentStep, wizardPageMenuOpen]);
   const templateIdsByStep = {
-    "units-today": ["units"],
     "staff": ["staff"],
     "trainee-upload": unitDraft.hasTrainees ? ["trainees"] : [],
     "master-lmp": ["courses"]
   };
   const visibleStepTemplateIds = templateIdsByStep[visibleStep.id] || [];
   const visibleTemplates = initialSetupTemplates.filter((template) => visibleStepTemplateIds.includes(template.id));
+  reactExports.useEffect(() => {
+    if (visibleStep.id !== "units-today") return;
+    const unitRows = parseWizardUnitRows(unitsTodayDraft);
+    if (unitRows.length <= 1) return;
+    setUnitsTodayDraft(formatWizardUnitRow(unitRows[0]));
+  }, [unitsTodayDraft, visibleStep.id]);
   const wizardCategoryTextClass = {
     mandatory: "text-red-600",
     "highly-desirable": "text-blue-600",
@@ -44770,27 +44782,33 @@ const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, lo
       );
     }
     if (visibleStep.id === "units-today") {
-      const unitRows = parseWizardUnitRows(unitsTodayDraft);
+      const unitRow = parseWizardUnitRows(unitsTodayDraft)[0] || { code: "", name: "" };
       const unitParentOptions = getWizardUnitParentPathOptions();
       const unitParentMap = getWizardUnitParentPathMap();
+      const updateSingleUnitRow = (patch) => {
+        const nextRow = {
+          ...unitRow,
+          ...patch
+        };
+        setUnitsTodayDraft(formatWizardUnitRow(nextRow));
+      };
       return promptShell(
-        /* @__PURE__ */ jsxRuntimeExports.jsxs("p", { children: [
-          "List each unit you want to configure in this setup run. Use one line per unit. Format: ",
-          /* @__PURE__ */ jsxRuntimeExports.jsx("strong", { children: "Unit code | Unit name" }),
-          "."
-        ] }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx("p", { children: "Enter the one unit you want to configure in this setup run. Additional units can be set up by running the wizard again for another unit." }),
         /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
-          wizardTextArea("Units to set up today", unitsTodayDraft, setUnitsTodayDraft, "UNIT-01 | Unit Name\nUNIT-02 | Training Unit Name", true),
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid min-w-0 gap-3 md:grid-cols-2", children: [
+            wizardField("Unit code", unitRow.code || "", (value) => updateSingleUnitRow({ code: value.toUpperCase() }), void 0, "UNIT-01"),
+            wizardField("Unit name", unitRow.name || "", (value) => updateSingleUnitRow({ name: value }), void 0, "Unit Name")
+          ] }),
           /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mt-4 rounded-lg border border-slate-200 bg-slate-50 p-3", children: [
-            /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: wizardLabelClass, children: "Parent organisation for each unit" }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-1 text-xs leading-5 text-slate-600", children: "Choose the immediate parent each unit sits under in the organisation tree." }),
-            unitRows.length > 0 && unitParentOptions.length > 0 ? /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-3 space-y-2", children: unitRows.map((row) => {
-              const currentParentPath = unitParentMap.get(normaliseUnitSettingsIdentifier(row.code)) || unitParentOptions[0];
+            /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: wizardLabelClass, children: "Parent organisation for this unit" }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-1 text-xs leading-5 text-slate-600", children: "Choose the immediate parent this unit sits under in the organisation tree." }),
+            unitRow.code && unitParentOptions.length > 0 ? /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-3 space-y-2", children: (() => {
+              const currentParentPath = unitParentMap.get(normaliseUnitSettingsIdentifier(unitRow.code)) || unitParentOptions[0];
               const currentParentValue = formatWizardOrganisationPath(currentParentPath);
               return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid min-w-0 gap-2 rounded-md border border-slate-200 bg-white p-3 md:grid-cols-[120px_minmax(0,1fr)] md:items-center", children: [
                 /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
-                  /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-sm font-bold text-slate-900", children: row.code }),
-                  /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-xs text-slate-500", children: row.name || row.code })
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-sm font-bold text-slate-900", children: unitRow.code }),
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-xs text-slate-500", children: unitRow.name || unitRow.code })
                 ] }),
                 /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "block", children: [
                   /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: wizardLabelClass, children: "Parent" }),
@@ -44799,18 +44817,18 @@ const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, lo
                     {
                       className: `${wizardInputClass} mt-1`,
                       value: currentParentValue,
-                      onChange: (event) => updateWizardUnitParentPath(row.code, event.target.value),
+                      onChange: (event) => updateWizardUnitParentPath(unitRow.code, event.target.value),
                       children: unitParentOptions.map((path) => {
                         const value = formatWizardOrganisationPath(path);
-                        return /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value, children: formatWizardImmediateParentLabel(path) }, `${row.code}-${value}`);
+                        return /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value, children: formatWizardImmediateParentLabel(path) }, `${unitRow.code}-${value}`);
                       })
                     }
                   )
                 ] })
-              ] }, `unit-parent-${row.code}`);
-            }) }) : /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-3 rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-xs font-semibold leading-5 text-amber-900", children: "Add the organisation levels above first, then return here to choose each unit's parent." })
+              ] }, `unit-parent-${unitRow.code}`);
+            })() }) : /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-3 rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-xs font-semibold leading-5 text-amber-900", children: "Enter the unit code and add the organisation levels above first, then return here to choose this unit's parent." })
           ] }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-3 text-xs leading-5 text-slate-600", children: "The first unit is used for the detailed setup questions, then the same structure is applied to every other unit listed." })
+          /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-3 text-xs leading-5 text-slate-600", children: "This wizard run prepares one unit. Use Set up another unit after finishing when you need to add the next unit." })
         ] })
       );
     }
