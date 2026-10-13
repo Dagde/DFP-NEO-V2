@@ -14350,9 +14350,9 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
               <div className="rounded-lg border border-cyan-400/20 bg-cyan-500/10 p-3">
                 <div className="flex flex-wrap items-start justify-between gap-3">
                   <div>
-                    <h6 className="text-xs font-bold uppercase tracking-wide text-cyan-100">Aircraft Callsign Assignment</h6>
+                    <h6 className="text-xs font-bold uppercase tracking-wide text-cyan-100">Callsign Allocation Method</h6>
                     <p className="mt-1 text-xs leading-relaxed text-cyan-100/70">
-                      Choose whether callsigns belong to the staff member, to each flight, or are selected by the scheduler.
+                      For each unit, choose how the callsign is allocated when a flight is scheduled: permanently to a person, generated for each flight, or selected by the scheduler.
                     </p>
                   </div>
                 </div>
@@ -14365,7 +14365,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
                     return (
                       <div key={unitCode} className="rounded border border-cyan-300/15 bg-gray-950/50 p-3">
                         <SelectField
-                          label={label}
+                          label={`${label} callsign method`}
                           value={policy.allocationMethod}
                           disabled={!canEditRankTerminology}
                           options={UNIT_CALLSIGN_ALLOCATION_METHODS}

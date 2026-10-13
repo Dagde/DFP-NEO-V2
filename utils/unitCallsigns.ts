@@ -19,9 +19,9 @@ export interface UnitCallsignSettings {
 }
 
 export const UNIT_CALLSIGN_ALLOCATION_METHOD_LABELS: Record<UnitCallsignAllocationMethod, string> = {
-  permanent: 'Permanent',
-  'per-flight': 'Per Flight',
-  'user-choice': 'User Choice',
+  permanent: 'Permanent person callsign',
+  'per-flight': 'New callsign each flight',
+  'user-choice': 'Scheduler chooses',
 };
 
 export const UNIT_CALLSIGN_ALLOCATION_METHODS = Object.keys(

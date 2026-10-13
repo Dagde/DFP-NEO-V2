@@ -7985,9 +7985,9 @@ const getInsertEventTimingDefaults = (config) => {
   return normaliseInsertEventTimingDefaults(activeOrganisation?.settings?.insertEventTimingDefaults);
 };
 const UNIT_CALLSIGN_ALLOCATION_METHOD_LABELS = {
-  permanent: "Permanent",
-  "per-flight": "Per Flight",
-  "user-choice": "User Choice"
+  permanent: "Permanent person callsign",
+  "per-flight": "New callsign each flight",
+  "user-choice": "Scheduler chooses"
 };
 const UNIT_CALLSIGN_ALLOCATION_METHODS = Object.keys(
   UNIT_CALLSIGN_ALLOCATION_METHOD_LABELS
@@ -30856,8 +30856,8 @@ This removes them from DFP Resource Rows. Press Save in this section to apply th
               /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mt-4 space-y-3", children: [
                 /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded-lg border border-cyan-400/20 bg-cyan-500/10 p-3", children: [
                   /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex flex-wrap items-start justify-between gap-3", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
-                    /* @__PURE__ */ jsxRuntimeExports.jsx("h6", { className: "text-xs font-bold uppercase tracking-wide text-cyan-100", children: "Aircraft Callsign Assignment" }),
-                    /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-1 text-xs leading-relaxed text-cyan-100/70", children: "Choose whether callsigns belong to the staff member, to each flight, or are selected by the scheduler." })
+                    /* @__PURE__ */ jsxRuntimeExports.jsx("h6", { className: "text-xs font-bold uppercase tracking-wide text-cyan-100", children: "Callsign Allocation Method" }),
+                    /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-1 text-xs leading-relaxed text-cyan-100/70", children: "For each unit, choose how the callsign is allocated when a flight is scheduled: permanently to a person, generated for each flight, or selected by the scheduler." })
                   ] }) }),
                   /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mt-3 grid gap-3 md:grid-cols-2 xl:grid-cols-3", children: [
                     visibleUnitOptions.map((unitCode) => {
@@ -30869,7 +30869,7 @@ This removes them from DFP Resource Rows. Press Save in this section to apply th
                         /* @__PURE__ */ jsxRuntimeExports.jsx(
                           SelectField,
                           {
-                            label,
+                            label: `${label} callsign method`,
                             value: policy.allocationMethod,
                             disabled: !canEditRankTerminology,
                             options: UNIT_CALLSIGN_ALLOCATION_METHODS,
