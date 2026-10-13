@@ -524,7 +524,8 @@ const getOrganisationRepairMaps = (platformConfig: any, levels: any[]): Map<numb
         current.add(key);
         target.set(levelIndex, current);
     };
-    const relationshipPaths = Array.isArray(structure.relationshipPaths) ? structure.relationshipPaths : [];
+    const relationshipPaths = (Array.isArray(structure.relationshipPaths) ? structure.relationshipPaths : [])
+        .filter((rawPath: unknown) => !isOrganisationStructureUnitRelationshipPath(rawPath, platformConfig));
     relationshipPaths.forEach((rawPath: unknown) => {
         const path = (Array.isArray(rawPath) ? rawPath : String(rawPath || '').split('>'))
             .map(normaliseOrgChartValue)
@@ -612,6 +613,20 @@ const parseOrganisationChartPath = (value: unknown): string[] => {
         .split(/\s*(?:\/|>|-)\s*/)
         .map(normaliseOrgChartValue)
         .filter(Boolean);
+};
+
+const getActiveOrganisationUnitCodeKeys = (platformConfig: any): Set<string> => new Set(
+    (platformConfig?.units || [])
+        .filter((unit: any) => String(unit?.status || 'ACTIVE').toUpperCase() !== 'INACTIVE')
+        .map((unit: any) => normaliseOrgChartKey(unit?.code || unit?.name))
+        .filter(Boolean),
+);
+
+const isOrganisationStructureUnitRelationshipPath = (rawPath: unknown, platformConfig: any): boolean => {
+    const path = parseOrganisationChartPath(rawPath);
+    if (path.length < 2) return false;
+    const unitKeys = getActiveOrganisationUnitCodeKeys(platformConfig);
+    return unitKeys.has(normaliseOrgChartKey(path[path.length - 1]));
 };
 
 const getOrganisationChartDraftUnitParentPaths = (settings: any): Map<string, string[]> => {
@@ -846,7 +861,8 @@ const buildOrganisationChart = (platformConfig: any): OrganisationChartNode | nu
     };
     const rootKey = root.label.toLowerCase();
     const repairMaps = getOrganisationRepairMaps(platformConfig, levels);
-    const relationshipPaths = Array.isArray(structure.relationshipPaths) ? structure.relationshipPaths : [];
+    const relationshipPaths = (Array.isArray(structure.relationshipPaths) ? structure.relationshipPaths : [])
+        .filter((rawPath: unknown) => !isOrganisationStructureUnitRelationshipPath(rawPath, platformConfig));
     const draftUnitParentPaths = getOrganisationChartDraftUnitParentPaths(activeOrganisation?.settings || {});
     relationshipPaths.forEach((rawPath: unknown) => {
         const path = (Array.isArray(rawPath) ? rawPath : String(rawPath || '').split('>'))
@@ -4158,9 +4174,10 @@ const InitialSetupWizard: React.FC<{
             seenChildren.add(childKey);
         });
         if (directLines.length > 0) return directLines.join('\n');
-        const relationshipPaths = Array.isArray(activeOrganisation?.settings?.organisationStructure?.relationshipPaths)
+        const relationshipPaths = (Array.isArray(activeOrganisation?.settings?.organisationStructure?.relationshipPaths)
             ? activeOrganisation.settings.organisationStructure.relationshipPaths
-            : [];
+            : []
+        ).filter((rawPath: unknown) => !isOrganisationStructureUnitRelationshipPath(rawPath, platformConfig));
         const pathLines: string[] = [];
         const seenPathChildren = new Set<string>();
         relationshipPaths.forEach((rawPath: any) => {
@@ -12322,10 +12339,6 @@ const InitialSetupWizard: React.FC<{
                 [normaliseUnitSettingsIdentifier(code)]: parentPath,
             };
         }, {} as Record<string, string[]>);
-        const unitRelationshipPaths = unitCodes.map((code) => [
-            ...(unitParentPaths[normaliseUnitSettingsIdentifier(code)] || fallbackUnitParentPath),
-            code,
-        ]);
         const unitChildrenByParent = unitCodes.reduce((map, code) => {
             const parentPath = unitParentPaths[normaliseUnitSettingsIdentifier(code)] || fallbackUnitParentPath;
             const parent = parentPath[parentPath.length - 1] || rootLabel;
@@ -12360,7 +12373,7 @@ const InitialSetupWizard: React.FC<{
         return {
             structure: {
                 levels,
-                relationshipPaths: [...relationshipPaths, ...unitRelationshipPaths],
+                relationshipPaths,
             },
             unitParentPaths,
             fallbackUnitParentPath,
