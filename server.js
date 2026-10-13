@@ -4832,12 +4832,68 @@ async function repairNewCustomerTestSetupRegressionIfNeeded(db, req) {
   });
 }
 
+async function repairNewCustomerTestResourcePoolSplitIfNeeded(db, req) {
+  if (!String(getRequestHostName(req)).includes('new-customer-test')) return;
+  const units = await db.$queryRawUnsafe(`SELECT "code", "settings" FROM "CommercialUnit" WHERE "code" IN ('285FTS', '286FTS')`);
+  const has285Unit = Array.isArray(units) && units.some((unit) => String(unit?.code || '').toUpperCase() === '285FTS');
+  const has286Unit = Array.isArray(units) && units.some((unit) => String(unit?.code || '').toUpperCase() === '286FTS');
+  if (!has285Unit || !has286Unit) return;
+
+  const pools = await db.$queryRawUnsafe(`SELECT * FROM "CommercialResourcePool" WHERE "unitCode" IN ('285FTS', '286FTS') AND UPPER(COALESCE("status", 'ACTIVE')) <> 'INACTIVE'`);
+  const has285Pool = Array.isArray(pools) && pools.some((pool) => String(pool?.unitCode || '').toUpperCase() === '285FTS');
+  if (has285Pool) return;
+  const sourcePool = Array.isArray(pools)
+    ? pools.find((pool) => String(pool?.unitCode || '').toUpperCase() === '286FTS')
+    : null;
+  if (!sourcePool) return;
+
+  const organisations = await db.$queryRawUnsafe(`SELECT "settings" FROM "CommercialOrganisation" ORDER BY "updatedAt" DESC LIMIT 1`);
+  const drafts = organisations?.[0]?.settings?.initialSetupWizardDrafts || {};
+  const legacyDraft = organisations?.[0]?.settings?.initialSetupWizardDraft || {};
+  const draftResource = drafts.resourceDraft || legacyDraft.resourceDraft || {};
+  const draftResourceUnitCode = String(draftResource?.poolUnitCode || '').trim().toUpperCase();
+  const settings = draftResourceUnitCode === '285FTS'
+    ? {
+        ...(sourcePool.settings || {}),
+        aircraftLabel: draftResource.poolName || sourcePool.settings?.aircraftLabel || sourcePool.name,
+        aircraft: Number(draftResource.aircraft || sourcePool.settings?.aircraft || 0),
+        ftd: Number(draftResource.sim || sourcePool.settings?.ftd || sourcePool.settings?.sim || 0),
+        cpt: Number(draftResource.trainer || sourcePool.settings?.cpt || sourcePool.settings?.trainer || 0),
+        standby: Number(draftResource.standby || sourcePool.settings?.standby || 0),
+        ground: Number(draftResource.ground || sourcePool.settings?.ground || 0),
+      }
+    : { ...(sourcePool.settings || {}) };
+  const aircraftTypeCode = String(draftResource.aircraftCode || sourcePool.aircraftTypeCode || 'T-6').trim().toUpperCase();
+  const locationCode = String(draftResource.poolLocationCode || sourcePool.locationCode || 'KCBM').trim().toUpperCase();
+  const poolName = String(draftResource.poolName || sourcePool.name || aircraftTypeCode).trim();
+  const poolCode = `${locationCode}-285FTS-${aircraftTypeCode}-ROWS`.replace(/[^A-Z0-9-]/g, '-').replace(/-+/g, '-');
+  await db.$executeRawUnsafe(`
+    INSERT INTO "CommercialResourcePool" ("id", "organisationCode", "locationCode", "unitCode", "aircraftTypeCode", "code", "name", "poolType", "status", "settings", "createdAt", "updatedAt")
+    VALUES (gen_random_uuid()::text, $1, $2, $3, $4, $5, $6, $7, 'ACTIVE', $8::jsonb, NOW(), NOW())
+    ON CONFLICT ("code") DO UPDATE SET
+      "organisationCode" = $1,
+      "locationCode" = $2,
+      "unitCode" = $3,
+      "aircraftTypeCode" = $4,
+      "name" = $6,
+      "poolType" = $7,
+      "status" = 'ACTIVE',
+      "settings" = $8::jsonb,
+      "updatedAt" = NOW()
+  `, 'BAF', locationCode, '285FTS', aircraftTypeCode, poolCode, poolName, sourcePool.poolType || 'Dedicated', JSON.stringify(settings));
+  console.warn('⚠️ Repaired new-customer-test split resource pool for 285FTS', {
+    sourcePool: sourcePool.code,
+    repairedPool: poolCode,
+  });
+}
+
 app.get('/api/platform-config', async (req, res) => {
   const requestStartedAt = Date.now();
   try {
     const db = await getPrisma();
     await seedCommercialConfigIfEmpty(db);
     await repairNewCustomerTestSetupRegressionIfNeeded(db, req);
+    await repairNewCustomerTestResourcePoolSplitIfNeeded(db, req);
 
     const [
       organisations,

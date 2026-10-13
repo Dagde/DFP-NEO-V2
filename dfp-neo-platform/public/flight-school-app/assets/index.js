@@ -35882,7 +35882,7 @@ const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, lo
   const exactCurrentUnit = configuredWizardUnits.find((unit) => normaliseUnitSettingsIdentifier(unit?.code) === currentWizardUnitCode);
   const firstCurrentMemberUnit = !exactCurrentUnit && currentWizardUnitCodes.length > 0 ? configuredWizardUnits.find((unit) => currentWizardUnitCodes.includes(normaliseUnitSettingsIdentifier(unit?.code))) : null;
   const currentUnit = exactCurrentUnit || firstCurrentMemberUnit || (!currentWizardUnitCode ? configuredWizardUnits[0] : null);
-  const currentUnitSetupCompleted = Boolean(
+  Boolean(
     currentUnit?.settings?.initialSetupWizardCompletedAt || currentUnit?.settings?.initialSetupCompletedAt || currentUnit?.settings?.setupWizardCompletedAt || currentUnit?.settings?.setupCompletedAt
   );
   const activeWizardLocationCode = sanitiseLegacyWizardLocationCode(currentUnit?.locationCode || "", shouldIgnoreLegacyWizardLocationSamples) || sanitiseLegacyWizardLocationCode(locationCode || "", shouldIgnoreLegacyWizardLocationSamples);
@@ -36666,6 +36666,20 @@ const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, lo
     }
     return {};
   };
+  const getSavedWizardObjectForUnit = (unitSpecificKey, fallbackKey, targetUnitCode) => {
+    const cleanTargetUnit = normaliseUnitSettingsIdentifier(unitDraft.code || currentUnit?.code || unitCode);
+    const drafts = getSavedInitialSetupWizardDrafts();
+    const unitMap = readPlainWizardObject(drafts?.[unitSpecificKey]);
+    if (cleanTargetUnit && unitMap && typeof unitMap === "object" && !Array.isArray(unitMap)) {
+      const exactKey = Object.keys(unitMap).find((key) => normaliseUnitSettingsIdentifier(key) === cleanTargetUnit);
+      const exactValue = exactKey ? readPlainWizardObject(unitMap[exactKey]) : {};
+      if (Object.keys(exactValue).length > 0) return exactValue;
+    }
+    const fallback = getSavedWizardObject(fallbackKey);
+    const fallbackUnit = normaliseUnitSettingsIdentifier(fallback?.poolUnitCode || fallback?.unitCode || fallback?.unit || "");
+    if (fallbackUnit && cleanTargetUnit && fallbackUnit !== cleanTargetUnit) return {};
+    return fallback;
+  };
   const isSavedWizardFreshUnitSetup = () => wizardFreshUnitSetupActive || String(getSavedInitialSetupWizardDrafts()?.setupMode || "").trim() === "new-unit";
   const parseHydratedBuildRulesDraft = (value) => {
     const readRule = (label, fallback) => {
@@ -37318,7 +37332,7 @@ const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, lo
   }, [unitDraft.code, unitDraft.locationCode]);
   reactExports.useEffect(() => {
     if (resourceDraftDirtyRef.current || crewDraftDirtyRef.current) return;
-    const savedResourceDraft = getSavedWizardObject("resourceDraft");
+    const savedResourceDraft = getSavedWizardObjectForUnit("resourceDraftsByUnit", "resourceDraft");
     const savedCrewDraft = getSavedWizardObject("crewDraft");
     const hasSavedResourceDraft = Object.keys(savedResourceDraft).length > 0;
     const setupCompleted = Boolean(activeOrganisation?.settings?.initialSetupWizardCompletedAt) || (() => {
@@ -37347,7 +37361,7 @@ const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, lo
       aircraftCode: String(savedCrewDraft.aircraftCode || (useOperationalResourceFallback ? primaryAircraftType?.code || primaryResourcePool?.aircraftTypeCode : "") || ""),
       standardSeats: String(savedCrewDraft.standardSeats || (useOperationalResourceFallback ? formatRoleRequirementsText(getAircraftStandardSeats(primaryAircraftType)) : ""))
     });
-  }, [activeOrganisation?.settings?.initialSetupWizardDrafts?.resourceDraft, activeOrganisation?.settings?.initialSetupWizardDrafts?.crewDraft, activeOrganisation?.settings?.initialSetupWizardDraft?.resourceDraft, activeOrganisation?.settings?.initialSetupWizardDraft?.crewDraft, primaryAircraftType?.code, primaryAircraftType?.name, JSON.stringify(primaryAircraftType?.crewComposition || {}), primaryResourcePool?.name, primaryResourcePool?.unitCode, primaryResourcePool?.locationCode, primaryResourcePool?.aircraftTypeCode, JSON.stringify(primaryResourcePool?.settings || {}), currentUnit?.code, currentUnit?.locationCode, currentLocation?.code, currentLocation?.name]);
+  }, [activeOrganisation?.settings?.initialSetupWizardDrafts?.resourceDraft, activeOrganisation?.settings?.initialSetupWizardDrafts?.resourceDraftsByUnit, activeOrganisation?.settings?.initialSetupWizardDrafts?.crewDraft, activeOrganisation?.settings?.initialSetupWizardDraft?.resourceDraft, activeOrganisation?.settings?.initialSetupWizardDraft?.resourceDraftsByUnit, activeOrganisation?.settings?.initialSetupWizardDraft?.crewDraft, primaryAircraftType?.code, primaryAircraftType?.name, JSON.stringify(primaryAircraftType?.crewComposition || {}), primaryResourcePool?.name, primaryResourcePool?.unitCode, primaryResourcePool?.locationCode, primaryResourcePool?.aircraftTypeCode, JSON.stringify(primaryResourcePool?.settings || {}), currentUnit?.code, currentUnit?.locationCode, currentLocation?.code, currentLocation?.name, unitDraft.code]);
   reactExports.useEffect(() => {
     setCrewDraft((draft) => ({
       ...draft,
@@ -37405,6 +37419,15 @@ const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, lo
   };
   const buildWizardDraftSnapshot = (overrides = {}) => {
     const scoringDraftToSave = wizardPhraseBankToScoringDraft(wizardScoringPhraseBank);
+    const resourceDraftUnitKey = normaliseUnitSettingsIdentifier(unitDraft.code || resourceDraft.poolUnitCode || currentUnit?.code || unitCode);
+    const existingResourceDraftsByUnit = readPlainWizardObject(getSavedInitialSetupWizardDrafts()?.resourceDraftsByUnit);
+    const resourceDraftsByUnit = resourceDraftUnitKey ? {
+      ...existingResourceDraftsByUnit,
+      [resourceDraftUnitKey]: {
+        ...resourceDraft,
+        poolUnitCode: resourceDraftUnitKey
+      }
+    } : existingResourceDraftsByUnit;
     return {
       organisationDraft,
       unitsTodayDraft,
@@ -37414,6 +37437,7 @@ const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, lo
       unitDraft,
       unitDraftsByCode: getWizardUnitDraftMapWithCurrent(),
       resourceDraft,
+      resourceDraftsByUnit,
       crewDraft,
       accessDraft,
       trainingDraft,
@@ -37480,6 +37504,7 @@ const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, lo
           unitDraft: snapshot.unitDraft,
           unitDraftsByCode: snapshot.unitDraftsByCode,
           resourceDraft: snapshot.resourceDraft,
+          resourceDraftsByUnit: snapshot.resourceDraftsByUnit,
           crewDraft: snapshot.crewDraft,
           accessDraft: snapshot.accessDraft,
           trainingDraft: snapshot.trainingDraft,
@@ -38260,7 +38285,8 @@ const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, lo
       const aircraftExists = aircraftTypes.some((aircraft) => normaliseUnitSettingsIdentifier(aircraft?.code) === normaliseUnitSettingsIdentifier(aircraftCode));
       const targetUnitCode = normaliseUnitSettingsIdentifier(effectivePoolUnitCode);
       const existingUnitPool = resourcePools.find((pool) => String(pool?.status || "ACTIVE").toUpperCase() !== "INACTIVE" && targetUnitCode && normaliseUnitSettingsIdentifier(pool?.unitCode) === targetUnitCode);
-      const targetPool = existingUnitPool || primaryResourcePool || null;
+      const primaryPoolMatchesTargetUnit = primaryResourcePool && targetUnitCode && normaliseUnitSettingsIdentifier(primaryResourcePool?.unitCode) === targetUnitCode;
+      const targetPool = existingUnitPool || (primaryPoolMatchesTargetUnit ? primaryResourcePool : null);
       const poolKey = targetPool?.id || targetPool?.code || "";
       const generatedPoolCode = makeWizardResourcePoolCode(effectivePoolLocationCode, effectivePoolUnitCode, aircraftCode);
       const nextPool = {
@@ -38285,7 +38311,7 @@ const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, lo
           academicStandardEvents: normaliseAcademicStandardEvents(resourceDraft.academicStandardEvents)
         }
       };
-      const shouldReplacePool = (pool) => poolKey && String(pool?.id || pool?.code || "") === String(poolKey) || targetUnitCode && normaliseUnitSettingsIdentifier(pool?.unitCode) === targetUnitCode && String(pool?.status || "ACTIVE").toUpperCase() !== "INACTIVE" || String(pool?.name || "").trim().toUpperCase() === String(nextPool.name || "").trim().toUpperCase();
+      const shouldReplacePool = (pool) => poolKey && String(pool?.id || pool?.code || "") === String(poolKey) || targetUnitCode && normaliseUnitSettingsIdentifier(pool?.unitCode) === targetUnitCode && String(pool?.status || "ACTIVE").toUpperCase() !== "INACTIVE" || targetUnitCode && normaliseUnitSettingsIdentifier(pool?.unitCode) === targetUnitCode && String(pool?.name || "").trim().toUpperCase() === String(nextPool.name || "").trim().toUpperCase();
       return {
         ...baseConfig,
         aircraftTypes: aircraftExists ? aircraftTypes.map((aircraft) => normaliseUnitSettingsIdentifier(aircraft?.code) === normaliseUnitSettingsIdentifier(aircraftCode) ? { ...aircraft, name: resourceDraft.aircraftName || aircraftCode, status: aircraft.status || "ACTIVE" } : aircraft) : [...aircraftTypes, { id: createWizardRecordId("aircraft-type"), code: aircraftCode, name: resourceDraft.aircraftName || aircraftCode, category: "Other", status: "ACTIVE", crewComposition: normaliseAircraftCrewComposition(null) }],
@@ -39773,6 +39799,15 @@ const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, lo
     ].some((key) => hasMeaningfulWizardText(runbook[key], ["Production", "Not started"])) || Number.isFinite(Number(runbook.backupRetentionDays)) && Number(runbook.backupRetentionDays) !== 30 || Number.isFinite(Number(runbook.restoreTimeObjectiveHours)) && Number(runbook.restoreTimeObjectiveHours) !== 24 || Number.isFinite(Number(runbook.restorePointObjectiveHours)) && Number(runbook.restorePointObjectiveHours) !== 24 || Number.isFinite(Number(runbook.auditRetentionYears)) && Number(runbook.auditRetentionYears) !== 7;
   };
   const hasMeaningfulLicenceSettings = () => (Array.isArray(platformConfig?.licenses) ? platformConfig.licenses : []).some((license) => String(license?.status || "ACTIVE").toUpperCase() !== "INACTIVE" && (hasMeaningfulWizardText(license.licenseName) || hasMeaningfulWizardText(license.licenseKey) || hasMeaningfulWizardText(license.validUntil) || hasMeaningfulWizardText(license.offlineFingerprint)));
+  const isWizardUnitSetupCompleteForCode = (code) => {
+    const cleanCode = normaliseUnitSettingsIdentifier(code);
+    if (!cleanCode) return false;
+    const unit = activeUnits.find((candidate) => normaliseUnitSettingsIdentifier(candidate?.code) === cleanCode);
+    return Boolean(
+      unit?.settings?.initialSetupWizardCompletedAt || unit?.settings?.initialSetupCompletedAt || unit?.settings?.setupWizardCompletedAt || unit?.settings?.setupCompletedAt
+    );
+  };
+  const activeWizardUnitSetupCompleted = isWizardUnitSetupCompleteForCode(unitDraft.code || currentUnit?.code || unitCode);
   const hasMeaningfulWizardStepData = (step) => {
     switch (step.id) {
       case "analysis":
@@ -39910,7 +39945,7 @@ const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, lo
       case "ground-event-scheduling":
         return wizardGroundEventSchedulingGroups.some((group) => group.eventCodes.length > 0);
       case "review":
-        return wizardReviewComplete || initialWizardSetupCompleted || currentUnitSetupCompleted;
+        return wizardReviewComplete || initialWizardSetupCompleted || activeWizardUnitSetupCompleted;
       default:
         if (/^org-level\d+$/.test(step.id)) {
           return hasMeaningfulOrganisationLevel(Number(step.id.replace("org-level", "")));
@@ -39919,6 +39954,7 @@ const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, lo
     }
   };
   const isWizardStepComplete = (step) => {
+    if (!wizardFreshUnitSetupActive && activeWizardUnitSetupCompleted) return true;
     if (wizardFreshUnitSetupActive) return completedWizardStepIds.has(step.id);
     const hasCompleteData = hasMeaningfulWizardStepData(step);
     if (step.category === "mandatory" || step.id === "review") {
@@ -40855,6 +40891,7 @@ const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, lo
           hasTrainees: true
         },
         unitDraftsByCode: {},
+        resourceDraftsByUnit: {},
         resourceDraft: {
           aircraftCode: "",
           aircraftName: "",
@@ -40941,6 +40978,7 @@ const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, lo
           unitParents: "",
           unitDraft: unitSpecificDraftPatch.unitDraft,
           unitDraftsByCode: {},
+          resourceDraftsByUnit: {},
           resourceDraft: unitSpecificDraftPatch.resourceDraft,
           crewDraft: unitSpecificDraftPatch.crewDraft,
           accessDraft: unitSpecificDraftPatch.accessDraft,
@@ -40997,6 +41035,7 @@ const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, lo
           hasTrainees: true
         },
         unitDraftsByCode: {},
+        resourceDraftsByUnit: {},
         completedStepIds: [],
         activeStepId: "analysis",
         activeStepIndex: 0,
