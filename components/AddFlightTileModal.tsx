@@ -1924,7 +1924,7 @@ const AddFlightTileModal: React.FC<AddFlightTileModalProps> = ({
       || '';
   };
   const fixedCrewRoleGroupLabel = (staff: Instructor) => String(staff.role || staff.category || 'Staff').trim() || 'Staff';
-  const isFixedCrewPilotRole = (staff: Instructor) => /\b(PIC|Pilot)\b/i.test(fixedCrewRoleGroupLabel(staff));
+  const isFixedCrewPilotRole = (staff: Instructor) => /\b(PIC|Pilot|Captain|Crew Commander|Aircraft Commander)\b/i.test(fixedCrewRoleGroupLabel(staff));
   const compareFixedCrewMemberDisplay = (a: Instructor, b: Instructor) => {
     const aPilot = isFixedCrewPilotRole(a);
     const bPilot = isFixedCrewPilotRole(b);

@@ -7985,9 +7985,9 @@ const getInsertEventTimingDefaults = (config) => {
   return normaliseInsertEventTimingDefaults(activeOrganisation?.settings?.insertEventTimingDefaults);
 };
 const UNIT_CALLSIGN_ALLOCATION_METHOD_LABELS = {
-  permanent: "Permanent person callsign",
-  "per-flight": "New callsign each flight",
-  "user-choice": "Scheduler chooses"
+  permanent: "Issue permanent PIC callsigns",
+  "per-flight": "Use unit callsign per flight",
+  "user-choice": "Scheduler chooses unit callsign"
 };
 const UNIT_CALLSIGN_ALLOCATION_METHODS = Object.keys(
   UNIT_CALLSIGN_ALLOCATION_METHOD_LABELS
@@ -30856,8 +30856,8 @@ This removes them from DFP Resource Rows. Press Save in this section to apply th
               /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mt-4 space-y-3", children: [
                 /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded-lg border border-cyan-400/20 bg-cyan-500/10 p-3", children: [
                   /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex flex-wrap items-start justify-between gap-3", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
-                    /* @__PURE__ */ jsxRuntimeExports.jsx("h6", { className: "text-xs font-bold uppercase tracking-wide text-cyan-100", children: "Callsign Allocation Method" }),
-                    /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-1 text-xs leading-relaxed text-cyan-100/70", children: "For each unit, choose how the callsign is allocated when a flight is scheduled: permanently to a person, generated for each flight, or selected by the scheduler." })
+                    /* @__PURE__ */ jsxRuntimeExports.jsx("h6", { className: "text-xs font-bold uppercase tracking-wide text-cyan-100", children: "PIC Callsign Source" }),
+                    /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-1 text-xs leading-relaxed text-cyan-100/70", children: "DFP-NEO uses the selected PIC's profile callsign first. If that PIC has no profile callsign, choose how this unit should offer unit callsigns during scheduling." })
                   ] }) }),
                   /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mt-3 grid gap-3 md:grid-cols-2 xl:grid-cols-3", children: [
                     visibleUnitOptions.map((unitCode) => {
@@ -30869,7 +30869,7 @@ This removes them from DFP Resource Rows. Press Save in this section to apply th
                         /* @__PURE__ */ jsxRuntimeExports.jsx(
                           SelectField,
                           {
-                            label: `${label} callsign method`,
+                            label: `${label}: if the PIC has no profile callsign`,
                             value: policy.allocationMethod,
                             disabled: !canEditRankTerminology,
                             options: UNIT_CALLSIGN_ALLOCATION_METHODS,
@@ -30878,7 +30878,7 @@ This removes them from DFP Resource Rows. Press Save in this section to apply th
                           }
                         ),
                         policy.allocationMethod === "permanent" && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mt-3", children: [
-                          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-[10px] font-bold uppercase tracking-wide text-cyan-100/80", children: "Roles receiving permanent callsigns" }),
+                          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-[10px] font-bold uppercase tracking-wide text-cyan-100/80", children: "PIC roles receiving permanent callsigns" }),
                           /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-2 grid gap-1.5", children: callsignAssignableRoleOptions.map((option) => {
                             const value = option.value.trim().toUpperCase();
                             const equivalentValues = [value];
@@ -30897,7 +30897,7 @@ This removes them from DFP Resource Rows. Press Save in this section to apply th
                               /* @__PURE__ */ jsxRuntimeExports.jsx("span", { children: option.label })
                             ] }, `${unitCode}-${value}`);
                           }) }),
-                          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-2 text-[11px] leading-snug text-cyan-100/60", children: "Select one or more roles or categories. If none are selected, no individual permanent callsigns are issued." })
+                          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-2 text-[11px] leading-snug text-cyan-100/60", children: "Select the roles that act as PIC for this unit. Staff in those roles receive permanent profile callsigns." })
                         ] })
                       ] }, unitCode);
                     }),
@@ -67228,7 +67228,7 @@ const AddFlightTileModal = ({
     return fixedCrewGroups.find((group) => group === raw) || fixedCrewGroups.find((group) => fixedCrewGroupMatches(group, raw)) || "";
   };
   const fixedCrewRoleGroupLabel = (staff) => String(staff.role || staff.category || "Staff").trim() || "Staff";
-  const isFixedCrewPilotRole = (staff) => /\b(PIC|Pilot)\b/i.test(fixedCrewRoleGroupLabel(staff));
+  const isFixedCrewPilotRole = (staff) => /\b(PIC|Pilot|Captain|Crew Commander|Aircraft Commander)\b/i.test(fixedCrewRoleGroupLabel(staff));
   const compareFixedCrewMemberDisplay = (a, b) => {
     const aPilot = isFixedCrewPilotRole(a);
     const bPilot = isFixedCrewPilotRole(b);

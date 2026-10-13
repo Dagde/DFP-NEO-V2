@@ -14350,9 +14350,9 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
               <div className="rounded-lg border border-cyan-400/20 bg-cyan-500/10 p-3">
                 <div className="flex flex-wrap items-start justify-between gap-3">
                   <div>
-                    <h6 className="text-xs font-bold uppercase tracking-wide text-cyan-100">Callsign Allocation Method</h6>
+                    <h6 className="text-xs font-bold uppercase tracking-wide text-cyan-100">PIC Callsign Source</h6>
                     <p className="mt-1 text-xs leading-relaxed text-cyan-100/70">
-                      For each unit, choose how the callsign is allocated when a flight is scheduled: permanently to a person, generated for each flight, or selected by the scheduler.
+                      DFP-NEO uses the selected PIC's profile callsign first. If that PIC has no profile callsign, choose how this unit should offer unit callsigns during scheduling.
                     </p>
                   </div>
                 </div>
@@ -14365,7 +14365,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
                     return (
                       <div key={unitCode} className="rounded border border-cyan-300/15 bg-gray-950/50 p-3">
                         <SelectField
-                          label={`${label} callsign method`}
+                          label={`${label}: if the PIC has no profile callsign`}
                           value={policy.allocationMethod}
                           disabled={!canEditRankTerminology}
                           options={UNIT_CALLSIGN_ALLOCATION_METHODS}
@@ -14374,7 +14374,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
                         />
                         {policy.allocationMethod === 'permanent' && (
                           <div className="mt-3">
-                            <div className="text-[10px] font-bold uppercase tracking-wide text-cyan-100/80">Roles receiving permanent callsigns</div>
+                            <div className="text-[10px] font-bold uppercase tracking-wide text-cyan-100/80">PIC roles receiving permanent callsigns</div>
                             <div className="mt-2 grid gap-1.5">
                               {callsignAssignableRoleOptions.map((option) => {
                                 const value = option.value.trim().toUpperCase();
@@ -14399,7 +14399,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
                               })}
                             </div>
                             <div className="mt-2 text-[11px] leading-snug text-cyan-100/60">
-                              Select one or more roles or categories. If none are selected, no individual permanent callsigns are issued.
+                              Select the roles that act as PIC for this unit. Staff in those roles receive permanent profile callsigns.
                             </div>
                           </div>
                         )}
