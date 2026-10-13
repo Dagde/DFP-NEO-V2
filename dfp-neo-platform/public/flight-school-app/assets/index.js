@@ -45193,6 +45193,11 @@ const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, lo
           "platform-resource-pool-records",
           "Aircraft numbering and unavailable reasons saved into Settings.",
           {
+            activeUnitCode: wizardResourcePoolUnitCode,
+            activeUnitCodes: wizardResourcePoolUnitCode ? [wizardResourcePoolUnitCode] : [],
+            activeCompositeUnitCode: wizardResourcePoolUnitCode,
+            focusUnitCode: wizardResourcePoolUnitCode,
+            focusLocationCode: wizardResourcePoolLocationCode,
             focusAircraftTypeCode: wizardResourcePoolAircraftCode,
             focusResourcePoolCode: wizardResourcePoolCode,
             wizardResourceRowPrefill: {
