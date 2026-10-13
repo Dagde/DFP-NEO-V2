@@ -35539,7 +35539,6 @@ const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, lo
   const [wizardUnitSetupChoiceMade, setWizardUnitSetupChoiceMade] = reactExports.useState(false);
   const [wizardExistingUnitPickerOpen, setWizardExistingUnitPickerOpen] = reactExports.useState(false);
   const [wizardFreshUnitSetupActive, setWizardFreshUnitSetupActive] = reactExports.useState(false);
-  const [wizardResourceRowsAdvancedOpen, setWizardResourceRowsAdvancedOpen] = reactExports.useState(false);
   const wizardReviewAutoReturnScheduledRef = reactExports.useRef(false);
   const onInitialSetupWizardFinishedRef = reactExports.useRef(onInitialSetupWizardFinished);
   const wizardFinishTraceStorageKey = "dfp_setup_wizard_finish_trace";
@@ -39307,9 +39306,9 @@ const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, lo
     },
     {
       id: "resource-row-details",
-      title: "Review generated DFP resource rows",
-      label: "Resource row review",
-      body: "Review the DFP resource row generated from the schedule counts. Open advanced settings only if you need to adjust row details, numbering or unavailable reasons.",
+      title: "Set aircraft numbering and unavailable reasons",
+      label: "Tail numbers/reasons",
+      body: "Collect aircraft number prefixes and optional unserviceability reasons using the same DFP Resource Rows settings.",
       checkIds: ["resources"],
       category: "highly-desirable"
     },
@@ -39804,13 +39803,9 @@ const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, lo
           resourceDraft.ground
         ].every(hasPositiveWizardNumber);
       case "resource-row-details":
-        return [
-          resourceDraft.aircraft,
-          resourceDraft.sim,
-          resourceDraft.trainer,
-          resourceDraft.standby,
-          resourceDraft.ground
-        ].some(hasPositiveWizardNumber);
+        return Boolean(
+          primaryResourcePool?.settings?.aircraftNumberUsePrefix || Array.isArray(primaryResourcePool?.settings?.aircraftNumberPrefixes) && primaryResourcePool.settings.aircraftNumberPrefixes.length > 0 || Array.isArray(primaryResourcePool?.settings?.flightLineUnavailableReasonOptions) && primaryResourcePool.settings.flightLineUnavailableReasonOptions.length > 0
+        );
       case "aircraft-configs":
         return hasMeaningfulAircraftConfigDefinitions();
       case "crew":
@@ -39992,7 +39987,7 @@ const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, lo
       saveResourceSharingDraft();
       return;
     }
-    if (stepId === "resource-aircraft" || stepId === "resource-counts" || stepId === "resource-row-details") {
+    if (stepId === "resource-aircraft" || stepId === "resource-counts") {
       saveResourceDraft();
       return;
     }
@@ -42393,6 +42388,7 @@ const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, lo
       commitFlyingWindowDrafts();
     }
     const wizardSettingsSaveSteps = {
+      "resource-row-details": "Resource row setup",
       "aircraft-configs": "Aircraft CONFIG setup",
       callsigns: "Callsign settings",
       "advanced-scheduling-rules": "Scheduling rule settings",
@@ -42411,18 +42407,6 @@ const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, lo
       const saved = await saveWizardSettings();
       if (!saved) {
         setSaveMessage(`${settingsSaveLabel} changes were not saved. Review the page before continuing.`);
-        return;
-      }
-    }
-    if (visibleStep.id === "resource-row-details" && wizardResourceRowsAdvancedOpen) {
-      const saveWizardSettings = wizardPlatformSettingsSaveRef.current;
-      if (!saveWizardSettings) {
-        setSaveMessage("Advanced resource row settings are still loading. Try Next again in a moment.");
-        return;
-      }
-      const saved = await saveWizardSettings();
-      if (!saved) {
-        setSaveMessage("Advanced resource row settings were not saved. Review the page before continuing.");
         return;
       }
     }
@@ -45048,87 +45032,14 @@ const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, lo
       );
     }
     if (visibleStep.id === "resource-row-details") {
-      const resourceCounts = [
-        { label: "Aircraft", value: parseNumberDraft(resourceDraft.aircraft, 0) },
-        { label: "Simulator", value: parseNumberDraft(resourceDraft.sim, 0) },
-        { label: "Trainer", value: parseNumberDraft(resourceDraft.trainer, 0) },
-        { label: "Standby", value: parseNumberDraft(resourceDraft.standby, 0) },
-        { label: "Ground", value: parseNumberDraft(resourceDraft.ground, 0) }
-      ];
-      const generatedPoolCode = makeWizardResourcePoolCode(
-        sanitiseLegacyWizardLocationCode(unitDraft.locationCode || resourceDraft.poolLocationCode || activeWizardLocationCode || currentLocation?.code || "", shouldIgnoreLegacyWizardLocationSamples),
-        String(unitDraft.code || resourceDraft.poolUnitCode || currentUnit?.code || "").trim().toUpperCase(),
-        String(resourceDraft.aircraftCode || "").trim().toUpperCase()
-      );
       return promptShell(
-        /* @__PURE__ */ jsxRuntimeExports.jsx("p", { children: "DFP NEO has generated the DFP resource row from the counts you entered in Step 15. Review it here, then open advanced settings only if you need to adjust the generated row, numbering, or unavailable reasons." }),
-        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-4", children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded-xl border border-emerald-200 bg-emerald-50 p-4", children: [
-            /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex flex-wrap items-start justify-between gap-3", children: [
-              /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
-                /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-[10px] font-black uppercase tracking-[0.16em] text-emerald-700", children: "Generated from Step 15" }),
-                /* @__PURE__ */ jsxRuntimeExports.jsx("h5", { className: "mt-1 text-base font-black text-slate-950", children: resourceDraft.poolName || "DFP Resource Rows" }),
-                /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-1 text-xs font-semibold leading-5 text-slate-600", children: generatedPoolCode || "Resource row code will be created when this step is saved." })
-              ] }),
-              /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "rounded-full border border-emerald-300 bg-white px-3 py-1 text-xs font-black text-emerald-800", children: "Ready to save" })
-            ] }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-4 grid gap-2 md:grid-cols-5", children: resourceCounts.map((item) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded-lg border border-emerald-200 bg-white px-3 py-2", children: [
-              /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-[10px] font-black uppercase tracking-[0.12em] text-slate-500", children: item.label }),
-              /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-1 text-xl font-black text-slate-950", children: item.value })
-            ] }, item.label)) }),
-            /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mt-4 grid gap-2 text-xs font-semibold text-slate-700 md:grid-cols-3", children: [
-              /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded-lg border border-slate-200 bg-white px-3 py-2", children: [
-                /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "block text-[10px] font-black uppercase tracking-[0.12em] text-slate-500", children: "Unit" }),
-                unitDraft.code || resourceDraft.poolUnitCode || currentUnit?.code || "Not set"
-              ] }),
-              /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded-lg border border-slate-200 bg-white px-3 py-2", children: [
-                /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "block text-[10px] font-black uppercase tracking-[0.12em] text-slate-500", children: "Location" }),
-                unitDraft.locationCode || resourceDraft.poolLocationCode || activeWizardLocationCode || currentLocation?.code || "Not set"
-              ] }),
-              /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded-lg border border-slate-200 bg-white px-3 py-2", children: [
-                /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "block text-[10px] font-black uppercase tracking-[0.12em] text-slate-500", children: "Aircraft / resource" }),
-                resourceDraft.aircraftCode || resourceDraft.aircraftName || "Not set"
-              ] })
-            ] })
-          ] }),
-          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded-xl border border-slate-200 bg-white p-3", children: [
-            /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex flex-wrap items-center justify-between gap-3", children: [
-              /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
-                /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-sm font-black text-slate-950", children: "Advanced review/edit" }),
-                /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-1 text-xs font-semibold leading-5 text-slate-600", children: "Use this only if the generated row needs different naming, counts, numbering, or unavailable reason settings." })
-              ] }),
-              /* @__PURE__ */ jsxRuntimeExports.jsx(
-                "button",
-                {
-                  type: "button",
-                  className: wizardSmallButtonClass,
-                  onClick: () => setWizardResourceRowsAdvancedOpen((open) => !open),
-                  children: wizardResourceRowsAdvancedOpen ? "Hide advanced" : "Show advanced"
-                }
-              )
-            ] }),
-            wizardResourceRowsAdvancedOpen ? /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mt-4 space-y-4", children: [
-              /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid gap-3 md:grid-cols-3", children: [
-                wizardField("Aircraft type code", resourceDraft.aircraftCode, (value) => updateResourceDraft((draft) => ({ ...draft, aircraftCode: value.toUpperCase(), aircraftName: draft.aircraftName || value })), void 0, "T-6"),
-                wizardField("Aircraft type name", resourceDraft.aircraftName, (value) => updateResourceDraft((draft) => ({ ...draft, aircraftName: value })), void 0, "T-6 Texan II"),
-                wizardField("DFP Resource Rows name", resourceDraft.poolName, (value) => updateResourceDraft((draft) => ({ ...draft, poolName: value })), void 0, "DFP Resource Rows")
-              ] }),
-              /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid gap-3 md:grid-cols-5", children: [
-                wizardField("Aircraft", resourceDraft.aircraft, (value) => updateResourceDraft((draft) => ({ ...draft, aircraft: value })), void 0, "12"),
-                wizardField("Sim", resourceDraft.sim, (value) => updateResourceDraft((draft) => ({ ...draft, sim: value })), void 0, "2"),
-                wizardField("Trainer", resourceDraft.trainer, (value) => updateResourceDraft((draft) => ({ ...draft, trainer: value })), void 0, "1"),
-                wizardField("Standby Lines", resourceDraft.standby, (value) => updateResourceDraft((draft) => ({ ...draft, standby: value })), void 0, "1"),
-                wizardField("Ground Lines", resourceDraft.ground, (value) => updateResourceDraft((draft) => ({ ...draft, ground: value })), void 0, "3")
-              ] }),
-              renderWizardPlatformSettingsEmbed(
-                "platform-dfp-resource-rows",
-                "platform-resource-pool-records",
-                "Aircraft numbering and unavailable reasons saved into Settings.",
-                { focusAircraftTypeCode: resourceDraft.aircraftCode || crewDraft.aircraftCode || primaryAircraftType?.code || "" }
-              )
-            ] }) : null
-          ] })
-        ] })
+        /* @__PURE__ */ jsxRuntimeExports.jsx("p", { children: "Set aircraft numbering and optional unserviceability reasons. This uses the same DFP Resource Rows controls as Settings." }),
+        renderWizardPlatformSettingsEmbed(
+          "platform-dfp-resource-rows",
+          "platform-resource-pool-records",
+          "Aircraft numbering and unavailable reasons saved into Settings.",
+          { focusAircraftTypeCode: resourceDraft.aircraftCode || crewDraft.aircraftCode || primaryAircraftType?.code || "" }
+        )
       );
     }
     if (visibleStep.id === "aircraft-configs") {
