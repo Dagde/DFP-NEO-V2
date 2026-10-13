@@ -37422,6 +37422,9 @@ const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, lo
     const savedResourceDraft = getSavedWizardObjectForUnit("resourceDraftsByUnit", "resourceDraft");
     const savedCrewDraft = getSavedWizardObject("crewDraft");
     const hasSavedResourceDraft = Object.keys(savedResourceDraft).length > 0;
+    const cleanWizardResourceUnit = normaliseUnitSettingsIdentifier(unitDraft.code || savedResourceDraft.poolUnitCode || resourceDraft.poolUnitCode || currentUnit?.code || unitCode);
+    const matchingWizardResourcePool = activeResourcePools.find((pool) => cleanWizardResourceUnit && String(pool?.status || "ACTIVE").toUpperCase() !== "INACTIVE" && normaliseUnitSettingsIdentifier(pool?.unitCode) === cleanWizardResourceUnit) || null;
+    const matchingWizardAircraftType = matchingWizardResourcePool ? activeAircraftTypes.find((aircraft) => normaliseUnitSettingsIdentifier(aircraft?.code) === normaliseUnitSettingsIdentifier(matchingWizardResourcePool.aircraftTypeCode)) || null : null;
     const setupCompleted = Boolean(activeOrganisation?.settings?.initialSetupWizardCompletedAt) || (() => {
       try {
         return Boolean(window.localStorage.getItem(initialSetupWizardCompletedAtStorageKey));
@@ -37429,26 +37432,26 @@ const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, lo
         return false;
       }
     })();
-    const useOperationalResourceFallback = hasSavedResourceDraft || setupCompleted;
+    const useOperationalResourceFallback = hasSavedResourceDraft || Boolean(matchingWizardResourcePool && (setupCompleted || wizardFreshUnitSetupActive));
     setResourceDraft({
-      aircraftCode: String(savedResourceDraft.aircraftCode || (useOperationalResourceFallback ? primaryAircraftType?.code || primaryResourcePool?.aircraftTypeCode : "") || ""),
-      aircraftName: String(savedResourceDraft.aircraftName || (useOperationalResourceFallback ? primaryAircraftType?.name || primaryAircraftType?.code || primaryResourcePool?.aircraftTypeCode : "") || ""),
-      poolName: String(savedResourceDraft.poolName || (useOperationalResourceFallback ? primaryResourcePool?.name : "") || ""),
-      poolUnitCode: String(savedResourceDraft.poolUnitCode || (useOperationalResourceFallback ? primaryResourcePool?.unitCode : "") || currentUnit?.code || ""),
-      poolLocationCode: sanitiseLegacyWizardLocationCode(savedResourceDraft.poolLocationCode || (useOperationalResourceFallback ? primaryResourcePool?.locationCode : "") || currentUnit?.locationCode || currentLocation?.code || "", shouldIgnoreLegacyWizardLocationSamples),
-      aircraft: String(savedResourceDraft.aircraft ?? (useOperationalResourceFallback ? primaryResourcePool?.settings?.aircraft ?? primaryResourcePool?.aircraft : "") ?? ""),
-      sim: String(savedResourceDraft.sim ?? (useOperationalResourceFallback ? primaryResourcePool?.settings?.ftd ?? primaryResourcePool?.settings?.sim ?? primaryResourcePool?.ftd ?? primaryResourcePool?.sim : "") ?? ""),
-      trainer: String(savedResourceDraft.trainer ?? (useOperationalResourceFallback ? primaryResourcePool?.settings?.cpt ?? primaryResourcePool?.settings?.trainer ?? primaryResourcePool?.cpt ?? primaryResourcePool?.trainer : "") ?? ""),
-      standby: String(savedResourceDraft.standby ?? (useOperationalResourceFallback ? primaryResourcePool?.settings?.standby ?? primaryResourcePool?.standby : "") ?? ""),
-      ground: String(savedResourceDraft.ground ?? (useOperationalResourceFallback ? primaryResourcePool?.settings?.ground ?? primaryResourcePool?.ground : "") ?? ""),
-      classrooms: String(savedResourceDraft.classrooms ?? (useOperationalResourceFallback ? formatClassroomNames(primaryResourcePool?.settings?.classrooms ?? primaryResourcePool?.settings?.classroomNames) : "")),
-      academicStandardEvents: String(savedResourceDraft.academicStandardEvents ?? (useOperationalResourceFallback ? normaliseAcademicStandardEvents(primaryResourcePool?.settings?.academicStandardEvents) : ""))
+      aircraftCode: String(savedResourceDraft.aircraftCode || (useOperationalResourceFallback ? matchingWizardAircraftType?.code || matchingWizardResourcePool?.aircraftTypeCode : "") || ""),
+      aircraftName: String(savedResourceDraft.aircraftName || (useOperationalResourceFallback ? matchingWizardAircraftType?.name || matchingWizardAircraftType?.code || matchingWizardResourcePool?.aircraftTypeCode : "") || ""),
+      poolName: String(savedResourceDraft.poolName || (useOperationalResourceFallback ? matchingWizardResourcePool?.name : "") || ""),
+      poolUnitCode: String(savedResourceDraft.poolUnitCode || (useOperationalResourceFallback ? matchingWizardResourcePool?.unitCode : "") || unitDraft.code || currentUnit?.code || ""),
+      poolLocationCode: sanitiseLegacyWizardLocationCode(savedResourceDraft.poolLocationCode || (useOperationalResourceFallback ? matchingWizardResourcePool?.locationCode : "") || unitDraft.locationCode || currentUnit?.locationCode || currentLocation?.code || "", shouldIgnoreLegacyWizardLocationSamples),
+      aircraft: String(savedResourceDraft.aircraft ?? (useOperationalResourceFallback ? matchingWizardResourcePool?.settings?.aircraft ?? matchingWizardResourcePool?.aircraft : "") ?? ""),
+      sim: String(savedResourceDraft.sim ?? (useOperationalResourceFallback ? matchingWizardResourcePool?.settings?.ftd ?? matchingWizardResourcePool?.settings?.sim ?? matchingWizardResourcePool?.ftd ?? matchingWizardResourcePool?.sim : "") ?? ""),
+      trainer: String(savedResourceDraft.trainer ?? (useOperationalResourceFallback ? matchingWizardResourcePool?.settings?.cpt ?? matchingWizardResourcePool?.settings?.trainer ?? matchingWizardResourcePool?.cpt ?? matchingWizardResourcePool?.trainer : "") ?? ""),
+      standby: String(savedResourceDraft.standby ?? (useOperationalResourceFallback ? matchingWizardResourcePool?.settings?.standby ?? matchingWizardResourcePool?.standby : "") ?? ""),
+      ground: String(savedResourceDraft.ground ?? (useOperationalResourceFallback ? matchingWizardResourcePool?.settings?.ground ?? matchingWizardResourcePool?.ground : "") ?? ""),
+      classrooms: String(savedResourceDraft.classrooms ?? (useOperationalResourceFallback ? formatClassroomNames(matchingWizardResourcePool?.settings?.classrooms ?? matchingWizardResourcePool?.settings?.classroomNames) : "")),
+      academicStandardEvents: String(savedResourceDraft.academicStandardEvents ?? (useOperationalResourceFallback ? normaliseAcademicStandardEvents(matchingWizardResourcePool?.settings?.academicStandardEvents) : ""))
     });
     setCrewDraft({
-      aircraftCode: String(savedCrewDraft.aircraftCode || (useOperationalResourceFallback ? primaryAircraftType?.code || primaryResourcePool?.aircraftTypeCode : "") || ""),
-      standardSeats: String(savedCrewDraft.standardSeats || (useOperationalResourceFallback ? formatRoleRequirementsText(getAircraftStandardSeats(primaryAircraftType)) : ""))
+      aircraftCode: String(savedCrewDraft.aircraftCode || (useOperationalResourceFallback ? matchingWizardAircraftType?.code || matchingWizardResourcePool?.aircraftTypeCode : "") || ""),
+      standardSeats: String(savedCrewDraft.standardSeats || (useOperationalResourceFallback ? formatRoleRequirementsText(getAircraftStandardSeats(matchingWizardAircraftType)) : ""))
     });
-  }, [activeOrganisation?.settings?.initialSetupWizardDrafts?.resourceDraft, activeOrganisation?.settings?.initialSetupWizardDrafts?.resourceDraftsByUnit, activeOrganisation?.settings?.initialSetupWizardDrafts?.crewDraft, activeOrganisation?.settings?.initialSetupWizardDraft?.resourceDraft, activeOrganisation?.settings?.initialSetupWizardDraft?.resourceDraftsByUnit, activeOrganisation?.settings?.initialSetupWizardDraft?.crewDraft, primaryAircraftType?.code, primaryAircraftType?.name, JSON.stringify(primaryAircraftType?.crewComposition || {}), primaryResourcePool?.name, primaryResourcePool?.unitCode, primaryResourcePool?.locationCode, primaryResourcePool?.aircraftTypeCode, JSON.stringify(primaryResourcePool?.settings || {}), currentUnit?.code, currentUnit?.locationCode, currentLocation?.code, currentLocation?.name, unitDraft.code]);
+  }, [activeOrganisation?.settings?.initialSetupWizardDrafts?.resourceDraft, activeOrganisation?.settings?.initialSetupWizardDrafts?.resourceDraftsByUnit, activeOrganisation?.settings?.initialSetupWizardDrafts?.crewDraft, activeOrganisation?.settings?.initialSetupWizardDraft?.resourceDraft, activeOrganisation?.settings?.initialSetupWizardDraft?.resourceDraftsByUnit, activeOrganisation?.settings?.initialSetupWizardDraft?.crewDraft, JSON.stringify(activeResourcePools.map((pool) => [pool?.id, pool?.code, pool?.name, pool?.unitCode, pool?.locationCode, pool?.aircraftTypeCode, pool?.status, pool?.settings])), JSON.stringify(activeAircraftTypes.map((aircraft) => [aircraft?.code, aircraft?.name, aircraft?.crewComposition])), currentUnit?.code, currentUnit?.locationCode, currentLocation?.code, currentLocation?.name, unitDraft.code, unitDraft.locationCode, wizardFreshUnitSetupActive]);
   reactExports.useEffect(() => {
     setCrewDraft((draft) => ({
       ...draft,
@@ -45175,8 +45178,14 @@ const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, lo
     if (visibleStep.id === "resource-row-details") {
       const wizardResourcePoolUnitCode = String(unitDraft.code || resourceDraft.poolUnitCode || currentUnit?.code || "").trim().toUpperCase();
       const wizardResourcePoolLocationCode = sanitiseLegacyWizardLocationCode(unitDraft.locationCode || resourceDraft.poolLocationCode || activeWizardLocationCode || currentLocation?.code || "", shouldIgnoreLegacyWizardLocationSamples);
-      const wizardResourcePoolAircraftCode = String(resourceDraft.aircraftCode || crewDraft.aircraftCode || primaryAircraftType?.code || "").trim().toUpperCase();
+      const matchingWizardResourcePool = activeResourcePools.find((pool) => normaliseUnitSettingsIdentifier(pool?.unitCode) === normaliseUnitSettingsIdentifier(wizardResourcePoolUnitCode) && String(pool?.status || "ACTIVE").toUpperCase() !== "INACTIVE") || null;
+      const matchingWizardAircraftType = matchingWizardResourcePool ? activeAircraftTypes.find((aircraft) => normaliseUnitSettingsIdentifier(aircraft?.code) === normaliseUnitSettingsIdentifier(matchingWizardResourcePool.aircraftTypeCode)) || null : null;
+      const useSavedPoolPrefill = Boolean(matchingWizardResourcePool && !resourceDraftDirtyRef.current);
+      const wizardResourcePoolAircraftCode = String(
+        (useSavedPoolPrefill ? matchingWizardResourcePool?.aircraftTypeCode : "") || resourceDraft.aircraftCode || crewDraft.aircraftCode || matchingWizardAircraftType?.code || ""
+      ).trim().toUpperCase();
       const wizardResourcePoolCode = makeWizardResourcePoolCode(wizardResourcePoolLocationCode, wizardResourcePoolUnitCode, wizardResourcePoolAircraftCode);
+      const wizardResourcePoolSettings = matchingWizardResourcePool?.settings || {};
       return promptShell(
         /* @__PURE__ */ jsxRuntimeExports.jsx("p", { children: "Set aircraft numbering and optional unserviceability reasons. This uses the same DFP Resource Rows controls as Settings." }),
         renderWizardPlatformSettingsEmbed(
@@ -45192,13 +45201,13 @@ const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, lo
               locationCode: wizardResourcePoolLocationCode,
               unitCode: wizardResourcePoolUnitCode,
               aircraftTypeCode: wizardResourcePoolAircraftCode,
-              aircraft: parseNumberDraft(resourceDraft.aircraft),
-              ftd: parseNumberDraft(resourceDraft.sim),
-              cpt: parseNumberDraft(resourceDraft.trainer),
-              standby: parseNumberDraft(resourceDraft.standby),
-              ground: parseNumberDraft(resourceDraft.ground),
-              classrooms: getClassroomNamesForRows(resourceDraft.classrooms, parseNumberDraft(resourceDraft.ground)),
-              academicStandardEvents: normaliseAcademicStandardEvents(resourceDraft.academicStandardEvents)
+              aircraft: useSavedPoolPrefill ? parseNumberDraft(wizardResourcePoolSettings.aircraft) : parseNumberDraft(resourceDraft.aircraft),
+              ftd: useSavedPoolPrefill ? parseNumberDraft(wizardResourcePoolSettings.ftd ?? wizardResourcePoolSettings.sim) : parseNumberDraft(resourceDraft.sim),
+              cpt: useSavedPoolPrefill ? parseNumberDraft(wizardResourcePoolSettings.cpt ?? wizardResourcePoolSettings.trainer) : parseNumberDraft(resourceDraft.trainer),
+              standby: useSavedPoolPrefill ? parseNumberDraft(wizardResourcePoolSettings.standby) : parseNumberDraft(resourceDraft.standby),
+              ground: useSavedPoolPrefill ? parseNumberDraft(wizardResourcePoolSettings.ground) : parseNumberDraft(resourceDraft.ground),
+              classrooms: useSavedPoolPrefill ? getClassroomNamesForRows(formatClassroomNames(wizardResourcePoolSettings.classrooms ?? wizardResourcePoolSettings.classroomNames), parseNumberDraft(wizardResourcePoolSettings.ground)) : getClassroomNamesForRows(resourceDraft.classrooms, parseNumberDraft(resourceDraft.ground)),
+              academicStandardEvents: useSavedPoolPrefill ? normaliseAcademicStandardEvents(wizardResourcePoolSettings.academicStandardEvents) : normaliseAcademicStandardEvents(resourceDraft.academicStandardEvents)
             }
           }
         )
