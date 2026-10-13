@@ -3483,8 +3483,9 @@ const InitialSetupWizard: React.FC<{
     serviceDefinitions?: CourseStudentGroupDefinition[];
     onUpdateServiceDefinitions?: (defs: Array<{ longName: string; shortName: string }>) => void;
     traineeServiceOptions?: string[];
+    wizardEntryVersion?: number;
     onInitialSetupWizardFinished?: () => void | Promise<void>;
-}> = ({ platformConfig, organisationSettings, unitCode, locationCode, syllabusDetails = [], formationCallsigns = [], buildRuleSettings, flyingStartTime = 8, flyingEndTime = 17, ftdStartTime = 8, ftdEndTime = 17, cptStartTime = 8, cptEndTime = 17, allowNightFlying = true, commenceNightFlying = 18.5, ceaseNightFlying = 23.5, onUpdateFlyingStartTime, onUpdateFlyingEndTime, onUpdateFtdStartTime, onUpdateFtdEndTime, onUpdateCptStartTime, onUpdateCptEndTime, onUpdateAllowNightFlying, onUpdateCommenceNightFlying, onUpdateCeaseNightFlying, dispatchStaggerSettings = DEFAULT_DISPATCH_STAGGER_SETTINGS, onUpdateDispatchStaggerSettings, tileStatusSettings = DEFAULT_TILE_STATUS_SETTINGS, onUpdateTileStatusSettings, emergencyFreezeAuthority = DEFAULT_EMERGENCY_FREEZE_AUTHORITY, onUpdateEmergencyFreezeAuthority, emergencyFreezeAllowedActions = DEFAULT_EMERGENCY_FREEZE_ALLOWED_ACTIONS, onUpdateEmergencyFreezeAllowedActions, groundEventSchedulingSettings = DEFAULT_GROUND_EVENT_SCHEDULING_SETTINGS, onUpdateGroundEventSchedulingSettings, qualificationOptions = [], currentUserQualificationIds = [], onUpdatePlatformConfig, onNavigateToSettingsSection, currentUserPermission = 'Staff', canUsePlatformPermission, isSetupTestMode = false, onSaveSetupTestPersonnel, serviceDefinitions = [], onUpdateServiceDefinitions, traineeServiceOptions = [], onInitialSetupWizardFinished }) => {
+}> = ({ platformConfig, organisationSettings, unitCode, locationCode, syllabusDetails = [], formationCallsigns = [], buildRuleSettings, flyingStartTime = 8, flyingEndTime = 17, ftdStartTime = 8, ftdEndTime = 17, cptStartTime = 8, cptEndTime = 17, allowNightFlying = true, commenceNightFlying = 18.5, ceaseNightFlying = 23.5, onUpdateFlyingStartTime, onUpdateFlyingEndTime, onUpdateFtdStartTime, onUpdateFtdEndTime, onUpdateCptStartTime, onUpdateCptEndTime, onUpdateAllowNightFlying, onUpdateCommenceNightFlying, onUpdateCeaseNightFlying, dispatchStaggerSettings = DEFAULT_DISPATCH_STAGGER_SETTINGS, onUpdateDispatchStaggerSettings, tileStatusSettings = DEFAULT_TILE_STATUS_SETTINGS, onUpdateTileStatusSettings, emergencyFreezeAuthority = DEFAULT_EMERGENCY_FREEZE_AUTHORITY, onUpdateEmergencyFreezeAuthority, emergencyFreezeAllowedActions = DEFAULT_EMERGENCY_FREEZE_ALLOWED_ACTIONS, onUpdateEmergencyFreezeAllowedActions, groundEventSchedulingSettings = DEFAULT_GROUND_EVENT_SCHEDULING_SETTINGS, onUpdateGroundEventSchedulingSettings, qualificationOptions = [], currentUserQualificationIds = [], onUpdatePlatformConfig, onNavigateToSettingsSection, currentUserPermission = 'Staff', canUsePlatformPermission, isSetupTestMode = false, onSaveSetupTestPersonnel, serviceDefinitions = [], onUpdateServiceDefinitions, traineeServiceOptions = [], wizardEntryVersion = 0, onInitialSetupWizardFinished }) => {
     const [mode, setMode] = useState<InitialSetupWizardMode>(() => {
         if (typeof window === 'undefined') return 'detect';
         const storedStep = Number(window.localStorage.getItem(initialSetupWizardStorageKey));
@@ -4803,10 +4804,25 @@ const InitialSetupWizard: React.FC<{
                 localDraftSnapshot = {};
             }
         }
-        return {
+        const serverDrafts = {
             ...(legacyDraft && typeof legacyDraft === 'object' ? legacyDraft : {}),
             ...(drafts && typeof drafts === 'object' ? drafts : {}),
-            ...(localDraftSnapshot && typeof localDraftSnapshot === 'object' ? localDraftSnapshot : {}),
+        };
+        const getDraftUpdatedAt = (value: any) => {
+            const parsed = Date.parse(String(value?.updatedAt || value?.savedAt || ''));
+            return Number.isFinite(parsed) ? parsed : 0;
+        };
+        const serverUpdatedAt = Math.max(getDraftUpdatedAt(legacyDraft), getDraftUpdatedAt(drafts));
+        const localUpdatedAt = getDraftUpdatedAt(localDraftSnapshot);
+        const shouldUseLocalDraft = (
+            localDraftSnapshot
+            && typeof localDraftSnapshot === 'object'
+            && Object.keys(localDraftSnapshot).length > 0
+            && (serverUpdatedAt === 0 || localUpdatedAt >= serverUpdatedAt)
+        );
+        return {
+            ...serverDrafts,
+            ...(shouldUseLocalDraft ? localDraftSnapshot : {}),
         };
     };
     const buildHydratedUnitsTodayDraft = () => {
@@ -15369,6 +15385,17 @@ const InitialSetupWizard: React.FC<{
         || Boolean(unit?.settings?.initialSetupWizardCompletedAt)
         || Boolean(unit?.settings?.parentOrganisationPath)
     ));
+    const lastWizardEntryVersionRef = useRef(wizardEntryVersion);
+    useEffect(() => {
+        if (lastWizardEntryVersionRef.current === wizardEntryVersion) return;
+        lastWizardEntryVersionRef.current = wizardEntryVersion;
+        if (!hasExistingWizardUnitSetupDetails) return;
+        setWizardLaunchRequested(false);
+        setWizardUnitSetupChoiceMade(false);
+        setWizardExistingUnitPickerOpen(false);
+        setWizardFreshUnitSetupActive(false);
+        setMode('detect');
+    }, [hasExistingWizardUnitSetupDetails, wizardEntryVersion]);
     const shouldShowWizardUnitSetupChoice = (
         !wizardLaunchRequested
         && !wizardUnitSetupChoiceMade
@@ -15769,9 +15796,13 @@ const OrganisationSlideoutDiagram: React.FC<{
     const chart = useMemo(() => buildOrganisationChart(platformConfig), [platformConfig]);
     const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
     const [activeView, setActiveView] = useState<OrganisationSlideoutView>(initialView);
+    const [setupWizardEntryVersion, setSetupWizardEntryVersion] = useState(0);
     useEffect(() => {
         if (!isOpen) return;
         setActiveView(initialView);
+        if (initialView === 'setupWizard') {
+            setSetupWizardEntryVersion((version) => version + 1);
+        }
     }, [initialView, isOpen]);
     useEffect(() => {
         onInitialSetupWizardActiveChange?.(Boolean(isOpen && activeView === 'setupWizard'));
@@ -15876,7 +15907,10 @@ const OrganisationSlideoutDiagram: React.FC<{
                         data-neo-guide="initial-setup-wizard-tab"
                         type="button"
                         className={activeView === 'setupWizard' ? organisationSlideoutActiveButtonClass : organisationSlideoutInactiveButtonClass}
-                        onClick={() => setActiveView('setupWizard')}
+                        onClick={() => {
+                            setActiveView('setupWizard');
+                            setSetupWizardEntryVersion((version) => version + 1);
+                        }}
                     >
                         Initial Setup Wizard
                     </button>
@@ -15974,6 +16008,7 @@ const OrganisationSlideoutDiagram: React.FC<{
                         serviceDefinitions={serviceDefinitions}
                         onUpdateServiceDefinitions={onUpdateServiceDefinitions}
                         traineeServiceOptions={traineeServiceOptions}
+                        wizardEntryVersion={setupWizardEntryVersion}
                         onInitialSetupWizardFinished={onInitialSetupWizardFinished}
                     />
                 </div>

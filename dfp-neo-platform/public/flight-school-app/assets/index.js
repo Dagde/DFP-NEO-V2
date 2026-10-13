@@ -35413,7 +35413,7 @@ const WizardFlyingWindowTimeInput = React.memo(({
     }
   );
 });
-const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, locationCode, syllabusDetails = [], formationCallsigns = [], buildRuleSettings, flyingStartTime = 8, flyingEndTime = 17, ftdStartTime = 8, ftdEndTime = 17, cptStartTime = 8, cptEndTime = 17, allowNightFlying = true, commenceNightFlying = 18.5, ceaseNightFlying = 23.5, onUpdateFlyingStartTime, onUpdateFlyingEndTime, onUpdateFtdStartTime, onUpdateFtdEndTime, onUpdateCptStartTime, onUpdateCptEndTime, onUpdateAllowNightFlying, onUpdateCommenceNightFlying, onUpdateCeaseNightFlying, dispatchStaggerSettings = DEFAULT_DISPATCH_STAGGER_SETTINGS, onUpdateDispatchStaggerSettings, tileStatusSettings = DEFAULT_TILE_STATUS_SETTINGS, onUpdateTileStatusSettings, emergencyFreezeAuthority = DEFAULT_EMERGENCY_FREEZE_AUTHORITY, onUpdateEmergencyFreezeAuthority, emergencyFreezeAllowedActions = DEFAULT_EMERGENCY_FREEZE_ALLOWED_ACTIONS, onUpdateEmergencyFreezeAllowedActions, groundEventSchedulingSettings = DEFAULT_GROUND_EVENT_SCHEDULING_SETTINGS, onUpdateGroundEventSchedulingSettings, qualificationOptions = [], currentUserQualificationIds = [], onUpdatePlatformConfig, onNavigateToSettingsSection, currentUserPermission = "Staff", canUsePlatformPermission, isSetupTestMode: isSetupTestMode$1 = false, onSaveSetupTestPersonnel, serviceDefinitions = [], onUpdateServiceDefinitions, traineeServiceOptions = [], onInitialSetupWizardFinished }) => {
+const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, locationCode, syllabusDetails = [], formationCallsigns = [], buildRuleSettings, flyingStartTime = 8, flyingEndTime = 17, ftdStartTime = 8, ftdEndTime = 17, cptStartTime = 8, cptEndTime = 17, allowNightFlying = true, commenceNightFlying = 18.5, ceaseNightFlying = 23.5, onUpdateFlyingStartTime, onUpdateFlyingEndTime, onUpdateFtdStartTime, onUpdateFtdEndTime, onUpdateCptStartTime, onUpdateCptEndTime, onUpdateAllowNightFlying, onUpdateCommenceNightFlying, onUpdateCeaseNightFlying, dispatchStaggerSettings = DEFAULT_DISPATCH_STAGGER_SETTINGS, onUpdateDispatchStaggerSettings, tileStatusSettings = DEFAULT_TILE_STATUS_SETTINGS, onUpdateTileStatusSettings, emergencyFreezeAuthority = DEFAULT_EMERGENCY_FREEZE_AUTHORITY, onUpdateEmergencyFreezeAuthority, emergencyFreezeAllowedActions = DEFAULT_EMERGENCY_FREEZE_ALLOWED_ACTIONS, onUpdateEmergencyFreezeAllowedActions, groundEventSchedulingSettings = DEFAULT_GROUND_EVENT_SCHEDULING_SETTINGS, onUpdateGroundEventSchedulingSettings, qualificationOptions = [], currentUserQualificationIds = [], onUpdatePlatformConfig, onNavigateToSettingsSection, currentUserPermission = "Staff", canUsePlatformPermission, isSetupTestMode: isSetupTestMode$1 = false, onSaveSetupTestPersonnel, serviceDefinitions = [], onUpdateServiceDefinitions, traineeServiceOptions = [], wizardEntryVersion = 0, onInitialSetupWizardFinished }) => {
   const [mode, setMode] = reactExports.useState(() => {
     if (typeof window === "undefined") return "detect";
     const storedStep = Number(window.localStorage.getItem(initialSetupWizardStorageKey));
@@ -36556,10 +36556,20 @@ const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, lo
         localDraftSnapshot = {};
       }
     }
-    return {
+    const serverDrafts = {
       ...legacyDraft && typeof legacyDraft === "object" ? legacyDraft : {},
-      ...drafts && typeof drafts === "object" ? drafts : {},
-      ...localDraftSnapshot && typeof localDraftSnapshot === "object" ? localDraftSnapshot : {}
+      ...drafts && typeof drafts === "object" ? drafts : {}
+    };
+    const getDraftUpdatedAt = (value) => {
+      const parsed = Date.parse(String(value?.updatedAt || value?.savedAt || ""));
+      return Number.isFinite(parsed) ? parsed : 0;
+    };
+    const serverUpdatedAt = Math.max(getDraftUpdatedAt(legacyDraft), getDraftUpdatedAt(drafts));
+    const localUpdatedAt = getDraftUpdatedAt(localDraftSnapshot);
+    const shouldUseLocalDraft = localDraftSnapshot && typeof localDraftSnapshot === "object" && Object.keys(localDraftSnapshot).length > 0 && (serverUpdatedAt === 0 || localUpdatedAt >= serverUpdatedAt);
+    return {
+      ...serverDrafts,
+      ...shouldUseLocalDraft ? localDraftSnapshot : {}
     };
   };
   const buildHydratedUnitsTodayDraft = () => {
@@ -45747,6 +45757,17 @@ Classrooms: ${classroomNames.join(", ")}` : ""}`;
     );
   };
   const hasExistingWizardUnitSetupDetails = activeUnits.some((unit) => normaliseUnitSettingsIdentifier(unit?.code) || String(unit?.name || "").trim() || String(unit?.locationCode || "").trim() || Boolean(unit?.settings?.initialSetupWizardCompletedAt) || Boolean(unit?.settings?.parentOrganisationPath));
+  const lastWizardEntryVersionRef = reactExports.useRef(wizardEntryVersion);
+  reactExports.useEffect(() => {
+    if (lastWizardEntryVersionRef.current === wizardEntryVersion) return;
+    lastWizardEntryVersionRef.current = wizardEntryVersion;
+    if (!hasExistingWizardUnitSetupDetails) return;
+    setWizardLaunchRequested(false);
+    setWizardUnitSetupChoiceMade(false);
+    setWizardExistingUnitPickerOpen(false);
+    setWizardFreshUnitSetupActive(false);
+    setMode("detect");
+  }, [hasExistingWizardUnitSetupDetails, wizardEntryVersion]);
   const shouldShowWizardUnitSetupChoice = !wizardLaunchRequested && !wizardUnitSetupChoiceMade && hasExistingWizardUnitSetupDetails;
   const existingWizardUnitSetupRows = activeUnits.filter((unit) => normaliseUnitSettingsIdentifier(unit?.code) || String(unit?.name || "").trim() || String(unit?.locationCode || "").trim() || Boolean(unit?.settings?.initialSetupWizardCompletedAt) || Boolean(unit?.settings?.parentOrganisationPath)).map((unit) => {
     const unitCodeLabel = String(unit?.code || "").trim().toUpperCase();
@@ -46016,9 +46037,13 @@ const OrganisationSlideoutDiagram = ({ platformConfig, organisationSettings, uni
   const chart = reactExports.useMemo(() => buildOrganisationChart(platformConfig), [platformConfig]);
   const [selectedNodeId, setSelectedNodeId] = reactExports.useState(null);
   const [activeView, setActiveView] = reactExports.useState(initialView);
+  const [setupWizardEntryVersion, setSetupWizardEntryVersion] = reactExports.useState(0);
   reactExports.useEffect(() => {
     if (!isOpen) return;
     setActiveView(initialView);
+    if (initialView === "setupWizard") {
+      setSetupWizardEntryVersion((version) => version + 1);
+    }
   }, [initialView, isOpen]);
   reactExports.useEffect(() => {
     onInitialSetupWizardActiveChange?.(Boolean(isOpen && activeView === "setupWizard"));
@@ -46122,7 +46147,10 @@ const OrganisationSlideoutDiagram = ({ platformConfig, organisationSettings, uni
             "data-neo-guide": "initial-setup-wizard-tab",
             type: "button",
             className: activeView === "setupWizard" ? organisationSlideoutActiveButtonClass : organisationSlideoutInactiveButtonClass,
-            onClick: () => setActiveView("setupWizard"),
+            onClick: () => {
+              setActiveView("setupWizard");
+              setSetupWizardEntryVersion((version) => version + 1);
+            },
             children: "Initial Setup Wizard"
           }
         )
@@ -46215,6 +46243,7 @@ const OrganisationSlideoutDiagram = ({ platformConfig, organisationSettings, uni
         serviceDefinitions,
         onUpdateServiceDefinitions,
         traineeServiceOptions,
+        wizardEntryVersion: setupWizardEntryVersion,
         onInitialSetupWizardFinished
       }
     ) })
