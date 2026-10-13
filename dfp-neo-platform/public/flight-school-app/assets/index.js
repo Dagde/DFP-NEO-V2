@@ -28370,7 +28370,7 @@ This removes them from DFP Resource Rows. Press Save in this section to apply th
                       /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: resourceSectionPanelClass, children: [
                         /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: resourceSectionPanelHeaderClass, children: [
                           /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
-                            /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: wizardEditMode ? `${resourceSectionPanelTitleClass} !text-white` : resourceSectionPanelTitleClass, children: [
+                            /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: resourceSectionPanelTitleClass, style: wizardEditMode ? { color: "#ffffff", WebkitTextFillColor: "#ffffff" } : void 0, children: [
                               pool.settings?.aircraftLabel || "Aircraft",
                               " Numbering"
                             ] }),
