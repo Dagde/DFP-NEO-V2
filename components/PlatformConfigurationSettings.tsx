@@ -14231,7 +14231,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
             <div className="flex flex-wrap items-start justify-between gap-3">
               <div>
                 <h5 className="text-sm font-bold text-emerald-100">Personnel Qualifications</h5>
-                <p className="mt-1 text-xs leading-relaxed text-emerald-100/75">
+                <p className={wizardEditMode ? 'mt-1 text-xs leading-relaxed text-slate-700' : 'mt-1 text-xs leading-relaxed text-emerald-100/75'}>
                   Define model-specific qualifications such as PIC, Crew Commander, or Operational Captain. Staff and trainee profile qualification options are drawn from this list.
                 </p>
               </div>
