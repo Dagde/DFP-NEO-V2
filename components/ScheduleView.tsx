@@ -14622,13 +14622,34 @@ const InitialSetupWizard: React.FC<{
             );
         }
         if (visibleStep.id === 'resource-row-details') {
+            const wizardResourcePoolUnitCode = String(unitDraft.code || resourceDraft.poolUnitCode || currentUnit?.code || '').trim().toUpperCase();
+            const wizardResourcePoolLocationCode = sanitiseLegacyWizardLocationCode(unitDraft.locationCode || resourceDraft.poolLocationCode || activeWizardLocationCode || currentLocation?.code || '', shouldIgnoreLegacyWizardLocationSamples);
+            const wizardResourcePoolAircraftCode = String(resourceDraft.aircraftCode || crewDraft.aircraftCode || primaryAircraftType?.code || '').trim().toUpperCase();
+            const wizardResourcePoolCode = makeWizardResourcePoolCode(wizardResourcePoolLocationCode, wizardResourcePoolUnitCode, wizardResourcePoolAircraftCode);
             return promptShell(
                 <p>Set aircraft numbering and optional unserviceability reasons. This uses the same DFP Resource Rows controls as Settings.</p>,
                 renderWizardPlatformSettingsEmbed(
                     'platform-dfp-resource-rows',
                     'platform-resource-pool-records',
                     'Aircraft numbering and unavailable reasons saved into Settings.',
-                    { focusAircraftTypeCode: resourceDraft.aircraftCode || crewDraft.aircraftCode || primaryAircraftType?.code || '' },
+                    {
+                        focusAircraftTypeCode: wizardResourcePoolAircraftCode,
+                        focusResourcePoolCode: wizardResourcePoolCode,
+                        wizardResourceRowPrefill: {
+                            poolCode: wizardResourcePoolCode,
+                            poolName: resourceDraft.poolName,
+                            locationCode: wizardResourcePoolLocationCode,
+                            unitCode: wizardResourcePoolUnitCode,
+                            aircraftTypeCode: wizardResourcePoolAircraftCode,
+                            aircraft: parseNumberDraft(resourceDraft.aircraft),
+                            ftd: parseNumberDraft(resourceDraft.sim),
+                            cpt: parseNumberDraft(resourceDraft.trainer),
+                            standby: parseNumberDraft(resourceDraft.standby),
+                            ground: parseNumberDraft(resourceDraft.ground),
+                            classrooms: getClassroomNamesForRows(resourceDraft.classrooms, parseNumberDraft(resourceDraft.ground)),
+                            academicStandardEvents: normaliseAcademicStandardEvents(resourceDraft.academicStandardEvents),
+                        },
+                    },
                 ),
             );
         }

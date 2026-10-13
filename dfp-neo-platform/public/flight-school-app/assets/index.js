@@ -20604,6 +20604,7 @@ const PlatformConfigurationSettings = ({
   focusLocationCode = "",
   focusResourcePoolCode = "",
   focusAircraftTypeCode = "",
+  wizardResourceRowPrefill,
   focusUserId = "",
   focusSubsectionId = "",
   onNavigateToSettingsSection,
@@ -20756,6 +20757,7 @@ const PlatformConfigurationSettings = ({
   const standardCrewCompositionRef = reactExports.useRef(null);
   const resourcePoolExitPromptOpenRef = reactExports.useRef(false);
   const resourcePoolEditBaselineRef = reactExports.useRef(null);
+  const appliedWizardResourceRowPrefillKeyRef = reactExports.useRef("");
   const settingsTraceRef = reactExports.useRef({
     mountedAtIso: (/* @__PURE__ */ new Date()).toISOString(),
     mountedAtMs: getTraceNow(),
@@ -24463,6 +24465,91 @@ This removes it from the master list and from every user assignment that current
     if (scrollTarget !== "platform-dfp-resource-rows" && scrollTarget !== "platform-aircraft-setup") return;
     enterResourcePoolsEditMode();
   }, [loading, resourcePoolsUnlocked, scrollTarget, wizardEditMode]);
+  reactExports.useEffect(() => {
+    if (!wizardEditMode || loading || scrollTarget !== "platform-dfp-resource-rows" || !wizardResourceRowPrefill) return;
+    const normaliseCode2 = (value) => String(value || "").trim().toUpperCase();
+    const cleanUnitCode = normaliseCode2(wizardResourceRowPrefill.unitCode || (Array.isArray(activeUnitCodes) ? activeUnitCodes[0] : "") || activeUnitCode);
+    const cleanLocationCode = normaliseCode2(wizardResourceRowPrefill.locationCode || focusLocationCode);
+    const cleanAircraftTypeCode = normaliseCode2(wizardResourceRowPrefill.aircraftTypeCode);
+    if (!cleanUnitCode || !cleanAircraftTypeCode) return;
+    const cleanPoolCode = normaliseCode2(wizardResourceRowPrefill.poolCode || focusResourcePoolCode || [cleanLocationCode, cleanUnitCode, cleanAircraftTypeCode, "ROWS"].filter(Boolean).join("-"));
+    const rowCounts = {
+      aircraft: Math.max(0, Math.floor(Number(wizardResourceRowPrefill.aircraft) || 0)),
+      ftd: Math.max(0, Math.floor(Number(wizardResourceRowPrefill.ftd) || 0)),
+      cpt: Math.max(0, Math.floor(Number(wizardResourceRowPrefill.cpt) || 0)),
+      standby: Math.max(0, Math.floor(Number(wizardResourceRowPrefill.standby) || 0)),
+      ground: Math.max(0, Math.floor(Number(wizardResourceRowPrefill.ground) || 0)),
+      dutySupervisor: 0,
+      towerDutyInstructor: 0
+    };
+    const prefillKey = JSON.stringify({
+      pool: cleanPoolCode,
+      unit: cleanUnitCode,
+      location: cleanLocationCode,
+      aircraftType: cleanAircraftTypeCode,
+      rows: rowCounts
+    });
+    if (appliedWizardResourceRowPrefillKeyRef.current === prefillKey) return;
+    appliedWizardResourceRowPrefillKeyRef.current = prefillKey;
+    setConfig((prev) => {
+      const previousPools = Array.isArray(prev.resourcePools) ? prev.resourcePools : [];
+      const poolIndex = previousPools.findIndex((pool) => {
+        const poolKeys = [pool?.id, pool?.code, pool?.name].map(normaliseCode2).filter(Boolean);
+        if (cleanPoolCode && poolKeys.includes(cleanPoolCode)) return true;
+        return normaliseCode2(pool?.unitCode) === cleanUnitCode && normaliseCode2(pool?.aircraftTypeCode) === cleanAircraftTypeCode && (!cleanLocationCode || normaliseCode2(pool?.locationCode) === cleanLocationCode) && String(pool?.status || "ACTIVE").toUpperCase() !== "INACTIVE";
+      });
+      const previousOrganisations = Array.isArray(prev.organisations) ? prev.organisations : [];
+      const selectedAircraftType = (Array.isArray(prev.aircraftTypes) ? prev.aircraftTypes : []).find((aircraft) => normaliseCode2(aircraft?.code) === cleanAircraftTypeCode);
+      const aircraftLabel = String(selectedAircraftType?.name || selectedAircraftType?.code || cleanAircraftTypeCode).trim();
+      const mergePoolSettings = (settings = {}) => ({
+        ...buildDfpResourceRowsSettings(settings, rowCounts),
+        aircraftLabel: String(settings.aircraftLabel || aircraftLabel).trim(),
+        classrooms: Array.isArray(wizardResourceRowPrefill.classrooms) ? wizardResourceRowPrefill.classrooms : settings.classrooms,
+        academicStandardEvents: Array.isArray(wizardResourceRowPrefill.academicStandardEvents) ? wizardResourceRowPrefill.academicStandardEvents : settings.academicStandardEvents
+      });
+      if (poolIndex >= 0) {
+        const nextPools = previousPools.map((pool, index) => index === poolIndex ? {
+          ...pool,
+          code: pool.code || cleanPoolCode,
+          name: String(pool.name || wizardResourceRowPrefill.poolName || `${cleanUnitCode} ${aircraftLabel} Resource Rows`).trim(),
+          locationCode: cleanLocationCode || pool.locationCode,
+          unitCode: cleanUnitCode,
+          aircraftTypeCode: cleanAircraftTypeCode,
+          settings: mergePoolSettings(pool.settings || {})
+        } : pool);
+        const targetPool = nextPools[poolIndex];
+        pendingResourcePoolScrollIdRef.current = targetPool?.id || null;
+        return { ...prev, resourcePools: nextPools };
+      }
+      const newPoolId = createClientRecordId("pool");
+      pendingResourcePoolScrollIdRef.current = newPoolId;
+      return {
+        ...prev,
+        resourcePools: [
+          ...previousPools,
+          {
+            id: newPoolId,
+            code: cleanPoolCode,
+            name: String(wizardResourceRowPrefill.poolName || `${cleanUnitCode} ${aircraftLabel} Resource Rows`).trim(),
+            organisationCode: previousOrganisations[0]?.code || "",
+            locationCode: cleanLocationCode,
+            unitCode: cleanUnitCode,
+            aircraftTypeCode: cleanAircraftTypeCode,
+            poolType: "Dedicated",
+            status: "ACTIVE",
+            settings: mergePoolSettings({
+              applyToV2Runtime: true,
+              aircraftNumberUsePrefix: true,
+              aircraftNumberPrefixes: [],
+              aircraftNumberDefaultPrefix: "",
+              ftdLabel: "Simulator",
+              cptLabel: "Procedural Trainer"
+            })
+          }
+        ]
+      };
+    });
+  }, [activeUnitCode, activeUnitCodes, focusLocationCode, focusResourcePoolCode, loading, scrollTarget, wizardEditMode, wizardResourceRowPrefill]);
   const buildResourceRowSavePlan = (candidateConfig = config, baselineConfig = loadedConfigRef.current) => {
     const today = getLocalDateString();
     const tomorrow = getLocalDateString(1);
@@ -45086,13 +45173,34 @@ const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, lo
       );
     }
     if (visibleStep.id === "resource-row-details") {
+      const wizardResourcePoolUnitCode = String(unitDraft.code || resourceDraft.poolUnitCode || currentUnit?.code || "").trim().toUpperCase();
+      const wizardResourcePoolLocationCode = sanitiseLegacyWizardLocationCode(unitDraft.locationCode || resourceDraft.poolLocationCode || activeWizardLocationCode || currentLocation?.code || "", shouldIgnoreLegacyWizardLocationSamples);
+      const wizardResourcePoolAircraftCode = String(resourceDraft.aircraftCode || crewDraft.aircraftCode || primaryAircraftType?.code || "").trim().toUpperCase();
+      const wizardResourcePoolCode = makeWizardResourcePoolCode(wizardResourcePoolLocationCode, wizardResourcePoolUnitCode, wizardResourcePoolAircraftCode);
       return promptShell(
         /* @__PURE__ */ jsxRuntimeExports.jsx("p", { children: "Set aircraft numbering and optional unserviceability reasons. This uses the same DFP Resource Rows controls as Settings." }),
         renderWizardPlatformSettingsEmbed(
           "platform-dfp-resource-rows",
           "platform-resource-pool-records",
           "Aircraft numbering and unavailable reasons saved into Settings.",
-          { focusAircraftTypeCode: resourceDraft.aircraftCode || crewDraft.aircraftCode || primaryAircraftType?.code || "" }
+          {
+            focusAircraftTypeCode: wizardResourcePoolAircraftCode,
+            focusResourcePoolCode: wizardResourcePoolCode,
+            wizardResourceRowPrefill: {
+              poolCode: wizardResourcePoolCode,
+              poolName: resourceDraft.poolName,
+              locationCode: wizardResourcePoolLocationCode,
+              unitCode: wizardResourcePoolUnitCode,
+              aircraftTypeCode: wizardResourcePoolAircraftCode,
+              aircraft: parseNumberDraft(resourceDraft.aircraft),
+              ftd: parseNumberDraft(resourceDraft.sim),
+              cpt: parseNumberDraft(resourceDraft.trainer),
+              standby: parseNumberDraft(resourceDraft.standby),
+              ground: parseNumberDraft(resourceDraft.ground),
+              classrooms: getClassroomNamesForRows(resourceDraft.classrooms, parseNumberDraft(resourceDraft.ground)),
+              academicStandardEvents: normaliseAcademicStandardEvents(resourceDraft.academicStandardEvents)
+            }
+          }
         )
       );
     }
