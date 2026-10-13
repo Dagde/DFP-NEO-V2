@@ -4697,6 +4697,7 @@ async function repairNewCustomerTestSetupRegressionIfNeeded(db, req) {
   const structure = settings.organisationStructure || {};
   const levels = Array.isArray(structure.levels) ? structure.levels : [];
   const relationshipPaths = Array.isArray(structure.relationshipPaths) ? structure.relationshipPaths : [];
+  const rootOrganisationOption = String(levels?.[0]?.options?.[0] || '').trim();
   const unitRows = await db.$queryRawUnsafe(`SELECT "code", "settings" FROM "CommercialUnit" WHERE "code" IN ('285FTS', '286FTS')`);
   const hasRepairUnitRows = Array.isArray(unitRows) && unitRows.some((unit) => String(unit?.code || '').toUpperCase() === '285FTS');
   const hasRepairedUnitParentPath = Array.isArray(unitRows) && unitRows.some((unit) => (
@@ -4704,15 +4705,15 @@ async function repairNewCustomerTestSetupRegressionIfNeeded(db, req) {
     && unit.settings.parentOrganisationPath.includes('Blueteam Air Force')
     && unit.settings.parentOrganisationPath.includes('Air Training Command')
   ));
+  const hasBlueteamStructure = (
+    rootOrganisationOption === 'Blueteam Air Force'
+    || relationshipPaths.some((path) => Array.isArray(path) && path.includes('Blueteam Air Force') && path.includes('Air Training Command'))
+  );
   const looksCorrupted = (
     String(organisation.code || '') === 'ORG'
     && String(organisation.name || '') === 'Organisation'
-    && levels.length <= 2
     && hasRepairUnitRows
-    && (
-      hasRepairedUnitParentPath
-      || relationshipPaths.some((path) => Array.isArray(path) && path.includes('Blueteam Air Force') && path.includes('Air Training Command'))
-    )
+    && (hasRepairedUnitParentPath || hasBlueteamStructure)
   );
   if (!looksCorrupted) return;
 
