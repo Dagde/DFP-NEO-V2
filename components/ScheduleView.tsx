@@ -15370,8 +15370,7 @@ const InitialSetupWizard: React.FC<{
         || Boolean(unit?.settings?.parentOrganisationPath)
     ));
     const shouldShowWizardUnitSetupChoice = (
-        !isSetupTestMode
-        && !wizardLaunchRequested
+        !wizardLaunchRequested
         && !wizardUnitSetupChoiceMade
         && hasExistingWizardUnitSetupDetails
     );

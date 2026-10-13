@@ -4586,11 +4586,239 @@ function recordSecurityAuditEvent(req, eventType, severity, summary, details = {
     .catch((error) => console.warn('⚠️ Security audit event could not be queued:', error.message));
 }
 
+const NEW_CUSTOMER_TEST_ORG_STRUCTURE_REPAIR = {
+  levels: [
+    {
+      name: 'Organisation',
+      options: ['Blueteam Air Force'],
+      levelIndex: 0,
+      parentByChild: {},
+      childrenByParent: {},
+    },
+    {
+      name: 'Organisation Level 1',
+      options: ['Air Component Command'],
+      levelIndex: 1,
+      parentByChild: { 'Air Component Command': 'Blueteam Air Force' },
+      childrenByParent: { 'Blueteam Air Force': ['Air Component Command'] },
+    },
+    {
+      name: 'Organisation Level 2',
+      options: ['Air Combat Command', 'Air Surveillance Command', 'Air Training Command', 'Air Transport Command'],
+      levelIndex: 2,
+      parentByChild: {
+        'Air Combat Command': 'Air Component Command',
+        'Air Surveillance Command': 'Air Component Command',
+        'Air Training Command': 'Air Component Command',
+        'Air Transport Command': 'Air Component Command',
+      },
+      childrenByParent: {
+        'Air Component Command': ['Air Combat Command', 'Air Surveillance Command', 'Air Training Command', 'Air Transport Command'],
+      },
+    },
+    {
+      name: 'Organisation Level 3',
+      options: ['20 Air Combat Wing', '21 Air Combat Wing', '40 Air Surveillance Wing', '41 Air Surveillance Wing', '10 Air Training Wing', '11 Air Training Wing', '30 Air Transport Wing', '31 Air Transport Wing'],
+      levelIndex: 3,
+      parentByChild: {
+        '20 Air Combat Wing': 'Air Combat Command',
+        '21 Air Combat Wing': 'Air Combat Command',
+        '40 Air Surveillance Wing': 'Air Surveillance Command',
+        '41 Air Surveillance Wing': 'Air Surveillance Command',
+        '10 Air Training Wing': 'Air Training Command',
+        '11 Air Training Wing': 'Air Training Command',
+        '30 Air Transport Wing': 'Air Transport Command',
+        '31 Air Transport Wing': 'Air Transport Command',
+      },
+      childrenByParent: {
+        'Air Combat Command': ['20 Air Combat Wing', '21 Air Combat Wing'],
+        'Air Surveillance Command': ['40 Air Surveillance Wing', '41 Air Surveillance Wing'],
+        'Air Training Command': ['10 Air Training Wing', '11 Air Training Wing'],
+        'Air Transport Command': ['30 Air Transport Wing', '31 Air Transport Wing'],
+      },
+    },
+  ],
+  levelCount: 4,
+  relationshipPaths: [
+    ['Blueteam Air Force', 'Air Component Command', 'Air Combat Command', '20 Air Combat Wing'],
+    ['Blueteam Air Force', 'Air Component Command', 'Air Combat Command', '21 Air Combat Wing'],
+    ['Blueteam Air Force', 'Air Component Command', 'Air Surveillance Command', '40 Air Surveillance Wing'],
+    ['Blueteam Air Force', 'Air Component Command', 'Air Surveillance Command', '41 Air Surveillance Wing'],
+    ['Blueteam Air Force', 'Air Component Command', 'Air Training Command', '10 Air Training Wing'],
+    ['Blueteam Air Force', 'Air Component Command', 'Air Training Command', '11 Air Training Wing'],
+    ['Blueteam Air Force', 'Air Component Command', 'Air Transport Command', '30 Air Transport Wing'],
+    ['Blueteam Air Force', 'Air Component Command', 'Air Transport Command', '31 Air Transport Wing'],
+  ],
+};
+
+const NEW_CUSTOMER_TEST_ORG_DRAFT_REPAIR = {
+  code: 'BAF',
+  name: 'Blueteam Air Force',
+  level0Name: 'Organisation',
+  level1Name: 'Organisation Level 1',
+  level2Name: 'Organisation Level 2',
+  level3Name: 'Organisation Level 3',
+  level0Options: 'Blueteam Air Force',
+  level1Options: 'Air Component Command',
+  level1Parents: 'Air Component Command = Blueteam Air Force',
+  level2Options: 'Air Combat Command\nAir Surveillance Command\nAir Training Command\nAir Transport Command',
+  level2Parents: 'Air Combat Command = Air Component Command\nAir Surveillance Command = Air Component Command\nAir Training Command = Air Component Command\nAir Transport Command = Air Component Command',
+  level3Options: '20 Air Combat Wing\n21 Air Combat Wing\n40 Air Surveillance Wing\n41 Air Surveillance Wing\n10 Air Training Wing\n11 Air Training Wing\n30 Air Transport Wing\n31 Air Transport Wing',
+  level3Parents: '20 Air Combat Wing = Air Combat Command\n21 Air Combat Wing = Air Combat Command\n40 Air Surveillance Wing = Air Surveillance Command\n41 Air Surveillance Wing = Air Surveillance Command\n10 Air Training Wing = Air Training Command\n11 Air Training Wing = Air Training Command\n30 Air Transport Wing = Air Transport Command\n31 Air Transport Wing = Air Transport Command',
+  additionalLevels: [],
+  organisationLevelCount: 3,
+};
+
+const NEW_CUSTOMER_TEST_PARENT_PATH_REPAIR = ['Blueteam Air Force', 'Air Component Command', 'Air Training Command', '10 Air Training Wing'];
+const NEW_CUSTOMER_TEST_COMPLETED_STEPS_REPAIR = [
+  'analysis',
+  'org-name',
+  'org-level1',
+  'org-level2',
+  'org-level3',
+  'locations-today',
+  'location-details',
+  'units-today',
+  'unit-model',
+  'unit-modules',
+  'ranks-labels',
+  'course-student-groups',
+  'crew-roles',
+  'resource-aircraft',
+  'resource-counts',
+];
+
+async function repairNewCustomerTestSetupRegressionIfNeeded(db, req) {
+  if (!String(getRequestHostName(req)).includes('new-customer-test')) return;
+  const organisations = await db.$queryRawUnsafe(`SELECT "code", "name", "settings" FROM "CommercialOrganisation" ORDER BY "updatedAt" DESC LIMIT 1`);
+  const organisation = organisations?.[0];
+  if (!organisation) return;
+  const settings = organisation.settings || {};
+  const structure = settings.organisationStructure || {};
+  const levels = Array.isArray(structure.levels) ? structure.levels : [];
+  const relationshipPaths = Array.isArray(structure.relationshipPaths) ? structure.relationshipPaths : [];
+  const draftStepIds = settings.initialSetupWizardDrafts?.completedStepIds;
+  const looksCorrupted = (
+    String(organisation.code || '') === 'ORG'
+    && String(organisation.name || '') === 'Organisation'
+    && levels.length <= 2
+    && relationshipPaths.some((path) => Array.isArray(path) && path.includes('Blueteam Air Force') && path.includes('Air Training Command'))
+    && Array.isArray(draftStepIds)
+    && draftStepIds.length === 0
+  );
+  if (!looksCorrupted) return;
+
+  const now = new Date().toISOString();
+  const unitParentText = `286FTS = ${NEW_CUSTOMER_TEST_PARENT_PATH_REPAIR.join(' / ')}`;
+  const legacyDraft = settings.initialSetupWizardDraft || {};
+  const drafts = settings.initialSetupWizardDrafts || {};
+  const nextSettings = {
+    ...settings,
+    selectedUnits: Array.from(new Set([...(Array.isArray(settings.selectedUnits) ? settings.selectedUnits : []), '285FTS', '286FTS'])),
+    organisationStructure: NEW_CUSTOMER_TEST_ORG_STRUCTURE_REPAIR,
+    initialSetupWizardDraft: {
+      ...legacyDraft,
+      organisation: NEW_CUSTOMER_TEST_ORG_DRAFT_REPAIR,
+      unitsToday: [{ code: '286FTS', name: '286FTS' }],
+      unitParents: unitParentText,
+      completedStepIds: NEW_CUSTOMER_TEST_COMPLETED_STEPS_REPAIR,
+      activeStepId: 'resource-row-details',
+      activeStepIndex: 15,
+      setupMode: 'new-unit',
+      updatedAt: now,
+    },
+    initialSetupWizardDrafts: {
+      ...drafts,
+      organisationDraft: NEW_CUSTOMER_TEST_ORG_DRAFT_REPAIR,
+      unitsTodayDraft: '286FTS | 286FTS',
+      unitParentDraft: unitParentText,
+      unitDraft: {
+        ...(drafts.unitDraft || {}),
+        code: '286FTS',
+        name: '286FTS',
+        locationCode: 'KCBM',
+        unitType: 'Training',
+        operationalModel: 'flight_school',
+        hasTrainees: true,
+      },
+      unitDraftsByCode: {
+        ...(drafts.unitDraftsByCode || {}),
+        '286FTS': {
+          ...((drafts.unitDraftsByCode || {})['286FTS'] || {}),
+          code: '286FTS',
+          name: '286FTS',
+          locationCode: 'KCBM',
+          unitType: 'Training',
+          operationalModel: 'flight_school',
+          hasTrainees: true,
+        },
+      },
+      completedStepIds: NEW_CUSTOMER_TEST_COMPLETED_STEPS_REPAIR,
+      activeStepId: 'resource-row-details',
+      activeStepIndex: 15,
+      setupMode: 'new-unit',
+      updatedAt: now,
+    },
+  };
+  const parentOrganisation = NEW_CUSTOMER_TEST_PARENT_PATH_REPAIR.join('-');
+  const parentUnitSettings = {
+    hasTrainees: true,
+    operationalModel: 'flight_school',
+    parentOrganisationPath: NEW_CUSTOMER_TEST_PARENT_PATH_REPAIR,
+    parentOrganisation,
+  };
+  await db.$transaction(async (tx) => {
+    await tx.$executeRawUnsafe(
+      `UPDATE "CommercialOrganisation"
+       SET "code" = $1, "name" = $2, "settings" = $3::jsonb, "updatedAt" = NOW()
+       WHERE "code" = $4`,
+      'BAF',
+      'Blueteam Air Force',
+      JSON.stringify(nextSettings),
+      organisation.code
+    );
+    await tx.$executeRawUnsafe(`UPDATE "CommercialLocation" SET "organisationCode" = $1, "updatedAt" = NOW()`, 'BAF');
+    await tx.$executeRawUnsafe(`UPDATE "CommercialUnit" SET "organisationCode" = $1, "updatedAt" = NOW()`, 'BAF');
+    await tx.$executeRawUnsafe(`UPDATE "CommercialResourcePool" SET "organisationCode" = $1, "updatedAt" = NOW()`, 'BAF');
+    await tx.$executeRawUnsafe(
+      `UPDATE "CommercialUnit"
+       SET "name" = $1, "locationCode" = $2, "settings" = COALESCE("settings", '{}'::jsonb) || $3::jsonb, "updatedAt" = NOW()
+       WHERE "code" = $4`,
+      '285FTS',
+      'KCBM',
+      JSON.stringify({ ...parentUnitSettings, initialSetupWizardCompletedAt: '2026-10-12T01:45:38.568Z' }),
+      '285FTS'
+    );
+    await tx.$executeRawUnsafe(
+      `UPDATE "CommercialUnit"
+       SET "name" = $1, "locationCode" = $2, "unitType" = $3, "settings" = COALESCE("settings", '{}'::jsonb) || $4::jsonb, "updatedAt" = NOW()
+       WHERE "code" = $5`,
+      '286FTS',
+      'KCBM',
+      'Training',
+      JSON.stringify(parentUnitSettings),
+      '286FTS'
+    );
+    await tx.$executeRawUnsafe(
+      `UPDATE "CommercialLocation"
+       SET "settings" = COALESCE("settings", '{}'::jsonb) || $1::jsonb, "updatedAt" = NOW()
+       WHERE "code" = $2`,
+      JSON.stringify({ unitCodes: ['285FTS', '286FTS'] }),
+      'KCBM'
+    );
+  });
+  console.warn('⚠️ Repaired new-customer-test setup regression data', {
+    previousOrganisationCode: organisation.code,
+    repairedAt: now,
+  });
+}
+
 app.get('/api/platform-config', async (req, res) => {
   const requestStartedAt = Date.now();
   try {
     const db = await getPrisma();
     await seedCommercialConfigIfEmpty(db);
+    await repairNewCustomerTestSetupRegressionIfNeeded(db, req);
 
     const [
       organisations,

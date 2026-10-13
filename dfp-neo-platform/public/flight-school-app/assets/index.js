@@ -45747,7 +45747,7 @@ Classrooms: ${classroomNames.join(", ")}` : ""}`;
     );
   };
   const hasExistingWizardUnitSetupDetails = activeUnits.some((unit) => normaliseUnitSettingsIdentifier(unit?.code) || String(unit?.name || "").trim() || String(unit?.locationCode || "").trim() || Boolean(unit?.settings?.initialSetupWizardCompletedAt) || Boolean(unit?.settings?.parentOrganisationPath));
-  const shouldShowWizardUnitSetupChoice = !isSetupTestMode$1 && !wizardLaunchRequested && !wizardUnitSetupChoiceMade && hasExistingWizardUnitSetupDetails;
+  const shouldShowWizardUnitSetupChoice = !wizardLaunchRequested && !wizardUnitSetupChoiceMade && hasExistingWizardUnitSetupDetails;
   const existingWizardUnitSetupRows = activeUnits.filter((unit) => normaliseUnitSettingsIdentifier(unit?.code) || String(unit?.name || "").trim() || String(unit?.locationCode || "").trim() || Boolean(unit?.settings?.initialSetupWizardCompletedAt) || Boolean(unit?.settings?.parentOrganisationPath)).map((unit) => {
     const unitCodeLabel = String(unit?.code || "").trim().toUpperCase();
     const unitNameLabel = String(unit?.name || unitCodeLabel || "Unnamed unit").trim();
