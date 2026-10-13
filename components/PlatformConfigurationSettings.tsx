@@ -11858,7 +11858,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
                     <div className={resourceSectionPanelClass}>
                       <div className={resourceSectionPanelHeaderClass}>
                         <div>
-                          <div className={resourceSectionPanelTitleClass} style={wizardEditMode ? { color: '#ffffff', WebkitTextFillColor: '#ffffff' } : undefined}>{pool.settings?.aircraftLabel || 'Aircraft'} Numbering</div>
+                          <div className={resourceSectionPanelTitleClass}>{pool.settings?.aircraftLabel || 'Aircraft'} Numbering</div>
                           <div className={resourceSectionPanelHintClass}>Controls how tail numbers are saved to completion records and logbooks.</div>
                         </div>
                         <div className="flex flex-wrap items-end gap-2">
@@ -11868,6 +11868,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
                               disabled={!canEditResourcePools}
                               onClick={() => addAircraftNumberPrefix(index)}
                               className={aircraftResourceMiniButtonClass}
+                              style={wizardHeaderActionTextStyle}
                             >
                               Add Prefix
                             </button>
