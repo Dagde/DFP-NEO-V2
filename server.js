@@ -4697,14 +4697,22 @@ async function repairNewCustomerTestSetupRegressionIfNeeded(db, req) {
   const structure = settings.organisationStructure || {};
   const levels = Array.isArray(structure.levels) ? structure.levels : [];
   const relationshipPaths = Array.isArray(structure.relationshipPaths) ? structure.relationshipPaths : [];
-  const draftStepIds = settings.initialSetupWizardDrafts?.completedStepIds;
+  const unitRows = await db.$queryRawUnsafe(`SELECT "code", "settings" FROM "CommercialUnit" WHERE "code" IN ('285FTS', '286FTS')`);
+  const hasRepairUnitRows = Array.isArray(unitRows) && unitRows.some((unit) => String(unit?.code || '').toUpperCase() === '285FTS');
+  const hasRepairedUnitParentPath = Array.isArray(unitRows) && unitRows.some((unit) => (
+    Array.isArray(unit?.settings?.parentOrganisationPath)
+    && unit.settings.parentOrganisationPath.includes('Blueteam Air Force')
+    && unit.settings.parentOrganisationPath.includes('Air Training Command')
+  ));
   const looksCorrupted = (
     String(organisation.code || '') === 'ORG'
     && String(organisation.name || '') === 'Organisation'
     && levels.length <= 2
-    && relationshipPaths.some((path) => Array.isArray(path) && path.includes('Blueteam Air Force') && path.includes('Air Training Command'))
-    && Array.isArray(draftStepIds)
-    && draftStepIds.length === 0
+    && hasRepairUnitRows
+    && (
+      hasRepairedUnitParentPath
+      || relationshipPaths.some((path) => Array.isArray(path) && path.includes('Blueteam Air Force') && path.includes('Air Training Command'))
+    )
   );
   if (!looksCorrupted) return;
 
@@ -4712,6 +4720,16 @@ async function repairNewCustomerTestSetupRegressionIfNeeded(db, req) {
   const unitParentText = `286FTS = ${NEW_CUSTOMER_TEST_PARENT_PATH_REPAIR.join(' / ')}`;
   const legacyDraft = settings.initialSetupWizardDraft || {};
   const drafts = settings.initialSetupWizardDrafts || {};
+  const nextCompletedStepIds = Array.isArray(drafts.completedStepIds) && drafts.completedStepIds.length > 0
+    ? drafts.completedStepIds
+    : Array.isArray(legacyDraft.completedStepIds) && legacyDraft.completedStepIds.length > 0
+      ? legacyDraft.completedStepIds
+      : NEW_CUSTOMER_TEST_COMPLETED_STEPS_REPAIR;
+  const nextActiveStepId = drafts.activeStepId || legacyDraft.activeStepId || 'resource-row-details';
+  const nextActiveStepIndex = Number.isFinite(Number(drafts.activeStepIndex ?? legacyDraft.activeStepIndex))
+    ? Number(drafts.activeStepIndex ?? legacyDraft.activeStepIndex)
+    : 15;
+  const nextSetupMode = drafts.setupMode || legacyDraft.setupMode || 'new-unit';
   const nextSettings = {
     ...settings,
     selectedUnits: Array.from(new Set([...(Array.isArray(settings.selectedUnits) ? settings.selectedUnits : []), '285FTS', '286FTS'])),
@@ -4721,10 +4739,10 @@ async function repairNewCustomerTestSetupRegressionIfNeeded(db, req) {
       organisation: NEW_CUSTOMER_TEST_ORG_DRAFT_REPAIR,
       unitsToday: [{ code: '286FTS', name: '286FTS' }],
       unitParents: unitParentText,
-      completedStepIds: NEW_CUSTOMER_TEST_COMPLETED_STEPS_REPAIR,
-      activeStepId: 'resource-row-details',
-      activeStepIndex: 15,
-      setupMode: 'new-unit',
+      completedStepIds: nextCompletedStepIds,
+      activeStepId: nextActiveStepId,
+      activeStepIndex: nextActiveStepIndex,
+      setupMode: nextSetupMode,
       updatedAt: now,
     },
     initialSetupWizardDrafts: {
@@ -4753,10 +4771,10 @@ async function repairNewCustomerTestSetupRegressionIfNeeded(db, req) {
           hasTrainees: true,
         },
       },
-      completedStepIds: NEW_CUSTOMER_TEST_COMPLETED_STEPS_REPAIR,
-      activeStepId: 'resource-row-details',
-      activeStepIndex: 15,
-      setupMode: 'new-unit',
+      completedStepIds: nextCompletedStepIds,
+      activeStepId: nextActiveStepId,
+      activeStepIndex: nextActiveStepIndex,
+      setupMode: nextSetupMode,
       updatedAt: now,
     },
   };
