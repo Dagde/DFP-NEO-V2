@@ -2557,6 +2557,7 @@ interface PlatformConfigurationSettingsProps {
   sectionOnly?: boolean;
   wizardEditMode?: boolean;
   onWizardSaveReady?: (save: (() => Promise<boolean>) | null) => void;
+  onWizardDraftChange?: (config: PlatformConfig) => void;
   canUsePlatformPermission?: (permissionId: string) => boolean;
   activeUnitCode?: string;
   activeUnitCodes?: string[];
@@ -2595,6 +2596,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
   sectionOnly = false,
   wizardEditMode = false,
   onWizardSaveReady,
+  onWizardDraftChange,
   canUsePlatformPermission,
   activeUnitCode = '',
   activeUnitCodes = [],
@@ -3631,6 +3633,17 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
       snapshot: getStep19UnitSettingsSnapshot(),
     });
   };
+  const publishWizardStep19DraftConfig = (nextConfig: PlatformConfig, reason: string) => {
+    if (!wizardEditMode || scrollTarget !== 'platform-rank-terminology') return;
+    recordStep19SettingsTrace('wizard-draft:direct-publish', {
+      reason,
+      activeSettingsUnitCode,
+      unitCodes: (Array.isArray(nextConfig.units) ? nextConfig.units : [])
+        .map((unit: any) => unit?.code)
+        .filter(Boolean),
+    });
+    onWizardDraftChange?.(nextConfig);
+  };
   const getStep19FieldSource = (
     unitContainer: Record<string, any> | null | undefined,
     organisationContainer: Record<string, any> | null | undefined,
@@ -4067,6 +4080,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
     });
     const nextConfig = { ...previousConfig, units: nextUnits };
     draftConfigRef.current = nextConfig;
+    publishWizardStep19DraftConfig(nextConfig, 'active-unit-settings-updated');
     notifyPlatformConfigUpdatedSoon(nextConfig);
     setConfig(nextConfig);
   };
@@ -4592,6 +4606,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
         : (Array.isArray(previousConfig.aircraftTypes) ? previousConfig.aircraftTypes : []),
     };
     draftConfigRef.current = nextConfig;
+    publishWizardStep19DraftConfig(nextConfig, 'crew-position-terminology-updated');
     notifyPlatformConfigUpdatedSoon(nextConfig);
     setConfig(nextConfig);
     recordStep19SettingsTrace('field:update-crew-positions:queued', {

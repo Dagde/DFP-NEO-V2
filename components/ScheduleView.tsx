@@ -8359,38 +8359,56 @@ const InitialSetupWizard: React.FC<{
     const currentStep = Math.min(wizardStep, steps.length - 1);
     const visibleStep = steps[currentStep];
     const wizardStepIdSignature = steps.map((step) => step.id).join('|');
+    const scheduleCapturedStep19DraftAutosave = useCallback(() => {
+        if (typeof window === 'undefined') return;
+        if (!onUpdatePlatformConfig) return;
+        if (wizardPlatformSettingsDraftAutosaveTimerRef.current) {
+            window.clearTimeout(wizardPlatformSettingsDraftAutosaveTimerRef.current);
+        }
+        wizardPlatformSettingsDraftAutosaveTimerRef.current = window.setTimeout(() => {
+            wizardPlatformSettingsDraftAutosaveTimerRef.current = null;
+            const capturedConfig = wizardPlatformSettingsDraftRef.current;
+            const capturedMeta = wizardPlatformSettingsDraftMetaRef.current;
+            if (!capturedConfig || capturedMeta.stepId !== 'callsigns') {
+                pushWizardPersistenceTrace('settings-embed-draft:autosave-skipped', {
+                    stepId: capturedMeta.stepId,
+                    hasCapturedConfig: Boolean(capturedConfig),
+                    sequence: capturedMeta.sequence,
+                });
+                return;
+            }
+            pushWizardPersistenceTrace('settings-embed-draft:autosave-requested', {
+                stepId: capturedMeta.stepId,
+                unitCodes: capturedMeta.unitCodes,
+                sequence: capturedMeta.sequence,
+            });
+            onUpdatePlatformConfig(() => capturedConfig);
+            pushWizardPersistenceTrace('settings-embed-draft:autosave-applied', {
+                stepId: capturedMeta.stepId,
+                unitCodes: capturedMeta.unitCodes,
+                sequence: capturedMeta.sequence,
+            });
+        }, 350);
+    }, [onUpdatePlatformConfig]);
+    const handleWizardPlatformSettingsDraftChange = useCallback((nextConfig: any) => {
+        if (mode !== 'active') return;
+        if (visibleStep.id !== 'callsigns') return;
+        if (!nextConfig || !Array.isArray(nextConfig.units)) return;
+        wizardPlatformSettingsDraftRef.current = nextConfig;
+        wizardPlatformSettingsDraftMetaRef.current = {
+            stepId: visibleStep.id,
+            unitCodes: getWizardActiveUnitCodes(),
+            sequence: Date.now(),
+        };
+        pushWizardPersistenceTrace('settings-embed-draft:direct-captured', {
+            stepId: visibleStep.id,
+            unitCodes: wizardPlatformSettingsDraftMetaRef.current.unitCodes,
+            sequence: wizardPlatformSettingsDraftMetaRef.current.sequence,
+        });
+        scheduleCapturedStep19DraftAutosave();
+    }, [mode, scheduleCapturedStep19DraftAutosave, visibleStep.id]);
     useEffect(() => {
         if (typeof window === 'undefined') return undefined;
-        const persistCapturedStep19DraftSoon = () => {
-            if (!onUpdatePlatformConfig) return;
-            if (wizardPlatformSettingsDraftAutosaveTimerRef.current) {
-                window.clearTimeout(wizardPlatformSettingsDraftAutosaveTimerRef.current);
-            }
-            wizardPlatformSettingsDraftAutosaveTimerRef.current = window.setTimeout(() => {
-                wizardPlatformSettingsDraftAutosaveTimerRef.current = null;
-                const capturedConfig = wizardPlatformSettingsDraftRef.current;
-                const capturedMeta = wizardPlatformSettingsDraftMetaRef.current;
-                if (!capturedConfig || capturedMeta.stepId !== 'callsigns') {
-                    pushWizardPersistenceTrace('settings-embed-draft:autosave-skipped', {
-                        stepId: capturedMeta.stepId,
-                        hasCapturedConfig: Boolean(capturedConfig),
-                        sequence: capturedMeta.sequence,
-                    });
-                    return;
-                }
-                pushWizardPersistenceTrace('settings-embed-draft:autosave-requested', {
-                    stepId: capturedMeta.stepId,
-                    unitCodes: capturedMeta.unitCodes,
-                    sequence: capturedMeta.sequence,
-                });
-                onUpdatePlatformConfig(() => capturedConfig);
-                pushWizardPersistenceTrace('settings-embed-draft:autosave-applied', {
-                    stepId: capturedMeta.stepId,
-                    unitCodes: capturedMeta.unitCodes,
-                    sequence: capturedMeta.sequence,
-                });
-            }, 350);
-        };
         const handlePlatformConfigUpdated = (event: Event) => {
             if (mode !== 'active') return;
             if (visibleStep.id !== 'callsigns') return;
@@ -8407,7 +8425,7 @@ const InitialSetupWizard: React.FC<{
                 unitCodes: wizardPlatformSettingsDraftMetaRef.current.unitCodes,
                 sequence: wizardPlatformSettingsDraftMetaRef.current.sequence,
             });
-            persistCapturedStep19DraftSoon();
+            scheduleCapturedStep19DraftAutosave();
         };
         window.addEventListener(PLATFORM_CONFIG_UPDATED_EVENT, handlePlatformConfigUpdated);
         return () => {
@@ -8417,7 +8435,7 @@ const InitialSetupWizard: React.FC<{
                 wizardPlatformSettingsDraftAutosaveTimerRef.current = null;
             }
         };
-    }, [mode, onUpdatePlatformConfig, visibleStep.id]);
+    }, [mode, scheduleCapturedStep19DraftAutosave, visibleStep.id]);
     useEffect(() => {
         if (!isSavedWizardFreshUnitSetup()) return;
         setWizardFreshUnitSetupActive(true);
@@ -12161,6 +12179,7 @@ const InitialSetupWizard: React.FC<{
                     sectionOnly
                     wizardEditMode
                     onWizardSaveReady={handleWizardPlatformSettingsSaveReady}
+                    onWizardDraftChange={handleWizardPlatformSettingsDraftChange}
                     canUsePlatformPermission={canUsePlatformPermission}
                     activeUnitCode={unitCode || unitDraft.code || ''}
                     activeUnitCodes={activeUnitCodesForSettings}

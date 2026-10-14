@@ -20515,6 +20515,7 @@ const PlatformConfigurationSettings = ({
   sectionOnly = false,
   wizardEditMode = false,
   onWizardSaveReady,
+  onWizardDraftChange,
   canUsePlatformPermission,
   activeUnitCode = "",
   activeUnitCodes = [],
@@ -21439,6 +21440,15 @@ const PlatformConfigurationSettings = ({
       snapshot: getStep19UnitSettingsSnapshot()
     });
   };
+  const publishWizardStep19DraftConfig = (nextConfig, reason) => {
+    if (!wizardEditMode || scrollTarget !== "platform-rank-terminology") return;
+    recordStep19SettingsTrace("wizard-draft:direct-publish", {
+      reason,
+      activeSettingsUnitCode,
+      unitCodes: (Array.isArray(nextConfig.units) ? nextConfig.units : []).map((unit) => unit?.code).filter(Boolean)
+    });
+    onWizardDraftChange?.(nextConfig);
+  };
   const getStep19FieldSource = (unitContainer, organisationContainer, key) => {
     if (unitContainer && Object.prototype.hasOwnProperty.call(unitContainer, key)) return "unit-settings";
     if (organisationContainer && Object.prototype.hasOwnProperty.call(organisationContainer, key)) return "organisation-settings";
@@ -21797,6 +21807,7 @@ const PlatformConfigurationSettings = ({
     });
     const nextConfig = { ...previousConfig, units: nextUnits };
     draftConfigRef.current = nextConfig;
+    publishWizardStep19DraftConfig(nextConfig, "active-unit-settings-updated");
     notifyPlatformConfigUpdatedSoon(nextConfig);
     setConfig(nextConfig);
   };
@@ -22228,6 +22239,7 @@ This permanently removes the organisation record from platform configuration and
       }) : Array.isArray(previousConfig.aircraftTypes) ? previousConfig.aircraftTypes : []
     };
     draftConfigRef.current = nextConfig;
+    publishWizardStep19DraftConfig(nextConfig, "crew-position-terminology-updated");
     notifyPlatformConfigUpdatedSoon(nextConfig);
     setConfig(nextConfig);
     recordStep19SettingsTrace("field:update-crew-positions:queued", {
@@ -40220,38 +40232,56 @@ const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, lo
   const currentStep = Math.min(wizardStep, steps.length - 1);
   const visibleStep = steps[currentStep];
   const wizardStepIdSignature = steps.map((step) => step.id).join("|");
+  const scheduleCapturedStep19DraftAutosave = reactExports.useCallback(() => {
+    if (typeof window === "undefined") return;
+    if (!onUpdatePlatformConfig) return;
+    if (wizardPlatformSettingsDraftAutosaveTimerRef.current) {
+      window.clearTimeout(wizardPlatformSettingsDraftAutosaveTimerRef.current);
+    }
+    wizardPlatformSettingsDraftAutosaveTimerRef.current = window.setTimeout(() => {
+      wizardPlatformSettingsDraftAutosaveTimerRef.current = null;
+      const capturedConfig = wizardPlatformSettingsDraftRef.current;
+      const capturedMeta = wizardPlatformSettingsDraftMetaRef.current;
+      if (!capturedConfig || capturedMeta.stepId !== "callsigns") {
+        pushWizardPersistenceTrace("settings-embed-draft:autosave-skipped", {
+          stepId: capturedMeta.stepId,
+          hasCapturedConfig: Boolean(capturedConfig),
+          sequence: capturedMeta.sequence
+        });
+        return;
+      }
+      pushWizardPersistenceTrace("settings-embed-draft:autosave-requested", {
+        stepId: capturedMeta.stepId,
+        unitCodes: capturedMeta.unitCodes,
+        sequence: capturedMeta.sequence
+      });
+      onUpdatePlatformConfig(() => capturedConfig);
+      pushWizardPersistenceTrace("settings-embed-draft:autosave-applied", {
+        stepId: capturedMeta.stepId,
+        unitCodes: capturedMeta.unitCodes,
+        sequence: capturedMeta.sequence
+      });
+    }, 350);
+  }, [onUpdatePlatformConfig]);
+  const handleWizardPlatformSettingsDraftChange = reactExports.useCallback((nextConfig) => {
+    if (mode !== "active") return;
+    if (visibleStep.id !== "callsigns") return;
+    if (!nextConfig || !Array.isArray(nextConfig.units)) return;
+    wizardPlatformSettingsDraftRef.current = nextConfig;
+    wizardPlatformSettingsDraftMetaRef.current = {
+      stepId: visibleStep.id,
+      unitCodes: getWizardActiveUnitCodes(),
+      sequence: Date.now()
+    };
+    pushWizardPersistenceTrace("settings-embed-draft:direct-captured", {
+      stepId: visibleStep.id,
+      unitCodes: wizardPlatformSettingsDraftMetaRef.current.unitCodes,
+      sequence: wizardPlatformSettingsDraftMetaRef.current.sequence
+    });
+    scheduleCapturedStep19DraftAutosave();
+  }, [mode, scheduleCapturedStep19DraftAutosave, visibleStep.id]);
   reactExports.useEffect(() => {
     if (typeof window === "undefined") return void 0;
-    const persistCapturedStep19DraftSoon = () => {
-      if (!onUpdatePlatformConfig) return;
-      if (wizardPlatformSettingsDraftAutosaveTimerRef.current) {
-        window.clearTimeout(wizardPlatformSettingsDraftAutosaveTimerRef.current);
-      }
-      wizardPlatformSettingsDraftAutosaveTimerRef.current = window.setTimeout(() => {
-        wizardPlatformSettingsDraftAutosaveTimerRef.current = null;
-        const capturedConfig = wizardPlatformSettingsDraftRef.current;
-        const capturedMeta = wizardPlatformSettingsDraftMetaRef.current;
-        if (!capturedConfig || capturedMeta.stepId !== "callsigns") {
-          pushWizardPersistenceTrace("settings-embed-draft:autosave-skipped", {
-            stepId: capturedMeta.stepId,
-            hasCapturedConfig: Boolean(capturedConfig),
-            sequence: capturedMeta.sequence
-          });
-          return;
-        }
-        pushWizardPersistenceTrace("settings-embed-draft:autosave-requested", {
-          stepId: capturedMeta.stepId,
-          unitCodes: capturedMeta.unitCodes,
-          sequence: capturedMeta.sequence
-        });
-        onUpdatePlatformConfig(() => capturedConfig);
-        pushWizardPersistenceTrace("settings-embed-draft:autosave-applied", {
-          stepId: capturedMeta.stepId,
-          unitCodes: capturedMeta.unitCodes,
-          sequence: capturedMeta.sequence
-        });
-      }, 350);
-    };
     const handlePlatformConfigUpdated = (event) => {
       if (mode !== "active") return;
       if (visibleStep.id !== "callsigns") return;
@@ -40268,7 +40298,7 @@ const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, lo
         unitCodes: wizardPlatformSettingsDraftMetaRef.current.unitCodes,
         sequence: wizardPlatformSettingsDraftMetaRef.current.sequence
       });
-      persistCapturedStep19DraftSoon();
+      scheduleCapturedStep19DraftAutosave();
     };
     window.addEventListener(PLATFORM_CONFIG_UPDATED_EVENT$1, handlePlatformConfigUpdated);
     return () => {
@@ -40278,7 +40308,7 @@ const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, lo
         wizardPlatformSettingsDraftAutosaveTimerRef.current = null;
       }
     };
-  }, [mode, onUpdatePlatformConfig, visibleStep.id]);
+  }, [mode, scheduleCapturedStep19DraftAutosave, visibleStep.id]);
   reactExports.useEffect(() => {
     if (!isSavedWizardFreshUnitSetup()) return;
     setWizardFreshUnitSetupActive(true);
@@ -43428,6 +43458,7 @@ const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, lo
         sectionOnly: true,
         wizardEditMode: true,
         onWizardSaveReady: handleWizardPlatformSettingsSaveReady,
+        onWizardDraftChange: handleWizardPlatformSettingsDraftChange,
         canUsePlatformPermission,
         activeUnitCode: unitCode || unitDraft.code || "",
         activeUnitCodes: activeUnitCodesForSettings,
