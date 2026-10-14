@@ -15956,24 +15956,35 @@ const DraftField = ({ inputId, label, labelNoWrap = false, value, disabled, onCo
   const storedValue = limitValue(value || '');
   const [draft, setDraft] = useState(() => storedValue);
   const [focused, setFocused] = useState(false);
+  const lastCommittedRef = useRef(storedValue);
   const displayedValue = focused ? draft : (placeholderOnly ? '' : storedValue);
 
   useEffect(() => {
-    if (!focused) setDraft(storedValue);
+    if (!focused) {
+      setDraft(storedValue);
+      lastCommittedRef.current = storedValue;
+    }
   }, [focused, storedValue]);
 
-  const updateDraft = (nextValue: string) => setDraft(limitValue(nextValue));
+  const commitValue = (nextValue: string) => {
+    const limitedValue = limitValue(nextValue);
+    if (placeholderOnly && !limitedValue.trim()) return;
+    if (limitedValue === lastCommittedRef.current) return;
+    lastCommittedRef.current = limitedValue;
+    onCommit(limitedValue);
+  };
+
+  const updateDraft = (nextValue: string) => {
+    const limitedValue = limitValue(nextValue);
+    setDraft(limitedValue);
+    commitValue(limitedValue);
+  };
 
   const commitDraft = () => {
     const nextValue = limitValue(draft);
     setFocused(false);
     setDraft(nextValue);
-    if (placeholderOnly) {
-      if (!nextValue.trim()) return;
-      onCommit(nextValue);
-      return;
-    }
-    if (nextValue !== storedValue) onCommit(nextValue);
+    commitValue(nextValue);
   };
 
   return (
@@ -16008,15 +16019,28 @@ const DraftField = ({ inputId, label, labelNoWrap = false, value, disabled, onCo
 const DraftTextAreaField = ({ label, value, disabled, onCommit, info, className = 'lg:col-span-2', fieldClassName = 'w-full', fieldSizingClassName = 'min-h-[74px]' }: { label: string; value: string; disabled: boolean; onCommit: (value: string) => void; info?: string; className?: string; fieldClassName?: string; fieldSizingClassName?: string }) => {
   const [draft, setDraft] = useState(value || '');
   const [focused, setFocused] = useState(false);
+  const lastCommittedRef = useRef(value || '');
   const displayedValue = focused ? draft : value || '';
 
   useEffect(() => {
-    if (!focused) setDraft(value || '');
+    if (!focused) {
+      setDraft(value || '');
+      lastCommittedRef.current = value || '';
+    }
   }, [focused, value]);
+
+  const updateDraft = (nextValue: string) => {
+    setDraft(nextValue);
+    if (nextValue === lastCommittedRef.current) return;
+    lastCommittedRef.current = nextValue;
+    onCommit(nextValue);
+  };
 
   const commitDraft = () => {
     setFocused(false);
-    if (draft !== (value || '')) onCommit(draft);
+    if (draft === lastCommittedRef.current) return;
+    lastCommittedRef.current = draft;
+    onCommit(draft);
   };
 
   return (
@@ -16026,15 +16050,15 @@ const DraftTextAreaField = ({ label, value, disabled, onCommit, info, className 
         className={`${fieldClass.replace('w-full', fieldClassName)} ${fieldSizingClassName} resize-y`}
         value={displayedValue}
         disabled={disabled}
-        onBeforeInput={(event) => handleEditableTextBeforeInput(event, setDraft)}
-        onKeyDownCapture={(event) => handleEditableTextKeyDownCapture(event, setDraft)}
+        onBeforeInput={(event) => handleEditableTextBeforeInput(event, updateDraft)}
+        onKeyDownCapture={(event) => handleEditableTextKeyDownCapture(event, updateDraft)}
         onKeyDown={stopEditableKeyPropagation}
         onFocus={() => {
           setFocused(true);
           setDraft(value || '');
         }}
         onBlur={commitDraft}
-        onChange={(event) => setDraft(event.target.value)}
+        onChange={(event) => updateDraft(event.target.value)}
       />
     </label>
   );
@@ -16263,14 +16287,27 @@ const AcademicStandardEventsField = ({
 const DraftTextInput = ({ value, disabled, placeholder, className, onCommit }: { value: string; disabled: boolean; placeholder?: string; className: string; onCommit: (value: string) => void }) => {
   const [draft, setDraft] = useState(value || '');
   const [focused, setFocused] = useState(false);
+  const lastCommittedRef = useRef(value || '');
 
   useEffect(() => {
-    if (!focused) setDraft(value || '');
+    if (!focused) {
+      setDraft(value || '');
+      lastCommittedRef.current = value || '';
+    }
   }, [focused, value]);
+
+  const updateDraft = (nextValue: string) => {
+    setDraft(nextValue);
+    if (nextValue === lastCommittedRef.current) return;
+    lastCommittedRef.current = nextValue;
+    onCommit(nextValue);
+  };
 
   const commitDraft = () => {
     setFocused(false);
-    if (draft !== (value || '')) onCommit(draft);
+    if (draft === lastCommittedRef.current) return;
+    lastCommittedRef.current = draft;
+    onCommit(draft);
   };
 
   return (
@@ -16279,15 +16316,15 @@ const DraftTextInput = ({ value, disabled, placeholder, className, onCommit }: {
       disabled={disabled}
       placeholder={placeholder}
       data-rank-equivalency-input="true"
-      onBeforeInput={(event) => handleEditableTextBeforeInput(event, setDraft)}
-      onKeyDownCapture={(event) => handleEditableTextKeyDownCapture(event, setDraft)}
+      onBeforeInput={(event) => handleEditableTextBeforeInput(event, updateDraft)}
+      onKeyDownCapture={(event) => handleEditableTextKeyDownCapture(event, updateDraft)}
       onKeyDown={stopEditableKeyPropagation}
       onFocus={() => {
         setFocused(true);
         setDraft(value || '');
       }}
       onBlur={commitDraft}
-      onChange={(event) => setDraft(event.target.value)}
+      onChange={(event) => updateDraft(event.target.value)}
       className={className}
     />
   );
