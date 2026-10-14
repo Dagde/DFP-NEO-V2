@@ -16496,8 +16496,6 @@ const DraftField = ({ inputId, label, labelNoWrap = false, value, disabled, onCo
         disabled={disabled}
         maxLength={maxLength}
         placeholder={placeholder}
-        onBeforeInput={(event) => handleEditableTextBeforeInput(event, updateDraft, maxLength)}
-        onKeyDownCapture={(event) => handleEditableTextKeyDownCapture(event, updateDraft, maxLength)}
         onKeyDown={stopEditableKeyPropagation}
         onFocus={() => {
           setFocused(true);
@@ -16557,8 +16555,6 @@ const DraftTextAreaField = ({ label, value, disabled, onCommit, info, className 
         className={`${fieldClass.replace('w-full', fieldClassName)} ${fieldSizingClassName} resize-y`}
         value={displayedValue}
         disabled={disabled}
-        onBeforeInput={(event) => handleEditableTextBeforeInput(event, updateDraft)}
-        onKeyDownCapture={(event) => handleEditableTextKeyDownCapture(event, updateDraft)}
         onKeyDown={stopEditableKeyPropagation}
         onFocus={() => {
           setFocused(true);
