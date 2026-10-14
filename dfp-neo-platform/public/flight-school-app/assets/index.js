@@ -19066,7 +19066,7 @@ const getOfflineTimezoneReference = (offset) => {
 };
 const AIRFIELD_CATALOGUE_FILE = "airfield-location-catalog.json";
 const MAX_AIRFIELD_SUGGESTIONS = 6;
-const PLATFORM_CONFIG_UPDATED_EVENT$2 = "dfp-platform-config-updated";
+const PLATFORM_CONFIG_UPDATED_EVENT$1 = "dfp-platform-config-updated";
 const SETTINGS_VISIBILITY_FILTERS = [
   {
     value: "unit",
@@ -19302,7 +19302,7 @@ const notifyPlatformConfigUpdated = (config, sequence) => {
   cachedPlatformConfig = config;
   if (typeof window === "undefined") return;
   const updateSequence = sequence ?? ++platformConfigUpdateSequence;
-  window.dispatchEvent(new CustomEvent(PLATFORM_CONFIG_UPDATED_EVENT$2, { detail: { config, sequence: updateSequence } }));
+  window.dispatchEvent(new CustomEvent(PLATFORM_CONFIG_UPDATED_EVENT$1, { detail: { config, sequence: updateSequence } }));
 };
 const notifyPlatformConfigUpdatedSoon = (config) => {
   if (typeof window === "undefined") return;
@@ -20636,8 +20636,8 @@ const PlatformConfigurationSettings = ({
         });
       }
     };
-    window.addEventListener(PLATFORM_CONFIG_UPDATED_EVENT$2, handlePlatformConfigUpdated);
-    return () => window.removeEventListener(PLATFORM_CONFIG_UPDATED_EVENT$2, handlePlatformConfigUpdated);
+    window.addEventListener(PLATFORM_CONFIG_UPDATED_EVENT$1, handlePlatformConfigUpdated);
+    return () => window.removeEventListener(PLATFORM_CONFIG_UPDATED_EVENT$1, handlePlatformConfigUpdated);
   }, []);
   reactExports.useEffect(() => {
     draftConfigRef.current = config;
@@ -25126,6 +25126,13 @@ This removes them from DFP Resource Rows. Press Save in this section to apply th
         if (!reloadPage) return true;
       }
       if (!reloadPage) {
+        if (wizardEditMode) {
+          recordStep19SettingsTrace("save:wizard-skip-reload", {
+            savedSnapshot: getStep19UnitSettingsSnapshot(configToSave)
+          });
+          if (!hasRowChanges) onShowSuccess(options?.successMessage || "Platform configuration saved.");
+          return true;
+        }
         await reloadPlatformConfig();
         if (!hasRowChanges) onShowSuccess(options?.successMessage || "Platform configuration saved.");
         return true;
@@ -33475,7 +33482,6 @@ const buildRowRecords = (rawRows, headerRowIndex, skipExampleRow) => {
     }, {})
   })).filter((record) => !skipExampleRow || record.excelRowNumber !== headerRowIndex + 2).filter((record) => Object.values(record.row).some((value) => normaliseCellText(value)));
 };
-const PLATFORM_CONFIG_UPDATED_EVENT$1 = "dfp-platform-config-updated";
 const PIXELS_PER_HOUR$6 = 200;
 const ROW_HEIGHT$6 = 32;
 const START_HOUR$6 = 0;
@@ -35866,7 +35872,6 @@ const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, lo
   const wizardShellRef = reactExports.useRef(null);
   const wizardSettingsEmbedRef = reactExports.useRef(null);
   const wizardPlatformSettingsSaveRef = reactExports.useRef(null);
-  const lastWizardPlatformConfigUpdateSequenceRef = reactExports.useRef(0);
   const flyingWindowDraftRef = reactExports.useRef({});
   const wizardAnswerPanelRef = reactExports.useRef(null);
   const wizardDiagnosticStorageKeys = [
@@ -40041,34 +40046,6 @@ const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, lo
     ...String(unitCode || "").split("+").map((item) => item.trim()).filter(Boolean),
     unitDraft.code
   ].map((item) => String(item || "").trim()).filter(Boolean)));
-  reactExports.useEffect(() => {
-    if (typeof window === "undefined" || mode !== "active" || !onUpdatePlatformConfig) return;
-    const handlePlatformConfigUpdated = (event) => {
-      const detail = event.detail || {};
-      const incomingSequence = Number(detail.sequence || 0);
-      if (incomingSequence > 0) {
-        if (incomingSequence < lastWizardPlatformConfigUpdateSequenceRef.current) return;
-        lastWizardPlatformConfigUpdateSequenceRef.current = incomingSequence;
-      }
-      const nextConfig = detail.config;
-      if (!nextConfig || !Array.isArray(nextConfig.units)) return;
-      onUpdatePlatformConfig(() => nextConfig);
-      if (visibleStep.id === "callsigns") {
-        pushWizardPersistenceTrace("platform-config-event:applied-to-wizard-parent", {
-          sequence: incomingSequence || null,
-          activeUnitCodes: getWizardActiveUnitCodes(),
-          units: nextConfig.units.map((unit) => ({
-            code: unit?.code,
-            hasStep19Settings: Boolean(
-              unit?.settings?.personnelDisplaySettings || unit?.settings?.trainingReportTerminology || unit?.settings?.sctTerminology || unit?.settings?.crewPositionTerminology || unit?.settings?.staffQualificationCatalogue || unit?.settings?.unitCallsignSettings
-            )
-          }))
-        });
-      }
-    };
-    window.addEventListener(PLATFORM_CONFIG_UPDATED_EVENT$1, handlePlatformConfigUpdated);
-    return () => window.removeEventListener(PLATFORM_CONFIG_UPDATED_EVENT$1, handlePlatformConfigUpdated);
-  }, [mode, onUpdatePlatformConfig, visibleStep.id, unitCode, unitDraft.code]);
   const getWizardSourceResourcePool = () => {
     const targetUnitCode = normaliseWizardValue(unitDraft.code || currentUnit?.code || unitCode);
     const targetAircraftCode = normaliseWizardValue(resourceDraft.aircraftCode || crewDraft.aircraftCode || primaryAircraftType?.code);

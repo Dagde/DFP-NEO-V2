@@ -8277,6 +8277,13 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
         if (!reloadPage) return true;
       }
       if (!reloadPage) {
+        if (wizardEditMode) {
+          recordStep19SettingsTrace('save:wizard-skip-reload', {
+            savedSnapshot: getStep19UnitSettingsSnapshot(configToSave),
+          });
+          if (!hasRowChanges) onShowSuccess(options?.successMessage || 'Platform configuration saved.');
+          return true;
+        }
         await reloadPlatformConfig();
         if (!hasRowChanges) onShowSuccess(options?.successMessage || 'Platform configuration saved.');
         return true;
