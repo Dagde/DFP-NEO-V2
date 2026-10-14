@@ -108,6 +108,8 @@ import {
     type GroundEventSchedulingSettings,
 } from '../utils/groundEventSchedulingSettings';
    
+const PLATFORM_CONFIG_UPDATED_EVENT = 'dfp-platform-config-updated';
+
 declare const XLSX: any;
 
 type AppUserPermission = 'Super Admin' | 'Admin' | 'Staff' | 'Trainee' | 'Ops' | 'Scheduler' | 'Course Supervisor';
@@ -3671,6 +3673,7 @@ const InitialSetupWizard: React.FC<{
     const wizardShellRef = useRef<HTMLDivElement | null>(null);
     const wizardSettingsEmbedRef = useRef<HTMLDivElement | null>(null);
     const wizardPlatformSettingsSaveRef = useRef<(() => Promise<boolean>) | null>(null);
+    const lastWizardPlatformConfigUpdateSequenceRef = useRef(0);
     const flyingWindowDraftRef = useRef<Record<string, string>>({});
     const wizardAnswerPanelRef = useRef<HTMLDivElement | null>(null);
     const wizardDiagnosticStorageKeys = [
@@ -8529,6 +8532,39 @@ const InitialSetupWizard: React.FC<{
         ...(String(unitCode || '').split('+').map((item) => item.trim()).filter(Boolean)),
         unitDraft.code,
     ].map((item) => String(item || '').trim()).filter(Boolean)));
+    useEffect(() => {
+        if (typeof window === 'undefined' || mode !== 'active' || !onUpdatePlatformConfig) return;
+        const handlePlatformConfigUpdated = (event: Event) => {
+            const detail = (event as CustomEvent<{ config?: any; sequence?: number }>).detail || {};
+            const incomingSequence = Number(detail.sequence || 0);
+            if (incomingSequence > 0) {
+                if (incomingSequence < lastWizardPlatformConfigUpdateSequenceRef.current) return;
+                lastWizardPlatformConfigUpdateSequenceRef.current = incomingSequence;
+            }
+            const nextConfig = detail.config;
+            if (!nextConfig || !Array.isArray(nextConfig.units)) return;
+            onUpdatePlatformConfig(() => nextConfig);
+            if (visibleStep.id === 'callsigns') {
+                pushWizardPersistenceTrace('platform-config-event:applied-to-wizard-parent', {
+                    sequence: incomingSequence || null,
+                    activeUnitCodes: getWizardActiveUnitCodes(),
+                    units: nextConfig.units.map((unit: any) => ({
+                        code: unit?.code,
+                        hasStep19Settings: Boolean(
+                            unit?.settings?.personnelDisplaySettings
+                            || unit?.settings?.trainingReportTerminology
+                            || unit?.settings?.sctTerminology
+                            || unit?.settings?.crewPositionTerminology
+                            || unit?.settings?.staffQualificationCatalogue
+                            || unit?.settings?.unitCallsignSettings
+                        ),
+                    })),
+                });
+            }
+        };
+        window.addEventListener(PLATFORM_CONFIG_UPDATED_EVENT, handlePlatformConfigUpdated);
+        return () => window.removeEventListener(PLATFORM_CONFIG_UPDATED_EVENT, handlePlatformConfigUpdated);
+    }, [mode, onUpdatePlatformConfig, visibleStep.id, unitCode, unitDraft.code]);
     const getWizardSourceResourcePool = () => {
         const targetUnitCode = normaliseWizardValue(unitDraft.code || currentUnit?.code || unitCode);
         const targetAircraftCode = normaliseWizardValue(resourceDraft.aircraftCode || crewDraft.aircraftCode || primaryAircraftType?.code);

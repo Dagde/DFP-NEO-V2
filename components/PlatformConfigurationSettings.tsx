@@ -3449,8 +3449,16 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
       valueLength: String(value || '').length,
       trimmedLength: String(value || '').trim().length,
     });
-    if (String(value || '').trim()) markWizardPlaceholderEdited(key);
-    commit(value);
+    try {
+      commit(value);
+      if (String(value || '').trim()) markWizardPlaceholderEdited(key);
+    } catch (error) {
+      recordStep19SettingsTrace('field:commit-placeholder:error', {
+        key,
+        message: error instanceof Error ? error.message : String(error),
+      });
+      throw error;
+    }
   };
   const commitStep19Field = (key: string, commit: (value: string) => void) => (value: string) => {
     recordStep19SettingsTrace('field:commit', {
