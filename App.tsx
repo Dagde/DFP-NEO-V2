@@ -29835,6 +29835,7 @@ const App: React.FC = () => {
     const [platformConfig, setPlatformConfig] = useState<PlatformConfig | null>(null);
     const [platformConfigLoaded, setPlatformConfigLoaded] = useState(false);
     const platformConfigSaveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+    const platformConfigImmediateSaveQueueRef = useRef<Promise<boolean>>(Promise.resolve(true));
     const effectiveDfpTimezoneOffset = useMemo(() => {
         const units = Array.isArray(platformConfig?.units) ? platformConfig.units : [];
         const locations = Array.isArray(platformConfig?.locations) ? platformConfig.locations : [];
@@ -35599,6 +35600,14 @@ const App: React.FC = () => {
         }
     }, []);
 
+    const queuePlatformConfigSave = useCallback((nextConfig: PlatformConfig, reason: string) => {
+        const queuedSave = platformConfigImmediateSaveQueueRef.current
+            .catch(() => false)
+            .then(() => persistPlatformConfigNow(nextConfig, reason));
+        platformConfigImmediateSaveQueueRef.current = queuedSave;
+        return queuedSave;
+    }, [persistPlatformConfigNow]);
+
     const savePlatformConfigDebounced = useCallback((nextConfig: PlatformConfig) => {
         if (platformConfigSaveTimerRef.current) {
             clearTimeout(platformConfigSaveTimerRef.current);
@@ -35702,13 +35711,13 @@ const App: React.FC = () => {
                 }, 0);
             }
             if (shouldPersistImmediately) {
-                void persistPlatformConfigNow(nextConfig, 'initial-setup-wizard');
+                void queuePlatformConfigSave(nextConfig, 'initial-setup-wizard');
             } else {
                 savePlatformConfigDebounced(nextConfig);
             }
             return nextConfig;
         });
-    }, [hasStoredInitialSetupWizardProgress, isInitialSetupWizardActive, persistPlatformConfigNow, savePlatformConfigDebounced]);
+    }, [hasStoredInitialSetupWizardProgress, isInitialSetupWizardActive, queuePlatformConfigSave, savePlatformConfigDebounced]);
     const registerSetupTestCoursesFromTrainees = useCallback((trainees: any[]) => {
         const defaultColors = [
             'bg-sky-400/80', 'bg-purple-400/80', 'bg-yellow-400/80', 'bg-pink-400/80',

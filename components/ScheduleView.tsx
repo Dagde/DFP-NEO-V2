@@ -4518,12 +4518,15 @@ const InitialSetupWizard: React.FC<{
     });
     const [unitDraftsByCode, setUnitDraftsByCode] = useState<Record<string, WizardUnitSetupDraft>>({});
     const unitDraftDirtyRef = useRef(false);
-    const buildWizardFlyingWindowDraft = (targetUnitCode: string) => {
+    const getSavedWizardFlyingWindowSettings = (targetUnitCode: string) => {
         const cleanUnitCode = normaliseUnitSettingsIdentifier(targetUnitCode);
         const targetUnit = (platformConfig?.units || []).find((unit: any) => (
             normaliseUnitSettingsIdentifier(unit?.code) === cleanUnitCode
         ));
-        const saved = targetUnit?.settings?.flyingWindowSettings || targetUnit?.settings?.flyingWindows || {};
+        return targetUnit?.settings?.flyingWindowSettings || targetUnit?.settings?.flyingWindows || null;
+    };
+    const buildWizardFlyingWindowDraft = (targetUnitCode: string) => {
+        const saved = getSavedWizardFlyingWindowSettings(targetUnitCode) || {};
         const readTime = (key: string, fallback: number) => {
             const numeric = Number(saved?.[key]);
             return Number.isFinite(numeric) ? numeric : fallback;
@@ -4545,10 +4548,17 @@ const InitialSetupWizard: React.FC<{
         buildWizardFlyingWindowDraft(initialWizardFlyingWindowUnitCode)
     ));
     const wizardFlyingWindowDraftRef = useRef(wizardFlyingWindowDraft);
-    const wizardFlyingWindowHydratedUnitRef = useRef(initialWizardFlyingWindowUnitCode);
+    const wizardFlyingWindowHydrationRef = useRef({
+        unitCode: initialWizardFlyingWindowUnitCode,
+        savedSignature: JSON.stringify(getSavedWizardFlyingWindowSettings(initialWizardFlyingWindowUnitCode)),
+    });
     const persistWizardFlyingWindowSettings = (nextSettings: typeof wizardFlyingWindowDraft) => {
         const targetUnitCode = normaliseUnitSettingsIdentifier(unitDraft.code || currentUnit?.code || unitCode);
         if (!targetUnitCode || !onUpdatePlatformConfig) return;
+        wizardFlyingWindowHydrationRef.current = {
+            unitCode: targetUnitCode,
+            savedSignature: JSON.stringify(nextSettings),
+        };
         onUpdatePlatformConfig((current) => ({
             ...current,
             units: (current?.units || []).map((unit: any) => (
@@ -4578,13 +4588,30 @@ const InitialSetupWizard: React.FC<{
     };
     useEffect(() => {
         const targetUnitCode = normaliseUnitSettingsIdentifier(unitDraft.code || currentUnit?.code || unitCode);
-        if (!targetUnitCode || wizardFlyingWindowHydratedUnitRef.current === targetUnitCode) return;
+        const savedSignature = JSON.stringify(getSavedWizardFlyingWindowSettings(targetUnitCode));
+        const previousHydration = wizardFlyingWindowHydrationRef.current;
+        if (
+            !targetUnitCode
+            || (
+                previousHydration.unitCode === targetUnitCode
+                && previousHydration.savedSignature === savedSignature
+            )
+        ) return;
         const nextSettings = buildWizardFlyingWindowDraft(targetUnitCode);
-        wizardFlyingWindowHydratedUnitRef.current = targetUnitCode;
+        wizardFlyingWindowHydrationRef.current = { unitCode: targetUnitCode, savedSignature };
         wizardFlyingWindowDraftRef.current = nextSettings;
         setWizardFlyingWindowDraft(nextSettings);
         flyingWindowDraftRef.current = {};
-    }, [unitDraft.code, currentUnit?.code, unitCode]);
+    }, [
+        unitDraft.code,
+        currentUnit?.code,
+        unitCode,
+        JSON.stringify((platformConfig?.units || []).map((unit: any) => [
+            unit?.code,
+            unit?.settings?.flyingWindowSettings,
+            unit?.settings?.flyingWindows,
+        ])),
+    ]);
     const getWizardDefaultLmpAudience = (model?: string | null): LmpAudience => (
         normaliseOperationalModel(model || '') === 'flight_school' ? 'trainee' : 'staff'
     );

@@ -37008,10 +37008,13 @@ const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, lo
   });
   const [unitDraftsByCode, setUnitDraftsByCode] = reactExports.useState({});
   const unitDraftDirtyRef = reactExports.useRef(false);
-  const buildWizardFlyingWindowDraft = (targetUnitCode) => {
+  const getSavedWizardFlyingWindowSettings = (targetUnitCode) => {
     const cleanUnitCode = normaliseUnitSettingsIdentifier(targetUnitCode);
     const targetUnit = (platformConfig?.units || []).find((unit) => normaliseUnitSettingsIdentifier(unit?.code) === cleanUnitCode);
-    const saved = targetUnit?.settings?.flyingWindowSettings || targetUnit?.settings?.flyingWindows || {};
+    return targetUnit?.settings?.flyingWindowSettings || targetUnit?.settings?.flyingWindows || null;
+  };
+  const buildWizardFlyingWindowDraft = (targetUnitCode) => {
+    const saved = getSavedWizardFlyingWindowSettings(targetUnitCode) || {};
     const readTime = (key, fallback) => {
       const numeric = Number(saved?.[key]);
       return Number.isFinite(numeric) ? numeric : fallback;
@@ -37031,10 +37034,17 @@ const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, lo
   const initialWizardFlyingWindowUnitCode = normaliseUnitSettingsIdentifier(unitDraft.code || currentUnit?.code || unitCode);
   const [wizardFlyingWindowDraft, setWizardFlyingWindowDraft] = reactExports.useState(() => buildWizardFlyingWindowDraft(initialWizardFlyingWindowUnitCode));
   const wizardFlyingWindowDraftRef = reactExports.useRef(wizardFlyingWindowDraft);
-  const wizardFlyingWindowHydratedUnitRef = reactExports.useRef(initialWizardFlyingWindowUnitCode);
+  const wizardFlyingWindowHydrationRef = reactExports.useRef({
+    unitCode: initialWizardFlyingWindowUnitCode,
+    savedSignature: JSON.stringify(getSavedWizardFlyingWindowSettings(initialWizardFlyingWindowUnitCode))
+  });
   const persistWizardFlyingWindowSettings = (nextSettings) => {
     const targetUnitCode = normaliseUnitSettingsIdentifier(unitDraft.code || currentUnit?.code || unitCode);
     if (!targetUnitCode || !onUpdatePlatformConfig) return;
+    wizardFlyingWindowHydrationRef.current = {
+      unitCode: targetUnitCode,
+      savedSignature: JSON.stringify(nextSettings)
+    };
     onUpdatePlatformConfig((current) => ({
       ...current,
       units: (current?.units || []).map((unit) => normaliseUnitSettingsIdentifier(unit?.code) === targetUnitCode ? {
@@ -37057,13 +37067,24 @@ const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, lo
   };
   reactExports.useEffect(() => {
     const targetUnitCode = normaliseUnitSettingsIdentifier(unitDraft.code || currentUnit?.code || unitCode);
-    if (!targetUnitCode || wizardFlyingWindowHydratedUnitRef.current === targetUnitCode) return;
+    const savedSignature = JSON.stringify(getSavedWizardFlyingWindowSettings(targetUnitCode));
+    const previousHydration = wizardFlyingWindowHydrationRef.current;
+    if (!targetUnitCode || previousHydration.unitCode === targetUnitCode && previousHydration.savedSignature === savedSignature) return;
     const nextSettings = buildWizardFlyingWindowDraft(targetUnitCode);
-    wizardFlyingWindowHydratedUnitRef.current = targetUnitCode;
+    wizardFlyingWindowHydrationRef.current = { unitCode: targetUnitCode, savedSignature };
     wizardFlyingWindowDraftRef.current = nextSettings;
     setWizardFlyingWindowDraft(nextSettings);
     flyingWindowDraftRef.current = {};
-  }, [unitDraft.code, currentUnit?.code, unitCode]);
+  }, [
+    unitDraft.code,
+    currentUnit?.code,
+    unitCode,
+    JSON.stringify((platformConfig?.units || []).map((unit) => [
+      unit?.code,
+      unit?.settings?.flyingWindowSettings,
+      unit?.settings?.flyingWindows
+    ]))
+  ]);
   const getWizardDefaultLmpAudience = (model) => normaliseOperationalModel(model || "") === "flight_school" ? "trainee" : "staff";
   const defaultWizardLmpAudience = getWizardDefaultLmpAudience(unitDraft.operationalModel || getUnitOperationalModel(currentUnit || {}));
   const resolveWizardLmpAudience = (value) => normaliseLmpAudience(value) || defaultWizardLmpAudience;
@@ -145573,6 +145594,7 @@ const App = () => {
   const [platformConfig, setPlatformConfig] = reactExports.useState(null);
   const [platformConfigLoaded, setPlatformConfigLoaded] = reactExports.useState(false);
   const platformConfigSaveTimerRef = reactExports.useRef(null);
+  const platformConfigImmediateSaveQueueRef = reactExports.useRef(Promise.resolve(true));
   const effectiveDfpTimezoneOffset = reactExports.useMemo(() => {
     const units2 = Array.isArray(platformConfig?.units) ? platformConfig.units : [];
     const locations2 = Array.isArray(platformConfig?.locations) ? platformConfig.locations : [];
@@ -150104,6 +150126,11 @@ ${error instanceof Error ? error.message : String(error)}`,
       return false;
     }
   }, []);
+  const queuePlatformConfigSave = reactExports.useCallback((nextConfig, reason) => {
+    const queuedSave = platformConfigImmediateSaveQueueRef.current.catch(() => false).then(() => persistPlatformConfigNow(nextConfig, reason));
+    platformConfigImmediateSaveQueueRef.current = queuedSave;
+    return queuedSave;
+  }, [persistPlatformConfigNow]);
   const savePlatformConfigDebounced = reactExports.useCallback((nextConfig) => {
     if (platformConfigSaveTimerRef.current) {
       clearTimeout(platformConfigSaveTimerRef.current);
@@ -150197,13 +150224,13 @@ ${error instanceof Error ? error.message : String(error)}`,
         }, 0);
       }
       if (shouldPersistImmediately) {
-        void persistPlatformConfigNow(nextConfig, "initial-setup-wizard");
+        void queuePlatformConfigSave(nextConfig, "initial-setup-wizard");
       } else {
         savePlatformConfigDebounced(nextConfig);
       }
       return nextConfig;
     });
-  }, [hasStoredInitialSetupWizardProgress, isInitialSetupWizardActive, persistPlatformConfigNow, savePlatformConfigDebounced]);
+  }, [hasStoredInitialSetupWizardProgress, isInitialSetupWizardActive, queuePlatformConfigSave, savePlatformConfigDebounced]);
   const registerSetupTestCoursesFromTrainees = reactExports.useCallback((trainees) => {
     const defaultColors = [
       "bg-sky-400/80",
