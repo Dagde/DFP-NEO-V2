@@ -43026,6 +43026,10 @@ const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, lo
     licensing: "Licence details"
   })[stepId] || "";
   const persistCapturedWizardPlatformSettingsDraft = async (stepId, reason) => {
+    if (typeof window !== "undefined" && wizardPlatformSettingsDraftAutosaveTimerRef.current) {
+      window.clearTimeout(wizardPlatformSettingsDraftAutosaveTimerRef.current);
+      wizardPlatformSettingsDraftAutosaveTimerRef.current = null;
+    }
     const capturedConfig = wizardPlatformSettingsDraftRef.current;
     const capturedMeta = wizardPlatformSettingsDraftMetaRef.current;
     const matchesStep = capturedMeta.stepId === stepId;
@@ -43058,6 +43062,10 @@ const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, lo
       hasCapturedDraft: Boolean(wizardPlatformSettingsDraftRef.current),
       capturedMeta: wizardPlatformSettingsDraftMetaRef.current
     });
+    if (stepId === "callsigns") {
+      const draftSaved = await persistCapturedWizardPlatformSettingsDraft(stepId, "step-19-direct-navigation-save");
+      if (draftSaved) return true;
+    }
     if (!saveWizardSettings) {
       const fallbackSaved = await persistCapturedWizardPlatformSettingsDraft(stepId, "missing-callback");
       if (fallbackSaved) return true;
