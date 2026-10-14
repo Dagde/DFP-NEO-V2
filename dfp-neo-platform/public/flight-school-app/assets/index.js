@@ -21337,7 +21337,7 @@ const PlatformConfigurationSettings = ({
   const getWizardSamplePlaceholderProps = (key, value, sample) => {
     const current = String(value || "").trim();
     const placeholder = String(sample || "").trim();
-    const usePlaceholder = wizardEditMode && !wizardEditedPlaceholderKeys.has(key) && Boolean(placeholder) && !current;
+    const usePlaceholder = false;
     if (wizardEditMode && scrollTarget === "platform-rank-terminology") {
       const signature = JSON.stringify({
         activeSettingsUnitCode,
@@ -21362,16 +21362,16 @@ const PlatformConfigurationSettings = ({
             sampleLength: placeholder.length,
             edited: wizardEditedPlaceholderKeys.has(key),
             usePlaceholder,
-            placeholderPolicy: current ? "show-current-value" : "empty-field-placeholder",
-            renderedInputValue: usePlaceholder ? "" : current
+            placeholderPolicy: current ? "show-current-value" : "standard-placeholder-no-placeholder-only",
+            renderedInputValue: current
           },
           renderCount: settingsTraceRef.current.renderCount
         });
       }
     }
     return {
-      placeholder: usePlaceholder ? placeholder : void 0,
-      placeholderOnly: usePlaceholder
+      placeholder: wizardEditMode && placeholder && !current ? placeholder : void 0,
+      placeholderOnly: false
     };
   };
   const getQualificationSamplePlaceholderProps = (entry, field) => {

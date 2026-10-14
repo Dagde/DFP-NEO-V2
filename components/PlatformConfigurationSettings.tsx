@@ -3529,14 +3529,12 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
   const getWizardSamplePlaceholderProps = (key: string, value: string, sample: string) => {
     const current = String(value || '').trim();
     const placeholder = String(sample || '').trim();
-    // In the wizard, sample/default text must behave as real editable data once
-    // loaded. Treating a value that matched the sample as "placeholder only"
-    // made fields clear themselves on remount while other ordinary inputs kept
-    // their edits.
-    const usePlaceholder = wizardEditMode
-      && !wizardEditedPlaceholderKeys.has(key)
-      && Boolean(placeholder)
-      && !current;
+    // In the wizard, sample/default text must never use placeholder-only mode.
+    // Normal fields with placeholders were the ones losing edits on Step 19;
+    // the reliable fields were ordinary controlled values. Keep these inputs
+    // ordinary too: placeholder text may show when empty, but the value is never
+    // hidden or cleared just because it matches a sample/default.
+    const usePlaceholder = false;
     if (wizardEditMode && scrollTarget === 'platform-rank-terminology') {
       const signature = JSON.stringify({
         activeSettingsUnitCode,
@@ -3561,7 +3559,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
             sampleLength: placeholder.length,
             edited: wizardEditedPlaceholderKeys.has(key),
             usePlaceholder,
-            placeholderPolicy: current ? 'show-current-value' : 'empty-field-placeholder',
+            placeholderPolicy: current ? 'show-current-value' : 'standard-placeholder-no-placeholder-only',
             renderedInputValue: usePlaceholder ? '' : current,
           },
           renderCount: settingsTraceRef.current.renderCount,
@@ -3569,8 +3567,8 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
       }
     }
     return {
-      placeholder: usePlaceholder ? placeholder : undefined,
-      placeholderOnly: usePlaceholder,
+      placeholder: wizardEditMode && placeholder && !current ? placeholder : undefined,
+      placeholderOnly: false,
     };
   };
   const getQualificationSamplePlaceholderProps = (entry: StaffQualificationDefinition, field: 'name' | 'code') => {
