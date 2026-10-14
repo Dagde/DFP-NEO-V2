@@ -3811,21 +3811,92 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
     setConfig(nextConfig);
   };
 
+  const getActiveUnitConfigUpdateBase = (): {
+    baseConfig: PlatformConfig;
+    units: any[];
+    targetIndex: number;
+    recoveredFrom: string | null;
+  } | null => {
+    const findActiveUnit = (sourceConfig: PlatformConfig | null | undefined) => {
+      const units = Array.isArray(sourceConfig?.units) ? sourceConfig.units : [];
+      const targetIndex = units.findIndex((unit) => (
+        String(unit.code || '').trim().toUpperCase() === activeSettingsUnitCode
+      ));
+      return { units, targetIndex };
+    };
+
+    const currentDraft = draftConfigRef.current;
+    const draftMatch = findActiveUnit(currentDraft);
+    if (draftMatch.targetIndex >= 0) {
+      return {
+        baseConfig: currentDraft,
+        units: draftMatch.units,
+        targetIndex: draftMatch.targetIndex,
+        recoveredFrom: null,
+      };
+    }
+
+    const fallbackSources: Array<{ label: string; value: PlatformConfig | null | undefined }> = [
+      { label: 'state', value: config },
+      { label: 'loaded', value: loadedConfigRef.current },
+      { label: 'cached', value: cachedPlatformConfig },
+    ];
+    const keepDraftArrayWhenPresent = (draftArray: any, fallbackArray: any) => (
+      Array.isArray(draftArray) && draftArray.length > 0
+        ? draftArray
+        : (Array.isArray(fallbackArray) ? fallbackArray : [])
+    );
+
+    for (const source of fallbackSources) {
+      const fallbackMatch = findActiveUnit(source.value);
+      if (fallbackMatch.targetIndex < 0 || !source.value) continue;
+      const recoveredConfig: PlatformConfig = {
+        ...source.value,
+        ...currentDraft,
+        organisations: keepDraftArrayWhenPresent(currentDraft.organisations, source.value.organisations),
+        locations: keepDraftArrayWhenPresent(currentDraft.locations, source.value.locations),
+        units: fallbackMatch.units,
+        unitTypes: keepDraftArrayWhenPresent(currentDraft.unitTypes, source.value.unitTypes),
+        aircraftTypes: keepDraftArrayWhenPresent(currentDraft.aircraftTypes, source.value.aircraftTypes),
+        resourcePools: keepDraftArrayWhenPresent(currentDraft.resourcePools, source.value.resourcePools),
+        modules: keepDraftArrayWhenPresent(currentDraft.modules, source.value.modules),
+        unitModules: keepDraftArrayWhenPresent(currentDraft.unitModules, source.value.unitModules),
+        licenses: keepDraftArrayWhenPresent(currentDraft.licenses, source.value.licenses),
+        userAccess: keepDraftArrayWhenPresent(currentDraft.userAccess, source.value.userAccess),
+        platformUsers: keepDraftArrayWhenPresent(currentDraft.platformUsers, source.value.platformUsers),
+        schedulingRuleSets: keepDraftArrayWhenPresent(currentDraft.schedulingRuleSets, source.value.schedulingRuleSets),
+      };
+      recordStep19SettingsTrace('unit-settings:target-recovered', {
+        activeSettingsUnitCode,
+        recoveredFrom: source.label,
+        draftUnitCodes: draftMatch.units.map((unit: any) => unit?.code).filter(Boolean),
+        recoveredUnitCodes: fallbackMatch.units.map((unit: any) => unit?.code).filter(Boolean),
+      });
+      draftConfigRef.current = recoveredConfig;
+      return {
+        baseConfig: recoveredConfig,
+        units: fallbackMatch.units,
+        targetIndex: fallbackMatch.targetIndex,
+        recoveredFrom: source.label,
+      };
+    }
+
+    recordStep19SettingsTrace('unit-settings:target-missing', {
+      activeSettingsUnitCode,
+      draftUnitCodes: draftMatch.units.map((unit: any) => unit?.code).filter(Boolean),
+      stateUnitCodes: findActiveUnit(config).units.map((unit: any) => unit?.code).filter(Boolean),
+      loadedUnitCodes: findActiveUnit(loadedConfigRef.current).units.map((unit: any) => unit?.code).filter(Boolean),
+      cachedUnitCodes: findActiveUnit(cachedPlatformConfig).units.map((unit: any) => unit?.code).filter(Boolean),
+    });
+    return null;
+  };
+
   const updateActiveUnitSettings = (
     updater: Record<string, any> | ((settings: Record<string, any>) => Record<string, any>),
   ) => {
-    const previousConfig = draftConfigRef.current;
-    const previousUnits = Array.isArray(previousConfig.units) ? previousConfig.units : [];
-    const targetIndex = previousUnits.findIndex((unit) => (
-      String(unit.code || '').trim().toUpperCase() === activeSettingsUnitCode
-    ));
-    if (targetIndex < 0) {
-      recordStep19SettingsTrace('unit-settings:target-missing', {
-        activeSettingsUnitCode,
-        availableUnitCodes: previousUnits.map((unit: any) => unit?.code).filter(Boolean),
-      });
-      return;
-    }
+    const updateBase = getActiveUnitConfigUpdateBase();
+    if (!updateBase) return;
+    const { baseConfig: previousConfig, units: previousUnits, targetIndex } = updateBase;
     const nextUnits = previousUnits.map((unit, index) => {
       if (index !== targetIndex) return unit;
       const currentSettings = unit.settings || {};
@@ -4318,12 +4389,9 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
     deletedDefaultIds?: string[],
   ) => {
     setRankTerminologyDirty(true);
-    const previousConfig = draftConfigRef.current;
-    const previousUnits = Array.isArray(previousConfig.units) ? previousConfig.units : [];
-    const targetIndex = previousUnits.findIndex((unit) => (
-      String(unit.code || '').trim().toUpperCase() === activeSettingsUnitCode
-    ));
-    if (targetIndex < 0) return;
+    const updateBase = getActiveUnitConfigUpdateBase();
+    if (!updateBase) return;
+    const { baseConfig: previousConfig, units: previousUnits, targetIndex } = updateBase;
     const targetUnit = previousUnits[targetIndex];
     const targetSettings = targetUnit?.settings || {};
     const currentTerminology = normaliseCrewPositionTerminology(
