@@ -20547,6 +20547,7 @@ const PlatformConfigurationSettings = ({
   const [error, setError] = reactExports.useState("");
   const [errorLink, setErrorLink] = reactExports.useState(null);
   const loadedConfigRef = reactExports.useRef(cachedPlatformConfig || emptyConfig);
+  const draftConfigRef = reactExports.useRef(cachedPlatformConfig || emptyConfig);
   const unitTypeOptions = reactExports.useMemo(() => normaliseUnitTypes(config.unitTypes, config.units), [config.unitTypes, config.units]);
   const [trainingReportNameDrafts, setTrainingReportNameDrafts] = reactExports.useState({});
   const [trainingReportTextDrafts, setTrainingReportTextDrafts] = reactExports.useState({});
@@ -20613,11 +20614,15 @@ const PlatformConfigurationSettings = ({
       if (!nextConfig || !Array.isArray(nextConfig.units)) return;
       cachedPlatformConfig = nextConfig;
       loadedConfigRef.current = nextConfig;
+      draftConfigRef.current = nextConfig;
       setConfig(nextConfig);
     };
     window.addEventListener(PLATFORM_CONFIG_UPDATED_EVENT$1, handlePlatformConfigUpdated);
     return () => window.removeEventListener(PLATFORM_CONFIG_UPDATED_EVENT$1, handlePlatformConfigUpdated);
   }, []);
+  reactExports.useEffect(() => {
+    draftConfigRef.current = config;
+  }, [config]);
   const [selectedAccessUserId, setSelectedAccessUserId] = reactExports.useState("");
   const [wizardAccessUserSelected, setWizardAccessUserSelected] = reactExports.useState(false);
   const [userSearch, setUserSearch] = reactExports.useState("");
@@ -21384,27 +21389,26 @@ const PlatformConfigurationSettings = ({
     return { ...baseConfig, organisations };
   };
   const updatePrimaryOrganisationSettings = (updater) => {
-    setConfig((prev) => {
-      const nextConfig = buildConfigWithPrimaryOrganisationSettings(prev, updater);
-      notifyPlatformConfigUpdatedSoon(nextConfig);
-      return nextConfig;
-    });
+    const nextConfig = buildConfigWithPrimaryOrganisationSettings(draftConfigRef.current, updater);
+    draftConfigRef.current = nextConfig;
+    notifyPlatformConfigUpdatedSoon(nextConfig);
+    setConfig(nextConfig);
   };
   const updateActiveUnitSettings = (updater) => {
-    setConfig((prev) => {
-      const previousUnits = Array.isArray(prev.units) ? prev.units : [];
-      const targetIndex = previousUnits.findIndex((unit) => String(unit.code || "").trim().toUpperCase() === activeSettingsUnitCode);
-      if (targetIndex < 0) return prev;
-      const nextUnits = previousUnits.map((unit, index) => {
-        if (index !== targetIndex) return unit;
-        const currentSettings = unit.settings || {};
-        const nextSettings = typeof updater === "function" ? updater(currentSettings) : { ...currentSettings, ...updater };
-        return { ...unit, settings: nextSettings };
-      });
-      const nextConfig = { ...prev, units: nextUnits };
-      notifyPlatformConfigUpdatedSoon(nextConfig);
-      return nextConfig;
+    const previousConfig = draftConfigRef.current;
+    const previousUnits = Array.isArray(previousConfig.units) ? previousConfig.units : [];
+    const targetIndex = previousUnits.findIndex((unit) => String(unit.code || "").trim().toUpperCase() === activeSettingsUnitCode);
+    if (targetIndex < 0) return;
+    const nextUnits = previousUnits.map((unit, index) => {
+      if (index !== targetIndex) return unit;
+      const currentSettings = unit.settings || {};
+      const nextSettings = typeof updater === "function" ? updater(currentSettings) : { ...currentSettings, ...updater };
+      return { ...unit, settings: nextSettings };
     });
+    const nextConfig = { ...previousConfig, units: nextUnits };
+    draftConfigRef.current = nextConfig;
+    notifyPlatformConfigUpdatedSoon(nextConfig);
+    setConfig(nextConfig);
   };
   const updateSettingsVisibilityPolicy = (patch) => {
     updatePrimaryOrganisationSettings((settings) => ({
@@ -21783,37 +21787,39 @@ This permanently removes the organisation record from platform configuration and
   };
   const updateCrewPositionTerminology = (positions, renamedPosition, deletedDefaultIds = crewPositionTerminology.deletedDefaultIds || []) => {
     setRankTerminologyDirty(true);
-    setConfig((prev) => {
-      const previousUnits = Array.isArray(prev.units) ? prev.units : [];
-      const targetIndex = previousUnits.findIndex((unit) => String(unit.code || "").trim().toUpperCase() === activeSettingsUnitCode);
-      if (targetIndex < 0) return prev;
-      const nextTerminology = normaliseCrewPositionTerminology({ positions, deletedDefaultIds });
-      const from = String(renamedPosition?.from || "").trim();
-      const to = String(renamedPosition?.to || "").trim();
-      const shouldRenameSeats = Boolean(from && to && from.toUpperCase() !== to.toUpperCase());
-      return {
-        ...prev,
-        units: previousUnits.map((unit, index) => index === targetIndex ? {
-          ...unit,
-          settings: {
-            ...unit.settings || {},
-            crewPositionTerminology: nextTerminology
-          }
-        } : unit),
-        aircraftTypes: shouldRenameSeats ? (Array.isArray(prev.aircraftTypes) ? prev.aircraftTypes : []).map((aircraft) => {
-          const crewComposition = normaliseAircraftCrewComposition(aircraft.crewComposition);
-          const seats = crewComposition.seats.map((seat) => ({
-            ...seat,
-            role: String(seat.role || "").trim().toUpperCase() === from.toUpperCase() ? to : seat.role,
-            eligibleRoles: getAircraftSeatEligibleRoles(seat).map((role) => role.toUpperCase() === from.toUpperCase() ? to : role)
-          }));
-          return {
-            ...aircraft,
-            crewComposition: normaliseAircraftCrewComposition({ ...crewComposition, seats })
-          };
-        }) : Array.isArray(prev.aircraftTypes) ? prev.aircraftTypes : []
-      };
-    });
+    const previousConfig = draftConfigRef.current;
+    const previousUnits = Array.isArray(previousConfig.units) ? previousConfig.units : [];
+    const targetIndex = previousUnits.findIndex((unit) => String(unit.code || "").trim().toUpperCase() === activeSettingsUnitCode);
+    if (targetIndex < 0) return;
+    const nextTerminology = normaliseCrewPositionTerminology({ positions, deletedDefaultIds });
+    const from = String(renamedPosition?.from || "").trim();
+    const to = String(renamedPosition?.to || "").trim();
+    const shouldRenameSeats = Boolean(from && to && from.toUpperCase() !== to.toUpperCase());
+    const nextConfig = {
+      ...previousConfig,
+      units: previousUnits.map((unit, index) => index === targetIndex ? {
+        ...unit,
+        settings: {
+          ...unit.settings || {},
+          crewPositionTerminology: nextTerminology
+        }
+      } : unit),
+      aircraftTypes: shouldRenameSeats ? (Array.isArray(previousConfig.aircraftTypes) ? previousConfig.aircraftTypes : []).map((aircraft) => {
+        const crewComposition = normaliseAircraftCrewComposition(aircraft.crewComposition);
+        const seats = crewComposition.seats.map((seat) => ({
+          ...seat,
+          role: String(seat.role || "").trim().toUpperCase() === from.toUpperCase() ? to : seat.role,
+          eligibleRoles: getAircraftSeatEligibleRoles(seat).map((role) => role.toUpperCase() === from.toUpperCase() ? to : role)
+        }));
+        return {
+          ...aircraft,
+          crewComposition: normaliseAircraftCrewComposition({ ...crewComposition, seats })
+        };
+      }) : Array.isArray(previousConfig.aircraftTypes) ? previousConfig.aircraftTypes : []
+    };
+    draftConfigRef.current = nextConfig;
+    notifyPlatformConfigUpdatedSoon(nextConfig);
+    setConfig(nextConfig);
   };
   const updateCrewPositionEntry = (entryId, changes) => {
     const currentEntry = crewPositionTerminology.positions.find((entry) => entry.id === entryId);
@@ -24728,7 +24734,7 @@ This removes them from DFP Resource Rows. Press Save in this section to apply th
   };
   const save = async (configOverride, restoreSection, options) => {
     const candidateConfig = ensureResourcePoolCodes(fillSingleAircraftTypeForResourceRows(
-      configOverride && Array.isArray(configOverride.locations) ? configOverride : config
+      configOverride && Array.isArray(configOverride.locations) ? configOverride : draftConfigRef.current
     ));
     const rowSavePlan = options?.skipResourceRowProtection ? null : buildResourceRowSavePlan(candidateConfig);
     const hasRowChanges = (rowSavePlan?.changedContexts.length || 0) > 0;
@@ -24835,6 +24841,7 @@ This removes them from DFP Resource Rows. Press Save in this section to apply th
       if (isSetupTestMode()) {
         writeSetupTestPlatformConfig(configToSave);
         loadedConfigRef.current = configToSave;
+        draftConfigRef.current = configToSave;
         setConfig(configToSave);
         onShowSuccess(
           hasRowChanges && rowSavePlan ? `DFP resource rows saved. Current day and past days are unchanged. New rows apply from ${rowSaveTomorrowDisplay}.` : options?.successMessage || "Platform configuration saved."
@@ -24881,6 +24888,7 @@ This removes them from DFP Resource Rows. Press Save in this section to apply th
         });
       });
       loadedConfigRef.current = configToSave;
+      draftConfigRef.current = configToSave;
       setConfig(configToSave);
       notifyPlatformConfigUpdated(configToSave);
       if (hasRowChanges && rowSavePlan) {
@@ -25200,6 +25208,7 @@ This removes them from DFP Resource Rows. Press Save in this section to apply th
       const nextConfig2 = normaliseSettingsPlatformConfig(readSetupTestPlatformConfig());
       setConfig(nextConfig2);
       loadedConfigRef.current = nextConfig2;
+      draftConfigRef.current = nextConfig2;
       notifyPlatformConfigUpdated(nextConfig2);
       return;
     }
@@ -25209,6 +25218,7 @@ This removes them from DFP Resource Rows. Press Save in this section to apply th
     const nextConfig = normaliseSettingsPlatformConfig(data);
     setConfig(nextConfig);
     loadedConfigRef.current = nextConfig;
+    draftConfigRef.current = nextConfig;
     notifyPlatformConfigUpdated(nextConfig);
   };
   const verifySignedLicense = async () => {
@@ -42385,6 +42395,11 @@ const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, lo
     flyingWindowDraftRef.current = {};
   };
   const goToNextWizardStep = async () => {
+    const activeElement = typeof document !== "undefined" ? document.activeElement : null;
+    if (activeElement instanceof HTMLInputElement || activeElement instanceof HTMLTextAreaElement || activeElement instanceof HTMLSelectElement) {
+      activeElement.blur();
+      await new Promise((resolve) => window.setTimeout(resolve, 0));
+    }
     pushWizardOrgDiag("wizard:next-clicked", {
       fromStep: visibleStep.id,
       currentStep,

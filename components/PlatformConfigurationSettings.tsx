@@ -2626,6 +2626,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
   const [error, setError] = useState('');
   const [errorLink, setErrorLink] = useState<PlatformConfigSaveBlocker['link'] | null>(null);
   const loadedConfigRef = useRef<PlatformConfig>(cachedPlatformConfig || emptyConfig);
+  const draftConfigRef = useRef<PlatformConfig>(cachedPlatformConfig || emptyConfig);
   const unitTypeOptions = useMemo(() => normaliseUnitTypes(config.unitTypes, config.units), [config.unitTypes, config.units]);
   const [trainingReportNameDrafts, setTrainingReportNameDrafts] = useState<Partial<Pick<TrainingReportTemplate, 'genericName' | 'displayName'>>>({});
   const [trainingReportTextDrafts, setTrainingReportTextDrafts] = useState<Record<string, string>>({});
@@ -2703,11 +2704,16 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
       if (!nextConfig || !Array.isArray(nextConfig.units)) return;
       cachedPlatformConfig = nextConfig;
       loadedConfigRef.current = nextConfig;
+      draftConfigRef.current = nextConfig;
       setConfig(nextConfig);
     };
     window.addEventListener(PLATFORM_CONFIG_UPDATED_EVENT, handlePlatformConfigUpdated);
     return () => window.removeEventListener(PLATFORM_CONFIG_UPDATED_EVENT, handlePlatformConfigUpdated);
   }, []);
+
+  useEffect(() => {
+    draftConfigRef.current = config;
+  }, [config]);
 
   const [selectedAccessUserId, setSelectedAccessUserId] = useState('');
   const [wizardAccessUserSelected, setWizardAccessUserSelected] = useState(false);
@@ -3608,34 +3614,33 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
   const updatePrimaryOrganisationSettings = (
     updater: Record<string, any> | ((settings: Record<string, any>) => Record<string, any>),
   ) => {
-    setConfig((prev) => {
-      const nextConfig = buildConfigWithPrimaryOrganisationSettings(prev, updater);
-      notifyPlatformConfigUpdatedSoon(nextConfig);
-      return nextConfig;
-    });
+    const nextConfig = buildConfigWithPrimaryOrganisationSettings(draftConfigRef.current, updater);
+    draftConfigRef.current = nextConfig;
+    notifyPlatformConfigUpdatedSoon(nextConfig);
+    setConfig(nextConfig);
   };
 
   const updateActiveUnitSettings = (
     updater: Record<string, any> | ((settings: Record<string, any>) => Record<string, any>),
   ) => {
-    setConfig((prev) => {
-      const previousUnits = Array.isArray(prev.units) ? prev.units : [];
-      const targetIndex = previousUnits.findIndex((unit) => (
-        String(unit.code || '').trim().toUpperCase() === activeSettingsUnitCode
-      ));
-      if (targetIndex < 0) return prev;
-      const nextUnits = previousUnits.map((unit, index) => {
-        if (index !== targetIndex) return unit;
-        const currentSettings = unit.settings || {};
-        const nextSettings = typeof updater === 'function'
-          ? updater(currentSettings)
-          : { ...currentSettings, ...updater };
-        return { ...unit, settings: nextSettings };
-      });
-      const nextConfig = { ...prev, units: nextUnits };
-      notifyPlatformConfigUpdatedSoon(nextConfig);
-      return nextConfig;
+    const previousConfig = draftConfigRef.current;
+    const previousUnits = Array.isArray(previousConfig.units) ? previousConfig.units : [];
+    const targetIndex = previousUnits.findIndex((unit) => (
+      String(unit.code || '').trim().toUpperCase() === activeSettingsUnitCode
+    ));
+    if (targetIndex < 0) return;
+    const nextUnits = previousUnits.map((unit, index) => {
+      if (index !== targetIndex) return unit;
+      const currentSettings = unit.settings || {};
+      const nextSettings = typeof updater === 'function'
+        ? updater(currentSettings)
+        : { ...currentSettings, ...updater };
+      return { ...unit, settings: nextSettings };
     });
+    const nextConfig = { ...previousConfig, units: nextUnits };
+    draftConfigRef.current = nextConfig;
+    notifyPlatformConfigUpdatedSoon(nextConfig);
+    setConfig(nextConfig);
   };
 
   const updateSettingsVisibilityPolicy = (patch: Partial<SettingsVisibilityPolicy>) => {
@@ -4091,46 +4096,48 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
     deletedDefaultIds = crewPositionTerminology.deletedDefaultIds || [],
   ) => {
     setRankTerminologyDirty(true);
-    setConfig((prev) => {
-      const previousUnits = Array.isArray(prev.units) ? prev.units : [];
-      const targetIndex = previousUnits.findIndex((unit) => (
-        String(unit.code || '').trim().toUpperCase() === activeSettingsUnitCode
-      ));
-      if (targetIndex < 0) return prev;
-      const nextTerminology = normaliseCrewPositionTerminology({ positions, deletedDefaultIds });
+    const previousConfig = draftConfigRef.current;
+    const previousUnits = Array.isArray(previousConfig.units) ? previousConfig.units : [];
+    const targetIndex = previousUnits.findIndex((unit) => (
+      String(unit.code || '').trim().toUpperCase() === activeSettingsUnitCode
+    ));
+    if (targetIndex < 0) return;
+    const nextTerminology = normaliseCrewPositionTerminology({ positions, deletedDefaultIds });
 
-      const from = String(renamedPosition?.from || '').trim();
-      const to = String(renamedPosition?.to || '').trim();
-      const shouldRenameSeats = Boolean(from && to && from.toUpperCase() !== to.toUpperCase());
-      return {
-        ...prev,
-        units: previousUnits.map((unit, index) => index === targetIndex
-          ? {
-              ...unit,
-              settings: {
-                ...(unit.settings || {}),
-                crewPositionTerminology: nextTerminology,
-              },
-            }
-          : unit),
-        aircraftTypes: shouldRenameSeats
-          ? (Array.isArray(prev.aircraftTypes) ? prev.aircraftTypes : []).map((aircraft) => {
-              const crewComposition = normaliseAircraftCrewComposition(aircraft.crewComposition);
-              const seats = crewComposition.seats.map((seat) => ({
-                ...seat,
-                role: String(seat.role || '').trim().toUpperCase() === from.toUpperCase() ? to : seat.role,
-                eligibleRoles: getAircraftSeatEligibleRoles(seat).map((role) => (
-                  role.toUpperCase() === from.toUpperCase() ? to : role
-                )),
-              }));
-              return {
-                ...aircraft,
-                crewComposition: normaliseAircraftCrewComposition({ ...crewComposition, seats }),
-              };
-            })
-          : (Array.isArray(prev.aircraftTypes) ? prev.aircraftTypes : []),
-      };
-    });
+    const from = String(renamedPosition?.from || '').trim();
+    const to = String(renamedPosition?.to || '').trim();
+    const shouldRenameSeats = Boolean(from && to && from.toUpperCase() !== to.toUpperCase());
+    const nextConfig = {
+      ...previousConfig,
+      units: previousUnits.map((unit, index) => index === targetIndex
+        ? {
+            ...unit,
+            settings: {
+              ...(unit.settings || {}),
+              crewPositionTerminology: nextTerminology,
+            },
+          }
+        : unit),
+      aircraftTypes: shouldRenameSeats
+        ? (Array.isArray(previousConfig.aircraftTypes) ? previousConfig.aircraftTypes : []).map((aircraft) => {
+            const crewComposition = normaliseAircraftCrewComposition(aircraft.crewComposition);
+            const seats = crewComposition.seats.map((seat) => ({
+              ...seat,
+              role: String(seat.role || '').trim().toUpperCase() === from.toUpperCase() ? to : seat.role,
+              eligibleRoles: getAircraftSeatEligibleRoles(seat).map((role) => (
+                role.toUpperCase() === from.toUpperCase() ? to : role
+              )),
+            }));
+            return {
+              ...aircraft,
+              crewComposition: normaliseAircraftCrewComposition({ ...crewComposition, seats }),
+            };
+          })
+        : (Array.isArray(previousConfig.aircraftTypes) ? previousConfig.aircraftTypes : []),
+    };
+    draftConfigRef.current = nextConfig;
+    notifyPlatformConfigUpdatedSoon(nextConfig);
+    setConfig(nextConfig);
   };
 
   const updateCrewPositionEntry = (
@@ -7860,7 +7867,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
     const candidateConfig = ensureResourcePoolCodes(fillSingleAircraftTypeForResourceRows(
       configOverride && Array.isArray(configOverride.locations)
         ? configOverride
-        : config
+        : draftConfigRef.current
     ));
     const rowSavePlan = options?.skipResourceRowProtection
       ? null
@@ -7976,6 +7983,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
       if (isSetupTestMode()) {
         writeSetupTestPlatformConfig(configToSave);
         loadedConfigRef.current = configToSave;
+        draftConfigRef.current = configToSave;
         setConfig(configToSave);
         onShowSuccess(
           hasRowChanges && rowSavePlan
@@ -8024,6 +8032,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
         });
       });
       loadedConfigRef.current = configToSave;
+      draftConfigRef.current = configToSave;
       setConfig(configToSave);
       notifyPlatformConfigUpdated(configToSave);
       if (hasRowChanges && rowSavePlan) {
@@ -8393,6 +8402,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
       const nextConfig = normaliseSettingsPlatformConfig(readSetupTestPlatformConfig());
       setConfig(nextConfig);
       loadedConfigRef.current = nextConfig;
+      draftConfigRef.current = nextConfig;
       notifyPlatformConfigUpdated(nextConfig);
       return;
     }
@@ -8402,6 +8412,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
     const nextConfig = normaliseSettingsPlatformConfig(data);
     setConfig(nextConfig);
     loadedConfigRef.current = nextConfig;
+    draftConfigRef.current = nextConfig;
     notifyPlatformConfigUpdated(nextConfig);
   };
 

@@ -11743,6 +11743,15 @@ const InitialSetupWizard: React.FC<{
         flyingWindowDraftRef.current = {};
     };
     const goToNextWizardStep = async () => {
+        const activeElement = typeof document !== 'undefined' ? document.activeElement : null;
+        if (
+            activeElement instanceof HTMLInputElement
+            || activeElement instanceof HTMLTextAreaElement
+            || activeElement instanceof HTMLSelectElement
+        ) {
+            activeElement.blur();
+            await new Promise((resolve) => window.setTimeout(resolve, 0));
+        }
         pushWizardOrgDiag('wizard:next-clicked', {
             fromStep: visibleStep.id,
             currentStep,
