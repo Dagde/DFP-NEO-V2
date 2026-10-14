@@ -15453,7 +15453,7 @@ const Field = ({
   const updateDraftValue = (nextValue: string) => {
     const limitedValue = normaliseFieldValue(nextValue);
     setDraftValue(limitedValue);
-    if (!commitOnBlur) onChange(limitedValue);
+    onChange(limitedValue);
   };
 
   const commitDraftValue = () => {
@@ -15508,6 +15508,12 @@ const OffsetField = ({ label, value, disabled, onChange, listId, options = [], m
     if (nextValue !== (value || '')) onChange(nextValue);
   };
 
+  const updateDraftValue = (nextValue: string) => {
+    const limitedValue = typeof maxLength === 'number' ? nextValue.slice(0, maxLength) : nextValue;
+    setDraftValue(limitedValue);
+    if (limitedValue !== (value || '')) onChange(limitedValue);
+  };
+
   return (
     <label>
       <FieldLabel label={label} />
@@ -15518,12 +15524,12 @@ const OffsetField = ({ label, value, disabled, onChange, listId, options = [], m
           disabled={disabled}
           list={listId}
           maxLength={maxLength}
-          onBeforeInput={(event) => handleEditableTextBeforeInput(event, setDraftValue, maxLength)}
-          onKeyDownCapture={(event) => handleEditableTextKeyDownCapture(event, setDraftValue, maxLength)}
+          onBeforeInput={(event) => handleEditableTextBeforeInput(event, updateDraftValue, maxLength)}
+          onKeyDownCapture={(event) => handleEditableTextKeyDownCapture(event, updateDraftValue, maxLength)}
           onKeyDown={stopEditableKeyPropagation}
           onFocus={() => setIsEditing(true)}
           onBlur={commitDraftValue}
-          onChange={(event) => setDraftValue(typeof maxLength === 'number' ? event.target.value.slice(0, maxLength) : event.target.value)}
+          onChange={(event) => updateDraftValue(event.target.value)}
         />
         {listId && options.length > 0 ? (
           <datalist id={listId}>
@@ -15570,6 +15576,11 @@ const CommaListField = ({
     setIsEditing(false);
   };
 
+  const updateDraftValue = (nextValue: string) => {
+    setDraftValue(nextValue);
+    onChange(parseCommaListFieldValue(nextValue));
+  };
+
   return (
     <label>
       <FieldLabel label={label} info={info} />
@@ -15577,11 +15588,11 @@ const CommaListField = ({
         className={fieldClass}
         value={draftValue}
         disabled={disabled}
-        onBeforeInput={(event) => handleEditableTextBeforeInput(event, setDraftValue)}
-        onKeyDownCapture={(event) => handleEditableTextKeyDownCapture(event, setDraftValue)}
+        onBeforeInput={(event) => handleEditableTextBeforeInput(event, updateDraftValue)}
+        onKeyDownCapture={(event) => handleEditableTextKeyDownCapture(event, updateDraftValue)}
         onKeyDown={stopEditableKeyPropagation}
         onFocus={() => setIsEditing(true)}
-        onChange={(event) => setDraftValue(event.target.value)}
+        onChange={(event) => updateDraftValue(event.target.value)}
         onBlur={commitDraftValue}
       />
     </label>
@@ -15620,6 +15631,12 @@ const AirfieldLookupField = ({
     if (nextValue !== (value || '')) onChange(nextValue);
   };
 
+  const updateDraftValue = (nextValue: string) => {
+    const limitedValue = typeof maxLength === 'number' ? nextValue.slice(0, maxLength) : nextValue;
+    setDraftValue(limitedValue);
+    if (limitedValue !== (value || '')) onChange(limitedValue);
+  };
+
   return (
     <label className="relative block">
       <FieldLabel label={label} />
@@ -15629,10 +15646,10 @@ const AirfieldLookupField = ({
         disabled={disabled}
         autoComplete="off"
         maxLength={maxLength}
-        onBeforeInput={(event) => handleEditableTextBeforeInput(event, setDraftValue, maxLength)}
-        onKeyDownCapture={(event) => handleEditableTextKeyDownCapture(event, setDraftValue, maxLength)}
+        onBeforeInput={(event) => handleEditableTextBeforeInput(event, updateDraftValue, maxLength)}
+        onKeyDownCapture={(event) => handleEditableTextKeyDownCapture(event, updateDraftValue, maxLength)}
         onKeyDown={stopEditableKeyPropagation}
-        onChange={(event) => setDraftValue(typeof maxLength === 'number' ? event.target.value.slice(0, maxLength) : event.target.value)}
+        onChange={(event) => updateDraftValue(event.target.value)}
         onFocus={() => setIsOpen(true)}
         onBlur={() => {
           commitDraftValue();
@@ -15849,7 +15866,10 @@ const TasField = ({ label, value, disabled, onChange, info, placeholder = 'KTAS'
   }, [isEditing, value]);
 
   const updateDraftValue = (nextValue: string) => {
-    setDraftValue(normaliseTasValue(nextValue));
+    const nextDraftValue = normaliseTasValue(nextValue);
+    setDraftValue(nextDraftValue);
+    const currentValue = normaliseTasValue(value);
+    if (nextDraftValue !== currentValue) onChange(nextDraftValue || null);
   };
 
   const commitDraftValue = () => {
@@ -15920,7 +15940,7 @@ const TextAreaField = ({
 
   const updateDraftValue = (nextValue: string) => {
     setDraftValue(nextValue);
-    if (!commitOnBlur) onChange(nextValue);
+    onChange(nextValue);
   };
 
   const commitDraftValue = () => {
@@ -16746,6 +16766,11 @@ const TimeZoneField = ({ label, value, disabled, onChange, info }: { label: stri
     if (draftValue !== (value || '')) onChange(draftValue);
   };
 
+  const updateDraftValue = (nextValue: string) => {
+    setDraftValue(nextValue);
+    if (nextValue !== (value || '')) onChange(nextValue);
+  };
+
   return (
     <label>
       <FieldLabel label={label} info={info} />
@@ -16755,12 +16780,12 @@ const TimeZoneField = ({ label, value, disabled, onChange, info }: { label: stri
         value={draftValue}
         disabled={disabled}
         placeholder="Australia/Melbourne"
-        onBeforeInput={(event) => handleEditableTextBeforeInput(event, setDraftValue)}
-        onKeyDownCapture={(event) => handleEditableTextKeyDownCapture(event, setDraftValue)}
+        onBeforeInput={(event) => handleEditableTextBeforeInput(event, updateDraftValue)}
+        onKeyDownCapture={(event) => handleEditableTextKeyDownCapture(event, updateDraftValue)}
         onKeyDown={stopEditableKeyPropagation}
         onFocus={() => setIsEditing(true)}
         onBlur={commitDraftValue}
-        onChange={(event) => setDraftValue(event.target.value)}
+        onChange={(event) => updateDraftValue(event.target.value)}
       />
       <datalist id="platform-iana-timezones">
         {COMMON_IANA_TIMEZONES.map((timezone) => <option key={timezone} value={timezone} />)}

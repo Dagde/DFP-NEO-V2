@@ -31708,7 +31708,7 @@ const Field = ({
   const updateDraftValue = (nextValue) => {
     const limitedValue = normaliseFieldValue(nextValue);
     setDraftValue(limitedValue);
-    if (!commitOnBlur) onChange(limitedValue);
+    onChange(limitedValue);
   };
   const commitDraftValue = () => {
     const nextValue = normaliseFieldValue(draftValue);
@@ -31758,6 +31758,11 @@ const OffsetField = ({ label, value, disabled, onChange, listId, options = [], m
     setIsEditing(false);
     if (nextValue !== (value || "")) onChange(nextValue);
   };
+  const updateDraftValue = (nextValue) => {
+    const limitedValue = typeof maxLength === "number" ? nextValue.slice(0, maxLength) : nextValue;
+    setDraftValue(limitedValue);
+    if (limitedValue !== (value || "")) onChange(limitedValue);
+  };
   return /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { children: [
     /* @__PURE__ */ jsxRuntimeExports.jsx(FieldLabel, { label }),
     /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mt-[15px]", children: [
@@ -31769,12 +31774,12 @@ const OffsetField = ({ label, value, disabled, onChange, listId, options = [], m
           disabled,
           list: listId,
           maxLength,
-          onBeforeInput: (event) => handleEditableTextBeforeInput(event, setDraftValue, maxLength),
-          onKeyDownCapture: (event) => handleEditableTextKeyDownCapture(event, setDraftValue, maxLength),
+          onBeforeInput: (event) => handleEditableTextBeforeInput(event, updateDraftValue, maxLength),
+          onKeyDownCapture: (event) => handleEditableTextKeyDownCapture(event, updateDraftValue, maxLength),
           onKeyDown: stopEditableKeyPropagation,
           onFocus: () => setIsEditing(true),
           onBlur: commitDraftValue,
-          onChange: (event) => setDraftValue(typeof maxLength === "number" ? event.target.value.slice(0, maxLength) : event.target.value)
+          onChange: (event) => updateDraftValue(event.target.value)
         }
       ),
       listId && options.length > 0 ? /* @__PURE__ */ jsxRuntimeExports.jsx("datalist", { id: listId, children: options.map((option) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: option }, option)) }) : null
@@ -31801,6 +31806,10 @@ const CommaListField = ({
     onChange(nextValue);
     setIsEditing(false);
   };
+  const updateDraftValue = (nextValue) => {
+    setDraftValue(nextValue);
+    onChange(parseCommaListFieldValue(nextValue));
+  };
   return /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { children: [
     /* @__PURE__ */ jsxRuntimeExports.jsx(FieldLabel, { label, info }),
     /* @__PURE__ */ jsxRuntimeExports.jsx(
@@ -31809,11 +31818,11 @@ const CommaListField = ({
         className: fieldClass,
         value: draftValue,
         disabled,
-        onBeforeInput: (event) => handleEditableTextBeforeInput(event, setDraftValue),
-        onKeyDownCapture: (event) => handleEditableTextKeyDownCapture(event, setDraftValue),
+        onBeforeInput: (event) => handleEditableTextBeforeInput(event, updateDraftValue),
+        onKeyDownCapture: (event) => handleEditableTextKeyDownCapture(event, updateDraftValue),
         onKeyDown: stopEditableKeyPropagation,
         onFocus: () => setIsEditing(true),
-        onChange: (event) => setDraftValue(event.target.value),
+        onChange: (event) => updateDraftValue(event.target.value),
         onBlur: commitDraftValue
       }
     )
@@ -31840,6 +31849,11 @@ const AirfieldLookupField = ({
     setDraftValue(nextValue);
     if (nextValue !== (value || "")) onChange(nextValue);
   };
+  const updateDraftValue = (nextValue) => {
+    const limitedValue = typeof maxLength === "number" ? nextValue.slice(0, maxLength) : nextValue;
+    setDraftValue(limitedValue);
+    if (limitedValue !== (value || "")) onChange(limitedValue);
+  };
   return /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "relative block", children: [
     /* @__PURE__ */ jsxRuntimeExports.jsx(FieldLabel, { label }),
     /* @__PURE__ */ jsxRuntimeExports.jsx(
@@ -31850,10 +31864,10 @@ const AirfieldLookupField = ({
         disabled,
         autoComplete: "off",
         maxLength,
-        onBeforeInput: (event) => handleEditableTextBeforeInput(event, setDraftValue, maxLength),
-        onKeyDownCapture: (event) => handleEditableTextKeyDownCapture(event, setDraftValue, maxLength),
+        onBeforeInput: (event) => handleEditableTextBeforeInput(event, updateDraftValue, maxLength),
+        onKeyDownCapture: (event) => handleEditableTextKeyDownCapture(event, updateDraftValue, maxLength),
         onKeyDown: stopEditableKeyPropagation,
-        onChange: (event) => setDraftValue(typeof maxLength === "number" ? event.target.value.slice(0, maxLength) : event.target.value),
+        onChange: (event) => updateDraftValue(event.target.value),
         onFocus: () => setIsOpen(true),
         onBlur: () => {
           commitDraftValue();
@@ -32045,7 +32059,10 @@ const TasField = ({ label, value, disabled, onChange, info, placeholder = "KTAS"
     if (!isEditing) setDraftValue(normaliseTasValue(value));
   }, [isEditing, value]);
   const updateDraftValue = (nextValue) => {
-    setDraftValue(normaliseTasValue(nextValue));
+    const nextDraftValue = normaliseTasValue(nextValue);
+    setDraftValue(nextDraftValue);
+    const currentValue = normaliseTasValue(value);
+    if (nextDraftValue !== currentValue) onChange(nextDraftValue || null);
   };
   const commitDraftValue = () => {
     const nextValue = normaliseTasValue(draftValue);
@@ -32100,7 +32117,7 @@ const TextAreaField = ({
   }, [isEditing, value]);
   const updateDraftValue = (nextValue) => {
     setDraftValue(nextValue);
-    if (!commitOnBlur) onChange(nextValue);
+    onChange(nextValue);
   };
   const commitDraftValue = () => {
     setIsEditing(false);
@@ -34891,6 +34908,10 @@ const UnitSettingsField = ({ label, value, onChange, disabled = false }) => {
     setFocused(false);
     if (draft !== (value || "")) onChange(draft);
   };
+  const updateDraft = (nextValue) => {
+    setDraft(nextValue);
+    if (nextValue !== (value || "")) onChange(nextValue);
+  };
   if (disabled) {
     return /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsReadRow, { label, value: value || "Not set", muted: !value });
   }
@@ -34902,15 +34923,17 @@ const UnitSettingsField = ({ label, value, onChange, disabled = false }) => {
         className: unitSettingsInputClass,
         value: focused ? draft : value || "",
         disabled,
-        onBeforeInput: (event) => handleUnitSettingsTextBeforeInput(event, setDraft),
-        onKeyDownCapture: (event) => handleUnitSettingsTextKeyDownCapture(event, setDraft),
+        onBeforeInput: (event) => handleUnitSettingsTextBeforeInput(event, updateDraft),
+        onKeyDownCapture: (event) => handleUnitSettingsTextKeyDownCapture(event, updateDraft),
         onKeyDown: stopEditableKeyPropagation,
         onFocus: () => {
           setFocused(true);
           setDraft(value || "");
         },
         onBlur: commitDraft,
-        onChange: (event) => setDraft(event.target.value)
+        onChange: (event) => {
+          updateDraft(event.target.value);
+        }
       }
     )
   ] });
@@ -34969,6 +34992,10 @@ const UnitSettingsTextAreaRow = ({ label, value, onChange, disabled = false, pla
     setFocused(false);
     if (draft !== (value || "")) onChange(draft);
   };
+  const updateDraft = (nextValue) => {
+    setDraft(nextValue);
+    if (nextValue !== (value || "")) onChange(nextValue);
+  };
   if (disabled) {
     return /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsReadRow, { label, value: /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "whitespace-pre-wrap", children: value || "Not set" }), muted: !value });
   }
@@ -34986,13 +35013,13 @@ const UnitSettingsTextAreaRow = ({ label, value, onChange, disabled = false, pla
           if (inputEvent.inputType !== "insertText" || inputEvent.data !== " ") return;
           event.preventDefault();
           event.stopPropagation();
-          insertUnitSettingsTextAtCursor(event.currentTarget, " ", setDraft);
+          insertUnitSettingsTextAtCursor(event.currentTarget, " ", updateDraft);
         },
         onKeyDownCapture: (event) => {
           if ((event.key === " " || event.code === "Space" || event.key === "Spacebar") && !event.metaKey && !event.ctrlKey && !event.altKey) {
             event.preventDefault();
             event.stopPropagation();
-            insertUnitSettingsTextAtCursor(event.currentTarget, " ", setDraft);
+            insertUnitSettingsTextAtCursor(event.currentTarget, " ", updateDraft);
             return;
           }
           stopEditableKeyPropagation(event);
@@ -35003,7 +35030,9 @@ const UnitSettingsTextAreaRow = ({ label, value, onChange, disabled = false, pla
           setDraft(value || "");
         },
         onBlur: commitDraft,
-        onChange: (event) => setDraft(event.target.value)
+        onChange: (event) => {
+          updateDraft(event.target.value);
+        }
       }
     )
   ] });
@@ -35646,6 +35675,11 @@ const WizardFlyingWindowTimeInput = React.memo(({
         const nextValue = input.value.replace(/[^\d:]/g, "").slice(0, 5);
         if (input.value !== nextValue) input.value = nextValue;
         onDraftChange?.(draftKey, nextValue);
+        if (nextValue.length >= 3) {
+          const nextTimeValue = parseWizardTimeInputValue(nextValue, value);
+          setHasUserValue(true);
+          onCommit?.(nextTimeValue);
+        }
       },
       onBlur: commitDraft,
       onKeyDown: (event) => {

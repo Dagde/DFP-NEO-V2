@@ -2361,6 +2361,11 @@ const UnitSettingsField: React.FC<{
         if (draft !== (value || '')) onChange(draft);
     };
 
+    const updateDraft = (nextValue: string) => {
+        setDraft(nextValue);
+        if (nextValue !== (value || '')) onChange(nextValue);
+    };
+
     if (disabled) {
         return <UnitSettingsReadRow label={label} value={value || 'Not set'} muted={!value} />;
     }
@@ -2372,15 +2377,17 @@ const UnitSettingsField: React.FC<{
                 className={unitSettingsInputClass}
                 value={focused ? draft : value || ''}
                 disabled={disabled}
-                onBeforeInput={(event) => handleUnitSettingsTextBeforeInput(event, setDraft)}
-                onKeyDownCapture={(event) => handleUnitSettingsTextKeyDownCapture(event, setDraft)}
+                onBeforeInput={(event) => handleUnitSettingsTextBeforeInput(event, updateDraft)}
+                onKeyDownCapture={(event) => handleUnitSettingsTextKeyDownCapture(event, updateDraft)}
                 onKeyDown={stopEditableKeyPropagation}
                 onFocus={() => {
                     setFocused(true);
                     setDraft(value || '');
                 }}
                 onBlur={commitDraft}
-                onChange={(event) => setDraft(event.target.value)}
+                onChange={(event) => {
+                    updateDraft(event.target.value);
+                }}
             />
         </label>
     );
@@ -2476,6 +2483,11 @@ const UnitSettingsTextAreaRow: React.FC<{
         if (draft !== (value || '')) onChange(draft);
     };
 
+    const updateDraft = (nextValue: string) => {
+        setDraft(nextValue);
+        if (nextValue !== (value || '')) onChange(nextValue);
+    };
+
     if (disabled) {
         return <UnitSettingsReadRow label={label} value={<span className="whitespace-pre-wrap">{value || 'Not set'}</span>} muted={!value} />;
     }
@@ -2493,13 +2505,13 @@ const UnitSettingsTextAreaRow: React.FC<{
                     if (inputEvent.inputType !== 'insertText' || inputEvent.data !== ' ') return;
                     event.preventDefault();
                     event.stopPropagation();
-                    insertUnitSettingsTextAtCursor(event.currentTarget, ' ', setDraft);
+                    insertUnitSettingsTextAtCursor(event.currentTarget, ' ', updateDraft);
                 }}
                 onKeyDownCapture={(event) => {
                     if ((event.key === ' ' || event.code === 'Space' || event.key === 'Spacebar') && !event.metaKey && !event.ctrlKey && !event.altKey) {
                         event.preventDefault();
                         event.stopPropagation();
-                        insertUnitSettingsTextAtCursor(event.currentTarget, ' ', setDraft);
+                        insertUnitSettingsTextAtCursor(event.currentTarget, ' ', updateDraft);
                         return;
                     }
                     stopEditableKeyPropagation(event);
@@ -2510,7 +2522,9 @@ const UnitSettingsTextAreaRow: React.FC<{
                     setDraft(value || '');
                 }}
                 onBlur={commitDraft}
-                onChange={(event) => setDraft(event.target.value)}
+                onChange={(event) => {
+                    updateDraft(event.target.value);
+                }}
             />
         </label>
     );
@@ -3422,6 +3436,11 @@ const WizardFlyingWindowTimeInput = React.memo(({
                 const nextValue = input.value.replace(/[^\d:]/g, '').slice(0, 5);
                 if (input.value !== nextValue) input.value = nextValue;
                 onDraftChange?.(draftKey, nextValue);
+                if (nextValue.length >= 3) {
+                    const nextTimeValue = parseWizardTimeInputValue(nextValue, value);
+                    setHasUserValue(true);
+                    onCommit?.(nextTimeValue);
+                }
             }}
             onBlur={commitDraft}
             onKeyDown={(event) => {
