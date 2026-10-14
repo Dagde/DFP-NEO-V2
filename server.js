@@ -5779,6 +5779,18 @@ app.post('/api/platform-config', async (req, res) => {
         drafts.resourceDraft
       );
     });
+    const [currentActiveLocationRows, currentActiveUnitRows] = await Promise.all([
+      db.$queryRawUnsafe(`SELECT COUNT(*)::int AS count FROM "CommercialLocation" WHERE COALESCE("status", 'ACTIVE') <> 'INACTIVE'`),
+      db.$queryRawUnsafe(`SELECT COUNT(*)::int AS count FROM "CommercialUnit" WHERE COALESCE("status", 'ACTIVE') <> 'INACTIVE'`),
+    ]);
+    const currentActiveLocationCount = Number(currentActiveLocationRows?.[0]?.count || 0);
+    const currentActiveUnitCount = Number(currentActiveUnitRows?.[0]?.count || 0);
+    if ((currentActiveLocationCount > 0 && !hasActiveLocations) || (currentActiveUnitCount > 0 && !hasActiveUnits)) {
+      return res.status(400).json({
+        error: 'Unsafe platform configuration save blocked',
+        details: 'This save payload would remove existing configured locations or units. Reload Settings and try again before saving.',
+      });
+    }
     const isDeliberatelyEmptyStructure = !hasActiveOrganisations && !hasActiveLocations && !hasActiveUnits;
     const structuralBlocker = isDeliberatelyEmptyStructure || isInitialSetupWizardPayload ? '' :
       !hasActiveOrganisations ? 'At least one active organisation is required while locations or units still exist.' :

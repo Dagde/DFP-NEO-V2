@@ -8466,7 +8466,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
   };
 
   const saveCrewCompositionAndExitEdit = async () => {
-    const saved = await save(undefined, 'platform-crew-composition');
+    const saved = await save(undefined, 'platform-crew-composition', { skipResourceRowProtection: true });
     if (saved) setCrewCompositionUnlocked(false);
   };
 
@@ -8491,7 +8491,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
         },
       })),
     };
-    const saved = await save(nextConfig, 'platform-task-profiles');
+    const saved = await save(nextConfig, 'platform-task-profiles', { skipResourceRowProtection: true });
     if (saved) {
       setTaskProfilesUnlocked(false);
       setTaskProfileDrafts({});
@@ -8500,7 +8500,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
   };
 
   const saveCurrencyProfilesAndExitEdit = async () => {
-    const saved = await save(undefined, 'platform-currency-profiles');
+    const saved = await save(undefined, 'platform-currency-profiles', { skipResourceRowProtection: true });
     if (saved) setCrewCompositionUnlocked(false);
   };
 
@@ -8522,7 +8522,8 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
     canEdit && canEditSectionPermission(sectionId) && isSectionEditActive(sectionId)
   );
   const saveSectionAndExitEdit = async (sectionId: string) => {
-    const saved = await save(undefined, sectionId);
+    const shouldCheckResourceRows = sectionId === 'platform-dfp-resource-rows' || sectionId === 'platform-aircraft-setup';
+    const saved = await save(undefined, sectionId, { skipResourceRowProtection: !shouldCheckResourceRows });
     if (saved && !wizardEditMode) {
       setSectionEditUnlocked((prev) => ({ ...prev, [sectionId]: false }));
       if (sectionId === 'platform-standard-missions') setExpandedStandardMissionIds(new Set());
