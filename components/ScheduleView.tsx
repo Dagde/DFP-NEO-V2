@@ -4518,6 +4518,73 @@ const InitialSetupWizard: React.FC<{
     });
     const [unitDraftsByCode, setUnitDraftsByCode] = useState<Record<string, WizardUnitSetupDraft>>({});
     const unitDraftDirtyRef = useRef(false);
+    const buildWizardFlyingWindowDraft = (targetUnitCode: string) => {
+        const cleanUnitCode = normaliseUnitSettingsIdentifier(targetUnitCode);
+        const targetUnit = (platformConfig?.units || []).find((unit: any) => (
+            normaliseUnitSettingsIdentifier(unit?.code) === cleanUnitCode
+        ));
+        const saved = targetUnit?.settings?.flyingWindowSettings || targetUnit?.settings?.flyingWindows || {};
+        const readTime = (key: string, fallback: number) => {
+            const numeric = Number(saved?.[key]);
+            return Number.isFinite(numeric) ? numeric : fallback;
+        };
+        return {
+            flyingStartTime: readTime('flyingStartTime', flyingStartTime),
+            flyingEndTime: readTime('flyingEndTime', flyingEndTime),
+            ftdStartTime: readTime('ftdStartTime', ftdStartTime),
+            ftdEndTime: readTime('ftdEndTime', ftdEndTime),
+            cptStartTime: readTime('cptStartTime', cptStartTime),
+            cptEndTime: readTime('cptEndTime', cptEndTime),
+            allowNightFlying: typeof saved?.allowNightFlying === 'boolean' ? saved.allowNightFlying : allowNightFlying,
+            commenceNightFlying: readTime('commenceNightFlying', commenceNightFlying),
+            ceaseNightFlying: readTime('ceaseNightFlying', ceaseNightFlying),
+        };
+    };
+    const initialWizardFlyingWindowUnitCode = normaliseUnitSettingsIdentifier(unitDraft.code || currentUnit?.code || unitCode);
+    const [wizardFlyingWindowDraft, setWizardFlyingWindowDraft] = useState(() => (
+        buildWizardFlyingWindowDraft(initialWizardFlyingWindowUnitCode)
+    ));
+    const wizardFlyingWindowDraftRef = useRef(wizardFlyingWindowDraft);
+    const wizardFlyingWindowHydratedUnitRef = useRef(initialWizardFlyingWindowUnitCode);
+    const persistWizardFlyingWindowSettings = (nextSettings: typeof wizardFlyingWindowDraft) => {
+        const targetUnitCode = normaliseUnitSettingsIdentifier(unitDraft.code || currentUnit?.code || unitCode);
+        if (!targetUnitCode || !onUpdatePlatformConfig) return;
+        onUpdatePlatformConfig((current) => ({
+            ...current,
+            units: (current?.units || []).map((unit: any) => (
+                normaliseUnitSettingsIdentifier(unit?.code) === targetUnitCode
+                    ? {
+                        ...unit,
+                        settings: {
+                            ...(unit.settings || {}),
+                            flyingWindowSettings: nextSettings,
+                        },
+                    }
+                    : unit
+            )),
+        }));
+    };
+    const updateWizardFlyingWindowSetting = (
+        key: keyof typeof wizardFlyingWindowDraft,
+        value: number | boolean,
+    ) => {
+        const nextSettings = {
+            ...wizardFlyingWindowDraftRef.current,
+            [key]: value,
+        };
+        wizardFlyingWindowDraftRef.current = nextSettings;
+        setWizardFlyingWindowDraft(nextSettings);
+        persistWizardFlyingWindowSettings(nextSettings);
+    };
+    useEffect(() => {
+        const targetUnitCode = normaliseUnitSettingsIdentifier(unitDraft.code || currentUnit?.code || unitCode);
+        if (!targetUnitCode || wizardFlyingWindowHydratedUnitRef.current === targetUnitCode) return;
+        const nextSettings = buildWizardFlyingWindowDraft(targetUnitCode);
+        wizardFlyingWindowHydratedUnitRef.current = targetUnitCode;
+        wizardFlyingWindowDraftRef.current = nextSettings;
+        setWizardFlyingWindowDraft(nextSettings);
+        flyingWindowDraftRef.current = {};
+    }, [unitDraft.code, currentUnit?.code, unitCode]);
     const getWizardDefaultLmpAudience = (model?: string | null): LmpAudience => (
         normaliseOperationalModel(model || '') === 'flight_school' ? 'trainee' : 'staff'
     );
@@ -11909,22 +11976,28 @@ const InitialSetupWizard: React.FC<{
     };
     const commitFlyingWindowDrafts = () => {
         const draftEntries = Object.entries(flyingWindowDraftRef.current);
-        if (draftEntries.length === 0) return;
         const timeRows = [
-            { key: 'flight-start', value: flyingStartTime, setValue: onUpdateFlyingStartTime },
-            { key: 'flight-end', value: flyingEndTime, setValue: onUpdateFlyingEndTime },
-            { key: 'ftd-start', value: ftdStartTime, setValue: onUpdateFtdStartTime },
-            { key: 'ftd-end', value: ftdEndTime, setValue: onUpdateFtdEndTime },
-            { key: 'cpt-start', value: cptStartTime, setValue: onUpdateCptStartTime },
-            { key: 'cpt-end', value: cptEndTime, setValue: onUpdateCptEndTime },
-            { key: 'night-start', value: commenceNightFlying, setValue: onUpdateCommenceNightFlying },
-            { key: 'night-end', value: ceaseNightFlying, setValue: onUpdateCeaseNightFlying },
+            { key: 'flight-start', field: 'flyingStartTime' as const },
+            { key: 'flight-end', field: 'flyingEndTime' as const },
+            { key: 'ftd-start', field: 'ftdStartTime' as const },
+            { key: 'ftd-end', field: 'ftdEndTime' as const },
+            { key: 'cpt-start', field: 'cptStartTime' as const },
+            { key: 'cpt-end', field: 'cptEndTime' as const },
+            { key: 'night-start', field: 'commenceNightFlying' as const },
+            { key: 'night-end', field: 'ceaseNightFlying' as const },
         ];
+        let nextSettings = { ...wizardFlyingWindowDraftRef.current };
         timeRows.forEach((row) => {
             const draft = flyingWindowDraftRef.current[row.key];
-            if (draft === undefined || !row.setValue) return;
-            row.setValue(parseWizardTimeInputValue(draft, row.value));
+            if (draft === undefined) return;
+            nextSettings = {
+                ...nextSettings,
+                [row.field]: parseWizardTimeInputValue(draft, Number(nextSettings[row.field])),
+            };
         });
+        wizardFlyingWindowDraftRef.current = nextSettings;
+        setWizardFlyingWindowDraft(nextSettings);
+        persistWizardFlyingWindowSettings(nextSettings);
         flyingWindowDraftRef.current = {};
     };
     const getWizardSettingsSaveLabel = (stepId: string): string => ({
@@ -12128,10 +12201,10 @@ const InitialSetupWizard: React.FC<{
     };
     const renderFlyingWindowsEditor = () => {
         const rows = [
-            { key: 'flight', label: 'Day flying', enabled: true, start: flyingStartTime, end: flyingEndTime, setStart: onUpdateFlyingStartTime, setEnd: onUpdateFlyingEndTime },
-            { key: 'ftd', label: 'Simulator operating', enabled: true, start: ftdStartTime, end: ftdEndTime, setStart: onUpdateFtdStartTime, setEnd: onUpdateFtdEndTime },
-            { key: 'cpt', label: 'Procedural trainer operating window', enabled: true, start: cptStartTime, end: cptEndTime, setStart: onUpdateCptStartTime, setEnd: onUpdateCptEndTime },
-            { key: 'night', label: 'Night flying', enabled: allowNightFlying, start: commenceNightFlying, end: ceaseNightFlying, setStart: onUpdateCommenceNightFlying, setEnd: onUpdateCeaseNightFlying, setEnabled: onUpdateAllowNightFlying },
+            { key: 'flight', label: 'Day flying', enabled: true, start: wizardFlyingWindowDraft.flyingStartTime, end: wizardFlyingWindowDraft.flyingEndTime, startField: 'flyingStartTime' as const, endField: 'flyingEndTime' as const },
+            { key: 'ftd', label: 'Simulator operating', enabled: true, start: wizardFlyingWindowDraft.ftdStartTime, end: wizardFlyingWindowDraft.ftdEndTime, startField: 'ftdStartTime' as const, endField: 'ftdEndTime' as const },
+            { key: 'cpt', label: 'Procedural trainer operating window', enabled: true, start: wizardFlyingWindowDraft.cptStartTime, end: wizardFlyingWindowDraft.cptEndTime, startField: 'cptStartTime' as const, endField: 'cptEndTime' as const },
+            { key: 'night', label: 'Night flying', enabled: wizardFlyingWindowDraft.allowNightFlying, start: wizardFlyingWindowDraft.commenceNightFlying, end: wizardFlyingWindowDraft.ceaseNightFlying, startField: 'commenceNightFlying' as const, endField: 'ceaseNightFlying' as const, enabledField: 'allowNightFlying' as const },
         ];
         return (
             <div className="overflow-hidden rounded-lg border border-slate-300 bg-white">
@@ -12144,18 +12217,18 @@ const InitialSetupWizard: React.FC<{
                             <tr key={row.key}>
                                 <td className="px-3 py-2 font-semibold text-slate-950">{row.label}</td>
                                 <td className="px-3 py-2">
-                                    {row.setEnabled ? (
-                                        <select className={wizardInputClass} value={row.enabled ? 'Yes' : 'No'} onChange={(event) => row.setEnabled?.(event.target.value === 'Yes')}>
+                                    {row.enabledField ? (
+                                        <select className={wizardInputClass} value={row.enabled ? 'Yes' : 'No'} onChange={(event) => updateWizardFlyingWindowSetting(row.enabledField!, event.target.value === 'Yes')}>
                                             <option>Yes</option>
                                             <option>No</option>
                                         </select>
                                     ) : <span className="inline-flex rounded border border-emerald-200 bg-emerald-50 px-2 py-1 text-xs font-bold text-emerald-800">Yes</span>}
                                 </td>
-                                <td className="px-3 py-2"><WizardFlyingWindowTimeInput draftKey={`${row.key}-start`} className={wizardInputClass} value={row.start} enabled={row.enabled} onCommit={row.setStart} onDraftChange={(key, value) => {
+                                <td className="px-3 py-2"><WizardFlyingWindowTimeInput draftKey={`${row.key}-start`} className={wizardInputClass} value={row.start} enabled={row.enabled} onCommit={(value) => updateWizardFlyingWindowSetting(row.startField, value)} onDraftChange={(key, value) => {
                                     if (value === null) delete flyingWindowDraftRef.current[key];
                                     else flyingWindowDraftRef.current[key] = value;
                                 }} /></td>
-                                <td className="px-3 py-2"><WizardFlyingWindowTimeInput draftKey={`${row.key}-end`} className={wizardInputClass} value={row.end} enabled={row.enabled} onCommit={row.setEnd} onDraftChange={(key, value) => {
+                                <td className="px-3 py-2"><WizardFlyingWindowTimeInput draftKey={`${row.key}-end`} className={wizardInputClass} value={row.end} enabled={row.enabled} onCommit={(value) => updateWizardFlyingWindowSetting(row.endField, value)} onDraftChange={(key, value) => {
                                     if (value === null) delete flyingWindowDraftRef.current[key];
                                     else flyingWindowDraftRef.current[key] = value;
                                 }} /></td>

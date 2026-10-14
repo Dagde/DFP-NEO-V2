@@ -37008,6 +37008,62 @@ const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, lo
   });
   const [unitDraftsByCode, setUnitDraftsByCode] = reactExports.useState({});
   const unitDraftDirtyRef = reactExports.useRef(false);
+  const buildWizardFlyingWindowDraft = (targetUnitCode) => {
+    const cleanUnitCode = normaliseUnitSettingsIdentifier(targetUnitCode);
+    const targetUnit = (platformConfig?.units || []).find((unit) => normaliseUnitSettingsIdentifier(unit?.code) === cleanUnitCode);
+    const saved = targetUnit?.settings?.flyingWindowSettings || targetUnit?.settings?.flyingWindows || {};
+    const readTime = (key, fallback) => {
+      const numeric = Number(saved?.[key]);
+      return Number.isFinite(numeric) ? numeric : fallback;
+    };
+    return {
+      flyingStartTime: readTime("flyingStartTime", flyingStartTime),
+      flyingEndTime: readTime("flyingEndTime", flyingEndTime),
+      ftdStartTime: readTime("ftdStartTime", ftdStartTime),
+      ftdEndTime: readTime("ftdEndTime", ftdEndTime),
+      cptStartTime: readTime("cptStartTime", cptStartTime),
+      cptEndTime: readTime("cptEndTime", cptEndTime),
+      allowNightFlying: typeof saved?.allowNightFlying === "boolean" ? saved.allowNightFlying : allowNightFlying,
+      commenceNightFlying: readTime("commenceNightFlying", commenceNightFlying),
+      ceaseNightFlying: readTime("ceaseNightFlying", ceaseNightFlying)
+    };
+  };
+  const initialWizardFlyingWindowUnitCode = normaliseUnitSettingsIdentifier(unitDraft.code || currentUnit?.code || unitCode);
+  const [wizardFlyingWindowDraft, setWizardFlyingWindowDraft] = reactExports.useState(() => buildWizardFlyingWindowDraft(initialWizardFlyingWindowUnitCode));
+  const wizardFlyingWindowDraftRef = reactExports.useRef(wizardFlyingWindowDraft);
+  const wizardFlyingWindowHydratedUnitRef = reactExports.useRef(initialWizardFlyingWindowUnitCode);
+  const persistWizardFlyingWindowSettings = (nextSettings) => {
+    const targetUnitCode = normaliseUnitSettingsIdentifier(unitDraft.code || currentUnit?.code || unitCode);
+    if (!targetUnitCode || !onUpdatePlatformConfig) return;
+    onUpdatePlatformConfig((current) => ({
+      ...current,
+      units: (current?.units || []).map((unit) => normaliseUnitSettingsIdentifier(unit?.code) === targetUnitCode ? {
+        ...unit,
+        settings: {
+          ...unit.settings || {},
+          flyingWindowSettings: nextSettings
+        }
+      } : unit)
+    }));
+  };
+  const updateWizardFlyingWindowSetting = (key, value) => {
+    const nextSettings = {
+      ...wizardFlyingWindowDraftRef.current,
+      [key]: value
+    };
+    wizardFlyingWindowDraftRef.current = nextSettings;
+    setWizardFlyingWindowDraft(nextSettings);
+    persistWizardFlyingWindowSettings(nextSettings);
+  };
+  reactExports.useEffect(() => {
+    const targetUnitCode = normaliseUnitSettingsIdentifier(unitDraft.code || currentUnit?.code || unitCode);
+    if (!targetUnitCode || wizardFlyingWindowHydratedUnitRef.current === targetUnitCode) return;
+    const nextSettings = buildWizardFlyingWindowDraft(targetUnitCode);
+    wizardFlyingWindowHydratedUnitRef.current = targetUnitCode;
+    wizardFlyingWindowDraftRef.current = nextSettings;
+    setWizardFlyingWindowDraft(nextSettings);
+    flyingWindowDraftRef.current = {};
+  }, [unitDraft.code, currentUnit?.code, unitCode]);
   const getWizardDefaultLmpAudience = (model) => normaliseOperationalModel(model || "") === "flight_school" ? "trainee" : "staff";
   const defaultWizardLmpAudience = getWizardDefaultLmpAudience(unitDraft.operationalModel || getUnitOperationalModel(currentUnit || {}));
   const resolveWizardLmpAudience = (value) => normaliseLmpAudience(value) || defaultWizardLmpAudience;
@@ -43266,23 +43322,29 @@ const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, lo
     ] });
   };
   const commitFlyingWindowDrafts = () => {
-    const draftEntries = Object.entries(flyingWindowDraftRef.current);
-    if (draftEntries.length === 0) return;
+    Object.entries(flyingWindowDraftRef.current);
     const timeRows = [
-      { key: "flight-start", value: flyingStartTime, setValue: onUpdateFlyingStartTime },
-      { key: "flight-end", value: flyingEndTime, setValue: onUpdateFlyingEndTime },
-      { key: "ftd-start", value: ftdStartTime, setValue: onUpdateFtdStartTime },
-      { key: "ftd-end", value: ftdEndTime, setValue: onUpdateFtdEndTime },
-      { key: "cpt-start", value: cptStartTime, setValue: onUpdateCptStartTime },
-      { key: "cpt-end", value: cptEndTime, setValue: onUpdateCptEndTime },
-      { key: "night-start", value: commenceNightFlying, setValue: onUpdateCommenceNightFlying },
-      { key: "night-end", value: ceaseNightFlying, setValue: onUpdateCeaseNightFlying }
+      { key: "flight-start", field: "flyingStartTime" },
+      { key: "flight-end", field: "flyingEndTime" },
+      { key: "ftd-start", field: "ftdStartTime" },
+      { key: "ftd-end", field: "ftdEndTime" },
+      { key: "cpt-start", field: "cptStartTime" },
+      { key: "cpt-end", field: "cptEndTime" },
+      { key: "night-start", field: "commenceNightFlying" },
+      { key: "night-end", field: "ceaseNightFlying" }
     ];
+    let nextSettings = { ...wizardFlyingWindowDraftRef.current };
     timeRows.forEach((row) => {
       const draft = flyingWindowDraftRef.current[row.key];
-      if (draft === void 0 || !row.setValue) return;
-      row.setValue(parseWizardTimeInputValue(draft, row.value));
+      if (draft === void 0) return;
+      nextSettings = {
+        ...nextSettings,
+        [row.field]: parseWizardTimeInputValue(draft, Number(nextSettings[row.field]))
+      };
     });
+    wizardFlyingWindowDraftRef.current = nextSettings;
+    setWizardFlyingWindowDraft(nextSettings);
+    persistWizardFlyingWindowSettings(nextSettings);
     flyingWindowDraftRef.current = {};
   };
   const getWizardSettingsSaveLabel = (stepId) => ({
@@ -43480,10 +43542,10 @@ const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, lo
   };
   const renderFlyingWindowsEditor = () => {
     const rows = [
-      { key: "flight", label: "Day flying", enabled: true, start: flyingStartTime, end: flyingEndTime, setStart: onUpdateFlyingStartTime, setEnd: onUpdateFlyingEndTime },
-      { key: "ftd", label: "Simulator operating", enabled: true, start: ftdStartTime, end: ftdEndTime, setStart: onUpdateFtdStartTime, setEnd: onUpdateFtdEndTime },
-      { key: "cpt", label: "Procedural trainer operating window", enabled: true, start: cptStartTime, end: cptEndTime, setStart: onUpdateCptStartTime, setEnd: onUpdateCptEndTime },
-      { key: "night", label: "Night flying", enabled: allowNightFlying, start: commenceNightFlying, end: ceaseNightFlying, setStart: onUpdateCommenceNightFlying, setEnd: onUpdateCeaseNightFlying, setEnabled: onUpdateAllowNightFlying }
+      { key: "flight", label: "Day flying", enabled: true, start: wizardFlyingWindowDraft.flyingStartTime, end: wizardFlyingWindowDraft.flyingEndTime, startField: "flyingStartTime", endField: "flyingEndTime" },
+      { key: "ftd", label: "Simulator operating", enabled: true, start: wizardFlyingWindowDraft.ftdStartTime, end: wizardFlyingWindowDraft.ftdEndTime, startField: "ftdStartTime", endField: "ftdEndTime" },
+      { key: "cpt", label: "Procedural trainer operating window", enabled: true, start: wizardFlyingWindowDraft.cptStartTime, end: wizardFlyingWindowDraft.cptEndTime, startField: "cptStartTime", endField: "cptEndTime" },
+      { key: "night", label: "Night flying", enabled: wizardFlyingWindowDraft.allowNightFlying, start: wizardFlyingWindowDraft.commenceNightFlying, end: wizardFlyingWindowDraft.ceaseNightFlying, startField: "commenceNightFlying", endField: "ceaseNightFlying", enabledField: "allowNightFlying" }
     ];
     return /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "overflow-hidden rounded-lg border border-slate-300 bg-white", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("table", { className: "w-full text-left text-sm text-slate-900", children: [
       /* @__PURE__ */ jsxRuntimeExports.jsx("thead", { className: "bg-[#e8f3fa] text-xs uppercase tracking-[0.12em] text-slate-700", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("tr", { children: [
@@ -43494,15 +43556,15 @@ const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, lo
       ] }) }),
       /* @__PURE__ */ jsxRuntimeExports.jsx("tbody", { className: "divide-y divide-slate-200 bg-[#f8fbfd]", children: rows.map((row) => /* @__PURE__ */ jsxRuntimeExports.jsxs("tr", { children: [
         /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "px-3 py-2 font-semibold text-slate-950", children: row.label }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "px-3 py-2", children: row.setEnabled ? /* @__PURE__ */ jsxRuntimeExports.jsxs("select", { className: wizardInputClass, value: row.enabled ? "Yes" : "No", onChange: (event) => row.setEnabled?.(event.target.value === "Yes"), children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "px-3 py-2", children: row.enabledField ? /* @__PURE__ */ jsxRuntimeExports.jsxs("select", { className: wizardInputClass, value: row.enabled ? "Yes" : "No", onChange: (event) => updateWizardFlyingWindowSetting(row.enabledField, event.target.value === "Yes"), children: [
           /* @__PURE__ */ jsxRuntimeExports.jsx("option", { children: "Yes" }),
           /* @__PURE__ */ jsxRuntimeExports.jsx("option", { children: "No" })
         ] }) : /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "inline-flex rounded border border-emerald-200 bg-emerald-50 px-2 py-1 text-xs font-bold text-emerald-800", children: "Yes" }) }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "px-3 py-2", children: /* @__PURE__ */ jsxRuntimeExports.jsx(WizardFlyingWindowTimeInput, { draftKey: `${row.key}-start`, className: wizardInputClass, value: row.start, enabled: row.enabled, onCommit: row.setStart, onDraftChange: (key, value) => {
+        /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "px-3 py-2", children: /* @__PURE__ */ jsxRuntimeExports.jsx(WizardFlyingWindowTimeInput, { draftKey: `${row.key}-start`, className: wizardInputClass, value: row.start, enabled: row.enabled, onCommit: (value) => updateWizardFlyingWindowSetting(row.startField, value), onDraftChange: (key, value) => {
           if (value === null) delete flyingWindowDraftRef.current[key];
           else flyingWindowDraftRef.current[key] = value;
         } }) }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "px-3 py-2", children: /* @__PURE__ */ jsxRuntimeExports.jsx(WizardFlyingWindowTimeInput, { draftKey: `${row.key}-end`, className: wizardInputClass, value: row.end, enabled: row.enabled, onCommit: row.setEnd, onDraftChange: (key, value) => {
+        /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "px-3 py-2", children: /* @__PURE__ */ jsxRuntimeExports.jsx(WizardFlyingWindowTimeInput, { draftKey: `${row.key}-end`, className: wizardInputClass, value: row.end, enabled: row.enabled, onCommit: (value) => updateWizardFlyingWindowSetting(row.endField, value), onDraftChange: (key, value) => {
           if (value === null) delete flyingWindowDraftRef.current[key];
           else flyingWindowDraftRef.current[key] = value;
         } }) })
