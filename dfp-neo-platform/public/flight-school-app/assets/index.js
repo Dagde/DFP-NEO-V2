@@ -32556,11 +32556,13 @@ const DraftField = ({ inputId, label, labelNoWrap = false, value, disabled, onCo
   const storedValue = limitValue(value || "");
   const [draft, setDraft] = reactExports.useState(() => storedValue);
   const [focused, setFocused] = reactExports.useState(false);
+  const draftRef = reactExports.useRef(storedValue);
   const lastCommittedRef = reactExports.useRef(storedValue);
   const displayedValue = focused ? draft : placeholderOnly ? "" : storedValue;
   reactExports.useEffect(() => {
     if (!focused) {
       setDraft(storedValue);
+      draftRef.current = storedValue;
       lastCommittedRef.current = storedValue;
     }
   }, [focused, storedValue]);
@@ -32573,11 +32575,13 @@ const DraftField = ({ inputId, label, labelNoWrap = false, value, disabled, onCo
   };
   const updateDraft = (nextValue) => {
     const limitedValue = limitValue(nextValue);
+    draftRef.current = limitedValue;
     setDraft(limitedValue);
     commitValue(limitedValue);
   };
-  const commitDraft = () => {
-    const nextValue = limitValue(draft);
+  const commitDraft = (latestValue) => {
+    const nextValue = limitValue(latestValue ?? draftRef.current);
+    draftRef.current = nextValue;
     setFocused(false);
     setDraft(nextValue);
     commitValue(nextValue);
@@ -32598,9 +32602,11 @@ const DraftField = ({ inputId, label, labelNoWrap = false, value, disabled, onCo
         onKeyDown: stopEditableKeyPropagation,
         onFocus: () => {
           setFocused(true);
-          setDraft(placeholderOnly ? "" : storedValue);
+          const nextValue = placeholderOnly ? "" : storedValue;
+          draftRef.current = nextValue;
+          setDraft(nextValue);
         },
-        onBlur: commitDraft,
+        onBlur: (event) => commitDraft(event.currentTarget.value),
         onChange: (event) => updateDraft(event.target.value)
       }
     ),
@@ -32614,25 +32620,31 @@ const DraftField = ({ inputId, label, labelNoWrap = false, value, disabled, onCo
 const DraftTextAreaField = ({ label, value, disabled, onCommit, info, className = "lg:col-span-2", fieldClassName = "w-full", fieldSizingClassName = "min-h-[74px]" }) => {
   const [draft, setDraft] = reactExports.useState(value || "");
   const [focused, setFocused] = reactExports.useState(false);
+  const draftRef = reactExports.useRef(value || "");
   const lastCommittedRef = reactExports.useRef(value || "");
   const displayedValue = focused ? draft : value || "";
   reactExports.useEffect(() => {
     if (!focused) {
       setDraft(value || "");
+      draftRef.current = value || "";
       lastCommittedRef.current = value || "";
     }
   }, [focused, value]);
   const updateDraft = (nextValue) => {
+    draftRef.current = nextValue;
     setDraft(nextValue);
     if (nextValue === lastCommittedRef.current) return;
     lastCommittedRef.current = nextValue;
     onCommit(nextValue);
   };
-  const commitDraft = () => {
+  const commitDraft = (latestValue) => {
+    const nextValue = latestValue ?? draftRef.current;
+    draftRef.current = nextValue;
     setFocused(false);
-    if (draft === lastCommittedRef.current) return;
-    lastCommittedRef.current = draft;
-    onCommit(draft);
+    setDraft(nextValue);
+    if (nextValue === lastCommittedRef.current) return;
+    lastCommittedRef.current = nextValue;
+    onCommit(nextValue);
   };
   return /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className, children: [
     /* @__PURE__ */ jsxRuntimeExports.jsx(FieldLabel, { label, info }),
@@ -32647,9 +32659,11 @@ const DraftTextAreaField = ({ label, value, disabled, onCommit, info, className 
         onKeyDown: stopEditableKeyPropagation,
         onFocus: () => {
           setFocused(true);
-          setDraft(value || "");
+          const nextValue = value || "";
+          draftRef.current = nextValue;
+          setDraft(nextValue);
         },
-        onBlur: commitDraft,
+        onBlur: (event) => commitDraft(event.currentTarget.value),
         onChange: (event) => updateDraft(event.target.value)
       }
     )
@@ -40392,19 +40406,11 @@ const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, lo
       if (visibleStep.id !== "callsigns") return;
       const detail = event.detail || {};
       if (!detail.config || !Array.isArray(detail.config.units)) return;
-      wizardPlatformSettingsDraftRef.current = detail.config;
-      wizardPlatformSettingsDraftMetaRef.current = {
+      pushWizardPersistenceTrace("settings-embed-draft:global-event-ignored-for-step-19", {
         stepId: visibleStep.id,
-        unitCodes: getWizardActiveUnitCodes(),
-        sequence: Number(detail.sequence || 0)
-      };
-      pushWizardPersistenceTrace("settings-embed-draft:captured", {
-        stepId: visibleStep.id,
-        unitCodes: wizardPlatformSettingsDraftMetaRef.current.unitCodes,
-        sequence: wizardPlatformSettingsDraftMetaRef.current.sequence,
+        sequence: Number(detail.sequence || 0),
         step19Summary: summariseWizardStep19Config(detail.config)
       });
-      scheduleCapturedStep19DraftAutosave();
     };
     window.addEventListener(PLATFORM_CONFIG_UPDATED_EVENT$1, handlePlatformConfigUpdated);
     return () => {

@@ -16451,12 +16451,14 @@ const DraftField = ({ inputId, label, labelNoWrap = false, value, disabled, onCo
   const storedValue = limitValue(value || '');
   const [draft, setDraft] = useState(() => storedValue);
   const [focused, setFocused] = useState(false);
+  const draftRef = useRef(storedValue);
   const lastCommittedRef = useRef(storedValue);
   const displayedValue = focused ? draft : (placeholderOnly ? '' : storedValue);
 
   useEffect(() => {
     if (!focused) {
       setDraft(storedValue);
+      draftRef.current = storedValue;
       lastCommittedRef.current = storedValue;
     }
   }, [focused, storedValue]);
@@ -16471,12 +16473,14 @@ const DraftField = ({ inputId, label, labelNoWrap = false, value, disabled, onCo
 
   const updateDraft = (nextValue: string) => {
     const limitedValue = limitValue(nextValue);
+    draftRef.current = limitedValue;
     setDraft(limitedValue);
     commitValue(limitedValue);
   };
 
-  const commitDraft = () => {
-    const nextValue = limitValue(draft);
+  const commitDraft = (latestValue?: string) => {
+    const nextValue = limitValue(latestValue ?? draftRef.current);
+    draftRef.current = nextValue;
     setFocused(false);
     setDraft(nextValue);
     commitValue(nextValue);
@@ -16497,9 +16501,11 @@ const DraftField = ({ inputId, label, labelNoWrap = false, value, disabled, onCo
         onKeyDown={stopEditableKeyPropagation}
         onFocus={() => {
           setFocused(true);
-          setDraft(placeholderOnly ? '' : storedValue);
+          const nextValue = placeholderOnly ? '' : storedValue;
+          draftRef.current = nextValue;
+          setDraft(nextValue);
         }}
-        onBlur={commitDraft}
+        onBlur={(event) => commitDraft(event.currentTarget.value)}
         onChange={(event) => updateDraft(event.target.value)}
       />
       {typeof maxLength === 'number' ? (
@@ -16514,28 +16520,34 @@ const DraftField = ({ inputId, label, labelNoWrap = false, value, disabled, onCo
 const DraftTextAreaField = ({ label, value, disabled, onCommit, info, className = 'lg:col-span-2', fieldClassName = 'w-full', fieldSizingClassName = 'min-h-[74px]' }: { label: string; value: string; disabled: boolean; onCommit: (value: string) => void; info?: string; className?: string; fieldClassName?: string; fieldSizingClassName?: string }) => {
   const [draft, setDraft] = useState(value || '');
   const [focused, setFocused] = useState(false);
+  const draftRef = useRef(value || '');
   const lastCommittedRef = useRef(value || '');
   const displayedValue = focused ? draft : value || '';
 
   useEffect(() => {
     if (!focused) {
       setDraft(value || '');
+      draftRef.current = value || '';
       lastCommittedRef.current = value || '';
     }
   }, [focused, value]);
 
   const updateDraft = (nextValue: string) => {
+    draftRef.current = nextValue;
     setDraft(nextValue);
     if (nextValue === lastCommittedRef.current) return;
     lastCommittedRef.current = nextValue;
     onCommit(nextValue);
   };
 
-  const commitDraft = () => {
+  const commitDraft = (latestValue?: string) => {
+    const nextValue = latestValue ?? draftRef.current;
+    draftRef.current = nextValue;
     setFocused(false);
-    if (draft === lastCommittedRef.current) return;
-    lastCommittedRef.current = draft;
-    onCommit(draft);
+    setDraft(nextValue);
+    if (nextValue === lastCommittedRef.current) return;
+    lastCommittedRef.current = nextValue;
+    onCommit(nextValue);
   };
 
   return (
@@ -16550,9 +16562,11 @@ const DraftTextAreaField = ({ label, value, disabled, onCommit, info, className 
         onKeyDown={stopEditableKeyPropagation}
         onFocus={() => {
           setFocused(true);
-          setDraft(value || '');
+          const nextValue = value || '';
+          draftRef.current = nextValue;
+          setDraft(nextValue);
         }}
-        onBlur={commitDraft}
+        onBlur={(event) => commitDraft(event.currentTarget.value)}
         onChange={(event) => updateDraft(event.target.value)}
       />
     </label>

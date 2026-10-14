@@ -8478,19 +8478,11 @@ const InitialSetupWizard: React.FC<{
             if (visibleStep.id !== 'callsigns') return;
             const detail = (event as CustomEvent<{ config?: any; sequence?: number }>).detail || {};
             if (!detail.config || !Array.isArray(detail.config.units)) return;
-            wizardPlatformSettingsDraftRef.current = detail.config;
-            wizardPlatformSettingsDraftMetaRef.current = {
+            pushWizardPersistenceTrace('settings-embed-draft:global-event-ignored-for-step-19', {
                 stepId: visibleStep.id,
-                unitCodes: getWizardActiveUnitCodes(),
                 sequence: Number(detail.sequence || 0),
-            };
-            pushWizardPersistenceTrace('settings-embed-draft:captured', {
-                stepId: visibleStep.id,
-                unitCodes: wizardPlatformSettingsDraftMetaRef.current.unitCodes,
-                sequence: wizardPlatformSettingsDraftMetaRef.current.sequence,
                 step19Summary: summariseWizardStep19Config(detail.config),
             });
-            scheduleCapturedStep19DraftAutosave();
         };
         window.addEventListener(PLATFORM_CONFIG_UPDATED_EVENT, handlePlatformConfigUpdated);
         return () => {
