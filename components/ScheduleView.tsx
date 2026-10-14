@@ -3923,7 +3923,13 @@ const InitialSetupWizard: React.FC<{
             || details.stepId === 'callsigns';
         if (shouldMirrorToStep19Trace) {
             try {
-                const existingStepTrace = JSON.parse(window.localStorage.getItem(step19SettingsTraceStorageKey) || '[]');
+                const memoryTrace = Array.isArray((window as any).dfpStep19SettingsTrace)
+                    ? (window as any).dfpStep19SettingsTrace
+                    : null;
+                const storageTrace = memoryTrace
+                    ? []
+                    : JSON.parse(window.localStorage.getItem(step19SettingsTraceStorageKey) || '[]');
+                const existingStepTrace = memoryTrace || (Array.isArray(storageTrace) ? storageTrace : []);
                 const stepEntry = {
                     stage: `wizard:${stage}`,
                     atIso: entry.ts,
@@ -3931,7 +3937,7 @@ const InitialSetupWizard: React.FC<{
                     details: entry.details,
                     snapshot: entry.snapshot,
                 };
-                const nextStepTrace = [...(Array.isArray(existingStepTrace) ? existingStepTrace : []), stepEntry].slice(-260);
+                const nextStepTrace = [...existingStepTrace, stepEntry].slice(-1200);
                 window.localStorage.setItem(step19SettingsTraceStorageKey, JSON.stringify(nextStepTrace, null, 2));
                 (window as any).dfpStep19SettingsTrace = nextStepTrace;
             } catch {
@@ -8359,6 +8365,60 @@ const InitialSetupWizard: React.FC<{
     const currentStep = Math.min(wizardStep, steps.length - 1);
     const visibleStep = steps[currentStep];
     const wizardStepIdSignature = steps.map((step) => step.id).join('|');
+    const summariseWizardStep19Config = (sourceConfig: any) => {
+        const targetCodes = Array.from(new Set([
+            String(unitCode || '').trim(),
+            String(unitDraft.code || '').trim(),
+        ].filter(Boolean))).map((code) => code.toUpperCase());
+        const sourceUnits = Array.isArray(sourceConfig?.units) ? sourceConfig.units : [];
+        const units = sourceUnits
+            .filter((unit: any) => {
+                if (targetCodes.length === 0) return false;
+                return targetCodes.includes(String(unit?.code || '').trim().toUpperCase());
+            })
+            .map((unit: any) => {
+                const settings = unit?.settings || {};
+                const personnel = settings.personnelDisplaySettings || settings.personnelSettings || {};
+                const training = settings.trainingReportTerminology || {};
+                const sct = settings.sctTerminology || {};
+                const qualificationEntries = Array.isArray(settings.staffQualificationCatalogue?.qualifications)
+                    ? settings.staffQualificationCatalogue.qualifications
+                    : [];
+                const callsignEntries = Array.isArray(settings.unitCallsignSettings?.entries)
+                    ? settings.unitCallsignSettings.entries
+                    : [];
+                const callsignPolicies = Array.isArray(settings.unitCallsignSettings?.policies)
+                    ? settings.unitCallsignSettings.policies
+                    : [];
+                return {
+                    code: unit?.code || null,
+                    name: unit?.name || null,
+                    settingsKeys: Object.keys(settings || {}).sort(),
+                    instructorLabel: personnel.instructorLabel ?? null,
+                    traineeLabel: personnel.traineeLabel ?? null,
+                    contractorLabel: personnel.simIpDisplayLabel ?? null,
+                    courseCommanderLabel: personnel.courseCommanderLabel ?? null,
+                    deputyCourseCommanderLabel: personnel.deputyCourseCommanderLabel ?? null,
+                    trainingReportName: training.name ?? null,
+                    sctShortLabel: sct.shortLabel ?? null,
+                    sctLongLabel: sct.longLabel ?? null,
+                    qualificationCount: qualificationEntries.length,
+                    qualificationSample: qualificationEntries.slice(0, 6).map((entry: any) => ({
+                        id: entry?.id,
+                        name: entry?.name,
+                        code: entry?.code,
+                    })),
+                    callsignEntryCount: callsignEntries.length,
+                    callsignPolicyCount: callsignPolicies.length,
+                    callsignPolicies: callsignPolicies.slice(0, 4),
+                };
+            });
+        return {
+            targetCodes,
+            configUnitCodes: sourceUnits.map((unit: any) => unit?.code).filter(Boolean),
+            matchingUnits: units,
+        };
+    };
     const scheduleCapturedStep19DraftAutosave = useCallback(() => {
         if (typeof window === 'undefined') return;
         if (!onUpdatePlatformConfig) return;
@@ -8374,6 +8434,7 @@ const InitialSetupWizard: React.FC<{
                     stepId: capturedMeta.stepId,
                     hasCapturedConfig: Boolean(capturedConfig),
                     sequence: capturedMeta.sequence,
+                    step19Summary: summariseWizardStep19Config(capturedConfig),
                 });
                 return;
             }
@@ -8381,12 +8442,14 @@ const InitialSetupWizard: React.FC<{
                 stepId: capturedMeta.stepId,
                 unitCodes: capturedMeta.unitCodes,
                 sequence: capturedMeta.sequence,
+                step19Summary: summariseWizardStep19Config(capturedConfig),
             });
             onUpdatePlatformConfig(() => capturedConfig);
             pushWizardPersistenceTrace('settings-embed-draft:autosave-applied', {
                 stepId: capturedMeta.stepId,
                 unitCodes: capturedMeta.unitCodes,
                 sequence: capturedMeta.sequence,
+                step19Summary: summariseWizardStep19Config(capturedConfig),
             });
         }, 350);
     }, [onUpdatePlatformConfig]);
@@ -8404,6 +8467,7 @@ const InitialSetupWizard: React.FC<{
             stepId: visibleStep.id,
             unitCodes: wizardPlatformSettingsDraftMetaRef.current.unitCodes,
             sequence: wizardPlatformSettingsDraftMetaRef.current.sequence,
+            step19Summary: summariseWizardStep19Config(nextConfig),
         });
         scheduleCapturedStep19DraftAutosave();
     }, [mode, scheduleCapturedStep19DraftAutosave, visibleStep.id]);
@@ -8424,6 +8488,7 @@ const InitialSetupWizard: React.FC<{
                 stepId: visibleStep.id,
                 unitCodes: wizardPlatformSettingsDraftMetaRef.current.unitCodes,
                 sequence: wizardPlatformSettingsDraftMetaRef.current.sequence,
+                step19Summary: summariseWizardStep19Config(detail.config),
             });
             scheduleCapturedStep19DraftAutosave();
         };
@@ -11896,6 +11961,7 @@ const InitialSetupWizard: React.FC<{
             capturedUnitCodes: capturedMeta.unitCodes,
             capturedSequence: capturedMeta.sequence,
             matchesStep,
+            step19Summary: summariseWizardStep19Config(capturedConfig),
         });
         if (!capturedConfig || !matchesStep || !onUpdatePlatformConfig) return false;
         onUpdatePlatformConfig(() => capturedConfig);
@@ -11905,6 +11971,7 @@ const InitialSetupWizard: React.FC<{
             reason,
             unitCodes: capturedMeta.unitCodes,
             sequence: capturedMeta.sequence,
+            step19Summary: summariseWizardStep19Config(capturedConfig),
         });
         return true;
     };

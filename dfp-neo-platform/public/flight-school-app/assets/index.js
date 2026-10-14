@@ -20772,8 +20772,10 @@ const PlatformConfigurationSettings = ({
     if (events.length > 260) events.splice(0, events.length - 260);
     if (typeof window === "undefined") return;
     try {
-      const existing = JSON.parse(window.localStorage.getItem(STEP_19_SETTINGS_TRACE_STORAGE_KEY) || "[]");
-      const next = [...Array.isArray(existing) ? existing : [], entry].slice(-700);
+      const memoryTrace = Array.isArray(window.dfpStep19SettingsTrace) ? window.dfpStep19SettingsTrace : null;
+      const storageTrace = memoryTrace ? [] : JSON.parse(window.localStorage.getItem(STEP_19_SETTINGS_TRACE_STORAGE_KEY) || "[]");
+      const existing = memoryTrace || (Array.isArray(storageTrace) ? storageTrace : []);
+      const next = [...existing, entry].slice(-1200);
       window.localStorage.setItem(STEP_19_SETTINGS_TRACE_STORAGE_KEY, JSON.stringify(next, null, 2));
       window.dfpStep19SettingsTrace = next;
     } catch {
@@ -21440,12 +21442,58 @@ const PlatformConfigurationSettings = ({
       snapshot: getStep19UnitSettingsSnapshot()
     });
   };
+  const summariseStep19ConfigForUnit = (sourceConfig, unitCode = activeSettingsUnitCode) => {
+    const targetCode = String(unitCode || "").trim().toUpperCase();
+    const sourceUnits = Array.isArray(sourceConfig?.units) ? sourceConfig.units : [];
+    const unit = sourceUnits.find((candidate) => String(candidate?.code || "").trim().toUpperCase() === targetCode) || null;
+    const settings = unit?.settings || {};
+    const personnel = settings.personnelDisplaySettings || settings.personnelSettings || {};
+    const training = settings.trainingReportTerminology || {};
+    const sct = settings.sctTerminology || {};
+    const staffQualifications = normaliseStaffQualificationCatalogue(settings.staffQualificationCatalogue || null).qualifications;
+    const callsignSettings = normaliseUnitCallsignSettings(settings.unitCallsignSettings || null);
+    return {
+      requestedUnitCode: targetCode,
+      found: Boolean(unit),
+      unitCode: unit?.code || null,
+      unitName: unit?.name || null,
+      settingsKeys: Object.keys(settings || {}).sort(),
+      personnelLabels: {
+        instructorLabel: personnel.instructorLabel ?? null,
+        traineeLabel: personnel.traineeLabel ?? null,
+        simIpDisplayLabel: personnel.simIpDisplayLabel ?? null,
+        courseCommanderLabel: personnel.courseCommanderLabel ?? null,
+        deputyCourseCommanderLabel: personnel.deputyCourseCommanderLabel ?? null
+      },
+      trainingReportTerminology: {
+        name: training.name ?? null
+      },
+      sctTerminology: {
+        shortLabel: sct.shortLabel ?? null,
+        longLabel: sct.longLabel ?? null
+      },
+      staffQualificationCount: staffQualifications.length,
+      staffQualificationSample: staffQualifications.slice(0, 8).map((entry) => ({
+        id: entry.id,
+        name: entry.name,
+        code: entry.code,
+        roleRestrictions: entry.roleRestrictions,
+        operationalModels: entry.operationalModels
+      })),
+      unitCallsignSettings: {
+        entryCount: callsignSettings.entries.length,
+        policyCount: callsignSettings.policies.length,
+        policies: callsignSettings.policies.slice(0, 8)
+      }
+    };
+  };
   const publishWizardStep19DraftConfig = (nextConfig, reason) => {
     if (!wizardEditMode || scrollTarget !== "platform-rank-terminology") return;
     recordStep19SettingsTrace("wizard-draft:direct-publish", {
       reason,
       activeSettingsUnitCode,
-      unitCodes: (Array.isArray(nextConfig.units) ? nextConfig.units : []).map((unit) => unit?.code).filter(Boolean)
+      unitCodes: (Array.isArray(nextConfig.units) ? nextConfig.units : []).map((unit) => unit?.code).filter(Boolean),
+      activeUnitSummary: summariseStep19ConfigForUnit(nextConfig)
     });
     onWizardDraftChange?.(nextConfig);
   };
@@ -21794,6 +21842,11 @@ const PlatformConfigurationSettings = ({
         unitCode: unit.code,
         previousKeys: Object.keys(currentSettings || {}).sort(),
         nextKeys: Object.keys(nextSettings || {}).sort(),
+        previousSummary: summariseStep19ConfigForUnit(previousConfig, unit.code),
+        nextSummary: summariseStep19ConfigForUnit({
+          ...previousConfig,
+          units: previousUnits.map((candidate, candidateIndex) => candidateIndex === targetIndex ? { ...candidate, settings: nextSettings } : candidate)
+        }, unit.code),
         touchedStep19Keys: {
           personnelDisplaySettings: Boolean(nextSettings.personnelDisplaySettings),
           trainingReportTerminology: Boolean(nextSettings.trainingReportTerminology),
@@ -36450,7 +36503,9 @@ const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, lo
     const shouldMirrorToStep19Trace = stage.startsWith("settings-embed") || entry.snapshot?.visibleStepId === "callsigns" || details.stepId === "callsigns";
     if (shouldMirrorToStep19Trace) {
       try {
-        const existingStepTrace = JSON.parse(window.localStorage.getItem(step19SettingsTraceStorageKey) || "[]");
+        const memoryTrace = Array.isArray(window.dfpStep19SettingsTrace) ? window.dfpStep19SettingsTrace : null;
+        const storageTrace = memoryTrace ? [] : JSON.parse(window.localStorage.getItem(step19SettingsTraceStorageKey) || "[]");
+        const existingStepTrace = memoryTrace || (Array.isArray(storageTrace) ? storageTrace : []);
         const stepEntry = {
           stage: `wizard:${stage}`,
           atIso: entry.ts,
@@ -36458,7 +36513,7 @@ const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, lo
           details: entry.details,
           snapshot: entry.snapshot
         };
-        const nextStepTrace = [...Array.isArray(existingStepTrace) ? existingStepTrace : [], stepEntry].slice(-260);
+        const nextStepTrace = [...existingStepTrace, stepEntry].slice(-1200);
         window.localStorage.setItem(step19SettingsTraceStorageKey, JSON.stringify(nextStepTrace, null, 2));
         window.dfpStep19SettingsTrace = nextStepTrace;
       } catch {
@@ -40232,6 +40287,52 @@ const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, lo
   const currentStep = Math.min(wizardStep, steps.length - 1);
   const visibleStep = steps[currentStep];
   const wizardStepIdSignature = steps.map((step) => step.id).join("|");
+  const summariseWizardStep19Config = (sourceConfig) => {
+    const targetCodes = Array.from(new Set([
+      String(unitCode || "").trim(),
+      String(unitDraft.code || "").trim()
+    ].filter(Boolean))).map((code) => code.toUpperCase());
+    const sourceUnits = Array.isArray(sourceConfig?.units) ? sourceConfig.units : [];
+    const units = sourceUnits.filter((unit) => {
+      if (targetCodes.length === 0) return false;
+      return targetCodes.includes(String(unit?.code || "").trim().toUpperCase());
+    }).map((unit) => {
+      const settings = unit?.settings || {};
+      const personnel = settings.personnelDisplaySettings || settings.personnelSettings || {};
+      const training = settings.trainingReportTerminology || {};
+      const sct = settings.sctTerminology || {};
+      const qualificationEntries = Array.isArray(settings.staffQualificationCatalogue?.qualifications) ? settings.staffQualificationCatalogue.qualifications : [];
+      const callsignEntries = Array.isArray(settings.unitCallsignSettings?.entries) ? settings.unitCallsignSettings.entries : [];
+      const callsignPolicies = Array.isArray(settings.unitCallsignSettings?.policies) ? settings.unitCallsignSettings.policies : [];
+      return {
+        code: unit?.code || null,
+        name: unit?.name || null,
+        settingsKeys: Object.keys(settings || {}).sort(),
+        instructorLabel: personnel.instructorLabel ?? null,
+        traineeLabel: personnel.traineeLabel ?? null,
+        contractorLabel: personnel.simIpDisplayLabel ?? null,
+        courseCommanderLabel: personnel.courseCommanderLabel ?? null,
+        deputyCourseCommanderLabel: personnel.deputyCourseCommanderLabel ?? null,
+        trainingReportName: training.name ?? null,
+        sctShortLabel: sct.shortLabel ?? null,
+        sctLongLabel: sct.longLabel ?? null,
+        qualificationCount: qualificationEntries.length,
+        qualificationSample: qualificationEntries.slice(0, 6).map((entry) => ({
+          id: entry?.id,
+          name: entry?.name,
+          code: entry?.code
+        })),
+        callsignEntryCount: callsignEntries.length,
+        callsignPolicyCount: callsignPolicies.length,
+        callsignPolicies: callsignPolicies.slice(0, 4)
+      };
+    });
+    return {
+      targetCodes,
+      configUnitCodes: sourceUnits.map((unit) => unit?.code).filter(Boolean),
+      matchingUnits: units
+    };
+  };
   const scheduleCapturedStep19DraftAutosave = reactExports.useCallback(() => {
     if (typeof window === "undefined") return;
     if (!onUpdatePlatformConfig) return;
@@ -40246,20 +40347,23 @@ const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, lo
         pushWizardPersistenceTrace("settings-embed-draft:autosave-skipped", {
           stepId: capturedMeta.stepId,
           hasCapturedConfig: Boolean(capturedConfig),
-          sequence: capturedMeta.sequence
+          sequence: capturedMeta.sequence,
+          step19Summary: summariseWizardStep19Config(capturedConfig)
         });
         return;
       }
       pushWizardPersistenceTrace("settings-embed-draft:autosave-requested", {
         stepId: capturedMeta.stepId,
         unitCodes: capturedMeta.unitCodes,
-        sequence: capturedMeta.sequence
+        sequence: capturedMeta.sequence,
+        step19Summary: summariseWizardStep19Config(capturedConfig)
       });
       onUpdatePlatformConfig(() => capturedConfig);
       pushWizardPersistenceTrace("settings-embed-draft:autosave-applied", {
         stepId: capturedMeta.stepId,
         unitCodes: capturedMeta.unitCodes,
-        sequence: capturedMeta.sequence
+        sequence: capturedMeta.sequence,
+        step19Summary: summariseWizardStep19Config(capturedConfig)
       });
     }, 350);
   }, [onUpdatePlatformConfig]);
@@ -40276,7 +40380,8 @@ const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, lo
     pushWizardPersistenceTrace("settings-embed-draft:direct-captured", {
       stepId: visibleStep.id,
       unitCodes: wizardPlatformSettingsDraftMetaRef.current.unitCodes,
-      sequence: wizardPlatformSettingsDraftMetaRef.current.sequence
+      sequence: wizardPlatformSettingsDraftMetaRef.current.sequence,
+      step19Summary: summariseWizardStep19Config(nextConfig)
     });
     scheduleCapturedStep19DraftAutosave();
   }, [mode, scheduleCapturedStep19DraftAutosave, visibleStep.id]);
@@ -40296,7 +40401,8 @@ const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, lo
       pushWizardPersistenceTrace("settings-embed-draft:captured", {
         stepId: visibleStep.id,
         unitCodes: wizardPlatformSettingsDraftMetaRef.current.unitCodes,
-        sequence: wizardPlatformSettingsDraftMetaRef.current.sequence
+        sequence: wizardPlatformSettingsDraftMetaRef.current.sequence,
+        step19Summary: summariseWizardStep19Config(detail.config)
       });
       scheduleCapturedStep19DraftAutosave();
     };
@@ -43201,7 +43307,8 @@ const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, lo
       capturedStepId: capturedMeta.stepId,
       capturedUnitCodes: capturedMeta.unitCodes,
       capturedSequence: capturedMeta.sequence,
-      matchesStep
+      matchesStep,
+      step19Summary: summariseWizardStep19Config(capturedConfig)
     });
     if (!capturedConfig || !matchesStep || !onUpdatePlatformConfig) return false;
     onUpdatePlatformConfig(() => capturedConfig);
@@ -43210,7 +43317,8 @@ const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, lo
       stepId,
       reason,
       unitCodes: capturedMeta.unitCodes,
-      sequence: capturedMeta.sequence
+      sequence: capturedMeta.sequence,
+      step19Summary: summariseWizardStep19Config(capturedConfig)
     });
     return true;
   };

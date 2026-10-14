@@ -2882,8 +2882,14 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
     if (events.length > 260) events.splice(0, events.length - 260);
     if (typeof window === 'undefined') return;
     try {
-      const existing = JSON.parse(window.localStorage.getItem(STEP_19_SETTINGS_TRACE_STORAGE_KEY) || '[]');
-      const next = [...(Array.isArray(existing) ? existing : []), entry].slice(-700);
+      const memoryTrace = Array.isArray((window as any).dfpStep19SettingsTrace)
+        ? (window as any).dfpStep19SettingsTrace
+        : null;
+      const storageTrace = memoryTrace
+        ? []
+        : JSON.parse(window.localStorage.getItem(STEP_19_SETTINGS_TRACE_STORAGE_KEY) || '[]');
+      const existing = memoryTrace || (Array.isArray(storageTrace) ? storageTrace : []);
+      const next = [...existing, entry].slice(-1200);
       window.localStorage.setItem(STEP_19_SETTINGS_TRACE_STORAGE_KEY, JSON.stringify(next, null, 2));
       (window as any).dfpStep19SettingsTrace = next;
     } catch {
@@ -3633,6 +3639,53 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
       snapshot: getStep19UnitSettingsSnapshot(),
     });
   };
+  const summariseStep19ConfigForUnit = (sourceConfig: PlatformConfig | null | undefined, unitCode = activeSettingsUnitCode) => {
+    const targetCode = String(unitCode || '').trim().toUpperCase();
+    const sourceUnits = Array.isArray(sourceConfig?.units) ? sourceConfig.units : [];
+    const unit = sourceUnits.find((candidate: any) => (
+      String(candidate?.code || '').trim().toUpperCase() === targetCode
+    )) || null;
+    const settings = unit?.settings || {};
+    const personnel = settings.personnelDisplaySettings || settings.personnelSettings || {};
+    const training = settings.trainingReportTerminology || {};
+    const sct = settings.sctTerminology || {};
+    const staffQualifications = normaliseStaffQualificationCatalogue(settings.staffQualificationCatalogue || null).qualifications;
+    const callsignSettings = normaliseUnitCallsignSettings(settings.unitCallsignSettings || null);
+    return {
+      requestedUnitCode: targetCode,
+      found: Boolean(unit),
+      unitCode: unit?.code || null,
+      unitName: unit?.name || null,
+      settingsKeys: Object.keys(settings || {}).sort(),
+      personnelLabels: {
+        instructorLabel: personnel.instructorLabel ?? null,
+        traineeLabel: personnel.traineeLabel ?? null,
+        simIpDisplayLabel: personnel.simIpDisplayLabel ?? null,
+        courseCommanderLabel: personnel.courseCommanderLabel ?? null,
+        deputyCourseCommanderLabel: personnel.deputyCourseCommanderLabel ?? null,
+      },
+      trainingReportTerminology: {
+        name: training.name ?? null,
+      },
+      sctTerminology: {
+        shortLabel: sct.shortLabel ?? null,
+        longLabel: sct.longLabel ?? null,
+      },
+      staffQualificationCount: staffQualifications.length,
+      staffQualificationSample: staffQualifications.slice(0, 8).map((entry) => ({
+        id: entry.id,
+        name: entry.name,
+        code: entry.code,
+        roleRestrictions: entry.roleRestrictions,
+        operationalModels: entry.operationalModels,
+      })),
+      unitCallsignSettings: {
+        entryCount: callsignSettings.entries.length,
+        policyCount: callsignSettings.policies.length,
+        policies: callsignSettings.policies.slice(0, 8),
+      },
+    };
+  };
   const publishWizardStep19DraftConfig = (nextConfig: PlatformConfig, reason: string) => {
     if (!wizardEditMode || scrollTarget !== 'platform-rank-terminology') return;
     recordStep19SettingsTrace('wizard-draft:direct-publish', {
@@ -3641,6 +3694,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
       unitCodes: (Array.isArray(nextConfig.units) ? nextConfig.units : [])
         .map((unit: any) => unit?.code)
         .filter(Boolean),
+      activeUnitSummary: summariseStep19ConfigForUnit(nextConfig),
     });
     onWizardDraftChange?.(nextConfig);
   };
@@ -4067,6 +4121,13 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
         unitCode: unit.code,
         previousKeys: Object.keys(currentSettings || {}).sort(),
         nextKeys: Object.keys(nextSettings || {}).sort(),
+        previousSummary: summariseStep19ConfigForUnit(previousConfig, unit.code),
+        nextSummary: summariseStep19ConfigForUnit({
+          ...previousConfig,
+          units: previousUnits.map((candidate, candidateIndex) => (
+            candidateIndex === targetIndex ? { ...candidate, settings: nextSettings } : candidate
+          )),
+        }, unit.code),
         touchedStep19Keys: {
           personnelDisplaySettings: Boolean(nextSettings.personnelDisplaySettings),
           trainingReportTerminology: Boolean(nextSettings.trainingReportTerminology),
