@@ -21256,6 +21256,23 @@ const PlatformConfigurationSettings = ({
     if (String(value || "").trim()) markWizardPlaceholderEdited(key);
     commit(value);
   };
+  const commitStep19Field = (key, commit) => (value) => {
+    recordStep19SettingsTrace("field:commit", {
+      key,
+      value,
+      valueLength: String(value || "").length,
+      trimmedLength: String(value || "").trim().length
+    });
+    commit(value);
+  };
+  const traceStep19FieldChange = (key, value, details = {}) => {
+    recordStep19SettingsTrace("field:change", {
+      key,
+      value,
+      valueType: Array.isArray(value) ? "array" : typeof value,
+      ...details
+    });
+  };
   const getWizardSamplePlaceholderProps = (key, value, sample) => {
     const current = String(value || "").trim();
     const placeholder = String(sample || "").trim();
@@ -21311,6 +21328,15 @@ const PlatformConfigurationSettings = ({
         callsign: entry.callsign,
         isDefault: entry.isDefault
       })),
+      unitCallsignSettings: {
+        entries: callsignSettings.entries.map((entry) => ({
+          id: entry.id,
+          unitCode: entry.unitCode,
+          callsign: entry.callsign,
+          isDefault: entry.isDefault
+        })),
+        policies: callsignSettings.policies
+      },
       callsignPolicies: callsignSettings.policies
     };
   };
@@ -21499,11 +21525,30 @@ const PlatformConfigurationSettings = ({
     const previousConfig = draftConfigRef.current;
     const previousUnits = Array.isArray(previousConfig.units) ? previousConfig.units : [];
     const targetIndex = previousUnits.findIndex((unit) => String(unit.code || "").trim().toUpperCase() === activeSettingsUnitCode);
-    if (targetIndex < 0) return;
+    if (targetIndex < 0) {
+      recordStep19SettingsTrace("unit-settings:target-missing", {
+        activeSettingsUnitCode,
+        availableUnitCodes: previousUnits.map((unit) => unit?.code).filter(Boolean)
+      });
+      return;
+    }
     const nextUnits = previousUnits.map((unit, index) => {
       if (index !== targetIndex) return unit;
       const currentSettings = unit.settings || {};
       const nextSettings = typeof updater === "function" ? updater(currentSettings) : { ...currentSettings, ...updater };
+      recordStep19SettingsTrace("unit-settings:applied", {
+        unitCode: unit.code,
+        previousKeys: Object.keys(currentSettings || {}).sort(),
+        nextKeys: Object.keys(nextSettings || {}).sort(),
+        touchedStep19Keys: {
+          personnelDisplaySettings: Boolean(nextSettings.personnelDisplaySettings),
+          trainingReportTerminology: Boolean(nextSettings.trainingReportTerminology),
+          sctTerminology: Boolean(nextSettings.sctTerminology),
+          crewPositionTerminology: Boolean(nextSettings.crewPositionTerminology),
+          staffQualificationCatalogue: Boolean(nextSettings.staffQualificationCatalogue),
+          unitCallsignSettings: Boolean(nextSettings.unitCallsignSettings)
+        }
+      });
       return { ...unit, settings: nextSettings };
     });
     const nextConfig = { ...previousConfig, units: nextUnits };
@@ -30536,6 +30581,7 @@ This removes them from DFP Resource Rows. Press Save in this section to apply th
                   options: ["Use staff rank order", "Use separate trainee rank order"],
                   disabled: !canEditRankTerminology,
                   onChange: (value) => {
+                    traceStep19FieldChange("trainee-rank-source", value);
                     const useSeparateTraineeRankOrder = value === "Use separate trainee rank order";
                     updatePersonnelDisplaySettings({
                       useSeparateTraineeRankOrder,
@@ -30560,7 +30606,10 @@ This removes them from DFP Resource Rows. Press Save in this section to apply th
                       type: "checkbox",
                       checked: personnelDisplaySettings.courseLeadershipEnabled,
                       disabled: !canEditRankTerminology,
-                      onChange: (event) => updatePersonnelDisplaySettings({ courseLeadershipEnabled: event.target.checked }),
+                      onChange: (event) => {
+                        traceStep19FieldChange("course-leadership-enabled", event.target.checked);
+                        updatePersonnelDisplaySettings({ courseLeadershipEnabled: event.target.checked });
+                      },
                       className: "peer sr-only"
                     }
                   ),
@@ -30618,7 +30667,10 @@ This removes them from DFP Resource Rows. Press Save in this section to apply th
                       type: "checkbox",
                       checked: personnelDisplaySettings.simIpDisplayEnabled,
                       disabled: !canEditRankTerminology,
-                      onChange: (event) => updatePersonnelDisplaySettings({ simIpDisplayEnabled: event.target.checked }),
+                      onChange: (event) => {
+                        traceStep19FieldChange("contractor-staff-enabled", event.target.checked);
+                        updatePersonnelDisplaySettings({ simIpDisplayEnabled: event.target.checked });
+                      },
                       className: "peer sr-only"
                     }
                   ),
@@ -30669,12 +30721,15 @@ This removes them from DFP Resource Rows. Press Save in this section to apply th
                               type: "checkbox",
                               checked,
                               disabled: !canEditRankTerminology || !personnelDisplaySettings.simIpDisplayEnabled,
-                              onChange: (event) => updatePersonnelDisplaySettings({
-                                contractorStaffEventEligibility: {
-                                  ...personnelDisplaySettings.contractorStaffEventEligibility,
-                                  [option.key]: event.target.checked
-                                }
-                              }),
+                              onChange: (event) => {
+                                traceStep19FieldChange(`contractor-staff-event-${option.key}`, event.target.checked);
+                                updatePersonnelDisplaySettings({
+                                  contractorStaffEventEligibility: {
+                                    ...personnelDisplaySettings.contractorStaffEventEligibility,
+                                    [option.key]: event.target.checked
+                                  }
+                                });
+                              },
                               className: "h-3.5 w-3.5 rounded border-gray-500 accent-cyan-400"
                             }
                           ),
@@ -30759,7 +30814,7 @@ This removes them from DFP Resource Rows. Press Save in this section to apply th
                       label: "Generic Position",
                       value: entry.genericName,
                       disabled: !canEditRankTerminology || isDefaultEntry,
-                      onCommit: (value) => updateCrewPositionEntry(entry.id, { genericName: value }),
+                      onCommit: commitStep19Field(`crew-position-${entry.id}-generic`, (value) => updateCrewPositionEntry(entry.id, { genericName: value })),
                       info: isDefaultEntry ? "Baseline generic positions stay fixed so aircraft seat links remain stable." : "The generic position saved on aircraft seat configuration."
                     }
                   ),
@@ -30769,7 +30824,7 @@ This removes them from DFP Resource Rows. Press Save in this section to apply th
                       label: "App Label",
                       value: entry.label,
                       disabled: !canEditRankTerminology,
-                      onCommit: (value) => updateCrewPositionEntry(entry.id, { label: value }),
+                      onCommit: commitStep19Field(`crew-position-${entry.id}-label`, (value) => updateCrewPositionEntry(entry.id, { label: value })),
                       info: getCrewPositionAppLabelInfo(entry)
                     }
                   ),
@@ -30791,6 +30846,7 @@ This removes them from DFP Resource Rows. Press Save in this section to apply th
                                 disabled: !canEditRankTerminology || isSelected && selectedModels.length <= 1,
                                 onChange: (event) => {
                                   const nextModels = event.target.checked ? Array.from(/* @__PURE__ */ new Set([...selectedModels, option.value])) : selectedModels.filter((model) => model !== option.value);
+                                  traceStep19FieldChange(`crew-position-${entry.id}-model-${option.value}`, event.target.checked, { nextModels });
                                   updateCrewPositionEntry(entry.id, { operationalModels: nextModels });
                                 },
                                 className: "h-3.5 w-3.5 rounded border-gray-500 accent-cyan-400"
@@ -30867,9 +30923,9 @@ This removes them from DFP Resource Rows. Press Save in this section to apply th
                     label: "Role Restrictions",
                     value: (entry.roleRestrictions || []).join(", "),
                     disabled: !canEditRankTerminology,
-                    onCommit: (value) => updateStaffQualificationEntry(entry.id, {
+                    onCommit: commitStep19Field(`qualification-${entry.id}-role-restrictions`, (value) => updateStaffQualificationEntry(entry.id, {
                       roleRestrictions: value.split(/[,;\n]/).map((item) => item.trim()).filter(Boolean)
-                    }),
+                    })),
                     info: "Optional comma-separated roles this qualification applies to. Leave blank for all roles."
                   }
                 ),
@@ -30891,6 +30947,7 @@ This removes them from DFP Resource Rows. Press Save in this section to apply th
                               disabled: !canEditRankTerminology || isSelected && selectedModels.length <= 1,
                               onChange: (event) => {
                                 const nextModels = event.target.checked ? Array.from(/* @__PURE__ */ new Set([...selectedModels, option.value])) : selectedModels.filter((model) => model !== option.value);
+                                traceStep19FieldChange(`qualification-${entry.id}-model-${option.value}`, event.target.checked, { nextModels });
                                 updateStaffQualificationEntry(entry.id, { operationalModels: nextModels });
                               },
                               className: "h-3.5 w-3.5 rounded border-gray-500 accent-emerald-400"
@@ -30955,7 +31012,10 @@ This removes them from DFP Resource Rows. Press Save in this section to apply th
                           disabled: !canEditRankTerminology,
                           options: UNIT_CALLSIGN_ALLOCATION_METHODS,
                           optionLabels: UNIT_CALLSIGN_ALLOCATION_METHOD_LABELS,
-                          onChange: (value) => updateUnitCallsignPolicy(unitCode, { allocationMethod: value })
+                          onChange: (value) => {
+                            traceStep19FieldChange(`unit-callsign-policy-${unitCode}`, value);
+                            updateUnitCallsignPolicy(unitCode, { allocationMethod: value });
+                          }
                         }
                       ) }, unitCode);
                     }),
@@ -30973,7 +31033,10 @@ This removes them from DFP Resource Rows. Press Save in this section to apply th
                         value: entry.unitCode,
                         disabled: !canEditRankTerminology,
                         options: visibleCallsignUnitOptions.length > 0 ? visibleCallsignUnitOptions : visibleUnitOptions,
-                        onChange: (value) => updateUnitCallsignEntry(entry.id, { unitCode: value.toUpperCase(), isDefault: false })
+                        onChange: (value) => {
+                          traceStep19FieldChange(`unit-callsign-${entry.id}-unit`, value);
+                          updateUnitCallsignEntry(entry.id, { unitCode: value.toUpperCase(), isDefault: false });
+                        }
                       }
                     ),
                     /* @__PURE__ */ jsxRuntimeExports.jsx(
@@ -30982,7 +31045,7 @@ This removes them from DFP Resource Rows. Press Save in this section to apply th
                         label: "Callsign",
                         value: entry.callsign,
                         disabled: !canEditRankTerminology,
-                        onCommit: (value) => updateUnitCallsignEntry(entry.id, { callsign: value }),
+                        onCommit: commitStep19Field(`unit-callsign-${entry.id}-callsign`, (value) => updateUnitCallsignEntry(entry.id, { callsign: value })),
                         info: "Callsign base only. The sortie number is selected when creating or editing an event.",
                         placeholder: isWizardSampleCallsign ? entry.callsign || "Callsign 1" : void 0,
                         placeholderOnly: isWizardSampleCallsign
@@ -30992,7 +31055,10 @@ This removes them from DFP Resource Rows. Press Save in this section to apply th
                       "button",
                       {
                         type: "button",
-                        onClick: () => setDefaultUnitCallsignEntry(entry.id),
+                        onClick: () => {
+                          traceStep19FieldChange(`unit-callsign-${entry.id}-default`, true, { unitCode: entry.unitCode, callsign: entry.callsign });
+                          setDefaultUnitCallsignEntry(entry.id);
+                        },
                         disabled: !canEditRankTerminology,
                         className: `w-full rounded border px-3 py-2 text-[10px] font-semibold uppercase tracking-wide ${entry.isDefault ? "border-green-600 bg-green-300 text-slate-950 shadow-sm" : "border-green-500 bg-green-200 text-slate-950 shadow-sm hover:border-green-600 hover:bg-green-100"} transition disabled:cursor-not-allowed disabled:border-gray-400 disabled:bg-gray-200 disabled:text-gray-500 disabled:opacity-70`,
                         children: entry.isDefault ? "Default" : "Set Default"
@@ -31101,7 +31167,7 @@ This removes them from DFP Resource Rows. Press Save in this section to apply th
                   label: "Civilian / Contractor Titles",
                   value: personnelDisplaySettings.civilianTitles.join("\n"),
                   disabled: !canEditRankTerminology,
-                  onCommit: updateCivilianTitles,
+                  onCommit: commitStep19Field("civilian-contractor-titles", updateCivilianTitles),
                   info: "Enter one civilian or contractor title per line. These titles appear after the military rank groups and are treated as equal status for sorting.",
                   className: "block w-[200px] max-w-[200px]",
                   fieldClassName: "w-[200px] max-w-[200px]",
@@ -31131,7 +31197,7 @@ This removes them from DFP Resource Rows. Press Save in this section to apply th
                     label: "Trainee Rank Order",
                     value: formatRankOrderText(personnelDisplaySettings.traineeRankOrder),
                     disabled: !canEditRankTerminology,
-                    onCommit: (value) => updatePersonnelDisplaySettings({ traineeRankOrder: parseRankOrderText(value) }),
+                    onCommit: commitStep19Field("trainee-rank-order", (value) => updatePersonnelDisplaySettings({ traineeRankOrder: parseRankOrderText(value) })),
                     info: "Optional separate ordering for trainee ranks. Enter one display level per line, highest priority first. Use = on the same line to give ranks or titles equal status."
                   }
                 )
