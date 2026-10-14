@@ -3529,10 +3529,14 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
   const getWizardSamplePlaceholderProps = (key: string, value: string, sample: string) => {
     const current = String(value || '').trim();
     const placeholder = String(sample || '').trim();
+    // In the wizard, sample/default text must behave as real editable data once
+    // loaded. Treating a value that matched the sample as "placeholder only"
+    // made fields clear themselves on remount while other ordinary inputs kept
+    // their edits.
     const usePlaceholder = wizardEditMode
       && !wizardEditedPlaceholderKeys.has(key)
       && Boolean(placeholder)
-      && (!current || current.localeCompare(placeholder, undefined, { sensitivity: 'accent' }) === 0);
+      && !current;
     if (wizardEditMode && scrollTarget === 'platform-rank-terminology') {
       const signature = JSON.stringify({
         activeSettingsUnitCode,
@@ -3557,6 +3561,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
             sampleLength: placeholder.length,
             edited: wizardEditedPlaceholderKeys.has(key),
             usePlaceholder,
+            placeholderPolicy: current ? 'show-current-value' : 'empty-field-placeholder',
             renderedInputValue: usePlaceholder ? '' : current,
           },
           renderCount: settingsTraceRef.current.renderCount,

@@ -21337,7 +21337,7 @@ const PlatformConfigurationSettings = ({
   const getWizardSamplePlaceholderProps = (key, value, sample) => {
     const current = String(value || "").trim();
     const placeholder = String(sample || "").trim();
-    const usePlaceholder = wizardEditMode && !wizardEditedPlaceholderKeys.has(key) && Boolean(placeholder) && (!current || current.localeCompare(placeholder, void 0, { sensitivity: "accent" }) === 0);
+    const usePlaceholder = wizardEditMode && !wizardEditedPlaceholderKeys.has(key) && Boolean(placeholder) && !current;
     if (wizardEditMode && scrollTarget === "platform-rank-terminology") {
       const signature = JSON.stringify({
         activeSettingsUnitCode,
@@ -21362,6 +21362,7 @@ const PlatformConfigurationSettings = ({
             sampleLength: placeholder.length,
             edited: wizardEditedPlaceholderKeys.has(key),
             usePlaceholder,
+            placeholderPolicy: current ? "show-current-value" : "empty-field-placeholder",
             renderedInputValue: usePlaceholder ? "" : current
           },
           renderCount: settingsTraceRef.current.renderCount
