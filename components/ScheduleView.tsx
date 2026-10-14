@@ -11932,7 +11932,20 @@ const InitialSetupWizard: React.FC<{
         }
     };
     const goToNextWizardStep = async () => {
+        pushWizardPersistenceTrace('wizard-next:handler-started', {
+            fromStep: visibleStep.id,
+            currentStep,
+            settingsSaveLabel: getWizardSettingsSaveLabel(visibleStep.id),
+            hasCapturedDraft: Boolean(wizardPlatformSettingsDraftRef.current),
+            capturedMeta: wizardPlatformSettingsDraftMetaRef.current,
+        });
         await flushActiveWizardFieldCommit();
+        pushWizardPersistenceTrace('wizard-next:after-field-flush', {
+            fromStep: visibleStep.id,
+            currentStep,
+            hasCapturedDraft: Boolean(wizardPlatformSettingsDraftRef.current),
+            capturedMeta: wizardPlatformSettingsDraftMetaRef.current,
+        });
         pushWizardOrgDiag('wizard:next-clicked', {
             fromStep: visibleStep.id,
             currentStep,
@@ -11945,6 +11958,12 @@ const InitialSetupWizard: React.FC<{
         const settingsSaveLabel = getWizardSettingsSaveLabel(visibleStep.id);
         if (settingsSaveLabel) {
             const saved = await saveWizardPlatformSettingsStep(visibleStep.id, settingsSaveLabel);
+            pushWizardPersistenceTrace('wizard-next:settings-save-result', {
+                fromStep: visibleStep.id,
+                currentStep,
+                settingsSaveLabel,
+                saved,
+            });
             if (!saved) return;
         }
         if (visibleStep.id === 'trainee-courses' && unitDraft.hasTrainees) {
@@ -12003,6 +12022,11 @@ const InitialSetupWizard: React.FC<{
         markWizardStepComplete(stepIdToSync);
         setWizardPageMenuOpen(false);
         setWizardStep(Math.min(steps.length - 1, currentStep + 1));
+        pushWizardPersistenceTrace('wizard-next:advanced', {
+            fromStep: stepIdToSync,
+            toStep: steps[Math.min(steps.length - 1, currentStep + 1)]?.id,
+            currentStep,
+        });
         if (typeof window !== 'undefined') window.requestAnimationFrame(() => window.setTimeout(syncStep, 0));
         else syncStep();
     };
@@ -12374,7 +12398,21 @@ const InitialSetupWizard: React.FC<{
                         {actionLabel}
                     </button>
                 ) : (
-                    <button type="button" className={wizardPrimaryButtonClass} onClick={goToNextWizardStep}>
+                    <button
+                        type="button"
+                        className={wizardPrimaryButtonClass}
+                        onPointerDown={() => pushWizardPersistenceTrace('wizard-next:button-pointer-down', {
+                            fromStep: visibleStep.id,
+                            currentStep,
+                        })}
+                        onClick={() => {
+                            pushWizardPersistenceTrace('wizard-next:button-clicked', {
+                                fromStep: visibleStep.id,
+                                currentStep,
+                            });
+                            void goToNextWizardStep();
+                        }}
+                    >
                         Next
                     </button>
                 )}
