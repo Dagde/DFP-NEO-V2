@@ -36041,6 +36041,7 @@ const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, lo
   const wizardReviewAutoReturnScheduledRef = reactExports.useRef(false);
   const onInitialSetupWizardFinishedRef = reactExports.useRef(onInitialSetupWizardFinished);
   const wizardFinishTraceStorageKey = "dfp_setup_wizard_finish_trace";
+  const step19SettingsTraceStorageKey = "dfp_step_19_settings_trace";
   const [wizardFinishTrace, setWizardFinishTrace] = reactExports.useState(() => {
     if (typeof window === "undefined") return [];
     try {
@@ -36302,6 +36303,22 @@ const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, lo
       snapshot: compactWizardDiagDetails(getWizardFinishTraceSnapshot()),
       details: compactWizardDiagDetails(details)
     };
+    if (stage.startsWith("settings-embed")) {
+      try {
+        const existingStepTrace = JSON.parse(window.localStorage.getItem(step19SettingsTraceStorageKey) || "[]");
+        const stepEntry = {
+          stage: `wizard:${stage}`,
+          atIso: entry.ts,
+          atMs: Date.now(),
+          details: entry.details,
+          snapshot: entry.snapshot
+        };
+        const nextStepTrace = [...Array.isArray(existingStepTrace) ? existingStepTrace : [], stepEntry].slice(-260);
+        window.localStorage.setItem(step19SettingsTraceStorageKey, JSON.stringify(nextStepTrace, null, 2));
+        window.dfpStep19SettingsTrace = nextStepTrace;
+      } catch {
+      }
+    }
     try {
       const existing = JSON.parse(window.localStorage.getItem(wizardFinishTraceStorageKey) || "[]");
       const next = [...Array.isArray(existing) ? existing : [], entry].slice(-120);
@@ -43019,12 +43036,15 @@ const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, lo
     }
     return true;
   };
-  const goToNextWizardStep = async () => {
+  const flushActiveWizardFieldCommit = async () => {
     const activeElement = typeof document !== "undefined" ? document.activeElement : null;
     if (activeElement instanceof HTMLInputElement || activeElement instanceof HTMLTextAreaElement || activeElement instanceof HTMLSelectElement) {
       activeElement.blur();
-      await new Promise((resolve) => window.setTimeout(resolve, 0));
+      await new Promise((resolve) => window.setTimeout(resolve, 60));
     }
+  };
+  const goToNextWizardStep = async () => {
+    await flushActiveWizardFieldCommit();
     pushWizardOrgDiag("wizard:next-clicked", {
       fromStep: visibleStep.id,
       currentStep,
@@ -43100,6 +43120,7 @@ const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, lo
     const boundedStep = Math.min(steps.length - 1, Math.max(0, nextStep));
     const settingsSaveLabel = getWizardSettingsSaveLabel(visibleStep.id);
     if (settingsSaveLabel && boundedStep !== currentStep) {
+      await flushActiveWizardFieldCommit();
       const saved = await saveWizardPlatformSettingsStep(visibleStep.id, settingsSaveLabel);
       if (!saved) return;
     }

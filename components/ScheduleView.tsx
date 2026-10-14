@@ -3656,6 +3656,7 @@ const InitialSetupWizard: React.FC<{
     const wizardReviewAutoReturnScheduledRef = useRef(false);
     const onInitialSetupWizardFinishedRef = useRef(onInitialSetupWizardFinished);
     const wizardFinishTraceStorageKey = 'dfp_setup_wizard_finish_trace';
+    const step19SettingsTraceStorageKey = 'dfp_step_19_settings_trace';
     const [wizardFinishTrace, setWizardFinishTrace] = useState<any[]>(() => {
         if (typeof window === 'undefined') return [];
         try {
@@ -3916,6 +3917,23 @@ const InitialSetupWizard: React.FC<{
             snapshot: compactWizardDiagDetails(getWizardFinishTraceSnapshot()),
             details: compactWizardDiagDetails(details),
         };
+        if (stage.startsWith('settings-embed')) {
+            try {
+                const existingStepTrace = JSON.parse(window.localStorage.getItem(step19SettingsTraceStorageKey) || '[]');
+                const stepEntry = {
+                    stage: `wizard:${stage}`,
+                    atIso: entry.ts,
+                    atMs: Date.now(),
+                    details: entry.details,
+                    snapshot: entry.snapshot,
+                };
+                const nextStepTrace = [...(Array.isArray(existingStepTrace) ? existingStepTrace : []), stepEntry].slice(-260);
+                window.localStorage.setItem(step19SettingsTraceStorageKey, JSON.stringify(nextStepTrace, null, 2));
+                (window as any).dfpStep19SettingsTrace = nextStepTrace;
+            } catch {
+                // Diagnostics must not interfere with wizard navigation.
+            }
+        }
         try {
             const existing = JSON.parse(window.localStorage.getItem(wizardFinishTraceStorageKey) || '[]');
             const next = [...(Array.isArray(existing) ? existing : []), entry].slice(-120);
@@ -11853,7 +11871,7 @@ const InitialSetupWizard: React.FC<{
         }
         return true;
     };
-    const goToNextWizardStep = async () => {
+    const flushActiveWizardFieldCommit = async () => {
         const activeElement = typeof document !== 'undefined' ? document.activeElement : null;
         if (
             activeElement instanceof HTMLInputElement
@@ -11861,8 +11879,11 @@ const InitialSetupWizard: React.FC<{
             || activeElement instanceof HTMLSelectElement
         ) {
             activeElement.blur();
-            await new Promise((resolve) => window.setTimeout(resolve, 0));
+            await new Promise((resolve) => window.setTimeout(resolve, 60));
         }
+    };
+    const goToNextWizardStep = async () => {
+        await flushActiveWizardFieldCommit();
         pushWizardOrgDiag('wizard:next-clicked', {
             fromStep: visibleStep.id,
             currentStep,
@@ -11940,6 +11961,7 @@ const InitialSetupWizard: React.FC<{
         const boundedStep = Math.min(steps.length - 1, Math.max(0, nextStep));
         const settingsSaveLabel = getWizardSettingsSaveLabel(visibleStep.id);
         if (settingsSaveLabel && boundedStep !== currentStep) {
+            await flushActiveWizardFieldCommit();
             const saved = await saveWizardPlatformSettingsStep(visibleStep.id, settingsSaveLabel);
             if (!saved) return;
         }
