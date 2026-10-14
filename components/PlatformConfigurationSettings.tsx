@@ -2633,6 +2633,8 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
   const loadedConfigRef = useRef<PlatformConfig>(cachedPlatformConfig || emptyConfig);
   const draftConfigRef = useRef<PlatformConfig>(cachedPlatformConfig || emptyConfig);
   const lastAppliedPlatformConfigUpdateSequenceRef = useRef(0);
+  const wizardEditModeRef = useRef(wizardEditMode);
+  const scrollTargetRef = useRef(scrollTarget);
   const unitTypeOptions = useMemo(() => normaliseUnitTypes(config.unitTypes, config.units), [config.unitTypes, config.units]);
   const [trainingReportNameDrafts, setTrainingReportNameDrafts] = useState<Partial<Pick<TrainingReportTemplate, 'genericName' | 'displayName'>>>({});
   const [trainingReportTextDrafts, setTrainingReportTextDrafts] = useState<Record<string, string>>({});
@@ -2702,6 +2704,11 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
   }, []);
 
   useEffect(() => {
+    wizardEditModeRef.current = wizardEditMode;
+    scrollTargetRef.current = scrollTarget;
+  }, [scrollTarget, wizardEditMode]);
+
+  useEffect(() => {
     const handlePlatformConfigUpdated = (event: Event) => {
       const detail = (event as CustomEvent<{ config?: PlatformConfig; sequence?: number }>).detail;
       const incomingSequence = Number(detail?.sequence || 0);
@@ -2714,11 +2721,25 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
         ? applyDefaultUnitTraineeAvailability(rawConfig)
         : rawConfig;
       if (!nextConfig || !Array.isArray(nextConfig.units)) return;
+      if (wizardEditModeRef.current && scrollTargetRef.current === 'platform-rank-terminology') {
+        appendSettingsTraceEntry({
+          stage: 'external-config-updated-event:ignored-wizard-draft',
+          atIso: new Date().toISOString(),
+          atMs: Number(getTraceNow().toFixed(2)),
+          details: {
+            activeSettingsUnitCode,
+            incomingSequence,
+          },
+          renderCount: settingsTraceRef.current.renderCount,
+          snapshot: getStep19UnitSettingsSnapshot(),
+        });
+        return;
+      }
       cachedPlatformConfig = nextConfig;
       loadedConfigRef.current = nextConfig;
       draftConfigRef.current = nextConfig;
       setConfig(nextConfig);
-      if (wizardEditMode && scrollTarget === 'platform-rank-terminology') {
+      if (wizardEditModeRef.current && scrollTargetRef.current === 'platform-rank-terminology') {
         appendSettingsTraceEntry({
           stage: 'external-config-updated-event',
           atIso: new Date().toISOString(),
