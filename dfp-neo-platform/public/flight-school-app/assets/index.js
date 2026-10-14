@@ -43479,7 +43479,6 @@ const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, lo
     setWizardStep(boundedStep);
   };
   const renderFlyingWindowsEditor = () => {
-    const showTimePlaceholders = !initialWizardSetupCompleted;
     const rows = [
       { key: "flight", label: "Day flying", enabled: true, start: flyingStartTime, end: flyingEndTime, setStart: onUpdateFlyingStartTime, setEnd: onUpdateFlyingEndTime },
       { key: "ftd", label: "Simulator operating", enabled: true, start: ftdStartTime, end: ftdEndTime, setStart: onUpdateFtdStartTime, setEnd: onUpdateFtdEndTime },
@@ -43499,11 +43498,11 @@ const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, lo
           /* @__PURE__ */ jsxRuntimeExports.jsx("option", { children: "Yes" }),
           /* @__PURE__ */ jsxRuntimeExports.jsx("option", { children: "No" })
         ] }) : /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "inline-flex rounded border border-emerald-200 bg-emerald-50 px-2 py-1 text-xs font-bold text-emerald-800", children: "Yes" }) }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "px-3 py-2", children: /* @__PURE__ */ jsxRuntimeExports.jsx(WizardFlyingWindowTimeInput, { draftKey: `${row.key}-start`, className: wizardInputClass, value: row.start, enabled: row.enabled, placeholderOnly: showTimePlaceholders, onCommit: row.setStart, onDraftChange: (key, value) => {
+        /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "px-3 py-2", children: /* @__PURE__ */ jsxRuntimeExports.jsx(WizardFlyingWindowTimeInput, { draftKey: `${row.key}-start`, className: wizardInputClass, value: row.start, enabled: row.enabled, onCommit: row.setStart, onDraftChange: (key, value) => {
           if (value === null) delete flyingWindowDraftRef.current[key];
           else flyingWindowDraftRef.current[key] = value;
         } }) }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "px-3 py-2", children: /* @__PURE__ */ jsxRuntimeExports.jsx(WizardFlyingWindowTimeInput, { draftKey: `${row.key}-end`, className: wizardInputClass, value: row.end, enabled: row.enabled, placeholderOnly: showTimePlaceholders, onCommit: row.setEnd, onDraftChange: (key, value) => {
+        /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "px-3 py-2", children: /* @__PURE__ */ jsxRuntimeExports.jsx(WizardFlyingWindowTimeInput, { draftKey: `${row.key}-end`, className: wizardInputClass, value: row.end, enabled: row.enabled, onCommit: row.setEnd, onDraftChange: (key, value) => {
           if (value === null) delete flyingWindowDraftRef.current[key];
           else flyingWindowDraftRef.current[key] = value;
         } }) })
