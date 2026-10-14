@@ -2844,6 +2844,8 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
     events: [] as Array<Record<string, any>>,
     timings: {} as Record<string, { count: number; lastMs: number; maxMs: number; totalMs: number }>,
   });
+  const step19FieldSourceTraceSignatureRef = useRef('');
+  const step19PlaceholderTraceSignatureRef = useRef<Record<string, string>>({});
 
   const recordSettingsTraceTiming = (label: string, startedAtMs: number) => {
     const duration = Math.max(0, getTraceNow() - startedAtMs);
@@ -2875,11 +2877,11 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
   const appendSettingsTraceEntry = (entry: Record<string, any>) => {
     const events = settingsTraceRef.current.events;
     events.push(entry);
-    if (events.length > 160) events.splice(0, events.length - 160);
+    if (events.length > 260) events.splice(0, events.length - 260);
     if (typeof window === 'undefined') return;
     try {
       const existing = JSON.parse(window.localStorage.getItem(STEP_19_SETTINGS_TRACE_STORAGE_KEY) || '[]');
-      const next = [...(Array.isArray(existing) ? existing : []), entry].slice(-220);
+      const next = [...(Array.isArray(existing) ? existing : []), entry].slice(-700);
       window.localStorage.setItem(STEP_19_SETTINGS_TRACE_STORAGE_KEY, JSON.stringify(next, null, 2));
       (window as any).dfpStep19SettingsTrace = next;
     } catch {
@@ -3523,6 +3525,36 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
       && !wizardEditedPlaceholderKeys.has(key)
       && Boolean(placeholder)
       && (!current || current.localeCompare(placeholder, undefined, { sensitivity: 'accent' }) === 0);
+    if (wizardEditMode && scrollTarget === 'platform-rank-terminology') {
+      const signature = JSON.stringify({
+        activeSettingsUnitCode,
+        key,
+        current,
+        placeholder,
+        edited: wizardEditedPlaceholderKeys.has(key),
+        usePlaceholder,
+      });
+      if (step19PlaceholderTraceSignatureRef.current[key] !== signature) {
+        step19PlaceholderTraceSignatureRef.current[key] = signature;
+        appendSettingsTraceEntry({
+          stage: 'field:placeholder-decision',
+          atIso: new Date().toISOString(),
+          atMs: Number(getTraceNow().toFixed(2)),
+          details: {
+            activeSettingsUnitCode,
+            key,
+            current,
+            currentLength: current.length,
+            sample: placeholder,
+            sampleLength: placeholder.length,
+            edited: wizardEditedPlaceholderKeys.has(key),
+            usePlaceholder,
+            renderedInputValue: usePlaceholder ? '' : current,
+          },
+          renderCount: settingsTraceRef.current.renderCount,
+        });
+      }
+    }
     return {
       placeholder: usePlaceholder ? placeholder : undefined,
       placeholderOnly: usePlaceholder,
@@ -3599,6 +3631,121 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
       snapshot: getStep19UnitSettingsSnapshot(),
     });
   };
+  const getStep19FieldSource = (
+    unitContainer: Record<string, any> | null | undefined,
+    organisationContainer: Record<string, any> | null | undefined,
+    key: string,
+  ) => {
+    if (unitContainer && Object.prototype.hasOwnProperty.call(unitContainer, key)) return 'unit-settings';
+    if (organisationContainer && Object.prototype.hasOwnProperty.call(organisationContainer, key)) return 'organisation-settings';
+    return 'default-normaliser';
+  };
+  const buildStep19FieldSourceDiagnostics = () => {
+    const unitSettings = activeSettingsUnitSettings || {};
+    const orgSettings = primaryOrganisationSettings || {};
+    const unitPersonnel = unitSettings.personnelDisplaySettings || unitSettings.personnelSettings || {};
+    const orgPersonnel = orgSettings.personnelDisplaySettings || orgSettings.personnelSettings || {};
+    const unitTrainingReport = unitSettings.trainingReportTerminology || {};
+    const orgTrainingReport = orgSettings.trainingReportTerminology || {};
+    const unitSct = unitSettings.sctTerminology || {};
+    const orgSct = orgSettings.sctTerminology || {};
+    const unitQualificationCatalogue = normaliseStaffQualificationCatalogue(unitSettings.staffQualificationCatalogue || null);
+    const orgQualificationCatalogue = normaliseStaffQualificationCatalogue(orgSettings.staffQualificationCatalogue || null);
+    const fields = [
+      ['instructor-label', 'personnelDisplaySettings', 'instructorLabel', personnelDisplaySettings.instructorLabel, DEFAULT_PERSONNEL_DISPLAY_SETTINGS.instructorLabel],
+      ['trainee-label', 'personnelDisplaySettings', 'traineeLabel', personnelDisplaySettings.traineeLabel, DEFAULT_PERSONNEL_DISPLAY_SETTINGS.traineeLabel],
+      ['contractor-staff-label', 'personnelDisplaySettings', 'simIpDisplayLabel', personnelDisplaySettings.simIpDisplayLabel, DEFAULT_PERSONNEL_DISPLAY_SETTINGS.simIpDisplayLabel],
+      ['course-commander-label', 'personnelDisplaySettings', 'courseCommanderLabel', personnelDisplaySettings.courseCommanderLabel, DEFAULT_PERSONNEL_DISPLAY_SETTINGS.courseCommanderLabel],
+      ['deputy-course-commander-label', 'personnelDisplaySettings', 'deputyCourseCommanderLabel', personnelDisplaySettings.deputyCourseCommanderLabel, DEFAULT_PERSONNEL_DISPLAY_SETTINGS.deputyCourseCommanderLabel],
+      ['course-leadership-enabled', 'personnelDisplaySettings', 'courseLeadershipEnabled', personnelDisplaySettings.courseLeadershipEnabled, DEFAULT_PERSONNEL_DISPLAY_SETTINGS.courseLeadershipEnabled],
+      ['contractor-staff-enabled', 'personnelDisplaySettings', 'simIpDisplayEnabled', personnelDisplaySettings.simIpDisplayEnabled, DEFAULT_PERSONNEL_DISPLAY_SETTINGS.simIpDisplayEnabled],
+      ['training-report-name', 'trainingReportTerminology', 'name', trainingReportTerminology.name, DEFAULT_TRAINING_REPORT_TERMINOLOGY.name],
+      ['sct-short-label', 'sctTerminology', 'shortLabel', sctTerminology.shortLabel, DEFAULT_SCT_TERMINOLOGY.shortLabel],
+      ['sct-long-label', 'sctTerminology', 'longLabel', sctTerminology.longLabel, DEFAULT_SCT_TERMINOLOGY.longLabel],
+    ].map(([traceKey, container, fieldKey, renderedValue, defaultValue]) => {
+      const unitContainer = container === 'personnelDisplaySettings'
+        ? unitPersonnel
+        : container === 'trainingReportTerminology'
+          ? unitTrainingReport
+          : unitSct;
+      const orgContainer = container === 'personnelDisplaySettings'
+        ? orgPersonnel
+        : container === 'trainingReportTerminology'
+          ? orgTrainingReport
+          : orgSct;
+      return {
+        traceKey,
+        container,
+        fieldKey,
+        source: getStep19FieldSource(unitContainer, orgContainer, String(fieldKey)),
+        renderedValue,
+        unitValue: unitContainer?.[String(fieldKey)] ?? null,
+        organisationValue: orgContainer?.[String(fieldKey)] ?? null,
+        defaultValue,
+        editedPlaceholder: wizardEditedPlaceholderKeys.has(String(traceKey)),
+      };
+    });
+    return {
+      activeSettingsUnitCode,
+      activeUnitCode,
+      activeUnitCodes,
+      activeSettingsUnitFound: Boolean(activeSettingsUnit),
+      activeSettingsUnitIndex,
+      unitSettingsKeys: Object.keys(unitSettings).sort(),
+      organisationSettingsKeys: Object.keys(orgSettings).sort(),
+      fields,
+      staffQualificationSource: unitSettings.staffQualificationCatalogue
+        ? 'unit-settings'
+        : orgSettings.staffQualificationCatalogue
+          ? 'organisation-settings'
+          : 'default-normaliser',
+      staffQualificationCounts: {
+        rendered: staffQualificationCatalogue.qualifications.length,
+        unit: unitQualificationCatalogue.qualifications.length,
+        organisation: orgQualificationCatalogue.qualifications.length,
+        default: DEFAULT_STAFF_QUALIFICATIONS.qualifications.length,
+      },
+      staffQualificationSample: staffQualificationCatalogue.qualifications.slice(0, 20).map((entry) => {
+        const unitEntry = unitQualificationCatalogue.qualifications.find((candidate) => candidate.id === entry.id);
+        const orgEntry = orgQualificationCatalogue.qualifications.find((candidate) => candidate.id === entry.id);
+        const defaultEntry = DEFAULT_STAFF_QUALIFICATIONS.qualifications.find((candidate) => candidate.id === entry.id);
+        return {
+          id: entry.id,
+          renderedName: entry.name,
+          renderedCode: entry.code,
+          source: unitEntry ? 'unit-settings' : orgEntry ? 'organisation-settings' : 'default-normaliser',
+          unitName: unitEntry?.name ?? null,
+          unitCode: unitEntry?.code ?? null,
+          organisationName: orgEntry?.name ?? null,
+          organisationCode: orgEntry?.code ?? null,
+          defaultName: defaultEntry?.name ?? null,
+          defaultCode: defaultEntry?.code ?? null,
+          nameEditedPlaceholder: wizardEditedPlaceholderKeys.has(`qualification-${entry.id}-name`),
+          codeEditedPlaceholder: wizardEditedPlaceholderKeys.has(`qualification-${entry.id}-code`),
+        };
+      }),
+    };
+  };
+  useEffect(() => {
+    if (!wizardEditMode || scrollTarget !== 'platform-rank-terminology') return;
+    const diagnostics = buildStep19FieldSourceDiagnostics();
+    const signature = JSON.stringify(diagnostics);
+    if (step19FieldSourceTraceSignatureRef.current === signature) return;
+    step19FieldSourceTraceSignatureRef.current = signature;
+    recordStep19SettingsTrace('render:field-source-diagnostics', diagnostics);
+  }, [
+    wizardEditMode,
+    scrollTarget,
+    activeSettingsUnitCode,
+    activeSettingsUnitIndex,
+    JSON.stringify(activeSettingsUnitSettings),
+    JSON.stringify(primaryOrganisationSettings),
+    JSON.stringify(personnelDisplaySettings),
+    JSON.stringify(trainingReportTerminology),
+    JSON.stringify(sctTerminology),
+    JSON.stringify(staffQualificationCatalogue),
+    Array.from(wizardEditedPlaceholderKeys).sort().join('|'),
+  ]);
   const exportStep19SettingsTrace = () => {
     const trace = typeof window !== 'undefined'
       ? JSON.parse(window.localStorage.getItem(STEP_19_SETTINGS_TRACE_STORAGE_KEY) || '[]')
