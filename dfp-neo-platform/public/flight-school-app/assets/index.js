@@ -25283,7 +25283,7 @@ This removes them from DFP Resource Rows. Press Save in this section to apply th
     return saved;
   };
   const saveCrewCompositionAndExitEdit = async () => {
-    const saved = await save(void 0, "platform-crew-composition", { skipResourceRowProtection: true });
+    const saved = await save(void 0, "platform-crew-composition");
     if (saved) setCrewCompositionUnlocked(false);
   };
   const saveTaskProfilesAndExitEdit = async () => {
@@ -25307,7 +25307,7 @@ This removes them from DFP Resource Rows. Press Save in this section to apply th
         }
       }))
     };
-    const saved = await save(nextConfig, "platform-task-profiles", { skipResourceRowProtection: true });
+    const saved = await save(nextConfig, "platform-task-profiles");
     if (saved) {
       setTaskProfilesUnlocked(false);
       setTaskProfileDrafts({});
@@ -25324,8 +25324,7 @@ This removes them from DFP Resource Rows. Press Save in this section to apply th
   const canEditSectionPermission = (sectionId) => hasLegacySettingsAdminRole || hasSettingsPermission("settings.edit") || hasSettingsPermission(getRequiredSettingsEditPermission(sectionId));
   const canEditSection = (sectionId) => canEdit && canEditSectionPermission(sectionId) && isSectionEditActive(sectionId);
   const saveSectionAndExitEdit = async (sectionId) => {
-    const shouldCheckResourceRows = sectionId === "platform-dfp-resource-rows" || sectionId === "platform-aircraft-setup";
-    const saved = await save(void 0, sectionId, { skipResourceRowProtection: !shouldCheckResourceRows });
+    const saved = await save(void 0, sectionId);
     if (saved && !wizardEditMode) {
       setSectionEditUnlocked((prev) => ({ ...prev, [sectionId]: false }));
       if (sectionId === "platform-standard-missions") setExpandedStandardMissionIds(/* @__PURE__ */ new Set());
